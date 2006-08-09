@@ -1,0 +1,172 @@
+# P A C K A G E ################################################
+package DW::Populate::ProductionEmployeeDim;
+
+################################################ P R A G M A S #
+use warnings;
+use strict;
+
+################################################ M O D U L E S #
+use Data::Dumper;
+use DW::Populate::BaseTable;
+
+######################################## I N H E R I T A N C E #
+# use base qw(DW::Populate);
+our @ISA = qw(DW::Populate::BaseTable);
+
+################################################ G L O B A L S #
+my @columns = qw(
+    ped_id
+    seq_emp
+    load_emp
+    pick_emp
+    prep_emp
+    spec_emp
+    inoc_emp
+);
+
+################################################ M E T H O D S #
+#get/set methods
+__PACKAGE__->mk_accessors(@columns);
+
+#database attributes
+sub table_name { return 'production_employee_dim' }
+sub columns { return @columns; }
+sub primary_key { return "ped_id"; }
+
+sub new {
+    my $class = shift;
+    my $self = {@_};
+    bless($self, $class);
+    $self->init_cloned_star_dbh;
+    return $self;
+}
+
+sub derive_pick_emp {
+    my $self = shift;
+    
+    my $pick_emp = $self->derive_employee( type => 'pick' );
+    return $pick_emp;
+}
+
+sub derive_spec_emp {
+    my $self = shift;
+    
+    my $spec_emp = $self->derive_employee( type => 'spec' );
+    return $spec_emp;
+}
+
+sub derive_prep_emp {
+    my $self = shift;
+    
+    my $prep_emp = $self->derive_employee( type => 'prep' );
+    return $prep_emp;
+}
+
+sub derive_inoc_emp {
+    my $self = shift;
+    
+    my $inoc_emp = $self->derive_employee( type => 'inoculate' );
+    return $inoc_emp;
+}
+
+sub derive_load_emp {
+    my $self = shift;
+    
+    my $load_emp = $self->derive_employee( type => 'load' );
+    return $load_emp;
+}
+
+sub derive_seq_emp {
+    my $self = shift;
+    
+    my $seq_emp = $self->derive_employee( type => 'sequence' );
+    return $seq_emp;
+}
+
+my $star_search_sth;
+my $search_sql;
+# This method is subclass for further hard coding and optimization speed
+# that is useful during backfilling
+sub search_id {
+    my $self = shift;
+    my %args = @_;
+
+    my $potential_sql_query = $self->_construct_search_sql_query();
+
+    unless ($star_search_sth && ($potential_sql_query eq $search_sql) ) {
+        # setup the statement handle
+        $search_sql = $self->_construct_search_sql_query();
+        $star_search_sth = $self->_setup_star_sth(
+                sql => $search_sql, 
+                purpose => 'search'
+        );
+    }
+
+    my $id = $self->SUPER::search_id(
+            %args, 
+            sql => $search_sql, 
+            sth => $star_search_sth
+    );
+
+    return $id;
+}
+
+my $star_insert_sth;
+my $insert_sql;
+# This method is subclass for further hard coding and optimization speed
+# that is useful during backfilling
+sub insert_entry_into_table {
+    my $self = shift;
+    my %args = @_;
+
+    my $potential_sql_query = $self->_construct_insert_sql_query();
+
+    unless ($star_insert_sth && ($potential_sql_query eq $insert_sql) ) {
+        # setup the statment handle
+        $insert_sql = $potential_sql_query;
+        $star_insert_sth = $self->_setup_star_sth(
+                sql => $insert_sql, 
+                purpose => 'insert'
+        );
+    }
+
+    my $id = $self->SUPER::insert_entry_into_table(
+            %args, 
+            sql => $insert_sql, 
+            sth => $star_insert_sth
+    );
+
+    return $id;
+}
+
+my $delete_sql;
+my $star_delete_sth;
+# This method is subclass for further hard coding and optimization speed
+# that is useful during backfilling
+sub delete_entry_from_table {
+    my $self = shift;
+    my %args = @_;
+
+    my $potential_sql_query = $self->_construct_delete_sql_query();
+
+    unless ($star_delete_sth && ($potential_sql_query eq $delete_sql) ) {
+        # setup the statment handle
+        $delete_sql = $potential_sql_query;
+        $star_delete_sth = $self->_setup_star_sth(
+                sql => $delete_sql, 
+                purpose => 'delete'
+        );
+    }
+
+    my $rows = $self->SUPER::delete_entry_from_table(
+            %args, 
+            sql => $delete_sql, 
+            sth => $star_delete_sth
+    );
+
+    return $rows;
+}
+# P A C K A G E  L O A D I N G ######################################
+1;
+
+#$Header$
