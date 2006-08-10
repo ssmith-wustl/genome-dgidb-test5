@@ -348,6 +348,7 @@ associations in four cases.
         SETUP_BASECALLER                GSC::Setup::Basecaller
         SETUP_AMPLICON_DESIGN           GSC::Setup::AmpliconDesign
         SETUP_SEQUENCE_ANNOTATION       GSC::Setup::SequenceAnnotation
+        READ_SUBMISSION_NCBI            GSC::Sequence::Read::Submission::NCBI
     /
 );
 
