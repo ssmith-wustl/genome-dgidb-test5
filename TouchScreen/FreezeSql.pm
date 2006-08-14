@@ -915,10 +915,12 @@ sub CompleteFinishingRequest {
 	my $slot_desc = $self->{'GetEquipmentBarcodeDesc'} -> xSql($slot_bar);
 	
 	my $mail_msg;
+	my $arc_bc = GSC::Barcode->get(barcode=>$arch_bar);
+	my $fl = $arc_bc->freezer_location;
 	
 	$mail_msg .= "Hello $unix_login,\n\n";
 	$mail_msg .= "Your request for plate $arch_bar has been filed in the finishing request freezer in\n";
-	$mail_msg .= "\tSlot = $slot_desc.\n\n";
+	$mail_msg .= "\tSlot = $fl\n\n";
 
 	if ($archives){
 	    $mail_msg .= "The following archives have been requested on this plate:\n";
