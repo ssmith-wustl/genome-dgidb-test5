@@ -35,10 +35,7 @@ GSCApp::FTP - manage uploading of files to GSC ftp server
 
 This module is capable of automatically uploading directories to the
 GSC FTP server.  This module is GSC specific and has no counterpart in
-the App tree.  It uses ssh/scp to set up the directory and copy it
-over to the FTP server (actually it copies it to the FTP filesystems
-mounted on another server).  Therefore, you should either have your
-SSH keys set up or expect to enter your password.
+the App tree.
 
 =cut
 
@@ -46,7 +43,7 @@ SSH keys set up or expect to enter your password.
 require 5.6.0;
 use warnings;
 use strict;
-our $VERSION = '0.2';
+our $VERSION = '0.3';
 use base qw(App::MsgLogger);
 use File::Basename;
 use IO::Handle;
@@ -67,9 +64,6 @@ This method take a directory and uploads it to the FTP server.  The
 method takes a hash as an argument and returns the URL of the uploaded
 directory upon success, C<undef> on failure.  The hash argument must
 has a key named C<dir> whose value is the directory to upload.
-
-This method used to take an optional key, C<private> as well.  This is
-now ignored since all automated uploads are to the private site.
 
 =cut
 
@@ -174,7 +168,7 @@ sub upload
     # construct and return url
     my $url = "$target/" . basename($path);
     $url =~ s{^/gsc/var/lib/ftp}{ftp://genome.wustl.edu};
-    return $url;
+    return "$url/";
 }
 
 1;
@@ -198,4 +192,5 @@ David Dooling <ddooling@watson.wustl.edu>
 
 =cut
 
-# $Header$
+# $HeadURL$
+# $Id$

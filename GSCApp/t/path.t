@@ -3,7 +3,7 @@
 
 use warnings;
 use strict;
-use Test::More skip_all => "TEST BROKEN"; # tests => 34;
+use Test::More tests => 28;
 
 BEGIN { use_ok('GSCApp::Path'); }
 
@@ -12,7 +12,7 @@ my $prefix = '/gsc/scripts';
 ok(App::Path->prefix($prefix), "set prefix $prefix");
 
 # check for know non-var directories
-my %known = (doc => 'info', intweb => 'html', lib => 'perl', share => 'gsc-login');
+my %known = (doc => 'info', lib => 'perl', share => 'gsc-login');
 while (my ($d, $s) = each(%known)) {
     my $p = "$prefix/$d/$s";
     # more than one may exist
@@ -22,7 +22,7 @@ while (my ($d, $s) = each(%known)) {
 }
 
 # check var directories
-foreach my $d qw(cache lib lock log run spool state tmp) {
+foreach my $d qw(cache lib lock log run spool tmp) {
     my $p = "/gsc/var/$d";
     # more than one may exist
     my @ps = grep { $_ eq $p } App::Path->get_path('var', $d);
