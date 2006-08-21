@@ -888,6 +888,29 @@ sub derive_machine {
         my @parent_ei = GSC::EquipmentInformation->get(barcode => [ map {$_->equinf_bs_barcode} @ei]);
         unless (@parent_ei == 1) {
 #            $DB::single = 1;
+            my %problematic_prep_pses = (
+                    71873660 => 1,
+                    71873661 => 1,
+                    71873662 => 1,
+                    71873664 => 1,
+                    71873665 => 1,
+                    71873666 => 1,
+                    71873667 => 1,
+                    71873668 => 1,
+                    71873670 => 1,
+                    71873671 => 1,
+                    71873673 => 1,
+                    71873675 => 1,
+                    71873678 => 1,
+                    71873680 => 1,
+                    71873682 => 1,
+                    71873685 => 1
+            );
+            if (exists $problematic_prep_pses{$pse->id}) {
+                App::Object->status_message("Using specialized machine 'EMPTY' exception case for prep pse: " . $pse->id );
+                print "\n[warn] Specialized machine 'EMPTY' exception case for prep pse: ", $pse->id, "\n";
+                return 'EMPTY';
+            }
             die "[err] Found parent equipment informations to be of ", scalar @parent_ei, 
                 " values.  Should be just 1. (process : $type) ", "\n",
                 Data::Dumper::Dumper(\@parent_ei), "\n";
