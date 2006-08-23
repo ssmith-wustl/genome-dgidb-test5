@@ -553,7 +553,7 @@ my @servers = (
 
     # development servers
 #    [qw(gscnew   Oracle  old_oltp_dev)],
-    [qw(devdb    Oracle  oltp_dev)],
+    [qw(dbdev    Oracle  oltp_dev)],
     [qw(dwdev    Oracle  dw_dev)],
 );
 
