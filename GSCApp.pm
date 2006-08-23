@@ -507,10 +507,16 @@ my @logins = (
     [qw(ldb64 gsc GSCUSER gscguest guest64 ro production GSC)],
 
     # OLTP development
-    [qw(devdb gsc GSC gscuser dev_user rw development GSC)],
-    [qw(devdb gsc GSC devuser iamonracdev rw-developer development GSC)],
-    [qw(devdb gsc GSC gscguest dev_guest ro development GSC)],
-    [qw(devdb gsc GSC devguest dg_racdev ro-developer development GSC)],
+    [qw(dbdev gsc GSC gscuser g_user rw production GSC)],
+    [qw(dbdev gsc GSC devuser iamonrac rw-developer production GSC)],
+    [qw(dbdev gsc GSC gscguest g_guest ro production GSC)],
+    [qw(dbdev gsc GSC devguest dg_rac ro-developer production GSC)],
+
+#    # OLTP development
+#    [qw(devdb gsc GSC gscuser dev_user rw development GSC)],
+#    [qw(devdb gsc GSC devuser iamonracdev rw-developer development GSC)],
+#    [qw(devdb gsc GSC gscguest dev_guest ro development GSC)],
+#    [qw(devdb gsc GSC devguest dg_racdev ro-developer development GSC)],
 
     # OLTP old development
 #    [qw(gscnew gsc GSC gscuser user_new rw old-development GSC)],
