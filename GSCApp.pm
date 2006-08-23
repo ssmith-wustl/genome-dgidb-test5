@@ -572,7 +572,7 @@ my @variants = (
     [qw(production       olap       ldb64)],
 
     # development variants
-    [qw(development      oltp       devdb)],
+    [qw(development      oltp       dbdev)],
     [qw(development      warehouse  dwdev)],
 
     # old development variants
