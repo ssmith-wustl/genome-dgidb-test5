@@ -507,10 +507,10 @@ my @logins = (
     [qw(ldb64 gsc GSCUSER gscguest guest64 ro production GSC)],
 
     # OLTP development
-    [qw(dbdev gsc GSC gscuser g_user rw production GSC)],
-    [qw(dbdev gsc GSC devuser iamonrac rw-developer production GSC)],
-    [qw(dbdev gsc GSC gscguest g_guest ro production GSC)],
-    [qw(dbdev gsc GSC devguest dg_rac ro-developer production GSC)],
+    [qw(dbdev gsc GSC gscuser g_user rw development GSC)],
+    [qw(dbdev gsc GSC devuser iamonrac rw-developer development GSC)],
+    [qw(dbdev gsc GSC gscguest g_guest ro development GSC)],
+    [qw(dbdev gsc GSC devguest dg_rac ro-developer development GSC)],
 
 #    # OLTP development
 #    [qw(devdb gsc GSC gscuser dev_user rw development GSC)],
@@ -734,4 +734,5 @@ Scott Smith <ssmith@watson.wustl.edu>
 
 =cut
 
-# $Header$
+# $Id$
+# $HeadURL$
