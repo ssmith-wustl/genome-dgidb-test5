@@ -2177,7 +2177,7 @@ our %PROCESS_CNTRL =
 							'384 fosmid plate' => {'SqlPackage'    => 'TouchScreen::NewProdSql',
 									       'Configuration' => 'OneToNone',
 									       'Headers'       => ['archive plate',],
-									       'InputCheck'    => 'GetAvailFosmidToClaim',
+									       'InputCheck'    => 'GetAvailBarcodeInInprogress',
 									       'OutputCheck'   => undef,
 									       'Confirm'       => 'ClaimArchivePlateInoc',
 									       'DataInfos'     => {'A1' => 0, 
