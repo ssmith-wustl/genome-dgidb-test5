@@ -2305,7 +2305,7 @@ sub InoculateMiniPrepCreateSubclones {
 	    }
 	}
     }
-
+    
 
     return $pses;
 } #InoculateMiniPrepCreateSubclones
@@ -2343,37 +2343,62 @@ sub ClaimArchivePlateInoc {
     my $group = $self->{'CoreSql'} -> Process('GetGroupForPsId', $ps_id);
     return ($self->GetCoreError) if($group eq '0');
 
-    my @source_pses = $self->dna_source_pses($bars_in->[0]);
-    
-    foreach my $source_pse_id (@source_pses){
-	my $pre_pse_id = @$pre_pse_ids == 1 ? $pre_pse_ids->[0] : shift @$pre_pse_ids;
+    foreach my $pre_pse_id (@$pre_pse_ids){
 
 	my ($new_pse_id) = $self->{'CoreSql'} -> xOneToManyProcess($ps_id, $pre_pse_id, $update_status, $update_result, $bars_in->[0], $bar_out, $emp_id);
 	return ($self->GetCoreError) if(!$new_pse_id);
-
-	my $arc_id = $self -> GetArcIdFromPseInSubPses($source_pse_id);
-	return 0 if($arc_id==0);
-
-	my $result = $self -> InsertArchivesPses($new_pse_id, $arc_id);
-	return 0 if($result == 0);
-
-	$result = $self -> UpdateArchiveGroup($group, $arc_id);
-	return 0 if(!$result);
-
 	
-	my $sql = "select distinct UPPER(sector_name) from sectors, 
+	my $arc_id = $self -> GetArcIdFromPseInSubPses($pre_pse_id);
+	if($arc_id==0){
+	    if(@$pre_pse_ids == 1){
+		#--get all the archives for the dna
+		my @source_dna_pse = $self->dna_source_pses($bars_in->[0]);
+		my %archives;
+		foreach my $source_pse_id(@source_dna_pse){
+		    my $arc_id = $self -> GetArcIdFromPseInSubPses($source_pse_id);
+		    return 0 unless $arc_id;
+		    unless($archives{$arc_id}){
+			$archives{$arc_id} = 1;
+			my $result = $self -> InsertArchivesPses($new_pse_id, $arc_id);
+			return 0 if($result == 0);
+			$result = $self -> UpdateArchiveGroup($group, $arc_id);
+			return 0 if(!$result);
+		    }
+		    my $sql = "select distinct UPPER(sector_name) from sectors, 
                     plate_locations, subclones_pses scx, subclones sc, plate_types
                     where scx.pse_pse_id = '$source_pse_id' and 
                     sub_sub_id = sub_id and pl_pl_id = pl_id and sec_sec_id = sec_id and pt_pt_id = pt_id and well_count = '384'";
-	
-	my $sector = Query($dbh, $sql);
-	my $purpose = $quadrant{$sector};
-        if(defined $purpose) {
-    
-	    $result = $self -> UpdateArchivePurpose($arc_id, $purpose);
-	}
+		    
+		    my $sector = Query($dbh, $sql);
+		    my $purpose = $quadrant{$sector};
+                    if(defined $purpose) {
+			my $result = $self -> UpdateArchivePurpose($arc_id, $purpose);
+		    }
 
-        push(@{$pse_ids}, $new_pse_id);
+                }
+            }
+            else{
+		return 0 ;
+	    }
+        }
+	else{
+	    my $result = $self -> InsertArchivesPses($new_pse_id, $arc_id);
+	    return 0 if($result == 0);
+	    $result = $self -> UpdateArchiveGroup($group, $arc_id);
+	    return 0 if(!$result);
+
+	    my $sql = "select distinct UPPER(sector_name) from sectors, 
+                    plate_locations, subclones_pses scx, subclones sc, plate_types
+                    where scx.pse_pse_id = '$pre_pse_id' and 
+                    sub_sub_id = sub_id and pl_pl_id = pl_id and sec_sec_id = sec_id and pt_pt_id = pt_id and well_count = '384'";
+	    
+	    my $sector = Query($dbh, $sql);
+	    my $purpose = $quadrant{$sector};
+            if(defined $purpose) {
+		$result = $self -> UpdateArchivePurpose($arc_id, $purpose);
+	    }
+        }
+    push(@{$pse_ids}, $new_pse_id);
     }
 
     return $pse_ids;
