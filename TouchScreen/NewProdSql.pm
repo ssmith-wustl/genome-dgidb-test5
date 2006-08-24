@@ -486,6 +486,18 @@ sub GetCoreError {
 #                                                                              #
 ################################################################################
 
+#  get all the pses, in order, that were sources for the dna
+#  this is useful for steps that have priors that were converted to the 'no dna pse' or that went to a 1-pse-per-plate instead of 1-pse-per-quadrant model.  See ClaimArchiveInoc or something like that for an example.
+
+sub dna_source_pses{
+    my $self = shift;
+    my $barcode = shift;
+    
+    my $bc= GSC::Barcode->get(barcode => $barcode);
+    my %dp = map {$_->pse_id => 1} $bc->get_dna_pse;
+    return sort keys %dp;
+}
+
 
 #############################################
 # Get the Barcode Description for a barcode # 
@@ -1982,6 +1994,7 @@ sub CreateOutOfHouseFosmids {
 
 }#CreateOutOfHouseFosmids
 
+
 sub ReplicateFosmidPlates {
 
     my ($self, $ps_id, $bars_in, $bars_out, $emp_id, $options, $pre_pse_ids) = @_;
@@ -2300,8 +2313,9 @@ sub InoculateMiniPrepCreateSubclones {
 #######################################
 # Process Claim Archive Barcode Request #
 #########################################
-sub ClaimArchivePlateInoc {
 
+sub ClaimArchivePlateInoc {
+    
     my ($self, $ps_id, $bars_in, $bar_out, $emp_id, $options, $pre_pse_ids) = @_;
  
     my $dbh = $self->{'dbh'};
@@ -2326,16 +2340,18 @@ sub ClaimArchivePlateInoc {
 	}
     }
     
-
     my $group = $self->{'CoreSql'} -> Process('GetGroupForPsId', $ps_id);
     return ($self->GetCoreError) if($group eq '0');
 
-    foreach my $pre_pse_id (@{$pre_pse_ids}) {
+    my @source_pses = $self->dna_source_pses($bars_in->[0]);
+    
+    foreach my $source_pse_id (@source_pses){
+	my $pre_pse_id = @$pre_pse_ids == 1 ? $pre_pse_ids->[0] : shift @$pre_pse_ids;
 
 	my ($new_pse_id) = $self->{'CoreSql'} -> xOneToManyProcess($ps_id, $pre_pse_id, $update_status, $update_result, $bars_in->[0], $bar_out, $emp_id);
 	return ($self->GetCoreError) if(!$new_pse_id);
 
-	my $arc_id = $self -> GetArcIdFromPseInSubPses($pre_pse_id);
+	my $arc_id = $self -> GetArcIdFromPseInSubPses($source_pse_id);
 	return 0 if($arc_id==0);
 
 	my $result = $self -> InsertArchivesPses($new_pse_id, $arc_id);
@@ -2347,17 +2363,17 @@ sub ClaimArchivePlateInoc {
 	
 	my $sql = "select distinct UPPER(sector_name) from sectors, 
                     plate_locations, subclones_pses scx, subclones sc, plate_types
-                    where scx.pse_pse_id = '$pre_pse_id' and 
+                    where scx.pse_pse_id = '$source_pse_id' and 
                     sub_sub_id = sub_id and pl_pl_id = pl_id and sec_sec_id = sec_id and pt_pt_id = pt_id and well_count = '384'";
-	    
+	
 	my $sector = Query($dbh, $sql);
 	my $purpose = $quadrant{$sector};
-	if(defined $purpose) {
-
+        if(defined $purpose) {
+    
 	    $result = $self -> UpdateArchivePurpose($arc_id, $purpose);
 	}
 
-	push(@{$pse_ids}, $new_pse_id);
+        push(@{$pse_ids}, $new_pse_id);
     }
 
     return $pse_ids;
