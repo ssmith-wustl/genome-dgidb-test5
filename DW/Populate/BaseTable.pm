@@ -75,80 +75,134 @@ sub init_cloned_star_dbh {
     return $stardbh;
 }
 
-sub get_or_create_gsc_api_object {
-    my $self = shift;
+sub create_specified_gsc_fact_objects {
+    my $class = shift;
     my %args = @_;
 
     my $table_type = $args{'table_type'}; # 'facts' or 'dimensions'
-    my $table_name = $args{'table_name'}; # in "table_name" form
-
-    my $class = ref($self);
-
-    my $pre_defined_attributes = $args{'attributes'};
+    my $table      = $args{'table'}; # in "table_name" form
+    my @reads      = @{$args{'reads'}};
 
     # derive the GSC class name
-    my @class_name_parts = split(/\:\:/, $class);
-    my $table_class_name = $class_name_parts[$#class_name_parts];
-    my $gsc_class = 'GSC::' . $table_class_name;
+    my $gsc_class = $class->derive_gsc_class_name_from_pseudo_class;
 
     # obtain column properties
-    my @non_pk_cols = $self->non_pk_columns; 
-    my %default_attributes = map { $_ => $self->$_ } @non_pk_cols;
-    my %attributes;
-    if ($pre_defined_attributes) {
-        %attributes = (%default_attributes, %{$pre_defined_attributes});
-    } else {
-        %attributes = %default_attributes;
-    }
-
-    # quick check of the column properties
-#    for (keys %attributes) {
-#        my $value = $attributes{$_};
-#        unless (defined($value) and ($value ne 'NULL') and ($value ne '') ) {
-#                die "[err] problem with ", ref($self), "\n",  
-#                    "read id : ", $self->read->re_id(), "\n",
-#                    " column '$_' ", "has value '$value' ", "\n",
-#                    "which is not allowed\n" ;
-#        }
-#    }
+    my @non_pk_cols = $class->non_pk_columns; 
+    my $pk = $class->primary_key;
 
     # contruct the GSC object
-    my $gsc;
-    if ($table_type eq 'dimensions') {
-        # Step 1: See if gsc object already exists
-        $gsc = $gsc_class->get(%attributes);
+    my @gsc_objects;
 
-        # Step 2: if not exists properly create it and retrieve
-        #         the gsc object
-        unless ($gsc) {
-            my $id = $self->single_threaded_table_row_creator(
-                    %args,
-                    attributes => \%attributes
-            );
-            $gsc = $gsc_class->get($id) or 
-                die "[err] Could not get a gsc object of '$gsc_class' \n";
-        }
-    } else { 
-        # ($table_type eq 'facts')
-        my $pk = $self->primary_key();
-        my $pk_id = $self->read()->id();
+    if ($table_type ne 'fact') {
+        die "[err] Entered create_gsc_api_fact_objects ",
+            "for $table a $table_type!\n";
+    } 
+
+    # obtain column properties
+    foreach my $read (@reads) {
+        my $pseudo_object = $read->{$table};
+        my %attributes = map { $_ => $pseudo_object->$_ } @non_pk_cols;
+        # contruct the GSC object
+        my $gsc;
+        my $pk_id = $read->id;
         
         $gsc = $gsc_class->create(%attributes, $pk => $pk_id);
         unless($gsc) {
             die "[err] Could not obtain an api object when creating a ",
                 "$gsc_class object with a $pk id of $pk_id \n";
         }
-    } 
+        $pseudo_object->$pk($pk_id);
+        push(@gsc_objects, $gsc);
+    }
 
-    return $gsc;
+    return \@gsc_objects;
 }
 
-sub single_threaded_table_row_creator {
-    my $self = shift;
+sub get_or_create_specified_gsc_dimension_objects {
+    my $class=shift;
     my %args = @_;
 
     my $table_type = $args{'table_type'}; # 'facts' or 'dimensions'
-    my $table_name = $args{'table_name'}; # in "table_name" form
+    my $table_name = $args{'table'}; # in "table_name" form
+    my @objects    = @{$args{'pseudo_objects'}};
+
+    # derive the GSC class name
+    my $gsc_class = $class->derive_gsc_class_name_from_pseudo_class;
+
+    # obtain column properties
+    my @non_pk_cols = $class->non_pk_columns; 
+    my $pk = $class->primary_key;
+
+    # contruct the GSC object
+    my @gsc_objects;
+
+    if ($table_type ne 'dimension') {
+        die "[err] Entered get_or_create_gsc_api_dimension_objects ",
+            "for $table_name a $table_type!\n";
+    }
+
+    # Step 1: See if gsc object already exists
+    my @nonexistant;
+    foreach my $pseudo_object (@objects) {
+        my %attributes = map {$_ => $pseudo_object->$_} @non_pk_cols;
+        my $gsc_object = $gsc_class->get(%attributes);
+        if($gsc_object) {
+            $pseudo_object->$pk($gsc_object->id);
+            push @gsc_objects, $gsc_object;
+        } 
+        else {
+            push @nonexistant, $pseudo_object;
+        }
+    }
+
+    # Step 2: if not exists properly create it and retrieve
+    #         the gsc object
+    if(@nonexistant) {
+        my @ids = $class->single_threaded_table_row_creator(
+                %args,
+                objects => \@nonexistant
+        );
+        for my $pseudo_object (@nonexistant) {
+            my $gsc_object = $gsc_class->get($pseudo_object->$pk);
+            unless ($gsc_object) {
+                die "[err] Could not create a gsc object from ref($pseudo_object) : ",
+                    "\n", Dumper($pseudo_object), "\n";
+            }
+            $pseudo_object->$pk($gsc_object->id);
+            push @gsc_objects, $gsc_object; 
+        }
+    }
+
+    return \@gsc_objects;
+}
+
+sub derive_gsc_class_name_from_pseudo_class {
+    my $self = shift;
+    my $class = ref($self) || $self;
+    my @class_name_parts = split(/\:\:/, $class);
+    my $table_class_name = $class_name_parts[$#class_name_parts];
+    my $gsc_class = 'GSC::' . $table_class_name;
+
+    return $gsc_class;
+}
+
+sub single_threaded_table_row_creator {
+    my $proto=shift;
+    my %args = @_;
+
+#    $DB::single = 1;
+    my $table_type = $args{'table_type'}; # 'facts' or 'dimensions'
+    my $table_name = $args{'table'}; # in "table_name" form
+
+    my @objects;
+    if(ref($proto)) {
+	    # Called as an object method
+        @objects=($proto);
+    } else {
+	    # Called as a class method--get the objects out of the arguments
+	    @objects=@{$args{'objects'}};
+    }
+    return unless(@objects);
 
     App::Object->status_message(
             "Entering single_threaded_table_row_creator App::Lock->create". 
@@ -181,31 +235,41 @@ sub single_threaded_table_row_creator {
         App::Object->status_message("Skipping obtaining an App::Lock for table $table_name")
     }
 
+    my @ids;
+    my $num_objects = scalar @objects;
+    my $object_counter = 0;
+    foreach my $object (@objects) {
+        $object_counter++;
+        App::Object->status_message("Working on $table_name object $object_counter of $num_objects");
+        # ensure that the row does not already exists!
+        App::Object->status_message("Performing pre-emptive id search in table $table_name");
+        my $id = $object->search_id(%args);    
+        if ($id) {
+            App::Object->status_message(
+                        "Finished with pre-emptive id search in table $table_name" .
+                        "and found id $id"
+                        );
+        } 
+        else {
+            App::Object->status_message(
+                        "Finished with pre-emptive id search in table $table_name" .
+                        "and found no primary key id"
+                        );
+        }
 
-    # ensure that the row does not already exists! 
-    App::Object->status_message("Performing pre-emptive id search for table $table_name");
-    my $id = $self->search_id(%args);    
-    if ($id) {
-        App::Object->status_message(
-                "Finished with pre-emptive id search for table $table_name" .
-                "and found id $id"
-        );
-    } 
-    else {
-        App::Object->status_message(
-                "Finished with pre-emptive id search for table $table_name" .
-                "and found no primary key id"
-        );
+        # perform the actual insertion
+        if (! $id) {
+            App::Object->status_message("Attempting to insert entry row to table $table_name");
+              $id = $object->insert_entry_into_table(%args);
+              $object->star_commit;
+              App::Object->status_message("commit on table: $table_name");
+        }
+
+        push @ids, $id;
+        my $pk = $object->primary_key;
+        $object->$pk($id);
     }
 
-    # perform the actual insertion
-    if (! $id) {
-        App::Object->status_message("Attempting to insert entry row to table $table_name");
-        $id = $self->insert_entry_into_table(%args);
-        $self->star_commit;
-        App::Object->status_message("commit on table: $table_name");
-#        $self->star_rollback;
-    }
 
     # Properly delete App::Lock
     if ($lock) {
@@ -222,7 +286,12 @@ sub single_threaded_table_row_creator {
         App::Object->status_message("No App::Lock was used for $table_name insertion...so no lock to delete");
     }
 
-    return $id;
+    if (ref($proto)) {
+        return $ids[0];
+    } 
+    else {
+        return @ids;
+    }
 }
 
 sub _setup_star_sth {
@@ -966,5 +1035,6 @@ sub derive_employee {
 # P A C K A G E  L O A D I N G ######################################
 1;
 
-# $Header$
+__END__
 
+# $Header$
