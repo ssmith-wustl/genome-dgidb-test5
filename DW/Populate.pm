@@ -72,36 +72,47 @@ my %dw_tables = (
 );
 
 
-my %star_schema_category_tables = (
+my %pipeline_based_table_groupings = (
     production => {
         dimensions => [
-                        'seq_dim',
-                        'source_sample_dim',
-                        'library_core_dim',
-                        'run_dim',
-                        'archive_project_dim',
-                        'production_date_dim',
-                        'production_machine_dim',
-                        'production_employee_dim',
-                        'processing_dim'
-                      ],
-        facts      => [
-                        'production_read_fact',
-                        'read_fact'
-                      ]
+            'seq_dim',
+            'source_sample_dim',
+            'library_core_dim',
+            'production_date_dim',
+            'production_machine_dim',
+            'production_employee_dim',
+            'processing_dim',
+            'archive_project_dim',
+            'run_dim'
+        ],
+
+        facts => [
+            'production_read_fact',
+            'read_fact'
+        ],
+
+        unique_dimensions_in_run => []    
     },
 
-    generic => {
+    other => {
         dimensions => [
-                        'seq_dim',
-                        'source_sample_dim',
-                        'run_dim',
-                        'archive_project_dim',
-                        'processing_dim'
-                      ],
-        facts      => [
-                        'read_fact'
-                      ]
+            'seq_dim',
+            'source_sample_dim',
+            'processing_dim',
+            'archive_project_dim',
+            'run_dim',
+        ],
+
+        facts => [
+            'read_fact'
+        ],
+        
+        unique_dimensions_in_run => [
+            'seq_dim',
+            'source_sample_dim',
+            'archive_project_dim'
+        ]
+
     }
 );
 
@@ -109,7 +120,6 @@ my %star_schema_category_tables = (
 #get/set methods
 __PACKAGE__->mk_accessors(
         qw(
-            read
             barcode
             run
             read_set
@@ -139,23 +149,16 @@ sub _init {
         unless (@read_sets >= 1) {
             warn "\n", '[warn] Could not obtain a set of reads for run: ', 
                  $gel_name, "\n";
-            $self->read_set('');
-            $self->read('');
+            $self->read_set([]);
             return ;
         }
         $self->read_set(\@read_sets);
     }
 
-    unless ( defined($self->read) ) {
-        my $set = $self->read_set();
-        my $read = shift(@{$set});
-        $self->read($read);
-    }
-    
     return 1;
 }
 
-sub star_schema_category_for_selected_read {
+sub pipeline_for_selected_read {
     my $self = shift;
     my %args = @_;
     
@@ -163,118 +166,81 @@ sub star_schema_category_for_selected_read {
 
     my $fc_id = $r->funding_id();
     my $fc = GSC::FundingCategory->get($fc_id);
-    
+
     if ($fc->pipeline eq 'shotgun sequencing') {
         return 'production';
     } else {
-        return 'generic';
+        return 'other';
     }
 }
 
-sub dimensions_for_selected_read {
+sub shared_dimensions_within_run_for_pipeline {
+    my $self = shift;
+    my %args = @_;
+    
+    my $pipeline = $args{'pipeline'};
+
+    my @all_dims = $self->all_dimensions_for_selected_pipeline(pipeline => $pipeline);
+
+    my @unique_dims = $self->unique_dimensions_within_run_for_pipeline(pipeline => $pipeline);
+    my %uniq_dimensions = map { $_ => 1 } @unique_dims;
+
+    my @shared_dims;
+    for my $d (@all_dims) {
+        if (not exists $uniq_dimensions{$d}) {
+            push(@shared_dims, $d);
+        }
+    }
+
+    return @shared_dims;
+}
+
+sub unique_dimensions_within_run_for_pipeline {
+    my $self = shift;
+    my %args = @_;
+    
+    my $pipeline = $args{'pipeline'};
+
+    my $dimsref = $pipeline_based_table_groupings{$pipeline}->{'unique_dimensions_in_run'};
+    return @{$dimsref};
+}
+
+sub all_dimensions_for_selected_pipeline {
     my $self = shift;
     my %args = @_;
 
-    my $r = $args{'read'} || die "[err] Please specify a read exp!\n";
+    my $pipeline = $args{'pipeline'};
 
-    # assess the star-schema-type for this read
-    my $ssc = $self->star_schema_category_for_selected_read(read => $r);
-    unless ($ssc) {
-        die '[err] ' , 'run: ', $self->run(), ' read id: ', $r->id,
-            ' Could not determine the proper set of dimension tables to populate.'; 
+    unless ($pipeline) {
+        die "[err] Need to specify a valid pipeline! \n";
     }
 
-    if (exists $star_schema_category_tables{$ssc}) {
-        my $dimsref = $star_schema_category_tables{$ssc}->{'dimensions'};
+    if (exists $pipeline_based_table_groupings{$pipeline}) {
+        my $dimsref = $pipeline_based_table_groupings{$pipeline}->{'dimensions'};
         return @{$dimsref};
     } else {
-        die "[err] Do not know how to deal with ",
-            "star_schema_category |$ssc| \n";
+        die "[err] Do not know which dimensions related with ",
+            "pipeline |$pipeline| \n";
     }
 }
 
-sub facts_for_selected_read {
+sub all_facts_for_selected_pipeline {
     my $self = shift;
     my %args = @_;
     
-    my $r = $args{'read'};
+    my $pipeline = $args{'pipeline'};
 
-    # assess the star-schema-type for this read
-    my $ssc = $self->star_schema_category_for_selected_read(read => $r);
-    unless ($ssc) {
-        die '[err] ' , 'run: ', $self->run(), ' read id: ', $r->id,
-            ' Could not determine the proper set of fact tables to populate.'; 
+    unless ($pipeline) {
+        die "[err] Need to specify a valid pipeline! \n";
     }
 
-    if (exists $star_schema_category_tables{$ssc}) {
-        my $factsref = $star_schema_category_tables{$ssc}->{'facts'};
+    if (exists $pipeline_based_table_groupings{$pipeline}) {
+        my $factsref = $pipeline_based_table_groupings{$pipeline}->{'facts'};
         return @{$factsref};
     } else {
-        die "[err] Do not know how to deal with ",
-            "star_schema_category |$ssc| \n";
+        die "[err] Do not know which facts related with ",
+            "pipeline |$pipeline| \n";
     }
-}
-
-sub populate_specified_tables_for_selected_read {
-    my $self = shift;
-    my %args = @_;
-    my $class = ref($self) || $self;
-    
-    my %created_table_objects;
-
-    #initialize and verify passed in parameters
-    my $read        = $args{'read'} || die "[err] Please specify a read exp!\n";
-    my $table_type  = $args{'table_type'}; # 'facts' or 'dimensions'
-    my $table_list  = $args{'tables'};     # arrayref of proper fact or dimension tables
-    my $dim_info    = $args{'dimension_info'};
-    
-    my $tables = $table_list or 
-        die '[err] List of ', $table_type, "to populate not specified!\n";
-    
-    # generate fact and/or dimension classes
-    for my $table (@{$tables}) {
-        my $table_class_name = $table;
-        $table_class_name =~ s/\_(\w)/uc($1)/eg; #convert "table_name" to "ClassDimensionForm"
-        $table_class_name =~ s/^(\w)/uc($1)/eg;  #ensure that the first letter is capitalized    
-        my $table_class = $class . '::' . $table_class_name;
-    
-        # create the initial parameters used for the fact or
-        # dimension class instantiation    
-        my %initial_params;
-        if ($table_type eq 'dimensions') {
-            %initial_params = (read => $read);
-        } elsif ($table_type eq 'facts') {
-            %initial_params = (read => $read);
-            my @dims = $self->dimensions_for_selected_read(read => $read);
-            for my $d (@dims) {
-                $initial_params{$d} = $dim_info->{$d} ;            
-            }
-        } else {
-            die "[err] $table_type is not a valid star schema table type!\n";
-        }
-        
-        # create the dimension or fact subclass object
-        my $tobj = $table_class->new(%initial_params);
-        # derive the non primary key columns 
-        $tobj->derive_non_pk_columns();
-        # based on the derived non primary key(pk) columns see if row
-        # already exists in the datawarehouse star schema
-        # otherwise insert the new row and obtain a new pk sequence id
-        my $id;
-        my $gsc_obj = $tobj->get_or_create_gsc_api_object(
-                table_type => $table_type,
-                table_name => $table
-        );
-        $id = $gsc_obj->id();
-        my $pk = $tobj->primary_key();
-        $tobj->$pk($id);
-        $created_table_objects{$table} = {
-            pseudo => $tobj,
-            gsc    => $gsc_obj
-        }
-    }
-    
-    return \%created_table_objects;
 }
 
 sub cache_data_for_reads {
@@ -360,90 +326,124 @@ sub uncache_data_for_reads {
 
 sub populate_star_schema_for_run {
     my $self = shift;
-    my $counter = 0;
     
+    my $reads = $self->read_set;
+    my $total_num_reads = scalar @{$reads};
+
     # ensure that there is at least one read associated with this run
-    unless ( defined($self->read) && $self->read() ) {
+    unless ( defined($total_num_reads) && $total_num_reads >= 1 ) {
         warn "\n", '[warn] Did not find any reads associated with this run ',
              $self->run(), ' ...skipping', "\n";
         return 0;
     }
 
+    my $num_reads_populated = 0;
+    my $newly_created_dim_objects;
+    my $newly_created_fact_objects;
+
+    # Fill the cache with things to speed processing up.    
+    my @re_ids = map { $_->id } (@$reads);
+    $self->cache_data_for_reads(@re_ids);
+
+    # for the given reads populate the OLAP tables
+    ($num_reads_populated, $newly_created_dim_objects, $newly_created_fact_objects) = 
+        $self->populate_dimensions_and_facts_for_reads();
+    
+    # uncache relevant historical data to speed processing up during backfilling.    
+#   $self->uncache_data_for_reads(@re_ids);
+
+    return $num_reads_populated;
+}
+
+sub populate_dimensions_and_facts_for_reads {
+    my $self = shift;
+
+    my $reads = $self->read_set;
+    my $token_read = $reads->[0];
+    my @remaining_reads = @{$reads}[1 .. $#{$reads}];
+
+    my $num_reads_populated = 0;
     my @newly_created_dim_objects;
     my @newly_created_fact_objects;
 
-    my $success = eval {
-        my $re = $self->read;
-        my $set = $self->read_set;
-        
-        # Fill the cache with things to speed processing up.    
-        my @re_ids = map { $_->id } ($re,@$set);
-        $self->cache_data_for_reads(@re_ids);
-        
-        # shortcut for populating 'production' type reads 
-        # i.e. (currently reads with funding pipeline of 'shotgun sequencing')
+
+    # assuming that the same pipeline is associated with the rest of reads in the run
+    my $pipeline          = $self->pipeline_for_selected_read(read => $token_read);
+    my @dim_tables        = $self->all_dimensions_for_selected_pipeline(pipeline => $pipeline);
+    my @fact_tables       = $self->all_facts_for_selected_pipeline(pipeline => $pipeline);
+    my @shared_dimensions = $self->shared_dimensions_within_run_for_pipeline(pipeline => $pipeline);
+    my @unique_dimensions = $self->unique_dimensions_within_run_for_pipeline(pipeline => $pipeline);
+
+    App::Object->status_message("The pipeline for run ". $self->run . " : " . $pipeline );
+
+    eval {
+        # S H A R E D    D I M E N S I O N S    C A S E
         # take a token read from the run and derive the dimension attributes
         # assume that the dimension attributes are the same for the rest of the 
         # reads associated with the run
-        if ($self->star_schema_category_for_selected_read(read => $re) eq 'production') {
-            my @dim_tables  = $self->dimensions_for_selected_read(read => $re);
-            my @fact_tables = $self->facts_for_selected_read(read => $re);
-            # properly populate the dimensions with the token read
-            my $dim_obj_href = $self->populate_specified_tables_for_selected_read(
-                    read       => $re,
-                    table_type => 'dimensions',
-                    tables     => \@dim_tables
+        for my $dim (@shared_dimensions) {
+            $self->derive_non_pk_table_attributes_for_selected_reads(
+                    reads      => [$token_read],
+                    table_type => 'dimension',
+                    table      => $dim
             );
-            push(@newly_created_dim_objects, $dim_obj_href);
-            my %dim_info = map { $_ => $dim_obj_href->{$_}->{'pseudo'} } @dim_tables;
-            # now populate the fact tables associated with the run
-            while($re = $self->read()) {
-                my $fact_obj_href = $self->populate_specified_tables_for_selected_read(
-                        read       => $re,
-                        table_type => 'facts',
-                        tables     => \@fact_tables,
-                        dimension_info => \%dim_info
-                );
-                push(@newly_created_fact_objects, $fact_obj_href);
-                $counter++;
-                # progress to the next read element
-                my $r = shift(@{$set});
-                if (defined($r) && $r) {
-                    $self->read($r);
-                } else {
-                    $self->read('');
-                }
-            }
-        } else {
-            # case for non-production runs --
-            # foreach read populate the dimension tables and fact tables individually
-            for my $re ($self->read(), @{$set}) {
-                my @dim_tables  = $self->dimensions_for_selected_read(read => $re);
-                my @fact_tables = $self->facts_for_selected_read(read => $re);
-
-                # properly populate the dimensions 
-                my $dim_obj_href = $self->populate_specified_tables_for_selected_read(
-                        read       => $re,
-                        table_type => 'dimensions',
-                        tables     => \@dim_tables
-                );
-                push(@newly_created_dim_objects, $dim_obj_href);
-                my %dim_info = map { $_ => $dim_obj_href->{$_}->{'pseudo'} } @dim_tables;
-                # properly populate the fact tables
-                my $fact_obj_href = $self->populate_specified_tables_for_selected_read(
-                        read       => $re,
-                        table_type => 'facts',
-                        tables     => \@fact_tables,
-                        dimension_info => \%dim_info
-                );
-                $counter++;
+            # get the primary key values for the objects
+            my $new_dim_objects = $self->construct_dimension_ids_for_selected_reads(
+                    reads      => [$token_read],
+                    table_type => 'dimension',
+                    table      => $dim
+            );
+            if (@{$new_dim_objects}) {
+                push(@newly_created_dim_objects, @{$new_dim_objects});
             }
         }
 
-        
-        # uncache relevant historical data to speed processing up during backfilling.    
-#        $self->uncache_data_for_reads(@re_ids);
-        return $counter;
+        # assign the dimension objects to the other remaing reads in the set/run
+        for my $re (@remaining_reads) {
+            for my $dim (@shared_dimensions) {
+                $re->{$dim} = $token_read->{$dim};
+            }
+        }
+
+        # U N I Q U E    D I M E N S I O N S   C A S E
+        # derive the dimension attributes for each read in run individually
+        for my $dim (@unique_dimensions) {
+            $self->derive_non_pk_table_attributes_for_selected_reads(
+                    reads      => $reads,
+                    table_type => 'dimension',
+                    table      => $dim
+            );
+            # get the primary key values for the objects
+            my $new_dim_objects = $self->construct_dimension_ids_for_selected_reads(
+                    reads      => $reads,
+                    table_type => 'dimension',
+                    table      => $dim
+            );
+            if (@{$new_dim_objects}) {
+                push(@newly_created_dim_objects, @{$new_dim_objects});
+            }
+        }
+
+        # F A C T   C R E A T I O N 
+        # now populate the fact tables for the set of reads with all attributes derived
+        for my $fact_table (@fact_tables) {
+            $self->derive_non_pk_table_attributes_for_selected_reads(
+                    reads      => $reads,
+                    table_type => 'fact',
+                    table      => $fact_table
+            );
+            my $new_fact_objects = $self->finalize_fact_ids_for_selected_reads(
+                    reads       => $reads,
+                    table_type  => 'fact',
+                    table       => $fact_table
+            );
+            if (@{$new_fact_objects}) {
+                push(@newly_created_fact_objects, @{$new_fact_objects});
+            }
+        }
+
+        $num_reads_populated = 
+            (scalar @newly_created_fact_objects)/(scalar @fact_tables);
     };
 
     if ($@) {
@@ -454,25 +454,155 @@ sub populate_star_schema_for_run {
              'deleting relevant dimension data associated with this run',
              "\n";
         $self->_remove_dimension_objects(@newly_created_dim_objects);
-        die "[err] Failed DW::Populate::populate_star_schema_for_run : ",
+        die "[err] Failed DW::Populate::populate_dimension_and_facts_for_production_reads : ",
             "\n\n", $err_message, "\n\n";
-        return;
     } else {
-        return $success;
+        return ($num_reads_populated, \@newly_created_dim_objects, \@newly_created_fact_objects);
     }
+} 
+
+sub derive_pseudo_object_class_name_for_table_name {
+    my $self = shift;
+    my $table_name = shift;
+
+    my $class = ref($self) || $self;
+
+    unless ($table_name) {
+        return ;
+    }
+
+    my $table_class_name = $table_name;
+    #convert "table_name" to "ClassDimensionForm"
+    $table_class_name =~ s/\_(\w)/uc($1)/eg; 
+    #ensure that the first letter is capitalized    
+    $table_class_name =~ s/^(\w)/uc($1)/eg;  
+    my $table_class = $class . '::' . $table_class_name;
+
+    return $table_class;
+}
+
+sub derive_non_pk_table_attributes_for_selected_reads {
+    my $self = shift;
+    my %args = @_;
+
+    my $reads = $args{'reads'};
+    my $type  = $args{'table_type'};
+    my $table = $args{'table'};
+
+    my $table_class = $self->derive_pseudo_object_class_name_for_table_name($table);
+
+    for my $read (@{$reads}) {
+        # create the initial parameters used for the fact or
+        # dimension pseudo class instantiation    
+        my %initial_params;
+
+        $initial_params{read} = $read;
+
+        if ($type eq 'fact') {
+            my $pipeline = $self->pipeline_for_selected_read(read => $read);
+            my @dims = $self->all_dimensions_for_selected_pipeline(pipeline => $pipeline);
+            for my $d (@dims) {
+                $initial_params{$d} = $read->{$d} ;            
+            }
+        }
+
+        # create pseudo object
+        my $pobj = $table_class->new(%initial_params);
+        # derive the non primary key columns 
+        $pobj->derive_non_pk_columns();
+        # remove the read associated with the pseudo object
+        $pobj->read(undef);
+        # assign the pseudo object as a hash key to the original read itself
+        $read->{$table} = $pobj;
+    }
+
+    return 1;
+}
+
+sub construct_dimension_ids_for_selected_reads {
+    my $self = shift;
+
+    my %args = @_;
+
+    my $reads = $args{'reads'};
+    my $type  = $args{'table_type'};
+    my $table = $args{'table'};
+
+    my $table_class = $self->derive_pseudo_object_class_name_for_table_name($table);
+    my @objects;
+
+    # collect all the pseudo objects of interest
+    for my $read (@{$reads}) {
+        my $pobj = $read->{$table};
+        push(@objects, $pobj);
+    }
+
+    my $gsc_objects = $table_class->get_or_create_specified_gsc_dimension_objects(
+            pseudo_objects => \@objects,
+            table_type => $type,
+            table => $table
+    );
+
+    my $pk = $table_class->primary_key;
+
+    my @newly_created_dims;
+    my %seen_dim_ids;
+    GSC: for my $gsc (@{$gsc_objects}) {
+        my $id = $gsc->id; 
+        if (not exists $seen_dim_ids{$id}) { 
+            for my $read (@{$reads}) {
+                my $pobj = $read->{$table};
+                if ($pobj->$pk == $id) {
+                    push(@newly_created_dims, { pseudo => $pobj, gsc => $gsc });
+                    $seen_dim_ids{$id} = 1;
+                    next GSC;
+                }
+            }
+        }
+    }
+
+    return \@newly_created_dims;
+}
+
+sub finalize_fact_ids_for_selected_reads {
+    my $self = shift;
+
+    my %args = @_;
+
+    my $reads = $args{'reads'};
+    my $type  = $args{'table_type'};
+    my $table = $args{'table'};
+
+    my $table_class = $self->derive_pseudo_object_class_name_for_table_name($table);
+    my $gsc_objects = $table_class->create_specified_gsc_fact_objects(
+            reads      => $reads,
+            table_type => $type,
+            table      => $table
+    );
+
+    my %gsc_objs = map { $_->id => $_ } @{$gsc_objects};
+
+    my @newly_created_facts;
+    for my $read (@{$reads}) {
+        push(@newly_created_facts, { pseudo => $read->{$table}, gsc => $gsc_objs{$read->id} });
+    }
+
+    return \@newly_created_facts;
 }
 
 sub _remove_dimension_objects {
     my $self = shift;
     my @dim_objects = @_;
 
-    for my $dim_obj_href (@dim_objects) {
-        my %dim_info = map { $_ => $dim_obj_href->{$_}->{'pseudo'} } 
-                       keys %{$dim_obj_href};
-        for my $dim (keys %dim_info) {
-            my $dobj = $dim_info{$dim};
-            $dobj->delete_entry_from_table(table_type => 'dimensions');
-        }
+    my @candidate_pseudo_objects_for_removal;
+
+    for my $obj_href (@dim_objects) {
+        my $pobj = $obj_href->{'pseudo'};
+        push(@candidate_pseudo_objects_for_removal, $pobj);
+    }
+
+    for (@candidate_pseudo_objects_for_removal) {
+        $_->delete_entry_from_table(table_type => 'dimensions');
     }
 }
 
@@ -497,3 +627,7 @@ sub all_fact_tables_in_star_schema {
 
 # P A C K A G E  L O A D I N G ######################################
 1;
+
+__END__
+
+# $Header$
