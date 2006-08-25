@@ -884,7 +884,7 @@ sub derive_date {
                  'read_id : ', $r->id(), "\n";
             $current_pse_warning_flag{$type} = $r->id();     
         }
-        return '1970-01-01 00:00:00' ;
+        return ;
     }
 
     my $date = $pse->date_scheduled;
@@ -922,7 +922,7 @@ sub derive_date {
         print "\n[warn] Problems obtaining the $type date for ", "\n",
               "\t", "read : ", $r->id() , "\n",
               "\t", "pse  : ", $pse->id() , "\n";
-        return '1970-01-01 00:00:00' ;
+        return ;
     }
 }
 
@@ -940,7 +940,7 @@ sub derive_machine {
                  'read_id : ', $r->id(), "\n";
             $current_pse_warning_flag{$type} = $r->id();     
         }
-        return 'EMPTY' ;
+        return ;
     }
 
     my ($ei);
@@ -950,7 +950,7 @@ sub derive_machine {
             "pse: ", $pse->id, "\n",
             "read: ", $r->id, "\n",
             "process_to: ", $type, "\n";
-        return 'EMPTY';    
+        return ;    
     }
     if (@pei > 1) {
         my @ei = GSC::EquipmentInformation->get(barcode => [map {$_->bs_barcode} @pei]);
@@ -976,9 +976,9 @@ sub derive_machine {
                     71873685 => 1
             );
             if (exists $problematic_prep_pses{$pse->id}) {
-                App::Object->status_message("Using specialized machine 'EMPTY' exception case for prep pse: " . $pse->id );
-                print "\n[warn] Specialized machine 'EMPTY' exception case for prep pse: ", $pse->id, "\n";
-                return 'EMPTY';
+                App::Object->status_message("Using specialized machine 'EMPTY'/undef exception case for prep pse: " . $pse->id );
+                print "\n[warn] Specialized machine 'EMPTY'/undef exception case for prep pse: ", $pse->id, "\n";
+                return ;
             }
             die "[err] Found parent equipment informations to be of ", scalar @parent_ei, 
                 " values.  Should be just 1. (process : $type) ", "\n",
@@ -1004,7 +1004,7 @@ sub derive_machine {
         print "\n[warn] Problems deriving the $type machine for ", "\n",
               "\t", "read : ", $r->id() , "\n",
               "\t", "pse  : ", $pse->id() , "\n";
-        return 'EMPTY';
+        return ;
     }    
 }
 
@@ -1021,14 +1021,14 @@ sub derive_employee {
                  'read_id : ', $r->id(), "\n";
             $current_pse_warning_flag{$type} = $r->id();     
         }
-        return 'EMPTY' ;
+        return ;
     }
     my $e = GSC::EmployeeInfo->get($pse->ei_id);
     if ($e) {
         my $u = GSC::User->get($e->gu_id);
         return $u->unix_login
     } else {
-        return 'EMPTY';
+        return ;
     }
 }
 

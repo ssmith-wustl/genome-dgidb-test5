@@ -54,7 +54,7 @@ sub derive_source_dna_name {
     } else {
         print "\n\t[warn] Could not obtain a base_template regarding this gel ",
               "and read(", $r->id(), ")", "\n";
-        return 'EMPTY';
+        return ;
     }
 }
 
@@ -71,10 +71,8 @@ sub derive_source_dna_type {
         } elsif ($base_template->isa('GSC::GenomicDNA') ) {
             $clone_type = 'genome';
         }
-    } else {
-        $clone_type = 'EMPTY';
-    }
-    
+    }     
+
     return $clone_type;
 }
 
@@ -90,7 +88,7 @@ sub derive_library_id {
         print "\n\t[warn] Could not obtain a GSC::CloneLibrary regarding this gel ",
               "and read(",
                $r->id(), ")\n";
-        return -1;
+        return ;
     }
 }
 
@@ -103,7 +101,7 @@ sub derive_library_number {
     if ($library) {
         return $library->library_number();
     } else {
-        return -1;
+        return ;
     }
 }
 
@@ -116,7 +114,7 @@ sub derive_fraction_id {
     if ($f) {
         return $f->fra_id();
     } else {
-        return -1;
+        return ;
     }
 }
 
@@ -128,7 +126,7 @@ sub derive_fraction_size {
     if ( defined($f) ) {
         return $f->fraction_name();
     } else {
-        return -1;
+        return ;
     } 
 }
 
@@ -142,7 +140,7 @@ sub derive_ligation_id {
         return $l->lig_id();
     } else {
         print "\n\t[warn] Could not derive the ligation id regarding this gel!\n";
-        return -1;
+        return ;
     }
 }
 
@@ -154,7 +152,7 @@ sub derive_ligation_name {
     if ( defined($l) ) {
         return $l->ligation_name();
     } else {
-        return 'EMPTY' ;
+        return ;
     }
 }
 

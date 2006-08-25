@@ -103,7 +103,7 @@ sub derive_load_group {
              "pse: ", $pse->id, "\n",
              "read: ", $r->id, "\n",
              "process_to: load ","\n";
-        return 'EMPTY';    
+        return ;    
     }
     if (@pei > 1) {
         my @ei = GSC::EquipmentInformation->get(barcode => [map {$_->bs_barcode} @pei]);
