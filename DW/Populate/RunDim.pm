@@ -258,13 +258,14 @@ sub cleanup_run_dim_table_entry {
     my $self = shift;
     my %args = @_;
 
-    my $attributes_href = $args{'attributes'};
+    my @non_pk_cols = $self->non_pk_columns;
+    my %attributes = map {$_ => $self->$_} @non_pk_cols;
 
     my ($run_name, 
         $polymer_reagent,
         $load_barcode, 
         $load_order) = 
-        @{$attributes_href}{
+        @attributes{
             'run_name',
             'polymer_reagent',
             'load_barcode',
