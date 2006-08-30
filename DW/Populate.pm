@@ -548,11 +548,18 @@ sub construct_dimension_ids_for_selected_reads {
     my @newly_created_dims;
     my %seen_dim_ids;
     GSC: for my $gsc (@{$gsc_objects}) {
-        my $id = $gsc->id; 
+        my $id;
+        if (defined $gsc) {
+            $id = $gsc->id; 
+        }
+        else {
+            $id = 'undef';
+        }
         if (not exists $seen_dim_ids{$id}) { 
             for my $read (@{$reads}) {
                 my $pobj = $read->{$table};
-                if ($pobj->$pk == $id) {
+                my $pk_value = $pobj->$pk || 'undef';
+                if ($pk_value eq $id) {
                     push(@newly_created_dims, { pseudo => $pobj, gsc => $gsc });
                     $seen_dim_ids{$id} = 1;
                     next GSC;

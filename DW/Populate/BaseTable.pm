@@ -75,6 +75,11 @@ sub init_cloned_star_dbh {
     return $stardbh;
 }
 
+sub can_dimension_table_have_null_pk_id {
+    my $class = shift;
+    return ;  # FALSE
+}
+
 sub create_specified_gsc_fact_objects {
     my $class = shift;
     my %args = @_;
@@ -133,6 +138,9 @@ sub get_or_create_specified_gsc_dimension_objects {
     my @non_pk_cols = $class->non_pk_columns; 
     my $pk = $class->primary_key;
 
+    # determine if the dimension table can have a nullable dimension id
+    my $is_nullable = $class->can_dimension_table_have_null_pk_id;
+
     # contruct the GSC object
     my @gsc_objects;
 
@@ -142,14 +150,41 @@ sub get_or_create_specified_gsc_dimension_objects {
     }
 
     # Step 1: See if gsc object already exists
+    #         ( or if gsc really needs to be created -- null id case)
     my @nonexistant;
     foreach my $pseudo_object (@objects) {
         my %attributes = map {$_ => $pseudo_object->$_} @non_pk_cols;
+
+        # count the number of undefined attributes
+        my $num_undef_attributes = 0;
+        for my $col (@non_pk_cols) {
+            if (not defined($attributes{$col})) {
+                $num_undef_attributes++; 
+            }
+        }
+
         my $gsc_object = $gsc_class->get(%attributes);
+
+        # gsc object already exists
         if($gsc_object) {
             $pseudo_object->$pk($gsc_object->id);
             push @gsc_objects, $gsc_object;
         } 
+
+        # specialized null dimension id case -- 
+        # all the relevant attributes are null and the table is nullable
+        elsif (($num_undef_attributes == scalar @non_pk_cols) and $is_nullable) {
+            $pseudo_object->$pk(undef);
+            push @gsc_objects, undef;
+        }
+
+        # specialized null dimension die case --
+        # all the relevant attributes are null and the table is NOT nullable
+        elsif (($num_undef_attributes == scalar @non_pk_cols) and not $is_nullable) {
+            die "[err] All non pk attributes undef in deriving row for non-nullable table $table_name ! ";
+        }
+
+        # a non existant dimension that needs to be created
         else {
             push @nonexistant, $pseudo_object;
         }

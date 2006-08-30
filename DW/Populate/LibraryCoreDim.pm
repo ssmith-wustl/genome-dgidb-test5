@@ -43,6 +43,11 @@ sub new {
     return $self;
 }
 
+sub can_dimension_table_have_null_pk_id {
+    my $class = shift;
+    return 1;  # TRUE
+}
+
 sub derive_source_dna_name {
     my $self = shift;
     
