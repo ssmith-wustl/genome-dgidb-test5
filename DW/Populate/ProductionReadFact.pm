@@ -149,14 +149,13 @@ sub derive_spec_od {
         warn "[warn] Could not obtain a subclone for determining the spec od : ", "\n",
              "read id: ", $r->id, "\n",
              "run_name: ", $r->gel_name, "\n";
-        return -1;     
+        return ;
     }
     my ($relevant_pse) = $self->get_pse_type(process_to => 'spec');
     unless ($relevant_pse) {
         warn "[warn] Could not find a proper pse in determining the spec_od for :\n",
              "read id: $re_id \n";
-        $spec_od_value = -1;
-        return $spec_od_value;
+         return ;    
     }
 
     my $seq_dna = $r->get_first_ancestor_with_type('sequenced dna');
@@ -193,11 +192,11 @@ sub derive_spec_od {
         warn "[warn] Could not derive a spec_od (concentration) value/",
              "GSC::DNAConcentration for ", 
              $r->re_id(), "\n";
-        $spec_od_value = -1;
+         return ;    
     }
        
     unless(defined($spec_od_value) && ($spec_od_value ne '')) {
-        $spec_od_value = -1;
+        return ;
     }
 
     return $spec_od_value;
