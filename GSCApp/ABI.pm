@@ -108,7 +108,12 @@ sub build_smb_command {
     # Default Options
     my %options=('-p' => 139,
                  '-U' => 'transferuser%tranxf3rus3r1',
-                 '-W' => 'gscseq');
+                );
+
+    # # nt100 isn't in the same domain as the regular ABIs and just has a local use defined
+    unless ($abi_host =~ m/nt100/i) {
+        $options{'-W'} = 'gscseq';
+    }
     
     # Add options passed in
     # Add directory
