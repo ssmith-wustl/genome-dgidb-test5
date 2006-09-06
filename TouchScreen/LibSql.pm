@@ -3920,6 +3920,9 @@ sub GetProjectPurpose {
     if($clone =~ /^M_/) {
 	$data = '5X';
     }
+    elsif($clone =~ /^Z_/){
+        $data = '3.5X';
+    }
     else {
 	$data = '8X';
     }
