@@ -97,6 +97,84 @@ sub flush_errors {
     return @e;
 }
 
+# handle timing and logging coverage 
+
+use Sys::Hostname;
+use File::Basename;
+use Time::HiRes;
+use DBI;
+
+my ($t1,$t2,$e);
+
+BEGIN {
+    $t1 = Time::HiRes::time();
+}
+
+END {
+    $t2 = Time::HiRes::time();
+    $e = $t2-$t1;
+    if (my $test_time_db = $ENV{UR_TEST_RECORD_TIME}) { 
+        eval {
+            my $database_exists_before_execution = (-e $test_time_db);
+
+            my $dbh = DBI->connect("dbi:SQLite:dbname=$test_time_db","","");
+            $dbh->{RaiseError} = 1;
+
+            unless ($database_exists_before_execution) {  
+                $dbh->do("create table test_execution("
+                    . "test_name text,user_name text,host_name text,log_date date,begin_time float,end_time float,elapsed_time float)"
+                );
+            }
+
+            $dbh->do("begin transaction");
+            $dbh->do(
+                "insert into test_execution(test_name,user_name,host_name,log_date,begin_time,end_time,elapsed_time) values (?,?,?,?,?,?,?)",
+                undef,
+                $0, $ENV{USER}, Sys::Hostname::hostname(), App::Time->now(), $t1, $t2, $e
+            );
+            $dbh->do("commit");
+            
+            $dbh->disconnect;
+        };
+
+        if ($@) {
+            print STDERR "Failed to log timing! $@";
+        }
+    } 
+
+
+    if (my $test_coverage_db = $ENV{UR_TEST_RECORD_COVERAGE}) { 
+        $DB::single = 1;
+        eval {
+            my $database_exists_before_execution = (-e $test_coverage_db);
+
+            my $dbh = DBI->connect("dbi:SQLite:dbname=$test_coverage_db","","");
+            $dbh->{RaiseError} = 1;
+
+            unless ($database_exists_before_execution) {  
+                $dbh->do("create table test_module_use("
+                    . "test_name text,module_name text)"
+                );
+            }
+
+            $dbh->do("begin transaction");
+            $dbh->do("delete from test_module_use where test_name = ?", undef, $0);
+            my $sth = $dbh->prepare("insert into test_module_use(test_name,module_name) values (?,?)");
+            for my $module_name (keys %INC) {
+                $sth->execute($0,$module_name);
+            }
+            $dbh->do("commit");
+            
+            $dbh->disconnect;
+        };
+
+        if ($@) {
+            print STDERR "Failed to log module usage! $@";
+        }
+    } 
+        
+}
+
 =pod
 
 =head1 NAME
