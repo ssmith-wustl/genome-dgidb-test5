@@ -99,16 +99,53 @@ sub flush_errors {
 
 # handle timing and logging coverage 
 
+use Cwd;
+sub _deconvolve_path {
+    # there must be a built-in which does this...?
+    # replace me
+    my $path = shift;
+    my $cwd = Cwd::cwd();
+    
+    my @parts;
+    unless ($path =~ /^\//) {
+        @parts = grep { length($_) } split(/\//,$cwd); 
+    }
+    push @parts, grep { length($_) and $_ ne "." } split(/\//,$path);
+   
+    my @final_parts; 
+    while (@parts) {
+        if ($parts[0] eq  "..") {
+            shift @parts;
+            pop @final_parts;
+        }
+        else {
+            push @final_parts, shift(@parts);
+        }
+    }
+    return join("", map { "/" . $_ } @final_parts); 
+}
+
 use Sys::Hostname;
 use File::Basename;
 use Time::HiRes;
 use DBI;
 
-my ($t1,$t2,$e);
+my ($t1,$t2,$e,$orig_argv,$inc);
 
 BEGIN {
     $t1 = Time::HiRes::time();
+    $orig_argv = "@ARGV";
+
+    $inc = "";
+    for my $path (@INC) {
+        if ($ENV{PERL5LIB} =~ /^$path(:|$)/) {
+            last;
+        }
+        $inc .= ":" if length($inc);
+        $inc .= _deconvolve_path($path);        
+    }
 }
+
 
 END {
     $t2 = Time::HiRes::time();
@@ -122,15 +159,15 @@ END {
 
             unless ($database_exists_before_execution) {  
                 $dbh->do("create table test_execution("
-                    . "test_name text,user_name text,host_name text,log_date date,begin_time float,end_time float,elapsed_time float)"
+                    . "test_name text,user_name text,host_name text,log_date date,begin_time float,end_time float,elapsed_time float,params text,inc text)"
                 );
             }
 
             $dbh->do("begin transaction");
             $dbh->do(
-                "insert into test_execution(test_name,user_name,host_name,log_date,begin_time,end_time,elapsed_time) values (?,?,?,?,?,?,?)",
+                "insert into test_execution(test_name,user_name,host_name,log_date,begin_time,end_time,elapsed_time,params,inc) values (?,?,?,?,?,?,?,?,?)",
                 undef,
-                $0, $ENV{USER}, Sys::Hostname::hostname(), App::Time->now(), $t1, $t2, $e
+                $0, $ENV{USER}, Sys::Hostname::hostname(), App::Time->now(), $t1, $t2, $e, $orig_argv, $inc
             );
             $dbh->do("commit");
             
