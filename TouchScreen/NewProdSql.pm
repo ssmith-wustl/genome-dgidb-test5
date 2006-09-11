@@ -2007,16 +2007,45 @@ sub ReplicateFosmidPlates {
     #---- because of newfanlged spec steps, the prior pse and the dna source pse may be different.... so we do this
     my @dna_source_pses;
     my @prior_pses;
+    #===================== this all should be cut out
     if(@$pre_pse_ids > 1){
 	#-- please note: this is for old steps.  Once every spec machine is running on optimus prime or higher, this entire
 	#   block can be taken out!
 	my $priors =  $self->GetAvailFosmidSubclonesInInprogress($bars_in->[0], $ps_id);
-	unless($priors){
-	    $self->{Error} = 'No priors found for old style replication';
-	    return;
+	if($priors){
+	    @dna_source_pses = @prior_pses = sort {$b <=> $a} @$priors;
 	}
-	@dna_source_pses = @prior_pses = sort {$b <=> $a}@$priors;
+	else{
+	    #--- one more try for special cases.  REALLY HACKY
+	    my $bc = GSC::Barcode->get($bars_in->[0]);
+	    unless($bc){
+		$self->{Error} = 'no barcode found';
+		return;
+	    }
+	    my %dp = map {$_->pse_id => $_} $bc->get_dna_pse;
+	    unless(%dp){
+		$self->{Error} = 'failed to find dna pses for '.$bc->barcode;
+		return;
+	    }
+	    @dna_source_pses = sort keys %dp;
+	    foreach my $dsp(@dna_source_pses){
+		my @tpp = GSC::TppPSE->get(prior_pse_id => $dsp, pse_id => $pre_pse_ids);
+		if(@tpp == 1){
+		    push @prior_pses, $tpp[0]->pse_id;
+		}
+		elsif(@tpp > 1){
+		    $self->{Error} = "No old style replication priors found, and too many out of house priors found!";
+		    return;
+		}
+		else{
+		    $self->{Error} = 'No priors found for old style replication';
+		    return;
+		}
+	    }
+	}
+
     }
+    #------------------ resume real processing
     else{
 	#-- this appropriately handles the new fashion.  Hopefully we will upgrade to transfer patterns soon, no ?
 	my $bc = GSC::Barcode->get($bars_in->[0]);
