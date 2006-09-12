@@ -2790,7 +2790,14 @@ our %PROCESS_CNTRL =
 								     'Confirm'       => 'ReplicateFosmidPlates',
 								     'OutputCheck'   => 'CheckIfUsedAsOutput',
 								 },
-								 },
+                                         '3 384 well archive plate' => {'SqlPackage'    => 'TouchScreen::NewProdSql',
+                                                                        'Configuration' => 'OneToThree',
+                                                                        'Headers'       => ['384 well Fosmid Plate', '384 well replicated plate', '384 well replicated plate', '384 well replicated plate'],
+                                                                        'InputCheck'    => 'GetAvailBarcodeInInprogress',
+                                                                        'Confirm'       => 'ReplicateFosmidPlates',
+                                                                        'OutputCheck'   => 'CheckIfUsedAsOutput',
+                                                                    },
+                                     },
 		     },   
 			 
 			     
