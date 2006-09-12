@@ -349,6 +349,15 @@ associations in four cases.
         SETUP_AMPLICON_DESIGN           GSC::Setup::AmpliconDesign
         SETUP_SEQUENCE_ANNOTATION       GSC::Setup::SequenceAnnotation
         READ_SUBMISSION_NCBI            GSC::Sequence::Read::Submission::NCBI
+
+        ORGANISM_POPULATION_GROUP       GSC::Organism::PopulationGroup
+        ORGANISM_SAMPLE                 GSC::Organism::Sample
+        ORGANISM_SUBMISSION_ID          GSC::Organism::SubmissionID
+        PHENOTYPE_MEASURABLE            GSC::Phenotype::Measurable
+        PHENOTYPE_MEASUREMENT           GSC::Phenotype::Measurement
+        PHENOTYPE_TRAIT                 GSC::Phenotype::Trait
+        PHENOTYPE_SAMPLE_TRAIT          GSC::Phenotype::SampleTrait
+        PHENOTYPE_GENERALIZATION        GSC::Phenotype::Generalization
     /
 );
 
