@@ -1,32 +1,39 @@
-use ExtUtils::MakeMaker;
+#!perl
 
-# get all the sub-directories where we want to look for modules
-my @subdirs;
-for ( `find . -type d` ) {
-    chomp;
-    s(^\./?)();
-    next unless ( $_ );
-    next if ( m(CVS) );
-    next if ( $_ eq 't' or m(^t/) );
-    next if ( $_ eq 'blib' or m(^blib/) );
-    push @subdirs, $_;
+use strict;
+use warnings;
+use inc::Module::Install;
+use Path::Class;
+
+name            'GSCApp',
+abstract        'this is my abstract';
+author          'me';
+version         '0.01';
+license         'perl';
+build_requires  'Test::More'    => '0.62';
+
+# could use this to point to custom installation
+# tool, like gsc-scripts or it's successor
+#install_script  'foo';
+
+# build explicit list of modules that should be involved
+my %pm;
+for my $d ( dir('App'), dir('GSC'), dir('GSCApp') ) {
+    $d->recurse(
+        callback => sub {
+            return if ( $_[0]->is_dir );
+            return if ( $_[0]->basename !~ /\.pm$/ );
+            $pm{"$_[0]"} = '$(INST_LIBDIR)/' . "$_[0]";
+        }
+    );
 }
 
-# get all the test to run for 'make test'
-#open(F, "<t/tests_in_order") or die "cannot open t/tests_in_order: $!";
-#my $tests;
-#for (<F>) {
-#    chomp;
-#    $tests .= join(' ', grep{ m(\.t$) } glob("t/$_"), '' );
-#}
-#close(F);
-
-# write the Makefile
-WriteMakefile (
-    'NAME'      => 'ALL_GSC_STUFF',
-#    'test'      => {TESTS => 't/[0-9][0-9]-*/[0-9][0-9]*.t'},
-#    'test'      => {TESTS => q{ `cat t/tests_in_order` } },
-#    'test'      => { TESTS => $tests },
-    'NORECURS'  => 1,
-    'PMLIBDIRS' => \@subdirs,
+#WriteAll;
+WriteMakefile(
+#    NAME        => 'GSCApp',
+#    NORECURS    => 1,
+#    PMLIBDIRS   => [],
+    PM          => \%pm,
+    test        => { TESTS => 'App/t/*.t GSC/t/*.t GSCApp/t/*.t' },
 );
+
