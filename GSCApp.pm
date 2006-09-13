@@ -350,6 +350,7 @@ associations in four cases.
         SETUP_SEQUENCE_ANNOTATION       GSC::Setup::SequenceAnnotation
         READ_SUBMISSION_NCBI            GSC::Sequence::Read::Submission::NCBI
 
+        TMP_ORGANISM                    GSC::TmpOrganism
         ORGANISM_POPULATION_GROUP       GSC::Organism::PopulationGroup
         ORGANISM_SAMPLE                 GSC::Organism::Sample
         ORGANISM_SUBMISSION_ID          GSC::Organism::SubmissionID
