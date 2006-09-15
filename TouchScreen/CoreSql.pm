@@ -439,6 +439,15 @@ sub ProcessOneInputToOneOutput {
     return ($pse);
 }
 
+sub dna_source_pses{
+    my $self = shift;
+    my $barcode = shift;
+    
+    my $bc= GSC::Barcode->get(barcode => $barcode);
+    my %dp = map {$_->pse_id => 1} $bc->get_dna_pse;
+    return sort keys %dp;
+}
+
 
 sub ProcessDNA {
 
@@ -466,71 +475,58 @@ sub ProcessDNA {
 	    }
 	}
     }
-    
 
-    foreach my $prior_pse (@$pre_pse_ids) {
-	my $pse = $self -> ProcessOneInputToOneOutput($ps_id, $bars_in->[0], $bars_out->[0], $emp_id, $prior_pse, $dont_update_prior);	
-	unless($pse) {
-	  $self->{'Error'} = "$pkg: ProcessDNA -> Failed creating PSE.";
-	  return;
+    my @dsp = $self->dna_source_pses($bars_in->[0]);
+    return unless @dsp;
+    foreach my $dna_source_pse(@dsp){
+	my $prior;
+
+	if(scalar(@$pre_pse_ids) == 1){
+	    $prior = $pre_pse_ids->[0];
 	}
-        my @pdps = GSC::DNAPSE->get(pse_id => $prior_pse);
-	unless(@pdps) {
-	  #LSF: Get chain of the prior pse since prior step do not have dna pse.
-	  #$self->{'Error'} = "$pkg: ProcessDNA -> Failed to find GSC::DNAPSE for pse_id [$prior_pse]!";
-	  my %beenhere;
-	  my $tprior_pse = $prior_pse;
-	  while($tprior_pse) {
-	    if($outpses{$tprior_pse}) {
-	      $self->{'Error'} = "$pkg: ProcessDNA -> Failed to find GSC::DNAPSE for pse_id [$tprior_pse]!";
-	      return;
-	    }
-            my $mp = GSC::PSE->get(pse_id => $tprior_pse);
-	    if($mp->prior_pse_id) {
-              $tprior_pse = $mp->prior_pse_id;
-	    } else {
-	      my @tpps = GSC::TppPSE->get(pse_id => $tprior_pse, barcode => $bars_in->[0]);
-	      unless(@tpps) {
-		$self->{'Error'} = "$pkg: ProcessDNA -> Failed to find GSC::DNAPSE for pse_id [$tprior_pse]!";
-		return;	    
-	      }
-	      if($tpps[0]->prior_pse_id) {
-                $tprior_pse = $tpps[0]->prior_pse_id;
-	      } else {
-		$self->{'Error'} = "$pkg: ProcessDNA -> Failed to find GSC::DNAPSE for pse_id [$tprior_pse]!";
-		return;	    
-	      }
-	    }
-            @pdps = GSC::DNAPSE->get(pse_id => $tprior_pse);
-	    if(@pdps) {
-	      last;
-	    }
-	    if($beenhere{$tprior_pse}) {
-	      $self->{'Error'} = "$pkg: ProcessDNA -> Failed to find GSC::DNAPSE for pse_id [$tprior_pse] and in a loop!";
-	      return;	      
-	    }
-	    $beenhere{$tprior_pse} = 1;
-	  }
-        }
-	foreach my $dp (@pdps) {
-	  my $dna_pse = $hdps{$dp->dl_id};
-	  unless($dna_pse) {
-	    #LSF: Put this here temporary to get the count colonies step through.
-	    #     The problem of the count colonies is that the prior step has the dna_pse dl_id 0.
-	    #     The output has the dl_id 2000 (tube).
-	    if(@pdps == 1 && keys %hdps == 1) {
-	      ($dna_pse) = values %hdps;
-	    } else {
-	      $self -> {'Error'} = "$pkg: ProcessDNA -> Failed to find DNAPSE.";
-	      return;
-	    }	    
-	  }
-	  unless(GSC::DNAPSE->create(pse_id => $pse->pse_id,
-				     dna_id => $dna_pse->dna_id,
-				     dl_id  => $dna_pse->dl_id)) {
-	    $self -> {'Error'} = "$pkg: ProcessDNA -> Failed creating DNAPSE.";
+	elsif(grep {$_ == $dna_source_pse} @$pre_pse_ids){
+	    $prior = $dna_source_pse;
+	}
+	else{
+	    ($prior) = App::DB->dbh->selectrow_array
+		(qq/select pse_id from tpp_pse 
+		 where pse_id in (/.join(',',@$pre_pse_ids).qq/)
+		 start with prior_pse_id = $dna_source_pse
+		 connect by prior pse_id = prior_pse_id/);
+	}
+	
+	unless($prior){
+	    $self->{Error} = "We cannot find the correct prior pse for the dna first dumped into this plate at pse $dna_source_pse";
 	    return;
-	  }
+	}
+
+	my $pse = $self -> ProcessOneInputToOneOutput($ps_id, $bars_in->[0], $bars_out->[0], $emp_id, $prior, $dont_update_prior);	
+	unless($pse) {
+	    $self->{'Error'} = "$pkg: ProcessDNA -> Failed creating PSE.";
+	    return;
+	}
+        my @pdps = GSC::DNAPSE->get(pse_id => $dna_source_pse);
+	return unless @pdps; #-- this is checked in the funciton that gives us the source pses
+
+	foreach my $dp (@pdps) {
+	    my $dna_pse = $hdps{$dp->dl_id};
+	    unless($dna_pse) {
+		#LSF: Put this here temporary to get the count colonies step through.
+		#     The problem of the count colonies is that the prior step has the dna_pse dl_id 0.
+		#     The output has the dl_id 2000 (tube).
+		if(@pdps == 1 && keys %hdps == 1) {
+		    ($dna_pse) = values %hdps;
+		} else {
+		    $self -> {'Error'} = "$pkg: ProcessDNA -> Failed to find DNAPSE.";
+		    return;
+		}	    
+	    }
+	    unless(GSC::DNAPSE->create(pse_id => $pse->pse_id,
+				       dna_id => $dna_pse->dna_id,
+				       dl_id  => $dna_pse->dl_id)) {
+		$self -> {'Error'} = "$pkg: ProcessDNA -> Failed creating DNAPSE.";
+		return;
+	    }
 	}
 	push (@$pses, $pse->pse_id);
     }
@@ -569,21 +565,13 @@ sub ProcessDNAWithNoDNAPSE {
 	}
 	
         #LSF: Keep it here for checking.
-        my @dna_pses = GSC::DNAPSE->get(sql => [qq/select distinct dp.* from dna_pse dp, pse_barcodes pb, dna_pse dp2, dna_location dl1, dna_location dl2
-                                                where 
-                                                dp.pse_id = pb.pse_pse_id 
-                                                and dp.dl_id = dl1.dl_id
-                                                and dp2.dl_id = dp.dl_id
-                                                and dl1.sec_id = dl2.sec_id
-                                                and direction = 'out' 
-                                                and bs_barcode = ? 
-                                                and dp2.pse_id =  ?/, $bars_in->[0], $prior_pse]);
-        
-
-	unless(@dna_pses) {
+	my $bc = GSC::Barcode->get($bars_in->[0]);
+	return unless $bc;
+	my @dp = $bc->get_dna_pse;
+	unless(@dp) {
+	    $self->{Error} = 'No DNA in this plate!';
 	    return;
 	}
-		
 	push (@$pses, $pse->pse_id);
     }
 
