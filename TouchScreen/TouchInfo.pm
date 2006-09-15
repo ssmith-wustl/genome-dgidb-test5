@@ -2262,7 +2262,7 @@ our %PROCESS_CNTRL =
                                                'Headers'       => ['dna plate'],
                                                'InputCheck'    => 'GetAvailBarcodeInInprogress',
                                                'OutputCheck'   => undef,
-                                               'Confirm'       => 'ProcessDNA',
+					      'Confirm'       => 'ProcessDNAWithNoDNAPSE',
                                            },
                       
                  },
