@@ -44,11 +44,11 @@ sub derive_organism_name {
     
     my $r = $self->read();
     my $dr = $r->get_first_ancestor_with_type('dna resource');
-    my $o = GSC::Organism->get(org_id => $dr->org_id) or 
+    my $o = GSC::Organism::Taxon->get(legacy_org_id => $dr->org_id) or 
         die "[err] Could not derive the organism_name in: ", 
              ref($self), "\n",
              'via read id: ', $r->id(), "\n";
-    return $o->organism_name();
+    return $o->species_name();
 }
 
 sub derive_vector {
