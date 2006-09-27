@@ -351,7 +351,7 @@ associations in four cases.
         READ_SUBMISSION_NCBI            GSC::Sequence::Read::Submission::NCBI
 
         TMP_ORGANISM                    GSC::TmpOrganism
-        ORGANISM_POPULATION_GROUP       GSC::Organism::PopulationGroup
+        ORGANISM_TAXON                  GSC::Organism::Taxon
         ORGANISM_SAMPLE                 GSC::Organism::Sample
         ORGANISM_SUBMISSION_ID          GSC::Organism::SubmissionID
         PHENOTYPE_MEASURABLE            GSC::Phenotype::Measurable
