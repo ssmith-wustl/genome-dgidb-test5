@@ -18,7 +18,7 @@ build_requires  'Test::More'    => '0.62';
 
 # build explicit list of modules that should be involved
 my %pm;
-for my $d ( dir('App'), dir('GSC'), dir('GSCApp') ) {
+for my $d ( map { dir($_) } qw(App GSC GSCApp) ) {
     $d->recurse(
         callback => sub {
             return if ( $_[0]->is_dir );
