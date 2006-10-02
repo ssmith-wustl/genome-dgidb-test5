@@ -30,15 +30,18 @@ for my $d ( map { dir($_) } qw(App GSC GSCApp) ) {
 
 my $tests = 'App/t/*.t GSC/t/*.t GSCApp/t/*.t';
 
-makemaker_args  (
+makemaker_args(
     PM   => \%pm,
     test => { TESTS => $tests },
 );
 
 postamble( << "EOS" );
 
-smoke : util/run-smoke.pl all
-	\$(PERL) util/run-smoke.pl smoke.html $tests
+smoke : all
+	\$(PERL) util/run_smoke.pl smoke.html $tests
+
+tests.yml : all
+	\$(PERL) util/yaml_harness.pl $tests --concurrent 5
 
 EOS
 
