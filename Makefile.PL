@@ -28,12 +28,19 @@ for my $d ( dir('App'), dir('GSC'), dir('GSCApp') ) {
     );
 }
 
-#WriteAll;
-WriteMakefile(
-#    NAME        => 'GSCApp',
-#    NORECURS    => 1,
-#    PMLIBDIRS   => [],
-    PM          => \%pm,
-    test        => { TESTS => 'App/t/*.t GSC/t/*.t GSCApp/t/*.t' },
+my $tests = 'App/t/*.t GSC/t/*.t GSCApp/t/*.t';
+
+makemaker_args  (
+    PM   => \%pm,
+    test => { TESTS => $tests },
 );
+
+postamble( << "EOS" );
+
+smoke : util/run-smoke.pl all
+	\$(PERL) util/run-smoke.pl smoke.html $tests
+
+EOS
+
+WriteAll;
 
