@@ -32,7 +32,6 @@ use IO::Handle;
 STDOUT->autoflush;
 STDERR->autoflush;
 
-App::DB->db_variant('development');
 App::DB->db_access_level('rw');
 App->init();
 
