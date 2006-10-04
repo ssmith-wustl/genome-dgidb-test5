@@ -45,6 +45,12 @@ smoke : tests.yml
 tests.yml : all
 	\$(PERLRUNINST) util/lsf_harness.pl $tests
 
+cover_db : all
+	HARNESS_PERL_SWITCHES=-MDevel::Cover make test
+
+coverage : cover_db
+	cover
+
 EOS
 
 WriteAll;
