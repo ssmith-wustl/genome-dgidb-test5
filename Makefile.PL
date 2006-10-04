@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use inc::Module::Install;
-use Path::Class;
+use Path::Class ();
 
 name            'GSCApp',
 abstract        'this is my abstract';
@@ -17,8 +17,10 @@ build_requires  'Test::More'    => '0.62';
 #install_script  'foo';
 
 # build explicit list of modules that should be involved
+# since this directory is used by projects other than
+# App/GSC/GSCApp
 my %pm;
-for my $d ( map { dir($_) } qw(App GSC GSCApp) ) {
+for my $d ( map { Path::Class::dir($_) } qw(App GSC GSCApp) ) {
     $d->recurse(
         callback => sub {
             return if ( $_[0]->is_dir );
@@ -37,11 +39,11 @@ makemaker_args(
 
 postamble( << "EOS" );
 
-smoke : all
-	\$(PERL) util/run_smoke.pl smoke.html $tests
+smoke : tests.yml
+	\$(PERL) util/testgraph.pl > smoke.html
 
 tests.yml : all
-	\$(PERL) util/yaml_harness.pl $tests --concurrent 5
+	\$(PERLRUNINST) util/lsf_harness.pl $tests
 
 EOS
 

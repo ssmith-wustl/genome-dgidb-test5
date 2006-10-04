@@ -1,0 +1,11 @@
+This "inc" directory is for modules/libraries that are only
+used during the build/make/test process.  The should not
+be deployed.  Makefile.PL makes this directory get included
+during any of the "make" commands.
+
+The Module directory is from inc::Module::Install.  It's all
+auto-generated code so it should not be modified.
+
+Also, Test::TAP::Model::LSF lives here.  It may not be the
+best place for it, but it works for now
+
