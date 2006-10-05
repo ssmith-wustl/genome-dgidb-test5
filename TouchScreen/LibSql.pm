@@ -3886,7 +3886,13 @@ sub GetProjectTarget {
     }
     
     my $clone = $self->{'GetProjectFromLigationBarcode'} -> xSql($barcode->[0]);
-    if($clone =~ /^(Z_AG|Z_AH|Z_AF)/) {
+
+    my $clone_obj = GSC::Clone->get(clone_name => $clone);
+
+    if($clone_obj->clone_type eq 'fosmid') {
+        $data = '8';
+    }
+    elsif($clone =~ /^(Z_AG|Z_AH|Z_AF)/) {
         $data = '8';
     }
     else {
