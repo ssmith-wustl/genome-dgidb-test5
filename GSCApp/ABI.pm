@@ -310,7 +310,7 @@ sub new {
 
 sub set_error {
     my $self=shift;
-    $self->error(1);
+    $self->error_message(1);
 
     my $error_reason=shift || 'unknown';
     $self->error_reason($error_reason);
