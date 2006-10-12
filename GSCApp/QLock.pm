@@ -23,7 +23,7 @@ GSCApp::QLock - lock and unlock the GSC queues
 
   %rv = GSCApp::QLock->create(queue => 'csp');
   %rv = GSCApp::QLock->delete(queue => 'genqueue');
-  %rv = GSCApp::QLock->status_message(queue => 'csp:asd');
+  %rv = GSCApp::QLock->status(queue => 'csp:asd');
 
 =head1 DESCRIPTION
 
@@ -454,7 +454,7 @@ sub delete
 
 =item status
 
-    GSCApp::QLock->status_message(queue => 'csp:at');
+    GSCApp::QLock->status(queue => 'csp:at');
 
 Return lock status of queue.  The return value of this method is a
 hash.  The hash keys are the type of locks.  The values of the hash
