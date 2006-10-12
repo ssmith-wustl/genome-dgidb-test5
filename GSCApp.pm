@@ -445,20 +445,6 @@ DNA.pm and Processable.pm.
 
 #App::DB->hide_table_columns(".+\._OLD");
 #App::DB->hide_table_columns('.+_OLD$');
-App::DB->hide_table_columns(qr/.+\._OLD$/);
-App::DB->hide_table_columns("CLONE_GROWTHS.CLO_CLO_ID");
-App::DB->hide_table_columns("CLONE_GROWTHS.CG_CG_ID");
-App::DB->hide_table_columns("CLONE_GROWTHS.SUB_SUB_ID");
-App::DB->hide_table_columns("CLONE_GROWTHS.CL_CL_ID");
-App::DB->hide_table_columns("CLONE_LIBRARIES.SUB_SUB_ID");
-App::DB->hide_table_columns("FRACTIONS.CL_CL_ID");
-App::DB->hide_table_columns("LIGATIONS.FRA_FRA_ID");
-App::DB->hide_table_columns("SUBCLONES.LIG_LIG_ID");
-App::DB->hide_table_columns("SEQUENCED_DNAS.SUB_SUB_ID");
-App::DB->hide_table_columns("TRACES.SEQDNA_SEQDNA_ID");
-App::DB->hide_table_columns("READ_EXPS.TRA_TRA_ID");
-App::DB->hide_table_columns("EXPUNGED_READ.TRA_TRA_ID");
-
 
 %App::DB::tables_for_instance = (
     olap => {
