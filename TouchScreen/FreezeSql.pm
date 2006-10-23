@@ -52,7 +52,7 @@ sub new {
     #$self->{'CoreSql'} = new CoreSql($dbh, $schema);
     $self = $class->SUPER::new( $dbh, $schema);
     $self->{'GetBarcodeDesc'} = LoadSql($dbh,"select decode(barcode_description, 'none', content_description, barcode_description) from $schema.barcode_sources where barcode = ?", 'Single');
-    $self->{'GetEquipmentBarcodeDesc'} = LoadSql($dbh,"select ei.equ_equipment_description from $schema.barcode_sources bs join $schema.equipment_informations ei on bs.barcode = ei.bs_barcode  where barcode = ?", 'Single');
+    $self->{'GetEquipmentBarcodeDesc'} = LoadSql($dbh,"select ei.equ_equipment_description || ' ' || bs.barcode_description from $schema.barcode_sources bs join $schema.equipment_informations ei on bs.barcode = ei.bs_barcode  where barcode = ?", 'Single');
 
     $self->{'GetEquipmentStatus'} = LoadSql($dbh, "select EIS_EQUIPMENT_STATUS from  $schema.equipment_informations
 	                               where BS_BARCODE = ?", 'Single');
