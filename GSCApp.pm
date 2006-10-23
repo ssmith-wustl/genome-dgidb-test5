@@ -524,10 +524,10 @@ my @logins = (
     [qw(ldb64 gsc GSCUSER gscguest guest64 ro production GSC)],
 
     # OLTP development
-    [qw(dbdev gsc GSC gscuser g_user rw development GSC)],
-    [qw(dbdev gsc GSC devuser iamonrac rw-developer development GSC)],
-    [qw(dbdev gsc GSC gscguest g_guest ro development GSC)],
-    [qw(dbdev gsc GSC devguest dg_rac ro-developer development GSC)],
+#    [qw(dbdev gsc GSC gscuser g_user rw development GSC)],
+#    [qw(dbdev gsc GSC devuser iamonrac rw-developer development GSC)],
+#    [qw(dbdev gsc GSC gscguest g_guest ro development GSC)],
+#    [qw(dbdev gsc GSC devguest dg_rac ro-developer development GSC)],
 
 #    # OLTP development
 #    [qw(devdb gsc GSC gscuser dev_user rw development GSC)],
@@ -570,7 +570,7 @@ my @servers = (
 
     # development servers
 #    [qw(gscnew   Oracle  old_oltp_dev)],
-    [qw(dbdev    Oracle  oltp_dev)],
+#    [qw(dbdev    Oracle  oltp_dev)],
     [qw(dwdev    Oracle  dw_dev)],
 );
 
@@ -589,7 +589,7 @@ my @variants = (
     [qw(production       olap       ldb64)],
 
     # development variants
-    [qw(development      oltp       dbdev)],
+#    [qw(development      oltp       dbdev)],
     [qw(development      warehouse  dwdev)],
 
     # old development variants
