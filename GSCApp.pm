@@ -46,8 +46,8 @@ our $VERSION = 1.6;
 
 BEGIN {
     if ($^O eq 'MSWin32') {
-        $ENV{ORACLE_HOME} = "//winsvr.gsc.wustl.edu/gsc/pkg/oracle/installed";
-        $ENV{PATH} = "//winsvr.gsc.wustl.edu/gsc/pkg/oracle/installed/BIN:$ENV{PATH}";
+        $ENV{ORACLE_HOME} = '\\\\winsvr.gsc.wustl.edu\\gsc\\pkg\\oracle\\installed';
+        $ENV{PATH} = '\\\\winsvr.gsc.wustl.edu\\gsc\\pkg\\oracle\\installed\\BIN;' . $ENV{PATH};
     }
 }
 
