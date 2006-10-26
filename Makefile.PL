@@ -19,15 +19,19 @@ build_requires  'Test::More'    => '0.62';
 # build explicit list of modules that should be involved
 # since this directory is used by projects other than
 # App/GSC/GSCApp
-my %pm;
+my @files = map { Path::Class::file($_) } qw(App.pm GSCApp.pm);
 for my $d ( map { Path::Class::dir($_) } qw(App GSC GSCApp) ) {
     $d->recurse(
         callback => sub {
             return if ( $_[0]->is_dir );
             return if ( $_[0]->basename !~ /\.pm$/ );
-            $pm{"$_[0]"} = '$(INST_LIBDIR)/' . "$_[0]";
+            push @files, $_[0];
         }
     );
+}
+my %pm;
+for my $f (@files) {
+    $pm{"$f"} = '$(INST_LIBDIR)/' . "$f";
 }
 
 my $tests = 'App/t/*.t GSC/t/*.t GSCApp/t/*.t';
