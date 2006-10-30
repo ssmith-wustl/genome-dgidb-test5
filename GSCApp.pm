@@ -114,7 +114,7 @@ App::MsgLogger->message_callback
     { 
         my $msg = $_[0]->text; 
         chomp $msg; 
-        print STDERR App::Name->pkg_name . ": WARNING: " . join(': ', (caller(3))[0, 2]) . ": $msg\n"; 
+        print STDERR App::Name->pkg_name . ": WARNING: " . join(': ', (caller(2))[0, 2]) . ": $msg\n"; 
         return 1
     }
 );
@@ -126,7 +126,7 @@ App::MsgLogger->message_callback
     { 
         my $msg = $_[0]->text; 
         chomp $msg; 
-        print STDERR App::Name->pkg_name . ": ERROR: " . join(': ', (caller(3))[0, 2]) . ": $msg\n"; 
+        print STDERR App::Name->pkg_name . ": ERROR: " . join(': ', (caller(2))[0, 2]) . ": $msg\n"; 
         return 0
     }
 );
