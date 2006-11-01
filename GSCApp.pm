@@ -266,7 +266,6 @@ associations in four cases.
     SEQUENCE_CLIPPING           => 'clipping sequence tag',
     SEQUENCE_FINISHING_TAG      => 'finishing sequence tag',    
     EXPUNGED_SEQUENCE_READ      => 'sequence expunged read',
-    MP_READ_FUNDING_CATEGORY    => 'mutational profiling read funding category',
     NHGRI_READ_FUNDING_CATEGORY    => 'old nhgri read funding category',
     CDS_SEQUENCE_TAG            => 'cds sequence tag',
     GSC_RUN                     => 'run',
@@ -304,7 +303,6 @@ associations in four cases.
         ENTITY_TYPE_ID                  App::Object::Property::ID
         ENTITY_TYPE_UNIQUE_ATTRIBUTE    App::Object::Property::Unique
         BARCODE                         GSC::BarcodeNew
-        MP_READ_FUNDING_CATEGORY        GSC::FundingCategory::MP::Read
         PS_TPP                          GSC::PSTPP
 
          
