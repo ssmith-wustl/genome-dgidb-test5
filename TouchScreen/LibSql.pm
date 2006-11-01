@@ -3875,7 +3875,7 @@ sub GetProjectTarget {
 
     my ($pso_id, $data, $lov) = $TouchSql -> GetPsoInfo($ps_id, $desc);
     
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy;
 
     
     my $proj_data = $self -> {'GetProjectTargetFromBarcodePsId'} -> xSql($barcode->[0], $ps_id);
@@ -3911,7 +3911,7 @@ sub GetProjectPurpose {
 
     my ($pso_id, $data, $lov) = $TouchSql -> GetPsoInfo($ps_id, $desc);
     
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy;
 
     $lov = Lquery($self->{'dbh'}, "select purpose from project_purposes");
 
@@ -3946,7 +3946,7 @@ sub GetProjectPriority {
 
     my ($pso_id, $data, $lov) = $TouchSql -> GetPsoInfo($ps_id, $desc);
     
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy;
 
     my $proj_data = $self -> {'GetProjectPriorityFromBarcodePsId'} -> xSql($barcode->[0], $ps_id);
    
