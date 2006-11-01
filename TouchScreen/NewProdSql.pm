@@ -1597,7 +1597,7 @@ sub GetArchivePurpose {
 
     my ($pso_id, $data, $lov) = $TouchSql -> GetPsoInfo($ps_id, $desc);
     
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy;
 
     my $purpose = $self -> {'GetArchivePurposeFromBarcode'} -> xSql($barcode->[0]);
     
@@ -1619,7 +1619,7 @@ sub GetClonePrefix {
 
     my ($pso_id, $data, $lov) = $TouchSql -> GetPsoInfo($ps_id, $desc);
     
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy;
 
     my $dv = 'PPAD';    
 	
