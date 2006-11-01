@@ -182,7 +182,7 @@ sub GetPlateName {
 
     my ($pso_id, $data, $lov) = $TouchSql -> GetPsoInfo($ps_id, $desc);
     
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy;
 
     $data = pop(@{$self->{'platelist'}});
     
