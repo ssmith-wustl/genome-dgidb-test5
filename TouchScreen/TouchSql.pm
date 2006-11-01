@@ -25,7 +25,7 @@ our @ISA = qw (Exporter AutoLoader);
 our @EXPORT = qw ( );
 
 my $pkg = __PACKAGE__;
-
+our $SINGLETON;
 #########################################################
 # Create a new instance of the TouchSql code so that you #
 # can easily use more than one data base schema         #
@@ -34,7 +34,8 @@ sub new {
 
     # Input
     my ($class, $dbh, $schema) = @_;
-    
+    #LSF: Assume you will not miss production and development database together. (I do not think this will happen).
+    return $SINGLETON if($SINGLETON);
     my $self;
 
     $self = {};
@@ -694,7 +695,7 @@ $arch_queries -> {'clone_name'} = LoadSql($dbh, "select clone_name from clones w
 	and pb.pse_pse_id = cp.pse_pse_id 
 	and bs_barcode = ?", 'Single');
  
-
+$SINGLETON = $self;
 return $self;
 
 } #new
@@ -721,6 +722,7 @@ sub rollback {
 sub destroy {
     my ($self) = @_;
     undef %{$self}; 
+    $SINGLETON = undef;
     $self ->  DESTROY;
 } #destroy
    
