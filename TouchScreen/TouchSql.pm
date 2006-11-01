@@ -705,7 +705,7 @@ return $self;
 ################################
 sub commit {
     my ($self) = @_;
-    $self->{'dbh'}->commit;
+    $self->{'dbh'}->commit if($SINGLETON);
 } #commit
 
 ################################
@@ -713,7 +713,7 @@ sub commit {
 ################################
 sub rollback {
     my ($self) = @_;
-    $self->{'dbh'}->rollback;
+    $self->{'dbh'}->rollback if($SINGLETON);
 } #commit
 
 ###################################
@@ -724,6 +724,7 @@ sub destroy {
     undef %{$self}; 
     $SINGLETON = undef;
     $self ->  DESTROY;
+    $self = undef;
 } #destroy
    
 ############################################################################################
