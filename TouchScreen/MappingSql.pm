@@ -2770,7 +2770,7 @@ sub SetupGel {
       }
     }
        
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy; #LSF: It is a singleton, we do want to destroy it.
     
     return [$new_pse_id1, $new_pse_id2];
 }
@@ -2847,7 +2847,7 @@ sub DigestGelLoading {
 	}
     }
     
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy; #LSF: It is a singleton, we do want to destroy it.
     
     return $result;
 }
@@ -3002,7 +3002,7 @@ sub DigestGelStaining {
 	}
     }
     
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy; #LSF: It is a singleton, we do want to destroy it.
     
     return $result;
 } #DigestGelStaining
@@ -3044,7 +3044,7 @@ sub DigestGelToScanPlate {
 	}
     }
     
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy; #LSF: It is a singleton, we do want to destroy it.
     
     return $result;
 } #DigestGelToScanPlate
@@ -3069,7 +3069,7 @@ sub ScanImage {
 	}
     }
     
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy; #LSF: It is a singleton, we do want to destroy it.
     
     return $result;
 
@@ -3441,7 +3441,7 @@ sub LogActiveReagentEvent {
 	}
     }
     
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy; #LSF: It is a singleton, we do want to destroy it.
 
     return 1;
 }
@@ -3454,7 +3454,7 @@ sub GenerateFileName {
 
     my ($pso_id, $data, $lov) = $TouchSql -> GetPsoInfo($ps_id, $desc);
     
-    $TouchSql -> destroy;
+    #$TouchSql -> destroy; #LSF: It is a singleton, we do want to destroy it.
 
     my ($year, $month, $day) = Today();
   
