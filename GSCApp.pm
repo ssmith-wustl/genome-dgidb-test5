@@ -42,8 +42,6 @@ B<GSCApp> makes the following customizations to applications:
 
 use warnings;
 use strict;
-
-
 our $VERSION = 1.6;
 
 BEGIN {
