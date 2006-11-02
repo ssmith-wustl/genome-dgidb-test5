@@ -706,8 +706,6 @@ sub number_to_alpha
     return($base_string . chr(ord('a') + $remainder));
 }
 
-#App::Init->add_init_subroutine('Temp fix.', sub { require GSC::Sequence });
-
 1;
 __END__
 
@@ -725,7 +723,6 @@ App(3), App::Object(3), App::DB(3), App::UI(3), App::Msgr(3),
 App::Lock(3), App::Debug(3), App::ACL(3), App::Mail(3), App::Print(3),
 App::MsgLogger(3), GSCApp::DBI(3), GSCApp::Mail(3),
 GSCApp::Print::Barcode(3), GSCApp::QLock(3), GSC::Processable(3),
-GSC::Sequence(3)
 
 =head1 AUTHOR
 
