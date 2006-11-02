@@ -112,10 +112,10 @@ sub new {
 					     barx.bs_barcode = ? and barx.direction = ? and pse.ps_ps_id in 
 					     (select ps_id from process_steps where pro_process_to in
 					      (select ps1.pro_process from process_steps ps, process_steps ps1 where ps.pro_process_to = ps1.pro_process_to and ps.ps_id = ?))/, 'ListOfList');
-    $self -> {'GetAvailPseOnMachine'} = LoadSql($dbh,  qq/ select distinct dp.pse_id from dna d, dna_pse dp, equipment_informations ei, pse_equipment_informations pei, process_step_executions pse
+    $self -> {'GetAvailPseOnMachine'} = LoadSql($dbh,  qq{ select /*+ use_nl(dp d) */ distinct dp.pse_id from dna d, dna_pse dp, equipment_informations ei, pse_equipment_informations pei, process_step_executions pse
 		where d.dna_id = dp.dna_id
-		and dp.pse_id = pei.pse_pse_id and pse.pse_id = dp.pse_id and pse.psesta_pse_status = 'inprogress'   
- 		and pei.equinf_bs_barcode = ei.bs_barcode and ei.bs_barcode = ?/, 'single');   
+		and pse.pse_id = pei.pse_pse_id and pse.pse_id = dp.pse_id and pse.psesta_pse_status = 'inprogress'   
+ 		and pei.equinf_bs_barcode = ei.bs_barcode and ei.bs_barcode = ?}, 'single');   
     $self -> {'GetAvailCloneGrowth_20031231'} = LoadSql($dbh,  qq/select distinct substr(c.clone_name, 0, length(c.clone_name) - 3) || ' ' || s.sector_name, clopre_clone_prefix, pse.pse_id from 
 					     pse_barcodes barx, 
 					     process_step_executions pse,
