@@ -52,9 +52,7 @@ BEGIN {
 }
 
 use App;
-
 use GSC::Processable;
-
 use base qw(App::MsgLogger);
 
 =pod
