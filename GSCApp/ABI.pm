@@ -211,7 +211,7 @@ sub ls {
     $params{command}='ls';
     my $result=$self->run_abi_command(%params);
 
-    if($result->error) {
+    if($result->error_message) {
         $self->error_message("Error in SMB ls:  ".$result->error_reason);
         return $result;
     }
