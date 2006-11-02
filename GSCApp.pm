@@ -54,7 +54,6 @@ BEGIN {
 use App;
 
 use GSC::Processable;
-#use GSC::Sequence;
 
 use base qw(App::MsgLogger);
 
