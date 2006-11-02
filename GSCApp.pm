@@ -45,6 +45,16 @@ use warnings;
 use strict;
 our $VERSION = 1.6;
 
+=pod
+
+=item *
+
+Windows applications explicitly set ORACLE_HOME and PATH.  The application will
+still need to do a "use lib" to get to GSCApp in the first place.  It will then 
+use the Oracle drivers on the application server.
+
+=cut
+
 BEGIN {
     if ($^O eq 'MSWin32') {
         $ENV{ORACLE_HOME} = '\\\\winsvr.gsc.wustl.edu\\gsc\\pkg\\oracle\\installed';
