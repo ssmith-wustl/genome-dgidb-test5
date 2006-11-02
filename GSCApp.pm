@@ -29,10 +29,11 @@ GSCApp - Configuration module for GSC applications and modules
 =head1 DESCRIPTION
 
 The B<GSCApp> module uses the App* modules, and sets up a GSC-specific
-default configuration.  Functions in it will rarely be called.  It is
-"used" mostly for the code which executes at import time.  View the
-module source and read documentation within to see the GSC-specific
-configuration.
+default configuration.  In many ways, it is like a C #include file.
+
+Functions in it will rarely be called.  It is "used" mostly for the code 
+which executes at import time.  View the module source and read 
+documentation within to see the GSC-specific configuration.
 
 B<GSCApp> makes the following customizations to applications:
 
