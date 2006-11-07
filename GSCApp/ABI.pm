@@ -211,7 +211,7 @@ sub ls {
     $params{command}='ls';
     my $result=$self->run_abi_command(%params);
 
-    if($result->error_message) {
+    if($result->error) {
         $self->error_message("Error in SMB ls:  ".$result->error_reason);
         return $result;
     }
@@ -310,7 +310,7 @@ sub new {
 
 sub set_error {
     my $self=shift;
-    $self->error_message(1);
+    $self->error(1);
 
     my $error_reason=shift || 'unknown';
     $self->error_reason($error_reason);
