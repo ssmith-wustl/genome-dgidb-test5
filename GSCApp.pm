@@ -357,6 +357,10 @@ associations in four cases.
         SETUP_PROJECT_HTMP_AMPLICON     GSC::Setup::Project::HTMP::Amplicon 
         SETUP_PROJECT_FINISHING         GSC::Setup::Project::Finishing
 
+        SETUP_PIPELINE                   GSC::Setup::Pipeline
+        SETUP_PIPELINE_TYPE              GSC::Setup::PipelineType
+        SETUP_PIPELINE_AMPLIFICATION     GSC::Setup::Pipeline::Amplification 
+
         SETUP_AUTO_ASSEMBLY             GSC::Setup::AutoAssembly
         SETUP_BASECALLER                GSC::Setup::Basecaller
         SETUP_AMPLICON_DESIGN           GSC::Setup::AmpliconDesign
