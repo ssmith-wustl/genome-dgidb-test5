@@ -990,36 +990,36 @@ sub derive_machine {
     if (@pei > 1) {
         my @ei = GSC::EquipmentInformation->get(barcode => [map {$_->bs_barcode} @pei]);
         my @parent_ei = GSC::EquipmentInformation->get(barcode => [ map {$_->equinf_bs_barcode} @ei]);
-        unless (@parent_ei == 1) {
-#            $DB::single = 1;
-            my %problematic_prep_pses = (
-                    71873660 => 1,
-                    71873661 => 1,
-                    71873662 => 1,
-                    71873664 => 1,
-                    71873665 => 1,
-                    71873666 => 1,
-                    71873667 => 1,
-                    71873668 => 1,
-                    71873670 => 1,
-                    71873671 => 1,
-                    71873673 => 1,
-                    71873675 => 1,
-                    71873678 => 1,
-                    71873680 => 1,
-                    71873682 => 1,
-                    71873685 => 1
-            );
-            if (exists $problematic_prep_pses{$pse->id}) {
-                App::Object->status_message("Using specialized machine 'EMPTY'/undef exception case for prep pse: " . $pse->id );
-                print "\n[warn] Specialized machine 'EMPTY'/undef exception case for prep pse: ", $pse->id, "\n";
-                return ;
+        if (@parent_ei != 1) {
+            $DB::single = 1;
+            if ($type eq 'sequence' and @parent_ei == 0) {
+                my @valid_machine = grep { 
+                    ($_->barcode eq '0j00mJ' and $_->machine_number == 11 and $_->equipment_description eq 'Biomek') or
+                    ($_->barcode eq '0j00mI' and $_->machine_number == 10 and $_->equipment_description eq 'Biomek')  
+                } @ei;
+                if (@valid_machine == 1) {
+                    my $machine_name = $valid_machine[0]->equipment_description . ' ' . $valid_machine[0]->machine_number;
+                    App::Object->status_message("Using specialized machine '${machine_name}' exception case for sequence pse: " . $pse->id );
+                    print "\n[warn] Specialized machine '${machine_name}' exception case for prep pse: ", $pse->id, "\n";
+                    $ei = $valid_machine[0];
+                }
+                else {
+                    die "[err] Found children equipment informations to be of ", scalar @ei, " values", "\n",
+                        "And found parent equipment informations to be of ", scalar @parent_ei, " values.", "\n",
+                        "Should be just 1 value for the parent equipment informations. ", "\n",
+                        "(process : $type) ", "\n",
+                        Data::Dumper::Dumper(\@ei), "\n";
+                }
             }
-            die "[err] Found parent equipment informations to be of ", scalar @parent_ei, 
-                " values.  Should be just 1. (process : $type) ", "\n",
-                Data::Dumper::Dumper(\@parent_ei), "\n";
+            else {
+                die "[err] Found parent equipment informations to be of ", scalar @parent_ei, 
+                    " values.  Should be just 1. (process : $type) ", "\n",
+                    Data::Dumper::Dumper(\@parent_ei), "\n";
+            }
         }
-        $ei = $parent_ei[0];
+        else {
+            $ei = $parent_ei[0];
+        }
     } else {
         my $pei = $pei[0];
         $ei = GSC::EquipmentInformation->get(barcode => $pei->bs_barcode);
