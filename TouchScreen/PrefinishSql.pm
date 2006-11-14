@@ -2469,6 +2469,13 @@ sub ComparePrimerReagentToAvailVector {
 
     my $subclone_vl_id = $self->{'ComparePrimerReagentToAvailVector'} -> xSql($barcode);
 
+    unless ($subclone_vl_id) {
+
+	my $bar = GSC::Barcode->get($barcode);
+	my @dna = $bar->get_dna;
+	$subclone_vl_id = $dna[0]->get_vector_linearization;
+    }
+
     if(defined $subclone_vl_id) {
 	my $count = $self->{'CountVlIdReagent'} -> xSql($subclone_vl_id, $reagent);
 	
