@@ -2473,7 +2473,8 @@ sub ComparePrimerReagentToAvailVector {
 
 	my $bar = GSC::Barcode->get($barcode);
 	my @dna = $bar->get_dna;
-	$subclone_vl_id = $dna[0]->get_vector_linearization;
+	my $vl = $dna[0]->get_vector_linearization;
+	$subclone_vl_id = $vl->id;
     }
 
     if(defined $subclone_vl_id) {
