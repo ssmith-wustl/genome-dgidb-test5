@@ -200,6 +200,16 @@ sub new {
        sp.pse_pse_id = pb.pse_pse_id and
        dp.pse_pse_id = pb.pse_pse_id and 
        ds_ds_id = ds_id/, 'ListOfList');
+
+    $self->{'GetAllSetupDNAPSE'} = LoadSql($dbh, qq/select distinct pb.bs_barcode, ds.dna_id, sp.dl_id, pri_pri_id, dc_dc_id, enz_enz_id, ds_id 
+    from 
+       direct_seq_pses dp, direct_seq ds, pse_barcodes pb, dna_pse sp
+    where 
+       pb.bs_barcode = ? and direction = 'out' and 
+       sp.dna_id = ds.dna_id and
+       sp.pse_id = pb.pse_pse_id and
+       dp.pse_pse_id = pb.pse_pse_id and 
+       ds_ds_id = ds_id/, 'ListOfList');
     $self -> {'GetPreBarPseInfo'} = LoadSql($dbh, qq/select 
 pb.bs_barcode, pse.pse_id 
 from process_steps ps, process_step_executions pse, pse_barcodes pb 
@@ -1515,6 +1525,9 @@ sub SequencePrefinish384Universal {
     return 0 if(! defined $enz_id);
     return 0 if(! defined $reagent);
 
+    
+
+
     my $i = 0;
 
     my $dye_type_name = Query($self->{'dbh'}, qq/select DYETYP_DYE_NAME from dye_chemistries where dc_id = $dc_id/);
@@ -1548,11 +1561,24 @@ sub SequencePrefinish384Universal {
         
         my $asetup = $self -> {'GetAllSetup'} -> xSql($ds_barcode);
 	my %dsinfo;
-        foreach my $s (@$asetup) {
-            push @{$dsinfo{$s->[0]}->{$s->[1]}->{$s->[2]}->{$s->[3]}->{$s->[5]}}, $s;
-	}        
+	if(@$asetup){
+	    foreach my $s (@$asetup) {
+		push @{$dsinfo{$s->[0]}->{$s->[1]}->{$s->[2]}->{$s->[3]}->{$s->[5]}}, $s;
+	    }        
+	}
+	else{
+	    my $asetup = $self -> {'GetAllSetupDNAPSE'} -> xSql($ds_barcode);
+	    foreach my $s (@$asetup) {
+		push @{$dsinfo{$s->[0]}->{$s->[1]}->{$s->[2]}->{$s->[3]}->{$s->[5]}}, $s;
+	    }        
+	}
+
 
         my $sub_infos = $self -> {'GetSubIdPlIdFromSubclonePse'} -> xSql($bars_in->[0], $pre_pse_id);
+
+	unless(@$sub_infos){
+	    $sub_infos = App::DB->dbh->selectall_arrayref(qq/select dna_id, 0, dl_id from dna_pse where pse_id = ?/, undef, $pre_pse_id);
+	}
         
         foreach my $sub_info (@{$sub_infos}) {
             my $sub_id = $sub_info->[0];
