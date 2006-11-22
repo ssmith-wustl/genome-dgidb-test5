@@ -132,6 +132,9 @@ where
     $self -> {'UpdateBoxParentToNull'} = LoadSql($dbh,"update $schema.equipment_informations
              SET equinf_bs_barcode = null 
 	     WHERE bs_barcode = ?");
+    $self -> {'UpdateBoxParentToNewParent'} = LoadSql($dbh,"update $schema.equipment_informations
+             SET equinf_bs_barcode = ? 
+	     WHERE bs_barcode = ?");
      return $self;
 } #new
 
@@ -628,9 +631,9 @@ sub PutArchivePlateInFreezerSlot  {
         if($abar->container_type_isa('freezer box') 
            || $abar->container_type_isa('96 well box') 
            || $abar->container_type_isa('freezer box 9x9')) {
-
-            my $freezer_position = GSC::EquipmentInformation->get(barcode =>$arch_bar);
-            $freezer_position->equinf_bs_barcode($slot_bar);
+            $self->{'UpdateBoxParentToNewParent'}->xSql($slot_bar, $arch_bar);
+            #my $freezer_position = GSC::EquipmentInformation->get(barcode =>$arch_bar);
+            #$freezer_position->equinf_bs_barcode($slot_bar);
         }
 	
 	my $freezer_group = Query($self->{'dbh'}, qq/select gro_group_name from equipment_informations where bs_barcode = '$slot_bar'/);
