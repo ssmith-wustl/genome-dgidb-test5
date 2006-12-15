@@ -91,10 +91,11 @@ sub fix_env
     push(@path, @bin);
 
     # set library path ($LD_LIBRARY_PATH)
+    $ENV{LD_LIBRARY_PATH} = "" if not defined $ENV{LD_LIBRARY_PATH};
     my @lib = split(m/:/, $ENV{LD_LIBRARY_PATH});
     my @ld_library_path;
     # make sure /gsc/lib is first
-    if ($lib[0] ne '/gsc/lib')
+    if (!@lib or $lib[0] ne '/gsc/lib')
     {
         push(@ld_library_path, '/gsc/lib');
     }
