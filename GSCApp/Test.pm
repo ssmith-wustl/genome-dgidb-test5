@@ -144,6 +144,7 @@ BEGIN {
         $inc .= ":" if length($inc);
         $inc .= _deconvolve_path($path);        
     }
+    $App::Mail::DISABLE_FOR_TESTING = 1;
 }
 
 

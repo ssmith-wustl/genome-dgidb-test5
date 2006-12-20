@@ -147,6 +147,11 @@ sub mail
     my $class = shift;
     my (%mail) = @_;
 
+    if ($App::Mail::DISABLE_FOR_TESTING) {
+	push (@App::Mail::SPOOLED_TESTING_MAIL, \%mail);
+	return 1;
+    }
+
     # set originating host and user header
     my $host = hostname;
     if ($host)
