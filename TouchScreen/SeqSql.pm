@@ -250,6 +250,7 @@ sub GetAvailRearrayBarcodeInInprogress { #rearray version
     my $org_id_ref=$self->Process('rearray_GetOrgIdFromPseId', $pse->id());
     
     if((@$org_id_ref!=1) && ($purpose ne 'Directed Sequencing')) {
+        $self->{'Error'} = @$org_id_ref > 1 ? "$barcode has " . scalar(@$org_id_ref) . " organisms on the plate." : "$barcode has no organism on the plate.";
         return(0, $pses);
         #Something's wrong here too--but what do we do about it?
     }
