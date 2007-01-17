@@ -1044,8 +1044,8 @@ sub expungeFromStorage {
 
   # Check to see if an MP primer is getting expunged
   # if so, send an alert email (RT Ticket # 14720)
-  my $sql = q(
-          select p.primer_name, pb.bs_barcode, pse2.date_scheduled, gu.unix_login
+  my $sql = q{
+          select /*+ leading(pb) */ p.primer_name, pb.bs_barcode, pse2.date_scheduled, gu.unix_login
           from  pse_barcodes pb
           join  process_step_executions pse1 on pse1.pse_id = pb.pse_pse_id
           join  process_steps ps1 on ps1.ps_id = pse1.ps_ps_id and ps1.pro_process_to = 'define primer tube'
@@ -1057,7 +1057,7 @@ sub expungeFromStorage {
           join  employee_infos ei on ei.ei_id = pse2.ei_ei_id
           join  gsc_users gu on gu.gu_id = ei.gu_gu_id
           join  primers p on p.pri_id = cpp2.pri_pri_id
-          where pb.bs_barcode = ) . sprintf("'%s'", $bars_in->[0]);
+          where pb.bs_barcode = } . sprintf("'%s'", $bars_in->[0]);
 
   my $dataref = App::DB->dbh->selectall_arrayref($sql);
 
