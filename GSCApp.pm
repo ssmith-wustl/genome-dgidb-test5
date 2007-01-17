@@ -274,8 +274,9 @@ associations in four cases.
     SEQUENCE_CLIPPING           => 'clipping sequence tag',
     SEQUENCE_FINISHING_TAG      => 'finishing sequence tag',    
     EXPUNGED_SEQUENCE_READ      => 'sequence expunged read',
-    NHGRI_READ_FUNDING_CATEGORY    => 'old nhgri read funding category',
+    NHGRI_READ_FUNDING_CATEGORY => 'old nhgri read funding category',
     CDS_SEQUENCE_TAG            => 'cds sequence tag',
+    COVERAGE_GAP_SEQUENCE_TAG   => 'coverage gap sequence tag',
     GSC_RUN                     => 'run',
 );
 
@@ -346,6 +347,8 @@ associations in four cases.
         SEQUENCE_VERIFICATION           GSC::Sequence::Tag::Verification
         SEQUENCE_FINISHING_TAG          GSC::Sequence::Tag::Finishing
         CDS_SEQUENCE_TAG                GSC::Sequence::Tag::CDS
+        COVERAGE_GAP_SEQUENCE_TAG       GSC::Sequence::Tag::CoverageGap
+
         
         SEQUENCE_READ_STAT_REF_ALIGN    GSC::Sequence::Read::Stat::RefAlign
         
