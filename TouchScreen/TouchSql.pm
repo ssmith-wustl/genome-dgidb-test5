@@ -2564,9 +2564,17 @@ sub GetBarcodeDesc {
 	  die "Cannot find the barcode $barcode!";
 	}
 	my $label = $mbar->resolve_content_description;
-	if(defined $label){
+	if(defined $label) {
 	    if($label){ #- non 0
-		return (1, [[$barcode.' '.$label]]);
+	      #LSF: This is to recalculate the content description that was not calculated in the confirmation.
+	      if($label eq $barcode) {
+	        $label = $mbar->resolve_content_description(1);
+		if($label && $label ne $barcode) {
+		  App::DB->sync_database;
+		  App::DB->commit;
+                }
+	      }
+	      return (1, [[$barcode.' '.$label]]);
 	    }
 	    else{
 		#- this is a hack because the function set is really too complex to weave through to do it downstream
