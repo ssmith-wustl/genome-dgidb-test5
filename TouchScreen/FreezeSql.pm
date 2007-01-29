@@ -650,7 +650,7 @@ sub PutArchivePlateInFreezerSlot  {
     }
     
     # use the last slot barcode to determine if parent is filled
-    my $result = $self -> UpdateFreezerStatus($slot_bar);
+    my $result = $self -> UpdateFreezerStatus($slot_bar,  0);
     return 0 if(!$result);
 	
     return($pses) ;
@@ -714,7 +714,7 @@ sub RetireArchivePlateFromFreezer {
         #$freezer_position->equinf_bs_barcode(undef);
 
     }
-    $self -> UpdateFreezerStatus($slot_bar);
+    $self -> UpdateFreezerStatus($slot_bar, 0);
 
     $result =  $self->Process('UpdatePse', 'completed', 'successful', $pse_id);
     if(!$result) {
@@ -784,7 +784,7 @@ sub RetireAllArchivesFromStorageLoc {
 	}
     }
 
-    $self -> UpdateFreezerStatus($bars_in->[0]);
+    $self -> UpdateFreezerStatus($bars_in->[0], 1);
 
     return $pses;
 } #RetireAllArchivesFromStorageLoc
@@ -804,11 +804,11 @@ sub RetireAllArchivesFromStorageLoc {
 #########################
 sub UpdateFreezerStatus {
 
-    my ($self, $barcode) = @_;
+    my ($self, $barcode, $found_children) = @_;
     
     my $parent_barcodes = [];
     $parent_barcodes->[0] = $barcode;
-    my $found_children = 1;
+    $found_children ||= 0;
     my $last_parents = [];
 
     while($found_children) {
