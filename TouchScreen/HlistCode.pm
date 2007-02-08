@@ -370,22 +370,80 @@ sub AddEntryData {
 ####################################
 sub AddDataInfo {
 	    
-    my ($hlist, $row, $col, $label, $lov, $data, $brwse_cmd) = @_;
+    my ($hlist, $row, $col, $label, $lov, $data, $brwse_cmd, $validation_cmd) = @_;
            
     my $window_type = 'window';
     my $button_style = $hlist->ItemStyle($window_type,-pady => 1, -padx => 1);
 
+    #------- determine the command!
+    my $cmd;
+    if(!$brwse_cmd && $validation_cmd){
+	
+	$cmd = $validation_cmd;
+    }
+    elsif($brwse_cmd && !$validation_cmd){
+	$cmd = $brwse_cmd;
+    }
+    else{
+	$cmd = sub{
+	    my $value = shift;
+	    &$brwse_cmd($value);
+	    &$validation_cmd($value);
+	}
+    }
     my $i = 0;
     my $frame = $hlist -> Frame -> pack;
     if(defined $brwse_cmd) {
-	$frame -> BrowseEntry(-label => $label, -variable => $data, -choices => $lov, -browsecmd => [\&$brwse_cmd, $data]) -> pack(-side => 'top', -anchor => 'e');
+	$frame -> BrowseEntry(-label => $label, -variable => $data, -choices => $lov, 
+			      -browsecmd => [\&$brwse_cmd, $data]) -> pack(-side => 'top', -anchor => 'e');
     }
     else {
-	$frame -> BrowseEntry(-label => $label, -variable => $data, -choices => $lov, -browsecmd => [\&EnterData, $data]) -> pack(-side => 'top', -anchor => 'e');
+	$frame -> BrowseEntry(-label => $label, -variable => $data, -choices => $lov, 
+			      -browsecmd => [\&EnterData, $data]) -> pack(-side => 'top', -anchor => 'e');
     }
     $hlist->itemCreate($row, $col, -itemtype => $window_type,-style => $button_style,-widget => $frame);
     	
 } #AddDataInfo
+
+
+sub PSEDataInfo{
+    #- for the new processing framework, we're hacking up the old one
+    my ($hlist, $row, $col, $param_name, $pse, $options, $validation_cmd) = @_;
+    
+    my $window_type = 'window';
+    my $button_style = $hlist->ItemStyle($window_type,-pady => 1, -padx => 1);
+
+    #------- determine the command!
+    my $cmd;
+    my $param_value = $options->[0];
+    $cmd = sub{
+	#--- process it through this guy.  It may change the param value
+	&EnterData(0, $param_value, \$param_value);
+	if($validation_cmd){
+	    unless(&$validation_cmd($param_value)){
+		#-- reset the value to whatever the current is
+		my ($value) = $pse->added_param($param_name);
+		$param_value = $value;
+	    }
+	}
+    };
+    my $i = 0;
+    my $frame = $hlist -> Frame -> pack;
+    
+    my $max = 18;
+    foreach (@$options){
+	$max = length($_) if length($_) > $max;
+    }
+
+    $frame -> BrowseEntry(-label => '', 
+			  -width => $max,
+			  -variable => \$param_value, 
+			  -choices => $options, 
+			  -browsecmd => [$cmd]) -> pack(-side => 'top', -anchor => 'e');
+    
+    $hlist->itemCreate($row, $col, -itemtype => $window_type,-style => $button_style,-widget => $frame);
+    
+}
 
 #############################
 # Add Button to Hlist Entry #
@@ -474,7 +532,6 @@ sub EnterData {
     if(defined $brwse_cmd) {
 	&$brwse_cmd($comment);
     }
-    print "comment = $comment, info = $$info\n";
     if($comment eq 'other') {
 	my $comment_win = $::MAIN_WINDOW -> Toplevel(
 						     -height =>  $::CANVAS_H,  
