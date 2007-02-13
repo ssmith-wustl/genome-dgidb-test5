@@ -94,6 +94,35 @@ my %pipeline_based_table_groupings = (
         unique_dimensions_in_run => []    
     },
 
+    library_core_production => {
+        dimensions => [
+            'seq_dim',
+            'source_sample_dim',
+            'library_core_dim',
+            'production_date_dim',
+            'production_machine_dim',
+            'production_employee_dim',
+            'processing_dim',
+            'archive_project_dim',
+            'run_dim'
+        ],
+
+        facts => [
+            'production_read_fact',
+            'read_fact'
+        ],
+
+        unique_dimensions_in_run => [
+            'seq_dim',
+            'source_sample_dim',
+            'library_core_dim',
+            'production_date_dim',
+            'production_machine_dim',
+            'production_employee_dim',
+            'archive_project_dim'
+        ]    
+    },
+
     other => {
         dimensions => [
             'seq_dim',
@@ -156,6 +185,46 @@ sub _init {
     }
 
     return 1;
+}
+
+sub pipeline_for_selected_run {
+    my $self = shift;
+    my %args = @_;
+
+    my $run_name = $args{'run'} || $self->run;
+
+    unless($run_name) {
+        die "[err] Did not specify a run_name in pipeline_for_selected_run!\n";
+    }
+    
+    my @r = GSC::ReadExp->get(gel_name => $run_name);
+
+    my $fc_id = $r[0]->funding_id();
+    my $fc = GSC::FundingCategory->get($fc_id);
+
+    if ($fc->pipeline ne 'shotgun sequencing') {
+        return 'other';
+    }
+
+    # ensure that this run is not a special "library core" 
+    # production run (where all reads are "shotgun sequencing"
+    # but consist of reads from various species/dna_resource_prefixes)
+    my %dna_resource_prefixes_in_run;
+    for my $read (@r) {
+        my $dr = $read->get_first_ancestor_with_type('dna resource');
+        my $drp = $dr->dna_resource_prefix();
+        $dna_resource_prefixes_in_run{$drp} = 1;
+        if ( scalar(keys %dna_resource_prefixes_in_run) > 1 ) {
+            last;
+        }
+    }
+
+    if ( scalar(keys %dna_resource_prefixes_in_run) > 1 )  {
+        return 'library_core_production';
+    }
+    else {
+        return 'production';
+    }
 }
 
 sub pipeline_for_selected_read {
@@ -368,7 +437,9 @@ sub populate_dimensions_and_facts_for_reads {
 
 
     # assuming that the same pipeline is associated with the rest of reads in the run
-    my $pipeline          = $self->pipeline_for_selected_read(read => $token_read);
+    my $pipeline          = $self->pipeline_for_selected_run();
+# this approach is no longer taken
+#    my $pipeline          = $self->pipeline_for_selected_read(read => $token_read); 
     my @dim_tables        = $self->all_dimensions_for_selected_pipeline(pipeline => $pipeline);
     my @fact_tables       = $self->all_facts_for_selected_pipeline(pipeline => $pipeline);
     my @shared_dimensions = $self->shared_dimensions_within_run_for_pipeline(pipeline => $pipeline);
