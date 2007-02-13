@@ -81,11 +81,8 @@ sub derive_project_name {
     
     my $r = $self->read();
     my $t = $r->get_first_ancestor_with_type('trace');
-    my $p = GSC::Project->get(project_id => $t->project_id) or 
-        die "[err] Could not derive the project_name in: ", 
-             ref($self), "\n",
-             'via trace id: ', $t->id(), "\n";
-    return $p->name();
+    my $name = $r->seqmgr_directory;
+    return $name;
 }
 
 my $star_search_sth;
