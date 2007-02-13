@@ -1793,6 +1793,11 @@ sub SetupBlockIn_scheduled {
 	}
 	
 	my ($new_pse_id) = $self -> xOneToManyProcess($ps_id, $pre_pse_id, $update_status, $update_result, $bars_in->[0], [$bar_out], $emp_id);
+	#LSF: We need to save the sector in the pse param to let the blade job know which sector to process.
+	unless(GSC::PSEParam->create(pse_id => $new_pse_id, param_name => 'sector', param_value => $sector)) {
+	  $self->{'Error'} = GSC::PSEParam->error_message;
+	  return 0;
+	}
 =cut
 	#if(@$quads_pses == 4){ #- 384 well plate
 	if($is384){ #- 384 well plate
