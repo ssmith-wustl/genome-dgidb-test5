@@ -1018,6 +1018,7 @@ sub hasItBeExpunged {
 Expunge the plate from storage
 
 =cut
+
 sub expungeFromStorage {
   my ($self, $ps_id, $bars_in, $bars_out, $emp_id, $options, $pre_pse_ids) = @_;
 
@@ -1041,40 +1042,33 @@ sub expungeFromStorage {
   my $update_result = 'successful';
   my $result =  $self->Process('UpdatePse', $update_status, $update_result, $pre_pse_ids->[0]);
   return 0 if(!$result);
+  #LSF: Automatically complete the check out if someone try to expunge it before check out.
+  foreach my $cipse (GSC::PSE->get(pse_id => [GSC::TppPSE->get(barcode => $bars_in->[0])], 
+                ps_id => [GSC::ProcessStep->get(process_to => 'check in')], 
+		pse_status => ['inprogress', 'scheduled'])) {
+    $cipse->set(pse_status =>'completed',
+             pse_result =>'successful',
+             date_completed => App::Time->now,
+	     ei_id_confirm => $emp_id);
 
-  # Check to see if an MP primer is getting expunged
-  # if so, send an alert email (RT Ticket # 14720)
-  my $sql = q{
-          select /*+ leading(pb) */ p.primer_name, pb.bs_barcode, pse2.date_scheduled, gu.unix_login
-          from  pse_barcodes pb
-          join  process_step_executions pse1 on pse1.pse_id = pb.pse_pse_id
-          join  process_steps ps1 on ps1.ps_id = pse1.ps_ps_id and ps1.pro_process_to = 'define primer tube'
-          join  custom_primer_pse cpp1 on cpp1.pse_pse_id = pse1.pse_id
-          join  custom_primer_pse cpp2 on cpp2.pri_pri_id = cpp1.pri_pri_id
-          join  process_step_executions pse2 on pse2.pse_id = cpp2.pse_pse_id
-          join  process_steps ps2 on ps2.ps_id = pse2.ps_ps_id and ps2.pro_process_to = 'request primer order'
-          join  pse_data_outputs pdo on pdo.pse_pse_id = pse2.pse_id and pdo.data_value = 'Amplification'
-          join  employee_infos ei on ei.ei_id = pse2.ei_ei_id
-          join  gsc_users gu on gu.gu_id = ei.gu_gu_id
-          join  primers p on p.pri_id = cpp2.pri_pri_id
-          where pb.bs_barcode = } . sprintf("'%s'", $bars_in->[0]);
+  }
+  my @pses = GSC::PSE->get(pse_id => [GSC::TppPSE->get(barcode => $bars_in->[0], prior_pse_id => 1)], 
+                           ps_id => [GSC::ProcessStep->get(process_to => 'define primer tube')]);
+  @pses = GSC::PSE->get(pse_id => [map { $_->prior_pse_id } grep { $_->prior_pse_id > 1 } GSC::TppPSE->get(pse_id => \@pses)], 
+                        ps_id => [GSC::ProcessStep->get(process_to => 'request primer order')]);
+  if(@pses) {
+      my %ei = map { $_->ei_id => $_ } GSC::EmployeeInfo->get(ei_id => [$emp_id, $pses[0]->ei_id]);
+      my %gu = map { $_->gu_id => $_ } GSC::User->get(gu_id => [map { $_->gu_id } values %ei]);
+      my $name = ucfirst($gu{$ei{$emp_id}->gu_id}->first_name) . " " . ucfirst($gu{$ei{$emp_id}->gu_id}->last_name);
+      my $email = $gu{$ei{$emp_id}->gu_id}->unix_login . "\@watson.wustl.edu";
 
-  my $dataref = App::DB->dbh->selectall_arrayref($sql);
-
-  if (@{$dataref}) {
-
-      my $ei = GSC::EmployeeInfo->get($emp_id);
-      my $gu = GSC::User->get($ei->gu_id);
-      my $name = $gu->first_name . " " . $gu->last_name;
-      my $email = $gu->unix_login . "\@watson.wustl.edu";
-
-
+      my $barcode = GSC::Barcode->get(barcode => $bars_in->[0]);
+      my @pris = $barcode->get_primers;
       my $msg = qq($name expunged the following MP primers from the freezer system:) . "\n\n";
-      $msg .= sprintf("%10s %10s %20s %10s \n\n", "Primer", "Barcode", "Date Requested", "Ordered By");
-      for my $rowref (@{$dataref}) {
-          my ($primer_name, $barcode, $date_scheduled, $login_id) = @{$rowref};
-          $msg .= sprintf("%10s %10s %20s %10s \n", $primer_name, $barcode, $date_scheduled, $login_id);
-      }
+      $msg .= 'BARCODE      : ' . $bars_in->[0] . "\n";
+      $msg .= 'PRIMERS      : ' . (join ',', map { $_->primer_name } @pris) . "\n";
+      $msg .= 'REQUEST DATE : ' . $pses[0]->date_scheduled . "\n";
+      $msg .= 'REQUESTOR    : ' . ucfirst($gu{$ei{$pses[0]->ei_id}->gu_id}->first_name) . ' ' . ucfirst($gu{$ei{$pses[0]->ei_id}->gu_id}->last_name) . ' (' . $gu{$ei{$pses[0]->ei_id}->gu_id}->unix_login . ")\n";
       $msg .= "\n\n";
 
       App::Mail->mail(
