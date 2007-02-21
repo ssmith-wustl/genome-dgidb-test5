@@ -155,6 +155,20 @@ sub probe
     return bless { event => $scanner_event, device => $device }, $class;
 }
 
+
+=pod
+
+=item connected
+
+Returns true if the scanner event device (/dev/input/event*) still exists.
+
+=cut
+
+sub connected {
+my($self) = @_;
+    -e $self->{'device'};
+}
+
 =pod
 
 =item event
@@ -254,7 +268,7 @@ sub read
             if ($event->{code} == 28 && $event->{value} == 1) {
                 # newline
                 $self->debug_message("USB barcode scanner buffer: $buffer", 2);
-                push(@barcodes, $buffer);
+                push(@barcodes, $buffer) if ($buffer);
                 $buffer = '';
                 next;
             }
