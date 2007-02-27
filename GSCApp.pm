@@ -321,6 +321,9 @@ associations in four cases.
          
         SEQUENCE_ITEM                   GSC::Sequence::Item                
         SEQUENCE_ASSEMBLY               GSC::Sequence::Assembly
+        SEQUENCE_ASSEMBLY_SANGER        GSC::Sequence::Assembly::Sanger
+        SEQUENCE_ASSEMBLY_454           GSC::Sequence::Assembly::454
+        SEQUENCE_ASSEMBLY_SOLEXA        GSC::Sequence::Assembly::Solexa
         SEQUENCE_REFERENCE_ALIGNMENT    GSC::Sequence::ReferenceAlignment
         SEQUENCE_READ                   GSC::Sequence::Read
         SEQUENCE_TEMPLATE               GSC::Sequence::Template
