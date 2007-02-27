@@ -278,6 +278,7 @@ associations in four cases.
     CDS_SEQUENCE_TAG            => 'cds sequence tag',
     SAMPLE_GAP_SEQUENCE_TAG     => 'sample coverage gap sequence tag',
     GSC_RUN                     => 'run',
+    SEQUENCE_SET                => 'sequence transparent set',
 );
 
 
@@ -349,6 +350,7 @@ associations in four cases.
         CDS_SEQUENCE_TAG                GSC::Sequence::Tag::CDS
         SAMPLE_GAP_SEQUENCE_TAG         GSC::Sequence::Tag::SampleCoverageGap
 
+        SEQUENCE_SET                    GSC::Sequence::TransparentSet
         
         SEQUENCE_READ_STAT_REF_ALIGN    GSC::Sequence::Read::Stat::RefAlign
         
