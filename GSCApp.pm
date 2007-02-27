@@ -324,6 +324,14 @@ associations in four cases.
         SEQUENCE_ASSEMBLY_SANGER        GSC::Sequence::Assembly::Sanger
         SEQUENCE_ASSEMBLY_454           GSC::Sequence::Assembly::454
         SEQUENCE_ASSEMBLY_SOLEXA        GSC::Sequence::Assembly::Solexa
+        SEQUENCE_ASSEMBLY_INPUT         GSC::Sequence::Assembly::Input
+        SEQUENCE_ASSEMBLY_INPUT_SANGER  GSC::Sequence::Assembly::Input::Sanger
+        SEQUENCE_ASSEMBLY_INPUT_454     GSC::Sequence::Assembly::Input::454
+        SEQUENCE_ASSEMBLY_INPUT_Solexa  GSC::Sequence::Assembly::Input::Solexa
+        SEQUENCE_ASSEMBLY_OUTPUT        GSC::Sequence::Assembly::Output
+        SEQUENCE_ASSEMBLY_OUTPUT_SANGER GSC::Sequence::Assembly::Output::Sanger
+        SEQUENCE_ASSEMBLY_OUTPUT_454    GSC::Sequence::Assembly::Output::454
+        SEQUENCE_ASSEMBLY_OUTPUT_Solexa GSC::Sequence::Assembly::Output::Solexa
         SEQUENCE_REFERENCE_ALIGNMENT    GSC::Sequence::ReferenceAlignment
         SEQUENCE_READ                   GSC::Sequence::Read
         SEQUENCE_TEMPLATE               GSC::Sequence::Template
