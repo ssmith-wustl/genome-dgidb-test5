@@ -279,6 +279,7 @@ associations in four cases.
     SAMPLE_GAP_SEQUENCE_TAG     => 'sample coverage gap sequence tag',
     GSC_RUN                     => 'run',
     SEQUENCE_SET                => 'sequence transparent set',
+    RUN_REGION_454		=> '454 run region',
 );
 
 
@@ -392,6 +393,8 @@ associations in four cases.
         PHENOTYPE_TRAIT                 GSC::Phenotype::Trait
         PHENOTYPE_SAMPLE_TRAIT          GSC::Phenotype::SampleTrait
         PHENOTYPE_GENERALIZATION        GSC::Phenotype::Generalization
+
+	RUN_REGION_454			GSC::RunRegion454
     /
 );
 
