@@ -1,4 +1,4 @@
-# -*-Perl-*-
+ # -*-Perl-*-
 
 ##############################################
 # Copyright (C) 2001 Craig S. Pohl
@@ -664,10 +664,11 @@ sub GetDNAFromPSE {
 sub GetAvailBarcodeInOutInprogress {
 
     my ($self, $barcode, $ps_id) = @_;
-    my ($result, $pses) = $self -> GetAvailBarcodeInInprogress($barcode, $ps_id);
+    my ($result, $pses) = $self -> GetAvailBarcodeOutInprogress($barcode, $ps_id);
     return ($result, $pses) if($pses);
-    return $self -> GetAvailBarcodeOutInprogress($barcode, $ps_id);
+    return $self -> GetAvailBarcodeInInprogress($barcode, $ps_id);
 }
+
 
 sub GetAvailBarcodeOutInprogress {
 
