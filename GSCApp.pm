@@ -395,6 +395,8 @@ associations in four cases.
         PHENOTYPE_GENERALIZATION        GSC::Phenotype::Generalization
 
 	RUN_REGION_454			GSC::RunRegion454
+	
+	SEQUENCE_ASSEMBLY_METRIC_454	GSC::Sequence::Assembly::Metric::454
     /
 );
 
