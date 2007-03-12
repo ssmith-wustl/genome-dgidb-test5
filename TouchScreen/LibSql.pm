@@ -3922,8 +3922,14 @@ sub GetProjectPurpose {
     }
 
     my $clone = $self->{'GetProjectFromLigationBarcode'} -> xSql($barcode->[0]);
+    my $project = GSC::Project->get(name=>$clone);
 
-    if($clone =~ /^M_/) {
+    # do not set purposes if it is already set
+    # bjo 3-12-2007
+    if (defined $project->purpose) {
+	$data = $project->purpose;
+    }
+    elsif($clone =~ /^M_/) {
 	$data = '5X';
     }
     elsif($clone =~ /^Z_/){
