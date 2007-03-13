@@ -320,6 +320,9 @@ associations in four cases.
         SEQUENCE_ITEM_TYPE              GSC::Sequence::ItemType
         SEQUENCE_TAG_TYPE               GSC::Sequence::TagType
          
+        SEQUENCE_FASTA_QUAL		GSC::Sequence::Fasta::Qual
+        SEQUENCE_FASTA_SEQ		GSC::Sequence::Fasta::Seq
+
         SEQUENCE_ITEM                   GSC::Sequence::Item                
         SEQUENCE_ASSEMBLY               GSC::Sequence::Assembly
         SEQUENCE_ASSEMBLY_SANGER        GSC::Sequence::Assembly::Sanger
