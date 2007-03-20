@@ -1,13 +1,14 @@
-package WUGSC::Runtests;
+package Runtests;
 
 use strict;
 use warnings FATAL => 'all';
 
+use Moose;
+with 'MooseX::Getopt';
 use English;
 use File::chdir '$CWD';
 use Path::Class ();
 use File::Slurp ();
-use Moose;
 
 our $VERSION = '0.01';
 
@@ -181,7 +182,7 @@ __END__
 
 =head1 NAME
 
-WUGSC::Runtests - encapsulate how we run tests
+Runtests - encapsulate how we run tests
 
 =head1 VERSION
 
@@ -193,9 +194,9 @@ Version 0.01
 
 Run the tests, collect the output, and report basic results.
 
-    use WUGSC::Runtests;
+    use Runtests;
 
-    my $r = WUGSC::Runtests->new(...);
+    my $r = Runtests->new(...);
     $r->runtests;
     if ( !$r->all_tests_successful ) {
         print $r->failure_summary;
