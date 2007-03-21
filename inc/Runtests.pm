@@ -66,6 +66,7 @@ has 'env' => (
             APP_DB_VARIANT    => $self->db_variant,
             APP_DBI_NO_COMMIT => 1,
             GSCAPP_TEST_QUIET => 0,
+            TEST_VERBOSE      => 1,
         );
         $env{HARNESS_PERL_SWITCHES} = '-MDevel::Cover' if $self->cover;
         %env = ( %env, $self->merge_env );
