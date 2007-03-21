@@ -380,6 +380,7 @@ associations in four cases.
         SETUP_PIPELINE                   GSC::Setup::Pipeline
         SETUP_PIPELINE_TYPE              GSC::Setup::PipelineType
         SETUP_PIPELINE_AMPLIFICATION     GSC::Setup::Pipeline::Amplification 
+        SEQUENCE_ANNOTATION_PARAM        GSC::Setup::SequenceAnnotationParam
 
         SETUP_AUTO_ASSEMBLY             GSC::Setup::AutoAssembly
         SETUP_BASECALLER                GSC::Setup::Basecaller
