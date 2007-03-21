@@ -86,7 +86,7 @@ has 'all_tests_successful' => (
         if ( $self->cmd_exit_code != 0 ) {
             return 0;
         }
-        my $output = $self->output;
+        my $output = $self->output || '';
         if ( $output =~ m{^All [ ] tests [ ] successful}xms ) {
             return 1;
         }
@@ -103,7 +103,7 @@ has 'failure_summary' => (
         my $self = shift;
         die 'cannot access failure_summary until cmd has been run'
             if ( !$self->cmd_has_been_run );
-        my $output = $self->output;
+        my $output = $self->output || '';
         return ''
             if ( $output
             !~ m{(^Failed [ ] Test.*List [ ] of [ ] Failed.*)}xms );
