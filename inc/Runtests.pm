@@ -93,12 +93,6 @@ has 'all_tests_successful' => (
     },
 );
 
-#sub all_tests_successful {
-#    my $self   = shift;
-#    my $output = $self->output;
-#    return ( $output =~ m{^All [ ] tests [ ] successful}xms );
-#}
-
 has 'failure_summary' => (
     is       => 'ro',
     isa      => 'Str',
@@ -114,19 +108,11 @@ has 'failure_summary' => (
             !~ m{(^Failed [ ] Test.*List [ ] of [ ] Failed.*)}xms );
         my $summary = $1;
         my $cmd     = $self->cmd;
-        return "$cmd\n\n$summary";
+        my %env = $self->env;
+        my $env = join("\n", map { "$_=$env{$_}" } sort keys %env);
+        return "$env\n$cmd\n\n$summary";
     },
 );
-
-#sub failure_summary {
-#    my $self   = shift;
-#    my $output = $self->output;
-#    die "does not look like a failure"
-#        if $output !~ m{(^Failed [ ] Test.*List [ ] of [ ] Failed.*)}xms;
-#    my $summary = $1;
-#    my $cmd     = $self->cmd;
-#    return "$cmd\n\n$summary";
-#}
 
 has 'cmd' => (
     is       => 'ro',
@@ -135,22 +121,12 @@ has 'cmd' => (
     lazy     => 1,
     default  => sub {
         my $self = shift;
-        my $cmd  = "$EXECUTABLE_NAME ./Makefile.PL ";
+        my $cmd  = "env && $EXECUTABLE_NAME ./Makefile.PL ";
         $cmd .= ' && make';
         $cmd .= ' && make test';
         return $cmd;
     },
 );
-
-#sub cmd {
-#    my $self = shift;
-#    my $cmd  = "$EXECUTABLE_NAME ./Makefile.PL ";
-#    $cmd .= ' && make';
-#    $cmd .= ' && make test';
-#    my $output_file = $self->output_file;
-#    $cmd = "($cmd) > $output_file 2>&1";
-#    return $cmd;
-#}
 
 sub runtests {
     my $self = shift;
@@ -172,7 +148,7 @@ sub output {
     die 'cannot access output until cmd has been run'
         if ( !$self->cmd_has_been_run );
     my $output_file = $self->output_file;
-    my $output      = File::Slurp::slurp("$output_file");
+    my $output = File::Slurp::slurp("$output_file");
     return $output;
 }
 
