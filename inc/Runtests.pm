@@ -16,7 +16,10 @@ has 'db_variant' => (
     is       => 'ro',
     isa      => 'Str',
     required => 1,
-    default  => sub { App::DB->db_variant },
+    default  => sub {
+        eval q{ use GSCApp; App->init; };
+        return App::DB->db_variant;
+    },
 );
 
 has 'output_file' => (
