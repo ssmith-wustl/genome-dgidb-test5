@@ -79,7 +79,9 @@ sub dispatch_test {
     my $stdout_file = $smoke_dir->file("$test.stdout");
     my $stderr_file = $smoke_dir->file("$test.stderr");
     my $yaml_file   = $smoke_dir->file("$test.yml");
-    my $script      = $self->base_dir->file('run_single_test.pl');
+    $stdout_file->parent->mkpath( 0, 0775 );
+    my $script
+        = $self->base_dir->subdir('util')->file('run_single_test.pl');
     my $rcmd        = "$EXECUTABLE_NAME $script $test $yaml_file";
 #    my $rcmd        = "$EXECUTABLE_NAME -d:ptkdb $script $test $yaml_file";
 
