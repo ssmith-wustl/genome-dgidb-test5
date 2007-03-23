@@ -42,13 +42,6 @@ has 'cover' => (
     default  => sub {0},
 );
 
-has 'smoke' => (
-    is       => 'ro',
-    isa      => 'Bool',
-    required => 1,
-    default  => sub {0},
-);
-
 has 'merge_env' => (
     is         => 'ro',
     isa        => 'HashRef',
