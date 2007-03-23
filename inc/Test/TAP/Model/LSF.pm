@@ -56,7 +56,7 @@ sub _status {
     my ($self, @msg) = @_;
     my $fh = $self->status_fh;
     for my $m (@msg) {
-        $fh->print($m);
+        $fh->print("$m\n");
     }
 }
 
