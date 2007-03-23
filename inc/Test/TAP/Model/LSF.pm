@@ -5,16 +5,14 @@ use warnings FATAL => 'all';
 use Moose;
 use Path::Class ();
 use YAML::Syck;
-use File::chdir '$CWD';
 use English;
 use Test::Harness::Results;
 
 extends 'Test::TAP::Model::Visual';
 
 has 'base_dir' => (
-    is       => 'ro',
+    is       => 'rw',
     isa      => 'Path::Class::Dir',
-    required => 1,
 );
 
 has 'smoke_dir' => (
@@ -22,7 +20,10 @@ has 'smoke_dir' => (
     isa      => 'Path::Class::Dir',
     required => 1,
     lazy     => 1,
-    default  => sub { Path::Class::dir($CWD)->subdir('smoke_db') },
+    default  => sub {
+        my $self = shift;
+        return $self->base_dir->subdir('smoke_db');
+    },
 );
 
 has 'raw_result_files' => (
@@ -34,9 +35,7 @@ has 'raw_result_files' => (
 );
 
 has 'status_fh' => (
-    is       => 'ro',
-    isa      => 'IO::Handle',
-    required => 1,
+    is       => 'rw',
 );
 
 # HACK: fool Test::Harness into using our
