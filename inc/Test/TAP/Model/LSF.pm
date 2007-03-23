@@ -12,7 +12,7 @@ use Test::Harness::Results;
 extends 'Test::TAP::Model::Visual';
 
 has 'base_dir' => (
-    is       => 'rw',
+    is       => 'ro',
     isa      => 'Path::Class::Dir',
     required => 1,
 );
@@ -33,6 +33,12 @@ has 'raw_result_files' => (
     default  => sub { {} },
 );
 
+has 'status_fh' => (
+    is       => 'ro',
+    isa      => 'IO::Handle',
+    required => 1,
+);
+
 # HACK: fool Test::Harness into using our
 # already populated subclass object of Test::Harness::Straps
 my $singleton;
@@ -47,11 +53,12 @@ sub add_raw_result_file {
     $raw->{$file} = $object;
 }
 
-sub event {
-    my $self = shift;
-    print shift;
-#    my $cb = $self->callback or return;
-#    $cb->(@_);
+sub _status {
+    my ($self, @msg) = @_;
+    my $fh = $self->status_fh;
+    for my $m (@msg) {
+        $fh->print($m);
+    }
 }
 
 sub run_tests {
@@ -87,9 +94,9 @@ sub dispatch_test {
 
     local $ENV{PERL5LIB} = $self->_INC2PERL5LIB;
     my $cmd = "bsub -q short -N -o $stdout_file -e $stderr_file $rcmd";
-    $self->event("dispatching $test...\n");
+    $self->_status("dispatching $test...");
     my @out = `$cmd 2>&1`;
-    $self->event("@out\n");
+    $self->_status(@out);
     if ($?) {
         die "command failed: $cmd";
     }
@@ -103,10 +110,10 @@ sub gather_results {
     my $raw = $self->raw_result_files;
     my @yaml_files = map { $raw->{$_}->yaml_file } @tests;
     for my $file (@yaml_files) {
-        $self->event("loading $file\n");
+        $self->_status("loading $file");
         my $chunk = LoadFile($file)
             or die "can't parse chunk ($file)";
-        $self->event("pushing $file data\n");
+        $self->_status("pushing $file data");
         push @{ $self->{meat}{test_files} }, @{ $chunk->{test_files} };
     }
 }
@@ -125,7 +132,7 @@ sub wait_for_results {
         if ($found) {
             delete $files{ $found->test_file };
             # TODO: make this do the harness-y thing instead
-            $self->event("done " . $found->test_file . "\n");
+            $self->_status("done " . $found->test_file);
         }
         else {
             sleep 3;
