@@ -33,6 +33,14 @@ has 'raw_result_files' => (
     default  => sub { {} },
 );
 
+# HACK: fool Test::Harness into using our
+# already populated subclass object of Test::Harness::Straps
+my $singleton;
+sub new {
+    my $class = shift;
+    return $singleton ||= $class->SUPER::new(@_);
+}
+
 sub add_raw_result_file {
     my ( $self, $file, $object ) = @_;
     my $raw = $self->raw_result_files;
@@ -67,6 +75,7 @@ sub dispatch_test {
     my $yaml_file   = $smoke_dir->file("$test.yml");
     my $script      = $self->base_dir->file('run_single_test.pl');
     my $rcmd        = "$EXECUTABLE_NAME $script $test $yaml_file";
+#    my $rcmd        = "$EXECUTABLE_NAME -d:ptkdb $script $test $yaml_file";
 
     my $raw = Test::TAP::Model::LSF::Raw->new(
         test_file   => $test,
@@ -90,17 +99,8 @@ sub gather_results {
     my ( $self, @tests ) = @_;
     $self->wait_for_results;
 
-    my $raw = $self->raw_result_files;
-    for my $file (@tests) {
-        my $stdout_file = $raw->{$file}->stdout_file;
-        my @stdout = $stdout_file->openr->getlines;
-        my $results = $self->analyze_fh( $file, \@stdout );
-        $results ||= Test::Harness::Results->new;
-        my $test_file = $self->start_file($file);
-        $test_file->{results} = $results;
-    }
-
     # read yaml files
+    my $raw = $self->raw_result_files;
     my @yaml_files = map { $raw->{$_}->yaml_file } @tests;
     for my $file (@yaml_files) {
         $self->event("loading $file\n");
@@ -133,14 +133,18 @@ sub wait_for_results {
     }
 }
 
-sub run_single_file {
-    my ($self, $file) = @_;
-    return $self->SUPER::run_test($file);
-}
+# called by Test::Harness::runtests
+# we simply return the Test::Harness::Results object what we
+# picked up from the YAML file in gather_results()
+sub analyze_file {
+    my ( $self, $file ) = @_;
 
-sub emit_chunk {
-    my ( $self, $result_file ) = @_;
-    DumpFile( $result_file, $self->structure );
+    for my $f ( @{$self->{meat}{test_files}} ) {
+        if ($f->{file} eq $file) {
+            return $f->{results};
+        }
+    }
+    die "no results for $file";
 }
 
 sub emit {
@@ -150,13 +154,6 @@ sub emit {
         map { $_ => $self->{"_$_"} }
             qw( build_info smoker config revision timing )
     });
-}
-
-# repeat the line to STDOUT
-sub _analyze_line {
-    my $self = shift;
-    print $_[0];
-    return $self->SUPER::_analyze_line(@_);
 }
 
 package Test::TAP::Model::LSF::Raw;
