@@ -125,7 +125,7 @@ sub wait_for_results {
         if ($found) {
             delete $files{ $found->test_file };
             # TODO: make this do the harness-y thing instead
-            $self->event($found->test_file . "\n");
+            $self->event("done " . $found->test_file . "\n");
         }
         else {
             sleep 3;
