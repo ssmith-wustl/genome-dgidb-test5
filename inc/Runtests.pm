@@ -4,7 +4,7 @@ use strict;
 use warnings FATAL => 'all';
 
 use Moose;
-with 'MooseX::Getopt';
+#with 'MooseX::Getopt';
 use English;
 use File::chdir '$CWD';
 use Path::Class ();
@@ -27,7 +27,7 @@ has 'output_file' => (
     isa      => 'Path::Class::File',
     required => 1,
     lazy     => 1,
-    default  => sub { Path::Class::dir($CWD)->file('runtests.out') },
+    default  => sub { Path::Class::dir($CWD)->file('lsf_harness.out') },
 );
 
 has 'cmd_exit_code' => (
@@ -125,9 +125,11 @@ has 'cmd' => (
     lazy     => 1,
     default  => sub {
         my $self = shift;
-        my $cmd  = "env && $EXECUTABLE_NAME ./Makefile.PL ";
-        $cmd .= ' && make';
-        $cmd .= ' && make test';
+#        my $cmd  = "env && $EXECUTABLE_NAME ./Makefile.PL ";
+#        $cmd .= ' && make';
+#        $cmd .= ' && make test';
+        my $cmd  = 'env';
+        $cmd .= ' && util/lsf_harness.pl';
         return $cmd;
     },
 );
