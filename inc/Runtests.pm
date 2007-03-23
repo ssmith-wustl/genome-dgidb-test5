@@ -122,7 +122,7 @@ has 'cmd' => (
 #        $cmd .= ' && make';
 #        $cmd .= ' && make test';
         my $cmd  = 'env';
-        $cmd .= ' && $EXECUTABLE_NAME util/lsf_harness.pl';
+        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl";
         return $cmd;
     },
 );
