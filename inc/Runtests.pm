@@ -105,8 +105,8 @@ has 'failure_summary' => (
             !~ m{(^Failed [ ] Test.*List [ ] of [ ] Failed.*)}xms );
         my $summary = $1;
         my $cmd     = $self->cmd;
-        my %env = $self->env;
-        my $env = join("\n", map { "$_=$env{$_}" } sort keys %env);
+        my %env     = $self->env;
+        my $env     = join( "\n", map {"$_=$env{$_}"} sort keys %env );
         return "$env\n$cmd\n\n$summary";
     },
 );
@@ -122,7 +122,7 @@ has 'cmd' => (
 #        $cmd .= ' && make';
 #        $cmd .= ' && make test';
         my $cmd  = 'env';
-        $cmd .= ' && util/lsf_harness.pl';
+        $cmd .= ' && $EXECUTABLE_NAME util/lsf_harness.pl';
         return $cmd;
     },
 );
