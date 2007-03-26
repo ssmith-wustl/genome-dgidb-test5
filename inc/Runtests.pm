@@ -27,7 +27,7 @@ has 'output_file' => (
     isa      => 'Path::Class::File',
     required => 1,
     lazy     => 1,
-    default  => sub { Path::Class::dir($CWD)->file('lsf_harness.out') },
+    default  => sub { Path::Class::dir($CWD)->file('runtests.out') },
 );
 
 has 'cmd_exit_code' => (
@@ -144,8 +144,8 @@ has 'cmd' => (
         $cmd .= ' && make';
 #        $cmd .= ' && make test';
 #        my $cmd  = 'env';
-#        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl";
-        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl App/t/*.t GSCApp/t/*.t";
+        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl";
+#        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl App/t/*.t GSCApp/t/*.t";
         return $cmd;
     },
 );
