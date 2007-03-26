@@ -91,8 +91,8 @@ sub dispatch_test {
     $stdout_file->parent->mkpath( 0, 0775 );
     my $script
         = $self->base_dir->subdir('util')->file('run_single_test.pl');
-    my $rcmd        = "$EXECUTABLE_NAME $script $test $yaml_file";
-#    my $rcmd        = "$EXECUTABLE_NAME -d:ptkdb $script $test $yaml_file";
+#    my $rcmd = "$EXECUTABLE_NAME $script $test $yaml_file";
+    my $rcmd = "$EXECUTABLE_NAME -d:ptkdb $script $test $yaml_file";
 
     my $raw = Test::TAP::Model::LSF::Raw->new(
         test_file   => $test,
