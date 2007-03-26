@@ -4,7 +4,7 @@ use strict;
 use warnings FATAL => 'all';
 
 use Moose;
-#with 'MooseX::Getopt';
+with 'MooseX::Getopt';
 use English;
 use File::chdir '$CWD';
 use Path::Class ();
@@ -27,7 +27,7 @@ has 'output_file' => (
     isa      => 'Path::Class::File',
     required => 1,
     lazy     => 1,
-    default  => sub { Path::Class::dir($CWD)->file('runtests.out') },
+    default  => sub { Path::Class::dir($CWD)->file('run_tests.out') },
 );
 
 has 'cmd_exit_code' => (
@@ -68,6 +68,21 @@ has 'env' => (
         %env = ( %env, $self->merge_env );
         return \%env;
     },
+);
+
+has 'tests' => (
+    is         => 'ro',
+    isa        => 'ArrayRef',
+    required   => 1,
+    auto_deref => 1,
+    default    => sub { [] },    # run all tests by default
+);
+
+has 'show' => (
+    is       => 'ro',
+    isa      => 'Bool',
+    required => 1,
+    default  => sub {0},
 );
 
 has 'all_tests_successful' => (
@@ -140,23 +155,25 @@ has 'cmd' => (
     lazy     => 1,
     default  => sub {
         my $self = shift;
+        my @tests = $self->tests;
         my $cmd  = "env && $EXECUTABLE_NAME ./Makefile.PL ";
         $cmd .= ' && make';
 #        $cmd .= ' && make test';
 #        my $cmd  = 'env';
-        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl";
+        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl @tests";
 #        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl App/t/*.t GSCApp/t/*.t";
         return $cmd;
     },
 );
 
-sub runtests {
+sub run_tests {
     my $self = shift;
     my $cmd = $self->cmd;
     my $output_file = $self->output_file;
-    $cmd = "($cmd) > $output_file 2>&1";
+    $cmd = "($cmd) 2>&1 | tee $output_file";
     local %ENV = ( %ENV, $self->env );
-    my $output = `$cmd`;
+    print "$cmd\n";
+    $self->show ? system($cmd) : `$cmd`;
     $self->cmd_exit_code($?);
 }
 
