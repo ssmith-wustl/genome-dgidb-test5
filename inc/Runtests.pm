@@ -111,6 +111,28 @@ has 'failure_summary' => (
     },
 );
 
+has 'failed_tests' => (
+    is         => 'ro',
+    isa        => 'ArrayRef',
+    required   => 1,
+    auto_deref => 1,
+    lazy       => 1,
+    default    => sub {
+        my $self = shift;
+        return [] if ( $self->all_tests_successful );
+        my $summary = $self->failure_summary;
+        my @failed_tests;
+        for ( split( /\n/, $summary ) ) {
+            last if (m{^\d+ test skipped}xms);
+            last if (m{^Failed [ ] .* subtests [ ] failed}xms);
+            next if (m{^([\w\/]+\.t)}xms);
+            push @failed_tests, $1;
+        }
+        die 'could not parse out failed tests' if ( @failed_tests == 0 );
+        return \@failed_tests;
+    },
+);
+
 has 'cmd' => (
     is       => 'ro',
     isa      => 'Str',
