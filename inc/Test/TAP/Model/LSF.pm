@@ -46,6 +46,15 @@ sub new {
     return $singleton ||= $class->SUPER::new(@_);
 }
 
+# HACK: this is borked in Test::TAP::Model
+sub new_with_struct {
+    my $pkg  = shift;
+    my $meat = shift;
+    my $self = $pkg->new(@_);
+    $self->{meat} = $meat;
+    $self;
+}
+
 sub add_raw_result_file {
     my ( $self, $file, $object ) = @_;
     my $raw = $self->raw_result_files;
