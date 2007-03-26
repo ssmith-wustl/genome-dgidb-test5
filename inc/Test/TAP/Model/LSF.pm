@@ -142,7 +142,7 @@ sub wait_for_results {
 }
 
 # called by Test::Harness::runtests
-# we simply return the Test::Harness::Results object what we
+# we simply return the Test::Harness::Results object that we
 # picked up from the YAML file in gather_results()
 sub analyze_file {
     my ( $self, $file ) = @_;
@@ -153,15 +153,6 @@ sub analyze_file {
         }
     }
     die "no results for $file";
-}
-
-sub emit {
-    my ( $self, $file ) = @_;
-    DumpFile( $file, {
-        meat => $self->structure,
-        map { $_ => $self->{"_$_"} }
-            qw( build_info smoker config revision timing )
-    });
 }
 
 package Test::TAP::Model::LSF::Raw;
