@@ -91,8 +91,8 @@ sub dispatch_test {
     $stdout_file->parent->mkpath( 0, 0775 );
     my $script
         = $self->base_dir->subdir('util')->file('run_single_test.pl');
-#    my $rcmd = "$EXECUTABLE_NAME $script $test $yaml_file";
-    my $rcmd = "$EXECUTABLE_NAME -d:ptkdb $script $test $yaml_file";
+    my $rcmd = "$EXECUTABLE_NAME $script $test $yaml_file";
+#    my $rcmd = "$EXECUTABLE_NAME -d:ptkdb $script $test $yaml_file";
 
     my $raw = Test::TAP::Model::LSF::Raw->new(
         test_file   => $test,
@@ -103,7 +103,7 @@ sub dispatch_test {
     $self->add_raw_result_file($test, $raw);
 
     local $ENV{PERL5LIB} = $self->_INC2PERL5LIB;
-    my $cmd = "bsub -q short -N -o $stdout_file -e $stderr_file $rcmd";
+    my $cmd = "bsub -q short -N -o $stdout_file -e $stderr_file -R 'select[type==LINUX86]' $rcmd";
     $self->_status("dispatching $test...");
     my @out = `$cmd 2>&1`;
     $self->_status(@out);
