@@ -118,11 +118,12 @@ has 'cmd' => (
     lazy     => 1,
     default  => sub {
         my $self = shift;
-#        my $cmd  = "env && $EXECUTABLE_NAME ./Makefile.PL ";
-#        $cmd .= ' && make';
+        my $cmd  = "env && $EXECUTABLE_NAME ./Makefile.PL ";
+        $cmd .= ' && make';
 #        $cmd .= ' && make test';
-        my $cmd  = 'env';
-        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl";
+#        my $cmd  = 'env';
+#        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl";
+        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl App/t/*.t GSCApp/t/*.t";
         return $cmd;
     },
 );
