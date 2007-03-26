@@ -71,7 +71,7 @@ has 'env' => (
 );
 
 has 'tests' => (
-    is         => 'ro',
+    is         => 'rw',
     isa        => 'ArrayRef',
     required   => 1,
     auto_deref => 1,
