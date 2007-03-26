@@ -172,7 +172,7 @@ sub run_tests {
     my $output_file = $self->output_file;
     $cmd = "($cmd) 2>&1 | tee $output_file";
     local %ENV = ( %ENV, $self->env );
-    print "$cmd\n";
+    print "$cmd\n"; if $self->show;
     $self->show ? system($cmd) : `$cmd`;
     $self->cmd_exit_code($?);
 }
