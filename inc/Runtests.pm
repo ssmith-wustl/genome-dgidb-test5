@@ -160,8 +160,8 @@ has 'cmd' => (
         $cmd .= ' && make';
 #        $cmd .= ' && make test';
 #        my $cmd  = 'env';
-        $cmd .= " && $EXECUTABLE_NAME -d:ptkdb util/lsf_harness.pl @tests";
-#        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl App/t/*.t GSCApp/t/*.t";
+#        $cmd .= " && $EXECUTABLE_NAME -d:ptkdb util/lsf_harness.pl @tests";
+        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl App/t/*.t GSCApp/t/*.t";
         return $cmd;
     },
 );
