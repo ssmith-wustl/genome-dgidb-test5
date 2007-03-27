@@ -137,10 +137,13 @@ has 'failed_tests' => (
         return [] if ( $self->all_tests_successful );
         my $summary = $self->failure_summary;
         my @failed_tests;
-        for ( split( /\n/, $summary ) ) {
+        my @summary = split( /\n/, $summary );
+        shift @summary while ( $summary[0] =~ m{^-------------}xms );
+        shift @summary;
+        for (@summary) {
             last if (m{^\d+ test skipped}xms);
             last if (m{^Failed [ ] .* subtests [ ] failed}xms);
-            next if (m{^([\w\/]+\.t)}xms);
+            next if ( !m{^([\w\/]+\.t)}xms );
             push @failed_tests, $1;
         }
         die 'could not parse out failed tests' if ( @failed_tests == 0 );
@@ -176,6 +179,7 @@ sub run_tests {
     print "$cmd\n" if $self->show;
     $self->show ? system($cmd) : `$cmd`;
     $self->cmd_exit_code($?);
+    return 1;
 }
 
 sub cmd_has_been_run {
