@@ -103,7 +103,7 @@ sub dispatch_test {
     $self->add_raw_result_file($test, $raw);
 
     local $ENV{PERL5LIB} = $self->_INC2PERL5LIB;
-    my $cmd = "bsub -q short -N -o $stdout_file -e $stderr_file -R 'select[type==LINUX86]' $rcmd";
+    my $cmd = "bsub -q seqmgr-long -N -o $stdout_file -e $stderr_file -R 'select[type==LINUX86]' $rcmd";
     $self->_status("dispatching $test...");
     my @out = `$cmd 2>&1`;
     $self->_status(@out);
