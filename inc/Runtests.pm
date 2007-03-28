@@ -138,7 +138,8 @@ has 'failed_tests' => (
         my $summary = $self->failure_summary;
         my @failed_tests;
         my @summary = split( /\n/, $summary );
-        shift @summary while ( $summary[0] =~ m{^-------------}xms );
+        shift @summary
+            while ( @summary && $summary[0] !~ m{^-------------}xms );
         shift @summary;
         for (@summary) {
             last if (m{^\d+ test skipped}xms);
