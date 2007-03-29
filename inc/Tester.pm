@@ -101,16 +101,8 @@ has 'all_tests_successful' => (
     lazy     => 1,
     default  => sub {
         my $self = shift;
-        die 'cannot access all_tests_successful until cmd has been run'
-            if ( !$self->cmd_has_been_run );
-        if ( $self->cmd_exit_code != 0 ) {
-            return 0;
-        }
-        my $output = $self->output || '';
-        if ( $output =~ m{^All [ ] tests [ ] successful}xms ) {
-            return 1;
-        }
-        return 0;
+        my @fail = $self->failed_tests;
+        return @fail ? 0 : 1;
     },
 );
 
@@ -121,17 +113,11 @@ has 'failure_summary' => (
     lazy     => 1,
     default  => sub {
         my $self = shift;
-        die 'cannot access failure_summary until cmd has been run'
-            if ( !$self->cmd_has_been_run );
-        my $output = $self->output || '';
-        return ''
-            if ( $output
-            !~ m{(^Failed [ ] Test.*List [ ] of [ ] Failed.*)}xms );
-        my $summary = $1;
-        my $cmd     = $self->cmd;
-        my %env     = $self->env;
-        my $env     = join( "\n", map {"$_=$env{$_}"} sort keys %env );
-        return "$env\n$cmd\n\n$summary";
+        return '' if $self->all_tests_successful;
+        my %env    = $self->env;
+        my $env    = join( "\n", map {"$_=$env{$_}"} sort keys %env );
+        my @failed = $self->failed_tests;
+        return "$env\n\nFailed tests:\n" . join( "\n", @failed, '' );
     },
 );
 
@@ -143,40 +129,11 @@ has 'failed_tests' => (
     lazy       => 1,
     default    => sub {
         my $self = shift;
-        return [] if ( $self->all_tests_successful );
-        my $summary = $self->failure_summary;
-        my @failed_tests;
-        my @summary = split( /\n/, $summary );
-        shift @summary
-            while ( @summary && $summary[0] !~ m{^-------------}xms );
-        shift @summary;
-        for (@summary) {
-            last if (m{^\d+ test skipped}xms);
-            last if (m{^Failed [ ] .* subtests [ ] failed}xms);
-            next if ( !m{^([\w\/]+\.t)}xms );
-            push @failed_tests, $1;
-        }
-        die 'could not parse out failed tests' if ( @failed_tests == 0 );
-        return \@failed_tests;
-    },
-);
-
-has 'cmd' => (
-    is       => 'ro',
-    isa      => 'Str',
-    required => 1,
-    lazy     => 1,
-    default  => sub {
-        my $self = shift;
-        my @tests = $self->tests;
-        my $cmd  = "env && $EXECUTABLE_NAME ./Makefile.PL ";
-        $cmd .= ' && make';
-#        $cmd .= ' && make test';
-#        my $cmd  = 'env';
-#        $cmd .= " && $EXECUTABLE_NAME -d:ptkdb util/lsf_harness.pl @tests";
-        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl @tests";
-#        $cmd .= " && $EXECUTABLE_NAME util/lsf_harness.pl";
-        return $cmd;
+        die 'cannot access failed_tests until we have a model'
+            if ( !$self->model );
+        my %status = $self->model->status;
+        my @not_pass = grep { $status{$_} ne 'PASS' } keys %status;
+        return \@not_pass;
     },
 );
 
@@ -186,6 +143,16 @@ has 'callback' => (
     required => 1,
     default  => sub { sub { } },
 );
+
+has 'model' => (
+    is  => 'rw',
+    isa => 'Test::TAP::Model',
+);
+
+sub status {
+    my $self = shift;
+    return $self->model->status;
+}
 
 sub run_tests {
     my $self = shift;
@@ -211,6 +178,7 @@ sub run_tests {
     my $model = $class->new or die;
     $model->handler($self->callback);
     $model->run_tests(@tests);
+    $self->model($model);
 
     $self->callback->("writing tests.yml...");
     DumpFile('tests.yml', $model->structure);
@@ -222,6 +190,8 @@ sub run_tests {
         require Test::Harness;
         Test::Harness::runtests(@tests);
     });
+
+    return $self->model->status;
 }
 
 sub _fork_run {

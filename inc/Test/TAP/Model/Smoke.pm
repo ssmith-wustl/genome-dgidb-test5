@@ -141,6 +141,18 @@ sub gather_results {
 sub wait_for_results {
 }
 
+sub status {
+    my $self       = shift;
+    my $test_files = $self->{meat}{test_files};
+    my %status;
+    for my $test (@$test_files) {
+        my $pf = $test->{results}->passing ? 'PASS' : 'FAIL';
+        $status{ $test->{file} } = $pf;
+    }
+    return %status;
+}
+
+
 # called by Test::Harness::runtests
 # we simply return the Test::Harness::Results object that we
 # picked up from the YAML file in gather_results()
