@@ -3926,7 +3926,7 @@ sub GetProjectPurpose {
 
     # do not set purposes if it is already set
     # bjo 3-12-2007
-    if (defined $project->purpose) {
+    if ($project && defined $project->purpose) {
 	$data = $project->purpose;
     }
     elsif($clone =~ /^M_/) {
