@@ -298,14 +298,10 @@ $self -> {'GetSubIdPlIdFromSubclonePse'} = LoadSql($dbh, qq/select  distinct dp.
                                                 pse_id = subclones_pses.pse_pse_id and sub_id = sub_sub_id and arc_id = arc_arc_id
                                                 and direction = 'out' and bs_barcode = ?", 'Single');
 
-    $self->{'CheckClonePurpose'} = LoadSql($dbh, "select distinct ct_clone_type from clones, clone_growths, clone_growths_libraries cgl, fractions fr, ligations
-                                                      where 
-                                                      clo_id = clo_clo_id and
-                                                      cg_id = cgl.cg_cg_id and
-                                                      cgl.cl_cl_id  = fr.cl_cl_id and
-                                                      fra_id = fra_fra_id and
-                                                      lig_id = (select lgx.dna_id from dna_pse lgx where lgx.pse_id in (select pse_pse_id 
-                                                          from pse_barcodes where bs_barcode = ? and direction = 'out'))", 'Single');
+    $self->{'CheckClonePurpose'} = LoadSql($dbh, "select distinct ct_clone_type from dna d, clones c where c.clo_id = d.dna_id and dna_id in (
+							  select dna_id from dna_relationship start with dna_id in (
+							  select dp.dna_id from dna_pse dp, pse_barcodes pb where dp.pse_id = pb.pse_pse_id and pb.bs_barcode = ? and pb.direction = 'out')
+							  connect by dna_id = prior parent_dna_id)", 'Single');
 
     $self->{'GetProjectTargetFromAgarPlate'} = LoadSql($dbh,  "select distinct project_id, projects.target from pse_barcodes, ligations, dna_pse, 
                                     fractions, clone_growths, clone_growths_libraries, clones, projects , clones_projects
@@ -2635,7 +2631,7 @@ sub ResuspendDna {
     my $update_result = 'successful';
     my $i=0;    
 
-
+    #$options->{'Resuspension Buffer'} = 0.05mM EDTA - 1L if(it is mp)
     if(! defined $pre_pse_ids->[0]) {
 	$self -> {'Error'} = "Could not find a valid pre_pse_id.";
     }
