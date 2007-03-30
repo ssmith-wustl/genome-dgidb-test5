@@ -210,6 +210,7 @@ sub _fork_run {
     }
     else {
         # child
+        open( STDERR, ">&", STDOUT );
         $code->();
         exit;
     }
