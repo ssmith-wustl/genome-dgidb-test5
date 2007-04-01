@@ -9,6 +9,7 @@ use Moose;
 with 'MooseX::Getopt';
 use English;
 use File::chdir '$CWD';
+use IO::Handle;
 use IO::File;
 use Path::Class ();
 use File::Slurp ();
@@ -211,6 +212,8 @@ sub _fork_run {
     else {
         # child
         open( STDERR, ">&", STDOUT );
+        STDOUT->autoflush(1);
+        STDERR->autoflish(1);
         $code->();
         exit;
     }
