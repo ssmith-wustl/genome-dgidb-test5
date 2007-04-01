@@ -12,28 +12,28 @@ use File::chdir '$CWD';
 use IO::Handle;
 use IO::File;
 use Path::Class ();
-use File::Slurp ();
 use YAML::Syck;
 use Test::TAP::Model::Smoke;
 use Test::TAP::Model::LSF;
-
-
-
-
 
 has 'db_variant' => (
     is       => 'ro',
     isa      => 'Str',
     required => 1,
+    lazy     => 1,
     default  => sub {
-        eval q{ use GSCApp; App->init; };
-        return App::DB->db_variant;
+        my $self = shift;
+        my $db_variant;
+        $self->_fork_run(
+            sub {
+                eval q{ use GSCApp; App->init; };
+                print App::DB->db_variant, "\n";
+            },
+            sub { $db_variant = shift },
+        );
+        chomp $db_variant;
+        return $db_variant;
     },
-);
-
-has 'cmd_exit_code' => (
-    is  => 'rw',
-    isa => 'Num',
 );
 
 has 'cover' => (
@@ -76,6 +76,7 @@ has 'tests' => (
     is         => 'rw',
     isa        => 'ArrayRef',
     required   => 1,
+    lazy       => 1,
     auto_deref => 1,
     default    => sub {
         my $self = shift;
@@ -88,6 +89,7 @@ has 'test_globs' => (
     is         => 'ro',
     isa        => 'ArrayRef',
     required   => 1,
+    lazy       => 1,
     auto_deref => 1,
     default    => sub {
         # run all tests by default
@@ -213,24 +215,10 @@ sub _fork_run {
         # child
         open( STDERR, ">&", STDOUT );
         STDOUT->autoflush(1);
-        STDERR->autoflish(1);
+        STDERR->autoflush(1);
         $code->();
         exit;
     }
-}
-
-sub cmd_has_been_run {
-    my $self = shift;
-    return defined $self->cmd_exit_code;
-}
-
-sub output {
-    my $self = shift;
-    die 'cannot access output until cmd has been run'
-        if ( !$self->cmd_has_been_run );
-    my $output_file = $self->output_file;
-    my $output = File::Slurp::slurp("$output_file");
-    return $output;
 }
 
 1;
