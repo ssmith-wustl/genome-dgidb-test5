@@ -795,7 +795,7 @@ sub GetAvailCountColonyAgarPlate {
             return 0;
         }
 
-	if($proj->project_status !~ /finish/ && $proj->project_status !~ /submit/) {
+	if($proj->project_status !~ /finish/ && $proj->project_status !~ /submit/ && $proj->project_status !~ /shotgun_done/) {
             my $update = $proj->set_project_status('shotgun_start');
             unless($update) {
                  $self->{'Error'} = "$pkg: Failed to update the project status.";
