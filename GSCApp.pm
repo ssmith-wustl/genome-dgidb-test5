@@ -401,6 +401,10 @@ associations in four cases.
 	RUN_REGION_454			GSC::RunRegion454
 	
 	SEQUENCE_ASSEMBLY_METRIC_454	GSC::Sequence::Assembly::Metric::454
+        VARIATION_SEQUENCE_TAG          GSC::Sequence::Tag::Variation
+        VARIATION_SEQUENCE_TAG_TSCRIPT  GSC::Sequence::Tag::Variation::Tscript
+        VARIATION_SEQUENCE_TAG_ALLELE   GSC::Sequence::Tag::Variation::Allele
+    
     /
 );
 
