@@ -46,6 +46,25 @@ sub new {
     return $self;
 } #new
 
+
+sub GetAndCheckBarcodeOutInprogress{
+    #--- check the output description for the plate type
+    my ($self, $barcode, $ps_id) = @_;
+    my $ps = GSC::ProcessStep->get(ps_id => $ps_id);
+    my $od = $ps->output_device;
+    my $bc = GSC::Barcode->get($barcode);
+    
+    unless($ps && $od && $bc){
+	$self->{'Error'} = "failed to get core information from barcode $barcode and ps_id $ps_id";
+	return 0;
+    }
+    unless($bc->container_type_isa($od)){
+	$self->{'Error'} = "The barcode $barcode is not a $od, and that is required (it is a ".$bc->container_type.")";
+	return 0;
+    }
+    return $self->GetAvailBarcodeOutInprogress($barcode, $ps_id);
+}
+
 sub GetAvailBarcodeInInprogress384 {
 
     my ($self, $barcode, $ps_id) = @_;
