@@ -459,6 +459,8 @@ sub ProcessDNA {
     my @dps  = GSC::DNAPSE->get(pse_id => \@pbs);
     my %hdps  = map { ( $_->dl_id => $_ ) } @dps;
 
+    my $ps = GSC::ProcessStep->get(ps_id => $ps_id);
+
     my $dont_update_prior = 0;
     my $data_options = $options->{'Data'};
     if(defined $data_options) {
@@ -508,6 +510,8 @@ sub ProcessDNA {
         my @pdps = GSC::DNAPSE->get(pse_id => $dna_source_pse);
 	return unless @pdps; #-- this is checked in the funciton that gives us the source pses
 
+	
+
 	foreach my $dp (@pdps) {
 	    my $dna_pse = $hdps{$dp->dl_id};
 	    unless($dna_pse) {
@@ -521,9 +525,23 @@ sub ProcessDNA {
 		    return;
 		}	    
 	    }
+
+	    #kc: hacking in appropriate tube -> agar plate transitions
+	    my $dlid;
+	    if($ps->output_device eq 'agar plate'){
+		my $dl = GSC::DNALocation->get(dl_id => $dna_pse);
+		unless($dl->location_type =~ /agar plate/){
+		    $dl = GSC::DNALocation->get(location_type => 'large square agar plate');
+		}
+		$dlid = $dl->dl_id;
+	    }
+	    else{
+		$dlid = $dna_pse->dl_id;
+	    }
+
 	    unless(GSC::DNAPSE->create(pse_id => $pse->pse_id,
 				       dna_id => $dna_pse->dna_id,
-				       dl_id  => $dna_pse->dl_id)) {
+				       dl_id  => $dlid)) {
 		$self -> {'Error'} = "$pkg: ProcessDNA -> Failed creating DNAPSE.";
 		return;
 	    }
