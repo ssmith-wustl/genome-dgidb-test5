@@ -244,7 +244,7 @@ when words are paresd:
 =cut
 
 
-App::Vocabulary->vocabulary(qw/GSC DNA NCBI FPC ID ABI SCF GB PSE MD PCR cDNA mRNA tRNA QStat ZTR NIH NHGRI MP FTP IPR HTMP QA AB1 ETL OLTP OLAP NSF CDS UTR SFF TA/);
+App::Vocabulary->vocabulary(qw/GSC DNA NCBI FPC ID ABI SCF GB PSE MD PCR cDNA mRNA tRNA QStat ZTR NIH NHGRI MP FTP IPR HTMP QA AB1 ETL OLTP OLAP NSF CDS UTR SFF TA TCGA/);
 
 =pod
 
@@ -387,6 +387,7 @@ associations in four cases.
         SETUP_AMPLICON_DESIGN           GSC::Setup::AmpliconDesign
         SETUP_SEQUENCE_ANNOTATION       GSC::Setup::SequenceAnnotation
         READ_SUBMISSION_NCBI            GSC::Sequence::Read::Submission::NCBI
+        READ_SUBMISSION_TCGA            GSC::Sequence::Read::Submission::TCGA
 
         TMP_ORGANISM                    GSC::TmpOrganism
         ORGANISM_TAXON                  GSC::Organism::Taxon
