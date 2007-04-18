@@ -58,7 +58,7 @@ sub GetAndCheckBarcodeOutInprogress{
 	$self->{'Error'} = "failed to get core information from barcode $barcode and ps_id $ps_id";
 	return 0;
     }
-    unless($bc->container_type_isa($od)){
+    unless($bc->container_type_isa($od) ){
 	$self->{'Error'} = "The barcode $barcode is not a $od, and that is required (it is a ".$bc->container_type.")";
 	return 0;
     }
