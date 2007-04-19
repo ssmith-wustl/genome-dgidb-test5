@@ -40,7 +40,7 @@ sub wait_for_results {
             $self->_status("done " . $found->test_file);
         }
         else {
-            sleep 3;
+            sleep 60;
         }
     }
 }
