@@ -165,7 +165,7 @@ sub run_tests {
     # prepare to run the tests
     local %ENV = ( %ENV, $self->env );
     $self->_fork_run( sub { system('env') } );
-    $self->_fork_run( sub { system("$EXECUTABLE_NAME ./Makefile.PL") } )
+    $self->_fork_run( sub { system("$EXECUTABLE_NAME ./Makefile.PL") } );
     $self->_fork_run( sub { system('make') } );
 
     my $class;
