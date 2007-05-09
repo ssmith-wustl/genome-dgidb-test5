@@ -166,7 +166,6 @@ sub run_tests {
     local %ENV = ( %ENV, $self->env );
     $self->_fork_run( sub { system('env') } );
     $self->_fork_run( sub { system("$EXECUTABLE_NAME ./Makefile.PL") } )
-        if ( !-e 'Makefile' );
     $self->_fork_run( sub { system('make') } );
 
     my $class;
