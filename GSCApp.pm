@@ -336,6 +336,11 @@ associations in four cases.
         SEQUENCE_ASSEMBLY_OUTPUT_SANGER GSC::Sequence::Assembly::Output::Sanger
         SEQUENCE_ASSEMBLY_OUTPUT_454    GSC::Sequence::Assembly::Output::454
         SEQUENCE_ASSEMBLY_OUTPUT_Solexa GSC::Sequence::Assembly::Output::Solexa
+
+	#  I wanted to use SEQUENCE_ASSEMBLY_READ_STATUS_454 here, 
+	#  but was too long for an oracle table name.
+        SEQ_ASSEMBLY_READ_STATUS_454	GSC::Sequence::Assembly::ReadStatus::454
+
         SEQUENCE_REFERENCE_ALIGNMENT    GSC::Sequence::ReferenceAlignment
         SEQUENCE_READ                   GSC::Sequence::Read
         SEQUENCE_TEMPLATE               GSC::Sequence::Template
