@@ -9,6 +9,8 @@ our @EXPORT = (@Test::More::EXPORT, 'flush_errors','flush_warnings');
 
 use Test::More;
 use Test::Builder;
+use Test::GSC::ProcessStep;
+use Test::GSC::PSE;
 
 my $Test = Test::Builder->new;
 
