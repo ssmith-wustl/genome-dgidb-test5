@@ -1,4 +1,4 @@
-package CSP;
+ package CSP;
 
 use strict;
 use warnings;
@@ -12,6 +12,10 @@ use IO::Handle;
 use IO::File;
 use Time::HiRes;
 use IPC::Open2 qw(open2);
+use Date::Calc;
+
+use CSP::PSE;
+use CSP::Job;
 
 
 =head1 NAME
@@ -54,8 +58,9 @@ our $PROCESS_TO_FILE = "/gsc/scripts/share/CSP/process_to.list";
 # to have an object or class interface.  For now I've
 # settled on class.  -thepler
 sub new {
-    die;
+    die "not allowed to create a csp object, Todd says";
     my $class = shift;
+    my %p = @_;
     my $self = bless {}, $class;
     return $self;
 }
@@ -98,6 +103,202 @@ sub find_scheduled_pses {
                                                     undef,
                                                     @inputs);
     return @$pse_id_ref;
+}
+
+
+=head2 sub blades_down()
+
+Indicates whether the blades are "still" down.  This is an optimistic test: if there are no reported problems, it will not check to verify that nothing bad has happened.  Once indicated that the blades are down, it will continue to return that the blades are down until 5 minutes has expired, at which point it will recheck the blades and either wait another 5 minutes are return false (ie. the blades are Not down).  
+
+Parameters: 
+ force : if set to true, force will always check the blade center and so you will have verification whether they are down *right now*.
+ cmd : if a command is provided, it will use that command instead of the default 'bhosts' command.  Note that this provides a more accurate blades-down measure because it is no longer an optimistic test.  You will still receive a true scalar value if the blades are down, and it will still put a 5 minute wait on the last failure time before attempting to access them again, *but* if it is suggested the blades are not down, it will run the provided command and use that as the test to determine down-ness.  If the blades are down, as noted, it will return a true scalar value.  If the blades are not down, it will return an array-ref of the values returned by your command.  No false value is possible.
+
+=cut
+
+my $BDOWN;
+sub blades_down{
+#params 
+#  force => 1 : check the blades no matter what
+#  cmd => 1 : run this as the command if you're going to be checking the blades (or if )
+
+    my $class = shift;
+    my %params = @_;
+
+    if(!$params{force} && defined $BDOWN && $BDOWN){
+	#--- we think they are down
+	my $now = time;
+	if($params{force} || ($now - $BDOWN > 300)){ #-- check again
+	    $BDOWN = 0;
+	}
+	else{
+	    return $BDOWN;
+	}
+    }
+    elsif(!$params{force} && !$params{cmd}){ 
+	#--- user was just checking to see if there was a known issue
+	return 0;
+    }
+
+    my $cmd = $params{cmd} || 'bhosts';
+    
+    #--- check just a generic timer
+    my $timein = Time::HiRes::time();
+    my @values = `$cmd`;
+    my $timeout = Time::HiRes::time();
+    if($timeout - $timein > 1000){
+	$BDOWN = time;
+	return $BDOWN;
+    }
+    else{
+	$BDOWN = 0;
+	return ($params{cmd} ? \@values : 0);
+    }
+}
+
+=head2 sub run_blade_cmd ( cmd )
+
+Runs the command on the blade center provided it is not down.  Automatically uses blades_down().  It *is* ambiguous if you receive () in return, because it may mean the blades are down, or that you have no results.  A subsequent call to blades_down() will clear it up if it is significant.
+
+=cut
+
+sub run_blade_cmd{
+    my $class = shift;
+    my $cmd = shift;
+
+    my $result = $class->blades_down(cmd => $cmd);
+    return () unless ref $result;
+    return @$result;
+}
+
+=head2 find_jobs 
+
+a function to find CSP::PSE objects and their jobs.  The parameters may be any constraint hash (see find_csp_pses), or 'csp_pse' => arrayref if you have already found the objects you want to find jobs for.  If there is no csp_pse parameter, it will call find_csp_pses with the parmaeters, thus the reason the constriant hash works just find.
+
+=cut
+
+sub find_jobs{
+    my $class = shift;
+    my %params = @_;
+
+    my @csp_pses = (exists $params{'csp_pse'} 
+		    ? @{$params{'csp_pse'}} 
+		    : $class->find_csp_pses(%params));
+    
+    return () unless @csp_pses; #-- no csps found
+
+    my @output;
+
+    unless(@output = CSP->run_blade_cmd("bjobs -a -u all 2>&1")){
+	return @csp_pses;
+    }
+    
+    
+    my %bladestats;
+    for my $i ( 1 .. $#output ) { #-- '1' to skip header
+	next unless $output[$i];
+	my ($jobid) = $output[$i] =~ /^([^\s]+)/;
+	next unless $jobid;
+	$bladestats{$jobid} = $output[$i];
+    }
+    
+    
+    foreach (@csp_pses){
+	next unless $_->job_id;
+	if(exists $bladestats{$_->job_id}){
+	    return unless $_->process_job_line($bladestats{$_->job_id});
+	}
+	else{
+	    $_->no_job_found(1);
+	}
+    }
+    return @csp_pses;
+}
+
+=head2 find_csp_pses
+
+This is a function to find the CSP::PSE objects for currently scheduled/confirming/failed pses from the database.  Because you may like a lot of different information for these, we have this function and the objects, which do other cool things.  
+
+The parameters is a hash to additional constraints.  The default is 
+ pse_status => ['scheduled', 'confirm', 'confirming']
+
+Which does what you expect.  You can put any constraints on the process_steps or process_step_executions table.  The '=>' is autoresolved to an '=' or an 'in' clause.
+
+=cut
+
+sub find_csp_pses{
+    my $class = shift;
+    my %params = @_;
+    
+    my %constraints;
+
+    #--- this is a less hardcore but still hokey version of find_scheduled_pses
+    #    that will return created CSP::PSE objects 
+    
+    if(exists $params{psesta_pse_status}){
+	$constraints{'pse.psesta_pse_status'} = delete $params{psesta_pse_status};
+    }
+    else{
+	$constraints{'pse.psesta_pse_status'} = ['scheduled', 'confirm', 'confirming'];
+    }
+    
+    my @possible_properties;
+    foreach ('PROCESS_STEP_EXECUTIONS', 'PROCESS_STEPS'){
+	push @possible_properties, map {lc($_)} App::DB::Table->get($_)->column_names;
+    }
+    foreach (@possible_properties){
+	if(exists $params{$_}){
+	    $constraints{$_} = $params{$_};
+	}
+    }
+    
+
+    my $query = qq{select /*+ordered */
+		       ps.pro_process_to, pse.pse_id, unix_login,pse.psesta_pse_status, 
+		       pse.pr_pse_result, to_char(pse.date_scheduled, 'dd-mon-yyyy hh:mi'),  
+		       pj.job_id, ps.ps_id
+		       from process_step_executions pse
+		       join process_steps ps on pse.ps_ps_id = ps.ps_id
+		       left outer join pse_job pj on pse.pse_id = pj.pse_id 
+		       left outer join 
+		       ( select unix_login, ei_id from employee_infos ei 
+			 join gsc_users gu on gu_gu_id = gu_id
+			 where ei.us_user_status = 'active' and gu.us_user_status = 'active') emp
+			 on emp.ei_id = pse.ei_ei_id
+			 where };
+    my @cst_strings;
+    while(my ($column, $values) = each %constraints){
+	if(ref $values){
+	    if(@$values > 1){
+		push @cst_strings, "$column in ('".join("','", @$values)."')";
+	    }
+	    else{
+		push @cst_strings, "$column = '".$values->[0]."'";
+	    }
+	}
+	else{
+	    push @cst_strings, "$column = '".$values."'";
+	}
+    }
+    $query .= join(" AND ", @cst_strings);
+
+    my $sth = App::DB->dbh->prepare($query) || die;
+    $sth->execute() || die;
+    
+    my @obj;
+    while (my @row = $sth->fetchrow_array){
+	my $obj = CSP::PSE->new_nocheck(process => $row[0],
+					pse_id => $row[1],
+					user => $row[2],
+					pse_status => $row[3],
+					pse_result => $row[4],
+					date_scheduled => $row[5],
+					ps_id => $row[7],
+					job_id => $row[6]);
+	push @obj, $obj;
+    }
+    
+    return @obj;
 }
 
 =head2 choose_pses
@@ -387,6 +588,7 @@ sub process_locked {
     my $queue = $config->{queue};
     $queue = 'seqmgr' if ($queue eq 'long');        # HACK
     $queue = 'seqmgr' if ($queue eq 'seqmgr-long'); # HACK
+    $queue = 'seqmgr' if ($queue eq 'dumpread');    # HACK
     my %rv = GSCApp::QLock->status(queue => 'csp:' . $queue);
     my ($v) = values %rv;
     ($v) = values %$v;
@@ -424,23 +626,26 @@ my %csp_priority = (
     'analyze amplicon failure' => 5,
     # lower priority steps
     'analyze 454 output'                      => 1,
-    'analyze traces'                          => 2,
     'analyze sequenced dna'                   => 2,
     'analyze digested dna'                    => 1,
     'etl reads from oltp to olap'             => 1,
-    'transfer tagged 454 run'                 => 1,
     'assemble 454 regions'                    => 1,
     'mp read analysis'                        => 1,
     'add read to mp assembly'                 => 1,
-    'dump reads to filesystem'                => 1,
     'import external reads'                   => 1,
     'gather submission results'               => 1,
-    'mkcs'                                    => 1,
-    'autofinish'                              => 1,
-    'shotgun done'                            => 1,
-    'submit finished clone to qa'             => 1,
     'prepare read submission'                 => 1,
     'submit reads'                            => 1,
+
+#    these were given their own cron to get around the
+#    problem of running as the lims user instead of seqmgr
+#    'analyze traces'                          => 2,
+#    'dump reads to filesystem'                => 1,
+#    'transfer tagged 454 run'                 => 1,
+#    'submit finished clone to qa'             => 1,
+#    'mkcs'                                    => 1,
+#    'shotgun done'                            => 1,
+#    'autofinish'                              => 1,
 );
 
 sub csp_priority { %csp_priority }
@@ -456,6 +661,8 @@ sub confirm_scheduled_pse_cron {
     my $queue        = $arg->{queue};
 #    my $MAX_JOBS     = 2500;
 
+    my $_process_to_ = $process_to;
+    $_process_to_ =~ s/\s+/_/g if ($_process_to_);
     #########################
     # set up message logging
     #########################
@@ -467,6 +674,9 @@ sub confirm_scheduled_pse_cron {
     # make up a log file name
     # one log file per day
     my ($today) = split(/ /, App::Time->now);
+    if ($_process_to_) {
+        $today .= "_$_process_to_";
+    }
     my $logfile = $cron_dir->file($today . '.log');
 
     # open file
@@ -489,11 +699,15 @@ sub confirm_scheduled_pse_cron {
         exit 0;
     }
 
-
     # make sure 1 and only 1 process is running at a time
+    my $resource_id = 'confirm_scheduled_pse_cron';
+    if ($_process_to_) {
+        $resource_id .= "_$_process_to_";
+    }
+    App::Object->status_message("$$ looking for db lock for $resource_id");
     my $cspc_lock = App::Lock->create(
         mechanism   => 'DB_Table',
-        resource_id => 'confirm_scheduled_pse_cron',
+        resource_id => $resource_id,
         block       => 0,
     );
     if (! $cspc_lock and ! $ignore_locks) {
@@ -544,16 +758,15 @@ sub confirm_scheduled_pse_cron {
     GSC::PSE->status_message("found " . scalar(@pse_infos) . " PSEs to confirm");
 
 
-#    sort by priority and pse_id
+#   sort by priority and pse_id
     @pse_ids =
-        map { $_->[0] }
+        map  { $_->[0] }
         sort {
-            ( $csp_priority{ $b->[2] } <=> $csp_priority{ $a->[2] } )
+        ( $csp_priority{ $b->[2] } || 0 <=> $csp_priority{ $a->[2] } || 0 )
             || ( $a->[0] <=> $b->[0] )
-        }
-        @pse_infos;
+        } @pse_infos;
 
-    #############################################################################
+    #####################################################################
 
     my $use_dbh = App::DB->dbh->clone();
 
@@ -834,6 +1047,7 @@ sub log_file_name {
     $now =~ s/\s+/_/g;
     return join( '.', $pse_id, $pt, $now, 'log' );
 }
+
 
 =head2 confirm_scheduled_pse
 
@@ -1351,7 +1565,6 @@ sub confirm_scheduled_pse {
 
     exit 0;
 }
-
 
 sub deal_with_previous_failures {
     my ( $class, $pse_id ) = @_;
