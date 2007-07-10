@@ -1,4 +1,4 @@
-package ChromosomeAlignmentCollection;
+package GenomeModel::ChromosomeAlignmentCollection;
 
 use strict;
 use warnings;
