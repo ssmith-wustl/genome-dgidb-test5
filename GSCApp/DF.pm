@@ -3,6 +3,8 @@ package GSCApp::DF;
 use warnings;
 use strict;
 
+our $ERROR_MESSAGE;
+
 sub disk_usage_file {
 
     if ($^O eq 'MSWin32') {
@@ -15,13 +17,18 @@ sub disk_usage_file {
 sub get_disk_lines {
 
     my ($class) = @_;
+    $ERROR_MESSAGE = undef;
 
     my $disk_usage_file=$class->disk_usage_file;
     my $fh=new IO::File("< $disk_usage_file");
 
-    my @disk_lines = $fh->getlines();
+    if ($fh) {
+        my @disk_lines = $fh->getlines();
+        return \@disk_lines;
+    }
 
-    return \@disk_lines;
+    $ERROR_MESSAGE = "Unable to open $disk_usage_file";
+    return;
 }
 
 
