@@ -8,7 +8,7 @@ our $ERROR_MESSAGE;
 sub disk_usage_file {
 
     if ($^O eq 'MSWin32') {
-        return q(\\winsvr.gsc.wustl.edu\gsc\var\cache\disk-usage\df.out);
+        return q(\\\\winsvr.gsc.wustl.edu\gsc\var\cache\disk-usage\df.out);
     } else {
         return q(/gsc/var/cache/disk-usage/df.out);
     }
