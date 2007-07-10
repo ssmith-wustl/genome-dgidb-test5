@@ -4,9 +4,9 @@ use strict;
 use warnings;
 
 use IO::File;
-use ChromosomeAlignmentCollection qw(END_TOKEN MAX_READ_LENGTH INDEX_RECORD_SIZE);
+use GenomeModel::ChromosomeAlignmentCollection qw(MAX_READ_LENGTH INDEX_RECORD_SIZE);
 
-use Test::More tests => 43;
+use Test::More tests => 58;
 
 # Remove the temp files that may have been laying around from a previous run
 my @file_list = ('/tmp/testme_chr_24_aln.dat',
@@ -16,19 +16,19 @@ my @file_list = ('/tmp/testme_chr_24_aln.dat',
                 );
 unlink @file_list;
 
-my $unsorted = ChromosomeAlignmentCollection->new(file_prefix => '/tmp/testme_chr_24', 
-                                                  mode => O_RDWR | O_CREAT);
+my $unsorted = GenomeModel::ChromosomeAlignmentCollection->new(file_prefix => '/tmp/testme_chr_24', 
+                                                               mode => O_RDWR | O_CREAT);
 
 ok($unsorted, "Created a new ChromosomeAlignmentCollection object");
 
 my $fake_coords = [ # start, stop, last_alignment_number, number of alignments
-                    [1, 32, END_TOKEN, 1],
-                    [2, 33, END_TOKEN, 2],
-                    [4, 35, END_TOKEN, 2],
                     [1, 32, 0, 1],
-                    [2, 33, 1, 2], # * index 4
-                    [4, 35, 2, 2], # * index 5
-                    [1, 32, 3, 1], # * index 6
+                    [2, 33, 0, 2],
+                    [4, 35, 0, 2],
+                    [1, 32, 1, 1],
+                    [2, 33, 2, 2], # * index 4
+                    [4, 35, 3, 2], # * index 5
+                    [1, 32, 4, 1], # * index 6
                    ];
 
 {
@@ -51,7 +51,7 @@ ok($unsorted->flush(), "Flushed the unsorted file's handles");
 
 {
 # Check that the index file looks OK by reading the data by hand
-    my @expected_index_data = (END_TOKEN, 6,4,END_TOKEN, 5);
+    my @expected_index_data = (0, 7,5,0, 6);
     my $prev_irs = $/;
     $/ = undef;
     my $fh = $unsorted->index_fh;
@@ -74,11 +74,11 @@ ok($unsorted->flush(), "Flushed the unsorted file's handles");
 
 # Check that the data file looks ok
 {
-    my @expected_ptrs = ( [END_TOKEN],
-                          [ 3, 0, END_TOKEN],
-                          [ 1, END_TOKEN],
-                          [ END_TOKEN ],
-                          [ 2, END_TOKEN],
+    my @expected_ptrs = ( [0],
+                          [ 4, 1, 0],
+                          [ 2, 0],
+                          [ 0 ],
+                          [ 3, 0],
                         );
     for (my $i = 1; $i <= 4; $i++) {
         my $alignment_num = $unsorted->_read_index_record_at_position($i);
@@ -90,12 +90,12 @@ ok($unsorted->flush(), "Flushed the unsorted file's handles");
             is($record->{'last_alignment_number'}, $expected_ptrs[$i]->[$count], "last alignment number for pos $i record $count is correct");
             $alignment_num = $record->{'last_alignment_number'};
             $count++;
-        } while ($alignment_num != END_TOKEN);
+        } while ($alignment_num);
     }
 }
 
-my $sorted = ChromosomeAlignmentCollection->new(file_prefix => '/tmp/testme_chr_24_SORTED',
-                                                mode => O_RDWR | O_CREAT);
+my $sorted = GenomeModel::ChromosomeAlignmentCollection->new(file_prefix => '/tmp/testme_chr_24_SORTED',
+                                                             mode => O_RDWR | O_CREAT);
 
 ok($sorted, "Created a new ChromosomeAlignmentCollection to contain the sorted data");
 
@@ -103,7 +103,7 @@ ok($sorted->merge($unsorted), "Calling merge() with the unsorted data");
 
 # Check that the sorted index looks ok
 {
-    my @expected_index_data = (0, 2,4,END_TOKEN, 6);
+    my @expected_index_data = (0, 3,5,0, 7);
 
     my $prev_irs = $/;
     $/ = undef;
@@ -128,11 +128,11 @@ ok($sorted->merge($unsorted), "Calling merge() with the unsorted data");
 
 # Check that the sorted data looks ok
 {
-    my @expected_ptrs = ( [END_TOKEN],
-                          [ 1, 0, END_TOKEN],
-                          [ 3, END_TOKEN],
-                          [ END_TOKEN ],
-                          [ 5, END_TOKEN],
+    my @expected_ptrs = ( [0],
+                          [ 2, 1, 0],
+                          [ 4, 0],
+                          [ 0 ],
+                          [ 6, 0],
                         );
     for (my $i = 1; $i <= 4; $i++) {
         my $alignment_num = $sorted->_read_index_record_at_position($i);
@@ -144,9 +144,27 @@ ok($sorted->merge($unsorted), "Calling merge() with the unsorted data");
             is($record->{'last_alignment_number'}, $expected_ptrs[$i]->[$count], "last alignment number for pos $i record $count is correct");
             $alignment_num = $record->{'last_alignment_number'};
             $count++;
-        } while ($alignment_num != END_TOKEN);
+        } while ($alignment_num);
+    }
+}
+
+{
+    # Try getting it with the quicker way
+    my @expected_counts = ( 0, 3, 2, 0, 2);  # how many records should be at each position
+    for (my $i = 1; $i < @expected_counts; $i++) {
+        my $alignments = $sorted->get_alignments_for_sorted_position($i);
+
+        is(ref $alignments, "ARRAY", "Got an arrayref back from get_alignments_for_sorted_position at position $i");
+        is(scalar @$alignments, $expected_counts[$i], "Got the correct number of records for position $i");
+        
+        for (my $j = 0; $j < @$alignments; $j++) {
+            is($alignments->[$j]->{'number_of_alignments'}, $i, "Alignment record $j at position $i has the correct data");
+        }
     }
 }
 
 # Remove the unsorted and sorted files
 unlink @file_list;
+
+
+
