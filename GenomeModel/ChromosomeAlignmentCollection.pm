@@ -5,18 +5,21 @@ use warnings;
 
 use IO::File;
 use Convert::Binary::C;
+use Carp;
+
 use Exporter 'import';
-our @EXPORT_OK = qw (END_TOKEN LINKED_LIST_RECORD_SIZE INDEX_RECORD_SIZE MAX_READ_LENGTH);
+our @EXPORT_OK = qw (LINKED_LIST_RECORD_SIZE INDEX_RECORD_SIZE MAX_READ_LENGTH);
 
-#use constant END_TOKEN => 2**64 - 1;  # Marks the end of a linked list
-use constant END_TOKEN => 0xFFFFFFFFFFFFFFFF;  # Marks the end of a linked list
-
-use constant LINKED_LIST_RECORD_SIZE => 8 + 8 + 8 + 1 + 1 + 62;  # Convert::Binary::C dosen't have a sizeof()
+BEGIN {
+    use Config;
+    unless ($Config{'use64bitint'}) {
+        Carp::croak(__PACKAGE__ . " requires use64bitint to make use of the Q pack format");
+    }
+}
 
 use constant INDEX_RECORD_SIZE => 8;  # The size of a quad?
 
 use constant MAX_READ_LENGTH => 60;  # Only support reads this long
-my $MAX_READ_LENGTH = &MAX_READ_LENGTH;
 our $C_STRUCTS = Convert::Binary::C->new->parse(
       "struct linked_list_element{
             unsigned long long last_alignment_number;
@@ -25,44 +28,52 @@ our $C_STRUCTS = Convert::Binary::C->new->parse(
             unsigned char length;
             unsigned char  orientation;
             unsigned short number_of_alignments;
-            unsigned char ref_and_mismatch_string[$MAX_READ_LENGTH];
+            unsigned char ref_and_mismatch_string[" . &MAX_READ_LENGTH . "];
       };
 ");
 
-
-my $CHROMOSOME_LENGTHS = {
-    1   =>      247249720,
-    2   =>      242951150,
-    3   =>      199501828,
-    4   =>      191273064,
-    5   =>      180857867,
-    6   =>      170899993,
-    7   =>      158821425,
-    8   =>      146274827,
-    9   =>      140273253,
-    10  =>      135374738,
-    11  =>      134452385,
-    12  =>      132349535,
-    13  =>      114142981,
-    14  =>      106368586,
-    15  =>      100338916,
-    16  =>      88827255,
-    17  =>      78774743,
-    18  =>      76117154,
-    19  =>      63811652,
-    20  =>      62435965,
-    21  =>      46944324,
-    22  =>      49691433,
-    X   =>      154913755,
-    Y   =>      57772955,
-    test=>      5,
-};
-
-# read-only Accessors
-foreach my $key ( qw ( index_file alignments_file index_fh alignments_fh chr_name chr_len index_file_len) ) {
-    my $string = "sub $key { return \$_[0]->{'$key'} }";
-    eval $string;
+sub LINKED_LIST_RECORD_SIZE () {
+    our $LINKED_LIST_RECORD_SIZE ||= $C_STRUCTS->sizeof('linked_list_element');
+    return $LINKED_LIST_RECORD_SIZE;
 }
+    
+
+=pod
+
+=head1 NAME
+
+ChromosomeAlignmentCollection - An API for packed aligment files
+
+=head1 SYNOPSIS
+
+  my $align = ChromosomeAlignmentCollection->new(file_prefix => '/tmp/alignments_chr_1',
+                                                 mode => O_RDWR | O_CREAT);
+  $align->add_alignments_for_position(1, $alignment_record_list);
+  $align->add_alignments_for_position(5, $another_alignment_record_list);
+  
+  my $alignment_list = $align->get_alignments_for_position(2);
+
+=head2 CONSTRUCTOR
+
+=over 4
+
+=item $align = ChromosomeAlignmentCollection->new(%params);
+
+The constructor returns a ref to a new ChromosomeAlignmentCollection object, which encapsulates
+access to both the index and data files.  The following parametes are accepted:
+
+    alignments_file => Pathname to the .dat file containing alignment information
+    index_file      => Pathname to the .ndx file containing offsets into the data
+    file_prefix     => Can be provided in lieu of alignments_file and index_file.
+                       It will look for file_prefix."_aln.dat" and file_prefix."_aln.ndx"
+    mode            => The open mode for the files.  This is used as the 3rd argument
+                       to the 3-arg open().  For existing files, you'll probably want
+                       O_RDONLY; to create a new file, you'll probably want O_RDWR | O_CREAT.
+                       O_LARGEFILE is automatically added to the mode.
+
+Returns undef if there was an error.
+
+=cut
 
 sub new {
 my($class,%params) = @_;
@@ -74,15 +85,10 @@ my($class,%params) = @_;
         delete $params{'file_prefix'};
     }
 
-    $params{'mode'} ||= 'r';   # File open mode defaults to 'r'
+    $params{'mode'} ||= O_RDONLY;   # File open mode defaults to read-only
+    $params{'mode'} |= O_LARGEFILE; # on 64-bit systems, this should be a no-op
 
     my $self = bless { %params }, $class;
-
-    my $chr_len = $self->{'chr_len'} || $CHROMOSOME_LENGTHS->{$params{'chr_name'}};
-    unless($chr_len) {
-        Carp::carp("Can't determine chromosome length");
-    }
-    $self->{'chromosome_length'} = $chr_len;
 
     $self->{'index_fh'} = IO::File->new($self->{'index_file'}, $self->{'mode'});
     unless ($self->{'index_fh'}) {
@@ -90,7 +96,7 @@ my($class,%params) = @_;
         return;
     }
     #$self->{'index_fh'}->input_record_separator(INDEX_RECORD_SIZE);  # This isn't supported per-fh
-    $self->{'index_file_len'} = int((-s $self->{'index_file'}) / INDEX_RECORD_SIZE) - 1;
+    $self->{'max_alignment_pos'} = int((-s $self->{'index_file'}) / INDEX_RECORD_SIZE) - 1;
 
     $self->{'alignments_fh'} = IO::File->new($self->{'alignments_file'}, $self->{'mode'});
     unless ($self->{'alignments_fh'}) {
@@ -102,21 +108,90 @@ my($class,%params) = @_;
     return $self;
 }
 
-# Merging also implies aggregating like elements together (sorting)
+=pod
+
+=head2 Accessors
+
+=item $align->index_file()
+
+The pathname of the index file
+
+=item $align->alignments_file()
+
+The pathname of the alignments file
+
+=item $align->index_fh()
+
+An IO::File filehandle for the index file
+
+=item $align->alignments_fh()
+
+An IO::File filehandle for the alignment data
+
+=cut
+
+# read-only Accessors
+foreach my $key ( qw ( index_file alignments_file index_fh alignments_fh) ) {
+    my $string = "sub $key { return \$_[0]->{'$key'} }";
+    eval $string;
+}
+
+
+=pod
+
+=item $align->max_alignment_pos()
+
+The maximum alignment position mentioned in the index file
+
+=cut
+
+sub max_alignment_pos {
+my $self = shift;
+
+    $self->index_fh->seek(0,2);
+    my $size = int($self->index_fh->tell() / INDEX_RECORD_SIZE) - 1;
+
+    return $size;
+}
+
+=pod
+
+=item $new->merge($align1, <$align-n>);
+
+Reads alignment data from one or more existing alignment files and merges them into
+$new.  merge() is not a constructor; it must have already been created or opened with
+new().  As a side effect, all new data written into $new from the other alignment objects
+will be aggregated together by alignment position.
+
+=cut
+
 sub merge {
 my($new,@objs) = @_;
+    return $new->_merge('get_alignments_for_position', @objs);
+}
+
+sub merge_sorted {
+my($new,@objs) = @_;
+    return $new->_merge('get_alignments_for_sorted_position', @objs);
+}
+
+
+# Merging also implies aggregating records from the same position together (sorting)
+sub _merge {
+my($new,$get_sub,@objs) = @_;
 
     my $max_pos_seen = -1;
     foreach (@objs) {
-        if ($_->index_file_len > $max_pos_seen) {
-            $max_pos_seen = $_->index_file_len;
+        if ($_->max_alignment_pos > $max_pos_seen) {
+            $max_pos_seen = $_->max_alignment_pos;
         }
     }
 
     for (my $pos = 1; $pos <= $max_pos_seen; $pos++) {   # The 0th position is a pad
         foreach my $obj ( @objs ) {
-            my $alignments = $obj->get_alignments_for_position($pos);
+            my $alignments = $obj->$get_sub($pos);
 
+print "Got ",scalar @$alignments," for position $pos\n";
             $new->add_alignments_for_position($pos,$alignments);
         }
     }
@@ -124,6 +199,22 @@ my($new,@objs) = @_;
     return $new;
 }
 
+=pod
+
+=item $align->flush()
+
+Call flush() on the alignment and index file handles
+
+=item $align->close()
+
+Close the alignment and index file handles.  You will not be able to access data
+from the object afterward.
+
+=item $align->opened()
+
+Returns true if both the alignment and index file handles are valid, opened handles.
+
+=cut
 
 sub flush {
 my $self = shift;
@@ -143,6 +234,18 @@ my $self = shift;
     return $self->alignments_fh->opened() && $self->index_fh->opened();
 }
 
+
+=pod
+
+=item $alignment_listref = $align->get_alignments_for_position($pos)
+
+Return a listref of alignment records for the given position.  Each record is a hashref
+with the following keys: read_number, probability, length, orientation, number_of_alignments,
+ref_and_mismatch_string, and last_alignment_number.  last_alignment_number is used internally
+to manage the data structures inside the alignment data file.
+
+=cut
+
 sub get_alignments_for_position {
 my($self,$pos) = @_;
 
@@ -152,7 +255,7 @@ my($self,$pos) = @_;
 
     my $next_alignment_num = $self->_read_index_record_at_position($pos);
 
-    while ($next_alignment_num != END_TOKEN) {
+    while ($next_alignment_num) {
         my $alignment_struct = $self->get_alignment_node_for_alignment_num($next_alignment_num);
         push @$alignments, $alignment_struct;
         
@@ -161,10 +264,70 @@ my($self,$pos) = @_;
     return $alignments;
 }
 
+=pod
 
+=item $alignment_listref = $align->get_alignments_for_sorted_position($pos)
+
+Functions exactly like get_alignments_for_position, except that it assummes the
+alignment data file has previously been sorted, and takes some shortcuts with
+the data.  Do not call this on an unsorted data file or badness will result
+
+=cut
+
+sub get_alignments_for_sorted_position {
+my($self,$pos) = @_;
+
+    my $last_alignment_num = $self->_read_index_record_at_position($pos);
+    return [] unless ($last_alignment_num);   # This position has no data
+
+    my $first_alignment_num;
+    if ($pos == 1) {
+       $first_alignment_num = 1;
+    } else {
+        # find the first prior index position with data
+        for ($pos--; !$first_alignment_num && $pos > 0; $pos--) {
+            $first_alignment_num = $self->_read_index_record_at_position($pos);
+        }
+        if ($first_alignment_num) {
+            # found one.  The data we're looking for starts at the next record
+            $first_alignment_num++;
+        } else {
+            $first_alignment_num = 1;
+        }
+    }
+
+    my $first_byte_offset = $first_alignment_num * LINKED_LIST_RECORD_SIZE;
+    my $len = ($last_alignment_num - $first_alignment_num + 1) * LINKED_LIST_RECORD_SIZE;
+
+    my $buf = '';
+    my $totalread = 0;
+    $self->alignments_fh->seek($first_byte_offset, 0);
+    while ($totalread < $len) {
+        my $read = $self->alignments_fh->read($buf, $len - $totalread, $totalread);
+        unless ($read) {
+            Carp::carp("Reading from alignments file at position " . $self->alignments_fh->tell . " failed: $!");
+            return undef;
+        }
+        $totalread += $read;
+    }
+
+    my @alignments = $C_STRUCTS->unpack('linked_list_element', $buf);
+    return \@alignments
+}
+
+
+=pod
+
+=item $alignment_record = $align->get_alignment_node_for_alignment_num($offset)
+
+Returns an individual alignment record out of the alignment data file at offset $offset.
+
+=cut
+
+# Should this be a private method?
 sub get_alignment_node_for_alignment_num {
 my($self,$alignment_num) = @_;
-    return if $alignment_num == END_TOKEN;
+    return unless $alignment_num;
 
     return unless ($self->opened);
 
@@ -179,9 +342,22 @@ my($self,$alignment_num) = @_;
     return $struct;
 }
 
+=pod
+
+=item $align->write_alignment_node_for_alignment_num($offset,$alignment_record)
+
+Write the given alignment record at offset $offset in the alignment data file.
+Please don't call this externally unless you know what you're doing, as it can
+damage the data structure inside the file
+
+=cut
+
+# Should this be a private method?
 sub write_alignment_node_for_alignment_num {
 my($self,$alignment_num,$alignment) = @_;
     return unless ($self->opened);
+
+    Carp::croak('Attempt to write to alignment record 0') unless $alignment_num;
 
     my $fh = $self->alignments_fh;
 
@@ -190,73 +366,108 @@ my($self,$alignment_num,$alignment) = @_;
     $fh->print($data);
 }
     
-
-
+# This is used to read out data from the index file at the given position
 sub _read_index_record_at_position {
 my($self,$pos) = @_;
     my $fh = $self->index_fh;
-
-    if ($pos > $self->index_file_len) {
-        return END_TOKEN;  # That's past the end, so there's no alignments at that pos
-    }
 
     $fh->seek($pos * INDEX_RECORD_SIZE,0);
 
     local $/ = INDEX_RECORD_SIZE;
 
     my $buf = <$fh>;
+    return 0 unless $buf;  # A read past the end will return nothing
+
     my $value = unpack("Q", $buf);
 
     return $value;
 }
 
+# This is used to write to the index file at the given position
 sub _write_index_record_at_position {
 my($self,$pos,$val) = @_;
 
     my $fh = $self->index_fh;
 
-    if ($pos > $self->index_file_len()) {
-        $fh->seek(0,2);  # Seek to the current end of the file
-
-        my $empty_records_to_write = $pos - $self->index_file_len - 1;
-        $self->index_fh->print(pack("Q",END_TOKEN) x $empty_records_to_write);
-        $self->{'index_file_len'} = $pos;
-    } else {
-        $fh->seek($pos * INDEX_RECORD_SIZE,0);
-    }
+    $fh->seek($pos * INDEX_RECORD_SIZE,0);
 
     $val = pack("Q", $val);
     $fh->print($val);
 }
 
 
+=pod
+
+=item $align->add_alignments_for_position($pos, $alignment_record_listref)
+
+Add additional alignment records for alignment position $pos to the alignment
+data file.
+
+=cut
 
 sub add_alignments_for_position {
 my($self,$pos,$alignments) = @_;
 
     return unless ($self->opened);
+    return unless (@$alignments);
 
     my $last_alignment_num = $self->_read_index_record_at_position($pos);
     
     $self->alignments_fh->seek(0,2);  # Seek to the end
+    my $first_record_to_write = int($self->alignments_fh->tell() / LINKED_LIST_RECORD_SIZE);
+    $first_record_to_write ||= 1;  # don't write anything to the 0th record
 
+    # Update the list pointers to all point to each other
     for (my $i = 0; $i < @$alignments; $i++) {
         my $alignment = $alignments->[$i];
 
         $alignment->{'last_alignment_number'} = $last_alignment_num;
         
-        my $data = $C_STRUCTS->pack('linked_list_element', $alignment);
-        $self->alignments_fh->print($data);
-
         if ($i) {
             $last_alignment_num++;
         } else {
-            $last_alignment_num = int($self->alignments_fh->tell() / LINKED_LIST_RECORD_SIZE) - 1;
+            $last_alignment_num = $first_record_to_write;
         }
     }
 
+    # and write out the data
+    $self->alignments_fh->seek($first_record_to_write * LINKED_LIST_RECORD_SIZE, 0);
+    $self->alignments_fh->print(join('',
+                                map { $C_STRUCTS->pack('linked_list_element',$_) }
+                                @$alignments
+                             ));
+
     $self->_write_index_record_at_position($pos,$last_alignment_num);
 }
+
+=pod
+
+=back
+
+=head1 File Format
+
+The format for the index file is an array of quad ints.  The 0th position is not used currently
+and should be considered reserved.  The index into this array corresponds to an alignment position
+offset from the start of the chromosome.  Each data element is an offset (by record number,
+not byte offset) into the data file pointing to an alignment record.  If there are no alignments
+at this position, it contains null.
+
+The data file is an array of C structures:
+
+    struct linked_list_element{
+            unsigned long long last_alignment_number;
+            unsigned long long  read_number;
+            double probability;
+            unsigned char length;
+            unsigned char  orientation;
+            unsigned short number_of_alignments;
+            unsigned char ref_and_mismatch_string[" . &MAX_READ_LENGTH . "];
+      };
+
+last_alignment_number is a pointer to the next element in the linked list, terminaing with null.  The 0th
+position is not used in the alignment data file and should be considered reserved.
+
+=cut
 
 1;
 
