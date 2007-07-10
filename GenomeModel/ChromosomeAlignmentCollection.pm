@@ -329,14 +329,19 @@ sub get_alignment_node_for_alignment_num {
 my($self,$alignment_num) = @_;
     return unless $alignment_num;
 
-    return unless ($self->opened);
+#    return unless ($self->opened);
 
-    my $fh = $self->alignments_fh;
+#    my $fh = $self->alignments_fh;
 
-    local $/ = LINKED_LIST_RECORD_SIZE;
+#    local $/ = LINKED_LIST_RECORD_SIZE;
 
-    $fh->seek($alignment_num * LINKED_LIST_RECORD_SIZE, 0);
-    my $buf = <$fh>;
+    $self->alignments_fh->seek($alignment_num * LINKED_LIST_RECORD_SIZE, 0);
+#    my $buf = <$fh>;
+    my $buf;
+    unless ($self->alignments_fh->read($buf,LINKED_LIST_RECORD_SIZE)) {
+        Carp::carp("reading from alignment data at record $alignment_num failed: $!");
+        return undef;
+    }
     my $struct = $C_STRUCTS->unpack('linked_list_element', $buf);
 
     return $struct;
@@ -369,13 +374,15 @@ my($self,$alignment_num,$alignment) = @_;
 # This is used to read out data from the index file at the given position
 sub _read_index_record_at_position {
 my($self,$pos) = @_;
-    my $fh = $self->index_fh;
+#    my $fh = $self->index_fh;
 
-    $fh->seek($pos * INDEX_RECORD_SIZE,0);
+    $self->index_fh->seek($pos * INDEX_RECORD_SIZE,0);
 
-    local $/ = INDEX_RECORD_SIZE;
+#    local $/ = INDEX_RECORD_SIZE;
 
-    my $buf = <$fh>;
+#    my $buf = <$fh>;
+    my $buf;
+    $self->index_fh->read($buf, INDEX_RECORD_SIZE);
     return 0 unless $buf;  # A read past the end will return nothing
 
     my $value = unpack("Q", $buf);
