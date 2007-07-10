@@ -1,4 +1,4 @@
-package GenomeModel::ChromosomeAlignmentCollection;
+package ChromosomeAlignmentCollection;
 
 use strict;
 use warnings;
@@ -70,6 +70,10 @@ access to both the index and data files.  The following parametes are accepted:
                        to the 3-arg open().  For existing files, you'll probably want
                        O_RDONLY; to create a new file, you'll probably want O_RDWR | O_CREAT.
                        O_LARGEFILE is automatically added to the mode.
+    is_sorted       => Boolean flag to indicate whether the associated alignments data file
+                       has been previously sorted.  During merge(), it will
+                       use get_alignments_for_sorted_position() instead of
+                       get_alignments_for_position().
 
 Returns undef if there was an error.
 
@@ -95,15 +99,12 @@ my($class,%params) = @_;
         Carp::carp("Can't open index file: $!") unless $self->{'index_fh'};
         return;
     }
-    #$self->{'index_fh'}->input_record_separator(INDEX_RECORD_SIZE);  # This isn't supported per-fh
-    $self->{'max_alignment_pos'} = int((-s $self->{'index_file'}) / INDEX_RECORD_SIZE) - 1;
 
     $self->{'alignments_fh'} = IO::File->new($self->{'alignments_file'}, $self->{'mode'});
     unless ($self->{'alignments_fh'}) {
         Carp::carp("Can't open alignments file: $!");
         return;
     }
-    #$self->{'alignments_fh'}->input_record_separator(LINKED_LIST_RECORD_SIZE);
 
     return $self;
 }
@@ -139,6 +140,8 @@ foreach my $key ( qw ( index_file alignments_file index_fh alignments_fh) ) {
 
 =pod
 
+=head2 Methods
+
 =item $align->max_alignment_pos()
 
 The maximum alignment position mentioned in the index file
@@ -165,36 +168,37 @@ will be aggregated together by alignment position.
 
 =cut
 
-sub merge {
-my($new,@objs) = @_;
-    return $new->_merge('get_alignments_for_position', @objs);
-}
-
-sub merge_sorted {
-my($new,@objs) = @_;
-    return $new->_merge('get_alignments_for_sorted_position', @objs);
-}
-
 
 # Merging also implies aggregating records from the same position together (sorting)
-sub _merge {
-my($new,$get_sub,@objs) = @_;
+sub merge {
+my($new,@objs) = @_;
+
+    my %get_sub_to_use;
 
     my $max_pos_seen = -1;
     foreach (@objs) {
+        $get_sub_to_use{$_} = $_->{'is_sorted'} ? 'get_alignments_for_sorted_position' : 'get_alignments_for_position';
+print "using $get_sub_to_use{$_} to get alignments data for ",$_->alignments_file,"\n";
+
         if ($_->max_alignment_pos > $max_pos_seen) {
             $max_pos_seen = $_->max_alignment_pos;
         }
     }
 
     for (my $pos = 1; $pos <= $max_pos_seen; $pos++) {   # The 0th position is a pad
+        my $new_alignments = [];
+
         foreach my $obj ( @objs ) {
+            my $get_sub = $get_sub_to_use{$obj};
             my $alignments = $obj->$get_sub($pos);
 
 print "Got ",scalar @$alignments," for position $pos\n";
-            $new->add_alignments_for_position($pos,$alignments);
+            push @$new_alignments, @$alignments;
         }
+
+        $new->add_alignments_for_position($pos,$new_alignments);
     }
+
 
     return $new;
 }
@@ -270,7 +274,8 @@ my($self,$pos) = @_;
 
 Functions exactly like get_alignments_for_position, except that it assummes the
 alignment data file has previously been sorted, and takes some shortcuts with
-the data.  Do not call this on an unsorted data file or badness will result
+the data.  Do not call this on an unsorted data file or you'll likely get incorrect
+data back.
 
 =cut
 
@@ -416,7 +421,7 @@ sub add_alignments_for_position {
 my($self,$pos,$alignments) = @_;
 
     return unless ($self->opened);
-    return unless (@$alignments);
+    return unless ($alignments);
 
     my $last_alignment_num = $self->_read_index_record_at_position($pos);
     
