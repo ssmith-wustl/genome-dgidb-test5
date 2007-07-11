@@ -261,7 +261,7 @@ my($self,$pos) = @_;
 
     while ($next_alignment_num) {
         my $alignment_struct = $self->get_alignment_node_for_alignment_num($next_alignment_num);
-        push @$alignments, $alignment_struct;
+        unshift @$alignments, $alignment_struct;
         
         $next_alignment_num = $alignment_struct->{'last_alignment_number'};
     }
