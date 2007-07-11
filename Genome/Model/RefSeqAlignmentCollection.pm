@@ -1,4 +1,4 @@
-package GenomeModel::ChromosomeAlignmentCollection;
+package Genome::Model::RefSeqAlignmentCollection;
 
 use strict;
 use warnings;
@@ -42,12 +42,12 @@ sub LINKED_LIST_RECORD_SIZE () {
 
 =head1 NAME
 
-ChromosomeAlignmentCollection - An API for packed aligment files
+Genome::Model::RefSeqAlignmentCollection - An API for packed aligment files
 
 =head1 SYNOPSIS
 
-  my $align = ChromosomeAlignmentCollection->new(file_prefix => '/tmp/alignments_chr_1',
-                                                 mode => O_RDWR | O_CREAT);
+  my $align = Genome::Model::RefSeqAlignmentCollection->new(file_prefix => '/tmp/alignments_chr_1',
+                                                            mode => O_RDWR | O_CREAT);
   $align->add_alignments_for_position(1, $alignment_record_list);
   $align->add_alignments_for_position(5, $another_alignment_record_list);
   
@@ -57,9 +57,9 @@ ChromosomeAlignmentCollection - An API for packed aligment files
 
 =over 4
 
-=item $align = ChromosomeAlignmentCollection->new(%params);
+=item $align = Genome::Model::RefSeqAlignmentCollection->new(%params);
 
-The constructor returns a ref to a new ChromosomeAlignmentCollection object, which encapsulates
+The constructor returns a ref to a new RefSeqAlignmentCollection object, which encapsulates
 access to both the index and data files.  The following parametes are accepted:
 
     alignments_file => Pathname to the .dat file containing alignment information
