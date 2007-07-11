@@ -767,8 +767,9 @@ sub confirm_scheduled_pse_cron {
     @pse_ids =
         map  { $_->[0] }
         sort {
-        ( $csp_priority{ $b->[2] } || 0 <=> $csp_priority{ $a->[2] } || 0 )
-            || ( $a->[0] <=> $b->[0] )
+            my $x = $csp_priority{ $b->[2] } || 0;
+            my $y = $csp_priority{ $a->[2] } || 0;
+            ( $x <=> $y ) || ( $a->[0] <=> $b->[0] );
         } @pse_infos;
 
     #####################################################################
