@@ -7,72 +7,105 @@ use Genome::Model::RefSeqAlignmentCollection;
 
 package Genome::Command::CalculateCoverage;
 
+use Fcntl;
+use Carp;
+
+use constant MATCH => 0;
+use constant MISMATCH => 1;
+use constant QUERY_INSERT => 3;
+use constant REFERENCE_INSERT => 2;
+
 # Constructor -----------------------------------------------------------------
 
 sub new{
     my ($pkg, %params) = @_;
     
     my $self = {
-        binary_aln_filename => undef,    
+        binary_aln_filename => undef,
+        ref_seq_alignment_collection => undef,
     };
     
     $self = { %$self, %params };
+
+    bless $self, $pkg;
+
+    if(
+       ($self->binary_aln_filename && $self->ref_seq_alignment_collection)
+       ||
+       (!$self->binary_aln_filename && !$self->ref_seq_alignment_collection)
+       ){
+        
+        Carp::croak("You must construct the CalculateCoverage object with EITHER an existing RefSeqAlignmentCollection OR a binary_aln_filename, not both or neither");
+    }
     
-    return bless $self, $pkg;
+    if($self->binary_aln_filename){
+        $self->{ref_seq_alignment_collection} = Genome::Model::RefSeqAlignmentCollection->new( file_prefix => $self->binary_aln_filename );
+    }
+    
+    return $self;
 }
 
 # Accessor Methods ------------------------------------------------------------
 
 sub binary_aln_filename {shift->{binary_aln_filename}}
+sub ref_seq_alignment_collection {shift->{ref_seq_alignment_collection}}
 
 # Instance Methods ------------------------------------------------------------
 
 sub print_coverage_by_position{
     my $self = shift;
     my $print_fh = shift;
-    
-    my $alns = Genome::Model::RefSeqAlignmentCollection->new( file_prefix => $self->binary_aln_filename );
-    
-    # 0 match
-    # 1 mismatch
-    # 2 subject-insert
-    # 3 query-insert
-    
-    my $QUERY_INSERT = 3;
-    my $REFERENCE_INSERT = 2;
-    
-    my $count_coverage = sub {
-        my $alignments = shift;
-        
-        my $coverage_depth_at_this_position = 0;
-        foreach my $aln (@$alignments){
-            
-            # skip over insertions in the reference
-            my $mm_code;
-            do{
-                $mm_code = $aln->get_current_mismatch_code();
-                $aln->increment_position();
-            } while (defined($mm_code) && $mm_code == $REFERENCE_INSERT);
-            
-            $coverage_depth_at_this_position++ unless (!defined($mm_code) || $mm_code == $QUERY_INSERT)
-        }
-        
-        return $coverage_depth_at_this_position;
-    };
 
-    {
-        no strict 'refs';
+    no strict 'refs';
+    
+    my $print_to_stdout = sub {
+        my $result = shift;
         
-        my $print_to_stdout = sub {
-            my $result = shift;
-            
-            print $print_fh $result . ' ';
-        };
+        print $print_fh $result . ' ';
+    };
+    
+    $self->ref_seq_alignment_collection->foreach_reference_position( \&_calculate_coverage, $print_to_stdout );
+    
+    print $print_fh "\n";
+
+}
+
+sub get_coverage_by_position{
+    my $self = shift;
+    my $print_fh = shift;
+    
+    my $coverage_values = [];
         
-        $alns->foreach_reference_position( $count_coverage, $print_to_stdout );
+    my $accumulate = sub {
+        my $result = shift;
         
-        print $print_fh "\n";
+        push @$coverage_values, $result;
+    };
+    
+    $self->ref_seq_alignment_collection->foreach_reference_position( \&_calculate_coverage, $accumulate );
+    
+    return $coverage_values;
+}
+
+# HELPER METHODS --------------------------------------------------------------
+
+sub _calculate_coverage{
+    my $alignments = shift;
+    
+    my $coverage_depth_at_this_position = 0;
+    foreach my $aln (@$alignments){
+        
+        # skip over insertions in the reference
+        my $mm_code;
+        do{
+            $mm_code = $aln->get_current_mismatch_code();
+            $aln->increment_position();
+        } while (defined($mm_code) && $mm_code == REFERENCE_INSERT);
+        
+        $coverage_depth_at_this_position++ unless (!defined($mm_code) || $mm_code == QUERY_INSERT)
     }
+    
+    return $coverage_depth_at_this_position;
 }
 
 1;

@@ -40,7 +40,7 @@ my $fake_coords = [ # start, stop, last_alignment_number, number of alignments
                                  length                  => 32,
                                  orientation             => 1,
                                  number_of_alignments    => $fake->[0],
-                                 ref_and_mismatch_string => chr(11) x MAX_READ_LENGTH,
+                                 ref_and_mismatch_string => [(01) x 32, (05) x (MAX_READ_LENGTH - 32)],
                                };
 
         ok($unsorted->add_alignments_for_position($fake->[0], [$alignment_record]), "Wrote an alignment record for position ".$fake->[0]);

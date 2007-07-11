@@ -7,6 +7,8 @@ use IO::File;
 use Convert::Binary::C;
 use Carp;
 
+use Genome::Model::Alignment;
+
 use Exporter 'import';
 our @EXPORT_OK = qw (LINKED_LIST_RECORD_SIZE INDEX_RECORD_SIZE MAX_READ_LENGTH);
 
@@ -132,7 +134,7 @@ An IO::File filehandle for the alignment data
 =cut
 
 # read-only Accessors
-foreach my $key ( qw ( index_file alignments_file index_fh alignments_fh) ) {
+foreach my $key ( qw ( index_file alignments_file index_fh alignments_fh reference_sequence_length) ) {
     my $sub = sub ($) { return $_[0]->{$key} };
     no strict 'refs';
     *{$key} = $sub;
@@ -179,7 +181,6 @@ my($new,@objs) = @_;
     my $max_pos_seen = -1;
     foreach (@objs) {
         $get_sub_to_use{$_} = $_->{'is_sorted'} ? 'get_alignments_for_sorted_position' : 'get_alignments_for_position';
-print "using $get_sub_to_use{$_} to get alignments data for ",$_->alignments_file,"\n";
 
         if ($_->max_alignment_pos > $max_pos_seen) {
             $max_pos_seen = $_->max_alignment_pos;
@@ -193,7 +194,6 @@ print "using $get_sub_to_use{$_} to get alignments data for ",$_->alignments_fil
             my $get_sub = $get_sub_to_use{$obj};
             my $alignments = $obj->$get_sub($pos);
 
-print "Got ",scalar @$alignments," for position $pos\n";
             push @$new_alignments, @$alignments;
         }
 
@@ -464,17 +464,21 @@ sub foreach_reference_position{
     my $each_pos_coderef = shift;
     my $each_result_coderef = shift;
     
-    my $chr_positions = $self->chromosome_length;
+    unless( $self->reference_sequence_length ){
+        Carp::croak("You must have constructed this object with a reference_sequence_length to window over it with foreach_reference_position");
+    }
+    
+    my $chr_positions = $self->reference_sequence_length;
     
     my $current_alignments = [];
         
     my $get_sub = $self->{'is_sorted'} ? 'get_alignments_for_sorted_position' : 'get_alignments_for_position';
-    for( my $pos = 0 ; $pos < $chr_positions ; $pos++ ){
+    for( my $pos = 1 ; $pos <= $chr_positions ; $pos++ ){
         
         $current_alignments = [ grep { !$_->spent_q } @$current_alignments ];
         
-        push @$current_alignments, @{$self->$get_sub($pos)};
-        
+        push @$current_alignments, map { Genome::Model::Alignment->new(%$_) } @{$self->$get_sub($pos)};
+        $DB::single=1;
         $each_result_coderef->( $each_pos_coderef->( $current_alignments ) );
     }
 }
