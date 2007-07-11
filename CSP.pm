@@ -1,4 +1,4 @@
- package CSP;
+package CSP;
 
 use strict;
 use warnings;
