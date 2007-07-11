@@ -133,8 +133,9 @@ An IO::File filehandle for the alignment data
 
 # read-only Accessors
 foreach my $key ( qw ( index_file alignments_file index_fh alignments_fh) ) {
-    my $string = "sub $key { return \$_[0]->{'$key'} }";
-    eval $string;
+    my $sub = sub ($) { return $_[0]->{$key} };
+    no strict 'refs';
+    *{$key} = $sub;
 }
 
 
@@ -448,6 +449,11 @@ my($self,$pos,$alignments) = @_;
                                 map { $C_STRUCTS->pack('linked_list_element',$_) }
                                 @$alignments
                              ));
+
+    # After we've added data, there's no guarantee that the file is still sorted
+    # If you, the user, are certain it is (for example, right after a merge),
+    # Then you'll need to destroy the old object and recreate a new one 
+    $self->{'is_sorted'} = 0;
 
     $self->_write_index_record_at_position($pos,$last_alignment_num);
 }
