@@ -586,6 +586,11 @@ sub process_locked {
     require PP;
     my $config = PP->config( $process ) or die "no config for $process";
     my $queue = $config->{queue};
+
+    # if we have no queue, then it's probably not a pp_type of lsf
+    # probably it's fork, which means it can't be locked
+    return if ( !defined $queue );
+
     $queue = 'seqmgr' if ($queue eq 'long');        # HACK
     $queue = 'seqmgr' if ($queue eq 'seqmgr-long'); # HACK
     $queue = 'seqmgr' if ($queue eq 'dumpread');    # HACK
