@@ -452,6 +452,27 @@ my($self,$pos,$alignments) = @_;
     $self->_write_index_record_at_position($pos,$last_alignment_num);
 }
 
+
+sub foreach_reference_position{
+    my $self = shift;
+    my $each_pos_coderef = shift;
+    my $each_result_coderef = shift;
+    
+    my $chr_positions = $self->chromosome_length;
+    
+    my $current_alignments = [];
+        
+    my $get_sub = $self->{'is_sorted'} ? 'get_alignments_for_sorted_position' : 'get_alignments_for_position';
+    for( my $pos = 0 ; $pos < $chr_positions ; $pos++ ){
+        
+        $current_alignments = [ grep { !$_->spent_q } @$current_alignments ];
+        
+        push @$current_alignments, @{$self->$get_sub($pos)};
+        
+        $each_result_coderef->( $each_pos_coderef->( $current_alignments ) );
+    }
+}
+
 =pod
 
 =back
