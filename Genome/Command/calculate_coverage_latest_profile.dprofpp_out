@@ -1,0 +1,28 @@
+%Time ExclSec CumulS #Calls sec/call Csec/c  Name
+ 0.00   143.2 143.29 576269   0.0000 0.0000  Genome::Model::Alignment::spent_q
+ 0.00   103.2 278.07 557124   0.0002 0.0005  Genome::Command::CalculateCoverage
+                   4                         ::_calculate_coverage
+ 0.00   102.6 174.81 288136   0.0000 0.0000  Genome::Model::Alignment::get_curr
+                   6                         ent_mismatch_code
+ 0.00   90.88 586.27      1   90.883 586.27  Genome::Model::RefSeqAlignmentColl
+                   8                     78  ection::foreach_reference_position
+ 0.00   75.93 75.937 480592   0.0002 0.0002  Genome::Model::Alignment::decode_m
+                                             atch_string
+ 0.00   19.72 95.661 480592   0.0000 0.0002  Genome::Model::Alignment::new
+ 0.00   14.50 14.504 480592   0.0000 0.0000  Convert::Binary::C::unpack
+ 0.00   6.258 48.660 557124   0.0000 0.0001  Genome::Model::RefSeqAlignmentColl
+                                             ection::get_alignments_for_positio
+                                             n
+ 0.00   5.669  5.669 318968   0.0000 0.0000  Genome::Model::RefSeqAlignmentColl
+                                             ection::__ANON__
+ 0.00   5.504  5.504 103771   0.0000 0.0000  IO::Handle::read
+ 0.00   3.958 26.079 480592   0.0000 0.0001  Genome::Model::RefSeqAlignmentColl
+                                             ection::get_alignment_node_for_ali
+                                             gnment_num
+ 0.00   3.886  3.886 103771   0.0000 0.0000  IO::Seekable::seek
+ 0.00   3.584 10.364 557124   0.0000 0.0000  Genome::Model::RefSeqAlignmentColl
+                                             ection::_read_index_record_at_posi
+                                             tion
+ 0.00   2.204  2.204 111424   0.0000 0.0000  IO::Handle::opened
+ 0.00   1.854  1.854 557123   0.0000 0.0000  Genome::Command::CalculateCoverage
+                                             ::__ANON__
