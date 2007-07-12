@@ -475,10 +475,10 @@ sub foreach_reference_position{
     my $get_sub = $self->{'is_sorted'} ? 'get_alignments_for_sorted_position' : 'get_alignments_for_position';
     for( my $pos = 1 ; $pos <= $chr_positions ; $pos++ ){
         
-        $current_alignments = [ grep { !$_->spent_q } @$current_alignments ];
+        @$current_alignments = grep { !$_->spent_q } @$current_alignments;
         
         push @$current_alignments, map { Genome::Model::Alignment->new(%$_) } @{$self->$get_sub($pos)};
-        $DB::single=1;
+
         $each_result_coderef->( $each_pos_coderef->( $current_alignments ) );
     }
 }

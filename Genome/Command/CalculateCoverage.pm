@@ -39,7 +39,9 @@ sub new{
     }
     
     if($self->binary_aln_filename){
-        $self->{ref_seq_alignment_collection} = Genome::Model::RefSeqAlignmentCollection->new( file_prefix => $self->binary_aln_filename );
+        $self->{ref_seq_alignment_collection} = Genome::Model::RefSeqAlignmentCollection->new( file_prefix => $self->binary_aln_filename,
+                                                                                              reference_sequence_length => $self->{reference_sequence_length},
+                                                                                              );
     }
     
     return $self;
@@ -99,7 +101,7 @@ sub _calculate_coverage{
         my $mm_code;
         do{
             $mm_code = $aln->get_current_mismatch_code();
-            $aln->increment_position();
+            $aln->{current_position}++; # an ugly but necessary optimization
         } while (defined($mm_code) && $mm_code == REFERENCE_INSERT);
         
         $coverage_depth_at_this_position++ unless (!defined($mm_code) || $mm_code == QUERY_INSERT)

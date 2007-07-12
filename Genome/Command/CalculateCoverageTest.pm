@@ -58,7 +58,8 @@ sub setup : Test(setup){
     
     $sorted->merge($unsorted);
     
-    my $sorted_double = Genome::Model::RefSeqAlignmentCollection->new(file_prefix => $temp_output_prefixes->[2],
+    my $sorted_double = Genome::Model::RefSeqAlignmentCollection->new(
+                                                             file_prefix => $temp_output_prefixes->[2],
                                                              mode => O_RDWR | O_CREAT | O_TRUNC,
                                                              reference_sequence_length => 40,
                                                              );
