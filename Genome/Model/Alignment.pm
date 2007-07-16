@@ -122,29 +122,32 @@ sub parse_aln_record{
 # missing 5
 my $REF_BASE = ['N', 'A', 'C', 'G', 'T', '-'];
 
-my %DECODE_MATCH_STRING;
+my @DECODE_MATCH_STRING;
 foreach my $match_code ( 0, 10, 20, 30 ) {
     foreach my $ref_base ( 0 .. 5 ) {
-        $DECODE_MATCH_STRING{$match_code + $ref_base} = [int($match_code/10), $REF_BASE->[$ref_base]];
+        @DECODE_MATCH_STRING[$match_code + $ref_base] = [int($match_code/10), $REF_BASE->[$ref_base]];
     }
 }
 
 sub decode_match_string{
     my $array_of_encoded_values = shift;
     
-    my $mismatch_string = '';
-    my $reference_bases = '';
+    my $string_lengths = scalar @$array_of_encoded_values;
+    my $mismatch_string = 'x' x $string_lengths;
+    my $reference_bases = 'x' x $string_lengths;
     
-    foreach my $encoded_value (@$array_of_encoded_values){
+    for (my $i = 0; $i < $string_lengths; $i++) {
+        my $encoded_value = $array_of_encoded_values->[$i];
         #my $ref_base = $REF_BASE->[$encoded_value % 10];
-        my $ref_base = $DECODE_MATCH_STRING{$encoded_value}->[1];
+        my $decode_values = $DECODE_MATCH_STRING[$encoded_value];
+        my $ref_base = $decode_values->[1];
         
         next if $ref_base eq '-';
          
         #$mismatch_string .= int ($encoded_value / 10);
-        $mismatch_string .= $DECODE_MATCH_STRING{$encoded_value}->[0];
+        substr($mismatch_string, $i, 1 $decode_values->[0]);
 
-        $reference_bases .= $ref_base;
+        substr($reference_bases, $i, 1, $ref_base);
 
     }
 
