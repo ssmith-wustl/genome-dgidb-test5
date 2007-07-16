@@ -58,11 +58,11 @@ sub some_length                     {return $_[0]->{length}}
 sub get_current_mismatch_code{
     my $self = shift;
     
-    if( $self->spent_q ){
-        return undef;
-    }else{
+#    if( $self->spent_q ){
+#        return undef;
+#    }else{
         return substr($self->{mismatch_string},$self->{current_position},1);
-    }
+#    }
 }
     
 # Instance Methods ------------------------------------------------------------
@@ -132,8 +132,20 @@ sub decode_match_string{
         my $ref_base = $REF_BASE->[$encoded_value % 10];
         
         next if $ref_base eq '-';
-        
-        $mismatch_string .= int ($encoded_value / 10);
+         
+        #$mismatch_string .= int ($encoded_value / 10);
+        if ($encoded_value < 10) {
+            $mismatch_string .= 0; 
+        } elsif ($encoded_value < 20 ) {
+            $mismatch_string .= 1;
+        } elsif ($encoded_value < 30 ) {
+            $mismatch_string .= 2;
+        } elsif ($encoded_value < 40) {
+            $mismatch_string .= 3;
+        } else {
+            Carp::croak("Shouldn't get here, encoded_value was greater than 40?!");
+        }
+
 	$reference_bases .= $ref_base;
     }
 

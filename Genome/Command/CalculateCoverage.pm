@@ -100,7 +100,10 @@ sub _calculate_coverage{
         # skip over insertions in the reference
         my $mm_code;
         do{
-            $mm_code = $aln->get_current_mismatch_code();
+            # Moving what get_current_mismatch_code() to here to remove the overhead of a function call
+            #$mm_code = $aln->get_current_mismatch_code();
+            $mm_code = substr($aln->{mismatch_string},$aln->{current_position},1);
+
             $aln->{current_position}++; # an ugly but necessary optimization
         } while (defined($mm_code) && $mm_code == REFERENCE_INSERT);
         
