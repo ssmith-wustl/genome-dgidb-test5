@@ -122,6 +122,13 @@ sub parse_aln_record{
 # missing 5
 my $REF_BASE = ['N', 'A', 'C', 'G', 'T', '-'];
 
+my %DECODE_MATCH_STRING;
+foreach my $match_code ( 0, 10, 20, 30 ) {
+    foreach my $ref_base ( 0 .. 5 ) {
+        $DECODE_MATCH_STRING{$match_code + $ref_base} = [int($match_code/10), $REF_BASE->[$ref_base]];
+    }
+}
+
 sub decode_match_string{
     my $array_of_encoded_values = shift;
     
@@ -129,24 +136,16 @@ sub decode_match_string{
     my $reference_bases = '';
     
     foreach my $encoded_value (@$array_of_encoded_values){
-        my $ref_base = $REF_BASE->[$encoded_value % 10];
+        #my $ref_base = $REF_BASE->[$encoded_value % 10];
+        my $ref_base = $DECODE_MATCH_STRING{$encoded_value}->[1];
         
         next if $ref_base eq '-';
          
         #$mismatch_string .= int ($encoded_value / 10);
-        if ($encoded_value < 10) {
-            $mismatch_string .= 0; 
-        } elsif ($encoded_value < 20 ) {
-            $mismatch_string .= 1;
-        } elsif ($encoded_value < 30 ) {
-            $mismatch_string .= 2;
-        } elsif ($encoded_value < 40) {
-            $mismatch_string .= 3;
-        } else {
-            Carp::croak("Shouldn't get here, encoded_value was greater than 40?!");
-        }
+        $mismatch_string .= $DECODE_MATCH_STRING{$encoded_value}->[0];
 
-	$reference_bases .= $ref_base;
+        $reference_bases .= $ref_base;
+
     }
 
     return ($mismatch_string, $reference_bases);
