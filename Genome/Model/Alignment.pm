@@ -6,52 +6,54 @@ use warnings;
 package Genome::Model::Alignment;
 
 sub new{
-    my ($pkg, %params) = @_;
-    
-    if( defined( $params{ aln_record_ar } ) ){
-        %params = (%params, %{parse_aln_record( $params{ aln_record_ar } )});
-        delete $params{ aln_record_ar };
+    my $pkg = shift;
+
+    my $self;
+
+    if (ref($_[0]) eq 'HASH') {  # The first arg was a pre-made hashref.  For speed, just bless it in place
+        $self = $_[0];
+
+    } else {
+        $self = { last_alignment_number           => undef,
+                  read_number                     => undef,
+                  probability                     => undef,
+                  length                          => undef,
+                  orientation                     => undef,
+                  number_of_alignments            => undef,
+                  mismatch_string                 => undef,
+                  reference_bases                 => undef,
+                  query_base_probability_vectors  => undef,
+                  @_,
+               };
+    }
+
+    if( defined( $self->{'aln_record_ar'} ) ){
+        $self = {%$self, %{parse_aln_record( $self->{'aln_record_ar'})} };
+        delete $self->{ aln_record_ar };
     }
     
-    unless( defined( $params{reference_bases} ) && defined( $params{mismatch_string} ) ){
-        ( $params{'mismatch_string'}, $params{'reference_bases'} )
-            = decode_match_string( $params{ref_and_mismatch_string} );  
+    unless( defined( $self->{'reference_bases'} ) && defined( $self->{'mismatch_string'} ) ) {
+        ( $self->{'mismatch_string'}, $self->{'reference_bases'} )
+            = decode_match_string( $self->{'ref_and_mismatch_string'} );  
     }
     
-    my $self = {
-        last_alignment_number           => undef,
-        read_number                     => undef,
-        probability                     => undef,
-        length                          => undef,
-        orientation                     => undef,
-        number_of_alignments            => undef,
-        mismatch_string                 => undef,
-        reference_bases                 => undef,
-        query_base_probability_vectors  => undef,
-        
-        current_position                => 0,
-    };
-    
-    $self = { %$self, %params };
-    
+    $self->{'current_position'} = 0;
     $self->{mismatch_string_length} = length($self->{mismatch_string});
 
     return bless $self, $pkg;
 }
 
-# Accessor Methods ------------------------------------------------------------
+# read-only Accessor Methods ------------------------------------------------------------
+foreach my $key ( qw ( last_alignment_number read_number probability orientation number_of_alignments
+                       mismatch_string reference_bases query_base_probability_vectors current_position
+                       mismatch_string_length ) ) {
+    my $sub = sub ($) { return $_[0]->{$key} };
+    no strict 'refs';
+    *{$key} = $sub;
+}
+# Why isn't this called just length?
+sub some_length                     {return $_[0]->{length}}
 
-sub last_alignment_number           {return shift->{last_alignment_number}}
-sub read_number                     {return shift->{read_number}}                     
-sub probability                     {return shift->{probability}}
-sub some_length                     {return shift->{length}}
-sub orientation                     {return shift->{orientation}}
-sub number_of_alignments            {return shift->{number_of_alignments}}
-sub mismatch_string                 {return shift->{mismatch_string}}
-sub reference_bases                 {return shift->{reference_bases}}
-sub query_base_probability_vectors  {return shift->{query_base_probability_vectors}}
-sub current_position                {return shift->{current_position}}
-sub mismatch_string_length          {return shift->{mismatch_string_length}}
 
 sub get_current_mismatch_code{
     my $self = shift;
@@ -118,15 +120,7 @@ sub parse_aln_record{
 # G 3
 # T 4
 # missing 5
-
-my $REF_BASE = {
-                0 => 'N',
-                1 => 'A',
-                2 => 'C',
-                3 => 'G',
-                4 => 'T',
-                5 => '-'
-               };
+my $REF_BASE = ['N', 'A', 'C', 'G', 'T', '-'];
 
 sub decode_match_string{
     my $array_of_encoded_values = shift;
@@ -135,7 +129,7 @@ sub decode_match_string{
     my $reference_bases = '';
     
     foreach my $encoded_value (@$array_of_encoded_values){
-        my $ref_base = $REF_BASE->{$encoded_value % 10};
+        my $ref_base = $REF_BASE->[$encoded_value % 10];
         
         next if $ref_base eq '-';
         

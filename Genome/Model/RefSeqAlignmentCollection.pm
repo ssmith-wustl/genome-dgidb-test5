@@ -463,20 +463,30 @@ sub foreach_reference_position{
     my $each_pos_coderef = shift;
     my $each_result_coderef = shift;
     
+$DB::single=1;
     unless( $self->reference_sequence_length ){
         Carp::croak("You must have constructed this object with a reference_sequence_length to window over it with foreach_reference_position");
     }
     
     my $chr_positions = $self->reference_sequence_length;
     
-    my $current_alignments = [];
-        
+    # Values are listrefs of alignment objects
+    # Keys are positions where these objects will be no longer needed
+    my %alignment_object_cache;
+
     my $get_sub = $self->{'is_sorted'} ? 'get_alignments_for_sorted_position' : 'get_alignments_for_position';
     for( my $pos = 1 ; $pos <= $chr_positions ; $pos++ ){
         
-        @$current_alignments = grep { !$_->spent_q } @$current_alignments;
+        delete $alignment_object_cache{$pos};   # Remove alignment objects that the window has passed by
+
+        my $alignments_at_this_pos = $self->$get_sub($pos);
+        my $count = scalar(@$alignments_at_this_pos);
+        for (my $i = 0; $i < $count; $i++) {
+            my $alignment_obj = Genome::Model::Alignment->new($alignments_at_this_pos->[$i]);
+            push @{$alignment_object_cache{$alignment_obj->mismatch_string_length + $pos}}, $alignment_obj;
+        }
         
-        push @$current_alignments, map { Genome::Model::Alignment->new(%$_) } @{$self->$get_sub($pos)};
+        my $current_alignments = [ map { @$_ } values %alignment_object_cache ];
 
         $each_result_coderef->( $each_pos_coderef->( $current_alignments ) );
     }
