@@ -1577,6 +1577,9 @@ sub deal_with_previous_failures {
     my ( $class, $pse_id ) = @_;
     (defined $pse_id) or croak 'must pass a pse_id';
 
+    # TODO: figure out how to do gzip on windows
+    return if ( $^O eq 'MSWin32' );
+
     # find any previous failures
     my @previous_failures = $class->find_previous_failures($pse_id)
         or return;
