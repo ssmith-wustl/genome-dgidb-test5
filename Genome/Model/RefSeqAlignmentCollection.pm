@@ -445,10 +445,9 @@ my($self,$pos,$alignments) = @_;
 
     # and write out the data
     $self->alignments_fh->seek($first_record_to_write * LINKED_LIST_RECORD_SIZE, 0);
-    $self->alignments_fh->print(join('',
-                                map { $C_STRUCTS->pack('linked_list_element',$_) }
-                                @$alignments
-                             ));
+    $self->alignments_fh->print(map { $C_STRUCTS->pack('linked_list_element',$_) }
+                                    @$alignments
+                             );
 
     # After we've added data, there's no guarantee that the file is still sorted
     # If you, the user, are certain it is (for example, right after a merge),
