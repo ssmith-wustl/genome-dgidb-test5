@@ -212,7 +212,7 @@ sub _fork_run {
     }
     else {
         # child
-        open( STDERR, ">&", STDOUT );
+        open( STDERR, ">&", STDOUT );   # tie them together
         STDOUT->autoflush(1);
         STDERR->autoflush(1);
         $code->();
