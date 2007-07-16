@@ -1132,6 +1132,9 @@ sub confirm_scheduled_pse {
     my $now = App::Time->now;
     my ($today) = split( / /, $now );
     $now =~ s/\s+/_/g;
+    if ( $^O eq 'MSWin32' ) {
+        $now =~ tr/:/_/;    # cannot put ":" in filenames in windows
+    }
     my $logfile = $jobs_dir->file(
         join( '.', $pse_id, $_process_to_, $now, 'log' )
     );
@@ -1140,12 +1143,10 @@ sub confirm_scheduled_pse {
     # open log file
     umask 0000;
     my $log_fh = IO::File->new or die 'IO::File->new failed';
-    if($^O eq 'MSWin32'){
-        $logfile =~ y/:/_/;
-        $log_fh->open("> $logfile")
-            or die "failed to open $logfile: $!";        
-    }
-    elsif ($tee_stdout){
+    if ($tee_stdout) {
+        if ( $^O eq 'MSWin32' ) {
+            die 'cannot tee-stdout on windows';
+        }
         $log_fh->open("| tee $logfile")
             or die "failed to open $logfile: $!";
     }
