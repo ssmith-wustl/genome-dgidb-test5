@@ -176,9 +176,12 @@ sub decode_match_string_perl {
 
 sub decode_match_string {
     #my $encoded_string = join('',map {chr} @{$_[0]});
-    my $encoded_string = pack('C*', @{$_[0]});
-    _decode_match_string(length($encoded_string), $encoded_string);
-    #_decode_match_string(length($_[0]), $_[0]);
+    #my $encoded_string = pack('C*', @{$_[0]});
+    #_decode_match_string(length($encoded_string), $encoded_string);
+    # FIXME when we figure out how to get Convert::Binary::C to properly 
+    # return the ref_and_mismatch_string as a binary string instead of a list,
+    # use this one instead
+    _decode_match_string(length($_[0]), $_[0]);
 }
 
 use Inline C => <<'END_C';
