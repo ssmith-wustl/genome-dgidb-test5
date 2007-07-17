@@ -1,12 +1,15 @@
 #!/usr/bin/env perl
 
+package Genome::Model::Alignment;
+
 use strict;
 use warnings;
 
-package Genome::Model::Alignment;
+_initialize_decode_table(1);  # Calls the C function at the bottom
 
 sub new{
     my $pkg = shift;
+
 
     my $self;
 
@@ -114,7 +117,7 @@ sub parse_aln_record{
 # 30 query-insert
 
 # reference bases
-# N  0
+# N 0
 # A 1
 # C 2
 # G 3
@@ -125,33 +128,131 @@ my $REF_BASE = ['N', 'A', 'C', 'G', 'T', '-'];
 my @DECODE_MATCH_STRING;
 foreach my $match_code ( 0, 10, 20, 30 ) {
     foreach my $ref_base ( 0 .. 5 ) {
-        @DECODE_MATCH_STRING[$match_code + $ref_base] = [int($match_code/10), $REF_BASE->[$ref_base]];
+        $DECODE_MATCH_STRING[$match_code + $ref_base] = [int($match_code/10), $REF_BASE->[$ref_base]];
     }
 }
 
-sub decode_match_string{
+sub decode_match_string_perl {
     my $array_of_encoded_values = shift;
     
     my $string_lengths = scalar @$array_of_encoded_values;
     my $mismatch_string = 'x' x $string_lengths;
     my $reference_bases = 'x' x $string_lengths;
     
-    for (my $i = 0; $i < $string_lengths; $i++) {
-        my $encoded_value = $array_of_encoded_values->[$i];
+    my $ev_idx = 0;
+    my $str_idx = 0;
+    for ( ; $ev_idx < $string_lengths; $ev_idx++) {
+
+        my $encoded_value = $array_of_encoded_values->[$ev_idx];
         #my $ref_base = $REF_BASE->[$encoded_value % 10];
         my $decode_values = $DECODE_MATCH_STRING[$encoded_value];
+        unless ($decode_values) {
+            $DB::single=1;
+            1;
+        }
         my $ref_base = $decode_values->[1];
         
         next if $ref_base eq '-';
          
         #$mismatch_string .= int ($encoded_value / 10);
-        substr($mismatch_string, $i, 1 $decode_values->[0]);
+        substr($mismatch_string, $str_idx, 1, $decode_values->[0]);
 
-        substr($reference_bases, $i, 1, $ref_base);
+        substr($reference_bases, $str_idx, 1, $ref_base);
 
+        $str_idx++;
+
+    }
+
+    my $missing = $str_idx - $ev_idx;
+    if($missing) {
+        $DB::single=1;
+    
+        substr($mismatch_string, $missing) = '';
+        substr($reference_bases, $missing) = '';
     }
 
     return ($mismatch_string, $reference_bases);
 }
 
+sub decode_match_string {
+    my $encoded_string = join('',map {chr} @{$_[0]});
+    _decode_match_string(length($encoded_string), $encoded_string);
+}
+
+use Inline C => <<'END_C';
+
+struct decoder_table_entry {
+    char match_code;
+    char reference_base;
+} decodetable[36];
+
+void _initialize_decode_table(int arg1) {
+    int match,base;
+    char bases[6] = { 'N', 'A', 'C', 'G', 'T', '-' };
+
+    for (match = 0; match < 4; match++) {
+        for (base = 0; base < 6; base++) {
+            decodetable[match * 10 + base].match_code = match + '0';
+            decodetable[match * 10 + base].reference_base = bases[base];
+        }
+    }
+
+    show_decode_table(1);
+}
+
+void show_decode_table(int arg1) {
+    int i;
+    printf("Decode table values:\n");
+    for (i = 0; i < 36; i++) {
+        printf("At position %d, match_code %c %d reference_base %c %d\n",
+               i,
+               decodetable[i].match_code, decodetable[i].match_code,
+               decodetable[i].reference_base, decodetable[i].reference_base);
+    }
+}
+
+void _decode_match_string(int count, char *encoded_values) {
+    /* These string lengths need to match MAX_READ_LENGTH
+     * in Genome::Model::RefSeqAlignmentCollection */
+    char mismatch_string[60];
+    char reference_bases[60];
+    unsigned int str_idx = 0;
+    unsigned int ev_idx;
+    char ref_base;
+
+printf("starting decode, count is %d\n", count);
+    for (ev_idx = 0; ev_idx < count; ev_idx++) {
+printf("at ev_idx %d encoded_value %d str_idx %d\n", ev_idx, encoded_values[ev_idx],str_idx);
+        ref_base = decodetable[ encoded_values[ev_idx] ].reference_base;
+
+printf("ref base is %c %d\n", ref_base, ref_base);
+        if (ref_base != '-') {
+printf("adding to strings at position %d base %c %d mismatch %c %d\n",
+        str_idx,
+        ref_base, ref_base,
+        decodetable[ encoded_values[ev_idx] ].match_code, decodetable[ encoded_values[ev_idx] ].match_code);
+
+            reference_bases[str_idx] = ref_base;
+            mismatch_string[str_idx] = decodetable[ encoded_values[ev_idx] ].match_code;
+            str_idx++;
+        }
+    }
+
+    // null-terminate the strings
+    mismatch_string[str_idx + 1] = 0;
+    reference_bases[str_idx + 1] = 0;
+printf("reference_bases is %s\n", reference_bases);
+printf("mismatch_string is %s\n", mismatch_string);
+
+
+    Inline_Stack_Vars;
+    Inline_Stack_Reset;
+    Inline_Stack_Push(sv_2mortal(newSVpv(mismatch_string, str_idx)));
+    Inline_Stack_Push(sv_2mortal(newSVpv(reference_bases, str_idx)));
+    Inline_Stack_Done;
+}
+
+END_C
+
 1;
+
