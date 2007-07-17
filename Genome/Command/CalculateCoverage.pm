@@ -41,6 +41,7 @@ sub new{
     if($self->binary_aln_filename){
         $self->{ref_seq_alignment_collection} = Genome::Model::RefSeqAlignmentCollection->new( file_prefix => $self->binary_aln_filename,
                                                                                               reference_sequence_length => $self->{reference_sequence_length},
+                                                                                              is_sorted => $params{'is_sorted'},
                                                                                               );
     }
     
