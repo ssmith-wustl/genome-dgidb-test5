@@ -20,19 +20,25 @@ BEGIN {
 }
 
 use constant INDEX_RECORD_SIZE => 8;  # The size of a quad?
+use constant INDEX_CACHE_SIZE => 64;  # That's 512 bytes / 8 bytes per quad
 
 use constant MAX_READ_LENGTH => 60;  # Only support reads this long
 our $C_STRUCTS = Convert::Binary::C->new->parse(
-      "struct linked_list_element{
+      "
+      struct linked_list_element {
             unsigned long long last_alignment_number;
             unsigned long long  read_number;
             double probability;
             unsigned char length;
             unsigned char  orientation;
             unsigned short number_of_alignments;
-            unsigned char ref_and_mismatch_string[" . &MAX_READ_LENGTH . "];
+            unsigned char  ref_and_mismatch_string[60];
       };
 ");
+# FIXME why isn't this working?!
+#unless ($C_STRUCTS->tag('linked_list_element.ref_and_mismatch_string', Format => 'Binary')) {
+#    die "C struct tag failed\n";
+#}
 
 sub LINKED_LIST_RECORD_SIZE () {
     our $LINKED_LIST_RECORD_SIZE ||= $C_STRUCTS->sizeof('linked_list_element');
@@ -107,6 +113,9 @@ my($class,%params) = @_;
         Carp::carp("Can't open alignments file: $!");
         return;
     }
+
+    $self->{'index_cache'} = [];
+    $self->{'index_cache_start'} = 0;
 
     return $self;
 }
@@ -254,7 +263,7 @@ to manage the data structures inside the alignment data file.
 sub get_alignments_for_position {
 my($self,$pos) = @_;
 
-    return unless ($self->opened);
+    #return unless ($self->opened);
 
     my $alignments = [];
 
@@ -337,12 +346,7 @@ my($self,$alignment_num) = @_;
 
 #    return unless ($self->opened);
 
-#    my $fh = $self->alignments_fh;
-
-#    local $/ = LINKED_LIST_RECORD_SIZE;
-
     $self->alignments_fh->seek($alignment_num * LINKED_LIST_RECORD_SIZE, 0);
-#    my $buf = <$fh>;
     my $buf;
     unless ($self->alignments_fh->read($buf,LINKED_LIST_RECORD_SIZE)) {
         Carp::carp("reading from alignment data at record $alignment_num failed: $!");
@@ -366,7 +370,8 @@ damage the data structure inside the file
 # Should this be a private method?
 sub write_alignment_node_for_alignment_num {
 my($self,$alignment_num,$alignment) = @_;
-    return unless ($self->opened);
+
+#    return unless ($self->opened);
 
     Carp::croak('Attempt to write to alignment record 0') unless $alignment_num;
 
@@ -378,28 +383,48 @@ my($self,$alignment_num,$alignment) = @_;
 }
     
 # This is used to read out data from the index file at the given position
+# In normal use, the user will read index positions in order, so read a batch
+# of them in one read and fill the cache from that
 sub _read_index_record_at_position {
 my($self,$pos) = @_;
-#    my $fh = $self->index_fh;
 
+    my $index_cache_start = $self->{'index_cache_start'};
+    my $index_cache_pos = $pos - $index_cache_start;
+    # Is this pos already in the cache?
+    if ($index_cache_start &&
+        $index_cache_pos >= 0 &&
+        $index_cache_pos < INDEX_CACHE_SIZE) {
+        
+        return $self->{'index_cache'}->[$index_cache_pos];
+    }
+
+    # refill the cache
     $self->index_fh->seek($pos * INDEX_RECORD_SIZE,0);
-
-#    local $/ = INDEX_RECORD_SIZE;
-
-#    my $buf = <$fh>;
     my $buf;
-    $self->index_fh->read($buf, INDEX_RECORD_SIZE);
+    $self->index_fh->read($buf, INDEX_CACHE_SIZE * INDEX_RECORD_SIZE);
     return 0 unless $buf;  # A read past the end will return nothing
 
-    my $value = unpack("Q", $buf);
+    $self->{'index_cache'} = [ unpack("Q*", $buf) ];
+    $self->{'index_cache_start'} = $pos;
 
-    return $value;
+    return $self->{'index_cache'}->[0];
 }
 
 # This is used to write to the index file at the given position
+# For now, just do a write-through cache.  
 sub _write_index_record_at_position {
 my($self,$pos,$val) = @_;
 
+    my $index_cache_start = $self->{'index_cache_start'};
+    my $index_cache_pos = $pos - $index_cache_start;
+    # Is this pos already in the cache?
+    if ($index_cache_start &&
+        $index_cache_pos >= 0 &&
+        $index_cache_pos < INDEX_CACHE_SIZE) {
+
+        $self->{'index_cache'}->[$index_cache_pos] = $val;
+    } 
+   
     my $fh = $self->index_fh;
 
     $fh->seek($pos * INDEX_RECORD_SIZE,0);
@@ -421,7 +446,7 @@ data file.
 sub add_alignments_for_position {
 my($self,$pos,$alignments) = @_;
 
-    return unless ($self->opened);
+#    return unless ($self->opened);
     return unless ($alignments);
 
     my $last_alignment_num = $self->_read_index_record_at_position($pos);
@@ -475,6 +500,7 @@ $DB::single=1;
     my %alignment_object_cache;
 
     my $get_sub = $self->{'is_sorted'} ? 'get_alignments_for_sorted_position' : 'get_alignments_for_position';
+#$chr_positions = 1000000;
     for( my $pos = 1 ; $pos <= $chr_positions ; $pos++ ){
         
         delete $alignment_object_cache{$pos};   # Remove alignment objects that the window has passed by

@@ -175,8 +175,10 @@ sub decode_match_string_perl {
 }
 
 sub decode_match_string {
-    my $encoded_string = join('',map {chr} @{$_[0]});
+    #my $encoded_string = join('',map {chr} @{$_[0]});
+    my $encoded_string = pack('C*', @{$_[0]});
     _decode_match_string(length($encoded_string), $encoded_string);
+    #_decode_match_string(length($_[0]), $_[0]);
 }
 
 use Inline C => <<'END_C';
@@ -197,7 +199,7 @@ void _initialize_decode_table(int arg1) {
         }
     }
 
-    show_decode_table(1);
+    //show_decode_table(1);
 }
 
 void show_decode_table(int arg1) {
@@ -220,17 +222,17 @@ void _decode_match_string(int count, char *encoded_values) {
     unsigned int ev_idx;
     char ref_base;
 
-printf("starting decode, count is %d\n", count);
+//printf("starting decode, count is %d\n", count);
     for (ev_idx = 0; ev_idx < count; ev_idx++) {
-printf("at ev_idx %d encoded_value %d str_idx %d\n", ev_idx, encoded_values[ev_idx],str_idx);
+//printf("at ev_idx %d encoded_value %d str_idx %d\n", ev_idx, encoded_values[ev_idx],str_idx);
         ref_base = decodetable[ encoded_values[ev_idx] ].reference_base;
 
-printf("ref base is %c %d\n", ref_base, ref_base);
+//printf("ref base is %c %d\n", ref_base, ref_base);
         if (ref_base != '-') {
-printf("adding to strings at position %d base %c %d mismatch %c %d\n",
-        str_idx,
-        ref_base, ref_base,
-        decodetable[ encoded_values[ev_idx] ].match_code, decodetable[ encoded_values[ev_idx] ].match_code);
+//printf("adding to strings at position %d base %c %d mismatch %c %d\n",
+ //       str_idx,
+  //      ref_base, ref_base,
+   //     decodetable[ encoded_values[ev_idx] ].match_code, decodetable[ encoded_values[ev_idx] ].match_code);
 
             reference_bases[str_idx] = ref_base;
             mismatch_string[str_idx] = decodetable[ encoded_values[ev_idx] ].match_code;
@@ -241,8 +243,8 @@ printf("adding to strings at position %d base %c %d mismatch %c %d\n",
     // null-terminate the strings
     mismatch_string[str_idx + 1] = 0;
     reference_bases[str_idx + 1] = 0;
-printf("reference_bases is %s\n", reference_bases);
-printf("mismatch_string is %s\n", mismatch_string);
+//printf("reference_bases is %s\n", reference_bases);
+//printf("mismatch_string is %s\n", mismatch_string);
 
 
     Inline_Stack_Vars;
