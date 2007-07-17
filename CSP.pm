@@ -501,7 +501,7 @@ sub setup_logging_callbacks {
     App::MsgLogger->message_callback( 'status',  \&log_callback );
     App::MsgLogger->message_callback( 'warning', \&log_callback );
     App::MsgLogger->message_callback( 'error',   \&log_callback );
-    App::MsgLogger->message_callback( 'debug',   \&log_callback );
+#    App::MsgLogger->message_callback( 'debug',   \&log_callback );
 
     # catch die and warn messages
     $SIG{__DIE__}  = sub { sig_handler( 'die',  $_[0] ) };
