@@ -320,9 +320,10 @@ my($self,$pos) = @_;
 
     #my @alignments = $C_STRUCTS->unpack('linked_list_element', $buf);
     my @alignments;
-    while ($buf) {
+    $#alignments = $last_alignment_num - $first_alignment_num;
+    for (my $i = 0; $buf; $i++) {
         my @record = unpack($C_PACK_FORMAT, substr($buf, 0, LINKED_LIST_RECORD_SIZE, ''));
-        push @alignments, { last_alignment_number => $record[0],
+        $alignments[$i] = { last_alignment_number => $record[0],
                             read_number => $record[1],
                             probability => $record[2],
                             length => $record[3],
