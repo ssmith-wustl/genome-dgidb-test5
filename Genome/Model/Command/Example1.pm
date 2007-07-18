@@ -44,9 +44,9 @@ EOS
 sub execute {
     my $self = shift;
     print "Running command 1 " 
-        . "foo is " . $self->foo 
+        . "foo is " . (defined $self->foo ? $self->foo : '<not defined>')
         . ", " 
-        . "bar is " . $self->bar 
+        . "bar is " . (defined $self->bar ? $self->bar : '<not defined>')
         . "\n";     
     return 1;
 }
