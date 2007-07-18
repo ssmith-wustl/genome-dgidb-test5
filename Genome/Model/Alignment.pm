@@ -175,12 +175,6 @@ sub decode_match_string_perl {
 }
 
 sub decode_match_string {
-    #my $encoded_string = join('',map {chr} @{$_[0]});
-    #my $encoded_string = pack('C*', @{$_[0]});
-    #_decode_match_string(length($encoded_string), $encoded_string);
-    # FIXME when we figure out how to get Convert::Binary::C to properly 
-    # return the ref_and_mismatch_string as a binary string instead of a list,
-    # use this one instead
     _decode_match_string(length($_[0]), $_[0]);
 }
 
@@ -202,10 +196,9 @@ void _initialize_decode_table(int arg1) {
         }
     }
 
-    //show_decode_table(1);
 }
 
-void show_decode_table(int arg1) {
+void _show_decode_table(int arg1) {
     int i;
     printf("Decode table values:\n");
     for (i = 0; i < 36; i++) {
@@ -221,8 +214,8 @@ void _decode_match_string(int count, char *encoded_values) {
      * in Genome::Model::RefSeqAlignmentCollection */
     char mismatch_string[60];
     char reference_bases[60];
-    unsigned int str_idx = 0;
-    unsigned int ev_idx;
+    unsigned int str_idx = 0;   // Index into the above 2 strings where we will put the next char
+    unsigned int ev_idx;        // Index into the encoded_values string
     char ref_base;
 
 //printf("starting decode, count is %d\n", count);
@@ -233,9 +226,9 @@ void _decode_match_string(int count, char *encoded_values) {
 //printf("ref base is %c %d\n", ref_base, ref_base);
         if (ref_base != '-') {
 //printf("adding to strings at position %d base %c %d mismatch %c %d\n",
- //       str_idx,
-  //      ref_base, ref_base,
-   //     decodetable[ encoded_values[ev_idx] ].match_code, decodetable[ encoded_values[ev_idx] ].match_code);
+//       str_idx,
+//       ref_base, ref_base,
+//       decodetable[ encoded_values[ev_idx] ].match_code, decodetable[ encoded_values[ev_idx] ].match_code);
 
             reference_bases[str_idx] = ref_base;
             mismatch_string[str_idx] = decodetable[ encoded_values[ev_idx] ].match_code;
@@ -244,16 +237,17 @@ void _decode_match_string(int count, char *encoded_values) {
     }
 
     // null-terminate the strings
-    mismatch_string[str_idx + 1] = 0;
-    reference_bases[str_idx + 1] = 0;
+    mismatch_string[str_idx] = 0;
+    reference_bases[str_idx] = 0;
 //printf("reference_bases is %s\n", reference_bases);
 //printf("mismatch_string is %s\n", mismatch_string);
 
 
     Inline_Stack_Vars;
     Inline_Stack_Reset;
-    Inline_Stack_Push(sv_2mortal(newSVpv(mismatch_string, str_idx)));
-    Inline_Stack_Push(sv_2mortal(newSVpv(reference_bases, str_idx)));
+    // The string length is really str_idx-1 because str_idx points to the char to put the _next_ char in to
+    Inline_Stack_Push(sv_2mortal(newSVpv(mismatch_string, str_idx - 1)));
+    Inline_Stack_Push(sv_2mortal(newSVpv(reference_bases, str_idx - 1)));
     Inline_Stack_Done;
 }
 
