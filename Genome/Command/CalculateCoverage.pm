@@ -7,6 +7,8 @@ use Genome::Model::RefSeqAlignmentCollection;
 
 package Genome::Command::CalculateCoverage;
 
+die "Don't use " . __PACKAGE__ . " anymore.  use Genome::Model::Command::CalculateCoverage instead";
+
 use Fcntl;
 use Carp;
 
@@ -40,7 +42,6 @@ sub new{
     
     if($self->binary_aln_filename){
         $self->{ref_seq_alignment_collection} = Genome::Model::RefSeqAlignmentCollection->new( file_prefix => $self->binary_aln_filename,
-                                                                                              reference_sequence_length => $self->{reference_sequence_length},
                                                                                               is_sorted => $params{'is_sorted'},
                                                                                               );
     }
@@ -67,7 +68,7 @@ sub print_coverage_by_position{
         print $print_fh $result . ' ';
     };
     
-    $self->ref_seq_alignment_collection->foreach_reference_position( \&_calculate_coverage, $print_to_stdout );
+    $self->ref_seq_alignment_collection->foreach_reference_position( \&_calculate_coverage, $print_to_stdout, 1, $self->{'reference_sequence_length'});
     
     print $print_fh "\n";
 
@@ -85,7 +86,7 @@ sub get_coverage_by_position{
         push @$coverage_values, $result;
     };
     
-    $self->ref_seq_alignment_collection->foreach_reference_position( \&_calculate_coverage, $accumulate );
+    $self->ref_seq_alignment_collection->foreach_reference_position( \&_calculate_coverage, $accumulate, 1, $self->{'reference_sequence_length'} );
     
     return $coverage_values;
 }
