@@ -10,7 +10,6 @@ use Command;
 use Fcntl;
 use Carp;
 
-use Genome::Model::RefSeqAlignmentCollection;
 
 use constant MATCH => 0;
 use constant MISMATCH => 1;
@@ -102,6 +101,8 @@ our %CHROM_LEN = (
 sub execute {
     my $self = shift;
 $DB::single=1;
+
+    require Genome::Model::RefSeqAlignmentCollection;
 
     my $alignment;
     if ($self->file) {
