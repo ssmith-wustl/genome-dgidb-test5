@@ -135,7 +135,7 @@ An IO::File filehandle for the alignment data
 =cut
 
 # read-only Accessors
-foreach my $key ( qw ( index_file alignments_file index_fh alignments_fh reference_sequence_length) ) {
+foreach my $key ( qw ( index_file alignments_file index_fh alignments_fh) ) {
     my $sub = sub ($) { return $_[0]->{$key} };
     no strict 'refs';
     *{$key} = $sub;
@@ -486,23 +486,19 @@ my($self,$pos,$alignments) = @_;
 
 
 sub foreach_reference_position{
-    my $self = shift;
-    my $each_pos_coderef = shift;
-    my $each_result_coderef = shift;
+my($self, $each_pos_coderef, $each_result_coderef, $start_position, $end_position) = @_;
     
 $DB::single=1;
-    unless( $self->reference_sequence_length ){
-        Carp::croak("You must have constructed this object with a reference_sequence_length to window over it with foreach_reference_position");
-    }
-    
-    my $chr_positions = $self->reference_sequence_length;
+
+    $start_position ||= 1;
+    $end_position ||= $self->max_alignment_pos();
     
     # Values are listrefs of alignment objects
     # Keys are positions where these objects will be no longer needed
     my %alignment_object_cache;
 
     my $get_sub = $self->{'is_sorted'} ? 'get_alignments_for_sorted_position' : 'get_alignments_for_position';
-    for( my $pos = 1 ; $pos <= $chr_positions ; $pos++ ){
+    for( my $pos = $start_position ; $pos <= $end_position ; $pos++ ){
         
         delete $alignment_object_cache{$pos};   # Remove alignment objects that the window has passed by
 
@@ -513,9 +509,11 @@ $DB::single=1;
             push @{$alignment_object_cache{$alignment_obj->mismatch_string_length + $pos}}, $alignment_obj;
         }
         
+        # FIXME this could be made faster by coupling the cache with $current_alignments
+        # and only having to add the new ones.  Maybe some kind of linked list?
         my $current_alignments = [ map { @$_ } values %alignment_object_cache ];
 
-        $each_result_coderef->( $each_pos_coderef->( $current_alignments ) );
+        $each_result_coderef->( $pos, $each_pos_coderef->( $current_alignments ));
     }
 }
 
