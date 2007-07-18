@@ -15,7 +15,7 @@ UR::Object::Class->define(
 );
 
 sub help_brief {
-    "example command 1"                     # Keep this to just a few words <---
+    "example command 1 XXX"                     # Keep this to just a few words <---
 }
 
 sub help_detail {                           # This is what the user will see with --help <---
