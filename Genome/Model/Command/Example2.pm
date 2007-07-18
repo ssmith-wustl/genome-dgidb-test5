@@ -1,6 +1,6 @@
 
 # Rename the final word in the full class name <---
-package Genome::Model::Command::Example1;
+package Genome::Model::Command::Example2;
 
 use strict;
 use warnings;
@@ -11,11 +11,14 @@ use Command;
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
-    has => ['foo','bar'],                   # Specify the command's properties (parameters) <--- 
+    has => [
+        foo => { type => "String" },
+        bar => { type => "Boolean" },
+    ],                                      # Specify the command's properties (parameters) <--- 
 );
 
 sub help_brief {
-    "example command 1"                     # Keep this to just a few words <---
+    "example command 2"                     # Keep this to just a few words <---
 }
 
 sub help_detail {                           # This is what the user will see with --help <---
@@ -43,7 +46,7 @@ EOS
 
 sub execute {
     my $self = shift;
-    print "Running command 1 " 
+    print "Running command 2 " 
         . "foo is " . (defined $self->foo ? $self->foo : '<not defined>')
          . ", " 
         . "bar is " . (defined $self->bar ? $self->bar : '<not defined>') 
