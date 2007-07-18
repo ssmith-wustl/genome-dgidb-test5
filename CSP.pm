@@ -1371,7 +1371,6 @@ sub confirm_scheduled_pse {
     $rv = eval{
         # call confirm_job
 
-        $DB::single=1; # Debugger command, to put a breakpoint; ignored if debugger isn't used
         $pse->status_message("calling confirm_job on pse_id $pse_id ($process_to)");
         unless($pse->confirm_job(@params)){
             $pse->error_message("Failed to confirm the job: ".$pse->error_message);
