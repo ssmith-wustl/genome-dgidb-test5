@@ -2,6 +2,8 @@
 
 package Genome::Model::Alignment;
 
+use IO::File;
+
 use strict;
 use warnings;
 
@@ -30,6 +32,8 @@ sub new{
                };
     }
 
+    
+
     if( defined( $self->{'aln_record_ar'} ) ){
         $self = {%$self, %{parse_aln_record( $self->{'aln_record_ar'})} };
         delete $self->{ aln_record_ar };
@@ -40,6 +44,14 @@ sub new{
             = decode_match_string( $self->{'ref_and_mismatch_string'} );  
     }
     
+    if (defined $self->{'reads_file'}) {
+        $self->{'reads_fh'} = IO::File->new($self->{'reads_file'});
+        unless ($self->{'reads_fh'}) {
+            return undef;
+        }
+        delete $self->{'reads_file'};
+    } 
+        
     $self->{'current_position'} = 0;
     $self->{mismatch_string_length} = length($self->{mismatch_string});
 
@@ -48,27 +60,73 @@ sub new{
 
 # read-only Accessor Methods ------------------------------------------------------------
 foreach my $key ( qw ( last_alignment_number read_number probability orientation number_of_alignments
-                       mismatch_string reference_bases query_base_probability_vectors current_position
-                       mismatch_string_length ) ) {
+                       mismatch_string reference_bases current_position mismatch_string_length ) ) {
     my $sub = sub ($) { return $_[0]->{$key} };
     no strict 'refs';
     *{$key} = $sub;
 }
-# Why isn't this called just length?
-sub some_length                     {return $_[0]->{length}}
+
+sub read_length                     {return $_[0]->{length}}
 
 
 sub get_current_mismatch_code{
     my $self = shift;
     
-#    if( $self->spent_q ){
-#        return undef;
-#    }else{
-        return substr($self->{mismatch_string},$self->{current_position},1);
-#    }
+    return substr($self->{mismatch_string},$self->{current_position},1);
 }
     
 # Instance Methods ------------------------------------------------------------
+
+
+use constant READ_LENGTH => 33;
+use constant READ_RECORD_LENGTH => READ_LENGTH * 4;  # 4 base scores for each position
+# Get all the probability values for all the bases in the read
+sub get_bases_probability_vectors {
+    my($self) = @_;
+
+    my $read_number = $self->read_number % 1000000000;
+    $self->{'reads_fh'}->seek($read_number * READ_RECORD_LENGTH, SEEK_SET);
+    my $buf;
+    $self->{'reads_fh'}->read($buf, READ_RECORD_LENGTH);
+
+    my @all_probs;
+    $#all_probs = READ_LENGTH - 1;
+    for (my $i = 0; $i < READ_LENGTH; $i++) {
+        $all_probs[$i] = [ unpack('cccc', substr($buf, $i, 4)) ];
+    }
+
+    return \@all_probs;
+}
+
+
+sub query_bases_probability_vectors {
+    my($self) = @_;
+
+    unless ($self->{'query_bases_probability_vectors'}) {
+        $self->{'query_bases_probability_vectors'} = $self->get_bases_probability_vectors();
+    }
+
+    return $self->{'query_bases_probability_vectors'};
+}
+
+
+# Get the probability values for one base in the read
+sub query_base_probability_vectors {
+    my($self,$pos) = @_;
+
+    return [] unless $self->{'reads_fh'};
+
+    my $read_number = $self->read_number % 1000000000;
+    $self->{'reads_fh'}->seek(($read_number * READ_RECORD_LENGTH) + $pos, SEEK_SET);
+    my $buf;
+    $self->{'reads_fh'}->read($buf, 4);  
+    my @probs = unpack('cccc', $buf);
+
+    return \@probs;
+}
+    
+
+
 
 sub increment_position{
     my $self = shift;
