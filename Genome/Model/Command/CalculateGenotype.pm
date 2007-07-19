@@ -5,29 +5,25 @@ use strict;
 use warnings;
 
 use UR;
-use Command;
-
-use constant MATCH => 0;
-use constant MISMATCH => 1;
-use constant REFERENCE_INSERT => 2;
-use constant QUERY_INSERT => 3;
-
 use Genome::Model::Command::IterateOverRefSeq;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Genome::Model::Command::IterateOverRefSeq',
-    has => [
-        result => { type => 'Array', doc => 'If set, results will be stored here instead of printing to STDOUT.' }
-    ],
 );
 
 sub help_brief {
-    ""
+    "examine coverage base-by-base"
 }
 
 sub help_synopsis {
-    return <<EOS
+    return <<"EOS"
+
+Write a subclass of this.  
+
+Give it a name which is an extension of this class name.
+
+Launch a genotyping algorithm.
 
 EOS
 }
@@ -35,32 +31,20 @@ EOS
 sub help_detail {
     return <<"EOS"
 
+This module is an abstract base class for commands which resolve coverage.
+
+Subclasses will implement different per-base consensus calling algorithms.  This module
+should handle common coverage parameters, typically for handling the results. 
 
 EOS
 }
 
-sub _examine_position {
-    my $alignments = shift;
 
-    my $coverage_depth_at_this_position = 0;
-    foreach my $aln (@$alignments){
+sub _print_result {
+    my ($pos,$coverage) = @_;
 
-        # skip over insertions in the reference
-        my $mm_code;
-        do{
-            # Moving what get_current_mismatch_code() to here to remove the overhead of a function call
-            #$mm_code = $aln->get_current_mismatch_code();
-            $mm_code = substr($aln->{mismatch_string},$aln->{current_position},1);
-
-            $aln->{current_position}++; # an ugly but necessary optimization
-        } while (defined($mm_code) && $mm_code == REFERENCE_INSERT);
-
-        $coverage_depth_at_this_position++ unless (!defined($mm_code) || $mm_code == QUERY_INSERT)
-    }
-
-    return $coverage_depth_at_this_position;
+    print "$pos:$coverage\n";
 }
-
 
 1;
 

@@ -1,4 +1,4 @@
-# Rename the final word in the full class name <---
+
 package Genome::Model::Command::IterateOverRefSeq;
 
 use strict;
@@ -23,14 +23,26 @@ UR::Object::Class->define(
     is_abstract => 1,
     sub_classification_meta_class_name => __PACKAGE__,
     sub_classification_property_name => 'class',
-    has => ['file','aln','chrom','length','start','result'],                   # Specify the command's properties (parameters) <--- 
+    has => ['file','aln','chrom','length','start','result'], 
 );
 
 sub help_brief {
-    "print out the coverage depth for the given alignment file"                     # Keep this to just a few words <---
+    "print out the coverage depth for the given alignment file" 
 }
 
-sub help_detail {                           # This is what the user will see with --help <---
+sub help_synopsis {
+    return <<EOS
+
+Write a sub-classs of this for any commands which iterate over an alignment collection.
+
+The subclass must implement _examine_position() and _print_result().
+
+It's usually easiest to copy one of the existing modules, and modify it's name and replace its guts. 
+
+EOS
+}
+
+sub help_detail {                       
     return <<"EOS"
 
 --file <path_to_alignment_file>  The prefix of the alignment index and data files, without the '_aln.dat'
@@ -44,7 +56,7 @@ the length
 EOS
 }
 
-sub create {                               # Rarely implemented.  Initialize things before execute <---
+sub create {                           
     my $class = shift;
     my %params = @_;
 
@@ -66,14 +78,14 @@ sub create {                               # Rarely implemented.  Initialize thi
     return $self;
 }
 
-#sub validate_params {                      # Pre-execute checking.  Not requiried <---
+#sub validate_params {                    
 #    my $self = shift;
 #    return unless $self->SUPER::validate_params(@_);
 #    # ..do real checks here
 #    return 1;
 #}
 
-# FIXME how can we determine these from the DB?
+# FIXME how can we determine these from the data?
 our %CHROM_LEN = (
     1   =>      247249720,
     2   =>      242951150,
@@ -136,6 +148,12 @@ $DB::single=1;
         $end_position = $alignment->max_alignment_pos();
     }
 
+    my $pos_coderef = $self->can('_examine_position');
+    unless ($pos_coderef) {
+        $self->error_message("Class does not define an _examine_position method!");
+        return;
+    }
+
     my $result_coderef;
     if ($self->result) {
         my $coverage_result = $self->result;
@@ -147,28 +165,22 @@ $DB::single=1;
                                 my($pos,$coverage) = @_;
                                 push @$coverage_result,$coverage;
                              };
-    } else {
+    }
+    elsif ($result_coderef = $self->can('_print_result')) {
         print "Coverage for ",$self->aln," from position $start_position to $end_position\n";
-        $result_coderef = \&_print_result;
     } 
+    else {
+        $self->error_message($self->class . " does not implement _print_result, and no result parameter was supplied to capture it!");
+        return;
+    }
     
 
-    my $pos_coderef = $self->can('_examine_position');
-    unless ($pos_coderef) {
-        $self->error_message("Class does not define an _examine_position method!");
+    unless ($alignment->foreach_reference_position( $pos_coderef, $result_coderef, $start_position, $end_position)) {
+        $self->error_message("Error iterating over alignments!: ");
     }
-    $alignment->foreach_reference_position( $pos_coderef, $result_coderef, $start_position, $end_position);
 
     return 1;
 }
-
-
-sub _print_result {
-my($pos,$coverage) = @_;
-
-    print "$pos:$coverage\n";
-}
-
 
 1;
 

@@ -13,7 +13,7 @@ use Test::More tests => 22;
 use Test::Deep;
 
 BEGIN {
-    use_ok('Genome::Model::Command::CalculateCoverage');
+    use_ok('Genome::Model::Command::CalculateCoverage::SimpleAlignmentCount');
 }
 
 my @temp_output_prefixes = qw( /tmp/testme_chr_ryan_1 /tmp/testme_chr_ryan_SORTED /tmp/testme_chr_ryan_SORTED_DOUBLE );
@@ -83,7 +83,7 @@ shift @$expected_array_double;
 
 
 my $unsorted_results = [];
-my $unsorted_coverage_command = Genome::Model::Command::CalculateCoverage->create( 
+my $unsorted_coverage_command = Genome::Model::Command::CalculateCoverage::SimpleAlignmentCount->create( 
                                           aln => $unsorted,
                                           start => 1,
                                           length => $REFERENCE_SEQUENCE_LENGTH,
@@ -97,7 +97,7 @@ cmp_deeply( $unsorted_results, $expected_array_single,
 
 
 my $sorted_results = [];
-my $sorted_coverage_command = Genome::Model::Command::CalculateCoverage->create(
+my $sorted_coverage_command = Genome::Model::Command::CalculateCoverage::SimpleAlignmentCount->create(
                                           aln => $sorted,
                                           start => 1,
                                           length => $REFERENCE_SEQUENCE_LENGTH,
@@ -112,7 +112,7 @@ cmp_deeply( $unsorted_results, $expected_array_single,
 
 
 my $double_results = [];
-my $double_coverage_command = Genome::Model::Command::CalculateCoverage->create(
+my $double_coverage_command = Genome::Model::Command::CalculateCoverage::SimpleAlignmentCount->create(
                                           aln => $sorted_double,
                                           start => 1,
                                           length => $REFERENCE_SEQUENCE_LENGTH,

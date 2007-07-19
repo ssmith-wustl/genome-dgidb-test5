@@ -5,31 +5,25 @@ use strict;
 use warnings;
 
 use UR;
-use Command;
-
-use constant MATCH => 0;
-use constant MISMATCH => 1;
-use constant REFERENCE_INSERT => 2;
-use constant QUERY_INSERT => 3;
-
 use Genome::Model::Command::IterateOverRefSeq;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Genome::Model::Command::IterateOverRefSeq',
-    has => [
-        result => { type => 'Array', doc => 'If set, results will be stored here instead of printing to STDOUT.' }
-    ],
 );
 
 sub help_brief {
-    "print out the coverage depth for the given alignment file"
+    "examine coverage base-by-base"
 }
 
 sub help_synopsis {
-    return <<EOS
+    return <<"EOS"
 
-genome-model calculate-coverage --file myalignments --start 1000 --length 100 >results
+Write a subclass of this.  
+
+Give it a name which is an extension of this class name.
+
+Implement a new coverage algorithm.
 
 EOS
 }
@@ -37,38 +31,19 @@ EOS
 sub help_detail {
     return <<"EOS"
 
---file <path_to_alignment_file>  The prefix of the alignment index and data files, without the '_aln.dat'
---chrom <name>     The single-character name of the chromosome this alignment file covers, to determine
-                   the last alignment position to check
---length <count>   In the absence of --chrom, specify how many positions to calculate coverage for
---start <position> The first alignment position to check, default is 1
+This module is an abstract base class for commands which resolve coverage.
 
-If neither --chrom or --length are specified, it uses the last position in the alignment file as
-the length
+Subclasses will implement different per-base coverage algorithms.  This module
+should handle common coverage parameters, typically for handling the results. 
 
 EOS
 }
 
-sub _examine_position {
-    my $alignments = shift;
 
-    my $coverage_depth_at_this_position = 0;
-    foreach my $aln (@$alignments){
+sub _print_result {
+    my ($pos,$coverage) = @_;
 
-        # skip over insertions in the reference
-        my $mm_code;
-        do{
-            # Moving what get_current_mismatch_code() to here to remove the overhead of a function call
-            #$mm_code = $aln->get_current_mismatch_code();
-            $mm_code = substr($aln->{mismatch_string},$aln->{current_position},1);
-
-            $aln->{current_position}++; # an ugly but necessary optimization
-        } while (defined($mm_code) && $mm_code == REFERENCE_INSERT);
-
-        $coverage_depth_at_this_position++ unless (!defined($mm_code) || $mm_code == QUERY_INSERT)
-    }
-
-    return $coverage_depth_at_this_position;
+    print "$pos:$coverage\n";
 }
 
 1;

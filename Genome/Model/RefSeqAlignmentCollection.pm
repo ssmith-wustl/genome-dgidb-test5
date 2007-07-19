@@ -515,6 +515,7 @@ $DB::single=1;
 
         $each_result_coderef->( $pos, $each_pos_coderef->( $current_alignments ));
     }
+    return 1;
 }
 
 =pod
