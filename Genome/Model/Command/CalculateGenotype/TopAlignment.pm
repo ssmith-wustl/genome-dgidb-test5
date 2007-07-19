@@ -7,6 +7,8 @@ use warnings;
 use UR;
 use Command;
 
+use IO::File;
+
 use constant MATCH => 0;
 use constant MISMATCH => 1;
 use constant REFERENCE_INSERT => 2;
@@ -18,7 +20,8 @@ UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Genome::Model::Command::CalculateGenotype',
     has => [
-        result => { type => 'Array', doc => 'If set, results will be stored here instead of printing to STDOUT.' }
+        result => { type => 'Array', doc => 'If set, results will be stored here instead of printing to STDOUT.' },
+        bases_file => { type => 'String', doc => 'The pathname of the binary file containing prb values' },
     ],
 );
 
@@ -39,28 +42,49 @@ sub help_detail {
 EOS
 }
 
+
+sub execute {
+    my($self) = @_;
+
+    our $bases_fh = IO::File->new($self->bases_file);   # Ugly hack until _examine_position can be called as a method
+    unless ($bases_fh) {
+        $self->error_message("Can't open bases file: $!");
+        return undef;
+    }
+
+    $self->SUPER::execute();
+}
+
+our @TRANSLATE_BASE = ( 'A','C','G','T' );
+
 sub _examine_position {
     my $alignments = shift;
 
-    my $coverage_depth_at_this_position = 0;
+$DB::single=1;
+    my $max_base_score_seen = -255;
+    my $base = undef;
+
     foreach my $aln (@$alignments){
 
-        # skip over insertions in the reference
-        my $mm_code;
-        do{
-            # Moving what get_current_mismatch_code() to here to remove the overhead of a function call
-            #$mm_code = $aln->get_current_mismatch_code();
-            $mm_code = substr($aln->{mismatch_string},$aln->{current_position},1);
+        our $bases_fh;
+        $aln->{'reads_fh'} = $bases_fh;   # another ugly hack.  $aln's constructor should know about this instead
 
-            $aln->{current_position}++; # an ugly but necessary optimization
-        } while (defined($mm_code) && $mm_code == REFERENCE_INSERT);
-
-        $coverage_depth_at_this_position++ unless (!defined($mm_code) || $mm_code == QUERY_INSERT)
+        my $vectors = $aln->query_bases_probability_vectors();
+        for (my $i = 0; $i < 4; $i++) {
+            my $base_score = $vectors->[ $aln->{'current_position'} ]->[$i];
+            next unless defined $base_score;   # The reference positions can go past the read length
+            if ($base_score > $max_base_score_seen) {
+                $max_base_score_seen = $base_score;
+                $base = $i;
+            }
+        }
+        $aln->{'current_position'}++;
     }
 
-    return $coverage_depth_at_this_position;
+    my $retval = defined($base) ? $TRANSLATE_BASE[$base] : 'N';
+    return $retval;
 }
-
+         
 
 1;
 
