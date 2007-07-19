@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+use lib '/gsc/scripts/test/ur-dev';
+
 use IO::File;
 use Genome::Model::RefSeqAlignmentCollection qw(MAX_READ_LENGTH INDEX_RECORD_SIZE);
 
