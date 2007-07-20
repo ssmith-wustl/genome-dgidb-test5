@@ -23,7 +23,36 @@ UR::Object::Class->define(
     is_abstract => 1,
     sub_classification_meta_class_name => __PACKAGE__,
     sub_classification_property_name => 'class',
-    has => ['file','aln','chrom','length','start','result'], 
+    has => [
+        file    =>  {   type => 'Filename', 
+                        is_optional => 1, 
+                        doc => "<path_to_alignment_file>  The prefix of the alignment index and data files, without the '_aln.dat'" 
+                    },
+        aln     =>  {   type => 'Genome::Model::RefSeqAlignmentCollection', 
+                        is_optional => 1,
+                        doc => "The alignment collection to iterate over." 
+                    },    
+        chrom   =>  { 
+                        type => 'String',  
+                        is_optional => 1, 
+                        doc => "<name> The single-character name of the chromosome this alignment file covers, to determine the last alignment position to check" 
+                    },
+        length  =>  { 
+                        type => 'Integer', 
+                        is_optional => 1, 
+                        doc => "<count>   In the absence of --chrom, specify how many positions to calculate coverage for"
+                    },
+        start   =>  { 
+                        type => 'Integer', 
+                        is_optional => 1, 
+                        doc => "<position> The first alignment position to check, default is 1" 
+                    },
+        result  =>  { 
+                        type => 'Integer', 
+                        is_optional => 1, 
+                        doc => "" 
+                    },
+    ], 
 );
 
 sub help_brief {
@@ -42,14 +71,10 @@ It's usually easiest to copy one of the existing modules, and modify it's name a
 EOS
 }
 
-sub help_detail {                       
-    return <<"EOS"
+sub help_options {                     
+    my $self = shift;  
+    return $self->SUPER::help_options() . <<"EOS"
 
---file <path_to_alignment_file>  The prefix of the alignment index and data files, without the '_aln.dat'
---chrom <name>     The single-character name of the chromosome this alignment file covers, to determine
-                   the last alignment position to check
---length <count>   In the absence of --chrom, specify how many positions to calculate coverage for
---start <position> The first alignment position to check, default is 1
 If neither --chrom or --length are specified, it uses the last position in the alignment file as
 the length
 

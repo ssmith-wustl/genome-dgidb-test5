@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::CalculateCoverage::SimpleAlignmentCount;
+package Genome::Model::Command::CalculateCoverage::Simple;
 
 use strict;
 use warnings;
@@ -17,9 +17,6 @@ use Genome::Model::Command::CalculateCoverage;
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Genome::Model::Command::CalculateCoverage',
-    has => [
-        result => { type => 'Array', doc => 'If set, results will be stored here instead of printing to STDOUT.' }
-    ],
 );
 
 sub help_brief {
@@ -28,24 +25,12 @@ sub help_brief {
 
 sub help_synopsis {
     return <<EOS
-
 genome-model calculate-coverage --file myalignments --start 1000 --length 100 >results
-
 EOS
 }
 
 sub help_detail {
     return <<"EOS"
-
---file <path_to_alignment_file>  The prefix of the alignment index and data files, without the '_aln.dat'
---chrom <name>     The single-character name of the chromosome this alignment file covers, to determine
-                   the last alignment position to check
---length <count>   In the absence of --chrom, specify how many positions to calculate coverage for
---start <position> The first alignment position to check, default is 1
-
-If neither --chrom or --length are specified, it uses the last position in the alignment file as
-the length
-
 EOS
 }
 

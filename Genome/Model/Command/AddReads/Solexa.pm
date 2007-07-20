@@ -1,6 +1,6 @@
 
 # Rename the final word in the full class name <---
-package Genome::Model::Command::Example2;
+package Genome::Model::Command::AddReads::Solexa;
 
 use strict;
 use warnings;
@@ -11,20 +11,16 @@ use Command;
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
-    has => [
-        foo => { type => "String" },
-        bar => { type => "Boolean" },
-    ],                                      # Specify the command's properties (parameters) <--- 
+    has => ['source_directory','destination_file'],                   # Specify the command's properties (parameters) <--- 
 );
 
 sub help_brief {
-    "example command 2"                     # Keep this to just a few words <---
+    "add reads to a genome model"
 }
 
 sub help_detail {                           # This is what the user will see with --help <---
     return <<EOS 
 
-This is a dummy command.  Copy, paste and modify! 
 
 EOS
 }
@@ -46,11 +42,7 @@ EOS
 
 sub execute {
     my $self = shift;
-    print "Running command 2 " 
-        . "foo is " . (defined $self->foo ? $self->foo : '<not defined>')
-         . ", " 
-        . "bar is " . (defined $self->bar ? $self->bar : '<not defined>') 
-        . "\n";     
+    print "Running command 1 ";
     return 1;
 }
 
