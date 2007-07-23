@@ -85,6 +85,8 @@ use constant READ_RECORD_LENGTH => READ_LENGTH * 4;  # 4 base scores for each po
 sub get_read_probability_vectors {
     my($self) = @_;
 
+    die 'this needs to include a field for gaps "-"\n';
+
     unless ($self->{'read_bases_probability_vectors'}) {
     
         my $read_number = $self->read_number % 1_000_000_000;
@@ -107,6 +109,8 @@ sub get_read_probability_vectors {
 # Get the probability values for one base in the read
 sub get_read_position_probability_vector {
     my($self,$pos) = @_;
+
+    die 'this needs to include a field for gaps "-"\n';
 
     return [] unless $self->{'reads_fh'};
 
