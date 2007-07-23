@@ -13,15 +13,13 @@ UR::Object::Class->define(
 );
 
 sub help_brief {
-    "examine coverage base-by-base"
+    "generate base-by-base consensus genotype"
 }
 
 sub help_synopsis {
     return <<"EOS"
 
-Write a subclass of this.  
-
-Give it a name which is an extension of this class name.
+???
 
 Launch a genotyping algorithm.
 
@@ -31,10 +29,10 @@ EOS
 sub help_detail {
     return <<"EOS"
 
-This module is an abstract base class for commands which resolve coverage.
+This module is an abstract base class for commands which resolve consensus's.
 
 Subclasses will implement different per-base consensus calling algorithms.  This module
-should handle common coverage parameters, typically for handling the results. 
+should handle common consensus parameters, typically for handling the results. 
 
 EOS
 }
@@ -43,7 +41,7 @@ EOS
 sub _print_result {
     my ($pos,$coverage) = @_;
 
-    print "$pos:$coverage\n";
+    print "$pos\t$coverage\n";
 }
 
 1;

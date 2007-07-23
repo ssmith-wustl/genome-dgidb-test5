@@ -146,8 +146,8 @@ $DB::single=1;
 
     my $alignment;
     if ($self->file) {
-        $alignment = Genome::Model::RefSeqAlignmentCollection->new(file_prefix => $self->file,
-                                                                   mode => O_RDONLY);
+        $alignment = Genome::Model::RefSeqAlignmentCollection->new(file_prefix  => $self->file,
+                                                                   mode         => O_RDONLY);
         unless ($alignment) {
             $self->error_message("Can't access the alignment data: $!");
             return;
@@ -192,7 +192,7 @@ $DB::single=1;
                              };
     }
     elsif ($result_coderef = $self->can('_print_result')) {
-        print "Coverage for ",$self->aln," from position $start_position to $end_position\n";
+        print "Result for ",$self->aln," from position $start_position to $end_position\n";
     } 
     else {
         $self->error_message($self->class . " does not implement _print_result, and no result parameter was supplied to capture it!");

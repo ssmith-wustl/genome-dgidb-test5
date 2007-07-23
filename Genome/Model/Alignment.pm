@@ -19,16 +19,17 @@ sub new{
         $self = $_[0];
 
     } else {
-        $self = { last_alignment_number           => undef,
-                  read_number                     => undef,
-                  probability                     => undef,
-                  length                          => undef,
-                  orientation                     => undef,
-                  number_of_alignments            => undef,
-                  mismatch_string                 => undef,
-                  reference_bases                 => undef,
-                  query_base_probability_vectors  => undef,
-                  @_,
+        $self = {
+                    last_alignment_number           => undef,
+                    read_number                     => undef,
+                    probability                     => undef,
+                    length                          => undef,
+                    orientation                     => undef,
+                    number_of_alignments            => undef,
+                    mismatch_string                 => undef,
+                    reference_bases                 => undef,
+                    query_base_probability_vectors  => undef,
+                    @_,
                };
     }
 
@@ -81,53 +82,47 @@ sub get_current_mismatch_code{
 use constant READ_LENGTH => 33;
 use constant READ_RECORD_LENGTH => READ_LENGTH * 4;  # 4 base scores for each position
 # Get all the probability values for all the bases in the read
-sub get_bases_probability_vectors {
+sub get_read_probability_vectors {
     my($self) = @_;
 
-    my $read_number = $self->read_number % 1000000000;
-    $self->{'reads_fh'}->seek($read_number * READ_RECORD_LENGTH, SEEK_SET);
-    my $buf;
-    $self->{'reads_fh'}->read($buf, READ_RECORD_LENGTH);
-
-    my @all_probs;
-    $#all_probs = READ_LENGTH - 1;
-    for (my $i = 0; $i < READ_LENGTH; $i++) {
-        $all_probs[$i] = [ unpack('cccc', substr($buf, $i, 4)) ];
+    unless ($self->{'read_bases_probability_vectors'}) {
+    
+        my $read_number = $self->read_number % 1_000_000_000;
+        $self->{'reads_fh'}->seek($read_number * READ_RECORD_LENGTH, SEEK_SET);
+        my $buf;
+        $self->{'reads_fh'}->read($buf, READ_RECORD_LENGTH);
+    
+        my @all_probs;
+        $#all_probs = READ_LENGTH - 1;
+        for (my $i = 0; $i < READ_LENGTH; $i++) {
+            $all_probs[$i] = [ unpack('cccc', substr($buf, $i, 4)) ];
+        }
+        
+        $self->{'read_bases_probability_vectors'} = \@all_probs;
     }
-
-    return \@all_probs;
+    
+    return $self->{'read_bases_probability_vectors'};
 }
-
-
-sub query_bases_probability_vectors {
-    my($self) = @_;
-
-    unless ($self->{'query_bases_probability_vectors'}) {
-        $self->{'query_bases_probability_vectors'} = $self->get_bases_probability_vectors();
-    }
-
-    return $self->{'query_bases_probability_vectors'};
-}
-
 
 # Get the probability values for one base in the read
-sub query_base_probability_vectors {
+sub get_read_position_probability_vector {
     my($self,$pos) = @_;
 
     return [] unless $self->{'reads_fh'};
 
-    my $read_number = $self->read_number % 1000000000;
+    my $read_number = $self->read_number % 1_000_000_000;
     $self->{'reads_fh'}->seek(($read_number * READ_RECORD_LENGTH) + $pos, SEEK_SET);
     my $buf;
     $self->{'reads_fh'}->read($buf, 4);  
     my @probs = unpack('cccc', $buf);
 
+    # convert solexa style log-odds scores back into probs,
+    # note that because of the rounding in log odds space to integers, these will not sum exactly to 1
+    @probs = map { 1 - ( ( 1 ) / ( 1 + 10 ** ( $_ / 10 ) ) ) } @probs;
+
     return \@probs;
 }
     
-
-
-
 sub increment_position{
     my $self = shift;
     
