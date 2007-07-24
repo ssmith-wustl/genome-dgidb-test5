@@ -1630,13 +1630,16 @@ sub cleanup_logs {
     my @to_gzip;
 
     # command_log
-    while ( $_ = $class->command_log_dir->next ) {
-        next if $_->is_dir;
-        if ( /\.log$/ and -M $_ > 30 and not -f "$_.gz" ) {
-            push @to_gzip, $_;
-        }
-        elsif ( /\.log\.gz$/ and -M _ > 60 ) {
-            unlink $_ or warn "failed to unlink $_: $!";
+    {
+        my $dir = $class->command_log_dir;
+        while ( $_ = $dir->next ) {
+            next if $_->is_dir;
+            if ( /\.log$/ and -M $_ > 30 and not -f "$_.gz" ) {
+                push @to_gzip, $_;
+            }
+            elsif ( /\.log\.gz$/ and -M _ > 60 ) {
+                unlink $_ or warn "failed to unlink $_: $!";
+            }
         }
     }
 
