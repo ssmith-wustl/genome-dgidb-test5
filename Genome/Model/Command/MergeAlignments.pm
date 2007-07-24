@@ -55,7 +55,7 @@ $DB::single=1;
     require Genome::Model::RefSeqAlignmentCollection;
 
     my $new_name = $self->out;
-    my $new = Genome::Model::RefSeqAlignmentCollection->new(file_prefix => $new_name, mode=> O_RDWR | O_CREAT |O_TRUNC);
+    my $new = Genome::Model::RefSeqAlignmentCollection->new(file_prefix => $new_name, mode=> O_RDWR | O_CREAT);
     unless ($new) {
         $self->error_message("Can't create output file $new_name: $!");
         return;
