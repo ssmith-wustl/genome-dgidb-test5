@@ -65,7 +65,7 @@ $DB::single=1;
     foreach my $name ( @{ $self->bare_args } ) {
         my $obj = Genome::Model::RefSeqAlignmentCollection->new(file_prefix => $name);
         unless ($obj) {
-            $self->error_message("Can't open $name: $!");
+            $self->error_message("Can't open alignment file $name: $!");
             return;
         }
     }
@@ -73,7 +73,7 @@ $DB::single=1;
     foreach my $name ( split(',',$self->sorted) ) {
         my $obj = Genome::Model::RefSeqAlignmentCollection->new(file_prefix => $name, is_sorted => 1);
         unless ($obj) {
-            $self->error_message("Can't open $name: $!");
+            $self->error_message("Can't open alignment $name: $!");
             return;
         }
     }
