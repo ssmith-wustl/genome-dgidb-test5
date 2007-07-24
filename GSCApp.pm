@@ -410,6 +410,7 @@ associations in four cases.
         VARIATION_SEQUENCE_TAG          GSC::Sequence::Tag::Variation
         VARIATION_SEQUENCE_TAG_TSCRIPT  GSC::Sequence::Tag::Variation::Tscript
         VARIATION_SEQUENCE_TAG_ALLELE   GSC::Sequence::Tag::Variation::Allele
+        AMPLICON_SEQUENCE_TAG           GSC::Sequence::Tag::Amplicon
     
     /
 );
