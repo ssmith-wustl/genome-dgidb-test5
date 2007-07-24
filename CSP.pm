@@ -628,6 +628,8 @@ my %csp_priority = (
     'sequence'                                => 10,
     'set up beckman block'                    => 10,
     'normalize dna'                           => 10,
+    'validate amplicon'                       => 10,
+    'validate primer tube'                    => 10,
     # middle priority stuff
     'analyze amplicon failure' => 5,
     # lower priority steps
@@ -637,7 +639,8 @@ my %csp_priority = (
     'etl reads from oltp to olap'             => 1,
     'assemble 454 regions'                    => 1,
     'mp read analysis'                        => 1,
-    'add read to mp assembly'                 => 1,
+    #Removed it temporary to sort out all fail jobs.
+    #'add read to mp assembly'                 => 1,
     'import external reads'                   => 1,
     'gather submission results'               => 1,
     'prepare read submission'                 => 1,
