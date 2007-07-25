@@ -613,6 +613,7 @@ my %csp_priority = (
     # high priority touchscreen steps
     'assign custom sequencing primers to dna' => 10,
     'claim dna'                               => 10,
+    'define alternate chemistry amplicon' => 10,                   
     'create dna container'                    => 10,
     'create pcr product'                      => 10,
     'create sequenced dna'                    => 10,
