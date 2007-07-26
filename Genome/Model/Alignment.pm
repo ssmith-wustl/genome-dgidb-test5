@@ -2,6 +2,8 @@
 
 package Genome::Model::Alignment;
 
+use Genome::Model::AlignedBase;
+
 use IO::File;
 
 use strict;
@@ -33,7 +35,7 @@ sub new{
                };
     }
 
-    
+    bless $self, $pkg;
 
     if( defined( $self->{'aln_record_ar'} ) ){
         $self = {%$self, %{parse_aln_record( $self->{'aln_record_ar'})} };
@@ -42,7 +44,7 @@ sub new{
     
     unless( defined( $self->{'reference_bases'} ) && defined( $self->{'mismatch_string'} ) ) {
         ( $self->{'mismatch_string'}, $self->{'reference_bases'} )
-            = decode_match_string( $self->{'ref_and_mismatch_string'} );  
+            = $self->decode_match_string( $self->{'ref_and_mismatch_string'} );  
     }
     
     if (defined $self->{'reads_file'}) {
@@ -56,7 +58,7 @@ sub new{
     $self->{'current_position'} = 0;
     $self->{mismatch_string_length} = length($self->{mismatch_string});
 
-    return bless $self, $pkg;
+    return $self;
 }
 
 # read-only Accessor Methods ------------------------------------------------------------
@@ -67,7 +69,7 @@ foreach my $key ( qw ( last_alignment_number read_number probability orientation
     *{$key} = $sub;
 }
 
-sub read_length                     {return $_[0]->{length}}
+sub read_length {return $_[0]->{length}}
 
 
 sub get_current_mismatch_code{
@@ -85,7 +87,7 @@ use constant READ_RECORD_LENGTH => READ_LENGTH * 4;  # 4 base scores for each po
 sub get_read_probability_vectors {
     my($self) = @_;
 
-    die 'this needs to include a field for gaps "-"\n';
+    return [] unless defined($self->{'reads_fh'});
 
     unless ($self->{'read_bases_probability_vectors'}) {
     
@@ -97,7 +99,9 @@ sub get_read_probability_vectors {
         my @all_probs;
         $#all_probs = READ_LENGTH - 1;
         for (my $i = 0; $i < READ_LENGTH; $i++) {
-            $all_probs[$i] = [ unpack('cccc', substr($buf, $i, 4)) ];
+            # convert solexa style log-odds scores back into probs,
+            # note that because of the rounding in log odds space to integers, these will not sum exactly to 1
+            $all_probs[$i] = [ map { 1 - ( ( 1 ) / ( 1 + 10 ** ( $_ / 10 ) ) ) } unpack('cccc', substr($buf, $i, 4)) ];
         }
         
         $self->{'read_bases_probability_vectors'} = \@all_probs;
@@ -106,25 +110,23 @@ sub get_read_probability_vectors {
     return $self->{'read_bases_probability_vectors'};
 }
 
+use constant READ_INSERT => 3;
+
 # Get the probability values for one base in the read
-sub get_read_position_probability_vector {
-    my($self,$pos) = @_;
+sub get_current_position_probability_vector {
+    my($self) = @_;
 
-    die 'this needs to include a field for gaps "-"\n';
+    my $base_position_prob_vectors = $self->get_read_probability_vectors();
 
-    return [] unless $self->{'reads_fh'};
+    my $position_vector = $base_position_prob_vectors->[$self->{current_position}];
 
-    my $read_number = $self->read_number % 1_000_000_000;
-    $self->{'reads_fh'}->seek(($read_number * READ_RECORD_LENGTH) + $pos, SEEK_SET);
-    my $buf;
-    $self->{'reads_fh'}->read($buf, 4);  
-    my @probs = unpack('cccc', $buf);
+    if($self->get_current_mismatch_code == READ_INSERT){
+        unshift @$position_vector, 1;
+    }else{
+        unshift @$position_vector, 0;
+    }
 
-    # convert solexa style log-odds scores back into probs,
-    # note that because of the rounding in log odds space to integers, these will not sum exactly to 1
-    @probs = map { 1 - ( ( 1 ) / ( 1 + 10 ** ( $_ / 10 ) ) ) } @probs;
-
-    return \@probs;
+    return $position_vector;
 }
     
 sub increment_position{
@@ -147,6 +149,15 @@ sub spent_q{
     }else{
         return;
     }
+}
+
+sub get_current_aligned_base{
+    my $self = shift;
+    
+    return Genome::Model::AlignedBase->new(
+                                    base_probability_vector => $self->get_current_position_probability_vector(),
+                                    alignment_probability   => $self->{probability},
+                                    );
 }
 
 
@@ -232,7 +243,7 @@ sub decode_match_string_perl {
 }
 
 sub decode_match_string {
-    _decode_match_string(length($_[0]), $_[0]);
+    _decode_match_string(length($_[1]), $_[1]);
 }
 
 use Inline C => <<'END_C';

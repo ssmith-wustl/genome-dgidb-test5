@@ -52,6 +52,11 @@ UR::Object::Class->define(
                         is_optional => 1, 
                         doc => "" 
                     },
+        iterator_method  =>  { 
+                        type => 'String', 
+                        is_optional => 1, 
+                        doc => "<name> The name of the iterator method in Genome::Model::RefSeqAlignmentCollection to use" 
+                    },
     ], 
 );
 
@@ -85,7 +90,7 @@ sub create {
     my $class = shift;
     my %params = @_;
 
-    my($aln,$result);
+    my($aln,$result,$iterator_method);
 
     if ($params{'aln'}) {
         $aln = delete $params{'aln'};
@@ -93,12 +98,19 @@ sub create {
     if ($params{'result'}) {
         $result = delete $params{'result'};
     }
-        
+    if ($params{'iterator_method'}){
+        $iterator_method = delete $params{iterator_method};
+    }
 
     my $self = $class->SUPER::create(%params);
 
     $self->aln($aln) if ($aln);
     $self->result($result) if ($result);
+    if($iterator_method){
+        $self->iterator_method($iterator_method)
+    }else{
+        $self->iterator_method('foreach_reference_position');
+    }
 
     return $self;
 }
@@ -140,6 +152,13 @@ our %CHROM_LEN = (
 
 sub execute {
     my $self = shift;
+    my %params = @_;
+    
+    my $iterator_method = $self->iterator_method;
+    if($params{iterator_method}){
+        $iterator_method = delete $params{iterator_method};
+    }
+    
 $DB::single=1;
 
     require Genome::Model::RefSeqAlignmentCollection;
@@ -198,9 +217,8 @@ $DB::single=1;
         $self->error_message($self->class . " does not implement _print_result, and no result parameter was supplied to capture it!");
         return;
     }
-    
 
-    unless ($alignment->foreach_reference_position( $pos_coderef, $result_coderef, $start_position, $end_position)) {
+    unless ($alignment->$iterator_method( $pos_coderef, $result_coderef, $start_position, $end_position)) {
         $self->error_message("Error iterating over alignments!: ");
     }
 

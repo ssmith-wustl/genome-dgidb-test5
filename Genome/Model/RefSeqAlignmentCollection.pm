@@ -8,6 +8,7 @@ use Convert::Binary::C;
 use Carp;
 
 use Genome::Model::Alignment;
+use Genome::Model::AlignedBase;
 
 use Exporter 'import';
 our @EXPORT_OK = qw (LINKED_LIST_RECORD_SIZE INDEX_RECORD_SIZE MAX_READ_LENGTH);
@@ -514,6 +515,56 @@ $DB::single=1;
         my $current_alignments = [ map { @$_ } values %alignment_object_cache ];
 
         $each_result_coderef->( $pos, $each_pos_coderef->( $current_alignments ));
+    }
+    return 1;
+}
+
+
+sub foreach_aligned_position{
+my($self, $each_pos_coderef, $each_result_coderef, $start_position, $end_position) = @_;
+    
+$DB::single=1;
+
+    $start_position ||= 1;
+    $end_position ||= $self->max_alignment_pos();
+    
+    # Values are listrefs of alignment objects
+    # Keys are positions where these objects will be no longer needed
+    my %alignment_object_cache;
+
+    my $get_sub = $self->{'is_sorted'} ? 'get_alignments_for_sorted_position' : 'get_alignments_for_position';
+    for( my $pos = $start_position ; $pos <= $end_position ; $pos++ ){
+        
+        delete $alignment_object_cache{$pos};   # Remove alignment objects that the window has passed by
+
+        my $alignments_at_this_pos = $self->$get_sub($pos);
+        my $count = scalar(@$alignments_at_this_pos);
+        for (my $i = 0; $i < $count; $i++) {
+            my $alignment_obj = Genome::Model::Alignment->new($alignments_at_this_pos->[$i]);
+            push @{$alignment_object_cache{$alignment_obj->mismatch_string_length + $pos}}, $alignment_obj;
+        }
+        
+        my @alignments_with_inserts = grep { $_->get_current_mismatch_code() } map { @$_ } values %alignment_object_cache;
+        
+        my @alignments_to_slice_and_return;
+        
+        if (@alignments_with_inserts) {
+            @alignments_to_slice_and_return = @alignments_with_inserts;
+        } else {
+            @alignments_to_slice_and_return = values %alignment_object_cache;
+        }
+        
+        my $column_bases = [
+                             map {
+                                 $_->get_current_aligned_base()
+                                 }
+                             @alignments_to_slice_and_return
+                            ];
+
+        $each_result_coderef->( $pos, $each_pos_coderef->( $column_bases ));
+    
+        $_->{current_position}++ foreach (@alignments_to_slice_and_return);
+        
     }
     return 1;
 }
