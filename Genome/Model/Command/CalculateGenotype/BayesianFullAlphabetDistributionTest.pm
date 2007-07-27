@@ -74,8 +74,10 @@ sub test_examine_position : Test(1) {
                   ];
                   
     my $expected = [];
+    
     use Data::Dumper;
     print Data::Dumper::Dumper($result);
+    
     cmp_deeply($result, $expected, '_examine_position correctly calculates the posterior base distribution of columns');
 }
 

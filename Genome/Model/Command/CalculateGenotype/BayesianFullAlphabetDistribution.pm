@@ -110,67 +110,68 @@ sub _examine_position {
 
     # Deep copy up a fresh one
     my $diploid_genotype_matrix = _calculate_diploid_genotype_priors();
-    
-    my $evidence = 0;
 
     foreach my $aln (@$alignments){
 
+        my $evidence = 0;
+        
         our $bases_fh;
         $aln->{'reads_fh'} = $bases_fh;   # another ugly hack.  $aln's constructor should know about this instead
 
         my $aln_prob = $aln->{'alignment_probability'};
         my $vector = $aln->{base_probability_vector};
-        foreach my $maternal_allele_alphabet_index (0 .. 4) {
-            foreach my $paternal_allele_alphabet_index (0 .. 4){
-            
-                my ($allele_1, $allele_2) = ($maternal_allele_alphabet_index, $paternal_allele_alphabet_index);
-               
-               #my $prob_this_ordering = .5;
-               
-                my $base_likelihood = $vector->[$allele_1];
-               
-                my $likelihood = $base_likelihood
-               #                    * $prob_this_ordering
-                                   * $aln_prob
-                                   * $BASE_CALL_PRIORS->[$allele_2];
-                                   
-                my $not_aln_likelihood = $base_likelihood
-               #                            * $prob_this_ordering
-                                           * (1- $aln_prob)
-                                           * $BASE_CALL_PRIORS->[$allele_2];
-
-               #$evidence += ( $diploid_genotype_matrix->[$allele_1]->[$allele_2]
-               #                * $not_aln_likelihood );
-               
-                $diploid_genotype_matrix->[$allele_1]->[$allele_2]
-                   *= $likelihood;
+        my $likelihood_matrix_to_or = [];
+        
+        foreach my $ordering ( 1, 2 ){
+        
+            foreach my $maternal_allele_alphabet_index (0 .. 4) {
+                foreach my $paternal_allele_alphabet_index (0 .. 4){
+                    
+                    my ($allele_1, $allele_2);
+                    if($ordering == 1){
+                        ($allele_1, $allele_2) = ($maternal_allele_alphabet_index, $paternal_allele_alphabet_index);
+                    }else{
+                        ($allele_2, $allele_1) = ($maternal_allele_alphabet_index, $paternal_allele_alphabet_index);
+                    }
                    
-                $evidence += $diploid_genotype_matrix->[$allele_1]->[$allele_2];
-           }
+                    my $prob_this_ordering = .5;
+                   
+                    my $base_likelihood = $vector->[$allele_1];
+                   
+                    my $likelihood = $base_likelihood
+                                       * $prob_this_ordering
+                                       * $aln_prob
+                                       * $BASE_CALL_PRIORS->[$allele_2];
+                                       
+                    my $not_aln_likelihood = $base_likelihood
+                                               * $prob_this_ordering
+                                               * (1- $aln_prob)
+                                               * $BASE_CALL_PRIORS->[$allele_2];
+    
+                   $evidence += ( $diploid_genotype_matrix->[$allele_1]->[$allele_2]
+                                   * $not_aln_likelihood );
+                    
+                    $likelihood_matrix_to_or->[$allele_1]->[$allele_2]->[$ordering] +=
+                            $likelihood;
+                }
+            }
+
         }
         
+        foreach my $i (0 .. 4){
+            foreach my $j (0 .. 4){
+                $diploid_genotype_matrix->[$i]->[$j] *= $likelihood_matrix_to_or->[$i]->[$j];
+                $evidence += $diploid_genotype_matrix->[$i]->[$j];
+            }
+        }
+    
         foreach my $i (0 .. 4){
             foreach my $j (0 .. 4){
                 $diploid_genotype_matrix->[$i]->[$j] /= $evidence;
             }
         }
-        my $sum = 0;
-        foreach my $i (0 .. 4){
-            foreach my $j (0 .. 4){
-                $sum += $diploid_genotype_matrix->[$i]->[$j];
-            }
-        }
-        print "total probability is $sum, evidence was $evidence\n";
     }
-    my $sum = 0;
-        foreach my $i (0 .. 4){
-            foreach my $j (0 .. 4){
-                $sum += $diploid_genotype_matrix->[$i]->[$j];
-            }
-        }
-        print "FINAL total probability is $sum, evidence was $evidence\n";
-     
-    
+
     my $diploid_genotype_vector = [];
     foreach my $i (0 .. 4){
         foreach my $j (0 .. 4){
