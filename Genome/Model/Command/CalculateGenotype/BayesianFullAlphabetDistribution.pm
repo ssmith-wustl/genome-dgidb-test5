@@ -118,26 +118,29 @@ sub _examine_position {
         our $bases_fh;
         $aln->{'reads_fh'} = $bases_fh;   # another ugly hack.  $aln's constructor should know about this instead
 
+        my $aln_prob = $aln->{'alignment_probability'};
         my $vector = $aln->{base_probability_vector};
-        for (my $i = 0; $i < 5; $i++) {
+        foreach my $i (0 .. 4) {
             
-            # we have all the positions since we get them all at once for a read and then cache them ...
-            # so just use 'current_position' to take the right one
             my $base_likelihood = $vector->[$i];
-            
-            next unless defined $base_likelihood;   # The reference positions can go past the read length
-            
-            my $base_AND_alignment_likelihood = $base_likelihood * $aln->{'alignment_probability'};
-            my $base_AND_NOT_alignment_likelihood = $base_likelihood * ( 1 - $aln->{'alignment_probability'} );
+
+            my $base_AND_alignment_likelihood = $base_likelihood * $aln_prob;
+            my $base_AND_NOT_alignment_likelihood = $base_likelihood * ( 1 - $aln_prob );
             
             foreach my $other_allele_alphabet_index (0 .. 4){
             
-                $evidence += $diploid_genotype_matrix->[$i]->[$other_allele_alphabet_index] * $base_AND_NOT_alignment_likelihood * $BASE_CALL_PRIORS->[$other_allele_alphabet_index];
+                $evidence += ( $diploid_genotype_matrix->[$i]->[$other_allele_alphabet_index]
+                                * $base_AND_NOT_alignment_likelihood
+                                * $BASE_CALL_PRIORS->[$other_allele_alphabet_index] );
                 
                 $diploid_genotype_matrix->[$i]->[$other_allele_alphabet_index]
-                    *= ( $base_AND_alignment_likelihood * $BASE_CALL_PRIORS->[$other_allele_alphabet_index] );
+                    *= ( $base_AND_alignment_likelihood * $BASE_CALL_PRIORS->[$other_allele_alphabet_index] ) * .5;
+                    
+                $diploid_genotype_matrix->[$other_allele_alphabet_index]->[$i]
+                    *= ( $base_AND_alignment_likelihood * $BASE_CALL_PRIORS->[$other_allele_alphabet_index] ) * .5;
                     
                 $evidence += $diploid_genotype_matrix->[$i]->[$other_allele_alphabet_index];
+                $evidence += $diploid_genotype_matrix->[$other_allele_alphabet_index]->[$i];
             }
         }
         
@@ -146,15 +149,15 @@ sub _examine_position {
                 $diploid_genotype_matrix->[$i]->[$j] /= $evidence;
             }
         }
-       
-        my $sum = 0;
+    }
+    
+     my $sum = 0;
         foreach my $i (0 .. 4){
             foreach my $j (0 .. 4){
                 $sum += $diploid_genotype_matrix->[$i]->[$j];
             }
         }
         print "total probability is $sum, evidence was $evidence\n";
-    }
     
     my $diploid_genotype_vector = [];
     foreach my $i (0 .. 4){
