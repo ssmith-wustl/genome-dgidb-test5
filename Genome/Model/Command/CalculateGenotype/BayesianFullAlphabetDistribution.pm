@@ -120,27 +120,37 @@ sub _examine_position {
 
         my $aln_prob = $aln->{'alignment_probability'};
         my $vector = $aln->{base_probability_vector};
-        foreach my $i (0 .. 4) {
+        foreach my $maternal_allele_alphabet_index (0 .. 4) {
+            foreach my $paternal_allele_alphabet_index (0 .. 4){
             
-            my $base_likelihood = $vector->[$i];
-
-            my $base_AND_alignment_likelihood = $base_likelihood * $aln_prob;
-            my $base_AND_NOT_alignment_likelihood = $base_likelihood * ( 1 - $aln_prob );
-            
-            foreach my $other_allele_alphabet_index (0 .. 4){
-            
-                $evidence += ( $diploid_genotype_matrix->[$i]->[$other_allele_alphabet_index]
-                                * $base_AND_NOT_alignment_likelihood
-                                * $BASE_CALL_PRIORS->[$other_allele_alphabet_index] );
+                foreach my $ordering ( [$maternal_allele_alphabet_index, $paternal_allele_alphabet_index],
+                                      [$paternal_allele_alphabet_index, $maternal_allele_alphabet_index] ){
                 
-                $diploid_genotype_matrix->[$i]->[$other_allele_alphabet_index]
-                    *= ( $base_AND_alignment_likelihood * $BASE_CALL_PRIORS->[$other_allele_alphabet_index] ) * .5;
+                    my ($allele_1, $allele_2) = @{$ordering};
                     
-                $diploid_genotype_matrix->[$other_allele_alphabet_index]->[$i]
-                    *= ( $base_AND_alignment_likelihood * $BASE_CALL_PRIORS->[$other_allele_alphabet_index] ) * .5;
+                    my $prob_this_ordering = .5;
                     
-                $evidence += $diploid_genotype_matrix->[$i]->[$other_allele_alphabet_index];
-                $evidence += $diploid_genotype_matrix->[$other_allele_alphabet_index]->[$i];
+                    my $base_likelihood = $vector->[$allele_1];
+                    
+                    my $likelihood = $base_likelihood
+                                        * $prob_this_ordering
+                                        * $aln_prob
+                                        * $BASE_CALL_PRIORS->[$allele_2];
+                                        
+                    my $not_aln_likelihood = $base_likelihood
+                                                * $prob_this_ordering
+                                                * (1- $aln_prob)
+                                                * $BASE_CALL_PRIORS->[$allele_2];
+            
+                    $evidence += ( $diploid_genotype_matrix->[$allele_1]->[$allele_2]
+                                    * $not_aln_likelihood );
+                    
+                    $diploid_genotype_matrix->[$i]->[$other_allele_alphabet_index]
+                        *= $likelihood;
+                        
+                    $evidence += $diploid_genotype_matrix->[$i]->[$other_allele_alphabet_index];
+                
+                }
             }
         }
         
