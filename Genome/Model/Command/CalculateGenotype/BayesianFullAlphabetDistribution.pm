@@ -123,35 +123,30 @@ sub _examine_position {
         foreach my $maternal_allele_alphabet_index (0 .. 4) {
             foreach my $paternal_allele_alphabet_index (0 .. 4){
             
-                foreach my $ordering ( [$maternal_allele_alphabet_index, $paternal_allele_alphabet_index],
-                                      [$paternal_allele_alphabet_index, $maternal_allele_alphabet_index] ){
-                
-                    my ($allele_1, $allele_2) = @{$ordering};
-                    
-                    my $prob_this_ordering = .5;
-                    
-                    my $base_likelihood = $vector->[$allele_1];
-                    
-                    my $likelihood = $base_likelihood
-                                        * $prob_this_ordering
-                                        * $aln_prob
-                                        * $BASE_CALL_PRIORS->[$allele_2];
-                                        
-                    my $not_aln_likelihood = $base_likelihood
-                                                * $prob_this_ordering
-                                                * (1- $aln_prob)
-                                                * $BASE_CALL_PRIORS->[$allele_2];
-            
-                    $evidence += ( $diploid_genotype_matrix->[$allele_1]->[$allele_2]
-                                    * $not_aln_likelihood );
-                    
-                    $diploid_genotype_matrix->[$i]->[$other_allele_alphabet_index]
-                        *= $likelihood;
-                        
-                    $evidence += $diploid_genotype_matrix->[$i]->[$other_allele_alphabet_index];
-                
-                }
-            }
+                my ($allele_1, $allele_2) = ($maternal_allele_alphabet_index, $paternal_allele_alphabet_index);
+               
+               #my $prob_this_ordering = .5;
+               
+                my $base_likelihood = $vector->[$allele_1];
+               
+                my $likelihood = $base_likelihood
+               #                    * $prob_this_ordering
+                                   * $aln_prob
+                                   * $BASE_CALL_PRIORS->[$allele_2];
+                                   
+                my $not_aln_likelihood = $base_likelihood
+               #                            * $prob_this_ordering
+                                           * (1- $aln_prob)
+                                           * $BASE_CALL_PRIORS->[$allele_2];
+
+               #$evidence += ( $diploid_genotype_matrix->[$allele_1]->[$allele_2]
+               #                * $not_aln_likelihood );
+               
+                $diploid_genotype_matrix->[$allele_1]->[$allele_2]
+                   *= $likelihood;
+                   
+                $evidence += $diploid_genotype_matrix->[$allele_1]->[$allele_2];
+           }
         }
         
         foreach my $i (0 .. 4){
@@ -159,15 +154,22 @@ sub _examine_position {
                 $diploid_genotype_matrix->[$i]->[$j] /= $evidence;
             }
         }
-    }
-    
-     my $sum = 0;
+        my $sum = 0;
         foreach my $i (0 .. 4){
             foreach my $j (0 .. 4){
                 $sum += $diploid_genotype_matrix->[$i]->[$j];
             }
         }
         print "total probability is $sum, evidence was $evidence\n";
+    }
+    my $sum = 0;
+        foreach my $i (0 .. 4){
+            foreach my $j (0 .. 4){
+                $sum += $diploid_genotype_matrix->[$i]->[$j];
+            }
+        }
+        print "FINAL total probability is $sum, evidence was $evidence\n";
+     
     
     my $diploid_genotype_vector = [];
     foreach my $i (0 .. 4){
