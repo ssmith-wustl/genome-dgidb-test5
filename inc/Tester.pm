@@ -147,7 +147,9 @@ has 'callback' => (
     default  => sub { sub { } },
 );
 
-has 'model' => (
+# work around new_with_options()
+sub model { shift->_model(@_) }
+has '_model' => (
     is  => 'rw',
     isa => 'Test::TAP::Model',
 );
