@@ -613,7 +613,7 @@ my %csp_priority = (
     # high priority touchscreen steps
     'assign custom sequencing primers to dna' => 10,
     'claim dna'                               => 10,
-    'define alternate chemistry amplicon' => 10,                   
+    'define alternate chemistry amplicon'     => 10,                   
     'create dna container'                    => 10,
     'create pcr product'                      => 10,
     'create sequenced dna'                    => 10,
@@ -646,6 +646,9 @@ my %csp_priority = (
     'gather submission results'               => 1,
     'prepare read submission'                 => 1,
     'submit reads'                            => 1,
+    'configure image analysis and base call'  => 1,
+    'make default offsets'                    => 1,
+    'configure alignment'                     => 1,
 
 #    these were given their own cron to get around the
 #    problem of running as the lims user instead of seqmgr
