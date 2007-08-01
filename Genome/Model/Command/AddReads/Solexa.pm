@@ -1,5 +1,3 @@
-
-# Rename the final word in the full class name <---
 package Genome::Model::Command::AddReads::Solexa;
 
 # This is mostly taken from the old prb2dat.pl script
@@ -14,7 +12,7 @@ use File::Basename;
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
-    has => [ 'input-dir', 'output', 'verbose', 'max-read-length' ],
+    has => [ 'input_dir', 'output', 'verbose', 'max_read_length' ],
 
 );
 
