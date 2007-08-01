@@ -120,20 +120,16 @@ sub _examine_position {
 
         my $aln_prob = $aln->{'alignment_probability'};
         my $vector = $aln->{base_probability_vector};
-        my $likelihood_matrix_to_or = [];
         
         foreach my $ordering ( 1, 2 ){
-        
-            foreach my $maternal_allele_alphabet_index (0 .. 4) {
-                foreach my $paternal_allele_alphabet_index (0 .. 4){
-                    
-                    my ($allele_1, $allele_2);
+            foreach my $allele_1 (0 .. 4) {
+                foreach my $allele_2 (0 .. 4){
                     if($ordering == 1){
-                        ($allele_1, $allele_2) = ($maternal_allele_alphabet_index, $paternal_allele_alphabet_index);
+                        next if ($allele_1 > $allele_2);
                     }else{
-                        ($allele_2, $allele_1) = ($maternal_allele_alphabet_index, $paternal_allele_alphabet_index);
+                        next if ($allele_1 < $allele_2);
                     }
-                   
+
                     my $prob_this_ordering = .5;
                    
                     my $base_likelihood = $vector->[$allele_1];
@@ -148,37 +144,46 @@ sub _examine_position {
                                                * (1- $aln_prob)
                                                * $BASE_CALL_PRIORS->[$allele_2];
     
-                   $evidence += ( $diploid_genotype_matrix->[$allele_1]->[$allele_2]
+                   $evidence += ( $diploid_genotype_matrix->[$allele_1]->[$allele_2]->[$ordering]
                                    * $not_aln_likelihood );
-                    
-                    $likelihood_matrix_to_or->[$allele_1]->[$allele_2] +=
-                            $likelihood;
+                                        
+                    $diploid_genotype_matrix->[$allele_1]->[$allele_2]->[$ordering] *= $likelihood;
+                    $evidence += $diploid_genotype_matrix->[$allele_1]->[$allele_2]->[$ordering];
                 }
             }
-
         }
         
-        foreach my $i (0 .. 4){
-            foreach my $j (0 .. 4){
-                $diploid_genotype_matrix->[$i]->[$j] *= $likelihood_matrix_to_or->[$i]->[$j];
-                $evidence += $diploid_genotype_matrix->[$i]->[$j];
+        foreach my $ordering ( 1, 2 ){
+            foreach my $i (0 .. 4) {
+                foreach my $j (0 .. 4){
+                    if($ordering == 1){
+                        next if ($i > $j);
+                    }else{
+                        next if ($i < $j);
+                    }
+                    
+                    $diploid_genotype_matrix->[$i]->[$j]->[$ordering] /= $evidence;
+                }
             }
         }
+    }
     
-        foreach my $i (0 .. 4){
+    my $diploid_genotype_vector = [];
+    foreach my $ordering ( 1, 2 ){
+        foreach my $i (0 .. 4) {
             foreach my $j (0 .. 4){
-                $diploid_genotype_matrix->[$i]->[$j] /= $evidence;
+                if($ordering == 1){
+                    next if ($i > $j);
+                }else{
+                    next if ($i < $j);
+                }
+                                
+                $diploid_genotype_vector->[$INDEX_OF_DIPLOD_FROM_ORDERED_PAIR->[$i]->[$j]]
+                    += $diploid_genotype_matrix->[$i]->[$j]->[$ordering];
             }
         }
     }
-
-    my $diploid_genotype_vector = [];
-    foreach my $i (0 .. 4){
-        foreach my $j (0 .. 4){
-            $diploid_genotype_vector->[$INDEX_OF_DIPLOD_FROM_ORDERED_PAIR->[$i]->[$j]] += $diploid_genotype_matrix->[$i]->[$j]
-        }
-    }
-
+    
     return $diploid_genotype_vector;
 }
 
@@ -189,30 +194,48 @@ sub _calculate_diploid_genotype_priors{
     my $DIPLOID_GENOTYPE_PRIORS = [];
     
     my $evidence_normalizer = 0;
-    
-    # naive OR
-    for (my $i = 0 ; $i < 5 ; $i++){
-        
-        for( my $j = 0 ; $j < 5 ; $j++){
-            
-            my $joint_prior = $BASE_CALL_PRIORS->[ $i ] * $BASE_CALL_PRIORS->[ $j ];
-            
-            $DIPLOID_GENOTYPE_PRIORS->[$i]->[$j] += $joint_prior;
+
+    foreach my $ordering (1,2){
+        for (my $i = 0 ; $i < 5 ; $i++){
+            for( my $j = 0 ; $j < 5 ; $j++){
+                
+                $DIPLOID_GENOTYPE_PRIORS->[$i]->[$j]->[$ordering] = 0;
+            }
         }
     }
+
     
-    # OR Correction
-    foreach my $i (0 .. 4){
-        foreach my $j (0 .. 4){
-            $DIPLOID_GENOTYPE_PRIORS->[$i]->[$j] -= ($DIPLOID_GENOTYPE_PRIORS->[$i]->[$j] ** 2)/2;
-            $evidence_normalizer += $DIPLOID_GENOTYPE_PRIORS->[$i]->[$j];
+    # naive OR    
+    foreach my $ordering (1,2){
+        for (my $i = 0 ; $i < 5 ; $i++){
+            for( my $j = 0 ; $j < 5 ; $j++){
+                if($ordering == 1){
+                    next if ($i > $j);
+                }else{
+                    next if ($i < $j);
+                }
+                
+                my $joint_prior = $BASE_CALL_PRIORS->[ $i ] * $BASE_CALL_PRIORS->[ $j ];
+                
+                $DIPLOID_GENOTYPE_PRIORS->[$i]->[$j]->[$ordering] += $joint_prior;
+                
+                $evidence_normalizer += $joint_prior;
+            }
         }
     }
     
     # Normalize
-    foreach my $i (0 .. 4){
-        foreach my $j (0 .. 4){
-            $DIPLOID_GENOTYPE_PRIORS->[$i]->[$j] /= $evidence_normalizer;
+    foreach my $ordering (1,2){
+        foreach my $i (0 .. 4){
+            foreach my $j (0 .. 4){
+                if($ordering == 1){
+                    next if ($i > $j);
+                }else{
+                    next if ($i < $j);
+                }
+                
+                $DIPLOID_GENOTYPE_PRIORS->[$i]->[$j]->[$ordering] /= $evidence_normalizer;
+            }
         }
     }
     
