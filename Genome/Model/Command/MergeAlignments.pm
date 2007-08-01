@@ -68,15 +68,19 @@ $DB::single=1;
             $self->error_message("Can't open alignment file $name: $!");
             return;
         }
+				push @existing, ($obj);
     }
 
-    foreach my $name ( split(',',$self->sorted) ) {
+		if ($self->sorted) {
+			foreach my $name ( split(',',$self->sorted) ) {
         my $obj = Genome::Model::RefSeqAlignmentCollection->new(file_prefix => $name, is_sorted => 1);
         unless ($obj) {
-            $self->error_message("Can't open alignment $name: $!");
+					$self->error_message("Can't open alignment $name: $!");
             return;
         }
-    }
+				push @existing, ($obj);
+			}
+		}
 
     $self->status_message("Merging " . scalar(@existing) . " alignment files into $new_name");
     $new->merge(@existing);
