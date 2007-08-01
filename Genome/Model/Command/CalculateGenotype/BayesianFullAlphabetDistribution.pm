@@ -143,15 +143,15 @@ sub _examine_position {
                                        * $aln_prob
                                        * $BASE_CALL_PRIORS->[$allele_2];
                                        
-                    my $not_aln_likelihood = $base_likelihood
-                                               * $prob_this_ordering
+                    my $not_aln_likelihood = $base_likelihood *
+                                                $prob_this_ordering
                                                * (1- $aln_prob)
                                                * $BASE_CALL_PRIORS->[$allele_2];
     
                    $evidence += ( $diploid_genotype_matrix->[$allele_1]->[$allele_2]
                                    * $not_aln_likelihood );
                     
-                    $likelihood_matrix_to_or->[$allele_1]->[$allele_2]->[$ordering] +=
+                    $likelihood_matrix_to_or->[$allele_1]->[$allele_2] +=
                             $likelihood;
                 }
             }
@@ -204,7 +204,7 @@ sub _calculate_diploid_genotype_priors{
     # OR Correction
     foreach my $i (0 .. 4){
         foreach my $j (0 .. 4){
-            $DIPLOID_GENOTYPE_PRIORS->[$i]->[$j] -= ($_ ** 2)/2;
+            $DIPLOID_GENOTYPE_PRIORS->[$i]->[$j] -= ($DIPLOID_GENOTYPE_PRIORS->[$i]->[$j] ** 2)/2;
             $evidence_normalizer += $DIPLOID_GENOTYPE_PRIORS->[$i]->[$j];
         }
     }
