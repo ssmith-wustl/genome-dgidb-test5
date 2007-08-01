@@ -3,7 +3,7 @@ package Genome::Model;
 use IO::File;
 use Carp;
 
-our $RUNS_LIST_FILE = 'gscmnt/sata114/info/medseq/aml/run_listing.txt';
+our $RUNS_LIST_FILE = '/gscmnt/sata114/info/medseq/aml/run_listing.txt';
 
 
 sub get_runs_info {
