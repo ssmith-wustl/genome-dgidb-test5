@@ -1018,7 +1018,9 @@ sub hasItBeExpunged {
   }
 }
 
-=head is_box_still_checked_in
+=pod
+
+=item is_box_still_checked_in
 
 Check the tube barcode that in a box whether it is checked in in freezer.
 
