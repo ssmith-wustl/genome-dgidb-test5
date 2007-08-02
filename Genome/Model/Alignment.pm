@@ -246,6 +246,12 @@ sub decode_match_string {
     _decode_match_string(length($_[1]), $_[1]);
 }
 
+our $inline_dir;
+BEGIN { 
+    ($inline_dir) = "/tmp/" . (`uname -a` =~ /ia64/ ? '_Inline64' : '_Inline32');
+    mkdir $inline_dir;
+};
+use Inline C => 'Config' => (DIRECTORY => $inline_dir);
 use Inline C => <<'END_C';
 
 struct decoder_table_entry {
