@@ -1,5 +1,5 @@
 
-# Rename the final word in the full class name <---
+# Rename the final word in the full class name to match the filename <---
 package Genome::Model::Command::Example1;
 
 use strict;
@@ -10,23 +10,34 @@ use Command;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => 'Command',
-    has => ['foo','bar'],                   # Specify the command's properties (parameters) <--- 
+    is => 'Command',                       
+    has => [                                # Specify the command's properties (parameters) <--- 
+        'foo'   => { type => 'String',      doc => "some foozy thing" },
+        'bar'   => { type => 'Boolean',     doc => "a flag to turn on and off" },
+        'baz'   => { type => 'My::Object',  doc => "this won't appear as a command-line option since it's not a primative" },
+        'yic'   => { type => 'String',      doc => "some yicky thing", is_optional => 1 },
+    ], 
 );
 
-sub help_brief {
-    "example command 1 XXX"                     # Keep this to just a few words <---
+sub help_brief {                            # Keep this to just a few words <---
+    "a one-line description used when there is a list of commands"                 
 }
 
-sub help_detail {                           # This is what the user will see with --help <---
-    return <<EOS 
-
-This is a dummy command.  Copy, paste and modify! 
-
+sub help_synopsis {                         # Replace the text below with real examples <---
+    return <<EOS
+genome-model example1 --foo=hello
+genome-model example1 --foo=goodbye --bar
+genome-model example1 --foo=hello barearg1 barearg2 barearg3
 EOS
 }
 
-#sub create {                               # Rarely implemented.  Initialize things before execute <---
+sub help_detail {                           # This is what the user will see with the longer version of help. <---
+    return <<EOS 
+This is a dummy command.  Copy, paste and modify the module! 
+EOS
+}
+
+#sub create {                               # Rarely implemented.  Initialize things before execute.  Delete unless you use it. <---
 #    my $class = shift;
 #    my %params = @_;
 #    my $self = $class->SUPER::create(%params);
@@ -34,21 +45,27 @@ EOS
 #    return $self;
 #}
 
-#sub validate_params {                      # Pre-execute checking.  Not requiried <---
+#sub validate_params {                      # Pre-execute checking.  Not requiried.  Delete unless you use it. <---
 #    my $self = shift;
 #    return unless $self->SUPER::validate_params(@_);
 #    # ..do real checks here
 #    return 1;
 #}
 
-sub execute {
+sub execute {                               # Replace with real execution logic.
     my $self = shift;
-    print "Running command 1 " 
-        . "foo is " . (defined $self->foo ? $self->foo : '<not defined>')
-         . ", " 
-        . "bar is " . (defined $self->bar ? $self->bar : '<not defined>') 
+    print "Running example command:\n" 
+        . "    foo is " . (defined $self->foo ? $self->foo : '<not defined>')
+        . "\n" 
+        . "    bar is " . (defined $self->bar ? $self->bar : '<not defined>') 
+        . "\n" 
+        . "    baz is " . (defined $self->baz ? $self->bar : '<not defined>') 
+        . "\n" 
+        . "    yic is " . (defined $self->yic ? $self->yic : '<not defined>') 
+        . "\n" 
+        . "    bare args are: " . (defined $self->bare_args ? join(",",@{ $self->bare_args })  : '<not defined>') 
         . "\n";     
-    return 1;
+    return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
 1;
