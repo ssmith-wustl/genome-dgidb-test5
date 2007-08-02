@@ -39,11 +39,5 @@ should handle common coverage parameters, typically for handling the results.
 EOS
 }
 
-sub execute {
-    my $self = shift;
-    # write code do show the viewer here
-    return 1;
-}
-
 1;
 
