@@ -15,13 +15,20 @@ my %PROCESS_COUNT = (
     'add read to mp assembly' => 1,
 
     #- there are over 1000 here right now. maybe we can make it non-0 later
-    'assemble 454 regions'  => 0,
-    'analyze 454 output'    => 0,
-    'mkcs'                  => 1,
-    'import external reads' => 0,
-    'run started'           => 0,
-    'cycle completed'       => 0,
-    'run completed'         => 0,
+    'assemble 454 regions' => 0,
+
+    'analyze 454 output'                     => 0,
+    'mkcs'                                   => 1,
+    'import external reads'                  => 0,
+    'run started'                            => 0,
+    'cycle completed'                        => 0,
+    'run completed'                          => 0,
+    'configure image analysis and base call' => 0,
+    'make default offsets'                   => 0,
+    'extract image features'                 => 0,
+    'call bases'                             => 0,
+    'configure alignment'                    => 0,
+    'run alignment'                          => 0,
 );
 
 
