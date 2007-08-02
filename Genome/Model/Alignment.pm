@@ -248,7 +248,7 @@ sub decode_match_string {
 
 our $inline_dir;
 BEGIN { 
-    ($inline_dir) = "/tmp/" . (`uname -a` =~ /ia64/ ? '_Inline64' : '_Inline32');
+    ($inline_dir) = "$ENV{HOME}/" . (`uname -a` =~ /ia64/ ? '_Inline64' : '_Inline32');
     mkdir $inline_dir;
 };
 use Inline C => 'Config' => (DIRECTORY => $inline_dir);
