@@ -20,8 +20,6 @@ use constant MISMATCH           => 1;
 use constant QUERY_INSERT       => 3;
 use constant REFERENCE_INSERT   => 2;
 
-my $tr = [qw/ -- -A -C -G -T AA AC AG AT CC CG CT GG GT TT/];
-
 sub setup : Test(setup){
     my $self = shift;
     
@@ -35,7 +33,7 @@ sub setup : Test(setup){
     $self->{consensus_calc} = $consensus_calc;
 }
 
-sub _create_mock_alignments {
+sub create_mock_alignments {
     my $configs = shift;
     return [
       map {
@@ -49,28 +47,88 @@ sub _create_mock_alignments {
     ];
 }
 
-sub test_simple_het : Test(1) {
+sub cmp_alignments_vs_expected {
     my $self = shift;
-    my $a = _create_mock_alignments(
+    my $alignment_data = shift;
+    my $expected = shift;
+    my $msg = shift;
+    
+    my $mock_a = create_mock_alignments($alignment_data);
+    my $result = $self->{consensus_calc}->_examine_position($mock_a);
+
+    my @pretty = (qw/- A C G T/);
+    my %result_pretty;
+    my @pairs;
+    for my $m (0..4) {
+        for my $p (0..4) {
+            my $pair = $pretty[$m] . $pretty[$p];
+            push @pairs, $pair;
+            $result_pretty{$pair} = $result->[$m][$p] if $result->[$m][$p];
+        }
+    } 
+    
+    cmp_deeply(\%result_pretty,$expected,$msg);
+    #or (
+    #    print Data::Dumper::Dumper($alignment_data)
+    #    &&
+    #    $self->{consensus_calc}->_print_diploid($result)
+    #);
+
+    is(sum_struct($result),1, "$msg sums to 1"); 
+}
+
+sub test_lots : Test(2) {
+    my $self = shift;
+    
+    $self->cmp_alignments_vs_expected(
         [ 
-            [[.7,.1,.1,.1], MATCH, 1], 
-            [[.1,.1,.1,.7], MATCH, 1], 
-            [[.7,.1,.1,.1], MATCH, 1], 
-            [[.1,.1,.1,.7], MATCH, 1], 
-            #[[1,0,0,0], MATCH, 1], 
-            #[[1,0,0,0], MATCH, 1], 
-        ],                               #
+            [[1,0,0,0], MATCH, 1], 
+            [[0,0,0,1], MATCH, 1],
+        ],
+        {
+            AT => .5,
+            TA => .5,
+        },
+        "perfect het" 
     );
 
-    my $result = $self->{consensus_calc}->_examine_position($a);
-
-    my $expect = {
-        AT => .5,
-        TA => .5,
-    };    
+    $self->cmp_alignments_vs_expected(
+        [ 
+            [[1,.0,0,0], MATCH, 1], 
+        ],
+        {
+        },
+        "single perfect read" 
+    );
     
-    cmp_deeply($result,$expect, "simple perfect het");
+    $self->cmp_alignments_vs_expected(
+        [ 
+            [[.25,.25,.25,.25], MATCH, 1], 
+        ],
+        {
+        },
+        "clear as mud" 
+    );
 }
+
+# Add these...
+
+# the more As in the pair the better
+#[[1,0,0,0], MATCH, 1], 
+
+# increasingly so...
+#[[1,0,0,0], MATCH, 1], 
+#[[1,0,0,0], MATCH, 1], 
+
+# clear as mud
+#[[.25,.25,.25,.25], MATCH, 1],
+
+#[[.9,0,0,.1], MATCH, 1], 
+#[[.1,0,0,.9], MATCH, 1], 
+
+# AA<.5 TA=small AT=small A*=tiny T*=tiny TT>0 
+#[[.9,0,0,.1], MATCH, 1], 
+#[[.9,0,0,.1], MATCH, 1], 
 
 
 sub sum_struct{
