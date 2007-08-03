@@ -14,19 +14,19 @@ UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [                                # Specify the command's properties (parameters) <--- 
-        'maqdir'   => { type => 'String',      doc => "required: maq reads directory"},
-        'outmap'   => { type => 'String',      doc => "required: output map file name"},
-        'refbfa'   => { type => 'String',      doc => "required: reference bfa file"},
-        'lanes'   => { type => 'String',  doc => "optional: the lanes to process--the default is all: 12345678", is_optional => 1 },
-        'mapfile'   => { type => 'String',     doc => "optional: existing map file to append to", is_optional => 1 },
-        'map_opt'   => { type => 'String',     doc => "optional: options to the map step", is_optional => 1 },
-        'mapcheck_opt'   => { type => 'String',     doc => "optional: options to the mapcheck step", is_optional => 1 },
-        'assemble_opt'   => { type => 'String',     doc => "optional: options to the assemble step", is_optional => 1 },
-        'mapcheck'   => { type => 'String',     doc => "optional: mapcheck file name", is_optional => 1 },
-        'assemble_log'   => { type => 'String', doc => "optional: assembly log file name", is_optional => 1 },
-        'cns_seqq'   => { type => 'String', doc => "optional: consensus sequences and qualities file name", is_optional => 1 },
-        'snp'   => { type => 'String', doc => "optional: snp file name", is_optional => 1 },
-        'indel'   => { type => 'String', doc => "optional: indel file name", is_optional => 1 }
+        'maqdir'   => { type => 'String',      doc => "maq reads directory"},
+        'outmap'   => { type => 'String',      doc => "output map file name"},
+        'refbfa'   => { type => 'String',      doc => "reference bfa file"},
+        'lanes'   => { type => 'String',  doc => "the lanes to process--the default is all: 12345678", is_optional => 1 },
+        'mapfile'   => { type => 'String',     doc => "existing map file to append to", is_optional => 1 },
+        'map_opt'   => { type => 'String',     doc => "options to the map step", is_optional => 1 },
+        'mapcheck_opt'   => { type => 'String',     doc => "options to the mapcheck step", is_optional => 1 },
+        'assemble_opt'   => { type => 'String',     doc => "options to the assemble step", is_optional => 1 },
+        'mapcheck'   => { type => 'String',     doc => "mapcheck file name", is_optional => 1 },
+        'assemble_log'   => { type => 'String', doc => "assembly log file name", is_optional => 1 },
+        'cns_seqq'   => { type => 'String', doc => "consensus sequences and qualities file name", is_optional => 1 },
+        'snp'   => { type => 'String', doc => "snp file name", is_optional => 1 },
+        'indel'   => { type => 'String', doc => "indel file name", is_optional => 1 }
     ], 
 );
 

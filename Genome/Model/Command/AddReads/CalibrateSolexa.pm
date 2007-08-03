@@ -14,14 +14,14 @@ UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [                                # Specify the command's properties (parameters) <--- 
-        'indir'   => { type => 'String',  doc => "required: existing prb (Bustard) directory"},
-        'outdir'   => { type => 'String', doc => "required: new prb directory" },
-        'gc'   => { type => 'Float',      doc => "optional: the gc content percentage--0.408 is the default for homo sapiens", is_optional => 1 },
-        'lanes'   => { type => 'String',  doc => "optional: the lanes to process--the default is all: 12345678", is_optional => 1 },
-        'chastity'   => { type => 'Integer',      doc => "optional: the chastity value--6 is 0.6 and is the default", is_optional => 1 },
-        'minbases'   => { type => 'Integer',      doc => "optional: the number of bases to check for quality of reads.  the default is 12", is_optional => 1 },
-        'start'   => { type => 'Integer',      doc => "optional: the base position (zero offset) to start calibrating", is_optional => 1 },
-        'onlycalculate'   => { type => 'Boolean',      doc => "optional: only produce the prb calibration file", is_optional => 1 }
+        'indir'   => { type => 'String',  doc => "existing prb (Bustard) directory"},
+        'outdir'   => { type => 'String', doc => "new prb directory" },
+        'gc'   => { type => 'Float',      doc => "the gc content percentage--0.408 is the default for homo sapiens", is_optional => 1 },
+        'lanes'   => { type => 'String',  doc => "the lanes to process--the default is all: 12345678", is_optional => 1 },
+        'chastity'   => { type => 'Integer',      doc => "the chastity value--6 is 0.6 and is the default", is_optional => 1 },
+        'minbases'   => { type => 'Integer',      doc => "the number of bases to check for quality of reads.  the default is 12", is_optional => 1 },
+        'start'   => { type => 'Integer',      doc => "the base position (zero offset) to start calibrating", is_optional => 1 },
+        'onlycalculate'   => { type => 'Boolean',      doc => "only produce the prb calibration file", is_optional => 1 }
     ], 
 );
 
