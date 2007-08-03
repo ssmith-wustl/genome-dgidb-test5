@@ -110,8 +110,9 @@ sub _examine_position {
 
     # Deep copy up a fresh one
     my $diploid_genotype_matrix = _calculate_diploid_genotype_priors();
+    my $original_priors = _calculate_diploid_genotype_priors();
 
-    print_matrix($diploid_genotype_matrix);
+    #print_matrix($diploid_genotype_matrix);
 
     foreach my $aln (@$alignments){
 
@@ -122,31 +123,30 @@ sub _examine_position {
 
         my $aln_prob = $aln->{'alignment_probability'};
         my $vector = $aln->{base_probability_vector};
-        print "VECTOR @$vector\n";
+        
+        #print "VECTOR @$vector\n";
+        
+        
         foreach my $ordering ( 1, 2 ){
             foreach my $allele_maternal (0 .. 4) {
                 foreach my $allele_paternal (0 .. 4){
-
+    
                     my ($sampled_allele, $other_allele);
                     if($ordering == 1){
                         ($sampled_allele, $other_allele) = ($allele_maternal, $allele_paternal);
                     }else{
                         ($sampled_allele, $other_allele) = ($allele_paternal, $allele_maternal);
                     }
-
-                    my $base_likelihood = $vector->[$sampled_allele];
-
-                    my $not_aln_likelihood = $base_likelihood * (1 - $aln_prob);
-    
-                    $evidence += ( $diploid_genotype_matrix->[$allele_maternal]->[$allele_paternal]->[$ordering]
-                                   * $not_aln_likelihood );
                     
-                    my $likelihood = $base_likelihood * $aln_prob;
+                    my $likelihood = $vector->[$sampled_allele] * $aln_prob
+                                        + $BASE_CALL_PRIORS->[$sampled_allele] * (1 - $aln_prob);
 
                     $diploid_genotype_matrix->[$allele_maternal]->[$allele_paternal]->[$ordering] *= $likelihood;
                     
                     $evidence += $diploid_genotype_matrix->[$allele_maternal]->[$allele_paternal]->[$ordering];
+                    
                     #print "like, EV ($alphabet->[$allele_1], $alphabet->[$allele_2]) is $likelihood, $diploid_genotype_matrix->[$allele_1]->[$allele_2]->[$ordering]\n";
+
                 }
             }
         }
@@ -173,7 +173,7 @@ sub _examine_position {
             }
         }
         
-        print_matrix($diploid_genotype_matrix);
+        #print_matrix($diploid_genotype_matrix);
     }
     
     my $diploid_genotype_vector = [];
