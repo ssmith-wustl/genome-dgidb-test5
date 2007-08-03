@@ -30,7 +30,7 @@ UR::Object::Class->define(
 );
 
 sub help_brief {
-    return "gives the consensus posterior over {A,C,G,T} for every position";
+    return "gives the consensus posterior per position using all combinations of allele distribution";
 }
 
 sub help_synopsis {
@@ -42,6 +42,7 @@ EOS
 sub help_detail {
     return <<"EOS"
 
+This logic will probably not scale, but seems to be correct in some cases.
 
 EOS
 }
