@@ -125,7 +125,7 @@ sub InitSxog {
 		@chr_list = split(":",$self->chr_list);
 		@chrs = @chr_list;
 	} else {
-		@chr_list = ( 1 .. 22, 'X', 'Y' );
+		@chr_list = ( 0 .. 22, 'X', 'Y' ); # include a chromosome zero--for nonmatches
 	  @chrs = map {($_, $_ . '_random')} @chr_list;
 	}
 
