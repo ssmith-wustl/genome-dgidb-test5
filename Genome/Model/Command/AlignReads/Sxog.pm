@@ -16,14 +16,16 @@ UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',                       
     has => [                                # Specify the command's properties (parameters) <--- 
-        'prbmap'   => { type => 'String',      doc => "prb map file name"},
-        'dirs'   => { type => 'String',      doc => "colon delimited list of directories with wildcard--default is: ./*.sxog*", is_optional => 1 },
-        'chr_list'   => { type => 'String',      doc => "colon delimited list chromosomes--default is homo sapiens chromosomes plus random", is_optional => 1 },
-        'output_base'   => { type => 'String',      doc => "prefix output file name base--default is sxog", is_optional => 1 },
-        'chr_program'   => { type => 'String',      doc => "per chromosome backend program--default is sxog_chr in path", is_optional => 1 },
-        'runid'   => { type => 'Integer',      doc => "run id (high part of the read identifier)--default is 1", is_optional => 1 },
-        'startread'   => { type => 'Integer',      doc => "starting read number (low part of the read identifier)--default is 0", is_optional => 1 },
-        'max_align'   => { type => 'Integer',      doc => "maximum number of alignments--default is 10000000", is_optional => 1 }
+        'prbmap'   => { type => 'String',      doc => "required: prb map file name"},
+        'dirs'   => { type => 'String',      doc => "optional: colon delimited list of directories--default is: ./", is_optional => 1 },
+        'files'   => { type => 'String',      doc => "optional: file wildcard--default is: *.sxog*", is_optional => 1 },
+        'chr_list'   => { type => 'String',      doc => "optional: colon delimited list chromosomes--default is homo sapiens chromosomes plus random", is_optional => 1 },
+        'output_base'   => { type => 'String',      doc => "optional: prefix output file name base--default is sxog", is_optional => 1 },
+        'chr_program'   => { type => 'String',      doc => "optional: per chromosome backend program--default is sxog_chr in path", is_optional => 1 },
+        'runid'   => { type => 'Integer',      doc => "optional: run id (high part of the read identifier)--default is 1", is_optional => 1 },
+        'startread'   => { type => 'Integer',      doc => "optional: starting read number (low part of the read identifier)--default is 0", is_optional => 1 },
+        'max_align'   => { type => 'Integer',      doc => "optional: maximum number of alignments--default is 10000000", is_optional => 1 },
+        'nobsub'   => { type => 'Boolean',      doc => "not recommended: force running without running under bsub", is_optional => 1 }
     ], 
 );
 
@@ -33,13 +35,19 @@ sub help_brief {                            # Keep this to just a few words <---
 
 sub help_synopsis {                         # Replace the text below with real examples <---
     return <<EOS
-genome-model align-reads sxog
+bsub -oo sxog.out -q long -n 48 -R 'select[type==LINUX64] span[ptile=2]' genome-model align-reads sxog --chr-program=/gscmnt/sata114/info/medseq/pkg/bin64/sxog_chr --dirs=/gscmnt/sata114/info/medseq/projects/chimp5mb/samples/chimp5mb/genome-models/alignment/sxog/cal --prbmap=/gscmnt/sata114/info/medseq/projects/chimp5mb/samples/chimp5mb/runs/solexa/calprb.map
 EOS
 }
 
 sub help_detail {                           # This is what the user will see with the longer version of help. <---
     return <<EOS 
-parses SXOligoSearchG search results into binary alignment files
+Parses SXOligoSearchG search results into binary alignment files.
+
+It is highly suggested to run this as:
+    bsub -oo sxog.out -q long -n 48 -R 'select[type==LINUX64] span[ptile=2]' genome-model align-reads sxog ARGS
+where 48 is the number of chromosomes (including random).
+
+NOT RECOMMENDED: Use the option: --nobsub to run it without bsub.
 EOS
 }
 
@@ -80,10 +88,12 @@ sub execute {                               # Replace with real execution logic.
 sub FileList {
   my($self) = @_;
   my(@dirs) = split(":",$self->dirs);
+  my($files) = $self->files;
+	$files ||= '*.sxog*';
 	if (defined($self->dirs)) {
-		@dirs = split(":",$self->dirs);
+		@dirs = map { $_ . '/' . $files } split(":",$self->dirs);
 	} else {
-		@dirs = './*.sxog*';
+		@dirs = ( './' . $files );
 	}
   my(@filelist);
 
@@ -157,6 +167,11 @@ sub InitSxog {
 	    $self->{chr_host}{$chr} = $host;
 	    $self->{chr_host}{$chr_random} = $host;
 	  }
+	} elsif (!$self->nobsub) {
+		my $suggested_jobs = $num_jobs * 2;
+		print "It is highly suggested to run this as:\n\tbsub -oo sxog.out -q long -n $suggested_jobs -R 'select[type==LINUX64] span[ptile=2]' genome-model align-reads sxog ARGS\n";
+		print "Use the option: --nobsub to run it anyway.\n";
+		exit 0;
 	}
 
 	my $pwd = $ENV{PWD};
@@ -330,14 +345,14 @@ sub Process {
 							 $
 							 /xo) {
       my $tmp_read_id = $1;
-      ($in_read_id) = $tmp_read_id =~ /\s* (\d+) \# \s*/xo;
+      ($in_read_id) = $tmp_read_id =~ /\s* (\d+) \s*/xo;
 			
       # Process any existing
-      if (defined($read_id) && $num_align == 0) {
+      if (defined($read_id) && $read_id ne '' && $num_align == 0) {
 				$read_offsetb = 0;
       }
 			
-      if (defined($read_id)) {
+      if (defined($read_id) && $read_id ne '') {
 				if ($num_align < $max_align) {
 					foreach my $alignment (@alignments) {
 						my ($out_chromosome, $out_read_id, $out_start, $out_read_len, $out_orientation,
@@ -366,7 +381,7 @@ sub Process {
 				
 				$running_total_of_probabilities_for_this_read = 0;
 				@alignments = ();
-				
+
 				print $read_index_fh "$read_id\t$source\t$in_read_id\t$num_align\t$read_offsetb\n";
 #	print $read_indexb_fh pack('QZ22SLQ',
 				print $read_indexb_fh pack('L!Z22SLL!',
@@ -425,6 +440,7 @@ sub Process {
 							s/^\s*\>//xo;
 							$seq_id = $_;
 							($chromosome) = /\b chromosome \s+ ([^\,]+) \, /xo;
+							$chromosome ||= ${$self->{'chromosomes'}}[0];
 #						} elsif ( /^ \s+ ([\|\s\d]+) \s*/xo ) {
 #							$aln_string = $1;
 						}
