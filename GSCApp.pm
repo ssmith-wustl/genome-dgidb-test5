@@ -280,6 +280,9 @@ associations in four cases.
     GSC_RUN                     => 'run',
     SEQUENCE_SET                => 'sequence transparent set',
     RUN_REGION_454		=> '454 run region',
+    SEQUENCE_GENOME             => 'genome sequence',        
+    SEQUENCE_CHROMOSOME         => 'chromosome sequence',
+ 
 );
 
 
