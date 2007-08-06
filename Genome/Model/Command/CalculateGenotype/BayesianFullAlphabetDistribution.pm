@@ -3,6 +3,7 @@ package Genome::Model::Command::CalculateGenotype::BayesianFullAlphabetDistribut
 
 use strict;
 use warnings;
+use utf8;
 
 use UR;
 use Command;
@@ -29,7 +30,7 @@ UR::Object::Class->define(
 );
 
 sub help_brief {
-    return "gives the consensus posterior over {A,C,G,T} for every position";
+    return "Gives the unphased consensus Posterior over Maternal,Paternal ∊ {-,A,C,G,T} for every position";
 }
 
 sub help_synopsis {
@@ -41,7 +42,6 @@ EOS
 sub help_detail {
     return <<"EOS"
 
-
 EOS
 }
 
@@ -50,42 +50,14 @@ EOS
 sub execute {
     my($self) = @_;
 
-    our $bases_fh = IO::File->new($self->bases_file);   # Ugly hack until _examine_position can be called as a method
-    unless ($bases_fh) {
-        $self->error_message("Can't open bases file: $!");
-        return undef;
-    }
-
     $self->SUPER::execute(
                           iterator_method => 'foreach_aligned_position',
                           );
 }
 
-# note that we have (assume?) no information about Maternal / Paternal phasing of the diploid genotypes
-# this means that we only have the diagonal and top half of the matrix of possible diploid genotypes.
-# We also assume that there cannot be the '--' genotype as it is illogical?
-# As a rule then, always lexographically sort haploid genotypes before combining
-#my $POSSIBLE_GENOTYPES = [
-#                          qw/
-#                                -- -A -C -G -T
-#                                   AA AC AG AT
-#                                      CC CG CT
-#                                         GG GT
-#                                            TT
-#                            /
-#                          ];
-
-#my $INDEX_OF_DIPLOID_FROM_STRING = {};
-#@INDEX_OF_DIPLOID_FROM_STRING{ qw/
-#    __ _A _C _G _T
-#    A_ AA AC AG AT
-#    C_ CA CC CG CT
-#    G_ GA GC GG GT
-#    T_ TA TC TG TT
-#    /} = @$INDEX_OF_DIPLOID_FROM_ORDERED_PAIR;
-
-my $alphabet = [qw/ - A C G T /];
-
+# 1D Version:
+# -- -A -C -G -T AA AC AG AT CC CG CT GG GT TT
+# This table converts 2D to 1D
 my $INDEX_OF_DIPLOD_FROM_ORDERED_PAIR = [
  [    0,  1,   2,   3,  4, ],
  [    1,  5,   6,   7,  8, ],
@@ -117,15 +89,11 @@ sub _examine_position {
     foreach my $aln (@$alignments){
 
         my $evidence = 0;
-        
-        our $bases_fh;
-        $aln->{'reads_fh'} = $bases_fh;   # another ugly hack.  $aln's constructor should know about this instead
 
         my $aln_prob = $aln->{'alignment_probability'};
         my $vector = $aln->{base_probability_vector};
         
-        #print "VECTOR @$vector\n";
-        
+        #print "VECTOR to incorporate: @$vector\n";
         
         foreach my $ordering ( 1, 2 ){
             foreach my $allele_maternal (0 .. 4) {
@@ -144,13 +112,14 @@ sub _examine_position {
                     $diploid_genotype_matrix->[$allele_maternal]->[$allele_paternal]->[$ordering] *= $likelihood;
                     
                     $evidence += $diploid_genotype_matrix->[$allele_maternal]->[$allele_paternal]->[$ordering];
-                    
-                    #print "like, EV ($alphabet->[$allele_1], $alphabet->[$allele_2]) is $likelihood, $diploid_genotype_matrix->[$allele_1]->[$allele_2]->[$ordering]\n";
-
                 }
             }
         }
         
+        # The intermediate matrix allows us to spread our uncertainty evenly over
+        # both possible Maternal/Paternal phasings for the next iteration in which
+        # we no longer know from which allele we sampled and that allele from which
+        # we did sample may be different from those on previous iterations
         my $intermediate_matrix = [];
         
         foreach my $ordering ( 1, 2 ){
@@ -198,10 +167,10 @@ sub _calculate_diploid_genotype_priors{
     
     my $evidence_normalizer = 0;
     
-    # naive OR    
+    # OR of mutually exclusive events
     foreach my $ordering (1,2){
-        for (my $i = 0 ; $i < 5 ; $i++){
-            for( my $j = 0 ; $j < 5 ; $j++){
+        foreach my $i (0 .. 4){
+            foreach my $j (0 .. 4){
                 
                 my $joint_prior = $BASE_CALL_PRIORS->[ $i ]
                                     * $BASE_CALL_PRIORS->[ $j ];
@@ -227,24 +196,29 @@ sub _calculate_diploid_genotype_priors{
     return $DIPLOID_GENOTYPE_PRIORS;
 }
 
-sub print_matrix {
-    my $matrix = shift;
 
-    foreach my $ordering (1,2){
-        print "   ", join("\t", @$alphabet), "\n";
-        for (my $i = 0 ; $i < 5 ; $i++){
-            print $alphabet->[$i], " ";
-            for( my $j = 0 ; $j < 5 ; $j++){
-                
-                my $value = $matrix->[$i]->[$j]->[$ordering]  ;
-                $value = int($value*10000)/10000;
-                print $value, "\t";
-            }
-            print "\n";
-        }
-        print "\n";
-    }
-}
+## A Helpful debugging method
+#
+#
+#my $ALPHABET = [qw/ - A C G T /];
+#sub print_matrix {
+#    my $matrix = shift;
+#
+#    foreach my $ordering (1,2){
+#        print "   ", join("\t", @$ALPHABET), "\n";
+#        for (my $i = 0 ; $i < 5 ; $i++){
+#            print $ALPHABET->[$i], " ";
+#            for( my $j = 0 ; $j < 5 ; $j++){
+#                
+#                my $value = $matrix->[$i]->[$j]->[$ordering]  ;
+#                $value = int($value*10000)/10000;
+#                print $value, "\t";
+#            }
+#            print "\n";
+#        }
+#        print "\n";
+#    }
+#}
 
 1;
 
