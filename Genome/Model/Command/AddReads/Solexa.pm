@@ -12,8 +12,10 @@ use File::Basename;
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
-    has => [ 'input_dir', 'output', 'verbose', 'max_read_length' ],
-
+    has => [ 'input_dir' => { type => 'String', doc => q(The directory to look for prb.txt files; default is '.')},
+             'output'    => { type => 'String', doc => q(The directory to write outfiles in; default is ',')},
+             'max_read_length' => {type => 'Integer', doc => q(The max read length, used as the 3rd arg to prb2dat_c; default is 50)},
+           ],
 );
 
 sub help_brief {
@@ -22,8 +24,7 @@ sub help_brief {
 
 sub help_detail {                           # This is what the user will see with --help <---
     return <<EOS 
-
-
+Uses the programs prb2dat_c and seq2loc_c to produce .dat .map and ltxy.dat files from prb files
 EOS
 }
 
@@ -48,7 +49,6 @@ sub execute {
     # Setup the defaults
     my $input_dir = $self->input_dir() || '.';
     my $output = $self->output() || './';
-    my $verbose = $self->verbose();
     my $max_read_length = $self->max_read_length() || 50;
 
     my $prb2dat_c = '/gscmnt/sata114/info/medseq/aml/bin/prb2dat_c';
