@@ -18,6 +18,7 @@ UR::Object::Class->define(
         'outmap'   => { type => 'String',      doc => "output map file name"},
         'refbfa'   => { type => 'String',      doc => "reference bfa file"},
         'lanes'   => { type => 'String',  doc => "the lanes to process--the default is all: 12345678", is_optional => 1 },
+        'bfq_prefix'   => { type => 'String',  doc => "the prefix to use for bfq files--the default is 's_'", is_optional => 1 },
         'mapfile'   => { type => 'String',     doc => "existing map file to append to", is_optional => 1 },
         'map_opt'   => { type => 'String',     doc => "options to the map step", is_optional => 1 },
         'mapcheck_opt'   => { type => 'String',     doc => "options to the mapcheck step", is_optional => 1 },
@@ -65,9 +66,10 @@ EOS
 sub execute {
     my $self = shift;
 
-		my($maqdir, $outmap, $refbfa, $lanes) = 
-				 ($self->maqdir, $self->outmap, $self->refbfa, $self->lanes);
+		my($maqdir, $outmap, $refbfa, $lanes, $bfq_prefix) = 
+				 ($self->maqdir, $self->outmap, $self->refbfa, $self->lanes, $self->bfq_prefix);
 		$lanes ||= '12345678';
+		$bfq_prefix ||= 's_';
 		return unless ( defined($maqdir) && defined($outmap) && defined($refbfa)
 									);
 
@@ -89,7 +91,7 @@ sub execute {
 		my $temp2_map = tmpnam();
 		print STDERR "Using temporary files: $accum_map $temp1_map $temp2_map\n";
 		foreach my $lane (split('',$lanes)) {
-			my $bfq_file = $maqdir . '/s_' . $lane . '_sequence.bfq';
+			my $bfq_file = $maqdir . '/' . $bfq_prefix . $lane . '_sequence.bfq';
 			next unless (-e $bfq_file);
 			my $map_opt = ($self->map_opt) ? $self->map_opt : '';
 			show_system("maq map $map_opt $temp1_map $refbfa $bfq_file");
@@ -105,10 +107,10 @@ sub execute {
 			if (-e $temp2_map) {
 				unlink $temp2_map;
 			}
-			show_system("cp $accum_map $outmap");
-			if (-e $accum_map) {
-				unlink $accum_map;
-			}
+		}
+		show_system("cp $accum_map $outmap");
+		if (-e $accum_map) {
+			unlink $accum_map;
 		}
 
 		# Statistics from the alignment
