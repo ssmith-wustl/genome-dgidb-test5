@@ -26,6 +26,7 @@ has 'db_variant' => (
         my $db_variant;
         $self->_fork_run(
             sub {
+                @ARGV = ();
                 eval q{ use GSCApp; App->init; };
                 print App::DB->db_variant, "\n";
             },
