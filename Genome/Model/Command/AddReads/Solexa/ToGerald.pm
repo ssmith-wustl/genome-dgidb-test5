@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::SolexaSequence;
+package Genome::Model::Command::AddReads::Solexa::ToGerald;
 
 # This is mostly taken from the old prbseq2sequence.pl script
 
