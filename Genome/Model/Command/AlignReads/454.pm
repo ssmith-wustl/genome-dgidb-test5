@@ -13,7 +13,6 @@ UR::Object::Class->define(
     has => [                                # Specify the command's properties (parameters) <--- 
         'sample'   => { type => 'String',  doc => "sample name"},
         'sffdir'   => { type => 'String',  doc => "sff (input) directory--default is sff", is_optional => 1},
-        'outdir'   => { type => 'String',  doc => "alignment (output) directory"},
         'dir'   => { type => 'String',  doc => "project alignment (output) directory"},
         'refseq'   => { type => 'String',      doc => "reference sequence file"}
     ], 
@@ -21,7 +20,7 @@ UR::Object::Class->define(
 
 sub help_synopsis {                         # Replace the text below with real examples <---
     return <<EOS
-genome-model align-reads 454 --outdir=454/ccds/alignment --dir=all --refseq=reference_sequence/CCDS_nucleotide.20070227.fa --sample=H_GW-454_EST_S_8977
+genome-model align-reads 454 --dir=454/ccds/alignment --refseq=reference_sequence/CCDS_nucleotide.20070227.fa --sample=H_GW-454_EST_S_8977
 EOS
 }
 
@@ -54,22 +53,21 @@ EOS
 sub execute {
     my $self = shift;
 
-		my($outdir, $dir, $sample, $sffdir, $refseq) = 
-				 ($self->outdir, $self->dir, $self->sample, $self->sffdir, $self->refseq);
-		return unless ( defined($outdir) && defined($dir) &&
+		my($dir, $sample, $sffdir, $refseq) = 
+				 ($self->dir, $self->sample, $self->sffdir, $self->refseq);
+		return unless ( defined($dir) &&
 										defined($sample) && defined($refseq)
 									);
 
 		$sffdir ||= 'sff';
-		$outdir =~ s/ \/ $ //x;			# Remove any trailing slash
 		$dir =~ s/ \/ $ //x;				# Remove any trailing slash
 
 		# Make sure the output directory exists
-		unless (-e $outdir) {
-			mkpath $outdir;
+		unless (-e $dir) {
+			mkpath $dir;
 		}
 
-		show_system("runMapping -o $outdir/$dir $refseq $sffdir/$sample.sff");
+		show_system("runMapping -o $dir $refseq $sffdir/$sample.sff");
 
     return 1;
 }

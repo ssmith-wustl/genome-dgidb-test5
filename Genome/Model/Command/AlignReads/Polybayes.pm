@@ -69,8 +69,6 @@ sub execute {
 		$dir =~ s/ \/ $ //x;					# Remove any trailing slash
 		$seqdir = RelativeDir($seqdir, 1, $dir, 'sequence', 0);
 		$logdir = RelativeDir($logdir, 1, $dir, 'logs', 1);
-		print STDERR "$seqdir\n";
-		print STDERR "$logdir\n";
 		return unless ( defined($dir) && defined($sample) && defined($refseq) &&
 										defined($seqdir) && defined($logdir)
 									);
@@ -84,12 +82,27 @@ sub execute {
 		unless (-e $dir) {
 			mkpath $dir;
 		}
+		unless (-e $logdir) {
+			mkpath $logdir;
+		}
 		my $mosaikaligner = "$bindir/MosaikAligner";
 		my $mosaikassembler = "$bindir/MosaikAssembler";
 
-		my $align_cmd = "$mosaikaligner -in $seqdir/$sample.dat -out $dir/${sample}_align.dat -anchors $refdir/$refseq.fa -oa $dir/$refseq.dat -hs $hash_size $alignment_opt > $logdir/$sample.log";
+		my $reffile;
+		if ($refseq !~ /$refdir/xo && $refseq !~ /\.fa/x) {
+			$reffile = "$refdir/$refseq.fa";
+		} elsif ($refseq !~ /$refdir/xo) {
+			$reffile = "$refdir/$refseq";
+		} elsif ($refseq !~ /\.fa/x) {
+			$reffile = "$refseq.fa";
+		} else {
+			$reffile = $refseq;
+		}
+
+		my $align_cmd = "$mosaikaligner -in $seqdir/$sample.dat -out $dir/${sample}_align.dat -anchors $reffile -oa $dir/$refseq.dat -hs $hash_size $alignment_opt > $logdir/$sample.log";
 		my $assemble_cmd = "$mosaikassembler -in $dir/${sample}_align.dat -od $dir -af $dir/$sample.ace -ia $dir/$refseq.dat >> $logdir/$sample.log";
 		my $machine = `uname -m`;
+		chomp $machine;
 		if ($bindir =~ /binit/x && $machine ne 'ia64') {
 			bsub_system($bsubscript,'ia64',$align_cmd . "\n" . $assemble_cmd);
 		} elsif ($bindir =~ /bin64/x && $machine ne 'x86_64') {
