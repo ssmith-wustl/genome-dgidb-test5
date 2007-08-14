@@ -1,6 +1,6 @@
 
 # Rename the final word in the full class name to match the filename <---
-package Genome::Model::Command::AlignReads::Sxog;
+package Genome::Model::Command::Update::AlignReads::Sxog;
 
 use strict;
 use warnings;

@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::AlignReads::Maq;
+package Genome::Model::Command::Update::AlignReads::Maq;
 
 use strict;
 use warnings;

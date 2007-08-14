@@ -1,4 +1,4 @@
-package Genome::Model::Command::AlignReads::454;
+package Genome::Model::Command::Update::AlignReads::454;
 
 use strict;
 use warnings;
