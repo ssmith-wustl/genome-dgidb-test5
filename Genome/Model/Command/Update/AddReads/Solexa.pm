@@ -1,6 +1,6 @@
 
 # Rename the final word in the full class name <---
-package Genome::Model::Command::AddReads::Solexa;
+package Genome::Model::Command::Update::AddReads::Solexa;
 
 use strict;
 use warnings;
