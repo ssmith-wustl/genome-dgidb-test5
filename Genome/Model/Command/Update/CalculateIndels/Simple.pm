@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::CalculateIndels::Simple;
+package Genome::Model::Command::Update::CalculateIndels::Simple;
 
 use strict;
 use warnings;
