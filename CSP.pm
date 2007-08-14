@@ -1819,6 +1819,9 @@ sub process_step_cron {
     if ($error) {
         $ps_class->error_message($error);
 
+        # release lock
+        $psc_lock->delete if $psc_lock;
+
         # TODO: send email here?
     }
 
