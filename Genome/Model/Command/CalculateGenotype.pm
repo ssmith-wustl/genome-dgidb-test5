@@ -76,6 +76,7 @@ sub execute {
 
     $self->SUPER::execute(
         iterator_method => 'foreach_aligned_position',
+        bases_fh        => $self->bases_fh,
     );
 }
 

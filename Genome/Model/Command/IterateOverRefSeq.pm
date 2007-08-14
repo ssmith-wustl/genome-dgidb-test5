@@ -158,15 +158,14 @@ sub execute {
     if($params{iterator_method}){
         $iterator_method = delete $params{iterator_method};
     }
-    
-$DB::single=1;
 
     require Genome::Model::RefSeqAlignmentCollection;
 
     my $alignment;
     if ($self->file) {
         $alignment = Genome::Model::RefSeqAlignmentCollection->new(file_prefix  => $self->file,
-                                                                   mode         => O_RDONLY);
+                                                                   mode         => O_RDONLY,
+                                                                   bases_fh     => $params{bases_fh});
         unless ($alignment) {
             $self->error_message("Can't access the alignment data: $!");
             return;
