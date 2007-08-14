@@ -1764,7 +1764,7 @@ sub process_step_cron {
 
     # set up message logging
 
-    my $logfile = $class->cron_logfile($process);
+    my $logfile = $class->cron_logfile("process_step_cron.$process");
     my $log_fh = $logfile->open('>>') or die "open $logfile failed: $!";
     $log_fh->autoflush(1);
     $class->log_fh($log_fh);
