@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReference::Maq;
+package Genome::Model::Command::Update::AddReference::Maq;
 
 use strict;
 use warnings;

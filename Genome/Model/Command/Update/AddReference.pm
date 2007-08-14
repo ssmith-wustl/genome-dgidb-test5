@@ -1,6 +1,6 @@
 
 # Rename the final word in the full class name <---
-package Genome::Model::Command::AddReference;
+package Genome::Model::Command::Update::AddReference;
 
 use strict;
 use warnings;
