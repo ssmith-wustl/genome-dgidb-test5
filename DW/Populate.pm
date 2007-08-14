@@ -13,7 +13,7 @@ DW::Populate - Population of the OLAP star schema
 
     my $run_name = '1aug05.807pmab2';
     my $dwp = DW::Populate->new(run => $run_name);
-    my $num_fact_rows_created = $dwp->populate_star_schema;
+    my $num_fact_rows_created = $dwp->populate_star_schema_for_run;
 
     App::DB->sync_database;
     App::DB->commit;
