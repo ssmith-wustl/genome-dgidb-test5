@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::CalculateCoverage::Simple;
+package Genome::Model::Command::Update::CalculateCoverage::Simple;
 
 use strict;
 use warnings;
