@@ -31,6 +31,7 @@ sub new{
                     mismatch_string                 => undef,
                     reference_bases                 => undef,
                     query_base_probability_vectors  => undef,
+                    reads_file                      => undef,
                     @_,
                };
     }
@@ -81,13 +82,11 @@ sub get_current_mismatch_code{
 # Instance Methods ------------------------------------------------------------
 
 
-use constant READ_LENGTH => 33;
+use constant READ_LENGTH => 32;
 use constant READ_RECORD_LENGTH => READ_LENGTH * 4;  # 4 base scores for each position
 # Get all the probability values for all the bases in the read
 sub get_read_probability_vectors {
     my($self) = @_;
-
-    return [] unless defined($self->{'reads_fh'});
 
     unless ($self->{'read_bases_probability_vectors'}) {
     

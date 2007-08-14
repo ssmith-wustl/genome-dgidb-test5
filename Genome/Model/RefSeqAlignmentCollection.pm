@@ -21,6 +21,10 @@ BEGIN {
 }
 
 use constant INDEX_RECORD_SIZE => 8;  # The size of a quad?
+use constant MATCH              => 0;
+use constant MISMATCH           => 1;
+use constant REFERENCE_INSERT   => 2;
+use constant QUERY_INSERT       => 3;
 
 use constant MAX_READ_LENGTH => 60;  # Only support reads this long
 our $C_STRUCTS = Convert::Binary::C->new->parse(
@@ -331,6 +335,7 @@ my($self,$pos) = @_;
                             orientation => $record[4],
                             number_of_alignments => $record[5],
                             ref_and_mismatch_string => $record[6],
+                            reads_fh     => $self->{bases_fh},
                          };
     }
 
@@ -370,6 +375,7 @@ my($self,$alignment_num) = @_;
              orientation => $record[4],
              number_of_alignments => $record[5],
              ref_and_mismatch_string => $record[6],
+             reads_fh     => $self->{bases_fh},
            };
 
 }
@@ -544,14 +550,14 @@ $DB::single=1;
             push @{$alignment_object_cache{$alignment_obj->mismatch_string_length + $pos}}, $alignment_obj;
         }
         
-        my @alignments_with_inserts = grep { $_->get_current_mismatch_code() } map { @$_ } values %alignment_object_cache;
+        my @alignments_with_inserts = grep { $_->get_current_mismatch_code() == QUERY_INSERT } map { @$_ } values %alignment_object_cache;
         
         my @alignments_to_slice_and_return;
         
         if (@alignments_with_inserts) {
             @alignments_to_slice_and_return = @alignments_with_inserts;
         } else {
-            @alignments_to_slice_and_return = values %alignment_object_cache;
+            @alignments_to_slice_and_return = map { @$_ } values %alignment_object_cache;
         }
         
         my $column_bases = [
