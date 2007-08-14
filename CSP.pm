@@ -641,7 +641,8 @@ my %csp_priority = (
     'assemble 454 regions'                    => 1,
     'mp read analysis'                        => 1,
     #Removed it temporary to sort out all fail jobs.
-    #'add read to mp assembly'                 => 1,
+    'update mp assembly'                      => 1,
+    'add read to mp assembly'                 => 1,
     'import external reads'                   => 1,
     'gather submission results'               => 1,
     'prepare read submission'                 => 1,
