@@ -1,6 +1,6 @@
 
 # Rename the final word in the full class name <---
-package Genome::Model::Command::Calculate;
+package Genome::Model::Command::Update::Calculate;
 
 use strict;
 use warnings;
