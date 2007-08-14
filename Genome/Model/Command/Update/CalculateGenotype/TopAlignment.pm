@@ -18,7 +18,7 @@ use Genome::Model::Command::IterateOverRefSeq;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => 'Genome::Model::Command::CalculateGenotype',
+    is => 'Genome::Model::Command::Update::CalculateGenotype',
     has => [
         result => { type => 'Array', doc => 'If set, results will be stored here instead of printing to STDOUT.' },
         bases_file => { type => 'String', doc => 'The pathname of the binary file containing prb values' },
