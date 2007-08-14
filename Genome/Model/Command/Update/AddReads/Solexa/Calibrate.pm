@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::Solexa::Calibrate;
+package Genome::Model::Command::Update::AddReads::Solexa::Calibrate;
 
 # This is mostly taken from the old prbcalib.pl script
 

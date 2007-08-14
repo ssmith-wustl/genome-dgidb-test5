@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::Solexa::Bustard;
+package Genome::Model::Command::Update::AddReads::Solexa::Bustard;
 
 # This is mostly taken from the old prb2dat.pl script
 
