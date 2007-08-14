@@ -1822,10 +1822,13 @@ sub process_step_cron {
         # TODO: send email here?
     }
 
+    die $error if $error;
+
+    App::DB->sync_database or die 'sync failed';
+    App::DB->commit or die 'commit failed';
+
     # release lock
     $psc_lock->delete if $psc_lock;
-
-    die $error if $error;
 
     $ps_class->status_message("process_step_cron pid $$ done");
     exit 0;
