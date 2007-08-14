@@ -1150,7 +1150,6 @@ sub confirm_scheduled_pse {
     die "log file $logfile already exists" if -e $logfile;
 
     # open log file
-    umask 0000;
     my $log_fh = IO::File->new or die 'IO::File->new failed';
     if ($tee_stdout) {
         if ( $^O eq 'MSWin32' ) {
@@ -1166,6 +1165,7 @@ sub confirm_scheduled_pse {
     $log_fh->autoflush(1);
     $class->log_fh($log_fh);
     $class->setup_logging_callbacks;
+    chmod( 0666, $logfile ) or die "chmod $logfile failed";
 
     # write dump-sql to the log when monitoring is turned-on
     # note that this is turned-on by default below
@@ -1765,17 +1765,15 @@ sub process_step_cron {
     # set up message logging
 
     my $logfile = $class->cron_logfile($process);
-    my $old_umask = umask;
-    umask 0002;
     my $log_fh = $logfile->open('>>') or die "open $logfile failed: $!";
     $log_fh->autoflush(1);
     $class->log_fh($log_fh);
     $class->setup_logging_callbacks;
-    umask $old_umask;
     App::MsgLogger->status_message(
         App::Name->prog_name . ' started on ' . hostname()
         . " as " . getpwuid($<) . " with pid $$ for process $process"
     );
+    chmod( 0664, $logfile ) or die "chmod $logfile failed";
 
     # Don't even start running if we're locked
     # (But at least write to the log file)
@@ -1795,7 +1793,7 @@ sub process_step_cron {
 
     # make sure 1 and only 1 (unix) process per process (step)
     # is running at a time
-    my $resource_id = "PSC $process";
+    my $resource_id = "process_step_cron for $process";
     my $psc_lock = App::Lock->create(
         mechanism   => 'DB_Table',
         resource_id => $resource_id,
@@ -1807,10 +1805,7 @@ sub process_step_cron {
     }
 
     # call the cron routine for this process step
-    my $rv;
-    eval {
-        $rv = $ps_class->cron($arg);
-    };
+    my $rv = eval { $ps_class->cron($arg) };
 
     # check for errors
     my $error;
