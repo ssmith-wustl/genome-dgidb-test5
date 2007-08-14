@@ -5,7 +5,7 @@ use warnings;
 
 use UR;
 use Command;
-use Genome::Model::Command::AddReads::Mosaik;
+use Genome::Model::Command::Update::AddReads::Mosaik;
 use IO::File;
 use File::Path;
 use File::Basename;
@@ -65,7 +65,7 @@ sub execute {
 
 		system("$pyrobayes	-i $sffdir/$sample.sff -o $dir/$sample");
 
-		my $mosaik = Genome::Model::Command::AddReads::Mosaik->create(
+		my $mosaik = Genome::Model::Command::Update::AddReads::Mosaik->create(
 																															sample => $sample,
 																															dir => $dir);
 		$mosaik->execute();

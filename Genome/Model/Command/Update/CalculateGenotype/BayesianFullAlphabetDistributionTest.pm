@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-package Genome::Model::Command:::Update::CalculateGenotype::BayesianFullAlphabetDistributionTest;
+package Genome::Model::Command::Update::CalculateGenotype::BayesianFullAlphabetDistributionTest;
 use base 'Test::Class';
 
 use Test::More;
