@@ -18,6 +18,7 @@ my %PROCESS_COUNT = (
     'assemble 454 regions' => 0,
 
     'analyze 454 output'                     => 0,
+    'autofinish'                             => 0,
     'mkcs'                                   => 1,
     'import external reads'                  => 0,
     'run started'                            => 0,
