@@ -34,7 +34,7 @@ EOS
 sub help_detail {
     return <<"EOS"
 
-This module is an abstract base class for commands that export data into the Ace file format.
+This module is an base class for commands that export data into the Ace file format.
 
 Subclasses will implement different input formats.  This module
 should handle common parameters, typically for handling the output file. 
