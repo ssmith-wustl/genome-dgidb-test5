@@ -1,4 +1,4 @@
-package Genome::Model::Command::Update::Calculate::Polybayes;
+package Genome::Model::Command::Update::Genotype::Polybayes;
 
 use strict;
 use warnings;
