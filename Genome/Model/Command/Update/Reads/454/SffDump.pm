@@ -1,4 +1,4 @@
-package Genome::Model::Command::Update::AddReads::454::SffDump;
+package Genome::Model::Command::Update::Reads::454::SffDump;
 
 use strict;
 use warnings;

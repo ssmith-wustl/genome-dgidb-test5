@@ -1,4 +1,4 @@
-package Genome::Model::Command::Update::AddAlignment::Polybayes;
+package Genome::Model::Command::Update::Alignments::Polybayes;
 
 use strict;
 use warnings;
