@@ -45,8 +45,11 @@ sub use_package {
 
     # Temporary hack until the UR modules are deployed
     # This must be present until the UR modules are deployed lab-wide.
-    eval "use lib '/gsc/scripts/test/ur-dev';";
-    die $@ if $@;
+    unless (grep { /ur-dev/ } @INC) {
+        my $ur_path = $ENV{UR_PATH} || '/gsc/scripts/test/ur-dev';
+        eval "use lib '$ur_path';";
+        die $@ if $@;
+    }
 
     # Now use the module.
     eval "use $class";
