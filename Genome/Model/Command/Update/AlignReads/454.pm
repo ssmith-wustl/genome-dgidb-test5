@@ -14,7 +14,8 @@ UR::Object::Class->define(
         'sample'   => { type => 'String',  doc => "sample name"},
         'sffdir'   => { type => 'String',  doc => "sff (input) directory--default is sff", is_optional => 1},
         'dir'   => { type => 'String',  doc => "project alignment (output) directory"},
-        'refseq'   => { type => 'String',      doc => "reference sequence file"}
+        'refseq'   => { type => 'String',      doc => "reference sequence file"},
+				'options' => { type => 'String', doc => "runMapping options", is_optional => 1}
     ], 
 );
 
@@ -53,8 +54,9 @@ EOS
 sub execute {
     my $self = shift;
 
-		my($dir, $sample, $sffdir, $refseq) = 
-				 ($self->dir, $self->sample, $self->sffdir, $self->refseq);
+		my($dir, $sample, $sffdir, $refseq, $options) = 
+				 ($self->dir, $self->sample, $self->sffdir, $self->refseq, $self->options);
+		$options ||= '';
 		return unless ( defined($dir) &&
 										defined($sample) && defined($refseq)
 									);
@@ -67,7 +69,7 @@ sub execute {
 			mkpath $dir;
 		}
 
-		show_system("runMapping -o $dir $refseq $sffdir/$sample.sff");
+		show_system("runMapping -o $dir $options $refseq $sffdir/$sample.sff");
 
     return 1;
 }
