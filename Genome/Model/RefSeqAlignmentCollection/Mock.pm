@@ -39,3 +39,5 @@ sub get_alignments_for_sorted_position{
     return $self->{mock_alignments}->[$pos];
 }
 
+1;
+
