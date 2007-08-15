@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Update::CalculateCoverage::Simple;
+package Genome::Model::Command::Update::Coverage::Simple;
 
 use strict;
 use warnings;
@@ -12,11 +12,11 @@ use constant MISMATCH => 1;
 use constant REFERENCE_INSERT => 2;
 use constant QUERY_INSERT => 3;
 
-use Genome::Model::Command::CalculateCoverage;
+use Genome::Model::Command::Coverage;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => 'Genome::Model::Command::CalculateCoverage',
+    is => 'Genome::Model::Command::Coverage',
 );
 
 sub help_brief {
@@ -25,7 +25,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<EOS
-genome-model calculate-coverage --file myalignments --start 1000 --length 100 >results
+genome-model update coverage --file myalignments --start 1000 --length 100 >results
 EOS
 }
 

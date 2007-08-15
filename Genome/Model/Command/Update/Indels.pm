@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Update::CalculateCoverage;
+package Genome::Model::Command::Model::Indels;
 
 use strict;
 use warnings;
@@ -23,7 +23,7 @@ Write a subclass of this.
 
 Give it a name which is an extension of this class name.
 
-Implement a new coverage algorithm.
+Implement an indel detection algorithm.
 
 EOS
 }
@@ -33,7 +33,7 @@ sub help_detail {
 
 This module is an abstract base class for commands which resolve coverage.
 
-Subclasses will implement different per-base coverage algorithms.  This module
+Subclasses will implement different indel detection algorithms.  This module
 should handle common coverage parameters, typically for handling the results. 
 
 EOS

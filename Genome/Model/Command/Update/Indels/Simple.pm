@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Update::CalculateIndels::Simple;
+package Genome::Model::Command::Update::Indels::Simple;
 
 use strict;
 use warnings;
@@ -16,7 +16,7 @@ use Genome::Model::Command::IterateOverRefSeq;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => 'Genome::Model::Command::CalculateIndels',
+    is => 'Genome::Model::Command::Indels',
     has => [
         result => { type => 'Array', doc => 'If set, results will be stored here instead of printing to STDOUT.' }
     ],
