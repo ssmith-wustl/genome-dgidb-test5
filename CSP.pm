@@ -1165,7 +1165,8 @@ sub confirm_scheduled_pse {
     $log_fh->autoflush(1);
     $class->log_fh($log_fh);
     $class->setup_logging_callbacks;
-    chmod( 0666, $logfile ) or die "chmod $logfile failed";
+#    chmod( 0666, $logfile );    # just try, it's ok if it fails
+    chmod( 0666, $logfile ) or die "chmod $logfile failed: $!";
 
     # write dump-sql to the log when monitoring is turned-on
     # note that this is turned-on by default below
