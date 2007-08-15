@@ -16,7 +16,7 @@ use constant REFERENCE_INSERT   => 2;
 use constant QUERY_INSERT       => 3;
 
 use Genome::Model::Command::IterateOverRefSeq;
-use Genome::Model::Command::Genotype;
+use Genome::Model::Command::Update::Genotype;
 
 # Class Methods ---------------------------------------------------------------
 
