@@ -638,7 +638,6 @@ my %csp_priority = (
     'analyze sequenced dna'                   => 2,
     'analyze digested dna'                    => 1,
     'etl reads from oltp to olap'             => 1,
-    'assemble 454 regions'                    => 1,
     'mp read analysis'                        => 1,
     #Removed it temporary to sort out all fail jobs.
     'update mp assembly'                      => 1,
@@ -660,6 +659,7 @@ my %csp_priority = (
 #    'mkcs'                                    => 1,
 #    'shotgun done'                            => 1,
 #    'autofinish'                              => 1,
+#    'assemble 454 regions'                    => 1,
 );
 
 sub csp_priority { %csp_priority }
