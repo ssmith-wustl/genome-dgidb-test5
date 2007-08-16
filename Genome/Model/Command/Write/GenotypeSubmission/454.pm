@@ -13,7 +13,11 @@ UR::Object::Class->define(
     has => [                                # Specify the command's properties (parameters) <--- 
         'sample'   => { type => 'String',  doc => "sample name"},
         'dir'   => { type => 'String',  doc => "project alignment (input) directory"},
-        'basename'   => { type => 'String',  doc => "output genotype submission file prefix basename"}
+        'basename'   => { type => 'String',  doc => "output genotype submission file prefix basename"},
+        'coordinates'   => { type => 'String',  doc => "coordinate translation file", is_optional => 1},
+        'all'   => { type => 'Boolean',  doc => "use the all instead of HC diffs file", is_optional => 1},
+        'version'   => { type => 'String',  doc => "454 software version--default is 1.1", is_optional => 1},
+        'build'   => { type => 'String',  doc => "reference build version--default is 36", is_optional => 1}
     ], 
 );
 
@@ -48,18 +52,72 @@ EOS
 #    return 1;
 #}
 
+sub MakeMatches {
+	my ($position, $sequence, $variation_ref) = @_;
+	my $i = 0;
+	my %matches;
+	foreach my $allele (split('',$sequence)) {
+		$matches{$position+$i++}{$allele} = $variation_ref;
+	}
+	return \%matches;
+}
+
+sub AdjustMatches {
+	my ($main_matches_ref, $add_matches_ref, $last_start, $start) = @_;
+	my $matches_ref = { %{$main_matches_ref}, %{$add_matches_ref} };
+	for (my $i = $last_start;$i < $start;$i++) {
+		if (exists($matches_ref->{$i})) {
+			foreach my $allele (keys %{$matches_ref->{$i}}) {
+				my $variation_ref = $matches_ref->{$i}{$allele};
+				my $number = $variation_ref->{number};
+				$number ||= 1;
+				if (defined($variation_ref->{quality_score})) {
+					$variation_ref->{quality_score} /= $number;
+				}
+				if (defined($variation_ref->{depth})) {
+					$variation_ref->{depth} /= $number;
+				}
+				if (defined($variation_ref->{signal})) {
+					$variation_ref->{signal} /= $number;
+				}
+				if (defined($variation_ref->{signal_sd})) {
+					$variation_ref->{signal_sd} /= $number;
+				}
+			}
+			delete $matches_ref->{$i};
+		}
+	}
+	return $matches_ref;
+}
+
 sub execute {
     my $self = shift;
 
-		my($dir, $sample, $basename) = 
-				 ($self->dir, $self->sample, $self->basename);
+		my($dir, $sample, $basename, $coord_file, $all, $version, $build) = 
+				 ($self->dir, $self->sample, $self->basename, $self->coordinates, $self->all,
+				 $self->version, $self->build);
 		return unless ( defined($dir) && defined($sample) && defined($basename)
 									);
+		$version ||= '1.1';
+		$build ||= '36';
 
 		$dir =~ s/ \/ $ //x;				# Remove any trailing slash
 
-#		my $diff_file = "$dir/454AllDiffs.txt";
-		my $diff_file = "$dir/454HCDiffs.txt";
+		my %coords;
+		if (defined($coord_file) && -e $coord_file) {
+			unless (open(COORD,$coord_file)) {
+				$self->error_message("Unable to open coordinates input file: $coord_file");
+				return;
+			}
+			print "Reading coordinate translation file $coord_file\n";
+			while(<COORD>) {
+				chomp;
+				my($coord_id,$coord_offset) = split("\t");
+				$coords{$coord_id} = $coord_offset;
+			}
+			close(COORD);
+		}
+		my $diff_file = ($all) ? "$dir/454AllDiffs.txt" : "$dir/454HCDiffs.txt";
 		unless (open(DIFF,$diff_file)) {
 			$self->error_message("Unable to open input file: $diff_file");
 			return;
@@ -78,6 +136,7 @@ sub execute {
 				$variation{$key}{end} = $end;
 				$variation{$key}{ref_sequence} = $ref_sequence;
 				$variation{$key}{var_sequence} = $var_sequence;
+				$variation{$key}{match} = MakeMatches($start,$var_sequence,$variation{$key});
 #				$variation{$key}{freq_forward} = $freq_forward;
 #				$variation{$key}{freq_reverse} = $freq_reverse;
 				$variation{$key}{variant_reads} = $variant_reads;
@@ -93,6 +152,8 @@ sub execute {
 		print "Processing $aligninfo_file\n";
 		my $header = <ALIGN>;
 		my ($id, $position);
+		my $matches = {};
+		my $last_start = 0;
 		while(<ALIGN>) {
 			chomp;
 			s/ //g;									# remove spaces (keep tabs)
@@ -100,18 +161,24 @@ sub execute {
 				($id, $position) = split("\t");
 				$id =~ s/\s*$//x;
 				$id =~ s/^ \s* > \s*//x;
+				$last_start = 0;
 			} else {
 				my ($position, $reference, $consensus, $quality_score, $depth, $signal, $stddeviation) = split("\t");
 				my $key = "$id\t$position";
-				if (exists($variation{$key}{start})) {
-					if ($variation{$key}{ref_sequence} eq $reference) {
-#						$variation{$key}{reference} = $reference;
-#						$variation{$key}{consensus} = $consensus;
-						$variation{$key}{quality_score} = $quality_score;
-						$variation{$key}{depth} = $depth;
-						$variation{$key}{signal} = $signal;
-						$variation{$key}{signal_sd} = $stddeviation;
-					}
+				my $add_matches_ref = (exists($variation{$key}{match})) ?
+					$variation{$key}{match} : {};
+				$matches = AdjustMatches($matches,$add_matches_ref,$last_start,$position);
+				$last_start = $position;
+				if (exists($matches->{$position}) &&
+						exists($matches->{$position}{$consensus})) {
+					my $variation_ref = $matches->{$position}{$consensus};
+#					$variation_ref->{reference} .= $reference;
+#					$variation_ref->{consensus} .= $consensus;
+					$variation_ref->{quality_score} += $quality_score;
+					$variation_ref->{depth} += $depth;
+					$variation_ref->{signal} += $signal;
+					$variation_ref->{signal_sd} += $stddeviation;
+					$variation_ref->{number} += 1;
 				}
 			}
 		}
@@ -132,8 +199,20 @@ sub execute {
 			if ($chromosome =~ /^ \d+ $/x ) {
 				$chromosome = sprintf "%02d", $chromosome;
 			}
+			my $coord_id = $id;
+			if ($id =~ /CCDS/) {
+				$coord_id =~ s/\|.*$//;
+			}
+			my $offset = (exists($coords{$coord_id})) ?
+				(($coords{$coord_id} > 1) ? $coords{$coord_id}-1 : 0 ) : 0;
+			$position += $offset;
+			$output{$chromosome}{$position}{id} = $id;
 			foreach my $valuekey (keys %{$variation{$key}}) {
-				$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey};
+				if ($valuekey eq 'start' || $valuekey eq 'end') {
+					$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey}+$offset;
+				} else {
+					$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey};
+				}
 			}
 		}
 		undef %variation;
@@ -167,16 +246,28 @@ sub execute {
 				my $depth = $output{$chr}{$pos}{depth};
 				my $signal = $output{$chr}{$pos}{signal};
 				my $signal_sd = $output{$chr}{$pos}{signal_sd};
-				my $software = 'runMapping';
-				my $build_id = 'B36';
+				my $software = 'runMapping' . $version;
+				my $build_id = 'B' . $build;
 				my $plus_minus = '+';
-				my $genotype_allele1 = substr($ref_sequence,0,1);
-				my $genotype_allele2 = substr($var_sequence,0,1);
+				my $genotype_allele1 = $ref_sequence;
+				my $genotype_allele2 = $var_sequence;
 				$quality_score ||= '';
-				$depth ||= '';
-				$signal ||= '';
-				$signal_sd ||= '';
-				my @scores = ($quality_score,$ref_reads,$variant_reads,$depth,$signal,$signal_sd);
+				my @scores = ($quality_score);
+				if (defined($ref_reads) && $ref_reads != 0) {
+					push @scores, ("reads1=$ref_reads");
+				}
+				if (defined($variant_reads) && $variant_reads != 0) {
+					push @scores, ("reads2=$variant_reads");
+				}
+				if (defined($depth)) {
+					push @scores, ("depth=$depth");
+				}
+				if (defined($signal)) {
+					push @scores, ("signal=$signal");
+				}
+				if (defined($signal_sd)) {
+					push @scores, ("signal_sd=$signal_sd");
+				}
 
 				Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build_id, $chromosome, $plus_minus, $start, $end,
 																																 $sample_id, $genotype_allele1, $genotype_allele2, \@scores);
