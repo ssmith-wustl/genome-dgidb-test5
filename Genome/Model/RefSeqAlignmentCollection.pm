@@ -88,7 +88,7 @@ Returns undef if there was an error.
 =cut
 
 sub new {
-my($class,%params) = @_;
+    my($class,%params) = @_;
 
     # Normalize the params
     if ($params{'file_prefix'}) {
@@ -104,13 +104,13 @@ my($class,%params) = @_;
 
     $self->{'index_fh'} = IO::File->new($self->{'index_file'}, $self->{'mode'});
     unless ($self->{'index_fh'}) {
-        Carp::carp("Can't open index file: $!") unless $self->{'index_fh'};
+        Carp::confess("Can't open index file: $!") unless $self->{'index_fh'};
         return;
     }
 
     $self->{'alignments_fh'} = IO::File->new($self->{'alignments_file'}, $self->{'mode'});
     unless ($self->{'alignments_fh'}) {
-        Carp::carp("Can't open alignments file: $!");
+        Carp::confess("Can't open alignments file: $!");
         return;
     }
 

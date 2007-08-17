@@ -24,7 +24,7 @@ sub new {
     
     $params{is_sorted} = 1;
     
-    my $self = $pkg->SUPER::new(%params);
+    my $self = {%params};
     
     $self = { %$self, %params };
     
