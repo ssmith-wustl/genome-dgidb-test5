@@ -22,12 +22,12 @@ UR::Object::Class->define(
 
 sub help_synopsis {                         # Replace the text below with real examples <---
     return <<EOS
-genome-model write genotype-submission 454 --dir=454/ccds/alignment --sample=H_GW-454_EST_S_8977
+genome-model write genotype-submission ssahasnp --input=ssahaSNP/ccds/H_GW-454_EST_S_8977.out --sample=H_GW-454_EST_S_8977 --basename=ssahasnp_ccds
 EOS
 }
 
 sub help_brief {
-    "create a genotype submission file from runMapping output"
+    "create a genotype submission file from ssahaSNP output"
 }
 
 sub help_detail {                       
