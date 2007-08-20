@@ -51,10 +51,11 @@ sub Open {
 }
 
 sub Write {
-	my ($fh,$software,$build_id, $chr, $plus_minus, $begin, $end,
-			$sample_id,$allele1,$allele2,$scores_ref) = @_;
-	$build_id ||= 'B36';
+	my ($fh,$software,$build, $chr, $plus_minus, $begin, $end,
+			$sample_id,$allele1,$allele2,$scores_ref, $number) = @_;
+	$build ||= '36';
 	my (@scores) = @{$scores_ref};
+	my $build_id = 'B' . $build;
 	my $chromosome = 'C' . $chr;
 	my $orientation = 'O' . $plus_minus;
 	my $seq1 = "'" . $allele1;
@@ -69,10 +70,48 @@ sub Write {
 	print $fh $line;
 }
 
-#B36     C7      O+      55054249        55054249        H_FY-16530      'N 'N      polyscan2.2(N:N:)       polyphred6.0Beta(N:N:)  -
-#B36     C7      O+      55054249        55054249        H_FY-16594      'T 'T      polyscan2.2(T:T:99)     polyphred6.0Beta(T:T:99_c99)    -
-#B36     C7      O+      55054346        55054346        H_FY-17226      'N     'N       polyscan2.2(N:N:)       polyphred6.0Beta(N:N:)  -
-#B36     C7      O+      55054346        55054346        H_FY-17228      'N     'N       polyscan2.2(N:N:)       polyphred6.0Beta(N:N:)  -
+#  The main data structure is implemented according to the following example.
+#
+#     $mutation = {
+#        H_FY-16530 => {
+#           746938 => {
+#              build => 36,
+#              chromosome => 18,
+#              genotype => "C C",
+#              end => 746939,
+#              calls => ["polyscan2.2 G G 99", "polyphred6.0Beta G G 99"],
+#              file_line_num => 34234,
+#           },
+#           746920 => {
+#              :
+#           },
+#        },
+#        H_FY-16594 => {
+#           :
+#        },
+#        :
+#     };
+
+sub AddMutation {
+	my ($mutation,$software,$build, $chr, $plus_minus, $begin, $end,
+			$sample_id, $allele1, $allele2, $scores_ref, $number) = @_;
+	$build ||= '36';
+
+	my @alleles = ($allele1, $allele2);
+	my (@scores) = @{$scores_ref};
+	my $call = $software . ' ' . join(' ',(join(' ',@alleles),join(' ',@scores)));
+	my $calls;
+	push @{$calls}, ($call);
+	$mutation->{$sample_id}->{$begin} = {
+																				 'build' => $build,
+																				 'chromosome' => $chr,
+																				 'genotype' => join(' ',@alleles),
+																				 'end' => $end,
+																				 'calls' => $calls,
+																				 'file_line_num' => $number
+																				};
+	return $mutation;
+}
 
 1;
 

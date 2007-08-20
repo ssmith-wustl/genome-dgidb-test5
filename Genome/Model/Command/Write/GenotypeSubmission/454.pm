@@ -245,6 +245,7 @@ sub execute {
 		my ($sample_a, $sample_b) = split('-',$sample_temp);
 		$sample_b = sprintf "%05d",$sample_b;
 		my $sample_id = $sample_a . '-' . $sample_b;
+		my $number = 1;
 		foreach my $chr (sort (keys %output)) {
 			my $chromosome = $chr;
 			$chromosome =~ s/^0//;
@@ -268,7 +269,6 @@ sub execute {
 				my $signal = $output{$chr}{$pos}{signal};
 				my $signal_sd = $output{$chr}{$pos}{signal_sd};
 				my $software = 'runMapping' . $version;
-				my $build_id = 'B' . $build;
 				my $plus_minus = '+';
 				my $genotype_allele1 = $ref_sequence;
 				my $genotype_allele2 = $var_sequence;
@@ -290,8 +290,8 @@ sub execute {
 					push @scores, ("signal_sd=$signal_sd");
 				}
 
-				Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build_id, $chromosome, $plus_minus, $start, $end,
-																																 $sample_id, $genotype_allele1, $genotype_allele2, \@scores);
+				Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build, $chromosome, $plus_minus, $start, $end,
+																																 $sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
 			}
 		}
 		$fh->close();
