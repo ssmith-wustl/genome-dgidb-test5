@@ -15,9 +15,9 @@ our @EXPORT_OK = qw (LINKED_LIST_RECORD_SIZE INDEX_RECORD_SIZE MAX_READ_LENGTH);
 
 BEGIN {
     use Config;
-    unless ($Config{'use64bitint'}) {
-        Carp::croak(__PACKAGE__ . " requires use64bitint to make use of the Q pack format");
-    }
+#    unless ($Config{'use64bitint'}) {
+#        Carp::croak(__PACKAGE__ . " requires use64bitint to make use of the Q pack format");
+#    }
 }
 
 use constant INDEX_RECORD_SIZE => 8;  # The size of a quad?
@@ -38,7 +38,7 @@ our $C_STRUCTS = Convert::Binary::C->new->parse(
             unsigned char ref_and_mismatch_string[" . &MAX_READ_LENGTH . "];
       };
 ");
-our $C_PACK_FORMAT = 'Q Q d C C C a60';
+our $C_PACK_FORMAT = 'L! L! d C C C a60';
 
 sub LINKED_LIST_RECORD_SIZE () {
     our $LINKED_LIST_RECORD_SIZE ||= $C_STRUCTS->sizeof('linked_list_element');
@@ -425,7 +425,7 @@ my($self,$pos) = @_;
     $self->index_fh->read($buf, INDEX_RECORD_SIZE);
     return 0 unless $buf;  # A read past the end will return nothing
 
-    my $value = unpack("Q", $buf);
+    my $value = unpack("L!", $buf);
 
     return $value;
 }
@@ -438,7 +438,7 @@ my($self,$pos,$val) = @_;
 
     $fh->seek($pos * INDEX_RECORD_SIZE,0);
 
-    $val = pack("Q", $val);
+    $val = pack("L!", $val);
     $fh->print($val);
 }
 
