@@ -6,6 +6,7 @@ use warnings;
 use UR;
 use Command;
 use File::Path;
+use MG::Transform::Coordinates::TranscriptToGenomic;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
@@ -97,21 +98,8 @@ sub execute {
 		$version ||= '1.0';
 		$build ||= '36';
 
-		my %coords;
-		if (defined($coord_file) && -e $coord_file) {
-			unless (open(COORD,$coord_file)) {
-				$self->error_message("Unable to open coordinates input file: $coord_file");
-				return;
-			}
-			print "Reading coordinate translation file $coord_file\n";
-			while(<COORD>) {
-				chomp;
-				my($coord_id,$coord_offset,$chr,$orient) = split("\t");
-				$coords{$coord_id}{offset} = $coord_offset;
-				$coords{$coord_id}{chromosome} = $chr;
-			}
-			close(COORD);
-		}
+		my $genomic_coords = new MG::Transform::Coordinates::TranscriptToGenomic(
+																																						 coordinate_file => $coord_file);
 
 		my %variation;
 
@@ -181,7 +169,7 @@ sub execute {
 		my %output;
 		print "Processing variations\n";
 		foreach my $key (keys %variation) {
-			my ($id, $position, $variant) = split("\t",$key);
+			my ($id, $rel_position, $variant) = split("\t",$key);
 			my $chromosome;
 			if ($id =~ /NC_0000(.{2})/x ) {
 				$chromosome = $1;
@@ -189,15 +177,15 @@ sub execute {
 				$chromosome = $1;
 			}
 			my $coord_id = $id;
-			if ($id =~ /CCDS/) {
+			if ($id =~ /\( \s* CCDS/) {
+				$coord_id =~ s/\( \s* CCDS.*$//;
+			} elsif($id =~ /CCDS/ ) {
 				$coord_id =~ s/\|.*$//;
 			}
-			my $offset = (exists($coords{$coord_id}{offset})) ?
-				(($coords{$coord_id}{offset} > 1) ? $coords{$coord_id}{offset} - 1 : 0 ) : 0;
-			$position += $offset;
+			my ($c_chromosome, $position, $offset, $c_orient) =
+				$genomic_coords->Translate($coord_id,$rel_position);
+			$chromosome ||= $c_chromosome;
 
-			$chromosome ||= (defined($coords{$coord_id}{chromosome})) ?
-				$coords{$coord_id}{chromosome} : 'Z';
 			# left pad with zero so sorting is easy
 			if ($chromosome =~ /^ \d+ $/x ) {
 				$chromosome = sprintf "%02d", $chromosome;
