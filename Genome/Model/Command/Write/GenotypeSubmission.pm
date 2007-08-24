@@ -92,26 +92,6 @@ sub Write {
 #        :
 #     };
 
-sub AddMutation {
-	my ($mutation,$software,$build, $chr, $plus_minus, $begin, $end,
-			$sample_id, $allele1, $allele2, $scores_ref, $number) = @_;
-	$build ||= '36';
-
-	my @alleles = ($allele1, $allele2);
-	my (@scores) = @{$scores_ref};
-	my $call = $software . ' ' . join(' ',(join(' ',@alleles),join(' ',@scores)));
-	my $calls;
-	push @{$calls}, ($call);
-	$mutation->{$sample_id}->{$begin} = {
-																				 'build' => $build,
-																				 'chromosome' => $chr,
-																				 'genotype' => join(' ',@alleles),
-																				 'end' => $end,
-																				 'calls' => $calls,
-																				 'file_line_num' => $number
-																				};
-	return $mutation;
-}
 
 1;
 

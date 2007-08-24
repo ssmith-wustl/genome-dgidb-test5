@@ -6,6 +6,7 @@ use warnings;
 use UR;
 use Command;
 use MG::Transform::Coordinates::TranscriptToGenomic;
+use MG::IO::GenotypeSubmission;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
@@ -19,7 +20,8 @@ UR::Object::Class->define(
         'coordinates'   => { type => 'String',  doc => "coordinate translation file", is_optional => 1},
         'indel'   => { type => 'Boolean',  doc => "try to get indel's also (not implemented yet)", is_optional => 1},
         'version'   => { type => 'String',  doc => "maq software version--default is 0.5", is_optional => 1},
-        'build'   => { type => 'String',  doc => "reference build version--default is 36", is_optional => 1}
+        'build'   => { type => 'String',  doc => "reference build version--default is 36", is_optional => 1},
+        'db'   => { type => 'String',  doc => "load to the database--default is to produce a file", is_optional => 1}
     ]
 );
 
@@ -154,12 +156,18 @@ sub execute {
 			delete $variation{$key};
 		}
 		undef %variation;
-		print "Writing genotype submission file\n";
-		my $fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
-		unless (defined($fh)) {
-			$self->error_message("Unable to open genotype submission file for writing: $basename");
-			return;
+		my $fh;
+		unless ($self->db) {
+			print "Writing genotype submission file\n";
+			$fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
+			unless (defined($fh)) {
+				$self->error_message("Unable to open genotype submission file for writing: $basename");
+				return;
+			}
+		} else {
+			print "Loading read groups\n";
 		}
+		my $mutation;
 		my $sample_temp = $sample;
 		$sample_temp =~ s/454_EST_S_//x;
 		my ($sample_a, $sample_b) = split('-',$sample_temp);
@@ -197,14 +205,26 @@ sub execute {
 				if (defined($depth)) {
 					push @scores, ("depth=$depth");
 				}
-
-				Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build, $chromosome, $plus_minus, $start, $end,
-																																 $sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
+				
+				unless ($self->db) {
+					Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build, $chromosome, $plus_minus, $start, $end,
+																																	 $sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
+				} else {
+					MG::IO::GenotypeSubmission::AddMutation($mutation,$software,$build, $chromosome, $plus_minus, $start, $end,
+																									$sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
+				}
 			}
 		}
-		$fh->close();
-    return 1;
-}
+		unless ($self->db) {
+			$fh->close();
+		} else {
+			MG::IO::GenotypeSubmission::Load($mutation,
+																			 tech_type => '',
+																			 mapping_reference => ''
+																			);
+		}
+		return 1;
+	}
 
 # 'maq indelsoa $refbfa $mapfile |'
 # CCDS15.1|Hs36.2|chr1    348825  -1      1       1       1       0.664983

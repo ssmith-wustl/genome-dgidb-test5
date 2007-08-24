@@ -7,6 +7,7 @@ use UR;
 use Command;
 use File::Path;
 use MG::Transform::Coordinates::TranscriptToGenomic;
+#use MG::IO::GenotypeSubmission;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
@@ -21,7 +22,8 @@ UR::Object::Class->define(
         'build'   => { type => 'String',  doc => "reference build version--default is 36", is_optional => 1},
         'signal_cutoff'   => { type => 'Float',  doc => "signal cutoff--default is: 0.1", is_optional => 1},
         'score_cutoff'   => { type => 'Integer',  doc => "quality score cutoff--default is: 1", is_optional => 1},
-        'depth_cutoff'   => { type => 'Integer',  doc => "depth cutoff--default is: 0", is_optional => 1}
+        'depth_cutoff'   => { type => 'Integer',  doc => "depth cutoff--default is: 0", is_optional => 1},
+        'db'   => { type => 'String',  doc => "load to the database--default is to produce a file", is_optional => 1}
     ], 
 );
 
@@ -223,12 +225,18 @@ sub execute {
 			}
 		}
 		undef %variation;
-		print "Writing genotype submission file\n";
-		my $fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
-		unless (defined($fh)) {
-			$self->error_message("Unable to open genotype submission file for writing: $basename");
-			return;
+		my $fh;
+		unless ($self->db) {
+			print "Writing genotype submission file\n";
+			$fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
+			unless (defined($fh)) {
+				$self->error_message("Unable to open genotype submission file for writing: $basename");
+				return;
+			}
+		} else {
+			print "Loading read groups\n";
 		}
+		my $mutation;
 		my $sample_temp = $sample;
 		$sample_temp =~ s/454_EST_S_//x;
 		my ($sample_a, $sample_b) = split('-',$sample_temp);
@@ -261,6 +269,12 @@ sub execute {
 				my $plus_minus = '+';
 				my $genotype_allele1 = $ref_sequence;
 				my $genotype_allele2 = $var_sequence;
+				unless ((length($ref_sequence) == 1 && length($var_sequence) == 1) ||	# SNP
+								$ref_sequence =~ /\-/ || # or indel
+								$var_sequence =~ /\-/) {
+					next;
+				}
+						
 				$quality_score ||= '';
 				my @scores = ($quality_score);
 				if (defined($ref_reads) && $ref_reads != 0) {
@@ -279,11 +293,23 @@ sub execute {
 					push @scores, ("signal_sd=$signal_sd");
 				}
 
-				Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build, $chromosome, $plus_minus, $start, $end,
-																																 $sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
+				unless ($self->db) {
+					Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build, $chromosome, $plus_minus, $start, $end,
+																																	 $sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
+				} else {
+#				MG::IO::GenotypeSubmission::AddMutation($mutation,$software,$build, $chromosome, $plus_minus, $start, $end,
+#																								$sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
+				}
 			}
 		}
-		$fh->close();
+		unless ($self->db) {
+			$fh->close();
+		} else {
+#			MG::IO::GenotypeSubmission::Load($mutation,
+#																			 tech_type => '',
+#																			 mapping_reference => ''
+#																			);
+		}
     return 1;
 }
 
