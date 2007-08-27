@@ -1,5 +1,5 @@
 package Genome::Model::Runs;
-
+ 
 sub new{
 	my $pkg = shift;
 	return bless {}, $pkg;
@@ -59,7 +59,7 @@ sub get_runs_info {
                                                                                                                                  
         s/#.*$//;  # Remove comments                                                                                             
                                                                                                                                  
-        next unless (m/\w+/);    # skip lines with no content                                                                    
+        next unless (m/^\w+$/);    # skip lines with no content                                                                    
                                                                                                                                  
         my($run, $lanes, $bustard, $sample) = split(/\t/, $_);                                                                   
         my @lanes = split(/,/,$lanes);                                                                                           
