@@ -62,9 +62,14 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model create --sample ley_aml_patient1 --dna-type whole --read-calibrator none       --aligner maq1_6    --genotyper maq1_6     --indel-finder bhdsindel1 --prior NCBI-human-build36 
-genome-model create --sample ley_aml_patient1 --dna-type whole --read-calibrator bhds-cal1  --aligner synamatix --genotyper bayes1     --indel-finder bhdsindel1 --prior none
-genome-model create --sample ley_aml_patient1 --dna-type cdna  --read-calibrator none       --aligner 454mapper --genotyper polybayes2 --indel-finder bhdsindel1 --prior NCBI-human-build36 
+genome-model create 
+                    --sample ley_aml_patient1 
+                    --dna-type whole 
+                    --read-calibrator none
+                    --aligner maq1_6    
+                    --genotyper maq1_6     
+                    --indel-finder bhdsindel1 
+                    --prior NCBI-human-build36 
 EOS
 }
 
