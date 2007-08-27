@@ -111,7 +111,7 @@ sub test_foreach_aligned_position : Test(2){
         push @$result_calls, shift;
     };
     
-     $rsac->foreach_aligned_position( $work_sub, $result_sub, 1, 1 );
+     $rsac->foreach_aligned_position( $work_sub, $result_sub );
     
     cmp_deeply($result_calls, $expected_result_calls, 'Results are transferred from one coderef to the other');
     cmp_deeply($passed_in_aligned_bases, $expected_bases, 'Windowing correctly iterates over pseudo-multi aligned sequences');
