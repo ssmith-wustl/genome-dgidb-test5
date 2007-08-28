@@ -11,11 +11,13 @@ UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [                                # Specify the command's properties (parameters) <--- 
-        'sample'   => { type => 'String',  doc => "sample name"},
+        'normsample'   => { type => 'String',  doc => "normal sample name"},
+        'tumorsample'   => { type => 'String',  doc => "tumor sample name"},
         'input'   => { type => 'String',  doc => "project alignment (input) file"},
+        'absnp'   => { type => 'String',  doc => "db snp file (input) file"},
         'basename'   => { type => 'String',  doc => "output genotype submission file prefix basename"},
         'coordinates'   => { type => 'String',  doc => "coordinate translation file", is_optional => 1},
-        'version'   => { type => 'String',  doc => "affy software version--default is 1.0", is_optional => 1},
+        'version'   => { type => 'String',  doc => "affy software version--default is ''", is_optional => 1},
         'build'   => { type => 'String',  doc => "reference build version--default is 36", is_optional => 1}
     ], 
 );
@@ -55,31 +57,22 @@ EOS
 sub execute {
     my $self = shift;
 
-		my($input, $sample, $basename, $coord_file, $version, $build) = 
-				 ($self->input, $self->sample, $self->basename, $self->coordinates,
-				 $self->version, $self->build);
-		return unless ( defined($input) && defined($sample) && defined($basename)
+		my($input, $norm_sample_id, $tumor_sample_id, $absnp,
+			 $basename, $version, $build) = 
+				 ($self->input, $self->normsample, $self->tumorsample, $self->absnp,
+					$self->basename, $self->version, $self->build);
+		return unless ( defined($input) && defined($norm_sample_id) && defined($basename)
 									);
-		$version ||= '1.0';
+		$version ||= '';
 		$build ||= '36';
 
-		my %coords;
-		if (defined($coord_file) && -e $coord_file) {
-			unless (open(COORD,$coord_file)) {
-				$self->error_message("Unable to open coordinates input file: $coord_file");
-				return;
-			}
-			print "Reading coordinate translation file $coord_file\n";
-			while(<COORD>) {
-				chomp;
-				my($coord_id,$coord_offset,$chr,$orient) = split("\t");
-				$coords{$coord_id}{offset} = $coord_offset;
-				$coords{$coord_id}{chromosome} = $chr;
-			}
-			close(COORD);
-		}
-
 		my %variation;
+
+		my $fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
+		unless (defined($fh)) {
+			$self->error_message("Unable to open genotype submission file for writing: $basename");
+			return;
+		}
 
 		unless (open(INPUT,$input)) {
 			$self->error_message("Unable to open input file: $input");
@@ -87,33 +80,88 @@ sub execute {
 		}
 		$| = 1;
 
-		my $sample_temp = $sample;
-		$sample_temp =~ s/454_EST_S_//x;
-		my ($sample_a, $sample_b) = split('-',$sample_temp);
-		$sample_b = sprintf "%05d",$sample_b;
-		my $sample_id = $sample_a . '-' . $sample_b;
+		if (defined($absnp)) {
+			unless (open(ABSNP,$absnp)) {
+				$self->error_message("Unable to open input file: $absnp");
+				return;
+			}
+			my %ab;
+			my %chr;
+			print "Reading $absnp\n";
+			while (<ABSNP>) {
+				chomp;
+				my ($id, $chr, $a, $b) = split("\t");
+				$ab{"$id\tA"} = $a;
+				$ab{"$id\tB"} = $b;
+				$chr{$id} = $chr;
+			}
+			close(ABSNP);
 
-		print "Processing $input\n";
-		print "Writing genotype submission file\n";
-		my $fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
-		unless (defined($fh)) {
-			$self->error_message("Unable to open genotype submission file for writing: $basename");
-			return;
-		}
-		while(<INPUT>) {
-			chomp;
-			next if (/^SNP_id/x );
-			my ($snp_id,$chromosome,$start,$allele1,$allele2,$affy_calls,$score) = split(',');
+			print "Processing $input\n";
+			print "Writing genotype submission file\n";
+			my $head = <INPUT>;
+			$head = <INPUT>;
 			my $software = 'affy' . $version;
-			my $build_id = 'B' . $build;
+			my $build_id = $build;
 			my $plus_minus = '+';
-			my @scores = ($score,"affy=$affy_calls");
+			while(<INPUT>) {
+				chomp;
+				s/\r//g;
+				my ($line, $snp_id, $chromosome, $position, $dbsnp_id, $norm_call, $norm_conf, $tumor_call, $tumor_conf) = split("\t");
+				unless ($chromosome =~ /^ [\dXY]+ $/x) {
+					if (defined($chr{$snp_id})) {
+						$chromosome = $chr{$snp_id};
+					}
+				}
+				unless ($chromosome =~ /^ [\dXY]+ $/x) {
+					print "Unknown chromosome: $chromosome ...skipping\n";
+					next;
+				}
+				my ($abkey1, $abkey2, $allele1, $allele2);
 
-			Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build_id, $chromosome, $plus_minus, $start, $start,
-																																 $sample_id, $allele1, $allele2, \@scores);
+				$abkey1 = "$snp_id\t" . substr($norm_call,0,1);
+				$abkey2 = "$snp_id\t" . substr($norm_call,1,1);
+				$allele1 = $ab{$abkey1};
+				$allele2 = $ab{$abkey2};
+				if (defined($allele1) && defined($allele2)) {
+				Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build_id, $chromosome, $plus_minus, $position, $position,
+																																 $norm_sample_id, $allele1, $allele2, [ $norm_conf ]);
+				} else {
+					print "No AB record for SNP: $snp_id $norm_call\n";
+				}
+
+				$abkey1 = "$snp_id\t" . substr($tumor_call,0,1);
+				$abkey2 = "$snp_id\t" . substr($tumor_call,1,1);
+				$allele1 = $ab{$abkey1};
+				$allele2 = $ab{$abkey2};
+				if (defined($allele1) && defined($allele2)) {
+				Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build_id, $chromosome, $plus_minus, $position, $position,
+																																 $tumor_sample_id, $allele1, $allele2, [ $tumor_conf ]);
+				} else {
+					print "No AB record for SNP: $snp_id $tumor_call\n";
+			}
+			}
+		} else {
+			print "Processing $input\n";
+			print "Writing genotype submission file\n";
+			while(<INPUT>) {
+				chomp;
+				next if (/^SNP_id/x );
+				my ($snp_id,$chromosome,$start,$allele1,$allele2,$affy_calls,$score) = split(',');
+				unless ($chromosome =~ /^ [\dXY]+ $/x) {
+					print "Unknown chromosome: $chromosome ...skipping\n";
+					next;
+				}
+				my $software = 'affy' . $version;
+				my $build_id = $build;
+				my $plus_minus = '+';
+				my @scores = ($score,"affy=$affy_calls");
+				
+				Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build_id, $chromosome, $plus_minus, $start, $start,
+																																 $norm_sample_id, $allele1, $allele2, \@scores);
+			}
 		}
 		close(INPUT);
-
 		$fh->close();
     return 1;
 	}
