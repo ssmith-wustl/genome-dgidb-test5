@@ -19,9 +19,9 @@ UR::Object::Class->define(
         'basename'   => { type => 'String',  doc => "output genotype submission file prefix basename"},
         'coordinates'   => { type => 'String',  doc => "coordinate translation file", is_optional => 1},
         'indel'   => { type => 'Boolean',  doc => "try to get indel's also (not implemented yet)", is_optional => 1},
-        'version'   => { type => 'String',  doc => "maq software version--default is 0.5", is_optional => 1},
+        'version'   => { type => 'String',  doc => "maq software version--default is ''", is_optional => 1},
         'build'   => { type => 'String',  doc => "reference build version--default is 36", is_optional => 1},
-        'db'   => { type => 'String',  doc => "load to the database--default is to produce a file", is_optional => 1}
+        'db'   => { type => 'Booleang',  doc => "load to the database--default is to produce a file", is_optional => 1}
     ]
 );
 
@@ -56,6 +56,25 @@ EOS
 #    return 1;
 #}
 
+
+my %IUBcode=(
+	     A=>'AA',
+	     C=>'CC',
+	     G=>'GG',
+	     T=>'TT',
+	     M=>'AC',
+	     K=>'GT',
+	     Y=>'CT',
+	     R=>'AG',
+	     W=>'AT',
+	     S=>'GC',
+	     D=>'AGT',
+	     B=>'CGT',
+	     H=>'ACT',
+	     V=>'ACG',
+	     N=>'ACGT',
+	    );
+
 sub execute {
     my $self = shift;
 
@@ -66,7 +85,7 @@ sub execute {
 		return unless ( defined($mapfile) && defined($cnsfile) && defined($refbfa) &&
 										defined($sample) && defined($basename)
 									);
-		$version ||= '0.5';
+		$version ||= '';
 		$build ||= '36';
 
 		$| = 1;											# autoflush stdout
@@ -83,12 +102,27 @@ sub execute {
 		print "Processing $cnsfile for SNPs\n";
 		while(<SNP>) {
 			chomp;
-			my ($id, $start, $ref_sequence, $var_sequence, $quality_score, $depth, $avg_hits, $high_quality, $unknown) = split("\t");
+			my ($id, $start, $ref_sequence, $iub_sequence, $quality_score, $depth, $avg_hits, $high_quality, $unknown) = split("\t");
 			my $key = "$id\t$start";
+			my $genotype = $IUBcode{$iub_sequence};
+			my $cns_sequence = substr($genotype,0,1);
+			my $var_sequence = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
+			if ($ref_sequence eq $cns_sequence &&
+					$ref_sequence eq $var_sequence &&
+				  $var_sequence eq $cns_sequence) {
+				next;										# no variation
+			}
 			$variation{$key}{start} = $start;
 			$variation{$key}{end} = $start;
 			$variation{$key}{ref_sequence} = $ref_sequence;
 			$variation{$key}{var_sequence} = $var_sequence;
+			if ($ref_sequence ne $cns_sequence && $var_sequence ne $cns_sequence) {
+				if ($ref_sequence eq $var_sequence) {
+					$variation{$key}{var_sequence} = $cns_sequence;
+				} else {
+					$variation{$key}{cns_sequence} = $cns_sequence;
+				}
+			}
 			$variation{$key}{quality_score} = $quality_score;
 			$variation{$key}{variant_reads} = $depth;
 			$variation{$key}{avg_hits} = $avg_hits;
@@ -139,6 +173,12 @@ sub execute {
 			my ($c_chromosome, $position, $offset, $c_orient) =
 				$genomic_coords->Translate($coord_id,$rel_position);
 			$chromosome ||= $c_chromosome;
+			$position ||= $rel_position;
+
+			unless (defined($chromosome)) {
+				print "Can not get chromosome for: '$id', '$coord_id', '$position'\n";
+				next;
+			}
 
 			# left pad with zero so sorting is easy
 			if ($chromosome =~ /^ \d+ $/x ) {
@@ -149,7 +189,7 @@ sub execute {
 			foreach my $valuekey (keys %{$variation{$key}}) {
 				if ($valuekey eq 'start' || $valuekey eq 'end') {
 					$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey}+$offset;
-				} else {
+				} elsif (exists($variation{$key}{$valuekey})) {
 					$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey};
 				}
 			}
@@ -182,6 +222,7 @@ sub execute {
 				my $end = $output{$chr}{$pos}{end};
 				my $ref_sequence = $output{$chr}{$pos}{ref_sequence};
 				my $var_sequence = $output{$chr}{$pos}{var_sequence};
+				my $cns_sequence = $output{$chr}{$pos}{cns_sequence};
 				my $variant_reads = $output{$chr}{$pos}{variant_reads};
 				my $total_reads = $output{$chr}{$pos}{total_reads};
 				my $ref_reads;
@@ -204,6 +245,9 @@ sub execute {
 				}
 				if (defined($depth)) {
 					push @scores, ("depth=$depth");
+				}
+				if (defined($cns_sequence)) {
+					push @scores, ("cns=$cns_sequence");
 				}
 				
 				unless ($self->db) {
