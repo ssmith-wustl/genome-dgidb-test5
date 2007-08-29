@@ -4,6 +4,7 @@ package Genome::Model::Command;
 use strict;
 use warnings;
 
+use Genome;
 use UR;
 use Command;
 
