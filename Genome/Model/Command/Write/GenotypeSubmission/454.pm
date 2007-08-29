@@ -23,7 +23,7 @@ UR::Object::Class->define(
         'signal_cutoff'   => { type => 'Float',  doc => "signal cutoff--default is: 0.1", is_optional => 1},
         'score_cutoff'   => { type => 'Integer',  doc => "quality score cutoff--default is: 1", is_optional => 1},
         'depth_cutoff'   => { type => 'Integer',  doc => "depth cutoff--default is: 0", is_optional => 1},
-        'db'   => { type => 'String',  doc => "load to the database--default is to produce a file", is_optional => 1}
+        'db'   => { type => 'Boolean',  doc => "load to the database--default is to produce a file", is_optional => 1}
     ], 
 );
 
@@ -59,257 +59,266 @@ EOS
 #}
 
 sub MakeMatches {
-	my ($position, $sequence, $variation_ref) = @_;
+	my ($id, $position, $sequence, $variation_ref) = @_;
 	my $i = 0;
 	my %matches;
 	foreach my $allele (split('',$sequence)) {
-		$matches{$position+$i++}{$allele} = $variation_ref;
+		$matches{$id}{$position+$i++}{$allele} = $variation_ref;
 	}
 	return \%matches;
 }
 
 sub execute {
     my $self = shift;
-
-		my($dir, $sample, $basename, $coord_file, $all, $version, $build,
-			$signal_cutoff, $quality_score_cutoff, $depth_cutoff) = 
-				 ($self->dir, $self->sample, $self->basename, $self->coordinates, $self->all,
-				 $self->version, $self->build,
-					$self->signal_cutoff, $self->score_cutoff, $self->depth_cutoff);
-		return unless ( defined($dir) && defined($sample) && defined($basename)
-									);
-		$version ||= '1.1';
-		$build ||= '36';
-		$signal_cutoff ||= 0.1;
-		$quality_score_cutoff ||= 1;
-		$depth_cutoff ||= 0;
-
-		$dir =~ s/ \/ $ //x;				# Remove any trailing slash
-
-		$| = 1;											# autoflush stdout
-
-		my $genomic_coords = new MG::Transform::Coordinates::TranscriptToGenomic(
-																																						 coordinate_file => $coord_file);
-
-		my $diff_file = ($all) ? "$dir/454AllDiffs.txt" : "$dir/454HCDiffs.txt";
-		unless (open(DIFF,$diff_file)) {
-			$self->error_message("Unable to open input file: $diff_file");
-			return;
-		}
-		my %variation;
-		print "Processing $diff_file\n";
-		while(<DIFF>) {
-			chomp;
-			if (/^ \s* > /x ) {
-				s/ //g;									# remove spaces (keep tabs)
-				my ($id, $start, $end, $ref_sequence, $var_sequence, $freq_forward, $freq_reverse, $variant_reads, $total_reads, $variant_percent) = split("\t");
-				$id =~ s/\s*$//x;
-				$id =~ s/^ \s* > \s*//x;
-				my $key = "$id\t$start";
-				$variation{$key}{start} = $start;
-				$variation{$key}{end} = $end;
-				$variation{$key}{ref_sequence} = $ref_sequence;
-				$variation{$key}{var_sequence} = $var_sequence;
-				$variation{$key}{match} = MakeMatches($start,$var_sequence,$variation{$key});
+    
+    my($dir, $sample, $basename, $coord_file, $all, $version, $build,
+       $signal_cutoff, $quality_score_cutoff, $depth_cutoff) = 
+	   ($self->dir, $self->sample, $self->basename, $self->coordinates, $self->all,
+	    $self->version, $self->build,
+	    $self->signal_cutoff, $self->score_cutoff, $self->depth_cutoff);
+    return unless ( defined($dir) && defined($sample) && defined($basename)
+	);
+    $version ||= '1.1';
+    $build ||= '36';
+    $signal_cutoff ||= 0.1;
+    $quality_score_cutoff ||= 1;
+    $depth_cutoff ||= 0;
+    
+    $dir =~ s/ \/ $ //x;				# Remove any trailing slash
+    
+    $| = 1;											# autoflush stdout
+    
+    my $genomic_coords = new MG::Transform::Coordinates::TranscriptToGenomic(
+	coordinate_file => $coord_file);
+    
+    my $diff_file = ($all) ? "$dir/454AllDiffs.txt" : "$dir/454HCDiffs.txt";
+    unless (open(DIFF,$diff_file)) {
+	$self->error_message("Unable to open input file: $diff_file");
+	return;
+    }
+    my %variation;
+    print "Processing $diff_file\n";
+    while(<DIFF>) {
+	chomp;
+	if (/^ \s* > /x ) {
+	    s/ //g;									# remove spaces (keep tabs)
+	    my ($id, $start, $end, $ref_sequence, $var_sequence, $freq_forward, $freq_reverse, $variant_reads, $total_reads, $variant_percent) = split("\t");
+	    $id =~ s/\s*$//x;
+	    $id =~ s/^ \s* > \s*//x;
+	    my $key = "$id\t$start";
+	    $variation{$key}{start} = $start;
+	    $variation{$key}{end} = $end;
+	    $variation{$key}{ref_sequence} = $ref_sequence;
+	    $variation{$key}{var_sequence} = $var_sequence;
+	    $variation{$key}{match} = MakeMatches($id,$start,$var_sequence,$variation{$key});
 #				$variation{$key}{freq_forward} = $freq_forward;
 #				$variation{$key}{freq_reverse} = $freq_reverse;
-				$variation{$key}{variant_reads} = $variant_reads;
-				$variation{$key}{total_reads} = $total_reads;
-			}
+	    $variation{$key}{variant_reads} = $variant_reads;
+	    $variation{$key}{total_reads} = $total_reads;
+	}
+    }
+    close(DIFF);
+    my $aligninfo_file = "$dir/454AlignmentInfo.tsv";
+    unless (open(ALIGN,$aligninfo_file)) {
+	$self->error_message("Unable to open input file: $aligninfo_file");
+	return;
+    }
+    print "Processing $aligninfo_file ";
+    my $header = <ALIGN>;
+    my ($id, $position);
+    my $matches = {};
+    my $count = 0;
+    $id = '';
+    while(<ALIGN>) {
+	chomp;
+	s/ //g;									# remove spaces (keep tabs)
+	print '.' if (++$count % 100000 == 0);
+	if (/^ \s* > /x ) {
+	    if (exists($matches->{$id})) {
+		delete $matches->{$id};
+	    }
+	    ($id, $position) = split("\t");
+	    $id =~ s/\s*$//x;
+	    $id =~ s/^ \s* > \s*//x;
+	} else {
+	    my ($position, $reference, $consensus, $quality_score, $depth, $signal, $stddeviation) = split("\t");
+	    my $key = "$id\t$position";
+	    my $add_matches_ref = (exists($variation{$key}{match})) ?
+		$variation{$key}{match} : {};
+	    $matches = { %{$matches}, %{$add_matches_ref} };
+	    
+	    if (exists($matches->{$id}{$position}) &&
+		exists($matches->{$id}{$position}{$consensus}) #&&
+#						$signal > $signal_cutoff &&
+#						$quality_score > $quality_score_cutoff &&
+#						$depth > $depth_cutoff
+		) {
+		my $variation_ref = $matches->{$id}{$position}{$consensus};
+		if ($reference ne '-' && $reference ne $consensus) {
+		    $variation_ref->{cns_sequence} = $consensus;
 		}
-		close(DIFF);
-		my $aligninfo_file = "$dir/454AlignmentInfo.tsv";
-		unless (open(ALIGN,$aligninfo_file)) {
-			$self->error_message("Unable to open input file: $aligninfo_file");
-			return;
+		unless ($consensus eq '-') {
+		    $variation_ref->{quality_score} += $quality_score;
+		    $variation_ref->{depth} += $depth;
+		    $variation_ref->{signal} += $signal;
+		    $variation_ref->{signal_sd} += $stddeviation;
+		    $variation_ref->{number} += 1;
 		}
-		print "Processing $aligninfo_file ";
-		my $header = <ALIGN>;
-		my ($id, $position);
-		my $matches = {};
-		my $count = 0;
-		while(<ALIGN>) {
-			chomp;
-			s/ //g;									# remove spaces (keep tabs)
-			print '.' if (++$count % 100000 == 0);
-			if (/^ \s* > /x ) {
-				($id, $position) = split("\t");
-				$id =~ s/\s*$//x;
-				$id =~ s/^ \s* > \s*//x;
-			} else {
-				my ($position, $reference, $consensus, $quality_score, $depth, $signal, $stddeviation) = split("\t");
-				my $key = "$id\t$position";
-				my $add_matches_ref = (exists($variation{$key}{match})) ?
-					$variation{$key}{match} : {};
-				$matches = { %{$matches}, %{$add_matches_ref} };
-
-				if (exists($matches->{$position}) &&
-						exists($matches->{$position}{$consensus}) &&
-						$signal > $signal_cutoff &&
-						$quality_score > $quality_score_cutoff &&
-						$depth > $depth_cutoff) {
-					my $variation_ref = $matches->{$position}{$consensus};
-#					$variation_ref->{reference} .= $reference;
-#					$variation_ref->{consensus} .= $consensus;
-					$variation_ref->{quality_score} += $quality_score;
-					$variation_ref->{depth} += $depth;
-					$variation_ref->{signal} += $signal;
-					$variation_ref->{signal_sd} += $stddeviation;
-					$variation_ref->{number} += 1;
-				}
-
-				my @match_positions = (sort { $a <=> $b } (keys %{$matches}));
-				my $low_position = (defined($match_positions[0])) ? $match_positions[0] : $position;
-				for (my $i = $low_position;$i < $position;$i++) {
-					if (exists($matches->{$i})) {
-						delete $matches->{$i};
-					}
-				}
-
-			}
+	    }
+	    
+	    my @match_positions = (sort { $a <=> $b } (keys %{$matches->{$id}}));
+	    my $low_position = (defined($match_positions[0])) ? $match_positions[0] : $position;
+	    for (my $i = $low_position;$i < $position;$i++) {
+		if (exists($matches->{$id}{$i})) {
+		    delete $matches->{$id}{$i};
 		}
-		close(ALIGN);
-		print "\n";
-
-		my %output;
-		print "Processing variations\n";
-		foreach my $key (keys %variation) {
-			next unless (exists($variation{$key}{start}));
-			my ($id, $rel_position) = split("\t",$key);
-			my $chromosome;
-			if ($id =~ /NC_0000(.{2})/x ) {
-				$chromosome = $1;
-			} elsif ($id =~ /chr(.*)$/x) {
-				$chromosome = $1;
-			}
-			my $coord_id = $id;
-			if ($id =~ /\( \s* CCDS/) {
-				$coord_id =~ s/\( \s* CCDS.*$//;
-			} elsif($id =~ /CCDS/ ) {
-				$coord_id =~ s/\|.*$//;
-			}
-			my ($c_chromosome, $position, $offset, $c_orient) =
-				$genomic_coords->Translate($coord_id,$rel_position);
-			$chromosome ||= $c_chromosome;
-
-			# left pad with zero so sorting is easy
-			if ($chromosome =~ /^ \d+ $/x ) {
-				$chromosome = sprintf "%02d", $chromosome;
-			}
-			$output{$chromosome}{$position}{id} = $id;
-
-			my $number = $variation{$key}->{number};
-			$number ||= 1;
-			if (defined($variation{$key}->{quality_score})) {
-				$variation{$key}->{quality_score} = sprintf "%.0f",
-					$variation{$key}->{quality_score} / $number;
-			}
-			if (defined($variation{$key}->{depth})) {
-				$variation{$key}->{depth} = sprintf "%.0f",
-					$variation{$key}->{depth} / $number;
-			}
-			if (defined($variation{$key}->{signal})) {
-				$variation{$key}->{signal} = sprintf "%.2f",
-					$variation{$key}->{signal} / $number;
-			}
-			if (defined($variation{$key}->{signal_sd})) {
-				$variation{$key}->{signal_sd} = sprintf "%.2f",
-					$variation{$key}->{signal_sd} / $number;
-			}
-			foreach my $valuekey (keys %{$variation{$key}}) {
-				if ($valuekey eq 'start' || $valuekey eq 'end') {
-					$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey}+$offset;
-				} else {
-					$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey};
-				}
-			}
-		}
-		undef %variation;
-		my $fh;
-		unless ($self->db) {
-			print "Writing genotype submission file\n";
-			$fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
-			unless (defined($fh)) {
-				$self->error_message("Unable to open genotype submission file for writing: $basename");
-				return;
-			}
-		} else {
-			print "Loading read groups\n";
-		}
-		my $mutation;
-		my $sample_temp = $sample;
-		$sample_temp =~ s/454_EST_S_//x;
-		my ($sample_a, $sample_b) = split('-',$sample_temp);
-		$sample_b = sprintf "%05d",$sample_b;
-		my $sample_id = $sample_a . '-' . $sample_b;
-		my $number = 1;
-		foreach my $chr (sort (keys %output)) {
-			my $chromosome = $chr;
-			$chromosome =~ s/^0//;
-			foreach my $pos (sort { $a <=> $b } (keys %{$output{$chr}})) {
-				my $start = $output{$chr}{$pos}{start};
-				my $end = $output{$chr}{$pos}{end};
-				my $ref_sequence = $output{$chr}{$pos}{ref_sequence};
-				my $var_sequence = $output{$chr}{$pos}{var_sequence};
-				#my $freq_forward = $output{$chr}{$pos}{freq_forward};
-				#my $freq_reverse = $output{$chr}{$pos}{freq_reverse};
-				my $variant_reads = $output{$chr}{$pos}{variant_reads};
-				my $total_reads = $output{$chr}{$pos}{total_reads};
-				my $ref_reads;
-				if (defined($total_reads) && defined($variant_reads)) {
-					$ref_reads = $total_reads - $variant_reads;
-				}
-#				my $reference = $output{$chr}{$pos}{reference};
-#				my $consensus = $output{$chr}{$pos}{consensus};
-				my $quality_score = $output{$chr}{$pos}{quality_score};
-				my $depth = $output{$chr}{$pos}{depth};
-				my $signal = $output{$chr}{$pos}{signal};
-				my $signal_sd = $output{$chr}{$pos}{signal_sd};
-				my $software = 'runMapping' . $version;
-				my $plus_minus = '+';
-				my $genotype_allele1 = $ref_sequence;
-				my $genotype_allele2 = $var_sequence;
-				unless ((length($ref_sequence) == 1 && length($var_sequence) == 1) ||	# SNP
-								$ref_sequence =~ /\-/ || # or indel
-								$var_sequence =~ /\-/) {
-					next;
-				}
-						
-				$quality_score ||= '';
-				my @scores = ($quality_score);
-				if (defined($ref_reads) && $ref_reads != 0) {
-					push @scores, ("reads1=$ref_reads");
-				}
-				if (defined($variant_reads) && $variant_reads != 0) {
-					push @scores, ("reads2=$variant_reads");
-				}
-				if (defined($depth)) {
-					push @scores, ("depth=$depth");
-				}
-				if (defined($signal)) {
-					push @scores, ("signal=$signal");
-				}
-				if (defined($signal_sd)) {
-					push @scores, ("signal_sd=$signal_sd");
-				}
-
-				unless ($self->db) {
-					Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build, $chromosome, $plus_minus, $start, $end,
-																																	 $sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
-				} else {
+	    }
+	}
+    }
+    close(ALIGN);
+    print "\n";
+    
+    my %output;
+    print "Processing variations\n";
+    foreach my $key (keys %variation) {
+	next unless (exists($variation{$key}{start}));
+	my ($id, $rel_position) = split("\t",$key);
+	my $chromosome;
+	if ($id =~ /NC_0000(.{2})/x ) {
+	    $chromosome = $1;
+	} elsif ($id =~ /chr(.*)$/x) {
+	    $chromosome = $1;
+	} elsif ($id =~ /^ \d+ $/x || $id =~ /^ [XY] $/x) {
+	    $chromosome = $id;
+	}
+	my $coord_id = $id;
+	if ($id =~ /\( \s* CCDS/) {
+	    $coord_id =~ s/\( \s* CCDS.*$//;
+	} elsif($id =~ /CCDS/ ) {
+	    $coord_id =~ s/\|.*$//;
+	}
+	my ($c_chromosome, $position, $offset, $c_orient) =
+	    $genomic_coords->Translate($coord_id,$rel_position);
+	if (defined($c_chromosome) && defined($rel_position)) {
+	    if ($c_chromosome =~ /^ \d+ $/x ) {
+		$c_chromosome = sprintf "%02d", $c_chromosome;
+	    }
+	    $chromosome ||= $c_chromosome;
+	    $position ||= $rel_position;
+	    $output{$chromosome}{$position}{orientation} = $c_orient;
+	}
+	
+	# left pad with zero so sorting is easy
+	if ($chromosome =~ /^ \d+ $/x ) {
+	    $chromosome = sprintf "%02d", $chromosome;
+	}
+	$output{$chromosome}{$position}{id} = $id;
+	
+	my $number = $variation{$key}->{number};
+	$number ||= 1;
+	if (defined($variation{$key}->{quality_score})) {
+	    $variation{$key}->{quality_score} = sprintf "%.0f",
+	    $variation{$key}->{quality_score} / $number;
+	}
+	if (defined($variation{$key}->{depth})) {
+	    $variation{$key}->{depth} = sprintf "%.0f",
+	    $variation{$key}->{depth} / $number;
+	}
+	if (defined($variation{$key}->{signal})) {
+	    $variation{$key}->{signal} = sprintf "%.2f",
+	    $variation{$key}->{signal} / $number;
+	}
+	if (defined($variation{$key}->{signal_sd})) {
+	    $variation{$key}->{signal_sd} = sprintf "%.2f",
+	    $variation{$key}->{signal_sd} / $number;
+	}
+	foreach my $valuekey (keys %{$variation{$key}}) {
+	    if ($valuekey eq 'start' || $valuekey eq 'end') {
+		$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey}+$offset;
+	    } else {
+		$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey};
+	    }
+	}
+    }
+    undef %variation;
+    my $fh;
+    unless ($self->db) {
+	print "Writing genotype submission file\n";
+	$fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
+	unless (defined($fh)) {
+	    $self->error_message("Unable to open genotype submission file for writing: $basename");
+	    return;
+	}
+    } else {
+	print "Loading read groups\n";
+    }
+    my $mutation;
+    my $sample_temp = $sample;
+    $sample_temp =~ s/454_EST_S_//x;
+    my ($sample_a, $sample_b) = split('-',$sample_temp);
+    $sample_b = sprintf "%05d",$sample_b;
+    my $sample_id = $sample_a . '-' . $sample_b;
+    my $number = 1;
+    foreach my $chr (sort (keys %output)) {
+	my $chromosome = $chr;
+	$chromosome =~ s/^0//;
+	foreach my $pos (sort { $a <=> $b } (keys %{$output{$chr}})) {
+	    my $start = $output{$chr}{$pos}{start};
+	    my $end = $output{$chr}{$pos}{end};
+	    my $ref_sequence = $output{$chr}{$pos}{ref_sequence};
+	    my $var_sequence = $output{$chr}{$pos}{var_sequence};
+	    #my $freq_forward = $output{$chr}{$pos}{freq_forward};
+	    #my $freq_reverse = $output{$chr}{$pos}{freq_reverse};
+	    my $variant_reads = $output{$chr}{$pos}{variant_reads};
+	    my $total_reads = $output{$chr}{$pos}{total_reads};
+	    my $ref_reads;
+	    if (defined($total_reads) && defined($variant_reads)) {
+		$ref_reads = $total_reads - $variant_reads;
+	    }
+	    my $quality_score = $output{$chr}{$pos}{quality_score};
+	    my $depth = $output{$chr}{$pos}{depth};
+	    my $signal = $output{$chr}{$pos}{signal};
+	    my $signal_sd = $output{$chr}{$pos}{signal_sd};
+	    my $software = 'runMapping' . $version;
+	    my $plus_minus = (defined($output{$chr}{$pos}{orientation})) ? $output{$chr}{$pos}{orientation} : '+';
+	    my $genotype_allele1 = $ref_sequence;
+	    my $genotype_allele2 = $var_sequence;
+	    
+	    $quality_score ||= '';
+	    my @scores = ($quality_score);
+	    if (defined($ref_reads) && $ref_reads != 0) {
+		push @scores, ("reads1=$ref_reads");
+	    }
+	    if (defined($variant_reads) && $variant_reads != 0) {
+		push @scores, ("reads2=$variant_reads");
+	    }
+	    if (defined($depth)) {
+		push @scores, ("depth=$depth");
+	    }
+	    if (defined($signal)) {
+		push @scores, ("signal=$signal");
+	    }
+	    if (defined($signal_sd)) {
+		push @scores, ("signal_sd=$signal_sd");
+	    }
+	    
+	    unless ($self->db) {
+		Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build, $chromosome, $plus_minus, $start, $end,
+									 $sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
+	    } else {
 #				MG::IO::GenotypeSubmission::AddMutation($mutation,$software,$build, $chromosome, $plus_minus, $start, $end,
 #																								$sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
-				}
-			}
-		}
-		unless ($self->db) {
-			$fh->close();
-		} else {
+	    }
+	}
+    }
+    unless ($self->db) {
+	$fh->close();
+    } else {
 #			MG::IO::GenotypeSubmission::Load($mutation,
 #																			 tech_type => '',
 #																			 mapping_reference => ''
 #																			);
-		}
+    }
     return 1;
 }
 

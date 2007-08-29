@@ -19,7 +19,7 @@ UR::Object::Class->define(
         'coordinates'   => { type => 'String',  doc => "coordinate translation file", is_optional => 1},
         'version'   => { type => 'String',  doc => "ssahaSNP software version--default is 1.0", is_optional => 1},
         'build'   => { type => 'String',  doc => "reference build version--default is 36", is_optional => 1},
-        'db'   => { type => 'String',  doc => "load to the database--default is to produce a file", is_optional => 1}
+        'db'   => { type => 'Boolean',  doc => "load to the database--default is to produce a file", is_optional => 1}
     ], 
 );
 
@@ -177,6 +177,8 @@ sub execute {
 				$chromosome = $1;
 			} elsif ($id =~ /chr(.*)$/x) {
 				$chromosome = $1;
+			} elsif ($id =~ /^ \d+ $/x || $id =~ /^ [XY] $/x) {
+			    $chromosome = $id;
 			}
 			my $coord_id = $id;
 			if ($id =~ /\( \s* CCDS/) {
@@ -186,6 +188,24 @@ sub execute {
 			}
 			my ($c_chromosome, $position, $offset, $c_orient) =
 				$genomic_coords->Translate($coord_id,$rel_position);
+			if (defined($c_chromosome) && defined($rel_position)) {
+			    if ($c_chromosome =~ /^ \d+ $/x ) {
+				$c_chromosome = sprintf "%02d", $c_chromosome;
+			    }
+			    $chromosome ||= $c_chromosome;
+			    $position ||= $rel_position;
+			    if (defined($variation{$key}{'SNP'})) {
+				$output{$chromosome}{$position}{orientation} =
+				    ($variation{$key}{'SNP'}{orientation} eq '+') ?
+				    ( ($c_orient eq '+') ? '+' : '-' ) :
+				    ( ($c_orient eq '+') ? '-' : '+' ) ;
+			    } else {
+				$output{$chromosome}{$position}{orientation} =
+				    ($variation{$key}{'indel'}{orientation} eq '+') ?
+				    ( ($c_orient eq '+') ? '+' : '-' ) :
+				    ( ($c_orient eq '+') ? '-' : '+' ) ;
+			    }
+			}
 			$chromosome ||= $c_chromosome;
 
 			# left pad with zero so sorting is easy
