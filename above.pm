@@ -38,7 +38,7 @@ sub use_package {
     # Get the special path in place
     if (length($path)) {
         while ($path =~ s:/[^/]+/\.\./:/:) { 1 } # simplify
-        print STDERR "Using libararies at $path\n";
+        print STDERR "Using libraries at $path\n";
         eval "use lib '$path';";
         die $@ if $@;
     }
