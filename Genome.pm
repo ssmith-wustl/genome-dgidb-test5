@@ -1,8 +1,7 @@
-
 package Genome;
 
-use strict;
 use warnings;
+use strict;
 
 use UR;
 
@@ -12,7 +11,5 @@ UR::Object::Class->define(
     english_name => 'genome',
 );
 
-# sub get_default_context { "GSC::Context::Production" }
 
 1;
-

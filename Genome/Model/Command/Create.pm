@@ -8,12 +8,18 @@ use UR;
 use Command; 
 use Genome::Model;
 
+use Data::Dumper;
+
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [
         # Steal from the model's properties.
         # TODO: make wrapping a constructor in a command encapsulated.
+        name                        =>  {   type        => "String",
+                                            is_optional => 0,
+                                            doc         => "A name for this model"
+                                        },
         sample                      =>  {   type        => "String",
                                             is_optional => 0,
                                             doc         => "The name of the sample whose genome is being modeled", 
@@ -29,22 +35,42 @@ UR::Object::Class->define(
                                                            "Defaults to the reference sequence of the prior."
                                         },
         read_calibrator             =>  {   type        => "String",
-                                            is_optional => 0,
+                                            is_optional => 1,
                                             doc         => "The calibration algorithm to use, if any.", 
                                         },
-        aligner                     =>  {   type        => "String",
+        read_calibrator_params      =>  {   type        => "String",
+                                            is_optional => 1,
+                                            doc         => "Params for the calibration algorithm to use, if any.", 
+                                        },
+        
+        read_aligner                =>  {   type        => "String",
                                             is_optional => 0,
                                             doc         => "The alignment algorithm to use.", 
                                         },
         
+        read_aligner_params         =>  {   type        => "String",
+                                            is_optional => 1,
+                                            doc         => "Parameters for the alignment algorithm to use.", 
+                                        },
+       
         genotyper                   =>  {   type        => "String",
                                             is_optional => 0,
                                             doc         => "The genotyping algorithm to use.", 
+                                        },
+                                        
+        genotyper_params            =>  {   type        => "String",
+                                            is_optional => 1,
+                                            doc         => "Parameters for the genotyping algorithm to use.", 
                                         },
         indel_finder                =>  {   type        => "String",
                                             is_optional => 0,
                                             doc         => "The indel finding algorithm to use.", 
                                         },
+        indel_finder_params         =>  {   type        => "String",
+                                            is_optional => 0,
+                                            doc         => "Parameters for the indel finding algorithm to use.", 
+                                        },
+
         prior                       =>  {   type        => "String",
                                             is_optional => 0,
                                             doc         => "The indel finding algorithm to use.", 
@@ -62,7 +88,8 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model create 
+genome-model create
+                    --name ley_aml_1_revA
                     --sample ley_aml_patient1 
                     --dna-type whole 
                     --read-calibrator none
@@ -98,20 +125,13 @@ sub execute {
     }
 
     my $target_class = "Genome::Model";    
-    my @command_properties = qw/sample dna_type read_calibrator aligner genotyper indel_finder prior reference_sequence/;
+    my @command_properties = qw/name sample dna_type read_calibrator read_calibrator_params
+                                read_aligner read_aligner_params genotyper genotyper_params indel_finder indel_finder_params
+                                reference_sequence/;
     
-    my $name = 
-        join("+", 
-            map { defined $_ ? $_ : '' } 
-            map { $self->$_ } 
-            grep { $_ ne 'reference_sequence' }
-            @command_properties
-        );
-
-    $name .= '+' . $self->reference_sequence if $self->reference_sequence ne $self->prior;
-
-    my @params = (name => $name);
+    my @params;
     for my $command_property (@command_properties) {
+        $DB::single = 1;
         my $object_property = $command_property;
         if ($target_class->can($command_property . "_name")) {
             $object_property .= "_name";
@@ -119,26 +139,22 @@ sub execute {
         elsif ($command_property eq "prior") {
             $object_property = "prior_model_name";
         }
+        
         push @params, $object_property => $self->$command_property;
     }
     
     my $obj = Genome::Model->create(@params);
+    print Dumper(\@params);
 
     unless($obj) {
         $self->error_message("Failed to create genome model: " . $obj->error_message);
         return;
     }
-   
-    # This is temporary until the object is tied to a real data source. 
-    if ($obj->write_to_filesystem()) {
-        $self->status_message("Created new model: " . $obj->name);
-    }
-    else {
-        $self->error_message("Failed to write a new model to the filesystem: " . $obj->error_message);
-        $obj->delete;
+    
+    unless (UR::Context->commit) {
+        $self->error_message("Failed to commit changes");
         return;
     }
-
     return 1;
 }
 
