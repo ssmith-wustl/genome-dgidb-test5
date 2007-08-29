@@ -417,6 +417,7 @@ associations in four cases.
         SEQUENCE_GENOME                 GSC::Sequence::Genome        
         SEQUENCE_CHROMOSOME             GSC::Sequence::Chromosome
 
+        AMP_TARGET_SAMPLE_COVERAGE      GSC::AmplificationTarget::Coverage::Sample
     /
 );
 
