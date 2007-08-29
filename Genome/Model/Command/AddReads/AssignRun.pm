@@ -1,6 +1,6 @@
 
 # Rename the final word in the full class name <---
-package Genome::Model::Command::SetupHierarchy;
+package Genome::Model::Command::AddReads::AssignRun;
 
 use strict;
 use warnings;
