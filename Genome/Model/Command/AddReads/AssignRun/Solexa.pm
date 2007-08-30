@@ -1,6 +1,4 @@
-
-# Rename the final word in the full class name <---
-package Genome::Model::Command::AddReads::AssignRun;
+package Genome::Model::Command::AddReads::AssignRun::Solexa;
 
 use strict;
 use warnings;
@@ -9,25 +7,37 @@ use UR;
 use Command;
 use Genome::Model;
 use File::Path;
+use Data::Dumper;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
-		has => [ 'run', 'lanes', 'sample_path', 'bustard_path' ]
+    has => [ 
+        model   => { is => 'String', is_optional => 0, doc => 'the genome model on which to operate' }
+    ]
 );
 
 sub help_brief {
-    "add reads to a genome model"
+    my $self = shift;
+    return "empty implementation of " . $self->command_name_brief;
 }
 
-sub help_detail {                           # This is what the user will see with --help <---
+sub help_detail {                           
     return <<EOS 
-
-
+not implemented
 EOS
 }
 
 sub execute {
+    my $self = shift;
+    my $model = Genome::Model->get(name=>$self->model);
+    $self->error_message("running " . $self->command_name . " on " . $model->name . ".!");
+    $self->status_message("Model Info:\n" . $model->pretty_print_text);
+    return 0; 
+}
+
+# old logic goes here and needs cleaning up
+sub Xexecute {
     my $self = shift;
     $DB::single=1;
     Genome::Model->add_run_info( 
