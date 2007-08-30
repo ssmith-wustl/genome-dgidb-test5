@@ -164,9 +164,6 @@ sub execute {
     foreach my $key (keys %variation) {
 	next unless (exists($variation{$key}{start}));
 	my ($id, $rel_position) = split("\t",$key);
-	if ($id =~ /C9orf152/) {
-	    1;
-	}
 	my $chromosome;
 	if ($id =~ /NC_0000(.{2})/x ) {
 	    $chromosome = $1;
