@@ -1,4 +1,4 @@
-package Genome::Model::Command::AlignReads::Mosaik;
+package Genome::Model::Command::AddReads::UpdateGenotypeProbabilities::BayesDiploid;
 
 use strict;
 use warnings;

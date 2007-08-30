@@ -1,4 +1,4 @@
-package Genome::Model::Command::ExportVariations::MedseqDb;
+package Genome::Model::Command::AddReads::IdentifyVariations::Maq;
 
 use strict;
 use warnings;

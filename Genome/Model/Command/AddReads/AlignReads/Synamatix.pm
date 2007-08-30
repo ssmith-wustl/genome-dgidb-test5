@@ -1,4 +1,4 @@
-package Genome::Model::Command::IdentifyVariations::Maq;
+package Genome::Model::Command::AddReads::AlignReads::Synamatix;
 
 use strict;
 use warnings;

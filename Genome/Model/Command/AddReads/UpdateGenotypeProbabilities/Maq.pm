@@ -1,4 +1,4 @@
-package Genome::Model::Command::CalculateGenotypeProbabilities::Synamatix;
+package Genome::Model::Command::AddReads::UpdateGenotypeProbabilities::Maq;
 
 use strict;
 use warnings;

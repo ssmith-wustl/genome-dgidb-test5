@@ -30,6 +30,8 @@ sub help_detail {
     return <<"EOS"
 This command launches all of the appropriate commands to add a run,
 or part of a run, to the specified model.
+
+All of the sub-commands listed below will be executed on the model in succession.
 EOS
 }
 

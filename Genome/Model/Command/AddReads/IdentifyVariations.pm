@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::AlignReads;
+package Genome::Model::Command::AddReads::IdentifyVariations;
 
 use strict;
 use warnings;
@@ -12,24 +12,27 @@ UR::Object::Class->define(
     is => 'Command',
     has => [
         model   =>  { is => 'String', 
-                        doc => "Identifies the genome model on which we'll align the reads." },
+                        doc => "identify genotype variations" }
     ]
 );
 
+sub sub_command_sort_position { 4 }
+
 sub help_brief {
-    "align reads from added runs against a reference sequence"
+    "identify genotype variations"
 }
 
 sub help_synopsis {
     return <<"EOS"
-genome-model align-reads --model MODEL 
 EOS
 }
 
 sub help_detail {
     return <<"EOS"
-This command will align reads against either the reference prescribed when the model was created
-or a reference specified on the command line at runtime.
+This command is launched automatically by "add reads".  
+
+It delegates to the appropriate sub-command for the genotyper
+specified in the model.
 EOS
 }
 

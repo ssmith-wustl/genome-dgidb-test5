@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::AddReads::AssignRun;
+package Genome::Model::Command::AddReads::AlignReads;
 
 use strict;
 use warnings;
@@ -16,7 +16,7 @@ UR::Object::Class->define(
     ]
 );
 
-sub sub_command_sort_position { 1 }
+sub sub_command_sort_position { 2 }
 
 sub help_brief {
     "add reads from all or part of an instrument run to the model"
@@ -31,8 +31,8 @@ sub help_detail {
     return <<"EOS"
 This command is launched automatically by "add reads".  
 
-It delegates to the appropriate sub-command according to 
-the model's sequencing platform.
+It delegates to the appropriate sub-command for the aligner
+specified in the model.
 EOS
 }
 

@@ -1,4 +1,4 @@
-package Genome::Model::Command::AlignReads::Synamatix;
+package Genome::Model::Command::AddReads::AlignReads::Mosaik;
 
 use strict;
 use warnings;
