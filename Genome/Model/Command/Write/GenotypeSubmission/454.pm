@@ -17,12 +17,10 @@ UR::Object::Class->define(
         'dir'   => { type => 'String',  doc => "project alignment (input) directory"},
         'basename'   => { type => 'String',  doc => "output genotype submission file prefix basename"},
         'coordinates'   => { type => 'String',  doc => "coordinate translation file", is_optional => 1},
+        'offset'   => { type => 'String',  doc => "coordinate offset to apply--default is zero", is_optional => 1},
         'all'   => { type => 'Boolean',  doc => "use the all instead of HC diffs file", is_optional => 1},
         'version'   => { type => 'String',  doc => "454 software version--default is 1.1", is_optional => 1},
         'build'   => { type => 'String',  doc => "reference build version--default is 36", is_optional => 1},
-        'signal_cutoff'   => { type => 'Float',  doc => "signal cutoff--default is: 0.1", is_optional => 1},
-        'score_cutoff'   => { type => 'Integer',  doc => "quality score cutoff--default is: 1", is_optional => 1},
-        'depth_cutoff'   => { type => 'Integer',  doc => "depth cutoff--default is: 0", is_optional => 1},
         'db'   => { type => 'Boolean',  doc => "load to the database--default is to produce a file", is_optional => 1}
     ], 
 );
@@ -71,18 +69,14 @@ sub MakeMatches {
 sub execute {
     my $self = shift;
     
-    my($dir, $sample, $basename, $coord_file, $all, $version, $build,
-       $signal_cutoff, $quality_score_cutoff, $depth_cutoff) = 
+    my($dir, $sample, $basename, $coord_file, $all, $version, $build, $coord_offset) = 
 	   ($self->dir, $self->sample, $self->basename, $self->coordinates, $self->all,
-	    $self->version, $self->build,
-	    $self->signal_cutoff, $self->score_cutoff, $self->depth_cutoff);
+	    $self->version, $self->build, $self->offset);
     return unless ( defined($dir) && defined($sample) && defined($basename)
 	);
     $version ||= '1.1';
     $build ||= '36';
-    $signal_cutoff ||= 0.1;
-    $quality_score_cutoff ||= 1;
-    $depth_cutoff ||= 0;
+    $coord_offset ||= 0;
     
     $dir =~ s/ \/ $ //x;				# Remove any trailing slash
     
@@ -148,10 +142,7 @@ sub execute {
 	    $matches = { %{$matches}, %{$add_matches_ref} };
 	    
 	    if (exists($matches->{$id}{$position}) &&
-		exists($matches->{$id}{$position}{$consensus}) #&&
-#						$signal > $signal_cutoff &&
-#						$quality_score > $quality_score_cutoff &&
-#						$depth > $depth_cutoff
+		exists($matches->{$id}{$position}{$consensus})
 		) {
 		my $variation_ref = $matches->{$id}{$position}{$consensus};
 		if ($reference ne '-' && $reference ne $consensus) {
@@ -199,6 +190,9 @@ sub execute {
 	}
 	my ($c_chromosome, $position, $offset, $c_orient) =
 	    $genomic_coords->Translate($coord_id,$rel_position);
+	$position += $coord_offset; # add a user supplied offset--the position is still undef  if undef
+	$rel_position += $coord_offset; # add a user supplied offset--the rel_position is still undef  if undef
+	$offset += $coord_offset; # add a user supplied offset--the offset is still undef  if undef
 	if (defined($c_chromosome) && defined($rel_position)) {
 	    if ($c_chromosome =~ /^ \d+ $/x ) {
 		$c_chromosome = sprintf "%02d", $c_chromosome;

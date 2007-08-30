@@ -18,6 +18,7 @@ UR::Object::Class->define(
         'refbfa'   => { type => 'String',  doc => "reference bfa file"},
         'basename'   => { type => 'String',  doc => "output genotype submission file prefix basename"},
         'coordinates'   => { type => 'String',  doc => "coordinate translation file", is_optional => 1},
+        'offset'   => { type => 'String',  doc => "coordinate offset to apply--default is zero", is_optional => 1},
         'indel'   => { type => 'Boolean',  doc => "try to get indel's also (not implemented yet)", is_optional => 1},
         'version'   => { type => 'String',  doc => "maq software version--default is ''", is_optional => 1},
         'qcutoff'   => { type => 'String',  doc => "only process if quality score is greater than this value--default value is 0", is_optional => 1},
@@ -80,15 +81,16 @@ sub execute {
     my $self = shift;
 
     my($mapfile, $cnsfile, $refbfa, $sample, $basename, $coord_file,
-       $indel, $version, $build, $qcutoff) =
+       $indel, $version, $build, $qcutoff, $coord_offset) =
 	   ($self->mapfile, $self->cnsfile, $self->refbfa, $self->sample, $self->basename,
-	    $self->coordinates, $self->indel, $self->version, $self->build, $self->qcutoff);
+	    $self->coordinates, $self->indel, $self->version, $self->build, $self->qcutoff, $self->offset);
     return unless ( defined($mapfile) && defined($cnsfile) && defined($refbfa) &&
 		    defined($sample) && defined($basename)
 	);
     $version ||= '';
     $build ||= '36';
     $qcutoff ||= 0;
+    $coord_offset ||= 0;
 
     $| = 1;			# autoflush stdout
 
@@ -181,6 +183,9 @@ sub execute {
 	}
 	my ($c_chromosome, $position, $offset, $c_orient) =
 	    $genomic_coords->Translate($coord_id,$rel_position);
+	$position += $coord_offset; # add a user supplied offset--the position is still undef  if undef
+	$rel_position += $coord_offset; # add a user supplied offset--the rel_position is still undef  if undef
+	$offset += $coord_offset; # add a user supplied offset--the offset is still undef  if undef
 	if (defined($c_chromosome) && defined($rel_position)) {
 	    if ($c_chromosome =~ /^ \d+ $/x ) {
 		$c_chromosome = sprintf "%02d", $c_chromosome;
