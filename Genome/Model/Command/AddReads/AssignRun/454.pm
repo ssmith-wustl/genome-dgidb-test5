@@ -31,7 +31,7 @@ EOS
 sub execute {
     my $self = shift;
     my $model = Genome::Model->get(name=>$self->model);
-    $self->error_message("running " . $self->command_name . " on " . $model->name . ".!");
+    $self->error_message("running " . $self->command_name . " on " . $model->name . "!");
     $self->status_message("Model Info:\n" . $model->pretty_print_text);
     return 0; 
 }
