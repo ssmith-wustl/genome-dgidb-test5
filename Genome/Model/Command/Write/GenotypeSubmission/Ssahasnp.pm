@@ -172,6 +172,7 @@ sub execute {
     
     my %output;
     print "Processing variations\n";
+    my %bad_ids = ();
     foreach my $key (keys %variation) {
 	my ($id, $rel_position, $variant) = split("\t",$key);
 	my $chromosome;
@@ -211,7 +212,10 @@ sub execute {
 		    ( ($c_orient eq '+') ? '-' : '+' ) ;
 	    }
 	}
-	$chromosome ||= $c_chromosome;
+	unless (defined($chromosome)) {
+	    $bad_ids{$id} = 1;
+	    next;
+	}
 	
 	# left pad with zero so sorting is easy
 	if ($chromosome =~ /^ \d+ $/x ) {
@@ -231,11 +235,15 @@ sub execute {
 	    foreach my $valuekey (keys %{$variation{$key}{$var_type}}) {
 		if ($valuekey eq 'start' || $valuekey eq 'end') {
 		    $output{$chromosome}{$position}{$valuekey} = $variation{$key}{$var_type}{$valuekey}+$offset;
-		} else {
+	    } else {
 		    $output{$chromosome}{$position}{$valuekey} = $variation{$key}{$var_type}{$valuekey};
 		}
 	    }
 	}
+    }
+    my $bad_ids = join(' ',keys %bad_ids);
+    if ($bad_ids ne '') {
+	print "Could not find coordinate translation for ids: $bad_ids\n";
     }
     undef %variation;
     my $fh;
@@ -264,6 +272,9 @@ sub execute {
 	    my $end = $output{$chr}{$pos}{end};
 	    my $ref_sequence = $output{$chr}{$pos}{ref_sequence};
 	    my $var_sequence = $output{$chr}{$pos}{var_sequence};
+	    unless (defined($ref_sequence) && defined($var_sequence)) {
+				next;
+	    }
 	    my $variant_reads = $output{$chr}{$pos}{variant_reads};
 	    my $total_reads = $output{$chr}{$pos}{total_reads};
 	    my $ref_reads;
