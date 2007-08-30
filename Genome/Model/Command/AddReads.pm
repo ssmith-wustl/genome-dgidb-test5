@@ -11,7 +11,7 @@ UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [
-        model   =>  { is => 'Genome::Model', id_by => 'model_name',
+        model   =>  { is => 'String', 
                         doc => "Identifies the genome model to which we'll add the reads." },
     ]
 );
@@ -22,7 +22,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model add-reads /SOME/PATH
+genome-model add-reads --model ley_aml_patient1_solexa_cdna /SOME/PATH
 EOS
 }
 
@@ -37,11 +37,11 @@ EOS
 #    return 0;
 #}
 
-#sub execute {
-#    my $self = shift;
-#    $self->status_message("Not implemented");
-#    return 1; 
-#}
+sub execute {
+    my $self = shift;
+    $self->status_message("Not implemented");
+    return 1; 
+}
 
 1;
 
