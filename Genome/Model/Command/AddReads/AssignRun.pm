@@ -30,11 +30,7 @@ sub help_detail {
 EOS
 }
 
-#sub is_sub_command_delegator {
-#    return 0;
-#}
-
-sub execute {
+sub Xexecute {
     my $self = shift;
     $self->status_message("Not implemented");
     return 1; 
