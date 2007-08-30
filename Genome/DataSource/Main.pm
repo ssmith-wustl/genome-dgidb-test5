@@ -12,10 +12,4 @@ UR::Object::Class->define(
     english_name => 'genome datasource main',
 );
 
-    
-sub _database_file_path {
-    return '/gscuser/boberkfe/genome_model.sqlite3';
-}
-
-
 1;
