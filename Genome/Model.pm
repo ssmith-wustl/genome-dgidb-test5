@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Term::ANSIColor;
 
 use Genome;
 UR::Object::Class->define(
@@ -30,6 +31,26 @@ UR::Object::Class->define(
     schema_name => 'Main',
     data_source => 'Genome::DataSource::Main',
 );
+
+sub pretty_print_text {
+    my $self = shift;
+
+    my $out;
+
+    $out .= Term::ANSIColor::colored("Model: " . $self ->name, 'bold red'). "\n\n";
+    $out .= Term::ANSIColor::colored("Configured Properties:", 'bold red'). "\n";
+
+    for my $prop (grep {$_ ne "name"} $self->property_names) {
+        
+        if (defined $self->$prop) {
+
+            $out .= "\t" . Term::ANSIColor::colored($prop, 'bold red'). "\t\t";
+            $out .= Term::ANSIColor::colored($self->$prop, "red"). "\n";
+        }
+    }
+
+    $out .= "\n\n";
+}
 
 
 1;

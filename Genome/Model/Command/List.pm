@@ -7,7 +7,6 @@ use warnings;
 use UR;
 use Command; 
 use Data::Dumper;
-use Term::ANSIColor;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
@@ -46,7 +45,7 @@ sub execute {
     my @models = Genome::Model->get();
     
     for (@models) {
-        $self->print_model($_);
+        print $_->pretty_print_text;
     }
 
 }
