@@ -13,8 +13,8 @@ UR::Object::Class->define(
     has => [
         model   =>  { is => 'String', 
                       doc => "Identifies the genome model to which we'll add the reads." },
-        bsub    =>  { is => 'BOOL',
-                      doc => 'Sub-commands should be submitted to bsub.',
+        bsub    =>  { is => 'Boolean',
+                      doc => 'Sub-commands should be submitted to bsub. Default is yes.',
                       default_value => 1 },
         bsub_queue => { is => 'String',
                       doc => 'Which bsub queue to use for sub-command jobs, default is "long"',
