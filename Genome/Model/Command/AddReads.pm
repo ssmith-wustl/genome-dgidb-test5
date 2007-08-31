@@ -19,6 +19,9 @@ UR::Object::Class->define(
         bsub_queue => { is => 'String',
                       doc => 'Which bsub queue to use for sub-command jobs, default is "long"',
                        default_value => 'long'},
+        bsub_args => { is => 'String',
+                       doc => 'Additional arguments passed along to bsub (such as -o, for example)',
+                       default_value => '' },
     ]
 );
 
@@ -58,11 +61,12 @@ $DB::single=1;
     my $last_bsub_job_id;
     my $queue = $self->bsub_queue;
     my $model = $self->model;
+    my $bsub_args = $self->bsub_args;
 
     foreach my $sub_command ( @sub_command_names ) {
         my $cmd = '';
         if ($self->bsub) {
-            $cmd .= "bsub -q $queue -o ~/bsub_output -e ~/bsub_output";
+            $cmd .= "bsub -q $queue $bsub_args";
             if ($last_bsub_job_id) {
                 $cmd .= " -w $last_bsub_job_id";
             }
