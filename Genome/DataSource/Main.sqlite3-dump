@@ -20,9 +20,10 @@ CREATE TABLE genome_model (
    indel_finder_name varchar(255),
    indel_finder_params varchar(255),
    read_calibrator_name varchar(255),
-   read_calibrator_params varchar(255)
+   read_calibrator_params varchar(255),
+   prior varchar2(255)
 );
-INSERT INTO "genome_model" VALUES(1, 'test1', 'ley_aml_patient_1', 'whole', 'NCBI_HumanBuild36', 'maq', NULL, 'maq', NULL, 'maq', NULL, NULL, NULL);
+INSERT INTO "genome_model" VALUES(1, 'test1', 'ley_aml_patient_1', 'whole', 'NCBI_HumanBuild36', 'maq', NULL, 'maq', NULL, 'maq', NULL, NULL, NULL, NULL);
 CREATE TABLE genome_model_event (
  id integer not null primary key,
  genome_model_id integer not null CONSTRAINT event_genome_model REFERENCES genome_model(id),

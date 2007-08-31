@@ -1,12 +1,3 @@
-BEGIN TRANSACTION;
-
-CREATE TABLE run (
-    id                      integer not     null primary key,
-    sequencing_platform     varchar2(255)   not null, 
-    full_path               varchar2(1000)  not null,
-    limit_regions           varchar2(32)    
-);
-
 CREATE TABLE genome_model (
    id integer not null primary key,
    name varchar(255) not null,
@@ -20,9 +11,9 @@ CREATE TABLE genome_model (
    indel_finder_name varchar(255),
    indel_finder_params varchar(255),
    read_calibrator_name varchar(255),
-   read_calibrator_params varchar(255)
+   read_calibrator_params varchar(255),
+   prior varchar2(255)
 );
-
 CREATE TABLE genome_model_event (
  id integer not null primary key,
  genome_model_id integer not null CONSTRAINT event_genome_model REFERENCES genome_model(id),
@@ -36,87 +27,9 @@ CREATE TABLE genome_model_event (
  date_completed timestamp,
  user_name varchar2(64) not null
 );
-
-
-INSERT INTO genome_model (id, name, sample_name, dna_type, reference_sequence_name, read_aligner_name, genotyper_name, indel_finder_name, read_calibrator_name) values 
-                         (1, 'test1', 'ley_aml_patient_1', 'whole', 'NCBI_HumanBuild36', 'maq', 'maq', 'maq', null);
-
-INSERT INTO run (id, sequencing_platform, full_path) values (1, 'solexa', '/tmp/test_solexa_path');
-
-INSERT INTO run (id, sequencing_platform, full_path) values (2, '454', '/tmp/test_454_path');
-
-/*
-
--- We'll omit these for now since much of it will just be changed when we integrate with OLTP, DW & MG databases
-
-INSERT INTO run_solexa (id, sample_path, bustard_path, lanes) values (1, '/tmp', '/tmp/foo', '1235678');
-INSERT INTO run_454 (id, run_name, analysis_name, regions) values (2, 'R_FOO', 'D_FOO', '12345678');
-
-CREATE TABLE event_property_class (
-   id integer not null primary key,
-   name varchar(64) not null,
-   event_class_id integer not null CONSTRAINT event_property_class_event_class REFERENCES event_class(id)
+CREATE TABLE run (
+    id                      integer not     null primary key,
+    sequencing_platform     varchar2(255)   not null, 
+    full_path               varchar2(1000)  not null,
+    limit_regions           varchar2(32)    
 );
-
-
-CREATE TABLE event_property (
- id integer not null primary key,
- event_id integer not null CONSTRAINT event_property_event REFERENCES event(id),
- event_property_class_id integer not null CONSTRAINT event_property_event_property_class REFERENCES event_property_class(id),
- value varchar(255)
-);
-
-
-CREATE TABLE event_class (
-   id integer not null primary key,
-   name varchar(64) not null
-);
-
-
-CREATE TABLE output_file_class (
-   id integer not null primary key,
-   name varchar(64) not null
-);
-
-
-CREATE TABLE sequencing_platform (
-   name varchar(255) not null primary key
-);
-
-
-CREATE TABLE run_solexa (
-   id integer not null primary key,
-   sample_path text not null,
-   bustard_path text not null,
-   lanes varchar(64) not null
-);
-
-
-CREATE TABLE run_454 (
-   id integer not null primary key,
-   run_name varchar(255) not null,
-   analysis_name varchar(255) not null,
-   regions varchar(64) not null
-);
-
--- make this if we need it
--- a controlled directory for the model and its results may handle this
-CREATE TABLE genome_model_event_output_file (
- id integer not null primary key,
- genome_model_id integer not null CONSTRAINT output_file_genome_model REFERENCES genome_model(id),
- run_id integer CONSTRAINT output_file_run_id REFERENCES run(id),
- file_type text not null,
- file_path text not null
-);
-
-CREATE TABLE genome_model_run (
-  id integer not null primary key,
-  genome_model_id integer not null CONSTRAINT genome_model_run_genome_model REFERENCES genome_model(id),
-  run_id integer not null CONSTRAINT genome_model_run_run REFERENCES run(id)
-);
-
-
-*/
-
-COMMIT;
-
