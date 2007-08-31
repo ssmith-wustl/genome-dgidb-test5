@@ -5,8 +5,6 @@ CREATE TABLE run (
     full_path               varchar2(1000)  not null,
     limit_regions           varchar2(32)    
 );
-INSERT INTO "run" VALUES(1, 'solexa', '/tmp/test_solexa_path', NULL);
-INSERT INTO "run" VALUES(2, '454', '/tmp/test_454_path', NULL);
 CREATE TABLE genome_model (
    id integer not null primary key,
    name varchar(255) not null,
@@ -23,7 +21,8 @@ CREATE TABLE genome_model (
    read_calibrator_params varchar(255),
    prior varchar2(255)
 );
-INSERT INTO "genome_model" VALUES(1, 'test1', 'ley_aml_patient_1', 'whole', 'NCBI_HumanBuild36', 'maq', NULL, 'maq', NULL, 'maq', NULL, NULL, NULL, NULL);
+INSERT INTO "genome_model" VALUES(5, 'test1', 'ley_aml_patient1', 'whole', 'NCBI-human-build36', 'maq', NULL, 'maq', NULL, 'maq', NULL, NULL, NULL, 'none');
+INSERT INTO "genome_model" VALUES(6, 'test1', 'ley_aml_patient1', 'cdna', 'NCBI-human-build36', 'maq', NULL, 'maq', NULL, 'maq', NULL, NULL, NULL, 'none');
 CREATE TABLE genome_model_event (
  id integer not null primary key,
  genome_model_id integer not null CONSTRAINT event_genome_model REFERENCES genome_model(id),
@@ -37,4 +36,11 @@ CREATE TABLE genome_model_event (
  date_completed timestamp,
  user_name varchar2(64) not null
 );
+INSERT INTO "genome_model_event" VALUES(3, 5, NULL, 'genome-model create', 'completed', NULL, '2007-08-30 22:13:20', NULL, 'ssmith');
+INSERT INTO "genome_model_event" VALUES(4, 6, NULL, 'genome-model create', 'completed', NULL, '2007-08-30 22:13:48', NULL, 'ssmith');
+CREATE TABLE URMETA_genome_model_id_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
+DELETE FROM sqlite_sequence;
+INSERT INTO "sqlite_sequence" VALUES('URMETA_genome_model_id_seq', 6);
+INSERT INTO "sqlite_sequence" VALUES('URMETA_genome_model_event_id_seq', 4);
+CREATE TABLE URMETA_genome_model_event_id_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
 COMMIT;

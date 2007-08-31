@@ -1,3 +1,5 @@
+CREATE TABLE URMETA_genome_model_event_id_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
+CREATE TABLE URMETA_genome_model_id_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
 CREATE TABLE genome_model (
    id integer not null primary key,
    name varchar(255) not null,
