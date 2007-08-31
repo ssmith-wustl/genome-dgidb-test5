@@ -120,3 +120,6 @@ sub test_foreach_aligned_position : Test(2){
 if ($0 eq __FILE__){
     Genome::Model::RefSeqAlignmentCollectionTest->new->runtests();
 }
+
+1;
+
