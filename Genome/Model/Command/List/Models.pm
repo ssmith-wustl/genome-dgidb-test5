@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::List;
+package Genome::Model::Command::List::Models;
 
 use strict;
 use warnings;
@@ -14,7 +14,7 @@ UR::Object::Class->define(
 );
 
 sub help_brief {
-    "list information about genome models and available runs"
+    "list all genome-models available for manipulation"
 }
 
 sub help_synopsis {
@@ -30,6 +30,12 @@ EOS
 }
 
 sub execute {
+    my $self = shift;
+    my @models = Genome::Model->get();
+    
+    for (@models) {
+        print $_->pretty_print_text;
+    }
 
 }
 
