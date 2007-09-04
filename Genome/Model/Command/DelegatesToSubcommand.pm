@@ -15,6 +15,7 @@ UR::Object::Class->define(
            ], 
 );
 
+sub is_abstract { 1;}
 
 
 
