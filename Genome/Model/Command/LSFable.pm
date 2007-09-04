@@ -12,16 +12,14 @@ use Command;
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
-#    is_abstract => 1,
+    is_abstract => 1,
 );
-
 
 sub lsf_job_id {
 my($self) = @_;
 
     return $ENV{'LSB_JOBID'};
 }
-
 
 sub create_or_get_event_by_jobid {
 my($self) = @_;
@@ -55,4 +53,5 @@ my($self) = @_;
     return $event;
 }
 1;
+
 

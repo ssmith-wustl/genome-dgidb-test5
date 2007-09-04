@@ -31,7 +31,6 @@ specified in the model.
 EOS
 }
 
-
 sub sub_command_delegator {
     my $self = shift;
 

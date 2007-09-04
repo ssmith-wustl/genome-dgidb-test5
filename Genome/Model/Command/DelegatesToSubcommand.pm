@@ -9,15 +9,11 @@ use Command;
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Genome::Model::Command::LSFable',
-#    is_abstract => 1,
+    is_abstract => 1,
     has => [ model => { is => 'String', doc => 'Identifies the genome model to use by name'},
              run_id => { is => 'Integer', doc => 'Identifies the run by id'},
            ], 
 );
-
-sub is_abstract { 1;}
-
-
 
 sub execute {
 my $self = shift;

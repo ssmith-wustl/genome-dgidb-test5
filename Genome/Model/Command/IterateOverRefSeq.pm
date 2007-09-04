@@ -21,8 +21,6 @@ UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
     is_abstract => 1,
-    sub_classification_meta_class_name => __PACKAGE__,
-    sub_classification_property_name => 'class',
     has => [
         file    =>  {   type => 'Filename', 
                         is_optional => 1, 
