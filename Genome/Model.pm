@@ -29,7 +29,6 @@ UR::Object::Class->define(
         reference_sequence_name => { is => 'varchar(255)' },
         sample_name             => { is => 'varchar(255)' },
     ],
-    schema_name => 'Main',
     data_source => 'Genome::DataSource::Main',
 );
 

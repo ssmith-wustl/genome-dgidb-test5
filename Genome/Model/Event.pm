@@ -24,7 +24,6 @@ UR::Object::Class->define(
         run_id          => { is => 'integer', is_optional => 1, implied_by => 'run_id' },
         user_name       => { is => 'varchar2(64)' },
     ],
-    schema_name => 'Main',
     data_source => 'Genome::DataSource::Main',
 );
 

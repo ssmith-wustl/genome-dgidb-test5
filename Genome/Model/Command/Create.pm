@@ -28,6 +28,7 @@ UR::Object::Class->define(
         reference_sequence     => { is => 'varchar', len => 255 },
         sample                 => { is => 'varchar', len => 255 },
     ],
+    schema_name => 'Main',
 );
 
 sub sub_command_sort_position {
