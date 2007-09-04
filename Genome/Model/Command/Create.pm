@@ -61,12 +61,21 @@ The properties of the model determine what will happen when the add-reads comman
 EOS
 }
 
+sub target_class{
+    return "Genome::Model";
+}
+
+sub command_properties{
+    my $self = shift;
+    
+    return
+        grep { $_ ne 'id' and $_ ne 'bare_args'}         
+            $self->get_class_object->all_property_names;
+}
+
 sub execute {
     my $self = shift;
-        
-    my $target_class = "Genome::Model";    
-    my $target_class_meta = $target_class->get_class_object; 
-    my $type_name = $target_class_meta->type_name;
+    
     $DB::single = 1;
 
     # genome model specific
@@ -75,6 +84,50 @@ sub execute {
         $self->prior('none');
     }
 
+    $self->_validate_execute_params();   
+
+    # generic: abstract out
+    
+    my %params = %{ $self->_extract_command_properties_and_duplicate_keys_for__name_properties() };
+    
+    my $obj = $self->_create_target_class_instance_and_error_check( \%params );
+
+    # move this up eventually    
+
+    unless (UR::Context->commit) {
+        $self->error_message("Failed to commit changes!");
+        return;
+    }
+    
+    $self->status_message("created model " . $obj->name);
+    print $obj->pretty_print_text,"\n";
+    
+    return 1;
+}
+
+sub _extract_command_properties_and_duplicate_keys_for__name_properties{
+    my $self = shift;
+    
+    my $target_class = $self->target_class; 
+    my %params;
+    
+    for my $command_property ($self->command_properties) {
+        my $value = $self->$command_property;
+        next unless defined $value;
+
+        my $object_property = $command_property;
+        if ($target_class->can($command_property . "_name")) {
+            $object_property .= "_name";
+        }
+        $params{$object_property} = $value;
+    }
+    
+    return \%params;
+}
+
+sub _validate_execute_params{
+    my $self = shift;
+    
     unless ($self->reference_sequence) {
         if ($self->prior eq "none") {
             $self->error_message("No reference sequence set.  This is required w/o a prior.");
@@ -88,25 +141,17 @@ sub execute {
         $self->error_message("extra arguments: @args");
         $self->usage_message($self->help_usage);
         return;
-    }   
-
-    # generic: abstract out    
-
-    my @command_properties = 
-        grep { $_ ne 'id' and $_ ne 'bare_args'}         
-        $self->get_class_object->all_property_names;
-
-    my %params;
-    for my $command_property (@command_properties) {
-        my $value = $self->$command_property;
-        next unless defined $value;
-
-        my $object_property = $command_property;
-        if ($target_class->can($command_property . "_name")) {
-            $object_property .= "_name";
-        }
-        $params{$object_property} = $value;
     }
+}
+
+sub _create_target_class_instance_and_error_check{
+    my ($self, $params_in) = @_;
+    
+    my %params = %{$params_in};
+    
+    my $target_class = $self->target_class;    
+    my $target_class_meta = $target_class->get_class_object; 
+    my $type_name = $target_class_meta->type_name;
     
     $self->set(
         date_scheduled  => $self->_time_now(),
@@ -141,17 +186,8 @@ sub execute {
         print Dumper(\%params);
         return;
     }
-
-    # move this up eventually    
-
-    unless (UR::Context->commit) {
-        $self->error_message("Failed to commit changes!");
-        return;
-    }
     
-    $self->status_message("created model " . $obj->name);
-    print $obj->pretty_print_text,"\n";
-    return 1;
+    return $obj;
 }
 
 1;
