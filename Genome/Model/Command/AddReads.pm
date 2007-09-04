@@ -69,13 +69,11 @@ $DB::single=1;
     my $last_bsub_job_id;
 
     for (my $idx = 0; $idx < @sub_command_names; $idx++) {
-        
-        my $cmd = $self->_generate_command_with_sorted_sub_command_name_and_last_bsub_id(
-                            $sub_command_names[$idx],
-                            $last_bsub_job_id,
-                    );
 
-        my $command_output = $self->_run_command( $cmd );
+        my $command_output = $self->_run_command_from_sub_command_name_and_last_bsub_id(
+                                        $sub_command_names[$idx],
+                                        $last_bsub_job_id,
+                                );
 
         if ($self->bsub) {
             $last_bsub_job_id = $self->_verify_bsubbed_job_output( $command_output );
@@ -167,8 +165,13 @@ sub _generate_command_with_run_and_sorted_sub_command_name_and_last_bsub_id{
     return $cmd;
 }
 
-sub _run_command{
-    my ($self, $cmd) = @_;
+sub _run_command_from_sub_command_name_and_last_bsub_id{
+    my ($self, $ssc_name, $last_bsub_job_id) = @_;
+    
+    my $cmd = $self->_generate_command_with_sorted_sub_command_name_and_last_bsub_id(
+                            $ssc_name,
+                            $last_bsub_job_id,
+                    );
     
     $self->status_message("Running command: $cmd");
     my($command_output, $retval);
