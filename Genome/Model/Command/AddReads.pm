@@ -55,21 +55,62 @@ All of the sub-commands listed below will be executed on the model in succession
 EOS
 }
 
-#sub is_sub_command_delegator {
-#    return 0;
-#}
 
 sub execute {
     my $self = shift;
 
 $DB::single=1;
+    
+    my $model_id = $self->_get_genome_model_id;
+
+    my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
+    my @sub_command_names = @{ $self->_get_sorted_sub_command_names };
+
+    my $last_bsub_job_id;
+
+    for (my $idx = 0; $idx < @sub_command_names; $idx++) {
+        
+        my $cmd = $self->_generate_command_with_sorted_sub_command_name_and_last_bsub_id(
+                            $sub_command_names[$idx],
+                            $last_bsub_job_id,
+                    );
+
+        my $command_output = $self->_run_command( $cmd );
+
+        if ($self->bsub) {
+            $last_bsub_job_id = $self->_verify_bsubbed_job_output( $command_output );
+        }
+        
+        Genome::Model::Event->create(
+                                        event_type         => $sub_command_classes[$idx],
+                                        genome_model_id    => $model_id,
+                                        lsf_job_id         => $last_bsub_job_id,
+                                        date_scheduled     => scalar(localtime),
+                                        user_name          => $ENV{'USER'},
+                                    );
+        App::DB->sync_database();
+        App::DB->commit();
+    }
+
+    return 1; 
+}
+
+sub _get_genome_model_id{
+    my $self = shift;
+    
     my $model_name = $self->model;
     my $model = Genome::Model->get(name => $model_name);
     unless($model) {
         $self->error_message("Genome model named $model_name is unknown");
         return 0;
     }
+    
+    return $model->id;
+}
 
+sub _get_run{
+    my $self = shift;
+    
     my $run = Genome::Run->create(full_path => $self->full_path,
                                   limit_regions => $self->limit_regions,
                                   sequencing_platform => $self->sequencing_platform);
@@ -77,63 +118,85 @@ $DB::single=1;
         $self->error_message('Failed to create a new Run record, exiting');
         return 0;
     }
+    
+    return $run;
+}
+
+sub _get_sorted_sub_command_classes{
+    my $self = shift;
 
     # Determine what all the sub-commands are going to be
     my @sub_command_classes = sort { $a->sub_command_sort_position
                                      <=>
                                      $b->sub_command_sort_position
                                    } $self->sub_command_classes();
-    my @sub_command_names = map { $_->command_name } @sub_command_classes;
+    
+    return \@sub_command_classes;
+}
 
-    my $last_bsub_job_id;
+sub _get_sorted_sub_command_names{
+    my $self = shift;
+    
+    my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes
+                                };
+    my @sub_command_names = map { $_->command_name } @sub_command_classes;
+    
+    return \@sub_command_names;
+}
+
+sub _generate_command_with_run_and_sorted_sub_command_name_and_last_bsub_id{
+    my ($self, $ssc_name, $last_bsub_job_id) = @_;
+    
+    my $run = $self->_get_run;
     my $queue = $self->bsub_queue;
     my $bsub_args = $self->bsub_args;
-
-    for (my $idx = 0; $idx < @sub_command_names; $idx++) {
-        my $cmd = '';
-        if ($self->bsub) {
-            $cmd .= "bsub -q $queue $bsub_args";
-            if ($last_bsub_job_id) {
-                $cmd .= " -w $last_bsub_job_id";
-            }
-        }
-
-        $cmd .= sprintf(' %s --model %s --run-id %d', $sub_command_names[$idx], $model_name, $run->id);
-
-        $self->status_message("Running command: $cmd");
-        my($command_output, $retval);
-        if ($self->test) {
-            $self->status_message("** test mode, above command not executed");
-        } else {
-            $command_output = `$cmd`;
-            $retval = $? >> 8;
-        }
-
-        if ($retval) {
-            $self->error_message("sub-command \"$cmd\" exited with return value $retval, bailing out\n");
-            return 0;
-        }
-
-        if ($self->bsub) {
-            $command_output =~ m/Job \<(\d+)\>/;
-            if ($1 || $self->test) {
-                $last_bsub_job_id = $1;
-            } else {
-                $self->error_message("Couldn't parse job out from bsub's output: $command_output");
-                return 0;
-            }
-            Genome::Model::Event->create(event_type => $sub_command_classes[$idx],
-                                         genome_model_id => $model->id,
-                                         lsf_job_id => $last_bsub_job_id,
-                                         date_scheduled => scalar(localtime),
-                                         user_name => $ENV{'USER'},
-                                        );
-            App::DB->sync_database();
-            App::DB->commit();
+    
+    my $cmd = '';
+    if ($self->bsub) {
+        $cmd .= "bsub -q $queue $bsub_args";
+        if ($last_bsub_job_id) {
+            $cmd .= " -w $last_bsub_job_id";
         }
     }
 
-    return 1; 
+    $cmd .= sprintf(' %s --model %s --run-id %d',
+                                $ssc_name,
+                                $self->model,
+                                $run->id);
+    
+    return $cmd;
+}
+
+sub _run_command{
+    my ($self, $cmd) = @_;
+    
+    $self->status_message("Running command: $cmd");
+    my($command_output, $retval);
+    if ($self->test) {
+        $self->status_message("** test mode, above command not executed");
+    } else {
+        $command_output = `$cmd`;
+        $retval = $? >> 8;
+    }
+
+    if ($retval) {
+        $self->error_message("sub-command \"$cmd\" exited with return value $retval, bailing out\n");
+        return 0;
+    }
+    
+    return $command_output;
+}
+
+sub _verify_bsubbed_job_output{
+    my ($self, $command_output) = @_;
+    
+    $command_output =~ m/Job \<(\d+)\>/;
+    if ($1 || $self->test) {
+        return $1;
+    } else {
+        $self->error_message("Couldn't parse job out from bsub's output: $command_output");
+        return 0;
+    }
 }
 
 1;
