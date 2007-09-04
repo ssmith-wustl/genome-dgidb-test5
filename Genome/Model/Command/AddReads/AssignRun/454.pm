@@ -13,7 +13,8 @@ UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [ 
-        model   => { is => 'String', is_optional => 0, doc => 'the genome model on which to operate' }
+        model   => { is => 'String', is_optional => 0, doc => 'the genome model on which to operate' },
+        run_id  => { is => 'Integer', doc => 'ID for the run object in the database'},
     ]
 );
 
@@ -31,8 +32,18 @@ EOS
 sub execute {
     my $self = shift;
     my $model = Genome::Model->get(name=>$self->model);
+    my $run = Genome::Run->get(id => $self->run_id);
+    unless ($run) {
+        $self->error_message("Did not find run info for run_id ".$self->run_id);
+        return 0;
+    }
+
     $self->error_message("running " . $self->command_name . " on " . $model->name . "!");
     $self->status_message("Model Info:\n" . $model->pretty_print_text);
+    $self->status_message(sprintf("Run info: run_id %d full_path %s limit_regions %s sequencing_platform %s\n",
+                                  $run->run_id, $run->full_path, $run->limit_regions, $run->sequencing_platform));
+
+                                   
     return 0; 
 }
 

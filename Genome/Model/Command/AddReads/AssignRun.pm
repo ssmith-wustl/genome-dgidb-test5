@@ -9,11 +9,7 @@ use Command;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => 'Command',
-    has => [
-        model   =>  { is => 'String', 
-                        doc => "Identifies the genome model to which we'll add the reads." },
-    ]
+    is => ['Genome::Model::Command::DelegatesToSubcommand'],
 );
 
 sub sub_command_sort_position { 1 }
@@ -36,11 +32,15 @@ the model's sequencing platform.
 EOS
 }
 
-sub execute {
+sub sub_command_delegator {
     my $self = shift;
-    $self->status_message("Not implemented: " . $self->command_name);
-    return 1; 
+
+    my $run = Genome::Run->get(id => $self->run_id);
+    return unless $run;
+
+    return $run->sequencing_platform;
 }
+    
 
 1;
 

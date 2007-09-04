@@ -1,4 +1,3 @@
-
 package Genome::Model::Command::AddReads::AlignReads;
 
 use strict;
@@ -9,17 +8,13 @@ use Command;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => 'Command',
-    has => [
-        model   =>  { is => 'String', 
-                        doc => "Identifies the genome model to which we'll add the reads." },
-    ]
+    is => ['Genome::Model::Command::DelegatesToSubcommand'],
 );
 
 sub sub_command_sort_position { 2 }
 
 sub help_brief {
-    "add reads from all or part of an instrument run to the model"
+    "Run the aligner tool on the reads being added to the model"
 }
 
 sub help_synopsis {
@@ -36,11 +31,15 @@ specified in the model.
 EOS
 }
 
-sub execute {
-    my $self = shift;
-    $self->status_message("Not implemented: " . $self->command_name);
-    return 1; 
-}
 
+sub sub_command_delegator {
+    my $self = shift;
+
+    my $model = Genome::Model->get(name => $self->model);
+    return unless $model;
+
+    return $model->read_aligner_name;
+}
+  
 1;
 

@@ -1,4 +1,3 @@
-
 package Genome::Model::Command::AddReads::UpdateGenotypeProbabilities;
 
 use strict;
@@ -10,10 +9,6 @@ use Command;
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
-    has => [
-        model   =>  { is => 'String', 
-                        doc => "Identifies the genome model to which we'll add the reads." },
-    ]
 );
 
 sub sub_command_sort_position { 3 }
@@ -36,11 +31,16 @@ specified in the model.
 EOS
 }
 
-sub execute {
+
+sub sub_command_delegator {
     my $self = shift;
-    $self->status_message("Not implemented: " . $self->command_name);
-    return 1; 
+
+    my $model = Genome::Model->get(name => $self->model);
+    return unless $model;
+
+    return $model->genotyper_name;
 }
+
 
 1;
 

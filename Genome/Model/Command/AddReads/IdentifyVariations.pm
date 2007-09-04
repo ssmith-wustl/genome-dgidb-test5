@@ -1,4 +1,3 @@
-
 package Genome::Model::Command::AddReads::IdentifyVariations;
 
 use strict;
@@ -9,11 +8,7 @@ use Command;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => 'Command',
-    has => [
-        model   =>  { is => 'String', 
-                        doc => "identify genotype variations" }
-    ]
+    is => 'Genome::Model::Command::DelegatesToSubcommand',
 );
 
 sub sub_command_sort_position { 4 }
@@ -36,15 +31,15 @@ specified in the model.
 EOS
 }
 
-#sub is_sub_command_delegator {
-#    return 0;
-#}
-
-sub execute {
+sub sub_command_delegator {
     my $self = shift;
-    $self->status_message("Not implemented");
-    return 1; 
+
+    my $model = Genome::Model->get(name => $self->model);
+    return unless $model;
+
+    return $model->indel_finder_name;
 }
+
 
 1;
 
