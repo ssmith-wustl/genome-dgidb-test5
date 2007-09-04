@@ -418,6 +418,10 @@ associations in four cases.
         SEQUENCE_CHROMOSOME             GSC::Sequence::Chromosome
 
         AMP_TARGET_SAMPLE_COVERAGE      GSC::AmplificationTarget::Coverage::Sample
+        SOLEXA_RUN                      GSC::Equipment::Solexa::Run
+        SOLEXA_RUN_ANALYSIS             GSC::Equipment::Solexa::RunAnalysis
+        SOLEXA_RUN_ANALYSIS_LANE        GSC::Equipment::Solexa::RunAnalysisLane
+        SOLEXA_LANE_ALIGN_SPEC          GSC::Equipment::Solexa::RunAnalysisLaneAlignSpec
     /
 );
 
