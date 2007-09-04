@@ -19,28 +19,9 @@ sub execute {
 my $self = shift;
     $DB::single=1;
 
-    # Which sub-command does the system think we should be doing here?
-    unless ($self->can('sub_command_delegator')) {
-        $self->error_message('command '.$self->command_name.' did not implement sub_command_delegator()');
-    }
-    my $sub_command_name = $self->sub_command_delegator;
+    my $sub_command_type = $self->_get_sub_command_class_name();
 
-    # Does the sub-command exist?
-    # Make a mapping from sub-command names to fully qualified classes
-    my %sub_command_types = map { my($type) = m/::(\w+)$/; $type => $_ } $self->sub_command_classes();
-
-    my $sub_command_type = $sub_command_types{$sub_command_name};
-    unless ($sub_command_type) {
-        $self->error_message("sub command $sub_command_type is not known");
-        return;
-    }
-
-    my $event = $self->create_or_get_event_by_jobid();
-    return unless $event;
-    $event->run_id($self->run_id);
-
-    my $model = Genome::Model->get(name => $self->model);
-    $event->genome_model_id($model->id);
+    my $event = $self->_get_or_create_then_init_event();
 
     my $command = $sub_command_type->create(model => $self->model,
                                             run_id => $self->run_id);
@@ -58,6 +39,57 @@ my $self = shift;
     App::DB->sync_database();
 
     return $retval;
+}
+
+sub _sub_command_name_to_class_name_map{
+    my $self = shift;
+    
+    return map {
+                    my ($type) = m/::(\w+)$/;
+                    $type => $_
+                }
+                $self->sub_command_classes();
+}
+
+sub _get_sub_command_class_name{
+    my $self = shift;
+    
+    my $sub_command_name = $self->_get_sub_command_name();
+    
+    # Does the sub-command exist?
+    my %sub_command_types = $self->_sub_command_name_to_class_name_map();
+
+    my $sub_command_type = $sub_command_types{$sub_command_name};
+    unless ($sub_command_type) {
+        $self->error_message("sub command $sub_command_type is not known");
+        return;
+    }
+    
+    return $sub_command_type;
+}
+
+sub _get_sub_command_name{
+    my $self = shift;
+    
+    # Which sub-command does the system think we should be doing here?
+    unless ($self->can('sub_command_delegator')) {
+        $self->error_message('command '.$self->command_name.' did not implement sub_command_delegator()');
+    }
+    
+    return $self->sub_command_delegator;
+}
+
+sub _get_or_create_then_init_event{
+    my $self = shift;
+    
+    my $event = $self->create_or_get_event_by_jobid();
+    return unless $event;
+    $event->run_id( $self->run_id );
+
+    my $model = Genome::Model->get(name => $self->model);
+    $event->genome_model_id($model->id);
+    
+    return $event;
 }
 
 1;
