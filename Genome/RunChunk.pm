@@ -28,7 +28,7 @@ sub name {
 
     my $path = $self->full_path;
 
-    my($name) = ($path =~ m/\/(\S+?)\/[Dd]ata/);
+    my($name) = ($path =~ m/.*\/(\S*?)\/[Dd]ata/);
     return $name;
 }
 
