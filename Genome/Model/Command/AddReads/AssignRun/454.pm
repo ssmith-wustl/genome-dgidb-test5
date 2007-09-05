@@ -32,7 +32,7 @@ EOS
 sub execute {
     my $self = shift;
     my $model = Genome::Model->get(name=>$self->model);
-    my $run = Genome::Run->get(id => $self->run_id);
+    my $run = Genome::RunChunk->get(id => $self->run_id);
     unless ($run) {
         $self->error_message("Did not find run info for run_id ".$self->run_id);
         return 0;

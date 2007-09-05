@@ -34,7 +34,7 @@ sub execute {
 
     $DB::single=1;
 
-    my $run = Genome::Run->get(run_id => $self->run_id);
+    my $run = Genome::RunChunk->get(id => $self->run_id);
     unless ($run) {
         $self->error_message("Did not find run info for run_id " . $self->run_id);
         return 0;
@@ -56,8 +56,7 @@ sub execute {
     }
 
     # make symbolic link to bustard
-    die "FIXME: where can we get ahold of the bustard_path from?";
-    my $bustard_dir = $self->bustard_path;
+    my $bustard_dir = $run->full_path;
     if (-e "$sample_path/prb_src") {
             $self->error_message("$sample_path/prb_src already exists");
             return;

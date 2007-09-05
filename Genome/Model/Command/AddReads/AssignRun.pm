@@ -35,7 +35,7 @@ EOS
 sub sub_command_delegator {
     my $self = shift;
 
-    my $run = Genome::Run->get(id => $self->run_id);
+    my $run = Genome::RunChunk->get(id => $self->run_id);
     return unless $run;
 
     return $run->sequencing_platform;
