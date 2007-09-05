@@ -8,6 +8,7 @@ use Command;
 use Genome::Model;
 use File::Path;
 use Data::Dumper;
+use Genome::Model::FileSystemInfo;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
@@ -24,7 +25,7 @@ sub help_brief {
 
 sub help_detail {                           
     return <<EOS 
-This command is normally run automaticly as part of add-reads
+This command is normally run automatically as part of add-reads
 EOS
 }
 
@@ -35,12 +36,10 @@ sub execute {
 
     my $run = Genome::Run->get(run_id => $self->run_id);
     unless ($run) {
-        $self->error_message("Did not find run info for run_id ".$self->run_id);
+        $self->error_message("Did not find run info for run_id " . $self->run_id);
         return 0;
     }
 
-    # make path
-    #my $sample_path = $self->sample_path . '/runs/solexa/aml' . $self->run;
     my $sample_path = $self->full_path;
     mkpath $sample_path;
     unless (-d $sample_path) {
@@ -48,9 +47,8 @@ sub execute {
         return;
     }
 
-    my $base_dir = '/gscmnt/sata114/info/medseq/aml';
-    # make symbolic link to path
-    #my $base_run_dir = $base_dir . '/aml' .$self->run;
+    my $base_dir = Genome::Model::FileSystemInfo->new->base_directory;
+
     my $base_run_dir = $base_dir . '/aml' .$self->run_id;
     if (-e $base_run_dir) {
             $self->error_message("$base_run_dir already exists");

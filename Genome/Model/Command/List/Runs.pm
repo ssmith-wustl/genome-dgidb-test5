@@ -39,9 +39,21 @@ sub execute {
     
     foreach my $pse (@gerald_pses)  {
         
+        $self->_get
+        
         my $bustard_path = $self->_get_bustard_path_from_pse($pse);
 
-        my @out = [
+        # do we need to put a unique constraint on the full_path in runs?
+        my $run_id = Genome::Run->get( full_path => $bustard_path )->id;
+
+        my @out;
+        
+        push @out, [
+                   Term::ANSIColor::colored("Run ID:", 'red'),
+                   Term::ANSIColor::colored($run_id, "cyan")
+                   ];
+        
+        push @out, [
                    Term::ANSIColor::colored("Gerald Date:", 'red'),
                    Term::ANSIColor::colored($pse->date_scheduled, "cyan")
                    ];
@@ -82,8 +94,11 @@ sub _get_bustard_path_from_pse{
     return $bustard_path;
 }
 
+my $DNA_TO_SOLEXA_LOAD_LANE_MAP_CACHE = {};
 sub _get_dna_to_solexa_load_lane_map_for_pse{
     my ($self, $pse) = @_;
+    
+    return $DNA_TO_SOLEXA_LOAD_LANE_MAP_CACHE->{$pse} if $DNA_TO_SOLEXA_LOAD_LANE_MAP_CACHE->{$pse};
     
     my $dna_his = GSC::PSE->dbh->selectall_arrayref(qq/select d.dna_name, dl.location_name from process_step_executions pse
                                                      join process_steps ps on ps.ps_id = pse.ps_ps_id
@@ -96,16 +111,18 @@ sub _get_dna_to_solexa_load_lane_map_for_pse{
                                                      and ps.pro_process_to='generate clusters'
                                                      order by dl.location_order/, {}, $pse->pse_id);
 
-    my %lane_mapping;
+    my $lane_mapping;
     
     foreach my $row (@$dna_his) {
         my ($dna, $loc) = @$row;
         my ($laneno) = $loc =~ /lane (\d+)/;
         
-        $lane_mapping{$dna} .= $laneno;
+        $lane_mapping->{$dna} .= $laneno;
     }
     
-    return \%lane_mapping;
+    $DNA_TO_SOLEXA_LOAD_LANE_MAP_CACHE->{$pse} = $lane_mapping;
+    
+    return $lane_mapping;
 }
 
 sub _get_sample_output_lines_by_plate_lanes_for_pse{
@@ -118,7 +135,7 @@ sub _get_sample_output_lines_by_plate_lanes_for_pse{
     foreach my $dna (keys %lane_mapping) {
         my $locs = $lane_mapping{$dna};
         
-        my $lanes_text = '';
+        my $lanes_text = 'Sample';
         unless($locs eq '12345678'){
             $lanes_text = ' in Lane';
             $lanes_text .= 's' if( length($locs) > 1 );
@@ -127,7 +144,7 @@ sub _get_sample_output_lines_by_plate_lanes_for_pse{
         }
         
         push @out, [
-                    Term::ANSIColor::colored("Sample$lanes_text", 'red'),
+                    Term::ANSIColor::colored($lanes_text, 'red'),
                     Term::ANSIColor::colored($dna, "cyan")
                     ];
     }
@@ -137,9 +154,7 @@ sub _get_sample_output_lines_by_plate_lanes_for_pse{
 
 sub _get_all_gerald_pses{
     my $self = shift;
-    
-    #my $gerald_ps = GSC::ProcessStep->get(process_to=>'run alignment');
-    
+        
     GSC::PSE->get(1);
 
     my @gerald_pses = GSC::PSE->get(

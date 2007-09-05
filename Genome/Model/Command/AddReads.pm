@@ -109,11 +109,13 @@ sub _get_genome_model_id{
 sub _get_run{
     my $self = shift;
     
-    my $run = Genome::Run->create(full_path => $self->full_path,
+    my $run = Genome::RunChunk->get_or_create(
+                                  full_path => $self->full_path,
                                   limit_regions => $self->limit_regions,
-                                  sequencing_platform => $self->sequencing_platform);
+                                  sequencing_platform => $self->sequencing_platform
+                                  );
     unless ($run) {
-        $self->error_message('Failed to create a new Run record, exiting');
+        $self->error_message('Failed to get or create a new Run record, exiting');
         return 0;
     }
     

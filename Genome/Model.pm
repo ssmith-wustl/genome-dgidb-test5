@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use Term::ANSIColor;
+use Genome::Model::EqualColumnWidthTableizer;
 
 use Genome;
 UR::Object::Class->define(
@@ -44,31 +45,15 @@ sub pretty_print_text {
             ]
         }
     }
-    _make_table_columns_equal_width(\@out);
+    
+    Genome::Model::EqualColumnWidthTableizer->new->convert_table_to_equal_column_widths_in_place( \@out );
 
     my $out;
-    $out .= Term::ANSIColor::colored("Model: " . $self ->name, 'red'). "\n\n";
+    $out .= Term::ANSIColor::colored("Model: " . $self ->name, 'bold magenta'). "\n\n";
     $out .= Term::ANSIColor::colored("Configured Properties:", 'red'). "\n";    
     $out .= join("\n", map { " @$_ " } @out);
     $out .= "\n\n";
     return $out;
 }
 
-sub _make_table_columns_equal_width {
-    my $arrayref = shift;
-    my @max_length;
-    for my $row (@$arrayref) {
-        for my $col_num (0..$#$row) {
-            $max_length[$col_num] ||= 0;
-            if ($max_length[$col_num] < length($row->[$col_num])) {                
-                $max_length[$col_num] = length($row->[$col_num]);
-            }
-        }
-    }
-    for my $row (@$arrayref) {
-        for my $col_num (0..$#$row) {
-            $row->[$col_num] .= ' ' x ($max_length[$col_num] - length($row->[$col_num]) + 1);
-        }
-    }    
-}
 1;
