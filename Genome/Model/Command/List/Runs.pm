@@ -49,12 +49,12 @@ sub execute {
 
         push @out, [
                     Term::ANSIColor::colored("Bustard Path", 'red'),
-                    Term::ANSIColor::colored($bustard_path, "black")
+                    Term::ANSIColor::colored($bustard_path, 'underscore')
                     ];
         
         push @out, [
                    Term::ANSIColor::colored("Gerald Date:", 'red'),
-                   Term::ANSIColor::colored($pse->date_scheduled, "black")
+                   Term::ANSIColor::colored($pse->date_scheduled, 'underscore')
                    ];
         
         Genome::Model::EqualColumnWidthTableizer->new->convert_table_to_equal_column_widths_in_place( \@out );
@@ -143,7 +143,7 @@ sub _get_sample_output_lines_by_plate_lanes_for_pse{
         
         push @out, [
                     Term::ANSIColor::colored($lanes_text, 'red'),
-                    Term::ANSIColor::colored($dna, "bold black")
+                    Term::ANSIColor::colored($dna, "bold")
                     ];
     }
 
