@@ -20,21 +20,26 @@ my $self = shift;
     $DB::single=1;
 
     my $sub_command_type = $self->_get_sub_command_class_name();
-
-    my $event = $self->_get_or_create_then_init_event();
+ 
+    my $model = Genome::Model->get(name=>$self->model);
 
     my $command = $sub_command_type->create(model => $self->model,
-                                            run_id => $self->run_id);
+                                            run_id => $self->run_id,
+					    genome_model => $model,
+					    event_type => $sub_command_type->command_name,
+					    date_scheduled => App::Time->now(),
+					    user_name => $ENV{'USER'}
+					   );
 
     my $retval;
     if ($command) {
         $retval = $command->execute();
-        $event->event_status($retval ? 'Succeeded' : 'Failed');
+        $command->event_status($retval ? 'Succeeded' : 'Failed');
     } else {
-        $event->event_status('Failed to create sub-command');
+        $command->event_status('Failed to create sub-command');
     }
 
-    $event->date_completed(scalar(localtime));
+    $command->date_completed(scalar(localtime));
 
     App::DB->sync_database();
 

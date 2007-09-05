@@ -29,25 +29,28 @@ sub execute {
 
     $DB::single=1;
 
+    my $model = Genome::Model->get(name=>$self->model);
+
     my $run = Genome::RunChunk->get(id => $self->run_id);
     unless ($run) {
         $self->error_message("Did not find run info for run_id " . $self->run_id);
         return 0;
     }
 
-    unless (-d  $run->data_parent_directory) {
-        mkdir $run->data_parent_directory;
-        unless(-d $run->data_parent_directory) {
-            $self->error_message("Failed to create data parent directory: ".$run->data_parent_directory. ": $!");
+    unless (-d  $model->data_parent_directory) {
+        mkdir $model->data_parent_directory;
+        unless(-d $model->data_parent_directory) {
+            $self->error_message("Failed to create data parent directory: ".$model->data_parent_directory. ": $!");
             return;
         }
     }
 
-    my $run_dir = sprintf('%s/runs/%s/%s', $run->data_parent_directory,
+    my $run_dir = sprintf('%s/runs/%s/%s', $model->data_parent_directory,
                                            $run->sequencing_platform,
-                                           $run->run_name);
+                                           $run->name);
     if (-d $run_dir) {
         $self->error_message("Run directory $run_dir already exists");
+        $self->event_status('completed');
         return;
     }
     
