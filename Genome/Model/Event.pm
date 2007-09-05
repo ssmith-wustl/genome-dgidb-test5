@@ -36,4 +36,13 @@ sub _shell_args_property_meta {
 }
 
 
+sub resolve_run_directory {
+    my $self = shift;
+
+    return sprintf('%s/runs/%s/%s', $self->model->data_parent_directory,
+                                    $self->run->sequencing_platform,
+                                    $self->run->name);
+}
+
+
 1;
