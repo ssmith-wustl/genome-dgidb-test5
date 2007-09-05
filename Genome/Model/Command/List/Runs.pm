@@ -39,24 +39,9 @@ sub execute {
     
     foreach my $pse (@gerald_pses)  {
         
-        $self->_get
-        
         my $bustard_path = $self->_get_bustard_path_from_pse($pse);
 
-        # do we need to put a unique constraint on the full_path in runs?
-        my $run_id = Genome::Run->get( full_path => $bustard_path )->id;
-
-        my @out;
-        
-        push @out, [
-                   Term::ANSIColor::colored("Run ID:", 'red'),
-                   Term::ANSIColor::colored($run_id, "cyan")
-                   ];
-        
-        push @out, [
-                   Term::ANSIColor::colored("Gerald Date:", 'red'),
-                   Term::ANSIColor::colored($pse->date_scheduled, "cyan")
-                   ];
+        my @out = ();
 
         push @out, @{
                      $self->_get_sample_output_lines_by_plate_lanes_for_pse($pse)
@@ -64,8 +49,13 @@ sub execute {
 
         push @out, [
                     Term::ANSIColor::colored("Bustard Path", 'red'),
-                    Term::ANSIColor::colored($bustard_path, "cyan")
+                    Term::ANSIColor::colored($bustard_path, "black")
                     ];
+        
+        push @out, [
+                   Term::ANSIColor::colored("Gerald Date:", 'red'),
+                   Term::ANSIColor::colored($pse->date_scheduled, "black")
+                   ];
         
         Genome::Model::EqualColumnWidthTableizer->new->convert_table_to_equal_column_widths_in_place( \@out );
         
@@ -76,7 +66,6 @@ sub execute {
                    
                    ), "\n\n\n";
     }
-
 }
 
 sub _get_bustard_path_from_pse{
@@ -94,12 +83,9 @@ sub _get_bustard_path_from_pse{
     return $bustard_path;
 }
 
-my $DNA_TO_SOLEXA_LOAD_LANE_MAP_CACHE = {};
 sub _get_dna_to_solexa_load_lane_map_for_pse{
     my ($self, $pse) = @_;
-    
-    return $DNA_TO_SOLEXA_LOAD_LANE_MAP_CACHE->{$pse} if $DNA_TO_SOLEXA_LOAD_LANE_MAP_CACHE->{$pse};
-    
+        
     my $dna_his = GSC::PSE->dbh->selectall_arrayref(qq/select d.dna_name, dl.location_name from process_step_executions pse
                                                      join process_steps ps on ps.ps_id = pse.ps_ps_id
                                                      join (select distinct tpse.pse_id from tpp_pse tpse 
@@ -119,9 +105,7 @@ sub _get_dna_to_solexa_load_lane_map_for_pse{
         
         $lane_mapping->{$dna} .= $laneno;
     }
-    
-    $DNA_TO_SOLEXA_LOAD_LANE_MAP_CACHE->{$pse} = $lane_mapping;
-    
+        
     return $lane_mapping;
 }
 
@@ -137,18 +121,32 @@ sub _get_sample_output_lines_by_plate_lanes_for_pse{
         
         my $lanes_text = 'Sample';
         unless($locs eq '12345678'){
-            $lanes_text = ' in Lane';
+            $lanes_text .= ' in Lane';
             $lanes_text .= 's' if( length($locs) > 1 );
             $lanes_text .= ': ';
             $lanes_text .= $locs;
         }
         
+        # do we need to put a unique constraint on the full_path in runs?
+        my $run_id = Genome::RunChunk->get_or_create(
+                                  full_path             => $self->_get_bustard_path_from_pse($pse),
+                                  limit_regions         => $locs,
+                                  sequencing_platform   => 'solexa',
+                    )->id;
+        
+        Carp::croak("Error no RunChunk got or created!") unless $run_id;
+        
+        push @out, [
+                   Term::ANSIColor::colored("Run ID:", 'green'),
+                   Term::ANSIColor::colored($run_id, "green")
+                   ];
+        
         push @out, [
                     Term::ANSIColor::colored($lanes_text, 'red'),
-                    Term::ANSIColor::colored($dna, "cyan")
+                    Term::ANSIColor::colored($dna, "black")
                     ];
     }
-        
+
     return \@out;
 }
 
