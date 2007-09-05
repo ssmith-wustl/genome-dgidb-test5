@@ -56,7 +56,7 @@ sub _assemble_event_creation_params{
     
     my $model = $self->_get_genome_model();
     
-    my %params = ( event_type => $self->class_name,
+    my %params = ( event_type => $self->get_class_object->class_name,
                        genome_model_id => $model->id,
                        date_scheduled => scalar(localtime),
                        user_name => $ENV{'USER'},
