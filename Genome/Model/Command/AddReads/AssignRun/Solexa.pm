@@ -45,9 +45,7 @@ sub execute {
         }
     }
 
-    my $run_dir = sprintf('%s/runs/%s/%s', $model->data_parent_directory,
-                                           $run->sequencing_platform,
-                                           $run->name);
+    my $run_dir = $self->resolve_run_directory;
     if (-d $run_dir) {
         $self->error_message("Run directory $run_dir already exists");
         $self->event_status('completed');
