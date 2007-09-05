@@ -171,7 +171,7 @@ sub _generate_command_with_run_and_sorted_sub_command_name_and_last_bsub_id{
 sub _run_command_from_sub_command_name_and_last_bsub_id{
     my ($self, $ssc_name, $last_bsub_job_id) = @_;
     
-    my $cmd = $self->_generate_command_with_sorted_sub_command_name_and_last_bsub_id(
+    my $cmd = $self->_generate_command_with_run_and_sorted_sub_command_name_and_last_bsub_id(
                             $ssc_name,
                             $last_bsub_job_id,
                     );
