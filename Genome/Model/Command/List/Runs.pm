@@ -32,9 +32,11 @@ Lists all known runs
 EOS
 }
 
+
 sub execute {
     my $self = shift;
-
+    
+    
     my @gerald_pses = @{ $self->_get_all_gerald_pses() };
     
     foreach my $pse (@gerald_pses)  {
@@ -66,6 +68,8 @@ sub execute {
                    
                    ), "\n\n\n";
     }
+ 
+    return 1;
 }
 
 sub _get_bustard_path_from_pse{
@@ -125,6 +129,7 @@ sub _get_sample_output_lines_by_plate_lanes_for_pse{
             $lanes_text .= ': ';
             $lanes_text .= $locs;
         }
+        
         
         # do we need to put a unique constraint on the full_path in runs?
         my $run_id = Genome::RunChunk->get_or_create(
