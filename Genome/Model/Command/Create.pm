@@ -49,7 +49,7 @@ genome-model create
                     --read-aligner maq1_6    
                     --genotyper maq1_6     
                     --indel-finder bhdsindel1 
-                    --prior NCBI-human-build36 
+                    --reference-sequence NCBI-human-build36 
 EOS
 }
 
@@ -91,13 +91,6 @@ sub execute {
     my %params = %{ $self->_extract_command_properties_and_duplicate_keys_for__name_properties() };
     
     my $obj = $self->_create_target_class_instance_and_error_check( \%params );
-
-    # move this up eventually    
-
-    unless (UR::Context->commit) {
-        $self->error_message("Failed to commit changes!");
-        return;
-    }
     
     $self->status_message("created model " . $obj->name);
     print $obj->pretty_print_text,"\n";
