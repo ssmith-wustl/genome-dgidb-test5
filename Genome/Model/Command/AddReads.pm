@@ -13,6 +13,14 @@ UR::Object::Class->define(
     has => [
         model   =>  { is => 'String', 
                       doc => "Identifies the genome model to which we'll add the reads." },
+        sequencing_platform => { is => 'String',
+                                 doc => 'Type of sequencing instrument used to generate the data'},
+        full_path => { is => 'String',
+                       doc => 'Pathname for the data produced by the run' },
+    ],
+    has_optional => [
+        limit_regions =>  { is => 'String',
+                            doc => 'Which regions should be kept during further analysis' },
         bsub    =>  { is => 'Boolean',
                       doc => 'Sub-commands should be submitted to bsub. Default is yes.',
                       default_value => 1 },
@@ -22,13 +30,6 @@ UR::Object::Class->define(
         bsub_args => { is => 'String',
                        doc => 'Additional arguments passed along to bsub (such as -o, for example)',
                        default_value => '' },
-        full_path => { is => 'String',
-                       doc => 'Pathname for the data produced by the run' },
-        limit_regions =>  { is => 'String',
-                            doc => 'Which regions should be kept during further analysis',
-                            is_optional => 1},
-        sequencing_platform => { is => 'String',
-                                 doc => 'Type of sequencing instrument used to generate the data'},
         test => { is => 'Boolean',
                   doc => 'Create run information in the database, but do not schedule any sub-commands',
                   is_optional => 1,
@@ -42,7 +43,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model add-reads --model ley_aml_patient1_solexa_cdna /SOME/PATH
+genome-model add-reads --model ley_aml_patient1_solexa_cdna --squencing-platform solexa --full-path /SOME/PATH
 EOS
 }
 
