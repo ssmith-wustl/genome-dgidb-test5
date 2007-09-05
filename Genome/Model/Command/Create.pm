@@ -31,6 +31,14 @@ UR::Object::Class->define(
     schema_name => 'Main',
 );
 
+sub _shell_args_property_meta {
+    # exclude this class' commands from shell arguments
+    return grep { 
+            $_->via and $_->via ne 'run'
+        } shift->SUPER::_shell_args_property_meta(@_);
+}
+
+
 sub sub_command_sort_position {
     -1
 }
