@@ -54,7 +54,7 @@ sub _get_genome_model{
 sub _assemble_event_creation_params{
     my ($self, $jobid) = @_;
     
-    my $model = $self-_get_genome_model();
+    my $model = $self->_get_genome_model();
     
     my %params = ( event_type => $self->class_name,
                        genome_model_id => $model->id,
