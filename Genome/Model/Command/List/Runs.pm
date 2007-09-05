@@ -49,12 +49,12 @@ sub execute {
 
         push @out, [
                     Term::ANSIColor::colored("Bustard Path", 'red'),
-                    Term::ANSIColor::colored($bustard_path, 'underscore')
+                    $bustard_path
                     ];
         
         push @out, [
                    Term::ANSIColor::colored("Gerald Date:", 'red'),
-                   Term::ANSIColor::colored($pse->date_scheduled, 'underscore')
+                   $pse->date_scheduled
                    ];
         
         Genome::Model::EqualColumnWidthTableizer->new->convert_table_to_equal_column_widths_in_place( \@out );
@@ -84,8 +84,7 @@ sub _get_bustard_path_from_pse{
 }
 
 sub _get_dna_to_solexa_load_lane_map_for_pse{
-    my ($self, $pse) = @_;
-        
+    my ($self, $pse) = @_; 
     my $dna_his = GSC::PSE->dbh->selectall_arrayref(qq/select d.dna_name, dl.location_name from process_step_executions pse
                                                      join process_steps ps on ps.ps_id = pse.ps_ps_id
                                                      join (select distinct tpse.pse_id from tpp_pse tpse 
