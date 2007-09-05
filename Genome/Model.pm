@@ -34,6 +34,16 @@ UR::Object::Class->define(
     data_source => 'Genome::DataSource::Main',
 );
 
+sub data_parent_directory {
+    "/gscmnt/sata114/info/medseq/sample_data"
+}
+
+sub data_directory {
+    my $self = shift;
+    my $name = $self->name;
+    return $self->model_data_parent_directory . '/' . $name;
+}
+
 sub pretty_print_text {
     my $self = shift;
     
