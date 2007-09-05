@@ -14,7 +14,6 @@ UR::Object::Class->define(
     has => [
         full_path           => { is => 'varchar2(1000)' },
         limit_regions       => { is => 'varchar2(32)', is_optional => 1 },
-        sample_name         => { is => 'varchar2(255)' },
         sequencing_platform => { is => 'varchar2(255)' },
     ],
     schema_name => 'Main',
