@@ -25,12 +25,8 @@ EOS
 
 sub help_detail {
     return <<"EOS"
-Lists all known genome models.
+List items related to genome models.
 EOS
-}
-
-sub execute {
-
 }
 
 1;
