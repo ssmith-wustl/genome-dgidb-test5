@@ -9,6 +9,7 @@ use GSC;
 use Command; 
 use Data::Dumper;
 use Term::ANSIColor;
+use Genome::Model::EqualColumnWidthTableizer;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
@@ -54,7 +55,7 @@ sub execute {
                     Term::ANSIColor::colored($bustard_path, "cyan")
                     ];
         
-        _make_table_columns_equal_width(\@out);
+        Genome::Model::EqualColumnWidthTableizer->new->convert_table_to_equal_column_widths_in_place( \@out );
         
         print join( "\n",
                    
@@ -64,24 +65,6 @@ sub execute {
                    ), "\n\n\n";
     }
 
-}
-
-sub _make_table_columns_equal_width {
-    my $arrayref = shift;
-    my @max_length;
-    for my $row (@$arrayref) {
-        for my $col_num (0..$#$row) {
-            $max_length[$col_num] ||= 0;
-            if ($max_length[$col_num] < length($row->[$col_num])) {                
-                $max_length[$col_num] = length($row->[$col_num]);
-            }
-        }
-    }
-    for my $row (@$arrayref) {
-        for my $col_num (0..$#$row) {
-            $row->[$col_num] .= ' ' x ($max_length[$col_num] - length($row->[$col_num]) + 1);
-        }
-    }    
 }
 
 sub _get_bustard_path_from_pse{
