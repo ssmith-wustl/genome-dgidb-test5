@@ -73,4 +73,12 @@ sub sample_path{
     return Genome::Model::FileSystemInfo->new->sample_data_directory . $self->sample_name;
 }
 
+
+sub reference_sequence_file {
+    my $self = shift;
+    return sprintf('%s/%s/reference_sequences/%s', $self->data_parent_directory,
+                                                   $self->sample_name,
+                                                   $self->reference_sequence_name);
+}
+
 1;
