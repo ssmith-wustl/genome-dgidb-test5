@@ -11,6 +11,9 @@ use Data::Dumper;
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
+    has => [
+        name    => { is => 'String' },
+    ]
 );
 
 sub help_brief {
@@ -31,21 +34,17 @@ EOS
 }
 
 sub execute {
-    my $self = shift;
-    my @names = @{ $self->bare_args };
-    my @models = (
-        Genome::Model->get(name => \@names),
-        Genome::Model->get(id => \@names)
-    );
+    my $self = shift;    
+    my $name = $self->name;
+    my @models = Genome::Model->get(name => $name);
     unless (@models) {
-        $self->error_message("No models found matching the specified criteria");
+        $self->error_message("No model found named $name");
     } 
     for (@models) {
         $self->status_message("Removing " . $_->name . "(id " . $_->id . ")...");
-        print $_->delete;
+        $_->delete;
     }
 
-    UR::Context->commit;
 }
 
 1;
