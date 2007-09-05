@@ -143,7 +143,7 @@ sub _get_sample_output_lines_by_plate_lanes_for_pse{
         
         push @out, [
                     Term::ANSIColor::colored($lanes_text, 'red'),
-                    Term::ANSIColor::colored($dna, "black")
+                    Term::ANSIColor::colored($dna, "bold black")
                     ];
     }
 
