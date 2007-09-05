@@ -3,6 +3,8 @@ package Genome::RunChunk;
 use strict;
 use warnings;
 
+use File::Basename;
+
 use Genome;
 UR::Object::Class->define(
     class_name => 'Genome::RunChunk',
@@ -19,5 +21,15 @@ UR::Object::Class->define(
     schema_name => 'Main',
     data_source => 'Genome::DataSource::Main',
 );
+
+
+sub name {
+    my $self = shift;
+
+    my $path = $self->full_path;
+
+    my($name) = ($path =~ m/\/(\S+?)\/[Dd]ata/);
+    return $name;
+}
 
 1;
