@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use Term::ANSIColor;
 use Genome::Model::EqualColumnWidthTableizer;
+Genome::Model::FileSystemInfo;
 
 use Genome;
 UR::Object::Class->define(
@@ -54,6 +55,12 @@ sub pretty_print_text {
     $out .= join("\n", map { " @$_ " } @out);
     $out .= "\n\n";
     return $out;
+}
+
+sub sample_path{
+    my $self = shift;
+    
+    return Genome::Model::FileSystemInfo->new->sample_data_directory . $self->sample_name;
 }
 
 1;

@@ -9,6 +9,7 @@ sub new{
     my $self = {
         base_directory => "/gscmnt/sata114/info/medseq/",
         runs_list_filename => "/gscmnt/sata114/info/medseq/aml/run_listing.txt",
+        sample_data_directory => '/gscmnt/sata114/info/medseq/sample_data/',
     };
 
     return bless $self, $pkg;
@@ -22,4 +23,7 @@ sub runs_list_filename{
     return shift->{runs_list_filename};
 }
 
+sub sample_data_directory{
+    return shift->{sample_data_directory}
+}
 1;

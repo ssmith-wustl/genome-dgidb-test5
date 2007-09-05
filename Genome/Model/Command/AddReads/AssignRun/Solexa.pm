@@ -40,37 +40,24 @@ sub execute {
         return 0;
     }
 
-    my $sample_path = $self->full_path;
-    mkpath $sample_path;
-    unless (-d $sample_path) {
-        $self->error_message("Sample pathname $sample_path was not created");
+    # create a space for links to bustards for this sample / platform / DNA type combination, unless exists
+    my $run_sample_path = $self->model->sample_path . '/runs/' . $run->sequencing_platform . '/' . $self->model->dna_type;
+    mkpath $run_sample_path unless (-e $run_sample_path && -d $run_sample_path);
+    unless (-d $run_sample_path) {
+        $self->error_message("Run Sample pathname $run_sample_path was not created");
         return;
     }
 
-    my $base_dir = Genome::Model::FileSystemInfo->new->base_directory;
-
-    my $base_run_dir = $base_dir . '/aml' .$self->run_id;
-    if (-e $base_run_dir) {
-            $self->error_message("$base_run_dir already exists");
-            return;
-    }
-
-    # make symbolic link to bustard
+    # ensure symbolic link to bustard not already present
     my $bustard_dir = $run->full_path;
-    if (-e "$sample_path/prb_src") {
-            $self->error_message("$sample_path/prb_src already exists");
+    if (-e "$run_sample_path/prb_src") {
+            $self->error_message("$run_sample_path/prb_src already exists");
             return;
-    }
-    #system("ln -s $sample_path $base_run_dir");
-    unless (symlink($sample_path,$base_run_dir)) {
-        $self->error_message("Can't create symlink $base_run_dir pointing to $sample_path: $!");
-        return;
     }
  
-    #system("ln -s $bustard_dir $sample_path/prb_src");
-    unless (symlink($bustard_dir, $sample_path . "/prb_src")) {
-        $self->error_message("Can't create symlink $sample_path/prb_src pointing to $bustard_dir: $!");
-        unlink($base_run_dir);  # Clean up symlink created above
+    # make symbolic link to bustard
+    unless (symlink($bustard_dir, $run_sample_path . "/prb_src")) {
+        $self->error_message("Can't create symlink $run_sample_path/prb_src pointing to $bustard_dir: $!");
         return;
     }
     return 1;
