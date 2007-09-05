@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Term::ANSIColor;
 use Genome::Model::EqualColumnWidthTableizer;
-Genome::Model::FileSystemInfo;
+use Genome::Model::FileSystemInfo;
 
 use Genome;
 UR::Object::Class->define(
