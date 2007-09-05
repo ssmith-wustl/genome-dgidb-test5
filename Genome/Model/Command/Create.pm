@@ -42,11 +42,11 @@ sub help_brief {
 sub help_synopsis {
     return <<"EOS"
 genome-model create
-                    --name ley_aml_1_revA
-                    --sample ley_aml_patient1 
+                    --name ley_aml_patient1_tumor_test1
+                    --sample ley_aml_patient1_tumor
                     --dna-type whole 
                     --read-calibrator none
-                    --aligner maq1_6    
+                    --read-aligner maq1_6    
                     --genotyper maq1_6     
                     --indel-finder bhdsindel1 
                     --prior NCBI-human-build36 
