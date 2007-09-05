@@ -39,9 +39,11 @@ sub execute {
         $self->error_message("Did not find run info for run_id " . $self->run_id);
         return 0;
     }
+    
+    my $model = Genome::Model->get( name => $self->model );
 
     # create a space for links to bustards for this sample / platform / DNA type combination, unless exists
-    my $run_sample_path = $self->model->sample_path . '/runs/' . $run->sequencing_platform . '/' . $self->model->dna_type;
+    my $run_sample_path = $model->sample_path . '/runs/' . $run->sequencing_platform . '/' . $model->dna_type;
     mkpath $run_sample_path unless (-e $run_sample_path && -d $run_sample_path);
     unless (-d $run_sample_path) {
         $self->error_message("Run Sample pathname $run_sample_path was not created");
@@ -60,6 +62,7 @@ sub execute {
         $self->error_message("Can't create symlink $run_sample_path/prb_src pointing to $bustard_dir: $!");
         return;
     }
+    
     return 1;
 }
 1;
