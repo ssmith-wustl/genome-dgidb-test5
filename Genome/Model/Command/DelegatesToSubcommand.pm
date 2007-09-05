@@ -59,7 +59,7 @@ sub _get_sub_command_class_name{
     # Does the sub-command exist?
     my %sub_command_types = $self->_sub_command_name_to_class_name_map();
 
-    my $sub_command_type = $sub_command_types{$sub_command_name};
+    my $sub_command_type = $sub_command_types{ucfirst($sub_command_name)};
     unless ($sub_command_type) {
         $self->error_message("sub command $sub_command_type is not known");
         return;
