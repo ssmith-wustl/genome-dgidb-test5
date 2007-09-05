@@ -20,11 +20,16 @@ UR::Object::Class->define(
         genome_model    => { is => 'Genome::Model', id_by => 'genome_model_id', constraint_name => 'event_genome_model' },
         genome_model_id => { is => 'integer', implied_by => 'genome_model_id' },
         lsf_job_id      => { is => 'varchar2(64)', is_optional => 1 },
-        run             => { is => 'Genome::RunChunk', id_by => 'run_id', constraint_name => 'event_run' },
-        run_id          => { is => 'integer', is_optional => 1, implied_by => 'run_id' },
+        run             => { is => 'Genome::RunChunk', id_by => 'run_id', constraint_name => 'event_run', id_dimension => 1 },
         user_name       => { is => 'varchar2(64)' },
     ],
     data_source => 'Genome::DataSource::Main',
 );
+
+sub _shell_args_property_meta {
+    # exclude this class' commands from shell arguments
+    return grep { $_->class_name ne __PACKAGE__ } shift->SUPER::_shell_args_property_meta(@_);
+}
+
 
 1;
