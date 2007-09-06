@@ -52,8 +52,6 @@ genome-model add-reads
 
 EOS
 }
-EOS
-}
 
 sub help_detail {
     return <<"EOS"
