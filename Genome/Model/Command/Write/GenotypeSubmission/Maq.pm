@@ -79,81 +79,106 @@ my %IUBcode=(
 
 sub execute {
     my $self = shift;
-
+		
     my($mapfile, $cnsfile, $refbfa, $sample, $basename, $coord_file,
        $indel, $version, $build, $qcutoff, $coord_offset) =
-	   ($self->mapfile, $self->cnsfile, $self->refbfa, $self->sample, $self->basename,
-	    $self->coordinates, $self->indel, $self->version, $self->build, $self->qcutoff, $self->offset);
+				 ($self->mapfile, $self->cnsfile, $self->refbfa, $self->sample, $self->basename,
+					$self->coordinates, $self->indel, $self->version, $self->build, $self->qcutoff, $self->offset);
     return unless ( defined($mapfile) && defined($cnsfile) && defined($refbfa) &&
-		    defined($sample) && defined($basename)
-	);
+										defined($sample) && defined($basename)
+									);
     $version ||= '';
     $build ||= '36';
     $qcutoff ||= 0;
     $coord_offset ||= 0;
-
+		
     $| = 1;			# autoflush stdout
-
+		
     my $genomic_coords = MG::Transform::Coordinates::TranscriptToGenomic->new(
-	coordinate_file => $coord_file);
-
+																																							coordinate_file => $coord_file);
+		
     my $snp_cmd = "maq cns2snp $cnsfile |";
     unless (open(SNP,$snp_cmd)) {
-	$self->error_message("Unable to run input command: $snp_cmd");
-	return;
+			$self->error_message("Unable to run input command: $snp_cmd");
+			return;
     }
     my %variation;
     print "Processing $cnsfile for SNPs\n";
     while(<SNP>) {
-	chomp;
-	my ($id, $start, $ref_sequence, $iub_sequence, $quality_score, $depth, $avg_hits, $high_quality, $unknown) = split("\t");
-	next if ($quality_score < $qcutoff );
-	my $key = "$id\t$start";
-	my $genotype = $IUBcode{$iub_sequence};
-	my $cns_sequence = substr($genotype,0,1);
-	my $var_sequence = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
-	if ($ref_sequence eq $cns_sequence &&
-	    $ref_sequence eq $var_sequence &&
-	    $var_sequence eq $cns_sequence) {
-	    next;										# no variation
-	}
-	$variation{$key}{start} = $start;
-	$variation{$key}{end} = $start;
-	$variation{$key}{ref_sequence} = $ref_sequence;
-	$variation{$key}{var_sequence} = $var_sequence;
-	if ($ref_sequence ne $cns_sequence && $var_sequence ne $cns_sequence) {
-	    if ($ref_sequence eq $var_sequence) {
-		$variation{$key}{var_sequence} = $cns_sequence;
-	    } else {
-		$variation{$key}{cns_sequence} = $cns_sequence;
-	    }
-	}
-	$variation{$key}{quality_score} = $quality_score;
-	$variation{$key}{variant_reads} = $depth;
-	$variation{$key}{avg_hits} = $avg_hits;
-	$variation{$key}{high_quality} = $high_quality;
-	$variation{$key}{unknown} = $unknown;
+			chomp;
+			my ($id, $start, $ref_sequence, $iub_sequence, $quality_score, $depth, $avg_hits, $high_quality, $unknown) = split("\t");
+			next if ($quality_score < $qcutoff );
+			my $key = "$id\t$start";
+			my $genotype = $IUBcode{$iub_sequence};
+			my $cns_sequence = substr($genotype,0,1);
+			my $var_sequence = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
+			if ($ref_sequence eq $cns_sequence &&
+					$ref_sequence eq $var_sequence &&
+					$var_sequence eq $cns_sequence) {
+				next;										# no variation
+			}
+			$variation{$key}{start} = $start;
+			$variation{$key}{end} = $start;
+			$variation{$key}{ref_sequence} = $ref_sequence;
+			$variation{$key}{var_sequence} = $var_sequence;
+			if ($ref_sequence ne $cns_sequence && $var_sequence ne $cns_sequence) {
+				if ($ref_sequence eq $var_sequence) {
+					$variation{$key}{var_sequence} = $cns_sequence;
+				} else {
+					$variation{$key}{cns_sequence} = $cns_sequence;
+				}
+			}
+			$variation{$key}{quality_score} = $quality_score;
+			$variation{$key}{total_reads} = $depth;
+			$variation{$key}{avg_hits} = $avg_hits;
+			$variation{$key}{high_quality} = $high_quality;
+			$variation{$key}{unknown} = $unknown;
     }
     close(SNP);
     my $pileup_cmd = "maq pileup -v $refbfa $mapfile |";
     unless (open(PILEUP,$pileup_cmd)) {
-	$self->error_message("Unable to run input command: $pileup_cmd");
-	return;
+			$self->error_message("Unable to run input command: $pileup_cmd");
+			return;
     }
     my $count = 0;
     print "Processing $mapfile for pileup ";
     while(<PILEUP>) {
-	chomp;
-	my ($id, $position, $ref_base, $depth, $bases) = split("\t");
-	if ($depth > 0) {
-	    my $key = "$id\t$position";
-	    if	(defined($variation{$key})) {
-		print '.' if (++$count % 1000 == 0);
-		$variation{$key}{total_reads} = $depth;
-#		$variation{$key}{ref_base} = $ref_base;
-#		$variation{$key}{bases} = $bases;
-	    }
-	}
+			chomp;
+			my ($id, $position, $ref_base, $depth, $bases) = split("\t");
+			if ($depth > 0) {
+				my $key = "$id\t$position";
+				if	(defined($variation{$key})) {
+					print '.' if (++$count % 1000 == 0);
+					$variation{$key}{depth} = $depth;
+					my $bases_length = length($bases);
+					my $temp_bases = $bases;
+					$temp_bases =~ s/[\,\.]//gx;
+					$variation{$key}{reference_reads} = $bases_length - length($temp_bases);
+					if ($bases =~ /A/ix ){
+						$temp_bases = $bases;
+						$temp_bases =~ s/A//gix;
+						$variation{$key}{variant_reads}{A} = $bases_length - length($temp_bases);
+					}
+					if ($bases =~ /C/ix ){
+						$temp_bases = $bases;
+						$temp_bases =~ s/C//gix;
+						$variation{$key}{variant_reads}{C} = $bases_length - length($temp_bases);
+					}
+					if ($bases =~ /G/ix ){
+						$temp_bases = $bases;
+						$temp_bases =~ s/G//gix;
+						$variation{$key}{variant_reads}{G} = $bases_length - length($temp_bases);
+					}
+					if ($bases =~ /T/ix ){
+						$temp_bases = $bases;
+						$temp_bases =~ s/T//gix;
+						$variation{$key}{variant_reads}{T} = $bases_length - length($temp_bases);
+					}
+					
+					#		$variation{$key}{ref_base} = $ref_base;
+					#		$variation{$key}{bases} = $bases;
+				}
+			}
     }
     close(PILEUP);
     print "\n";
@@ -162,71 +187,71 @@ sub execute {
     print "Processing variations\n";
     my %bad_ids = ();
     foreach my $key (keys %variation) {
-	next unless (exists($variation{$key}{start}));
-	my ($id, $rel_position) = split("\t",$key);
-	my $chromosome;
-	if ($id =~ /NC_0000(.{2})/x ) {
-	    $chromosome = $1;
-	} elsif ($id =~ /chr(.*)$/x) {
-	    $chromosome = $1;
-	} elsif ($id =~ /^ \d+ $/x || $id =~ /^ [XY] $/x) {
-	    $chromosome = $id;
-	}
-	my $coord_id = $id;
-	if ($id =~ /\( \s* CCDS/) {
-	    $coord_id =~ s/\( \s* CCDS.*$//;
-	} elsif($id =~ /CCDS/ ) {
-	    $coord_id =~ s/\|.*$//;
-	}
-	my ($c_chromosome, $position, $offset, $c_orient) =
-	    $genomic_coords->Translate($coord_id,$rel_position);
-	$position += $coord_offset; # add a user supplied offset--the position is still undef  if undef
-	$rel_position += $coord_offset; # add a user supplied offset--the rel_position is still undef  if undef
-	$offset += $coord_offset; # add a user supplied offset--the offset is still undef  if undef
-	if (defined($c_chromosome) && defined($rel_position)) {
-	    if ($c_chromosome =~ /^ \d+ $/x ) {
-		$c_chromosome = sprintf "%02d", $c_chromosome;
-	    }
-	    $chromosome ||= $c_chromosome;
-	    $position ||= $rel_position;
-	    $output{$chromosome}{$position}{orientation} = $c_orient;
-	}
-	
-	unless (defined($chromosome)) {
-	    $bad_ids{$id} = 1;
-	    next;
-	}
-	
-	# left pad with zero so sorting is easy
-	if ($chromosome =~ /^ \d+ $/x ) {
-	    $chromosome = sprintf "%02d", $chromosome;
-	}
-	$output{$chromosome}{$position}{id} = $id;
-	
-	foreach my $valuekey (keys %{$variation{$key}}) {
-	    if ($valuekey eq 'start' || $valuekey eq 'end') {
-		$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey}+$offset;
-	    } elsif (exists($variation{$key}{$valuekey})) {
-		$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey};
-	    }
-	}
-	delete $variation{$key};
+			next unless (exists($variation{$key}{start}));
+			my ($id, $rel_position) = split("\t",$key);
+			my $chromosome;
+			if ($id =~ /NC_0000(.{2})/x ) {
+				$chromosome = $1;
+			} elsif ($id =~ /chr(.*)$/x) {
+				$chromosome = $1;
+			} elsif ($id =~ /^ \d+ $/x || $id =~ /^ [XY] $/x) {
+				$chromosome = $id;
+			}
+			my $coord_id = $id;
+			if ($id =~ /\( \s* CCDS/) {
+				$coord_id =~ s/\( \s* CCDS.*$//;
+			} elsif($id =~ /CCDS/ ) {
+				$coord_id =~ s/\|.*$//;
+			}
+			my ($c_chromosome, $position, $offset, $c_orient) =
+				$genomic_coords->Translate($coord_id,$rel_position);
+			$position += $coord_offset; # add a user supplied offset--the position is still undef  if undef
+			$rel_position += $coord_offset; # add a user supplied offset--the rel_position is still undef  if undef
+			$offset += $coord_offset; # add a user supplied offset--the offset is still undef  if undef
+			if (defined($c_chromosome) && defined($rel_position)) {
+				if ($c_chromosome =~ /^ \d+ $/x ) {
+					$c_chromosome = sprintf "%02d", $c_chromosome;
+				}
+				$chromosome ||= $c_chromosome;
+				$position ||= $rel_position;
+				$output{$chromosome}{$position}{orientation} = $c_orient;
+			}
+			
+			unless (defined($chromosome)) {
+				$bad_ids{$id} = 1;
+				next;
+			}
+			
+			# left pad with zero so sorting is easy
+			if ($chromosome =~ /^ \d+ $/x ) {
+				$chromosome = sprintf "%02d", $chromosome;
+			}
+			$output{$chromosome}{$position}{id} = $id;
+			
+			foreach my $valuekey (keys %{$variation{$key}}) {
+				if ($valuekey eq 'start' || $valuekey eq 'end') {
+					$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey}+$offset;
+				} elsif (exists($variation{$key}{$valuekey})) {
+					$output{$chromosome}{$position}{$valuekey} = $variation{$key}{$valuekey};
+				}
+			}
+			delete $variation{$key};
     }
     my $bad_ids = join(' ',keys %bad_ids);
     if ($bad_ids ne '') {
-	print "Could not find coordinate translation for ids: $bad_ids\n";
+			print "Could not find coordinate translation for ids: $bad_ids\n";
     }
     undef %variation;
     my $fh;
     unless ($self->db) {
-	print "Writing genotype submission file\n";
-	$fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
-	unless (defined($fh)) {
-	    $self->error_message("Unable to open genotype submission file for writing: $basename");
-	    return;
-	}
+			print "Writing genotype submission file\n";
+			$fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
+			unless (defined($fh)) {
+				$self->error_message("Unable to open genotype submission file for writing: $basename");
+				return;
+			}
     } else {
-	print "Loading read groups\n";
+			print "Loading read groups\n";
     }
     my $mutation;
     my $sample_temp = $sample;
@@ -236,63 +261,72 @@ sub execute {
     my $sample_id = $sample_a . '-' . $sample_b;
     my $number = 1;
     foreach my $chr (sort (keys %output)) {
-	my $chromosome = $chr;
-	$chromosome =~ s/^0//;
-	foreach my $pos (sort { $a <=> $b } (keys %{$output{$chr}})) {
-	    my $start = $output{$chr}{$pos}{start};
-	    my $end = $output{$chr}{$pos}{end};
-	    my $ref_sequence = $output{$chr}{$pos}{ref_sequence};
-	    my $var_sequence = $output{$chr}{$pos}{var_sequence};
-	    unless (defined($ref_sequence) && defined($var_sequence)) {
-		next;
-	    }
-	    my $cns_sequence = $output{$chr}{$pos}{cns_sequence};
-	    my $variant_reads = $output{$chr}{$pos}{variant_reads};
-	    my $total_reads = $output{$chr}{$pos}{total_reads};
-	    my $ref_reads;
-	    if (defined($total_reads) && defined($variant_reads)) {
-		$ref_reads = $total_reads - $variant_reads;
-	    }
-	    my $quality_score = $output{$chr}{$pos}{quality_score};
-	    my $depth = $output{$chr}{$pos}{depth};
-	    my $software = 'maq' . $version;
-	    my $plus_minus = (defined($output{$chr}{$pos}{orientation})) ? $output{$chr}{$pos}{orientation} : '+';
-	    my $genotype_allele1 = $ref_sequence;
-	    my $genotype_allele2 = $var_sequence;
-	    $quality_score ||= '';
-	    my @scores = ($quality_score);
-	    if (defined($ref_reads) && $ref_reads != 0) {
-		push @scores, ("reads1=$ref_reads");
-	    }
-	    if (defined($variant_reads) && $variant_reads != 0) {
-		push @scores, ("reads2=$variant_reads");
-	    }
-	    if (defined($depth)) {
-		push @scores, ("depth=$depth");
-	    }
-	    if (defined($cns_sequence)) {
-		push @scores, ("cns=$cns_sequence");
-	    }
-	    
-	    unless ($self->db) {
-		Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build, $chromosome, $plus_minus, $start, $end,
-									 $sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
-	    } else {
-		MG::IO::GenotypeSubmission::AddMutation($mutation,$software,$build, $chromosome, $plus_minus, $start, $end,
-							$sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
-	    }
-	}
+			my $chromosome = $chr;
+			$chromosome =~ s/^0//;
+			foreach my $pos (sort { $a <=> $b } (keys %{$output{$chr}})) {
+				my $start = $output{$chr}{$pos}{start};
+				my $end = $output{$chr}{$pos}{end};
+				my $ref_sequence = $output{$chr}{$pos}{ref_sequence};
+				my $var_sequence = $output{$chr}{$pos}{var_sequence};
+				unless (defined($ref_sequence) && defined($var_sequence)) {
+					next;
+				}
+				my $cns_sequence = $output{$chr}{$pos}{cns_sequence};
+				my $total_reads = $output{$chr}{$pos}{total_reads};
+				my $variant_reads;
+				if (exists($output{$chr}{$pos}{variant_reads}{$var_sequence})) {
+					$variant_reads = $output{$chr}{$pos}{variant_reads}{$var_sequence};
+				}
+				my $depth = $output{$chr}{$pos}{depth};
+				my $ref_reads = $output{$chr}{$pos}{reference_reads};
+				if (defined($cns_sequence) && $cns_sequence ne '') {
+					if (exists($output{$chr}{$pos}{variant_reads}{$cns_sequence})) {
+						$ref_reads = $output{$chr}{$pos}{variant_reads}{$cns_sequence};
+					}
+				} else {
+					if (exists($output{$chr}{$pos}{variant_reads}{$ref_sequence})) {
+						$ref_reads = $output{$chr}{$pos}{variant_reads}{$ref_sequence};
+					}
+				}
+				my $quality_score = $output{$chr}{$pos}{quality_score};
+				my $software = 'maq' . $version;
+				my $plus_minus = (defined($output{$chr}{$pos}{orientation})) ? $output{$chr}{$pos}{orientation} : '+';
+				my $genotype_allele1 = $ref_sequence;
+				my $genotype_allele2 = $var_sequence;
+				$quality_score ||= '';
+				my @scores = ($quality_score);
+				if (defined($ref_reads) && $ref_reads != 0) {
+					push @scores, ("reads1=$ref_reads");
+				}
+				if (defined($variant_reads) && $variant_reads != 0) {
+					push @scores, ("reads2=$variant_reads");
+				}
+				if (defined($depth)) {
+					push @scores, ("depth=$depth");
+				}
+				if (defined($cns_sequence)) {
+					push @scores, ("cns=$cns_sequence");
+				}
+				
+				unless ($self->db) {
+					Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build, $chromosome, $plus_minus, $start, $end,
+																																	 $sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
+				} else {
+					MG::IO::GenotypeSubmission::AddMutation($mutation,$software,$build, $chromosome, $plus_minus, $start, $end,
+																									$sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
+				}
+			}
     }
     unless ($self->db) {
-	$fh->close();
+			$fh->close();
     } else {
-	MG::IO::GenotypeSubmission::Load($mutation,
-					 tech_type => '',
-					 mapping_reference => ''
-	    );
+			MG::IO::GenotypeSubmission::Load($mutation,
+																			 tech_type => '',
+																			 mapping_reference => ''
+																			);
     }
     return 1;
-}
+	}
     
 # 'maq indelsoa $refbfa $mapfile |'
 # CCDS15.1|Hs36.2|chr1    348825  -1      1       1       1       0.664983
