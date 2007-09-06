@@ -11,12 +11,11 @@ use Data::Dumper;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => 'Command',
+    is => 'Genome::Model::Event',
     has => [ 
-        model   => { is => 'String', is_optional => 0, doc => 'the genome model on which to operate' }
+        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
     ]
 );
-
 sub help_brief {
     my $self = shift;
     return "empty implementation of " . $self->command_name_brief;
