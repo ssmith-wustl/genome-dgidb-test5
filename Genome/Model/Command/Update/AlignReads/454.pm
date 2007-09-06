@@ -15,6 +15,7 @@ UR::Object::Class->define(
         'sffdir'   => { type => 'String',  doc => "sff (input) directory--default is sff", is_optional => 1},
         'dir'   => { type => 'String',  doc => "project alignment (output) directory"},
         'refseq'   => { type => 'String',      doc => "reference sequence file"},
+				'cdna' => { type => 'Boolean', doc => "use old version for cdna", is_optional => 1},
 				'options' => { type => 'String', doc => "runMapping options", is_optional => 1}
     ], 
 );
@@ -54,13 +55,13 @@ EOS
 sub execute {
     my $self = shift;
 
-		my($dir, $sample, $sffdir, $refseq, $options) = 
-				 ($self->dir, $self->sample, $self->sffdir, $self->refseq, $self->options);
+		my($dir, $sample, $sffdir, $refseq, $options, $cdna) = 
+				 ($self->dir, $self->sample, $self->sffdir, $self->refseq, $self->options, $self->cdna);
 		$options ||= '';
 		return unless ( defined($dir) &&
 										defined($sample) && defined($refseq)
 									);
-
+		my $runmapping = ($cdna) ? 'PATH=/gsc/pkg/bio/454/offInstrumentApps-1.1.01.20-64/bin:$PATH ; runMapping' : 'runMapping';
 		$sffdir ||= 'sff';
 		$dir =~ s/ \/ $ //x;				# Remove any trailing slash
 
@@ -69,7 +70,7 @@ sub execute {
 			mkpath $dir;
 		}
 
-		show_system("runMapping -o $dir $options $refseq $sffdir/$sample.sff");
+		show_system("$runmapping -o $dir $options $refseq $sffdir/$sample.sff");
 
     return 1;
 }
