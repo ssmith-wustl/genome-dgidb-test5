@@ -41,7 +41,9 @@ CREATE TABLE genome_model_event (
 INSERT INTO "genome_model_event" VALUES(3, 5, NULL, 'genome-model create', 'completed', NULL, '2007-08-30 22:13:20', NULL, 'ssmith');
 INSERT INTO "genome_model_event" VALUES(4, 6, NULL, 'genome-model create', 'completed', NULL, '2007-08-30 22:13:48', NULL, 'ssmith');
 CREATE TABLE URMETA_genome_model_id_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
+CREATE TABLE URMETA_run_id_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
 DELETE FROM sqlite_sequence;
+INSERT INTO "sqlite_sequence" VALUES('URMETA_run_id_seq', 1);
 INSERT INTO "sqlite_sequence" VALUES('URMETA_genome_model_id_seq', 6);
 INSERT INTO "sqlite_sequence" VALUES('URMETA_genome_model_event_id_seq', 4);
 CREATE TABLE URMETA_genome_model_event_id_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
