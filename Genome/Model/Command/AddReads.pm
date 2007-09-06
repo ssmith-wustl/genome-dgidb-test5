@@ -43,7 +43,15 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model add-reads --model_id 123 --squencing-platform solexa --full-path /SOME/PATH
+
+genome-model add-reads
+--model-id 5
+--squencing-platform solexa
+--run-id 10
+                    
+
+EOS
+}
 EOS
 }
 
