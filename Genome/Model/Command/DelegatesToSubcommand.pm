@@ -33,16 +33,16 @@ my $self = shift;
     my $retval;
     if ($command) {
         $retval = $command->execute();
+        
+        $command->date_completed(scalar(localtime));
         $command->event_status($retval ? 'Succeeded' : 'Failed');
+        
+        return 1;
+        
     } else {
         $command->event_status('Failed to create sub-command');
+        return;
     }
-
-    $command->date_completed(scalar(localtime));
-
-    App::DB->sync_database();
-
-    return $retval;
 }
 
 sub _sub_command_name_to_class_name_map{
