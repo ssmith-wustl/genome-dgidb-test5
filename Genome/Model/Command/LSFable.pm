@@ -11,6 +11,9 @@ use Command;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
+    has => [ 
+            model_id => { type => 'Integer', doc => 'Identifies the genome model by ID'},
+           ],
     is => 'Command',
     is_abstract => 1,
 );
@@ -42,9 +45,9 @@ my($self) = @_;
 sub _get_genome_model{
     my $self = shift;
     
-    my $model = Genome::Model->get(name => $self->model);
+    my $model = Genome::Model->get(id => $self->model_id);
     unless ($model) {
-        $self->error_message("Can't find information about genome model named ".$self->model );
+        $self->error_message("Can't find information about genome model with id ".$self->model_id );
         return undef;
     }
     
@@ -54,10 +57,8 @@ sub _get_genome_model{
 sub _assemble_event_creation_params{
     my ($self, $jobid) = @_;
     
-    my $model = $self->_get_genome_model();
-    
     my %params = ( event_type => $self->get_class_object->class_name,
-                       genome_model_id => $model->id,
+                       genome_model_id => $self->model_id,
                        date_scheduled => scalar(localtime),
                        user_name => $ENV{'USER'},
                      );

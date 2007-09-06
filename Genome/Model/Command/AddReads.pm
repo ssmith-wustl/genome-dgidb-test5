@@ -11,7 +11,7 @@ UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [
-        model   =>  { is => 'String', 
+        model_id   =>  { is => 'Integer', 
                       doc => "Identifies the genome model to which we'll add the reads." },
         sequencing_platform => { is => 'String',
                                  doc => 'Type of sequencing instrument used to generate the data'},
@@ -43,7 +43,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model add-reads --model ley_aml_patient1_solexa_cdna --squencing-platform solexa --full-path /SOME/PATH
+genome-model add-reads --model_id 123 --squencing-platform solexa --full-path /SOME/PATH
 EOS
 }
 
@@ -62,8 +62,6 @@ sub execute {
 
 $DB::single=1;
     
-    my $model_id = $self->_get_genome_model_id;
-
     my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
     my @sub_command_names = @{ $self->_get_sorted_sub_command_names };
 
@@ -82,7 +80,7 @@ $DB::single=1;
         
         Genome::Model::Event->create(
                                         event_type         => $sub_command_classes[$idx],
-                                        genome_model_id    => $model_id,
+                                        model_id           => $self->model_id,
                                         lsf_job_id         => $last_bsub_job_id,
                                         date_scheduled     => scalar(localtime),
                                         user_name          => $ENV{'USER'},
@@ -94,18 +92,18 @@ $DB::single=1;
     return 1; 
 }
 
-sub _get_genome_model_id{
-    my $self = shift;
-    
-    my $model_name = $self->model;
-    my $model = Genome::Model->get(name => $model_name);
-    unless($model) {
-        $self->error_message("Genome model named $model_name is unknown");
-        return 0;
-    }
-    
-    return $model->id;
-}
+#sub _get_genome_model_id{
+#    my $self = shift;
+#    
+#    my $model_name = $self->model;
+#    my $model = Genome::Model->get(name => $model_name);
+#    unless($model) {
+#        $self->error_message("Genome model named $model_name is unknown");
+#        return 0;
+#    }
+#    
+#    return $model->id;
+#}
 
 sub _get_run{
     my $self = shift;
@@ -160,9 +158,9 @@ sub _generate_command_with_sub_command_name_and_last_bsub_id{
         }
     }
 
-    $cmd .= sprintf(' %s --model %s --run-id %d',
+    $cmd .= sprintf(' %s --model-id %d --run-id %d',
                                 $ssc_name,
-                                $self->model,
+                                $self->model_id,
                                 $run->id);
     
     return $cmd;

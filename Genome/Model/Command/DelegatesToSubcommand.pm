@@ -10,7 +10,7 @@ UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Genome::Model::Command::LSFable',
     is_abstract => 1,
-    has => [ model => { is => 'String', doc => 'Identifies the genome model to use by name'},
+    has => [ model_id => { is => 'Integer', doc => 'Identifies the genome model to use by ID'},
              run_id => { is => 'Integer', doc => 'Identifies the run by id'},
            ], 
 );
@@ -21,11 +21,10 @@ my $self = shift;
 
     my $sub_command_type = $self->_get_sub_command_class_name();
  
-    my $model = Genome::Model->get(name=>$self->model);
+    my $model = Genome::Model->get(id => $self->model_id);
 
-    my $command = $sub_command_type->create(model => $self->model,
+    my $command = $sub_command_type->create(model_id => $self->model_id,
                                             run_id => $self->run_id,
-					    genome_model => $model,
 					    event_type => $sub_command_type->command_name,
 					    date_scheduled => App::Time->now(),
 					    user_name => $ENV{'USER'}
@@ -91,8 +90,7 @@ sub _get_or_create_then_init_event{
     return unless $event;
     $event->run_id( $self->run_id );
 
-    my $model = Genome::Model->get(name => $self->model);
-    $event->genome_model_id($model->id);
+    $event->genome_model_id($self->model_id);
     
     return $event;
 }

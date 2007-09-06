@@ -13,7 +13,7 @@ UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Genome::Model::Event',
     has => [ 
-        model   => { is => 'String', is_optional => 0, doc => 'the genome model on which to operate' },
+        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
     ]
 );
 
@@ -30,7 +30,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $model = Genome::Model->get(name => $self->model);
+    my $model = Genome::Model->get(id => $self->model_id);
 
     my $working_dir = $self->resolve_run_directory;
 

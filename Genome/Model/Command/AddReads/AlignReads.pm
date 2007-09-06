@@ -34,8 +34,11 @@ EOS
 sub sub_command_delegator {
     my $self = shift;
 
-    my $model = Genome::Model->get(name => $self->model);
-    return unless $model;
+    my $model = Genome::Model->get(id => $self->model_id);
+    unless ($model) {
+        $self->error_message("Can't retrieve a Genome Model with ID ".$self->model_id);
+        return;
+    }
 
     return $model->read_aligner_name;
 }
