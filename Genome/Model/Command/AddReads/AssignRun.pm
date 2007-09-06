@@ -10,6 +10,7 @@ use Command;
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => ['Genome::Model::Command::DelegatesToSubcommand'],
+    
 );
 
 sub sub_command_sort_position { 1 }
@@ -20,6 +21,9 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
+    genome-model add-reads assign-run
+                    --model-id 5
+                    --run-id 10
 EOS
 }
 

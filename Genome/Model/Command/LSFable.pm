@@ -58,7 +58,7 @@ sub _assemble_event_creation_params{
     my ($self, $jobid) = @_;
     
     my %params = ( event_type => $self->get_class_object->class_name,
-                       genome_model_id => $self->model_id,
+                       model_id => $self->model_id,
                        date_scheduled => scalar(localtime),
                        user_name => $ENV{'USER'},
                      );

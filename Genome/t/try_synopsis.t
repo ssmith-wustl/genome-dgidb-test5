@@ -16,7 +16,7 @@ sub get_example_from_synopsis {
     $cmd =~ s/\n//g;
     $cmd =~ s/\s+/ /g;
     $cmd =~ s/genome-model //;
-    #print $cmd;
+    print "CMD IS $cmd \n\n\n";
     ok($cmd, "got a command from the synopsis of $command_name");
     exit 1 unless $cmd;
     

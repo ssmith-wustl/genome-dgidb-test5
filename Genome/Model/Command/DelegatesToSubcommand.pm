@@ -90,7 +90,7 @@ sub _get_or_create_then_init_event{
     return unless $event;
     $event->run_id( $self->run_id );
 
-    $event->genome_model_id($self->model_id);
+    $event->model_id($self->model_id);
     
     return $event;
 }

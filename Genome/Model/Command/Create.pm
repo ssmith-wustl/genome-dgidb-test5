@@ -173,7 +173,7 @@ sub _create_target_class_instance_and_error_check{
         return;
     }
 
-    $self->genome_model($obj);
+    $self->model($obj);
 
     if (my @problems = $obj->invalid) {
         $self->error_message("Error creating $type_name:\n\t"
