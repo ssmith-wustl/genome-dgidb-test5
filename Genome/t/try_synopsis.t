@@ -32,9 +32,9 @@ sub get_example_from_synopsis {
 }
 
 sub test_command {
-    my $class;
+    my $class = shift;
     
-    my ($command_argv) = get_example_from_synopsis("Genome::Model::Command::AddReads::AlignReads");
+    my ($command_argv) = get_example_from_synopsis($class);
     my $exit_code = Genome::Model::Command->_execute_with_shell_params_and_return_exit_code(@$command_argv, "test", 1);
     is($exit_code,0,"execution worked of genome-model @$command_argv");
     
@@ -50,11 +50,13 @@ test_assign_run();
 # align reads
 test_command("Genome::Model::Command::AddReads::AlignReads");
 
+# update genotype probabilities
+
+test_command("Genome::Model::Command::AddReads::UpdateGenotypeProbabilities");
+
 # identify variations
 test_command("Genome::Model::Command::AddReads::IdentifyVariations");
 
-# update genotype probabilities
-test_command("Genome::Model::Command::AddReads::AlignReads");
 
 
 sub test_create_model {
@@ -83,6 +85,7 @@ sub test_assign_run {
     my ($command_argv) = get_example_from_synopsis("Genome::Model::Command::AddReads::AssignRun");
     #my @before = $model->run_chunk_list;
     #is(scalar(@before), 0, "has no run chunks before test");
+    print Data::Dumper::Dumper($command_argv);
     my $exit_code = Genome::Model::Command->_execute_with_shell_params_and_return_exit_code(@$command_argv, "test", 1);
     is($exit_code,0,"execution worked of genome-model @$command_argv");
     #my @after = $model->run_chunks;

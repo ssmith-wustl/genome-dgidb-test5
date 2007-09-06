@@ -43,7 +43,7 @@ sub execute {
         return 0;
     }
 
-    unless (-d  $model->data_parent_directory) {
+    unless (-d $model->data_parent_directory) {
         mkdir $model->data_parent_directory;
         unless(-d $model->data_parent_directory) {
             $self->error_message("Failed to create data parent directory: ".$model->data_parent_directory. ": $!");
@@ -53,7 +53,7 @@ sub execute {
 
     my $run_dir = $self->resolve_run_directory;
     if (-d $run_dir) {
-        $self->error_message("Run directory $run_dir already exists");
+        $self->status_message("Run directory $run_dir already exists");
         $self->event_status('completed');
         return;
     }

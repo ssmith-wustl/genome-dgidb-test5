@@ -19,7 +19,7 @@ UR::Object::Class->define(
         event_type      => { is => 'varchar2(255)' },
         model           => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'event_genome_model' },
         lsf_job_id      => { is => 'varchar2(64)', is_optional => 1 },
-        run             => { is => 'Genome::RunChunk', id_by => 'run_id', constraint_name => 'event_run', is_dimension => 1 },
+        run             => { is => 'Genome::RunChunk', id_by => 'run_id', constraint_name => 'event_run' },
         user_name       => { is => 'varchar2(64)' },
     ],
     data_source => 'Genome::DataSource::Main',

@@ -29,11 +29,13 @@ EOS
 
 sub execute {
     my $self = shift;
+    
+    return 1;
 
     my $model = Genome::Model->get(id => $self->model_id);
 
     my $lanes;
-    if ($self->sequencing_platform eq 'Solexa') {
+    if ($self->sequencing_platform eq 'solexa') {
         $lanes = $self->limit_regions || '12345678';
     } else {
         $self->error_message("Determining limit_regions for sequencing_platform ".$self->sequencing_platform." is not implemented yet");

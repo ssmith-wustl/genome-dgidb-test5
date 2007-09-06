@@ -29,6 +29,7 @@ EOS
 
 sub execute {
     my $self = shift;
+    return 1;
 
     my $model = Genome::Model->get(id => $self->model_id);
 
