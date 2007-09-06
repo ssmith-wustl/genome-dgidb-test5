@@ -9,7 +9,7 @@ use Genome;
 UR::Object::Class->define(
     class_name => 'Genome::RunChunk',
     english_name => 'run chunk',
-    table_name => 'run',
+    table_name => 'run_chunk',
     id_by => [
         id => { is => 'integer' },
     ],

@@ -1,11 +1,12 @@
 BEGIN TRANSACTION;
-CREATE TABLE run (
+CREATE TABLE run_chunk (
     id                      integer not     null primary key,
     sequencing_platform     varchar2(255)   not null, 
     full_path               varchar2(1000)  not null,
     limit_regions           varchar2(32),
     CONSTRAINT fake_mcpk unique(sequencing_platform, full_path, limit_regions)    
 );
+INSERT INTO "run_chunk" VALUES(1, 'solexa', '/gscmnt/sata114/info/medseq/aml/test_data/GERALD_28-01-2007_mhickenb', '1');
 CREATE TABLE genome_model (
    id integer not null primary key,
    name varchar(255) not null,
@@ -26,8 +27,8 @@ INSERT INTO "genome_model" VALUES(5, 'test1', 'ley_aml_patient1', 'whole', 'NCBI
 INSERT INTO "genome_model" VALUES(6, 'test2', 'ley_aml_patient1', 'cdna', 'NCBI-human-build36', 'maq', NULL, 'maq', NULL, 'maq', NULL, NULL, NULL, 'none');
 CREATE TABLE genome_model_event (
  id integer not null primary key,
- genome_model_id integer not null CONSTRAINT event_genome_model REFERENCES genome_model(id),
- run_id integer CONSTRAINT event_run REFERENCES run(id),
+ model_id integer not null CONSTRAINT event_genome_model REFERENCES genome_model(id),
+ run_id integer CONSTRAINT event_run REFERENCES run_chunk(id),
 
  -- these will come via the PSE when integrated, for now they will be part of the command
  event_type varchar2(255) not null,  -- from the command name now
