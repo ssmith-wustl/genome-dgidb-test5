@@ -5,6 +5,7 @@ use warnings;
 
 use UR;
 use File::Path;
+use GSC;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,

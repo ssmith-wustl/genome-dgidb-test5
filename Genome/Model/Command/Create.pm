@@ -34,7 +34,7 @@ UR::Object::Class->define(
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments
     return grep { 
-            $_->via and $_->via ne 'run'
+            not ($_->via and $_->via ne 'run') && not ($_->property_name eq 'run_id')
         } shift->SUPER::_shell_args_property_meta(@_);
 }
 
@@ -78,7 +78,8 @@ sub command_properties{
     
     return
         grep { $_ ne 'id' and $_ ne 'bare_args'}         
-            $self->get_class_object->all_property_names;
+            map { $_->property_name }
+                $self->_shell_args_property_meta;
 }
 
 sub execute {
