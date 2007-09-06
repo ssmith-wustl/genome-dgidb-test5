@@ -8,7 +8,7 @@ use Command;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => 'Genome::Model::Command::LSFable',
+    is => 'Command',
     is_abstract => 1,
     has => [ model_id => { is => 'Integer', doc => 'Identifies the genome model to use by ID'},
              run_id => { is => 'Integer', doc => 'Identifies the run by id'},
