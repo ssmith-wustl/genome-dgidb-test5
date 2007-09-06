@@ -56,7 +56,6 @@ sub execute {
     if (-d $run_dir) {
         $self->status_message("Run directory $run_dir already exists");
         $self->event_status('completed');
-        return;
     }
     
     eval { mkpath($run_dir) };
