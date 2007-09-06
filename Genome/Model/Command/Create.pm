@@ -63,7 +63,7 @@ EOS
 
 sub help_detail {
     return <<"EOS"
-This defines a new genome model.  Currently it equates to a directory tree on the filesystem.
+This defines a new genome model.
 
 The properties of the model determine what will happen when the add-reads command is run.
 EOS
