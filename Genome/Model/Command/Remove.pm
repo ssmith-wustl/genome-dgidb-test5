@@ -22,8 +22,8 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model remove some_name another_name
-genome-model remove 12345 yet_another_name 56789
+genome-model remove 
+--model-id 5
 EOS
 }
 
