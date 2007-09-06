@@ -108,7 +108,7 @@ sub new {
 	barx.bs_barcode = ? and barx.direction = ? and pse.ps_ps_id in 
 	(select ps3.ps_id from process_steps ps1, process_steps ps2, process_steps ps3 
            where ps2.pro_process = ps3.pro_process_to and ps1.pro_process_to = ps2.pro_process_to 
-           and ps1.ps_id = ? and (ps1.purpose = ps3.purpose or ps1.pro_process_to like 'claim%' or (ps3.purpose like 'Non-Barcoded Finishing' and ps3.gro_group_name = 'berg'))) order by pse.pse_id";
+           and ps1.ps_id = ? and (ps1.purpose = ps3.purpose or ps1.pro_process_to like 'claim%' or (ps3.purpose like 'Non-Barcoded Finishing' and ps3.gro_group_name = 'berg') or (ps1.purpose = 'Old Plasmid Picking' and ps3.purpose = 'Plasmid Picking'))) order by pse.pse_id";
 
     $self->{'GetDNAPSEFromBarcode'} = "select dp.* from dna_pse dp, pse_barcodes pb 
 	where 
