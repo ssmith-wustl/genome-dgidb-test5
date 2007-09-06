@@ -19,6 +19,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
+    genome-model add-reads --model-id 5 --run-id 10
 EOS
 }
 
