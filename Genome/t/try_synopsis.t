@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 8;
+use Test::More tests => 13;
 
 use above "Genome";
 use Genome::Model::Command::Create;
@@ -85,7 +85,6 @@ sub test_assign_run {
     my ($command_argv) = get_example_from_synopsis("Genome::Model::Command::AddReads::AssignRun");
     #my @before = $model->run_chunk_list;
     #is(scalar(@before), 0, "has no run chunks before test");
-    print Data::Dumper::Dumper($command_argv);
     my $exit_code = Genome::Model::Command->_execute_with_shell_params_and_return_exit_code(@$command_argv, "test", 1);
     is($exit_code,0,"execution worked of genome-model @$command_argv");
     #my @after = $model->run_chunks;
