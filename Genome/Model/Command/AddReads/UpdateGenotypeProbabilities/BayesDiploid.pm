@@ -22,6 +22,12 @@ sub help_brief {
     return "empty implementation of " . $self->command_name_brief;
 }
 
+sub help_synopsis {
+    return <<"EOS"
+    genome-model add-reads update-genotype-probabilities bayes-diploid --model-id 5 --run-id 10
+EOS
+}
+
 sub help_detail {                           
     return <<EOS 
 not implemented

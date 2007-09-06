@@ -21,6 +21,12 @@ sub help_brief {
     "Use maq to build the mapping assembly"
 }
 
+sub help_synopsis {
+    return <<"EOS"
+    genome-model add-reads update-genotype-probabilities maq --model-id 5 --run-id 10
+EOS
+}
+
 sub help_detail {                           
     return <<EOS 
 This command is usually called as part of the add-reads process
