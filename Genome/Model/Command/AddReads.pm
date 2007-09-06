@@ -83,16 +83,6 @@ $DB::single=1;
         if ($self->bsub) {
             $last_bsub_job_id = $self->_verify_bsubbed_job_output( $command_output );
         }
-        
-        Genome::Model::Event->create(
-                                        event_type         => $sub_command_classes[$idx],
-                                        model_id           => $self->model_id,
-                                        lsf_job_id         => $last_bsub_job_id,
-                                        date_scheduled     => scalar(localtime),
-                                        user_name          => $ENV{'USER'},
-                                    );
-        App::DB->sync_database();
-        App::DB->commit();
     }
 
     return 1; 
