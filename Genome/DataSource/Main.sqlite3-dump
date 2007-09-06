@@ -3,7 +3,8 @@ CREATE TABLE run (
     id                      integer not     null primary key,
     sequencing_platform     varchar2(255)   not null, 
     full_path               varchar2(1000)  not null,
-    limit_regions           varchar2(32)    
+    limit_regions           varchar2(32),
+    CONSTRAINT fake_mcpk unique(sequencing_platform, full_path, limit_regions)    
 );
 CREATE TABLE genome_model (
    id integer not null primary key,
