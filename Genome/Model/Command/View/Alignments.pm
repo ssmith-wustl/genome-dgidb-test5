@@ -20,6 +20,14 @@ UR::Object::Class->define(
                         doc => "The alignment position to display information for.  If omitted, uses the last position in the index." }, 
     ], 
 );
+sub help_synopsis {
+    return <<"EOS"
+
+    genome-model view alignments --file ???
+                    
+
+EOS
+}
 
 sub help_brief {
     "Display information inside the packed alignment file" 

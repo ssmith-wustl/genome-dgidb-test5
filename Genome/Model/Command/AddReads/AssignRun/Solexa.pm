@@ -14,6 +14,11 @@ UR::Object::Class->define(
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
     ]
 );
+sub help_synopsis {
+    return <<"EOS"
+    genome-model add-reads assign-run solexa --model-id 5 --run-id 10
+EOS
+}
 
 sub help_brief {
     "Creates the appropriate items on the filesystem for a new Solexa run"
