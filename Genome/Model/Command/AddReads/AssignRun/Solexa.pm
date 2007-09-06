@@ -26,7 +26,8 @@ sub help_brief {
 
 sub help_detail {                           
     return <<EOS 
-This command is normally run automatically as part of add-reads
+This command is normally run automatically as part of "add-reads assign-run"
+when it is determined that the run is from Solexa.  
 EOS
 }
 
