@@ -41,7 +41,7 @@ sub execute {
     
     foreach my $pse (@gerald_pses)  {
         
-        my $bustard_path = $self->_get_bustard_path_from_pse($pse);
+        my $gerald_path = $self->_get_gerald_path_from_pse($pse);
 
         my @out = ();
 
@@ -50,8 +50,8 @@ sub execute {
                      };
 
         push @out, [
-                    Term::ANSIColor::colored("Bustard Path", 'red'),
-                    $bustard_path
+                    Term::ANSIColor::colored("Gerald Path", 'red'),
+                    $gerald_path
                     ];
         
         push @out, [
@@ -72,19 +72,15 @@ sub execute {
     return 1;
 }
 
-sub _get_bustard_path_from_pse{
+sub _get_gerald_path_from_pse{
     my ($self, $pse) = @_;
     
     my $gerald_path = GSC::PSEParam->get(
                                              param_name => 'gerald_directory',
                                              pse_id     => $pse
                                              )->param_value;
-                                    
-    my @paths = split /\//, $gerald_path;
-    pop @paths;
-    my $bustard_path = join "/", @paths;
     
-    return $bustard_path;
+    return $gerald_path;
 }
 
 sub _get_dna_to_solexa_load_lane_map_for_pse{
@@ -133,7 +129,7 @@ sub _get_sample_output_lines_by_plate_lanes_for_pse{
         
         # do we need to put a unique constraint on the full_path in runs?
         my $run_id = Genome::RunChunk->get_or_create(
-                                  full_path             => $self->_get_bustard_path_from_pse($pse),
+                                  full_path             => $self->_get_gerald_path_from_pse($pse),
                                   limit_regions         => $locs,
                                   sequencing_platform   => 'solexa',
                     )->id;

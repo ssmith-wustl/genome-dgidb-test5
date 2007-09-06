@@ -36,15 +36,13 @@ EOS
 sub execute {
     my $self = shift;
     
-    return 1;
-
     my $model = Genome::Model->get(id => $self->model_id);
 
     my $lanes;
-    if ($self->sequencing_platform eq 'solexa') {
-        $lanes = $self->limit_regions || '12345678';
+    if ($self->run->sequencing_platform eq 'solexa') {
+        $lanes = $self->run->limit_regions || '12345678';
     } else {
-        $self->error_message("Determining limit_regions for sequencing_platform ".$self->sequencing_platform." is not implemented yet");
+        $self->error_message("Determining limit_regions for sequencing_platform ".$self->run->sequencing_platform." is not implemented yet");
         return;
     }
 
@@ -59,17 +57,17 @@ sub execute {
     # Part 1, convert the files to a different format
     # Why are we converting them?
 
-    my $gerald_dir = die "When this was written, \$self->full_path was a path to a bustard directory, not gerald.";
+    my $gerald_dir = $self->run->full_path;
     my @geraldfiles = glob($gerald_dir . '/s_[' . $lanes . ']_sequence.txt*');
     foreach my $seqfile (@geraldfiles) {
 
             # convert quality values
-            my $fastq_file = $working_dir . '/' . basename($seqfile);
+            my $fastq_file = $working_dir . '/' . File::Basename::basename($seqfile);
             $fastq_file =~ s/\.txt/.fastq/x;
             system("maq sol2sanger $seqfile $fastq_file");
 
             # Convert the reads to the binary fastq format
-            my $bfq_file = $working_dir . '/' . basename($seqfile);
+            my $bfq_file = $working_dir . '/' . File::Basename::basename($seqfile);
             $bfq_file =~ s/\.txt/.bfq/x;
             system("maq fastq2bfq $fastq_file $bfq_file");
 
@@ -91,16 +89,24 @@ sub execute {
         my $this_lane_alignments_file = $working_dir . "/alignments_lane_$lane";
         push @alignment_files, $this_lane_alignments_file;
        
-        my $maq_cmdline = sprintf('maq map %s %s %s %s', $model->read_aligner_params,
+       
+        my $maq_cmdline = sprintf('maq map %s %s %s %s', $model->read_aligner_params || '',
                                                          $this_lane_alignments_file,
                                                          $model->reference_sequence_file,
                                                          $bfq_file);
+        
+        print "**** $maq_cmdline\n";
         system($maq_cmdline);
     }
 
-    my $accumulated_alignments_file = $working_dir . "/alignments_run_" . $self->run_name;
-    my $cmdline = "maq maq mapmerge $accumulated_alignments_file " . join(' ', @alignment_files);
-    system($cmdline);
+    my $accumulated_alignments_file = $working_dir . "/alignments_run_" . $self->run->name;
+
+    if (@alignment_files == 1) {
+        rename($alignment_files[0], $accumulated_alignments_file);   
+    } else {
+        my $cmdline = "maq mapmerge $accumulated_alignments_file " . join(' ', @alignment_files);
+        system($cmdline);
+    }
  
     unlink foreach @alignment_files;
         
