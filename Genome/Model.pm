@@ -59,7 +59,7 @@ sub pretty_print_text {
     Genome::Model::EqualColumnWidthTableizer->new->convert_table_to_equal_column_widths_in_place( \@out );
 
     my $out;
-    $out .= Term::ANSIColor::colored("Model: " . $self ->name, 'bold magenta'). "\n\n";
+    $out .= Term::ANSIColor::colored(sprintf("Model: %s (ID %s)", $self ->name, $self->id), 'bold magenta') . "\n\n";
     $out .= Term::ANSIColor::colored("Configured Properties:", 'red'). "\n";    
     $out .= join("\n", map { " @$_ " } @out);
     $out .= "\n\n";
