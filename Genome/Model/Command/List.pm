@@ -19,7 +19,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model list
+    genome-model list
 EOS
 }
 

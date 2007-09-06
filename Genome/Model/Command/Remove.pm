@@ -22,8 +22,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model remove 
---model-id 5
+    genome-model remove --model-id 5
 EOS
 }
 
