@@ -106,14 +106,25 @@ sub execute {
         system($maq_cmdline);
     }
 
-    my $accumulated_alignments_file = $working_dir . "/alignments_run_" . $self->run->name;
+    my $model_dir = $model->data_directory;
+    
+    my $accumulated_alignments_file = $model_dir . "/alignments";
+    
+    my $accum_tmp = $accumulated_alignments_file . '.tmp';
 
     if (@alignment_files == 1) {
-        rename($alignment_files[0], $accumulated_alignments_file);   
+        rename($alignment_files[0], $accum_tmp);   
     } else {
-        my $cmdline = "maq mapmerge $accumulated_alignments_file " . join(' ', @alignment_files);
+        my $cmdline = "maq mapmerge $accum_tmp " . join(' ', (@alignment_files, $accumulated_alignments_file));
         system($cmdline);
     }
+    
+    if (! -f $accum_tmp) {
+        $self->error_message("accumulated alignment temp file $accum_tmp doesn't exist.  mapmerge apparently failed.");
+        return;
+    }
+    
+    rename($accum_tmp, $accumulated_alignments_file);
  
     unlink foreach @alignment_files;
         

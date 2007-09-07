@@ -34,13 +34,14 @@ UR::Object::Class->define(
 );
 
 sub data_parent_directory {
-    "/gscmnt/sata114/info/medseq/sample_data"
+    "/gscmnt/sata114/info/medseq/sample_data/model_data/"
 }
 
 sub data_directory {
     my $self = shift;
     my $name = $self->name;
-    return $self->model_data_parent_directory . '/' . $name;
+    
+    return $self->data_parent_directory . '/' . $self->sample_name . "_" . $name;
 }
 
 sub pretty_print_text {
@@ -75,9 +76,8 @@ sub sample_path{
 
 sub reference_sequence_file {
     my $self = shift;
-    return sprintf('%s/%s/reference-sequences/%s', $self->data_parent_directory,
-                                                   $self->sample_name,
-                                                   $self->reference_sequence_name);
+    return sprintf('%s/reference-sequences/%s', $self->data_directory,
+                                                $self->reference_sequence_name);
 }
 
 1;

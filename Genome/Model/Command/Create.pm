@@ -7,6 +7,8 @@ use warnings;
 use Command; 
 use Genome::Model;
 
+use File::Path;
+
 use Data::Dumper;
 
 use Genome;
@@ -50,7 +52,7 @@ sub help_brief {
 sub help_synopsis {
     return <<"EOS"
 genome-model create
-                    --name ley_aml_patient1_tumor_test1
+                    --name test5
                     --sample ley_aml_patient1_tumor
                     --dna-type whole 
                     --read-calibrator none
@@ -104,7 +106,29 @@ sub execute {
     $self->status_message("created model " . $obj->name);
     print $obj->pretty_print_text,"\n";
     
+    unless ($self->_build_model_filesystem_paths($obj)) {
+        $self->error_message('filesystem path creation failed');
+        return;
+    }
+    
     return 1;
+}
+
+sub _build_model_filesystem_paths {
+    my $self = shift;
+    my $model = shift;
+    
+    my $base_dir = $model->data_directory;
+    
+    eval {mkpath("$base_dir/reference-sequences");};
+    
+    if ($@) {
+        $self->error_message("model base dir $base_dir could not be successfully created");
+        return;
+    }
+    
+    return 1;
+    
 }
 
 sub _extract_command_properties_and_duplicate_keys_for__name_properties{

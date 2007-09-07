@@ -38,6 +38,7 @@ sub execute {
 
     my $model = Genome::Model->get(id => $self->model_id);
 
+    my $model_dir = $model->data_directory;
     my $working_dir = $self->resolve_run_directory;
 
     # Make sure the output directory exists
@@ -46,13 +47,13 @@ sub execute {
         return;
     }
 
-    my $accumulated_alignments_file = $working_dir . '/alignments_run_' . $self->run->name;
+    my $accumulated_alignments_file = $model_dir . '/alignments';
     unless (-f $accumulated_alignments_file) {
         $self->error_message("Alignments file $accumulated_alignments_file was not found.  It should have been created by a prior run of align-reads maq");
         return;
     }
 
-    my $assembly_output_file = sprintf('%s/assembly_%s.cns', $working_dir, $self->run->name);
+    my $assembly_output_file = sprintf('%s/assembly.cns', $model_dir);
     my $ref_seq_file = $model->reference_sequence_file;
 
     my $assembly_opts = $model->genotyper_params || '';

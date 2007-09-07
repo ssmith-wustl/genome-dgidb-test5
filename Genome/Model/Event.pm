@@ -50,7 +50,7 @@ sub resolve_run_directory {
     my $self = shift;
 
     $DB::single = 1;
-    return sprintf('%s/runs/%s/%s', Genome::Model->get($self->model_id)->data_parent_directory,
+    return sprintf('%s/runs/%s/%s', Genome::Model->get($self->model_id)->data_directory,
                                     $self->run->sequencing_platform,
                                     $self->run->name);
 }
