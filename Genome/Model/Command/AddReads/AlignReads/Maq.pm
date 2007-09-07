@@ -95,7 +95,6 @@ sub execute {
                                                          $model->reference_sequence_file,
                                                          $bfq_file);
         
-        print "**** $maq_cmdline\n";
         system($maq_cmdline);
     }
 
