@@ -43,10 +43,8 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-
-    genome-model add-reads --model-id 5 --squencing-platform solexa --full-path /path/to/gerald/directory/for/a/solexa/run
+genome-model add-reads --model-id 5 --squencing-platform solexa --full-path=/gscmnt/sata191/production/TEST_DATA/000000_HWI-EAS110-0000_00000/Data/C1-27_Firecrest1.8.28_04-09-2007_lims/Bustard1.8.28_04-09-2007_lims/GERALD_28-01-2007_mhickenb
                     
-
 EOS
 }
 
