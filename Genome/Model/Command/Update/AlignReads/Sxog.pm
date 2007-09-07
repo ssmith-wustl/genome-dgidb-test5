@@ -8,7 +8,7 @@ use warnings;
 use UR;
 use Command;
 
-#use GSCApp;
+use GSC;
 use IO::File;
 use File::Basename;
 
