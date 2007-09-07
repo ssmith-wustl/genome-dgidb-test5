@@ -38,6 +38,13 @@ sub execute {
     
     my $model = Genome::Model->get(id => $self->model_id);
 
+    # ensure the reference sequence exists.
+    my $ref_seq_file = $model->reference_sequence_file;
+    unless (-e $ref_seq_file) {
+        $self->error_message("reference sequence file $ref_seq_file does not exist.  please verify this first.");
+        return;
+    }
+
     my $working_dir = $self->resolve_run_directory;
 
     # Make sure the output directory exists
@@ -62,7 +69,7 @@ sub execute {
     system("maq cns2snp $assembly_output_file > $snip_output_file");
 
     my $indel_file = $working_dir . '/indels';
-    my $ref_seq_file = $model->reference_sequence_file;
+    
     return (!system("maq indelsoa $ref_seq_file $accumulated_alignments_file > $indel_file"));
     
 }

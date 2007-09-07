@@ -39,6 +39,14 @@ sub execute {
     my $model = Genome::Model->get(id => $self->model_id);
 
     my $lanes;
+    
+    # ensure the reference sequence exists.
+    
+    unless (-e $model->reference_sequence_file) {
+        $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $model->reference_sequence_file));
+        return;
+    }
+    
     if ($self->run->sequencing_platform eq 'solexa') {
         $lanes = $self->run->limit_regions || '12345678';
     } else {
