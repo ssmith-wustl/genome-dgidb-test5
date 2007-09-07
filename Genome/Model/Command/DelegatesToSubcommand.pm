@@ -37,7 +37,7 @@ my $self = shift;
         $command->date_completed(scalar(localtime));
         $command->event_status($retval ? 'Succeeded' : 'Failed');
         
-        return $retval;
+        return 1;
         
     } else {
         $command->event_status('Failed to create sub-command');
