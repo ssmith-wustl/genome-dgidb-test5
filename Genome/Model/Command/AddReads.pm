@@ -44,7 +44,7 @@ sub help_brief {
 sub help_synopsis {
     return <<"EOS"
 
-    genome-model add-reads --model-id 5 --squencing-platform solexa --run-id 10
+    genome-model add-reads --model-id 5 --squencing-platform solexa --full-path /path/to/gerald/directory/for/a/solexa/run
                     
 
 EOS
@@ -60,7 +60,7 @@ EOS
 }
 
 
-our $GENOME_MODEL_BSUBBED_COMMAND = 'genome-model';
+our $GENOME_MODEL_BSUBBED_COMMAND = "genome-model";
 
 sub execute {
     my $self = shift;
