@@ -23,7 +23,14 @@ UR::Object::Class->define(
         'version'   => { type => 'String',  doc => "maq software version--default is ''", is_optional => 1},
         'qcutoff'   => { type => 'String',  doc => "only process if quality score is greater than this value--default value is 0", is_optional => 1},
         'build'   => { type => 'String',  doc => "reference build version--default is 36", is_optional => 1},
-        'db'   => { type => 'Booleang',  doc => "load to the database--default is to produce a file", is_optional => 1}
+        'loaddb'   => { type => 'Boolean',  doc => "load to the database--default is to produce a file", is_optional => 1},
+        'check'   => { type => 'Boolean',  doc => "processing check only the input file", is_optional => 1},
+        'rccheck'   => { type => 'Boolean',  doc => "revcomp check against the consensus--set check", is_optional => 1},
+        'verbose'   => { type => 'Boolean',  doc => "print progress messages", is_optional => 1},
+        'source'   => { type => 'String',  doc => "set source--default is 'wugsc'", is_optional => 1},
+        'techtype'   => { type => 'String',  doc => "set tech_type--default is 'solexa'", is_optional => 1},
+        'mappingreference'   => { type => 'String',  doc => "set mapping_reference--default is 'hg'", is_optional => 1},
+        'runidentifier'   => { type => 'String',  doc => "set run_identifier--default is null", is_optional => 1}
     ]
 );
 
@@ -93,6 +100,14 @@ sub execute {
     $coord_offset ||= 0;
 		
     $| = 1;			# autoflush stdout
+
+		my ($check, $rccheck, $verbose, $source, $techtype, $mappingreference, $runidentifier) =
+			($self->check, $self->rccheck, $self->verbose, $self->source,
+			 $self->techtype, $self->mappingreference, $self->runidentifier);
+		$check ||= 0;
+		$rccheck ||= 0;
+		$techtype ||= 'solexa';
+		$mappingreference ||= 'hg';
 		
     my $genomic_coords = MG::Transform::Coordinates::TranscriptToGenomic->new(
 																																							coordinate_file => $coord_file);
@@ -103,7 +118,9 @@ sub execute {
 			return;
     }
     my %variation;
-    print "Processing $cnsfile for SNPs\n";
+		if ($verbose) {
+			print "Processing $cnsfile for SNPs\n";
+		}
     while(<SNP>) {
 			chomp;
 			my ($id, $start, $ref_sequence, $iub_sequence, $quality_score, $depth, $avg_hits, $high_quality, $unknown) = split("\t");
@@ -141,14 +158,18 @@ sub execute {
 			return;
     }
     my $count = 0;
-    print "Processing $mapfile for pileup ";
+		if ($verbose) {
+			print "Processing $mapfile for pileup ";
+		}
     while(<PILEUP>) {
 			chomp;
 			my ($id, $position, $ref_base, $depth, $bases) = split("\t");
 			if ($depth > 0) {
 				my $key = "$id\t$position";
 				if	(defined($variation{$key})) {
-					print '.' if (++$count % 1000 == 0);
+					if ($verbose) {
+						print '.' if (++$count % 1000 == 0);
+					}
 					$variation{$key}{depth} = $depth;
 					my $bases_length = length($bases);
 					my $temp_bases = $bases;
@@ -181,10 +202,14 @@ sub execute {
 			}
     }
     close(PILEUP);
-    print "\n";
+		if ($verbose) {
+			print "\n";
+		}
     
     my %output;
-    print "Processing variations\n";
+		if ($verbose) {
+			print "Processing variations\n";
+		}
     my %bad_ids = ();
     foreach my $key (keys %variation) {
 			next unless (exists($variation{$key}{start}));
@@ -243,22 +268,20 @@ sub execute {
     }
     undef %variation;
     my $fh;
-    unless ($self->db) {
+		if ($verbose) {
 			print "Writing genotype submission file\n";
-			$fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
-			unless (defined($fh)) {
-				$self->error_message("Unable to open genotype submission file for writing: $basename");
-				return;
-			}
-    } else {
-			print "Loading read groups\n";
-    }
-    my $mutation;
+		}
+		$fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
+		unless (defined($fh)) {
+			$self->error_message("Unable to open genotype submission file for writing: $basename");
+			return;
+		}
     my $sample_temp = $sample;
     $sample_temp =~ s/454_EST_S_//x;
     my ($sample_a, $sample_b) = split('-',$sample_temp);
     $sample_b = sprintf "%05d",$sample_b;
     my $sample_id = $sample_a . '-' . $sample_b;
+		my $mutation = {};
     my $number = 1;
     foreach my $chr (sort (keys %output)) {
 			my $chromosome = $chr;
@@ -308,23 +331,45 @@ sub execute {
 					push @scores, ("cns=$cns_sequence");
 				}
 				
-				unless ($self->db) {
-					Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build, $chromosome, $plus_minus, $start, $end,
-																																	 $sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
-				} else {
-					MG::IO::GenotypeSubmission::AddMutation($mutation,$software,$build, $chromosome, $plus_minus, $start, $end,
-																									$sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number++);
+				Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build, $chromosome, $plus_minus, $start, $end,
+																																 $sample_id, $genotype_allele1, $genotype_allele2, \@scores, $number);
+				if ($self->loaddb) {
+					$mutation = MG::IO::GenotypeSubmission::AddMutation($mutation,$software,$build,
+																															$chromosome, $plus_minus,
+																															"$start", "$end",
+																															$sample_id, 
+																															$genotype_allele1, $genotype_allele2,
+																															\@scores, $number);
 				}
+				$number += 1;
 			}
     }
-    unless ($self->db) {
-			$fh->close();
-    } else {
-			MG::IO::GenotypeSubmission::Load($mutation,
-																			 tech_type => '',
-																			 mapping_reference => ''
-																			);
+		$fh->close();
+		my $t0 = time;
+		if ($self->loaddb) {
+			if ($verbose) {
+				print "Loading database\n";
+			}
+			$t0 = MG::IO::GenotypeSubmission::LoadDatabase($mutation,
+																										 check => $check,
+																										 rccheck => $rccheck,
+																										 verbose => $verbose,
+																										 source => $source,
+																										 tech_type => $techtype,
+																										 mapping_reference => $mappingreference,
+																										 run_identifier => $runidentifier
+																										);
     }
+		#####################
+		#  POST PROCESSING  #
+		#####################
+		
+		#__VERBOSE OUTPUT OF PROGRESS
+		if ($verbose) {
+      my $elapsed = time - $t0;
+      print "\nDONE: elapsed time $elapsed secs\n";
+		}
+		
     return 1;
 	}
     
