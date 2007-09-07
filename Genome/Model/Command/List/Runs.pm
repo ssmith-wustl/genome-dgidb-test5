@@ -36,7 +36,6 @@ EOS
 sub execute {
     my $self = shift;
     
-    
     my @gerald_pses = @{ $self->_get_all_gerald_pses() };
     
     foreach my $pse (@gerald_pses)  {
@@ -46,11 +45,11 @@ sub execute {
         my @out = ();
 
         push @out, @{
-                     $self->_get_sample_output_lines_by_plate_lanes_for_pse($pse)
+                     $self->_get_sample_and_model_output_lines_by_plate_lanes_for_pse($pse)
                      };
 
         push @out, [
-                    Term::ANSIColor::colored("Gerald Path", 'red'),
+                    Term::ANSIColor::colored("Gerald Path:", 'red'),
                     $gerald_path
                     ];
         
@@ -108,7 +107,7 @@ sub _get_dna_to_solexa_load_lane_map_for_pse{
     return $lane_mapping;
 }
 
-sub _get_sample_output_lines_by_plate_lanes_for_pse{
+sub _get_sample_and_model_output_lines_by_plate_lanes_for_pse{
     my ($self, $pse) = @_;
     
     my @out;
@@ -124,17 +123,40 @@ sub _get_sample_output_lines_by_plate_lanes_for_pse{
             $lanes_text .= 's' if( length($locs) > 1 );
             $lanes_text .= ': ';
             $lanes_text .= $locs;
+        }else{
+            $lanes_text .= ': ';
         }
         
-        
-        # do we need to put a unique constraint on the full_path in runs?
-        my $run_id = Genome::RunChunk->get_or_create(
+        my $run = Genome::RunChunk->get_or_create(
                                   full_path             => $self->_get_gerald_path_from_pse($pse),
                                   limit_regions         => $locs,
                                   sequencing_platform   => 'solexa',
-                    )->id;
+                    );
+        
+        my $run_id = $run->id;
         
         Carp::croak("Error no RunChunk got or created!") unless $run_id;
+
+        # This ought to use the class definition instead of a get BUT that doesnt seem to work ATM.   
+        #my @model_names = sort keys %{ { map { $_->name => 1 } $run->models } };
+        
+        my @model_names = sort keys %{  {map { $_->name => 1 }
+                             map {$_->model}
+                             Genome::Model::Event->get( run_id => $run_id )
+                            } };
+        
+        my $model_text = "In Model";
+        
+        unless( scalar(@model_names) ){
+            @model_names = Term::ANSIColor::colored("none", 'magenta');
+            $model_text .= ':';
+        }else{
+            if(scalar(@model_names) > 1){
+                $model_text .= 's:';
+            }else{
+                $model_text .= ':';
+            }
+        }
         
         push @out, [
                    Term::ANSIColor::colored("Run ID:", 'green'),
@@ -145,6 +167,12 @@ sub _get_sample_output_lines_by_plate_lanes_for_pse{
                     Term::ANSIColor::colored($lanes_text, 'red'),
                     Term::ANSIColor::colored($dna, "bold")
                     ];
+        
+        push @out, [
+                   Term::ANSIColor::colored($model_text, 'red'),
+                   join(", ", @model_names),
+                   ];
+        
     }
 
     return \@out;

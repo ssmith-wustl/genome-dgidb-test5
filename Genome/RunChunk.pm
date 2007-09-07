@@ -17,6 +17,8 @@ UR::Object::Class->define(
         full_path           => { is => 'varchar2(1000)' },
         limit_regions       => { is => 'varchar2(32)', is_optional => 1 },
         sequencing_platform => { is => 'varchar2(255)' },
+        events              => {is => 'Genome::Model::Event', is_many => 1, reverse_id_by => 'model'},
+        models              => { via => 'events', to => 'model'},
     ],
     schema_name => 'Main',
     data_source => 'Genome::DataSource::Main',
