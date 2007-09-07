@@ -27,7 +27,7 @@ my $self = shift;
                                             run_id => $self->run_id,
 					    event_type => $sub_command_type->command_name,
 					    date_scheduled => App::Time->now(),
-					    user_name => $ENV{'USER'}
+					    user_name => $ENV{'USER'},
 					   );
 
     my $retval;

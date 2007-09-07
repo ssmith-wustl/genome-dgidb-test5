@@ -25,6 +25,17 @@ UR::Object::Class->define(
     data_source => 'Genome::DataSource::Main',
 );
 
+
+sub create {
+    my $class = shift;
+
+    if (exists $ENV{'LSB_JOBID'}) {
+        push(@_, 'lsf_job_id', $ENV{'LSB_JOBID'});
+    }
+    $class->SUPER::create(@_);
+}
+    
+
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments
     return grep { 
