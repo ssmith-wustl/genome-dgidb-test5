@@ -60,7 +60,7 @@ EOS
 }
 
 
-our $GENOME_MODEL_BSUBBED_COMMAND = "put something in here";
+our $GENOME_MODEL_BSUBBED_COMMAND = 'genome-model';
 
 sub execute {
     my $self = shift;
