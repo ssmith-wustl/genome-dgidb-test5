@@ -33,8 +33,13 @@ UR::Object::Class->define(
     data_source => 'Genome::DataSource::Main',
 );
 
+sub base_parent_directory {
+    "/gscmnt/sata114/info/medseq"
+}
+
 sub data_parent_directory {
-    "/gscmnt/sata114/info/medseq/sample_data/model_data/"
+    my $self = shift;
+    return $self->base_parent_directory . "/model_data"
 }
 
 sub data_directory {
@@ -76,8 +81,8 @@ sub sample_path{
 
 sub reference_sequence_file {
     my $self = shift;
-    return sprintf('%s/reference-sequences/%s', $self->data_directory,
-                                                $self->reference_sequence_name);
+    return sprintf('%s/reference_sequences/%s', $self->base_parent_directory,
+						$self->reference_sequence_name)
 }
 
 1;
