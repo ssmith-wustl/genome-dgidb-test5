@@ -67,24 +67,52 @@ $DB::single=1;
     
     my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
 
-    my $run = Genome::RunChunk->get_or_create(full_path => $self->full_path,
-                                              limit_regions => $self->limit_regions,
-                                              sequencing_platform => $self->sequencing_platform
-                                         );
-    unless ($run) {
-        $self->error_message("Unable to get or create a run record in the database with the parameters provided");
+    # Determine the correct value for limit_regions
+    my $regions;
+    if ($self->limit_regions) {
+        $regions = $self->limit_regions;
+
+    } else {
+        # The default will differ depengin on what the sequencing_patform is
+        if (lc($self->sequencing_platform) eq 'solexa') {
+            $regions = '12345678';
+        } else {
+            $self->error_message("I don't know how to create a default limit-regions value for sequencing platform ".$self->sequencing_platform);
+            return;
+        }
+    }
+
+    # Make a RunChunk object for each region
+    my @runs;
+    foreach my $region ( split(//,$regions) ) {
+        my $run = Genome::RunChunk->get_or_create(full_path => $self->full_path,
+                                                  limit_regions => $region,
+                                                  sequencing_platform => $self->sequencing_platform
+                                             );
+        unless ($run) {
+            $self->error_message("Failed to run record information for region $region");
+            return;
+        }
+        push @runs, $run;
+    }
+
+    unless (@runs) {
+        $self->error_message("No runs were created, exiting.");
         return;
     }
 
-    my $last_bsub_job_id;
-    foreach my $command_class ( @sub_command_classes ) {
-        my $command = $command_class->create(run_id => $run->id,
-                                             model_id => $self->model_id);
+    foreach my $run ( @runs ) {
 
-        if ($self->bsub) {
-            $last_bsub_job_id = $self->run_command_with_bsub($command,$run,$last_bsub_job_id);
-        } elsif (! $self->test) {
-            $command->execute();
+        my $last_bsub_job_id;
+        foreach my $command_class ( @sub_command_classes ) {
+            my $command = $command_class->create(run_id => $run->id,
+                                                 model_id => $self->model_id);
+    
+            if ($self->bsub) {
+                $last_bsub_job_id = $self->run_command_with_bsub($command,$run,$last_bsub_job_id);
+            } elsif (! $self->test) {
+                $command->execute();
+            }
         }
     }
 

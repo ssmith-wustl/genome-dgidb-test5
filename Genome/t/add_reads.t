@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 24;
+use Test::More tests => 52;
 
 use above "Genome";
 #use Genome::Model::Command::AddReads;
@@ -33,14 +33,14 @@ my $files_path = "/tmp/add_reads_test_$$";
     
     
     # That should have created a RunChunk record
-    my $run = Genome::RunChunk->get(sequencing_platform => 'Solexa',
-                                    full_path => $files_path);
-    ok($run, "Genome::RunChunk object was created");
+    my @runs = Genome::RunChunk->get(sequencing_platform => 'Solexa',
+                                     full_path => $files_path);
+    is(scalar(@runs), 8, "8 Genome::RunChunk objects were created, one for each lane");
     
     
     # Check the properties of all the command objects created by AddReads
     my @sub_commands = grep { $_->can('model_id') && $_->model_id == $model->id } Command->get();
-    my $number_of_sub_commands_created = 5;
+    my $number_of_sub_commands_created = 33;  # one add-reads, and 8 of all the sub-steps
     is(scalar(@sub_commands), $number_of_sub_commands_created, "$number_of_sub_commands_created command objects were created");
     
     foreach my $command_class (qw( Genome::Model::Command::AddReads
@@ -70,7 +70,7 @@ my $files_path = "/tmp/add_reads_test_$$";
 
     # Clean up...
     $_->delete foreach (@sub_commands);
-    $run->delete;
+    $_->delete foreach (@runs);
 }
 
 
@@ -106,14 +106,14 @@ my %bsub_command_line_results = (
     ok($command->execute(), "AddReads executed");
 
     # That should have created a RunChunk record
-    my $run = Genome::RunChunk->get(sequencing_platform => 'Solexa',
-                                    full_path => $files_path);
-    ok($run, "Genome::RunChunk object was created");
+    my @runs = Genome::RunChunk->get(sequencing_platform => 'Solexa',
+                                     full_path => $files_path);
+    is(scalar(@runs), 8, "8 Genome::RunChunk objects were created, one for each lane");
 
 
     # Check the properties of all the command objects created by AddReads
     my @sub_commands = grep { $_->can('model_id') && $_->model_id == $model->id } Command->get();
-    my $number_of_sub_commands_created = 5;
+    my $number_of_sub_commands_created = 33;
     is(scalar(@sub_commands), $number_of_sub_commands_created, "$number_of_sub_commands_created command objects were created");
 
     foreach my $command_class (qw( Genome::Model::Command::AddReads
@@ -138,7 +138,8 @@ my %bsub_command_line_results = (
         $status_message =~ s/^Test mode, command not executed: //;
         
         my $expected_message = $bsub_command_line_results{$class_name} || '';
-        $expected_message = sprintf($expected_message, $bsubbed_command, $run->id, $model->id) if ($expected_message);
+my $run=1;
+        $expected_message = sprintf($expected_message, $bsubbed_command, $command->run_id, $model->id) if ($expected_message);
         is ($status_message,
             $expected_message,
             "$class_name would have run the right bsub command");
@@ -153,7 +154,7 @@ my %bsub_command_line_results = (
 
     # Clean up...
     $_->delete foreach (@sub_commands);
-    $run->delete;
+    $_->delete foreach (@runs);
 }
 
 
