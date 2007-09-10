@@ -190,7 +190,20 @@ sub execute {
 	    chomp;
 			s/\r//g;
 	    next if (/^SNP_id/x );
-	    my ($snp_id,$chromosome,$start,$allele1,$allele2,$affy_calls,$score) = split(',');
+	    my ($snp_id,$chromosome,$start,$allele_a,$allele_b,$affy_calls,$score) = split(',');
+			my ($allele1, $allele2);
+			$allele1 = $allele_a;
+	    my @scores = ($score,"affy=$affy_calls");
+			if ($affy_calls == 0) {		# AA
+				$allele2 = $allele_a;
+			} elsif ($affy_calls == 1) { # AB
+				$allele2 = $allele_b;
+			} elsif ($affy_calls == 2) { # BB
+				$allele2 = $allele_b;
+				push @scores, ("cns=$allele_b");
+			} else {
+				next;
+			}
 	    unless ($chromosome =~ /^ [\dXY]+ $/x) {
 				print "Unknown chromosome: $chromosome $_ ...skipping\n";
 				next;
@@ -198,7 +211,6 @@ sub execute {
 	    my $software = 'affy' . $version;
 	    my $build_id = $build;
 	    my $plus_minus = '+';
-	    my @scores = ($score,"affy=$affy_calls");
 	    
 	    Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build_id, $chromosome, $plus_minus, $start, $start,
 																															 $sample_id, $allele1, $allele2, \@scores);
