@@ -114,12 +114,16 @@ sub execute {
     my $accum_tmp = $accumulated_alignments_file . '.tmp';
 
     if (!-f $accumulated_alignments_file && @alignment_files == 1) {
-	rename($alignment_files[0], $accumulated_alignments_file);
+	my $rv = system("mv $alignment_files[0] $accumulated_alignments_file");
+        if ($rv) {
+            $self->error_message("exit code from moving $alignment_files[0] $accumulated_alignments_file was nonzero")
+            return;
+        }
     } else {
         my $cmdline = "maq mapmerge $accum_tmp " . join(' ', (@alignment_files, $accumulated_alignments_file));
         my $merge_ret_val = system($cmdline);
     
-        if (! -f $accum_tmp || !$merge_ret_val) {
+        if (! -f $accum_tmp || $merge_ret_val) {
             $self->error_message("got a nonzero return value from mapmerge, or the accumulated alignment temp file $accum_tmp doesn't exist.  mapmerge apparently failed.");
             return;
         }
