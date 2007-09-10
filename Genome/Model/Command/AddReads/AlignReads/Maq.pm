@@ -113,6 +113,18 @@ sub execute {
     my $accumulated_alignments_file = $model_dir . "/alignments";
     my $accum_tmp = $accumulated_alignments_file . '.tmp';
 
+    # Only one process is allwoed to manipulate the accumulated alignment file for the model
+    # at a time
+    my $lock = App::Lock(mechanism=>'DB_Table',
+                         resource_id=>$accum_tmp,
+                         block=>1,
+                         block_sleep=>10,
+                         max_try=>3600);  # Keep trying for 10 hours, 3600sec * 10
+    unless ($lock) {
+        $self->error_message("Unable to aquire lock for the model's accumulated alignment file: $accum_tmp");
+        return;
+    }
+
     if (!-f $accumulated_alignments_file && @alignment_files == 1) {
 	my $rv = system("mv $alignment_files[0] $accumulated_alignments_file");
         if ($rv) {
