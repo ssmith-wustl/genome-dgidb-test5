@@ -116,7 +116,7 @@ sub execute {
     if (!-f $accumulated_alignments_file && @alignment_files == 1) {
 	my $rv = system("mv $alignment_files[0] $accumulated_alignments_file");
         if ($rv) {
-            $self->error_message("exit code from moving $alignment_files[0] $accumulated_alignments_file was nonzero")
+            $self->error_message("exit code from moving $alignment_files[0] $accumulated_alignments_file was nonzero");
             return;
         }
     } else {
