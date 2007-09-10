@@ -42,6 +42,8 @@ sub execute {
     
     # ensure the reference sequence exists.
     
+    print "RS IS " . $model->reference_sequence_file . "\n";
+    
     unless (-e $model->reference_sequence_file) {
         $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $model->reference_sequence_file));
         return;
@@ -109,17 +111,21 @@ sub execute {
     my $model_dir = $model->data_directory;
     
     my $accumulated_alignments_file = $model_dir . "/alignments";
-    
     my $accum_tmp = $accumulated_alignments_file . '.tmp';
 
-    my $cmdline = "maq mapmerge $accum_tmp " . join(' ', (@alignment_files, $accumulated_alignments_file));
+    if (!-f $accumulated_alignments_file && @alignment_files == 1) {
+	rename($alignment_files[0], $accumulated_alignments_file);
+    } else {
+        my $cmdline = "maq mapmerge $accum_tmp " . join(' ', (@alignment_files, $accumulated_alignments_file));
+        my $merge_ret_val = system($cmdline);
     
-    if (! -f $accum_tmp) {
-        $self->error_message("accumulated alignment temp file $accum_tmp doesn't exist.  mapmerge apparently failed.");
-        return;
+        if (! -f $accum_tmp || !$merge_ret_val) {
+            $self->error_message("got a nonzero return value from mapmerge, or the accumulated alignment temp file $accum_tmp doesn't exist.  mapmerge apparently failed.");
+            return;
+        }
+    
+       rename($accum_tmp, $accumulated_alignments_file);
     }
-    
-    rename($accum_tmp, $accumulated_alignments_file);
  
     unlink foreach @alignment_files;
         

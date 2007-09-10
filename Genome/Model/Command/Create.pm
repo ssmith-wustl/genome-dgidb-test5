@@ -120,7 +120,7 @@ sub _build_model_filesystem_paths {
     
     my $base_dir = $model->data_directory;
     
-    eval {mkpath("$base_dir/reference-sequences");};
+    eval {mkpath("$base_dir");};
     
     if ($@) {
         $self->error_message("model base dir $base_dir could not be successfully created");
