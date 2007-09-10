@@ -12,4 +12,8 @@ UR::Object::Class->define(
     english_name => 'genome datasource main',
 );
 
+sub server {
+	"/gscmnt/sata114/info/medseq/sample_data/Main.sqlite3";
+}
+
 1;
