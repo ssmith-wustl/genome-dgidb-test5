@@ -99,8 +99,6 @@ sub _summarize_all_run_records {
     
         
     for my $path (keys %grouped_by_run_path) {
-        print $path, "\n";
-
         my @out = ();
         
         my @sorted_recs = sort {$a->lane <=> $b->lane} @{$grouped_by_run_path{$path}};
