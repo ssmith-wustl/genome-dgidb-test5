@@ -9,6 +9,8 @@ use Genome::Model;
 use File::Path;
 use Data::Dumper;
 
+use App::Lock;
+
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Genome::Model::Event',
@@ -42,7 +44,7 @@ sub execute {
     
     # ensure the reference sequence exists.
     
-    print "RS IS " . $model->reference_sequence_file . "\n";
+    
     
     unless (-e $model->reference_sequence_file) {
         $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $model->reference_sequence_file));
@@ -112,17 +114,16 @@ sub execute {
     
     my $accumulated_alignments_file = $model_dir . "/alignments";
     my $accum_tmp = $accumulated_alignments_file . '.tmp';
+    
+    my $LOCK_NAME = $accum_tmp . ".lock";
 
     # Only one process is allwoed to manipulate the accumulated alignment file for the model
     # at a time
-    my $lock = App::Lock(mechanism=>'DB_Table',
-                         resource_id=>$accum_tmp,
-                         block=>1,
-                         block_sleep=>10,
-                         max_try=>3600);  # Keep trying for 10 hours, 3600sec * 10
-    unless ($lock) {
-        $self->error_message("Unable to aquire lock for the model's accumulated alignment file: $accum_tmp");
-        return;
+    unless ($self->_get_local_lock(resource_id => $LOCK_NAME,
+                                   block_sleep => 10,
+                                   max_try => 3600)) {
+        $self->error_message("Can't get lock for $LOCK_NAME, the model's accumulated alignment");
+        return undef;
     }
 
     if (!-f $accumulated_alignments_file && @alignment_files == 1) {
@@ -147,6 +148,24 @@ sub execute {
         
     return 1;
 }
+
+# stole this from analyze digested dna.
+# 
+sub _get_local_lock {
+    my($self,%args) = @_;
+    my $ret;
+    my $resource_id = $args{'resource_id'};
+
+    while(! ($ret = mkdir $resource_id)) {
+        return undef unless $args{'max_try'}--;
+        sleep $args{'block_sleep'};
+    }
+
+    eval "END { rmdir \$resource_id;}";
+
+    return 1;
+}
+
 
 1;
 
