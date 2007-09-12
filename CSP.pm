@@ -639,7 +639,6 @@ my %csp_priority = (
     'analyze digested dna'                    => 1,
     'etl reads from oltp to olap'             => 1,
     'mp read analysis'                        => 1,
-    #Removed it temporary to sort out all fail jobs.
     'update mp assembly'                      => 1,
     'add read to mp assembly'                 => 1,
     'import external reads'                   => 1,
@@ -649,6 +648,7 @@ my %csp_priority = (
     'configure image analysis and base call'  => 1,
     'make default offsets'                    => 1,
     'configure alignment'                     => 1,
+    'import sequence annotation'              => 2,
 
 #    these were given their own cron to get around the
 #    problem of running as the lims user instead of seqmgr
