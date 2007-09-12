@@ -21,7 +21,7 @@ sub convert_table_to_equal_column_widths_in_place{
         }
     }
     for my $row (@$arrayref) {
-        for my $col_num (0..$#$row) {
+        for my $col_num (0..($#$row - 1)) {
             $row->[$col_num] .= ' ' x ($max_length[$col_num] - length($row->[$col_num]) + 1);
         }
     }  
