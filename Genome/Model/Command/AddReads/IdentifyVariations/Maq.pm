@@ -66,6 +66,16 @@ sub execute {
         return;
     }
 
+    unless ($model->lock_resource(resource_id=>'snips')) {
+        $self->error_message("Can't get lock for model's cns2snp output");
+        return undef;
+    }
+
+    unless ($model->lock_resource(resource_id=>'indels')) {
+        $self->error_message("Can't get lock for model's cns2snp output");
+        return undef;
+    }
+
     my $snip_output_file = $model_dir . '/snips';
     system("maq cns2snp $assembly_output_file > $snip_output_file");
 

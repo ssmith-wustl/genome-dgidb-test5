@@ -85,4 +85,21 @@ sub reference_sequence_file {
 						$self->reference_sequence_name)
 }
 
+sub lock_resource {
+    my($self,%args) = @_;
+    my $ret;
+    my $resource_id = $self->data_directory . "/" . $args{'resource_id'} . ".lock";
+    my $block_sleep = $args{block_sleep} || 10;
+    my $max_try = $args{max_try} || 3600;
+
+    while(! ($ret = mkdir $resource_id)) {
+        return undef unless $max_try--;
+        sleep $block_sleep;
+    }
+
+    eval "END { rmdir \$resource_id;}";
+
+    return 1;
+}
+
 1;

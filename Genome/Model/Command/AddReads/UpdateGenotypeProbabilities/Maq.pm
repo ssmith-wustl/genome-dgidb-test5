@@ -57,6 +57,11 @@ sub execute {
     my $ref_seq_file = $model->reference_sequence_file;
 
     my $assembly_opts = $model->genotyper_params || '';
+
+    unless ($model->lock_resource(resource_id=>'assembly.cns')) {
+        $self->error_message("Can't get lock for model's maq assemble output");
+        return undef;
+    }
     return (!system("maq assemble $assembly_opts $assembly_output_file $ref_seq_file $accumulated_alignments_file"));
     
 }

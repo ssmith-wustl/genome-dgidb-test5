@@ -34,7 +34,7 @@ my $self = shift;
     if ($command) {
         $retval = $command->execute();
         
-        $command->date_completed(scalar(localtime));
+        $command->date_completed(App::Time->now());
         $command->event_status($retval ? 'Succeeded' : 'Failed');
         
         return $retval;

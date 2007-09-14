@@ -113,16 +113,12 @@ sub execute {
     my $model_dir = $model->data_directory;
     
     my $accumulated_alignments_file = $model_dir . "/alignments";
-    my $accum_tmp = $accumulated_alignments_file . '.tmp';
+    my $accum_tmp = $accumulated_alignments_file . "." . $$;
     
-    my $LOCK_NAME = $accum_tmp . ".lock";
-
     # Only one process is allwoed to manipulate the accumulated alignment file for the model
     # at a time
-    unless ($self->_get_local_lock(resource_id => $LOCK_NAME,
-                                   block_sleep => 10,
-                                   max_try => 3600)) {
-        $self->error_message("Can't get lock for $LOCK_NAME, the model's accumulated alignment");
+    unless ($model->lock_resource(resource_id=>'alignments')) {
+        $self->error_message("Can't get lock for accumulated alignment");
         return undef;
     }
 
@@ -149,22 +145,6 @@ sub execute {
     return 1;
 }
 
-# stole this from analyze digested dna.
-# 
-sub _get_local_lock {
-    my($self,%args) = @_;
-    my $ret;
-    my $resource_id = $args{'resource_id'};
-
-    while(! ($ret = mkdir $resource_id)) {
-        return undef unless $args{'max_try'}--;
-        sleep $args{'block_sleep'};
-    }
-
-    eval "END { rmdir \$resource_id;}";
-
-    return 1;
-}
 
 
 1;
