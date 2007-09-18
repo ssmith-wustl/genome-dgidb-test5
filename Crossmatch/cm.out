@@ -1,0 +1,1853 @@
+cross_match -discrep_lists -minmatch 500 -minscore 1000 ex1.contigs ex2.contigs 
+cross_match version 0.990319
+
+Run date:time  070625:142645
+Query file(s):  ex1.contigs
+Subject file(s):   ex2.contigs
+Presumed sequence type: DNA
+
+Pairwise comparison algorithm: banded Smith-Waterman
+
+Score matrix (set by value of penalty: -2)
+    A   C   G   T   N   X
+A   1  -2  -2  -2   0  -3
+C  -2   1  -2  -2   0  -3
+G  -2  -2   1  -2   0  -3
+T  -2  -2  -2   1   0  -3
+N   0   0   0   0   0   0
+X  -3  -3  -3  -3   0  -3
+
+Gap penalties: gap_init: -4, gap_ext: -3, ins_gap_ext: -3, del_gap_ext: -3, 
+Using complexity-adjusted scores. Assumed background frequencies:
+ A: 0.250  C: 0.250  G: 0.250  T: 0.250  N: 0.000  X: 0.000  
+
+minmatch: 127, maxmatch: 127, max_group_size: 20, minscore: 1000, bandwidth: 14, indexwordsize: 10
+vector_bound: 0
+word_raw: 0
+masklevel: 80
+
+Sequence file: ex1.contigs    94 entries
+Residue counts:
+  A    1280145
+  C    1116428
+  G    1078620
+  T    1250688
+  a     7735
+  c     5903
+  g     6127
+  t     7965
+Total  4753611
+
+NO QUALITY FILE ex1.contigs.qual WAS FOUND. REMAINING INPUT QUALITIES SET TO 15.
+Maximal single base matches (low complexity regions):
+
+223562  0.00 0.00 0.00  Contig102      259 224649 (0)    Contig7.1        1 224385 (0)  
+ I     289  G(15)     30  gagaagGtcccaa
+ I     300  T(15)     40  aagggtTgggctg
+ I     308  T(15)     47  ggctgtTcgccca
+ I     316  T(15)     54  gcccatTaaagtg
+ I     323  G(15)     60  aaagtgGcacgcg
+ I     338  T(15)     74  ctgggtTcagaac
+
+108446  0.00 0.00 0.00  Contig20.1        1 108754 (0)    Contig20.1        1 108754 (0)  
+
+72522  0.00 0.00 0.00  Contig25.1        1 72790 (0)  C Contig25.1   (0) 72790     1  
+
+78667  0.00 0.00 0.00  Contig19.1        1 78826 (0)  C Contig19.1   (0) 78826     1  
+
+15171  0.00 0.00 0.00  Contig34.1        1 15396 (0)    Contig34.1        1 15396 (0)  
+
+1223  0.94 0.22 0.73  Contig342       26  1402 (4)    Contig13.1    82699 84068 (9160)  
+ S      75  G(15)  82748  ttccagGccttcc
+ I     552  A(15)  83224  gtaaaaAgcaaat
+ I     563  C(15)  83234  atatccCggatat
+ I     577  T(15)  83247  tgtgttTggactt
+ I     640  A(15)  83309  aaaaaaAgattat
+ D     695  T(15)  83365  taatagTatactt
+ I     701  T(15)  83370  tatactTgagtta
+ I     737  T(15)  83405  aaaattTcggcga
+ S     883  A(15)  83551  tgatgaAgaatat
+ S    1039  A(15)  83707  ttcataAtattaa
+ S    1045  A(15)  83713  atattaAatttaa
+ I    1272  C(15)  83939  attgacCaagcaa
+ D    1278  A(15)  83946  caagcaAcatata
+ I    1290  T(15)  83957  acttttTgccatc
+ S    1323  A(15)  83990  actggaAcagtat
+ S    1324  C(15)  83991  ctggaaCagtatg
+ S    1343  C(15)  84010  ttgatcCaataca
+ D    1354  A(15)  84022  caagggAacaacc
+ S    1359  C(15)  84027  gaacaaCcaaagc
+ I    1368  C(15)  84035  aagcccCgctttt
+ S    1370  C(15)  84037  gccccgCtttttt
+ S    1371  T(15)  84038  ccccgcTtttttt
+ S    1372  T(15)  84039  cccgctTtttttt
+ S    1375  T(15)  84042  gcttttTtttttg
+ S    1383  C(15)  84050  ttttgcCtttggg
+ I    1392  G(15)  84058  tgggggGaggttt
+
+27174  0.00 0.00 0.00  Contig38.1        1 27248 (0)    Contig38.1        1 27248 (0)  
+
+209132  0.00 0.00 0.00  Contig4.1        1 210193 (0)    Contig4.1        1 210193 (0)  
+
+1492  0.26 0.32 0.00  Contig435        2  1543 (0)  C Contig35.3   (576)  7548  6002  
+ S      16  G(15)   7534  atgtagGggatgg
+ S      65  A(15)   7485  acaagaAtatgaa
+ S      66  T(15)   7484  caagaaTatgaat
+ S      67  A(15)   7483  aagaatAtgaatc
+ D      83  A(15)   7466  gaccgtAtgaaag
+ D-2   105  C(15)   7443  ctgctgCtgtatg
+ D     110  T(15)   7436  gctgtaTgtgcac
+ D     131  G(15)   7414  aacggtGtatttt
+
+1798  0.72 0.00 0.51  Contig440        1  1950 (25)    Contig31.2     1653  3592 (10256)  
+ I      20  T(15)   1671  gggcgaTattcag
+ S      22  T(15)   1673  gcgataTtcaggc
+ I      26  G(15)   1676  tattcaGgccaga
+ S      47  G(15)   1697  aaattgGctttta
+ I      52  T(15)   1701  ggctttTatatcc
+ S      68  G(15)   1717  ttcttgGgcacga
+ I      93  A(15)   1741  gtgtaaAgatttt
+ I      96  T(15)   1743  taaagaTttttgt
+ S      98  T(15)   1745  aagattTttgtgg
+ I     132  T(15)   1778  agttttTgttgat
+ I    1283  A(15)   2928  gaggaaAgaaata
+ S    1315  T(15)   2960  agatttTtatacg
+ I    1335  A(15)   2979  tggaaaAtgattg
+ I    1370  A(15)   3013  atagaaAtaacaa
+ S    1544  A(15)   3187  caatctAtgcttg
+ S    1651  T(15)   3294  aaacctTtacgtt
+ S    1899  C(15)   3542  attacgCttattt
+ S    1900  T(15)   3543  ttacgcTtatttt
+ I    1903  T(15)   3545  cgcttaTtttgaa
+ S    1905  T(15)   3547  cttattTtgaatt
+ S    1906  T(15)   3548  ttatttTgaattt
+ S    1907  G(15)   3549  tattttGaatttg
+ S    1908  A(15)   3550  attttgAatttgt
+ S    1909  A(15)   3551  ttttgaAtttgtt
+
+1120  0.25 1.08 0.00  Contig448        1  1203 (28)    Contig34.1     5172  6387 (9009)  
+ S       4  A(15)   5175  ccaAatcaat
+ S    1038  A(15)   6209  taataaAgttact
+ D    1090  A(15)   6262  tccaaaAgtacgg
+ D    1112  T(15)   6285  gtttggTgcctca
+ D    1137  A(15)   6311  cgcgctAttgaga
+ D-2  1147  A(15)   6322  agaaaaAtgggtt
+ D    1157  A(15)   6334  gttggaAtatcag
+ D    1164  A(15)   6342  tatcagAtccact
+ S    1165  T(15)   6343  atcagaTccacta
+ D    1170  T(15)   6349  atccacTatccta
+ D    1177  T(15)   6357  atcctaTgttttg
+ D    1182  T(15)   6363  atgtttTgtttgc
+ D    1183  G(15)   6365  tgttttGtttgca
+ D    1187  G(15)   6370  ttgtttGcactac
+ D    1195  A(15)   6379  actacgAgacttt
+
+33820  0.00 0.00 0.00  Contig468        1 33901 (185620)  C Contig32.2   (0) 33901     1  
+2584  0.00 0.00 0.00  Contig468    34043 36770 (182751)  C Contig32.1   (0)  2728     1 *
+182779  0.00 0.00 0.00  Contig468    36103 219521 (0)    Contig8.2        1 183419 (0)  
+
+1338  0.00 0.00 0.00  Contig52.1        1  1355 (0)    Contig52.1        1  1355 (0)  
+
+42975  0.01 0.03 0.00  Contig600        1 43210 (358774)    Contig1.1       71 43291 (0)  
+ D   42994  C(15)  43065  tttggcCattgtc
+ D   43100  G(15)  43172  atccggGtatagg
+ D   43119  G(15)  43192  caaactGtggatt
+ S   43120  T(15)  43193  aaactgTggatta
+ D   43132  A(15)  43206  atgctcAccgtgc
+ D-2 43143  T(15)  43218  gcttttTggagcc
+ D   43152  G(15)  43229  agccggGttcatg
+ D   43158  G(15)  43236  gttcatGcctggg
+ D   43164  G(15)  43243  gcctggGcgggac
+ D   43165  C(15)  43245  cctgggCgggaca
+ D   43178  A(15)  43259  gcttttAtgcatt
+ D   43187  T(15)  43269  cattgcTccggca
+ I   43194  A(15)  43275  ccggcaAcaccgc
+ S   43199  G(15)  43280  aacaccGcttgat
+ S   43200  C(15)  43281  acaccgCttgatg
+ S   43201  T(15)  43282  caccgcTtgatgc
+1366  0.36 0.00 0.07  Contig600    42502 43895 (358089)  C Contig2.1   (173208) 177074 175682 *
+ S   42511  T(15)  177065  cttatcTtgatat
+ S   42832  T(15)  176744  gaaagcTctgtct
+ S   43685  C(15)  175891  caacgaCatcggg
+ S   43848  G(15)  175728  agcaatGaaaaga
+ I   43884  A(15)  175693  cggacaAgcaagt
+ S   43891  A(15)  175686  gcaagtAcgggtt
+196357  0.00 0.00 0.00  Contig600    43545 240240 (161744)    Contig1.2        1 196697 (0)  
+ S   43586  T(15)     42  cgtcagTatgacg
+ S   43588  T(15)     44  tcagtaTgacgga
+ D   43589  G(15)     46  cagtatGacggaa
+ S   43591  C(15)     48  gtatgaCggaaga
+ S   43596  G(15)     53  acggaaGactaca
+1675  0.12 0.06 0.18  Contig600    239754 241459 (160525)  C Contig51.1   (0)  1720    17 *
+ I   241337  G(15)    138  gcatgaGacgttc
+ S   241386  G(15)     89  gtagtaGgcttga
+ I   241404  A(15)     72  atggccAaacaga
+ D   241437  G(15)     38  caggttGcgctga
+ I   241449  C(15)     27  actgacCagttcc
+ S   241456  G(15)     20  agttccGttacga
+118396  0.00 0.00 0.00  Contig600    240840 359828 (42156)    Contig1.3        1 118989 (0)  
+42682  0.00 0.00 0.00  Contig600    359246 401984 (0)    Contig30.1        1 42738 (0) *
+ S   359399  G(15)    154  caaataGccgaac
+ I   359487  A(15)    241  tcttcaAgaaaga
+
+1547  1.43 0.65 0.12  Contig642      635  2317 (130617)  C Contig16.1   (0) 107842 106151 *
+ I     666  C(15)  107812  tggagtCgggttg
+ S     670  T(15)  107808  gtcgggTtgcaga
+ S     671  T(15)  107807  tcgggtTgcagac
+ D     979  A(15)  107498  cacatcAttcagt
+ S     993  C(15)  107484  gcaattCaagccc
+ S     994  A(15)  107483  caattcAagcccg
+ D     999  C(15)  107477  caagccCgggtaa
+ D    1009  T(15)  107466  taaggtTcctcgc
+ D    1022  T(15)  107452  gtatcaTcgaatt
+ S    1024  G(15)  107450  atcatcGaattaa
+ D    1037  T(15)  107436  accacaTgttcct
+ S    1040  T(15)  107433  acatgtTcctccg
+ S    1063  T(15)  107410  cccccgTcaattc
+ S    1065  A(15)  107408  cccgtcAattcct
+ S    1069  C(15)  107404  tcaattCctttga
+ D    1076  G(15)  107396  ctttgaGtttcac
+ S    1081  A(15)  107391  agtttcAccgttg
+ S    1083  C(15)  107389  tttcacCgttgcc
+ D    1097  T(15)  107374  gcgtacTccccag
+ S    1113  T(15)  107358  gaatacTtaacgc
+ D    1116  A(15)  107354  tacttaAcgcttt
+ S    1117  C(15)  107353  acttaaCgctttc
+ S    1137  C(15)  107333  cgcttaCtgtata
+ S    1185  A(15)  107285  actaccAgggtat
+ S    1186  G(15)  107284  ctaccaGggtatc
+ S    1193  T(15)  107277  ggtatcTaatcct
+ S    1350  C(15)  107120  caactgCaatttt
+ S    1777  T(15)  106693  tagttcTaccatg
+ S    2002  T(15)  106468  tgcgcaTattaaa
+ I    2055  A(15)  106416  gaattcAaaaagt
+ S    2062  C(15)  106409  aaaagtCtatctt
+ S    2083  A(15)  106388  tatataAaataag
+ S    2134  C(15)  106337  cttaatCattagt
+ S    2216  T(15)  106255  atcgctTgtttca
+ D-2  2296  G(15)  106174  tcggaaGtttttt
+ D    2305  A(15)  106163  tttttcAtttttt
+111511  0.00 0.00 0.00  Contig642     2261 114146 (18788)    Contig14.1        1 111886 (0)  
+16736  0.04 0.00 0.00  Contig642    114056 130832 (2102)  C Contig40.1   (0) 16777     1  
+ S   130798  A(15)     35  cttcgcAggtaat
+ S   130811  T(15)     22  gaaatcTtgttaa
+ S   130813  G(15)     20  aatcttGttaatt
+ S   130814  T(15)     19  atcttgTtaattc
+ S   130819  T(15)     14  gttaatTccatta
+ S   130822  A(15)     11  aattccAttaata
+2188  1.38 0.09 0.04  Contig642    130593 132909 (25)  C Contig22.1   (62390) 10656  8339 *
+ S   130599  A(15)  10650  gatgtcAtcatca
+ S   130608  A(15)  10641  atcataAtcctta
+ S   130629  A(15)  10620  gaacgtAcctgca
+ S   130638  A(15)  10611  tgcagtAcccaac
+ S   130643  A(15)  10606  tacccaAcatcaa
+ S   130647  C(15)  10602  caacatCaaggca
+ S   130653  A(15)  10596  caaggcActgaac
+ S   130663  G(15)  10586  aacaggGtcacac
+ S   130680  C(15)  10569  aaacttCttgttc
+ S   130747  C(15)  10502  tcatttCgaatcc
+ S   130751  T(15)  10498  ttcgaaTcccttc
+ S   130757  C(15)  10492  tcccttCcacata
+ S   130759  A(15)  10490  ccttccAcatagc
+ S   130764  G(15)  10485  cacataGctgtct
+ S   130765  C(15)  10484  acatagCtgtctg
+ I   130769  C(15)  10481  agctgtCtgtcat
+ S   130771  G(15)  10479  ctgtctGtcatgt
+ S   130773  C(15)  10477  gtctgtCatgtga
+ S   130774  A(15)  10476  tctgtcAtgtgat
+ S   130776  G(15)  10474  tgtcatGtgattt
+ S   130777  T(15)  10473  gtcatgTgatttt
+ S   130778  G(15)  10472  tcatgtGattttt
+ S   130780  T(15)  10470  atgtgaTtttttc
+ S   130781  T(15)  10469  tgtgatTttttcc
+ S   130783  T(15)  10467  tgatttTttccgt
+ S   132748  T(15)   8502  tgaggtTtattat
+ S   132753  A(15)   8497  tttattAtacaga
+ S   132821  A(15)   8429  aatcttAgaaaaa
+ D   132847  A(15)   8402  tctatcAtttgga
+ S   132859  T(15)   8390  atatttTttttag
+ S   132860  T(15)   8389  tattttTtttagg
+ S   132862  T(15)   8387  ttttttTtaggtg
+ S   132863  T(15)   8386  ttttttTaggtgg
+ S   132866  G(15)   8383  ttttagGtgggta
+ D   132901  T(15)   8347  tgagttTtcaaga
+
+1982  0.93 0.05 0.00  Contig648        4  2056 (13765)    Contig34.1     7142  9195 (6201) *
+ S    1141  A(15)   8279  ttccccAaggaat
+ S    1480  C(15)   8618  gtgaggCccagga
+ S    1505  C(15)   8643  cgaggaCggtgtt
+ S    1784  A(15)   8922  tgtggtAcgctcg
+ S    1859  C(15)   8997  tatcaaCgaggcg
+ S    1874  C(15)   9012  aaggcaCatgggg
+ S    1920  A(15)   9058  aaaagaAccctca
+ S    1938  A(15)   9076  gaaaaaAtataca
+ S    1994  C(15)   9132  agtataCaaacca
+ D    2000  A(15)   9139  caaaccAttaatc
+ S    2006  C(15)   9145  attaatCtattta
+ S    2015  A(15)   9154  tttaaaAcatgag
+ S    2021  G(15)   9160  acatgaGaatcaa
+ S    2030  C(15)   9169  tcaaatCattaat
+ S    2031  A(15)   9170  caaatcAttaatt
+ S    2034  A(15)   9173  atcattAattttg
+ S    2037  T(15)   9176  attaatTttggcg
+ S    2040  G(15)   9179  aattttGgcggcc
+ S    2043  G(15)   9182  tttggcGgcctta
+ S    2052  C(15)   9191  cttatgCatggtc
+14702  0.02 0.00 0.07  Contig648      890 15821 (0)    Contig43.1        1 14922 (0)  
+ S     895  T(15)      6  actctaTttctac
+ I     905  T(15)     15  tactgtTctcatt
+ S     909  A(15)     19  gttctcAttttat
+ S     910  T(15)     20  ttctcaTtttata
+ I     922  A(15)     31  atatatAtacaac
+ I     930  T(15)     38  acaactTgtcata
+ I     952  A(15)     59  ctcaaaAcaatct
+ I-2   961  TA(15)     67  atctttTAaagtca
+ I     972  T(15)     76  tcaactTaagaga
+ I     983  T(15)     86  gatactTcttaac
+ I     985  T(15)     87  tacttcTtaacta
+ I     992  T(15)     93  taactaTtgttgg
+
+8982  0.00 0.00 0.00  Contig659        4  9128 (278671)    Contig42.1        1  9125 (0) *
+277813  0.00 0.00 0.00  Contig659     8456 287799 (0)    Contig3.1        1 279344 (0)  
+
+1922  0.20 0.05 0.05  Contig690      772  2754 (807)    Contig49.1        2  1984 (0)  
+ S     775  T(15)      5  tggtttTaggagg
+ S     787  T(15)     17  gcagctTacactg
+ S     788  A(15)     18  cagcttAcactgg
+ S     789  C(15)     19  agcttaCactgga
+ D     805  T(15)     36  tccaacTatcatt
+ I     815  T(15)     45  atttttTcccgtt
+
+92653  0.00 0.00 0.00  Contig697        1 93228 (797)    Contig13.1        1 93228 (0)  
+
+1099  0.18 0.18 0.00  Contig699        1  1121 (486197)  C Contig53.1   (0)  1125     3 *
+ D    1075  G(15)     50  gaaagtGcttacc
+ D    1110  C(15)     14  tgtcctCacaaga
+ S    1113  A(15)     11  cctcacAagagga
+ S    1114  A(15)     10  ctcacaAgaggaa
+349054  0.01 0.00 0.00  Contig699     1066 351349 (135969)  C Contig2.1   (0) 350282     1  
+ S   175026  C(15)  176322  tcgctaCcacaag
+ S   175042  C(15)  176306  aagaacCtaatca
+ S   175054  C(15)  176294  aaaggaCtgacct
+ S   175077  A(15)  176271  caaccaAgttgtg
+ I   175078  G(15)  176271  aaccaaGttgtgg
+ S   175090  C(15)  176259  ggtcagCgacatt
+ S   175112  G(15)  176237  ccacttGccaatg
+ S   175153  C(15)  176196  ggatgcCtactcc
+ S   175169  G(15)  176180  aagataGtgggat
+ S   175170  T(15)  176179  agatagTgggatg
+ S   175184  G(15)  176165  gtgcttGccgaca
+ S   175196  C(15)  176153  accttaCgggtat
+ S   175254  C(15)  176095  aaatgaCaggaga
+ S   175259  G(15)  176090  acaggaGatgaaa
+ S   175260  A(15)  176089  caggagAtgaaaa
+ I   175263  A(15)  176087  gagatgAaaatct
+ S   175272  C(15)  176078  atcttaCgggcct
+ S   175273  G(15)  176077  tcttacGggcctg
+ S   175291  G(15)  176059  tcactcGgaccgt
+ S   175324  C(15)  176026  cccataCgtggca
+ S   175355  A(15)  175995  attgccAtcagta
+12779  0.01 0.00 0.01  Contig699    350801 363685 (123633)    Contig44.1        1 12884 (5) *
+ I   363650  A(15)  12849  aaatgtAtgtagc
+ S   363652  G(15)  12851  atgtatGtagcga
+1572  1.33 0.00 0.06  Contig699    363218 364869 (122449)    Contig2.1    175424 177074 (173208) *
+ S   363789  T(15)  175995  tactgaTggcaat
+ S   363820  G(15)  176026  tgccacGtatggg
+ S   363853  C(15)  176059  acggtcCgagtga
+ S   363871  C(15)  176077  caggccCgtaaga
+ S   363872  G(15)  176078  aggcccGtaagat
+ I   363881  T(15)  176086  agatttTcatctc
+ S   363884  T(15)  176089  ttttcaTctcctg
+ S   363885  C(15)  176090  tttcatCtcctgt
+ S   363890  G(15)  176095  tctcctGtcattt
+ S   363948  G(15)  176153  atacccGtaaggt
+ S   363960  C(15)  176165  tgtcggCaagcac
+ S   363974  A(15)  176179  catcccActatct
+ S   363975  C(15)  176180  atcccaCtatctt
+ S   363991  G(15)  176196  ggagtaGgcatcc
+ S   364032  C(15)  176237  cattggCaagtgg
+ S   364054  G(15)  176259  aatgtcGctgacc
+ S   364066  C(15)  176271  ccacaaCtggttg
+ S   364089  G(15)  176294  aggtcaGtccttt
+ S   364101  G(15)  176306  tgattaGgttctt
+ S   364117  G(15)  176322  cttgtgGtagcga
+ S   364503  C(15)  176708  catcaaCtcacgg
+ S   364539  A(15)  176744  agacagAgctttc
+ S   364577  T(15)  176782  attgggTattttc
+122097  0.00 0.00 0.00  Contig699    364858 487318 (0)  C Contig18.1   (0) 122461     1  
+
+2015  0.28 0.05 0.46  Contig701       23  2190 (2570)  C Contig35.3   (5965)  2159     1 *
+ D      30  G(15)   2151  cgcagtGaatctg
+ I     396  G(15)   1786  tcccttGggattt
+ I     400  T(15)   1783  ttgggaTtttcag
+ S     415  T(15)   1768  cgttgaTttttgt
+ I     422  A(15)   1762  ttttgtAaaataa
+ I     427  A(15)   1758  taaaatAaaagaa
+ I     432  A(15)   1754  taaaagAaaacta
+ I    2073  A(15)    114  aataccAatgaca
+ I    2095  T(15)     93  tcacagTtatcaa
+ I    2122  T(15)     67  cctctcTttacgg
+ I    2145  G(15)     45  gctaacGgtgttg
+ I    2153  G(15)     38  tgttgtGgtcatt
+ S    2167  A(15)     24  cgacgaAaagcgg
+ S    2178  C(15)     13  ggaaaaCaaggca
+ S    2179  A(15)     12  gaaaacAaggcaa
+ S    2183  C(15)      8  acaaggCaaaaca
+ S    2184  A(15)      7  caaggcAaaacaa
+3319  1.39 0.09 0.03  Contig701     1238  4759 (1)  C Contig15.2   (4) 53740 50217  
+ S    1270  C(15)  53708  ttgaatCttgccg
+ S    1272  T(15)  53706  gaatctTgccgta
+ D    1272  T(15)  53705  gaatctTgccgta
+ S    1276  G(15)  53701  cttgccGtatata
+ S    1278  A(15)  53699  tgccgtAtatatt
+ S    1285  A(15)  53692  tatattAtatatt
+ S    1286  T(15)  53691  atattaTatattc
+ S    1288  T(15)  53689  attataTattcat
+ S    1295  C(15)  53682  attcatCaattat
+ S    1296  A(15)  53681  ttcatcAattata
+ I    1308  C(15)  53670  aaataaCatatgt
+ S    1313  G(15)  53665  acatatGtaaagc
+ D    1314  T(15)  53663  catatgTaaagca
+ S    1318  G(15)  53659  tgtaaaGcaaata
+ D    1319  C(15)  53657  gtaaagCaaatat
+ S    1340  A(15)  53636  aaaaaaAtatttt
+ S    1341  T(15)  53635  aaaaaaTattttg
+ S    1349  A(15)  53627  ttttggAactttt
+ S    1367  T(15)  53609  taaaatTtatctt
+ S    1371  C(15)  53605  atttatCtttcaa
+ S    1398  C(15)  53578  tataatCtatcgt
+ S    1427  A(15)  53549  acatttAttgggt
+ S    1449  C(15)  53527  catcacCaattaa
+ S    1459  A(15)  53517  taaaagAgtagaa
+ S    1472  G(15)  53504  tgaaatGttacaa
+ S    1474  T(15)  53502  aaatgtTacaata
+ S    1476  C(15)  53500  atgttaCaataac
+ S    1484  C(15)  53492  ataacgCgctcat
+ S    1488  C(15)  53488  cgcgctCattatc
+ S    1514  C(15)  53462  tcaaaaCggtatg
+ S    1534  G(15)  53442  tacttcGagccac
+ S    1536  G(15)  53440  cttcgaGccactt
+ S    1552  T(15)  53424  tcccttTgccata
+ S    1569  G(15)  53407  tttataGataata
+ S    1571  T(15)  53405  tatagaTaatata
+ S    1578  C(15)  53398  aatataCaataga
+ S    1585  A(15)  53391  aatagaAtaaact
+ S    1589  A(15)  53387  gaataaActctgt
+ S    1591  T(15)  53385  ataaacTctgttc
+ S    1592  C(15)  53384  taaactCtgttct
+ S    1597  C(15)  53379  tctgttCtatagc
+ S    1602  G(15)  53374  tctataGcaaacg
+ S    1603  C(15)  53373  ctatagCaaacgt
+ S    1604  A(15)  53372  tatagcAaacgta
+ S    1606  A(15)  53370  tagcaaAcgtaaa
+ S    1607  C(15)  53369  agcaaaCgtaaac
+ S    1613  C(15)  53363  cgtaaaCaattgt
+ S    1614  A(15)  53362  gtaaacAattgtt
+ S    1618  G(15)  53358  acaattGtttttt
+ S    1619  T(15)  53357  caattgTttttta
+ S    1624  T(15)  53352  gtttttTagcaat
+ S    1636  C(15)  53340  tatacaCttattg
+ S    1637  T(15)  53339  atacacTtattgt
+
+89275  0.00 0.00 0.00  Contig717       23 89383 (0)    Contig5.1    122765 212125 (0)  
+ S      68  C(15)  122810  aacaacCgtccag
+
+9954  0.00 0.00 0.00  Contig718        1 10031 (33352)  C Contig45.1   (0) 10031     1  
+29189  0.00 0.00 0.00  Contig718    10015 39438 (3945)    Contig29.1        1 29424 (0)  
+ S   39277  G(15)  29263  gaaggaGgaatac
+1547  1.43 0.65 0.12  Contig718    40542 42224 (1159)    Contig16.1    106151 107842 (0)  
+ D   40553  A(15)  106163  gaaaaaAtgaaaa
+ D-2 40562  A(15)  106173  aaaaaaActtccg
+ S   40643  A(15)  106255  tgaaacAagcgat
+ S   40725  G(15)  106337  actaatGattaag
+ S   40776  T(15)  106388  cttattTtatata
+ S   40797  G(15)  106409  aagataGactttt
+ I   40804  T(15)  106415  acttttTgaattc
+ S   40857  A(15)  106468  tttaatAtgcgca
+ S   41082  A(15)  106693  catggtAgaacta
+ S   41509  G(15)  107120  aaaattGcagttg
+ S   41666  A(15)  107277  aggattAgatacc
+ S   41673  C(15)  107284  gataccCtggtag
+ S   41674  T(15)  107285  atacccTggtagt
+ S   41722  G(15)  107333  tatacaGtaagcg
+ S   41742  G(15)  107353  gaaagcGttaagt
+ D   41742  G(15)  107354  gaaagcGttaagt
+ S   41746  A(15)  107358  gcgttaAgtattc
+ D   41761  G(15)  107374  cctgggGagtacg
+ S   41776  G(15)  107389  ggcaacGgtgaaa
+ S   41778  T(15)  107391  caacggTgaaact
+ D   41782  A(15)  107396  ggtgaaActcaaa
+ S   41790  G(15)  107404  tcaaagGaattga
+ S   41794  T(15)  107408  aggaatTgacggg
+ S   41796  A(15)  107410  gaattgAcggggg
+ S   41819  A(15)  107433  cggaggAacatgt
+ D   41821  C(15)  107436  gaggaaCatgtgg
+ S   41835  C(15)  107450  ttaattCgatgat
+ D   41836  G(15)  107452  taattcGatgata
+ D   41849  G(15)  107466  cgcgagGaacctt
+ D   41859  C(15)  107477  cttaccCgggctt
+ S   41865  T(15)  107483  cgggctTgaattg
+ S   41866  G(15)  107484  gggcttGaattgc
+ D   41879  A(15)  107498  aactgaAtgatgt
+ S   42188  A(15)  107807  gtctgcAacccga
+ S   42189  A(15)  107808  tctgcaAcccgac
+ I   42193  G(15)  107811  caacccGactcca
+
+1356  0.00 0.00 0.00  Contig72.1        1  1390 (0)    Contig72.1        1  1390 (0)  
+
+49944  0.00 0.00 0.01  Contig724        1 50348 (353062)  C Contig24.1   (0) 50344     1  
+ I   50325  T(15)     21  gtgttcTttccat
+ I-2 50331  TT(15)     16  tttccaTTttagga
+ I   50336  G(15)     13  attttaGgaaaca
+90887  0.01 0.00 0.01  Contig724    50033 141512 (261898)    Contig17.1        1 91474 (0)  
+ I   50039  A(15)      6  aattcaAtgtcat
+ S   141425  C(15)  91392  cactacCctatcc
+ D   141425  C(15)  91393  cactacCctatcc
+ I   141428  A(15)  91395  taccctAtccacc
+ I   141432  A(15)  91398  ctatccAccagac
+ I   141442  T(15)  91407  gacgctTgataac
+ I   141461  C(15)  91425  cgcggcCgtaacg
+ S   141464  A(15)  91428  ggccgtAacggtc
+ S   141467  G(15)  91431  cgtaacGgtcact
+ S   141468  G(15)  91432  gtaacgGtcactt
+ I-2 141471  AC(15)  91434  acggtcACttcgtc
+ S   141497  T(15)  91459  agaagaTttcaat
+164658  0.00 0.00 0.00  Contig724    141147 306410 (97000)    Contig10.1        1 165264 (0)  
+2448  0.08 0.12 0.04  Contig724    306457 308935 (94475)  C Contig47.1   (74)  2484     4 *
+ I   308449  T(15)    493  caccgcTtttcac
+ D   308911  G(15)     30  atctttGttgtca
+ S   308920  G(15)     21  gtcataGtagaaa
+ S   308923  G(15)     18  atagtaGaaatga
+ D   308923  G(15)     17  atagtaGaaatga
+ D   308928  G(15)     11  agaaatGatttta
+69882  0.01 0.00 0.00  Contig724    308409 378493 (24917)  C Contig23.1   (0) 70085     1  
+ S   308419  C(15)  70075  tggccaCgaacac
+ S   308428  C(15)  70066  acacttCaacgct
+ S   308436  C(15)  70058  acgctgCgacatt
+ D   308442  T(15)  70051  cgacatTcaccgc
+ I   308449  T(15)  70045  caccgcTtttcac
+ S   378464  G(15)     30  tcttgcGcgattg
+17923  0.06 0.14 0.03  Contig724    377863 395966 (7444)    Contig35.1        1 18124 (0) *
+ I   377895  G(15)     32  caaggaGcagctt
+ I   377901  T(15)     37  gcagctTcagact
+ I   377920  A(15)     55  gatgtaAgtagtg
+ I   377955  C(15)     89  ctattcCatgcgg
+ D   378091  C(15)    226  accatcCgtacgt
+ D   378135  T(15)    271  caatctTatcctg
+ D   378147  A(15)    284  gaaggaAgacggt
+ D   378200  C(15)    338  tgggacCagccga
+ D   378214  A(15)    353  atcaaaAgttata
+ D   378224  A(15)    364  atatgaAgatgaa
+ D   378240  C(15)    381  tgtgccCatggta
+ D   378266  A(15)    408  ttccgcAgccggg
+ D   378272  G(15)    415  agccggGtgccaa
+ D   378278  A(15)    422  gtgccaAccacat
+ D   378283  A(15)    428  aaccacAttgaaa
+ D   378289  A(15)    435  attgaaAtagcca
+ D   378296  A(15)    443  tagccaAcgccgt
+ D   378298  G(15)    446  gccaacGccgtat
+ S   378314  T(15)    462  accgcaTggagaa
+ D   378318  G(15)    467  catggaGaagatg
+ S   378323  T(15)    472  agaagaTgaagaa
+ S   378324  G(15)    473  gaagatGaagaaa
+ D   378326  A(15)    476  agatgaAgaaaga
+ D   378336  T(15)    487  agacctTcccgaa
+ D   378343  G(15)    495  cccgaaGatgttc
+ D   378349  C(15)    502  gatgttCattaca
+ S   378368  A(15)    521  gttttgAcaatac
+ D   378375  C(15)    529  caatacCaagttt
+ D   378381  T(15)    536  caagttTatccgc
+ S   378382  A(15)    537  aagtttAtccgcg
+ D   378391  T(15)    547  cgcgctTctatcg
+ S   378396  C(15)    552  ttctatCgacgag
+ D   378409  C(15)    566  gtgaagCagacgg
+ S   378410  A(15)    567  tgaagcAgacggt
+ D   378418  T(15)    576  acggtgTatgagg
+ S   378420  T(15)    578  ggtgtaTgaggcc
+ S   378424  G(15)    582  tatgagGcctttg
+ I   395925  G(15)  18082  taagtgGctcgaa
+ D   395947  C(15)  18105  tcatacCattttg
+ S   395948  A(15)  18106  cataccAttttga
+7375  0.87 0.00 0.01  Contig724    395684 403401 (9)    Contig35.3      408  8124 (0) *
+ S   395691  A(15)    415  gtaccgAaagcga
+ S   395694  G(15)    418  ccgaaaGcgacca
+ S   395697  A(15)    421  aaagcgAccacca
+ S   395698  C(15)    422  aagcgaCcaccat
+ S   395699  C(15)    423  agcgacCaccatt
+ S   395704  T(15)    428  ccaccaTtacctc
+ S   395705  T(15)    429  caccatTacctca
+ S   395711  A(15)    435  tacctcAtcaagc
+ S   395719  T(15)    443  caagcaTctcagt
+ S   395725  T(15)    449  tctcagTatcaga
+ S   395729  A(15)    453  agtatcAgacttc
+ S   395732  C(15)    456  atcagaCttcatc
+ S   395737  T(15)    461  acttcaTcaccac
+ S   395738  C(15)    462  cttcatCaccact
+ S   395740  C(15)    464  tcatcaCcacttt
+ S   395741  C(15)    465  catcacCactttt
+ S   395744  T(15)    468  caccacTtttacg
+ S   395750  G(15)    474  ttttacGctggat
+ S   395751  C(15)    475  tttacgCtggatt
+ S   395752  T(15)    476  ttacgcTggattt
+ S   395753  G(15)    477  tacgctGgatttt
+ S   395755  A(15)    479  cgctggAttttat
+ S   395759  T(15)    483  ggatttTattgcc
+ S   395762  T(15)    486  ttttatTgccacc
+ S   395764  C(15)    488  ttattgCcacctc
+ S   395765  C(15)    489  tattgcCacctcc
+ S   395768  C(15)    492  tgccacCtcctgg
+ S   395771  C(15)    495  cacctcCtgggtc
+ S   395777  C(15)    501  ctgggtCtgcata
+ S   395788  T(15)    512  taccaaTatacga
+ S   395790  T(15)    514  ccaataTacgaaa
+ S   395798  T(15)    522  cgaaatTaccaga
+ S   395948  A(15)    672  cataccAttttga
+ S   395974  A(15)    698  gataatAagcacg
+ S   395978  A(15)    702  ataagcAcgttat
+ S   395986  A(15)    710  gttattAttaaat
+ S   395988  T(15)    712  tattatTaaattt
+ S   395990  A(15)    714  ttattaAatttca
+ S   396003  C(15)    727  ttctacCctttta
+ S   396013  T(15)    737  ttaattTgtgatg
+ S   396035  C(15)    759  acccaaCaaatgt
+ S   396064  A(15)    788  acgataAattata
+ S   396091  T(15)    815  ttgaaaTatagat
+ S   396095  G(15)    819  aatataGatttta
+ S   396113  C(15)    837  aaaagtCccaaaa
+ S   396121  T(15)    845  caaaatTcttttt
+ S   396122  C(15)    846  aaaattCtttttt
+ S   396143  A(15)    867  atatttAgtttac
+ S   396144  G(15)    868  tatttaGtttaca
+ S   396154  A(15)    878  acatatAttattt
+ S   396166  G(15)    890  tataatGtatgaa
+ S   396167  T(15)    891  ataatgTatgaat
+ S   396174  G(15)    898  atgaatGtggaat
+ S   396176  G(15)    900  gaatgtGgaatat
+ S   396177  G(15)    901  aatgtgGaatata
+ S   396184  C(15)    908  aatataCatggaa
+ S   396186  T(15)    910  tatacaTggaaat
+ S   396189  A(15)    913  acatggAaatatt
+ S   396192  T(15)    916  tggaaaTattcaa
+ S   396225  T(15)    949  atctttTcatata
+ S   396226  C(15)    950  tcttttCatataa
+ S   396271  T(15)    995  ctcccgTccttta
+ S   396285  A(15)   1009  acataaAgagaat
+ S   396367  A(15)   1091  tcttttAcagata
+ S   396500  T(15)   1224  actgggTataatc
+ S   396589  T(15)   1313  taaatgTgatatc
+ I   403298  T(15)   8021  ggcagtTactaag
+ S   403354  T(15)   8077  ttttctTaatttc
+
+1756  0.00 0.00 0.06  Contig728        3  1794 (480)    Contig31.1     6111  7901 (164)  
+ I    1783  T(15)   7890  gagtttTcgcgga
+
+1212  0.08 0.24 0.00  Contig729        1  1233 (4)  C Contig15.2   (478) 53266 52031  
+ D       9  G(15)  53257  tgtaaaGtaattt
+ D      12  A(15)  53253  aaagtaAtttgaa
+ D      24  A(15)  53240  aatccgAtctgag
+ S     120  T(15)  53144  caccttTgaagat
+
+1966  0.00 0.00 0.00  Contig732       22  2035 (9)  C Contig31.2   (11834)  2014     1  
+
+1489  0.13 0.13 0.13  Contig735       21  1576 (0)  C Contig31.2   (9816)  4032  2477  
+ D      27  T(15)   4025  ctacagTaaagat
+ S     655  C(15)   3397  ggattgCataaat
+ S    1457  A(15)   2595  cactaaAgagtag
+ I    1497  T(15)   2556  atcttgTttttat
+ I    1526  A(15)   2528  ttcaggAaattca
+ D    1544  A(15)   2509  agaaaaAgataaa
+
+1461  0.07 0.07 0.13  Contig736        4  1487 (0)  C Contig31.2   (691) 13157 11675  
+ S       8  C(15)  13153  gaagatCcttgat
+ I      29  G(15)  13133  agtagtGggctta
+ I      43  A(15)  13120  ggcactAaaacgt
+ D     372  T(15)  12790  gtggtgTgtcatg
+
+2563  0.55 0.29 0.15  Contig747        3  2717 (28)  C Contig31.2   (6539)  7309  4591  
+ I       9  G(15)   7304  gcaagtGgtctcc
+ S      27  A(15)   7286  accgggAtcgtct
+ I      38  A(15)   7276  ctacacAaggtac
+ D      47  A(15)   7266  gtacgtAtcgggg
+ S      51  G(15)   7262  gtatcgGggtatc
+ D      64  A(15)   7248  gggtctAgtctgc
+ D      70  C(15)   7241  agtctgCtcagta
+ D      73  A(15)   7237  ctgctcAgtaccc
+ I      77  C(15)   7234  tcagtaCccccac
+ S      90  G(15)   7221  tttatgGtataga
+ D     101  G(15)   7209  gatggaGtgctat
+ D     106  A(15)   7203  agtgctAtgaagc
+ S     184  A(15)   7125  taaatcAgaatga
+ D     192  A(15)   7116  aatgatAtgagtc
+ I     858  T(15)   6451  atgctgTttcctg
+ S     873  C(15)   6436  tatgatCtggatg
+ S     905  G(15)   6404  tgatgaGaatggc
+ S     912  T(15)   6397  aatggcTaacctc
+ S     967  G(15)   6342  tatcatGtgcaca
+ S     975  T(15)   6334  gcacaaTctgaca
+ S     991  A(15)   6318  atgcaaAtaacac
+ S    1019  A(15)   6290  aaatccAtacgtg
+ S    1186  T(15)   6123  tgaccaTtacatt
+ S    2638  T(15)   4671  tattggTcggtgc
+ S    2672  T(15)   4637  tacaatTttatgt
+ S    2677  G(15)   4632  ttttatGtggtat
+ D    2706  A(15)   4602  tttaaaAtgagat
+
+1137  0.41 0.58 0.49  Contig750        1  1215 (0)  C Contig47.1   (74)  2484  1269  
+ S     932  C(15)   1553  gaagtaCgctgct
+ D    1026  A(15)   1458  cgttcaAgatccg
+ D    1055  A(15)   1428  ccgtatAgcgcag
+ D    1061  G(15)   1421  agcgcaGtgcgtg
+ I    1070  G(15)   1413  cgtggcGgcatgc
+ S    1088  A(15)   1395  ccgccaAcaaccg
+ I    1110  C(15)   1374  gaaggtCcttctt
+ S    1116  T(15)   1368  ccttctTcaacgc
+ D    1129  G(15)   1354  catgatGctctgc
+ D    1141  C(15)   1341  catgaaCgaacgc
+ I    1151  G(15)   1332  cgccgcGgggagg
+ D    1169  G(15)   1313  tcttgaGtccgcc
+ D    1176  A(15)   1305  tccgccActtgcc
+ S    1182  C(15)   1299  acttgcCcagaat
+ I    1186  A(15)   1296  gcccagAatacag
+ S    1198  A(15)   1284  gcagcaAgaacgt
+ I    1200  A(15)   1283  agcaagAacgtta
+ I    1209  T(15)   1275  gttatcTtgtctg
+
+13019  0.02 0.01 0.01  Contig751        1 13291 (0)  C Contig31.2   (0) 13848   558  
+ S     293  T(15)  13556  aagggtTtacatt
+ I     314  A(15)  13536  tggaatAaacaac
+ S     513  A(15)  13337  tagagtAtcttct
+ S     515  C(15)  13335  gagtatCttctct
+ D   13283  G(15)    566  aatgtaGtccgcg
+
+1450  0.00 0.00 0.07  Contig752        4  1467 (23)    Contig31.2     8585 10047 (3801)  
+ I      75  C(15)   8655  ttttccCgtataa
+
+1531  0.00 0.06 0.00  Contig754        8  1553 (4)  C Contig15.2   (1900) 51844 50298  
+ D      81  A(15)  51770  acagatAtatctc
+
+22163  0.00 0.00 0.00  Contig756        1 22219 (75131)  C Contig41.1   (0) 22219     1 *
+72692  0.00 0.00 0.00  Contig756    21814 94860 (2490)  C Contig22.1   (0) 73046     1  
+ S   94810  A(15)     50  caaaacAtgcaga
+ S   94814  A(15)     46  acatgcAgacggt
+ S   94816  A(15)     44  atgcagAcggtcc
+ I   94851  T(15)     10  ggtacgTttacag
+3082  0.37 0.19 0.22  Contig756    94127 97350 (0)    Contig40.1       30  3252 (13525) *
+ S   94132  T(15)     35  gttaccTgcgaag
+ D   96429  A(15)   2333  ttagtgAcggttt
+ D   96437  T(15)   2342  ggtttcTgaacaa
+ I   96450  G(15)   2354  agacggGcggtga
+ I   96452  G(15)   2355  acgggcGgtgaac
+ S   96458  C(15)   2361  ggtgaaCcttgct
+ S   96460  T(15)   2363  tgaaccTtgctac
+ I   96470  G(15)   2372  tactggGtgcatg
+ I   96479  G(15)   2380  catgggGaatcct
+ S   96483  C(15)   2384  gggaatCcttgta
+ S   96485  T(15)   2386  gaatccTtgtact
+ S   96504  C(15)   2405  ataagaCcgttgc
+ I   96515  T(15)   2415  gcgaatTgtaaag
+ S   96518  A(15)   2418  aattgtAaagatc
+ D   96521  G(15)   2422  tgtaaaGatccat
+ S   96526  A(15)   2427  agatccAtattct
+ S   96534  T(15)   2435  attctcTtacatt
+ D   96543  A(15)   2445  catttgAttgcta
+ I   96563  G(15)   2464  gttttgGaattcg
+ D   96581  T(15)   2483  gaaaagTgcctgg
+ S   96583  C(15)   2485  aaagtgCctggta
+ D   96605  T(15)   2508  agtactTgatgca
+ I   96610  C(15)   2512  ttgatgCaggcca
+ S   96611  A(15)   2513  tgatgcAggccag
+ S   96612  G(15)   2514  gatgcaGgccagc
+
+1184  0.32 1.27 0.00  Contig757       79  1340 (131)    Contig22.1     3954  5231 (67815)  
+ D      88  A(15)   3964  tgcagcActcccc
+ S      91  C(15)   3967  agcactCcccgtc
+ D      92  C(15)   3969  gcactcCccgtcg
+ D      95  G(15)   3973  ctccccGtcgcat
+ D     103  G(15)   3982  cgcatcGtatcag
+ D     105  A(15)   3985  catcgtAtcagaa
+ D     109  G(15)   3990  gtatcaGaaatga
+ D     115  A(15)   3997  gaaatgAtgagac
+ D     119  G(15)   4002  tgatgaGacatct
+ D     131  A(15)   4015  tacgacAgcctaa
+ S     133  C(15)   4017  cgacagCctaaga
+ D     137  A(15)   4022  agcctaAgaaggt
+ D     153  A(15)   4039  atgaccAgcagga
+ D-2   161  T(15)   4048  caggaaTcacgcc
+ D     170  T(15)   4059  cgccgtTatactc
+ S     194  A(15)   4083  acaaagAgtgccg
+ S     214  C(15)   4103  tacggcCtctgtg
+ D    1292  T(15)   5182  accggcTgcagaa
+ D    1313  T(15)   5204  gggaatTtacgaa
+
+2172  0.18 0.04 0.22  Contig763        1  2223 (21)    Contig22.1     2815  5033 (68013)  
+ S      14  T(15)   2828  cgtaatTccttac
+ I      18  T(15)   2831  attcctTaccagg
+ I      24  G(15)   2836  taccagGccacat
+ S      40  G(15)   2852  cggtatGgccgcc
+ I      50  C(15)   2861  gccatcCacgctg
+ I     200  T(15)   3010  ttatttTccatgt
+ I    2169  T(15)   4978  ttctctTtttggc
+ S    2170  T(15)   4979  tctcttTttggct
+ S    2171  T(15)   4980  ctctttTtggctg
+ D    2214  T(15)   5024  atgcatTatcatc
+
+107194  0.05 0.02 0.00  Contig771      255 108081 (405174)  C Contig16.1   (0) 107842     1  
+ I     286  C(15)  107812  tggagtCgggttg
+ S     290  T(15)  107808  gtcgggTtgcaga
+ S     291  T(15)  107807  tcgggtTgcagac
+ D     599  A(15)  107498  cacatcAttcagt
+ S     613  C(15)  107484  gcaattCaagccc
+ S     614  A(15)  107483  caattcAagcccg
+ D     619  C(15)  107477  caagccCgggtaa
+ D     629  T(15)  107466  taaggtTcctcgc
+ S     644  G(15)  107451  atcatcGaattaa
+ D     644  G(15)  107450  atcatcGaattaa
+ S     659  T(15)  107435  cacatgTtcctcc
+ D     660  T(15)  107433  acatgtTcctccg
+ S     683  T(15)  107410  cccccgTcaattc
+ S     685  A(15)  107408  cccgtcAattcct
+ S     689  C(15)  107404  tcaattCctttga
+ D     696  G(15)  107396  ctttgaGtttcac
+ S     701  A(15)  107391  agtttcAccgttg
+ S     703  C(15)  107389  tttcacCgttgcc
+ D     717  T(15)  107374  gcgtacTccccag
+ S     733  T(15)  107358  gaatacTtaacgc
+ S     737  C(15)  107354  acttaaCgctttc
+ D     737  C(15)  107353  acttaaCgctttc
+ S     757  C(15)  107333  cgcttaCtgtata
+ S     805  A(15)  107285  actaccAgggtat
+ S     806  G(15)  107284  ctaccaGggtatc
+ S     813  T(15)  107277  ggtatcTaatcct
+ S     970  C(15)  107120  caactgCaatttt
+ I    3861  T(15)  104230  acagagTtttttc
+ I   107759  A(15)    333  ccatgcAatatcg
+ S   107765  G(15)    327  aatatcGtccagt
+ S   107787  G(15)    305  ggcatcGgttgct
+ I   107816  G(15)    277  tttttcGtgcagc
+ S   107831  C(15)    262  atgtatCatatcg
+ S   107837  G(15)    256  catatcGagcgca
+ D   107851  T(15)    241  gatgttTgtcctt
+ S   107855  C(15)    237  tttgtcCttccaa
+ S   107872  C(15)    220  ggttggCatcaat
+ S   107887  G(15)    205  caatcgGaaggtc
+ S   107898  A(15)    194  tccgtcAccgaac
+ S   107901  G(15)    191  gtcaccGaacgga
+ S   107904  C(15)    188  accgaaCggatgg
+ S   107908  T(15)    184  aacggaTggtctc
+ S   107911  T(15)    181  ggatggTctctat
+ S   107915  T(15)    177  ggtctcTatcatt
+ D   107915  T(15)    176  ggtctcTatcatt
+ D   107920  T(15)    170  ctatcaTttcctt
+ S   107928  T(15)    162  tccttgTcgttct
+ D   107937  C(15)    152  ttctccCgcccca
+ S   107943  A(15)    146  cgccccAgcttca
+ S   107944  G(15)    145  gccccaGcttcac
+ D   107944  G(15)    144  gccccaGcttcac
+ D   107953  T(15)    134  tcacttTaaggat
+ S   107959  T(15)    128  taaggaTattgaa
+ D   107960  A(15)    126  aaggatAttgaac
+ D   107965  A(15)    120  tattgaAccggtc
+ S   107967  C(15)    118  ttgaacCggtcgg
+ S   107970  T(15)    115  aaccggTcggcac
+ S   107974  C(15)    111  ggtcggCacactc
+ S   107976  C(15)    109  tcggcaCactctt
+ S   107978  C(15)    107  ggcacaCtctttc
+ S   107984  C(15)    101  ctctttCgtcttt
+ S   107985  G(15)    100  tctttcGtctttt
+ D   107985  G(15)     99  tctttcGtctttt
+ S   107992  C(15)     92  tcttttCacgcac
+ S   107995  G(15)     89  tttcacGcaccac
+ S   108002  G(15)     82  caccacGtcggcc
+ S   108007  C(15)     77  cgtcggCcgtatc
+ S   108013  C(15)     71  ccgtatCaatacc
+ S   108014  A(15)     70  cgtatcAataccg
+ S   108016  T(15)     68  tatcaaTaccgat
+ S   108022  T(15)     62  taccgaTggtgaa
+ S   108025  T(15)     59  cgatggTgaaagt
+ D   108025  T(15)     58  cgatggTgaaagt
+ I   108031  T(15)     53  tgaaagTtgtaga
+ S   108036  G(15)     48  gttgtaGagggag
+ S   108043  T(15)     41  agggagTcttttc
+ S   108049  C(15)     35  tcttttCcttgtc
+ D   108049  C(15)     34  tcttttCcttgtc
+ D   108052  T(15)     30  tttcctTgtccaa
+ S   108074  C(15)      8  cttataCcaaggg
+67750  0.01 0.00 0.00  Contig771    107702 175838 (337417)    Contig0.1        1 68137 (242)  
+ S   175768  C(15)  68067  catagtCtatctg
+ S   175789  T(15)  68088  aggcctTgtagcg
+ S   175795  G(15)  68094  tgtagcGgaacgc
+ S   175798  A(15)  68097  agcggaAcgccgc
+ S   175799  C(15)  68098  gcggaaCgccgcc
+ S   175800  G(15)  68099  cggaacGccgccc
+ S   175801  C(15)  68100  ggaacgCcgcccc
+ S   175802  C(15)  68101  gaacgcCgccccg
+ S   175834  T(15)  68133  ctgcatTggcacg
+2452  0.08 0.12 0.00  Contig771    175139 177616 (335639)  C Contig47.1   (74)  2484     4 *
+ D   177592  G(15)     30  atctttGttgtca
+ S   177601  G(15)     21  gtcataGtagaaa
+ S   177604  G(15)     18  atagtaGaaatga
+ D   177604  G(15)     17  atagtaGaaatga
+ D   177609  G(15)     11  agaaatGatttta
+126083  0.00 0.00 0.00  Contig771    176942 303569 (209686)    Contig0.2        1 126627 (0)  
+ I   176960  A(15)     18  ccgccgAtttgag
+2524  0.08 0.12 0.04  Contig771    303093 305645 (207610)    Contig47.1        4  2558 (0) *
+ D   303099  T(15)     11  ataaaaTcatttc
+ D   303104  T(15)     17  atcattTctacta
+ S   303105  C(15)     18  tcatttCtactat
+ S   303108  C(15)     21  tttctaCtatgac
+ D   303116  A(15)     30  atgacaAcaaaga
+ I   305609  T(15)   2522  tgttttTgcttgt
+207435  0.00 0.00 0.00  Contig771    304935 513255 (0)    Contig0.3        1 208315 (0)  
+ S   304943  C(15)      9  gatagaCtatgca
+ S   304956  C(15)     22  atcccgCgtggcc
+ I   304960  G(15)     25  cgcgtgGccttga
+ S   304980  G(15)     45  cagatgGagcggc
+ I   304985  G(15)     49  ggagcgGcttgca
+ I   304988  T(15)     51  gcggctTgcatcg
+ I   304995  C(15)     57  gcatcgCtggagt
+ I   304998  G(15)     59  tcgctgGagttca
+ I   305007  C(15)     67  ttcatcCgcaagg
+
+23053  0.00 0.00 0.00  Contig775        1 23105 (53788)  C Contig39.1   (0) 23105     1  
+53578  0.00 0.00 0.00  Contig775    23090 76893 (0)    Contig26.1        1 53804 (0)  
+
+149303  0.00 0.00 0.00  Contig780       17 149774 (158684)  C Contig9.1   (0) 149754     1  
+ I     671  G(15)  149101  gttttaGggggca
+ I   149688  G(15)     85  cttgcaGgcttca
+ S   149717  A(15)     56  caaggaAgctctt
+ I   149727  G(15)     47  cttcccGgtaccg
+ I   149739  C(15)     36  ggatgaCcctgtg
+ S   149754  G(15)     21  gaagagGttctgt
+ S   149762  C(15)     13  tctgtcCcttgcg
+ S   149764  T(15)     11  tgtcccTtgcgga
+ S   149768  G(15)      7  ccttgcGgatgaa
+2453  0.08 0.12 0.00  Contig780    149204 151682 (156776)  C Contig47.1   (73)  2485     4 *
+ D   151658  G(15)     30  atctttGttgtca
+ S   151667  G(15)     21  gtcataGtagaaa
+ S   151670  G(15)     18  atagtaGaaatga
+ D   151670  G(15)     17  atagtaGaaatga
+ D   151675  G(15)     11  agaaatGatttta
+29570  0.01 0.01 0.00  Contig780    151358 180989 (127469)    Contig27.1        1 29634 (0) *
+ S   151365  C(15)      8  actcttCgtacag
+ D   151368  A(15)     12  cttcgtAcagggt
+ D   151372  G(15)     17  gtacagGgttttc
+ D   151396  G(15)     42  tcggcgGctaagc
+ I   151464  T(15)    109  ccctgtTacggcc
+ S   151517  G(15)    162  atggcgGccaact
+126936  0.08 0.03 0.02  Contig780    180486 308458 (0)    Contig5.1        1 127980 (84145)  
+ S   304348  T(15)  123863  tcgtttTttgaac
+ S   304349  T(15)  123864  cgttttTtgaacg
+ S   304356  T(15)  123871  tgaacgTcaatat
+ S   304357  C(15)  123872  gaacgtCaatatt
+ S   304360  T(15)  123875  cgtcaaTatttaa
+ S   304363  T(15)  123878  caatatTtaagaa
+ S   304364  T(15)  123879  aatattTaagaaa
+ S   304365  A(15)  123880  atatttAagaaaa
+ S   304366  A(15)  123881  tatttaAgaaaac
+ D   304366  A(15)  123882  tatttaAgaaaac
+ S   304368  A(15)  123884  tttaagAaaacta
+ S   304370  A(15)  123886  taagaaAactaaa
+ S   304371  A(15)  123887  aagaaaActaaag
+ S   304372  C(15)  123888  agaaaaCtaaaga
+ D-2 304373  T(15)  123890  gaaaacTaaagag
+ S   304376  A(15)  123894  aactaaAgaggga
+ S   304377  G(15)  123895  actaaaGagggaa
+ S   304378  A(15)  123896  ctaaagAgggaag
+ S   304379  G(15)  123897  taaagaGggaaga
+ S   304381  G(15)  123899  aagaggGaagatt
+ S   304384  G(15)  123902  agggaaGattact
+ S   304387  T(15)  123905  gaagatTacttaa
+ S   304388  A(15)  123906  aagattActtaaa
+ S   304389  C(15)  123907  agattaCttaaaa
+ D-2 304390  T(15)  123909  gattacTtaaaaa
+ D   304397  T(15)  123918  taaaaaTtagtaa
+ S   304399  A(15)  123920  aaaattAgtaaaa
+ S   304400  G(15)  123921  aaattaGtaaaag
+ S   304403  A(15)  123924  ttagtaAaaggaa
+ S   304406  G(15)  123927  gtaaaaGgaagaa
+ S   304407  G(15)  123928  taaaagGaagaag
+ S   304408  A(15)  123929  aaaaggAagaagt
+ S   304409  A(15)  123930  aaaggaAgaagtt
+ S   304410  G(15)  123931  aaggaaGaagtta
+ S   304411  A(15)  123932  aggaagAagttag
+ S   304412  A(15)  123933  ggaagaAgttaga
+ S   304413  G(15)  123934  gaagaaGttagag
+ D-2 304417  G(15)  123939  aagttaGagaaat
+ D   304419  G(15)  123943  gttagaGaaatac
+ D   304420  A(15)  123945  ttagagAaataca
+ S   304426  A(15)  123951  aaatacAatgcaa
+ S   304427  A(15)  123952  aatacaAtgcaat
+ D   304429  G(15)  123955  tacaatGcaatag
+ S   304432  A(15)  123958  aatgcaAtaggct
+ S   304435  G(15)  123961  gcaataGgcttac
+ S   304438  T(15)  123964  ataggcTtactga
+ S   304441  C(15)  123967  ggcttaCtgacaa
+ I   304444  A(15)  123969  ttactgAcaaagt
+ S   304447  A(15)  123972  ctgacaAagtatt
+ S   304448  A(15)  123973  tgacaaAgtatta
+ I   304454  A(15)  123978  agtattAtactca
+ I   304456  A(15)  123979  tattatActcact
+ I-2 304460  AC(15)  123982  atactcACtaaaaa
+ S   304465  A(15)  123986  cactaaAaagaaa
+ S   304466  A(15)  123987  actaaaAagaaat
+ S   304467  A(15)  123988  ctaaaaAgaaatt
+ S   304468  G(15)  123989  taaaaaGaaattt
+ S   304469  A(15)  123990  aaaaagAaattta
+ S   304470  A(15)  123991  aaaagaAatttat
+ S   304471  A(15)  123992  aaagaaAtttata
+ S   304472  T(15)  123993  aagaaaTttatag
+ S   304475  A(15)  123996  aaatttAtagaat
+ S   304478  G(15)  123999  tttataGaatatt
+ S   304479  A(15)  124000  ttatagAatattt
+ I   304481  T(15)  124001  atagaaTattttt
+ S   304489  T(15)  124009  tttttaTtaaaca
+ S   304490  T(15)  124010  ttttatTaaacat
+ S   304491  A(15)  124011  tttattAaacatt
+ I-2 304494  CA(15)  124013  attaaaCAttttgc
+ S   304497  T(15)  124015  aaacatTttgcga
+ S   304500  G(15)  124018  cattttGcgagat
+ S   304502  G(15)  124020  ttttgcGagattc
+ S   304503  A(15)  124021  tttgcgAgattca
+ S   304504  G(15)  124022  ttgcgaGattcaa
+ S   304505  A(15)  124023  tgcgagAttcaaa
+ I-2 304508  CA(15)  124025  gagattCAaaaata
+ S   304511  A(15)  124027  attcaaAaataca
+ S   304512  A(15)  124028  ttcaaaAatacac
+ S   304513  A(15)  124029  tcaaaaAtacacg
+ S   304515  A(15)  124031  aaaaatAcacgtt
+ S   304517  A(15)  124033  aaatacAcgttat
+ S   304518  C(15)  124034  aatacaCgttatc
+ S   304519  G(15)  124035  atacacGttatct
+ S   304520  T(15)  124036  tacacgTtatctt
+ I   304521  T(15)  124036  acacgtTatcttt
+ S   304524  C(15)  124039  cgttatCtttgcg
+ S   304527  T(15)  124042  tatcttTgcgttc
+ S   304528  G(15)  124043  atctttGcgttca
+ S   304535  T(15)  124050  cgttcaTtaaacg
+ S   304536  T(15)  124051  gttcatTaaacga
+ D   304897  A(15)  124413  gcagacAcggaga
+ D   304908  G(15)  124425  gaagtaGcagtac
+ S   305006  T(15)  124523  accactTcaaata
+ D   305015  A(15)  124533  aatacaAcagtac
+ S   305037  T(15)  124555  gataatTgccaat
+ S   305040  C(15)  124558  aattgcCaattat
+ I   305044  T(15)  124561  gccaatTatcacc
+ D   305054  C(15)  124572  accagaCgatttt
+ D   305062  A(15)  124581  attttcAgaacca
+ D   305075  A(15)  124595  gccgacAtcatca
+ D   305082  C(15)  124603  tcatcaCaatgca
+ D   305104  A(15)  124626  ttctgcAgaacta
+ S   305108  C(15)  124630  gcagaaCtacggg
+ D   305108  C(15)  124631  gcagaaCtacggg
+ D   305114  G(15)  124638  ctacggGtttgtc
+ D   305120  C(15)  124645  gtttgtCgactca
+ D   305123  C(15)  124649  tgtcgaCtcatat
+ D-2 305144  T(15)  124671  accccaTgcactt
+ D-2 305147  A(15)  124676  ccatgcActtctc
+ S   305159  A(15)  124689  caaaacAgtccgt
+ S   305178  A(15)  124708  ctttccAatattt
+ I   305184  T(15)  124713  aatattTctacta
+ I   305187  A(15)  124715  atttctActaccg
+ S   305194  A(15)  124722  ctaccgAaacgac
+ S   305199  A(15)  124727  gaaacgActcgcc
+ D   305200  C(15)  124729  aaacgaCtcgcca
+ D   305206  A(15)  124736  ctcgccAgcatac
+ S   305220  T(15)  124750  caacttTtaggtg
+ S   305222  A(15)  124752  acttttAggtgct
+ D   305224  G(15)  124755  ttttagGtgctgg
+ S   305230  G(15)  124761  gtgctgGgcgggc
+ I   305250  C(15)  124780  ataaccCagccaa
+ I   305268  A(15)  124797  gatataAgaccag
+ S   305273  A(15)  124802  aagaccAgtaatc
+ I   305277  A(15)  124805  ccagtaAtcaaag
+ S   305282  A(15)  124810  aatcaaAgtccct
+ S   305294  C(15)  124822  taccccCcaaatc
+ I   305306  A(15)  124833  caagatAgacagg
+ S   305311  G(15)  124838  tagacaGgcagta
+ S   305321  T(15)  124848  gtaacaTtcgaag
+ I   305342  C(15)  124868  catcccCatcccg
+ S   305348  G(15)  124874  catcccGggaggg
+ S   305351  A(15)  124877  cccgggAgggcag
+ S   305352  G(15)  124878  ccgggaGggcagc
+ D   305358  C(15)  124885  gggcagCattcca
+ S   305369  A(15)  124896  cactgaAgccccc
+ S   305371  C(15)  124898  ctgaagCccccac
+ S   305373  C(15)  124900  gaagccCccaccc
+ S   305381  C(15)  124908  cacccaCcatttt
+ S   305391  C(15)  124918  tttgtcCtccgga
+ S   305416  G(15)  124943  cgacggGgtgaag
+ S   305420  A(15)  124947  ggggtgAagtccc
+ S   305424  C(15)  124951  tgaagtCccataa
+ D   305450  C(15)  124978  tccaagCccggcc
+ S   305456  C(15)  124984  cccggcCcccata
+ I   305459  C(15)  124986  ggccccCatagcc
+ S   305478  T(15)  125005  ggcactTggtgct
+ I   305480  G(15)  125006  cacttgGtgctgc
+ S   305499  A(15)  125025  cggcacAagcact
+ S   305518  T(15)  125044  ttctgcTtccata
+ I-2 305537  TC(15)  125062  ggctttTCcccatg
+ S   305562  A(15)  125086  ctcttcAacgtcg
+ I   305570  G(15)  125093  cgtcggGctatcg
+ S   305617  A(15)  125140  aaagagAtcggaa
+ I   305637  A(15)  125159  gttcaaAtatcat
+
+41699  0.01 0.00 0.00  Contig781        1 41840 (236269)  C Contig28.1   (0) 41840     1 *
+ S   41805  G(15)     36  agcaatGcattat
+ S   41807  A(15)     34  caatgcAttatac
+ S   41810  A(15)     31  tgcattAtacata
+104177  0.00 0.00 0.00  Contig781    41201 145738 (132371)  C Contig11.1   (0) 104535     1  
+ I   145647  T(15)     90  tttttcTttttgc
+ I   145688  A(15)     50  aaagagAaaaaaa
+ I   145728  A(15)     11  atttggAagatat
+ S   145733  A(15)      6  gaagatAtgcttt
+1547  1.43 0.65 0.12  Contig781    145690 147372 (130737)    Contig16.1    106151 107842 (0) *
+ D   145701  A(15)  106163  gaaaaaAtgaaaa
+ D-2 145710  A(15)  106173  aaaaaaActtccg
+ S   145791  A(15)  106255  tgaaacAagcgat
+ S   145873  G(15)  106337  actaatGattaag
+ S   145924  T(15)  106388  cttattTtatata
+ S   145945  G(15)  106409  aagataGactttt
+ I   145952  T(15)  106415  acttttTgaattc
+ S   146005  A(15)  106468  tttaatAtgcgca
+ S   146230  A(15)  106693  catggtAgaacta
+ S   146657  G(15)  107120  aaaattGcagttg
+ S   146814  A(15)  107277  aggattAgatacc
+ S   146821  C(15)  107284  gataccCtggtag
+ S   146822  T(15)  107285  atacccTggtagt
+ S   146870  G(15)  107333  tatacaGtaagcg
+ S   146890  G(15)  107353  gaaagcGttaagt
+ D   146890  G(15)  107354  gaaagcGttaagt
+ S   146894  A(15)  107358  gcgttaAgtattc
+ D   146909  G(15)  107374  cctgggGagtacg
+ S   146924  G(15)  107389  ggcaacGgtgaaa
+ S   146926  T(15)  107391  caacggTgaaact
+ D   146930  A(15)  107396  ggtgaaActcaaa
+ S   146938  G(15)  107404  tcaaagGaattga
+ S   146942  T(15)  107408  aggaatTgacggg
+ S   146944  A(15)  107410  gaattgAcggggg
+ S   146967  A(15)  107433  cggaggAacatgt
+ D   146969  C(15)  107436  gaggaaCatgtgg
+ S   146983  C(15)  107450  ttaattCgatgat
+ D   146984  G(15)  107452  taattcGatgata
+ D   146997  G(15)  107466  cgcgagGaacctt
+ D   147007  C(15)  107477  cttaccCgggctt
+ S   147013  T(15)  107483  cgggctTgaattg
+ S   147014  G(15)  107484  gggcttGaattgc
+ D   147027  A(15)  107498  aactgaAtgatgt
+ S   147336  A(15)  107807  gtctgcAacccga
+ S   147337  A(15)  107808  tctgcaAcccgac
+ I   147341  G(15)  107811  caacccGactcca
+62380  0.09 0.03 0.01  Contig781    150189 213013 (65096)    Contig15.1        1 62832 (0)  
+ I   150199  C(15)     10  agtgtcCgtggag
+ I   150217  A(15)     27  gttgaaAtacggc
+ I   150327  T(15)    136  taaaggTgccctc
+ D   150380  T(15)    190  ggcgctTgactgg
+ I   150384  T(15)    193  cttgacTgggaga
+ S   150392  T(15)    201  ggagacTtacaag
+ I   150393  T(15)    201  gagactTacaagt
+ S   150431  C(15)    239  gtgatcCggtgtt
+ S   150432  G(15)    240  tgatccGgtgttt
+ I   150433  G(15)    240  gatccgGtgtttc
+ S   150437  T(15)    244  cggtgtTtctgta
+ I   150439  C(15)    245  gtgtttCtgtatg
+ I   150467  T(15)    272  aaaggaTaaaagg
+ S   150474  T(15)    279  aaaaggTactccg
+ S   150475  A(15)    280  aaaggtActccgg
+ S   150476  C(15)    281  aaggtaCtccggg
+ S   150477  T(15)    282  aggtacTccgggg
+ S   150478  C(15)    283  ggtactCcgggga
+ S   150479  C(15)    284  gtactcCggggat
+ S   150482  G(15)    287  ctccggGgataac
+ S   150483  G(15)    288  tccgggGataaca
+ S   150485  T(15)    290  cggggaTaacagg
+ S   150486  A(15)    291  ggggatAacaggc
+ S   150488  C(15)    293  ggataaCaggctg
+ S   150489  A(15)    294  gataacAggctga
+ S   150490  G(15)    295  ataacaGgctgat
+ S   150492  C(15)    297  aacaggCtgatcc
+ S   150494  G(15)    299  caggctGatccct
+ S   150495  A(15)    300  aggctgAtccctc
+ D   150495  A(15)    301  aggctgAtccctc
+ S   150500  T(15)    306  gatcccTcccaag
+ S   150501  C(15)    307  atccctCccaaga
+ S   150502  C(15)    308  tccctcCcaagag
+ S   150503  C(15)    309  ccctccCaagagc
+ S   150504  A(15)    310  cctcccAagagct
+ S   150505  A(15)    311  ctcccaAgagctc
+ S   150506  G(15)    312  tcccaaGagctca
+ S   150508  G(15)    314  ccaagaGctcata
+ S   150509  C(15)    315  caagagCtcatat
+ S   150512  A(15)    318  gagctcAtatcga
+ I   150513  T(15)    318  agctcaTatcgac
+ S   150515  T(15)    320  ctcataTcgacgg
+ S   150516  C(15)    321  tcatatCgacgga
+ S   150518  A(15)    323  atatcgAcggagg
+ S   150519  C(15)    324  tatcgaCggaggg
+ S   150522  A(15)    327  cgacggAggggtt
+ S   150524  G(15)    329  acggagGggtttg
+ S   150525  G(15)    330  cggaggGgtttgg
+ S   150527  T(15)    332  gaggggTttggca
+ S   150528  T(15)    333  aggggtTtggcac
+ S   150529  T(15)    334  ggggttTggcacc
+ S   150530  G(15)    335  gggtttGgcacct
+ S   150531  G(15)    336  ggtttgGcacctc
+ S   150533  A(15)    338  tttggcAcctcga
+ S   150534  C(15)    339  ttggcaCctcgat
+ S   150536  T(15)    341  ggcaccTcgatgt
+ S   150537  C(15)    342  gcacctCgatgtc
+ S   150538  G(15)    343  cacctcGatgtcg
+ S   150539  A(15)    344  acctcgAtgtcgg
+ S   150541  G(15)    346  ctcgatGtcggct
+ S   150542  T(15)    347  tcgatgTcggctc
+ S   150543  C(15)    348  cgatgtCggctcg
+ S   150545  G(15)    350  atgtcgGctcgtc
+ S   150546  C(15)    351  tgtcggCtcgtca
+ S   150558  T(15)    363  acatccTggggct
+ D   150562  G(15)    368  cctgggGctggag
+ D   150566  G(15)    373  gggctgGagaagg
+ D   150576  C(15)    384  aggtccCaagggt
+ D   150581  G(15)    390  ccaaggGttgggc
+ D   150586  G(15)    396  ggttggGctgttc
+ S   150590  T(15)    400  gggctgTtcgccc
+ D   150592  C(15)    403  gctgttCgcccat
+ D   150596  C(15)    408  ttcgccCattaaa
+ D   150602  A(15)    415  cattaaAgtggca
+ D   150606  G(15)    420  aaagtgGcacgcg
+ D-2 150619  G(15)    434  agctggGttcaga
+ D   150626  A(15)    443  ttcagaAcgtcgt
+ D   150633  G(15)    451  cgtcgtGagacag
+ D   150641  T(15)    460  gacagtTcggtct
+1572  1.39 0.00 0.06  Contig781    212392 214047 (64062)  C Contig2.1   (173208) 177074 175420 *
+ S   212684  A(15)  176782  gaaaatAcccaat
+ S   212722  T(15)  176744  gaaagcTctgtct
+ S   212758  G(15)  176708  ccgtgaGttgatg
+ S   213144  C(15)  176322  tcgctaCcacaag
+ S   213160  C(15)  176306  aagaacCtaatca
+ S   213172  C(15)  176294  aaaggaCtgacct
+ S   213195  G(15)  176271  caaccaGttgtgg
+ S   213207  C(15)  176259  ggtcagCgacatt
+ S   213229  G(15)  176237  ccacttGccaatg
+ S   213270  C(15)  176196  ggatgcCtactcc
+ S   213286  G(15)  176180  aagataGtgggat
+ S   213287  T(15)  176179  agatagTgggatg
+ S   213301  G(15)  176165  gtgcttGccgaca
+ S   213313  C(15)  176153  accttaCgggtat
+ S   213371  C(15)  176095  aaatgaCaggaga
+ S   213376  G(15)  176090  acaggaGatgaaa
+ S   213377  A(15)  176089  caggagAtgaaaa
+ I   213380  A(15)  176087  gagatgAaaatct
+ S   213389  C(15)  176078  atcttaCgggcct
+ S   213390  G(15)  176077  tcttacGggcctg
+ S   213408  G(15)  176059  tcactcGgaccgt
+ S   213441  C(15)  176026  cccataCgtggca
+ S   213472  A(15)  175995  attgccAtcagta
+ S   214044  A(15)  175423  aagacaAtacgaa
+53467  0.01 0.00 0.00  Contig781    214042 267780 (10329)    Contig15.2        1 53741 (3)  
+ S   267703  A(15)  53662  tagtttAcatata
+ S   267704  C(15)  53663  agtttaCatatat
+ D   267711  T(15)  53671  atatatTatttat
+ D   267743  G(15)  53704  tacatgGaaatat
+ S   267744  A(15)  53705  acatggAaatatt
+ S   267745  A(15)  53706  catggaAatattc
+ S   267747  T(15)  53708  tggaaaTattcaa
+7717  0.16 0.06 0.05  Contig781    267129 275132 (2977)    Contig31.1        1  8005 (60) *
+ I   275019  T(15)   7890  gagtttTcgcgga
+ S   275029  T(15)   7900  ggaactTggtacg
+ S   275030  G(15)   7901  gaacttGgtacgt
+ D   275031  G(15)   7903  aacttgGtacgtt
+ D-2 275034  C(15)   7907  ttggtaCgtttgg
+ S   275040  G(15)   7914  cgtttgGtaatgt
+ S   275042  A(15)   7916  tttggtAatgtaa
+ D   275055  C(15)   7930  aatcacCatctac
+ S   275084  G(15)   7959  atttgtGtacctt
+ S   275087  C(15)   7962  tgtgtaCctttta
+ S   275088  C(15)   7963  gtgtacCttttac
+ S   275089  T(15)   7964  tgtaccTtttacc
+ S   275092  T(15)   7967  acctttTaccaat
+ S   275095  C(15)   7970  ttttacCaataca
+ I   275097  A(15)   7971  ttaccaAtacaga
+ S   275100  C(15)   7974  ccaataCagaggc
+ S   275101  A(15)   7975  caatacAgaggct
+ S   275104  G(15)   7978  tacagaGgctcca
+ I   275105  G(15)   7978  acagagGctccaa
+ D   275112  T(15)   7986  ctccaaTaactgg
+ I   275119  C(15)   7992  aactggCtgcccg
+3315  0.43 0.00 0.23  Contig781    274257 277770 (339)    Contig31.3        1  3506 (254) *
+ I   274264  T(15)      7  cattctTccagta
+ I   274285  A(15)     27  tatcagAttttta
+ S   274299  C(15)     41  cttcagCcttcca
+ S   274316  A(15)     58  ttatatAcggggg
+ I-2 274321  GG(15)     62  tacgggGGcaatac
+ S   274327  A(15)     67  ggcaatAccgtaa
+ S   274337  G(15)     77  taatctGcatcaa
+ S   274350  C(15)     90  aaaggtCttcgct
+ S   274351  T(15)     91  aaggtcTtcgctt
+ I   274364  T(15)    103  gcatatTgtttgg
+ I   274366  T(15)    104  atattgTttggca
+ S   274368  T(15)    106  attgttTggcagt
+ S   274370  G(15)    108  tgtttgGcagtag
+ I   274442  A(15)    179  agttcaAgaaacc
+ I   274494  T(15)    230  gggtgtTgatacc
+ S   277736  C(15)   3472  actctgCtaattt
+ S   277747  T(15)   3483  ttcgtaTgttggt
+ S   277748  G(15)   3484  tcgtatGttggta
+ S   277750  T(15)   3486  gtatgtTggtatg
+ S   277753  T(15)   3489  tgttggTatgcaa
+ S   277759  A(15)   3495  tatgcaAacgcaa
+ S   277762  G(15)   3498  gcaaacGcaagag
+
+81664  0.01 0.00 0.00  Contig782      806 82765 (164471)  C Contig21.1   (0) 81960     1  
+ D     827  A(15)  81938  ttggtaAccgtcg
+ S   82693  T(15)     72  tcaacgTtacatc
+ S   82694  T(15)     71  caacgtTacatct
+ S   82732  A(15)     33  atttttAtaatca
+ S   82734  A(15)     31  ttttatAatcatt
+ S   82738  A(15)     27  ataatcAttcgct
+ S   82739  T(15)     26  taatcaTtcgctt
+ I   82744  T(15)     22  attcgcTttccag
+2429  0.04 0.04 0.00  Contig782    82463 85038 (162198)  C Contig32.1   (0)  2728   152 *
+ D   85026  A(15)    164  atagttAccttct
+ S   85031  C(15)    159  taccttCttttat
+18468  0.26 0.05 0.00  Contig782    84114 103498 (143738)    Contig33.1        1 19395 (0) *
+ S   84122  C(15)      9  aactttCttgtca
+ S   84125  G(15)     12  tttcttGtcatta
+ S   84129  T(15)     16  ttgtcaTtatgcc
+ S   84130  T(15)     17  tgtcatTatgccg
+ S   84135  C(15)     22  ttatgcCgattct
+ S   84140  C(15)     27  ccgattCttattt
+ S   84141  T(15)     28  cgattcTtatttt
+ D   84154  C(15)     42  tgcctcCgacaaa
+ S   84166  C(15)     54  aggtttCgtcggc
+ S   84169  C(15)     57  tttcgtCggcttc
+ S   84172  C(15)     60  cgtcggCttctac
+ S   84175  C(15)     63  cggcttCtacttc
+ S   84178  C(15)     66  cttctaCttcatt
+ S   84186  T(15)     74  tcattaTgcaatt
+ S   84190  A(15)     78  tatgcaAttttcc
+ S   84196  C(15)     84  attttcCttgatt
+ S   84197  T(15)     85  ttttccTtgattt
+ S   84198  T(15)     86  tttcctTgatttt
+ D   84200  A(15)     89  tccttgAttttca
+ S   84207  C(15)     96  ttttcaCatacca
+ S   84209  T(15)     98  ttcacaTaccaaa
+ D   84210  A(15)    100  tcacatAccaaac
+ S   84222  C(15)    112  catattCttatcc
+ S   84231  T(15)    121  atccgtTgtaaca
+ S   84233  T(15)    123  ccgttgTaacaca
+ S   84248  T(15)    138  ccaggcTgttttc
+ D-2 84253  T(15)    144  ctgtttTctgggt
+ S   84254  C(15)    146  tgttttCtgggtc
+ S   84255  T(15)    147  gttttcTgggtca
+ S   84275  T(15)    167  atccctTgctaat
+ S   84277  C(15)    169  cccttgCtaattg
+ S   84282  T(15)    174  gctaatTgtaaag
+ S   84284  T(15)    176  taattgTaaagat
+ S   84287  A(15)    179  ttgtaaAgatgat
+ S   84289  A(15)    181  gtaaagAtgatat
+ S   84290  T(15)    182  taaagaTgatatt
+ D   84297  C(15)    190  gatattCctttct
+ S   84298  C(15)    191  atattcCtttctt
+ S   84299  T(15)    192  tattccTttcttg
+ S   84301  T(15)    194  ttccttTcttgtt
+ S   84302  C(15)    195  tcctttCttgttt
+ D   84309  G(15)    203  ttgtttGaaagaa
+ S   84315  A(15)    209  gaaagaAccatcc
+ S   84318  A(15)    212  agaaccAtccata
+ S   84322  A(15)    216  ccatccAtacggc
+ S   84323  T(15)    217  catccaTacggcc
+ S   84324  A(15)    218  atccatAcggcca
+ D   84326  G(15)    221  ccatacGgccata
+ S   84327  G(15)    222  catacgGccataa
+ S   84330  A(15)    225  acggccAtaaacc
+ S   84334  A(15)    229  ccataaAccactt
+ S   84342  C(15)    237  cactttCgcaacg
+ S   84347  C(15)    242  tcgcaaCgacatt
+ S   84348  G(15)    243  cgcaacGacattt
+ S   84356  A(15)    251  cattttAgtattc
+ D   84369  A(15)    265  tcaaaaAtggttc
+ S   84370  T(15)    266  caaaaaTggttcc
+ D   84384  A(15)    281  gtttttAcattaa
+ S   84393  C(15)    290  ttaaacCttctcc
+ S   84403  T(15)    300  tcccggTgtcctt
+143309  0.00 0.00 0.00  Contig782    102766 246525 (711)  C Contig12.1   (0) 143760     1  
+
+202460  0.00 0.00 0.00  Contig783        1 203135 (28696)    Contig6.1        1 203135 (0)  
+14313  0.00 0.00 0.00  Contig783    203115 217482 (14349)  C Contig37.1   (0) 14368     1  
+2774 10.31 0.35 0.35  Contig783    216073 220300 (11531)    Contig1.2    172167 176394 (20303) *
+ S   216085  A(15)  172179  gatttgAgggcgt
+ S   216087  G(15)  172181  tttgagGgcgttg
+ S   216089  C(15)  172183  tgagggCgttggc
+ S   216090  G(15)  172184  gagggcGttggcg
+ S   216091  T(15)  172185  agggcgTtggcga
+ S   216093  G(15)  172187  ggcgttGgcgaaa
+ S   216096  G(15)  172190  gttggcGaaaatc
+ S   216100  A(15)  172194  gcgaaaAtcatgg
+ S   216108  T(15)  172202  catggaTtttctg
+ S   216111  T(15)  172205  ggatttTctgcgt
+ S   216112  C(15)  172206  gattttCtgcgtg
+ S   216120  C(15)  172214  gcgtgcCgtgagt
+ S   216121  G(15)  172215  cgtgccGtgagta
+ S   216123  G(15)  172217  tgccgtGagtatt
+ S   216126  T(15)  172220  cgtgagTattatt
+ S   216130  A(15)  172224  agtattAttttag
+ S   216132  T(15)  172226  tattatTttagtg
+ S   216135  A(15)  172229  tattttAgtggtc
+ S   216138  G(15)  172232  tttagtGgtcatg
+ S   216144  G(15)  172238  ggtcatGaacgtg
+ S   216147  C(15)  172241  catgaaCgtgtac
+ S   216148  G(15)  172242  atgaacGtgtact
+ S   216150  G(15)  172244  gaacgtGtactgg
+ S   216165  T(15)  172259  ctgttaTgaagcc
+ S   216166  G(15)  172260  tgttatGaagcca
+ S   216168  A(15)  172262  ttatgaAgccata
+ S   216169  G(15)  172263  tatgaaGccatac
+ S   216171  C(15)  172265  tgaagcCatacgg
+ S   216172  A(15)  172266  gaagccAtacggc
+ S   216174  A(15)  172268  agccatAcggctc
+ S   216178  C(15)  172272  atacggCtctggg
+ S   216179  T(15)  172273  tacggcTctgggg
+ S   216180  C(15)  172274  acggctCtggggt
+ S   216186  T(15)  172280  ctggggTgtggac
+ S   216187  G(15)  172281  tggggtGtggaca
+ S   216189  G(15)  172283  gggtgtGgacatc
+ S   216198  T(15)  172292  catcggTgtggtg
+ S   216201  G(15)  172295  cggtgtGgtggac
+ S   216204  G(15)  172298  tgtggtGgacagg
+ S   216207  C(15)  172301  ggtggaCaggata
+ S   216214  C(15)  172308  aggataCtgatga
+ S   216217  A(15)  172311  atactgAtgaact
+ S   216219  G(15)  172313  actgatGaacttc
+ S   216220  A(15)  172314  ctgatgAacttca
+ S   216221  A(15)  172315  tgatgaActtcaa
+ S   216226  A(15)  172320  aacttcAaccgca
+ S   216228  C(15)  172322  cttcaaCcgcacg
+ S   216231  C(15)  172325  caaccgCacggcg
+ S   216234  G(15)  172328  ccgcacGgcgggg
+ S   216237  G(15)  172331  cacggcGgggctg
+ S   216247  C(15)  172341  ctgttcCgttcca
+ S   216248  G(15)  172342  tgttccGttccat
+ S   216249  T(15)  172343  gttccgTtccatc
+ S   216250  T(15)  172344  ttccgtTccatcc
+ S   216251  C(15)  172345  tccgttCcatcct
+ S   216252  C(15)  172346  ccgttcCatcctc
+ S   216260  A(15)  172354  tcctctAcacgaa
+ S   216261  C(15)  172355  cctctaCacgaaa
+ S   216267  A(15)  172361  cacgaaActattt
+ S   216270  A(15)  172364  gaaactAtttgcc
+ S   216273  T(15)  172367  actattTgccgtc
+ S   216279  C(15)  172373  tgccgtCctcctg
+ S   216282  C(15)  172376  cgtcctCctgctt
+ S   216283  C(15)  172377  gtcctcCtgcttg
+ S   216285  G(15)  172379  cctcctGcttgcc
+ S   216288  T(15)  172382  cctgctTgccctg
+ S   216294  G(15)  172388  tgccctGtcctgt
+ S   216295  T(15)  172389  gccctgTcctgtc
+ S   216296  C(15)  172390  ccctgtCctgtct
+ S   216300  T(15)  172394  gtcctgTctgggg
+ S   216303  G(15)  172397  ctgtctGgggaca
+ S   216306  G(15)  172400  tctgggGacaaag
+ D   216322  G(15)  172417  gtgaagGgcgaga
+ I   216325  G(15)  172419  aagggcGagaaaa
+ D   216339  G(15)  172434  cacgtgGgggaaa
+ D-2 216340  G(15)  172436  acgtggGggaaaa
+ S   216344  A(15)  172441  gggggaAaatctg
+ S   216345  A(15)  172442  ggggaaAatctgg
+ D   216348  C(15)  172446  gaaaatCtgggcg
+ S   216350  G(15)  172448  aaatctGggcggt
+ S   216351  G(15)  172449  aatctgGgcggtc
+ I   216356  T(15)  172453  gggcggTccttgc
+ S   216358  C(15)  172455  gcggtcCttgccg
+ S   216360  T(15)  172457  ggtcctTgccgtg
+ S   216361  G(15)  172458  gtccttGccgtgg
+ I-3 216365  TGG(15)  172461  ttgccgTGGgcttcg
+ S   216372  C(15)  172466  gggcttCgtgctg
+ S   216373  G(15)  172467  ggcttcGtgctgt
+ S   216378  G(15)  172472  cgtgctGttcttc
+ S   216381  C(15)  172475  gctgttCttcctc
+ S   216385  C(15)  172479  ttcttcCtcaact
+ S   216386  T(15)  172480  tcttccTcaactg
+ S   216391  T(15)  172485  ctcaacTggtgga
+ S   216397  A(15)  172491  tggtggAtactgg
+ S   216399  A(15)  172493  gtggatActggcc
+ S   216402  G(15)  172496  gatactGgccctg
+ S   216408  G(15)  172502  ggccctGccattg
+ S   216411  A(15)  172505  cctgccAttgccg
+ S   216412  T(15)  172506  ctgccaTtgccgg
+ S   216415  C(15)  172509  ccattgCcggtgg
+ S   216418  G(15)  172512  ttgccgGtggagg
+ S   216420  G(15)  172514  gccggtGgaggcg
+ S   216421  G(15)  172515  ccggtgGaggcgg
+ S   216422  A(15)  172516  cggtggAggcggt
+ S   216428  T(15)  172522  aggcggTgacggg
+ S   216429  G(15)  172523  ggcggtGacggga
+ S   216432  G(15)  172526  ggtgacGggactg
+ S   216434  G(15)  172528  tgacggGactgta
+ S   216435  A(15)  172529  gacgggActgtat
+ S   216445  C(15)  172539  tatatcCtgaccg
+ S   216446  T(15)  172540  atatccTgaccgt
+ S   216447  G(15)  172541  tatcctGaccgtt
+ S   216451  G(15)  172545  ctgaccGttggcg
+ S   216454  G(15)  172548  accgttGgcgcgg
+ S   216455  G(15)  172549  ccgttgGcgcggg
+ S   216459  G(15)  172553  tggcgcGggctat
+ S   216462  C(15)  172556  cgcgggCtatgta
+ S   216466  G(15)  172560  ggctatGtattcc
+ S   216468  A(15)  172562  ctatgtAttcctg
+ S   216470  T(15)  172564  atgtatTcctgct
+ S   216477  G(15)  172571  cctgctGatgggc
+ S   216482  G(15)  172576  tgatggGcggtct
+ S   216483  C(15)  172577  gatgggCggtctg
+ S   216486  T(15)  172580  gggcggTctgtgg
+ S   216493  T(15)  172587  ctgtggTtgagcc
+ S   216496  A(15)  172590  tggttgAgccgcc
+ S   216497  G(15)  172591  ggttgaGccgcct
+ S   216505  T(15)  172599  cgcctgTtgaagc
+ S   216511  C(15)  172605  ttgaagCacaacc
+ S   216512  A(15)  172606  tgaagcAcaacct
+ S   216514  A(15)  172608  aagcacAacctca
+ S   216519  C(15)  172613  caacctCatggat
+ S   216520  A(15)  172614  aacctcAtggatg
+ S   216522  G(15)  172616  cctcatGgatgat
+ S   216525  T(15)  172619  catggaTgatgtg
+ S   216528  T(15)  172622  ggatgaTgtgttc
+ S   216538  A(15)  172632  ttcaacAacgaga
+ S   216539  A(15)  172633  tcaacaAcgagaa
+ S   216549  G(15)  172643  gaacgaGagcttc
+ S   216550  A(15)  172644  aacgagAgcttca
+ S   216551  G(15)  172645  acgagaGcttcat
+ S   216564  A(15)  172658  gcaggaAacaagg
+ S   216567  A(15)  172661  ggaaacAaggctt
+ S   216568  A(15)  172662  gaaacaAggctta
+ S   216569  G(15)  172663  aaacaaGgcttat
+ S   216573  T(15)  172667  aaggctTatcgaa
+ S   216575  T(15)  172669  ggcttaTcgaaag
+ S   216576  C(15)  172670  gcttatCgaaagc
+ S   216579  A(15)  172673  tatcgaAagcgag
+ S   216581  G(15)  172675  tcgaaaGcgagta
+ S   216591  G(15)  172685  gtattcGgtcaat
+ S   216597  T(15)  172691  ggtcaaTcttccg
+ I   216600  T(15)  172693  caatctTccgaca
+ D   216603  G(15)  172697  tcttccGacacgg
+ S   216606  A(15)  172700  tccgacAcggttc
+ S   216609  G(15)  172703  gacacgGttctac
+ S   216614  A(15)  172708  ggttctActacaa
+ S   216615  C(15)  172709  gttctaCtacaaa
+ S   216617  A(15)  172711  tctactAcaaaaa
+ S   216619  A(15)  172713  tactacAaaaagc
+ S   216620  A(15)  172714  actacaAaaagcg
+ S   216621  A(15)  172715  ctacaaAaagcgt
+ S   216622  A(15)  172716  tacaaaAagcgtt
+ I   216623  A(15)  172716  acaaaaAgcgttg
+ S   216626  G(15)  172719  aaaagcGttggaa
+ S   216627  T(15)  172720  aaagcgTtggaac
+ S   216628  T(15)  172721  aagcgtTggaaca
+ D   216629  G(15)  172723  agcgttGgaacaa
+ S   216631  A(15)  172725  cgttggAacaacg
+ S   216633  C(15)  172727  ttggaaCaacgga
+ S   216634  A(15)  172728  tggaacAacggat
+ S   216648  T(15)  172742  gatcaaTgtggtg
+ S   216649  G(15)  172743  atcaatGtggtga
+ S   216651  G(15)  172745  caatgtGgtgaat
+ S   216654  G(15)  172748  tgtggtGaatcct
+ S   216660  T(15)  172754  gaatccTtttcgt
+ S   216663  T(15)  172757  tcctttTcgtgcc
+ S   216669  C(15)  172763  tcgtgcCtccatc
+ S   216670  T(15)  172764  cgtgccTccatcg
+ S   216672  C(15)  172766  tgcctcCatcgtg
+ S   216675  C(15)  172769  ctccatCgtgttg
+ S   216678  G(15)  172772  catcgtGttgggt
+ S   216684  T(15)  172778  gttgggTacgccg
+ S   216690  G(15)  172784  tacgccGggtagt
+ S   216694  A(15)  172788  ccgggtAgtggaa
+ S   216695  G(15)  172789  cgggtaGtggaaa
+ S   216696  T(15)  172790  gggtagTggaaag
+ S   216699  A(15)  172793  tagtggAaagtca
+ S   216705  A(15)  172799  aaagtcAtacgcg
+ S   216708  C(15)  172802  gtcataCgcggtg
+ S   216711  G(15)  172805  atacgcGgtggta
+ S   216712  G(15)  172806  tacgcgGtggtaa
+ S   216714  G(15)  172808  cgcggtGgtaaac
+ S   216715  G(15)  172809  gcggtgGtaaaca
+ S   216717  A(15)  172811  ggtggtAaacagt
+ D   216719  A(15)  172814  tggtaaAcagttt
+ S   216724  T(15)  172819  aacagtTtcatca
+ I   216725  T(15)  172819  acagttTcatcaa
+ S   216732  G(15)  172826  catcaaGcagcag
+ S   216736  C(15)  172830  aagcagCagattg
+ S   216737  A(15)  172831  agcagcAgattga
+ S   216738  G(15)  172832  gcagcaGattgaa
+ S   216741  T(15)  172835  gcagatTgaaaag
+ S   216744  A(15)  172838  gattgaAaagggc
+ S   216752  T(15)  172846  agggctTttcgat
+ S   216757  A(15)  172851  ttttcgAtgtatg
+ S   216759  G(15)  172853  ttcgatGtatgta
+ S   216761  A(15)  172855  cgatgtAtgtata
+ S   216762  T(15)  172856  gatgtaTgtatat
+ S   216763  G(15)  172857  atgtatGtatatg
+ S   216765  A(15)  172859  gtatgtAtatgac
+ S   216771  C(15)  172865  atatgaCttcaaa
+ S   216777  A(15)  172871  cttcaaAttcagc
+ S   216779  T(15)  172873  tcaaatTcagcga
+ S   216781  A(15)  172875  aaattcAgcgact
+ S   216782  G(15)  172876  aattcaGcgactt
+ S   216787  T(15)  172881  agcgacTtatcta
+ S   216789  A(15)  172883  cgacttAtctaca
+ S   216792  T(15)  172886  cttatcTacaatc
+ S   216793  A(15)  172887  ttatctAcaatcg
+ S   216794  C(15)  172888  tatctaCaatcgc
+ S   216795  A(15)  172889  atctacAatcgcc
+ S   216798  C(15)  172892  tacaatCgcctac
+ S   216801  C(15)  172895  aatcgcCtacaac
+ S   216810  T(15)  172904  caaccaTctgctg
+ S   216816  G(15)  172910  tctgctGaaccac
+ S   216817  A(15)  172911  ctgctgAaccacc
+ S   216818  A(15)  172912  tgctgaAccaccc
+ S   216822  C(15)  172916  gaaccaCccggag
+ S   216823  C(15)  172917  aaccacCcggagg
+ S   216824  C(15)  172918  accaccCggaggg
+ S   216828  G(15)  172922  cccggaGggttac
+ S   216831  T(15)  172925  ggagggTtacaag
+ S   216840  G(15)  172934  caaggtGaagccg
+ S   216846  G(15)  172940  gaagccGaagttt
+ S   216852  T(15)  172946  gaagttTtatgtg
+ S   216855  T(15)  172949  gttttaTgtgata
+ S   216871  G(15)  172965  ttcgacGacccgc
+ S   216877  C(15)  172971  gacccgCgacgct
+ S   216879  A(15)  172973  cccgcgAcgctcg
+ I   216880  C(15)  172973  ccgcgaCgctcgc
+ S   216882  C(15)  172975  gcgacgCtcgcac
+ S   216883  T(15)  172976  cgacgcTcgcacc
+ S   216884  C(15)  172977  gacgctCgcaccg
+ D   216886  C(15)  172980  cgctcgCaccgct
+ S   216894  T(15)  172988  ccgctgTaatccc
+ S   216897  T(15)  172991  ctgtaaTcccatc
+ S   216909  G(15)  173003  ccacccGgatttc
+ S   216912  T(15)  173006  cccggaTttcatg
+ S   216919  G(15)  173013  ttcatgGaggata
+ S   216920  A(15)  173014  tcatggAggatat
+ S   216921  G(15)  173015  catggaGgatatt
+ S   216924  T(15)  173018  ggaggaTattacg
+ S   216927  T(15)  173021  ggatatTacggat
+ S   216928  A(15)  173022  gatattAcggatg
+ S   216930  G(15)  173024  tattacGgatgcc
+ S   216951  T(15)  173045  tgcctaTacgata
+ S   216957  A(15)  173051  tacgatAatgctc
+ S   216961  C(15)  173055  ataatgCtcaatt
+ S   216963  C(15)  173057  aatgctCaatttg
+ S   216973  A(15)  173067  ttgaacAagacct
+ S   216974  A(15)  173068  tgaacaAgacctg
+ S   216975  G(15)  173069  gaacaaGacctgg
+ S   216978  C(15)  173072  caagacCtgggtg
+ S   219398  G(15)  175492  cccgatGtgcaga
+ S   219400  G(15)  175494  cgatgtGcagaag
+ S   219401  C(15)  175495  gatgtgCagaagc
+ S   219402  A(15)  175496  atgtgcAgaagca
+ S   219403  G(15)  175497  tgtgcaGaagcag
+ S   219418  C(15)  175512  cgacttCtttgtg
+ S   219421  T(15)  175515  cttcttTgtggaa
+ S   219424  G(15)  175518  ctttgtGgaatca
+ S   219430  A(15)  175524  ggaatcAcctatt
+ S   219436  T(15)  175530  acctatTattttg
+ S   219440  T(15)  175534  attattTtgtttg
+ S   219445  T(15)  175539  tttgttTgccagc
+ S   219451  C(15)  175545  tgccagCattata
+ I   219475  T(15)  175568  aatctaTcaaggc
+ S   219480  G(15)  175573  atcaagGcggcaa
+ D   219480  G(15)  175574  atcaagGcggcaa
+ S   219487  A(15)  175581  cggcaaAtactgc
+ S   219490  C(15)  175584  caaataCtgcacg
+ S   219496  G(15)  175590  ctgcacGttcccc
+ S   219508  G(15)  175602  ccatgcGattgag
+ S   219511  T(15)  175605  tgcgatTgagttc
+ S   219527  C(15)  175621  aaccgcCgctatg
+ S   219528  G(15)  175622  accgccGctatga
+ S   219529  C(15)  175623  ccgccgCtatgag
+ S   219532  T(15)  175626  ccgctaTgaggat
+ S   219534  A(15)  175628  gctatgAggatat
+ S   219535  G(15)  175629  ctatgaGgatatt
+ S   219538  T(15)  175632  tgaggaTattttc
+ S   219544  C(15)  175638  tattttCccgata
+ S   219547  G(15)  175641  tttcccGatactg
+ S   219550  A(15)  175644  cccgatActgacc
+ S   219553  G(15)  175647  gatactGacctct
+ S   219559  T(15)  175653  gacctcTtacccg
+ S   219568  A(15)  175662  cccggaAttggaa
+ S   219569  T(15)  175663  ccggaaTtggaaa
+ S   219574  A(15)  175668  attggaAaactat
+ S   219580  T(15)  175674  aaactaTctttct
+ S   219589  G(15)  175683  ttctccGttcatg
+ S   219605  C(15)  175699  gcatggCtcggag
+ S   219606  T(15)  175700  catggcTcggagg
+ S   219607  C(15)  175701  atggctCggaggg
+ S   219608  G(15)  175702  tggctcGgagggg
+ S   219609  G(15)  175703  ggctcgGaggggc
+ S   219610  A(15)  175704  gctcggAggggct
+ S   219611  G(15)  175705  ctcggaGgggctg
+ S   219612  G(15)  175706  tcggagGggctgc
+ S   219613  G(15)  175707  cggaggGgctgcg
+ S   219616  T(15)  175710  aggggcTgcggag
+ S   219618  C(15)  175712  gggctgCggagca
+ S   219629  A(15)  175723  cagttgAtggggc
+ S   219630  T(15)  175724  agttgaTggggca
+ S   219643  A(15)  175737  gatagcAagcgcg
+ S   219646  C(15)  175740  agcaagCgcgaaa
+ S   219649  G(15)  175743  aagcgcGaaaatc
+ S   219652  A(15)  175746  cgcgaaAatccct
+ S   219655  C(15)  175749  gaaaatCcctttg
+ S   219658  T(15)  175752  aatcccTttgtca
+ S   219659  T(15)  175753  atccctTtgtcaa
+ S   219661  G(15)  175755  ccctttGtcaagg
+ S   219664  A(15)  175758  tttgtcAaggatg
+ S   219665  A(15)  175759  ttgtcaAggatga
+ S   219667  G(15)  175761  gtcaagGatgatt
+ S   219680  C(15)  175774  tccccgCagctct
+ S   219681  A(15)  175775  ccccgcAgctcta
+ S   219688  T(15)  175782  gctctaTtgggtg
+ S   219698  T(15)  175792  gtgatgTcggaca
+ I   219702  A(15)  175795  tgtcggAcagcga
+ S   219704  A(15)  175797  tcggacAgcgagt
+ D   219705  G(15)  175799  cggacaGcgagtt
+ S   219709  G(15)  175803  cagcgaGttcacg
+ S   219715  G(15)  175809  gttcacGctggac
+ S   219718  G(15)  175812  cacgctGgacatc
+ S   219739  A(15)  175833  cgaagaAccgaaa
+ S   219742  G(15)  175836  agaaccGaaaata
+ S   219746  A(15)  175840  ccgaaaAtactct
+ S   219748  A(15)  175842  gaaaatActctgt
+ I   219752  T(15)  175845  atactcTgtgtgg
+ D   219754  T(15)  175848  actctgTgtgggc
+ S   219757  G(15)  175851  ctgtgtGggcaac
+ S   219760  C(15)  175854  tgtgggCaacaat
+ S   219773  C(15)  175867  cccgacCgtcaga
+ S   219775  T(15)  175869  cgaccgTcagaat
+ S   219779  A(15)  175873  cgtcagAatatct
+ S   219780  A(15)  175874  gtcagaAtatcta
+ S   219781  T(15)  175875  tcagaaTatctac
+ S   219784  C(15)  175878  gaatatCtacggg
+ S   219793  C(15)  175887  cggggcCgctctc
+ S   219796  T(15)  175890  ggccgcTctcggt
+ S   219797  C(15)  175891  gccgctCtcggtc
+ S   219799  C(15)  175893  cgctctCggtctg
+ S   219802  T(15)  175896  tctcggTctgtat
+ S   219808  T(15)  175902  tctgtaTaactcc
+ S   219817  T(15)  175911  ctcccgTatcgtg
+ S   219826  A(15)  175920  cgtgaaActcatc
+ I   219841  A(15)  175934  caagaaAgggatg
+ S   219843  G(15)  175936  agaaagGgatgct
+ S   219844  G(15)  175937  gaaaggGatgctg
+ S   219846  T(15)  175939  aagggaTgctgaa
+ D   219847  G(15)  175941  agggatGctgaag
+ S   219850  G(15)  175944  gatgctGaagtcg
+ S   219853  G(15)  175947  gctgaaGtcgtcg
+ S   219856  G(15)  175950  gaagtcGtcggtc
+ S   219857  T(15)  175951  aagtcgTcggtca
+ S   219859  G(15)  175953  gtcgtcGgtcatc
+ S   219862  C(15)  175956  gtcggtCatcatc
+ S   219865  C(15)  175959  ggtcatCatcgac
+ S   219883  G(15)  175977  gcccacGatttat
+ S   219886  T(15)  175980  cacgatTtatttc
+ S   219889  T(15)  175983  gatttaTttcaag
+ S   219890  T(15)  175984  atttatTtcaagg
+ S   219892  C(15)  175986  ttatttCaagggg
+ S   219893  A(15)  175987  tatttcAaggggt
+ S   219894  A(15)  175988  atttcaAggggtt
+ S   219895  G(15)  175989  tttcaaGgggttg
+ S   219899  T(15)  175993  aaggggTtggaca
+ S   219904  C(15)  175998  gttggaCaacctt
+ S   219910  T(15)  176004  caacctTatcgcc
+ S   219913  C(15)  176007  ccttatCgccacc
+ S   219922  G(15)  176016  caccgcGcgaagc
+ S   219937  T(15)  176031  caaggtTgccgtg
+ S   219943  G(15)  176037  tgccgtGtgtctg
+ D   219943  G(15)  176038  tgccgtGtgtctg
+ I   219946  T(15)  176040  cgtgtgTctgggc
+ S   219949  G(15)  176043  gtgtctGggcttt
+ S   219964  C(15)  176058  ggatttCagccag
+ S   219974  G(15)  176068  cagttgGtgcgcg
+ S   219975  T(15)  176069  agttggTgcgcga
+ S   219979  C(15)  176073  ggtgcgCgactac
+ S   219982  C(15)  176076  gcgcgaCtacggt
+ S   219988  T(15)  176082  ctacggTgataaa
+ S   219991  T(15)  176085  cggtgaTaaagaa
+ S   219997  A(15)  176091  taaagaAgcgaag
+ S   219998  G(15)  176092  aaagaaGcgaagg
+ S   220000  G(15)  176094  agaagcGaaggtc
+ S   220001  A(15)  176095  gaagcgAaggtcg
+ S   220002  A(15)  176096  aagcgaAggtcgt
+ S   220003  G(15)  176097  agcgaaGgtcgtg
+ S   220006  C(15)  176100  gaaggtCgtgatg
+ S   220007  G(15)  176101  aaggtcGtgatga
+ S   220009  G(15)  176103  ggtcgtGatgaac
+ I   220010  A(15)  176103  gtcgtgAtgaaca
+ D   220012  G(15)  176106  cgtgatGaacacc
+ S   220015  C(15)  176109  gatgaaCaccgtc
+ S   220018  C(15)  176112  gaacacCgtcggc
+ S   220028  A(15)  176122  ggcaatAtctttt
+ S   220034  T(15)  176128  atctttTccggtc
+ S   220036  C(15)  176130  cttttcCggtcag
+ S   220045  G(15)  176139  tcaggtGgtgggt
+ S   220048  G(15)  176142  ggtggtGggtgaa
+ S   220050  G(15)  176144  tggtggGtgaaac
+ S   220051  T(15)  176145  ggtgggTgaaacc
+ S   220066  G(15)  176160  caagacGctttcc
+ S   220069  T(15)  176163  gacgctTtccgaa
+ S   220075  A(15)  176169  ttccgaAcgcttc
+ S   220078  C(15)  176172  cgaacgCttcggt
+ S   220084  T(15)  176178  cttcggTaaggtg
+ S   220090  G(15)  176184  taaggtGttgcag
+ S   220106  T(15)  176200  cggcagTccattt
+ S   220107  C(15)  176201  ggcagtCcatttc
+ S   220111  T(15)  176205  gtccatTtccatc
+ S   220112  T(15)  176206  tccattTccatca
+ S   220124  C(15)  176218  aaccggCaggatg
+ S   220126  G(15)  176220  ccggcaGgatgtt
+ S   220129  T(15)  176223  gcaggaTgtttcc
+ S   220130  G(15)  176224  caggatGtttcca
+ S   220131  T(15)  176225  aggatgTttccac
+ S   220132  T(15)  176226  ggatgtTtccacc
+ S   220136  A(15)  176230  gtttccAcctcca
+ S   220137  C(15)  176231  tttccaCctccat
+ S   220150  G(15)  176244  caacacGcagatg
+ S   220159  T(15)  176253  gatggaTtcactc
+ S   220160  T(15)  176254  atggatTcactca
+ S   220161  C(15)  176255  tggattCactcat
+ S   220162  A(15)  176256  ggattcActcatc
+ S   220165  C(15)  176259  ttcactCatcccg
+ S   220172  C(15)  176266  atcccgCcgagca
+ S   220187  G(15)  176281  atttccGgcttga
+ S   220188  G(15)  176282  tttccgGcttgac
+ S   220190  T(15)  176284  tccggcTtgacgc
+ S   220192  G(15)  176286  cggcttGacgcag
+ S   220195  G(15)  176289  cttgacGcagggt
+ S   220207  T(15)  176301  tatgttTgtcggt
+ S   220213  T(15)  176307  tgtcggTtcggtg
+ S   220214  T(15)  176308  gtcggtTcggtgt
+ S   220219  G(15)  176313  ttcggtGtccgac
+ S   220220  T(15)  176314  tcggtgTccgaca
+ S   220228  C(15)  176322  cgacaaCttcaac
+ S   220232  A(15)  176326  aacttcAacgagc
+ S   220258  T(15)  176352  gattttTcattgt
+ S   220262  T(15)  176356  tttcatTgtgaga
+ S   220263  G(15)  176357  ttcattGtgagat
+ S   220264  T(15)  176358  tcattgTgagatt
+ S   220279  T(15)  176373  cgtggaTgccgag
+ S   220280  G(15)  176374  gtggatGccgaga
+ S   220281  C(15)  176375  tggatgCcgagaa
+ S   220286  A(15)  176380  gccgagAaggtga
+ S   220291  G(15)  176385  gaaggtGaggcgc
+ S   220293  G(15)  176387  aggtgaGgcgcga
+ S   220297  C(15)  176391  gaggcgCgaggag
+12883  0.00 0.00 0.05  Contig783    218868 231831 (0)    Contig36.1        1 12957 (0)  
+ I   218878  T(15)     10  aagtctTgggttg
+ I   218905  A(15)     36  catgaaAttcggg
+ I   218913  G(15)     43  tcggggGcgtaaa
+ I   218928  T(15)     57  gacgttTgcatgg
+ I   218946  C(15)     74  tgaaacCaagagc
+ I   218954  A(15)     81  agagcaAgaaagt
+ I   218968  C(15)     94  aactacCtgaccc
+
+44 matching entries (first file).
+
+Discrepancy summary:
+Qual algn  cum    rcum    (%)    unalgn X    N  sub del ins  total (%)   cum  rcum (%)
+
