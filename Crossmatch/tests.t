@@ -22,7 +22,8 @@ use base 'Test::Class';
 
 use Data::Dumper;
 use Crossmatch::Reader;
-use IO::File;
+use Crossmatch::ConvertToNav;
+use Finishing::Assembly::Consed::Navigation::Writer;
 use IO::String;
 use Test::More;
 
@@ -33,12 +34,9 @@ sub test01_read_alignments : Tests
     my $class = 'Crossmatch::Reader';
     print "Testing $class\n";
     
-    my $fh = IO::File->new('< cm.out')
-        or die"$!\n";
-
     my $reader = $class->new
     (
-        io => $fh,
+        io => 'cm.out',
         return_as_objs => 1,
     )
         or die;
@@ -58,6 +56,30 @@ sub test01_read_alignments : Tests
     };
     
     ok($count == 1668, "Got $count discreps from the alignments");
+
+    return 1;
+}
+
+sub test02_convert_alignments_to_navs : Tests
+{
+    my $self = shift;
+    
+    my $class = 'Crossmatch::ConvertToNav';
+    
+    print "Testing $class\n";
+
+    unlink 'cm.nav';
+
+    my $converter = $class->new
+    (
+        reader => Crossmatch::Reader->new(io => 'cm.out', return_as_objs => 1,),
+        writer => Finishing::Assembly::Consed::Navigation::Writer->new(io => 'cm.nav'),
+        discreps => 1,
+    );
+
+    ok($converter, "Created $class");
+    
+    ok($converter->execute, "Executed $class");
 
     return 1;
 }
