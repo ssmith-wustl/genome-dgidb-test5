@@ -566,6 +566,10 @@ my @logins = (
     [qw(ldb64 gsc GSCUSER gscuser user_64 rw production GSC)],
     [qw(ldb64 gsc GSCUSER gscguest guest64 ro production GSC)],
 
+    # MG production
+    ['mysql2', 'gsc', 'sample_data', 'sample_data', 'Zl0*rCh', 'ro', 'production', 'GSC'],
+    ['mysql2', 'gsc', 'sample_data', 'sample_data', 'Zl0*rCh', 'rw', 'production', 'GSC'],
+
     # OLTP development
 #    [qw(dbdev gsc GSC gscuser g_user rw development GSC)],
 #    [qw(dbdev gsc GSC devuser iamonrac rw-developer development GSC)],
@@ -610,6 +614,7 @@ my @servers = (
     [qw(gscprod  Oracle  oltp_prod)],
     [qw(dwrac    Oracle  dw_prod)],
     [qw(ldb64    Oracle  olap_prod)],
+    [qw(mysql2   MySQL   mg_prod)],
 
     # development servers
 #    [qw(gscnew   Oracle  old_oltp_dev)],
@@ -630,6 +635,7 @@ my @variants = (
     [qw(production       oltp       gscprod)],
     [qw(production       warehouse  dwrac)],
     [qw(production       olap       ldb64)],
+    [qw(production       mg         mysql2)],
 
     # development variants
 #    [qw(development      oltp       dbdev)],
