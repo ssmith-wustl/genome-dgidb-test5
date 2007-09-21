@@ -626,6 +626,7 @@ my %csp_priority = (
     'new primers'                             => 10,
     'pick'                                    => 10,
     'rearray dna'                             => 10,
+    'transfer dna'                            => 10,
     'sequence'                                => 10,
     'set up beckman block'                    => 10,
     'normalize dna'                           => 10,
