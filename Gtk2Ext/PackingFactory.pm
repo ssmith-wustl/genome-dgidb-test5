@@ -1029,9 +1029,9 @@ sub add_slist
 
  Basics:
 
- use Gtk2Ext::View;
+ use Gtk2Ext::PackingFactory;
 
- my $view = Gtk2Ext::View->instance(title => 'Hi', size => 100);
+ my $view = Gtk2Ext::PackingFactory->instance(title => 'Hi', size => 100);
  # use instance, no new method!
  
  $view->init; # inits Gtk2
