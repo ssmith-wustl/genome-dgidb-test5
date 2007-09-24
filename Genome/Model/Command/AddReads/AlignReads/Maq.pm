@@ -44,9 +44,9 @@ sub execute {
     
     # ensure the reference sequence exists.
     
-    my $ref_seq_file =  $model->reference_sequence_path . "/bfa" 
+    my $ref_seq_file =  $model->reference_sequence_path . "/bfa";
     
-    unless (-e $ref_seq_file)
+    unless (-e $ref_seq_file) {
         $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
         return;
     }
