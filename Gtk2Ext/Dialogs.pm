@@ -5,7 +5,6 @@ use warnings;
 
 use base 'Finfo::Singleton';
 
-use Gtk2Ext::FormDialog;
 use Gtk2Ext::Info;
 use Gtk2Ext::PackingFactory;
 use Gtk2Ext::Utils;
