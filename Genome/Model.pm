@@ -79,7 +79,7 @@ sub sample_path{
 }
 
 
-sub reference_sequence_file {
+sub reference_sequence_path {
     my $self = shift;
     return sprintf('%s/reference_sequences/%s', $self->base_parent_directory,
 						$self->reference_sequence_name)

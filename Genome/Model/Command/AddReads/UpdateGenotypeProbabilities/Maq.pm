@@ -54,7 +54,7 @@ sub execute {
     }
 
     my $assembly_output_file = sprintf('%s/assembly.cns', $model_dir);
-    my $ref_seq_file = $model->reference_sequence_file;
+    my $ref_seq_file = $model->reference_sequence_path . "/bfa";
 
     my $assembly_opts = $model->genotyper_params || '';
 

@@ -39,7 +39,7 @@ sub execute {
     my $model = Genome::Model->get(id => $self->model_id);
 
     # ensure the reference sequence exists.
-    my $ref_seq_file = $model->reference_sequence_file;
+    my $ref_seq_file = $model->reference_sequence_path . "/bfa";
     unless (-e $ref_seq_file) {
         $self->error_message("reference sequence file $ref_seq_file does not exist.  please verify this first.");
         return;

@@ -44,10 +44,10 @@ sub execute {
     
     # ensure the reference sequence exists.
     
+    my $ref_seq_file =  $model->reference_sequence_path . "/bfa" 
     
-    
-    unless (-e $model->reference_sequence_file) {
-        $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $model->reference_sequence_file));
+    unless (-e $ref_seq_file)
+        $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
         return;
     }
     
@@ -90,6 +90,7 @@ sub execute {
 
     # Part 2, use maq to do the alignments
 
+    $DB::single = 1;
     my @alignment_files;
     foreach my $lane ( split('', $lanes) ) {
         my $bfq_file = sprintf('%s/s_%d_sequence.bfq', $working_dir, $lane);
@@ -104,9 +105,11 @@ sub execute {
        
         my $maq_cmdline = sprintf('maq map %s %s %s %s', $model->read_aligner_params || '',
                                                          $this_lane_alignments_file,
-                                                         $model->reference_sequence_file,
+                                                         $ref_seq_file,
                                                          $bfq_file);
-        
+	
+	print $maq_cmdline;
+      
         system($maq_cmdline);
     }
 
@@ -140,7 +143,7 @@ sub execute {
        rename($accum_tmp, $accumulated_alignments_file);
     }
  
-    unlink foreach @alignment_files;
+    #unlink foreach @alignment_files;
         
     return 1;
 }
