@@ -8,7 +8,7 @@ use base 'Finfo::Singleton';
 use Gtk2 -init;
 
 use Data::Dumper;
-use Gtk2::SimpleList;
+use Gtk2::Ex::Simple::List;
 use Gtk2Ext::Info;
 use IO::File;
 
@@ -26,6 +26,29 @@ sub gtk2_main
 sub gtk2_quit
 {
     Gtk2->main_quit;
+}
+
+sub check_for_unknown_params
+{
+    my ($self, %p) = @_;
+
+    return 1 unless %p;
+
+    my @caller = caller;
+    
+    my $msg = sprintf
+    (
+        'Unkown params sent (%s) at line %s in file %s', 
+        join(', ', keys %p),
+        $caller[2],
+        $caller[1],
+    );
+    
+    Gtk2Ext::Dialogs->error_dialog($msg);
+
+    $caller[0]->fatal_msg($msg, { 'caller' => \@caller });
+    
+    return;
 }
 
 # Window/Dialog stuff
@@ -228,16 +251,32 @@ sub add_color_to_widget
         }
     }
 
-    $self->fatal_msg("Unknown params sent to add_color_to_widget: " . join(', ', keys %p))
-        and return if %p;
+    $self->fatal_msg("Unknown params sent to add_color_to_widget: " . join(', ', keys %p)) if %p;
 
     return 1;
 }
 
 # Simple List
+sub _validate_slist : PRIVATE
+{
+    my ($self, $slist) = @_;
+
+    return Finfo::Validate->validate
+    (
+        attr => 'slist',
+        value => $slist,
+        type => 'inherits_from',
+        options => [qw/ Gtk2::SimpleList Gtk2::Ex::Simple::List /],
+        err_cb => $self,
+        'caller' => [ caller ],
+    );
+}
+    
 sub get_slist_column_titles
 {
     my ($self, $slist) = @_;
+
+    $self->_validate_slist($slist);
 
     my @titles;
     my $last_col = $slist->get_model->get_n_columns;
@@ -250,23 +289,29 @@ sub get_slist_column_titles
     return \@titles;
 }
 
-sub get_slist_data_in_column
+sub get_data_from_slist_in_column
 {
     my ($self, $slist, $col) = @_;
+
+    $self->_validate_slist($slist);
 
     return map { $_->[$col] } @{ $slist->{data} };
 }
 
-sub get_slist_data_for_match
+sub get_data_from_slist_for_match_in_columnn
 {
     my ($self, $slist, $match, $col) = @_;
 
-    return grep { $_->[$col] eq $match } @{ $slist->{data} };
+    $self->_validate_slist($slist);
+
+    return grep { $_->[$col] =~ /$match/ } @{ $slist->{data} };
 }
 
-sub find_indices_for_column_match
+sub find_indices_in_slist_for_column_match
 {
     my ($self, $slist, $match, $col) = @_;
+
+    $self->_validate_slist($slist);
 
     my @indices; 
     my $length = scalar @{ $slist->{data} };
@@ -278,28 +323,31 @@ sub find_indices_for_column_match
     return @indices;
 }
 
-sub get_data_for_column_from_indices
+sub get_data_in_slist_for_column_from_indices
 {
     my ($self, $slist, $indices, $col) = @_;
+
+    $self->_validate_slist($slist);
 
     return map { $slist->{data}[$_]->[$col] } @$indices;
 }
 
-sub get_slist_selected_indices
+sub get_selected_indices_in_slist
 {
     my ($self, $slist) = @_;
 
-    $self->fatal_msg("No slist")
-        and return unless $slist;
+    $self->_validate_slist($slist);
 
     return $slist->get_selected_indices;
 }
 
-sub get_slist_selected_data
+sub get_selected_data_in_slist
 {
     my ($self, $slist, $col) = @_;
 
-    my @sels = $self->get_slist_selected_indices($slist)
+    $self->_validate_slist($slist);
+
+    my @sels = $slist->get_selected_indices
         or return;
 
     # TODO add multiple column support?
@@ -308,22 +356,26 @@ sub get_slist_selected_data
     return map { $slist->{data}[$_] } @sels
 }
 
-sub get_slist_selected_data_as_delineated_string
+sub get_selected_data_from_slist_as_delineated_string
 {
     my ($self, $slist, $char, $col) = @_;
 
-    my @data = $self->get_slist_selected_data($slist, $col)
+    $self->_validate_slist($slist);
+
+    my @data = $self->get_selected_data_in_slist($slist, $col)
         or return;
     
     return $self->_convert_slist_data_to_string($slist, \@data, $char);
 }
 
-sub get_all_slist_data_as_delineated_string
+sub get_all_data_from_slist_as_delineated_string
 {
     my ($self, $slist, $char, $col) = @_;
 
+    $self->_validate_slist($slist);
+
     my $data = ( defined $col )
-    ? [ $slist->get_slist_data_in_column($slist, $col) ]
+    ? [ $slist->get_data_from_slist_in_column($slist, $col) ]
     : $slist->{data};
 
     return unless @$data;
@@ -331,9 +383,11 @@ sub get_all_slist_data_as_delineated_string
     return $self->_convert_slist_data_to_string($slist, $data, $char);
 }
 
-sub _convert_slist_data_to_string : PRIVATE
+sub _convert_data_to_string : PRIVATE
 {
     my ($self, $slist, $data, $char) = @_;
+
+    $self->_validate_slist($slist);
 
     $char = '\t' unless defined $char;
     
@@ -346,14 +400,16 @@ sub _convert_slist_data_to_string : PRIVATE
     return $text;
 }
 
-sub add_slist_data
+sub add_data_to_slist
 {    
     my ($self, $slist, @aryrefs) = @_;
     
+    $self->_validate_slist($slist);
+
     return push @{ $slist->{data} }, @aryrefs;
 }
 
-sub move_slist_data
+sub move_data_between_slists
 {
     my ($self, $from, $to, $matches, $col) = @_;
 
@@ -371,16 +427,20 @@ sub move_slist_data
     return 1;
 }
 
-sub remove_slist_data
+sub remove_data_from_slist
 {
     my ($self, $slist, $row) = @_;
     
+    $self->_validate_slist($slist);
+
     return splice @{ $slist->{data} }, $row, 1;
 }
 
-sub remove_slist_data_by_col_match
+sub remove_data_from_slist_by_col_match
 {
     my ($self, $slist, $matches, $col) = @_;
+
+    $self->_validate_slist($slist);
 
     $col = 0 unless defined $col;
 
@@ -396,17 +456,21 @@ sub remove_slist_data_by_col_match
     return;
 }
 
-sub remove_all_slist_data
+sub remove_all_data_from_slist
 {
     my ($self, $slist) = @_;
+
+    $self->_validate_slist($slist);
 
     return splice @{ $slist->{data} }, 0;
 }
 
-sub replace_slist_data
+sub replace_row_in_slist
 {
     my ($self, $slist, $aryref, $row) = @_;
 
+    $self->_verify_slist($slist);
+    
     return splice @{ $slist->{data} }, $row, 1, $aryref;
 }
 
@@ -443,7 +507,7 @@ sub default_slist_events
                         img => 'gtk-print',
                         cb => sub
                         {
-                            my $str = $self->get_all_slist_data_as_delineated_string($slist, ',')
+                            my $str = $self->get_all_data_from_slist_as_delineated_string($slist, ',')
                                 or return;
                             print "$str\n";
                         },
@@ -453,7 +517,7 @@ sub default_slist_events
                         img => 'gtk-print',
                         cb => sub
                         {
-                            my $str = $self->get_slist_selected_data_as_delineated_string($slist, ',')
+                            my $str = $self->get_selected_data_in_slist_as_delineated_string($slist, ',')
                                 or return;
                             print "$str\n";
                         },
@@ -463,7 +527,7 @@ sub default_slist_events
                         img => 'gtk-save',
                         cb => sub
                         { 
-                            my $str = $self->get_all_slist_data_as_delineated_string($slist, ',')
+                            my $str = $self->get_all_data_from_slist_as_delineated_string($slist, ',')
                                 or return;
                             $self->save_text_to_file(text => $str);
                         },
@@ -474,7 +538,7 @@ sub default_slist_events
                         cb => => sub
                         { 
                             #TODO check for selected data
-                            my $str = $self->get_slist_selected_data_as_delineated_string($slist, ',')
+                            my $str = $self->get_selected_data_in_slist_as_delineated_string($slist, ',')
                                 or return;
                             $self->save_text_to_file(text => $str);
                         },
@@ -505,7 +569,7 @@ sub default_slist_events
 
 sub add_color_column_to_slist
 {
-    return Gtk2::SimpleList->add_column_type
+    return Gtk2::Ex::Simple::List->add_column_type
     (
         'color',
         type     => 'Gtk2::Gdk::Color',
@@ -519,15 +583,17 @@ sub save_file
 {
     my ($self, $file, $text) = @_;
 
-    return unless Finfo::Validate->validate
+    $self->_enforce_instance;
+
+    Finfo::Validate->validate
     (
         attr => 'text to save',
         value => $text,
-        type => 'defined',
+        type => 'string',
         err_cb => $self,
     );
 
-    return unless Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => 'file to save text to',
         value => $file,
@@ -553,21 +619,39 @@ sub save_text_to_file
 {
     my ($self, %p) = @_;
 
+    $self->_enforce_instance;
+
+    my $title = delete $p{title};
+    my $dir = delete $p{dir};
+    my $text = delete $p{text};
+
+    $self->fatal_msg("Unkown params sent to save_text_to_file: " . join(', ', keys %p)) if %p;
+    
+    Finfo::Validate->validate
+    (
+        attr => 'text to save',
+        value => $text,
+        type => 'string',
+        err_cb => $self,
+    );
+
     my $file = Gtk2Ext::Dialogs->instance->file_dialog
     (
-        title => $p{title},
-        dir => $p{dir},
+        title => $title,
+        dir => $dir,
         type => 'new',
     );
 
     return 1 unless defined $file;
 
-    return $self->save_file($file, $p{text});
+    return $self->save_file($file, $text);
 }
 
 1;
 
 =pod
+
+B<Documentation not complete!!  Sorry...>
 
 =head1 Name
 
@@ -724,51 +808,23 @@ Gtk2Ext::Utils->instance->add_color_to_widget();
 
 =over
 
-=item I<Synopsis>
+=item I<Synopsis>   Gets the title strings from an slist
 
-=item I<Params>     Gtk2::SimpleList (object)
+=item I<Params>     Gtk2::Ex::Simple::List (object)
 
 =item I<Returns>    titles (aryref of strings)
 
 =back
 
-=head2 get_slist_data_in_column
+=head2 get_data_from_slist_for_match_in_column
 
- my $data = Gtk2Ext::Utils->instance->get_slist_data_in_column($slist, $col_num);
-
-=over
-
-=item I<Synopsis>
-
-=item I<Params>
-
-=item I<Returns>
-
-=back
-
-=head2 get_slist_data_for_match
-
-Gtk2Ext::Utils->instance->get_slist_data_for_match();
+ my $data = Gtk2Ext::Utils->instance->get_data_from_slist_for_match_in_column($slist, $col, $match);
 
 =over
 
 =item I<Synopsis>
 
-=item I<Params>
-
-=item I<Returns>
-
-=back
-
-=head2 find_indices_for_column_match
-
-Gtk2Ext::Utils->instance->find_indices_for_column_match();
-
-=over
-
-=item I<Synopsis>
-
-=item I<Params>
+=item I<Params>     Gtk2::Ex::Simple::List (object)
 
 =item I<Returns>
 
@@ -782,83 +838,83 @@ Gtk2Ext::Utils->instance->get_data_for_column_from_indices();
 
 =item I<Synopsis>
 
-=item I<Params>
+=item I<Params>     Gtk2::Ex::Simple::List (object)
 
 =item I<Returns>
 
 =back
 
-=head2 get_slist_selected_data
+=head2 get_selected_data_in_slist
 
-Gtk2Ext::Utils->instance->get_slist_selected_data();
+ my $data = Gtk2Ext::Utils->instance->get_selected_data_in_slist($slist);
 
 =over
 
 =item I<Synopsis>
 
-=item I<Params>
+=item I<Params>     Gtk2::Ex::Simple::List (object)
 
-=item I<Returns>
+=item I<Returns>    
 
 =back
 
-=head2 get_slist_selected_indices
+=head2 get_selected_indices_in_slist
 
-Gtk2Ext::Utils->instance->get_slist_selected_indices();
+ @indices = Gtk2Ext::Utils->instance->get_selected_indices_in_slist($slist);
+
+=over
+
+=item I<Synopsis>   Gets the indices that are currently selected in the slist
+
+=item I<Params>     Gtk2::Ex::Simple::List (object)
+
+=item I<Returns>    indices (array of ints)
+
+=back
+
+=head2 convert_selected_indices_in_slist_to_string
+
+ Gtk2Ext::Utils->instance->convert_slist_selected_indices_to_string();
 
 =over
 
 =item I<Synopsis>
 
-=item I<Params>
+=item I<Params>     Gtk2::Ex::Simple::List (object)
 
-=item I<Returns>
+=item I<Returns>    
 
 =back
 
-=head2 convert_slist_selected_indices_to_string
+=head2 add_data_to_slist
 
-Gtk2Ext::Utils->instance->convert_slist_selected_indices_to_string();
+ Gtk2Ext::Utils->instance->add_data_to_slist();
+
+=over
+
+=item I<Synopsis>   Adds data to the slist
+
+=item I<Params>     Gtk2::Ex::Simple::List (object)
+
+=item I<Returns>    Number of rows added (int)
+
+=back
+
+=head2 move_data_between_slists
+
+ Gtk2Ext::Utils->instance->move_data_between_slists();
 
 =over
 
 =item I<Synopsis>
 
-=item I<Params>
+=item I<Params>     Gtk2::Ex::Simple::List (object)
 
 =item I<Returns>
 
 =back
 
-=head2 add_slist_data
-
-Gtk2Ext::Utils->instance->add_slist_data();
-
-=over
-
-=item I<Synopsis>
-
-=item I<Params>
-
-=item I<Returns>
-
-=back
-
-=head2 move_slist_data
-
-Gtk2Ext::Utils->instance->move_slist_data();
-
-=over
-
-=item I<Synopsis>
-
-=item I<Params>
-
-=item I<Returns>
-
-=back
-
-=head2 remove_slist_data
+=head2 remove_data_from_slist
 
 Gtk2Ext::Utils->instance->remove_slist_data();
 
@@ -866,79 +922,84 @@ Gtk2Ext::Utils->instance->remove_slist_data();
 
 =item I<Synopsis>
 
-=item I<Params>
+=item I<Params>     Gtk2::Ex::Simple::List (object)
 
 =item I<Returns>
 
 =back
 
-=head2 remove_slist_data_by_col_match
+=head2 remove_data_in_slist_by_col_match
 
-Gtk2Ext::Utils->instance->remove_slist_data_by_col_match();
+ Gtk2Ext::Utils->instance->remove_slist_data_by_col_match();
 
 =over
 
-=item I<Synopsis>
+=item I<Synopsis>   Removes data from the slist if the data in the $col matches $match
 
-=item I<Params>
+=item I<Params>     Gtk2::Ex::Simple::List (object)
 
-=item I<Returns>
+=item I<Returns>    
 
 =back
 
-=head2 remove_all_slist_data
+=head2 remove_all_data_in_slist
 
-Gtk2Ext::Utils->instance->remove_all_slist_data();
+ Gtk2Ext::Utils->instance->remove_all_data_in_slist($slist);
 
 =over
 
-=item I<Synopsis>
+=item I<Synopsis>   Removes all the data from an slist
 
-=item I<Params>
+=item I<Params>     Gtk2::Ex::Simple::List (object)
 
-=item I<Returns>
+=item I<Returns>    number of rows removed (int)
 
 =back
 
-=head2 replace_slist_data
+=head2 replace_row_in_slist
 
-Gtk2Ext::Utils->instance->replace_slist_data();
+ Gtk2Ext::Utils->instance->replace_row_in_slist($slist, $new_data, $row);
 
 =over
 
-=item I<Synopsis>
+=item I<Synopsis>   Removes the data at $row (default = 0) from slist, then inserts the $aryref
 
-=item I<Params>
+=item I<Params>     Gtk2::Ex::Simple::List (object), data (aryref representing the new row), row (int)
 
-=item I<Returns>
+=item I<Returns>    boolean (true in success)
 
 =back
 
 =head2 save_file
 
-Gtk2Ext::Utils->instance->save_file();
+ Gtk2Ext::Utils->instance->save_file
+ (
+    title => $title_for_file_dialog, # opt
+    dir => $starting_dir, # opt, default is '.'
+    text => $text_to_save # required
+ );
 
 =over
 
-=item I<Synopsis>
+=item I<Synopsis>   Opens a file dialog, gets a file name, then saves the text to it.
 
-=item I<Params>
+=item I<Params>     hash with keys: title of file dialog, directory to display, text to save
 
-=item I<Returns>
+=item I<Returns>    boolean (true in success)
 
 =back
 
 =head2 save_text_to_file
 
-Gtk2Ext::Utils->instance->save_text_to_file();
+ Gtk2Ext::Utils->instance->save_text_to_file($file, $text);
 
 =over
 
-=item I<Synopsis>
+=item I<Synopsis>   Writes text to a file
 
-=item I<Params>
+=item I<Params>     file name (string), text (string)
 
-=item I<Returns>
+=item I<Returns>    boolean (true in success)
 
 =back
 
