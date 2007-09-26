@@ -7,7 +7,7 @@ use base 'Finfo::Singleton';
 
 use Data::Dumper;
 use Gtk2::Pango; 
-use Gtk2::SimpleList;
+use Gtk2::Ex::Simple::List;
 use Gtk2::Ex::Simple::Menu;
 use Gtk2Ext::Info;
 use Gtk2Ext::Utils;
@@ -63,6 +63,38 @@ sub adjust_sizes : PRIVATE
     return ($new_h, $new_v);
 }
 
+# General widget properties
+sub _set_general_container_properties : PRIVATE
+{
+    #TODO add more...
+    my ($self, $widget, $p) = @_;
+
+    $self->_enforce_instance;
+
+    Finfo::Validate->validate
+    (
+        attr => 'widget to set general properties',
+        value => $widget,
+        type => 'object',
+        err_cb => $self,
+    );
+
+    my $border = delete $p->{border_width} || 0;
+    $widget->set_border_width($border);
+    
+    my $redraws = delete $p->{redraws} || 0;
+    $widget->set_reallocate_redraws($redraws);
+    
+    return 1;
+}
+
+sub _separate_create_and_packing_params
+{
+    #TODO implement
+    my ($self, $p) = @_;
+    $self->fatal_msg("Need to implement");
+}
+
 # Window
 sub create_window
 {
@@ -86,46 +118,25 @@ sub create_window
         );
     }
     $win->set_position($pos);
-
-    $win->set_border_width( delete $p{border_w} || 0 );
-    $win->set_reallocate_redraws( delete $p{redraws} || 0 );
+    $self->_set_general_container_properties($win, \%p)
+        or return;
     
     $self->determine_and_set_size_for_widget($win, \%p);
 
     my $events = delete $p{events};
+    # merge events??
     unless ( exists $events->{delete_event} )
     {
         $events->{delete_event} = sub{ Gtk2->main_quit };
     }
 
-     $self->utils->add_events_to_widget($win, $events);
-
+    $self->utils->add_events_to_widget($win, $events);
     $self->utils->add_color_to_widget($win, delete $p{color}) if exists $p{color};
 
-    $self->fatal_msg("Unknown params sent to create_window:" . join(', ', keys %p)) if %p;
+    #$self->fatal_msg("Unknown params sent to create_window:" . join(', ', keys %p)) if %p;
 
     $win->show;
     
-    return $win;
-}
-
-sub create_window_with_menu
-{
-    my ($self, %p) = @_;
-    
-    my $title = delete $p{title} || $self->title;
-    my $menu;
-
-    my $win = Gtk2::Window->new('toplevel');
-    $win->set_title($title);
-    $self->determine_and_set_size_for_widget($win, \%p);
-    
-    # this should work, but doesn't:
-    $win->add_accel_group( $menu->{accel_group} ) if defined $menu;
-    
-    $win->signal_connect("delete_event", sub{ $self->utils->gtk2_exit });
-    $win->show;
-
     return $win;
 }
 
@@ -135,10 +146,7 @@ sub create_dialog
     my ($self, %p) = @_;
 
     my @button_params = ( exists $p{buttons} )
-    ? Gtk2Ext::Info->instance->dialog_button_params_for_buttons
-    (
-        $p{buttons}
-    )
+    ? Gtk2Ext::Info->instance->dialog_button_params_for_buttons( delete $p{buttons} )
     : Gtk2Ext::Info->instance->default_dialog_button_params;
 
     my $d = Gtk2::Dialog->new
@@ -178,9 +186,14 @@ sub add_menu
 {   
     my ($self, %p) = @_;
 
-    $p{child} = $self->create_menu(%p)->{widget};
+    my $menu = $self->create_menu(%p);
 
-    return $self->add_or_pack_child(%p);
+    $p{child} = $menu->{widget};
+
+    $self->add_or_pack_child(%p)
+        or return;
+
+    return $menu;
 }
 
 # SW
@@ -246,8 +259,12 @@ sub create_frame
 {
     my ($self, %p) = @_;
 
-    my $frame = Gtk2::Frame->new( $p{text} || '' );
-    $frame->set_shadow_type( $p{shadow} || 'etched_in' );
+    my $text = delete $p{text};
+    my $shadow = delete $p{shadow} || 'etched_in'; 
+
+    my $frame = Gtk2::Frame->new();
+    $frame->set_label($text) if $text;
+    $frame->set_shadow_type($shadow);
     $frame->show;
 
     return $frame;
@@ -267,22 +284,27 @@ sub create_box
 {
     my ($self, %p) = @_;
 
-    $p{type} = 'v' unless exists $p{type};
+    my $type = uc(delete $p{type} || 'V');
 
     Finfo::Validate->validate
     (
         attr => 'type of box',
-        value => $p{type},
+        value => $type,
         type => 'in_list',
-        options => [qw/ V v H h /],
+        options => [qw/ V H /],
         err_cb => $self,
     );
 
-    my $pkg = 'Gtk2::' . uc($p{type}) . 'Box';
-    my $box = $pkg->new( $p{homogen} || 0, $p{spacing} || 0);
-    $box->set_border_width( $p{border} || 0 );
+    my $pkg = 'Gtk2::' . $type . 'Box';
+    my $homogen = delete $p{homogen} || 0;
+    my $spacing = delete $p{spacing} || 0;
+    my $box = $pkg->new($homogen, $spacing);
+    $self->_set_general_container_properties($box, \%p)
+        or return;
     $box->show;
 
+    # $self->utils->check_for_unknown_params(%p);
+    
     return $box;
 }
 
@@ -299,22 +321,25 @@ sub create_bbox
 {
     my ($self, %p) = @_;
 
-    $p{type} = 'v' unless exists $p{type};
+    my $type = uc(delete $p{type} || 'V' );
     
     Finfo::Validate->validate
     (
         attr => 'type of bbox',
-        value => $p{type},
+        value => $type,
         type => 'in_list',
-        options => [qw/ V v H h /],
+        options => [qw/ V H /],
         err_cb => $self,
     );
 
-    my $pkg = 'Gtk2::' . uc($p{type}) . 'ButtonBox';
+    my $pkg = 'Gtk2::' . $type . 'ButtonBox';
     my $box = $pkg->new();
-    $box->set_layout_default( $p{layout} || 'start' );
-    $box->set_spacing_default( $p{spacing} || 10 );
-    
+    $self->_set_general_container_properties($box, \%p)
+        or return;
+    my $layout = delete $p{layout} || 'start';
+    $box->set_layout_default($layout);
+    my $spacing = ( exists $p{spacing} ) ? delete $p{spacing} : 10;
+    $box->set_spacing_default($spacing);
     $box->show;
 
     return $box;
@@ -976,7 +1001,7 @@ sub create_slist
     
     $self->add_color_column_to_slist if $add_color;
 
-    my $slist = Gtk2::SimpleList->new(@$columns);
+    my $slist = Gtk2::Ex::Simple::List->new(@$columns);
     $slist->get_selection->set_mode($sel_mode);
     @{ $slist->{data} } = @$data if defined $data;
 
