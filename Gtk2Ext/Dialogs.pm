@@ -5,10 +5,11 @@ use warnings;
 
 use base 'Finfo::Singleton';
 
+require Cwd;
+use Data::Dumper;
 use Gtk2Ext::Info;
 use Gtk2Ext::PackingFactory;
 use Gtk2Ext::Utils;
-use Data::Dumper;
 
 sub title
 {
@@ -527,7 +528,6 @@ sub ecrate_dialog
     {
         my $response = $dialog->run;
 
-        $self->info_msg($response);
         if ($response eq 'ok' )
         {
             my ($values, @errors);
@@ -568,12 +568,12 @@ sub file_dialog
     my ($self, %p) = @_;
 
     my $dir = delete $p{dir};
+    my $pwd = Cwd::getcwd();
+    chdir $dir if defined $dir and -d $dir;
 
     my $type = (defined $p{type} and $p{type} =~ /exists|new|dir/)
     ? delete $p{type}
     : 'new';
-
-    chdir $dir if defined $dir and -d $dir;
 
     my %titles = 
     (
@@ -582,8 +582,17 @@ sub file_dialog
         'new' => 'Please Eneter a New File',
     );
     
+    my $title = ( exists $p{title} )
+    ? delete $p{title}
+    : $titles{$type};
+
     my $fs = Gtk2::FileSelection->new($titles{$type});
 
+    my $pattern = delete $p{pattern};
+    $fs->complete($p{pattern}) if $pattern;
+
+    $self->fatal_msg("Unknown params sent to create_window:" . join(', ', keys %p)) if %p;
+    
     while (1)
     {
         my $response = $fs->run;
@@ -599,12 +608,14 @@ sub file_dialog
                     if ($self->question_dialog("File exists, overwrite?") eq "yes")
                     {
                         $fs->destroy;
+                        chdir $pwd;
                         return $file;
                     }
                 }
                 elsif (!-e $file and !-d $file)
                 {
                     $fs->destroy;
+                    chdir $pwd;
                     return $file;
                 }
                 else
@@ -617,6 +628,7 @@ sub file_dialog
                 if (-e $file and !-d $file)
                 {
                     $fs->destroy;
+                    chdir $pwd;
                     return $file;
                 }
                 else
@@ -629,6 +641,7 @@ sub file_dialog
                 if (-d $file)
                 {
                     $fs->destroy;
+                    chdir $pwd;
                     return $file;
                 }
                 else
@@ -644,6 +657,7 @@ sub file_dialog
         else
         {
             $fs->destroy;
+            chdir $pwd;
             return;
         }
     }
