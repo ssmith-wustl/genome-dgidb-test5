@@ -38,7 +38,7 @@ our $VERSION = '0.2';
 use App::Path;
 
 # set the path to installed scripts
-if ($^O eq 'MSWin32')
+if ($^O eq 'MSWin32' || $^O eq 'cygwin')
 {
     App::Path->prefix('//winsvr.gsc.wustl.edu/gsc/scripts');
 }
@@ -85,7 +85,7 @@ sub get_path
         # alter prefix
         $old_prefix = $class->prefix;
         my $new_prefix = $old_prefix;
-        if ($^O eq 'MSWin32')
+        if ($^O eq 'MSWin32' || $^O eq 'cygwin')
         {
             # remove /gsc/scripts
             $new_prefix =~ s,/gsc/scripts,,;

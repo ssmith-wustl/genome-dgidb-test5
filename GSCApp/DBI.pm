@@ -112,7 +112,7 @@ sub employee_id
         return;
     }
 
-    return if $^O eq 'MSWin32';
+    return if ($^O eq 'MSWin32' || $^O eq 'cygwin');
 
     # get login id
     my $login = getpwuid($uid);

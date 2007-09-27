@@ -49,7 +49,7 @@ use App::Mail;
 # configure App::Mail
 App::Mail->config
 (
-    mqueue => (($^O eq 'MSWin32')
+    mqueue => (($^O eq 'MSWin32' || $^O eq 'cygwin')
                ? '//winsvr.gsc.wustl.edu/var/spool/mqueue'
                : '/gsc/var/spool/mqueue'),
     ext => '.mailhash',
@@ -164,7 +164,7 @@ sub mail
         $host = 'gschost';
     }
     my ($login, $name);
-    if ($^O eq 'MSWin32')
+    if ($^O eq 'MSWin32' || $^O eq 'cygwin')
     {
         $login = 'winguest';
         $name = 'Generic Windows User';

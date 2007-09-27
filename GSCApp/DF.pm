@@ -7,7 +7,7 @@ our $ERROR_MESSAGE;
 
 sub disk_usage_file {
 
-    if ($^O eq 'MSWin32') {
+    if ($^O eq 'MSWin32' || $^O eq 'cygwin') {
         return q(\\\\winsvr.gsc.wustl.edu\var\cache\disk-usage\df.out);
     } else {
         return q(/gsc/var/cache/disk-usage/df.out);

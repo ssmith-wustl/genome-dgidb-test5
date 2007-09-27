@@ -1306,7 +1306,7 @@ sub spool
 
         # if printing through lpr, first we'll write the data to
         # a temporary file, then use lpr to print that file
-        my $tmpdir = ($^O eq 'MSWin32') ? '/temp' : $ENV{'TMPDIR'} || '/tmp';
+        my $tmpdir = ($^O eq 'MSWin32' || $^O eq 'cygwin') ? '/temp' : $ENV{'TMPDIR'} || '/tmp';
         $printer = File::Temp->new
         (
             DIR => $tmpdir,

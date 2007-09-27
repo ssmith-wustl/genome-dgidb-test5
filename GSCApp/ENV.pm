@@ -69,7 +69,7 @@ sub fix_env
     my $class = shift;
 
     # do not change anything under windows
-    return 1 if $^O eq 'MSWin32';
+    return 1 if ($^O eq 'MSWin32' || $^O eq 'cygwin');
 
     # save original environment in accessible variable
     our %OENV = %ENV;
