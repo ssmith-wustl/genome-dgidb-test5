@@ -547,7 +547,7 @@ put stuff here...
 
 
 sub log_dir{
-    if($^O eq 'MSWin32'){
+    if($^O eq 'MSWin32' || $^O eq 'cygwin'){
         return dir('//winsvr/var/log/confirm_scheduled_pse');
     }
     return dir('/gsc/var/log/confirm_scheduled_pse');
@@ -1142,7 +1142,7 @@ sub confirm_scheduled_pse {
     my $now = App::Time->now;
     my ($today) = split( / /, $now );
     $now =~ s/\s+/_/g;
-    if ( $^O eq 'MSWin32' ) {
+    if ( $^O eq 'MSWin32' || $^O eq 'cygwin' ) {
         $now =~ tr/:/_/;    # cannot put ":" in filenames in windows
     }
     my $logfile = $jobs_dir->file(
@@ -1153,7 +1153,7 @@ sub confirm_scheduled_pse {
     # open log file
     my $log_fh = IO::File->new or die 'IO::File->new failed';
     if ($tee_stdout) {
-        if ( $^O eq 'MSWin32' ) {
+        if ( $^O eq 'MSWin32' || $^O eq 'cygwin' ) {
             die 'cannot tee-stdout on windows';
         }
         $log_fh->open("| tee $logfile")
@@ -1241,7 +1241,7 @@ sub confirm_scheduled_pse {
     }
     else {
         if ($is_to_make_job or $confirm_unscheduled_pse) {
-            my $jobid = ($^O eq 'MSWin32' ? 'localhost' : getpwuid($<))
+            my $jobid = (($^O eq 'MSWin32' || $^O eq 'cygwin') ? 'localhost' : getpwuid($<))
                 ."@".$hostname . ".". $$;
             
             $pse->status_message("Generating a to make job.");
@@ -1589,7 +1589,7 @@ sub deal_with_previous_failures {
     (defined $pse_id) or croak 'must pass a pse_id';
 
     # TODO: figure out how to do gzip on windows
-    return if ( $^O eq 'MSWin32' );
+    return if ( $^O eq 'MSWin32' || $^O eq 'cygwin' );
 
     # find any previous failures
     my @previous_failures = $class->find_previous_failures($pse_id)
