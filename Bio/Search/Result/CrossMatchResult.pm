@@ -17,7 +17,7 @@ Bio::Search::Result::CrossMatchResult - CrossMatch-specific subclass of Bio::Sea
 
 =head1 SYNOPSIS
 
-    # Working with iterations (BLAST results)
+    # Working with iterations (CrossMatch results)
 
     $result->next_iteration();
     $result->num_iterations();
@@ -37,8 +37,8 @@ Bio::Search::Result::CrossMatchResult - CrossMatch-specific subclass of Bio::Sea
 =head1 DESCRIPTION
 
 This object is a subclass of Bio::Search::Result::GenericResult
-and provides some operations that facilitate working with BLAST
-and BLAST results.
+and provides some operations that facilitate working with CrossMatch
+and CrossMatch results.
 
 For general information about working with Results, see 
 Bio::Search::Result::GenericResult.
@@ -100,7 +100,7 @@ use Bio::Search::Result::GenericResult;
            The following parameters are specific to CrossMatchResult:
              -iterations  => array ref of Bio::Search::Iteration::IterationI objects
              -inclusion_threshold => e-value threshold for inclusion in the
-                                     BLAST score matrix model (blastpgp)
+                                     CrossMatch score matrix model (blastpgp)
 
 =cut
 
@@ -139,7 +139,7 @@ sub new {
 =head2 hits
 
 This method overrides L<Bio::Search::Result::GenericResult::hits> to take 
-into account the possibility of multiple iterations, as occurs in BLAST reports.
+into account the possibility of multiple iterations, as occurs in CrossMatch reports.
 
 If there are multiple iterations, all 'new' hits for all iterations are returned.
 These are the hits that did not occur in a previous iteration.
@@ -163,7 +163,7 @@ sub hits {
 =head2 next_hit
 
 This method overrides L<Bio::Search::Result::GenericResult::next_hit> to take 
-into account the possibility of multiple iterations, as occurs in BLAST reports.
+into account the possibility of multiple iterations, as occurs in CrossMatch reports.
 
 If there are multiple iterations, calling next_hit() traverses the
 all of the hits, old and new, for each iteration, calling next_hit() on each iteration. 
@@ -197,7 +197,7 @@ sub next_hit {
 =head2 num_hits
 
 This method overrides L<Bio::Search::Result::GenericResult::num_hits> to take 
-into account the possibility of multiple iterations, as occurs in BLAST reports.
+into account the possibility of multiple iterations, as occurs in CrossMatch reports.
 
 If there are multiple iterations, calling num_hits() returns the number of
 'new' hits for each iteration. These are the hits that did not occur
@@ -266,7 +266,7 @@ sub next_iteration {
 
  Usage     : $iteration = $blast->iteration( $number );
  Purpose   : Get an IterationI object for the specified iteration
-             in the search result (BLAST).
+             in the search result (CrossMatch).
  Returns   : Bio::Search::Iteration::IterationI object
  Throws    : Bio::Root::NoSuchThing exception if $number is not within 
              range of the number of iterations in this report.
@@ -289,7 +289,7 @@ sub iteration {
 =head2 num_iterations
 
  Usage     : $num_iterations = $blast->num_iterations; 
- Purpose   : Get the number of iterations in the search result (BLAST).
+ Purpose   : Get the number of iterations in the search result (CrossMatch).
  Returns   : Total number of iterations in the report
  Argument  : none (read-only)
 
@@ -336,27 +336,6 @@ sub iterations {
     return @its;
 }
 
-=head2 psiblast
-
- Usage     : if( $blast->psiblast ) { ... }
- Purpose   : Set/get a boolean indicator whether or not the report 
-             is a BLAST report.
- Returns   : 1 if BLAST, undef if not.
- Argument  : 1 (when setting)
-
-=cut
-
-#----------------
-sub psiblast {
-#----------------
-    my ($self, $val ) = @_;
-    if( $val ) {
-        $self->{'_psiblast'} = 1;
-    }
-    return $self->{'_psiblast'};
-}
-
-
 =head2 no_hits_found
 
  Usage     : $nohits = $blast->no_hits_found( $iteration_number );
@@ -371,8 +350,8 @@ sub psiblast {
              for hitless reports generated when filtering.
 
  Returns   : Boolean
- Argument  : (optional) integer indicating the iteration number (BLAST)
-             If iteration number is not specified and this is a BLAST result,
+ Argument  : (optional) integer indicating the iteration number (CrossMatch)
+             If iteration number is not specified and this is a CrossMatch result,
              then this method will return true only if all iterations had
              no hits found.
 
@@ -416,7 +395,7 @@ sub no_hits_found {
  Purpose   : Set boolean indicator indicating whether or not any hits
              were present in the report.
  Returns   : n/a
- Argument  : (optional) integer indicating the iteration number (BLAST)
+ Argument  : (optional) integer indicating the iteration number (CrossMatch)
 
 =cut
 
@@ -464,10 +443,10 @@ sub rewind {
 
  Title   : inclusion_threshold
  Usage   : my $incl_thresh = $result->inclusion_threshold; (read-only)
- Function: Gets the e-value threshold for inclusion in the BLAST 
+ Function: Gets the e-value threshold for inclusion in the CrossMatch 
            score matrix model (blastpgp) that was used for generating the report
            being parsed.
- Returns : number (real) or undef if not a BLAST report.
+ Returns : number (real) or undef if not a CrossMatch report.
  Args    : none
 
 =cut
