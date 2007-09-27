@@ -1,3 +1,84 @@
+# $Id$
+#
+# BioPerl module for Bio::SearchIO::cross_match
+#
+# Cared for by Shin Leong <sleong@watson.wustl.edu>
+#
+# Copyright Shin Leong
+#
+# You may distribute this module under the same terms as perl itself
+
+# POD documentation - main docs before the code
+
+=head1 NAME
+
+Bio::SearchIO::cross_match - CrossMatch-specific subclass of Bio::SearchIO
+
+=head1 SYNOPSIS
+
+    # Working with iterations (CrossMatch results)
+    my $searchIO = new Bio::SearchIO( -format => 'cross_match',
+                            -file   => "$file.screen.out" )
+    while(my $r = $searchIO->next_result) {
+      while(my $hit = $r->next_hit) {
+	while(my $hsp = $hit->next_hsp) {
+           #Do the processing here.
+        }
+      }
+    }
+# See Bio::SearchIO for information about working with Results.
+
+# See L<Bio::SearchIO>
+# for details about working with Bio::SearchIO.
+
+
+=head1 DESCRIPTION
+
+This object is a subclass of Bio::SearchIO
+and provides some operations that facilitate working with CrossMatch
+and CrossMatch results.
+
+For general information about working with Results, see 
+L<Bio::Search::Result::GenericResult>.
+
+=head1 FEEDBACK
+
+=head2 Mailing Lists
+
+User feedback is an integral part of the evolution of this and other
+Bioperl modules. Send your comments and suggestions preferably to
+the Bioperl mailing list.  Your participation is much appreciated.
+
+  bioperl-l@bioperl.org              - General discussion
+  http://bioperl.org/MailList.shtml  - About the mailing lists
+
+=head2 Reporting Bugs
+
+Report bugs to the Bioperl bug tracking system to help us keep track
+of the bugs and their resolution. Bug reports can be submitted via
+email or the web:
+
+  bioperl-bugs@bioperl.org
+  http://bugzilla.bioperl.org/
+
+=head1 AUTHOR - Shin Leong
+
+Email sleong@watson.wustl.edu
+
+=head1 CONTRIBUTORS
+
+Additional contributors names and emails here
+
+=head1 APPENDIX
+
+The rest of the documentation details each of the object methods.
+Internal methods are usually preceded with a _
+
+=cut
+
+
+# Let the code begin...
+
 package Bio::SearchIO::cross_match;
 use Bio::Search::Result::CrossMatchResult;
 use Bio::SearchIO;
@@ -64,6 +145,14 @@ sub next_result {
     }
   }
 }
+
+=head2 _alignment
+
+ Title   : _alignment
+ Usage   : private
+
+=cut
+
 sub _alignment {
   my $self = shift;
 =cut
@@ -116,6 +205,14 @@ C H_EO-aaa01PCR02     43 TATTCTCTGAAGGCAGTTACATAGGGTTACAGAGG 9
   }
   return @data;
 }
+
+=head2 _parse
+
+ Title   : _parse
+ Usage   : private
+
+=cut
+
 sub _parse {
   my $self = shift;
   my $line = shift;
@@ -185,7 +282,7 @@ sub _parse {
 
  Title   : result_count
  Usage   : $num = $stream->result_count;
- Function: Gets the number of Blast results that have been parsed.
+ Function: Gets the number of CrossMatch results that have been parsed.
  Returns : integer
  Args    : none
  Throws  : none
