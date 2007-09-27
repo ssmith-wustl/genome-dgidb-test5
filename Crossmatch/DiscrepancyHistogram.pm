@@ -1,4 +1,4 @@
-package Crossmatch::DiscrepancyHistogram;
+package Alignment::Crossmatch::DiscrepancyHistogram;
 
 use Finfo::Std;
 
@@ -29,7 +29,7 @@ sub type
 
 =head1 Name
 
-Crossmatch::DiscrepancyHistogram
+Alignment::Crossmatch::DiscrepancyHistogram
 
 =head1 Description
 

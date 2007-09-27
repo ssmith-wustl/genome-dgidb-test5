@@ -1,12 +1,12 @@
-package Crossmatch::Reader;
+package Alignment::Crossmatch::Reader;
 
 use strict;
 use warnings;
 
 use base 'Finfo::Reader';
 
-use Crossmatch::Alignment;
-use Crossmatch::DiscrepancyReader;
+use Alignment::Crossmatch;
+use Alignment::Crossmatch::DiscrepancyReader;
 use Data::Dumper;
 use IO::String;
 
@@ -14,7 +14,7 @@ my %header :name(_header:p) :type(string);
 
 sub _return_class
 {
-    return 'Crossmatch::Alignment';
+    return 'Alignment::Crossmatch';
 }
 
 sub header
@@ -76,7 +76,7 @@ sub _next
     if ( $num_of_discreps )
     {
         $discrep_io->seek(0, 0);
-        my $discrep_reader = Crossmatch::DiscrepancyReader->new
+        my $discrep_reader = Alignment::Crossmatch::DiscrepancyReader->new
         (
             io => $discrep_io,
             return_as_objs => $self->return_as_objs,
@@ -159,7 +159,7 @@ sub _create_alignment_ref_from_line : PRIVATE
 
 =head1 Name
 
- Crossmatch::Reader
+ Alignment::Crossmatch::Reader
 
 =head1 Description
 
@@ -167,12 +167,12 @@ sub _create_alignment_ref_from_line : PRIVATE
 
 =head1 Usage
 
- use Crossmatch::Reader
+ use Alignment::Crossmatch::Reader
 
- my $reader = Crossmatch::Reader->new
+ my $reader = Alignment::Crossmatch::Reader->new
  (
      io => 'cm.out', # required - file or IO::* object
-     return as_objedcts => 1, # optional - return alignments as hashrefs or Crossmatch::Alignment objects
+     return as_objedcts => 1, # optional - return alignments as hashrefs or Alignment::Crossmatch::Alignment objects
  )
     or die;
  

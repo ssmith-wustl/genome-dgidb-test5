@@ -1,4 +1,4 @@
-package Crossmatch::DiscrepancyReader;
+package Alignment::Crossmatch::DiscrepancyReader;
 
 use strict;
 use warnings;
@@ -189,6 +189,8 @@ Parses a discrepancy string from a crossmatch output.  Mainly a helper object fo
 =head1 See Also
 
 =over
+
+=item cross_match
 
 =item Alignment::Crossmatch::Discrepancy
 

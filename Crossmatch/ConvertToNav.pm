@@ -1,4 +1,4 @@
-package Crossmatch::ConvertToNav;
+package Alignment::Crossmatch::ConvertToNav;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Finishing::Assembly::Consed::Navigation;
 # Get reader and writer clo from their classes
 my %reader :name(reader:r)
     :type(inherits_from)
-    :options([qw/ Crossmatch::Reader /]);
+    :options([qw/ Alignment::Crossmatch::Reader /]);
 my %writer :name(writer:r)
     :type(inherits_from)
     :options([qw/ Finishing::Assembly::Consed::Navigation::Writer /]);
@@ -228,7 +228,7 @@ sub _create_navigations_for_alignments_discrepancies_reverse : PRIVATE
 
 =head1 Name
 
-Crossmatch::ConvertToNav
+Alignment::Crossmatch::ConvertToNav
 
 =head1 Synopsis
 
@@ -236,11 +236,11 @@ Converts a crossmatch alignemtn to a consed navigation object.
 
 =head1 Usage
 
- use Crossmatch::ConvertToNav;
- use Crossmatch::Reader;
+ use Alignment::Crossmatch::ConvertToNav;
+ use Alignment::Crossmatch::Reader;
  use Finishing::Assembly::Consed::Navigation::Writer;
 
- my $reader = Crossmatch::Reader->new
+ my $reader = Alignment::Crossmatch::Reader->new
  (
      io => 'cm.out',
  )
@@ -252,7 +252,7 @@ Converts a crossmatch alignemtn to a consed navigation object.
  )
     or die;
 
- my $converter = Crossmatch::ConvertToNav->new
+ my $converter = Alignment::Crossmatch::ConvertToNav->new
  (
     # REQUIRED
     reader => $reader,
@@ -289,7 +289,7 @@ Converts a crossmatch alignemtn to a consed navigation object.
 
 =over
 
-=item Crossmatch::Reader
+=item Alignment::Crossmatch::Reader
 
 =item Finishing::Assembly::Consed::Navigation::Writer
 

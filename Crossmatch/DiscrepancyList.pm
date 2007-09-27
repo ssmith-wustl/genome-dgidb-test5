@@ -1,4 +1,4 @@
-package Crossmatch::DiscrepancyList;
+package Alignment::Crossmatch::DiscrepancyList;
 
 use Finfo::Std;
 
@@ -25,7 +25,7 @@ Alignment::Crossmatch::DiscrepancyList
 =head1 Description
 
 An object representing an instance of a alignment discrepancy list.
-These objects are associated with a GSC::Alignment::Crossmatch object
+These objects are associated with an Alignment::Crossmatch object
 and can be accessed by
 
 Alignment::Crossmatch->discrepancies.

@@ -7,13 +7,13 @@ use lib '/gscuser/ebelter/dev/svn/perl_modules/';
 
 use Test::Class;
 
-Test::Class->runtests('Crossmatch::Test');
+Test::Class->runtests('Alignment::Crossmatch::Test');
 
 exit 0;
 
 #######################################################
 
-package Crossmatch::Test;
+package Alignment::Crossmatch::Test;
 
 use strict;
 use warnings;
@@ -21,8 +21,8 @@ use warnings;
 use base 'Test::Class';
 
 use Data::Dumper;
-use Crossmatch::Reader;
-use Crossmatch::ConvertToNav;
+use Alignment::Crossmatch::Reader;
+use Alignment::Crossmatch::ConvertToNav;
 use Finishing::Assembly::Consed::Navigation::Writer;
 use IO::String;
 use Test::More;
@@ -31,7 +31,7 @@ sub test01_read_alignments : Tests
 {
     my $self = shift;
 
-    my $class = 'Crossmatch::Reader';
+    my $class = 'Alignment::Crossmatch::Reader';
     print "Testing $class\n";
     
     my $reader = $class->new
@@ -64,7 +64,7 @@ sub test02_convert_alignments_to_navs : Tests
 {
     my $self = shift;
     
-    my $class = 'Crossmatch::ConvertToNav';
+    my $class = 'Alignment::Crossmatch::ConvertToNav';
     
     print "Testing $class\n";
 
@@ -72,7 +72,7 @@ sub test02_convert_alignments_to_navs : Tests
 
     my $converter = $class->new
     (
-        reader => Crossmatch::Reader->new(io => 'cm.out', return_as_objs => 1,),
+        reader => Alignment::Crossmatch::Reader->new(io => 'cm.out', return_as_objs => 1,),
         writer => Finishing::Assembly::Consed::Navigation::Writer->new(io => 'cm.nav'),
         discreps => 1,
     );
