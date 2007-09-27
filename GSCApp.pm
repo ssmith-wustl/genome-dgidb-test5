@@ -56,7 +56,7 @@ use the Oracle drivers on the application server.
 =cut
 
 BEGIN {
-    if ($^O eq 'MSWin32') {
+    if ($^O eq 'MSWin32' || $^O eq 'cygwin') {
         $ENV{ORACLE_HOME} = '\\\\winsvr.gsc.wustl.edu\\gsc\\pkg\\oracle\\installed';
         $ENV{PATH} = '\\\\winsvr.gsc.wustl.edu\\gsc\\pkg\\oracle\\installed\\BIN;' . $ENV{PATH};
     }
@@ -481,7 +481,7 @@ update the former.
 
 =cut
 
-if ($^O eq 'MSWin32')
+if ($^O eq 'MSWin32' || $^O eq 'cygwin')
 {
     App::DB->network_cache_base_path("//winsvr.gsc.wustl.edu/var/cache/app_object_cache_v3");
     App::DB->local_cache_base_path("c:/temp/app_object_cache_v3");
@@ -669,7 +669,7 @@ for my $property_value (
 }    
 
 # on unix verify gtkrc is set properly
-if ($^O ne 'MSWin32') {
+if ($^O ne 'MSWin32' && $^O ne 'cygwin') {
     my ($login, $real_name) = (getpwuid($<))[0, 6];
 
     # only do this for logins with /gscuser (e.g. do not run on touchscreen)
