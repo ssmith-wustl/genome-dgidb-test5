@@ -31,6 +31,9 @@ sub name {
     my $path = $self->full_path;
 
     my($name) = ($path =~ m/.*\/(\S*?)\/[Dd]ata/);
+    if (!$name) {
+	$name = "run_" . $self->id;
+    }
     return $name;
 }
 
