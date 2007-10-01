@@ -90,7 +90,7 @@ sub lock_resource {
     my $ret;
     my $resource_id = $self->data_directory . "/" . $args{'resource_id'} . ".lock";
     my $block_sleep = $args{block_sleep} || 10;
-    my $max_try = $args{max_try} || 3600;
+    my $max_try = $args{max_try} || 7200;
 
     while(! ($ret = mkdir $resource_id)) {
         return undef unless $max_try--;
