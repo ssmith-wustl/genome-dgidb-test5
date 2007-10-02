@@ -7,6 +7,7 @@ use UR;
 use Command;
 use MG::Transform::Coordinates::TranscriptToGenomic;
 use MG::IO::GenotypeSubmission;
+use File::Temp;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
@@ -19,6 +20,7 @@ UR::Object::Class->define(
         'basename'   => { type => 'String',  doc => "output genotype submission file prefix basename"},
         'coordinates'   => { type => 'String',  doc => "coordinate translation file", is_optional => 1},
         'offset'   => { type => 'String',  doc => "coordinate offset to apply--default is zero", is_optional => 1},
+        'record'   => { type => 'Boolean',  doc => "load a record at a time--default is all", is_optional => 1},
         'indel'   => { type => 'Boolean',  doc => "try to get indel's also (not implemented yet)", is_optional => 1},
         'version'   => { type => 'String',  doc => "maq software version--default is ''", is_optional => 1},
         'qcutoff'   => { type => 'String',  doc => "only process if quality score is greater than this value--default value is 0", is_optional => 1},
@@ -88,12 +90,13 @@ sub execute {
     my $self = shift;
 		
     my($mapfile, $cnsfile, $refbfa, $sample, $basename, $coord_file,
-       $indel, $version, $build, $qcutoff, $coord_offset) =
+       $indel, $version, $build, $qcutoff, $coord_offset, $record) =
 				 ($self->mapfile, $self->cnsfile, $self->refbfa, $self->sample, $self->basename,
-					$self->coordinates, $self->indel, $self->version, $self->build, $self->qcutoff, $self->offset);
+					$self->coordinates, $self->indel, $self->version, $self->build, $self->qcutoff, $self->offset, $self->record);
     return unless ( defined($mapfile) && defined($cnsfile) && defined($refbfa) &&
 										defined($sample) && defined($basename)
 									);
+		$record ||= 0;
     $version ||= '';
     $build ||= '36';
     $qcutoff ||= 0;
@@ -119,13 +122,19 @@ sub execute {
     }
     my %variation;
 		if ($verbose) {
-			print "Processing $cnsfile for SNPs\n";
+			if ($record) {
+				print "Record based processing $cnsfile for SNPs\n";
+			} else {
+				print "Processing $cnsfile for SNPs\n";
+			}
 		}
+		my $tmp_pos_list_fh = File::Temp->new(DIR => $ENV{TMP});
     while(<SNP>) {
 			chomp;
 			my ($id, $start, $ref_sequence, $iub_sequence, $quality_score, $depth, $avg_hits, $high_quality, $unknown) = split("\t");
 			next if ($quality_score < $qcutoff );
 			my $key = "$id\t$start";
+			print $tmp_pos_list_fh "$id\t$start\n";
 			my $genotype = $IUBcode{$iub_sequence};
 			my $cns_sequence = substr($genotype,0,1);
 			my $var_sequence = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
@@ -152,7 +161,11 @@ sub execute {
 			$variation{$key}{unknown} = $unknown;
     }
     close(SNP);
-    my $pileup_cmd = "maq pileup -v $refbfa $mapfile |";
+
+		my $tmp_pos_list = $tmp_pos_list_fh->filename();
+		$tmp_pos_list_fh->close();
+
+		my $pileup_cmd = "maq pileup -v -l $tmp_pos_list $refbfa $mapfile |";
     unless (open(PILEUP,$pileup_cmd)) {
 			$self->error_message("Unable to run input command: $pileup_cmd");
 			return;
@@ -269,7 +282,11 @@ sub execute {
     undef %variation;
     my $fh;
 		if ($verbose) {
-			print "Writing genotype submission file\n";
+			if ($record) {
+				print "Writing genotype submission file and loading database\n";
+			} else {
+				print "Writing genotype submission file\n";
+			}
 		}
 		$fh = Genome::Model::Command::Write::GenotypeSubmission::Open($basename);
 		unless (defined($fh)) {
@@ -340,6 +357,20 @@ sub execute {
 																															$sample_id, 
 																															$genotype_allele1, $genotype_allele2,
 																															\@scores, $number);
+					if ($record) {
+						MG::IO::GenotypeSubmission::LoadDatabase($mutation,
+																										 check => $check,
+																										 rccheck => $rccheck,
+																										 verbose => $verbose,
+																										 source => $source,
+																										 tech_type => $techtype,
+																										 mapping_reference => $mappingreference,
+																										 run_identifier => $runidentifier
+																										);
+					}
+				}
+			  if ($record) {
+					$mutation = {};
 				}
 				$number += 1;
 			}
