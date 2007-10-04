@@ -8,6 +8,8 @@ use Command;
 use Genome::Model;
 use File::Path;
 use Data::Dumper;
+use Date::Calc;
+use File::stat;
 
 use App::Lock;
 
@@ -115,13 +117,13 @@ sub execute {
 
     my $model_dir = $model->data_directory;
     
-    my $accumulated_alignments_file = $model_dir . "/alignments";
+    my $accumulated_alignments_file = $model_dir . $self->_resolve_accumulated_alignments_file();
     my $accum_tmp = $accumulated_alignments_file . "." . $$;
     
     # Only one process is allwoed to manipulate the accumulated alignment file for the model
     # at a time
-    unless ($model->lock_resource(resource_id=>'alignments')) {
-        $self->error_message("Can't get lock for accumulated alignment");
+    unless ($model->lock_resource(resource_id=>$accumulated_alignments_file)) {
+        $self->error_message("Can't get lock for accumulated alignment $accumulated_alignments_file");
         return undef;
     }
 
@@ -148,6 +150,23 @@ sub execute {
     return 1;
 }
 
+#
+#
+sub _resolve_accumulated_alignments_file {
+    my $self = shift;
+    my $model = Genome::Model->get(id => $self->model_id);
+    
+    my $model_dir = $model->data_directory;
+    my $accumulated_alignments_filename = sprintf("/alignments_to_merge_%s_%s_%s-", Date::Calc::Today);
+    
+    my $iter = 1;
+    
+    while (-e "$model_dir/$accumulated_alignments_filename.$iter" && stat("$model_dir/$accumulated_alignments_filename.$iter")->size > 5000000000)) {
+        $iter++;
+    }
+    
+    return $accumulated_alignments_filename.$iter;
+}
 
 
 1;
