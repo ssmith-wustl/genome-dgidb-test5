@@ -161,7 +161,7 @@ sub _resolve_accumulated_alignments_file {
     
     my $iter = 1;
     
-    while (-e "$model_dir/$accumulated_alignments_filename.$iter" && stat("$model_dir/$accumulated_alignments_filename.$iter")->size > 5000000000)) {
+    while (-e "$model_dir/$accumulated_alignments_filename.$iter" && stat("$model_dir/$accumulated_alignments_filename.$iter")->size > 5000000000) {
         $iter++;
     }
     
