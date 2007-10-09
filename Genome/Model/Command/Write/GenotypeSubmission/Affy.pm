@@ -14,7 +14,7 @@ UR::Object::Class->define(
     is => 'Command',
     has => [                                # Specify the command's properties (parameters) <--- 
         'normsample'   => { type => 'String',  doc => "normal sample name", is_optional => 1},
-        'tumorsample'   => { type => 'String',  doc => "tumor sample name"},
+        'sample'   => { type => 'String',  doc => "sample name"},
         'input'   => { type => 'String',  doc => "project alignment (input) file"},
         'absnp'   => { type => 'String',  doc => "ab snp file (input) file", is_optional => 1},
         'basename'   => { type => 'String',  doc => "output genotype submission file prefix basename"},
@@ -69,11 +69,11 @@ EOS
 sub execute {
 	my $self = shift;
 	
-	my($input, $norm_sample_id, $tumor_sample_id, $absnp,
+	my($input, $norm_sample_id, $sample_id, $absnp,
 		 $basename, $version, $build, $coord_offset) = 
-			 ($self->input, $self->normsample, $self->tumorsample, $self->absnp,
+			 ($self->input, $self->normsample, $self->sample, $self->absnp,
 				$self->basename, $self->version, $self->build, $self->offset);
-	return unless ( defined($input) && defined($tumor_sample_id) && defined($basename)
+	return unless ( defined($input) && defined($sample_id) && defined($basename)
 								);
 	$version ||= '';
 	$build ||= '36';
@@ -163,12 +163,12 @@ sub execute {
 	    $allele2 = $ab{$abkey2};
 	    if (defined($allele1) && defined($allele2)) {
 				Genome::Model::Command::Write::GenotypeSubmission::Write($fh,$software,$build_id, $chromosome, $plus_minus, $position, $position,
-																																 $tumor_sample_id, $allele1, $allele2, [ $tumor_conf ]);
+																																 $sample_id, $allele1, $allele2, [ $tumor_conf ]);
 				if ($self->loaddb) {
 					$mutation = MG::IO::GenotypeSubmission::AddMutation($mutation,$software,$build_id,
 																															$chromosome, $plus_minus,
 																															"$position", "$position",
-																															$tumor_sample_id, 
+																															$sample_id, 
 																															$allele1, $allele2,
 																															[ $tumor_conf ], $number);
 				}
@@ -182,7 +182,7 @@ sub execute {
 			print "Processing $input\n";
 			print "Writing genotype submission file\n";
 		}
-		my $sample_temp = $tumor_sample_id;
+		my $sample_temp = $sample_id;
 		my ($sample_a, $sample_b) = split('-',$sample_temp);
 		$sample_b = sprintf "%05d",$sample_b;
 		my $sample_id = $sample_a . '-' . $sample_b;
