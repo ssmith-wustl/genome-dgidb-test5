@@ -102,4 +102,11 @@ sub lock_resource {
     return 1;
 }
 
+sub unlock_resource {
+    my ($self, %args) = @_;
+    
+    my $resource_id = $self->data_directory . "/" . $args{'resource_id'} . ".lock";
+    rmdir $resource_id;
+}
+
 1;

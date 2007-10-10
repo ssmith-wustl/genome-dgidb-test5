@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::UpdateGenotypeProbabilities::BayesDiploid;
+package Genome::Model::Command::PostprocessAlignments::UpdateGenotypeProbabilities::Mosaik;
 
 use strict;
 use warnings;
@@ -11,9 +11,9 @@ use Data::Dumper;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => 'Command',
+    is => 'Genome::Model::Event',
     has => [ 
-        model   => { is => 'String', is_optional => 0, doc => 'the genome model on which to operate' }
+        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
     ]
 );
 
@@ -24,7 +24,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model add-reads update-genotype-probabilities bayes-diploid --model-id 5 --run-id 10
+    genome-model add-reads update-genotype-probabilities mosaik --model-id 5 --run-id 10
 EOS
 }
 
