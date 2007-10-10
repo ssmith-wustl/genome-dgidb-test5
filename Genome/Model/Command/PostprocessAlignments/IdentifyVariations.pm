@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::IdentifyVariations;
+package Genome::Model::Command::PostprocessAlignments::IdentifyVariations;
 
 use strict;
 use warnings;
@@ -19,7 +19,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model add-reads identify-variations --model-id 5 --run-id 10
+    genome-model postprocess-alignments identify-variations --model-id 5 --run-id 10
 EOS
 }
 
