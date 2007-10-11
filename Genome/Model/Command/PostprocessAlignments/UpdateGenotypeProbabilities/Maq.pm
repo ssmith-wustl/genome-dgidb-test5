@@ -39,13 +39,6 @@ sub execute {
     my $model = Genome::Model->get(id => $self->model_id);
 
     my $model_dir = $model->data_directory;
-    my $working_dir = $self->resolve_run_directory;
-
-    # Make sure the output directory exists
-    unless (-d $working_dir) {
-        $self->error_message("working directory $working_dir does not exist, please run assign-run first");
-        return;
-    }
 
     my $accumulated_alignments_file = $model_dir . '/alignments';
     unless (-f $accumulated_alignments_file) {

@@ -48,6 +48,7 @@ sub execute {
     
     my $ref_seq_file =  $model->reference_sequence_path . "/bfa";
     
+    
     unless (-e $ref_seq_file) {
         $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
         return;
@@ -110,25 +111,28 @@ sub execute {
                                                          $ref_seq_file,
                                                          $bfq_file);
 	
-	print $maq_cmdline;
+	print "$maq_cmdline\n";
       
         system($maq_cmdline);
     }
 
     my $model_dir = $model->data_directory;
     
-    my $accumulated_alignments_file = $model_dir . $self->_resolve_accumulated_alignments_file();
+    my $accumulated_alignments_basename =  $self->_resolve_accumulated_alignments_file();
+    my $accumulated_alignments_file = $model_dir . "/" . $accumulated_alignments_basename;
     my $accum_tmp = $accumulated_alignments_file . "." . $$;
+
     
     # Only one process is allwoed to manipulate the accumulated alignment file for the model
     # at a time
-    unless ($model->lock_resource(resource_id=>$accumulated_alignments_file)) {
-        $self->error_message("Can't get lock for accumulated alignment $accumulated_alignments_file");
+    unless ($model->lock_resource(resource_id=>$accumulated_alignments_basename)) {
+        $self->error_message("Can't get lock for accumulated alignment $accumulated_alignments_basename");
         return undef;
     }
+    
 
     if (!-f $accumulated_alignments_file && @alignment_files == 1) {
-	my $rv = system("mv $alignment_files[0] $accumulated_alignments_file");
+	my $rv = system("cp $alignment_files[0] $accumulated_alignments_file");
         if ($rv) {
             $self->error_message("exit code from moving $alignment_files[0] $accumulated_alignments_file was nonzero");
             return;
