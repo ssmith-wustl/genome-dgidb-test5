@@ -573,6 +573,12 @@ my @logins = (
     ['mysql2', 'gsc', 'sample_data', 'sample_data', 'Zl0*rCh', 'rw', 'production', 'GSC'],
 
     # OLTP development
+    [qw(gscdev gsc GSC gscuser user_dev rw development GSC)],
+#    [qw(gscdev gsc GSC devuser iamonrac rw-developer development GSC)],
+    [qw(gscdev gsc GSC gscguest guest_dev ro development GSC)],
+#    [qw(gscdev gsc GSC devguest dg_rac ro-developer development GSC)],
+
+    # OLTP development
 #    [qw(dbdev gsc GSC gscuser g_user rw development GSC)],
 #    [qw(dbdev gsc GSC devuser iamonrac rw-developer development GSC)],
 #    [qw(dbdev gsc GSC gscguest g_guest ro development GSC)],
@@ -621,6 +627,7 @@ my @servers = (
     # development servers
 #    [qw(gscnew   Oracle  old_oltp_dev)],
 #    [qw(dbdev    Oracle  oltp_dev)],
+    [qw(gscdev   Oracle  oltp_dev)],
     [qw(dwdev    Oracle  dw_dev)],
 );
 
@@ -640,7 +647,7 @@ my @variants = (
     [qw(production       mg         mysql2)],
 
     # development variants
-#    [qw(development      oltp       dbdev)],
+    [qw(development      oltp       gscdev)],
     [qw(development      warehouse  dwdev)],
 
     # old development variants
