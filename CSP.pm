@@ -641,6 +641,7 @@ my %csp_priority = (
     'etl reads from oltp to olap'             => 1,
     'mp read analysis'                        => 1,
     'update mp assembly'                      => 1,
+    'update mp coverage'                      => 1,
     'add read to mp assembly'                 => 1,
     'import external reads'                   => 1,
     'gather submission results'               => 1,
