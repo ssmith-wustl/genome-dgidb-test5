@@ -658,6 +658,7 @@ my %csp_priority = (
 #    'dump reads to filesystem'                => 1,
 #    'transfer tagged 454 run'                 => 1,
 #    'submit finished clone to qa'             => 1,
+#    'analyze finished clone for qa'           => 1,
 #    'mkcs'                                    => 1,
 #    'shotgun done'                            => 1,
 #    'autofinish'                              => 1,
