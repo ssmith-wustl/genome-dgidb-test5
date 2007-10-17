@@ -11,7 +11,6 @@ UR::Object::Class->define(
     is => 'Command',
     is_abstract => 1,
     has => [ model_id => { is => 'Integer', doc => 'Identifies the genome model to use by ID'},
-             run_id => { is => 'Integer', doc => 'Identifies the run by id'},
            ], 
 );
 
@@ -19,16 +18,7 @@ sub execute {
 my $self = shift;
     $DB::single=1;
 
-    my $sub_command_type = $self->_get_sub_command_class_name();
- 
-    my $model = Genome::Model->get(id => $self->model_id);
-
-    my $command = $sub_command_type->create(model_id => $self->model_id,
-                                            run_id => $self->run_id,
-					    event_type => $sub_command_type->command_name,
-					    date_scheduled => App::Time->now(),
-					    user_name => $ENV{'USER'},
-					   );
+    my $command =  $self->_create_sub_command();
 
     my $retval;
     if ($command) {
@@ -43,6 +33,19 @@ my $self = shift;
         $command->event_status('Failed to create sub-command');
         return;
     }
+}
+
+sub _create_sub_command {
+    my $self = shift;
+    my $sub_command_type = $self->_get_sub_command_class_name();
+
+    my $command = $sub_command_type->create(model_id => $self->model_id,
+					    event_type => $sub_command_type->command_name,
+					    date_scheduled => App::Time->now(),
+					    user_name => $ENV{'USER'},
+					   );
+
+
 }
 
 sub _sub_command_name_to_class_name_map{

@@ -70,12 +70,12 @@ sub execute {
     }
     
     # the master alignment file that we're merging into is an input, too!
-    
+    my @accum_input; 
     if (-e $accumulated_alignments_filename) {
-        unshift @successfully_locked_inputs, $accumulated_alignments_filename;
+        unshift @accum_input, $accumulated_alignments_filename;
     }
 
-    my $cmdline = "maq mapmerge $accum_tmp " . join(' ', @successfully_locked_inputs);
+    my $cmdline = "maq mapmerge $accum_tmp " . join(' ', (@accum_input, @successfully_locked_inputs));
     my $rv = system($cmdline);
     if ($rv) {
         $self->error_message("exit code from maq merge was nonzero; something went wrong.  command line was $cmdline");

@@ -9,7 +9,7 @@ use Command;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => ['Genome::Model::Command::DelegatesToSubcommand'],
+    is => ['Genome::Model::Command::DelegatesToSubcommand::WithRun'],
     
 );
 

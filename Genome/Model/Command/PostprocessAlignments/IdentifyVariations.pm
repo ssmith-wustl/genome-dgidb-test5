@@ -19,7 +19,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model postprocess-alignments identify-variations --model-id 5 --run-id 10
+    genome-model postprocess-alignments identify-variations --model-id 5
 EOS
 }
 

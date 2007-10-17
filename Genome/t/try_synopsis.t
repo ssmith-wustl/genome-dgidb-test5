@@ -52,10 +52,10 @@ test_command("Genome::Model::Command::AddReads::AlignReads");
 
 # update genotype probabilities
 
-test_command("Genome::Model::Command::AddReads::UpdateGenotypeProbabilities");
+test_command("Genome::Model::Command::PostprocessAlignments::UpdateGenotypeProbabilities");
 
 # identify variations
-test_command("Genome::Model::Command::AddReads::IdentifyVariations");
+test_command("Genome::Model::Command::PostprocessAlignments::IdentifyVariations");
 
 
 
