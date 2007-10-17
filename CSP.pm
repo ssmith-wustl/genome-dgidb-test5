@@ -636,6 +636,8 @@ my %csp_priority = (
     'analyze amplicon failure' => 5,
     # lower priority steps
     'analyze 454 output'                      => 1,
+    'transfer 454 run to backup'              => 1,
+    'transfer tagged 454 run'                 => 1,
     'analyze sequenced dna'                   => 2,
     'analyze digested dna'                    => 1,
     'etl reads from oltp to olap'             => 1,
@@ -656,7 +658,6 @@ my %csp_priority = (
 #    problem of running as the lims user instead of seqmgr
 #    'analyze traces'                          => 2,
 #    'dump reads to filesystem'                => 1,
-#    'transfer tagged 454 run'                 => 1,
 #    'submit finished clone to qa'             => 1,
 #    'analyze finished clone for qa'           => 1,
 #    'mkcs'                                    => 1,
