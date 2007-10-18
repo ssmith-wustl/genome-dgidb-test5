@@ -653,6 +653,8 @@ my %csp_priority = (
     'make default offsets'                    => 1,
     'configure alignment'                     => 1,
     'import sequence annotation'              => 2,
+    'allocate disk space'                     => 1,
+    'deallocate disk space'                   => 1,
 
 #    these were given their own cron to get around the
 #    problem of running as the lims user instead of seqmgr
