@@ -1154,23 +1154,24 @@ sub confirm_scheduled_pse {
     die "log file $logfile already exists" if -e $logfile;
 
     # open log file
-    my $log_fh = IO::File->new or die 'IO::File->new failed';
+    my $log_fh=IO::File->new or die 'IO::File->new failed';
+    $log_fh->open("> $logfile") or die "failed to open $logfile: $!";
+    $log_fh->autoflush(1);
+    chmod( 0666, $logfile ) or die "chmod $logfile failed: $!";
     if ($tee_stdout) {
         if ( $^O eq 'MSWin32' || $^O eq 'cygwin' ) {
             die 'cannot tee-stdout on windows';
         }
-        $log_fh->open("| tee $logfile")
-            or die "failed to open $logfile: $!";
+        
+        require IO::Tee;
+        my $log_file_fh=$log_fh;
+        $log_fh=new IO::Tee(\*STDOUT, $log_file_fh) or die "failed to open $logfile: $!";
     }
-    else {
-        $log_fh->open("> $logfile")
-            or die "failed to open $logfile: $!";
-    }
+
     $log_fh->autoflush(1);
     $class->log_fh($log_fh);
     $class->setup_logging_callbacks;
-#    chmod( 0666, $logfile );    # just try, it's ok if it fails
-    chmod( 0666, $logfile ) or die "chmod $logfile failed: $!";
+
 
     # write dump-sql to the log when monitoring is turned-on
     # note that this is turned-on by default below
