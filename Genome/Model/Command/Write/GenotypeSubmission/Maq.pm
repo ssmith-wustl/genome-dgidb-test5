@@ -139,15 +139,17 @@ sub execute {
 			my $cns_sequence = substr($genotype,0,1);
 			my $var_sequence = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
 			if ($ref_sequence eq $cns_sequence &&
-					$ref_sequence eq $var_sequence &&
-					$var_sequence eq $cns_sequence) {
+					$ref_sequence eq $var_sequence) {
 				next;										# no variation
 			}
 			$variation{$key}{start} = $start;
 			$variation{$key}{end} = $start;
 			$variation{$key}{ref_sequence} = $ref_sequence;
 			$variation{$key}{var_sequence} = $var_sequence;
-			if ($ref_sequence ne $cns_sequence && $var_sequence ne $cns_sequence) {
+			if ($var_sequence eq $cns_sequence) {
+				# homozygous rare
+				$variation{$key}{cns_sequence} = $cns_sequence;
+			} elsif ($ref_sequence ne $cns_sequence) {
 				if ($ref_sequence eq $var_sequence) {
 					$variation{$key}{var_sequence} = $cns_sequence;
 				} else {
