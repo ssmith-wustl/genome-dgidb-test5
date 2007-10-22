@@ -169,7 +169,7 @@ sub _resolve_accumulated_alignments_file {
         $iter++;
     }
     
-    return $accumulated_alignments_filename.$iter;
+    return $accumulated_alignments_filename.$iter.".map";
 }
 
 
