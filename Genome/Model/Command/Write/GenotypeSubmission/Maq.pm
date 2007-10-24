@@ -21,6 +21,7 @@ UR::Object::Class->define(
         'coordinates'   => { type => 'String',  doc => "coordinate translation file", is_optional => 1},
         'offset'   => { type => 'String',  doc => "coordinate offset to apply--default is zero", is_optional => 1},
         'record'   => { type => 'Boolean',  doc => "load a record at a time--default is all", is_optional => 1},
+        'genotype'   => { type => 'Boolean',  doc => "output the pileup genotype readcount--default is true", is_optional => 1},
         'indel'   => { type => 'Boolean',  doc => "try to get indel's also (not implemented yet)", is_optional => 1},
         'version'   => { type => 'String',  doc => "maq software version--default is ''", is_optional => 1},
         'qcutoff'   => { type => 'String',  doc => "only process if quality score is greater than this value--default value is 0", is_optional => 1},
@@ -90,12 +91,14 @@ sub execute {
     my $self = shift;
 		
     my($mapfile, $cnsfile, $refbfa, $sample, $basename, $coord_file,
-       $indel, $version, $build, $qcutoff, $coord_offset, $record) =
+       $indel, $version, $build, $qcutoff, $coord_offset, $record, $output_genotype) =
 				 ($self->mapfile, $self->cnsfile, $self->refbfa, $self->sample, $self->basename,
-					$self->coordinates, $self->indel, $self->version, $self->build, $self->qcutoff, $self->offset, $self->record);
+					$self->coordinates, $self->indel, $self->version, $self->build, $self->qcutoff,
+					$self->offset, $self->record, $self->genotype);
     return unless ( defined($mapfile) && defined($cnsfile) && defined($refbfa) &&
 										defined($sample) && defined($basename)
 									);
+		$output_genotype ||= 1;
 		$record ||= 0;
     $version ||= '';
     $build ||= '36';
@@ -302,6 +305,14 @@ sub execute {
     my $sample_id = $sample_a . '-' . $sample_b;
 		my $mutation = {};
     my $number = 1;
+		if ($output_genotype) {
+			my $genotype_file = $basename . '_genotype.csv';
+			unless (open(GENOTYPE,">$genotype_file")) {
+				$self->error_message("Unable to open genotype output file: $genotype_file");
+				return;
+			}
+			print GENOTYPE "chromosome\tposition\tref\tvar\tcns\ta_readcount\tc_readcount\tg_readcount\tt_readcount\n";
+		}
     foreach my $chr (sort (keys %output)) {
 			my $chromosome = $chr;
 			$chromosome =~ s/^0//;
@@ -319,6 +330,22 @@ sub execute {
 				if (exists($output{$chr}{$pos}{variant_reads}{$var_sequence})) {
 					$variant_reads = $output{$chr}{$pos}{variant_reads}{$var_sequence};
 				}
+				if ($output_genotype) {
+					my %genotype_reads = %{$output{$chr}{$pos}{variant_reads}};
+					$genotype_reads{$ref_sequence} ||= $output{$chr}{$pos}{reference_reads};
+					my $var_a_reads = $genotype_reads{A};
+					my $var_c_reads = $genotype_reads{C};
+					my $var_g_reads = $genotype_reads{G};
+					my $var_t_reads = $genotype_reads{T};
+					my $cns_allele = $cns_sequence;
+					$cns_allele ||= '';
+					$var_a_reads ||= 0;
+					$var_c_reads ||= 0;
+					$var_g_reads ||= 0;
+					$var_t_reads ||= 0;
+					print GENOTYPE "$chromosome\t$pos\t$ref_sequence\t$var_sequence\t$cns_allele\t$var_a_reads\t$var_c_reads\t$var_g_reads\t$var_t_reads\n";
+				}
+
 				my $depth = $output{$chr}{$pos}{depth};
 				my $ref_reads = $output{$chr}{$pos}{reference_reads};
 				if (defined($cns_sequence) && $cns_sequence ne '') {
@@ -377,6 +404,9 @@ sub execute {
 				$number += 1;
 			}
     }
+		if ($output_genotype) {
+			close(GENOTYPE);
+		}
 		$fh->close();
 		my $t0 = time;
 		if ($self->loaddb) {
