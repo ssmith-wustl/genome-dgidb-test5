@@ -1160,11 +1160,7 @@ sub confirm_scheduled_pse {
     $log_fh->open("> $logfile") or die "failed to open $logfile: $!";
     $log_fh->autoflush(1);
     chmod( 0666, $logfile ) or die "chmod $logfile failed: $!";
-    if ($tee_stdout) {
-        if ( $^O eq 'MSWin32' || $^O eq 'cygwin' ) {
-            die 'cannot tee-stdout on windows';
-        }
-        
+    if ($tee_stdout) {        
         require IO::Tee;
         my $log_file_fh=$log_fh;
         $log_fh=new IO::Tee(\*STDOUT, $log_file_fh) or die "failed to open $logfile: $!";
