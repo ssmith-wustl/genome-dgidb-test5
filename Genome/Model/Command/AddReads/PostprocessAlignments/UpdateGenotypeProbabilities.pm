@@ -1,4 +1,4 @@
-package Genome::Model::Command::PostprocessAlignments::UpdateGenotypeProbabilities;
+package Genome::Model::Command::AddReads::PostprocessAlignments::UpdateGenotypeProbabilities;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Command;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => ['Genome::Model::Command::DelegatesToSubcommand'],
+    is => ['Genome::Model::Command::DelegatesToSubcommand::WithRefSeq'],
 );
 
 sub sub_command_sort_position { 3 }

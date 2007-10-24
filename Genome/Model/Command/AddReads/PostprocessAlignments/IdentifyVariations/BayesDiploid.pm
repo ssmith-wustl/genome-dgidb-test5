@@ -1,4 +1,4 @@
-package Genome::Model::Command::PostprocessAlignments::UpdateGenotypeProbabilities::Mosaik;
+package Genome::Model::Command::AddReads::PostprocessAlignments::IdentifyVariations::BayesDiploid;
 
 use strict;
 use warnings;
@@ -24,13 +24,13 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model add-reads update-genotype-probabilities mosaik --model-id 5 --run-id 10
+    genome-model postprocess-alignments identify-variation bayes-diploid --model-id 5 --run-id 10
 EOS
 }
 
 sub help_detail {                           
     return <<EOS 
-This command is usually called as part of the add-reads process
+This command is usually called as part of the postprocess-alignments process
 EOS
 }
 

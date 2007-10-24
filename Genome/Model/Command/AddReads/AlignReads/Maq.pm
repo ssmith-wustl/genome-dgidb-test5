@@ -46,7 +46,7 @@ sub execute {
     
     # ensure the reference sequence exists.
     
-    my $ref_seq_file =  $model->reference_sequence_path . "/bfa";
+    my $ref_seq_file =  $model->reference_sequence_path . "/all_sequences.bfa";
     
     
     unless (-e $ref_seq_file) {
@@ -72,6 +72,7 @@ sub execute {
     # Part 1, convert the files to a different format
     # Why are we converting them?
 
+    $DB::single = 1;
     my $gerald_dir = $self->run->full_path;
     my @geraldfiles = glob($gerald_dir . '/s_[' . $lanes . ']_sequence.txt*');
     foreach my $seqfile (@geraldfiles) {
@@ -112,64 +113,38 @@ sub execute {
                                                          $bfq_file);
 	
 	print "$maq_cmdline\n";
-      
-        system($maq_cmdline);
-    }
 
-    my $model_dir = $model->data_directory;
-    
-    my $accumulated_alignments_basename =  $self->_resolve_accumulated_alignments_file();
-    my $accumulated_alignments_file = $model_dir . "/" . $accumulated_alignments_basename;
-    my $accum_tmp = $accumulated_alignments_file . "." . $$;
-
-    
-    # Only one process is allwoed to manipulate the accumulated alignment file for the model
-    # at a time
-    unless ($model->lock_resource(resource_id=>$accumulated_alignments_basename)) {
-        $self->error_message("Can't get lock for accumulated alignment $accumulated_alignments_basename");
-        return undef;
-    }
-    
-
-    if (!-f $accumulated_alignments_file && @alignment_files == 1) {
-	my $rv = system("cp $alignment_files[0] $accumulated_alignments_file");
+        my $rv = system($maq_cmdline);
         if ($rv) {
-            $self->error_message("exit code from moving $alignment_files[0] $accumulated_alignments_file was nonzero");
+            $self->error_message("got a nonzero return value from maq map; something went wrong.  cmdline was $maq_cmdline rv was $rv");
             return;
         }
-    } else {
-        my $cmdline = "maq mapmerge $accum_tmp " . join(' ', (@alignment_files, $accumulated_alignments_file));
-        my $merge_ret_val = system($cmdline);
-    
-        if (! -f $accum_tmp || $merge_ret_val) {
-            $self->error_message("got a nonzero return value from mapmerge, or the accumulated alignment temp file $accum_tmp doesn't exist.  mapmerge apparently failed.");
-            return;
-        }
-    
-       rename($accum_tmp, $accumulated_alignments_file);
-    }
- 
-    #unlink foreach @alignment_files;
-        
-    return 1;
-}
 
-#
-#
-sub _resolve_accumulated_alignments_file {
-    my $self = shift;
-    my $model = Genome::Model->get(id => $self->model_id);
+        # Part 3, use submap if necessary
     
-    my $model_dir = $model->data_directory;
-    my $accumulated_alignments_filename = sprintf("/alignments_to_merge_%s_%s_%s-", Date::Calc::Today);
-    
-    my $iter = 1;
-    
-    while (-e "$model_dir/$accumulated_alignments_filename.$iter" && stat("$model_dir/$accumulated_alignments_filename.$iter")->size > 5000000000) {
-        $iter++;
-    }
-    
-    return $accumulated_alignments_filename.$iter.".map";
+        my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
+        if (!@subsequences) {
+            @subsequences = ('all_sequences');
+        }
+
+        foreach my $seq (@subsequences) {
+            unless (-d "$this_lane_alignments_file.submaps") {
+                 mkdir("$this_lane_alignments_file.submaps");
+            }    
+            my $submap_target = sprintf("%s.submaps/%s.map",$this_lane_alignments_file,$seq);
+                    
+            my $maq_submap_cmdline = "maq submap $submap_target $this_lane_alignments_file $seq";
+                
+            print $maq_submap_cmdline, "\n";
+                    
+            my $rv = system($maq_submap_cmdline);
+            if ($rv) {
+                 $self->error_message("got a nonzero return value from maq submap; cmdline was $maq_submap_cmdline");
+                 return;
+           } 
+       }
+     } 
+     return 1;
 }
 
 

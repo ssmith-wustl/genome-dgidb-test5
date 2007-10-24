@@ -1,7 +1,9 @@
-package Genome::Model::Command::PostprocessAlignments;
+package Genome::Model::Command::AddReads::PostprocessAlignments;
 
 use strict;
 use warnings;
+
+use Data::Dumper;
 
 use UR;
 use Command; 
@@ -62,15 +64,25 @@ $DB::single=1;
     
     my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
 
-    my $last_bsub_job_id;
-    foreach my $command_class ( @sub_command_classes ) {
-        my $command = $command_class->create(model_id => $self->model_id);
+    my $model = Genome::Model->get($self->model_id);
+    my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
+
+    unless (@subreferences_names > 0) {
+        @subreferences_names = ('all_sequences');
+    }
+    
+   
+    foreach my $ref (@subreferences_names) { 
+        my $last_bsub_job_id;
+        foreach my $command_class ( @sub_command_classes ) {
+          my $command = $command_class->create(model_id => $self->model_id, ref_seq_id=>$ref);
  
-        if ($self->bsub) {
-           $last_bsub_job_id = $self->run_command_with_bsub($command,$last_bsub_job_id);
-        } elsif (! $self->test) {
-           $command->execute();
-        }
+          if ($self->bsub) {
+             $last_bsub_job_id = $self->run_command_with_bsub($command,$last_bsub_job_id);
+          } elsif (! $self->test) {
+             $command->execute();
+          }
+         }
     }
 
     return 1; 
@@ -89,12 +101,13 @@ sub run_command_with_bsub {
     $cmd =~ s/^\S+/$GENOME_MODEL_BSUBBED_COMMAND/;
 
     my $model_id = $self->model_id;
+    my $refseq_id = $command->ref_seq_id;
 
     my $cmdline;
     { no warnings 'uninitialized';
         $cmdline = "bsub -q $queue $bsub_args" .
                    ($last_bsub_job_id && " -w $last_bsub_job_id") .
-                   " $cmd --model-id $model_id";
+                   " $cmd --model-id $model_id --ref-seq-id $refseq_id";
     }
 
     if ($self->test) {

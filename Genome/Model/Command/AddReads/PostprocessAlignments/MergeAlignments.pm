@@ -1,4 +1,4 @@
-package Genome::Model::Command::PostprocessAlignments::MergeAlignments;
+package Genome::Model::Command::AddReads::PostprocessAlignments::MergeAlignments;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Command;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => ['Genome::Model::Command::DelegatesToSubcommand'],
+    is => ['Genome::Model::Command::DelegatesToSubcommand::WithRefSeq'],
 );
 
 sub sub_command_sort_position { 2 }
@@ -19,7 +19,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model postprocess-alignments merge-alignments --model-id 5 
+    genome-model add-reads postprocess-alignments merge-alignments --model-id 5 
 EOS
 }
 

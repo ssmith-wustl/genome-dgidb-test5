@@ -6,30 +6,36 @@ use warnings;
 use Genome;
 use Term::ANSIColor;
 use Genome::Model::EqualColumnWidthTableizer;
+use File::Path;
+use File::Basename;
 
 use Genome;
 UR::Object::Class->define(
     class_name => 'Genome::Model',
     english_name => 'genome model',
-    table_name => 'genome_model',
+    table_name => 'GENOME_MODEL',
     id_by => [
-        id => { is => 'integer' },
+        id => { is => 'INT', len => 11 },
     ],
     has => [
-        dna_type                => { is => 'varchar(255)' },
-        genotyper_name          => { is => 'varchar(255)' },
-        genotyper_params        => { is => 'varchar(255)', is_optional => 1 },
-        indel_finder_name       => { is => 'varchar(255)', is_optional => 1 },
-        indel_finder_params     => { is => 'varchar(255)', is_optional => 1 },
-        name                    => { is => 'varchar(255)' },
-        prior                   => { is => 'varchar2(255)', is_optional => 1 },
-        read_aligner_name       => { is => 'varchar(255)' },
-        read_aligner_params     => { is => 'varchar(255)', is_optional => 1 },
-        read_calibrator_name    => { is => 'varchar(255)', is_optional => 1 },
-        read_calibrator_params  => { is => 'varchar(255)', is_optional => 1 },
-        reference_sequence_name => { is => 'varchar(255)' },
-        sample_name             => { is => 'varchar(255)' },
+        dna_type                => { is => 'VARCHAR', len => 64 },
+        genotyper_name          => { is => 'VARCHAR', len => 255 },
+        genotyper_params        => { is => 'VARCHAR', len => 255, is_optional => 1 },
+        indel_finder_name       => { is => 'VARCHAR', len => 255, is_optional => 1 },
+        indel_finder_params     => { is => 'VARCHAR', len => 255, is_optional => 1 },
+        name                    => { is => 'VARCHAR', len => 255 },
+        prior                   => { is => 'VARCHAR', len => 255, is_optional => 1 },
+        read_aligner_name       => { is => 'VARCHAR', len => 255 },
+        read_aligner_params     => { is => 'VARCHAR', len => 255, is_optional => 1 },
+        read_calibrator_name    => { is => 'VARCHAR', len => 255, is_optional => 1 },
+        read_calibrator_params  => { is => 'VARCHAR', len => 255, is_optional => 1 },
+        reference_sequence_name => { is => 'VARCHAR', len => 255 },
+        sample_name             => { is => 'VARCHAR', len => 255 },
     ],
+    unique_constraints => [
+        { properties => [qw/id/], sql => 'PRIMARY' },
+    ],
+    schema_name => 'Main',
     data_source => 'Genome::DataSource::Main',
 );
 
@@ -108,5 +114,54 @@ sub unlock_resource {
     my $resource_id = $self->data_directory . "/" . $args{'resource_id'} . ".lock";
     rmdir $resource_id;
 }
+
+sub get_subreference_paths {
+    my $self = shift;
+    my %p = @_;
+    
+    my $ext = $p{reference_extension};
+    
+    return glob(sprintf("%s/*.%s",
+                        $self->reference_sequence_path,
+                        $ext));
+    
+}
+
+sub get_subreference_names {
+    my $self = shift;
+    my %p = @_;
+    
+    my $ext = $p{reference_extension};
+
+    my @paths = $self->get_subreference_paths(reference_extension=>$ext);
+    
+    my @basenames = map {basename($_)} @paths;
+    for (@basenames) {
+        s/\.$ext$//;
+    }
+    
+    return @basenames;    
+}
+
+sub resolve_accumulated_alignments_filename {
+    my $self = shift;
+    
+    my %p = @_;
+    my $refseq = $p{ref_seq_id};
+    
+    my $model_data_directory = $self->data_directory;
+    
+    my @subsequences = grep {$_ ne "all_sequences" } $self->get_subreference_names(reference_extension=>'bfa');
+    
+    if (@subsequences && !$refseq) {
+        $self->error_message("there are multiple subsequences available, but you did not specify a refseq");
+        return;
+    } elsif (!@subsequences) {
+        return $model_data_directory . "/alignments.submap/all_sequences.map";
+    } else {
+        return $model_data_directory . "/alignments.submap/" . $refseq . ".map";   
+    }
+}
+
 
 1;
