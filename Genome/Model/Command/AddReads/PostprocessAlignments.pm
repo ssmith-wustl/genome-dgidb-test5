@@ -152,5 +152,9 @@ sub _get_sorted_sub_command_classes{
     return \@sub_command_classes;
 }
 
+sub is_not_to_be_run_by_add_reads {
+    return 0;
+}
+
 1;
 

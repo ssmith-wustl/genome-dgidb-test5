@@ -178,7 +178,7 @@ sub _get_sorted_sub_command_classes{
     my @sub_command_classes = sort { $a->sub_command_sort_position
                                      <=>
                                      $b->sub_command_sort_position
-                                   } $self->sub_command_classes();
+                                   } grep {! $_->can('is_not_to_be_run_by_add_reads')} $self->sub_command_classes();
     
     return \@sub_command_classes;
 }
