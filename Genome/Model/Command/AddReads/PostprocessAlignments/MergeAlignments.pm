@@ -1,9 +1,9 @@
-package Genome::Model::Command::AddReads::PostprocessAlignments::MergeAlignments;
+package Genome::Model::Command::AddReads::MergeAlignments;
 
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command; 
 
 UR::Object::Class->define(

@@ -1,9 +1,9 @@
-package Genome::Model::Command::AddReads::PostprocessAlignments::IdentifyVariations::Maq;
+package Genome::Model::Command::AddReads::IdentifyVariations::Maq;
 
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 use Genome::Model;
 use File::Path;

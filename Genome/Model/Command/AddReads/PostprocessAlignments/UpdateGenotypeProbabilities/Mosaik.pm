@@ -1,9 +1,9 @@
-package Genome::Model::Command::AddReads::PostprocessAlignments::UpdateGenotypeProbabilities::Mosaik;
+package Genome::Model::Command::AddReads::UpdateGenotypeProbabilities::Mosaik;
 
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 use Genome::Model;
 use File::Path;

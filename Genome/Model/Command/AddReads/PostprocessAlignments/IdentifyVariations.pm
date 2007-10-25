@@ -1,9 +1,9 @@
-package Genome::Model::Command::AddReads::PostprocessAlignments::IdentifyVariations;
+package Genome::Model::Command::AddReads::IdentifyVariations;
 
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command; 
 
 UR::Object::Class->define(
