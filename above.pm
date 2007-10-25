@@ -11,6 +11,8 @@ sub import {
     }
 }
 
+our %used_libs;
+
 sub use_package {
     my $class = shift;
 
@@ -38,9 +40,12 @@ sub use_package {
     # Get the special path in place
     if (length($path)) {
         while ($path =~ s:/[^/]+/\.\./:/:) { 1 } # simplify
-        print STDERR "Using libraries at $path\n";
-        eval "use lib '$path';";
-        die $@ if $@;
+        unless ($used_libs{$path}) {
+            print STDERR "Using libraries at $path\n";
+            eval "use lib '$path';";
+            die $@ if $@;
+            $used_libs{$path} = 1;
+        }
     }
 
     # Temporary hack until the UR modules are deployed
