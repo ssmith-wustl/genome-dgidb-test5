@@ -61,7 +61,7 @@ sub execute {
 		return unless ( defined($dir) &&
 										defined($sample) && defined($refseq)
 									);
-		my $runmapping = ($cdna) ? 'PATH=/gsc/pkg/bio/454/offInstrumentApps-1.1.01.20-64/bin:$PATH ; runMapping' : 'runMapping';
+		my $runmapping = ($cdna) ? 'runMappingTest' : 'runMapping';
 		$sffdir ||= 'sff';
 		$dir =~ s/ \/ $ //x;				# Remove any trailing slash
 
