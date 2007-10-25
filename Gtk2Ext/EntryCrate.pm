@@ -11,21 +11,21 @@ use Data::Dumper;
 my %name :name(name:r);
 my %label :name(label:o);
 my %type :name(type:r) 
-    :type(is_validation_type)
+    :isa(is_isa)
     :default('not_blank');
 my %options :name(options:o)
-    :type(non_empty_aryref);
+    :ds(aryref);
 my %default :name(default:o) 
     :default('');
 my %multi_values :name(multi_values:o)
     :default(0);
 
 my %label_widget :name(_label_widget:p)
-    :type(object);
+    :isa(object);
 my %box :name(_box:p)
-    :type(object);
+    :isa(object);
 my %entry :name(_entry:p)
-    :type(object);
+    :isa(object);
 
 sub START
 {

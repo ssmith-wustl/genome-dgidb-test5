@@ -11,23 +11,24 @@ use Gtk2Ext::PackingFactory;
 use Gtk2Ext::Utils;
 
 my %button_params :name(button_params:r)
-    :type(non_empty_aryref)
+    :ds(aryref)
     :access(ro);
 my %orient :name(orient:o) 
-    :type(regex)
+    :isa('regex h v')
     :default('v')
-    :options([qw/ h v /])
     :access(ro);
 my %buttons :name(_buttons:p)
-    :type(aryref)
+    :ds(aryref)
+    :empty_ok(1)
     :default([]);
 my %ecrates :name(_ecrates:p)
-    :type(hashref)
+    :ds(hashref)
+    :empty_ok(1)
     :default({});
-my %bbox :name(_bbox:p) 
-    :type(defined);
+my %bbox :name(_bbox:p);
 my %base_button_pos :name(_base_button_pos:p)
-    :type(integer) :default(0);
+    :isa('int') 
+    :default(0);
 
 sub START
 {

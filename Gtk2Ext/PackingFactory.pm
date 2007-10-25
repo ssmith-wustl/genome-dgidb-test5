@@ -12,7 +12,7 @@ use Gtk2::Ex::Simple::Menu;
 use Gtk2Ext::Info;
 use Gtk2Ext::Utils;
 
-my %size :name(size:o) :type(int_between) :options([qw/ 30 100 /]) :default('100');
+my %size :name(size:o) :isa('int between 30 100') :default('100');
 
 sub title
 {
