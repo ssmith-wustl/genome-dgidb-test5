@@ -4,8 +4,7 @@ package Genome::Model::Command;
 use strict;
 use warnings;
 
-use Genome;
-use UR;
+use above "Genome";
 use Command;
 
 UR::Object::Class->define(
