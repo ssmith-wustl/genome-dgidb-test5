@@ -5,13 +5,13 @@ use warnings;
 
 use lib '/gsc/scripts/test/ur-dev';
 
-package Genome::Model::Command::Update::Genotype::SeparateAlleleTest;
+package Genome::Model::Command::Tools::Genotype::SeparateAlleleTest;
 use base 'Test::Class';
 
 use Test::More;
 use Test::Deep;
 
-use Genome::Model::Command::Update::Genotype::SeparateAllele;
+use Genome::Model::Command::Tools::Genotype::SeparateAllele;
 use Genome::Model::RefSeqAlignmentCollection;
 use Genome::Model::Alignment::Mock;
 
@@ -26,7 +26,7 @@ sub setup : Test(setup){
     my $consensus_results = [];
     $self->{consensus_results} = $consensus_results;
     
-    my $consensus_calc = Genome::Model::Command::Update::Genotype::SeparateAllele->create(
+    my $consensus_calc = Genome::Model::Command::Tools::Genotype::SeparateAllele->create(
             length      => 1,
             result      => $consensus_results,
     );
@@ -156,7 +156,7 @@ sub sum_struct{
 }
 
 if ($0 eq __FILE__){
-    Genome::Model::Command::Update::Genotype::SeparateAlleleTest->new->runtests();
+    Genome::Model::Command::Tools::Genotype::SeparateAlleleTest->new->runtests();
 }
 
 1;

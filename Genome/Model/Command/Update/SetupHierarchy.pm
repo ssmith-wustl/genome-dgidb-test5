@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Update::SetupHierarchy;
+package Genome::Model::Command::Tools::SetupHierarchy;
 
 use strict;
 use warnings;

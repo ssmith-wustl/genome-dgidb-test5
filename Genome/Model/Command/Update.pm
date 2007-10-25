@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Update;
+package Genome::Model::Command::Tools;
 
 use strict;
 use warnings;

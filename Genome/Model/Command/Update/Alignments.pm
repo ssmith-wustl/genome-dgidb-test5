@@ -1,6 +1,6 @@
 
 # Rename the final word in the full class name <---
-package Genome::Model::Command::Update::Alignments;
+package Genome::Model::Command::Tools::Alignments;
 
 use strict;
 use warnings;

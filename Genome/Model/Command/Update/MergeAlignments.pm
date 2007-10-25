@@ -1,4 +1,4 @@
-package Genome::Model::Command::Update::MergeAlignments;
+package Genome::Model::Command::Tools::MergeAlignments;
 
 use strict;
 use warnings;

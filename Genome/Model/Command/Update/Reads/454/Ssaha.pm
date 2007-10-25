@@ -1,4 +1,4 @@
-package Genome::Model::Command::Update::Reads::454::Ssaha;
+package Genome::Model::Command::Tools::Reads::454::Ssaha;
 
 use strict;
 use warnings;

@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Update::AlignReads::Synamatix;
+package Genome::Model::Command::Tools::AlignReads::Synamatix;
 
 use strict;
 use warnings;
