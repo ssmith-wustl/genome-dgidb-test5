@@ -133,7 +133,7 @@ sub resolve_input_alignments_filename_from_run {
                                $run->limit_regions);
     
     if (@subsequences) {
-        return $base_run_path . ".submaps/" . $self->ref_seq_id;
+        return $base_run_path . ".submaps/" . $self->ref_seq_id . ".map";
     } else {
         return $base_run_path;
     }
