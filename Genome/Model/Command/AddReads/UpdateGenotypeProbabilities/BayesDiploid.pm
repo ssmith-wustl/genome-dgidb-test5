@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::UpdateGenotypeProbabilities::BayesDiploid;
+package Genome::Model::Command::AddReads::UpdateGenotype::BayesDiploid;
 
 use strict;
 use warnings;

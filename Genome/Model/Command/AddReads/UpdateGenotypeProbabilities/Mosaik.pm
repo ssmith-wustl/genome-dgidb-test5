@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::UpdateGenotypeProbabilities::Mosaik;
+package Genome::Model::Command::AddReads::UpdateGenotype::Mosaik;
 
 use strict;
 use warnings;

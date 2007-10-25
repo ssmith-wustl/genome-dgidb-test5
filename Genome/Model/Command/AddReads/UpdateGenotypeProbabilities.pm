@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::UpdateGenotypeProbabilities;
+package Genome::Model::Command::AddReads::UpdateGenotype;
 
 use strict;
 use warnings;
