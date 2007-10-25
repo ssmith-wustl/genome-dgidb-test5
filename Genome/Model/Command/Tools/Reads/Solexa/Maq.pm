@@ -3,7 +3,7 @@ package Genome::Model::Command::Tools::Reads::Solexa::Maq;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 use IO::File;
 use File::Path;

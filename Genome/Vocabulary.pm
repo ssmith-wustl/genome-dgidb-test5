@@ -3,7 +3,7 @@ package Genome::Vocabulary;
 use warnings;
 use strict;
 
-use UR;
+use above "Genome";
 
 UR::Object::Class->define(
     class_name => 'Genome::Vocabulary',

@@ -5,7 +5,7 @@ package Genome::Model::Command::Tools::Reference;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 
 UR::Object::Class->define(

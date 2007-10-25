@@ -4,7 +4,7 @@ package Genome::Model::Command::List::Runs;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use GSC;
 use Command; 
 use Data::Dumper;

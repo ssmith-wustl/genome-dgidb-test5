@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use utf8;
 
-use UR;
+use above "Genome";
 use Command;
 
 use IO::File;

@@ -5,7 +5,7 @@ package Genome::Model::Command::Tools::Reads::Solexa::ToGerald;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 use IO::File;
 use File::Path;

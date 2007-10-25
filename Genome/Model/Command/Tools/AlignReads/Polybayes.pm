@@ -3,7 +3,7 @@ package Genome::Model::Command::AlignReads::Polybayes;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 use File::Path;
 use File::Basename;

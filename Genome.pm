@@ -3,7 +3,7 @@ package Genome;
 use warnings;
 use strict;
 
-use UR;
+use above "UR";
 
 UR::Object::Class->define(
     class_name => 'Genome',

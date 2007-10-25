@@ -4,7 +4,7 @@ package Genome::Model::Command::Write::GenotypeSubmission;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 use IO::File;
 

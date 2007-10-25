@@ -3,7 +3,7 @@ package Genome::Model::Command::Tools::Reads::454::Mosaik;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 use Genome::Model::Command::Tools::Reads::Mosaik;
 use IO::File;

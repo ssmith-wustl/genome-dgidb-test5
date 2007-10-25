@@ -3,7 +3,7 @@ package Genome::Model::Command::Tools::Reads::454::SffDump;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 use GSC;
 use SFFDump;

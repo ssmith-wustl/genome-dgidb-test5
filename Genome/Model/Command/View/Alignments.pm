@@ -3,7 +3,7 @@ package Genome::Model::Command::View::Alignments;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 
 use Fcntl;

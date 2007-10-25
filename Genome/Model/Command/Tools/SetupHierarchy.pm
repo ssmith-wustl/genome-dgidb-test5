@@ -4,7 +4,7 @@ package Genome::Model::Command::Tools::SetupHierarchy;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 use Genome::Model;
 use File::Path;

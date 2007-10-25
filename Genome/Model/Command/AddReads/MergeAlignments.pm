@@ -11,7 +11,7 @@ UR::Object::Class->define(
     is => ['Genome::Model::Command::DelegatesToSubcommand::WithRefSeq'],
 );
 
-sub sub_command_sort_position { 2 }
+sub sub_command_sort_position { 4 }
 
 sub help_brief {
     "Merge any accumulated alignments on a model";

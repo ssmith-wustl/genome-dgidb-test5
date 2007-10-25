@@ -4,7 +4,7 @@ package Genome::Model::Command::Tools::Indels;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Genome::Model::Command::IterateOverRefSeq;
 
 UR::Object::Class->define(

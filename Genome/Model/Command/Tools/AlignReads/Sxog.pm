@@ -5,7 +5,7 @@ package Genome::Model::Command::Tools::AlignReads::Sxog;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 
 use GSC;

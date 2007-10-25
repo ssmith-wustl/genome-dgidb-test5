@@ -4,7 +4,7 @@ package Genome::Model::Command::List::Models;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command; 
 use Data::Dumper;
 

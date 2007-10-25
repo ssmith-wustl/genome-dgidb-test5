@@ -3,7 +3,7 @@ package Genome::Model::Command::AddReads;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command; 
 
 UR::Object::Class->define(

@@ -11,7 +11,7 @@ UR::Object::Class->define(
     is => 'Genome::Model::Command::DelegatesToSubcommand::WithRefSeq',
 );
 
-sub sub_command_sort_position { 4 }
+sub sub_command_sort_position { 7 }
 
 sub help_brief {
     "identify genotype variations"

@@ -3,7 +3,7 @@ package Genome::Model::Command::Write::GenotypeSubmission::Maq;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 use MG::Transform::Coordinates::TranscriptToGenomic;
 use MG::IO::GenotypeSubmission;

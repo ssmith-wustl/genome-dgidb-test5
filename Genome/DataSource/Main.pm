@@ -4,7 +4,7 @@ use warnings;
 
 package Genome::DataSource::Main;
 
-use UR;
+use above "Genome";
 
 UR::Object::Class->define(
     class_name => 'Genome::DataSource::Main',
