@@ -19,7 +19,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model postprocess-alignments update-genotype-probabilities --model-id 5 
+    genome-model postprocess-alignments update-genotype --model-id 5 
 EOS
 }
 
@@ -45,6 +45,9 @@ sub sub_command_delegator {
     return $model->genotyper_name;
 }
 
+sub is_not_to_be_run_by_add_reads {
+    return 1;
+}
 
 
 1;
