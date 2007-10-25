@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::IdentifyVariations::BayesDiploid;
+package Genome::Model::Command::AddReads::FindVariations::Polybayes;
 
 use strict;
 use warnings;
@@ -24,7 +24,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model postprocess-alignments identify-variation bayes-diploid --model-id 5 --run-id 10
+    genome-model postprocess-alignments identify-variation polybayes --model-id 5 --run-id 10
 EOS
 }
 
@@ -41,6 +41,5 @@ sub execute {
     $self->status_message("Model Info:\n" . $model->pretty_print_text);
     return 0; 
 }
-
 1;
 

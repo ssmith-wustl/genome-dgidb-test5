@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::IdentifyVariations;
+package Genome::Model::Command::AddReads::FindVariations;
 
 use strict;
 use warnings;
