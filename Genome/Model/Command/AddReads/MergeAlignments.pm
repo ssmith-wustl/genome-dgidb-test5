@@ -1,31 +1,31 @@
-package Genome::Model::Command::AddReads::AlignReads;
+package Genome::Model::Command::AddReads::MergeAlignments;
 
 use strict;
 use warnings;
 
-use above "UR";
+use above "Genome";
 use Command; 
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => ['Genome::Model::Command::DelegatesToSubcommand::WithRun'],
+    is => ['Genome::Model::Command::DelegatesToSubcommand::WithRefSeq'],
 );
 
 sub sub_command_sort_position { 2 }
 
 sub help_brief {
-    "Run the aligner tool on the reads being added to the model"
+    "Merge any accumulated alignments on a model";
 }
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model add-reads align-reads --model-id 5 --run-id 10
+    genome-model add-reads postprocess-alignments merge-alignments --model-id 5 
 EOS
 }
 
 sub help_detail {
     return <<"EOS"
-This command is launched automatically by "add reads".  
+This command is launched automatically by "postprocess alignments".  
 
 It delegates to the appropriate sub-command for the aligner
 specified in the model.

@@ -4,7 +4,7 @@ package Genome::Model::Command::AddReads::AssignRun;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command; 
 
 UR::Object::Class->define(

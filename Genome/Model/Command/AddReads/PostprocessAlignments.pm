@@ -5,7 +5,7 @@ use warnings;
 
 use Data::Dumper;
 
-use UR;
+use above "Genome";
 use Command; 
 
 UR::Object::Class->define(

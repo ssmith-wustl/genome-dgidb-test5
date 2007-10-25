@@ -3,7 +3,7 @@ package Genome::Model::Command::AddReads::AlignReads::Maq;
 use strict;
 use warnings;
 
-use UR;
+use above "Genome";
 use Command;
 use Genome::Model;
 use File::Path;
