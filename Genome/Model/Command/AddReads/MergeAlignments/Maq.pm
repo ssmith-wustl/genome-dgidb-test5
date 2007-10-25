@@ -51,7 +51,7 @@ sub execute {
     
     my $now = App::Time->now();
 
-    my ($last_merge_event) = Genome::Model::Event->get(sql=>sprintf("select * from GENOME_MODEL_EVENT where event_type='genome-model add-reads postprocess-alignments merge-alignments maq'
+    my ($last_merge_event) = Genome::Model::Event->get(sql=>sprintf("select * from GENOME_MODEL_EVENT where event_type='genome-model add-reads merge-alignments maq'
                                                        and event_status='Succeeded' and model_id=%s and ref_seq_id='%s' order by date_completed DESC",
                                                        $model->id, $self->ref_seq_id));
     my $last_merge_done_str = (defined $last_merge_event ? sprintf("and date_completed >= '%s'",

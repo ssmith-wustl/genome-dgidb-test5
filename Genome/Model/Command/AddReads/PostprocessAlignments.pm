@@ -57,13 +57,17 @@ EOS
 
 
 our $GENOME_MODEL_BSUBBED_COMMAND = "genome-model";
+our @CHILD_JOB_CLASSES = ('Genome::Model::Command::AddReads::MergeAlignments',
+                          'Genome::Model::Command::AddReads::UpdateGenotypeProbabilities',
+                          'Genome::Model::Command::AddReads::IdentifyVariations');
+
 
 sub execute {
     my $self = shift;
 
-$DB::single=1;
+    $DB::single=1;
     
-    my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
+    my @sub_command_classes = @CHILD_JOB_CLASSES;
 
     my $model = Genome::Model->get($self->model_id);
     my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
@@ -141,14 +145,15 @@ sub run_command_with_bsub {
 
 
 
-sub _get_sorted_sub_command_classes{
+sub _get_sorted_command_classes{
     my $self = shift;
+    my @in_classes = @_;
 
     # Determine what all the sub-commands are going to be
     my @sub_command_classes = sort { $a->sub_command_sort_position
                                      <=>
                                      $b->sub_command_sort_position
-                                   } $self->sub_command_classes();
+                                   } @in_classes;
     
     return \@sub_command_classes;
 }
