@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Tools::Genotype::SeparateAllele;
+package Genome::Model::Command::Tools::Old::Genotype::SeparateAllele;
 
 use strict;
 use warnings;
@@ -16,13 +16,13 @@ use constant REFERENCE_INSERT   => 2;
 use constant QUERY_INSERT       => 3;
 
 use Genome::Model::Command::IterateOverRefSeq;
-use Genome::Model::Command::Tools::Genotype;
+use Genome::Model::Command::Tools::Old::Genotype;
 
 # Class Methods ---------------------------------------------------------------
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => 'Genome::Model::Command::Tools::Genotype',
+    is => 'Genome::Model::Command::Tools::Old::Genotype',
     has => [
         result => { type => 'Array', doc => 'If set, results will be stored here instead of printing to STDOUT.' },
         bases_file => { type => 'String', doc => 'The pathname of the binary file containing prb values' },

@@ -10,35 +10,35 @@ UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [
-        model_id   =>  { is => 'Integer', 
-                      doc => "Identifies the genome model to which we'll add the reads." },
+        model_id            => { is => 'Integer', 
+                                doc => "Identifies the genome model to which we'll add the reads." },
         sequencing_platform => { is => 'String',
-                                 doc => 'Type of sequencing instrument used to generate the data'},
-        full_path => { is => 'String',
-                       doc => 'Pathname for the data produced by the run' },
+                                doc => 'Type of sequencing instrument used to generate the data'},
+        full_path           => { is => 'String',
+                                doc => 'Pathname for the data produced by the run' },
     ],
     has_optional => [
-        limit_regions =>  { is => 'String',
-                            doc => 'Which regions should be kept during further analysis' },
-        bsub    =>  { is => 'Boolean',
-                      doc => 'Sub-commands should be submitted to bsub. Default is yes.',
-                      default_value => 1 },
-        bsub_queue => { is => 'String',
-                      doc => 'Which bsub queue to use for sub-command jobs, default is "long"',
-                       default_value => 'long'},
-        bsub_args => { is => 'String',
-                       doc => 'Additional arguments passed along to bsub (such as -o, for example)',
-                       default_value => '' },
-        test => { is => 'Boolean',
-                  doc => 'Create run information in the database, but do not schedule any sub-commands',
-                  is_optional => 1,
-                  default_value => 0},
+        limit_regions       =>  { is => 'String',
+                                    doc => 'Which regions should be kept during further analysis' },
+        bsub                =>  { is => 'Boolean',
+                                    doc => 'Sub-commands should be submitted to bsub. Default is yes.',
+                                    default_value => 1 },
+        bsub_queue          =>  { is => 'String',
+                                    doc => 'Which bsub queue to use for sub-command jobs, default is "long"',
+                                    default_value => 'long'},
+        bsub_args           => { is => 'String',
+                                    doc => 'Additional arguments passed along to bsub (such as -o, for example)',
+                                    default_value => '' },
+        test                => { is => 'Boolean',
+                                    doc => 'Create run information in the database, but do not schedule any sub-commands',
+                                    is_optional => 1,
+                                    default_value => 0},
     ]
 );
 
 
 sub help_brief {
-    "add reads from all or part of an instrument run to the model"
+    "launch the pipeline of steps which adds reads to a model"
 }
 
 sub help_synopsis {
@@ -63,8 +63,6 @@ our $GENOME_MODEL_BSUBBED_COMMAND = "genome-model";
 sub execute {
     my $self = shift;
 
-$DB::single=1;
-    
     my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
 
     # Determine the correct value for limit_regions

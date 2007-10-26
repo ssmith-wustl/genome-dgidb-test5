@@ -1,29 +1,30 @@
-package Genome::Model::Command::Tools::Reads::Mosaik;
+package Genome::Model::Command::Tools::Fasta2BFA;
 
 use strict;
 use warnings;
 
 use above "Genome";
 use Command;
+use IO::File;
 use File::Path;
+use File::Basename;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [                                # Specify the command's properties (parameters) <--- 
-        'sample'   => { type => 'String',  doc => "sample name"},
-        'dir'   => { type => 'String',  doc => "mosaik sequence (output) directory"},
-        'bindir'   => { type => 'String',  doc => "directory for binary executables for mosaik", is_optional => 1}
+        'fasta'   => { type => 'String',  doc => "required: fasta reference file"},
+        'maqdir'   => { type => 'String',  doc => "required: Maq (output) directory"}
     ], 
 );
 
 sub help_brief {
-    "add reads to Mosaik"
+    "add a reference sequence for processing with Maq"
 }
 
 sub help_detail {                           # This is what the user will see with --help <---
     return <<EOS 
-add reads to Mosaik
+add a reference sequence for processing with Maq
 EOS
 }
 
@@ -44,23 +45,26 @@ EOS
 
 sub execute {
     my $self = shift;
-		my($sample, $dir, $bindir) = 
-				 ($self->sample, $self->dir, $self->bindir);
-		$bindir ||= '/gscmnt/sata114/info/medseq/pkg/bin64';
-		return unless ( defined($sample) && defined($dir)
+		my($fasta, $maqdir) = 
+				 ($self->fasta, $self->maqdir);
+		return unless ( defined($fasta) && defined($maqdir)
 									);
-		my $mosaik_build ||= "$bindir/MosaikBuild";
-		my $fasta2bas ||= "$bindir/fasta2Bas";
 
-		$dir =~ s/ \/ $ //x;					# Remove any trailing slash
+		$maqdir =~ s/ \/ $ //x;					# Remove any trailing slash
 
 		# Make sure the output directory exists
-		unless (-e $dir) {
-			mkpath $dir;
+		unless (-e $maqdir) {
+			mkpath $maqdir;
 		}
 
-		system("cd $dir ; $mosaik_build -seq $sample.fasta -qual $sample.fasta.qual -out $sample.dat");
-		system("cd $dir ; $fasta2bas --fastaDna $sample.fasta --fastaQual $sample.fasta.qual --bas $sample.bas");
+		my $bfa_file = $maqdir . '/' . basename($fasta);
+		$bfa_file =~ s/\.fasta/.fa/x;
+		$bfa_file =~ s/\.fa/.bfa/x;
+
+		# Convert the reference to the binary fasta format
+		system("maq fasta2bfa $fasta $bfa_file");
+
+    return 1;
 }
 
 1;

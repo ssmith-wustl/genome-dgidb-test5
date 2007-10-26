@@ -6,6 +6,7 @@ use warnings;
 
 use above "Genome";
 use Command;
+use lib '/gsc/scripts/gsc/medseq/lib/'; 
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,

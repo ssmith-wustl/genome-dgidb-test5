@@ -1,30 +1,29 @@
-package Genome::Model::Command::Tools::Reference::Maq;
+package Genome::Model::Command::Tools::Old::AddReadsToMosaik;
 
 use strict;
 use warnings;
 
 use above "Genome";
 use Command;
-use IO::File;
 use File::Path;
-use File::Basename;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [                                # Specify the command's properties (parameters) <--- 
-        'fasta'   => { type => 'String',  doc => "required: fasta reference file"},
-        'maqdir'   => { type => 'String',  doc => "required: Maq (output) directory"}
+        'sample'   => { type => 'String',  doc => "sample name"},
+        'dir'   => { type => 'String',  doc => "mosaik sequence (output) directory"},
+        'bindir'   => { type => 'String',  doc => "directory for binary executables for mosaik", is_optional => 1}
     ], 
 );
 
 sub help_brief {
-    "add a reference sequence for processing with Maq"
+    "add reads to Mosaik"
 }
 
 sub help_detail {                           # This is what the user will see with --help <---
     return <<EOS 
-add a reference sequence for processing with Maq
+add reads to Mosaik
 EOS
 }
 
@@ -45,26 +44,23 @@ EOS
 
 sub execute {
     my $self = shift;
-		my($fasta, $maqdir) = 
-				 ($self->fasta, $self->maqdir);
-		return unless ( defined($fasta) && defined($maqdir)
+		my($sample, $dir, $bindir) = 
+				 ($self->sample, $self->dir, $self->bindir);
+		$bindir ||= '/gscmnt/sata114/info/medseq/pkg/bin64';
+		return unless ( defined($sample) && defined($dir)
 									);
+		my $mosaik_build ||= "$bindir/MosaikBuild";
+		my $fasta2bas ||= "$bindir/fasta2Bas";
 
-		$maqdir =~ s/ \/ $ //x;					# Remove any trailing slash
+		$dir =~ s/ \/ $ //x;					# Remove any trailing slash
 
 		# Make sure the output directory exists
-		unless (-e $maqdir) {
-			mkpath $maqdir;
+		unless (-e $dir) {
+			mkpath $dir;
 		}
 
-		my $bfa_file = $maqdir . '/' . basename($fasta);
-		$bfa_file =~ s/\.fasta/.fa/x;
-		$bfa_file =~ s/\.fa/.bfa/x;
-
-		# Convert the reference to the binary fasta format
-		system("maq fasta2bfa $fasta $bfa_file");
-
-    return 1;
+		system("cd $dir ; $mosaik_build -seq $sample.fasta -qual $sample.fasta.qual -out $sample.dat");
+		system("cd $dir ; $fasta2bas --fastaDna $sample.fasta --fastaQual $sample.fasta.qual --bas $sample.bas");
 }
 
 1;

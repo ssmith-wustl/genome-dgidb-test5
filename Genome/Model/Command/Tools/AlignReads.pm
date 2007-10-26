@@ -14,14 +14,7 @@ UR::Object::Class->define(
 );
 
 sub help_brief {
-    "align new reads to the model's reference sequences"
-}
-
-sub help_detail {                           # This is what the user will see with --help <---
-    return <<EOS 
-
-
-EOS
+    "run a variety of alignment tools directly"
 }
 
 1;

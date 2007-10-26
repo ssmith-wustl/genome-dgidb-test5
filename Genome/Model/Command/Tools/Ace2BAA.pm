@@ -1,4 +1,4 @@
-package Genome::Model::Command::Tools::Alignments::Polybayes;
+package Genome::Model::Command::Tools::Ace2BAA;
 
 use strict;
 use warnings;
@@ -18,29 +18,8 @@ UR::Object::Class->define(
 );
 
 sub help_brief {
-    "add an alignment to Polybayes"
+    "convert a (consed) Ace file to BAA (polybayes) format"
 }
-
-sub help_detail {                           # This is what the user will see with --help <---
-    return <<EOS 
-add an alignment to Polybayes
-EOS
-}
-
-#sub create {                               # Rarely implemented.  Initialize things before execute <---
-#    my $class = shift;
-#    my %params = @_;
-#    my $self = $class->SUPER::create(%params);
-#    # ..do initialization here
-#    return $self;
-#}
-
-#sub validate_params {                      # Pre-execute checking.  Not requiried <---
-#    my $self = shift;
-#    return unless $self->SUPER::validate_params(@_);
-#    # ..do real checks here
-#    return 1;
-#}
 
 sub execute {
     my $self = shift;

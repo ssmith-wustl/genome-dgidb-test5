@@ -3,13 +3,13 @@
 use strict;
 use warnings;
 
-package Genome::Model::Command::Tools::Genotype::BayesianFullAlphabetDistributionTest;
+package Genome::Model::Command::Tools::Old::Genotype::BayesianFullAlphabetDistributionTest;
 use base 'Test::Class';
 
 use Test::More;
 use Test::Deep;
 
-use Genome::Model::Command::Tools::Genotype::BayesianFullAlphabetDistribution;
+use Genome::Model::Command::Tools::Old::Genotype::BayesianFullAlphabetDistribution;
 use Genome::Model::RefSeqAlignmentCollection;
 use Genome::Model::Alignment::Mock;
 
@@ -26,7 +26,7 @@ sub setup : Test(setup){
     my $consensus_results = [];
     $self->{consensus_results} = $consensus_results;
     
-    my $consensus_calc = Genome::Model::Command::Tools::Genotype::BayesianFullAlphabetDistribution->create(
+    my $consensus_calc = Genome::Model::Command::Tools::Old::Genotype::BayesianFullAlphabetDistribution->create(
             length      => 1,
             result      => $consensus_results,
     );
@@ -55,7 +55,7 @@ sub setup : Test(setup){
 sub test_calculate_diploid_genotype_priors : Test(1){
     my $self = shift;
     
-    my $result = Genome::Model::Command::Genotype::BayesianFullAlphabetDistribution::_calculate_diploid_genotype_priors();
+    my $result = Genome::Model::Command::Old::Genotype::BayesianFullAlphabetDistribution::_calculate_diploid_genotype_priors();
     
     cmp_deeply(sum_struct($result), num(1,.000000001));
 }
@@ -75,7 +75,7 @@ sub test_examine_position_single_position_heterozygote : Test(1){
                                         probability                    => 1,
                                     )->get_current_aligned_base();
     
-    my $result = Genome::Model::Command::Genotype::BayesianFullAlphabetDistribution::_examine_position([$base1, $base2]);
+    my $result = Genome::Model::Command::Old::Genotype::BayesianFullAlphabetDistribution::_examine_position([$base1, $base2]);
     
     my $expected = [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0];
     
@@ -91,7 +91,7 @@ sub test_examine_position_single_position_single_read : Test(3){
                                         probability                    => 1,
                                     )->get_current_aligned_base();
     
-    my $result = Genome::Model::Command::Genotype::BayesianFullAlphabetDistribution::_examine_position([$base]);
+    my $result = Genome::Model::Command::Old::Genotype::BayesianFullAlphabetDistribution::_examine_position([$base]);
     
     # Test Set 1
     {
@@ -146,7 +146,7 @@ sub test_examine_position_single_position_single_read_gap_only : Test(2){
                                         probability                    => .9999,
                                     )->get_current_aligned_base();
     
-    my $result = Genome::Model::Command::Genotype::BayesianFullAlphabetDistribution::_examine_position([$base]);
+    my $result = Genome::Model::Command::Old::Genotype::BayesianFullAlphabetDistribution::_examine_position([$base]);
     
     cmp_deeply( sum_struct($result), num(1,.000000001), "Posterior distribution sums to 1");
     
@@ -180,7 +180,7 @@ sub test_examine_position_single_position_single_read_uniform : Test(2){
                                         probability                    => 1,
                                     )->get_current_aligned_base();
     
-    my $result = Genome::Model::Command::Genotype::BayesianFullAlphabetDistribution::_examine_position([$base]);
+    my $result = Genome::Model::Command::Old::Genotype::BayesianFullAlphabetDistribution::_examine_position([$base]);
     
     cmp_deeply( sum_struct($result), num(1,.000000001), "Posterior distribution sums to 1");
     
@@ -214,7 +214,7 @@ sub test_examine_position_single_position_single_read_certainty : Test(1){
                                         probability                    => 1,
                                     )->get_current_aligned_base();
     
-    my $result = Genome::Model::Command::Genotype::BayesianFullAlphabetDistribution::_examine_position([$base]);
+    my $result = Genome::Model::Command::Old::Genotype::BayesianFullAlphabetDistribution::_examine_position([$base]);
 
     my $expected = [
                         0,
@@ -246,7 +246,7 @@ sub test_examine_position_single_position_single_read_ambiguous_placement : Test
                                         probability                    => .2,
                                     )->get_current_aligned_base();
     
-    my $result = Genome::Model::Command::Genotype::BayesianFullAlphabetDistribution::_examine_position([$base]);
+    my $result = Genome::Model::Command::Old::Genotype::BayesianFullAlphabetDistribution::_examine_position([$base]);
     
     cmp_deeply( sum_struct($result), num(1, .000000001), "Posterior distribution sums to 1");
     
@@ -276,7 +276,7 @@ sub test_examine_position : Test(16) {
     
     my $result = [
                     map {
-                      Genome::Model::Command::Genotype::BayesianFullAlphabetDistribution::_examine_position(
+                      Genome::Model::Command::Old::Genotype::BayesianFullAlphabetDistribution::_examine_position(
                           [
                               map {
                                   Genome::Model::Alignment::Mock->new(
@@ -610,7 +610,7 @@ sub sum_struct{
 }
 #
 if ($0 eq __FILE__){
-    Genome::Model::Command::Tools::Genotype::BayesianFullAlphabetDistributionTest->new->runtests();
+    Genome::Model::Command::Tools::Old::Genotype::BayesianFullAlphabetDistributionTest->new->runtests();
 }
 #
 ##    AC?ATC*TACT-A

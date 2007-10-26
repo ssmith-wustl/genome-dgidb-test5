@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Genotype::TopAlignment;
+package Genome::Model::Command::Old::Genotype::TopAlignment;
 
 use strict;
 use warnings;
@@ -18,7 +18,7 @@ use Genome::Model::Command::IterateOverRefSeq;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
-    is => 'Genome::Model::Command::Tools::Genotype',
+    is => 'Genome::Model::Command::Tools::Old::Genotype',
     has => [
         result => { type => 'Array', doc => 'If set, results will be stored here instead of printing to STDOUT.' },
         bases_file => { type => 'String', doc => 'The pathname of the binary file containing prb values' },

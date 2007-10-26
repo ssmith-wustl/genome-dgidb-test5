@@ -14,14 +14,7 @@ UR::Object::Class->define(
 );
 
 sub help_brief {
-    "add reads to a genome model"
-}
-
-sub help_detail {                           # This is what the user will see with --help <---
-    return <<EOS 
-
-
-EOS
+    "tools to work directly with read data files"
 }
 
 1;
