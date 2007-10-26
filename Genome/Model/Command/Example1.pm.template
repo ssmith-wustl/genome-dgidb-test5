@@ -1,29 +1,26 @@
 
-# Rename the final word in the full class name to match the filename <---
-package Genome::Model::Command::Example1;
+package Genome::Model::Command::Example1;   # rename this when you give the module file a different name <--
 
 use strict;
 use warnings;
 
-use above "Genome";
-use Command;
+use above "Genome";                         # >above< ensures YOUR copy is used during development
 
-UR::Object::Class->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Command::Example1 {
     is => 'Command',                       
-    has => [                                # Specify the command's properties (parameters) <--- 
-        'foo'   => { type => 'String',      doc => "some foozy thing" },
-        'bar'   => { type => 'Boolean',     doc => "a flag to turn on and off" },
-        'baz'   => { type => 'My::Object',  doc => "this won't appear as a command-line option since it's not a primative" },
-        'yic'   => { type => 'String',      doc => "some yicky thing", is_optional => 1 },
+    has => [                                # specify the command's properties (parameters) <--- 
+        foo     => { type => 'String',      doc => "some foozy thing" },
+        bar     => { type => 'Boolean',     doc => "a flag to turn on and off", is_optional => 1 },
+        baz     => { type => 'My::Object',  doc => "this won't appear as a command-line option since it's not a primative", is_optional => 1 },
+        yic     => { type => 'String',      doc => "some yicky thing", is_optional => 1 },
     ], 
-);
+};
 
-sub help_brief {                            # Keep this to just a few words <---
-    "a one-line description used when there is a list of commands"                 
+sub help_brief {                            # keep this to just a few words <---
+    "WRITE A ONE-LINE DESCRIPTION HERE"                 
 }
 
-sub help_synopsis {                         # Replace the text below with real examples <---
+sub help_synopsis {                         # replace the text below with real examples <---
     return <<EOS
 genome-model example1 --foo=hello
 genome-model example1 --foo=goodbye --bar
@@ -31,13 +28,14 @@ genome-model example1 --foo=hello barearg1 barearg2 barearg3
 EOS
 }
 
-sub help_detail {                           # This is what the user will see with the longer version of help. <---
+sub help_detail {                           # this is what the user will see with the longer version of help. <---
     return <<EOS 
 This is a dummy command.  Copy, paste and modify the module! 
+CHANGE THIS BLOCK OF TEXT IN THE MODULE TO CHANGE THE HELP OUTPUT.
 EOS
 }
 
-#sub create {                               # Rarely implemented.  Initialize things before execute.  Delete unless you use it. <---
+#sub create {                               # rarely implemented.  Initialize things before execute.  Delete unless you use it. <---
 #    my $class = shift;
 #    my %params = @_;
 #    my $self = $class->SUPER::create(%params);
@@ -45,14 +43,14 @@ EOS
 #    return $self;
 #}
 
-#sub validate_params {                      # Pre-execute checking.  Not requiried.  Delete unless you use it. <---
+#sub validate_params {                      # pre-execute checking.  Not requiried.  Delete unless you use it. <---
 #    my $self = shift;
 #    return unless $self->SUPER::validate_params(@_);
 #    # ..do real checks here
 #    return 1;
 #}
 
-sub execute {                               # Replace with real execution logic.
+sub execute {                               # replace with real execution logic.
     my $self = shift;
     print "Running example command:\n" 
         . "    foo is " . (defined $self->foo ? $self->foo : '<not defined>')
