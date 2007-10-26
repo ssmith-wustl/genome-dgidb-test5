@@ -8,6 +8,8 @@ use Command;
 use Genome::Model;
 use File::Path;
 use Data::Dumper;
+use File::Temp;
+use IO::File;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
@@ -76,23 +78,62 @@ sub execute {
                                     defined $self->ref_seq_id ? "_".$self->ref_seq_id
                                                               : "");
 
-    unless ($model->lock_resource(resource_id=>$snp_resource_name)) {
-        $self->error_message("Can't get lock for model's cns2snp output $snp_resource_name");
-        return undef;
-    }
+    my $pileup_resource_name = sprintf("pileup%s",
+                                    defined $self->ref_seq_id ? "_".$self->ref_seq_id
+                                                              : "");
 
-    unless ($model->lock_resource(resource_id=>$indel_resource_name)) {
-        $self->error_message("Can't get lock for model's cns2snp output $indel_resource_name");
-        return undef;
+    foreach my $resource ( $snp_resource_name, $indel_resource_name, $pileup_resource_name) {
+        unless ($model->lock_resource(resource_id=>$resource)) {
+            $self->error_message("Can't get lock for resource $resource");
+            return undef;
+        }
     }
 
     my $snip_output_file =  $analysis_base_path . "/" . $snp_resource_name;
     my $indel_output_file =  $analysis_base_path . "/" . $indel_resource_name;
+    my $pileup_output_file = $analysis_base_path . "/" . $pileup_resource_name;
                                        
-    system("maq cns2snp $assembly_output_file > $snip_output_file");
+    my $retval = system("maq cns2snp $assembly_output_file > $snip_output_file");
+    unless ($retval == 0) {
+        $self->error_message("running maq cns2snp returned non-zero exit code $retval");
+        return;
+    }
     
-    return (!system("maq indelsoa $ref_seq_file $accumulated_alignments_file > $indel_output_file"));
-    
+    $retval = system("maq indelsoa $ref_seq_file $accumulated_alignments_file > $indel_output_file");
+    unless ($retval == 0) {
+        $self->error_message("running maq indelsoa returned non-zero exit code $retval");
+        return;
+    }
+
+    # Running pileup requires some parsing of the snip file
+    my $tmpfh = File::Temp->new();
+    my $snip_fh = IO::File->new($snip_output_file);
+    unless ($snip_fh) {
+        $self->error_message("Can't open snip output file for reading: $!");
+        return;
+    }
+    while(<$snip_fh>) {
+        chomp;
+        my ($id, $start, $ref_sequence, $iub_sequence, $quality_score,
+            $depth, $avg_hits, $high_quality, $unknown) = split("\t");
+        $tmpfh->print("$id\t$start\n");
+    }
+    $tmpfh->close();
+    $snip_fh->close();
+
+    my $pileup_command = sprintf("maq pileup -v -l %s %s %s > %s",
+                                 $tmpfh->filename,
+                                 $ref_seq_file,
+                                 $accumulated_alignments_file,
+                                 $pileup_output_file);
+
+    $retval = system($pileup_command);
+    unless ($retval == 0) {
+        $self->error_message("running maq pileup returned non-zero exit code $retval");
+        return;
+    }
+
+    return 1;
 }
 
 
