@@ -41,3 +41,4 @@ EOS
 
 1;
 
+sub sub_command_sort_position { 7 }

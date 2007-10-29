@@ -6,10 +6,9 @@ use warnings;
 use above "Genome";
 use Command; 
 
-UR::Object::Class->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Command::AddReads::UploadDatabase {
     is => ['Genome::Model::Command::DelegatesToSubcommand::WithRefSeq'],
-);
+};
 
 sub sub_command_sort_position { 8 }
 

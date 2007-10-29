@@ -7,13 +7,13 @@ use above "Genome";
 use File::Path;
 use GSC;
 
-UR::Object::Class->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Command::AddReads::AssignRun::Solexa {
     is => 'Genome::Model::Event',
     has => [ 
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
     ]
-);
+};
+
 sub help_synopsis {
     return <<"EOS"
     genome-model add-reads assign-run solexa --model-id 5 --run-id 10

@@ -6,10 +6,9 @@ use warnings;
 use above "UR";
 use Command; 
 
-UR::Object::Class->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Command::AddReads::AlignReads {
     is => ['Genome::Model::Command::DelegatesToSubcommand::WithRun'],
-);
+};
 
 sub sub_command_sort_position { 2 }
 

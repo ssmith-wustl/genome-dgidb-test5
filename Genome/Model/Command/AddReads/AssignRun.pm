@@ -7,11 +7,9 @@ use warnings;
 use above "Genome";
 use Command; 
 
-UR::Object::Class->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Command::AddReads::AssignRun {
     is => ['Genome::Model::Command::DelegatesToSubcommand::WithRun'],
-    
-);
+};
 
 sub sub_command_sort_position { 1 }
 

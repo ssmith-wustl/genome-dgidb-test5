@@ -9,14 +9,13 @@ use Genome::Model;
 use File::Path;
 use Data::Dumper;
 
-UR::Object::Class->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Command::AddReads::AssignRun::454 {
     is => 'Command',
     has => [ 
         model   => { is => 'String', is_optional => 0, doc => 'the genome model on which to operate' },
         run_id  => { is => 'Integer', doc => 'ID for the run object in the database'},
     ]
-);
+};
 
 sub help_brief {
     my $self = shift;

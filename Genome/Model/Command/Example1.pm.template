@@ -16,6 +16,8 @@ class Genome::Model::Command::Example1 {
     ], 
 };
 
+sub sub_command_sort_position { 12 }
+
 sub help_brief {                            # keep this to just a few words <---
     "WRITE A ONE-LINE DESCRIPTION HERE"                 
 }

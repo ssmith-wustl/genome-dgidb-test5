@@ -6,8 +6,7 @@ use warnings;
 use above "Genome";
 use Command; 
 
-UR::Object::Class->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Command::AddReads {
     is => 'Command',
     has => [
         model_id            => { is => 'Integer', 
@@ -34,8 +33,9 @@ UR::Object::Class->define(
                                     is_optional => 1,
                                     default_value => 0},
     ]
-);
+};
 
+sub sub_command_sort_position { 3 }
 
 sub help_brief {
     "launch the pipeline of steps which adds reads to a model"

@@ -5,13 +5,12 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Command;
 use lib '/gsc/scripts/gsc/medseq/lib/'; 
 
-UR::Object::Class->define(
-    class_name => __PACKAGE__,
-    is => 'Command',
-);
+class Genome::Model::Command {
+    is => ['Command'],
+    english_name => 'genome model command',
+};
 
 sub command_name {
     'genome-model' 

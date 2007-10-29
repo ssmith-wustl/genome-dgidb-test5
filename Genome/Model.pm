@@ -3,14 +3,14 @@ package Genome::Model;
 use strict;
 use warnings;
 
-use Genome;
+use above "Genome";
 use Term::ANSIColor;
 use Genome::Model::EqualColumnWidthTableizer;
 use File::Path;
 use File::Basename;
 
-use Genome;
-UR::Object::Class->define(
+#UR::Object::Class->define(
+class Genome::Model (
     class_name => 'Genome::Model',
     english_name => 'genome model',
     table_name => 'GENOME_MODEL',

@@ -10,13 +10,12 @@ use File::Path;
 use File::Basename;
 use Data::Dumper;
 
-UR::Object::Class->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Command::AddReads::UpdateGenotype::Maq {    
     is => 'Genome::Model::Event',
     has => [ 
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
     ]
-);
+};
 
 sub help_brief {
     "Use maq to build the mapping assembly"

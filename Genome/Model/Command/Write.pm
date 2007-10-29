@@ -48,3 +48,4 @@ sub _print_result {
 
 1;
 
+sub sub_command_sort_position { 8 }

@@ -13,6 +13,8 @@ UR::Object::Class->define(
     is => 'Command',
 );
 
+sub sub_command_sort_position { 2 }
+
 sub help_brief {
     "list information about genome models and available runs"
 }

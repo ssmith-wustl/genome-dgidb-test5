@@ -12,13 +12,12 @@ use lib "/gsc/scripts/gsc/medseq/lib";
 use MG::Transform::Coordinates::TranscriptToGenomic;
 use MG::IO::GenotypeSubmission;
 
-UR::Object::Class->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Command::AddReads::UploadDatabase::Maq {
     is => 'Genome::Model::Event',
     has => [ 
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
     ]
-);
+};
 
 sub help_brief {
     "Upload a variation set created by maq to the medical genomics database";

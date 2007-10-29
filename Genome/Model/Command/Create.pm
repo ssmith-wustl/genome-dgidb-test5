@@ -4,16 +4,13 @@ package Genome::Model::Command::Create;
 use strict;
 use warnings;
 
+use above "Genome";
 use Command; 
 use Genome::Model;
-
 use File::Path;
-
 use Data::Dumper;
 
-use Genome;
-UR::Object::Class->define(
-    class_name => __PACKAGE__, 
+class Genome::Model::Command::Create {
     is => ['Genome::Model::Event'],
     has => [
         dna_type               => { is => 'varchar', len => 255 },
@@ -31,7 +28,7 @@ UR::Object::Class->define(
         sample                 => { is => 'varchar', len => 255 },
     ],
     schema_name => 'Main',
-);
+};
 
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments
@@ -42,7 +39,7 @@ sub _shell_args_property_meta {
 
 
 sub sub_command_sort_position {
-    -1
+    1
 }
 
 sub help_brief {
