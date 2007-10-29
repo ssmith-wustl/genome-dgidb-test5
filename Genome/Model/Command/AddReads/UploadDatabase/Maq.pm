@@ -8,9 +8,9 @@ use Command;
 use Genome::Model;
 use IO::File;
 
-#use MG::Transform::Coordinates::TranscriptToGenomic;
-#use MG::IO::GenotypeSubmission;
-
+use lib "/gsc/scripts/gsc/medseq/lib";
+use MG::Transform::Coordinates::TranscriptToGenomic;
+use MG::IO::GenotypeSubmission;
 
 UR::Object::Class->define(
     class_name => __PACKAGE__,
@@ -188,10 +188,9 @@ sub _convert_output_to_mutations {
 sub _convert_variations_to_output {
     my($self,$variations) = @_;
 
-    # FIXME
-    die "We don't have any way to specify the coordinate file yet!";
-    my $genomic_coords;
-    #my $genomic_coords = MG::Transform::Coordinates::TranscriptToGenomic->new(coordinate_file => $coord_file);
+    die "We don't have a way to specify the transcript coord file yet";
+    my $coord_file;
+    my $genomic_coords = MG::Transform::Coordinates::TranscriptToGenomic->new(coordinate_file => $coord_file);
 
     my $output = {};
 
