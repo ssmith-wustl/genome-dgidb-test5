@@ -48,6 +48,7 @@ sub execute {
     my $self = shift;
 
     my $model = Genome::Model->get(id => $self->model_id);
+$DB::single=1;
 
     my @ref_seq_ids;
     if ($self->ref_seq_id) {
@@ -70,8 +71,15 @@ sub execute {
         my $pileup_resource_name = sprintf("pileup%s",
                                         defined $self->ref_seq_id ? "_".$self->ref_seq_id
                                                                   : "");
-        my $snip_output_file = sprintf("%s/identified_variations/%s", $self->data_directory,$snp_resource_name);
-        my $pileup_output_file = sprintf("%s/identified_variations/%s", $self->data_directory,$pileup_resource_name);
+        my $snip_output_file = sprintf("%s/identified_variations/%s", $model->data_directory,$snp_resource_name);
+        my $pileup_output_file = sprintf("%s/identified_variations/%s", $model->data_directory,$pileup_resource_name);
+
+        foreach my $file ( $snip_output_file, $pileup_output_file) {
+            unless (-f $file and -s $file) {
+                $self->error_message("File $file dosen't exist or has no data.  It should have been filled-in in a prior step");
+                return;
+            }
+        }
 
         foreach my $resource ( $snp_resource_name, $pileup_resource_name) {
             unless ($model->lock_resource(resource_id => $resource)) {
@@ -80,7 +88,7 @@ sub execute {
             }
         }
 
-        $self->status_mesage("Parsing snip file $snip_output_file");
+        $self->status_message("Parsing snip file $snip_output_file");
         $self->_parse_snip_file($snip_output_file, $variations);
 
         $self->status_message("Parsing pileup file $pileup_output_file");
@@ -300,7 +308,7 @@ sub _parse_pileup_file {
 
 
 # The variations hashref is modified in-place, not returned
-sub _parse_snip_output {
+sub _parse_snip_file {
     my($self,$filename,$variations) = @_;
 
     my $fh = IO::File->new($filename);
