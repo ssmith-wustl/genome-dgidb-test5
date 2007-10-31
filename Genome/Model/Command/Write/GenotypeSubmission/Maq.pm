@@ -136,6 +136,9 @@ sub execute {
 			chomp;
 			my ($id, $start, $ref_sequence, $iub_sequence, $quality_score, $depth, $avg_hits, $high_quality, $unknown) = split("\t");
 			next if ($quality_score < $qcutoff );
+			if ($id =~ /^NT_/x ) {
+				next;										# Skip random
+			}
 			my $key = "$id\t$start";
 			print $tmp_pos_list_fh "$id\t$start\n";
 			my $genotype = $IUBcode{$iub_sequence};
