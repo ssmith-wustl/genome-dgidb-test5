@@ -50,7 +50,6 @@ sub AddScreen {
     my $seq_num = $self->GetSeqNum;
   
 
-
     my $prescreen_code = $screenmgr->{$seq_num}->{'ScreenCode'};
     
     if($seq_num >  0) {
@@ -69,6 +68,24 @@ sub AddScreen {
     return $screen_ref;
 
 }
+
+sub PreviousScreen {
+
+    my ($self) = @_;
+    
+    my $screenmgr = $self -> {'TouchMgr'};
+        
+    my $seqnum = $self -> GetSeqNumDec;
+    undef($screenmgr -> {$seqnum});
+
+    $seqnum = $self -> GetSeqNum;
+    my $screencode = $screenmgr -> {$seqnum} -> {'ScreenCode'};
+    
+    &$screencode if(defined $screencode);
+   
+    
+} #PreviousScreen
+
 
 sub GetSeqNumIncr {
 
@@ -126,23 +143,6 @@ sub GetAutoScreen {
     
 } #GetAutoScreen
 
-
-sub PreviousScreen {
-
-    my ($self) = @_;
-    
-    my $screenmgr = $self -> {'TouchMgr'};
-
-    my $seqnum = $self -> GetSeqNumDec;
-    undef($screenmgr -> {$seqnum});
-
-    $seqnum = $self -> GetSeqNumDec;
-    my $screencode = $screenmgr -> {$seqnum} -> {'ScreenCode'};
-    
-    &$screencode if(defined $screencode);
-   
-    
-} #PreviousScreen
 
 sub Restart {
 
