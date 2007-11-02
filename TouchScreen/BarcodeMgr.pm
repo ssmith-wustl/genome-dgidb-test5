@@ -46,8 +46,8 @@ sub new {
     $self -> {'NumberOfScans'} = 0;
     $self -> {'ProcessId'} = undef;
     $self -> {'EmployeeId'} = undef;
-    $self -> {'UsedInputBarcodes'} = {};
-    $self -> {'UsedOutputBarcodes'} = {};
+    $self -> {'UsedInputBarcodes'} = [];
+    $self -> {'UsedOutputBarcodes'} = [];
     $self -> {'Machine'} = undef;
     $self -> {'Reagents'} = [];
     $self -> {'Barcodes'} = [];
@@ -93,8 +93,8 @@ sub ReInitInfo {
     my ($self) = @_;
     
     $self -> DestroyBarcodes;
-    $self -> {'UsedInputBarcodes'} = {};
-    $self -> {'UsedOutputBarcodes'} = {};
+    $self -> {'UsedInputBarcodes'} = [];
+    $self -> {'UsedOutputBarcodes'} = [];
     $self -> {'Machine'} = undef;
     $self -> {'Reagents'} = [];
     $self->{'Active'} = undef;
@@ -124,19 +124,19 @@ sub DestroyBarcodes {
     $self -> {'Barcodes'} = [];
 }
 
-sub clear_used_barcodes{
-    my $self = shift;
-    $self->{UsedInputBarcodes} = {};
-    $self->{UsedOutputBarcodes} = {};
-    1;
-}
-
 sub RemoveBarcode {
   my ($self, $barcode, $type) = @_;
   
   my $used = $type eq "in" ? $self -> {'UsedInputBarcodes'} : $self -> {'UsedOutputBarcodes'};
 
-  delete $used->{$barcode};
+  for my $i (0 .. $#{$used}) {
+    if(defined $used->[$i]) {
+      if($used->[$i] eq $barcode) {
+	$used->[$i] = undef;
+	last;
+      }
+    }
+  }
 }
 
 sub RemoveBarcodes {
@@ -160,12 +160,30 @@ sub RemoveBarcodes {
 	}
 
 	# remove deleted barcodes from used lists
-        foreach my $in(@inputs){
-            delete $self->{'UsedInputBarcodes'}{$in};
-        }
-        foreach my $out(@outputs){
-            delete $self->{'UsedOutputBarcodes'}{$out};
-        }
+	my @used = @{$self -> {'UsedInputBarcodes'}};
+	for my $i (0 .. $#used) {
+	    if(defined $used[$i]) {
+		foreach my $in (@inputs) {
+		    if($used[$i] eq $in) {
+			$self->{'UsedInputBarcodes'}[$i] = undef;
+			last;
+		    }
+		}
+	    }
+	}
+
+	@used = @{$self -> {'UsedOutputBarcodes'}};
+	for my $i (0 .. $#used) {
+	    if(defined $used[$i]) {
+		foreach my $in (@outputs) {
+		    if($used[$i] eq $in) {
+			$self->{'UsedOutputBarcodes'}[$i] = undef;
+			last;
+		    }
+		}
+	    }
+	}
+
     }
 } #RemoveBarcodes
 
@@ -184,7 +202,7 @@ sub AddUsedInputBarcode {
 
     my ($self, $input) = @_;
 
-    $self -> {'UsedInputBarcodes'}{$input} = 1;
+    push(@{$self -> {'UsedInputBarcodes'}}, $input);
 
 }
 
@@ -195,29 +213,41 @@ sub CheckIfUsedInput {
     #allow primer prefix barcodes, which are more like reagents to be scanned multiple times
     return 1 if($new =~ /^21/);
 
-    return 0 if exists $self->{'UsedInputBarcodes'}{$new}; #--already used
-    $self -> AddUsedInputBarcode($new) if ($new ne 'empty');
-    return 1;
-}
+    foreach my $in (@{$self -> {'UsedInputBarcodes'}}) {
+	if(defined $in) {
+	    if($in eq $new) {
+		return 0;
+	    }
+	}
+    }
+    
+    $self -> AddUsedInputBarcode($new) if($new ne 'empty');
 
-sub GetUsedOutputBarcodes{
-    my $self = shift;
-    return keys %{$self->{'UsedOutputBarcodes'}};
+    return 1;
 }
 
 sub AddUsedOutputBarcode {
 
     my ($self, $output) = @_;
-    $self->{'UsedOutputBarcodes'}{$output} = 1;
-    1;
+
+    push(@{$self -> {'UsedOutputBarcodes'}}, $output);
+    
 }
 
 sub CheckIfUsedOutput {
 
     my ($self, $new) = @_;
     
-    return 0 if exists $self->{'UsedOutputBarcode'};
+    foreach my $in (@{$self -> {'UsedOutputBarcodes'}}) {
+	if(defined $in) {
+	    if($in eq $new) {
+		return 0;
+	    }
+	}
+    }
+    
     $self -> AddUsedOutputBarcode($new) if($new ne 'empty');
+
     return 1;
 }
 

@@ -387,7 +387,7 @@ sub GetFreezerBarcodeDescToCheckout {
       if($ei && $ei->equipment_description =~ /freezer box/i) { 
 	if($self->GetFreezerBarcodeDescToCheckout($ei->equinf_bs_barcode, $ps_id)) {
           $self->{'Error'} = "Cannot check out tube [$barcode] because the box [" . $ei->equinf_bs_barcode . '] has NOT been checked out yet.';
-	  return 0;
+	  return;
 	}
 	$self->{'Error'} = '';
       }
@@ -1010,9 +1010,49 @@ sub hasItBeExpunged {
     $self->{'Error'} = "$pkg: HasItBeExpunged -> This $barcode was expunged before.";
     return 0;
   }
-  return $self->getBarcodeDescription($barcode);
+  my $bar = GSC::Barcode->get(barcode => $barcode);
+  if($bar->container_type eq 'tube') {
+    return $self->GetFreezerBarcodeDescToCheckout($barcode, 0);
+  } else {
+    return $self->getBarcodeDescription($barcode);
+  }
 }
 
+=pod
+
+=item is_box_still_checked_in
+
+Check the tube barcode that in a box whether it is checked in in freezer.
+
+PARAMS: $barcode - tube barcode to be checked
+RETURN: boolean
+
+=cut
+
+sub is_box_still_checked_in {
+  my $self = shift;
+  my $barcode = shift;
+  my $ps_id = shift;
+  my $checkin_pse_id = $self -> {'GetMaxPseForCheckIn'} -> xSql($barcode);
+  #LSF: If the $barcode is a tube, check to see the box is still checkin.
+  my $bar = GSC::Barcode->get(barcode => $barcode);
+  unless($bar) {
+    $self->{'Error'} = "Cannot find the barcode [$barcode] in the database!";
+    return 0;
+  }
+  if($checkin_pse_id && $bar->container_type eq "tube") {
+    my $cpse = GSC::PSEEquipmentInformation->get(pse_id => $checkin_pse_id);
+    my $ei = GSC::EquipmentInformation->get(barcode => $cpse->bs_barcode);
+    if($ei && $ei->equipment_description =~ /freezer box/i) { 
+      if($self->GetFreezerBarcodeDescToCheckout($ei->equinf_bs_barcode, $ps_id)) {
+        $self->{'Error'} = "Cannot check out tube [$barcode] because the box [" . $ei->equinf_bs_barcode . '] has NOT been checked out yet.';
+	return 0;
+      }
+      $self->{'Error'} = '';
+    }
+  }
+  return 1;
+}
 =head2 expungeFromStorage
 
 Expunge the plate from storage
@@ -1033,6 +1073,10 @@ sub expungeFromStorage {
       #$pre_pse_ids = $self->RetireArchivePlateFromFreezer($pss[0]->ps_id, $bars_in, $bars_out, $emp_id, $options, $pre_pse_ids);
       $pre_pse_ids = $self->RetireArchivePlateFromFreezer($pss[0]->ps_id, $bars_in, $bars_out, $emp_id, $options, $fpse_ids);
     }
+  } elsif(! defined $fdesc) {
+    #LSF: The box have not been checked out from the Freezer yet.
+    #     You cannot expunge the tube.
+    return;
   }
 
   my $new_pse_id = $self->BarcodeProcessEvent($ps_id, $bars_in->[0], $bars_out, 'completed', 'successful', $emp_id, 0, $pre_pse_ids->[0]);

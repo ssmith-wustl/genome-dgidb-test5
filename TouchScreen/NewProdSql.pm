@@ -2107,18 +2107,17 @@ sub ClaimArchivePlate {
 	return ($self->GetCoreError) if(!$new_pse_id);
 
 	my $arc_id = $self -> GetArcIdFromPseInSubPses($pre_pse_id);
-	return 0 if($arc_id==0);
+        if($arc_id){
+            my $result = $self -> InsertArchivesPses($new_pse_id, $arc_id);
+            return 0 if($result == 0);
+            
+            $result = $self -> UpdateArchiveGroup($group, $arc_id);
+            return 0 if(!$result);
 
-	my $result = $self -> InsertArchivesPses($new_pse_id, $arc_id);
-	return 0 if($result == 0);
-
-	$result = $self -> UpdateArchiveGroup($group, $arc_id);
-	return 0 if(!$result);
-
-	if(defined $purpose) {
-
-	    $result = $self -> UpdateArchivePurpose($arc_id, $purpose);
-	}
+            if(defined $purpose) {
+                $result = $self -> UpdateArchivePurpose($arc_id, $purpose);
+            }
+        }
 
 	push(@{$pse_ids}, $new_pse_id);
     }

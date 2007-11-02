@@ -12,7 +12,7 @@ use strict;
 use DBI;
 use DbAss;
 use TouchScreen::CoreSql;
-use Date::Calc;
+
 #############################################################
 # Production sql code package
 #############################################################
@@ -343,7 +343,97 @@ $self->{'GetEquipmentInfo'} = LoadSql($dbh, "select EIS_EQUIPMENT_STATUS, EQU_EQ
              
 $self->{'GetBarcodeHistory'} = LoadSql($dbh, "select pse_pse_id, direction from pse_barcodes
                where  bs_barcode = ? order by pse_pse_id", 'ListOfList');
+#LSF: Changed this substr(c.clone_name, 0, length(c.clopre_clone_prefix) + 4) to substr(c.clone_name, 0, length(c.clone_name) - length(ltrim(substr(c.clone_name, length(c.clopre_clone_prefix) + 1, length(c.clone_name) - length(c.clopre_clone_prefix)), '-0123456789')))
+$self->{'GetEquipmentHistory'} = LoadSql($dbh, q/select
+  distinct dp.pse_id, pb.bs_barcode || ' ' || 
+  substr(c.clone_name, 0, length(c.clone_name) - length(ltrim(substr(c.clone_name, length(c.clopre_clone_prefix) + 1, length(c.clone_name) - length(c.clopre_clone_prefix)), '-0123456789'))) 
+  || ' ' || s.sector_name, ei.equ_equipment_description || ' ' || ei.machine_number, pse.date_scheduled
+from 
+  (select bs_barcode from equipment_informations start with bs_barcode like ? connect by equinf_bs_barcode = prior bs_barcode) eh, process_step_executions pse, pse_equipment_informations pei, equipment_informations ei, pse_barcodes pb, dna_pse dp, clone_growths cg, dna_pse dpi, clones c, dna_location dl, sectors s
+where
+  s.sec_id = dl.sec_id
+and
+  dpi.dl_id = dl.dl_id 
+and
+  dpi.dna_id = c.clo_id
+and
+  cg.clo_clo_id = c.clo_id
+and
+  cg.cg_id = dp.dna_id
+and
+  dp.pse_id = pse.pse_id
+and
+  pse.pse_id = pb.pse_pse_id 
+and 
+  pse.pse_id = pei.pse_pse_id 
+and 
+  pse.psesta_pse_status = 'inprogress' 
+and 
+  ei.bs_barcode = pei.equinf_bs_barcode 
+and 
+  pei.equinf_bs_barcode  = eh.bs_barcode order by dp.pse_id, pse.date_scheduled/, 'ListOfList');
+  
+  $self->{'GetEquipmentHistory_old'} = LoadSql($dbh, q/select
+  distinct dp.pse_id, pb.bs_barcode || ' ' || 
+  substr(c.clone_name, 0, length(c.clone_name) - length(ltrim(substr(c.clone_name, length(c.clopre_clone_prefix) + 1, length(c.clone_name) - length(c.clopre_clone_prefix)), '-0123456789'))) 
+  || ' ' || s.sector_name, ei.equ_equipment_description || ' ' || ei.machine_number, pse.date_scheduled
+from 
+  process_step_executions pse, pse_equipment_informations pei, equipment_informations ei, pse_barcodes pb, dna_pse dp, clone_growths cg, dna_pse dpi, clones c, dna_location dl, sectors s
+where
+  s.sec_id = dl.sec_id
+and
+  dpi.dl_id = dl.dl_id 
+and
+  dpi.dna_id = c.clo_id
+and
+  cg.clo_clo_id = c.clo_id
+and
+  cg.cg_id = dp.dna_id
+and
+  dp.pse_id = pse.pse_id
+and
+  pse.pse_id = pb.pse_pse_id 
+and 
+  pse.pse_id = pei.pse_pse_id 
+and 
+  pse.psesta_pse_status = 'inprogress' 
+and 
+  ei.bs_barcode = pei.equinf_bs_barcode 
+and 
+  pei.equinf_bs_barcode in (select bs_barcode from equipment_informations start with bs_barcode = ? connect by equinf_bs_barcode = prior bs_barcode) order by dp.pse_id, pse.date_scheduled/, 'ListOfList');
 
+$self->{'GetEquipmentHistoryWithoutDNA'} = LoadSql($dbh, q/select
+    distinct pse.pse_id, eii.bs_barcode || ' ' ||  eii.equ_equipment_description || ' ' || nvl(eii.unit_name, eii.machine_number) , '', pse.date_scheduled
+  from 
+    process_step_executions pse, 
+    process_steps ps, 
+    equipment_informations ei, 
+    equipment_informations eii, 
+    pse_equipment_informations pei, 
+    pse_equipment_informations peii 
+  where 
+    pse.pse_id = peii.pse_pse_id 
+  and
+    ps.ps_id = pse.ps_ps_id 
+  and
+    eii.bs_barcode = peii.equinf_bs_barcode 
+  and 
+    peii.pse_pse_id = pei.pse_pse_id 
+  and 
+    ei.bs_barcode = pei.equinf_bs_barcode 
+  and 
+    pse.psesta_pse_status in ('inprogress', 'scheduled') 
+  and
+    ei.bs_barcode in (
+       select 
+         bs_barcode 
+       from 
+         equipment_informations 
+       start with 
+         bs_barcode = ? 
+       connect by 
+         equinf_bs_barcode = prior bs_barcode) order by pse.pse_id, pse.date_scheduled
+/, 'ListOfList');
 
 $self->{'GetEquipmentContain'} = LoadSql($dbh, q{select 
   distinct dp.pse_id, pb.bs_barcode || ' ' ||
@@ -2401,92 +2491,49 @@ sub GetBarcodeHistory {
 #######################
 # get Equipment History #
 #######################
-#-- local cache
-my %PROC_MAP;
-my %LOGIN_MAP;
-sub EquipmentHistory{
+sub GetEquipmentHistory {
+
     my ($self, $barcode) = @_;
-
-    my $type = $::EQUIPMENT_HISTORY_TYPE;
-
+    
     my $dbh = $self -> {'dbh'};
+    my $schema = $self -> {'Schema'};
+   #'BARCODE', 'DIRECTION', 'PROCESS', 'DATE COMPLETED', 'STATUS', 'CONFIRM EMPLOYEE', 'PSE'
+
+    my $pse_info = LoadSql($dbh, "select DATE_SCHEDULED, PSESTA_PSE_STATUS, pr_pse_result from process_step_executions 
+                                      where pse_id = ?", 'ListOfList');
     
-    #--- make sure we get associated barcodes
-    my $barcodes = App::DB->dbh->selectcol_arrayref
-        (qq/select bs_barcode from equipment_informations 
-         start with bs_barcode = ?
-         connect by equinf_bs_barcode = prior bs_barcode/, undef, $barcode);
+    my $unix_sql = LoadSql($dbh, "select distinct unix_login from gsc_users where gu_id = 
+                                      (select gu_gu_id from employee_infos where ei_id = 
+                                      (select ei_ei_id from process_step_executions where pse_id = ?))", 'Single');
+    my $process_to_sql = LoadSql($dbh, "select pro_process_to from process_steps where ps_id = 
+                                            (select ps_ps_id from process_step_executions where pse_id = ?)", 'Single');
+    my $info = $self->{'GetEquipmentHistory'} -> xSql($barcode);
 
-    unless(@$barcodes){
-        return;
+    #If there is no dna for the equipment, do the equipment check for the pse.
+    if(! @$info) {
+       $info = $self->{'GetEquipmentHistoryWithoutDNA'} -> xSql($barcode);   
     }
-    
-    #--- now craft the sql
-
-    my $sql = 
-        (qq/select 
-         distinct pse.pse_id,
-         pei.equinf_bs_barcode,
-         pse.ps_ps_id,
-         date_scheduled,
-         pse.psesta_pse_status,
-         pse.pr_pse_result,
-         pse.ei_ei_id,
-         bar.barcode || ' - ' || bar.content_description
-         FROM               
-         pse_equipment_informations pei 
-         join process_step_executions pse on pei.pse_pse_id = pse.pse_id                
-         left join pse_barcodes pb on pb.pse_pse_id = pse.pse_id
-         left join barcode_sources bar on pb.bs_barcode is not null 
-         and pb.bs_barcode = bar.barcode                               
-         where pei.equinf_bs_Barcode in (/.join(',', '?' x scalar(@$barcodes)).qq/)/);
-    
-    if($type eq 'Inprogress Now'){
-        $sql .= "\n  AND pse.psesta_pse_status = 'inprogress'";
-    }
-    elsif($type =~ /equipment management/i){
-        $sql .= "\n and pse.ps_ps_id in (select ps_id from process_steps where purpose = 'Equipment Management')";
-    }
-    elsif($type eq 'Executed Today'){
-        $sql .= "\n  AND trunc(date_scheduled) = trunc(sysdate)";
-    }
-    elsif($type =~ /(\d+) Hour/){
-        my @info = Date::Calc::Add_Delta_DHMS(Date::Calc::Today_and_Now(), 0, -$1, 0, 0);
-        #--- index is on trunc(Date_scheduled), so we do this:
-        $sql .= "\n AND trunc(date_scheduled) >= to_date('$info[0]-$info[1]-$info[2]', 'yyyy-mm-dd')"
-            . "\n AND date_scheduled >= to_date('$info[0]-$info[1]-$info[2] $info[3]:$info[4]', 'yyyy-mm-dd hh24:mi')";
-    }
-    elsif($type =~ /(\d+) Days/){
-        $sql .= "\n  AND trunc(date_scheduled) >= trunc(sysdate) - $1";
-    }
-    else{} #-- never... no where clause.... this is dangerous
-
-    $sql .= "\n  order by pse.pse_id, pse.date_scheduled desc";
-    
-    #-- pse_id, process_to, date_scheduled, pse_status, pse_result, ei_id, plate barcode
-
-    my $ei_sth = App::DB->dbh->prepare(qq/select unix_login from gsc_users join employee_infos on gu_gu_id = gu_id where ei_id = ?/);
-
-    my $ps_sth = App::DB->dbh->prepare(qq/select pro_process_to from process_steps where ps_id = ?/);
-    print STDERR "SQL is $sql\n";
-    my $sth = App::DB->dbh->prepare($sql) || die App::DB->error_message;;
-    $sth->execute(@$barcodes);
 
     my $lol=[];
-    while(my ($pse, $equip_bc, $ps_id, $date, $status, $result, $ei, $plate) = $sth->fetchrow_array){
+    my $i = 0;
+    foreach my $el (@{$info}) {
+	my $pse = $el->[0];
+	
+	$lol->[$i][0] = $barcode . " " . $el->[2];
+	$lol->[$i][1] = $el->[1];
+	
+	$lol->[$i][2] = $process_to_sql-> xSql($pse);
+	my $temp_ref = $pse_info -> xSql($pse);
+	$lol->[$i][3] = $temp_ref->[0][0];
+        $lol->[$i][4] = $temp_ref->[0][1];
+        $lol->[$i][5] = $temp_ref->[0][2];
+        $lol->[$i][6] = $unix_sql -> xSql($pse);
+	$lol->[$i][7] = $pse;
 
-        my ($proc, $login);
-        unless(exists $PROC_MAP{$ps_id}){
-            $ps_sth->execute($ps_id);
-            ($PROC_MAP{$ps_id}) = $ps_sth->fetchrow_array;
-        }
-        if($ei && !exists $LOGIN_MAP{$ei}){
-            $ei_sth->execute($ei);
-            ($LOGIN_MAP{$ei}) = $ei_sth->fetchrow_array;
-        }
-        push @$lol, [$equip_bc, $PROC_MAP{$ps_id}, $date, $status, $result, $LOGIN_MAP{$ei}, $pse, $plate, ];
-    }        
-    if(defined @$lol) {
+	$i++;
+    }
+   
+    if(defined $lol->[0][0]) {
 	return (1, $lol);
     }
     elsif(defined $DBI::errstr){
@@ -2495,8 +2542,9 @@ sub EquipmentHistory{
     else{
 	$Error = "Could not get barcode history info for barcode = $barcode.";
     }	
-    
+
     return 0;
+   
 } #
     
 

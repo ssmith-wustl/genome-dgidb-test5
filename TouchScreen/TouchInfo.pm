@@ -1060,14 +1060,7 @@ our %PROCESS_CNTRL =
 										   'InputCheck'    => 'GetGlycerolPlateInfo',
 										   'OutputCheck'   => 'GetAvailGlycerol',
 										   'Confirm'       => 'CreateGlycerolGrowth',
-										   'OutputDefined' => 'GetAvailableWellsInGrowthPlate'},
-                    'small agar plate' => {'SqlPackage'    => 'TouchScreen::LibSql',
-                                           'Configuration' => 'OneToDefined',
-                                           'Headers'       => ['small agar plate', 'centrifuge bottle'],
-                                           'InputCheck'    => 'GetAvailBarcodeOutInprogress',
-                                           'OutputCheck'   => 'GetAvailGlycerol',
-                                           'Confirm'       => 'CreateGlycerolGrowth',
-                                          }, 
+										   'OutputDefined' => 'GetAvailableWellsInGrowthPlate'}
 						      },
 			      
 			      'pellet cell debris' => {'250mL centrifuge bottle' => {'SqlPackage'    => 'TouchScreen::LibSql',
