@@ -724,9 +724,9 @@ sub confirm_scheduled_pse_cron {
     if ($_process_to_) {
         $resource_id .= "_$_process_to_";
     }
-    App::Object->status_message("$$ looking for db lock for $resource_id");
+    App::Object->status_message("$$ looking for file lock for $resource_id");
     my $cspc_lock = App::Lock->create(
-        mechanism   => 'DB_Table',
+        mechanism   => 'file',
         resource_id => $resource_id,
         block       => 0,
     );
