@@ -81,9 +81,16 @@ sub Set {
 sub Get {
     
     my ($self, $info) = @_;
-    
-    my $data = $self -> {$info};
-
+    my $data;
+    #LSF: Made it to support the call to get the input or output in array ref as before.
+    if($info =~ /^Used(In|Out)putBarcodes$/) {
+      my $t = $self->{$info};
+      if($t) {
+        $data = [keys %$t];
+      }
+    } else {
+      $data = $self -> {$info};
+    }
     return ($data);
 } #Get
 
