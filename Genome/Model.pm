@@ -31,6 +31,7 @@ class Genome::Model (
         read_calibrator_params  => { is => 'VARCHAR', len => 255, is_optional => 1 },
         reference_sequence_name => { is => 'VARCHAR', len => 255 },
         sample_name             => { is => 'VARCHAR', len => 255 },
+        alignment_distribution_threshold => { is => 'VARCHAR', len => 255 },
     ],
     unique_constraints => [
         { properties => [qw/id/], sql => 'PRIMARY' },
@@ -162,6 +163,8 @@ sub resolve_accumulated_alignments_filename {
         return $model_data_directory . "/alignments.submap/" . $refseq . ".map";   
     }
 }
+
+
 
 
 1;
