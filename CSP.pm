@@ -707,8 +707,9 @@ sub confirm_scheduled_pse_cron {
     $class->setup_logging_callbacks;
 
 
+    my $hostname = hostname();
     App::Object->status_message(
-        App::Name->prog_name . ' started on ' . hostname()
+        App::Name->prog_name . ' started on ' . $hostname
         . " as " . getpwuid($<) . " with pid $$"
     );
 
@@ -717,6 +718,15 @@ sub confirm_scheduled_pse_cron {
     if ( $class->global_locked and !$ignore_locks ) {
         App::MsgLogger->warning_message('Locked: exiting');
         exit 0;
+    }
+
+    # must be on cron2 (linuscs38) because of file based locks
+    App::Object->status_message("checking hostname: $hostname");
+    my $proper_hostname = 'linuscs38';
+    if ( $hostname ne $proper_hostname ) {
+        my $msg = "must run on $proper_hostname, not $hostname";
+        App::Object->error_message($msg);
+        die $msg;
     }
 
     # make sure 1 and only 1 process is running at a time
