@@ -55,9 +55,11 @@ sub execute {
 	push @goodlanes, $lane;
       }
     }
-    unless {@goodlanes) {return 0;}
-    $self->run->limit_regions{join('',@goodlanes)};
-    return 1;
+    unless ( @goodlanes ) {
+        return 0;
+    }
+        $self->run->limit_regions(join('',@goodlanes));
+        return 1;
 }
 
 
