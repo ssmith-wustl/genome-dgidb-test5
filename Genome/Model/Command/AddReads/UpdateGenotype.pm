@@ -10,7 +10,7 @@ class Genome::Model::Command::AddReads::UpdateGenotype {
     is => ['Genome::Model::Command::DelegatesToSubcommand::WithRefSeq'],
 };
 
-sub sub_command_sort_position { 6 }
+sub sub_command_sort_position { 7 }
 
 sub help_brief {
     "add reads from all or part of an instrument run to the model"
