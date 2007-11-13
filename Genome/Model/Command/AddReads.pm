@@ -109,8 +109,13 @@ sub execute {
             if ($self->bsub) {
                 $last_bsub_job_id = $self->run_command_with_bsub($command,$run,$last_bsub_job_id);
             } elsif (! $self->test) {
-                $command->execute();
+                $last_bsub_job_id = $command->execute();
             }
+
+            # This will be false if something went wrong.
+            # We should probably stop the pipeline at this point
+            return unless $last_bsub_job_id;
+           
         }
     }
 
