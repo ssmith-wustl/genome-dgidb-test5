@@ -3830,7 +3830,7 @@ sub AutoAbandonAgarPlates {
 	    
 	    my $arcs2pick = ($target - $picked_archives);
 	    
-	    if(($arcs2pick <= 0) && ($picked96 == 1))  {                
+	    if(($arcs2pick <= 0) && ($picked96 == 1))  {
                 my $find_dna_query=
                     qq/
                     select distinct dr.dna_id
@@ -3864,8 +3864,8 @@ sub AutoAbandonAgarPlates {
                                                                undef,
                                                                @dna_ids);
                 my @abpses=map {$_->[0]} @$abpse_ref;
-
-		    #foreach my $pse_id (@{$abpses}) {
+                
+                if(@abpses) {		    
                     foreach my $pse_id (@abpses) {
                         #LSF: Check to make sure the out of the $pse_id barcode is ligation "11" prefix.
                         next if(grep { $_->barcode !~ /^11/ } GSC::PSEBarcode->get(pse_id    => $pse_id, 
