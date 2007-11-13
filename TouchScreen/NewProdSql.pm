@@ -303,13 +303,21 @@ $self -> {'GetSubIdPlIdFromSubclonePse'} = LoadSql($dbh, qq/select  distinct dp.
 							  select dp.dna_id from dna_pse dp, pse_barcodes pb where dp.pse_id = pb.pse_pse_id and pb.bs_barcode = ? and pb.direction = 'out')
 							  connect by dna_id = prior parent_dna_id)", 'Single');
 
-    $self->{'GetProjectTargetFromAgarPlate'} = LoadSql($dbh,  "select distinct project_id, projects.target from pse_barcodes, ligations, dna_pse, 
-                                    fractions, clone_growths, clone_growths_libraries, clones, projects , clones_projects
-                                    where pse_barcodes.pse_pse_id = dna_pse.pse_id and
-                                    dna_pse.dna_id = lig_id and fra_id = fra_fra_id and fractions.cl_cl_id = clone_growths_libraries.cl_cl_id and 
-                                    cg_id = clone_growths_libraries.cg_cg_id and clone_growths.clo_clo_id = clo_id and 
-                                    clones_projects.clo_clo_id = clo_id and project_project_id = project_id 
-                                    and projects.name = clones.clone_name and bs_barcode = ? and direction = 'out'", 'ListOfList'); 
+    $self->{'GetProjectTargetFromAgarPlate'} = LoadSql($dbh,
+                                                       qq/
+                                                       select distinct p.project_id, p.target
+                                                       from pse_barcodes pb
+                                                       join dna_pse dp on dp.pse_id = pb.pse_pse_id
+                                                       join ligations l on l.lig_id = dp.dna_id
+                                                       join fractions f on f.fra_id = l.fra_fra_id
+                                                       join clone_growths_libraries cgl on cgl.cl_cl_id = f.cl_cl_id
+                                                       join clone_growths cg on cg.cg_id = cgl.cg_cg_id
+                                                       join clones c on c.clo_id = cg.clo_clo_id
+                                                       join projects p on p.name = c.clone_name
+                                                       where pb.bs_barcode = ?
+                                                       and pb.direction = 'out'
+                                                       /,
+                                                       'ListOfList'); 
     
     $self->{'CheckIfProjectOpen'} = LoadSql($dbh, "select count(*) from process_step_executions pse, ligations, dna_pse, 
                                     fractions, clone_growths, clone_growths_libraries, clones, projects, clones_projects where 
@@ -3822,45 +3830,54 @@ sub AutoAbandonAgarPlates {
 	    
 	    my $arcs2pick = ($target - $picked_archives);
 	    
-	    if(($arcs2pick <= 0) && ($picked96 == 1))  {
-		$self -> {'ProjectAgarPlates_old'} = LoadSql($self->{'dbh'}, "select pse.pse_id from process_step_executions pse, process_steps,
-                                                             ligations, fractions, clone_growths, clone_growths_libraries, clones, 
-                                                             clones_projects, dna_pse lgx
-                                                             where 
-                                                                 lgx.pse_id = pse.pse_id and 
-                                                                 ps_ps_id = ps_id and 
-                                                                 lgx.dna_id = lig_id and 
-                                                                 fra_id = fra_fra_id and 
-                                                                 fractions.cl_cl_id = clone_growths_libraries.cl_cl_id and
-                                                                 cg_id = clone_growths_libraries.cg_cg_id 
-                                                                 and clone_growths.clo_clo_id = clo_id and 
-                                                                 clones_projects.clo_clo_id = clo_id and 
-                                                                 project_project_id = ? and 
-                                                                 (bp_barcode_prefix = '11' or bp_barcode_prefix_input = '11') and
-                                                                 psesta_pse_status = 'inprogress'", 'List');
-		$self -> {'ProjectAgarPlates'} = LoadSql($self->{'dbh'}, "select distinct pb1.pse_pse_id from process_steps ps, dna_pse dp, pse_barcodes pb, process_step_executions pse, pse_barcodes pb1 where
-ps.ps_id = pse.ps_ps_id and (ps.bp_barcode_prefix = '11' or ps.bp_barcode_prefix_input = '11') and
-pb.bs_barcode = pb1.bs_barcode and pb1.pse_pse_id = pse.pse_id and 
-pse.psesta_pse_status = 'inprogress' and 
-pb.bs_barcode like '11%' and pb.pse_pse_id = dp.pse_id and dp.dna_id in (
-select dr.dna_id from dna_relationship dr where dtr_id in (select dtr_id from dna_type_relationship where dna_type = 'ligation')
-start with dr.dna_id in (select clo_clo_id from clones_projects cl where project_project_id = ?)
-connect by prior dr.dna_id = dr.parent_dna_id)", 'List');
-	    
-	    
-	    
-		my $abpses = $self -> {'ProjectAgarPlates'} -> xSql($project_id);
-		
-		if(defined $abpses->[0]) {
-		    
-		    foreach my $pse_id (@{$abpses}) {
-		      #LSF: Check to make sure the out of the $pse_id barcode is ligation "11" prefix.
-		      next if(grep { $_->barcode !~ /^11/ } GSC::PSEBarcode->get(pse_id => $pse_id, direction => "out"));
-		      my $result = $self -> {'CoreSql'} -> Process('UpdatePse', 'abandoned', 'terminated', $pse_id);
-		      if($result == 0) {
-			  $self->GetCoreError;
-			  return 0;
-		      }		      
+	    if(($arcs2pick <= 0) && ($picked96 == 1))  {                
+                my $find_dna_query=
+                    qq/
+                    select distinct dr.dna_id
+                    from dna_relationship dr
+                    where dtr_id in (select dtr_id
+                                     from dna_type_relationship
+                                     where dna_type = 'ligation')
+                    start with dr.dna_id in (select clo_clo_id
+                                             from clones_projects cl
+                                             where project_project_id = ?)
+                    connect by prior dr.dna_id = dr.parent_dna_id
+                    /;
+                my $dna_ids_ref=$self->{dbh}->selectall_arrayref($find_dna_query,
+                                                                 undef,
+                                                                 $project_id);
+                
+                my @dna_ids=map {$_->[0]} @$dna_ids_ref;
+                my $get_ab_pses_query=qq/
+                    select distinct pb1.pse_pse_id
+                    from process_steps ps, dna_pse dp, pse_barcodes pb, process_step_executions pse, pse_barcodes pb1
+                    where ps.ps_id = pse.ps_ps_id
+                    and (ps.bp_barcode_prefix = '11'
+                         or ps.bp_barcode_prefix_input = '11')
+                    and pb.bs_barcode = pb1.bs_barcode
+                    and pb1.pse_pse_id = pse.pse_id
+                    and pse.psesta_pse_status = 'inprogress'
+                    and pb.bs_barcode like '11%'
+                    and pb.pse_pse_id = dp.pse_id
+                    and dp.dna_id in (/.join(', ', ('?') x @dna_ids).qq/)/;
+                my $abpse_ref=$self->{dbh}->selectall_arrayref($get_ab_pses_query,
+                                                               undef,
+                                                               @dna_ids);
+                my @abpses=map {$_->[0]} @$abpse_ref;
+
+		    #foreach my $pse_id (@{$abpses}) {
+                    foreach my $pse_id (@abpses) {
+                        #LSF: Check to make sure the out of the $pse_id barcode is ligation "11" prefix.
+                        next if(grep { $_->barcode !~ /^11/ } GSC::PSEBarcode->get(pse_id    => $pse_id, 
+                                                                                   direction => "out"));
+                        my $result = $self -> {'CoreSql'} -> Process('UpdatePse', 
+                                                                     'abandoned', 
+                                                                     'terminated', 
+                                                                     $pse_id);
+                        if($result == 0) {
+                            $self->GetCoreError;
+                            return 0;
+                        }		      
 		    }
 		}
 	    }
