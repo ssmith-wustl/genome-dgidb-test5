@@ -50,14 +50,17 @@ sub execute {
     
     my $now = App::Time->now();
 
+
+    # find when the last merge happened
     my ($last_merge_event) = Genome::Model::Event->get(sql=>sprintf("select * from GENOME_MODEL_EVENT where event_type='genome-model add-reads merge-alignments maq'
                                                        and event_status='Succeeded' and model_id=%s and ref_seq_id='%s' order by date_completed DESC",
                                                        $model->id, $self->ref_seq_id));
+    
+    # find the runs which have been accepted since the last merge (or since "ever" if there was no merge)                           
     my $last_merge_done_str = (defined $last_merge_event ? sprintf("and date_completed >= '%s'",
                                                                    $last_merge_event->date_completed)
                                                          : "");
-                               
-    my @run_events = Genome::Model::Event->get(sql=>sprintf("select * from GENOME_MODEL_EVENT where event_type='genome-model add-reads align-reads maq'
+    my @run_events = Genome::Model::Event->get(sql=>sprintf("select * from GENOME_MODEL_EVENT where event_type='genome-model add-reads accept-reads maq'
                                                 %s and model_id=%s and event_status='Succeeded'",
                                                 $last_merge_done_str,
                                                 $model->id));
