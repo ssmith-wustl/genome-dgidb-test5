@@ -83,7 +83,10 @@ sub get_disks_for {
         );
         ###########################################################
 
-        push @disks, $disk if($disk->{$key}=~/$pattern/);
+            if ( !$key || $disk->{$key} =~ /$pattern/ ) {
+
+                push @disks, $disk;
+            }
     }
 
     return(@disks);
