@@ -1510,7 +1510,7 @@ sub confirm_scheduled_pse {
     if ($lsf_job_id) {
 
         # log my own history
-        App->status_message( join( '', `bhist -l $lsf_job_id 2>&1` ) );
+        App->status_message( join( '', `bjobs -l $lsf_job_id 2>&1` ) );
     }
 
     # log elapsed time
