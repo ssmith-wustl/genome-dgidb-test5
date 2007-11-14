@@ -43,6 +43,8 @@ sub execute {
 
     my $lanes;
     
+    $DB::single = 1;
+    
     # ensure the reference sequence exists.
     my $run_path=$self->resolve_run_directory();
     $lanes=$self->run->limit_regions || '1245678';

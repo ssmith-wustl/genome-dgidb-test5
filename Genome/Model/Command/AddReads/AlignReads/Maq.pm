@@ -122,10 +122,7 @@ sub execute {
         # Part 3, use submap if necessary
     
         my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
-        if (!@subsequences) {
-            @subsequences = ('all_sequences');
-        }
-
+        
         foreach my $seq (@subsequences) {
             unless (-d "$this_lane_alignments_file.submaps") {
                  mkdir("$this_lane_alignments_file.submaps");

@@ -35,10 +35,10 @@ EOS
 sub sub_command_delegator {
     my $self = shift;
 
-    my $run = Genome::RunChunk->get(id => $self->run_id);
-    return unless $run;
+    my $model = Genome::Model->get($self->model_id);
+    return unless $model;
 
-    return $run->sequencing_platform;
+    return $model->genotyper_name;
 }
     
 

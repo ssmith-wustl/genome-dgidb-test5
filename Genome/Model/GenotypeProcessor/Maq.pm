@@ -12,7 +12,7 @@ use lib "/gsc/scripts/gsc/medseq/lib";
 use MG::Transform::Coordinates::TranscriptToGenomic;
 use MG::IO::GenotypeSubmission;
 
-class Genome::Model::Command::AddReads::UploadDatabase::Maq {
+class Genome::Model::GenotypeProcessor::Maq {
     has => [
         ref_seq_id => { is => 'Integer', is_optional => 1, doc => 'reference sequence id to operate against' },
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
@@ -28,6 +28,7 @@ class Genome::Model::Command::AddReads::UploadDatabase::Maq {
 our $QC_CUTOFF = 0;
 
 sub get_mutations {
+    $DB::single = 1;
     my $self = shift;
 
     my $model = Genome::Model->get(id => $self->model_id);
@@ -82,7 +83,8 @@ sub _convert_output_to_mutations {
     # FIXME Is this right?  They used to be command line args
     my $software = 'maq';
     my $build = '36';
-    my $sample_temp = $self->model->model_name;  
+    my $model = Genome::Model->get($self->model_id);
+    my $sample_temp = $model->sample_name;  
 
     $sample_temp =~ s/454_EST_S_//x;
     my ($sample_a, $sample_b) = split('-',$sample_temp);
