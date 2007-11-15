@@ -7,13 +7,12 @@ use lib "/gsc/scripts/gsc/medseq/lib";
 use lib "./t";
 use above "Genome";
 use Genome::Model::Command::Write::GenotypeSubmission;
-use MG::IO::GenotypeSubmission;
 use MaqSubmissionWriterControl;
+use MG::IO::GenotypeSubmission;
 
-my $model = Genome::Model->get(5);
+my $model = Genome::Model->get(1);
 my $base_path = $model->data_directory;
-my $ref_bfa = "/gscmnt/sata114/info/medseq/reference_sequences/CCDS_nucleotide.20070227.merged_new/all_sequences.bfa";
-my $coord_trans = "/gscmnt/sata114/info/medseq/reference_sequences/CCDS_nucleotide.20070227.merged_new/coord_translation_all_sequences.tsv";
+my $ref_bfa = "/gscmnt/sata114/info/medseq/reference_sequences/Homo_sapiens.NCBI36.45.dna.aml/1.bfa";
 
 
 my $working_mg_write_gs_call_list;
@@ -62,15 +61,14 @@ my $old_command = MaqSubmissionWriterControl->create(
     verbose=>1,
     source=>'wugsc',
     techtype=>'solexa',
-    mappingreference=>'ccds_merged',
-    cnsfile=>"$base_path/consensus/all_sequences.cns",
-    mapfile=>"$base_path/alignments.submap/all_sequences.map",
+    mappingreference=>'hg',
+    cnsfile=>"$base_path/consensus/1.cns",
+    mapfile=>"$base_path/alignments.submap/1.map",
     refbfa=>$ref_bfa,
     sample=>$model->sample_name,
-    coordinates=>$coord_trans,
     basename=>"/tmp/TEST",
     loaddb=>1,
-    runidentifier=>"1", # the new one counts runs up and we only have one run in the test model
+    runidentifier=>"432", # the new one counts runs up and we only have one run in the test model
     );  
 
 my @old_call_set;
@@ -86,13 +84,13 @@ ok(-f '/tmp/TEST_genotype.csv', 'test genotype file exists, we assume this is ok
 ok(unlink('/tmp/TEST_genotype.csv'), 'removed the genotype csv file');
 
 my $new_command = Genome::Model::Command::Write::GenotypeSubmission::Maq->create(
-    model_id=>5,
-    ref_seq_id=>'all_sequences'
+    model_id=>1,
+    ref_seq_id=>'1'
     );
 
 my $new_load_command = Genome::Model::Command::AddReads::UploadDatabase::Maq->create(
-    model_id=>5,
-    ref_seq_id=>'all_sequences'
+    model_id=>1,
+    ref_seq_id=>'1'
     );
 
 my @new_call_set;

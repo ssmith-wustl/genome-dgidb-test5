@@ -13,8 +13,8 @@ UR::Object::Class->define(
         id => { is => 'INT', len => 11 },
     ],
     has => [
-        date_completed => { is => 'TIMESTAMP', len => 14 },
-        date_scheduled => { is => 'TIMESTAMP', len => 14 },
+        date_completed => { is => 'TIMESTAMP', len => 19 },
+        date_scheduled => { is => 'TIMESTAMP', len => 19 },
         event_status   => { is => 'VARCHAR', len => 32 },
         event_type     => { is => 'VARCHAR', len => 255 },
         lsf_job_id     => { is => 'VARCHAR', len => 64, is_optional => 1 },

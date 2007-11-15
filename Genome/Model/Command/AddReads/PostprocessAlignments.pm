@@ -59,7 +59,8 @@ EOS
 our $GENOME_MODEL_BSUBBED_COMMAND = "genome-model";
 our @CHILD_JOB_CLASSES = ('Genome::Model::Command::AddReads::MergeAlignments',
                           'Genome::Model::Command::AddReads::UpdateGenotype',
-                          'Genome::Model::Command::AddReads::FindVariations');
+                          'Genome::Model::Command::AddReads::FindVariations',
+                          'Genome::Model::Command::AddReads::UploadDatabase');
 
 
 sub execute {
