@@ -279,6 +279,10 @@ sub _parse_pileup_file {
 
             my $bases_length = length($bases);
             
+            my $tb = $bases;
+            $tb =~ s/[\,\.]//gx;       
+            
+            $variations->{$key}->{reference_reads} = $bases_length - length($tb);
 
             foreach my $base ( 'A', 'C', 'G', 'T' ) {
                 if ($bases =~ m/$base/ix) {
