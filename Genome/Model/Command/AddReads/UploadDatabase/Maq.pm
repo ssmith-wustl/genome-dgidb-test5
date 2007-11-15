@@ -107,5 +107,9 @@ sub execute {
     return 1;
 }
 
+sub bsub_rusage {
+    return "-R 'rusage[mem=4000]'";
+}
+
 1;
 

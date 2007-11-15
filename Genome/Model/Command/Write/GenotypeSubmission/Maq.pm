@@ -58,7 +58,6 @@ sub execute {
     
     my $platform;
     foreach my $event (@run_events) {
-        print $event->event_type, "\n";
         my ($p) = $event->event_type =~ m/genome-model add-reads assign-run (\w+)$/;
         if (!defined $platform) {
             $platform = $p;

@@ -64,6 +64,11 @@ sub execute {
         return 1;
 }
 
+sub bsub_rusage {
+    return "-R 'select[type=LINUX64]'";
+
+}
+
 
 1;
 

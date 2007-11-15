@@ -40,7 +40,7 @@ sub sub_command_delegator {
 
     return $model->genotyper_name;
 }
-    
+
 
 1;
 
