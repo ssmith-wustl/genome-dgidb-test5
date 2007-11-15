@@ -55,11 +55,11 @@ sub execute {
                                                                          event_type => {operator =>'like',
                                                                          value => 'genome-model add-reads assign-run%'});
     
-    my $platform = "";
+    my $platform;
     foreach my $event (@run_events) {
         my ($p) = $event->event_type =~ m/genome-model add-reads assign-run (\w+)$/;
         if (!defined $platform) {
-            $p = $platform;
+            $platform = $p;
         }
         if ($p ne $platform) {
             $self->error_message("mixing runs of multiple sequencing platforms, maq only works with solexa runs!");
@@ -93,13 +93,12 @@ sub execute {
                                                             $_->{count});
     }
 
-    
     MG::IO::GenotypeSubmission::LoadDatabase($mutations,
                                              #check => $check,
                                              #rccheck => $rccheck,
                                              #verbose => $verbose,
                                              source => 'wugsc',
-                                             tech_type => "solexa",
+                                             tech_type => $platform,
                                              mapping_reference => ($model->dna_type eq "whole" ? 'hg' : 'ccds_merged'), 
                                              run_identifier => $run_count,  
                                          );

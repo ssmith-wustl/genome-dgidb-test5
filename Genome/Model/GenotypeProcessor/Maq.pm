@@ -69,6 +69,13 @@ $DB::single=1;
 
     my $mutations = $self->_convert_output_to_mutations($output);
 
+     foreach my $resource ( $snp_resource_name, $pileup_resource_name) {
+        unless ($model->unlock_resource(resource_id => $resource)) {
+            $self->error_message("Can't release lock for resource $resource");
+            return undef;
+        }
+    }
+
     return $mutations;
 }
 
