@@ -1,4 +1,4 @@
-package Genome::Model::Command::Write::GenotypeSubmission::Maq2;
+package Genome::Model::Command::Write::GenotypeSubmission::Maq;
 
 use strict;
 use warnings;
@@ -12,7 +12,7 @@ use lib "/gsc/scripts/gsc/medseq/lib";
 use MG::Transform::Coordinates::TranscriptToGenomic;
 use MG::IO::GenotypeSubmission;
 
-class Genome::Model::Command::Write::GenotypeSubmission::Maq2 {
+class Genome::Model::Command::Write::GenotypeSubmission::Maq {
     is => 'Command',
     has => [
         ref_seq_id => { is => 'Integer', is_optional => 0, doc => 'the reference sequence on which to operate (default = "all_sequences")', default=>'all_sequences'},
