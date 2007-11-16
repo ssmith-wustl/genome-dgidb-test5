@@ -102,8 +102,8 @@ sub run_command_with_bsub {
     my $queue = $self->bsub_queue;
     my $bsub_args = $self->bsub_args;
 
-    if ($cmd->can('bsub_rusage')) {
-        $bsub_args .= ' ' . $cmd->bsub_rusage;
+    if ($command->can('bsub_rusage')) {
+        $bsub_args .= ' ' . $command->bsub_rusage;
     }
 
     # In case the command to run on the blades is different than 'genome-model'
