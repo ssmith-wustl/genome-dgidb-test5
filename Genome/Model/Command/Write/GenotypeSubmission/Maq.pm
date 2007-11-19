@@ -76,7 +76,7 @@ sub execute {
 
     my $mut_list = $gproc->get_mutations();
 
-    my $fh = Genome::Model::Command::Write::GenotypeSubmission::Open($model->data_directory . "/genotype_submission");
+    my $fh = Genome::Model::Command::Write::GenotypeSubmission::Open($model->data_directory . "/" . $_->ref_seq_id);
     unless (defined($fh)) {
         $self->error_message("Unable to open genotype submission file for writing");
 	return;
