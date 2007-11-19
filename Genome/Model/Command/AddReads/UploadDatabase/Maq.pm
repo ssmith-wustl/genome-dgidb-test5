@@ -67,7 +67,7 @@ sub execute {
         }
     }
     
-    my %run_ids = map {$_, 1} @run_events;
+    my %run_ids = map {$_->run_id, 1} @run_events;
     my $run_count = scalar keys %run_ids;
 
     my $gproc = Genome::Model::GenotypeProcessor::Maq->create(ref_seq_id=>$self->ref_seq_id,
