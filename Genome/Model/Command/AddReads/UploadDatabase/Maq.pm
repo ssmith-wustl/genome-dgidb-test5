@@ -100,7 +100,7 @@ sub execute {
                                              source => 'wugsc',
                                              tech_type => $platform,
                                              mapping_reference => ($model->dna_type eq "whole" ? 'hg' : 'ccds_merged'), 
-                                             run_identifier => $run_count,  
+                                             run_identifier => $model->sample_name . "_" . $run_count,  
                                          );
 
 
