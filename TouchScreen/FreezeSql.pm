@@ -63,14 +63,14 @@ sub new {
                where pse_id = pse_pse_id and
                direction = 'in' and BS_BARCODE = ? and
                ps_ps_id in (select ps_id from $schema.process_steps where pro_process_to in 
-               ('assign archive plate to storage location', 'assign freezer box to storage location', 'assign tube to freezer box location' ))", 'Single');
+               ('assign archive plate to storage location', 'assign freezer box to storage location', 'assign tube to freezer box location', 'check in' ))", 'Single');
     $self -> {'GetMaxPseForCheckOut'} = LoadSql($dbh, "select max(pse_id) from $schema.pse_barcodes,$schema.process_step_executions 
                 where pse_id = pse_pse_id and
                 direction = 'in' and BS_BARCODE = ? and
                 ps_ps_id in (select ps_id from $schema.process_steps
                 where pro_process_to in 
                 ('retire all archives in a storage location','retire all contents in a storage location','retire archive plate from storage location', 
-                'retire freezer box from storage location', 'retire tube from freezer box location'))", 'Single');
+                'retire freezer box from storage location', 'retire tube from freezer box location', 'check out'))", 'Single');
     $self -> {'GetSlotDescFromPse'} =  LoadSql($dbh, "select barcode_description from $schema.barcode_sources where barcode = 
                 (select equinf_bs_barcode from $schema.pse_equipment_informations where pse_pse_id = ?)", 'Single');
     $self -> {'GetSlotBarcodeFromPse'} =  LoadSql($dbh, "select equinf_bs_barcode from $schema.pse_equipment_informations where pse_pse_id = ?", 'Single');
@@ -384,7 +384,7 @@ sub GetFreezerBarcodeDescToCheckout {
     if($checkin_pse_id && $bar->container_type eq "tube") {
       my $cpse = GSC::PSEEquipmentInformation->get(pse_id => $checkin_pse_id);
       my $ei = GSC::EquipmentInformation->get(barcode => $cpse->bs_barcode);
-      if($ei && $ei->equipment_description =~ /freezer box/i) { 
+      if($ei && $ei->equipment_description =~ /freezer box|well box/i) { 
 	if($self->GetFreezerBarcodeDescToCheckout($ei->equinf_bs_barcode, $ps_id)) {
           $self->{'Error'} = "Cannot check out tube [$barcode] because the box [" . $ei->equinf_bs_barcode . '] has NOT been checked out yet.';
 	  return;
