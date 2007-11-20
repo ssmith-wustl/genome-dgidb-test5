@@ -223,7 +223,7 @@ sub CheckIfUsedOutput {
 
     my ($self, $new) = @_;
     
-    return 0 if exists $self->{'UsedOutputBarcode'};
+    return 0 if exists $self->{'UsedOutputBarcodes'}{$new};
     $self -> AddUsedOutputBarcode($new) if($new ne 'empty');
     return 1;
 }
