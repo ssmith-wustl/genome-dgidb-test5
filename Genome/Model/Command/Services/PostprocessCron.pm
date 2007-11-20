@@ -13,9 +13,6 @@ use File::Basename;
 UR::Object::Class->define(
     class_name => __PACKAGE__,
     is => 'Command',                       
-    has => [                                # Specify the command's properties (parameters) <--- 
-        'model_id'   => { type => 'integer',      doc => "model id on which to work"},
-    ], 
 );
 
 sub help_brief {
@@ -41,10 +38,17 @@ EOS
 sub execute {
     my $self = shift;
     
-    my $model  = Genome::Model->get($self->model_id);
-    
+    my @pp_models = grep {$self->model_requires_postprocess($_)} Genome::Model->get();
+
+    print Data::Dumper::Dumper(@pp_models);
+}
+
+sub model_requires_postprocess {
+    my $self = shift;
+    my $model = shift;
+
         # find when the last merge happened
-    my ($last_merge_event) = Genome::Model::Event->get(sql=>sprintf("select * from GENOME_MODEL_EVENT where event_type = 'genome-model add-reads merge-alignments maq'
+    my ($last_merge_event) = Genome::Model::Event->get(sql=>sprintf("select * from GENOME_MODEL_EVENT where event_type = 'genome-model add-reads postprocess-alignments'
                                                        and event_status='Succeeded' and model_id=%s order by date_completed DESC",
                                                        $model->id));
     
@@ -58,10 +62,7 @@ sub execute {
                                                 $model->id));
     my @run_ids = map {$_->run_id} @run_events; 
     my @target_runs = Genome::RunChunk->get(id=>\@run_ids);
-    
-    if (@target_runs) {
-        my $cmd = Genome::Model::Command::AddReads::PostprocessAlignments->create(model_id=>$model->id);
-        return $cmd->execute;
-    }
+
+    return (@target_runs > 0);
     
 }
