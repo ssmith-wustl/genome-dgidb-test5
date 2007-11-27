@@ -40,7 +40,9 @@ sub execute {
     
     my @pp_models = grep {$self->model_requires_postprocess($_)} Genome::Model->get();
 
-    print Data::Dumper::Dumper(@pp_models);
+    foreach my $model (@pp_models) {
+        Genome::Model::Command::AddReads::PostprocessAlignments->execute(model_id=>$model->id);
+    }
 }
 
 sub model_requires_postprocess {
