@@ -17,6 +17,7 @@ class Genome::Model::Command::Write::GenotypeSubmission::Maq {
     has => [
         ref_seq_id => { is => 'Integer', is_optional => 0, doc => 'the reference sequence on which to operate (default = "all_sequences")', default=>'all_sequences'},
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
+        mutation_data => { is => 'Listref', is_optional => 1, doc => 'Use this pre-computed mutation data to generate the file, instead of computing it itself.  Should only be used internally.'},
     ]
 };
 
@@ -37,24 +38,17 @@ EOS
 }
 
 
-# This part is stolen and refactored from Brian's original G::M::Command::Write::GenotypeSubmission::Maq
-# Maybe it should be moved to a Maq-specific tools module at some point?
-
-# This used to be a command-line arg to the submitter.  Looks like it's pretty much
-# always 0.  If that's true, then it can be removed.  If it changes, then it should be made an
-# attribute of the model
-our $QC_CUTOFF = 0;
-
 sub execute {
     my $self = shift;
     $DB::single = 1;
-
     
     my $model = Genome::Model->get($self->model_id);
 
-    my @run_events = grep {defined $_->run_id} Genome::Model::Event->get(model_id=>$self->model_id,
-                                                                         event_type => {operator =>'like',
-                                                                         value => 'genome-model add-reads assign-run%'});
+    my @run_events = grep {defined $_->run_id}
+                          Genome::Model::Event->get(model_id=>$self->model_id,
+                                                    event_type => { operator =>'like',
+                                                                    value => 'genome-model add-reads assign-run%'
+                                                                   });
     
     my $platform;
     foreach my $event (@run_events) {
@@ -68,13 +62,14 @@ sub execute {
         }
     }
     
-    my %run_ids = map {$_, 1} @run_events;
-    my $run_count = scalar keys %run_ids;
-
-    my $gproc = Genome::Model::GenotypeProcessor::Maq->create(ref_seq_id=>$self->ref_seq_id,
-                                                              model_id=>$self->model_id);
-
-    my $mut_list = $gproc->get_mutations();
+    my $mut_list;
+    if ($self->mutation_data) {
+        $mut_list = $self->mutation_data;
+    } else {
+        my $gproc = Genome::Model::GenotypeProcessor::Maq->create(ref_seq_id=>$self->ref_seq_id,
+                                                                  model_id=>$self->model_id);
+        $mut_list = $gproc->get_mutations();
+    }
 
     my $fh = Genome::Model::Command::Write::GenotypeSubmission::Open($model->data_directory . "/" . $_->ref_seq_id);
     unless (defined($fh)) {

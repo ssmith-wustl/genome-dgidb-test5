@@ -102,7 +102,17 @@ sub execute {
                                              mapping_reference => ($model->dna_type eq "whole" ? 'hg' : 'ccds_merged'), 
                                              run_identifier => $model->sample_name . "_" . $run_count,  
                                          );
+    my $submission_file_writer = Genome::Model::Command::Write::GenotypeSubmission::Maq->create(
+                                        ref_seq_id    => $self->ref_seq_id,
+                                        model_id      => $self->model_id,
+                                        mutation_data => $mutations,
+                                      );
+    unless ($submission_file_writer) {
+        $self->error_message("Unable to create a submisstion file writer command");
+        return;
+    }
 
+    $submission_file_writer->execute() || return;
 
     return 1;
 }
