@@ -15,9 +15,6 @@ use App::Lock;
 
 class Genome::Model::Command::AddReads::AlignReads::Maq {
     is => 'Genome::Model::Event',
-    has => [ 
-        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
-    ]
 };
 
 sub help_brief {

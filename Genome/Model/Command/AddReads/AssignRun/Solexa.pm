@@ -45,7 +45,11 @@ sub execute {
     }
 
     unless (-d $model->data_parent_directory) {
-        mkdir $model->data_parent_directory;
+        eval { mkpath $model->data_parent_directory };
+				if ($@) {
+					$self->error_message("Couldn't create run directory path $model->data_parent_directory: $@");
+					return;
+				}
         unless(-d $model->data_parent_directory) {
             $self->error_message("Failed to create data parent directory: ".$model->data_parent_directory. ": $!");
             return;
