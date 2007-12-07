@@ -282,7 +282,7 @@ associations in four cases.
     RUN_REGION_454		=> '454 run region',
     SEQUENCE_GENOME             => 'genome sequence',        
     SEQUENCE_CHROMOSOME         => 'chromosome sequence',
- 
+    SEQUENCE_TRANSCRIPTOME      => 'transcriptome sequence', 
 );
 
 
@@ -417,6 +417,7 @@ associations in four cases.
         AMPLICON_SEQUENCE_TAG           GSC::Sequence::Tag::Amplicon
         SEQUENCE_GENOME                 GSC::Sequence::Genome        
         SEQUENCE_CHROMOSOME             GSC::Sequence::Chromosome
+        SEQUENCE_TRANSCRIPTOME          GSC::Sequence::Transcriptome
 
         AMP_TARGET_SAMPLE_COVERAGE      GSC::AmplificationTarget::Coverage::Sample
         SOLEXA_RUN                      GSC::Equipment::Solexa::Run
