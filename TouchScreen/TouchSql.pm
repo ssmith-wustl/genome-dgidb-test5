@@ -2508,53 +2508,19 @@ sub GetBarcodeDesc {
     my ($self, $barcode) = @_;
 
     my $prefix = substr($barcode, 0, 2);
-    my $SubName = $TouchScreen::TouchInfo::BARCODE_DESCRIPTION{$prefix};
-  
-    if(!(defined $SubName)) {
-        my $mbar = GSC::Barcode->get(barcode => $barcode);
-	unless($mbar) {
-	  die "Cannot find the barcode $barcode!";
-	}
-	my $label = $mbar->resolve_content_description;
-	if(defined $label) {
-	    if($label){ #- non 0
-	      #LSF: This is to recalculate the content description that was not calculated in the confirmation.
-	      if($label eq $barcode) {
-	        $label = $mbar->resolve_content_description(1);
-		if($label && $label ne $barcode) {
-		  App::DB->sync_database;
-		  App::DB->commit;
-                }
-	      }
-	      return (1, [[$barcode.' '.$label]]);
-	    }
-	    else{
-		#- this is a hack because the function set is really too complex to weave through to do it downstream
-		$barcode =~ /^(..)/;
-		($label) = App::DB->dbh->selectrow_array(qq/select prefix_description from barcode_prefixes where barcode_prefix = ?/, undef, $1);
-		die "Error running a barcode prefix query.  Has the table changed?" unless $label;
-		return  (1, [[$barcode.' '.$label]]);
-	    }
-	}
-
-#	$Error = "No method for barcode prefix defined.";
-	return (1, [[$barcode.' '.'no description']]);
+    my $mbar = GSC::Barcode->get(barcode => $barcode);
+    if($mbar){
+        my $label = $mbar->resolve_barcode_label();
+        if($label){
+            return (1, [[$barcode.' '.$label]]);
+        }
+        else{
+            return (1, [[$barcode.' Exists, but No Description']]);
+        }
     }
-
-    my ($desc) = $self -> $SubName($barcode); 
-    
-    unless($desc){
-		#- this is a hack because the function set is really too complex to weave through to do it downstream
-		$barcode =~ /^(..)/;
-		($desc) = App::DB->dbh->selectrow_array(qq/select prefix_description from barcode_prefixes where barcode_prefix = ?/, undef, $1);
-		die "Error running a barcode prefix query.  Has the table changed?" unless $desc;
-	    }
-    
-
-    $desc = $barcode.' '.$desc;
-    
-    return (1, [[$desc]]);
-
+    else{
+        return (1, [[$barcode. ' not found']]);
+    }
 } #GetBarcodeDesc
 
 
