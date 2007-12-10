@@ -1142,7 +1142,7 @@ sub isFreezerRackOrColumnOccupied {
     return 0;
   }
   my $bar = GSC::Barcode->get(barcode => $barcode);
-  my $desc = $bar->resolve_content_description;
+  my $desc = $bar->resolve_barcode_label;
   return $barcode unless($desc);
   return $desc;
 }
