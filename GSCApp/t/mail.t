@@ -16,7 +16,8 @@ ok(App::Mail->config(ext => $ext), 'set mail extension');
 ok(App::Mail->smail == 0, 'sent no mail');
 
 # create standard mail
-my $email = getlogin || getpwuid($<) || 'nobody';
+#my $email = getlogin || getpwuid($<) || 'nobody';
+my $email = 'nobody';
 ok
 (
     App::Mail->mail
