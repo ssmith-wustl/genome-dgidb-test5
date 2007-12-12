@@ -2510,7 +2510,7 @@ sub GetBarcodeDesc {
     my $prefix = substr($barcode, 0, 2);
     my $mbar = GSC::Barcode->get(barcode => $barcode);
     if($mbar){
-        my $label = $mbar->resolve_barcode_label();
+        my $label = $mbar->barcode_label();
         if($label){
             return (1, [[$barcode.' '.$label]]);
         }
