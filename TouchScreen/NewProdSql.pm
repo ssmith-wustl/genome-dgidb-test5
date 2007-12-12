@@ -4590,6 +4590,20 @@ sub GenerateSubclonesAndLocations {
     my $sector = $self -> GetSectorName($sec_id); 
     return 0 if(!$sector);
 		
+    #--- get all the plate information first
+    my %pl_map;
+    my $xs = App::DB->dbh->prepare(qq/select pl_id, sec_sec_id, well_name from plate_locations where pt_pt_id = ?/);
+    $xs->execute($pt_id);
+    while(my ($plid, $sec, $well) = $xs->fetchrow_array){
+        $pl_map{$sec} = {} unless exists $pl_map{$sec};
+        $pl_map{$sec}{$well} = $plid;
+    }
+
+    #--- get the seq ids first
+    my $count = scalar(@rows) * 12;
+    my $ids = App::DB->dbh->selectcol_arrayref(qq/select sub_seq.nextval from process_steps where rownum <= $count/) || die "query is wrong";
+
+
     for ($j=0;$j<=$#rows;$j++) {
 	for($i=1;$i<=12;$i++) {
 	    my $well;
@@ -4606,7 +4620,7 @@ sub GenerateSubclonesAndLocations {
 	    my $subclone = $ArchiveNumber.$well;
 	    
 	    # get next sub_id
-	    my $sub_id = $self -> GetNextSubId;
+	    my $sub_id = shift @$ids;
 	    return 0 if(!$sub_id);
 
 	    # determine plate location
@@ -4614,9 +4628,9 @@ sub GenerateSubclonesAndLocations {
 		$well = &ConvertWell::To384 ($well, $sector);
 	    }
 		
-	    my $pl_id = $self->GetPlId($well, $sec_id, $pt_id);
-	    return 0 if($pl_id eq '0');
-
+	    my $pl_id = $pl_map{$sec_id}{$well}; #$self->GetPlId($well, $sec_id, $pt_id);
+	    return 0 unless $pl_id; 
+            
 	    # insert subclone
 	    my $result = $self -> InsertSubclones($subclone, $lig_id, $sub_id, $arc_id, $pse_id, $pl_id);
 	    return 0 if(!$result);
