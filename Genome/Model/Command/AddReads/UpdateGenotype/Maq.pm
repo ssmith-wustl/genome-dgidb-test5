@@ -12,9 +12,6 @@ use Data::Dumper;
 
 class Genome::Model::Command::AddReads::UpdateGenotype::Maq {    
     is => 'Genome::Model::Event',
-    has => [ 
-        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
-    ]
 };
 
 sub help_brief {
@@ -23,7 +20,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model add-reads update-genotype-probabilities maq --model-id 5 --run-id 10
+    genome-model add-reads update-genotype maq --model-id 5 --run-id 10
 EOS
 }
 

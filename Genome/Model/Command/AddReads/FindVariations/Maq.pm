@@ -13,9 +13,6 @@ use IO::File;
 
 class Genome::Model::Command::AddReads::FindVariations::Maq {
     is => 'Genome::Model::Event',
-    has => [ 
-        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
-    ]
 };
 
 sub help_brief {
@@ -24,7 +21,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model postprocess-alignments identify-variation maq --model-id 5 --run-id 10
+    genome-model add-reads find-variations maq --model-id 5 --run-id 10
 EOS
 }
 
@@ -40,7 +37,7 @@ sub execute {
     my $model = Genome::Model->get(id => $self->model_id);
 
     # ensure the reference sequence exists.
-    my $ref_seq_file = $model->reference_sequence_path . "/" . $self->ref_seq_id . ".bfa";
+    my $ref_seq_file = $model->reference_sequence_path . "/all_sequences.bfa";
     unless (-e $ref_seq_file) {
         $self->error_message("reference sequence file $ref_seq_file does not exist.  please verify this first.");
         return;
