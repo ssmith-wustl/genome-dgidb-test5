@@ -339,6 +339,7 @@ associations in four cases.
         SEQUENCE_ASSEMBLY_OUTPUT_SANGER GSC::Sequence::Assembly::Output::Sanger
         SEQUENCE_ASSEMBLY_OUTPUT_454    GSC::Sequence::Assembly::Output::454
         SEQUENCE_ASSEMBLY_OUTPUT_Solexa GSC::Sequence::Assembly::Output::Solexa
+        SEQUENCE_GC_PCT_COUNT           GSC::Sequence::GCPctCount
 
         SEQ_ASSEMBLY_READ_STATUS_454	GSC::Sequence::Assembly::ReadStatus::454
 
