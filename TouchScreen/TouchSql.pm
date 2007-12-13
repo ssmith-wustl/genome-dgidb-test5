@@ -2515,7 +2515,7 @@ sub GetBarcodeDesc {
             return (1, [[$barcode.' '.$label]]);
         }
         else{
-            return (1, [[$barcode.' : '.$mbar->barcode_description."  exists, but has no content lable"]]);
+            return (1, [[$barcode.' : '.$mbar->barcode_description."  exists, but has no content label"]]);
         }
     }
     else{
