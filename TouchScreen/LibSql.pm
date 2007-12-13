@@ -443,42 +443,48 @@ connect by prior pse.pse_id = pse.prior_pse_id)", 'ListOfList');
                 purpose =  ?)", 'ListOfList');
 
 
-    $self->{'GetProjectTargetFromBarcodePsId'} = LoadSql($dbh, "select distinct projects.target from 
-               projects, clones_projects, clone_growths, fractions, 
-               clone_growths_libraries cgl, 
-               ligations, dna_pse, pse_barcodes, process_step_executions pse, process_steps where
-               project_id = project_project_id and 
-               clone_growths.clo_clo_id = clones_projects.clo_clo_id and  
-               clone_growths.cg_id = cgl.cg_cg_id and
-               fractions.cl_cl_id = cgl.cl_cl_id and
-               fra_id = fra_fra_id and lig_id = dna_id and pse_barcodes.pse_pse_id = dna_pse.pse_id and 
-               pse_barcodes.pse_pse_id = pse.pse_id and ps_ps_id = ps_id and
-               bs_barcode = ? and direction = 'out' and
-               ps_id in (select ps_id from process_steps where pro_process_to in (select pro_process from process_steps where ps_id = ?))", 'Single');
+    $self->{'GetProjectTargetFromBarcodePsId'} = LoadSql($dbh, "select distinct p.name from 
+pse_barcodes pb
+join process_step_executions pse on pse.pse_Id = pb.pse_pse_id
+join dna_pse dp on dp.pse_id = pse.pse_id
+join dna_relationship dr1 on dr1.dna_id = dp.dna_id -- ligation
+join dna_relationship dr2 on dr2.dna_id = dr1.parent_dna_id -- fraction
+join dna_relationship dr3 on dr3.dna_id = dr2.parent_dna_id -- library
+join dna_relationship dr4 on dr4.dna_id = dr3.parent_dna_id -- growth
+join clones_projects cp on cp.clo_clo_id = dr4.parent_dna_id
+join projects p on p.project_id = cp.project_project_id
+where
+pb.bs_barcode = ? 
+and pb.direction = 'out'", 'Single');
 
-    $self->{'GetProjectPurposeFromBarcodePsId'} = LoadSql($dbh, "select distinct  projects.pp_purpose from 
-               projects, clones_projects, clone_growths, fractions, 
-               clone_growths_libraries cgl, 
-               ligations, dna_pse, pse_barcodes, process_step_executions pse, process_steps where
-               project_id = project_project_id and clone_growths.clo_clo_id = clones_projects.clo_clo_id and  
-               clone_growths.cg_id = cgl.cg_cg_id and
-               fractions.cl_cl_id = cgl.cl_cl_id and
-               fra_id = fra_fra_id and lig_id = dna_id and pse_barcodes.pse_pse_id = dna_pse.pse_id and 
-               pse_barcodes.pse_pse_id = pse.pse_id and ps_ps_id = ps_id and
-               bs_barcode = ? and direction = 'out' and
-               ps_id in (select ps_id from process_steps where pro_process_to in (select pro_process from process_steps where ps_id = ?))", 'Single');
+    $self->{'GetProjectPurposeFromBarcodePsId'} = LoadSql($dbh, "select distinct p.pp_purpose from 
+pse_barcodes pb
+join process_step_executions pse on pse.pse_Id = pb.pse_pse_id
+join dna_pse dp on dp.pse_id = pse.pse_id
+join dna_relationship dr1 on dr1.dna_id = dp.dna_id -- ligation
+join dna_relationship dr2 on dr2.dna_id = dr1.parent_dna_id -- fraction
+join dna_relationship dr3 on dr3.dna_id = dr2.parent_dna_id -- library
+join dna_relationship dr4 on dr4.dna_id = dr3.parent_dna_id -- growth
+join clones_projects cp on cp.clo_clo_id = dr4.parent_dna_id
+join projects p on p.project_id = cp.project_project_id
+where
+pb.bs_barcode = ? 
+and pb.direction = 'out'", 'Single');
 
-    $self->{'GetProjectPriorityFromBarcodePsId'} = LoadSql($dbh, "select distinct projects.priority from 
-               projects, clones_projects, clone_growths, fractions, 
-               clone_growths_libraries cgl, 
-               ligations, dna_pse, pse_barcodes, process_step_executions pse, process_steps where
-               project_id = project_project_id and  clone_growths.clo_clo_id = clones_projects.clo_clo_id and 
-               clone_growths.cg_id = cgl.cg_cg_id and
-               fractions.cl_cl_id = cgl.cl_cl_id and
-               fra_id = fra_fra_id and lig_id = dna_id and pse_barcodes.pse_pse_id = dna_pse.pse_id and 
-               pse_barcodes.pse_pse_id = pse.pse_id and ps_ps_id = ps_id and
-               bs_barcode = ? and direction = 'out' and
-               ps_id in (select ps_id from process_steps where pro_process_to in (select pro_process from process_steps where ps_id = ?))", 'Single');
+    $self->{'GetProjectPriorityFromBarcodePsId'} = LoadSql($dbh, "select distinct p.priority from 
+pse_barcodes pb
+join process_step_executions pse on pse.pse_Id = pb.pse_pse_id
+join dna_pse dp on dp.pse_id = pse.pse_id
+join dna_relationship dr1 on dr1.dna_id = dp.dna_id -- ligation
+join dna_relationship dr2 on dr2.dna_id = dr1.parent_dna_id -- fraction
+join dna_relationship dr3 on dr3.dna_id = dr2.parent_dna_id -- library
+join dna_relationship dr4 on dr4.dna_id = dr3.parent_dna_id -- growth
+join clones_projects cp on cp.clo_clo_id = dr4.parent_dna_id
+join projects p on p.project_id = cp.project_project_id
+where
+pb.bs_barcode = ? 
+and pb.direction = 'out'
+", 'Single');
 	
     $self->{'GetPsoDescription'} = LoadSql($dbh, "select OUTPUT_DESCRIPTION from process_step_outputs where pso_id = ?", 'Single');
     
@@ -646,24 +652,18 @@ connect by prior pse.pse_id = pse.prior_pse_id)", 'ListOfList');
 	cp.clo_clo_id = ?", 'ListOfList');
 
 
-   $self->{'GetProjectFromLigationBarcode'} = LoadSql($dbh, "select distinct clone_name
-               from 
-	       clones clo, clone_growths cg, 
-               clone_growths_libraries cgl,
-	       clone_libraries cl,  
-               fractions fr,
-               ligations lg,
-               dna_pse lgx,
-               pse_barcodes barx, process_step_executions pse where
-               clo.clo_id = cg.clo_clo_id and
-               cgl.cg_cg_id = cg.cg_id and
-               cgl.cl_cl_id = cl.cl_id and
-               cl.cl_id = fr.cl_cl_id and
-               lg.fra_fra_id = fr.fra_id and
-               lgx.dna_id = lg.lig_id and
-               pse.pse_id = lgx.pse_id and
-               barx.pse_pse_id = pse.pse_id and
-               barx.bs_barcode = ? and barx.direction = 'out'", 'Single');
+   $self->{'GetProjectFromLigationBarcode'} = LoadSql($dbh, "select distinct c.clone_name from 
+pse_barcodes pb
+join process_step_executions pse on pse.pse_Id = pb.pse_pse_id
+join dna_pse dp on dp.pse_id = pse.pse_id
+join dna_relationship dr1 on dr1.dna_id = dp.dna_id -- ligation
+join dna_relationship dr2 on dr2.dna_id = dr1.parent_dna_id -- fraction
+join dna_relationship dr3 on dr3.dna_id = dr2.parent_dna_id -- library
+join dna_relationship dr4 on dr4.dna_id = dr3.parent_dna_id -- growth
+join clones c on c.clo_id = dr4.parent_dna_id
+where
+pb.bs_barcode = ? 
+and pb.direction = 'out'", 'Single');
 
     $self->{'GetLigationVectorType'} = LoadSql($dbh, "select distinct vt_vector_type from vectors, vector_linearizations, ligations, dna_pse, pse_barcodes
                                                     where vec_id = vec_vec_id and vl_id = vl_vl_id and lig_id = dna_id and pse_barcodes.pse_pse_id = 
@@ -3878,7 +3878,7 @@ sub GetProjectTarget {
     #$TouchSql -> destroy;
 
     
-    my $proj_data = $self -> {'GetProjectTargetFromBarcodePsId'} -> xSql($barcode->[0], $ps_id);
+    my $proj_data = $self -> {'GetProjectTargetFromBarcodePsId'} -> xSql($barcode->[0]);
     
     if((defined $proj_data)&&($proj_data != 0)) {
 	return ($pso_id, $proj_data, $lov);
@@ -3915,7 +3915,7 @@ sub GetProjectPurpose {
 
     $lov = Lquery($self->{'dbh'}, "select purpose from project_purposes");
 
-    my $proj_data = $self -> {'GetProjectPurposeFromBarcodePsId'} -> xSql($barcode->[0], $ps_id);
+    my $proj_data = $self -> {'GetProjectPurposeFromBarcodePsId'} -> xSql($barcode->[0]);
    
     if(defined $proj_data) {
 	return ($pso_id, $proj_data, $lov);
@@ -3954,7 +3954,7 @@ sub GetProjectPriority {
     
     #$TouchSql -> destroy;
 
-    my $proj_data = $self -> {'GetProjectPriorityFromBarcodePsId'} -> xSql($barcode->[0], $ps_id);
+    my $proj_data = $self -> {'GetProjectPriorityFromBarcodePsId'} -> xSql($barcode->[0]);
    
     if(defined $proj_data) {
 	if($proj_data) {
