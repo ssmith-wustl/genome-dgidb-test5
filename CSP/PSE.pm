@@ -31,11 +31,8 @@ my %PROCESS_COUNT = (
     'configure alignment'                    => 0,
     'run alignment'                          => 0,
     'clean run'                              => 0,
-
-# these are not around yet, but uncomment them when they are
-#    'copy run'                               => 0,
-#    'remove run'                             => 0,
-
+    'copy run'                               => 0,
+    'remove run'                             => 0,
     'prepare read submission'                => 0,
     'submit reads'                           => 0,
     'gather submission results'              => 0,
