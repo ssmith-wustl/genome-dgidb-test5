@@ -672,22 +672,17 @@ my %csp_priority = (
 
 sub csp_priority { %csp_priority }
 
-our %WAIT_ON_RESOURCE;
-# entry point for the confirm_schedule_pse_cron script
-sub confirm_scheduled_pse_cron {
+# this could probably have a better name
+sub _cron_setup {
     my ( $class, $arg ) = @_;
 
-    my @pse_ids      = @{ $arg->{pse_ids} };
-    my $ignore_locks = $arg->{ignore_locks};
-    my $process_to   = $arg->{process_to};
-    my $queue        = $arg->{queue};
-#    my $MAX_JOBS     = 2500;
-
-    my $_process_to_ = $process_to;
-    $_process_to_ =~ s/\s+/_/g if ($_process_to_);
     #########################
     # set up message logging
     #########################
+
+    my $process_to = $arg->{process_to};
+    $process_to =~ s/\s+/_/g if $process_to;
+    my $ignore_locks = $arg->{ignore_locks};
 
     # check for the log directory
     my $cron_dir = $class->cron_dir;
@@ -696,8 +691,8 @@ sub confirm_scheduled_pse_cron {
     # make up a log file name
     # one log file per day
     my ($today) = split(/ /, App::Time->now);
-    if ($_process_to_) {
-        $today .= "_$_process_to_";
+    if ($process_to) {
+        $today .= "_$process_to";
     }
     my $logfile = $cron_dir->file($today . '.log');
 
@@ -733,8 +728,8 @@ sub confirm_scheduled_pse_cron {
 
     # make sure 1 and only 1 process is running at a time
     my $resource_id = 'confirm_scheduled_pse_cron';
-    if ($_process_to_) {
-        $resource_id .= "_$_process_to_";
+    if ($process_to) {
+        $resource_id .= "_$process_to";
     }
     App::Object->status_message("$$ looking for file lock for $resource_id");
     my $cspc_lock = App::Lock->create(
@@ -746,6 +741,25 @@ sub confirm_scheduled_pse_cron {
         App::Object->status_message("$$ did not get lock, quitting");
         exit 0;
     }
+
+    return $cspc_lock;
+}
+
+our %WAIT_ON_RESOURCE;
+# entry point for the confirm_schedule_pse_cron script
+sub confirm_scheduled_pse_cron {
+    my ( $class, $arg ) = @_;
+
+    my @pse_ids      = @{ $arg->{pse_ids} };
+    my $ignore_locks = $arg->{ignore_locks};
+    my $process_to   = $arg->{process_to};
+    my $queue        = $arg->{queue};
+#    my $MAX_JOBS     = 2500;
+
+    my $cspc_lock = $class->_cron_setup({
+        process_to   => $process_to,
+        ignore_locks => $ignore_locks,
+    });
 
     ###################
     # do the real work
