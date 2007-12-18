@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 13;
+use Test::More tests => 15;
 
 use above "Genome";
 use Genome::Model::Command::Create;
@@ -50,12 +50,16 @@ test_assign_run();
 # align reads
 test_command("Genome::Model::Command::AddReads::AlignReads");
 
+# merge alignments
+
+test_command("Genome::Model::Command::AddReads::MergeAlignments");
+
 # update genotype probabilities
 
-test_command("Genome::Model::Command::PostprocessAlignments::UpdateGenotypeProbabilities");
+test_command("Genome::Model::Command::AddReads::UpdateGenotype");
 
 # identify variations
-test_command("Genome::Model::Command::PostprocessAlignments::IdentifyVariations");
+test_command("Genome::Model::Command::AddReads::FindVariations");
 
 
 
