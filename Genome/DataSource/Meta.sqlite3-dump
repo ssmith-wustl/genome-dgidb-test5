@@ -1,0 +1,128 @@
+BEGIN TRANSACTION;
+CREATE TABLE dd_table (
+     data_source varchar NOT NULL,
+     owner varchar,
+     table_name varchar NOT NULL,
+     table_type varchar NOT NULL,
+     er_type varchar NOT NULL,
+     last_ddl_time timestamp,
+     last_object_revision timestamp NOT NULL,
+     remarks varchar,
+     PRIMARY KEY(data_source, owner, table_name)
+);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','','GENOME_MODEL','TABLE','entity',NULL,'2007-08-30 21:18:48',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','TABLE','entity',NULL,'2007-08-30 21:18:49',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','','RUN','TABLE','entity',NULL,'2007-08-30 21:18:48',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','','URMETA_GENOME_MODEL_ID_SEQ','TABLE','validation item',NULL,'2007-09-05 16:00:16',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','','URMETA_GENOME_MODEL_EVENT_ID_SEQ','TABLE','validation item',NULL,'2007-09-05 16:00:17',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','','URMETA_RUN_ID_SEQ','TABLE','validation item',NULL,'2007-09-05 16:00:17',NULL);
+CREATE TABLE dd_bitmap_index (
+    data_source varchar NOT NULL,
+    owner varchar,
+    table_name varchar NOT NULL,
+    bitmap_index_name varchar NOT NULL,
+    PRIMARY KEY (data_source, owner, table_name, bitmap_index_name)
+);
+CREATE TABLE dd_table_column (
+    data_source varchar NOT NULL,
+    owner varchar,
+    table_name varchar NOT NULL,
+    column_name varchar NOT NULL,
+    data_type varchar NOT NULL,
+    data_length varchar,
+    nullable varchar NOT NULL,
+    last_object_revision timestamp NOT NULL,
+    remarks varchar,
+    PRIMARY KEY(data_source, owner, table_name, column_name)
+);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','ID','INT','11','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','PRIOR','VARCHAR','255','Y','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','GENOTYPER_PARAMS','VARCHAR','255','Y','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','RUN','ID','INT','11','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','RUN_ID','INT','11','Y','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','DNA_TYPE','VARCHAR','64','N','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','GENOTYPER_NAME','VARCHAR','255','N','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','REFERENCE_SEQUENCE_NAME','VARCHAR','255','N','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','LSF_JOB_ID','VARCHAR','64','Y','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','INDEL_FINDER_NAME','VARCHAR','255','Y','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','EVENT_STATUS','VARCHAR','32','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','READ_ALIGNER_NAME','VARCHAR','255','N','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','READ_CALIBRATOR_NAME','VARCHAR','255','Y','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','ID','INT','11','N','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','DATE_COMPLETED','TIMESTAMP','14','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','INDEL_FINDER_PARAMS','VARCHAR','255','Y','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','RUN','LIMIT_REGIONS','VARCHAR','32','Y','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','RUN','SEQUENCING_PLATFORM','VARCHAR','255','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','SAMPLE_NAME','VARCHAR','255','N','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','READ_CALIBRATOR_PARAMS','VARCHAR','255','Y','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','NAME','VARCHAR','255','N','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','DATE_SCHEDULED','TIMESTAMP','14','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','EVENT_TYPE','VARCHAR','255','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','RUN','FULL_PATH','VARCHAR','767','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','READ_ALIGNER_PARAMS','VARCHAR','255','Y','2007-10-24 11:27:46','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','USER_NAME','VARCHAR','64','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','URMETA_GENOME_MODEL_EVENT_ID_SEQ','NEXT_VALUE','INT','11','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','URMETA_RUN_ID_SEQ','NEXT_VALUE','INT','11','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','URMETA_GENOME_MODEL_ID_SEQ','NEXT_VALUE','INT','11','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','MODEL_ID','INT','11','N','2007-10-24 11:27:47','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','REF_SEQ_ID','VARCHAR','64','Y','2007-10-24 11:27:47',NULL);
+CREATE TABLE dd_pk_constraint_column (
+    data_source varchar NOT NULL,
+    owner varchar,
+    table_name varchar NOT NULL,
+    column_name varchar NOT NULL,
+    rank integer NOT NULL,
+    PRIMARY KEY (data_source,owner,table_name,column_name,rank)
+);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','','RUN','ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','','URMETA_GENOME_MODEL_ID_SEQ','NEXT_VALUE',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','','URMETA_RUN_ID_SEQ','NEXT_VALUE',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','','URMETA_GENOME_MODEL_EVENT_ID_SEQ','NEXT_VALUE',1);
+CREATE TABLE dd_unique_constraint_column (
+    data_source varchar NOT NULL,
+    owner varchar,
+    table_name varchar NOT NULL,
+    constraint_name varchar NOT NULL,
+    column_name varchar NOT NULL,
+    PRIMARY KEY (data_source,owner,table_name,constraint_name,column_name)
+);
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','','RUN','SQLITE_AUTOINDEX_RUN_1','LIMIT_REGIONS');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','','RUN','SQLITE_AUTOINDEX_RUN_1','SEQUENCING_PLATFORM');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','','RUN','SQLITE_AUTOINDEX_RUN_1','FULL_PATH');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','','URMETA_GENOME_MODEL_ID_SEQ','PRIMARY','NEXT_VALUE');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','','RUN','FAKE_MCPK','LIMIT_REGIONS');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','','RUN','FAKE_MCPK','SEQUENCING_PLATFORM');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','PRIMARY','ID');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','','URMETA_GENOME_MODEL_EVENT_ID_SEQ','PRIMARY','NEXT_VALUE');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','','RUN','FAKE_MCPK','FULL_PATH');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','','URMETA_RUN_ID_SEQ','PRIMARY','NEXT_VALUE');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL','PRIMARY','ID');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','','RUN','PRIMARY','ID');
+CREATE TABLE dd_fk_constraint (
+    data_source varchar NOT NULL,
+    owner varchar,
+    r_owner varchar,
+    table_name varchar NOT NULL,
+    r_table_name varchar NOT NULL,
+    fk_constraint_name varchar NOT NULL,
+    last_object_revision timestamp NOT NULL,
+    PRIMARY KEY(data_source, owner, r_owner, table_name, r_table_name, fk_constraint_name)
+);
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','','','GENOME_MODEL_EVENT','GENOME_MODEL','EVENT_GENOME_MODEL','2007-08-30 21:18:48');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','','','GENOME_MODEL_EVENT','RUN','EVENT_RUN','2007-08-30 21:18:48');
+CREATE TABLE dd_fk_constraint_column (
+    fk_constraint_name varchar NOT NULL,
+    data_source varchar NOT NULL,
+    owner varchar NOT NULL,
+    table_name varchar NOT NULL,
+    r_table_name varchar NOT NULL,
+    column_name varchar NOT NULL,
+    r_column_name varchar NOT NULL,
+      
+    PRIMARY KEY(data_source, owner, table_name, fk_constraint_name, column_name)
+);
+INSERT INTO "dd_fk_constraint_column" VALUES('EVENT_GENOME_MODEL','Genome::DataSource::Main','','GENOME_MODEL_EVENT','GENOME_MODEL','GENOME_MODEL_ID','ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('EVENT_RUN','Genome::DataSource::Main','','GENOME_MODEL_EVENT','RUN','RUN_ID','ID');
+COMMIT;
