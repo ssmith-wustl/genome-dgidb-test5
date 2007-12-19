@@ -18,7 +18,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model add-reads postprocess-alignments merge-alignments --model-id 5 
+    genome-model add-reads merge-alignments --model-id 5  --ref-seq-id all_sequences
 EOS
 }
 

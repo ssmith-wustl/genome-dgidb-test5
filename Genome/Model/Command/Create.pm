@@ -25,6 +25,7 @@ class Genome::Model::Command::Create {
         read_calibrator        => { is => 'varchar', len => 255, is_optional => 1 },
         read_calibrator_params => { is => 'varchar', len => 255, is_optional => 1 },
         reference_sequence     => { is => 'varchar', len => 255 },
+        alignment_distribution_threshold => { is => 'varchar', len => 255 },
         sample                 => { is => 'varchar', len => 255 },
     ],
     schema_name => 'Main',
@@ -57,6 +58,7 @@ genome-model create
                     --genotyper maq1_6     
                     --indel-finder bhdsindel1 
                     --reference-sequence NCBI-human-build36 
+                    --alignment-distribution-threshold 0
 EOS
 }
 
@@ -83,8 +85,6 @@ sub command_properties{
 
 sub execute {
     my $self = shift;
-    
-    $DB::single = 1;
 
     # genome model specific
 
