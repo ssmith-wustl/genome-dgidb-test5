@@ -5,7 +5,7 @@ use strict;
 
 use above "UR";
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => 'Genome',
     is => ['UR::Namespace'],
     english_name => 'genome',
