@@ -8,8 +8,8 @@ use above "Genome";
 use Genome::Model::Command::Create;
 
 my $uname = `uname -a`;
-if ($uname !~ /opteron/) {
-     plan skip_all => "Must be run on an opteron (maq used for accept reads is only available for opteron)";
+if ($uname !~ /(opteron|x86_64)/) {
+     plan skip_all => "Must be run on a 64 bit intel (maq used for accept reads is only available on that arch)";
 } else {
     plan tests => 17;
 }
