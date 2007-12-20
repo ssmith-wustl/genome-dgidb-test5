@@ -11,7 +11,7 @@ my $uname = `uname -a`;
 if ($uname !~ /opteron/) {
      plan skip_all => "Must be run on an opteron (maq used for accept reads is only available for opteron)";
 } else {
-    plan tests => 15;
+    plan tests => 17;
 }
 
 
