@@ -9,7 +9,7 @@ use MG::Transform::Coordinates::TranscriptToGenomic;
 use MG::IO::GenotypeSubmission;
 use File::Temp;
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [                                # Specify the command's properties (parameters) <--- 

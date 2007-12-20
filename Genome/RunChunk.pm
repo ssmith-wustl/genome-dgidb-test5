@@ -6,7 +6,7 @@ use warnings;
 use File::Basename;
 
 use Genome;
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => 'Genome::RunChunk',
     english_name => 'run chunk',
     table_name => 'RUN',

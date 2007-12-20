@@ -20,7 +20,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model add-reads update-genotype maq --model-id 5 --run-id 10
+    genome-model add-reads update-genotype maq --model-id 5 --ref-seq-id all_sequences
 EOS
 }
 

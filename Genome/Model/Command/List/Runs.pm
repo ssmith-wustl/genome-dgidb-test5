@@ -11,7 +11,7 @@ use Data::Dumper;
 use Term::ANSIColor;
 use Genome::Model::EqualColumnWidthTableizer;
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
 );
@@ -232,7 +232,7 @@ sub _get_all_gerald_pses{
 
 package Genome::Model::Command::List::Runs::InternalRunRecord;
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => 'Genome::Model::Command::List::Runs::InternalRunRecord',
     english_name => 'genome model command list runs internal run record',
     id_properties => ['full_path', 'lane'],

@@ -17,7 +17,7 @@ use constant QUERY_INSERT => 3;
 use constant REFERENCE_INSERT => 2;
 
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
     is_abstract => 1,

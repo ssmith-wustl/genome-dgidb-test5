@@ -7,7 +7,7 @@ use warnings;
 use above "Genome";
 use Genome::Model::Command::IterateOverRefSeq;
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Genome::Model::Command::IterateOverRefSeq',
     has => [

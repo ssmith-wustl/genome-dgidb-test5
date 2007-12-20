@@ -9,7 +9,7 @@ use Command;
 use Fcntl;
 use Carp;
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [

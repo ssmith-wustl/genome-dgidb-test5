@@ -9,7 +9,7 @@ use above "Genome";
 use Command;
 use File::Basename;
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [ 'input_dir' => { type => 'String', doc => q(The directory to look for prb.txt files; default is '.')},

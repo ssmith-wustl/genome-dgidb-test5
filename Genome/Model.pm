@@ -9,13 +9,13 @@ use Genome::Model::EqualColumnWidthTableizer;
 use File::Path;
 use File::Basename;
 
-#UR::Object::Class->define(
+#UR::Object::Type->define(
 class Genome::Model (
     class_name => 'Genome::Model',
     english_name => 'genome model',
     table_name => 'GENOME_MODEL',
     id_by => [
-        id => { is => 'INT', len => 11 },
+        id                      => { is => 'INT', len => 11 },
     ],
     has => [
         dna_type                => { is => 'VARCHAR', len => 64 },

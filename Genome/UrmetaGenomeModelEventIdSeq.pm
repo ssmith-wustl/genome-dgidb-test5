@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => 'Genome::UrmetaGenomeModelEventIdSeq',
     english_name => 'urmeta genome model event id seq',
     table_name => 'URMETA_GENOME_MODEL_EVENT_ID_SEQ',

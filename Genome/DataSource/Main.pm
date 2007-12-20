@@ -6,7 +6,7 @@ package Genome::DataSource::Main;
 
 use above "Genome";
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => 'Genome::DataSource::Main',
     is => ['UR::DataSource::MySQL'],
     english_name => 'genome datasource main',

@@ -10,7 +10,7 @@ use Command;
 use Bio::Index::Fasta;
 use Bio::SeqIO;
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
 );

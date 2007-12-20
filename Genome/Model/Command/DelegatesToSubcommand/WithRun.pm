@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 use Command; 
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Genome::Model::Command::DelegatesToSubcommand',
     is_abstract => 1,
@@ -23,7 +23,7 @@ sub _create_sub_command {
     my $command = $sub_command_type->create(model_id => $self->model_id,
                                             run_id => $self->run_id,
 					    event_type => $sub_command_type->command_name,
-					    date_scheduled => App::Time->now(),
+					    date_scheduled => UR::Time->now(),
 					    user_name => $ENV{'USER'},
 					   );
 

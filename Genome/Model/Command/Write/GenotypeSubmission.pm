@@ -8,7 +8,7 @@ use above "Genome";
 use Command;
 use IO::File;
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
 );

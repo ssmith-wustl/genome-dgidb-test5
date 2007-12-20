@@ -8,7 +8,7 @@ use above "Genome";
 use Command;
 use File::Basename;
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => ['run_number','lane_number','refseq', 'minimum_score'],

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => 'Genome::Model::Event',
     is => ['Command'],
     english_name => 'genome model event',

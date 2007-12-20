@@ -7,7 +7,7 @@ use above "Genome";
 use Command;
 use File::Path;
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [                                # Specify the command's properties (parameters) <--- 

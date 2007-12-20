@@ -16,7 +16,7 @@ use constant QUERY_INSERT       => 3;
 
 use Genome::Model::Command::IterateOverRefSeq;
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Genome::Model::Command::Tools::Old::Genotype',
     has => [

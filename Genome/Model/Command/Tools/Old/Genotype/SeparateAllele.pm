@@ -20,7 +20,7 @@ use Genome::Model::Command::Tools::Old::Genotype;
 
 # Class Methods ---------------------------------------------------------------
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Genome::Model::Command::Tools::Old::Genotype',
     has => [

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => 'Genome::UrmetaGenomeModelIdSeq',
     english_name => 'urmeta genome model id seq',
     table_name => 'URMETA_GENOME_MODEL_ID_SEQ',

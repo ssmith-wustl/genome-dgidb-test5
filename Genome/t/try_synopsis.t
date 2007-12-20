@@ -43,24 +43,20 @@ sub test_command {
 
 # create
 my $model = test_create_model();
-
 # add reads
 test_assign_run();
 
 # align reads
 test_command("Genome::Model::Command::AddReads::AlignReads");
-
 # merge alignments
 
 test_command("Genome::Model::Command::AddReads::MergeAlignments");
-
 # update genotype probabilities
 
 test_command("Genome::Model::Command::AddReads::UpdateGenotype");
 
 # identify variations
 test_command("Genome::Model::Command::AddReads::FindVariations");
-
 
 
 sub test_create_model {

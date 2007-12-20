@@ -7,7 +7,7 @@ use warnings;
 use above "Genome";
 use Command; 
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
 );

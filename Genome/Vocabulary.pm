@@ -5,7 +5,7 @@ use strict;
 
 use above "Genome";
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => 'Genome::Vocabulary',
     is => ['UR::Vocabulary'],
     english_name => 'genome vocabulary',

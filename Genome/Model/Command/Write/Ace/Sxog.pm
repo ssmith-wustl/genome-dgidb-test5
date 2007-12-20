@@ -31,7 +31,7 @@ my $LINKED_LIST_NODE_HEADER = [
                 {Type=> 'byte', NDims => 1, Dims => [ 60 ]}
                ];
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',                       
     has => [                                # Specify the command's properties (parameters) <--- 

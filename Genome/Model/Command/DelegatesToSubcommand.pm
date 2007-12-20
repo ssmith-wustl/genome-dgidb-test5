@@ -3,10 +3,11 @@ package Genome::Model::Command::DelegatesToSubcommand;
 use strict;
 use warnings;
 
+
 use above "Genome";
 use Command; 
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
     is_abstract => 1,
@@ -24,7 +25,7 @@ my $self = shift;
     if ($command) {
         $retval = $command->execute();
         
-        $command->date_completed(App::Time->now());
+        $command->date_completed(UR::Time->now());
         $command->event_status($retval ? 'Succeeded' : 'Failed');
         
         return $retval;
@@ -41,7 +42,7 @@ sub _create_sub_command {
 
     my $command = $sub_command_type->create(model_id => $self->model_id,
 					    event_type => $sub_command_type->command_name,
-					    date_scheduled => App::Time->now(),
+					    date_scheduled => UR::Time->now(),
 					    user_name => $ENV{'USER'},
 					   );
 

@@ -13,7 +13,7 @@ use File::Basename;
 use File::Temp;
 use File::stat;
 
-UR::Object::Class->define(
+UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',                       
     has => [                                # Specify the command's properties (parameters) <--- 
