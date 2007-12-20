@@ -2,10 +2,17 @@
 
 use strict;
 use warnings;
-use Test::More tests => 15;
+use Test::More;
 
 use above "Genome";
 use Genome::Model::Command::Create;
+
+my $uname = `uname -a`;
+if ($uname !~ /opteron/) {
+     plan skip_all => "Must be run on an opteron (maq used for accept reads is only available for opteron)";
+} else {
+    plan tests => 15;
+}
 
 
 sub get_example_from_synopsis {
@@ -48,6 +55,10 @@ test_assign_run();
 
 # align reads
 test_command("Genome::Model::Command::AddReads::AlignReads");
+
+# align reads
+test_command("Genome::Model::Command::AddReads::AcceptReads");
+
 # merge alignments
 
 test_command("Genome::Model::Command::AddReads::MergeAlignments");
