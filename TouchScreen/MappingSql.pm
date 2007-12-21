@@ -3574,7 +3574,7 @@ sub VerifyGrowths {
 sub GetAvailVerifyGrowths{
 
     my ($self, $barcode, $ps_id) = @_;
-
+    $self->{dbh}->do('alter session set "_OPTIM_PEEK_USER_BINDS"=FALSE');
 
     my ($result, $pses) = $self -> GetAvailClonePf($barcode, $ps_id, 'scheduled', 'in', 'Clone Setup');
 
@@ -3582,8 +3582,10 @@ sub GetAvailVerifyGrowths{
 	($result, $pses) = $self -> GetAvailClonePf($barcode, $ps_id, 'inprogress', 'in', 'Clone Setup');
 	#LSF: Get rid of the barcode in the description since the main program will append the barcode for it.
 	#$result =~ s/^$barcode//;
+        $self->{dbh}->do('alter session set "_OPTIM_PEEK_USER_BINDS"=TRUE');
 	return ($result, $pses);
     }
+    $self->{dbh}->do('alter session set "_OPTIM_PEEK_USER_BINDS"=TRUE');
     
     $self -> {'Error'} = "$pkg: GetAvailVerifyGrowths() -> There are still inputs plates scheduled for this plate = $barcode";
     
