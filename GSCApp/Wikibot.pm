@@ -18,7 +18,7 @@ sub new {
 
     $self->login(
         user             => 'Wikibot',
-        password         => '12345',
+        password         => 'w1k1_gsc_1',
         mediawiki_domain => 'local'
     ) or die 'Wikibot could not login';
 
