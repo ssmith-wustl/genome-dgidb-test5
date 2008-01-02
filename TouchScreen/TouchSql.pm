@@ -410,7 +410,7 @@ and  pei.equinf_bs_barcode = ? order by dp.pse_id, pse.date_scheduled
                                                              lig_lig_id = lig_id and fra_id = fra_fra_id and fractions.cl_cl_id = clone_growths_libraries.cl_cl_id and
                                                              cg_id = clone_growths_libraries.cg_cg_id and arc_arc_id = arc_id and ap_purpose != 'qc'", 'List');
 
-    $project_queries -> {'active_qc'} = LoadSql($dbh, "select distinct data_value, lig_id from process_step_outputs, pse_data_outputs,
+    $project_queries -> {'active_qc_old'} = LoadSql($dbh, "select distinct data_value, lig_id from process_step_outputs, pse_data_outputs,
                                                   dna_pse lgx, process_step_executions pse, process_steps, ligations, 
                                                   fractions, clone_growths_libraries, clone_growths, clones, clones_projects where
                                                   pso_id = pso_pso_id and 
@@ -428,6 +428,27 @@ and  pei.equinf_bs_barcode = ? order by dp.pse_id, pse.date_scheduled
                                                   clone_growths.clo_clo_id = clo_id and 
                                                   clones_projects.clo_clo_id = clo_id and
                                                   project_project_id = ?", 'ListOfList');
+
+    $project_queries -> {'active_qc'} = LoadSql($dbh, "select /*+ ordered */ distinct data_value, lig_id from clones_projects
+							 cp, clones, clone_growths cg, 
+							 clone_growths_libraries cgl , fractions fra, ligations lig, dna_pse dp,
+							 process_step_executions pse, process_steps ps, process_step_outputs po,
+							 pse_data_outputs pdo
+							  where project_project_id=?
+							 and clo_id=cp.clo_clo_id 
+							 and clo_id=cg.clo_clo_id
+							 and cgl.cg_cg_id=cg_id
+							 and fra.cl_cl_id=cgl.cl_cl_id
+							 and lig.fra_fra_id=fra.fra_id
+							 and dp.dna_id=lig_id
+							 and pse.pse_id=dp.pse_id
+							 and ((psesta_pse_status='inprogess') or ((psesta_pse_status='completed')
+							 and (pr_pse_result='successful')))
+							 and ps.ps_id=pse.ps_ps_id
+							 and ps.pro_process_to='confirm dilution'
+							 and po.ps_ps_id=ps.ps_id
+							 and po.output_description = 'pick qc'
+							 and pdo.pso_pso_id=po.pso_id", 'ListOfList');
 
 $project_queries -> {'qc_picked'} = LoadSql($dbh,"select distinct arc_id from 
                                                              subclones, archives
