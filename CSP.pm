@@ -658,6 +658,7 @@ my %csp_priority = (
     'remove run'                              => 1,
     'import sequence annotation'              => 2,
     'allocate disk space'                     => 1,
+    'reallocate disk space'                   => 1,
     'deallocate disk space'                   => 1,
 
 #    these were given their own cron to get around the
