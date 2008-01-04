@@ -69,22 +69,38 @@ sub new {
 					       (select ps_id from process_steps where pro_process_to in
 						(select pro_process from process_steps where ps_id = ?) and      
 						purpose =  ?)/, 'ListOfList');
-    $self->{'GetAvailAgarPlatePSE'} = LoadSql($dbh, qq/select distinct clone_name, library_number, ligation_name, pse.pse_id, priority
-					       from projects, clones_projects cp, clones, clone_growths cg, clone_growths_libraries cgl, 
-					       clone_libraries cl, fractions fr, ligations lg,
-					       dna_pse lgx,
-					       pse_barcodes barx, process_step_executions pse where
-					       project_id = project_project_id and
-					       cp.clo_clo_id = cg.clo_clo_id and 
-					       cp.clo_clo_id = clo_id and
-					       cg.cg_id = cgl.cg_cg_id and
-					       cgl.cl_cl_id = cl.cl_id and
-					       lgx.dna_id = lg.lig_id and
-					       fr.fra_id = lg.fra_fra_id and
-					       fr.cl_cl_id = cl.cl_id and
-					       pse.pse_id = lgx.pse_id and
-					       barx.pse_pse_id = pse.pse_id and
-					       pse.pse_id = ?/, 'ListOfList');
+#    $self->{'GetAvailAgarPlatePSE'} = LoadSql($dbh, qq/select distinct clone_name, library_number, ligation_name, pse.pse_id, priority
+#					       from projects, clones_projects cp, clones, clone_growths cg, clone_growths_libraries cgl, 
+#					       clone_libraries cl, fractions fr, ligations lg,
+#					       dna_pse lgx,
+#					       pse_barcodes barx, process_step_executions pse where
+#					       project_id = project_project_id and
+#					       cp.clo_clo_id = cg.clo_clo_id and 
+#					       cp.clo_clo_id = clo_id and
+#					       cg.cg_id = cgl.cg_cg_id and
+#					       cgl.cl_cl_id = cl.cl_id and
+#					       lgx.dna_id = lg.lig_id and
+#					       fr.fra_id = lg.fra_fra_id and
+#					       fr.cl_cl_id = cl.cl_id and
+#					       pse.pse_id = lgx.pse_id and
+#					       barx.pse_pse_id = pse.pse_id and
+#					       pse.pse_id = ?/, 'ListOfList');
+    $self->{'GetAvailAgarPlatePSE'} = LoadSql($dbh, qq/
+                                              select distinct c.clone_name, cl.library_number, lg.ligation_name, pse.pse_id, p.priority
+                                              from process_step_executions pse 
+                                              join dna_pse lgx on lgx.pse_id = pse.pse_id
+                                              join ligations lg on lg.lig_id = lgx.dna_id
+                                              join fractions fr on fr.fra_id = lg.fra_fra_id
+                                              join clone_libraries cl on cl.cl_id = fr.cl_cl_id
+                                              join dna_relationship dr on dr.dna_id = cl.cl_id
+                                              join clone_growths cg on cg.cg_id = dr.parent_dna_id
+                                              join clones c on c.clo_id = cg.clo_clo_id
+                                              join clones_projects cp on cp.clo_clo_id = c.clo_id
+                                              join projects p on p.project_id = cp.project_project_id
+                                              where pse.pse_id = ?
+                                              /, 'ListOfList');
+
+
 
     $self->{'GetAvailAgarPlateNoPriority'} = LoadSql($dbh, qq/select distinct clone_name, library_number, ligation_name, pse.pse_id
 							 from clones, clone_growths cg, clone_growths_libraries cgl, 
@@ -303,19 +319,34 @@ $self -> {'GetSubIdPlIdFromSubclonePse'} = LoadSql($dbh, qq/select  distinct dp.
 							  select dp.dna_id from dna_pse dp, pse_barcodes pb where dp.pse_id = pb.pse_pse_id and pb.bs_barcode = ? and pb.direction = 'out')
 							  connect by dna_id = prior parent_dna_id)", 'Single');
 
+#    $self->{'GetProjectTargetFromAgarPlate'} = LoadSql($dbh,
+#                                                       qq/
+#                                                       select distinct p.project_id, p.target
+#                                                       from pse_barcodes pb
+#                                                       join dna_pse dp on dp.pse_id = pb.pse_pse_id
+#                                                       join ligations l on l.lig_id = dp.dna_id
+#                                                       join fractions f on f.fra_id = l.fra_fra_id
+#                                                       join clone_growths_libraries cgl on cgl.cl_cl_id = f.cl_cl_id
+#                                                       join clone_growths cg on cg.cg_id = cgl.cg_cg_id
+#                                                       join clones c on c.clo_id = cg.clo_clo_id
+#                                                       join projects p on p.name = c.clone_name
+#                                                       where pb.bs_barcode = ?
+#                                                       and pb.direction = 'out'
+#                                                       /,
+#                                                       'ListOfList'); 
     $self->{'GetProjectTargetFromAgarPlate'} = LoadSql($dbh,
                                                        qq/
                                                        select distinct p.project_id, p.target
-                                                       from pse_barcodes pb
-                                                       join dna_pse dp on dp.pse_id = pb.pse_pse_id
-                                                       join ligations l on l.lig_id = dp.dna_id
-                                                       join fractions f on f.fra_id = l.fra_fra_id
-                                                       join clone_growths_libraries cgl on cgl.cl_cl_id = f.cl_cl_id
-                                                       join clone_growths cg on cg.cg_id = cgl.cg_cg_id
-                                                       join clones c on c.clo_id = cg.clo_clo_id
+                                                       from clones c
                                                        join projects p on p.name = c.clone_name
-                                                       where pb.bs_barcode = ?
-                                                       and pb.direction = 'out'
+                                                       where c.clo_id IN (select dr.dna_id
+                                                                          from dna_relationship dr
+                                                                          start with dr.dna_id IN (select dp.dna_id
+                                                                                                   from pse_barcodes pb
+                                                                                                   join dna_pse dp on dp.pse_id = pb.pse_pse_id
+                                                                                                   where pb.bs_barcode = ?
+                                                                                                   and pb.direction = 'out')
+                                                                          connect by dr.dna_id = prior dr.parent_dna_id)
                                                        /,
                                                        'ListOfList'); 
     
@@ -1817,6 +1848,25 @@ sub PickArchive {
     }
 
     my $lig_id = $self->{'GetLigIdFromPse'} -> xSql($pre_pse_id);
+    unless($lig_id) {
+        # Maybe this is coming from a new step, and the dna_pse isn't created
+        my @tpp_pses=GSC::TppPSE->get(pse_id => $pre_pse_id);
+        if(@tpp_pses) {
+            my $source_barcode;
+            foreach my $tpse (@tpp_pses) {
+                my $pos=$tpse->get_transfer_pattern_position;
+                if($pos->content_type eq 'DNA') {
+                    $source_barcode=$tpse->barcode;
+                }
+            }
+            my $barcode=GSC::Barcode->get($source_barcode);
+            my $dna=$barcode->get_dna;
+            if($dna->dna_type eq 'ligation') {
+                # Bingo
+                $lig_id=$dna->dna_id;
+            }
+        }
+    }
     return 0 if($lig_id == 0);
 
     my $pt_id = $self -> {'CoreSql'} -> Process('GetPlateTypeId', $plate_type);
