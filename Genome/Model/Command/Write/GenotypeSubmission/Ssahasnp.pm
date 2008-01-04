@@ -278,6 +278,7 @@ sub execute {
 	my $sample_temp = $sample;
 	$sample_temp =~ s/454_EST_S_//x;
 	my ($sample_a, $sample_b) = split('-',$sample_temp);
+	$sample_b ||= 1;
 	$sample_b = sprintf "%05d",$sample_b;
 	my $sample_id = $sample_a . '-' . $sample_b;
 	my $number = 1;
