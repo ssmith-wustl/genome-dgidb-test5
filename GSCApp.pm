@@ -395,6 +395,7 @@ associations in four cases.
         SETUP_BASECALLER                GSC::Setup::Basecaller
         SETUP_AMPLICON_DESIGN           GSC::Setup::AmpliconDesign
         SETUP_SEQUENCE_ANNOTATION       GSC::Setup::SequenceAnnotation
+        SETUP_SEQUENCE_ANALYSIS         GSC::Setup::SequenceAnalysis
         READ_SUBMISSION_NCBI            GSC::Sequence::Read::Submission::NCBI
         READ_SUBMISSION_TCGA            GSC::Sequence::Read::Submission::TCGA
 
