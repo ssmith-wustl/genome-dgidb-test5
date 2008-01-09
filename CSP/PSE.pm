@@ -41,7 +41,8 @@ my %PROCESS_COUNT = (
 
 my %PROCESS_HANG_LENGTH = (
 			   #-- format is days,hours,minutes,seconds
-			   'mkcs' => [1],
+			   'mkcs'           => [1],
+			   'analyze traces' => [0,6,0,0],
 			   );
 
 
@@ -323,10 +324,10 @@ sub _hanging_too_long{
 	    + $hours * 10000
 	    + $mins * 100
 	    + $secs;
-	my $compint = $days * 1000000
-	    + $hours * 10000
-	    + $mins * 100
-	    + $secs; 
+	my $compint = $comp[0] * 1000000
+	    + $comp[1] * 10000
+	    + $comp[2] * 100
+	    + $comp[3]; 
 	return ($diffint > $compint);
     }
     else{
