@@ -761,9 +761,8 @@ my %pse_type;
 my $previous_read_id_state;
 my $analyzed_pse_cutoff_date;
 sub get_pse_type {
-
+    
     my $self = shift;
-#    App::Object->status_message('getting pse type');
     my %args = @_;
         
     my $process = $args{'process_to'};
@@ -846,7 +845,6 @@ sub get_pse_type {
     my $ps_id_stop_hashref = $pse_type_ref->{ps_id_stop};
     unless ($ps_id_hashref) {
         $ps_id_hashref = {};
-#        App::Object->status_message('resolving ps_ids');
         for my $ps (GSC::ProcessStep->get()) {
             if ($purpose) {
                 if ($ps->process_to =~ /$process_to/ &&
@@ -873,7 +871,6 @@ sub get_pse_type {
     @pse = sort { $b->pse_id <=> $a->pse_id } @pse;
     my $loop_count = 0;
     while (@pse) {
-      $self->status_message('looping on pses');
         for my $p (@pse) {
             if ($ps_id_hashref->{$p->ps_id}) {
                 return $p;
