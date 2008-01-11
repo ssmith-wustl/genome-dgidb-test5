@@ -315,8 +315,7 @@ sub all_facts_for_selected_pipeline {
 sub cache_data_for_reads {
     my $self = shift;
     my @re_ids = @_;
-
-#    App::Object->status_message('start cache_data_for_reads');
+    
 #    print "start caching " . Time::HiRes::time, " ", scalar(App::Object->all_objects_loaded), "\n";
     
     # DNA up-to the template in the most common cases.
@@ -358,7 +357,6 @@ sub cache_data_for_reads {
         my @ar = GSC::Archive->get(\@arc_ids);
     }
 
-#    App::Object->status_message('stop cache_data_for_reads');
 #    print "stop caching " . Time::HiRes::time, " ", scalar(App::Object->all_objects_loaded), "\n";
 
     return 1;
