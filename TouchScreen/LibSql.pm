@@ -343,25 +343,29 @@ connect by prior pse.pse_id = pse.prior_pse_id)", 'ListOfList');
                (select ps_id from process_steps where pro_process_to in
                (select pro_process from process_steps where ps_id = ?) and      
                 purpose = (select purpose from process_steps where ps_id = ?))", 'ListOfList');
-    $self->{'GetAvailFraction'} = LoadSql($dbh, "select distinct clone_name, library_number, fraction_name, pse.pse_id
-               from 
-	       clones clo, clone_growths cg, 
-               clone_growths_libraries cgl, 
-	       clone_libraries cl, fractions fr,
-               fractions_pses frx,
-               pse_barcodes barx, process_step_executions pse where
-               clo.clo_id = cg.clo_clo_id and
-               cgl.cg_cg_id = cg.cg_id and
-               cgl.cl_cl_id = cl.cl_id and
-               fr.cl_cl_id = cl.cl_id and
-               frx.fra_fra_id = fr.fra_id and
-               pse.pse_id = frx.pse_pse_id and
-               barx.pse_pse_id = pse.pse_id and
-               pse.psesta_pse_status = ? and
-               barx.bs_barcode = ? and barx.direction = ? and pse.ps_ps_id in 
-               (select ps_id from process_steps where pro_process_to in
-               (select pro_process from process_steps where ps_id = ?) and      
-                purpose in ('New Library Construction', 'Library Construction', 'Ligation', 'Transition Non-Barcoded Library Core', 'Restriction Digest Subcloning', 'Shatter'))", 'ListOfList');
+    $self->{'GetAvailFraction'} = LoadSql($dbh, 
+                                          qq/
+                                          select distinct clo.clone_name, cl.library_number, 
+                                                          fr.fraction_name, pse.pse_id
+                                          from pse_barcodes barx
+                                          join process_step_executions pse on pse.pse_id = barx.pse_pse_id
+                                          join process_steps ps on ps.ps_id = pse.ps_ps_id
+                                          join process_steps ps2 on ps2.pro_process = ps.pro_process_to
+                                          join dna_pse dp on dp.pse_id = pse.pse_id
+                                          join fractions fr on fr.fra_id = dp.dna_id
+                                          join dna_relationship dr1 on dr1.dna_id = fr.fra_id
+                                          join clone_libraries cl on cl.cl_id = dr1.parent_dna_id
+                                          join dna_relationship dr2 on dr2.dna_id = cl.cl_id
+                                          join dna_relationship dr3 on dr3.dna_id = dr2.parent_dna_id
+                                          join clones clo on clo.clo_id = dr3.parent_dna_id
+                                          where pse.psesta_pse_status = ?
+                                          and barx.bs_barcode = ?
+                                          and barx.direction = ?
+                                          and ps2.ps_id = ?
+                                          and ps.purpose in ('New Library Construction', 'Library Construction', 
+                                                             'Ligation', 'Transition Non-Barcoded Library Core', 
+                                                             'Restriction Digest Subcloning', 'Shatter')        
+                                          /, 'ListOfList');
     $self->{'GetAvailLigation'} = LoadSql($dbh, "select distinct library_number, ligation_name, pse.pse_id
                from 
 	       clone_libraries cl, fractions fr, ligations lg,
@@ -505,15 +509,24 @@ and pb.direction = 'out'
                        fra_id = fra_fra_id and 
                        pse_pse_id = ? order by gel_lane", 'ListOfList');
 
-    $self->{'GetLigationOnGel'} = LoadSql($self->{'dbh'}, "select gel_lane, library_number, clone_name, library_set, ligation_name from 
-                       clones, clone_growths, clone_growths_libraries, clone_libraries, fractions, ligations, ligations_pses where 
-                       clo_id = clo_clo_id and
-                       cl_id = clone_growths_libraries.cl_cl_id and 
-                       cg_id = clone_growths_libraries.cg_cg_id and 
-                       cl_id = fractions.cl_cl_id and
-                       fra_id = fra_fra_id and 
-                       lig_id = lig_lig_id and
-                       pse_pse_id = ? order by gel_lane", 'ListOfList');
+    $self->{'GetLigationOnGel'} = LoadSql($self->{'dbh'}, 
+                                          qq/
+                                          select dl.location_name, cl.library_number, c.clone_name, 
+                                                 cg.library_set, l.ligation_name
+                                          from dna_pse dp
+                                          join dna_location dl on dl.dl_id = dp.dl_id
+                                          join ligations l on l.lig_id = dp.dna_id
+                                          join dna_relationship dr_lig_fra on dr_lig_fra.dna_id = l.lig_id
+                                          join dna_relationship dr_fra_cl  on dr_fra_cl.dna_id = dr_lig_fra.parent_dna_id
+                                          join clone_libraries cl on cl.cl_id = dr_fra_cl.parent_dna_id
+                                          join dna_relationship dr_cl_cg on dr_cl_cg.dna_id = dr_fra_cl.parent_dna_id
+                                          join clone_growths cg on cg.cg_id = dr_cl_cg.parent_dna_id
+                                          join dna_relationship dr_cg_clo on dr_cg_clo.dna_id = dr_cl_cg.parent_dna_id 
+                                          join clones c on c.clo_id = dr_cg_clo.parent_dna_id
+                                          where dp.pse_id = ?
+                                          order by to_number(dl.location_name)
+                                          /,
+                                          'ListOfList');
 
 #    $self->{'GetSubcloneOnGel'} = LoadSql($self->{'dbh'}, "select gel_lane, clone_name, subclone_name from 
 #                       clones, clone_growths, clone_growths_libraries, clone_libraries, fractions, ligations, subclones, subclones_pses subx where 
@@ -565,28 +578,23 @@ and pb.direction = 'out'
                (select ps_id from process_steps where pro_process_to in
                (select pro_process from process_steps where ps_id = ?) and      
                 purpose = (select purpose from process_steps where ps_id = ?)) order by gel_lane", 'ListOfList');
-    $self->{'GetAvailLigationGel'} = LoadSql($dbh, "select distinct gel_lane, pse.pse_id
-               from 
-	       clones clo, clone_growths cg, 
-               clone_growths_libraries cgl,
-	       clone_libraries cl,  
-               fractions fr,
-               ligations lg,
-               ligations_pses lgx,
-               pse_barcodes barx, process_step_executions pse where
-               clo.clo_id = cg.clo_clo_id and
-               cgl.cg_cg_id = cg.cg_id and
-               cgl.cl_cl_id = cl.cl_id and
-               cl.cl_id = fr.cl_cl_id and
-               lg.fra_fra_id = fr.fra_id and
-               lgx.lig_lig_id = lg.lig_id and
-               pse.pse_id = lgx.pse_pse_id and
-               barx.pse_pse_id = pse.pse_id and
-               pse.psesta_pse_status = ? and
-               barx.bs_barcode = ? and barx.direction = ? and pse.ps_ps_id in 
-               (select ps_id from process_steps where pro_process_to in
-               (select pro_process from process_steps where ps_id = ?) and      
-                purpose = (select purpose from process_steps where ps_id = ?)) order by gel_lane", 'ListOfList');
+    $self->{'GetAvailLigationGel'} = LoadSql($dbh, 
+                                             qq/
+                                             select distinct dl.location_name, pse.pse_id
+                                             from pse_barcodes barx
+                                             join process_step_executions pse on pse.pse_id = barx.pse_pse_id
+                                             join process_steps ps on ps.ps_id = pse.ps_ps_id
+                                             join process_steps ps2 on ps2.pro_process = ps.pro_process_to
+                                                                   and ps2.purpose = ps.purpose
+                                             join dna_pse dp on dp.pse_id = pse.pse_id
+                                             join dna_location dl on dl.dl_id = dp.dl_id
+                                             where pse.psesta_pse_status = ?
+                                             and barx.bs_barcode = ?
+                                             and barx.direction = ?
+                                             and ps2.ps_id = ?
+                                             order by to_number(dl.location_name)
+                                             /,
+                                             'ListOfList');
    
 #    $self->{'GetAvailSubcloneGel'} = LoadSql($dbh, "select distinct gel_lane, pse.pse_id
 #               from 
@@ -1223,7 +1231,7 @@ sub GetAvailLigationGel {
 
     my ($self, $barcode, $ps_id) = @_;
     
-    my $lol = $self->{'GetAvailLigationGel'} -> xSql('inprogress', $barcode, 'out', $ps_id, $ps_id);
+    my $lol = $self->{'GetAvailLigationGel'} -> xSql('inprogress', $barcode, 'out', $ps_id);
 
     if(defined $lol->[0][0]) {
 	my $i = 0;
