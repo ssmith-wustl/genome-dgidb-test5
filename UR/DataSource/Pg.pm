@@ -1,4 +1,4 @@
-package UR::DataSource::PostgreSQL;
+package UR::DataSource::Pg;
 use strict;
 use warnings;
 
