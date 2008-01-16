@@ -158,7 +158,10 @@ $DB::single=1;
         return;
     }
 
-    my $this_ds_class = $namespace . '::DataSource::' . $self->dsname;
+    # FIXME see the comment in the class definition about default values
+    my $name = ucfirst($self->dsname) || 'Main';
+
+    my $this_ds_class = $namespace . '::DataSource::' . $name;
     my $this_ds_parent_class = 'UR::DataSource::'.$driver;
 
     if (eval {$this_ds_class->get_class_object}) {
@@ -167,8 +170,6 @@ $DB::single=1;
         return;
     }
     
-    # FIXME see the comment in the class definition about default values
-    my $name = ucfirst($self->dsname) || 'Main';
 
     # Figure out the right path the Datasource goes in
     my $namespace_module = $namespace . '.pm';
