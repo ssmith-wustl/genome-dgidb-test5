@@ -609,9 +609,9 @@ my @logins = (
     [qw(dwdev gsc GSC devguest dg_dwdev ro-developer development GSC)],
 
     # tilepath
-    [qw(gscprod tilepath SSMITH ssmith blue22 rw tilepath_production GSC)],
+#    [qw(gscprod tilepath SSMITH ssmith blue22 rw tilepath_production GSC)],
 #    [qw(gscnew tilepath SSMITH ssmith blue22 rw tilepath_development GSC)],
-    [qw(gscprod tilepath SSMITH ssmith blue22 ro tilepath_production GSC)],
+#    [qw(gscprod tilepath SSMITH ssmith blue22 ro tilepath_production GSC)],
 #    [qw(gscnew tilepath SSMITH ssmith blue22 ro tilepath_development GSC)],
 );
 
