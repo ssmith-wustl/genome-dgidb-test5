@@ -381,12 +381,15 @@ associations in four cases.
         SETUP_SAMPLE_SET_TYPE           GSC::Setup::SampleSetType
         SETUP_SAMPLE_SET                GSC::Setup::SampleSet
         SETUP_PROJECT                   GSC::Setup::Project
-        SETUP_PROCESS_PARAM		GSC::Setup::ProcessParam
+        SETUP_PROCESS_PARAM             GSC::Setup::ProcessParam
         SETUP_PROJECT_TYPE              GSC::Setup::ProjectType
         SETUP_PROJECT_HTMP              GSC::Setup::Project::HTMP 
         SETUP_PROJECT_HTMP_REFSEQ       GSC::Setup::Project::HTMP::RefSeq 
         SETUP_PROJECT_HTMP_AMPLICON     GSC::Setup::Project::HTMP::Amplicon 
         SETUP_PROJECT_FINISHING         GSC::Setup::Project::Finishing
+
+        RESEARCH_PROJECT_HTMP           GSC::ResearchProject::HTMP 
+        RESEARCH_PROJECT_FINISHING      GSC::ResearchProject::Finishing
 
         SETUP_PIPELINE                   GSC::Setup::Pipeline
         SETUP_PIPELINE_TYPE              GSC::Setup::PipelineType
