@@ -62,6 +62,7 @@ BEGIN {
     }
 }
 
+use GSC;
 use App;
 use GSC::Processable;
 use base qw(App::MsgLogger);
