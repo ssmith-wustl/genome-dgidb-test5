@@ -9,8 +9,8 @@ use Genome::Model;
 
 use IO::File;
 
-class Genome::Model::Command::HTest::Diff::Define::Lst {
-    is => 'Genome::Model::Command::HTest::Diff::Define',
+class Genome::Model::Command::Htest::Diff::Define::Lst {
+    is => 'Genome::Model::Command::Htest::Diff::Define',
 };
 
 sub help_brief {
@@ -39,7 +39,7 @@ sub load_changes_file {
         return;
     }
 
-    my $diffobj = Genome::Model::SequenceDiff->create(from_path => $self->from_path, to_path => $self->to_path, description => 'imported from .lst format');
+    my $diff_obj = Genome::Model::SequenceDiff->create(from_path => $self->from_path, to_path => $self->to_path, description => 'imported from .lst format');
     
     my $patched_offset;  # How different the patched ref position is from the original
     while (<$fh>) {
@@ -50,17 +50,17 @@ sub load_changes_file {
             return;
         }
 
-        chop $refseq_path if ($refseq_path =~ m/,$/;  # Get rid of the trailing comma
+        chop $refseq_path if ($refseq_path =~ m/,$/);  # Get rid of the trailing comma
 
         # FIXME what do we do with indels with length greater than 1?
-        my $diff_part = Genome::Model::SequenceDiffPart->create(diff_id => $diffobj->diff_id,
+        my $diff_part = Genome::Model::SequenceDiffPart->create(diff_id => $diff_obj->diff_id,
                                                                 refseq_path => $refseq_path,
                                                                 orig_position => $position,
-                                                                orig_length => length($delete),
-                                                                orig_sequence => '',  # Is there a way to fill this in from here?
+                                                                orig_length => length($original_seq),
+                                                                orig_sequence => $original_seq,  
                                                                 patched_position => $position + $patched_offset,
-                                                                patched_length => length($insert),
-                                                                patched_sequence => $insert,
+                                                                patched_length => length($replacement_seq),
+                                                                patched_sequence => $replacement_seq,
                                                                 confidence_value => 1,  # Maybe $code has something to do with it?
                                                               );
 	$patched_offset += $diff_part->orig_length - $diff_part->patched_length;
