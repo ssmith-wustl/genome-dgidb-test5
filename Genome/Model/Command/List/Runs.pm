@@ -6,6 +6,7 @@ use warnings;
 
 use above "Genome";
 use GSC;
+use GSCApp;
 use Command; 
 use Data::Dumper;
 use Term::ANSIColor;
@@ -188,7 +189,7 @@ sub _get_gerald_path_from_pse{
 
 sub _get_dna_to_solexa_load_lane_map_for_pse{
     my ($self, $pse) = @_; 
-    my $dna_his = GSC::PSE->get_data_source->get_default_dbh->selectall_arrayref(qq/select d.dna_name || ' (' || d.dna_type || ')', dl.location_name from process_step_executions pse
+    my $dna_his = GSC::PSE->dbh->selectall_arrayref(qq/select d.dna_name || ' (' || d.dna_type || ')', dl.location_name from process_step_executions pse
                                                      join process_steps ps on ps.ps_id = pse.ps_ps_id
                                                      join (select distinct tpse.pse_id from tpp_pse tpse 
                                                            connect by prior tpse.prior_pse_id = tpse.pse_id
