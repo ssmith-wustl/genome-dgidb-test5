@@ -1,4 +1,4 @@
-package Genome::Model::Command::HTest::Diff::Define::Lst;
+package Genome::Model::Command::Htest::Diff::Define::Lst;
 
 use strict;
 use warnings;
