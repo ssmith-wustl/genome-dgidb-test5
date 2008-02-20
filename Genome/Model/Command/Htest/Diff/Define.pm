@@ -7,7 +7,7 @@ use above "Genome";
 use Command;
 use Genome::Model;
 
-class Genome::Model::Command::HTest::Diff::Define {
+class Genome::Model::Command::Htest::Diff::Define {
     is => 'Command',
     has => [
 	from_path => { is => 'String', is_optional => 0, doc => 'Path to the original refseq' },
