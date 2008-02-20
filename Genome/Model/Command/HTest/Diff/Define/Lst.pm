@@ -44,8 +44,8 @@ sub load_changes_file {
     my $patched_offset;  # How different the patched ref position is from the original
     while (<$fh>) {
         chomp;
-        my($refseq_path, $position, $insert, $delete, $code) = split;
-        unless ($refseq_path && $position && $insert && $delete && $code) {
+        my($refseq_path, $position, $original_seq, $replacement_seq, $code) = split;
+        unless ($refseq_path && $position && $original_seq && $replacement_seq && $code) {
             $self->error_message("Couldn't parse line ",$fh->input_line_number," of .lst file ",$self->changes);
             return;
         }
