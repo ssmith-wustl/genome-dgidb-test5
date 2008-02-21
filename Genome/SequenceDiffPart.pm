@@ -18,7 +18,7 @@ class Genome::SequenceDiffPart {
         orig_sequence    => { is => 'VARCHAR(36)', is_optional => 1 },
         patched_length   => { is => 'INTEGER', is_optional => 1 },
         patched_position => { is => 'INTEGER', is_optional => 1 },
-        patched_sequecne => { is => 'VARCHAR(36)', is_optional => 1 },
+        patched_sequence => { is => 'VARCHAR(36)', is_optional => 1 },
     ],
     schema_name => 'Diffs',
     data_source => 'Genome::DataSource::Diffs',

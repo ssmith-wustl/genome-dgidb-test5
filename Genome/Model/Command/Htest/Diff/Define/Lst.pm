@@ -30,6 +30,7 @@ EOS
 }
 
 
+
 sub load_changes_file {
     my $self = shift;
 
@@ -39,13 +40,13 @@ sub load_changes_file {
         return;
     }
 
-    my $diff_obj = Genome::Model::SequenceDiff->create(from_path => $self->from_path, to_path => $self->to_path, description => 'imported from .lst format');
+    my $diff_obj = Genome::SequenceDiff->create(from_path => $self->from_path, to_path => $self->to_path, description => 'imported from .lst format');
 
     # split the changes file into buckets by refseq_path
     my %changes_by_refseq;
     while(<$fh>) {
         chomp;
-        my($refseq_name, $position, $orig_seq, $repl_seq, $confidence) = split;
+        my($refseq_name, $position, $repl_seq, $orig_seq, $confidence) = split;
 
         unless ($refseq_name && $position && $orig_seq && $repl_seq && $confidence) {
             $self->error_message("Couldn't parse line ",$fh->input_line_number," of .lst file ",$self->changes);
@@ -73,8 +74,8 @@ sub load_changes_file {
 
         push @{$changes_by_refseq{$refseq_name}}, { refseq_name => $refseq_name,
                                                     position => $position,
-                                                    orig_seq => $orig_seq,
-                                                    repl_seq => $repl_seq,
+                                                    orig_seq => uc $orig_seq,
+                                                    repl_seq => uc $repl_seq,
 					            confidence => $confidence,
                                                     change_type => $change_type,
                                                   };
@@ -83,78 +84,81 @@ sub load_changes_file {
     # Sort the changes by position
     foreach my $refseq_name ( keys %changes_by_refseq ) {
         my @sorted = sort {$a->{'position'} <=> $b->{'position'}} @{$changes_by_refseq{$refseq_name}};
-        @{$changes_by_refseq{$refseq_name}} = \@sorted;
+        $changes_by_refseq{$refseq_name} = \@sorted;
     }
 
     # group contiguous changes together
     # Do we need to worry about an insertion and a deletion overlapping?
     foreach my $refseq_name ( keys %changes_by_refseq ) {
-        my $patched_offset = 0;
-        my %accumulate;
+        my $patched_offset = 0;  # How different the orig and patched positions are
         my $last_position = 0;
+        my %accumulate;  # Holds the accumulated, contiguous indel information
 
         foreach my $change ( @{$changes_by_refseq{$refseq_name}} ) {
             no warnings 'uninitialized';
 
-            if ($change->{'change_type'} ne 'snp'
-                or $last_position == $change->{'position'}  # part of some kind of overlapping indel
-                or $last_position + 1 == $change->{'position'}) {  # or otherwise contiguous
+            if ($change->{'change_type'} ne 'snp' and 
+                 ($last_position == $change->{'position'}  # part of some kind of overlapping indel
+                  or $last_position + 1 == $change->{'position'})) {  # or otherwise contiguous
 
                 $accumulate{'orig_seq'} .= $change->{'orig_seq'};
                 $accumulate{'repl_seq'} .= $change->{'repl_seq'};
+                $accumulate{'position'} = $change->{'position'} unless defined($accumulate{'position'});
+                $accumulate{'confidence'} = $change->{'confidence'} unless defined($accumulate{'confidence'});
 
             } else {
                 # Not contiguous, save what we've got and start a new contiguous region
-                my $diff_part = $self->_combine_accumulations(refseq_name => $refseq_name,
-                                                              diff_id => $diff_obj->id,
-                                                              patched_offset => $patched_offset,
-                                                              %accumulate);
-                $patched_offset += $diff_part->orig_length - $diff_part->patched_length;
+                if ($accumulate{'position'}) {
+                    my $diff_part = $self->_combine_and_store_accumulations(refseq_name => $refseq_name,
+                                                                            diff_id => $diff_obj->id,
+                                                                            patched_offset => $patched_offset,
+                                                                            %accumulate);
+                    $patched_offset += $diff_part->orig_length - $diff_part->patched_length;
+
+                }
 
                 if ($change->{'change_type'} eq 'snp') {
                     # we have to handle these by themselves, I think
-                    $self->_combine_accumulations(refseq_name => $refseq_name,
-                                                  diff_id => $diff_obj->id,
-                                                  patched_offset => $patched_offset,
-                                                  position => $change->{'position'},
-                                                  orig_seq => $change->{'orig_seq'},
-                                                  repl_seq => $change->{'repl_seq'},
-                                                  confidence => $change->{'confidence'});
-		}
-
-                 %accumulate = ( position => $change->{'position'},
-                                 confidence => $change->{'confidence'},
-                                 orig_seq => $change->{'orig_seq'},
-                                 repl_seq => $change->{'repl_seq'});
+                    $self->_combine_and_store_accumulations(refseq_name => $refseq_name,
+                                                            diff_id => $diff_obj->diff_id,
+                                                            patched_offset => $patched_offset,
+                                                            %$change);
+                    %accumulate = ();
+                } else {
+                    %accumulate = ( position => $change->{'position'},
+                                    confidence => $change->{'confidence'},
+                                    orig_seq => $change->{'orig_seq'},
+                                    repl_seq => $change->{'repl_seq'});
+                }
             }
 
             $last_position = $change->{'position'};
         }
         # Ran through the whole list, save the last contiguous part
-        $self->_combine_accumulations(refseq_name => $refseq_name,
-                                      diff_id => $diff_obj->id,
-                                      patched_offset => $patched_offset,
-                                      %accumulate);
+        $self->_combine_and_store_accumulations(refseq_name => $refseq_name,
+                                                diff_id => $diff_obj->id,
+                                                patched_offset => $patched_offset,
+                                                %accumulate) if ($accumulate{'position'});
     }
 
                                                                 
     return $diff_obj;
 }
 
-sub _combine_accumulations {
+sub _combine_and_store_accumulations {
     my($self,%args) = @_;
 
     # FIXME what do we do with the confidence for sequences longer than 1?
-    my $diff_part = Genome::Model::SequenceDiffPart->create(diff_id => $args{'diff_id'},
-                                                            refseq_path => $args{'refseq_name'},
-                                                            orig_position => $args{'position'},
-                                                            orig_length => length($args{'orig_seq'}),
-                                                            orig_sequence => $args{'orig_seq'},
-                                                            patched_position => $args{'position'} + $args{'patched_offset'},
-                                                            patched_length => length($args{'repl_seq'}),
-                                                            patched_sequence => $args{'repl_seq'},
-                                                            confidence_value => $args{'confidence'},
-                                                          );
+    my $diff_part = Genome::SequenceDiffPart->create(diff_id => $args{'diff_id'},
+                                                     refseq_path => $args{'refseq_name'},
+                                                     orig_position => $args{'position'} + $args{'patched_offset'},
+                                                     orig_length => length($args{'orig_seq'}),
+                                                     orig_sequence => $args{'orig_seq'},
+                                                     patched_position => $args{'position'},
+                                                     patched_length => length($args{'repl_seq'}),
+                                                     patched_sequence => $args{'repl_seq'},
+                                                     confidence_value => $args{'confidence'},
+                                                   );
     return $diff_part;
 }
 

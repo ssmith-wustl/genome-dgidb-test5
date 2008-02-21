@@ -16,9 +16,9 @@ INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','','RUN','TABLE','entit
 INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','','URMETA_GENOME_MODEL_ID_SEQ','TABLE','validation item',NULL,'2007-09-05 16:00:16',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','','URMETA_GENOME_MODEL_EVENT_ID_SEQ','TABLE','validation item',NULL,'2007-09-05 16:00:17',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','','URMETA_RUN_ID_SEQ','TABLE','validation item',NULL,'2007-09-05 16:00:17',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','TABLE','entity',NULL,'2008-02-20 11:46:35',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_EVAL','TABLE','entity',NULL,'2008-02-20 11:46:35',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF','TABLE','entity',NULL,'2008-02-20 11:46:34',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','TABLE','entity',NULL,'2008-02-21 11:31:06',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_EVAL','TABLE','entity',NULL,'2008-02-21 11:31:06',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF','TABLE','entity',NULL,'2008-02-21 11:31:05',NULL);
 CREATE TABLE dd_bitmap_index (
     data_source varchar NOT NULL,
     owner varchar,
@@ -69,23 +69,23 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','URMETA_RUN_I
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','URMETA_GENOME_MODEL_ID_SEQ','NEXT_VALUE','INT','11','N','2007-10-24 11:27:47','');
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','MODEL_ID','INT','11','N','2007-10-24 11:27:47','');
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','','GENOME_MODEL_EVENT','REF_SEQ_ID','VARCHAR','64','Y','2007-10-24 11:27:47',NULL);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF','FROM_PATH','VARCHAR(256)',NULL,'Y','2008-02-20 11:46:34','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','ORIG_SEQUENCE','VARCHAR(36)',NULL,'Y','2008-02-20 11:46:35','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF','TO_PATH','VARCHAR(256)',NULL,'Y','2008-02-20 11:46:34','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','PATCHED_LENGTH','INTEGER',NULL,'Y','2008-02-20 11:46:35','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_EVAL','REFSEQ_PATH','VARCHAR(256)',NULL,'Y','2008-02-20 11:46:35','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','PATCHED_SEQUECNE','VARCHAR(36)',NULL,'Y','2008-02-20 11:46:35','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','ORIG_POSITION','INTEGER',NULL,'Y','2008-02-20 11:46:35','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_EVAL','POSITION','INTEGER',NULL,'Y','2008-02-20 11:46:35','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF','DIFF_ID','INTEGER',NULL,'Y','2008-02-20 11:46:34','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF','DESCRIPTION','VARCHAR(256)',NULL,'Y','2008-02-20 11:46:34','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','DIFF_ID','INTEGER',NULL,'Y','2008-02-20 11:46:35','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','CONFIDENCE_VALUE','FLOAT',NULL,'Y','2008-02-20 11:46:35','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','PATCHED_POSITION','INTEGER',NULL,'Y','2008-02-20 11:46:35','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','ORIG_LENGTH','INTEGER',NULL,'Y','2008-02-20 11:46:35','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','REFSEQ_PATH','VARCHAR(256)',NULL,'Y','2008-02-20 11:46:35','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_EVAL','DIFF_ID','INTEGER',NULL,'Y','2008-02-20 11:46:35','');
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_EVAL','CONFIDENCE_VALUE','FLOAT',NULL,'Y','2008-02-20 11:46:35','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF','FROM_PATH','VARCHAR(256)',NULL,'Y','2008-02-21 11:31:05','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','ORIG_SEQUENCE','VARCHAR(36)',NULL,'Y','2008-02-21 11:31:06','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF','TO_PATH','VARCHAR(256)',NULL,'Y','2008-02-21 11:31:05','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','PATCHED_LENGTH','INTEGER',NULL,'Y','2008-02-21 11:31:06','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_EVAL','REFSEQ_PATH','VARCHAR(256)',NULL,'Y','2008-02-21 11:31:06','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','PATCHED_SEQUENCE','VARCHAR(36)',NULL,'Y','2008-02-21 11:31:06','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','ORIG_POSITION','INTEGER',NULL,'Y','2008-02-21 11:31:06','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_EVAL','POSITION','INTEGER',NULL,'Y','2008-02-21 11:31:06','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF','DIFF_ID','INTEGER',NULL,'Y','2008-02-21 11:31:05','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF','DESCRIPTION','VARCHAR(256)',NULL,'Y','2008-02-21 11:31:05','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','DIFF_ID','INTEGER',NULL,'Y','2008-02-21 11:31:06','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','CONFIDENCE_VALUE','FLOAT',NULL,'Y','2008-02-21 11:31:06','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','PATCHED_POSITION','INTEGER',NULL,'Y','2008-02-21 11:31:06','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','ORIG_LENGTH','INTEGER',NULL,'Y','2008-02-21 11:31:06','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_PART','REFSEQ_PATH','VARCHAR(256)',NULL,'Y','2008-02-21 11:31:06','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_EVAL','DIFF_ID','INTEGER',NULL,'Y','2008-02-21 11:31:06','');
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Diffs','','SEQUENCE_DIFF_EVAL','CONFIDENCE_VALUE','FLOAT',NULL,'Y','2008-02-21 11:31:06','');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
