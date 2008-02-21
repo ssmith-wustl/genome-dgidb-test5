@@ -35,7 +35,12 @@ EOS
 
 sub load_changes_file {
     my $self = shift;
-    die "Subclass $self didn't define load_chages_file()";
+    if (ref($self) eq __PACKAGE__) {
+        $self->error_message("This command shouldn't be called directly, use one of its sub-commands");
+    } else {
+        $self->error_message("Class ",ref($self)," didn't define load_changes_file()");
+    }
+    return;
 }
 
 

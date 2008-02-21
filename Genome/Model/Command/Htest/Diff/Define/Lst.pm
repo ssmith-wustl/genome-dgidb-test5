@@ -40,35 +40,123 @@ sub load_changes_file {
     }
 
     my $diff_obj = Genome::Model::SequenceDiff->create(from_path => $self->from_path, to_path => $self->to_path, description => 'imported from .lst format');
-    
-    my $patched_offset;  # How different the patched ref position is from the original
-    while (<$fh>) {
+
+    # split the changes file into buckets by refseq_path
+    my %changes_by_refseq;
+    while(<$fh>) {
         chomp;
-        my($refseq_path, $position, $original_seq, $replacement_seq, $code) = split;
-        unless ($refseq_path && $position && $original_seq && $replacement_seq && $code) {
+        my($refseq_name, $position, $orig_seq, $repl_seq, $confidence) = split;
+
+        unless ($refseq_name && $position && $orig_seq && $repl_seq && $confidence) {
             $self->error_message("Couldn't parse line ",$fh->input_line_number," of .lst file ",$self->changes);
             return;
         }
 
-        chop $refseq_path if ($refseq_path =~ m/,$/);  # Get rid of the trailing comma
+        if ($confidence eq '+') {
+            $confidence = 99;
+        } elsif ($confidence eq '-') {
+            $confidence = 1;
+        }
 
-        # FIXME what do we do with indels with length greater than 1?
-        my $diff_part = Genome::Model::SequenceDiffPart->create(diff_id => $diff_obj->diff_id,
-                                                                refseq_path => $refseq_path,
-                                                                orig_position => $position,
-                                                                orig_length => length($original_seq),
-                                                                orig_sequence => $original_seq,  
-                                                                patched_position => $position + $patched_offset,
-                                                                patched_length => length($replacement_seq),
-                                                                patched_sequence => $replacement_seq,
-                                                                confidence_value => 1,  # Maybe $code has something to do with it?
-                                                              );
-	$patched_offset += $diff_part->orig_length - $diff_part->patched_length;
+        $orig_seq = '' if ($orig_seq eq '-');
+        $repl_seq = '' if ($repl_seq eq '-');
+
+        my $change_type;
+        if ($orig_seq and $repl_seq) {
+            $change_type = 'snp';
+        } elsif ($orig_seq or $repl_seq) {
+            $change_type = 'indel';
+        } else {
+            $self->error_message("orig_seq and repl_seq are both blank on line  ",$fh->input_line_number," of .lst file ",$self->changes);
+            return
+        }
+
+        push @{$changes_by_refseq{$refseq_name}}, { refseq_name => $refseq_name,
+                                                    position => $position,
+                                                    orig_seq => $orig_seq,
+                                                    repl_seq => $repl_seq,
+					            confidence => $confidence,
+                                                    change_type => $change_type,
+                                                  };
     }
+    
+    # Sort the changes by position
+    foreach my $refseq_name ( keys %changes_by_refseq ) {
+        my @sorted = sort {$a->{'position'} <=> $b->{'position'}} @{$changes_by_refseq{$refseq_name}};
+        @{$changes_by_refseq{$refseq_name}} = \@sorted;
+    }
+
+    # group contiguous changes together
+    # Do we need to worry about an insertion and a deletion overlapping?
+    foreach my $refseq_name ( keys %changes_by_refseq ) {
+        my $patched_offset = 0;
+        my %accumulate;
+        my $last_position = 0;
+
+        foreach my $change ( @{$changes_by_refseq{$refseq_name}} ) {
+            no warnings 'uninitialized';
+
+            if ($change->{'change_type'} ne 'snp'
+                or $last_position == $change->{'position'}  # part of some kind of overlapping indel
+                or $last_position + 1 == $change->{'position'}) {  # or otherwise contiguous
+
+                $accumulate{'orig_seq'} .= $change->{'orig_seq'};
+                $accumulate{'repl_seq'} .= $change->{'repl_seq'};
+
+            } else {
+                # Not contiguous, save what we've got and start a new contiguous region
+                my $diff_part = $self->_combine_accumulations(refseq_name => $refseq_name,
+                                                              diff_id => $diff_obj->id,
+                                                              patched_offset => $patched_offset,
+                                                              %accumulate);
+                $patched_offset += $diff_part->orig_length - $diff_part->patched_length;
+
+                if ($change->{'change_type'} eq 'snp') {
+                    # we have to handle these by themselves, I think
+                    $self->_combine_accumulations(refseq_name => $refseq_name,
+                                                  diff_id => $diff_obj->id,
+                                                  patched_offset => $patched_offset,
+                                                  position => $change->{'position'},
+                                                  orig_seq => $change->{'orig_seq'},
+                                                  repl_seq => $change->{'repl_seq'},
+                                                  confidence => $change->{'confidence'});
+		}
+
+                 %accumulate = ( position => $change->{'position'},
+                                 confidence => $change->{'confidence'},
+                                 orig_seq => $change->{'orig_seq'},
+                                 repl_seq => $change->{'repl_seq'});
+            }
+
+            $last_position = $change->{'position'};
+        }
+        # Ran through the whole list, save the last contiguous part
+        $self->_combine_accumulations(refseq_name => $refseq_name,
+                                      diff_id => $diff_obj->id,
+                                      patched_offset => $patched_offset,
+                                      %accumulate);
+    }
+
                                                                 
     return $diff_obj;
 }
 
+sub _combine_accumulations {
+    my($self,%args) = @_;
+
+    # FIXME what do we do with the confidence for sequences longer than 1?
+    my $diff_part = Genome::Model::SequenceDiffPart->create(diff_id => $args{'diff_id'},
+                                                            refseq_path => $args{'refseq_name'},
+                                                            orig_position => $args{'position'},
+                                                            orig_length => length($args{'orig_seq'}),
+                                                            orig_sequence => $args{'orig_seq'},
+                                                            patched_position => $args{'position'} + $args{'patched_offset'},
+                                                            patched_length => length($args{'repl_seq'}),
+                                                            patched_sequence => $args{'repl_seq'},
+                                                            confidence_value => $args{'confidence'},
+                                                          );
+    return $diff_part;
+}
 
 1;
 
