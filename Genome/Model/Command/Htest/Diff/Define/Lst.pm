@@ -29,21 +29,17 @@ Load a reference diff into the database.  See the sub-commands for what formats 
 EOS
 }
 
+# split the changes file into buckets by refseq_path
+sub _bucketize_changes_by_refseq {
+    my($self,$changes_filename) = @_;
 
-
-sub load_changes_file {
-    my $self = shift;
-
-    my $fh = IO::File->new($self->changes);
+    my $fh = IO::File->new($changes_filename);
     unless ($fh) {
-        $self->error_message("Can't open changes file ".$self->changes.": $!");
+        $self->error_message("Can't open changes file $changes_filename: $!");
         return;
     }
 
-    my $diff_obj = Genome::SequenceDiff->create(from_path => $self->from_path, to_path => $self->to_path, description => 'imported from .lst format');
-
-    # split the changes file into buckets by refseq_path
-    my %changes_by_refseq;
+    my $changes_by_refseq = {};
     while(<$fh>) {
         chomp;
         my($refseq_name, $position, $repl_seq, $orig_seq, $confidence) = split;
@@ -72,29 +68,43 @@ sub load_changes_file {
             return
         }
 
-        push @{$changes_by_refseq{$refseq_name}}, { refseq_name => $refseq_name,
-                                                    position => $position,
-                                                    orig_seq => uc $orig_seq,
-                                                    repl_seq => uc $repl_seq,
-					            confidence => $confidence,
-                                                    change_type => $change_type,
-                                                  };
+        push @{$changes_by_refseq->{$refseq_name}}, { refseq_name => $refseq_name,
+                                                      position => $position,
+                                                      orig_seq => uc $orig_seq,
+                                                      repl_seq => uc $repl_seq,
+                                                      confidence => $confidence,
+                                                      change_type => $change_type,
+                                                    };
     }
-    
+
     # Sort the changes by position
-    foreach my $refseq_name ( keys %changes_by_refseq ) {
-        my @sorted = sort {$a->{'position'} <=> $b->{'position'}} @{$changes_by_refseq{$refseq_name}};
-        $changes_by_refseq{$refseq_name} = \@sorted;
+    foreach my $refseq_name ( keys %$changes_by_refseq ) {
+        my @sorted = sort {$a->{'position'} <=> $b->{'position'}} @{$changes_by_refseq->{$refseq_name}};
+        $changes_by_refseq->{$refseq_name} = \@sorted;
     }
+
+    return $changes_by_refseq;
+}
+
+
+
+
+sub load_changes_file {
+    my $self = shift;
+
+    my $changes_by_refseq = $self->_bucketize_changes_by_refseq($self->changes);
+
+    my $diff_obj = Genome::SequenceDiff->create(from_path => $self->from_path, to_path => $self->to_path, description => 'imported from .lst format');
+    
 
     # group contiguous changes together
     # Do we need to worry about an insertion and a deletion overlapping?
-    foreach my $refseq_name ( keys %changes_by_refseq ) {
+    foreach my $refseq_name ( keys %$changes_by_refseq ) {
         my $patched_offset = 0;  # How different the orig and patched positions are
         my $last_position = 0;
         my %accumulate;  # Holds the accumulated, contiguous indel information
 
-        foreach my $change ( @{$changes_by_refseq{$refseq_name}} ) {
+        foreach my $change ( @{$changes_by_refseq->{$refseq_name}} ) {
             no warnings 'uninitialized';
 
             if ($change->{'change_type'} ne 'snp' and 
