@@ -12,7 +12,7 @@ CREATE TABLE sequence_diff_part (
     orig_sequence VARCHAR(36),
     patched_position INTEGER,
     patched_length INTEGER,
-    patched_sequecne VARCHAR(36),
+    patched_sequence VARCHAR(36),
     confidence_value FLOAT,
     PRIMARY KEY (diff_id,refseq_path,orig_position)
 );
