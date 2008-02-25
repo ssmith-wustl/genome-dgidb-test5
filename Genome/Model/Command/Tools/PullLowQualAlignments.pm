@@ -216,7 +216,7 @@ sub _get_fastq_file_for_flow_cell_and_lane {
                 $copy_run_pses[0]->added_param('destination_directory')) {
 
             $self->error_message("No source_directory or destination_directory param on copy run PSE ".$copy_run_pses[0]->pse_id);
-            next;
+            return;
         }
         my($from) = $copy_run_pses[0]->added_param('source_directory');
         my($to) = $copy_run_pses[0]->added_param('destination_directory');
