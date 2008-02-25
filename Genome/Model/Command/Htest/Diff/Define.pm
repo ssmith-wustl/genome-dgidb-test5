@@ -134,6 +134,11 @@ $DB::single=1;
         return;
     }
 
+    # We don't need the new reference in fasta format hanging around any more
+    # FIXME maybe make this a File::Temp file after we know this works right 
+    # so it'll get cleaned up automaticly.
+    unlink($$patched_ref_path);
+
     $self->status_message("diff_id is ".$diff_obj->diff_id);
 
     return 1;
