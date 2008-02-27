@@ -30,6 +30,8 @@ my @columns = qw(
     read_length
     vector_left
     vector_right
+    sample_set
+    research_project
 );
 
 my @relevant_dimension_tables = qw(
@@ -56,6 +58,24 @@ sub new {
     bless($self, $class);
     $self->init_cloned_star_dbh;
     return $self;
+}
+
+sub derive_sample_set {
+    my $self = shift;
+
+    my $r = $self->read();
+
+    my $sr = GSC::Sequence::Read->get($r->id);
+    return $sr->sample_set;
+}
+
+sub derive_research_project {
+    my $self = shift;
+
+    my $r = $self->read();
+
+    my $sr = GSC::Sequence::Read->get($r->id);
+    return $sr->research_project;
 }
 
 sub derive_read_length {
