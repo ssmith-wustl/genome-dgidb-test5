@@ -22,7 +22,7 @@ ok
 (
     App::Mail->mail
     (
-        From => qq("GSCApp::Mail Test" <$email\@watson.wustl.edu>),
+        From => qq("GSCApp::Mail Test" <$email\@genome.wustl.edu>),
         To => $email,
         Subject => 'GSCApp::Mail test',
         Message => "First test message from GSCApp::Mail test.\n"
