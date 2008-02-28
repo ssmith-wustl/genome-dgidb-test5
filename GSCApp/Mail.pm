@@ -1,5 +1,5 @@
 # Customize App::Mail for GSC
-# Copyright (C) 2004 Washington University in St. Louis
+# Copyright (C) 2008 Washington University in St. Louis
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
@@ -84,26 +84,21 @@ sub _header_check
     my (%mail) = @_;
 
     # loop through the headers to check
-    foreach my $k qw(To From Subject Message)
-    {
+    foreach my $k qw(To From Subject Message) {
         # make sure it exists
-        if (exists($mail{$k}))
-        {
+        if (exists($mail{$k})) {
             $class->debug_message("mail key $k exists", 4);
         }
-        else
-        {
+        else {
             $class->error_message("required mail key $k does not exist");
             return;
         }
 
         # make sure it is set with something
-        if ($mail{$k})
-        {
+        if ($mail{$k}) {
             $class->debug_message("mail key $k is set: $mail{$k}", 4);
         }
-        else
-        {
+        else {
             $class->error_message("required mail key $k not set");
             return;
         }
@@ -140,6 +135,22 @@ Only the Message key is allowed for the mesasge body text
 It then creates a file in the mail queue directory so that C<smail>
 can send it out.
 
+This method adds two headers to the message.
+
+=over 6
+
+=item X-GSCApp-Mail-Sender
+
+This header contains the user and host from which the message
+originated.
+
+=item Precedence
+
+This header is set to bulk unless the hash passed in to the method
+has already set it.
+
+=back
+
 =cut
 
 sub mail
@@ -154,77 +165,67 @@ sub mail
 
     # set originating host and user header
     my $host = hostname;
-    if ($host)
-    {
+    if ($host) {
         $class->debug_message("hostname is $host", 3);
     }
-    else
-    {
+    else {
         $class->warning_message("choosing arbitrary host name");
         $host = 'gschost';
     }
     my ($login, $name);
-    if ($^O eq 'MSWin32' || $^O eq 'cygwin')
-    {
+    if ($^O eq 'MSWin32' || $^O eq 'cygwin') {
         $login = 'winguest';
         $name = 'Generic Windows User';
     }
-    else
-    {
+    else {
         ($login, $name) = (getpwuid($<))[0, 6];
         $login ||= 'nobody';
         $name ||= 'Nobody';
     }
     $mail{'X-GSCApp-Mail-Sender'} = "$login\@$host";
 
+    # set precedence
+    if (!exists($mail{Precedence})) {
+        $mail{Precedence} = 'bulk';
+    }
+
     # set from header if is is not set
-    if (!exists($mail{From}) || !$mail{From})
-    {
-        $mail{From} = qq("$name" <$login\@watson.wustl.edu>);
+    if (!exists($mail{From}) || !$mail{From}) {
+        $mail{From} = qq("$name" <$login\@genome.wustl.edu>);
     }
 
     # check headers
-    if ($class->_header_check(%mail))
-    {
+    if ($class->_header_check(%mail)) {
         $class->debug_message("mail headers are ok", 3);
     }
-    else
-    {
+    else {
         # warning already given
         return;
     }
 
     # check email addresses
-    foreach my $header qw(To From Cc Bcc)
-    {
-        if (exists($mail{$header}))
-        {
+    foreach my $header qw(To From Cc Bcc) {
+        if (exists($mail{$header})) {
             my @addresses = split(m/\s*,\s*/, $mail{$header});
-            foreach my $add (@addresses)
-            {
-                if ($add =~ m/\@/)
-                {
+            foreach my $add (@addresses) {
+                if ($add =~ m/\@/) {
                     $class->debug_message("address is qualified: $add", 4);
                 }
-                elsif ($add =~ m/[^-\w.]/)
-                {
+                elsif ($add =~ m/[^-\w.]/) {
                     $class->error_message("address is not qualified and is not "
                                           . "simple enough to fix: $add");
                     return;
                 }
-                else
-                {
+                else {
                     # qualify simple addresses
-                    $add .= '@watson.wustl.edu';
+                    $add .= '@genome.wustl.edu';
                 }
 
                 # make sure email address looks valid
-                if ($add =~ m/[-.+\w]+@[-.\w]+/)
-                {
+                if ($add =~ m/[-.+\w]+@[-.\w]+/) {
                     $class->debug_message("address looks valid: $add", 4);
                 }
-                else
-                {
+                else {
                     $class->error_message("address does not appear to be "
                                           . "valid: $add");
                     return;
@@ -238,57 +239,47 @@ sub mail
 
     # create unique file name
     my $mqueue = App::Mail->config('mqueue');
-    if ($mqueue)
-    {
+    if ($mqueue) {
         $class->debug_message("mqueue is $mqueue", 3);
     }
-    else
-    {
+    else {
         $class->error_message("mqueue directory not defined");
         return;
     }
-    if (-d $mqueue)
-    {
+    if (-d $mqueue) {
         $class->debug_message("mqueue directory $mqueue exists", 3);
     }
-    else
-    {
+    else {
         $class->error_message("mqueue directory $mqueue does not exist");
         return;
     }
 
     my $ext = App::Mail->config('ext');
-    if ($ext)
-    {
+    if ($ext) {
         $class->debug_message("mail extension is $ext", 3);
     }
-    else
-    {
+    else {
         $class->error_message("mail file extension not set");
         return;
     }
     my $file = "$mqueue/" . App::Name->prog_name . "-$host-$$";
-    while (-e "$file$ext")
-    {
+    while (-e "$file$ext") {
         $file .= 'x';
     }
     $file .= $ext;
 
     # set permissive umask
     my $umask = umask;
-    eval
-    {
+    eval {
         umask(0000);
     };
 
     # open the file for writing
     my $fh = IO::File->new(">$file");
-    if (defined($fh))
-    {
+    if (defined($fh)) {
         $class->debug_message("opened file $file for writing", 3);
     }
-    else
-    {
+    else {
         $class->error_message("failed to open file $file for writing: $!");
         umask($umask) if $umask;
         return;
@@ -331,35 +322,29 @@ sub smail
 
     # get mqueue directory
     my $mqueue = App::Mail->config('mqueue');
-    if ($mqueue)
-    {
+    if ($mqueue) {
         $class->debug_message("mail queue directory is $mqueue", 3);
     }
-    else
-    {
+    else {
         $class->error_message("mail queue directory is not set");
         return;
     }
     # get mail extension
     my $ext = App::Mail->config('ext');
-    if ($ext)
-    {
+    if ($ext) {
         $class->debug_message("mail extension is $ext", 3);
     }
-    else
-    {
+    else {
         $class->error_message("mail extension is not set");
         return;
     }
 
     # open directory
     my $dh = IO::Dir->new($mqueue);
-    if (defined($dh))
-    {
+    if (defined($dh)) {
         $class->debug_message("opened directory $mqueue", 3);
     }
-    else
-    {
+    else {
         $class->error_message("failed to open directory $mqueue: $!");
         return;
     }
@@ -371,17 +356,14 @@ sub smail
     # loop through the contents of the directory
     my ($sent, $fail) = (0, 0);
     my @files = $dh->read;
-    foreach my $file (@files)
-    {
+    foreach my $file (@files) {
         next unless $file =~ m/$ext$/;
 
         my $fh = IO::File->new("<$mqueue/$file");
-        if (defined($fh))
-        {
+        if (defined($fh)) {
             $class->debug_message("opened file $file for reading", 4);
         }
-        else
-        {
+        else {
             $class->error_message("failed to open file $file for reading: $!");
             ++$fail;
             next;
@@ -396,24 +378,20 @@ sub smail
         eval($mail_hash_ref_dump);
 
         # allow us to reference mail hash variable indirectly
-        if (ref($mail_hash_ref) eq 'HASH')
-        {
+        if (ref($mail_hash_ref) eq 'HASH') {
             $class->debug_message("dumper ref is a hash ref", 4);
         }
-        else
-        {
+        else {
             $class->error_message("dumper ref is not a hash ref");
             ++$fail;
             next;
         }
 
         # check the mail headers
-        if ($class->_header_check(%$mail_hash_ref))
-        {
+        if ($class->_header_check(%$mail_hash_ref)) {
             $class->debug_message("all required mail headers present", 4);
         }
-        else
-        {
+        else {
             $class->error_message("mail hash in $file does not have all "
                                   . "required mail headers");
             ++$fail;
@@ -424,24 +402,20 @@ sub smail
         $class->debug_message("mail hash: " . Dumper($mail_hash_ref), 6);
 
         # send the mail
-        if (sendmail(%$mail_hash_ref))
-        {
+        if (sendmail(%$mail_hash_ref)) {
             $class->debug_message("sent mail: $Mail::Sendmail::log", 5);
         }
-        else
-        {
+        else {
             $class->error_message("failed to send mail: $Mail::Sendmail::error");
             ++$fail;
             next;
         }
 
         # remove the file
-        if (unlink("$mqueue/$file"))
-        {
+        if (unlink("$mqueue/$file")) {
             $class->debug_message("removed mail queue file $file", 4);
         }
-        else
-        {
+        else {
             $class->error_message("failed to remove file $mqueue/$file: $!");
             ++$fail;
             next;
@@ -465,7 +439,7 @@ __END__
 
 =head1 BUGS
 
-Report bugs to <software@watson.wustl.edu>.
+Report bugs to <software@genome.wustl.edu>.
 
 =head1 SEE ALSO
 
@@ -473,8 +447,6 @@ App(3), App::Mail(3), GSCApp(3), Mail::Sendmail(3), perlfunc(1)
 
 =head1 AUTHOR
 
-David Dooling <ddooling@watson.wustl.edu>
+David Dooling <ddooling@wustl.edu>
 
 =cut
-
-# $Header$
