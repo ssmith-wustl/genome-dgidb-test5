@@ -84,5 +84,3 @@ ok(!App::Mail->mail(To => 'nobody', Cc => 'No One <nobody>', Subject => 's', Mes
 ok(!App::Mail->mail(To => 'nobody', Bcc => 'nobody (No One)', Subject => 's', Message => 'bad address'), 'rejected message with complicated unqualified Bcc address');
 ok(!App::Mail->mail(To => '@cnn.com', Subject => 's', Message => 'bad address'), 'rejected message with domain only address');
 exit(0);
-
-# $Header$
