@@ -18,14 +18,15 @@ class Genome::Model::Command::Create {
         genotyper_params       => { is => 'varchar', len => 255, is_optional => 1 },
         indel_finder           => { is => 'varchar', len => 255 },
         indel_finder_params    => { is => 'varchar', len => 255, is_optional => 1 },
-        name                   => { is => 'varchar', len => 255 },
+        model_name             => { is => 'varchar', len => 255 },
         prior                  => { is => 'varchar', len => 32,  is_optional => 1 },
         read_aligner           => { is => 'varchar', len => 255 },
         read_aligner_params    => { is => 'varchar', len => 255, is_optional => 1 },
         read_calibrator        => { is => 'varchar', len => 255, is_optional => 1 },
         read_calibrator_params => { is => 'varchar', len => 255, is_optional => 1 },
         reference_sequence     => { is => 'varchar', len => 255 },
-        alignment_distribution_threshold => { is => 'varchar', len => 255 },
+        align_dist_threshold => { is => 'varchar', len => 255 },
+        multi_read_fragment_strategy => { is => 'varchar', len => 255, is_optional => 1},
         sample                 => { is => 'varchar', len => 255 },
     ],
     schema_name => 'Main',
@@ -87,6 +88,7 @@ sub execute {
     my $self = shift;
 
     # genome model specific
+$DB::single=1;
 
     unless ($self->prior) {
         $self->prior('none');
@@ -138,11 +140,22 @@ sub _extract_command_properties_and_duplicate_keys_for__name_properties{
         my $value = $self->$command_property;
         next unless defined $value;
 
-        my $object_property = $command_property;
-        if ($target_class->can($command_property . "_name")) {
-            $object_property .= "_name";
+        # This is an ugly hack just for creating Genome::Model objects
+        # Command-derived objects gobble up the --name parameter as part of the
+        # UR framework initialization, so we're stepping around that by
+        # knowing that Genome::Model's have names, and the related Command
+        # param is called "model_name"
+        if ($command_property eq 'model_name') {
+            if ($target_class->can('name')) {
+                $params{'name'} = $value;
+            }
+        } else {
+            my $object_property = $command_property;
+            if ($target_class->can($command_property . "_name")) {
+                $object_property .= "_name";
+            }
+            $params{$object_property} = $value;
         }
-        $params{$object_property} = $value;
     }
     
     return \%params;

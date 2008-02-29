@@ -1,22 +1,23 @@
-package Genome::SequenceDiffEval;
+package GenomE::SequenceDiffEval;
 
 use strict;
 use warnings;
 
-use Genome;
-class Genome::SequenceDiffEval {
+use GenomE;
+class GenomE::SequenceDiffEval {
     type_name => 'sequence diff eval',
     table_name => 'SEQUENCE_DIFF_EVAL',
     id_by => [
-        diff_id     => { is => 'INTEGER', is_optional => 1 },
-        position    => { is => 'INTEGER', is_optional => 1 },
-        refseq_path => { is => 'VARCHAR(256)', is_optional => 1 },
+        diff_id       => { is => 'NUMBER', len => 10 },
+        position      => { is => 'NUMBER', len => 10 },
+        refseq_path   => { is => 'VARCHAR2', len => 256 },
+        sequence_diff => { is => 'GenomE::SequenceDiff', id_by => 'diff_id', constraint_name => 'SDE_FK' },
     ],
     has => [
-        confidence_value => { is => 'FLOAT', is_optional => 1 },
+        confidence_value => { is => 'NUMBER', len => 10, is_optional => 1 },
     ],
-    schema_name => 'Diffs',
-    data_source => 'Genome::DataSource::Diffs',
+    schema_name => 'GMSchema',
+    data_source => 'GenomE::DataSource::GMSchema',
 };
 
 1;

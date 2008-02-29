@@ -11,6 +11,9 @@ use Data::Dumper;
 use Date::Calc;
 use File::stat;
 
+use GDBM_File;
+
+
 use App::Lock;
 
 class Genome::Model::Command::AddReads::AlignReads::Maq {
@@ -65,30 +68,7 @@ sub execute {
         return;
     }
 
-    # Part 1, convert the files to a different format
-    # Why are we converting them?
-
-    $DB::single = 1;
-    my $gerald_dir = $self->run->full_path;
-    my @geraldfiles = glob($gerald_dir . '/s_[' . $lanes . ']_sequence.txt*');
-    foreach my $seqfile (@geraldfiles) {
-
-            # convert quality values
-            my $fastq_file = $working_dir . '/' . File::Basename::basename($seqfile);
-            $fastq_file =~ s/\.txt/.fastq/x;
-            system("maq sol2sanger $seqfile $fastq_file");
-
-            # Convert the reads to the binary fastq format
-            my $bfq_file = $working_dir . '/' . File::Basename::basename($seqfile);
-            $bfq_file =~ s/\.txt/.bfq/x;
-            system("maq fastq2bfq $fastq_file $bfq_file");
-
-            #unless ($self->keep_fastq) {
-            #        unlink $fastq_file;
-            #}
-    }
-
-    # Part 2, use maq to do the alignments
+    # use maq to do the alignments
 
     $DB::single = 1;
     my @alignment_files;
@@ -116,7 +96,35 @@ sub execute {
             return;
         }
 
-        # Part 3, use submap if necessary
+        # Find out which reads didn't align
+        my %read_index;
+        my $dbm_file = $self->read_index_dbm_file_for_lane($lane);
+
+        unless (tie(%read_index, 'GDBM_File', $dbm_file, &GDBM_WRCREAT, 0666)) {
+            $self->error_message("Failed to tie to DBM file $dbm_file");
+            return;
+        }
+
+        my $unaligned_pathname = $self->unaligned_reads_file_for_lane();
+        my $unaligned_dbm_pathname = $unaligned_pathname . ".ndbm";
+        `cp $dbm_file $unaligned_dbm_pathname`;
+
+        my %unaligned_index;
+        unless (tie(%unaligned_index, 'NDBM_File', $unaligned_dbm_pathname, "O_RDWR O_CREAT", 0666)) {
+            $self->error_message("Failed to tie to NDBM file $unaligned_dbm_pathname");
+            return;
+        }
+
+        my $aligned_info;
+        open($aligned_info,"maq mapview $this_lane_alignments_file |");
+        while(<$aligned_info>) {
+            my($aligned_read_name) = m/^(\S+)\s/;
+            delete $unaligned_index{$aligned_read_name};
+        }
+        $aligned_info->close();
+        untie %unaligned_index;
+
+        # use submap if necessary
     
         my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
         

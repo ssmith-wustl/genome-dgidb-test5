@@ -9,36 +9,34 @@ use Genome::Model::EqualColumnWidthTableizer;
 use File::Path;
 use File::Basename;
 
-#UR::Object::Type->define(
-class Genome::Model (
-    class_name => 'Genome::Model',
-    english_name => 'genome model',
+class Genome::Model {
+    type_name => 'genome model',
     table_name => 'GENOME_MODEL',
     id_by => [
-        id                      => { is => 'INT', len => 11 },
+        genome_model_id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        dna_type                => { is => 'VARCHAR', len => 64 },
-        genotyper_name          => { is => 'VARCHAR', len => 255 },
-        genotyper_params        => { is => 'VARCHAR', len => 255, is_optional => 1 },
-        indel_finder_name       => { is => 'VARCHAR', len => 255, is_optional => 1 },
-        indel_finder_params     => { is => 'VARCHAR', len => 255, is_optional => 1 },
-        name                    => { is => 'VARCHAR', len => 255 },
-        prior                   => { is => 'VARCHAR', len => 255, is_optional => 1 },
-        read_aligner_name       => { is => 'VARCHAR', len => 255 },
-        read_aligner_params     => { is => 'VARCHAR', len => 255, is_optional => 1 },
-        read_calibrator_name    => { is => 'VARCHAR', len => 255, is_optional => 1 },
-        read_calibrator_params  => { is => 'VARCHAR', len => 255, is_optional => 1 },
-        reference_sequence_name => { is => 'VARCHAR', len => 255 },
-        sample_name             => { is => 'VARCHAR', len => 255 },
-        alignment_distribution_threshold => { is => 'VARCHAR', len => 255 },
+        align_dist_threshold         => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        dna_type                     => { is => 'VARCHAR2', len => 64 },
+        genotyper_name               => { is => 'VARCHAR2', len => 255 },
+        genotyper_params             => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        indel_finder_name            => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        indel_finder_params          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        multi_read_fragment_strategy => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        name                         => { is => 'VARCHAR2', len => 255 },
+        prior                        => { is => 'VARCHAR2', len => 255, is_optional => 1, sql => 'prior_ref_seq' },
+        read_aligner_name            => { is => 'VARCHAR2', len => 255 },
+        read_aligner_params          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        read_calibrator_name         => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        read_calibrator_params       => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        reference_sequence_name      => { is => 'VARCHAR2', len => 255 },
+        sample_name                  => { is => 'VARCHAR2', len => 255 },
     ],
-    unique_constraints => [
-        { properties => [qw/id/], sql => 'PRIMARY' },
-    ],
-    schema_name => 'Main',
-    data_source => 'Genome::DataSource::Main',
-);
+    schema_name => 'GMSchema',
+    data_source => 'Genome::DataSource::GMSchema',
+    doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
+};
+
 
 sub base_parent_directory {
     "/gscmnt/sata114/info/medseq"

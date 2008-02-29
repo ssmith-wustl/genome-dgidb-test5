@@ -44,7 +44,7 @@ sub _bucketize_changes_by_refseq {
         chomp;
         my($refseq_name, $position, $repl_seq, $orig_seq, $confidence) = split;
 
-        unless ($refseq_name && $position && $orig_seq && $repl_seq && $confidence) {
+        unless ($refseq_name && $position && $repl_seq && $orig_seq && $confidence) {
             $self->error_message("Couldn't parse line ",$fh->input_line_number," of .lst file ",$self->changes);
             return;
         }
