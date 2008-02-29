@@ -10,7 +10,7 @@ class Genome::Model::Command::AddReads::UploadDatabase {
     is => ['Genome::Model::Command::DelegatesToSubcommand::WithRefSeq'],
 };
 
-sub sub_command_sort_position { 9 }
+sub sub_command_sort_position { 90 }
 
 sub help_brief {
     "upload the current variation set to the medical genomics database";

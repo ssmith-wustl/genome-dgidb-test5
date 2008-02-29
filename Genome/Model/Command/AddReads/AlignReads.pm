@@ -10,7 +10,7 @@ class Genome::Model::Command::AddReads::AlignReads {
     is => ['Genome::Model::Command::DelegatesToSubcommand::WithRun'],
 };
 
-sub sub_command_sort_position { 2 }
+sub sub_command_sort_position { 20 }
 
 sub help_brief {
     "Run the aligner tool on the reads being added to the model"

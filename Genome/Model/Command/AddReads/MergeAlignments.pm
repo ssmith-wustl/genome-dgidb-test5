@@ -10,7 +10,7 @@ class Genome::Model::Command::AddReads::MergeAlignments {
     is => ['Genome::Model::Command::DelegatesToSubcommand::WithRefSeq'],
 };
 
-sub sub_command_sort_position { 5 }
+sub sub_command_sort_position { 50 }
 
 sub help_brief {
     "Merge any accumulated alignments on a model";

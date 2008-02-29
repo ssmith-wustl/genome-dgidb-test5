@@ -10,7 +10,7 @@ class Genome::Model::Command::AddReads::FindVariations {
     is => 'Genome::Model::Command::DelegatesToSubcommand::WithRefSeq',
 };
 
-sub sub_command_sort_position { 8 }
+sub sub_command_sort_position { 80 }
 
 sub help_brief {
     "identify genotype variations"

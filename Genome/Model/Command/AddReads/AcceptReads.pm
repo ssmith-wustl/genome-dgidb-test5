@@ -11,7 +11,7 @@ class Genome::Model::Command::AddReads::AcceptReads {
     is => ['Genome::Model::Command::DelegatesToSubcommand::WithRun'],
 };
 
-sub sub_command_sort_position { 3 }
+sub sub_command_sort_position { 30 }
 
 sub help_brief {
     "add reads from all or part of an instrument run to the model"
