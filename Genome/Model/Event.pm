@@ -53,7 +53,6 @@ sub _shell_args_property_meta {
 sub resolve_run_directory {
     my $self = shift;
 
-    $DB::single = 1;
     return sprintf('%s/runs/%s/%s', Genome::Model->get($self->model_id)->data_directory,
                                     $self->run->sequencing_platform,
                                     $self->run->name);
@@ -87,8 +86,16 @@ sub sorted_fastq_file_for_lane {
 sub sorted_screened_fastq_file_for_lane {
     my($self,$lane) = @_;
 
-    my $run = Genome::RunChunk->get($self->run_id);
-    return sprintf("%s/s_%d_sequence.unique.sorted.fastq", $self->resolve_run_directory, $run->limit_regions);
+    my $model = $self->model();
+
+    my $path;
+    if ($model->multi_read_fragment_strategy()) {
+        my $run = Genome::RunChunk->get($self->run_id);
+        $path = sprintf("%s/s_%d_sequence.unique.sorted.fastq", $self->resolve_run_directory, $run->limit_regions);
+    } else {
+        $path = $self->sorted_fastq_file_for_lane();
+    }
+    return $path;
 }
 
 
@@ -103,7 +110,7 @@ sub bfq_file_for_lane {
 sub read_index_dbm_file_for_lane {
     my($self) = @_;
     my $run = Genome::RunChunk->get($self->run_id);
-    return sprintf("%s/s_%d_read_names.ndbm", $self->resolve_run_directory, $run->limit_regions);
+    return sprintf("%s/s_%d_read_name_index.dbm", $self->resolve_run_directory, $run->limit_regions);
 }
 
 sub unaligned_reads_file_for_lane {

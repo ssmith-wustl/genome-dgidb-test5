@@ -47,7 +47,8 @@ sub execute {
     $lanes=$self->run->limit_regions || '1245678';
     my @goodlanes;
     foreach my $lane (split //, $lanes){
-      my $lane_mapfile=$run_path . '/'. 'alignments_lane_'.$lane;
+      #my $lane_mapfile=$run_path . '/'. 'alignments_lane_'.$lane;
+      my $lane_mapfile=$self->alignment_file_for_lane();
       my $line=`/gscmnt/sata114/info/medseq/pkg/maq/branches/lh3/maq-xp/maq-xp pileup -t $lane_mapfile 2>&1`;
       my ($evenness)=($line=~/(\S+)\%$/);
       if($evenness > $model->alignment_distribution_threshold){

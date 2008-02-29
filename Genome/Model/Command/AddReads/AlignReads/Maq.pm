@@ -41,12 +41,12 @@ sub execute {
     
     my $model = Genome::Model->get(id => $self->model_id);
 
+$DB::single = 1;
+
     my $lanes;
     
     # ensure the reference sequence exists.
-    
     my $ref_seq_file =  $model->reference_sequence_path . "/all_sequences.bfa";
-    
     
     unless (-e $ref_seq_file) {
         $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
@@ -70,23 +70,31 @@ sub execute {
 
     # use maq to do the alignments
 
-    $DB::single = 1;
     my @alignment_files;
     foreach my $lane ( split('', $lanes) ) {
-        my $bfq_file = sprintf('%s/s_%d_sequence.bfq', $working_dir, $lane);
+        #my $bfq_file = sprintf('%s/s_%d_sequence.bfq', $working_dir, $lane);
+
+        # Convert the right fastq file into a bfq file
+        my $fastq_file = $self->sorted_screened_fastq_file_for_lane();
+        my $bfq_file = $self->bfq_file_for_lane();
+        system("maq fastq2bfq $fastq_file $bfq_file");
+
         unless (-r $bfq_file) {
             $self->error_message("bfq file $bfq_file does not exist");
             next;
         }
 
-        my $this_lane_alignments_file = $working_dir . "/alignments_lane_$lane";
+        #my $this_lane_alignments_file = $working_dir . "/alignments_lane_$lane.map";
+        my $this_lane_alignments_file = $self->alignment_file_for_lane();
         push @alignment_files, $this_lane_alignments_file;
+
+        my $unaligned_reads_file = $self->unaligned_reads_file_for_lane();
        
-       
-        my $maq_cmdline = sprintf('maq map %s %s %s %s', $model->read_aligner_params || '',
-                                                         $this_lane_alignments_file,
-                                                         $ref_seq_file,
-                                                         $bfq_file);
+        my $maq_cmdline = sprintf('maq map %s -u %s %s %s %s %s', $model->read_aligner_params || '',
+                                                                  $unaligned_reads_file,
+                                                                  $this_lane_alignments_file,
+                                                                  $ref_seq_file,
+                                                                  $bfq_file);
 	
 	print "$maq_cmdline\n";
 
@@ -95,6 +103,7 @@ sub execute {
             $self->error_message("got a nonzero return value from maq map; something went wrong.  cmdline was $maq_cmdline rv was $rv");
             return;
         }
+return 1;
 
         # Find out which reads didn't align
         my %read_index;

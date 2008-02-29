@@ -8,6 +8,7 @@ use File::Path;
 use GSC;
 
 use GDBM_File;
+use File::Temp;
 
 use IO::File;
 
@@ -61,15 +62,12 @@ sub execute {
     }
 
     my $run_dir = $self->resolve_run_directory;
-    if (-d $run_dir) {
-        $self->status_message("Run directory $run_dir already exists");
-        $self->event_status('completed');
-    }
-    
-    eval { mkpath($run_dir) };
-    if ($@) {
-        $self->error_message("Couldn't create run directory path $run_dir: $@");
-        return;
+    unless (-d $run_dir) {
+        eval { mkpath($run_dir) };
+        if ($@) {
+            $self->error_message("Couldn't create run directory path $run_dir: $@");
+            return;
+        }
     }
 
     # Convert the original solexa sequence files into maq-usable files
@@ -89,9 +87,10 @@ sub execute {
         my $fastq_file = $self->fastq_file_for_lane();
         system("maq sol2sanger $seqfile $fastq_file");
 
-        # Convert the reads to the binary fastq format
-        my $bfq_file = $self->bfq_file_for_lane();
-        system("maq fastq2bfq $fastq_file $bfq_file");
+        ## Convert the reads to the binary fastq format
+        ## We're doing this in align-reads now
+        #my $bfq_file = $self->bfq_file_for_lane();
+        #system("maq fastq2bfq $fastq_file $bfq_file");
 
         # We also need a sorted/indexed fastq file 
         unless ($self->_make_sorted_fastq_and_index_file()) {
@@ -127,8 +126,9 @@ sub _make_sorted_fastq_and_index_file {
 
     while(1) {
         my $read_name = $fastq->getline;
+        last unless $read_name;
         chomp $read_name;
-        last unless ($read_name);
+        last unless $read_name;
 
         my $sequence = $fastq->getline;
         chomp $sequence;
@@ -169,27 +169,37 @@ sub _make_sorted_fastq_and_index_file {
         return;
     }
 
-    my %read_index;
-    my $dbm_file = $self->read_index_dbm_file_for_lane();
-    unless (tie(%read_index, 'GDBM_File', $dbm_file, &GDBM_WRCREAT, 0666)) {
-        $self->error_message("Failed to tie to DBM file $dbm_file");
-        return;
-    }
+#    my %read_index;
+#    # Create the DBM file in /tmp initially  because it's faster
+#    my $model = Genome::Model->get(id => $self->model_id);
+#    my $run = Genome::RunChunk->get(id => $self->run_id);
+#    my $temp_dbm_file = sprintf("/tmp/fastq_index_%s_%s_%d.dbm", $model->genome_model_id, $run->limit_regions, $$);
+#    unless (tie(%read_index, 'GDBM_File', $temp_dbm_file, &GDBM_WRCREAT, 0666)) {
+#        $self->error_message("Failed to tie to DBM file $temp_dbm_file");
+#        return;
+#    }
 
-    my $file_offset = 0;
+#    my $file_offset = 0;
     while(<$postsorted>) {
         chomp;
         my($sequence,$read_name,$quality) = split;
-        my $record = "\@$read_name\n$sequence\n+\n$quality\n";
+        my $record = "$read_name\n$sequence\n+\n$quality\n";
         $sorted->print($record);
 
-        $read_index{$read_name} = $file_offset;
-        $file_offset += length($record);
+#        $read_index{$read_name} = $file_offset;
+#        $file_offset += length($record);
     }
 
-    untie %read_index;
+#    untie %read_index;
     $postsorted->close();
     $sorted->close();
+
+#    my $dbm_file = $self->read_index_dbm_file_for_lane();
+#    `mv $temp_dbm_file $dbm_file`;
+#    if ($?) {
+#        $self->error_message("Failed to move $temp_dbm_file $dbm_file");
+#        return;
+#    }
 
     unlink($presorted_pathname,$postsorted_pathname);
         

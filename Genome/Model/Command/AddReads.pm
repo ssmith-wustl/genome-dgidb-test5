@@ -14,7 +14,11 @@ class Genome::Model::Command::AddReads {
         sequencing_platform => { is => 'String',
                                 doc => 'Type of sequencing instrument used to generate the data'},
         full_path           => { is => 'String',
-                                doc => 'Pathname for the data produced by the run' },
+                                doc => 'Pathname for the data produced by the run',
+                                is_optional => 1 },
+        run_name            => { is => 'String',
+                                 doc => "Name of the run.  It will determine the pathname automaticly and add all lanes for the model's sample",
+                                 is_optional => 1 },
     ],
     has_optional => [
         limit_regions       =>  { is => 'String',
@@ -54,6 +58,8 @@ This command launches all of the appropriate commands to add a run,
 or part of a run, to the specified model.
 
 All of the sub-commands listed below will be executed on the model in succession.
+
+Either the --full-path or --run-name option must be specified
 EOS
 }
 
@@ -65,6 +71,30 @@ sub execute {
 
     my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
 
+$DB::single=1;
+    # Determine the pathname for the run
+    my $full_path;
+    if ($self->full_path) {
+        $full_path = $self->full_path;
+
+    } elsif ($self->run_name) {
+        require GSCApp;
+        my @paths = $self->_find_full_path_by_run_name_and_sequencing_platform();
+
+        if (! @paths) {
+            $self->error_message("No analysis pathname found for that run name");
+            return;
+        } elsif (@paths > 1) {
+            my $message = "Multiple analysis pathnames found:\n" . join("\n",@paths);
+            $self->warning_message($message);
+            $self->error_message("Use the --full-path option to directly specify one pathname");
+            return;
+        } else {
+            $full_path = $paths[0];
+        }
+    }
+
+
     # Determine the correct value for limit_regions
     my $regions;
     if ($self->limit_regions) {
@@ -72,18 +102,13 @@ sub execute {
 
     } else {
         # The default will differ depengin on what the sequencing_patform is
-        if (lc($self->sequencing_platform) eq 'solexa') {
-            $regions = '12345678';
-        } else {
-            $self->error_message("I don't know how to create a default limit-regions value for sequencing platform ".$self->sequencing_platform);
-            return;
-        }
+        $regions = $self->_determine_default_limit_regions();
     }
 
     # Make a RunChunk object for each region
     my @runs;
     foreach my $region ( split(//,$regions) ) {
-        my $run = Genome::RunChunk->get_or_create(full_path => $self->full_path,
+        my $run = Genome::RunChunk->get_or_create(full_path => $full_path,
                                                   limit_regions => $region,
                                                   sequencing_platform => $self->sequencing_platform
                                              );
@@ -122,6 +147,71 @@ sub execute {
     return 1; 
 }
 
+
+# For solexa runs, return the gerald directory path
+sub _find_full_path_by_run_name_and_sequencing_platform {
+    my($self) = @_;
+
+    my $run_name = $self->run_name;
+    my $sequencing_platform = $self->sequencing_platform;
+
+    unless ($sequencing_platform eq 'solexa') {
+        $self->error_message("Don't know how to determine run paths for sequencing platform $sequencing_platform");
+        return;
+    }
+
+    my $solexa_run = GSC::Equipment::Solexa::Run->get(run_name => $run_name);
+    unless ($solexa_run) {
+        $self->error_message("No Solexa run found by that name");
+        return;
+    }
+
+    my $glob = $solexa_run->run_directory . '/Data/*Firecrest*/Bustard*/GERALD*/';
+    my @gerald_dirs = glob($glob);
+
+    return @gerald_dirs;
+}
+
+
+sub _determine_default_limit_regions {
+    my($self) = @_;
+
+    unless ($self->sequencing_platform eq 'solexa') {
+        $self->error_message("Don't know how to determine limit-regions for sequencing platform ".$self->sequencing_platform);
+        return;
+    }
+  
+    my $flowcell;
+    if ($self->run_name) {
+        ($flowcell) = ($self->run_name =~ m/_(\d+)$/);
+    } elsif ($self->full_path) {
+        my @path_parts = split('/', $self->full_path);
+        foreach my $part ( @path_parts ) {
+            ($flowcell) = m/_(\d+)$/;
+            last if $flowcell;
+        }
+    }
+    unless ($flowcell) {
+        $self->error_message("Couldn't determine flow_cell_id from run name ".$self->run_name." or full path ".$self->full_path);
+        return;
+    }
+
+    my $solexa_run = GSC::Equipment::Solexa::Run->get(flow_cell_id => $flowcell);
+    unless ($solexa_run) {
+        $self->error_message("No Solexa run record for flow cell id $flowcell");
+        return;
+    }
+
+    my @dnapses = GSC::DNAPSE->get(pse_id => $solexa_run->creation_event_id);
+    my $model = Genome::Model->get(genome_model_id => $self->model_id);
+
+    my %location_to_dna =
+               map { GSC::DNALocation->get(dl_id => $_->dl_id)->location_order => GSC::DNA->get(dna_id => $_->dna_id) }
+               grep { $_->get_dna->dna_name eq $model->sample_name }
+               @dnapses;
+
+    return join('',keys %location_to_dna);
+}
 
 
 sub run_command_with_bsub {

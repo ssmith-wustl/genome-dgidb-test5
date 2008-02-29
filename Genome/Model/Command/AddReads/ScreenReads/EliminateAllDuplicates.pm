@@ -43,20 +43,23 @@ sub execute {
     
     my $model = Genome::Model->get(id => $self->model_id);
 
-    unless ($model->lock_resource($model->model_id)) {
-        $self->error_message("Can't aquire lock for model id ".$model->model_id);
+$DB::single=1;
+    unless ($model->lock_resource(resource_id => $model->genome_model_id)) {
+        $self->error_message("Can't aquire lock for model id ".$model->genome_model_id);
         return;
     }
 
     my $sql = "select * from GENOME_MODEL_EVENT event
                join GENOME_MODEL_EVENT next_event on next_event.model_id = event.model_id
-                                                 and next_event.run_id = event.run_id
-                                                 and next_event.event_type = 'genome-model add-reads screen-reads'
-               where event.event_type = 'genome-model add-reads assign-run'
+                                  and next_event.run_id = event.run_id
+                                  and next_event.event_type = 'genome-model add-reads screen-reads eliminate-all-duplicates'
+               where event.event_type = 'genome-model add-reads assign-run solexa'
                  and next_event.event_status is not null
                  and next_Event.event_status = 'Succeeded'
-             ";
-                
+    ";
+
+
+
     my @events = Genome::Model::Event->get(sql => $sql);
 
     my @fastq_files = map { $_->sorted_screened_fastq_file_for_lane() } @events;
@@ -66,7 +69,7 @@ sub execute {
     my $this_fastq = IO::File->new($self->sorted_fastq_file_for_lane);
 
     my $screened_fastq_pathname = $self->sorted_screened_fastq_file_for_lane;
-    my $screened_fastq = IO::File->new($self->sorted_screened_fastq_file_for_lane);
+    my $screened_fastq = IO::File->new(">$screened_fastq_pathname");
     unless($screened_fastq) {
         $self->error_message("Can't create $screened_fastq_pathname for writing: $!");
         return;
@@ -102,10 +105,12 @@ sub execute {
         }
 
         if ($keep) {
-            $$screened_fastq->print('@' . $this_record->{'read_name'} . "\n" .
+            $screened_fastq->print( $this_record->{'read_name'} . "\n" .
                                     $this_record->{'sequence'} . "\n" .
                                     "+\n" .
                                     $this_record->{'quality'} . "\n");
+
+            $last_sequence_seen = $this_record->{'sequence'};
         }
     }
 
