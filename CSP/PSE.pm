@@ -36,6 +36,18 @@ my %PROCESS_COUNT = (
     'prepare read submission'                => 0,
     'submit reads'                           => 0,
     'gather submission results'              => 0,
+
+
+    #Finishing QA steps
+    'analyze finished clone for qa'                      => 0,
+    'submit finished clone for coordinator approval'     => 0,
+    'submit finished clone to qa'                        => 0,
+    'claim finished clone for qa'                        => 0,
+    'hold finished clone in qa'                          => 0,
+    'approve finished clone quality'                     => 0,
+    'reject finished clone quality'                      => 0,
+    'submit finished clone to finisher to make changes'  => 0,
+    'submit finished clone to coor to approve changes'   => 0,
 );
 
 
