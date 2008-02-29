@@ -127,7 +127,7 @@ sub resolve_input_alignments_filename_from_run {
         return;
     }
       
-    my $base_run_path = sprintf("%s/runs/%s/%s/alignments_lane_%s",
+    my $base_run_path = sprintf("%s/runs/%s/%s/alignments_lane_%s.map",
                                $model_data_directory,
                                $run->sequencing_platform,
                                $run->name,
