@@ -12,7 +12,7 @@ use Bio::SeqIO;
 class Genome::Model::Command::Htest::Diff::Define {
     is => 'Command',
     has => [
-	from_path => { is => 'String', is_optional => 0, doc => 'Path to the original refseq' },
+	from_path => { is => 'String', is_optional => 0, doc => 'Path to the original fasta refseq' },
         to_path   => { is => 'String', is_optional => 0, doc => 'Path to where the new, patched reference in bfa format will be located' },
         changes   => { is => 'String', is_optional => 0, doc => 'Path to the formatted diff file' },
     ],
@@ -137,7 +137,7 @@ $DB::single=1;
     # We don't need the new reference in fasta format hanging around any more
     # FIXME maybe make this a File::Temp file after we know this works right 
     # so it'll get cleaned up automaticly.
-    unlink($$patched_ref_path);
+    unlink($patched_ref_path);
 
     $self->status_message("diff_id is ".$diff_obj->diff_id);
 
