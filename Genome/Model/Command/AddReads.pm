@@ -14,7 +14,7 @@ class Genome::Model::Command::AddReads {
         sequencing_platform => { is => 'String',
                                 doc => 'Type of sequencing instrument used to generate the data'},
         full_path           => { is => 'String',
-                                doc => 'Pathname for the data produced by the run',
+                                doc => 'Pathname for the data produced by the run (GERALD dir for Solexa runs)',
                                 is_optional => 1 },
         run_name            => { is => 'String',
                                  doc => "Name of the run.  It will determine the pathname automaticly and add all lanes for the model's sample",
@@ -48,7 +48,8 @@ sub help_brief {
 sub help_synopsis {
     return <<"EOS"
 genome-model add-reads --model-id 5 --squencing-platform solexa --full-path=/gscmnt/sata191/production/TEST_DATA/000000_HWI-EAS110-0000_00000/Data/C1-27_Firecrest1.8.28_04-09-2007_lims/Bustard1.8.28_04-09-2007_lims/GERALD_28-01-2007_mhickenb
-                    
+
+genome-model add-reads --model-id 5 --squencing-platform solexa --run_name 000000_HWI-EAS110-0000_00000
 EOS
 }
 
@@ -57,9 +58,10 @@ sub help_detail {
 This command launches all of the appropriate commands to add a run,
 or part of a run, to the specified model.
 
+Either the --full-path or --run-name option must be specified.  
+
 All of the sub-commands listed below will be executed on the model in succession.
 
-Either the --full-path or --run-name option must be specified
 EOS
 }
 
@@ -182,23 +184,22 @@ sub _determine_default_limit_regions {
     }
   
     my $flowcell;
-    if ($self->run_name) {
-        ($flowcell) = ($self->run_name =~ m/_(\d+)$/);
-    } elsif ($self->full_path) {
+    my $run_name = $self->run_name;
+    unless ($run_name) {
         my @path_parts = split('/', $self->full_path);
         foreach my $part ( @path_parts ) {
-            ($flowcell) = m/_(\d+)$/;
-            last if $flowcell;
+            ($run_name) = m/.*\/(.*?_\d+_\d+)$/;
+            last if $run_name;;
+        }
+        unless ($run_name) {
+            $self->error_message("Couldn't determine run name from --full-path ".$self->full_path);
+            return;
         }
     }
-    unless ($flowcell) {
-        $self->error_message("Couldn't determine flow_cell_id from run name ".$self->run_name." or full path ".$self->full_path);
-        return;
-    }
 
-    my $solexa_run = GSC::Equipment::Solexa::Run->get(flow_cell_id => $flowcell);
+    my $solexa_run = GSC::Equipment::Solexa::Run->get(run_name => $run_name);
     unless ($solexa_run) {
-        $self->error_message("No Solexa run record for flow cell id $flowcell");
+        $self->error_message("No Solexa run record for run_name $run_name");
         return;
     }
 
@@ -239,7 +240,8 @@ sub run_command_with_bsub {
     }
 
     if ($self->test) {
-        $command->status_message("Test mode, command not executed: $cmdline");
+        #$command->status_message("Test mode, command not executed: $cmdline");
+        print "Test mode, command not executed: $cmdline\n";
         $last_bsub_job_id = 'test';
     } else {
         $self->status_message("Running command: " . $cmdline);
