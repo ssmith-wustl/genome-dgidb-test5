@@ -36,6 +36,12 @@ This command is usually called as part of the add-reads process
 EOS
 }
 
+sub bsub_rusage {
+    return "-R 'select[type=LINUX64]'";
+
+}
+
+
 sub execute {
     my $self = shift;
     
@@ -75,9 +81,11 @@ $DB::single = 1;
         #my $bfq_file = sprintf('%s/s_%d_sequence.bfq', $working_dir, $lane);
 
         # Convert the right fastq file into a bfq file
-        my $fastq_file = $self->sorted_screened_fastq_file_for_lane();
         my $bfq_file = $self->bfq_file_for_lane();
-        system("maq fastq2bfq $fastq_file $bfq_file");
+        unless (-e $bfq_file) {
+            my $fastq_file = $self->sorted_screened_fastq_file_for_lane();
+            system("maq fastq2bfq $fastq_file $bfq_file");
+       }
 
         unless (-r $bfq_file) {
             $self->error_message("bfq file $bfq_file does not exist");
