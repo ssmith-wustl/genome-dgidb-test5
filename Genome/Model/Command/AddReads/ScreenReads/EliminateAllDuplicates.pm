@@ -49,24 +49,38 @@ $DB::single=1;
         return;
     }
 
+    my $this_fastq_pathname = $self->sorted_fastq_file_for_lane;
+    my $this_fastq = IO::File->new($this_fastq_pathname);
+
+    # Find previously completed eliminate-all-duplicates steps
+    # so we can look at their unique fastq files
     my $sql = "select * from GENOME_MODEL_EVENT event
                join GENOME_MODEL_EVENT next_event on next_event.model_id = event.model_id
                                   and next_event.run_id = event.run_id
                                   and next_event.event_type = 'genome-model add-reads screen-reads eliminate-all-duplicates'
                where event.event_type = 'genome-model add-reads assign-run solexa'
-                 and next_event.event_status is not null
+                 and next_event.date_completed is not null
                  and next_Event.event_status = 'Succeeded'
     ";
 
 
-
     my @events = Genome::Model::Event->get(sql => $sql);
 
-    my @fastq_files = map { $_->sorted_screened_fastq_file_for_lane() } @events;
+    my @fastq_files = grep { $_ ne $this_fastq_pathname }
+                      map { $_->sorted_screened_fastq_file_for_lane() }
+                      @events;
 
-    my %handles = map { $_ => IO::File->new($_) } @fastq_files;
+    #my %handles = map { $_ => IO::File->new($_) } @fastq_files;
+    my %handles;
+    foreach my $file ( @fastq_files ) {
+        my $fh = IO::File->new($file);
+        unless ($fh) {
+            $self->error_message("Can't open $file: $!");
+            return;
+        }
+        $handles{$file} = $fh;
+    }
 
-    my $this_fastq = IO::File->new($self->sorted_fastq_file_for_lane);
 
     my $screened_fastq_pathname = $self->sorted_screened_fastq_file_for_lane;
     my $screened_fastq = IO::File->new(">$screened_fastq_pathname");
@@ -81,6 +95,8 @@ $DB::single=1;
     }
 
     my $last_sequence_seen = '';
+    
+    THIS_FASTQ_RECORD:
     while(my $this_record = $self->_get_fastq_record($this_fastq)) {
         if ($this_record->{'sequence'} eq $last_sequence_seen) {
             next;
@@ -90,17 +106,21 @@ $DB::single=1;
         foreach my $fastq ( @fastq_files ) {
 
             # fast forward to the first record that's less than our sequence
-            while ($this_record->{'sequence'} gt $buffers{$fastq}->{'sequence'}) {
+            OTHER_FASTQ_RECORDS:
+            while ($buffers{$fastq} and ($this_record->{'sequence'} gt $buffers{$fastq}->{'sequence'})) {
                 $buffers{$fastq} = $self->_get_fastq_record($handles{$fastq});
                 unless (defined ($buffers{$fastq})) {
                     # we're at the end of that file.  Don't check it any more
                     $handles{$fastq}->close();
                     delete $buffers{$fastq};
+                    last OTHER_FASTQ_RECORDS;;
                 }
             }
 
-            if ($this_record->{'sequence'} eq $buffers{$fastq}->{'sequence'}) {
+            if ($buffers{$fastq} and ($this_record->{'sequence'} eq $buffers{$fastq}->{'sequence'})) {
                 $keep = 0;
+                $last_sequence_seen = $this_record->{'sequence'};
+                next THIS_FASTQ_RECORD;
             } 
         }
 
@@ -126,12 +146,13 @@ sub _get_fastq_record {
     my($self,$fh) = @_;
 
     my %node;
-    chomp($node{'read_name'} = $fh->getline);
-    return unless $node{'read_name'};
+    my $read_name = $fh->getline;
+    return unless $read_name;
 
+    chomp($node{'read_name'} = $read_name);;
 
     chomp($node{'sequence'} = $fh->getline);
-    $fh->getline;  # This should be the read name again
+    $fh->getline;  # This should be the read name again, or just a '+'
     chomp($node{'quality'} = $fh->getline);
 
     return \%node;
