@@ -82,6 +82,7 @@ sub _get_sub_command_name{
     # Which sub-command does the system think we should be doing here?
     unless ($self->can('sub_command_delegator')) {
         $self->error_message('command '.$self->command_name.' did not implement sub_command_delegator()');
+        return;
     }
     
     return $self->sub_command_delegator;
@@ -98,6 +99,23 @@ sub _get_or_create_then_init_event{
     
     return $event;
 }
+
+
+# When add-reads schedules these jobs, it uses the mid-level command 
+# (assign-run) and not the most specific one (assign-run solexa).  Since
+# the bsub_rusage is defined in the most specific class, the mid-level
+# command should get the value from there
+sub bsub_rusage {
+    my $self = shift;
+
+    my $command =  $self->_create_sub_command();
+    if ($command->can('bsub_rusage')) {
+        return $command->bsub_rusage;
+    } else {
+        return '';
+    }
+}
+
 
 1;
 

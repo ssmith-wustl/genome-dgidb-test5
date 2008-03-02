@@ -36,6 +36,12 @@ when it is determined that the run is from Solexa.
 EOS
 }
 
+sub bsub_rusage {
+    return "-R 'select[type=LINUX64]'";
+
+}
+
+
 sub execute {
     my $self = shift;
 
