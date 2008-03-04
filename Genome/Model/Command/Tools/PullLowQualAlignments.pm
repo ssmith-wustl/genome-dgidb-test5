@@ -77,41 +77,39 @@ $DB::single=1;
         chomp;
 
         my(@line) = split;
-        my %node;
-        @node{@column_order} = @line;
+        my %read_info;
+        @read_info{@column_order} = @line;
 
-        if ($node{'mapping_qual'} < $self->threshold or
-            $node{'single_end_mapping_qual'} < $self->threshold) {
-            
-            push(@interesting_reads, \%node);
-        }
+        next unless ($read_info{'mapping_qual'} > $self->threshold and
+                    $read_info{'single_end_mapping_qual'} > $self->threshold );
 
-        last if (@interesting_reads > 10000);
-    }
-    close($maq);
 
-    # From this data, we _could_ create a fastq file with the low-quality-aligned 
-    # reads.  But since we still need to track down the unaligned (unplaced) reads
-    # anyway, go ahead and do it the hard way by tracking down the original read info
+        # From this data, we _could_ create a fastq file with the low-quality-aligned 
+        # reads.  But since we still need to track down the unaligned (unplaced) reads
+        # anyway, go ahead and do it the hard way by tracking down the original read info
         
-    # the solexa_analysis table has flow_cell_id's.  Their creation_event_id is
-    # a 'configure image analysis and base call' PSE.
-    # Go forward in the history to find a 'run alignment' PSE.
-    # From a Solexa Analysis/run alignment PSE, there is a gerald_directory PSEParam
+        # the solexa_analysis table has flow_cell_id's.  Their creation_event_id is
+        # a 'configure image analysis and base call' PSE.
+        # Go forward in the history to find a 'run alignment' PSE.
+        # From a Solexa Analysis/run alignment PSE, there is a gerald_directory PSEParam
 
-    $DB::single=1;
-    foreach my $read_info ( @interesting_reads ) {
-        my $read_name = $read_info->{'read_name'};  # names look like HWI-EAS97__11840_6_111_374_897
+
+        my $read_name = $read_info{'read_name'};  # names look like HWI-EAS97__11840_6_111_374_897
         my($instrument,$run_id,$flow_cell_id,$lane,@stuff) = split('_',$read_name);
 
         my $fastq_file = $self->_get_fastq_file_for_flow_cell_and_lane($flow_cell_id,$lane);
-        next unless $fastq_file;
+        unless ($fastq_file) {
+            $self->error_message("Unable to find original fastq file for read name $read_name flowcell $flow_cell_id lane $lane");
+            next;
+        }
 
         my($sequence,$quality) = $self->_get_fastq_data_for_read($fastq_file, $read_name);
         unless ($sequence && $quality) {
             $self->error_message("Can't find data for read $read_name in fastq $fastq_file");
             next;
         }
+        chomp($sequence);
+        chomp($quality);
         $output->print("\@$read_name\n$sequence\n\+$read_name\n$quality\n");
     }
     $output->close();
