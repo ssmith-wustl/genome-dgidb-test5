@@ -13,9 +13,6 @@ use File::stat;
 
 use IO::File;
 
-
-use App::Lock;
-
 class Genome::Model::Command::AddReads::ScreenReads::EliminateAllDuplicates {
     is => 'Genome::Model::Event',
 };

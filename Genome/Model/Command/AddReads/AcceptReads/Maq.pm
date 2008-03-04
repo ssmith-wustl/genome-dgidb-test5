@@ -11,8 +11,6 @@ use Data::Dumper;
 use Date::Calc;
 use File::stat;
 
-use App::Lock;
-
 class Genome::Model::Command::AddReads::AcceptReads::Maq {
     is => 'Genome::Model::Event',
 };

@@ -12,8 +12,6 @@ use Data::Dumper;
 use Date::Calc;
 use File::stat;
 
-use App::Lock;
-
 class Genome::Model::Command::AddReads::MergeAlignments::Maq {
     is => 'Genome::Model::Event',
     has => [ 
