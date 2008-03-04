@@ -58,6 +58,25 @@ sub resolve_run_directory {
                                     $self->run->name);
 }
 
+
+# FIXME This should go in a better location later
+# returns the next record of data from a fastq filehandle
+sub get_next_fastq_record {
+    my($self,$fh) = @_;
+
+    my %node;
+    my $read_name = $fh->getline;
+    return unless $read_name;
+
+    chomp($node{'read_name'} = $read_name);;
+
+    chomp($node{'sequence'} = $fh->getline);
+    $fh->getline;  # This should be the read name again, or just a '+'
+    chomp($node{'quality'} = $fh->getline);
+
+    return \%node;
+}
+
 # maq map file for all this lane's alignments
 sub alignment_file_for_lane {
     my($self) = @_;
@@ -119,6 +138,11 @@ sub unaligned_reads_file_for_lane {
     return sprintf("%s/s_%d_sequence.unaligned", $self->resolve_run_directory, $run->limit_regions);
 }
 
+sub unaligned_fastq_file_for_lane {
+    my($self) = @_;
+    my $run = Genome::RunChunk->get($self->run_id);
+    return sprintf("%s/s_%d_sequence.unaligned.fastq", $self->resolve_run_directory, $run->limit_regions);
+}
 
 
 

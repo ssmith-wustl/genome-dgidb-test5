@@ -84,6 +84,10 @@ $DB::single=1;
         my @paths = $self->_find_full_path_by_run_name_and_sequencing_platform();
 
         if (! @paths) {
+            @paths = $self->_find_full_path_by_run_name_and_sequencing_platform_old();
+        }
+
+        if (! @paths) {
             $self->error_message("No analysis pathname found for that run name");
             return;
         } elsif (@paths > 1) {
@@ -96,6 +100,10 @@ $DB::single=1;
         }
     }
 
+    unless (-d $full_path) {
+        $self->error_message("full_path $full_path directory does not exist");
+        return;
+    }
 
     # Determine the correct value for limit_regions
     my $regions;
@@ -107,12 +115,23 @@ $DB::single=1;
         $regions = $self->_determine_default_limit_regions();
     }
 
+    unless ($regions) {
+        $self->error_message("limit_regions is empty!");
+        return;
+    }
+
+    $self->full_path($full_path);
+    $self->limit_regions($regions);
+    $self->status_message("Using full_path: ".$self->full_path."\nlimit_regions: ".$self->limit_regions);
+
     # Make a RunChunk object for each region
+    my $model = Genome::Model->get(model_id => $self->model_id);
     my @runs;
     foreach my $region ( split(//,$regions) ) {
         my $run = Genome::RunChunk->get_or_create(full_path => $full_path,
                                                   limit_regions => $region,
-                                                  sequencing_platform => $self->sequencing_platform
+                                                  sequencing_platform => $self->sequencing_platform,
+                                                  sample_name => $model->sample_name,
                                              );
         unless ($run) {
             $self->error_message("Failed to run record information for region $region");
@@ -150,8 +169,7 @@ $DB::single=1;
 }
 
 
-# For solexa runs, return the gerald directory path
-sub _find_full_path_by_run_name_and_sequencing_platform {
+sub _find_full_path_by_run_name_and_sequencing_platform_old {
     my($self) = @_;
 
     my $run_name = $self->run_name;
@@ -173,6 +191,74 @@ sub _find_full_path_by_run_name_and_sequencing_platform {
 
     return @gerald_dirs;
 }
+
+# For solexa runs, return the gerald directory path for the 
+# analysis on this model's samples
+# NOTE: Data is broken on OLTP for flow cell 9133
+sub _find_full_path_by_run_name_and_sequencing_platform {
+    my $self = shift;
+
+    my $run_name = $self->run_name;
+    my $sequencing_platform = $self->sequencing_platform;
+
+    unless ($sequencing_platform eq 'solexa') {
+        $self->error_message("Don't know how to determine run paths for sequencing platform $sequencing_platform");
+        return;
+    }
+
+    my $solexa_run = GSC::Equipment::Solexa::Run->get(run_name => $run_name);
+    unless ($solexa_run) {
+        $self->error_message("No Solexa run found by that name");
+        return;
+    }
+
+    my $config_image_analysis_pse = GSC::PSE->get(pse_id => $solexa_run->creation_event_id);
+    my $sample_name = $self->model->sample_name();
+    my @involved_lanes = map { GSC::DNALocation->get($_->dl_id)->location_order }
+                         grep { $_->get_dna->dna_name eq $sample_name }
+                         GSC::DNAPSE->get(pse_id => $config_image_analysis_pse);
+
+    my @possible_configure_alignment_pses = grep { $_->process_to eq 'configure alignment' and
+                                                   $_->pse_status eq 'completed' and
+                                                   $_->pse_result eq 'successful' }
+                                            $config_image_analysis_pse->get_subsequent_pses_recurse;
+    
+    my @config_alignment_pses = grep { my @l = GSC::PSEParam->get(param_name => 'lanes',
+                                                                  param_value => \@involved_lanes,
+                                                                  pse_id => \@possible_configure_alignment_pses)
+                                     }
+                                @possible_configure_alignment_pses;
+  
+
+    if (@config_alignment_pses != 1) {
+        $self->error_message("Didn't find exactly 1 'configure alignment' PSE for run $run_name, sample $sample_name");
+        return;
+    }
+
+    my @gerald_dir_param = GSC::PSEParam->get(param_name => 'gerald_directory',
+                                              pse_id => $config_alignment_pses[0]);
+    unless (@gerald_dir_param) {
+        $self->error_message("No gerald_directory PSEParam for pse ".$config_alignment_pses[0]->pse_id);
+        return;
+    }
+
+    my @gerald_dirs = map { $_->param_value }
+                      @gerald_dir_param;
+
+    # the real gerald_dir may have been archived since running gerald.
+    # in that case, the run_directory is the right top-level dir, but
+    # the rest of the path to the gerald_directory must come from the
+    # gerald_directory PSE parameter
+    my $run_directory = $solexa_run->run_directory;
+    foreach ( @gerald_dirs ) {
+        unless (m/^$run_directory/) {
+            s/^.*\/$run_name/$run_directory/;
+        }
+    }
+
+    return @gerald_dirs;
+}
+
 
 
 sub _determine_default_limit_regions {
