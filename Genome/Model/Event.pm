@@ -59,23 +59,6 @@ sub resolve_run_directory {
 }
 
 
-# FIXME This should go in a better location later
-# returns the next record of data from a fastq filehandle
-sub get_next_fastq_record {
-    my($self,$fh) = @_;
-
-    my %node;
-    my $read_name = $fh->getline;
-    return unless $read_name;
-
-    chomp($node{'read_name'} = $read_name);;
-
-    chomp($node{'sequence'} = $fh->getline);
-    $fh->getline;  # This should be the read name again, or just a '+'
-    chomp($node{'quality'} = $fh->getline);
-
-    return \%node;
-}
 
 # maq map file for all this lane's alignments
 sub alignment_file_for_lane {

@@ -38,52 +38,23 @@ sub execute {
     
 $DB::single = 1;
 
-    my $unaligned_file = $self->unaligned_reads_file_for_lane();
-    my $unaligned = IO::File->new($unaligned_file);
-    unless ($unaligned) {
-        $self->error_message("Unable to open $unaligned_file for reading: $!");
+    my $command = Genome::Model::Command::Tools::UnalignedDataToFastq->create(
+                           in => $self->unaligned_reads_file_for_lane(),
+                           fastq => $self->unaligned_fastq_file_for_lane(),
+                   );
+    unless ($command) {
+        $self->error_message("Unable to create the UnalignedDataToFastq command");
         return;
     }
 
-    my $unaligned_fastq_file = $self->unaligned_fastq_file_for_lane();
-    my $fastq = IO::File->new(">$unaligned_fastq_file");
-    unless ($fastq) {
-        $self->error_message("Unable to open $unaligned_fastq_file for writing: $!");
+    unless ($command->execute()) {
+        $self->error_message("UnalignedDataToFastq command execution failed");
         return;
     }
-  
-    while(<$unaligned>) {
-        chomp;
-        my($read_name,$alignment_quality,$sequence,$read_quality) = split;
-        $fastq->print("\@$read_name\n$sequence\n\+\n$read_quality\n");
-    }
-
-    $unaligned->close();
-    $fastq->close();
 
     return 1;
 }
 
-
-
-# The sequence/quality in the unaligned data file is exactly the same
-# as in the original fastq file, so we can skip looking up the data in
-# the original file
-#
-# The filehandle passed in here must be from a sorted fastq file,
-# and you must ask for read records that are sorted in the same order
-sub _get_original_data_for_read_name {
-    my($self,$read_name,$fastq_fh) = @_;
-
-    $read_name = "\@$read_name";   # The fastq records still have the @ in the read name (for now)
-
-    while(my $record = $self->get_next_fastq_record($fastq_fh) ) {
-        return $record if ($record->{'read_name'} eq $read_name);
-    }
-
-    return;
-}
-    
 
 
 1;
