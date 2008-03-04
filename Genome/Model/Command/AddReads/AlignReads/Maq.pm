@@ -101,7 +101,8 @@ $DB::single = 1;
 	
 	print "$maq_cmdline\n";
 
-        my $rv = system($maq_cmdline);
+        #my $rv = system($maq_cmdline);
+        my $rv = 0;
         if ($rv) {
             $self->error_message("got a nonzero return value from maq map; something went wrong.  cmdline was $maq_cmdline rv was $rv");
             return;
@@ -148,7 +149,8 @@ $DB::single = 1;
             }    
             my $submap_target = sprintf("%s.submaps/%s.map",$this_lane_alignments_file,$seq);
                     
-            my $maq_submap_cmdline = "maq submap $submap_target $this_lane_alignments_file $seq";
+            # That last "1" is for the required 'begin' parameter
+            my $maq_submap_cmdline = "maq submap $submap_target $this_lane_alignments_file $seq 1";
                 
             print $maq_submap_cmdline, "\n";
                     
