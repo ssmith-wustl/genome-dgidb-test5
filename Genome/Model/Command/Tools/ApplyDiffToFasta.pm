@@ -1,4 +1,4 @@
-package Genome::Model::Command::Tools::ApplyDiffToFasta;
+PACKAge Genome::Model::Command::Tools::ApplyDiffToFasta;
 
 use strict;
 use warnings;
@@ -37,11 +37,50 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    my $buffer = Buffer->new($self->output);
+    my $diff_handle = IO::File->new('< '.$self->diff);
     
-    $DB::single=1;
-
-
+    my $input_stream = Stream->new( ); #file or bioseq object
+    my $current_header = $input_stream->next_header;
+    $buffer->print($current_header);
+    while (my $diff = $diff_handle->next){
+       
+        until ($diff->{header} eq $current_header){
+            $buffer->print($char) while my $char = $input_stream->next;
+            $current_header = $input_stream->next_header;
+            $buffer->print($current_header);
+        }
+       
+        until ($input_stream->last_position = $diff->{position}){
+            $buffer->print($input_stream->next);
+        }
+       
+        if ($diff->{patch}){
+            $buffer->print($diff->{patch});
+    
+        }elsif ($diff->{ref}){
+            my @ref = split('',$diff->{ref});
+            while (@ref){
+                my $replace = shift @ref;
+                my $replaced = $input_string->next;
+                unless $replaced and $replaced eq $replace){
+                    $self->error_message("ref sequence to be replaced did not match fasta sequence");
+                    return;
+                }
+            }
+        }else{
+            $self->error_message("no patch sequence to insert or reference sequence to remove for diff line ".$diff->{line});
+            return;
+        }
+    }
     return 1;
 }
+
+#=====
+sub print_fasta_section{
+    my ($header, $diff_handle, $seq, $buffer);
+
+
 
 1;
