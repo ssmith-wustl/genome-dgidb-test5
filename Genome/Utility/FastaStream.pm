@@ -30,7 +30,7 @@ sub START{
 sub next_header{
     my $self = shift;
     my $hl = $self->_next_header_line;
-    $self->fatal_msg("Haven't parsed through previous fasta section") unless $val;
+    $self->fatal_msg("Haven't parsed through previous fasta section") unless $hl;
     $self->undef_attribute('_next_header_line');
     return $self->_parse_header($hl);
 }
@@ -38,7 +38,7 @@ sub next_header{
 sub next{
     my $self = shift;
     if (scalar @{$self->_current_chars}){
-        $self->_last_position_written($self->_last_position_written + 1) 
+        $self->_last_position_written($self->_last_position_written + 1);
         my $char = shift @{$self->_current_chars};
         return $char;
     }else{
