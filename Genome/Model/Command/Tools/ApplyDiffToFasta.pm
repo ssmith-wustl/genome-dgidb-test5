@@ -9,6 +9,7 @@ use GSCApp;
 
 use IO::File;
 
+
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
@@ -38,30 +39,54 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $buffer = Buffer->new($self->output);
-    my $diff_handle = IO::File->new('< '.$self->diff);
+    my $buffer = Genome::Utility::Buffer->new(file => $self->output );
+    my $diff_handle = Genome::Utility::Diff->new(file => $self->diff );
+    my $input_stream = Genome::Utility::FastaStream->new( file => $self->input ); #file or bioseq object
     
-    my $input_stream = Stream->new( ); #file or bioseq object
+
+    #use these for error checking
+    my @seen_headers;
+    my $last_diff_pos;
+    my $last_header;
+
+    #print first header
     my $current_header = $input_stream->next_header;
+    push @seen_headers, $current_header;
     $buffer->print($current_header);
-    while (my $diff = $diff_handle->next){
+
+    while (my $diff = $diff_handle->next_diff){
+
+        #error checking
+        unless ($diff->{header} eq $last_header){
+            $last_header = $diff->{header};
+            $last_diff_pos = 0;
+        }
+        $self->fatal_msg("Diff pos is less that a previous diff position for header $last_header( ".$diff->{position}." $last_diff_pos! These need to be sorted!") if $diff->{position}<$last_diff_position;
        
         until ($diff->{header} eq $current_header){
+            
+            #sorted file error checking
+            $self->fatal_msg("Diff header matches a previous chromosome! Diffs should be sorted by chromosome and position!") if grep {$diff->{header} eq $_} @seen_headers;
+            
+            #print fasta sections until we get to the right header
             $buffer->print($char) while my $char = $input_stream->next;
             $current_header = $input_stream->next_header;
             $buffer->print($current_header);
         }
        
         until ($input_stream->last_position = $diff->{position}){
+            #print out until we hit have printed to the diff position
             $buffer->print($input_stream->next);
         }
        
         if ($diff->{patch}){
+            #print out the insert if there is one
             $buffer->print($diff->{patch});
     
         }elsif ($diff->{ref}){
             my @ref = split('',$diff->{ref});
             while (@ref){
+                #shift off input while replacing
                 my $replace = shift @ref;
                 my $replaced = $input_string->next;
                 unless $replaced and $replaced eq $replace){
@@ -73,14 +98,10 @@ sub execute {
             $self->error_message("no patch sequence to insert or reference sequence to remove for diff line ".$diff->{line});
             return;
         }
+        #diff processed, resume printing to buffer;
     }
     return 1;
 }
-
-#=====
-sub print_fasta_section{
-    my ($header, $diff_handle, $seq, $buffer);
-
 
 
 1;
