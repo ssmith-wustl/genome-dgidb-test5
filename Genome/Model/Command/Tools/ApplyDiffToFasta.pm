@@ -61,7 +61,7 @@ sub execute {
             $last_header = $diff->{header};
             $last_diff_pos = 0;
         }
-        $self->fatal_msg("Diff pos is less that a previous diff position for header $last_header( ".$diff->{position}." $last_diff_pos! These need to be sorted!") if $diff->{position}<$last_diff_position;
+        $self->fatal_msg("Diff pos is less that a previous diff position for header $last_header( ".$diff->{position}." $last_diff_pos! These need to be sorted!") if $diff->{position}<$last_diff_pos;
        
         until ($diff->{header} eq $current_header){
             
@@ -69,7 +69,9 @@ sub execute {
             $self->fatal_msg("Diff header matches a previous chromosome! Diffs should be sorted by chromosome and position!") if grep {$diff->{header} eq $_} @seen_headers;
             
             #print fasta sections until we get to the right header
-            $buffer->print($char) while my $char = $input_stream->next;
+            while (my $char = $input_stream->next){
+                $buffer->print($char);
+            }
             $current_header = $input_stream->next_header;
             $buffer->print($current_header);
         }
@@ -88,8 +90,8 @@ sub execute {
             while (@ref){
                 #shift off input while replacing
                 my $replace = shift @ref;
-                my $replaced = $input_string->next;
-                unless $replaced and $replaced eq $replace){
+                my $replaced = $input_stream->next;
+                unless ($replaced and $replaced eq $replace){
                     $self->error_message("ref sequence to be replaced did not match fasta sequence");
                     return;
                 }
