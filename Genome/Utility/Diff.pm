@@ -1,0 +1,46 @@
+package Genome::Utility::Diff;
+
+use strict;
+use warnings;
+use Data::Dumper;
+
+use Finfo::Std;
+
+use IO::File;
+
+#attributes
+
+my %file  :name(file:r) :type(file_r);
+my %io  :name(_io:p);
+
+sub START{
+    my $self = shift;
+    my $io = IO::File->new('< '.$self->file);
+    $self->fatal_msg("couldn't open io") unless $io;
+    $self->_io($io);
+}
+
+sub next_diff{
+    my $self = shift;
+    my %diff;
+    my $line = $self->_io->getline;
+    return undef unless $line;
+    my $line_copy = $line;
+    my ($subject, $chromosome, $pos, $ref, $patch) = split $line;
+    $diff{line} = $line_copy;
+    $diff{subject} = $subject;
+    $diff{chromosome} = $chromosome;
+    $diff{pos} = $pos;
+    $diff{header} = $self->_generate_header($subject, $chromosome);
+    $diff{ref} = $ref unless $ref =~/-/;
+    $diff{patch} = $patch unless $patch =~/-/;
+
+    return \%diff;
+}
+
+sub _generate_header{
+    my ($self, $subject, $chromosome) = @_;
+    return ;#TODO
+
+}
+
