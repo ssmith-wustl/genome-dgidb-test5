@@ -171,6 +171,68 @@ sub upload
     return "$url/";
 }
 
+=item notification
+
+  GSCApp::FTP->upload(recipient => 'recipient@one.email.com,recipient@two.email.com',
+                      url => 'http://put.url.address/string/here');
+
+This method take a recipient email string and url string.  The
+method takes a hash as an argument and returns boolean to indicate success or fail. 
+ The hash argument must has key named C<recipient> to email the notification to
+ and C<url_string> for the uploaded file location(s).
+
+=cut
+
+sub notification {
+  my $proto = shift;
+  my %params = @_;
+  my $recipients = $params{recipient};
+  my $url_string = $params{url_string};
+  unless($recipients && $url_string) {
+    App->error_message("recipient and url_string parameters must be specified!");
+    return 0;
+  }
+  # create email
+  my $email;
+  # get email template
+  my @templates = App::Path->find_files_in_path('email*', 'share', 'ftp-upload');
+  foreach my $template (@templates) {
+      my $fh = IO::File->new("<$template");
+      if (defined($fh)) {
+          App->debug_message("opened $template for reading", 2);
+      }
+      else {
+          App->warning_message("failed to open $template for reading: $!");
+          next;
+      }
+      $email = join('', $fh->getlines);
+      $email .= "\n";
+      $fh->close;
+
+  }
+  unless($email) {
+    App->error_message("no message found!");
+    return;
+  }
+  # insert url string into email
+  chomp($url_string);
+  $email =~ s/%URLS%/$url_string/;
+  # send the mail
+  my $rv = App::Mail->mail
+  (
+      To => $recipients,
+      Subject => 'files ready on FTP site',
+      Message => $email
+  );
+  if ($rv) {
+      App->debug_message("sent mail to $recipients");
+  }
+  else {
+      App->error_message("failed to send mail to $recipients");
+      return 0;
+  }
+  return 1;
+}
 1;
 __END__
 
