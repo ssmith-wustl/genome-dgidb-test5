@@ -36,6 +36,7 @@ sub next_header{
     my $self = shift;
     my $hl = $self->_next_header_line;
     $self->fatal_msg("Haven't parsed through previous fasta section") unless $hl;
+    return undef if $hl =~ /^EOF$/;
     $self->_current_header_line($hl);
     $self->undef_attribute('_next_header_line');
     return $self->_parse_header($hl);
@@ -54,6 +55,10 @@ sub next{
         return $char;
     }else{
         my $line = $self->_io->getline;
+        unless ($line){
+            $self->_next_header_line('EOF');
+            return undef;
+        }
         chomp $line;
         if ($self->_is_header_line($line)){
             $self->_next_header_line($line);
