@@ -39,6 +39,7 @@ sub next_header{
     return undef if $hl =~ /^EOF$/;
     $self->_current_header_line($hl);
     $self->undef_attribute('_next_header_line');
+    $self->_last_position_written(0);
     return $self->_parse_header($hl);
 }
 
@@ -49,9 +50,10 @@ sub header_line{
 
 sub next{
     my $self = shift;
-    if (scalar @{$self->_current_chars}){
+    
+    my $char = shift @{$self->_current_chars};
+    if ($char){
         $self->_last_position_written($self->_last_position_written + 1);
-        my $char = shift @{$self->_current_chars};
         return $char;
     }else{
         my $line = $self->_io->getline;
