@@ -1362,15 +1362,20 @@ sub confirm_scheduled_pse {
 	#     because the is_resource_met might use 
 	#     something that might not like the sync and commit.
 	unless($pse->is_resource_met) {
-	  $pse->status_message("require resource NOT met");
-	  $pse->pse_status('scheduled');
-	  $psejob->delete if($psejob);
-          App::DB->sync_database
-              or die "sync_database failed on changing status to scheduled";
-          App::DB->commit
-              or die "commit failed on changing status to scheduled";
-          $pse->status_message("successfully set status to 'scheduled'");
-	  die 'required resource NOT met';
+            $pse->status_message("require resource NOT met");
+            $pse->pse_status('scheduled');
+            $psejob->delete if($psejob);
+            App::DB->sync_database
+                or die "sync_database failed on changing status to scheduled";
+            App::DB->commit
+                or die "commit failed on changing status to scheduled";
+            $pse->status_message("successfully set status to 'scheduled'");
+            
+            # Don't keep the log file in this case
+            $class->log_fh->close;
+            $logfile->remove;
+            
+            die 'required resource NOT met';
 	}
 	
         $pse->pse_status('inprogress');
