@@ -1,4 +1,4 @@
-package Genome::Utility::Buffer;
+package Genome::Utility::OutputBuffer;
 
 use strict;
 use warnings;

@@ -1,4 +1,4 @@
-package Genome::Utility::Diff;
+package Genome::Utility::DiffStream;
 
 use strict;
 use warnings;
