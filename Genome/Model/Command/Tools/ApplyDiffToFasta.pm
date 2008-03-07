@@ -3,8 +3,8 @@ package Genome::Model::Command::Tools::ApplyDiffToFasta;
 use strict;
 use warnings;
 
-use Genome::Utility::Buffer;
-use Genome::Utility::Diff;
+use Genome::Utility::OutputBuffer;
+use Genome::Utility::DiffStream;
 use Genome::Utility::FastaStream;
 use above "Genome";
 use Command;
@@ -42,73 +42,97 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $buffer = Genome::Utility::Buffer->new(file => $self->output, line_width => 60 );
-    my $diff_handle = Genome::Utility::Diff->new(file => $self->diff );
-    my $input_stream = Genome::Utility::FastaStream->new( file => $self->input ); #file or bioseq object
+    my $buffer = Genome::Utility::OutputBuffer->new(file => $self->output, line_width => 60 );
+    my $diff_stream = Genome::Utility::DiffStream->new(file => $self->diff ); 
+    my $fasta_stream = Genome::Utility::FastaStream->new( file => $self->input ); #file or bioseq object
     
 
     #use these for error checking
     my @seen_headers;
-    my $last_diff_pos=0;
-    my $last_header;
+    my $last_diff_pos = 0;
+    my $current_header_from_diffs;
 
     #print first header
-    my $current_header = $input_stream->next_header;
-    push @seen_headers, $current_header;
-    $buffer->print_header($input_stream->header_line);
+    my $current_header_from_fasta_stream = $fasta_stream->next_header;
+    $buffer->print_header($fasta_stream->header_line);
 
-    while (my $diff = $diff_handle->next_diff){
+    while (my $diff = $diff_stream->next_diff){
 
         #error checking
-        unless ($last_header and $diff->{header} eq $last_header){
-            $last_header = $diff->{header};
+        unless ($current_header_from_diffs and $diff->{header} eq $current_header_from_diffs){
+            push @seen_headers, $current_header_from_diffs if $current_header_from_diffs;
+            $current_header_from_diffs = $diff->{header};
             $last_diff_pos = 0;
         }
-        $self->fatal_msg("Diff pos is less that a previous diff position for header $last_header( ".$diff->{position}." $last_diff_pos! These need to be sorted!") if $diff->{position}<$last_diff_pos;
+        if ($diff->{position} < $last_diff_pos){
+            $self->error_message("Diff pos is less that a previous diff position for header $current_header_from_diffs( ".$diff->{position}." $last_diff_pos! These need to be sorted!");
+            return;
+        }
        
-        until ( $current_header eq $diff->{header} ){
+        until ( $current_header_from_fasta_stream eq $diff->{header} ){ 
             
-            #sorted file error checking
-            $self->fatal_msg("Diff header matches a previous chromosome! Diffs should be sorted by chromosome and position!") if grep {$diff->{header} eq $_} @seen_headers;
+            #make sure diff header is not out of order
+            if ( grep { $diff->{header} eq $_ } @seen_headers){
+                $self->error_message("Diff header matches a previous chromosome! Diffs should be sorted by chromosome and position!"); 
+                return;
+            }
             
             #print fasta sections until we get to the right header
-            while (my $char = $input_stream->next){
+            while (my $char = $fasta_stream->next){
                 $buffer->print($char);
             }
-            $current_header = $input_stream->next_header;
-            $buffer->print_header($input_stream->header_line);
+            $current_header_from_fasta_stream = $fasta_stream->next_header;
+            unless ($current_header_from_fasta_stream){
+                $self->error_message("Can't get another header from the fasta(probably at EOF) and there are still diffs to process!");
+                return;
+            }
+            $buffer->print_header($fasta_stream->header_line);
         }
        
-        until ($input_stream->last_position == $diff->{position} - 1){  #this is -1 in case we have a deletion, which means we don't print the base at that position, if we have an insert, we do a print first, to print up to the position, and then print the insert.
+        my $stream_stop_position = $diff->{position}-1; #we stop before the position given in diff, since we don't want to print a base that is going to be deleted
+        until ($fasta_stream->last_position == $stream_stop_position){  
             #print out until we hit have printed to the diff position
-            $buffer->print($input_stream->next);
+            $buffer->print($fasta_stream->next);
         }
        
-        if ($diff->{patch}){
+        if ($diff->{patch}){ #insert
+
             #print the base @ $diff->{position}
-            $buffer->print($input_stream->next);
+            $buffer->print($fasta_stream->next);
             #print out the insert if there is one
             $buffer->print($diff->{patch});
     
         }elsif ($diff->{ref}){
+
             my @ref = split('',$diff->{ref});
             while (@ref){
                 #shift off input while replacing
                 my $replace = shift @ref;
-                my $replaced = $input_stream->next;
+                my $replaced = $fasta_stream->next;
                 unless ($replaced and $replaced =~ /^$replace$/i){
                     $self->error_message("ref sequence to be replaced did not match fasta sequence");
                     return;
                 }
             }
+
         }else{
             $self->error_message("no patch sequence to insert or reference sequence to remove for diff line ".$diff->{line});
             return;
         }
         #diff processed, resume printing to buffer;
     }
+    while(1){
+        while (my $char = $fasta_stream->next){
+            $buffer->print($char);
+        }
+        $current_header_from_fasta_stream = $fasta_stream->next_header;
+        unless ($current_header_from_fasta_stream){
+            $buffer->print("\n");
+            last;
+        }
+        $buffer->print_header($fasta_stream->header_line);
+    }
     return 1;
 }
-
 
 1;
