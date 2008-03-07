@@ -10,7 +10,7 @@ use IO::File;
 
 #attributes
 
-my %file  :name(file:r) :type(file_r);
+my %file  :name(file:r) :isa(file_r);
 my %io  :name(_io:p);
 
 sub START{
@@ -18,6 +18,7 @@ sub START{
     my $io = IO::File->new('< '.$self->file);
     $self->fatal_msg("couldn't open io") unless $io;
     $self->_io($io);
+    1;
 }
 
 sub next_diff{
@@ -26,11 +27,11 @@ sub next_diff{
     my $line = $self->_io->getline;
     return undef unless $line;
     my $line_copy = $line;
-    my ($subject, $chromosome, $pos, $ref, $patch) = split $line;
+    my ($subject, $chromosome, $pos, $ref, $patch) = split(/\s+/, $line);
     $diff{line} = $line_copy;
     $diff{subject} = $subject;
     $diff{chromosome} = $chromosome;
-    $diff{pos} = $pos;
+    $diff{position} = $pos;
     $diff{header} = $self->_generate_header($subject, $chromosome);
     $diff{ref} = $ref unless $ref =~/-/;
     $diff{patch} = $patch unless $patch =~/-/;
@@ -40,7 +41,7 @@ sub next_diff{
 
 sub _generate_header{
     my ($self, $subject, $chromosome) = @_;
-    return ;#TODO
+    return $subject;#TODO this only applies for human, need a more generalized method
 
 }
-
+1;
