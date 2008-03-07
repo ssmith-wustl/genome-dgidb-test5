@@ -90,6 +90,12 @@ sub execute {
         }
        
         my $stream_stop_position = $diff->{position}-1; #we stop before the position given in diff, since we don't want to print a base that is going to be deleted
+
+        if ($fasta_stream->last_position > $stream_stop_position){
+            $self->error_message("fasta stream already past diff position!");
+            return;
+        }
+
         until ($fasta_stream->last_position == $stream_stop_position){  
             #print out until we hit have printed to the diff position
             $buffer->print($fasta_stream->next);
