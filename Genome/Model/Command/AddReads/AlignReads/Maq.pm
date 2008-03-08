@@ -6,13 +6,13 @@ use warnings;
 use above "Genome";
 use Command;
 use Genome::Model;
-use File::Path;
-use Data::Dumper;
-use Date::Calc;
-use File::stat;
 
 class Genome::Model::Command::AddReads::AlignReads::Maq {
     is => 'Genome::Model::Event',
+    has => [
+        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
+        run_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },
+    ],
 };
 
 sub help_brief {
@@ -37,15 +37,13 @@ sub bsub_rusage {
 }
 
 
-sub execute {
+sub _execute {
     my $self = shift;
     
     my $model = Genome::Model->get(id => $self->model_id);
 
 $DB::single = 1;
 
-    my $lanes;
-    
     # ensure the reference sequence exists.
     my $ref_seq_file =  $model->reference_sequence_path . "/all_sequences.bfa";
     
@@ -54,10 +52,9 @@ $DB::single = 1;
         return;
     }
     
-    if ($self->run->sequencing_platform eq 'solexa') {
-        $lanes = $self->run->limit_regions || '12345678';
-    } else {
-        $self->error_message("Determining limit_regions for sequencing_platform ".$self->run->sequencing_platform." is not implemented yet");
+    my $lane = $self->run->limit_regions;
+    unless ($lane) {
+        $self->error_message("There is no limit_regions attribute on run_id ".$self->run_id);
         return;
     }
 
@@ -71,97 +68,118 @@ $DB::single = 1;
 
     # use maq to do the alignments
 
-    my @alignment_files;
-    foreach my $lane ( split('', $lanes) ) {
-        #my $bfq_file = sprintf('%s/s_%d_sequence.bfq', $working_dir, $lane);
+    #my $bfq_file = sprintf('%s/s_%d_sequence.bfq', $working_dir, $lane);
 
-        # Convert the right fastq file into a bfq file
-        my $bfq_file = $self->bfq_file_for_lane();
-        unless (-e $bfq_file) {
-            my $fastq_file = $self->sorted_screened_fastq_file_for_lane();
-            system("maq fastq2bfq $fastq_file $bfq_file");
-       }
+    # Convert the right fastq file into a bfq file
+    my $bfq_file = $self->bfq_file_for_lane();
+    unless (-e $bfq_file) {
+        my $fastq_file = $self->sorted_screened_fastq_file_for_lane();
+        system("maq fastq2bfq $fastq_file $bfq_file");
+   }
 
-        unless (-r $bfq_file) {
-            $self->error_message("bfq file $bfq_file does not exist");
-            next;
-        }
+    unless (-r $bfq_file) {
+        $self->error_message("bfq file $bfq_file does not exist");
+        next;
+    }
 
-        #my $this_lane_alignments_file = $working_dir . "/alignments_lane_$lane.map";
-        my $this_lane_alignments_file = $self->alignment_file_for_lane();
-        push @alignment_files, $this_lane_alignments_file;
+    #my $this_lane_alignments_file = $working_dir . "/alignments_lane_$lane.map";
+    my $this_lane_alignments_file = $self->alignment_file_for_lane();
 
-        my $unaligned_reads_file = $self->unaligned_reads_file_for_lane();
+    my $unaligned_reads_file = $self->unaligned_reads_file_for_lane();
        
-        my $maq_cmdline = sprintf('maq map %s -u %s %s %s %s %s', $model->read_aligner_params || '',
-                                                                  $unaligned_reads_file,
-                                                                  $this_lane_alignments_file,
-                                                                  $ref_seq_file,
-                                                                  $bfq_file);
+    my $maq_cmdline = sprintf('maq map %s -u %s %s %s %s %s', $model->read_aligner_params || '',
+                                                              $unaligned_reads_file,
+                                                              $this_lane_alignments_file,
+                                                              $ref_seq_file,
+                                                              $bfq_file);
 	
-	print "$maq_cmdline\n";
+    print "$maq_cmdline\n";
 
-        #my $rv = system($maq_cmdline);
-        my $rv = 0;
-        if ($rv) {
-            $self->error_message("got a nonzero return value from maq map; something went wrong.  cmdline was $maq_cmdline rv was $rv");
-            return;
+    my $maq_fh = IO::Handle->new();
+    open($maq_fh, "$maq_cmdline 2>&1 |");
+    unless ($maq_fh) {
+        $self->error_message("problem starting maq: $!\nCommand line was $maq_cmdline");
+        return;
+    }
+
+    my $maq_results = '';
+    while(<$maq_fh>) {
+        if (m/match_data2mapping/) {   # They're interested in seeing these lines
+            $maq_results .= $_;
         }
+    }
+    $maq_fh->close();
 
-        # This is old code that never got used.  It parsed through the maq mapview output
-        # to find low quality and unaligned reads, track down the original read data for
-        # them, and create a new fastq with just those reads
-        # Find out which reads didn't align
-        #my %read_index;
-        #my $dbm_file = $self->read_index_dbm_file_for_lane($lane);
+    if ($?) {
+        my $rv = $? >> 8;
+        $self->error_message("got a nonzero exit code ($rv) from maq map; something went wrong.  cmdline was $maq_cmdline rv was $rv");
+        return;
+    }
+    # Save the lines we saved
+    my $results_file = $this_lane_alignments_file . ".matchdata";
+    my $fh = IO::File->new(">$results_file");
+    unless ($fh) {
+        $self->error_message("Can't create $results_file for writing: $!");
+        return;
+    }
+    $fh->print($maq_results);
+    $fh->close();
+       
 
-        #unless (tie(%read_index, 'GDBM_File', $dbm_file, &GDBM_WRCREAT, 0666)) {
-        #    $self->error_message("Failed to tie to DBM file $dbm_file");
-        #    return;
-        #}
+    # This is old code that never got used.  It parsed through the maq mapview output
+    # to find low quality and unaligned reads, track down the original read data for
+    # them, and create a new fastq with just those reads
+    # Find out which reads didn't align
+    #my %read_index;
+    #my $dbm_file = $self->read_index_dbm_file_for_lane($lane);
 
-        #my $unaligned_pathname = $self->unaligned_reads_file_for_lane();
-        #my $unaligned_dbm_pathname = $unaligned_pathname . ".ndbm";
-        #`cp $dbm_file $unaligned_dbm_pathname`;
+    #unless (tie(%read_index, 'GDBM_File', $dbm_file, &GDBM_WRCREAT, 0666)) {
+    #    $self->error_message("Failed to tie to DBM file $dbm_file");
+    #    return;
+    #}
 
-        #my %unaligned_index;
-        #unless (tie(%unaligned_index, 'NDBM_File', $unaligned_dbm_pathname, "O_RDWR O_CREAT", 0666)) {
-        #    $self->error_message("Failed to tie to NDBM file $unaligned_dbm_pathname");
-        #    return;
-        #}
+    #my $unaligned_pathname = $self->unaligned_reads_file_for_lane();
+    #my $unaligned_dbm_pathname = $unaligned_pathname . ".ndbm";
+    #`cp $dbm_file $unaligned_dbm_pathname`;
 
-        #my $aligned_info;
-        #open($aligned_info,"maq mapview $this_lane_alignments_file |");
-        #while(<$aligned_info>) {
-        #    my($aligned_read_name) = m/^(\S+)\s/;
-        #    delete $unaligned_index{$aligned_read_name};
-        #}
-        #$aligned_info->close();
-        #untie %unaligned_index;
+    #my %unaligned_index;
+    #unless (tie(%unaligned_index, 'NDBM_File', $unaligned_dbm_pathname, "O_RDWR O_CREAT", 0666)) {
+    #    $self->error_message("Failed to tie to NDBM file $unaligned_dbm_pathname");
+    #    return;
+    #}
 
-        # use submap if necessary
+    #my $aligned_info;
+    #open($aligned_info,"maq mapview $this_lane_alignments_file |");
+    #while(<$aligned_info>) {
+    #    my($aligned_read_name) = m/^(\S+)\s/;
+    #    delete $unaligned_index{$aligned_read_name};
+    #}
+    #$aligned_info->close();
+    #untie %unaligned_index;
+
+    # use submap if necessary
     
-        my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
+    my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
 
-        foreach my $seq (@subsequences) {
-            unless (-d "$this_lane_alignments_file.submaps") {
-                 mkdir("$this_lane_alignments_file.submaps");
-            }    
-            my $submap_target = sprintf("%s.submaps/%s.map",$this_lane_alignments_file,$seq);
-                    
-            # That last "1" is for the required 'begin' parameter
-            my $maq_submap_cmdline = "maq submap $submap_target $this_lane_alignments_file $seq 1";
+    foreach my $seq (@subsequences) {
+        unless (-d "$this_lane_alignments_file.submaps") {
+             mkdir("$this_lane_alignments_file.submaps");
+        }    
+        my $submap_target = sprintf("%s.submaps/%s.map",$this_lane_alignments_file,$seq);
                 
-            print $maq_submap_cmdline, "\n";
-                    
-            my $rv = system($maq_submap_cmdline);
-            if ($rv) {
-                 $self->error_message("got a nonzero return value from maq submap; cmdline was $maq_submap_cmdline");
-                 return;
-           } 
-       }
-     } 
-     return 1;
+        # That last "1" is for the required 'begin' parameter
+        my $maq_submap_cmdline = "maq submap $submap_target $this_lane_alignments_file $seq 1";
+            
+        print $maq_submap_cmdline, "\n";
+                
+        my $rv = system($maq_submap_cmdline);
+        if ($rv) {
+             $self->error_message("got a nonzero return value from maq submap; cmdline was $maq_submap_cmdline");
+             return;
+       } 
+   }
+
+   return 1;
 }
 
 
