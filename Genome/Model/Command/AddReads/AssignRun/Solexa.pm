@@ -16,6 +16,7 @@ class Genome::Model::Command::AddReads::AssignRun::Solexa {
     is => 'Genome::Model::Event',
     has => [ 
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
+        run_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },
     ]
 };
 
@@ -42,7 +43,7 @@ sub bsub_rusage {
 }
 
 
-sub execute {
+sub _execute {
     my $self = shift;
 
     $DB::single=1;
@@ -77,35 +78,53 @@ sub execute {
     }
 
     # Convert the original solexa sequence files into maq-usable files
-    my $lanes = $self->run->limit_regions;
-    unless ($lanes) {
-        $lanes = '12345678';
-        $self->run->limit_regions($lanes);
-    }
+    my $lane = $self->run->limit_regions;
 
     my $gerald_dir = $self->run->full_path;
-    my @geraldfiles = glob($gerald_dir . '/s_[' . $lanes . ']_sequence.txt*');
-    foreach my $seqfile (@geraldfiles) {
-
-        my($lane) = ($seqfile =~ m/s_(\d+)_sequence.txt/);
-
-        # convert quality values
-        my $fastq_file = $self->fastq_file_for_lane();
-        system("maq sol2sanger $seqfile $fastq_file");
-
-        ## Convert the reads to the binary fastq format
-        ## We're doing this in align-reads now
-        #my $bfq_file = $self->bfq_file_for_lane();
-        #system("maq fastq2bfq $fastq_file $bfq_file");
-
-        # We also need a sorted/indexed fastq file 
-        unless ($self->_make_sorted_fastq_and_index_file()) {
-            return;
-        }
-
+    my $seqfile = sprintf("%s/s_%s_sequence.txt", $gerald_dir, $lane);
+    unless (-r $seqfile and -s $seqfile) {
+        $self->error_message("Gerald file $seqfile is not readable or has 0 size");
+        return;
     }
 
-    
+    # convert quality values
+    my $fastq_file = $self->fastq_file_for_lane();
+    $self->status_message("Original gerald file path $seqfile\nResulting fastq file $fastq_file\n");
+
+    unlink($fastq_file);
+
+    my $maq_output = '';
+    my $cmdline = "maq sol2sanger $seqfile $fastq_file";
+    my $maq_fh = IO::File->new("$cmdline 2>&1 |");
+    unless ($maq_fh) {
+        $self->error_message("Can't start $cmdline: $!");
+        return;
+    }
+    while(<$maq_fh>) {
+        $maq_output .= $_;
+    }
+    $maq_fh->close();
+    if ($?) {
+        my $rv = $? >> 8;
+        $self->error_message("$cmdline returned an error code $rv.  The output was:\n$maq_output\n");
+        return;
+    }
+
+    unless (-f $fastq_file) {
+        $self->error_message("maq didn't create the fastq file $fastq_file");
+        return;
+    }
+
+    # We also need a sorted/indexed fastq file 
+    unless ($self->_make_sorted_fastq_and_index_file()) {
+        return;
+    }
+
+    my $sorted_fastq = $self->sorted_fastq_file_for_lane();
+    unless (-f $sorted_fastq) {
+        $self->error_message("The sorted fastq file didn't get created $sorted_fastq");
+        return;
+    }
 
     return 1;
 }
@@ -166,6 +185,11 @@ sub _make_sorted_fastq_and_index_file {
         return;
     }
 
+    unless (-s $presorted_pathname == -s $postsorted_pathname) {
+        $self->error_message("The pre- and post-sorted file sizes do not match!\n");
+        return;
+    }
+
     my $postsorted = IO::File->new($postsorted_pathname);
 
     my $sorted_pathname = $self->sorted_fastq_file_for_lane();
@@ -206,6 +230,12 @@ sub _make_sorted_fastq_and_index_file {
 #        $self->error_message("Failed to move $temp_dbm_file $dbm_file");
 #        return;
 #    }
+
+    unless (-s $fastq_file == -s $sorted_pathname) {
+        $self->error_message("The pre- and post-sorted fastq file sizes do not match!\n");
+        return;
+    }
+
 
     unlink($presorted_pathname,$postsorted_pathname);
         
