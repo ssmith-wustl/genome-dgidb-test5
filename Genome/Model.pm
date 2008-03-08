@@ -8,6 +8,7 @@ use Term::ANSIColor;
 use Genome::Model::EqualColumnWidthTableizer;
 use File::Path;
 use File::Basename;
+use IO::File;
 
 class Genome::Model {
     type_name => 'genome model',
@@ -102,7 +103,16 @@ sub lock_resource {
         sleep $block_sleep;
     }
 
-    eval "END { rmdir \$resource_id;}";
+    my $lock_info_pathname = $resource_id . '/info';
+    my $lock_info = IO::File->new(">$lock_info_pathname");
+    $lock_info->printf("HOST %s\nPID $$\nLSF_JOB_ID %s\nUSER %s\n",
+                       $ENV{'HOST'},
+                       $ENV{'LSB_JOBID'},
+                       $ENV{'USER'},
+                     );
+    $lock_info->close();
+
+    eval "END { unlink \$lock_info_pathname; rmdir \$resource_id;}";
 
     return 1;
 }
@@ -111,6 +121,7 @@ sub unlock_resource {
     my ($self, %args) = @_;
     
     my $resource_id = $self->data_directory . "/" . $args{'resource_id'} . ".lock";
+    unlink $resource_id . '/info';
     rmdir $resource_id;
 }
 
