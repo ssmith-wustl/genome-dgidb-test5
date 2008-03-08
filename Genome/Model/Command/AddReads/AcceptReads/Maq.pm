@@ -13,6 +13,10 @@ use File::stat;
 
 class Genome::Model::Command::AddReads::AcceptReads::Maq {
     is => 'Genome::Model::Event',
+    has => [
+        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
+        run_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },
+    ],
 };
 
 sub help_brief {
@@ -31,7 +35,7 @@ This command is usually called as part of the add-reads process
 EOS
 }
 
-sub execute {
+sub _execute {
     my $self = shift;
     
     my $model = Genome::Model->get(id => $self->model_id);
@@ -42,22 +46,24 @@ sub execute {
     
     # ensure the reference sequence exists.
     my $run_path=$self->resolve_run_directory();
-    $lanes=$self->run->limit_regions || '1245678';
-    my @goodlanes;
-    foreach my $lane (split //, $lanes){
-      #my $lane_mapfile=$run_path . '/'. 'alignments_lane_'.$lane;
-      my $lane_mapfile=$self->alignment_file_for_lane();
-      my $line=`/gscmnt/sata114/info/medseq/pkg/maq/branches/lh3/maq-xp/maq-xp pileup -t $lane_mapfile 2>&1`;
-      my ($evenness)=($line=~/(\S+)\%$/);
-      if($evenness > $model->alignment_distribution_threshold){
-	push @goodlanes, $lane;
-      }
+    my $lane = $self->run->limit_regions;
+    unless ($lane) {
+        $self->error_message("No limit regions parameter on run_id ".$self->run_id);
+        return;
     }
-    unless ( @goodlanes ) {
+
+    my @goodlanes;
+    
+    #my $lane_mapfile=$run_path . '/'. 'alignments_lane_'.$lane;
+    my $lane_mapfile=$self->alignment_file_for_lane();
+    my $line=`/gscmnt/sata114/info/medseq/pkg/maq/branches/lh3/maq-xp/maq-xp pileup -t $lane_mapfile 2>&1`;
+    my ($evenness)=($line=~/(\S+)\%$/);
+    if($evenness > $model->alignment_distribution_threshold) {
+        return 1;
+    } else {
+        $self->error_message("Run id ".$self->run_id." failed accept reads.  Evenness $evenness is lower than the threshold ".$model->alignment_distribution_threshold);
         return 0;
     }
-        $self->run->limit_regions(join('',@goodlanes));
-        return 1;
 }
 
 sub bsub_rusage {
