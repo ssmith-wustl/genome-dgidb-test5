@@ -192,7 +192,7 @@ sub _create_target_class_instance_and_error_check{
     $self->set(
         date_scheduled  => $self->_time_now(),
         date_completed  => undef,
-        event_status    => 'completed', 
+        event_status    => 'Scheduled',
         event_type      => $self->command_name,
         lsf_job_id      => undef, 
         user_name       => $ENV{USER}, 
@@ -217,12 +217,15 @@ sub _create_target_class_instance_and_error_check{
         return;
     }   
 
+    $self->date_completed($self->_time_now());
     unless($obj) {
+        $self->event_status('Failed');
         $self->error_message("Failed to create genome model: " . $obj->error_message);
         print Dumper(\%params);
         return;
     }
     
+    $self->event_status('Succeeded');
     return $obj;
 }
 
