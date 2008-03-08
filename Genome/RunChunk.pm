@@ -19,6 +19,7 @@ UR::Object::Type->define(
         full_path           => { is => 'VARCHAR2', len => 767 },
         limit_regions       => { is => 'VARCHAR2', len => 32, is_optional => 1 },
         sequencing_platform => { is => 'VARCHAR2', len => 255 },
+        sample_name         => { is => 'VARCHAR2', len => 255 },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
