@@ -11,6 +11,7 @@ class Genome::Model::Command::AddReads {
     has => [
         model_id            => { is => 'Integer', 
                                 doc => "Identifies the genome model to which we'll add the reads." },
+        model               => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
         sequencing_platform => { is => 'String',
                                 doc => 'Type of sequencing instrument used to generate the data'},
         full_path           => { is => 'String',
@@ -125,7 +126,7 @@ $DB::single=1;
     $self->status_message("Using full_path: ".$self->full_path."\nlimit_regions: ".$self->limit_regions);
 
     # Make a RunChunk object for each region
-    my $model = Genome::Model->get(model_id => $self->model_id);
+    my $model = $self->model;
     my @runs;
     foreach my $region ( split(//,$regions) ) {
         my $run = Genome::RunChunk->get_or_create(full_path => $full_path,
@@ -154,14 +155,19 @@ $DB::single=1;
     
             if ($self->bsub) {
                 $last_bsub_job_id = $self->run_command_with_bsub($command,$run,$last_bsub_job_id);
+                $command->lsf_job_id($last_bsub_job_id);
             } elsif (! $self->test) {
                 $last_bsub_job_id = $command->execute();
             }
 
+
             # This will be false if something went wrong.
             # We should probably stop the pipeline at this point
             return unless $last_bsub_job_id;
-           
+
+            # For catching up on all the old runs... remove later
+            # This will submit only the assign-run step
+            #last;
         }
     }
 
@@ -186,8 +192,28 @@ sub _find_full_path_by_run_name_and_sequencing_platform_old {
         return;
     }
 
+    my $config_image_analysis_pse = GSC::PSE->get(pse_id => $solexa_run->creation_event_id);
+    my $sample_name = $self->model->sample_name();
+    my @this_sample_lanes = map { GSC::DNALocation->get($_->dl_id)->location_order }
+                            grep { $_->get_dna->dna_name eq $sample_name }
+                            GSC::DNAPSE->get(pse_id => $config_image_analysis_pse);
+
+    $self->status_message("Sample $sample_name is in lanes: ".join(',',sort @this_sample_lanes));
+
     my $glob = $solexa_run->run_directory . '/Data/*Firecrest*/Bustard*/GERALD*/';
-    my @gerald_dirs = glob($glob);
+    my @possible_gerald_dirs = glob($glob);
+    my @gerald_dirs;
+    foreach my $gerald_dir ( @possible_gerald_dirs ) {
+        my $found = 1;
+        foreach my $lane ( @this_sample_lanes ) {
+            my $lane_pathname = sprintf('%s/s_%s_sequence.txt', $gerald_dir, $lane);
+            unless (-f $lane_pathname) {
+                $found = 0;
+                last;
+            }
+        }
+        push(@gerald_dirs, $gerald_dir) if $found;
+    }
 
     return @gerald_dirs;
 }
@@ -218,6 +244,11 @@ sub _find_full_path_by_run_name_and_sequencing_platform {
                          grep { $_->get_dna->dna_name eq $sample_name }
                          GSC::DNAPSE->get(pse_id => $config_image_analysis_pse);
 
+    unless ( @involved_lanes ) {
+        $self->warning_message("Sample $sample_name does not appear to be in this run");
+        return;
+    }
+
     my @possible_configure_alignment_pses = grep { $_->process_to eq 'configure alignment' and
                                                    $_->pse_status eq 'completed' and
                                                    $_->pse_result eq 'successful' }
@@ -231,7 +262,7 @@ sub _find_full_path_by_run_name_and_sequencing_platform {
   
 
     if (@config_alignment_pses != 1) {
-        $self->error_message("Didn't find exactly 1 'configure alignment' PSE for run $run_name, sample $sample_name");
+        $self->warning_message("Found ".scalar(@config_alignment_pses)." 'configure alignment' PSE for run $run_name, sample $sample_name");
         return;
     }
 
@@ -322,7 +353,7 @@ sub run_command_with_bsub {
     { no warnings 'uninitialized';
         $cmdline = "bsub -q $queue $bsub_args" .
                    ($last_bsub_job_id && " -w $last_bsub_job_id") .
-                   " $cmd --run-id $run_id --model-id $model_id";
+                   " $cmd --model-id $model_id --run-id $run_id";
     }
 
     if ($self->test) {
