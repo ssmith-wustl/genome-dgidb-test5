@@ -30,15 +30,92 @@ UR::Object::Type->define(
 );
 
 
+# This create() can get called in two different occasions:
+# 1) When some initiator programs runs (like the top-level add-reads), we actually want to
+#    create a brand new event and log it as 'scheduled'
+# 2) When the sub-sub command acutally executes, say on a blade, the Command module
+#    wrapper system will create() an object of the appropriate subtype.  In this
+#    case we want to find the right previously created command and return that
+#    instead of making a new one
 sub create {
     my $class = shift;
+    my %args = @_;
 
-    if (exists $ENV{'LSB_JOBID'}) {
-        push(@_, 'lsf_job_id', $ENV{'LSB_JOBID'});
+$DB::single=1;
+
+    #if (! exists($args{'lsf_job_id'}) and exists($ENV{'LSB_JOBID'})) {
+    #    $args{'lsf_job_id'} = $ENV{'LSB_JOBID'};
+    #}
+    #return $class->SUPER::create(%args);
+
+    delete $args{' '};  # Most (all?) Of these things are really going to be some 
+                        # derivitives of Command::Something, so there'll be a ' ' param in there
+    my @candidates = $class->get(%args,
+                                 event_status => 'Scheduled');
+
+    my $event;
+    if (@candidates == 0) {
+        if (! exists($args{'lsf_job_id'}) and exists($ENV{'LSB_JOBID'})) {
+            $args{'lsf_job_id'} = $ENV{'LSB_JOBID'};
+        }
+        $event = $class->SUPER::create(%args);
+    } elsif (@candidates == 1) {
+        if (! exists($args{'lsf_job_id'}) and exists($ENV{'LSB_JOBID'})) {
+            $candidates[0]->lsf_job_id($ENV{'LSB_JOBID'});
+        }
+        $event = $candidates[0];
+    } else {
+         $class->warning_message("Got back ".scalar(@candidates)." objects from get() returning the oldest one");
+         @candidates = sort { $a->date_scheduled cmp $b->date_scheduled } @candidates;
+         $event = $candidates[0];
     }
-    $class->SUPER::create(@_);
-}
+
+    $event->date_scheduled(UR::Time->now());
+    $event->event_status('Scheduled');
+    $event->user_name($ENV{'USER'});
+    if ($event->can('command_name')) {
+        $event->event_type($event->command_name);
+    } else {
+        $event->event_type('unknown');
+    }
+
+    # A nasty, ugly hack
+    # This in effect overrides the lowest-level commands' execute() method
+    # so that it gets called, then updates the date_completed and event_status
+    # before returning Command infrastructure 
+    #
+    # The right way is to change all the sub- and sub-sub commands' execute()
+    # to something like _execute() and then define execute() in here which would
+    # call _execute();
+#    no strict 'refs';
+#    my $class_path = $class . '::';
+#    my $glob = ${$class_path}{'execute'};
+#    my $orig_execute  = *{$glob}{'CODE'};
+#    my $sub = sub {
+#                      $DB::single=1;
+#                      my $rv = $orig_execute->(@_);
+#                      $_[0]->date_completed(UR::Time->now());
+#                      $_[0]->event_status($rv ? 'Succeeded' : 'Failed');
+#                      return $rv;
+#                   };
+#    my $execute_path = $class_path . 'execute';
+#    no warnings 'redefine';
+#    *{$execute_path} = $sub;
     
+    return $event;
+}
+
+
+sub execute {
+    my $self = shift;
+
+    my $rv = $self->_execute();
+    $self->date_completed(UR::Time->now());
+    $self->event_status($rv ? 'Succeeded' : 'Failed');
+    return $rv;
+}
+
+
 
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments

@@ -15,26 +15,42 @@ UR::Object::Type->define(
            ], 
 );
 
-sub execute {
-my $self = shift;
-    $DB::single=1;
 
-    my $command =  $self->_create_sub_command();
+sub create {
+    my $class = shift;
 
-    my $retval;
-    if ($command) {
-        $retval = $command->execute();
-        
-        $command->date_completed(UR::Time->now());
-        $command->event_status($retval ? 'Succeeded' : 'Failed');
-        
-        return $retval;
-        
-    } else {
-        $command->event_status('Failed to create sub-command');
-        return;
-    }
+$DB::single=1;
+    my $self = $class->SUPER::create(@_);
+    my $correct_subcommand = $self->_get_or_create_sub_command(@_);
+    $correct_subcommand->event_status('Scheduled');
+
+    return $correct_subcommand;
 }
+
+
+sub execute {
+1;
+}
+#sub execute {
+#my $self = shift;
+#    $DB::single=1;
+#
+#    my $command =  $self->_create_sub_command();
+#
+#    my $retval;
+#    if ($command) {
+#        $retval = $command->execute();
+#        
+##        $command->date_completed(UR::Time->now());
+##        $command->event_status($retval ? 'Succeeded' : 'Failed');
+#        
+#        return $retval;
+#        
+#    } else {
+#        $command->event_status('Failed to create sub-command');
+#        return;
+#    }
+#}
 
 sub _create_sub_command {
     my $self = shift;
@@ -46,8 +62,34 @@ sub _create_sub_command {
 					    user_name => $ENV{'USER'},
 					   );
 
-
 }
+
+
+sub _get_or_create_sub_command {
+    my $self = shift;
+    my %args = @_;
+
+    my $sub_command_type = $self->_get_sub_command_class_name();
+
+    delete $args{' '};
+    my @commands = $sub_command_type->get(%args,
+                                          event_status => 'Scheduled');
+    if (! @commands) {
+        return $sub_command_type->create( %args,
+                                          event_type => $sub_command_type->command_name,
+                                          date_scheduled => UR::Time->now(),
+                                          user_name => $ENV{'USER'},
+                                         );
+
+    } elsif (@commands == 1) {
+        return $commands[0];
+
+    } else {
+        @commands = sort { $a->date_scheduled cmp $b->date_scheduled } @commands;
+        return $commands[0];
+    }
+}
+    
 
 sub _sub_command_name_to_class_name_map{
     my $self = shift;
@@ -108,7 +150,8 @@ sub _get_or_create_then_init_event{
 sub bsub_rusage {
     my $self = shift;
 
-    my $command =  $self->_create_sub_command();
+    #my $command =  $self->_create_sub_command();
+    my $command = $self->_get_sub_command_class_name();
     if ($command->can('bsub_rusage')) {
         return $command->bsub_rusage;
     } else {
