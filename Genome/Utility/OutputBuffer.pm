@@ -21,16 +21,16 @@ sub new{
     my $file = shift;
     my $io = IO::File->new("> ".$file);
     die "can't create io" unless $io;
-    my $self = bless({_io => $io, current_line_avail => 60},$class);
+    my $self = bless({_io => $io, current_line_avail => 10},$class);
     return $self;
 }
 
 sub print_header{
     my ($self, $header) = @_;
     #don't print leading newline if we're at the top of the file
-    $self->{_io}->print("\n") unless $self->{current_line_avail} == 60;
+    $self->{_io}->print("\n") unless $self->{current_line_avail} == 10;
     $self->{_io}->print("$header\n") or $self->fatal_msg("can't write header $header");
-    $self->{current_line_avail} = 60;
+    $self->{current_line_avail} = 10;
     return 1;
 }
 
@@ -44,7 +44,7 @@ sub print{
         $avail -= length($next);
         if ($avail == 0) {
             $io->print("\n");
-            $avail = 60;
+            $avail = 10;
         }                    
         $_ = substr($_,length($next));
         redo if length($_);        

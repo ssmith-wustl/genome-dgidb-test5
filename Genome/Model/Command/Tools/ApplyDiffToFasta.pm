@@ -109,6 +109,7 @@ sub execute {
             last if $read_position > $diff->{position};
 
             $output_stream->print($buffer);
+            $buffer = undef;
             $write_position = $read_position;
         }
 
