@@ -660,6 +660,7 @@ my %csp_priority = (
     'allocate disk space'                     => 1,
     'reallocate disk space'                   => 1,
     'deallocate disk space'                   => 1,
+    'transfer solid run'                      => 1,
 
 #    these were given their own cron to get around the
 #    problem of running as the lims user instead of seqmgr
