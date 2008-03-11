@@ -4,33 +4,25 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-
 use IO::File;
-#attributes
-=cut
-my %file :name(file:r);
-my %line_width :name(line_width:o) :isa('int pos') :default(50);
 
-my %io :name(_io:p);
-my %count :name(_count:p);
-
-=cut
+my $linelength = 60;
 
 sub new{
     my $class = shift;
     my $file = shift;
     my $io = IO::File->new("> ".$file);
     die "can't create io" unless $io;
-    my $self = bless({_io => $io, current_line_avail => 10},$class);
+    my $self = bless({_io => $io, current_line_avail => $linelength},$class);
     return $self;
 }
 
 sub print_header{
     my ($self, $header) = @_;
     #don't print leading newline if we're at the top of the file
-    $self->{_io}->print("\n") unless $self->{current_line_avail} == 10;
+    $self->{_io}->print("\n") unless $self->{current_line_avail} == $linelength;
     $self->{_io}->print("$header\n") or $self->fatal_msg("can't write header $header");
-    $self->{current_line_avail} = 10;
+    $self->{current_line_avail} = $linelength;
     return 1;
 }
 
@@ -45,7 +37,7 @@ sub print{
         $avail -= length($next);
         if ($avail == 0) {
             $io->print("\n");
-            $avail = 10;
+            $avail = $linelength;
         }                    
         $_ = substr($_,length($next));
         redo if length($_);        
