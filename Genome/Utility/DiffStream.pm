@@ -4,27 +4,21 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-use Finfo::Std;
-
 use IO::File;
 
 #attributes
 
-my %file  :name(file:r) :isa(file_r);
-my %io  :name(_io:p);
-
-sub START{
-    my $self = shift;
-    my $io = IO::File->new('< '.$self->file);
-    $self->fatal_msg("couldn't open io") unless $io;
-    $self->_io($io);
-    1;
+sub new{
+    my ($class, $file) = @_;
+    my $io = IO::File->new('< '.$file);
+    die "couldn't open io" unless $io;
+    return bless({_io => $io}, $class);
 }
 
 sub next_diff{
     my $self = shift;
     my %diff;
-    my $line = $self->_io->getline;
+    my $line = $self->{_io}->getline;
     return undef unless $line;
     my $line_copy = $line;
     my ($subject, $chromosome, $pos, $ref, $patch) = split(/\s+/, $line);
@@ -36,6 +30,7 @@ sub next_diff{
     $diff{ref} = $ref unless $ref =~/-/;
     $diff{patch} = $patch unless $patch =~/-/;
 
+    $diff{position}=$diff{position}-1 if $diff{ref}; # deletes now start AFTER index, like inserts
     return \%diff;
 }
 

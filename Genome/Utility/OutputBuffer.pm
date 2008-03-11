@@ -4,46 +4,53 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-use Finfo::Std;
 
 use IO::File;
 #attributes
-
+=cut
 my %file :name(file:r);
 my %line_width :name(line_width:o) :isa('int pos') :default(50);
 
 my %io :name(_io:p);
 my %count :name(_count:p);
 
-sub START{
-    my $self = shift;
-    my $io = IO::File->new("> ".$self->file);
-    $self->fatal_msg("can't create io") unless $io;
-    $self->_io($io);
-    $self->_count(0);
-    1;
+=cut
+
+sub new{
+    my $class = shift;
+    my $file = shift;
+    my $io = IO::File->new("> ".$file);
+    die "can't create io" unless $io;
+    my $self = bless({_io => $io, current_line_avail => 60},$class);
+    return $self;
 }
 
 sub print_header{
     my ($self, $header) = @_;
     #don't print leading newline if we're at the top of the file
-    $self->_io->print("\n") unless $self->_io->tell == 0;
-    $self->_io->print("$header\n") or $self->fatal_msg("can't write header $header");
+    $self->{_io}->print("\n") unless $self->{current_line_avail} == 60;
+    $self->{_io}->print("$header\n") or $self->fatal_msg("can't write header $header");
+    $self->{current_line_avail} = 60;
     return 1;
 }
 
 sub print{
-    my ($self, $out) = @_;
-    my @chars = split('',$out) or $self->fatal_msg("can't split output $out");
-    $self->_print_char($_) foreach @chars;
+    my $self = shift;
+    my $avail = $self->{current_line_avail};
+    my $io = $self->{_io};
+    for (@_) {
+        my $next = substr($_,0,$avail);
+        $io->print($next);
+        $avail -= length($next);
+        if ($avail == 0) {
+            $io->print("\n");
+            $avail = 60;
+        }                    
+        $_ = substr($_,length($next));
+        redo if length($_);        
+    }
+    $self->{current_line_avail}=$avail;
+    return 1;
 }
 
-sub _print_char{
-    my ($self, $char) = @_;
-    if ($self->_count == $self->line_width){
-        $self->_count(0);
-        $self->_io->print("\n");
-    }
-    $self->_io->print($char) and $self->_count($self->_count + 1);
-}
 1;

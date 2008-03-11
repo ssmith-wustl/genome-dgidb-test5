@@ -4,94 +4,54 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-use Finfo::Std;
 
 use IO::File;
-#attributes
 
-my %file :name(file:r) :isa(file_r);
+sub new{
+    my $class = shift;
+    my $file = shift;
+    my $io = IO::File->new($file);
+    die "can't create io" unless $io;
+    my $next_line = $io->getline;
+    my $self = bless({_io => $io, next_line => $next_line },$class);
+    return $self;
+}
 
-my %io :name(_io:p);
-
-my %next_header_line :name(_next_header_line:p);
-my %current_chars :name(_current_chars:p);
-my %last_position_written :name(_last_position_written:p);
-my %current_header_line :name(_current_header_line:p);
-
-sub START{
+sub parse_header{
     my $self = shift;
-    my $io = IO::File->new('< '. $self->file);
-    $self->fatal_msg("Can't open io for ".$self->file) unless $io;
-    $self->_io($io);
-    my $line = $self->_io->getline;
-    chomp $line;
-    $self->fatal_msg("fasta file doesn't start with a header line!") unless $self->_is_header_line($line);
-    $self->_next_header_line($line);
-    $self->_last_position_written(0);
-    $self->_current_chars([]);
-    1;
+    my $line = shift;
+    my $header = substr($line,1,1);
+}
+
+sub next_line{
+    my $self = shift;
+    if (substr($self->{next_line},0,1) eq '>'){
+        return undef;
+    }
+    my $next_line = $self->{next_line};
+    $self->{next_line} = $self->{_io}->getline;
+    chomp $next_line;
+    return $next_line;
 }
 
 sub next_header{
     my $self = shift;
-    my $hl = $self->_next_header_line;
-    $self->fatal_msg("Haven't parsed through previous fasta section") unless $hl;
-    return undef if $hl =~ /^EOF$/;
-    $self->_current_header_line($hl);
-    $self->undef_attribute('_next_header_line');
-    $self->_last_position_written(0);
-    return $self->_parse_header($hl);
-}
-
-sub header_line{
-    my $self = shift;
-    return $self->_current_header_line;
-}
-
-sub next{
-    my $self = shift;
-    
-    my $char = shift @{$self->_current_chars};
-    if ($char){
-        $self->_last_position_written($self->_last_position_written + 1);
-        return $char;
+    if (not defined $self->{next_line}){
+        return undef;
+    }elsif (substr($self->{next_line},0,1) eq '>' ){
+        $self->{current_header_line} = $self->{next_line};
+        $self->{current_header} = $self->parse_header( $self->{current_header_line} );
+        $self->{next_line} = $self->{_io}->getline;
     }else{
-        my $line = $self->_io->getline;
-        unless ($line){
-            $self->_next_header_line('EOF');
-            return undef;
-        }
-        chomp $line;
-        if ($self->_is_header_line($line)){
-            $self->_next_header_line($line);
-            return undef;
-        }else{
-            my @chars = split ('', $line);
-            $self->_current_chars(\@chars);
-            return $self->next;
-        }
-
+        die 'not at seq end' ;
     }
+    return $self->{current_header};
 }
 
-sub last_position{
+sub current_header_line{
     my $self = shift;
-    return $self->_last_position_written;
-}
-
-sub _is_header_line{
-    my ($self, $line) = @_;
-    return $line =~ /^>/;
-
-}
-
-sub _parse_header{
-    my ($self, $line) = @_;
-    #>2 dna:chromosome chromosome:NCBI36:2:1:242951149:1 - sample header line
-    my ($header_subject) = $line =~ />([0-9a-zA-Z_-]+)/;
-    #TODO this may need to change to become a more generalized/subclassable solution
-    return $header_subject;
-
+    my $line = chomp $self->{current_header_line};
+    return $line;
 }
 
 1;
