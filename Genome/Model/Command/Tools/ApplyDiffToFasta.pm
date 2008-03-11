@@ -143,6 +143,7 @@ sub execute {
         }
 
     }
+    $output_stream->print($buffer);
     while (my $line= $fasta_stream->next_line){
         $output_stream->print($line);
     }
