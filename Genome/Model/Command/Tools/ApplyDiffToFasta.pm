@@ -77,6 +77,7 @@ sub execute {
                 return;
             }elsif($diff->{header} gt $last_fasta_header){
                 $output_stream->print($buffer);
+                $buffer = undef;
                 my $row;
                 while ($row = $fasta_stream->next_line){
                     $output_stream->print($row);
@@ -103,12 +104,12 @@ sub execute {
         $DB::single = 1;
 
         while( $write_position <= $diff->{position}){
-            unless ($buffer){
+            unless (defined $buffer){
                 $buffer = $fasta_stream->next_line;
                 $read_position = $read_position + length $buffer;
             }
 
-            last if $read_position > $diff->{position};
+            last if $read_position >= $diff->{position};
 
             $output_stream->print($buffer);
             $buffer = undef;
@@ -126,7 +127,10 @@ sub execute {
 
         if ($diff->{ref}) {
             # cutting out sequence
-            $write_position += length $diff->{ref};
+            my $ref = $diff->{ref};
+            $write_position += length $ref;
+            my $del = substr($buffer, $first_part_length, length $ref); #check buffer at this point
+            $self->error_message("deleted seq ref does not equal acutal sequence! $del != $ref ") and return unless $del eq $ref; #TODO clean up these var names to be clearer, in diffstream.pm as well.
             while ($write_position > $read_position){
                 $buffer = $fasta_stream->next_line;
                 $read_position += length $buffer;
@@ -148,6 +152,9 @@ sub execute {
             $output_stream->print($line);
         }
     }
+
+    $output_stream->close();
+
     return 1;
 }
 1;

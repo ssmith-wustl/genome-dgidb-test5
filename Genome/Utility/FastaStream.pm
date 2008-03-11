@@ -20,7 +20,9 @@ sub new{
 sub parse_header{
     my $self = shift;
     my $line = shift;
-    my $header = substr($line,1,1);
+    my ($header) = $line =~ />(\S+)/;
+    # my $header = substr($line,1,1);
+    return $header;
 }
 
 sub next_line{

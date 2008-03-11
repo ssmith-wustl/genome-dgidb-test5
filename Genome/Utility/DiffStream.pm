@@ -26,7 +26,8 @@ sub next_diff{
     $diff{subject} = $subject;
     $diff{chromosome} = $chromosome;
     $diff{position} = $pos;
-    $diff{header} = $self->_generate_header($subject, $chromosome);
+    $diff{header} = $subject;
+    #$diff{header} = $self->_generate_header($subject, $chromosome);
     $diff{ref} = $ref unless $ref =~/-/;
     $diff{patch} = $patch unless $patch =~/-/;
 
