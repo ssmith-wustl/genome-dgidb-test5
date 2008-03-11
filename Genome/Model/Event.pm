@@ -13,8 +13,10 @@ UR::Object::Type->define(
         genome_model_event_id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        date_completed        => { is => 'TIMESTAMP(6)', len => 11, is_optional => 1 },
-        date_scheduled        => { is => 'TIMESTAMP(6)', len => 11, is_optional => 1 },
+        #date_completed        => { is => 'TIMESTAMP(6)', len => 11, is_optional => 1 },
+        #date_scheduled        => { is => 'TIMESTAMP(6)', len => 11, is_optional => 1 },
+        date_completed        => { is => 'TIMESTAMP(20)', len => 20, is_optional => 1 },
+        date_scheduled        => { is => 'TIMESTAMP(20', len => 20, is_optional => 1 },
         event_status          => { is => 'VARCHAR2', len => 32, is_optional => 1 },
         event_type            => { is => 'VARCHAR2', len => 255 },
         model                 => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
