@@ -50,18 +50,17 @@ sub execute {
     my $fasta_stream = Genome::Utility::FastaStream->new($self->input ); #file or bioseq object
 
 
-    my $read_position;
+    my $read_position=0;
     my $buffer;
-    my $write_position;
+    my $write_position=0;
 
 #use these for error checking
     my $last_diff_header='';
     my $last_fasta_header='';
     my $last_diff_pos = 0;
-    my $current_header_from_diffs;
 
 #print first header
-    my $current_header_from_fasta_stream = $fasta_stream->next_header;
+    $last_fasta_header = $fasta_stream->next_header;
     $output_stream->print_header($fasta_stream->current_header_line);
 
     while (my $diff = $diff_stream->next_diff){
@@ -90,7 +89,7 @@ sub execute {
                     return;
                 }
                 $last_fasta_header = $current_fasta_header;
-                $output_stream->print($current_fasta_header_line);
+                $output_stream->print_header($current_fasta_header_line);
                 redo;
 
             }        
@@ -99,6 +98,8 @@ sub execute {
         if ($write_position > $diff->{position}) {
             die "write_position past diff";
         }
+
+        $DB::single = 1;
 
         while( $write_position <= $diff->{position}){
             unless ($buffer){
@@ -129,7 +130,7 @@ sub execute {
                 $buffer = $fasta_stream->next_line;
                 $read_position += length $buffer;
             }
-            $buffer = substr($buffer, $read_position - $write_position);
+            $buffer = substr($buffer, (length $buffer) - ($read_position - $write_position) );
         }
         else {
             # nothing removed

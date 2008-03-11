@@ -39,6 +39,7 @@ sub print{
     my $avail = $self->{current_line_avail};
     my $io = $self->{_io};
     for (@_) {
+        next unless $_;
         my $next = substr($_,0,$avail);
         $io->print($next);
         $avail -= length($next);

@@ -25,6 +25,7 @@ sub parse_header{
 
 sub next_line{
     my $self = shift;
+    return unless $self->{next_line}; #TODO faster way of doing this besides checking every next line call?
     if (substr($self->{next_line},0,1) eq '>'){
         return undef;
     }
@@ -50,7 +51,8 @@ sub next_header{
 
 sub current_header_line{
     my $self = shift;
-    my $line = chomp $self->{current_header_line};
+    my $line = $self->{current_header_line};
+    chomp $line;
     return $line;
 }
 
