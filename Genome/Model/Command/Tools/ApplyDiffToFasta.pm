@@ -157,7 +157,7 @@ sub execute {
             $write_position += length $ref;
             my $del = substr($buffer, $first_part_length, length $ref); #check buffer at this point
             unless ($del eq $ref){ #TODO clean up these var names to be clearer, in diffstream.pm as well.
-                $self->error_message("deleted seq ref does not equal acutal sequence! $del != $ref ");
+                $self->error_message("deleted seq ref does not equal actual sequence! $del != $ref ");
                 return ;
             }
 
