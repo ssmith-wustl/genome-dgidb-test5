@@ -63,33 +63,58 @@ sub execute {
     $last_fasta_header = $fasta_stream->next_header;
     $output_stream->print_header($fasta_stream->current_header_line);
 
+
     while (my $diff = $diff_stream->next_diff){
 
+        my $numeric;
+        my $cross;
         #error checking
-        if ($diff->{header} lt $last_diff_header){
-            $self->error_message("Diff header in incorrect order");
-            return;
-        }
+        #if ($diff->{header} lt $last_diff_header){ #TODO currently last diff header is not set, if we do use this, make sure we take into account the numeric possibility
+        #    $self->error_message("Diff header in incorrect order");
+        #    return;
+        #}
 
         until ($diff->{header} eq $last_fasta_header) {
-            if($diff->{header} lt $last_fasta_header){
-                $self->error_message("Diff ");
-                return;
-            }elsif($diff->{header} gt $last_fasta_header){
+            
+            if($diff->{header} lt $last_fasta_header) {
+                unless ($diff->{header} =~ /^\d+$/ and $last_fasta_header =~ /^\d+$/ and $diff->{header} >= $last_fasta_header){
+                    unless (($diff->{header} =~ /^[A-Z]+$/ and $last_fasta_header =~ /^\d+$/) or ($diff->{header} =~ /^\d+$/ and $last_fasta_header =~ /^[A-Z]+$/)){
+                            $self->error_message("Header from diff is less than the current/last fasta header! ".$diff->{header}." lt $last_fasta_header");
+                            return;
+                        }
+                    $cross = 1;
+                }
+                $numeric = 1;
+                
+            }
+            if($diff->{header} gt $last_fasta_header or $cross or ($numeric and $diff->{header} > $last_fasta_header )){
+
                 $output_stream->print($buffer);
                 $buffer = undef;
                 my $row;
                 while ($row = $fasta_stream->next_line){
                     $output_stream->print($row);
                 }
-                die "ouch!" unless  my $current_fasta_header = $fasta_stream->next_header;
+
+                my $current_fasta_header;
+                unless ( $current_fasta_header = $fasta_stream->next_header ){
+                    use Data::Dumper;
+                    $self->error_message( "Can't get next fasta header and we still have diffs to process!\n".Dumper $diff);
+                    return;
+                }
+
                 my $current_fasta_header_line = $fasta_stream->current_header_line;
                 $read_position =0;
                 $write_position=0;
                 if ($current_fasta_header lt $last_fasta_header){
-                    die;
-                    return;
+                    unless ($cross or ($numeric and $current_fasta_header >= $last_fasta_header)){
+                        $self->error_message( "Current fasta header is less than the last fasta header! $current_fasta_header lt $last_fasta_header" );
+                        return;
+                    }
                 }
+                $cross = 0;
+                $numeric = 0;
+
                 $last_fasta_header = $current_fasta_header;
                 $output_stream->print_header($current_fasta_header_line);
                 redo;
@@ -98,7 +123,8 @@ sub execute {
         }
 
         if ($write_position > $diff->{position}) {
-            die "write_position past diff";
+            $self->error_msg("Write position is greater than diff postion! We've missed the boat! $write_position > ".$diff->{position});
+            return;
         }
 
         $DB::single = 1;
@@ -130,7 +156,11 @@ sub execute {
             my $ref = $diff->{ref};
             $write_position += length $ref;
             my $del = substr($buffer, $first_part_length, length $ref); #check buffer at this point
-            $self->error_message("deleted seq ref does not equal acutal sequence! $del != $ref ") and return unless $del eq $ref; #TODO clean up these var names to be clearer, in diffstream.pm as well.
+            unless ($del eq $ref){ #TODO clean up these var names to be clearer, in diffstream.pm as well.
+                $self->error_message("deleted seq ref does not equal acutal sequence! $del != $ref ");
+                return ;
+            }
+
             while ($write_position > $read_position){
                 $buffer = $fasta_stream->next_line;
                 $read_position += length $buffer;
