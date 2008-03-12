@@ -296,9 +296,6 @@ $self->{'PrefixEquip'} = LoadSql($dbh, qq/select distinct equ_equipment_descript
 					 from equipment_informations where 
 					 bs_barcode = ?/, 'ListOfList');
 
-$self->{'PrefixGenome'} = LoadSql($dbh,qq/select distinct genome_name from genome g, genome_pse gp
-				  where g.gn_id = gp.gn_id and pse_id in 
-				  (select distinct pse_pse_id from pse_barcodes where bs_barcode = ? and direction = 'out')/, 'Single');  
 
 $self->{'PrefixPse'} = LoadSql($dbh,qq/select distinct pse_pse_id from pse_barcodes where bs_barcode = ? and direction = 'out'/, 'List');  
 $self->{'PrefixPcr'} = LoadSql($dbh,qq/select distinct pcr_name from pcr_product pcr, pcr_pse pp
@@ -1734,25 +1731,6 @@ sub PrefixBarcodeDesc {
     return 0;
 }
 
-sub PrefixGenome {
-
-    my ($self, $barcode) = @_;
-    
-    my $subclone = $self->{'PrefixGenome'} -> xSql($barcode);
-    if(defined $subclone) {
-	#my $desc= substr($subclone, 0, 5);
-	my ($desc) = $subclone =~ /^(.*)[A-H]\d\d$/;
-	return $desc;
-    }
-    elsif(defined $DBI::errstr){
-	$Error = $DBI::errstr;
-    }
-    else {
-	$Error = "Could not find information for barcode = $barcode.";
-    }	
-
-    return 0;
-}
 sub PrefixPrimer {
 
     my ($self, $barcode) = @_;
