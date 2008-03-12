@@ -16,7 +16,7 @@ use Data::Dumper;
 use File::Compare;
 use FindBin;
 
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 ########################################################################
 sub runfastadiff
@@ -32,11 +32,10 @@ sub runfastadiff
   my @output=`$cmd`;
   my $ret = $?;
   my $retval = 0;
-  printf "ret: $ret     outfile:  %s\n", -e $outfile ? "exists" : "not exist";
   if ( ! defined $compareto )
     { $retval = 1 if ( $ret == 0 || -e $outfile ); }
   else
-    { $retval = 1 if ( $ret != 0 || ! -r $outfile || compare($outfile,$compareto) == 0 ); }
+    { $retval = 1 if ( $ret != 0 || ! -r $outfile || compare($outfile,$compareto) != 0 ); }
   return $retval;
   }
 
@@ -55,9 +54,10 @@ sub fastadifftest
 #                replace (delete/insert at same loc);
 #                seq. descriptions maintained.
 #   simple2a   - error if delete text does not match.
-#   simple2b   - error if change is out of sequence range.
+#   simple2b   - error if insertion is out of sequence range.
 #   simple2c   - error if diff ops are unused.
 #   simple2d   - error if sequence indels are out of order.
+#   simple2e   - error if deletion is out of sequence range.
 #   multiline1 - multiple line insert/deletes.
 ########################################################################
 sub main
@@ -72,7 +72,7 @@ sub main
                 "$tpath/simple.fasta",
                 "$tpath/simple1.diff",
                 "$tpath/simple1.fasta";
-  foreach my $expect_fail (qw/simple2a simple2b simple2c simple2d/)
+  foreach my $expect_fail (qw/simple2a simple2b simple2c simple2d simple2e/)
     {
     fastadifftest "$expect_fail: handling error conditions",
                   "$tpath/simple.fasta",
