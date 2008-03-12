@@ -16,7 +16,7 @@ use Data::Dumper;
 use File::Compare;
 use FindBin;
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 ########################################################################
 sub runfastadiff
@@ -83,6 +83,10 @@ sub main
                 "$tpath/multiline.fasta",
                 "$tpath/multiline1.diff",
                 "$tpath/multiline1.fasta";
+  fastadifftest "multiline: delete off end of sequence",
+                "$tpath/multiline.fasta",
+                "$tpath/multiline2.diff",
+                undef;
   }
 
 ########################################################################
