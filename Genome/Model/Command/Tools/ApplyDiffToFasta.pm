@@ -42,6 +42,11 @@ EOS
 
 sub execute {
     my $self = shift;
+
+$self->error_messages_callback(
+    sub{ unlink $self->output; }
+);
+
     $DB::single =1;
 
 
@@ -123,7 +128,7 @@ sub execute {
         }
 
         if ($write_position > $diff->{position}) {
-            $self->error_msg("Write position is greater than diff postion! We've missed the boat! $write_position > ".$diff->{position});
+            $self->error_message("Write position is greater than diff postion! We've missed the boat! $write_position > ".$diff->{position});
             return;
         }
 
@@ -132,6 +137,10 @@ sub execute {
         while( $write_position <= $diff->{position}){
             unless (defined $buffer){
                 $buffer = $fasta_stream->next_line;
+                unless ($buffer){
+                    $self->error_message("Hit the end of the section and haven't reached the current diff's position! $write_position < ".$diff->{position});
+                    return;
+                }
                 $read_position = $read_position + length $buffer;
             }
 
