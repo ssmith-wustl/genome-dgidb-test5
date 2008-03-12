@@ -392,10 +392,7 @@ associations in four cases.
         RESEARCH_PROJECT_HTMP           GSC::ResearchProject::HTMP 
         RESEARCH_PROJECT_FINISHING      GSC::ResearchProject::Finishing
 
-        SETUP_PIPELINE                   GSC::Setup::Pipeline
-        SETUP_PIPELINE_TYPE              GSC::Setup::PipelineType
-        SETUP_PIPELINE_AMPLIFICATION     GSC::Setup::Pipeline::Amplification 
-        SEQUENCE_ANNOTATION_PARAM        GSC::Setup::SequenceAnnotationParam
+        SEQUENCE_ANNOTATION_PARAM       GSC::Setup::SequenceAnnotationParam
 
         SETUP_AUTO_ASSEMBLY             GSC::Setup::AutoAssembly
         SETUP_BASECALLER                GSC::Setup::Basecaller
@@ -405,7 +402,7 @@ associations in four cases.
         READ_SUBMISSION_NCBI            GSC::Sequence::Read::Submission::NCBI
         READ_SUBMISSION_TCGA            GSC::Sequence::Read::Submission::TCGA
 
-        TMP_ORGANISM                    GSC::TmpOrganism
+        ORGANISM_INDIVIDUAL             GSC::Organism::Individual
         ORGANISM_TAXON                  GSC::Organism::Taxon
         ORGANISM_SAMPLE                 GSC::Organism::Sample
         ORGANISM_SUBMISSION_ID          GSC::Organism::SubmissionID
