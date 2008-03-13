@@ -181,16 +181,9 @@ sub sorted_screened_fastq_file_for_lane {
 
 sub sorted_redundant_fastq_file_for_lane {
     my($self,$lane) = @_;
-
     my $model = $self->model();
-
-    my $path;
-    if ($model->multi_read_fragment_strategy()) {
-        my $run = Genome::RunChunk->get($self->run_id);
-        $path = sprintf("%s/s_%d_sequence.cchredundant.sorted.fastq", $self->resolve_run_directory, $run->limit_regions);
-    } else {
-        $path = $self->sorted_fastq_file_for_lane();
-    }
+    my $run = Genome::RunChunk->get($self->run_id);
+    my $path = sprintf("%s/s_%d_sequence.redundant.sorted.fastq", $self->resolve_run_directory, $run->limit_regions);
     return $path;
 }
 
