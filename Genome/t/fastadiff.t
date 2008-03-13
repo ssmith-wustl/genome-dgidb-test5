@@ -15,6 +15,7 @@ use warnings;
 use Data::Dumper;
 use File::Compare;
 use FindBin;
+use Genome::Model::Command;
 
 use Test::More tests => 9;
 
@@ -22,6 +23,7 @@ use Test::More tests => 9;
 sub runfastadiff
   {
   my ($ref, $diff, $compareto) = @_;
+  my $retval = 0;
   my $outfile = "/tmp/fastadiff.fasta";
   unlink $outfile if (-e $outfile);
 
@@ -29,13 +31,13 @@ sub runfastadiff
                     "genome-model tools apply-diff-to-fasta",
                     $ref, $diff, $outfile;
 # print ">> $cmd\n";
-  my @output=`$cmd 2>&1`;
-  my $ret = $?;
-  my $retval = 0;
+# my $exit_code = Genome::Model::Command->_execute_with_shell_params_and_return_exit_code(split /\s+/, $cmd);
+  my @output = `$cmd 2>&1`;
+  my $exit_code = $?;
   if ( ! defined $compareto )
-    { $retval = 1 if ( $ret == 0 || -e $outfile ); }
+    { $retval = 1 if ( $exit_code == 0 || -e $outfile ); }
   else
-    { $retval = 1 if ( $ret != 0 || ! -r $outfile || compare($outfile,$compareto) != 0 ); }
+    { $retval = 1 if ( $exit_code != 0 || ! -r $outfile || compare($outfile,$compareto) != 0 ); }
   return $retval;
   }
 
