@@ -18,9 +18,10 @@ UR::Object::Type->define(
     is => 'Command',
     has => [
     input => { is => 'String', doc => 'path to input fasta file to apply diff to' },
-    diff => { is => 'String', doc => 'path to diff file containing inserts and deletes' },
+    diff => { is => 'string', doc => 'path to diff file containing inserts and deletes' },
     output => { is => 'String', doc => 'path to output file for new patched fasta file' },
-    chunk => {is => 'String', doc => 'max size of sequence to load into memory', default => 15000 },
+    #diff_flank_file => { is => 'string', doc => 'path to file containing flanking sequence of diff areas and the modified sequence' },
+    #ref_flank_file => { is => 'string', doc => 'path to file containing flanking sequence of diff areas and the original ref sequence' },
     ],
 );
 
@@ -53,6 +54,8 @@ $self->error_messages_callback(
     my $output_stream = Genome::Utility::OutputBuffer->new($self->output );
     my $diff_stream = Genome::Utility::DiffStream->new($self->diff ); 
     my $fasta_stream = Genome::Utility::FastaStream->new($self->input ); #file or bioseq object
+    #my $diff_flank_stream = Genome::Utility::OutputBuffer->new($self->diff_flank_file);
+    #my $ref_flank_stream =  Genome::Utility::OutputBuffer->new($self->ref_flank_file);
 
 
     my $read_position=0;
@@ -71,68 +74,39 @@ $self->error_messages_callback(
 
     while (my $diff = $diff_stream->next_diff){
 
-        my $numeric;
-        my $cross;
-        #error checking
-        #if ($diff->{header} lt $last_diff_header){ #TODO currently last diff header is not set, if we do use this, make sure we take into account the numeric possibility
-        #    $self->error_message("Diff header in incorrect order");
-        #    return;
-        #}
+        $DB::single = 1;
 
         until ($diff->{header} eq $last_fasta_header) {
-            
-            if($diff->{header} lt $last_fasta_header) {
-                unless ($diff->{header} =~ /^\d+$/ and $last_fasta_header =~ /^\d+$/ and $diff->{header} >= $last_fasta_header){
-                    unless (($diff->{header} =~ /^[A-Z]+$/ and $last_fasta_header =~ /^\d+$/) or ($diff->{header} =~ /^\d+$/ and $last_fasta_header =~ /^[A-Z]+$/)){
-                            $self->error_message("Header from diff is less than the current/last fasta header! ".$diff->{header}." lt $last_fasta_header");
-                            return;
-                        }
-                    $cross = 1;
-                }
-                $numeric = 1;
-                
+
+            $output_stream->print($buffer);
+            $buffer = undef;
+            my $row;
+            while ($row = $fasta_stream->next_line){
+                $output_stream->print($row);
             }
-            if($diff->{header} gt $last_fasta_header or $cross or ($numeric and $diff->{header} > $last_fasta_header )){
 
-                $output_stream->print($buffer);
-                $buffer = undef;
-                my $row;
-                while ($row = $fasta_stream->next_line){
-                    $output_stream->print($row);
-                }
+            my $current_fasta_header;
+            unless ( $current_fasta_header = $fasta_stream->next_header ){
+                use Data::Dumper;
+                $self->error_message( "Can't get next fasta header and we still have diffs to process!\n".Dumper $diff);
+                return;
+            }
+            $write_position = 0;
+            $read_position = 0;
 
-                my $current_fasta_header;
-                unless ( $current_fasta_header = $fasta_stream->next_header ){
-                    use Data::Dumper;
-                    $self->error_message( "Can't get next fasta header and we still have diffs to process!\n".Dumper $diff);
-                    return;
-                }
+            my $current_fasta_header_line = $fasta_stream->current_header_line;
 
-                my $current_fasta_header_line = $fasta_stream->current_header_line;
-                $read_position =0;
-                $write_position=0;
-                if ($current_fasta_header lt $last_fasta_header){
-                    unless ($cross or ($numeric and $current_fasta_header >= $last_fasta_header)){
-                        $self->error_message( "Current fasta header is less than the last fasta header! $current_fasta_header lt $last_fasta_header" );
-                        return;
-                    }
-                }
-                $cross = 0;
-                $numeric = 0;
+            $last_fasta_header = $current_fasta_header;
+            $output_stream->print_header($current_fasta_header_line);
 
-                $last_fasta_header = $current_fasta_header;
-                $output_stream->print_header($current_fasta_header_line);
-                redo;
+        }        
 
-            }        
-        }
 
         if ($write_position > $diff->{position}) {
             $self->error_message("Write position is greater than diff postion! We've missed the boat! $write_position > ".$diff->{position});
             return;
         }
 
-        $DB::single = 1;
 
         while( $write_position <= $diff->{position}){
             unless (defined $buffer){
@@ -158,8 +132,6 @@ $self->error_messages_callback(
 
         $output_stream->print($diff->{patch});
 
-
-
         if ($diff->{ref}) {
             # cutting out sequence
             my $ref = $diff->{ref};
@@ -182,10 +154,12 @@ $self->error_messages_callback(
         }
 
     }
+
     $output_stream->print($buffer);
     while (my $line= $fasta_stream->next_line){
         $output_stream->print($line);
     }
+    
     while (my $current_header = $fasta_stream->next_header){
         $output_stream->print_header($fasta_stream->current_header_line);
         while (my $line= $fasta_stream->next_line){
