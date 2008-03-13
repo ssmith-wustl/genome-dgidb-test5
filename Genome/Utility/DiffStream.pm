@@ -22,7 +22,7 @@ sub next_diff{
     return undef unless $line;
     my $line_copy = $line;
     my ($subject, $chromosome, $pos, $ref, $patch) = split(/\s+/, $line);
-    $diff{line} = $line_copy;
+#   $diff{line} = $line_copy;
     $diff{subject} = $subject;
     $diff{chromosome} = $chromosome;
     $diff{position} = $pos;

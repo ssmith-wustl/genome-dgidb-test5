@@ -28,8 +28,8 @@ sub runfastadiff
   my $cmd = sprintf "%s --input=%s --diff=%s --output=%s",
                     "genome-model tools apply-diff-to-fasta",
                     $ref, $diff, $outfile;
-  print ">> $cmd\n";
-  my @output=`$cmd`;
+# print ">> $cmd\n";
+  my @output=`$cmd 2>&1`;
   my $ret = $?;
   my $retval = 0;
   if ( ! defined $compareto )
@@ -59,6 +59,7 @@ sub fastadifftest
 #   simple2d   - error if sequence indels are out of order.
 #   simple2e   - error if deletion is out of sequence range.
 #   multiline1 - multiple line insert/deletes.
+#   multiline2 - error if delete off end of sequence.
 ########################################################################
 sub main
   {

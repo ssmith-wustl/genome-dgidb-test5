@@ -7,3 +7,6 @@ gi_0123456789   XX  21   fed          -
 short           XX   2   b            -     
 short           XX   3   c            -     
 short           XX   3   -            d     
+short2          XX   2   bc           -     
+short2          XX   3   -            d     
+short3          XX   2   bc           d     
