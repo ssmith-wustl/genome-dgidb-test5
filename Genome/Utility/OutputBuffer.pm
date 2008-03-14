@@ -6,7 +6,7 @@ use Data::Dumper;
 
 use IO::File;
 
-my $linelength = 60;
+my $linelength = 10;
 
 sub new{
     my $class = shift;
