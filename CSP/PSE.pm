@@ -17,6 +17,7 @@ my %PROCESS_COUNT = (
     #- there are over 1000 here right now. maybe we can make it non-0 later
     'assemble 454 regions' => 0,
 
+    'align reads to recent runs'             => 2,
     'analyze 454 output'                     => 0,
     'autofinish'                             => 1,
     'mkcs'                                   => 1,
