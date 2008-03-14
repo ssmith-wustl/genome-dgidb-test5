@@ -229,11 +229,11 @@ sub execute {
                 $ref_flank .= $first_part;
 
                 if ( length $diff_flank ){
-                    $diff_flank_stream->print_header(">$flank_header");
+                    $diff_flank_stream->print_header(">$flank_header ($last_fasta_header)");
                     $diff_flank_stream->print($diff_flank);
                 }
                 if ( length $ref_flank ){
-                    $ref_flank_stream->print_header(">$flank_header");
+                    $ref_flank_stream->print_header(">$flank_header ($last_fasta_header)");
                     $ref_flank_stream->print($ref_flank);
                 }
                 $diff_flank = undef;
