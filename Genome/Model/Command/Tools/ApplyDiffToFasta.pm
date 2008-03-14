@@ -45,7 +45,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $| = 1;
 
     my $fasta_stream = Genome::Utility::FastaStream->new($self->input ); #file or bioseq object
     my $diff_stream = Genome::Utility::DiffStream->new($self->diff, $self->flank_size); 
