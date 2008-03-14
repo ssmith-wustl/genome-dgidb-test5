@@ -50,7 +50,6 @@ sub execute {
     my $fasta_stream = Genome::Utility::FastaStream->new($self->input ); #file or bioseq object
     my $diff_stream = Genome::Utility::DiffStream->new($self->diff, $self->flank_size); 
 
-=cut
     $self->error_messages_callback(
         sub{
             unlink $self->output; 
@@ -59,14 +58,13 @@ sub execute {
         }
 
     );
-=cut
 
     my $output_stream = Genome::Utility::OutputBuffer->new($self->output );
     
     my $diff_file = $self->diff_flank_file || '/dev/null';
     my $ref_file = $self->ref_flank_file || '/dev/null';
-    my $diff_flank_stream = Genome::Utility::OutputBuffer->new($self->diff_flank_file);
-    my $ref_flank_stream =  Genome::Utility::OutputBuffer->new($self->ref_flank_file);
+    my $diff_flank_stream = Genome::Utility::OutputBuffer->new($diff_file);
+    my $ref_flank_stream =  Genome::Utility::OutputBuffer->new($ref_file);
 
     my $read_position=0;
     my $buffer;

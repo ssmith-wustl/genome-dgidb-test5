@@ -12,7 +12,7 @@ sub new{
     my $class = shift;
     my $file = shift;
     my $io = IO::File->new("> ".$file);
-    die "can't create io" unless $io;
+    die "can't create io from $file" unless $io;
     my $self = bless({_io => $io, current_line_avail => $linelength},$class);
     return $self;
 }
