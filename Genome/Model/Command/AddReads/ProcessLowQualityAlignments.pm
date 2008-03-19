@@ -36,7 +36,7 @@ sub sub_command_delegator {
 
     my $model = Genome::Model->get(id => $params{'model_id'});
     unless ($model) {
-        $self->error_message("Can't retrieve a Genome Model with ID ".$params{'model_id'});
+        $class->error_message("Can't retrieve a Genome Model with ID ".$params{'model_id'});
         return;
     }
 
