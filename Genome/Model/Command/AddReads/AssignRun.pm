@@ -1,11 +1,10 @@
-
 package Genome::Model::Command::AddReads::AssignRun;
 
 use strict;
 use warnings;
 
 use above "Genome";
-use Command; 
+use Command;
 
 class Genome::Model::Command::AddReads::AssignRun {
     is => ['Genome::Model::Command::DelegatesToSubcommand::WithRun'],
@@ -25,22 +24,24 @@ EOS
 
 sub help_detail {
     return <<"EOS"
-This command is launched automatically by "add reads".  
+This command is launched automatically by "add reads".
 
-It delegates to the appropriate sub-command according to 
+It delegates to the appropriate sub-command according to
 the model's sequencing platform.
 EOS
 }
 
-sub sub_command_delegator {
-    my $self = shift;
+sub should_bsub { 0;}  # This sub-command shouldn't be bsubbed
 
-    my $run = Genome::RunChunk->get(id => $self->run_id);
+sub sub_command_delegator {
+    my($class,%params) = @_;
+
+    my $run = Genome::RunChunk->get(id => $params{'run_id'});
     return unless $run;
 
     return $run->sequencing_platform;
 }
-    
+
 
 1;
 

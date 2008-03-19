@@ -32,11 +32,11 @@ EOS
 }
 
 sub sub_command_delegator {
-    my $self = shift;
+    my($class,%params) = @_;
 
-    my $model = Genome::Model->get(id => $self->model_id);
+    my $model = Genome::Model->get(id => $params{'model_id'});
     unless ($model) {
-        $self->error_message("Can't retrieve a Genome Model with ID ".$self->model_id);
+        $self->error_message("Can't retrieve a Genome Model with ID ".$params{'model_id'});
         return;
     }
 

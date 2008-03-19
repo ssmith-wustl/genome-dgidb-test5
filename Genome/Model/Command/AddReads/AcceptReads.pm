@@ -33,9 +33,9 @@ EOS
 }
 
 sub sub_command_delegator {
-    my $self = shift;
+    my($class,%params) = @_;
 
-    my $model = Genome::Model->get($self->model_id);
+    my $model = Genome::Model->get($params{'model_id'});
     return unless $model;
 
     return $model->genotyper_name;
