@@ -33,11 +33,14 @@ sub make_diff{
     return unless $line;
     my %diff;
     my $flank_adjust = 0;
-    my ($subject, $chromosome, $pos, $delete, $insert) = split(/\s+/, $line);
+    my $flank = $self->{flank};
+    my ($subject, $chromosome, $pos, $delete, $insert, $pre_diff_seq, $post_diff_seq) = split(/\s+/, $line);
 
     $diff{header} = $subject;
     $diff{delete} = $delete unless $delete =~/-/;
+    $diff{delete} ||= '';
     $diff{insert} = $insert unless $insert =~/-/;
+    $diff{insert} ||= '';
 
     $diff{position} = $pos;
     
@@ -45,10 +48,20 @@ sub make_diff{
         $diff{position}--;
         $flank_adjust += length $diff{delete};
     }
+    
+    if ($pre_diff_seq or $post_diff_seq){
+        $diff{pre_diff_sequence} = $pre_diff_seq;
+        $diff{post_diff_sequence} = $post_diff_seq;
 
-    $diff{left_flank} = $diff{position} - $self->{flank};
-    $diff{left_flank} = 0 if $diff{left_flank} < 0;
-    $diff{right_flank} = $diff{position} + $flank_adjust + $self->{flank};
+        my $min_flank = length $pre_diff_seq;
+        $min_flank = length $post_diff_seq if length $post_diff_seq > $min_flank;
+
+        $flank = $min_flank if $flank < $min_flank;
+    }
+
+    $diff{left_flank_position} = $diff{position} - $flank;
+    $diff{left_flank_position} = 0 if $diff{left_flank_position} < 0;
+    $diff{right_flank_position} = $diff{position} + $flank_adjust + $flank;
 
     $self->{current_diff_header} = $diff{header};
     return \%diff;
@@ -61,9 +74,9 @@ sub _generate_header{
 
 }
 
-sub next_left_flank{
+sub next_left_flank_position{
     my $self = shift;
-    return $self->{next_diff}->{left_flank} if $self->{next_diff} and $self->{next_diff}->{header} eq $self->{current_diff_header};
+    return $self->{next_diff}->{left_flank_position} if $self->{next_diff} and $self->{next_diff}->{header} eq $self->{current_diff_header};
     return undef;
 }
 
