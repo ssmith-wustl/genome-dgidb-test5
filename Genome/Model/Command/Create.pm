@@ -13,21 +13,21 @@ use Data::Dumper;
 class Genome::Model::Command::Create {
     is => ['Genome::Model::Event'],
     has => [
+        model_id               => { is => 'varchar', len => 255, doc => 'Identifier for the new model'},
         dna_type               => { is => 'varchar', len => 255 },
         genotyper              => { is => 'varchar', len => 255 },
         genotyper_params       => { is => 'varchar', len => 255, is_optional => 1 },
         indel_finder           => { is => 'varchar', len => 255 },
         indel_finder_params    => { is => 'varchar', len => 255, is_optional => 1 },
-        model_name             => { is => 'varchar', len => 255 },
         prior                  => { is => 'varchar', len => 32,  is_optional => 1 },
         read_aligner           => { is => 'varchar', len => 255 },
         read_aligner_params    => { is => 'varchar', len => 255, is_optional => 1 },
         read_calibrator        => { is => 'varchar', len => 255, is_optional => 1 },
         read_calibrator_params => { is => 'varchar', len => 255, is_optional => 1 },
-        reference_sequence     => { is => 'varchar', len => 255 },
-        align_dist_threshold => { is => 'varchar', len => 255 },
+        reference_sequence     => { is => 'varchar', len => 255, doc => 'reference sequence' },
+        align_dist_threshold   => { is => 'varchar', len => 255 },
         multi_read_fragment_strategy => { is => 'varchar', len => 255, is_optional => 1},
-        sample                 => { is => 'varchar', len => 255 },
+        sample                 => { is => 'varchar', len => 255, doc => 'sample description' },
     ],
     schema_name => 'Main',
 };
@@ -51,15 +51,14 @@ sub help_brief {
 sub help_synopsis {
     return <<"EOS"
 genome-model create
-                    --name test5
+                    --model-id test5
                     --sample ley_aml_patient1_tumor
                     --dna-type whole 
-                    --read-calibrator none
                     --read-aligner maq1_6    
                     --genotyper maq1_6     
                     --indel-finder bhdsindel1 
                     --reference-sequence NCBI-human-build36 
-                    --alignment-distribution-threshold 0
+                    --align-dist-threshold 0
 EOS
 }
 
@@ -87,6 +86,8 @@ sub command_properties{
 sub execute {
     my $self = shift;
 
+print Dumper $self;
+
     # genome model specific
 $DB::single=1;
 
@@ -98,6 +99,7 @@ $DB::single=1;
 
     # generic: abstract out
     
+print Dumper $self;
     my %params = %{ $self->_extract_command_properties_and_duplicate_keys_for__name_properties() };
     
     my $obj = $self->_create_target_class_instance_and_error_check( \%params );
