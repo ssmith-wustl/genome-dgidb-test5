@@ -157,29 +157,34 @@ $DB::single = 1;
     #$aligned_info->close();
     #untie %unaligned_index;
 
+
     # use submap if necessary
-    
     my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
 
-    foreach my $seq (@subsequences) {
-        unless (-d "$this_lane_alignments_file.submaps") {
-             mkdir("$this_lane_alignments_file.submaps");
-        }    
-        my $submap_target = sprintf("%s.submaps/%s.map",$this_lane_alignments_file,$seq);
+    if (@subsequences) {
+        foreach my $seq (@subsequences) {
+            unless (-d "$this_lane_alignments_file.submaps") {
+                 mkdir("$this_lane_alignments_file.submaps");
+            }
+            my $submap_target = sprintf("%s.submaps/%s.map",$this_lane_alignments_file,$seq);
                 
-        # That last "1" is for the required 'begin' parameter
-        my $maq_submap_cmdline = "maq submap $submap_target $this_lane_alignments_file $seq 1";
+            # That last "1" is for the required 'begin' parameter
+            my $maq_submap_cmdline = "maq submap $submap_target $this_lane_alignments_file $seq 1";
             
-        print $maq_submap_cmdline, "\n";
+            print $maq_submap_cmdline, "\n";
                 
-        my $rv = system($maq_submap_cmdline);
-        if ($rv) {
-             $self->error_message("got a nonzero return value from maq submap; cmdline was $maq_submap_cmdline");
-             return;
-       } 
-   }
+            my $rv = system($maq_submap_cmdline);
+            if ($rv) {
+                 $self->error_message("got a nonzero return value from maq submap; cmdline was $maq_submap_cmdline");
+                 return;
+            }
+        }
+       
+        # After we do the submaps, we don't need the original map file anymore
+        unlink($this_lane_alignments_file);
+    }
 
-   return 1;
+    return 1;
 }
 
 
