@@ -16,19 +16,5 @@ UR::Object::Type->define(
 );
 
 
-sub _create_sub_command {
-    my $self = shift;
-    my $sub_command_type = $self->_get_sub_command_class_name();
-
-    my $command = $sub_command_type->create(model_id => $self->model_id,
-                                            ref_seq_id => $self->ref_seq_id,
-					    event_type => $sub_command_type->command_name,
-					    date_scheduled => UR::Time->now(),
-					    user_name => $ENV{'USER'},
-					   );
-
-
-}
-
 1;
 

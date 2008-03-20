@@ -12,47 +12,32 @@ UR::Object::Type->define(
     is_abstract => 1,
     has => [ 
              run_id => { is => 'Integer', doc => 'Identifies the run by id'},
+             run => { is => 'Genome::RunChunk', id_by => 'run_id' },
            ], 
 );
 
 
-sub _create_sub_command {
-    my $self = shift;
-    my $sub_command_type = $self->_get_sub_command_class_name();
+sub _validate_params {
+    my($class,%params) = @_;
 
-#$DB::single=1;
-    my $command = $sub_command_type->create(model_id => $self->model_id,
-                                            run_id => $self->run_id,
-                                            event_type => $sub_command_type->command_name,
-                                            date_scheduled => UR::Time->now(),
-                                            user_name => $ENV{'USER'},
-                                          );
-    return $command;
-
-
-
-    # The add-reads top-level step may have (probably) made an event record
-    # as a byproduct of some of its other work
-    my %args = (model_id => $self->model_id,
-                run_id => $self->run_id,
-                event_type => $sub_command_type->command_name,
-                user_name => $ENV{'USER'},
-               );
-    my @possible_commands = $sub_command_type->get(%args,
-                                                   event_status => { operator => '!=', value => 'Failed'},
-                                                  );
-    unless (@possible_commands) {
-        my $command = $sub_command_type->create(%args,
-                                                date_scheduled => UR::Time->now(),
-                                               );
-        return $command;
+    unless ($params{'model_id'} && $params{'run_id'}) {
+        $class->error_message("both model_id and run_id are required params when creating a $class");
+        return;
     }
 
-    my @commands = sort { $a->id <=> $b->id }
-                   @possible_commands;
+    unless (Genome::Model->get(id => $params{'model_id'})) {
+        $class->error_message("There is no model with id ".$params{'model_id'});
+        return;
+    }
 
-    return $commands[0];
+    unless (Genome::RunChunk->get(id => $params{'run_id'}) ) {
+        $class->error_message("There is no run with id ".$params{'run_id'});
+        return;
+    }
+
+    return 1;
 }
+
 
 1;
 
