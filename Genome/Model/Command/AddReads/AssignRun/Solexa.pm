@@ -7,9 +7,6 @@ use above "Genome";
 use File::Path;
 use GSC;
 
-use GDBM_File;
-use File::Temp;
-
 use IO::File;
 
 class Genome::Model::Command::AddReads::AssignRun::Solexa {
@@ -37,13 +34,14 @@ when it is determined that the run is from Solexa.
 EOS
 }
 
-sub bsub_rusage {
-    return "-R 'select[type=LINUX64]'";
+sub should_bsub { 0;}
 
-}
+# The Previous PSE puts files starting in this directory.  
+# There's a subdir for each run name, and then the fastqs are
+# under there
+sub fastq_directory { '/gscmnt/sata181/info/medseq/sample_data/fastq_dir_from_pse/' }
 
-
-sub _execute {
+sub execute {
     my $self = shift;
 
     $DB::single=1;
@@ -77,173 +75,51 @@ sub _execute {
         }
     }
 
+    # The LIMS PSE that ran before us has done some preparation already
+    # by making 2 files for each lane in the run.  1 containing sequences
+    # that are unique for that sample's library, and another containing
+    # sequences that have been seen before, both are fastq files
+
     # Convert the original solexa sequence files into maq-usable files
     my $lane = $self->run->limit_regions;
 
-    my $gerald_dir = $self->run->full_path;
-    my $seqfile = sprintf("%s/s_%s_sequence.txt", $gerald_dir, $lane);
-    unless (-r $seqfile and -s $seqfile) {
-        $self->error_message("Gerald file $seqfile is not readable or has 0 size");
+    my $orig_unique_file = sprintf("%s/%s/s_%s_sequence.unique.sorted.fastq",
+                                   $self->fastq_directory,
+                                   $run->name,
+                                   $lane,
+                                 );
+    my $orig_duplicate_file = sprintf("%s/%s/s_%s_sequence.duplicate.sorted.fastq",
+                                   $self->fastq_directory,
+                                   $run->name,
+                                   $lane,
+                                 );
+
+
+    my $our_unique_file = sprintf("%s/%s/s_%s_sequence.unique.sorted.fastq",
+                                   $run_dir,
+                                   $run->name,
+                                   $lane,
+                                 );
+    my $our_duplicate_file = sprintf("%s/%s/s_%s_sequence.duplicate.sorted.fastq",
+                                   $run_dir,
+                                   $run->name,
+                                   $lane,
+                                 );
+
+    # make a symlink in our model directory pointing to the unique and dup fastq data
+    unless (symlink($orig_unique_file,$our_unique_file)) {
+        $self->error_message("Unable to create symlink $our_unique_file -> $orig_unique_file: $!");
         return;
     }
 
-    # convert quality values
-    my $fastq_file = $self->fastq_file_for_lane();
-    $self->status_message("Original gerald file path $seqfile\nResulting fastq file $fastq_file\n");
-
-    unlink($fastq_file);
-
-    my $maq_output = '';
-    my $cmdline = "maq sol2sanger $seqfile $fastq_file";
-    my $maq_fh = IO::File->new("$cmdline 2>&1 |");
-    unless ($maq_fh) {
-        $self->error_message("Can't start $cmdline: $!");
-        return;
-    }
-    while(<$maq_fh>) {
-        $maq_output .= $_;
-    }
-    $maq_fh->close();
-    if ($?) {
-        my $rv = $? >> 8;
-        $self->error_message("$cmdline returned an error code $rv.  The output was:\n$maq_output\n");
-        return;
-    }
-
-    unless (-f $fastq_file) {
-        $self->error_message("maq didn't create the fastq file $fastq_file");
-        return;
-    }
-
-    # We also need a sorted/indexed fastq file 
-    unless ($self->_make_sorted_fastq_and_index_file()) {
-        return;
-    }
-
-    my $sorted_fastq = $self->sorted_fastq_file_for_lane();
-    unless (-f $sorted_fastq) {
-        $self->error_message("The sorted fastq file didn't get created $sorted_fastq");
+    unless (symlink($orig_duplicate_file, $our_duplicate_file)) {
+        $self->error_message("Unable to create symlink $our_duplicate_file -> $orig_duplicate_file: $!");
         return;
     }
 
     return 1;
 }
-
-
-sub _make_sorted_fastq_and_index_file {
-    my($self) = @_;
-
-    my $fastq_file = $self->fastq_file_for_lane();
-    my $fastq = IO::File->new($fastq_file);
-    unless ($fastq) {
-        $self->error_message("can't open $fastq_file: $!");
-        return;
-    }
-
-    my $presorted_pathname = $fastq_file . ".presorted";
-    my $presorted = IO::File->new(">$presorted_pathname");
-    unless ($presorted) {
-        $self->error_message("Can't open $presorted_pathname for writing: $!");
-        return;
-    }
-
-    my $postsorted_pathname = $fastq_file . ".postsorted";
-
-    while(1) {
-        my $read_name = $fastq->getline;
-        last unless $read_name;
-        chomp $read_name;
-        last unless $read_name;
-
-        my $sequence = $fastq->getline;
-        chomp $sequence;
-        
-        my $throwaway = $fastq->getline;  # This line should just be "+"
-
-        my $quality = $fastq->getline;
-        chomp $quality;
-
-        unless ($sequence && $quality) {
-            $self->error_message("Malformed data in fastq file, no sequence or quality found for read $read_name line ".$fastq->input_line_number);
-            return;
-        }
-
-        $presorted->print(join("\t", $sequence, $read_name, $quality),"\n");
-    }
-
-    $presorted->close();
-    $fastq->close();
-
-    my $rv = system("sort $presorted_pathname > $postsorted_pathname");
-    if ($rv) {
-        $self->error_message("Get a non-zero return value from sorting $presorted_pathname into $postsorted_pathname");
-        return;
-    }
-
-    unless (-f $postsorted_pathname and -s $postsorted_pathname) {
-        $self->error_message("Sorted sequence file $postsorted_pathname has no info");
-        return;
-    }
-
-    unless (-s $presorted_pathname == -s $postsorted_pathname) {
-        $self->error_message("The pre- and post-sorted file sizes do not match!\n");
-        return;
-    }
-
-    my $postsorted = IO::File->new($postsorted_pathname);
-
-    my $sorted_pathname = $self->sorted_fastq_file_for_lane();
-    my $sorted = IO::File->new(">$sorted_pathname");
-    unless ($sorted) {
-        $self->error_message("Can't create $sorted_pathname for writing: $!");
-        return;
-    }
-
-#    my %read_index;
-#    # Create the DBM file in /tmp initially  because it's faster
-#    my $model = Genome::Model->get(id => $self->model_id);
-#    my $run = Genome::RunChunk->get(id => $self->run_id);
-#    my $temp_dbm_file = sprintf("/tmp/fastq_index_%s_%s_%d.dbm", $model->genome_model_id, $run->limit_regions, $$);
-#    unless (tie(%read_index, 'GDBM_File', $temp_dbm_file, &GDBM_WRCREAT, 0666)) {
-#        $self->error_message("Failed to tie to DBM file $temp_dbm_file");
-#        return;
-#    }
-
-#    my $file_offset = 0;
-    while(<$postsorted>) {
-        chomp;
-        my($sequence,$read_name,$quality) = split;
-        my $record = "$read_name\n$sequence\n+\n$quality\n";
-        $sorted->print($record);
-
-#        $read_index{$read_name} = $file_offset;
-#        $file_offset += length($record);
-    }
-
-#    untie %read_index;
-    $postsorted->close();
-    $sorted->close();
-
-#    my $dbm_file = $self->read_index_dbm_file_for_lane();
-#    `mv $temp_dbm_file $dbm_file`;
-#    if ($?) {
-#        $self->error_message("Failed to move $temp_dbm_file $dbm_file");
-#        return;
-#    }
-
-    unless (-s $fastq_file == -s $sorted_pathname) {
-        $self->error_message("The pre- and post-sorted fastq file sizes do not match!\n");
-        return;
-    }
-
-
-    unlink($presorted_pathname,$postsorted_pathname);
-        
-    return 1;
-}
-
-         
-
+    
 
 
 1;
