@@ -13,21 +13,30 @@ use Data::Dumper;
 class Genome::Model::Command::Create {
     is => ['Genome::Model::Event'],
     has => [
-        model_id               => { is => 'varchar', len => 255, doc => 'Identifier for the new model'},
-        dna_type               => { is => 'varchar', len => 255 },
-        genotyper              => { is => 'varchar', len => 255 },
-        genotyper_params       => { is => 'varchar', len => 255, is_optional => 1 },
-        indel_finder           => { is => 'varchar', len => 255 },
-        indel_finder_params    => { is => 'varchar', len => 255, is_optional => 1 },
+        dna_type               => { is => 'varchar', len => 255,
+                                    doc => "The type of dna used in the reads for this model, probably 'genomic dna' or 'cdna'" },
+        genotyper              => { is => 'varchar', len => 255,
+                                    doc => 'Name of the genotyper for this model' },
+        genotyper_params       => { is => 'varchar', len => 255, is_optional => 1,
+                                    doc => 'command line args used for the genotyper' },
+        indel_finder           => { is => 'varchar', len => 255,
+                                    doc => 'Name of the indel finder for this model' },
+        indel_finder_params    => { is => 'varchar', len => 255, is_optional => 1,
+                                    doc => 'command line args for the indel finder' },
+        model_name             => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
         prior                  => { is => 'varchar', len => 32,  is_optional => 1 },
-        read_aligner           => { is => 'varchar', len => 255 },
-        read_aligner_params    => { is => 'varchar', len => 255, is_optional => 1 },
+        read_aligner           => { is => 'varchar', len => 255,
+                                    doc => 'alignment program used for this model' },
+        read_aligner_params    => { is => 'varchar', len => 255, is_optional => 1,
+                                    doc => 'command line args for the aligner' },
         read_calibrator        => { is => 'varchar', len => 255, is_optional => 1 },
         read_calibrator_params => { is => 'varchar', len => 255, is_optional => 1 },
-        reference_sequence     => { is => 'varchar', len => 255, doc => 'reference sequence' },
-        align_dist_threshold   => { is => 'varchar', len => 255 },
+        reference_sequence     => { is => 'varchar', len => 255,
+                                    doc => 'Identifies the reference sequence used in the model' },
+        align_dist_threshold => { is => 'varchar', len => 255 },
         multi_read_fragment_strategy => { is => 'varchar', len => 255, is_optional => 1},
-        sample                 => { is => 'varchar', len => 255, doc => 'sample description' },
+        sample                 => { is => 'varchar', len => 255,
+                                    doc => 'The name of the sample all the reads originate from' },
     ],
     schema_name => 'Main',
 };
@@ -51,7 +60,7 @@ sub help_brief {
 sub help_synopsis {
     return <<"EOS"
 genome-model create
-                    --model-id test5
+                    --model-name test5
                     --sample ley_aml_patient1_tumor
                     --dna-type whole 
                     --read-aligner maq1_6    
