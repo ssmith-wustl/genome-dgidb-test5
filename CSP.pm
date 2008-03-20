@@ -661,7 +661,6 @@ my %csp_priority = (
     'allocate disk space'                     => 1,
     'reallocate disk space'                   => 1,
     'deallocate disk space'                   => 1,
-    'transfer solid run'                      => 1,
 
 #    these were given their own cron to get around the
 #    problem of running as the lims user instead of seqmgr
@@ -742,7 +741,37 @@ sub _cron_setup {
         block       => 0,
     );
     if (! $cspc_lock and ! $ignore_locks) {
-        App::Object->status_message("$$ did not get lock, quitting");
+        App::Object->status_message("$$ did not get lock");
+        my $answer=App::Lock->examine_lock(mechanism   => 'file',
+                                           resource_id => $resource_id);
+        if(time()-$answer->{time}>2*60*60) { # Lock is more than 2 hours old
+            App::Object->status_message("Lock for resource $resource_id ".
+                                        "is more than 2 hours old, notifying ".
+                                        "informatics");
+            my $message=sprintf("There is a lock for the CSP cron on hostname %s".
+                                " that is %.1f hours old.\n".
+                                "This is usually an indication of a hung CSP cron\n".
+                                "Please investigate\n".
+                                "\thostname:  %s\n".
+                                "\tpid:  %d\n".
+                                "\tprogram holding lock:  %s\n".
+                                "\tlock file path:  %s\n".
+                                "\ttime of lock creation:  %s\n",
+                                $answer->{hostname},
+                                (time()-$answer->{time})/3600,
+                                $answer->{hostname},
+                                $answer->{pid},
+                                $answer->{program},
+                                $answer->{lock_file},
+                                scalar(localtime($answer->{time})));
+                
+
+              App::Mail->mail(To      => 'autobulk',
+                              Subject => "Stale CSP lock for resource $resource_id",
+                              Message => $message
+                              );
+        }
+
         exit 0;
     }
 
