@@ -15,8 +15,8 @@ UR::Object::Type->define(
     has => [
         #date_completed        => { is => 'TIMESTAMP(6)', len => 11, is_optional => 1 },
         #date_scheduled        => { is => 'TIMESTAMP(6)', len => 11, is_optional => 1 },
-        date_completed        => { is => 'TIMESTAMP(20)', len => 20, is_optional => 1 },
-        date_scheduled        => { is => 'TIMESTAMP(20', len => 20, is_optional => 1 },
+        date_completed        => { is => 'TIMESTAMP(20)', len => 11, is_optional => 1 },
+        date_scheduled        => { is => 'TIMESTAMP(20)', len => 11, is_optional => 1 },
         event_status          => { is => 'VARCHAR2', len => 32, is_optional => 1 },
         event_type            => { is => 'VARCHAR2', len => 255 },
         model                 => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
@@ -32,90 +32,15 @@ UR::Object::Type->define(
 );
 
 
-# This create() can get called in two different occasions:
-# 1) When some initiator programs runs (like the top-level add-reads), we actually want to
-#    create a brand new event and log it as 'scheduled'
-# 2) When the sub-sub command acutally executes, say on a blade, the Command module
-#    wrapper system will create() an object of the appropriate subtype.  In this
-#    case we want to find the right previously created command and return that
-#    instead of making a new one
-sub create {
-    my $class = shift;
-    my %args = @_;
 
-$DB::single=1;
-
-    #if (! exists($args{'lsf_job_id'}) and exists($ENV{'LSB_JOBID'})) {
-    #    $args{'lsf_job_id'} = $ENV{'LSB_JOBID'};
-    #}
-    #return $class->SUPER::create(%args);
-
-    delete $args{' '};  # Most (all?) Of these things are really going to be some 
-                        # derivitives of Command::Something, so there'll be a ' ' param in there
-    my @candidates = $class->get(%args,
-                                 event_status => 'Scheduled');
-
-    my $event;
-    if (@candidates == 0) {
-        if (! exists($args{'lsf_job_id'}) and exists($ENV{'LSB_JOBID'})) {
-            $args{'lsf_job_id'} = $ENV{'LSB_JOBID'};
-        }
-        $event = $class->SUPER::create(%args);
-    } elsif (@candidates == 1) {
-        if (! exists($args{'lsf_job_id'}) and exists($ENV{'LSB_JOBID'})) {
-            $candidates[0]->lsf_job_id($ENV{'LSB_JOBID'});
-        }
-        $event = $candidates[0];
-    } else {
-         $class->warning_message("Got back ".scalar(@candidates)." objects from get() returning the oldest one");
-         @candidates = sort { $a->date_scheduled cmp $b->date_scheduled } @candidates;
-         $event = $candidates[0];
-    }
-
-    $event->date_scheduled(UR::Time->now());
-    $event->event_status('Scheduled');
-    $event->user_name($ENV{'USER'});
-    if ($event->can('command_name')) {
-        $event->event_type($event->command_name);
-    } else {
-        $event->event_type('unknown');
-    }
-
-    # A nasty, ugly hack
-    # This in effect overrides the lowest-level commands' execute() method
-    # so that it gets called, then updates the date_completed and event_status
-    # before returning Command infrastructure 
-    #
-    # The right way is to change all the sub- and sub-sub commands' execute()
-    # to something like _execute() and then define execute() in here which would
-    # call _execute();
-#    no strict 'refs';
-#    my $class_path = $class . '::';
-#    my $glob = ${$class_path}{'execute'};
-#    my $orig_execute  = *{$glob}{'CODE'};
-#    my $sub = sub {
-#                      $DB::single=1;
-#                      my $rv = $orig_execute->(@_);
-#                      $_[0]->date_completed(UR::Time->now());
-#                      $_[0]->event_status($rv ? 'Succeeded' : 'Failed');
-#                      return $rv;
-#                   };
-#    my $execute_path = $class_path . 'execute';
-#    no warnings 'redefine';
-#    *{$execute_path} = $sub;
-    
-    return $event;
-}
-
-
-sub execute {
-    my $self = shift;
-
-    my $rv = $self->_execute();
-    $self->date_completed(UR::Time->now());
-    $self->event_status($rv ? 'Succeeded' : 'Failed');
-    return $rv;
-}
+#sub execute {
+#    my $self = shift;
+#
+#    my $rv = $self->_execute();
+#    $self->date_completed(UR::Time->now());
+#    $self->event_status($rv ? 'Succeeded' : 'Failed');
+#    return $rv;
+#}
 
 
 
@@ -137,6 +62,28 @@ sub resolve_run_directory {
                                     $self->run->name);
 }
 
+
+# I thought that the Command API should be able to do this through
+# resolve_class_and_params_for_argv(), but it didn't work...
+sub class_for_event_type {
+    my $self = shift;
+
+    my @command_parts = split(' ',$self->event_type);
+    my $genome_model = shift @command_parts;
+    if ($genome_model !~ m/genome-model/) {
+        $self->error_message("Malformed event-type for event ".$self->event_id.
+                             ". Expected it to begin with 'genome-model'");
+        return;
+    }
+
+    foreach ( @command_parts ) {
+        my @sub_parts = map { ucfirst } split('-');
+        $_ = join('',@sub_parts);
+    }
+
+    my $class_name = join('::', 'Genome::Model::Command' , @command_parts);
+    return $class_name;
+}
 
 
 # maq map file for all this lane's alignments
@@ -183,10 +130,9 @@ sub sorted_redundant_fastq_file_for_lane {
     my($self,$lane) = @_;
     my $model = $self->model();
     my $run = Genome::RunChunk->get($self->run_id);
-    my $path = sprintf("%s/s_%d_sequence.redundant.sorted.fastq", $self->resolve_run_directory, $run->limit_regions);
+    my $path = sprintf("%s/s_%d_sequence.duplicate.sorted.fastq", $self->resolve_run_directory, $run->limit_regions);
     return $path;
 }
-
 
 
 # The maq bfq file that goes with that lane's fastq file
