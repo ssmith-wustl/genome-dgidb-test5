@@ -20,7 +20,7 @@ class Genome::Model::Command::AddReads::AcceptReads::Maq {
 };
 
 sub help_brief {
-    "Use maq to accept reads";
+    "Use maq to accept reads from a lane if the evenness is greater than the model's alignment_distribution_threshold";
 }
 
 sub help_synopsis {
