@@ -111,18 +111,14 @@ sub sorted_fastq_file_for_lane {
 }
 
 
-sub sorted_screened_fastq_file_for_lane {
+sub sorted_unique_fastq_file_for_lane {
     my($self,$lane) = @_;
 
     my $model = $self->model();
 
     my $path;
-    if ($model->multi_read_fragment_strategy()) {
-        my $run = Genome::RunChunk->get($self->run_id);
-        $path = sprintf("%s/s_%d_sequence.unique.sorted.fastq", $self->resolve_run_directory, $run->limit_regions);
-    } else {
-        $path = $self->sorted_fastq_file_for_lane();
-    }
+    my $run = Genome::RunChunk->get($self->run_id);
+    $path = sprintf("%s/s_%d_sequence.unique.sorted.fastq", $self->resolve_run_directory, $run->limit_regions);
     return $path;
 }
 
@@ -136,11 +132,18 @@ sub sorted_redundant_fastq_file_for_lane {
 
 
 # The maq bfq file that goes with that lane's fastq file
-sub bfq_file_for_lane {
+sub unique_bfq_file_for_lane {
     my($self) = @_;
     my $run = Genome::RunChunk->get($self->run_id);
-    return sprintf("%s/s_%d_sequence.bfq", $self->resolve_run_directory, $run->limit_regions);
+    return sprintf("%s/s_%d_sequence.unique.bfq", $self->resolve_run_directory, $run->limit_regions);
 }
+
+sub redundant_bfq_file_for_lane {
+    my($self) = @_;
+    my $run = Genome::RunChunk->get($self->run_id);
+    return sprintf("%s/s_%d_sequence.duplicate.bfq", $self->resolve_run_directory, $run->limit_regions);
+}
+
 
 # And ndbm file keyed by read name, value is the offset in the sorted fastq file where the read info is
 sub read_index_dbm_file_for_lane {
