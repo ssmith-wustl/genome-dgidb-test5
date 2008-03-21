@@ -88,21 +88,28 @@ sub execute {
                                    $run->name,
                                    $lane,
                                  );
+    unless (-f $orig_unique_file) {
+        $self->error_message("Source fastq $orig_unique_file does not exist");
+        return;
+    }
+
     my $orig_duplicate_file = sprintf("%s/%s/s_%s_sequence.duplicate.sorted.fastq",
                                    $self->fastq_directory,
                                    $run->name,
                                    $lane,
                                  );
+    unless (-f $orig_duplicate_file) {
+        $self->error_message("Source fastq $orig_duplicate_file does not exist");
+        return;
+    }
 
 
-    my $our_unique_file = sprintf("%s/%s/s_%s_sequence.unique.sorted.fastq",
+    my $our_unique_file = sprintf("%s/s_%s_sequence.unique.sorted.fastq",
                                    $run_dir,
-                                   $run->name,
                                    $lane,
                                  );
-    my $our_duplicate_file = sprintf("%s/%s/s_%s_sequence.duplicate.sorted.fastq",
+    my $our_duplicate_file = sprintf("%s/s_%s_sequence.duplicate.sorted.fastq",
                                    $run_dir,
-                                   $run->name,
                                    $lane,
                                  );
 
