@@ -19,20 +19,20 @@ class Genome::Model::Command::AddReads {
     ],
     has_optional => [
         limit_regions       =>  { is => 'String',
-                                    doc => 'Which regions should be kept during further analysis' },
+                                  doc => 'Which regions should be kept during further analysis' },
         bsub                =>  { is => 'Boolean',
-                                    doc => 'Sub-commands should be submitted to bsub. Default is yes.',
-                                    default_value => 1 },
+                                  doc => 'Sub-commands should be submitted to bsub. Default is yes.',
+                                  default_value => 1 },
         bsub_queue          =>  { is => 'String',
-                                    doc => 'Which bsub queue to use for sub-command jobs, default is "long"',
-                                    default_value => 'long'},
+                                  doc => 'Which bsub queue to use for sub-command jobs, default is "long"',
+                                  default_value => 'long'},
         bsub_args           => { is => 'String',
-                                    doc => 'Additional arguments passed along to bsub (such as -o, for example)',
-                                    default_value => '' },
+                                  doc => 'Additional arguments passed along to bsub (such as -o, for example)',
+                                  default_value => '' },
         test                => { is => 'Boolean',
-                                    doc => 'Create run information in the database, but do not schedule any sub-commands',
-                                    is_optional => 1,
-                                    default_value => 0},
+                                  doc => 'Create run and event information in the database, but do not schedule or execute any sub-commands',
+                                  is_optional => 1,
+                                  default_value => 0},
     ]
 };
 
@@ -133,13 +133,17 @@ $DB::single=1;
                 if ($should_bsub && $self->bsub) {
                     #$last_bsub_job_id = $self->run_command_with_bsub($command,$run,$last_bsub_job_id);
                     $last_bsub_job_id = $self->run_command_with_bsub($command,$last_bsub_job_id);
+                    return unless $last_bsub_job_id;
                     $command->lsf_job_id($last_bsub_job_id);
                 } elsif (! $self->test) {
-                    $last_bsub_job_id = $command->execute();
+                    my $rv = $command->execute();
+                    $command->date_completed(UR::Time->now());
+                    $command->event_status($rv ? 'Succeeded' : 'Failed');
+                } else {
+                    print "Created $command_class for run_id ",$run->id," event_id ",$command->genome_model_event_id,"\n";
                 }
                 # This will be false if something went wrong.
                 # We should probably stop the pipeline at this point
-                return unless $last_bsub_job_id;
             }
 
             # For catching up on all the old runs... remove later
