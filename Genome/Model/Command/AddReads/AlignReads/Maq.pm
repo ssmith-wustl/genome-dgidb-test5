@@ -36,8 +36,9 @@ sub bsub_rusage {
 
 }
 
+sub should_bsub { 1;}
 
-sub _execute {
+sub execute {
     my $self = shift;
     
     my $model = Genome::Model->get(id => $self->model_id);
@@ -68,30 +69,36 @@ $DB::single = 1;
 
     # use maq to do the alignments
 
-    #my $bfq_file = sprintf('%s/s_%d_sequence.bfq', $working_dir, $lane);
+    # Convert the fastq files into bfq files
+    my $unique_fastq = $self->sorted_unique_fastq_file_for_lane;
+    my $unique_bfq = $self->unique_bfq_file_for_lane;
+    my $duplicate_fastq = $self->sorted_redundant_fastq_file_for_lane;
+    my $duplicate_bfq = $self->redundant_bfq_file_for_lane;
 
-    # Convert the right fastq file into a bfq file
-    my $bfq_file = $self->bfq_file_for_lane();
-    unless (-e $bfq_file) {
-        my $fastq_file = $self->sorted_screened_fastq_file_for_lane();
-        system("maq fastq2bfq $fastq_file $bfq_file");
-   }
-
-    unless (-r $bfq_file) {
-        $self->error_message("bfq file $bfq_file does not exist");
-        next;
+    if (-f $unique_fastq and ! -f $unique_bfq) {
+        system("maq fastq2bfq $unique_fastq $unique_bfq");
+    }
+    if (-f $duplicate_fastq and ! -f $duplicate_bfq) {
+        system("maq fastq2bfq $duplicate_fastq $duplicate_bfq");
     }
 
-    #my $this_lane_alignments_file = $working_dir . "/alignments_lane_$lane.map";
     my $this_lane_alignments_file = $self->alignment_file_for_lane();
 
     my $unaligned_reads_file = $self->unaligned_reads_file_for_lane();
        
+    my $bfq_files = $unique_bfq;
+    if ($self->model->multi_read_fragment_strategy eq "EliminateAllDuplicates") {
+        1;
+    } else {
+        $bfq_files .= " $duplicate_bfq";
+    }
+
+    # Do the alignments
     my $maq_cmdline = sprintf('maq map %s -u %s %s %s %s %s', $model->read_aligner_params || '',
                                                               $unaligned_reads_file,
                                                               $this_lane_alignments_file,
                                                               $ref_seq_file,
-                                                              $bfq_file);
+                                                              $bfq_files);
 	
     print "$maq_cmdline\n";
 
@@ -115,7 +122,7 @@ $DB::single = 1;
         $self->error_message("got a nonzero exit code ($rv) from maq map; something went wrong.  cmdline was $maq_cmdline rv was $rv");
         return;
     }
-    # Save the lines we saved
+    # write out the lines we saved
     my $results_file = $this_lane_alignments_file . ".matchdata";
     my $fh = IO::File->new(">$results_file");
     unless ($fh) {
@@ -125,38 +132,6 @@ $DB::single = 1;
     $fh->print($maq_results);
     $fh->close();
        
-
-    # This is old code that never got used.  It parsed through the maq mapview output
-    # to find low quality and unaligned reads, track down the original read data for
-    # them, and create a new fastq with just those reads
-    # Find out which reads didn't align
-    #my %read_index;
-    #my $dbm_file = $self->read_index_dbm_file_for_lane($lane);
-
-    #unless (tie(%read_index, 'GDBM_File', $dbm_file, &GDBM_WRCREAT, 0666)) {
-    #    $self->error_message("Failed to tie to DBM file $dbm_file");
-    #    return;
-    #}
-
-    #my $unaligned_pathname = $self->unaligned_reads_file_for_lane();
-    #my $unaligned_dbm_pathname = $unaligned_pathname . ".ndbm";
-    #`cp $dbm_file $unaligned_dbm_pathname`;
-
-    #my %unaligned_index;
-    #unless (tie(%unaligned_index, 'NDBM_File', $unaligned_dbm_pathname, "O_RDWR O_CREAT", 0666)) {
-    #    $self->error_message("Failed to tie to NDBM file $unaligned_dbm_pathname");
-    #    return;
-    #}
-
-    #my $aligned_info;
-    #open($aligned_info,"maq mapview $this_lane_alignments_file |");
-    #while(<$aligned_info>) {
-    #    my($aligned_read_name) = m/^(\S+)\s/;
-    #    delete $unaligned_index{$aligned_read_name};
-    #}
-    #$aligned_info->close();
-    #untie %unaligned_index;
-
 
     # use submap if necessary
     my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
