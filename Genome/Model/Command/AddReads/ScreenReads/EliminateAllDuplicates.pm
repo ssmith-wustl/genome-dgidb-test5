@@ -40,7 +40,13 @@ not duplicated in this run
 EOS
 }
 
-sub _execute {
+
+sub execute {
+    1;
+}
+
+# This functionality has been moved into the ConvertQualityAndDeduplicateReads PSE
+sub _old_execute {
     my $self = shift;
     
 sleep 120;
