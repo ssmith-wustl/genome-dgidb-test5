@@ -32,7 +32,7 @@ sub name {
 
     my $path = $self->full_path;
 
-    my($name) = ($path =~ m/.*\/(.*EAS.*?)\//);
+    my($name) = ($path =~ m/.*\/(.*EAS.*?)\/?$/);
     if (!$name) {
 	$name = "run_" . $self->id;
     }
