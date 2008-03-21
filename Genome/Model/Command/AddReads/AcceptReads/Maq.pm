@@ -35,7 +35,9 @@ This command is usually called as part of the add-reads process
 EOS
 }
 
-sub _execute {
+sub should_bsub {1;}
+
+sub execute {
     my $self = shift;
     
     my $model = Genome::Model->get(id => $self->model_id);
