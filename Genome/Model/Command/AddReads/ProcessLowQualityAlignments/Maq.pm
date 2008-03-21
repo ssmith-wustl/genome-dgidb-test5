@@ -31,6 +31,7 @@ This command is usually called as part of the add-reads process
 EOS
 }
 
+sub should_bsub { 1;}
 
 
 sub execute {
