@@ -81,12 +81,17 @@ $DB::single=1;
     $command_obj->event_status('Running');
     $command_obj->user_name($ENV{'USER'});
 
-    #UR::Context->commit();
+    UR::Context->commit();
 
-    my $rv = $command_obj->execute();
+    my $rv;
+    eval { $rv = $command_obj->execute(); };
 
     $command_obj->date_completed(UR::Time->now());
-    $command_obj->event_status($rv ? 'Succeeded' : 'Failed');
+    if ($@) {
+        $command_obj->event_status('Crashed');
+    } else {
+        $command_obj->event_status($rv ? 'Succeeded' : 'Failed');
+    }
 
     return $rv;
 }
