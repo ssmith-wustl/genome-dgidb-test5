@@ -125,6 +125,7 @@ $DB::single=1;
             }
             
             if (ref($command)) {   # If there's a command to be done at this step
+                $command->event_status('Scheduled');
                 my $should_bsub = 0;
                 if ($command->can('should_bsub')) {
                     $should_bsub = $command->should_bsub;
