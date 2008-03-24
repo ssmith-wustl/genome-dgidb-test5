@@ -3,36 +3,38 @@ package Genome::Model::Command::Annotate::GetGeneExpression;
 
 use strict;
 use warnings;
+use Getopt::Long;
+use Carp;
+use MPSampleData::DBI;
+use MPSampleData::ExternalGeneId;
+use MG::Analysis::VariantAnnotation;
 
-use above "Genome";                     
+use above "Genome";
 
 class Genome::Model::Command::Annotate::GetGeneExpression {
-    is => 'Command',                       
-    has => [                           
-        dev 	=> { type => 'String',      doc => "The database to use" },
-        infile  => { type => 'String',      doc => "The infile (fulle report file so far)" },
-        outfile => { type => 'String',      doc => "The outfile" },
-    ], 
+    is  => 'Command',
+    has => [
+        dev    => { type => 'String', doc => "The database to use" },
+        infile => { type => 'String', doc => "The infile (full report file so far)" },
+        outfile => { type => 'String', doc => "The outfile" },
+    ],
 };
 
 sub sub_command_sort_position { 12 }
 
-sub help_brief {                      
-    "WRITE A ONE-LINE DESCRIPTION HERE"                 
+sub help_brief {
+    "This command adds the gene expression information to the report file."
 }
 
-sub help_synopsis {                  
+sub help_synopsis {
     return <<EOS
-genome-model example1 --foo=hello
-genome-model example1 --foo=goodbye --bar
-genome-model example1 --foo=hello barearg1 barearg2 barearg3
+genome-model Annotate GetGeneExpression--dev=std_test --infile=~xshi/temp_1/AML_SNP/amll123t92_q1r07t096/TEMP --outfile=base_file_name
 EOS
 }
 
-sub help_detail {                   
-    return <<EOS 
-This is a dummy command.  Copy, paste and modify the module! 
-CHANGE THIS BLOCK OF TEXT IN THE MODULE TO CHANGE THE HELP OUTPUT.
+sub help_detail {
+    return <<EOS
+This command adds the gene expression information to the report file.
 EOS
 }
 
@@ -51,127 +53,117 @@ EOS
 #    return 1;
 #}
 
-sub execute { 
+sub execute {
+    my %options = ( 'dev' => $self->dev, );
+    #GetOptions( 'devel=s' => \$options{'dev'}, );
 
-#!/gsc/bin/perl
+    unless ( defined( $options{'dev'} ) ) {
+        croak "usage $0 --dev <database sample_data/sd_test..>";
+    }
+    MG::Analysis::VariantAnnotation->change_db( $options{dev} );
 
+    my ($Srv)      = 'mysql2';
+    my ($Uid)      = "sample_data";
+    my ($Pwd)      = q{Zl0*rCh};
+    my ($database) = "sd_test";
+    my $gene_hash;
+    my ($X);
 
-use strict;
-use warnings;
+    #$X cannot have 'my($X)' or else it will close every time.
+    ( $X = DBI->connect( "DBI:mysql:$database:$Srv", $Uid, $Pwd ) ) or ( die "fail to connect to database \n" );
 
-use Getopt::Long;
-use Carp;
-use MPSampleData::DBI;
-use MPSampleData::ExternalGeneId;
-use MG::Analysis::VariantAnnotation;
-
-my %options = (  
-                'dev'         => undef,
- 	     );
- 
-GetOptions(  
-           'devel=s'       => \$options{'dev'},
-	);
- 
-unless(defined($options{'dev'}))  {
-    croak "usage $0 --dev <database sample_data/sd_test..>";
-}
-MG::Analysis::VariantAnnotation->change_db($options{dev});
- 
-my($Srv) = 'mysql2';
-my($Uid) = "sample_data";
-my($Pwd) = q{Zl0*rCh};
-my($database) = "sd_test";
-my  $gene_hash;
-my ($X);
-#$X cannot have 'my($X)' or else it will close every time.
-($X = DBI->connect("DBI:mysql:$database:$Srv", $Uid, $Pwd))  or (die "fail to connect to datase \n");
-
-my $sql = qq{
+    my $sql = qq{
         select expression_intensity, detection from gene_expression ge 
         join gene_gene_expression gge on gge.expression_id=ge.expression_id
         join gene g on g.gene_id=gge.gene_id 
         join external_gene_id egi on egi.gene_id=g.gene_id 
         where (g.hugo_gene_name=?  or egi.id_value=?)  
-        order by expression_intensity desc limit 1;
-};
-my ($sth) = $X->prepare($sql);
-my $submitted;
+        order by expression_intensity desc limit 1; };
+    my ($sth) = $X->prepare($sql);
+    my $submitted;
 
-open (SUB, "</gscuser/xshi/work/AML_SNP/Gene_to_check/AMP_SNP_set3.submit.091507.results.8oct2007.csv") or die "Can't open  $!";
-while(<SUB>){
- next if(/dbSNP/);
- my ($dbsnp,$chrom,$start,$end,$a1,$g1,$g2,$a2)=split(/,/);
- $submitted->{"$chrom,$start,$end"}=1;
-}
-close(SUB);
-
-
-open (IN, "<$ARGV[0]") or die "Can't open $ARGV[0]. $!";
-  
- open (OUT, ">$ARGV[1]") or die "Can't open $ARGV[1]. $!";
-  
- print OUT qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_position (B36)",Variant_allele,"# of genomic reads supporting variant allele","# of cDNA reads supporting variant allele",Reference_allele,"# of genomic reads supporting reference allele","# of cDNA reads supporting reference allele",Gene_expression,Detection,Ensembl_transcript_id,Transcript_stranding,Variant_type,Transcript_position,Amino_acid_change,Polyphen_prediction,"submit(0:no; 1:yes)"
+    open( SUB, "</gscuser/xshi/work/AML_SNP/Gene_to_check/AMP_SNP_set3.submit.091507.results.8oct2007.csv") or die "Can't open  $!";
+    while (<SUB>) {
+        next if (/dbSNP/);
+        my ( $dbsnp, $chrom, $start, $end, $a1, $g1, $g2, $a2 ) = split(/,/);
+        $submitted->{"$chrom,$start,$end"} = 1;
+    }
+    close(SUB);
+    open( IN, "<$self->infile" ) or die "Can't open $self->infile. $!";
+    open( OUT, ">$self->outfile" ) or die "Can't open $self->outfile. $!";
+    print OUT
+qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_position (B36)",Variant_allele,"# of genomic reads supporting variant allele","# of cDNA reads supporting variant allele",Reference_allele,"# of genomic reads supporting reference allele","# of cDNA reads supporting reference allele",Gene_expression,Detection,Ensembl_transcript_id,Transcript_stranding,Variant_type,Transcript_position,Amino_acid_change,Polyphen_prediction,"submit(0:no; 1:yes)"
 };
 
 #print OUT "dbSNP(0:no; 1:yes),Gene_name,Chromosome,Start_position (B36),End_position (B36),Reference_allele,Variant_allele,# of genomic reads supporting reference allele,# of cDNA reads supporting reference allele,# of genomic reads supporting variant allele,# of cDNA reads supporting variant allele,Gene_expression,Detection,Ensembl_transcript_id,Transcript_stranding,Variant_type,Transcript_position,Amino_acid_change,Polyphen_prediction\n";
- while(<IN>){
- next if(/dbSNP/);
- chomp(); 
- my $line=$_;
- my $pph_prediction="NULL";
- my ($dbsnp,$chromosome,$start,$end,$al1,$al1_read1,$al1_read2,$al2,$al2_read1,$al2_read2,$gene,$transcript,$strand,$trv_type,$c_position,$pro_str,$polyphen,$gene_exp,$gene_det,$rgg_id) =  split(/,/)  ; 
- print "check  $chromosome,$start,$end,$al1,$al2,$transcript...............\n";
-#only check flanking region as 10k bp
- if($trv_type=~/flank/) {
-	 my ($tr) = MPSampleData::Transcript->search("transcript_name"=>$transcript);
-	next unless(($tr->transcript_start>$start && $start>=$tr->transcript_start-10000 )||($tr->transcript_stop<$start && $start<=$tr->transcript_stop+10000 ));
-  }
-  $gene_hash->{$gene}=MG::Analysis::VariantAnnotation->get_gene_expression($sth,$gene) unless(defined $gene_hash->{$gene});
-#check whether submitted or not
-  my $submit;
-  if(exists $submitted->{"$chromosome,$start,$end"} &&  $submitted->{"$chromosome,$start,$end"}==1) {$submit=1;}
-  else {$submit=0;}
-  print OUT "$dbsnp,$gene,$chromosome,$start,$end,$al1,$al1_read1,$al1_read2,$al2,$al2_read1,$al2_read2,",$gene_hash->{$gene}->{exp},",",$gene_hash->{$gene}->{det},",$transcript,$strand,$trv_type,$c_position,$pro_str,$pph_prediction,$submit,$rgg_id\n";
-}
+    while (<IN>) {
+        next if (/dbSNP/);
+        chomp();
+        my $line           = $_;
+        my $pph_prediction = "NULL";
+        my (
+            $dbsnp,     $chromosome, $start,    $end,       $al1,
+            $al1_read1, $al1_read2,  $al2,      $al2_read1, $al2_read2,
+            $gene,      $transcript, $strand,   $trv_type,  $c_position,
+            $pro_str,   $polyphen,   $gene_exp, $gene_det,  $rgg_id
+          )
+          = split(/,/);
+        print "check  $chromosome,$start,$end,$al1,$al2,$transcript...............\n";
 
- 
-print "final finished!\n";
- 
-close(IN);
-close(OUT);
+        #only check flanking region as 10k bp
+        if ( $trv_type =~ /flank/ ) {
+            my ($tr) = MPSampleData::Transcript->search( "transcript_name" => $transcript );
+            next unless ( ( $tr->transcript_start > $start && $start >= $tr->transcript_start - 10000) || (   $tr->transcript_stop < $start && $start <= $tr->transcript_stop + 10000 ));
+        }
+        $gene_hash->{$gene} = MG::Analysis::VariantAnnotation->get_gene_expression( $sth, $gene ) unless ( defined $gene_hash->{$gene} );
 
- 
-
-#subrutine
-
-
-# check if submitted or -+20bp
-sub check_submitted{
- open (FILTER, ">$options{'file'}.filted") or die "Can't open $options{'file'}.filted. $!";
- open (IN, "<$options{'file'}.prioritized") or die "Can't open $options{'file'}.prioritized. $!";
- while(<IN>){print FILTER $_; last;}
- while(<IN>){
-  my $grep=0;
-  chomp();
-  my @sp=split(/,/);
-  open (CHECK, "</gscuser/xshi/work/AML_SNP/AML_SNP_set.091507.txt") or die "Can't open /gscuser/xshi/work/AML_SNP/AML_SNP_set.091507.txt. $!";
-  while(<CHECK>) {last;}
-  while(<CHECK>) {
-    chomp();
-    my @fi=split(/,/);
-    if(lc($fi[1]) eq lc($sp[1])&&($sp[2]>=$fi[2]-20&&$sp[3]<=$fi[3]+20)) {
-	{$grep=1;last;}
+        #check whether submitted or not
+        my $submit;
+        if ( exists $submitted->{"$chromosome,$start,$end"} && $submitted->{"$chromosome,$start,$end"} == 1 ) {
+            $submit = 1;
+        }
+        else { 
+			$submit = 0; 
+		}
+        print OUT
+"$dbsnp,$gene,$chromosome,$start,$end,$al1,$al1_read1,$al1_read2,$al2,$al2_read1,$al2_read2,",
+          $gene_hash->{$gene}->{exp}, ",", $gene_hash->{$gene}->{det},
+",$transcript,$strand,$trv_type,$c_position,$pro_str,$pph_prediction,$submit,$rgg_id\n";
     }
-  }
-  close(CHECK);
-  print FILTER join(",",@sp),"\n" if($grep==0);
- }
- close(IN); 
- close(FILTER);
-  
-}
-    return 0; 
+
+    print "final finished!\n";
+
+    close(IN);
+    close(OUT);
+
+    #subroutine
+
+    # check if submitted or -+20bp
+    sub check_submitted {
+        open( FILTER, ">$options{'file'}.filted" ) or die "Can't open $options{'file'}.filted. $!";
+        open( IN, "<$options{'file'}.prioritized" ) or die "Can't open $options{'file'}.prioritized. $!";
+        while (<IN>) { print FILTER $_; last; }
+        while (<IN>) {
+            my $grep = 0;
+            chomp();
+            my @sp = split(/,/);
+            open( CHECK, "</gscuser/xshi/work/AML_SNP/AML_SNP_set.091507.txt" ) or die "Can't open /gscuser/xshi/work/AML_SNP/AML_SNP_set.091507.txt. $!";
+            while (<CHECK>) { last; }
+            while (<CHECK>) {
+                chomp();
+                my @fi = split(/,/);
+                if ( lc( $fi[1] ) eq lc( $sp[1] ) && ( $sp[2] >= $fi[2] - 20 && $sp[3] <= $fi[3] + 20 ) ) {
+                    { $grep = 1; last; }
+                }
+            }
+            close(CHECK);
+            print FILTER join( ",", @sp ), "\n" if ( $grep == 0 );
+        }
+        close(IN);
+        close(FILTER);
+
+    }
+    return 0;
 }
 
 1;
