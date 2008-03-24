@@ -58,9 +58,16 @@ sub execute {
     
     #my $lane_mapfile=$run_path . '/'. 'alignments_lane_'.$lane;
     my $lane_mapfile=$self->alignment_file_for_lane();
+    unless (-f $lane_mapfile) {
+        $self->error_message("map file for lane $lane does not exist $lane_mapfile");
+        return;
+    }
+
     my $line=`/gscmnt/sata114/info/medseq/pkg/maq/branches/lh3/maq-xp/maq-xp pileup -t $lane_mapfile 2>&1`;
     my ($evenness)=($line=~/(\S+)\%$/);
-    if($evenness > $model->alignment_distribution_threshold) {
+    if($evenness > $model->align_dist_threshold) {
+        # The align-reads step make submap files for each chromosome.  We can delete this one now
+        unlink $lane_mapfile;
         return 1;
     } else {
         $self->error_message("Run id ".$self->run_id." failed accept reads.  Evenness $evenness is lower than the threshold ".$model->alignment_distribution_threshold);

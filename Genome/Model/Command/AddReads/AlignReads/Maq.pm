@@ -155,8 +155,10 @@ $DB::single = 1;
             }
         }
        
-        # After we do the submaps, we don't need the original map file anymore
-        unlink($this_lane_alignments_file);
+        # Oops.  The next step (accept reads) needs this map file.  We can
+        # delete it there
+        ## After we do the submaps, we don't need the original map file anymore
+        #unlink($this_lane_alignments_file);
     }
 
     return 1;
