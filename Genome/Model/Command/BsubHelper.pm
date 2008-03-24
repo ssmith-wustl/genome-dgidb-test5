@@ -10,13 +10,11 @@ class Genome::Model::Command::BsubHelper {
     is => 'Command',
     has => [
         event_id            => { is => 'Integer', doc => 'Identifies the Genome::Model::Event by id'},
-        model_id            => { is => 'Integer', doc => "Identifies the genome model on which we're operating" },
+        model_id            => { is => 'Integer', doc => "Identifies the genome model on which we're operating, Used for validation" },
         model               => { is => 'Genome::Model', id_by => 'model_id' },
     ],
     has_optional => [
-        run_id              =>  { is => 'Integer'},
-#        run                 =>  { is => 'Genome::RunChunk', id_by => 'run_id' },  # FIXME there's a bug where the initialization stuff appears to try to load this object even if run_id wasn't specified, causing it to not compile
-        ref_seq_id          =>  { is => 'String'},
+        reschedule          =>  { is => 'Boolean', doc => 'Allow completed jobs to run again' },
     ]
 };
 
@@ -28,13 +26,14 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model bsub-helper --event-id 123456 --model_id 5 --run_id 1001
+genome-model bsub-helper --event-id 123456 --model_id 5
 EOS
 }
 
 sub help_detail {
     return <<"EOS"
-This command is run on a blade, and loads an already existing Event and executes it
+This command is run on a blade, and loads an already existing Event and executes it.  If the indicated event is
+not in a 'Scheduled' state, it will refuse to run.  The --reschedule flag will override this behavior.
 EOS
 }
 
@@ -54,6 +53,10 @@ $DB::single=1;
     }
     unless ($event) {
         $self->error_message('No event found with id '.$self->event_id);
+        return;
+    }
+    if (($event->event_status and $event->event_status ne 'Scheduled') and ! $self->reschedule) {
+        $self->error_message("Refusing to re-run event with status ".$event->event_status);
         return;
     }
 
