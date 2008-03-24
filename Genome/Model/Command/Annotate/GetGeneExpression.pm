@@ -54,6 +54,7 @@ EOS
 #}
 
 sub execute {
+    my $self = shift;
     my %options = ( 'dev' => $self->dev, );
     #GetOptions( 'devel=s' => \$options{'dev'}, );
 
