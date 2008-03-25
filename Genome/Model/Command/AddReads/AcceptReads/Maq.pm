@@ -6,13 +6,10 @@ use warnings;
 use above "Genome";
 use Command;
 use Genome::Model;
-use File::Path;
-use Data::Dumper;
-use Date::Calc;
-use File::stat;
+use File::Temp;
 
 class Genome::Model::Command::AddReads::AcceptReads::Maq {
-    is => 'Genome::Model::Event',
+    is => ['Genome::Model::Event', 'Genome::Model::Command::MaqSubclasser'],
     has => [
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
         run_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },
@@ -41,23 +38,27 @@ sub execute {
     my $self = shift;
     
     my $model = Genome::Model->get(id => $self->model_id);
+    my $maq_pathname = $self->proper_maq_pathname('read_aligner_name');
 
-    my $lanes;
-    
     $DB::single = 1;
     
     # ensure the reference sequence exists.
-    my $run_path=$self->resolve_run_directory();
     my $lane = $self->run->limit_regions;
     unless ($lane) {
         $self->error_message("No limit regions parameter on run_id ".$self->run_id);
         return;
     }
 
-    my @goodlanes;
-    
-    #my $lane_mapfile=$run_path . '/'. 'alignments_lane_'.$lane;
-    my $lane_mapfile=$self->alignment_file_for_lane();
+    my $lane_mapfile = sprintf("/tmp/AcceptReads_%s_%s.map", $self->run_id, $self->genome_modelevent_id);
+
+    # Get a single map file with all the proper submaps combined back together
+    my $alignment_submaps_dir_for_lane = $self->alignment_submaps_dir_for_lane;
+    my @input_mapfiles = glob($alignment_submaps_dir_for_lane . '/*unique.map');
+    if ($self->model->multi_read_fragment_strategy() ne 'EliminateAllDuplicates') {
+        push @input_mapfiles, glob($alignment_submaps_dir_for_lane . '/*duplicate.map');
+    }
+    system($maq_pathname, 'mapmerge', $lane_mapfile, @input_mapfiles);
+        
     unless (-f $lane_mapfile) {
         $self->error_message("map file for lane $lane does not exist $lane_mapfile");
         return;
