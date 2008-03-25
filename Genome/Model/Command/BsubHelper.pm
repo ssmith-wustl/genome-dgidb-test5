@@ -78,6 +78,7 @@ $DB::single=1;
 
     $command_obj->lsf_job_id($ENV{'LSB_JOBID'});
     $command_obj->date_scheduled(UR::Time->now());
+    $command_obj->date_completed(undef);
     $command_obj->event_status('Running');
     $command_obj->user_name($ENV{'USER'});
 
