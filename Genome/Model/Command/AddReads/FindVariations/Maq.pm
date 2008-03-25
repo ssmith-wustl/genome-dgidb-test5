@@ -12,7 +12,7 @@ use File::Temp;
 use IO::File;
 
 class Genome::Model::Command::AddReads::FindVariations::Maq {
-    is => 'Genome::Model::Event',
+    is => ['Genome::Model::Event', 'Genome::Model::Command::MaqSubclasser'],
 };
 
 sub help_brief {
@@ -41,6 +41,7 @@ sub _execute {
     my $self = shift;
     
     my $model = Genome::Model->get(id => $self->model_id);
+    my $maq_pathname = $self->proper_maq_pathname('indel_finder_name');
 
     # ensure the reference sequence exists.
     my $ref_seq_file = $model->reference_sequence_path . "/all_sequences.bfa";
@@ -95,13 +96,13 @@ sub _execute {
     my $indel_output_file =  $analysis_base_path . "/" . $indel_resource_name;
     my $pileup_output_file = $analysis_base_path . "/" . $pileup_resource_name;
                                        
-    my $retval = system("maq cns2snp $assembly_output_file > $snip_output_file");
+    my $retval = system("$maq_pathname cns2snp $assembly_output_file > $snip_output_file");
     unless ($retval == 0) {
         $self->error_message("running maq cns2snp returned non-zero exit code $retval");
         return;
     }
     
-    $retval = system("maq indelsoa $ref_seq_file $accumulated_alignments_file > $indel_output_file");
+    $retval = system("$maq_pathname indelsoa $ref_seq_file $accumulated_alignments_file > $indel_output_file");
     unless ($retval == 0) {
         $self->error_message("running maq indelsoa returned non-zero exit code $retval");
         return;
@@ -123,7 +124,7 @@ sub _execute {
     $tmpfh->close();
     $snip_fh->close();
 
-    my $pileup_command = sprintf("maq pileup -v -l %s %s %s > %s",
+    my $pileup_command = sprintf("$maq_pathname pileup -v -l %s %s %s > %s",
                                  $tmpfh->filename,
                                  $ref_seq_file,
                                  $accumulated_alignments_file,

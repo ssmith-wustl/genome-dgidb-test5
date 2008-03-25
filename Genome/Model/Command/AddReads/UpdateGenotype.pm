@@ -41,7 +41,12 @@ sub sub_command_delegator {
         return;
     }
 
-    return $model->genotyper_name;
+    my $genotyper_name = $model->genotyper_name;
+    if ($genotyper_name =~ m/^maq/) {
+        return 'maq';
+    } else {
+        return $genotyper_name;
+    }
 }
 
 sub is_not_to_be_run_by_add_reads {

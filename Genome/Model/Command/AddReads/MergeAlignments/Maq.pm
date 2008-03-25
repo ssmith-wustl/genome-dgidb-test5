@@ -13,7 +13,7 @@ use Date::Calc;
 use File::stat;
 
 class Genome::Model::Command::AddReads::MergeAlignments::Maq {
-    is => 'Genome::Model::Event',
+    is => ['Genome::Model::Event', 'Genome::Model::Command::MaqSubclasser'],
     has => [ 
         ref_seq_id   => { is => 'Integer', is_optional => 0, doc => 'the refseq on which to operate' },
     ]
@@ -46,6 +46,7 @@ sub _execute {
     
     my $model = Genome::Model->get(id => $self->model_id);
     my $model_data_directory = $model->data_directory;
+    my $maq_pathname = $self->proper_maq_pathname('read_aligner_name');
 
     $DB::single = 1;
 
@@ -99,7 +100,7 @@ sub _execute {
             unshift @input_alignments, $accumulated_alignments_filename;
         }
 
-        my @cmdline = (qw/maq mapmerge/, $accum_tmp, @input_alignments);
+        my @cmdline = ($maq_pathname,'mapmerge', $accum_tmp, @input_alignments);
         my $rv = system(@cmdline);
         if ($rv) {
             $self->error_message("exit code from maq merge was nonzero; something went wrong.  command line was " . join " ", @cmdline);

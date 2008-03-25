@@ -40,7 +40,12 @@ sub sub_command_delegator {
         return;
     }
 
-    return $model->read_aligner_name;
+    my $read_aligner_name = $model->read_aligner_name;
+    if ($read_aligner_name =~ m/^maq/) {
+        return 'maq';
+    } else {
+        return $read_aligner_name;
+    }
 }
 
 sub is_not_to_be_run_by_add_reads {

@@ -11,7 +11,7 @@ use File::Basename;
 use Data::Dumper;
 
 class Genome::Model::Command::AddReads::UpdateGenotype::Maq {    
-    is => 'Genome::Model::Event',
+    is => ['Genome::Model::Event', 'Genome::Model::Command::MaqSubclasser'],
 };
 
 sub help_brief {
@@ -40,6 +40,7 @@ sub _execute {
     my $self = shift;
 
     my $model = Genome::Model->get(id => $self->model_id);
+    my $maq_pathname = $self->proper_maq_pathname('genotyper_name');
 
     my $model_dir = $model->data_directory;
 
@@ -64,7 +65,7 @@ sub _execute {
         $self->error_message("Can't get lock for model's maq assemble output $assembly_output_base");
         return undef;
     }
-    my $scmd = "maq assemble $assembly_opts $assembly_output_file $ref_seq_file $accumulated_alignments_file";
+    my $scmd = "$maq_pathname assemble $assembly_opts $assembly_output_file $ref_seq_file $accumulated_alignments_file";
     print $scmd, "\n";
     return (!system($scmd));
     

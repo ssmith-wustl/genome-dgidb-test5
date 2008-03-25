@@ -38,7 +38,12 @@ sub sub_command_delegator {
     my $model = Genome::Model->get($params{'model_id'});
     return unless $model;
 
-    return $model->genotyper_name;
+    my $genotyper_name= $model->genotyper_name;
+    if ($genotyper_name =~ m/^maq/) {
+        return 'maq';
+    } else {
+        return $genotyper_name;
+    }
 }
 
 
