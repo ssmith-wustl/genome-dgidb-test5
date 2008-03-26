@@ -45,8 +45,7 @@ $DB::single = 1;
     my $model = Genome::Model->get(id => $self->model_id);
     my $maq_pathname = $self->proper_maq_pathname('read_aligner_name');
 
-
-    # ensure the reference sequence exists.
+   # ensure the reference sequence exists.
     my $ref_seq_file =  $model->reference_sequence_path . "/all_sequences.bfa";
     
     unless (-e $ref_seq_file) {
@@ -68,8 +67,21 @@ $DB::single = 1;
         return;
     }
 
+    # does this model specify to keep or eliminate duplicate reads
+    my @passes = ('unique') ;
+    if (! $model->multi_read_fragment_strategy or
+        $model->multi_read_fragment_strategy ne 'EliminateAllDuplicates') {
+        push @passes, 'duplicate';
+    }
+
     # use maq to do the alignments
-    foreach my $pass ( 'unique','duplicate' ) {
+    foreach my $pass ( @passes ) {
+        # See if we can re-use data from another run, and just symlink to it
+        my $shortcut = $self->_check_for_shortcut($pass);
+        if (defined $shortcut) {
+            next if $shortcut;
+        }
+
         # Convert the fastq files into bfq files
     
         my $fastq_method = sprintf("sorted_%s_fastq_file_for_lane", $pass);
@@ -105,11 +117,11 @@ $DB::single = 1;
 
         print "running: $cmdline\n";
         system($cmdline);
-        if ($?) {
-            my $rv = $? >> 8;
-            $self->error_message("got a nonzero exit code ($rv) from maq map; something went wrong.  cmdline was $cmdline rv was $rv");
-            return;
-        }
+#        if ($?) {
+#            my $rv = $? >> 8;
+#            $self->error_message("got a nonzero exit code ($rv) from maq map; something went wrong.  cmdline was $cmdline rv was $rv");
+#            return;
+#        }
 
         # use submap if necessary
         my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
@@ -135,7 +147,7 @@ $DB::single = 1;
             }
 
             ## Don't need the whole-lane map file anymore
-            # Actually we do, at the next step...
+            # Actually, we'll need them in the AcceptReads step, next
             #unlink($alignment_file);
         }  
 
@@ -143,6 +155,85 @@ $DB::single = 1;
 
     return 1;
 }
+
+# Find other successful executions working on the same data and link to it.
+# Returns undef if there is no other data suitable to link to, and we should 
+# do it the long way.  Returns 1 if the linking was successful. 0 if we tried
+# but there were problems
+#
+# $type is either 'unique' or 'duplicate'
+sub _check_for_shortcut {
+    my($self,$type) = @_;
+
+    my $model = Genome::Model->get($self->model_id);
+
+    my @similar_models = Genome::Model->get(sample_name => $model->sample_name,
+                                            reference_sequence_name => $model->reference_sequence_name,
+                                            read_aligner_name => $model->read_aligner_name,
+                                            dna_type => $model->dna_type,
+                                            genome_model_id => { operator => 'ne', value => $model->genome_model_id},
+                                         );
+    my @similar_model_ids = map { $_->genome_model_id } @similar_models;
+
+    my @possible_events = Genome::Model::Event->get(event_type => $self->event_type,
+                                                    event_status => 'Succeeded',
+                                                    model_id => \@similar_model_ids,
+                                                    run_id => $self->run_id,
+                                                );
+
+    foreach my $prior_event ( @possible_events ) {
+        my $prior_alignments_dir = $prior_event->alignment_submaps_dir_for_lane;
+        if (-d $prior_alignments_dir) {
+            my @alignment_files = glob("$prior_alignments_dir/*$type.map");
+            return 0 if (@alignment_files == 0);  # The prior run didn't make the files we needed
+
+            my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
+            if (scalar(@alignment_files) != scalar(@subsequences)) {
+                $self->error_message("The number of references for this model doesn't match the number of sequences found in event ".$prior_event->genome_model_event_id);
+                die;
+            }
+
+            # This is a good candidate to make symlinks to
+
+            # Find the aligner output files
+            my $unaligned_reads_file_method = sprintf('unaligned_%s_reads_file_for_lane',$type);
+            my $prior_unaligned_reads_file = $prior_event->$unaligned_reads_file_method;
+            return 0 unless (-f $prior_unaligned_reads_file);
+            my $this_unaligned_reads_file = $self->$unaligned_reads_file_method;
+            symlink($prior_unaligned_reads_file, $this_unaligned_reads_file);
+
+            # the bfq file
+            my $bfq_file_method = sprintf('%s_bfq_file_for_lane', $type);
+            my $prior_bfq_file = $prior_event->$bfq_file_method;
+            return 0 unless (-f $prior_bfq_file);
+            my $this_bfq_file = $self->$bfq_file_method;
+            symlink($prior_bfq_file, $this_bfq_file);
+
+            # maq's output file
+            my $output_file_method = sprintf('aligner_%s_output_file_for_lane',$type);
+            my $prior_output_file = $prior_event->$output_file_method;
+            return 0 unless (-f $prior_output_file);
+            my $this_output_file = $self->$output_file_method;
+            symlink($prior_output_file, $this_output_file);
+
+            my $this_alignments_dir = $self->alignment_submaps_dir_for_lane;
+            mkdir $this_alignments_dir;
+
+            foreach my $orig_file ( @alignment_files ) {
+                return 0 unless $orig_file;
+                my($this_filename) = ($orig_file =~ m/.*\/(\S+?)$/);
+                return 0 unless $this_filename;
+           
+                symlink($orig_file, $this_alignments_dir . '/' . $this_filename);
+            }
+            return 1;
+        }
+    }
+
+    return undef;
+}
+                                                    
+                                                    
 
 
 1;
