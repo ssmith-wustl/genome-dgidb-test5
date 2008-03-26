@@ -39,9 +39,26 @@ sub execute {
     
 $DB::single = 1;
 
+    my $unique_reads = $self->unaligned_unique_reads_file_for_lane();
+    if (-f $unique_reads) {
+        return unless $self->_make_fastq_from_unaligned_file($unique_reads, $self->unaligned_unique_fastq_file_for_lane);
+    }
+ 
+    my $dup_reads = $self->unaligned_duplicate_reads_file_for_lane();
+    if (-f $unique_reads) {
+        return unless $self->_make_fastq_from_unaligned_file($dup_reads, $self->unaligned_duplicate_fastq_file_for_lane);
+    }
+
+    return 1;
+}
+
+
+
+sub _make_fastq_from_unaligned_file {
+    my($self,$in,$fastq) = @_;
     my $command = Genome::Model::Command::Tools::UnalignedDataToFastq->create(
-                           in => $self->unaligned_reads_file_for_lane(),
-                           fastq => $self->unaligned_fastq_file_for_lane(),
+                           in => $in,
+                           fastq => $fastq,
                    );
     unless ($command) {
         $self->error_message("Unable to create the UnalignedDataToFastq command");
@@ -55,6 +72,7 @@ $DB::single = 1;
 
     return 1;
 }
+
 
 
 
