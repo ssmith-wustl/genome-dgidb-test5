@@ -69,7 +69,7 @@ sub execute {
                 
         if ($self->model->multi_read_fragment_strategy() ne 'EliminateAllDuplicates') {
             # Include duplicate reads, too?
-            if (-f $self->unique_alignment_file_for_lane) {
+            if (-f $self->duplicate_alignment_file_for_lane) {
                 push @input_mapfiles, $self->duplicate_alignment_file_for_lane;
             } else {
                 push @input_mapfiles, glob($self->alignment_submaps_dir_for_lane . '/*duplicate.map');
@@ -89,6 +89,9 @@ sub execute {
     if($evenness > $model->align_dist_threshold) {
         # The align-reads step make submap files for each chromosome.  We can delete this one now
         unlink $lane_mapfile;
+        unlink $self->unique_alignment_file_for_lane;
+        unlink $self->duplicate_alignment_file_for_lane;
+
         return 1;
     } else {
         $self->error_message("Run id ".$self->run_id." failed accept reads.  Evenness $evenness is lower than the threshold ".$model->alignment_distribution_threshold);
