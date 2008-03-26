@@ -105,11 +105,11 @@ $DB::single = 1;
 
         print "running: $cmdline\n";
         system($cmdline);
-#        if ($?) {
-#            my $rv = $? >> 8;
-#            $self->error_message("got a nonzero exit code ($rv) from maq map; something went wrong.  cmdline was $cmdline rv was $rv");
-#            return;
-#        }
+        if ($?) {
+            my $rv = $? >> 8;
+            $self->error_message("got a nonzero exit code ($rv) from maq map; something went wrong.  cmdline was $cmdline rv was $rv");
+            return;
+        }
 
         # use submap if necessary
         my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
@@ -134,8 +134,9 @@ $DB::single = 1;
                 }
             }
 
-            # Don't need the whole-lane map file anymore
-            unlink($alignment_file);
+            ## Don't need the whole-lane map file anymore
+            # Actually we do, at the next step...
+            #unlink($alignment_file);
         }  
 
     } # end foreach unique, duplicate
