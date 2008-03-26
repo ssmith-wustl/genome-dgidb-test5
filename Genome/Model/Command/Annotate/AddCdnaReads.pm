@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Annotate::AddCDNAReads;
+package Genome::Model::Command::Annotate::AddCdnaReads;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use MG::Analysis::VariantAnnotation;
 
 use above "Genome";
 
-class Genome::Model::Command::Annotate::AddCDNAReads {
+class Genome::Model::Command::Annotate::AddCdnaReads {
     is  => 'Command',
     has => [
         outfile => { type => 'String', doc => "ARGV[0], the outfile" },
