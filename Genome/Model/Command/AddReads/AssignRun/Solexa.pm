@@ -93,35 +93,40 @@ sub execute {
         return;
     }
 
-    my $orig_duplicate_file = sprintf("%s/%s/s_%s_sequence.duplicate.sorted.fastq",
-                                   $self->fastq_directory,
-                                   $run->name,
-                                   $lane,
-                                 );
-    unless (-f $orig_duplicate_file) {
-        $self->error_message("Source fastq $orig_duplicate_file does not exist");
-        return;
-    }
-
-
     my $our_unique_file = sprintf("%s/s_%s_sequence.unique.sorted.fastq",
                                    $run_dir,
                                    $lane,
                                  );
-    my $our_duplicate_file = sprintf("%s/s_%s_sequence.duplicate.sorted.fastq",
-                                   $run_dir,
-                                   $lane,
-                                 );
 
-    # make a symlink in our model directory pointing to the unique and dup fastq data
+    # make a symlink in our model directory pointing to the unique fastq data
     unless (symlink($orig_unique_file,$our_unique_file)) {
         $self->error_message("Unable to create symlink $our_unique_file -> $orig_unique_file: $!");
         return;
     }
 
-    unless (symlink($orig_duplicate_file, $our_duplicate_file)) {
-        $self->error_message("Unable to create symlink $our_duplicate_file -> $orig_duplicate_file: $!");
-        return;
+    if (! $model->multi_read_fragment_strategy  or
+        $model->multi_read_fragment_strategy ne 'EliminateAllDuplicates') {
+
+        my $orig_duplicate_file = sprintf("%s/%s/s_%s_sequence.duplicate.sorted.fastq",
+                                       $self->fastq_directory,
+                                       $run->name,
+                                       $lane,
+                                     );
+        unless (-f $orig_duplicate_file) {
+            $self->error_message("Source fastq $orig_duplicate_file does not exist");
+            return;
+        }
+
+
+        my $our_duplicate_file = sprintf("%s/s_%s_sequence.duplicate.sorted.fastq",
+                                       $run_dir,
+                                       $lane,
+                                     );
+
+        unless (symlink($orig_duplicate_file, $our_duplicate_file)) {
+            $self->error_message("Unable to create symlink $our_duplicate_file -> $orig_duplicate_file: $!");
+            return;
+        }
     }
 
     return 1;
