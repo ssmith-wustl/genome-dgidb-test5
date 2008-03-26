@@ -33,7 +33,9 @@ sub create {
     }
 
     my $sub_command_class = $class->_get_sub_command_class_name(%params);
-    unless ($sub_command_class) {
+    if  ($sub_command_class and
+         ($sub_command_class !~ m/::/)) {
+        # returned a true value, but something that's not a class name
         return "0 but true";
     }
 
@@ -60,13 +62,19 @@ sub _get_sub_command_class_name{
     my $class = shift;
     
     my $sub_command_name = $class->_get_sub_command_name(@_);
+    unless ($sub_command_name) {
+        # The subclassing column's value was probably undef, meaning this sub-command
+        # should be skipped
+        return "0 but true";
+    }
     
     # Does the sub-command exist?
     my %sub_command_types = $class->_sub_command_name_to_class_name_map();
 
     my $sub_command_type = $sub_command_types{ucfirst($sub_command_name)};
     unless ($sub_command_type) {
-        $class->error_message("sub command $sub_command_type is not known");
+#        $class->error_message("sub command $sub_command_type is not known");
+      
         return;
     }
     
