@@ -90,8 +90,10 @@ sub execute {
         $submitted->{"$chrom,$start,$end"} = 1;
     }
     close(SUB);
-    open( IN, "<$self->infile" ) or die "Can't open $self->infile. $!";
-    open( OUT, ">$self->outfile" ) or die "Can't open $self->outfile. $!";
+	my $infile = $self->infile;
+	my $outfile = $self->outfile;
+    open( IN, "<$infile" ) or die "Can't open $self->infile. $!";
+    open( OUT, ">$outfile" ) or die "Can't open $self->outfile. $!";
     print OUT
 qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_position (B36)",Variant_allele,"# of genomic reads supporting variant allele","# of cDNA reads supporting variant allele",Reference_allele,"# of genomic reads supporting reference allele","# of cDNA reads supporting reference allele",Gene_expression,Detection,Ensembl_transcript_id,Transcript_stranding,Variant_type,Transcript_position,Amino_acid_change,Polyphen_prediction,"submit(0:no; 1:yes)"
 };
