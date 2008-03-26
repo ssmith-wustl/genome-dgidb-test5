@@ -49,15 +49,35 @@ sub execute {
         return;
     }
 
-    my $lane_mapfile = sprintf("/tmp/AcceptReads_%s_%s.map", $self->run_id, $self->genome_modelevent_id);
+    my $lane_mapfile;
+    if ($self->model->multi_read_fragment_strategy() eq 'EliminateAllDuplicates'  and
+        -f $self->unique_alignment_file_for_lane) { 
+        # The whole-lane .map file is still around, and we only need the unique reads file anyway
+        $lane_mapfile = $self->unique_alignment_file_for_lane;
 
-    # Get a single map file with all the proper submaps combined back together
-    my $alignment_submaps_dir_for_lane = $self->alignment_submaps_dir_for_lane;
-    my @input_mapfiles = glob($alignment_submaps_dir_for_lane . '/*unique.map');
-    if ($self->model->multi_read_fragment_strategy() ne 'EliminateAllDuplicates') {
-        push @input_mapfiles, glob($alignment_submaps_dir_for_lane . '/*duplicate.map');
+    } else {
+        # We need to build a new map file from 2 or more smaller files
+        $lane_mapfile = sprintf("/tmp/AcceptReads_%s_%s.map", $self->run_id, $self->genome_model_event_id);
+        my @input_mapfiles;
+
+        # We're always interested in the unique reads, right?
+        if (-f $self->unique_alignment_file_for_lane) {
+            push @input_mapfiles, $self->unique_alignment_file_for_lane;
+        } else {
+            push @input_mapfiles, glob($self->alignment_submaps_dir_for_lane . '/*unique.map');
+        }
+                
+        if ($self->model->multi_read_fragment_strategy() ne 'EliminateAllDuplicates') {
+            # Include duplicate reads, too?
+            if (-f $self->unique_alignment_file_for_lane) {
+                push @input_mapfiles, $self->duplicate_alignment_file_for_lane;
+            } else {
+                push @input_mapfiles, glob($self->alignment_submaps_dir_for_lane . '/*duplicate.map');
+            }
+        }
+
+        system($maq_pathname, 'mapmerge', $lane_mapfile, @input_mapfiles);
     }
-    system($maq_pathname, 'mapmerge', $lane_mapfile, @input_mapfiles);
         
     unless (-f $lane_mapfile) {
         $self->error_message("map file for lane $lane does not exist $lane_mapfile");
