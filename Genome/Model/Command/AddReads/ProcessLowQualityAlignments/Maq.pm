@@ -45,7 +45,7 @@ $DB::single = 1;
     }
  
     my $dup_reads = $self->unaligned_duplicate_reads_file_for_lane();
-    if (-f $unique_reads) {
+    if (-f $dup_reads) {
         return unless $self->_make_fastq_from_unaligned_file($dup_reads, $self->unaligned_duplicate_fastq_file_for_lane);
     }
 
