@@ -53,21 +53,38 @@ EOS
 sub execute { 
     my $self = shift;
 
-    use Carp;
-    use MPSampleData::DBI;
-    use MPSampleData::ExternalGeneId;
+ my %options = ( 'file'         => $self->file,
+            'dev'         => $self->dev,
+
+        );
+
+    if ( $options{dev} eq 'mysql' )
+    {
+        use Carp;
+
+        use MPSampleData::DBI;
+        use MPSampleData::ExternalGeneId;
 #use lib '/gscuser/xshi/svn/mp';
-    use MG::Analysis::VariantAnnotation;
+        use MG::Analysis::VariantAnnotation;
 
-    my %options = ( 'file'         => $self->file,
-        'dev'         => $self->dev,
-
-    );
-    unless(defined($options{'dev'}))  {
-        croak "usage $0 --dev <database sample_data/sd_test..>";
+               unless(defined($options{'dev'}))  {
+            croak "usage $0 --dev <database sample_data/sd_test..>";
+        }
+        #MPSampleData::DBI->set_sql(change_db => "use $options{dev}");
+        MPSampleData::DBI->set_sql(change_db => "use sd_test");
+        MPSampleData::DBI->sql_change_db->execute;
     }
-    MPSampleData::DBI->set_sql(change_db => qq{use $options{dev}});
-    MPSampleData::DBI->sql_change_db->execute;
+    elsif ( $options{dev} eq 'oracle' )
+    {
+        use MPSampleData::DBI;
+        MPSampleData::DBI::myinit("dbi:Oracle:dwdev","mguser_dev"); #dev
+        #MPSampleData::DBI::myinit("dbi:Oracle:dwrac","mguser_prd"); #prod
+    }
+    else
+    {
+        die "invalid dev: $options{dev}\n";
+    }
+
 #my $gene_info; 
 #my $gene_hash;
 # my $chrom_ids = MG::Analysis::VariantAnnotation->map_chromid_chromosome ;
@@ -88,7 +105,8 @@ sub execute {
         my $line=$_;
         my ($chromosome,$start,$end,$allele1,$allele1_read1,$allele1_read2,$allele2,$allele2_read1,$allele2_read2,$allele1_type,$allele2_type) ; 
 #   ($chrom,$start,$end,$allele1,$allele1_read1,$allele1_read2,$allele2,$allele2_read1,$allele2_read2,$allele1_type,$allele2_type) =  split(/\t/) if($options{'gr'}==1); 
-        ($chromosome,$start,$end,$allele1,$allele2,$allele1_type,$allele2_type,$allele1_read1,$allele2_read1) =  split(/\t/)  ; 
+        #($chromosome,$start,$end,$allele1,$allele2,$allele1_type,$allele2_type,$allele1_read1,$allele2_read1) =  split(/\t/)  ; 
+        ($chromosome,$start,$end,$allele1,$allele2,$allele1_type,$allele2_type,$allele1_read1,$allele2_read1) =  split(/\s+/)  ; 
 
         print "check   $chromosome,$start,$end,$allele1,$allele2 ...............\t";
         next if($allele1_type eq 'ref' && $allele2_type eq 'ref');	
@@ -119,7 +137,7 @@ sub execute {
         while(my $allele=shift @allele){
             my ($al1,$al1_read1,$al1_read2,$al2,$al2_read1,$al2_read2)=split(",",$allele);
             print " [anno $al1,$al2] ";
-            my $result=$self->annotate(allele1=>$al1,allele2=>$al2); 
+                my $result=$self->annotate(allele1=>$al1,allele2=>$al2); 
 #get the annotation result
             foreach my $gene (keys %{$self->{annotation}}){
                 my @trs;
