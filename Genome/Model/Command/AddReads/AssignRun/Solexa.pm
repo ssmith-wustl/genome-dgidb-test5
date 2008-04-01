@@ -36,11 +36,6 @@ EOS
 
 sub should_bsub { 0;}
 
-# The Previous PSE puts files starting in this directory.  
-# There's a subdir for each run name, and then the fastqs are
-# under there
-sub fastq_directory { '/gscmnt/sata181/info/medseq/sample_data/fastq_dir_from_pse/' }
-
 sub execute {
     my $self = shift;
 
@@ -83,11 +78,9 @@ sub execute {
     # Convert the original solexa sequence files into maq-usable files
     my $lane = $self->run->limit_regions;
 
-    my $orig_unique_file = sprintf("%s/%s/s_%s_sequence.unique.sorted.fastq",
-                                   $self->fastq_directory,
-                                   $run->name,
-                                   $lane,
-                                 );
+    my $orig_unique_file = sprintf("%s/%s_sequence.unique.sorted.fastq",
+                                   $run->full_path, 
+                                   $lane);
     unless (-f $orig_unique_file) {
         $self->error_message("Source fastq $orig_unique_file does not exist");
         return;
@@ -99,6 +92,10 @@ sub execute {
                                  );
 
     # make a symlink in our model directory pointing to the unique fastq data
+    if (-f $our_unique_file) {
+        $self->warning_message("The file $our_unique_file already exists.  Removing...");
+        unlink ($our_unique_file);
+    }
     unless (symlink($orig_unique_file,$our_unique_file)) {
         $self->error_message("Unable to create symlink $our_unique_file -> $orig_unique_file: $!");
         return;
@@ -107,9 +104,8 @@ sub execute {
     if (! $model->multi_read_fragment_strategy  or
         $model->multi_read_fragment_strategy ne 'EliminateAllDuplicates') {
 
-        my $orig_duplicate_file = sprintf("%s/%s/s_%s_sequence.duplicate.sorted.fastq",
-                                       $self->fastq_directory,
-                                       $run->name,
+        my $orig_duplicate_file = sprintf("%s/%s_sequence.duplicate.sorted.fastq",
+                                       $run->full_path,
                                        $lane,
                                      );
         unless (-f $orig_duplicate_file) {
@@ -123,6 +119,10 @@ sub execute {
                                        $lane,
                                      );
 
+        if (-f $our_duplicate_file) {
+            $self->warning_message("The file $our_duplicate_file already exists.  Removing...");
+            unlink ($our_duplicate_file);
+        }
         unless (symlink($orig_duplicate_file, $our_duplicate_file)) {
             $self->error_message("Unable to create symlink $our_duplicate_file -> $orig_duplicate_file: $!");
             return;
