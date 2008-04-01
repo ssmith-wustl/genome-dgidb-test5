@@ -16,9 +16,9 @@ CREATE TABLE dd_fk_constraint (
     last_object_revision timestamp NOT NULL,
     PRIMARY KEY(data_source, owner, r_owner, table_name, r_table_name, fk_constraint_name)
 );
-INSERT INTO "dd_fk_constraint" VALUES('GenomE::DataSource::GMSchema','MG','MG','SEQUENCE_DIFF_EVAL','SEQUENCE_DIFF','SDE_FK','2008-02-28 17:10:42');
-INSERT INTO "dd_fk_constraint" VALUES('GenomE::DataSource::GMSchema','MG','MG','GENOME_MODEL_EVENT','GENOME_MODEL','GME_GM_FK','2008-02-28 17:10:40');
-INSERT INTO "dd_fk_constraint" VALUES('GenomE::DataSource::GMSchema','MG','MG','SEQUENCE_DIFF_PART','SEQUENCE_DIFF','SDP_FK','2008-02-28 17:10:42');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','SEQUENCE_DIFF_EVAL','SEQUENCE_DIFF','SDE_FK','2008-02-28 17:10:42');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_EVENT','GENOME_MODEL','GME_GM_FK','2008-02-28 17:10:40');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','SEQUENCE_DIFF_PART','SEQUENCE_DIFF','SDP_FK','2008-02-28 17:10:42');
 CREATE TABLE dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
     data_source varchar NOT NULL,
@@ -30,9 +30,9 @@ CREATE TABLE dd_fk_constraint_column (
 
     PRIMARY KEY(data_source, owner, table_name, fk_constraint_name, column_name)
 );
-INSERT INTO "dd_fk_constraint_column" VALUES('SDE_FK','GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','SEQUENCE_DIFF','DIFF_ID','DIFF_ID');
-INSERT INTO "dd_fk_constraint_column" VALUES('GME_GM_FK','GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','GENOME_MODEL','MODEL_ID','GENOME_MODEL_ID');
-INSERT INTO "dd_fk_constraint_column" VALUES('SDP_FK','GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','SEQUENCE_DIFF','DIFF_ID','DIFF_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('SDE_FK','Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','SEQUENCE_DIFF','DIFF_ID','DIFF_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('GME_GM_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','GENOME_MODEL','MODEL_ID','GENOME_MODEL_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('SDP_FK','Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','SEQUENCE_DIFF','DIFF_ID','DIFF_ID');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -41,16 +41,16 @@ CREATE TABLE dd_pk_constraint_column (
     rank integer NOT NULL,
     PRIMARY KEY (data_source,owner,table_name,column_name,rank)
 );
-INSERT INTO "dd_pk_constraint_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','REFSEQ_PATH',2);
-INSERT INTO "dd_pk_constraint_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','REFSEQ_PATH',2);
-INSERT INTO "dd_pk_constraint_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','DELETE_POSITION',3);
-INSERT INTO "dd_pk_constraint_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','DIFF_ID',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF','DIFF_ID',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_RUN','GENOME_MODEL_RUN_ID',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','GENOME_MODEL_EVENT_ID',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','POSITION',3);
-INSERT INTO "dd_pk_constraint_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','DIFF_ID',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','GENOME_MODEL_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','REFSEQ_PATH',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','REFSEQ_PATH',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','DELETE_POSITION',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','DIFF_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF','DIFF_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','GENOME_MODEL_RUN_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','GENOME_MODEL_EVENT_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','POSITION',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','DIFF_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','GENOME_MODEL_ID',1);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -62,12 +62,12 @@ CREATE TABLE dd_table (
      remarks varchar,
      PRIMARY KEY(data_source, owner, table_name)
 );
-INSERT INTO "dd_table" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','TABLE','entity','2008-02-28 09:33:09','2008-02-28 17:10:43',NULL);
-INSERT INTO "dd_table" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_RUN','TABLE','entity','2008-02-28 15:41:26','2008-02-28 17:10:41',NULL);
-INSERT INTO "dd_table" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','TABLE','entity','2008-02-28 15:41:21','2008-02-28 17:10:40','The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.');
-INSERT INTO "dd_table" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','TABLE','entity','2008-02-28 15:41:16','2008-02-28 17:10:45',NULL);
-INSERT INTO "dd_table" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','TABLE','entity','2008-02-28 09:33:09','2008-02-28 17:10:44',NULL);
-INSERT INTO "dd_table" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF','TABLE','entity','2008-02-28 09:33:09','2008-02-28 17:10:42',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','TABLE','entity','2008-02-28 09:33:09','2008-02-28 17:10:43',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','TABLE','entity','2008-02-28 15:41:26','2008-02-28 17:10:41',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','TABLE','entity','2008-02-28 15:41:21','2008-02-28 17:10:40','The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.');
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','TABLE','entity','2008-02-28 15:41:16','2008-02-28 17:10:45',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','TABLE','entity','2008-02-28 09:33:09','2008-02-28 17:10:44',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF','TABLE','entity','2008-02-28 09:33:09','2008-02-28 17:10:42',NULL);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -80,53 +80,54 @@ CREATE TABLE dd_table_column (
     remarks varchar,
     PRIMARY KEY(data_source, owner, table_name, column_name)
 );
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','NAME','VARCHAR2','255','N','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','INDEL_FINDER_NAME','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','REF_SEQ_ID','VARCHAR2','64','Y','2008-02-28 17:10:45',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','INSERT_LENGTH','NUMBER','10','Y','2008-02-28 17:10:44',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','LSF_JOB_ID','VARCHAR2','64','Y','2008-02-28 17:10:45',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','REFSEQ_PATH','VARCHAR2','256','N','2008-02-28 17:10:44',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','READ_CALIBRATOR_NAME','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','GENOTYPER_PARAMS','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF','DIFF_ID','NUMBER','10','N','2008-02-28 17:10:42',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','ALIGN_DIST_THRESHOLD','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','DATE_SCHEDULED','TIMESTAMP(6)','11','Y','2008-02-28 17:10:45',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','GENOME_MODEL_ID','NUMBER','11','N','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','GENOME_MODEL_EVENT_ID','NUMBER','11','N','2008-02-28 17:10:45',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','SAMPLE_NAME','VARCHAR2','255','N','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','EVENT_TYPE','VARCHAR2','255','N','2008-02-28 17:10:45',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','CONFIDENCE_VALUE','NUMBER','10','Y','2008-02-28 17:10:44',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','REFSEQ_PATH','VARCHAR2','256','N','2008-02-28 17:10:43',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','DELETE_SEQUENCE','VARCHAR2','4000','Y','2008-02-28 17:10:44',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','INDEL_FINDER_PARAMS','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','READ_CALIBRATOR_PARAMS','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','MULTI_READ_FRAGMENT_STRATEGY','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','DIFF_ID','NUMBER','10','N','2008-02-28 17:10:43',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','READ_ALIGNER_PARAMS','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_RUN','LIMIT_REGIONS','VARCHAR2','32','Y','2008-02-28 17:10:41',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF','TO_PATH','VARCHAR2','256','Y','2008-02-28 17:10:42',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF','FROM_PATH','VARCHAR2','256','Y','2008-02-28 17:10:42',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','USER_NAME','VARCHAR2','64','Y','2008-02-28 17:10:45',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_RUN','FULL_PATH','VARCHAR2','767','N','2008-02-28 17:10:41',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','READ_ALIGNER_NAME','VARCHAR2','255','N','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_RUN','SEQUENCING_PLATFORM','VARCHAR2','255','N','2008-02-28 17:10:41',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','INSERT_SEQUENCE','VARCHAR2','4000','Y','2008-02-28 17:10:44',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','REFERENCE_SEQUENCE_NAME','VARCHAR2','255','N','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','DELETE_POSITION','NUMBER','10','N','2008-02-28 17:10:44',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','DELETE_LENGTH','NUMBER','10','Y','2008-02-28 17:10:44',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF','DESCRIPTION','VARCHAR2','256','Y','2008-02-28 17:10:42',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','EVENT_STATUS','VARCHAR2','32','Y','2008-02-28 17:10:45',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','CONFIDENCE_VALUE','NUMBER','10','Y','2008-02-28 17:10:43',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','GENOTYPER_NAME','VARCHAR2','255','N','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_RUN','GENOME_MODEL_RUN_ID','NUMBER','11','N','2008-02-28 17:10:41',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','POSITION','NUMBER','10','N','2008-02-28 17:10:43',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','DATE_COMPLETED','TIMESTAMP(6)','11','Y','2008-02-28 17:10:45',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','RUN_ID','NUMBER','11','Y','2008-02-28 17:10:45',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','DIFF_ID','NUMBER','10','N','2008-02-28 17:10:44',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','INSERT_POSITION','NUMBER','10','Y','2008-02-28 17:10:44',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','MODEL_ID','NUMBER','11','Y','2008-02-28 17:10:45',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','DNA_TYPE','VARCHAR2','64','N','2008-02-28 17:10:40',NULL);
-INSERT INTO "dd_table_column" VALUES('GenomE::DataSource::GMSchema','MG','GENOME_MODEL','PRIOR_REF_SEQ','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','NAME','VARCHAR2','255','N','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','INDEL_FINDER_NAME','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','REF_SEQ_ID','VARCHAR2','64','Y','2008-02-28 17:10:45',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','INSERT_LENGTH','NUMBER','10','Y','2008-02-28 17:10:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','LSF_JOB_ID','VARCHAR2','64','Y','2008-02-28 17:10:45',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','REFSEQ_PATH','VARCHAR2','256','N','2008-02-28 17:10:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','READ_CALIBRATOR_NAME','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','GENOTYPER_PARAMS','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF','DIFF_ID','NUMBER','10','N','2008-02-28 17:10:42',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','ALIGN_DIST_THRESHOLD','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','DATE_SCHEDULED','TIMESTAMP(6)','11','Y','2008-02-28 17:10:45',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','GENOME_MODEL_ID','NUMBER','11','N','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','GENOME_MODEL_EVENT_ID','NUMBER','11','N','2008-02-28 17:10:45',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','SAMPLE_NAME','VARCHAR2','255','N','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','EVENT_TYPE','VARCHAR2','255','N','2008-02-28 17:10:45',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','CONFIDENCE_VALUE','NUMBER','10','Y','2008-02-28 17:10:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','REFSEQ_PATH','VARCHAR2','256','N','2008-02-28 17:10:43',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','DELETE_SEQUENCE','VARCHAR2','4000','Y','2008-02-28 17:10:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','INDEL_FINDER_PARAMS','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','READ_CALIBRATOR_PARAMS','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','MULTI_READ_FRAGMENT_STRATEGY','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','DIFF_ID','NUMBER','10','N','2008-02-28 17:10:43',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','READ_ALIGNER_PARAMS','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','LIMIT_REGIONS','VARCHAR2','32','Y','2008-02-28 17:10:41',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF','TO_PATH','VARCHAR2','256','Y','2008-02-28 17:10:42',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF','FROM_PATH','VARCHAR2','256','Y','2008-02-28 17:10:42',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','USER_NAME','VARCHAR2','64','Y','2008-02-28 17:10:45',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','FULL_PATH','VARCHAR2','767','N','2008-02-28 17:10:41',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','READ_ALIGNER_NAME','VARCHAR2','255','N','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','SEQUENCING_PLATFORM','VARCHAR2','255','N','2008-02-28 17:10:41',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','INSERT_SEQUENCE','VARCHAR2','4000','Y','2008-02-28 17:10:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','REFERENCE_SEQUENCE_NAME','VARCHAR2','255','N','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','DELETE_POSITION','NUMBER','10','N','2008-02-28 17:10:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','DELETE_LENGTH','NUMBER','10','Y','2008-02-28 17:10:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF','DESCRIPTION','VARCHAR2','256','Y','2008-02-28 17:10:42',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','EVENT_STATUS','VARCHAR2','32','Y','2008-02-28 17:10:45',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','CONFIDENCE_VALUE','NUMBER','10','Y','2008-02-28 17:10:43',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','GENOTYPER_NAME','VARCHAR2','255','N','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','GENOME_MODEL_RUN_ID','NUMBER','11','N','2008-02-28 17:10:41',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','POSITION','NUMBER','10','N','2008-02-28 17:10:43',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','DATE_COMPLETED','TIMESTAMP(6)','11','Y','2008-02-28 17:10:45',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','RUN_ID','NUMBER','11','Y','2008-02-28 17:10:45',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','DIFF_ID','NUMBER','10','N','2008-02-28 17:10:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','INSERT_POSITION','NUMBER','10','Y','2008-02-28 17:10:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','MODEL_ID','NUMBER','11','Y','2008-02-28 17:10:45',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','DNA_TYPE','VARCHAR2','64','N','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','PRIOR_REF_SEQ','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','SAMPLE_NAME','VARCHAR2','255','N','2008-02-28 17:10:41',NULL);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
