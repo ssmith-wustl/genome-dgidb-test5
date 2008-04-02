@@ -72,7 +72,7 @@ sub execute {
     }
 
     # Copy the given adaptor file to the run's directory
-    my $given_adaptor_pathanme = $self->adaptor_file;
+    my $given_adaptor_pathname = $self->adaptor_file;
     my $local_adaptor_pathname = $self->adaptor_file_for_run;
     `cp $given_adaptor_pathname $local_adaptor_pathname`;
 

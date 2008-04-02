@@ -133,7 +133,7 @@ $DB::single=1;
             
             if (ref($command)) {   # If there's a command to be done at this step
                 # FIXME This isn't very clean.  We should come up with a vetter way to do it
-                if ($self->adaptor_file and $command->can('adaptor_file') {
+                if ($self->adaptor_file and $command->can('adaptor_file')) {
                     $command->adaptor_file($self->adaptor_file);
                 }
 
