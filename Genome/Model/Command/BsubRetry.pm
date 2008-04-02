@@ -137,7 +137,7 @@ sub lsf_state {
     $spool =~ s/\s{22}//gm; 
 
     my @eventlines = split(/\n/, $spool);
-    shift @eventlines;  # first line is white space
+    shift @eventlines unless ($eventlines[0] =~ m/\S/);  # first line is white space
     
     my $jobinfoline = shift @eventlines;
     # sometimes the prior regex nukes the white space between Key <Value>
@@ -158,7 +158,7 @@ sub lsf_state {
         substr($time,-2,2,'');
 
         # see if we really got the time string
-        if ($time !~ /\w{3} \w{3} \d{2} \d{2}:\d{2}:\d{2}/) {
+        if ($time !~ /\w{3}\s+\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}/) {
             # there's stuff we dont care about at the bottom, just skip it
             next;
         }
