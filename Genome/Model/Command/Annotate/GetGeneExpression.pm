@@ -1,10 +1,10 @@
-
 package Genome::Model::Command::Annotate::GetGeneExpression;
 
 use strict;
 use warnings;
-use Getopt::Long;
+
 use Carp;
+use Data::Dumper;
 use MPSampleData::DBI;
 use MPSampleData::ExternalGeneId;
 use MG::Analysis::VariantAnnotation;
@@ -14,7 +14,7 @@ use above "Genome";
 class Genome::Model::Command::Annotate::GetGeneExpression {
     is  => 'Command',
     has => [
-        dev    => { type => 'String', doc => "The database to use" },
+    #dev    => { type => 'String', doc => "The database to use" },
         infile => { type => 'String', doc => "The infile (full report file so far)" },
         outfile => { type => 'String', doc => "The outfile" },
     ],
@@ -55,6 +55,8 @@ EOS
 
 sub execute {
     my $self = shift;
+
+=pod
     my %options = ( 'dev' => $self->dev, );
     #GetOptions( 'devel=s' => \$options{'dev'}, );
 
@@ -73,6 +75,8 @@ sub execute {
     #$X cannot have 'my($X)' or else it will close every time.
     ( $X = DBI->connect( "DBI:mysql:$database:$Srv", $Uid, $Pwd ) ) or ( die "fail to connect to database \n" );
 
+
+
     my $sql = qq{
         select expression_intensity, detection from gene_expression ge 
         join gene_gene_expression gge on gge.expression_id=ge.expression_id
@@ -81,6 +85,13 @@ sub execute {
         where (g.hugo_gene_name=?  or egi.id_value=?)  
         order by expression_intensity desc limit 1; };
     my ($sth) = $X->prepare($sql);
+
+=cut
+    my $gene_hash;
+
+#MPSampleData::DBI::myinit("dbi:Oracle:dwdev","mguser_dev"); #dev
+    MPSampleData::DBI::myinit("dbi:Oracle:dwrac","mguser_prd"); #prod
+    
     my $submitted;
 
     open( SUB, "</gscuser/xshi/work/AML_SNP/Gene_to_check/AMP_SNP_set3.submit.091507.results.8oct2007.csv") or die "Can't open  $!";
@@ -116,7 +127,10 @@ qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_positio
             my ($tr) = MPSampleData::Transcript->search( "transcript_name" => $transcript );
             next unless ( ( $tr->transcript_start > $start && $start >= $tr->transcript_start - 10000) || (   $tr->transcript_stop < $start && $start <= $tr->transcript_stop + 10000 ));
         }
-        $gene_hash->{$gene} = MG::Analysis::VariantAnnotation->get_gene_expression( $sth, $gene ) unless ( defined $gene_hash->{$gene} );
+        
+        # Replaced the gene exp query w/ class relationships
+        #$gene_hash->{$gene} = MG::Analysis::VariantAnnotation->get_gene_expression( $sth, $gene ) unless ( defined $gene_hash->{$gene} );
+        $gene_hash->{$gene} = $self->_get_gene_expression($gene) unless exists $gene_hash->{$gene};
 
         #check whether submitted or not
         my $submit;
@@ -126,6 +140,9 @@ qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_positio
         else { 
 			$submit = 0; 
 		}
+
+        print "\n\n# ".scalar(split(/,/, $line))," #\n\n";
+        # print Dumper($line) unless defined $rgg_id;
         print OUT
 "$dbsnp,$gene,$chromosome,$start,$end,$al1,$al1_read1,$al1_read2,$al2,$al2_read1,$al2_read2,",
           $gene_hash->{$gene}->{exp}, ",", $gene_hash->{$gene}->{det},
@@ -139,8 +156,10 @@ qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_positio
 
     #subroutine
 
+    # FIXME This sub is not used...
     # check if submitted or -+20bp
     sub check_submitted {
+        my %options;
         open( FILTER, ">$options{'file'}.filted" ) or die "Can't open $options{'file'}.filted. $!";
         open( IN, "<$options{'file'}.prioritized" ) or die "Can't open $options{'file'}.prioritized. $!";
         while (<IN>) { print FILTER $_; last; }
@@ -165,6 +184,27 @@ qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_positio
 
     }
     return 0;
+}
+
+sub _get_gene_expression
+{
+    my ($self, $name) = @_;
+    
+    my $gene_expression;
+    if ( my ($gene) = MPSampleData::Gene->search(hugo_gene_name => $name) )
+    {
+        $gene_expression = $gene->expressions->first;
+    }
+    else 
+    {
+        my ($eig) = MPSampleData::ExternalGeneId->search(id_value => $name);
+        die "can't find $name\n" unless $eig;
+        $gene_expression = $eig->gene_id->expressions->first;
+    }
+
+    return ( $gene_expression )
+    ? { 'exp' => $gene_expression->expression_intensity, det => $gene_expression->detection }
+    : { 'exp' => 'NULL', det => 'NULL' };
 }
 
 1;
