@@ -128,6 +128,7 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','DNA_TYPE','VARCHAR2','64','N','2008-02-28 17:10:40',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','PRIOR_REF_SEQ','VARCHAR2','255','Y','2008-02-28 17:10:40',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','SAMPLE_NAME','VARCHAR2','255','N','2008-02-28 17:10:41',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','RETRY_COUNT','NUMBER','3','Y','2008-04-01 16:40:56',NULL);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,

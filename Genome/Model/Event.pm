@@ -25,6 +25,7 @@ UR::Object::Type->define(
         ref_seq_id            => { is => 'VARCHAR2', len => 64, is_optional => 1 },
         run_id                => { is => 'NUMBER', len => 11, is_optional => 1 },
         user_name             => { is => 'VARCHAR2', len => 64, is_optional => 1 },
+        retry_count           => { is => 'NUMBER', len => 3, is_optional => 1 },
         run            => { is => 'Genome::RunChunk', id_by => 'run_id', constraint_name => 'event_run' },
     ],
     schema_name => 'GMSchema',
