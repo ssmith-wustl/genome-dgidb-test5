@@ -110,6 +110,9 @@ $DB::single = 1;
         my $alignment_file = $self->$alignment_file_method();
 
         my $aligner_params = $model->read_aligner_params || '';
+        if (-f $self->adaptor_file_for_run()) {
+            $aligner_params = join(' ', $aligner_params, '-d', $self->adaptor_file_for_run);
+        }
         my $cmdline = sprintf("$maq_pathname map %s -u %s %s %s %s %s > $aligner_output 2>&1",
                               $aligner_params,
                               $reads_file,

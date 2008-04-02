@@ -14,6 +14,7 @@ class Genome::Model::Command::AddReads::AssignRun::Solexa {
     has => [ 
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
         run_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },
+        adaptor_file => { is => 'String', is_optional => 1, doc => 'pathname to the adaptor file used for these reads'},
     ]
 };
 
@@ -69,6 +70,11 @@ sub execute {
             return;
         }
     }
+
+    # Copy the given adaptor file to the run's directory
+    my $given_adaptor_pathanme = $self->adaptor_file;
+    my $local_adaptor_pathname = $self->adaptor_file_for_run;
+    `cp $given_adaptor_pathname $local_adaptor_pathname`;
 
     # The LIMS PSE that ran before us has done some preparation already
     # by making 2 files for each lane in the run.  1 containing sequences

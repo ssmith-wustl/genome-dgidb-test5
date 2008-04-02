@@ -190,5 +190,11 @@ sub alignment_submaps_dir_for_lane {
     return sprintf("%s/alignments_lane_%s.submaps", $self->resolve_run_directory, $run->limit_regions)
 }
 
+sub adaptor_file_for_run {
+    my $self = shift;
+
+    my $pathname = $self->resolve_run_directory . '/adaptor_sequence_file';
+    return $pathname;
+}
 
 1;

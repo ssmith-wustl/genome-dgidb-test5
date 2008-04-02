@@ -18,6 +18,8 @@ class Genome::Model::Command::AddReads {
                                 doc => 'Pathname to the directory containing unique and duplicate fastq files for that run',},
     ],
     has_optional => [
+        adaptor_file        =>  { is => 'String',
+                                  doc => 'Pathname to the adaptor sequence file for these reads' },
         limit_regions       =>  { is => 'String',
                                   doc => 'Which regions should be kept during further analysis' },
         bsub                =>  { is => 'Boolean',
@@ -77,6 +79,11 @@ $DB::single=1;
         return;
     }
 
+    if ($self->adaptor_file && ! -f $self->adaptor_file) {
+        $self->error_message("Specified adaptor file does not exist");
+        return;
+    }
+
     # Determine the correct value for limit_regions
     my $regions;
     if ($self->limit_regions) {
@@ -125,6 +132,11 @@ $DB::single=1;
             }
             
             if (ref($command)) {   # If there's a command to be done at this step
+                # FIXME This isn't very clean.  We should come up with a vetter way to do it
+                if ($self->adaptor_file and $command->can('adaptor_file') {
+                    $command->adaptor_file($self->adaptor_file);
+                }
+
                 $command->event_status('Scheduled');
                 my $should_bsub = 0;
                 if ($command->can('should_bsub')) {
