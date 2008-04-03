@@ -106,6 +106,8 @@ $DB::single=1;
 
     UR::Context->commit();
 
+    $self->status_message("Job rescheduled as jobid $job_id: ".$event->event_type);
+
     {
         my @all_scheduled = Genome::Model::Event->get(event_status => 'Scheduled', model_id => $self->model_id);
         foreach my $sched_event (@all_scheduled) {
@@ -118,6 +120,7 @@ $DB::single=1;
 
                 my $dep_lsf_job = $sched_event->lsf_job_id;
 
+                $self->status_message("Changing dependancy of jobid $dep_lsf_job from $old_lsf_job_id to $job_id");
                 my $bmod_out = `bmod -w $job_id $dep_lsf_job`;
 
             }
