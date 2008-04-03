@@ -123,6 +123,8 @@ $DB::single=1;
     foreach my $run ( @runs ) {
 
         my $last_bsub_job_id;
+
+        THIS_RUN_PIPELINE:
         foreach my $command_class ( @sub_command_classes ) {
             my $command = $command_class->create(run_id => $run->id,
                                                  model_id => $self->model_id);
@@ -152,16 +154,12 @@ $DB::single=1;
                     my $rv = $command->execute();
                     $command->date_completed(UR::Time->now());
                     $command->event_status($rv ? 'Succeeded' : 'Failed');
+
+                    last THIS_RUN_PIPELINE unless ($rv);  # Stop the pipline if one of these fails
                 } else {
                     print "Created $command_class for run_id ",$run->id," event_id ",$command->genome_model_event_id,"\n";
                 }
-                # This will be false if something went wrong.
-                # We should probably stop the pipeline at this point
             }
-
-            # For catching up on all the old runs... remove later
-            # This will submit only the assign-run step
-            #last;
         }
     }
 
