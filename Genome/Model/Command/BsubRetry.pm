@@ -98,6 +98,7 @@ $DB::single=1;
 
     $ar->delete;  ## ditch the dummy
 
+    $command_obj->retry_count($command_obj->retry_count + 1);
     $command_obj->lsf_job_id($job_id);
     $command_obj->event_status('Scheduled');
     $command_obj->date_scheduled(UR::Time->now());
@@ -108,24 +109,24 @@ $DB::single=1;
 
     $self->status_message("Job rescheduled as jobid $job_id: ".$event->event_type);
 
-    {
-        my @all_scheduled = Genome::Model::Event->get(event_status => 'Scheduled', model_id => $self->model_id);
-        foreach my $sched_event (@all_scheduled) {
-            next if ($command_obj->lsf_job_id == $sched_event->lsf_job_id); # dont check me
-
-            my ($sched_lsf_state, $sched_lsf_events) = $self->lsf_state($sched_event->lsf_job_id);
-
-            if (exists $sched_lsf_events->[0]->[1]->{'Dependency Condition'} &&
-                $sched_lsf_events->[0]->[1]->{'Dependency Condition'} =~ /^$old_lsf_job_id$/) {
-
-                my $dep_lsf_job = $sched_event->lsf_job_id;
-
+    my @all_scheduled = Genome::Model::Event->get(event_status => 'Scheduled', model_id => $self->model_id, run_id => $command_obj->run_id);
+    foreach my $sched_event (@all_scheduled) {
+        next if ($command_obj->lsf_job_id == $sched_event->lsf_job_id); # dont check me
+        if (my ($sched_lsf_state, $sched_lsf_events) = $self->lsf_state($sched_event->lsf_job_id)) {
+            if (exists $sched_lsf_events->[0]->[1]->{'Dependency Condition'}) {
+                if ($sched_lsf_events->[0]->[1]->{'Dependency Condition'} =~ /^(ended|done)\($old_lsf_job_id\)$/) {
+                    my $dep_lsf_job = $sched_event->lsf_job_id;
                 $self->status_message("Changing dependancy of jobid $dep_lsf_job from $old_lsf_job_id to $job_id");
-                my $bmod_out = `bmod -w $job_id $dep_lsf_job`;
+                    my $bmod_out = `bmod -w '$1($job_id)' $dep_lsf_job`;
+                } elsif ($sched_lsf_events->[0]->[1]->{'Dependency Condition'} =~ /^$old_lsf_job_id$/) {
+                    ## handle old behavior
+                    my $dep_lsf_job = $sched_event->lsf_job_id;
+                $self->status_message("Changing dependancy of jobid $dep_lsf_job from $old_lsf_job_id to $job_id");
+                    my $bmod_out = `bmod -w $job_id $dep_lsf_job`;
+                }
 
             }
         }
-
     }
 
     1;
@@ -135,7 +136,9 @@ $DB::single=1;
 sub lsf_state {
     my ($self, $lsf_job_id) = @_;
 
-    my $spool = `bjobs -l $lsf_job_id`;
+    my $spool = `bjobs -l $lsf_job_id 2>&1`;
+    return if ($spool =~ /Job <$lsf_job_id> is not found/);
+
     # this regex nukes the indentation and line feed
     $spool =~ s/\s{22}//gm; 
 

@@ -123,6 +123,7 @@ $DB::single=1;
     foreach my $run ( @runs ) {
 
         my $last_bsub_job_id;
+        my $last_command;
 
         THIS_RUN_PIPELINE:
         foreach my $command_class ( @sub_command_classes ) {
@@ -140,16 +141,17 @@ $DB::single=1;
                 }
 
                 $command->event_status('Scheduled');
+                $command->retry_count(0);
                 my $should_bsub = 0;
                 if ($command->can('should_bsub')) {
                     $should_bsub = $command->should_bsub;
                 }
 
                 if ($should_bsub && $self->bsub) {
-                    #$last_bsub_job_id = $self->run_command_with_bsub($command,$run,$last_bsub_job_id);
-                    $last_bsub_job_id = $self->run_command_with_bsub($command,$last_bsub_job_id);
+                    $last_bsub_job_id = $self->run_command_with_bsub($command,$last_command);
                     return unless $last_bsub_job_id;
                     $command->lsf_job_id($last_bsub_job_id);
+                    $last_command  = $command;
                 } elsif (! $self->test) {
                     my $rv = $command->execute();
                     $command->date_completed(UR::Time->now());
@@ -179,7 +181,11 @@ sub _determine_default_limit_regions {
 
 
 sub run_command_with_bsub {
-    my($self,$command,$last_bsub_job_id) = @_;
+    my($self,$command,$last_command, $dep_type) = @_;
+    $dep_type ||= 'ended';
+
+    my $last_bsub_job_id;
+    $last_bsub_job_id = $last_command->lsf_job_id if defined $last_command;
 
     my $queue = $self->bsub_queue;
     my $bsub_args = $self->bsub_args;
@@ -191,12 +197,14 @@ sub run_command_with_bsub {
     my $cmd = 'genome-model bsub-helper';
 
     my $event_id = $command->genome_model_event_id;
+    my $prior_event_id = $last_command->genome_model_event_id if defined $last_command;
     my $model_id = $self->model_id;
     my $cmdline;
     { no warnings 'uninitialized';
         $cmdline = "bsub -q $queue $bsub_args" .
-                   ($last_bsub_job_id && " -w $last_bsub_job_id") .
-                   " $cmd --model-id $model_id --event-id $event_id";
+                   ($last_bsub_job_id && " -w '$dep_type($last_bsub_job_id)'") .
+                   " $cmd --model-id $model_id --event-id $event_id" .
+                   ($prior_event_id && " --prior-event-id $prior_event_id");
     }
 
     if ($self->test) {
@@ -228,6 +236,14 @@ sub run_command_with_bsub {
     return $last_bsub_job_id;
 }
 
+## used for a special test case, needs to be fixed to be a run-time option
+sub XXXXX_sub_command_classes {
+    my $self = shift;
+    
+    my @classes = $self->SUPER::sub_command_classes(@_);
+    
+    return grep { /::Test(A|B|C|D|E)/ } @classes;
+}
 
 
 sub _get_sorted_sub_command_classes{
