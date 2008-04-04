@@ -1,11 +1,11 @@
-package Genome::Model::Command::Annotate::AmlReport;
+package Genome::Model::Command::Annotate::AmlReportOld;
 
 use strict;
 use warnings;
 
 use above "Genome"; 
 
-class Genome::Model::Command::Annotate::AmlReport
+class Genome::Model::Command::Annotate::AmlReportOld
 {
     is => 'Command',                       
     has => [ 

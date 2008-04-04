@@ -1,15 +1,14 @@
-package Genome::Model::Command::Annotate::AmlReportChunker;
+package Genome::Model::Command::Annotate::AmlReportChunkerOld;
 
 use strict;
 use warnings;
 
 use above "Genome";                
 
-use DBI;
-use LSF::Job;
-use UR::DBI;
+#use LSF::Job;
+use MPSampleData::DBI;
 
-class Genome::Model::Command::Annotate::AmlReportChunker {
+class Genome::Model::Command::Annotate::AmlReportChunkerOld {
     is => 'Command',                       
     has => 
     [   
@@ -68,11 +67,11 @@ sub execute
     #    croak "usage $0 --dev <database sample_data/sd_test..>";
     #}
 
-    # Changed the connection to use db aliases
-    MPSampleData::DBI->connect($self->db_name);
-    my $X = MPSampleData::DBI->db_Main;
 # $X cannot have 'my($X)' or else it will close every time.
 
+    # Changed the connection to use db aliases
+    MPSampleData::DBI->connect($options{dev});
+    my $X = MPSampleData::DBI->db_Main;
     my($sql_3);
 
     if ( grep { $options{dev} eq $_ } (qw/ sd_test sample_data /) )
