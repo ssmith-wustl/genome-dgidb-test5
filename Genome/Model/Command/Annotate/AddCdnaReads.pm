@@ -61,10 +61,10 @@ sub execute {
     my $read_hash_unique_dna = MG::Analysis::VariantAnnotation->add_unique_reads_count( $self->read_hash_unique_dna );
     my $read_hash_cDNA = MG::Analysis::VariantAnnotation->add_reads_count( $self->read_hash_cdna );
     my $read_hash_unique_cDNA = MG::Analysis::VariantAnnotation->add_unique_reads_count( $self->read_hash_unique_cdna );
-    my $read_hash_relapse_cDNA = MG::Analysis::VariantAnnotation->add_reads_count( $self->read_hash_relapse_dna );
+    my $read_hash_relapse_cDNA = MG::Analysis::VariantAnnotation->add_reads_count( $self->read_hash_relapse_cdna );
 
     open( IN, "<", $self->outfile ) or die "Can't open " . $self->outfile . "$!";
-    open( OUT, ">", $self->outfile."read" ) or die "Can't open " . $self->outfile."read" . "$!";
+    open( OUT, ">", $self->outfile.".read" ) or die "Can't open " . $self->outfile."read" . "$!";
 
     print OUT
 qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_position (B36)",Variant_allele,"# of genomic reads supporting variant allele","# of cDNA reads supporting variant allele","# of unique genomic reads supporting variant allele(starting point)","# of unique genomic reads supporting variant allele(context)","# of unique cDNA reads supporting variant allele(starting point)","# of unique cDNA reads supporting variant allele(context)","# of relapse cDNA reads supporting variant allele",Reference_allele,"# of genomic reads supporting reference allele","# of cDNA reads supporting reference allele","# of unique genomic reads supporting reference allele(starting point)","# of unique genomic reads supporting reference allele(context)","# of unique cDNA reads supporting reference allele(starting point)","# of unique cDNA reads supporting reference allele(context)","# of relapse cDNA reads supporting reference allele",Gene_expression,Detection,Ensembl_transcript_id,Transcript_stranding,Variant_type,Transcript_position,Amino_acid_change,Polyphen_prediction,"submit(0:no; 1:yes)"\n};
