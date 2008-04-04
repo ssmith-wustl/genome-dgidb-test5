@@ -37,7 +37,7 @@ sub bsub_rusage {
 }
 
 
-sub _execute {
+sub execute {
     my $self = shift;
     
     my $model = Genome::Model->get(id => $self->model_id);
