@@ -108,7 +108,7 @@ qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_positio
     my $read_hash_unique_dna = MG::Analysis::VariantAnnotation->add_unique_reads_count( $self->read_hash_unique_dna );
     my $read_hash_cDNA = MG::Analysis::VariantAnnotation->add_reads_count( $self->read_hash_cdna );
     my $read_hash_unique_cDNA = MG::Analysis::VariantAnnotation->add_unique_reads_count( $self->read_hash_unique_cdna );
-    my $read_hash_relapse_cDNA = MG::Analysis::VariantAnnotation->add_reads_count( $self->read_hash_relapse_dna );
+    my $read_hash_relapse_cDNA = MG::Analysis::VariantAnnotation->add_reads_count( $self->read_hash_relapse_cdna );
 
     while (<IN>) {
         next if (/dbSNP/);
