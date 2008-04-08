@@ -222,7 +222,7 @@ sub _check_for_shortcut {
                                             genome_model_id => { operator => 'ne', value => $model->genome_model_id},
                                          );
     my @similar_model_ids = map { $_->genome_model_id } @similar_models;
-
+    return unless (@similar_model_ids);
     my @possible_events = Genome::Model::Event->get(event_type => $self->event_type,
                                                     event_status => ['Succeeded', 'Running'],
                                                     model_id => \@similar_model_ids,
