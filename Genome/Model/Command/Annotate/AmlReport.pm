@@ -8,13 +8,17 @@ use above "Genome";
 class Genome::Model::Command::Annotate::AmlReport
 {
     is => 'Command',                       
-    has => [ 
-        file => { type => 'String', doc => "file", is_optional => 0, },
-        dev  => { type => 'String', doc => "dev", is_optional => 0, },
+    has => 
+    [ 
+    db_name => { type => 'String', doc => "?", is_optional => 0 },
+    file => { type => 'String', doc => "?", is_optional => 0 },
     ], 
 };
 
-sub sub_command_sort_position { 12 }
+use IO::File;
+use MG::Analysis::VariantAnnotation;
+use MPSampleData::DBI;
+use MPSampleData::ReadGroupGenotype;
 
 sub help_brief {   
     "WRITE A ONE-LINE DESCRIPTION HERE"                 
@@ -28,85 +32,66 @@ genome-model example1 --foo=hello barearg1 barearg2 barearg3
 EOS
 }
 
-sub help_detail {                           # this is what the user will see with the longer version of help. <---
+sub help_detail {
     return <<EOS 
 This is a dummy command.  Copy, paste and modify the module! 
 CHANGE THIS BLOCK OF TEXT IN THE MODULE TO CHANGE THE HELP OUTPUT.
 EOS
 }
 
-#sub create {                               # rarely implemented.  Initialize things before execute.  Delete unless you use it. <---
-#    my $class = shift;
-#    my %params = @_;
-#    my $self = $class->SUPER::create(%params);
-#    # ..do initialization here
-#    return $self;
-#}
-
-#sub validate_params {                      # pre-execute checking.  Not requiried.  Delete unless you use it. <---
-#    my $self = shift;
-#    return unless $self->SUPER::validate_params(@_);
-#    # ..do real checks here
-#    return 1;
-#}
-
 sub execute { 
     my $self = shift;
 
- my %options = ( 'file'         => $self->file,
-            'dev'         => $self->dev,
+   MPSampleData::DBI->connect($self->db_name);
 
-        );
+   my $file = $self->file;
+   my $fh = IO::File->new("< $file");
+   $self->error_message("Can't open file ($file): $!")
+       and return unless $fh;
 
-    if ( $options{dev} eq 'mysql' )
-    {
-        use Carp;
-
-        use MPSampleData::DBI;
-        use MPSampleData::ExternalGeneId;
-#use lib '/gscuser/xshi/svn/mp';
-        use MG::Analysis::VariantAnnotation;
-
-               unless(defined($options{'dev'}))  {
-            croak "usage $0 --dev <database sample_data/sd_test..>";
-        }
-        #MPSampleData::DBI->set_sql(change_db => "use $options{dev}");
-        MPSampleData::DBI->set_sql(change_db => "use sd_test");
-        MPSampleData::DBI->sql_change_db->execute;
-    }
-    elsif ( $options{dev} eq 'oracle' )
-    {
-        use MPSampleData::DBI;
-        MPSampleData::DBI::myinit("dbi:Oracle:dwdev","mguser_dev"); #dev
-        #MPSampleData::DBI::myinit("dbi:Oracle:dwrac","mguser_prd"); #prod
-    }
-    else
-    {
-        die "invalid dev: $options{dev}\n";
-    }
-
-#my $gene_info; 
-#my $gene_hash;
-# my $chrom_ids = MG::Analysis::VariantAnnotation->map_chromid_chromosome ;
-# my $gene_list;
-#  open (GENELIST, "<$ARGV[0]") or die "Can't open $ARGV[0]. $!";
-# while(<GENELIST>){
-# 	chomp();
-# 	$gene_list->{$_}=1;
-# }
-#  close(GENELIST);
-
-    open (IN, "<$options{'file'}") or die "Can't open $options{'file'}. $!";
-    open (ERROR,">$options{'file'}.error") or die "cant' open $options{'file'}.error $!";
-    open (OUT, ">$options{'file'}.out") or die "Can't open $options{'file'}.out. $!";
+   my $err_file = "$file.error";
+    open (ERROR,"> $err_file") or die "Can't open $err_file\: $!";
+   my $out_file = "$file.out";
+    open (OUT, "> $out_file") or die "Can't open $out_file\: $!";
     print OUT "dbSNP(0:no; 1:yes),Chromosome,Start_position (B36),End_position (B36),Reference_allele,# of cDNA reads supporting reference allele,# of genomic reads supporting reference allele,Variant_allele,# of cDNA reads supporting variant allele,# of genomic reads supporting variant allele,Gene_name,Ensembl_transcript_id,Transcript_stranding,Variant_type,Transcript_position,Amino_acid_change,Polyphen_prediction,Gene_expression,Detection\n";
-    while(<IN>){
-        chomp(); 
-        my $line=$_;
+
+    while ( my $id = $fh->getline )
+    {
+        chomp $id;
+        my $genotype = MPSampleData::ReadGroupGenotype->retrieve($id);
+        # check!
+
+=pod
+        print join
+        (
+            "\t",
+            map(
+                { defined($_) ? $_ : 0 }
+                $genotype->chrom_id->chromosome_name,
+                $genotype->start,
+                $genotype->end,
+                $genotype->allele1,
+                $genotype->allele2,
+                $genotype->allele1_type,
+                $genotype->allele2_type,
+                $genotype->num_reads1,
+                $genotype->num_reads2,
+            )
+        ), "\n";
+=cut 
+
         my ($chromosome,$start,$end,$allele1,$allele1_read1,$allele1_read2,$allele2,$allele2_read1,$allele2_read2,$allele1_type,$allele2_type) ; 
-#   ($chrom,$start,$end,$allele1,$allele1_read1,$allele1_read2,$allele2,$allele2_read1,$allele2_read2,$allele1_type,$allele2_type) =  split(/\t/) if($options{'gr'}==1); 
-        #($chromosome,$start,$end,$allele1,$allele2,$allele1_type,$allele2_type,$allele1_read1,$allele2_read1) =  split(/\t/)  ; 
-        ($chromosome,$start,$end,$allele1,$allele2,$allele1_type,$allele2_type,$allele1_read1,$allele2_read1) =  split(/\s+/)  ; 
+       ( $chromosome,$start,$end,$allele1,$allele2,$allele1_type,$allele2_type,$allele1_read1,$allele2_read1) =  (
+            $genotype->chrom_id->chromosome_name,
+                $genotype->start,
+                $genotype->end,
+                $genotype->allele1,
+                $genotype->allele2,
+                $genotype->allele1_type,
+                $genotype->allele2_type,
+                $genotype->num_reads1,
+                $genotype->num_reads2
+            );
 
         print "check   $chromosome,$start,$end,$allele1,$allele2 ...............\t";
         next if($allele1_type eq 'ref' && $allele2_type eq 'ref');	
@@ -137,7 +122,7 @@ sub execute {
         while(my $allele=shift @allele){
             my ($al1,$al1_read1,$al1_read2,$al2,$al2_read1,$al2_read2)=split(",",$allele);
             print " [anno $al1,$al2] ";
-                my $result=$self->annotate(allele1=>$al1,allele2=>$al2); 
+            my $result=$self->annotate(allele1=>$al1,allele2=>$al2); 
 #get the annotation result
             foreach my $gene (keys %{$self->{annotation}}){
                 my @trs;
@@ -147,7 +132,7 @@ sub execute {
                 else {
                     @trs=keys %{$self->{annotation}->{$gene}->{transcript}} if(exists $self->{annotation}->{$gene}->{transcript} && defined $self->{annotation}->{$gene}->{transcript});  
                 } 
-                unless(@trs) {print ERROR "no result:$line\n"; next;}
+                unless(@trs) {print ERROR "no result: $id\n"; next;}
 
                 foreach my $transcript (@trs) {
 # 			my $pph_prediction="NULL"; 
@@ -163,22 +148,16 @@ sub execute {
         print "\n";	
     }
 
-#MG::Analysis::VariantAnnotation->finish;
-
     print "final finished!\n";
 
     close(ERROR);
     close(OUT);
 
-# END OF SCRIPT
+    $fh->close;
+
     return 1;
 }
 
-# `perl /gscuser/xshi/work/AML_SNP/get_maq_num_reads.pl --dev sd_test --input $options{'file'}.prioritized --output $options{'file'}.prioritized.maqgt --list1 maq-wugsc-solexa-hg-dna_2_55 --pileup /gscuser/xshi/work/AML_SNP/maq_genotype/run124u567_mg_cnosv_q30_hg71.lst`;
-# check_submitted() if(defined  $options{'checksubm'} && $options{'checksubm'}==1);
-
-
-#subrutine
 # check if submitted or -+20bp
 sub check_submitted{
     # added $self and options

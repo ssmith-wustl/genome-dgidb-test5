@@ -15,7 +15,6 @@ class Genome::Model::Command::Annotate::AmlReportChunkerOld {
     dev => { type => 'String', doc => "?", is_optional => 0 },
     list1 => { type => 'String', doc => "?", is_optional => 0 },
     output => { type => 'String', doc => "?", is_optional => 0 },
-    create_input => { type => 'Boolean', doc => "?", is_optional => 1 },
     ], 
 };
 
@@ -27,7 +26,7 @@ sub help_brief
 sub help_synopsis
 {
     return <<EOS
-genome-model annotate aml-report-chunker --dev <db_name> --list1 <run_id> --output <output_file> --create_input
+genome-model annotate aml-report-chunker --dev <db_name> --list1 <run_id> --output <output_file>
 EOS
 }
 
@@ -42,14 +41,12 @@ sub execute
     my $self = shift;
 
     # removed GetOptions, added getting options from 'self'
-    # added option flag 'create_input' to replace checking for the ARGV[0]
     # changed dev to mean dw_dev, dw_rac, mysql_sd_test, mysql_sample_data
     my %options = 
     ( 
         'dev' => $self->dev,
         'list1' =>$self->list1,
         'out' =>$self->output,
-        'create_input' =>$self->create_input,
     );
     my $quality=">=30";
 =pod
@@ -119,7 +116,6 @@ EOS
 
 
     print $options{'list1'},":query database\n";
-    if($options{create_input}) {
         open(OUT,">$options{'out'}.dump") or die "can't open $options{'out'}.dump $!";
         my $sth;
         # commentted out the rm below, replacing with unlnking out file
@@ -136,7 +132,6 @@ EOS
         close(OUT);
         $sth->finish;
         print "query finished\n";
-    }
     $X->disconnect;
 
     # ending here, only getting the first 1000 for testing
