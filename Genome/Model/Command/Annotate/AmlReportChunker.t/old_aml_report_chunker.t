@@ -16,13 +16,11 @@ sub execute : Tests
 {
     my $self = shift;
 
-    my $dev = 'mg_dev';
-    my $list1 = "'maq wugsc solexa hg amll123t98_q1r07t096'"; 
+    my $dev = 'mg_prod';
+    my $list1 = "'maq wugsc solexa hg amll123t100_q1r07t096'";
     my $file = 'old';
-    my $dump_file = $file . '.dump';
-    unlink $dump_file if -e $dump_file;
 
-    is((system "genome-model annotate aml-report-chunker-old --dev $dev --list1 $list1 --output $file --create-input"), 0, "Executed");
+    is((system "genome-model annotate aml-report-chunker-old --dev $dev --list1 $list1 --output $file"), 0, "Executed");
 
     # TODO check files? currently more data is being added, so this query should return moer and more data
 
