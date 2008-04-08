@@ -9,13 +9,18 @@ use Command;
 class Genome::Model::Command::BsubRetry {
     is => 'Command',
     has => [
-        event_id            => { is => 'Integer', doc => 'Identifies the Genome::Model::Event by id'},
+        event_id            => { is => 'Integer', is_optional => 1, doc => 'Identifies the Genome::Model::Event by id'},
+        job_id              => { is => 'Integer', is_optional => 1, doc => 'Identifies the Genome::Model::Event by lsf jobID'},
         prior_event_id      => { is => 'Integer', doc => 'Identifies the prior Genome::Model::Event by id', is_optional=>1 },
         model_id            => { is => 'Integer', doc => "Identifies the genome model on which we're operating, Used for validation" },
         model               => { is => 'Genome::Model', id_by => 'model_id' },
     ],
     has_optional => [
         reschedule          =>  { is => 'Boolean', doc => 'Allow completed jobs to run again' },
+        bsub_queue          =>  { is => 'String',
+                                  doc => 'Which bsub queue to use for sub-command jobs, default is whatever queue it was originally scheduled into', },
+                                  
+
     ]
 };
 
@@ -46,10 +51,20 @@ sub execute {
 $DB::single=1;
     # Give the add-reads top level step a chance to sync database so these events
     # show up
+    my %get_args;
+    if ($self->event_id) {
+        $get_args{'genome_model_event_id'} = $self->event_id;
+    } elsif ($self->job_id) {
+        $get_args{'lsf_job_id'} = $self->job_id;
+    } else {
+        $self->error_message('Either --event-id or --job-id is required');
+        return;
+    }
+
     my $try_count = 10;
     my $event;
     while($try_count--) {
-        $event = Genome::Model::Event->load(id => $self->event_id);
+        $event = Genome::Model::Event->load(%get_args);
         last if ($event);
         sleep 5;
     }
@@ -80,13 +95,25 @@ $DB::single=1;
         $command_obj = $proper_command_class_name->get(genome_model_event_id => $event->genome_model_event_id);
     }
 
+    # What lsf queue should it get rescheduled in to
+    my %add_reads_queue;
+    if ($self->bsub_queue) {
+        $add_reads_queue{'bsub_queue'} = $self->bsub_queue;
+    } else {
+        my ($old_jobinfo, $old_events) = $self->lsf_state($event->lsf_job_id);
+        if ($old_jobinfo && $old_jobinfo->{'Queue'}) {
+            $add_reads_queue{'bsub_queue'} = $old_jobinfo->{'Queue'};
+        }
+    }
+
     # retry tests here
 
     ## create a dummy object to call this method, refactor candidate
     my $ar = Genome::Model::Command::AddReads->create(
         model_id => $self->model_id,
         sequencing_platform => 'solexa', # dont care
-        full_path => '/tmp' # dont care
+        full_path => '/tmp', # dont care
+        %add_reads_queue,
     );
 
     ## since i'm rerunning prior, set its job_id to me
