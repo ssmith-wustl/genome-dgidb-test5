@@ -72,9 +72,11 @@ sub execute {
     }
 
     # Copy the given adaptor file to the run's directory
-    my $given_adaptor_pathname = $self->adaptor_file;
-    my $local_adaptor_pathname = $self->adaptor_file_for_run;
-    `cp $given_adaptor_pathname $local_adaptor_pathname`;
+    if ($self->adaptor_file) {
+        my $given_adaptor_pathname = $self->adaptor_file;
+        my $local_adaptor_pathname = $self->adaptor_file_for_run;
+        `cp $given_adaptor_pathname $local_adaptor_pathname`;
+    }
 
     # The LIMS PSE that ran before us has done some preparation already
     # by making 2 files for each lane in the run.  1 containing sequences
