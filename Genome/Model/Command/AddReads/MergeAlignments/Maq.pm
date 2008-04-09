@@ -68,16 +68,20 @@ sub execute {
                                                 %s and model_id=%s and event_status='Succeeded'",
                                                 $last_merge_done_str,
                                                 $model->id));
-    my @run_ids = map {$_->run_id} @run_events; 
-    my @target_runs = Genome::RunChunk->get(id=>\@run_ids);
-    
-    my @input_alignments;
-    
-    foreach my $in_run (@target_runs) {
-        my $resolved_input =  $self->resolve_input_alignments_filename_from_run(run=>$in_run);        
-        push @input_alignments, $resolved_input if (-f $resolved_input);
-    }
-    if (@input_alignments) {
+                                              
+   my @input_alignments;
+   for my $run_event (@run_events) {
+       my @map_files=$run_event->map_files_for_refseq($self->ref_seq_id);
+       push(@input_alignments, @map_files);    
+   }
+   for my $input_alignment (@input_alignments) {
+       unless(-f $input_alignment) {
+           $self->error_message("Expected $input_alignment not found");
+           return
+       }
+   }
+
+   if (@input_alignments) {
     
         my $accumulated_alignments_filename = $model->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
         my $align_dir = dirname($accumulated_alignments_filename);
@@ -113,36 +117,6 @@ sub execute {
     }
     
     return 1;
-}
-
-
-sub resolve_input_alignments_filename_from_run {
-    my $self = shift;
-    my %p = @_;
-    
-    my $run = $p{run};
-    
-    my $model = Genome::Model->get(id => $self->model_id);
-    my $model_data_directory = $model->data_directory;
-    
-    my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
-    
-    if (@subsequences && !$self->ref_seq_id) {
-        $self->error_message("there are multiple subsequences available, but you did not specify a refseq");
-        return;
-    }
-      
-    my $base_run_path = sprintf("%s/runs/%s/%s/alignments_lane_%s.map",
-                               $model_data_directory,
-                               $run->sequencing_platform,
-                               $run->name,
-                               $run->limit_regions);
-    
-    if (@subsequences) {
-        return $base_run_path . ".submaps/" . $self->ref_seq_id . ".map";
-    } else {
-        return $base_run_path;
-    }
 }
 
 1;
