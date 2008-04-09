@@ -63,11 +63,7 @@ sub execute {
         mkdir($analysis_base_path);
     }
 
-    my $assembly_output_file = sprintf('%s/consensus/%s.cns',
-                                       $model_dir, 
-                                       (defined $self->ref_seq_id ? $self->ref_seq_id
-                                                              : ""));
-    
+    my $assembly_output_file =  $model->assembly_file_for_refseq($self->ref_seq_id);   
     unless (-f $assembly_output_file) {
         $self->error_message("Assembly output file $assembly_output_file was not found.  It should have been created by a prior run of update-genotype-probabilities maq");
         return;

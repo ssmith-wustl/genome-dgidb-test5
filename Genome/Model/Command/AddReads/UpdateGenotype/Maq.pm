@@ -54,15 +54,14 @@ sub execute {
         mkdir ("$model_dir/consensus");
     }
 
-    my $assembly_output_base = sprintf('consensus/%s.cns', $self->ref_seq_id);
-    my $assembly_output_file = $model_dir . "/" . $assembly_output_base;
+    my $assembly_output_file = $model->assembly_file_for_refseq($self->ref_seq_id);
     my $ref_seq_file = sprintf("%s/%s.bfa", $model->reference_sequence_path , $self->ref_seq_id);
 
 
     my $assembly_opts = $model->genotyper_params || '';
 
-    unless ($model->lock_resource(resource_id=>$assembly_output_base)) {
-        $self->error_message("Can't get lock for model's maq assemble output $assembly_output_base");
+    unless ($model->lock_resource(resource_id=>"assembly_" . $self->ref_seq_id)) {
+        $self->error_message("Can't get lock for model's maq assemble output assembly_" . $self->ref_seq_id);
         return undef;
     }
     my $scmd = "$maq_pathname assemble $assembly_opts $assembly_output_file $ref_seq_file $accumulated_alignments_file";

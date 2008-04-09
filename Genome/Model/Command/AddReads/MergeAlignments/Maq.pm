@@ -112,6 +112,11 @@ sub execute {
         }
     
         rename($accum_tmp, $accumulated_alignments_filename);
+        $self->date_scheduled(UR::Time->now());
+        $self->date_completed(UR::Time->now());
+        $self->event_status('succeeded');
+        $self->event_type($self->command_name);
+        $self->user_name($ENV{USER});
     } else {
         $self->status_message("Nothing to do!");
     }
