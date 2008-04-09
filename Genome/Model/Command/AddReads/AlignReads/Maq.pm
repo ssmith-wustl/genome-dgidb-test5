@@ -99,7 +99,7 @@ $DB::single = 1;
             system("$maq_pathname fastq2bfq $fastq_pathname $bfq_pathname");
         }
 
-        # Do alignments 
+        # Files needed/creatd by the aligner
         my $aligner_output_method = sprintf("aligner_%s_output_file_for_lane", $pass);
         my $aligner_output = $self->$aligner_output_method;
 
@@ -113,6 +113,10 @@ $DB::single = 1;
         if (-f $self->adaptor_file_for_run()) {
             $aligner_params = join(' ', $aligner_params, '-d', $self->adaptor_file_for_run);
         }
+
+        # Remove the output file if it already exists
+        unlink($alignment_file);
+       
         my $cmdline = sprintf("$maq_pathname map %s -u %s %s %s %s %s > $aligner_output 2>&1",
                               $aligner_params,
                               $reads_file,
@@ -143,7 +147,8 @@ $DB::single = 1;
                      mkdir($alignments_dir);
                 }
                 my $submap_target = sprintf("%s/%s_%s.map",$alignments_dir,$seq,$pass);
-                
+                unlink ($submap_target);
+              
                 # That last "1" is for the required (because of a bug) 'begin' parameter
                 my $maq_submap_cmdline = "$maq_pathname submap $submap_target $alignment_file $seq 1";
             
