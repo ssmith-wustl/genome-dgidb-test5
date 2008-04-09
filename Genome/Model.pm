@@ -173,6 +173,17 @@ sub resolve_accumulated_alignments_filename {
     }
 }
 
+sub is_eliminate_all_duplicates {
+    my $self = shift;
+
+    if ($self->model->multi_read_fragment_strategy and
+        $self->model->multi_read_fragment_strategy eq 'EliminateAllDuplicates') {
+
+        1;
+    } else {
+        0;
+    }
+}
 
 
 
