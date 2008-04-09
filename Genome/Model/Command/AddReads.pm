@@ -179,63 +179,6 @@ sub _determine_default_limit_regions {
     return '12345678';
 }
 
-
-sub run_command_with_bsub {
-    my($self,$command,$last_command, $dep_type) = @_;
-    $dep_type ||= 'ended';
-
-    my $last_bsub_job_id;
-    $last_bsub_job_id = $last_command->lsf_job_id if defined $last_command;
-
-    my $queue = $self->bsub_queue;
-    my $bsub_args = $self->bsub_args;
-
-    if ($command->can('bsub_rusage')) {
-        $bsub_args .= ' ' . $command->bsub_rusage;
-    }
-
-    my $cmd = 'genome-model bsub-helper';
-
-    my $event_id = $command->genome_model_event_id;
-    my $prior_event_id = $last_command->genome_model_event_id if defined $last_command;
-    my $model_id = $self->model_id;
-    my $cmdline;
-    { no warnings 'uninitialized';
-        $cmdline = "bsub -q $queue $bsub_args" .
-                   ($last_bsub_job_id && " -w '$dep_type($last_bsub_job_id)'") .
-                   " $cmd --model-id $model_id --event-id $event_id" .
-                   ($prior_event_id && " --prior-event-id $prior_event_id");
-    }
-
-    if ($self->test) {
-        #$command->status_message("Test mode, command not executed: $cmdline");
-        print "Test mode, command not executed: $cmdline\n";
-        $last_bsub_job_id = 'test';
-    } else {
-        $self->status_message("Running command: " . $cmdline);
-
-        my $bsub_output = `$cmdline`;
-        my $retval = $? >> 8;
-
-        if ($retval) {
-            $self->error_message("bsub returned a non-zero exit code ($retval), bailing out");
-            return;
-        }
-
-        if ($bsub_output =~ m/Job <(\d+)>/) {
-            $last_bsub_job_id = $1;
-
-        } else {
-            $self->error_message('Unable to parse bsub output, bailing out');
-            $self->error_message("The output was: $bsub_output");
-            return;
-        }
-
-    }
-
-    return $last_bsub_job_id;
-}
-
 ## used for a special test case, needs to be fixed to be a run-time option
 sub XXXXX_sub_command_classes {
     my $self = shift;

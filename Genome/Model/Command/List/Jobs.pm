@@ -104,19 +104,39 @@ sub _summarize_jobs {
 
     my $job_info = $self->_get_job_info(map {$_->lsf_job_id} @events);
 
-    my $is_orphaned = 0;
-    print("JobID    User     Status     Model                       Run Path                            Command\n");
+    my $any_orphaned = 0;
+    my $any_without_retries = 0;
+    print("JobID     User     Status     Model                       Run Path                            Command\n");
     foreach my $event ( @events ) {
         my $jobid = $event->lsf_job_id || '<none>';
         my $model = $event->model;
         my $run = $event->run;
 
+        my $max_retries;
+        {
+            my $proper_command_class_name = $event->class_for_event_type();
+            my $command_obj;
+            if ($proper_command_class_name) {
+                $command_obj = $proper_command_class_name->get(genome_model_event_id => $event->genome_model_event_id);
+            } else {
+                # weird case because of test classes that may end up in the db, just use the event obj
+                $command_obj = $event;
+            }
+            $max_retries = $command_obj->can('max_retries') ? $command_obj->max_retries : 0;
+        }
+
         my $this_job_info = $job_info->{$jobid};
         if ($event->event_status eq 'Running' and !$this_job_info) {
             $jobid .= '*';
-            $is_orphaned = 1;
+            $any_orphaned = 1;
         }
-        printf("%-8s %-8s %-10s %-27s %-35s %s\n",
+
+        ## older events have null retry_count, they will never be retried
+        if (!defined($event->retry_count) or $event->retry_count >= $max_retries) {
+            $jobid .= '~';
+            $any_without_retries = 1;
+        }
+        printf("%-9s %-8s %-10s %-27s %-35s %s\n",
                $jobid,
                $this_job_info->{'user'} || $event->user_name || '<unknown>',
                $this_job_info->{'stat'} || $event->event_status || 'running',
@@ -125,8 +145,11 @@ sub _summarize_jobs {
                $event->event_type || '<unknown>',
             );
     }
-    if ($is_orphaned) {
+    if ($any_orphaned) {
         print "* denotes an event listed as 'Running' but the LSF job no longer exists\n";
+    }
+    if ($any_without_retries) {
+        print "~ denotes an event without any remaining automatic retries\n";
     }
 
     return 1;

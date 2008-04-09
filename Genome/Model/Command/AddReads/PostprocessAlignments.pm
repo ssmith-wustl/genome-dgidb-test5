@@ -68,7 +68,7 @@ sub execute {
 
     $DB::single=1;
     
-    my @sub_command_classes = @CHILD_JOB_CLASSES;
+    my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
 
     my $model = Genome::Model->get($self->model_id);
     my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
@@ -77,88 +77,43 @@ sub execute {
         @subreferences_names = ('all_sequences');
     }
     
-   
     foreach my $ref (@subreferences_names) { 
         my $last_bsub_job_id;
+        my $last_command;
+
+        THIS_PIPELINE:
         foreach my $command_class ( @sub_command_classes ) {
-          my $command = $command_class->create(model_id => $self->model_id, ref_seq_id=>$ref);
- 
-          if ($self->bsub) {
-             $last_bsub_job_id = $self->run_command_with_bsub($command,$last_bsub_job_id);
-          } elsif (! $self->test) {
-             $command->execute();
-          }
-         }
+            my $command = $command_class->create(model_id => $self->model_id, ref_seq_id=>$ref);
+
+            $command->event_status('Scheduled');
+            $command->retry_count(0);
+
+            my $should_bsub = $command->can('should_bsub') ? $command->should_bsub : 0;
+            if ($should_bsub && $self->bsub) {
+                $last_bsub_job_id = $self->run_command_with_bsub($command,$last_command);
+                $command->lsf_job_id($last_bsub_job_id);
+                $last_command = $command;
+            } elsif (! $self->test) {
+                my $rv = $command->execute();
+                $command->date_completed(UR::Time->now);
+                $command->event_status($rv ? 'Succeeded' : 'Failed');
+
+                last THIS_PIPELINE unless ($rv);
+            }
+        }
     }
 
     return 1; 
 }
 
-
-
-sub run_command_with_bsub {
-    my($self,$command,$last_bsub_job_id) = @_;
-
-    my $queue = $self->bsub_queue;
-    my $bsub_args = $self->bsub_args;
-
-    if ($command->can('bsub_rusage')) {
-        $bsub_args .= ' ' . $command->bsub_rusage;
-    }
-
-    # In case the command to run on the blades is different than 'genome-model'
-    my $cmd = $command->command_name;
-    $cmd =~ s/^\S+/$GENOME_MODEL_BSUBBED_COMMAND/;
-
-    my $model_id = $self->model_id;
-    my $refseq_id = $command->ref_seq_id;
-
-    my $cmdline;
-    { no warnings 'uninitialized';
-        $cmdline = "bsub -q $queue $bsub_args" .
-                   ($last_bsub_job_id && " -w $last_bsub_job_id") .
-                   " $cmd --model-id $model_id --ref-seq-id $refseq_id";
-    }
-
-    if ($self->test) {
-        $command->status_message("Test mode, command not executed: $cmdline");
-        $last_bsub_job_id = 'test';
-    } else {
-        $self->status_message("Running command: " . $cmdline);
-
-        my $bsub_output = `$cmdline`;
-        my $retval = $? >> 8;
-
-        if ($retval) {
-            $self->error_message("bsub returned a non-zero exit code ($retval), bailing out");
-            return;
-        }
-
-        if ($bsub_output =~ m/Job <(\d+)>/) {
-            $last_bsub_job_id = $1;
-
-        } else {
-            $self->error_message('Unable to parse bsub output, bailing out');
-            $self->error_message("The output was: $bsub_output");
-            return;
-        }
-
-    }
-
-    return $last_bsub_job_id;
-}
-
-
-
 sub _get_sorted_command_classes{
     my $self = shift;
-    my @in_classes = @_;
 
     # Determine what all the sub-commands are going to be
     my @sub_command_classes = sort { $a->sub_command_sort_position
                                      <=>
                                      $b->sub_command_sort_position
-                                   } @in_classes;
+                                   } grep {$_->can('is_not_to_be_run_by_add_reads') && $_->is_not_to_be_run_by_add_reads} $self->sub_command_classes();
     
     return \@sub_command_classes;
 }
