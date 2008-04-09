@@ -198,4 +198,21 @@ sub adaptor_file_for_run {
     return $pathname;
 }
 
+sub map_files_for_refseq {
+    my $self = shift;
+    my $ref_seq_id=shift;
+    my $model= $self->model;
+    
+    my $path = $self->alignment_submaps_dir_for_lane;
+    my @map_files =  (sprintf("%s/%s_unique.map",$path, $ref_seq_id));
+    if($model->is_eliminate_all_duplicates) {
+        return @map_files;
+    }
+    else {
+        push (@map_files, sprintf("%s/%s_duplicate.map",$path, $ref_seq_id));
+        return @map_files;
+    }
+}
+    
+    
 1;
