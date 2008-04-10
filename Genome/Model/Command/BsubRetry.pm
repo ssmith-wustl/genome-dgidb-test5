@@ -12,8 +12,6 @@ class Genome::Model::Command::BsubRetry {
         event_id            => { is => 'Integer', is_optional => 1, doc => 'Identifies the Genome::Model::Event by id'},
         job_id              => { is => 'Integer', is_optional => 1, doc => 'Identifies the Genome::Model::Event by lsf jobID'},
         prior_event_id      => { is => 'Integer', doc => 'Identifies the prior Genome::Model::Event by id', is_optional=>1 },
-        model_id            => { is => 'Integer', doc => "Identifies the genome model on which we're operating, Used for validation" },
-        model               => { is => 'Genome::Model', id_by => 'model_id' },
     ],
     has_optional => [
         reschedule          =>  { is => 'Boolean', doc => 'Allow completed jobs to run again' },
@@ -32,7 +30,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model bsub-retry --event-id 123456 --model_id 5
+genome-model bsub-retry --event-id 123456
 EOS
 }
 
@@ -77,12 +75,6 @@ $DB::single=1;
         return;
     }
 
-    unless ($event->model_id == $self->model_id) {
-        $self->error_message("The model id for the loaded event ".$event->model_id.
-                             " does not match the command line ".$self->model_id);
-        return;
-    }
-
     # Re-load the command object with the proper class.
     # FIXME Maybe Event.pm could be changed to do this for us at some point
     my $command_obj;
@@ -110,7 +102,7 @@ $DB::single=1;
 
     ## create a dummy object to call this method, refactor candidate
     my $ar = Genome::Model::Command::AddReads->create(
-        model_id => $self->model_id,
+        model_id => $event->model_id,
         sequencing_platform => 'solexa', # dont care
         full_path => '/tmp', # dont care
         %add_reads_queue,
@@ -136,7 +128,7 @@ $DB::single=1;
 
     $self->status_message("Job rescheduled as jobid $job_id: ".$event->event_type);
 
-    my @all_scheduled = Genome::Model::Event->get(event_status => 'Scheduled', model_id => $self->model_id, run_id => $command_obj->run_id);
+    my @all_scheduled = Genome::Model::Event->get(event_status => 'Scheduled', model_id => $event->model_id, run_id => $command_obj->run_id);
     foreach my $sched_event (@all_scheduled) {
         next if ($command_obj->lsf_job_id == $sched_event->lsf_job_id); # dont check me
         if (my ($sched_lsf_state, $sched_lsf_events) = $self->lsf_state($sched_event->lsf_job_id)) {
