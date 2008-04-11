@@ -16,49 +16,46 @@ class Genome::Model::Command::Annotate::Sort {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {
-    "WRITE A ONE-LINE DESCRIPTION HERE"                 
+    "#TODO fill in"             
 }
 
 sub help_synopsis { 
     return <<EOS
-genome-model example1 --foo=hello
-genome-model example1 --foo=goodbye --bar
-genome-model example1 --foo=hello barearg1 barearg2 barearg3
+    #TODO fill me in
 EOS
 }
 
 sub help_detail {  
     return <<EOS 
-This is a dummy command.  Copy, paste and modify the module! 
-CHANGE THIS BLOCK OF TEXT IN THE MODULE TO CHANGE THE HELP OUTPUT.
+    #TODO fill out
 EOS
 }
-
-#sub create {                               # rarely implemented.  Initialize things before execute.  Delete unless you use it. <---
-#    my $class = shift;
-#    my %params = @_;
-#    my $self = $class->SUPER::create(%params);
-#    # ..do initialization here
-#    return $self;
-#}
-
-#sub validate_params {                      # pre-execute checking.  Not requiried.  Delete unless you use it. <---
-#    my $self = shift;
-#    return unless $self->SUPER::validate_params(@_);
-#    # ..do real checks here
-#    return 1;
-#}
 
 sub execute {     
     my $self = shift;
 	
-	my $input= $self->input;
-	system("echo $input");
-	
-	system(qw{awk '{FS=",";if($8==0 && $9>0 ) print}' $input | sort -t',' -nrk 7,7 -k
-		9,9|awk '{FS=",";if($7>=4 && $9>=10 && !($23==1 && $9==0 && $16>0) && !($23==0
-		&& $9==0 && $16==0)) {print  > "prioritize.1";} else {print  >
-		"prioritize.2";} }'});  
+	my $input_fh = File::IO->new($self->input);
+    my $output_fh1 = File::IO->new(">".$self->input.".prioritize.1");
+    my $output_fh2 = File::IO->new(">".$self->input.".prioritize.2");
+	    
+    my @lines = $input_fh->getlines;
+    my @lines_to_sort;
+    while (my $line = shift @lines){
+	    my @fields = split(',', $line);
+        if ( $fields[8] == 0 and $fields[9] > 0 ){
+            push @lines_to_sort, \@fields; 
+        }
+    }
+    
+    @lines_to_sort = sort { $b->[7] <=> $a->[7] } sort { $b->[9] cmp $a->[9] } @lines_to_sort;
+
+    foreach (@lines_to_sort){
+        if ($_->[7] >= 4 && $_->[9] >= 10 && !($_->[23] == 1 && $_->[9] == 0 && $_->[16] > 0) && !($_->[23] == 0 && $_->[9] == 0 && $_->[16] == 0) ) {
+            $output_fh1->print( join(",", @$_) ); 
+        }else {
+            $output_fh2->print( join(",", @$_) ); 
+        }
+    }
 		
     return 0;
 }
