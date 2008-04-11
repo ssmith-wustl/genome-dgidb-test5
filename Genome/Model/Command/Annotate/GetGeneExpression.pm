@@ -5,7 +5,7 @@ use warnings;
 
 use Carp;
 use Data::Dumper;
-use MPSampleData::DBI;
+#use MPSampleData::DBI;
 use MPSampleData::ExternalGeneId;
 use MG::Analysis::VariantAnnotation;
 
@@ -55,7 +55,6 @@ EOS
 
 sub execute {
     my $self = shift;
-
 =pod
     my %options = ( 'dev' => $self->dev, );
     #GetOptions( 'devel=s' => \$options{'dev'}, );
@@ -90,8 +89,14 @@ sub execute {
     my $gene_hash;
 
 #MPSampleData::DBI::myinit("dbi:Oracle:dwdev","mguser_dev"); #dev
-    MPSampleData::DBI::myinit("dbi:Oracle:dwrac","mguser_prd"); #prod
+    #MPSampleData::DBI::myinit("dbi:Oracle:dwrac","mguser_prd"); #prod
     
+	#to connect:
+	my $db_name = 'mg_prod';
+	MPSampleData::DBI->connect($db_name); # mg_dev, mg_prod, sd_test, sample_data; stored in
+	#Get the dbh:
+	my $dbh = MPSampleData::DBI->db_Main; 
+
     my $submitted;
 
     open( SUB, "</gscuser/xshi/work/AML_SNP/Gene_to_check/AMP_SNP_set3.submit.091507.results.8oct2007.csv") or die "Can't open  $!";
@@ -104,7 +109,7 @@ sub execute {
     open( IN, "<", $self->infile ) or die "Can't open " . $self->infile . " $!";
     open( OUT, ">", $self->outfile ) or die "Can't open " . $self->outfile . " $!";
     print OUT
-qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_position (B36)",Variant_allele,"# of genomic reads supporting variant allele","# of cDNA reads supporting variant allele",Reference_allele,"# of genomic reads supporting reference allele","# of cDNA reads supporting reference allele",Gene_expression,Detection,Ensembl_transcript_id,Transcript_stranding,Variant_type,Transcript_position,Amino_acid_change,Polyphen_prediction,"submit(0:no; 1:yes)"
+ qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_position (B36)",Variant_allele,"# of genomic reads supporting variant allele","# of cDNA reads supporting variant allele",Reference_allele,"# of genomic reads supporting reference allele","# of cDNA reads supporting reference allele",Gene_expression,Detection,Ensembl_transcript_id,Transcript_stranding,Variant_type,Transcript_position,Amino_acid_change,Polyphen_prediction,"submit(0:no; 1:yes)"
 };
 
 #print OUT "dbSNP(0:no; 1:yes),Gene_name,Chromosome,Start_position (B36),End_position (B36),Reference_allele,Variant_allele,# of genomic reads supporting reference allele,# of cDNA reads supporting reference allele,# of genomic reads supporting variant allele,# of cDNA reads supporting variant allele,Gene_expression,Detection,Ensembl_transcript_id,Transcript_stranding,Variant_type,Transcript_position,Amino_acid_change,Polyphen_prediction\n";

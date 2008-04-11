@@ -3,6 +3,7 @@ package Genome::Model::Command::Annotate::Sort;
 
 use strict;
 use warnings;
+use IO::File;
 
 use above "Genome";                         
 
@@ -34,24 +35,27 @@ EOS
 sub execute {     
     my $self = shift;
 	
-	my $input_fh = File::IO->new($self->input);
-    my $output_fh1 = File::IO->new(">".$self->input.".prioritize.1");
-    my $output_fh2 = File::IO->new(">".$self->input.".prioritize.2");
-	    
+	my $input_fh = IO::File->new($self->input);
+    my $output_fh1 = IO::File->new(">".$self->input.".prioritize.1");
+    my $output_fh2 = IO::File->new(">".$self->input.".prioritize.2");
+	
     my @lines = $input_fh->getlines;
     my @lines_to_sort;
+	shift @lines;
+
     while (my $line = shift @lines){
 	    my @fields = split(',', $line);
-        if ( $fields[8] == 0 and $fields[9] > 0 ){
+        if ( $fields[7] == 0 and $fields[8] > 0 ){
             push @lines_to_sort, \@fields; 
         }
     }
     
-    @lines_to_sort = sort { $b->[7] <=> $a->[7] } sort { $b->[9] cmp $a->[9] } @lines_to_sort;
+    @lines_to_sort = sort { $b->[6] <=> $a->[6] } sort { $b->[8] cmp $a->[8] } @lines_to_sort;
 
     foreach (@lines_to_sort){
-        if ($_->[7] >= 4 && $_->[9] >= 10 && !($_->[23] == 1 && $_->[9] == 0 && $_->[16] > 0) && !($_->[23] == 0 && $_->[9] == 0 && $_->[16] == 0) ) {
-            $output_fh1->print( join(",", @$_) ); 
+        if ($_->[6] >= 4 && $_->[8] >= 10 && !($_->[22] == 1 && $_->[8] == 0 && $_->[15] > 0) && !($_->[22] == 0 && $_->[8] == 0 && $_->[15] == 0) )
+		{ 
+			$output_fh1->print( join(",", @$_) ); 
         }else {
             $output_fh2->print( join(",", @$_) ); 
         }
