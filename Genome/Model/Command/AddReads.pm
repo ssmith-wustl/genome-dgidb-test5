@@ -148,7 +148,7 @@ $DB::single=1;
                 }
 
                 if ($should_bsub && $self->bsub) {
-                    $last_bsub_job_id = $self->run_command_with_bsub($command,$last_command);
+                    $last_bsub_job_id = $self->Genome::Model::Event::run_command_with_bsub($command,$last_command);
                     return unless $last_bsub_job_id;
                     $command->lsf_job_id($last_bsub_job_id);
                     $last_command  = $command;
