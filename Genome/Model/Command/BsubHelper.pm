@@ -162,7 +162,7 @@ sub redo_bsub {
     ## since i'm rerunning prior, set its job_id to me
     ## then run a new copy of the command i was supposed to run, dependent on my job_id
     ## finally set the command i should have ran to the new job_id
-    my $job_id = $ar->run_command_with_bsub($command_obj, $prior_command_obj, $dep_type);
+    my $job_id = $ar->Genome::Model::Event::run_command_with_bsub($command_obj, $prior_command_obj, $dep_type);
 
     $ar->delete;  ## ditch the dummy
 

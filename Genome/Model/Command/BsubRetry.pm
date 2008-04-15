@@ -113,7 +113,7 @@ $DB::single=1;
     ## finally set the command i should have ran to the new job_id
 
     my $old_lsf_job_id = $command_obj->lsf_job_id;
-    my $job_id = $ar->run_command_with_bsub($command_obj);
+    my $job_id = $ar->Genome::Model::Event::run_command_with_bsub($command_obj);
 
     $ar->delete;  ## ditch the dummy
 
