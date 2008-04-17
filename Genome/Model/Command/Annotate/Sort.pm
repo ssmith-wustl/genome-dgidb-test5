@@ -1,4 +1,3 @@
-
 package Genome::Model::Command::Annotate::Sort;  
 
 use strict;
@@ -7,38 +6,57 @@ use IO::File;
 
 use above "Genome";                         
 
-class Genome::Model::Command::Annotate::Sort {
+class Genome::Model::Command::Annotate::Sort 
+{
     is => 'Command',                       
-    has => [                                
-        input	=> { type => 'String',      doc => "The input file" },
+    has => 
+    [                                
+        file => { type => 'String', doc => "Report file", is_optional => 0, },
+        # TODO parameterize out files?
     ], 
 };
 
-sub sub_command_sort_position { 12 }
-
 sub help_brief {
-    "#TODO fill in"             
+    return;
 }
 
 sub help_synopsis { 
     return <<EOS
-    #TODO fill me in
 EOS
 }
 
 sub help_detail {  
     return <<EOS 
-    #TODO fill out
 EOS
 }
 
-sub execute {     
+sub execute 
+{     
     my $self = shift;
 	
-	my $input_fh = IO::File->new($self->input);
-    my $output_fh1 = IO::File->new(">".$self->input.".prioritize.1");
-    my $output_fh2 = IO::File->new(">".$self->input.".prioritize.2");
-	
+    my $file = $self->file;
+
+    `awk '{FS=",";if(\$8==0 && \$9>0 ) print}' $file | sort -t',' -nrk 7,7 -k 9,9|awk '{FS=",";if(\$7>=4 && \$9>=10 && !(\$23==1 && \$9==0 && \$16>0) && !(\$23==0 && \$9==0 && \$16==0)) {print  > "prioritize.1";} else {print  > "prioritize.2";} }'`;
+    
+    return 1;
+    
+    # FIXME unshell-ify!
+    
+    my $file = $self->file;
+	my $input_fh = IO::File->new("< $file");
+    $self->error_message("Can't open file ($file): $!")
+        and return unless $input_fh;
+
+    my $p1_file = $self->file . ".prioritize.1";
+    my $output_fh1 = IO::File->new("> $p1_file");
+    $self->error_message("Can't open file ($p1_file): $!")
+        and return unless $output_fh1;
+
+    my $p2_file = $self->file . ".prioritize.2";
+    my $output_fh2 = IO::File->new("> $p2_file");
+	$self->error_message("Can't open file ($p2_file): $!")
+        and return unless $output_fh2;
+
     my @lines = $input_fh->getlines;
     my @lines_to_sort;
 	shift @lines;
