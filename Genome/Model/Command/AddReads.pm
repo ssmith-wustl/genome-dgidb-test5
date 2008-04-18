@@ -14,14 +14,12 @@ class Genome::Model::Command::AddReads {
         model               => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
         sequencing_platform => { is => 'String',
                                 doc => 'Type of sequencing instrument used to generate the data'},
-        full_path           => { is => 'String',
-                                doc => 'Pathname to the directory containing unique and duplicate fastq files for that run',},
+        read_set_id         => { is => 'String',
+                                doc => 'The unique ID of the data set produced on the instrument' },
     ],
     has_optional => [
         adaptor_file        =>  { is => 'String',
                                   doc => 'Pathname to the adaptor sequence file for these reads' },
-        limit_regions       =>  { is => 'String',
-                                  doc => 'Which regions should be kept during further analysis' },
         bsub                =>  { is => 'Boolean',
                                   doc => 'Sub-commands should be submitted to bsub. Default is yes.',
                                   default_value => 1 },
@@ -37,6 +35,7 @@ class Genome::Model::Command::AddReads {
                                   default_value => 0},
     ]
 };
+
 
 sub sub_command_sort_position { 3 }
 
@@ -69,98 +68,117 @@ our $GENOME_MODEL_BSUBBED_COMMAND = "genome-model";
 
 sub execute {
     my $self = shift;
+    
+    my $model = $self->model;
 
     my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
 
 $DB::single=1;
-    my $full_path = $self->full_path;
-    unless (-d $full_path) {
-        $self->error_message("full_path $full_path directory does not exist");
-        return;
-    }
+print "hi\n";
 
     if ($self->adaptor_file && ! -f $self->adaptor_file) {
         $self->error_message("Specified adaptor file does not exist");
         return;
     }
 
-    # Determine the correct value for limit_regions
-    my $regions;
-    if ($self->limit_regions) {
-        $regions = $self->limit_regions;
-
-    } else {
-        # The default will differ depengin on what the sequencing_patform is
-        $regions = $self->_determine_default_limit_regions();
-        $self->limit_regions($regions);
-    }
-    unless ($regions) {
-        $self->error_message("limit_regions is empty!");
+    my $read_set_id = $self->read_set_id;
+    
+    # hack until the GSC.pm namespace is deployed ...after we fix perl5.6 issues...
+    eval "use GSCApp; App::DB->db_access_level('rw'); App->init;";
+    die $@ if $@;
+    
+    my $read_set = GSC::Sequence::Item->get($read_set_id);
+    unless ($read_set) {
+        $self->error_message("Failed to find run $read_set_id");
         return;
     }
 
-    # Make a RunChunk object for each region
-    my $model = $self->model;
-    my @runs;
-    foreach my $region ( split(//,$regions) ) {
-        my $run = Genome::RunChunk->get_or_create(full_path => $full_path,
-                                                  limit_regions => $region,
-                                                  sequencing_platform => $self->sequencing_platform,
-                                                  sample_name => $model->sample_name,
-                                             );
-        unless ($run) {
-            $self->error_message("Failed to run record information for region $region");
+    my $run_name = $read_set->run_name;
+    my $lane = $read_set->lane;
+
+    unless ($model->sample_name eq $read_set->sample_name) {
+        $self->error_message(
+            "Bad sample name " 
+            . $read_set->sample_name 
+            . " on $run_name/$lane ($read_set_id) "
+            . " does not match model sample "
+            . $model->sample_name
+        );
+        return;
+    }
+
+    use File::Basename;
+    my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id);
+    unless (@fs_path) {
+        $self->error_message("Failed to find the path for data set $run_name/$lane ($read_set_id)!");
+        return;
+    }
+    my %dirs = map { File::Basename::dirname($_->path) => 1 } @fs_path;    
+    if (keys(%dirs)>1) {
+        $self->error_message("Multiple directories for run $run_name/$lane ($read_set_id) not supported!");
+        return;
+    }
+    elsif (keys(%dirs)==0) {
+        $self->error_message("No directories for run $run_name/$lane ($read_set_id)??");
+        return;
+    }
+    my ($full_path) = keys %dirs;
+    
+    
+    my $run = Genome::RunChunk->get_or_create(
+        genome_model_run_id => $read_set_id,
+        seq_id => $read_set_id,
+        run_name => $run_name,
+        full_path => $full_path,
+        limit_regions => $lane, #TODO: platform-neutral name!!
+        sequencing_platform => $self->sequencing_platform,
+        sample_name => $model->sample_name,
+    );
+    
+    unless ($run) {
+        $self->error_message("Failed to get or create run record information for $run_name, $lane ($read_set_id)");
+        return;
+    }
+
+    my $last_bsub_job_id;
+    my $last_command;
+
+    foreach my $command_class ( @sub_command_classes ) {
+        my $command = $command_class->create(run_id => $run->id,
+                                             model_id => $self->model_id);
+        unless ($command) {
+            $self->error_message("Problem creating subcommand for class $command_class run id ".$run->id." model id ".$self->model_id);
             return;
         }
-        push @runs, $run;
-    }
-
-    unless (@runs) {
-        $self->error_message("No runs were created, exiting.");
-        return;
-    }
-
-    foreach my $run ( @runs ) {
-
-        my $last_bsub_job_id;
-        my $last_command;
-
-        THIS_RUN_PIPELINE:
-        foreach my $command_class ( @sub_command_classes ) {
-            my $command = $command_class->create(run_id => $run->id,
-                                                 model_id => $self->model_id);
-            unless ($command) {
-                $self->error_message("Problem creating subcommand for class $command_class run id ".$run->id." model id ".$self->model_id);
-                return;
+        
+        if (ref($command)) {   # If there's a command to be done at this step
+            # FIXME This isn't very clean.  We should come up with a vetter way to do it
+            # TODO: instead of passing the adaptor, have the code which cares look it up
+            #       since the logic which passes this just checks genomic vs. cdna
+            if ($self->adaptor_file and $command->can('adaptor_file')) {
+                $command->adaptor_file($self->adaptor_file);
             }
-            
-            if (ref($command)) {   # If there's a command to be done at this step
-                # FIXME This isn't very clean.  We should come up with a vetter way to do it
-                if ($self->adaptor_file and $command->can('adaptor_file')) {
-                    $command->adaptor_file($self->adaptor_file);
-                }
 
-                $command->event_status('Scheduled');
-                $command->retry_count(0);
-                my $should_bsub = 0;
-                if ($command->can('should_bsub')) {
-                    $should_bsub = $command->should_bsub;
-                }
+            $command->event_status('Scheduled');
+            $command->retry_count(0);
+            my $should_bsub = 0;
+            if ($command->can('should_bsub')) {
+                $should_bsub = $command->should_bsub;
+            }
 
-                if ($should_bsub && $self->bsub) {
-                    $last_bsub_job_id = $self->Genome::Model::Event::run_command_with_bsub($command,$last_command);
-                    return unless $last_bsub_job_id;
-                    $command->lsf_job_id($last_bsub_job_id);
-                    $last_command  = $command;
-                } elsif (! $self->test) {
-                    my $rv = $command->execute();
-                    $command->date_completed(UR::Time->now());
-                    $command->event_status($rv ? 'Succeeded' : 'Failed');
+            if ($should_bsub && $self->bsub) {
+                $last_bsub_job_id = $self->Genome::Model::Event::run_command_with_bsub($command,$last_command);
+                return unless $last_bsub_job_id;
+                $command->lsf_job_id($last_bsub_job_id);
+                $last_command  = $command;
+            } elsif (! $self->test) {
+                my $rv = $command->execute();
+                $command->date_completed(UR::Time->now());
+                $command->event_status($rv ? 'Succeeded' : 'Failed');
 
-                    last THIS_RUN_PIPELINE unless ($rv);  # Stop the pipline if one of these fails
-                } else {
-                    print "Created $command_class for run_id ",$run->id," event_id ",$command->genome_model_event_id,"\n";
-                }
+                last unless ($rv);  # Stop the pipline if one of these fails
+            } else {
+                print "Created $command_class for run_id ",$run->id," event_id ",$command->genome_model_event_id,"\n";
             }
         }
     }
