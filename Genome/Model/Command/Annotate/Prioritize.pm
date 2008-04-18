@@ -1,4 +1,4 @@
-package Genome::Model::Command::Annotate::Sort;  
+package Genome::Model::Command::Annotate::Prioritize;  
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use IO::File;
 
 use above "Genome";                         
 
-class Genome::Model::Command::Annotate::Sort 
+class Genome::Model::Command::Annotate::Prioritize 
 {
     is => 'Command',                       
     has => 

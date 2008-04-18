@@ -1,4 +1,4 @@
-package Genome::Model::Command::Annotate::AmlReportChunker;
+package Genome::Model::Command::Annotate::BatchSnps;
 
 use strict;
 use warnings;
@@ -16,7 +16,7 @@ use MPSampleData::ReadGroupGenotype;
 use UR::DBI;
 use XML::Simple ':strict';
 
-class Genome::Model::Command::Annotate::AmlReportChunker 
+class Genome::Model::Command::Annotate::BatchSnps 
 {
     is => 'Command',                       
     has => 

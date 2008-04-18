@@ -1,11 +1,11 @@
-package Genome::Model::Command::Annotate::FilterValidation;  
+package Genome::Model::Command::Annotate::RemoveSnpsSubmittedForValidation;  
 
 use strict;
 use warnings;
 
 use above "Genome";                         
 
-class Genome::Model::Command::Annotate::FilterValidation 
+class Genome::Model::Command::Annotate::RemoveSnpsSubmittedForValidation 
 {
     is => 'Command',                       
     has =>
