@@ -20,7 +20,7 @@ sub execute : Tests
     my $out1 = $input . '.1';
     my $out2 = $input . '.2';
     
-    is((system "genome-model annotate prioritze --input $input --priorty1_output $out1 --priorty2_output $out2"), 0, "Executed");
+    is((system "genome-model annotate prioritize --input $input --priority1-output $out1 --priority2-output $out2"), 0, "Executed");
 
     tie(my @out1, 'Tie::File', $out1);
 
