@@ -67,7 +67,7 @@ sub execute {
     my $input = $self->input;
     open (IN, "< $input") or die "Can't open file ($input): $!";
 
-    my $output = $self->output || "$input.add";
+    my $output = $self->output || $self->output("$input.add");
     open (OUT, "> $output") or die "Can't open file ($output): $!";
 
     my @header = (  q{"dbSNP(0:no; 1:yes)"},
