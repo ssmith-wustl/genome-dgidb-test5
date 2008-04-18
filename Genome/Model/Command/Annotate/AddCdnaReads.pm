@@ -1,4 +1,3 @@
-
 package Genome::Model::Command::Annotate::AddCdnaReads;
 
 use strict;
@@ -10,65 +9,105 @@ use above "Genome";
 
 class Genome::Model::Command::Annotate::AddCdnaReads {
     is  => 'Command',
-    has => [
-        outfile => { type => 'String', doc => "ARGV[0], the outfile" },
-        read_hash_unique_dna    => { type => 'String', doc => "ARGV[1]" },
-        read_hash_cdna          => { type => 'String', doc => "ARGV[2]" },
-        read_hash_unique_cdna   => { type => 'String', doc => "ARGV[3]" },
-        read_hash_relapse_cdna  => { type => 'String', doc => "ARGV[4]" },
+    has => 
+    [
+    input => { type => 'String', doc => "Report file" },
+    output => { type => 'String', doc => "Output file", is_optional => 1 },
+    #read_hash_unique_dna    => { type => 'String', doc => "ARGV[1]" },
+    #read_hash_cdna          => { type => 'String', doc => "ARGV[2]" },
+    #read_hash_unique_cdna   => { type => 'String', doc => "ARGV[3]" },
+    #read_hash_relapse_cdna  => { type => 'String', doc => "ARGV[4]" },
     ],
 };
 
-sub sub_command_sort_position { 12 }
+use DBI;
+use List::MoreUtils qw{ pairwise };
 
 sub help_brief {
-    "WRITE A ONE-LINE DESCRIPTION HERE"
+    return;
 }
 
 sub help_synopsis {
     return <<EOS
-genome-model example1 --foo=hello
-genome-model example1 --foo=goodbye --bar
-genome-model example1 --foo=hello barearg1 barearg2 barearg3
 EOS
 }
 
 sub help_detail {
     return <<EOS
-This is a dummy command.  Copy, paste and modify the module! 
-CHANGE THIS BLOCK OF TEXT IN THE MODULE TO CHANGE THE HELP OUTPUT.
 EOS
 }
-
-#sub create {                               # rarely implemented.  Initialize things before execute.  Delete unless you use it. <---
-#    my $class = shift;
-#    my %params = @_;
-#    my $self = $class->SUPER::create(%params);
-#    # ..do initialization here
-#    return $self;
-#}
-
-#sub validate_params {                      # pre-execute checking.  Not requiried.  Delete unless you use it. <---
-#    my $self = shift;
-#    return unless $self->SUPER::validate_params(@_);
-#    # ..do real checks here
-#    return 1;
-#}
 
 sub execute {
     my $self = shift;
 
-    my $read_hash_unique_dna = MG::Analysis::VariantAnnotation->add_unique_reads_count( $self->read_hash_unique_dna );
-    my $read_hash_cDNA = MG::Analysis::VariantAnnotation->add_reads_count( $self->read_hash_cdna );
-    my $read_hash_unique_cDNA = MG::Analysis::VariantAnnotation->add_unique_reads_count( $self->read_hash_unique_cdna );
-    my $read_hash_relapse_cDNA = MG::Analysis::VariantAnnotation->add_reads_count( $self->read_hash_relapse_cdna );
+    use lib '/gscuser/dlarson/src/mp/trunk';
 
-    open( IN, "<", $self->outfile ) or die "Can't open " . $self->outfile . "$!";
-    open( OUT, ">", $self->outfile.".read" ) or die "Can't open " . $self->outfile."read" . "$!";
+    my $dbh = DBI->connect("dbi:SQLite:dbname=/tmp/add_cdna.db","","", { RaiseError =>1, AutoCommit => 0});
 
-    print OUT
-qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_position (B36)",Variant_allele,"# of genomic reads supporting variant allele","# of cDNA reads supporting variant allele","# of unique genomic reads supporting variant allele(starting point)","# of unique genomic reads supporting variant allele(context)","# of unique cDNA reads supporting variant allele(starting point)","# of unique cDNA reads supporting variant allele(context)","# of relapse cDNA reads supporting variant allele",Reference_allele,"# of genomic reads supporting reference allele","# of cDNA reads supporting reference allele","# of unique genomic reads supporting reference allele(starting point)","# of unique genomic reads supporting reference allele(context)","# of unique cDNA reads supporting reference allele(starting point)","# of unique cDNA reads supporting reference allele(context)","# of relapse cDNA reads supporting reference allele",Gene_expression,Detection,Ensembl_transcript_id,Transcript_stranding,Variant_type,Transcript_position,Amino_acid_change,Polyphen_prediction,"submit(0:no; 1:yes)"\n};
+#create tables
+#my $read_hash_dna = 'genomic_counts';
+#add_reads_count($dbh, $read_hash_dna, $ARGV[1]);
+    my $read_hash_unique_dna = 'genomic_unique_counts';
+    my $genomic_rc_file = '/gscmnt/sata180/info/medseq/dlarson/amll123t100_readcounts/amll123t100_readcount-q1/amll123t100_readcount-q1_allchr.merge';
+    add_reads_count($dbh, $read_hash_unique_dna, $genomic_rc_file);#$ARGV[2]);
+    #add_unique_reads_count($dbh, $read_hash_unique_dna, $genomic_rc_file);#$ARGV[2]);
+    my $read_hash_cDNA = 'cDNA_counts';
+    my $cdna_rc_file = '/gscmnt/sata180/info/medseq/dlarson/amll123t100_readcounts/amll123t100_cdna_readcount-q1/cDNA_readcount_amll123t100.csv';
+    add_reads_count($dbh, $read_hash_cDNA, $cdna_rc_file);#$ARGV[3] );
+    my $read_hash_unique_cDNA = 'cDNA_unique_counts';
+    my $cdna_urc_file = '/gscmnt/sata180/info/medseq/dlarson/amll123t100_readcounts/amll123t100_cdna_unique_readcount-q1/cDNA_unique_readcount_amll123t100.csv';
+    add_unique_reads_count($dbh, $read_hash_unique_cDNA, $cdna_urc_file);#$ARGV[4] );
+    my $read_hash_relapse_cDNA = 'relapse_cDNA_counts';
+    add_reads_count($dbh, $read_hash_relapse_cDNA, 'dummy');#$ARGV[5] );
+    my $read_hash_skin_dna = 'skin_read_counts';
+    add_reads_count($dbh, $read_hash_skin_dna, 'dummy');#$ARGV[6] );
+    my $read_hash_unique_skin_dna = 'skin_unique_counts';
+    add_unique_reads_count($dbh, $read_hash_unique_skin_dna, 'dummy');#$ARGV[7] );
+    #
+    my $input = $self->input;
+    open (IN, "< $input") or die "Can't open file ($input): $!";
 
+    my $output = $self->output || "$input.add";
+    open (OUT, "> $output") or die "Can't open file ($output): $!";
+
+    my @header = (  q{"dbSNP(0:no; 1:yes)"},
+        q{"Gene_name"},
+        q{"Chromosome"},
+        q{"Start_position (B36)"},
+        q{"End_position (B36)"},
+        q{"Variant_allele"},
+        q{"# of genomic reads supporting variant allele"},
+        q{"# of cDNA reads supporting variant allele"},
+        q{"# of skin genomic reads with variant allele"},
+        q{"# of unique genomic reads supporting variant allele(starting point)"},
+        q{"# of unique genomic reads supporting variant allele(context)"},
+        q{"# of unique cDNA reads supporting variant allele(starting point)"},
+        q{"# of unique cDNA reads supporting variant allele(context)"},
+        q{"# of unique skin genomic reads with variant allele(starting point)"},
+        q{"# of unique skin genomic reads with variant allele(context)"},
+        q{"# of relapse cDNA reads supporting variant allele"},
+        q{"Reference_allele"},
+        q{"# of genomic reads supporting reference allele"},
+        q{"# of cDNA reads supporting reference allele"},
+        q{"# of skin genomic reads with reference allele"},
+        q{"# of unique genomic reads supporting reference allele(starting point)"},
+        q{"# of unique genomic reads supporting reference allele(context)"},
+        q{"# of unique cDNA reads supporting reference allele(starting point)"},
+        q{"# of unique cDNA reads supporting reference allele(context)"},
+        q{"# of unique skin genomic reads with reference allele(starting point)"},
+        q{"# of unique skin genomic reads with reference allele(context)"},
+        q{"# of relapse cDNA reads supporting reference allele"},
+        q{"Gene_expression"},
+        q{"Detection"},
+        q{"Ensembl_transcript_id"},
+        q{"Transcript_stranding"},
+        q{"Variant_type"},
+        q{"Transcript_position"},
+        q{"Amino_acid_change"},
+        q{"Polyphen_prediction"},
+        q{"submit(0:no; 1:yes)"},
+    );
+    print OUT join(q{,}, @header), "\n";
     while (<IN>) {
         chomp();
         my $line = $_;
@@ -79,75 +118,206 @@ qq{"dbSNP(0:no; 1:yes)",Gene_name,Chromosome,"Start_position (B36)","End_positio
             $al2,        $al2_read_hg, $al2_read_cDNA,  $gene_exp,
             $gene_det,   $transcript,  $strand,         $trv_type,
             $c_position, $pro_str,     $pph_prediction, $submit,
-            $rgg_id
-          )
-          = split(/,/);
-        my ( $al1_read_unique_dna_start,   $al2_read_unique_dna_start,
-            $al1_read_unique_dna_context, $al2_read_unique_dna_context
-        );
+        )
+        = split(/,/);
+
+        #grab read counts for genomic reads
+#      (
+#        $al1_read_hg,   $al2_read_hg,
+#      )
+#      = retrieve_readcount_from($dbh, $read_hash_dna, $chromosome,
+#        $start, $al1, $al2, );
+        #grab unique read counts for genomic reads
         my (
-            $al1_read_relapse_cDNA,        $al2_read_relapse_cDNA,
+            $al1_read_unique_dna_start,   $al2_read_unique_dna_start,
+            $al1_read_unique_dna_context, $al2_read_unique_dna_context,
+        )
+        = retrieve_unique_readcount_from($dbh, $read_hash_unique_dna, $chromosome,
+            $start, $al1, $al2, );
+
+        #grab cDNA readcounts
+        ( $al1_read_cDNA, $al2_read_cDNA ) =
+        retrieve_readcount_from($dbh, $read_hash_cDNA, $chromosome, $start, $al1,
+            $al2 );
+
+        #grab unique cDNA readcounts
+        my (
             $al1_read_unique_cDNA_start,   $al2_read_unique_cDNA_start,
-            $al1_read_unique_cDNA_context, $al2_read_unique_cDNA_context
+            $al1_read_unique_cDNA_context, $al2_read_unique_cDNA_context,
+        )
+        = retrieve_unique_readcount_from($dbh, $read_hash_unique_cDNA, $chromosome,
+            $start, $al1, $al2, );
+
+        #grab releapse readcounts
+        my ( $al1_read_relapse_cDNA, $al2_read_relapse_cDNA ) =
+        retrieve_readcount_from($dbh, $read_hash_relapse_cDNA,
+            $chromosome, $start, $al1, $al2, );
+
+        #grab skin readcounts
+        my ( $al1_read_skin_dna, $al2_read_skin_dna ) =
+        retrieve_readcount_from($dbh, $read_hash_skin_dna,
+            $chromosome, $start, $al1, $al2, );
+
+        my (
+            $al1_read_unique_skin_start,   $al2_read_unique_skin_start,
+            $al1_read_unique_skin_context, $al2_read_unique_skin_context,
+        )
+        = retrieve_unique_readcount_from($dbh, $read_hash_unique_skin_dna, $chromosome,
+            $start, $al1, $al2, );
+        my @fields = (  $dbsnp,
+            $gene,
+            $chromosome,
+            $start,
+            $end,
+            $al2,
+            $al2_read_hg,
+            $al2_read_cDNA,
+            $al2_read_skin_dna,
+            $al2_read_unique_dna_start,
+            $al2_read_unique_dna_context,
+            $al2_read_unique_cDNA_start,
+            $al2_read_unique_cDNA_context,
+            $al2_read_unique_skin_start,
+            $al2_read_unique_skin_context,
+            $al2_read_relapse_cDNA,
+            $al1,
+            $al1_read_hg,
+            $al1_read_cDNA,
+            $al1_read_skin_dna,
+            $al1_read_unique_dna_start,
+            $al1_read_unique_dna_context,
+            $al1_read_unique_cDNA_start,
+            $al1_read_unique_cDNA_context,
+            $al1_read_unique_skin_start,
+            $al1_read_unique_skin_context,
+            $al1_read_relapse_cDNA,
+            $gene_exp,
+            $gene_det,
+            $transcript,
+            $strand,
+            $trv_type,
+            $c_position,
+            $pro_str,
+            $pph_prediction,
+            $submit,
         );
-
-        my $read_unique_dna   = $read_hash_unique_dna->{$chromosome}->{$start};
-        my $read_cDNA         = $read_hash_cDNA->{$chromosome}->{$start};
-        my $read_unique_cDNA  = $read_hash_unique_cDNA->{$chromosome}->{$start};
-        my $read_relapse_cDNA = $read_hash_relapse_cDNA->{$chromosome}->{$start};
-
-        if ( defined $read_unique_dna ) {
-            $al1_read_unique_dna_start   = $read_unique_dna->{$al1}->{start};
-            $al2_read_unique_dna_start   = $read_unique_dna->{$al2}->{start};
-            $al1_read_unique_dna_context = $read_unique_dna->{$al1}->{context};
-            $al2_read_unique_dna_context = $read_unique_dna->{$al2}->{context};
-        }
-        else {
-            $al1_read_unique_dna_start   = 0;
-            $al2_read_unique_dna_start   = 0;
-            $al1_read_unique_dna_context = 0;
-            $al2_read_unique_dna_context = 0;
-        }
-
-        if ( defined $read_cDNA ) {
-            $al1_read_cDNA = $read_cDNA->{$al1};
-            $al2_read_cDNA = $read_cDNA->{$al2};
-        }
-        else {
-            $al1_read_cDNA = 0;
-            $al2_read_cDNA = 0;
-        }
-
-        if ( defined $read_unique_cDNA ) {
-            $al1_read_unique_cDNA_start   = $read_unique_cDNA->{$al1}->{start};
-            $al2_read_unique_cDNA_start   = $read_unique_cDNA->{$al2}->{start};
-            $al1_read_unique_cDNA_context = $read_unique_cDNA->{$al1}->{context};
-            $al2_read_unique_cDNA_context = $read_unique_cDNA->{$al2}->{context};
-        }
-        else {
-            $al1_read_unique_cDNA_start   = 0;
-            $al2_read_unique_cDNA_start   = 0;
-            $al1_read_unique_cDNA_context = 0;
-            $al2_read_unique_cDNA_context = 0;
-        }
-
-        if ( defined $read_relapse_cDNA ) {
-            $al1_read_relapse_cDNA = $read_relapse_cDNA->{$al1};
-            $al2_read_relapse_cDNA = $read_relapse_cDNA->{$al2};
-        }
-        else {
-            $al1_read_relapse_cDNA = 0;
-            $al2_read_relapse_cDNA = 0;
-        }
-        print OUT
-"$dbsnp,$gene,$chromosome,$start,$end,$al2,$al2_read_hg,$al2_read_cDNA,$al2_read_unique_dna_start,$al2_read_unique_dna_context,$al2_read_unique_cDNA_start,$al2_read_unique_cDNA_context,$al2_read_relapse_cDNA,$al1,$al1_read_hg,$al1_read_cDNA,$al1_read_unique_dna_start,$al1_read_unique_dna_context,$al1_read_unique_cDNA_start,$al1_read_unique_cDNA_context,$al1_read_relapse_cDNA,$gene_exp,$gene_det,$transcript,$strand,$trv_type,$c_position,$pro_str,$pph_prediction,$submit,$rgg_id\n";
+        print OUT join(q{,}, @fields), "\n";
     }
-    print "final finished!\n";
+
 
     close(IN);
     close(OUT);
 
+
+    print "final finished!\n";
+    #system("rm -rf /tmp/add_cdna.db");
+
     return 0;
+}
+
+sub retrieve_readcount_from {
+    my ( $dbh, $tablename, $chromosome, $start, $al1, $al2 ) = @_;
+    $al1 = lc $al1;
+    $al2 = lc $al2;
+    if($al1 !~ /a|c|t|g/ || $al2 !~ /a|c|t|g/) {
+        return (0,0);
+    }
+    my $sql = qq{select $al1, $al2 from $tablename where chromosome='$chromosome' and position=$start};
+    my $sth = $dbh->prepare($sql);
+    $sth->execute();
+    my @totals=(0,0);
+    while(my @results = $sth->fetchrow_array) {
+        if((scalar @results) == 2) {
+            pairwise {$a += $b} @totals,@results; #sum in the results with th running total
+        }
+    }
+    return @totals;
+}
+
+sub retrieve_unique_readcount_from {
+    my ( $dbh, $tablename, $chromosome, $start, $al1, $al2 ) = @_;
+    $al1 = lc $al1;
+    $al2 = lc $al2;
+    if($al1 !~ /a|c|t|g/ || $al2 !~ /a|c|t|g/) {
+        return (0,0,0,0);
+    }
+    my $al1_c = $al1."_c";
+    my $al2_c = $al2."_c";
+    my $sql = qq{select $al1, $al2, $al1_c, $al2_c from $tablename where chromosome='$chromosome' and position=$start};
+    my $sth = $dbh->prepare($sql);
+    $sth->execute();
+    my @totals=(0,0,0,0);
+
+    while(my @results = $sth->fetchrow_array) {
+        if((scalar @results) == 4) {
+            pairwise {$a += $b} @totals,@results; #sum in the results with th running total
+        }
+    }
+    return @totals;
+}
+
+sub add_unique_reads_count {
+    my ($dbh, $tablename, $file) = @_;
+
+    eval {
+        local $dbh->{PrintError} = 0;
+        $dbh->do(qq{DROP TABLE $tablename});
+    };
+
+    $dbh->do(qq{CREATE TABLE $tablename (chromosome TEXT, position INTEGER, a INTEGER, c INTEGER, g INTEGER, t INTEGER, a_c INTEGER, c_c INTEGER, g_c INTEGER, t_c INTEGER)});
+    $dbh->commit();
+
+    open (IN, "<$file") or die "Can't open $file. $!";
+    my $line=<IN>; #read in header
+    my $count = 0;
+    while(<IN>){
+        #skip inserted headers from cat
+        next if /^chromosome.*$/xms;
+        chomp();
+        $count++;
+        my ($chromosome,$pos,$a_reads,$c_reads,$g_reads,$t_reads,$a_reads_con,$c_reads_con,$g_reads_con,$t_reads_con) =split(/\t/);
+
+        $dbh->do(qq{INSERT INTO $tablename VALUES ('$chromosome', $pos, $a_reads, $c_reads, $g_reads, $t_reads, $a_reads_con,$c_reads_con,$g_reads_con,$t_reads_con)});
+        $dbh->commit if($count%10000 == 0);
+    } 
+    close(IN);
+    my $index_name = $tablename."_index";
+    $dbh->do(qq{CREATE INDEX $index_name ON $tablename(chromosome,position)});
+    $dbh->commit();
+    #IMPORT NOT WORKING
+    #my $load_cmd = qq{sqlite3 -separator "\t" /tmp/add_cdna.db ".import $filename $tablename"};
+    #system($load_cmd);
+
+}
+
+sub add_reads_count {
+    my ($dbh, $tablename, $file) = @_;
+    #From Perl Cookbook
+    eval {
+        local $dbh->{PrintError} = 0;
+        $dbh->do(qq{DROP TABLE $tablename});
+    };
+    $dbh->do(qq{CREATE TABLE $tablename (chromosome TEXT, position INTEGER, a INTEGER, c INTEGER, g INTEGER, t INTEGER)});
+
+    $dbh->commit();
+
+    open (IN, "<$file") or die "Can't open $file. $!";
+    my $count = 0;
+    while(<IN>){
+        $count++;
+        chomp();
+        my ($id,$chromosome,$pos,$ref_base,$ref_reads,$a_reads,$c_reads,$g_reads,$t_reads) =split(/\t/);
+        $a_reads+=$ref_reads if($ref_base eq 'A' ||$ref_base eq 'N');
+        $t_reads+=$ref_reads if($ref_base eq 'T' ||$ref_base eq 'N');
+        $g_reads+=$ref_reads if($ref_base eq 'G' ||$ref_base eq 'N');
+        $c_reads+=$ref_reads if($ref_base eq 'C' ||$ref_base eq 'N');
+        $dbh->do(qq{INSERT INTO $tablename VALUES ('$chromosome', $pos, $a_reads, $c_reads, $g_reads, $t_reads)});
+        $dbh->commit if($count%10000 == 0);
+    }
+    close(IN);
+    my $index_name = $tablename."_index";
+    $dbh->do(qq{CREATE INDEX $index_name ON $tablename(chromosome,position)});
+    $dbh->commit();
 }
 
 1;
