@@ -16,11 +16,11 @@ sub execute : Tests
 {
     my $self = shift;
 
-    my $file = 'ora1000.dump';
-    #my $file = 'new_oracle.dump';
+    #my $input = 'ora1000.dump';
+    my $input = 'new_oracle.dump';
     my $db_name = 'mg_prod';
     
-    is((system "genome-model annotate aml-report --db-name $db_name --file $file"), 0, "Executed");
+    is((system "genome-model annotate get-annotation-info --db-name $db_name --input $input"), 0, "Executed");
 
     #TODO check files
     

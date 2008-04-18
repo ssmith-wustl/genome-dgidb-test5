@@ -1,0 +1,3 @@
+dbSNP(0:no; 1:yes),Chromosome,Start_position (B36),End_position (B36),Reference_allele,# of cDNA reads supporting reference allele,# of genomic reads supporting reference allele,Variant_allele,# of cDNA reads supporting variant allele,# of genomic reads supporting variant allele,Gene_name,Ensembl_transcript_id,Transcript_stranding,Variant_type,Transcript_position,Amino_acid_change,Polyphen_prediction,Gene_expression,Detection
+0,1,231,231,C,4,0,A,5,0,ENSG00000197194,ENST00000379481,-1,3_prime_flanking_region,c.*24770,NULL,NULL,0,0
+0,1,231,231,C,4,0,A,5,0,ENSG00000146556,ENST00000326632,-1,3_prime_flanking_region,c.*4043,NULL,NULL,0,0
