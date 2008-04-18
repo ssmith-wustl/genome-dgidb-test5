@@ -104,7 +104,7 @@ $DB::single=1;
     my $ar = Genome::Model::Command::AddReads->create(
         model_id => $event->model_id,
         sequencing_platform => 'solexa', # dont care
-        full_path => '/tmp', # dont care
+#        full_path => '/tmp', # dont care
         %add_reads_queue,
     );
 
