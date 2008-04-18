@@ -117,7 +117,12 @@ sub _summarize_jobs {
             my $proper_command_class_name = $event->class_for_event_type();
             my $command_obj;
             if ($proper_command_class_name) {
-                $command_obj = $proper_command_class_name->get(genome_model_event_id => $event->genome_model_event_id);
+                eval {
+                    $command_obj = $proper_command_class_name->get(genome_model_event_id => $event->genome_model_event_id);
+                };
+                if ($@) {
+                    $command_obj = $event;
+                };
             } else {
                 # weird case because of test classes that may end up in the db, just use the event obj
                 $command_obj = $event;

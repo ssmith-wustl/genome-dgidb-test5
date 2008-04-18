@@ -156,7 +156,8 @@ sub redo_bsub {
     my $ar = Genome::Model::Command::AddReads->create(
         model_id => $self->model_id,
         sequencing_platform => 'solexa', # dont care
-        full_path => '/tmp' # dont care
+        full_path => '/tmp',
+        bsub_queue => 'aml' # default for retry
     );
 
     ## since i'm rerunning prior, set its job_id to me
