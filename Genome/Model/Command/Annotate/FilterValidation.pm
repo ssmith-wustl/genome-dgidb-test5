@@ -1,78 +1,86 @@
-
 package Genome::Model::Command::Annotate::FilterValidation;  
 
 use strict;
 use warnings;
 
 use above "Genome";                         
-use IO::File;
 
-class Genome::Model::Command::Annotate::FilterValidation {
-		is => 'Command',                       
-		has => [                                
-				input     			=> { type => 'String',      doc => "The infile, produced from sort" },
-		        variant_validation  => { type => 'String',      doc => "The
-				variant validation .csv file", default => '/gscuser/xshi/work/AML_SNP/VALIDATION/Ley_Siteman_AML_variant_validation.10mar2008a.csv' },
-		], 
+class Genome::Model::Command::Annotate::FilterValidation 
+{
+    is => 'Command',                       
+    has =>
+    [                                
+    input_file => 
+    {
+        type => 'String',
+        doc => "Input file", 
+        is_optional => 0,
+    },
+    output_file => 
+    {
+        type => 'String',
+        doc => "Output file", 
+        is_optional => 1 
+    },
+    #   variant_validation  => { type => 'String', doc => "The variant validation .csv file", default => '/gscuser/xshi/work/AML_SNP/VALIDATION/Ley_Siteman_AML_variant_validation.10mar2008a.csv' }, 
+    ], 
 };
 
-sub sub_command_sort_position { 12 }
+require Cwd;
+require IO::File;
 
 sub help_brief {
-		"WRITE A ONE-LINE DESCRIPTION HERE"                 
 }
 
 sub help_synopsis { 
-		return <<EOS
-				genome-model example1 --foo=hello
-				genome-model example1 --foo=goodbye --bar
-				genome-model example1 --foo=hello barearg1 barearg2 barearg3
+    return <<EOS
 EOS
 }
 
 sub help_detail {  
-		return <<EOS 
-				This is a dummy command.  Copy, paste and modify the module! 
-				CHANGE THIS BLOCK OF TEXT IN THE MODULE TO CHANGE THE HELP OUTPUT.
+    return <<EOS 
 EOS
 }
 
-#sub create {                               # rarely implemented.  Initialize things before execute.  Delete unless you use it. <---
-#    my $class = shift;
-#    my %params = @_;
-#    my $self = $class->SUPER::create(%params);
-#    # ..do initialization here
-#    return $self;
-#}
-
-#sub validate_params {                      # pre-execute checking.  Not requiried.  Delete unless you use it. <---
-#    my $self = shift;
-#    return unless $self->SUPER::validate_params(@_);
-#    # ..do real checks here
-#    return 1;
-#}
-
 sub execute {     
-		my $self = shift;
 
-		my $input_fh = IO::File->new($self->input);
-		my $variant_fh = IO::File->new($self->variant_validation);
+    my $self = shift;
+
+    my $in = Cwd::abs_path( $self->input_file );
+    my $out = Cwd::abs_path( $self->output_file  ) || "$in.out";
+    unlink $out if -e $out;
+
+    # FIXME get list exclusion info from DB!
+    my $list = '/tmp/list';
+    unlink $list if -e $list;
+    `cat Ley_Siteman_AML_variant_validation.10mar2008a.csv | awk '{FS="\t";if(\$42=="G"||\$42=="WT"||\$42=="S"||\$42=="LOH"||\$42=="O") print \$2","\$4","\$5","\$6;}' > list`;
+    `grep -v -f list $in > $out`;
+
+    unlink $list;
+
+    return 1;
+
+    # FIXME unshell-ify!
+    ####################
+
+    my $input_fh = IO::File->new($self->input);
+    my $variant_fh = IO::File->new($self->variant_validation);
 
 #cat Ley_Siteman_AML_variant_validation.10mar2008a.csv | 
 #awk '{FS="\t";
 
-		my $matches;
-		while (my $line = $variant_fh->getline) {
-				my @columns = split('\t', $line);
-				
-				if($columns[41]eq"G"||$columns[41]eq"WT"||$columns[41]eq"S"||$columns[41]eq"LOH"||$columns[41]eq"O") {
-						$matches .= $columns[1].",".$columns[3].",".$columns[4].",".$columns[5]."\n";	# > list
-				}
-		}
+    my $matches;
+    while (my $line = $variant_fh->getline) {
+        my @columns = split('\t', $line);
 
-		system("grep -v -F '$matches' ".$self->input);
+        if($columns[41]eq"G"||$columns[41]eq"WT"||$columns[41]eq"S"||$columns[41]eq"LOH"||$columns[41]eq"O") {
+            $matches .= $columns[1].",".$columns[3].",".$columns[4].",".$columns[5]."\n";	# > list
+        }
+    }
 
-		return 0;
+    system("grep -v -F '$matches' ".$self->input);
+
+    return 0;
 }
 
 1;
