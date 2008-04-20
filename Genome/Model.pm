@@ -55,6 +55,15 @@ sub data_directory {
     return $self->data_parent_directory . '/' . $self->sample_name . "_" . $name;
 }
 
+sub directory_for_run {
+    my ($self, $run) = @_;
+    return sprintf('%s/runs/%s/%s', 
+        $self->data_directory,
+        $run->sequencing_platform,
+        $run->name
+    );
+}
+
 sub pretty_print_text {
     my $self = shift;
     
@@ -78,7 +87,7 @@ sub pretty_print_text {
     return $out;
 }
 
-sub sample_path{
+sub sample_path {
     my $self = shift;
     
     return $self->data_parent_directory . $self->sample_name;
