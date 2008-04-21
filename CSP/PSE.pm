@@ -31,6 +31,7 @@ my %PROCESS_COUNT = (
     'call bases'                             => 0,
     'configure alignment'                    => 0,
     'run alignment'                          => 0,
+    'generate lane summary'                  => 0,
     'clean run'                              => 0,
     'copy run'                               => 0,
     'remove run'                             => 0,
