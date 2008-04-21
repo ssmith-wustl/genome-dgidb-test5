@@ -187,6 +187,36 @@ $DB::single = 1;
 }
 
 
+sub verify_successful_completion {
+    my ($self) = @_;
+
+    my $model = Genome::Model->get(id => $self->model_id);
+    # does this model specify to keep or eliminate duplicate reads
+    my @passes = ('unique') ;
+    if (! $model->multi_read_fragment_strategy or
+        $model->multi_read_fragment_strategy ne 'EliminateAllDuplicates') {
+        push @passes, 'duplicate';
+    }
+    foreach my $pass ( @passes ) {
+        my $aligner_output_method = sprintf("aligner_%s_output_file_for_lane", $pass);
+        my $aligner_output = $self->$aligner_output_method;
+        my $aligner_output_fh = IO::File->new($aligner_output);
+        unless ($aligner_output_fh) {
+            $self->error_message("Can't open aligner output file $aligner_output: $!");
+            return;
+        }
+
+        while(<$aligner_output_fh>) {
+            if (m/match_data2mapping/) {
+                $aligner_output_fh->close();
+                return 1;
+            }
+        }
+        $self->error_message("Didn't find a line matching /match_data2mapping/ in the maq output file");
+    }
+    return;
+}
+
 
 sub _check_maq_successful_completion {
     my($self,$output_filename) = @_;
