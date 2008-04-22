@@ -149,8 +149,13 @@ $DB::single = 1;
                 my $submap_target = sprintf("%s/%s_%s.map",$alignments_dir,$seq,$pass);
                 unlink ($submap_target);
               
+                # FIXME maq 0.6.4 (and later) have the submap functionality we use removed.  Newer maq's 
+                # supposedly have the same file format, so hopefully using maq 0.6.3's submap will do the
+                # job for us
+
                 # That last "1" is for the required (because of a bug) 'begin' parameter
-                my $maq_submap_cmdline = "$maq_pathname submap $submap_target $alignment_file $seq 1";
+                #my $maq_submap_cmdline = "$maq_pathname submap $submap_target $alignment_file $seq 1";
+                my $maq_submap_cmdline = "/gsc/pkg/bio/maq/maq-0.6.3_x86_64-linux/maq submap $submap_target $alignment_file $seq 1";
             
                 print $maq_submap_cmdline, "\n";
                 
