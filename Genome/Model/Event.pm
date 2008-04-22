@@ -3,6 +3,8 @@ package Genome::Model::Event;
 use strict;
 use warnings;
 
+our $log_base = '/gscmnt/sata114/info/medseq/model_data/logs/';
+
 use Genome;
 UR::Object::Type->define(
     class_name => 'Genome::Model::Event',
@@ -74,7 +76,64 @@ sub _resolve_subclass_name_for_event_type {
     return $class_name;
 }
 
+sub desc {
+    my $self = shift;
+    return $self->id . " of type " . $self->event_type;
+}
 
+# Override the default message handling to auto-instantiate a log handle.
+# TODO: have the command tell the current context to take messages
+
+our @process_logs;
+
+sub _get_msgdata {
+    my $self = $_[0];
+    my $msgdata = $self->SUPER::_get_msgdata;
+    return $msgdata if $msgdata->{gm_fh_set};
+    $msgdata->{gm_fh_set} = 1;
+
+    my $name = $log_base;
+    use Sys::Hostname;
+    if (ref($self)) {
+        no warnings;
+        $name .= "/" . join('.', UR::Time->now, hostname(), $$, $self->id, $self->event_type, 
+            $self->model_id, 
+            $self->run_id || 'NORUN',
+            $self->ref_seq_id || 'NOREF', 
+            ($self->lsf_job_id || 'NOJOB')
+        ) . ".log";
+    }
+    else {
+        $name .= "/" . join(".", UR::Time->now, hostname(), $$) . ".process-log";
+    }
+    $name =~ s/\s/_/g;
+
+    my $logfh = $msgdata->{gm_logfh} = IO::File->new(">$name");
+    $logfh->autoflush(1);
+    chmod(0644, $name) or die "chmod $name failed: $!";
+    require IO::Tee;
+    my $fh = IO::Tee->new(\*STDERR, $logfh) or die "failed to open tee for $name: $!";        
+
+    push @process_logs, [$name,$logfh,$fh];
+
+    $self->dump_status_messages($fh);
+    $self->dump_warning_messages($fh);
+    $self->dump_error_messages($fh);
+ 
+    return $msgdata;
+}
+
+END {
+    for (@process_logs) {
+        my ($name,$logfh,$fh) = @$_;
+        eval { $fh->close; };
+        eval { $logfh->close; };
+        if (-z $name) {
+            print STDERR "removing empty file $name\n";
+            unlink $name;
+        }
+    }
+}
 
 #sub execute {
 #    my $self = shift;
