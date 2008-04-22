@@ -13,8 +13,6 @@ UR::Object::Type->define(
         genome_model_event_id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        #date_completed        => { is => 'TIMESTAMP(6)', len => 11, is_optional => 1 },
-        #date_scheduled        => { is => 'TIMESTAMP(6)', len => 11, is_optional => 1 },
         date_completed        => { is => 'TIMESTAMP(20)', len => 11, is_optional => 1 },
         date_scheduled        => { is => 'TIMESTAMP(20)', len => 11, is_optional => 1 },
         event_status          => { is => 'VARCHAR2', len => 32, is_optional => 1 },
@@ -28,9 +26,53 @@ UR::Object::Type->define(
         retry_count           => { is => 'NUMBER', len => 3, is_optional => 1 },
         run            => { is => 'Genome::RunChunk', id_by => 'run_id', constraint_name => 'event_run' },
     ],
+    is_abstract => 1,
+    sub_classification_method_name => '_resolve_subclass_name',
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 );
+
+
+# This is called by the infrastructure to appropriately classify abstract events
+# according to their event type because of the "sub_classification_method_name" setting
+# in the class definiton...
+# TODO: replace with cleaner calculated property.
+sub _resolve_subclass_name {
+    my $class = shift;
+    my $event_type;
+    if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
+        $event_type = $_[0]->event_type;
+    }
+    else {
+        $event_type = $class->get_rule_for_params(@_)->specified_value_for_property_name('event_type');
+    }
+    return $class->_resolve_subclass_name_for_event_type($event_type);
+}
+
+# This is called by some legacy code.
+sub class_for_event_type {
+    my $self = shift;
+    return $self->_resolve_subclass_name_for_event_type($self->event_type);
+}
+
+# This is called by both of the above.
+sub _resolve_subclass_name_for_event_type {
+    my ($class,$event_type) = @_;
+    my @command_parts = split(' ',$event_type);
+    my $genome_model = shift @command_parts;
+    if ($genome_model !~ m/genome-model/) {
+        $class->error_message("Malformed event-type $event_type.  Expected it to begin with 'genome-model'");
+        return;
+    }
+
+    foreach ( @command_parts ) {
+        my @sub_parts = map { ucfirst } split('-');
+        $_ = join('',@sub_parts);
+    }
+
+    my $class_name = join('::', 'Genome::Model::Command' , @command_parts);
+    return $class_name;
+}
 
 
 
@@ -42,7 +84,6 @@ UR::Object::Type->define(
 #    $self->event_status($rv ? 'Succeeded' : 'Failed');
 #    return $rv;
 #}
-
 
 
 sub _shell_args_property_meta {
@@ -64,29 +105,6 @@ sub resolve_run_directory {
 }
 
 
-# I thought that the Command API should be able to do this through
-# resolve_class_and_params_for_argv(), but it didn't work...
-sub class_for_event_type {
-    my $self = shift;
-
-    my @command_parts = split(' ',$self->event_type);
-    my $genome_model = shift @command_parts;
-    if ($genome_model !~ m/genome-model/) {
-        $self->error_message("Malformed event-type for event ".$self->event_id.
-                             ". Expected it to begin with 'genome-model'");
-        return;
-    }
-
-    foreach ( @command_parts ) {
-        my @sub_parts = map { ucfirst } split('-');
-        $_ = join('',@sub_parts);
-    }
-
-    my $class_name = join('::', 'Genome::Model::Command' , @command_parts);
-    return $class_name;
-}
-
-
 # maq map file for all this lane's alignments
 sub unique_alignment_file_for_lane {
     my($self) = @_;
@@ -101,8 +119,6 @@ sub duplicate_alignment_file_for_lane {
     my $run = Genome::RunChunk->get($self->run_id);
     return $self->resolve_run_directory . '/duplicate_alignments_lane_' . $run->limit_regions . '.map';
 }
-
-
 
 # fastq file for all the reads in this lane
 sub fastq_file_for_lane {
