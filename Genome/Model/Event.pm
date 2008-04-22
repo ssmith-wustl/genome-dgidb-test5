@@ -170,28 +170,6 @@ sub resolve_log_directory {
                                     $self->run->name);
 }
 
-# I thought that the Command API should be able to do this through
-# resolve_class_and_params_for_argv(), but it didn't work...
-sub class_for_event_type {
-    my $self = shift;
-
-    my @command_parts = split(' ',$self->event_type);
-    my $genome_model = shift @command_parts;
-    if ($genome_model !~ m/genome-model/) {
-        $self->error_message("Malformed event-type for event ".$self->event_id.
-                             ". Expected it to begin with 'genome-model'");
-        return;
-    }
-
-    foreach ( @command_parts ) {
-        my @sub_parts = map { ucfirst } split('-');
-        $_ = join('',@sub_parts);
-    }
-
-    my $class_name = join('::', 'Genome::Model::Command' , @command_parts);
-    return $class_name;
-}
-
 # maq map file for all this lane's alignments
 sub unique_alignment_file_for_lane {
     my($self) = @_;
