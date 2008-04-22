@@ -162,7 +162,35 @@ sub resolve_run_directory {
                                     $self->run->sequencing_platform,
                                     $self->run->name);
 }
+sub resolve_log_directory {
+    my $self = shift;
 
+    return sprintf('%s/logs/%s/%s', Genome::Model->get($self->model_id)->data_directory,
+                                    $self->run->sequencing_platform,
+                                    $self->run->name);
+}
+
+# I thought that the Command API should be able to do this through
+# resolve_class_and_params_for_argv(), but it didn't work...
+sub class_for_event_type {
+    my $self = shift;
+
+    my @command_parts = split(' ',$self->event_type);
+    my $genome_model = shift @command_parts;
+    if ($genome_model !~ m/genome-model/) {
+        $self->error_message("Malformed event-type for event ".$self->event_id.
+                             ". Expected it to begin with 'genome-model'");
+        return;
+    }
+
+    foreach ( @command_parts ) {
+        my @sub_parts = map { ucfirst } split('-');
+        $_ = join('',@sub_parts);
+    }
+
+    my $class_name = join('::', 'Genome::Model::Command' , @command_parts);
+    return $class_name;
+}
 
 # maq map file for all this lane's alignments
 sub unique_alignment_file_for_lane {
@@ -299,16 +327,21 @@ sub run_command_with_bsub {
 
     my $queue = $self->bsub_queue;
     my $bsub_args = $self->bsub_args;
-
-    if ($command->can('bsub_rusage')) {
+    
+   if ($command->can('bsub_rusage')) {
         $bsub_args .= ' ' . $command->bsub_rusage;
     }
-
     my $cmd = 'genome-model bsub-helper';
 
     my $event_id = $command->genome_model_event_id;
     my $prior_event_id = $last_command->genome_model_event_id if defined $last_command;
     my $model_id = $self->model_id;
+  
+    my $err_log_file=  sprintf("%s/%s.err", $command->resolve_log_directory, $event_id);
+    my $out_log_file=  sprintf("%s/%s.out", $command->resolve_log_directory, $event_id);
+    $bsub_args .= ' -o ' . $out_log_file . ' -e ' . $err_log_file;
+ 
+
     my $cmdline;
     { no warnings 'uninitialized';
         $cmdline = "bsub -q $queue $bsub_args" .
