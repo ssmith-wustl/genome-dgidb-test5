@@ -49,10 +49,13 @@ $DB::single = 1;
         return unless $self->_make_fastq_from_unaligned_file($dup_reads, $self->unaligned_duplicate_fastq_file_for_lane);
     }
 
+    unless ($self->verify_successful_completion) {
+        $self->error_message("Failed to verify successful completion!");
+        return;
+    }
+
     return 1;
 }
-
-
 
 sub _make_fastq_from_unaligned_file {
     my($self,$in,$fastq) = @_;
@@ -73,8 +76,26 @@ sub _make_fastq_from_unaligned_file {
     return 1;
 }
 
+sub verify_successful_completion {
+    my $self = shift;
+    my $f;
 
+    my $unique_reads = $self->unaligned_unique_reads_file_for_lane();
+    if (-f $unique_reads) {
+        unless (-f ($f = $self->unaligned_unique_fastq_file_for_lane)) {
+            $self->error_message("No unaligned duplicate fastq file $f for " . $self->desc);
+        }
+    }
+ 
+    my $dup_reads = $self->unaligned_duplicate_reads_file_for_lane();
+    if (-f $dup_reads) {
+        unless (-f ($f = $self->unaligned_duplicate_fastq_file_for_lane)) {
+            $self->error_message("No unaligned duplicate fastq file $f for " . $self->desc);
+        }
+    }
 
+    return 1;
+}
 
 1;
 
