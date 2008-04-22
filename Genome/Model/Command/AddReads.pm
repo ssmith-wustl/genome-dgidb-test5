@@ -125,7 +125,7 @@ print "hi\n";
     my ($full_path) = keys %dirs;
     
     
-    my $run = Genome::RunChunk->get_or_create(
+    my $run = Genome::RunChunk->get(
         seq_id => $read_set_id,
         run_name => $run_name,
         full_path => $full_path,
@@ -133,7 +133,19 @@ print "hi\n";
         sequencing_platform => $self->sequencing_platform,
         sample_name => $model->sample_name,
     );
-    
+ 
+    unless ($run) {
+        $run = Genome::RunChunk->create(
+            genome_model_run_id => $read_set_id,
+            seq_id => $read_set_id,
+            run_name => $run_name,
+            full_path => $full_path,
+            limit_regions => $lane, #TODO: platform-neutral name!!
+            sequencing_platform => $self->sequencing_platform,
+            sample_name => $model->sample_name,
+        );
+    }
+   
     unless ($run) {
         $self->error_message("Failed to get or create run record information for $run_name, $lane ($read_set_id)");
         return;
