@@ -126,7 +126,6 @@ print "hi\n";
     
     
     my $run = Genome::RunChunk->get_or_create(
-        genome_model_run_id => $read_set_id,
         seq_id => $read_set_id,
         run_name => $run_name,
         full_path => $full_path,
