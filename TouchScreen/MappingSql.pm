@@ -2116,7 +2116,9 @@ sub CloneTransfer96OutWithEquipment {
       #	 return 0;
       #}
       
-      my $tp = GSC::TransferPattern->get(transfer_name => '96 well transfer');
+      #LSF: Change it to use the transfer_desc because the transfer_name has been changed to a shorted name.
+      #     It should be tp_id = 305 in production database.
+      my $tp = GSC::TransferPattern->get(transfer_desc => '96 well transfer');
       
       my $tpse1 = GSC::TppPSE->create(prior_pse_id => $pre_pse_id,
                                       tp_id => $tp,
