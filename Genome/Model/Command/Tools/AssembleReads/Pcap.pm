@@ -185,13 +185,16 @@ sub execute {
 
 sub resolve_path_for_data {
     my ($self) = @_;
-    chomp (my $date = `date +%y%m%d`);
 
-    my $project_root_name = $self->project_name.'-'.$self->assembly_version.'_'.$date;
-
-    my $data_path = $dir.'/'.$project_root_name.'.pcap';
-    my $data_path = $self->data_path
-    return;
+    die "this method did not declare \$dir, and I wasn't sure what it intended to do.  I've disabled it because a module which doesn't complie breaks the build."
+    
+    #chomp (my $date = `date +%y%m%d`);
+    #
+    #my $project_root_name = $self->project_name.'-'.$self->assembly_version.'_'.$date;
+    #
+    #my $data_path = $dir.'/'.$project_root_name.'.pcap';
+    #my $data_path = $self->data_path
+    #return;
 }
 
 sub create_project_directories
