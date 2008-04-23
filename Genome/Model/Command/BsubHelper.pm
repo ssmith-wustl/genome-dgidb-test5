@@ -42,6 +42,8 @@ EOS
 sub execute {
     my $self = shift;
 
+    umask 0022;
+
 $DB::single=1;
     # Give the add-reads top level step a chance to sync database so these events
     # show up
@@ -157,7 +159,7 @@ sub redo_bsub {
         model_id => $self->model_id,
         sequencing_platform => 'solexa', # dont care
         full_path => '/tmp',
-        bsub_queue => 'aml' # default for retry
+        bsub_queue => 'long' # default for retry
     );
 
     ## since i'm rerunning prior, set its job_id to me
