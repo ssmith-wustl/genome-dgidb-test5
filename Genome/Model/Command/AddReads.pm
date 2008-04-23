@@ -128,7 +128,7 @@ print "hi\n";
     my $run = Genome::RunChunk->get(
         seq_id => $read_set_id,
         run_name => $run_name,
-        full_path => $full_path,
+#        full_path => $full_path,
         limit_regions => $lane, #TODO: platform-neutral name!!
         sequencing_platform => $self->sequencing_platform,
         sample_name => $model->sample_name,
