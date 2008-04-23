@@ -2,8 +2,6 @@ package Genome::Model::Command::Annotate::AddCdnaReads;
 
 use strict;
 use warnings;
-use lib '/gscuser/xshi/svn/mp';
-use MG::Analysis::VariantAnnotation;
 
 use above "Genome";
 
@@ -13,10 +11,12 @@ class Genome::Model::Command::Annotate::AddCdnaReads {
     [
     input => { type => 'String', doc => "Report file" },
     output => { type => 'String', doc => "Output file", is_optional => 1 },
-    #read_hash_unique_dna    => { type => 'String', doc => "ARGV[1]" },
-    #read_hash_cdna          => { type => 'String', doc => "ARGV[2]" },
-    #read_hash_unique_cdna   => { type => 'String', doc => "ARGV[3]" },
-    #read_hash_relapse_cdna  => { type => 'String', doc => "ARGV[4]" },
+    tumor_unique                => { type => 'String', doc => "File containing genomic unique readcounts for the three tumor libraries" },
+    tumor_cdna_raw              => { type => 'String', doc => "File containing non-unique readcounts for the tumor cDNA" },
+    tumor_cdna_unique           => { type => 'String', doc => "File containing unique readcounts for the tumor cDNA" },
+    relapse_cdna_raw            => { type => 'String', doc => "File containing non-unique readcounts for the relapse cDNA" },
+    skin_raw                    => { type => 'String', doc => "File containing non-unique readcounts for the skin genomic dna" },
+    skin_unique                 => { type => 'String', doc => "File containing unique readcounts for the skin genomic dna" },
     ],
 };
 
@@ -42,27 +42,23 @@ sub execute {
 
     use lib '/gscuser/dlarson/src/mp/trunk';
 
-    my $dbh = DBI->connect("dbi:SQLite:dbname=/tmp/add_cdna.db","","", { RaiseError =>1, AutoCommit => 0});
+    my $dbh = DBI->connect("dbi:SQLite:dbname=/tmp/add_cdna_genome.db","","", { RaiseError =>1, AutoCommit => 0});
 
 #create tables
 #my $read_hash_dna = 'genomic_counts';
 #add_reads_count($dbh, $read_hash_dna, $ARGV[1]);
     my $read_hash_unique_dna = 'genomic_unique_counts';
-    my $genomic_rc_file = '/gscmnt/sata180/info/medseq/dlarson/amll123t100_readcounts/amll123t100_readcount-q1/amll123t100_readcount-q1_allchr.merge';
-    add_reads_count($dbh, $read_hash_unique_dna, $genomic_rc_file);#$ARGV[2]);
-    #add_unique_reads_count($dbh, $read_hash_unique_dna, $genomic_rc_file);#$ARGV[2]);
+    add_unique_reads_count($dbh, $read_hash_unique_dna, $self->tumor_unique); 
     my $read_hash_cDNA = 'cDNA_counts';
-    my $cdna_rc_file = '/gscmnt/sata180/info/medseq/dlarson/amll123t100_readcounts/amll123t100_cdna_readcount-q1/cDNA_readcount_amll123t100.csv';
-    add_reads_count($dbh, $read_hash_cDNA, $cdna_rc_file);#$ARGV[3] );
+    add_reads_count($dbh, $read_hash_cDNA, $self->tumor_cdna_raw);
     my $read_hash_unique_cDNA = 'cDNA_unique_counts';
-    my $cdna_urc_file = '/gscmnt/sata180/info/medseq/dlarson/amll123t100_readcounts/amll123t100_cdna_unique_readcount-q1/cDNA_unique_readcount_amll123t100.csv';
-    add_unique_reads_count($dbh, $read_hash_unique_cDNA, $cdna_urc_file);#$ARGV[4] );
+    add_unique_reads_count($dbh, $read_hash_unique_cDNA, $self->tumor_cdna_unique);
     my $read_hash_relapse_cDNA = 'relapse_cDNA_counts';
-    add_reads_count($dbh, $read_hash_relapse_cDNA, 'dummy');#$ARGV[5] );
+    add_reads_count($dbh, $read_hash_relapse_cDNA, $self->relapse_cdna_raw);
     my $read_hash_skin_dna = 'skin_read_counts';
-    add_reads_count($dbh, $read_hash_skin_dna, 'dummy');#$ARGV[6] );
+    add_reads_count($dbh, $read_hash_skin_dna, $self->skin_raw);
     my $read_hash_unique_skin_dna = 'skin_unique_counts';
-    add_unique_reads_count($dbh, $read_hash_unique_skin_dna, 'dummy');#$ARGV[7] );
+    add_unique_reads_count($dbh, $read_hash_unique_skin_dna, $self->skin_unique);
     #
     my $input = $self->input;
     open (IN, "< $input") or die "Can't open file ($input): $!";
@@ -210,6 +206,7 @@ sub execute {
 
 
     print "final finished!\n";
+    $dbh->disconnect;
     #system("rm -rf /tmp/add_cdna.db");
 
     return 0;

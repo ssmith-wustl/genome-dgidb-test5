@@ -7,7 +7,7 @@ use lib '/gscuser/dlarson/src/mp/trunk';
 use Carp;
 use DBI;
 use List::MoreUtils qw{ pairwise };
-my $dbh = DBI->connect("dbi:SQLite:dbname=/tmp/add_cdna.db","","", { RaiseError =>1, AutoCommit => 0});
+my $dbh = DBI->connect("dbi:SQLite:dbname=/tmp/add_cdna_orig.db","","", { RaiseError =>1, AutoCommit => 0});
 
 #create tables
 #my $read_hash_dna = 'genomic_counts';
@@ -169,151 +169,11 @@ while (<IN>) {
 close(IN);
 close(OUT);
 
-
-#print "Starting Skin\n";
-#
-#
-#
-#my $read_hash_skin_dna =
-#  add_reads_count( $ARGV[5] );
-#my $read_hash_unique_skin_dna =
-#  add_unique_reads_count( $ARGV[6] );
-#
-#  
-#open (IN, "<$ARGV[0].read") or die "Can't open $ARGV[0]. $!";
-#  
-#open (OUT, ">$ARGV[0].read2") or die "Can't open $ARGV[0].read2. $!";
-#  
-#@header = (  q{"dbSNP(0:no; 1:yes)"},
-#             q{"Gene_name"},
-#             q{"Chromosome"},
-#             q{"Start_position (B36)"},
-#             q{"End_position (B36)"},
-#             q{"Variant_allele"},
-#             q{"# of genomic reads supporting variant allele"},
-#             q{"# of cDNA reads supporting variant allele"},
-#             q{"# of skin genomic reads with variant allele"},
-#             q{"# of unique genomic reads supporting variant allele(starting point)"},
-#             q{"# of unique genomic reads supporting variant allele(context)"},
-#             q{"# of unique cDNA reads supporting variant allele(starting point)"},
-#             q{"# of unique cDNA reads supporting variant allele(context)"},
-#             q{"# of unique skin genomic reads with variant allele(starting point)"},
-#             q{"# of unique skin genomic reads with variant allele(context)"},
-#             q{"# of relapse cDNA reads supporting variant allele"},
-#             q{"Reference_allele"},
-#             q{"# of genomic reads supporting reference allele"},
-#             q{"# of cDNA reads supporting reference allele"},
-#             q{"# of skin genomic reads with reference allele"},
-#             q{"# of unique genomic reads supporting reference allele(starting point)"},
-#             q{"# of unique genomic reads supporting reference allele(context)"},
-#             q{"# of unique cDNA reads supporting reference allele(starting point)"},
-#             q{"# of unique cDNA reads supporting reference allele(context)"},
-#             q{"# of unique skin genomic reads with reference allele(starting point)"},
-#             q{"# of unique skin genomic reads with reference allele(context)"},
-#             q{"# of relapse cDNA reads supporting reference allele"},
-#             q{"Gene_expression"},
-#             q{"Detection"},
-#             q{"Ensembl_transcript_id"},
-#             q{"Transcript_stranding"},
-#             q{"Variant_type"},
-#             q{"Transcript_position"},
-#             q{"Amino_acid_change"},
-#             q{"Polyphen_prediction"},
-#             q{"submit(0:no; 1:yes)"},
-#         );
-#print OUT join(q{,}, @header), "\n";
-#while (<IN>) {
-#    chomp();
-#    my $line = $_;
-#    next if ( $line =~ /dbSNP/ );
-#    my (  $dbsnp,
-#           $gene,
-#           $chromosome,
-#           $start,
-#           $end,
-#           $al2,
-#           $al2_read_hg,
-#           $al2_read_cDNA,
-#           $al2_read_unique_dna_start,
-#           $al2_read_unique_dna_context,
-#           $al2_read_unique_cDNA_start,
-#           $al2_read_unique_cDNA_context,
-#           $al2_read_relapse_cDNA,
-#           $al1,
-#           $al1_read_hg,
-#           $al1_read_cDNA,
-#           $al1_read_unique_dna_start,
-#           $al1_read_unique_dna_context,
-#           $al1_read_unique_cDNA_start,
-#           $al1_read_unique_cDNA_context,
-#           $al1_read_relapse_cDNA,
-#           $gene_exp,
-#           $gene_det,
-#           $transcript,
-#           $strand,
-#           $trv_type,
-#           $c_position,
-#           $pro_str,
-#           $pph_prediction,
-#           $submit,
-#       ) = split(/,/);
-#
-#    #grab skin readcounts
-#    my ( $al1_read_skin_dna, $al2_read_skin_dna ) =
-#      retrieve_readcount_from( $read_hash_skin_dna,
-#        $chromosome, $start, $al1, $al2, );
-#    
-#    my (
-#        $al1_read_unique_skin_start,   $al2_read_unique_skin_start,
-#        $al1_read_unique_skin_context, $al2_read_unique_skin_context,
-#      )
-#      = retrieve_unique_readcount_from( $read_hash_unique_skin_dna, $chromosome,
-#        $start, $al1, $al2, );
-#    my @fields = (  $dbsnp,
-#                    $gene,
-#                    $chromosome,
-#                    $start,
-#                    $end,
-#                    $al2,
-#                    $al2_read_hg,
-#                    $al2_read_cDNA,
-#                    $al2_read_skin_dna,
-#                    $al2_read_unique_dna_start,
-#                    $al2_read_unique_dna_context,
-#                    $al2_read_unique_cDNA_start,
-#                    $al2_read_unique_cDNA_context,
-#                    $al2_read_unique_skin_start,
-#                    $al2_read_unique_skin_context,
-#                    $al2_read_relapse_cDNA,
-#                    $al1,
-#                    $al1_read_hg,
-#                    $al1_read_cDNA,
-#                    $al1_read_skin_dna,
-#                    $al1_read_unique_dna_start,
-#                    $al1_read_unique_dna_context,
-#                    $al1_read_unique_cDNA_start,
-#                    $al1_read_unique_cDNA_context,
-#                    $al1_read_unique_skin_start,
-#                    $al1_read_unique_skin_context,
-#                    $al1_read_relapse_cDNA,
-#                    $gene_exp,
-#                    $gene_det,
-#                    $transcript,
-#                    $strand,
-#                    $trv_type,
-#                    $c_position,
-#                    $pro_str,
-#                    $pph_prediction,
-#                    $submit,
-#                );
-#    print OUT join(q{,}, @fields), "\n";
-#}
-#
-#close(IN);
-#close(OUT);
   
 print "final finished!\n";
-system("rm -rf /tmp/add_cdna.db");
+$dbh->disconnect;
+0;
+#system("rm -rf /tmp/add_cdna.db");
 
 sub retrieve_readcount_from {
     my ( $dbh, $tablename, $chromosome, $start, $al1, $al2 ) = @_;
