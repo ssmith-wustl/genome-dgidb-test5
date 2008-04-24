@@ -65,27 +65,27 @@ sub execute {
     #my $file;
     my $file = $self->infile; #really crummy way to get the file name
     my $handle = new FileHandle;
-    $handle->open($file, "r") or die "Couldn't open annotation file\n";
-    #$handle->open($self->infile, "r") or die "Couldn't open annotation file\n";
-    print "file is $file \n";
+    $handle->open($file, "r") or croak "Couldn't open annotation file\n";
+
     my $header_line = $handle->getline; #ignore header
     chomp($header_line);
     my $output_handle = new FileHandle;
-    $output_handle->open($self->outfile,"w") or die "Couldn't open output file\n";
-    #exit;
+    $output_handle->open($self->outfile,"w") or croak "Couldn't open output file\n";
+
     my $c = new Text::CSV_XS;
     my $cin = new Text::CSV_XS;
 #print new header
-#    my @header = split q{,}, $header_line;
+
     $cin->parse($header_line);
     my @header = $cin->fields();
     push @header, qq{Watson or Venter(0:no, Name:source(s))};
     $c->combine(@header);
-#    print $output_handle join(q{,}, @header), "\n";
+
     print $output_handle $c->string(),"\n";
     my $append_line;
     while($append_line = $handle->getline) {
         chomp $append_line;
+        # should replace split with Text::CSV_XS->fields;
         my (  $dbsnp,
               $gene,
               $chromosome,
@@ -133,9 +133,7 @@ sub execute {
             end         =>  "$end",
             filter      =>  1,
         });
-        #if(!defined($watson_or_venter)) {
-        #    $watson_or_venter = "NULLFIX!";
-        #}
+
         my @fields = (   $dbsnp,
                          $gene,
                          $chromosome,
@@ -177,7 +175,7 @@ sub execute {
                          
                          );
         $c->combine(@fields);
-#        print $output_handle join(q{,},@fields), "\n";    
+
         print $output_handle $c->string(),"\n";
         $output_handle->flush;
     }
