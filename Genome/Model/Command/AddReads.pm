@@ -127,26 +127,25 @@ $DB::single=1;
         seq_id => $read_set_id,
     );
 
-    if ($run->run_name ne $run_name) {
-        $self->error_message("Bad run_name value $run_name.  Expected " . $run->run_name);
-        return;
+    if ($run) {
+        if ($run->run_name ne $run_name) {
+            $self->error_message("Bad run_name value $run_name.  Expected " . $run->run_name);
+            return;
+        }
+        if ($run->full_path ne $full_path) {
+            $self->warning_message("Run $run_name has changed location to $full_path from " . $run->full_path);
+            $run->full_path($full_path);
+        }
+        if ($run->limit_regions ne $lane) {
+            $self->error_message("Bad lane/region value $lane.  Expected " . $run->limit_regions);
+            return;
+        }
+        if ($run->sample_name ne $model->sample_name) {
+            $self->error_message("Bad sample_name.  Model value is " . $model->model. ", run value is " . $run->sample_name);
+            return;
+        }
     }
-    
-    $DB::single = 1;
-    if ($run->full_path ne $full_path) {
-        $self->warning_message("Run $run_name has changed location to $full_path from " . $run->full_path);
-        $run->full_path($full_path);
-    }
-    if ($run->limit_regions ne $lane) {
-        $self->error_message("Bad lane/region value $lane.  Expected " . $run->limit_regions);
-        return;
-    }
-    if ($run->sample_name ne $model->sample_name) {
-        $self->error_message("Bad sample_name.  Model value is " . $model->model. ", run value is " . $run->sample_name);
-        return;
-    }
- 
-    unless ($run) {
+    else {
         $run = Genome::RunChunk->create(
             genome_model_run_id => $read_set_id,
             seq_id => $read_set_id,
@@ -156,7 +155,6 @@ $DB::single=1;
             sequencing_platform => $self->sequencing_platform,
             sample_name => $model->sample_name,
         );
-        
         unless ($run) {
             $self->error_message("Failed to get or create run record information for $run_name, $lane ($read_set_id)");
             return;
