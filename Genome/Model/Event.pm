@@ -15,25 +15,33 @@ UR::Object::Type->define(
         genome_model_event_id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        date_completed        => { is => 'TIMESTAMP(20)', len => 11, is_optional => 1 },
-        date_scheduled        => { is => 'TIMESTAMP(20)', len => 11, is_optional => 1 },
-        event_status          => { is => 'VARCHAR2', len => 32, is_optional => 1 },
-        event_type            => { is => 'VARCHAR2', len => 255 },
-        model                 => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
-        lsf_job_id            => { is => 'VARCHAR2', len => 64, is_optional => 1 },
-        model_id              => { is => 'NUMBER', len => 11, is_optional => 1 },
-        ref_seq_id            => { is => 'VARCHAR2', len => 64, is_optional => 1 },
-        run_id                => { is => 'NUMBER', len => 11, is_optional => 1 },
-        user_name             => { is => 'VARCHAR2', len => 64, is_optional => 1 },
-        retry_count           => { is => 'NUMBER', len => 3, is_optional => 1 },
-        run            => { is => 'Genome::RunChunk', id_by => 'run_id', constraint_name => 'event_run' },
+        date_completed      => { is => 'TIMESTAMP(20)', len => 11, is_optional => 1 },
+        date_scheduled      => { is => 'TIMESTAMP(20)', len => 11, is_optional => 1 },
+        
+        event_status        => { is => 'VARCHAR2', len => 32, is_optional => 1 },
+        event_type          => { is => 'VARCHAR2', len => 255 },
+        lsf_job_id          => { is => 'VARCHAR2', len => 64, is_optional => 1 },
+        ref_seq_id          => { is => 'VARCHAR2', len => 64, is_optional => 1 },
+        user_name           => { is => 'VARCHAR2', len => 64, is_optional => 1 },
+        retry_count         => { is => 'NUMBER', len => 3, is_optional => 1 },
+        
+        run_id              => { is => 'NUMBER', len => 11, is_optional => 1 },
+        run                 => { is => 'Genome::RunChunk', id_by => 'run_id', is_optional => 1, constraint_name => 'event_run' },
+        run_name            => { via => 'run' },
+        run_lane            => { via => 'run', to => 'limit_regions' },
+        sample_name         => { via => 'run', to => 'sample_name' },
+        read_set_id         => { via => 'run', to => 'seq_id' },
+        
+        model_id            => { is => 'NUMBER', len => 11, is_optional => 1 },
+        model               => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
+        model_name          => { via => 'model', to => 'name' },
+        
     ],
     is_abstract => 1,
     sub_classification_method_name => '_resolve_subclass_name',
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 );
-
 
 # This is called by the infrastructure to appropriately classify abstract events
 # according to their event type because of the "sub_classification_method_name" setting
