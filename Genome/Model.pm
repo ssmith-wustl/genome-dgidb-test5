@@ -128,8 +128,9 @@ sub lock_resource {
 
 sub unlock_resource {
     my ($self, %args) = @_;
-    
-    my $resource_id = $self->data_directory . "/" . $args{'resource_id'} . ".lock";
+    my $resource_id = delete $args{resource_id};
+    Carp::confess("No resource_id specified for unlocking.") unless $resource_id;
+    $resource_id = $self->data_directory . "/" . $resource_id . ".lock";
     unlink $resource_id . '/info';
     rmdir $resource_id;
 }
