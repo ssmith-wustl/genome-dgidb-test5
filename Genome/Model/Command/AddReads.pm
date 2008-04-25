@@ -45,9 +45,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model add-reads --model-id 5 --squencing-platform solexa --full-path=/gscmnt/sata191/production/TEST_DATA/000000_HWI-EAS110-0000_00000/Data/C1-27_Firecrest1.8.28_04-09-2007_lims/Bustard1.8.28_04-09-2007_lims/GERALD_28-01-2007_mhickenb
-
-genome-model add-reads --model-id 5 --squencing-platform solexa --run_name 000000_HWI-EAS110-0000_00000
+genome-model add-reads --model-id 5 --squencing-platform solexa --read-set-id 5 
 EOS
 }
 
@@ -67,14 +65,13 @@ EOS
 our $GENOME_MODEL_BSUBBED_COMMAND = "genome-model";
 
 sub execute {
+$DB::single=1;
+
     my $self = shift;
     
     my $model = $self->model;
 
     my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
-
-$DB::single=1;
-print "hi\n";
 
     if ($self->adaptor_file && ! -f $self->adaptor_file) {
         $self->error_message("Specified adaptor file does not exist");
@@ -109,6 +106,7 @@ print "hi\n";
 
     use File::Basename;
     my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id);
+    
     unless (@fs_path) {
         $self->error_message("Failed to find the path for data set $run_name/$lane ($read_set_id)!");
         return;
@@ -123,16 +121,30 @@ print "hi\n";
         return;
     }
     my ($full_path) = keys %dirs;
-    
+    $full_path .= '/' unless $full_path =~ m|\/$|;
     
     my $run = Genome::RunChunk->get(
         seq_id => $read_set_id,
-        run_name => $run_name,
-#        full_path => $full_path,
-        limit_regions => $lane, #TODO: platform-neutral name!!
-        sequencing_platform => $self->sequencing_platform,
-        sample_name => $model->sample_name,
     );
+
+    if ($run->run_name ne $run_name) {
+        $self->error_message("Bad run_name value $run_name.  Expected " . $run->run_name);
+        return;
+    }
+    
+    $DB::single = 1;
+    if ($run->full_path ne $full_path) {
+        $self->warning_message("Run $run_name has changed location to $full_path from " . $run->full_path);
+        $run->full_path($full_path);
+    }
+    if ($run->limit_regions ne $lane) {
+        $self->error_message("Bad lane/region value $lane.  Expected " . $run->limit_regions);
+        return;
+    }
+    if ($run->sample_name ne $model->sample_name) {
+        $self->error_message("Bad sample_name.  Model value is " . $model->model. ", run value is " . $run->sample_name);
+        return;
+    }
  
     unless ($run) {
         $run = Genome::RunChunk->create(
@@ -140,15 +152,15 @@ print "hi\n";
             seq_id => $read_set_id,
             run_name => $run_name,
             full_path => $full_path,
-            limit_regions => $lane, #TODO: platform-neutral name!!
+            limit_regions => $lane, #TODO: platform-neutral name for lane/region!!
             sequencing_platform => $self->sequencing_platform,
             sample_name => $model->sample_name,
         );
-    }
-   
-    unless ($run) {
-        $self->error_message("Failed to get or create run record information for $run_name, $lane ($read_set_id)");
-        return;
+        
+        unless ($run) {
+            $self->error_message("Failed to get or create run record information for $run_name, $lane ($read_set_id)");
+            return;
+        }
     }
 
     my $last_bsub_job_id;
@@ -158,7 +170,11 @@ print "hi\n";
         my $command = $command_class->create(run_id => $run->id,
                                              model_id => $self->model_id);
         unless ($command) {
-            $self->error_message("Problem creating subcommand for class $command_class run id ".$run->id." model id ".$self->model_id);
+            $self->error_message(
+                "Problem creating subcommand for class $command_class run id ".$run->id
+                . " model id ".$self->model_id
+                . ": " . $command_class->error_message()
+            );
             return;
         }
         
