@@ -77,19 +77,25 @@ sub execute {
 
     my $quality_for =  $self->build_qual_hash($handle);
   
+    my $cin = new Text::CSV_XS;
+    my $cout = new Text::CSV_XS;
     
-    my $end_file = shift;
+    my $end_file = $self->infile;
     my $ef_file = new FileHandle;
     $ef_file->open("$end_file","r") or die "Couldn't open annotation file\n";
     my $header_line = $ef_file->getline; #ignore header
     chomp($header_line);
     my $output_handle = new FileHandle;
-    $output_handle->open("$end_file.quals","w") or die "Couldn't open output file\n";
+    $output_handle->open($self->outfile,"w") or die "Couldn't open output file\n";
 
 #print new header
-    my @header = split q{,}, $header_line;
-    push @header, q{"SNP q-value"};
-    print $output_handle join(q{,}, @header), "\n";
+    $cin->parse($header_line);
+#    my @header = split q{,}, $header_line;
+    my @header = $cin->fields();
+    push @header, q{SNP q-value};
+    $cout->combine(@header);
+#    print $output_handle join(q{,}, @header), "\n";
+    print $output_handle $cout->string(),"\n";
     my $append_line;
     while($append_line = $ef_file->getline) {
         chomp $append_line;
@@ -131,6 +137,8 @@ sub execute {
               $submit,
               ) = split ",", $append_line;
         my $real_qscore; 
+
+        # handle qscore stuff here...
         if( exists($quality_for->{$chromosome}{$start}{$end})) {
             $real_qscore =$quality_for->{$chromosome}{$start}{$end} ;
         }
@@ -182,10 +190,13 @@ sub execute {
     return 0;
 }
 
+
+# change this to read per line...
 sub build_qual_hash {
     my $self = shift;
     my $fh = shift;
     my %return_hash;
+    
     while(my $line = $fh->getline) {
         chomp($line);
         my
