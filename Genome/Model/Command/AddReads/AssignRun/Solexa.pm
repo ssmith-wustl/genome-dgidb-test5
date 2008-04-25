@@ -37,25 +37,76 @@ EOS
 
 sub should_bsub { 0;}
 
+sub create {
+    my $class = shift;
+    my $obj = $class->SUPER::create(@_);
+
+    unless ($obj->model_id and $obj->run_id and $obj->event_type) {
+        $class->error_message("This step requires the model and run to be specified at construction time for locking concurrency.");
+        $obj->delete;
+        return;
+    }
+    
+    my $model = $obj->model;
+    
+    my $resource_id = join(".",$class,'create',$obj->run_id);
+    my $lock = $model->lock_resource(resource_id => $resource_id);
+    unless ($lock) {
+        $class->error_message("Failed to lock $resource_id.");
+        $obj->delete;
+        return;
+    }
+    
+    my @prev =
+        grep { $_ ne $obj }
+        $class->load(
+            model_id    => $obj->model_id,
+            run_id      => $obj->run_id,
+            event_type  => $obj->event_type,
+        );
+        
+    if (@prev) {
+        $obj->error_message(
+            "This run/lane, " 
+            . $obj->run_name . "/" . $obj->run_lane . ' ' 
+            . '(' . $obj->read_set_id . '),'
+            . ' has already been assigned to this model '
+            . $model->id . ' (' . $model->name . ')'
+            . ' on event '
+            . $prev[0]->genome_model_event_id
+        );
+        $obj->model->unlock_resource(resource_id => $resource_id);
+        $obj->delete;
+        return;
+    }
+
+    my $unlock = sub { $model->unlock_resource(resource_id => $resource_id) };
+    $obj->create_subscription(method => 'commit', callback => $unlock);
+    $obj->create_subscription(method => 'delete', callback => $unlock);
+
+    return $obj;
+}
+
 sub execute {
     my $self = shift;
 
     $DB::single=1;
 
-    my $model = Genome::Model->get(id => $self->model_id);
+    my $model = $self->model;
 
-    my $run = Genome::RunChunk->get(id => $self->run_id);
+    my $run = $self->run;
+    
     unless ($run) {
-        $self->error_message("Did not find run info for run_id " . $self->run_id);
-        return 0;
+        $self->error_message("No run specified?");
+        return;
     }
 
     unless (-d $model->data_parent_directory) {
         eval { mkpath $model->data_parent_directory };
-				if ($@) {
-					$self->error_message("Couldn't create run directory path $model->data_parent_directory: $@");
-					return;
-				}
+            if ($@) {
+                $self->error_message("Couldn't create run directory path $model->data_parent_directory: $@");
+                return;
+            }
         unless(-d $model->data_parent_directory) {
             $self->error_message("Failed to create data parent directory: ".$model->data_parent_directory. ": $!");
             return;
