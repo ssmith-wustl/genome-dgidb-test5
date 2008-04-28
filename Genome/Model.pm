@@ -96,8 +96,17 @@ sub sample_path {
 
 sub reference_sequence_path {
     my $self = shift;
-    return sprintf('%s/reference_sequences/%s', $self->base_parent_directory,
-						$self->reference_sequence_name)
+    my $path = sprintf('%s/reference_sequences/%s', $self->base_parent_directory,
+						$self->reference_sequence_name);
+
+    my $dna_type = $self->dna_type;
+    $dna_type =~ tr/ /_/;
+
+    if (-d $path . '.' . $dna_type) {
+        $path .= '.' . $dna_type
+    }
+
+    return $path;
 }
 
 sub lock_resource {
