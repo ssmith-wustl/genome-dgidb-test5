@@ -2,6 +2,7 @@ package Genome::Model::Event;
 
 use strict;
 use warnings;
+use File::Path;
 
 our $log_base = '/gscmnt/sata114/info/medseq/model_data/logs/';
 
