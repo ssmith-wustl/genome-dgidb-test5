@@ -5,7 +5,6 @@ use strict;
 use warnings;
 
 use above "Genome";
-use lib '/gsc/scripts/gsc/medseq/lib/'; 
 
 class Genome::Model::Command {
     is => ['Command'],
