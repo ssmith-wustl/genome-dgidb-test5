@@ -77,6 +77,7 @@ sub execute {
     unless (@subreferences_names > 0) {
         @subreferences_names = ('all_sequences');
     }
+@subreferences_names = (22);
     
     foreach my $ref (@subreferences_names) { 
         my $last_bsub_job_id;

@@ -31,22 +31,8 @@ specified in the model.
 EOS
 }
 
-
-sub sub_command_delegator {
-    my($class,%params) = @_;
-
-    my $model = Genome::Model->get(id => $params{'model_id'});
-    unless ($model) {
-        $class->error_message("Can't retrieve genome model with ID ".$params{'model_id'});
-        return;
-    }
-
-    my $genotyper_name = $model->genotyper_name;
-    if ($genotyper_name =~ m/^maq/) {
-        return 'maq';
-    } else {
-        return $genotyper_name;
-    }
+sub command_subclassing_model_property {
+    return 'genotyper_name';
 }
 
 sub is_not_to_be_run_by_add_reads {

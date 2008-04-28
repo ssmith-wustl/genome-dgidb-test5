@@ -61,7 +61,8 @@ sub _sub_command_name_to_class_name_map{
 sub _get_sub_command_class_name{
     my $class = shift;
     
-    my $sub_command_name = $class->_get_sub_command_name(@_);
+    #my $sub_command_name = $class->_get_sub_command_name(@_);
+    my $sub_command_name = $class->sub_command_delegator(@_);
     unless ($sub_command_name) {
         # The subclassing column's value was probably undef, meaning this sub-command
         # should be skipped
@@ -81,17 +82,40 @@ sub _get_sub_command_class_name{
     return $sub_command_type;
 }
 
-sub _get_sub_command_name{
-    my $class = shift;
-    
-    # Which sub-command does the system think we should be doing here?
-    unless ($class->can('sub_command_delegator')) {
-        $class->error_message('command '.$class->command_name.' did not implement sub_command_delegator()');
+
+# This method is used by the mid-level (like G::M::C::AddReads::AlignReads command modules
+# To return the right sub-sub-class when the subclassing property is maq-ish
+sub sub_command_delegator {
+    my($class,%params) = @_;
+
+    my $model = Genome::Model->get(id => $params{'model_id'});
+    unless ($model) {
+        $class->error_message("Can't retrieve a Genome Model with ID ".$params{'model_id'});
         return;
     }
-    
-    return $class->sub_command_delegator(@_);
+
+    # Which property on the model will tell is the proper subclass to call?
+    unless ($class->can('command_subclassing_model_property')) {
+        $class->error_message("class $class did not implement command_subclassing_model_property()");
+        return;
+    }
+    my $subclassing_property = $class->command_subclassing_model_property();
+
+    unless ($model->can($subclassing_property)) {
+        $class->error_message("class $class command_subclassing_model_property() returned $subclassing_property, but that is not a property of a model");
+        return;
+    }
+
+    my $value = $model->$subclassing_property;
+    if ($value =~ m/^maq/) {
+        return 'maq';
+    } else {
+        return $value;
+    }
+
 }
+
+
 
 # Don't think this is used
 #sub _get_or_create_then_init_event{

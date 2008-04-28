@@ -32,18 +32,9 @@ the model's sequencing platform.
 EOS
 }
 
-sub sub_command_delegator {
-    my($class,%params) = @_;
 
-    my $model = Genome::Model->get($params{'model_id'});
-    return unless $model;
-
-    my $genotyper_name= $model->genotyper_name;
-    if ($genotyper_name =~ m/^maq/) {
-        return 'maq';
-    } else {
-        return $genotyper_name;
-    }
+sub command_subclassing_model_property {
+    return 'genotyper_name';
 }
 
 

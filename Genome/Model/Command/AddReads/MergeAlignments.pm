@@ -31,21 +31,8 @@ specified in the model.
 EOS
 }
 
-sub sub_command_delegator {
-    my($class,%params) = @_;
-
-    my $model = Genome::Model->get(id => $params{'model_id'});
-    unless ($model) {
-        $class->error_message("Can't retrieve a Genome Model with ID ".$params{'model_id'});
-        return;
-    }
-
-    my $read_aligner_name = $model->read_aligner_name;
-    if ($read_aligner_name =~ m/^maq/) {
-        return 'maq';
-    } else {
-        return $read_aligner_name;
-    }
+sub command_subclassing_model_property {
+    return 'read_aligner_name';
 }
 
 sub is_not_to_be_run_by_add_reads {

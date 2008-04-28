@@ -31,17 +31,10 @@ specified in the model.
 EOS
 }
 
-sub sub_command_delegator {
-    my($class,%params) = @_;
-
-    my $model = Genome::Model->get(id => $params{'model_id'});
-    unless ($model) {
-        $class->error_message("Can't retrieve a Genome Model with ID ".$params{'model_id'});
-        return;
-    }
-
-    return $model->multi_read_fragment_strategy;
+sub command_subclassing_model_property {
+    return 'multi_read_fragment_strategy';
 }
+
 
 sub should_bsub { 0;}
   

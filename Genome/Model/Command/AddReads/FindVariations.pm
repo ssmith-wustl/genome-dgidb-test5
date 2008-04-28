@@ -7,7 +7,7 @@ use above "Genome";
 use Command; 
 
 class Genome::Model::Command::AddReads::FindVariations {    
-    is => 'Genome::Model::Command::DelegatesToSubcommand::WithRefSeq',
+    is => ['Genome::Model::Command::DelegatesToSubcommand::WithRefSeq'],
 };
 
 sub sub_command_sort_position { 80 }
@@ -31,16 +31,8 @@ specified in the model.
 EOS
 }
 
-sub sub_command_delegator {
-    my($class,%params) = @_;
-
-    my $model = Genome::Model->get(id => $params{'model_id'});
-    unless ($model) {
-        $class->error_message("Can't retrieve genome model with ID ".$params{'model_id'});
-        return;
-    }
-
-    return $model->indel_finder_name;
+sub command_subclassing_model_property {
+    return 'indel_finder_name';
 }
 
 sub is_not_to_be_run_by_add_reads {
