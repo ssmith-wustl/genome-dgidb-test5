@@ -42,6 +42,7 @@ sub execute {
     
     my $model = Genome::Model->get(id => $self->model_id);
     my $maq_pathname = $self->proper_maq_pathname('indel_finder_name');
+    my $maq_pl_pathname = $self->proper_maq_pl_pathname('indel_finder_name');
 
     # ensure the reference sequence exists.
     my $ref_seq_file = $model->reference_sequence_path . "/all_sequences.bfa";
@@ -89,6 +90,7 @@ sub execute {
     }
 
     my $snip_output_file =  $analysis_base_path . "/" . $snp_resource_name;
+    my $filtered_snip_output_file = $snip_output_file . '.filtered';
     my $indel_output_file =  $analysis_base_path . "/" . $indel_resource_name;
     my $pileup_output_file = $analysis_base_path . "/" . $pileup_resource_name;
                                        
@@ -97,6 +99,13 @@ sub execute {
         $self->error_message("running maq cns2snp returned non-zero exit code $retval");
         return;
     }
+
+    $retval = system("$maq_pl_pathname SNPfilter $snip_output_file > $filtered_snip_output_file");
+    unless ($retval == 0) {
+        $self->error_message("running maq.pl SNPfilter returned non-zero exit code $retval");
+        return;
+    }
+
     
     $retval = system("$maq_pathname indelsoa $ref_seq_file $accumulated_alignments_file > $indel_output_file");
     unless ($retval == 0) {
@@ -106,7 +115,7 @@ sub execute {
 
     # Running pileup requires some parsing of the snip file
     my $tmpfh = File::Temp->new();
-    my $snip_fh = IO::File->new($snip_output_file);
+    my $snip_fh = IO::File->new($filtered_snip_output_file);
     unless ($snip_fh) {
         $self->error_message("Can't open snip output file for reading: $!");
         return;
