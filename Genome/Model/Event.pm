@@ -327,6 +327,15 @@ sub run_command_with_bsub {
     my $event_id = $command->genome_model_event_id;
     my $prior_event_id = $last_command->genome_model_event_id if defined $last_command;
     my $model_id = $self->model_id;
+
+    my $log_dir = $command->resolve_log_directory;
+    unless (-d $log_dir) {
+        eval { mkpath($log_dir) };
+        if ($@) {
+            $self->error_message("Couldn't create run directory path $log_dir: $@");
+            return;
+        }
+    }
   
     my $err_log_file=  sprintf("%s/%s.err", $command->resolve_log_directory, $event_id);
     my $out_log_file=  sprintf("%s/%s.out", $command->resolve_log_directory, $event_id);

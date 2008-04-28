@@ -121,14 +121,7 @@ sub execute {
             return;
         }
     }
-    my $log_dir = $self->resolve_log_directory;
-    unless (-d $log_dir) {
-        eval { mkpath($log_dir) };
-        if ($@) {
-            $self->error_message("Couldn't create run directory path $log_dir: $@");
-            return;
-        }
-    }
+
     # Copy the given adaptor file to the run's directory
     if ($self->adaptor_file) {
         my $given_adaptor_pathname = $self->adaptor_file;
