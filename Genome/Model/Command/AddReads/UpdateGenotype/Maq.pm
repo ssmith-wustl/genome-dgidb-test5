@@ -35,6 +35,7 @@ sub bsub_rusage {
 
 }
 
+sub should_bsub { 1;}
 
 sub execute {
     my $self = shift;

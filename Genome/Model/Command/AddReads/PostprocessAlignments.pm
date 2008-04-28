@@ -68,7 +68,8 @@ sub execute {
 
     $DB::single=1;
     
-    my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
+    #my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
+    my @sub_command_classes = @CHILD_JOB_CLASSES;
 
     my $model = Genome::Model->get($self->model_id);
     my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');

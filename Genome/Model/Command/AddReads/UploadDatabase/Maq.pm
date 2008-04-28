@@ -32,6 +32,8 @@ This command is usually called as part of the postprocess-alignments process
 EOS
 }
 
+sub should_bsub { 1;}
+
 
 # This part is stolen and refactored from Brian's original G::M::Command::Write::GenotypeSubmission::Maq
 # Maybe it should be moved to a Maq-specific tools module at some point?
@@ -44,7 +46,8 @@ our $QC_CUTOFF = 0;
 sub execute {
     my $self = shift;
     
-
+    # FIXME - uploading to the MG database is turned off for the moment
+    return 1;
     
     my $model = Genome::Model->get($self->model_id);
 
