@@ -9,8 +9,9 @@ class Genome::Model::Command::Annotate::AddCdnaReads {
     is  => 'Command',
     has => 
     [
-    input => { type => 'String', doc => "Report file" },
-    output => { type => 'String', doc => "Output file", is_optional => 1 },
+    input 						=> { type => 'String', doc => "Report file" },
+    output 						=> { type => 'String', doc => "Output file", is_optional => 1 },
+    rebuild_database 			=> { type => 'Boolean', doc => "Enter 1 to rebuild the databases, 0 to use pre-existing", is_optional => 1, default_value => 0 },
     tumor_unique                => { type => 'String', doc => "File containing genomic unique readcounts for the three tumor libraries" },
     tumor_cdna_raw              => { type => 'String', doc => "File containing non-unique readcounts for the tumor cDNA" },
     tumor_cdna_unique           => { type => 'String', doc => "File containing unique readcounts for the tumor cDNA" },
@@ -48,17 +49,21 @@ sub execute {
 #my $read_hash_dna = 'genomic_counts';
 #add_reads_count($dbh, $read_hash_dna, $ARGV[1]);
     my $read_hash_unique_dna = 'genomic_unique_counts';
-    add_unique_reads_count($dbh, $read_hash_unique_dna, $self->tumor_unique); 
     my $read_hash_cDNA = 'cDNA_counts';
-    add_reads_count($dbh, $read_hash_cDNA, $self->tumor_cdna_raw);
     my $read_hash_unique_cDNA = 'cDNA_unique_counts';
-    add_unique_reads_count($dbh, $read_hash_unique_cDNA, $self->tumor_cdna_unique);
     my $read_hash_relapse_cDNA = 'relapse_cDNA_counts';
-    add_reads_count($dbh, $read_hash_relapse_cDNA, $self->relapse_cdna_raw);
     my $read_hash_skin_dna = 'skin_read_counts';
-    add_reads_count($dbh, $read_hash_skin_dna, $self->skin_raw);
     my $read_hash_unique_skin_dna = 'skin_unique_counts';
-    add_unique_reads_count($dbh, $read_hash_unique_skin_dna, $self->skin_unique);
+ 
+	if ($self->rebuild_database) 
+	{
+	    add_unique_reads_count($dbh, $read_hash_unique_dna, $self->tumor_unique); 
+    	add_reads_count($dbh, $read_hash_cDNA, $self->tumor_cdna_raw);
+	    add_unique_reads_count($dbh, $read_hash_unique_cDNA, $self->tumor_cdna_unique);
+    	add_reads_count($dbh, $read_hash_relapse_cDNA, $self->relapse_cdna_raw);
+	    add_reads_count($dbh, $read_hash_skin_dna, $self->skin_raw);
+		add_unique_reads_count($dbh, $read_hash_unique_skin_dna, $self->skin_unique);
+	}
     #
     my $input = $self->input;
     open (IN, "< $input") or die "Can't open file ($input): $!";
