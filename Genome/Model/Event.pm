@@ -173,9 +173,14 @@ sub resolve_run_directory {
 sub resolve_log_directory {
     my $self = shift;
 
-    return sprintf('%s/logs/%s/%s', Genome::Model->get($self->model_id)->data_directory,
-                                    $self->run->sequencing_platform,
-                                    $self->run->name);
+    if (defined $self->run) {
+        return sprintf('%s/logs/%s/%s', Genome::Model->get($self->model_id)->data_directory,
+                                        $self->run->sequencing_platform,
+                                        $self->run->name);
+    } else {
+        return sprintf('%s/logs/%s', Genome::Model->get($self->model_id)->data_directory,
+                                     $self->ref_seq_id);
+    }
 }
 
 # maq map file for all this lane's alignments
