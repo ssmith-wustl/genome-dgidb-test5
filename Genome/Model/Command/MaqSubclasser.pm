@@ -38,6 +38,17 @@ sub proper_maq_pathname {
     }
 }
 
+# There's a perl script that's a frontend for some 
+# extra maq functionality.  Assumme it's in the same
+# location as the maq binary, with a ".pl" extention
+sub proper maq_pl_pathname {
+    my($self, $model_param_name) = @_;
+
+    my $path = $self->proper_maq_pathname($model_param_name);
+
+    return $path . '.pl';
+}
+
 
 1;
 
