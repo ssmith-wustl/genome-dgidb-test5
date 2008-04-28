@@ -68,10 +68,17 @@ sub execute {
 $DB::single=1;
 
     my $self = shift;
-    
+$DB::single=1;
+
     my $model = $self->model;
 
-    my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
+    #my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
+    my @sub_command_classes= qw/
+        Genome::Model::Command::AddReads::AssignRun
+        Genome::Model::Command::AddReads::AlignReads
+        Genome::Model::Command::AddReads::ProcessLowQualityAlignments
+        Genome::Model::Command::AddReads::AcceptReads
+    /;
 
     if ($self->adaptor_file && ! -f $self->adaptor_file) {
         $self->error_message("Specified adaptor file does not exist");
