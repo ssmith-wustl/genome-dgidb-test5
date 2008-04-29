@@ -36,7 +36,7 @@ $DB::single=1;
   
     my $variations = {};
 
-    my $snp_resource_name = sprintf("snips%s",
+    my $snp_resource_name = sprintf("snips%s.filtered",
                                     defined $self->ref_seq_id ? "_".$self->ref_seq_id
                                                               : "");
     my $pileup_resource_name = sprintf("pileup%s",
