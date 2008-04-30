@@ -53,4 +53,30 @@ sub close{
     $io->close();
 }
 
+=pod
+
+=head1 OutputBuffer
+Simple output writer for taking arbitrary length input and writing output of max line length(60)
+
+my $ob = Genome::Utility::OutputBuffer->new(<file>);
+
+$ob->print_header(">Sequence_1");
+
+while{
+    ...
+    (create $seq of arbitrary length
+    ...
+    $ob->print("$seq);
+}
+
+=head2 Subs
+
+=head3 print_header($string)
+prints $string followed by a newline to the file
+
+=head3 print($string)
+prints $string to the file, automatically inserting a newline when the max line_length(60) is reached
+
+=cut
+
 1;
