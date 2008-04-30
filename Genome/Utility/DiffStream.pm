@@ -32,15 +32,22 @@ sub make_diff{
     return unless $line;
     my %diff;
 
-    my ($subject, $pos, $delete, $insert, $pre_diff_sequence, $post_diff_sequence) = split(/\s+/, $line);
+    my ($subject, $pos, $type, $deletion_length, $indel, $pre_diff_sequence, $post_diff_sequence, $read_name) = split(/\s+/, $line);
 
     $diff{header} = $subject;
-    $diff{delete} = uc $delete unless $delete eq '-';
+    $diff{delete} = uc $indel if $type =~ /^d(el(etion)?)?$/i;
+    $diff{insert} = uc $indel if $type =~ /^i(ns(ertion)?)?$/i;
+    ($diff{delete}, $diff{insert}) = split(/\//, $indel) if $type =~ /^s(ub(stitution)?)?$/i;
+    
     $diff{delete} ||= '';
-    $diff{insert} = uc $insert unless $insert eq '-';
     $diff{insert} ||= '';
+    
 
     $diff{position} = $pos;
+    $diff{type} = $type;
+
+    $diff{deletion_length} = $deletion_length;
+    $diff{read_name} = $read_name;
     
     if ( $diff{delete} ){ # in ApplyDiffToFasta deletes start AFTER index, like inserts, also adjuct right flank;
         $diff{position}--;
@@ -67,20 +74,38 @@ sub next_diff_position{
 
 =pod
 
-=head1 Diff File Input Streamer I<(name subject to change)>
+=head1 DiffStream
+diff file input stream used in genome-model-tools apply-diff-to-fasta
 
 =head2 Synopsis
 
-This streams through a diff file, and parses and returns diff objects used in the Tools command ApplyDiffToFasta I<(name subject to change)>
+This streams through a diff file, and parses and returns diff objects used in the Tools command ApplyDiffToFasta 
 
 my $ds = Genome::Utility::DiffStream->new( <file_name> )
 
 =head2 Diff File Format
 no header
-<fasta header identifier> <position> <deletion sequence> <insertion sequence> <pre_diff_seq> <post_diff_seq>
+<fasta_header_identifier> <position> <indel_type> <deletion_length> <indel> [<pre_diff_seq> <post_diff_seq>]
 
-The fasta header identifier should
+The fasta header identifier should match the first \S+ of chars following the '>' on the fasta header line in the reference sequence
 
-=head2 Options
+valid indel types (case insensitive)
+d[el[etion]]
+i[ns[ertion]]
+s[ub[stitution]]
 
-1;
+S SUB del insertion Ins are all valid for this field
+
+The deletion length is always the length of the sequence to be deleted from the reference in deletions and substitutions.  This field should always be 0 for insertions
+
+The post and pre diff sequence are not necessary for apply-diff-to-fasta to run, but are recommended, as they ensure your diff is being applied in the correct position
+
+=head2 Subs
+
+=head3 next_diff
+reads and returns the next diff in the file.  Advances one line in the diff file.
+
+=head3 next_diff_position
+returns the position of the next diff, but does not advance in the file.
+
+=cut
