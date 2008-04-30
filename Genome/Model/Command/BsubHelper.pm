@@ -154,12 +154,22 @@ sub redo_bsub {
     my ($self, $command_obj, $prior_command_obj, $dep_type) = @_;
     $dep_type ||= 'ended';
 
+    my %add_reads_queue;
+    {
+        my ($old_jobinfo, $old_events) = $self->lsf_state($prior_command_obj->lsf_job_id);
+        if ($old_jobinfo && $old_jobinfo->{'Queue'}) {
+            $add_reads_queue{'bsub_queue'} = $old_jobinfo->{'Queue'};
+        } else {
+            $add_reads_queue{'bsub_queue'} = 'aml'
+        }
+    }
+
     ## create a dummy object to call this method, refactor candidate
     my $ar = Genome::Model::Command::AddReads->create(
         model_id => $self->model_id,
-        sequencing_platform => 'solexa', # dont care
-        full_path => '/tmp',
-        bsub_queue => 'long' # default for retry
+        sequencing_platform => 'solexa',
+        read_set_id => '0_but_true', ## execute never gets fired but this is required
+        %add_reads_queue
     );
 
     ## since i'm rerunning prior, set its job_id to me
