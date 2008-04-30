@@ -382,7 +382,7 @@ sub run_command_with_bsub {
 
 ## for automatic retries by bsub-helper, override if you want less or more than 3
 sub max_retries {
-    3;
+    0;  #temporarily disabled until rusage issue is dealt with,  sometimes retries maq on non-64 bit blades
 }
     
 1;
