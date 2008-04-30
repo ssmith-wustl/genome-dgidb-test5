@@ -101,6 +101,12 @@ sub execute {
         return;
     }
 
+    my $lane_summary = GSC::RunLaneSolexa->get(seq_id => $run);
+    unless ($lane_summary) {
+        $self->error_message("No lane summary found?");
+        return;
+    }
+
     unless (-d $model->data_parent_directory) {
         eval { mkpath $model->data_parent_directory };
             if ($@) {
@@ -137,18 +143,33 @@ sub execute {
     # Convert the original solexa sequence files into maq-usable files
     my $lane = $self->run->limit_regions;
 
-    my $orig_unique_file = sprintf("%s/%s_sequence.unique.sorted.fastq",
-                                   $run->full_path, 
-                                   $lane);
+    my $orig_unique_file;
+    my $our_unique_file;
+    if ($lane_summary->run_type =~ /Paired End Read (\d+)/) {
+        $orig_unique_file = sprintf("%s/%s_%s_sequence.unique.sorted.fastq",
+                                    $run->full_path,
+                                    $lane,
+                                    $1
+                                );
+        $our_unique_file = sprintf("%s/s_%s_%s_sequence.unique.sorted.fastq",
+                                   $run_dir,
+                                   $lane,
+                                   $1
+                               );
+    } else {
+        $orig_unique_file = sprintf("%s/%s_sequence.unique.sorted.fastq",
+                                    $run->full_path,
+                                    $lane);
+        $our_unique_file = sprintf("%s/s_%s_sequence.unique.sorted.fastq",
+                                   $run_dir,
+                                   $lane,
+                                 );
+    }
+
     unless (-f $orig_unique_file) {
         $self->error_message("Source fastq $orig_unique_file does not exist");
         return;
     }
-
-    my $our_unique_file = sprintf("%s/s_%s_sequence.unique.sorted.fastq",
-                                   $run_dir,
-                                   $lane,
-                                 );
 
     # make a symlink in our model directory pointing to the unique fastq data
     if (-f $our_unique_file) {
@@ -163,20 +184,34 @@ sub execute {
     if (! $model->multi_read_fragment_strategy  or
         $model->multi_read_fragment_strategy ne 'EliminateAllDuplicates') {
 
-        my $orig_duplicate_file = sprintf("%s/%s_sequence.duplicate.sorted.fastq",
-                                       $run->full_path,
+        my $orig_duplicate_file;
+        my $our_duplicate_file;
+        if ($lane_summary->run_type =~ /Paired End Read (\d+)/) {
+            $orig_duplicate_file = sprintf("%s/%s_%s_sequence.duplicate.sorted.fastq",
+                                           $run->full_path,
+                                           $lane,
+                                           $1
+                                       );
+            $our_duplicate_file = sprintf("%s/s_%s_%s_sequence.duplicate.sorted.fastq",
+                                          $run_dir,
+                                          $lane,
+                                          $1
+                                      );
+        } else {
+            $orig_duplicate_file = sprintf("%s/%s_sequence.duplicate.sorted.fastq",
+                                           $run->full_path,
+                                           $lane,
+                                       );
+            $our_duplicate_file = sprintf("%s/s_%s_sequence.duplicate.sorted.fastq",
+                                       $run_dir,
                                        $lane,
                                      );
+        }
+
         unless (-f $orig_duplicate_file) {
             $self->error_message("Source fastq $orig_duplicate_file does not exist");
             return;
         }
-
-
-        my $our_duplicate_file = sprintf("%s/s_%s_sequence.duplicate.sorted.fastq",
-                                       $run_dir,
-                                       $lane,
-                                     );
 
         if (-f $our_duplicate_file) {
             $self->warning_message("The file $our_duplicate_file already exists.  Removing...");
