@@ -184,92 +184,103 @@ sub resolve_log_directory {
     }
 }
 
+sub resolve_lane_name {
+    my ($self) = @_;
+
+    # hack until the GSC.pm namespace is deployed ...after we fix perl5.6 issues...
+    eval "use GSCApp; App->init;";
+    my $lane_summary = GSC::RunLaneSolexa->get(seq_id => $self->run->seq_id);
+    unless ($lane_summary) {
+        $self->error_message('No lane summary');
+    }
+    if ($lane_summary->run_type =~ /Paired End Read (\d+)/) {
+        return $self->run->limit_regions . '_' . $1;
+    } else {
+        return $self->run->limit_regions;
+    }
+}
+
 # maq map file for all this lane's alignments
 sub unique_alignment_file_for_lane {
     my($self) = @_;
 
-    my $run = Genome::RunChunk->get($self->run_id);
-    return $self->resolve_run_directory . '/unique_alignments_lane_' . $run->limit_regions . '.map';
+    return $self->resolve_run_directory . '/unique_alignments_lane_' . $self->resolve_lane_name . '.map';
 }
 
 sub duplicate_alignment_file_for_lane {
     my($self) = @_;
 
-    my $run = Genome::RunChunk->get($self->run_id);
-    return $self->resolve_run_directory . '/duplicate_alignments_lane_' . $run->limit_regions . '.map';
+    return $self->resolve_run_directory . '/duplicate_alignments_lane_' . $self->resolve_lane_name . '.map';
 }
 
 # fastq file for all the reads in this lane
 sub fastq_file_for_lane {
     my($self) = @_;
-    my $run = Genome::RunChunk->get($self->run_id);
-    return sprintf("%s/s_%d_sequence.fastq", $self->resolve_run_directory, $run->limit_regions);
+
+    return sprintf("%s/s_%s_sequence.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
 }
 
 
 # a file containing sequence\tread_name\tquality sorted by sequence
 sub sorted_fastq_file_for_lane {
-    my($self,$lane) = @_;
+    my($self) = @_;
 
-    my $run = Genome::RunChunk->get($self->run_id);
-    return sprintf("%s/s_%d_sequence.sorted.fastq", $self->resolve_run_directory, $run->limit_regions);
+    return sprintf("%s/s_%s_sequence.sorted.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
 }
 
+sub original_sorted_unique_fastq_file_for_lane {
+    my($self) = @_;
+
+    return sprintf("%s/%s_sequence.unique.sorted.fastq", $self->run->full_path, $self->resolve_lane_name);
+}
 
 sub sorted_unique_fastq_file_for_lane {
-    my($self,$lane) = @_;
+    my($self) = @_;
 
-    my $model = $self->model();
+    return sprintf("%s/s_%s_sequence.unique.sorted.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
+}
 
-    my $path;
-    my $run = Genome::RunChunk->get($self->run_id);
-    $path = sprintf("%s/s_%d_sequence.unique.sorted.fastq", $self->resolve_run_directory, $run->limit_regions);
-    return $path;
+sub original_sorted_duplicate_fastq_file_for_lane {
+    my($self) = @_;
+    return sprintf("%s/%s_sequence.duplicate.sorted.fastq", $self->run->full_path, $self->resolve_lane_name);
+
 }
 
 sub sorted_duplicate_fastq_file_for_lane {
-    my($self,$lane) = @_;
-    my $model = $self->model();
-    my $run = Genome::RunChunk->get($self->run_id);
-    my $path = sprintf("%s/s_%d_sequence.duplicate.sorted.fastq", $self->resolve_run_directory, $run->limit_regions);
-    return $path;
+    my($self) = @_;
+    return sprintf("%s/s_%s_sequence.duplicate.sorted.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
+
 }
 
 # The maq bfq file that goes with that lane's fastq file
 sub unique_bfq_file_for_lane {
     my($self) = @_;
-    my $run = Genome::RunChunk->get($self->run_id);
-    return sprintf("%s/s_%d_sequence.unique.bfq", $self->resolve_run_directory, $run->limit_regions);
+    return sprintf("%s/s_%s_sequence.unique.bfq", $self->resolve_run_directory, $self->resolve_lane_name);
 }
 
 sub duplicate_bfq_file_for_lane {
     my($self) = @_;
-    my $run = Genome::RunChunk->get($self->run_id);
-    return sprintf("%s/s_%d_sequence.duplicate.bfq", $self->resolve_run_directory, $run->limit_regions);
+    return sprintf("%s/s_%s_sequence.duplicate.bfq", $self->resolve_run_directory, $self->resolve_lane_name);
 }
 
 sub unaligned_unique_reads_file_for_lane {
     my($self) = @_;
-    my $run = Genome::RunChunk->get($self->run_id);
-    return sprintf("%s/s_%d_sequence.unaligned.unique", $self->resolve_run_directory, $run->limit_regions);
+    return sprintf("%s/s_%s_sequence.unaligned.unique", $self->resolve_run_directory, $self->resolve_lane_name);
 }
 
 sub unaligned_unique_fastq_file_for_lane {
     my($self) = @_;
-    my $run = Genome::RunChunk->get($self->run_id);
-    return sprintf("%s/s_%d_sequence.unaligned.unique.fastq", $self->resolve_run_directory, $run->limit_regions);
+    return sprintf("%s/s_%s_sequence.unaligned.unique.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
 }
 
 sub unaligned_duplicate_reads_file_for_lane {
     my($self) = @_;
-    my $run = Genome::RunChunk->get($self->run_id);
-    return sprintf("%s/s_%d_sequence.unaligned.duplicate", $self->resolve_run_directory, $run->limit_regions);
+    return sprintf("%s/s_%s_sequence.unaligned.duplicate", $self->resolve_run_directory, $self->resolve_lane_name);
 }
 
 sub unaligned_duplicate_fastq_file_for_lane {
     my($self) = @_;
-    my $run = Genome::RunChunk->get($self->run_id);
-    return sprintf("%s/s_%d_sequence.unaligned.duplicate.fastq", $self->resolve_run_directory, $run->limit_regions);
+    return sprintf("%s/s_%s_sequence.unaligned.duplicate.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
 }
 
 sub aligner_unique_output_file_for_lane {
@@ -282,8 +293,7 @@ sub aligner_duplicate_output_file_for_lane {
 
 sub alignment_submaps_dir_for_lane {
     my $self = shift;
-    my $run = Genome::RunChunk->get($self->run_id);
-    return sprintf("%s/alignments_lane_%s.submaps", $self->resolve_run_directory, $run->limit_regions)
+    return sprintf("%s/alignments_lane_%s.submaps", $self->resolve_run_directory, $self->resolve_lane_name)
 }
 
 sub adaptor_file_for_run {
