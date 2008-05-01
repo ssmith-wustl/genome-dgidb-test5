@@ -28,7 +28,6 @@ class Genome::Model::GenotypeProcessor::Maq {
 our $QC_CUTOFF = 0;
 
 sub get_mutations {
-    $DB::single = 1;
     my $self = shift;
 
     my $model = Genome::Model->get(id => $self->model_id);
@@ -87,16 +86,23 @@ sub _convert_output_to_mutations {
 
     my $mutations = [];
 
+$DB::single=1;
+
     # FIXME Is this right?  They used to be command line args
     my $software = 'maq';
     my $build = '36';
     my $model = Genome::Model->get($self->model_id);
-    my $sample_temp = $model->sample_name;  
+    #my $sample_temp = $model->sample_name;  
+    #$sample_temp =~ s/454_EST_S_//x;
+    #my ($sample_a, $sample_b) = split('-',$sample_temp);
+    ##$sample_b = sprintf "%05d",$sample_b;
+    #my $sample_id = $sample_a . '-' . $sample_b;
 
-    $sample_temp =~ s/454_EST_S_//x;
-    my ($sample_a, $sample_b) = split('-',$sample_temp);
-    $sample_b = sprintf "%05d",$sample_b;
-    my $sample_id = $sample_a . '-' . $sample_b;
+    my $sample_id = $model->sample_name;
+
+    #my @sample_parts = split('-',$model->sample_name);
+    #my $sample_id = join('-', @sample_parts[0,-1]);
+
 
     my $count = 1;
     foreach my $chr ( sort (keys %$output)) {
