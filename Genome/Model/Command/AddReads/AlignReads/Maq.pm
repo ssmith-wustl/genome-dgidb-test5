@@ -88,9 +88,20 @@ $DB::single = 1;
 
         my $fastq_method = sprintf("sorted_%s_fastq_file_for_lane", $pass);
         my $fastq_pathname = $self->$fastq_method;
-        unless (-f $fastq_pathname || -z $fastq_pathname ) {
-            $self->error_message("fastq file does not exist or has zero size $fastq_pathname");
+        unless (-f $fastq_pathname) {
+            $self->error_message("fastq file does not exist $fastq_pathname");
             return;
+        }
+
+        # Skip align reads for with_dups model when the duplicate fastq does not exist
+        # In other words CQADR, was faked and unique file contains all reads
+        if (-z $fastq_pathname) {
+            if ($pass eq 'duplicate') {
+                next;
+            } else {
+                $self->error_message("fastq file has zero size $fastq_pathname");
+                return;
+            }
         }
 
         my $bfq_method = sprintf("%s_bfq_file_for_lane", $pass);
@@ -220,7 +231,18 @@ sub verify_successful_completion {
     foreach my $pass ( @passes ) {
         my $aligner_output_method = sprintf("aligner_%s_output_file_for_lane", $pass);
         my $aligner_output = $self->$aligner_output_method;
+        unless (-f $aligner_output) {
+            if ($pass eq 'duplicate') {
+                next;
+            } else {
+                $self->error_message("Aligner output file not found for $pass '$aligner_output'");
+                return;
+            }
+        }
         unless ($self->_check_maq_successful_completion($aligner_output)) {
+            if ($pass eq 'duplicate') {
+                next;
+            }
             return;
         }
     }
@@ -332,8 +354,7 @@ sub _check_for_shortcut {
 
     return undef;
 }
-                                                    
-                                                    
+
 
 
 1;
