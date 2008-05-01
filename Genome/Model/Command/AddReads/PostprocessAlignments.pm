@@ -68,6 +68,7 @@ sub execute {
 
     $DB::single=1;
     
+    # FIXME there should probably be a more automatic way of getting this list...
     #my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
     my @sub_command_classes = @CHILD_JOB_CLASSES;
 
@@ -77,7 +78,6 @@ sub execute {
     unless (@subreferences_names > 0) {
         @subreferences_names = ('all_sequences');
     }
-@subreferences_names = (22);
     
     foreach my $ref (@subreferences_names) { 
         my $last_bsub_job_id;
