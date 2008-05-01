@@ -205,21 +205,11 @@ sub verify_successful_completion {
     foreach my $pass ( @passes ) {
         my $aligner_output_method = sprintf("aligner_%s_output_file_for_lane", $pass);
         my $aligner_output = $self->$aligner_output_method;
-        my $aligner_output_fh = IO::File->new($aligner_output);
-        unless ($aligner_output_fh) {
-            $self->error_message("Can't open aligner output file $aligner_output: $!");
+        unless ($self->_check_maq_successful_completion($aligner_output)) {
             return;
         }
-
-        while(<$aligner_output_fh>) {
-            if (m/match_data2mapping/) {
-                $aligner_output_fh->close();
-                return 1;
-            }
-        }
-        $self->error_message("Didn't find a line matching /match_data2mapping/ in the maq output file");
     }
-    return;
+    return 1;
 }
 
 
@@ -239,7 +229,7 @@ sub _check_maq_successful_completion {
         }
     }
 
-    $self->error_message("Didn't find a line matching /match_data2mapping/ in the maq output file");
+    $self->error_message("Didn't find a line matching /match_data2mapping/ in the maq output file '$output_filename'");
     return;
 }
 
