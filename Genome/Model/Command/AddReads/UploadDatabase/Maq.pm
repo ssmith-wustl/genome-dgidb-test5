@@ -8,8 +8,8 @@ use Command;
 use Genome::Model;
 use IO::File;
 
-use lib "/gsc/scripts/gsc/medseq/lib";
-use MG::Transform::Coordinates::TranscriptToGenomic;
+#use lib "/gsc/scripts/gsc/medseq/lib";
+#use MG::Transform::Coordinates::TranscriptToGenomic;
 use MG::IO::GenotypeSubmission;
 
 class Genome::Model::Command::AddReads::UploadDatabase::Maq {
@@ -46,9 +46,7 @@ our $QC_CUTOFF = 0;
 sub execute {
     my $self = shift;
     
-    # FIXME - uploading to the MG database is turned off for the moment
-    return 1;
-    
+$DB::single=1;
     my $model = Genome::Model->get($self->model_id);
 
     my @run_events = grep {defined $_->run_id} Genome::Model::Event->get(model_id=>$self->model_id,
@@ -93,26 +91,39 @@ sub execute {
                                                             $_->{count});
     }
 
-    MG::IO::GenotypeSubmission::LoadDatabase($mutations,
-                                             #check => $check,
-                                             #rccheck => $rccheck,
-                                             #verbose => $verbose,
-                                             source => 'wugsc',
-                                             tech_type => $platform,
-                                             mapping_reference => ($model->dna_type eq "whole" ? 'hg' : 'ccds_merged'), 
-                                             run_identifier => $model->sample_name . "_" . $run_count,  
-                                         );
-    my $submission_file_writer = Genome::Model::Command::Write::GenotypeSubmission::Maq->create(
-                                        ref_seq_id    => $self->ref_seq_id,
-                                        model_id      => $self->model_id,
-                                        mutation_data => $mutations,
-                                      );
-    unless ($submission_file_writer) {
-        $self->error_message("Unable to create a submisstion file writer command");
+    # Looks like some things deep in the bowels of MG::* can call die() in some cases
+    # so let's trap those
+$SIG{'__DIE__'} = sub {
+$DB::single=1;
+1;
+};
+    eval {
+        MG::IO::GenotypeSubmission::LoadDatabase($mutations,
+                                                 #check => $check,
+                                                 #rccheck => $rccheck,
+                                                 #verbose => $verbose,
+                                                 source => 'wugsc',
+                                                 tech_type => $platform,
+                                                 mapping_reference => ($model->dna_type eq "whole" ? 'hg' : 'ccds_merged'), 
+                                                 run_identifier => $model->sample_name . "_" . $run_count,  
+                                             );
+    };
+    if ($@) {
+        $self->error_message($@);
         return;
     }
 
-    $submission_file_writer->execute() || return;
+    #my $submission_file_writer = Genome::Model::Command::Write::GenotypeSubmission::Maq->create(
+    #                                    ref_seq_id    => $self->ref_seq_id,
+    #                                    model_id      => $self->model_id,
+    #                                    mutation_data => $mutations,
+    #                                  );
+    #unless ($submission_file_writer) {
+    #    $self->error_message("Unable to create a submisstion file writer command");
+    #    return;
+    #}
+    #
+    #$submission_file_writer->execute() || return;
 
     return 1;
 }
