@@ -193,7 +193,7 @@ sub resolve_lane_name {
     unless ($lane_summary) {
         $self->error_message('No lane summary');
     }
-    if ($lane_summary->run_type =~ /Paired End Read (\d+)/) {
+    if ($lane_summary->run_type && $lane_summary->run_type =~ /Paired End Read (\d+)/) {
         return $self->run->limit_regions . '_' . $1;
     } else {
         return $self->run->limit_regions;
