@@ -8,7 +8,7 @@ use Command;
 use Genome::Model;
 
 class Genome::Model::Command::Tools::UnalignedDataToFastq {
-    is => 'Genome::Model::Command',
+    is => 'Command',
     has => [
         in => { is => 'String', doc => "Pathname to a file generated from maq map's -u option" },
         fastq => { is => 'String', doc => "pathname of the fastq file to write" },
