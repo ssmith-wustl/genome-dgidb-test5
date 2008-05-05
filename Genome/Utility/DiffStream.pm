@@ -4,14 +4,12 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-use IO::File;
-
 #attributes
 
 sub new{
-    my ($class, $file) = @_;
-    my $io = IO::File->new('< '.$file);
-    die "couldn't open io" unless $io;
+    my $class = shift;
+    my $io = shift;
+    die "Need IO::Handle" unless $io->isa('IO::Handle');
     my $self = bless({_io => $io }, $class);
     $self->{next_diff} = $self->make_diff($self->{_io}->getline);
     $self->{current_diff_header} = '';
@@ -66,7 +64,13 @@ sub make_diff{
 
 sub next_diff_position{
     my $self = shift;
-    return $self->{next_diff}->{position} if $self->{next_diff} and $self->{next_diff}->{header} eq $self->{current_diff_header};
+    return unless $self->{next_diff};
+    my $pos = $self->{next_diff}->{position};
+    my $pre_diff_seq = $self->{next_diff}->{pre_diff_sequence};
+    my $post_diff_seq = $self->{next_diff}->{post_diff_sequence};
+    my $pre_diff_seq_length = length $pre_diff_seq if $pre_diff_seq;
+    my $post_diff_seq_length = length $post_diff_seq if $post_diff_seq;
+    return ($pos, $pre_diff_seq_length, $post_diff_seq_length) if $pos;
     return undef;
 }
 
