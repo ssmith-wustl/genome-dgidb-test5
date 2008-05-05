@@ -142,6 +142,7 @@ $DB::single=1;
 
     $command_obj->date_completed(UR::Time->now());
     if ($@) {
+        $self->error_message($@);
         $command_obj->event_status('Crashed');
     } else {
         $command_obj->event_status($rv ? 'Succeeded' : 'Failed');
