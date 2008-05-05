@@ -91,8 +91,9 @@ sub execute {
             mkdir($align_dir);
         }
         
-        my $accum_tmp = $accumulated_alignments_filename . "." . $$;
-
+        my $last_accum_tmp = $accumulated_alignments_filename;
+        my $accum_tmp = $accumulated_alignments_filename . "." . $$ . "." . time;
+        my $max_args = 99;
         my $basename = basename($accumulated_alignments_filename);
 
         unless ($model->lock_resource(resource_id=>"alignments.submap/$basename")) {
@@ -100,20 +101,25 @@ sub execute {
             return undef;
         }
     
-        # the master alignment file that we're merging into is an input, too!
-        my @accum_input; 
-        if (-e $accumulated_alignments_filename) {
-            unshift @input_alignments, $accumulated_alignments_filename;
-        }
+        while (my @input_subset = splice(@input_alignments,0,$max_args)) {
+            # the master alignment file that we're merging into is an input, too!
+            if (-e $last_accum_tmp) {
+                unshift @input_subset, $last_accum_tmp;
+            }
 
-        my @cmdline = ($maq_pathname,'mapmerge', $accum_tmp, @input_alignments);
-        my $rv = system(@cmdline);
-        if ($rv) {
-            $self->error_message("exit code from maq merge was nonzero; something went wrong.  command line was " . join " ", @cmdline);
-            return;
+            my @cmdline = ($maq_pathname,'mapmerge', $accum_tmp, @input_subset);
+            my $rv = system(@cmdline);
+            if ($rv) {
+                $self->error_message("exit code from maq merge was nonzero; something went wrong.  command line was " . join " ", @cmdline);
+                return;
+            }
+            
+            unlink $last_accum_tmp unless ($last_accum_tmp eq $accumulated_alignments_filename);
+            $last_accum_tmp = $accum_tmp;
+            $accum_tmp = $accumulated_alignments_filename . "." . $$ . "." . time;
         }
     
-        rename($accum_tmp, $accumulated_alignments_filename);
+        rename($last_accum_tmp, $accumulated_alignments_filename);
         $self->date_scheduled(UR::Time->now());
         $self->date_completed(UR::Time->now());
         $self->event_status('succeeded');
