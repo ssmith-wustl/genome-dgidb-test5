@@ -32,12 +32,15 @@ class Genome::Model {
         read_calibrator_params       => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         reference_sequence_name      => { is => 'VARCHAR2', len => 255 },
         sample_name                  => { is => 'VARCHAR2', len => 255 },
+        events                       => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => 'model' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
 
+
+# Operating directories
 
 sub base_parent_directory {
     "/gscmnt/sata114/info/medseq"
@@ -48,10 +51,14 @@ sub data_parent_directory {
     return $self->base_parent_directory . "/model_data"
 }
 
+sub sample_path {
+    my $self = shift;
+    return $self->data_parent_directory . $self->sample_name;
+}
+
 sub data_directory {
     my $self = shift;
     my $name = $self->name;
-    
     return $self->data_parent_directory . '/' . $self->sample_name . "_" . $name;
 }
 
@@ -64,35 +71,7 @@ sub directory_for_run {
     );
 }
 
-sub pretty_print_text {
-    my $self = shift;
-    
-    my @out;
-    for my $prop (grep {$_ ne "name"} $self->property_names) {
-        if (defined $self->$prop) {
-            push @out, [
-                Term::ANSIColor::colored($prop, 'red'),
-                Term::ANSIColor::colored($self->$prop, "cyan")
-            ]
-        }
-    }
-    
-    Genome::Model::EqualColumnWidthTableizer->new->convert_table_to_equal_column_widths_in_place( \@out );
-
-    my $out;
-    $out .= Term::ANSIColor::colored(sprintf("Model: %s (ID %s)", $self ->name, $self->id), 'bold magenta') . "\n\n";
-    $out .= Term::ANSIColor::colored("Configured Properties:", 'red'). "\n";    
-    $out .= join("\n", map { " @$_ " } @out);
-    $out .= "\n\n";
-    return $out;
-}
-
-sub sample_path {
-    my $self = shift;
-    
-    return $self->data_parent_directory . $self->sample_name;
-}
-
+# Refseq directories and names
 
 sub reference_sequence_path {
     my $self = shift;
@@ -108,6 +87,78 @@ sub reference_sequence_path {
 
     return $path;
 }
+
+sub get_subreference_paths {
+    my $self = shift;
+    my %p = @_;
+    
+    my $ext = $p{reference_extension};
+    
+    return glob(sprintf("%s/*.%s",
+                        $self->reference_sequence_path,
+                        $ext));
+    
+}
+
+sub get_subreference_names {
+    my $self = shift;
+    my %p = @_;
+    
+    my $ext = $p{reference_extension};
+
+    my @paths = $self->get_subreference_paths(reference_extension=>$ext);
+    
+    my @basenames = map {basename($_)} @paths;
+    for (@basenames) {
+        s/\.$ext$//;
+    }
+    
+    return @basenames;    
+}
+
+# Results data
+
+sub assembly_file_for_refseq {
+    my $self=shift;  
+    my $ref_seq=shift;
+    my $assembly_output_file=sprintf('%s/consensus/%s.cns',
+                                    $self->data_directory,
+                                    $ref_seq);
+    return $assembly_output_file;
+}
+
+sub resolve_accumulated_alignments_filename {
+    my $self = shift;
+    
+    my %p = @_;
+    my $refseq = $p{ref_seq_id};
+    
+    my $model_data_directory = $self->data_directory;
+    
+    my @subsequences = grep {$_ ne "all_sequences" } $self->get_subreference_names(reference_extension=>'bfa');
+    
+    if (@subsequences && !$refseq) {
+        $self->error_message("there are multiple subsequences available, but you did not specify a refseq");
+        return;
+    } elsif (!@subsequences) {
+        return $model_data_directory . "/alignments.submap/all_sequences.map";
+    } else {
+        return $model_data_directory . "/alignments.submap/" . $refseq . ".map";   
+    }
+}
+
+sub is_eliminate_all_duplicates {
+    my $self = shift;
+
+    if ($self->multi_read_fragment_strategy and
+        $self->multi_read_fragment_strategy eq 'EliminateAllDuplicates') {
+        1;
+    } else {
+        0;
+    }
+}
+
+# Functional methods
 
 sub lock_resource {
     my($self,%args) = @_;
@@ -144,73 +195,29 @@ sub unlock_resource {
     rmdir $resource_id;
 }
 
-sub get_subreference_paths {
-    my $self = shift;
-    my %p = @_;
-    
-    my $ext = $p{reference_extension};
-    
-    return glob(sprintf("%s/*.%s",
-                        $self->reference_sequence_path,
-                        $ext));
-    
-}
 
-sub get_subreference_names {
+sub pretty_print_text {
     my $self = shift;
-    my %p = @_;
     
-    my $ext = $p{reference_extension};
-
-    my @paths = $self->get_subreference_paths(reference_extension=>$ext);
-    
-    my @basenames = map {basename($_)} @paths;
-    for (@basenames) {
-        s/\.$ext$//;
+    my @out;
+    for my $prop (grep {$_ ne "name"} $self->property_names) {
+        if (defined $self->$prop) {
+            push @out, [
+                Term::ANSIColor::colored($prop, 'red'),
+                Term::ANSIColor::colored($self->$prop, "cyan")
+            ]
+        }
     }
     
-    return @basenames;    
+    Genome::Model::EqualColumnWidthTableizer->new->convert_table_to_equal_column_widths_in_place( \@out );
+
+    my $out;
+    $out .= Term::ANSIColor::colored(sprintf("Model: %s (ID %s)", $self ->name, $self->id), 'bold magenta') . "\n\n";
+    $out .= Term::ANSIColor::colored("Configured Properties:", 'red'). "\n";    
+    $out .= join("\n", map { " @$_ " } @out);
+    $out .= "\n\n";
+    return $out;
 }
 
-sub resolve_accumulated_alignments_filename {
-    my $self = shift;
-    
-    my %p = @_;
-    my $refseq = $p{ref_seq_id};
-    
-    my $model_data_directory = $self->data_directory;
-    
-    my @subsequences = grep {$_ ne "all_sequences" } $self->get_subreference_names(reference_extension=>'bfa');
-    
-    if (@subsequences && !$refseq) {
-        $self->error_message("there are multiple subsequences available, but you did not specify a refseq");
-        return;
-    } elsif (!@subsequences) {
-        return $model_data_directory . "/alignments.submap/all_sequences.map";
-    } else {
-        return $model_data_directory . "/alignments.submap/" . $refseq . ".map";   
-    }
-}
-
-sub is_eliminate_all_duplicates {
-    my $self = shift;
-
-    if ($self->multi_read_fragment_strategy and
-        $self->multi_read_fragment_strategy eq 'EliminateAllDuplicates') {
-
-        1;
-    } else {
-        0;
-    }
-}
-
-sub assembly_file_for_refseq {
-    my $self=shift;  
-    my $ref_seq=shift;
-    my $assembly_output_file=sprintf('%s/consensus/%s.cns',
-                                    $self->data_directory,
-                                    $ref_seq);
-    return $assembly_output_file;
-}
 
 1;
