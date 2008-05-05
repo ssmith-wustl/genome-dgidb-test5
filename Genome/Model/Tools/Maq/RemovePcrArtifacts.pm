@@ -6,6 +6,18 @@ use above "Genome";
 class Genome::Model::Tools::Maq::RemovePcrArtifacts {
     is => 'Genome::Model::Tools::Maq',
     has => [
+        input => {
+            type => 'String',
+            doc => 'File path for input map',
+        },
+        keep => {
+            type => 'String',
+            doc => 'File path for map of unique reads',
+        },
+        remove => {
+            type => 'String',
+            doc => 'File path for map of removed reads',
+        },
         identity_length => { 
             is => 'Integer', is_optional => 1, 
             doc => "Reads with the same sequence to this point are considered the same if at the same start site (NOT IMPLEMENTED!)." },
@@ -35,8 +47,10 @@ EOS
 sub execute {
     $DB::single = 1;
     my $self = shift;
-    my ($in, $keep, $delete) = @{ $self->bare_args };
-    unless ($in and $keep and $delete and -f $in) {
+    my $in = $self->input;
+    my $remove = $self->remove;
+    my $keep = $self->keep;
+    unless ($in and $keep and $remove and -f $in) {
         $self->error_message("Bad params!");
         $self->usage_message($self->help_usage_complete_text);
         return;
@@ -45,7 +59,7 @@ sub execute {
     # jit use so we don't compile when making the object for other reasons...
     require Genome::Model::Tools::Maq::RemovePcrArtifacts_C;
     
-    my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts_C::remove_dup_frags($in,$keep,$delete);
+    my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts_C::remove_dup_frags($in,$keep,$remove);
     $result = !$result; # c -> perl
 
     $self->result($result);
