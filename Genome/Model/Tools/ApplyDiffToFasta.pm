@@ -4,9 +4,9 @@ use strict;
 use warnings;
 
 use Data::Dumper;
-use Genome::Utility::OutputBuffer;
+use Genome::Utility::FastaStreamOut;
 use Genome::Utility::DiffStream;
-use Genome::Utility::FastaStream;
+use Genome::Utility::FastaStreamIn;
 use above "Genome";
 use Command;
 use GSCApp;
@@ -42,23 +42,21 @@ UR::Object::Type->define(
             doc => "Flag to skip indel sequence comparison with reference fasta sequence.  Useful if diff file doesn't contain any/complete seqence for deletions",
             default => 0
         },
+        column_width => { is => 'Int',
+            doc => "column width for output fasta column width, defaults to 60",
+        },
     ],
 );
 
 sub help_brief {
-    "applies inserts and deletes from a sorted diff file to a fasta file." 
+    "applies seq inserts and deletes from a diff file to a fasta file";
 }
 
-sub help_synopsis {
-    "genome-model tools apply-diff-to-fasta --input reference.fasta --diff reference_indels.diff --output modified_reference.fasta --diff_flank_file flanks_with_diff.fasta --ref_flank_file original_flanks.fasta --flank_size 50 --ignore_deletion_sequence"
-}
-
-sub help_detail {                           
+sub help_detail {                           # This is what the user will see with --help <---
     return q/ 
-    Applies sequence inserts and deletes from a sorted diff file to a fasta file, and produces the modified fasta sequence.  
-    Also can produce flanking regions around diff positions as separate fasta files. 
-
     Given a reference fasta file and a diff file, applies the diffs to the reference. Can produce several outputs: The original reference fasta with the diffs applied, and fastas containing sequence regions around the diff positions with or without the diff applied.
+    Usage:
+    genome-model tools apply-diff-to-fasta --input reference.fasta --diff reference_indels.diff --output modified_reference.fasta --diff_flank_file flanks_with_diff.fasta --ref_flank_file original_flanks.fasta --flank_size 50 --ignore_deletion_sequence
 
     This command streams through both files simultaneously, so for your diffs to be applied correctly, the following criteria must be met:
     The headers in your diffs must be in the same order as the headers in the reference fasta file.
@@ -86,15 +84,15 @@ sub execute {
     );
 
 #INPUT/OUTPUT STREAMS;
-    my $fasta_stream    = Genome::Utility::FastaStream->new($self->input);
-    my $diff_stream     = Genome::Utility::DiffStream->new($self->diff);
+    my $fasta_stream    = Genome::Utility::FastaStreamIn->new(IO::File->new("< ".$self->input));
+    my $diff_stream     = Genome::Utility::DiffStream->new(IO::File->new("< ".$self->diff));
 
     my $diff_flank_stream;
     my $ref_flank_stream;
     my $output_stream;
-    $diff_flank_stream = Genome::Utility::OutputBuffer->new($self->diff_flank_file) if $self->diff_flank_file;
-    $ref_flank_stream =  Genome::Utility::OutputBuffer->new($self->ref_flank_file) if $self->ref_flank_file;
-    $output_stream   = Genome::Utility::OutputBuffer->new($self->output ) if $self->output;
+    $diff_flank_stream = Genome::Utility::FastaStreamOut->new(IO::File->new("> ".$self->diff_flank_file), $self->column_width) if $self->diff_flank_file;
+    $ref_flank_stream =  Genome::Utility::FastaStreamOut->new(IO::File->new("> ".$self->ref_flank_file), $self->column_width) if $self->ref_flank_file;
+    $output_stream   = Genome::Utility::FastaStreamOut->new(IO::File->new("> ".$self->output ), $self->column_width) if $self->output;
 
 #LOOP VARIABLES
     my $pre_diff_sequence;
@@ -120,7 +118,7 @@ sub execute {
     my $first_part;
 
     my $current_fasta_header = '';
-    my $current_fasta_header_line;
+    my $current_fasta_header_id='';
 
     my $successful_diffs = 0;
     my $attempted_diffs;
@@ -129,9 +127,8 @@ sub execute {
 ###########################################################
 #MAIN LOOP
 
+    $DB::single = 1;
     while (my $diff = $diff_stream->next_diff){
-
-        $DB::single = 1;
 
         # leftover buffer from previous diff
         $output_stream->print($buffer) if $output_stream;
@@ -147,7 +144,7 @@ sub execute {
         $right_flank_position   = $diff->{position} + ( $diff->{deletion_length} ) + $flank_size;
 
         #ADVANCE THROUGH THE FASTA FILE UNTIL CURRENT FASTA SECTION HEADER EQ DIFF HEADER
-        until ($current_fasta_header eq $diff->{header}) { 
+        until ($current_fasta_header_id eq $diff->{header}) { 
 
             #print out entire fasta section if still not at diff->{header} in fasta
             while ($buffer = $fasta_stream->next_line){
@@ -164,9 +161,8 @@ sub execute {
 
             $write_position = 0;
             $read_position = 0;
-            $current_fasta_header_line = $fasta_stream->current_header_line;
-            $output_stream->print_header($current_fasta_header_line) if $output_stream;
-
+            $output_stream->print_header($current_fasta_header) if $output_stream;
+            $current_fasta_header_id = $self->parse_header($current_fasta_header);
         }        
 
         #ERROR CHECK
@@ -242,6 +238,10 @@ sub execute {
             if ( $diff->{pre_diff_sequence} ) {
                 $pre_diff_sequence = substr($ref_flank_sequence, (0 - length( $diff->{pre_diff_sequence} ) ) );
 
+                unless ( length ($pre_diff_sequence) eq length ($diff->{pre_diff_sequence}) ){
+                    $self->status_message("Pre diff sequences are different lengths! Diff not processed!");
+                }
+
 
                 unless ( $pre_diff_sequence eq $diff->{pre_diff_sequence} ) {
                     $self->status_message("pre_diff_sequence in diff(".$diff->{type}."-".$diff->{deletion_length}." header:".$diff->{header}." pos:".$diff->{position}.") does not match actual fasta sequence! fasta:$pre_diff_sequence not eq diff:".$diff->{pre_diff_sequence}."  Diff not processed!" );
@@ -289,16 +289,26 @@ sub execute {
                 $ref_flank_sequence.=$deletion; 
 
                 unless ($ignore_del or $deletion eq $to_delete){ 
-                    $self->status_message( "deleted seq does not equal actual sequence! $deletion != $to_delete  chrom: $current_fasta_header position: $write_position $first_part - $deletion - $buffer ". ($diff->{position} + 1) ."\n");
+                    $self->status_message( "deleted seq does not equal actual sequence! $deletion != $to_delete  chrom: $current_fasta_header_id position: $write_position $first_part - $deletion - $buffer ". ($diff->{position} + 1) ."\n");
                     $skip_diff = 1;
                 }
                 $write_position += length $deletion unless $skip_diff;
             }
 
             $successful_diffs++ unless $skip_diff;
-
-            if ( defined $diff_stream->next_diff_position and $right_flank_position > $diff_stream->next_diff_position - $flank_size ){ #now check if the tail of the flank overlaps the next diff flank
+            
+            my ($next_diff_position, $next_pre_diff_length) = $diff_stream->next_diff_position;
+            $next_pre_diff_length||=0;
+            my $next_flank_length = $flank_size >= $next_pre_diff_length ? $flank_size : $next_pre_diff_length;
+            if (  $next_diff_position and $right_flank_position > $next_diff_position - $next_flank_length ){ #now check if the tail of the flank overlaps the next diff flank
                 $diff = $diff_stream->next_diff;
+                $min_flank_size         = length $diff->{pre_diff_sequence} <=> length $diff->{post_diff_sequence} ? 
+                length $diff->{post_diff_sequence} : 
+                length $diff->{pre_diff_sequence};
+                $flank_size             = $min_flank_size if $min_flank_size > $flank_size;
+                $left_flank_position    = $diff->{position} - $flank_size;
+                $left_flank_position    = 0 if $left_flank_position < 0;
+                $right_flank_position   = $diff->{position} + ( $diff->{deletion_length} ) + $flank_size;
                 $skip_diff = 0;
 
             }else{
@@ -334,11 +344,11 @@ sub execute {
                 $ref_flank_sequence .= $first_part;
 
                 if ( length $diff_flank_sequence and $diff_flank_stream){
-                    $diff_flank_stream->print_header(">$current_fasta_header|".$diff->{position}." (Diff cluster #$flank_header, flank size $flank_size)");
+                    $diff_flank_stream->print_header(">$current_fasta_header_id|".$diff->{position}." (Diff cluster #$flank_header, flank size $flank_size)");
                     $diff_flank_stream->print($diff_flank_sequence);
                 }
                 if ( length $ref_flank_sequence and $ref_flank_stream){
-                    $ref_flank_stream->print_header(">$current_fasta_header|".$diff->{position}." (Diff cluster #$flank_header, flank size $flank_size)");
+                    $ref_flank_stream->print_header(">$current_fasta_header_id|".$diff->{position}." (Diff cluster #$flank_header, flank size $flank_size)");
                     $ref_flank_stream->print($ref_flank_sequence);
                 }
                 $diff_flank_sequence = undef;
@@ -356,7 +366,7 @@ sub execute {
 
 #FINISH PRINTING FASTA FILE
         while (my $current_header = $fasta_stream->next_header){
-            $output_stream->print_header($fasta_stream->current_header_line);
+            $output_stream->print_header($current_header);
             while (my $line= $fasta_stream->next_line){
                 $output_stream->print($line);
             }
@@ -372,6 +382,12 @@ sub execute {
     return 1;
 }
 
-=cut
+sub parse_header{
+    my $self = shift;
+    my $line = shift;
+    my ($header) = $line =~ />(\S+)/;
+    # my $header = substr($line,1,1);
+    return $header;
+}
 
 1;
