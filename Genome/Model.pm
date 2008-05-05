@@ -32,7 +32,17 @@ class Genome::Model {
         read_calibrator_params       => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         reference_sequence_name      => { is => 'VARCHAR2', len => 255 },
         sample_name                  => { is => 'VARCHAR2', len => 255 },
-        events                       => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => 'model' },
+        events                       => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => 'model', 
+                                          doc => 'all events which have occurred for this model',
+                                        },
+        
+        read_set_assignments         => { is => 'Genome::Model::Command::AddReads::AssignRun', is_many => 1, reverse_id_by => 'model',
+                                          doc => 'each case of a read set being assigned to the model',
+                                        },
+        
+        alignments                   => { is => 'Genome::Model::Command::AddReads::AlignReads', is_many => 1, reverse_id_by => 'model',
+                                          doc => 'each case of a read set being aligned to the model\'s reference sequence(s), possibly including multiple actual aligner executions',
+                                        },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
