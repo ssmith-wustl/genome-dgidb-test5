@@ -3,13 +3,13 @@
 use strict;
 use warnings;
 
-package Genome::Model::Command::Tools::Old::Genotype::BayesianFullAlphabetDistributionTest;
+package Genome::Model::Tools::Old::Genotype::BayesianFullAlphabetDistributionTest;
 use base 'Test::Class';
 
 use Test::More;
 use Test::Deep;
 
-use Genome::Model::Command::Tools::Old::Genotype::BayesianFullAlphabetDistribution;
+use Genome::Model::Tools::Old::Genotype::BayesianFullAlphabetDistribution;
 use Genome::Model::RefSeqAlignmentCollection;
 use Genome::Model::Alignment::Mock;
 
@@ -26,7 +26,7 @@ sub setup : Test(setup){
     my $consensus_results = [];
     $self->{consensus_results} = $consensus_results;
     
-    my $consensus_calc = Genome::Model::Command::Tools::Old::Genotype::BayesianFullAlphabetDistribution->create(
+    my $consensus_calc = Genome::Model::Tools::Old::Genotype::BayesianFullAlphabetDistribution->create(
             length      => 1,
             result      => $consensus_results,
     );
@@ -610,7 +610,7 @@ sub sum_struct{
 }
 #
 if ($0 eq __FILE__){
-    Genome::Model::Command::Tools::Old::Genotype::BayesianFullAlphabetDistributionTest->new->runtests();
+    Genome::Model::Tools::Old::Genotype::BayesianFullAlphabetDistributionTest->new->runtests();
 }
 #
 ##    AC?ATC*TACT-A

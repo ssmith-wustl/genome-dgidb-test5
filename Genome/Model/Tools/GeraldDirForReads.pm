@@ -1,4 +1,4 @@
-package Genome::Model::Command::Tools::GeraldDirForReads;
+package Genome::Model::Tools::GeraldDirForReads;
 
 use strict;
 use warnings;

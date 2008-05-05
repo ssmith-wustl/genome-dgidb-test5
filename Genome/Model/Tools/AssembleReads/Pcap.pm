@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Tools::AssembleReads::Pcap;
+package Genome::Model::Tools::AssembleReads::Pcap;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use warnings;
 use above "Genome";  
 use IO::File;                       
 
-class Genome::Model::Command::Tools::AssembleReads::Pcap {
+class Genome::Model::Tools::AssembleReads::Pcap {
     is => 'Command',                       
     has => [  
 	      project_name     => { 

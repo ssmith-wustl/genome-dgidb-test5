@@ -1,4 +1,4 @@
-package Genome::Model::Command::Tools::Old::AddReadsToMosaik;
+package Genome::Model::Tools::Old::AddReadsToMosaik;
 
 use strict;
 use warnings;

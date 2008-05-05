@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Tools::Old::Genotype;
+package Genome::Model::Tools::Old::Genotype;
 
 use strict;
 use warnings;

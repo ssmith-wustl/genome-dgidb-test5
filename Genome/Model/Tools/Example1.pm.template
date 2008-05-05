@@ -1,12 +1,12 @@
 
-package Genome::Model::Command::Tools::Example1;   # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Example1;   # rename this when you give the module file a different name <--
 
 use strict;
 use warnings;
 
 use above "Genome";                         # >above< ensures YOUR copy is used during development
 
-class Genome::Model::Command::Tools::Example1 {
+class Genome::Model::Tools::Example1 {
     is => 'Command',                       
     has => [                                # specify the command's properties (parameters) <--- 
         foo     => { type => 'String',      doc => "some foozy thing" },

@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Tools::Old;
+package Genome::Model::Tools::Old;
 
 use strict;
 use warnings;
@@ -12,8 +12,10 @@ UR::Object::Type->define(
     is => 'Command',
 );
 
+sub sub_command_sort_position { 1_000_000 }
+
 sub help_brief {
-    "legacy commands which are no longer deployed"
+    "(legacy commands which are no longer deployed)"
 }
 
 sub help_synopsis {

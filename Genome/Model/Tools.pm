@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Tools;
+package Genome::Model::Tools;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use warnings;
 use above "Genome";
 use Command; 
 
-class Genome::Model::Command::Tools {
+class Genome::Model::Tools {
     is => 'Command',
 };
 

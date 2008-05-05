@@ -1,4 +1,4 @@
-package Genome::Model::Command::Tools::Reads::Solexa::Maq;
+package Genome::Model::Tools::Reads::Solexa::Maq;
 
 use strict;
 use warnings;

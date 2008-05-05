@@ -1,4 +1,4 @@
-package Genome::Model::Command::Tools::FastaDiff;
+package Genome::Model::Tools::FastaDiff;
 
 use strict;
 use warnings;

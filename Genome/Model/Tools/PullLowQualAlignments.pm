@@ -1,4 +1,4 @@
-package Genome::Model::Command::Tools::PullLowQualAlignments;
+package Genome::Model::Tools::PullLowQualAlignments;
 
 use strict;
 use warnings;

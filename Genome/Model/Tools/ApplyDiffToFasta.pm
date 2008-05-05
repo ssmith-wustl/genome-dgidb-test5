@@ -1,4 +1,4 @@
-package Genome::Model::Command::Tools::ApplyDiffToFasta;
+package Genome::Model::Tools::ApplyDiffToFasta;
 
 use strict;
 use warnings;
@@ -46,14 +46,19 @@ UR::Object::Type->define(
 );
 
 sub help_brief {
-    "Applies sequence inserts and deletes from a sorted diff file to a fasta file, and produces the modified fasta sequence.  Also can produce flanking regions around diff positions as separate fasta files."; 
+    "applies inserts and deletes from a sorted diff file to a fasta file." 
 }
 
-sub help_detail {                           # This is what the user will see with --help <---
+sub help_synopsis {
+    "genome-model tools apply-diff-to-fasta --input reference.fasta --diff reference_indels.diff --output modified_reference.fasta --diff_flank_file flanks_with_diff.fasta --ref_flank_file original_flanks.fasta --flank_size 50 --ignore_deletion_sequence"
+}
+
+sub help_detail {                           
     return q/ 
+    Applies sequence inserts and deletes from a sorted diff file to a fasta file, and produces the modified fasta sequence.  
+    Also can produce flanking regions around diff positions as separate fasta files. 
+
     Given a reference fasta file and a diff file, applies the diffs to the reference. Can produce several outputs: The original reference fasta with the diffs applied, and fastas containing sequence regions around the diff positions with or without the diff applied.
-    Usage:
-    genome-model tools apply-diff-to-fasta --input reference.fasta --diff reference_indels.diff --output modified_reference.fasta --diff_flank_file flanks_with_diff.fasta --ref_flank_file original_flanks.fasta --flank_size 50 --ignore_deletion_sequence
 
     This command streams through both files simultaneously, so for your diffs to be applied correctly, the following criteria must be met:
     The headers in your diffs must be in the same order as the headers in the reference fasta file.

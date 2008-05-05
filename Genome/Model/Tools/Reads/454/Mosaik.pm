@@ -1,11 +1,11 @@
-package Genome::Model::Command::Tools::Reads::454::Mosaik;
+package Genome::Model::Tools::Reads::454::Mosaik;
 
 use strict;
 use warnings;
 
 use above "Genome";
 use Command;
-use Genome::Model::Command::Tools::Reads::Mosaik;
+use Genome::Model::Tools::Reads::Mosaik;
 use IO::File;
 use File::Path;
 use File::Basename;
@@ -65,7 +65,7 @@ sub execute {
 
 		system("$pyrobayes	-i $sffdir/$sample.sff -o $dir/$sample");
 
-		my $mosaik = Genome::Model::Command::Tools::Reads::Mosaik->create(
+		my $mosaik = Genome::Model::Tools::Reads::Mosaik->create(
 																															sample => $sample,
 																															dir => $dir);
 		$mosaik->execute();

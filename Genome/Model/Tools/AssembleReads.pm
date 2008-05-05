@@ -1,12 +1,12 @@
 
-package Genome::Model::Command::Tools::AssembleReads;
+package Genome::Model::Tools::AssembleReads;
 
 use strict;
 use warnings;
 
 use above "Genome";
 
-class Genome::Model::Command::Tools::AssembleReads {
+class Genome::Model::Tools::AssembleReads {
     is => 'Command',
 };
 

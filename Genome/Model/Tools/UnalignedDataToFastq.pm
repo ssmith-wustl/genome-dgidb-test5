@@ -1,4 +1,4 @@
-package Genome::Model::Command::Tools::UnalignedDataToFastq;
+package Genome::Model::Tools::UnalignedDataToFastq;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use above "Genome";
 use Command;
 use Genome::Model;
 
-class Genome::Model::Command::Tools::UnalignedDataToFastq {
+class Genome::Model::Tools::UnalignedDataToFastq {
     is => 'Command',
     has => [
         in => { is => 'String', doc => "Pathname to a file generated from maq map's -u option" },
