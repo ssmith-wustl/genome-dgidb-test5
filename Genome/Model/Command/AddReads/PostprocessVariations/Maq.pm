@@ -38,11 +38,16 @@ sample variation type ('SNP' for SNP data, later indel data will be something di
 number of sample reads that match the reference
 number of sample reads that matched the indicated variant
 consensus quality at that position
+number of unique reads (by start position) covering that start position
 
 If the sample is homozygous at the SNP position, only one line will be recorded.  If
 the sample is heterozygous, there will be two lines with the same start position and
 the same reference base.
 EOS
+}
+
+sub bsub_rusage {
+    return "-R 'select[type=LINUX64]'";
 }
 
 sub should_bsub { 1;}
