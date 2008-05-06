@@ -41,6 +41,18 @@ UR::Object::Type->define(
     data_source => 'Genome::DataSource::GMSchema',
 );
 
+sub _shell_args_property_meta {
+    # exclude this class' commands from shell arguments
+    return grep { 
+            (
+                $_->class_name eq __PACKAGE__
+                    ? ($_->property_name eq 'model_id' ? 1 : 0)
+                    : 1
+            )
+        } shift->SUPER::_shell_args_property_meta(@_);
+}
+
+
 # This is called by the infrastructure to appropriately classify abstract events
 # according to their event type because of the "sub_classification_method_name" setting
 # in the class definiton...
@@ -149,15 +161,6 @@ END {
 #    $self->event_status($rv ? 'Succeeded' : 'Failed');
 #    return $rv;
 #}
-
-sub _shell_args_property_meta {
-    # exclude this class' commands from shell arguments
-    return grep { 
-            $_->class_name ne __PACKAGE__ 
-            or
-            ($_->via and $_->via eq 'run')
-        } shift->SUPER::_shell_args_property_meta(@_);
-}
 
 
 sub resolve_run_directory {
