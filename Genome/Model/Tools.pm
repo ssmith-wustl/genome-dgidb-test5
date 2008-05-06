@@ -5,17 +5,19 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Command; 
 
 class Genome::Model::Tools {
-    is => 'Command',
+    is => ['Command'],
+    english_name => 'genome tools',
 };
 
-sub help_brief {
-    "misc tools which are used in conjunction with genome modeling"
+sub command_name {
+    'gt' 
 }
 
-sub sub_command_sort_position { 11 }
+sub help_brief {
+    "Bioinformatics tools for genomics."
+}
+
 
 1;
-

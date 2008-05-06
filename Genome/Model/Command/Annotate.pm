@@ -8,6 +8,7 @@ use above "Genome";
 
 class Genome::Model::Command::Annotate {
     is => 'Genome::Model::Event',
+    is_abstract => 1,
 };
 
 sub help_brief {

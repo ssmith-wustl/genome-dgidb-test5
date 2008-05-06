@@ -7,7 +7,7 @@ use above "Genome";
 use Command; 
 
 class Genome::Model::Command::AddReads::UploadDatabase {
-    is => ['Genome::Model::Command::DelegatesToSubcommand::WithRefSeq'],
+    is => ['Genome::Model::EventWithRefSeq'],
 };
 
 sub sub_command_sort_position { 90 }

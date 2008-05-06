@@ -9,7 +9,7 @@ our $log_base = '/gscmnt/sata114/info/medseq/model_data/logs/';
 use Genome;
 UR::Object::Type->define(
     class_name => 'Genome::Model::Event',
-    is => ['Command'],
+    is => ['Genome::Model::Command'],
     english_name => 'genome model event',
     table_name => 'GENOME_MODEL_EVENT',
     id_by => [
@@ -26,17 +26,14 @@ UR::Object::Type->define(
         user_name           => { is => 'VARCHAR2', len => 64, is_optional => 1 },
         retry_count         => { is => 'NUMBER', len => 3, is_optional => 1 },
         
-        run_id              => { is => 'NUMBER', len => 11, is_optional => 1 },
-        run                 => { is => 'Genome::RunChunk', id_by => 'run_id', is_optional => 1, constraint_name => 'event_run' },
-        run_name            => { via => 'run' },
-        run_lane            => { via => 'run', to => 'limit_regions' },
-        sample_name         => { via => 'run', to => 'sample_name' },
-        read_set_id         => { via => 'run', to => 'seq_id' },
+        # these are currently in the main event table as nullable field, but will move        
+        run_id              => { is => 'NUMBER', len => 11, is_optional => 1, doc => 'the genome_model_run on which to operate' }, 
+        ref_seq_id          => { is => 'NUMBER', len => 11, is_optional => 1, doc => 'identifies the refseq'},
         
-        model_id            => { is => 'NUMBER', len => 11, is_optional => 1 },
+        model_id            => { is => 'NUMBER', len => 11 },
         model               => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
         model_name          => { via => 'model', to => 'name' },
-        
+        sample_name         => { via => 'model' },
     ],
     is_abstract => 1,
     sub_classification_method_name => '_resolve_subclass_name',

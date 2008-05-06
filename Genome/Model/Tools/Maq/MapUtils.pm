@@ -1,129 +1,35 @@
 package Genome::Model::Tools::Maq::MapUtils;
 
-=pod
-
-=head1 NAME
-
-B<Genome::Model::Tools::Maq::MapUtils> - Work with maq map DNA sequence alignment files in C via Perl
-
-=head1 SYNOPSIS
-
-use Genome::Model::Tools::Maq::MapUtils;
-my $result = Genome::Model::Tools::Maq::MapUtils::some_c_function($some_data);
-
-# or 
-
-use Inline 'C' => 'Config' => @Genome::Model::Tools::Maq::MapUtils::CONFIG;
-use Inline 'C' => <<'END_C';
-    <your c code here>
-END_C
-
-
-=head1 DESCRIPTION
-
-This module uses Inline::C to make work with maq map files speedy.
-
-For more details on the maq suite of tools for aligning short DNA reads to a reference sequence, see:
-http://maq.sourceforge.net/
-
-=head1 METHODS
-
-=over 4
-
-=method char* call_function_pass_string_return_string(char* s)
-
-This utility function will let you pass a function pointer from another module and this function will execute it.
-
-=back
-
-=head1 EXAMPLES
-
-See the commands under Genome::Model::Tools::Maq with "gt maq" on the command-line.
-
-=head1 BUGS
-
-Returning a char* sometimes converts to a Perl string, and sometimes does not.
-
-=over 4
-
-=back
-
-Report bugs to <software@watson.wustl.edu>.
-
-=head1 AUTHOR
-
-Scott Smith <ssmith@watson.wustl.edu>
-
-=cut
-
-
 use strict;
 use warnings;
 
-our @CONFIG;
-our $INLINE_DIR;
-our $C_INC;
-our $C_LIBS;
-
-BEGIN
-{
-    ($INLINE_DIR) = "$ENV{HOME}/".(`uname -a ` =~ /ia64 / ? '_Inline64' : '_Inline32');
-    mkdir $INLINE_DIR unless -d $INLINE_DIR;
-    
-    my $module_dir = $INC{'Genome/Model/Tools/Maq/MapUtils.pm'};
-    $module_dir =~ s/MapUtils.pm$//;
-    
-    $C_INC = join(" ", map { "-I$_" } (
-        "$module_dir/src", 
-        "/gscuser/jschindl/svn/gsc/zlib-1.2.3")
-    );
-    
-    $C_LIBS =
-        join(" ",
-            map { "-L$_" } 
-            ('/gscuser/jschindl','/gscuser/jschindl/svn/gsc/zlib-1.2.3')
-        )
-        . " "
-        . join(" ", 
-            map { "-l$_" } 
-            ('z','maq')
-        );
-
-    our @CONFIG = (
-            DIRECTORY => $Genome::Model::Tools::Maq::MapUtils::INLINE_DIR,            
-            INC => $Genome::Model::Tools::Maq::MapUtils::C_INC,
-            CCFLAGS => '-D_FILE_OFFSET_BITS=64',
-            LIBS => $Genome::Model::Tools::Maq::MapUtils::C_LIBS
-    );
-
+our $inline_dir;
+BEGIN {
+    my $uname=`uname -a`;
+    if ($uname =~ /ia64/) {
+        $inline_dir="$ENV{HOME}/_InlineItanium";
+    }elsif($uname =~ /x86_64/ ) {
+        $inline_dir="$ENV{HOME}/_Inline64";
+    }else {
+       $inline_dir = "$ENV{HOME}/_Inline32";
+    }
+     mkdir $inline_dir;
 };
-
-use Inline 'C' => 'Config' => @CONFIG;
-
+use Inline 'C' => 'Config' => (DIRECTORY => $inline_dir );
 use Inline 'C' => <<'END_C';
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-char* call_function_pass_string_return_string(void *p, char *s) {
+char* test_call_functionptr_with_string_param(void *p, char *s) {
     char* (*x)(char *s) = p;
-    printf("returning %ld: %s\n", s, s);
     return (*x)(s);
-}
-
-char* test_ssmith (char* s) {
-    char r[100];
-    sprintf(&r, "c: %s", s);
-    return r;
-}
-
-void* test_ssmith_fptr() {
-    return &test_ssmith;
 }
 
 
 END_C
+
 
 1;
 
@@ -212,5 +118,160 @@ int open_fof_files(
         }
         if (data[cnt].dupfile) {
             if ((data[cnt].dup_fh = fopen(data[cnt].dupfile, "w")) == NULL) {
-???BLOCK MISSING
-???BLOCK MISSING
+                perror("open_fof_files(): Can't fopen() dupfile");
+                return 1;
+            }
+        }
+    cnt++;
+    }
+    if (file_count != NULL)
+        *file_count = cnt;
+    return 0;
+}
+
+////////////////////////////////////////////////////////////////////////
+int get_fastq_record(int next) {
+    int     ret=0;
+    char    throwaway[MAX_LINE_LEN];
+    if (data[next].in_fh == NULL ||
+        fgets(readlabel[next], MAX_LINE_LEN, data[next].in_fh) == NULL ||
+        fgets(sequence[next],  MAX_LINE_LEN, data[next].in_fh) == NULL ||
+        fgets(throwaway,       MAX_LINE_LEN, data[next].in_fh) == NULL ||
+        fgets(quality[next],   MAX_LINE_LEN, data[next].in_fh) == NULL) {
+
+        strcpy(sequence[next],"");
+        if (data[next].in_fh) {
+            fclose(data[next].in_fh);
+            data[next].in_fh = NULL;
+        }
+        if (data[next].uniq_fh) {
+            fclose(data[next].uniq_fh);
+            data[next].uniq_fh = NULL;
+        }
+        if (data[next].dup_fh) {
+            fclose(data[next].dup_fh);
+            data[next].dup_fh = NULL;
+        }
+        ret=1;
+    }
+    return ret;
+}
+
+////////////////////////////////////////////////////////////////////////
+void put_fastq_record(FILE *fpout, int ndx) {
+    fprintf(fpout, "%s%s+\n%s",
+                   readlabel[ndx],
+                   sequence[ndx],
+                   quality[ndx]);
+}
+
+////////////////////////////////////////////////////////////////////////
+// Find the input stream with the next record.
+// Now in reverse alpha order.
+int next_sequence() {
+    int next = 0;
+    int lv;
+    for(lv = 1; lv < file_count; lv++) {
+        if (strcmp(sequence[lv], sequence[next]) > 0) {
+            next = lv;
+        }
+    }
+    return next;
+}
+
+////////////////////////////////////////////////////////////////////////
+int make_uniques(
+     char *sorted_file_pathname,
+     char *unique_file_pathname,
+     char *duplicate_file_pathname,
+     char *statistics_file_pathname) {
+
+    if (!sorted_file_pathname || !unique_file_pathname ||
+        !duplicate_file_pathname || !statistics_file_pathname) {
+        printf("make_uniques: not all arguments specified\n");
+        return 0;
+    }
+
+    memset(readlabel, 0, sizeof(readlabel));   /* clearing per record information */
+    memset(sequence, 0, sizeof(sequence));
+    memset(quality, 0, sizeof(quality));
+
+    memset(data, 0, sizeof(data));
+
+    if (open_fof_files(sorted_file_pathname,
+                       unique_file_pathname,
+                       duplicate_file_pathname,
+                       &file_count)) {
+        printf("make_uniques: could not open required files\n");
+        return 0;
+    }
+    int        open_fd_count = file_count;
+
+    int        next;
+    int        last = -1;
+    char       last_seq[MAX_LINE_LEN] = "~";
+
+    FILE      *statistics = fopen(statistics_file_pathname,"w");
+
+    // fill in the first record from each input file
+    int   lv;
+    for ( lv = 0; lv < file_count; lv++) {
+        *readlabel[lv] = *sequence[lv] = *quality[lv] = '\0';
+        if (get_fastq_record(lv))
+            open_fd_count--;
+    }
+
+    while(open_fd_count) {
+        // Find the file with the lowest sorting sequence
+        next = next_sequence();
+
+        if (strcmp(sequence[next], last_seq)) {  // not equal
+            ++data[next].unique;
+            if (data[next].uniq_fh)
+                put_fastq_record(data[next].uniq_fh, next);
+            last = next;
+            strcpy(last_seq,sequence[last]);
+        }
+        else if (data[next].dup_fh) { // duplicate of some sort (across this lib)
+            ++data[next].libdups;
+            if (!data[next].dup_fh) {
+                fprintf(statistics,
+                        "ERROR: Duplicate detected and unreportable next=%d seq=%s matches last=%d\n",
+                        next,last_seq,last);
+                return 0;
+            }
+            put_fastq_record(data[next].dup_fh, next);
+            if(data[last].dupfile) {
+                //current run
+                ++data[next].rundups;
+            } else {
+                //previous run.. nothing to do..
+            }
+            last = next;
+            // strcpy above would be a no-op
+        }
+        else {
+            fprintf(statistics,
+                    "ERROR: Duplicate detected in file next=%d seq=%s matches last=%d\n",
+                    next,last_seq,last);
+//      printf("%d %d %s %s",last, next, last_seq, sequence[next]);
+            return 0;
+        }
+
+        if (get_fastq_record(next))
+            open_fd_count--;
+    }
+
+    for ( lv = 0; lv < file_count; lv++) {
+        fprintf(statistics,"%lu\t%lu\t%lu\n", data[lv].unique, data[lv].libdups, data[lv].rundups);
+    }
+    fclose(statistics);
+
+    return 1;
+}
+
+
+
+END_C
+
+1;

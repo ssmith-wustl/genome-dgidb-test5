@@ -7,7 +7,16 @@ use above "UR";
 use Command; 
 
 class Genome::Model::Command::AddReads::AlignReads {
-    is => ['Genome::Model::Command::DelegatesToSubcommand::WithRun'],
+    is => ['Genome::Model::EventWithReadSet'],
+    is_abstract => 1,
+    has_abstract => [
+        aligner_output_file_paths => { 
+            doc => "the paths to the filed which captured the aligners standard output and error and/or log"
+        },
+        alignment_file_paths => {
+            doc => "the paths to to the alignment files"
+        },
+    ]
 };
 
 sub sub_command_sort_position { 20 }

@@ -6,12 +6,123 @@ use warnings;
 use above "Genome";
 use Command;
 use Genome::Model;
+use Genome::Model::Command::AddReads::AlignReads;
 
 class Genome::Model::Command::AddReads::AlignReads::Maq {
-    is => ['Genome::Model::Event', 'Genome::Model::Command::MaqSubclasser'], 
+    is => [
+        'Genome::Model::Command::AddReads::AlignReads',
+        'Genome::Model::Command::MaqSubclasser'
+    ],
     has => [
-        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
-        run_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },
+        output_data_dir => {
+            doc => "The path at which the model stores all of its private data for a given run",
+            calculate_from => ['model','read_set'],
+            calculate => q|
+                return unless $model;
+                $model->directory_for_run($read_set);
+            |,
+            is_constant => 1,
+        },
+        alignment_file_paths => {
+            doc => "the paths to to the map files",
+            calculate_from => ['output_data_dir','run_subset_name'],
+            calculate => q|
+                return unless -d $output_data_dir;;
+                return grep { -e $_ } glob("${output_data_dir}/*${run_subset_name}.submaps/*.map");
+            |,
+        },
+        aligner_output_file_paths => {
+            doc => "the paths to the filed which captured maq's standard output and error",
+            calculate_from => ['output_data_dir','run_subset_name'],
+            calculate => q|
+                return unless -d $output_data_dir;;
+                return grep { -e $_ } glob("${output_data_dir}/*${run_subset_name}.map.aligner_output");
+            |,
+        },
+        poorly_aligned_reads_list_paths => {
+            doc => "the path(s) to the file(s) which list poorly aligned reads",
+            calculate_from => ['output_data_dir','run_subset_name'],
+            calculate => q|
+                return unless -d $output_data_dir;;
+                return grep { -e $_ } grep { $_ !~ /\.fastq$/ } glob("${output_data_dir}/*${run_subset_name}_sequence.unaligned.*");
+            |,
+        },
+        poorly_aligned_reads_fastq_paths => {
+            doc => "the path(s) to the fastq(s) of poorly aligned reads",
+            calculate_from => ['output_data_dir','run_subset_name'],
+            calculate => q|
+                return unless -d $output_data_dir;;
+                return grep { -e $_ } glob("${output_data_dir}/*${run_subset_name}_sequence.unaligned.*.fastq");
+            |,
+        },
+        contaminants_file_path => {
+            doc => "the paths to the file containing adaptor sequence and other contaminants to screen",
+            calculate_from => ['output_data_dir'],
+            calculate => q|
+                return unless -d $output_data_dir;;
+                return grep { -e $_ } glob("${output_data_dir}/adaptor_sequence_file");
+            |,
+        },
+        contaminated_read_count => {
+            doc => "the count of contaminated reads",
+            calculate_from => ['aligner_output_file_paths'],
+            is_constant => 1,
+            calculate => q|
+                my @f = $self->aligner_output_file_paths;
+                my $total = 0;
+                for my $f (@f) {
+                    my $fh = IO::File->new($f);
+                    $fh or die "Failed to open $f to read.  Error returning value for contaminated_read_count.\n";
+                    my $n;
+                    while (my $row = $fh->getline) {
+                        if ($row =~ /\[ma_trim_adapter\] (\d+) reads possibly contains adaptor contamination./) {
+                            $n = $1;
+                            last;
+                        }
+                    }
+                    unless (defined $n) {
+                        #$self->warning_message("No adaptor information found in $f!");
+                        next;
+                    }
+                    $total += $n;
+                }
+                return $total;
+            |,
+        },
+        poorly_aligned_read_count => {
+            doc => "the count of contaminated reads",
+            calculate_from => ['poorly_aligned_reads_list_paths'],
+            is_constant => 1,
+            calculate => q|
+                my $total = 0;
+                for my $f ($self->poorly_aligned_reads_list_paths) {
+                    my $fh = IO::File->new($f);
+                    $fh or die "Failed to open $f to read.  Error returning value for contaminated_read_count.\n";
+                    while (my $row = $fh->getline) {
+                        $total++
+                    }
+                }
+                return $total;
+            |,
+        },
+        input_read_file_paths => {
+            doc => "the paths to the filed which captured maq's standard output and error",
+            calculate_from => ['output_data_dir','run_subset_name'],
+            calculate => q|
+                return unless -d $output_data_dir;;
+                return grep { -e $_ } glob("${output_data_dir}/s_${run_subset_name}_sequence*.sorted.fastq");
+            |,
+        },
+        unique_reads_across_library     => { via => 'read_set' },
+        duplicate_reads_across_library  => { via => 'read_set' },
+        _alignment_file_paths_unsubmapped => {
+            doc => "the paths to to the map files before submapping (not always available)",
+            calculate => q|
+                return unless -d $output_data_dir;;
+                return grep { -e $_ } glob("${output_data_dir}/*${run_subset_name}.map");
+            |,
+            calculate_from => ['output_data_dir','run_subset_name'],
+        },
     ],
 };
 

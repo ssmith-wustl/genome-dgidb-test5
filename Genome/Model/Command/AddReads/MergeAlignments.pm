@@ -7,7 +7,7 @@ use above "Genome";
 use Command; 
 
 class Genome::Model::Command::AddReads::MergeAlignments {
-    is => ['Genome::Model::Command::DelegatesToSubcommand::WithRefSeq'],
+    is => ['Genome::Model::EventWithRefSeq'],
 };
 
 sub sub_command_sort_position { 50 }

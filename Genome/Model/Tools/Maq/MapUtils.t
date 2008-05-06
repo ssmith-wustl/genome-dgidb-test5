@@ -2,10 +2,9 @@
 
 package Genome::Model::Tools::Maq::MapUtils::Test;
 
-use above "Genome";
+use above "Genome";                         # >above< ensures YOUR copy is used during development
 use Test::More tests => 2;
 
-# make a dummy command for the test case
 class Genome::Model::Tools::Maq::MapUtils::Test {
     is => 'Command',
     has => [
@@ -14,33 +13,35 @@ class Genome::Model::Tools::Maq::MapUtils::Test {
     ],
 };
 
+run_tests();
+
+sub run_tests {
+    my $command = __PACKAGE__->create(some_input => "hello");
+    ok($command->execute(), "executed");
+    is($command->some_output, "c: hello");
+
+    $command = __PACKAGE__->create(some_input => "goodbye");
+    ok($command->execute(), "executed");
+    is($command->some_output, "c: goodbye");
+    
+    $command = __PACKAGE__->execute(some_input => "adios");
+    is($command->some_output, "c: adios");
+
+    1;
+}
+
 sub execute {
     $DB::single = 1;
     my $self = shift;
     my $fptr = Genome::Model::Tools::Maq::MapUtils::Test::CSubs::test_ssmith_fptr();
-    ok($fptr, "got a function pointer for our private function: $fptr\n");
-
+    print "got address: $fptr\n";
+    my $s = { x => $self->some_input };
     #utf8::upgrade($s);
-    my $s = $self->some_input;
-    utf8::downgrade($s);
-    my $result = Genome::Model::Tools::Maq::MapUtils::call_function_pass_string_return_string($fptr, $s);
-    ok($result, "had the maputils module call the function with a string we just created, and got a result $result");
-
+    my $result = Genome::Model::Tools::Maq::MapUtils::test_call_functionptr_with_string_param($fptr, $s->{x});
+    print "called function got return: $result\n";
     $self->some_output($result);
-    return 1;
+    return $result;
 }
-
-my $command = __PACKAGE__->create(some_input => "hello");
-ok($command->execute(), "executed");
-is($command->some_output, "c: hello", "output matches: " . $command->some_output);
-
-$command = __PACKAGE__->create(some_input => "goodbye");
-ok($command->execute(), "executed");
-is($command->some_output, "c: goodbye", "output matches: " . $command->some_output);
-
-$command = __PACKAGE__->execute(some_input => "adios");
-is($command->some_output, "c: adios", "output matches: " . $command->some_output);
-
 
 #
 # The C extensions go into a sub-namespace so Inline doesn't have odd errors with the autoloader.
