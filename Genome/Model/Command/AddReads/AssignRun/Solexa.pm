@@ -10,7 +10,7 @@ use GSC;
 use IO::File;
 
 class Genome::Model::Command::AddReads::AssignRun::Solexa {
-    is => 'Genome::Model::Event',
+    is => 'Genome::Model::Command::AddReads::AssignRun',
     has => [ 
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
         run_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },
