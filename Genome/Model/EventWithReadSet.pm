@@ -25,6 +25,16 @@ class Genome::Model::EventWithReadSet {
     ],
 };
 
+sub _shell_args_property_meta {
+    # exclude this class' commands from shell arguments
+    return grep {
+            not (
+                $_->class_name eq __PACKAGE__
+                and $_->property_name !~ /(model_id|run_id)/
+            )
+        } shift->SUPER::_shell_args_property_meta(@_);
+}
+
 # TODO: replace with override to invalid()
 sub invalid {
     my($class,%params) = @_;
