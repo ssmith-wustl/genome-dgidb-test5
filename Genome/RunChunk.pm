@@ -5,9 +5,12 @@ use warnings;
 
 use Genome;
 use File::Basename;
+
 use GSC;
 use GSCApp;
-App->init;
+
+# This should not be necessary before working with objects which use App.
+#App->init; 
 
 class Genome::RunChunk {
     type_name => 'run chunk',
