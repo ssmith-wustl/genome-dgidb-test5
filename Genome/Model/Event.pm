@@ -150,7 +150,6 @@ END {
 #    return $rv;
 #}
 
-
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments
     return grep { 
