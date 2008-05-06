@@ -265,9 +265,9 @@ sub unaligned_unique_reads_file_for_lane {
     return sprintf("%s/s_%s_sequence.unaligned.unique", $self->resolve_run_directory, $self->resolve_lane_name);
 }
 
-sub unaligned_unique_fastq_file_for_lane {
+sub unaligned_distinct_fastq_file_for_lane {
     my($self) = @_;
-    return sprintf("%s/s_%s_sequence.unaligned.unique.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
+    return sprintf("%s/s_%s_sequence.unaligned.distinct.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
 }
 
 sub unaligned_duplicate_reads_file_for_lane {
@@ -275,9 +275,9 @@ sub unaligned_duplicate_reads_file_for_lane {
     return sprintf("%s/s_%s_sequence.unaligned.duplicate", $self->resolve_run_directory, $self->resolve_lane_name);
 }
 
-sub unaligned_duplicate_fastq_file_for_lane {
+sub unaligned_redundant_fastq_file_for_lane {
     my($self) = @_;
-    return sprintf("%s/s_%s_sequence.unaligned.duplicate.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
+    return sprintf("%s/s_%s_sequence.unaligned.redundant.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
 }
 
 sub aligner_unique_output_file_for_lane {
