@@ -7,7 +7,7 @@ use above "Genome";
 use Command; 
 
 class Genome::Model::Command::AddReads {
-    is => 'Genome::Model::Event',  # this actually makes the read set, so we can't use it as a parameter
+    is => 'Genome::Model::Command',
     has => [
         model_id            => { is => 'Integer', 
                                 doc => "Identifies the genome model to which we'll add the reads." },

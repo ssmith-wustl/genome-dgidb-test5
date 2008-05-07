@@ -33,25 +33,28 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
     
-    if ( (!$self->model) and $self->bare_args->[0] ) {
-        my $pattern = $self->bare_args->[0];
-        my @models = Genome::Model->get(name => { operator => "like", value => '%' . $pattern . '%' });
-        if (@models >1) {
-            $self->error_message(
-                "No model specified at creation time, and multiple models match pattern \%${pattern}\%!\n"
-                . join("\n", map { $_->name } @models)
-                . "\n"
-            );
+    unless ($self->model) {
+        if ($self->bare_args) {
+            my $pattern = $self->bare_args->[0];
+            my @models = Genome::Model->get(name => { operator => "like", value => '%' . $pattern . '%' });
+            if (@models >1) {
+                $self->error_message(
+                                     "No model specified at creation time, and multiple models match pattern \%${pattern}\%!\n"
+                                     . join("\n", map { $_->name } @models)
+                                     . "\n"
+                                 );
+                return;
+            }
+            elsif (@models == 1) {
+                $self->model($models[0]);
+            } else {
+                # continue, the developer may set this value later...
+            }
+        } else {
+            $self->error_message("No model or bare_args exists");
             return;
         }
-        elsif (@models == 1) {
-            $self->model($models[0]);
-        }
-        else {
-            # continue, the developer may set this value later...
-        }
     }
-    
     return $self;
 }
 
