@@ -154,22 +154,7 @@ sub sub_command_delegator {
 
 }
 
-# When add-reads schedules these jobs, it uses the mid-level command 
-# (assign-run) and not the most specific one (assign-run solexa).  Since
-# the bsub_rusage is defined in the most specific class, the mid-level
-# command should get the value from there
-sub bsub_rusage {
-    my $class = shift;
-
-    #my $command =  $self->_create_sub_command();
-    my $subcommand = $class->_get_sub_command_class_name();
-    if ($subcommand->can('bsub_rusage')) {
-        return $subcommand->bsub_rusage;
-    } else {
-        return '';
-    }
-}
-
+sub bsub_rusage { '' }
 
 1;
 

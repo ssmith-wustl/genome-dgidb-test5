@@ -41,6 +41,16 @@ UR::Object::Type->define(
     data_source => 'Genome::DataSource::GMSchema',
 );
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    return unless $self;
+    unless ($self->event_type) {
+        $self->event_type($self->command_name);
+    }
+    return $self;
+}
+
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments
     return grep { 
@@ -52,13 +62,11 @@ sub _shell_args_property_meta {
         } shift->SUPER::_shell_args_property_meta(@_);
 }
 
-
 # This is called by the infrastructure to appropriately classify abstract events
 # according to their event type because of the "sub_classification_method_name" setting
 # in the class definiton...
 # TODO: replace with cleaner calculated property.
 sub _resolve_subclass_name {
-    $DB::single = 1;
     my $class = shift;
     
     if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
@@ -69,9 +77,8 @@ sub _resolve_subclass_name {
         return $class->_resolve_subclass_name_for_event_type($event_type);
     }
     else {
-        $DB::single = 1;
-        my $c = $class->_get_sub_command_class_name(@_);
-        return $c;
+        # this uses the model
+        return $class->_get_sub_command_class_name(@_);
     }
 }
 
@@ -329,14 +336,16 @@ sub run_command_with_bsub {
 ## should check if $self isa Command??
     $dep_type ||= 'ended';
 
+    $DB::single=1;
+    
     my $last_bsub_job_id;
     $last_bsub_job_id = $last_command->lsf_job_id if defined $last_command;
 
     my $queue = $self->bsub_queue;
     my $bsub_args = $self->bsub_args;
     
-   if ($command->can('bsub_rusage')) {
-        $bsub_args .= ' ' . $command->bsub_rusage;
+    if (my $bsub_rusage = $command->bsub_rusage) {
+        $bsub_args .= ' ' . $bsub_rusage;
     }
     my $cmd = 'genome-model bsub-helper';
 
