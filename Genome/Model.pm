@@ -179,6 +179,7 @@ sub lock_resource {
 
     while(! ($ret = mkdir $resource_id)) {
         return undef unless $max_try--;
+        $self->status_message("waiting on lock for resource $resource_id");
         sleep $block_sleep;
     }
 
