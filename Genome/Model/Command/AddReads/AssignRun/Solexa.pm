@@ -68,7 +68,7 @@ sub create {
     if (@prev) {
         $obj->error_message(
             "This run/lane, " 
-            . $obj->run_name . "/" . $obj->run_lane . ' ' 
+            . $obj->run_name . "/" . $obj->run_subset_name. ' ' 
             . '(' . $obj->read_set_id . '),'
             . ' has already been assigned to this model '
             . $model->id . ' (' . $model->name . ')'

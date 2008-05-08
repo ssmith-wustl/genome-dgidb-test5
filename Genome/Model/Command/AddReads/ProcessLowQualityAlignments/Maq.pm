@@ -12,7 +12,7 @@ use Date::Calc;
 use File::stat;
 
 class Genome::Model::Command::AddReads::ProcessLowQualityAlignments::Maq {
-    is => 'Genome::Model::Event',
+    is => 'Genome::Model::Command::AddReads::ProcessLowQualityAlignments',
 };
 
 sub help_brief {
