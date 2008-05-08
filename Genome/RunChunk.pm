@@ -7,7 +7,12 @@ use Genome;
 use File::Basename;
 
 use GSC;
+
+# This is so we can hook into the dw for run data.
 use GSCApp;
+
+# GSCApp removes our overrides to can/isa for Class::Autoloader.  Tell it to put them back.
+App::Init->_restore_isa_can_hooks();
 
 # This should not be necessary before working with objects which use App.
 #App->init; 
