@@ -11,7 +11,7 @@ use File::Basename;
 use Data::Dumper;
 
 class Genome::Model::Command::AddReads::UpdateGenotype::Maq {    
-    is => ['Genome::Model::Event', 'Genome::Model::Command::MaqSubclasser'],
+    is => ['Genome::Model::Command::AddReads::UpdateGenotype', 'Genome::Model::Command::MaqSubclasser'],
 };
 
 sub help_brief {

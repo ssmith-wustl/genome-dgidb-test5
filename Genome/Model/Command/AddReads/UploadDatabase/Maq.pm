@@ -13,7 +13,7 @@ use IO::File;
 use MG::IO::GenotypeSubmission;
 
 class Genome::Model::Command::AddReads::UploadDatabase::Maq {
-    is => 'Genome::Model::Event',
+    is => 'Genome::Model::Command::AddReads::UploadDatabase',
 };
 
 sub help_brief {

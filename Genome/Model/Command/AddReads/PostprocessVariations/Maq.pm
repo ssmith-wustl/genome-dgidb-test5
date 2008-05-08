@@ -10,7 +10,7 @@ use IO::File;
 use File::Basename;
 
 class Genome::Model::Command::AddReads::PostprocessVariations::Maq {
-    is => ['Genome::Model::Event', 'Genome::Model::Command::MaqSubclasser'],
+    is => ['Genome::Model::Command::AddReads::PostprocessVariations', 'Genome::Model::Command::MaqSubclasser'],
 };
 
 sub help_brief {

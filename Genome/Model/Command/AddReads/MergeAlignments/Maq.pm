@@ -13,7 +13,7 @@ use Date::Calc;
 use File::stat;
 
 class Genome::Model::Command::AddReads::MergeAlignments::Maq {
-    is => ['Genome::Model::Event', 'Genome::Model::Command::MaqSubclasser'],
+    is => ['Genome::Model::Command::AddReads::MergeAlignments', 'Genome::Model::Command::MaqSubclasser'],
     has => [ 
         ref_seq_id   => { is => 'Integer', is_optional => 0, doc => 'the refseq on which to operate' },
     ]

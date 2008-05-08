@@ -12,7 +12,7 @@ use File::Temp;
 use IO::File;
 
 class Genome::Model::Command::AddReads::FindVariations::Maq {
-    is => ['Genome::Model::Event', 'Genome::Model::Command::MaqSubclasser'],
+    is => ['Genome::Model::Command::AddReads::FindVariations', 'Genome::Model::Command::MaqSubclasser'],
 };
 
 sub help_brief {
