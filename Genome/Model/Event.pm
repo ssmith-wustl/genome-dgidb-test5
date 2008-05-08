@@ -58,15 +58,21 @@ sub _shell_args_property_meta {
 # in the class definiton...
 # TODO: replace with cleaner calculated property.
 sub _resolve_subclass_name {
+    $DB::single = 1;
     my $class = shift;
-    my $event_type;
+    
     if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
-        $event_type = $_[0]->event_type;
+        my $event_type = $_[0]->event_type;
+        return $class->_resolve_subclass_name_for_event_type($event_type);
+    }
+    elsif (my $event_type = $class->get_rule_for_params(@_)->specified_value_for_property_name('event_type')) {
+        return $class->_resolve_subclass_name_for_event_type($event_type);
     }
     else {
-        $event_type = $class->get_rule_for_params(@_)->specified_value_for_property_name('event_type');
+        $DB::single = 1;
+        my $c = $class->_get_sub_command_class_name(@_);
+        return $c;
     }
-    return $class->_resolve_subclass_name_for_event_type($event_type);
 }
 
 # This is called by some legacy code.
