@@ -35,26 +35,27 @@ sub _shell_args_property_meta {
         } shift->SUPER::_shell_args_property_meta(@_);
 }
 
-# TODO: replace with override to invalid()
 sub invalid {
-    my($class,%params) = @_;
+    my ($self) = shift;
 
-    unless ($params{'model_id'} && $params{'run_id'}) {
-        $class->error_message("both model_id and run_id are required params when creating a $class");
-        return;
+    my @tags = $self->SUPER::invalid(@_);
+    unless (Genome::Model->get(id => $self->model_id)) {
+        push @tags, UR::Object::Tag->create(
+                                            type => 'invalid',
+                                            properties => ['Genome::Model'],
+                                            desc => "There is no model with id ". $self->model_id,
+                                        );
     }
 
-    unless (Genome::Model->get(id => $params{'model_id'})) {
-        $class->error_message("There is no model with id ".$params{'model_id'});
-        return;
+    unless (Genome::RunChunk->get(id => $self->run_id)) {
+        push @tags, UR::Object::Tag->create(
+                                            type => 'invalid',
+                                            properties => ['Genome::RunChunk'],
+                                            desc => "There is no genome run with id ". $self->run_id,
+                                        );
     }
-
-    unless (Genome::RunChunk->get(id => $params{'run_id'}) ) {
-        $class->error_message("There is no run with id ".$params{'run_id'});
-        return;
-    }
-
-    return 1;
+    return @tags;
 }
 
 1;
+
