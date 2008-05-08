@@ -8,7 +8,7 @@ use above "Genome";
 use Command; 
 
 class Genome::Model::Command::AddReads::AcceptReads {
-    is => ['Genome::Model::Command::DelegatesToSubcommand::WithRun'],
+    is => ['Genome::Model::EventWithReadSet'],
 };
 
 sub sub_command_sort_position { 30 }

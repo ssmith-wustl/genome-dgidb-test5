@@ -7,7 +7,7 @@ use above "UR";
 use Command; 
 
 class Genome::Model::Command::AddReads::ScreenReads {
-    is => ['Genome::Model::Command::DelegatesToSubcommand::WithRun'],
+    is => ['Genome::Model::EventWithReadSet'],
 };
 
 sub sub_command_sort_position { 15 }
