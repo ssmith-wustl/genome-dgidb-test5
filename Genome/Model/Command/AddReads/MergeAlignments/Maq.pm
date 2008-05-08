@@ -71,19 +71,33 @@ sub execute {
                                                 $last_merge_done_str,
                                                 $model->id));
                                               
-   my @input_alignments;
-   for my $run_event (@run_events) {
-       my @map_files=$run_event->map_files_for_refseq($self->ref_seq_id);
-       push(@input_alignments, @map_files);    
-   }
-   for my $input_alignment (@input_alignments) {
-       unless(-f $input_alignment) {
-           $self->error_message("Expected $input_alignment not found");
-           return
-       }
-   }
+    my @input_alignments;
+    for my $run_event (@run_events) {
+        ## find the align-reads prior to this event, by model_id and run_id
 
-   if (@input_alignments) {
+        my $align_reads = Genome::Model::Command::AddReads::AlignReads::Maq->get(
+            model_id   => $model->id,
+            run_id     => $run_event->run_id,
+            event_type => 'genome-model add-reads align-reads maq'
+        );
+        
+        # new way
+        my @map_files = $align_reads->alignment_file_paths;
+
+        my $ref_seq_id = $self->ref_seq_id;
+        @map_files = grep { basename($_) =~ /^$ref_seq_id\_/ } @map_files;
+#       old way   
+#        my @map_files=$run_event->map_files_for_refseq($self->ref_seq_id);
+        push(@input_alignments, @map_files);
+    }
+    for my $input_alignment (@input_alignments) {
+        unless(-f $input_alignment) {
+            $self->error_message("Expected $input_alignment not found");
+            return
+        }
+    }
+
+    if (@input_alignments) {
     
         my $accumulated_alignments_filename = $model->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
         my $align_dir = dirname($accumulated_alignments_filename);
