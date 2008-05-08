@@ -219,39 +219,113 @@ sub _lookup_iub_code {
 
 
 # Given a fh to a whole-lane map file, return a count of the number of 
-# unique reads (by start position) for a given position
+# unique reads (by start position) for a given position. 
+# If two reads have the same start position, it considers them the same
+# if the first 26 bases are the same
 sub unique_reads_at_position {
     my($self,$map_fh,$pos) = @_;
 
-    # fill in new data
     my $last_pos = $self->{'_last_map_pos'} || 0;
     while ($last_pos <= $pos) {
         my $line = $map_fh->getline();
-        my @line = split("\t", $line);
+        my @line = split("\t",$line);
 
         my $start_pos = $line[2];
         $last_pos = $start_pos;
-        my $end_pos = $start_pos + length($line[14]);
-        next if ($end_pos < $pos);
+        my $readlen = length($line[14]);   # column 14 is the read data
+        my $end_pos = $start_pos + $readlen;
+        next if ($end_pos < $pos);   # This read ended before the point we're interested in
 
-        if (! $self->{'_map_cache'}->{$start_pos} or
-              $self->{'_map_cache'}->{$start_pos} < $end_pos) {
+        my $sub_sequence;
+        if ($readlen > 26) {
+            # Quality really drops off after the first 26 bases, so only do our
+            # comparisons among those
 
-            $self->{'_map_cache'}->{$start_pos} = $end_pos;
+            if ($line[3] eq '-') {    # 3rd column is the strand 
+                # start position is always from the point of view of the forward direction, so
+                # for reads on the reverse strand, we need to take the last 26 bases instead of the
+                # first 26, and alter the start position to point to the 26th base (from the reverse
+                # direction)
+                $sub_sequence = uc(substr($line[14], 0, -26));
+                $start_pos += ($readlen - 26);
+            } else {
+                $sub_sequence = uc(substr($line[14], 0, 26));
+            }
+        } else {
+            $sub_sequence = $line[14];
         }
 
+        if (! $self->{'_map_cache_end_pos'}->{$start_pos}) {
+            # Haven't had a read at this start pos yet
+            $self->{'_map_cache_end_pos'}->{$start_pos} = [ $end_pos ];
+            $self->{'_map_cache_sub_sequence'}->{$start_pos} = [ $sub_sequence ];
+            $self->{'_map_cache_count'}++;
+
+        } else {
+            my $matched = 0;
+            # Does the first 26 bases of this read match any of the other 26 bases at this start pos?
+            for (my $i = 0; $i < @{$self->{'_map_cache_sub_sequence'}->{$start_pos}}; $i++) {
+                if ( $sub_sequence eq $self->{'_map_cache_sub_sequence'}->{$start_pos}->[$i] ) {
+                    $matched = 1;
+                    last;
+                }
+            }
+            unless ($matched) {
+                push @{$self->{'_map_cache_end_pos'}->{$start_pos}}, $end_pos;
+                push @{$self->{'_map_cache_sub_sequence'}->{$start_pos}}, $sub_sequence;
+                $self->{'_map_cache_count'}++;
+            }
+        }
     }
+
     $self->{'_last_map_pos'} = $last_pos;
 
     # remove any positions that have left the window
-    foreach my $key ( keys %{$self->{'_map_cache'}} ) {
-        next if ($self->{'_map_cache'}->{$key} >= $pos);
-        delete($self->{'_map_cache'}->{$key});
+    foreach my $key ( keys %{$self->{'_map_cache_end_pos'}} ) {
+        next if ($self->{'_map_cache_end_pos'}->{$key} >= $pos);
+        delete($self->{'_map_cache_end_pos'}->{$key});
+        delete($self->{'_map_cache_sub_sequence'}->{$key});
+        $self->{'_map_cache_count'}--;
     }
 
     # Subtract 1 because we've read in one record past the position we asked for
-    return scalar(keys(%{$self->{'_map_cache'}}))-1;
+    return $self->{'_map_cache_count'} - 1;
 }
+
+ 
+
+#sub unique_reads_at_position {
+#    my($self,$map_fh,$pos) = @_;
+#
+#    # fill in new data
+#    my $last_pos = $self->{'_last_map_pos'} || 0;
+#    while ($last_pos <= $pos) {
+#        my $line = $map_fh->getline();
+#        my @line = split("\t", $line);
+#
+#        my $start_pos = $line[2];
+#        $last_pos = $start_pos;
+#        my $end_pos = $start_pos + length($line[14]);
+#        next if ($end_pos < $pos);
+#
+#        if (! $self->{'_map_cache'}->{$start_pos} or
+#              $self->{'_map_cache'}->{$start_pos} < $end_pos) {
+#
+#            $self->{'_map_cache'}->{$start_pos} = $end_pos;
+#        }
+#
+#    }
+#    $self->{'_last_map_pos'} = $last_pos;
+#
+#    # remove any positions that have left the window
+#    foreach my $key ( keys %{$self->{'_map_cache'}} ) {
+#        next if ($self->{'_map_cache'}->{$key} >= $pos);
+#        delete($self->{'_map_cache'}->{$key});
+#    }
+#
+#    # Subtract 1 because we've read in one record past the position we asked for
+#    return scalar(keys(%{$self->{'_map_cache'}}))-1;
+#}
 
 
 
