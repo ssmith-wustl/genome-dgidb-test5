@@ -186,7 +186,7 @@ sub resolve_run_directory {
 sub resolve_log_directory {
     my $self = shift;
 
-    if (defined $self->run) {
+    if ($self->can('run') && defined $self->run) {
         return sprintf('%s/logs/%s/%s', Genome::Model->get($self->model_id)->data_directory,
                                         $self->run->sequencing_platform,
                                         $self->run->name);
