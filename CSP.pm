@@ -639,6 +639,7 @@ my %csp_priority = (
     # lower priority steps
     'analyze 454 output'                      => 1,
     'transfer 454 run to backup'              => 1,
+    'transfer 454 run'                        => 1,
     'transfer tagged 454 run'                 => 1,
     'assemble 454 regions'                    => 1,
     'align reads to recent runs'              => 1,
