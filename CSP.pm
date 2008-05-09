@@ -638,6 +638,7 @@ my %csp_priority = (
     'analyze amplicon failure' => 5,
     # lower priority steps
     'analyze 454 output'                      => 1,
+    'analyze 454 run'                         => 1,
     'transfer 454 run to backup'              => 1,
     'transfer 454 run'                        => 1,
     'transfer tagged 454 run'                 => 1,
