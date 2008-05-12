@@ -74,7 +74,7 @@ use Inline 'C' => <<'END_C';
 #include <string.h>
 
 char* test_ssmith (char* s) {
-    char r[100];
+    static char r[100];
     sprintf(&r, "c: %s", s);
     return r;
 }
