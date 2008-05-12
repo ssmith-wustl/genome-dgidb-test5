@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
-package Genome::Model::Tools::Maq::MapUtils::Test;
+package Genome::Model::Tools::Maq::Map::Utils::Test;
 
 use above "Genome";                         # >above< ensures YOUR copy is used during development
 use Test::More tests => 2;
 
-class Genome::Model::Tools::Maq::MapUtils::Test {
+class Genome::Model::Tools::Maq::Map::Utils::Test {
     is => 'Command',
     has => [
         some_input  => { is => 'String', is_optional => 1, default_value => '0.6.3', doc => "Version of maq to use, if not the newest." },
@@ -33,11 +33,11 @@ sub run_tests {
 sub execute {
     $DB::single = 1;
     my $self = shift;
-    my $fptr = Genome::Model::Tools::Maq::MapUtils::Test::CSubs::test_ssmith_fptr();
+    my $fptr = Genome::Model::Tools::Maq::Map::Utils::Test::CSubs::test_ssmith_fptr();
     print "got address: $fptr\n";
     my $s = { x => $self->some_input };
     #utf8::upgrade($s);
-    my $result = Genome::Model::Tools::Maq::MapUtils::test_call_functionptr_with_string_param($fptr, $s->{x});
+    my $result = Genome::Model::Tools::Maq::Map::Utils::test_call_functionptr_with_string_param($fptr, $s->{x});
     print "called function got return: $result\n";
     $self->some_output($result);
     return $result;
@@ -47,9 +47,9 @@ sub execute {
 # The C extensions go into a sub-namespace so Inline doesn't have odd errors with the autoloader.
 #
 
-package Genome::Model::Tools::Maq::MapUtils::Test::CSubs;
+package Genome::Model::Tools::Maq::Map::Utils::Test::CSubs;
 
-use Genome::Model::Tools::Maq::MapUtils;
+use Genome::Model::Tools::Maq::Map::Utils;
 
 use strict;
 use warnings;

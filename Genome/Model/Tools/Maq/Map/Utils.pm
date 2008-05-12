@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Maq::MapUtils;
+package Genome::Model::Tools::Maq::Map::Utils;
 
 use strict;
 use warnings;

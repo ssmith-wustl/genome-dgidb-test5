@@ -7,7 +7,6 @@ BEGIN
     mkdir $inline_dir;
 };
 
-use Class::ISA;
 use Inline (C =>'DATA',
             DIRECTORY => $inline_dir,
             INC => '-I/gscuser/jschindl -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
