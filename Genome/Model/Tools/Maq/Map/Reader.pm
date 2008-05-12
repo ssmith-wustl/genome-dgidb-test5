@@ -1,3 +1,4 @@
+#this code is not quite done yet, jschindl - 5/12/2008
 package Genome::Model::Tools::Maq::Map::Reader;
 
 our $inline_dir;

@@ -1,6 +1,5 @@
-package Genome::Model::Tools::Maq::Map::Writer;
-#Tony suggests - having a top level Maq directory, and then have sub modules, this would be a submod
-#-look at perlxs to help deal with some of the issues with Inline C, i.e. having to have the user 
+#this code is not quite done yet, jschindl - 5/12/2008
+package Genome::Model::Tools::Maq::Map::Writer; 
 our $inline_dir;
 BEGIN
 {
