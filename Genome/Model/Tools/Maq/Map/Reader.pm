@@ -138,6 +138,8 @@ sub dynaloader_has_package
 1;
 __DATA__
 __C__
+#include <myfile.c>
+.
 
 #include <stdio.h>
 #include <stdlib.h>
