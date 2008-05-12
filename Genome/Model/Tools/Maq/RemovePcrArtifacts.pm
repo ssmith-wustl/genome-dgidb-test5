@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::Maq::RemovePcrArtifacts;
 
 use above "Genome";
@@ -50,6 +49,7 @@ sub execute {
     my $in = $self->input;
     my $remove = $self->remove;
     my $keep = $self->keep;
+    my $identity_length = $self->identity_length;
     unless ($in and $keep and $remove and -f $in) {
         $self->error_message("Bad params!");
         $self->usage_message($self->help_usage_complete_text);
@@ -58,8 +58,15 @@ sub execute {
     
     # jit use so we don't compile when making the object for other reasons...
     require Genome::Model::Tools::Maq::RemovePcrArtifacts_C;
-    
-    my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts_C::remove_dup_frags($in,$keep,$remove);
+    my $result;
+    if(defined $identity_length)
+    {
+        $result = Genome::Model::Tools::Maq::RemovePcrArtifacts_C::remove_dup_frags($in,$keep,$remove,$identity_length);
+    }
+    else
+    {
+        $result = Genome::Model::Tools::Maq::RemovePcrArtifacts_C::remove_dup_frags($in,$keep,$remove);
+    }
     $result = !$result; # c -> perl
 
     $self->result($result);
