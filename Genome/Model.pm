@@ -80,6 +80,15 @@ sub directory_for_run {
         $run->name
     );
 }
+sub directory_for_log {
+    my ($self, $run) = @_;
+    return sprintf('%s/logs/%s/%s', 
+        $self->data_directory,
+        $run->sequencing_platform,
+        $run->name
+    );
+}
+
 
 # Refseq directories and names
 
