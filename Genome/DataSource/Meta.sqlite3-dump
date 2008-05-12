@@ -294,7 +294,7 @@ INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','META_GROUP','
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GROUP_INFO','TABLE','entity','2008-03-13 11:23:57','2008-04-15 10:35:39',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','READ_GROUP','TABLE','entity','2008-04-07 14:49:44','2008-04-15 10:35:40',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SAMPLE_GENE','TABLE','entity','2008-03-07 16:38:08','2008-04-15 10:36:00',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','TABLE','entity','2008-05-08 08:35:14','2008-05-08 11:26:37',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','TABLE','entity','2008-05-12 15:30:16','2008-05-08 11:26:37',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST_MEMBER','TABLE','entity','2008-05-08 08:35:14','2008-05-08 11:26:48',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','TABLE','entity','2008-05-08 08:35:14','2008-05-08 11:26:41',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','ANALYSIS_METHOD','TABLE','entity','2008-05-08 08:35:14','2008-05-08 11:26:35',NULL);
@@ -693,6 +693,8 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIAN
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','ROI_SEQ_ID','NUMBER','10','Y','2008-05-08 11:26:41',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST_MEMBER','LIST_ID','NUMBER','10','N','2008-05-08 11:26:48',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SUBMITTER','VARIATION_SOURCE','VARCHAR2','255','Y','2008-05-08 11:26:33',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','RT_TICKET','NUMBER','10','Y','2008-05-12 17:01:36',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','AUTHOR','VARCHAR2','256','Y','2008-05-12 17:01:36',NULL);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
