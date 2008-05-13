@@ -19,6 +19,7 @@ my %PROCESS_COUNT = (
 
     'align reads to recent runs'             => 2,
     'analyze 454 output'                     => 0,
+    'analyze 454 run'                        => 0,
     'autofinish'                             => 1,
     'mkcs'                                   => 1,
     'import external reads'                  => 0,
