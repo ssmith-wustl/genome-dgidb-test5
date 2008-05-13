@@ -33,7 +33,7 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
     
-    unless ($self->model) {
+    unless ($class->get_class_object->get_property_meta_by_name("model")->is_optional or $self->model) {
         if ($self->bare_args) {
             my $pattern = $self->bare_args->[0];
             my @models = Genome::Model->get(name => { operator => "like", value => '%' . $pattern . '%' });
