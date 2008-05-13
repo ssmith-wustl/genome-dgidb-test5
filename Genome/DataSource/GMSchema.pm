@@ -30,7 +30,7 @@ sub _get_sequence_name_for_table_and_column {
         return $table_name . '_SEQ';
     }
     else {
-        $self->SUPER::get_sequence_name_for_table_and_column($table_name, $column_name);
+        $self->SUPER::_get_sequence_name_for_table_and_column($table_name, $column_name);
     }
 }
 
