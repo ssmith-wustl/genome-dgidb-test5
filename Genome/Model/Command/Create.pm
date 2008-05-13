@@ -12,6 +12,7 @@ use Data::Dumper;
 
 class Genome::Model::Command::Create {
     is => ['Genome::Model::Event'],
+    sub_classification_method_name => 'class',
     has => [
         dna_type               => { is => 'varchar', len => 255,
                                     doc => "The type of dna used in the reads for this model, probably 'genomic dna' or 'cdna'" },
@@ -37,6 +38,7 @@ class Genome::Model::Command::Create {
         multi_read_fragment_strategy => { is => 'varchar', len => 255, is_optional => 1},
         sample                 => { is => 'varchar', len => 255,
                                     doc => 'The name of the sample all the reads originate from' },
+        model                  => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id' },
     ],
     schema_name => 'Main',
 };
@@ -44,7 +46,8 @@ class Genome::Model::Command::Create {
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments
     return grep { 
-            not ($_->via and $_->via ne 'run') && not ($_->property_name eq 'run_id')
+            $_->property_name ne 'model_id'
+            #not ($_->via and $_->via ne 'run') && not ($_->property_name eq 'run_id')
         } shift->SUPER::_shell_args_property_meta(@_);
 }
 
@@ -95,29 +98,37 @@ sub command_properties{
 sub execute {
     my $self = shift;
 
-print Dumper $self;
+$DB::single=1;
 
     # genome model specific
-$DB::single=1;
 
     unless ($self->prior) {
         $self->prior('none');
     }
 
-    $self->_validate_execute_params();   
+    $self->_validate_execute_params(); 
 
     # generic: abstract out
-    
-print Dumper $self;
     my %params = %{ $self->_extract_command_properties_and_duplicate_keys_for__name_properties() };
     
     my $obj = $self->_create_target_class_instance_and_error_check( \%params );
+    unless ($obj) {
+        $self->error_message("Failed to create model!");
+        return;
+    }
+    
+    if (my @problems = $obj->invalid) {
+        $self->error_message("Invaild model!");
+        $obj->delete;
+        return;
+    }
     
     $self->status_message("created model " . $obj->name);
     print $obj->pretty_print_text,"\n";
     
     unless ($self->_build_model_filesystem_paths($obj)) {
         $self->error_message('filesystem path creation failed');
+        $obj->delete;
         return;
     }
     
