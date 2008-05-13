@@ -218,13 +218,15 @@ sub unlock_resource {
 
 sub pretty_print_text {
     my $self = shift;
-    
+    $DB::single = 1;
     my @out;
     for my $prop (grep {$_ ne "name"} $self->property_names) {
         if (defined $self->$prop) {
+            my $value = $self->$prop;
+            next if ref $value;
             push @out, [
                 Term::ANSIColor::colored($prop, 'red'),
-                Term::ANSIColor::colored($self->$prop, "cyan")
+                Term::ANSIColor::colored($value, "cyan")
             ]
         }
     }
