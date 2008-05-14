@@ -146,7 +146,64 @@ sub assembly_file_for_refseq {
     return $assembly_output_file;
 }
 
+sub alignments_maplist_directory {
+    my $self = shift;
+    return $self->data_directory . '/alignments.maplist'; 
+}
+
+sub maplist_file_paths {
+    my $self = shift;
+
+    my %p = @_;
+    my $ref_seq_id;
+
+    if (%p) {
+        $ref_seq_id = $p{ref_seq_id};
+    } else {
+        $ref_seq_id = 'all_sequences';
+    }
+
+    return grep { -e $_ } glob($self->alignments_maplist_directory .'/*'. $ref_seq_id .'.maplist');
+}
+
+
 sub resolve_accumulated_alignments_filename {
+    my $self = shift;
+    my %p = @_;
+    my $ref_seq_id = $p{ref_seq_id};
+    my @maplists;
+    if ($ref_seq_id) {
+        @maplists = $self->maplist_file_paths(%p);
+    } else {
+        @maplists = $self->maplist_file_paths();
+    }
+    if (!@maplists) {
+        $self->error_message("No maplists found");
+        return;
+    }
+    my $vmerge = Genome::Model::Tools::Maq::VMerge->create(
+                                                           maplist => \@maplists,
+                                                       );
+    my $pid = fork();
+    if (!defined $pid) {
+        $self->error_message("No fork available:  $!");
+        return;
+    } elsif ($pid == 0) {
+        unless (Genome::DataSource::GMSchema->set_all_dbh_to_inactive_destroy) {
+            $self->error_message("Could not set all dbh to inactive destroy");
+            exit(1);
+        }
+        $vmerge->execute;
+        exit;
+    } else {
+        sleep(10);
+        return $vmerge->pipe;
+    }
+    $self->error_message("Should never happen:  $!");
+    return;
+}
+
+sub Xresolve_accumulated_alignments_filename {
     my $self = shift;
     
     my %p = @_;
