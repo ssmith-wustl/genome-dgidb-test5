@@ -32,7 +32,7 @@ EOS
 }
 
 sub bsub_rusage {
-    return "-R 'select[type=LINUX64]'";
+    return "-R 'select[type=LINUX64] span[hosts=1]'";
 
 }
 
@@ -54,12 +54,7 @@ sub execute {
 
     my $model_dir = $model->data_directory;
 
-    my $accumulated_alignments_file = $model->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
-    unless (-f $accumulated_alignments_file) {
-        $self->error_message("Alignment file $accumulated_alignments_file was not found.  It should have been created by a prior run of align-reads maq");
-        return;
-    }
-    
+   
     my $analysis_base_path = $model_dir . "/identified_variations";
     unless (-d $analysis_base_path) {
         mkdir($analysis_base_path);
@@ -94,7 +89,7 @@ sub execute {
     my $filtered_snip_output_file = $snip_output_file . '.filtered';
     my $indel_output_file =  $analysis_base_path . "/" . $indel_resource_name;
     my $pileup_output_file = $analysis_base_path . "/" . $pileup_resource_name;
-                                       
+
     my $retval = system("$maq_pathname cns2snp $assembly_output_file > $snip_output_file");
     unless ($retval == 0) {
         $self->error_message("running maq cns2snp returned non-zero exit code $retval");
@@ -107,8 +102,12 @@ sub execute {
         return;
     }
 
-    
-    $retval = system("$maq_pathname indelsoa $ref_seq_file $accumulated_alignments_file > $indel_output_file");
+    my $accumulated_alignments_file_for_indelsoa = $model->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
+    unless (-p $accumulated_alignments_file_for_indelsoa) {
+        $self->error_message("Named pipe $accumulated_alignments_file_for_indelsoa was not found.");
+        return;
+    }
+    $retval = system("$maq_pathname indelsoa $ref_seq_file $accumulated_alignments_file_for_indelsoa > $indel_output_file");
     unless ($retval == 0) {
         $self->error_message("running maq indelsoa returned non-zero exit code $retval");
         return;
@@ -130,10 +129,15 @@ sub execute {
     $tmpfh->close();
     $snip_fh->close();
 
+    my $accumulated_alignments_file_for_pileup = $model->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
+    unless (-p $accumulated_alignments_file_for_pileup) {
+        $self->error_message("Named pipe $accumulated_alignments_file_for_pileup was not found.");
+        return;
+    }
     my $pileup_command = sprintf("$maq_pathname pileup -v -l %s %s %s > %s",
                                  $tmpfh->filename,
                                  $ref_seq_file,
-                                 $accumulated_alignments_file,
+                                 $accumulated_alignments_file_for_pileup,
                                  $pileup_output_file);
 
     $retval = system($pileup_command);
