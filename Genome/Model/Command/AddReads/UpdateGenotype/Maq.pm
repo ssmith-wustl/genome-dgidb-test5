@@ -6,9 +6,7 @@ use warnings;
 use above "Genome";
 use Command;
 use Genome::Model;
-use File::Path;
-use File::Basename;
-use Data::Dumper;
+
 
 class Genome::Model::Command::AddReads::UpdateGenotype::Maq {    
     is => ['Genome::Model::Command::AddReads::UpdateGenotype', 'Genome::Model::Command::MaqSubclasser'],
@@ -31,7 +29,7 @@ EOS
 }
 
 sub bsub_rusage {
-    return "-R 'select[type=LINUX64]'";
+    return "-R 'select[type=LINUX64] span[hosts=1]'";
 
 }
 
@@ -45,19 +43,13 @@ sub execute {
 
     my $model_dir = $model->data_directory;
 
-    my $accumulated_alignments_file = $model->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
-    unless (-f $accumulated_alignments_file) {
-        $self->error_message("Alignments file $accumulated_alignments_file was not found.  It should have been created by a prior run of align-reads maq");
-        return;
-    }
-
     unless (-d "$model_dir/consensus") {
         mkdir ("$model_dir/consensus");
     }
 
     my $assembly_output_file = $model->assembly_file_for_refseq($self->ref_seq_id);
-    my $ref_seq_file = sprintf("%s/%s.bfa", $model->reference_sequence_path , $self->ref_seq_id);
 
+    my $ref_seq_file = sprintf("%s/%s.bfa", $model->reference_sequence_path , $self->ref_seq_id);
 
     my $assembly_opts = $model->genotyper_params || '';
 
@@ -65,10 +57,21 @@ sub execute {
         $self->error_message("Can't get lock for model's maq assemble output assembly_" . $self->ref_seq_id);
         return undef;
     }
-    my $scmd = "$maq_pathname assemble $assembly_opts $assembly_output_file $ref_seq_file $accumulated_alignments_file";
-    print $scmd, "\n";
-    return (!system($scmd));
-    
+    my $accumulated_alignments_file = $model->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
+
+    my @args = ($maq_pathname, 'assemble');
+    if ($assembly_opts) {
+        push @args, $assembly_opts;
+    }
+    push @args, ($assembly_output_file, $ref_seq_file, $accumulated_alignments_file);
+    print "@args\n";
+
+    my $rv = system(@args);
+    if ($rv) {
+        $self->error_message("nonzero exit code $rv returned by maq, command looks like, @args");
+        return;
+    }
+    return 1;
 }
 
 1;
