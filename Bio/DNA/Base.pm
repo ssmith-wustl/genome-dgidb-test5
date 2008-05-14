@@ -1,5 +1,5 @@
 
-package Bio::DNA::CDS;
+package Bio::DNA::Base;
 use base 'Bio::Dynamic';
 
 use strict;
