@@ -4,15 +4,15 @@ package Genome::Model::Tools::Maq::Map::Reader;
 our $inline_dir;
 BEGIN
 {
-    ($inline_dir) = "$ENV{HOME}/".(`uname -a ` =~ /ia64 / ? '_Inline64' : '_Inline32');
+    ($inline_dir) = "$ENV{HOME}/".(`uname -m` =~ /ia64/ ? '_InlineItanium' : '_Inline32');
     mkdir $inline_dir;
 };
 
 use Class::ISA;
-use Inline (C =>'DATA',
+use Inline (C => 'Config',
             DIRECTORY => $inline_dir,
             INC => '-I/gscuser/jschindl -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
-            CCFLAGS => '-D_FILE_OFFSET_BITS=64',
+            CCFLAGS => `uname -m` =~ /ia64/?'-D_FILE_OFFSET_BITS=64 -m32':'-D_FILE_OFFSET_BITS=64',
             LIBS => '-L/gscuser/jschindl -L/gscuser/jschindl/svn/gsc/zlib-1.2.3 -lz -lmaq',
             NAME => __PACKAGE__
             );
@@ -135,9 +135,16 @@ sub dynaloader_has_package
     return undef;
 }
 
-1;
-__DATA__
-__C__
+sub read_header
+{
+    my ($self) = @_;
+    return _read_header($self->{input_file});
+
+
+}
+
+use Inline C => <<'END_C';
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <zlib.h>
@@ -148,12 +155,14 @@ __C__
 #define put_record(a, b) gzwrite(a,b, sizeof(*(b)))
 
 typedef void (*do_func)(maqmap1_t *mm);
+SV *build_perl_header(maqmap_t *mm);
 
-void * read_header(void * fpin)
+SV *_read_header(void * fpin)
 {
     maqmap_t  *mm = maqmap_read_header(fpin);
-    mm->n_mapped_reads = 0;
-    return (void *)mm;
+    SV *perl_header = build_perl_header(mm);
+    maq_delete_maqmap(mm);
+    return perl_header;
 }
 
 void * init_file(char *infile)
@@ -172,7 +181,7 @@ char * get_read(maqmap1_t *mm)
 {
     static char string[MAX_READLEN];
     int j = 0;
-    for (j = 0; j != mm->size; ++j) {
+    for (j = 0; j < mm->size; ++j) {
         if (mm->seq[j] == 0) string[j] ='n';
         else if ((mm->seq[j]&0x3f) < 27) string[j]="acgt"[mm->seq[j]>>6&3];
         else string[j]="ACGT"[mm->seq[j]>>6&3];
@@ -186,7 +195,7 @@ SV * get_qual(maqmap1_t *mm)
     int j =0;
     AV *AV_qual = newAV();
     sv_2mortal((SV *)AV_qual);
-    for (j = 0; j != mm->size; ++j)
+    for (j = 0; j < mm->size; ++j)
         av_push(AV_qual, newSViv((mm->seq[j]&0x3f) + 33));
     
     return newRV_inc((SV *)AV_qual);
@@ -202,18 +211,47 @@ SV * build_perl_hash(maqmap1_t *mm)
     hv_store(rec, "pos",3,newSViv(mm->pos),0);
     hv_store(rec, "seqid",5,newSViv(mm->seqid),0);
     hv_store(rec, "qual",4,get_qual(mm),0);
-    hv_store(rec, "single_end_map_qual",sizeof("single_end_map_qual"),newSViv(mm->seq[MAX_READLEN]),0);
+    hv_store(rec, "single_end_map_qual",strlen("single_end_map_qual"),newSViv(mm->seq[MAX_READLEN-1]),0);
     hv_store(rec, "map_qual",8,newSViv(mm->map_qual),0);
     hv_store(rec, "alt_qual",8,newSViv(mm->alt_qual),0);
     hv_store(rec, "flag",4,newSViv(mm->flag),0);
     hv_store(rec, "dist",4,newSViv(mm->dist),0);
-    hv_store(rec, "24bp_mismatches",sizeof("24bp_mismatches"),newSViv(mm->info1>>4),0);
-    hv_store(rec, "mismatches",sizeof("mismatches"),newSViv(mm->info1|0x0f),0);
+    hv_store(rec, "24bp_mismatches",strlen("24bp_mismatches"),newSViv(mm->info1>>4),0);
+    hv_store(rec, "mismatches",strlen("mismatches"),newSViv(mm->info1&0x0f),0);
     hv_store(rec, "info2",5,newSViv(mm->info2),0);
-    hv_store(rec, "c",1,newSViv((*(int *)(&mm->c[0]))|0x0FFF),0);
-    //return sv_2mortal((SV *)newRV_inc((SV *)rec));
+    hv_store(rec, "c0",2,newSViv(mm->c[0]),0);
+    hv_store(rec, "c1",2,newSViv(mm->c[1]),0);
     return (SV *)newRV_inc((SV *)rec);
 }
+
+SV *get_ref_name(char **ref_name, int n_ref)
+{
+    int i =0;
+    AV *AV_ref_name = newAV();
+    sv_2mortal((SV *)AV_ref_name);
+    for (i = 0; i < n_ref; i++)
+        av_push(AV_ref_name, newSVpv(ref_name[i],0));
+    
+    return newRV_inc((SV *)AV_ref_name);
+
+}
+
+SV *build_perl_header(maqmap_t *mm)
+{
+    HV * rec = newHV();
+    sv_2mortal((SV *)rec);
+    char string[256];
+    bzero(string,256);
+    //printf("n_mapped_reads is %llu\n",mm->n_mapped_reads);
+    sprintf(string, "%llu", (unsigned long long)mm->n_mapped_reads);
+    //printf("n_mapped_reads string is %s\n",string);
+    hv_store(rec, "format",strlen("format"),newSViv(mm->format),0);
+    hv_store(rec, "n_ref",strlen("n_ref"),newSViv(mm->n_ref),0);   
+    hv_store(rec, "ref_name",strlen("ref_name"),get_ref_name(mm->ref_name,mm->n_ref),0);
+    hv_store(rec, "n_mapped_reads",strlen("n_mapped_reads"),newSVpv(string,0),0);
+    return (SV *)newRV_inc((SV *)rec);
+}
+
 
 void call_perl_do_func(SV * perl_func, maqmap1_t *mm)
 {
@@ -255,7 +293,6 @@ SV * get_next_perl_record(void * fpin)
 void do_with_c_func(void * fpin,void * tempfunc) 
 {
     maqmap_t  *mm = maqmap_read_header((gzFile)fpin);
-    mm->n_mapped_reads = 0;
     do_func func = tempfunc;
     
     static maqmap1_t curr_mm;
@@ -265,3 +302,5 @@ void do_with_c_func(void * fpin,void * tempfunc)
         (*func)(&curr_mm);
     }
 }
+END_C
+1;
