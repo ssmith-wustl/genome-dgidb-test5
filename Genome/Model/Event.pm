@@ -169,9 +169,12 @@ END {
 #sub execute {
 #    my $self = shift;
 #
-#    my $rv = $self->_execute();
+#
+#    my $rv = $sub_command->execute();
+#
 #    $self->date_completed(UR::Time->now());
 #    $self->event_status($rv ? 'Succeeded' : 'Failed');
+#
 #    return $rv;
 #}
 
@@ -329,6 +332,80 @@ sub map_files_for_refseq {
         push (@map_files, sprintf("%s/%s_duplicate.map",$path, $ref_seq_id));
         return @map_files;
     }
+}
+
+sub execute_with_bsub {
+    my ($self, %params) = @_;
+    my $last_command = $params{last_command};
+    my $dep_type = $params{dep_type};
+    my $queue = $params{bsub_queue};
+    my $bsub_args = $params{bsub_args};
+    
+    my $model_id = $self->model_id;
+
+## should check if $self isa Command??
+    $dep_type ||= 'ended';
+
+    $DB::single=1;
+    
+    my $last_bsub_job_id;
+    $last_bsub_job_id = $last_command->lsf_job_id if defined $last_command;
+
+    
+    if (my $bsub_rusage = $self->bsub_rusage) {
+        $bsub_args .= ' ' . $bsub_rusage;
+    }
+
+    my $class = $self->class;
+    my $id = $self->id;
+    #my $cmd = qq|perl -e 'use above "Genome"; $class->get($id)->execute() && UR::Context->commit();'|;
+    my $cmd = 'genome-model bsub-helper';
+    
+    my $event_id = $self->genome_model_event_id;
+    my $prior_event_id = $last_command->genome_model_event_id if defined $last_command;
+
+    my $log_dir = $self->resolve_log_directory;
+    unless (-d $log_dir) {
+        eval { mkpath($log_dir) };
+        if ($@) {
+            $self->error_message("Couldn't create run directory path $log_dir: $@");
+            return;
+        }
+    }
+  
+    my $err_log_file=  sprintf("%s/%s.err", $self->resolve_log_directory, $event_id);
+    my $out_log_file=  sprintf("%s/%s.out", $self->resolve_log_directory, $event_id);
+    $bsub_args .= ' -o ' . $out_log_file . ' -e ' . $err_log_file;
+ 
+
+    my $cmdline;
+    { no warnings 'uninitialized';
+        $cmdline = "bsub -q $queue $bsub_args" .
+                   ($last_bsub_job_id && " -w '$dep_type($last_bsub_job_id)'") .
+                   " $cmd --model-id $model_id --event-id $event_id " .
+                   ($prior_event_id && " --prior-event-id $prior_event_id");
+    }
+
+    $self->status_message("Running command: " . $cmdline);
+
+    my $bsub_output = `$cmdline`;
+    my $retval = $? >> 8;
+
+    if ($retval) {
+        $self->error_message("bsub returned a non-zero exit code ($retval), bailing out");
+        return;
+    }
+
+    if ($bsub_output =~ m/Job <(\d+)>/) {
+        $last_bsub_job_id = $1;
+
+    } else {
+        $self->error_message('Unable to parse bsub output, bailing out');
+        $self->error_message("The output was: $bsub_output");
+        return;
+    }
+
+    return $last_bsub_job_id;
 }
 
 sub run_command_with_bsub {
