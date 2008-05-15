@@ -10,27 +10,18 @@ class Genome::Model::Command::AddReads {
     is => 'Genome::Model::Command',
     has => [
         model_id            => { is => 'Integer', 
-                                doc => "Identifies the genome model to which we'll add the reads." },
+                                doc => 'Identifies the genome model to which we\'ll add the reads.' },
         model               => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' 
                                 },
         read_set_id         => { is => 'String',
                                 doc => 'The unique ID of the data set produced on the instrument' },
     ],
     has_optional => [
-        bsub                =>  { is => 'Boolean',
-                                  doc => 'Sub-commands should be submitted to bsub. Default is yes.',
-                                  default_value => 1 },
-        bsub_queue          =>  { is => 'String',
-                                  doc => 'Which bsub queue to use for sub-command jobs, default is "long"',
-                                  default_value => 'long'},
-        bsub_args           => { is => 'String',
-                                  doc => 'Additional arguments passed along to bsub (such as -o, for example)',
-                                  default_value => '' },
         test                => { is => 'Boolean',
                                   doc => 'Create run and event information in the database, but do not schedule or execute any sub-commands',
                                   is_optional => 1,
                                   default_value => 0},
-    ]
+    ],
 };
 
 
@@ -42,7 +33,10 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model add-reads --model-id 5 --squencing-platform solexa --read-set-id 5 
+genome-model add-reads AML-tumor1-new_maq-with_dups --read-set-id 5
+
+genome-model add-reads --model-id 5 --read-set-id 5
+
 EOS
 }
 
