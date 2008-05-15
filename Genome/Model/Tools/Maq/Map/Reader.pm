@@ -1,4 +1,3 @@
-#this code is not quite done yet, jschindl - 5/12/2008
 package Genome::Model::Tools::Maq::Map::Reader;
 
 our $inline_dir;
@@ -50,7 +49,7 @@ sub do
     my ($self, $func_name_or_ref,$package) = @_;
     
     ($self->{calling_package}) = caller;
-    my ($func_type, $func_ref) = resolve_func_type($func_name_or_ref,$package);
+    my ($func_type, $func_ref) = $self->resolve_func_type($func_name_or_ref,$package);
     if($func_type eq 'perl_func')
     {
         do_with_perl_func($self->{input_file}, $func_ref);
@@ -70,7 +69,7 @@ sub get_next
 
 sub resolve_func_type
 {
-    my ($func_name_or_ref, $package) = @_; #print join ' ',@DynaLoader::dl_modules,"\n";
+    my ($self, $func_name_or_ref, $package) = @_; #print join ' ',@DynaLoader::dl_modules,"\n";
 
     #if this is a perl code ref we're done 
     if(ref($func_name_or_ref) eq 'CODE')
