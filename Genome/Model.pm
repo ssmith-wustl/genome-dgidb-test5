@@ -236,7 +236,7 @@ sub resolve_accumulated_alignments_filename {
         $self->error_message("No maplists found");
         return;
     }
-    my $vmerge = Genome::Model::Tools::Maq::VMerge->create(
+    my $vmerge = Genome::Model::Tools::Maq::Vmerge->create(
                                                            maplist => \@maplists,
                                                        );
     my $pid = fork();
