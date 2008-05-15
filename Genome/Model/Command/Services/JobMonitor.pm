@@ -31,7 +31,8 @@ sub execute {
     my $self = shift;
 
     unless ($< == 10102) {
-        die "This module should only be run by via cron.";
+        $self->error_message("This module should only be run by via cron.");
+        return;
     }
 
     $DB::single = 1;
