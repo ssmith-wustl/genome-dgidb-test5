@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Maq::VMerge;
+package Genome::Model::Tools::Maq::Vmerge;
 
 use strict;
 use warnings;
@@ -8,12 +8,12 @@ use Command;
 use File::Temp;
 use IO::File;
 
-class Genome::Model::Tools::Maq::VMerge {
+class Genome::Model::Tools::Maq::Vmerge {
     is => 'Command',
     has => [ 
             'maplist'   => { is => 'list',      doc => "maplist file",},
-            'pipe'      => { is => 'String',      doc => "the named pipe",},
-            'tmp_script' => { is => 'String',     doc => "temp script to run",},
+            'pipe'      => { is => 'String',      doc => "the named pipe",      is_optional => 1},
+            'tmp_script' => { is => 'String',     doc => "temp script to run",  is_optional => 1},
     ],
 };
 
@@ -23,7 +23,7 @@ sub help_brief {
 
 sub help_detail {                           # This is what the user will see with --help <---
     return <<EOS 
-
+This takes a list of map files and creates a named pipe which streams the results of maq mapmerge.
 EOS
 }
 
@@ -32,16 +32,20 @@ sub create {
     $DB::single = 1;
     my $self = $class->SUPER::create(@_);
 
-    my ($fh_pipe,$filename_pipe) = File::Temp::tempfile;
-    $fh_pipe->close;
-    unlink $filename_pipe;
 
-    my ($out_fh,$tmp_script) = File::Temp::tempfile;
-    $out_fh->close;
-    unlink $tmp_script;
+    unless (defined ($self->tmp_script)){
+        my ($out_fh,$tmp_script) = File::Temp::tempfile;
+        $out_fh->close;
+        unlink $tmp_script;
+        $self->tmp_script($tmp_script);
+    }
     
-    $self->pipe($filename_pipe);
-    $self->tmp_script($tmp_script);
+    unless (defined ($self->pipe)){
+        my ($fh_pipe,$filename_pipe) = File::Temp::tempfile;
+        $fh_pipe->close;
+        unlink $filename_pipe;
+        $self->pipe($filename_pipe);
+    }
 
     return $self;
 }
