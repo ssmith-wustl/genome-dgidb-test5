@@ -67,7 +67,7 @@ sub _launch_events {
         if ( $last_event and ($event->model_id != $last_event->model_id) ) {
             $last_event = undef;
         }
-        my $last_bsub_job_id = $self->Genome::Model::Event::run_command_with_bsub($event,$last_event);
+        my $last_bsub_job_id = $event->execute_with_bsub(last_event => $last_event);
         unless ($last_bsub_job_id) {
             $self->error_message("Error running bsub for event " . $event->id);
             # skip on to the events for the next model
