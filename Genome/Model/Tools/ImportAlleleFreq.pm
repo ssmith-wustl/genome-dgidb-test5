@@ -34,6 +34,7 @@ EOS
 }
 
 sub execute {
+    $DB::single = 1;
     my $self = shift;
     my $dir = $self->dir;
     my $group_name = $self->group;
@@ -65,7 +66,6 @@ sub execute {
         from mg.variation v 
         join mg.chromosome c on c.chrom_id = v.chrom_id 
         where chromosome_name = ? 
-        and rownum < 10 
         order by start_
     /;
     my $dbh = Genome::DataSource::GMSchema->get_default_dbh();
@@ -116,7 +116,7 @@ sub execute {
                 $next_db_variant = $sth->fetchrow_hashref();
             }
 
-            print join("\t", @data{@cols_out}, $expected_chrom, $pos, ':', $next_db_variant->{VARIANT_ID}, $allele_string, $allele_freq),"\n";
+            print join("\t", @data{@cols_out}, $expected_chrom, $pos, ':', $next_db_variant->{VARIATION_ID}, $allele_string, $allele_freq),"\n";
             last if $cnt==10;
         }
 
