@@ -69,6 +69,8 @@ $DB::single=1;
         return;
     }
 
+=cut
+
     # Re-load the command object with the proper class.
     # FIXME Maybe Event.pm could be changed to do this for us at some point
     my $command_obj;
@@ -81,8 +83,14 @@ $DB::single=1;
         $command_obj = $proper_command_class_name->get(genome_model_event_id => $event->genome_model_event_id);
     }
 
+=cut
+    
+    my $command_obj = $event;
+
     if ($self->prior_event_id) {
         my $prior_event = Genome::Model::Event->load(id => $self->prior_event_id);
+
+=cut
         my $prior_command_obj;
         {
             my $proper_command_class_name = $prior_event->class_for_event_type();
@@ -92,6 +100,9 @@ $DB::single=1;
             }
             $prior_command_obj = $proper_command_class_name->get(genome_model_event_id => $prior_event->genome_model_event_id);
         }
+=cut
+
+        my $prior_command_obj = $event;
         
         if ($prior_event && $prior_event->lsf_job_id) {
             my ($state, $lsf_events) = $self->lsf_state($prior_event->lsf_job_id);
