@@ -77,6 +77,8 @@ $DB::single=1;
         return;
     }
 
+=cut
+
     # Re-load the command object with the proper class.
     # FIXME Maybe Event.pm could be changed to do this for us at some point
     my $command_obj;
@@ -88,7 +90,10 @@ $DB::single=1;
         }
         $command_obj = $proper_command_class_name->get(genome_model_event_id => $event->genome_model_event_id);
     }
+=cut
 
+    my $command_obj = $event;
+    
     # What lsf queue should it get rescheduled in to
     my %add_reads_queue;
     if ($self->bsub_queue) {
@@ -100,12 +105,13 @@ $DB::single=1;
         }
     }
 
+=cut
     # retry tests here
 
     ## create a dummy object to call this method, refactor candidate
     my $ar = Genome::Model::Command::AddReads->create(
         model_id => $event->model_id,
-        sequencing_platform => 'solexa', # dont care
+        #sequencing_platform => 'solexa', # dont care
 #        full_path => '/tmp', # dont care
         %add_reads_queue,
     );
@@ -118,6 +124,11 @@ $DB::single=1;
     my $job_id = $ar->Genome::Model::Event::run_command_with_bsub($command_obj);
 
     $ar->delete;  ## ditch the dummy
+
+=cut
+
+    my $old_lsf_job_id = $command_obj->lsf_job_id;
+    my $job_id = $command_obj->execute_with_bsub(%add_reads_queue);
 
     $command_obj->retry_count($command_obj->retry_count + 1);
     $command_obj->lsf_job_id($job_id);
