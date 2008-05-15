@@ -239,19 +239,19 @@ sub resolve_accumulated_alignments_filename {
     my $vmerge = Genome::Model::Tools::Maq::Vmerge->create(
                                                            maplist => \@maplists,
                                                        );
+    unless (Genome::DataSource::GMSchema->set_all_dbh_to_inactive_destroy) {
+        $self->error_message("Could not set all dbh to inactive destroy");
+        exit(1);
+    }
     my $pid = fork();
     if (!defined $pid) {
         $self->error_message("No fork available:  $!");
         return;
     } elsif ($pid == 0) {
-        unless (Genome::DataSource::GMSchema->set_all_dbh_to_inactive_destroy) {
-            $self->error_message("Could not set all dbh to inactive destroy");
-            exit(1);
-        }
         $vmerge->execute;
         exit;
     } else {
-        sleep(10);
+        sleep(5);
         return $vmerge->pipe;
     }
     $self->error_message("Should never happen:  $!");
