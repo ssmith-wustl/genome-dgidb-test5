@@ -1,3 +1,4 @@
+
 package Genome::Model;
 
 use strict;
@@ -32,17 +33,32 @@ class Genome::Model {
         read_calibrator_params       => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         reference_sequence_name      => { is => 'VARCHAR2', len => 255 },
         sample_name                  => { is => 'VARCHAR2', len => 255 },
+        
         events                       => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => 'model', 
                                           doc => 'all events which have occurred for this model',
                                         },
-        
-        read_set_assignments         => { is => 'Genome::Model::Command::AddReads::AssignRun', is_many => 1, reverse_id_by => 'model',
+        read_set_assignment_events   => { is => 'Genome::Model::Command::AddReads::AssignRun', is_many => 1, reverse_id_by => 'model',
                                           doc => 'each case of a read set being assigned to the model',
                                         },
-        
-        alignments                   => { is => 'Genome::Model::Command::AddReads::AlignReads', is_many => 1, reverse_id_by => 'model',
+        alignment_events             => { is => 'Genome::Model::Command::AddReads::AlignReads', is_many => 1, reverse_id_by => 'model',
                                           doc => 'each case of a read set being aligned to the model\'s reference sequence(s), possibly including multiple actual aligner executions',
                                         },
+        variant_count                => {
+                                            doc => 'the differences between the genome and the reference',
+                                            calculate => q|
+                                                my @f = $self->_variant_list_files();
+                                                my $c = 0;
+                                                for (@f) {
+                                                    my $fh = IO::File->new($_);
+                                                    while ($fh->getline) {
+                                                        $c++
+                                                    }
+                                                }
+                                                return $c;
+                                            |,
+                                        },
+        
+                                
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -123,7 +139,7 @@ sub get_subreference_names {
     my $self = shift;
     my %p = @_;
     
-    my $ext = $p{reference_extension};
+    my $ext = $p{reference_extension} || 'fasta';
 
     my @paths = $self->get_subreference_paths(reference_extension=>$ext);
     
@@ -135,15 +151,53 @@ sub get_subreference_names {
     return @basenames;    
 }
 
-# Results data
 
-sub assembly_file_for_refseq {
-    my $self=shift;  
+# Results data
+# TODO: refactor to not be directly in the model
+
+# TODO: this consensus doesn't have the alignments, so assembly is not a good name
+*assembly_file_for_refseq = \&_consensus_files;
+
+sub _consensus_files {
+    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/consensus/%s.cns',@_);
+}
+
+sub _variant_list_files {
+    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/identified_variations/snips_%s',@_);
+}
+
+sub _variant_detail_files {
+    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/identified_variations/pileup_%s',@_);
+}
+
+sub _files_for_pattern_and_optional_ref_seq_id {
+    $DB::single = 1;
+    my $self=shift;
+    my $pattern = shift;
     my $ref_seq=shift;
-    my $assembly_output_file=sprintf('%s/consensus/%s.cns',
-                                    $self->data_directory,
-                                    $ref_seq);
-    return $assembly_output_file;
+    
+    my @files = 
+        map { 
+            sprintf(
+                $pattern,
+                $self->data_directory,
+                $_
+            )
+        }
+        grep { $_ ne 'all_sequences' }
+        grep { (!defined($ref_seq)) or ($ref_seq eq $_) }
+        $self->get_subreference_names;
+        
+    return @files;
+}
+
+sub _files_for_pattern_and_params {
+    my $self = shift;
+    my $pattern = shift;
+    my %params = @_;
+    my $ref_seq_id = delete $params{'ref_seq_id'};
+    Carp::confess("unknown params! " . Data::Dumper::Dumper(\%params)) if keys %params;
+    return $self->_files_for_pattern_and_optional_ref_seq_id($pattern, $ref_seq_id);
 }
 
 sub alignments_maplist_directory {
@@ -166,6 +220,7 @@ sub maplist_file_paths {
     return grep { -e $_ } glob($self->alignments_maplist_directory .'/*'. $ref_seq_id .'.maplist');
 }
 
+##
 
 sub resolve_accumulated_alignments_filename {
     my $self = shift;
