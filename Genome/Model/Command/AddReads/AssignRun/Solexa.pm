@@ -122,11 +122,27 @@ sub execute {
         }
     }
 
+    # TODO: We should pull this from the run data, probably a seq_fs_path on the solexa lane summary.
+    my $adaptor_file;
+    my @dna = GSC::DNA->get(dna_name => $run->sample_name);
+    if (@dna == 1) {
+        if ($dna[0]->dna_type eq 'genomic dna') {
+            $adaptor_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer';
+        } elsif ($dna[0]->dna_type eq 'rna') {
+            $adaptor_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer_SMART';
+        }
+    }
+    unless (-e $adaptor_file) {
+        $self->error_message("Adaptor file $adaptor_file not found!: $!");
+        return;
+    }
+
     # Copy the given adaptor file to the run's directory
-    if ($self->adaptor_file) {
-        my $given_adaptor_pathname = $self->adaptor_file;
-        my $local_adaptor_pathname = $self->adaptor_file_for_run;
-        `cp $given_adaptor_pathname $local_adaptor_pathname`;
+    my $local_adaptor_pathname = $self->adaptor_file_for_run;
+    system "cp $adaptor_file $local_adaptor_pathname";
+    unless (-e $local_adaptor_pathname) {
+        $self->error_message("Failed to copy $adaptor_file to $local_adaptor_pathname!: $!");
+        return;
     }
 
     # The LIMS PSE that ran before us has done some preparation already

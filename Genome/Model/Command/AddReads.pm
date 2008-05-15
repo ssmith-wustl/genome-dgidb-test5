@@ -11,15 +11,12 @@ class Genome::Model::Command::AddReads {
     has => [
         model_id            => { is => 'Integer', 
                                 doc => "Identifies the genome model to which we'll add the reads." },
-        model               => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
-        sequencing_platform => { is => 'String',
-                                doc => 'Type of sequencing instrument used to generate the data'},
+        model               => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' 
+                                },
         read_set_id         => { is => 'String',
                                 doc => 'The unique ID of the data set produced on the instrument' },
     ],
     has_optional => [
-        adaptor_file        =>  { is => 'String',
-                                  doc => 'Pathname to the adaptor sequence file for these reads' },
         bsub                =>  { is => 'Boolean',
                                   doc => 'Sub-commands should be submitted to bsub. Default is yes.',
                                   default_value => 1 },
@@ -72,18 +69,12 @@ $DB::single=1;
 
     my $model = $self->model;
 
-    #my @sub_command_classes = @{ $self->_get_sorted_sub_command_classes };
     my @sub_command_classes= qw/
         Genome::Model::Command::AddReads::AssignRun
         Genome::Model::Command::AddReads::AlignReads
         Genome::Model::Command::AddReads::ProcessLowQualityAlignments
         Genome::Model::Command::AddReads::AcceptReads
     /;
-
-    if ($self->adaptor_file && ! -f $self->adaptor_file) {
-        $self->error_message("Specified adaptor file does not exist");
-        return;
-    }
 
     my $read_set_id = $self->read_set_id;
     
@@ -95,6 +86,23 @@ $DB::single=1;
     unless ($read_set) {
         $self->error_message("Failed to find run $read_set_id");
         return;
+    }
+
+    my $sequencing_platform;
+    if ($read_set->isa("GSC::RunLaneSolexa")) {
+        $sequencing_platform = 'solexa';
+    }
+    elsif ($read_set->isa("GSC::RunRegion454")) {
+        $sequencing_platform = '454';
+    }
+    else {
+        $self->error_message("Cannot resolve sequencing platform for "
+            . ref($read_set)
+            . " " 
+            . $read_set->name 
+            . " (" . $read_set->id . ")"
+        );
+        return; 
     }
 
     my $run_name = $read_set->run_name;
@@ -159,7 +167,7 @@ $DB::single=1;
             run_name => $run_name,
             full_path => $full_path,
             limit_regions => $lane, #TODO: platform-neutral name for lane/region!!
-            sequencing_platform => $self->sequencing_platform,
+            sequencing_platform => $sequencing_platform,
             sample_name => $model->sample_name,
         );
         unless ($run) {
@@ -172,8 +180,12 @@ $DB::single=1;
     my $last_command;
 
     foreach my $command_class ( @sub_command_classes ) {
-        my $command = $command_class->create(run_id => $run->id,
-                                             model_id => $self->model_id);
+        my $command = $command_class->create(
+            run_id => $run->id,
+            model_id => $self->model_id,
+            event_status => 'Scheduled',
+            retry_count => 0,
+        );
         unless ($command) {
             $self->error_message(
                 "Problem creating subcommand for class $command_class run id ".$run->id
@@ -183,72 +195,14 @@ $DB::single=1;
             return;
         }
         
-        if (ref($command)) {   # If there's a command to be done at this step
-            # FIXME This isn't very clean.  We should come up with a vetter way to do it
-            # TODO: instead of passing the adaptor, have the code which cares look it up
-            #       since the logic which passes this just checks genomic vs. cdna
-            if ($self->adaptor_file and $command->can('adaptor_file')) {
-                $command->adaptor_file($self->adaptor_file);
-            }
-
-            $command->event_status('Scheduled');
-            $command->retry_count(0);
-            my $should_bsub = 0;
-            if ($command->can('should_bsub')) {
-                $should_bsub = $command->should_bsub;
-            }
-
-            if ($should_bsub && $self->bsub) {
-                $last_bsub_job_id = $self->Genome::Model::Event::run_command_with_bsub($command,$last_command);
-                return unless $last_bsub_job_id;
-                $command->lsf_job_id($last_bsub_job_id);
-                $last_command  = $command;
-            } elsif (! $self->test) {
-                my $rv = $command->execute();
-                $command->date_completed(UR::Time->now());
-                $command->event_status($rv ? 'Succeeded' : 'Failed');
-
-                last unless ($rv);  # Stop the pipline if one of these fails
-            } else {
-                print "Created $command_class for run_id ",$run->id," event_id ",$command->genome_model_event_id,"\n";
-            }
+        $self->status_message("Launched $command_class for run_id ",$run->id," event_id ",$command->genome_model_event_id,"\n");
+        
+        if ($self->test) {
+            $command->lsf_job_id("test " . UR::Context::Process->get_current());
         }
     }
 
     return 1; 
-}
-
-
-sub _determine_default_limit_regions {
-    my($self) = @_;
-
-    unless ($self->sequencing_platform eq 'solexa') {
-        $self->error_message("Don't know how to determine limit-regions for sequencing platform ".$self->sequencing_platform);
-        return;
-    }
-    return '12345678';
-}
-
-## used for a special test case, needs to be fixed to be a run-time option
-sub XXXXX_sub_command_classes {
-    my $self = shift;
-    
-    my @classes = $self->SUPER::sub_command_classes(@_);
-    
-    return grep { /::Test(A|B|C|D|E)/ } @classes;
-}
-
-
-sub _get_sorted_sub_command_classes{
-    my $self = shift;
-
-    # Determine what all the sub-commands are going to be
-    my @sub_command_classes = sort { $a->sub_command_sort_position
-                                     <=>
-                                     $b->sub_command_sort_position
-                                   } grep {! $_->can('is_not_to_be_run_by_add_reads')} $self->sub_command_classes();
-    
-    return \@sub_command_classes;
 }
 
 1;
