@@ -104,11 +104,11 @@ sub execute {
 
             die "got $data{chrom} expected >$expected_chrom<" unless $data{chrom} eq 'chr' . $expected_chrom;
 
-            my $allele_string = $data{refallele} . '/' . $data{otherallele};
+            my $allele_string = uc($data{refallele} . '/' . $data{otherallele});
             my $allele_freq = $data{otherallele_freq};
             my $pos = $data{pos};
 
-            until ($next_db_variant->{START_} == $pos and $allele_string eq $next_db_variant->{ALLELE_STRING}) {
+            until ($next_db_variant->{START_} == $pos and $allele_string eq uc($next_db_variant->{ALLELE_STRING})) {
                 if ($next_db_variant->{START_} > $pos) {
                     print "no variant at $pos for $expected_chrom and allele $allele_string\n";
                     next ROW;

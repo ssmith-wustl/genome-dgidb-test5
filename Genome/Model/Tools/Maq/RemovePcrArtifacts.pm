@@ -72,3 +72,6 @@ sub execute {
     $self->result($result);
     return $result;
 }
+
+1;
+
