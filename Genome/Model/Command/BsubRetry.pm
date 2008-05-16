@@ -146,15 +146,16 @@ $DB::single=1;
         next if ($command_obj->lsf_job_id == $sched_event->lsf_job_id); # dont check me
         if (my ($sched_lsf_state, $sched_lsf_events) = $self->lsf_state($sched_event->lsf_job_id)) {
             if (exists $sched_lsf_events->[0]->[1]->{'Dependency Condition'}) {
+                my $queue = $add_reads_queue{'bsub_queue'};
                 if ($sched_lsf_events->[0]->[1]->{'Dependency Condition'} =~ /^(ended|done)\($old_lsf_job_id\)$/) {
                     my $dep_lsf_job = $sched_event->lsf_job_id;
                 $self->status_message("Changing dependancy of jobid $dep_lsf_job from $old_lsf_job_id to $job_id");
-                    my $bmod_out = `bmod -w '$1($job_id)' $dep_lsf_job`;
+                    my $bmod_out = `bmod -q $queue -w '$1($job_id)' $dep_lsf_job`;
                 } elsif ($sched_lsf_events->[0]->[1]->{'Dependency Condition'} =~ /^$old_lsf_job_id$/) {
                     ## handle old behavior
                     my $dep_lsf_job = $sched_event->lsf_job_id;
                 $self->status_message("Changing dependancy of jobid $dep_lsf_job from $old_lsf_job_id to $job_id");
-                    my $bmod_out = `bmod -w $job_id $dep_lsf_job`;
+                    my $bmod_out = `bmod -q $queue -w $job_id $dep_lsf_job`;
                 }
 
             }
