@@ -153,7 +153,7 @@ sub execute {
     my $self = shift;
     
 $DB::single = 1;
-    my $model = Genome::Model->get(id => $self->model_id);
+    my $model = $self->model;
     my $maq_pathname = $self->proper_maq_pathname('read_aligner_name');
 
    # ensure the reference sequence exists.
