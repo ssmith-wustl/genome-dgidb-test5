@@ -338,7 +338,7 @@ sub execute_with_bsub {
     my ($self, %params) = @_;
     my $last_command = $params{last_command};
     my $dep_type = $params{dep_type};
-    my $queue = $params{bsub_queue};
+    my $queue = $params{bsub_queue} || 'long';
     my $bsub_args = $params{bsub_args};
     
     my $model_id = $self->model_id;
@@ -359,7 +359,7 @@ sub execute_with_bsub {
     my $class = $self->class;
     my $id = $self->id;
     #my $cmd = qq|perl -e 'use above "Genome"; $class->get($id)->execute() && UR::Context->commit();'|;
-    my $cmd = 'genome-model bsub-helper';
+    my $cmd = 'ssh localhost genome-model bsub-helper';
     
     my $event_id = $self->genome_model_event_id;
     my $prior_event_id = $last_command->genome_model_event_id if defined $last_command;
