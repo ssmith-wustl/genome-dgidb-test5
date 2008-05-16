@@ -103,7 +103,7 @@ sub execute {
     $out_fh->close;
 
     my @args = ($maq_pathname, 'runscript', $self->tmp_script);
-    print STDERR "@args\n";
+    $self->status_message("Running command: @args\n");
 
     my $rv = system(@args);
     if ($rv) {
