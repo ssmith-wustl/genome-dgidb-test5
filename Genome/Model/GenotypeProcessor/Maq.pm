@@ -16,6 +16,7 @@ class Genome::Model::GenotypeProcessor::Maq {
     has => [
         ref_seq_id => { is => 'Integer', is_optional => 1, doc => 'reference sequence id to operate against' },
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
+        model      => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
     ]
 };
 
@@ -30,45 +31,44 @@ our $QC_CUTOFF = 0;
 sub get_mutations {
     my $self = shift;
 
-    my $model = Genome::Model->get(id => $self->model_id);
+    my @find_variations = Genome::Model::Event->get(
+                                                    model_id => $self->model_id,
+                                                    ref_seq_id => $self->ref_seq_id,
+                                                    event_type => {operator => 'like', value => '%find-variation%'},
+                                                    event_status => 'Succeeded',
+                                                );
+    my $find_variation = $find_variations[0];
+
+    my $model = $self->model;
 $DB::single=1;
   
     my $variations = {};
 
-    my $snp_resource_name = sprintf("snips%s.filtered",
-                                    defined $self->ref_seq_id ? "_".$self->ref_seq_id
-                                                              : "");
-    my $pileup_resource_name = sprintf("pileup%s",
-                                    defined $self->ref_seq_id ? "_".$self->ref_seq_id
-                                                              : "");
-    my $snip_output_file = sprintf("%s/identified_variations/%s", $model->data_directory,$snp_resource_name);
-    my $pileup_output_file = sprintf("%s/identified_variations/%s", $model->data_directory,$pileup_resource_name);
-
-    foreach my $file ( $snip_output_file, $pileup_output_file) {
+    foreach my $file ( $find_variation->snip_output_file, $find_variation->pileup_output_file) {
         unless (-f $file and -s $file) {
             $self->error_message("File $file dosen't exist or has no data.  It should have been filled-in in a prior step");
             return;
         }
     }
 
-    foreach my $resource ( $snp_resource_name, $pileup_resource_name) {
+    foreach my $resource ( $find_variation->snip_resource_name, $find_variation->pileup_resource_name) {
         unless ($model->lock_resource(resource_id => $resource)) {
             $self->error_message("Can't get lock for resource $resource");
             return undef;
         }
     }
 
-    $self->status_message("Parsing snip file $snip_output_file");
-    $self->_parse_snip_file($snip_output_file, $variations);
+    $self->status_message("Parsing snip file ". $find_variation->snip_output_file);
+    $self->_parse_snip_file($find_variation->snip_output_file, $variations);
 
-    $self->status_message("Parsing pileup file $pileup_output_file");
-    $self->_parse_pileup_file($pileup_output_file, $variations);
+    $self->status_message("Parsing pileup file ". $find_variation->pileup_output_file);
+    $self->_parse_pileup_file($find_variation->pileup_output_file, $variations);
     
     my $output = $self->_convert_variations_to_output($variations);
 
     my $mutations = $self->_convert_output_to_mutations($output);
 
-     foreach my $resource ( $snp_resource_name, $pileup_resource_name) {
+     foreach my $resource ( $find_variation->snip_resource_name, $find_variation->pileup_resource_name) {
         unless ($model->unlock_resource(resource_id => $resource)) {
             $self->error_message("Can't release lock for resource $resource");
             return undef;
