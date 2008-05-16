@@ -132,7 +132,6 @@ $DB::single=1;
     my ($full_path) = keys %dirs;
     $full_path .= '/' unless $full_path =~ m|\/$|;
 
-    ($run_name)=($full_path=~ m/.*\/(.*?)\..*\/?$/);
  
 
     my $run = Genome::RunChunk->get(
