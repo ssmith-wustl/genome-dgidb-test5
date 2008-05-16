@@ -47,7 +47,7 @@ sub execute {
     my $self = shift;
     
 $DB::single=1;
-    my $model = Genome::Model->get($self->model_id);
+    my $model = $self->model;
 
     my @run_events = grep {defined $_->run_id} Genome::Model::Event->get(model_id=>$self->model_id,
                                                                          event_type => {operator =>'like',
@@ -72,6 +72,11 @@ $DB::single=1;
                                                               model_id=>$self->model_id);
 
     my $mut_list = $gproc->get_mutations();
+
+    unless ($mut_list) {
+        $self->error_message("No mutations found");
+        return;
+    }
 
 
     my $mutations = {};
@@ -131,6 +136,7 @@ $DB::single=1;
 sub bsub_rusage {
     return "-R 'rusage[mem=4000]'";
 }
+
 
 1;
 
