@@ -38,7 +38,7 @@ sub should_bsub { 1;}
 sub execute {
     my $self = shift;
 
-    my $model = Genome::Model->get(id => $self->model_id);
+    my $model = $self->model;
     my $maq_pathname = $self->proper_maq_pathname('genotyper_name');
 
     my $model_dir = $model->data_directory;
@@ -47,7 +47,7 @@ sub execute {
         mkdir ("$model_dir/consensus");
     }
 
-    my ($assembly_output_file) = $model->assembly_file_for_refseq($self->ref_seq_id);
+    my ($consensus_file) = $model->assembly_file_for_refseq($self->ref_seq_id);
 
     my $ref_seq_file = sprintf("%s/%s.bfa", $model->reference_sequence_path , $self->ref_seq_id);
 
@@ -63,12 +63,23 @@ sub execute {
     if ($assembly_opts) {
         push @args, $assembly_opts;
     }
-    push @args, ($assembly_output_file, $ref_seq_file, $accumulated_alignments_file);
+    push @args, ($consensus_file, $ref_seq_file, $accumulated_alignments_file);
     $self->status_message("Running command: @args\n");
 
     my $rv = system(@args);
     if ($rv) {
         $self->error_message("nonzero exit code $rv returned by maq, command looks like, @args");
+        return;
+    }
+    return $self->verify_succesful_completion;
+}
+
+sub verify_succesful_completion {
+    my $self = shift;
+
+    my ($consensus_file) = $self->model->assembly_file_for_refseq($self->ref_seq_id);
+    unless (-e $consensus_file && -s $consensus_file > 20) {
+        $self->error_message("Consensus file $consensus_file is too small");
         return;
     }
     return 1;
