@@ -64,7 +64,7 @@ sub execute {
         push @args, $assembly_opts;
     }
     push @args, ($assembly_output_file, $ref_seq_file, $accumulated_alignments_file);
-    print "@args\n";
+    $self->status_message("Running command: @args\n");
 
     my $rv = system(@args);
     if ($rv) {
