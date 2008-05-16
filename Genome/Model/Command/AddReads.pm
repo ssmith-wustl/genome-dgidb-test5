@@ -114,9 +114,9 @@ $DB::single=1;
     }
 
     use File::Basename;
-    my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id);
-    
-    unless (@fs_path) {
+    my $fastq_data_types=["duplicate fastq path" , "unique fastq path"];
+    my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id, data_type => $fastq_data_types);
+   unless (@fs_path) {
         $self->error_message("Failed to find the path for data set $run_name/$lane ($read_set_id)!");
         return;
     }
@@ -131,15 +131,18 @@ $DB::single=1;
     }
     my ($full_path) = keys %dirs;
     $full_path .= '/' unless $full_path =~ m|\/$|;
-    
+
+    ($run_name)=($full_path=~ m/.*\/(.*?)\..*\/?$/);
+ 
+
     my $run = Genome::RunChunk->get(
         seq_id => $read_set_id,
     );
 
     if ($run) {
-        if ($run->run_name ne $run_name) {
-            $self->error_message("Bad run_name value $run_name.  Expected " . $run->run_name);
-            return;
+          if ($run->run_name ne $run_name) {
+                $self->error_message("Bad run_name value $run_name.  Expected " . $run->run_name);
+                 return;
         }
         if ($run->full_path ne $full_path) {
             $self->warning_message("Run $run_name has changed location to $full_path from " . $run->full_path);
@@ -174,6 +177,7 @@ $DB::single=1;
     my $last_command;
 
     foreach my $command_class ( @sub_command_classes ) {
+
         my $command = $command_class->create(
             run_id => $run->id,
             model_id => $self->model_id,
