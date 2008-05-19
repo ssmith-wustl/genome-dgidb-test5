@@ -364,7 +364,7 @@ sub execute_with_bsub {
     my @paths = UR::Util->used_libs();
     my $paths = join ' ', @paths;
     
-    my $cmd = "ssh -o stricthostkeychecking=no -F /etc/ssh/ssh_config localhost perl -I $path `which genome-model` bsub-helper";
+    my $cmd = "ssh -o stricthostkeychecking=no -F /etc/ssh/ssh_config localhost perl -I $paths `which genome-model` bsub-helper";
     
     my $event_id = $self->genome_model_event_id;
     my $prior_event_id = $last_command->genome_model_event_id if defined $last_command;
