@@ -44,6 +44,8 @@ sub should_bsub { 1;}
 our $QC_CUTOFF = 0;
 
 sub execute {
+    return 1;
+    
     my $self = shift;
     
 $DB::single=1;
