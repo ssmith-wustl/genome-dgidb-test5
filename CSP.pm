@@ -634,6 +634,7 @@ my %csp_priority = (
     'validate primer tube'                    => 10,
     'pool pcr product'                        => 10,
     'break empcr'                             => 10,
+    'create dilutions'                        => 10, 
     # middle priority stuff
     'analyze amplicon failure' => 5,
     # lower priority steps
