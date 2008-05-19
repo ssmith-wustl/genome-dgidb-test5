@@ -9,6 +9,8 @@ class Genome::Model::Command::Services::JobMonitor {
     is => 'Command',
     has => [
         dispatcher => { is => 'String', is_optional => 0 },
+        model_id => {is => 'Integer', is_optional => 1 },
+        run_id => {is => 'Integer', is_optional => 1 },    
     ]
 };
 
@@ -37,17 +39,17 @@ sub context {
 sub execute {
     my $self = shift;
 
-    unless ($< == 10102) {
-        $self->error_message("This module should only be run by via cron.");
-        return;
-    }
+    #unless ($< == 10102) {
+    #    $self->error_message("This module should only be run by via cron.");
+    #    return;
+    #}
 
     $DB::single = 1;
 
     no warnings;
     
     my @launchable_events =
-        grep { $_->event_type !~ /accept/ } 
+        grep { $_->event_type !~ /create/ }
         sort { ($a->model_id <=> $b->model_id) || ($a->date_scheduled <=> $b->date_scheduled) }
         Genome::Model::Event->get(
             event_status => 'Scheduled', # how did this get an uppercase everywhere?
@@ -55,12 +57,20 @@ sub execute {
             ref_seq_id => undef,
             #-order_by => ['model_id','date_scheduled'],
         );
-
     $DB::single = 1;
-
+    
+    if ($self->model_id) {
+        @launchable_events = grep {$_->model_id == $self->model_id} @launchable_events;
+    }
+    if ($self->run_id) {
+        @launchable_events = grep {$_->run_id == $self->run_id} @launchable_events;
+    }
+   
+   
     $self->_launch_events(@launchable_events);
 
-    @launchable_events = 
+    @launchable_events =
+        grep { $_->event_type !~ /create/ }
         sort { ($a->model_id <=> $b->model_id) || ($a->date_scheduled <=> $b->date_scheduled) }
         Genome::Model::Event->get(
             event_status => 'Scheduled', # how did this get an uppercase everywhere?
@@ -68,6 +78,13 @@ sub execute {
             run_id => undef,
             #-order_by => ['model_id','-ref_seq_id'],
         );
+
+    if ($self->model_id) {
+        @launchable_events = grep {$_->model_id == $self->model_id} @launchable_events;
+    }
+    if ($self->run_id) {
+        @launchable_events = grep {$_->run_id == $self->run_id} @launchable_events;
+    }
 
     $self->_launch_events(@launchable_events);
 
@@ -97,8 +114,7 @@ sub _launch_events {
                 $last_event = undef;
             }
         }
-        
-        
+
         if ($self->dispatcher eq "inline") {
             my $result = $event->execute();
             $event->date_completed(UR::Time->now);
@@ -108,7 +124,6 @@ sub _launch_events {
             else {
                 $event->event_status("Failed");
             }
-            
         }
         elsif ($self->dispatcher eq "lsf") {
             my $last_bsub_job_id = $event->execute_with_bsub(last_event => $last_event);
@@ -123,6 +138,7 @@ sub _launch_events {
                 }
                 redo;
             }
+            $event->date_scheduled(UR::Time->now);
             $event->lsf_job_id($last_bsub_job_id);
         }
         else {
