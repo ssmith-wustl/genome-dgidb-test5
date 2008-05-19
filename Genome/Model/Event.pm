@@ -359,7 +359,12 @@ sub execute_with_bsub {
     my $class = $self->class;
     my $id = $self->id;
     #my $cmd = qq|perl -e 'use above "Genome"; $class->get($id)->execute() && UR::Context->commit();'|;
-    my $cmd = 'ssh localhost genome-model bsub-helper';
+
+    # THE SSH COMMAND AND PARTICULARLY THE NO HOST KEY CHECK IS NOT A GREATE IDEA BUT WORKS FOR GETTING pam_limits
+    my @paths = UR::Util->used_libs();
+    my $paths = join ' ', @paths;
+    
+    my $cmd = "ssh -o stricthostkeychecking=no -F /etc/ssh/ssh_config localhost perl -I $path `which genome-model` bsub-helper";
     
     my $event_id = $self->genome_model_event_id;
     my $prior_event_id = $last_command->genome_model_event_id if defined $last_command;
@@ -385,7 +390,7 @@ sub execute_with_bsub {
                    " $cmd --model-id $model_id --event-id $event_id " .
                    ($prior_event_id && " --prior-event-id $prior_event_id");
     }
-
+    
     $self->status_message("Running command: " . $cmdline);
 
     my $bsub_output = `$cmdline`;
