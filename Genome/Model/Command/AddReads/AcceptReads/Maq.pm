@@ -49,8 +49,9 @@ sub execute {
     }
 
     my $lane_mapfile;
-    if ($self->model->multi_read_fragment_strategy() eq 'EliminateAllDuplicates'  and
-        -f $self->unique_alignment_file_for_lane) { 
+    if (defined $self->model->multi_read_fragment_strategy() 
+        and $self->model->multi_read_fragment_strategy() eq 'EliminateAllDuplicates'  
+        and -f $self->unique_alignment_file_for_lane) { 
         # The whole-lane .map file is still around, and we only need the unique reads file anyway
         $lane_mapfile = $self->unique_alignment_file_for_lane;
 
@@ -66,7 +67,8 @@ sub execute {
             push @input_mapfiles, glob($self->alignment_submaps_dir_for_lane . '/*unique.map');
         }
                 
-        if ($self->model->multi_read_fragment_strategy() ne 'EliminateAllDuplicates') {
+        if (defined($self->model->multi_read_fragment_strategy)
+            and $self->model->multi_read_fragment_strategy() ne 'EliminateAllDuplicates') {
             # Include duplicate reads, too?
             if (-f $self->duplicate_alignment_file_for_lane) {
                 push @input_mapfiles, $self->duplicate_alignment_file_for_lane;
