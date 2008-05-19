@@ -7,39 +7,51 @@ use File::Path;
 our $log_base = '/gscmnt/sata114/info/medseq/model_data/logs/';
 
 use Genome;
-UR::Object::Type->define(
-    class_name => 'Genome::Model::Event',
+class Genome::Model::Event {
     is => ['Genome::Model::Command'],
-    english_name => 'genome model event',
+    type_name => 'genome model event',
     table_name => 'GENOME_MODEL_EVENT',
+    is_abstract => 1,
+    first_sub_classification_method_name => '_resolve_subclass_name',
+    sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
         genome_model_event_id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        date_completed      => { is => 'TIMESTAMP(20)', len => 11, is_optional => 1 },
-        date_scheduled      => { is => 'TIMESTAMP(20)', len => 11, is_optional => 1 },
-        
-        event_status        => { is => 'VARCHAR2', len => 32, is_optional => 1 },
-        event_type          => { is => 'VARCHAR2', len => 255 },
-        lsf_job_id          => { is => 'VARCHAR2', len => 64, is_optional => 1 },
-        ref_seq_id          => { is => 'VARCHAR2', len => 64, is_optional => 1 },
-        user_name           => { is => 'VARCHAR2', len => 64, is_optional => 1 },
-        retry_count         => { is => 'NUMBER', len => 3, is_optional => 1 },
-        
-        # these are currently in the main event table as nullable field, but will move        
-        run_id              => { is => 'NUMBER', len => 11, is_optional => 1, doc => 'the genome_model_run on which to operate' }, 
-        ref_seq_id          => { is => 'NUMBER', len => 11, is_optional => 1, doc => 'identifies the refseq'},
-        
-        model_id            => { is => 'NUMBER', len => 11 },
-        model               => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
-        model_name          => { via => 'model', to => 'name' },
-        sample_name         => { via => 'model' },
+        model                           => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
+        event_type                      => { is => 'VARCHAR2', len => 255 },
+        event_status                    => { is => 'VARCHAR2', len => 32 },
+        user_name                       => { is => 'VARCHAR2', len => 64 },
     ],
-    is_abstract => 1,
-    sub_classification_method_name => '_resolve_subclass_name',
+    has_optional => [
+        run_id                          => { is => 'NUMBER', len => 11,  
+                                                  doc => "the genome_model_run on which to operate" },
+        ref_seq_id                      => { is => 'NUMBER', len => 11,  
+                                                  doc => "identifies the refseq" },
+        
+        parent_event                    => { is => 'Genome::Model::Event', id_by => ['parent_event_id'], constraint_name => 'GME_PAEID_FK' },
+        prior_event                     => { is => 'Genome::Model::Event', id_by => ['prior_event_id'], constraint_name => 'GME_PPEID_FK' },
+        
+        date_completed                  => { is => 'TIMESTAMP', len => 20 },
+        date_scheduled                  => { is => 'TIMESTAMP', len => 20 },
+        
+        lsf_job_id                      => { is => 'VARCHAR2', len => 64 },
+        retry_count                     => { is => 'NUMBER', len => 3 },
+        status_detail                   => { is => 'VARCHAR2', len => 200 },
+        
+        # bug requiring these explicitly when the reference is circular?
+        parent_event_id                 => { is => 'NUMBER', len => 11 },
+        prior_event_id                  => { is => 'NUMBER', len => 11 },
+        
+        
+    ],
+    has_many_optional => [
+        inputs                          => { is => 'Genome::Model::Event::Input',  reverse_id_by => 'event' }, 
+        outputs                         => { is => 'Genome::Model::Event::Output', reverse_id_by => 'event' }, 
+    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
-);
+};
 
 sub create {
     my $class = shift;
