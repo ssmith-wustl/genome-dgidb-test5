@@ -64,7 +64,7 @@ $DB::single=1;
     }
 
     unless ($event->verify_prior_event) {
-        my $prior_event =  $self->get_prior_event;
+        my $prior_event =  $event->get_prior_event;
         $self->error_message('Prior event did not verify: '. $prior_event->genome_model_event_id .' '.
                              $prior_event->event_status);
         return;
@@ -75,79 +75,10 @@ $DB::single=1;
                              " does not match the command line ".$self->model_id);
         return;
     }
-
-=cut
-
-    # Re-load the command object with the proper class.
-    # FIXME Maybe Event.pm could be changed to do this for us at some point
-    my $command_obj;
-    {
-        my $proper_command_class_name = $event->class_for_event_type();
-        unless ($proper_command_class_name) {
-            $self->error_message('Could not derive command class for command string '.$event->event_type);
-            return;
-        }
-        $command_obj = $proper_command_class_name->get(genome_model_event_id => $event->genome_model_event_id);
-    }
-
-=cut
     
     my $command_obj = $event;
 
-    if ($self->prior_event_id) {
-        my $prior_event = Genome::Model::Event->load(id => $self->prior_event_id);
-
-=cut
-        my $prior_command_obj;
-        {
-            my $proper_command_class_name = $prior_event->class_for_event_type();
-            unless ($proper_command_class_name) {
-                $self->error_message('Could not derive command class for command string '.$prior_event->event_type);
-                return;
-            }
-            $prior_command_obj = $proper_command_class_name->get(genome_model_event_id => $prior_event->genome_model_event_id);
-        }
-=cut
-
-        my $prior_command_obj = $event;
-        
-        if ($prior_event && $prior_event->lsf_job_id) {
-            my ($state, $lsf_events) = $self->lsf_state($prior_event->lsf_job_id);
-            
-            my $queue = $state->{Queue};
-            
-            if ($state->{Status} eq 'EXIT') {
-                # retry tests here
-                my $max_retries = ($prior_command_obj->can('max_retries') ? $prior_command_obj->max_retries : 0);
-                
-                if ($prior_command_obj->retry_count < $max_retries) {
-                    $prior_command_obj->retry_count($prior_command_obj->retry_count + 1);
-
-                    $prior_command_obj->lsf_job_id($ENV{'LSB_JOBID'});
-                    
-                    ## refactor this some day so the redo_bsub method is on the $command_obj
-                    ## right now its more of a utility
-                    my $new_job_id = $self->redo_bsub($command_obj, $prior_command_obj);
-                    $command_obj->lsf_job_id($new_job_id);
-
-                    $event = $prior_event;
-                    $command_obj = $prior_command_obj;
-                } else {
-                    # reschedule myself exactly as before but with a "done" dependency
-                    # this will make bsub-retry behave as expected after a manual fix
-                    
-                    my $new_job_id = $self->redo_bsub($command_obj, $prior_command_obj, 'done');
-                    $command_obj->lsf_job_id($new_job_id);
-                    
-                    ## email or something here
-                    
-                    return 1;
-                }
-            }
-        }
-    }
-
-    unless ($command_obj->lsf_job_id) {
+       unless ($command_obj->lsf_job_id) {
         $command_obj->lsf_job_id($ENV{'LSB_JOBID'});
     }
     $command_obj->date_scheduled(UR::Time->now());
@@ -171,7 +102,9 @@ $DB::single=1;
     return $rv;
 }
 
-sub redo_bsub {
+
+###Bad juju####
+sub Xredo_bsub {
     my ($self, $command_obj, $prior_command_obj, $dep_type) = @_;
     $dep_type ||= 'ended';
 
