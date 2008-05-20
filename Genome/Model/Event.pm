@@ -502,5 +502,29 @@ sub run_command_with_bsub {
 sub max_retries {
     0;  #temporarily disabled until rusage issue is dealt with,  sometimes retries maq on non-64 bit blades
 }
+
+sub get_prior_event {
+    my $self = shift;
     
+    if (defined $self->prior_event_id) {
+        return Genome::Model::Event->get($self->prior_event_id);
+    }
+    
+    return;
+}
+
+sub verify_prior_event {
+    my $self = shift;
+    
+    if (defined $self->prior_event_id) {
+        my $prior_event = $self->get_prior_event;
+        unless ($prior_event->event_status eq 'Succeeded') {
+            $self->error_message('Prior event '. $self->prior_event_id .' is not Succeeded');
+            return;
+        }
+    }
+
+    return 1;
+}
+
 1;
