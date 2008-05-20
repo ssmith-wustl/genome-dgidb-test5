@@ -435,6 +435,15 @@ sub PSEDataInfo{
 	$max = length($_) if length($_) > $max;
     }
 
+    #LSF: Let execute it if the validation_cmd is defined.
+    if($validation_cmd){
+	unless(&$validation_cmd($param_value)){
+	    #-- reset the value to whatever the current is
+	    my ($value) = $pse->added_param($param_name);
+	    $param_value = $value;
+	}
+    }
+
     $frame -> BrowseEntry(-label => '', 
 			  -width => $max,
 			  -variable => \$param_value, 
