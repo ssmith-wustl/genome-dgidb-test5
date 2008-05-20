@@ -74,6 +74,8 @@ sub _shell_args_property_meta {
         } shift->SUPER::_shell_args_property_meta(@_);
 }
 
+
+
 # This is called by the infrastructure to appropriately classify abstract events
 # according to their event type because of the "sub_classification_method_name" setting
 # in the class definiton...
@@ -348,8 +350,8 @@ sub map_files_for_refseq {
 
 sub execute_with_bsub {
     my ($self, %params) = @_;
-    my $last_command = $params{last_command};
-    my $dep_type = $params{dep_type};
+    my $last_event = $params{last_event};
+    my $dep_type = $params{dep_type} || 'done';
     my $queue = $params{bsub_queue} || 'long';
     my $bsub_args = $params{bsub_args};
     
@@ -361,7 +363,7 @@ sub execute_with_bsub {
     $DB::single=1;
     
     my $last_bsub_job_id;
-    $last_bsub_job_id = $last_command->lsf_job_id if defined $last_command;
+    $last_bsub_job_id = $last_event->lsf_job_id if defined $last_event;
 
     
     if (my $bsub_rusage = $self->bsub_rusage) {
@@ -379,7 +381,7 @@ sub execute_with_bsub {
     my $cmd = "ssh -o stricthostkeychecking=no -F /etc/ssh/ssh_config localhost perl -I $paths `which genome-model` bsub-helper";
     
     my $event_id = $self->genome_model_event_id;
-    my $prior_event_id = $last_command->genome_model_event_id if defined $last_command;
+    my $prior_event_id = $last_event->genome_model_event_id if defined $last_event;
 
     my $log_dir = $self->resolve_log_directory;
     unless (-d $log_dir) {
