@@ -63,6 +63,13 @@ $DB::single=1;
         return;
     }
 
+    unless ($event->verify_prior_event) {
+        my $prior_event =  $self->get_prior_event;
+        $self->error_message('Prior event did not verify: '. $prior_event->genome_model_event_id .' '.
+                             $prior_event->event_status);
+        return;
+    }
+
     unless ($event->model_id == $self->model_id) {
         $self->error_message("The model id for the loaded event ".$event->model_id.
                              " does not match the command line ".$self->model_id);
