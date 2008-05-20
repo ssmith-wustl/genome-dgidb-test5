@@ -7,6 +7,7 @@ use above "Genome";
 use Command;
 
 class Genome::Model::Command::AddReads::AssignRun {
+    is_abstract => 1,
     is => ['Genome::Model::EventWithReadSet'],
 };
 
