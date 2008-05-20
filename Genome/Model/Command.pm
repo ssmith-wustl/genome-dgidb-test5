@@ -30,6 +30,8 @@ sub help_brief {
 
 sub create {
     my $class = shift;
+    my %params = @_;
+
     my $self = $class->SUPER::create(@_);
     return unless $self;
     
