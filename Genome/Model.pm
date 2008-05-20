@@ -217,7 +217,7 @@ sub maplist_file_paths {
         $ref_seq_id = 'all_sequences';
     }
 
-    return grep { -e $_ } glob($self->alignments_maplist_directory .'/*'. $ref_seq_id .'.maplist');
+    return grep { -e $_ } glob($self->alignments_maplist_directory .'/*_'. $ref_seq_id .'.maplist');
 }
 
 ##
