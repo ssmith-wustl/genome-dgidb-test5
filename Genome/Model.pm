@@ -43,6 +43,13 @@ class Genome::Model {
         alignment_events             => { is => 'Genome::Model::Command::AddReads::AlignReads', is_many => 1, reverse_id_by => 'model',
                                           doc => 'each case of a read set being aligned to the model\'s reference sequence(s), possibly including multiple actual aligner executions',
                                         },
+        _total_read_counts           => { via => 'alignment_events', to => 'total_read_count' },
+        _poorly_aligned_read_counts  => { via => 'alignment_events', to => 'poorly_aligned_read_count' },
+        _contaminated_read_counts    => { via => 'alignment_events', to => 'contaminated_read_count' },
+        _good_read_counts            => { via => 'alignment_events', to => 'good_read_count' },
+        _total_base_pair_counts      => { via => 'alignment_events', to => 'total_base_pair_count' },
+        _good_base_pair_counts       => { via => 'alignment_events', to => 'good_base_pair_count' },
+        
         variant_count                => {
                                             doc => 'the differences between the genome and the reference',
                                             calculate => q|
@@ -57,8 +64,6 @@ class Genome::Model {
                                                 return $c;
                                             |,
                                         },
-        
-                                
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
