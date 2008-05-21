@@ -63,7 +63,7 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
                 return grep { -e $_ } glob("${output_data_dir}/adaptor_sequence_file");
             |,
         },
-        contaminated_read_count => {
+        _contaminated_read_count => {
             doc => "the count of contaminated reads",
             calculate_from => ['aligner_output_file_paths'],
             is_constant => 1,
@@ -89,7 +89,7 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
                 return $total;
             |,
         },
-        poorly_aligned_read_count => {
+        _poorly_aligned_read_count => {
             doc => "the count of contaminated reads",
             calculate_from => ['poorly_aligned_reads_list_paths'],
             is_constant => 1,
@@ -148,6 +148,72 @@ sub bsub_rusage {
 }
 
 sub should_bsub { 1;}
+
+sub generate_metrics {
+    my $self = shift;
+    my $m;
+
+    my $total_read_count;
+    do {
+        no warnings;
+        $total_read_count = ($self->unique_reads_across_library + $self->duplicate_reads_across_library);
+        unless ($total_read_count) {
+            my @f = $self->input_read_file_paths;
+            my ($wc) = grep { /total/ } `wc -l @f`;
+            $wc =~ s/total//;
+            $wc =~ s/\s//g;
+            if ($wc % 4) {
+                warn "run $a->{id} has a line count of $wc, which is not divisible by four!"
+            }
+            $total_read_count = $wc/4;
+        }
+    };
+    
+    my @all;
+    
+    $m = $self->add_metric(
+        name    => 'total_read_count',
+        value   => $total_read_count
+    );
+    push @all, $m;
+    
+    my $poorly_aligned_read_count = $self->_poorly_aligned_read_count;
+    $m = $self->add_metric(
+        name    => 'poorly_aligned_read_count',
+        value   => $poorly_aligned_read_count
+    );
+    push @all, $m;
+
+    my $contaminated_read_count = $self->_contaminated_read_count;
+    $m = $self->add_metric(
+        name    => 'contaminated_read_count',
+        value   => $contaminated_read_count
+    );
+    push @all, $m;
+    
+    my $good_read_count = $total_read_count - $poorly_aligned_read_count - $contaminated_read_count;
+    $m = $self->add_metric(
+        name    => 'good_read_count',
+        value   => $good_read_count
+    );
+    push @all, $m;
+    
+    my $total_base_pair_count = $total_read_count * $self->read_set->read_length;
+    $m = $self->add_metric(
+        name    => 'total_base_pair_count',
+        value   => $total_base_pair_count
+    );
+    push @all, $m;
+    
+    my $good_base_pair_count = $good_read_count * $self->read_set->read_length;
+    $m = $self->add_metric(
+        name    => 'good_base_pair_count',
+        value   => $good_base_pair_count
+    );
+    push @all, $m;
+
+    return @all;
+}
 
 sub execute {
     my $self = shift;
@@ -324,6 +390,8 @@ $DB::single = 1;
         #Should attempt something like this to avoid circular symlinks
         #if (-l read_link($self->))
     }
+
+    $self->generate_metrics;
 
     return 1;
 }
