@@ -353,14 +353,16 @@ sub map_files_for_refseq {
 sub execute_with_bsub {
     my ($self, %params) = @_;
     my $last_event = $params{last_event};
-    my $dep_type = $params{dep_type} || 'done';
-    my $queue = $params{bsub_queue} || 'long';
+    my $dep_type = $params{dep_type};
+    my $queue = $params{bsub_queue};
     my $bsub_args = $params{bsub_args};
     
     my $model_id = $self->model_id;
 
 ## should check if $self isa Command??
-    $dep_type ||= 'ended';
+    $queue ||= 'long';
+    $dep_type ||= 'done';
+    
 
     $DB::single=1;
     
