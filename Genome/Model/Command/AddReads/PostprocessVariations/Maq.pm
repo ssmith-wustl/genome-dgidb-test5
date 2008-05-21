@@ -132,9 +132,10 @@ $DB::single=1;
             $start != $pu_start 
             or
             $ref_sequence ne $pu_ref_sequence
-            or
+            #or
             # in the snp file, the max reported read depth is 255
-            $read_depth != ($read_depth >= 255 ? 255 : $pu_read_depth)) {
+            #$read_depth != ($read_depth >= 255 ? 255 : $pu_read_depth)
+        ) {
             
             $self->error_message("Data is not consistent.  snp file line " . $snip_fh->input_line_number . 
                                  " pileup line " . $pileup_fh->input_line_number);
