@@ -172,8 +172,7 @@ $DB::single=1;
         }
     }
 
-    my $last_bsub_job_id;
-    my $last_command;
+    my $prior_event_id = undef;
 
     foreach my $command_class ( @sub_command_classes ) {
 
@@ -182,6 +181,8 @@ $DB::single=1;
             model_id => $self->model_id,
             event_status => 'Scheduled',
             retry_count => 0,
+            prior_event_id => $prior_event_id,
+            # parent_event_id => $self->id,  ###enable when we are able to save AddReads
         );
         unless ($command) {
             $self->error_message(
@@ -191,12 +192,13 @@ $DB::single=1;
             );
             return;
         }
-        
         $self->status_message("Launched $command_class for run_id ",$run->id," event_id ",$command->genome_model_event_id,"\n");
         
         if ($self->test) {
             $command->lsf_job_id("test " . UR::Context::Process->get_current());
         }
+        
+        $prior_event_id = $command->id;
     }
 
     return 1; 
