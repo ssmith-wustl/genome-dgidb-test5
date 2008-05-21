@@ -59,7 +59,8 @@ class Genome::RunChunk {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-sub name {
+# WHY NOT USE RUN_NAME FROM THE DB????
+sub old_name {
     my $self = shift;
 
     my $path = $self->full_path;
