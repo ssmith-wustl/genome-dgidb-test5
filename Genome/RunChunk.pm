@@ -24,7 +24,7 @@ class Genome::RunChunk {
         genome_model_run_id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        sequencing_platform => { is => 'VARCHAR2', len => 255 },    
+        sequencing_platform => { is => 'VARCHAR2', len => 255 },
         run_name            => { is => 'VARCHAR2', len => 500, is_optional => 1 },
         subset_name         => { is => 'VARCHAR2', len => 32, is_optional => 1, column_name => "LIMIT_REGIONS" },
         sample_name         => { is => 'VARCHAR2', len => 255 },
@@ -40,15 +40,23 @@ class Genome::RunChunk {
                                 |,
                                 calculate_from => ['seq_id']
                             },
-        short_name          => { 
+        short_name          => {
                                 doc => 'The essential portion of the run name which identifies the run.  The rest is redundent information about the instrument, date, etc.',
                                 is => 'String', 
                                 calculate_from => ['run_name'], 
                                 calculate => q|($run_name =~ /_([^_]+)$/)[0]| 
                             },
+        name                => { 
+                                doc => 'This is a long version of the name which is still used in some places.',
+                                is => 'String', 
+                                calculate_from => ['run_name','sample_name'], 
+                                calculate => q|$sample_name . '.' . $run_name| 
+                            },
+                            
         library_name                    => { via => "_run_lane_solexa" },
         unique_reads_across_library     => { via => "_run_lane_solexa" },
         duplicate_reads_across_library  => { via => "_run_lane_solexa" },
+        read_length                     => { via => "_run_lane_solexa" },
         
         # deprecated
         limit_regions       => { is => 'VARCHAR2', len => 32, is_optional => 1, column_name => "LIMIT_REGIONS" },
