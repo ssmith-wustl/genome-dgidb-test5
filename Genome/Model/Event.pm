@@ -48,6 +48,7 @@ class Genome::Model::Event {
     has_many_optional => [
         inputs                          => { is => 'Genome::Model::Event::Input',  reverse_id_by => 'event' }, 
         outputs                         => { is => 'Genome::Model::Event::Output', reverse_id_by => 'event' }, 
+        metrics                         => { is => 'Genome::Model::Event::Metric', reverse_id_by => 'event' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
