@@ -23,6 +23,7 @@ class Genome::Model::EventWithReadSet {
         run_id              => { is => 'NUMBER', len => 11, is_optional => 0, doc => 'the genome_model_run on which to operate', is_deprecated => 1 }, # don't use
         run                 => { is => 'Genome::RunChunk', id_by => 'run_id', is_deprecated => 1 }, # use read_set
     ],
+    sub_classification_method_name => '_get_sub_command_class_name',
 };
 
 sub _shell_args_property_meta {
