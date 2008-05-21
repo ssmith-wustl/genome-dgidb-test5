@@ -195,20 +195,21 @@ END {
 
 sub resolve_run_directory {
     my $self = shift;
-
-    return sprintf('%s/runs/%s/%s', Genome::Model->get($self->model_id)->data_directory,
+    # WHY NOT USE THE RUN_NAME FROM DB??
+    # HOWEVER WILL THIS BREAK ALL OLDER GM RUNS??
+    return sprintf('%s/runs/%s/%s', $self->model->data_directory,
                                     $self->run->sequencing_platform,
-                                    $self->run->name);
+                                    $self->run->run_name);
 }
 sub resolve_log_directory {
     my $self = shift;
 
     if ($self->can('run') && defined $self->run) {
-        return sprintf('%s/logs/%s/%s', Genome::Model->get($self->model_id)->data_directory,
+        return sprintf('%s/logs/%s/%s', $self->model->data_directory,
                                         $self->run->sequencing_platform,
-                                        $self->run->name);
+                                        $self->run->run_name);
     } else {
-        return sprintf('%s/logs/%s', Genome::Model->get($self->model_id)->data_directory,
+        return sprintf('%s/logs/%s', $self->model->data_directory,
                                      $self->ref_seq_id);
     }
 }
@@ -427,7 +428,7 @@ sub execute_with_bsub {
     return $last_bsub_job_id;
 }
 
-sub run_command_with_bsub {
+sub Xrun_command_with_bsub {
     my($self,$command,$last_command, $dep_type) = @_;
 ## should check if $self isa Command??
     $dep_type ||= 'ended';
