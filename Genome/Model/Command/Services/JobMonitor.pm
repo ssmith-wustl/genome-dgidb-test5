@@ -10,7 +10,9 @@ class Genome::Model::Command::Services::JobMonitor {
     has => [
         dispatcher => { is => 'String', is_optional => 0 },
         model_id => {is => 'Integer', is_optional => 1 },
-        run_id => {is => 'Integer', is_optional => 1 },    
+        run_id => {is => 'Integer', is_optional => 1 },
+        bsub_queue => {is => 'String', is_optional => 1 },
+        bsub_args => {is => 'String', is_optional => 1 },   
     ]
 };
 
@@ -140,7 +142,11 @@ if ($self->dispatcher eq "inline") {
     }
 }
 elsif ($self->dispatcher eq "lsf") {
-    my $last_bsub_job_id = $event->execute_with_bsub(last_event => $last_event);
+    my $last_bsub_job_id = $event->execute_with_bsub(
+                                                     last_event => $last_event,
+                                                     bsub_queue => $self->bsub_queue,
+                                                     bsub_args => $self->bsub_args,
+                                                 );
     unless ($last_bsub_job_id) {
         $self->error_message("Error running bsub for event " . $event->id);
         # skip on to the events for the next model
