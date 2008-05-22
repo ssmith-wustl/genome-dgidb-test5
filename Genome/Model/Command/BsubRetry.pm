@@ -77,21 +77,6 @@ $DB::single=1;
         return;
     }
 
-=cut
-
-    # Re-load the command object with the proper class.
-    # FIXME Maybe Event.pm could be changed to do this for us at some point
-    my $command_obj;
-    my $proper_command_class_name = $event->class_for_event_type();
-    {
-        unless ($proper_command_class_name) {
-            $self->error_message('Could not derive command class for command string '.$event->event_type);
-            return;
-        }
-        $command_obj = $proper_command_class_name->get(genome_model_event_id => $event->genome_model_event_id);
-    }
-=cut
-
     my $command_obj = $event;
     
     # What lsf queue should it get rescheduled in to
@@ -104,28 +89,6 @@ $DB::single=1;
             $add_reads_queue{'bsub_queue'} = $old_jobinfo->{'Queue'};
         }
     }
-
-=cut
-    # retry tests here
-
-    ## create a dummy object to call this method, refactor candidate
-    my $ar = Genome::Model::Command::AddReads->create(
-        model_id => $event->model_id,
-        #sequencing_platform => 'solexa', # dont care
-#        full_path => '/tmp', # dont care
-        %add_reads_queue,
-    );
-
-    ## since i'm rerunning prior, set its job_id to me
-    ## then run a new copy of the command i was supposed to run, dependent on my job_id
-    ## finally set the command i should have ran to the new job_id
-
-    my $old_lsf_job_id = $command_obj->lsf_job_id;
-    my $job_id = $ar->Genome::Model::Event::run_command_with_bsub($command_obj);
-
-    $ar->delete;  ## ditch the dummy
-
-=cut
 
     my $old_lsf_job_id = $command_obj->lsf_job_id;
     my $job_id = $command_obj->execute_with_bsub(%add_reads_queue);
