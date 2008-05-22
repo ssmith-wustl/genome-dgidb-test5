@@ -140,7 +140,7 @@ sub _launch_events {
             }
 
         } elsif ($self->dispatcher eq "lsf") {
-            my $last_bsub_job_id = $event->execute_with_bsub( last_event => $self->prior_event || $last_event,
+            my $last_bsub_job_id = $event->execute_with_bsub( last_event => $event->prior_event || $last_event,
                                                               bsub_queue => $self->bsub_queue,
                                                               bsub_args => $self->bsub_args,
                                                             );
