@@ -11,6 +11,7 @@ class Genome::Model::Command::Services::JobMonitor {
         dispatcher => { is => 'String', is_optional => 0 },
         model_id => {is => 'Integer', is_optional => 1 },
         run_id => {is => 'Integer', is_optional => 1 },
+        event_id => {is => 'Integer', is_optional => 1 },
         bsub_queue => {is => 'String', is_optional => 1 },
         bsub_args => {is => 'String', is_optional => 1 },   
     ]
@@ -67,6 +68,9 @@ sub execute {
     if ($self->run_id) {
         @launchable_events = grep {$_->run_id == $self->run_id} @launchable_events;
     }
+    if ($self->event_id) {
+       @launchable_events = grep {$_->id == $self->event_id} @launchable_events;
+    }
    
    
     $self->_launch_events(@launchable_events);
@@ -87,7 +91,10 @@ sub execute {
     if ($self->run_id) {
         @launchable_events = grep {$_->run_id == $self->run_id} @launchable_events;
     }
-
+    if ($self->event_id) {
+       @launchable_events = grep {$_->id == $self->event_id} @launchable_events;
+    }
+    
     $self->_launch_events(@launchable_events);
 
     return 1;
