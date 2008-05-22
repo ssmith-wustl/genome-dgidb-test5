@@ -171,8 +171,12 @@ sub _variant_list_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/identified_variations/snips_%s',@_);
 }
 
-sub _variant_detail_files {
+sub _variant_pileup_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/identified_variations/pileup_%s',@_);
+}
+
+sub _variant_detail_files {
+    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/identified_variations/report_input_%s',@_);
 }
 
 sub _files_for_pattern_and_optional_ref_seq_id {
