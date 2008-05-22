@@ -199,7 +199,7 @@ $DB::single=1;
                                          $ref_read_count,
                                          $read_counts{$sample_read},
                                          $cns_quality_score,
-                                         $self->unique_reads_at_position($mapview_fh, $start),
+                                         #$self->unique_reads_at_position($mapview_fh, $start),
                                    ), "\n");
             # If the sample is homozygous, only report this SNP once
             last if ($sample_alleles[0] eq $sample_alleles[1]);
