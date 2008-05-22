@@ -10,29 +10,12 @@ use Command;
 
 
 class Genome::Model::Command::AddReads::PostprocessAlignments {
-    is => 'Command',
+    is => 'Genome::Model::Event',
     has => [
         model_id   =>  { is => 'Integer', 
                       doc => "Identifies the genome model to which we'll add the reads." },
     ],
-    has_optional => [
-        limit_regions =>  { is => 'String',
-                            doc => 'Which regions should be kept during further analysis' },
-        bsub    =>  { is => 'Boolean',
-                      doc => 'Sub-commands should be submitted to bsub. Default is yes.',
-                      default_value => 1 },
-        bsub_queue => { is => 'String',
-                      doc => 'Which bsub queue to use for sub-command jobs, default is "long"',
-                       default_value => 'long'},
-        bsub_args => { is => 'String',
-                       doc => 'Additional arguments passed along to bsub (such as -o, for example)',
-                       default_value => '' },
-        test => { is => 'Boolean',
-                  doc => 'Create run information in the database, but do not schedule any sub-commands',
-                  is_optional => 1,
-                  default_value => 0},
-    ]
-};
+ };
 
 sub sub_command_sort_position { 40 }
 
@@ -60,7 +43,7 @@ our $GENOME_MODEL_BSUBBED_COMMAND = "genome-model";
 our @CHILD_JOB_CLASSES = ('Genome::Model::Command::AddReads::MergeAlignments',
                           'Genome::Model::Command::AddReads::UpdateGenotype',
                           'Genome::Model::Command::AddReads::FindVariations',
-                          'Genome::Model::Command::AddReads::UploadDatabase');
+                          'Genome::Model::Command::AddReads::PostprocessVariations');
 
 
 sub execute {
@@ -80,28 +63,34 @@ sub execute {
     }
     
     foreach my $ref (@subreferences_names) { 
-        my $last_bsub_job_id;
-        my $last_command;
+        my $prior_event_id = undef;
 
         THIS_PIPELINE:
         foreach my $command_class ( @sub_command_classes ) {
-            my $command = $command_class->create(model_id => $self->model_id, ref_seq_id=>$ref);
-
+            my $command = $command_class->create(
+                model_id => $self->model_id, 
+                ref_seq_id=>$ref,
+                prior_event_id => $prior_event_id,
+                parent_event_id => $self->id,
+            );
+            $command->parent_event_id($self->id);
             $command->event_status('Scheduled');
             $command->retry_count(0);
 
-            my $should_bsub = $command->can('should_bsub') ? $command->should_bsub : 0;
-            if ($should_bsub && $self->bsub) {
-                $last_bsub_job_id = $self->Genome::Model::Event::run_command_with_bsub($command,$last_command);
-                $command->lsf_job_id($last_bsub_job_id);
-                $last_command = $command;
-            } elsif (! $self->test) {
-                my $rv = $command->execute();
-                $command->date_completed(UR::Time->now);
-                $command->event_status($rv ? 'Succeeded' : 'Failed');
+            $prior_event_id = $command->id;
 
-                last THIS_PIPELINE unless ($rv);
-            }
+            #   my $should_bsub = $command->can('should_bsub') ? $command->should_bsub : 0;
+            #  if ($should_bsub && $self->bsub) {
+                #    $last_bsub_job_id = $self->Genome::Model::Event::run_command_with_bsub($command,$last_command);
+                #   $command->lsf_job_id($last_bsub_job_id);
+                #     $last_command = $command;
+                #    } elsif (! $self->test) {
+                    #    my $rv = $command->execute();
+                    #    $command->date_completed(UR::Time->now);
+                    #  $command->event_status($rv ? 'Succeeded' : 'Failed');
+
+                    #   last THIS_PIPELINE unless ($rv);
+                    # }
         }
     }
 
@@ -119,6 +108,10 @@ sub _get_sorted_command_classes{
     
     return \@sub_command_classes;
 }
+
+sub _get_sub_command_class_name{
+  return __PACKAGE__; 
+  }
 
 sub is_not_to_be_run_by_add_reads {
     return 0;
