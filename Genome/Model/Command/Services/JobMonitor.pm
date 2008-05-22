@@ -102,6 +102,7 @@ sub _launch_events {
     
     my $last_event;
     while (my $event = shift @launchable_events) {
+        next unless $event;  # How did undef items get in the list?!
         if( $event->run_id) {
             $self->status_message( join("\t", 
                                         $event->id,
@@ -140,7 +141,12 @@ sub _launch_events {
             }
 
         } elsif ($self->dispatcher eq "lsf") {
-            my $last_bsub_job_id = $event->execute_with_bsub( last_event => $event->prior_event || $last_event,
+            my $prior_event;
+            if ($event->prior_event->event_status eq 'Scheduled' or $event->prior_event->event_status eq 'Running') {
+                $prior_event = $event->prior_event;
+            } 
+ 
+            my $last_bsub_job_id = $event->execute_with_bsub( last_event => $prior_event || $last_event,
                                                               bsub_queue => $self->bsub_queue,
                                                               bsub_args => $self->bsub_args,
                                                             );
