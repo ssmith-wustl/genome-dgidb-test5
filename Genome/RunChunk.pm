@@ -50,7 +50,7 @@ class Genome::RunChunk {
                                 doc => 'This is a long version of the name which is still used in some places.',
                                 is => 'String', 
                                 calculate_from => ['run_name','sample_name'], 
-                                calculate => q|$sample_name . '.' . $run_name| 
+                                calculate => q|$run_name. '.' . $sample_name| 
                             },
                             
         library_name                    => { via => "_run_lane_solexa" },
