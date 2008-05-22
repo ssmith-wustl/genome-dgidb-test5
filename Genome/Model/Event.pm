@@ -61,6 +61,12 @@ sub create {
     unless ($self->event_type) {
         $self->event_type($self->command_name);
     }
+    unless ($self->date_scheduled) {
+        $self->date_scheduled(UR::Time->now);
+    }
+    unless ($self->user_name) {
+        $self->user_name($ENV{USER});
+    }
     return $self;
 }
 
