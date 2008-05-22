@@ -43,10 +43,14 @@ sub execute {
 
     $DB::single = 1; # when debugging, stop here...
 
-    $self->add_output(
-        name => 'transcript annotation csv',
-        value => $detail_file . "csv", 
-    );
+    my ($reports_dir) = $model->_reports_dir();
+    print "$reports_dir\n";
+    unless (-d $reports_dir) {
+        mkdir $reports_dir;
+        `chmod g+w $reports_dir`;
+    }
+
+    # make files in that dir here...
 
     $self->date_completed(UR::Time->now);
     if (0) { # replace w/ actual check
@@ -60,4 +64,5 @@ sub execute {
 }
 
 1;
+
 

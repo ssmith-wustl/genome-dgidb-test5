@@ -6,7 +6,7 @@ use above "Genome";
 use Genome::Model::Command::AddReads::PostprocessVariations;
 use Genome::Model::Command::AddReads::AnnotateVariations;
 
-use Test::More tests => 4;
+use Test::More tests => 3;
 
 my $event_id = 89040994;
 my $event = Genome::Model::Event->get($event_id);
@@ -18,9 +18,6 @@ my $av = Genome::Model::Command::AddReads::AnnotateVariations->execute(
     ref_seq_id => $event->ref_seq_id,
 );
 ok($av, "successfully ran the step to annotate the variations");
-
-my @outputs = $av->outputs();
-is(scalar(@outputs),1,"got expected count");
 
 1;
 
