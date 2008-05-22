@@ -55,7 +55,7 @@ sub should_bsub { 1;}
 
 sub _snp_resource_name {
     my $self = shift;
-    return printf("snips%s.filtered", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
+    return printf("snips%s", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
 }
 
 sub _pileup_resource_name {
@@ -91,9 +91,9 @@ sub execute {
 $DB::single=1;
     # Get a lock for the snp and pileup files
 
-    my $snp_resource_name    = $self->snp_resource_name; 
-    my $pileup_resource_name = $self->pileup_resource_name; 
-    my $report_resource_name = $self->genotype_detail_name; 
+    my $snp_resource_name    = $self->_snp_resource_name; 
+    my $pileup_resource_name = $self->_pileup_resource_name; 
+    my $report_resource_name = $self->_genotype_detail_name; 
 
     my $snip_output_file    = $self->snp_resource_file;
     my $pileup_output_file  = $self->pileup_resource_file;

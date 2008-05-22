@@ -163,7 +163,7 @@ sub execute {
 
     # Running pileup requires some parsing of the snip file
     my $tmpfh = File::Temp->new();
-    my $snip_fh = IO::File->new($filtered_snip_output_file);
+    my $snip_fh = IO::File->new($snip_output_file);
     unless ($snip_fh) {
         $self->error_message("Can't open snip output file for reading: $!");
         return;
