@@ -53,6 +53,36 @@ sub bsub_rusage {
 sub should_bsub { 1;}
 
 
+sub _snp_resource_name {
+    my $self = shift;
+    return printf("snips%s.filtered", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
+}
+
+sub _pileup_resource_name {
+    my $self = shift;
+    return sprintf("pileup%s", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
+}
+
+sub _genotype_detail_name {
+    my $self = shift;
+    return sprintf("report_input%s", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
+}
+
+sub snp_output_file {
+    my $self = shift;
+    return sprintf("%s/identified_variations/%s", $self->model->data_directory,$self->_snp_resource_name);
+}
+
+sub pileup_output_file {
+    my $self = shift;
+    return sprintf("%s/identified_variations/%s", $self->model->data_directory,$self->_pileup_resource_name);
+}
+
+sub genotype_detail_file {
+    my $self = shift;
+    return sprintf("%s/identified_variations/%s", $self->model->data_directory, $self->_genotype_detail_name);
+}
+
 sub execute {
     my $self = shift;
 
@@ -61,19 +91,13 @@ sub execute {
 $DB::single=1;
     # Get a lock for the snp and pileup files
 
-    my $snp_resource_name = sprintf("snips%s.filtered",
-                                    defined $self->ref_seq_id ? "_".$self->ref_seq_id
-                                                              : "");
-    my $pileup_resource_name = sprintf("pileup%s",
-                                    defined $self->ref_seq_id ? "_".$self->ref_seq_id
-                                                              : "");
-    my $report_resource_name = sprintf("report_input%s",
-                                    defined $self->ref_seq_id ? "_".$self->ref_seq_id
-                                                              : "");
+    my $snp_resource_name    = $self->snp_resource_name; 
+    my $pileup_resource_name = $self->pileup_resource_name; 
+    my $report_resource_name = $self->genotype_detail_name; 
 
-    my $snip_output_file = sprintf("%s/identified_variations/%s", $model->data_directory,$snp_resource_name);
-    my $pileup_output_file = sprintf("%s/identified_variations/%s", $model->data_directory,$pileup_resource_name);
-    my $report_input_file = sprintf("%s/identified_variations/%s", $model->data_directory,$report_resource_name);
+    my $snip_output_file    = $self->snp_resource_file;
+    my $pileup_output_file  = $self->pileup_resource_file;
+    my $report_input_file   = $self->genotype_detail_file;
 
     my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
     my $chromosome_resource_name = basename($chromosome_alignment_file);
