@@ -50,6 +50,19 @@ sub execute {
         `chmod g+w $filtered_list_dir`;
     }
 
+    # LOGIC HERE
+   
+    # Example to get a map file...
+    # This creates a map file in /tmp which is actually a named pipe
+    # streaming the data from the original maps.
+    # It can be used only once.  Run this again if you need to use it multiple times.
+    my $map_file_path = $model->resolve_accumulated_alignments_filename(
+        ref_seq_id => '22',
+        library_name => '031308a', # optional
+    );
+    print "made map $map_file_path\n";
+
+    # Clean up when we're done...
     $self->date_completed(UR::Time->now);
     if (0) { # replace w/ actual check
         $self->event_status("Failed");
