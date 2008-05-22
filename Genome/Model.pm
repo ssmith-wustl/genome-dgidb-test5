@@ -43,6 +43,7 @@ class Genome::Model {
         alignment_events             => { is => 'Genome::Model::Command::AddReads::AlignReads', is_many => 1, reverse_id_by => 'model',
                                           doc => 'each case of a read set being aligned to the model\'s reference sequence(s), possibly including multiple actual aligner executions',
                                         },
+        alignment_file_paths         => { via => 'alignment_events' },
         _total_read_counts           => { via => 'alignment_events', to => 'total_read_count' },
         _poorly_aligned_read_counts  => { via => 'alignment_events', to => 'poorly_aligned_read_count' },
         _contaminated_read_counts    => { via => 'alignment_events', to => 'contaminated_read_count' },
@@ -179,6 +180,16 @@ sub _variant_detail_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/identified_variations/report_input_%s',@_);
 }
 
+sub _filtered_variants_dir {
+    my $self = shift;
+    return sprintf('%s/filtered_variations/',$self->data_directory);
+}
+
+sub _reports_dir {
+    my $self = shift;
+    return sprintf('%s/reports/',$self->data_directory);
+}
+
 sub _files_for_pattern_and_optional_ref_seq_id {
     $DB::single = 1;
     my $self=shift;
@@ -231,16 +242,27 @@ sub maplist_file_paths {
 
 ##
 
+sub library_names {
+    my $self = shift;
+    die "TOOD: write me!";    
+}
+
 sub resolve_accumulated_alignments_filename {
     my $self = shift;
     my %p = @_;
     my $ref_seq_id = $p{ref_seq_id};
+    my $library_name = $p{library_name};
+
     my @maplists;
     if ($ref_seq_id) {
         @maplists = $self->maplist_file_paths(%p);
     } else {
         @maplists = $self->maplist_file_paths();
     }
+    if ($library_name) {
+        @maplists = grep { /$library_name/ } @maplists;
+    }
+
     if (!@maplists) {
         $self->error_message("No maplists found");
         return;
