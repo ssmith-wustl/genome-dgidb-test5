@@ -196,22 +196,17 @@ END {
 
 sub resolve_run_directory {
     my $self = shift;
-    # WHY NOT USE THE RUN_NAME FROM DB??
-    # HOWEVER WILL THIS BREAK ALL OLDER GM RUNS??
-    return sprintf('%s/runs/%s/%s.%s', $self->model->data_directory,
+    return sprintf('%s/runs/%s/%s', $self->model->data_directory,
                                     $self->run->sequencing_platform,
-                                    $self->run->run_name,
-                                    $self->run->sample_name);
+                                    $self->run->name);
 }
 sub resolve_log_directory {
     my $self = shift;
 
     if ($self->can('run') && defined $self->run) {
-        return sprintf('%s/logs/%s/%s.%s', $self->model->data_directory,
+        return sprintf('%s/logs/%s/%s', $self->model->data_directory,
                                         $self->run->sequencing_platform,
-                                        $self->run->run_name,
-                                        $self->sample_name,
-                   );
+                                        $self->run->name);
     } else {
         return sprintf('%s/logs/%s', $self->model->data_directory,
                                      $self->ref_seq_id);
