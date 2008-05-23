@@ -3,7 +3,7 @@ package Genome::ProcessingProfile;
 use strict;
 use warnings;
 
-use Genome;
+use above "Genome";
 class Genome::ProcessingProfile {
     type_name => 'processing profile',
     table_name => 'PROCESSING_PROFILE',
@@ -17,5 +17,17 @@ class Genome::ProcessingProfile {
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+# resolves the full subclass name based upon the type_name field
+sub resolve_subclass_name {
+	my $self = shift;
+	my $subclass = $self->type_name;
+
+	my @subclass_parts = map { ucfirst } split(' ', $subclass);
+	$subclass = join('', @subclass_parts);
+
+	my $class_name = join('::', 'Genome::ProcessingProfile' , $subclass);
+	return $class_name;
+}
 
 1;
