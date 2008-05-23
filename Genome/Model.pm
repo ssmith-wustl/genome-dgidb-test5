@@ -94,6 +94,11 @@ sub data_directory {
     return $self->data_parent_directory . '/' . $self->sample_name . "_" . $name;
 }
 
+sub lock_directory {
+    my $self = shift;
+    return $self->data_directory . '/locks/';
+}
+
 sub directory_for_run {
     my ($self, $run) = @_;
     return sprintf('%s/runs/%s/%s', 
@@ -247,6 +252,35 @@ sub library_names {
     die "TOOD: write me!";    
 }
 
+
+sub _mapmerge_locally {
+    my($self,$ref_seq_id,@maplists) = @_;
+
+    $ref_seq_id ||= 'all_sequences';
+
+    my $result_file = '/tmp/mapmerge_' . $self->genome_model_id . '-' . $ref_seq_id;
+
+    my @inputs;
+    foreach my $listfile ( @maplists ) {
+        my $f = IO::File->new($listfile);
+        next unless $f;
+        chomp(my @lines = $f->getlines());
+
+        push @inputs, @lines;
+    }
+
+    if (-f $result_file && -s $result_file) {
+        $self->warning_message("Using mapmerge file left over from previous run: $result_file");
+    } else {
+        $self->warning_message("Performing a complete mapmerge.  Hold on...");
+        my $cmd = Genome::Model::Tools::Maq::MapMerge->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
+        $cmd->execute();
+        $self->warning_message("mapmerge complete.  output filename is $result_file");
+    }
+    return $result_file;
+}
+
+
 sub resolve_accumulated_alignments_filename {
     my $self = shift;
     my %p = @_;
@@ -267,6 +301,12 @@ sub resolve_accumulated_alignments_filename {
         $self->error_message("No maplists found");
         return;
     }
+
+    if ($^P) {
+        # If we're running under the debugger, the fork() below will mess things up
+        return $self->_mapmerge_locally($ref_seq_id,@maplists);
+    }
+
     my $vmerge = Genome::Model::Tools::Maq::Vmerge->create(
                                                            maplist => \@maplists,
                                                        );
@@ -325,9 +365,11 @@ sub is_eliminate_all_duplicates {
 sub lock_resource {
     my($self,%args) = @_;
     my $ret;
-    my $resource_id = $self->data_directory . "/" . $args{'resource_id'} . ".lock";
+    my $resource_id = $self->lock_directory . '/' . $args{'resource_id'} . ".lock";
     my $block_sleep = $args{block_sleep} || 10;
     my $max_try = $args{max_try} || 7200;
+
+    mkdir($self->lock_directory,0777) unless (-d $self->lock_directory);
 
     while(! ($ret = mkdir $resource_id)) {
         return undef unless $max_try--;
@@ -353,7 +395,7 @@ sub unlock_resource {
     my ($self, %args) = @_;
     my $resource_id = delete $args{resource_id};
     Carp::confess("No resource_id specified for unlocking.") unless $resource_id;
-    $resource_id = $self->data_directory . "/" . $resource_id . ".lock";
+    $resource_id = $self->lock_directory . "/" . $resource_id . ".lock";
     unlink $resource_id . '/info';
     rmdir $resource_id;
 }
