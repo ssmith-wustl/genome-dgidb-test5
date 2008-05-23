@@ -138,6 +138,9 @@ sub execute {
     my $indel_output_file =  $self->indel_output_file;
     my $pileup_output_file = $self->pileup_output_file;
 
+    # Remove the result files from any previous run
+    unlink($snip_output_file,$filtered_snip_output_file,$indel_output_file,$pileup_output_file);
+
     my $retval = system("$maq_pathname cns2snp $assembly_output_file > $snip_output_file");
     unless ($retval == 0) {
         $self->error_message("running maq cns2snp returned non-zero exit code $retval");
