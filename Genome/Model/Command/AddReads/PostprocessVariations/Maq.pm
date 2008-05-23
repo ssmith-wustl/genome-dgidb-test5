@@ -128,6 +128,7 @@ $DB::single=1;
         return;
     }
 
+    unlink($report_input_file);
     my $report_fh = IO::File->new(">$report_input_file");
     unless ($report_fh) {
         $self->error_message("Can't open report input file $report_input_file for writing: $!");
