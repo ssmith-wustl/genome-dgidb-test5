@@ -166,7 +166,7 @@ sub _reschedule_failed_jobs {
                             #                                 model_id => $_->model_id,
                             #                                 event_type => $_->event_type,
                             #                                 date_scheduled => { operator => '>', value => $_->date_scheduled } ) }
-                            Genome::Model::Event->get(event_status => 'Failed',%addl_get_params);  
+                            Genome::Model::Event->get(event_status => ['Failed','Crashed'],%addl_get_params);  
 
     while (my $event = shift @launchable_events) {
         # Get subsequent events that have been through a round of 'scheduling'.
