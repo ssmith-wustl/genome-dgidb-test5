@@ -70,6 +70,10 @@ sub create {
     return $self;
 }
 
+sub is_reschedulable {
+    1;
+}
+
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments
     return grep { 
