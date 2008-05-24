@@ -55,7 +55,7 @@ sub should_bsub { 1;}
 
 sub _snp_resource_name {
     my $self = shift;
-    return printf("snips%s", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
+    return sprintf("snips%s", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
 }
 
 sub _pileup_resource_name {
@@ -78,7 +78,7 @@ sub pileup_output_file {
     return sprintf("%s/identified_variations/%s", $self->model->data_directory,$self->_pileup_resource_name);
 }
 
-sub genotype_detail_file {
+su genotype_detail_file {
     my $self = shift;
     return sprintf("%s/identified_variations/%s", $self->model->data_directory, $self->_genotype_detail_name);
 }
