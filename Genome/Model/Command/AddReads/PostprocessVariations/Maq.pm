@@ -95,8 +95,8 @@ $DB::single=1;
     my $pileup_resource_name = $self->_pileup_resource_name; 
     my $report_resource_name = $self->_genotype_detail_name; 
 
-    my $snip_output_file    = $self->snp_resource_file;
-    my $pileup_output_file  = $self->pileup_resource_file;
+    my $snip_output_file    = $self->snp_output_file;
+    my $pileup_output_file  = $self->pileup_output_file;
     my $report_input_file   = $self->genotype_detail_file;
 
     my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
