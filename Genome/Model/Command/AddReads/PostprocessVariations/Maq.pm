@@ -78,7 +78,7 @@ sub pileup_output_file {
     return sprintf("%s/identified_variations/%s", $self->model->data_directory,$self->_pileup_resource_name);
 }
 
-su genotype_detail_file {
+sub genotype_detail_file {
     my $self = shift;
     return sprintf("%s/identified_variations/%s", $self->model->data_directory, $self->_genotype_detail_name);
 }
@@ -215,8 +215,6 @@ $DB::single=1;
 
     return 1;
 }
-
-
 
 # Converts between the 1-letter genotype code into
 # its allele constituients
