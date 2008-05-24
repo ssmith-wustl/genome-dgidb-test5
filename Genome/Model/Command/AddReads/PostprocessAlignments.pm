@@ -113,9 +113,5 @@ sub _get_sub_command_class_name{
   return __PACKAGE__; 
   }
 
-sub is_not_to_be_run_by_add_reads {
-    return 0;
-}
-
 1;
 
