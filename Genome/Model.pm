@@ -96,7 +96,13 @@ sub data_directory {
 
 sub lock_directory {
     my $self = shift;
-    return $self->data_directory . '/locks/';
+    my $data_directory = $self->data_directory;
+    my $lock_directory = $data_directory . '/locks/';
+    if (-d $data_directory and not -d $lock_directory) {
+        mkdir $lock_directory;
+        chmod '2775', $lock_directory;
+    }
+    return $lock_directory;
 }
 
 sub directory_for_run {
