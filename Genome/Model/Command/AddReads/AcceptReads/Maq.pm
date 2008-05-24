@@ -88,27 +88,34 @@ sub execute {
 
     my $line=`/gscmnt/sata114/info/medseq/pkg/maq/branches/lh3/maq-xp/maq-xp pileup -t $lane_mapfile 2>&1`;
     my ($evenness)=($line=~/(\S+)\%$/);
-    if($evenness > $model->align_dist_threshold) {
-        # The align-reads step make submap files for each chromosome.  We can delete this one now
-        if ($model->read_aligner_name ne 'maq0_6_3') {
-            # FIXME For 0.6.4 and 0.6.5, don't remove the whole-lane map files, only any new file
-            # we may have created in /tmp.  When we're convinced that we can submap and mapmerge
-            # successfully with newer maq's, the, we only need to keep the three unlink()s
-            # in the else block below
-            if ($lane_mapfile =~ m#/tmp/AcceptReads#) {
-                unlink $lane_mapfile;
-            }
-        } else {
-            unlink $lane_mapfile;
-            unlink $self->unique_alignment_file_for_lane;
-            unlink $self->duplicate_alignment_file_for_lane;
-        }
 
-        return 1;
+    $self->add_metric(
+        name => 'evenness',
+        value => $evenness
+    );
+
+    if($evenness > $model->align_dist_threshold) {
+        $self->add_metric(name => 'read set pass fail', value => 'pass');
     } else {
-        $self->error_message("Run id ".$self->run_id." failed accept reads.  Evenness $evenness is lower than the threshold ".$model->alignment_distribution_threshold);
-        return 0;
+        $self->add_metric(name => 'read set pass fail', value => 'fail');
     }
+
+    # The align-reads step make submap files for each chromosome.  We can delete this one now
+    if ($model->read_aligner_name ne 'maq0_6_3') {
+        # FIXME For 0.6.4 and 0.6.5, don't remove the whole-lane map files, only any new file
+        # we may have created in /tmp.  When we're convinced that we can submap and mapmerge
+        # successfully with newer maq's, the, we only need to keep the three unlink()s
+        # in the else block below
+        if ($lane_mapfile =~ m#/tmp/AcceptReads#) {
+            unlink $lane_mapfile;
+        }
+    } else {
+        unlink $lane_mapfile;
+        unlink $self->unique_alignment_file_for_lane;
+        unlink $self->duplicate_alignment_file_for_lane;
+    }
+
+    return 1;
 }
 
 sub bsub_rusage {
