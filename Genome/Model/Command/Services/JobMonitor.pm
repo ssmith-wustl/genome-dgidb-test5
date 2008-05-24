@@ -78,6 +78,8 @@ sub execute {
         $addl_get_params{'genome_model_event_id'} = $self->event_id;
     }
 
+    $self->_verify_submitted_jobs(%addl_get_params);
+
     $self->_reschedule_failed_jobs(%addl_get_params);
 
     $self->_schedule_scheduled_jobs(%addl_get_params);
@@ -109,6 +111,58 @@ sub _execute_inline_event {
 
 }
     
+# Find events in a 'Scheduled' state, but haven't been submitted to lsf
+sub _verify_submitted_jobs {
+    my($self,%addl_get_params) = @_;
+
+    my @queued_events = 
+        sort { 
+            ($a->model_id <=> $b->model_id) 
+            || 
+            ($a->genome_model_event_id <=> $b->genome_model_event_id) 
+        }
+        Genome::Model::Event->get(
+            event_status => ['Running','Scheduled'],
+            lsf_job_id => { operator => 'ne', value => undef },
+            %addl_get_params
+        );
+    
+    while (my $event = shift @queued_events) {
+        unless ($event->ref_seq_id || $event->run_id) {
+            $self->error_message("Event ".$event->id." has no ref_seq_id or run_id... skipping.");
+            next;
+        }
+
+        my $job_id = $event->lsf_job_id;
+        my @result = `bjobs $job_id 2>/dev/null`;
+        
+        unless (@result) {
+            $self->status_message(
+                $event->event_status
+                . ' event ' 
+                . event_desc($event) 
+                . " has no LSF job $job_id.  Setting to crashed."
+            );
+            $event->event_status("Crashed");
+        }
+
+    } # end while @launchable_events
+
+    return 1;
+}
+
+
+sub event_desc {
+    my ($event) = @_;
+    my $s = $event->id . ': ' . $event->event_type . ' on ' . $event->model->name;
+    if ($event->run_id) {
+        $s .= ' for read set ' . $event->read_set->name;
+    }
+    elsif ($event->ref_seq_id) {
+        $s .= ' for ref seq ' . $event->ref_seq_id
+    }
+    return $s;
+}
 
 
 # Find events in a 'Scheduled' state, but haven't been submitted to lsf
