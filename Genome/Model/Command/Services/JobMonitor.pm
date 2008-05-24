@@ -136,7 +136,13 @@ sub _verify_submitted_jobs {
         my $job_id = $event->lsf_job_id;
         my @result = `bjobs $job_id 2>/dev/null`;
         
-        unless (@result) {
+        my $status = '';
+        if (@result) {
+            my (@cols) = split(/\s+/,$result[1]);
+            $status = $cols[2];
+        }
+
+        if ($status eq '' or $status eq 'EXIT') {
             $self->status_message(
                 $event->event_status
                 . ' event ' 
