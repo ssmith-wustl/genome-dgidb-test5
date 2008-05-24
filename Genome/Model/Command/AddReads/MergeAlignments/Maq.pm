@@ -59,11 +59,15 @@ sub execute {
             return;
         }
     }
-    my @run_events = Genome::Model::Event->get(
-                                                 event_type => 'genome-model add-reads accept-reads maq',
-                                                 model_id => $model->id,
-                                                 event_status => 'Succeeded'
-                                           );
+    my @run_events = 
+        grep { my $m = $_->metrics(name => 'read set pass fail'); (!$m or $m->value eq 'pass') }
+        Genome::Model::Event->get(
+            event_type => 'genome-model add-reads accept-reads maq',
+            model_id => $model->id,
+            event_status => 'Succeeded'
+        );
+
+
     my @run_ids = map {$_->run_id} @run_events;
     my @runs = Genome::RunChunk->get(
                                      genome_model_run_id => \@run_ids,
