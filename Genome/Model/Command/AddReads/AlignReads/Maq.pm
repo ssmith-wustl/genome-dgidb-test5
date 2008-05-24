@@ -153,6 +153,11 @@ sub generate_metrics {
     my $self = shift;
     my $m;
 
+    if (my @m = $self->metrics) {
+        # TODO recalculate the metrics instead
+        return;
+    }
+
     my $total_read_count;
     do {
         no warnings;
