@@ -75,12 +75,12 @@ class Genome::Model {
 # Operating directories
 
 sub base_parent_directory {
-    "/gscmnt/sata114/info/medseq"
+    "/gscmnt/839/info/medseq"
 }
 
 sub data_parent_directory {
     my $self = shift;
-    return $self->base_parent_directory . "/model_data"
+    return $self->base_parent_directory . "/model_links"
 }
 
 sub sample_path {
