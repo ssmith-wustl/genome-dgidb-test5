@@ -2,7 +2,7 @@ use warnings;
 use strict;
 
 use URT;
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 
 ok(setup(), 'Create initial schema, data and classes');
