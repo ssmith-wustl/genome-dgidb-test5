@@ -45,13 +45,6 @@ EOS
 #    return $self;
 #}
 
-#sub validate_params {                      # pre-execute checking.  Not requiried.  Delete unless you use it. <---
-#    my $self = shift;
-#    return unless $self->SUPER::validate_params(@_);
-#    # ..do real checks here
-#    return 1;
-#}
-
 sub execute {                               # replace with real execution logic.
     my $self = shift;
     print "Running example command:\n" 
