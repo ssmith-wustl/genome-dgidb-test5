@@ -114,6 +114,11 @@ sub execute {
         
         foreach my $annotation ( @annotations )
         {
+            my @non_dbsnp_submitters = join('/', grep { $_ !~ /^dbSNP/ } keys %{ $annotation->{variations} });
+            my $wv = ( @non_dbsnp_submitters )
+            ? join('/', @non_dbsnp_submitters)
+            : 0;
+
             $out_fh->print
             (
                 join
@@ -140,7 +145,7 @@ sub execute {
                     'NULL', # polyphen_prediction",
                     0, # submit
                     '', # rgg_id
-                    #join('/', grep { $_ !~ /^dbSNP/ } keys %{ $annotation->{variations} }), # watson/ventor
+                    $wv, # watson/ventor
                 ), 
                 "\n",
             );
