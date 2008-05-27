@@ -114,7 +114,7 @@ sub execute {
         
         foreach my $annotation ( @annotations )
         {
-            my @non_dbsnp_submitters = join('/', grep { $_ !~ /^dbSNP/ } keys %{ $annotation->{variations} });
+            my @non_dbsnp_submitters = grep { $_ !~ /dbsnp|old|none/i } keys %{ $annotation->{variations} };
             my $wv = ( @non_dbsnp_submitters )
             ? join('/', @non_dbsnp_submitters)
             : 0;
