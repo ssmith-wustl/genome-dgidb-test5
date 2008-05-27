@@ -57,10 +57,11 @@ sub execute {
     {
         $eval = Genome::Model::Command::Report::Variations->execute
         (
-            in => $detail_file,
-            out => sprintf('%s/%s.out', $reports_dir, File::Basename::basename($detail_file));
-            chromosome => $chromosome,
-            type => 'snp',
+            variant_file => $detail_file,
+            report_file => sprintf('%s/%s.out', $reports_dir, File::Basename::basename($detail_file));
+            chromosome_name => $chromosome,
+            # variant_type => 'snp',
+            # flank_range => ??,
             # format => ??,
         );
     };
