@@ -49,7 +49,7 @@ sub expressions_by_intensity
     return $self->expressions->search
     (
         undef,
-        { order_by => 'expression_intensity ASC' },
+        { order_by => 'expression_intensity DESC' },
     );
 }
 
