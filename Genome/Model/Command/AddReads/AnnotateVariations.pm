@@ -13,6 +13,8 @@ class Genome::Model::Command::AddReads::AnnotateVariations {
     ]
 };
 
+use Genome::Model::Command::Report::Variations;
+
 sub sub_command_sort_position { 90 }
 
 sub help_brief {
@@ -50,14 +52,28 @@ sub execute {
         `chmod g+w $reports_dir`;
     }
 
-    # make files in that dir here...
+    my $eval;
+    eval
+    {
+        $eval = Genome::Model::Command::Report::Variations->execute
+        (
+            in => $detail_file,
+            out => sprintf('%s/%s.out', $reports_dir, File::Basename::basename($detail_file));
+            chromosome => $chromosome,
+            type => 'snp',
+            # format => ??,
+        );
+    };
 
     $self->date_completed(UR::Time->now);
-    if (0) { # replace w/ actual check
+
+    unless ( $eval )
+    { 
         $self->event_status("Failed");
         return;
     }
-    else {
+    else 
+    {
         $self->event_status("Succeeded");
         return 1;
     }
