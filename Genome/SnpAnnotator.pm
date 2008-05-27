@@ -108,6 +108,10 @@ sub _transcript_annotation
     }
     my $structure_type = $main_structure->structure_type;
     my $method = '_transcript_annotation_for_' . $structure_type;
+
+    # check type.  not sure why, but had a failure for type 'rna'
+    #return unless grep { $structure_type eq $_ } (qw/ utr_exon flank intron cds_exon /);
+    return unless $self->can($method);
     
     my %structure_annotation = $self->$method($transcript, $snp)
         or return;
