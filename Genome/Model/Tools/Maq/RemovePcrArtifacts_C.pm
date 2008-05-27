@@ -3,13 +3,14 @@ package Genome::Model::Tools::Maq::RemovePcrArtifacts_C;
 our $inline_dir;
 BEGIN
 {
-    ($inline_dir) = "$ENV{HOME}/".(`uname -a ` =~ /ia64 / ? '_Inline64' : '_Inline32');
-    mkdir $inline_dir;
+    ($inline_dir) = "$ENV{HOME}/".(`uname -m` =~ /ia64/ ? '_InlineItanium' : '_Inline32');
+    mkdir $inline_dir;    
 };
+
 use Inline 'C' => 'Config' => (
             DIRECTORY => $inline_dir,
             INC => '-I/gscuser/jschindl -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
-            CCFLAGS => '-D_FILE_OFFSET_BITS=64',
+            CCFLAGS => `uname -m` =~ /ia64/ ? '-D_FILE_OFFSET_BITS=64':'-D_FILE_OFFSET_BITS=64 -m32',
             LIBS => '-L/gscuser/jschindl -L/gscuser/jschindl/svn/gsc/zlib-1.2.3 -lz -lmaq',
             NAME => __PACKAGE__
             );
@@ -631,7 +632,9 @@ void print_seq_names (char *maqfile, char *seqfile)
         if(seqid == curr_mm.seqid && pos == curr_mm.pos>>1)
         {
             printf("%s %d %d\n", curr_mm.name, curr_mm.seqid, curr_mm.pos>>1);
-        }                 
+        } 
+        // before and after read count for a given start site position
+        // chromosme, position, read count before, read count after                
     }                
 
 cleanup:
