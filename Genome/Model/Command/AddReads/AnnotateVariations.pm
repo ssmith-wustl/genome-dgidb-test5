@@ -71,6 +71,7 @@ sub execute {
     unless ( $eval )
     { 
         $self->event_status("Failed");
+        $self->error_message($@) if $@;
         return;
     }
     else 
