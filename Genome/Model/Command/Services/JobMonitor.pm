@@ -189,10 +189,12 @@ sub _schedule_scheduled_jobs {
         my $prior_event = $event->prior_event();
         my %execute_args = (bsub_queue => $self->bsub_queue, bsub_args => $self->bsub_args);
 
-        if ( $prior_event->lsf_job_id and 
-             ( $prior_event->event_status eq 'Running' or $prior_event->event_status eq 'Scheduled') ) {
+        if ($prior_event) {
+            if ( $prior_event->lsf_job_id and 
+                 ( $prior_event->event_status eq 'Running' or $prior_event->event_status eq 'Scheduled') ) {
 
-            $execute_args{'last_event'} = $prior_event;
+                $execute_args{'last_event'} = $prior_event;
+            }
         }
 
         my $last_bsub_job_id = $event->execute_with_bsub( %execute_args);
