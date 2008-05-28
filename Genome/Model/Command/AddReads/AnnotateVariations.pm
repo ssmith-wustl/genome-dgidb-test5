@@ -39,8 +39,8 @@ sub execute {
     my $chromosome = $self->ref_seq_id;
     my $model = $self->model;
 
-    my ($snp_file) = $model->_variant_list_files($chromosome);
-    my ($pileup_file) = $model->_variant_pileup_files($chromosome);
+    #my ($snp_file) = $model->_variant_list_files($chromosome);
+    #my ($pileup_file) = $model->_variant_pileup_files($chromosome);
     my ($detail_file) = $model->_variant_detail_files($chromosome);
 
     $DB::single = 1; # when debugging, stop here...
@@ -58,7 +58,7 @@ sub execute {
         $eval = Genome::Model::Command::Report::Variations->execute
         (
             variant_file => $detail_file,
-            report_file => sprintf('%s/%s.out', $reports_dir, File::Basename::basename($detail_file)),
+            report_file => sprintf('%s/variant_report_for_chr_%s', $reports_dir, $chromosome),
             chromosome_name => $chromosome,
             # variant_type => 'snp',
             # flank_range => ??,
