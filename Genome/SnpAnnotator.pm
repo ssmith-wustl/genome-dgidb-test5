@@ -286,7 +286,7 @@ sub _transcript_annotation_for_intron
                     $exon_pos,
                     $aft_end,
                     $transcript->transcript_id, 
-                    $main_structure->structure_id,
+                    $main_structure->transcript_structure_id,
                     $prev_structure_type,
                     $next_structure_type,
                 )  
@@ -353,7 +353,7 @@ sub _transcript_annotation_for_cds_exon
             (
                 'Phase wrong.  Trans ID: %d; Sub Struct ID, phase: %d, %s; Calc phase: %d; Exon pos: %d', 
                 $transcript->transcript_id,
-                $main_structure->structure_id,
+                $main_structure->transcript_structure_id,
                 $main_structure->phase,
                 $trsub_phase,
                 $exon_pos,
