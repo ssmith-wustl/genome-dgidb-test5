@@ -101,17 +101,11 @@ sub _transcript_annotation
     my ($self, $transcript, $snp) = @_;
 
     my ($main_structure) = $transcript->sub_structure_window->scroll( $snp->{position} );
-    unless ( $main_structure )
-    {
-        #$self->info_msg("no structures @ $snp->{position}");
-        return;
-    }
-    my $structure_type = $main_structure->structure_type;
-    my $method = '_transcript_annotation_for_' . $structure_type;
+    return unless $main_structure;
 
-    # check type.  not sure why, but had a failure for type 'rna'
-    #return unless grep { $structure_type eq $_ } (qw/ utr_exon flank intron cds_exon /);
-    return unless $self->can($method);
+    my $structure_type = $main_structure->structure_type;
+    return if $structure_type eq 'rna'; # skip micro rnas
+    my $method = '_transcript_annotation_for_' . $structure_type;
     
     my %structure_annotation = $self->$method($transcript, $snp)
         or return;
