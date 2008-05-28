@@ -692,6 +692,7 @@ sub _cron_setup {
     my $process_to = $arg->{process_to};
     $process_to =~ s/\s+/_/g if $process_to;
     my $ignore_locks = $arg->{ignore_locks};
+    $arg->{hostname_check} = 1 if ( !exists $arg->{hostname_check} );
 
     # check for the log directory
     my $cron_dir = $class->cron_dir;
@@ -729,7 +730,7 @@ sub _cron_setup {
     # must be on cron2 (linuscs38) because of file based locks
     App::Object->status_message("checking hostname: $hostname");
     my $proper_hostname = 'linuscs38';
-    if ( $hostname ne $proper_hostname ) {
+    if ( $arg->{hostname_check} && $hostname ne $proper_hostname ) {
         my $msg = "must run on $proper_hostname, not $hostname";
         App::Object->error_message($msg);
         die $msg;
