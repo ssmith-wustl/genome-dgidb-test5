@@ -230,7 +230,7 @@ sub _transcript_annotation_for_intron
         $position_after = $structure_stop + 1;
     }
 
-    my $exon_pos = $transcript->sub_structure_window->length_of_cds_exons_past_main_structure($strand),
+    my $exon_pos = $transcript->sub_structure_window->length_of_cds_exons_before_main_structure($strand),
     my $pre_start = abs( $snp->{position} - $oriented_structure_start ) + 1,
     my $pre_end = abs( $snp->{position} - $oriented_structure_start ) + 1,
     my $aft_start = abs( $oriented_structure_stop - $snp->{position} ) + 1,
@@ -282,12 +282,12 @@ sub _transcript_annotation_for_intron
             (
                 sprintf
                 (
-                    'Exon position is 0 for intron (%d) in transcript (%d) at $d',
+                    'Exon position is 0 for intron (%d) in transcript (%d) at %d',
                     $main_structure->transcript_structure_id,
                     $transcript->transcript_id, 
                     $snp->{position},
                 )  
-            ) and return;
+            ) and return if $exon_pos == 0;
             $c_position = ($exon_pos + 1) . '-' . $aft_end;
         }
     }
@@ -335,7 +335,7 @@ sub _transcript_annotation_for_cds_exon
         ($oriented_structure_stop, $oriented_structure_start) = ($structure_start, $structure_stop);
     }	 
 
-    my $exon_pos = $transcript->sub_structure_window->length_of_cds_exons_past_main_structure($strand);
+    my $exon_pos = $transcript->sub_structure_window->length_of_cds_exons_before_main_structure($strand);
     my $pre_start = abs( $snp->{position} - $oriented_structure_start ) + 1;
     my $pre_end = abs( $snp->{position} - $oriented_structure_start ) + 1;
     my $aft_start = abs( $oriented_structure_stop - $snp->{position} ) + 1;
