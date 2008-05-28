@@ -66,7 +66,12 @@ $DB::single=1;
     unless ($event->verify_prior_event) {
         my $prior_event =  $event->get_prior_event;
         $self->error_message('Prior event did not verify: '. $prior_event->genome_model_event_id .' '.
-                             $prior_event->event_status);
+        $prior_event->event_status);
+        $event->date_completed(undef);
+        $event->event_status('Failed');
+        $event->user_name($ENV{'USER'});
+
+
         return;
     }
 
@@ -211,5 +216,8 @@ sub lsf_state {
     return (\%jobinfo, \@events);
 }
 
+
+
 1;
+
 
