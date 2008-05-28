@@ -47,6 +47,13 @@ sub sub_structures
     return @{ $self->_objects };
 }
 
+sub main_structure
+{
+    my $self = shift;
+
+    return $self->_objects->[0];
+}
+
 sub sub_structures_flanking_main_structure
 {
     my $self = shift;
