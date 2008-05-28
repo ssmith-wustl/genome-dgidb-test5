@@ -369,7 +369,7 @@ sub execute_with_bsub {
 
 ## should check if $self isa Command??
     $queue ||= 'long';
-    $dep_type ||= 'done';
+    $dep_type ||= 'ended';
     
 
     $DB::single=1;
