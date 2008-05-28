@@ -106,7 +106,7 @@ sub cds_exon_length
     return $length;
 }
 
-sub length_of_cds_exons_past_main_structure
+sub length_of_cds_exons_before_main_structure
 {
     my ($self, $strand) = @_;
 
@@ -117,37 +117,29 @@ sub length_of_cds_exons_past_main_structure
     $strand = '+1' unless $strand;
 
     # Make this an anon sub for slight speed increase
-    my $exon_is_past_main;
+    my $exon_is_before;
     if ( $strand eq '+1' )
     {
-        my $structure_stop = $main_structure->structure_stop;
-        $exon_is_past_main = sub
+        my $structure_start = $main_structure->structure_start;
+        $exon_is_before = sub
         {
-            return $_[0]->structure_start > $structure_stop;
+            return $_[0]->structure_stop < $structure_start;
         }
     }
     else
     {
-        my $structure_start = $main_structure->structure_start;
-        $exon_is_past_main = sub
+        my $structure_stop = $main_structure->structure_stop;
+        $exon_is_before = sub
         {
-            return $_[0]->structure_stop < $structure_start;
+            return $_[0]->structure_start > $structure_stop;
         }
     }
 
     my $length = 0;
     foreach my $cds_exon ( @cds_exons )
     {
-        #next if $cds_exon->transcript_structure_id eq $main_structure->transcript_structure_id;
-        next unless $exon_is_past_main->($cds_exon);
+        next unless $exon_is_before->($cds_exon);
         $length += $cds_exon->structure_stop - $cds_exon->structure_start + 1;
-    }
-
-    if ( $main_structure->structure_type eq 'cds_exon' )
-    {
-        my $main_structure_length = $main_structure->structure_stop - $main_structure->structure_start + 1;
-        return 0 if $main_structure_length > $length; # don't return negative length
-        $length -= $main_structure_length;
     }
 
     return $length;
