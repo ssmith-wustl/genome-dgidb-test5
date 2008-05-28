@@ -71,7 +71,7 @@ sub execute {
     unless ( $eval )
     { 
         $self->event_status("Failed");
-        $self->error_message($@) if $@;
+        $self->error_message("Exception from ".__PACKAGE__.": $@") if $@;
         return;
     }
     else 
