@@ -284,6 +284,10 @@ sub _transcript_annotation_for_intron
         }
         else 
         {
+            $self->info_msg
+            (
+                sprintf('exon pos is 0! tr_id: %d:, sub_struct_id: %d; prev_struct: %s; next_struct: %s', $transcript->transcript_id, $main_structure->structure_id, $prev_structure_type, $next_structure_type)  
+            ) if $exon_pos <= 0;
             $c_position = ($exon_pos + 1) . '-' . $aft_end;
         }
     }
