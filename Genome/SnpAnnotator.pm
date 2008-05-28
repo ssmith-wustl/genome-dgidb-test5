@@ -100,7 +100,7 @@ sub _transcript_annotation
 {
     my ($self, $transcript, $snp) = @_;
 
-    my ($main_structure) = $transcript->sub_structure_window->scroll( $snp->{position} );
+    my ($main_structure) = $transcript->structure_window->scroll( $snp->{position} );
     return unless $main_structure;
 
     my $structure_type = $main_structure->structure_type;
@@ -134,7 +134,7 @@ sub _transcript_annotation_for_utr_exon
 
     my $position = $snp->{position};
     my $strand = $transcript->strand;
-    my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
+    my ($cds_exon_start, $cds_exon_stop) = $transcript->structure_window->cds_exon_range;
     my ($c_position, $trv_type);
     if ( $position < $cds_exon_start )	
     { 
@@ -165,7 +165,7 @@ sub _transcript_annotation_for_flank
 
     my $position = $snp->{position};
     my $strand = $transcript->strand;
-    my @cds_exon_positions = $transcript->sub_structure_window->cds_exon_range
+    my @cds_exon_positions = $transcript->structure_window->cds_exon_range
         or return;
     #   print Dumper([$transcript->transcript_id, $position, $cds_exon_start, $cds_exon_stop]);
     my ($c_position, $trv_type);
@@ -198,15 +198,15 @@ sub _transcript_annotation_for_intron
 
     my $strand = $transcript->strand;
     
-    my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
+    my ($cds_exon_start, $cds_exon_stop) = $transcript->structure_window->cds_exon_range;
     my ($oriented_cds_exon_start, $oriented_cds_exon_stop) = ($cds_exon_start, $cds_exon_stop);
     
-    my ($main_structure) = $transcript->sub_structure_window->sub_structures;
+    my $main_structure = $transcript->structure_window->main_structure;
     my $structure_start = $main_structure->structure_start;
     my $structure_stop = $main_structure->structure_stop;
     my ($oriented_structure_start, $oriented_structure_stop) = ($structure_start, $structure_stop);
 
-    my ($prev_structure, $next_structure) = $transcript->sub_structure_window->sub_structures_flanking_main_structure;
+    my ($prev_structure, $next_structure) = $transcript->structure_window->structures_flanking_main_structure;
     #return unless $prev_structure and $next_structure;
     my ($prev_structure_type, $next_structure_type, $position_before, $position_after);
 
@@ -230,7 +230,7 @@ sub _transcript_annotation_for_intron
         $position_after = $structure_stop + 1;
     }
 
-    my $exon_pos = $transcript->sub_structure_window->cds_exon_length_past_main_structure($strand),
+    my $exon_pos = $transcript->structure_windo->length_of_cds_exons_past_main_structure($strand),
     my $pre_start = abs( $snp->{position} - $oriented_structure_start ) + 1,
     my $pre_end = abs( $snp->{position} - $oriented_structure_start ) + 1,
     my $aft_start = abs( $oriented_structure_stop - $snp->{position} ) + 1,
@@ -278,19 +278,16 @@ sub _transcript_annotation_for_intron
         }
         else 
         {
-            $self->info_msg
+            $self->error_msg
             (
                 sprintf
                 (
-                    'exon pos: %s; aft_end: %d; tr_id: %d; sub_struct_id: %d; prev_struct: %s; next_struct: %s',
-                    $exon_pos,
-                    $aft_end,
-                    $transcript->transcript_id, 
+                    'Exon position is 0 for intron (%d) in transcript (%d) at $d',
                     $main_structure->transcript_structure_id,
-                    $prev_structure_type,
-                    $next_structure_type,
+                    $transcript->transcript_id, 
+                    $snp->{position},
                 )  
-            );
+            ) and return;
             $c_position = ($exon_pos + 1) . '-' . $aft_end;
         }
     }
@@ -327,7 +324,7 @@ sub _transcript_annotation_for_cds_exon
     
     my $strand = $transcript->strand;
     
-    my ($main_structure) = $transcript->sub_structure_window->sub_structures;
+    my $main_structure = $transcript->structure_window->main_structure;
     my $structure_start = $main_structure->structure_start;
     my $structure_stop = $main_structure->structure_stop;
     my ($oriented_structure_start, $oriented_structure_stop) = ($structure_start, $structure_stop);
@@ -338,7 +335,7 @@ sub _transcript_annotation_for_cds_exon
         ($oriented_structure_stop, $oriented_structure_start) = ($structure_start, $structure_stop);
     }	 
 
-    my $exon_pos = $transcript->sub_structure_window->cds_exon_length_past_main_structure($strand);
+    my $exon_pos = $transcript->structure_window->length_of_cds_exons_past_main_structure($strand);
     my $pre_start = abs( $snp->{position} - $oriented_structure_start ) + 1;
     my $pre_end = abs( $snp->{position} - $oriented_structure_start ) + 1;
     my $aft_start = abs( $oriented_structure_stop - $snp->{position} ) + 1;
@@ -351,12 +348,13 @@ sub _transcript_annotation_for_cds_exon
         (
             sprintf
             (
-                'Phase wrong.  Trans ID: %d; Sub Struct ID, phase: %d, %s; Calc phase: %d; Exon pos: %d', 
-                $transcript->transcript_id,
-                $main_structure->transcript_structure_id,
-                $main_structure->phase,
+                'Calculated phase (%d) does not match the phase (%d, exon position: %d) for the main sub structure (%d) for transcript (%d) at %d',
                 $trsub_phase,
+                $main_structure->phase,
                 $exon_pos,
+                $main_structure->transcript_structure_id,
+                $transcript->transcript_id,
+                $snp->{position},
             )
         );
         return;
@@ -386,12 +384,22 @@ sub _transcript_annotation_for_cds_exon
     else
     {
         my $ordinal = $main_structure->ordinal + $chose_ord;
-        my $cds_exon = $transcript->sub_structure_window->cds_exon_with_ordinal($ordinal);
+        my $cds_exon = $transcript->structure_window->cds_exon_with_ordinal($ordinal);
         unless ( defined $cds_exon )
         {
-            print "wrong!!!\n";
-            #my $e="substructure  not  found:".$tr->transcript_name.",".($codon_start-1).",".$c_position.",".$self->{chrom}.",".$self->{start}.",".$self->{end}.",".$self->{allele1}.",".$self->{allele2}.",".$self->{type};
-            #$self->error_report($e);
+            $self->error_msg
+            (
+                sprintf
+                (
+                    "Next cds exon (ordinal: %d, next ordinal: %s, chose ordinal: %s) for cds exon (%d) not found after in transcript (%d) at %d",
+                    $main_structure->ordinal, 
+                    $ordinal,
+                    $chose_ord,
+                    $main_structure->transcript_structure_id,
+                    $transcript->transcript_id,
+                    $snp->{position},
+                )
+            );
             return ;
         }
 
@@ -417,9 +425,20 @@ sub _transcript_annotation_for_cds_exon
     my $test_aa_be = $codon2single{ uc $codonstr };
     unless ( ( $test_aa_be eq $aa_be) or ($test_aa_be eq "" and $aa_be eq "*") ) 
     { 
-        $self->error_msg("phase wrong");
-        #$self->error_report("phase wrong:".$tr->transcript_name.",".$codonstr.",".($codon_start-1).",".$c_position.",".$test_aa_be.",".$aa_be.",".$self->{chrom}.",".$self->{start}.",".$self->{end}.",".$self->{allele1}.",".$self->{allele2}.",".$self->{type});
-        return ;
+        $self->error_msg
+        (
+            sprintf
+            (
+                'Calculated amino acid (%s) does not match the expected amino acid (%s) for the main sub structure (%d) for transcript (%d) in codon string (%s) at %d',
+                $aa_be,
+                $test_aa_be,
+                $main_structure->transcript_structure_id,
+                $transcript->transcript_id,
+                $codonstr,
+                $snp->{position},
+            )
+        );
+        return;
     }		
 
     my $ref = $snp->{reference}; #was allele1
@@ -430,11 +449,21 @@ sub _transcript_annotation_for_cds_exon
         $variant =~tr/ATGC/TACG/;
     }	
 
-    if ( $ref ne substr($codonstr, $codon_start - 1, 1) )
+    my $ref_codon_check = substr($codonstr, $codon_start - 1, 1);
+    if ( $ref ne $ref_codon_check )
     {
-        $self->error_msg("allele does not match");
-        #$self->error_report("allele not  match:".$tr->transcript_name.",".$codonstr.",".($codon_start-1).",".$c_position.",".$self->{chrom}.",".$self->{start}.",".$self->{end}.",".$self->{allele1}.",".$self->{allele2}.",".$self->{type}."\n");
-        return ;
+        $self->error_msg
+        (
+            sprintf
+            (
+                "Reference (%s) does not match the base (%s) stored in transcript (%d) at %d",
+                $ref,
+                $ref_codon_check,
+                $transcript->transcript_id,
+                $snp->{position},
+            )
+        );
+        return;
     }
     
     substr($codonstr, $codon_start - 1, 1) = $variant;
