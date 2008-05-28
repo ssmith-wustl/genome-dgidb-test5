@@ -100,7 +100,7 @@ sub _transcript_annotation
 {
     my ($self, $transcript, $snp) = @_;
 
-    my ($main_structure) = $transcript->structure_window->scroll( $snp->{position} );
+    my ($main_structure) = $transcript->sub_structure_window->scroll( $snp->{position} );
     return unless $main_structure;
 
     my $structure_type = $main_structure->structure_type;
@@ -134,7 +134,7 @@ sub _transcript_annotation_for_utr_exon
 
     my $position = $snp->{position};
     my $strand = $transcript->strand;
-    my ($cds_exon_start, $cds_exon_stop) = $transcript->structure_window->cds_exon_range;
+    my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
     my ($c_position, $trv_type);
     if ( $position < $cds_exon_start )	
     { 
@@ -165,7 +165,7 @@ sub _transcript_annotation_for_flank
 
     my $position = $snp->{position};
     my $strand = $transcript->strand;
-    my @cds_exon_positions = $transcript->structure_window->cds_exon_range
+    my @cds_exon_positions = $transcript->sub_structure_window->cds_exon_range
         or return;
     #   print Dumper([$transcript->transcript_id, $position, $cds_exon_start, $cds_exon_stop]);
     my ($c_position, $trv_type);
@@ -198,15 +198,15 @@ sub _transcript_annotation_for_intron
 
     my $strand = $transcript->strand;
     
-    my ($cds_exon_start, $cds_exon_stop) = $transcript->structure_window->cds_exon_range;
+    my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
     my ($oriented_cds_exon_start, $oriented_cds_exon_stop) = ($cds_exon_start, $cds_exon_stop);
     
-    my $main_structure = $transcript->structure_window->main_structure;
+    my $main_structure = $transcript->sub_structure_window->main_structure;
     my $structure_start = $main_structure->structure_start;
     my $structure_stop = $main_structure->structure_stop;
     my ($oriented_structure_start, $oriented_structure_stop) = ($structure_start, $structure_stop);
 
-    my ($prev_structure, $next_structure) = $transcript->structure_window->structures_flanking_main_structure;
+    my ($prev_structure, $next_structure) = $transcript->sub_structure_window->structures_flanking_main_structure;
     #return unless $prev_structure and $next_structure;
     my ($prev_structure_type, $next_structure_type, $position_before, $position_after);
 
@@ -230,7 +230,7 @@ sub _transcript_annotation_for_intron
         $position_after = $structure_stop + 1;
     }
 
-    my $exon_pos = $transcript->structure_windo->length_of_cds_exons_past_main_structure($strand),
+    my $exon_pos = $transcript->sub_structure_window->length_of_cds_exons_past_main_structure($strand),
     my $pre_start = abs( $snp->{position} - $oriented_structure_start ) + 1,
     my $pre_end = abs( $snp->{position} - $oriented_structure_start ) + 1,
     my $aft_start = abs( $oriented_structure_stop - $snp->{position} ) + 1,
@@ -324,7 +324,7 @@ sub _transcript_annotation_for_cds_exon
     
     my $strand = $transcript->strand;
     
-    my $main_structure = $transcript->structure_window->main_structure;
+    my $main_structure = $transcript->sub_structure_window->main_structure;
     my $structure_start = $main_structure->structure_start;
     my $structure_stop = $main_structure->structure_stop;
     my ($oriented_structure_start, $oriented_structure_stop) = ($structure_start, $structure_stop);
@@ -335,7 +335,7 @@ sub _transcript_annotation_for_cds_exon
         ($oriented_structure_stop, $oriented_structure_start) = ($structure_start, $structure_stop);
     }	 
 
-    my $exon_pos = $transcript->structure_window->length_of_cds_exons_past_main_structure($strand);
+    my $exon_pos = $transcript->sub_structure_window->length_of_cds_exons_past_main_structure($strand);
     my $pre_start = abs( $snp->{position} - $oriented_structure_start ) + 1;
     my $pre_end = abs( $snp->{position} - $oriented_structure_start ) + 1;
     my $aft_start = abs( $oriented_structure_stop - $snp->{position} ) + 1;
@@ -384,7 +384,7 @@ sub _transcript_annotation_for_cds_exon
     else
     {
         my $ordinal = $main_structure->ordinal + $chose_ord;
-        my $cds_exon = $transcript->structure_window->cds_exon_with_ordinal($ordinal);
+        my $cds_exon = $transcript->sub_structure_window->cds_exon_with_ordinal($ordinal);
         unless ( defined $cds_exon )
         {
             $self->error_msg
