@@ -115,7 +115,7 @@ sub cds_exon_length_past_main_structure
         }
     }
 
-    my $length;
+    my $length = 0;
     foreach my $cds_exon ( @cds_exons )
     {
         #next if $cds_exon->transcript_structure_id eq $main_structure->transcript_structure_id;
@@ -123,7 +123,7 @@ sub cds_exon_length_past_main_structure
         $length += $cds_exon->structure_stop - $cds_exon->structure_start + 1;
     }
 
-       $length -= $main_structure->structure_stop - $main_structure->structure_start + 1 if $main_structure->structure_type eq 'cds_exon';
+    $length -= $main_structure->structure_stop - $main_structure->structure_start + 1 if $main_structure->structure_type eq 'cds_exon';
 
     return $length;
 }
