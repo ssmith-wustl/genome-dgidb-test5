@@ -280,8 +280,17 @@ sub _transcript_annotation_for_intron
         {
             $self->info_msg
             (
-                sprintf('exon pos is 0! tr_id: %d:, sub_struct_id: %d; prev_struct: %s; next_struct: %s', $transcript->transcript_id, $main_structure->structure_id, $prev_structure_type, $next_structure_type)  
-            ) if $exon_pos <= 0;
+                sprintf
+                (
+                    'exon pos: %s; aft_end: %d; tr_id: %d; sub_struct_id: %d; prev_struct: %s; next_struct: %s',
+                    $exon_pos,
+                    $aft_end,
+                    $transcript->transcript_id, 
+                    $main_structure->structure_id,
+                    $prev_structure_type,
+                    $next_structure_type,
+                )  
+            );
             $c_position = ($exon_pos + 1) . '-' . $aft_end;
         }
     }
@@ -338,8 +347,18 @@ sub _transcript_annotation_for_cds_exon
     my $trsub_phase = $exon_pos % 3;
     unless ( $trsub_phase eq $main_structure->phase ) 
     {
-        $self->error_msg('phase wrong');
-        #$self->error_report( "phase wrong:".$transcript->transcript_name.",".$trsub_phase.",".$trsub->phase.",".$trsub->ordinal.",".$trsub->structure_start.",".$self->{chrom}.",".$self->{start}.",".$self->{end}.",".$self->{allele1}.",".$self->{allele2}.",".$self->{type});
+        $self->error_msg
+        (
+            sprintf
+            (
+                'Phase wrong.  Trans ID: %d; Sub Struct ID, phase: %d, %s; Calc phase: %d; Exon pos: %d', 
+                $transcript->transcript_id,
+                $main_structure->structure_id,
+                $main_structure->phase,
+                $trsub_phase,
+                $exon_pos,
+            )
+        );
         return;
     }	
 
