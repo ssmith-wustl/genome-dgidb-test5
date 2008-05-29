@@ -61,6 +61,13 @@ sub structures_by_type
     return grep { $_->structure_type eq $type } @{ $self->_structures };
 }
 
+sub cds_exons
+{
+    my $self = shift;
+
+    return @{ $self->_cds_exons };
+}
+
 sub main_structure
 {
     my $self = shift;
