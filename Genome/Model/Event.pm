@@ -519,9 +519,22 @@ sub Xrun_command_with_bsub {
     return $last_bsub_job_id;
 }
 
-## for automatic retries by bsub-helper, override if you want less or more than 3
+
+sub is_reschedulable {
+    my($self) = @_;
+
+    if ($self->event_status eq 'Failed' and
+       $self->retry_count < $self->max_retries) {
+
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+## for automatic retries by bsub-helper, override if you want something different
 sub max_retries {
-    0;  #temporarily disabled until rusage issue is dealt with,  sometimes retries maq on non-64 bit blades
+    2;  #temporarily disabled until rusage issue is dealt with,  sometimes retries maq on non-64 bit blades
 }
 
 sub get_prior_event {
