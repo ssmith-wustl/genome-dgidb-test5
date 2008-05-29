@@ -53,6 +53,7 @@ sub get_prioritized_annotations
     my %prioritized_annotations;
     foreach my $annotation ( @annotations )
     {
+        # TODO add more priority info in the variat priorities...transcript source, status, etc
         $annotation->{priority} = $variant_priorities{ $annotation->{trv_type} };
         unless ( exists $prioritized_annotations{ $annotation->{gene_name} } )
         {
@@ -65,6 +66,16 @@ sub get_prioritized_annotations
         elsif ( $annotation->{priority} == $prioritized_annotations{ $annotation->{gene_name} }->{priority} )
         {
             next if $annotation->{amino_acid_length} < $prioritized_annotations{ $annotation->{gene_name} }->{amino_acid_length};
+
+            if  ( $annotation->{amino_acid_length} == $prioritized_annotations{ $annotation->{gene_name} }->{amino_acid_length} )
+            {
+                # amino acid length is the same, set the annotation sorted by transcript_name
+                ($annotation) = sort 
+                {
+                    $a->{transcript_name} cmp $b->{transcript_name } 
+                } ($annotation, $prioritized_annotations{ $annotation->{gene_name} })
+            }
+            
             $prioritized_annotations{ $annotation->{gene_name} } = $annotation;
         }
     }
