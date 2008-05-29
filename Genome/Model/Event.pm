@@ -424,9 +424,9 @@ sub execute_with_bsub {
     # Header for output and error files
     for my $log_file ( $err_log_file, $out_log_file )
     {
-        unless ( chmod(0664, $log_file) )
+        unless ( -w $log_file )
         {
-            $self->error_message("Can't chmod log file ($log_file)");
+            $self->error_message("Can't write to log file ($log_file)");
             return;
         }
         my $fh = IO::File->new(">> $log_file");
