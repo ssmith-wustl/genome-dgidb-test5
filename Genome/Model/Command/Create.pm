@@ -116,7 +116,7 @@ $DB::single=1;
         $self->error_message("Failed to create model!");
         return;
     }
-    
+
     if (my @problems = $obj->invalid) {
         $self->error_message("Invaild model!");
         $obj->delete;
@@ -131,8 +131,10 @@ $DB::single=1;
         $obj->delete;
         return;
     }
-    
-    return 1;
+   
+   	$self->result($obj);
+   
+    return $obj;
 }
 
 sub _build_model_filesystem_paths {

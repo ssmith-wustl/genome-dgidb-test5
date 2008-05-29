@@ -416,7 +416,6 @@ sub pretty_print_text {
         my $class_meta = $self->get_class_object;
         for my $name ($class_meta->all_property_names) {
             next if $name eq 'name';
-            print $name,"\n";
             my $property_meta = $class_meta->get_property_meta_by_name($name);
             unless ($property_meta->is_delegated or $property_meta->is_calculated) {
                 push @printable_property_names, $name;
