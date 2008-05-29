@@ -426,7 +426,7 @@ sub execute_with_bsub {
     {
         unless ( chmod(0664, $log_file) )
         {
-            $self->error_message("Can't chmod log file ($logfile)");
+            $self->error_message("Can't chmod log file ($log_file)");
             return;
         }
         my $fh = IO::File->new(">> $log_file");
