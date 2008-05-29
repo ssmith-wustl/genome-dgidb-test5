@@ -42,6 +42,12 @@ EOS
 sub execute {
     my $self = shift;
 
+    # Running statement for standard output and error, should print to appropriate files
+    for my $handle ( *STDOUT, *STDERR )
+    {
+        print( $handle sprintf("Running execute at %s\n", UR::Time->now) );
+    }
+
     umask 0022;
 
 $DB::single=1;
