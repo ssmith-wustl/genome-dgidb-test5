@@ -100,11 +100,17 @@ sub _transcript_annotation
 {
     my ($self, $transcript, $snp) = @_;
 
-    my ($main_structure) = $transcript->sub_structure_window->scroll( $snp->{position} );
+    my $ss_window = $transcript->sub_structure_window;
+    my ($main_structure) = $ss_window->scroll( $snp->{position} );
     return unless $main_structure;
 
+    # skip psuedogenes
+    return unless $ss_window->cds_exons;
+
     my $structure_type = $main_structure->structure_type;
-    return if $structure_type eq 'rna'; # skip micro rnas
+    # skip micro rnas
+    return if $structure_type eq 'rna';
+    
     my $method = '_transcript_annotation_for_' . $structure_type;
     
     my %structure_annotation = $self->$method($transcript, $snp)
