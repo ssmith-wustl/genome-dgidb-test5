@@ -278,16 +278,6 @@ sub _transcript_annotation_for_intron
         }
         else 
         {
-            $self->error_msg
-            (
-                sprintf
-                (
-                    'Exon position is 0 for intron (%d) in transcript (%d) at %d',
-                    $main_structure->transcript_structure_id,
-                    $transcript->transcript_id, 
-                    $snp->{position},
-                )  
-            ) and return if $exon_pos == 0;
             $c_position = ($exon_pos + 1) . '-' . $aft_end;
         }
     }
