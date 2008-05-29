@@ -70,10 +70,6 @@ sub create {
     return $self;
 }
 
-sub is_reschedulable {
-    1;
-}
-
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments
     return grep { 
@@ -522,6 +518,8 @@ sub Xrun_command_with_bsub {
 
 sub is_reschedulable {
     my($self) = @_;
+
+    return 1; # was part of bsub helper, may change implementation again
 
     if ($self->event_status eq 'Failed' and
        $self->retry_count < $self->max_retries) {
