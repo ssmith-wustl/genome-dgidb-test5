@@ -407,10 +407,9 @@ sub execute_with_bsub {
         }
     }
   
-    my $err_log_file=  sprintf("%s/%s.err", $self->resolve_log_directory, $event_id);
-    my $out_log_file=  sprintf("%s/%s.out", $self->resolve_log_directory, $event_id);
+    my $err_log_file = sprintf("%s/%s.err", $self->resolve_log_directory, $event_id);
+    my $out_log_file = sprintf("%s/%s.out", $self->resolve_log_directory, $event_id);
     $bsub_args .= ' -o ' . $out_log_file . ' -e ' . $err_log_file;
- 
 
     my $cmdline;
     { no warnings 'uninitialized';
@@ -421,6 +420,20 @@ sub execute_with_bsub {
     }
     
     $self->status_message("Running command: " . $cmdline);
+
+    # Header for output and error files
+    for my $log_file ( $err_log_file, $out_log_file )
+    {
+        unless ( chmod(0664, $log_file) )
+        {
+            $self->error_message("Can't chmod log file ($logfile)");
+            return;
+        }
+        my $fh = IO::File->new(">> $log_file");
+        $fh->print("\n\n########################################################\n");
+        $fh->print( sprintf('Submitted at %s: %s', UR::Time->now, $cmdline) );
+        $fh->close;
+    }
 
     my $bsub_output = `$cmdline`;
     my $retval = $? >> 8;
