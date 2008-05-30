@@ -39,6 +39,7 @@ my %PROCESS_COUNT = (
     'prepare read submission'                => 0,
     'submit reads'                           => 0,
     'gather submission results'              => 0,
+    'make library start site'                => 0,
 
 
     #Finishing QA steps
