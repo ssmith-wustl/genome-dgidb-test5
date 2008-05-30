@@ -14,7 +14,9 @@ class Genome::Model::Command::ProcessingProfile::ShortRead::Create {
     is => ['Genome::Model::Event'],
     sub_classification_method_name => 'class',
     has => [
-		model		=> {is_optional => 1}, # should this be here? needs to be to run
+		# This will probably never be specified since processing profiles are used for many models
+		# this shouldnt even be here except that we need to override this to be not required
+        model                  		 => { is => 'Genome::Model', is_optional => 1 },
         profile_name 			     => { is => 'VARCHAR2', len => 255, is_optional => 1 ,
 										doc => 'The human readable name for the processing profile'},
 		align_dist_threshold         => { is => 'VARCHAR2', len => 255, is_optional => 1,
@@ -31,7 +33,7 @@ class Genome::Model::Command::ProcessingProfile::ShortRead::Create {
 										doc => "command line args for the indel finder"},
 		multi_read_fragment_strategy => { is => 'VARCHAR2', len => 255, is_optional => 1,
 										doc => ""},
-		prior_ref_seq                => { is => 'VARCHAR2', len => 255, is_optional => 1,
+		prior		                 => { is => 'VARCHAR2', len => 255, sql => 'prior_ref_seq', is_optional => 1,
 										doc => ""},
 		read_aligner                 => { is => 'VARCHAR2', len => 255, is_optional => 1,
 										doc => "alignment program used for this model"},
@@ -84,7 +86,7 @@ sub help_detail {
     return <<"EOS"
 This defines a new processing profile for short reads.
 
-The properties of the model determine what will happen when the add-reads command is run.
+The properties of the processing profile determine what will happen when the add-reads command is run.
 EOS
 }
 
@@ -108,8 +110,8 @@ $DB::single=1;
 
     # genome model specific
 
-    unless ($self->prior_ref_seq) {
-        $self->prior_ref_seq('none');
+    unless ($self->prior) {
+        $self->prior('none');
     }
 
     $self->_validate_execute_params(); 
@@ -119,12 +121,12 @@ $DB::single=1;
     
     my $obj = $self->_create_target_class_instance_and_error_check( \%params );
     unless ($obj) {
-        $self->error_message("Failed to create model!");
+        $self->error_message("Failed to create processing_profile!");
         return;
     }
     
     if (my @problems = $obj->invalid) {
-        $self->error_message("Invaild model!");
+        $self->error_message("Invalid processing_profile!");
         $obj->delete;
         return;
     }
@@ -132,33 +134,8 @@ $DB::single=1;
     $self->status_message("created model " . $obj->name);
     print $obj->pretty_print_text,"\n";
     
-	# this should probably still be built when the model is
-    #unless ($self->_build_model_filesystem_paths($obj)) {
-    #    $self->error_message('filesystem path creation failed');
-    #    $obj->delete;
-    #    return;
-    #}
     
     return 1;
-}
-
-# TODO: remove
-# this should probably still be build when the model is
-sub _build_model_filesystem_paths {
-    my $self = shift;
-    my $model = shift;
-    
-    my $base_dir = $model->data_directory;
-    
-    eval {mkpath("$base_dir");};
-    
-    if ($@) {
-        $self->error_message("model base dir $base_dir could not be successfully created");
-        return;
-    }
-    
-    return 1;
-    
 }
 
 sub _extract_command_properties_and_duplicate_keys_for__name_properties{
@@ -190,12 +167,8 @@ sub _extract_command_properties_and_duplicate_keys_for__name_properties{
         }
     }
 
-	# set the type name property
+	# set the type name property for the parent class
 	$params{'type_name'} = 'short read';
-    # TODO: remove
-	# The sequence is not set up at the moment in the db... so this module will
-	# not work until it is
-	# $params{'id'} = 42;
 
     return \%params;
 }
@@ -204,12 +177,12 @@ sub _validate_execute_params{
     my $self = shift;
     
     unless ($self->reference_sequence) {
-        if ($self->prior_ref_seq eq "none") {
+        if ($self->prior eq "none") {
             $self->error_message("No reference sequence set.  This is required w/o a prior.");
             $self->usage_message($self->help_usage);
             return;
         }
-        $self->reference_sequence($self->prior_ref_seq);
+        $self->reference_sequence($self->prior);
     }
 
     if (my @args = @{ $self->bare_args }) {
@@ -236,7 +209,24 @@ sub _create_target_class_instance_and_error_check{
         lsf_job_id      => undef, 
         user_name       => $ENV{USER}, 
     );
-
+	
+#=cut
+	#  check to see if the processing profile exists before creating
+$DB::single=1;
+	# exclude 'name' and 'id' from the get since these parameters would make the
+	# processing_profile unique despite being effectively the same as another...
+	my %get_params = %params;
+	delete $get_params{name};
+	delete $get_params{id};
+	my @existing_profiles = $self->target_class->get(%get_params);
+	if (scalar(@existing_profiles) > 0) {
+		my $existing_name = $existing_profiles[0]->name;
+		$self->error_message("A processing profile named $existing_name with those parameters already exists.");
+		return;
+	}
+	#
+#=cut	
+	
     my $obj = $target_class->create(%params);
     if (!$obj) {
         $self->error_message(
