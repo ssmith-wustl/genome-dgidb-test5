@@ -424,11 +424,14 @@ sub execute_with_bsub {
     # Header for output and error files
     for my $log_file ( $err_log_file, $out_log_file )
     {
-        unless ( -w $log_file )
-        {
-            $self->error_message("Can't write to log file ($log_file)");
-            return;
-        }
+        $DB::single=1;
+        if((stat($log_file))[2] != 0100664) { 
+            unless ( chmod(0664, $log_file) )
+            {
+                $self->error_message("Can't chmod log file ($log_file)");
+                return;
+            }
+       }
         my $fh = IO::File->new(">> $log_file");
         $fh->print("\n\n########################################################\n");
         $fh->print( sprintf('Submitted at %s: %s', UR::Time->now, $cmdline) );
