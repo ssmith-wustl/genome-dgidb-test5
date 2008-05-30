@@ -19,7 +19,7 @@ class Genome::ProcessingProfile::ShortRead {
         indel_finder_name            => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         indel_finder_params          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         multi_read_fragment_strategy => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        prior_ref_seq                => { is => 'VARCHAR2', len => 255, is_optional => 1 }, 
+        prior		                 => { is => 'VARCHAR2', len => 255, sql => 'prior_ref_seq', is_optional => 1 }, 
         read_aligner_name            => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         read_aligner_params          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         read_calibrator_name         => { is => 'VARCHAR2', len => 255, is_optional => 1 },
@@ -39,7 +39,6 @@ sub pretty_print_text {
         my $class_meta = $self->get_class_object;
         for my $name ($class_meta->all_property_names) {
             next if $name eq 'name';
-            print $name,"\n";
             my $property_meta = $class_meta->get_property_meta_by_name($name);
             unless ($property_meta->is_delegated or $property_meta->is_calculated) {
                 push @printable_property_names, $name;
