@@ -303,3 +303,112 @@ void do_with_c_func(void * fpin,void * tempfunc)
 }
 END_C
 1;
+=pod
+
+=head1 NAME
+
+Genome::Model::Tools::Maq::Map::Reader - Map File Reader/Iterator
+
+=head1 SYNOPSIS
+
+my $mi = Genome::Model::Tools::Maq::Map::Reader->new();
+
+ $mi->open("inputfilename");
+ my $map_header = $mi->read_header();
+ 
+ while(my $map_record = $mi->get_next)
+ {
+    print Dumper($map_record);
+ 
+ }
+ $mi->close;
+ 
+ --or--
+ $mi->open("inputfilename");
+ my $map_header = $mi->read_header();
+ 
+ $mi->do('do_func');
+ 
+ $mi->close;
+ 
+ sub do_func
+ {
+    my ($record) = @_;
+    print Dumper($record);
+ }
+ 
+ --or--
+ use Inline C;
+ $mi->open("inputfilename");
+ my $map_header = $mi->read_header();
+ 
+ $mi->do('do_func_c');
+ 
+ $mi->close;
+ __END__
+ __C__
+ #include "mapmap.h"
+ void do_func_c(maqmap1_t *mm)
+ {
+     maqmap1_t *temp = (maqmap1_t *)mm;
+     printf("%s\n",temp->name);
+ }
+ 
+ 
+    
+=head1 DESCRIPTION
+
+Genome::Model::Tools::Maq::Map::Reader is a map file reader/iterator.  It allows the implementation of callbacks
+in C for fast iteration over a Map file.
+
+=head1 METHODS
+
+=head1 new 
+
+my $mi = Genome::Model::Tools::Maq::Map::Reader->new;
+
+=head1  get_contig_names 
+
+$mi->open("input_file_name");
+
+input_file_name - required before reading from map file
+
+=head1 read_header 
+
+my $header = $mi->read_header();
+    
+returns a hash representing the map file header.
+
+=head1 get_next
+
+my $record = $mi->get_next;
+    
+returns a hash containing the next record in the map file stream.
+
+=head1 do
+
+ $mi->do('do_func');
+ $mi->do($perl_func_ref);
+ $mi->do('do_func_c');
+ 
+ Takes either a perl function name, perl function ref, or C function name, and performs that operation for 
+ each record in the map file.  The first argument to the perl do_func is a hash containing the map file record.  
+ The first argument to the C implementation of a do_func is a pointer to a maqmap1_t record.  
+
+=head1 set_assembly_tags 
+
+$ace_object->set_assembly_tags(\@assembly_tags);
+    
+replaces the current array of assembly tags in the ace file with a new list of assembly tags.
+
+=head1 write_file
+
+$ace_object->write_file;
+    
+This function will write the ace object in it's current state to the output ace file specified during object construction.
+
+=head1 Author(s)
+
+ Jon Schindler <jschindl@watson.wustl.edu>
+
+=cut

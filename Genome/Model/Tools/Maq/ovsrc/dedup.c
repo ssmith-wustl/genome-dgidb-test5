@@ -1,22 +1,3 @@
-package Genome::Model::Tools::Maq::RemovePcrArtifacts_C;
-
-our $inline_dir;
-BEGIN
-{
-    ($inline_dir) = "$ENV{HOME}/".(`uname -m` =~ /ia64/ ? '_InlineItanium' : '_Inline32');
-    mkdir $inline_dir;    
-};
-
-use Inline 'C' => 'Config' => (
-            DIRECTORY => $inline_dir,
-            INC => '-I/gscuser/jschindl -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
-            CCFLAGS => `uname -m` =~ /ia64/ ? '-D_FILE_OFFSET_BITS=64':'-D_FILE_OFFSET_BITS=64 -m32',
-            LIBS => '-L/gscuser/jschindl -L/gscuser/jschindl/svn/gsc/zlib-1.2.3 -lz -lmaq',
-            NAME => __PACKAGE__
-            );
-
-use Inline C => <<'END_C';
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <zlib.h>
@@ -32,32 +13,6 @@ int MAX_READLEN2 =64;
 
 int glob_keep_records;
 int glob_del_records;
-
-/*int get_record(gzFile fpin, void * buf) // simple buffered read optimization test
-{
-    static int size = 8000000;
-    static maqmap1_t maqbuffer[8000000];
-    static int used = -1;
-    static int current = 0;
-    int ret;
-    if(current>=used)
-    {
-        used = gzread(fpin, maqbuffer, sizeof(maqbuffer));
-        used = used <=size?used:size;
-        if(!used) return 0;
-        current = 0;
-         printf("current %d %d\n", current, used);
-    }
-    if(used>current)
-    {
-       
-        memcpy(buf, &maqbuffer[current],sizeof(maqmap1_t));
-        current++;
-        return 1;    
-    }
-    return 0;
-
-}*/
 
 /**********************************************************************/
 /* data structure and funcs for managing a list of sequences might be overkill, but oh well**/
@@ -146,6 +101,7 @@ void bl_realloc_list(bl_list *list, int size)
 
 int bl_dump_list(bl_list *list, gzFile fp)
 {
+    if(!fp)return list->used;
     int i = 0;
     for(i=0;i<list->used;i++)
     {
@@ -277,6 +233,30 @@ void bl_array_free(bl_array *array)
         bl_free_list(array->lists[i]);
     }
     free(array);
+}
+
+int dedup_count(maqmap1_t **reads, int read_count, int comparison_length)
+{  
+    //initialize lists
+    
+    static bl_array *keep_list = NULL;
+    keep_list = keep_list?keep_list:bl_array_create(4*MAX_READLEN);
+    static bl_array *del_list = NULL;
+    del_list = del_list?del_list:bl_array_create(4*MAX_READLEN);    
+        
+    int total_records = 1;
+    int best_records = 0;
+    int del_records = 0;
+    int i = 0;
+    for(i=0;i<read_count;i++)
+    {
+        process_record(keep_list, del_list, reads[i], comparison_length);         
+    }
+    best_records += bl_array_prune_all(keep_list, 0,NULL);
+    //bl_array_free(del_list);
+    //bl_array_free(keep_list);    
+    
+    return best_records;
 }
 
 
@@ -504,80 +484,6 @@ void sort_frags_files (char *infile, char *keepfile,int size )
     return;
 }
 
-/**********************************************************************/
-void remove_dup_frags (char *infile, char *keepfile, char *delfile, ...)
-{
-    int i;
-    int compare_seqs = 0;
-    int comparison_length = 0;
-    Inline_Stack_Vars;
-    if(Inline_Stack_Items >= 4)
-    {
-        compare_seqs = 1;
-        SV *x = Inline_Stack_Item(3);
-        comparison_length = SvIV(x);
-    }
-    MAX_READLEN = 64;
-    
-    glob_keep_records = 0;
-    glob_del_records = 0;
-    
-    char keepfileunsorted[256];
-    char delfileunsorted[256];
-    bzero(keepfileunsorted, 256);
-    bzero(delfileunsorted, 256);
-    
-    sprintf(keepfileunsorted, "%s.unsorted",keepfile);
-    sprintf(delfileunsorted, "%s.unsorted",delfile);
-    
-    gzFile fpin = gzopen(infile, "r");
-    if (fpin == NULL) { printf("Unable to open file '%s'\n",infile); return; }
-
-    gzFile fpkeepseq = gzopen(keepfileunsorted, "w");
-    if (fpkeepseq == NULL) { printf("Unable to open file '%s'\n",keepfileunsorted); return; }
-
-    gzFile fpdelseq = gzopen(delfileunsorted, "w");
-    if (fpdelseq == NULL) { printf("Unable to open file '%s'\n",delfileunsorted); return; }
-
-    if(compare_seqs)
-    {
-        fragdedup_yav(fpin,fpkeepseq, fpdelseq, comparison_length);
-        
-        gzclose(fpkeepseq);
-        gzclose(fpdelseq);
-        fpkeepseq = gzopen(keepfileunsorted, "r");
-        if (fpkeepseq == NULL) { printf("Unable to open file '%s'\n",keepfileunsorted); return; }
-        
-        fpdelseq = gzopen(delfileunsorted, "r");
-        if (fpdelseq == NULL) { printf("Unable to open file '%s'\n",delfileunsorted); return; }
-        
-        gzFile fpkeepseqsorted = gzopen(keepfile, "w");
-        if (fpkeepseqsorted == NULL) { printf("Unable to open file '%s'\n",keepfile); return; }
-        
-        gzFile fpdelseqsorted = gzopen(delfile, "w");
-        if (fpdelseqsorted == NULL) { printf("Unable to open file '%s'\n",delfile); return; }
-        
-
-        sort_frags(fpkeepseq, fpkeepseqsorted, glob_keep_records);
-        sort_frags(fpdelseq, fpdelseqsorted, glob_del_records);
-        gzclose(fpkeepseqsorted);
-        gzclose(fpdelseqsorted);
-        gzclose(fpkeepseq);
-        gzclose(fpdelseq);
-        unlink(keepfileunsorted);
-        unlink(delfileunsorted);
-        exit(0);
-    }
-    else
-        fragdedup_original(fpin,fpkeepseq, fpdelseq);
-
-    gzclose(fpin);
-    gzclose(fpkeepseq);
-    gzclose(fpdelseq);
-    return;
-}
-
-/**********************************************************************/
 int find_ref_seq_id(char *ref_seq_name, maqmap_t * mm)
 {
     int i = 0;
@@ -650,46 +556,6 @@ cleanup:
 }
 
 /**********************************************************************/
-void print_seq_ov (char *maqfile, char *seqfile)
-{
-    gzFile fpin = NULL;
-    FILE *fp = NULL;
-    maqmap_t  *mm = NULL;
-    fpin = gzopen(maqfile, "r");
-    if (fpin == NULL) { printf("Unable to open file '%s'\n",maqfile); goto cleanup; }
-    
-    fp = fopen(seqfile, "r");
-    if (fp == NULL) { printf("Unable to open file '%s'\n",seqfile); goto cleanup; }
-    
-    mm = maqmap_read_header(fpin);    
-    if(mm == NULL) { printf("Unable to get header from maq file.\n"); goto cleanup; }
-    maqmap1_t curr_mm;    
-    int seqid, pos, ret;
-    //ret = get_next_seq_pos(fp, &seqid, &pos, mm);        
-    //if(!ret) goto cleanup;
-    
-    while((ret = get_next_seq_pos(fp, &seqid, &pos, mm)))
-    {
-        while(get_record(fpin, &curr_mm))
-        {  
-            if(seqid != curr_mm.seqid) continue;
-            if((curr_mm.pos>>1) > pos) break;
-            if(((curr_mm.pos>>1) + curr_mm.size - 1) < pos) continue;
-            printf("%s %d %d %d\n", curr_mm.name, curr_mm.seqid, curr_mm.pos>>1, curr_mm.size);    
-        }    
-    }
- 
-    // before and after read count for a given start site position
-    // chromosme, position, read count before, read count after                
-
-cleanup:
-    if(mm) maq_delete_maqmap(mm);
-    if(fpin) gzclose(fpin);
-    if(fp) fclose(fp);
-    return;
-}
-
-/**********************************************************************/
 void print_ref_names(char * maqfile) 
 {
     gzFile fpin = gzopen(maqfile, "r");
@@ -704,7 +570,3 @@ void print_ref_names(char * maqfile)
     fclose(fpin);
 }
 
-
-END_C
-
-1;
