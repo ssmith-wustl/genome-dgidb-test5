@@ -30,4 +30,13 @@ sub resolve_subclass_name {
 	return $class_name;
 }
 
+# Calls the subclass's pretty_print_text
+sub pretty_print_text {
+	my $self = shift;
+	
+	my $subclass = $self->resolve_subclass_name();
+	my $subclass_instance = $subclass->get(name => $self->name);
+	$subclass_instance->pretty_print_text();
+}
+
 1;
