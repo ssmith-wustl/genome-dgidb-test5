@@ -59,7 +59,7 @@ class Genome::RunChunk {
         read_length                     => { via => "_run_lane_solexa" },
         
         # deprecated
-        limit_regions       => { is => 'VARCHAR2', len => 32, is_optional => 1, column_name => "LIMIT_REGIONS" },
+        limit_regions       => { is => 'String', is_optional => 1, calculate_from => ['subset_name'], calculate=> q| $subset_name | },
         full_path           => { is => 'VARCHAR2', len => 767, column_name => "FULL_PATH" },
         
     ],
