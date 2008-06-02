@@ -195,6 +195,23 @@ sub execute {
     return 1;
 }
 
+sub verify_successful_completion {
+	my $self = shift;
+	
+	unless (-d $model->data_parent_directory) {
+    	$self->error_message("Data parent directory doesnt exist: ".$model->data_parent_directory);
+		return 0;
+	}
+
+	my $run_dir = $self->resolve_run_directory;
+    unless (-d $run_dir) {
+       	$self->error_message("Run directory path doesnt exist: $run_dir");
+    	return 0;
+    }
+	
+	return 1;
+}
+
 
 
 1;
