@@ -39,7 +39,7 @@ ok($create_pp_command->execute(), 'execute processing profile create');
 
 # Get it and make sure there is one
 my @processing_profiles = Genome::ProcessingProfile::ShortRead->get(name => $pp_name);
-is(scalar(@processing_profiles),1,'expected one model');
+is(scalar(@processing_profiles),1,'expected one processing profile');
 
 # check the type
 my $pp = $processing_profiles[0];

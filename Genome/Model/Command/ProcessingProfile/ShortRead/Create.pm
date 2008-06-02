@@ -16,7 +16,7 @@ class Genome::Model::Command::ProcessingProfile::ShortRead::Create {
     has => [
 		# This will probably never be specified since processing profiles are used for many models
 		# this shouldnt even be here except that we need to override this to be not required
-        model                  		 => { is => 'Genome::Model', is_optional => 1 },
+        model                  		 => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
         profile_name 			     => { is => 'VARCHAR2', len => 255, is_optional => 1 ,
 										doc => 'The human readable name for the processing profile'},
 		align_dist_threshold         => { is => 'VARCHAR2', len => 255, is_optional => 1,
@@ -131,7 +131,7 @@ $DB::single=1;
         return;
     }
     
-    $self->status_message("created model " . $obj->name);
+    $self->status_message("created processing profile " . $obj->name);
     print $obj->pretty_print_text,"\n";
     
     
@@ -148,12 +148,11 @@ sub _extract_command_properties_and_duplicate_keys_for__name_properties{
         my $value = $self->$command_property;
         next unless defined $value;
 
-        # This is an ugly hack just for creating Genome::Model objects
+        # This is an ugly hack just for creating Genome::ProcessingProfile objects
         # Command-derived objects gobble up the --name parameter as part of the
         # UR framework initialization, so we're stepping around that by
-        # knowing that Genome::Model's have names, and the related Command
-        # param is called "model_name"
-		# Also used for creating Genome::ProcessingProfile objects now
+        # knowing that Genome::ProcessingProfile's have names, and the related Command
+        # param is called "profile_name"
         if ($command_property eq 'profile_name') {
             if ($target_class->can('name')) {
                 $params{'name'} = $value; 
@@ -210,9 +209,7 @@ sub _create_target_class_instance_and_error_check{
         user_name       => $ENV{USER}, 
     );
 	
-#=cut
 	#  check to see if the processing profile exists before creating
-$DB::single=1;
 	# exclude 'name' and 'id' from the get since these parameters would make the
 	# processing_profile unique despite being effectively the same as another...
 	my %get_params = %params;
@@ -225,7 +222,6 @@ $DB::single=1;
 		return;
 	}
 	#
-#=cut	
 	
     my $obj = $target_class->create(%params);
     if (!$obj) {
