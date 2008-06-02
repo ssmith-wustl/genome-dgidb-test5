@@ -27,21 +27,26 @@ void fire_callback_for_overlaps (ov_stream_t * v_stream, ov_stream_t * r_stream,
     GQueue * overlapping_reads_queue = g_queue_new();
     void * next_v = NULL;
     void * next_r = NULL;
-    //int rec_count = 0;
+    int rec_count = 0;
+    int i = 0;
     while (next_v = NEXT(v_stream)) {
-        while (!g_queue_is_empty(overlapping_reads_queue)&&
-                BEGIN(r_stream, g_queue_peek_tail(overlapping_reads_queue)) < BEGIN(v_stream, next_v)) {
+        rec_count = g_queue_get_length(overlapping_reads_queue);
+        i = rec_count;
+        while(i>0&&BEGIN(r_stream, g_queue_peek_nth(overlapping_reads_queue,i-1)) < BEGIN(v_stream, next_v))
+        {
+            i--;
             // clear the queue of reads which don't overlap this variation
             // we need to do an explicit check of whether or not the END of the reads queue is 
             // greater than the beginning of the variant since only the beginning of reads are 
             // sorted, not the ends
-            if(END(r_stream, g_queue_peek_tail(overlapping_reads_queue)) >= BEGIN(v_stream, next_v))
+            if(END(r_stream, g_queue_peek_nth(overlapping_reads_queue,i)) >= BEGIN(v_stream, next_v))
                 continue;
-            gpointer item = g_queue_pop_tail(overlapping_reads_queue);
+            gpointer item = g_queue_pop_nth(overlapping_reads_queue,i);
             //printf("Before free\n");
             FREE(r_stream, item);
-            //printf("After free\n");
+            //printf("After free\n");        
         }
+        
         while (next_r = NEXT(r_stream)) {
             //printf ("rec_count %d\n",rec_count);
             //rec_count++;
@@ -74,8 +79,7 @@ void fire_callback_for_overlaps (ov_stream_t * v_stream, ov_stream_t * r_stream,
 		if(next_v) FREE(v_stream, next_v);
     }
     //printf("Here\n");
-    while (!g_queue_is_empty(overlapping_reads_queue)&&
-            END(r_stream, g_queue_peek_tail(overlapping_reads_queue)) <= BEGIN(v_stream, next_v)) {
+    while (!g_queue_is_empty(overlapping_reads_queue)) {
             // clear the queue of reads which don't overlap this variation
             gpointer item = g_queue_pop_tail(overlapping_reads_queue);
             FREE(r_stream, item);
