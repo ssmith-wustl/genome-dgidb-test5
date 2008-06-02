@@ -162,7 +162,7 @@ $DB::single=1;
             seq_id => $read_set_id,
             run_name => $run_name,
             full_path => $full_path,
-            limit_regions => $lane, #TODO: platform-neutral name for lane/region!!
+            subset_name =>$lane,
             sequencing_platform => $sequencing_platform,
             sample_name => $model->sample_name,
         );
