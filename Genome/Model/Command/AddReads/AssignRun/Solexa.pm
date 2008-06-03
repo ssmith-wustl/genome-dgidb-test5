@@ -197,8 +197,10 @@ sub execute {
 
 sub verify_successful_completion {
 	my $self = shift;
-	
-	unless (-d $model->data_parent_directory) {
+
+	my $model = $self->model;
+
+        unless (-d $model->data_parent_directory) {
     	$self->error_message("Data parent directory doesnt exist: ".$model->data_parent_directory);
 		return 0;
 	}
