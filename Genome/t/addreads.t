@@ -53,9 +53,11 @@ unless ($archos =~ /64/) {
 
 ####Maybe create Genome::RunChunk(s)?
 ###teh gzips are teh key here.... DR. SCHUSTE has provided us with some suitably tiny fastqs in gzip form.
-my $zip_file = $ENV{PWD} .'/addreads.tgz';
+use FindBin qw($Bin);
 
-my $tmp_dir = File::Temp::tempdir();
+my $zip_file = $Bin .'/addreads.tgz';
+
+y $tmp_dir = File::Temp::tempdir();
 $directories_to_remove{$tmp_dir} = 1;
 chdir $tmp_dir;
 
