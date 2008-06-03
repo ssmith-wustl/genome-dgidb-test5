@@ -104,16 +104,12 @@ sub execute {
 
     my @args = ($maq_pathname, 'runscript', $self->tmp_script);
     #print STDERR "Running command: @args\n";
-    my $linkage_class = $self->c_linkage_class();
-    my $function = $linkage_class . '::mapmergenozip';
-    no strict 'refs';
-    my $rv = $function->(@args);
-    use strict 'refs';
-    #my $rv = system(@args);
-    #if ($rv) {
-    #    $self->error_message("nonzero exit code returned by maq, command looks like, @args");
-    #    return;
-    #}
+
+    my $rv = system(@args);
+    if ($rv) {
+        $self->error_message("nonzero exit code returned by maq, command looks like, @args");
+        return;
+    }
     return 1;
 }
 
