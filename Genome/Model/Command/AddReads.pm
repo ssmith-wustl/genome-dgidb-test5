@@ -7,12 +7,10 @@ use above "Genome";
 use Command; 
 
 class Genome::Model::Command::AddReads {
-    is => 'Genome::Model::Command',
+    is => 'Genome::Model::Event',
     has => [
         model_id            => { is => 'Integer', 
                                 doc => 'Identifies the genome model to which we\'ll add the reads.' },
-        model               => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' 
-                                },
         read_set_id         => { is => 'String',
                                 doc => 'The unique ID of the data set produced on the instrument' },
     ],
@@ -73,7 +71,8 @@ $DB::single=1;
     my $read_set_id = $self->read_set_id;
     
     # hack until the GSC.pm namespace is deployed ...after we fix perl5.6 issues...
-    eval "use GSCApp; App::DB->db_access_level('rw'); App->init;";
+
+    eval "use GSCApp; App::Init->initialized || App->init;";
     die $@ if $@;
     
     my $read_set = GSC::Sequence::Item->get($read_set_id);
@@ -182,7 +181,7 @@ $DB::single=1;
             event_status => 'Scheduled',
             retry_count => 0,
             prior_event_id => $prior_event_id,
-            # parent_event_id => $self->id,  ###enable when we are able to save AddReads
+            parent_event_id => $self->id,
         );
         unless ($command) {
             $self->error_message(
@@ -202,6 +201,10 @@ $DB::single=1;
     }
 
     return 1; 
+}
+
+sub _get_sub_command_class_name { 
+    return __PACKAGE__;
 }
 
 1;
