@@ -101,7 +101,7 @@ sub lock_directory {
     my $lock_directory = $data_directory . '/locks/';
     if (-d $data_directory and not -d $lock_directory) {
         mkdir $lock_directory;
-        chmod '2775', $lock_directory;
+        chmod 02775, $lock_directory;
     }
     return $lock_directory;
 }
