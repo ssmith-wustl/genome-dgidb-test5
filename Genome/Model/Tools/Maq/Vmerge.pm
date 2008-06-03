@@ -108,7 +108,7 @@ sub execute {
     my $function = $linkage_class . '::mapmergenozip';
     no strict 'refs';
     my $rv = $function->(@args);
-    strict 'refs';
+    use strict 'refs';
     #my $rv = system(@args);
     #if ($rv) {
     #    $self->error_message("nonzero exit code returned by maq, command looks like, @args");
