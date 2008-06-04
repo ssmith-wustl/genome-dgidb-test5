@@ -209,20 +209,32 @@ sub _create_target_class_instance_and_error_check{
         user_name       => $ENV{USER}, 
     );
 	
-	#  check to see if the processing profile exists before creating
-	# exclude 'name' and 'id' from the get since these parameters would make the
-	# processing_profile unique despite being effectively the same as another...
-	my %get_params = %params;
-	delete $get_params{name};
-	delete $get_params{id};
-	my @existing_profiles = $self->target_class->get(%get_params);
+	# Check to see if the processing profile exists before creating
+	# First, enforce the name being unique since processing profiles are
+	# specified by name
+	my @existing_profiles = $self->target_class->get(name => $params{name});
 	if (scalar(@existing_profiles) > 0) {
 		my $existing_name = $existing_profiles[0]->name;
-		$self->error_message("A processing profile named $existing_name with those parameters already exists.");
+		$self->error_message("A processing profile named $existing_name already exists. Processing profile names must be unique.");
 		return;
 	}
-	#
 	
+	
+	# Now, enforce functional uniqueness. We dont want more than one processing
+	# profile doing effectively the same thing.
+	my %get_params = %params;
+	# exclude 'name' and 'id' from the get since these parameters would make the
+	# processing_profile unique despite being effectively the same as another...
+	delete $get_params{name};
+	delete $get_params{id};
+	@existing_profiles = $self->target_class->get(%get_params);
+	if (scalar(@existing_profiles) > 0) {
+		my $existing_name = $existing_profiles[0]->name;
+		$self->error_message("A processing profile named $existing_name already exists with the same parameters. Processing profiles must be functionally unique.");
+		return;
+	}
+	
+	# If it passed the above checks, create the processing profile
     my $obj = $target_class->create(%params);
     if (!$obj) {
         $self->error_message(
