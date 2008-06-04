@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "ov.h"
 #include "maqmap.h"
+
 #define NEXT(a) a->next(a)
 #define FREE(a,b) a->free?a->free(b):free(b)
 #define BEGIN(a,b) (a->beginf?a->beginf(b):((ov_loc_type *)b)->begin)
@@ -29,9 +30,10 @@ void fire_callback_for_overlaps (ov_stream_t * v_stream, ov_stream_t * r_stream,
     void * next_r = NULL;
     int rec_count = 0;
     int i = 0;
+
     while (next_v = NEXT(v_stream)) {
         rec_count = g_queue_get_length(overlapping_reads_queue);
-        i = rec_count;
+        i = rec_count;        
         while(i>0&&BEGIN(r_stream, g_queue_peek_nth(overlapping_reads_queue,i-1)) < BEGIN(v_stream, next_v))
         {
             i--;
@@ -46,7 +48,8 @@ void fire_callback_for_overlaps (ov_stream_t * v_stream, ov_stream_t * r_stream,
             FREE(r_stream, item);
             //printf("After free\n");        
         }
-        
+        //TODO: check if last item in reads_queue is already greater than next_v, if so, fire callback
+		// and continue
         while (next_r = NEXT(r_stream)) {
             //printf ("rec_count %d\n",rec_count);
             //rec_count++;
@@ -77,6 +80,7 @@ void fire_callback_for_overlaps (ov_stream_t * v_stream, ov_stream_t * r_stream,
             }
         }
 		if(next_v) FREE(v_stream, next_v);
+        if(!next_r) break;
     }
     //printf("Here\n");
     while (!g_queue_is_empty(overlapping_reads_queue)) {
@@ -84,6 +88,6 @@ void fire_callback_for_overlaps (ov_stream_t * v_stream, ov_stream_t * r_stream,
             gpointer item = g_queue_pop_tail(overlapping_reads_queue);
             FREE(r_stream, item);
     }
-    if(next_v)FREE(v_stream, next_v);
+
 
 }

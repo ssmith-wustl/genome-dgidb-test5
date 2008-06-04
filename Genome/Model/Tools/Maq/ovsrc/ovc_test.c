@@ -6,14 +6,41 @@
 #include "dedup.h"
 #include "bfa.h"
 
-
+int g_last_rseqid;
+int g_last_vseqid;
+int g_num_seqs;
 
 void * next_r(void * r_stream) 
 {
     ov_stream_t *stream = (ov_stream_t*)r_stream;
-    maqmap1_t *m1 =malloc(sizeof(maqmap1_t));    
+    maqmap1_t *m1 =malloc(sizeof(maqmap1_t));
+    if(!m1) {printf("Couldn't allocate m1 record\n");return NULL;}    
     gzFile *fp = (gzFile *)(stream->stream_data);
-    return gzread(fp,m1, sizeof(maqmap1_t))?(void*)m1:NULL;
+    long long offset = gztell(fp);
+    int size=0;
+    if((size = gzread(fp,m1, sizeof(maqmap1_t))))
+    {
+        if(size != sizeof(maqmap1_t)) 
+        {
+            printf("size is only %d, seqid is %d\n",size,m1->seqid);
+            //dealing with a truncated file
+            free(m1);
+            return NULL;
+        }
+        
+        if(m1->seqid!=g_last_rseqid)
+        {
+            gzseek(fp,offset,SEEK_SET);
+            free(m1);            
+            return NULL;
+        }        
+        return (void*)m1;
+    }
+    else
+    {
+        free(m1);
+        return NULL;
+    }
 }
 
 unsigned int begin_r(void * item)
@@ -33,8 +60,113 @@ unsigned int end_r(void * item)
 void * next_v(void *pstream)
 {
     ov_stream_t *stream = (ov_stream_t *)pstream;
+    //HACK 
     snp_stream *s = (snp_stream *)stream->stream_data;
-	return get_next_snp(s);
+    snp_item *item = get_next_snp(s);
+    if(item &&item->seqid!=g_last_vseqid)
+    {
+        fseek(s->fp,-(strlen(item->line)+1),SEEK_CUR);
+        free(item);
+        return NULL;        
+    }
+    return (void *)item;	
+}
+
+int advance_seqid(void *rstream, void *vstream)
+{
+
+    ov_stream_t *stream = (ov_stream_t*)rstream;
+    maqmap1_t *m1 =malloc(sizeof(maqmap1_t));    
+    gzFile *fp = (gzFile *)(stream->stream_data);
+    stream = (ov_stream_t *)vstream;
+    snp_stream *s = (snp_stream *)stream->stream_data;
+    snp_item temp;
+    snp_item *item = &temp;
+    int size = 0;
+    long long offset = 0;
+    do
+    {
+        if(g_last_rseqid<=g_last_vseqid)
+            while((offset = gztell(fp))&&(size = gzread(fp,m1, sizeof(maqmap1_t))))
+            {
+                if(size != sizeof(maqmap1_t)||size == 0) 
+                {
+                    printf("size is only %d, seqid is %d\n",size,m1->seqid);
+                    //dealing with a truncated file
+                    free(m1);
+                    return 0;
+                }
+                if(m1->seqid>g_last_rseqid)
+                {
+                    gzseek(fp,offset,SEEK_SET);
+                    g_last_rseqid = m1->seqid;
+                    free(m1);
+                    if(g_last_rseqid>=g_num_seqs) return 0;
+                    break;
+                }
+            }
+        
+        if(g_last_rseqid>g_last_vseqid)
+            while(item =get_next_snp(s))
+            {
+                if(item->seqid>g_last_vseqid)
+                {
+                    fseek(s->fp,-(strlen(item->line)+1),SEEK_CUR);
+                    g_last_vseqid=item->seqid;
+                    free(item);
+                    if(g_last_vseqid>=g_num_seqs) return 0;
+                    break;
+                }        
+            }
+        if(!item || gzeof(fp))return 0;
+    }
+    while(g_last_vseqid != g_last_rseqid);
+    
+    return 1;
+}
+
+int init_seqid(void *rstream, void *vstream)
+{
+
+    ov_stream_t *stream = (ov_stream_t*)rstream;
+    maqmap1_t m1;    
+    gzFile *fp = (gzFile *)(stream->stream_data);
+    stream = (ov_stream_t *)vstream;
+    snp_stream *s = (snp_stream *)stream->stream_data;
+    snp_item temp;
+    snp_item *item = &temp;
+    long long offset = 0;
+    do
+    {
+        if(g_last_rseqid<g_last_vseqid)
+            while((offset = gztell(fp))&&gzread(fp,&m1, sizeof(maqmap1_t)))
+            {
+                
+                if(m1.seqid>g_last_rseqid)
+                {
+                    gzseek(fp,offset,SEEK_SET);
+                    printf("setting rseqid %d %d\n", m1.seqid, g_last_rseqid);
+                    g_last_rseqid = m1.seqid;                    
+                    break;
+                }
+            }
+        
+        if(g_last_rseqid>g_last_vseqid)
+            while((offset = ftell(s->fp))&&(item =get_next_snp(s)))
+            {
+                if(item->seqid>g_last_vseqid)
+                {
+                    fseek(s->fp,offset,SEEK_SET);
+                    g_last_vseqid=item->seqid;
+                    free(item);
+                    break;
+                }        
+            }
+        if(!item || gzeof(fp)){printf("error in init\n"); return 0;}
+    }
+    while(g_last_vseqid != g_last_rseqid);
+    
+    return 1;
 }
 
 typedef struct
@@ -155,7 +287,7 @@ static char get_ref_base(long long position, char *name, int seqid)
     }        
 	bit64_t word = bfa1->seq[position>>5];
     bit64_t mask = bfa1->mask[position>>5];
-    int offset = 32-(position&0x1f);//position%32 
+    long long offset = 32-(position&0x1f);//position%32 
     return (mask>>(offset<<1)&3)? "ACGT"[word>>(offset<<1)&3] : 'N'; 
 }
 
@@ -190,22 +322,30 @@ void callback_def (void *variation, GQueue * reads)
     snp_item * var_overlap = (snp_item *)variation;  
     v1base = get_base(var_overlap->var1);
     v2base = get_base(var_overlap->var2);
-    //printf("%d - %d\n", var_overlap->begin, var_overlap->end);
-    if(g_queue_is_empty(reads)) return;
+    //if(g_queue_is_empty(reads)) return;
     GList *item = g_queue_peek_head_link(reads);
+    if(g_queue_is_empty(reads)) item = NULL;
     mreads->count = g_queue_get_length(reads);
     check_size(mreads);
     
-    int current_pos = 0;
-    do
+    int current_pos = mreads->count-1;
+    if (!g_queue_is_empty(reads)) do//yes, hacky
     {
         maqmap1_t *read = (maqmap1_t *)(item->data);
         mreads->reads[current_pos] = read;
-        current_pos++;
+        if(read->map_qual>10)current_pos--;
     }while(item = g_list_next(item));
-
+    current_pos++;
+    int i = 0;
+    if(current_pos>0) for(i=0;i<(mreads->count)-current_pos;i++){ mreads->reads[i] = mreads->reads[i+current_pos]; }
+    mreads->count-=current_pos;
+    //check for the case where the last record doesn't overlap
+    while(mreads->count>0&&(mreads->reads[mreads->count-1]->pos>>1)>var_overlap->end) { //printf("count is %d\n",current_pos);
+    mreads->count--;}
+    //if(mreads->count<=0) return;
+    
     get_matching_reads(mreads, match_reads,var_overlap->begin, 20, 0);//A allele
-    rc[0] = g_queue_get_length(reads);
+    rc[0] = match_reads->count;//g_queue_get_length(reads);
     get_quality_stats(match_reads, var_overlap->begin,&q[0],&mq[0]);
     urc[0] = dedup_count(match_reads->reads, match_reads->count, 26);
 
@@ -228,7 +368,7 @@ void callback_def (void *variation, GQueue * reads)
     v1[0] = rc[v1base];v1[1]=urc[v1base];v1[2]=q[v1base];v1[3]=mq[v1base]; 
     v2[0] = rc[v2base];v2[1]=urc[v2base];v2[2]=q[v2base];v2[3]=mq[v2base];
     ref_base = get_ref_base(var_overlap->begin, var_overlap->name, var_overlap->seqid);
-    int iref_base = get_base(ref_base);
+    int iref_base= get_base(ref_base);
     printf("%s\t%d,%d,%d,%d\t\t",var_overlap->line, rc[0],rc[1],rc[2],rc[3]);
     printf("%d,%d,%d,%d\t%c\t",urc[0],urc[1],urc[2],urc[3],ref_base);
     printf("%d,%d,%d,%d\t\t",rc[iref_base],urc[iref_base],q[iref_base],mq[iref_base]);
@@ -237,14 +377,17 @@ void callback_def (void *variation, GQueue * reads)
 }
 
 int ovc_filter_variations(char *mapfilename,char *snpfilename)
+//int main(int argc, char ** argv)
 {
+//    char * mapfilename = strdup(argv[1],256);
+//    char * snpfilename = strdup(argv[2], 256);
     gzFile reffp = gzopen(mapfilename,"r");
     maqmap_t *mm = maqmap_read_header(reffp);
+    g_num_seqs = mm->n_ref;
     mreads = calloc(1,sizeof(map_array));
     match_reads = calloc(1,sizeof(map_array));
     init_map_array(mreads);
     init_map_array(match_reads);
-    
     fpbfa = fopen("/gscmnt/sata114/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.bfa","r");
 	//nst_load_bfa(fpbfa);
     snp_stream *snps = calloc(1,sizeof(snp_stream));
@@ -253,9 +396,30 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename)
 	snps->ref_names = mm->ref_name;
     ov_stream_t * r_stream = new_stream(&next_r, NULL, &begin_r, &end_r, reffp );
     ov_stream_t * v_stream = new_stream(&next_v, NULL, NULL, NULL, snps);
-    fire_callback_for_overlaps(
-        v_stream,
-        r_stream,  
-        callback_def  
-    );
+    //init seqids
+    ov_stream_t *stream = (ov_stream_t*)r_stream;
+    maqmap1_t *m1 =malloc(sizeof(maqmap1_t));    
+    gzFile *fp = (gzFile *)(stream->stream_data);
+    if(gzread(reffp,m1, sizeof(maqmap1_t)))
+    {
+        gzrewind(reffp);
+        maqmap_read_header(reffp);
+        free(m1);
+        g_last_rseqid = m1->seqid;
+    }
+    else return 1;   
+
+    snp_item *item = get_next_snp(snps);
+    fseek(snps->fp,-(strlen(item->line)+1),SEEK_CUR);
+    g_last_vseqid=item->seqid;
+    free(item);
+    if(!init_seqid(r_stream, v_stream))return 1;//make sure they are are equal
+    do
+    {
+        fire_callback_for_overlaps(
+            v_stream,
+            r_stream,  
+            callback_def  
+        );
+    } while(advance_seqid(r_stream,v_stream));
 }

@@ -10,7 +10,7 @@ typedef struct {
    unsigned int seqid;
    char var1;
    char var2;
-   char line[256];
+   char line[1024];
 } snp_item;
 
 typedef struct {

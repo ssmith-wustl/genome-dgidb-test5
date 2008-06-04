@@ -36,8 +36,13 @@ snp_item *get_next_snp(snp_stream *s)
 	int n_ref = s->num_refs;
 	char **ref_names = s->ref_names;
 	static char last_name[256];
-	
-	snp_item *snp = calloc(n_ref, sizeof(snp_item));
+	    
+	snp_item *snp = calloc(1, sizeof(snp_item));
+    if(!snp)
+    {
+        printf("snp allocation failed.\n");
+        return NULL;
+    }
 	if(!fgets(snp->line, 1024, fp)) 
 	{
 		free(snp);
