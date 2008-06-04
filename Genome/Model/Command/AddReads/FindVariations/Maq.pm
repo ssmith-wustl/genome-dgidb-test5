@@ -154,7 +154,7 @@ sub execute {
     }
 
     my $accumulated_alignments_file_for_indelsoa = $model->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
-    unless (-p $accumulated_alignments_file_for_indelsoa) {
+    unless (-p $accumulated_alignments_file_for_indelsoa || ($^P && -s $accumulated_alignments_file_for_indelsoa)) {
         $self->error_message("Named pipe $accumulated_alignments_file_for_indelsoa was not found.");
         return;
     }
@@ -181,7 +181,7 @@ sub execute {
     $snip_fh->close();
 
     my $accumulated_alignments_file_for_pileup = $model->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
-    unless (-p $accumulated_alignments_file_for_pileup) {
+    unless (-p $accumulated_alignments_file_for_pileup || ($^P && -s $accumulated_alignments_file_for_indelsoa)) {
         $self->error_message("Named pipe $accumulated_alignments_file_for_pileup was not found.");
         return;
     }
@@ -203,12 +203,19 @@ sub execute {
 sub verify_succesful_completion {
     my $self = shift;
 
-    for my $file ($self->snip_output_file, $self->filtered_snip_output_file, $self->indel_output_file, $self->pileup_output_file) {
+    for my $file ($self->snip_output_file, $self->pileup_output_file) {
         unless (-e $file && -s $file) {
-            $self->error_message("file does not exist or is zero size $file");
+           $self->error_message("file does not exist or is zero size $file");
             return;
         }
     }
+    for my $file ($self->filtered_snip_output_file, $self->indel_output_file) {
+         unless (-e $file )  {
+           $self->error_message("file does not exist or is zero size $file");
+            return;
+        }
+    }
+        
 
     return 1;
 }
