@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Create;
+package Genome::Model::Command::Create::Model;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Genome::Model;
 use File::Path;
 use Data::Dumper;
 
-class Genome::Model::Command::Create {
+class Genome::Model::Command::Create::Model {
     is => ['Genome::Model::Event'],
     sub_classification_method_name => 'class',
     has => [

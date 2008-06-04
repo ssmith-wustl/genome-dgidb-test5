@@ -28,7 +28,7 @@ my $read_aligner = 'maq0_6_3';
 my $pp_name = 'testing';
 
 ######## test command processing profile short reads create. ########
-my $create_pp_command= Genome::Model::Command::ProcessingProfile::ShortRead::Create->create(
+my $create_pp_command= Genome::Model::Command::Create::ProcessingProfile::ShortRead->create(
      indel_finder          => $indel_finder,
      dna_type              => $dna_type,
      align_dist_threshold  => $align_dist_threshold,
@@ -41,7 +41,7 @@ my $create_pp_command= Genome::Model::Command::ProcessingProfile::ShortRead::Cre
 
 
 # check and create the processing profile
-isa_ok($create_pp_command,'Genome::Model::Command::ProcessingProfile::ShortRead::Create');
+isa_ok($create_pp_command,'Genome::Model::Command::Create::ProcessingProfile::ShortRead');
 ok($create_pp_command->execute(), 'execute processing profile create');     
 
 # Get it and make sure there is one
