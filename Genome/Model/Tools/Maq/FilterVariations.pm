@@ -40,7 +40,7 @@ sub execute {
     $DB::single = 1;
     my $self = shift;
     my $in = $self->input;
-    my $keep = $self->snpfile;
+    my $snpfile = $self->snpfile;
     unless ($in and $snpfile and -f $in and -f $snpfile) {
         $self->error_message("Bad params!");
         $self->usage_message($self->help_usage_complete_text);
@@ -61,8 +61,12 @@ package Genome::Model::Tools::Maq::FilterVariations_C;
 our $inline_dir;
 our $cflags;
 our $libs;
+our $ovsrc;
 BEGIN
 {
+    $ovsrc =  `wtf Genome::Model::Tools::Maq::FilterVariations`;
+    chomp $ovsrc;
+    ($ovsrc) = $ovsrc =~/(.*)\FilterVariations.pm/;
     ($inline_dir) = "$ENV{HOME}/".(`uname -m` =~ /ia64/ ? '_InlineItanium' : '_Inline32');
     mkdir $inline_dir;
     $cflags = `pkg-config glib-2.0 --cflags`;
@@ -72,7 +76,7 @@ BEGIN
 
 use Inline 'C' => 'Config' => (
             DIRECTORY => $inline_dir,
-            INC => '-I./ovsrc -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
+            INC => "-I$ovsrc".' -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
             CCFLAGS => `uname -m` =~ /ia64/ ? '-D_FILE_OFFSET_BITS=64 '.$cflags:'-D_FILE_OFFSET_BITS=64 -m32 '.$cflags,
             LIBS => '-L/gscuser/jschindl/svn/gsc/zlib-1.2.3 -lz '.$libs,
             NAME => __PACKAGE__

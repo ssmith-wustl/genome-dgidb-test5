@@ -410,7 +410,7 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename)
     else return 1;   
 
     snp_item *item = get_next_snp(snps);
-    fseek(snps->fp,-(strlen(item->line)+1),SEEK_CUR);
+    rewind(snps->fp);
     g_last_vseqid=item->seqid;
     free(item);
     if(!init_seqid(r_stream, v_stream))return 1;//make sure they are are equal
