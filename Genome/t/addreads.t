@@ -57,7 +57,7 @@ use FindBin qw($Bin);
 
 my $zip_file = $Bin .'/addreads.tgz';
 
-y $tmp_dir = File::Temp::tempdir();
+my $tmp_dir = File::Temp::tempdir();
 $directories_to_remove{$tmp_dir} = 1;
 chdir $tmp_dir;
 
@@ -147,7 +147,7 @@ my $create_command= Genome::Model::Command::Create->create(
     sample                => $sample,
     read_aligner          => $read_aligner, 
     genotyper             => $genotyper ,
-    bare_args                  => [],
+    bare_args             => [],
     multi_read_fragment_strategy => 'EliminateAllDuplicates',
 );
 
@@ -202,7 +202,6 @@ for my $sls (@lanes) {
     my $data_directory = $assign_run_command->model->data_directory;
     ok(-d $data_directory, "data directory '$data_directory' exists");
     $directories_to_remove{$data_directory} = 1;
-
     my $run_directory = $assign_run_command->resolve_run_directory;
     #this happens on a different granularity--- one per 8 lanes/flowcell for solexa. figure out this later
     #ok(!-e $run_directory, "run directory '$run_directory' not created yet");
@@ -274,7 +273,8 @@ is(scalar(@pp_events),15,'get scheduled genome_model add-reads postprocess-align
 my $merge_alignments_command = $pp_events[0];
 isa_ok($merge_alignments_command,'Genome::Model::Command::AddReads::MergeAlignments');
 &execute_test($merge_alignments_command);
-exit;
+
+$DB::single=1;
 my $update_genotype_command = $pp_events[1];
 isa_ok($update_genotype_command,'Genome::Model::Command::AddReads::UpdateGenotype');
 &execute_test($update_genotype_command);
@@ -283,9 +283,14 @@ my $find_variations_command = $pp_events[2];
 isa_ok($find_variations_command,'Genome::Model::Command::AddReads::FindVariations');
 &execute_test($find_variations_command);
 
+###HERES THE UNLOCK MAGIC...ARE YOU READY?
+rmtree $model->lock_directory;
+
+
 my $pp_variations_command = $pp_events[3];
 isa_ok($pp_variations_command,'Genome::Model::Command::AddReads::PostprocessVariations');
 &execute_test($pp_variations_command);
+
 
 my $annotate_variations_command = $pp_events[4];
 isa_ok($annotate_variations_command,'Genome::Model::Command::AddReads::AnnotateVariations');
@@ -304,7 +309,7 @@ isa_ok($annotate_variations_command,'Genome::Model::Command::AddReads::AnnotateV
 END {
     for my $directory_to_remove (keys %directories_to_remove) {
         print $directory_to_remove . "\n";
-         #rmtree $directory_to_remove;
+         rmtree $directory_to_remove;
     }
 }
 
