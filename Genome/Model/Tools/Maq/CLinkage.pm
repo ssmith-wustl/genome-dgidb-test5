@@ -31,9 +31,10 @@ sub _get_config_hash {
     mkdir($inline_dir) unless -d $inline_dir;   # Why isn't it creating this dir for us anymore?!
 
     my $libmaq = "maq" . $version;
-
+    
+    #FIXME: This home directory code is temporary until systems deploys our library fleet around the star system 
     return ( DIRECTORY => $inline_dir,
-             LIBS => "-L$loaded_dir -L/gsc/pkg/bio/maq/ -L/gsc/pkg/bio/maq/zlib/lib/ -l$libmaq -lz -lm",
+             LIBS => "-L/gscuser/charris/pm2/Genome/Model/Tools/Maq/ -L$loaded_dir -L/gsc/pkg/bio/maq/ -L/gsc/pkg/bio/maq/zlib/lib/ -l$libmaq -lz -lm",
              INC => "-I$loaded_dir -I/gsc/pkg/bio/maq/zlib/include/",
              CCFLAGS => '-D_FILE_OFFSET_BITS=64' . ($machine_type =~ m/ia64/ ? '' : ' -m32'),
              #BUILD_NOISY => 1,
