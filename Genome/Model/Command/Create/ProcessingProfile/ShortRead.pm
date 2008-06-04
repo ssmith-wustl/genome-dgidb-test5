@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::ProcessingProfile::ShortRead::Create;
+package Genome::Model::Command::Create::ProcessingProfile::ShortRead;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Genome::Model;
 use File::Path;
 use Data::Dumper;
 
-class Genome::Model::Command::ProcessingProfile::ShortRead::Create {
+class Genome::Model::Command::Create::ProcessingProfile::ShortRead {
     is => ['Genome::Model::Event'],
     sub_classification_method_name => 'class',
     has => [

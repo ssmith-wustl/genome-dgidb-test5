@@ -24,7 +24,7 @@ my $genotyper = 'maq0_6_3';
 my $read_aligner = 'maq0_6_3';
 my $pp_name = 'testing';
 
-my $create_pp_command= Genome::Model::Command::ProcessingProfile::ShortRead::Create->create(
+my $create_pp_command= Genome::Model::Command::Create::ProcessingProfile::ShortRead->create(
      indel_finder          => $indel_finder,
      dna_type              => $dna_type,
      align_dist_threshold  => $align_dist_threshold,
@@ -36,7 +36,7 @@ my $create_pp_command= Genome::Model::Command::ProcessingProfile::ShortRead::Cre
  );
 
 # check and create the processing profile
-isa_ok($create_pp_command,'Genome::Model::Command::ProcessingProfile::ShortRead::Create');
+isa_ok($create_pp_command,'Genome::Model::Command::Create::ProcessingProfile::ShortRead');
 ok($create_pp_command->execute(), 'execute processing profile create');     
 
 # Get it and make sure there is one
@@ -59,7 +59,7 @@ is($pp->name,$pp_name,'name accessor');
 ######## Test enforced name uniqueness ########
 $genotyper = 'maq0_6_4';
 $read_aligner = 'maq0_6_4';
-my $create_pp_command_name_unique= Genome::Model::Command::ProcessingProfile::ShortRead::Create->create(
+my $create_pp_command_name_unique= Genome::Model::Command::Create::ProcessingProfile::ShortRead->create(
      indel_finder          => $indel_finder,
      dna_type              => $dna_type,
      align_dist_threshold  => $align_dist_threshold,
@@ -76,7 +76,7 @@ is(scalar(@processing_profiles),1,'expected one processing profile before attemp
 
 # Attempt to create a processing profile with the same name but a different
 # quality, we expect this to fail due to enforced name uniqueness
-isa_ok($create_pp_command_name_unique,'Genome::Model::Command::ProcessingProfile::ShortRead::Create');
+isa_ok($create_pp_command_name_unique,'Genome::Model::Command::Create::ProcessingProfile::ShortRead');
 diag('');
 diag('Should see two error lines below since we cannot create a processing profile with the same name as an existing one.');
 diag('');
@@ -91,7 +91,7 @@ is(scalar(@processing_profiles),1,'expected one processing profile after attempt
 $genotyper = 'maq0_6_3';
 $read_aligner = 'maq0_6_3';
 $pp_name = 'testing_again';
-my $create_pp_command_functional_unique= Genome::Model::Command::ProcessingProfile::ShortRead::Create->create(
+my $create_pp_command_functional_unique= Genome::Model::Command::Create::ProcessingProfile::ShortRead->create(
      indel_finder          => $indel_finder,
      dna_type              => $dna_type,
      align_dist_threshold  => $align_dist_threshold,
@@ -116,7 +116,7 @@ my %get_params =
 is(scalar(@processing_profiles),1,'expected one processing profile before attempted dupe creation');
 
 # We expect this to fail due to enforced functional uniqueness
-isa_ok($create_pp_command_functional_unique,'Genome::Model::Command::ProcessingProfile::ShortRead::Create');
+isa_ok($create_pp_command_functional_unique,'Genome::Model::Command::Create::ProcessingProfile::ShortRead');
 diag('');
 diag('Should see two error lines below since we cannot create a processing profile with the same functionality as an existing one.');
 diag('');
