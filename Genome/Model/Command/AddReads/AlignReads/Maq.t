@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use above "Genome"; 
-use Test::More tests => 2;
+use Test::More tests => 1;
              	
 my $event_id = 88961295; # 88986518;	
 my $event = Genome::Model::Event->get($event_id);
