@@ -4,44 +4,45 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Command; 
+
+use Genome::Model::Command::Report::VariationsBatchToLsf;
 
 class Genome::Model::Command::AddReads::AnnotateVariations {
-    is => ['Genome::Model::EventWithRefSeq'],
+    is => [ 'Genome::Model::EventWithRefSeq' ],
     sub_classification_method_name => 'class',
-    has => [
-    ]
 };
 
-use Genome::Model::Command::Report::Variations;
+#########################################################
 
-sub sub_command_sort_position { 90 }
+sub sub_command_sort_position { 90 } # TODO needed?
 
+# TODO Add doc
 sub help_brief {
-    "Generates basic annotation for the variations found."
+    "Automates variant annotation reporting during add reads"
 }
 
 sub help_synopsis {
-    return <<"EOS"
-    genome-model postprocess-alignments annotate-variations --model-id 5 --ref-seq-id 22 
-EOS
+    return;
 }
 
 sub help_detail {
     return <<"EOS"
-This does simple automated annotation of discovered variants.  Complex comparision/reporting is done elsewhere.
+This module implements the automation of annotating variants discovered during the add reads pipeline.
+For the actual annotation process see: 
+Genome::SnpAnnotator
+For the report process (which runs the annotator) see:
+Genome::Model::Command::Report::Variations 
+Genome::Model::Command::Report::VariationsBatchToLsf
 EOS
 }
 
 sub execute {
     my $self = shift;
     
-    my $chromosome = $self->ref_seq_id;
+    my $chromosome_name = $self->ref_seq_id;
     my $model = $self->model;
-
-    #my ($snp_file) = $model->_variant_list_files($chromosome);
-    #my ($pileup_file) = $model->_variant_pileup_files($chromosome);
-    my ($detail_file) = $model->_variant_detail_files($chromosome);
+    my ($detail_file) = $model->_variant_detail_files($chromosome_name);
+    my $log_dir = $self->resolve_log_directory;
 
     $DB::single = 1; # when debugging, stop here...
 
@@ -52,33 +53,32 @@ sub execute {
         `chmod g+w $reports_dir`;
     }
 
-    my $eval;
-    eval
-    {
-        $eval = Genome::Model::Command::Report::Variations->execute
-        (
-            variant_file => $detail_file,
-            report_file => sprintf('%s/variant_report_for_chr_%s', $reports_dir, $chromosome),
-            chromosome_name => $chromosome,
-            # variant_type => 'snp',
-            # flank_range => ??,
-            # format => ??,
-        );
-    };
+    my $success = Genome::Model::Command::Report::VariationsBatchToLsf->execute
+    (
+        chromosome_name => $chromosome_name,
+        variation_type => 'snp', # TODO run for each type
+        variant_file => $detail_file,
+        report_file => sprintf('%s/snp_report_%s', $reports_dir, $chromosome_name),
+        out_log_file => sprintf('%s/%s.out', $log_dir, $self->lsf_job_id || $chromosome_name),
+        error_log_file => sprintf('%s/%s.err', $log_dir, $self->lsf_job_id || $chromosome_name),
+        # OTHER PARAMS:
+        # flank_range => ??,
+        # variant_range => ??,
+        # format => ??,
+    );
 
-    $self->date_completed(UR::Time->now);
-
-    unless ( $eval )
+    if ( $success )
     { 
-        $self->event_status("Failed");
-        $self->error_message("Exception from ".__PACKAGE__.": $@") if $@;
-        return;
+        $self->event_status("Succeeded");
     }
     else 
     {
-        $self->event_status("Succeeded");
-        return 1;
+        $self->event_status("Failed");
     }
+
+    $self->date_completed( UR::Time->now );
+
+    return $success;
 }
 
 1;
