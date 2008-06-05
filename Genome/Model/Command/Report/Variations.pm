@@ -5,6 +5,13 @@ use warnings;
 
 use above "Genome"; 
 
+use Data::Dumper;
+use IO::File;
+use Genome::DB::Schema;
+#use Genome::IndelAnnotator;
+use Genome::SnpAnnotator;
+use Tie::File;
+
 class Genome::Model::Command::Report::Variations
 {
     is => 'Command',                       
@@ -13,54 +20,58 @@ class Genome::Model::Command::Report::Variations
     variant_file => 
     {
         type => 'String',
-        doc => "?",
         is_optional => 0,
+        doc => "File of variants",
     },
     report_file => 
     {
         type => 'String',
-        doc => "?",
         is_optional => 0,
+        doc => "File to put annotations",
     },
     chromosome_name => 
     {
         type => 'String',
-        doc => "?", 
         is_optional => 0,
+        doc => "Name of the chromosome AKA ref_seq_id", 
     },
-    #variation_type => 
-    #{
-    #   type => 'String', 
-    #   doc => "?",
-    #   is_optional => 0,
-    #},
+    variation_type => 
+    {
+       type => 'String', 
+       is_optional => 1,
+       doc => "Type of variation: snp, indel",
+       default => 'snp',
+    },
     flank_range => 
     {
         type => 'Integer', 
-        doc => "?",
-        default => 50000,
         is_optional => 1,
+        default => 50000,
+        doc => "Range to look around for flaking regions of transcripts",
+    },
+    variation_range => 
+    {
+       type => 'Integer', 
+       is_optional => 0,
+       default => 0,
+       doc => "Range to look around a variant for known variations",
     },
     ], 
 };
 
-use Data::Dumper;
-use IO::File;
-use Genome::DB::Schema;
-#use Genome::IndelAnnotator;
-use Genome::SnpAnnotator;
+############################################################
 
 sub help_brief {   
     return;
 }
 
 sub help_synopsis { 
-    return <<EOS
-EOS
+    return;
 }
 
 sub help_detail {
     return <<EOS 
+    Creates an annotation report for variants in a given file.  Uses Genome::SnpAnnotator or Genome::IndelAnnotator (coming soon!) for each given variant, and outputs the annotation infomation to the given report file.
 EOS
 }
 
@@ -71,7 +82,7 @@ sub execute {
     my $in_fh = IO::File->new("< $input");
     $self->error_message("Can't open variation file ($input) for reading: $!")
         and return unless $in_fh;
-
+    
     my $output = $self->report_file;
     unlink $output if -e $output;
     my $out_fh = IO::File->new("> $output");
@@ -90,10 +101,26 @@ sub execute {
     $self->error_message("Can't find chromosome ($chromosome_name)")
         and return unless $chromosome;
     
+    tie my @variants, 'Tie::File', $input;
+    my $from = ( split(/\s+/, $variants[0]) )[1];
+    my $to = ( split(/\s+/, $variants[$#variants]) )[1];
+    untie @variants;
+    undef @variants;
+
     my $annotator = Genome::SnpAnnotator->new
     (
-        transcript_window => $chromosome->transcript_window(range => $self->flank_range),
-        variation_window => $chromosome->variation_window(range => 0),
+        transcript_window => $chromosome->transcript_window
+        (
+            from => $from - $self->flank_range,
+            to => $to + $self->flank_range,
+            range => $self->flank_range
+        ),
+        variation_window => $chromosome->variation_window
+        (
+            from => $from,
+            to => $to,
+            range => $self->variation_range,
+        ),
     );
 
     while ( my $line = $in_fh->getline )
@@ -159,6 +186,67 @@ sub execute {
 }
 
 1;
+
+=pod
+
+=head1 Name
+
+Genome::Model::Command::Report::Variations
+
+=head1 Synopsis
+
+Goes through each variant in a file, retrieving annotation information from Genome::SnpAnnotator or Genome::IndelAnnotator (coming soon).
+
+=head1 Usage
+
+ $success = Genome::Model::Command::Report::Variations->execute
+ (
+     chromosome_name => $chromosome, # required
+     variant_type => 'snp', # opt, default snp, valid types: snp, indel
+     variant_file => $detail_file, # required
+     report_file => sprintf('%s/variant_report_for_chr_%s', $reports_dir, $chromosome), # required
+     flank_range => 10000, # default 50000
+     variant_range => 0, # default 0
+ );
+
+ if ( $success )
+ { 
+    ...
+ }
+ else 
+ {
+    ...
+ }
+ 
+=head1 Methods
+
+=head2 execute, or create then execute
+
+=over
+
+=item I<Synopsis>   Gets all annotations for a snp
+
+=item I<Arguments>  snp (hash; see 'SNP' below)
+
+=item I<Returns>    annotations (array of hash refs; see 'Annotation' below)
+
+=back
+
+=head1 See Also
+
+B<Genome::SnpAnnotator>, B<Genome::Model::Command::Report::VariationsBatchToLsf>, B<Genome::DB::*>, B<Genome::DB::Window::*>
+
+=head1 Disclaimer
+
+Copyright (C) 2008 Washington University Genome Sequencing Center
+
+This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+=head1 Author(s)
+
+B<Eddie Belter> I<ebelter@watson.wustl.edu>
+
+=cut
 
 #$HeadURL$
 #$Id$
