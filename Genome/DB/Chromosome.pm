@@ -19,24 +19,40 @@ __PACKAGE__->has_many('variations', 'Genome::DB::Variation', 'chrom_id');
 # TRANSCRIPTS
 sub ordered_transcripts
 {
-    my $self = shift;
+    my ($self, %transcript_params) = @_;
 
+    my %search_params;
+    if ( exists $transcript_params{from} )
+    {
+        $search_params{transcript_stop} = { '>' => $transcript_params{from} };
+    }
+
+    if ( exists $transcript_params{to} )
+    {
+        $search_params{transcript_start} = { '<' => $transcript_params{to} };
+    }
+    
     return $self->transcripts->search
     (
-        undef, 
+        \%search_params,
         {
             order_by => [qw/ transcript_start transcript_stop /],
-            #prefetch => 'sub_structures',
         }
     );
 }
 
 sub transcript_window
 {
-    my ($self, %window_params) = @_;
+    my ($self, %params) = @_;
 
-    my $transcripts = $self->ordered_transcripts;
+    my $transcripts = $self->ordered_transcripts(%params);
 
+    my %window_params;
+    if ( my $range = delete $params{range} )
+    {
+        $window_params{range} = $range;
+    }
+    
     return Genome::DB::Window::Transcript->new
     (
         iterator => $transcripts,
@@ -47,21 +63,38 @@ sub transcript_window
 # VARIATIONS
 sub ordered_variations
 {
-    my $self = shift;
+    my ($self, %variation_params) = @_;
 
+    my %search_params;
+    if ( exists $variation_params{from} )
+    {
+        $search_params{end} = { '>=' => $variation_params{from} };
+    }
+
+    if ( exists $variation_params{to} )
+    {
+        $search_params{start_} = { '<=' => $variation_params{to} };
+    }
+    
     return $self->variations->search
     (
-        undef, 
+        \%search_params, 
         { order_by => [qw/ start_ /], }
     );
 }
 
 sub variation_window
 {
-    my ($self, %window_params) = @_;
+    my ($self, %params) = @_;
 
-    my $variations = $self->ordered_variations;
+    my $variations = $self->ordered_variations(%params);
 
+    my %window_params;
+    if ( my $range = delete $params{range} )
+    {
+        $window_params{range} = $range;
+    }
+    
     return Genome::DB::Window::Variation->new
     (
         iterator => $variations,
