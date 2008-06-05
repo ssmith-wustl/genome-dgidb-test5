@@ -136,7 +136,7 @@ my $read_aligner = 'maq0_6_3';
 
 ####### test command create.
 
-my $create_command= Genome::Model::Command::Create->create( 
+my $create_command= Genome::Model::Command::Create::Model->create( 
     indel_finder          => $indel_finder,
     dna_type              => $dna_type,
     reference_sequence    => $reference_sequence,
@@ -149,7 +149,7 @@ my $create_command= Genome::Model::Command::Create->create(
     multi_read_fragment_strategy => 'EliminateAllDuplicates',
 );
 
-isa_ok($create_command,'Genome::Model::Command::Create');
+isa_ok($create_command,'Genome::Model::Command::Create::Model');
 
 my $result = $create_command->execute();
 ok($result, 'execute genome-model create');
