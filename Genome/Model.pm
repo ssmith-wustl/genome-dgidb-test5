@@ -38,12 +38,16 @@ class Genome::Model {
         events                       => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => 'model', 
                                           doc => 'all events which have occurred for this model',
                                         },
-        read_set_assignment_events   => { is => 'Genome::Model::Command::AddReads::AssignRun', is_many => 1, reverse_id_by => 'model',
+        read_set_assignment_events   => { is => 'Genome::Model::Command::AddReads::AssignRun',
+                                          is_many => 1,
+                                          reverse_id_by => 'model',
                                           doc => 'each case of a read set being assigned to the model',
                                         },
-        alignment_events             => { is => 'Genome::Model::Command::AddReads::AlignReads', is_many => 1, reverse_id_by => 'model',
+        alignment_events             => { is => 'Genome::Model::Command::AddReads::AlignReads',
+                                          is_many => 1,
+                                          reverse_id_by => 'model',
                                           doc => 'each case of a read set being aligned to the model\'s reference sequence(s), possibly including multiple actual aligner executions',
-                                        },
+                                     },
         alignment_file_paths         => { via => 'alignment_events' },
         _total_read_counts           => { via => 'alignment_events', to => 'total_read_count' },
         _poorly_aligned_read_counts  => { via => 'alignment_events', to => 'poorly_aligned_read_count' },
@@ -65,12 +69,71 @@ class Genome::Model {
                                                 }
                                                 return $c;
                                             |,
-                                        },
+                                     },
+            run_names => {
+                          doc => 'the run names of all included runs for this model',
+                          is_many => 1,
+                          calculate => q|
+                                        my %distinct_run_names = map { $_->run_name => 1}  $self->get_read_sets;
+                                        my @distinct_run_names = keys %distinct_run_names;
+                                        return @distinct_run_names;
+                         |,
+                      },
+            run_count => {
+                          doc => 'the number of runs included in this model',
+                          is_many => 1,
+                          calculate => q|
+                                        return scalar($self->run_names);
+                         |,
+                      },
+            libraries => {
+                          doc => 'the libraries used for this model',
+                          is_many => 1,
+                          calculate => q|
+                                        my @seq_ids = map {$_->seq_id} $self->get_read_sets;
+                                        my @sls = GSC::RunLaneSolexa->get(seq_id => \@seq_ids);
+                                        my %libraries = map {$_->library_name => 1} @sls;
+                                        my @distinct_libraries = keys %libraries;
+                                        return @distinct_libraries;
+                                      |,
+                      },
+            library_count => {
+                              doc => 'the number of  libraries used for this model',
+                              is_many => 1,
+                              calculate => q|
+                                        return scalar($self->libraries);
+                         |,
+                          },
+            test                     => {
+                                         is => 'Boolean',
+                                         doc => 'testing flag',
+                                         is_optional => 1,
+                                         is_transient => 1,
+                                     },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
+
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    if ($^P) {
+        $self->test(1);
+    }
+    return $self;
+}
+
+sub get_read_sets {
+    my $self = shift;
+
+    my %distinct_run_ids = map { $_->run_id => 1}  $self->read_set_assignment_events;
+    my @distinct_run_ids = keys %distinct_run_ids;
+    return Genome::RunChunk->get(\@distinct_run_ids);
+}
+
 
 
 # Operating directories
@@ -309,7 +372,7 @@ sub resolve_accumulated_alignments_filename {
         return;
     }
 
-    if ($^P) {
+    if ($self->test) {
         # If we're running under the debugger, the fork() below will mess things up
         return $self->_mapmerge_locally($ref_seq_id,@maplists);
     }
