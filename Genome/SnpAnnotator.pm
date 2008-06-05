@@ -533,31 +533,126 @@ sub _variation_sources
 
 =head1 Name
 
-ModuleTemplate
+Genome::SnpAnnotator
 
 =head1 Synopsis
 
+Given information about a 'snp', this modules retrieves annotation information.
+
 =head1 Usage
+
+ my $schema = Genome::DB::Schema->connect_to_dwrac;
+ $self->error_message("Can't connect to dwrac")
+     and return unless $schema;
+    
+ my $chromosome_name = $self->chromosome_name;
+ my $chromosome = $schema->resultset('Chromosome')->find
+ (
+     { chromosome_name => $chromosome_name },
+ );
+ $self->error_message("Can't find chromosome ($chromosome_name)")
+     and return unless $chromosome;
+ 
+ my $annotator = Genome::SnpAnnotator->new
+ (
+     transcript_window => $chromosome->transcript_window(range => $self->flank_range),
+     variation_window => $chromosome->variation_window(range => 0),
+ );
+
+ while ( my $line = $in_fh->getline )
+ {
+     my (
+         $chromosome_name, $start, $stop, $reference, $variant, 
+         $reference_type, $variant_type, $reference_reads, $variant_reads,
+         $consensus_quality, $read_count
+     ) = split(/\s+/, $line);
+
+     my @annotations = $annotator->get_prioritized_annotations # TODO param whether or not we do prioritized annos?
+     (
+         position => $start,
+         variant => $variant,
+         reference => $reference,
+     )
+         or next;
+ 
+    ...
+ }
 
 =head1 Methods
 
-=head2 
+=head2 get_annotations 
 
 =over
 
-=item I<Synopsis>
+=item I<Synopsis>   Gets all annotations for a snp
 
-=item I<Arguments>
+=item I<Arguments>  snp (hash; see 'SNP' below)
 
-=item I<Returns>
+=item I<Returns>    annotations (array of hash refs; see 'Annotation' below)
+
+=back
+
+=head2 get_prioritized_annotations 
+
+=over
+
+=item I<Synopsis>   Gets one prioritized annotation per gene for a snp
+
+=item I<Arguments>  snp (hash; see 'SNP' below)
+
+=item I<Returns>    annotations (array of hash refs; see 'Annotation' below)
+
+=back
+
+=head1 SNP Properties
+
+=over
+
+=item I<position>   The position of the snp
+
+=item I<variant>    The snp base
+
+=item I<reference>  The reference base at the position
+
+=back
+
+=head1 Annotation Properties
+
+=over
+
+=item I<transcript_name>    Name of the transcript
+
+=item I<transcript_source>  Source of the transcript
+
+=item I<strand>             Strand of the transcript
+
+=item I<c_position>         Relative position of the snp
+
+=item I<trv_type>           Type of snp
+
+=item I<priority>           Priority of the trv_type (only from get_prioritized_annotations)
+
+=item I<gene_name>          Gene name of the transcript
+
+=item I<intensity>          Gene intenstiy
+
+=item I<detection>          Gene detection
+
+=item I<amino_acid_length>  Amino acid length of the protein
+
+=item I<amino_acid_change>  Resultant change in amino acid in snp is in cds_exon
+
+=item I<variations>         Hashref w/ keys of known variations at the snp position
 
 =back
 
 =head1 See Also
 
+B<Genome::DB::*>, B<Genome::DB::Window::*>, B<Genome::Model::Command::Report>
+
 =head1 Disclaimer
 
-Copyright (C) 2005 - 2008 Washington University Genome Sequencing Center
+Copyright (C) 2008 Washington University Genome Sequencing Center
 
 This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
@@ -565,8 +660,9 @@ This module is distributed in the hope that it will be useful, but WITHOUT ANY W
 
 B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
+B<Xiaoqi Shi> I<ebelter@watson.wustl.edu>
+
 =cut
 
 #$HeadURL$
 #$Id$
-
