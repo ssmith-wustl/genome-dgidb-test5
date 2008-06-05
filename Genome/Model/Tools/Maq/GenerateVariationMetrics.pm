@@ -1,8 +1,8 @@
-package Genome::Model::Tools::Maq::FilterVariations;
+package Genome::Model::Tools::Maq::GenerateVariationMetrics;
 
 use above "Genome";
 
-class Genome::Model::Tools::Maq::FilterVariations {
+class Genome::Model::Tools::Maq::GenerateVariationMetrics {
     is => 'Genome::Model::Tools::Maq',
     has => [
         input => {
@@ -48,7 +48,7 @@ sub execute {
     }
     
     my $result;
-    $result = Genome::Model::Tools::Maq::FilterVariations_C::filter_variations($in,$snpfile);
+    $result = Genome::Model::Tools::Maq::GenerateVariationMetrics_C::filter_variations($in,$snpfile);
     
     $result = !$result; # c -> perl
 
@@ -56,7 +56,7 @@ sub execute {
     return $result;
 }
 
-package Genome::Model::Tools::Maq::FilterVariations_C;
+package Genome::Model::Tools::Maq::GenerateVariationMetrics_C;
 
 our $inline_dir;
 our $cflags;
