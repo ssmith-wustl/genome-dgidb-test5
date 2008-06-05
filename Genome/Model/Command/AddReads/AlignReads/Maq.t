@@ -9,7 +9,8 @@ my $event_id = 88961295; # 88986518;
 my $event = Genome::Model::Event->get($event_id);
 ok($event, "got an event");
 
-my @m = $event->generate_metrics();
-is(scalar(@m), 6, "got metrics");
+#this is time consuming. comment out for autorun.
+#my @m = $event->generate_metrics();
+#is(scalar(@m), 6, "got metrics");
 
 
