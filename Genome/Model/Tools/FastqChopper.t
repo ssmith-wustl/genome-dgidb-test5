@@ -5,7 +5,8 @@ use warnings;
 
 use above "Genome";
 use Genome::Model::Tools::FastqChopper;
-use Test::More qw(no_plan);
+use Test::More;
+plan "skip_all";
 
 my $file = "/gscuser/charris/svn/pm2/Genome/Model/Tools/test.fastq";
 my $total = lines($file);
