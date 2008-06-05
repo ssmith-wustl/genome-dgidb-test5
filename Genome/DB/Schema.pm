@@ -77,5 +77,71 @@ sub DESTROY
 
 1;
 
+=pod
+
+=head1 Name
+
+Genome::Model::Command::Report::Variations
+
+=head1 Synopsis
+
+ORM using DBIx::Class for the MG schema
+
+=head1 Usage
+
+ my $schema = Genome::DB::Schema->connect_to_dwrac;
+ $self->error_message("Can't connect to dwrac")
+    and return unless $schema;
+
+ # Get a resultset
+ my $chromosome_rs = $schema->resultset("Chromosome");
+
+ # Iterate
+ while ( my $chr = $chromosome_rs->next )
+ {
+    ...
+ }
+
+ # Find by primary key
+ my $chr = $chromosome_rs->find(2);
+
+ # Search, by other properties
+ # returns, resultset (scalar context)
+ my $chr_10_rs = $chromsome_rs->search({ chromosome_name => '10' });
+ # or objects (array context)
+ my ($chr_10) = $chromsome_rs->search({ chromosome_name => '10' });
+
+ See DBIx::Class on CPAN docs for more info.
+ 
+=head1 Methods
+
+=head2 connect_to_dwrac
+
+=over
+
+=item I<Synopsis>   Connects to the dwrac
+
+=item I<Arguments>  none
+
+=item I<Returns>    schema (scalar, object)
+
+=back
+
+=head1 See Also
+
+B<DBIx::Class>, B<Genome::DB::*>, B<Genome::DB::Window::*>
+
+=head1 Disclaimer
+
+Copyright (C) 2008 Washington University Genome Sequencing Center
+
+This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+=head1 Author(s)
+
+B<Eddie Belter> I<ebelter@watson.wustl.edu>
+
+=cut
+
 #$HeadURL$
 #$Id$
