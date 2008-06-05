@@ -17,8 +17,6 @@ sub _get_config_hash {
 
     $DB::single=1;
 
-    #print "in _get_config_hash version is $version\n";
-
     # First, determine what dir we should look in
     my $p = __PACKAGE__ . '.pm';
     $p =~ s/::/\//g;
@@ -34,11 +32,10 @@ sub _get_config_hash {
     
     #FIXME: This home directory code is temporary until systems deploys our library fleet around the star system 
     return ( DIRECTORY => $inline_dir,
-             LIBS => "-L/gscuser/charris/pm2/Genome/Model/Tools/Maq/ -L$loaded_dir -L/gsc/pkg/bio/maq/ -L/gsc/pkg/bio/maq/zlib/lib/ -l$libmaq -lz -lm",
+             LIBS => "-L$loaded_dir -L/gsc/lib/ -L/gsc/pkg/bio/maq/zlib/lib/ -l$libmaq -lz -lm",
              INC => "-I$loaded_dir -I/gsc/pkg/bio/maq/zlib/include/",
              CCFLAGS => '-D_FILE_OFFSET_BITS=64' . ($machine_type =~ m/ia64/ ? '' : ' -m32'),
              #BUILD_NOISY => 1,
-             #AUTO_INCLUDE => "#include \"$version_dir/../c_linkage.cpp\"",
            );
 }
              
