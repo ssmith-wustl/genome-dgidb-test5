@@ -520,7 +520,7 @@ s,@AUTOHEADER@,|#_!!_#|${SHELL} /gscuser/bshore/src/perl_modules/Genome/Model/To
 s,@MAKEINFO@,|#_!!_#|${SHELL} /gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/missing --run makeinfo,g
 s,@AMTAR@,|#_!!_#|${SHELL} /gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/missing --run tar,g
 s,@install_sh@,|#_!!_#|/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/install-sh,g
-s,@STRIP@,|#_!!_#|,g
+s,@STRIP@,|#_!!_#|strip,g
 s,@INSTALL_STRIP_PROGRAM@,|#_!!_#|${SHELL} $(install_sh) -c -s,g
 s,@mkdir_p@,|#_!!_#|mkdir -p -- .,g
 s,@AWK@,|#_!!_#|gawk,g
@@ -544,9 +544,19 @@ s,@OBJEXT@,|#_!!_#|o,g
 s,@CXX@,|#_!!_#|g++,g
 s,@CXXFLAGS@,|#_!!_#|-g -O2,g
 s,@ac_ct_CXX@,|#_!!_#|g++,g
-s,@CPP@,|#_!!_#|gcc -E,g
 s,@GREP@,|#_!!_#|/gsc/bin/grep,g
 s,@EGREP@,|#_!!_#|/gsc/bin/grep -E,g
+s,@LN_S@,|#_!!_#|ln -s,g
+s,@ECHO@,|#_!!_#|echo,g
+s,@AR@,|#_!!_#|ar,g
+s,@RANLIB@,|#_!!_#|ranlib,g
+s,@CPP@,|#_!!_#|gcc -E,g
+s,@CXXCPP@,|#_!!_#|g++ -E,g
+s,@F77@,|#_!!_#|g77,g
+s,@FFLAGS@,|#_!!_#|-g -O2,g
+s,@ac_ct_F77@,|#_!!_#|g77,g
+s,@LIBTOOL@,|#_!!_#|$(SHELL) $(top_builddir)/libtool,g
+s,@LIBTOOL_DEPS@,|#_!!_#|./ltmain.sh,g
 s,@LIBOBJS@,|#_!!_#|,g
 s,@LTLIBOBJS@,|#_!!_#|,g
 :end
@@ -807,7 +817,6 @@ s,^\([	 #]*\)[^	 ]*\([	 ]*PACKAGE_STRING\)[	 (].*,\1define\2 "MAQVAL 0.1.0" ,
 s,^\([	 #]*\)[^	 ]*\([	 ]*PACKAGE_BUGREPORT\)[	 (].*,\1define\2 "" ,
 s,^\([	 #]*\)[^	 ]*\([	 ]*PACKAGE\)[	 (].*,\1define\2 "maqval" ,
 s,^\([	 #]*\)[^	 ]*\([	 ]*VERSION\)[	 (].*,\1define\2 "0.1.0" ,
-s,^\([	 #]*\)[^	 ]*\([	 ]*HAVE_LIBZ\)[	 (].*,\1define\2 1 ,
 s,^\([	 #]*\)[^	 ]*\([	 ]*STDC_HEADERS\)[	 (].*,\1define\2 1 ,
 s,^\([	 #]*\)[^	 ]*\([	 ]*HAVE_SYS_TYPES_H\)[	 (].*,\1define\2 1 ,
 s,^\([	 #]*\)[^	 ]*\([	 ]*HAVE_SYS_STAT_H\)[	 (].*,\1define\2 1 ,
@@ -818,6 +827,9 @@ s,^\([	 #]*\)[^	 ]*\([	 ]*HAVE_STRINGS_H\)[	 (].*,\1define\2 1 ,
 s,^\([	 #]*\)[^	 ]*\([	 ]*HAVE_INTTYPES_H\)[	 (].*,\1define\2 1 ,
 s,^\([	 #]*\)[^	 ]*\([	 ]*HAVE_STDINT_H\)[	 (].*,\1define\2 1 ,
 s,^\([	 #]*\)[^	 ]*\([	 ]*HAVE_UNISTD_H\)[	 (].*,\1define\2 1 ,
+s,^\([	 #]*\)[^	 ]*\([	 ]*HAVE_DLFCN_H\)[	 (].*,\1define\2 1 ,
+s,^\([	 #]*\)[^	 ]*\([	 ]*HAVE_LIBZ\)[	 (].*,\1define\2 1 ,
+s,^\([	 #]*\)[^	 ]*\([	 ]*STDC_HEADERS\)[	 (].*,\1define\2 1 ,
 s,^\([	 #]*\)[^	 ]*\([	 ]*HAVE_ZLIB_H\)[	 (].*,\1define\2 1 ,
 s,^\([	 #]*\)[^	 ]*\([	 ]*HAVE_STDLIB_H\)[	 (].*,\1define\2 1 ,
 s,^\([	 #]*\)[^	 ]*\([	 ]*HAVE_STRING_H\)[	 (].*,\1define\2 1 ,

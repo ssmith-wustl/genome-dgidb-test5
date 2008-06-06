@@ -11,6 +11,9 @@ AC_CANONICAL_HOST
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_CXX
+# Checks for libraries.
+AC_PROG_LIBTOOL
+AC_SUBST(LIBTOOL_DEPS)
 
 # set CFLAGS
 generic_CFLAGS="-g -O2 -Wall `pkg-config glib-2.0 --cflags --libs`"
