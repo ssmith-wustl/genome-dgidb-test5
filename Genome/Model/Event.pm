@@ -553,12 +553,88 @@ sub max_retries {
 
 sub get_prior_event {
     my $self = shift;
-    
+
     if (defined $self->prior_event_id) {
         return Genome::Model::Event->get($self->prior_event_id);
     }
-    
+
     return;
+}
+
+#this method is just a wrapper that tries a database call, then tries to calculate the metric and store it if its not already in the db
+sub get_metric_value {
+    my $self = shift;
+    my $metric_name = shift;
+
+    return unless($metric_name);
+
+    my $metric = $self->resolve_metric($metric_name);
+    unless ($metric) {
+        $self->error_message("No $metric_name metric found");
+        return;
+    }
+    return $metric->value;
+}
+
+#this method is like gimme that metric from the database or fail if it doesn't exist. 
+#Its public for those that want to generate a view without impyling an hour computation for unknown values
+sub get_metric {
+    my $self = shift;
+    my $metric_name = shift;
+
+    return unless $metric_name;
+
+    return Genome::Model::Event::Metric->get(
+                                             name => $metric_name,
+                                             event_id => $self->id,
+                                         );
+}
+
+#this method is like can i have that metric? no? then i'll make one!
+sub resolve_metric {
+    my $self = shift;
+    my $metric_name = shift;
+
+    return unless $metric_name;
+    my $metric = $self->get_metric($metric_name);
+
+    unless ($metric) {
+        $metric = $self->_generate_metric($metric_name);
+        unless ($metric) {
+            $self->error_message("Unable to generate requested metric $metric_name for event_id ". $self->event_id);
+            return;
+        }
+    }
+    return $metric;
+}
+
+#this private method is called by resolve metric and it dynamically figures out the calculate method to call to store a new metric
+sub _generate_metric {
+    my $self = shift;
+    my $metric_name = shift;
+
+    my $calculate_method = '_calculate_'. $metric_name;
+    unless ($self->can($calculate_method)) {
+        $self->error_message("Event ". $self->id ." can not $calculate_method");
+        return;
+    }
+
+    my $value = $self->$calculate_method;
+    unless(defined $value) {
+        $self->error_message("Value not defined for metric $metric_name using method $calculate_method");
+        return;
+    }
+
+    my $metric = $self->add_metric(
+                              name    => $metric_name,
+                              value   => $value,
+                          );
+    unless ($metric) {
+        $self->error_message("Could not create metric $metric_name with value $value");
+        return;
+    }
+
+    return $metric;
 }
 
 sub verify_prior_event {
