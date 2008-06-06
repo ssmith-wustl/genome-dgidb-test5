@@ -55,7 +55,7 @@ else {
 ###teh gzips are teh key here.... DR. SCHUSTE has provided us with some suitably tiny fastqs in gzip form.
 use FindBin qw($Bin);
 
-my $zip_file = $Bin .'/addreads.tgz';
+my $zip_file = '/gsc/var/cache/testsuite/data/Genome-Model-Command-AddReads/addreads.tgz';
 
 my $tmp_dir = File::Temp::tempdir();
 $directories_to_remove{$tmp_dir} = 1;
