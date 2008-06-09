@@ -101,6 +101,145 @@ sub bsub_rusage {
 
 sub should_bsub { 1;}
 
+###Metrics-------------------------------
+
+sub metrics_for_class {
+    my $class = shift;
+    
+    my @metric_names = qw(
+                          SNV_count
+                          SNV_in_dbSNP_count
+                          SNV_in_venter_count
+                          SNV_in_watson_count
+                          SNV_distinct_count
+                          HQ_SNP_count
+                          HQ_SNP_reference_allele_count
+                          HQ_SNP_variant_allele_count
+                          HQ_SNP_both_allele_count
+    );
+
+    return @metric_names;
+}
+
+
+sub has_all_metrics {
+    my $self = shift;
+
+    my @metric_names = $self->metrics_for_class;
+    for my $metric_name (@metric_names) {
+        unless ($self->get_metric($metric_name)) {
+            $self->error_message("Metric $metric_name does not exist for event_id ". $self->id);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+sub generate_metrics {
+    my $self = shift;
+
+    my @metric_names = $self->metrics_for_class;
+
+    my @all;
+    for my $metric_name (@metric_names) {
+        push @all, $self->metric_name;
+    }
+
+    return @all;
+}
+
+sub SNV_count {
+    my $self=shift;
+    return $self->get_metric_value('SNV_count');
+}
+
+sub _calculate_SNV_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file, but maybe not.
+}
+
+sub SNV_in_dbSNP_count {
+    my $self=shift;
+    return $self->get_metric_value('SNV_in_dbSNP_count');
+}
+
+sub _calculate_SNV_in_dbSNP_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file, but maybe not.
+}
+
+sub SNV_in_watson_count {
+    my $self=shift;
+    return $self->get_metric_value('SNV_in_watson_count');
+}
+
+sub _calculate_SNV_in_watson_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file, but maybe not.
+}
+
+sub SNV_in_venter_count {
+    my $self=shift;
+    return $self->get_metric_value('SNV_in_venter_count');
+}
+
+sub _calculate_SNV_in_venter_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file, but maybe not.
+}
+
+sub SNV_distinct_count {
+    my $self=shift;
+    return $self->get_metric_value('SNV_distinct_count');
+}
+
+sub _calculate_SNV_distinct_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file, but maybe not.
+}
+
+sub HQ_SNP_count {
+    my $self=shift;
+    return $self->get_metric_value('HQ_SNP_count');
+}
+
+sub _calculate_HQ_SNP_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file, but maybe not.
+}
+
+sub HQ_SNP_reference_allele_count {
+    my $self=shift;
+    return $self->get_metric_value('HQ_SNP_reference_allele_count');
+}
+
+sub _calculate_HQ_SNP_reference_allele_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file then do something else, but maybe not.
+}
+
+
+sub HQ_SNP_variant_allele_count {
+    my $self=shift;
+    return $self->get_metric_value('HQ_SNP_variant_allele_count');
+}
+ 
+sub _calculate_HQ_SNP_variant_allele_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file then do something else, but maybe not.
+}
+
+   
+sub HQ_SNP_both_allele_count {
+    my $self=shift;
+    return $self->get_metric_value('HQ_SNP_both_allele_count');
+}
+ 
+sub _calculate_HQ_SNP_both_allele_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file then do something else, but maybe not.
+}
+
 sub execute {
     my $self = shift;
 
