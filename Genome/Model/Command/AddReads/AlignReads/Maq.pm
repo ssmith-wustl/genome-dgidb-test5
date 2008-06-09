@@ -147,7 +147,7 @@ sub generate_metrics {
 
     my @all;
     for my $metric_name (@metric_names) {
-        push @all, $self->metric_name;
+        push @all, $self->$metric_name;
     }
 
     return @all;
