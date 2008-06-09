@@ -14,31 +14,12 @@ class Genome::Model::Command::Create::Model {
     is => ['Genome::Model::Event'],
     sub_classification_method_name => 'class',
     has => [
-        dna_type               => { is => 'varchar', len => 255,
-                                    doc => "The type of dna used in the reads for this model, probably 'genomic dna' or 'cdna'" },
-        genotyper              => { is => 'varchar', len => 255,
-                                    doc => 'Name of the genotyper for this model' },
-        genotyper_params       => { is => 'varchar', len => 255, is_optional => 1,
-                                    doc => 'command line args used for the genotyper' },
-        indel_finder           => { is => 'varchar', len => 255,
-                                    doc => 'Name of the indel finder for this model' },
-        indel_finder_params    => { is => 'varchar', len => 255, is_optional => 1,
-                                    doc => 'command line args for the indel finder' },
+		#TODO: make processing_profile not a parameter, name only.
+		processing_profile     => { is => 'Genome::ProcessingProfile', doc => 'Not used as a parameter', id_by => 'processing_profile_id', is_optional => 1, },
+		processing_profile_name => { is => 'varchar', len => 255,  doc => 'The name of the processing profile to be used. '},
         model_name             => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
-        prior                  => { is => 'varchar', len => 32,  is_optional => 1 },
-        read_aligner           => { is => 'varchar', len => 255,
-                                    doc => 'alignment program used for this model' },
-        read_aligner_params    => { is => 'varchar', len => 255, is_optional => 1,
-                                    doc => 'command line args for the aligner' },
-        read_calibrator        => { is => 'varchar', len => 255, is_optional => 1 },
-        read_calibrator_params => { is => 'varchar', len => 255, is_optional => 1 },
-        reference_sequence     => { is => 'varchar', len => 255,
-                                    doc => 'Identifies the reference sequence used in the model' },
-        align_dist_threshold => { is => 'varchar', len => 255 },
-        multi_read_fragment_strategy => { is => 'varchar', len => 255, is_optional => 1},
-        sample                 => { is => 'varchar', len => 255,
-                                    doc => 'The name of the sample all the reads originate from' },
-        model                  => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id' },
+        sample                 => { is => 'varchar', len => 255, doc => 'The name of the sample all the reads originate from' },
+        model                  => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id', doc => 'Not used as a parameter' },
     ],
     schema_name => 'Main',
 };
@@ -65,20 +46,21 @@ sub help_synopsis {
 genome-model create
                     --model-name test5
                     --sample ley_aml_patient1_tumor
-                    --dna-type whole 
-                    --read-aligner maq1_6    
-                    --genotyper maq1_6     
-                    --indel-finder bhdsindel1 
-                    --reference-sequence NCBI-human-build36 
-                    --align-dist-threshold 0
+                    --processing-profile-name nature_aml_08
 EOS
 }
 
 sub help_detail {
     return <<"EOS"
 This defines a new genome model.
-
 The properties of the model determine what will happen when the add-reads command is run.
+
+Define the processing profile to be used by name. Do not specify the
+processing_profile_id as this will be looked up and overridden by the processing
+profile name.
+
+To obtain a list of available processing profiles, use genome-model list
+processing-profiles.
 EOS
 }
 
@@ -100,11 +82,11 @@ sub execute {
 
 $DB::single=1;
 
-    # genome model specific
-
-    unless ($self->prior) {
-        $self->prior('none');
-    }
+	unless ($self->_get_processing_profile_from_name()) { 
+        $self->event_status('Failed');
+        $self->error_message("Error: Expecting 1 processing profile match." );
+		return;
+	}
 
     $self->_validate_execute_params(); 
 
@@ -118,7 +100,7 @@ $DB::single=1;
     }
 
     if (my @problems = $obj->invalid) {
-        $self->error_message("Invaild model!");
+        $self->error_message("Invalid model!");
         $obj->delete;
         return;
     }
@@ -174,11 +156,14 @@ sub _extract_command_properties_and_duplicate_keys_for__name_properties{
                 $params{'name'} = $value;
             }
         } else {
-            my $object_property = $command_property;
-            if ($target_class->can($command_property . "_name")) {
-                $object_property .= "_name";
-            }
-            $params{$object_property} = $value;
+			# processing_profile_name is only used to grab the processing_profile... so dont include it as a param
+			unless ($command_property eq 'processing_profile_name') { 
+	            my $object_property = $command_property;
+            	if ($target_class->can($command_property . "_name")) {
+                	$object_property .= "_name";
+            	}
+            	$params{$object_property} = $value;
+			}
         }
     }
     
@@ -187,15 +172,6 @@ sub _extract_command_properties_and_duplicate_keys_for__name_properties{
 
 sub _validate_execute_params{
     my $self = shift;
-    
-    unless ($self->reference_sequence) {
-        if ($self->prior eq "none") {
-            $self->error_message("No reference sequence set.  This is required w/o a prior.");
-            $self->usage_message($self->help_usage);
-            return;
-        }
-        $self->reference_sequence($self->prior);
-    }
 
     if (my @args = @{ $self->bare_args }) {
         $self->error_message("extra arguments: @args");
@@ -251,6 +227,23 @@ sub _create_target_class_instance_and_error_check{
     
     $self->event_status('Succeeded');
     return $obj;
+}
+
+# Retreives the processing profile matching the name specified
+sub _get_processing_profile_from_name {
+	my $self = shift;
+	my $processing_profile_name = $self->processing_profile_name;
+	my @processing_profiles = Genome::ProcessingProfile::ShortRead->get(name => $processing_profile_name);
+
+	# Bomb out unless exactly 1 matching processing profile is found
+	my $num_processing_profiles = scalar(@processing_profiles);
+	unless($num_processing_profiles == 1) {
+        return 0;
+	}
+	
+	my $pp = $processing_profiles[0];
+	$self->processing_profile_id($pp->id);
+	return $pp->id; 
 }
 
 1;
