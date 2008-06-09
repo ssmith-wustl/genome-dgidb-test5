@@ -568,10 +568,9 @@ sub get_metric_value {
 
     return unless($metric_name);
 
-    my $metric = $self->resolve_metric($metric_name);
+    my $metric=$self->get_metric($metric_name);
     unless ($metric) {
-        $self->error_message("No $metric_name metric found");
-        return;
+         return "Not Found"; 
     }
     return $metric->value;
 }
