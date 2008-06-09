@@ -63,48 +63,6 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
                 return grep { -e $_ } glob("${output_data_dir}/adaptor_sequence_file");
             |,
         },
-        _contaminated_read_count => {
-            doc => "the count of contaminated reads",
-            calculate_from => ['aligner_output_file_paths'],
-            is_constant => 1,
-            calculate => q|
-                my @f = $self->aligner_output_file_paths;
-                my $total = 0;
-                for my $f (@f) {
-                    my $fh = IO::File->new($f);
-                    $fh or die "Failed to open $f to read.  Error returning value for contaminated_read_count.\n";
-                    my $n;
-                    while (my $row = $fh->getline) {
-                        if ($row =~ /\[ma_trim_adapter\] (\d+) reads possibly contains adaptor contamination./) {
-                            $n = $1;
-                            last;
-                        }
-                    }
-                    unless (defined $n) {
-                        #$self->warning_message("No adaptor information found in $f!");
-                        next;
-                    }
-                    $total += $n;
-                }
-                return $total;
-            |,
-        },
-        _poorly_aligned_read_count => {
-            doc => "the count of contaminated reads",
-            calculate_from => ['poorly_aligned_reads_list_paths'],
-            is_constant => 1,
-            calculate => q|
-                my $total = 0;
-                for my $f ($self->poorly_aligned_reads_list_paths) {
-                    my $fh = IO::File->new($f);
-                    $fh or die "Failed to open $f to read.  Error returning value for contaminated_read_count.\n";
-                    while (my $row = $fh->getline) {
-                        $total++
-                    }
-                }
-                return $total;
-            |,
-        },
         input_read_file_paths => {
             doc => "the paths to the filed which captured maq's standard output and error",
             calculate_from => ['output_data_dir','run_subset_name'],
@@ -115,6 +73,7 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
         },
         unique_reads_across_library     => { via => 'read_set' },
         duplicate_reads_across_library  => { via => 'read_set' },
+        total_read_count                => { via => 'read_set', to => 'clusters'},
         _alignment_file_paths_unsubmapped => {
             doc => "the paths to to the map files before submapping (not always available)",
             calculate => q|
@@ -149,20 +108,64 @@ sub bsub_rusage {
 
 sub should_bsub { 1;}
 
+
+sub metrics_for_class {
+    my $class = shift;
+
+    my @metric_names = qw(
+                          total_reads_passed_quality_filter_count
+                          total_bases_passed_quality_filter_count
+                          poorly_aligned_read_count
+                          contaminated_read_count
+                          aligned_read_count
+                          aligned_base_pair_count
+                          unaligned_read_count
+                          unaligned_base_pair_count
+                          total_base_pair_count
+     );
+
+    return @metric_names;
+}
+
+sub has_all_metrics {
+    my $self = shift;
+
+    my @metric_names = $self->metrics_for_class;
+    for my $metric_name (@metric_names) {
+        unless ($self->get_metric($metric_name)) {
+            $self->error_message("Metric $metric_name does not exist for event_id ". $self->id);
+            return 0;
+        }
+    }
+    return 1;
+}
+
 sub generate_metrics {
     my $self = shift;
-    my $m;
 
-    if (my @m = $self->metrics) {
-        # TODO recalculate the metrics instead
-        return;
+    my @metric_names = $self->metrics_for_class;
+
+    my @all;
+    for my $metric_name (@metric_names) {
+        push @all, $self->metric_name;
     }
 
-    my $total_read_count;
+    return @all;
+}
+
+sub total_reads_passed_quality_filter_count {
+    my $self = shift;
+    return $self->get_metric_value('total_reads_passed_quality_filter_count');
+}
+
+sub _calculate_total_reads_passed_quality_filter_count {
+    my $self = shift;
+
+    my $total_reads_passed_quality_filter_count;
     do {
         no warnings;
-        $total_read_count = ($self->unique_reads_across_library + $self->duplicate_reads_across_library);
-        unless ($total_read_count) {
+        $total_reads_passed_quality_filter_count = ($self->unique_reads_across_library + $self->duplicate_reads_across_library);
+        unless ($total_reads_passed_quality_filter_count) {
             my @f = $self->input_read_file_paths;
             my ($wc) = grep { /total/ } `wc -l @f`;
             $wc =~ s/total//;
@@ -170,55 +173,128 @@ sub generate_metrics {
             if ($wc % 4) {
                 warn "run $a->{id} has a line count of $wc, which is not divisible by four!"
             }
-            $total_read_count = $wc/4;
+            $total_reads_passed_quality_filter_count = $wc/4;
         }
     };
-    
-    my @all;
-    
-    $m = $self->add_metric(
-        name    => 'total_read_count',
-        value   => $total_read_count
-    );
-    push @all, $m;
-    
-    my $poorly_aligned_read_count = $self->_poorly_aligned_read_count;
-    $m = $self->add_metric(
-        name    => 'poorly_aligned_read_count',
-        value   => $poorly_aligned_read_count
-    );
-    push @all, $m;
-
-    my $contaminated_read_count = $self->_contaminated_read_count;
-    $m = $self->add_metric(
-        name    => 'contaminated_read_count',
-        value   => $contaminated_read_count
-    );
-    push @all, $m;
-    
-    my $good_read_count = $total_read_count - $poorly_aligned_read_count - $contaminated_read_count;
-    $m = $self->add_metric(
-        name    => 'good_read_count',
-        value   => $good_read_count
-    );
-    push @all, $m;
-    
-    my $total_base_pair_count = $total_read_count * $self->read_set->read_length;
-    $m = $self->add_metric(
-        name    => 'total_base_pair_count',
-        value   => $total_base_pair_count
-    );
-    push @all, $m;
-    
-    my $good_base_pair_count = $good_read_count * $self->read_set->read_length;
-    $m = $self->add_metric(
-        name    => 'good_base_pair_count',
-        value   => $good_base_pair_count
-    );
-    push @all, $m;
-
-    return @all;
+    return $total_reads_passed_quality_filter_count;
 }
+
+sub total_bases_passed_quality_filter_count {
+    my $self = shift;
+    return $self->get_metric_value('total_bases_passed_quality_filter_count');
+}
+
+sub _calculate_total_bases_passed_quality_filter_count {
+    my $self = shift;
+
+    my $total_bases_passed_quality_filter_count = $self->total_reads_passed_quality_filter_count * $self->read_set->read_length;
+    return $total_bases_passed_quality_filter_count;
+}
+
+sub poorly_aligned_read_count {
+    my $self = shift;
+    return $self->get_metric_value('poorly_aligned_read_count');
+}
+
+sub _calculate_poorly_aligned_read_count {
+    my $self = shift;
+
+    my $total = 0;
+    for my $f ($self->poorly_aligned_reads_list_paths) {
+        my $fh = IO::File->new($f);
+        $fh or die "Failed to open $f to read.  Error returning value for poorly_aligned_read_count.\n";
+        while (my $row = $fh->getline) {
+            $total++
+        }
+    }
+    return $total;
+}
+
+sub contaminated_read_count {
+    my $self = shift;
+    return $self->get_metric_value('contaminated_read_count');
+}
+
+sub _calculate_contaminated_read_count {
+    my $self = shift;
+
+    my @f = $self->aligner_output_file_paths;
+    my $total = 0;
+    for my $f (@f) {
+        my $fh = IO::File->new($f);
+        $fh or die "Failed to open $f to read.  Error returning value for contaminated_read_count.\n";
+        my $n;
+        while (my $row = $fh->getline) {
+            if ($row =~ /\[ma_trim_adapter\] (\d+) reads possibly contains adaptor contamination./) {
+                $n = $1;
+                last;
+            }
+        }
+        unless (defined $n) {
+            #$self->warning_message("No adaptor information found in $f!");
+            next;
+        }
+        $total += $n;
+    }
+    return $total;
+}
+
+sub aligned_read_count {
+    my $self = shift;
+    return $self->get_metric_value('aligned_read_count');
+}
+
+sub _calculate_aligned_read_count {
+    my $self = shift;
+    my $aligned_read_count = $self->total_reads_passed_quality_filter_count - $self->poorly_aligned_read_count - $self->contaminated_read_count;
+    return $aligned_read_count;
+}
+
+sub aligned_base_pair_count {
+    my $self = shift;
+    return $self->get_metric_value('aligned_base_pair_count');
+}
+
+sub _calculate_aligned_base_pair_count {
+    my $self = shift;
+
+    my $aligned_base_pair_count = $self->aligned_read_count * $self->read_set->read_length;
+    return $aligned_base_pair_count;
+}
+sub unaligned_read_count {
+    my $self = shift;
+    return $self->get_metric_value('unaligned_read_count');
+}
+
+sub _calculate_unaligned_read_count {
+    my $self = shift;
+    my $unaligned_read_count = $self->poorly_aligned_read_count + $self->contaminated_read_count;
+    return $unaligned_read_count;
+}
+
+sub unaligned_base_pair_count {
+    my $self = shift;
+    return $self->get_metric_value('unaligned_base_pair_count');
+}
+
+sub _calculate_unaligned_base_pair_count {
+    my $self = shift;
+    my $unaligned_base_pair_count = $self->unaligned_read_count * $self->read_set->read_length;
+    return $unaligned_base_pair_count;
+}
+
+sub total_base_pair_count {
+    my $self = shift;
+    return $self->get_metric_value('total_base_pair_count');
+}
+
+sub _calculate_total_base_pair_count {
+    my $self = shift;
+
+    my $total_base_pair_count = $self->total_read_count * $self->read_set->read_length;
+    return $total_base_pair_count;
+}
+
 
 sub execute {
     my $self = shift;
