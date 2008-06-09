@@ -57,6 +57,7 @@ class Genome::RunChunk {
         unique_reads_across_library     => { via => "_run_lane_solexa" },
         duplicate_reads_across_library  => { via => "_run_lane_solexa" },
         read_length                     => { via => "_run_lane_solexa" },
+        clusters                        => { via => "_run_lane_solexa" },
         
         # deprecated
         limit_regions       => { is => 'String', is_optional => 1, calculate_from => ['subset_name'], calculate=> q| $subset_name | },
