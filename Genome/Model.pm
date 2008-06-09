@@ -43,22 +43,25 @@ class Genome::Model {
                                           reverse_id_by => 'model',
                                           doc => 'each case of a read set being assigned to the model',
                                         },
+                                        #this is to get some basic statistics..                         
         alignment_events             => { is => 'Genome::Model::Command::AddReads::AlignReads',
                                           is_many => 1,
                                           reverse_id_by => 'model',
                                           doc => 'each case of a read set being aligned to the model\'s reference sequence(s), possibly including multiple actual aligner executions',
                                      },
+       #this is to get the SNP statistics...
+       variation_events             => { is => 'Genome::Model::Command::AddReads::FindVariations::Maq',
+                                          is_many => 1,
+                                          reverse_id_by => 'model',
+                                          doc => 'each case of a read set being aligned to the model\'s reference sequence(s), possibly including multiple actual aligner executions',
+                                     },
+
         alignment_file_paths         => { via => 'alignment_events' },
-        _total_read_counts           => { via => 'alignment_events', to => 'total_read_count' },
-        _poorly_aligned_read_counts  => { via => 'alignment_events', to => 'poorly_aligned_read_count' },
-        _contaminated_read_counts    => { via => 'alignment_events', to => 'contaminated_read_count' },
-        _good_read_counts            => { via => 'alignment_events', to => 'good_read_count' },
-        _total_base_pair_counts      => { via => 'alignment_events', to => 'total_base_pair_count' },
-        _good_base_pair_counts       => { via => 'alignment_events', to => 'good_base_pair_count' },
-        
+        has_all_alignment_metrics    => { via => 'alignment_events', to => 'has_all_metrics' },
+        has_all_variation_metrics    => { via => 'variation_events', to => 'has_all_metrics' },
         variant_count                => {
-                                            doc => 'the differences between the genome and the reference',
-                                            calculate => q|
+                                         doc => 'the differences between the genome and the reference',
+                                         calculate => q|
                                                 my @f = $self->_variant_list_files();
                                                 my $c = 0;
                                                 for (@f) {
@@ -70,51 +73,18 @@ class Genome::Model {
                                                 return $c;
                                             |,
                                      },
-            run_names => {
-                          doc => 'the run names of all included runs for this model',
-                          is_many => 1,
-                          calculate => q|
-                                        my %distinct_run_names = map { $_->run_name => 1}  $self->get_read_sets;
-                                        my @distinct_run_names = keys %distinct_run_names;
-                                        return @distinct_run_names;
-                         |,
-                      },
-            run_count => {
-                          doc => 'the number of runs included in this model',
-                          is_many => 1,
-                          calculate => q|
-                                        return scalar($self->run_names);
-                         |,
-                      },
-            libraries => {
-                          doc => 'the libraries used for this model',
-                          is_many => 1,
-                          calculate => q|
-                                        my @seq_ids = map {$_->seq_id} $self->get_read_sets;
-                                        my @sls = GSC::RunLaneSolexa->get(seq_id => \@seq_ids);
-                                        my %libraries = map {$_->library_name => 1} @sls;
-                                        my @distinct_libraries = keys %libraries;
-                                        return @distinct_libraries;
-                                      |,
-                      },
-            library_count => {
-                              doc => 'the number of  libraries used for this model',
-                              is_many => 1,
-                              calculate => q|
-                                        return scalar($self->libraries);
-                         |,
-                          },
-            test                     => {
+        test                     => {
                                          is => 'Boolean',
                                          doc => 'testing flag',
                                          is_optional => 1,
                                          is_transient => 1,
-                                     },
+                                  },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
+
 
 
 sub create {
@@ -126,6 +96,31 @@ sub create {
     return $self;
 }
 
+sub libraries {
+    my $self = shift;
+    my %libraries = map {$_->library_name => 1} $self->get_read_sets;
+    my @distinct_libraries = keys %libraries;
+    return @distinct_libraries;
+}
+
+sub _calculate_library_count {
+    my $self = shift;
+    return scalar($self->libraries);
+}
+
+sub run_names {
+    my $self = shift;
+
+    my %distinct_run_names = map { $_->run_name => 1}  $self->get_read_sets;
+    my @distinct_run_names = keys %distinct_run_names;
+    return @distinct_run_names;
+}
+
+sub _calculate_run_count {
+    my $self = shift;
+    return scalar($self->run_names);
+}
+
 sub get_read_sets {
     my $self = shift;
 
@@ -134,7 +129,183 @@ sub get_read_sets {
     return Genome::RunChunk->get(\@distinct_run_ids);
 }
 
+sub metrics_for_class {
+    my $class = shift;
+    my @metrics = qw(
+                     library_count
+                     run_count
+                     total_read_count
+                     total_reads_passed_quality_filter_count
+                     total_bases_passed_quality_filter_count
+                     aligned_read_count
+                     unaligned_read_count
+                     SNV_count
+                     SNV_in_dbSNP_count
+                     SNV_in_venter_count
+                     SNV_in_watson_count
+                     SNV_distinct_count
+                     HQ_SNP_count
+                     HQ_SNP_reference_allele_count
+                     HQ_SNP_variant_allele_count
+                     HQ_SNP_both_allele_count
+                    );
+    return @metrics;
+}
 
+sub generate_metrics_hash_ref {
+    my $self = shift;
+    #we get model metric names one way or another:
+    my @model_metrics = $self->metrics_for_class;
+    my %metric_name_value_hash;
+
+    for my $metric (@model_metrics) {
+        my $value;
+        my $calculate_method = "_calculate_" . $metric;
+        if ($self->can($calculate_method)) {
+            $value = $self->$calculate_method;
+        }
+        else{
+            $self->error_message("No _calculate_" . $calculate_method . " method has been defined for " . __PACKAGE__ . "\n");
+            return;
+        }
+        $metric_name_value_hash{$metric} = $value;
+    }
+    return \%metric_name_value_hash;
+}
+
+#define calculate methods required
+
+
+sub _calculate_total_read_count {
+    my $self = shift;
+    my @events = $self->alignment_events;
+    return $self->_get_sum_of_metric_values_from_events('total_read_count',@events);
+}
+
+sub _calculate_total_reads_passed_quality_filter_count {
+    my $self = shift;
+    my @events = $self->alignment_events;
+    return $self->_get_sum_of_metric_values_from_events('total_reads_passed_quality_filter_count',@events);
+}
+
+sub _calculate_total_bases_passed_quality_filter_count {
+    my $self = shift;
+    my @events = $self->alignment_events;
+    return $self->_get_sum_of_metric_values_from_events('total_bases_passed_quality_filter_count',@events);
+}
+
+sub _calculate_aligned_read_count {
+    my $self = shift;
+    my @events = $self->alignment_events;
+    return $self->_get_sum_of_metric_values_from_events('aligned_read_count',@events);
+}
+
+sub _calculate_aligned_base_pair_count {
+    my $self = shift;
+    my @events = $self->alignment_events;
+    return $self->_get_sum_of_metric_values_from_events('aligned_base_pair_count',@events);
+}
+
+sub _calculate_unaligned_read_count {
+    my $self = shift;
+    my @events = $self->alignment_events;
+    return $self->_get_sum_of_metric_values_from_events('unaligned_read_count',@events);
+}
+
+sub _calculate_unaligned_base_pair_count {
+    my $self = shift;
+    my @events = $self->alignment_events;
+    return $self->_get_sum_of_metric_values_from_events('unaligned_base_pair_count',@events);
+}
+
+sub _calculate_SNV_count {
+    my $self = shift;
+    my @events = $self->variation_events;
+    return $self->_get_sum_of_metric_values_from_events('SNV_count',@events);
+}
+
+sub _calculate_SNV_in_dbSNP_count {
+    my $self = shift;
+    my @events = $self->variation_events;
+    return $self->_get_sum_of_metric_values_from_events('SNV_in_dbSNP_count',@events);
+}
+
+sub _calculate_SNV_in_venter_count {
+    my $self = shift;
+    my @events = $self->variation_events;
+    return $self->_get_sum_of_metric_values_from_events('SNV_in_venter_count',@events);
+}
+
+sub _calculate_SNV_in_watson_count {
+    my $self = shift;
+    my @events = $self->variation_events;
+    return $self->_get_sum_of_metric_values_from_events('SNV_in_watson_count',@events);
+}
+
+sub _calculate_SNV_distinct_count {
+    my $self = shift;
+    my @events = $self->variation_events;
+    return $self->_get_sum_of_metric_values_from_events('SNV_distinct_count',@events);
+}
+
+sub _calculate_HQ_SNP_count {
+    my $self = shift;
+    my @events = $self->variation_events;
+    return $self->_get_sum_of_metric_values_from_events('HQ_SNP_count',@events);
+}
+
+sub _calculate_HQ_SNP_reference_allele_count {
+    my $self = shift;
+    my @events = $self->variation_events;
+    return $self->_get_sum_of_metric_values_from_events('HQ_SNP_reference_allele_count',@events);
+}
+
+sub _calculate_HQ_SNP_variant_allele_count {
+    my $self = shift;
+    my @events = $self->variation_events;
+    return $self->_get_sum_of_metric_values_from_events('HQ_SNP_variant_allele_count',@events);
+}
+
+sub _calculate_HQ_SNP_both_allele_count {
+    my $self = shift;
+    my @events = $self->variation_events;
+    return $self->_get_sum_of_metric_values_from_events('HQ_SNP_both_allele_count',@events);
+}
+
+sub _get_sum_of_metric_values_from_events {
+    my $self = shift;
+    my $metric_to_sum = shift;
+    my @events = @_;
+
+    my $metric_method = $metric_to_sum;
+    my @values;
+    for my $event (@events) {
+        unless($event->can($metric_method)) {
+            #do something;
+            $self-error_message("The event you're trying to call " . $metric_method
+                                . "on doesn't have that method.");
+            return;
+        }
+        return "Not Found" if ($event->$metric_method !~ /^\d+$/);
+     push @values, $event->$metric_method;
+    }
+    my $sum;
+    $sum += $_ foreach @values;
+    return $sum;
+}
+
+sub has_all_metrics {
+    my $self = shift;
+    my @metrics = $self->has_all_alignment_metrics;
+    push @metrics, $self->has_all_variation_metrics;
+    for my $metric (@metrics) {
+        unless ($metric) {
+            $self->error_message("Not all metrics were found for model ". $self->id);
+            return 0;
+        }
+    }
+    return 1;
+}
 
 # Operating directories
 
