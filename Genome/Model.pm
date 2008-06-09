@@ -282,7 +282,7 @@ sub _get_sum_of_metric_values_from_events {
     for my $event (@events) {
         unless($event->can($metric_method)) {
             #do something;
-            $self-error_message("The event you're trying to call " . $metric_method
+            $self->error_message("The event you're trying to call " . $metric_method
                                 . "on doesn't have that method.");
             return;
         }
