@@ -349,6 +349,7 @@ associations in four cases.
         SEQUENCE_READ                   GSC::Sequence::Read
         SEQUENCE_TEMPLATE               GSC::Sequence::Template
         
+        SEQUENCE_UNPLACED_CONTIG        GSC::Sequence::UnplacedContig
         SEQUENCE_ANALYSIS_OUTPUT        GSC::Sequence::AnalysisOutput
         SEQUENCE_ANALYSIS_OUTPUT_PSE  GSC::Sequence::AnalysisOutputPSE
         SEQUENCE_BASE_STRING            GSC::Sequence::BaseString        
