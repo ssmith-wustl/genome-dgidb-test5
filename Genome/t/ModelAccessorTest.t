@@ -10,13 +10,8 @@ use Test::More 'no_plan';
 my @genome_models = Genome::Model->get();
 
 for my $model (@genome_models) {
-	# Get the subclass type
-	my $subclass_path = $model->processing_profile->resolve_subclass_name();
-	ok($subclass_path, "subclass resolved");
-	print $subclass_path ."\n";
-	
-	# Get the matching processing profile of the subclass type and check there is only one
-	my @processing_profiles = $subclass_path->get(id => $model->processing_profile_id);
+	# Get the matching processing profile and check there is only one
+	my @processing_profiles = Genome::ProcessingProfile->get(id => $model->processing_profile_id);
 	is(scalar(@processing_profiles), 1, "Exactly one profile matches");
 	my $processing_profile = $processing_profiles[0];
 	
