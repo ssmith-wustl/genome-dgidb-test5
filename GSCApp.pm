@@ -373,6 +373,8 @@ associations in four cases.
         SEQUENCE_CLIPPING               GSC::Sequence::Tag::Clipping
         SEQUENCE_VERIFICATION           GSC::Sequence::Tag::Verification
         SEQUENCE_FINISHING_TAG          GSC::Sequence::Tag::Finishing
+        REFERENCE_SEQUENCE_SET          GSC::Sequence::ReferenceSet
+        REFERENCE_SEQUENCE_SET_MEMBER   GSC::Sequence::ReferenceSetMember
         CDS_SEQUENCE_TAG                GSC::Sequence::Tag::CDS
         SAMPLE_GAP_SEQUENCE_TAG         GSC::Sequence::Tag::SampleCoverageGap
 
