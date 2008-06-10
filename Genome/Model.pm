@@ -19,6 +19,7 @@ class Genome::Model {
     ],
     has => [
         processing_profile           => { is => 'Genome::ProcessingProfile::ShortRead', id_by => 'processing_profile_id' },
+        processing_profile_name      => { via => 'processing_profile', to => 'name'},
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
         genotyper_name               => { via => 'processing_profile'},
@@ -652,6 +653,10 @@ sub pretty_print_text {
             next if $name eq 'name';
             my $property_meta = $class_meta->get_property_meta_by_name($name);
             unless ($property_meta->is_delegated or $property_meta->is_calculated) {
+                push @printable_property_names, $name;
+            }
+            # an exception to include the processing profile name when listed
+            if ($name eq 'processing_profile_name') {
                 push @printable_property_names, $name;
             }
         }
