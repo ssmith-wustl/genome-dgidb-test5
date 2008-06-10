@@ -41,6 +41,7 @@ my %PROCESS_COUNT = (
     'submit reads'                           => 0,
     'gather submission results'              => 0,
     'make library start site'                => 0,
+    'build sequence db'                      => 0,
 
 
     #Finishing QA steps
