@@ -10,7 +10,8 @@ diag("testing sub-classification by event_type formula...");
 
 my $event_type = "genome-model add-reads align-reads maq";
 my $event_class_name = "Genome::Model::Command::AddReads::AlignReads::Maq";
-my $m = Genome::Model->create(id => -1, sample_name => "test_case_sample$$",  read_aligner_name => 'maq0_6_5');
+my ($pp) = sort { $a->id <=> $b->id } Genome::ProcessingProfile::ShortRead->get(read_aligner_name => 'maq0_6_5');
+my $m = Genome::Model->create(id => -1, sample_name => "test_case_sample$$",  processing_profile => $pp);
 my $r = Genome::RunChunk->create(-1, sequencing_platform => 'solexa');
 my $e1 = Genome::Model::Event->create(event_type => $event_type, id => -2, model_id => $m->id, run_id => $r->id);
 ok($e1, "created an object");
