@@ -660,6 +660,7 @@ my %csp_priority = (
     'make default offsets'                    => 1,
     'configure alignment'                     => 1,
     'generate lane summary'                   => 1,
+    'import sequence'                         => 1,
 #    'copy run'                                => 1,
 #    'remove run'                              => 1,
     'import sequence annotation'              => 2,
