@@ -18,7 +18,7 @@ class Genome::Model {
         genome_model_id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        processing_profile 		     => { is => 'Genome::ProcessingProfile::ShortRead', id_by => 'processing_profile_id' },
+        processing_profile           => { is => 'Genome::ProcessingProfile::ShortRead', id_by => 'processing_profile_id' },
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
         genotyper_name               => { via => 'processing_profile'},
