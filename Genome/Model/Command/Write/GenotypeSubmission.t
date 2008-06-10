@@ -1,14 +1,18 @@
 use warnings;
 use strict;
 
-use Test::More tests => 7;
+use Test::More;
 
-use lib "/gsc/scripts/gsc/medseq/lib";
-use lib "./t";
+#plan tests => 7;
+plan skip_all => 'This test depends on a test model which is no longer present.  Replace.';
+
 use above "Genome";
 use Genome::Model::Command::Write::GenotypeSubmission;
 use MG::IO::GenotypeSubmission;
-use MaqSubmissionWriterControl;
+
+my $path = $INC{"Genome.pm"};
+$path =~ s/Genome.pm// or die;
+require $path . "Genome/t/MaqSubmissionWriterControl.pm";
 
 my $model = Genome::Model->get(5);
 my $base_path = $model->data_directory;
