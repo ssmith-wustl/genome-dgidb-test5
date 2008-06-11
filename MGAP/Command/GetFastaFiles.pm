@@ -3,7 +3,15 @@ package MGAP::Command::GetFastaFiles;
 use strict;
 use warnings;
 
+use Bio::SeqIO;
+use Bio::Seq;
+
+use BAP::DB::Sequence;
+use BAP::DB::SequenceSet;
 use Workflow;
+
+use File::Temp;
+
 
 class MGAP::Command::GetFastaFiles {
     is => ['MGAP::Command'],
@@ -37,14 +45,44 @@ EOS
 }
 
 sub execute {
-    my $self = shift;
-    $DB::single=1;
 
+    my $self = shift;
+
+    
+    $DB::single = 1;
+
+    ##FIXME:  There really should be an input/parameter for db_env
+    $BAP::DB::DBI::db_env = 'dev';
+    
     my $seq_set_id = $self->seq_set_id;
 
-## do some stuff
+    my $sequence_set = BAP::DB::SequenceSet->retrieve($seq_set_id);
 
-    my @filenames = qw/asdf ghjkl/;
+    my @filenames = ( );
+    
+    my @sequences = $sequence_set->sequences();
+
+    foreach my $sequence (@sequences) {
+
+        my $tmp_fh = File::Temp->new(
+                                     'DIR'      => '/gscmnt/temp212/info/annotation/MGAP_tmp',
+                                     'SUFFIX'   => '.tmp',
+                                     'TEMPLATE' => 'MGAP_XXXXXXXX',
+                                     'UNLINK'   => 0, 
+                                  );
+
+        my $bp_fasta = Bio::SeqIO->new(-fh => $tmp_fh, -format => 'Fasta');
+        
+        my $bp_seq = Bio::Seq->new(
+                                   -seq => $sequence->sequence_string(),
+                                   -id  => $sequence->sequence_name(),
+                               );
+        
+        $bp_fasta->write_seq($bp_seq);
+
+        push @filenames, $tmp_fh->filename();
+        
+    }
 
     $self->status_message("Wrote out files: " . join(',',@filenames));
     $self->fasta_files(\@filenames);
