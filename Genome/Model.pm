@@ -51,15 +51,15 @@ class Genome::Model {
                                           doc => 'each case of a read set being aligned to the model\'s reference sequence(s), possibly including multiple actual aligner executions',
                                      },
        #this is to get the SNP statistics...
-       variation_events             => { is => 'Genome::Model::Command::AddReads::FindVariations::Maq',
-                                          is_many => 1,
-                                          reverse_id_by => 'model',
-                                          doc => 'each case of a read set being aligned to the model\'s reference sequence(s), possibly including multiple actual aligner executions',
-                                     },
+       filter_variation_events             => { is => 'Genome::Model::Command::AddReads::FilterVariations',
+                                                is_many => 1,
+                                                reverse_id_by => 'model',
+                                                doc => 'each case of variations filtered per chromosome',
+                                           },
 
         alignment_file_paths         => { via => 'alignment_events' },
         has_all_alignment_metrics    => { via => 'alignment_events', to => 'has_all_metrics' },
-        has_all_variation_metrics    => { via => 'variation_events', to => 'has_all_metrics' },
+        has_all_filter_variation_metrics    => { via => 'filter_variation_events', to => 'has_all_metrics' },
         variant_count                => {
                                          doc => 'the differences between the genome and the reference',
                                          calculate => q|
@@ -130,42 +130,67 @@ sub get_read_sets {
     return Genome::RunChunk->get(\@distinct_run_ids);
 }
 
-sub metrics_for_class {
+sub metric_to_class_hash {
     my $class = shift;
-    my @metrics = qw(
-                     library_count
-                     run_count
-                     total_read_count
-                     total_reads_passed_quality_filter_count
-                     total_bases_passed_quality_filter_count
-                     aligned_read_count
-                     unaligned_read_count
-                     SNV_count
-                     SNV_in_dbSNP_count
-                     SNV_in_venter_count
-                     SNV_in_watson_count
-                     SNV_distinct_count
-                     HQ_SNP_count
-                     HQ_SNP_reference_allele_count
-                     HQ_SNP_variant_allele_count
-                     HQ_SNP_both_allele_count
-                    );
-    return @metrics;
+    my %metrics = (
+                   library_count => 'Genome::Model',
+                   run_count => 'Genome::Model',
+                   total_read_count => 'Genome::Model::Command::AddReads::AlignReads',
+                   total_reads_passed_quality_filter_count => 'Genome::Model::Command::AddReads::AlignReads',
+                   total_bases_passed_quality_filter_count => 'Genome::Model::Command::AddReads::AlignReads',
+                   aligned_read_count => 'Genome::Model::Command::AddReads::AlignReads',
+                   unaligned_read_count => 'Genome::Model::Command::AddReads::AlignReads',
+                   SNV_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
+                   SNV_in_dbSNP_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
+                   SNV_in_venter_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
+                   SNV_in_watson_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
+                   SNV_distinct_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
+                   HQ_SNP_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
+                   HQ_SNP_reference_allele_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
+                   HQ_SNP_variant_allele_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
+                   HQ_SNP_both_allele_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
+               );
+    return %metrics;
 }
 
-sub generate_metrics_hash_ref {
+sub class_for_metric {
+    my $self = shift;
+    my $metric_name = shift;
+
+    my %metric_to_class_hash = $self->metric_to_class_hash;
+    return $metric_to_class_hash{$metric_name};
+}
+
+sub get_events_for_metric {
+    my $self = shift;
+    my $metric_name = shift;
+
+    unless ($metric_name) {
+        $self->error_message("Must give metric name to get events for");
+        return;
+    }
+    my $class = $self->class_for_metric($metric_name);
+    if ($class eq __PACKAGE__) {
+        # Should maybe do something else here
+        # return $self->$metric_name;
+        return $self;
+    }
+    return $class->get(model_id => $self->id);
+
+}
+
+sub get_metrics_hash_ref {
     my $self = shift;
     #we get model metric names one way or another:
-    my @model_metrics = $self->metrics_for_class;
+    my %metrics = $self->metric_to_class_hash;
     my %metric_name_value_hash;
 
-    for my $metric (@model_metrics) {
+    for my $metric (keys %metrics) {
         my $value;
         my $calculate_method = "_calculate_" . $metric;
         if ($self->can($calculate_method)) {
             $value = $self->$calculate_method;
-        }
-        else{
+        } else {
             $self->error_message("No _calculate_" . $calculate_method . " method has been defined for " . __PACKAGE__ . "\n");
             return;
         }
@@ -174,138 +199,159 @@ sub generate_metrics_hash_ref {
     return \%metric_name_value_hash;
 }
 
-#define calculate methods required
+sub resolve_metrics {
+    my $self = shift;
+    my %metric_to_class = $self->metric_to_class_hash;
+    my @metrics;
+    for my $metric_name (keys %metric_to_class) {
+        my @events = $self->get_events_for_metric($metric_name);
+        for my $event (@events) {
+            my $metric = $event->resolve_metric($metric_name);
+            if ($metric) {
+                push @metrics, $metric;
+            }
+        }
+    }
+    return @metrics;
+}
 
+sub generate_metrics {
+    my $self = shift;
+    my %metric_to_class = $self->metric_to_class_hash;
+    my @metrics;
+    for my $metric_name (keys %metric_to_class) {
+        my @events = $self->get_events_for_metric($metric_name);
+        for my $event (@events) {
+            my $metric = $event->generate_metric($metric_name);
+            if ($metric) {
+                push @metrics, $metric;
+            }
+        }
+    }
+    return @metrics;
+}
+
+#define calculate methods required
 
 sub _calculate_total_read_count {
     my $self = shift;
-    my @events = $self->alignment_events;
-    return $self->_get_sum_of_metric_values_from_events('total_read_count',@events);
+    my $name = 'total_read_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_total_reads_passed_quality_filter_count {
     my $self = shift;
-    my @events = $self->alignment_events;
-    return $self->_get_sum_of_metric_values_from_events('total_reads_passed_quality_filter_count',@events);
+    my $name = 'total_reads_passed_quality_filter_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_total_bases_passed_quality_filter_count {
     my $self = shift;
-    my @events = $self->alignment_events;
-    return $self->_get_sum_of_metric_values_from_events('total_bases_passed_quality_filter_count',@events);
+    my $name = 'total_bases_passed_quality_filter_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_aligned_read_count {
     my $self = shift;
-    my @events = $self->alignment_events;
-    return $self->_get_sum_of_metric_values_from_events('aligned_read_count',@events);
+    my $name = 'aligned_read_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_aligned_base_pair_count {
     my $self = shift;
-    my @events = $self->alignment_events;
-    return $self->_get_sum_of_metric_values_from_events('aligned_base_pair_count',@events);
+    my $name = 'aligned_base_pair_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_unaligned_read_count {
     my $self = shift;
-    my @events = $self->alignment_events;
-    return $self->_get_sum_of_metric_values_from_events('unaligned_read_count',@events);
+    my $name = 'unaligned_read_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_unaligned_base_pair_count {
     my $self = shift;
-    my @events = $self->alignment_events;
-    return $self->_get_sum_of_metric_values_from_events('unaligned_base_pair_count',@events);
+    my $name = 'unaligned_base_pair_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_SNV_count {
     my $self = shift;
-    my @events = $self->variation_events;
-    return $self->_get_sum_of_metric_values_from_events('SNV_count',@events);
+    my $name = 'SNV_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_SNV_in_dbSNP_count {
     my $self = shift;
-    my @events = $self->variation_events;
-    return $self->_get_sum_of_metric_values_from_events('SNV_in_dbSNP_count',@events);
+    my $name = 'SNV_in_dbSNP_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_SNV_in_venter_count {
     my $self = shift;
-    my @events = $self->variation_events;
-    return $self->_get_sum_of_metric_values_from_events('SNV_in_venter_count',@events);
+    my $name = 'SNV_in_venter_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_SNV_in_watson_count {
     my $self = shift;
-    my @events = $self->variation_events;
-    return $self->_get_sum_of_metric_values_from_events('SNV_in_watson_count',@events);
+    my $name = 'SNV_in_watson_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_SNV_distinct_count {
     my $self = shift;
-    my @events = $self->variation_events;
-    return $self->_get_sum_of_metric_values_from_events('SNV_distinct_count',@events);
+    my $name = 'SNV_distinct_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_HQ_SNP_count {
     my $self = shift;
-    my @events = $self->variation_events;
-    return $self->_get_sum_of_metric_values_from_events('HQ_SNP_count',@events);
+    my $name = 'HQ_SNP_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_HQ_SNP_reference_allele_count {
     my $self = shift;
-    my @events = $self->variation_events;
-    return $self->_get_sum_of_metric_values_from_events('HQ_SNP_reference_allele_count',@events);
+    my $name = 'HQ_SNP_reference_allele_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_HQ_SNP_variant_allele_count {
     my $self = shift;
-    my @events = $self->variation_events;
-    return $self->_get_sum_of_metric_values_from_events('HQ_SNP_variant_allele_count',@events);
+    my $name = 'HQ_SNP_variant_allele_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _calculate_HQ_SNP_both_allele_count {
     my $self = shift;
-    my @events = $self->variation_events;
-    return $self->_get_sum_of_metric_values_from_events('HQ_SNP_both_allele_count',@events);
+    my $name = 'HQ_SNP_both_allele_count';
+    return $self->_get_sum_of_metric_values_from_events($name);
 }
 
 sub _get_sum_of_metric_values_from_events {
     my $self = shift;
-    my $metric_to_sum = shift;
-    my @events = @_;
+    my $metric_name = shift;
+    my @events = $self->get_events_for_metric($metric_name);
 
-    my $metric_method = $metric_to_sum;
-    my @values;
+    my $sum;
     for my $event (@events) {
-        unless($event->can($metric_method)) {
+        unless ($event->should_calculate) {
+            $self->error_message("The event ". $event->id ." will not calculate ". $metric_name);
+            next;
+        }
+        unless($event->can($metric_name)) {
             #do something;
-            $self->error_message("The event you're trying to call " . $metric_method
+            $self->error_message("The event you're trying to call " . $metric_name
                                 . "on doesn't have that method.");
             return;
         }
-        return "Not Found" if ($event->$metric_method !~ /^\d+$/);
-     push @values, $event->$metric_method;
-    }
-    my $sum;
-    $sum += $_ foreach @values;
-    return $sum;
-}
-
-sub has_all_metrics {
-    my $self = shift;
-    my @metrics = $self->has_all_alignment_metrics;
-    push @metrics, $self->has_all_variation_metrics;
-    for my $metric (@metrics) {
-        unless ($metric) {
-            $self->error_message("Not all metrics were found for model ". $self->id);
-            return 0;
+        my $value = $event->$metric_name;
+        if ($value =~ /^\d+$/) {
+            $sum += $value;
         }
     }
-    return 1;
+    return $sum;
 }
 
 # Operating directories
