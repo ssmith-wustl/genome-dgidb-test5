@@ -9,6 +9,7 @@
 int g_last_rseqid;
 int g_last_vseqid;
 int g_num_seqs;
+int g_qual_cutoff;
 
 void * next_r(void * r_stream) 
 {
@@ -22,7 +23,7 @@ void * next_r(void * r_stream)
     {
         if(size != sizeof(maqmap1_t)) 
         {
-            printf("size is only %d, seqid is %d\n",size,m1->seqid);
+            //printf("size is only %d, seqid is %d\n",size,m1->seqid);
             //dealing with a truncated file
             free(m1);
             return NULL;
@@ -30,10 +31,12 @@ void * next_r(void * r_stream)
         
         if(m1->seqid!=g_last_rseqid)
         {
+            //printf("gseqids don't match, returning NULL\n");
             gzseek(fp,offset,SEEK_SET);
             free(m1);            
             return NULL;
-        }        
+        }
+        if(m1->map_qual<g_qual_cutoff) m1->pos=0;//hacky, but should avoid the situation where crap reads are clogging up the queue       
         return (void*)m1;
     }
     else
@@ -65,6 +68,7 @@ void * next_v(void *pstream)
     snp_item *item = get_next_snp(s);
     if(item &&item->seqid!=g_last_vseqid)
     {
+        printf("vseqids don't match, returning NULL %d\n",strlen(item->line));    
         fseek(s->fp,-(strlen(item->line)+1),SEEK_CUR);
         free(item);
         return NULL;        
@@ -329,12 +333,13 @@ void callback_def (void *variation, GQueue * reads)
     check_size(mreads);
     
     int current_pos = mreads->count-1;
-    if (!g_queue_is_empty(reads)) do//yes, hacky
-    {
-        maqmap1_t *read = (maqmap1_t *)(item->data);
-        mreads->reads[current_pos] = read;
-        if(read->map_qual>10)current_pos--;
-    }while(item = g_list_next(item));
+    if (!g_queue_is_empty(reads)) 
+        do
+        {
+            maqmap1_t *read = (maqmap1_t *)(item->data);
+            mreads->reads[current_pos] = read;
+            if(read->map_qual>=g_qual_cutoff)current_pos--;
+        }while(item = g_list_next(item));
     current_pos++;
     int i = 0;
     if(current_pos>0) for(i=0;i<(mreads->count)-current_pos;i++){ mreads->reads[i] = mreads->reads[i+current_pos]; }
@@ -345,7 +350,7 @@ void callback_def (void *variation, GQueue * reads)
     //if(mreads->count<=0) return;
     
     get_matching_reads(mreads, match_reads,var_overlap->begin, 20, 0);//A allele
-    rc[0] = match_reads->count;//g_queue_get_length(reads);
+    rc[0] = match_reads->count;
     get_quality_stats(match_reads, var_overlap->begin,&q[0],&mq[0]);
     urc[0] = dedup_count(match_reads->reads, match_reads->count, 26);
 
@@ -376,11 +381,12 @@ void callback_def (void *variation, GQueue * reads)
     printf("%d,%d,%d,%d\t\t%d,%d,%d,%d\t%d\n",v1[0],v1[1],v1[2],v1[3],v2[0],v2[1],v2[2],v2[3],unique_read_count);
 }
 
-int ovc_filter_variations(char *mapfilename,char *snpfilename)
+int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff)
 //int main(int argc, char ** argv)
 {
-//    char * mapfilename = strdup(argv[1],256);
-//    char * snpfilename = strdup(argv[2], 256);
+//    char * mapfilename = strdup(argv[1]);
+//    char * snpfilename = strdup(argv[2]);
+    g_qual_cutoff = qual_cutoff;
     gzFile reffp = gzopen(mapfilename,"r");
     maqmap_t *mm = maqmap_read_header(reffp);
     g_num_seqs = mm->n_ref;
@@ -413,13 +419,17 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename)
     rewind(snps->fp);
     g_last_vseqid=item->seqid;
     free(item);
+    int i = 0;
     if(!init_seqid(r_stream, v_stream))return 1;//make sure they are are equal
+    i = g_last_rseqid;
     do
     {
+        //printf("Running on chromosome %s\n", mm->ref_name[i]);i++;
         fire_callback_for_overlaps(
             v_stream,
             r_stream,  
             callback_def  
         );
+        
     } while(advance_seqid(r_stream,v_stream));
 }

@@ -31,7 +31,7 @@ void fire_callback_for_overlaps (ov_stream_t * v_stream, ov_stream_t * r_stream,
     int rec_count = 0;
     int i = 0;
 
-    while (next_v = NEXT(v_stream)) {
+    while ((next_v = NEXT(v_stream))) {
         rec_count = g_queue_get_length(overlapping_reads_queue);
         i = rec_count;        
         while(i>0&&BEGIN(r_stream, g_queue_peek_nth(overlapping_reads_queue,i-1)) < BEGIN(v_stream, next_v))
@@ -50,6 +50,12 @@ void fire_callback_for_overlaps (ov_stream_t * v_stream, ov_stream_t * r_stream,
         }
         //TODO: check if last item in reads_queue is already greater than next_v, if so, fire callback
 		// and continue
+        next_r = g_queue_peek_head(overlapping_reads_queue);
+        if(next_r &&(BEGIN(r_stream,next_r)>BEGIN(v_stream, next_v)))
+        {
+            callback(next_v,overlapping_reads_queue);
+            continue;        
+        }
         while (next_r = NEXT(r_stream)) {
             //printf ("rec_count %d\n",rec_count);
             //rec_count++;
@@ -69,25 +75,30 @@ void fire_callback_for_overlaps (ov_stream_t * v_stream, ov_stream_t * r_stream,
                 // read begins past the end of the variant
                 // handle all reporting for this variant here
                 //printf("Here3\n");
-                callback(next_v,overlapping_reads_queue);
+                //callback(next_v,overlapping_reads_queue);
                 //printf("After Callback\n");
                 // put this on the end of the list after we've processed it
                 // this will get pruned if it doesn't overlap the next variant
                 
-                g_queue_push_head(overlapping_reads_queue, next_r);
+                //g_queue_push_head(overlapping_reads_queue, next_r);
                 
                 break;
             }
         }
+        callback(next_v,overlapping_reads_queue);
+        if(next_r) g_queue_push_head(overlapping_reads_queue, next_r);
 		if(next_v) FREE(v_stream, next_v);
-        if(!next_r) break;
+        //if(!next_r) break;
     }
+
     //printf("Here\n");
     while (!g_queue_is_empty(overlapping_reads_queue)) {
             // clear the queue of reads which don't overlap this variation
             gpointer item = g_queue_pop_tail(overlapping_reads_queue);
             FREE(r_stream, item);
     }
+    //should be gqueue_free, but for some reason it segfaults....
+    free(overlapping_reads_queue);
 
 
 }
