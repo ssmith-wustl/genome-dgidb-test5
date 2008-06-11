@@ -315,10 +315,11 @@ void callback_def (void *variation, GQueue * reads)
     int urc[4];//acgt
     int q[4];//acgt
     int mq[4];//acgt
+    int ursc[4];//acgt
     int v1base;
     int v2base;
-    int v1[4];//RC,URC,Q, MQ
-    int v2[4];//RC,URC,Q, MQ
+    int v1[5];//RC,URC,URSC,Q, MQ
+    int v2[5];//RC,URC,URSC,Q, MQ
     char ref_base;
     
     mreads->count = 0;
@@ -353,32 +354,37 @@ void callback_def (void *variation, GQueue * reads)
     rc[0] = match_reads->count;
     get_quality_stats(match_reads, var_overlap->begin,&q[0],&mq[0]);
     urc[0] = dedup_count(match_reads->reads, match_reads->count, 26);
+    ursc[0] = ur_old(match_reads);
 
     get_matching_reads(mreads, match_reads,var_overlap->begin, 20, 1);//C allele
     rc[1] = match_reads->count;
     get_quality_stats(match_reads, var_overlap->begin,&q[1],&mq[1]);
     urc[1] = dedup_count(match_reads->reads, match_reads->count, 26);    
+    ursc[1] = ur_old(match_reads);
     
     get_matching_reads(mreads, match_reads,var_overlap->begin, 20, 2);//G allele
     rc[2] = match_reads->count;
     get_quality_stats(match_reads, var_overlap->begin,&q[2],&mq[2]);
     urc[2] = dedup_count(match_reads->reads, match_reads->count, 26);
+    ursc[2] = ur_old(match_reads);
 
     get_matching_reads(mreads, match_reads,var_overlap->begin, 20, 3);//T allele
     rc[3] = match_reads->count;
     get_quality_stats(match_reads, var_overlap->begin,&q[3],&mq[3]);
     urc[3] = dedup_count(match_reads->reads, match_reads->count, 26);
+    ursc[3] = ur_old(match_reads);
 //header:      RC(A,C,G,T) URC(A,C,G,T) REF Ref(RC,URC,Q,MQ) Var1(RC, URC,Q,MQ) Var2(RC,URC,Q,MQ) URCbyContent
-//csv_in_line  2,0,3,4     4,0,3,3      A   2,4,30,30        2,2,30,30           2,2,30,30         3    
-    v1[0] = rc[v1base];v1[1]=urc[v1base];v1[2]=q[v1base];v1[3]=mq[v1base]; 
-    v2[0] = rc[v2base];v2[1]=urc[v2base];v2[2]=q[v2base];v2[3]=mq[v2base];
+//header:      RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
+//csv_in_line  2,0,3,4     4,0,3,3      4,0,3,3       A   2,4,30,30             2,2,2,30,30            2,2,2,30,30             
+    v1[0] = rc[v1base];v1[1]=urc[v1base];v1[2]=ursc[v1base];v1[3]=q[v1base];v1[4]=mq[v1base]; 
+    v2[0] = rc[v2base];v2[1]=urc[v2base];v2[2]=ursc[v2base];v2[3]=q[v2base];v2[4]=mq[v2base];
     ref_base = get_ref_base(var_overlap->begin, var_overlap->name, var_overlap->seqid);
     int iref_base= get_base(ref_base);
     printf("%s\t%d,%d,%d,%d\t\t",var_overlap->line, rc[0],rc[1],rc[2],rc[3]);
-    printf("%d,%d,%d,%d\t%c\t",urc[0],urc[1],urc[2],urc[3],ref_base);
-    printf("%d,%d,%d,%d\t\t",rc[iref_base],urc[iref_base],q[iref_base],mq[iref_base]);
-    int unique_read_count = ur_old(mreads);
-    printf("%d,%d,%d,%d\t\t%d,%d,%d,%d\t%d\n",v1[0],v1[1],v1[2],v1[3],v2[0],v2[1],v2[2],v2[3],unique_read_count);
+    printf("%d,%d,%d,%d\t",urc[0],urc[1],urc[2],urc[3]);
+    printf("%d,%d,%d,%d\t%c\t",ursc[0],ursc[1],ursc[2],ursc[3],ref_base);
+    printf("%d,%d,%d,%d,%d\t\t",rc[iref_base],urc[iref_base],ursc[iref_base],q[iref_base],mq[iref_base]);
+    printf("%d,%d,%d,%d,%d\t\t%d,%d,%d,%d,%d\t%d\n",v1[0],v1[1],v1[2],v1[3],v1[4],v2[0],v2[1],v2[2],v2[3],v2[4]);
 }
 
 int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff)
