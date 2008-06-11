@@ -12,7 +12,11 @@ class Genome::Model::Tools::Maq::GenerateVariationMetrics {
         snpfile => {
             type => 'String',
             doc => 'File path for snp file',
-        },      
+        },
+        qual_cutoff => {
+            type => 'int',
+            doc => 'quality cutoff value', 
+        },     
     ],
 };
 
@@ -48,7 +52,7 @@ sub execute {
     }
     
     my $result;
-    $result = Genome::Model::Tools::Maq::GenerateVariationMetrics_C::filter_variations($in,$snpfile);
+    $result = Genome::Model::Tools::Maq::GenerateVariationMetrics_C::filter_variations($in,$snpfile, 100);#$qual_cutoff);
     
     $result = !$result; # c -> perl
 
@@ -64,20 +68,22 @@ our $libs;
 our $ovsrc;
 BEGIN
 {
-    $ovsrc =  `wtf Genome::Model::Tools::Maq::FilterVariations`;
+    $ovsrc =  `wtf Genome::Model::Tools::Maq::GenerateVariationMetrics`;
     chomp $ovsrc;
-    ($ovsrc) = $ovsrc =~/(.*)\FilterVariations.pm/;
+    ($ovsrc) = $ovsrc =~/(.*)\/GenerateVariationMetrics\.pm/;
     ($inline_dir) = "$ENV{HOME}/".(`uname -m` =~ /ia64/ ? '_InlineItanium' : '_Inline32');
     mkdir $inline_dir;
     $cflags = `pkg-config glib-2.0 --cflags`;
-    $libs = `pkg-config glib-2.0 --libs`;
+    $libs = '-L/var/chroot/etch-ia32/usr/lib -L/usr/lib -L/lib '.`pkg-config glib-2.0 --libs`;
         
 };
 
 use Inline 'C' => 'Config' => (
+            CC => '/gscmnt/936/info/jschindl/gcc32/gcc',
             DIRECTORY => $inline_dir,
             INC => "-I$ovsrc".' -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
             CCFLAGS => `uname -m` =~ /ia64/ ? '-D_FILE_OFFSET_BITS=64 '.$cflags:'-D_FILE_OFFSET_BITS=64 -m32 '.$cflags,
+            LD => '/gscmnt/936/info/jschindl/gcc32/ld',
             LIBS => '-L/gscuser/jschindl/svn/gsc/zlib-1.2.3 -lz '.$libs,
             NAME => __PACKAGE__
             );
@@ -90,9 +96,9 @@ use Inline C => <<'END_C';
 #include "ovsrc/bfa.c"
 #include "ovsrc/ovc_test.c"
 
-int filter_variations(char *mapfilename,char *snpfilename)
+int filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff)
 {
-    return ovc_filter_variations(mapfilename,snpfilename);
+    return ovc_filter_variations(mapfilename,snpfilename, qual_cutoff);
 }
 
 END_C
