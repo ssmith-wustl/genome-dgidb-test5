@@ -74,6 +74,11 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
         unique_reads_across_library     => { via => 'read_set' },
         duplicate_reads_across_library  => { via => 'read_set' },
         total_read_count                => { via => 'read_set', to => 'clusters'},
+        _calculate_total_read_count     => {
+                                            doc => "an accessor to return the number of reads",
+                                            calculate_from => ['total_read_count'],
+                                            calculate => q| return $total_read_count |,
+                                        },
         _alignment_file_paths_unsubmapped => {
             doc => "the paths to to the map files before submapping (not always available)",
             calculate => q|
@@ -95,8 +100,8 @@ sub help_synopsis {
 EOS
 }
 
-sub help_detail {                           
-    return <<EOS 
+sub help_detail {
+    return <<EOS
 This command is usually called as part of the add-reads process
 EOS
 }
@@ -125,32 +130,6 @@ sub metrics_for_class {
      );
 
     return @metric_names;
-}
-
-sub has_all_metrics {
-    my $self = shift;
-
-    my @metric_names = $self->metrics_for_class;
-    for my $metric_name (@metric_names) {
-        unless ($self->get_metric($metric_name)) {
-            $self->error_message("Metric $metric_name does not exist for event_id ". $self->id);
-            return 0;
-        }
-    }
-    return 1;
-}
-
-sub generate_metrics {
-    my $self = shift;
-
-    my @metric_names = $self->metrics_for_class;
-
-    my @all;
-    for my $metric_name (@metric_names) {
-        push @all, $self->$metric_name;
-    }
-
-    return @all;
 }
 
 sub total_reads_passed_quality_filter_count {
@@ -193,12 +172,17 @@ sub _calculate_total_bases_passed_quality_filter_count {
 
 sub poorly_aligned_read_count {
     my $self = shift;
+    
     return $self->get_metric_value('poorly_aligned_read_count');
 }
 
 sub _calculate_poorly_aligned_read_count {
     my $self = shift;
 
+    #unless ($self->should_calculate) {
+    #    return 0;
+    #}
+    
     my $total = 0;
     for my $f ($self->poorly_aligned_reads_list_paths) {
         my $fh = IO::File->new($f);
