@@ -81,7 +81,7 @@ sub DESTROY
 
 =head1 Name
 
-Genome::Model::Command::Report::Variations
+Genome::DB::Schema
 
 =head1 Synopsis
 
