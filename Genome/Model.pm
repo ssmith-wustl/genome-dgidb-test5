@@ -204,8 +204,12 @@ sub resolve_metrics {
     my %metric_to_class = $self->metric_to_class_hash;
     my @metrics;
     for my $metric_name (keys %metric_to_class) {
+        if ($metric_name =~ /^HQ/) { next; }
         my @events = $self->get_events_for_metric($metric_name);
         for my $event (@events) {
+            if (ref($event) eq __PACKAGE__) {
+                next;
+            }
             my $metric = $event->resolve_metric($metric_name);
             if ($metric) {
                 push @metrics, $metric;
@@ -220,8 +224,12 @@ sub generate_metrics {
     my %metric_to_class = $self->metric_to_class_hash;
     my @metrics;
     for my $metric_name (keys %metric_to_class) {
+        if ($metric_name =~ /^HQ/) { next; }
         my @events = $self->get_events_for_metric($metric_name);
         for my $event (@events) {
+            if (ref($event) eq __PACKAGE__) {
+                next;
+            }
             my $metric = $event->generate_metric($metric_name);
             if ($metric) {
                 push @metrics, $metric;
