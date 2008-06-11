@@ -531,6 +531,17 @@ sub Xrun_command_with_bsub {
     return $last_bsub_job_id;
 }
 
+# Scheduling
+
+sub schedule {
+    my $self = shift;
+
+    $self->event_status("Scheduled");
+    $self->date_scheduled( UR::Time->now );
+    $self->date_completed(undef);
+
+    return 1;
+}
 
 sub is_reschedulable {
     my($self) = @_;
