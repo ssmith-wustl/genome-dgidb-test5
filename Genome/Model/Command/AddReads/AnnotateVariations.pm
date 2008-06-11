@@ -37,6 +37,25 @@ Genome::Model::Command::Report::VariationsBatchToLsf
 EOS
 }
 
+sub snp_report_file {
+    my $self = shift;
+
+    return $self->_report_file('snp');
+}
+
+sub indel_report_file {
+    my $self = shift;
+
+    return $self->_report_file('indel');
+}
+
+sub _report_file {
+    my ($self, $type) = @_;
+
+    return sprintf('%s/variant_report_for_chr_%s', ($self->model->_reports_dir)[0], $self->ref_seq_id);
+    return sprintf('%s/%s_report_%s', $type, ($self->model->_reports_dir)[0], $self->ref_seq_id);
+}
+
 sub execute {
     my $self = shift;
     
@@ -60,6 +79,7 @@ sub execute {
         variation_type => 'snp', # TODO run for each type
         variant_file => $detail_file,
         report_file => sprintf('%s/snp_report_%s', $reports_dir, $chromosome_name),
+        #report_file => $self->snp_report_file,
         out_log_file => sprintf('%s/%s.out', $log_dir, $self->lsf_job_id || $chromosome_name),
         error_log_file => sprintf('%s/%s.err', $log_dir, $self->lsf_job_id || $chromosome_name),
         # OTHER PARAMS:
