@@ -6,6 +6,7 @@ use warnings;
 use above "Genome";
 
 use Genome::Model::Command::Report::VariationsBatchToLsf;
+use Genome::Model::EventWithRefSeq;
 
 class Genome::Model::Command::AddReads::AnnotateVariations {
     is => [ 'Genome::Model::EventWithRefSeq' ],
