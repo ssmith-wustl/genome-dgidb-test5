@@ -102,6 +102,150 @@ sub execute {
     return $success;
 }
 
+###Metrics-------------------------------
+
+sub metrics_for_class {
+    my $class = shift;
+
+    my @metric_names = qw(
+                          SNV_count
+                          SNV_in_dbSNP_count
+                          SNV_in_venter_count
+                          SNV_in_watson_count
+                          SNV_distinct_count
+                          HQ_SNP_count
+                          HQ_SNP_reference_allele_count
+                          HQ_SNP_variant_allele_count
+                          HQ_SNP_both_allele_count
+    );
+
+    return @metric_names;
+}
+
+sub SNV_count {
+    my $self=shift;
+    return $self->get_metric_value('SNV_count');
+}
+
+##########THESE METHODS SHOULD PROLLY CLOSE THEIR FILE HANDLES TOO, YO#######
+sub _calculate_SNV_count {
+    $DB::single=1;
+    my $self=shift;
+    my $snp_file = $self->snp_report_file;
+    my $c = 0;
+    my $fh = IO::File->new($snp_file);
+    while ($fh->getline) {
+        $c++
+    }
+    return $c;
+}
+
+sub SNV_in_dbSNP_count {
+    my $self=shift;
+    return $self->get_metric_value('SNV_in_dbSNP_count');
+}
+
+sub _calculate_SNV_in_dbSNP_count {
+    my $self=shift;
+    my $snp_file = $self->snp_report_file;
+    my $c = 0;
+    my $fh = IO::File->new($snp_file);
+    while (my $line=$fh->getline) {
+        $c++ if ($line =~ /^1/);
+    }
+    return $c;
+}
+
+sub SNV_in_watson_count {
+    my $self=shift;
+    return $self->get_metric_value('SNV_in_watson_count');
+}
+
+sub _calculate_SNV_in_watson_count {
+    my $self=shift;
+    my $snp_file = $self->snp_report_file;
+    my $c = 0;
+    my $fh = IO::File->new($snp_file);
+    while (my $line=$fh->getline) {
+        $c++ if ($line =~ /watson/i);
+    }
+    return $c;
+}
+
+sub SNV_in_venter_count {
+    my $self=shift;
+    return $self->get_metric_value('SNV_in_venter_count');
+}
+
+sub _calculate_SNV_in_venter_count {
+    my $self=shift;
+    my $snp_file = $self->snp_report_file;
+    my $c = 0;
+    my $fh = IO::File->new($snp_file);
+    while (my $line=$fh->getline) {
+        $c++ if ($line =~ /venter/i);
+    }
+    return $c;
+}
+
+sub SNV_distinct_count {
+    my $self=shift;
+    return $self->get_metric_value('SNV_distinct_count');
+}
+
+sub _calculate_SNV_distinct_count {
+    my $self=shift;
+    my $snp_file = $self->snp_report_file;
+    my $c = 0;
+    my $fh = IO::File->new($snp_file);
+    while (my $line=$fh->getline) {
+        $c++ if ($line !~ /venter/i && $line !~ /watson/i  && $line !~/^1/);
+    }
+    return $c;
+}
+
+sub HQ_SNP_count {
+    my $self=shift;
+    return $self->get_metric_value('HQ_SNP_count');
+}
+
+sub _calculate_HQ_SNP_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file, but maybe not.
+}
+
+sub HQ_SNP_reference_allele_count {
+    my $self=shift;
+    return $self->get_metric_value('HQ_SNP_reference_allele_count');
+}
+
+sub _calculate_HQ_SNP_reference_allele_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file then do something else, but maybe not.
+}
+
+sub HQ_SNP_variant_allele_count {
+    my $self=shift;
+    return $self->get_metric_value('HQ_SNP_variant_allele_count');
+}
+
+sub _calculate_HQ_SNP_variant_allele_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file then do something else, but maybe not.
+}
+
+sub HQ_SNP_both_allele_count {
+    my $self=shift;
+    return $self->get_metric_value('HQ_SNP_both_allele_count');
+}
+
+sub _calculate_HQ_SNP_both_allele_count {
+    my $self=shift;
+    ###how do i do this? I don't know. I should probably word count the filtered snp file then do something else, but maybe not.
+}
+
+
+
 1;
 
 #$HeadURL$
