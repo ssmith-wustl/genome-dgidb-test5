@@ -11,6 +11,4 @@ UR::Object::Type->define(
     english_name => 'genome',
 );
 
-require Genome::Model;
-
 1;
