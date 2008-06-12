@@ -380,13 +380,17 @@ $DB::single = 1;
         if (-f $self->adaptor_file_for_run()) {
             $aligner_params = join(' ', $aligner_params, '-d', $self->adaptor_file_for_run);
         }
-
+        
+        # one of these parameters may be undefined, this is normal... turn
+        # warnings off just for a moment
+        no warnings;
         my $cmdline = sprintf("$maq_pathname map %s -u %s %s %s %s %s > $aligner_output 2>&1",
                               $aligner_params,
                               $reads_file,
                               $alignment_file,
                               $ref_seq_file,
                               $bfq_pathname);
+        use warnings;                      
 
         print "running: $cmdline\n";
         system($cmdline);
