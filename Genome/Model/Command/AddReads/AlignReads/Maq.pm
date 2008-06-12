@@ -456,7 +456,7 @@ $DB::single = 1;
         #if (-l read_link($self->))
     }
 
-    $self->generate_metrics;
+    $self->generate_metric($self->metrics_for_class);
 
     return 1;
 }
