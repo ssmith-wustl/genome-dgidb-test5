@@ -31,7 +31,7 @@ void fire_callback_for_overlaps (ov_stream_t * v_stream, ov_stream_t * r_stream,
     int rec_count = 0;
     int i = 0;
 
-    while ((next_v = NEXT(v_stream))) {
+    while ((next_v = NEXT(v_stream))&&next_v) {
         rec_count = g_queue_get_length(overlapping_reads_queue);
         i = rec_count;        
         while(i>0&&BEGIN(r_stream, g_queue_peek_nth(overlapping_reads_queue,i-1)) < BEGIN(v_stream, next_v))

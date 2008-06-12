@@ -65,11 +65,13 @@ void * next_v(void *pstream)
     ov_stream_t *stream = (ov_stream_t *)pstream;
     //HACK 
     snp_stream *s = (snp_stream *)stream->stream_data;
+    long long offset = ftell(s->fp);
     snp_item *item = get_next_snp(s);
+    //printf("snp is %s\n",item->line);
     if(item &&item->seqid!=g_last_vseqid)
     {
         printf("vseqids don't match, returning NULL %d\n",strlen(item->line));    
-        fseek(s->fp,-(strlen(item->line)+1),SEEK_CUR);
+        fseek(s->fp,offset,SEEK_SET);
         free(item);
         return NULL;        
     }
@@ -156,8 +158,11 @@ int init_seqid(void *rstream, void *vstream)
             }
         
         if(g_last_rseqid>g_last_vseqid)
-            while((offset = ftell(s->fp))&&(item =get_next_snp(s)))
+            while(1)
             {
+                offset = ftell(s->fp);
+                item =get_next_snp(s);
+                if(!item) return 0;
                 if(item->seqid>g_last_vseqid)
                 {
                     fseek(s->fp,offset,SEEK_SET);
@@ -205,32 +210,32 @@ void get_matching_reads(map_array *reads, map_array *match_reads, int ref_positi
 {
     //we pass in the address of a pointer to a pointer to maqmap1_t array, ugghh
     int i =0;
-    int base_comp = (~base)&3;//0123,acgt,complement of binary 00 is 11, 01 is 10, 10 is 01, 11 is 00
+    //int base_comp = (~base)&3;//0123,acgt,complement of binary 00 is 11, 01 is 10, 10 is 01, 11 is 00
     maqmap1_t **preads = reads->reads;//makes things easier to read below
     match_reads->count =0;
     for(i=0;i<reads->count;i++)
     {
         check_size(match_reads);
         int base_pos = ref_position - (preads[i]->pos>>1);
-        int strand = preads[i]->pos&1;
-        int read_base = preads[i]->seq[base_pos]>>6&3;
+        int strand = (preads[i]->pos)&1;
+        int read_base = (preads[i]->seq[base_pos]>>6)&3;
 
-        if(strand==0)
-        {
+        //if(strand==0)
+        //{
             if(base == read_base) 
             {
                 match_reads->reads[match_reads->count] = preads[i];
                 match_reads->count++;
             }
-        }
-        else //strand ==1
-        {
-           if(base_comp == read_base)
-           {
-                match_reads->reads[match_reads->count] = preads[i];
-                match_reads->count++;
-           }
-        }          
+        //}
+        //else //strand ==1
+        //{
+        //   if(base_comp == read_base)
+        //   {
+        //        match_reads->reads[match_reads->count] = preads[i];
+        //        match_reads->count++;
+        //   }
+        //}          
     }
 
 }
@@ -291,7 +296,8 @@ static char get_ref_base(long long position, char *name, int seqid)
     }        
 	bit64_t word = bfa1->seq[position>>5];
     bit64_t mask = bfa1->mask[position>>5];
-    long long offset = 32-(position&0x1f);//position%32 
+    //changed from 32 to 31 to handle base coordinates starting at 0 (not 1)...
+    long long offset = 31-(position&0x1f);//position%32 
     return (mask>>(offset<<1)&3)? "ACGT"[word>>(offset<<1)&3] : 'N'; 
 }
 
@@ -346,7 +352,7 @@ void callback_def (void *variation, GQueue * reads)
     if(current_pos>0) for(i=0;i<(mreads->count)-current_pos;i++){ mreads->reads[i] = mreads->reads[i+current_pos]; }
     mreads->count-=current_pos;
     //check for the case where the last record doesn't overlap
-    while(mreads->count>0&&(mreads->reads[mreads->count-1]->pos>>1)>var_overlap->end) { //printf("count is %d\n",current_pos);
+    while(mreads->count>0&&((mreads->reads[mreads->count-1]->pos>>1)>var_overlap->end)) { //printf("count is %d\n",current_pos);
     mreads->count--;}
     //if(mreads->count<=0) return;
     
@@ -384,7 +390,7 @@ void callback_def (void *variation, GQueue * reads)
     printf("%d,%d,%d,%d\t",urc[0],urc[1],urc[2],urc[3]);
     printf("%d,%d,%d,%d\t%c\t",ursc[0],ursc[1],ursc[2],ursc[3],ref_base);
     printf("%d,%d,%d,%d,%d\t\t",rc[iref_base],urc[iref_base],ursc[iref_base],q[iref_base],mq[iref_base]);
-    printf("%d,%d,%d,%d,%d\t\t%d,%d,%d,%d,%d\t%d\n",v1[0],v1[1],v1[2],v1[3],v1[4],v2[0],v2[1],v2[2],v2[3],v2[4]);
+    printf("%d,%d,%d,%d,%d\t\t%d,%d,%d,%d,%d\n",v1[0],v1[1],v1[2],v1[3],v1[4],v2[0],v2[1],v2[2],v2[3],v2[4]);
 }
 
 int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff)
@@ -430,12 +436,13 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff)
     i = g_last_rseqid;
     do
     {
-        //printf("Running on chromosome %s\n", mm->ref_name[i]);i++;
+        printf("Running on chromosome %s\n", mm->ref_name[i]);i++;
         fire_callback_for_overlaps(
             v_stream,
             r_stream,  
             callback_def  
         );
+        printf("After fire callback\n");
         
     } while(advance_seqid(r_stream,v_stream));
 }
