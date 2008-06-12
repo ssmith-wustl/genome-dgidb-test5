@@ -4,11 +4,11 @@ use strict;
 use warnings;
 
 use above "Genome";
+
 class Genome::ProcessingProfile {
     type_name => 'processing profile',
     table_name => 'PROCESSING_PROFILE',
     is_abstract => 1,
-    first_sub_classification_method_name => '_resolve_subclass_name',
     sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
         id => { is => 'NUMBER', len => 11 },
@@ -21,16 +21,15 @@ class Genome::ProcessingProfile {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-# resolves the full subclass name based upon the type_name field
-sub resolve_subclass_name {
-	my $self = shift;
-	my $subclass = $self->type_name;
-
-	my @subclass_parts = map { ucfirst } split(' ', $subclass);
-	$subclass = join('', @subclass_parts);
-
-	my $class_name = join('::', 'Genome::ProcessingProfile' , $subclass);
-	return $class_name;
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    unless ($self->type_name) {
+        my $type_name =
+            $class->_resolve_type_name_for_subclass_name($self->class);
+        $self->type_name($type_name);
+    }
+    return $self;
 }
 
 # Calls the subclass's pretty_print_text
@@ -42,11 +41,9 @@ sub pretty_print_text {
 	$subclass_instance->pretty_print_text();
 }
 
-############ event.pm stuff ####################
-# This is called by the infrastructure to appropriately classify abstract events
-# according to their event type because of the "sub_classification_method_name" setting
+# This is called by the infrastructure to appropriately classify abstract processing profiles
+# according to their type name because of the "sub_classification_method_name" setting
 # in the class definiton...
-# TODO: replace with cleaner calculated property.
 sub _resolve_subclass_name {
 	my $class = shift;
 	
@@ -54,17 +51,16 @@ sub _resolve_subclass_name {
 		my $type_name = $_[0]->type_name;
 		return $class->_resolve_subclass_name_for_type_name($type_name);
 	}
+    elsif (my $type_name = $class->get_rule_for_params(@_)->specified_value_for_property_name('type_name')) {
+        return $class->_resolve_subclass_name_for_type_name($type_name);
+    }
 	else {
-		# What goes here? When would it fail the above case?
-		# bomb bomb bomb...
-		$class->error_message("Error in _resolve_subclass_name");
 		return;
 	}
 }
 
 # This is called by both of the above.
 sub _resolve_subclass_name_for_type_name {
-	$DB::single=1;
     my ($class,$type_name) = @_;
     my @type_parts = split(' ',$type_name);
 	
@@ -73,6 +69,15 @@ sub _resolve_subclass_name_for_type_name {
 	
     my $class_name = join('::', 'Genome::ProcessingProfile' , $subclass);
     return $class_name;
+}
+
+sub _resolve_type_name_for_subclass_name {
+    my ($class,$subclass_name) = @_;
+    my ($ext) = ($subclass_name =~ /Genome::ProcessingProfile::(.*)/);
+    return unless ($ext);
+    my @words = $ext =~ /[a-z]+|[A-Z](?:[A-Z]+|[a-z]*)(?=$|[A-Z])/g;
+    my $type_name = lc(join(" ", @words));
+    return $type_name;
 }
 
 1;
