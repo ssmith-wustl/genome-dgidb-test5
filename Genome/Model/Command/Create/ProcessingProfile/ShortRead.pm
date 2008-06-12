@@ -47,6 +47,8 @@ class Genome::Model::Command::Create::ProcessingProfile::ShortRead {
 										doc => "Identifies the reference sequence used in the model"},
 		sequencing_platform          => { is => 'VARCHAR2', len => 255, is_optional => 1, 
 										doc => "The sequencing platform. Always 'solexa' at the moment"},
+		type_name                    => { is => 'VARCHAR2', len => 255, is_optional => 1, 
+										doc => "The type of processing profile.  Always 'short read' at the moment"},
     ],
     schema_name => 'Main',
 };
@@ -165,9 +167,6 @@ sub _extract_command_properties_and_duplicate_keys_for__name_properties{
            	$params{$object_property} = $value;
         }
     }
-
-	# set the type name property for the parent class
-	$params{'type_name'} = 'short read';
 
     return \%params;
 }
