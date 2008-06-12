@@ -9,7 +9,7 @@ class MGAP::Command::CalculateGcPercent {
     is => ['MGAP::Command'],
     has => [
         fasta_files => { is => 'ARRAY', doc => 'array of fasta file names' },
-        gc_percent => { is => 'Integer', doc => 'GC content' }
+        gc_percent => { is => 'Float', is_optional => 1, doc => 'GC content' }
     ],
 };
 
@@ -36,11 +36,36 @@ EOS
 }
 
 sub execute {
+    
     my $self = shift;
+    
+    
     $DB::single=1;
+    
+    my @files = @{$self->fasta_files()};
 
+    my $gc_count;
+    my $seq_length;
+    
+    foreach my $file (@files) {
 
-    1;
+        my $seqio = Bio::SeqIO->new(-file => $file, -format => 'Fasta');
+
+        my $seq        = $seqio->next_seq();
+        my $seq_string = $seq->seq();
+
+        ## Ns are usually gaps...
+        my $n_count = $seq_string =~ tr/nN/nN/;
+        
+        $gc_count   += $seq_string =~ tr/gcGC/gcGC/;
+
+        ## ...so don't count them when determining the sequence length
+        $seq_length += ($seq->length() - $n_count); 
+        
+    }
+
+    $self->gc_percent(sprintf("%.1f", (($gc_count / $seq_length) * 100)));
+
+    return 1;
+    
 }
- 
-1;

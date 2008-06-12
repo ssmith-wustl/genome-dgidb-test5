@@ -64,6 +64,8 @@ sub execute {
 
     foreach my $sequence (@sequences) {
 
+        ##FIXME: The temp dir location should not be hardcoded.  At least not here.
+        ##       Move it up to a super class or make it a parameter
         my $tmp_fh = File::Temp->new(
                                      'DIR'      => '/gscmnt/temp212/info/annotation/MGAP_tmp',
                                      'SUFFIX'   => '.tmp',

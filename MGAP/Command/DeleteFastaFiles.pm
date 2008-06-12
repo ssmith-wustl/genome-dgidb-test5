@@ -5,6 +5,8 @@ use warnings;
 
 use Workflow;
 
+use English;
+
 class MGAP::Command::DeleteFastaFiles {
     is => ['MGAP::Command'],
     has => [
@@ -35,11 +37,26 @@ EOS
 }
 
 sub execute {
+    
     my $self = shift;
+
+    
     $DB::single=1;
+    
+    my @fasta_files = @{$self->fasta_files()};
 
+    foreach my $fasta_file (@fasta_files) {
 
-    1;
+        unless(unlink($fasta_file)) {
+
+            die "failed to unlink '$fasta_file': $OS_ERROR";
+
+        }
+
+    }
+
+    $self->status_message("Deleted files: " . join(',',@fasta_files));
+    
 }
  
 1;
