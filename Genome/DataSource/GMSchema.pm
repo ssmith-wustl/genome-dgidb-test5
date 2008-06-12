@@ -26,7 +26,10 @@ sub owner {
 
 sub _get_sequence_name_for_table_and_column {
     my ($self, $table_name, $column_name) = @_;
-    if ($table_name =~ /VARIANT_REVIEW_/) {
+    if ($table_name =~ /PROCESSING_PROFILE/) {
+        return 'PROCESSING_PROFILE_SEQ';
+    }
+    elsif ($column_name eq 'ID') {
         return $table_name . '_SEQ';
     }
     else {
