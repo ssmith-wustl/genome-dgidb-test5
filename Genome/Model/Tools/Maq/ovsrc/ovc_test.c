@@ -208,36 +208,20 @@ void check_size(map_array *arr)
 
 void get_matching_reads(map_array *reads, map_array *match_reads, int ref_position, int quality, int base)
 {
-    //we pass in the address of a pointer to a pointer to maqmap1_t array, ugghh
     int i =0;
-    //int base_comp = (~base)&3;//0123,acgt,complement of binary 00 is 11, 01 is 10, 10 is 01, 11 is 00
     maqmap1_t **preads = reads->reads;//makes things easier to read below
     match_reads->count =0;
     for(i=0;i<reads->count;i++)
     {
         check_size(match_reads);
         int base_pos = ref_position - (preads[i]->pos>>1);
-        int strand = (preads[i]->pos)&1;
         int read_base = (preads[i]->seq[base_pos]>>6)&3;
-
-        //if(strand==0)
-        //{
-            if(base == read_base) 
-            {
-                match_reads->reads[match_reads->count] = preads[i];
-                match_reads->count++;
-            }
-        //}
-        //else //strand ==1
-        //{
-        //   if(base_comp == read_base)
-        //   {
-        //        match_reads->reads[match_reads->count] = preads[i];
-        //        match_reads->count++;
-        //   }
-        //}          
+        if(base == read_base) 
+        {
+            match_reads->reads[match_reads->count] = preads[i];
+            match_reads->count++;
+        }
     }
-
 }
 
 void get_quality_stats(map_array *reads, int ref_position, int *q, int *mq)
