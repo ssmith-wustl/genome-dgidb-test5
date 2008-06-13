@@ -252,6 +252,109 @@ static int get_base(char base)
     return -1;
 }
 
+/* sub _lookup_iub_code {
+    my($self,$code) = @_;
+
+    $self->{'_iub_code_table'} ||= {
+             A => ['A', 'A'],
+             C => ['C', 'C'],
+             G => ['G', 'G'],
+             T => ['T', 'T'],
+             M => ['A', 'C'],
+             K => ['G', 'T'],
+             Y => ['C', 'T'],
+             R => ['A', 'G'],
+             W => ['A', 'T'],
+             S => ['G', 'C'],
+             D => ['A', 'G', 'T'],
+             B => ['C', 'G', 'T'],
+             H => ['A', 'C', 'T'],
+             V => ['A', 'C', 'G'],
+             N => ['A', 'C', 'G', 'T'],
+          };
+    return @{$self->{'_iub_code_table'}->{$code}};
+} */
+
+static void get_variant_basess(char iub_code, int * base, int *count)
+{
+    *count = 2;
+    
+    switch (iub_code) {
+		case 'A': 
+            base[0]=0;
+            base[1]=0;
+            break;
+        case 'C':
+            base[0]=1;
+            base[1]=1;
+            break;
+        case 'G':
+            base[0]=2;
+            base[1]=2;
+            break;
+        case 'T':
+            base[0]=3;
+            base[1]=3;
+            break;
+        case 'M':
+            base[0]=0;//A
+            base[1]=1;//C 
+            break;
+        case 'K':
+            base[0]=2;//G
+            base[1]=3;//T
+            break;
+        case 'Y':
+            base[0]=1;//C
+            base[1]=3;//T 
+            break;
+        case 'R':
+            base[0]=0;//A
+            base[1]=2;//G
+            break;
+        case 'W':
+            base[0]=0;//A
+            base[1]=3;//T
+            break;
+        case 'S':
+            base[0]=2;//G
+            base[1]=1;//C 
+            break;
+        case 'D':
+            base[0]=0;//A
+            base[1]=2;//G         
+            base[2]=3;//T
+            *count =3;
+            break;
+        case 'B':
+            base[0]=1;//C
+            base[1]=2;//G
+            base[2]=3;//T
+            *count=3;
+            break;
+        case 'H':
+            base[0]=0;//A
+            base[1]=1;//C
+            base[2]=3;//T
+            *count=3;
+            break;
+        case 'V':
+            base[0]=0;//A
+            base[1]=1;//C
+            base[2]=2;//G
+            *count=3;
+            break;
+        case 'N':
+            base[0]=0;//A
+            base[1]=1;//C
+            base[2]=2;//G
+            base[3]=3;//T
+            *count=4;
+            break;
+        break;        
+		}
+}
+
 static char get_ref_base(long long position, char *name, int seqid)
 {
     static int last_seqid;
@@ -306,17 +409,17 @@ void callback_def (void *variation, GQueue * reads)
     int q[4];//acgt
     int mq[4];//acgt
     int ursc[4];//acgt
-    int v1base;
-    int v2base;
-    int v1[5];//RC,URC,URSC,Q, MQ
-    int v2[5];//RC,URC,URSC,Q, MQ
+    int vbase[4];
+    int vcount;
     char ref_base;
     
     mreads->count = 0;
     match_reads->count = 0;    
-    snp_item * var_overlap = (snp_item *)variation;  
-    v1base = get_base(var_overlap->var1);
-    v2base = get_base(var_overlap->var2);
+    snp_item * var_overlap = (snp_item *)variation; 
+    int iref_base = get_base(var_overlap->var1);
+    
+    
+    get_variant_bases(var_overlap->var2,vbase,&vcount);
     //if(g_queue_is_empty(reads)) return;
     GList *item = g_queue_peek_head_link(reads);
     if(g_queue_is_empty(reads)) item = NULL;
@@ -364,20 +467,22 @@ void callback_def (void *variation, GQueue * reads)
     urc[3] = dedup_count(match_reads->reads, match_reads->count, 26);
     ursc[3] = ur_old(match_reads);
 //header:      RC(A,C,G,T) URC(A,C,G,T) REF Ref(RC,URC,Q,MQ) Var1(RC, URC,Q,MQ) Var2(RC,URC,Q,MQ) URCbyContent
-//header:      RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
+//header:      RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ) ...
 //csv_in_line  2,0,3,4     4,0,3,3      4,0,3,3       A   2,4,30,30             2,2,2,30,30            2,2,2,30,30             
-    v1[0] = rc[v1base];v1[1]=urc[v1base];v1[2]=ursc[v1base];v1[3]=q[v1base];v1[4]=mq[v1base]; 
-    v2[0] = rc[v2base];v2[1]=urc[v2base];v2[2]=ursc[v2base];v2[3]=q[v2base];v2[4]=mq[v2base];
-    ref_base = get_ref_base(var_overlap->begin, var_overlap->name, var_overlap->seqid);
-    int iref_base= get_base(ref_base);
+   
     printf("%s\t%d,%d,%d,%d\t\t",var_overlap->line, rc[0],rc[1],rc[2],rc[3]);
     printf("%d,%d,%d,%d\t",urc[0],urc[1],urc[2],urc[3]);
     printf("%d,%d,%d,%d\t%c\t",ursc[0],ursc[1],ursc[2],ursc[3],ref_base);
     printf("%d,%d,%d,%d,%d\t\t",rc[iref_base],urc[iref_base],ursc[iref_base],q[iref_base],mq[iref_base]);
-    printf("%d,%d,%d,%d,%d\t\t%d,%d,%d,%d,%d\n",v1[0],v1[1],v1[2],v1[3],v1[4],v2[0],v2[1],v2[2],v2[3],v2[4]);
+    for(i=0;i<vcount;i++)
+    {
+        int b = vbase[i];
+        printf("%d,%d,%d,%d,%d\t\t",rc[b],urc[b],ursc[b],q[b],mq[b]);
+    }
+    printf("\n");
 }
 
-int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff)
+int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,char *output)
 //int main(int argc, char ** argv)
 {
 //    char * mapfilename = strdup(argv[1]);
@@ -390,8 +495,12 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff)
     match_reads = calloc(1,sizeof(map_array));
     init_map_array(mreads);
     init_map_array(match_reads);
-    fpbfa = fopen("/gscmnt/sata114/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.bfa","r");
-	//nst_load_bfa(fpbfa);
+    FILE *stdoutsave = stdout;
+    if(!output&&strlen(output))
+    {
+        stdout = fopen(output, "w");
+    }
+
     snp_stream *snps = calloc(1,sizeof(snp_stream));
 	snps->fp = fopen(snpfilename,"r");
 	snps->num_refs = mm->n_ref;
@@ -429,4 +538,6 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff)
         printf("After fire callback\n");
         
     } while(advance_seqid(r_stream,v_stream));
+    if(stdout != stdoutsave) fclose(stdout);
+    stdout = stdoutsave;
 }

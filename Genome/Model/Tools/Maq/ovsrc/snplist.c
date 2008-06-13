@@ -60,7 +60,9 @@ snp_item *get_next_snp(snp_stream *s)
 		return NULL;
 	}
     snp->line[strlen(snp->line)-1] = 0x00;
-	sscanf(snp->line, "%s %d %d %c %c", snp->name, &(snp->begin), &(snp->end), &(snp->var1), &(snp->var2));
+	//sscanf(snp->line, "%s %d %d %c %c", snp->name, &(snp->begin), &(snp->end), &(snp->var1), &(snp->var2));
+    sscanf(snp->line, "%s %d %c %c", snp->name, &(snp->begin), &(snp->var1), &(snp->var2));
+    snp->end = snp->begin;
     snp->begin--;
     snp->end--;
 	snp->seqid = get_seqid(snp->name, n_ref, ref_names);
