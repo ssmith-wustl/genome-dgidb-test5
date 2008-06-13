@@ -16,6 +16,10 @@ class Genome::Model::Tools::Maq::GenerateVariationMetrics {
         qual_cutoff => {
             type => 'int',
             doc => 'quality cutoff value', 
+        },
+        output => {
+            type => 'String',
+            doc => 'File path for input map', 
         },     
     ],
 };
@@ -52,7 +56,7 @@ sub execute {
     }
     
     my $result;
-    $result = Genome::Model::Tools::Maq::GenerateVariationMetrics_C::filter_variations($in,$snpfile, 100);#$qual_cutoff);
+    $result = Genome::Model::Tools::Maq::GenerateVariationMetrics_C::filter_variations($in,$snpfile, 100,$out);#$qual_cutoff);
     
     $result = !$result; # c -> perl
 
@@ -96,9 +100,9 @@ use Inline C => <<'END_C';
 #include "ovsrc/bfa.c"
 #include "ovsrc/ovc_test.c"
 
-int filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff)
+int filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff, char *outputmapfile)
 {
-    return ovc_filter_variations(mapfilename,snpfilename, qual_cutoff);
+    return ovc_filter_variations(mapfilename,snpfilename, qual_cutoff, outputmapfile);
 }
 
 END_C
