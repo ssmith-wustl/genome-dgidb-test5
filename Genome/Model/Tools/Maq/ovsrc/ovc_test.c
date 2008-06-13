@@ -275,7 +275,7 @@ static int get_base(char base)
     return @{$self->{'_iub_code_table'}->{$code}};
 } */
 
-static void get_variant_basess(char iub_code, int * base, int *count)
+static void get_variant_bases(char iub_code, int * base, int *count)
 {
     *count = 2;
     
