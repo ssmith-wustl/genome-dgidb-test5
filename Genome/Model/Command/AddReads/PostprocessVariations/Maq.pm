@@ -68,6 +68,11 @@ sub _genotype_detail_name {
     return sprintf("report_input%s", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
 }
 
+sub _variation_metrics_name {
+    my $self = shift;
+    return sprintf("variation_metrics%s", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
+}
+
 sub snp_output_file {
     my $self = shift;
     return sprintf("%s/identified_variations/%s", $self->model->data_directory,$self->_snp_resource_name);
@@ -81,6 +86,11 @@ sub pileup_output_file {
 sub genotype_detail_file {
     my $self = shift;
     return sprintf("%s/identified_variations/%s", $self->model->data_directory, $self->_genotype_detail_name);
+}
+
+sub variation_metrics_file {
+    my $self = shift;
+    return sprintf("%s/identified_variations/%s", $self->model->data_directory, $self->_variation_metrics_name);
 }
 
 sub execute {
@@ -213,7 +223,27 @@ $DB::single=1;
     $report_fh->close();
     $mapview_fh->close();
 
+    unless ($self->generate_variation_metrics) {        
+        $self->error_message("");
+        # cleanup...
+        return;
+    }
+
     return 1;
+}
+
+sub generate_variation_metrics {
+    my $self = shift;
+    my $model = $self->model;
+    my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
+    my $chromosome_resource_name = basename($chromosome_alignment_file);
+    
+    my $path = $self->variation_metrics_file;    
+    return Genome::Model::Command::Map::GenerateVariationMetrics->execute(input => $chromosome_alignment_file,
+                                                          snpfile => $self->snp_output_file,
+                                                          qual_cutoff => 1,
+                                                          output => $path);
+        
 }
 
 # Converts between the 1-letter genotype code into
