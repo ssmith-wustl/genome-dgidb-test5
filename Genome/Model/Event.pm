@@ -704,6 +704,9 @@ sub generate_metric {
         }
         push @metrics, $metric;
     }
+    if($self->can('cleanup_transient_properties')) {
+        $self->cleanup_transient_properties();
+    }
     return @metrics;
 }
 
