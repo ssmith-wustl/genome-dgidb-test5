@@ -222,7 +222,8 @@ $DB::single=1;
     $pileup_fh->close();
     $report_fh->close();
     $mapview_fh->close();
-
+    
+    return 1;
     unless ($self->generate_variation_metrics) {        
         $self->error_message("");
         # cleanup...
@@ -239,10 +240,10 @@ sub generate_variation_metrics {
     my $chromosome_resource_name = basename($chromosome_alignment_file);
     
     my $path = $self->variation_metrics_file;    
-    return Genome::Model::Command::Map::GenerateVariationMetrics->execute(input => $chromosome_alignment_file,
+    return Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(input => $chromosome_alignment_file,
                                                           snpfile => $self->snp_output_file,
-                                                          qual_cutoff => 1,
-                                                          output => $path);
+                                                          qual_cutoff => 1);#,
+#                                                          output => $path);
         
 }
 
