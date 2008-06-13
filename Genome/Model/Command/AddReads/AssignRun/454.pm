@@ -10,25 +10,24 @@ use File::Path;
 use Data::Dumper;
 
 class Genome::Model::Command::AddReads::AssignRun::454 {
-    is => 'Command',
+    is => 'Genome::Model::Command::AddReads::AssignRun',
     has => [ 
-        model   => { is => 'String', is_optional => 0, doc => 'the genome model on which to operate' },
-        run_id  => { is => 'Integer', doc => 'ID for the run object in the database'},
+        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
+        read_set_id  => { is => 'Integer', doc => 'ID for the run object in the database'},
     ]
 };
 
 sub help_brief {
-    my $self = shift;
-    return "empty implementation of " . $self->command_name_brief;
+    "Creates the appropriate items on the filesystem for a new 454 run region"
 }
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model add-reads assign-run 454 --model-id 5 --run-id 10
+    genome-model add-reads assign-run 454 --model-id 5 --read-set-id 10
 EOS
 }
 
-sub help_detail {                           
+sub help_detail {
     return <<EOS 
     This command is launched automatically by "add-reads assign-run"
     when it is determined that the run is from a 454.  
@@ -37,8 +36,11 @@ EOS
 
 sub execute {
     my $self = shift;
-    my $model = Genome::Model->get(name=>$self->model);
-    my $run = Genome::RunChunk->get(id => $self->run_id);
+
+    my $model = $self->model;
+    my $run = $self->run;
+
+    
     unless ($run) {
         $self->error_message("Did not find run info for run_id ".$self->run_id);
         return 0;
