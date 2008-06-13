@@ -20,6 +20,7 @@ class Genome::Model::Tools::Maq::GenerateVariationMetrics {
         output => {
             type => 'String',
             doc => 'File path for input map', 
+            is_optional => 1,
         },     
     ],
 };
@@ -49,6 +50,7 @@ sub execute {
     my $self = shift;
     my $in = $self->input;
     my $snpfile = $self->snpfile;
+    my $out = $self->output;
     unless ($in and $snpfile and -f $in and -f $snpfile) {
         $self->error_message("Bad params!");
         $self->usage_message($self->help_usage_complete_text);
