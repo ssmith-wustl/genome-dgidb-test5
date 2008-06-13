@@ -411,7 +411,7 @@ void callback_def (void *variation, GQueue * reads)
     int ursc[4];//acgt
     int vbase[4];
     int vcount;
-    char ref_base;
+    char ref_base = 'N';
     
     mreads->count = 0;
     match_reads->count = 0;    
