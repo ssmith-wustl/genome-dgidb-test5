@@ -82,11 +82,20 @@ $DB::single=1;
     }
 
     my $sequencing_platform;
+    my $seq_fs_data_types;
+    my $lane;
+    my $sample_name;
     if ($read_set->isa("GSC::RunLaneSolexa")) {
         $sequencing_platform = 'solexa';
+        $seq_fs_data_types = ["duplicate fastq path" , "unique fastq path"];
+        $lane = $read_set->lane;
+        $sample_name = $read_set->sample_name;
     }
     elsif ($read_set->isa("GSC::RunRegion454")) {
         $sequencing_platform = '454';
+        $seq_fs_data_types = ["fasta file path"];
+        $lane = $read_set->region_number;
+        $sample_name = $read_set->incoming_dna_name;
     }
     else {
         $self->error_message("Cannot resolve sequencing platform for "
@@ -99,12 +108,10 @@ $DB::single=1;
     }
 
     my $run_name = $read_set->run_name;
-    my $lane = $read_set->lane;
-
-    unless ($model->sample_name eq $read_set->sample_name) {
+    unless ($model->sample_name eq $sample_name) {
         $self->error_message(
             "Bad sample name " 
-            . $read_set->sample_name 
+            . $sample_name 
             . " on $run_name/$lane ($read_set_id) "
             . " does not match model sample "
             . $model->sample_name
@@ -113,8 +120,9 @@ $DB::single=1;
     }
 
     use File::Basename;
-    my $fastq_data_types=["duplicate fastq path" , "unique fastq path"];
-    my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id, data_type => $fastq_data_types);
+
+
+    my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id, data_type => $seq_fs_data_types);
    unless (@fs_path) {
         $self->error_message("Failed to find the path for data set $run_name/$lane ($read_set_id)!");
         return;
@@ -146,8 +154,8 @@ $DB::single=1;
             $self->warning_message("Run $run_name has changed location to $full_path from " . $run->full_path);
             $run->full_path($full_path);
         }
-        if ($run->limit_regions ne $lane) {
-            $self->error_message("Bad lane/region value $lane.  Expected " . $run->limit_regions);
+        if ($run->subset_name ne $lane) {
+            $self->error_message("Bad lane/subset value $lane.  Expected " . $run->subset_name);
             return;
         }
         if ($run->sample_name ne $model->sample_name) {
@@ -161,7 +169,7 @@ $DB::single=1;
             seq_id => $read_set_id,
             run_name => $run_name,
             full_path => $full_path,
-            subset_name =>$lane,
+            subset_name => $lane,
             sequencing_platform => $sequencing_platform,
             sample_name => $model->sample_name,
         );
