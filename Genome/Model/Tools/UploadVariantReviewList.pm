@@ -8,6 +8,8 @@ use Genome::VariantReviewDetail;
 use Genome::VariantReviewListFilter;
 use Genome::VariantReviewListMember;
 use Genome::VariantReviewList;
+use Genome::Utility::VariantReviewListReader;
+
 
 use above "Genome";
 
@@ -62,25 +64,7 @@ Once uploaded, the variants can be viewed and edited online at this address: htt
 
 sub execute {
     my $self = shift;
-
-=cut
-    eval "use GSCApp; App::DB->db_variant('development'); App::DB->db_access_level('rw'); App->init";
-    if ($@) {
-        $self->error_message("Error initializing GSCApp! $@");
-        return;
-    }
-=cut
-
     
-
-    
-    my $fh = IO::File->new("< ".$self->list);
-    unless ($fh){
-        $self->error_message("Couldn't open list file for reading!");
-        return;
-    }
-
-
     my $name = $self->name;
     my $filter = $self->filter || $name;
     my $author = $self->vtest($self->author);
@@ -99,55 +83,19 @@ sub execute {
             my $review_list_filter = Genome::VariantReviewListFilter->create(filter_name => $filter, list_id => $review_list->id);
         }
         my $list_id = $review_list->id;
+        my $list_reader = Genome::Utility::VariantReviewListReader->new($self->list, $separation_character);
+        while (my $line_hash = $list_reader->next_line_data()){
+            next if $line_hash->{header};
 
-        while (my $line = $fh->getline){
-            chomp $line;
-            my $current_line = $line;
-            my @data = split(/\Q$separation_character\E/, $line);
-
-            my ($chromosome, $begin_position, $end_position, $variant_type, $variant_length, $delete_sequence, $insert_sequence, $genes, $supporting_samples, $supporting_dbs, $finisher_manual_review, $pass_manual_review, $finisher_3730_review, $manual_genotype_normal, $manual_genotype_tumor, $manual_genotype_relapse, $somatic_status, $notes) = @data;
-
-            foreach ($chromosome, $begin_position, $end_position, $variant_type, $variant_length, $delete_sequence, $insert_sequence, $genes, $supporting_samples, $supporting_dbs, $finisher_manual_review, $pass_manual_review, $finisher_3730_review, $manual_genotype_normal, $manual_genotype_tumor, $manual_genotype_relapse, $somatic_status, $notes){
-                if ($_){
-                    $_ =~ s/"//g;
-                    undef $_  if $_ =~ /^-$/;
-                }
-            }
-            my ($insert_sequence_allele1, $insert_sequence_allele2) ;
-            ($insert_sequence_allele1, $insert_sequence_allele2) = split (/\//, $insert_sequence) if $insert_sequence;
-
-            my $current_member = Genome::VariantReviewDetail->get( begin_position => $begin_position, chromosome => $chromosome, end_position => $end_position, variant_type => $variant_type, delete_sequence => $delete_sequence, insert_sequence_allele1 => $insert_sequence_allele1, insert_sequence_allele2 => $insert_sequence_allele2 );
+            my $current_member = Genome::VariantReviewDetail->get( begin_position => $line_hash->begin_position, chromosome => $line_hash->chromosome, end_position => $line_hash->end_position, variant_type => $line_hash->variant_type, delete_sequence => $line_hash->delete_sequence, insert_sequence_allele1 => $line_hash->insert_sequence_allele1, insert_sequence_allele2 => $line_hash->insert_sequence_allele2 );
             if ($current_member){
                 my $new_notes = $self->vtest($current_member->notes);
-                $new_notes .= ', ' if $new_notes and $notes;
-                $new_notes .= $notes if $notes;
+                $new_notes .= ', ' if $new_notes and $line_hash->{notes};
+                $new_notes .= $line_hash->{notes} if $line_hash->{notes};
                 $current_member->notes($new_notes);
             }else{
                 $current_member = Genome::VariantReviewDetail->create(
-                    chromosome              => $chromosome,
-                    begin_position          => $begin_position,
-                    end_position            => $end_position,
-                    variant_type            => $variant_type,
-                    variant_length          => $variant_length,
-                    delete_sequence         => $delete_sequence, 
-                    insert_sequence_allele1 => $insert_sequence_allele1,
-                    insert_sequence_allele2 => $insert_sequence_allele2,
-                    genes                   => $genes,
-                    supporting_samples      => $supporting_samples,
-                    supporting_dbs          => $supporting_dbs,
-                    finisher_manual_review  => $finisher_manual_review,
-                    pass_manual_review      => $pass_manual_review,
-                    finisher_3730_review    => $finisher_3730_review,
-                    manual_genotype_normal  => $manual_genotype_normal,
-                    manual_genotype_tumor  => $manual_genotype_tumor,
-                    manual_genotype_relapse => $manual_genotype_relapse,
-                    somatic_status          => $somatic_status,
-                    notes                   => $notes,
-
-                    rgg_id                  => undef,
-                    roi_seq_id              => undef,
-                    sample_name             => undef,
-                    variant_seq_id          => undef,
+                   %$line_hash   
                 );
             }
             my $member_id = $current_member->id;
