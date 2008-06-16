@@ -239,11 +239,12 @@ sub generate_variation_metrics {
     my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
     my $chromosome_resource_name = basename($chromosome_alignment_file);
     
-    my $path = $self->variation_metrics_file;    
+    my $path = $self->variation_metrics_file;
+
     return Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(input => $chromosome_alignment_file,
                                                           snpfile => $self->snp_output_file,
-                                                          qual_cutoff => 1);#,
-#                                                          output => $path);
+                                                          qual_cutoff => 1,
+                                                          output => '/gscuser/jschindl/gvmout.log');
         
 }
 
