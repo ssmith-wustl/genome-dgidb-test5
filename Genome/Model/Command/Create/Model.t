@@ -9,7 +9,8 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 24;
+#use Test::More tests => 24;
+use Test::More 'no_plan';
 use Test::Differences;
 
 $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -27,7 +28,7 @@ my $genotyper = 'maq0_6_3';
 my $read_aligner = 'maq0_6_3';
 my $pp_name = 'testing';
 
-######## test command processing profile short reads create. ########
+diag('test command create for a processing profile short reads');
 my $create_pp_command= Genome::Model::Command::Create::ProcessingProfile::ShortRead->create(
      indel_finder          => $indel_finder,
      dna_type              => $dna_type,
@@ -62,7 +63,7 @@ is($pp->read_aligner_name,$read_aligner,'processing profile read_aligner accesso
 is($pp->name,$pp_name,'processing profile name accessor');
 
 
-######## test command create for a genome model ########
+diag('test command create for a genome model');
 my $create_command= Genome::Model::Command::Create::Model->create( 
   	model_name            	=> $model_name,
     sample                  => $sample,
@@ -94,4 +95,70 @@ is($model->genotyper_name,$genotyper,'model genotyper accessor');
 is($model->read_aligner_name,$read_aligner,'model read_aligner accessor');
 
 UR::Context->_sync_databases(); 
+
+
+diag('test create for a genome model object');
+$model_name = 'model_name_here';
+my $sample_name = 'sample_name_here';
+my %params = (
+    name => $model_name,
+    sample_name => $sample_name,
+    processing_profile_id   => $pp->id, # cannot access pp properties without the id here
+);
+my $obj = Genome::Model->create(%params);
+ok($obj, 'creation worked');
+isa_ok($obj ,'Genome::Model::ShortRead');
+
+# Test the accessors through the processing profile
+diag('Test accessing model for processing profile properties...');
+is($obj->indel_finder_name,$indel_finder,'indel_finder accessor');
+is($obj->dna_type,$dna_type,'dna_type accessor');
+is($obj->align_dist_threshold,$align_dist_threshold,'align_dist_threshold accessor');
+is($obj->reference_sequence_name,$reference_sequence,'reference_sequence accessor');
+is($obj->genotyper_name,$genotyper,'genotyper accessor');
+is($obj->read_aligner_name,$read_aligner,'read_aligner accessor');
+is($obj->name,$model_name,'name accessor');
+is($obj->type_name,'short read','type name accessor');
+
+# test the model accessors
+diag('Test accessing model for model properties...');
+is($obj->name,$model_name,'model name accessor');
+is($obj->sample_name,$sample_name,'sample name accessor');
+is($obj->processing_profile_id,$pp->id,'processing profile id accessor');
+
+diag('subclassing tests - test create for a processing profile object of each subclass');
+my $ppsr = Genome::ProcessingProfile->create(type_name => 'short read');
+ok($ppsr, 'creation worked for short read processing profile');
+isa_ok($ppsr ,'Genome::ProcessingProfile::ShortRead');
+my $ppdns = Genome::ProcessingProfile->create(type_name => 'de novo sanger');
+ok($ppdns, 'creation worked de novo sanger processing profile');
+isa_ok($ppdns ,'Genome::ProcessingProfile::DeNovoSanger');
+my $ppirs = Genome::ProcessingProfile->create(type_name => 'imported reference sequence');
+ok($ppirs, 'creation worked imported reference sequence processing profile');
+isa_ok($ppirs ,'Genome::ProcessingProfile::ImportedReferenceSequence');
+my $ppiv = Genome::ProcessingProfile->create(type_name => 'imported variants');
+ok($ppiv, 'creation worked imported variants processing profile');
+isa_ok($ppiv ,'Genome::ProcessingProfile::ImportedVariants');
+
+diag('subclassing tests - test create for a genome model object of each subclass');
+my $gmsr = Genome::Model->create(processing_profile_id => $ppsr->id,
+                                 name => 'short read test');
+ok($gmsr, 'creation worked for short read processing profile');
+isa_ok($gmsr ,'Genome::Model::ShortRead');
+my $gmdns = Genome::Model->create(processing_profile_id => $ppdns->id,
+                                 name => 'de novo sanger test');
+ok($gmdns, 'creation worked de novo sanger processing profile');
+isa_ok($gmdns ,'Genome::Model::DeNovoSanger');
+my $gmirs = Genome::Model->create(processing_profile_id => $ppirs->id,
+                                 name => 'imported reference sequence test');
+ok($gmirs, 'creation worked imported reference sequence processing profile');
+isa_ok($gmirs ,'Genome::Model::ImportedReferenceSequence');
+my $gmiv = Genome::Model->create(processing_profile_id => $ppiv->id,
+                                 name => 'imported variants test');
+ok($gmiv, 'creation worked imported variants processing profile');
+isa_ok($gmiv ,'Genome::Model::ImportedVariants');
+
+
+
+
 

@@ -14,12 +14,15 @@ use IO::File;
 class Genome::Model {
     type_name => 'genome model',
     table_name => 'GENOME_MODEL',
+    is_abstract => 1,
+    sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
         genome_model_id => { is => 'NUMBER', len => 11 },
     ],
     has => [
         processing_profile           => { is => 'Genome::ProcessingProfile::ShortRead', id_by => 'processing_profile_id' },
         processing_profile_name      => { via => 'processing_profile', to => 'name'},
+        type_name                    => { via => 'processing_profile'},
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
         genotyper_name               => { via => 'processing_profile'},
@@ -749,5 +752,48 @@ sub pretty_print_text {
     return $out;
 }
 
+# This is called by the infrastructure to appropriately classify abstract processing profiles
+# according to their type name because of the "sub_classification_method_name" setting
+# in the class definiton...
+sub _resolve_subclass_name {
+	my $class = shift;
+    $DB::single=1;
+	
+	if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
+		my $type_name = $_[0]->type_name;
+		return $class->_resolve_subclass_name_for_type_name($type_name);
+	}
+    # access the type according to the processing profile being used
+    elsif (my $processing_profile_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('processing_profile_id')) {
+        my $processing_profile = Genome::ProcessingProfile->get(id =>
+                                            $processing_profile_id);
+        my $type_name = $processing_profile->type_name;    
+        return $class->_resolve_subclass_name_for_type_name($type_name);
+    }
+	else {
+		return;
+	}
+}
+
+# This is called by both of the above.
+sub _resolve_subclass_name_for_type_name {
+    my ($class,$type_name) = @_;
+    my @type_parts = split(' ',$type_name);
+	
+    my @sub_parts = map { ucfirst } @type_parts;
+    my $subclass = join('',@sub_parts);
+	
+    my $class_name = join('::', 'Genome::Model' , $subclass);
+    return $class_name;
+}
+
+sub _resolve_type_name_for_subclass_name {
+    my ($class,$subclass_name) = @_;
+    my ($ext) = ($subclass_name =~ /Genome::Model::(.*)/);
+    return unless ($ext);
+    my @words = $ext =~ /[a-z]+|[A-Z](?:[A-Z]+|[a-z]*)(?=$|[A-Z])/g;
+    my $type_name = lc(join(" ", @words));
+    return $type_name;
+}
 
 1;
