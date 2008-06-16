@@ -85,9 +85,10 @@ sub execute {
         my $list_id = $review_list->id;
         my $list_reader = Genome::Utility::VariantReviewListReader->new($self->list, $separation_character);
         while (my $line_hash = $list_reader->next_line_data()){
+            last unless $line_hash;
             next if $line_hash->{header};
 
-            my $current_member = Genome::VariantReviewDetail->get( begin_position => $line_hash->begin_position, chromosome => $line_hash->chromosome, end_position => $line_hash->end_position, variant_type => $line_hash->variant_type, delete_sequence => $line_hash->delete_sequence, insert_sequence_allele1 => $line_hash->insert_sequence_allele1, insert_sequence_allele2 => $line_hash->insert_sequence_allele2 );
+            my $current_member = Genome::VariantReviewDetail->get( begin_position => $line_hash->{begin_position}, chromosome => $line_hash->{chromosome}, end_position => $line_hash->{end_position}, variant_type => $line_hash->{variant_type}, delete_sequence => $line_hash->{delete_sequence}, insert_sequence_allele1 => $line_hash->{insert_sequence_allele1}, insert_sequence_allele2 => $line_hash->{insert_sequence_allele2} );
             if ($current_member){
                 my $new_notes = $self->vtest($current_member->notes);
                 $new_notes .= ', ' if $new_notes and $line_hash->{notes};

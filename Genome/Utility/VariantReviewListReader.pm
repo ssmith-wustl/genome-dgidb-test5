@@ -16,7 +16,7 @@ sub new{
 
 sub list_columns{
     my ($self, $column_name) = @_;;
-    my @columns =( q/
+    my @columns = (qw/
         chromosome
         begin_position
         end_position
@@ -35,8 +35,7 @@ sub list_columns{
         manual_genotype_relapse
         somatic_status
         notes
-        /
-    );
+        /);
     return @columns unless $column_name;
     my $counter=0;
     while ($columns[$counter] ne $column_name){
@@ -46,7 +45,7 @@ sub list_columns{
 }
 
 sub db_columns{
-    my @columns =( q/
+    my @columns = ( qw/
         chromosome
         begin_position
         end_position
@@ -71,15 +70,15 @@ sub db_columns{
         roi_seq_id 
         sample_name
         variant_seq_id
-        /
-    );
+        /);
+
     return @columns;
 }
 
 sub set_line_hash{
     my ($self, @data) = @_;
     my $index = 0;
-    my %hash={};
+    my %hash;
     foreach my $col_name ($self->list_columns){
         if ($col_name eq 'insert_sequence'){
             my ($insert_sequence_allele1, $insert_sequence_allele2) ;
@@ -105,14 +104,16 @@ sub line_hash{
 sub next_line_data{
     my ($self) = @_;
     my $line = $self->{lfh}->getline;
+    return unless $line;
     chomp $line;
-    if ($line =~ /^[\dXxYy]/){
+    unless ($line =~ /^[\dXxYy]/){
         return {header=>$line};
     }
     my $char = $self->{'separation_character'};
     my @data = split(/\Q$char\E/, $line);
     foreach (@data){
         $_ =~ s/"'//g;
+        undef $_ if $_=~/^-$/;
     }
 
     $self->set_line_hash(@data);

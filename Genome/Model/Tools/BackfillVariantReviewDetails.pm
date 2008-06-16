@@ -1,4 +1,4 @@
-package Genome::Model::Tools::UploadVariantReviewList;
+package Genome::Model::Tools::BackfillVariantReviewDetails;
 
 use strict;
 use warnings;
@@ -18,7 +18,7 @@ UR::Object::Type->define(
     has => [
         list => {
             is => 'String',
-            doc => 'Master csv to import', 
+            doc => 'list to backfill from', 
         },
     ],
     has_optional => [
@@ -35,26 +35,23 @@ UR::Object::Type->define(
 );
 
 sub help_brief{
-    return "Uploads a character delimited variant list to the db";
+    return "Backfills AML lists to db";
 }
 
 sub help_synopsis{
-    return "gt upload-variant-review-list --list <list> --name <list_name> --author <list_author> --filter '<description of list criteria>'";
+    return "gt backfill-variant-review-details --list <list> --logfile <log file for abnormal backups> --separation_char <char>";
 }
 
 sub help_detail{
-    return "This command takes in a character delimited list of variants, and uploads them to the data warehouse.  The separation character is the '|' char by default, but can be sspecified on the command line. The list should be formatted as follows:
-chromosome|begin_position|end_position|variant_type|variant_length|delete_sequence|insert_sequence|genes|supporting_samples|supporting_dbs|finisher_manual_review|pass_manual_review|finisher_3730_review|manual_genotype_normal|manual_genotype_tumor|manual_genotype_relapse|somatic_status|notes
-
-Once uploaded, the variants can be viewed and edited online at this address: https://gscweb.gsc.wustl.edu/view/variant_review_list.html
-";
+    return "Backfills data, this should not be run routinely";
 }
 
 sub log{
     my ($self, $input) = @_;
     return unless $input;
-    return unless $self->{log_fh};
     chomp $input;
+    print $input."\n";
+    return unless $self->{log_fh};
     $self->{log_fh}->print($input."\n");
 }
 
@@ -63,9 +60,11 @@ sub execute {
 
     my $separation_character = $self->separation_character;
     if ($self->log_file){
-        my $log_fh = IO::File->new("< ".$self->log_file);
+        my $log_fh = IO::File->new("> ".$self->log_file);
         if ($log_fh){
-            $self->{log} = $log_fh;
+            $self->{log_fh} = $log_fh;
+        }else{
+            $self->log("Can't open log file, no logging will occur!");
         }
     }
 
@@ -75,12 +74,13 @@ sub execute {
 
         my $line_no = 0;
         while (my $line_hash = $list_reader->next_line_data()){
+            last unless $line_hash;
             $line_no++;
             next if $line_hash->{header};
 
-            my @current_members = Genome::VariantReviewDetail->get( begin_position => $line_hash->begin_position, chromosome => $line_hash->chromosome, end_position => $line_hash->end_position);
+            my @current_members = Genome::VariantReviewDetail->get( begin_position => $line_hash->{begin_position}, chromosome => $line_hash->{chromosome}, end_position => $line_hash->{end_position});
             if (@current_members != 1 ){
-                $self->log(scalar @current_members." results for variant @ ".$line_hash->chromosome." ".$line_hash->begin_position." ".$line_hash->end_position.". Not processing, line $line_no");
+                $self->log(scalar @current_members." results for variant @ ".$line_hash->{chromosome}." ".$line_hash->{begin_position}." ".$line_hash->{end_position}.". Not processing, line $line_no");
                 next;
             }
             my $current_member = shift @current_members;
