@@ -506,16 +506,16 @@ void callback_def (void *variation, GQueue * reads)
 //header:      RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ) ...
 //csv_in_line  2,0,3,4     4,0,3,3      4,0,3,3       A   2,4,30,30             2,2,2,30,30            2,2,2,30,30             
    
-    printf("%s\t%d,%d,%d,%d\t\t",var_overlap->line, rc[0],rc[1],rc[2],rc[3]);
-    printf("%d,%d,%d,%d\t",urc[0],urc[1],urc[2],urc[3]);
-    printf("%d,%d,%d,%d\t%c\t",ursc[0],ursc[1],ursc[2],ursc[3],ref_base);
-    printf("%d,%d,%d,%d,%d\t\t",rc[iref_base],urc[iref_base],ursc[iref_base],q[iref_base],mq[iref_base]);
+    fprintf(stdout, "%s\t%d,%d,%d,%d\t\t",var_overlap->line, rc[0],rc[1],rc[2],rc[3]);
+    fprintf(stdout, "%d,%d,%d,%d\t",urc[0],urc[1],urc[2],urc[3]);
+    fprintf(stdout, "%d,%d,%d,%d\t%c\t",ursc[0],ursc[1],ursc[2],ursc[3],ref_base);
+    fprintf(stdout, "%d,%d,%d,%d,%d\t\t",rc[iref_base],urc[iref_base],ursc[iref_base],q[iref_base],mq[iref_base]);
     for(i=0;i<vcount;i++)
     {
         int b = vbase[i];
-        printf("%d,%d,%d,%d,%d\t\t",rc[b],urc[b],ursc[b],q[b],mq[b]);
+        fprintf(stdout, "%d,%d,%d,%d,%d\t\t",rc[b],urc[b],ursc[b],q[b],mq[b]);
     }
-    printf("\n");
+    fprintf(stdout,"\n");
 }
 
 int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,char *output)
@@ -531,8 +531,9 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,c
     init_map_array(mreads);
     init_map_array(match_reads);
     FILE *stdoutsave = stdout;
-    if(!output&&strlen(output))
+    if(output&&strlen(output))
     {
+        printf("here is the output file %s\n",output);
         stdout = fopen(output, "w");
     }
 
@@ -562,13 +563,13 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,c
     i = g_last_rseqid;
     do
     {
-        printf("Running on chromosome %s\n", mm->ref_name[i]);i++;
+        fprintf(stderr, "Running on chromosome %s\n", mm->ref_name[i]);i++;
         fire_callback_for_overlaps(
             v_stream,
             r_stream,  
             callback_def  
         );
-        printf("After fire callback\n");
+        fprintf(stderr,"After fire callback\n");
         
     } while(advance_seqid(r_stream,v_stream));
     if(stdout != stdoutsave) fclose(stdout);

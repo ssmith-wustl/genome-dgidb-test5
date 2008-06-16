@@ -45,20 +45,31 @@ A future enhancement would group reads with a common sequence in the first n bas
 EOS
 }
 
+sub create {
+    my $class = shift;    
+    my $self = $class->SUPER::create(@_);    
+
+    return $self;
+}
+
 sub execute {
-    $DB::single = 1;
     my $self = shift;
     my $in = $self->input;
     my $snpfile = $self->snpfile;
     my $out = $self->output;
-    unless ($in and $snpfile and -f $in and -f $snpfile) {
+    unless ($in and $snpfile and -e $in and -e $snpfile) {
         $self->error_message("Bad params!");
         $self->usage_message($self->help_usage_complete_text);
         return;
     }
     
     my $result;
-    $result = Genome::Model::Tools::Maq::GenerateVariationMetrics_C::filter_variations($in,$snpfile, 100,$out);#$qual_cutoff);
+    $ovsrc =  `wtf Genome::Model::Tools::Maq::GenerateVariationMetrics_C`;
+    print "This is the wtf ss wanted me to add $ovsrc";
+    chomp $ovsrc;
+    `perl $ovsrc`;#evil hack
+    require Genome::Model::Tools::Maq::GenerateVariationMetrics_C;
+    $result = Genome::Model::Tools::Maq::GenerateVariationMetrics_C::filter_variations($in,$snpfile, 1,$out);#$qual_cutoff);
     
     $result = !$result; # c -> perl
 
@@ -66,47 +77,6 @@ sub execute {
     return $result;
 }
 
-package Genome::Model::Tools::Maq::GenerateVariationMetrics_C;
 
-our $inline_dir;
-our $cflags;
-our $libs;
-our $ovsrc;
-BEGIN
-{
-    $ovsrc =  `wtf Genome::Model::Tools::Maq::GenerateVariationMetrics`;
-    chomp $ovsrc;
-    ($ovsrc) = $ovsrc =~/(.*)\/GenerateVariationMetrics\.pm/;
-    ($inline_dir) = "$ENV{HOME}/".(`uname -m` =~ /ia64/ ? '_InlineItanium' : '_Inline32');
-    mkdir $inline_dir;
-    $cflags = `pkg-config glib-2.0 --cflags`;
-    $libs = '-L/var/chroot/etch-ia32/usr/lib -L/usr/lib -L/lib '.`pkg-config glib-2.0 --libs`;
-        
-};
-
-use Inline 'C' => 'Config' => (
-            CC => '/gscmnt/936/info/jschindl/gcc32/gcc',
-            DIRECTORY => $inline_dir,
-            INC => "-I$ovsrc".' -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
-            CCFLAGS => `uname -m` =~ /ia64/ ? '-D_FILE_OFFSET_BITS=64 '.$cflags:'-D_FILE_OFFSET_BITS=64 -m32 '.$cflags,
-            LD => '/gscmnt/936/info/jschindl/gcc32/ld',
-            LIBS => '-L/gscuser/jschindl/svn/gsc/zlib-1.2.3 -lz '.$libs,
-            NAME => __PACKAGE__
-            );
-
-use Inline C => <<'END_C';
-#include "ovsrc/snplist.c"
-#include "ovsrc/maqmap.c"
-#include "ovsrc/ov.c" 
-#include "ovsrc/dedup.c"
-#include "ovsrc/bfa.c"
-#include "ovsrc/ovc_test.c"
-
-int filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff, char *outputmapfile)
-{
-    return ovc_filter_variations(mapfilename,snpfilename, qual_cutoff, outputmapfile);
-}
-
-END_C
 
 1;
