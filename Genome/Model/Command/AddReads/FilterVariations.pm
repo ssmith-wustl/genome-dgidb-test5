@@ -12,8 +12,8 @@ class Genome::Model::Command::AddReads::FilterVariations {
     is => ['Genome::Model::EventWithRefSeq'],
     sub_classification_method_name => 'class',
     has => [
-        normal_id            => { is => 'Integer', 
-                                doc => 'Identifies the normal genome model.' },
+#        normal_id            => { is => 'Integer', 
+#                                doc => 'Identifies the normal genome model.' },
     ]
 };
 
@@ -36,11 +36,12 @@ EOS
 }
 
 sub GetNormal {
-	my ($self, $ref_seq_file) = shift;
+	my ($self, $ref_seq_file, $detail_file_sort, $alignment_quality) = @_;
 	my $chromosome = $self->ref_seq_id;
 	my $model = $self->model;
 	my ($detail_file) = $model->_variant_detail_files($chromosome);
-	my $normal_name = $self->normal_id;
+	my $normal_name = '2509660674';
+	#my $normal_name = $self->normal_id;
 	my @normal_model = Genome::Model->get(id => $normal_name );
 	unless (scalar(@normal_model)) {
 		$self->error_message(sprintf("normal model %s does not exist.  please verify this first.",
@@ -53,8 +54,7 @@ sub GetNormal {
 		$normal_model[0]->resolve_accumulated_alignments_filename(
 																															ref_seq_id => $chromosome,
 																														 );
-
-	my $ov_cmd = "/gscuser/jschindl/ov/test $detail_file $map_file_path |";
+	my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $detail_file_sort $alignment_quality |";
 	my $ov_fh = IO::File->new($ov_cmd);
 	unless ($ov_fh) {
 		$self->error_message("Unable to get counts $$");
@@ -62,15 +62,20 @@ sub GetNormal {
 	}
 	while (<$ov_fh>) {
 		chomp;
-		my ($chr, $start, $end, $al1, $al2, $al1_type, $al2_type,
-				$reference_reads, $variant_reads, $consensus_quality, $read_count,
-#				$rgg_id,
-				$rc_arr, $urc_arr, $ref,
-				$ref_count_arr, $al1_count_arr, $al2_count_arr, $rc) =
+		unless (/^\d+\s+/) {
+			next;
+		}
+#RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
+		my ($chr, $start, $ref_sequence, $iub_sequence, $quality_score,
+				$rc_arr, $empty3, $urc_arr, $ursc_arr, $ref,
+				$ref_count_arr, $empty4, $al1_count_arr, $empty5, $al2_count_arr) =
 					split("\t");
-		my ($ref_rc, $ref_urc, $ref_bq, $ref_maxbq) = split(',',$ref_count_arr);
-		my ($al1_rc, $al1_urc, $al1_bq, $al1_maxbq) = split(',',$al1_count_arr);
-		my ($al2_rc, $al2_urc, $al2_bq, $al2_maxbq) = split(',',$al2_count_arr);
+		my ($ref_rc, $ref_urc, $ref_ursc, $ref_bq, $ref_maxbq) =
+			split(',',$ref_count_arr);
+		my ($al1_rc, $al1_urc, $al1_ursc, $al1_bq, $al1_maxbq) =
+			split(',',$al1_count_arr);
+		my ($al2_rc, $al2_urc, $al2_ursc, $al2_bq, $al2_maxbq) =
+			split(',',$al2_count_arr);
 		$normal{$chr}{$start}{ref_rc} = $ref_rc;
 		$normal{$chr}{$start}{al1_rc} = $al1_rc;
 		$normal{$chr}{$start}{al2_rc} = $al2_rc;
@@ -79,9 +84,26 @@ sub GetNormal {
 	return \%normal;
 }
 
-sub GetQuality {
-	my ($self) = shift;
-	my %quality;
+my %IUBcode=(
+	     A=>'AA',
+	     C=>'CC',
+	     G=>'GG',
+	     T=>'TT',
+	     M=>'AC',
+	     K=>'GT',
+	     Y=>'CT',
+	     R=>'AG',
+	     W=>'AT',
+	     S=>'GC',
+	     D=>'AGT',
+	     B=>'CGT',
+	     H=>'ACT',
+	     V=>'ACG',
+	     N=>'ACGT',
+	    );
+
+sub SNPFiltered {
+	my ($self, $snp_file_filtered) = @_;
 	my $chromosome = $self->ref_seq_id;
 	my $model = $self->model;
 
@@ -90,17 +112,32 @@ sub GetQuality {
 	unless ($snp_fh) {
 		$self->error_message(sprintf("snp file %s does not exist.  please verify this first.",
 																 $snp_file));
-		return undef;
+		return 0;
+	}
+	my $snp_filtered_fh = IO::File->new(">$snp_file_filtered");
+	unless ($snp_filtered_fh) {
+		$self->error_message(sprintf("snp file %s can not be created.",
+																 $snp_file_filtered));
+		return 0;
 	}
 	while (<$snp_fh>) {
 		chomp;
 		my ($id, $start, $ref_sequence, $iub_sequence, $quality_score,
 				$depth, $avg_hits, $high_quality, $unknown) = split("\t");
-		$quality{$id}{$start}{ref} = $ref_sequence;
-		$quality{$id}{$start}{quality} = $quality_score;
+		my $genotype = $IUBcode{$iub_sequence};
+		my $cns_sequence = substr($genotype,0,1);
+		my $var_sequence = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
+		if ($ref_sequence eq $cns_sequence &&
+				$ref_sequence eq $var_sequence) {
+			next;										# no variation
+		}
+		if ($depth > 2) {
+			print $snp_filtered_fh $_ . "\n";
+		}
 	}
 	$snp_fh->close;
-	return \%quality;
+	$snp_filtered_fh->close;
+	return 1;
 }
 
 sub execute {
@@ -122,22 +159,34 @@ sub execute {
 			return;
     }
 
-		my $normal_href = $self->GetNormal($ref_seq_file);
-		unless (defined($normal_href)) {
-			return;
-		}
-
-		my $quality_href = $self->GetQuality();
-		unless (defined($quality_href)) {
-			return;
-		}
-		
     my ($filtered_list_dir) = $model->_filtered_variants_dir();
     print "$filtered_list_dir\n";
     unless (-d $filtered_list_dir) {
         mkdir $filtered_list_dir;
         `chmod g+w $filtered_list_dir`;
     }
+
+		my $snp_file_filtered = $filtered_list_dir . "snp_filtered_${chromosome}.csv";
+
+		unless ($self->SNPFiltered($snp_file_filtered)) {
+			return;
+		}
+
+    # This creates a map file in /tmp which is actually a named pipe
+    # streaming the data from the original maps.
+    # It can be used only once.  Run this again if you need to use it multiple times.
+    my $map_file_path = $model->resolve_accumulated_alignments_filename(
+																																				ref_seq_id => $chromosome,
+																																			 );
+
+		my $snp_file_sort = $filtered_list_dir . "snp_filtered_sort_${chromosome}.csv";
+		system("perl /gscuser/jschindl/snp_sort.pl $snp_file_filtered $map_file_path $snp_file_sort $chromosome");
+
+		my $alignment_quality = 1;
+		my $normal_href = $self->GetNormal($ref_seq_file, $snp_file_sort, $alignment_quality);
+		unless (defined($normal_href)) {
+			return;
+		}
 
 		my ($file, $basename, $qvalue_level, $bq);
 		my $specificity = 'default';
@@ -174,22 +223,43 @@ sub execute {
 
 		$basename = $filtered_list_dir . '/filtered';
 
-#    my @alignments = $model->alignments('-order_by' => ['run_name','run_subset_name']);
-#		foreach my $a (@alignments) {
-#        my $r = $a->read_set;
-#        my $rls = $r->_run_lane_solexa;
-#        
-#        my $sample_name = $rls->sample_name;
-#        my $library_name = $rls->library_name;
-#				# This creates a map file in /tmp which is actually a named pipe
-#				# streaming the data from the original maps.
-#				# It can be used only once.  Run this again if you need to use it multiple times.
-#				my $map_file_path = $model->resolve_accumulated_alignments_filename(
-#																																						ref_seq_id => $chromosome,
-#																																						library_name => $library_name, # optional
-#																																					 );
-#			}
+		my %lib_urc;
+    my @libraries = $model->libraries;
+		my $library_number = 0;
+		foreach my $library_name (@libraries) {
+				# This creates a map file in /tmp which is actually a named pipe
+				# streaming the data from the original maps.
+				# It can be used only once.  Run this again if you need to use it multiple times.
+				my $lib_map_file_path = $model->resolve_accumulated_alignments_filename(
+																																						ref_seq_id => $chromosome,
+																																						library_name => $library_name, # optional
+																																					 );
+				$library_number += 1;
+				my $ov_lib_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $lib_map_file_path $snp_file_sort $alignment_quality |";
 
+				my $ov_lib_fh = IO::File->new($ov_lib_cmd);
+				unless ($ov_lib_fh) {
+					$self->error_message("Unable to get counts for $chromosome $library_name $$");
+					return;
+				}
+				while (<$ov_lib_fh>) {
+					chomp;
+					unless (/^\d+\s+/) {
+						next;
+					}
+					#RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
+					
+					my ($lib_chr, $lib_start, $lib_ref_sequence, $lib_iub_sequence, $lib_quality_score,
+							$lib_depth, $lib_avg_hits, $lib_high_quality, $lib_unknown,
+							$lib_rc_arr, $lib_empty3, $lib_urc_arr, $lib_ursc_arr, $lib_ref,
+							$lib_ref_count_arr, $lib_empty4, $lib_al1_count_arr, $lib_empty5, $lib_al2_count_arr) =
+								split("\t");
+					my ($lib_al1_rc, $lib_al1_urc, $lib_al1_ursc, $lib_al1_bq, $lib_al1_maxbq) =
+						split(',',$lib_al1_count_arr);
+					$lib_urc{$library_number}{$lib_chr}{$lib_start}{al1_ursc} = $lib_al1_ursc;
+				}
+				$ov_lib_fh->close();
+			}
 
 		my $use_validation = 1;
 		my $status_file = '/gscmnt/sata180/info/medseq/dlarson/aml_temp_consolidate_08520.csv';
@@ -245,14 +315,13 @@ sub execute {
     # This creates a map file in /tmp which is actually a named pipe
     # streaming the data from the original maps.
     # It can be used only once.  Run this again if you need to use it multiple times.
-    my $map_file_path = $model->resolve_accumulated_alignments_filename(
-																																				ref_seq_id => $chromosome,
-#																																				library_name => '031308a', # optional
-																																				);
-
+    $map_file_path = $model->resolve_accumulated_alignments_filename(
+																																		 ref_seq_id => $chromosome,
+																																		);
     print "made map $map_file_path\n";
 
-		my $ov_cmd = "/gscuser/jschindl/ov/test $detail_file $map_file_path |";
+		my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $snp_file_sort $alignment_quality |";
+
     my $ov_fh = IO::File->new($ov_cmd);
 		unless ($ov_fh) {
 			$self->error_message("Unable to get counts $$");
@@ -290,18 +359,31 @@ sub execute {
 			
 		while (<$ov_fh>) {
 			chomp;
+			unless (/^\d+\s+/) {
+				next;
+			}
+#RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
 
-			my ($chr, $start, $end, $al1, $al2, $al1_type, $al2_type,
-					$reference_reads, $variant_reads, $consensus_quality, $read_count,
-#					$rgg_id,
-					$rc_arr, $urc_arr, $ref,
-					$ref_count_arr, $al1_count_arr, $al2_count_arr, $rc) =
+		my ($chr, $start, $ref_sequence, $iub_sequence, $quality_score,
+				$depth, $avg_hits, $high_quality, $unknown,
+				$rc_arr, $empty3, $urc_arr, $ursc_arr, $ref,
+				$ref_count_arr, $empty4, $al1_count_arr, $empty5, $al2_count_arr) =
 						split("\t");
-			my ($ref_rc, $ref_urc, $ref_bq, $ref_maxbq) = split(',',$ref_count_arr);
-			my ($al1_rc, $al1_urc, $al1_bq, $al1_maxbq) = split(',',$al1_count_arr);
-			my ($al2_rc, $al2_urc, $al2_bq, $al2_maxbq) = split(',',$al2_count_arr);
-			
+			my ($ref_rc, $ref_urc, $ref_ursc, $ref_bq, $ref_maxbq) =
+				split(',',$ref_count_arr);
+			my ($al1_rc, $al1_urc, $al1_ursc, $al1_bq, $al1_maxbq) =
+				split(',',$al1_count_arr);
+			my ($al2_rc, $al2_urc, $al2_ursc, $al2_bq, $al2_maxbq) =
+				split(',',$al2_count_arr);
+
+			my $genotype = $IUBcode{$iub_sequence};
+			my $al1 = substr($genotype,0,1);
+			my $al2 = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
+
 			my (
+					$end,
+					$al1_type,
+					$al2_type,
 					$al2_read_hg,
 					$al2_read_unique_dna_start,
 					$al2_read_unique_dna_context,
@@ -315,15 +397,18 @@ sub execute {
 					$max_base_quality
 				 ) = 
 					 (
+						$start,
+						($ref_sequence eq $al1) ? 'ref' : 'SNP',
+						'SNP',
 						$al2_rc,
 						$al2_urc,
-						0,
-						0,
-						0,
-						0,
-						$al1_urc,
-						$normal_href->{$chr}{$start}{al2_rc},
-						$quality_href->{$chr}{$start}{quality},
+						$al2_ursc,
+						$lib_urc{1}{$chr}{$start}{al1_ursc} || 0,
+						$lib_urc{2}{$chr}{$start}{al1_ursc} || 0,
+						$lib_urc{3}{$chr}{$start}{al1_ursc} || 0,
+						$ref_urc,
+						$normal_href->{$chr}{$start}{al2_rc} || 0,
+						$quality_score,
 						$al2_bq,
 						$al2_maxbq,
 					 );
