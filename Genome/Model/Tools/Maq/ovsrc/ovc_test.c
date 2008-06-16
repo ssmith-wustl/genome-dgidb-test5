@@ -424,11 +424,12 @@ int ur_old(map_array *reads)
 {
     int i = 0;
     static GHashTable *hash = NULL;
-    hash = hash?hash:g_hash_table_new(g_str_hash,g_str_equal);
-    char read_string[70];
+    hash = hash?hash:g_hash_table_new_full(g_str_hash,g_str_equal,free, free);
+    char *read_string;
     
     for(i = 0;i<reads->count;i++)
     {
+        read_string = malloc(70);
         get_read_lc(reads->reads[i],read_string);
         g_hash_table_insert(hash,read_string,NULL);
     }
