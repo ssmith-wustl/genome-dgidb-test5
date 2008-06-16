@@ -62,7 +62,7 @@ maqmap1_t *bl_get_at_pos(bl_list *list, bl_pos position)
     return NULL;
 }
 
-bl_pos bl_find(bl_list *list, maqmap1_t *rec, int comparison_length)
+bl_pos bl_find_seq_comp(bl_list *list, maqmap1_t *rec, int comparison_length)
 {    
     static char rec_string[64];//64 is MAX_READLEN
     static char cmp_string[64];
@@ -71,10 +71,30 @@ bl_pos bl_find(bl_list *list, maqmap1_t *rec, int comparison_length)
     for(i=0;i<list->used;i++)
     {
         if(list->_list[i].size != rec->size) continue;
+        int length = rec->size<comparison_length?rec->size:comparison_length;
+        length = list->_list[i].size<length?list->_list[i].size:length;
         get_read_lc(&list->_list[i],cmp_string);
-        if(memcmp(rec_string, cmp_string, comparison_length))
-            return i;
+        if(((rec->pos)&1))
+        {
+            int offset = length<comparison_length?0:(length-comparison_length);
+            if(!memcmp(&rec_string[offset],&cmp_string[offset],length))
+                return i;            
+        }
+        else
+            if(!memcmp(rec_string, cmp_string, length))
+                return i;
     }
+    return -1;
+}
+
+bl_pos bl_find(bl_list *list, maqmap1_t *rec, int comparison_length)
+{    
+    static char rec_string[64];//64 is MAX_READLEN
+    static char cmp_string[64];
+    get_read_lc(rec, rec_string);
+    int i =0;
+    if(list->used>=1) return 0;
+    
     return -1;
 }
 

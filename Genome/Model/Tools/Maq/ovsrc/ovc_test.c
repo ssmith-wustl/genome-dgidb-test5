@@ -10,17 +10,20 @@ int g_last_rseqid;
 int g_last_vseqid;
 int g_num_seqs;
 int g_qual_cutoff;
+maqmap1_t *g_m1;
 
 void * next_r(void * r_stream) 
 {
     ov_stream_t *stream = (ov_stream_t*)r_stream;
-    maqmap1_t *m1 =malloc(sizeof(maqmap1_t));
-    if(!m1) {printf("Couldn't allocate m1 record\n");return NULL;}    
+    maqmap1_t *m1 =NULL;
+    if(!g_m1) m1=malloc(sizeof(maqmap1_t));
+    if(!m1&&!g_m1) {printf("Couldn't allocate m1 record\n");return NULL;}    
     gzFile *fp = (gzFile *)(stream->stream_data);
-    long long offset = gztell(fp);
-    int size=0;
-    if((size = gzread(fp,m1, sizeof(maqmap1_t))))
+    int size=sizeof(maqmap1_t);
+    if(g_m1||(size = gzread(fp,m1, sizeof(maqmap1_t))))
     {
+        if(g_m1)
+            m1=g_m1;
         if(size != sizeof(maqmap1_t)) 
         {
             //printf("size is only %d, seqid is %d\n",size,m1->seqid);
@@ -32,10 +35,12 @@ void * next_r(void * r_stream)
         if(m1->seqid!=g_last_rseqid)
         {
             //printf("gseqids don't match, returning NULL\n");
-            gzseek(fp,offset,SEEK_SET);
-            free(m1);            
+            g_m1=m1;
             return NULL;
         }
+        if(g_m1)
+            g_m1 = NULL;            
+        
         if(m1->map_qual<g_qual_cutoff) m1->pos=0;//hacky, but should avoid the situation where crap reads are clogging up the queue       
         return (void*)m1;
     }
@@ -88,13 +93,21 @@ int advance_seqid(void *rstream, void *vstream)
     snp_stream *s = (snp_stream *)stream->stream_data;
     snp_item temp;
     snp_item *item = &temp;
-    int size = 0;
-    long long offset = 0;
+    int size = sizeof(maqmap1_t);
     do
     {
         if(g_last_rseqid<=g_last_vseqid)
-            while((offset = gztell(fp))&&(size = gzread(fp,m1, sizeof(maqmap1_t))))
+        {
+            if(g_m1)
             {
+                memcpy(m1,g_m1,sizeof(maqmap1_t));
+                free(g_m1);
+                g_m1 = NULL;
+            }
+            else
+                size = gzread(fp,m1, sizeof(maqmap1_t));                    
+            do
+            {                
                 if(size != sizeof(maqmap1_t)||size == 0) 
                 {
                     printf("size is only %d, seqid is %d\n",size,m1->seqid);
@@ -104,14 +117,14 @@ int advance_seqid(void *rstream, void *vstream)
                 }
                 if(m1->seqid>g_last_rseqid)
                 {
-                    gzseek(fp,offset,SEEK_SET);
-                    g_last_rseqid = m1->seqid;
-                    free(m1);
+                    g_m1 = m1;                    
+                    g_last_rseqid = m1->seqid;                    
                     if(g_last_rseqid>=g_num_seqs) return 0;
                     break;
                 }
-            }
-        
+            } while((size = gzread(fp,m1, sizeof(maqmap1_t))));
+        }
+                
         if(g_last_rseqid>g_last_vseqid)
             while(item =get_next_snp(s))
             {
@@ -135,32 +148,49 @@ int init_seqid(void *rstream, void *vstream)
 {
 
     ov_stream_t *stream = (ov_stream_t*)rstream;
-    maqmap1_t m1;    
+    maqmap1_t *m1 =malloc(sizeof(maqmap1_t));    
     gzFile *fp = (gzFile *)(stream->stream_data);
     stream = (ov_stream_t *)vstream;
     snp_stream *s = (snp_stream *)stream->stream_data;
     snp_item temp;
     snp_item *item = &temp;
-    long long offset = 0;
+    int size =sizeof(maqmap1_t);
     do
     {
+    
         if(g_last_rseqid<g_last_vseqid)
-            while((offset = gztell(fp))&&gzread(fp,&m1, sizeof(maqmap1_t)))
+        {
+            if(g_m1)
             {
-                
-                if(m1.seqid>g_last_rseqid)
+                free(m1);
+                m1=g_m1;
+                g_m1 = NULL;
+            }
+            else
+                size = gzread(fp,m1, sizeof(maqmap1_t));                    
+            do
+            {                
+                if(size != sizeof(maqmap1_t)||size == 0) 
                 {
-                    gzseek(fp,offset,SEEK_SET);
-                    printf("setting rseqid %d %d\n", m1.seqid, g_last_rseqid);
-                    g_last_rseqid = m1.seqid;                    
+                    printf("size is only %d, seqid is %d\n",size,m1->seqid);
+                    //dealing with a truncated file
+                    free(m1);
+                    return 0;
+                }
+                if(m1->seqid>g_last_rseqid)
+                {
+                    g_m1 = m1;                    
+                    g_last_rseqid = m1->seqid;                    
+                    if(g_last_rseqid>=g_num_seqs) return 0;
                     break;
                 }
-            }
+            } while((size = gzread(fp,m1, sizeof(maqmap1_t))));
+        }        
         
         if(g_last_rseqid>g_last_vseqid)
             while(1)
             {
-                offset = ftell(s->fp);
+                long long offset = ftell(s->fp);
                 item =get_next_snp(s);
                 if(!item) return 0;
                 if(item->seqid>g_last_vseqid)
@@ -388,14 +418,19 @@ static char get_ref_base(long long position, char *name, int seqid)
     return (mask>>(offset<<1)&3)? "ACGT"[word>>(offset<<1)&3] : 'N'; 
 }
 
+
+
 int ur_old(map_array *reads)
 {
     int i = 0;
     static GHashTable *hash = NULL;
     hash = hash?hash:g_hash_table_new(g_str_hash,g_str_equal);
+    char read_string[70];
+    
     for(i = 0;i<reads->count;i++)
     {
-        g_hash_table_insert(hash,reads->reads[i]->name,NULL);
+        get_read_lc(reads->reads[i],read_string);
+        g_hash_table_insert(hash,read_string,NULL);
     }
     int ur = g_hash_table_size(hash);
     g_hash_table_remove_all(hash);
@@ -483,13 +518,12 @@ void callback_def (void *variation, GQueue * reads)
 }
 
 int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,char *output)
-//int main(int argc, char ** argv)
 {
-//    char * mapfilename = strdup(argv[1]);
-//    char * snpfilename = strdup(argv[2]);
     g_qual_cutoff = qual_cutoff;
     gzFile reffp = gzopen(mapfilename,"r");
+    if(reffp)printf("opened %s\n",mapfilename);
     maqmap_t *mm = maqmap_read_header(reffp);
+    printf("Finished reading mapfile header\n");
     g_num_seqs = mm->n_ref;
     mreads = calloc(1,sizeof(map_array));
     match_reads = calloc(1,sizeof(map_array));
@@ -513,9 +547,7 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,c
     gzFile *fp = (gzFile *)(stream->stream_data);
     if(gzread(reffp,m1, sizeof(maqmap1_t)))
     {
-        gzrewind(reffp);
-        maqmap_read_header(reffp);
-        free(m1);
+        g_m1=m1;
         g_last_rseqid = m1->seqid;
     }
     else return 1;   
