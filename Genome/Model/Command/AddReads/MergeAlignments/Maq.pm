@@ -73,18 +73,20 @@ sub execute {
                                      genome_model_run_id => \@run_ids,
                                  );
     my @seq_ids = map {$_->seq_id} @runs;
-    eval "use GSCApp; App::DB->db_access_level('rw'); App->init;";
-    my @sls = GSC::RunLaneSolexa->get(
-                                      seq_id => \@seq_ids,
-                                  );
+
+    my @rc = Genome::RunChunk->get(seq_id => \@seq_ids);
+
+    # pre-cache the lanes
+    my @sls = GSC::RunLaneSolexa->get(seq_id => \@seq_ids);
+    
     my %library_alignments;
     for my $run_event (@run_events) {
         ## find the align-reads prior to this event, by model_id and run_id
         my $align_reads = Genome::Model::Command::AddReads::AlignReads::Maq->get(
-                                                                                 model_id   => $model->id,
-                                                                                 run_id     => $run_event->run_id,
-                                                                                 event_type => 'genome-model add-reads align-reads maq'
-                                                                             );
+            model_id   => $model->id,
+            run_id     => $run_event->run_id,
+            event_type => 'genome-model add-reads align-reads maq'
+        );
 
         # new way
         my @map_files = $align_reads->alignment_file_paths;

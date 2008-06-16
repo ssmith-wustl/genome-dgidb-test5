@@ -71,8 +71,7 @@ $DB::single=1;
     my $read_set_id = $self->read_set_id;
     
     # hack until the GSC.pm namespace is deployed ...after we fix perl5.6 issues...
-
-    eval "use GSCApp; App::Init->initialized || App->init;";
+    Genome::RunChunk->class;
     die $@ if $@;
     
     my $read_set = GSC::Sequence::Item->get($read_set_id);
@@ -122,7 +121,7 @@ $DB::single=1;
     use File::Basename;
 
 
-    my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id, data_type => $seq_fs_data_types);
+   my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id, data_type => $seq_fs_data_types);
    unless (@fs_path) {
         $self->error_message("Failed to find the path for data set $run_name/$lane ($read_set_id)!");
         return;

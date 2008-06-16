@@ -232,7 +232,6 @@ sub resolve_lane_name {
     my ($self) = @_;
 
     # hack until the GSC.pm namespace is deployed ...after we fix perl5.6 issues...
-    eval "use GSCApp; App->init;";
     my $lane_summary = GSC::RunLaneSolexa->get(seq_id => $self->run->seq_id);
     unless ($lane_summary) {
         $self->error_message('No lane summary');

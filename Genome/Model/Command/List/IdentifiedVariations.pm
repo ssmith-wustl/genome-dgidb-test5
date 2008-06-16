@@ -6,7 +6,6 @@ use warnings;
 use above "Genome";
 
 use Data::Dumper;
-use GSCApp;
 use IO::File;
 
 class Genome::Model::Command::List::IdentifiedVariations
