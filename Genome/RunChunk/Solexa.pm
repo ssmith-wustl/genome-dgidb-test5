@@ -1,0 +1,39 @@
+package Genome::RunChunk::Solexa;
+
+use strict;
+use warnings;
+
+use above "Genome";
+use Genome::RunChunk;
+
+class Genome::RunChunk::Solexa {
+    is => [
+           'Genome::RunChunk',
+       ],
+    has => [
+            _run_lane_solexa    => {
+                                    doc => 'Lane representation from LIMS.  This class should eventually be a base class for data like this.',
+                                    is => 'GSC::RunLaneSolexa',
+                                    calculate => q|
+                                    GSC::RunLaneSolexa->get($seq_id);
+                                |,
+                                    calculate_from => ['seq_id']
+                                },
+            short_name          => {
+                                    doc => 'The essential portion of the run name which identifies the run.  The rest is redundent information about the instrument, date, etc.',
+                                    is => 'String', 
+                                    calculate_from => ['run_name'],
+                                    calculate => q|($run_name =~ /_([^_]+)$/)[0]|
+                                },
+            library_name                    => { via => "_run_lane_solexa" },
+            unique_reads_across_library     => { via => "_run_lane_solexa" },
+            duplicate_reads_across_library  => { via => "_run_lane_solexa" },
+            read_length                     => { via => "_run_lane_solexa" },
+            #rename not to be platform specific
+            clusters                        => { via => "_run_lane_solexa" },
+        ],
+    };
+
+
+
+1;
