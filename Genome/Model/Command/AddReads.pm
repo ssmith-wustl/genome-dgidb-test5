@@ -54,10 +54,10 @@ EOS
 our $GENOME_MODEL_BSUBBED_COMMAND = "genome-model";
 
 sub execute {
-$DB::single=1;
+    $DB::single=1;
 
     my $self = shift;
-$DB::single=1;
+    $DB::single=1;
 
     my $model = $self->model;
 
@@ -67,7 +67,7 @@ $DB::single=1;
         Genome::Model::Command::AddReads::ProcessLowQualityAlignments
         Genome::Model::Command::AddReads::AcceptReads
     /;
-
+    
     my $read_set_id = $self->read_set_id;
     
     # hack until the GSC.pm namespace is deployed ...after we fix perl5.6 issues...
@@ -80,15 +80,31 @@ $DB::single=1;
         return;
     }
 
-    my $sequencing_platform;
-    my $seq_fs_data_types;
-    my $lane;
-    my $sample_name;
+    my ($sequencing_platform,$seq_fs_data_types,$lane,$sample_name,$full_path);
+    my $run_name = $read_set->run_name;
     if ($read_set->isa("GSC::RunLaneSolexa")) {
         $sequencing_platform = 'solexa';
         $seq_fs_data_types = ["duplicate fastq path" , "unique fastq path"];
         $lane = $read_set->lane;
         $sample_name = $read_set->sample_name;
+        use File::Basename;
+
+        my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id, data_type => $seq_fs_data_types);
+        unless (@fs_path) {
+            $self->error_message("Failed to find the path for data set $run_name/$lane ($read_set_id)!");
+            return;
+        }
+        my %dirs = map { File::Basename::dirname($_->path) => 1 } @fs_path;
+        if (keys(%dirs)>1) {
+            $self->error_message("Multiple directories for run $run_name/$lane ($read_set_id) not supported!");
+            return;
+        }
+        elsif (keys(%dirs)==0) {
+            $self->error_message("No directories for run $run_name/$lane ($read_set_id)??");
+            return;
+        }
+        ($full_path) = keys %dirs;
+        $full_path .= '/' unless $full_path =~ m|\/$|;
     }
     elsif ($read_set->isa("GSC::RunRegion454")) {
         $sequencing_platform = '454';
@@ -98,47 +114,25 @@ $DB::single=1;
     }
     else {
         $self->error_message("Cannot resolve sequencing platform for "
-            . ref($read_set)
-            . " " 
-            . $read_set->name 
-            . " (" . $read_set->id . ")"
-        );
-        return; 
+                             . ref($read_set)
+                             . " " 
+                             . $read_set->name 
+                             . " (" . $read_set->id . ")"
+                         );
+        return;
     }
 
-    my $run_name = $read_set->run_name;
     unless ($model->sample_name eq $sample_name) {
         $self->error_message(
-            "Bad sample name " 
-            . $sample_name 
-            . " on $run_name/$lane ($read_set_id) "
-            . " does not match model sample "
-            . $model->sample_name
-        );
+                             "Bad sample name "
+                             . $sample_name
+                             . " on $run_name/$lane ($read_set_id) "
+                             . " does not match model sample "
+                             . $model->sample_name
+                         );
         return;
     }
 
-    use File::Basename;
-
-
-   my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id, data_type => $seq_fs_data_types);
-   unless (@fs_path) {
-        $self->error_message("Failed to find the path for data set $run_name/$lane ($read_set_id)!");
-        return;
-    }
-    my %dirs = map { File::Basename::dirname($_->path) => 1 } @fs_path;    
-    if (keys(%dirs)>1) {
-        $self->error_message("Multiple directories for run $run_name/$lane ($read_set_id) not supported!");
-        return;
-    }
-    elsif (keys(%dirs)==0) {
-        $self->error_message("No directories for run $run_name/$lane ($read_set_id)??");
-        return;
-    }
-    my ($full_path) = keys %dirs;
-    $full_path .= '/' unless $full_path =~ m|\/$|;
-
- 
 
     my $run = Genome::RunChunk->get(
         seq_id => $read_set_id,
@@ -170,7 +164,7 @@ $DB::single=1;
             full_path => $full_path,
             subset_name => $lane,
             sequencing_platform => $sequencing_platform,
-            sample_name => $model->sample_name,
+            sample_name => $sample_name,
         );
         unless ($run) {
             $self->error_message("Failed to get or create run record information for $run_name, $lane ($read_set_id)");
@@ -198,12 +192,11 @@ $DB::single=1;
             );
             return;
         }
-        $self->status_message("Launched $command_class for run_id ",$run->id," event_id ",$command->genome_model_event_id,"\n");
-        
+        $self->status_message('Launched '. $command_class .' for run_id '. $run->id
+                              .' event_id '. $command->genome_model_event_id ."\n");
         if ($self->test) {
             $command->lsf_job_id("test " . UR::Context::Process->get_current());
         }
-        
         $prior_event_id = $command->id;
     }
 
