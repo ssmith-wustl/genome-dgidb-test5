@@ -67,6 +67,7 @@ sub execute {
             $self->log("Can't open log file, no logging will occur!");
         }
     }
+    $self->log("Backfilling variant_review_detail from file ".$self->list);
 
     eval{
 
@@ -88,7 +89,7 @@ sub execute {
                 foreach my $column_name ($list_reader->db_columns){
                     if ( $line_hash->{$column_name} ){
                         if ($current_member->$column_name){
-                            $self->log("inequal entries for column $column_name, line $line_no") unless $current_member->$column_name eq $line_hash->{$column_name};
+                            $self->log("inequal entries for column $column_name(db:".$current_member->$column_name.", backfill_list:".$line_hash->{$column_name}.") @ ".$line_hash->{chromosome}." ".$line_hash->{begin_position}." ".$line_hash->{end_position}.", line $line_no") unless $current_member->$column_name eq $line_hash->{$column_name};
                             }else{
                                 $current_member->$column_name($line_hash->{$column_name} );
                             }
