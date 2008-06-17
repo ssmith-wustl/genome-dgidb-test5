@@ -87,6 +87,15 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
             |,
             calculate_from => ['output_data_dir','run_subset_name'],
         },
+        
+        # make accessors for common metrics
+        (
+            map {
+                $_ => { via => 'metrics', to => 'value', where => [name => $_], is_mutable => 1 },
+            }
+            qw/total_read_count/
+        ),
+        
     ],
 };
 
@@ -529,12 +538,17 @@ sub _check_for_shortcut {
 
     my $model = $self->model;
 
-    my @similar_models = Genome::Model->get(sample_name => $model->sample_name,
-                                            reference_sequence_name => $model->reference_sequence_name,
-                                            read_aligner_name => $model->read_aligner_name,
-                                            dna_type => $model->dna_type,
-                                            genome_model_id => { operator => 'ne', value => $model->genome_model_id},
-                                         );
+    $DB::single = 1;
+    my @params = (
+        sample_name => $model->sample_name,
+        reference_sequence_name => $model->reference_sequence_name,
+        read_aligner_name => $model->read_aligner_name,
+        dna_type => $model->dna_type,
+        genome_model_id => { operator => 'ne', value => $model->genome_model_id},
+    );
+    print Data::Dumper::Dumper(\@params);
+    exit;
+    my @similar_models = Genome::Model->get(@params);
     my @similar_model_ids = map { $_->genome_model_id } @similar_models;
     return unless (@similar_model_ids);
     my @possible_events = Genome::Model::Event->get(event_type => $self->event_type,
