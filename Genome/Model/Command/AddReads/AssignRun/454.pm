@@ -12,8 +12,15 @@ use Data::Dumper;
 class Genome::Model::Command::AddReads::AssignRun::454 {
     is => 'Genome::Model::Command::AddReads::AssignRun',
     has => [ 
-        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
-        read_set_id  => { is => 'Integer', doc => 'ID for the run object in the database'},
+            model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
+            sff_file => {
+                         is => 'string',
+                         doc => 'The path to the fasta file',
+                         calculate_from => ['read_set_directory','read_set'],
+                         calculate => q|
+                           return $read_set_directory .'/'. $read_set->subset_name .'.sff';
+                       |,
+                     },
     ]
 };
 
@@ -30,7 +37,7 @@ EOS
 sub help_detail {
     return <<EOS 
     This command is launched automatically by "add-reads assign-run"
-    when it is determined that the run is from a 454.  
+    when it is determined that the run is from a 454.
 EOS
 }
 
@@ -38,21 +45,41 @@ sub execute {
     my $self = shift;
 
     my $model = $self->model;
-    my $run = $self->run;
+    my $read_set = $self->read_set;
 
-    
-    unless ($run) {
-        $self->error_message("Did not find run info for run_id ".$self->run_id);
-        return 0;
+    unless ($read_set) {
+        $self->error_message("Did not find read_set info for seq_id ".$self->seq_id);
+        return;
     }
 
-    $self->error_message("running " . $self->command_name . " on " . $model->name . "!");
-    $self->status_message("Model Info:\n" . $model->pretty_print_text);
-    $self->status_message(sprintf("Run info: run_id %d full_path %s limit_regions %s sequencing_platform %s\n",
-                                  $run->run_id, $run->full_path, $run->limit_regions, $run->sequencing_platform));
+    unless (-d $model->data_parent_directory) {
+        eval { mkpath $model->data_parent_directory };
+        if ($@) {
+            $self->error_message('Could not create read_set directory path '. $model->data_parent_directory .": $@");
+            return;
+        }
+        unless(-d $model->data_parent_directory) {
+            $self->error_message('Failed to create data parent directory: '. $model->data_parent_directory .": $!");
+            return;
+        }
+    }
 
-                                   
-    return 0; 
+    my $read_set_dir = $self->read_set_directory;
+    unless (-d $read_set_dir) {
+        eval { mkpath($read_set_dir) };
+        if ($@) {
+            $self->error_message("Couldn't create read_set directory path $read_set_dir: $@");
+            return;
+        }
+    }
+    my $sff_file = $self->sff_file;
+    unless (-e $sff_file) {
+        unless ($read_set->_run_region_454->dump_sff('filename' => $sff_file)) {
+            $self->error_message("Could not dump sff file to $sff_file for read set ". $read_set->id);
+            return;
+        }
+    }
+    return 1;
 }
 
 # old logic goes here and needs cleaning up
