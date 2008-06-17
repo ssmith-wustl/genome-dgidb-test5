@@ -52,38 +52,26 @@ my $align_dist_threshold = '0';
 my $reference_sequence = 'refseq-for-test';
 my $multi_read_fragment_strategy = 'EliminateAllDuplicates';
 
-my ($sample,$indel_finder,$genotyper,$read_aligner);
+my ($sample,$indel_finder,$genotyper,$read_aligner,$read_aligner_params);
 if ($platform eq '454') {
     plan qw(no_plan);
 
     # Seems to be a small data set
-    $sample = 'FQAC-454_070212_Tube2';
-
-    $indel_finder = $platform .'_indel_finder';
-    $genotyper = $platform .'_genotyper';
-    $read_aligner = 'BlatPlusCrossmatch';
+    #$sample = 'H_FY-454_080213_TSP_SetN4';
+    #$sample = 'H_IL-TSP_tn_pool_flx_tube1-051508a';
+    $sample = 'H_FY-454_96normal_tspset1_9amps';
+    $indel_finder = 'breakPointRead454';
+    $genotyper = 'gsMapper';
+    $read_aligner = 'blatPlusCrossmatch';
+    $read_aligner_params = 'v32x1 -mask=lower -out=pslx;v1.080426';
 } elsif ($platform eq 'solexa') {
-    plan tests => 541;
+    plan tests => 460;
 
     $sample = 'H_GV-933124G-skin1-9017g';
     $indel_finder = 'maq0_6_3';
     $genotyper = 'maq0_6_3';
     $read_aligner = 'maq0_6_3';
 }
-
-
-####If we have a test gzip of files, we need to unzip it here
-
-####Maybe create Genome::RunChunk(s)?
-###teh gzips are teh key here.... DR. SCHUSTE has provided us with some suitably tiny fastqs in gzip form.
-use FindBin qw($Bin);
-
-my $tmp_dir = File::Temp::tempdir();
-$directories_to_remove{$tmp_dir} = 1;
-chdir $tmp_dir;
-
-my @read_sets = &setup_test_data;
-
 
 ######## test command processing profile short reads create. ########
 my $create_pp_command= Genome::Model::Command::Create::ProcessingProfile::ShortRead->create(
@@ -93,6 +81,7 @@ my $create_pp_command= Genome::Model::Command::Create::ProcessingProfile::ShortR
      reference_sequence    => $reference_sequence,
      genotyper             => $genotyper ,
      read_aligner          => $read_aligner,
+     read_aligner_params   => $read_aligner_params,
      profile_name	   => $pp_name,
      sequencing_platform   => $platform,
      multi_read_fragment_strategy => $multi_read_fragment_strategy,
@@ -126,7 +115,7 @@ is($pp->sequencing_platform ,$platform ,'processing profile sequencing_platform 
 ####### test command create.
 
 ######## test command create for a genome model ########
-my $create_command= Genome::Model::Command::Create::Model->create( 
+my $create_command= Genome::Model::Command::Create::Model->create(
   	model_name            	=> $model_name,
         sample                  => $sample,
 	processing_profile_name => $pp_name,
@@ -162,6 +151,8 @@ is($model->read_aligner_name,$read_aligner,'read_aligner accessor');
 
 ###genome model add-reads section
 
+my @read_sets = &setup_test_data;
+
 ###RUN ADD-READS. This should make scheduled
 for my $read_set (@read_sets) {
     my $add_reads_command = Genome::Model::Command::AddReads->create(
@@ -169,9 +160,7 @@ for my $read_set (@read_sets) {
                                                                      read_set_id => $read_set->seq_id,
                                                                  );
     isa_ok($add_reads_command,'Genome::Model::Command::AddReads');
-
     ok($add_reads_command->execute(),'execute genome-model add-reads');
-
     UR::Context->_sync_databases();
 
     my @add_reads_events = Genome::Model::Event->get(
@@ -181,38 +170,40 @@ for my $read_set (@read_sets) {
     is(scalar(@add_reads_events),4,'get scheduled genome_model_events');
     # sort by event id to ensure order of events matches pipeline order
     @add_reads_events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @add_reads_events;
-    
+
     my $assign_run_command = $add_reads_events[0];
     isa_ok($assign_run_command,'Genome::Model::Command::AddReads::AssignRun');
 
     my $data_directory = $assign_run_command->model->data_directory;
     ok(-d $data_directory, "data directory '$data_directory' exists");
     $directories_to_remove{$data_directory} = 1;
+
     my $run_directory = $assign_run_command->resolve_run_directory;
     #this happens on a different granularity--- one per 8 lanes/flowcell for solexa. figure out this later
     #ok(!-e $run_directory, "run directory '$run_directory' not created yet");
 
-    my $adaptor_file = $assign_run_command->adaptor_file_for_run;
+    #my $adaptor_file = $assign_run_command->adaptor_file_for_run;
     #ok(!-e $adaptor_file, "adaptor_file '$adaptor_file' not created yet");
 
-    my $orig_unique_file = $assign_run_command->original_sorted_unique_fastq_file_for_lane;
-    ok(-s $orig_unique_file, "orig_unique_file '$orig_unique_file' exists from CQADR with non-zero size");
+    #my $orig_unique_file = $assign_run_command->original_sorted_unique_fastq_file_for_lane;
+    #ok(-s $orig_unique_file, "orig_unique_file '$orig_unique_file' exists from CQADR with non-zero size");
 
-    my $our_unique_file = $assign_run_command->sorted_unique_fastq_file_for_lane;
-    ok(!-e $our_unique_file, "our_unique_file '$our_unique_file' not created yet");
+    #my $our_unique_file = $assign_run_command->sorted_unique_fastq_file_for_lane;
+    #ok(!-e $our_unique_file, "our_unique_file '$our_unique_file' not created yet");
 
     #this test will only test uniques for now.
     #my $orig_duplicate_file = $assign_run_command->original_sorted_duplicate_fastq_file_for_lane;
     #ok(-s $orig_duplicate_file, "orig_duplicate_file '$orig_duplicate_file' exists from CQADR with non-zero size");
 
-    my $our_duplicate_file = $assign_run_command->sorted_duplicate_fastq_file_for_lane;
-    ok(!-e $our_duplicate_file, "our_duplicate_file '$our_duplicate_file' not created yet");
+    #my $our_duplicate_file = $assign_run_command->sorted_duplicate_fastq_file_for_lane;
+    #ok(!-e $our_duplicate_file, "our_duplicate_file '$our_duplicate_file' not created yet");
 
     &execute_test($assign_run_command,$read_set);
 
     ok(-d $run_directory, 'run_directory created');
-    ok(-f $adaptor_file, 'adaptor_file created');
-    ok(-l $our_unique_file, 'our_unique_file symlink created');
+
+    #ok(-f $adaptor_file, 'adaptor_file created');
+    #ok(-l $our_unique_file, 'our_unique_file symlink created');
 
     #This test will only test uniques for now.
     #ok(-l $our_duplicate_file, 'our_duplicate_file symlink created');
@@ -220,7 +211,6 @@ for my $read_set (@read_sets) {
     ###RUN ALIGN-READS VIA BSUBHELPER(?). 
     my $align_reads_command = $add_reads_events[1];
     isa_ok($align_reads_command,'Genome::Model::Command::AddReads::AlignReads');
-
 
     my $align_reads_ref_seq_file =  $align_reads_command->model->reference_sequence_path . "/all_sequences.bfa";
     #If the files are binary then the size of an empty file is greater than zero(20?)
@@ -294,7 +284,9 @@ exit;
 END {
     for my $directory_to_remove (keys %directories_to_remove) {
         print $directory_to_remove . "\n";
-         rmtree $directory_to_remove;
+        unless (defined($platform) && $platform eq '454') {
+            rmtree $directory_to_remove;
+        }
     }
 }
 
@@ -331,29 +323,29 @@ sub set_status {
 
 
 sub setup_test_data {
+    my @read_sets;
     if ($platform eq '454') {
+        my $data_dir = $model->data_directory;
         # A small data set to test with(origin unknown)
-        my @read_sets = GSC::RunRegion454->get(
-                                               incoming_dna_name => $sample,
-                                               region_number => 8,
-                                           );
-        is(@read_sets,3,'Three read sets for test');
-        for my $read_set (@read_sets) {
-            my $file = $tmp_dir .'/'. $read_set->resolve_default_file_name(type => 'fasta', extension => 'fna');
-            ok($read_set->dump_library_region_fasta_file(filename => $file),"Dump the fasta file");
-            my $fs_path = GSC::SeqFPath->create(
-                                                path => $file ,
-                                                seq_id => $read_set->seq_id,
-                                                data_type => 'fasta file path',
-                                                creation_event_id => -1,
-                                            );
-        }
-        UR::Context->_sync_databases();
-        return @read_sets;
+        @read_sets = GSC::RunRegion454->get(
+                                            incoming_dna_name => $sample,
+                                        );
     } elsif ($platform eq 'solexa') {
+
+        ####If we have a test gzip of files, we need to unzip it here
+
+        ####Maybe create Genome::RunChunk(s)?
+        ###teh gzips are teh key here.... DR. SCHUSTE has provided us with some suitably tiny fastqs in gzip form.
+
+        use FindBin qw($Bin);
+
+        my $tmp_dir = File::Temp::tempdir();
+        $directories_to_remove{$tmp_dir} = 1;
+        chdir $tmp_dir;
+
         my $zip_file = '/gsc/var/cache/testsuite/data/Genome-Model-Command-AddReads/addreads.tgz';
         `tar -xzf $zip_file`;
-        my @sls;
+
         my @run_dirs = grep { -d $_ } glob("$tmp_dir/*_*_*_*");
         for my $run_dir (@run_dirs) {
             my $run_dir_params = GSC::PSE::SolexaSequencing::SolexaRunDirectory->parse_regular_run_directory($run_dir);
@@ -399,17 +391,12 @@ sub setup_test_data {
                                                         creation_event_id => -1,
                                                     );
                 }
-                push @sls, $sls;
+                push @read_sets, $sls;
             }
         }
-
-        UR::Context->_sync_databases();
-
-        my @lanes = GSC::RunLaneSolexa->get(\@sls);
-
-        is(scalar(@lanes), 16, 'expected 16 lanes');
-        return @lanes;
     } else {
         die "Incorrect platform found $platform:  $!";
     }
+    UR::Context->_sync_databases();
+    return @read_sets;
 }
