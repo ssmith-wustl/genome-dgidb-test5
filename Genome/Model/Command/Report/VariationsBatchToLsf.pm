@@ -137,7 +137,7 @@ sub _open_fh
     my ($self, $file, $mode) = @_;
 
     my $fh = IO::File->new("$mode $file");
-    $self->error_msg("Can't open file ($file)")
+    warn("Can't open file ($file)")
         and return unless $fh;
 
     return $fh;
