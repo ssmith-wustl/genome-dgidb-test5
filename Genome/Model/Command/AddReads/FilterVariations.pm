@@ -288,11 +288,11 @@ sub execute {
 		my $remove_handle = new FileHandle;
 		my $report_handle = new FileHandle;
 		my $invalue_handle = new FileHandle;
-		my $somatic_file = $basename . '.somatic.csv';
-		my $keep_file = $basename . '.keep.csv';
-		my $remove_file = $basename . '.remove.csv';
-		my $report_file = $basename . '.report.csv';
-		my $invalue_file = $basename . '.input.csv';
+		my $somatic_file = $basename . '.chr' . $chromosome . '.somatic.csv';
+		my $keep_file = $basename . '.chr' . $chromosome . '.keep.csv';
+		my $remove_file = $basename . '.chr' . $chromosome . '.remove.csv';
+		my $report_file = $basename . '.chr' . $chromosome . '.report.csv';
+		my $invalue_file = $basename . '.chr' . $chromosome . '.input.csv';
 		$somatic_handle->open("$somatic_file","w") or die "Couldn't open keep output file\n";
 		$keep_handle->open("$keep_file","w") or die "Couldn't open keep output file\n";
 		$remove_handle->open("$remove_file","w") or die "Couldn't open remove output file\n";
