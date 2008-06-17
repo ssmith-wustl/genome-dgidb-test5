@@ -209,7 +209,7 @@ END {
 #}
 
 
-sub resolve_run_directory {
+sub Xresolve_run_directory {
     my $self = shift;
     return sprintf('%s/runs/%s/%s', $self->model->data_directory,
                                     $self->run->sequencing_platform,
@@ -228,7 +228,7 @@ sub resolve_log_directory {
     }
 }
 
-sub resolve_lane_name {
+sub Xresolve_lane_name {
     my ($self) = @_;
 
     # hack until the GSC.pm namespace is deployed ...after we fix perl5.6 issues...
@@ -243,101 +243,6 @@ sub resolve_lane_name {
     }
 }
 
-# maq map file for all this lane's alignments
-sub unique_alignment_file_for_lane {
-    my($self) = @_;
-
-    return $self->resolve_run_directory . '/unique_alignments_lane_' . $self->resolve_lane_name . '.map';
-}
-
-sub duplicate_alignment_file_for_lane {
-    my($self) = @_;
-
-    return $self->resolve_run_directory . '/duplicate_alignments_lane_' . $self->resolve_lane_name . '.map';
-}
-
-# fastq file for all the reads in this lane
-sub fastq_file_for_lane {
-    my($self) = @_;
-
-    return sprintf("%s/s_%s_sequence.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
-}
-
-
-# a file containing sequence\tread_name\tquality sorted by sequence
-sub sorted_fastq_file_for_lane {
-    my($self) = @_;
-
-    return sprintf("%s/s_%s_sequence.sorted.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
-}
-
-sub original_sorted_unique_fastq_file_for_lane {
-    my($self) = @_;
-
-    return sprintf("%s/%s_sequence.unique.sorted.fastq", $self->run->full_path, $self->resolve_lane_name);
-}
-
-sub sorted_unique_fastq_file_for_lane {
-    my($self) = @_;
-
-    return sprintf("%s/s_%s_sequence.unique.sorted.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
-}
-
-sub original_sorted_duplicate_fastq_file_for_lane {
-    my($self) = @_;
-    return sprintf("%s/%s_sequence.duplicate.sorted.fastq", $self->run->full_path, $self->resolve_lane_name);
-
-}
-
-sub sorted_duplicate_fastq_file_for_lane {
-    my($self) = @_;
-    return sprintf("%s/s_%s_sequence.duplicate.sorted.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
-
-}
-
-# The maq bfq file that goes with that lane's fastq file
-sub unique_bfq_file_for_lane {
-    my($self) = @_;
-    return sprintf("%s/s_%s_sequence.unique.bfq", $self->resolve_run_directory, $self->resolve_lane_name);
-}
-
-sub duplicate_bfq_file_for_lane {
-    my($self) = @_;
-    return sprintf("%s/s_%s_sequence.duplicate.bfq", $self->resolve_run_directory, $self->resolve_lane_name);
-}
-
-sub unaligned_unique_reads_file_for_lane {
-    my($self) = @_;
-    return sprintf("%s/s_%s_sequence.unaligned.unique", $self->resolve_run_directory, $self->resolve_lane_name);
-}
-
-sub unaligned_distinct_fastq_file_for_lane {
-    my($self) = @_;
-    return sprintf("%s/s_%s_sequence.unaligned.distinct.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
-}
-
-sub unaligned_duplicate_reads_file_for_lane {
-    my($self) = @_;
-    return sprintf("%s/s_%s_sequence.unaligned.duplicate", $self->resolve_run_directory, $self->resolve_lane_name);
-}
-
-sub unaligned_redundant_fastq_file_for_lane {
-    my($self) = @_;
-    return sprintf("%s/s_%s_sequence.unaligned.redundant.fastq", $self->resolve_run_directory, $self->resolve_lane_name);
-}
-
-sub aligner_unique_output_file_for_lane {
-    return $_[0]->unique_alignment_file_for_lane . '.aligner_output';
-}
-
-sub aligner_duplicate_output_file_for_lane {
-    return $_[0]->duplicate_alignment_file_for_lane . '.aligner_output';
-}
-
-sub alignment_submaps_dir_for_lane {
-    my $self = shift;
-    return sprintf("%s/alignments_lane_%s.submaps", $self->resolve_run_directory, $self->resolve_lane_name)
-}
 
 sub adaptor_file_for_run {
     my $self = shift;
