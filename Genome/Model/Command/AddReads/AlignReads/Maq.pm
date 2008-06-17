@@ -14,61 +14,58 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
         'Genome::Model::Command::MaqSubclasser'
     ],
     has => [
-        output_data_dir => {
-            doc => "The path at which the model stores all of its private data for a given run",
-            calculate_from => ['model','read_set'],
-            calculate => q|
-                return unless $model;
-                $model->directory_for_run($read_set);
-            |,
-            is_constant => 1,
-        },
+        sorted_unique_fastq_file_for_lane => {via => 'prior_event'},
+        sorted_duplicate_fastq_file_for_lane => {via => 'prior_event'},
         alignment_file_paths => {
             doc => "the paths to to the map files",
-            calculate_from => ['output_data_dir','run_subset_name'],
+            calculate_from => ['read_set_directory','run_subset_name'],
             calculate => q|
-                return unless -d $output_data_dir;;
-                return grep { -e $_ } glob("${output_data_dir}/*${run_subset_name}.submaps/*.map");
+                return unless -d $read_set_directory;;
+                return grep { -e $_ } glob("${read_set_directory}/*${run_subset_name}.submaps/*.map");
             |,
         },
         aligner_output_file_paths => {
             doc => "the paths to the filed which captured maq's standard output and error",
-            calculate_from => ['output_data_dir','run_subset_name'],
+            calculate_from => ['read_set_directory','run_subset_name'],
             calculate => q|
-                return unless -d $output_data_dir;;
-                return grep { -e $_ } glob("${output_data_dir}/*${run_subset_name}.map.aligner_output");
+                return unless -d $read_set_directory;
+                return grep { -e $_ } glob("${read_set_directory}/*${run_subset_name}.map.aligner_output");
             |,
         },
         poorly_aligned_reads_list_paths => {
             doc => "the path(s) to the file(s) which list poorly aligned reads",
-            calculate_from => ['output_data_dir','run_subset_name'],
+            calculate_from => ['read_set_directory','run_subset_name'],
             calculate => q|
-                return unless -d $output_data_dir;;
-                return grep { -e $_ } grep { $_ !~ /\.fastq$/ } glob("${output_data_dir}/*${run_subset_name}_sequence.unaligned.*");
+                return unless -d $read_set_directory;;
+                return grep { -e $_ } grep { $_ !~ /\.fastq$/ } glob("${read_set_directory}/*${run_subset_name}_sequence.unaligned.*");
             |,
         },
         poorly_aligned_reads_fastq_paths => {
             doc => "the path(s) to the fastq(s) of poorly aligned reads",
-            calculate_from => ['output_data_dir','run_subset_name'],
+            calculate_from => ['read_set_directory','run_subset_name'],
             calculate => q|
-                return unless -d $output_data_dir;;
-                return grep { -e $_ } glob("${output_data_dir}/*${run_subset_name}_sequence.unaligned.*.fastq");
+                return unless -d $read_set_directory;;
+                return grep { -e $_ } glob("${read_set_directory}/*${run_subset_name}_sequence.unaligned.*.fastq");
             |,
         },
         contaminants_file_path => {
             doc => "the paths to the file containing adaptor sequence and other contaminants to screen",
-            calculate_from => ['output_data_dir'],
+            calculate_from => ['read_set_directory'],
             calculate => q|
-                return unless -d $output_data_dir;;
-                return grep { -e $_ } glob("${output_data_dir}/adaptor_sequence_file");
+                return unless -d $read_set_directory;;
+                return grep { -e $_ } glob("${read_set_directory}/adaptor_sequence_file");
             |,
         },
         input_read_file_paths => {
-            doc => "the paths to the filed which captured maq's standard output and error",
-            calculate_from => ['output_data_dir','run_subset_name'],
+            doc => "the paths to the files which captured maq's standard output and error",
+            calculate_from => ['read_set_directory','run_subset_name'],
             calculate => q|
-                return unless -d $output_data_dir;;
-                return grep { -e $_ } glob("${output_data_dir}/s_${run_subset_name}_sequence*.sorted.fastq");
+                unless (-d $read_set_directory) {
+                    $self->error_message("read set directory '$read_set_directory' does not exist");
+                    return;
+                }
+                $self->status_message("Looking for input read files in '$read_set_directory'\n");
+                return grep { -e $_ } glob("${read_set_directory}/s_${run_subset_name}_sequence*.sorted.fastq");
             |,
         },
         unique_reads_across_library     => { via => 'read_set' },
@@ -82,12 +79,22 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
         _alignment_file_paths_unsubmapped => {
             doc => "the paths to to the map files before submapping (not always available)",
             calculate => q|
-                return unless -d $output_data_dir;;
-                return grep { -e $_ } glob("${output_data_dir}/*${run_subset_name}.map");
+                return unless -d $read_set_directory;;
+                return grep { -e $_ } glob("${read_set_directory}/*${run_subset_name}.map");
             |,
-            calculate_from => ['output_data_dir','run_subset_name'],
+            calculate_from => ['read_set_directory','run_subset_name'],
         },
-        
+            # deprecated
+            output_data_dir => {
+                                doc => "The path at which the model stores all of its private data for a given run",
+                                calculate_from => ['read_set_directory'],
+                                calculate => q|
+                                    return $read_set_directory
+                                |,
+                                is_constant => 1,
+                                is_deprecated => 1,
+        },
+
         # make accessors for common metrics
         (
             map {
@@ -95,7 +102,6 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
             }
             qw/total_read_count/
         ),
-        
     ],
 };
 
@@ -152,9 +158,16 @@ sub _calculate_total_reads_passed_quality_filter_count {
     my $total_reads_passed_quality_filter_count;
     do {
         no warnings;
-        $total_reads_passed_quality_filter_count = ($self->unique_reads_across_library + $self->duplicate_reads_across_library);
+
+        if (defined $self->unique_reads_across_library && defined $self->duplicate_reads_across_library) {
+            $total_reads_passed_quality_filter_count = ($self->unique_reads_across_library + $self->duplicate_reads_across_library);
+        }
         unless ($total_reads_passed_quality_filter_count) {
             my @f = $self->input_read_file_paths;
+            if (!@f) {
+                $self->error_message("No input read files found");
+                return;
+            }
             my ($wc) = grep { /total/ } `wc -l @f`;
             $wc =~ s/total//;
             $wc =~ s/\s//g;
