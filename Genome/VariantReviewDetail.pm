@@ -13,6 +13,7 @@ class Genome::VariantReviewDetail {
     has => [
         begin_position          => { is => 'NUMBER', len => 10, is_optional => 1 },
         chromosome              => { is => 'VARCHAR2', len => 32, is_optional => 1 },
+        data_needed             => { is => 'VARCHAR2', len => 256, is_optional => 1 },
         delete_sequence         => { is => 'VARCHAR2', len => 256, is_optional => 1 },
         end_position            => { is => 'NUMBER', len => 10, is_optional => 1 },
         finisher_3730_review    => { is => 'VARCHAR2', len => 256, is_optional => 1 },
@@ -25,8 +26,6 @@ class Genome::VariantReviewDetail {
         manual_genotype_tumor   => { is => 'VARCHAR2', len => 256, is_optional => 1 },
         notes                   => { is => 'VARCHAR2', len => 4000, is_optional => 1 },
         pass_manual_review      => { is => 'VARCHAR2', len => 256, is_optional => 1 },
-        report_data             => { is => 'VARCHAR2', len => 4000, is_optional => 1 },
-        report_header           => { is => 'VARCHAR2', len => 4000, is_optional => 1 },
         rgg_id                  => { is => 'NUMBER', len => 10, is_optional => 1 },
         roi_seq_id              => { is => 'NUMBER', len => 10, is_optional => 1 },
         sample_name             => { is => 'VARCHAR2', len => 1024, is_optional => 1 },
