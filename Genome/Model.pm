@@ -398,7 +398,7 @@ sub lock_directory {
     return $lock_directory;
 }
 
-sub directory_for_run {
+sub Xdirectory_for_run {
     my ($self, $run) = @_;
     return sprintf('%s/runs/%s/%s', 
         $self->data_directory,
