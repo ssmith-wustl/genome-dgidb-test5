@@ -10,12 +10,38 @@ use GSC;
 use IO::File;
 
 class Genome::Model::Command::AddReads::AssignRun::Solexa {
-    is => 'Genome::Model::Command::AddReads::AssignRun',
-    has => [ 
-        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
-        run_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },
-        adaptor_file => { is => 'String', is_optional => 1, doc => 'pathname to the adaptor file used for these reads'},
-    ]
+    is => [
+           'Genome::Model::Command::AddReads::AssignRun',
+       ],
+    has => [
+            model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
+            run_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },
+            adaptor_file => { is => 'String', is_optional => 1, doc => 'pathname to the adaptor file used for these reads'},
+            original_sorted_unique_fastq_file_for_lane => {
+                                                           calculate_from => [ 'read_set' ],
+                                                           calculate => q|
+                return sprintf("%s/%s_sequence.unique.sorted.fastq", $read_set->full_path, $read_set->subset_name);
+            |
+                                                       },
+            sorted_unique_fastq_file_for_lane => {
+                                                  calculate_from => [ 'read_set_directory','read_set' ],
+                                                  calculate => q|
+                return sprintf("%s/s_%s_sequence.unique.sorted.fastq", $read_set_directory, $read_set->subset_name);
+            |
+                                              },
+            original_sorted_duplicate_fastq_file_for_lane => {
+                                                              calculate_from => [ 'read_set' ],
+                                                              calculate => q|
+                return sprintf("%s/%s_sequence.duplicate.sorted.fastq", $read_set->full_path, $read_set->subset_name);
+            |
+                                                          },
+            sorted_duplicate_fastq_file_for_lane => {
+                                                     calculate_from => [ 'read_set_directory', 'read_set' ],
+                                                     calculate => q|
+                return sprintf("%s/s_%s_sequence.duplicate.sorted.fastq", $read_set_directory, $read_set->subset_name);
+            |
+                                                 },
+        ],
 };
 
 sub help_synopsis {
@@ -28,10 +54,10 @@ sub help_brief {
     "Creates the appropriate items on the filesystem for a new Solexa run"
 }
 
-sub help_detail {                           
-    return <<EOS 
+sub help_detail {
+    return <<EOS
 This command is normally run automatically as part of "add-reads assign-run"
-when it is determined that the run is from Solexa.  
+when it is determined that the run is from Solexa.
 EOS
 }
 
