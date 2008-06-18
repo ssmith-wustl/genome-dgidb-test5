@@ -32,6 +32,11 @@ the model's sequencing platform.
 EOS
 }
 
+sub command_subclassing_model_property {
+    return 'sequencing_platform';
+}
+
+
 sub should_bsub { 0;}  # This sub-command shouldn't be bsubbed
 
 sub sub_command_delegator {

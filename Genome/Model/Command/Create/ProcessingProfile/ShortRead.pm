@@ -11,7 +11,7 @@ use File::Path;
 use Data::Dumper;
 
 class Genome::Model::Command::Create::ProcessingProfile::ShortRead {
-    is => ['Genome::Model::Event'],
+    is => ['Genome::Model::Event', 'Genome::Model::Command::Create::ProcessingProfile'],
     sub_classification_method_name => 'class',
     has => [
 		# This will probably never be specified since processing profiles are used for many models
@@ -116,7 +116,10 @@ $DB::single=1;
         $self->prior('none');
     }
 
-    $self->_validate_execute_params(); 
+    unless ($self->_validate_execute_params()) {
+        $self->error_message("Failed to create processing_profile!");
+        return;
+    }
 
     # generic: abstract out
     my %params = %{ $self->_extract_command_properties_and_duplicate_keys_for__name_properties() };
@@ -187,6 +190,12 @@ sub _validate_execute_params{
         $self->error_message("extra arguments: @args");
         $self->usage_message($self->help_usage);
         return;
+    }
+
+    unless ($self->verify_params) {
+        $self->error_message(
+        "One or more modules could not be found for the supplied parameters");
+        return;                        
     }
 }
 
