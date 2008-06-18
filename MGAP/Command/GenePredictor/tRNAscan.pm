@@ -1,4 +1,4 @@
-package MGAP::Command::GenePredictor::RfamScan;
+package MGAP::Command::GenePredictor::tRNAscan;
 
 use strict;
 use warnings;
