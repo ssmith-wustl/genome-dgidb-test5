@@ -14,8 +14,14 @@ class Genome::Model::Command::AddReads::FilterVariations {
     has => [
 #        normal_id            => { is => 'Integer', 
 #                                doc => 'Identifies the normal genome model.' },
+
+ 
+                                           
+                                   
+                                   
     ]
 };
+
 
 sub sub_command_sort_position { 90 }
 
@@ -624,6 +630,8 @@ sub execute {
 		$invalue_handle->close();
 		$header->close();
 		$ov_fh->close;
+
+        
 		
 		my $keep_wt = 0;
 		my $total_wt = 0;
@@ -660,6 +668,7 @@ sub execute {
 			printf $report_handle "Sensitivity: %0.2f\n", (100.0 * ($keep_g/$total_g));
 		}
 		
+        $self->generate_figure_3_files($somatic_file);
 		# Clean up when we're done...
 		$self->date_completed(UR::Time->now);
 		if (0) { # replace w/ actual check
@@ -670,7 +679,320 @@ sub execute {
 			$self->event_status("Succeeded");
 			return 1;
 		}
-	}
+
+    }
 
 1;
+        
 
+        
+
+sub generate_figure_3_files {
+    my $self = shift;  
+    my $somatic_file=shift;
+
+    #this might break
+    #my $prior = Genome::Model::Event->get(id => $self->prior_event);
+    #my $snp_file = $prior->snp_report_file;
+    #end possible break
+    my $snp_file = $self->_report_file('snp');
+        my $dir = $self->model->_filtered_variants_dir();
+       my $dbsnp_fh = IO::File->new(">$dir" . "/tumor_only_in_d_V_W_" . $self->ref_seq_id .
+            ".csv");
+       my $dbsnp_count;      
+       my $non_coding_fh = IO::File->new(">$dir" .
+           "/non_coding_tumor_only_variants_" . $self->ref_seq_id .
+            ".csv");
+       my $non_coding_count;      
+       my $novel_tumor_fh = IO::File->new(">$dir" .
+           "/novel_tumor_only_variants_" . $self->ref_seq_id .
+            ".csv");
+       my $novel_tumor_count;      
+       my $silent_fh = IO::File->new(">$dir" .
+           "/silent_tumor_only_" . $self->ref_seq_id .
+            ".csv");
+       my $silent_count;     
+       my $nonsynonymous_fh = IO::File->new(">$dir" .
+           "/non_synonymous_splice_site_variants_" . $self->ref_seq_id .
+            ".csv");
+       my $nonsynonymous_count;      
+       my $var_pass_manreview_fh = IO::File->new(">$dir" .
+           "/var_pass_manreview_" . $self->ref_seq_id .
+            ".csv");
+       my $var_pass_manreview_count;     
+       my $var_fail_manreview_fh = IO::File->new(">$dir" .
+           "/var_fail_manreview_" . $self->ref_seq_id .
+            ".csv");
+       my $var_fail_manreview_count;     
+       my $var_fail_valid_assay_fh = IO::File->new(">$dir" .
+           "/var_fail_valid_assay_" . $self->ref_seq_id .
+            ".csv");
+       my $var_fail_valid_assay_count;      
+       my $var_complete_validation_fh = IO::File->new(">$dir" .
+           "/var_complete_validation_" . $self->ref_seq_id .
+            ".csv");
+       my $var_complete_validation_count;      
+       my $validated_snps_fh = IO::File->new(">$dir" .
+           "/valid_snps_" . $self->ref_seq_id .
+            ".csv");
+       my $validated_snps_count;     
+       my $false_positives_fh = IO::File->new(">$dir" .
+           "/false_positives_" . $self->ref_seq_id .
+            ".csv");
+       my $false_positives_count;     
+       my $validated_somatic_var_fh = IO::File->new(">$dir" .
+           "/validated_somatic_var_" . $self->ref_seq_id .
+            ".csv");
+       my $validated_somatic_var_count;     
+         my $annotation_fh = IO::File->new($snp_file);
+        my $somatic_fh = IO::File->new($somatic_file);
+        my @cur_somatic_snp;
+        my @cur_anno_snp;
+        my $anno_line;
+        my $somatic_line;
+        #throw away header
+        $somatic_fh->getline;
+        #end throw away header section
+      while($somatic_line=$somatic_fh->getline) {
+          chomp $somatic_line;
+          if (!defined $somatic_line) {
+              #the filter file must be over if we're here
+              last;
+          }
+          @cur_somatic_snp = split(/\s+/, $somatic_line);
+          
+          while(!@cur_anno_snp || ($cur_anno_snp[3] < $cur_somatic_snp[1]) ) {
+              #we hit this block because a) this is our first time through
+              #or b) the last annotation position is smaller than the current somatic snp
+              # snp value   
+              $anno_line = $annotation_fh->getline;
+              chomp $anno_line;
+              if(!defined $anno_line) {
+                  #annotation file has ended before somatic one has...this is bad
+                  $self->error_message("Annotation file has ended before somatic file. This is probably bad.");
+                  return undef;
+              }
+              @cur_anno_snp= split (/,/, $anno_line);
+          } 
+          while($cur_anno_snp[3] == $cur_somatic_snp[1] ) {
+          #if we get here then the idea is we have a somatic line with the same position as a snp line.
+     
+             #call in Brian's somatic file and Eddie's report
+
+             #For Eddie's output we need to know the type of variant and also the
+             #dbSNP and Watson/Venter status
+             my @report_indexes = (0,1,2,3,4,5,8,15,21); 
+
+             #this is taken care of implicitly by the loop actually...damn pair programming
+             if(defined($cur_somatic_snp[0]) && defined($cur_anno_snp[0])) {
+                 #it's genic and in Eddie's report and passed Brian's filters
+                 my ($dbsnp, $gene, $chromosome, $begin, $end,
+                     $variant_allele, $reference_allele, $variant_type, $wv) = @cur_anno_snp[@report_indexes];    
+
+                 #Test if seen in dbSNP or Watson/Venter
+                 if((defined($dbsnp) && $dbsnp ne '0') || (defined($wv) && $wv ne '0' )) {
+                     #previously identified
+                     $self->_write_array_to_file(\@cur_anno_snp, $dbsnp_fh);
+                     $dbsnp_count++;
+                 }
+                 else {
+                     $self->_write_array_to_file(\@cur_anno_snp,
+                         $novel_tumor_fh);    
+                     $novel_tumor_count++;    
+                     #nonsynonymous
+                     if( $variant_type =~ /missense|nonsense|nonstop|splice_site/i) {
+                         #output those that are coding
+                         $self->_write_array_to_file(\@cur_anno_snp,
+                             $nonsynonymous_fh);
+                             $nonsynonymous_count++;
+
+                         #TODO Query VariantLists to find validation data
+                         my $variant_detail = Genome::VariantReviewDetail->get(
+                             chromosome => $chromosome, 
+                             begin_position => $begin, 
+                             end_position => $end,
+                             insert_sequence_allele1 => $variant_allele,
+                             delete_sequence => $reference_allele,
+                         );
+                         if(defined($variant_detail)) {
+                             #it's been sent to manual review
+                             my $decision = $variant_detail->pass_manual_review; 
+                             if(defined($decision) && lc($decision) eq 'yes') {
+                                 $self->_write_array_to_file(\@cur_anno_snp,
+                                     $var_pass_manreview_fh);
+                                     $var_pass_manreview_count++;
+
+                                 #If passed then check the result
+                                 my $status = $variant_detail->somatic_status;
+                                 if(defined($status)) {
+                                     $status = uc($status);
+                                     if($status eq 'S') {
+                                         $self->_write_array_to_file(\@cur_anno_snp,
+                                         $validated_somatic_var_fh);
+                                         $validated_somatic_var_count++;
+                                     }
+                                     elsif($status eq 'WT') {
+                                         $self->_write_array_to_file(\@cur_anno_snp,
+                                         $false_positives_fh);
+                                         $false_positives_count++;
+                                     }
+                                     elsif($status eq 'G') {
+                                         $self->_write_array_to_file(\@cur_anno_snp,
+                                         $validated_snps_fh);
+                                         $validated_snps_count++;
+                                     }
+                                     else {
+                                         $self->_write_array_to_file(\@cur_anno_snp, $var_fail_valid_assay_fh);
+                                         $var_fail_valid_assay_count++;
+                                     }
+
+                                 }
+                                 else {
+                                     #else no validation status
+                                     #FIXME Do something here
+                                 }
+
+
+                             }
+                             else {
+                                 #TODO This may not be valid if for instance
+                                 #maybe's were passed along to validation
+                                 $self->_write_array_to_file(\@cur_anno_snp,
+                                     $var_fail_manreview_fh);
+                                 $var_fail_manreview_count++;
+                             }
+
+                         }
+                         else {
+                             #we're actually not tracking this case in the
+                             #figure
+                             #FIXME Doing nothing here
+                         }
+
+                     }
+                     elsif( $variant_type eq 'silent') {
+                         $self->_write_array_to_file(\@cur_anno_snp,
+                             $silent_fh);
+                             $silent_count++;
+                     }
+                     else {
+                         $self->_write_array_to_file(\@cur_anno_snp,
+                             $non_coding_fh);
+                             $non_coding_count++;
+                     }
+                 }
+             }
+
+       
+     
+             $anno_line = $annotation_fh->getline;
+             chomp $anno_line;
+              if(!defined $anno_line) {
+                  #annotation file has ended before somatic one has...this is bad
+                  $self->error_message("Annotation file has ended before somatic file. This is probably bad.");
+                  return undef;
+              }
+              @cur_anno_snp= split (/,/, $anno_line);
+             
+          }
+      }
+      #close all filehandles.
+      my $metric;
+      $metric = $self->add_metric(
+                                    name=> "somatic_variants_in_d_v_w",
+                                    value=> $dbsnp_count,
+                                );
+
+      $metric = $self->add_metric(
+                                    name=> "non_coding_variants",
+                                    value=> $non_coding_count,
+                                );
+
+
+      $metric = $self->add_metric(
+                                    name=> "novel_tumor_variants",
+                                    value=> $novel_tumor_count,
+                                );
+
+
+      $metric = $self->add_metric(
+                                    name=> "silent_variants",
+                                    value=> $silent_count,
+                                );
+      $metric = $self->add_metric(
+                                    name=> "nonsynonymous_variants",
+                                    value=> $nonsynonymous_count,
+                                );
+
+
+     $metric = $self->add_metric(
+                                    name=> "var_pass_manreview",
+                                    value=> $var_pass_manreview_count,
+                                );
+
+
+     $metric = $self->add_metric(
+                                    name=> "var_fail_manreview",
+                                    value=> $var_fail_manreview_count,
+                                );
+     $metric = $self->add_metric(
+                                    name=> "var_fail_valid_assay",
+                                    value=> $var_fail_valid_assay_count,
+                                );
+    $metric = $self->add_metric(
+                                    name=> "var_complete_validation",
+                                    value=> $var_complete_validation_count,
+                                );
+
+    $metric = $self->add_metric(
+                                    name=> "validated_snps",
+                                    value=> $validated_snps_count,
+                                );
+    $metric = $self->add_metric(
+                                    name=> "false_positives",
+                                    value=> $false_positives_count,
+                                );
+    $metric = $self->add_metric(
+                                    name=> "validated_somatic_variants",
+                                    value=> $validated_somatic_var_count,
+                                );
+
+
+
+
+
+      $dbsnp_fh->close;
+      $non_coding_fh->close;
+      $novel_tumor_fh->close;
+      $silent_fh->close;
+      $nonsynonymous_fh->close;
+      $var_pass_manreview_fh->close;
+      $var_fail_manreview_fh->close;
+      $var_fail_valid_assay_fh->close;
+      $var_complete_validation_fh->close;
+      $validated_snps_fh->close;
+      $false_positives_fh->close;
+      $validated_somatic_var_fh->close;
+      $annotation_fh->close;
+      $somatic_fh->close;
+
+  }
+
+sub _write_array_to_file {
+    my $self=shift;
+    my $array_ref_to_write=shift;
+    my $file_handle=shift;
+
+    my $line_to_write = join (" ", @{$array_ref_to_write});
+    $file_handle->print($line_to_write . "\n");
+
+    return 1;
+}
+    
+ 
+sub _report_file {
+    my ($self, $type) = @_;
+
+    return sprintf('%s/variant_report_for_chr_%s', ($self->model->_reports_dir)[0], $self->ref_seq_id);
+    return sprintf('%s/%s_report_%s', $type, ($self->model->_reports_dir)[0], $self->ref_seq_id);
+} 
