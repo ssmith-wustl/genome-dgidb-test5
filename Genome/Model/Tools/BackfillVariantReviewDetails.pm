@@ -80,36 +80,39 @@ sub execute {
             next if $line_hash->{header};
 
             my @current_members = Genome::VariantReviewDetail->get( begin_position => $line_hash->{begin_position}, chromosome => $line_hash->{chromosome}, end_position => $line_hash->{end_position});
-            if (@current_members != 1 ){
+            if (@current_members > 1 ){
                 $self->log(scalar @current_members." results for variant @ ".$line_hash->{chromosome}." ".$line_hash->{begin_position}." ".$line_hash->{end_position}.". Not processing, line $line_no");
                 next;
             }
             my $current_member = shift @current_members;
             if ($current_member){
+                if ($current_member->data_needed  and $current_member->data_needed eq 'X'){
+                    $current_member->data_needed('Z');
+                }
                 foreach my $column_name ($list_reader->db_columns){
                     if ( $line_hash->{$column_name} ){
                         if ($current_member->$column_name){
                             $self->log("inequal entries for column $column_name(db:".$current_member->$column_name.", backfill_list:".$line_hash->{$column_name}.") @ ".$line_hash->{chromosome}." ".$line_hash->{begin_position}." ".$line_hash->{end_position}.", line $line_no") unless $current_member->$column_name eq $line_hash->{$column_name};
-                            }else{
-                                $current_member->$column_name($line_hash->{$column_name} );
-                            }
+                        }else{
+                            $current_member->$column_name($line_hash->{$column_name} );
                         }
                     }
                 }
-            }  
-        };
+            }
+        }  
+    };
 
-        if ($@){
-            $self->error_message("error in execution. $@");
-            return 0;
-        }
-
-        return 1;
+    if ($@){
+        $self->error_message("error in execution. $@");
+        return 0;
     }
 
-    sub vtest{
-        my ($self, $v) = @_;
-        return $v? $v : '';
-    }
+    return 1;
+}
 
-    1;
+sub vtest{
+    my ($self, $v) = @_;
+    return $v? $v : '';
+}
+
+1;

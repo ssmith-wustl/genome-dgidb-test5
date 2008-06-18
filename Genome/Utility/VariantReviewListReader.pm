@@ -67,12 +67,6 @@ sub db_columns{
         somatic_status
         notes
         /);
-=cut
-        rgg_id
-        roi_seq_id 
-        sample_name
-        variant_seq_id
-=cut
     return @columns;
 }
 
