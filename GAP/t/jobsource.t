@@ -15,7 +15,6 @@ BEGIN {
    
 }
 
-
 my $blast_db = '/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr'; 
 
 my @job_sources = ( );
@@ -53,8 +52,6 @@ push @job_sources, GAP::JobSource::Composite->new(
                                                   $rfamscan_job_source,
                                                   $rnammer_job_source,
                                               );
-
-
 
 foreach my $job_source (@job_sources) {
     

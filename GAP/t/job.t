@@ -43,27 +43,6 @@ my @jobs = ( );
     
 }
 
-{
-
-    my $fasta = Bio::SeqIO->new(
-                                -file   => 'data/BACSTEFNL_Contig26.1.fasta',
-                                -format => 'Fasta',
-                            );
-    
-    my $seq = $fasta->next_seq();
-    
-    my @features = ( );
-    
-    my $gff = Bio::Tools::GFF->new(
-                                   -file => 'data/BACSTEFNL_Contig26.1.gff',
-                               );
-    
-    while (my $feature = $gff->next_feature()) {
-        push @features, $feature;
-    }  
-     
-}
-
 foreach my $job (@jobs) {
     
     isa_ok($job, 'GAP::Job');
@@ -77,12 +56,10 @@ foreach my $job (@jobs) {
 
     my @genes = ( );
 
-        
     @genes = $job->seq->get_SeqFeatures(); 
         
-        
     foreach my $gene (@genes) {
-                        
-	isa_ok($gene, 'Bio::SeqFeature::Generic');
+	    isa_ok($gene, 'Bio::SeqFeature::Generic');
     }
+    
 }
