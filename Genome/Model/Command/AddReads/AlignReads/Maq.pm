@@ -559,8 +559,9 @@ sub _check_for_shortcut {
         dna_type => $model->dna_type,
         genome_model_id => { operator => 'ne', value => $model->genome_model_id},
     );
-    print Data::Dumper::Dumper(\@params);
-    exit;
+    #Someone left this from testing I guess;
+    #print Data::Dumper::Dumper(\@params);
+    #exit;
     my @similar_models = Genome::Model->get(@params);
     my @similar_model_ids = map { $_->genome_model_id } @similar_models;
     return unless (@similar_model_ids);
