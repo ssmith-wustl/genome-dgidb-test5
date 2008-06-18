@@ -217,6 +217,7 @@ typedef struct
 
 map_array *mreads;
 map_array *match_reads;
+map_array *clipped_match_reads;
 FILE *fpbfa;
 
 void init_map_array(map_array *arr)
@@ -438,6 +439,59 @@ int ur_old(map_array *reads)
     return ur;
 }
 
+/*map_array * get_urc26(map_array *reads, map_array *clipped_match_reads, long position)
+{
+    clipped_match_reads->count = reads->count;
+    check_size(clipped_match_reads);
+        
+    int current_pos = 0;
+    int i = 0;
+    if(reads->count) 
+        for(i=0;i<reads->count;i++)
+        {
+            maqmap1_t *read = reads->reads[i];
+            clipped_match_reads->reads[current_pos] = read;
+            long read_start = read->pos>>1;
+            long read_end = read->pos>>1+read->size;
+            //this code works because have already tested reads smaller than 26 bases to see if they fit
+            if(read->pos&1)
+                if((read_end-26)<=position)
+                    current_pos++;
+            
+            else
+                if((read_start+26)>=position)
+                    current_pos++;
+        }
+    current_pos++;   
+    
+    clipped_match_reads->count-=(mreads->count-current_pos);
+    return clipped_match_reads;
+
+}*/
+
+int get_urc26(map_array *reads, long position)
+{        
+    int current_pos = 0;
+    int i = 0;
+    if(reads->count) 
+        for(i=0;i<reads->count;i++)
+        {
+            maqmap1_t *read = reads->reads[i];
+            long read_start = read->pos>>1;
+            long read_end = read->pos>>1+read->size;
+            //this code works because have already tested reads smaller than 26 bases to see if they fit
+            if(read->pos&1)
+                if((read_end-26)<=position)
+                    current_pos++;
+            
+            else
+                if((read_start+26)>=position)
+                    current_pos++;
+        }
+    current_pos++;
+    return current_pos;
+}
+
 void callback_def (void *variation, GQueue * reads)
 {
     int rc[4];//acgt
@@ -445,12 +499,12 @@ void callback_def (void *variation, GQueue * reads)
     int q[4];//acgt
     int mq[4];//acgt
     int ursc[4];//acgt
+    int urc26[4];//acgt
     int vbase[4];
-    int vcount;
-    char ref_base = 'N';
+    int vcount;    
     
     mreads->count = 0;
-    match_reads->count = 0;    
+    match_reads->count = 0; 
     snp_item * var_overlap = (snp_item *)variation; 
     int iref_base = get_base(var_overlap->var1);
     
@@ -467,53 +521,63 @@ void callback_def (void *variation, GQueue * reads)
         do
         {
             maqmap1_t *read = (maqmap1_t *)(item->data);
-            mreads->reads[current_pos] = read;
-            if(read->map_qual>=g_qual_cutoff)current_pos--;
+            mreads->reads[current_pos] = read;            
+            if(read->map_qual>=g_qual_cutoff)current_pos--;            
         }while(item = g_list_next(item));
     current_pos++;
     int i = 0;
-    if(current_pos>0) for(i=0;i<(mreads->count)-current_pos;i++){ mreads->reads[i] = mreads->reads[i+current_pos]; }
+    if(current_pos>0) for(i=0;i<(mreads->count)-current_pos;i++)
+    { 
+        mreads->reads[i] = mreads->reads[i+current_pos]; 
+    }
     mreads->count-=current_pos;
     //check for the case where the last record doesn't overlap
-    while(mreads->count>0&&((mreads->reads[mreads->count-1]->pos>>1)>var_overlap->end)) { //printf("count is %d\n",current_pos);
-    mreads->count--;}
-    //if(mreads->count<=0) return;
+    while(mreads->count>0&&((mreads->reads[mreads->count-1]->pos>>1)>var_overlap->end)) 
+    {    
+        mreads->count--;
+    }
+    
     
     get_matching_reads(mreads, match_reads,var_overlap->begin, 20, 0);//A allele
     rc[0] = match_reads->count;
     get_quality_stats(match_reads, var_overlap->begin,&q[0],&mq[0]);
     urc[0] = dedup_count(match_reads->reads, match_reads->count, 26);
+    urc26[0] = get_urc26(match_reads, var_overlap->begin);
     ursc[0] = ur_old(match_reads);
 
     get_matching_reads(mreads, match_reads,var_overlap->begin, 20, 1);//C allele
     rc[1] = match_reads->count;
     get_quality_stats(match_reads, var_overlap->begin,&q[1],&mq[1]);
     urc[1] = dedup_count(match_reads->reads, match_reads->count, 26);    
+    urc26[1] = get_urc26(match_reads, var_overlap->begin);
     ursc[1] = ur_old(match_reads);
     
     get_matching_reads(mreads, match_reads,var_overlap->begin, 20, 2);//G allele
     rc[2] = match_reads->count;
     get_quality_stats(match_reads, var_overlap->begin,&q[2],&mq[2]);
     urc[2] = dedup_count(match_reads->reads, match_reads->count, 26);
+    urc26[2] = get_urc26(match_reads, var_overlap->begin);
     ursc[2] = ur_old(match_reads);
 
     get_matching_reads(mreads, match_reads,var_overlap->begin, 20, 3);//T allele
     rc[3] = match_reads->count;
     get_quality_stats(match_reads, var_overlap->begin,&q[3],&mq[3]);
     urc[3] = dedup_count(match_reads->reads, match_reads->count, 26);
+    urc26[3] = get_urc26(match_reads, var_overlap->begin);
     ursc[3] = ur_old(match_reads);
 //header:      RC(A,C,G,T) URC(A,C,G,T) REF Ref(RC,URC,Q,MQ) Var1(RC, URC,Q,MQ) Var2(RC,URC,Q,MQ) URCbyContent
-//header:      RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ) ...
+//header:      RC(A,C,G,T) URC(A,C,G,T) URC26(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URC26,URSC,Q,MQ) Var1(RC,URC,URC26,URSC,Q,MQ) Var2(RC,URC,URC26,URSC,Q,MQ) ...
 //csv_in_line  2,0,3,4     4,0,3,3      4,0,3,3       A   2,4,30,30             2,2,2,30,30            2,2,2,30,30             
    
     fprintf(stdout, "%s\t%d,%d,%d,%d\t\t",var_overlap->line, rc[0],rc[1],rc[2],rc[3]);
     fprintf(stdout, "%d,%d,%d,%d\t",urc[0],urc[1],urc[2],urc[3]);
-    fprintf(stdout, "%d,%d,%d,%d\t%c\t",ursc[0],ursc[1],ursc[2],ursc[3],ref_base);
-    fprintf(stdout, "%d,%d,%d,%d,%d\t\t",rc[iref_base],urc[iref_base],ursc[iref_base],q[iref_base],mq[iref_base]);
+    fprintf(stdout, "%d,%d,%d,%d\t",urc26[0],urc26[1],urc26[2],urc26[3]);
+    fprintf(stdout, "%d,%d,%d,%d\t",ursc[0],ursc[1],ursc[2],ursc[3]);
+    fprintf(stdout, "%d,%d,%d,%d,%d,%d\t\t",rc[iref_base],urc[iref_base],urc26[iref_base],ursc[iref_base],q[iref_base],mq[iref_base]);
     for(i=0;i<vcount;i++)
     {
         int b = vbase[i];
-        fprintf(stdout, "%d,%d,%d,%d,%d\t\t",rc[b],urc[b],ursc[b],q[b],mq[b]);
+        fprintf(stdout, "%d,%d,%d,%d,%d,%d\t\t",rc[b],urc[b],urc26[b],ursc[b],q[b],mq[b]);
     }
     fprintf(stdout,"\n");
 }
@@ -528,8 +592,10 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,c
     g_num_seqs = mm->n_ref;
     mreads = calloc(1,sizeof(map_array));
     match_reads = calloc(1,sizeof(map_array));
+    clipped_match_reads = calloc(1,sizeof(map_array));
     init_map_array(mreads);
     init_map_array(match_reads);
+    init_map_array(clipped_match_reads);
     FILE *stdoutsave = stdout;
     if(output&&strlen(output))
     {
