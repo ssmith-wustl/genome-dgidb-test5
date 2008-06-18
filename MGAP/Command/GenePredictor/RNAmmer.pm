@@ -1,16 +1,13 @@
-package MGAP::Command::GenePredictor::Glimmer3;
+package MGAP::Command::GenePredictor::RNAmmer;
 
 use strict;
 use warnings;
 
-use BAP::Job::Glimmer;
+use GAP::Job::RNAmmer;
 
-class MGAP::Command::GenePredictor::Glimmer3 {
+
+class MGAP::Command::GenePredictor::RNAmmer {
     is => ['MGAP::Command::GenePredictor'],
-    has => [
-            model_file => { is => 'SCALAR', doc => 'absolute path to the model file for this fasta' },
-            pwm_file => { is => 'SCALAR' , doc => 'absolute path to the pwm file for this fasta' },
-    ],
 };
 
 sub sub_command_sort_position { 10 }
@@ -33,23 +30,18 @@ EOS
 sub execute {
     
     my $self = shift;
-
-    my $seqio = Bio::SeqIO->new(-file => $self->fasta_file(), -format => 'Fasta');
-
-    my $seq = $seqio->next_seq();
-
     
-    ##FIXME: The last two args are the circular dna flag and the
-    ##       job_id, which are hardcoded here in a rather lame fashion.
-    my $legacy_job = BAP::Job::Glimmer->new(
-                                            'glimmer3',
+    my $seqio = Bio::SeqIO->new(-file => $self->fasta_file(), -format => 'Fasta');
+    
+    my $seq = $seqio->next_seq();
+    
+    ##FIXME: The last arg is the job_id, which is hardcoded here in 
+    ##       a rather lame fashion.
+    my $legacy_job = GAP::Job::RNAmmer->new(
                                             $seq,
-                                            $self->model_file(),
-                                            $self->pwm_file(),
-                                            0,
                                             2112,
                                         );
-
+    
     $legacy_job->execute();
 
     my @features = $legacy_job->seq()->get_SeqFeatures();
