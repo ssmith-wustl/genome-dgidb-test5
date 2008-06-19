@@ -5,11 +5,13 @@ use warnings;
 
 use above "Genome"; 
 
+use Command;
 use Data::Dumper;
 use IO::File;
 use Genome::DB::Schema;
+use Genome::VariantAnnotator;
 #use Genome::IndelAnnotator;
-use Genome::SnpAnnotator;
+#use Genome::SnpAnnotator;
 use Tie::File;
 
 class Genome::Model::Command::Report::Variations
@@ -17,31 +19,50 @@ class Genome::Model::Command::Report::Variations
     is => 'Command',                       
     has => 
     [ 
+    # Input Variant Params
     variant_file => 
     {
         type => 'String',
         is_optional => 0,
         doc => "File of variants",
     },
-    report_file => 
+    variant_type => 
+    {
+        type => 'String', 
+        is_optional => 1,
+        doc => "Type of variation: snp, indel",
+        default => 'snp',
+    },
+    # Report File
+    report_file_base => 
     {
         type => 'String',
         is_optional => 0,
-        doc => "File to put annotations",
+        doc => "File base for report outputs",
     },
-    chromosome_name => 
+    no_headers =>
     {
-        type => 'String',
-        is_optional => 0,
-        doc => "Name of the chromosome AKA ref_seq_id", 
+        type => 'Boolean',
+        is_optional => 1,
+        default => 0,
+        doc => "Add headers in report outputs",
     },
-    variation_type => 
+    # Metrix Params
+    minimum_maq_score => 
     {
-       type => 'String', 
-       is_optional => 1,
-       doc => "Type of variation: snp, indel",
-       default => 'snp',
+        is => 'Integer',
+        is_optional => 1,
+        default => 15,
+        doc => 'Minimum quality to consider a variant high quality',
     },
+    minimum_read_count => 
+    {
+        is => 'Integer',
+        is_optional => 1,
+        default => 3,
+        doc => 'Minimum number of total reads to consider a variant high quality',
+    },
+    # Transcript Params
     flank_range => 
     {
         type => 'Integer', 
@@ -49,10 +70,11 @@ class Genome::Model::Command::Report::Variations
         default => 50000,
         doc => "Range to look around for flaking regions of transcripts",
     },
+    # Variation Params
     variation_range => 
     {
        type => 'Integer', 
-       is_optional => 0,
+       is_optional => 1,
        default => 0,
        doc => "Range to look around a variant for known variations",
     },
@@ -71,43 +93,81 @@ sub help_synopsis {
 
 sub help_detail {
     return <<EOS 
-    Creates an annotation report for variants in a given file.  Uses Genome::SnpAnnotator or Genome::IndelAnnotator (coming soon!) for each given variant, and outputs the annotation infomation to the given report file.
+    Creates an annotation report for variants in a given file.  Uses Genome::VariantAnnotator or Genome::IndelAnnotator (coming soon!) for each given variant, and outputs the annotation infomation to the given report file.
 EOS
 }
+
+############################################################
 
 sub execute { 
     my $self = shift;
 
-    my $input = $self->variant_file;
-    my $in_fh = IO::File->new("< $input");
-    $self->error_message("Can't open variation file ($input) for reading: $!")
-        and return unless $in_fh;
-    
-    my $output = $self->report_file;
-    unlink $output if -e $output;
-    my $out_fh = IO::File->new("> $output");
-    $self->error_message("Can't open report file ($output) for writing: $!")
-        and return unless $out_fh;
+    my $variant_fh = $self->_open_variant_file;
+    my $annotator = $self->_create_annotator;
+    $self->_open_report_files;
+    my ($transcripts_method, $variations_method, $print_method) = $self->_determine_methods_for_variant_type;
 
+    while ( my $line = $variant_fh->getline )
+    {
+        chomp $line;
+        my %variant;
+        @variant{qw/ 
+            chromosome_name start stop reference variant 
+            reference_type variant_type reference_reads variant_reads
+            maq_score
+            /} = split(/\s+/, $line);
+
+        my @transcripts = $annotator->$transcripts_method(%variant);
+        my @variations = $annotator->$variations_method(%variant);
+        $self->$print_method(\%variant, \@transcripts, \@variations);
+    }
+
+    $self->_print_metrics_report;
+    $self->_close_report_fhs;
+
+    return 1;
+}
+
+sub _open_variant_file
+{
+    my $self = shift;
+
+    my $variant_file = $self->variant_file;
+    my $variant_fh = IO::File->new("< $variant_file");
+    $self->error_message("Can't open variation file ($variant_file) for reading: $!")
+        and return unless $variant_fh;
+
+    return $variant_fh;
+}
+
+sub _create_annotator
+{
+    my $self = shift;
+
+    my $variant_file = $self->variant_file;
+    tie my @variants, 'Tie::File', $variant_file;
+    my ($chromosome_name, $from) = ( split(/\s+/, $variants[0]) )[0..1];
+    my ($chromosome_confirm, $to) = ( split(/\s+/, $variants[$#variants]) )[0..1];
+    untie @variants;
+    undef @variants;
+    $self->error_msg
+    (
+        "Different chromosome at beginning ($chromosome_name) and end ($chromosome_confirm) of variant file ($variant_file)"
+    )
+        and return unless $chromosome_name eq $chromosome_confirm;
+    
     my $schema = Genome::DB::Schema->connect_to_dwrac;
     $self->error_message("Can't connect to dwrac")
         and return unless $schema;
-    
-    my $chromosome_name = $self->chromosome_name;
+
     my $chromosome = $schema->resultset('Chromosome')->find
     (
         { chromosome_name => $chromosome_name },
     );
     $self->error_message("Can't find chromosome ($chromosome_name)")
         and return unless $chromosome;
-    
-    tie my @variants, 'Tie::File', $input;
-    my $from = ( split(/\s+/, $variants[0]) )[1];
-    my $to = ( split(/\s+/, $variants[$#variants]) )[1];
-    untie @variants;
-    undef @variants;
 
-    my $annotator = Genome::SnpAnnotator->new
+    my $annotator = Genome::VariantAnnotator->new
     (
         transcript_window => $chromosome->transcript_window
         (
@@ -123,66 +183,237 @@ sub execute {
         ),
     );
 
-    while ( my $line = $in_fh->getline )
+    return $annotator;
+}
+
+#- REPORTS -#
+sub report_types
+{
+    return (qw/ metrics transcript variation /);
+}
+
+sub _report_file
+{
+    my ($self, $directory, $type) = @_;
+
+    return sprintf('%s.%s', $directory, $type);
+}
+
+sub _open_report_files
+{
+    my $self = shift;
+
+    for my $report_type ( $self->report_types )
     {
-        my (
-            $chromosome_name, $start, $stop, $reference, $variant, 
-            $reference_type, $variant_type, $reference_reads, $variant_reads,
-            $consensus_quality, $read_count
-        ) = split(/\s+/, $line);
-
-        my @annotations = $annotator->get_prioritized_annotations # TODO param whether or not we do prioritized annos?
-        (
-            position => $start,
-            reference => $reference,
-            variant => $variant,
-        )
-            or next;
+        my $report_file = $self->_report_file($self->report_file_base, $report_type);
+        unlink $report_file if -e $report_file;
         
-        foreach my $annotation ( @annotations )
-        {
-            my @non_dbsnp_submitters = grep { $_ !~ /dbsnp|old|none/i } keys %{ $annotation->{variations} };
-            my $wv = ( @non_dbsnp_submitters )
-            ? join('/', @non_dbsnp_submitters)
-            : 0;
+        my $report_fh = IO::File->new("> $report_file");
+        $self->error_message("Can't open $report_type report file ($report_file) for writing: $!")
+            and return unless $report_fh;
 
-            $out_fh->print
-            (
-                join
-                (
-                    ',',                   
-                    ( exists $annotation->{variations}->{'dbSNP-127'} ? 1 : 0), # dbsnp
-                    $annotation->{gene_name},
-                    $chromosome_name,
-                    $start,
-                    $stop,
-                    $variant, 
-                    $variant_reads, # num of genomic reads supporting variant allele",
-                    '0', # # of cdna reads supporting variant allele",
-                    $reference,
-                    $reference_reads, # num of genomic reads supporting reference allele",
-                    '0', # # of cdna reads supporting reference allele",
-                    $annotation->{intensity},
-                    $annotation->{detection},
-                    $annotation->{transcript_name}, # ensembl_transcript_id",
-                    $annotation->{strand}, # transcript_stranding",
-                    $annotation->{trv_type}, 
-                    $annotation->{c_position}, # transcript_position",
-                    $annotation->{amino_acid_change} || 'NULL', # amino_acid_change", 
-                    'NULL', # polyphen_prediction",
-                    0, # submit
-                    '', # rgg_id
-                    $wv, # watson/ventor
-                ), 
-                "\n",
-            );
-        }
+        my $headers_method = sprintf('%s_report_headers', $report_type);
+        $report_fh->print( join(',', $self->$headers_method), "\n" ) unless $self->no_headers;
+        
+        my $report_fh_method = sprintf('_%s_report_fh', $report_type);
+        $self->$report_fh_method($report_fh);
     }
 
-    $in_fh->close;
-    $out_fh->close;
+    return 1;
+}
+
+sub _close_report_fhs
+{
+    my $self = shift;
+
+    for my $report_type ( $self->report_types )
+    {
+        my $report_fh_method = sprintf('_%s_report_fh', $report_type);
+        $self->$report_fh_method->close;
+    }
+    
+    return 1;
+}
+
+# report fhs
+sub _metrics_report_fh
+{
+    my ($self, $fh) = @_;
+
+    $self->{_metrics_fh} = $fh if $fh;
+
+    return $self->{_metrics_fh};
+}
+
+sub _transcript_report_fh
+{
+    my ($self, $fh) = @_;
+
+    $self->{_transcript_fh} = $fh if $fh;
+
+    return $self->{_transcript_fh};
+}
+
+sub _variation_report_fh
+{
+    my ($self, $fh) = @_;
+
+    $self->{_variation_fh} = $fh if $fh;
+
+    return $self->{_variation_fh};
+}
+
+# report headers
+sub metrics_report_headers
+{
+    return (qw/ snvs hq_snvs not_in_any /, variation_sources());
+}
+
+sub transcript_report_headers
+{
+    return ( variant_attributes(), transcript_attributes(), variation_attributes() );
+}
+
+sub variation_report_headers
+{
+    return ( variant_attributes(), variation_attributes() );
+}
+
+# attributes
+sub variant_attributes
+{
+    return (qw/ chromosome_name start stop variant variant_reads reference reference_reads maq_score /);
+}
+
+sub transcript_attributes
+{
+    return (qw/ gene_name intensity detection transcript_name strand trv_type c_position amino_acid_change /);
+}
+
+sub variation_attributes
+{
+    return ('in_coding_region', variation_sources());
+}
+
+sub variation_sources
+{
+    # TODO add a header foreach dbsnp release?
+    return (qw/ dbsnp-127 watson venter /);
+}
+
+#- METHODS BASED ON TYPE OF VARIANT -#
+sub _determine_methods_for_variant_type
+{
+    my $self = shift;
+
+    my $variant_type = $self->variant_type;
+
+    return
+    (
+        sprintf('prioritized_transcripts_for_%s', $variant_type),
+        sprintf('variations_for_%s', $variant_type),
+        sprintf('_print_reports_for_%s', $variant_type),
+    );
+}
+
+#- PRINT REPORTS -#
+sub _print_reports_for_snp
+{
+    my ($self, $snp, $transcripts, $variations) = @_;
+
+    # Calculate Metrics
+    my $is_hq_snp = ( $snp->{maq_score} >= $self->minimum_maq_score 
+            and $snp->{reference_reads} + $snp->{variant_reads} > $self->minimum_read_count )
+    ? 1
+    : 0;
+
+    $self->{_metrics}->{snvs}++;
+    $self->{_metrics}->{hq_snvs}++ if $is_hq_snp;
+
+    # Basic SNP Info
+    my $snp_info_string = join
+    (
+        ',', 
+        map { $snp->{$_} } $self->variant_attributes,
+    );
+
+    # Variation Report
+    my @snp_exists_in_variations;
+    if ( @$variations )
+    {
+        for my $db_source ( $self->variation_sources )
+        {
+            if ( grep { lc($_->source) eq $db_source } @$variations )
+            {
+                push @snp_exists_in_variations, 1;
+                $self->{_metrics}->{$db_source}++ if $is_hq_snp;
+            }
+            else
+            {
+                push @snp_exists_in_variations, 0;
+            }
+        }
+    }
+    else
+    {
+        $self->{_metrics}->{not_in_any}++ if $is_hq_snp;
+        @snp_exists_in_variations = (qw/ 0 0 0 /);
+    }
+
+    $self->_variation_report_fh->print
+    (
+        join
+        (
+            ',',
+            $snp_info_string,
+            ( @$transcripts ) ? 1 : 0, # coding
+            @snp_exists_in_variations,
+        ),
+        "\n",
+    );
+
+    # Transcripts
+    for my $transcripts ( @$transcripts )
+    {
+        $self->_transcript_report_fh->print
+        (
+            join
+            (
+                ',',                   
+                $snp_info_string,
+                map({ $transcripts->{$_} } $self->transcript_attributes),
+                @snp_exists_in_variations,
+            ), 
+            "\n",
+        );
+    }
 
     return 1;
+}
+
+sub _print_reports_for_indel
+{
+    my ($self, $indel, $annotations, $variations) = @_;
+
+    return 1;
+}
+
+sub _print_metrics_report
+{
+    my $self = shift;
+
+    my $metrics = $self->{_metrics};
+    print Dumper($metrics);
+    
+    return $self->_metrics_report_fh->print
+    (
+        join
+        (
+            ',',
+            map({ $metrics->{$_} || 0 } $self->metrics_report_headers),
+        ),
+        "\n",
+    );
 }
 
 1;
@@ -195,7 +426,7 @@ Genome::Model::Command::Report::Variations
 
 =head1 Synopsis
 
-Goes through each variant in a file, retrieving annotation information from Genome::SnpAnnotator or Genome::IndelAnnotator (coming soon).
+Goes through each variant in a file, retrieving annotation information from Genome::VariantAnnotator or Genome::IndelAnnotator (coming soon).
 
 =head1 Usage
 
@@ -234,7 +465,7 @@ Goes through each variant in a file, retrieving annotation information from Geno
 
 =head1 See Also
 
-B<Genome::SnpAnnotator>, B<Genome::Model::Command::Report::VariationsBatchToLsf>, B<Genome::DB::*>, B<Genome::DB::Window::*>
+B<Genome::VariantAnnotator>, B<Genome::Model::Command::Report::VariationsBatchToLsf>, B<Genome::DB::*>, B<Genome::DB::Window::*>
 
 =head1 Disclaimer
 
