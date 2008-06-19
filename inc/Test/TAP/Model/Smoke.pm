@@ -161,6 +161,12 @@ sub analyze_file {
 
     for my $f ( @{$self->{meat}{test_files}} ) {
         if ($f->{file} eq $file) {
+            my @events=@{$f->{events}};
+            if(@events) {
+                $self->{'next'}=$events[-1]{num}+1;
+            } else {
+                $self->{'next'}=0;
+            }
             return $f->{results};
         }
     }
