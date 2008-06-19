@@ -117,7 +117,7 @@ bl_pos bl_find(bl_list *list, maqmap1_t *rec, int comparison_length)
     {
         if(list->_list[i].size != rec->size) continue;
         get_read_lc(&list->_list[i],cmp_string);
-        if(memcmp(rec_string, cmp_string, comparison_length))
+        if(!memcmp(rec_string, cmp_string, comparison_length))
             return i;
     }
     return -1;
