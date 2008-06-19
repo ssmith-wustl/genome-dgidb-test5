@@ -106,7 +106,7 @@ sub _get_sub_command_class_name{
     unless ($sub_command_name) {
         # The subclassing column's value was probably undef, meaning this sub-command
         # should be skipped
-        return "0 but true";
+        return;
     }
     
     # Does the sub-command exist?
@@ -127,6 +127,10 @@ sub _get_sub_command_class_name{
 # To return the right sub-sub-class when the subclassing property is maq-ish
 sub sub_command_delegator {
     my($class,%params) = @_;
+
+    if (not defined $params{'model_id'}) {
+        return;
+    }
 
     my $model = Genome::Model->get(id => $params{'model_id'});
     unless ($model) {
