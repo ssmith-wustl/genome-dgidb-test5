@@ -8,10 +8,9 @@ use above "Genome";
 use Command; 
 use Data::Dumper;
 
-UR::Object::Type->define(
-    class_name => __PACKAGE__,
-    is => 'Command',
-);
+class Genome::Model::Command::List { 
+    is => ['Genome::Model::Command', 'UR::Object::Command::List'],
+};
 
 sub sub_command_sort_position { 2 }
 
@@ -30,6 +29,22 @@ sub help_detail {
 List items related to genome models.
 EOS
 }
+
+sub create {
+    my $self = shift->SUPER::create(@_);
+    if ($self->model_id) {
+        my $filter = $self->filter;
+        if ($filter) {
+            $filter .= "," if $filter;
+        }
+        else {
+            $filter = '';
+        }
+        $filter .= 'model_id=' . $self->model_id;
+    }
+    return $self;
+}
+
 
 1;
 
