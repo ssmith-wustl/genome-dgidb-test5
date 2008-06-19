@@ -793,7 +793,7 @@ sub generate_figure_3_files {
 
              #For Eddie's output we need to know the type of variant and also the
              #dbSNP and Watson/Venter status
-             my @report_indexes = (0,1,2,3,5,8,13,17,18,19); 
+             my @report_indexes = (0,1,2,3,5,8,13,16,17,18); 
 
              #this is taken care of implicitly by the loop actually...damn pair programming
              if(defined($cur_somatic_snp[0]) && defined($cur_anno_snp[0])) {
