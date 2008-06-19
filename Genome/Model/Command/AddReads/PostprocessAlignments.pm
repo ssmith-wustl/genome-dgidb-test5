@@ -41,7 +41,8 @@ sub subordinate_job_classes {
         'Genome::Model::Command::AddReads::UpdateGenotype',
         'Genome::Model::Command::AddReads::FindVariations',
         'Genome::Model::Command::AddReads::PostprocessVariations',
-        'Genome::Model::Command::AddReads::AnnotateVariations'
+        'Genome::Model::Command::AddReads::AnnotateVariations',
+        'Genome::Model::Command::AddReads::FilterVariations'
     );
 }
 
