@@ -697,6 +697,10 @@ sub generate_figure_3_files {
     #end possible break
     my $snp_file = $self->_report_file('snp');
         my $dir = $self->model->_filtered_variants_dir();
+        if(!defined($dir)) {
+            $self->error_message("No filtered_variants directory returned.");
+            return undef;
+        }
        my $dbsnp_fh = IO::File->new(">$dir" . "/tumor_only_in_d_V_W_" . $self->ref_seq_id .
             ".csv");
        my $dbsnp_count;      
@@ -745,7 +749,15 @@ sub generate_figure_3_files {
             ".csv");
        my $validated_somatic_var_count;     
          my $annotation_fh = IO::File->new($snp_file);
+        if(!defined($annotation_fh)) {
+            $self->error_message("Could not open report file.");
+            return undef;
+        }
         my $somatic_fh = IO::File->new($somatic_file);
+        if(!defined($somatic_fh)) {
+            $self->error_message("Could not open file of somatic mutations.");
+            return undef;
+        }
         my @cur_somatic_snp;
         my @cur_anno_snp;
         my $anno_line;
@@ -781,16 +793,17 @@ sub generate_figure_3_files {
 
              #For Eddie's output we need to know the type of variant and also the
              #dbSNP and Watson/Venter status
-             my @report_indexes = (0,1,2,3,4,5,8,15,21); 
+             my @report_indexes = (0,1,2,3,5,8,13,17,18,19); 
 
              #this is taken care of implicitly by the loop actually...damn pair programming
              if(defined($cur_somatic_snp[0]) && defined($cur_anno_snp[0])) {
                  #it's genic and in Eddie's report and passed Brian's filters
-                 my ($dbsnp, $gene, $chromosome, $begin, $end,
-                     $variant_allele, $reference_allele, $variant_type, $wv) = @cur_anno_snp[@report_indexes];    
+                 my ($chromosome, $begin, $end,
+                     $variant_allele, $reference_allele, $gene, $variant_type,$dbsnp,
+                     $watson, $venter) = @cur_anno_snp[@report_indexes];    
 
                  #Test if seen in dbSNP or Watson/Venter
-                 if((defined($dbsnp) && $dbsnp ne '0') || (defined($wv) && $wv ne '0' )) {
+                 if((defined($dbsnp) && $dbsnp ne '0') || (defined($watson) && $watson ne '0' ) || (defined($venter) && $venter ne '0')) {
                      #previously identified
                      $self->_write_array_to_file(\@cur_anno_snp, $dbsnp_fh);
                      $dbsnp_count++;
