@@ -55,9 +55,7 @@ our $GENOME_MODEL_BSUBBED_COMMAND = "genome-model";
 
 sub execute {
     $DB::single=1;
-
     my $self = shift;
-    $DB::single=1;
 
     my $model = $self->model;
 

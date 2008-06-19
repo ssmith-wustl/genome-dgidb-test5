@@ -495,7 +495,6 @@ sub _reports_dir {
 }
 
 sub _files_for_pattern_and_optional_ref_seq_id {
-    $DB::single = 1;
     my $self=shift;
     my $pattern = shift;
     my $ref_seq=shift;
@@ -757,7 +756,6 @@ sub pretty_print_text {
 # in the class definiton...
 sub _resolve_subclass_name {
 	my $class = shift;
-    $DB::single=1;
 	
 	if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
 		my $type_name = $_[0]->type_name;
