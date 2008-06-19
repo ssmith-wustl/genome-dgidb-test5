@@ -83,8 +83,8 @@ sub execute {
 sub extend_last_execution {
     my ($self) = @_;
 
-    # like execute, but get the existing steps, see which ones never got executed, and launch those
-    
+    # like execute, but get the existing steps, see which ones never got executed, and generates those.
+
     my @sub_command_classes = $self->subordinate_job_classes;
 
     my $model = Genome::Model->get($self->model_id);
@@ -93,7 +93,8 @@ sub extend_last_execution {
     unless (@subreferences_names > 0) {
         @subreferences_names = ('all_sequences');
     }
-    
+
+    my @new_events;    
     foreach my $ref (@subreferences_names) { 
         my $prior_event_id = undef;
         foreach my $command_class ( @sub_command_classes ) {
@@ -110,6 +111,10 @@ sub extend_last_execution {
                     prior_event_id => $prior_event_id,
                     parent_event_id => $self->id,
                 );
+                unless ($command) {
+                    die "Failed to create command object: $command_class!" . $command_class->error_message;
+                }
+                push @new_events, $command;
                 $command->parent_event_id($self->id);
                 $command->event_status('Scheduled');
                 $command->retry_count(0);
@@ -119,7 +124,7 @@ sub extend_last_execution {
         }
     }
 
-    return 1; 
+    return @new_events; 
 }
 
 sub _get_sub_command_class_name{
