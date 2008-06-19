@@ -11,21 +11,9 @@ use PP::LSF;
 
 class Genome::Model::Command::Report::VariationsBatchToLsf 
 {
-    is => 'Command',                       
+    is => 'Genome::Model::Command::Report::Variations',                       
     has => 
     [ 
-    variant_file => 
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => "File of variants",
-    },
-    report_file => 
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => "File to put annotations",
-    },
     out_log_file => 
     {
         type => 'String',
@@ -38,39 +26,6 @@ class Genome::Model::Command::Report::VariationsBatchToLsf
         is_optional => 1,
         doc => "Will combine the LSF error files into this file",
     },
-    chromosome_name => 
-    {
-        type => 'String',
-        doc => "Name of the chromosome AKA ref_seq_id", 
-        is_optional => 0,
-    },
-    variation_type => 
-    {
-       type => 'String', 
-       is_optional => 1,
-       default => 'snp',
-       doc => "Type of variation: snp, indel",
-    },
-    flank_range => 
-    {
-        type => 'Integer', 
-        is_optional => 1,
-        default => 50000,
-        doc => "Range to look around for flaking regions of transcripts",
-    },
-    variation_range => 
-    {
-       type => 'Integer', 
-       is_optional => 1,
-       default => 0,
-       doc => "Range to look around a variant for known variations",
-    },
-    #format => 
-    #{
-    #   type => 'String', 
-    #   doc => "?",
-    #   is_optional => 0,
-    #},
     ],
 };
 
@@ -79,7 +34,7 @@ class Genome::Model::Command::Report::VariationsBatchToLsf
 sub sub_command_sort_position { 90 } # FIXME needed?
 
 sub help_brief {
-    "Generates an annotation report for a variation file."
+    return "Generates an annotation report for a variation file."
 }
 
 sub help_synopsis {
@@ -95,7 +50,22 @@ EOS
 sub execute {
     my $self = shift;
     
-    my $chromosome = $self->chromosome_name;
+    # create child jobs
+    my $jobs = $self->_create_jobs;
+    $self->error_message("No jobs created")
+        and return unless @$jobs;
+
+    # run & monitor jobs
+    my $success = $self->_run_and_monitor_jobs($jobs);
+
+    # finish
+    return $self->_finish($success, $jobs);
+}
+
+sub _create_jobs
+{
+    my $self = shift;
+
     my $main_variant_fh = $self->_open_read_fh( $self->variant_file )
         or return;
 
@@ -128,8 +98,7 @@ sub execute {
     $jobs[$#jobs]->{variant_fh}->close if $jobs[$#jobs]->{variant_fh}->opened;
     $main_variant_fh->close;
 
-    # Run & monitor jobs, then finish
-    return $self->_finish( $self->_run_and_monitor_jobs(\@jobs), \@jobs );
+    return \@jobs;
 }
 
 sub _open_fh
@@ -163,8 +132,6 @@ sub _setup_job
 {
     my ($self, $num) = @_;
 
-    my $chromosome_name = $self->chromosome_name;
-
     my $variant_file = sprintf
     (
         '%s.%d', 
@@ -175,13 +142,12 @@ sub _setup_job
     my $variant_fh = $self->_open_write_fh($variant_file)
         or return;
     
-    my $report_file = sprintf
+    my $report_file_base = sprintf
     (
         '%s.%d', 
-        $self->report_file,
+        $self->report_file_base,
         $num,
     );
-    unlink $report_file if -e $report_file;
 
     # If logging, get a log file for each job
     my ($out_file, $error_file);
@@ -214,15 +180,20 @@ sub _setup_job
         R => "'select[db_dw_prod_runq<10] rusage[db_dw_prod=1]'",
         command => sprintf
         (
-            '`which genome-model` report variations --report-file %s --variant-file %s --chromosome-name %s --variation-type %s --flank-range %s --variation-range %s',
-            $report_file,
+            #'perl -I /gscuser/ebelter/dev/perl_modules /gscuser/ebelter/bin/gm report variations --report-file-base %s --variant-file %s --variation-type %s --flank-range %s --variation-range %s --minimum_maq_score %s --minimum_read_count %s %s',
+            '`which genome-model` report variations --report-file-base %s --variant-file %s --variant-type %s --flank-range %s --variation-range %s --minimum-maq-score %s --minimum-read-count %s %s',
+            $report_file_base,
             $variant_file,
-            $chromosome_name,
-            $self->variation_type,
+            $self->variant_type,
             $self->flank_range,
             $self->variation_range,
+            $self->minimum_maq_score,
+            $self->minimum_read_count,
+            ( $self->no_headers ? '--no-headers' : ''),
         ),
     );
+
+    print $job_params{command},"\n";
 
     $job_params{o} = $out_file if $out_file;
     $job_params{e} = $error_file if $error_file;
@@ -236,7 +207,7 @@ sub _setup_job
         job => $job,
         variant => $variant_file,
         variant_fh => $variant_fh,
-        report => $report_file,
+        report_file_base => $report_file_base,
         out => $out_file,
         error => $error_file,
     };
@@ -246,7 +217,7 @@ sub _run_and_monitor_jobs
 {
     my ($self, $jobs) = @_;
 
-    # Start
+    # Start jobs.  To monitor, create hash w/ job ids as keys.
     my %running_jobs;
     for my $num ( 0..(scalar(@$jobs) - 1) )
     {
@@ -266,27 +237,22 @@ sub _run_and_monitor_jobs
             my $job = $jobs->[ $running_jobs{$job_id} ]->{job};
             if ( $job->has_ended )
             {
-                if ( $job->has_ended )
+                if ( $job->is_successful )
                 {
-                    if ( $job->is_successful )
-                    {
-                        print "$job_id successful\n";
-                        delete $running_jobs{$job_id};
-                    }
-                    else
-                    {
-                        print "$job_id failed\n";
-                        $self->_kill_jobs($jobs);
-                        last MONITOR;
-                        # return;
-                    }
+                    print "$job_id successful\n";
+                    delete $running_jobs{$job_id};
+                }
+                else
+                {
+                    print "$job_id failed, killing other jobs\n";
+                    $self->_kill_jobs($jobs);
+                    last MONITOR;
                 }
             }
         }
     }
 
     return ( %running_jobs ) ? 0 : 1; # success is going thru all running jobs 
-    #return 1;
 }
 
 sub _kill_jobs
@@ -303,56 +269,78 @@ sub _kill_jobs
     return 1;
 }
 
-sub _combine_and_remove_report_files
-{
-    my ($self, $jobs) = @_;
-
-    my $report_file = $self->report_file;
-    unlink $report_file if -e $report_file;
-
-    JOB: for my $job ( @$jobs )
-    {
-        unlink $job->{variant} if -e $job->{variant};
-        $self->error_msg
-        (
-            'Can\'t find report portion (%s) for chromosome (%s)', $job->{report}, $self->ref_seq_id
-        ) and next JOB unless -e $job->{report};
-        system sprintf('cat %s >> %s', $job->{report}, $report_file);
-        unlink $job->{report}; 
-    }
-
-    return 1;
-}
-
-sub _combine_and_remove_lsf_files
-{
-    my ($self, $jobs) = @_;
-
-    LOG_TYPE: for my $log_type (qw/ out error /)
-    {
-        my $log_file_method = $log_type . '_log_file';
-        my $log_file = $self->$log_file_method;
-        next LOG_TYPE unless $log_file;
-        JOB: for my $job ( @$jobs )
-        {
-            next JOB unless -e $job->{$log_type};
-            system sprintf('cat %s >> %s', $job->{$log_type}, $log_file);
-            # print??
-            unlink $job->{$log_type};
-        }
-    }
-
-    return 1;
-}
-
 sub _finish
 {
     my ($self, $success, $jobs) = @_;
 
-    $self->_combine_and_remove_report_files($jobs) if $success;
-    $self->_combine_and_remove_lsf_files($jobs);
+    JOB: for my $job ( @$jobs )
+    {
+        LOG_TYPE: for my $log_type (qw/ out error /)
+        {
+            my $log_file_method = $log_type . '_log_file';
+            my $log_file = $self->$log_file_method;
+            next LOG_TYPE unless $log_file and -e $job->{$log_type};
+            # cat the log file
+            system sprintf('cat %s >> %s', $job->{$log_type}, $log_file);
+            # remove the job's log file
+            unlink $job->{$log_type};
+        }
+
+        # remove the chunked variant file
+        unlink $job->{variant} if -e $job->{variant};
+
+        # cat the reports if successful
+        REPORT_TYPE: for my $report_type (qw/ transcript variation /)
+        {
+            my $chunked_file = $self->_report_file
+            (
+                $job->{report_file_base},
+                $report_type,
+            );
+            next REPORT_TYPE unless -e $chunked_file;
+
+            if ( $success 
+                    and -e $chunked_file 
+                    and my $report_fh = $self->_get_report_fh($report_type) )
+            {
+                my $chunked_fh = IO::File->new("< $chunked_file");
+                if ( $chunked_fh )
+                {
+                    while ( $chunked_fh->getline )
+                    {
+                        $report_fh->print($_);
+                    }
+                }
+                else
+                {
+                    $self->error_message("Can't open $report_type report file for reading");
+                }
+            }
+
+            unlink $chunked_file; 
+        }
+    }
 
     return $success;
+}
+
+sub _get_report_fh
+{
+    my ($self, $report_type) = @_;
+
+    my $report_file_attr = sprintf('_%s_fh', $report_type);
+
+    return $self->{$report_file_attr} if $self->{$report_file_attr};
+
+    my $report_file = $self->_report_file($self->report_file_base, $report_type);
+    unlink $report_file if -e $report_file;
+    my $report_fh = IO::File->new("> $report_file");
+    $self->error_message("Can't open $report_type report file for writing") 
+        and next REPORT_TYPE unless $report_fh;
+    my $headers_method = sprintf('%s_report_headers', $report_type);
+    $report_fh->print( join(',', $self->$headers_method) ) unless $self->no_headers;
+
+    return $self->{$report_file_attr} = $report_fh;
 }
 
 1;
@@ -371,7 +359,6 @@ For a given variant file, this module will split it up into files containing 100
 
  $success = Genome::Model::Command::Report::VariationsBatchToLsf->execute
  (
-     chromosome_name => $chromosome, # req
      variant_type => 'snp', # opt, default snp, valid types: snp, indel
      variant_file => $detail_file, # req
      report_file => sprintf('%s/variant_report_for_chr_%s', $reports_dir, $chromosome), # req
