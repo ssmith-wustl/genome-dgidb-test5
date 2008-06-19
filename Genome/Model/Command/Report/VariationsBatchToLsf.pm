@@ -211,6 +211,7 @@ sub _setup_job
     (
         pp_type => 'lsf',
         q => 'aml',
+        R => "'select[db_dw_prod_runq<10] rusage[db_dw_prod=1]'",
         command => sprintf
         (
             '`which genome-model` report variations --report-file %s --variant-file %s --chromosome-name %s --variation-type %s --flank-range %s --variation-range %s',
@@ -277,6 +278,7 @@ sub _run_and_monitor_jobs
                         print "$job_id failed\n";
                         $self->_kill_jobs($jobs);
                         last MONITOR;
+                        # return;
                     }
                 }
             }
@@ -284,6 +286,7 @@ sub _run_and_monitor_jobs
     }
 
     return ( %running_jobs ) ? 0 : 1; # success is going thru all running jobs 
+    #return 1;
 }
 
 sub _kill_jobs
@@ -334,6 +337,7 @@ sub _combine_and_remove_lsf_files
         {
             next JOB unless -e $job->{$log_type};
             system sprintf('cat %s >> %s', $job->{$log_type}, $log_file);
+            # print??
             unlink $job->{$log_type};
         }
     }
