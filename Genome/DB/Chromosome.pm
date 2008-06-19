@@ -36,7 +36,7 @@ sub ordered_transcripts
     (
         \%search_params,
         {
-            order_by => [qw/ transcript_start transcript_stop /],
+            order_by => [qw/ transcript_start /],
         }
     );
 }
