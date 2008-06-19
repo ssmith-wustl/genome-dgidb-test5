@@ -223,7 +223,6 @@ $DB::single=1;
     $report_fh->close();
     $mapview_fh->close();
     
-    return 1;
     unless ($self->generate_variation_metrics) {        
         $self->error_message("");
         # cleanup...
