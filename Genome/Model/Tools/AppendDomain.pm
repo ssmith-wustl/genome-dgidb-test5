@@ -13,6 +13,7 @@ use File::Slurp;
 use Text::CSV_XS;
 use File::Temp qw/ tempfile /;
 use List::MoreUtils qw/ uniq /;
+use SnpDom;
 
 UR::Object::Type->define(
                          class_name => __PACKAGE__,
