@@ -383,8 +383,16 @@ sub execute {
 				split(',',$al2_count_arr);
 
 			my $genotype = $IUBcode{$iub_sequence};
-			my $al1 = substr($genotype,0,1);
-			my $al2 = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
+			my $cns_sequence = substr($genotype,0,1);
+			my $var_sequence = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
+			my ($al1, $al2);
+			if ($cns_sequence eq $ref_sequence) {
+				$al1 = $cns_sequence;
+				$al2 = $var_sequence;
+			} else {
+				$al1 = $var_sequence;
+				$al2 = $cns_sequence;
+			}
 
 			my (
 					$end,
