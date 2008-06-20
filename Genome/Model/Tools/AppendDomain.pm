@@ -19,29 +19,29 @@ UR::Object::Type->define(
                          class_name => __PACKAGE__,
                          is => 'Command',
                          has => [
-                                 'maf' => { type => 'String',
-                                            doc => "mutation annotation file",
-                                            required => 1},
+                                 'maf'    => { type => 'String',
+                                               doc => "mutation annotation file",
+                                               required => 1},
                                  'filter' => { type => 'String',
                                                doc => "filter expression for domains",
                                                },
                                  'output' => { type => 'String',
                                                doc => "output file name",
                                                required => 1},
-                                 'gcol' => { type => 'Integer',
-                                             doc => "hugo gene name column",
-                                             default => 0},
-                                 'tcol' => { type => 'Integer',
-                                             doc => "transcript name column",
-                                             default => 3},
-                                 'acol' => { type => 'Integer',
-                                             doc => "Amino acid change column",
-                                             default => 12},
+                                 'gcol'   => { type => 'Integer',
+                                               doc => "hugo gene name column",
+                                               default => 0},
+                                 'tcol'   => { type => 'Integer',
+                                               doc => "transcript name column",
+                                               default => 3},
+                                 'acol'   => { type => 'Integer',
+                                               doc => "Amino acid change column",
+                                               default => 12},
                                  'sepchar' => { type => 'String', 
                                                 doc => "separator character in matrix", 
                                                 is_optional => 1,
                                                 default => "\t"},
-]
+                                 ]
                          );
 
 sub help_brief
@@ -108,6 +108,7 @@ sub execute
     }
     
     write_file( $self->output, @new );
+    unlink($tmpfile);
 
     return 1;
 }
