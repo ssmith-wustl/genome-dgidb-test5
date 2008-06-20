@@ -180,8 +180,7 @@ sub _setup_job
         R => "'select[db_dw_prod_runq<10] rusage[db_dw_prod=1]'",
         command => sprintf
         (
-            #'perl -I /gscuser/ebelter/dev/perl_modules /gscuser/ebelter/bin/gm report variations --report-file-base %s --variant-file %s --variation-type %s --flank-range %s --variation-range %s --minimum_maq_score %s --minimum_read_count %s %s',
-            '`which genome-model` report variations --report-file-base %s --variant-file %s --variant-type %s --flank-range %s --variation-range %s --minimum-maq-score %s --minimum-read-count %s %s',
+            '`which genome-model` report variations --report-file-base %s --variant-file %s --variant-type %s --flank-range %s --variation-range %s --minimum-maq-score %s --minimum-read-count %s --no-header',
             $report_file_base,
             $variant_file,
             $self->variant_type,
@@ -189,11 +188,10 @@ sub _setup_job
             $self->variation_range,
             $self->minimum_maq_score,
             $self->minimum_read_count,
-            ( $self->no_headers ? '--no-headers' : ''),
         ),
     );
 
-    print $job_params{command},"\n";
+    # print $job_params{command},"\n";
 
     $job_params{o} = $out_file if $out_file;
     $job_params{e} = $error_file if $error_file;
@@ -273,6 +271,23 @@ sub _finish
 {
     my ($self, $success, $jobs) = @_;
 
+    # Create the main reports, if jobs were successful
+    my %report_fhs;
+    if ( $success )
+    {
+        REPORT_TYPE: for my $report_type ( $self->report_types )
+        {
+            my $report_file = $self->_report_file($self->report_file_base, $report_type);
+            unlink $report_file if -e $report_file;
+            my $report_fh = IO::File->new("> $report_file");
+            $self->error_message("Can't open $report_type report file for writing") 
+                and next REPORT_TYPE unless $report_fh;
+            my $headers_method = sprintf('%s_report_headers', $report_type);
+            $report_fh->print( join(',', $self->$headers_method), "\n" ) unless $self->no_headers;
+            $report_fhs{$report_type} = $report_fh;
+        }
+    }
+
     JOB: for my $job ( @$jobs )
     {
         LOG_TYPE: for my $log_type (qw/ out error /)
@@ -289,8 +304,8 @@ sub _finish
         # remove the chunked variant file
         unlink $job->{variant} if -e $job->{variant};
 
-        # cat the reports if successful
-        REPORT_TYPE: for my $report_type (qw/ transcript variation /)
+        # combined the chunked report w/ the main report
+        REPORT_TYPE: for my $report_type ( $self->report_types )
         {
             my $chunked_file = $self->_report_file
             (
@@ -299,16 +314,14 @@ sub _finish
             );
             next REPORT_TYPE unless -e $chunked_file;
 
-            if ( $success 
-                    and -e $chunked_file 
-                    and my $report_fh = $self->_get_report_fh($report_type) )
+            if ( $success )
             {
                 my $chunked_fh = IO::File->new("< $chunked_file");
                 if ( $chunked_fh )
                 {
-                    while ( $chunked_fh->getline )
+                    while ( my $line = $chunked_fh->getline )
                     {
-                        $report_fh->print($_);
+                        $report_fhs{$report_type}->print($line);
                     }
                 }
                 else
@@ -317,30 +330,17 @@ sub _finish
                 }
             }
 
+            # remove the chunked report
             unlink $chunked_file; 
         }
     }
 
+    for my $fh ( values %report_fhs )
+    {
+        $fh->close;
+    }
+
     return $success;
-}
-
-sub _get_report_fh
-{
-    my ($self, $report_type) = @_;
-
-    my $report_file_attr = sprintf('_%s_fh', $report_type);
-
-    return $self->{$report_file_attr} if $self->{$report_file_attr};
-
-    my $report_file = $self->_report_file($self->report_file_base, $report_type);
-    unlink $report_file if -e $report_file;
-    my $report_fh = IO::File->new("> $report_file");
-    $self->error_message("Can't open $report_type report file for writing") 
-        and next REPORT_TYPE unless $report_fh;
-    my $headers_method = sprintf('%s_report_headers', $report_type);
-    $report_fh->print( join(',', $self->$headers_method) ) unless $self->no_headers;
-
-    return $self->{$report_file_attr} = $report_fh;
 }
 
 1;
