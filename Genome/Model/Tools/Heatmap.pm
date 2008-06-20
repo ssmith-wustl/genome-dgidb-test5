@@ -17,11 +17,18 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'Command',
     has => [
-            'matrix'  => { type => 'String', doc => "", required => 1},
-            'image'   => { type => 'String', doc => "", required => 1},
-            'columns' => { type => 'Integer', doc => "", required => 1},
-            'sepchar' => { type => 'String', doc => "", is_optional => 1,
-                       default => "\t"},
+            'matrix'  => { type => 'String', 
+                           doc => "mutation matrix file", required => 1},
+            'image'   => { type => 'String', 
+                           doc => "image output file (png)", 
+                           required => 1},
+            'columns' => { type => 'Integer', 
+                           doc => "number of columns to use from matrix", 
+                           required => 1},
+            'sepchar' => { type => 'String', 
+                           doc => "separator character in matrix", 
+                           is_optional => 1,
+                           default => "\t"},
 
     ],
 );
@@ -39,7 +46,10 @@ sub execute {
 #        $self->sepchar("\t");
 #    }
     my $maxmutations = $self->validate_matrix($self->matrix);
-
+    unless($maxmutations)
+    {
+        croak "matrix did not validate, check format";
+    }
 # this needs to be nailed down better.
     my @colors = qw/blue pink red yellow orange purple/;
 
@@ -88,8 +98,9 @@ sub validate_matrix
     chomp @lines;
     my $c = new Text::CSV_XS({sep_char => $self->sepchar});
 
-   my $max = 0;
+    my $max = 0;
     my $header_line = undef;
+
     foreach my $line (@lines)
     {
         $c->parse($line);
