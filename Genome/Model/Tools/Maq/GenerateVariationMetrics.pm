@@ -57,6 +57,7 @@ sub execute {
     my $in = $self->input;
     my $snpfile = $self->snpfile;
     my $out = $self->output;
+
     unless ($in and $snpfile and -e $in and -e $snpfile) {
         $self->error_message("Bad params!");
         $self->usage_message($self->help_usage_complete_text);
@@ -65,7 +66,8 @@ sub execute {
     
     my $result;
     $ovsrc =  `wtf Genome::Model::Tools::Maq::GenerateVariationMetrics_C`;
-    print "This is the wtf ss wanted me to add $ovsrc";
+    ($ovsrc) = split /\n/,$ovsrc;
+    print "This is the wtf ss wanted me to add $ovsrc\n";
     chomp $ovsrc;
     `perl $ovsrc`;#evil hack
     require Genome::Model::Tools::Maq::GenerateVariationMetrics_C;
