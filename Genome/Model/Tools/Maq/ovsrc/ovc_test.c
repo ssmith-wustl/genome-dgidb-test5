@@ -217,7 +217,6 @@ typedef struct
 
 map_array *mreads;
 map_array *match_reads;
-map_array *clipped_match_reads;
 FILE *fpbfa;
 
 void init_map_array(map_array *arr)
@@ -501,7 +500,8 @@ void callback_def (void *variation, GQueue * reads)
     int ursc[4];//acgt
     int urc26[4];//acgt
     int vbase[4];
-    int vcount;    
+    int vcount;
+    char bases[4] = "ACGT";    
     
     mreads->count = 0;
     match_reads->count = 0; 
@@ -526,10 +526,11 @@ void callback_def (void *variation, GQueue * reads)
         }while(item = g_list_next(item));
     current_pos++;
     int i = 0;
-    if(current_pos>0) for(i=0;i<(mreads->count)-current_pos;i++)
-    { 
-        mreads->reads[i] = mreads->reads[i+current_pos]; 
-    }
+    if(current_pos>0) 
+        for(i=0;i<(mreads->count)-current_pos;i++)
+        { 
+            mreads->reads[i] = mreads->reads[i+current_pos]; 
+        }
     mreads->count-=current_pos;
     //check for the case where the last record doesn't overlap
     while(mreads->count>0&&((mreads->reads[mreads->count-1]->pos>>1)>var_overlap->end)) 
@@ -570,14 +571,15 @@ void callback_def (void *variation, GQueue * reads)
 //csv_in_line  2,0,3,4     4,0,3,3      4,0,3,3       A   2,4,30,30             2,2,2,30,30            2,2,2,30,30             
    
     fprintf(stdout, "%s\t%d,%d,%d,%d\t\t",var_overlap->line, rc[0],rc[1],rc[2],rc[3]);
-    fprintf(stdout, "%d,%d,%d,%d\t",urc[0],urc[1],urc[2],urc[3]);
-    fprintf(stdout, "%d,%d,%d,%d\t",urc26[0],urc26[1],urc26[2],urc26[3]);
-    fprintf(stdout, "%d,%d,%d,%d\t",ursc[0],ursc[1],ursc[2],ursc[3]);
-    fprintf(stdout, "%d,%d,%d,%d,%d,%d\t\t",rc[iref_base],urc[iref_base],urc26[iref_base],ursc[iref_base],q[iref_base],mq[iref_base]);
+    fprintf(stdout, "%d,%d,%d,%d\t\t",urc[0],urc[1],urc[2],urc[3]);
+    fprintf(stdout, "%d,%d,%d,%d\t\t",urc26[0],urc26[1],urc26[2],urc26[3]);
+    fprintf(stdout, "%d,%d,%d,%d\t\t",ursc[0],ursc[1],ursc[2],ursc[3]);
+    fprintf(stdout, "%c\t%d,%d,%d,%d,%d,%d\t\t",bases[iref_base],rc[iref_base],urc[iref_base],urc26[iref_base],ursc[iref_base],q[iref_base],mq[iref_base]);
     for(i=0;i<vcount;i++)
     {
         int b = vbase[i];
-        fprintf(stdout, "%d,%d,%d,%d,%d,%d\t\t",rc[b],urc[b],urc26[b],ursc[b],q[b],mq[b]);
+        if(b==iref_base)continue;
+        fprintf(stdout, "%c\t%d,%d,%d,%d,%d,%d\t\t",bases[b],rc[b],urc[b],urc26[b],ursc[b],q[b],mq[b]);
     }
     fprintf(stdout,"\n");
 }
@@ -592,10 +594,8 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,c
     g_num_seqs = mm->n_ref;
     mreads = calloc(1,sizeof(map_array));
     match_reads = calloc(1,sizeof(map_array));
-    clipped_match_reads = calloc(1,sizeof(map_array));
     init_map_array(mreads);
     init_map_array(match_reads);
-    init_map_array(clipped_match_reads);
     FILE *stdoutsave = stdout;
     if(output&&strlen(output))
     {
