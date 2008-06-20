@@ -17,7 +17,7 @@ void * next_r(void * r_stream)
     ov_stream_t *stream = (ov_stream_t*)r_stream;
     maqmap1_t *m1 =NULL;
     if(!g_m1) m1=malloc(sizeof(maqmap1_t));
-    if(!m1&&!g_m1) {printf("Couldn't allocate m1 record\n");return NULL;}    
+    if(!m1&&!g_m1) {fprintf(stderr,"Couldn't allocate m1 record\n");return NULL;}    
     gzFile *fp = (gzFile *)(stream->stream_data);
     int size=sizeof(maqmap1_t);
     if(g_m1||(size = gzread(fp,m1, sizeof(maqmap1_t))))
@@ -75,7 +75,7 @@ void * next_v(void *pstream)
     //printf("snp is %s\n",item->line);
     if(item &&item->seqid!=g_last_vseqid)
     {
-        printf("vseqids don't match, returning NULL %d\n",strlen(item->line));    
+        fprintf(stderr,"vseqids don't match, returning NULL %d\n",strlen(item->line));    
         fseek(s->fp,offset,SEEK_SET);
         free(item);
         return NULL;        
@@ -110,7 +110,7 @@ int advance_seqid(void *rstream, void *vstream)
             {                
                 if(size != sizeof(maqmap1_t)||size == 0) 
                 {
-                    printf("size is only %d, seqid is %d\n",size,m1->seqid);
+                    fprintf(stderr,"size is only %d, seqid is %d\n",size,m1->seqid);
                     //dealing with a truncated file
                     free(m1);
                     return 0;
@@ -172,7 +172,7 @@ int init_seqid(void *rstream, void *vstream)
             {                
                 if(size != sizeof(maqmap1_t)||size == 0) 
                 {
-                    printf("size is only %d, seqid is %d\n",size,m1->seqid);
+                    fprintf(stderr,"size is only %d, seqid is %d\n",size,m1->seqid);
                     //dealing with a truncated file
                     free(m1);
                     return 0;
@@ -201,7 +201,7 @@ int init_seqid(void *rstream, void *vstream)
                     break;
                 }        
             }
-        if(!item || gzeof(fp)){printf("error in init\n"); return 0;}
+        if(!item || gzeof(fp)){fprintf(stderr,"error in init\n"); return 0;}
     }
     while(g_last_vseqid != g_last_rseqid);
     
@@ -408,7 +408,7 @@ static char get_ref_base(long long position, char *name, int seqid)
     }
     if(!bfa1) 
     {
-        printf("Could not find seq %s\n", name);
+        fprintf(stderr,"Could not find seq %s\n", name);
         return 4;
     }        
 	bit64_t word = bfa1->seq[position>>5];
@@ -588,9 +588,15 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,c
 {
     g_qual_cutoff = qual_cutoff;
     gzFile reffp = gzopen(mapfilename,"r");
-    if(reffp)printf("opened %s\n",mapfilename);
+    if(reffp)
+        fprintf(stderr,"opened %s\n",mapfilename);
+    else 
+    {
+        fprintf(stderr,"Could not open %s\n",mapfilename);
+        exit(1);
+    }
     maqmap_t *mm = maqmap_read_header(reffp);
-    printf("Finished reading mapfile header\n");
+    fprintf(stderr,"Finished reading mapfile header\n");
     g_num_seqs = mm->n_ref;
     mreads = calloc(1,sizeof(map_array));
     match_reads = calloc(1,sizeof(map_array));
@@ -599,12 +605,22 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,c
     FILE *stdoutsave = stdout;
     if(output&&strlen(output))
     {
-        printf("here is the output file %s\n",output);
+        fprintf(stderr,"here is the output file %s\n",output);
         stdout = fopen(output, "w");
+        if(!stdout)
+        {
+            fprintf(stderr,"Could not open output file %s\n",output);
+            exit(1);
+        }
     }
 
     snp_stream *snps = calloc(1,sizeof(snp_stream));
 	snps->fp = fopen(snpfilename,"r");
+    if(!snps->fp)
+    {
+        fprintf(stderr, "Could not open snpfile %s.\n",snpfilename);
+        exit(1);    
+    }
 	snps->num_refs = mm->n_ref;
 	snps->ref_names = mm->ref_name;
     ov_stream_t * r_stream = new_stream(&next_r, NULL, &begin_r, &end_r, reffp );
