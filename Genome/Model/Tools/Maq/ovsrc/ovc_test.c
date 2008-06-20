@@ -313,18 +313,22 @@ static void get_variant_bases(char iub_code, int * base, int *count)
 		case 'A': 
             base[0]=0;
             base[1]=0;
+            *count=1;
             break;
         case 'C':
             base[0]=1;
             base[1]=1;
+            *count=1;
             break;
         case 'G':
             base[0]=2;
             base[1]=2;
+            *count=1;
             break;
         case 'T':
             base[0]=3;
             base[1]=3;
+            *count=1;
             break;
         case 'M':
             base[0]=0;//A
