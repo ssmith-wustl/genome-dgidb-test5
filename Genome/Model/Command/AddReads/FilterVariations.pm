@@ -72,19 +72,18 @@ sub GetNormal {
 			next;
 		}
 #RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
+		s/\t\t/\t/g;
 		my ($chr, $start, $ref_sequence, $iub_sequence, $quality_score,
-				$rc_arr, $empty3, $urc_arr, $ursc_arr, $ref,
-				$ref_count_arr, $empty4, $al1_count_arr, $empty5, $al2_count_arr) =
+				$depth, $avg_hits, $high_quality, $unknown,
+				$rc_arr, $urc_arr, $urc26_arr, $ursc_arr,
+				$ref,	$ref_count_arr, $var, $var_count_arr) =
 					split("\t");
-		my ($ref_rc, $ref_urc, $ref_ursc, $ref_bq, $ref_maxbq) =
+		my ($ref_rc, $ref_urc, $ref_urc26, $ref_ursc, $ref_bq, $ref_maxbq) =
 			split(',',$ref_count_arr);
-		my ($al1_rc, $al1_urc, $al1_ursc, $al1_bq, $al1_maxbq) =
-			split(',',$al1_count_arr);
-		my ($al2_rc, $al2_urc, $al2_ursc, $al2_bq, $al2_maxbq) =
-			split(',',$al2_count_arr);
-		$normal{$chr}{$start}{ref_rc} = $ref_rc;
-		$normal{$chr}{$start}{al1_rc} = $al1_rc;
-		$normal{$chr}{$start}{al2_rc} = $al2_rc;
+		my ($var_rc, $var_urc, $var_urc26, $var_ursc, $var_bq, $var_maxbq) =
+			split(',',$var_count_arr);
+		$normal{$chr}{$start}{$ref} = $ref_rc;
+		$normal{$chr}{$start}{$var} = $var_rc;
 	}
 	$ov_fh->close;
 	return \%normal;
@@ -255,14 +254,18 @@ sub execute {
 					}
 					#RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
 					
+					s/\t\t/\t/g;
 					my ($lib_chr, $lib_start, $lib_ref_sequence, $lib_iub_sequence, $lib_quality_score,
 							$lib_depth, $lib_avg_hits, $lib_high_quality, $lib_unknown,
-							$lib_rc_arr, $lib_empty3, $lib_urc_arr, $lib_ursc_arr, $lib_ref,
-							$lib_ref_count_arr, $lib_empty4, $lib_al1_count_arr, $lib_empty5, $lib_al2_count_arr) =
+							$lib_rc_arr, $lib_urc_arr, $lib_urc26_arr, $lib_ursc_arr,
+							$lib_ref, $lib_ref_count_arr, $lib_var, $lib_var_count_arr) =
 								split("\t");
-					my ($lib_al1_rc, $lib_al1_urc, $lib_al1_ursc, $lib_al1_bq, $lib_al1_maxbq) =
-						split(',',$lib_al1_count_arr);
-					$lib_urc{$library_number}{$lib_chr}{$lib_start}{al1_ursc} = $lib_al1_ursc;
+					my ($lib_ref_rc, $lib_ref_urc, $lib_ref_urc26, $lib_ref_ursc, $lib_ref_bq, $lib_ref_maxbq) =
+						split(',',$lib_ref_count_arr);
+					my ($lib_var_rc, $lib_var_urc, $lib_var_urc26, $lib_var_ursc, $lib_var_bq, $lib_var_maxbq) =
+						split(',',$lib_var_count_arr);
+					$lib_urc{$library_number}{$lib_chr}{$lib_start}{$lib_ref} = $lib_var_ursc;
+					$lib_urc{$library_number}{$lib_chr}{$lib_start}{$lib_var} = $lib_var_ursc;
 				}
 				$ov_lib_fh->close();
 			}
@@ -342,26 +345,26 @@ sub execute {
 #					$chr,
 #					$start,
 #					$end,
-#					$al1,
-#					$al2,
-##					$al1_type,
-##					$al2_type,
+#					$ref,
+#					$var,
+##					$ref_type,
+##					$var_type,
 ##					$rgg_id,
 ##					$ref,
-#					$al2_read_hg,
-#					$al2_read_unique_dna_start,
-#					$al2_read_unique_dna_context,
+#					$var_read_hg,
+#					$var_read_unique_dna_start,
+#					$var_read_unique_dna_context,
 #					$lib1_al1_read_unique_dna_context,
 #					$lib2_al1_read_unique_dna_context,
 #					$lib3_al1_read_unique_dna_context,
-#					$al1_read_unique_dna_start,
-#					$al2_read_skin_dna,
+#					$ref_read_unique_dna_start,
+#					$var_read_skin_dna,
 #					$qvalue,
 #					$base_quality,
 #					$max_base_quality
 #				 ) = @values[@values_used];
-#			my $al1_type = 'ref';
-#			my $al2_type = 'SNP';
+#			my $ref_type = 'ref';
+#			my $var_type = 'SNP';
 			
 		while (<$ov_fh>) {
 			chomp;
@@ -370,267 +373,262 @@ sub execute {
 			}
 #RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
 
-		my ($chr, $start, $ref_sequence, $iub_sequence, $quality_score,
-				$depth, $avg_hits, $high_quality, $unknown,
-				$rc_arr, $empty3, $urc_arr, $ursc_arr, $ref,
-				$ref_count_arr, $empty4, $al1_count_arr, $empty5, $al2_count_arr) =
+			s/\t\t/\t/g;
+			my ($chr, $start, $ref_sequence, $iub_sequence, $quality_score,
+					$depth, $avg_hits, $high_quality, $unknown,
+					$rc_arr, $urc_arr, $urc26_arr, $ursc_arr,
+					$ref, $ref_count_arr, @variant_pair) =
 						split("\t");
-			my ($ref_rc, $ref_urc, $ref_ursc, $ref_bq, $ref_maxbq) =
+			my ($ref_rc, $ref_urc, $ref_urc26, $ref_ursc, $ref_bq, $ref_maxbq) =
 				split(',',$ref_count_arr);
-			my ($al1_rc, $al1_urc, $al1_ursc, $al1_bq, $al1_maxbq) =
-				split(',',$al1_count_arr);
-			my ($al2_rc, $al2_urc, $al2_ursc, $al2_bq, $al2_maxbq) =
-				split(',',$al2_count_arr);
-
-			my $genotype = $IUBcode{$iub_sequence};
-			my $cns_sequence = substr($genotype,0,1);
-			my $var_sequence = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
-			my ($al1, $al2);
-			if ($cns_sequence eq $ref_sequence) {
-				$al1 = $cns_sequence;
-				$al2 = $var_sequence;
-			} else {
-				$al1 = $var_sequence;
-				$al2 = $cns_sequence;
-			}
-
-			my (
-					$end,
-					$al1_type,
-					$al2_type,
-					$al2_read_hg,
-					$al2_read_unique_dna_start,
-					$al2_read_unique_dna_context,
-					$lib1_al1_read_unique_dna_context,
-					$lib2_al1_read_unique_dna_context,
-					$lib3_al1_read_unique_dna_context,
-					$al1_read_unique_dna_start,
-					$al2_read_skin_dna,
-					$qvalue,
-					$base_quality,
-					$max_base_quality
-				 ) = 
-					 (
-						$start,
-						($ref_sequence eq $al1) ? 'ref' : 'SNP',
-						'SNP',
-						$al2_rc,
-						$al2_urc,
-						$al2_ursc,
-						$lib_urc{1}{$chr}{$start}{al1_ursc} || 0,
-						$lib_urc{2}{$chr}{$start}{al1_ursc} || 0,
-						$lib_urc{3}{$chr}{$start}{al1_ursc} || 0,
-						$ref_urc,
-						$normal_href->{$chr}{$start}{al2_rc} || 0,
-						$quality_score,
-						$al2_bq,
-						$al2_maxbq,
-					 );
-			my $line = 
-				join("\t",
+			do {
+				my $var = shift @variant_pair;
+				my $var_count_arr = shift @variant_pair;
+				unless (defined($var) && defined($var_count_arr)) {
+					last;
+				}
+				my ($var_rc, $var_urc, $var_urc26, $var_ursc, $var_bq, $var_maxbq) =
+					split(',',$var_count_arr);
+				my (
+						$end,
+						$ref_type,
+						$var_type,
+						$var_read_hg,
+						$var_read_unique_dna_start,
+						$var_read_unique_dna_context,
+						$lib1_al1_read_unique_dna_context,
+						$lib2_al1_read_unique_dna_context,
+						$lib3_al1_read_unique_dna_context,
+						$ref_read_unique_dna_start,
+						$var_read_skin_dna,
+						$qvalue,
+						$base_quality,
+						$max_base_quality
+					 ) = 
 						 (
-							$chr,
 							$start,
-							$end,
-							$al1,
-							$al2,
-							$al1_type,
-							$al2_type,
-							$al2_read_hg,
-							$al2_read_unique_dna_start,
-							$al2_read_unique_dna_context,
-							$lib1_al1_read_unique_dna_context,
-							$lib2_al1_read_unique_dna_context,
-							$lib3_al1_read_unique_dna_context,
-							$al1_read_unique_dna_start,
-							$al2_read_skin_dna,
-							$qvalue,
-							$base_quality,
-							$max_base_quality
-						 ));
-
-			
-			print $invalue_handle join("\t",
-																 (
-																	$chr,
-																	$start,
-																	$end,
-																	$al1,
-																	$al2,
-																	$al1_type,
-																	$al2_type,
-																	$al2_read_hg,
-																	$al2_read_unique_dna_start,
-																	$al2_read_unique_dna_context,
-																	$lib1_al1_read_unique_dna_context,
-																	$lib2_al1_read_unique_dna_context,
-																	$lib3_al1_read_unique_dna_context,
-																	$al1_read_unique_dna_start,
-																	$al2_read_skin_dna,
-																	$qvalue,
-																	$base_quality,
-																	$max_base_quality
-																 )) . "\n";
-
-			my $validation;
-			if (exists($status{$chr}{$start})) {
-				$validation = $status{$chr}{$start};
-			}
-			$validation ||= '0';
-			my $decision = 'keep';
-			my $rule = 'none';
-			
-			# dtr2a rules
-			if ($ruleset eq 'dtr2a') {
-				if ($al2_read_hg > 9 &&
-						$al2_read_unique_dna_start <= 4) {
-					#Rule 8:
-					#    	# of genomic reads supporting variant allele > 9
-					#    	# of unique genomic reads supporting variant allele(starting point) <= 4
-					#	->  class WT  [93.9%]
-					#
-					$decision = 'remove';
-					$rule = '8';
-				} elsif ($al1_read_unique_dna_start > 15) {
-					#Rule 14:
-					#    	# of unique genomic reads supporting reference allele(starting point) > 15
-					#	->  class WT  [89.9%]
-					#
-					$decision = 'remove';
-					$rule = '14';
-				} elsif ($al1_read_unique_dna_start <= 15 &&
-								 $qvalue < $qvalue_level) {
-					# qvalue:
-					# 29  is > 74% (74.46%) Specifity (91.06% Sensitivity),
-					# 30  is > 75% (74.85%) Specifity (91.06% Sensitivity),
-					# 70  is > 90% (90.77%) Specifity (75.50% Sensitivity),
-					# 110 is > 95% (95.48%) Specifity (53.31% Sensitivity)
-					#Rule 2:
-					#    	# of unique genomic reads supporting reference allele(starting point) <= 15
-					#    	Maq SNP q-value <= 28
-					#	->  class WT  [78.4%]
-					#
-					$decision = 'remove';
-					$rule = '2';
-				} elsif ($al2_read_unique_dna_start > 4 &&
-								 $al1_read_unique_dna_start <= 15 &&
-								 $qvalue > 33) {
-					#Rule 13:
-					#    	# of unique genomic reads supporting variant allele(starting point) > 4
-					#    	# of unique genomic reads supporting reference allele(starting point) <= 15
-					#    	Maq SNP q-value > 33
-					#	->  class G  [88.9%]
-					$decision = 'keep';
-					$rule = '13';
-				} elsif ($al2_read_unique_dna_start <= 3 &&
-								 $al2_read_unique_dna_context > 3  &&
-								 $lib1_al1_read_unique_dna_context <= 5 &&
-								 $lib2_al1_read_unique_dna_context <= 5 &&
-								 $lib3_al1_read_unique_dna_context <= 5
-								 #						 $lib1_al1_read_unique_dna_context <= 4 &&
-								 #						 $lib2_al1_read_unique_dna_context <= 4 &&
-								 #						 $lib3_al1_read_unique_dna_context <= 4
-								) {
-					#Rule 5:
-					#    	# of unique genomic reads supporting variant allele(starting point) <= 3
-					#    	# of unique genomic reads supporting variant allele(context) > 3
-					#    	# of unique genomic reads supporting reference allele from lib1 in first 26 bp(context) <= 4
-					#	->  class WT  [87.1%]
-					#
-					$decision = 'remove';
-					$rule = '5';
-					#		} elsif ($al2_read_unique_cDNA_start_pre27 <= 9 &&
-					#						 $al1_read_unique_dna_start_pre27 > 9) {
-					#			#Rule 12:
-					#			#    	# of unique cDNA reads supporting variant allele in first 26 bp(starting point) <= 9
-					#			#    	# of unique genomic reads supporting reference allele in first 26 bp(starting point) > 9
-					#			#	->  class WT  [70.7%]
-					#			#
-					#			$decision = 'remove';
-					#			$rule = '12';
-					# Rule 12 removes somatic SNPs--not allowed!!!
+							'ref',
+							'SNP',
+							$var_rc,
+							$var_urc,
+							$var_ursc,
+							$lib_urc{1}{$chr}{$start}{$var} || 0,
+							$lib_urc{2}{$chr}{$start}{$var} || 0,
+							$lib_urc{3}{$chr}{$start}{$var} || 0,
+							$ref_urc,
+							$normal_href->{$chr}{$start}{$var} || 0,
+							$quality_score,
+							$var_bq,
+							$var_maxbq,
+						 );
+				my $line = 
+					join("\t",
+							 (
+								$chr,
+								$start,
+								$end,
+								$ref,
+								$var,
+								$ref_type,
+								$var_type,
+								$var_read_hg,
+								$var_read_unique_dna_start,
+								$var_read_unique_dna_context,
+								$var_urc26,
+								$lib1_al1_read_unique_dna_context,
+								$lib2_al1_read_unique_dna_context,
+								$lib3_al1_read_unique_dna_context,
+								$ref_read_unique_dna_start,
+								$var_read_skin_dna,
+								$qvalue,
+								$base_quality,
+								$max_base_quality
+							 ));
+				
+				
+				print $invalue_handle join("\t",
+																	 (
+																		$chr,
+																		$start,
+																		$end,
+																		$ref,
+																		$var,
+																		$ref_type,
+																		$var_type,
+																		$var_read_hg,
+																		$var_read_unique_dna_start,
+																		$var_read_unique_dna_context,
+																		$var_urc26,
+																		$lib1_al1_read_unique_dna_context,
+																		$lib2_al1_read_unique_dna_context,
+																		$lib3_al1_read_unique_dna_context,
+																		$ref_read_unique_dna_start,
+																		$var_read_skin_dna,
+																		$qvalue,
+																		$base_quality,
+																		$max_base_quality
+																	 )) . "\n";
+				
+				my $validation;
+				if (exists($status{$chr}{$start})) {
+					$validation = $status{$chr}{$start};
+				}
+				$validation ||= '0';
+				my $decision = 'keep';
+				my $rule = 'none';
+				
+				# dtr2a rules
+				if ($ruleset eq 'dtr2a') {
+					if ($var_read_hg > 9 &&
+							$var_read_unique_dna_start <= 4) {
+						#Rule 8:
+						#    	# of genomic reads supporting variant allele > 9
+						#    	# of unique genomic reads supporting variant allele(starting point) <= 4
+						#	->  class WT  [93.9%]
+						#
+						$decision = 'remove';
+						$rule = '8';
+					} elsif ($ref_read_unique_dna_start > 15) {
+						#Rule 14:
+						#    	# of unique genomic reads supporting reference allele(starting point) > 15
+						#	->  class WT  [89.9%]
+						#
+						$decision = 'remove';
+						$rule = '14';
+					} elsif ($ref_read_unique_dna_start <= 15 &&
+									 $qvalue < $qvalue_level) {
+						# qvalue:
+						# 29  is > 74% (74.46%) Specifity (91.06% Sensitivity),
+						# 30  is > 75% (74.85%) Specifity (91.06% Sensitivity),
+						# 70  is > 90% (90.77%) Specifity (75.50% Sensitivity),
+						# 110 is > 95% (95.48%) Specifity (53.31% Sensitivity)
+						#Rule 2:
+						#    	# of unique genomic reads supporting reference allele(starting point) <= 15
+						#    	Maq SNP q-value <= 28
+						#	->  class WT  [78.4%]
+						#
+						$decision = 'remove';
+						$rule = '2';
+					} elsif ($var_read_unique_dna_start > 4 &&
+									 $ref_read_unique_dna_start <= 15 &&
+									 $qvalue > 33) {
+						#Rule 13:
+						#    	# of unique genomic reads supporting variant allele(starting point) > 4
+						#    	# of unique genomic reads supporting reference allele(starting point) <= 15
+						#    	Maq SNP q-value > 33
+						#	->  class G  [88.9%]
+						$decision = 'keep';
+						$rule = '13';
+					} elsif ($var_read_unique_dna_start <= 3 &&
+									 $var_read_unique_dna_context > 3  &&
+									 $lib1_al1_read_unique_dna_context <= 5 &&
+									 $lib2_al1_read_unique_dna_context <= 5 &&
+									 $lib3_al1_read_unique_dna_context <= 5
+									 #						 $lib1_al1_read_unique_dna_context <= 4 &&
+									 #						 $lib2_al1_read_unique_dna_context <= 4 &&
+									 #						 $lib3_al1_read_unique_dna_context <= 4
+									) {
+						#Rule 5:
+						#    	# of unique genomic reads supporting variant allele(starting point) <= 3
+						#    	# of unique genomic reads supporting variant allele(context) > 3
+						#    	# of unique genomic reads supporting reference allele from lib1 in first 26 bp(context) <= 4
+						#	->  class WT  [87.1%]
+						#
+						$decision = 'remove';
+						$rule = '5';
+						#		} elsif ($var_read_unique_cDNA_start_pre27 <= 9 &&
+						#						 $ref_read_unique_dna_start_pre27 > 9) {
+						#			#Rule 12:
+						#			#    	# of unique cDNA reads supporting variant allele in first 26 bp(starting point) <= 9
+						#			#    	# of unique genomic reads supporting reference allele in first 26 bp(starting point) > 9
+						#			#	->  class WT  [70.7%]
+						#			#
+						#			$decision = 'remove';
+						#			$rule = '12';
+						# Rule 12 removes somatic SNPs--not allowed!!!
+					} else {
+						#Default class: G
+						$decision = 'keep';
+						$rule = 'default';
+					}
+				} elsif ($ruleset eq 'dtr3e') {
+					# dtr3e rules
+					if ($var_read_unique_dna_start > 7 &&
+							$qvalue >= $qvalue_level) {
+						#Rule 5:
+						#    	# of unique genomic reads supporting variant allele(starting point) > 7
+						#	->  class G  [96.8%]
+						#
+						$decision = 'keep';
+						$rule = '5';
+						#		} elsif ($var_read_unique_dna_start > 2 &&
+						#						 $base_quality <= $bq + 2) {
+						#			#Rule 2:
+						#			#    	# of unique genomic reads supporting variant allele(starting point) > 2
+						#			#    	Base Quality > 18
+						#			#	->  class G  [90.7%]
+						#			#
+						#			$decision = 'keep';
+						#			$rule = '2';
+					} elsif ($max_base_quality <= 26) {
+						#Rule 11:
+						#    	Max Base Quality <= 26
+						#	->  class WT  [85.2%]
+						#
+						$decision = 'remove';
+						$rule = '11';
+					} elsif ($var_read_unique_dna_start <= 7 &&
+									 $qvalue < $qvalue_level) {
+						#Rule 7:
+						#    	# of unique genomic reads supporting variant allele(starting point) <= 7
+						#    	Maq SNP q-value <= 29
+						#	->  class WT  [81.5%]
+						#
+						$decision = 'remove';
+						$rule = '7';
+					} elsif ($var_read_unique_dna_start <= 2) {
+						#Rule 8:
+						#    	# of unique genomic reads supporting variant allele(starting point) <= 2
+						#	->  class WT  [74.7%]
+						#
+						$decision = 'remove';
+						$rule = '8';
+					} elsif ($base_quality <= $bq) {
+						#Rule 3:
+						#    	Base Quality <= 16
+						#	->  class WT  [73.0%]
+						#
+						$decision = 'remove';
+						$rule = '3';
+					} else {
+						#Default class: G
+						$decision = 'keep';
+						$rule = 'default';
+					}
 				} else {
-					#Default class: G
-					$decision = 'keep';
-					$rule = 'default';
+					return;
 				}
-			} elsif ($ruleset eq 'dtr3e') {
-				# dtr3e rules
-				if ($al2_read_unique_dna_start > 7 &&
-						$qvalue >= $qvalue_level) {
-					#Rule 5:
-					#    	# of unique genomic reads supporting variant allele(starting point) > 7
-					#	->  class G  [96.8%]
-					#
-					$decision = 'keep';
-					$rule = '5';
-					#		} elsif ($al2_read_unique_dna_start > 2 &&
-					#						 $base_quality <= $bq + 2) {
-					#			#Rule 2:
-					#			#    	# of unique genomic reads supporting variant allele(starting point) > 2
-					#			#    	Base Quality > 18
-					#			#	->  class G  [90.7%]
-					#			#
-					#			$decision = 'keep';
-					#			$rule = '2';
-				} elsif ($max_base_quality <= 26) {
-					#Rule 11:
-					#    	Max Base Quality <= 26
-					#	->  class WT  [85.2%]
-					#
-					$decision = 'remove';
-					$rule = '11';
-				} elsif ($al2_read_unique_dna_start <= 7 &&
-								 $qvalue < $qvalue_level) {
-					#Rule 7:
-					#    	# of unique genomic reads supporting variant allele(starting point) <= 7
-					#    	Maq SNP q-value <= 29
-					#	->  class WT  [81.5%]
-					#
-					$decision = 'remove';
-					$rule = '7';
-				} elsif ($al2_read_unique_dna_start <= 2) {
-					#Rule 8:
-					#    	# of unique genomic reads supporting variant allele(starting point) <= 2
-					#	->  class WT  [74.7%]
-					#
-					$decision = 'remove';
-					$rule = '8';
-				} elsif ($base_quality <= $bq) {
-					#Rule 3:
-					#    	Base Quality <= 16
-					#	->  class WT  [73.0%]
-					#
-					$decision = 'remove';
-					$rule = '3';
+				
+				my $output_validation = '';
+				if ($use_validation) {
+					$result{$decision}{$validation}{n} += 1;
+					$result{$decision}{$validation}{rule}{$rule} += 1;
+					#				$output_validation = ",$validation";
+				}
+				if ($decision eq 'keep') {
+					if ($var_read_skin_dna == 0) {
+						$decision = 'somatic';
+					}
+				}
+				if ($decision eq 'keep') {
+					print $keep_handle $line,"$output_validation,$rule\n";    
+				} elsif ($decision eq 'somatic') {
+					print $somatic_handle $line,"$output_validation,$rule\n";    
+					print $keep_handle $line,"$output_validation,$rule\n";    
 				} else {
-					#Default class: G
-					$decision = 'keep';
-					$rule = 'default';
+					print $remove_handle $line,"$output_validation,$rule\n";    
 				}
-			} else {
-				return;
-			}
-		
-			my $output_validation = '';
-			if ($use_validation) {
-				$result{$decision}{$validation}{n} += 1;
-				$result{$decision}{$validation}{rule}{$rule} += 1;
-#				$output_validation = ",$validation";
-			}
-			if ($decision eq 'keep') {
-				if ($al2_read_skin_dna == 0) {
-					$decision = 'somatic';
-				}
-			}
-			if ($decision eq 'keep') {
-				print $keep_handle $line,"$output_validation,$rule\n";    
-			} elsif ($decision eq 'somatic') {
-				print $somatic_handle $line,"$output_validation,$rule\n";    
-				print $keep_handle $line,"$output_validation,$rule\n";    
-			} else {
-				print $remove_handle $line,"$output_validation,$rule\n";    
-			}
+			} while (scalar(@variant_pair));
 		}
 		$somatic_handle->close();
 		$keep_handle->close();
@@ -638,8 +636,8 @@ sub execute {
 		$invalue_handle->close();
 		$header->close();
 		$ov_fh->close;
-
-        
+		
+		
 		
 		my $keep_wt = 0;
 		my $total_wt = 0;
@@ -676,7 +674,7 @@ sub execute {
 			printf $report_handle "Sensitivity: %0.2f\n", (100.0 * ($keep_g/$total_g));
 		}
 		
-        $self->generate_figure_3_files($somatic_file);
+		$self->generate_figure_3_files($somatic_file);
 		# Clean up when we're done...
 		$self->date_completed(UR::Time->now);
 		if (0) { # replace w/ actual check
@@ -687,8 +685,8 @@ sub execute {
 			$self->event_status("Succeeded");
 			return 1;
 		}
-
-    }
+		
+	}
 
 1;
         
