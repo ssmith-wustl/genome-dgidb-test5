@@ -55,10 +55,10 @@ sub invalid {
     my ($self) = shift;
 
     my @tags = $self->SUPER::invalid(@_);
-    unless (Genome::Model->get(id => $self->model_id)) {
+    unless (Genome::Model->get($self->model_id)) {
         push @tags, UR::Object::Tag->create(
                                             type => 'invalid',
-                                            properties => ['Genome::Model'],
+                                            properties => ['model_id'],
                                             desc => "There is no model with id ". $self->model_id,
                                         );
     }
@@ -66,7 +66,7 @@ sub invalid {
     unless (Genome::RunChunk->get(id => $self->run_id)) {
         push @tags, UR::Object::Tag->create(
                                             type => 'invalid',
-                                            properties => ['Genome::RunChunk'],
+                                            properties => ['run_id'],
                                             desc => "There is no genome run with id ". $self->run_id,
                                         );
     }
