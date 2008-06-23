@@ -8,6 +8,7 @@ use Command;
 use Genome::Model;
 use Genome::Model::Command::AddReads::AlignReads;
 use Genome::Model::Tools::Reads::454::SffInfo;
+use File::Basename;
 
 class Genome::Model::Command::AddReads::AlignReads::BlatPlusCrossmatch {
     is => [
@@ -27,10 +28,16 @@ class Genome::Model::Command::AddReads::AlignReads::BlatPlusCrossmatch {
                             is_transient => 1,
                             is_optional => 1,
                         },
+            blat_output => {
+                            calculate_from => ['read_set_directory','read_set'],
+                            calculate => q|
+                                        return $read_set_directory .'/'. $read_set->subset_name .'.psl';
+                            |
+                        },
             blat_aligner_output => {
                                     calculate_from => ['read_set_directory','read_set'],
                                     calculate => q|
-                                        return $read_set_directory .'/'. $read_set->subset_name .'.blat.out';
+                                        return $read_set_directory .'/'. $read_set->subset_name .'.out';
                                     |
                                 },
             cross_match_version => {
@@ -59,6 +66,14 @@ class Genome::Model::Command::AddReads::AlignReads::BlatPlusCrossmatch {
                                return $read_set_directory .'/'. $read_set->subset_name .'.fna';
                            |,
                        },
+            alignment_file_paths => {
+                                     doc => "the paths to to the alignment files",
+                                     calculate_from => ['read_set_directory','read_set'],
+                                     calculate => q|
+                                         return unless -d $read_set_directory;;
+                                         return grep { -e $_ } glob(sprintf("%s/%s.psl_*",$read_set_directory,$read_set->subset_name));
+                                     |,
+                                 },
         ],
 };
 
@@ -168,6 +183,11 @@ sub execute {
     my $model = $self->model;
     my $read_set = $self->read_set;
 
+    if (-s $self->blat_output) {
+        $self->error_message('Alignment file already exists '. $self->blat_output);
+        return;
+    }
+
     my $sffinfo = Genome::Model::Tools::Reads::454::SffInfo->create(
                                                                     sff_file => $self->sff_file,
                                                                     params => '-s',
@@ -178,34 +198,115 @@ sub execute {
         return;
     }
 
-    my $ref_seq_path = $model->reference_sequence_path .'/all_sequences.fa';
+    my $ext = 'fa';
+    my @ref_seq_paths = grep {$_ !~ /all_sequences\.$ext$/ } $model->get_subreference_paths(reference_extension => $ext);
 
     my $blat_path = $self->proper_blat_path;
     my $blat_params = $self->blat_params || '' ;
-    my $out_psl = $self->read_set_directory .'/'. $read_set->id .'.psl';
-    my $blat_cmd = $blat_path .' '. $blat_params.' '. $ref_seq_path .' '. $self->fasta_file .' '.
-        $out_psl . ' > '. $self->blat_aligner_output .' 2>&1';
-    $self->status_message('Running '. $blat_cmd ."\n");
-    my $blat_rv = system($blat_cmd);
-    unless ($blat_rv == 0) {
-        $self->error_message("non-zero exit code '$blat_rv' from '$blat_cmd'");
+    my %jobs;
+    my @psls_to_cat;
+    my @blat_to_cat;
+    for my $ref_seq_path (@ref_seq_paths) {
+        my $ref_seq_name = basename($ref_seq_path);
+        $ref_seq_name =~ s/\.$ext//;
+
+        my $ref_seq_psl = $self->blat_output .'_'. $ref_seq_name;
+        push @psls_to_cat, $ref_seq_psl;
+
+        my $ref_seq_output = $self->blat_aligner_output .'_'. $ref_seq_name;
+        push @blat_to_cat, $ref_seq_output;
+
+        my $blat_cmd = $blat_path .' '. $blat_params.' '. $ref_seq_path .' '. $self->fasta_file .' '.
+            $ref_seq_psl;
+
+        my $job = PP::LSF->create(
+                                  pp_type => 'lsf',
+                                  queue => 'long',
+                                  command => $blat_cmd,
+                                  output => $ref_seq_output,
+                              );
+        unless ($job) {
+            $self->error_message("Failed to create job for '$blat_cmd'");
+            return;
+        }
+        my $id = $job->id;
+        $jobs{$id} = $job;
+    }
+
+    for my $job_id (keys %jobs) {
+        my $job = $jobs{$job_id};
+        $self->status_message('starting '. $job->id  .' bsub_cmd:'. $job->bsub_cmd);
+        unless ($job->start) {
+            $self->error_message('failed to start '. $job->id  .' bsub_cmd:'. $job->bsub_cmd);
+            return;
+        }
+    }
+  MONITOR: while ( %jobs ) {
+        sleep 30;
+        for my $job_id ( keys %jobs ) {
+            my $job = $jobs{$job_id};
+            if ( $job->has_ended ) {
+                if ( $job->has_ended ) {
+                    if ( $job->is_successful ) {
+                        $self->status_message("$job_id successful");
+                        delete $jobs{$job_id};
+                    } else {
+                        $self->status_message("$job_id failed\n");
+                        $self->_kill_jobs(values %jobs);
+                        last MONITOR;
+                    }
+                }
+            }
+        }
+    }
+    unless ($self->_cat_files($self->blat_output,@psls_to_cat)) {
+        $self->error_message("Failed to cat psl blat alignments");
+        return;
+    }
+    unless ($self->_cat_files($self->blat_aligner_output,@blat_to_cat)) {
+        $self->error_message("Failed to cat blat output");
         return;
     }
 
-    my $cross_match_path = $self->proper_cross_match_path;
-    my $cross_match_params = $self->cross_match_params || '';
-    my $cm_cmd = $cross_match_path .' '. $cross_match_params .' '. $self->fasta_file  .' '. $ref_seq_path .' > '.
-        $self->cross_match_aligner_output .' 2>&1';
-    $self->status_message('Running '. $cm_cmd ."\n");
-    my $cm_rv = system($cm_cmd);
-    unless ($cm_rv == 0) {
-        $self->error_message("non-zero exit code '$cm_rv' from '$cm_cmd'");
-        return;
-    }
-
+    #my @to_remove;
+    #push @to_remove, @psls_to_cat;
+    #push @to_remove, @blat_to_cat;
+    #for my $file_to_remove (@to_remove) {
+    #    unlink $file_to_remove || $self->error_message("Failed to remove $file_to_remove");
+    #}
     return 1;
 }
 
+
+sub _kill_jobs {
+    my $self = shift;
+    my @jobs = @_;
+    for my $job ( @jobs ) {
+        next if $job->has_ended;
+        $job->kill;
+    }
+    return 1;
+}
+
+sub _cat_files {
+    my $self = shift;
+    my $out_file = shift;
+    my @files = @_;
+
+    if (-s $out_file) {
+        $self->error_message("File already exists '$out_file'");
+        return;
+    }
+
+    for my $file (@files) {
+        my $rv = system sprintf('cat %s >> %s', $file, $out_file);
+        unless ($rv == 0) {
+            $self->error_message("Failed to cat '$file' onto '$out_file'");
+            return;
+        }
+    }
+    return 1;
+}
 
 sub verify_successful_completion {
     my ($self) = @_;
