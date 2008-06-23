@@ -37,8 +37,7 @@ class Genome::Model {
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
         reference_sequence_name      => { via => 'processing_profile'},
-		sample_name                  => { is => 'VARCHAR2', len => 255 },
-        
+	sample_name                  => { is => 'VARCHAR2', len => 255 },
         events                       => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => 'model', 
                                           doc => 'all events which have occurred for this model',
                                         },
@@ -523,9 +522,9 @@ sub _files_for_pattern_and_params {
     return $self->_files_for_pattern_and_optional_ref_seq_id($pattern, $ref_seq_id);
 }
 
-sub alignments_maplist_directory {
+sub alignments_directory {
     my $self = shift;
-    return $self->data_directory . '/alignments.maplist'; 
+    return $self->data_directory . '/alignmens'; 
 }
 
 sub maplist_file_paths {
@@ -540,7 +539,7 @@ sub maplist_file_paths {
         $ref_seq_id = 'all_sequences';
     }
 
-    return grep { -e $_ } glob($self->alignments_maplist_directory .'/*_'. $ref_seq_id .'.maplist');
+    return grep { -e $_ } glob($self->alignments_directory .'/*_'. $ref_seq_id .'.maplist');
 }
 
 ##
