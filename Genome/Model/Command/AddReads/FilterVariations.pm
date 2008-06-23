@@ -770,6 +770,7 @@ sub generate_figure_3_files {
         my $somatic_line;
         #throw away header
         $somatic_fh->getline;
+        $annotation_fh->getline;
         #end throw away header section
       while($somatic_line=$somatic_fh->getline) {
           chomp $somatic_line;
@@ -779,7 +780,7 @@ sub generate_figure_3_files {
           }
           @cur_somatic_snp = split(/\s+/, $somatic_line);
           
-          while(!@cur_anno_snp || ($cur_anno_snp[3] < $cur_somatic_snp[1]) ) {
+          while(!@cur_anno_snp || ($cur_anno_snp[1] < $cur_somatic_snp[1]) ) {
               #we hit this block because a) this is our first time through
               #or b) the last annotation position is smaller than the current somatic snp
               # snp value   
@@ -792,7 +793,7 @@ sub generate_figure_3_files {
               }
               @cur_anno_snp= split (/,/, $anno_line);
           } 
-          while($cur_anno_snp[3] == $cur_somatic_snp[1] ) {
+          while($cur_anno_snp[1] == $cur_somatic_snp[1] ) {
           #if we get here then the idea is we have a somatic line with the same position as a snp line.
      
              #call in Brian's somatic file and Eddie's report
