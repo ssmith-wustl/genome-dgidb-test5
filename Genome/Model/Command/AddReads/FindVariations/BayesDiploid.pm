@@ -6,14 +6,11 @@ use warnings;
 use above "Genome";
 use Command;
 use Genome::Model;
-use File::Path;
-use Data::Dumper;
 
 class Genome::Model::Command::AddReads::FindVariations::BayesDiploid {
-    is => 'Genome::Model::Event',
-    has => [ 
-        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
-    ]
+    is => [
+           'Genome::Model::Command::AddReads::FindVariations',
+       ],
 };
 
 sub help_brief {
@@ -23,21 +20,20 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model postprocess-alignments identify-variation bayes-diploid --model-id 5 --run-id 10
+    genome-model postprocess-alignments identify-variation bayes-diploid --model-id 5 --ref-seq-id 10
 EOS
 }
 
-sub help_detail {                           
-    return <<EOS 
+sub help_detail {
+    return <<EOS
 This command is usually called as part of the postprocess-alignments process
 EOS
 }
 
 sub execute {
     my $self = shift;
-    my $model = Genome::Model->get(name=>$self->model);
-    $self->error_message("running " . $self->command_name . " on " . $model->name . "!");
-    $self->status_message("Model Info:\n" . $model->pretty_print_text);
+    my $model = $self->model;
+    $self->error_message('Not Implemented: ' . $self->command_name . ' on ' . $model->name );
     return 0; 
 }
 
