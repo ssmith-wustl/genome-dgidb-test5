@@ -177,6 +177,15 @@ sub get_events_for_metric {
         # return $self->$metric_name;
         return $self;
     }
+
+    #if we get here then we need to make sure we only grab events related to one add-reads 
+    #or post-process_alignemnts event
+    my @parent_addreads_events = Genome::Model::Command::AddReads->get(model_id => $self->id);
+    my @parent_pp_alignment_events= Genome::Model::Command::PostProcessAlignments->get(model_id => $self->id);
+
+    @parent_addreads_events = sort { $a->date_scheduled cmp $b->date_scheduled } @parent_addreads_events;
+    @parent_pp_alignment_events= sort { $a->date_scheduled cmp $b->date_scheduled } @parent_pp_alignment_events;
+    my @latest_parent_ids = ($parent_addreads_events[0] , $parent_pp_alignment_events[0]);
     return $class->get(model_id => $self->id);
 
 }
