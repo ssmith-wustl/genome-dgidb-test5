@@ -846,13 +846,16 @@ sub generate_figure_3_files {
                          if(defined($variant_detail)) {
                              #it's been sent to manual review
                              my $decision = $variant_detail->pass_manual_review; 
-                             if(defined($decision) && lc($decision) eq 'yes') {
+                             #if there is a somatic status then it probably
+                             #passed manual review but wasn't documented.
+                             #Or it was directly passed along.
+                             my $status = $variant_detail->somatic_status;
+                             if(defined($decision) && lc($decision) eq 'yes'
+                                 || defined($status)) {
                                  $self->_write_array_to_file(\@cur_anno_snp,
                                      $var_pass_manreview_fh);
                                      $var_pass_manreview_count++;
 
-                                 #If passed then check the result
-                                 my $status = $variant_detail->somatic_status;
                                  if(defined($status)) {
                                      $status = uc($status);
                                      if($status eq 'S') {
