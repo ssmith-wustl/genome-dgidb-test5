@@ -524,7 +524,7 @@ sub _files_for_pattern_and_params {
 
 sub alignments_directory {
     my $self = shift;
-    return $self->data_directory . '/alignmens'; 
+    return $self->data_directory . '/alignments'; 
 }
 
 sub maplist_file_paths {
