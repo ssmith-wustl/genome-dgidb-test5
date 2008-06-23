@@ -833,6 +833,16 @@ sub generate_figure_3_files {
                              insert_sequence_allele1 => $variant_allele,
                              delete_sequence => $reference_allele,
                          );
+                         if(!defined($variant_detail)) {
+                             #try and see if it was a biallelic variant site
+                             $variant_detail = Genome::VariantReviewDetail->get(
+                                 chromosome => $chromosome, 
+                                 begin_position => $begin, 
+                                 end_position => $end,
+                                 insert_sequence_allele2 => $variant_allele,
+                                 delete_sequence => $reference_allele,
+                             );
+                         }
                          if(defined($variant_detail)) {
                              #it's been sent to manual review
                              my $decision = $variant_detail->pass_manual_review; 
