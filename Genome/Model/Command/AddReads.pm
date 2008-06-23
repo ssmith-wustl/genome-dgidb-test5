@@ -139,7 +139,8 @@ sub execute {
                 $self->error_message("Bad run_name value $run_name.  Expected " . $run->run_name);
                  return;
         }
-        if ($run->full_path ne $full_path) {
+        #full_path no longer required field
+        if ($run->full_path && ($run->full_path ne $full_path)) {
             $self->warning_message("Run $run_name has changed location to $full_path from " . $run->full_path);
             $run->full_path($full_path);
         }
