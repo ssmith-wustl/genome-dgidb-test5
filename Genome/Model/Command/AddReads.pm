@@ -59,12 +59,7 @@ sub execute {
 
     my $model = $self->model;
 
-    my @sub_command_classes= qw/
-        Genome::Model::Command::AddReads::AssignRun
-        Genome::Model::Command::AddReads::AlignReads
-        Genome::Model::Command::AddReads::ProcessLowQualityAlignments
-        Genome::Model::Command::AddReads::AcceptReads
-    /;
+    my @sub_command_classes = get_sub_command_classes(); 
     
     my $read_set_id = $self->read_set_id;
     
@@ -204,6 +199,18 @@ sub execute {
 sub _get_sub_command_class_name { 
     return __PACKAGE__;
 }
+
+sub get_sub_command_classes {
+    
+    my @sub_command_classes= qw/
+        Genome::Model::Command::AddReads::AssignRun
+        Genome::Model::Command::AddReads::AlignReads
+        Genome::Model::Command::AddReads::ProcessLowQualityAlignments
+        Genome::Model::Command::AddReads::AcceptReads
+    /;
+
+    return @sub_command_classes;
+}    
 
 1;
 
