@@ -9,10 +9,14 @@ use Command;
 class Genome::Model::Command::AddReads {
     is => 'Genome::Model::Event',
     has => [
-        model_id            => { is => 'Integer', 
-                                doc => 'Identifies the genome model to which we\'ll add the reads.' },
-        read_set_id         => { is => 'String',
-                                doc => 'The unique ID of the data set produced on the instrument' },
+            model_id            => {
+                                    is => 'Integer', 
+                                    doc => 'Identifies the genome model to which we\'ll add the reads.'
+                                },
+            read_set_id         => {
+                                    is => 'String',
+                                    doc => 'The unique ID of the data set produced on the instrument'
+                                },
     ],
     has_optional => [
         test                => { is => 'Boolean',
@@ -73,15 +77,16 @@ sub execute {
         return;
     }
 
-    my ($sequencing_platform,$seq_fs_data_types,$lane,$sample_name,$full_path);
     my $run_name = $read_set->run_name;
+    my $sample_name = $read_set->sample_name;
+
+    my ($sequencing_platform,$seq_fs_data_types,$lane,$full_path);
     if ($read_set->isa("GSC::RunLaneSolexa")) {
         $sequencing_platform = 'solexa';
-        $seq_fs_data_types = ["duplicate fastq path" , "unique fastq path"];
         $lane = $read_set->lane;
-        $sample_name = $read_set->sample_name;
-        use File::Basename;
 
+        use File::Basename;
+        my $seq_fs_data_types = ["duplicate fastq path" , "unique fastq path"];
         my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id, data_type => $seq_fs_data_types);
         unless (@fs_path) {
             $self->error_message("Failed to find the path for data set $run_name/$lane ($read_set_id)!");
@@ -101,9 +106,7 @@ sub execute {
     }
     elsif ($read_set->isa("GSC::RunRegion454")) {
         $sequencing_platform = '454';
-        $seq_fs_data_types = ["fasta file path"];
         $lane = $read_set->region_number;
-        $sample_name = $read_set->incoming_dna_name;
     }
     else {
         $self->error_message("Cannot resolve sequencing platform for "
