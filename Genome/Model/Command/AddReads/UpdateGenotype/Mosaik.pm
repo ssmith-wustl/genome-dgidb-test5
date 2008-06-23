@@ -6,15 +6,12 @@ use warnings;
 use above "Genome";
 use Command;
 use Genome::Model;
-use File::Path;
-use Data::Dumper;
 
 
 class Genome::Model::Command::AddReads::UpdateGenotype::Mosaik {
-    is => 'Genome::Model::Event',
-    has => [ 
-        model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
-    ]
+    is => [
+           'Genome::Model::Command::AddReads::UpdateGenotype',
+       ],
 };
 
 sub help_brief {
@@ -28,18 +25,18 @@ sub help_synopsis {
 EOS
 }
 
-sub help_detail {                           
-    return <<EOS 
+sub help_detail {
+    return <<EOS
 This command is usually called as part of the add-reads process
 EOS
 }
 
 sub execute {
     my $self = shift;
-    my $model = Genome::Model->get(name=>$self->model);
+    my $model = $self->model;
     $self->error_message("running " . $self->command_name . " on " . $model->name . "!");
     $self->status_message("Model Info:\n" . $model->pretty_print_text);
-    return 0; 
+    return 0;
 }
 
 1;
