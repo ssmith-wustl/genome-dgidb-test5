@@ -698,10 +698,10 @@ sub generate_figure_3_files {
     my $somatic_file=shift;
 
     #this might break
-    #my $prior = Genome::Model::Event->get(id => $self->prior_event);
-    #my $snp_file = $prior->snp_report_file;
+    my $prior = Genome::Model::Event->get(id => $self->prior_event);
+    my $snp_file = $prior->snp_report_file;
     #end possible break
-    my $snp_file = $self->_report_file('snp');
+    #my $snp_file = $self->_report_file('snp');
         my $dir = $self->model->_filtered_variants_dir();
         if(!defined($dir)) {
             $self->error_message("No filtered_variants directory returned.");
@@ -1008,10 +1008,9 @@ sub _write_array_to_file {
     return 1;
 }
     
- 
+#NO! BAD METHOD! THATS A BAD BAD METHOD!
 sub _report_file {
     my ($self, $type) = @_;
 
-    return sprintf('%s/variant_report_for_chr_%s', ($self->model->_reports_dir)[0], $self->ref_seq_id);
-    return sprintf('%s/%s_report_%s', $type, ($self->model->_reports_dir)[0], $self->ref_seq_id);
+    return sprintf('%s/%s_report_%s', ($self->model->_reports_dir)[0], $type,$self->ref_seq_id);
 } 
