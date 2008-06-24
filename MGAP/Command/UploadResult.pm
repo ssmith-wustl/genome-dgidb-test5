@@ -117,7 +117,9 @@ sub execute {
         }
         
     }
-    
+
+    BAP::DB::DBI->dbi_commit();
+
     return 1;
     
 }
