@@ -78,6 +78,14 @@ sub _select_model {
     ##FIXME: This should probably not be hardcoded, at least not here
     my $model_dir = '/gsc/pkg/bio/genemark.hmm/installed/modeldir';
 
+    ##FIXME: These thresholds should not be hardcoded, either
+    if ($gc_percent < 30) {
+        $gc_percent = 30;
+    }
+    elsif ($gc_percent > 70) {
+        $gc_percent = 70;
+    }
+    
     unless (-e $model_dir) {
         die "model directory does not seem to exist: $model_dir";
     }
