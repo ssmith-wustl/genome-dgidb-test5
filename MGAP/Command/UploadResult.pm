@@ -71,7 +71,7 @@ sub execute {
     my %features   = ( );
     my %gene_count = ( );
     
-    foreach my $feature (@{$self->bio_seq_feature()}) {
+    foreach my $feature (@{$self->bio_seq_features()}) {
         push @{$features{$feature->seq_id()}}, $feature;
     }
     
@@ -87,6 +87,8 @@ sub execute {
         my @features = @{$features{$seq_id}};
         
         foreach my $feature (@features) {
+
+            $gene_count{$seq_id}++;
             
             my $source = $feature->source_tag();
             
