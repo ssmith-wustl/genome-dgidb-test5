@@ -13,12 +13,17 @@ my $w = Workflow::Model->create_from_xml($ARGV[0] || '../../Workflow/t/xml.d/50_
 
 print join("\n", $w->validate) . "\n";
 
-print $w->as_png("/tmp/test.png");
+#print $w->as_png("/tmp/test.png");
+#exit;
 
-#my $out = $w->execute(
-#    'model input string' => 'hello this is an echo test',
-#    'sleep time' => 3,
-#);
+my $out = $w->execute(
+    'input' => {
+        'dev flag' => 1,
+        'seq set id' => 43
+    }
+);
 
-#print Data::Dumper->new([$out])->Dump;
+$w->wait;
+
+print Data::Dumper->new([$out])->Dump;
 
