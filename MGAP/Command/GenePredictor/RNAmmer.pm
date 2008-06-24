@@ -3,11 +3,17 @@ package MGAP::Command::GenePredictor::RNAmmer;
 use strict;
 use warnings;
 
+use Workflow;
 use GAP::Job::RNAmmer;
 
 
 class MGAP::Command::GenePredictor::RNAmmer {
     is => ['MGAP::Command::GenePredictor'],
+};
+
+operation_io MGAP::Command::GenePredictor::RNAmmer {
+    input => [ 'fasta_file' ],
+    output => [ 'bio_seq_feature' ]
 };
 
 sub sub_command_sort_position { 10 }

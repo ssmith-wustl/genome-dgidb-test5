@@ -3,6 +3,7 @@ package MGAP::Command::GenePredictor::Glimmer3;
 use strict;
 use warnings;
 
+use Workflow;
 use BAP::Job::Glimmer;
 
 class MGAP::Command::GenePredictor::Glimmer3 {
@@ -11,6 +12,11 @@ class MGAP::Command::GenePredictor::Glimmer3 {
             model_file => { is => 'SCALAR', doc => 'absolute path to the model file for this fasta' },
             pwm_file => { is => 'SCALAR' , doc => 'absolute path to the pwm file for this fasta' },
     ],
+};
+
+operation_io MGAP::Command::GenePredictor::Glimmer3 {
+    input => [ 'model_file', 'pwm_file', 'fasta_file' ],
+    output => [ 'bio_seq_feature' ]
 };
 
 sub sub_command_sort_position { 10 }

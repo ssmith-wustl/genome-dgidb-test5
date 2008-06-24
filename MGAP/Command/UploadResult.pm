@@ -18,7 +18,7 @@ class MGAP::Command::UploadResult {
 };
 
 operation MGAP::Command::UploadResult {
-    input  => [ 'bio_seq_features' ],
+    input  => [ 'bio_seq_features','seq_set_id','dev' ],
     output => [ ],
 };
 

@@ -3,12 +3,16 @@ package MGAP::Command::GenePredictor::tRNAscan;
 use strict;
 use warnings;
 
+use Workflow;
 use GAP::Job::tRNAscan;
-
-
 
 class MGAP::Command::GenePredictor::tRNAscan {
     is => ['MGAP::Command::GenePredictor'],
+};
+
+operation_io MGAP::Command::GenePredictor::tRNAscan {
+    input => [ 'fasta_file' ],
+    output => [ 'bio_seq_feature' ]
 };
 
 sub sub_command_sort_position { 10 }

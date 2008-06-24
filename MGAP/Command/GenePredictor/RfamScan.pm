@@ -3,6 +3,7 @@ package MGAP::Command::GenePredictor::RfamScan;
 use strict;
 use warnings;
 
+use Workflow;
 use GAP::Job::RfamScan;
 
 
@@ -10,6 +11,12 @@ use GAP::Job::RfamScan;
 class MGAP::Command::GenePredictor::RfamScan {
     is => ['MGAP::Command::GenePredictor'],
 };
+
+operation_io MGAP::Command::GenePredictor::RfamScan {
+    input => [ 'fasta_file' ],
+    output => [ 'bio_seq_feature' ]
+};
+
 
 sub sub_command_sort_position { 10 }
 

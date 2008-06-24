@@ -1,0 +1,24 @@
+#!/gsc/bin/perl
+
+use strict;
+use warnings;
+
+use lib '/gscuser/mjohnson/bioperl-svn/bioperl-live';
+use lib '/gscuser/mjohnson/bioperl-svn/bioperl-run';
+
+use above 'Workflow';
+use Data::Dumper;
+
+my $w = Workflow::Model->create_from_xml($ARGV[0] || '../../Workflow/t/xml.d/50_genepredict.xml');
+
+print join("\n", $w->validate) . "\n";
+
+print $w->as_png("/tmp/test.png");
+
+#my $out = $w->execute(
+#    'model input string' => 'hello this is an echo test',
+#    'sleep time' => 3,
+#);
+
+#print Data::Dumper->new([$out])->Dump;
+
