@@ -151,6 +151,20 @@ sub metric_to_class_hash {
                    HQ_SNP_reference_allele_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
                    HQ_SNP_variant_allele_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
                    HQ_SNP_both_allele_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
+                   somatic_variants_in_d_v_w => 'Genome::Model::Command::AddReads::FilterVariations',
+                   non_coding_variants => 'Genome::Model::Command::AddReads::FilterVariations',
+                   novel_tumor_variants => 'Genome::Model::Command::AddReads::FilterVariations',
+                   silent_variants => 'Genome::Model::Command::AddReads::FilterVariations',
+                   nonsynonymous_variants => 'Genome::Model::Command::AddReads::FilterVariations',
+                   var_pass_manreview => 'Genome::Model::Command::AddReads::FilterVariations',
+                   var_fail_manreview => 'Genome::Model::Command::AddReads::FilterVariations',
+                   var_fail_valid_assay => 'Genome::Model::Command::AddReads::FilterVariations',
+                   var_complete_validation=> 'Genome::Model::Command::AddReads::FilterVariations',
+                   validated_snps => 'Genome::Model::Command::AddReads::FilterVariations',
+                   false_positives=> 'Genome::Model::Command::AddReads::FilterVariations',
+                   validated_somatic_variants=> 'Genome::Model::Command::AddReads::FilterVariations',
+              
+
                );
     return %metrics;
 }
@@ -181,13 +195,18 @@ sub get_events_for_metric {
     #if we get here then we need to make sure we only grab events related to one add-reads 
     #or post-process_alignemnts event
     my @parent_addreads_events = Genome::Model::Command::AddReads->get(model_id => $self->id);
-    my @parent_pp_alignment_events= Genome::Model::Command::PostprocessAlignments->get(model_id => $self->id);
+    my @parent_pp_alignment_events= Genome::Model::Command::AddReads::PostprocessAlignments->get(model_id => $self->id);
 
-    @parent_addreads_events = sort { $a->date_scheduled cmp $b->date_scheduled } @parent_addreads_events;
+    #nothing has a frickin addreads event yet
+    #@parent_addreads_events = sort { $a->date_scheduled cmp $b->date_scheduled } @parent_addreads_events;
     @parent_pp_alignment_events= sort { $a->date_scheduled cmp $b->date_scheduled } @parent_pp_alignment_events;
-    my @latest_parent_ids = ($parent_addreads_events[0] , $parent_pp_alignment_events[0]);
-    return $class->get(model_id => $self->id);
-
+    my @latest_parent_ids = ($parent_pp_alignment_events[0]->id);
+    my @events = $class->get(model_id => $self->id, parent_event_id => \@latest_parent_ids);
+    
+    if (!@events) {
+        return $class->get(model_id=> $self->id);
+   }
+   return @events;
 }
 
 sub get_metrics_hash_ref {
@@ -347,6 +366,81 @@ sub _calculate_HQ_SNP_both_allele_count {
     my $name = 'HQ_SNP_both_allele_count';
     return $self->_get_sum_of_metric_values_from_events($name);
 }
+
+sub _calculate_somatic_variants_in_d_v_w {
+    my $self = shift;
+    my $name = 'somatic_variants_in_d_v_w';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+
+sub _calculate_non_coding_variants {
+    my $self = shift;
+    my $name = 'non_coding_variants';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+sub _calculate_novel_tumor_variants {
+    my $self = shift;
+    my $name = 'novel_tumor_variants';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+
+
+sub _calculate_silent_variants {
+    my $self = shift;
+    my $name = 'silent_variants';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+
+sub _calculate_nonsynonymous_variants {
+    my $self = shift;
+    my $name = 'nonsynonymous_variants';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+
+sub _calculate_var_pass_manreview {
+    my $self = shift;
+    my $name = 'var_pass_manreview';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+
+sub _calculate_var_fail_manreview {
+    my $self = shift;
+    my $name = 'var_fail_manreview';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+
+
+sub _calculate_var_fail_valid_assay {
+    my $self = shift;
+    my $name = 'var_fail_valid_assay';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+
+
+sub _calculate_var_complete_validation {
+    my $self = shift;
+    my $name = 'var_complete_validation';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+
+sub _calculate_validated_snps {
+    my $self = shift;
+    my $name = 'validated_snps';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+sub _calculate_false_positives {
+    my $self = shift;
+    my $name = 'false_positives';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+sub _calculate_validated_somatic_variants {
+    my $self = shift;
+    my $name = 'validated_somatic_variants';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+
+
+
 
 sub _get_sum_of_metric_values_from_events {
     my $self = shift;
