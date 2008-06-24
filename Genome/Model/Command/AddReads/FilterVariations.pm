@@ -60,6 +60,11 @@ sub GetNormal {
 		$normal_model[0]->resolve_accumulated_alignments_filename(
 																															ref_seq_id => $chromosome,
 																														 );
+	unless (defined($map_file_path) &&
+					$map_file_path !~ /^\s*$/ &&
+					-r $map_file_path) {
+		return undef;
+	}
 	my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $detail_file_sort $alignment_quality |";
 	my $ov_fh = IO::File->new($ov_cmd);
 	unless ($ov_fh) {
@@ -183,7 +188,12 @@ sub execute {
     my $map_file_path = $model->resolve_accumulated_alignments_filename(
 																																				ref_seq_id => $chromosome,
 																																			 );
-
+		unless (defined($map_file_path) &&
+						$map_file_path !~ /^\s*$/ &&
+						-r $map_file_path) {
+			return undef;
+		}
+		
 		my $snp_file_sort = $filtered_list_dir . "snp_filtered_sort_${chromosome}.csv";
 		system("perl /gscuser/jschindl/snp_sort.pl $snp_file_filtered $map_file_path $snp_file_sort $chromosome");
 
@@ -239,6 +249,11 @@ sub execute {
 																																						ref_seq_id => $chromosome,
 																																						library_name => $library_name, # optional
 																																					 );
+				unless (defined($lib_map_file_path) &&
+								$lib_map_file_path !~ /^\s*$/ &&
+								-r $lib_map_file_path) {
+					return undef;
+				}
 				$library_number += 1;
 				my $ov_lib_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $lib_map_file_path $snp_file_sort $alignment_quality |";
 
