@@ -63,7 +63,7 @@ sub GetNormal {
 	unless (defined($map_file_path) &&
 					$map_file_path !~ /^\s*$/ &&
 					-r $map_file_path) {
-		return undef;
+		return;
 	}
 	my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $detail_file_sort $alignment_quality |";
 	my $ov_fh = IO::File->new($ov_cmd);
@@ -191,7 +191,7 @@ sub execute {
 		unless (defined($map_file_path) &&
 						$map_file_path !~ /^\s*$/ &&
 						-r $map_file_path) {
-			return undef;
+			return;
 		}
 		
 		my $snp_file_sort = $filtered_list_dir . "snp_filtered_sort_${chromosome}.csv";
@@ -252,7 +252,7 @@ sub execute {
 				unless (defined($lib_map_file_path) &&
 								$lib_map_file_path !~ /^\s*$/ &&
 								-r $lib_map_file_path) {
-					return undef;
+					return;
 				}
 				$library_number += 1;
 				my $ov_lib_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $lib_map_file_path $snp_file_sort $alignment_quality |";
