@@ -164,7 +164,7 @@ sub execute {
         
         my $glimmer = $factory->run($contig_seq);
 
-        while (my $gene = $glimmer->next_prediction()) {
+        GENE: while (my $gene = $glimmer->next_prediction()) {
 
              my $location = $gene->location();
 
