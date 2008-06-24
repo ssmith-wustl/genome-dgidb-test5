@@ -16,13 +16,14 @@ use File::Temp;
 class MGAP::Command::GetFastaFiles {
     is => ['MGAP::Command'],
     has => [
+        dev        => { is => 'SCALAR', doc => "if true set $BAP::DB::DBI::db_env = 'dev'" },
         seq_set_id => { is => 'SCALAR', doc => 'identifies a whole assembly' },
         fasta_files => { is => 'ARRAY', is_optional => 1, doc => 'array of fasta file names' }
     ],
 };
 
 operation MGAP::Command::GetFastaFiles {
-    input  => [ 'seq_set_id' ],
+    input  => [ 'dev', 'seq_set_id' ],
     output => [ 'fasta_files' ],
 };
 
@@ -48,7 +49,10 @@ sub execute {
 
     my $self = shift;
 
-    
+    if ($self->dev()) {
+        $BAP::DB::DBI::db_env = 'dev'; 
+    }
+               
     $DB::single = 1;
 
     ##FIXME:  There really should be an input/parameter for db_env
