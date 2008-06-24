@@ -26,7 +26,7 @@ my $command = MGAP::Command::UploadResult->create();
 ## Workaround for something in UR eating arguments to create()
 $command->dev(1);
 $command->seq_set_id(43);
-$command->bio_seq_features([$feature]);
+$command->bio_seq_features( [ [$feature] ]);
                                                  
 isa_ok($command, 'MGAP::Command::UploadResult');
 

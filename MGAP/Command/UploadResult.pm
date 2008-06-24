@@ -70,9 +70,11 @@ sub execute {
     
     my %features   = ( );
     my %gene_count = ( );
-    
-    foreach my $feature (@{$self->bio_seq_features()}) {
-        push @{$features{$feature->seq_id()}}, $feature;
+   
+    foreach my $ref (@{$self->bio_seq_features()}) {
+        foreach my $feature (@{$ref}) {
+            push @{$features{$feature->seq_id()}}, $feature;
+       }
     }
     
     foreach my $seq_id (keys %features) {
