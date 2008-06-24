@@ -32,7 +32,11 @@ class Genome::Model::Tools::Parser {
                      data_hash_ref => {
                               doc => "the data pulled from file",
                               is => 'hash',
-                          }
+                          },
+                     _file_handle => {
+                            doc => "The filehandle",
+                            is => 'IO::File',
+                     }     
                  ],
 };
 
@@ -54,6 +58,9 @@ sub create {
         Text::CSV_XS->new({'sep_char' => $self->separator}) :
               Text::CSV_XS->new();
     $self->_parser($parser);
+
+    my $fh = IO::File->new($self->file,'r');
+    $self->_file_handle($fh);
     return $self;
 }
 
@@ -64,22 +71,20 @@ sub execute {
         $self->error_message('File does not exist or has zero size'. $self->file);
         return;
     }
-    my $fh = IO::File->new($self->file,'r');
     my @keys;
     #if (defined($self->header_fields)) {
     #    @keys = @{$self->header_fields};
     #} else {
-
-    my $header = <$fh>;
+    
+    my $header = $self->_file_handle()->getline();
     chomp($header);
     $self->_parser->parse($header);
     @keys = $self->_parser->fields();
     #}
 
     my $line_num = 0;
-    while (<$fh>) {
+    while (my $line = $self->_file_handle()->getline()) {
         $line_num++;
-        my $line = $_;
         chomp($line);
         $self->_parser->parse($line);
         my @values = $self->_parser->fields();
