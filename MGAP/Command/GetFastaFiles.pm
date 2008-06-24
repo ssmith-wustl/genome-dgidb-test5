@@ -55,9 +55,6 @@ sub execute {
                
     $DB::single = 1;
 
-    ##FIXME:  There really should be an input/parameter for db_env
-    $BAP::DB::DBI::db_env = 'dev';
-    
     my $seq_set_id = $self->seq_set_id;
 
     my $sequence_set = BAP::DB::SequenceSet->retrieve($seq_set_id);
