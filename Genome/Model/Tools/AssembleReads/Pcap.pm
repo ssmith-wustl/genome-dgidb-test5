@@ -900,7 +900,7 @@ sub resolve_pcap_run_type
     }
 
     #not sure why but bdocs.rep.454 always runs out of memory so just use bdocs.rep for now
-    $self->{bdocs_prog_type} = 'bdocs.rep';
+#   $self->{bdocs_prog_type} = 'bdocs.rep';
 
     #bconsen.rep.454 no longer exists
     $self->{bconsen_prog_type} = 'bconsen.rep.454.071214'
