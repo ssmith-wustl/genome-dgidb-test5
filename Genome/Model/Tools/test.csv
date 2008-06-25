@@ -1,0 +1,11 @@
+build,chromosome,orientation,start,end,sample,allele1,allele2,comments
+B36,C1,0+,10599808,10599808,TSP_Round1-4_Normal_Amplicon_Pool-00001,'T,'A,breakPointRead(T:A::reads1=0:reads2=1)
+B36,C1,0+,108129428,108129428,TSP_Round1-4_Normal_Amplicon_Pool-00001,'C,'T,breakPointRead(C:T::reads1=318:reads2=1)
+B36,C1,0+,108129429,108129429,TSP_Round1-4_Normal_Amplicon_Pool-00001,'C,'T,breakPointRead(C:T::reads1=321:reads2=1)
+B36,C1,0+,108129432,108129432,TSP_Round1-4_Normal_Amplicon_Pool-00001,'G,'T,breakPointRead(G:T::reads1=320:reads2=1)
+B36,C1,0+,108129434,108129434,TSP_Round1-4_Normal_Amplicon_Pool-00001,'G,'A,breakPointRead(G:A::reads1=320:reads2=1)
+B36,C1,0+,108129437,108129437,TSP_Round1-4_Normal_Amplicon_Pool-00001,'C,'T,breakPointRead(C:T::reads1=320:reads2=2)
+B36,C1,0+,108129448,108129448,TSP_Round1-4_Normal_Amplicon_Pool-00001,'T,'C,breakPointRead(T:C::reads1=321:reads2=1)
+B36,C1,0+,108129452,108129452,TSP_Round1-4_Normal_Amplicon_Pool-00001,'C,'T,breakPointRead(C:T::reads1=321:reads2=1)
+B36,C1,0+,108129454,108129454,TSP_Round1-4_Normal_Amplicon_Pool-00001,'A,'G,breakPointRead(A:G::reads1=321:reads2=1)
+B36,C1,0+,108129458,108129458,TSP_Round1-4_Normal_Amplicon_Pool-00001,'A,'G,breakPointRead(A:G::reads1=318:reads2=1)
