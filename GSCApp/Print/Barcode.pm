@@ -1565,6 +1565,7 @@ sub default_barcode_printer
         $self->error_message("failed to run lpstat: $exit_val: $?");
         return;
     }
+    chomp $lpstat;
     my $printer = (split(m/:\s*/, $lpstat))[1];
     if ($printer)
     {
