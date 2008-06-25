@@ -21,7 +21,7 @@ my $tsv_parser = Genome::Model::Tools::Parser->create(
                                                   separator => "\t",
                                                   );
 isa_ok($tsv_parser,'Genome::Model::Tools::Parser');
-is_deeply($tsv_parser->_header_fields,\@header,'header parsed correctly for tsv');
+is_deeply($tsv_parser->header_fields,\@header,'header parsed correctly for tsv');
 ok($tsv_parser->execute(),'execute tsv parser');
 my $tsv_data_ref = $tsv_parser->data_hash_ref;
 
@@ -30,7 +30,7 @@ my $csv_parser = Genome::Model::Tools::Parser->create(
                                                       file => $csv_file,
                                                   );
 isa_ok($csv_parser,'Genome::Model::Tools::Parser');
-is_deeply($csv_parser->_header_fields,\@header,'header parsed correctly for csv');
+is_deeply($csv_parser->header_fields,\@header,'header parsed correctly for csv');
 ok($csv_parser->execute(),'execute csv parser');
 my $csv_data_ref = $csv_parser->data_hash_ref;
 
