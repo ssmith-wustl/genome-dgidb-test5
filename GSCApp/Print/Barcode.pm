@@ -1593,12 +1593,12 @@ sub default_barcode_printer
         # parse out printer name
         if ($^O eq 'solaris')
         {
-            $printer = $lpstat =~ m,/dev/(\w+),;
+            ($printer) = $lpstat =~ m,/dev/(\w+),;
         }
         else
         {
             # cups
-            $printer = $lpstat =~ m,socket://(\w+):,;
+            ($printer) = $lpstat =~ m,socket://(\w+):,;
         }
         if ($printer)
         {
