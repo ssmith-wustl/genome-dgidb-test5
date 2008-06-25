@@ -15,7 +15,12 @@ class Genome::Model::Tools::Parser {
             file => {
                      doc => 'the path to the file for parsing',
                      is => 'string',
-                 }
+                 },
+            header => {
+                       doc => "a flag if the file does not contain a header",
+                       is => 'Boolean',
+                       default => 1,
+                   },
     ],
     has_optional => [
                      separator => {
@@ -25,7 +30,7 @@ class Genome::Model::Tools::Parser {
                      _parser => {
                                  is => 'Text::CSV_XS',
                             },
-                     _header_fields => {
+                     header_fields => {
                                         doc => "column header fields",
                                         is => 'array',
                                     },
@@ -70,16 +75,18 @@ sub create {
     my $fh = IO::File->new($self->file,'r');
     $self->_file_handle($fh);
 
-    my $header = $self->_file_handle()->getline();
-    unless(defined $header) {
-        $self->error_message('No lines to parse from file '. $self->file);
-        return;
+    if ($self->header) {
+        my $header = $self->_file_handle()->getline();
+        unless(defined $header) {
+            $self->error_message('No lines to parse from file '. $self->file);
+            return;
+        }
+        $self->_line_number(1);
+        chomp($header);
+        $self->_parser->parse($header);
+        my @header_fields = $self->_parser->fields();
+        $self->header_fields(\@header_fields);
     }
-    $self->_line_number(1);
-    chomp($header);
-    $self->_parser->parse($header);
-    my @header_fields = $self->_parser->fields();
-    $self->_header_fields(\@header_fields);
 
     return $self;
 }
@@ -91,6 +98,10 @@ sub execute {
 
     while (my $line = $self->_file_handle()->getline()) {
         my %line_hash = $self->_read_line($line);
+        unless (%line_hash) {
+            $self->error_message("Failed to read line '$line'");
+            return;
+        }
         $data_hash{$self->_line_number} = \%line_hash;
     }
 
@@ -116,7 +127,11 @@ sub _read_line {
     my %data_hash;
 
     chomp($line);
-    my @keys = @{$self->_header_fields};
+    unless ($self->header_fields) {
+        $self->error_message("No header fields set");
+        return;
+    }
+    my @keys = @{$self->header_fields};
 
     $self->_line_number($self->_line_number + 1);
     $self->_parser->parse($line);
