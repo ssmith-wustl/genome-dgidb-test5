@@ -17,7 +17,7 @@ class Genome::Model::Command::Create::ProcessingProfile::ShortRead {
 		# This will probably never be specified since processing profiles are used for many models
 		# this shouldnt even be here except that we need to override this to be not required
         model                  		 => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
-        profile_name 			     => { is => 'VARCHAR2', len => 255, is_optional => 1 ,
+        profile_name 			     => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
 										doc => 'The human readable name for the processing profile'},
 		align_dist_threshold         => { is => 'VARCHAR2', len => 255, is_optional => 1,
 										doc => ""},
