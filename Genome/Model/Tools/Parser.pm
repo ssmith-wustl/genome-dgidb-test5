@@ -19,7 +19,7 @@ class Genome::Model::Tools::Parser {
             header => {
                        doc => "a flag if the file does not contain a header",
                        is => 'Boolean',
-                       default => 1,
+                       default_value => 1,
                    },
     ],
     has_optional => [
