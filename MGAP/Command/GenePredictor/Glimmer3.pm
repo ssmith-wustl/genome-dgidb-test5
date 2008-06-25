@@ -3,6 +3,7 @@ package MGAP::Command::GenePredictor::Glimmer3;
 use strict;
 use warnings;
 
+use Bio::SeqIO;
 use Workflow;
 use BAP::Job::Glimmer;
 

@@ -3,6 +3,7 @@ package MGAP::Command::GenePredictor::tRNAscan;
 use strict;
 use warnings;
 
+use Bio::SeqIO;
 use Workflow;
 use GAP::Job::tRNAscan;
 
