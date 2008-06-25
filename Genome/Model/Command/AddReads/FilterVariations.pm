@@ -81,14 +81,21 @@ sub GetNormal {
 		my ($chr, $start, $ref_sequence, $iub_sequence, $quality_score,
 				$depth, $avg_hits, $high_quality, $unknown,
 				$rc_arr, $urc_arr, $urc26_arr, $ursc_arr,
-				$ref,	$ref_count_arr, $var, $var_count_arr) =
+				$ref,	$ref_count_arr, @variant_pair) =
 					split("\t");
 		my ($ref_rc, $ref_urc, $ref_urc26, $ref_ursc, $ref_bq, $ref_maxbq) =
 			split(',',$ref_count_arr);
-		my ($var_rc, $var_urc, $var_urc26, $var_ursc, $var_bq, $var_maxbq) =
-			split(',',$var_count_arr);
 		$normal{$chr}{$start}{$ref} = $ref_rc;
-		$normal{$chr}{$start}{$var} = $var_rc;
+		do {
+			my $var = shift @variant_pair;
+			my $var_count_arr = shift @variant_pair;
+			unless (defined($var) && defined($var_count_arr)) {
+				last;
+			}
+			my ($var_rc, $var_urc, $var_urc26, $var_ursc, $var_bq, $var_maxbq) =
+				split(',',$var_count_arr);
+			$normal{$chr}{$start}{$var} = $var_rc;
+		} while (scalar(@variant_pair));
 	}
 	$ov_fh->close;
 	return \%normal;
@@ -273,14 +280,21 @@ sub execute {
 					my ($lib_chr, $lib_start, $lib_ref_sequence, $lib_iub_sequence, $lib_quality_score,
 							$lib_depth, $lib_avg_hits, $lib_high_quality, $lib_unknown,
 							$lib_rc_arr, $lib_urc_arr, $lib_urc26_arr, $lib_ursc_arr,
-							$lib_ref, $lib_ref_count_arr, $lib_var, $lib_var_count_arr) =
+							$lib_ref, $lib_ref_count_arr, , @lib_variant_pair) =
 								split("\t");
 					my ($lib_ref_rc, $lib_ref_urc, $lib_ref_urc26, $lib_ref_ursc, $lib_ref_bq, $lib_ref_maxbq) =
 						split(',',$lib_ref_count_arr);
-					my ($lib_var_rc, $lib_var_urc, $lib_var_urc26, $lib_var_ursc, $lib_var_bq, $lib_var_maxbq) =
-						split(',',$lib_var_count_arr);
-					$lib_urc{$library_number}{$lib_chr}{$lib_start}{$lib_ref} = $lib_var_ursc;
-					$lib_urc{$library_number}{$lib_chr}{$lib_start}{$lib_var} = $lib_var_ursc;
+					$lib_urc{$library_number}{$lib_chr}{$lib_start}{$lib_ref} = $lib_ref_ursc;
+					do {
+						my $var = shift @lib_variant_pair;
+						my $var_count_arr = shift @lib_variant_pair;
+						unless (defined($var) && defined($var_count_arr)) {
+							last;
+						}
+						my ($var_rc, $var_urc, $var_urc26, $var_ursc, $var_bq, $var_maxbq) =
+							split(',',$var_count_arr);
+						$lib_urc{$library_number}{$lib_chr}{$lib_start}{$var} = $var_ursc;
+					} while (scalar(@lib_variant_pair));
 				}
 				$ov_lib_fh->close();
 			}
