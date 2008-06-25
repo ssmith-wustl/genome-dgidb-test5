@@ -25,10 +25,10 @@ class Genome::Model::Tools::Parser {
                      _parser => {
                                  is => 'Text::CSV_XS',
                             },
-                     #header_fields => {
-                     #                       doc => "column header fields",
-                     #                       is => 'array',
-                     #                   },
+                     _header_fields => {
+                                        doc => "column header fields",
+                                        is => 'array',
+                                    },
                      data_hash_ref => {
                               doc => "the data pulled from file",
                               is => 'hash',
@@ -36,7 +36,10 @@ class Genome::Model::Tools::Parser {
                      _file_handle => {
                             doc => "The filehandle",
                             is => 'IO::File',
-                     }     
+                     },
+                     _line_number => {
+                                      is => 'Integer',
+                                  }
                  ],
 };
 
@@ -59,48 +62,77 @@ sub create {
               Text::CSV_XS->new();
     $self->_parser($parser);
 
+    unless (-s $self->file) {
+        $self->error_message('File does not exist or has zero size'. $self->file);
+        return;
+    }
+
     my $fh = IO::File->new($self->file,'r');
     $self->_file_handle($fh);
+
+    my $header = $self->_file_handle()->getline();
+    unless(defined $header) {
+        $self->error_message('No lines to parse from file '. $self->file);
+        return;
+    }
+    $self->_line_number(1);
+    chomp($header);
+    $self->_parser->parse($header);
+    my @header_fields = $self->_parser->fields();
+    $self->_header_fields(\@header_fields);
+
     return $self;
 }
 
 sub execute {
     my $self = shift;
-    my %return;
-    unless (-s $self->file) {
-        $self->error_message('File does not exist or has zero size'. $self->file);
-        return;
-    }
-    my @keys;
-    #if (defined($self->header_fields)) {
-    #    @keys = @{$self->header_fields};
-    #} else {
-    
-    my $header = $self->_file_handle()->getline();
-    chomp($header);
-    $self->_parser->parse($header);
-    @keys = $self->_parser->fields();
-    #}
 
-    my $line_num = 0;
+    my %data_hash;
+
     while (my $line = $self->_file_handle()->getline()) {
-        $line_num++;
-        chomp($line);
-        $self->_parser->parse($line);
-        my @values = $self->_parser->fields();
-        if (scalar(@values) ne scalar(@keys)) {
-            $self->error_message('un-balanced data. found '. scalar(@values)
-                                 .' values and '. scalar(@keys) .' expected');
-            return;
-        }
-        for (my $i=0; $i < scalar(@values); $i++) {
-            $return{$line_num}{$keys[$i]} = $values[$i];
-        }
+        my %line_hash = $self->_read_line($line);
+        $data_hash{$self->_line_number} = \%line_hash;
     }
-    $self->data_hash_ref(\%return);
+
+    $self->data_hash_ref(\%data_hash);
+
     return 1;
 }
 
+sub getline {
+    my $self = shift;
+
+    my $line = $self->_file_handle()->getline();
+    unless (defined $line) {
+        return;
+    }
+    return $self->_read_line($line);
+}
+
+sub _read_line {
+    my $self = shift;
+    my $line = shift;
+
+    my %data_hash;
+
+    chomp($line);
+    my @keys = @{$self->_header_fields};
+
+    $self->_line_number($self->_line_number + 1);
+    $self->_parser->parse($line);
+    my @values = $self->_parser->fields();
+    if (scalar(@values) ne scalar(@keys)) {
+        $self->error_message('un-balanced data. found '. scalar(@values)
+                             .' values and '. scalar(@keys) .' expected on line '.
+                             $self->_line_number
+                         );
+        return;
+    }
+    for (my $i=0; $i < scalar(@values); $i++) {
+        $data_hash{$keys[$i]} = $values[$i];
+    }
+    return %data_hash;
+}
 
 1;
 
