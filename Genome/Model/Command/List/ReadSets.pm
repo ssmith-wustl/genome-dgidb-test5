@@ -12,7 +12,7 @@ class Genome::Model::Command::List::ReadSets {
     has => [
         subject_class_name  => { is_constant => 1, value => 'Genome::RunChunk' },
         model               => { is_optional => 1 },
-        show                => { default_value => 'run_name,subset_name,sample_name' },
+        show                => { default_value => 'run_name,subset_name,sample_name,sequencing_platform,is_paired_end' },
     ]    
 };
 
