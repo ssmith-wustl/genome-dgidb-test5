@@ -192,11 +192,27 @@ sub _validate_execute_params{
         return;
     }
 
-    unless ($self->verify_params) {
+    unless ($self->_validate_dna_type) {
         $self->error_message(
-        "One or more modules could not be found for the supplied parameters");
+            'DNA Type is invalid... must be "genomic dna" or "cdna"');
         return;                        
     }
+
+    unless ($self->verify_params) {
+        $self->error_message(
+            "One or more modules could not be found for the supplied parameters");
+        return;                        
+    }
+}
+
+sub _validate_dna_type {
+    my $self = shift;
+    
+    unless (($self->dna_type() eq "genomic dna")||($self->dna_type() eq "cdna")) {
+        return undef;    
+    }
+
+    return 1;
 }
 
 sub _create_target_class_instance_and_error_check{
