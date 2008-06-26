@@ -53,7 +53,7 @@ sub execute {
     # create child jobs
     my $jobs = $self->_create_jobs;
     $self->error_message("No jobs created")
-        and return unless @$jobs;
+        and return unless $jobs and @$jobs;
 
     # run & monitor jobs
     my $success = $self->_run_and_monitor_jobs($jobs);
