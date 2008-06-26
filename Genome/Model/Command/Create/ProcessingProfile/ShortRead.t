@@ -207,12 +207,12 @@ is(scalar(@ppfailed),0,'Expected no subclassed profiles since creation should fa
 # Test to make sure invalid dna_type supplied makes create fail
 my $create_pp_command_dna_type_fail = Genome::Model::Command::Create::ProcessingProfile::ShortRead->create(
     indel_finder          => $indel_finder,
-    dna_type              => $dna_type,
+    dna_type              => 'not cdna or genomic dna',
     align_dist_threshold  => $align_dist_threshold,
     reference_sequence    => $reference_sequence,
     genotyper             => $genotyper ,
     read_aligner          => $read_aligner, 
-    profile_name		   => $pp_name,
+    profile_name		  => 'testing-bad-dna-type',
     sequencing_platform   => $sequencing_platform,   
     bare_args => [],
     );
