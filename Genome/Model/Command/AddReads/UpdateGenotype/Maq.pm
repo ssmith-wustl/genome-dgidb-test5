@@ -49,7 +49,8 @@ sub execute {
 
     my ($consensus_file) = $model->assembly_file_for_refseq($self->ref_seq_id);
 
-    my $ref_seq_file = sprintf("%s/%s.bfa", $model->reference_sequence_path , $self->ref_seq_id);
+    my $ref_seq_file = sprintf("%s/all_sequences.bfa", $model->reference_sequence_path);
+    #my $ref_seq_file = sprintf("%s/%s.bfa", $model->reference_sequence_path , $self->ref_seq_id);
 
     my $assembly_opts = $model->genotyper_params || '';
 
