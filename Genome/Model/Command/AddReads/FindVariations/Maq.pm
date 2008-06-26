@@ -119,6 +119,7 @@ sub execute {
 
     unless (-d $self->analysis_base_path) {
         mkdir($self->analysis_base_path);
+        chmod 02775, $self->analysis_base_path;
     }
 
     my ($assembly_output_file) =  $model->assembly_file_for_refseq($self->ref_seq_id);
