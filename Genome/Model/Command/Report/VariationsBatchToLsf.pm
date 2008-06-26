@@ -106,8 +106,17 @@ sub _open_fh
     my ($self, $file, $mode) = @_;
 
     my $fh = IO::File->new("$mode $file");
-    warn("Can't open file ($file)")
-        and return unless $fh;
+    unless ( $fh )
+    {
+        $self->error_message
+        (
+            sprintf
+            (
+                'Can\'t open file (%s) for %sing', $file, ( $mode eq '<' ? 'read' : 'writ' ),
+            ) 
+        );
+        return;
+    }
 
     return $fh;
 }
