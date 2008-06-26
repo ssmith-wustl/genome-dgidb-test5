@@ -13,9 +13,14 @@ class Genome::Model::Event::Metric {
     ],
     has => [
         value   => { is => 'VARCHAR2', len => 1000, is_optional => 1, column_name => 'METRIC_VALUE' },
+        model   => { is => 'Genome::Model', via => 'event' },
+        event_type  => { via => 'event', to => 'event_type' },
+        model_name  => { via => 'model', to => 'name' },
+        
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
 
 1;
+

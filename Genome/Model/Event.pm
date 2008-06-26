@@ -19,6 +19,7 @@ class Genome::Model::Event {
     ],
     has => [
         model                           => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
+        model_name                      => { via => 'model', to => 'name' },
         event_type                      => { is => 'VARCHAR2', len => 255 },
         event_status                    => { is => 'VARCHAR2', len => 32 },
         user_name                       => { is => 'VARCHAR2', len => 64 },
@@ -72,6 +73,7 @@ class Genome::Model::Event {
         inputs                          => { is => 'Genome::Model::Event::Input',  reverse_id_by => 'event' },
         outputs                         => { is => 'Genome::Model::Event::Output', reverse_id_by => 'event' },
         metrics                         => { is => 'Genome::Model::Event::Metric', reverse_id_by => 'event' },
+        metric_names                    => { via => 'metrics', to => 'name' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',

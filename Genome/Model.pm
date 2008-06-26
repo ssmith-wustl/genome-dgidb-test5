@@ -21,6 +21,7 @@ class Genome::Model {
     ],
     has => [
         processing_profile           => { is => 'Genome::ProcessingProfile::ShortRead', id_by => 'processing_profile_id' },
+        #processing_profile           => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name      => { via => 'processing_profile', to => 'name'},
         type_name                    => { via => 'processing_profile'},
         align_dist_threshold         => { via => 'processing_profile'},

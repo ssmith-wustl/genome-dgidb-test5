@@ -712,14 +712,14 @@ widget_class "*" style "user-font"
 include "/gscuser/$login/.gtkrc.mine"
 
 END_GTKRC
-
-           open (OUT, ">/gscuser/$login/.gtkrc");
-           print OUT $gtkrc;
-           close (OUT);
+            my $out;
+            open ($out, ">/gscuser/$login/.gtkrc");
+            if ($out) {
+                print $out $gtkrc;
+                close ($out);
+            }
 
         }
-
-
 
 }
 

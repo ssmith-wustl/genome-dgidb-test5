@@ -28,4 +28,5 @@ for my $model (@genome_models) {
 	}
 }
 
+ok(0,'no');
 
