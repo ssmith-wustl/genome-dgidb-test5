@@ -25,6 +25,8 @@ class Genome::RunChunk::454 {
             dump_fasta         => { via => "_run_region_454", to => "dump_library_region_fasta_file" },
             dump_qual          => { via => "_run_region_454", to => "dump_library_region_qual_file" },
             dump_sff           => { via => "_run_region_454" },
+            is_paired_end      => { calculate => q| return "unknown"; | },
+
         ],
 };
 

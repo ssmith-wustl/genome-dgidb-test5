@@ -31,6 +31,16 @@ class Genome::RunChunk::Solexa {
             read_length                     => { via => "_run_lane_solexa" },
             #rename not to be platform specific
             clusters                        => { via => "_run_lane_solexa" },
+            is_paired_end                   => { via => "_run_lane_solexa",
+                                                 calculate_from => ['run_type'],
+                                                 calculate => q| if ($run_type =~ m/Paired End/) {
+                                                                    return 1;
+                                                                 }
+                                                                 else {
+                                                                     return 0;
+                                                                 } |
+                                               },
+            run_type                        => { via => "_run_lane_solexa" },
         ],
     };
 
