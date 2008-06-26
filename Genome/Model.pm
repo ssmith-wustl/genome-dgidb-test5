@@ -164,8 +164,9 @@ sub metric_to_class_hash {
                    validated_snps => 'Genome::Model::Command::AddReads::FilterVariations',
                    false_positives=> 'Genome::Model::Command::AddReads::FilterVariations',
                    validated_somatic_variants=> 'Genome::Model::Command::AddReads::FilterVariations',
-              
-
+                   skin_variants=> 'Genome::Model::Command::AddReads::FilterVariations' ,
+                   tumor_only_variants=> 'Genome::Model::Command::AddReads::FilterVariations' ,
+                   well_supported_variants=> 'Genome::Model::Command::AddReads::FilterVariations' ,
                );
     return %metrics;
 }
@@ -200,8 +201,9 @@ sub get_events_for_metric {
 
     #nothing has a frickin addreads event yet
     #@parent_addreads_events = sort { $a->date_scheduled cmp $b->date_scheduled } @parent_addreads_events;
-    @parent_pp_alignment_events= sort { $a->date_scheduled cmp $b->date_scheduled } @parent_pp_alignment_events;
+    @parent_pp_alignment_events= sort { $b->date_scheduled cmp $a->date_scheduled } @parent_pp_alignment_events;
     my @latest_parent_ids = ($parent_pp_alignment_events[0]->id);
+    $DB::single=1;
     my @events = $class->get(model_id => $self->id, parent_event_id => \@latest_parent_ids);
     
     if (!@events) {
@@ -440,6 +442,24 @@ sub _calculate_validated_somatic_variants {
     return $self->_get_sum_of_metric_values_from_events($name);
 }
 
+sub _calculate_well_supported_variants {
+    my $self = shift;
+    my $name = 'well_supported_variants';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+
+
+sub _calculate_skin_variants {
+    my $self = shift;
+    my $name = 'skin_variants';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+
+sub _calculate_tumor_only_variants {
+    my $self = shift;
+    my $name = 'tumor_only_variants';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
 
 
 
