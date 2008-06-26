@@ -192,6 +192,13 @@ sub report_types
     return (qw/ metrics transcript variation /);
 }
 
+sub report_file_for_type
+{
+    my ($self, $type) = @_;
+
+    return $self->_report_file($self->report_file_base, $type);
+}
+
 sub _report_file
 {
     my ($self, $directory, $type) = @_;
@@ -266,7 +273,7 @@ sub _variation_report_fh
 # report headers
 sub metrics_report_headers
 {
-    return (qw/ snvs hq_snvs not_in_any /, variation_sources());
+    return (qw/ total confident distinct /, variation_sources());
 }
 
 sub transcript_report_headers
@@ -297,7 +304,6 @@ sub variation_attributes
 
 sub variation_sources
 {
-    # TODO add a header foreach dbsnp release?
     return (qw/ dbsnp-127 watson venter /);
 }
 
