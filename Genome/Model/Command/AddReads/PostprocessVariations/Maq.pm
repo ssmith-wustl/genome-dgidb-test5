@@ -240,10 +240,30 @@ sub generate_variation_metrics {
     
     my $variation_metrics_file = $self->variation_metrics_file;
 
-    return Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(input => $chromosome_alignment_file,
-                                                          snpfile => $self->snp_output_file,
-                                                          qual_cutoff => 1,
-                                                          output => $variation_metrics_file);
+    #$self->error() unless Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(input => $chromosome_alignment_file,
+    #                                                      snpfile => $self->snp_output_file,
+    #                                                      qual_cutoff => 1,
+    #                                                      output => $variation_metrics_file);
+    my @libraries = $model->libraries;
+	my $library_number = 0;
+	foreach my $library_name (@libraries) 
+    {
+        my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename
+        (
+            ref_seq_id => $self->ref_seq_id,
+            library_name => $library_name,
+        ); 
+        
+        my $chromosome_resource_name = basename($chromosome_alignment_file);        
+        $self->error() unless 
+            Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(
+                input => $chromosome_alignment_file,
+                snpfile => $self->snp_output_file,
+                qual_cutoff => 1,
+                output => $variation_metrics_file.$library_name
+            );   
+    }
+    return 1;
         
 }
 
