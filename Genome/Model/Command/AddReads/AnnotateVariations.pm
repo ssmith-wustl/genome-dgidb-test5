@@ -9,7 +9,7 @@ use Command;
 use Data::Dumper;
 use Genome::Model::Command::Report::VariationsBatchToLsf;
 use Genome::Model::EventWithRefSeq;
-use Genome::Utility::Parser;
+#use Genome::Utility::Parser;
 use IO::File;
 
 class Genome::Model::Command::AddReads::AnnotateVariations {
