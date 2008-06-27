@@ -323,11 +323,15 @@ sub execute {
 		my $header_line = $header->getline; #ignore header
 		my $somatic_handle = new FileHandle;
 		my $keep_handle = new FileHandle;
+        my $keep_highly_supported_handle = new FileHandle;
+        my $keep_not_highly_supported_handle = new FileHandle;
 		my $remove_handle = new FileHandle;
 		my $report_handle = new FileHandle;
 		my $invalue_handle = new FileHandle;
 		my $somatic_file = $basename . '.chr' . $chromosome . '.somatic.csv';
 		my $keep_file = $basename . '.chr' . $chromosome . '.keep.csv';
+        my $highly_supported_keep_file = $basename . '.chr' . $chromosome .  '.keep.highlysupported.csv';
+        my $not_highly_supported_keep_file = $basename . '.chr' . $chromosome .  '.keep.nothighlysupported.csv';
 		my $remove_file = $basename . '.chr' . $chromosome . '.remove.csv';
 		my $report_file = $basename . '.chr' . $chromosome . '.report.csv';
 		my $invalue_file = $basename . '.chr' . $chromosome . '.input.csv';
@@ -336,6 +340,8 @@ sub execute {
 		$remove_handle->open("$remove_file","w") or die "Couldn't open remove output file\n";
 		$report_handle->open("$report_file","w") or die "Couldn't open report output file\n";
 		$invalue_handle->open("$invalue_file","w") or die "Couldn't open input value (output) file\n";
+		$keep_highly_supported_handle->open("$highly_supported_keep_file","w") or die "Couldn't open keep highly supported output file\n";
+		$keep_not_highly_supported_handle->open("$not_highly_supported_keep_file","w") or die "Couldn't open keep not highly supported (output) file\n";
 		
 		chomp $header_line;
 		my $validation_header = '';
@@ -345,7 +351,8 @@ sub execute {
 		print $somatic_handle $header_line . "$validation_header,rule\n";
 		print $keep_handle $header_line . "$validation_header,rule\n";
 		print $remove_handle $header_line . "$validation_header,rule\n";
-		
+	    print $keep_highly_supported_handle $header_line . "$validation_header,rule\n";
+        print $keep_not_highly_supported_handle $header_line . "$validation_header,rule\n";
 		my %result = ();
 		
 		#print new header
@@ -645,15 +652,24 @@ sub execute {
 					#				$output_validation = ",$validation";
 				}
 				if ($decision eq 'keep') {
-					if ($var_read_skin_dna == 0) {
+					if ($var_read_skin_dna == 0 && $var_urc26 > 2) {
 						$decision = 'somatic';
 					}
 				}
 				if ($decision eq 'keep') {
 					print $keep_handle $line,"$output_validation,$rule\n";    
+                    if($var_urc26 > 2) {
+                        #print to a highly supported file
+                        print $keep_highly_supported_handle $line,"$output_validation,$rule\n";
+                    }
+                    else {
+                        #print to a 'not highly supported file'
+                        print $keep_not_highly_supported_handle $line,"$output_validation,$rule\n";
+                    }
 				} elsif ($decision eq 'somatic') {
 					print $somatic_handle $line,"$output_validation,$rule\n";    
 					print $keep_handle $line,"$output_validation,$rule\n";    
+                    print $keep_highly_supported_handle $line,"$output_validation,$rule\n";
 				} else {
 					print $remove_handle $line,"$output_validation,$rule\n";    
 				}
@@ -755,6 +771,9 @@ sub generate_figure_3_files {
            "/non_synonymous_splice_site_variants_" . $self->ref_seq_id .
             ".csv");
        my $nonsynonymous_count;      
+       my $var_never_manreview_fh = IO::File->new(">$dir" .
+           "/var_never_manreview_" . $self->ref_seq_id . ".csv");
+       my $never_manreview_count;
        my $var_pass_manreview_fh = IO::File->new(">$dir" .
            "/var_pass_manreview_" . $self->ref_seq_id .
             ".csv");
@@ -781,6 +800,13 @@ sub generate_figure_3_files {
        my $false_positives_count;     
        my $validated_somatic_var_fh = IO::File->new(">$dir" .
            "/validated_somatic_var_" . $self->ref_seq_id .
+            ".csv");
+        #added to track things that were passed through manual review but
+        #don't have a validation status. Could be pending or could be missing
+        #from db
+       my $passed_but_no_status_count;     
+       my $passed_but_no_status_fh = IO::File->new(">$dir" .
+           "/passed_manreview_no_validation" . $self->ref_seq_id .
             ".csv");
        my $validated_somatic_var_count;     
          my $annotation_fh = IO::File->new($snp_file);
@@ -855,7 +881,6 @@ sub generate_figure_3_files {
                              $nonsynonymous_fh);
                              $nonsynonymous_count++;
 
-                         #TODO Query VariantLists to find validation data
                          my $variant_detail = Genome::VariantReviewDetail->get(
                              chromosome => $chromosome, 
                              begin_position => $begin, 
@@ -911,7 +936,8 @@ sub generate_figure_3_files {
                                  }
                                  else {
                                      #else no validation status
-                                     #FIXME Do something here
+                                     $passed_but_no_status_count++;     
+                                     $self->_write_array_to_file(\@cur_anno_snp, $passed_but_no_status_fh);  
                                  }
 
 
@@ -928,7 +954,11 @@ sub generate_figure_3_files {
                          else {
                              #we're actually not tracking this case in the
                              #figure
-                             #FIXME Doing nothing here
+                             #Not in database, but should be!
+                             #Either novel or missing from database
+                             $never_manreview_count++;
+                             $self->_write_array_to_file(\@cur_anno_snp,
+                                 $var_never_manreview_fh);
                          }
 
                      }
@@ -1017,6 +1047,14 @@ sub generate_figure_3_files {
     $metric = $self->add_metric(
                                     name=> "validated_somatic_variants",
                                     value=> $validated_somatic_var_count,
+                                );
+    $metric = $self->add_metric(
+                                    name=> "var_never_sent_to_manual_review",
+                                    value=> $never_manreview_count,
+                                );
+    $metric = $self->add_metric(
+                                    name=> "var_pass_manreview_but_no_val_status",
+                                    value=> $passed_but_no_status_count,
                                 );
 
 
