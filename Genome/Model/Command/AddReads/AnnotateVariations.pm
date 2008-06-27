@@ -9,7 +9,7 @@ use Command;
 use Data::Dumper;
 use Genome::Model::Command::Report::VariationsBatchToLsf;
 use Genome::Model::EventWithRefSeq;
-use Genome::Model::Tools::Parser;
+use Genome::Utility::Parser;
 use IO::File;
 
 class Genome::Model::Command::AddReads::AnnotateVariations {
@@ -225,7 +225,7 @@ sub snv_metrics
         $self->error_message("Can't find metrics file ($metrics_report_file)")
             and return unless -e $metrics_report_file;
         
-        # TODO use Tools::Parser
+        # TODO use Genome::Utility::Parser
         my $fh = IO::File->new("< $metrics_report_file");
         $self->error_message("Can't open file ($metrics_report_file)")
             and return unless $fh;
