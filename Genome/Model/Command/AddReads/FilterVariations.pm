@@ -14,9 +14,6 @@ class Genome::Model::Command::AddReads::FilterVariations {
     has => [
 #        normal_id            => { is => 'Integer', 
 #                                doc => 'Identifies the normal genome model.' },
-
- 
-                                           
                                    
                                    
     ]
@@ -328,13 +325,13 @@ sub execute {
 		my $remove_handle = new FileHandle;
 		my $report_handle = new FileHandle;
 		my $invalue_handle = new FileHandle;
-		my $somatic_file = $basename . '.chr' . $chromosome . '.somatic.csv';
-		my $keep_file = $basename . '.chr' . $chromosome . '.keep.csv';
+		my $somatic_file = $self->somatic_file_name;
+        my $keep_file =  $self->keep_file_name;
+		my $remove_file = $self->remove_file_name;
+        my $report_file = $self->report_file_name;
+        my $invalue_file = $self->invalue_file_name;
         my $highly_supported_keep_file = $basename . '.chr' . $chromosome .  '.keep.highlysupported.csv';
         my $not_highly_supported_keep_file = $basename . '.chr' . $chromosome .  '.keep.nothighlysupported.csv';
-		my $remove_file = $basename . '.chr' . $chromosome . '.remove.csv';
-		my $report_file = $basename . '.chr' . $chromosome . '.report.csv';
-		my $invalue_file = $basename . '.chr' . $chromosome . '.input.csv';
 		$somatic_handle->open("$somatic_file","w") or die "Couldn't open keep output file\n";
 		$keep_handle->open("$keep_file","w") or die "Couldn't open keep output file\n";
 		$remove_handle->open("$remove_file","w") or die "Couldn't open remove output file\n";
@@ -754,61 +751,61 @@ sub generate_figure_3_files {
         }
        my $dbsnp_fh = IO::File->new(">$dir" . "/tumor_only_in_d_V_W_" . $self->ref_seq_id .
             ".csv");
-       my $dbsnp_count;      
+       my $dbsnp_count=0;      
        my $non_coding_fh = IO::File->new(">$dir" .
            "/non_coding_tumor_only_variants_" . $self->ref_seq_id .
             ".csv");
-       my $non_coding_count;      
+       my $non_coding_count=0;      
        my $novel_tumor_fh = IO::File->new(">$dir" .
            "/novel_tumor_only_variants_" . $self->ref_seq_id .
             ".csv");
-       my $novel_tumor_count;      
+       my $novel_tumor_count=0;      
        my $silent_fh = IO::File->new(">$dir" .
            "/silent_tumor_only_" . $self->ref_seq_id .
             ".csv");
-       my $silent_count;     
+       my $silent_count=0;     
        my $nonsynonymous_fh = IO::File->new(">$dir" .
            "/non_synonymous_splice_site_variants_" . $self->ref_seq_id .
             ".csv");
-       my $nonsynonymous_count;      
+       my $nonsynonymous_count=0;      
        my $var_never_manreview_fh = IO::File->new(">$dir" .
            "/var_never_manreview_" . $self->ref_seq_id . ".csv");
        my $never_manreview_count;
        my $var_pass_manreview_fh = IO::File->new(">$dir" .
            "/var_pass_manreview_" . $self->ref_seq_id .
             ".csv");
-       my $var_pass_manreview_count;     
+       my $var_pass_manreview_count=0;     
        my $var_fail_manreview_fh = IO::File->new(">$dir" .
            "/var_fail_manreview_" . $self->ref_seq_id .
             ".csv");
-       my $var_fail_manreview_count;     
+       my $var_fail_manreview_count=0;     
        my $var_fail_valid_assay_fh = IO::File->new(">$dir" .
            "/var_fail_valid_assay_" . $self->ref_seq_id .
             ".csv");
-       my $var_fail_valid_assay_count;      
+       my $var_fail_valid_assay_count=0;      
        my $var_complete_validation_fh = IO::File->new(">$dir" .
            "/var_complete_validation_" . $self->ref_seq_id .
             ".csv");
-       my $var_complete_validation_count;      
+       my $var_complete_validation_count=0;      
        my $validated_snps_fh = IO::File->new(">$dir" .
            "/valid_snps_" . $self->ref_seq_id .
             ".csv");
-       my $validated_snps_count;     
+       my $validated_snps_count=0;     
        my $false_positives_fh = IO::File->new(">$dir" .
            "/false_positives_" . $self->ref_seq_id .
             ".csv");
-       my $false_positives_count;     
+       my $false_positives_count=0;     
        my $validated_somatic_var_fh = IO::File->new(">$dir" .
            "/validated_somatic_var_" . $self->ref_seq_id .
             ".csv");
+       my $validated_somatic_var_count=0;     
         #added to track things that were passed through manual review but
         #don't have a validation status. Could be pending or could be missing
         #from db
-       my $passed_but_no_status_count;     
+       my $passed_but_no_status_count=0;     
        my $passed_but_no_status_fh = IO::File->new(">$dir" .
            "/passed_manreview_no_validation" . $self->ref_seq_id .
             ".csv");
-       my $validated_somatic_var_count;     
          my $annotation_fh = IO::File->new($snp_file);
         if(!defined($annotation_fh)) {
             $self->error_message("Could not open report file.");
@@ -825,13 +822,15 @@ sub generate_figure_3_files {
         my $somatic_line;
         #throw away header
         $somatic_fh->getline;
-        $annotation_fh->getline;
+        #throw away the header, but preload anno_line so our loop gets off the ground. i rate this hack:medium special
+        $anno_line = $annotation_fh->getline;
         #end throw away header section
-      while($somatic_line=$somatic_fh->getline) {
+      while(($somatic_line=$somatic_fh->getline) && defined $anno_line) {
           chomp $somatic_line;
-          if (!defined $somatic_line) {
+          if (!defined $somatic_line || !defined $anno_line) {
               #the filter file must be over if we're here
               last;
+              
           }
           @cur_somatic_snp = split(/\s+/, $somatic_line);
           
@@ -842,9 +841,9 @@ sub generate_figure_3_files {
               $anno_line = $annotation_fh->getline;
               chomp $anno_line;
               if(!defined $anno_line) {
-                  #annotation file has ended before somatic one has...this is bad
-                  $self->error_message("Annotation file has ended before somatic file. This is probably bad.");
-                  return undef;
+                  $self->error_message("Annotation file has ended before somatic file. This may be ok.");
+                  $self->error_message("Last somatic snp was\n " . join (" ", @cur_somatic_snp) . "last anno snp was\n " . join(" ", @cur_anno_snp) );
+                  last;
               }
               @cur_anno_snp= split (/,/, $anno_line);
           } 
@@ -981,8 +980,9 @@ sub generate_figure_3_files {
              chomp $anno_line;
               if(!defined $anno_line) {
                   #annotation file has ended before somatic one has...this is bad
-                  $self->error_message("Annotation file has ended before somatic file. This is probably bad.");
-                  return undef;
+                  $self->error_message("Annotation file has ended before somatic file. This is probably bad.\n");
+                  $self->error_message("Last somatic snp was\n " . @cur_somatic_snp . "last anno snp was\n " . @cur_anno_snp );
+                  last;
               }
               @cur_anno_snp= split (/,/, $anno_line);
              
@@ -1094,4 +1094,243 @@ sub _report_file {
     my ($self, $type) = @_;
 
     return sprintf('%s/%s_report_%s', ($self->model->_reports_dir)[0], $type,$self->ref_seq_id);
-} 
+}
+
+
+sub somatic_variants_in_d_v_w {
+    my $self = shift;
+    my $name = 'somatic_variants_in_d_v_w';
+    return $self->get_metric_value($name);
+}
+
+sub non_coding_variants {
+    my $self = shift;
+    my $name = 'non_coding_variants';
+    return $self->get_metric_value($name);
+}
+sub novel_tumor_variants {
+    my $self = shift;
+    my $name = 'novel_tumor_variants';
+    return $self->get_metric_value($name);
+}
+
+
+sub silent_variants {
+    my $self = shift;
+    my $name = 'silent_variants';
+    return $self->get_metric_value($name);
+}
+
+sub nonsynonymous_variants {
+    my $self = shift;
+    my $name = 'nonsynonymous_variants';
+    return $self->get_metric_value($name);
+}
+
+sub var_pass_manreview {
+    my $self = shift;
+    my $name = 'var_pass_manreview';
+    return $self->get_metric_value($name);
+}
+
+sub var_fail_manreview {
+    my $self = shift;
+    my $name = 'var_fail_manreview';
+    return $self->get_metric_value($name);
+}
+
+
+sub var_fail_valid_assay {
+    my $self = shift;
+    my $name = 'var_fail_valid_assay';
+    return $self->get_metric_value($name);
+}
+
+
+sub var_complete_validation {
+    my $self = shift;
+    my $name = 'var_complete_validation';
+    return $self->get_metric_value($name);
+}
+
+sub validated_snps {
+    my $self = shift;
+    my $name = 'validated_snps';
+    return $self->get_metric_value($name);
+}
+sub false_positives {
+    my $self = shift;
+    my $name = 'false_positives';
+    return $self->get_metric_value($name);
+}
+sub validated_somatic_variants {
+    my $self = shift;
+    my $name = 'validated_somatic_variants';
+    return $self->get_metric_value($name);
+}
+
+sub _calculate_somatic_variants_in_d_v_w {
+    my $self = shift;
+    my $name = 'somatic_variants_in_d_v_w';
+    return $self->get_metric_value($name);
+}
+
+sub _calculate_non_coding_variants {
+    my $self = shift;
+    my $name = 'non_coding_variants';
+    return $self->get_metric_value($name);
+}
+sub _calculate_novel_tumor_variants {
+    my $self = shift;
+    my $name = 'novel_tumor_variants';
+    return $self->get_metric_value($name);
+}
+
+
+sub _calculate_silent_variants {
+    my $self = shift;
+    my $name = 'silent_variants';
+    return $self->get_metric_value($name);
+}
+
+sub _calculate_nonsynonymous_variants {
+    my $self = shift;
+    my $name = 'nonsynonymous_variants';
+    return $self->get_metric_value($name);
+}
+
+sub _calculate_var_pass_manreview {
+    my $self = shift;
+    my $name = 'var_pass_manreview';
+    return $self->get_metric_value($name);
+}
+
+sub _calculate_var_fail_manreview {
+    my $self = shift;
+    my $name = 'var_fail_manreview';
+    return $self->get_metric_value($name);
+}
+
+
+sub _calculate_var_fail_valid_assay {
+    my $self = shift;
+    my $name = 'var_fail_valid_assay';
+    return $self->get_metric_value($name);
+}
+
+
+sub _calculate_var_complete_validation {
+    my $self = shift;
+    my $name = 'var_complete_validation';
+    return $self->get_metric_value($name);
+}
+
+sub _calculate_validated_snps {
+    my $self = shift;
+    my $name = 'validated_snps';
+    return $self->get_metric_value($name);
+}
+sub _calculate_false_positives {
+    my $self = shift;
+    my $name = 'false_positives';
+    return $self->get_metric_value($name);
+}
+sub _calculate_validated_somatic_variants {
+    my $self = shift;
+    my $name = 'validated_somatic_variants';
+    return $self->get_metric_value($name);
+}
+
+sub tumor_only_variants {
+    my $self = shift;
+    my $name = 'tumor_only_variants';
+    return $self->get_metric_value($name);
+}
+sub skin_variants {
+    my $self = shift;
+    my $name = 'skin_variants';
+    return $self->get_metric_value($name);
+}
+
+sub well_supported_variants {
+    my $self = shift;
+    my $name = 'well_supported_variants';
+     return $self->get_metric_value($name);
+ }
+
+sub _calculate_well_supported_variants {
+    my $self = shift;
+    my $file_I_will_wordcount_to_find_total_variants = $self->keep_file_name;
+    my $file_wordcount_1  = `wc -l $file_I_will_wordcount_to_find_total_variants | cut -f1 -d' '`;
+    chomp($file_wordcount_1);
+    return $file_wordcount_1;
+ }
+
+
+sub _calculate_tumor_only_variants {
+    my $self = shift;
+    my $file_I_will_wordcount_to_find_only_tumor_variants = $self->somatic_file_name;
+    my $file_wordcount = `wc -l $file_I_will_wordcount_to_find_only_tumor_variants | cut -f1 -d' '`;
+    chomp($file_wordcount);
+    return $file_wordcount;
+}
+sub _calculate_skin_variants {
+    my $self = shift;
+    my $file_I_will_wordcount_to_find_total_variants = $self->keep_file_name;
+    my $file_I_will_wordcount_to_find_only_tumor_variants = $self->somatic_file_name;
+    my $file_wordcount_1  = `wc -l $file_I_will_wordcount_to_find_total_variants | cut -f1 -d' '`;
+    my $file_wordcount_2  = `wc -l $file_I_will_wordcount_to_find_only_tumor_variants | cut -f1 -d' '`;
+    chomp($file_wordcount_1);
+    chomp($file_wordcount_2);    
+    return $file_wordcount_1 - $file_wordcount_2;
+}
+
+sub somatic_file_name {
+    my $self=shift;
+    my $model = $self->model;
+    return  $model->_filtered_variants_dir() . "/filtered.chr" . $self->ref_seq_id . '.somatic.csv';
+}
+
+sub keep_file_name {
+    my $self=shift;
+    my $model = $self->model;
+    return  $model->_filtered_variants_dir() . "/filtered.chr" . $self->ref_seq_id . '.keep.csv';
+}
+sub remove_file_name {
+    my $self=shift;
+    my $model = $self->model;
+    return  $model->_filtered_variants_dir() . "/filtered.chr" . $self->ref_seq_id . '.remove.csv';
+}
+
+sub report_file_name {
+    my $self=shift;
+    my $model = $self->model;
+    return  $model->_filtered_variants_dir() . "/filtered.chr" . $self->ref_seq_id . '.report.csv';
+}
+
+sub invalue_file_name {
+    my $self=shift;
+    my $model = $self->model;
+    return  $model->_filtered_variants_dir() . "/filtered.chr" . $self->ref_seq_id . '.invalue.csv';
+}
+
+sub metrics_for_class {
+    my $self = shift;
+    my @metrics = qw| 
+    somatic_variants_in_d_v_w
+    non_coding_variants
+    novel_tumor_variants
+    silent_variants
+    nonsynonymous_variants
+    var_pass_manreview
+    var_fail_manreview
+    var_fail_valid_assay
+    var_complete_validation
+    validated_snps
+    false_positives
+    validated_somatic_variants
+    skin_variants
+    tumor_only_variants 
+    well_supported_variants
+    |;
+}
