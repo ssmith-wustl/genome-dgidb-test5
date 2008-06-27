@@ -15,49 +15,59 @@ use File::Temp qw/ tempfile /;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
-    is => 'Command',
-    has => [
-            'matrix'  => { type => 'String', 
-                           doc => "mutation matrix file", required => 1},
-            'image'   => { type => 'String', 
-                           doc => "image output file (png)", 
-                           required => 1},
-            'columns' => { type => 'Integer', 
-                           doc => "number of columns to use from matrix", 
-                           required => 1},
-            'sepchar' => { type => 'String', 
-                           doc => "separator character in matrix", 
-                           is_optional => 1,
-                           default => "\t"},
+    is         => 'Command',
+    has        => [
+        'matrix' => {
+            is  => 'String',
+            doc => "mutation matrix file",
+        },
+        'image' => {
+            is  => 'String',
+            doc => "image output file (png)",
+        },
+        'columns' => {
+            is  => 'Integer',
+            doc => "number of columns to use from matrix",
+        },
+        'sepchar' => {
+            is          => 'String',
+            doc         => "separator character in matrix",
+            is_optional => 1,
+            default     => "\t"
+        },
 
     ],
 );
 
-sub help_brief 
+sub help_brief
 {
-    "tool to generate heatmaps of mutation matrix files via R"
+    "tool to generate heatmaps of mutation matrix files via R";
 }
 
-
-sub execute {
+sub execute
+{
     my $self = shift;
-#    unless($self->sepchar)
-#    {
-#        $self->sepchar("\t");
-#    }
-    my $maxmutations = $self->validate_matrix($self->matrix);
-    unless($maxmutations)
+
+    #    unless($self->sepchar)
+    #    {
+    #        $self->sepchar("\t");
+    #    }
+    my $maxmutations = $self->validate_matrix( $self->matrix );
+    unless ($maxmutations)
     {
         croak "matrix did not validate, check format";
     }
-# this needs to be nailed down better.
+
+    # this needs to be nailed down better.
     my @colors = qw/blue pink red yellow orange purple/;
 
-    my $color_vector = $self->array2vector(\@colors, {limit => $maxmutations});
-    my $matrix = $self->matrix;
-    my $image = $self->image;
+    my $color_vector =
+      $self->array2vector( \@colors, { limit => $maxmutations } );
+    my $matrix  = $self->matrix;
+    my $image   = $self->image;
     my $columns = $self->columns;
-    my $rcmd = [ qq(
+    my $rcmd    = [
+        qq(
                     x <- read.table( "$matrix" ,header=T )
                     mt <- as.matrix(x[,1:$columns])
                     png("$image", width=1600, height=1200)
@@ -70,18 +80,19 @@ sub execute {
                          labels=rownames(t(mt)),
                          las=2)
                     dev.off()
-                    ), ] ;
+                    ),
+    ];
 
-    my ($fh,$tmpfile) = tempfile("heatmapXXXXX", SUFFIX => '.R');
+    my ( $fh, $tmpfile ) = tempfile( "heatmapXXXXX", SUFFIX => '.R' );
 
-    write_file($tmpfile,@$rcmd);
+    write_file( $tmpfile, @$rcmd );
 
     system("/usr/bin/R --no-save -q < $tmpfile");
 
-    if($@)
+    if ($@)
     {
         print STDERR "problem with R?";
-        print STDERR $@,"\n";
+        print STDERR $@, "\n";
         exit 2;
     }
 
@@ -90,15 +101,14 @@ sub execute {
     return 1;
 }
 
-
 sub validate_matrix
 {
-    my $self = shift;
-    my @lines = read_file($self->matrix);
+    my $self  = shift;
+    my @lines = read_file( $self->matrix );
     chomp @lines;
-    my $c = new Text::CSV_XS({sep_char => $self->sepchar});
+    my $c = new Text::CSV_XS( { sep_char => $self->sepchar } );
 
-    my $max = 0;
+    my $max         = 0;
     my $header_line = undef;
 
     foreach my $line (@lines)
@@ -106,11 +116,11 @@ sub validate_matrix
         $c->parse($line);
         my @f = $c->fields();
 
-        if($f[0])
+        if ( $f[0] )
         {
-            foreach my $idx (1..$#f)
+            foreach my $idx ( 1 .. $#f )
             {
-                if($f[$idx] > $max)
+                if ( $f[$idx] > $max )
                 {
                     $max = $f[$idx];
                 }
@@ -118,15 +128,17 @@ sub validate_matrix
         }
         else
         {
+
             # header line
             $header_line = $line;
         }
     }
 
-    unless(defined($header_line))
+    unless ( defined($header_line) )
     {
         return undef;
     }
+
     # what to return, $max?
     return $max;
 }
@@ -134,20 +146,18 @@ sub validate_matrix
 sub array2vector
 {
     my $self = shift;
-    my ($aref,$optref) = @_;
+    my ( $aref, $optref ) = @_;
     my $str = "c(";
 
-    foreach my $i (0..$optref->{limit})
+    foreach my $i ( 0 .. $optref->{limit} )
     {
-        $str = $str . qq("$aref->[$i]",) ;
+        $str = $str . qq("$aref->[$i]",);
     }
     $str =~ s/,$//;
     $str = $str . ")";
     return $str;
 }
 
-
-
-
 1;
 
+# $Id$
