@@ -10,8 +10,11 @@ use Genome::Model::Tools::Parser;
 use Test::More tests => 7;
 use Test::Differences;
 
-my $tsv_file = 'test.tsv';
-my $csv_file = 'test.csv';
+# Use FindBin to provie a proper full path to the test files
+# so we can run this test from anywhere
+use FindBin qw($Bin);
+my $tsv_file = "$Bin/test.tsv";
+my $csv_file = "$Bin/test.csv";
 
 my @header = qw(build chromosome orientation start end sample allele1 allele2 comments);
 
