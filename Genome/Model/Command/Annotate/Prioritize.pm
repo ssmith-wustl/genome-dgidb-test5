@@ -42,8 +42,7 @@ sub execute
     
     # FIXME unshell-ify!
     
-    my $file = $self->file;
-	my $input_fh = IO::File->new("< $file");
+    my $input_fh = IO::File->new("< $file");
     $self->error_message("Can't open file ($file): $!")
         and return unless $input_fh;
 
