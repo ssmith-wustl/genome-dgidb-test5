@@ -63,7 +63,7 @@ sub execute {
 
     my $model = $self->model;
 
-    my @sub_command_classes = get_sub_command_classes(); 
+    my @sub_command_classes = $self->get_sub_command_classes(); 
     
     my $read_set_id = $self->read_set_id;
     
@@ -205,7 +205,8 @@ sub _get_sub_command_class_name {
 }
 
 sub get_sub_command_classes {
-    
+    my $self = shift;
+
     my @sub_command_classes= qw/
         Genome::Model::Command::AddReads::AssignRun
         Genome::Model::Command::AddReads::AlignReads
