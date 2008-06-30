@@ -7,7 +7,6 @@ use above "Genome";
 use Command;
 use Genome::Model;
 use Genome::Model::Command::AddReads::AlignReads;
-use Genome::Model::Tools::Reads::454::SffInfo;
 use File::Basename;
 
 class Genome::Model::Command::AddReads::AlignReads::Blat {
@@ -15,39 +14,33 @@ class Genome::Model::Command::AddReads::AlignReads::Blat {
         'Genome::Model::Command::AddReads::AlignReads',
     ],
     has => [
-            sff_file => { via => "prior_event" },
+            fasta_file => { via => "prior_event" },
             blat_version => {
                              is => 'string',
-                             doc => "",
+                             doc => "version of blat used to determine path to blat executable",
                              is_transient => 1,
                              is_optional =>1,
                          },
             blat_params => {
                             is => 'string',
-                            doc => "",
+                            doc => "parameters to pass to the blat application",
                             is_transient => 1,
                             is_optional => 1,
                         },
             alignment_file => {
-                            calculate_from => ['read_set_directory','read_set'],
-                            calculate => q|
+                               doc => "the file path to store the blat alignment",
+                               calculate_from => ['read_set_directory','read_set'],
+                               calculate => q|
                                         return $read_set_directory .'/'. $read_set->subset_name .'.psl';
-                            |
-                        },
+                               |
+                           },
             aligner_output_file => {
+                                    doc => "the file path to dump the blat application output",
                                     calculate_from => ['read_set_directory','read_set'],
                                     calculate => q|
                                         return $read_set_directory .'/'. $read_set->subset_name .'.out';
                                     |
                                 },
-            fasta_file => {
-                           is => 'string',
-                           doc => "The path were the fasta file will be dumped",
-                           calculate_from => ['read_set_directory','read_set'],
-                           calculate => q|
-                               return $read_set_directory .'/'. $read_set->subset_name .'.fna';
-                           |,
-                       },
         ],
 };
 
@@ -121,16 +114,6 @@ sub execute {
     my $alignment_file = $self->alignment_file;
     if (-s $alignment_file) {
         $self->error_message("Alignment file '$alignment_file' already exists.");
-        return;
-    }
-
-    my $sffinfo = Genome::Model::Tools::Reads::454::SffInfo->create(
-                                                                    sff_file => $self->sff_file,
-                                                                    params => '-s',
-                                                                    output_file => $self->fasta_file,
-                                                                );
-    unless ($sffinfo->execute) {
-        $self->error_message('Can not convert sff '. $self->sff_file .' to fasta '. $self->fasta_file);
         return;
     }
 
