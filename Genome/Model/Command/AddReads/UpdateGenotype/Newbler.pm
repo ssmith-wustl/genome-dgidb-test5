@@ -40,11 +40,11 @@ sub execute {
     my $model = $self->model;
     my $run_project = Genome::Model::Tools::Newbler::RunProject->create(
                                                                         dir => $model->alignments_directory,
-                                                                        options => $model->genotyper_params;
+                                                                        options => $model->genotyper_params,
                                                                     );
     unless ($run_project->execute) {
         $self->error_message('Can not execute runProject on '. $model->alignments_directory
-                             .' with params '. $aligner_params);
+                             .' with params '. $model->genotyper_params);
         return;
     }
     return 1;
