@@ -333,8 +333,8 @@ sub _print_reports_for_snp
     ? 1
     : 0;
 
-    $self->{_metrics}->{snvs}++;
-    $self->{_metrics}->{hq_snvs}++ if $is_hq_snp;
+    $self->{_metrics}->{total}++;
+    $self->{_metrics}->{confident}++ if $is_hq_snp;
 
     # Basic SNP Info
     my $snp_info_string = join
@@ -362,7 +362,7 @@ sub _print_reports_for_snp
     }
     else
     {
-        $self->{_metrics}->{not_in_any}++ if $is_hq_snp;
+        $self->{_metrics}->{distinct}++ if $is_hq_snp;
         @snp_exists_in_variations = (qw/ 0 0 0 /);
     }
 
