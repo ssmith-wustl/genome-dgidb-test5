@@ -9,14 +9,17 @@
   <link fromOperation="get sequence fasta files" fromProperty="fasta_files" toOperation="calculate gc percent" toProperty="fasta_files" />
   <link fromOperation="get sequence fasta files" fromProperty="fasta_files" toOperation="contig predict genes" toProperty="fasta file" />
   <link fromOperation="build glimmer3 data" fromProperty="model_file" toOperation="contig predict genes" toProperty="glimmer3 model" />
+  <link fromOperation="build glimmer3 data" fromProperty="model_file" toOperation="cat files" toProperty="model file" />
   <link fromOperation="build glimmer3 data" fromProperty="pwm_file" toOperation="contig predict genes" toProperty="glimmer3 pwm" />
+  <link fromOperation="build glimmer3 data" fromProperty="pwm_file" toOperation="cat files" toProperty="pwm file" />
   <link fromOperation="calculate gc percent" fromProperty="gc_percent" toOperation="contig predict genes" toProperty="gc content" />
   <link fromOperation="contig predict genes" fromProperty="bio seq features" toOperation="database upload" toProperty="bio_seq_features" />
   <link fromOperation="database upload" fromProperty="result" toOperation="wait db upload" toProperty="db upload result" />
   <link fromOperation="get sequence fasta files" fromProperty="fasta_files" toOperation="wait db upload" toProperty="fasta_files" />
-  <link fromOperation="wait db upload" fromProperty="fasta_files" toOperation="delete fasta" toProperty="fasta_files" />
+  <link fromOperation="wait db upload" fromProperty="fasta_files" toOperation="cat files" toProperty="fasta files" />
   <link fromOperation="wait db upload" fromProperty="db upload result" toOperation="wait delete" toProperty="db upload result" />
-  <link fromOperation="delete fasta" fromProperty="result" toOperation="wait delete" toProperty="delete result" />
+  <link fromOperation="cat files" fromProperty="all files" toOperation="delete files" toProperty="files" />
+  <link fromOperation="delete files" fromProperty="result" toOperation="wait delete" toProperty="delete result" />
   <link fromOperation="wait delete" fromProperty="seq_set_id" toOperation="mail" toProperty="seq_set_id" />
   <link fromOperation="mail" fromProperty="result" toOperation="output connector" toProperty="result" />
   <operation name="get sequence fasta files">
@@ -38,8 +41,8 @@
       <property>db upload result</property>
     </operationtype>
   </operation>
-  <operation name="delete fasta">
-    <operationtype commandClass="MGAP::Command::DeleteFastaFiles" typeClass="Workflow::OperationType::Command" />
+  <operation name="delete files">
+    <operationtype commandClass="MGAP::Command::DeleteFiles" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="wait delete">
     <operationtype typeClass="Workflow::OperationType::Block">
@@ -50,10 +53,19 @@
   </operation>
   <operation name="mail">
     <operationtype typeClass="Workflow::OperationType::Mail">
-      <inputproperty default="eclark@genome.wustl.edu">email_address</inputproperty>
+      <inputproperty default="mjohnson@watson.wustl.edu">email_address</inputproperty>
       <inputproperty default="MGAP Workflow">subject</inputproperty>
       <inputproperty default="data/output_mail.txt">template_file</inputproperty>
       <inputproperty>seq_set_id</inputproperty>
+    </operationtype>
+  </operation>
+  <operation name = "cat files">
+    <operationtype typeClass="Workflow::OperationType::Converge">
+      <inputproperty>model file</inputproperty>
+      <inputproperty>pwm file</inputproperty>
+      <inputproperty>fasta files</inputproperty>
+      <outputproperty>all files</outputproperty>
+      <outputproperty>result</outputproperty>
     </operationtype>
   </operation>
   <operationtype typeClass="Workflow::OperationType::Model">

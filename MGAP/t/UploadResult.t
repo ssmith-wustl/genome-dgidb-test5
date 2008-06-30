@@ -17,7 +17,7 @@ my $feature = Bio::SeqFeature::Generic->new(
                                             -start      => 2112,
                                             -end        => 2191,
                                             -strand     => 1,
-                                            -source_tag => 'trnascan',
+                                            -source_tag => 'tRNAscan-SE',
                                             -tag => { 'Codon' => 'TAG', 'AminoAcid' => 'Leu' },
                                            );
               

@@ -94,7 +94,7 @@ sub execute {
             
             my $source = $feature->source_tag();
             
-            if ($source eq 'trnascan') {
+            if ($source eq 'tRNAscan-SE') {
                 
                 my $gene_name = join('.', $seq_id, (join('', 't', $gene_count{$seq_id})));
                 my ($codon)   = $feature->each_tag_value('Codon');

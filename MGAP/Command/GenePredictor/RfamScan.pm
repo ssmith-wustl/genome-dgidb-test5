@@ -40,6 +40,7 @@ sub execute {
     
     my $self = shift;
 
+
     my $seqio = Bio::SeqIO->new(-file => $self->fasta_file(), -format => 'Fasta');
 
     my $seq = $seqio->next_seq();
