@@ -146,7 +146,12 @@ sub _read_line {
     for (my $i=0; $i < scalar(@values); $i++) {
         $data_hash{$keys[$i]} = $values[$i];
     }
-    return %data_hash;
+
+    if (wantarray) {
+        return %data_hash;
+    } else {    
+        return \%data_hash;
+    }
 }
 
 1;
