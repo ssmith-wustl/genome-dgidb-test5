@@ -6,6 +6,7 @@ use warnings;
 use above "Genome";
 use Command;
 use Genome::Model;
+use Genome::Model::Tools::Reads::454::SffInfo;
 use File::Path;
 use Data::Dumper;
 
@@ -15,12 +16,28 @@ class Genome::Model::Command::AddReads::AssignRun::454 {
             model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
             sff_file => {
                          is => 'string',
-                         doc => 'The path to the fasta file',
+                         doc => 'The path were the sff file will be dumped',
                          calculate_from => ['read_set_directory','read_set'],
                          calculate => q|
                            return $read_set_directory .'/'. $read_set->subset_name .'.sff';
                        |,
                      },
+            fasta_file => {
+                           is => 'string',
+                           doc => "The path were the fasta file will be dumped",
+                           calculate_from => ['read_set_directory','read_set'],
+                           calculate => q|
+                               return $read_set_directory .'/'. $read_set->subset_name .'.fna';
+                           |,
+                       },
+            qual_file => {
+                          is => 'string',
+                          doc => "The path were the quality file will be dumped",
+                          calculate_from => ['read_set_directory','read_set'],
+                          calculate => q|
+                               return $read_set_directory .'/'. $read_set->subset_name .'.qual';
+                           |,
+                      },
     ]
 };
 
@@ -48,7 +65,7 @@ sub execute {
     my $read_set = $self->read_set;
 
     unless ($read_set) {
-        $self->error_message("Did not find read_set info for seq_id ".$self->seq_id);
+        $self->error_message("Did not find read_set info for seq_id ". $self->seq_id);
         return;
     }
 
@@ -79,6 +96,27 @@ sub execute {
             return;
         }
     }
+
+    my $sffinfo_fasta = Genome::Model::Tools::Reads::454::SffInfo->create(
+                                                                          sff_file => $sff_file,
+                                                                          params => '-s',
+                                                                          output_file => $self->fasta_file,
+                                                                      );
+    unless ($sffinfo_fasta->execute) {
+        $self->error_message('Can not convert sff '. $sff_file .' to fasta '. $self->fasta_file);
+        return;
+    }
+
+    my $sffinfo_qual = Genome::Model::Tools::Reads::454::SffInfo->create(
+                                                                         sff_file => $sff_file,
+                                                                         params => '-q',
+                                                                         output_file => $self->qual_file,
+                                                                );
+    unless ($sffinfo_qual->execute) {
+        $self->error_message('Can not convert sff '. $sff_file .' to fasta '. $self->qual_file);
+        return;
+    }
+
     return 1;
 }
 
