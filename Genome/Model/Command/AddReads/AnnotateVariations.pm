@@ -194,7 +194,7 @@ sub execute {
         # format => ??,
     );
 
-    $self->generate_metrics;
+    $self->generate_metric( $self->snv_metric_names );
 
     if ( $success )
     { 
