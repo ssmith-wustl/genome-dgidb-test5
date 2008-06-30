@@ -22,6 +22,12 @@ class Genome::Model::Command::AddReads::PostprocessVariations::BreakPointRead454
                                          |,
                                      },
             deletions_file => { via => 'prior_event' },
+            combined_deletions_file => {
+                                         calculate_from => ['deletions_file'],
+                                         calculate => q|
+                                             return $deletions_file .'.combined';
+                                         |,
+                                     },
             substitutions_file => { via => 'prior_event' },
             combined_substitutions_file => {
                                          calculate_from => ['substitutions_file'],
@@ -87,7 +93,7 @@ sub execute {
                           $self->combined_substitutions_file,
                           $self->coverage_blocks_file,
                           $model->sample_name);
-    my $indel_cmd = sprintf("%s --genotype-indels %s --alignment-file %s --sample-name %s --reads-fasta %s --ref-dir %s",
+    my $in_cmd = sprintf("%s --genotype-indels %s --alignment-file %s --sample-name %s --reads-fasta %s --ref-dir %s",
                             $break_point_path,
                             $self->combined_insertions_file,
                             $self->coverage_blocks_file,
@@ -95,8 +101,16 @@ sub execute {
                             $model->alignments_directory,
                             $model->reference_sequence_path,
                         );
+    my $del_cmd = sprintf("%s --genotype-indels %s --alignment-file %s --sample-name %s --reads-fasta %s --ref-dir %s",
+                            $break_point_path,
+                            $self->combined_deletions_file,
+                            $self->coverage_blocks_file,
+                            $model->sample_name,
+                            $model->alignments_directory,
+                            $model->reference_sequence_path,
+                        );
 
-    my @cmds = ($insertions_cmd,$deletions_cmd,$substitutions_cmd,$snp_cmd,$indel_cmd);
+    my @cmds = ($insertions_cmd,$deletions_cmd,$substitutions_cmd,$snp_cmd,$in_cmd,$del_cmd);
     for my $cmd (@cmds) {
         $self->status_message('Running: '. $cmd);
         my $rv = system($cmd);
