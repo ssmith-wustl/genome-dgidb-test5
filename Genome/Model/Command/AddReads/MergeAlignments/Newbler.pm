@@ -38,14 +38,7 @@ sub should_bsub { 1;}
 sub execute {
     my $self = shift;
     my $model = $self->model;
-    my $alignments_directory = $model->alignments_directory;
-    my $run_project = Genome::Model::Tools::Newbler::RunProject->create(
-                                                                        dir => $alignments_directory,
-                                                                    );
-    unless ($run_project->execute) {
-        $self->error_message('Failed to run last pass of mapping');
-        return;
-    }
+    $self->status_message('Not Implemented: '. $self->command_name .' on '. $model->name);
     return 1;
 }
 
