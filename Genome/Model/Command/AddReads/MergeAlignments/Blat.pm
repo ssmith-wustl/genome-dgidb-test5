@@ -69,24 +69,12 @@ sub execute {
             return;
         }
     }
+                                                                           );
 
-    #my @succeeded_events =
-    #    grep { my $m = $_->metrics(name => 'read set pass fail'); (!$m or $m->value eq 'pass') }
-    #        Genome::Model::Command::AddReads::AcceptReads::BlatPlusCrossmatch->get(
-    #                                                                               model_id => $model->id,
-    #                                                                               event_status => 'Succeeded'
-    #                                                                           );
-
-    my @succeeded_events = $model->alignment_events;
+    my @alignment_events = $model->alignment_events;
     my @sub_alignment_files;
-    my @fasta_files;
-    for my $event (@succeeded_events) {
-        #my $align_reads = Genome::Model::Command::AddReads::AlignReads::BlatPlusCrossmatch->get(
-        #                                                                                        model_id   => $model->id,
-        #                                                                                        read_set_id     => $event->read_set_id,
-        #                                                                                    );
-        push @sub_alignment_files, $event->alignment_file;
-        push @fasta_files, $event->fasta_file;
+    for my $alignment_event (@alignment_events) {
+        push @sub_alignment_files, $alignment_event->alignment_file;
     }
     unless ($self->_cat_files($self->merged_alignments_file,@sub_alignment_files)){
         $self->error_message("Could not merge all alignment files");
@@ -117,13 +105,22 @@ sub _cat_files {
         return;
     }
 
-    for my $file (@files) {
-        my $rv = system sprintf('cat %s >> %s', $file, $out_file);
-        unless ($rv == 0) {
-            $self->error_message("Failed to cat '$file' onto '$out_file'");
+    my $out_fh = IO::File->new($out_file,'w');
+    unless ($out_fh) {
+        $self->error_message("File will not open with write priveleges '$out_file'");
+        return;
+    }
+    for my $in_file (@files) {
+        my $in_fh = IO::File->new($in_file,'r');
+        unless ($in_fh) {
+            $self->error_message("File will not open with read priveleges '$in_file'");
             return;
         }
+        while (my $line = $in_fh->getline()) {
+            $out_fh->print($line);
+        }
     }
+    $out_fh->close();
     return 1;
 }
 1;
