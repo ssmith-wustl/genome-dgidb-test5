@@ -20,18 +20,6 @@ class Genome::Model::Command::AddReads::MergeAlignments::Blat {
                                           return $model->alignments_directory .'/'. $model->sample_name .'.psl';
                                       |,
                                    },
-            merged_fasta_file => {
-                                  calculate_from => ['model'],
-                                  calculate => q|
-                                          return $model->alignments_directory .'/'. $model->sample_name .'.fa';
-                                      |,
-                              },
-            merged_qual_file => {
-                                 calculate_from => ['model'],
-                                 calculate => q|
-                                          return $model->alignments_directory .'/'. $model->sample_name .'.qual';
-                                      |,
-                             },
         ],
 };
 
@@ -78,22 +66,10 @@ sub execute {
 
     my @alignment_events = $model->alignment_events;
     my @sub_alignment_files;
-    my @fasta_files;
-    my @qual_files;
     for my $alignment_event (@alignment_events) {
         push @sub_alignment_files, $alignment_event->alignment_file;
-        push @fasta_files, $alignment_event->fasta_file;
-        push @qual_files, $alignment_event->qual_file;
     }
     unless ($self->_cat_files($self->merged_alignments_file,@sub_alignment_files)){
-        $self->error_message("Could not merge all alignment files");
-        return;
-    }
-    unless ($self->_cat_files($self->merged_fasta_file,@fasta_files)){
-        $self->error_message("Could not merge all alignment files");
-        return;
-    }
-    unless ($self->_cat_files($self->merged_qual_file,@qual_files)){
         $self->error_message("Could not merge all alignment files");
         return;
     }
