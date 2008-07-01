@@ -11,9 +11,9 @@ BEGIN {
         use_ok ('Genome::Model::Tools::FastaToFastq');
 }
 
-my $fasta_file = 'test.fasta';
-my $qual_file = 'test.qual';
-my $expected_fastq = 'test.fastq';
+my $fasta_file = 't/test.fasta';
+my $qual_file = 't/test.qual';
+my $expected_fastq = 't/test.fastq';
 
 my ($fastq_fh,$fastq_file) = File::Temp::tempfile;
 my $fasta_to_fastq = Genome::Model::Tools::FastaToFastq->create(
