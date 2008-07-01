@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 use Command;
 use Genome::Model;
-use Genome::Model::Tools::Reads::454::SffInfo;
+use Genome::Model::Tools::454::SffInfo;
 use File::Path;
 use Data::Dumper;
 
@@ -97,7 +97,7 @@ sub execute {
         }
     }
 
-    my $sffinfo_fasta = Genome::Model::Tools::Reads::454::SffInfo->create(
+    my $sffinfo_fasta = Genome::Model::Tools::454::SffInfo->create(
                                                                           sff_file => $sff_file,
                                                                           params => '-s',
                                                                           output_file => $self->fasta_file,
@@ -107,7 +107,7 @@ sub execute {
         return;
     }
 
-    my $sffinfo_qual = Genome::Model::Tools::Reads::454::SffInfo->create(
+    my $sffinfo_qual = Genome::Model::Tools::454::SffInfo->create(
                                                                          sff_file => $sff_file,
                                                                          params => '-q',
                                                                          output_file => $self->qual_file,
