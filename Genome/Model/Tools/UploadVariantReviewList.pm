@@ -55,10 +55,7 @@ sub help_synopsis{
 }
 
 sub help_detail{
-    return "This command takes in a character delimited list of variants, and uploads them to the data warehouse.  The separation character is the '|' char by default, but can be sspecified on the command line. The list should be formatted as follows:
-chromosome|begin_position|end_position|variant_type|variant_length|delete_sequence|insert_sequence|genes|supporting_samples|supporting_dbs|finisher_manual_review|pass_manual_review|finisher_3730_review|manual_genotype_normal|manual_genotype_tumor|manual_genotype_relapse|somatic_status|notes
-
-Once uploaded, the variants can be viewed and edited online at this address: https://gscweb.gsc.wustl.edu/view/variant_review_list.html
+    return "This command takes in a character delimited list of variants, and uploads them to the data warehouse.  The separation character is the '|' char by default, but can be specified on the command line. The list should be formatted as follows:\n".join('|', Genome::Utility::VariantReviewListReader->list_columns)."\n Once uploaded, the variants can be viewed and edited online at this address: https://gscweb.gsc.wustl.edu/view/variant_review_list.html
 ";
 }
 
