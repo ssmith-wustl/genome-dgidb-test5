@@ -88,8 +88,8 @@ foreach my $dir (@dirs) {
     ok($run_project->execute,'execute newbler runProject');
 }
 
-#rmtree $mapping_dir || die "Could not remove directory '$mapping_dir'";
-#rmtree $assembly_dir || die "Could not remove directory '$assembly_dir'";
-#rmtree $sff_tmp_dir || die "Could not remove directory '$sff_tmp_dir'";
+rmtree $mapping_dir || die "Could not remove directory '$mapping_dir'";
+rmtree $assembly_dir || die "Could not remove directory '$assembly_dir'";
+rmtree $sff_tmp_dir || die "Could not remove directory '$sff_tmp_dir'";
 
 exit;
