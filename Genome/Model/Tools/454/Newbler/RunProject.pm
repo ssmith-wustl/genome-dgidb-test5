@@ -1,10 +1,10 @@
-package Genome::Model::Tools::Newbler::RunProject;
+package Genome::Model::Tools::454::Newbler::RunProject;
 
 use strict;
 use warnings;
 
-class Genome::Model::Tools::Newbler::RunProject {
-    is => 'Genome::Model::Tools::Newbler',
+class Genome::Model::Tools::454::Newbler::RunProject {
+    is => 'Genome::Model::Tools::454::Newbler',
     has => [
             dir => {
                     is => 'String',

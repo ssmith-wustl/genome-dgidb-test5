@@ -1,10 +1,10 @@
-package Genome::Model::Tools::Newbler::RemoveRun;
+package Genome::Model::Tools::454::Newbler::RemoveRun;
 
 use strict;
 use warnings;
 
-class Genome::Model::Tools::Newbler::RemoveRun {
-    is => 'Genome::Model::Tools::Newbler',
+class Genome::Model::Tools::454::Newbler::RemoveRun {
+    is => 'Genome::Model::Tools::454::Newbler',
     has => [
             dir => {
                     is => 'String',

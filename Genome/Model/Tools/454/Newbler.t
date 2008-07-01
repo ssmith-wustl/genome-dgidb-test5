@@ -12,12 +12,12 @@ use GSCApp;
 App->init;
 
 BEGIN {
-    use_ok( 'Genome::Model::Tools::Newbler::NewMapping');
-    use_ok( 'Genome::Model::Tools::Newbler::NewAssembly');
-    use_ok( 'Genome::Model::Tools::Newbler::SetRef');
-    use_ok( 'Genome::Model::Tools::Newbler::AddRun');
-    use_ok( 'Genome::Model::Tools::Newbler::RemoveRun');
-    use_ok( 'Genome::Model::Tools::Newbler::RunProject');
+    use_ok( 'Genome::Model::Tools::454::Newbler::NewMapping');
+    use_ok( 'Genome::Model::Tools::454::Newbler::NewAssembly');
+    use_ok( 'Genome::Model::Tools::454::Newbler::SetRef');
+    use_ok( 'Genome::Model::Tools::454::Newbler::AddRun');
+    use_ok( 'Genome::Model::Tools::454::Newbler::RemoveRun');
+    use_ok( 'Genome::Model::Tools::454::Newbler::RunProject');
 };
 
 my $test = 0;
@@ -45,46 +45,46 @@ my @fasta_files = glob($ref_seq_dir .'/*.fasta');
 
 
 my $mapping_dir = File::Temp::tempdir;
-my $new_mapping = Genome::Model::Tools::Newbler::NewMapping->create(
+my $new_mapping = Genome::Model::Tools::454::Newbler::NewMapping->create(
                                                                     dir => $mapping_dir,
                                                                     test => $test,
                                                                    );
-isa_ok($new_mapping,'Genome::Model::Tools::Newbler::NewMapping');
+isa_ok($new_mapping,'Genome::Model::Tools::454::Newbler::NewMapping');
 ok($new_mapping->execute,'execute newbler newMapping');
 ok(-d $mapping_dir,'directory exists');
-my $set_ref = Genome::Model::Tools::Newbler::SetRef->create(
+my $set_ref = Genome::Model::Tools::454::Newbler::SetRef->create(
                                                             dir => $mapping_dir,
                                                             reference_fasta_files => \@fasta_files,
                                                             test => $test,
                                                         );
-isa_ok($set_ref,'Genome::Model::Tools::Newbler::SetRef');
+isa_ok($set_ref,'Genome::Model::Tools::454::Newbler::SetRef');
 ok($set_ref->execute,'execute newbler setRef');
 
 
 my $assembly_dir = File::Temp::tempdir;
-my $new_assembly = Genome::Model::Tools::Newbler::NewAssembly->create(
+my $new_assembly = Genome::Model::Tools::454::Newbler::NewAssembly->create(
                                                                       dir => $assembly_dir,
                                                                       test => $test,
                                                                    );
-isa_ok($new_assembly,'Genome::Model::Tools::Newbler::NewAssembly');
+isa_ok($new_assembly,'Genome::Model::Tools::454::Newbler::NewAssembly');
 ok($new_assembly->execute,'execute newbler newAssembly');
 ok(-d $assembly_dir,'directory exists');
 
 my @dirs = ($mapping_dir, $assembly_dir);
 foreach my $dir (@dirs) {
-    my $add_run = Genome::Model::Tools::Newbler::AddRun->create(
+    my $add_run = Genome::Model::Tools::454::Newbler::AddRun->create(
                                                                 dir => $dir,
                                                                 runs => \@sff_files,
                                                                 test => $test,
                                                             );
-    isa_ok($add_run,'Genome::Model::Tools::Newbler::AddRun');
+    isa_ok($add_run,'Genome::Model::Tools::454::Newbler::AddRun');
     ok($add_run->execute,'execute newbler addRun');
 
-    my $run_project = Genome::Model::Tools::Newbler::RunProject->create(
+    my $run_project = Genome::Model::Tools::454::Newbler::RunProject->create(
                                                                         dir => $dir,
                                                                         test => $test,
                                                                     );
-    isa_ok($run_project,'Genome::Model::Tools::Newbler::RunProject');
+    isa_ok($run_project,'Genome::Model::Tools::454::Newbler::RunProject');
     ok($run_project->execute,'execute newbler runProject');
 }
 

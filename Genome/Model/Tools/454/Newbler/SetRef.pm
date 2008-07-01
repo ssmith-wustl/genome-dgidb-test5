@@ -1,10 +1,10 @@
-package Genome::Model::Tools::Newbler::SetRef;
+package Genome::Model::Tools::454::Newbler::SetRef;
 
 use strict;
 use warnings;
 
-class Genome::Model::Tools::Newbler::SetRef {
-    is => 'Genome::Model::Tools::Newbler',
+class Genome::Model::Tools::454::Newbler::SetRef {
+    is => 'Genome::Model::Tools::454::Newbler',
     has => [
             dir => {
                     is => 'String',

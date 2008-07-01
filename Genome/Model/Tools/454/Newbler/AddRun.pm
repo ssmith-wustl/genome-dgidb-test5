@@ -1,10 +1,10 @@
-package Genome::Model::Tools::Newbler::AddRun;
+package Genome::Model::Tools::454::Newbler::AddRun;
 
 use strict;
 use warnings;
 
-class Genome::Model::Tools::Newbler::AddRun {
-    is => 'Genome::Model::Tools::Newbler',
+class Genome::Model::Tools::454::Newbler::AddRun {
+    is => 'Genome::Model::Tools::454::Newbler',
     has => [
             dir => {
                     is => 'String',

@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Newbler;
+package Genome::Model::Tools::454::Newbler;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use above "Genome";
 
 use File::Basename;
 
-class Genome::Model::Tools::Newbler {
-    is => 'Command',
+class Genome::Model::Tools::454::Newbler {
+    is => ['Genome::Model::Tools::454'],
     has => [
             test => {
                      is => 'Boolean',
@@ -39,31 +39,15 @@ EOS
 sub newbler_bin {
     my $self = shift;
 
-    my $test = $self->test;
-
-    my $base_path = '/gsc/pkg/bio/454/installed';
-    if ($test) {
-        $base_path = '/gsc/pkg/bio/454/newbler';
-    }
-    my $archos = `uname -a`;
-    my $tail;
-    if ($archos =~ /64/) {
-        if ($test) {
-            $tail = '64';
+    my $bin_path = $self->bin_path;
+    if ($self->test) {
+        if ($self->arch_os =~ /64/) {
+            $bin_path = '/gsc/pkg/bio/454/newbler/applicationsBin64';
         } else {
-            $tail = '-64/bin';
-        }
-    } else {
-        if ($test) {
-            $tail = '32';
-        } else {
-            $tail = '/bin';
+            $bin_path = '/gsc/pkg/bio/454/newbler/applicationsBin32';
         }
     }
-    if ($test) {
-        return $base_path .'/applicationsBin'. $tail;
-    }
-    return $base_path . $tail;
+    return $bin_path;
 }
 
 sub full_bin_path {
