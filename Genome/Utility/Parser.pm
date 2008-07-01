@@ -26,6 +26,7 @@ class Genome::Utility::Parser {
                      separator => {
                                    doc => "an optional separator charactor",
                                    is => 'string',
+                                   default => ',',
                                },
                      _parser => {
                                  is => 'Text::CSV_XS',
@@ -62,9 +63,11 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
 
-    my $parser = defined($self->separator) ?
-        Text::CSV_XS->new({'sep_char' => $self->separator}) :
-              Text::CSV_XS->new();
+    my $parser = Text::CSV_XS->new({ sep_char => $self->separator });
+    #my $parser = defined($self->separator) 
+    #? Text::CSV_XS->new({'sep_char' => $self->separator}) :
+    #: Text::CSV_XS->new();
+
     $self->_parser($parser);
 
     unless (-s $self->file) {
@@ -88,6 +91,11 @@ sub create {
         $self->header_fields(\@header_fields);
     }
 
+    unless ( $self->header_fields ) {
+        $self->error_message("No header fields set");
+        return;
+    }
+
     return $self;
 }
 
@@ -96,12 +104,7 @@ sub execute {
 
     my %data_hash;
 
-    while (my $line = $self->_file_handle()->getline()) {
-        my %line_hash = $self->_read_line($line);
-        unless (%line_hash) {
-            $self->error_message("Failed to read line '$line'");
-            return;
-        }
+    while ( my %line_hash = $self->next ) {
         $data_hash{$self->_line_number} = \%line_hash;
     }
 
@@ -110,13 +113,16 @@ sub execute {
     return 1;
 }
 
-sub getline {
+BEGIN {
+*getline = \&next;
+}
+
+sub next { 
     my $self = shift;
 
-    my $line = $self->_file_handle()->getline();
-    unless (defined $line) {
-        return;
-    }
+    my $line = $self->_file_handle()->getline()
+        or return;
+
     return $self->_read_line($line);
 }
 
@@ -124,36 +130,31 @@ sub _read_line {
     my $self = shift;
     my $line = shift;
 
-    my %data_hash;
-
     chomp($line);
-    unless ($self->header_fields) {
-        $self->error_message("No header fields set");
-        return;
-    }
-    my @keys = @{$self->header_fields};
+    $self->_line_number( $self->_line_number + 1 );
+    $self->_parser->parse($line); # check for true parse??
 
-    $self->_line_number($self->_line_number + 1);
-    $self->_parser->parse($line);
+    my @keys = @{ $self->header_fields };
     my @values = $self->_parser->fields();
-    if (scalar(@values) ne scalar(@keys)) {
-        $self->error_message('un-balanced data. found '. scalar(@values)
-                             .' values and '. scalar(@keys) .' expected on line '.
-                             $self->_line_number
-                         );
+
+    unless (scalar(@values) == scalar(@keys)) {
+        $self->error_message (
+            sprintf('Un-balanced data found: %d values and %d expected on line %d',
+                scalar(@values),
+                scalar(@keys),
+                $self->_line_number,
+            )
+        );
         return;
     }
-    for (my $i=0; $i < scalar(@values); $i++) {
-        $data_hash{$keys[$i]} = $values[$i];
-    }
 
-    if (wantarray) {
-        return %data_hash;
-    } else {    
-        return \%data_hash;
-    }
+    my %data_hash;
+    @data_hash{@keys} = @values;
+
+    return ( wantarray ) ? %data_hash : \%data_hash;
 }
 
 1;
 
-
+#$Header$
+#$Id$
