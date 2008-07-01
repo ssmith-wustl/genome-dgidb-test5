@@ -24,6 +24,10 @@ UR::Object::Type->define(
             is => 'String', 
             doc => 'ID of list to be updated',
         },
+        separation_character => {
+            is => 'String',
+            doc => 'separation character in list of variants to be added',
+        },
     ]
 );
 
@@ -36,12 +40,12 @@ sub help_synopsis{
 }
 
 sub help_detail{
-"Adds variants to existing lists given the list name or list id.";
+"Adds variants to existing lists given the list name or list id. The list must be a character delimited list.  The default delimiter is the '|' char, but this can be specified on the command line.  The list columns must be in the following format:\n".join('|', Genome::Utility::VariantReviewListReader->list_columns)."\n Once uploaded, the variants can be viewed and edited online at this address: https://gscweb.gsc.wustl.edu/view/variant_review_list.html";
 }
 
 sub execute{
     my $self = shift;
-    my $list = Genome::Utility::VariantReviewListReader->new($self->list);
+    my $list = Genome::Utility::VariantReviewListReader->new($self->list, $self->separation_character);
     my $db_list = Genome::VariantReviewList->get($self->db_list_name ? (name=>$self->db_list_name) : (id=>$self->db_list_id)); 
 
     unless ($db_list){
