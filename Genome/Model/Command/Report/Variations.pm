@@ -10,8 +10,6 @@ use Data::Dumper;
 use IO::File;
 use Genome::DB::Schema;
 use Genome::VariantAnnotator;
-#use Genome::IndelAnnotator;
-#use Genome::SnpAnnotator;
 use Tie::File;
 
 class Genome::Model::Command::Report::Variations
@@ -93,7 +91,7 @@ sub help_synopsis {
 
 sub help_detail {
     return <<EOS 
-    Creates an annotation report for variants in a given file.  Uses Genome::VariantAnnotator or Genome::IndelAnnotator (coming soon!) for each given variant, and outputs the annotation infomation to the given report file.
+    Creates an annotation report for variants in a given file.  Uses Genome::VariantAnnotator for each given variant, and outputs the annotation infomation to the given report file.
 EOS
 }
 
@@ -169,6 +167,7 @@ sub _create_annotator
 
     my $annotator = Genome::VariantAnnotator->new
     (
+        #variant_type => $self->variant_type,
         transcript_window => $chromosome->transcript_window
         (
             from => $from - $self->flank_range,
@@ -273,7 +272,7 @@ sub _variation_report_fh
 # report headers
 sub metrics_report_headers
 {
-    return (qw/ total confident distinct /, variation_sources());
+    return (qw/ total confident distinct genic /, variation_sources());
 }
 
 sub transcript_report_headers
@@ -300,6 +299,7 @@ sub transcript_attributes
 sub variation_attributes
 {
     return ('in_coding_region', variation_sources());
+    #return ('genic', variation_sources());
 }
 
 sub variation_sources
@@ -366,13 +366,17 @@ sub _print_reports_for_snp
         @snp_exists_in_variations = (qw/ 0 0 0 /);
     }
 
+
+    $self->{_metrics}->{genic}++ if @$transcripts;
+    
+    # Variations
     $self->_variation_report_fh->print
     (
         join
         (
             ',',
             $snp_info_string,
-            ( @$transcripts ) ? 1 : 0, # coding
+            ( @$transcripts ) ? 1 : 0, # genic
             @snp_exists_in_variations,
         ),
         "\n",
@@ -422,6 +426,9 @@ sub _print_metrics_report
     );
 }
 
+#- CALC METRICS -#
+# TODO move metric calcing here
+
 1;
 
 =pod
@@ -432,7 +439,7 @@ Genome::Model::Command::Report::Variations
 
 =head1 Synopsis
 
-Goes through each variant in a file, retrieving annotation information from Genome::VariantAnnotator or Genome::IndelAnnotator (coming soon).
+Goes through each variant in a file, retrieving annotation information from Genome::VariantAnnotator.
 
 =head1 Usage
 
