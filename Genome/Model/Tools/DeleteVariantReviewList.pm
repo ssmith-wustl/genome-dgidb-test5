@@ -22,7 +22,7 @@ UR::Object::Type->define(
 );
 
 sub help_brief{
-    return "Delete a variant review list";
+    return "Delete a variant review list and all of the variant review details that are only in that list";
 }
 
 sub help_synopsis{
@@ -30,7 +30,7 @@ sub help_synopsis{
 }
 
 sub help_detail{
-"Delete a variant review list.";
+"Deletes a variant review list from the database. Also deletes all variant review details that have no other links to other lists.  Use with caution.  Takes in either the list id, or the list name";
 }
 
 
