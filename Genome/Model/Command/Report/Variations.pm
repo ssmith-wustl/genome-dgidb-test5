@@ -329,7 +329,7 @@ sub _print_reports_for_snp
 
     # Calculate Metrics
     my $is_hq_snp = ( $snp->{maq_score} >= $self->minimum_maq_score 
-            and $snp->{reference_reads} + $snp->{variant_reads} > $self->minimum_read_count )
+            and $snp->{reference_reads} + $snp->{variant_reads} >= $self->minimum_read_count )
     ? 1
     : 0;
 
