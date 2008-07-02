@@ -1,14 +1,15 @@
 package Genome::Model::Tools::Maq::GenerateVariationMetrics;
 
 use above "Genome";
-
+use File::Basename;
+use Genome;
 class Genome::Model::Tools::Maq::GenerateVariationMetrics {
     is => 'Genome::Model::Tools::Maq',
     has => [
         input => {
             type => 'String',
             doc => 'File path for input map',
-        },
+        },  
         snpfile => {
             type => 'String',
             doc => 'File path for snp file',
@@ -57,7 +58,17 @@ sub execute {
     my $in = $self->input;
     my $snpfile = $self->snpfile;
     my $out = $self->output;
-
+    #`cp $in /tmp/$out.map`;return 1;
+    #print "input :$in \n snpfile: $snpfile \n out: $out\n";exit;
+    if($in =~ /resolve/)
+    {
+        my ($eid, $library_name) = $in =~ /resolve (.*) (.*)/;
+        my $e = Genome::Model::Event->get("$eid");
+        my $model = $e->model;
+        #print $model->name,"\n";
+        $in = $model->resolve_accumulated_alignments_filename(ref_seq_id => $e->ref_seq_id,
+                                                              library_name => $library_name);    
+    }
     unless ($in and $snpfile and -e $in and -e $snpfile) {
         $self->error_message("Bad params!");
         $self->usage_message($self->help_usage_complete_text);
@@ -65,14 +76,14 @@ sub execute {
     }
     
     my $result;
-    $ovsrc =  `wtf Genome::Model::Tools::Maq::GenerateVariationMetrics_C`;
-    ($ovsrc) = split /\n/,$ovsrc;
-    print "This is the wtf ss wanted me to add $ovsrc\n";
-    chomp $ovsrc;
-    `perl $ovsrc`;#evil hack
-    require Genome::Model::Tools::Maq::GenerateVariationMetrics_C;
-    $result = Genome::Model::Tools::Maq::GenerateVariationMetrics_C::filter_variations($in,$snpfile, 1,$out);#$qual_cutoff);
+    #$ovsrc =  `wtf Genome::Model::Tools::Maq::GenerateVariationMetrics_C`;
+    #($ovsrc) = split /\n/,$ovsrc;
+    #chomp $ovsrc;
+    #`perl $ovsrc`;#evil hack
+    #require Genome::Model::Tools::Maq::GenerateVariationMetrics_C;
+    #$result = Genome::Model::Tools::Maq::GenerateVariationMetrics_C::filter_variations($in,$snpfile, 1,$out);#$qual_cutoff);
     
+    $result = system("/gscuser/jschindl/svn/dev/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $in $snpfile 1 $out\n");
     $result = !$result; # c -> perl
 
     $self->result($result);
