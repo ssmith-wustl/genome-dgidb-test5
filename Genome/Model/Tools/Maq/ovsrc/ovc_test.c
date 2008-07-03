@@ -110,7 +110,7 @@ int advance_seqid(void *rstream, void *vstream)
             {                
                 if(size != sizeof(maqmap1_t)||size == 0) 
                 {
-                    fprintf(stderr,"size is only %d, seqid is %d\n",size,m1->seqid);
+                    //fprintf(stderr,"size is only %d, seqid is %d\n",size,m1->seqid);
                     //dealing with a truncated file
                     free(m1);
                     return 0;
@@ -172,7 +172,7 @@ int init_seqid(void *rstream, void *vstream)
             {                
                 if(size != sizeof(maqmap1_t)||size == 0) 
                 {
-                    fprintf(stderr,"size is only %d, seqid is %d\n",size,m1->seqid);
+                    //fprintf(stderr,"size is only %d, seqid is %d\n",size,m1->seqid);
                     //dealing with a truncated file
                     free(m1);
                     return 0;
@@ -278,6 +278,7 @@ static int get_base(char base)
     if(tolower(base)=='c') return 1;
     if(tolower(base)=='g') return 2;
     if(tolower(base)=='t') return 3;
+    if(tolower(base)=='n') return 4;
     
     return -1;
 }
@@ -481,17 +482,16 @@ int get_urc26(map_array *reads, long position)
         {
             maqmap1_t *read = reads->reads[i];
             long read_start = read->pos>>1;
-            long read_end = read->pos>>1+read->size;
-            //this code works because have already tested reads smaller than 26 bases to see if they fit
+            long read_end = (read_start+read->size)-1;
+            //this code works because I have already tested reads smaller than 26 bases to see if they fit
             if(read->pos&1)
-                if((read_end-26)<=position)
+                if((read_end-25)<=position)
                     current_pos++;
             
             else
-                if((read_start+26)>=position)
+                if((read_start+25)>=position)
                     current_pos++;
         }
-    current_pos++;
     return current_pos;
 }
 
@@ -578,7 +578,13 @@ void callback_def (void *variation, GQueue * reads)
     fprintf(stdout, "%d,%d,%d,%d\t\t",urc[0],urc[1],urc[2],urc[3]);
     fprintf(stdout, "%d,%d,%d,%d\t\t",urc26[0],urc26[1],urc26[2],urc26[3]);
     fprintf(stdout, "%d,%d,%d,%d\t\t",ursc[0],ursc[1],ursc[2],ursc[3]);
-    fprintf(stdout, "%c\t%d,%d,%d,%d,%d,%d\t\t",bases[iref_base],rc[iref_base],urc[iref_base],urc26[iref_base],ursc[iref_base],q[iref_base],mq[iref_base]);
+    if(iref_base == 4)
+        for(i = 0;i<4;i++)
+            fprintf(stdout, "%c\t%d,%d,%d,%d,%d,%d\t\t",bases[i],rc[i],urc[i],urc26[i],ursc[i],q[i],mq[i]);            
+    else if(iref_base != -1)
+        fprintf(stdout, "%c\t%d,%d,%d,%d,%d,%d\t\t",bases[iref_base],rc[iref_base],urc[iref_base],urc26[iref_base],ursc[iref_base],q[iref_base],mq[iref_base]);
+    else 
+        fprintf(stdout, "%s invalid reference base!");
     for(i=0;i<vcount;i++)
     {
         int b = vbase[i];
@@ -655,7 +661,7 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,c
             r_stream,  
             callback_def  
         );
-        fprintf(stderr,"After fire callback\n");
+        //fprintf(stderr,"After fire callback\n");
         
     } while(advance_seqid(r_stream,v_stream));
     if(stdout != stdoutsave) fclose(stdout);
