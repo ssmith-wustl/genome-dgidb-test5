@@ -87,7 +87,7 @@ sub execute
 
     write_file( $tmpfile, @$rcmd );
 
-    system("/usr/bin/R --no-save -q < $tmpfile");
+    system("/usr/bin/R --no-save -q < $tmpfile >/dev/null 2>&1");
 
     if ($@)
     {
