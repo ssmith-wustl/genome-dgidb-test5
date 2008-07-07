@@ -21,7 +21,7 @@ my $hm = Genome::Model::Tools::Heatmap->create(
                                                          columns => $columns,
                                                         );
 ok($hm->execute,'heatmap image generation');
-my $imagecontents = qw(cat $outfile);
+my $imagecontents = qx(cat $outfile);
 #is(md5_hex($imagecontents), $checksum, 'image correct');
 
 #ok(0,'firetest');
