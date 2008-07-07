@@ -903,7 +903,13 @@ sub resolve_pcap_run_type
 #   $self->{bdocs_prog_type} = 'bdocs.rep';
 
     #bconsen.rep.454 no longer exists
-    $self->{bconsen_prog_type} = 'bconsen.rep.454.071214'
+
+    #they make frequent changes to this prog name
+
+#   $self->{bconsen_prog_type} = 'bconsen.rep.454.071214'
+#      if $self->pcap_run_type eq 'RAW_454';
+
+    $self->{bconsen_prog_type} = 'bconsen.454'
 	if $self->pcap_run_type eq 'RAW_454';
 
     $self->{bcontig_prog_type} = 'bcontig.rep.poly'
@@ -1004,7 +1010,7 @@ sub run_pcap
 
     my $ec = system ($pcap_prog.' '.$self->{pcap_root_name}.' '.$self->_get_pcap_params);
 
-    $self->error_message("pcap.rep.test returned exit code $ec\n") and return
+    $self->error_message("$pcap_prog returned exit code $ec\n") and return
 	if $ec;
 
     return 1;
