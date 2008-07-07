@@ -6,6 +6,7 @@ use warnings;
 use above "Genome";
 use Command;
 use Genome::Model;
+use Genome::Model::Command::Report::MetricsBatchToLsf;
 use IO::File;
 use File::Basename;
 
@@ -95,40 +96,112 @@ sub variation_metrics_file {
 
 sub execute {
     my $self = shift;
-
     my $model = $self->model;
 
-$DB::single=1;
-    # Get a lock for the snp and pileup files
+    $DB::single=1;
+
+    unless ($self->generate_genotype_detail_file) {
+        $self->error_message("Error generating genotype detail file (annotation input)!");
+        # cleanup...
+        return;
+
+    }
+
+    unless ($self->generate_variation_metrics_files) {        
+        $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
+        # cleanup...
+        return;
+    }
+
+    unless ($self->verify_successful_completion) {
+        $self->error_message("Error validating results!");
+        # cleanup...
+        return;
+    }
+    
+    return 1;
+}
+
+sub verify_successful_completion {
+    my $self = shift;
+    my $model = $self->model; 
+
+    my $snp_output_file             = $self->snp_output_file;
+    my $snp_output_file_count       = _wc($snp_output_file);
+    
+    my $errors = 0;
+    
+    my $genotype_detail_file        = $self->genotype_detail_file;
+    my $genotype_detail_file_count  = _wc($genotype_detail_file);
+
+    my @ck = map { $self->$_ } qw/variation_metrics_file/;
+    for my $ck (@ck) {
+        unless (-e $ck) {
+            $self->error_message("Failed to find $ck!");
+            $errors++;
+            next;
+        }
+        my $cnt = _wc($ck);
+        unless ($cnt == $snp_output_file_count) {
+            $self->error_message("File $ck has size $cnt "
+                    . "while the SNP file $snp_output_file has size $snp_output_file_count!");
+            $errors++;
+        }
+    }
+    
+    return !$errors;
+}
+
+sub _wc {
+    my $name = shift;
+    my $fh = IO::File->new($name);
+    my $cnt = 0;
+    while (<$fh>) { $cnt++ }
+    return $cnt;
+}
+
+sub generate_genotype_detail_file {
+    my $self = shift;
+    my $model = $self->model; 
 
     my $snp_resource_name    = $self->_snp_resource_name; 
     my $pileup_resource_name = $self->_pileup_resource_name; 
     my $report_resource_name = $self->_genotype_detail_name; 
 
-    my $snip_output_file    = $self->snp_output_file;
+    my $snp_output_file     = $self->snp_output_file;
     my $pileup_output_file  = $self->pileup_output_file;
     my $report_input_file   = $self->genotype_detail_file;
 
-    my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
-    my $chromosome_resource_name = basename($chromosome_alignment_file);
-
-    foreach my $file ( $snip_output_file, $pileup_output_file) {
-        unless (-f $file and -s $file) {
-            $self->error_message("File $file dosen't exist or has no data.  It should have been filled-in in a prior step");
-            return;
-        }
-    }
-
-    foreach my $resource ( $snp_resource_name, $pileup_resource_name, $report_resource_name, $chromosome_resource_name) {
+    # Get a lock for the snp and pileup files
+    foreach my $resource ( $snp_resource_name, $pileup_resource_name, $report_resource_name) {
         unless ($model->lock_resource(resource_id => $resource)) {
             $self->error_message("Can't get lock for resource $resource");
             return undef;
         }
     }
 
-    my $snip_fh = IO::File->new($snip_output_file);
-    unless ($snip_fh) {
-        $self->error_message("Can't open snp file $snip_output_file: $!");
+    my $result = $self->_generate_genotype_detail_file($snp_output_file,$pileup_output_file,$report_input_file);
+    unless ($result) {
+        $self->error_message("Error generating genotype detail!");
+        return;
+    }
+
+    return $result;
+}
+
+sub _generate_genotype_detail_file {
+    my ($self, $snp_output_file, $pileup_output_file, $report_input_file) = @_;
+    
+    foreach my $file ( $snp_output_file, $pileup_output_file) {
+        unless (-f $file and -s $file) {
+            $self->error_message("File $file dosen't exist or has no data.  It should have been filled-in in a prior step");
+            return;
+        }
+    }
+
+    my $snp_fh = IO::File->new($snp_output_file);
+    unless ($snp_fh) {
+        $self->error_message("Can't open snp file $snp_output_file: $!");
         return;
     }
 
@@ -145,14 +218,7 @@ $DB::single=1;
         return;
     }
 
-    my $maq_pathname = $self->proper_maq_pathname('genotyper_name');
-    my $mapview_fh = IO::File->new("$maq_pathname mapview $chromosome_alignment_file |");
-    unless ($mapview_fh) {
-        $self->error_message("Can't open maq mapview on $chromosome_alignment_file: $!");
-        return;
-    }
-
-    while(<$snip_fh>) {
+    while(<$snp_fh>) {
         chomp;
         my ($chromosome, $start, $ref_sequence, $cns_sequence, $cns_quality_score,
             $read_depth, $avg_hits, $highest_quality, $allele_quality_diff) = split("\t");
@@ -172,7 +238,7 @@ $DB::single=1;
             #$read_depth != ($read_depth >= 255 ? 255 : $pu_read_depth)
         ) {
             
-            $self->error_message("Data is not consistent.  snp file line " . $snip_fh->input_line_number . 
+            $self->error_message("Data is not consistent.  snp file line " . $snp_fh->input_line_number . 
                                  " pileup line " . $pileup_fh->input_line_number);
             return;
         }
@@ -210,7 +276,6 @@ $DB::single=1;
                                          $ref_read_count,
                                          $read_counts{$sample_read},
                                          $cns_quality_score,
-                                         #$self->unique_reads_at_position($mapview_fh, $start),
                                    ), "\n");
             # If the sample is homozygous, only report this SNP once
             last if ($sample_alleles[0] eq $sample_alleles[1]);
@@ -218,16 +283,9 @@ $DB::single=1;
 
     } # end foreach line in the SNP file
                           
-    $snip_fh->close();
+    $snp_fh->close();
     $pileup_fh->close();
     $report_fh->close();
-    $mapview_fh->close();
-    
-    unless ($self->generate_variation_metrics) {        
-        $self->error_message("");
-        # cleanup...
-        return;
-    }
 
     return 1;
 }
@@ -296,13 +354,79 @@ sub snp_unchunk
     }
 }
 
+sub chunk_variation_metrics2 {
+    my $self = shift;
+    my $model = $self->model;
+
+    my $variation_metrics_file = $self->variation_metrics_file;
+    $self->status_message("Generating cross-library metrics for $variation_metrics_file");
+    if(0) {
+        
+        unless (
+            Genome::Model::Command::Report::MetricsBatchToLsf->execute
+            (
+                input => 'resolve '.$self->eid,
+                snpfile => $self->snp_output_file,
+                qual_cutoff => 1,
+                output => $variation_metrics_file,
+                out_log_file => $self->snp_out_log_file,
+                error_log_file => $self->snp_err_log_file,
+                # OTHER PARAMS:
+                # flank_range => ??,
+                # variant_range => ??,
+                # format => ??,
+            )
+        ) {
+            $self->error_message("Failed to generate cross-library metrics for $variation_metrics_file");
+            return;            
+        }
+        unless (-s ($variation_metrics_file)) {
+            $self->error_message("Metrics file not found for library $variation_metrics_file!");
+            return;
+        }
+    }
+
+    my @libraries = $model->libraries;
+    
+	$self->status_message("Generating per-library metric breakdown of $variation_metrics_file");
+	foreach my $library_name (@libraries) {
+        my $lib_variation_metrics_file = $variation_metrics_file . '.' . $library_name;
+        $self->status_message("...generating per-library metrics for $lib_variation_metrics_file");
+
+        unless (
+            Genome::Model::Command::Report::MetricsBatchToLsf->execute
+            (
+                input => 'resolve '.$self->eid,
+                snpfile => $self->snp_output_file,
+                qual_cutoff => 1,
+                output => $lib_variation_metrics_file,
+                out_log_file => $self->snp_out_log_file,
+                error_log_file => $self->snp_err_log_file,
+                # OTHER PARAMS:
+                # flank_range => ??,
+                # variant_range => ??,
+                # format => ??,
+            )            
+        ) {
+            $self->error_message("Failed to generate per-library metrics for $lib_variation_metrics_file");
+            return;
+        } 
+        unless (-s ($variation_metrics_file . '.' . $library_name)) {
+            $self->error_message("Per-library metrics file not found for $lib_variation_metrics_file!");
+            return;
+        }
+    }
+    return 1;
+
+}
+
 sub chunk_variation_metrics {
     my $self = shift;
     my $model = $self->model;
     my $eid = $self->id;
     my $variation_metrics_file = $self->variation_metrics_file;
     $self->status_message("Generating cross-library metrics for $variation_metrics_file");
-    my $chunk_number = 4;
+    my $chunk_number = 30;
     my $prefix = $self->snp_chunk($self->snp_output_file, $chunk_number);
     my $out_prefix = $self->snp_chunk_prefix($self->variation_metrics_file);
     if(1) {
@@ -311,7 +435,7 @@ sub chunk_variation_metrics {
         for(my $i=0;$i<$chunk_number;$i++)
         {
             
-            system("bsub -oo ".$model->name.".$i.log ".
+            system("bsub -oo ".$model->name.'_'.$self->ref_seq_id.".$i.log ".
                    "gt maq generate-variation-metrics ".
                    "--input=\"$input\" ".
                    "--snpfile=$prefix.$i --qual-cutoff=1 --output=$out_prefix.$i");       
@@ -337,7 +461,7 @@ sub chunk_variation_metrics {
         my $out_prefix = $self->snp_chunk_prefix($self->variation_metrics_file);
         for(my $i=0;$i<$chunk_number;$i++)
         {
-            system("bsub -oo ".$model->name.".$library_name.$i.log ".
+            system("bsub -oo ".$model->name.'_'.$self->ref_seq_id.".$library_name.$i.log ".
                    "gt maq generate-variation-metrics ".
                    "--input=\"$input\" ".
                    "--snpfile=$prefix.$i --qual-cutoff=1 --output=$out_prefix.$library_name.$i");      
@@ -346,7 +470,7 @@ sub chunk_variation_metrics {
     return 1;
 }
 
-sub generate_variation_metrics {
+sub generate_variation_metrics_files {
     my $self = shift;
     my $model = $self->model;
 
@@ -504,6 +628,30 @@ sub unique_reads_at_position {
     # Subtract 1 because we've read in one record past the position we asked for
     return $self->{'_map_cache_count'} - 1;
 }
+
+#- LOG FILES -#
+sub snp_out_log_file {
+    my $self = shift;
+
+    return sprintf
+    (
+        '%s/%s.out', #'%s/%s_snp.out',
+        $self->resolve_log_directory,
+        ($self->lsf_job_id || $self->ref_seq_id),
+    );
+}
+
+sub snp_err_log_file {
+    my $self = shift;
+
+    return sprintf
+    (
+        '%s/%s.err', #'%s/%s_snp.err',
+        $self->resolve_log_directory,
+        ($self->lsf_job_id || $self->ref_seq_id),
+    );
+}
+
 
  
 
