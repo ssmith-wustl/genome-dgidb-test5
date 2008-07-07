@@ -239,8 +239,17 @@ sub _reschedule_failed_jobs {
                                 Genome::Model::Event->get(event_status => 'Scheduled',
                                                           prior_event_id => $event->genome_model_event_id);
 
-        my $new_job_id = $event->execute_with_bsub( bsub_queue => $self->bsub_queue,
-                                                    bsub_args => $self->bsub_args );
+        my $prior_event = $event->prior_event();
+        my %execute_args = (bsub_queue => $self->bsub_queue, bsub_args => $self->bsub_args);
+
+        if ($prior_event) {
+            if ( $prior_event->lsf_job_id and 
+                 ( $prior_event->event_status eq 'Running' or $prior_event->event_status eq 'Scheduled') ) {
+
+                $execute_args{'last_event'} = $prior_event;
+            }
+        }
+        my $new_job_id = $event->execute_with_bsub(%execute_args);
         unless ($new_job_id) {
             $self->_failed_to_bsub($event, \@launchable_events);
             next;
