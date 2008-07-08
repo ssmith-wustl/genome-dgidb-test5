@@ -3,7 +3,7 @@ package UR::Object::Command::List;
 use strict;
 use warnings;
 
-use above "Genome";                 
+use above "UR";                 
 
 use Data::Dumper;
 require Term::ANSIColor;
