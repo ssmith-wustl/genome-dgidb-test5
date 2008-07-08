@@ -55,6 +55,7 @@ sub create {
 
 sub execute {
     my $self = shift;
+$DB::single = 1;
     my $in = $self->input;
     my $snpfile = $self->snpfile;
     my $out = $self->output;
@@ -62,7 +63,10 @@ sub execute {
     #print "input :$in \n snpfile: $snpfile \n out: $out\n";exit;
     if($in =~ /resolve/)
     {
-        my ($eid, $library_name) = $in =~ /resolve (.*) (.*)/;
+        my ($eid, $library_name);
+        ($eid, $library_name) = $in =~ /resolve (.*) (.*)/;
+        ($eid) = $in =~ /resolve (.*)/ unless $library_name;
+
         my $e = Genome::Model::Event->get("$eid");
         my $model = $e->model;
         #print $model->name,"\n";
