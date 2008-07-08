@@ -320,7 +320,7 @@ sub chunk_variation_metrics {
             $self->error_message("Metrics file not found for library $variation_metrics_file!");
             return;
         }
-    }
+    }return 1;
 
     my @libraries = $model->libraries;
     
@@ -362,7 +362,7 @@ sub generate_variation_metrics_files {
 
     my $variation_metrics_file = $self->variation_metrics_file;
     $self->status_message("Generating cross-library metrics for $variation_metrics_file");
-    if(0) {
+    if(1) {
         my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
         unless (
             Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(
