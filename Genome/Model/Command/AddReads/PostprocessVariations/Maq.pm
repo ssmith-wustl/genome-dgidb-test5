@@ -290,87 +290,23 @@ sub _generate_genotype_detail_file {
     return 1;
 }
 
-sub snp_chunk
-{
-    my ($self, $input_file,$count) = @_;
-    my $in = IO::File->new($input_file);
-    my $chunk_prefix = $self->snp_chunk_prefix($input_file);
-    my @out;
-
-    for(my $i = 0;$i<$count;$i++)
-    {
-        $out[$i] = IO::File->new(">$chunk_prefix.$i");
-    }
-    my $i=0;
-    #I give line 0 to chunk file 0, line 1 to chunk file 1, etc.
-    #I divide it this way because certain clusters of SNP's have quite a few overlapping
-    #reads, and I want that work to be distributed
-    #The other method of chunking, which would involve give the first 10% of the SNP file
-    #to chunk 0, second 10% to chunk file 2, etc., would result in some chunks having a much
-    #greater amount of work than others.
-    while(my $line = <$in>)
-    {
-        while($i>=$count){$i-=$count;}#same as $i= $i%$count, but a bit more efficient, as long as $i isn't some huge number
-        $out[$i]->print( $line);
-        $i++;
-    }
-
-    for(my $i = 0;$i<$count;$i++)
-    {
-        $out[$i]->close;
-    }
-    return $chunk_prefix;
-}
-
-sub snp_chunk_prefix
-{
-    my ($self, $input_file) = @_;
-    my $out_path = dirname($input_file);
-    my $out_prefix = basename $input_file;
-    my $out_dir = $out_path.'/'.$out_prefix.".chunk";
-    `mkdir $out_dir` unless -d $out_dir;
-    return "$out_dir/$out_prefix";
-}
-
-sub snp_unchunk
-{
-    my ($self,$prefix,$count,$output) = @_;
-
-    $prefix = dirname($prefix.'.0').'/'.basename($prefix.'.0','.0');
-    my @fhs;
-    for(my $i=0;$i<$count;$i++)
-    {
-        push @fhs,IO::File->new($prefix.".$i");
-    }
-    my $out_fh = IO::File->new(">$output");
-    my $line_no = 0;
-    my $line;
-    while(1)
-    {
-        if($line_no>$count){$line_no-=$count;}
-        last unless($line =$fhs[$line_no%$count]->getline);   
-        print $out_fh $line;
-        $line_no++;
-    }
-}
-
-sub chunk_variation_metrics2 {
+sub chunk_variation_metrics {
     my $self = shift;
     my $model = $self->model;
 
     my $variation_metrics_file = $self->variation_metrics_file;
     $self->status_message("Generating cross-library metrics for $variation_metrics_file");
-    if(0) {
+    if(1) {
         
         unless (
             Genome::Model::Command::Report::MetricsBatchToLsf->execute
             (
-                input => 'resolve '.$self->eid,
+                input => 'resolve '.$self->id,
                 snpfile => $self->snp_output_file,
                 qual_cutoff => 1,
                 output => $variation_metrics_file,
                 out_log_file => $self->snp_out_log_file,
-                error_log_file => $self->snp_err_log_file,
+                #error_log_file => $self->snp_err_log_file,
                 # OTHER PARAMS:
                 # flank_range => ??,
                 # variant_range => ??,
@@ -396,12 +332,12 @@ sub chunk_variation_metrics2 {
         unless (
             Genome::Model::Command::Report::MetricsBatchToLsf->execute
             (
-                input => 'resolve '.$self->eid,
+                input => 'resolve '.$self->id . " $library_name",
                 snpfile => $self->snp_output_file,
                 qual_cutoff => 1,
                 output => $lib_variation_metrics_file,
                 out_log_file => $self->snp_out_log_file,
-                error_log_file => $self->snp_err_log_file,
+                #error_log_file => $self->snp_err_log_file,
                 # OTHER PARAMS:
                 # flank_range => ??,
                 # variant_range => ??,
@@ -418,56 +354,6 @@ sub chunk_variation_metrics2 {
     }
     return 1;
 
-}
-
-sub chunk_variation_metrics {
-    my $self = shift;
-    my $model = $self->model;
-    my $eid = $self->id;
-    my $variation_metrics_file = $self->variation_metrics_file;
-    $self->status_message("Generating cross-library metrics for $variation_metrics_file");
-    my $chunk_number = 30;
-    my $prefix = $self->snp_chunk($self->snp_output_file, $chunk_number);
-    my $out_prefix = $self->snp_chunk_prefix($self->variation_metrics_file);
-    if(1) {
-        #my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
-        my $input = "resolve $eid";
-        for(my $i=0;$i<$chunk_number;$i++)
-        {
-            
-            system("bsub -oo ".$model->name.'_'.$self->ref_seq_id.".$i.log ".
-                   "gt maq generate-variation-metrics ".
-                   "--input=\"$input\" ".
-                   "--snpfile=$prefix.$i --qual-cutoff=1 --output=$out_prefix.$i");       
-        }
-    }
-
-    my @libraries = $model->libraries;
-    
-	$self->status_message("Generating per-library metric breakdown of $variation_metrics_file");
-	foreach my $library_name (@libraries) {
-        my $lib_variation_metrics_file = $variation_metrics_file . '.' . $library_name;
-        $self->status_message("...generating per-library metrics for $lib_variation_metrics_file");
-        #my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename(
-        #    ref_seq_id => $self->ref_seq_id,
-        #    library_name => $library_name,
-        #); 
-        #unless ($chromosome_alignment_file) {
-        #    $self->error_message("Failed to create an accumulated alignments file for"
-        #            . " per-library metrics for library $lib_variation_metrics_file");
-        #    return;
-        #}
-        my $input = "resolve $eid $library_name";
-        my $out_prefix = $self->snp_chunk_prefix($self->variation_metrics_file);
-        for(my $i=0;$i<$chunk_number;$i++)
-        {
-            system("bsub -oo ".$model->name.'_'.$self->ref_seq_id.".$library_name.$i.log ".
-                   "gt maq generate-variation-metrics ".
-                   "--input=\"$input\" ".
-                   "--snpfile=$prefix.$i --qual-cutoff=1 --output=$out_prefix.$library_name.$i");      
-        }        
-    }
-    return 1;
 }
 
 sub generate_variation_metrics_files {
