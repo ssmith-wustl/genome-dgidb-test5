@@ -23,7 +23,13 @@ class Genome::Model::EventWithReadSet {
                                                                    $read_set->name);
                                 |,
                             },
-
+        alignment_links_directory => { via => 'model'},
+        read_set_alignment_directory  => {
+                                          calculate_from => ['alignment_links_directory','read_set'],
+                                          calculate => q|
+                                              return sprintf('%s/%s',$alignment_links_directory,$read_set->seq_id);
+                                          |,
+                            },
         library_name        => { via => 'read_set' },
         sample_name         => { via => 'read_set' },
 
