@@ -13,7 +13,12 @@ class Genome::Model::Command::AddReads::PostprocessVariations::BreakPointRead454
        ],
     has => [
             merged_alignments_file => { via => 'prior_event' },
-            merged_fasta_file => {via => 'prior_event'},
+            merged_fasta_file => {
+                                  calculate_from => ['model'],
+                                  calculate => q|
+                                          return $model->alignments_directory .'/'. $model->sample_name .'.fa';
+                                  |,
+                              },
             insertions_file => { via => 'prior_event' },
             combined_insertions_file => {
                                          calculate_from => ['insertions_file'],
@@ -30,11 +35,11 @@ class Genome::Model::Command::AddReads::PostprocessVariations::BreakPointRead454
                                      },
             substitutions_file => { via => 'prior_event' },
             combined_substitutions_file => {
-                                         calculate_from => ['substitutions_file'],
-                                         calculate => q|
+                                            calculate_from => ['substitutions_file'],
+                                            calculate => q|
                                              return $substitutions_file .'.combined';
-                                         |, 
-                                     },
+                                         |,
+                                        },
             coverage_blocks_file => {
                                      calculate_from => ['merged_alignments_file'],
                                      calculate => q|
@@ -65,29 +70,15 @@ sub execute {
     my $self = shift;
     my $model = $self->model;
 
+    my @alignment_events = $model->alignment_events;
+    my @fasta_files = map {$_->fasta_file} @alignment_events;
+    unless ($self->_cat_files($self->merged_fasta_file,@fasta_files)){
+        $self->error_message("Could not merge all alignment files");
+        return;
+    }
+
     my $break_point_path = 'perl ~jwalker/svn/perl_modules/breakPointRead/breakPointRead454.pl';
 
-    my @sibling_events = $self->sibling_events;
-    my @merged_alignments_events = grep { $_->event_type =~ /merge-alignments/
-                                             && $_->ref_seq_id eq $self->ref_seq_id } @sibling_events;
-    if (scalar(@merged_alignments_events) > 1) {
-        $self->error_message("Not setup to handle multiple ref seqs yet");
-        return;
-    }
-    my $merged_alignments_event = $merged_alignments_events[0];
-    if (!$merged_alignments_event) {
-        $self->error_message("No merge alignment found");
-        return;
-    }
-    my $merged_alignments_file = $merged_alignments_event->merged_alignments_file;
-    unless ($merged_alignments_file && -s $merged_alignments_file) {
-        $self->error_message("merged alignments file '$merged_alignments_file' does not exist or has zero size");
-        return;
-    }
-
-    my $insertions_cmd = $break_point_path .' --combine-indels '. $self->insertions_file;
-    my $deletions_cmd = $break_point_path .' --combine-indels '. $self->deletions_file;
-    my $substitutions_cmd = $break_point_path .' --combine-snps '. $self->substitutions_file;
     my $snp_cmd = sprintf("%s --genotype-snps %s --alignment-file %s --sample-name %s",
                           $break_point_path,
                           $self->combined_substitutions_file,
@@ -109,8 +100,7 @@ sub execute {
                             $model->alignments_directory,
                             $model->reference_sequence_path,
                         );
-
-    my @cmds = ($insertions_cmd,$deletions_cmd,$substitutions_cmd,$snp_cmd,$in_cmd,$del_cmd);
+    my @cmds = ($snp_cmd,$in_cmd,$del_cmd);
     for my $cmd (@cmds) {
         $self->status_message('Running: '. $cmd);
         my $rv = system($cmd);
@@ -119,10 +109,38 @@ sub execute {
             return;
         }
     }
+
     return 1;
 }
 
+sub _cat_files {
+    my $self = shift;
+    my $out_file = shift;
+    my @files = @_;
 
+    if (-s $out_file) {
+        $self->error_message("File already exists '$out_file'");
+        return;
+    }
+
+    my $out_fh = IO::File->new($out_file,'w');
+    unless ($out_fh) {
+        $self->error_message("File will not open with write priveleges '$out_file'");
+        return;
+    }
+    for my $in_file (@files) {
+        my $in_fh = IO::File->new($in_file,'r');
+        unless ($in_fh) {
+            $self->error_message("File will not open with read priveleges '$in_file'");
+            return;
+        }
+        while (my $line = $in_fh->getline()) {
+            $out_fh->print($line);
+        }
+    }
+    $out_fh->close();
+    return 1;
+}
 
 1;
 
