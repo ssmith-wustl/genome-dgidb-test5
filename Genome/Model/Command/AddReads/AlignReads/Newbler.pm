@@ -8,8 +8,8 @@ use Command;
 use Genome::Model;
 use Genome::Model::Command::AddReads::AlignReads;
 
-use Genome::Model::Tools::Newbler::AddRun;
-use Genome::Model::Tools::Newbler::RunProject;
+use Genome::Model::Tools::454::Newbler::AddRun;
+use Genome::Model::Tools::454::Newbler::RunProject;
 
 class Genome::Model::Command::AddReads::AlignReads::Newbler {
     is => [
@@ -44,7 +44,7 @@ sub execute {
     $DB::single = 1;
     my $model = $self->model;
 
-    my $add_run = Genome::Model::Tools::Newbler::AddRun->create(
+    my $add_run = Genome::Model::Tools::454::Newbler::AddRun->create(
                                                                 dir => $model->alignments_directory,
                                                                 inputs => $self->sff_file,
                                                             );
@@ -53,7 +53,7 @@ sub execute {
         return;
     }
 
-    my $run_project = Genome::Model::Tools::Newbler::RunProject->create(
+    my $run_project = Genome::Model::Tools::454::Newbler::RunProject->create(
                                                                         dir => $model->alignments_directory,
                                                                         options => $model->aligner_params,
                                                                     );
