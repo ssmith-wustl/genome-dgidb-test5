@@ -107,6 +107,7 @@ sub execute {
     elsif ($read_set->isa("GSC::RunRegion454")) {
         $sequencing_platform = '454';
         $lane = $read_set->region_number;
+        $full_path = '/gscmnt/833/info/medseq/sample_data/'. $read_set->run_name .'/'. $read_set->region_id .'/';
     }
     else {
         $self->error_message("Cannot resolve sequencing platform for "
@@ -135,12 +136,11 @@ sub execute {
     );
 
     if ($run) {
-          if ($run->run_name ne $run_name) {
-                $self->error_message("Bad run_name value $run_name.  Expected " . $run->run_name);
-                 return;
+        if ($run->run_name ne $run_name) {
+            $self->error_message("Bad run_name value $run_name.  Expected " . $run->run_name);
+            return;
         }
-        #full_path no longer required field
-        if ($run->full_path && ($run->full_path ne $full_path)) {
+        if ($run->full_path ne $full_path) {
             $self->warning_message("Run $run_name has changed location to $full_path from " . $run->full_path);
             $run->full_path($full_path);
         }
