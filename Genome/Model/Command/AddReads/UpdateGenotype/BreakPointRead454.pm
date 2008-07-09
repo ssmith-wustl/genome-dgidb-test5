@@ -14,7 +14,6 @@ class Genome::Model::Command::AddReads::UpdateGenotype::BreakPointRead454 {
        ],
     has => [
             merged_alignments_file => {via => 'prior_event'},
-            merged_fasta_file => {via => 'prior_event'},
         ],
 };
 
@@ -38,7 +37,20 @@ EOS
 sub execute {
     my $self = shift;
     my $model = $self->model;
-    $self->status_message('Not Implemented: ' . $self->command_name . ' on ' . $model->name);
+    my $break_point_path = 'perl ~jwalker/svn/perl_modules/breakPointRead/breakPointRead454.pl';
+
+    my $merged_alignments_file = $self->merged_alignments_file;
+    unless ($merged_alignments_file && -s $merged_alignments_file) {
+        $self->error_message("merged alignments file '$merged_alignments_file' does not exist or has zero size");
+        return;
+    }
+    my $cmd = $break_point_path .' --blat-file '. $merged_alignments_file;
+    $self->status_message('Running: '. $cmd);
+    my $rv = system($cmd);
+    unless ($rv == 0) {
+        $self->error_message("non-zero exit code '$rv' from comamnd $cmd");
+        return;
+    }
     return 1;
 }
 
