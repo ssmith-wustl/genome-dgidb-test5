@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 use Command;
 use Genome::Model;
-
+use Genome::Model::Tools::454::Newbler::RunProject;
 
 class Genome::Model::Command::AddReads::UpdateGenotype::Newbler {
     is => [
@@ -38,7 +38,7 @@ sub execute {
     $DB::single = 1;
 
     my $model = $self->model;
-    my $run_project = Genome::Model::Tools::Newbler::RunProject->create(
+    my $run_project = Genome::Model::Tools::454::Newbler::RunProject->create(
                                                                         dir => $model->alignments_directory,
                                                                         options => $model->genotyper_params,
                                                                     );
