@@ -82,7 +82,7 @@ sub create {
         $obj->delete;
         return;
     }
-    
+
     my @prev =
         grep { $_ ne $obj }
         $class->load(
@@ -90,11 +90,11 @@ sub create {
             run_id      => $obj->run_id,
             event_type  => $obj->event_type,
         );
-        
+
     if (@prev) {
         $obj->error_message(
             "This run/lane, " 
-            . $obj->run_name . "/" . $obj->run_subset_name. ' ' 
+            . $obj->run_name . "/" . $obj->run_subset_name. ' '
             . '(' . $obj->read_set_id . '),'
             . ' has already been assigned to this model '
             . $model->id . ' (' . $model->name . ')'
@@ -127,14 +127,14 @@ sub execute {
         return;
     }
 
-    unless (-d $model->data_parent_directory) {
-        eval { mkpath $model->data_parent_directory };
+    unless (-d $model->model_links_directory) {
+        eval { mkpath $model->model_links_directory };
             if ($@) {
-                $self->error_message("Couldn't create run directory path $model->data_parent_directory: $@");
+                $self->error_message("Couldn't create run directory path $model->model_links_directory: $@");
                 return;
             }
-        unless(-d $model->data_parent_directory) {
-            $self->error_message("Failed to create data parent directory: ".$model->data_parent_directory. ": $!");
+        unless(-d $model->model_links_directory) {
+            $self->error_message("Failed to create data parent directory: ".$model->model_links_directory. ": $!");
             return;
         }
     }
@@ -222,22 +222,21 @@ sub execute {
 }
 
 sub verify_successful_completion {
-	my $self = shift;
+    my $self = shift;
 
-	my $model = $self->model;
+    my $model = $self->model;
 
-        unless (-d $model->data_parent_directory) {
-    	$self->error_message("Data parent directory doesnt exist: ".$model->data_parent_directory);
-		return 0;
-	}
-
-	my $run_dir = $self->resolve_run_directory;
-    unless (-d $run_dir) {
-       	$self->error_message("Run directory path doesnt exist: $run_dir");
-    	return 0;
+    unless (-d $model->model_links_directory) {
+    	$self->error_message("Data parent directory doesnt exist: ".$model->model_links_directory);
+        return 0;
     }
-	
-	return 1;
+
+    my $run_dir = $self->resolve_run_directory;
+    unless (-d $run_dir) {
+        $self->error_message("Run directory path doesnt exist: $run_dir");
+        return 0;
+    }
+    return 1;
 }
 
 

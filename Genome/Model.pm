@@ -23,6 +23,7 @@ class Genome::Model {
         processing_profile           => { is => 'Genome::ProcessingProfile::ShortRead', id_by => 'processing_profile_id' },
         #processing_profile           => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name      => { via => 'processing_profile', to => 'name'},
+        sequencing_platform          => { via => 'processing_profile'},
         type_name                    => { via => 'processing_profile'},
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
@@ -93,9 +94,28 @@ class Genome::Model {
 
 sub create {
     my $class = shift;
+    
     my $self = $class->SUPER::create(@_);
     if ($^P) {
         $self->test(1);
+    }
+    if ($self->read_aligner_name eq 'newbler') {
+        my $new_mapping = Genome::Model::Tools::454::Newbler::NewMapping->create(
+                                                                            dir => $self->alignments_directory,
+                                                                        );
+        unless ($self->new_mapping) {
+            $self->error_message('Could not setup newMapping for newbler in directory '. $self->alignments_directory);
+            return;
+        }
+        my @fasta_files = grep {$_ !~ /all_sequences/} $self->get_subreference_paths(reference_extension => 'fasta');
+        my $set_ref = Genome::Model::Tools::454::Newbler::SetRef->create(
+                                                                    dir => $self->alignments_directory,
+                                                                    reference_fasta_files => \@fasta_files,
+                                                                );
+        unless ($set_ref->execute) {
+            $self->error_message('Could not set refrence setRef for newbler in directory '. $self->alignments_directory);
+            return;
+        }
     }
     return $self;
 }
@@ -128,9 +148,9 @@ sub _calculate_run_count {
 sub get_read_sets {
     my $self = shift;
 
-    my %distinct_run_ids = map { $_->run_id => 1}  $self->read_set_assignment_events;
-    my @distinct_run_ids = keys %distinct_run_ids;
-    return Genome::RunChunk->get(\@distinct_run_ids);
+    my %distinct_ids = map { $_->read_set_id => 1}  $self->read_set_assignment_events;
+    my @distinct_ids = keys %distinct_ids;
+    return Genome::RunChunk->get(\@distinct_ids);
 }
 
 sub metric_to_class_hash {
@@ -494,20 +514,22 @@ sub base_parent_directory {
     "/gscmnt/839/info/medseq"
 }
 
-sub data_parent_directory {
+sub alignment_links_directory {
     my $self = shift;
-    return $self->base_parent_directory . "/model_links"
+    return $self->base_parent_directory . "/alignment_links/" .
+        $self->read_aligner_name .'/'.
+        $self->reference_sequence_name;
 }
 
-sub sample_path {
+sub model_links_directory {
     my $self = shift;
-    return $self->data_parent_directory . $self->sample_name;
+    return $self->base_parent_directory . "/model_links"
 }
 
 sub data_directory {
     my $self = shift;
     my $name = $self->name;
-    return $self->data_parent_directory . '/' . $self->sample_name . "_" . $name;
+    return $self->model_links_directory . '/' . $self->sample_name . "_" . $name;
 }
 
 sub lock_directory {
@@ -520,24 +542,6 @@ sub lock_directory {
     }
     return $lock_directory;
 }
-
-sub Xdirectory_for_run {
-    my ($self, $run) = @_;
-    return sprintf('%s/runs/%s/%s', 
-        $self->data_directory,
-        $run->sequencing_platform,
-        $run->name
-    );
-}
-sub directory_for_log {
-    my ($self, $run) = @_;
-    return sprintf('%s/logs/%s/%s', 
-        $self->data_directory,
-        $run->sequencing_platform,
-        $run->name
-    );
-}
-
 
 # Refseq directories and names
 
@@ -559,29 +563,28 @@ sub reference_sequence_path {
 sub get_subreference_paths {
     my $self = shift;
     my %p = @_;
-    
+
     my $ext = $p{reference_extension};
-    
+
     return glob(sprintf("%s/*.%s",
                         $self->reference_sequence_path,
                         $ext));
-    
 }
 
 sub get_subreference_names {
     my $self = shift;
     my %p = @_;
-    
+
     my $ext = $p{reference_extension} || 'fasta';
 
     my @paths = $self->get_subreference_paths(reference_extension=>$ext);
-    
+
     my @basenames = map {basename($_)} @paths;
     for (@basenames) {
         s/\.$ext$//;
     }
-    
-    return @basenames;    
+
+    return @basenames;
 }
 
 
@@ -878,22 +881,22 @@ sub pretty_print_text {
 # according to their type name because of the "sub_classification_method_name" setting
 # in the class definiton...
 sub _resolve_subclass_name {
-	my $class = shift;
-	
-	if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
-		my $type_name = $_[0]->type_name;
-		return $class->_resolve_subclass_name_for_type_name($type_name);
-	}
+    my $class = shift;
+    my $proper_subclass_name;
+    if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
+        my $type_name = $_[0]->type_name;
+        $proper_subclass_name = $class->_resolve_subclass_name_for_type_name($type_name);
+    }
     # access the type according to the processing profile being used
     elsif (my $processing_profile_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('processing_profile_id')) {
         my $processing_profile = Genome::ProcessingProfile->get(id =>
                                             $processing_profile_id);
         my $type_name = $processing_profile->type_name;    
-        return $class->_resolve_subclass_name_for_type_name($type_name);
+        $proper_subclass_name = $class->_resolve_subclass_name_for_type_name($type_name);
     }
-	else {
-		return;
-	}
+    # Adding a hack to call class to force autoload
+    $proper_subclass_name->class if $proper_subclass_name;
+    return $proper_subclass_name;
 }
 
 # This is called by both of the above.
