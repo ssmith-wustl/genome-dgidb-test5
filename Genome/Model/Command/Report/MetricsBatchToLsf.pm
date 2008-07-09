@@ -243,6 +243,9 @@ sub _setup_job
         report_file_base => $outfile,
         out => $out_file,
         #error => $error_file,
+        num => $num,
+        tries => 3,
+        try_count => 1,
     };
 }
 
@@ -275,8 +278,29 @@ sub _run_and_monitor_jobs
                     print "$job_id successful\n";
                     delete $running_jobs{$job_id};
                 }
+                elsif($job->{tries} <= $job->{try_count})
+                {
+                    print "$job->{num} with job_id $job_id failed, retry number $job->{try_count}\n";
+                    #unlink $job->{out} if -e $job->{out};
+                    #unlink $job->{error} if -e $job->{error};
+                    my $new_job = $self->_setup_job($job->{num});
+                    if(!$new_job)
+                    {   
+                        $self->_kill_jobs($jobs);
+                        last MONITOR;
+                    }
+                    $new_job->{try_count} = $job->{try_count} + 1;
+                    delete $running_jobs{ $job->id };
+                    $running_jobs{ $new_job->id } = $new_job->{num};
+
+                    $jobs->[$new_job->{num}] = $new_job;
+                    print "restarting $new_job->{num}\n";
+                    $new_job->start;
+                    print "restarted $new_job->{num} with new job_id ".$new_job->id."\n";
+                }
                 else
                 {
+                
                     print "$job_id failed, killing other jobs\n";
                     $self->_kill_jobs($jobs);
                     last MONITOR;
