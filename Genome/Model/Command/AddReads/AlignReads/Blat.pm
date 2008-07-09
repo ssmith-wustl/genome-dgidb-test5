@@ -15,18 +15,6 @@ class Genome::Model::Command::AddReads::AlignReads::Blat {
     ],
     has => [
             fasta_file => { via => "prior_event" },
-            blat_version => {
-                             is => 'string',
-                             doc => "version of blat used to determine path to blat executable",
-                             is_transient => 1,
-                             is_optional =>1,
-                         },
-            blat_params => {
-                            is => 'string',
-                            doc => "parameters to pass to the blat application",
-                            is_transient => 1,
-                            is_optional => 1,
-                        },
             alignment_file => {
                                doc => "the file path to store the blat alignment",
                                calculate_from => ['read_set_directory','read_set'],
@@ -41,6 +29,18 @@ class Genome::Model::Command::AddReads::AlignReads::Blat {
                                         return $read_set_directory .'/'. $read_set->subset_name .'.out';
                                     |
                                 },
+            _existing_alignment_path => {
+                                         calculate_from => ['read_set_alignment_directory','read_set'],
+                                         calculate => q|
+                                             return $read_set_alignment_directory .'/'. $read_set->subset_name .'.psl';
+                                         |
+                                         },
+            _existing_aligner_output_path => {
+                                              calculate_from => ['read_set_alignment_directory','read_set'],
+                                              calculate => q|
+                                                  return $read_set_alignment_directory .'/'. $read_set->subset_name .'.out';
+                                             |
+                                          },
         ],
 };
 
@@ -62,52 +62,20 @@ EOS
 
 sub should_bsub { 1;}
 
-sub _parse_read_aligner_params {
-    my $self = shift;
-    my $regex = 'v([\w\.]+)\s*(.*)';
-
-    my $params = $self->model->read_aligner_params;
-
-    if ($params =~ /$regex/) {
-        if ($1) {
-            $self->blat_version($1);
-        } else {
-            $self->error_message("blat version not found in param string '$params'");
-            return;
-        }
-        $self->blat_params($2);
-    } else {
-        $self->error_message("blat params not recognized '$params'");
-        return;
-    }
-    return 1;
-}
-
 
 sub proper_blat_path {
     my $self = shift;
-
-    unless ($self->blat_version) {
-        unless ($self->_parse_read_aligner_params) {
-            return;
-        }
-    }
-    my $version = $self->blat_version;
-    if ($version eq '32x1') {
-        # This is not the path to version 32x1, but simply the installed app server version
-        return '/gsc/bin/blat';
-    } elsif ($version eq '2.0') {
-        return '/blat/2_0';
-    } else {
-        $self->error_message("No blat path defined for version '$version'");
-        return;
-    }
+    return '/gsc/bin/blat';
 }
 
 sub execute {
     my $self = shift;
 
     $DB::single = 1;
+    if ($self->_check_for_existing_alignment_files) {
+        return 1;
+    }
+
     my $model = $self->model;
     my $read_set = $self->read_set;
 
@@ -121,7 +89,8 @@ sub execute {
     my @ref_seq_paths = grep {$_ !~ /all_sequences\.$ext$/ } $model->get_subreference_paths(reference_extension => $ext);
 
     my $blat_path = $self->proper_blat_path;
-    my $blat_params = $self->blat_params || '' ;
+    my $blat_params = '-mask=lower -out=pslx -noHead';
+    $blat_params .= $model->read_aligner_params || '';
 
     my %jobs;
     my @psls_to_cat;
@@ -232,6 +201,33 @@ sub verify_successful_completion {
     my ($self) = @_;
 
     return 1;
+}
+
+sub _check_for_existing_alignment_files {
+    my $self = shift;
+
+    if (-s $self->_existing_alignment_path && -s $self->_existing_aligner_output_path) {
+        unless (symlink($self->_existing_alignment_path,$self->alignment_file)) {
+            $self->error_message('Failed to create symlink '. $self->alignment_file
+                                 .' => '. $self->_existing_alignment_path);
+            return;
+        }
+        unless (symlink($self->_existing_aligner_output_path,$self->aligner_output_file)) {
+            $self->error_message('Failed to create symlink '. $self->aligner_output_file
+                                 .' => '. $self->_existing_aligner_output_path);
+            # remove alignment file too since aligner output failed to symlink
+            if (-l $self->alignment_file) {
+                unless(unlink $self->alignment_file) {
+                    $self->error_message('Failed to remove symlink '. $self->alignment_file
+                                         .' after aligner output symlink error!');
+                    return;
+                }
+            }
+            return;
+        }
+        return 1;
+    }
+    return;
 }
 
 
