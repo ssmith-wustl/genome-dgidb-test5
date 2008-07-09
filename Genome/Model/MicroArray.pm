@@ -7,13 +7,17 @@ use warnings;
 use above "Genome";
 use GSCApp;
 use File::Basename;
+use Sort::Naturally;
 
 class Genome::Model::MicroArray{
     is => 'Genome::Model',
     has => [
-        snp_file              => { is     => 'String', 
+        snp_file                        => { is     => 'String', 
                                              doc    => 'A single snp file containing data for all chromosomes. This will be refactored to run on one per chromosome as well.',   
-       },
+        },
+#        snp_directory                   => { is     => 'String', 
+#                                             doc    => 'The directory where the files "snip_1" through "snip_y" are located.',   
+#        },
         affy_illumina_intersection_file => { is     => 'String', 
                                              doc    => 'The file representing the intersection of where affy and illumina data agrees. Must be pre-existing. Will be refactored to create this.',   
         },
@@ -21,16 +25,19 @@ class Genome::Model::MicroArray{
         base_name                       => { is     => 'String', 
                                              doc    => 'The base name of the files produced.',   
         },
-# Since we do not know where the below files are, for now just use the intersection file...        
-#        affy_file                      => { is     => 'String', 
-#                                            doc    => 'The .cns consensus file from maq to compare to the microarray data.',   
-#        },
-#        illumina_file                  => { is     => 'String', 
-#                                            doc    => 'The .cns consensus file from maq to compare to the microarray data.',   
-#        },
 
     ],
     has_optional => [
+        new_intersection_file           => { is     => 'String', 
+                                             doc    => 'The location of the output file of the affy and illumina intersection.',   
+        },
+        # Since we do not know where the below files are, for now just use the intersection file...        
+        affy_file                      => { is     => 'String', 
+                                            doc    => 'The .cns consensus file from maq to compare to the microarray data.',   
+        },
+        illumina_file                  => { is     => 'String', 
+                                            doc    => 'The .cns consensus file from maq to compare to the microarray data.',   
+        },
     ]
 };
 
@@ -38,7 +45,6 @@ class Genome::Model::MicroArray{
 sub execute {
     my $self = shift;
     
-    my $program_name = 'maq_gold_snp';
     # Command line option variables
     my($aii_file, $cns, $basename, $maxsnps, $snplist);
     $maxsnps=10000000;
@@ -46,6 +52,8 @@ sub execute {
 
     $aii_file = $self->affy_illumina_intersection_file();
     $basename = $self->base_name();
+#    my $snp_directory = $self->snp_file();
+    my $big_snip = $self->snp_file();
 
     #
     ## The main part of the program starts here.
@@ -93,8 +101,11 @@ sub execute {
         }
         close(AII);
 
-        my $big_snip = $self->snp_file();
-        unless(open(SNP, $big_snip)) {
+        
+#        unless(open(SNP, $big_snip)) {
+#        my $snp_cmd = "sort $snp_directory/snip_* |";
+        my $snp_cmd = $big_snip;
+        unless (open(SNP,$snp_cmd)) {
             die("Unable to open snp file");
             exit 0;
         }
@@ -462,31 +473,109 @@ sub GetResults {
 # Sort a file, return its sorted name
 # This must be used on the affy and illumina files since they seem to come unsorted...
 # We want to sort by chromosome and then position
-# TODO: Need to deal with the affy and illumina formats individually
-sub sort_file {
-    my ($self, $file, $chromosome_column_num, $position_column_num) = @_;
+sub sort_affy_file {
+    my ($self, $file) = @_;
+
+    # These are hardcoded values for now... this is the way affy files should always be laid out...
+    my $chromosome_column_num = 2;
+    my $position_column_num = 3;
 
     my $input_file_name = $file;
-    my $output_file_name = $file . "_sorted";
+    #FIXME my $output_file_name = $file . "_sorted";
+    my $output_file_name = '/gscuser/gsanders/aml/affy_sorted';
     
-    # Sort by chromosome and position, tab delimited columns
-    # FIXME: This might be bad... does sort require the sorted columns be contiguous?
-    system("sort -t \$'\t' -k $chromosome_column_num,$position_column_num $input_file_name  > $output_file_name");
+    # TODO: Grab the header then copy over the rest of the file so the header doesnt get sorted in
+    # count the lines, pipe all of them minus the header to sort...
+    my $lines = `wc -l $input_file_name`;
+    $lines -=2; # so we do not capture the header
+    system("head -1 $input_file_name > $output_file_name");
+    
+    # Sort by chromosome and position assume a tsv file since thats the way illumina rolls... 
+    system("tail -$lines $input_file_name | sort -g -t ',' -k $chromosome_column_num -k $position_column_num >> $output_file_name");
+
+    return $output_file_name;
+}
+
+# Version of the above to handle illumina files
+sub sort_illumina_file {
+    my ($self, $file) = @_;
+    
+    # These are hardcoded values for now... this is the way affy files should always be laid out...
+    my $chromosome_column_num = 16;
+    my $position_column_num = 17;
+
+    my $input_file_name = $file;
+    #FIXME my $output_file_name = $file . "_sorted";
+    my $output_file_name = '/gscuser/gsanders/aml/illumina_sorted';
+
+    # TODO: Grab the header then copy over the rest of the file so the header doesnt get sorted in
+    # count the lines, pipe all of them minus the header to sort...
+    my $lines = `wc -l $input_file_name`;
+    $lines--; # so we do not capture the header
+    system("head -1 $input_file_name > $output_file_name");
+    
+    # Sort by chromosome and position assume a tsv file since thats the way illumina rolls... 
+    system("tail -$lines $input_file_name | sort -g -t \$'\t' -k $chromosome_column_num -k $position_column_num >> $output_file_name");
+
+    return $output_file_name;
+}
+
+# Experimental sort for genotype submission files (sort by chromosome and position)
+# This uses a bunch of magic that I do not fully understand. I may be opening pandora's box.
+sub sort_genotype_submission_file {
+    my ($self, $file) = @_;
+
+    # Begin black magic
+    open (DATA, $file); 
+    my @list= <DATA>;
+    my @sorted= @list[
+    map { unpack "N", substr($_,-4) }
+    sort
+    map {
+        my $key= $list[$_];
+        $key =~ s[(\d+)][ pack "N", $1 ]ge;
+        $key . pack "N", $_
+    } 0..$#list
+    ];
+    
+    # Open the output file and dump the sorted stuff
+#    my $output_file_name = $file . "_sorted";
+    my @file_split = split('/',$file);
+    my $output_file_name = "/gscuser/gsanders/aml/" . $file_split[-1] . "_sorted";
+    
+    my $output_fh = IO::File->new(">$output_file_name");
+    print $output_fh @sorted;
 
     return $output_file_name;
 }
 
 # Compare files and output where they agree on chromosome, position, and alleles into a 3rd file
-# This assumes the files are sorted
-# TODO: Need to deal with the affy and illumina formats individually
-# FIXME: affy file doesnt have a header... probably hard code this for now...
-sub compare_files {
-    my ($self, $illumina_file, $illumina_file_chrom_column, $illumina_file_pos_column, $illumina_file_allele_1_column, $illumina_file_allele_2_column,
-               $affy_file, $affy_file_chrom_column, $affy_file_pos_column, $affy_file_allele_1_column, $affy_file_allele_2_column) = @_;  
+# This assumes the files are unsorted with only one header line on top (a requirement of the parser)
+sub Xmake_affy_illumina_intersection {
+    my $self = shift;
 
-    my $output_file_name = $self->output_file();
-    open (OUTFILE, ">$output_file_name");
-    print OUTFILE "chromosome\tpos\tallele_1\tallele_2\n";    
+    my $output_file_name = $self->new_intersection_file();
+    my $output_fh;
+    unless ($output_fh = IO::File->new(">$output_file_name")) {
+        die("Could not open $output_file_name");
+    }
+
+    my $illumina_file_unsorted = $self->illumina_file;
+    my $affy_file_unsorted = $self->affy_file;
+
+    my $illumina_file = $self->sort_illumina_file($illumina_file_unsorted);
+    my $affy_file = $self->sort_affy_file($affy_file_unsorted);
+
+    # Hardcoded values for the names of the columns for the illumina and affy files
+    # FIXME: make sure these are correct...
+    my $illumina_file_chrom_column = 'Chr';
+    my $illumina_file_pos_column = 'Position';
+    my $illumina_file_allele_1_column = 'Allele1 - Top';
+    my $illumina_file_allele_2_column = 'Allele2 - Top';
+    my $affy_file_chrom_column = 'chrom';
+    my $affy_file_pos_column = 'pos'; 
+    my $affy_file_allele_1_column = 'allel1';
+    my $affy_file_allele_2_column = 'allel2';  
     
     # Create the parsers... right now we assume the file just has a header line and then data
     # This assumes they are tab delimited... should probably be ANOTHER parameter...
@@ -520,7 +609,6 @@ sub compare_files {
             # file 2 must be over if we're here
             last;
         }
-
         # If we get here, check to make sure the positions are equal and
         # check the alleles and copy to third file if they match
         if (($illumina_file_line->{$illumina_file_allele_1_column} eq $affy_file_line->{$illumina_file_allele_1_column}) && 
@@ -528,16 +616,155 @@ sub compare_files {
             ($illumina_file_line->{$illumina_file_pos_column} eq $affy_file_line->{$affy_file_pos_column}) &&
             ($illumina_file_line->{$illumina_file_chrom_column} eq $affy_file_line->{$affy_file_chrom_column})) {
             # Shouldnt matter which one we write to the file
-            # TODO: copy to third file... refactor this...
-            print OUTFILE   $illumina_file_line->{$illumina_file_chrom_column} . "\t" .
-                            $illumina_file_line->{$illumina_file_pos_column} . "\t" .
-                            $illumina_file_line->{$illumina_file_allele_1_column} . "\t" .
-                            $illumina_file_line->{$illumina_file_allele_2_column} . "\t" .
-                            "\n";
+            # For now, write in an output identical to the current intersection files
+            # FIXME: BIG ASSUMPTIONS:
+            # 1. position start and end are always the same since its just a single position...
+            # 2. Print SNP SNP if homo... print ref SNP if het...
+            # 3. Print this series yet AGAIN for some reason
+            print $output_fh $illumina_file_line->{$illumina_file_chrom_column} . "\t" .
+                             $illumina_file_line->{$illumina_file_pos_column} . "\t" .
+                             $illumina_file_line->{$illumina_file_pos_column} . "\t" .
+                             $illumina_file_line->{$illumina_file_allele_1_column} . "\t" .
+                             $illumina_file_line->{$illumina_file_allele_2_column} . "\t";
+            # as per the assumption, if it is het print "ref SNP ref SNP"... otherwise SNP SNP SNP SNP
+            if ($illumina_file_line->{$illumina_file_allele_1_column} eq $illumina_file_line->{$illumina_file_allele_2_column}) {
+                print $output_fh "ref\tSNP\tref\tSNP\n"; 
+            } else {
+                print $output_fh "SNP\tSNP\tSNP\tSNP\n"; 
+            }
         }
-
     }
-    close (OUTFILE);
+    $output_fh->close;
+
+    return 1;
 }
 
+# Compare files and output where they agree on chromosome, position, and alleles into a 3rd file
+# This assumes the files are unsorted with only one header line on top (a requirement of the parser)
+# version utilizing genotype submission files...
+sub make_affy_illumina_intersection {
+    my $self = shift;
 
+    my $output_file_name = $self->new_intersection_file();
+    my $output_fh;
+    unless ($output_fh = IO::File->new(">$output_file_name")) {
+        die("Could not open $output_file_name");
+    }
+
+    my $illumina_file_unsorted = $self->illumina_file;
+    my $affy_file_unsorted = $self->affy_file;
+
+    my $illumina_file = $self->sort_genotype_submission_file($illumina_file_unsorted);
+    my $affy_file = $self->sort_genotype_submission_file($affy_file_unsorted);
+
+    my $illumina_file_fh;
+    unless($illumina_file_fh = IO::File->new($illumina_file)) {
+        die("Could not open $illumina_file");
+    }
+    my $affy_file_fh;
+    unless($affy_file_fh = IO::File->new($affy_file)) {
+        die("Could not open $affy_file");
+    }
+
+    my ($affy_file_line, $affy_chrom, $affy_pos, $affy_ref, $affy_allele_1, $affy_allele_2)
+        = $self->parse_new_line($affy_file_fh);
+    my ($illumina_file_line, $illumina_chrom, $illumina_pos, $illumina_ref, $illumina_allele_1, $illumina_allele_2)
+        = $self->parse_new_line($illumina_file_fh);
+    
+    while($illumina_file_line && $affy_file_line) {
+        #compare chromosomes
+        if(ncmp($illumina_chrom, $affy_chrom) > 0) {
+            ($affy_file_line, $affy_chrom, $affy_pos, $affy_ref, 
+                $affy_allele_1, $affy_allele_2) 
+                = $self->parse_new_line($affy_file_fh);
+        }
+        elsif(ncmp($illumina_chrom, $affy_chrom) < 0) {
+            ($illumina_file_line, $illumina_chrom, $illumina_pos, 
+                $illumina_ref, $illumina_allele_1, $illumina_allele_2) 
+                = $self->parse_new_line($illumina_file_fh);
+        }
+        #same chromosome, compare positions    
+        elsif(ncmp($illumina_chrom, $affy_chrom) == 0) {
+            if(ncmp($illumina_pos, $affy_pos) > 0) {
+                ($affy_file_line, $affy_chrom, $affy_pos, $affy_ref, $affy_allele_1, $affy_allele_2) 
+                    = $self->parse_new_line($affy_file_fh);
+            }
+            elsif(ncmp($illumina_pos, $affy_pos) < 0) {
+                ($illumina_file_line, $illumina_chrom, $illumina_pos, $illumina_ref, $illumina_allele_1, $illumina_allele_2) 
+                    = $self->parse_new_line($illumina_file_fh);
+            }
+            # If alleles were not captured (dashes in the file)... get a new line
+            elsif (!$illumina_allele_1 || !$illumina_allele_2) { 
+                ($illumina_file_line, $illumina_chrom, $illumina_pos, $illumina_ref, $illumina_allele_1, $illumina_allele_2) 
+                    = $self->parse_new_line($illumina_file_fh);
+            }
+            elsif (!$affy_allele_1 || !$affy_allele_2) {
+                ($affy_file_line, $affy_chrom, $affy_pos, $affy_ref, $affy_allele_1, $affy_allele_2) 
+                    = $self->parse_new_line($affy_file_fh);
+            }
+            # match position... check alleles
+            elsif(ncmp($illumina_pos, $affy_pos) == 0) {
+                if (($illumina_allele_1 eq $affy_allele_1) && 
+                ($illumina_allele_2 eq $affy_allele_2)) {
+                    # Shouldnt matter which one we write to the file
+                    # For now, write in an output identical to the current intersection files
+                    # FIXME: BIG ASSUMPTIONS:
+                    # 1. position start and end are always the same since its just a single position...
+                    # 2. Print SNP SNP if homo... print ref SNP if het...
+                    # 3. Print this series yet AGAIN for some reason
+                    print $output_fh $illumina_chrom . "\t" .
+                    $illumina_pos . "\t" .
+                    $illumina_pos . "\t" .
+                    $illumina_allele_1 . "\t" .
+                    $illumina_allele_2 . "\t";
+                    # as per the assumption, if it is het print "ref SNP ref SNP"... otherwise SNP SNP SNP SNP
+                    if ($illumina_allele_1 eq $illumina_allele_2) {
+                        print $output_fh "ref\tSNP\tref\tSNP\n"; 
+                    } else {
+                        print $output_fh "SNP\tSNP\tSNP\tSNP\n"; 
+                    }
+                }
+
+                # Now get 2 new lines...
+                ($affy_file_line, $affy_chrom, $affy_pos, $affy_ref, 
+                $affy_allele_1, $affy_allele_2) 
+                = $self->parse_new_line($affy_file_fh);
+                
+                ($illumina_file_line, $illumina_chrom, $illumina_pos, 
+                $illumina_ref, $illumina_allele_1, $illumina_allele_2) 
+                = $self->parse_new_line($illumina_file_fh);
+            }
+        }
+    }
+    $output_fh->close;
+
+    return 1;
+}
+
+# This sub grabs a new line from the parameterized file handle...
+# It returns the chromosome, position, ref, allele1, allele2 for that line
+# This is intended to work for genotype submission files
+sub parse_new_line {
+    my ($self, $fh) = @_;
+
+    my $current_file_line = $fh->getline();
+    
+    if (!$current_file_line) {
+        return undef;
+    }
+    
+    # Position will always be the third column
+    my @current_tabs = split("\t", $current_file_line);
+    my $current_pos = $current_tabs[3];
+    # Chromosome is denoted by "C22" "C7" "CY" etc.
+    my ($current_chrom) = ($current_file_line =~ m/C(\w+)/);
+    # The reference allele and allele 1 will be listed as "A:G" on the line 
+    my ($current_ref, $current_allele_1) = ($current_file_line =~ m/([A-Z]):([A-Z])/);
+    # Allele 2 will be on the line as "cns=T" if it is a het snp non ref or a homo snp...
+    # if it is a het snp matching ref there will be no cns =... so set it equal to ref...
+    #FIXME: what happens if allele1 matches ref but allele2 does not? whats the format?
+    my ($current_allele_2) = ($current_file_line =~ m/cns=([A-Z])/);
+    $current_allele_2 ||= $current_ref;
+
+    return ($current_file_line, $current_chrom, $current_pos, $current_ref, $current_allele_1, $current_allele_2);
+}
