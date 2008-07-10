@@ -15,9 +15,9 @@ class Genome::Model::MicroArray{
         snp_file                        => { is     => 'String', 
                                              doc    => 'A single snp file containing data for all chromosomes. This will be refactored to run on one per chromosome as well.',   
         },
-#        snp_directory                   => { is     => 'String', 
-#                                             doc    => 'The directory where the files "snip_1" through "snip_y" are located.',   
-#        },
+        snp_directory                   => { is     => 'String', 
+                                             doc    => 'The directory where the files "snip_1" through "snip_y" are located.',   
+        },
         affy_illumina_intersection_file => { is     => 'String', 
                                              doc    => 'The file representing the intersection of where affy and illumina data agrees. Must be pre-existing. Will be refactored to create this.',   
         },
@@ -52,7 +52,6 @@ sub execute {
 
     $aii_file = $self->affy_illumina_intersection_file();
     $basename = $self->base_name();
-#    my $snp_directory = $self->snp_file();
     my $big_snip = $self->snp_file();
 
     my ($total_aii, $ref_aii, $het_aii, $hom_aii);
@@ -100,12 +99,35 @@ sub execute {
         
 #   unless(open(SNP, $big_snip)) {
 #   my $snp_cmd = "sort $snp_directory/snip_* |";
-    my $snp_cmd = $big_snip;
-    unless (open(SNP,$snp_cmd)) {
-        die("Unable to open snp file");
+#    my $snp_cmd = $big_snip;
+#    unless (open(SNP,$snp_cmd)) {
+#        die("Unable to open snp file");
+#        exit 0;
+#   }
+    
+# get all of the snp files... sort them... use them as input
+    my $snp_directory_glob = "/gscuser/gsanders/aml/test/snip*"; # TODO replace this with genome model method
+    my @snp_files = glob($snp_directory_glob);
+    my $file_list = join(" ", @snp_files);
+    my $snp_cmd = "cat $file_list | sort -g -t \$'\t' -k 1 -k 2 |";
+    unless (open(DATA,$snp_cmd)) {
+        die("Unable to run input command: $snp_cmd");
         exit 0;
     }
 
+    # Begin sort black magic
+    my @list= <DATA>;
+    my @sorted= @list[
+    map { unpack "N", substr($_,-4) }
+    sort
+    map {
+        my $key= $list[$_];
+        $key =~ s[(\d+)][ pack "N", $1 ]ge;
+        $key . pack "N", $_
+    } 0..$#list
+    ];
+    close (DATA);
+    
     my %IUBcode=(
              A=>'AA',
              C=>'CC',
@@ -140,9 +162,9 @@ sub execute {
     if ($snplist) {
         open(SNPLIST,">$output_snplist") || die "Unable to create snp list file: $output_snplist $$";
     }
-    while(<SNP>) {
-        chomp;
-        my ($id, $start, $ref_sequence, $iub_sequence, $quality_score, $depth, $avg_hits, $high_quality, $unknown) = split("\t");
+    for my $line (@sorted) {
+        chomp($line);
+        my ($id, $start, $ref_sequence, $iub_sequence, $quality_score, $depth, $avg_hits, $high_quality, $unknown) = split("\t", $line);
         next if ($depth < 2);
         $total += 1;
         if ($total >= $maxsnps) {
@@ -212,7 +234,6 @@ sub execute {
         } # end if (exists($aii{$chr}{$pos}))
     } # end while <SNP>
     close(SNPLIST);
-    close(SNP);
 
     my $output_notfound = $basename . '_notfound.csv';
     open(NOTFOUND,">$output_notfound") || die "Unable to create not found file: $output_notfound $$";
