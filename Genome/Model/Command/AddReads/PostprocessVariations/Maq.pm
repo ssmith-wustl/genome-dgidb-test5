@@ -292,9 +292,11 @@ sub _generate_genotype_detail_file {
 
 sub chunk_variation_metrics {
     my $self = shift;
+    my %p = (@_);
+    my $test_extension = $p{test_extension};
     my $model = $self->model;
 
-    my $variation_metrics_file = $self->variation_metrics_file;
+    my $variation_metrics_file = $self->variation_metrics_file.$test_extension;
     $self->status_message("Generating cross-library metrics for $variation_metrics_file");
     if(1) {
         
@@ -304,7 +306,7 @@ sub chunk_variation_metrics {
                 input => 'resolve '.$self->id,
                 snpfile => $self->snp_output_file,
                 qual_cutoff => 1,
-                output => $variation_metrics_file.".jschindl_test",
+                output => $variation_metrics_file,
                 out_log_file => $self->snp_out_log_file,
                 #error_log_file => $self->snp_err_log_file,
                 # OTHER PARAMS:
@@ -326,7 +328,7 @@ sub chunk_variation_metrics {
     
 	$self->status_message("Generating per-library metric breakdown of $variation_metrics_file");
 	foreach my $library_name (@libraries) {
-        my $lib_variation_metrics_file = $variation_metrics_file . '.' . $library_name;
+        my $lib_variation_metrics_file = $variation_metrics_file . '.' . $library_name.$test_extension;
         $self->status_message("...generating per-library metrics for $lib_variation_metrics_file");
 
         unless (
@@ -335,7 +337,7 @@ sub chunk_variation_metrics {
                 input => 'resolve '.$self->id . " $library_name",
                 snpfile => $self->snp_output_file,
                 qual_cutoff => 1,
-                output => $lib_variation_metrics_file.".jschindl_test",
+                output => $lib_variation_metrics_file,
                 out_log_file => $self->snp_out_log_file,
                 #error_log_file => $self->snp_err_log_file,
                 # OTHER PARAMS:
@@ -358,13 +360,15 @@ sub chunk_variation_metrics {
 
 sub generate_variation_metrics_files {
     my $self = shift;
+    my %p = (@_);
+    my $test_extension = $p{test_extension};
     if($self->ref_seq_id eq "10" || $self->ref_seq_id eq "1")#horrible hack for now
     {
         return $self->chunk_variation_metrics(@_);
     }
     my $model = $self->model;
 
-    my $variation_metrics_file = $self->variation_metrics_file;
+    my $variation_metrics_file = $self->variation_metrics_file.$test_extension;
     $self->status_message("Generating cross-library metrics for $variation_metrics_file");
     if(1) {
         my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
@@ -373,7 +377,7 @@ sub generate_variation_metrics_files {
                 input => $chromosome_alignment_file,
                 snpfile => $self->snp_output_file,
                 qual_cutoff => 1,
-                output => $variation_metrics_file.".jschindl_test"
+                output => $variation_metrics_file
             )
         ) {
             $self->error_message("Failed to generate cross-library metrics for $variation_metrics_file");
@@ -389,7 +393,7 @@ sub generate_variation_metrics_files {
     
 	$self->status_message("Generating per-library metric breakdown of $variation_metrics_file");
 	foreach my $library_name (@libraries) {
-        my $lib_variation_metrics_file = $variation_metrics_file . '.' . $library_name;
+        my $lib_variation_metrics_file = $variation_metrics_file . '.' . $library_name.$test_extension;
         $self->status_message("...generating per-library metrics for $lib_variation_metrics_file");
         my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename(
             ref_seq_id => $self->ref_seq_id,
@@ -405,7 +409,7 @@ sub generate_variation_metrics_files {
                 input => $chromosome_alignment_file,
                 snpfile => $self->snp_output_file,
                 qual_cutoff => 1,
-                output => $lib_variation_metrics_file.".jschindl_test"
+                output => $lib_variation_metrics_file
             )
         ) {
             $self->error_message("Failed to generate per-library metrics for $lib_variation_metrics_file");
