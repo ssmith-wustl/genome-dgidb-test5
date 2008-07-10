@@ -48,7 +48,7 @@ class Genome::Model::Command::Report::MetricsBatchToLsf
             type => 'int',
             doc => 'number of jobs to run', 
             is_optional => 1,
-            default => 2,
+            default => 20,
         },   
     ],
 };
