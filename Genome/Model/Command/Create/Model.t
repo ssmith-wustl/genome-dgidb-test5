@@ -9,8 +9,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-#use Test::More tests => 24;
-use Test::More 'no_plan';
+use Test::More tests => 57;
 use Test::Differences;
 
 $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -139,6 +138,9 @@ isa_ok($ppirs ,'Genome::ProcessingProfile::ImportedReferenceSequence');
 my $ppiv = Genome::ProcessingProfile->create(type_name => 'imported variants');
 ok($ppiv, 'creation worked imported variants processing profile');
 isa_ok($ppiv ,'Genome::ProcessingProfile::ImportedVariants');
+my $ppma = Genome::ProcessingProfile->create(type_name => 'micro array');
+ok($ppma, 'creation worked micro array processing profile');
+isa_ok($ppma ,'Genome::ProcessingProfile::MicroArray');
 
 diag('subclassing tests - test create for a genome model object of each subclass');
 my $gmsr = Genome::Model->create(processing_profile_id => $ppsr->id,
@@ -157,6 +159,10 @@ my $gmiv = Genome::Model->create(processing_profile_id => $ppiv->id,
                                  name => 'imported variants test');
 ok($gmiv, 'creation worked imported variants processing profile');
 isa_ok($gmiv ,'Genome::Model::ImportedVariants');
+my $gmma = Genome::Model->create(processing_profile_id => $ppma->id,
+                                 name => 'micro array test');
+ok($gmma, 'creation worked imported variants processing profile');
+isa_ok($gmma ,'Genome::Model::MicroArray');
 
 
 
