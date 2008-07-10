@@ -48,7 +48,7 @@ class Genome::Model::Command::Report::MetricsBatchToLsf
             type => 'int',
             doc => 'number of jobs to run', 
             is_optional => 1,
-            default => 20,
+            default => 2,
         },   
     ],
 };
@@ -212,12 +212,10 @@ sub _setup_job
     my $out_prefix = $self->snp_chunk_prefix($self->output);    
     my $snpfile =  "$prefix.$num";
     my $outfile = "$out_prefix.$num";   
-    print STDERR "I'm running the latest version.\n";
     my %job_params =
     (
-        pp_type => 'lsf',
-        q => 'short',
-        #q => 'aml',
+        pp_type => 'lsf',        
+        q => 'aml',
         #R => "'select[db_dw_prod_runq<10] rusage[db_dw_prod=1]'",
         command => sprintf
         (
@@ -355,16 +353,20 @@ sub _finish
             # remove the job's log file
             unlink $job->{$log_type};
         }
-
-        # remove the chunked variant metrics file
-        unlink $job->{variant_metrics} if -e $job->{variant_metrics};
+        # remove the chunked input snps files
+        foreach my $file (glob $self->snpfile.'.chunk/*')
+        {
+            unlink $file;
+        }
+        #remove chunked snps files directory
+        rmdir $job->snpfile.'.chunk';
         #remove the chunked output files
-        foreach my $file (glob $job->{variant_metrics}.'.chunk/*')
+        foreach my $file (glob $job->output.'.chunk/*')
         {
             unlink $file;
         }
         #remove the chunk directory
-        rmdir $job->{variant_metrics}.'.chunk';
+        rmdir $job->output.'.chunk';
     }
 
     return $success;
