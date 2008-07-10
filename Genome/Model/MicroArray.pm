@@ -501,10 +501,14 @@ sub make_affy_illumina_intersection {
                     # 2. If homo... print ref ref if it matches ref, otherwise print SNP SNP... if het print ref SNP
                     # 3. Print this series yet AGAIN for some reason
                     print $output_fh $illumina_chrom . "\t" .
-                    $illumina_pos . "\t" .
-                    $illumina_pos . "\t" .
-                    $illumina_allele_2 . "\t" .
-                    $illumina_allele_1 . "\t"; 
+                        $illumina_pos . "\t" .
+                        $illumina_pos . "\t"; 
+                    # if reverse match, print reverse...
+                    if (($illumina_allele_1 eq $affy_allele_1) && ($illumina_allele_2 eq $affy_allele_2)) {
+                        print $output_fh $illumina_allele_2 . "\t" .$illumina_allele_1 . "\t"; 
+                    } else {
+                        print $output_fh $illumina_allele_1 . "\t" .$illumina_allele_2 . "\t"; 
+                    }
                     # as per the assumptions...
                     if ($illumina_allele_1 eq $illumina_allele_2) {
                         if ($illumina_allele_1 eq $illumina_ref) {
