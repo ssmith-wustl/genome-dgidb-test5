@@ -152,9 +152,7 @@ sub snp_unchunk
 #call chunk function here, and setup chunks
 sub _create_jobs
 {
-    my $self = shift;
-    
-    
+    my $self = shift;    
     
     my $chunk_prefix = $self->snp_chunk($self->snpfile,$self->chunk_count);
 
@@ -219,10 +217,10 @@ sub _setup_job
         #R => "'select[db_dw_prod_runq<10] rusage[db_dw_prod=1]'",
         command => sprintf
         (
-            #'`which gt` maq generate-variation-metrics --input "%s" --snpfile %s --qual-cutoff 1 --output %s',
-            '/bin/touch %s',
-#            $self->input,
-#            $snpfile,
+            '`which gt` maq generate-variation-metrics --input "%s" --snpfile %s --qual-cutoff 1 --output %s',
+            #'/bin/touch %s',
+            $self->input,
+            $snpfile,
             $outfile
         ),
     );
