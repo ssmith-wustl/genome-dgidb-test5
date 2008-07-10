@@ -269,6 +269,7 @@ sub _run_and_monitor_jobs
         {
             # Set local $job for clarity
             my $job = $jobs->[ $running_jobs{$job_id} ]->{job};
+            my $job_hash = $jobs->[ $running_jobs{$job_id} ];
             if ( $job->has_ended )
             {
                 if ( $job->is_successful )
@@ -276,19 +277,19 @@ sub _run_and_monitor_jobs
                     print "$job_id successful\n";
                     delete $running_jobs{$job_id};
                 }
-                elsif($job->{tries} <= $job->{try_count})
+                elsif($job_hash->{tries} <= $job_hash->{try_count})
                 {
-                    print "$job->{num} with job_id $job_id failed, retry number $job->{try_count}\n";
+                    print "$job_hash->{num} with job_id $job_id failed, retry number $job_hash->{try_count}\n";
                     #unlink $job->{out} if -e $job->{out};
                     #unlink $job->{error} if -e $job->{error};
-                    my $new_job = $self->_setup_job($job->{num});
+                    my $new_job = $self->_setup_job($job_hash->{num});
                     if(!$new_job)
                     {   
                         $self->_kill_jobs($jobs);
                         last MONITOR;
                     }
                     $jobs->[$new_job->{num}] = $new_job;
-                    $new_job->{try_count} = $job->{try_count} + 1;
+                    $new_job->{try_count} = $job_hash->{try_count} + 1;
                     delete $running_jobs{ $job->id };
                     print "restarting $new_job->{num}\n";
                     $new_job->{job}->start;
