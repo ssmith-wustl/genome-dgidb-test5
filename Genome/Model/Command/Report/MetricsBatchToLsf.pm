@@ -239,9 +239,9 @@ sub _setup_job
     return 
     {
         job => $job,
-        variant_metrics => $snpfile,
-        report_file_base => $outfile,
-        out => $out_file,
+        snpchunk=> $snpfile,
+        outchunk => $outfile,
+        out => $out_file,#out log file, needs less confusing name...
         #error => $error_file,
         num => $num,
         tries => 3,
@@ -353,21 +353,17 @@ sub _finish
             # remove the job's log file
             unlink $job->{$log_type};
         }
-        # remove the chunked input snps files
-        foreach my $file (glob $self->snpfile.'.chunk/*')
-        {
-            unlink $file;
-        }
-        #remove chunked snps files directory
-        rmdir $job->snpfile.'.chunk';
-        #remove the chunked output files
-        foreach my $file (glob $job->output.'.chunk/*')
-        {
-            unlink $file;
-        }
-        #remove the chunk directory
-        rmdir $job->output.'.chunk';
+        #remove the chunked input snp file
+        unlink $job->{snpchunk} if -e $job->{snpchunk}; 
+        
+        #remove the chunked output file        
+        unlink $job->{outchunk} if -e $job->{outchunk};        
     }
+    
+    #remove chunked snps files directory
+    rmdir $self->snpfile.'.chunk';
+    #remove the chunk directory
+    rmdir $self->output.'.chunk';
 
     return $success;
 }
