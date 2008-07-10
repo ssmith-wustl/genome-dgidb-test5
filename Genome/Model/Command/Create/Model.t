@@ -9,7 +9,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 57;
+use Test::More tests => 65;
 use Test::Differences;
 
 $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -141,6 +141,12 @@ isa_ok($ppiv ,'Genome::ProcessingProfile::ImportedVariants');
 my $ppma = Genome::ProcessingProfile->create(type_name => 'micro array');
 ok($ppma, 'creation worked micro array processing profile');
 isa_ok($ppma ,'Genome::ProcessingProfile::MicroArray');
+my $ppmai = Genome::ProcessingProfile->create(type_name => 'micro array illumina');
+ok($ppmai, 'creation worked micro array illumina processing profile');
+isa_ok($ppmai ,'Genome::ProcessingProfile::MicroArrayIllumina');
+my $ppmaa = Genome::ProcessingProfile->create(type_name => 'micro array affymetrix');
+ok($ppmaa, 'creation worked micro array affymetrix processing profile');
+isa_ok($ppmaa ,'Genome::ProcessingProfile::MicroArrayAffymetrix');
 
 diag('subclassing tests - test create for a genome model object of each subclass');
 my $gmsr = Genome::Model->create(processing_profile_id => $ppsr->id,
@@ -161,8 +167,16 @@ ok($gmiv, 'creation worked imported variants processing profile');
 isa_ok($gmiv ,'Genome::Model::ImportedVariants');
 my $gmma = Genome::Model->create(processing_profile_id => $ppma->id,
                                  name => 'micro array test');
-ok($gmma, 'creation worked imported variants processing profile');
+ok($gmma, 'creation worked micro array processing profile');
 isa_ok($gmma ,'Genome::Model::MicroArray');
+my $gmmai = Genome::Model->create(processing_profile_id => $ppmai->id,
+                                 name => 'micro array illumina test');
+ok($gmmai, 'creation worked micro array illumina processing profile');
+isa_ok($gmmai ,'Genome::Model::MicroArrayIllumina');
+my $gmmaa = Genome::Model->create(processing_profile_id => $ppmaa->id,
+                                 name => 'micro array affymetrix test');
+ok($gmmaa, 'creation worked micro array affymetrix processing profile');
+isa_ok($gmmaa ,'Genome::Model::MicroArrayAffymetrix');
 
 
 
