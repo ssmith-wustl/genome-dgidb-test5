@@ -304,7 +304,7 @@ sub chunk_variation_metrics {
                 input => 'resolve '.$self->id,
                 snpfile => $self->snp_output_file,
                 qual_cutoff => 1,
-                output => $variation_metrics_file,
+                output => $variation_metrics_file.".jschindl_test",
                 out_log_file => $self->snp_out_log_file,
                 #error_log_file => $self->snp_err_log_file,
                 # OTHER PARAMS:
@@ -335,7 +335,7 @@ sub chunk_variation_metrics {
                 input => 'resolve '.$self->id . " $library_name",
                 snpfile => $self->snp_output_file,
                 qual_cutoff => 1,
-                output => $lib_variation_metrics_file,
+                output => $lib_variation_metrics_file.".jschindl_test",
                 out_log_file => $self->snp_out_log_file,
                 #error_log_file => $self->snp_err_log_file,
                 # OTHER PARAMS:
@@ -373,7 +373,7 @@ sub generate_variation_metrics_files {
                 input => $chromosome_alignment_file,
                 snpfile => $self->snp_output_file,
                 qual_cutoff => 1,
-                output => $variation_metrics_file
+                output => $variation_metrics_file.".jschindl_test"
             )
         ) {
             $self->error_message("Failed to generate cross-library metrics for $variation_metrics_file");
@@ -405,7 +405,7 @@ sub generate_variation_metrics_files {
                 input => $chromosome_alignment_file,
                 snpfile => $self->snp_output_file,
                 qual_cutoff => 1,
-                output => $lib_variation_metrics_file
+                output => $lib_variation_metrics_file.".jschindl_test"
             )
         ) {
             $self->error_message("Failed to generate per-library metrics for $lib_variation_metrics_file");
