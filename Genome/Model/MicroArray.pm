@@ -12,32 +12,23 @@ use Sort::Naturally;
 class Genome::Model::MicroArray{
     is => 'Genome::Model',
     has => [
-        snp_file                        => { is     => 'String', 
-                                             doc    => 'A single snp file containing data for all chromosomes. This will be refactored to run on one per chromosome as well.',   
-        },
         snp_directory                   => { is     => 'String', 
                                              doc    => 'The directory where the files "snip_1" through "snip_y" are located.',   
         },
-        affy_illumina_intersection_file => { is     => 'String', 
-                                             doc    => 'The file representing the intersection of where affy and illumina data agrees. Must be pre-existing. Will be refactored to create this.',   
-        },
-# will probably remove this
         base_name                       => { is     => 'String', 
-                                             doc    => 'The base name of the files produced.',   
+                                             doc    => 'The base name (and path) of the files to be produced.',   
         },
-
-    ],
-    has_optional => [
-        new_intersection_file           => { is     => 'String', 
-                                             doc    => 'The location of the output file of the affy and illumina intersection.',   
+        affy_illumina_intersection_file => { is     => 'String', 
+                                             doc    => 'The file and path (to be created)representing the intersection of where affy and illumina data agrees. This will be created and then used.',   
         },
-        # Since we do not know where the below files are, for now just use the intersection file...        
         affy_file                      => { is     => 'String', 
-                                            doc    => 'The .cns consensus file from maq to compare to the microarray data.',   
+                                            doc    => 'The genotype submission .tsv file representing the affy data for this model.',   
         },
         illumina_file                  => { is     => 'String', 
-                                            doc    => 'The .cns consensus file from maq to compare to the microarray data.',   
-        },
+                                            doc    => 'The genotype submission .tsv file representing the illumina data for this model.',   
+        }
+    ],
+    has_optional => [
     ]
 };
 
@@ -52,7 +43,6 @@ sub execute {
 
     $aii_file = $self->affy_illumina_intersection_file();
     $basename = $self->base_name();
-    my $big_snip = $self->snp_file();
 
     my ($total_aii, $ref_aii, $het_aii, $hom_aii);
     $total_aii = $ref_aii = $het_aii = $hom_aii = 0;
@@ -96,17 +86,8 @@ sub execute {
     } # end while <AII>
     close(AII);
 
-        
-#   unless(open(SNP, $big_snip)) {
-#   my $snp_cmd = "sort $snp_directory/snip_* |";
-#    my $snp_cmd = $big_snip;
-#    unless (open(SNP,$snp_cmd)) {
-#        die("Unable to open snp file");
-#        exit 0;
-#   }
-    
-# get all of the snp files... sort them... use them as input
-    my $snp_directory_glob = "/gscuser/gsanders/aml/test/snip*"; # TODO replace this with genome model method
+    # get all of the snp files... sort them... use them as input
+    my $snp_directory_glob = $self->snp_directory . "/snip*"; # TODO replace this with genome model method
     my @snp_files = glob($snp_directory_glob);
     my $file_list = join(" ", @snp_files);
     my $snp_cmd = "cat $file_list | sort -g -t \$'\t' -k 1 -k 2 |";
@@ -115,7 +96,9 @@ sub execute {
         exit 0;
     }
 
-    # Begin sort black magic
+    # Begin sort black magic...
+    # This essentially will just sort by chromosome and position
+    # Sorts chromosomes correctly as 1-22, then x, then y
     my @list= <DATA>;
     my @sorted= @list[
     map { unpack "N", substr($_,-4) }
@@ -127,6 +110,7 @@ sub execute {
     } 0..$#list
     ];
     close (DATA);
+    # End black magic
     
     my %IUBcode=(
              A=>'AA',
@@ -449,7 +433,7 @@ sub sort_genotype_submission_file {
 sub make_affy_illumina_intersection {
     my $self = shift;
 
-    my $output_file_name = $self->new_intersection_file();
+    my $output_file_name = $self->affy_illumina_intersection_file();
     my $output_fh;
     unless ($output_fh = IO::File->new(">$output_file_name")) {
         die("Could not open $output_file_name");
@@ -506,26 +490,31 @@ sub make_affy_illumina_intersection {
                 ($affy_file_line, $affy_chrom, $affy_pos, $affy_ref, $affy_allele_1, $affy_allele_2) 
                     = $self->parse_new_line($affy_file_fh);
             }
-            # match position... check alleles
+            # match position... check alleles... can match or be reversed to be included
             elsif(ncmp($illumina_pos, $affy_pos) == 0) {
-                if (($illumina_allele_1 eq $affy_allele_1) && 
-                ($illumina_allele_2 eq $affy_allele_2)) {
+                if ((($illumina_allele_1 eq $affy_allele_1) && ($illumina_allele_2 eq $affy_allele_2)) || 
+                    (($illumina_allele_2 eq $affy_allele_1) && ($illumina_allele_1 eq $affy_allele_2))) {
                     # Shouldnt matter which one we write to the file
                     # For now, write in an output identical to the current intersection files
                     # FIXME: BIG ASSUMPTIONS:
                     # 1. position start and end are always the same since its just a single position...
-                    # 2. Print SNP SNP if homo... print ref SNP if het...
+                    # 2. If homo... print ref ref if it matches ref, otherwise print SNP SNP... if het print ref SNP
                     # 3. Print this series yet AGAIN for some reason
                     print $output_fh $illumina_chrom . "\t" .
                     $illumina_pos . "\t" .
                     $illumina_pos . "\t" .
-                    $illumina_allele_1 . "\t" .
-                    $illumina_allele_2 . "\t";
-                    # as per the assumption, if it is het print "ref SNP ref SNP"... otherwise SNP SNP SNP SNP
+                    $illumina_allele_2 . "\t" .
+                    $illumina_allele_1 . "\t"; 
+                    # as per the assumptions...
                     if ($illumina_allele_1 eq $illumina_allele_2) {
-                        print $output_fh "ref\tSNP\tref\tSNP\n"; 
+                        if ($illumina_allele_1 eq $illumina_ref) {
+                            print $output_fh "ref\tref\tref\tref\n"; 
+                        } 
+                        else {
+                            print $output_fh "SNP\tSNP\tSNP\tSNP\n";
+                        } 
                     } else {
-                        print $output_fh "SNP\tSNP\tSNP\tSNP\n"; 
+                        print $output_fh "ref\tSNP\tref\tSNP\n"; 
                     }
                 }
 
@@ -631,7 +620,7 @@ sub sort_illumina_file {
 sub Xmake_affy_illumina_intersection {
     my $self = shift;
 
-    my $output_file_name = $self->new_intersection_file();
+    my $output_file_name = $self->affy_illumina_intersection_file();
     my $output_fh;
     unless ($output_fh = IO::File->new(">$output_file_name")) {
         die("Could not open $output_file_name");
