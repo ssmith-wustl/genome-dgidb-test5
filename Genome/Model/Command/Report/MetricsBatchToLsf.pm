@@ -289,14 +289,17 @@ sub _run_and_monitor_jobs
                         $self->_kill_jobs($jobs);
                         last MONITOR;
                     }
+                    $jobs->[$new_job->{num}] = $new_job;
                     $new_job->{try_count} = $job->{try_count} + 1;
                     delete $running_jobs{ $job->id };
-                    $running_jobs{ $new_job->id } = $new_job->{num};
-
-                    $jobs->[$new_job->{num}] = $new_job;
                     print "restarting $new_job->{num}\n";
                     $new_job->start;
                     print "restarted $new_job->{num} with new job_id ".$new_job->id."\n";
+                    
+                    #save job in running jobs list...
+                    $running_jobs{ $new_job->id } = $new_job->{num};
+                    
+                    
                 }
                 else
                 {
