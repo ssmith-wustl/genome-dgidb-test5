@@ -216,7 +216,8 @@ sub _setup_job
     my %job_params =
     (
         pp_type => 'lsf',
-        q => 'aml',
+        q => 'short',
+        #q => 'aml',
         #R => "'select[db_dw_prod_runq<10] rusage[db_dw_prod=1]'",
         command => sprintf
         (
@@ -339,7 +340,7 @@ sub _finish
     {
         my $out_prefix = $self->snp_chunk_prefix($self->output);
  
-        $self->snp_unchunk($out_prefix,$self->chunk_count,$self->output."jschindl_test");
+        $self->snp_unchunk($out_prefix,$self->chunk_count,$self->output.".jschindl_test");
     }
 
     JOB: for my $job ( @$jobs )
@@ -356,10 +357,14 @@ sub _finish
         }
 
         # remove the chunked variant metrics file
-        #unlink $job->{variant_metrics} if -e $job->{variant_metrics};
-        #TODO: remove the chunked output files
-        
-        #TODO: remove the chunk directory (prefix)
+        unlink $job->{variant_metrics} if -e $job->{variant_metrics};
+        #remove the chunked output files
+        foreach my $file (glob $job->{variant_metrics}.'.chunk/*')
+        {
+            unlink $file;
+        }
+        #remove the chunk directory
+        rmdir $job->{variant_metrics}.'.chunk';
     }
 
     return $success;
