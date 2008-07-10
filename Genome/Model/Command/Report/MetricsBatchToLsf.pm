@@ -220,9 +220,10 @@ sub _setup_job
         #R => "'select[db_dw_prod_runq<10] rusage[db_dw_prod=1]'",
         command => sprintf
         (
-            '`which gt` maq generate-variation-metrics --input "%s" --snpfile %s --qual-cutoff 1 --output %s',
-            $self->input,
-            $snpfile,
+            #'`which gt` maq generate-variation-metrics --input "%s" --snpfile %s --qual-cutoff 1 --output %s',
+            '/bin/touch %s',
+#            $self->input,
+#            $snpfile,
             $outfile
         ),
     );
@@ -293,12 +294,11 @@ sub _run_and_monitor_jobs
                     $new_job->{try_count} = $job->{try_count} + 1;
                     delete $running_jobs{ $job->id };
                     print "restarting $new_job->{num}\n";
-                    $new_job->start;
-                    print "restarted $new_job->{num} with new job_id ".$new_job->id."\n";
+                    $new_job->{job}->start;
+                    print "restarted $new_job->{num} with new job_id ".$new_job->{job}->id."\n";
                     
                     #save job in running jobs list...
-                    $running_jobs{ $new_job->id } = $new_job->{num};
-                    
+                    $running_jobs{ $new_job->{job}->id } = $new_job->{num};                 
                     
                 }
                 else
