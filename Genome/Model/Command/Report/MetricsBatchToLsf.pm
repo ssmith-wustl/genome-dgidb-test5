@@ -337,9 +337,9 @@ sub _finish
     # Create the main reports, if jobs were successful
     if ( $success )
     {
-        my $out_prefix = $self->get_snp_prefix($self->output);
+        my $out_prefix = $self->snp_chunk_prefix($self->output);
  
-        $self->snp_unchunk($self->out_prefix,$self->chunk_count,$self->output."jschindl_test");
+        $self->snp_unchunk($out_prefix,$self->chunk_count,$self->output."jschindl_test");
     }
 
     JOB: for my $job ( @$jobs )
