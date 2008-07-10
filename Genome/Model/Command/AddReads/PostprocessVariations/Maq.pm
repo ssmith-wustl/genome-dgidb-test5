@@ -358,6 +358,10 @@ sub chunk_variation_metrics {
 
 sub generate_variation_metrics_files {
     my $self = shift;
+    if($self->ref_seq_id eq "10" || $self->ref_seq_id eq "1")#horrible hack for now
+    {
+        return $self->chunk_variation_metrics(@_);
+    }
     my $model = $self->model;
 
     my $variation_metrics_file = $self->variation_metrics_file;
