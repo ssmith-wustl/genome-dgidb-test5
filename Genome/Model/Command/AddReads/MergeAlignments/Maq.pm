@@ -59,7 +59,21 @@ sub execute {
             return;
         }
     }
-    my @run_events = 
+   
+    
+    my %library_alignments;
+    if($model->id == 2667602812) {
+    push @{$library_alignments{'H_GV-933124G-tumor1-9043g-031308a'}}, glob('/gscmnt/sata182/info/medseq/aml1/submaps/amll1t71_chr' . $self->ref_seq_id . ".map");
+    push @{$library_alignments{'H_GV-933124G-tumor1-9043g-031308b'}}, glob('/gscmnt/sata182/info/medseq/aml1/submaps/amll2t12_chr' . $self->ref_seq_id . ".map");
+    push @{$library_alignments{'H_GV-933124G-tumor1-9043g-031308c'}}, glob('/gscmnt/sata182/info/medseq/aml1/submaps/amll3t15_chr' . $self->ref_seq_id . ".map");
+}
+elsif($model->id == '2667602813') {
+    push @{$library_alignments{'H_GV-933124G-skin1-9017g-031308a'}}, glob('/gscmnt/sata183/info/medseq/kchen/Hs_build36/maq6/analysis_skin/submaps/amlsking18_chr' . $self->ref_seq_id . ".map");
+    push @{$library_alignments{'H_GV-933124G-skin1-9017g-031308b'}}, glob('/gscmnt/sata183/info/medseq/kchen/Hs_build36/maq6/analysis_skin2/submaps/amll2skin10_chr' . $self->ref_seq_id . ".map");
+    push @{$library_alignments{'H_GV-933124G-skin1-9017g-031308c'}}, glob('/gscmnt/sata183/info/medseq/kchen/Hs_build36/maq6/analysis_skin3/submaps/amll3skin6_chr' . $self->ref_seq_id . ".map");
+}
+else {
+     my @run_events = 
         grep { my $m = $_->metrics(name => 'read set pass fail'); (!$m or $m->value eq 'pass') }
         Genome::Model::Event->get(
             event_type => 'genome-model add-reads accept-reads maq',
@@ -79,7 +93,6 @@ sub execute {
     # pre-cache the lanes
     my @sls = GSC::RunLaneSolexa->get(seq_id => \@seq_ids);
     
-    my %library_alignments;
     for my $run_event (@run_events) {
         ## find the align-reads prior to this event, by model_id and run_id
         my $align_reads = Genome::Model::Command::AddReads::AlignReads::Maq->get(
@@ -102,6 +115,8 @@ sub execute {
         my $library = $sls->library_name;
         push @{$library_alignments{$library}}, @map_files;
     }
+}    
+    
     for my $library (keys %library_alignments) {
         my $library_maplist = $maplist_dir .'/' . $library . '_' . $self->ref_seq_id . '.maplist';
         my $fh = IO::File->new($library_maplist,'w');
