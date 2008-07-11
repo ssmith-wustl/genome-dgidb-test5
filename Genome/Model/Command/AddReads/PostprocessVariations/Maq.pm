@@ -48,7 +48,7 @@ EOS
 }
 
 sub bsub_rusage {
-    return "-R 'select[type=LINUX64]'";
+    return "-R 'select[type=LINUX64] hname!=linuscs50'";
 }
 
 sub should_bsub { 1;}
@@ -375,6 +375,7 @@ sub generate_variation_metrics_files {
     }
     else
     {
+        print "chunking with 1 job\n",@_,"\n";
         return $self->chunk_variation_metrics(@_,chunk_count => 1);
     }
     my $model = $self->model;
