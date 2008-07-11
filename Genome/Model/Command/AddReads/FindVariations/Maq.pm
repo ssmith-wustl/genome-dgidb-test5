@@ -155,8 +155,8 @@ sub execute {
         return;
     }
 
-    my $accumulated_alignments_file_for_indelsoa = $model->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
-    unless (-p $accumulated_alignments_file_for_indelsoa || ($model->test && -s $accumulated_alignments_file_for_indelsoa)) {
+    my $accumulated_alignments_file_for_indelsoa = $self->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
+    unless (-s $accumulated_alignments_file_for_indelsoa ) {
         $self->error_message("Named pipe $accumulated_alignments_file_for_indelsoa was not found.");
         return;
     }
@@ -182,8 +182,8 @@ sub execute {
     $tmpfh->close();
     $snip_fh->close();
 
-    my $accumulated_alignments_file_for_pileup = $model->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
-    unless (-p $accumulated_alignments_file_for_pileup || ($model->test && -s $accumulated_alignments_file_for_indelsoa)) {
+    my $accumulated_alignments_file_for_pileup = $self->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
+    unless (-s $accumulated_alignments_file_for_pileup) {
         $self->error_message("Named pipe $accumulated_alignments_file_for_pileup was not found.");
         return;
     }
