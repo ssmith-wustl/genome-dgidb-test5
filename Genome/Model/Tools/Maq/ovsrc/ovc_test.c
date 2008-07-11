@@ -269,7 +269,7 @@ void get_quality_stats(map_array *reads, int ref_position, int *q, int *mq)
         max_qual = max_qual<read_qual?read_qual:max_qual;          
     }
     *mq = max_qual;
-    *q = reads->count?(int)(total_qual/(double)(reads->count)):0;
+    *q = reads->count?(int)((total_qual/(double)(reads->count))+0.5):0;/*add 0.5 to round instead of trunc*/
 }
 
 static int get_base(char base)
@@ -490,6 +490,28 @@ int get_urc26(map_array *reads, long position)
             
             else
                 if((read_start+25)>=position)
+                    current_pos++;
+        }
+    return current_pos;
+}
+/* quick hack, will remove function above later or make this more generic */
+int get_urc27(map_array *reads, long position)
+{        
+    int current_pos = 0;
+    int i = 0;
+    if(reads->count) 
+        for(i=0;i<reads->count;i++)
+        {
+            maqmap1_t *read = reads->reads[i];
+            long read_start = read->pos>>1;
+            long read_end = (read_start+read->size)-1;
+            //this code works because I have already tested reads smaller than 27 bases to see if they fit
+            if(read->pos&1)
+                if((read_end-26)<=position)
+                    current_pos++;
+            
+            else
+                if((read_start+26)>=position)
                     current_pos++;
         }
     return current_pos;
