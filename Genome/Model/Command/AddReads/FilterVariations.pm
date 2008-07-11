@@ -189,7 +189,7 @@ sub execute {
     # This creates a map file in /tmp which is actually a named pipe
     # streaming the data from the original maps.
     # It can be used only once.  Run this again if you need to use it multiple times.
-    my $map_file_path = $model->resolve_accumulated_alignments_filename(
+    my $map_file_path = $self->resolve_accumulated_alignments_filename(
 																																				ref_seq_id => $chromosome,
 																																			 );
 		unless (defined($map_file_path) &&
@@ -249,7 +249,7 @@ sub execute {
 				# This creates a map file in /tmp which is actually a named pipe
 				# streaming the data from the original maps.
 				# It can be used only once.  Run this again if you need to use it multiple times.
-				my $lib_map_file_path = $model->resolve_accumulated_alignments_filename(
+				my $lib_map_file_path = $self->resolve_accumulated_alignments_filename(
 																																						ref_seq_id => $chromosome,
 																																						library_name => $library_name, # optional
 																																					 );
@@ -357,7 +357,7 @@ sub execute {
     # This creates a map file in /tmp which is actually a named pipe
     # streaming the data from the original maps.
     # It can be used only once.  Run this again if you need to use it multiple times.
-    $map_file_path = $model->resolve_accumulated_alignments_filename(
+    $map_file_path = $self->resolve_accumulated_alignments_filename(
 																																		 ref_seq_id => $chromosome,
 																																		);
     print "made map $map_file_path\n";
@@ -718,6 +718,11 @@ sub execute {
 		
 		$self->generate_figure_3_files($somatic_file);
 		# Clean up when we're done...
+        #I realize this is dumb to pass refseq. its an incremental refactor and will go away
+        #next iteration
+        $self->cleanup_my_mapmerge($self->ref_seq_id);
+        $self->cleanup_all_mapmerges($self->ref_seq_id);
+        
 		$self->date_completed(UR::Time->now);
 		if (0) { # replace w/ actual check
 			$self->event_status("Failed");
@@ -770,7 +775,7 @@ sub generate_figure_3_files {
        my $nonsynonymous_count=0;      
        my $var_never_manreview_fh = IO::File->new(">$dir" .
            "/var_never_manreview_" . $self->ref_seq_id . ".csv");
-       my $never_manreview_count;
+       my $never_manreview_count=0;
        my $var_pass_manreview_fh = IO::File->new(">$dir" .
            "/var_pass_manreview_" . $self->ref_seq_id .
             ".csv");
