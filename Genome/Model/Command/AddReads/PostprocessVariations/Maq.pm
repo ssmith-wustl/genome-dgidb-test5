@@ -382,7 +382,7 @@ sub generate_variation_metrics_files {
     my $variation_metrics_file = $self->variation_metrics_file.$test_extension;
     $self->status_message("Generating cross-library metrics for $variation_metrics_file");
     if(1) {
-        my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
+        my $chromosome_alignment_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
         unless (
             Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(
                 input => $chromosome_alignment_file,
@@ -406,7 +406,7 @@ sub generate_variation_metrics_files {
 	foreach my $library_name (@libraries) {
         my $lib_variation_metrics_file = $self->variation_metrics_file . '.' . $library_name.$test_extension;
         $self->status_message("...generating per-library metrics for $lib_variation_metrics_file");
-        my $chromosome_alignment_file = $model->resolve_accumulated_alignments_filename(
+        my $chromosome_alignment_file = $self->resolve_accumulated_alignments_filename(
             ref_seq_id => $self->ref_seq_id,
             library_name => $library_name,
         ); 
