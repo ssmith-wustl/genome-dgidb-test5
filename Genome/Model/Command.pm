@@ -40,10 +40,11 @@ sub create {
             my @models = Genome::Model->get(name => { operator => "like", value => '%' . $pattern . '%' });
             if (@models >1) {
                 $self->error_message(
-                                     "No model specified at creation time, and multiple models match pattern \%${pattern}\%!\n"
+                                     "No model specified, and multiple models match pattern \%${pattern}\%!\n"
                                      . join("\n", map { $_->name } @models)
                                      . "\n"
                                  );
+                $self->delete;
                 return;
             }
             elsif (@models == 1) {
@@ -53,6 +54,7 @@ sub create {
             }
         } else {
             $self->error_message("No model or bare_args exists");
+            $self->delete;
             return;
         }
     }
