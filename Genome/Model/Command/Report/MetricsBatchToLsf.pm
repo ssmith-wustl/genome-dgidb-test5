@@ -209,12 +209,14 @@ sub _setup_job
     my $prefix = $self->snp_chunk_prefix($self->snpfile);
     my $out_prefix = $self->snp_chunk_prefix($self->output);    
     my $snpfile =  "$prefix.$num";
-    my $outfile = "$out_prefix.$num";   
+    my $outfile = "$out_prefix.$num";
+    my $hostname = `hostname`;   
     my %job_params =
     (
         pp_type => 'lsf',        
         q => 'aml',
         #R => "'select[db_dw_prod_runq<10] rusage[db_dw_prod=1]'",
+        R => "'hname!=$hostname hname!=linuscs50'",#exclude linuscs50
         command => sprintf
         (
             '`which gt` maq generate-variation-metrics --input "%s" --snpfile %s --qual-cutoff 1 --output %s',
@@ -242,7 +244,7 @@ sub _setup_job
         out => $out_file,#out log file, needs less confusing name...
         #error => $error_file,
         num => $num,
-        tries => 3,
+        tries => 100,
         try_count => 1,
     };
 }
@@ -277,11 +279,12 @@ sub _run_and_monitor_jobs
                     print "$job_id successful\n";
                     delete $running_jobs{$job_id};
                 }
-                elsif($job_hash->{tries} <= $job_hash->{try_count})
+                elsif($job_hash->{try_count} <= $job_hash->{tries} )
                 {
                     print "$job_hash->{num} with job_id $job_id failed, retry number $job_hash->{try_count}\n";
                     #unlink $job->{out} if -e $job->{out};
                     #unlink $job->{error} if -e $job->{error};
+                    unlink "core" if -e "core";
                     my $new_job = $self->_setup_job($job_hash->{num});
                     if(!$new_job)
                     {   
