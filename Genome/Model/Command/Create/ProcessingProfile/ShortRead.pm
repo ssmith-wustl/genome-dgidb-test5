@@ -17,8 +17,6 @@ class Genome::Model::Command::Create::ProcessingProfile::ShortRead {
 		# This will probably never be specified since processing profiles are used for many models
 		# this shouldnt even be here except that we need to override this to be not required
         model                  		 => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
-        profile_name 			     => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
-										doc => 'The human readable name for the processing profile'},
 		align_dist_threshold         => { is => 'VARCHAR2', len => 255, is_optional => 1,
 										doc => ""},
 		dna_type                     => { is => 'VARCHAR2', len => 64, is_optional => 1,
@@ -35,7 +33,7 @@ class Genome::Model::Command::Create::ProcessingProfile::ShortRead {
 										doc => ""},
 		prior		                 => { is => 'VARCHAR2', len => 255, sql => 'prior_ref_seq', is_optional => 1,
 										doc => ""},
-		read_aligner                 => { is => 'VARCHAR2', len => 255, is_optional => 1,
+		read_aligner                 => { is => 'VARCHAR2', len => 255, is_optional => 0,
 										doc => "alignment program used for this model"},
 		read_aligner_params          => { is => 'VARCHAR2', len => 255, is_optional => 1,
 										doc => "command line args for the aligner"},
@@ -47,8 +45,6 @@ class Genome::Model::Command::Create::ProcessingProfile::ShortRead {
 										doc => "Identifies the reference sequence used in the model"},
 		sequencing_platform          => { is => 'VARCHAR2', len => 255, is_optional => 1, 
 										doc => "The sequencing platform. Always 'solexa' at the moment"},
-		type_name                    => { is => 'VARCHAR2', len => 255, is_optional => 1, 
-										doc => "The type of processing profile.  Always 'short read' at the moment"},
     ],
     schema_name => 'Main',
 };
@@ -96,19 +92,52 @@ sub target_class{
     return "Genome::ProcessingProfile::ShortRead";
 }
 
-sub command_properties{
+sub _validate_execute_params {
     my $self = shift;
     
-    return
-        grep { $_ ne 'id' and $_ ne 'bare_args'}         
-            map { $_->property_name }
-                $self->_shell_args_property_meta;
+    unless($self->SUPER::_validate_execute_params) {
+        $self->error_message('_validate_execute_params failed for SUPER');
+        return;                        
+    }
+
+    unless ($self->reference_sequence) {
+        if ($self->prior eq "none") {
+            $self->error_message("No reference sequence set.  This is required w/o a prior.");
+            $self->usage_message($self->help_usage);
+            return;
+        }
+        $self->reference_sequence($self->prior);
+    }
+    unless ($self->_validate_dna_type) {
+        $self->error_message(
+            'DNA Type is invalid... must be "genomic dna" or "cdna"');
+        return;                        
+    }
+
+    unless ($self->verify_params) {
+        $self->error_message(
+            "One or more modules could not be found for the supplied parameters");
+        return;                        
+    }
+
+    return 1;
 }
 
+sub _validate_dna_type {
+    my $self = shift;
+    
+    unless (($self->dna_type() eq "genomic dna")||($self->dna_type() eq "cdna")) {
+        return undef;    
+    }
+
+    return 1;
+}
+
+# TODO: copied from create processingprofile... refactor
 sub execute {
     my $self = shift;
 
-$DB::single=1;
+    $DB::single=1;
 
     # genome model specific
 
@@ -143,152 +172,6 @@ $DB::single=1;
     return 1;
 }
 
-sub _extract_command_properties_and_duplicate_keys_for__name_properties{
-    my $self = shift;
-    
-    my $target_class = $self->target_class; 
-    my %params;
-    
-    for my $command_property ($self->command_properties) {
-        my $value = $self->$command_property;
-        next unless defined $value;
-
-        # This is an ugly hack just for creating Genome::ProcessingProfile objects
-        # Command-derived objects gobble up the --name parameter as part of the
-        # UR framework initialization, so we're stepping around that by
-        # knowing that Genome::ProcessingProfile's have names, and the related Command
-        # param is called "profile_name"
-        if ($command_property eq 'profile_name') {
-            if ($target_class->can('name')) {
-                $params{'name'} = $value; 
-            }
-        } else {
-            my $object_property = $command_property;
-            if ($target_class->can($command_property . "_name")) {
-                $object_property .= "_name";
-            }
-           	$params{$object_property} = $value;
-        }
-    }
-
-    return \%params;
-}
-
-sub _validate_execute_params{
-    my $self = shift;
-    
-    unless ($self->reference_sequence) {
-        if ($self->prior eq "none") {
-            $self->error_message("No reference sequence set.  This is required w/o a prior.");
-            $self->usage_message($self->help_usage);
-            return;
-        }
-        $self->reference_sequence($self->prior);
-    }
-
-    if (my @args = @{ $self->bare_args }) {
-        $self->error_message("extra arguments: @args");
-        $self->usage_message($self->help_usage);
-        return;
-    }
-
-    unless ($self->_validate_dna_type) {
-        $self->error_message(
-            'DNA Type is invalid... must be "genomic dna" or "cdna"');
-        return;                        
-    }
-
-    unless ($self->verify_params) {
-        $self->error_message(
-            "One or more modules could not be found for the supplied parameters");
-        return;                        
-    }
-}
-
-sub _validate_dna_type {
-    my $self = shift;
-    
-    unless (($self->dna_type() eq "genomic dna")||($self->dna_type() eq "cdna")) {
-        return undef;    
-    }
-
-    return 1;
-}
-
-sub _create_target_class_instance_and_error_check{
-    my ($self, $params_in) = @_;
-    
-    my %params = %{$params_in};
-    
-    my $target_class = $self->target_class;    
-    my $target_class_meta = $target_class->get_class_object; 
-    my $type_name = $target_class_meta->type_name;
-
-    $self->set(
-        date_scheduled  => $self->_time_now(),
-        date_completed  => undef,
-        event_status    => 'Scheduled',
-        event_type      => $self->command_name,
-        lsf_job_id      => undef, 
-        user_name       => $ENV{USER}, 
-    );
-	
-	# Check to see if the processing profile exists before creating
-	# First, enforce the name being unique since processing profiles are
-	# specified by name
-	my @existing_profiles = $self->target_class->get(name => $params{name});
-	if (scalar(@existing_profiles) > 0) {
-		my $existing_name = $existing_profiles[0]->name;
-		$self->error_message("A processing profile named $existing_name already exists. Processing profile names must be unique.");
-		return;
-	}
-	
-	
-	# Now, enforce functional uniqueness. We dont want more than one processing
-	# profile doing effectively the same thing.
-	my %get_params = %params;
-	# exclude 'name' and 'id' from the get since these parameters would make the
-	# processing_profile unique despite being effectively the same as another...
-	delete $get_params{name};
-	delete $get_params{id};
-	@existing_profiles = $self->target_class->get(%get_params);
-	if (scalar(@existing_profiles) > 0) {
-		my $existing_name = $existing_profiles[0]->name;
-		$self->error_message("A processing profile named $existing_name already exists with the same parameters. Processing profiles must be functionally unique.");
-		return;
-	}
-	
-	# If it passed the above checks, create the processing profile
-    my $obj = $target_class->create(%params);
-    if (!$obj) {
-        $self->error_message(
-            "Error creating $type_name: " 
-            . $target_class->error_message
-        );
-        return;
-    }
-
-    $self->model($obj); 
-
-    if (my @problems = $obj->invalid) {
-        $self->error_message("Error creating $type_name:\n\t"
-            . join("\n\t", map { $_->desc } @problems)
-            . "\n");
-        $obj->delete;
-        return;
-    }   
-
-    $self->date_completed($self->_time_now());
-    unless($obj) {
-        $self->event_status('Failed');
-        $self->error_message("Failed to create genome model: " . $obj->error_message);
-        print Dumper(\%params);
-        return;
-    }
-    
-    $self->event_status('Succeeded');
-    return $obj;
-}
 
 1;
 

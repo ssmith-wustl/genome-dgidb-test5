@@ -36,7 +36,7 @@ sub create {
 sub pretty_print_text {
 	my $self = shift;
 	
-	my $subclass = $self->resolve_subclass_name();
+	my $subclass = $self->_resolve_subclass_name();
 	my $subclass_instance = $subclass->get(name => $self->name);
 	$subclass_instance->pretty_print_text();
 }
