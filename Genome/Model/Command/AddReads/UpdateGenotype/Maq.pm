@@ -37,7 +37,7 @@ sub should_bsub { 1;}
 
 sub execute {
     my $self = shift;
-
+$DB::single = 1;
     my $model = $self->model;
     my $maq_pathname = $self->proper_maq_pathname('genotyper_name');
 
@@ -65,9 +65,10 @@ sub execute {
         push @args, $assembly_opts;
     }
     push @args, ($consensus_file, $ref_seq_file, $accumulated_alignments_file);
-    $self->status_message("Running command: @args\n");
+    my $cmd = join(' ', @args);
+    $self->status_message("Running command: $cmd\n");
 
-    my $rv = system(@args);
+    my $rv = system($cmd);
     if ($rv) {
         $self->error_message("nonzero exit code $rv returned by maq, command looks like, @args");
         return;
