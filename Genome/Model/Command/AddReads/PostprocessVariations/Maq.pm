@@ -341,7 +341,7 @@ sub chunk_variation_metrics {
                 qual_cutoff => 1,
                 output => $lib_variation_metrics_file,
                 out_log_file => $self->snp_out_log_file,
-                chunk_count => 20,
+                chunk_count => $chunk_count,
                 #error_log_file => $self->snp_err_log_file,
                 # OTHER PARAMS:
                 # flank_range => ??,
