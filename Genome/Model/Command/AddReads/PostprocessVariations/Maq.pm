@@ -294,6 +294,7 @@ sub chunk_variation_metrics {
     my $self = shift;
     my %p = (@_);
     my $test_extension = $p{test_extension};
+    my $chunk_count = $p{chunk_count} || 20;
     my $model = $self->model;
 
     my $variation_metrics_file = $self->variation_metrics_file.$test_extension;
@@ -308,6 +309,7 @@ sub chunk_variation_metrics {
                 qual_cutoff => 1,
                 output => $variation_metrics_file,
                 out_log_file => $self->snp_out_log_file,
+                chunk_count => $chunk_count
                 #error_log_file => $self->snp_err_log_file,
                 # OTHER PARAMS:
                 # flank_range => ??,
@@ -339,6 +341,7 @@ sub chunk_variation_metrics {
                 qual_cutoff => 1,
                 output => $lib_variation_metrics_file,
                 out_log_file => $self->snp_out_log_file,
+                chunk_count => 20,
                 #error_log_file => $self->snp_err_log_file,
                 # OTHER PARAMS:
                 # flank_range => ??,
@@ -362,9 +365,17 @@ sub generate_variation_metrics_files {
     my $self = shift;
     my %p = @_;
     my $test_extension = $p{test_extension};
-    if($self->ref_seq_id eq "10" || $self->ref_seq_id eq "1")#horrible hack for now
+    if($self->ref_seq_id =~ /^(8|10|1)$/)#horrible hack for now
     {
         return $self->chunk_variation_metrics(@_);
+    }
+    elsif($self->ref_seq_id < 10)
+    {
+        return $self->chunk_variation_metrics(@_,chunk_count => 3);
+    }
+    else
+    {
+        return $self->chunk_variation_metrics(@_,chunk_count => 1);
     }
     my $model = $self->model;
 
