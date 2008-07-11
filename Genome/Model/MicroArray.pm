@@ -496,10 +496,6 @@ sub make_affy_illumina_intersection {
                     (($illumina_allele_2 eq $affy_allele_1) && ($illumina_allele_1 eq $affy_allele_2))) {
                     # Shouldnt matter which one we write to the file
                     # For now, write in an output identical to the current intersection files
-                    # FIXME: BIG ASSUMPTIONS:
-                    # 1. position start and end are always the same since its just a single position...
-                    # 2. If homo... print ref ref if it matches ref, otherwise print SNP SNP... if het print ref SNP
-                    # 3. Print this series yet AGAIN for some reason
                     print $output_fh $illumina_chrom . "\t" .
                         $illumina_pos . "\t" .
                         $illumina_pos . "\t"; 
@@ -509,16 +505,31 @@ sub make_affy_illumina_intersection {
                     } else {
                         print $output_fh $illumina_allele_1 . "\t" .$illumina_allele_2 . "\t"; 
                     }
-                    # as per the assumptions...
-                    if ($illumina_allele_1 eq $illumina_allele_2) {
-                        if ($illumina_allele_1 eq $illumina_ref) {
-                            print $output_fh "ref\tref\tref\tref\n"; 
+
+                    # if homozygous (affy)
+                    if ($affy_allele_1 eq $affy_allele_2) {
+                        if ($affy_allele_1 eq $affy_ref) {
+                            print $output_fh "ref\tref\t"; 
                         } 
                         else {
-                            print $output_fh "SNP\tSNP\tSNP\tSNP\n";
-                        } 
+                            print $output_fh "SNP\tSNP\t";
+                        }
+                    # otherwise must be het            
                     } else {
-                        print $output_fh "ref\tSNP\tref\tSNP\n"; 
+                        print $output_fh "ref\tSNP\t"; 
+                    }
+
+                    # if homozygous (illumina)
+                    if ($illumina_allele_1 eq $illumina_allele_2) {
+                        if ($illumina_allele_1 eq $illumina_ref) {
+                            print $output_fh "ref\tref\n"; 
+                        } 
+                        else {
+                            print $output_fh "SNP\tSNP\n";
+                        }
+                    # otherwise must be het            
+                    } else {
+                        print $output_fh "ref\tSNP\n"; 
                     }
                 }
 
