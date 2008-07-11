@@ -70,7 +70,7 @@ $DB::single = 1;
         my $e = Genome::Model::Event->get("$eid");
         my $model = $e->model;
         #print $model->name,"\n";
-        $in = $model->resolve_accumulated_alignments_filename(ref_seq_id => $e->ref_seq_id,
+        $in = $e->resolve_accumulated_alignments_filename(ref_seq_id => $e->ref_seq_id,
                                                               library_name => $library_name);    
     }
     unless ($in and $snpfile and -e $in and -e $snpfile) {
