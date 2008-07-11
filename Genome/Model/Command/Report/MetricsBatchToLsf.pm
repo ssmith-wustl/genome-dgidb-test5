@@ -210,13 +210,14 @@ sub _setup_job
     my $out_prefix = $self->snp_chunk_prefix($self->output);    
     my $snpfile =  "$prefix.$num";
     my $outfile = "$out_prefix.$num";
-    my $hostname = `hostname`;   
+    my $hostname = `hostname -s`; 
+    chomp $hostname;  
     my %job_params =
     (
         pp_type => 'lsf',        
         q => 'aml',
         #R => "'select[db_dw_prod_runq<10] rusage[db_dw_prod=1]'",
-        R => "'hname!=$hostname hname!=linuscs50'",#exclude linuscs50
+        #R => "'hname!=$hostname && hname!=linuscs50'",#exclude linuscs50
         command => sprintf
         (
             '`which gt` maq generate-variation-metrics --input "%s" --snpfile %s --qual-cutoff 1 --output %s',
@@ -244,7 +245,7 @@ sub _setup_job
         out => $out_file,#out log file, needs less confusing name...
         #error => $error_file,
         num => $num,
-        tries => 100,
+        tries => 3,
         try_count => 1,
     };
 }
