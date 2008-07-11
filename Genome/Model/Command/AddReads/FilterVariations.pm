@@ -209,8 +209,8 @@ sub execute {
 
 		my ($file, $basename, $qvalue_level, $bq);
 		my $specificity = 'default';
-		my $ruleset = 'dtr2a';
-		#my $ruleset = 'dtr3e';
+		#my $ruleset = 'dtr2a';
+		my $ruleset = 'dtr3e';
 
 
 
