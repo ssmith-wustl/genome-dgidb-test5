@@ -58,7 +58,7 @@ $DB::single = 1;
         $self->error_message("Can't get lock for model's maq assemble output assembly_" . $self->ref_seq_id);
         return undef;
     }
-    my $accumulated_alignments_file = $model->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
+    my $accumulated_alignments_file = $self->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
 
     my @args = ($maq_pathname, 'assemble');
     if ($assembly_opts) {
