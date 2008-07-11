@@ -324,7 +324,7 @@ sub chunk_variation_metrics {
             $self->error_message("Metrics file not found for library $variation_metrics_file!");
             return;
         }
-    }return 1;
+    }
 
     my @libraries = $model->libraries;
     
