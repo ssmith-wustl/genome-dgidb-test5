@@ -115,8 +115,8 @@ sub cleanup_all_mapmerges {
     my $ref_seq_id = shift;
        
     for my $host_output (my @host_outputs= $self->find_possible_hosts) {
-        my $host = $host_output->param_value;
-        my $cmd = "ssh -o StrictHostKeyChecking=no $host 'rm /tmp/mapmerge_" . $self->model_id . "*";
+        my $host = $host_output->value;
+        my $cmd = "ssh $host 'rm /tmp/mapmerge_" . $self->model_id . "*";
         $self->warning_message("Running $cmd");
         my $rv = system($cmd);
         
