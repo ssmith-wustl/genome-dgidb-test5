@@ -48,7 +48,7 @@ EOS
 }
 
 sub bsub_rusage {
-    return "-R 'select[type=LINUX64] hname!=linuscs50'";
+    return "-R 'select[type=LINUX64]'";
 }
 
 sub should_bsub { 1;}
@@ -365,19 +365,18 @@ sub generate_variation_metrics_files {
     my $self = shift;
     my %p = @_;
     my $test_extension = $p{test_extension};
-    if($self->ref_seq_id =~ /^(8|10|1)$/)#horrible hack for now
-    {
-        return $self->chunk_variation_metrics(@_);
-    }
-    elsif($self->ref_seq_id < 10)
-    {
-        return $self->chunk_variation_metrics(@_,chunk_count => 3);
-    }
-    else
-    {
-        print "chunking with 1 job\n",@_,"\n";
-        return $self->chunk_variation_metrics(@_,chunk_count => 1);
-    }
+    #if($self->ref_seq_id =~ /^(8|10|1)$/)#horrible hack for now
+    #{
+    #    return $self->chunk_variation_metrics(@_);
+    #}
+    #elsif($self->ref_seq_id < 10)
+    #{
+    #   return $self->chunk_variation_metrics(@_,chunk_count => 3);
+    #}
+    #else
+    #{
+    #    return $self->chunk_variation_metrics(@_,chunk_count => 1);
+    #}
     my $model = $self->model;
 
     my $variation_metrics_file = $self->variation_metrics_file.$test_extension;
