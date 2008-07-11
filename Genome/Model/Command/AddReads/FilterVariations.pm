@@ -53,17 +53,10 @@ sub GetNormal {
 	}
 	my %normal;
 
-	my $map_file_path =
-		$normal_model[0]->resolve_accumulated_alignments_filename(
-																															ref_seq_id => $chromosome,
-																														 );
-	unless (defined($map_file_path) &&
-					$map_file_path !~ /^\s*$/ &&
-					-r $map_file_path) {
-		return;
-	}
-	my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $detail_file_sort $alignment_quality |";
-	my $ov_fh = IO::File->new($ov_cmd);
+
+    #my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $detail_file_sort $alignment_quality |";
+    my $equivalent_skin_event= Genome::Model::Command::AddReads::FilterVariations->get(model_id=>2509660674, ref_seq_id=>$self->ref_seq_id);
+	my $ov_fh = IO::File->new($equivalent_skin_event->variation_metrics_filename);
 	unless ($ov_fh) {
 		$self->error_message("Unable to get counts $$");
 		return;
@@ -189,16 +182,9 @@ sub execute {
     # This creates a map file in /tmp which is actually a named pipe
     # streaming the data from the original maps.
     # It can be used only once.  Run this again if you need to use it multiple times.
-    my $map_file_path = $self->resolve_accumulated_alignments_filename(
-																																				ref_seq_id => $chromosome,
-																																			 );
-		unless (defined($map_file_path) &&
-						$map_file_path !~ /^\s*$/ &&
-						-r $map_file_path) {
-			return;
-		}
 		
 		my $snp_file_sort = $filtered_list_dir . "snp_filtered_sort_${chromosome}.csv";
+        my $map_file_path = $self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
 		system("perl /gscuser/jschindl/snp_sort.pl $snp_file_filtered $map_file_path $snp_file_sort $chromosome");
 
 		my $alignment_quality = 1;
@@ -259,9 +245,9 @@ sub execute {
 					return;
 				}
 				$library_number += 1;
-				my $ov_lib_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $lib_map_file_path $snp_file_sort $alignment_quality |";
+                #my $ov_lib_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $lib_map_file_path $snp_file_sort $alignment_quality |";
 
-				my $ov_lib_fh = IO::File->new($ov_lib_cmd);
+				my $ov_lib_fh = IO::File->new($self->variation_metrics_filename($library_name));
 				unless ($ov_lib_fh) {
 					$self->error_message("Unable to get counts for $chromosome $library_name $$");
 					return;
@@ -357,14 +343,9 @@ sub execute {
     # This creates a map file in /tmp which is actually a named pipe
     # streaming the data from the original maps.
     # It can be used only once.  Run this again if you need to use it multiple times.
-    $map_file_path = $self->resolve_accumulated_alignments_filename(
-																																		 ref_seq_id => $chromosome,
-																																		);
-    print "made map $map_file_path\n";
+    #my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $snp_file_sort $alignment_quality |";
 
-		my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $snp_file_sort $alignment_quality |";
-
-    my $ov_fh = IO::File->new($ov_cmd);
+    my $ov_fh = IO::File->new($self->variation_metrics_file_name());
 		unless ($ov_fh) {
 			$self->error_message("Unable to get counts $$");
 			return;
@@ -1340,3 +1321,20 @@ sub metrics_for_class {
     well_supported_variants
     |;
 }
+
+
+sub variation_metrics_file_name {
+     my $self = shift;
+     my $library_name = shift;
+
+     my $annotate_step = Genome::Model::Event->get($self->prior_event_id);
+     my $post_process_step= Genome::Model::Event->get($annotate_step->prior_event_id);
+     
+     my $base_variation_file_name = $post_process_step->variation_metrics_file;
+
+     unless($library_name) {
+         return $base_variation_file_name;
+     }
+     return "$base_variation_file_name.$library_name";
+} 
+     
