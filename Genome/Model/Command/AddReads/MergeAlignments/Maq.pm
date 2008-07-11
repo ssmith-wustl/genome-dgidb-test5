@@ -133,7 +133,20 @@ else {
         }
         $fh->close;
     }
+    my $next_event= Genome::Model->get(prior_event_id=> $self->id);
+   #begin the /tmp/maplist odyssey here
+    while($next_event) { 
+          my $lsf_job_id = $next_event->lsf_job_id;
+          if($lsf_job_id) {
+              my $rv = system("bmod -m " .  $ENV{HOSTNAME} . " $lsf_job_id");
+              if($rv && ($rv != 0)) {
+                  $self->error_message("unable to change host to " . $ENV{HOSTNAME} . " for job $lsf_job_id");
+              }
+          }
+          $next_event= Genome::Model->get(prior_event_id=> $next_event->id); 
+      }
 
+    
     $self->date_scheduled($now);
     $self->date_completed(UR::Time->now());
     $self->event_status('Succeeded');
