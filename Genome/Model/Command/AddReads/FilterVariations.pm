@@ -721,7 +721,8 @@ sub execute {
         #I realize this is dumb to pass refseq. its an incremental refactor and will go away
         #next iteration
         $self->cleanup_my_mapmerge($self->ref_seq_id);
-        $self->cleanup_all_mapmerges($self->ref_seq_id);
+        #commented until we test this method
+        #$self->cleanup_all_mapmerges($self->ref_seq_id);
         
 		$self->date_completed(UR::Time->now);
 		if (0) { # replace w/ actual check
