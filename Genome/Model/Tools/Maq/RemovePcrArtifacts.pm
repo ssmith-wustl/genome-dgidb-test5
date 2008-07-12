@@ -30,7 +30,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gt remove-pcr-artifacts orig.map new_better.map removed_stuff.map --sequence-identity-length 26
+gt remove-pcr-artifacts --input orig.map --keep nodups.map --remove dups.map --sequence-identity-length 26
 EOS
 }
 
@@ -39,7 +39,7 @@ sub help_detail {
 This tool removes reads from a maq map file which are likely to be the result of PCR, rather than distinct DNA fragments.
 It examines all reads at the same start site, selects the read which has the best data to represent the group based on length and alignment quality.
 
-A future enhancement would group reads with a common sequence in the first n bases of the read and select the best read from that group.
+Optionally, groupis reads with a common sequence in the first n bases of the read and select the best read from that group.  (When unspecified, this value is effectively zero.)
 EOS
 }
 
