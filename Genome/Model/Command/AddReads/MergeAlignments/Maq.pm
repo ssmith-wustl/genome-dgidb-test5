@@ -152,7 +152,7 @@ sub execute {
                 $self->error_message("unable to change host to " . $ENV{HOSTNAME} . " for job $lsf_job_id");
             }
         }
-        $next_event= Genome::Model->get(prior_event_id=> $next_event->id); 
+        $next_event= Genome::Model::Event->get(prior_event_id=> $next_event->id); 
     }
     
     $self->date_scheduled($now);
