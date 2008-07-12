@@ -56,6 +56,10 @@ sub GetNormal {
 
     #my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $detail_file_sort $alignment_quality |";
     my $equivalent_skin_event= Genome::Model::Command::AddReads::FilterVariations->get(model_id=>2509660674, ref_seq_id=>$self->ref_seq_id);
+    unless ($equivalent_skin_event) {
+        $self->error_message("Failed to find an event on the skin model to match the tumor.  Probably need to re-run after that completes.  In the future, we will have the tumor/skin filtering separate from the individual model processing.\n");
+        return;
+    } 
 	my $ov_fh = IO::File->new($equivalent_skin_event->variation_metrics_filename);
 	unless ($ov_fh) {
 		$self->error_message("Unable to get counts $$");
