@@ -3,13 +3,12 @@ package Genome::Vocabulary;
 use warnings;
 use strict;
 
-use above "Genome";
+use Genome;
 
-UR::Object::Type->define(
-    class_name => 'Genome::Vocabulary',
+class Genome::Vocabulary {
     is => ['UR::Vocabulary'],
     english_name => 'genome vocabulary',
-);
+};
 
 
 1;
