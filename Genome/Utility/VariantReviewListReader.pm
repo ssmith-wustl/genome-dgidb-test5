@@ -4,13 +4,17 @@ use strict;
 use warnings;
 
 use IO::File;
+use Finfo::SeparatedValueReader;
 
 sub new{
     my ($class, $list, $separation_character) = @_;
-    $separation_character ||= '|';
-    my $lfh = IO::File->new("< $list");
-    die "Can't open filehandle for $list!" unless $lfh;
-    my $self = bless({lfh=>$lfh, separation_character=>$separation_character}, $class);
+    $separation_character ||= "|";
+    my $separated_value_reader = Finfo::SeparatedValueReader->new(
+        io => $list,
+        separator => $separation_character,
+    );
+    die "Can't get SeparatedValueReader for $list!" unless $separated_value_reader;
+    my $self = bless({separated_value_reader=>$separated_value_reader, separation_character=>$separation_character}, $class);
     return $self;
 }
 
@@ -52,7 +56,6 @@ sub db_columns{
         variant_type
         variant_length
         delete_sequence
-        insert_sequence
         insert_sequence_allele1
         insert_sequence_allele2
         genes
@@ -71,19 +74,17 @@ sub db_columns{
 }
 
 sub set_line_hash{
-    my ($self, @data) = @_;
-    my $index = 0;
+    my ($self, $data) = @_;
     my %hash;
     foreach my $col_name ($self->list_columns){
         if ($col_name eq 'insert_sequence'){
             my ($insert_sequence_allele1, $insert_sequence_allele2) ;
-            ($insert_sequence_allele1, $insert_sequence_allele2) = split (/\//, $data[$index]) if $data[$index];
+            ($insert_sequence_allele1, $insert_sequence_allele2) = split (/\//, $data->{$col_name}) if $data->{$col_name};
             $hash{'insert_sequence_allele1'} = $insert_sequence_allele1;
             $hash{'insert_sequence_allele2'} = $insert_sequence_allele2;
         }else{
-            $hash{$col_name} = $data[$index];
+            $hash{$col_name} = $data->{$col_name};
         }
-        $index++;
     }
     $self->{hash} = \%hash;
 }
@@ -98,23 +99,71 @@ sub line_hash{
 
 sub next_line_data{
     my ($self) = @_;
-    my $line = $self->{lfh}->getline;
-    return unless $line;
-    chomp $line;
-    unless ($line =~ /^[\dXxYy]/){
-        return {header=>$line};
-    }
-    my $char = $self->{'separation_character'};
-    my @data = split(/\Q$char\E/, $line);
-    foreach (@data){
-        $_ =~ s/"'//g;
+    my $line_hash = $self->{separated_value_reader}->next;
+    return unless $line_hash;
+    foreach (keys %$line_hash){
+        $_ =~ s/"'//g;          #strip quotation marks
         undef $_ if $_=~/^-$/;
     }
 
-    $self->set_line_hash(@data);
+    $self->set_line_hash($line_hash);
     return $self->line_hash;
 }
 
 1;
 
+=pod
 
+=head1 Name
+
+Genome::Utility::VariantReviewListReader
+
+=head1 Synopsis
+
+Processes a variant review list line by line, splits on the given separator, and builds a hash whose keys are the items from the header and values are the data from the processed row.     
+
+=head1 Usage
+
+  use Genome::Utility::VariantRevewListReader;
+
+  my $reader = Genome::Utility::VariantReviewListReader->new(
+     list => 'VariantReviewList.csv', # req; file
+     separation_character => ',' , # opt; default is '|'
+  );
+
+  while (my $line_hash = $reader->next_line_data){
+      print "Chromosome: " . $line_hash->{'chromosome'} . " and Begin Position: " . $line_hash->{'begin_position'};
+  }
+
+=head1 Methods
+
+=head2 next_line_data
+
+  my $line_data = $reader->next_line_data
+
+=over
+
+=item I<Synopsis>   Gets the next line in hash form from the list
+
+=item I<Params>     none
+
+=item I<Returns>    hashref with the following keys: chromosome, begin_position, end_position, variant_type, variant_length, delete_sequence, insert_sequence_allele1, insert_sequence_allele2, genes, supporting_samples, supporting_dbs, finisher_manual_review, pass_manual_review, finisher_3730_review, manual_genotype_normal, manual_genotype_tumor, manual_genotype_relapse, somatic_status, notes
+
+=back
+
+=head1 See Also
+
+I<Finfo::SeparatedValueReader>
+
+=head1 Disclaimer
+
+Copyright (C) 2008 Washington University Genome Sequencing Center
+
+This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+=head1 Author(s)
+
+Adam Dukes  <adukes@watson.wustl.edu>,
+Jim Weible  <jweible@watson.wustl.edu>
+
+=cut
