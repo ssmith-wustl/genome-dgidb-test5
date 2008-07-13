@@ -95,6 +95,17 @@ sub create {
     return $self;
 }
 
+sub revert {
+    my $self = shift;
+    my @metrics = $self->metrics;
+    my @outputs = $self->outputs;
+    for my $obj (@metrics,@outputs) {
+        $self->warning_message("Deleting " . $obj->id);
+        $obj->delete;
+    }
+    return 1;
+}
+
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments
     return grep { 
@@ -105,8 +116,6 @@ sub _shell_args_property_meta {
             )
         } shift->SUPER::_shell_args_property_meta(@_);
 }
-
-
 
 # This is called by the infrastructure to appropriately classify abstract events
 # according to their event type because of the "sub_classification_method_name" setting
@@ -155,7 +164,7 @@ sub _resolve_subclass_name_for_event_type {
 
 sub desc {
     my $self = shift;
-    return $self->id . " of type " . $self->event_type;
+    return $self->id . " (" . $self->event_type . ")";
 }
 
 # Override the default message handling to auto-instantiate a log handle.
@@ -212,25 +221,6 @@ END {
     }
 }
 
-#sub execute {
-#    my $self = shift;
-#
-#
-#    my $rv = $sub_command->execute();
-#
-#    $self->date_completed(UR::Time->now());
-#    $self->event_status($rv ? 'Succeeded' : 'Failed');
-#
-#    return $rv;
-#}
-
-
-sub Xresolve_run_directory {
-    my $self = shift;
-    return sprintf('%s/runs/%s/%s', $self->model->data_directory,
-                                    $self->run->sequencing_platform,
-                                    $self->run->name);
-}
 sub resolve_log_directory {
     my $self = shift;
 
@@ -244,25 +234,8 @@ sub resolve_log_directory {
     }
 }
 
-sub Xresolve_lane_name {
-    my ($self) = @_;
-
-    # hack until the GSC.pm namespace is deployed ...after we fix perl5.6 issues...
-    my $lane_summary = GSC::RunLaneSolexa->get(seq_id => $self->run->seq_id);
-    unless ($lane_summary) {
-        $self->error_message('No lane summary');
-    }
-    if ($lane_summary->run_type && $lane_summary->run_type =~ /Paired End Read (\d+)/) {
-        return $self->run->limit_regions . '_' . $1;
-    } else {
-        return $self->run->limit_regions;
-    }
-}
-
-
 sub adaptor_file_for_run {
     my $self = shift;
-
     my $pathname = $self->resolve_run_directory . '/adaptor_sequence_file';
     return $pathname;
 }
@@ -375,79 +348,6 @@ sub execute_with_bsub {
     return $last_bsub_job_id;
 }
 
-sub Xrun_command_with_bsub {
-    my($self,$command,$last_command, $dep_type) = @_;
-## should check if $self isa Command??
-    $dep_type ||= 'ended';
-
-    $DB::single=1;
-    
-    my $last_bsub_job_id;
-    $last_bsub_job_id = $last_command->lsf_job_id if defined $last_command;
-
-    my $queue = $self->bsub_queue;
-    my $bsub_args = $self->bsub_args;
-    
-    if (my $bsub_rusage = $command->bsub_rusage) {
-        $bsub_args .= ' ' . $bsub_rusage;
-    }
-    my $cmd = 'genome-model bsub-helper';
-
-    my $event_id = $command->genome_model_event_id;
-    my $prior_event_id = $last_command->genome_model_event_id if defined $last_command;
-    my $model_id = $self->model_id;
-
-    my $log_dir = $command->resolve_log_directory;
-    unless (-d $log_dir) {
-        eval { mkpath($log_dir) };
-        if ($@) {
-            $self->error_message("Couldn't create run directory path $log_dir: $@");
-            return;
-        }
-    }
-  
-    my $err_log_file=  sprintf("%s/%s.err", $command->resolve_log_directory, $event_id);
-    my $out_log_file=  sprintf("%s/%s.out", $command->resolve_log_directory, $event_id);
-    $bsub_args .= ' -o ' . $out_log_file . ' -e ' . $err_log_file;
- 
-
-    my $cmdline;
-    { no warnings 'uninitialized';
-        $cmdline = "bsub -q $queue $bsub_args" .
-                   ($last_bsub_job_id && " -w '$dep_type($last_bsub_job_id)'") .
-                   " $cmd --model-id $model_id --event-id $event_id" .
-                   ($prior_event_id && " --prior-event-id $prior_event_id");
-    }
-
-    if ($self->can('test') && $self->test) {
-        #$command->status_message("Test mode, command not executed: $cmdline");
-        print "Test mode, command not executed: $cmdline\n";
-        $last_bsub_job_id = 'test';
-    } else {
-        $self->status_message("Running command: " . $cmdline);
-
-        my $bsub_output = `$cmdline`;
-        my $retval = $? >> 8;
-
-        if ($retval) {
-            $self->error_message("bsub returned a non-zero exit code ($retval), bailing out");
-            return;
-        }
-
-        if ($bsub_output =~ m/Job <(\d+)>/) {
-            $last_bsub_job_id = $1;
-
-        } else {
-            $self->error_message('Unable to parse bsub output, bailing out');
-            $self->error_message("The output was: $bsub_output");
-            return;
-        }
-
-    }
-
-    return $last_bsub_job_id;
-}
-
 # Scheduling
 
 sub schedule {
@@ -474,9 +374,8 @@ sub is_reschedulable {
     }
 }
 
-## for automatic retries by bsub-helper, override if you want something different
 sub max_retries {
-    2;  #temporarily disabled until rusage issue is dealt with,  sometimes retries maq on non-64 bit blades
+    2;  
 }
 
 sub get_prior_event {
