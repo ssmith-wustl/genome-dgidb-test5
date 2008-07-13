@@ -14,6 +14,11 @@ class Genome::Model::Command::ReLaunch {
             is_optional => 1,
             doc => 'all or part of the step name(s) which should be rescheduled' 
         },
+        'event_id' => { 
+            is => 'Number',
+            is_optional => 1,
+            doc => 'the id to re-schedule, includeing downstream steps.'
+        },
     ],
 };
 
@@ -54,13 +59,38 @@ sub execute {
     }
 
     # get everything specified on the cmdline, or else everything which is at the start of a series of steps
-    my @e = Genome::Model::Event->get(
-        model_id => $model->id,
-        parent_event_id => $running_build_event->id,
-        ($self->events_matching ? ("event_type like" => $self->events_matching) : (prior_event_id => undef) )
-    );
-    $self->status_message("Found " . scalar(@e) . " events to re-launch.");
-
+    my @e;
+    if ($self->event_id) {
+        @e = Genome::Model::Event->get($self->event_id);
+        unless (@e) {
+            $self->error_message("Event " . $self->event_id . " not found!");
+            return;
+        }
+        unless ($e[0]->model_id eq $self->model_id) {
+            $self->error_message("Event " . $e[0]->event_id
+                . " is for model " . $e[0]->model->name . " (" . $e[0]->model_id . ")"
+                . " but the specified model was " . $model->name . " (" . $self->model_id . ")!"
+            );
+            return;
+        }
+    }
+    else {
+        if ($self->events_matching) {
+            @e = Genome::Model::Event->get(
+                model_id => $model->id,
+                parent_event_id => $running_build_event->id,
+                ($self->events_matching ? ("event_type like" => $self->events_matching) : (prior_event_id => undef) )
+            );
+        }
+        else {
+            @e = Genome::Model::Event->get(
+                model_id => $model->id,
+                parent_event_id => $running_build_event->id,
+                prior_event_id => undef
+            );
+        }
+        $self->status_message("Found " . scalar(@e) . " events to re-launch.");
+    }
     my @lsf_jobs;
     for my $e (@e) {
         unless ($e->revert) {
