@@ -43,12 +43,15 @@ sub GetNormal {
 
     my $chromosome = $self->ref_seq_id;
     my $model = $self->model;
-
+    
+    my $model_name = $model->name;
+    my $normal_name = $model_name;
+    $normal_name =~ s/tumor/skin/g;
+    $normal_name =~ s/\d+/\%/g;
     # This is hard-coded for now.  TODO: fixme
-    my $normal_id = '2509660674';
-    my $normal_model = Genome::Model->get(id => $normal_id );
+    my $normal_model = Genome::Model->get('name like' => $normal_name);
     unless ($normal_model) {
-        $self->error_message(sprintf("normal model %s does not exist.  please verify this first.", $normal_id));
+        $self->error_message(sprintf("normal model matching name %s does not exist.  please verify this first.", $normal_name));
         return undef;
     }
     
@@ -58,21 +61,28 @@ sub GetNormal {
         $self->error_message("Failed to find a build event for the comparable normal model " . $normal_model->name); 
         return;
     } 
-    my $equivalent_skin_event= $latest_normal_build->get(
-        event_type => Genome::Model::Command::AddReads::PostprocessVariations->command_name,
-        ref_seq_id => $self->ref_seq_id
-    );
+
+    my ($equivalent_skin_event) = 
+        grep { $_->isa("Genome::Model::Command::AddReads::PostprocessVariations")  } 
+        $latest_normal_build->child_events( 
+            ref_seq_id => $self->ref_seq_id
+        );
+
     unless ($equivalent_skin_event) {
         $self->error_message("Failed to find an event on the skin model to match the tumor.  Probably need to re-run after that completes.  In the future, we will have the tumor/skin filtering separate from the individual model processing.\n");
         return;
     } 
-    my $normal_sample_variation_metrics_file_name = $equivalent_skin_event->variation_metrics_filename;
+    my $normal_sample_variation_metrics_file_name = $equivalent_skin_event->variation_metrics_file;
+    unless (-e $normal_sample_variation_metrics_file_name) {
+        $self->error_message("Failed to find variation metrics for \"normal\": $normal_sample_variation_metrics_file_name");
+        return;
+    }
 
     # construct a hashref for the normal data
     #my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $detail_file_sort $alignment_quality |";
     my $ov_fh = IO::File->new($normal_sample_variation_metrics_file_name);
     unless ($ov_fh) {
-        $self->error_message("Unable to get counts $$");
+        $self->error_message("Unable to open $normal_sample_variation_metrics_file_name for comparision to \"normal\": $!");
         return;
     }
     my %normal;
@@ -166,6 +176,11 @@ sub execute {
     my $self = shift;
     $DB::single = 1; # when debugging, stop here...
     
+    unless ($self->revert) {
+        $self->error_message("Error ensuring previous runs have been cleaned up.");
+        return;
+    }
+
     my $chromosome = $self->ref_seq_id;
     my $model = $self->model;
 
@@ -262,7 +277,7 @@ sub execute {
 				$library_number += 1;
                 #my $ov_lib_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $lib_map_file_path $snp_file_sort $alignment_quality |";
 
-				my $ov_lib_fh = IO::File->new($self->variation_metrics_filename($library_name));
+				my $ov_lib_fh = IO::File->new($self->variation_metrics_file_name($library_name));
 				unless ($ov_lib_fh) {
 					$self->error_message("Unable to get counts for $chromosome $library_name $$");
 					return;
