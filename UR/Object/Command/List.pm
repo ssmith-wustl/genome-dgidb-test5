@@ -216,8 +216,19 @@ sub _get_header_string_for_pretty {
 # Body 
 sub _object_properties_to_string {
     my ($self, $object, $char) = @_;
-
-    return join($char, map { ( defined $object->$_ ? $object->$_ : 'NULL' ) } @{$self->show});
+    my @v;
+    return join(
+        $char, 
+        map { 
+                @v = map { defined $_ ? $_ : 'NULL' } $object->$_;
+                if (@v > 1) {
+                    join(',',@v)
+                }
+                else {
+                    $v[0]
+                }
+            } @{$self->show}
+    );
 }
 
 sub _get_text_string_for_object {
