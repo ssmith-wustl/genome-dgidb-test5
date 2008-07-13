@@ -106,7 +106,13 @@ sub resolve_accumulated_alignments_filename {
         my $cmd = Genome::Model::Tools::Maq::MapMerge->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
         $cmd->execute();
         $self->warning_message("mapmerge complete.  output filename is $result_file");
-        $self->add_output(name=>"Hostname" , value=>$ENV{HOSTNAME});
+        my ($hostname) = $self->outputs(name => "Hostname");
+        if ($hostname) {
+            $hostname->value($ENV{HOSTNAME});
+        }
+        else {
+            $self->add_output(name=>"Hostname" , value=>$ENV{HOSTNAME});
+        }
     }
     return $result_file;
 }

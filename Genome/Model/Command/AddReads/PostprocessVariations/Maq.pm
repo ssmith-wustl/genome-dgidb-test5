@@ -99,6 +99,7 @@ sub execute {
     my $model = $self->model;
 
     $DB::single=1;
+    $self->revert;
 
     unless ($self->generate_genotype_detail_file) {
         $self->error_message("Error generating genotype detail file (annotation input)!");
