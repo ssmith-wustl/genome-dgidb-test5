@@ -46,15 +46,15 @@ sub execute {
     unless ($model) {
         $self->error_message("No model!?");
     }    
-    my $running_assembly_event = $model->running_assembly_event;
-    unless ($running_assembly_event) {
+    my $running_build_event = $model->running_build_event;
+    unless ($running_build_event) {
         $self->error_message("No in-progress assembly event found.  Run a new one!");
         return;
     }
 
     my @e = Genome::Model::Event->get(
         model_id => $model->id,
-        parent_event_id => $running_assembly_event->id,
+        parent_event_id => $running_build_event->id,
         "event_type like" => $self->events_matching
     );
 
