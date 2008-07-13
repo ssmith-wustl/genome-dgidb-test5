@@ -15,6 +15,14 @@ class Genome::Model::EventWithRefSeq {
         cleanup_tmp_files => { is => 'Boolean', doc => 'set to force cleanup of your tmp mapmerge' },
     ],
 };
+
+sub desc {
+    my $self = shift;
+    my $desc = $self->SUPER::desc;
+    $desc .= " for refseq " . $self->ref_seq_id . " on build " . $self->parent_event_id;
+    return $desc;
+}
+
 #it is dumb to take a ref_seq for args when we could just call $self->refseq. 
 #this is just the first iteration for proof of concept. then we'll refactor it to not be dumb
 sub mapmerge_filename {
@@ -29,8 +37,6 @@ sub mapmerge_filename {
 }
 
 #need to link _mapmerge_locally sub name to resolve_accumulated prolly
-
-
 sub resolve_accumulated_alignments_filename {
     my $self = shift;
     my %p = @_;
@@ -45,7 +51,11 @@ sub resolve_accumulated_alignments_filename {
         @maplists = $model->maplist_file_paths();
     }
     if ($library_name) {
+        my @orig_maplists = @maplists;
         @maplists = grep { /$library_name/ } @maplists;
+        unless (@maplists) {
+            $self->error_message("Failed to find library $library_name in: @orig_maplists");
+        }
     }
 
     if (!@maplists) {
