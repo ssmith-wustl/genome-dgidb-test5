@@ -32,9 +32,11 @@ class Genome::RunChunk {
         sample_name         => { is => 'VARCHAR2', len => 255 },
         events              => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => "run" },
         seq_id              => { is => 'NUMBER', len => 15, is_optional => 1 },
+        
+        full_name           => { calculate_from => ['run_name','subset_name'], calculate => q|"$run_name/$subset_name"| },
 
         name                => { 
-                                doc => 'This is a long version of the name which is still used in some places.',
+                                doc => 'This is a long version of the name which is still used in some places.  Replace with full_name.',
                                 is => 'String', 
                                 calculate_from => ['run_name','sample_name'], 
                                 calculate => q|$run_name. '.' . $sample_name| 
