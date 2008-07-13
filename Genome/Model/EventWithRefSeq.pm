@@ -140,8 +140,8 @@ sub find_possible_hosts {
     my $previous;
     while(defined $current->prior_event_id) {
         $previous = Genome::Model::Event->get($current->prior_event_id);
-        my $output = Genome::Model::Event::Output->get(name => "Hostname", event_id=> $previous->id);
-        push @host_outputs, $output if $output;
+        my @output = Genome::Model::Event::Output->get(name => "Hostname", event_id=> $previous->id);
+        push @host_outputs, @output;
         $current = $previous;
     }
     return @host_outputs if wantarray;

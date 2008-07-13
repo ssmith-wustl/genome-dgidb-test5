@@ -49,15 +49,17 @@ sub execute {
    
     my $running_build_event = $model->running_build_event;
     unless ($running_build_event) {
-        $self->error_message("No in-progress assembly event found.  Run a new one!");
+        $self->error_message("No in-progress build event found.  Run a new build to get new results.");
         return;
     }
 
+    # get everything specified on the cmdline, or else everything which is at the start of a series of steps
     my @e = Genome::Model::Event->get(
         model_id => $model->id,
         parent_event_id => $running_build_event->id,
-        "event_type like" => $self->events_matching
+        ($self->events_matching ? ("event_type like" => $self->events_matching) : (prior_event_id => undef) )
     );
+    $self->status_message("Found " . scalar(@e) . " events to re-launch.");
 
     my @lsf_jobs;
     for my $e (@e) {
@@ -73,12 +75,14 @@ sub execute {
             print ((" " x $indent) . $next->id(), "\t", $next->event_type,"\n");
         }
     }
-    print "failed " . scalar(@e) . " processes and their subsequent steps.\n";
  
     # TODO: make this more robuts 
+    $self->status_message("LSF jobs to kill or verify are killed: " . scalar(@lsf_jobs) . "\n") if @lsf_jobs;
     system "bkill @lsf_jobs";      
 
-    return Genome::Model::Command::Services::JobMonitor->execute(model_id => $model->id);
+    $self->status_message("Launching LSF jobs for the model " . $model->name . " (id " . $model->id . ")\n");
+    $self->status_message("Monitor jobs at: http://gscweb/cgi-bin/solexa/genome-model-stage2.cgi?model-name=" . $model->name . "&refresh=1");
+    return 1; #Genome::Model::Command::Services::JobMonitor->execute(model_id => $model->id);
 }
 
 1;
