@@ -363,8 +363,10 @@ sub chunk_variation_metrics {
 
 sub generate_variation_metrics_files {
     my $self = shift;
+
     my %p = @_;
-    my $test_extension = $p{test_extension};
+    my $test_extension = $p{test_extension} || '';
+
     #if($self->ref_seq_id =~ /^(8|10|1)$/)#horrible hack for now
     #{
     #    return $self->chunk_variation_metrics(@_);
@@ -402,17 +404,19 @@ sub generate_variation_metrics_files {
 
     my @libraries = $model->libraries;
     
-	$self->status_message("Generating per-library metric breakdown of $variation_metrics_file");
-	foreach my $library_name (@libraries) {
+    $self->status_message("Generating per-library metric breakdown of $variation_metrics_file");
+    foreach my $library_name (@libraries) {
         my $lib_variation_metrics_file = $self->variation_metrics_file . '.' . $library_name.$test_extension;
         $self->status_message("...generating per-library metrics for $lib_variation_metrics_file");
         my $chromosome_alignment_file = $self->resolve_accumulated_alignments_filename(
             ref_seq_id => $self->ref_seq_id,
             library_name => $library_name,
         ); 
-       unless ($chromosome_alignment_file) {
-            $self->error_message("Failed to create an accumulated alignments file for"
-                    . " per-library metrics for library $lib_variation_metrics_file");
+        unless ($chromosome_alignment_file) {
+            $self->error_message(
+                "Failed to create an accumulated alignments file for"
+                . " per-library metrics for library $lib_variation_metrics_file"
+            );
             return;
         }
         unless (
@@ -431,6 +435,7 @@ sub generate_variation_metrics_files {
             return;
         }
     }
+
     return 1;
 }
 
