@@ -649,7 +649,11 @@ sub maplist_file_paths {
         $ref_seq_id = 'all_sequences';
     }
 
-    return grep { -e $_ } glob($self->alignments_directory .'/*_'. $ref_seq_id .'.maplist');
+    my @map_lists = grep { -e $_ } glob($self->alignments_directory .'/*_'. $ref_seq_id .'.maplist');
+    unless (@map_lists) {
+        $self->error_message("No map lists found for ref seq $ref_seq_id in " . $self->alignments_directory);
+    }
+    return @map_lists;
 }
 
 ##
