@@ -29,17 +29,17 @@ sub help_detail {
 Creates a file with SNP information used later by the annotation report pipeline.
 
 The output file is tab separated and has these columns:
-chromosome_name
-start position
-end position (for SNPs, start and end will be equal)
-reference base
-sample base
-the string 'ref' to indicate the first base above is from the reference
-sample variation type ('SNP' for SNP data, later indel data will be something different)
-number of sample reads that match the reference
-number of sample reads that matched the indicated variant
-consensus quality at that position
-number of unique reads (by start position) covering that start position
+    chromosome_name
+    start position
+    end position (for SNPs, start and end will be equal)
+    reference base
+    sample base
+    the string 'ref' to indicate the first base above is from the reference
+    sample variation type ('SNP' for SNP data, later indel data will be something different)
+    number of sample reads that match the reference
+    number of sample reads that matched the indicated variant
+    consensus quality at that position
+    number of unique reads (by start position) covering that start position
 
 If the sample is homozygous at the SNP position, only one line will be recorded.  If
 the sample is heterozygous, there will be two lines with the same start position and
@@ -105,7 +105,7 @@ sub execute {
         # cleanup...
         return;
 
-    }
+   }
 
     unless ($self->generate_variation_metrics_files) {        
         $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
