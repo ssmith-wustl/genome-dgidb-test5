@@ -101,18 +101,18 @@ sub execute {
     $DB::single=1;
     $self->revert;
 
+    unless ($self->generate_variation_metrics_files) {        
+        $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
+        # cleanup...
+        return;
+    }
+
     unless ($self->generate_genotype_detail_file) {
         $self->error_message("Error generating genotype detail file (annotation input)!");
         # cleanup...
         return;
 
    }
-
-    unless ($self->generate_variation_metrics_files) {        
-        $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
-        # cleanup...
-        return;
-    }
 
     unless ($self->verify_successful_completion) {
         $self->error_message("Error validating results!");
@@ -329,10 +329,10 @@ sub chunk_variation_metrics {
 
     my @libraries = $model->libraries;
     
-	$self->status_message("Generating per-library metric breakdown of $variation_metrics_file");
+	$self->status_message("\nGenerating (batch) per-library metric breakdown of $variation_metrics_file");
 	foreach my $library_name (@libraries) {
         my $lib_variation_metrics_file = $self->variation_metrics_file . '.' . $library_name.$test_extension;
-        $self->status_message("...generating per-library metrics for $lib_variation_metrics_file");
+        $self->status_message("...generating per-library (batch) metrics for $lib_variation_metrics_file");
 
         unless (
             Genome::Model::Command::Report::MetricsBatchToLsf->execute
@@ -354,7 +354,7 @@ sub chunk_variation_metrics {
             return;
         } 
         unless (-s ($lib_variation_metrics_file)) {
-            $self->error_message("Per-library metrics file not found for $lib_variation_metrics_file!");
+            $self->error_message("Per-library (batch) metrics file not found for $lib_variation_metrics_file!");
             return;
         }
     }
@@ -383,7 +383,49 @@ sub generate_variation_metrics_files {
     my $model = $self->model;
 
     my $variation_metrics_file = $self->variation_metrics_file.$test_extension;
-    $self->status_message("Generating cross-library metrics for $variation_metrics_file");
+
+    my @libraries = $model->libraries;
+    if ($model->name =~ /v0b/) {
+        # hack to test the manually prodced map files for tumor v0b/aml
+        # this prevents the d library from being recognized or touched
+        @libraries = grep { $_ !~ /d$/ } @libraries;
+    } 
+    $self->status_message("\nGenerating per-library metric breakdown of $variation_metrics_file");
+    $self->status_message(join("\n",map { "'$_'" } @libraries));
+    foreach my $library_name (@libraries) {
+        my $lib_variation_metrics_file = $self->variation_metrics_file . '.' . $library_name.$test_extension;
+        $self->status_message("...generating per-library metrics for $lib_variation_metrics_file");
+        my $chromosome_alignment_file = $self->resolve_accumulated_alignments_filename(
+            ref_seq_id => $self->ref_seq_id,
+            library_name => $library_name,
+        ); 
+        unless ($chromosome_alignment_file) {
+            $self->error_message(
+                "Failed to create an accumulated alignments file for"
+                . " library_name '$library_name' ref_seq_id " 
+                . $self->ref_seq_id    
+                . " per-library metrics for library $lib_variation_metrics_file"
+            );
+            return;
+        }
+        unless (
+            Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(
+                input => $chromosome_alignment_file,
+                snpfile => $self->snp_output_file,
+                qual_cutoff => 1,
+                output => $lib_variation_metrics_file
+            )
+        ) {
+            $self->error_message("Failed to (non-batch) generate per-library metrics for $lib_variation_metrics_file");
+            return;
+        } 
+        unless (-s ($lib_variation_metrics_file)) {
+            $self->error_message("Per-library metrics (non-batch) file not found for $lib_variation_metrics_file!");
+            return;
+        }
+    }
+
+    $self->status_message("\nGenerating cross-library metrics for $variation_metrics_file");
     my $chromosome_alignment_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
     unless (
         Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(
@@ -399,44 +441,6 @@ sub generate_variation_metrics_files {
     unless (-s ($variation_metrics_file)) {
         $self->error_message("Metrics file not found for library $variation_metrics_file!");
         return;
-    }
-
-    my @libraries = $model->libraries;
-    if ($model->name =~ /v0b/) {
-        # hack to test the manually prodced map files for tumor v0b/aml
-        # this prevents the d library from being recognized or touched
-        @libraries = grep { $_ !~ /d$/ } @libraries;
-    } 
-    $self->status_message("Generating per-library metric breakdown of $variation_metrics_file");
-    foreach my $library_name (@libraries) {
-        my $lib_variation_metrics_file = $self->variation_metrics_file . '.' . $library_name.$test_extension;
-        $self->status_message("...generating per-library metrics for $lib_variation_metrics_file");
-        my $chromosome_alignment_file = $self->resolve_accumulated_alignments_filename(
-            ref_seq_id => $self->ref_seq_id,
-            library_name => $library_name,
-        ); 
-        unless ($chromosome_alignment_file) {
-            $self->error_message(
-                "Failed to create an accumulated alignments file for"
-                . " per-library metrics for library $lib_variation_metrics_file"
-            );
-            return;
-        }
-        unless (
-            Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(
-                input => $chromosome_alignment_file,
-                snpfile => $self->snp_output_file,
-                qual_cutoff => 1,
-                output => $lib_variation_metrics_file
-            )
-        ) {
-            $self->error_message("Failed to generate per-library metrics for $lib_variation_metrics_file");
-            return;
-        } 
-        unless (-s ($lib_variation_metrics_file)) {
-            $self->error_message("Per-library metrics file not found for $lib_variation_metrics_file!");
-            return;
-        }
     }
 
     return 1;
