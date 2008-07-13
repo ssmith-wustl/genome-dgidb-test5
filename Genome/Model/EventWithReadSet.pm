@@ -11,6 +11,8 @@ class Genome::Model::EventWithReadSet {
     has => [
         read_set            => { is => 'Genome::RunChunk', id_by => 'run_id', is_optional => 0, constraint_name => 'event_run' },
         read_set_id         => { via => 'read_set', to => 'seq_id' }, # not really the fk currently (run_id), see below...
+        
+        read_set_name       => { via => 'read_set', to => 'full_name' },
 
         run_name            => { via => 'read_set' },
         run_short_name      => { via => 'read_set', to => 'short_name' },
@@ -46,6 +48,13 @@ class Genome::Model::EventWithReadSet {
     ],
     sub_classification_method_name => '_get_sub_command_class_name',
 };
+
+sub desc {
+    my $self = shift;
+    my $desc = $self->SUPER::desc;
+    $desc .= " for read set " . $self->read_set_name;
+    return $desc;
+}
 
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments
