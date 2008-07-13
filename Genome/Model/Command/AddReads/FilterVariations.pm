@@ -53,7 +53,7 @@ sub GetNormal {
     }
     
     # Get metrics for the normal sample for processing.
-    my $latest_normal_build = $normal_model->latest_normal_build; 
+    my $latest_normal_build = $normal_model->latest_build_event; 
     unless ($latest_normal_build) {
         $self->error_message("Failed to find a build event for the comparable normal model " . $normal_model->name); 
         return;
