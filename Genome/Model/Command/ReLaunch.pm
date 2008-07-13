@@ -63,6 +63,10 @@ sub execute {
 
     my @lsf_jobs;
     for my $e (@e) {
+        unless ($e->revert) {
+            $self->error_message("Error reverting " . $e->desc . ": " . $e->error_message . " ...skipping resubmit.");
+            next;
+        }
         $e->event_status('Failed');
         push @lsf_jobs, $e->lsf_job_id if $e->lsf_job_id;
         print $e->id(), "\t", $e->event_type," for ref seq ",$e->ref_seq_id,"\n";
@@ -70,6 +74,10 @@ sub execute {
         my $indent = 0;
         while ($next = Genome::Model::Event->get(prior_event => $next)) {
             $next->event_status('Failed');
+            unless ($next->revert) {
+                $self->error_message("Error reverting " . $next->desc . ": " . $next->error_message . " ...skipping resubmit.");
+                next;
+            }
             push @lsf_jobs, $next->lsf_job_id if $next->lsf_job_id;
             $indent ++;
             print ((" " x $indent) . $next->id(), "\t", $next->event_type,"\n");
