@@ -4,10 +4,30 @@ package Genome::Model::ShortRead;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::ShortRead {
     is => 'Genome::Model',
+    has => [
+        build_events  => {
+            is => 'Genome::Model::Command::AddReads::PostprocessAlignments',
+            reverse_id_by => 'model',
+            is_many => 1,
+            where => [
+                parent_event_id => undef,
+            ]
+        },
+        running_build_event => {
+            calculate_from => ['assembly_event_arrayref'],
+            calculate => q|
+                my @e = sort { $a->id cmp $b->id } @$assembly_event_arrayref;
+                my $e = $e[-1];
+                #return if $e->event_status('Succeeded');
+                return $e;
+            |,
+        }
+    ],
+    doc => 'A genome model produced by aligning DNA reads to a reference sequence.' 
 };
 
 sub create {
