@@ -17,16 +17,30 @@ class Genome::Model::ShortRead {
                 parent_event_id => undef,
             ]
         },
-        running_build_event => {
+        latest_build_event => {
             calculate_from => ['build_event_arrayref'],
             calculate => q|
                 my @e = sort { $a->id cmp $b->id } @$build_event_arrayref;
                 my $e = $e[-1];
-                # TODO: we don't currently have this event complete when child events are done.
-                #return if $e->event_status('Succeeded');
                 return $e;
             |,
-        }
+        },
+        running_build_event => {
+            calculate_from => ['latest_build_event'],
+            calculate => q|
+                # TODO: we don't currently have this event complete when child events are done.
+                #return if $latest_build_event->event_status('Succeeded');
+                return $latest_build_event;
+            |,
+        },
+        latest_complete_build_event => {
+            calculate_from => ['build_event_arrayref'],
+            calculate => q|
+                my @e = grep { $_->event_status eq 'Succeeded' } sort { $a->id cmp $b->id } @$build_event_arrayref;
+                my $e = $e[-1];
+                return $e;
+            |,
+        },
     ],
     doc => 'A genome model produced by aligning DNA reads to a reference sequence.' 
 };

@@ -39,60 +39,71 @@ EOS
 }
 
 sub GetNormal {
-	my ($self, $ref_seq_file, $detail_file_sort, $alignment_quality) = @_;
-	my $chromosome = $self->ref_seq_id;
-	my $model = $self->model;
-	my ($detail_file) = $model->_variant_detail_files($chromosome);
-	my $normal_name = '2509660674';
-	#my $normal_name = $self->normal_id;
-	my @normal_model = Genome::Model->get(id => $normal_name );
-	unless (scalar(@normal_model)) {
-		$self->error_message(sprintf("normal model %s does not exist.  please verify this first.",
-																 $normal_name));
-		return undef;
-	}
-	my %normal;
+    my ($self, $ref_seq_file, $detail_file_sort, $alignment_quality) = @_;
 
+    my $chromosome = $self->ref_seq_id;
+    my $model = $self->model;
 
-    #my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $detail_file_sort $alignment_quality |";
-    my $equivalent_skin_event= Genome::Model::Command::AddReads::FilterVariations->get(model_id=>2509660674, ref_seq_id=>$self->ref_seq_id);
+    # This is hard-coded for now.  TODO: fixme
+    my $normal_id = '2509660674';
+    my $normal_model = Genome::Model->get(id => $normal_id );
+    unless ($normal_model) {
+        $self->error_message(sprintf("normal model %s does not exist.  please verify this first.", $normal_id));
+        return undef;
+    }
+    
+    # Get metrics for the normal sample for processing.
+    my $latest_normal_build = $normal_model->latest_normal_build; 
+    unless ($latest_normal_build) {
+        $self->error_message("Failed to find a build event for the comparable normal model " . $normal_model->name); 
+        return;
+    } 
+    my $equivalent_skin_event= $latest_normal_build->get(
+        event_type => Genome::Model::Command::AddReads::PostprocessVariations->command_name,
+        ref_seq_id => $self->ref_seq_id
+    );
     unless ($equivalent_skin_event) {
         $self->error_message("Failed to find an event on the skin model to match the tumor.  Probably need to re-run after that completes.  In the future, we will have the tumor/skin filtering separate from the individual model processing.\n");
         return;
     } 
-	my $ov_fh = IO::File->new($equivalent_skin_event->variation_metrics_filename);
-	unless ($ov_fh) {
-		$self->error_message("Unable to get counts $$");
-		return;
-	}
-	while (<$ov_fh>) {
-		chomp;
-		unless (/^\d+\s+/) {
-			next;
-		}
-#RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
-		s/\t\t/\t/g;
-		my ($chr, $start, $ref_sequence, $iub_sequence, $quality_score,
-				$depth, $avg_hits, $high_quality, $unknown,
-				$rc_arr, $urc_arr, $urc26_arr, $ursc_arr,
-				$ref,	$ref_count_arr, @variant_pair) =
-					split("\t");
-		my ($ref_rc, $ref_urc, $ref_urc26, $ref_ursc, $ref_bq, $ref_maxbq) =
-			split(',',$ref_count_arr);
-		$normal{$chr}{$start}{$ref} = $ref_rc;
-		do {
-			my $var = shift @variant_pair;
-			my $var_count_arr = shift @variant_pair;
-			unless (defined($var) && defined($var_count_arr)) {
-				last;
-			}
-			my ($var_rc, $var_urc, $var_urc26, $var_ursc, $var_bq, $var_maxbq) =
-				split(',',$var_count_arr);
-			$normal{$chr}{$start}{$var} = $var_rc;
-		} while (scalar(@variant_pair));
-	}
-	$ov_fh->close;
-	return \%normal;
+    my $normal_sample_variation_metrics_file_name = $equivalent_skin_event->variation_metrics_filename;
+
+    # construct a hashref for the normal data
+    #my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $detail_file_sort $alignment_quality |";
+    my $ov_fh = IO::File->new($normal_sample_variation_metrics_file_name);
+    unless ($ov_fh) {
+        $self->error_message("Unable to get counts $$");
+        return;
+    }
+    my %normal;
+    while (<$ov_fh>) {
+        chomp;
+        unless (/^\d+\s+/) {
+            next;
+        }
+        #RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
+        s/\t\t/\t/g;
+        my ($chr, $start, $ref_sequence, $iub_sequence, $quality_score,
+            $depth, $avg_hits, $high_quality, $unknown,
+            $rc_arr, $urc_arr, $urc26_arr, $ursc_arr,
+            $ref, $ref_count_arr, @variant_pair) =
+                                split("\t");
+        my ($ref_rc, $ref_urc, $ref_urc26, $ref_ursc, $ref_bq, $ref_maxbq) =
+                split(',',$ref_count_arr);
+        $normal{$chr}{$start}{$ref} = $ref_rc;
+        do {
+            my $var = shift @variant_pair;
+            my $var_count_arr = shift @variant_pair;
+            unless (defined($var) && defined($var_count_arr)) {
+                    last;
+            }
+            my ($var_rc, $var_urc, $var_urc26, $var_ursc, $var_bq, $var_maxbq) =
+                    split(',',$var_count_arr);
+            $normal{$chr}{$start}{$var} = $var_rc;
+        } while (scalar(@variant_pair));
+    }
+    $ov_fh->close;
+    return \%normal;
 }
 
 my %IUBcode=(
