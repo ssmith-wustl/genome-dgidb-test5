@@ -383,27 +383,29 @@ sub generate_variation_metrics_files {
 
     my $variation_metrics_file = $self->variation_metrics_file.$test_extension;
     $self->status_message("Generating cross-library metrics for $variation_metrics_file");
-    if(1) {
-        my $chromosome_alignment_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
-        unless (
-            Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(
-                input => $chromosome_alignment_file,
-                snpfile => $self->snp_output_file,
-                qual_cutoff => 1,
-                output => $variation_metrics_file
-            )
-        ) {
-            $self->error_message("Failed to generate cross-library metrics for $variation_metrics_file");
-            return;            
-        }
-        unless (-s ($variation_metrics_file)) {
-            $self->error_message("Metrics file not found for library $variation_metrics_file!");
-            return;
-        }
+    my $chromosome_alignment_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
+    unless (
+        Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(
+            input => $chromosome_alignment_file,
+            snpfile => $self->snp_output_file,
+            qual_cutoff => 1,
+            output => $variation_metrics_file
+        )
+    ) {
+        $self->error_message("Failed to generate cross-library metrics for $variation_metrics_file");
+        return;            
+    }
+    unless (-s ($variation_metrics_file)) {
+        $self->error_message("Metrics file not found for library $variation_metrics_file!");
+        return;
     }
 
     my @libraries = $model->libraries;
-    
+    if ($model->name =~ /v0b/) {
+        # hack to test the manually prodced map files for tumor v0b/aml
+        # this prevents the d library from being recognized or touched
+        @libraries = grep { $_ !~ /d$/ } @libraries;
+    } 
     $self->status_message("Generating per-library metric breakdown of $variation_metrics_file");
     foreach my $library_name (@libraries) {
         my $lib_variation_metrics_file = $self->variation_metrics_file . '.' . $library_name.$test_extension;
