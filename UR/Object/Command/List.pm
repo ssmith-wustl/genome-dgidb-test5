@@ -10,7 +10,6 @@ require Term::ANSIColor;
 
 class UR::Object::Command::List {
     is => 'UR::Object::Command::FetchAndDo',
-    is_abstract => 1,
     has => [
     show => {
         is => 'Text',
