@@ -38,8 +38,8 @@ Create filtered list(s) of variations.
 EOS
 }
 
-sub GetNormal {
-    my ($self, $ref_seq_file, $detail_file_sort, $alignment_quality) = @_;
+sub get_metrics_hashref_for_normal_sample {
+    my ($self) = @_;
 
     my $chromosome = $self->ref_seq_id;
     my $model = $self->model;
@@ -213,12 +213,9 @@ sub execute {
     # streaming the data from the original maps.
     # It can be used only once.  Run this again if you need to use it multiple times.
 		
-		my $snp_file_sort = $filtered_list_dir . "snp_filtered_sort_${chromosome}.csv";
-        my $map_file_path = $self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
-		system("perl /gscuser/jschindl/snp_sort.pl $snp_file_filtered $map_file_path $snp_file_sort $chromosome");
 
 		my $alignment_quality = 1;
-		my $normal_href = $self->GetNormal($ref_seq_file, $snp_file_sort, $alignment_quality);
+		my $normal_href = $self->get_metrics_hashref_for_normal_sample();
 		unless (defined($normal_href)) {
 			return;
 		}
