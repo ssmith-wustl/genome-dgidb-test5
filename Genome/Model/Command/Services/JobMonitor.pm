@@ -1,17 +1,14 @@
 package Genome::Model::Command::Services::JobMonitor;
 
-
 use strict;
 use warnings;
-
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::Services::JobMonitor {
-    is => 'Command',
+    is => 'Genome::Model::Command',
     has => [
         dispatcher => { is => 'String', is_optional => 1, default_value => 'lsf',
                         doc => 'underlying mechanism for executing jobs ("lsf" or "inline")', },
-        model_id => {is => 'Integer', is_optional => 0, doc => 'only dispatch events for this model_id' },
         run_id => {is => 'Integer', is_optional => 1, doc => 'only dispatch events with this run_id' },
         ref_seq_id => {is => 'String', is_optional => 1, doc => 'only dispatch events with this ref_seq_id' },
         event_id => {is => 'Integer', is_optional => 1, doc => 'only dispatch this single event' },
@@ -108,9 +105,8 @@ sub _execute_inline_event {
     $event->date_completed(UR::Time->now);
 
     $self->context->commit;
-
 }
-    
+
 # Find events in a 'Scheduled' state, but haven't been submitted to lsf
 sub _verify_submitted_jobs {
     my($self,%addl_get_params) = @_;
