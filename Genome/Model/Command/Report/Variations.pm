@@ -114,7 +114,6 @@ sub execute {
             reference_type variant_type reference_reads variant_reads
             maq_score
             /} = split(/\s+/, $line);
-
         my @transcripts = $annotator->$transcripts_method(%variant);
         my @variations = $annotator->$variations_method(%variant);
         $self->$print_method(\%variant, \@transcripts, \@variations);
@@ -293,7 +292,7 @@ sub variant_attributes
 
 sub transcript_attributes
 {
-    return (qw/ gene_name intensity detection transcript_name strand trv_type c_position amino_acid_change /);
+    return (qw/ gene_name intensity detection transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain /);
 }
 
 sub variation_attributes

@@ -8,6 +8,8 @@ use Finfo::Std;
 use Data::Dumper;
 use Genome::Info::CodonToAminoAcid;
 use Genome::Info::VariantPriorities;
+use MG::ConsScore;
+use List::MoreUtils qw/ uniq /;
 
 my %trans_win :name(transcript_window:r) :isa('object');
 my %var_win :name(variation_window:r) :isa('object');
@@ -176,7 +178,9 @@ sub _transcript_annotation
     my ($intensity, $detection) = ( $expression )
     ? ( $expression->expression_intensity, $expression->detection )
     : (qw/ NULL NULL /);
-    
+
+    my $conservation = $self->_ucsc_cons_annotation($snp);
+
     return 
     (
         %structure_annotation,
@@ -186,6 +190,7 @@ sub _transcript_annotation
         intensity => $intensity,
         detection => $detection,
         amino_acid_change => 'NULL',
+        ucsc_cons => $conservation
     )
 }
 
@@ -550,6 +555,12 @@ sub _transcript_annotation_for_cds_exon
         $trv_type = "silent"; 
     }
 
+    my $conservation = $self->_ucsc_cons_annotation($snp);
+    my $pdom = $self->_protein_domain($snp,
+                                      $transcript->gene,
+                                      $transcript->transcript_name,
+                                      $amino_acid_change);
+
     return 
     (
         strand => $strand,
@@ -557,8 +568,45 @@ sub _transcript_annotation_for_cds_exon
         trv_type => $trv_type,
         amino_acid_change => $amino_acid_change,
         amino_acid_length => length($amino_acid_seq),
+        ucsc_cons => $conservation,
+        domain => $pdom
     );
 }
+
+sub _ucsc_cons_annotation
+{
+    my ($self, $snp) = @_;
+    # goto the annotation files for this.
+    my $c = new MG::ConsScore(-location => "/gscmnt/temp202/info/medseq/josborne/conservation/b36/fixed-records/");
+
+    my $range = [ $snp->{start}..$snp->{stop} ] ;
+    my $ref = $c->get_scores($snp->{chromosome_name},$range);
+    my @ret;
+    foreach my $item (@$ref)
+    {
+        push(@ret,sprintf("%.3f",$item->[1]));
+    }
+    return join(":",@ret); 
+}
+
+sub _protein_domain
+{
+    my ($self, $snp, $gene, $transcript, $amino_acid_change) = @_;
+    #
+    #my ($gene,$transcript);
+    my $s = new SnpDom({'-inc-ts' => 1});
+    $s->add_mutation($gene ,$transcript ,$amino_acid_change);
+    my %domlen;
+    $s->mutation_in_dom(\%domlen,"HMMPfam");
+    my $obj = $s->get_mut_obj($transcript . "," . $gene);
+    my $doms = $obj->get_domain($amino_acid_change);
+    if(defined($doms))
+    {
+        return join(":", uniq @$doms);
+    }
+    return 'NULL';
+}
+
 
 1;
 
