@@ -46,6 +46,7 @@ class Genome::Model {
         read_set_assignment_events   => { is => 'Genome::Model::Command::AddReads::AssignRun',
                                           is_many => 1,
                                           reverse_id_by => 'model',
+                                          where => [ "event_type like" => 'genome-model add-reads assign-run %'],
                                           doc => 'each case of a read set being assigned to the model',
                                         },
                                         #this is to get some basic statistics..                         
@@ -105,8 +106,12 @@ sub create {
 
 sub libraries {
     my $self = shift;
-    my %libraries = map {$_->library_name => 1} $self->get_read_sets;
+    my %libraries = map {$_->library_name => 1} $self->read_sets;
     my @distinct_libraries = keys %libraries;
+    if ($self->name =~ /v0b/) {
+        warn "removing any *d libraries from v0b models.  temp hack for AML v0b models.";
+        @distinct_libraries = grep { $_ !~ /d$/ } @distinct_libraries;
+    }
     return @distinct_libraries;
 }
 
@@ -117,8 +122,7 @@ sub _calculate_library_count {
 
 sub run_names {
     my $self = shift;
-
-    my %distinct_run_names = map { $_->run_name => 1}  $self->get_read_sets;
+    my %distinct_run_names = map { $_->run_name => 1}  $self->read_sets;
     my @distinct_run_names = keys %distinct_run_names;
     return @distinct_run_names;
 }
@@ -128,12 +132,17 @@ sub _calculate_run_count {
     return scalar($self->run_names);
 }
 
-sub get_read_sets {
+sub read_sets {
     my $self = shift;
-
-    my %distinct_ids = map { $_->read_set_id => 1}  $self->read_set_assignment_events;
+    my %distinct_ids = map { $_->run_id => 1}  $self->read_set_assignment_events;
     my @distinct_ids = keys %distinct_ids;
-    return Genome::RunChunk->get(\@distinct_ids);
+    my @sets = Genome::RunChunk->get(\@distinct_ids);
+    return unless @sets;
+    if (my $dw_class = $sets[0]->_dw_class) {
+        # cache the equivalent dw data in bulk
+        my @tmp = $dw_class->get(id => [ map { $_->id } @sets]);
+    }
+    return @sets;
 }
 
 sub metric_to_class_hash {
