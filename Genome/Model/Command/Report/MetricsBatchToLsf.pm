@@ -264,6 +264,7 @@ sub _run_and_monitor_jobs
         $running_jobs{ $job->id } = $num;
     }
 
+    no warnings; # these are filling the log files, not sure from where
     # Monitor
     MONITOR: while ( %running_jobs )
     {
