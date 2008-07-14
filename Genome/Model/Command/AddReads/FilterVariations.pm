@@ -197,7 +197,7 @@ sub execute {
     }
 
     my ($filtered_list_dir) = $model->_filtered_variants_dir();
-    print "$filtered_list_dir\n";
+    $self->status_message("Filtered variants directory is $filtered_list_dir");
     unless (-d $filtered_list_dir) {
         mkdir $filtered_list_dir;
         `chmod g+w $filtered_list_dir`;
@@ -259,21 +259,7 @@ sub execute {
     my @libraries = $model->libraries;
 		my $library_number = 0;
 		foreach my $library_name (@libraries) {
-				# This creates a map file in /tmp which is actually a named pipe
-				# streaming the data from the original maps.
-				# It can be used only once.  Run this again if you need to use it multiple times.
-				my $lib_map_file_path = $self->resolve_accumulated_alignments_filename(
-																																						ref_seq_id => $chromosome,
-																																						library_name => $library_name, # optional
-																																					 );
-				unless (defined($lib_map_file_path) &&
-								$lib_map_file_path !~ /^\s*$/ &&
-								-r $lib_map_file_path) {
-					return;
-				}
 				$library_number += 1;
-                #my $ov_lib_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $lib_map_file_path $snp_file_sort $alignment_quality |";
-
 				my $ov_lib_fh = IO::File->new($self->variation_metrics_file_name($library_name));
 				unless ($ov_lib_fh) {
 					$self->error_message("Unable to get counts for $chromosome $library_name $$");
