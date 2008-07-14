@@ -39,12 +39,14 @@ sub execute {
     my $self = shift;
 $DB::single = 1;
     my $model = $self->model;
+    $self->revert;
     my $maq_pathname = $self->proper_maq_pathname('genotyper_name');
 
     my $model_dir = $model->data_directory;
 
     unless (-d "$model_dir/consensus") {
         mkdir ("$model_dir/consensus");
+        chmod 02775, "$model_dir/consensus";
     }
 
     my ($consensus_file) = $model->assembly_file_for_refseq($self->ref_seq_id);
