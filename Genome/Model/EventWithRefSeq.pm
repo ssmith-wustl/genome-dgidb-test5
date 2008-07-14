@@ -39,10 +39,11 @@ sub mapmerge_filename {
 #need to link _mapmerge_locally sub name to resolve_accumulated prolly
 sub resolve_accumulated_alignments_filename {
     my $self = shift;
+    
     my %p = @_;
     my $ref_seq_id = $p{ref_seq_id};
-    $DB::single=1;
     my $library_name = $p{library_name};
+    
     my $model= Genome::Model->get($self->model_id);
     my @maplists;
     if ($ref_seq_id) {
@@ -63,7 +64,6 @@ sub resolve_accumulated_alignments_filename {
         return;
     }
 
-
     $ref_seq_id ||= 'all_sequences';
 
     my $result_file = $self->mapmerge_filename($ref_seq_id, $library_name);
@@ -72,9 +72,9 @@ sub resolve_accumulated_alignments_filename {
         my $f = IO::File->new($listfile);
         next unless $f;
         chomp(my @lines = $f->getlines());
-
         push @inputs, @lines;
     }
+    
     my $found=0;
     if (-f $result_file && -s $result_file) {
         #the file is already present on our blade/environment
@@ -91,14 +91,18 @@ sub resolve_accumulated_alignments_filename {
                 $self->warning_message("File not found(or something terrible happened) on $host-- cmd return value was '$rv'. Continuing.");
                 next;
             }
-            else {
-                $self->warning_message("File found on $host");
-                $found=1;
-                $self->cleanup_tmp_files(1);
-                last;
+            unless (-s $result_file) {
+                $self->warning_message("File $result_file from $host was empty.  Continuing.");
+                unlink $result_file;
+                next;
             }
-        }           
-    }                 
+            # TODO: test for a valid "gzip" file
+            $self->warning_message("File found on $host");
+            $found=1;
+            $self->cleanup_tmp_files(1);
+            last;
+        }
+    }
 
     if($found==0) {
         #no one has a file we want. we should make one and add a note that we have one.
