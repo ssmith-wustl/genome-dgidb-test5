@@ -595,7 +595,7 @@ sub _protein_domain
     my ($self, $snp, $gene, $transcript, $amino_acid_change) = @_;
     #
     #my ($gene,$transcript);
-    my $s = new SnpDom({'-inc-ts' => 1});
+    my $s = SnpDom->new({'-inc-ts' => 1});
     $s->add_mutation($gene ,$transcript ,$amino_acid_change);
     my %domlen;
     $s->mutation_in_dom(\%domlen,"HMMPfam");
