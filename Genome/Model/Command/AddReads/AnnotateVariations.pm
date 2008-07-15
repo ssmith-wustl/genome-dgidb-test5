@@ -194,10 +194,9 @@ sub execute {
         # format => ??,
     );
 
-    $self->generate_metric( $self->snv_metric_names );
-
     if ( $success )
     { 
+        $self->generate_metric( $self->snv_metric_names );
         $self->event_status("Succeeded");
     }
     else 
