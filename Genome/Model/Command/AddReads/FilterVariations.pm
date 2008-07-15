@@ -46,9 +46,7 @@ sub get_metrics_hashref_for_normal_sample {
     
     my $model_name = $model->name;
     my $normal_name = $model_name;
-    $normal_name =~ s/tumor/skin/g;
-    $normal_name =~ s/\d+/\%/g;
-    # This is hard-coded for now.  TODO: fixme
+    $normal_name =~ s/98tumor/34skin/g;
     my $normal_model = Genome::Model->get('name like' => $normal_name);
     unless ($normal_model) {
         $self->error_message(sprintf("normal model matching name %s does not exist.  please verify this first.", $normal_name));
