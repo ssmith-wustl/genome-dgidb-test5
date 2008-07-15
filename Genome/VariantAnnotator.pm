@@ -10,6 +10,7 @@ use Genome::Info::CodonToAminoAcid;
 use Genome::Info::VariantPriorities;
 use MG::ConsScore;
 use List::MoreUtils qw/ uniq /;
+use SnpDom;
 
 my %trans_win :name(transcript_window:r) :isa('object');
 my %var_win :name(variation_window:r) :isa('object');
