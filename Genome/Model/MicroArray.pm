@@ -39,7 +39,7 @@ sub execute {
     # Command line option variables
     my($aii_file, $cns, $basename, $maxsnps, $snplist);
     $maxsnps=10000000;
-    $snplist = 0;
+    $snplist = 1; # produce the snplist?
 
     $aii_file = $self->affy_illumina_intersection_file();
     $basename = $self->base_name();
@@ -158,6 +158,10 @@ sub execute {
         my ($chr, $pos, $offset, $c_orient);
         ($chr, $pos) = ($id, $start);
 
+        # Filter which snps we care about...
+        my $min_depth = 2;
+        my $min_quality = 15;
+
         my $genotype = $IUBcode{$iub_sequence};
         $genotype ||= 'NN';
         my $cns_sequence = substr($genotype,0,1);
@@ -175,24 +179,33 @@ sub execute {
                         $qsnp_het_ref_match{$quality_score} += 1;
                         $qsnp_het_var_match{$quality_score} += 1;
                         if ($snplist) {
-                            print SNPLIST join("\t",('het',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                            # only print the snps we are currently interested in
+                            if (($depth >= $min_depth)&&($quality_score >= $min_quality)) { 
+                                print SNPLIST join("\t",('het',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                            }
                         }
                 } else {
                     if ($aii{$chr}{$pos}{allele1} eq $cns_sequence ||
                         $aii{$chr}{$pos}{allele1} eq $var_sequence) {
                             $qsnp_het_ref_match{$quality_score} += 1;
                             if ($snplist) {
-                                print SNPLIST join("\t",('hetref',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                                if (($depth >= $min_depth)&&($quality_score >= $min_quality)) {
+                                    print SNPLIST join("\t",('hetref',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                                }
                             }
                     } elsif ($aii{$chr}{$pos}{allele2} eq $cns_sequence ||
                              $aii{$chr}{$pos}{allele2} eq $var_sequence) {
                                 $qsnp_het_var_match{$quality_score} += 1;
                                 if ($snplist) {
-                                    print SNPLIST join("\t",('hetvar',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                                    if (($depth >= $min_depth)&&($quality_score >= $min_quality)) {
+                                        print SNPLIST join("\t",('hetvar',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                                    }
                                 }
                     } else {
                         if ($snplist) {
-                            print SNPLIST join("\t",('hetmis',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                            if (($depth >= $min_depth)&&($quality_score >= $min_quality)) {
+                                print SNPLIST join("\t",('hetmis',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                            }
                         }
                     }
                     $qsnp_het_mismatch{$quality_score} += 1;
@@ -205,12 +218,16 @@ sub execute {
                      $aii{$chr}{$pos}{allele2} eq $cns_sequence)) {
                         $qsnp_hom_match{$quality_score} += 1;
                         if ($snplist) {
-                            my $type = ($aii{$chr}{$pos}{ref}) ? 'ref' : 'hom';
-                            print SNPLIST join("\t",($type,$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                            my $type = ($aii{$chr}{$pos}{ref}) ? 'ref' : 'hom'; 
+                            # FIXME: Right now just commented this out so we only get het
+                            if (($type ne 'hom')&&(($depth >= $min_depth)&&($quality_score >= $min_quality))) {
+                               print SNPLIST join("\t",($type,$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                           }
                         }
                  } else {
                     if ($snplist) {
-                        print SNPLIST join("\t",('hommis',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                        # FIXME: Right now just commented this out so we only get het
+                        #print SNPLIST join("\t",('hommis',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
                     }
                     $qsnp_hom_mismatch{$quality_score} += 1;
                 }
@@ -346,7 +363,7 @@ sub GetResults {
 		my ($qkey, $het_location, $het_match, $het_mismatch,
 				$hom_location, $hom_match, $hom_mismatch, $all,
 				$het_ref_match, $het_var_match) = split("\t");
-        $qkey = $qkey || ''; #FIXME : cheap fix to get rid of warnings here        
+        $qkey = $qkey || ''; 
 		if ($qkey eq 'Total') {
 			$total = $het_location;
 			$total ||= '';
