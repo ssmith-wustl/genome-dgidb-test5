@@ -181,6 +181,10 @@ sub _transcript_annotation
     : (qw/ NULL NULL /);
 
     my $conservation = $self->_ucsc_cons_annotation($snp);
+    if(!exists($structure_annotation{domain}))
+    {
+        $structure_annotation{domain} = 'NULL';
+    }
 
     return 
     (
