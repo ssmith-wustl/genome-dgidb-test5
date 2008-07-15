@@ -92,6 +92,11 @@ sub variation_metrics_file {
     return sprintf("%s/identified_variations/%s", $self->model->data_directory, $self->_variation_metrics_name);
 }
 
+sub experimental_variation_metrics_file_basename {
+    my $self = shift;
+    return sprintf("%s/identified_variations/%s", $self->model->data_directory, 'experimental_' . $self->_variation_metrics_name);
+}
+
 sub execute {
     my $self = shift;
     my $model = $self->model;
@@ -444,6 +449,38 @@ sub generate_variation_metrics_files {
     }
 
     return 1;
+}
+
+sub generate_experimental_variation_metrics_files {
+    # This generates additional bleeding-edge data.
+    # It runs directly out of David Larson's home for now until merged w/ the stuff above.
+    # It will be removed when bugs are worked out in the regular metric generator.
+
+    my $self = shift;
+
+    my $output_basename     = $self->experimental_variation_metrics_file_basename;
+    
+    my $snp_file            = $self->snp_output_file;
+    my $ref_seq             = $self->ref_seq_id;
+    my $map_file            = $self->resolve_accumulated_alignments_filename(); 
+    
+    # TODO: move this to the model
+    my $model = $self->model;
+    my $bfa_file = sprintf("%s/all_sequences.bfa", $model->reference_sequence_path);
+
+    my @f = ($map_file,$bfa_file,$snp_file);
+    my $errors = 0;
+    for my $f (@f) {
+        unless (-e $f) {
+            $self->error_message("Failed to find file $f");
+            $errors++;
+        }
+    }
+    return if $errors;
+    my $cmd = "perl /gscuser/dlarson/pipeline_mapstat/snp_stats.pl --mapfile $map_file --ref-bfa $bfa_file --basename 'extra_metrics_$ref_seq' --locfile $snp_file --minq 1 --chr=$ref_seq";
+    my $result = system($cmd);
+    $result /= 256;
+    return $result;
 }
 
 # Converts between the 1-letter genotype code into
