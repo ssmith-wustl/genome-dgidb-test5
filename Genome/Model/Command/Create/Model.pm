@@ -233,7 +233,7 @@ sub _create_target_class_instance_and_error_check{
 sub _get_processing_profile_from_name {
 	my $self = shift;
 	my $processing_profile_name = $self->processing_profile_name;
-	my @processing_profiles = Genome::ProcessingProfile::ShortRead->get(name => $processing_profile_name);
+	my @processing_profiles = Genome::ProcessingProfile->get(name => $processing_profile_name);
 
 	# Bomb out unless exactly 1 matching processing profile is found
 	my $num_processing_profiles = scalar(@processing_profiles);

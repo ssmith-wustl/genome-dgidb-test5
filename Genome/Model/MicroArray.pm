@@ -12,414 +12,120 @@ use Sort::Naturally;
 class Genome::Model::MicroArray{
     is => 'Genome::Model',
     has => [
-        snp_directory                   => { is     => 'String', 
-                                             doc    => 'The directory where the files "snip_1" through "snip_y" are located.',   
-        },
-        base_name                       => { is     => 'String', 
-                                             doc    => 'The base name (and path) of the files to be produced.',   
-        },
-        affy_illumina_intersection_file => { is     => 'String', 
-                                             doc    => 'The file and path (to be created)representing the intersection of where affy and illumina data agrees. This will be created and then used.',   
-        },
-        affy_file                      => { is     => 'String', 
-                                            doc    => 'The genotype submission .tsv file representing the affy data for this model.',   
-        },
-        illumina_file                  => { is     => 'String', 
-                                            doc    => 'The genotype submission .tsv file representing the illumina data for this model.',   
+        genotype_submission_file        => { is     => 'String',
+                                             doc    => 'The genotype submission file to be used as microarray data. This file will be copied to the appropriate directory.',
         }
     ],
     has_optional => [
+        data_file_fh                    => { is     => 'IO::File',
+                                             doc    => 'The file handle to the micro array data file. This is set internally. Not a parameter, just a class variable.',
+        },
+        current_line                    => { is     => 'Hash',
+                                             doc    => 'The current line of input most recently returned from next. Not a parameter, just a class variable.',
+        },
+        file_sample_name                => { is     => 'String',
+                                             doc    => 'The sample name of interest in the genotype submission file (if there is more than one. This can be left blank if there is only one sample in the file.',
+        }
     ]
 };
 
-# This stuff is hacked out of brian's maq_gold_snp.pl script
-sub execute {
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+
+    # Grab the data file, make the appropriate directory and copy the file there with an appropriate name
+    my $original_file = $self->genotype_submission_file();
+    if (!$original_file) {
+        $self->error_message("Genotype submission file not defined!");
+        return undef;
+    }
+    
+    # check if successfully made directory and copied file (return value 0)
+    my $target_dir = $self->_base_directory();
+    my $target_file = $self->_data_file();
+    unless (-e $target_dir) {
+        unless (system("mkdir $target_dir") == 0) {
+            $self->error_message("Failed to mkdir $target_dir");
+            return undef;
+        }
+    }
+    
+    unless (-e $target_file) {
+        unless (system("cp $original_file $target_file") == 0) {
+            $self->error_message("Failed to cp file $original_file to $target_file (Is this a valid directory?)");
+            return undef;
+        }
+    }
+
+    # Sort the genotype submission file
+    my $sorted_data_file = $self->_sort_genotype_submission_file($target_file);
+
+    if (!$sorted_data_file) {
+        $self->error_message("Sort genotype submission file failed!");
+        return undef;
+    }
+    
+    # Set up the class level file handle to the micro array data file (sorted version)
+    my $data_file_fh = IO::File->new($sorted_data_file);
+    $self->data_file_fh($data_file_fh);
+    
+    return $self;
+}
+# returns the parsed from a single line of the micro array data file
+# returns chrom, pos, ref, allele1, allele2, or undef if no more lines left on fh
+sub get_next_line {
     my $self = shift;
+    my $current_line;
     
-    # Command line option variables
-    my($aii_file, $cns, $basename, $maxsnps, $snplist);
-    $maxsnps=10000000;
-    $snplist = 1; # produce the snplist?
+    ($current_line->{unparsed_line}, $current_line->{chromosome}, $current_line->{position}, $current_line->{reference}, $current_line->{allele_1}, $current_line->{allele_2})
+        = $self->_parse_genotype_submission_line($self->data_file_fh);
 
-    $aii_file = $self->affy_illumina_intersection_file();
-    $basename = $self->base_name();
+    $self->current_line($current_line);
 
-    my ($total_aii, $ref_aii, $het_aii, $hom_aii);
-    $total_aii = $ref_aii = $het_aii = $hom_aii = 0;
-    my %aii;
-    open(AII,$aii_file) || die "Unable to open aii input file: $aii_file $$";
-    while(<AII>) {
-        chomp;
-        my $line = $_;
-        my ($chromosome, $start, $end, $allele1, $allele2
-            , $rgg1_allele1_type, $rgg1_allele2_type
-            , $rgg2_allele1_type, $rgg2_allele2_type
-            ) = split("\t");
-
-        my $ref = 0;
-        $total_aii += 1;
-        if ($rgg1_allele1_type eq 'ref' &&
-            $rgg1_allele2_type eq 'ref' &&
-            $rgg2_allele1_type eq 'ref' &&
-            $rgg2_allele2_type eq 'ref') {
-                $ref_aii += 1;
-                $ref = 1;
-        }
-            
-        $aii{$chromosome}{$start}{allele1} = $allele1;
-        $aii{$chromosome}{$start}{allele2} = $allele2;
-        $aii{$chromosome}{$start}{ref} = $ref;
-        $aii{$chromosome}{$start}{found} = 0;
-        $aii{$chromosome}{$start}{line} = $line;
-
-        if ($rgg1_allele1_type eq 'ref' &&
-        $rgg1_allele2_type eq 'ref' &&
-        $rgg2_allele1_type eq 'ref' &&
-        $rgg2_allele2_type eq 'ref') {
-            next;
-        }
-        if ($allele1 eq $allele2) {
-            $hom_aii += 1;
-        } else {
-            $het_aii += 1;
-        }
-    } # end while <AII>
-    close(AII);
-
-    # get all of the snp files... sort them... use them as input
-    my $snp_directory_glob = $self->snp_directory . "/snip*"; # TODO replace this with genome model method
-    my @snp_files = glob($snp_directory_glob);
-    my $file_list = join(" ", @snp_files);
-    my $snp_cmd = "cat $file_list | sort -g -t \$'\t' -k 1 -k 2 |";
-    unless (open(DATA,$snp_cmd)) {
-        die("Unable to run input command: $snp_cmd");
-        exit 0;
-    }
-
-    # Begin sort black magic...
-    # This essentially will just sort by chromosome and position
-    # Sorts chromosomes correctly as 1-22, then x, then y
-    my @list= <DATA>;
-    my @sorted= @list[
-    map { unpack "N", substr($_,-4) }
-    sort
-    map {
-        my $key= $list[$_];
-        $key =~ s[(\d+)][ pack "N", $1 ]ge;
-        $key . pack "N", $_
-    } 0..$#list
-    ];
-    close (DATA);
-    # End black magic
-    
-    my %IUBcode=(
-             A=>'AA',
-             C=>'CC',
-             G=>'GG',
-             T=>'TT',
-             M=>'AC',
-             K=>'GT',
-             Y=>'CT',
-             R=>'AG',
-             W=>'AT',
-             S=>'GC',
-             D=>'AGT',
-             B=>'CGT',
-             H=>'ACT',
-             V=>'ACG',
-             N=>'ACGT',
-             );
-
-
-    my $max_bin = 40;
-    my %qsnp;
-    my %qsnp_het;
-    my %qsnp_het_match;
-    my %qsnp_het_ref_match;
-    my %qsnp_het_var_match;
-    my %qsnp_het_mismatch;
-    my %qsnp_hom;
-    my %qsnp_hom_match;
-    my %qsnp_hom_mismatch;
-    my $total;
-    my $output_snplist = $basename . '_snplist.csv';
-    if ($snplist) {
-        open(SNPLIST,">$output_snplist") || die "Unable to create snp list file: $output_snplist $$";
-    }
-    for my $line (@sorted) {
-        chomp($line);
-        my ($id, $start, $ref_sequence, $iub_sequence, $quality_score, $depth, $avg_hits, $high_quality, $unknown) = split("\t", $line);
-        next if ($depth < 2);
-        $total += 1;
-        if ($total >= $maxsnps) {
-            last;
-        }
-
-        my ($chr, $pos, $offset, $c_orient);
-        ($chr, $pos) = ($id, $start);
-
-        # Filter which snps we care about...
-        my $min_depth = 2;
-        my $min_quality = 15;
-
-        my $genotype = $IUBcode{$iub_sequence};
-        $genotype ||= 'NN';
-        my $cns_sequence = substr($genotype,0,1);
-        my $var_sequence = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
-        if (exists($aii{$chr}{$pos})) {
-            $aii{$chr}{$pos}{found} = 1;
-            $qsnp{$quality_score} += 1;
-            if ($aii{$chr}{$pos}{allele1} ne $aii{$chr}{$pos}{allele2}) {
-                $qsnp_het{$quality_score} += 1;
-                if (($aii{$chr}{$pos}{allele1} eq $cns_sequence &&
-                     $aii{$chr}{$pos}{allele2} eq $var_sequence) ||
-                    ($aii{$chr}{$pos}{allele1} eq $var_sequence &&
-                     $aii{$chr}{$pos}{allele2} eq $cns_sequence)) {
-                        $qsnp_het_match{$quality_score} += 1;
-                        $qsnp_het_ref_match{$quality_score} += 1;
-                        $qsnp_het_var_match{$quality_score} += 1;
-                        if ($snplist) {
-                            # only print the snps we are currently interested in
-                            if (($depth >= $min_depth)&&($quality_score >= $min_quality)) { 
-                                print SNPLIST join("\t",('het',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
-                            }
-                        }
-                } else {
-                    if ($aii{$chr}{$pos}{allele1} eq $cns_sequence ||
-                        $aii{$chr}{$pos}{allele1} eq $var_sequence) {
-                            $qsnp_het_ref_match{$quality_score} += 1;
-                            if ($snplist) {
-                                if (($depth >= $min_depth)&&($quality_score >= $min_quality)) {
-                                    print SNPLIST join("\t",('hetref',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
-                                }
-                            }
-                    } elsif ($aii{$chr}{$pos}{allele2} eq $cns_sequence ||
-                             $aii{$chr}{$pos}{allele2} eq $var_sequence) {
-                                $qsnp_het_var_match{$quality_score} += 1;
-                                if ($snplist) {
-                                    if (($depth >= $min_depth)&&($quality_score >= $min_quality)) {
-                                        print SNPLIST join("\t",('hetvar',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
-                                    }
-                                }
-                    } else {
-                        if ($snplist) {
-                            if (($depth >= $min_depth)&&($quality_score >= $min_quality)) {
-                                print SNPLIST join("\t",('hetmis',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
-                            }
-                        }
-                    }
-                    $qsnp_het_mismatch{$quality_score} += 1;
-                }
-            } else {
-                $qsnp_hom{$quality_score} += 1;
-                if (($aii{$chr}{$pos}{allele1} eq $cns_sequence &&
-                     $aii{$chr}{$pos}{allele2} eq $var_sequence) ||
-                    ($aii{$chr}{$pos}{allele1} eq $var_sequence &&
-                     $aii{$chr}{$pos}{allele2} eq $cns_sequence)) {
-                        $qsnp_hom_match{$quality_score} += 1;
-                        if ($snplist) {
-                            my $type = ($aii{$chr}{$pos}{ref}) ? 'ref' : 'hom'; 
-                            # FIXME: Right now just commented this out so we only get het
-                            if (($type ne 'hom')&&(($depth >= $min_depth)&&($quality_score >= $min_quality))) {
-                               print SNPLIST join("\t",($type,$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
-                           }
-                        }
-                 } else {
-                    if ($snplist) {
-                        # FIXME: Right now just commented this out so we only get het
-                        #print SNPLIST join("\t",('hommis',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
-                    }
-                    $qsnp_hom_mismatch{$quality_score} += 1;
-                }
-            }
-        } # end if (exists($aii{$chr}{$pos}))
-    } # end while <SNP>
-    close(SNPLIST);
-
-    my $output_notfound = $basename . '_notfound.csv';
-    open(NOTFOUND,">$output_notfound") || die "Unable to create not found file: $output_notfound $$";
-    foreach my $chromosome (sort (keys %aii)) {
-        foreach my $location (sort (keys %{$aii{$chromosome}})) {
-            unless ($aii{$chromosome}{$location}{found}) {
-                print NOTFOUND $aii{$chromosome}{$location}{line} . "\n";
-            }
-        }
-    }
-
-    close(NOTFOUND);
-
-    my $output = $basename . '_detail.csv';
-    open(OUTPUT,">$output") || die "Unable to open output file: $output";
-    print OUTPUT "Total\t$total\n\n";
-    print OUTPUT "qval\tall_het\thet_match\thet_mismatch\tall\tall_hom\thom_match\thom_mismatch\thet_ref_match\thet_var_match\n";
-    my @qkeys = ( 0, 10, 15, 20, 30 );
-    my %all;
-    my %het_location;
-    my %het_match;
-    my %het_ref_match;
-    my %het_var_match;
-    my %het_mismatch;
-    my %hom_location;
-    my %hom_match;
-    my %hom_mismatch;
-    foreach my $qval (sort { $a <=> $b } (keys %qsnp)) {
-        # Initialize values to 0 if undef
-        my $all = $qsnp{$qval} || 0;
-        my $all_het = $qsnp_het{$qval} || 0;
-        my $het_match = $qsnp_het_match{$qval} || 0;
-        my $het_ref_match = $qsnp_het_ref_match{$qval} || 0;
-        my $het_var_match = $qsnp_het_var_match{$qval} || 0;
-        my $het_mismatch = $qsnp_het_mismatch{$qval} || 0;
-        my $all_hom = $qsnp_hom{$qval} || 0;
-        my $hom_match = $qsnp_hom_match{$qval} || 0;
-        my $hom_mismatch = $qsnp_hom_mismatch{$qval} || 0;
-        print OUTPUT "$qval\t$all_het\t$het_match\t$het_mismatch\t$all\t$all_hom\t$hom_match\t$hom_mismatch\t$het_ref_match\t$het_var_match\n";
-        foreach my $qkey (@qkeys) {
-            if ($qval >= $qkey) {
-                $all{$qkey} += $all;
-                $het_location{$qkey} += $all_het;
-                $het_match{$qkey} += $het_match;
-                $het_ref_match{$qkey} += $het_ref_match;
-                $het_var_match{$qkey} += $het_var_match;
-                $het_mismatch{$qkey} += $het_mismatch;
-                $hom_location{$qkey} += $all_hom;
-                $hom_match{$qkey} += $hom_match;
-                $hom_mismatch{$qkey} += $hom_mismatch;
-            }
-        }
-    } # end foreach
-    close(OUTPUT);
-
-    my $summary = $basename . '_summary.csv';
-    open(SUMMARY,">$summary") || die "Unable to open output summary file: $summary";
-    print SUMMARY "Total\t$total\n\n";
-    print SUMMARY "QVAL\tHet_Location\tHet_Match\tHet_Mismatch\tHom_Location\tHom_Match\tHom_Mismatch\tAll\tHet_Ref_Match\tHet_Var_Match\n";
-    foreach my $qkey (@qkeys) {
-        print SUMMARY "$qkey\t$het_location{$qkey}\t$het_match{$qkey}\t$het_mismatch{$qkey}\t$hom_location{$qkey}\t$hom_match{$qkey}\t$hom_mismatch{$qkey}\t$all{$qkey}\t$het_ref_match{$qkey}\t$het_var_match{$qkey}\n";
-    }
-    close(SUMMARY);
-
-    my $report = $basename . '_report.csv';
-    open(REPORT,">$report") || die "Unable to open output report file: $report";
-    my ($result) = $self->GetResults($summary);
-
-    print REPORT "all\tref\thet\thom\n";
-    print REPORT "$total_aii\t$ref_aii\t$het_aii\t$hom_aii\n";
-
-    print REPORT "\nTotal: " . $result->{total} . "\n\n";
-
-    print REPORT "Heterozygous:\n";
-    print REPORT join("\t", ( '', 'Location', 'Match', 'Ref Match', 'Var Match',
-    'Mismatch')) . "\n";
-
-    print REPORT "SNP Q0:\t" .  join("\t",@{$result}{ qw( q0_location q0_match q0_ref_match q0_var_match q0_mismatch) }) . "\n";
-    print REPORT "SNP Q15:\t" .  join("\t",@{$result}{ qw( q15_location q15_match q15_ref_match q15_var_match q15_mismatch) }) . "\n";
-    print REPORT "SNP Q30:\t" .  join("\t",@{$result}{ qw( q30_location q30_match q30_ref_match q30_var_match q30_mismatch) }) . "\n";
-    print REPORT "SNP Q0 %:\t" .  join("\t", map { my $p = sprintf "%0.2f%%", (100.0 * $_)/$het_aii; $p; } @{$result}{ qw( q0_location q0_match q0_ref_match q0_var_match q0_mismatch) }) . "\n";
-    print REPORT "SNP Q15 %:\t" .  join("\t", map { my $p = sprintf "%0.2f%%", (100.0 * $_)/$het_aii; $p; } @{$result}{ qw( q15_location q15_match q15_ref_match q15_var_match q15_mismatch) }) . "\n";
-    print REPORT "SNP Q30 %:\t" .  join("\t", map { my $p = sprintf "%0.2f%%", (100.0 * $_)/$het_aii; $p; } @{$result}{ qw( q30_location q30_match q30_ref_match q30_var_match q30_mismatch) }) . "\n";
-
-    print REPORT "\nHomozygous:\n";
-    print REPORT join("\t", ( '', 'Location', 'Match', 'Mismatch')) . "\n";
-    print REPORT "SNP Q0:\t" .  join("\t",@{$result}{ qw( q0_location_hom q0_match_hom q0_mismatch_hom) }) . "\n";
-    print REPORT "SNP Q15:\t" .  join("\t",@{$result}{ qw( q15_location_hom q15_match_hom q15_mismatch_hom) }) . "\n";
-    print REPORT "SNP Q30:\t" .  join("\t",@{$result}{ qw( q30_location_hom q30_match_hom q30_mismatch_hom) }) . "\n";
-
-    print REPORT "SNP Q0 %:\t" .  join("\t", map { my $p = sprintf "%0.2f%%", (100.0 * $_)/$het_aii; $p; } @{$result}{ qw( q0_location_hom q0_match_hom q0_mismatch_hom) }) . "\n";
-    print REPORT "SNP Q15 %:\t" .  join("\t", map { my $p = sprintf "%0.2f%%", (100.0 * $_)/$het_aii; $p; } @{$result}{ qw( q15_location_hom q15_match_hom q15_mismatch_hom) }) . "\n";
-    print REPORT "SNP Q30 %:\t" .  join("\t", map { my $p = sprintf "%0.2f%%", (100.0 * $_)/$het_aii; $p; } @{$result}{ qw( q30_location_hom q30_match_hom q30_mismatch_hom) }) . "\n";
-    
-    close(REPORT);
-
-    my $numbers = $basename . '_numbers.csv';
-    open(NUMBERS,">$numbers") || die "Unable to open output report file: $numbers ";
-
-    my $ref_match = $result->{q15_ref_match};  
-    my $var_match = $result->{q15_var_match};  
-    my $all_match = $result->{q15_match};  
-    print NUMBERS "HQ SNP count (all het snps): $het_aii\n";
-    print NUMBERS "HQ SNP reference allele count (agree on ref): $ref_match\n";
-    print NUMBERS "HQ SNP variant allele count (agree on var): $var_match\n";
-    print NUMBERS "HQ SNP both allele count (total agreement): $all_match\n";
-        
-    close(NUMBERS);
-        
-    return 1;
+    if ($current_line->{unparsed_line}) {
+        return $current_line;    
+    } else {
+        return undef;
+    }    
 }
 
-# This is also fully pasted from the maq_gold_snp.
-sub GetResults {
+# Returns current directory where the microarray data is housed
+sub _base_directory {
     my $self = shift;
-    
-	my ($summary_file) = @_;
-	my $filename = basename($summary_file);
 
-	open(SUMMARY,$summary_file) || die "Unable to open summary file: $summary_file $$";
-	my %result_best_fit;
-	my %new_best_fit;
-	my $total;
-	while(<SUMMARY>) {
-		chomp;
-		my ($qkey, $het_location, $het_match, $het_mismatch,
-				$hom_location, $hom_match, $hom_mismatch, $all,
-				$het_ref_match, $het_var_match) = split("\t");
-        $qkey = $qkey || ''; 
-		if ($qkey eq 'Total') {
-			$total = $het_location;
-			$total ||= '';
-			if (!defined($total) || $total eq '') {
-				return (\%new_best_fit);
-			}
-		} elsif ($qkey =~ /^\d+$/x) {
-#			print "$_\n";
-			$result_best_fit{$qkey}{location} = $het_location;
-			$result_best_fit{$qkey}{match} = $het_match;
-			$result_best_fit{$qkey}{ref_match} = $het_ref_match;
-			$result_best_fit{$qkey}{var_match} = $het_var_match;
-			$result_best_fit{$qkey}{mismatch} = $het_mismatch;
-			$result_best_fit{$qkey}{location_hom} = $hom_location;
-			$result_best_fit{$qkey}{match_hom} = $hom_match;
-			$result_best_fit{$qkey}{mismatch_hom} = $hom_mismatch;
-		} else {
-#			print "$_\n";
-		}
-	}
-	close(SUMMARY);
-	$new_best_fit{total} = $total || 0;
-	$new_best_fit{q0_location} = $result_best_fit{0}{location} || 0;
-	$new_best_fit{q0_match} = $result_best_fit{0}{match} || 0;
-	$new_best_fit{q0_ref_match} = $result_best_fit{0}{ref_match} || 0;
-	$new_best_fit{q0_var_match} = $result_best_fit{0}{var_match} || 0;
-	$new_best_fit{q0_mismatch} = $result_best_fit{0}{mismatch} || 0;
-	$new_best_fit{q0_location_hom} = $result_best_fit{0}{location_hom} || 0;
-	$new_best_fit{q0_match_hom} = $result_best_fit{0}{match_hom} || 0;
-	$new_best_fit{q0_mismatch_hom} = $result_best_fit{0}{mismatch_hom} || 0;
+    # Replace all spaces with underbars to insure proper directory access
+    my $name = $self->name;
+    $name =~ s/ /_/g;
 
-	$new_best_fit{q15_location} = $result_best_fit{15}{location} || 0;
-	$new_best_fit{q15_match} = $result_best_fit{15}{match} || 0;
-	$new_best_fit{q15_ref_match} = $result_best_fit{15}{ref_match} || 0;
-	$new_best_fit{q15_var_match} = $result_best_fit{15}{var_match} || 0;
-	$new_best_fit{q15_mismatch} = $result_best_fit{15}{mismatch} || 0;
-	$new_best_fit{q15_location_hom} = $result_best_fit{15}{location_hom} || 0;
-	$new_best_fit{q15_match_hom} = $result_best_fit{15}{match_hom} || 0;
-	$new_best_fit{q15_mismatch_hom} = $result_best_fit{15}{mismatch_hom} || 0;
-
-	$new_best_fit{q30_location} = $result_best_fit{30}{location} || 0;
-	$new_best_fit{q30_match} = $result_best_fit{30}{match} || 0;
-	$new_best_fit{q30_ref_match} = $result_best_fit{30}{ref_match} || 0;
-	$new_best_fit{q30_var_match} = $result_best_fit{30}{var_match} || 0;
-	$new_best_fit{q30_mismatch} = $result_best_fit{30}{mismatch} || 0;
-	$new_best_fit{q30_location_hom} = $result_best_fit{30}{location_hom} || 0;
-	$new_best_fit{q30_match_hom} = $result_best_fit{30}{match_hom} || 0;
-	$new_best_fit{q30_mismatch_hom} = $result_best_fit{30}{mismatch_hom} || 0;
-	return (\%new_best_fit);
+    return '/gscmnt/834/info/medseq/microarray_data/'.$name;
 }
 
-# Experimental sort for genotype submission files (sort by chromosome and position)
+# Returns the full path to the file where the microarray data should be
+sub _data_file {
+    my $self = shift;
+
+    my $base_dir = $self->_base_directory;
+    my $model_name = $self->name;
+    my $file_location = "$base_dir/$model_name.tsv";
+
+    # Remove any existing spaces... replace with underscores...
+    $file_location =~ s/ /_/g;
+
+   return $file_location; 
+}
+
+# Sort for genotype submission files (sort by chromosome and position)
 # This uses a bunch of magic that I do not fully understand. I may be opening pandora's box.
-sub sort_genotype_submission_file {
+sub _sort_genotype_submission_file {
     my ($self, $file) = @_;
 
+    my $output_file_name = $file . "_sorted";
+
+    # if it is already sorted, just return the sorted name
+    if (-s $output_file_name) {
+        return $output_file_name;
+    }
+    
     # Begin black magic
     open (DATA, $file); 
     my @list= <DATA>;
@@ -434,142 +140,53 @@ sub sort_genotype_submission_file {
     ];
     
     # Open the output file and dump the sorted stuff
-#    my $output_file_name = $file . "_sorted";
-    my @file_split = split('/',$file);
-    my $output_file_name = "/gscuser/gsanders/aml/" . $file_split[-1] . "_sorted";
-    
     my $output_fh = IO::File->new(">$output_file_name");
-    print $output_fh @sorted;
 
-    return $output_file_name;
-}
+    # parse out the sample name and only copy it to the output file if it is the sample we care about
+    my $sample_name = $self->file_sample_name;
+    my $sample_column = 5;
 
-# Compare files and output where they agree on chromosome, position, and alleles into a 3rd file
-# This assumes the files are unsorted with only one header line on top (a requirement of the parser)
-# version utilizing genotype submission files...
-sub make_affy_illumina_intersection {
-    my $self = shift;
-
-    my $output_file_name = $self->affy_illumina_intersection_file();
-    my $output_fh;
-    unless ($output_fh = IO::File->new(">$output_file_name")) {
-        die("Could not open $output_file_name");
+    # if a sample name is defined, filter only that sample name in...
+    if ($sample_name) {
+        my $found_any = undef;
+        for my $current_line (@sorted) {
+            my @line_cols = split("\t", $current_line);
+            if ($line_cols[$sample_column] eq $sample_name) {
+                print $output_fh $current_line;
+                $found_any = 1;
+            }
+        }
+        # warn and bomb out if nothing with specified name found
+        unless ($found_any) {
+            $self->error_message("No data for sample name $sample_name found!");
+            return undef;
+        }
     }
+    # Otherwise just make sure only one sample name exists... if more than one exists bomb out and warn
+    else {
+        my $first_sample_name;
+        for my $current_line (@sorted) {
+            my @line_cols = split("\t", $current_line);
+            if (!$first_sample_name) {
+                $first_sample_name = $line_cols[$sample_column];
+            }
 
-    my $illumina_file_unsorted = $self->illumina_file;
-    my $affy_file_unsorted = $self->affy_file;
-
-    my $illumina_file = $self->sort_genotype_submission_file($illumina_file_unsorted);
-    my $affy_file = $self->sort_genotype_submission_file($affy_file_unsorted);
-
-    my $illumina_file_fh;
-    unless($illumina_file_fh = IO::File->new($illumina_file)) {
-        die("Could not open $illumina_file");
+            if ($line_cols[$sample_column] ne $first_sample_name) {
+                my $different_sample = $line_cols[$sample_column];
+                $self->error_message("Multiple sample names encountered ($different_sample, $first_sample_name) and no sample name specified!");
+                return undef;
+            }
+            print $output_fh $current_line;
+        }
     }
-    my $affy_file_fh;
-    unless($affy_file_fh = IO::File->new($affy_file)) {
-        die("Could not open $affy_file");
-    }
-
-    my ($affy_file_line, $affy_chrom, $affy_pos, $affy_ref, $affy_allele_1, $affy_allele_2)
-        = $self->parse_new_line($affy_file_fh);
-    my ($illumina_file_line, $illumina_chrom, $illumina_pos, $illumina_ref, $illumina_allele_1, $illumina_allele_2)
-        = $self->parse_new_line($illumina_file_fh);
     
-    while($illumina_file_line && $affy_file_line) {
-        #compare chromosomes
-        if(ncmp($illumina_chrom, $affy_chrom) > 0) {
-            ($affy_file_line, $affy_chrom, $affy_pos, $affy_ref, 
-                $affy_allele_1, $affy_allele_2) 
-                = $self->parse_new_line($affy_file_fh);
-        }
-        elsif(ncmp($illumina_chrom, $affy_chrom) < 0) {
-            ($illumina_file_line, $illumina_chrom, $illumina_pos, 
-                $illumina_ref, $illumina_allele_1, $illumina_allele_2) 
-                = $self->parse_new_line($illumina_file_fh);
-        }
-        #same chromosome, compare positions    
-        elsif(ncmp($illumina_chrom, $affy_chrom) == 0) {
-            if(ncmp($illumina_pos, $affy_pos) > 0) {
-                ($affy_file_line, $affy_chrom, $affy_pos, $affy_ref, $affy_allele_1, $affy_allele_2) 
-                    = $self->parse_new_line($affy_file_fh);
-            }
-            elsif(ncmp($illumina_pos, $affy_pos) < 0) {
-                ($illumina_file_line, $illumina_chrom, $illumina_pos, $illumina_ref, $illumina_allele_1, $illumina_allele_2) 
-                    = $self->parse_new_line($illumina_file_fh);
-            }
-            # If alleles were not captured (dashes in the file)... get a new line
-            elsif (!$illumina_allele_1 || !$illumina_allele_2) { 
-                ($illumina_file_line, $illumina_chrom, $illumina_pos, $illumina_ref, $illumina_allele_1, $illumina_allele_2) 
-                    = $self->parse_new_line($illumina_file_fh);
-            }
-            elsif (!$affy_allele_1 || !$affy_allele_2) {
-                ($affy_file_line, $affy_chrom, $affy_pos, $affy_ref, $affy_allele_1, $affy_allele_2) 
-                    = $self->parse_new_line($affy_file_fh);
-            }
-            # match position... check alleles... can match or be reversed to be included
-            elsif(ncmp($illumina_pos, $affy_pos) == 0) {
-                if ((($illumina_allele_1 eq $affy_allele_1) && ($illumina_allele_2 eq $affy_allele_2)) || 
-                    (($illumina_allele_2 eq $affy_allele_1) && ($illumina_allele_1 eq $affy_allele_2))) {
-                    # Shouldnt matter which one we write to the file
-                    # For now, write in an output identical to the current intersection files
-                    print $output_fh $illumina_chrom . "\t" .
-                        $illumina_pos . "\t" .
-                        $illumina_pos . "\t"; 
-                    # if reverse match, print reverse...
-                    if (($illumina_allele_1 eq $affy_allele_1) && ($illumina_allele_2 eq $affy_allele_2)) {
-                        print $output_fh $illumina_allele_2 . "\t" .$illumina_allele_1 . "\t"; 
-                    } else {
-                        print $output_fh $illumina_allele_1 . "\t" .$illumina_allele_2 . "\t"; 
-                    }
-
-                    # if homozygous (affy)
-                    if ($affy_allele_1 eq $affy_allele_2) {
-                        if ($affy_allele_1 eq $affy_ref) {
-                            print $output_fh "ref\tref\t"; 
-                        } 
-                        else {
-                            print $output_fh "SNP\tSNP\t";
-                        }
-                    # otherwise must be het            
-                    } else {
-                        print $output_fh "ref\tSNP\t"; 
-                    }
-
-                    # if homozygous (illumina)
-                    if ($illumina_allele_1 eq $illumina_allele_2) {
-                        if ($illumina_allele_1 eq $illumina_ref) {
-                            print $output_fh "ref\tref\n"; 
-                        } 
-                        else {
-                            print $output_fh "SNP\tSNP\n";
-                        }
-                    # otherwise must be het            
-                    } else {
-                        print $output_fh "ref\tSNP\n"; 
-                    }
-                }
-
-                # Now get 2 new lines...
-                ($affy_file_line, $affy_chrom, $affy_pos, $affy_ref, 
-                $affy_allele_1, $affy_allele_2) 
-                = $self->parse_new_line($affy_file_fh);
-                
-                ($illumina_file_line, $illumina_chrom, $illumina_pos, 
-                $illumina_ref, $illumina_allele_1, $illumina_allele_2) 
-                = $self->parse_new_line($illumina_file_fh);
-            }
-        }
-    }
-    $output_fh->close;
-
-    return 1;
+    return $output_file_name;
 }
 
 # This sub grabs a new line from the parameterized file handle...
 # It returns the chromosome, position, ref, allele1, allele2 for that line
 # This is intended to work for genotype submission files
-sub parse_new_line {
+sub _parse_genotype_submission_line {
     my ($self, $fh) = @_;
 
     my $current_file_line = $fh->getline();
@@ -579,169 +196,20 @@ sub parse_new_line {
     }
     
     # Position will always be the third column
+    my $position_column = 3;
     my @current_tabs = split("\t", $current_file_line);
-    my $current_pos = $current_tabs[3];
+    my $current_pos = $current_tabs[$position_column];
     # Chromosome is denoted by "C22" "C7" "CY" etc.
     my ($current_chrom) = ($current_file_line =~ m/C(\w+)/);
     # The reference allele and allele 1 will be listed as "A:G" on the line 
     my ($current_ref, $current_allele_1) = ($current_file_line =~ m/([A-Z]):([A-Z])/);
     # Allele 2 will be on the line as "cns=T" if it is a het snp non ref or a homo snp...
     # if it is a het snp matching ref there will be no cns =... so set it equal to ref...
-    #FIXME: what happens if allele1 matches ref but allele2 does not? whats the format?
     my ($current_allele_2) = ($current_file_line =~ m/cns=([A-Z])/);
     $current_allele_2 ||= $current_ref;
 
     return ($current_file_line, $current_chrom, $current_pos, $current_ref, $current_allele_1, $current_allele_2);
 }
 
-##### Functions below not currently used since I am currently ##############
-##### processing genotype submission files ################################
-
-# Sort a file, return its sorted name
-# This must be used on the affy and illumina files since they seem to come unsorted...
-# We want to sort by chromosome and then position
-sub sort_affy_file {
-    my ($self, $file) = @_;
-
-    # These are hardcoded values for now... this is the way affy files should always be laid out...
-    my $chromosome_column_num = 2;
-    my $position_column_num = 3;
-
-    my $input_file_name = $file;
-    #FIXME my $output_file_name = $file . "_sorted";
-    my $output_file_name = '/gscuser/gsanders/aml/affy_sorted';
-    
-    # Grab the header then copy over the rest of the file so the header doesnt get sorted in
-    # count the lines, pipe all of them minus the header to sort...
-    my $lines = `wc -l $input_file_name`;
-    $lines -=2; # so we do not capture the header
-    system("head -1 $input_file_name > $output_file_name");
-    
-    # Sort by chromosome and position assume a tsv file since thats the way illumina rolls... 
-    system("tail -$lines $input_file_name | sort -g -t ',' -k $chromosome_column_num -k $position_column_num >> $output_file_name");
-
-    return $output_file_name;
-}
-
-# Version of the above to handle illumina files
-sub sort_illumina_file {
-    my ($self, $file) = @_;
-    
-    # These are hardcoded values for now... this is the way affy files should always be laid out...
-    my $chromosome_column_num = 16;
-    my $position_column_num = 17;
-
-    my $input_file_name = $file;
-    #FIXME my $output_file_name = $file . "_sorted";
-    my $output_file_name = '/gscuser/gsanders/aml/illumina_sorted';
-
-    # Grab the header then copy over the rest of the file so the header doesnt get sorted in
-    # count the lines, pipe all of them minus the header to sort...
-    my $lines = `wc -l $input_file_name`;
-    $lines--; # so we do not capture the header
-    system("head -1 $input_file_name > $output_file_name");
-    
-    # Sort by chromosome and position assume a tsv file since thats the way illumina rolls... 
-    system("tail -$lines $input_file_name | sort -g -t \$'\t' -k $chromosome_column_num -k $position_column_num >> $output_file_name");
-
-    return $output_file_name;
-}
-
-# Compare files and output where they agree on chromosome, position, and alleles into a 3rd file
-# This assumes the files are unsorted with only one header line on top (a requirement of the parser)
-sub Xmake_affy_illumina_intersection {
-    my $self = shift;
-
-    my $output_file_name = $self->affy_illumina_intersection_file();
-    my $output_fh;
-    unless ($output_fh = IO::File->new(">$output_file_name")) {
-        die("Could not open $output_file_name");
-    }
-
-    my $illumina_file_unsorted = $self->illumina_file;
-    my $affy_file_unsorted = $self->affy_file;
-
-    my $illumina_file = $self->sort_illumina_file($illumina_file_unsorted);
-    my $affy_file = $self->sort_affy_file($affy_file_unsorted);
-
-    # Hardcoded values (for now) for the names of the columns for the illumina and affy files
-    my $illumina_file_chrom_column = 'Chr';
-    my $illumina_file_pos_column = 'Position';
-    my $illumina_file_allele_1_column = 'Allele1 - Top';
-    my $illumina_file_allele_2_column = 'Allele2 - Top';
-    my $affy_file_chrom_column = 'chrom';
-    my $affy_file_pos_column = 'pos'; 
-    my $affy_file_allele_1_column = 'allel1';
-    my $affy_file_allele_2_column = 'allel2';  
-    
-    # Create the parsers... right now we assume the file just has a header line and then data
-    # This assumes they are tab delimited... should probably be ANOTHER parameter...
-    my $illumina_file_parser = Genome::Utility::Parser->create(
-                                                  file => $illumina_file,
-                                                  separator => "\t",
-                                                  );
-    my $affy_file_parser = Genome::Utility::Parser->create(
-                                                  file => $affy_file,
-                                                  separator => ",",
-                                                  );
-
-    my $affy_file_line = $affy_file_parser->getline;
-    my $illumina_file_line = $illumina_file_parser->getline;    
-    while($illumina_file_line && $affy_file_line) {
-        #compare chromosomes
-        if(ncmp($illumina_file_line->{$illumina_file_chrom_column}, $affy_file_line->{$affy_file_chrom_column}) > 0) {
-            $affy_file_line = $affy_file_parser->getline;
-        }
-        elsif(ncmp($illumina_file_line->{$illumina_file_chrom_column}, $affy_file_line->{$affy_file_chrom_column}) < 0) {
-            $illumina_file_line = $illumina_file_parser->getline;    
-        }
-        #same chromosome, compare positions    
-        elsif(ncmp($illumina_file_line->{$illumina_file_chrom_column}, $affy_file_line->{$affy_file_chrom_column}) == 0) {
-            if(ncmp($illumina_file_line->{$illumina_file_pos_column}, $affy_file_line->{$affy_file_pos_column}) > 0) {
-                $affy_file_line = $affy_file_parser->getline;
-            }
-            elsif(ncmp($illumina_file_line->{$illumina_file_pos_column}, $affy_file_line->{$affy_file_pos_column}) < 0) {
-                $illumina_file_line = $illumina_file_parser->getline;    
-            }
-            # If alleles were not captured (dashes in the file)... get a new line
-            elsif (!$illumina_file_line->{$illumina_file_allele_1_column} || !$illumina_file_line->{$illumina_file_allele_2_column}) { 
-                $illumina_file_line = $illumina_file_parser->getline;    
-            }
-            elsif (!$affy_file_line->{$affy_file_allele_1_column} || !$affy_file_line->{$affy_file_allele_2_column}) {
-                $affy_file_line = $affy_file_parser->getline;
-            }
-            # match position... check alleles
-            elsif(ncmp($illumina_file_line->{$illumina_file_pos_column}, $affy_file_line->{$affy_file_pos_column}) == 0) {
-                if (($illumina_file_line->{$illumina_file_allele_1_column} eq $affy_file_line->{$affy_file_allele_1_column}) && 
-                ($illumina_file_line->{$illumina_file_allele_2_column} eq $affy_file_line->{$affy_file_allele_2_column})) {
-                    # Shouldnt matter which one we write to the file
-                    # For now, write in an output identical to the current intersection files
-                    # FIXME: BIG ASSUMPTIONS:
-                    # 1. position start and end are always the same since its just a single position...
-                    # 2. Print SNP SNP if homo... print ref SNP if het...
-                    # 3. Print this series yet AGAIN for some reason
-                    print $output_fh $illumina_file_line->{$illumina_file_chrom_column} . "\t" .
-                    $illumina_file_line->{$illumina_file_pos_column} . "\t" .
-                    $illumina_file_line->{$illumina_file_pos_column} . "\t" .
-                    $illumina_file_line->{$illumina_file_allele_1_column} . "\t" .
-                    $illumina_file_line->{$illumina_file_allele_2_column} . "\t";
-                    # as per the assumption, if it is het print "ref SNP ref SNP"... otherwise SNP SNP SNP SNP
-                    if ($illumina_file_line->{$illumina_file_allele_1_column} eq $illumina_file_line->{$illumina_file_allele_2_column}) {
-                        print $output_fh "ref\tSNP\tref\tSNP\n"; 
-                    } else {
-                        print $output_fh "SNP\tSNP\tSNP\tSNP\n"; 
-                    }
-                }
-
-                # Now get 2 new lines...
-                $affy_file_line = $affy_file_parser->getline;
-                $illumina_file_line = $illumina_file_parser->getline;    
-            }
-        }
-    }
-    $output_fh->close;
-
-    return 1;
-}
-
+1;
 

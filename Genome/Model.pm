@@ -10,6 +10,7 @@ use Genome::Model::EqualColumnWidthTableizer;
 use File::Path;
 use File::Basename;
 use IO::File;
+use Sort::Naturally;
 
 class Genome::Model {
     type_name => 'genome model',
@@ -39,7 +40,7 @@ class Genome::Model {
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
         reference_sequence_name      => { via => 'processing_profile'},
-	sample_name                  => { is => 'VARCHAR2', len => 255 },
+	    sample_name                  => { is => 'VARCHAR2', len => 255 },
         events                       => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => 'model', 
                                           doc => 'all events which have occurred for this model',
                                         },
@@ -915,5 +916,594 @@ sub _resolve_type_name_for_subclass_name {
     my $type_name = lc(join(" ", @words));
     return $type_name;
 }
+
+# Returns the base name of the hq_snp report files
+sub hq_snp_base_name {
+    my $self = shift;
+
+    return $self->data_directory . "/hq_snp";
+}
+
+# Returns the name of the snplist file
+sub hq_snp_snplist_name {
+    my $self = shift;
+
+    return $self->hq_snp_base_name . '_snplist.csv';
+}
+
+# Returns the name of the notfound file
+sub hq_snp_notfound_name {
+    my $self = shift;
+
+    return $self->hq_snp_base_name . '_notfound.csv';
+}
+
+# Returns the name of the detail file
+sub hq_snp_detail_name {
+    my $self = shift;
+
+    return $self->hq_snp_base_name . '_detail.csv';
+}
+
+# Returns the name of the summary file
+sub hq_snp_summary_name {
+    my $self = shift;
+
+    return $self->hq_snp_base_name . '_summary.csv';
+}
+    
+# Returns the name of the report file
+sub hq_snp_report_name {
+    my $self = shift;
+
+    return $self->hq_snp_base_name . '_report.csv';
+}
+
+# Returns the name of the numbers file
+sub hq_snp_numbers_name {
+    my $self = shift;
+
+    return $self->hq_snp_base_name . '_numbers.csv';
+}
+
+# Returns the name of the gold snp file
+# This file is just the intersection of all micro array data on the same sample
+sub gold_snp_file {
+    my $self = shift;
+
+    return $self->data_directory . "/gold_snp.tsv";
+}
+
+# Compare files and output where they agree on chromosome, position, and alleles into a 3rd file
+sub make_gold_snp_file {
+    my $self = shift;
+    $DB::single=1;
+    
+    my $output_file_name = $self->gold_snp_file();
+    my $output_fh;
+    unless ($output_fh = IO::File->new(">$output_file_name")) {
+        die("Could not open $output_file_name");
+    }
+
+    my @related_microarray = Genome::Model::MicroArray->get(sample_name => $self->sample_name);
+    if (scalar(@related_microarray) == 0) {
+        $self->error_message("No micro array models found with the same sample");
+        return 0;
+    }
+    # if theres only one related micro array... use that as the gold snp list
+    elsif (scalar(@related_microarray) == 1) {
+        $self->error_message("Only one micro array model found with the same sample... using its data as the gold snp file.");
+        my $model = $related_microarray[0];
+        while ($model->get_next_line) {
+            print $output_fh $model->current_line->{chromosome} . "\t" .
+            $model->current_line->{position} . "\t" .
+            $model->current_line->{position} . "\t"; 
+             
+            #TODO : currently very hackish... 4 columns do not make sense... should be 2... check if this is necessary and fix   
+            if ($model->current_line->{allele_1} eq $model->current_line->{allele_2}) {
+                if ($model->current_line->{allele_1} eq $model->current_line->{reference}) {
+                    print $output_fh "ref\tref\tref\tref\n"; 
+                } 
+                else {
+                    print $output_fh "SNP\tSNP\tSNP\tSNP\n";
+                }
+                # otherwise must be het            
+            } else {
+                print $output_fh "ref\tSNP\tref\tSNP\n"; 
+            }
+        }
+        return 1;
+    }
+
+    # Otherwise we have 2 or more microarray models to compare, compare all of them to find agreement
+    my $done = 0;
+    while(!$done) {
+        my $return = $self->get_next_microarray_input(@related_microarray);
+
+        if ($return == -1) {
+            $done = 1;
+        }
+        elsif ($return == 1) {
+            if ((($related_microarray[0]->current_line->{allele_1} eq $related_microarray[1]->current_line->{allele_1}) 
+            && ($related_microarray[0]->current_line->{allele_2} eq $related_microarray[1]->current_line->{allele_2})) || 
+            (($related_microarray[0]->current_line->{allele_2} eq $related_microarray[1]->current_line->{allele_1}) 
+            && ($related_microarray[0]->current_line->{allele_1} eq $related_microarray[1]->current_line->{allele_2}))) {
+                my $model = $related_microarray[0];
+                print $output_fh $model->current_line->{chromosome} . "\t" .
+                $model->current_line->{position} . "\t" .
+                $model->current_line->{position} . "\t"; 
+
+                # if reverse match, print reverse...
+                if (($related_microarray[0]->current_line->{allele_1} eq $related_microarray[1]->current_line->{allele_1}) && 
+                ($related_microarray[0]->current_line->{allele_2} eq $related_microarray[1]->current_line->{allele_2})) {
+                    print $output_fh $related_microarray[0]->current_line->{allele_2} . "\t" 
+                    . $related_microarray[0]->current_line->{allele_1} . "\t"; 
+                } else {
+                    print $output_fh $related_microarray[0]->current_line->{allele_1} . "\t" 
+                    . $related_microarray[0]->current_line->{allele_2} . "\t"; 
+                }
+
+                # if homozygous
+                if ($related_microarray[1]->current_line->{allele_1} eq $related_microarray[1]->current_line->{allele_2}) {
+                    if ($related_microarray[1]->current_line->{allele_1} eq $related_microarray[1]->current_line->{reference}) {
+                        print $output_fh "ref\tref\t"; 
+                    } 
+                    else {
+                        print $output_fh "SNP\tSNP\t";
+                    }
+                    # otherwise must be het            
+                } else {
+                    print $output_fh "ref\tSNP\t"; 
+                }
+
+                # if homozygous 
+                if ($related_microarray[0]->current_line->{allele_1} eq $related_microarray[0]->current_line->{allele_2}) {
+                    if ($related_microarray[0]->current_line->{allele_1} eq $related_microarray[0]->current_line->{reference}) {
+                        print $output_fh "ref\tref\n"; 
+                    } 
+                    else {
+                        print $output_fh "SNP\tSNP\n";
+                    }
+                    # otherwise must be het            
+                } else {
+                    print $output_fh "ref\tSNP\n"; 
+                }
+            } 
+            # If the chrom/pos matches but the alleles dont, just get new lines for each model
+            for my $model (@related_microarray) {
+                $model->get_next_line();
+            }
+        }
+        # Get the next input if return is 0... means there is no chrom/pos match yet
+    }
+    $output_fh->close;
+
+    return 1;
+}
+
+# Gets the next line for the model that has the least value for chromosome/pos...
+# Does nothing and returns 1 if they all match, return 0 if next gotten but no match
+# Return undef if one of the models hit the end
+sub get_next_microarray_input {
+    my $self = shift;
+
+    my @models = @_;
+    
+    my $lowest_model = undef;
+    for my $model (@models) {
+        # if a line has not been gotten in this model yet, get one
+        if (!$model->{current_line}) {
+            # if we still cant get a line successfully, must be at the end
+            unless($model->get_next_line) {
+                return -1;
+            }
+        }
+        
+        # If alleles were not captured (dashes in the file)... get a new line
+        if (!$model->current_line->{allele_1} || !$model->current_line->{allele_2}) { 
+            $model->get_next_line();
+            next;
+        }
+
+        # if lowest model has not been set yet, set to current model
+        if (!$lowest_model) {
+            $lowest_model = $model;
+            next;
+        }
+
+        #compare chromosomes
+        if(ncmp($model->current_line->{chromosome}, $lowest_model->current_line->{chromosome}) > 0) {
+            # current lowest stands... do nothing
+        }
+        elsif(ncmp($model->current_line->{chromosome}, $lowest_model->current_line->{chromosome}) < 0) {
+            $lowest_model = $model;
+        }
+        #same chromosome, compare positions    
+        elsif(ncmp($model->current_line->{chromosome}, $lowest_model->current_line->{chromosome}) == 0) {
+            if(ncmp($model->current_line->{position}, $lowest_model->current_line->{position}) > 0) {
+                # current lowest stands... do nothing
+            }
+            elsif(ncmp($model->current_line->{position}, $lowest_model->current_line->{position}) < 0) {
+                $lowest_model = $model;
+            }
+            # match position... check alleles... can match or be reversed to be included
+            elsif(ncmp($model->current_line->{position}, $lowest_model->current_line->{position}) == 0) {
+                # We have found a chromosome and position match
+                return 1;
+            }
+        }
+    } # end for
+
+    # Now, get the next line of the model that has the lowest chrom/pos values...
+    $lowest_model->get_next_line();
+
+    return 0;
+}
+
+# This stuff is hacked out of brian's maq_gold_snp.pl script
+# TODO: This maybe doesnt belong here... but where? Filtervariations?
+sub find_hq_snps {
+    my $self = shift;
+    
+    # Command line option variables
+    my($aii_file, $cns, $basename, $maxsnps, $snplist);
+    $maxsnps=10000000;
+    $snplist = 0;
+
+    $aii_file = $self->gold_snp_file();
+
+    my ($total_aii, $ref_aii, $het_aii, $hom_aii);
+    $total_aii = $ref_aii = $het_aii = $hom_aii = 0;
+    my %aii;
+    open(AII,$aii_file) || die "Unable to open aii input file: $aii_file $$";
+    while(<AII>) {
+        chomp;
+        my $line = $_;
+        my ($chromosome, $start, $end, $allele1, $allele2
+            , $rgg1_allele1_type, $rgg1_allele2_type
+            , $rgg2_allele1_type, $rgg2_allele2_type
+            ) = split("\t");
+
+        my $ref = 0;
+        $total_aii += 1;
+        if ($rgg1_allele1_type eq 'ref' &&
+            $rgg1_allele2_type eq 'ref' &&
+            $rgg2_allele1_type eq 'ref' &&
+            $rgg2_allele2_type eq 'ref') {
+                $ref_aii += 1;
+                $ref = 1;
+        }
+            
+        $aii{$chromosome}{$start}{allele1} = $allele1;
+        $aii{$chromosome}{$start}{allele2} = $allele2;
+        $aii{$chromosome}{$start}{ref} = $ref;
+        $aii{$chromosome}{$start}{found} = 0;
+        $aii{$chromosome}{$start}{line} = $line;
+
+        if ($rgg1_allele1_type eq 'ref' &&
+        $rgg1_allele2_type eq 'ref' &&
+        $rgg2_allele1_type eq 'ref' &&
+        $rgg2_allele2_type eq 'ref') {
+            next;
+        }
+        if ($allele1 eq $allele2) {
+            $hom_aii += 1;
+        } else {
+            $het_aii += 1;
+        }
+    } # end while <AII>
+    close(AII);
+
+    # get all of the snp files... sort them... use them as input
+    my @snp_files = $self->_variant_list_files();
+    my $file_list = join(" ", @snp_files);
+    my $snp_cmd = "cat $file_list | sort -g -t \$'\t' -k 1 -k 2 |";
+    unless (open(DATA,$snp_cmd)) {
+        die("Unable to run input command: $snp_cmd");
+        exit 0;
+    }
+
+    # Begin sort black magic...
+    # This essentially will just sort by chromosome and position
+    # Sorts chromosomes correctly as 1-22, then x, then y
+    my @list= <DATA>;
+    my @sorted= @list[
+    map { unpack "N", substr($_,-4) }
+    sort
+    map {
+        my $key= $list[$_];
+        $key =~ s[(\d+)][ pack "N", $1 ]ge;
+        $key . pack "N", $_
+    } 0..$#list
+    ];
+    close (DATA);
+    # End black magic
+    
+    my %IUBcode=(
+             A=>'AA',
+             C=>'CC',
+             G=>'GG',
+             T=>'TT',
+             M=>'AC',
+             K=>'GT',
+             Y=>'CT',
+             R=>'AG',
+             W=>'AT',
+             S=>'GC',
+             D=>'AGT',
+             B=>'CGT',
+             H=>'ACT',
+             V=>'ACG',
+             N=>'ACGT',
+             );
+
+
+    my $max_bin = 40;
+    my %qsnp;
+    my %qsnp_het;
+    my %qsnp_het_match;
+    my %qsnp_het_ref_match;
+    my %qsnp_het_var_match;
+    my %qsnp_het_mismatch;
+    my %qsnp_hom;
+    my %qsnp_hom_match;
+    my %qsnp_hom_mismatch;
+    my $total;
+    my $output_snplist = $self->hq_snp_snplist_name();
+    if ($snplist) {
+        open(SNPLIST,">$output_snplist") || die "Unable to create snp list file: $output_snplist $$";
+    }
+    for my $line (@sorted) {
+        chomp($line);
+        my ($id, $start, $ref_sequence, $iub_sequence, $quality_score, $depth, $avg_hits, $high_quality, $unknown) = split("\t", $line);
+        next if ($depth < 2);
+        $total += 1;
+        if ($total >= $maxsnps) {
+            last;
+        }
+
+        my ($chr, $pos, $offset, $c_orient);
+        ($chr, $pos) = ($id, $start);
+
+        my $genotype = $IUBcode{$iub_sequence};
+        $genotype ||= 'NN';
+        my $cns_sequence = substr($genotype,0,1);
+        my $var_sequence = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
+        if (exists($aii{$chr}{$pos})) {
+            $aii{$chr}{$pos}{found} = 1;
+            $qsnp{$quality_score} += 1;
+            if ($aii{$chr}{$pos}{allele1} ne $aii{$chr}{$pos}{allele2}) {
+                $qsnp_het{$quality_score} += 1;
+                if (($aii{$chr}{$pos}{allele1} eq $cns_sequence &&
+                     $aii{$chr}{$pos}{allele2} eq $var_sequence) ||
+                    ($aii{$chr}{$pos}{allele1} eq $var_sequence &&
+                     $aii{$chr}{$pos}{allele2} eq $cns_sequence)) {
+                        $qsnp_het_match{$quality_score} += 1;
+                        $qsnp_het_ref_match{$quality_score} += 1;
+                        $qsnp_het_var_match{$quality_score} += 1;
+                        if ($snplist) {
+                            print SNPLIST join("\t",('het',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                        }
+                } else {
+                    if ($aii{$chr}{$pos}{allele1} eq $cns_sequence ||
+                        $aii{$chr}{$pos}{allele1} eq $var_sequence) {
+                            $qsnp_het_ref_match{$quality_score} += 1;
+                            if ($snplist) {
+                                print SNPLIST join("\t",('hetref',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                            }
+                    } elsif ($aii{$chr}{$pos}{allele2} eq $cns_sequence ||
+                             $aii{$chr}{$pos}{allele2} eq $var_sequence) {
+                                $qsnp_het_var_match{$quality_score} += 1;
+                                if ($snplist) {
+                                    print SNPLIST join("\t",('hetvar',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                                }
+                    } else {
+                        if ($snplist) {
+                            print SNPLIST join("\t",('hetmis',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                        }
+                    }
+                    $qsnp_het_mismatch{$quality_score} += 1;
+                }
+            } else {
+                $qsnp_hom{$quality_score} += 1;
+                if (($aii{$chr}{$pos}{allele1} eq $cns_sequence &&
+                     $aii{$chr}{$pos}{allele2} eq $var_sequence) ||
+                    ($aii{$chr}{$pos}{allele1} eq $var_sequence &&
+                     $aii{$chr}{$pos}{allele2} eq $cns_sequence)) {
+                        $qsnp_hom_match{$quality_score} += 1;
+                        if ($snplist) {
+                            my $type = ($aii{$chr}{$pos}{ref}) ? 'ref' : 'hom';
+                            print SNPLIST join("\t",($type,$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                        }
+                 } else {
+                    if ($snplist) {
+                        print SNPLIST join("\t",('hommis',$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth)) . "\n";
+                    }
+                    $qsnp_hom_mismatch{$quality_score} += 1;
+                }
+            }
+        } # end if (exists($aii{$chr}{$pos}))
+    } # end while <SNP>
+    close(SNPLIST);
+
+    my $output_notfound = $self->hq_snp_notfound_name();
+    open(NOTFOUND,">$output_notfound") || die "Unable to create not found file: $output_notfound $$";
+    foreach my $chromosome (sort (keys %aii)) {
+        foreach my $location (sort (keys %{$aii{$chromosome}})) {
+            unless ($aii{$chromosome}{$location}{found}) {
+                print NOTFOUND $aii{$chromosome}{$location}{line} . "\n";
+            }
+        }
+    }
+
+    close(NOTFOUND);
+
+    my $output = $self->hq_snp_detail_name();
+    open(OUTPUT,">$output") || die "Unable to open output file: $output";
+    print OUTPUT "Total\t$total\n\n";
+    print OUTPUT "qval\tall_het\thet_match\thet_mismatch\tall\tall_hom\thom_match\thom_mismatch\thet_ref_match\thet_var_match\n";
+    my @qkeys = ( 0, 10, 15, 20, 30 );
+    my %all;
+    my %het_location;
+    my %het_match;
+    my %het_ref_match;
+    my %het_var_match;
+    my %het_mismatch;
+    my %hom_location;
+    my %hom_match;
+    my %hom_mismatch;
+    foreach my $qval (sort { $a <=> $b } (keys %qsnp)) {
+        # Initialize values to 0 if undef
+        my $all = $qsnp{$qval} || 0;
+        my $all_het = $qsnp_het{$qval} || 0;
+        my $het_match = $qsnp_het_match{$qval} || 0;
+        my $het_ref_match = $qsnp_het_ref_match{$qval} || 0;
+        my $het_var_match = $qsnp_het_var_match{$qval} || 0;
+        my $het_mismatch = $qsnp_het_mismatch{$qval} || 0;
+        my $all_hom = $qsnp_hom{$qval} || 0;
+        my $hom_match = $qsnp_hom_match{$qval} || 0;
+        my $hom_mismatch = $qsnp_hom_mismatch{$qval} || 0;
+        print OUTPUT "$qval\t$all_het\t$het_match\t$het_mismatch\t$all\t$all_hom\t$hom_match\t$hom_mismatch\t$het_ref_match\t$het_var_match\n";
+        foreach my $qkey (@qkeys) {
+            if ($qval >= $qkey) {
+                $all{$qkey} += $all;
+                $het_location{$qkey} += $all_het;
+                $het_match{$qkey} += $het_match;
+                $het_ref_match{$qkey} += $het_ref_match;
+                $het_var_match{$qkey} += $het_var_match;
+                $het_mismatch{$qkey} += $het_mismatch;
+                $hom_location{$qkey} += $all_hom;
+                $hom_match{$qkey} += $hom_match;
+                $hom_mismatch{$qkey} += $hom_mismatch;
+            }
+        }
+    } # end foreach
+    close(OUTPUT);
+
+    my $summary = $self->hq_snp_summary_name();
+    open(SUMMARY,">$summary") || die "Unable to open output summary file: $summary";
+    print SUMMARY "Total\t$total\n\n";
+    print SUMMARY "QVAL\tHet_Location\tHet_Match\tHet_Mismatch\tHom_Location\tHom_Match\tHom_Mismatch\tAll\tHet_Ref_Match\tHet_Var_Match\n";
+    foreach my $qkey (@qkeys) {
+        print SUMMARY "$qkey\t$het_location{$qkey}\t$het_match{$qkey}\t$het_mismatch{$qkey}\t$hom_location{$qkey}\t$hom_match{$qkey}\t$hom_mismatch{$qkey}\t$all{$qkey}\t$het_ref_match{$qkey}\t$het_var_match{$qkey}\n";
+    }
+    close(SUMMARY);
+
+    my $report = $self->hq_snp_report_name();
+    open(REPORT,">$report") || die "Unable to open output report file: $report";
+    my ($result) = $self->GetResults($summary);
+
+    print REPORT "all\tref\thet\thom\n";
+    print REPORT "$total_aii\t$ref_aii\t$het_aii\t$hom_aii\n";
+
+    print REPORT "\nTotal: " . $result->{total} . "\n\n";
+
+    print REPORT "Heterozygous:\n";
+    print REPORT join("\t", ( '', 'Location', 'Match', 'Ref Match', 'Var Match',
+    'Mismatch')) . "\n";
+
+    print REPORT "SNP Q0:\t" .  join("\t",@{$result}{ qw( q0_location q0_match q0_ref_match q0_var_match q0_mismatch) }) . "\n";
+    print REPORT "SNP Q15:\t" .  join("\t",@{$result}{ qw( q15_location q15_match q15_ref_match q15_var_match q15_mismatch) }) . "\n";
+    print REPORT "SNP Q30:\t" .  join("\t",@{$result}{ qw( q30_location q30_match q30_ref_match q30_var_match q30_mismatch) }) . "\n";
+    print REPORT "SNP Q0 %:\t" .  join("\t", map { my $p = sprintf "%0.2f%%", (100.0 * $_)/$het_aii; $p; } @{$result}{ qw( q0_location q0_match q0_ref_match q0_var_match q0_mismatch) }) . "\n";
+    print REPORT "SNP Q15 %:\t" .  join("\t", map { my $p = sprintf "%0.2f%%", (100.0 * $_)/$het_aii; $p; } @{$result}{ qw( q15_location q15_match q15_ref_match q15_var_match q15_mismatch) }) . "\n";
+    print REPORT "SNP Q30 %:\t" .  join("\t", map { my $p = sprintf "%0.2f%%", (100.0 * $_)/$het_aii; $p; } @{$result}{ qw( q30_location q30_match q30_ref_match q30_var_match q30_mismatch) }) . "\n";
+
+    print REPORT "\nHomozygous:\n";
+    print REPORT join("\t", ( '', 'Location', 'Match', 'Mismatch')) . "\n";
+    print REPORT "SNP Q0:\t" .  join("\t",@{$result}{ qw( q0_location_hom q0_match_hom q0_mismatch_hom) }) . "\n";
+    print REPORT "SNP Q15:\t" .  join("\t",@{$result}{ qw( q15_location_hom q15_match_hom q15_mismatch_hom) }) . "\n";
+    print REPORT "SNP Q30:\t" .  join("\t",@{$result}{ qw( q30_location_hom q30_match_hom q30_mismatch_hom) }) . "\n";
+
+    print REPORT "SNP Q0 %:\t" .  join("\t", map { my $p = sprintf "%0.2f%%", (100.0 * $_)/$het_aii; $p; } @{$result}{ qw( q0_location_hom q0_match_hom q0_mismatch_hom) }) . "\n";
+    print REPORT "SNP Q15 %:\t" .  join("\t", map { my $p = sprintf "%0.2f%%", (100.0 * $_)/$het_aii; $p; } @{$result}{ qw( q15_location_hom q15_match_hom q15_mismatch_hom) }) . "\n";
+    print REPORT "SNP Q30 %:\t" .  join("\t", map { my $p = sprintf "%0.2f%%", (100.0 * $_)/$het_aii; $p; } @{$result}{ qw( q30_location_hom q30_match_hom q30_mismatch_hom) }) . "\n";
+    
+    close(REPORT);
+
+    my $numbers = $self->hq_snp_numbers_name();
+    open(NUMBERS,">$numbers") || die "Unable to open output report file: $numbers ";
+
+    my $ref_match = $result->{q15_ref_match};  
+    my $var_match = $result->{q15_var_match};  
+    my $all_match = $result->{q15_match};  
+    print NUMBERS "HQ SNP count (all het snps): $het_aii\n";
+    print NUMBERS "HQ SNP reference allele count (agree on ref): $ref_match\n";
+    print NUMBERS "HQ SNP variant allele count (agree on var): $var_match\n";
+    print NUMBERS "HQ SNP both allele count (total agreement): $all_match\n";
+        
+    close(NUMBERS);
+        
+    return 1;
+}
+
+# This is also fully pasted from the maq_gold_snp.
+sub GetResults {
+    my $self = shift;
+    
+	my ($summary_file) = @_;
+	my $filename = basename($summary_file);
+
+	open(SUMMARY,$summary_file) || die "Unable to open summary file: $summary_file $$";
+	my %result_best_fit;
+	my %new_best_fit;
+	my $total;
+	while(<SUMMARY>) {
+		chomp;
+		my ($qkey, $het_location, $het_match, $het_mismatch,
+				$hom_location, $hom_match, $hom_mismatch, $all,
+				$het_ref_match, $het_var_match) = split("\t");
+        $qkey = $qkey || '';
+		if ($qkey eq 'Total') {
+			$total = $het_location;
+			$total ||= '';
+			if (!defined($total) || $total eq '') {
+				return (\%new_best_fit);
+			}
+		} elsif ($qkey =~ /^\d+$/x) {
+#			print "$_\n";
+			$result_best_fit{$qkey}{location} = $het_location;
+			$result_best_fit{$qkey}{match} = $het_match;
+			$result_best_fit{$qkey}{ref_match} = $het_ref_match;
+			$result_best_fit{$qkey}{var_match} = $het_var_match;
+			$result_best_fit{$qkey}{mismatch} = $het_mismatch;
+			$result_best_fit{$qkey}{location_hom} = $hom_location;
+			$result_best_fit{$qkey}{match_hom} = $hom_match;
+			$result_best_fit{$qkey}{mismatch_hom} = $hom_mismatch;
+		} else {
+#			print "$_\n";
+		}
+	}
+	close(SUMMARY);
+	$new_best_fit{total} = $total || 0;
+	$new_best_fit{q0_location} = $result_best_fit{0}{location} || 0;
+	$new_best_fit{q0_match} = $result_best_fit{0}{match} || 0;
+	$new_best_fit{q0_ref_match} = $result_best_fit{0}{ref_match} || 0;
+	$new_best_fit{q0_var_match} = $result_best_fit{0}{var_match} || 0;
+	$new_best_fit{q0_mismatch} = $result_best_fit{0}{mismatch} || 0;
+	$new_best_fit{q0_location_hom} = $result_best_fit{0}{location_hom} || 0;
+	$new_best_fit{q0_match_hom} = $result_best_fit{0}{match_hom} || 0;
+	$new_best_fit{q0_mismatch_hom} = $result_best_fit{0}{mismatch_hom} || 0;
+
+	$new_best_fit{q15_location} = $result_best_fit{15}{location} || 0;
+	$new_best_fit{q15_match} = $result_best_fit{15}{match} || 0;
+	$new_best_fit{q15_ref_match} = $result_best_fit{15}{ref_match} || 0;
+	$new_best_fit{q15_var_match} = $result_best_fit{15}{var_match} || 0;
+	$new_best_fit{q15_mismatch} = $result_best_fit{15}{mismatch} || 0;
+	$new_best_fit{q15_location_hom} = $result_best_fit{15}{location_hom} || 0;
+	$new_best_fit{q15_match_hom} = $result_best_fit{15}{match_hom} || 0;
+	$new_best_fit{q15_mismatch_hom} = $result_best_fit{15}{mismatch_hom} || 0;
+
+	$new_best_fit{q30_location} = $result_best_fit{30}{location} || 0;
+	$new_best_fit{q30_match} = $result_best_fit{30}{match} || 0;
+	$new_best_fit{q30_ref_match} = $result_best_fit{30}{ref_match} || 0;
+	$new_best_fit{q30_var_match} = $result_best_fit{30}{var_match} || 0;
+	$new_best_fit{q30_mismatch} = $result_best_fit{30}{mismatch} || 0;
+	$new_best_fit{q30_location_hom} = $result_best_fit{30}{location_hom} || 0;
+	$new_best_fit{q30_match_hom} = $result_best_fit{30}{match_hom} || 0;
+	$new_best_fit{q30_mismatch_hom} = $result_best_fit{30}{mismatch_hom} || 0;
+	return (\%new_best_fit);
+}
+
 
 1;
