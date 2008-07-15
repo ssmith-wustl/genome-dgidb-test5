@@ -194,9 +194,10 @@ sub execute {
         # format => ??,
     );
 
+    $self->generate_metric( $self->snv_metric_names );
+
     if ( $success )
     { 
-        $self->generate_metric( $self->snv_metric_names );
         $self->event_status("Succeeded");
     }
     else 
@@ -367,7 +368,10 @@ sub HQ_SNP_count {
 
 sub _calculate_HQ_SNP_count {
     my $self=shift;
-    ###how do i do this? I don't know. I should probably word count the filtered snp file, but maybe not.
+    my $chrom = $self->ref_seq_id();
+    
+    my $hq_snp_counts = $self->model->get_hq_snps_for_chrom($chrom);
+    return $hq_snp_counts->{total};
 }
 
 sub HQ_SNP_reference_allele_count {
@@ -377,7 +381,10 @@ sub HQ_SNP_reference_allele_count {
 
 sub _calculate_HQ_SNP_reference_allele_count {
     my $self=shift;
-    ###how do i do this? I don't know. I should probably word count the filtered snp file then do something else, but maybe not.
+    my $chrom = $self->ref_seq_id();
+    
+    my $hq_snp_counts = $self->model->get_hq_snps_for_chrom($chrom);
+    return $hq_snp_counts->{reference};
 }
 
 sub HQ_SNP_variant_allele_count {
@@ -387,7 +394,10 @@ sub HQ_SNP_variant_allele_count {
 
 sub _calculate_HQ_SNP_variant_allele_count {
     my $self=shift;
-    ###how do i do this? I don't know. I should probably word count the filtered snp file then do something else, but maybe not.
+    my $chrom = $self->ref_seq_id();
+    
+    my $hq_snp_counts = $self->model->get_hq_snps_for_chrom($chrom);
+    return $hq_snp_counts->{variant};
 }
 
 sub HQ_SNP_both_allele_count {
@@ -397,7 +407,10 @@ sub HQ_SNP_both_allele_count {
 
 sub _calculate_HQ_SNP_both_allele_count {
     my $self=shift;
-    ###how do i do this? I don't know. I should probably word count the filtered snp file then do something else, but maybe not.
+    my $chrom = $self->ref_seq_id();
+    
+    my $hq_snp_counts = $self->model->get_hq_snps_for_chrom($chrom);
+    return $hq_snp_counts->{both};
 }
 
 1;
