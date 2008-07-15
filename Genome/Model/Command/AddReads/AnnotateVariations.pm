@@ -222,12 +222,12 @@ sub snv_metrics
     foreach my $variant_type (qw/ snp /) #indel
     {
         my $metrics_report_file = $self->snp_metrics_report_file;
-        $self->error_message("Can't find metrics file ($metrics_report_file)")
+        $self->error_message("Can't compute metrics because the metrics file ($metrics_report_file) does not exist")
             and return unless -e $metrics_report_file;
         
         # TODO use Genome::Utility::Parser
         my $fh = IO::File->new("< $metrics_report_file");
-        $self->error_message("Can't open file ($metrics_report_file)")
+        $self->error_message("Can't comput metrics because the metrics file ($metrics_report_file) cannot be opened: $!")
             and return unless $fh;
         $fh->getline;
 
@@ -245,8 +245,6 @@ sub snv_metrics
         }
     }
 
-    print Dumper(\%metrics);
-    
     return $self->_snv_metrics(\%metrics);
 }
 
@@ -288,7 +286,10 @@ sub SNV_count {
 sub _calculate_SNV_count {
     my $self= shift;
     
-    return $self->snv_metrics->{confident};
+    my $metrics = $self->snv_metrics
+        or return;
+    
+    return $metrics->{confident};
 }
 
 # in dbSNP metric
@@ -301,18 +302,26 @@ sub SNV_in_dbSNP_count {
 sub _calculate_SNV_in_dbSNP_count {
     my $self= shift;
 
-    return $self->snv_metrics->{'dbsnp-127'};
+    my $metrics = $self->snv_metrics
+        or return;
+ 
+    return $metrics->{'dbsnp-127'};
 }
 
 # in watson metric
 sub SNV_in_watson_count {
     my $self=shift;
+    
     return $self->get_metric_value('SNV_in_watson_count');
 }
 
 sub _calculate_SNV_in_watson_count {
     my $self= shift;
-    return $self->snv_metrics->{watson};
+
+    my $metrics = $self->snv_metrics
+        or return;
+ 
+    return $metrics->{watson};
 }
 
 # in venter metric
@@ -325,7 +334,10 @@ sub SNV_in_venter_count {
 sub _calculate_SNV_in_venter_count {
     my $self= shift;
     
-    return $self->snv_metrics->{venter};
+    my $metrics = $self->snv_metrics
+        or return;
+ 
+    return $metrics->{venter};
 }
 
 # distinct (not in any other db) snv count
@@ -338,7 +350,10 @@ sub SNV_distinct_count {
 sub _calculate_SNV_distinct_count {
     my $self= shift;
 
-    return $self->snv_metrics->{distinct};
+    my $metrics = $self->snv_metrics
+        or return;
+ 
+    return $metrics->{distinct};
 }
 
 ####################
