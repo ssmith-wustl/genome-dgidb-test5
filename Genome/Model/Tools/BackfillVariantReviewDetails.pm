@@ -57,6 +57,8 @@ sub log{
 
 sub execute {
     my $self = shift;
+    $self->status_message("This command is no longer intended for normal use") and return 0;
+    my $row_processed = 0;
 
     my $separation_character = $self->separation_character;
     if ($self->log_file){
@@ -75,6 +77,7 @@ sub execute {
 
         my $line_no = 0;
         while (my $line_hash = $list_reader->next_line_data()){
+            $self->log("$line_no, $row_processed");
             last unless $line_hash;
             $line_no++;
             next if $line_hash->{header};
@@ -82,24 +85,32 @@ sub execute {
             my @current_members = Genome::VariantReviewDetail->get( begin_position => $line_hash->{begin_position}, chromosome => $line_hash->{chromosome}, end_position => $line_hash->{end_position});
             if (@current_members > 1 ){
                 $self->log(scalar @current_members." results for variant @ ".$line_hash->{chromosome}." ".$line_hash->{begin_position}." ".$line_hash->{end_position}.". Not processing, line $line_no");
+                $row_processed += scalar @current_members;
                 next;
             }
             my $current_member = shift @current_members;
             if ($current_member){
+                $row_processed++;
                 if ($current_member->data_needed  and $current_member->data_needed eq 'X'){
                     $current_member->data_needed('Z');
                 }
                 foreach my $column_name ($list_reader->db_columns){
                     if ( $line_hash->{$column_name} ){
                         if ($current_member->$column_name){
-                            $self->log("inequal entries for column $column_name(db:".$current_member->$column_name.", backfill_list:".$line_hash->{$column_name}.") @ ".$line_hash->{chromosome}." ".$line_hash->{begin_position}." ".$line_hash->{end_position}.", line $line_no") unless $current_member->$column_name eq $line_hash->{$column_name};
+                            unless ($current_member->$column_name eq $line_hash->{$column_name}){
+                                if ($column_name eq 'genes') {  #columns we're adding to instead of reporting error
+                                    $current_member->$column_name($current_member->$column_name."/".$line_hash->{$column_name}) unless $self->is_in_list($line_hash->{$column_name}, $current_member->$column_name);
+                                }else{
+                                    $self->log("inequal entries for column $column_name(db:".$current_member->$column_name.", backfill_list:".$line_hash->{$column_name}.") @ ".$line_hash->{chromosome}." ".$line_hash->{begin_position}." ".$line_hash->{end_position}.", line $line_no");
+                                }
+                            }
                         }else{
                             $current_member->$column_name($line_hash->{$column_name} );
                         }
                     }
                 }
             }
-        }  
+        }#while  
     };
 
     if ($@){
@@ -113,6 +124,15 @@ sub execute {
 sub vtest{
     my ($self, $v) = @_;
     return $v? $v : '';
+}
+
+sub is_in_list{
+    my ($self, $substring, $string) = @_;
+    my @parts = split (/\//, $string);
+    foreach (@parts){
+        return 1 if $substring eq $_;
+    }
+    return 0;
 }
 
 1;
