@@ -14,94 +14,140 @@ use above "Genome";
 UR::Object::Type->define(
     class_name => __PACKAGE__, is => 'Command',
     has => [
-        input => { is => 'String',
-        doc => 'Master csv to import'
-    },
+        list => {
+            is => 'String',
+            doc => 'Master csv to import', 
+        },
+    ],
+    has_optional => [
+        separation_character =>{
+            is => 'String',
+            doc => 'character or string that separates the fields in the list',
+            default => '|',
+        },
+        author => { 
+            is => 'String', 
+            doc => 'Author or authors of the list',
+        },
+        filter => { 
+            is => 'String', 
+            doc => 'Filter, filters, or description of criteria use to generate the list',
+        },
+        rt_ticket => { 
+            is => 'String', 
+            doc => 'RT ticket id number',
+        },
     ]
 );
 
 sub execute {
     my $self = shift;
 
-    my $fh = IO::File->new("< ".$self->input);
-    my %ph; #position hash
-    my $current_header;
+    $self->status_message("This module is no longer intended for normal use");
+    $DB::single = 1;
 
-    my $total;
-    while (my $line = $fh->getline){
-        chomp $line;
-        if ($line =~ /^"List"/){
-            $current_header = $line;
-            next;
-        }else{
-            my $current_line = $line;
-            my @data = split('\|', $line);
-            my ($list, $finisher, $venter_watson, $dbsnp, $gene, $chromosome, $begin_position, $end_position, $validate, $notes, $variant_allele) = @data[0..10];
-
-            my ($validation_finisher, $manual_genotype_normal, $manual_genotype_tumor, $manual_genotype_relapse, $somatic_status, $comment) = @data[59,64];
-
-            foreach ($list, $finisher, $venter_watson, $dbsnp, $gene, $chromosome, $begin_position, $end_position, $validate, $notes, $variant_allele, $validation_finisher, $manual_genotype_normal, $manual_genotype_tumor, $manual_genotype_relapse, $somatic_status, $comment){
-                $_ =~ s/"//g if $_;
-            }
-
-            if ($begin_position){
-
-                $total++;
-
-                my $review_list = Genome::VariantReviewList->get(name => $list);
-                unless ($review_list){
-                    $review_list = Genome::VariantReviewList->create(name => $list);
-                    my $review_list_filter = Genome::VariantReviewListFilter->create(filter_name => $list, list_id => $review_list->id);
-                }
-
-                my $list_id = $review_list->id;
-
-                my $current_member = Genome::VariantReviewDetail->get(begin_position => $begin_position, chromosome => $chromosome);
-                if ($current_member ){
-                    if ($self->vtest($current_member->insert_sequence_allele1) ne $variant_allele){
-                        foreach( ['genes', $gene],  ['finisher', $finisher],  ['insert_seqeuence_allele1', $variant_allele], ['supporting_dbs', $dbsnp],  ['supporting_samples',$venter_watson] ){
-                            my ($col_name, $var) = @$_;
-                            my $new_val = $self->vtest($current_member->$col_name);
-                            $new_val.=', ' if $new_val;
-                            $new_val.= $var;
-                        }
-                    }
-
-                    $current_member->notes( $self->vtest($current_member->notes) . "$current_line|\n" );
-                }else{
-                    $current_member = Genome::VariantReviewDetail->create(
-                        begin_position          => $begin_position,
-                        chromosome              => $chromosome,
-                        end_position            => $end_position,
-                        finisher                => $finisher,
-                        genes                   => $gene,
-                        notes                   => $notes,
-                        pass_manual_review      => $validate,
-                        report_data             => $current_line,
-                        report_header           => $current_header,
-                        supporting_dbs          => $dbsnp,
-                        supporting_samples      => $venter_watson,
-                        variant_type            => 'S',
-                        delete_sequence         => 'X',
-                        insert_sequence_allele1 => $variant_allele,
-                        pass_3730_validation    => $validation_finisher, #somatic status
-
-                        #rgg_id                  => ?,
-                        #roi_seq_id              => ?,
-                        #sample_name             => ?,
-                        #variant_seq_id          => ?,
-                    );
-                }
-                my $member_id = $current_member->id;
-                my $review_list_member = Genome::VariantReviewListMember->get_or_create(
-                    list_id => $list_id,
-                    member_id => $member_id,
-                );
-            }
+=cut
+    eval "use GSCApp; App::DB->db_variant('development'); App::DB->db_access_level('rw'); App->init";
+    if ($@) {
+        $self->error_message("Error initializing GSCApp! $@");
+        return;
+    }
+    
+    unless(App::DB->sync_database) {
+        $self->error_message("Failed to save GSC objects: " . App::DB->error_message);
+        return;
+    }
+    $self->create_subscription("commit", 
+        sub {  
+            #App::DB->commit 
+            print "committing!\n";
         }
+    );
+=cut
+
+    my $separation_character = $self->separation_character;
+    
+    my $fh = IO::File->new("< ".$self->list);
+    unless ($fh){
+        $self->error_message("Couldn't open list file for reading!");
+        return;
     }
 
-#report on multiple positions
+    eval{
+        while (my $line = $fh->getline){
+            chomp $line;
+            my $current_line = $line;
+            my @data = split(/\Q$separation_character\E/, $line);
+
+            my ($list, $chromosome, $begin_position, $end_position, $variant_type, $variant_length, $delete_sequence, $insert_sequence, $genes, $supporting_samples, $supporting_dbs, $finisher_manual_review, $pass_manual_review, $finisher_3730_review, $manual_genotype_normal, $manual_genotype_tumor, $manual_genotype_relapse, $somatic_status, $notes) = @data;
+
+            foreach ($list, $chromosome, $begin_position, $end_position, $variant_type, $variant_length, $delete_sequence, $insert_sequence, $genes, $supporting_samples, $supporting_dbs, $finisher_manual_review, $pass_manual_review, $finisher_3730_review, $manual_genotype_normal, $manual_genotype_tumor, $manual_genotype_relapse, $somatic_status, $notes){
+                if ($_){
+                    $_ =~ s/"//g;
+                    undef $_  if $_ =~ /^-$/;
+                }
+            }
+            my $name = $list;
+            my $filter = $name;
+        
+            my $review_list = Genome::VariantReviewList->get(name => $name);
+
+            unless ($review_list){
+                $review_list = Genome::VariantReviewList->create(name => $name);
+                my $review_list_filter = Genome::VariantReviewListFilter->create(filter_name => $filter, list_id => $review_list->id);
+            }
+            
+            my $list_id = $review_list->id;
+
+            my ($insert_sequence_allele1, $insert_sequence_allele2) = split (/\//, $insert_sequence);
+
+            my $current_member = Genome::VariantReviewDetail->get( begin_position => $begin_position, chromosome => $chromosome, end_position => $end_position, variant_type => $variant_type, delete_sequence => $delete_sequence, insert_sequence_allele1 => $insert_sequence_allele1, insert_sequence_allele2 => $insert_sequence_allele2 );
+            if ($current_member){
+                my $new_notes = $self->vtest($current_member->notes);
+                $new_notes .= ', ' if $new_notes and $notes;
+                $new_notes .= $notes if $notes;
+                $current_member->notes($new_notes);
+            }else{
+                $current_member = Genome::VariantReviewDetail->create(
+                    chromosome              => $chromosome,
+                    begin_position          => $begin_position,
+                    end_position            => $end_position,
+                    variant_type            => $variant_type,
+                    variant_length          => $variant_length,
+                    delete_sequence         => $delete_sequence, 
+                    insert_sequence_allele1 => $insert_sequence_allele1,
+                    insert_sequence_allele2 => $insert_sequence_allele2,
+                    genes                   => $genes,
+                    supporting_samples      => $supporting_samples,
+                    supporting_dbs          => $supporting_dbs,
+                    finisher_manual_review  => $finisher_manual_review,
+                    pass_manual_review      => $pass_manual_review,
+                    finisher_3730_review    => $finisher_3730_review,
+                    manual_genotype_normal  => $manual_genotype_normal,
+                    manual_genotype_tumor   => $manual_genotype_tumor,
+                    manual_genotype_relapse => $manual_genotype_relapse,
+                    somatic_status          => $somatic_status,
+                    notes                   => $notes,
+
+                    rgg_id                  => undef,
+                    roi_seq_id              => undef,
+                    sample_name             => undef,
+                    variant_seq_id          => undef,
+                );
+            }
+            my $member_id = $current_member->id;
+            my $review_list_member = Genome::VariantReviewListMember->get_or_create(
+                list_id => $list_id,
+                member_id => $member_id,
+            );
+
+        }  #while ( my $line = getline);
+    };
+    
+    if ($@){
+        $self->error_message("error in execution. $@");
+        return 0;
+    }
     return 1;
 }
 
@@ -109,6 +155,5 @@ sub vtest{
     my ($self, $v) = @_;
     return $v? $v : '';
 }
-
 
 1;
