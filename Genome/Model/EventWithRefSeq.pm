@@ -3,8 +3,9 @@ package Genome::Model::EventWithRefSeq;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Genome::Model::Event; 
+use File::Temp;
 
 class Genome::Model::EventWithRefSeq {
     is => 'Genome::Model::Event',
@@ -40,10 +41,13 @@ sub mapmerge_filename {
 sub resolve_accumulated_alignments_filename {
     my $self = shift;
     
+    $DB::single = 1;
+
     my %p = @_;
     my $ref_seq_id = $p{ref_seq_id};
     my $library_name = $p{library_name};
-    
+    my $force_use_original_files = $p{force_use_original_files};
+
     my $model= Genome::Model->get($self->model_id);
     my @maplists;
     if ($ref_seq_id) {
@@ -51,6 +55,11 @@ sub resolve_accumulated_alignments_filename {
     } else {
         @maplists = $model->maplist_file_paths();
     }
+    unless (@maplists) {
+        $self->error_message("Failed to find maplists!");
+        return;
+    }
+
     if ($library_name) {
         my @orig_maplists = @maplists;
         @maplists = grep { /$library_name/ } @maplists;
@@ -76,28 +85,40 @@ sub resolve_accumulated_alignments_filename {
     }
     
     my $found=0;
-    if (-f $result_file && -s $result_file) {
-        #the file is already present on our blade/environment
-        $self->warning_message("Using mapmerge file left over from previous run: $result_file");
-        $found=1;
-    } elsif(my @host_outputs = $self->find_possible_hosts) {
+    unless ($force_use_original_files) {
+        # unless specifically requested, we'll try to "borrow" a copy of the file 
+        # from the current /tmp or from a previous step's temp file
+
         #someone may have the file already complete. we should just get it from them via secure copy
-        for my $host_output (@host_outputs) {
-            my $host=$host_output->value;
-            my $cmd = "scp $host:$result_file /tmp/";
-            $self->warning_message("Running cmd:$cmd");
-            my $rv=system($cmd);
-            if($rv != 0){
-                $self->warning_message("File not found(or something terrible happened) on $host-- cmd return value was '$rv'. Continuing.");
-                next;
+        my @host_outputs = ($self->find_possible_hosts);
+        for my $host ('localhost', map { $_->value } @host_outputs) {
+            if ($host eq 'localhost') {
+                unless (-f $result_file) {
+                    next;
+                }
+                $self->status_message("Found mapmerge file left over from previous run in /tmp on this host: $result_file");
+            }
+            else { 
+                my $cmd = "scp $host:$result_file /tmp/";
+                $self->status_message("Copying file from previous host: $cmd");
+                my $rv=system($cmd);
+                if($rv != 0){
+                    $self->status_message("File not found(or something terrible happened) on $host-- cmd return value was '$rv'. Continuing.");
+                    next;
+                }
+                $self->status_message("Found mapmerge file on found on $host: $result_file");
             }
             unless (-s $result_file) {
-                $self->warning_message("File $result_file from $host was empty.  Continuing.");
+                $self->error_message("File $result_file from $host was empty.  Continuing.");
                 unlink $result_file;
                 next;
             }
-            # TODO: test for a valid "gzip" file
-            $self->warning_message("File found on $host");
+            my @gzip_problems = `gzip -t $result_file 2>&1`;
+            if (@gzip_problems) {
+                $self->error_message("Error in gzip file $result_file!: @gzip_problems");
+                unlink $result_file;
+                next;
+            }
             $found=1;
             $self->cleanup_tmp_files(1);
             last;
@@ -106,9 +127,26 @@ sub resolve_accumulated_alignments_filename {
 
     if($found==0) {
         #no one has a file we want. we should make one and add a note that we have one.
-        $self->warning_message("Performing a complete mapmerge.  Hold on...");
-        my $cmd = Genome::Model::Tools::Maq::MapMerge->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
-        $cmd->execute();
+        $self->warning_message("Performing a complete mapmerge for $result_file using @inputs.  Hold on...");
+        
+        #my $cmd = Genome::Model::Tools::Maq::MapMerge->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
+        my ($fh,$maplist) = File::Temp::tempfile;
+        $fh->print(join("\n",@inputs),"\n");
+        $fh->close;
+        system "gt maq vmerge --maplist $maplist --pipe $result_file.pipe &";
+        my $start_time = time;
+        until (-p "$result_file.pipe" or ( (time - $start_time) > 100) )  {
+            $self->status_message("Waiting for pipe...");
+        }
+        unless (-p "$result_file.pipe") {
+            die "Failed to make pipe? $!";
+        }
+        $self->status_message("Streaming into file $result_file.");
+        system "cp $result_file.pipe $result_file";
+        unless (-s "$result_file") {
+            die "Failed to make map from pipe? $!";
+        }
+        
         $self->warning_message("mapmerge complete.  output filename is $result_file");
         my ($hostname) = $self->outputs(name => "Hostname");
         if ($hostname) {
