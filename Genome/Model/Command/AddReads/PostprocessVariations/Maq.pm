@@ -101,8 +101,10 @@ sub execute {
     my $self = shift;
     my $model = $self->model;
 
-    $DB::single=1;
+$DB::single=1;    
     $self->revert;
+$DB::single=1;
+print '';
 
     unless ($self->generate_variation_metrics_files) {        
         $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
@@ -294,158 +296,96 @@ sub _generate_genotype_detail_file {
     return 1;
 }
 
-sub chunk_variation_metrics {
-    my $self = shift;
-    my %p = (@_);
-    my $test_extension = $p{test_extension};
-    my $chunk_count = $p{chunk_count} || 20;
-    my $model = $self->model;
-
-    my $variation_metrics_file = $self->variation_metrics_file.$test_extension;
-    $self->status_message("Generating cross-library metrics for $variation_metrics_file");
-    if(1) {
-        
-        unless (
-            Genome::Model::Command::Report::MetricsBatchToLsf->execute
-            (
-                input => 'resolve '.$self->id,
-                snpfile => $self->snp_output_file,
-                qual_cutoff => 1,
-                output => $variation_metrics_file,
-                out_log_file => $self->snp_out_log_file,
-                chunk_count => $chunk_count
-                #error_log_file => $self->snp_err_log_file,
-                # OTHER PARAMS:
-                # flank_range => ??,
-                # variant_range => ??,
-                # format => ??,
-            )
-        ) {
-            $self->error_message("Failed to generate cross-library metrics for $variation_metrics_file");
-            return;            
-        }
-        unless (-s ($variation_metrics_file)) {
-            $self->error_message("Metrics file not found for library $variation_metrics_file!");
-            return;
-        }
-    }
-
-    my @libraries = $model->libraries;
-    
-	$self->status_message("\nGenerating (batch) per-library metric breakdown of $variation_metrics_file");
-	foreach my $library_name (@libraries) {
-        my $lib_variation_metrics_file = $self->variation_metrics_file . '.' . $library_name.$test_extension;
-        $self->status_message("...generating per-library (batch) metrics for $lib_variation_metrics_file");
-
-        unless (
-            Genome::Model::Command::Report::MetricsBatchToLsf->execute
-            (
-                input => 'resolve '.$self->id . " $library_name",
-                snpfile => $self->snp_output_file,
-                qual_cutoff => 1,
-                output => $lib_variation_metrics_file,
-                out_log_file => $self->snp_out_log_file,
-                chunk_count => $chunk_count,
-                #error_log_file => $self->snp_err_log_file,
-                # OTHER PARAMS:
-                # flank_range => ??,
-                # variant_range => ??,
-                # format => ??,
-            )            
-        ) {
-            $self->error_message("Failed to generate per-library metrics for $lib_variation_metrics_file");
-            return;
-        } 
-        unless (-s ($lib_variation_metrics_file)) {
-            $self->error_message("Per-library (batch) metrics file not found for $lib_variation_metrics_file!");
-            return;
-        }
-    }
-    return 1;
-
-}
-
 sub generate_variation_metrics_files {
     my $self = shift;
 
     my %p = @_;
     my $test_extension = $p{test_extension} || '';
 
-    #if($self->ref_seq_id =~ /^(8|10|1)$/)#horrible hack for now
-    #{
-    #    return $self->chunk_variation_metrics(@_);
-    #}
-    #elsif($self->ref_seq_id < 10)
-    #{
-    #   return $self->chunk_variation_metrics(@_,chunk_count => 3);
-    #}
-    #else
-    #{
-    #    return $self->chunk_variation_metrics(@_,chunk_count => 1);
-    #}
     my $model = $self->model;
+    my $ref_seq_id = $self->ref_seq_id;
 
+    my $snpfile = $self->snp_output_file;
     my $variation_metrics_file = $self->variation_metrics_file.$test_extension;
 
-    my @libraries = $model->libraries;
-    
-    $self->status_message("\n*** Generating per-library metric breakdown of $variation_metrics_file");
-    $self->status_message(join("\n",map { "'$_'" } @libraries));
-    foreach my $library_name (@libraries) {
-        my $lib_variation_metrics_file = $self->variation_metrics_file . '.' . $library_name.$test_extension;
-        $self->status_message("\n...generating per-library metrics for $lib_variation_metrics_file");
-        
-        my $chromosome_alignment_file = $self->resolve_accumulated_alignments_filename(
-            ref_seq_id => $self->ref_seq_id,
-            library_name => $library_name,
-        ); 
-        
-        unless (
-            $chromosome_alignment_file 
-            and -e $chromosome_alignment_file and 
-            (-p $chromosome_alignment_file or -s $chromosome_alignment_file)
-        ) {
-            $self->error_message(
-                "Failed to create an accumulated alignments file for"
-                . " library_name '$library_name' ref_seq_id " 
-                . $self->ref_seq_id    
-                . " per-library metrics for library $lib_variation_metrics_file"
-            );
-            return;
-        }
-        unless (
-            Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(
-                input => $chromosome_alignment_file,
-                snpfile => $self->snp_output_file,
-                qual_cutoff => 1,
-                output => $lib_variation_metrics_file
-            )
-        ) {
-            $self->error_message("Failed to (non-batch) generate per-library metrics for $lib_variation_metrics_file");
-            return;
-        } 
-        unless (-s ($lib_variation_metrics_file)) {
-            $self->error_message("Per-library metrics (non-batch) file not found or zero size for $lib_variation_metrics_file!");
-            return;
-        }
+    my $parallel_units;
+    if ($ref_seq_id == 1 or $ref_seq_id == 8 or $ref_seq_id == 10) {
+        $parallel_units = 20;
+    }
+    elsif ($ref_seq_id < 10) {
+        $parallel_units = 3;
+    }
+    else {
+        $parallel_units = 1
     }
 
-    $self->status_message("\n*** Generating cross-library metrics for $variation_metrics_file");
-    my $chromosome_alignment_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
-    unless (
-        Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(
-            input => $chromosome_alignment_file,
-            snpfile => $self->snp_output_file,
-            qual_cutoff => 1,
-            output => $variation_metrics_file
-        )
-    ) {
-        $self->error_message("Failed to generate cross-library metrics for $variation_metrics_file");
-        return;
-    }
-    unless (-s ($variation_metrics_file)) {
-        $self->error_message("Metrics file not found for library $variation_metrics_file!");
-        return;
+    my @libraries = $model->libraries;
+    $self->status_message("\n*** Generating per-library metric breakdown of $variation_metrics_file");
+    $self->status_message(join("\n",map { "'$_'" } @libraries));
+    foreach my $library_name (@libraries, '') {
+        my $variation_metrics_file = $self->variation_metrics_file;
+
+        my $chromosome_alignment_file;
+        if ($library_name) {
+            $variation_metrics_file .= '.' . $library_name.$test_extension;
+            $self->status_message("\n...generating per-library metrics for $variation_metrics_file");
+        }
+        else {
+            $self->status_message("\n*** Generating cross-library metrics for $variation_metrics_file");
+        }    
+    
+        my $tries = 0;
+        for (1) {
+            if ($library_name) {
+                $chromosome_alignment_file = $self->resolve_accumulated_alignments_filename(
+                    ref_seq_id => $self->ref_seq_id,
+                    library_name => $library_name,
+                );
+            }
+            else {
+                $chromosome_alignment_file = $self->resolve_accumulated_alignments_filename(
+                    ref_seq_id => $self->ref_seq_id,
+                );
+            }    
+            
+            unless (
+                $chromosome_alignment_file 
+                and -e $chromosome_alignment_file 
+                and (-p $chromosome_alignment_file or -s $chromosome_alignment_file)
+            ) {
+                $self->error_message(
+                    "Failed to create an accumulated alignments file for"
+                    . ($library_name ? " library_name '$library_name' " : '')
+                    . " ref_seq_id " . $self->ref_seq_id    
+                    . " to generate metrics file $variation_metrics_file"
+                );
+                if ($tries > 3) {
+                    return;
+                }
+                else {
+                    redo;
+                }
+            }
+        }
+        
+        my $result =
+            Genome::Model::Tools::Maq::GenerateVariationMetrics->execute(
+                input => $chromosome_alignment_file,
+                snpfile => $snpfile,
+                qual_cutoff => 1,
+                output => $variation_metrics_file,
+                parallel_units => $parallel_units,
+            );
+
+        unless ($result) {
+            $self->error_message("Failed to generate cross-library metrics for $variation_metrics_file");
+            return;
+        }
+
+        unless (-s ($variation_metrics_file)) {
+            $self->error_message("Metrics file not found for library $variation_metrics_file!");
+            return;
+        }
     }
 
     return 1;
@@ -605,46 +545,6 @@ sub snp_err_log_file {
         ($self->lsf_job_id || $self->ref_seq_id),
     );
 }
-
-
- 
-
-#sub unique_reads_at_position {
-#    my($self,$map_fh,$pos) = @_;
-#
-#    # fill in new data
-#    my $last_pos = $self->{'_last_map_pos'} || 0;
-#    while ($last_pos <= $pos) {
-#        my $line = $map_fh->getline();
-#        my @line = split("\t", $line);
-#
-#        my $start_pos = $line[2];
-#        $last_pos = $start_pos;
-#        my $end_pos = $start_pos + length($line[14]);
-#        next if ($end_pos < $pos);
-#
-#        if (! $self->{'_map_cache'}->{$start_pos} or
-#              $self->{'_map_cache'}->{$start_pos} < $end_pos) {
-#
-#            $self->{'_map_cache'}->{$start_pos} = $end_pos;
-#        }
-#
-#    }
-#    $self->{'_last_map_pos'} = $last_pos;
-#
-#    # remove any positions that have left the window
-#    foreach my $key ( keys %{$self->{'_map_cache'}} ) {
-#        next if ($self->{'_map_cache'}->{$key} >= $pos);
-#        delete($self->{'_map_cache'}->{$key});
-#    }
-#
-#    # Subtract 1 because we've read in one record past the position we asked for
-#    return scalar(keys(%{$self->{'_map_cache'}}))-1;
-#}
-
-
-
-
 
 1;
 
