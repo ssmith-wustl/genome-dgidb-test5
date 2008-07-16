@@ -971,14 +971,14 @@ sub hq_snp_numbers_name {
 sub gold_snp_file {
     my $self = shift;
 
-    return $self->data_directory . "/gold_snp.tsv";
+    return $self->_filtered_variants_dir . "/gold_snp.tsv";
 }
 
 sub hq_snp_file_for_chromosome {
     my $self = shift;
     my $chromosome = shift;
 
-    return $self->data_directory . "/hq_snp_$chromosome.tsv";
+    return $self->hq_snp_base_name . "_$chromosome.tsv";
 }
 
 # Segments the gold snp file into chromosomes
@@ -991,7 +991,11 @@ sub segment_HQ_snp_file {
         return undef;
     }
     
-    my $input_fh = IO::File->new(">$hq_snplist");
+    my $input_fh;
+    unless ($input_fh = IO::File->new("$hq_snplist")) {
+        $self->error_message("Could not open file $hq_snplist after determining it exists!");
+        return undef;
+    }
     my $output_fh = IO::File->new();
 
     my $last_chr = undef;
@@ -1015,7 +1019,7 @@ sub get_hq_snps_for_chrom {
     my $self = shift;
     my $chromosome = shift;
 
-    my $hq_snplist = $self->hq_snp_file_for_chromosome();
+    my $hq_snplist = $self->hq_snp_file_for_chromosome($chromosome);
 
     # If this file does not exist, must not have done the segment yet. Do it!
     unless (-e $hq_snplist) {
@@ -1026,7 +1030,7 @@ sub get_hq_snps_for_chrom {
         }
     }
     
-    my $input_fh = IO::File->new(">$hq_snplist");
+    my $input_fh = IO::File->new("$hq_snplist");
 
     my $hq_snp;
     ($hq_snp->{reference} = 0, $hq_snp->{variant} = 0, $hq_snp->{both} = 0, $hq_snp->{total} = 0);
