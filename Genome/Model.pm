@@ -998,7 +998,7 @@ sub segment_HQ_snp_file {
     }
     my $output_fh = IO::File->new();
 
-    my $last_chr = undef;
+    my $last_chr = '';
     while (my $line = $input_fh->getline) {
         my ($type,$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth) = split("\t", $line);
 
@@ -1046,7 +1046,21 @@ sub get_hq_snps_for_chrom {
     while (my $line = $input_fh->getline) {
         my ($type,$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth) = split("\t", $line);
 
+        # Do not consider hom snps, only het
+        unless($type =~ m/^het/) {
+            next;
+        }
+        
+        # Add to the total count if a het snp is found
         $hq_snp->{total}++;
+        
+        # Quality filter >= 15 and depth filter >=2 currently...
+        my $quality_filter = 15;
+        my $depth_filter = 2;
+        unless (($quality_score >= $quality_filter)&&($depth >= $depth_filter)) {
+            next;
+        } 
+        
         if ($type eq 'het') {
             $hq_snp->{both}++;
             $hq_snp->{reference}++;
