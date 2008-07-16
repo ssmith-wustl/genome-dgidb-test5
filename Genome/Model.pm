@@ -1012,6 +1012,15 @@ sub segment_HQ_snp_file {
 
         print $output_fh join("\t",($type,$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth));
     }
+
+    # if there is no chromosome y file yet (sequenced a female?) create an empty file
+    my $chrom_y_file = $self->hq_snp_file_for_chromosome("Y");
+    unless (-e $chrom_y_file) {
+        unless (system("touch $chrom_y_file") == 0) {
+            $self->error_message("Could not create empty file $chrom_y_file after determining it doesnt exist!");
+            return undef;
+        }
+    }
 }
 
 # Gets the hq num stats for a single chromosome file
