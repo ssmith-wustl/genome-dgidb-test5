@@ -118,6 +118,7 @@ sub resolve_accumulated_alignments_filename {
             $self->add_output(name=>"Hostname" , value=>$ENV{HOSTNAME});
         }
     }
+    chmod 00664, $result_file;
     return $result_file;
 }
 
