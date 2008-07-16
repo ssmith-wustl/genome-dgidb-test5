@@ -150,6 +150,22 @@ sub cleanup_all_mapmerges {
         }
     }
 }
+sub cleanup_the_mapmerge_I_specify {
+    my $self=shift;
+    my $output=shift;
+    my $host = $output->value;
+    
+    my $cmd = "ssh $host 'rm /tmp/mapmerge_" . $self->model_id . "*";
+    $self->warning_message("Running $cmd");
+    my $rv = system($cmd);
+    if($rv && $rv!=0) {
+        $self->warning_message("nonzero exit code $rv from $cmd");
+    }
+    else{
+        $self->warning_message("Removed file from $host.");
+    }
+}
+
 1;
 
 
