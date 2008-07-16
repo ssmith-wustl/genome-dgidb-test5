@@ -99,6 +99,11 @@ sub revert {
     my $self = shift;
     my @metrics = $self->metrics;
     my @outputs = $self->outputs;
+    for my $output (@outputs) {
+            if ($output->name eq 'Hostname') {
+                $self->cleanup_the_mapmerge_I_specify($output);
+            }
+    }
     for my $obj (@metrics,@outputs) {
         $self->warning_message("Deleting " . $obj->id);
         $obj->delete;
