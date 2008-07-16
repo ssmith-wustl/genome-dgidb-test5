@@ -20,7 +20,7 @@ UR::Object::Type->define(
         input => { is => 'String', 
             doc => 'Reference fasta file to apply diff too' 
         },
-        diff => { is => 'string', 
+        diff => { is => 'String', 
             doc => 'file containing diffs to apply to fasta.'  
         },
         ],
@@ -28,10 +28,10 @@ UR::Object::Type->define(
         output => { is => 'String', 
             doc => 'Output file containing input fasta file with appropriate diffs applied', is_optional => 1 
         },
-        diff_flank_file => { is => 'string', 
+        diff_flank_file => { is => 'String', 
             doc => 'Output file containing flanking sequence of diff positions with the diff applied' 
         },
-        ref_flank_file => { is => 'string', 
+        ref_flank_file => { is => 'String', 
             doc => 'Output file containing flanking sequence of diff positions original ref sequence' 
         },
         flank_size => { is => 'Int', 
