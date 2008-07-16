@@ -199,7 +199,44 @@ sub execute {
         return;
     }
 
+    unless ($self->generate_metrics) {
+        $self->error_message("Error generating metrics.");
+        return;
+    }
+
     return $self->verify_succesful_completion;
+}
+
+sub generate_metrics {
+    my $self = shift;
+
+    #my @m = $self->metrics;
+    #for (@m) { $_->delete };
+
+    my $snp_output_file = $self->snip_output_file;
+    my $snp_fh = IO::File->new($snp_output_file);
+    my $snp_count = 0;
+    my $snp_count_filtered = 0;
+    while (my $row = $snp_fh->getline) {
+        $snp_count++;
+        my ($r,$p,$a1,$a2,$q,$c) = split(/\s+/,$row);
+        $snp_count_filtered++ if $q >= 15 and $c > 2;
+        
+    }
+    $self->add_metric(name => 'total_snp_count', value => $snp_count);
+    $self->add_metric(name => 'confident_snp_count', value => $snp_count_filtered);
+
+    my $indel_output_file = $self->indel_output_file;
+    my $indel_fh = IO::File->new($indel_output_file);
+    my $indel_count = 0;
+    while (my $row = $indel_fh->getline) {
+        $indel_count++;
+        
+    }
+    $self->add_metric(name => 'total indel count', value => $indel_count);
+    print "$self->{ref_seq_id}\t$snp_count\t$snp_count_filtered\t$indel_count\n";
+
+    return 1;
 }
 
 sub verify_succesful_completion {
