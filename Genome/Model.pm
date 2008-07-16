@@ -921,7 +921,7 @@ sub _resolve_type_name_for_subclass_name {
 sub hq_snp_base_name {
     my $self = shift;
 
-    return $self->data_directory . "/hq_snp";
+    return $self->_filtered_variants_dir . "/hq_snp";
 }
 
 # Returns the name of the snplist file
@@ -972,6 +972,82 @@ sub gold_snp_file {
     my $self = shift;
 
     return $self->data_directory . "/gold_snp.tsv";
+}
+
+sub hq_snp_file_for_chromosome {
+    my $self = shift;
+    my $chromosome = shift;
+
+    return $self->data_directory . "/hq_snp_$chromosome.tsv";
+}
+
+# Segments the gold snp file into chromosomes
+sub segment_HQ_snp_file {
+    my $self = shift;
+
+    my $hq_snplist = $self->hq_snp_snplist_name();
+    unless (-e $hq_snplist) {
+        $self->error_message("HQ snplist file $hq_snplist doesnt exist!");
+        return undef;
+    }
+    
+    my $input_fh = IO::File->new(">$hq_snplist");
+    my $output_fh = IO::File->new();
+
+    my $last_chr = undef;
+    while (my $line = $input_fh->getline) {
+        my ($type,$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth) = split("\t", $line);
+
+        # if we hit a new chromosome, close the old and open a new outfile
+        if ($chr ne $last_chr) {
+            $last_chr = $chr;
+            $output_fh->close();
+            my $filename = $self->hq_snp_file_for_chromosome($chr);
+            $output_fh = IO::File->new(">$filename");
+        } 
+
+        print $output_fh join("\t",($type,$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth));
+    }
+}
+
+# Gets the hq num stats for a single chromosome file
+sub get_hq_snps_for_chrom {
+    my $self = shift;
+    my $chromosome = shift;
+
+    my $hq_snplist = $self->hq_snp_file_for_chromosome();
+
+    # If this file does not exist, must not have done the segment yet. Do it!
+    unless (-e $hq_snplist) {
+        $self->segment_HQ_snp_file();
+        unless (-e $hq_snplist) {
+            $self->error_message("HQ snplist file $hq_snplist still doesnt exist after attempting to create!");
+            return undef;
+        }
+    }
+    
+    my $input_fh = IO::File->new(">$hq_snplist");
+
+    my $hq_snp;
+    ($hq_snp->{reference} = 0, $hq_snp->{variant} = 0, $hq_snp->{both} = 0, $hq_snp->{total} = 0);
+    while (my $line = $input_fh->getline) {
+        my ($type,$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth) = split("\t", $line);
+
+        $hq_snp->{total}++;
+        if ($type eq 'het') {
+            $hq_snp->{both}++;
+            $hq_snp->{reference}++;
+            $hq_snp->{variant}++;
+        }
+        elsif ($type eq 'hetref') {
+            $hq_snp->{reference}++;
+        }
+        elsif ($type eq 'hetvar') {
+            $hq_snp->{variant}++;
+        }
+    }
+
+    return $hq_snp;
 }
 
 # Compare files and output where they agree on chromosome, position, and alleles into a 3rd file
