@@ -92,7 +92,6 @@ sub setup_test_data {
                                                  full_path                  => $run_dir,
                                                  flow_cell_id               => $$run_dir_params{'flow_cell_id'},
                                                  sample_name                => $sample_name,
-                                                 clusters                   => -1,
                                                  clusters_avg               => -1,
                                                  clusters_stdev             => -1,
                                                  filt_aligned_clusters_pct  => -1,
@@ -111,7 +110,9 @@ sub setup_test_data {
                                                  kilobases_read             => -1,
                                                  phasing_pct                => -1,
                                                  prephasing_pct             => -1,
-                                                 read_length                => -1,
+                                                 #these need to be valid for metric generation
+                                                 clusters                   => 5000000,
+                                                 read_length                => 32, 
                                                  #seq_id                     => -1,
                                                  sral_id                    => -1,
                                                  library_name => 'TESTINGLIBRARY',

@@ -70,11 +70,14 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
         },
         unique_reads_across_library     => { via => 'read_set' },
         duplicate_reads_across_library  => { via => 'read_set' },
-        total_read_count                => { via => 'read_set', to => 'clusters'},
         _calculate_total_read_count     => {
                                             doc => "an accessor to return the number of reads",
-                                            calculate_from => ['total_read_count'],
-                                            calculate => q| return $total_read_count |,
+                                            calculate_from => ['read_set'],
+                                            calculate => q| if ($read_set->clusters <= 0) {
+                                                                die('Impossible value for clusters field. seq_id:'. $read_set->seq_id);
+                                                            }
+                                                            return $read_set->clusters;
+                                                          |,
                                         },
         _alignment_file_paths_unsubmapped => {
             doc => "the paths to to the map files before submapping (not always available)",
@@ -95,7 +98,7 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
                                 is_deprecated => 1,
         },
 
-        # make accessors for common metrics
+        #make accessors for common metrics
         (
             map {
                 $_ => { via => 'metrics', to => 'value', where => [name => $_], is_mutable => 1 },
@@ -133,6 +136,7 @@ sub metrics_for_class {
     my $class = shift;
 
     my @metric_names = qw(
+                          total_read_count
                           total_reads_passed_quality_filter_count
                           total_bases_passed_quality_filter_count
                           poorly_aligned_read_count
