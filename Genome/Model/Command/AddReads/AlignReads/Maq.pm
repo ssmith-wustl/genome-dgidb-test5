@@ -70,6 +70,15 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
         },
         unique_reads_across_library     => { via => 'read_set' },
         duplicate_reads_across_library  => { via => 'read_set' },
+        read_length                     => {
+                                            doc => "an accessor to return the read_length",
+                                            calculate_from => ['read_set'],
+                                            calculate => q| if ($read_set->read_length <= 0) {
+                                                                die('Impossible value for read_length field. seq_id:'. $read_set->seq_id);
+                                                            }
+                                                            return $read_set->read_length;
+                                                          |,
+                                        },
         _calculate_total_read_count     => {
                                             doc => "an accessor to return the number of reads",
                                             calculate_from => ['read_set'],
@@ -192,7 +201,7 @@ sub total_bases_passed_quality_filter_count {
 sub _calculate_total_bases_passed_quality_filter_count {
     my $self = shift;
 
-    my $total_bases_passed_quality_filter_count = $self->total_reads_passed_quality_filter_count * $self->read_set->read_length;
+    my $total_bases_passed_quality_filter_count = $self->total_reads_passed_quality_filter_count * $self->read_length;
     return $total_bases_passed_quality_filter_count;
 }
 
@@ -268,7 +277,7 @@ sub aligned_base_pair_count {
 sub _calculate_aligned_base_pair_count {
     my $self = shift;
 
-    my $aligned_base_pair_count = $self->aligned_read_count * $self->read_set->read_length;
+    my $aligned_base_pair_count = $self->aligned_read_count * $self->read_length;
     return $aligned_base_pair_count;
 }
 sub unaligned_read_count {
@@ -289,7 +298,7 @@ sub unaligned_base_pair_count {
 
 sub _calculate_unaligned_base_pair_count {
     my $self = shift;
-    my $unaligned_base_pair_count = $self->unaligned_read_count * $self->read_set->read_length;
+    my $unaligned_base_pair_count = $self->unaligned_read_count * $self->read_length;
     return $unaligned_base_pair_count;
 }
 
@@ -301,7 +310,7 @@ sub total_base_pair_count {
 sub _calculate_total_base_pair_count {
     my $self = shift;
 
-    my $total_base_pair_count = $self->total_read_count * $self->read_set->read_length;
+    my $total_base_pair_count = $self->total_read_count * $self->read_length;
     return $total_base_pair_count;
 }
 
