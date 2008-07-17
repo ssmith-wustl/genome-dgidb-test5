@@ -925,6 +925,7 @@ sub hq_snp_base_name {
 }
 
 # Returns the name of the snplist file
+# The hq_snp_snplist file is the list of snps where the gold list agreed with the snp files
 sub hq_snp_snplist_name {
     my $self = shift;
 
@@ -973,7 +974,15 @@ sub gold_snp_file {
 
     return $self->_filtered_variants_dir . "/gold_snp.tsv";
 }
+# Returns the name of the gold snp file for a single chromosome 
+sub gold_snp_file_for_chromosome {
+    my $self = shift;
+    my $chromosome = shift;
 
+    return $self->_filtered_variants_dir . "/gold_snp_$chromosome.tsv";
+}
+
+# Returns the name of the hq snp file for a single chromosome
 sub hq_snp_file_for_chromosome {
     my $self = shift;
     my $chromosome = shift;
@@ -982,7 +991,52 @@ sub hq_snp_file_for_chromosome {
 }
 
 # Segments the gold snp file into chromosomes
-sub segment_HQ_snp_file {
+# TODO: merge this and segment_hq_snp_file somehow that doesnt suck
+sub segment_gold_snp_file {
+    my $self = shift;
+
+    my $gold_snplist = $self->gold_snp_file();
+    unless (-e $gold_snplist) {
+        $self->error_message("Gold snplist file $gold_snplist doesnt exist!");
+        return undef;
+    }
+    
+    my $input_fh;
+    unless ($input_fh = IO::File->new("$gold_snplist")) {
+        $self->error_message("Could not open file $gold_snplist after determining it exists!");
+        return undef;
+    }
+    my $output_fh = IO::File->new();
+
+    my $last_chr = '';
+    while (my $line = $input_fh->getline) {
+        my ($chr,$pos_start, $pos_end, $allele_1, $allele_2, $allele_1_type_1,$allele_2_type_1,$allele_1_type_2,$allele_2_type_2) = split("\t", $line);
+
+        # if we hit a new chromosome, close the old and open a new outfile
+        if ($chr ne $last_chr) {
+            $last_chr = $chr;
+            $output_fh->close();
+            my $filename = $self->gold_snp_file_for_chromosome($chr);
+            $output_fh = IO::File->new(">$filename");
+        } 
+
+        print $output_fh $line;
+    }
+
+    # if there is no chromosome y file yet (sequenced a female?) create an empty file
+    my $chrom_y_file = $self->gold_snp_file_for_chromosome("Y");
+    unless (-e $chrom_y_file) {
+        unless (system("touch $chrom_y_file") == 0) {
+            $self->error_message("Could not create empty file $chrom_y_file after determining it doesnt exist!");
+            return undef;
+        }
+    }
+}
+
+
+# Segments the HQ snp file into chromosomes
+# TODO: merge this and segment_gold_snp_file somehow that doesnt suck
+sub segment_hq_snp_file {
     my $self = shift;
 
     my $hq_snplist = $self->hq_snp_snplist_name();
@@ -1010,7 +1064,7 @@ sub segment_HQ_snp_file {
             $output_fh = IO::File->new(">$filename");
         } 
 
-        print $output_fh join("\t",($type,$chr,$pos, $cns_sequence,$var_sequence, $quality_score,$depth));
+        print $output_fh $line;
     }
 
     # if there is no chromosome y file yet (sequenced a female?) create an empty file
@@ -1023,6 +1077,39 @@ sub segment_HQ_snp_file {
     }
 }
 
+# Gets the gold num stats for a single chromosome file
+sub get_gold_snps_for_chrom {
+    my $self = shift;
+    my $chromosome = shift;
+
+    my $gold_snplist = $self->gold_snp_file_for_chromosome($chromosome);
+
+    # If this file does not exist, must not have done the segment yet. Do it!
+    unless (-e $gold_snplist) {
+        $self->segment_gold_snp_file();
+        unless (-e $gold_snplist) {
+            $self->error_message("gold snplist file $gold_snplist still doesnt exist after attempting to create!");
+            return undef;
+        }
+    }
+    
+    my $input_fh = IO::File->new("$gold_snplist");
+
+    # The hq snp count metric is the total count of all het snps from the gold snp list...
+    # So this is not a misnomer from that perspective
+    my $hq_snp_count = 0;
+    while (my $line = $input_fh->getline) {
+        my ($chr,$pos_start, $pos_end, $allele_1, $allele_2, $allele_1_type_1,$allele_2_type_1,$allele_1_type_2,$allele_2_type_2) = split("\t", $line);
+
+        # if it is a het snp, it is added to this count
+        if ($allele_1 ne $allele_2) {
+            $hq_snp_count++;
+        }
+    }
+
+    return $hq_snp_count;
+}
+
 # Gets the hq num stats for a single chromosome file
 sub get_hq_snps_for_chrom {
     my $self = shift;
@@ -1032,7 +1119,7 @@ sub get_hq_snps_for_chrom {
 
     # If this file does not exist, must not have done the segment yet. Do it!
     unless (-e $hq_snplist) {
-        $self->segment_HQ_snp_file();
+        $self->segment_hq_snp_file();
         unless (-e $hq_snplist) {
             $self->error_message("HQ snplist file $hq_snplist still doesnt exist after attempting to create!");
             return undef;
@@ -1050,9 +1137,6 @@ sub get_hq_snps_for_chrom {
         unless($type =~ m/^het/) {
             next;
         }
-        
-        # Add to the total count if a het snp is found
-        $hq_snp->{total}++;
         
         # Quality filter >= 15 and depth filter >=2 currently...
         my $quality_filter = 15;
@@ -1073,6 +1157,11 @@ sub get_hq_snps_for_chrom {
             $hq_snp->{variant}++;
         }
     }
+
+    # call this sub since the snp count metric relies on a totally different file
+    # It is based on the gold snp list het snp count, whereas the other 3 above
+    # metrics depend on the hq snp data
+    $hq_snp->{total} = $self->get_gold_snps_for_chrom($chromosome);
 
     return $hq_snp;
 }
