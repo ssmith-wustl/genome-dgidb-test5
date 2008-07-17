@@ -131,6 +131,7 @@ sub _do
     my @show;
     my $cnt = '0 but true';
     unless ($self->format eq 'none') {
+        no warnings; # lots of undefs as strings below
         # TODO: replace this with views, and handle terminal output as one type     
         if ($self->format eq 'text') {
             my $h = IO::File->new("| tab2col --nocount");
