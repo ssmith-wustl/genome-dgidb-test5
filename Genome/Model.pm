@@ -22,6 +22,7 @@ class Genome::Model {
     ],
     has => [
         processing_profile           => { is => 'Genome::ProcessingProfile::ShortRead', id_by => 'processing_profile_id' },
+        # TODO: Make processing profile generic and move all shortread specific properties down to G::M::ShortRead
         #processing_profile           => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name      => { via => 'processing_profile', to => 'name'},
         sequencing_platform          => { via => 'processing_profile'},
@@ -40,7 +41,7 @@ class Genome::Model {
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
         reference_sequence_name      => { via => 'processing_profile'},
-	    sample_name                  => { is => 'VARCHAR2', len => 255 },
+        sample_name                  => { is => 'VARCHAR2', len => 255 },
         events                       => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => 'model', 
                                           doc => 'all events which have occurred for this model',
                                         },
@@ -541,7 +542,7 @@ sub lock_directory {
 sub reference_sequence_path {
     my $self = shift;
     my $path = sprintf('%s/reference_sequences/%s', $self->base_parent_directory,
-						$self->reference_sequence_name);
+                        $self->reference_sequence_name);
 
     my $dna_type = $self->dna_type;
     $dna_type =~ tr/ /_/;
@@ -900,10 +901,10 @@ sub _resolve_subclass_name {
 sub _resolve_subclass_name_for_type_name {
     my ($class,$type_name) = @_;
     my @type_parts = split(' ',$type_name);
-	
+    
     my @sub_parts = map { ucfirst } @type_parts;
     my $subclass = join('',@sub_parts);
-	
+    
     my $class_name = join('::', 'Genome::Model' , $subclass);
     return $class_name;
 }
@@ -1633,68 +1634,65 @@ sub find_hq_snps {
 sub GetResults {
     my $self = shift;
     
-	my ($summary_file) = @_;
-	my $filename = basename($summary_file);
+    my ($summary_file) = @_;
+    my $filename = basename($summary_file);
 
-	open(SUMMARY,$summary_file) || die "Unable to open summary file: $summary_file $$";
-	my %result_best_fit;
-	my %new_best_fit;
-	my $total;
-	while(<SUMMARY>) {
-		chomp;
-		my ($qkey, $het_location, $het_match, $het_mismatch,
-				$hom_location, $hom_match, $hom_mismatch, $all,
-				$het_ref_match, $het_var_match) = split("\t");
+    open(SUMMARY,$summary_file) || die "Unable to open summary file: $summary_file $$";
+    my %result_best_fit;
+    my %new_best_fit;
+    my $total;
+    while(<SUMMARY>) {
+        chomp;
+        my ($qkey, $het_location, $het_match, $het_mismatch,
+                $hom_location, $hom_match, $hom_mismatch, $all,
+                $het_ref_match, $het_var_match) = split("\t");
         $qkey = $qkey || '';
-		if ($qkey eq 'Total') {
-			$total = $het_location;
-			$total ||= '';
-			if (!defined($total) || $total eq '') {
-				return (\%new_best_fit);
-			}
-		} elsif ($qkey =~ /^\d+$/x) {
-#			print "$_\n";
-			$result_best_fit{$qkey}{location} = $het_location;
-			$result_best_fit{$qkey}{match} = $het_match;
-			$result_best_fit{$qkey}{ref_match} = $het_ref_match;
-			$result_best_fit{$qkey}{var_match} = $het_var_match;
-			$result_best_fit{$qkey}{mismatch} = $het_mismatch;
-			$result_best_fit{$qkey}{location_hom} = $hom_location;
-			$result_best_fit{$qkey}{match_hom} = $hom_match;
-			$result_best_fit{$qkey}{mismatch_hom} = $hom_mismatch;
-		} else {
-#			print "$_\n";
-		}
-	}
-	close(SUMMARY);
-	$new_best_fit{total} = $total || 0;
-	$new_best_fit{q0_location} = $result_best_fit{0}{location} || 0;
-	$new_best_fit{q0_match} = $result_best_fit{0}{match} || 0;
-	$new_best_fit{q0_ref_match} = $result_best_fit{0}{ref_match} || 0;
-	$new_best_fit{q0_var_match} = $result_best_fit{0}{var_match} || 0;
-	$new_best_fit{q0_mismatch} = $result_best_fit{0}{mismatch} || 0;
-	$new_best_fit{q0_location_hom} = $result_best_fit{0}{location_hom} || 0;
-	$new_best_fit{q0_match_hom} = $result_best_fit{0}{match_hom} || 0;
-	$new_best_fit{q0_mismatch_hom} = $result_best_fit{0}{mismatch_hom} || 0;
+        if ($qkey eq 'Total') {
+            $total = $het_location;
+            $total ||= '';
+            if (!defined($total) || $total eq '') {
+                return (\%new_best_fit);
+            }
+        } elsif ($qkey =~ /^\d+$/x) {
+            $result_best_fit{$qkey}{location} = $het_location;
+            $result_best_fit{$qkey}{match} = $het_match;
+            $result_best_fit{$qkey}{ref_match} = $het_ref_match;
+            $result_best_fit{$qkey}{var_match} = $het_var_match;
+            $result_best_fit{$qkey}{mismatch} = $het_mismatch;
+            $result_best_fit{$qkey}{location_hom} = $hom_location;
+            $result_best_fit{$qkey}{match_hom} = $hom_match;
+            $result_best_fit{$qkey}{mismatch_hom} = $hom_mismatch;
+        }
+    }
+    close(SUMMARY);
+    $new_best_fit{total} = $total || 0;
+    $new_best_fit{q0_location} = $result_best_fit{0}{location} || 0;
+    $new_best_fit{q0_match} = $result_best_fit{0}{match} || 0;
+    $new_best_fit{q0_ref_match} = $result_best_fit{0}{ref_match} || 0;
+    $new_best_fit{q0_var_match} = $result_best_fit{0}{var_match} || 0;
+    $new_best_fit{q0_mismatch} = $result_best_fit{0}{mismatch} || 0;
+    $new_best_fit{q0_location_hom} = $result_best_fit{0}{location_hom} || 0;
+    $new_best_fit{q0_match_hom} = $result_best_fit{0}{match_hom} || 0;
+    $new_best_fit{q0_mismatch_hom} = $result_best_fit{0}{mismatch_hom} || 0;
 
-	$new_best_fit{q15_location} = $result_best_fit{15}{location} || 0;
-	$new_best_fit{q15_match} = $result_best_fit{15}{match} || 0;
-	$new_best_fit{q15_ref_match} = $result_best_fit{15}{ref_match} || 0;
-	$new_best_fit{q15_var_match} = $result_best_fit{15}{var_match} || 0;
-	$new_best_fit{q15_mismatch} = $result_best_fit{15}{mismatch} || 0;
-	$new_best_fit{q15_location_hom} = $result_best_fit{15}{location_hom} || 0;
-	$new_best_fit{q15_match_hom} = $result_best_fit{15}{match_hom} || 0;
-	$new_best_fit{q15_mismatch_hom} = $result_best_fit{15}{mismatch_hom} || 0;
+    $new_best_fit{q15_location} = $result_best_fit{15}{location} || 0;
+    $new_best_fit{q15_match} = $result_best_fit{15}{match} || 0;
+    $new_best_fit{q15_ref_match} = $result_best_fit{15}{ref_match} || 0;
+    $new_best_fit{q15_var_match} = $result_best_fit{15}{var_match} || 0;
+    $new_best_fit{q15_mismatch} = $result_best_fit{15}{mismatch} || 0;
+    $new_best_fit{q15_location_hom} = $result_best_fit{15}{location_hom} || 0;
+    $new_best_fit{q15_match_hom} = $result_best_fit{15}{match_hom} || 0;
+    $new_best_fit{q15_mismatch_hom} = $result_best_fit{15}{mismatch_hom} || 0;
 
-	$new_best_fit{q30_location} = $result_best_fit{30}{location} || 0;
-	$new_best_fit{q30_match} = $result_best_fit{30}{match} || 0;
-	$new_best_fit{q30_ref_match} = $result_best_fit{30}{ref_match} || 0;
-	$new_best_fit{q30_var_match} = $result_best_fit{30}{var_match} || 0;
-	$new_best_fit{q30_mismatch} = $result_best_fit{30}{mismatch} || 0;
-	$new_best_fit{q30_location_hom} = $result_best_fit{30}{location_hom} || 0;
-	$new_best_fit{q30_match_hom} = $result_best_fit{30}{match_hom} || 0;
-	$new_best_fit{q30_mismatch_hom} = $result_best_fit{30}{mismatch_hom} || 0;
-	return (\%new_best_fit);
+    $new_best_fit{q30_location} = $result_best_fit{30}{location} || 0;
+    $new_best_fit{q30_match} = $result_best_fit{30}{match} || 0;
+    $new_best_fit{q30_ref_match} = $result_best_fit{30}{ref_match} || 0;
+    $new_best_fit{q30_var_match} = $result_best_fit{30}{var_match} || 0;
+    $new_best_fit{q30_mismatch} = $result_best_fit{30}{mismatch} || 0;
+    $new_best_fit{q30_location_hom} = $result_best_fit{30}{location_hom} || 0;
+    $new_best_fit{q30_match_hom} = $result_best_fit{30}{match_hom} || 0;
+    $new_best_fit{q30_mismatch_hom} = $result_best_fit{30}{mismatch_hom} || 0;
+    return (\%new_best_fit);
 }
 
 
