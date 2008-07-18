@@ -310,7 +310,7 @@ sub generate_variation_metrics_files {
 
     my $parallel_units;
     if ($ref_seq_id == 1 or $ref_seq_id == 8 or $ref_seq_id == 10) {
-        $parallel_units = 1;
+        $parallel_units = 2;
     }
     elsif ($ref_seq_id < 10) {
         $parallel_units = 1;
@@ -320,9 +320,10 @@ sub generate_variation_metrics_files {
     }
 
     my @libraries = $model->libraries;
-    $self->status_message("\n*** Generating per-library metric breakdown of $variation_metrics_file");
+#    $self->status_message("\n*** Generating per-library metric breakdown of $variation_metrics_file");
     $self->status_message(join("\n",map { "'$_'" } @libraries));
-    foreach my $library_name (@libraries, '') {
+#    foreach my $library_name (@libraries, '') {
+    foreach my $library_name ('') {    
         my $variation_metrics_file = $self->variation_metrics_file;
 
         my $chromosome_alignment_file;
@@ -331,6 +332,7 @@ sub generate_variation_metrics_files {
             $self->status_message("\n...generating per-library metrics for $variation_metrics_file");
         }
         else {
+            $variation_metrics_file .= $test_extension;
             $self->status_message("\n*** Generating cross-library metrics for $variation_metrics_file");
         }    
     
