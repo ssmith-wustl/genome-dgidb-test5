@@ -310,7 +310,7 @@ sub generate_variation_metrics_files {
 
     my $parallel_units;
     if ($ref_seq_id == 1 or $ref_seq_id == 8 or $ref_seq_id == 10) {
-        $parallel_units = 2;
+        $parallel_units = 1;
     }
     elsif ($ref_seq_id < 10) {
         $parallel_units = 1;
@@ -321,7 +321,7 @@ sub generate_variation_metrics_files {
 
     my @libraries = $model->libraries;
 #    $self->status_message("\n*** Generating per-library metric breakdown of $variation_metrics_file");
-    $self->status_message(join("\n",map { "'$_'" } @libraries));
+#    $self->status_message(join("\n",map { "'$_'" } @libraries));
 #    foreach my $library_name (@libraries, '') {
     foreach my $library_name ('') {    
         my $variation_metrics_file = $self->variation_metrics_file;
