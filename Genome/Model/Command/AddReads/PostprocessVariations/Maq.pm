@@ -310,13 +310,13 @@ sub generate_variation_metrics_files {
 
     my $parallel_units;
     if ($ref_seq_id == 1 or $ref_seq_id == 8 or $ref_seq_id == 10) {
-        $parallel_units = 20;
+        $parallel_units = 1;
     }
     elsif ($ref_seq_id < 10) {
-        $parallel_units = 3;
+        $parallel_units = 1;
     }
     else {
-        $parallel_units = 1
+        $parallel_units = 1;
     }
 
     my @libraries = $model->libraries;
