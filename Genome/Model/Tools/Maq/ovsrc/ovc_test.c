@@ -5,6 +5,8 @@
 #include "maqmap.h"
 #include "dedup.h"
 #include "bfa.h"
+#include "stack.h"
+#include <glib.h>
 
 int g_last_rseqid;
 int g_last_vseqid;
@@ -15,8 +17,9 @@ maqmap1_t *g_m1;
 void * next_r(void * r_stream) 
 {
     ov_stream_t *stream = (ov_stream_t*)r_stream;
-    maqmap1_t *m1 =NULL;
-    if(!g_m1) m1=malloc(sizeof(maqmap1_t));
+    static maqmap1_t junk;
+    maqmap1_t *m1 =&junk;
+    //if(!g_m1) m1=malloc(sizeof(maqmap1_t));
     if(!m1&&!g_m1) {fprintf(stderr,"Couldn't allocate m1 record\n");return NULL;}    
     gzFile *fp = (gzFile *)(stream->stream_data);
     int size=sizeof(maqmap1_t);
@@ -28,7 +31,7 @@ void * next_r(void * r_stream)
         {
             //printf("size is only %d, seqid is %d\n",size,m1->seqid);
             //dealing with a truncated file
-            free(m1);
+            //free(m1);
             return NULL;
         }
         
@@ -42,11 +45,11 @@ void * next_r(void * r_stream)
             g_m1 = NULL;            
         
         if(m1->map_qual<g_qual_cutoff) m1->pos=0;//hacky, but should avoid the situation where crap reads are clogging up the queue       
-        return (void*)m1;
+        return (void*)m1;//printf("Returning %s\n",m1->name);
     }
     else
     {
-        free(m1);
+        //free(m1);
         return NULL;
     }
 }
@@ -517,8 +520,9 @@ int get_urc27(map_array *reads, long position)
     return current_pos;
 }
 
-void callback_def (void *variation, GQueue * reads)
+void callback_def (void *variation, s_stack * reads)
 {
+    double junk[100];
     int rc[4];//acgt
     int urc[4];//acgt
     int q[4];//acgt
@@ -536,35 +540,29 @@ void callback_def (void *variation, GQueue * reads)
     
     
     get_variant_bases(var_overlap->var2,vbase,&vcount);
-    //if(g_queue_is_empty(reads)) return;
-    GList *item = g_queue_peek_head_link(reads);
-    if(g_queue_is_empty(reads)) item = NULL;
-    mreads->count = g_queue_get_length(reads);
-    check_size(mreads);
-    
-    int current_pos = mreads->count-1;
-    if (!g_queue_is_empty(reads)) 
-        do
+    mreads->count = s_length(reads);
+    int stack_size = s_length(reads);
+    check_size(mreads);    
+    int current_pos = 0;
+    int i = 0;//printf("Reads lengths are %d\n",s_length(reads));
+    if ( s_length(reads)) 
+        for(i=0;i<stack_size;i++)
         {
-            maqmap1_t *read = (maqmap1_t *)(item->data);
+    
+            maqmap1_t *read = (maqmap1_t *)s_peek_nth(reads,i);
             mreads->reads[current_pos] = read;            
-            if(read->map_qual>=g_qual_cutoff)current_pos--;            
-        }while(item = g_list_next(item));
-    current_pos++;
-    int i = 0;
-    if(current_pos>0) 
-        for(i=0;i<(mreads->count)-current_pos;i++)
-        { 
-            mreads->reads[i] = mreads->reads[i+current_pos]; 
+            if(read->map_qual>=g_qual_cutoff)current_pos++;            
         }
-    mreads->count-=current_pos;
+    
+    mreads->count=current_pos;
     //check for the case where the last record doesn't overlap
-    while(mreads->count>0&&((mreads->reads[mreads->count-1]->pos>>1)>var_overlap->end)) 
+    
+    while(mreads->count>0&&(((mreads->reads[mreads->count-1]->pos)>>1)>var_overlap->end)) 
     {    
         mreads->count--;
     }
     
-    
+    //fprintf(stdout, "%s\n",var_overlap->line); return;
     get_matching_reads(mreads, match_reads,var_overlap->begin, 20, 0);//A allele
     rc[0] = match_reads->count;
     get_quality_stats(match_reads, var_overlap->begin,&q[0],&mq[0]);
@@ -683,7 +681,7 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,c
             r_stream,  
             callback_def  
         );
-        //fprintf(stderr,"After fire callback\n");
+        fprintf(stderr,"After fire callback\n");
         
     } while(advance_seqid(r_stream,v_stream));
     if(stdout != stdoutsave) fclose(stdout);

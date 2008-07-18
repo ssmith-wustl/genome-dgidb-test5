@@ -1,7 +1,7 @@
 #ifndef OV_H
 #define OV_H
-#include <glib.h>
-typedef void (*ov_callback_t)(void *variation, GQueue * reads);
+#include "stack.h"
+typedef void (*ov_callback_t)(void *variation, s_stack * reads);
 typedef void *(*ov_next_func)(void *stream);
 typedef unsigned int (*ov_begin_func)(void *item);
 typedef unsigned int (*ov_end_func)(void *item);
