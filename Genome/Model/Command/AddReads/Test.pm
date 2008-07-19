@@ -220,7 +220,7 @@ sub test_c : Tests {
     is(scalar(@pp_events),$self->{_expected_postprocess_events},'get scheduled genome_model add-reads postprocess-alignments');
     # sort by event id to ensure order of events matches pipeline order
     @pp_events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @pp_events;
-
+print "@pp_events\n";
     my $merge_alignments_command = $pp_events[0];
     isa_ok($merge_alignments_command,'Genome::Model::Command::AddReads::MergeAlignments');
     $self->execute_event_test($merge_alignments_command);
