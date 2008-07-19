@@ -35,5 +35,15 @@ sub command_subclassing_model_property {
     return 'filter_ruleset_name';
 }
 
+sub execute {
+    my $self = shift;
+    if (ref($self) eq __PACKAGE__) {
+        $self->error_message("Old jobs cannot be re-run until they are sub-classified by their filtering algorithm."
+            . "  Update event " . $self->id . " to have a more specific event type");
+        return;
+    }
+    return $self->SUPER::_execute_body();
+}   
+
 1;
 
