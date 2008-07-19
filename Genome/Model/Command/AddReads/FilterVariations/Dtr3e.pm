@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::FilterVariations::Basic;
+package Genome::Model::Command::AddReads::FilterVariations::Dtr3e;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use FileHandle;
 
-class Genome::Model::Command::AddReads::FilterVariations::Basic {
+class Genome::Model::Command::AddReads::FilterVariations::Dtr3e {
     is => ['Genome::Model::Command::AddReads::FilterVariations'],
     sub_classification_method_name => 'class',
     has => [
