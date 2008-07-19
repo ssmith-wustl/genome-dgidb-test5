@@ -33,7 +33,7 @@ class Genome::ProcessingProfile::ShortRead {
 
 sub filter_ruleset_name {
     #TODO: move into the db so it's not constant
-    'v3'
+    'basic'
 }
 
 sub filter_ruleset_params {
