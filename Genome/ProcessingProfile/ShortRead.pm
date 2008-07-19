@@ -31,6 +31,15 @@ class Genome::ProcessingProfile::ShortRead {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub filter_ruleset_name {
+    #TODO: move into the db so it's not constant
+    'v3'
+}
+
+sub filter_ruleset_params {
+    ''
+}
+
 my @printable_property_names;
 sub pretty_print_text {
     my $self = shift;

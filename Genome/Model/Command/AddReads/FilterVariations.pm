@@ -38,6 +38,10 @@ Create filtered list(s) of variations.
 EOS
 }
 
+sub command_subclassing_model_property {
+    "filter_ruleset_name"
+}
+
 sub get_metrics_hashref_for_normal_sample {
     my ($self) = @_;
 

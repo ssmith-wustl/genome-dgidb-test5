@@ -41,6 +41,8 @@ class Genome::Model::ShortRead {
                 return $e;
             |,
         },
+        filter_ruleset_name     => { via => 'processing_profile' },
+        filter_ruleset_params   => { via => 'processing_profile' },
     ],
     doc => 'A genome model produced by aligning DNA reads to a reference sequence.' 
 };
