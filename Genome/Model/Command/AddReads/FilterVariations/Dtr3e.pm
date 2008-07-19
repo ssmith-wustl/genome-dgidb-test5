@@ -1340,8 +1340,8 @@ sub variation_metrics_file_name {
      my $self = shift;
      my $library_name = shift;
 
-     my $annotate_step = Genome::Model::Event->get($self->prior_event_id);
-     my $post_process_step= Genome::Model::Event->get($annotate_step->prior_event_id);
+     my $annotate_step = Genome::Model::Event->get(parent_event_id => $self->parent_event_id, ref_seq_id => $self->ref_seq_id, "event_type like" => '%annotate%');
+     my $post_process_step= Genome::Model::Event->get(parent_event_id => $self->parent_event_id, ref_seq_id => $self->ref_seq_id, "event_type like" => '%postprocess-variations%');
      
      my $base_variation_file_name = $post_process_step->variation_metrics_file;
 
