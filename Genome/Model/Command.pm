@@ -61,35 +61,6 @@ sub create {
     return $self;
 }
 
-# Use the passed-in args to to determine the correct sub-sub command and create it
-# Returns either the created command object, or "0 but true" to say that there was no
-# sub-sub-command at that step.
-sub Xcreate {
-    my($class,%params) = @_;
-
-    if ($class->can('_validate_params')) {
-        unless ($class->_validate_params(%params)) {
-            $class->error_message("Params did not validate, cannot create command $class");
-            return;
-        }
-    }
-
-    my $sub_command_class = $class->_get_sub_command_class_name(%params);
-    if  ($sub_command_class and
-         ($sub_command_class !~ m/::/)) {
-        # returned a true value, but something that's not a class name
-        return "0 but true";
-    }
-
-    my $self = $sub_command_class->create(%params,
-                                          event_type => $sub_command_class->command_name,
-                                          date_scheduled => UR::Time->now(),
-                                          user_name => $ENV{'USER'});
-
-    return $self;
-}
-
-
 sub _sub_command_name_to_class_name_map{
     my $class = shift;
     
@@ -146,7 +117,6 @@ sub sub_command_delegator {
         return;
     }
     my $subclassing_property = $class->command_subclassing_model_property();
-
     unless ($model->can($subclassing_property)) {
         $class->error_message("class $class command_subclassing_model_property() returned $subclassing_property, but that is not a property of a model");
         return;
