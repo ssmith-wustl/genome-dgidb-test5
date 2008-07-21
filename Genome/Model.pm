@@ -1584,7 +1584,7 @@ sub find_hq_snps {
 
     my $report = $self->hq_snp_report_name();
     open(REPORT,">$report") || die "Unable to open output report file: $report";
-    my ($result) = $self->GetResults($summary);
+    my ($result) = $self->get_data_from_summary_file($summary);
 
     print REPORT "all\tref\thet\thom\n";
     print REPORT "$total_aii\t$ref_aii\t$het_aii\t$hom_aii\n";
@@ -1631,7 +1631,9 @@ sub find_hq_snps {
 }
 
 # This is also fully pasted from the maq_gold_snp.
-sub GetResults {
+# This should really be refactored since all this really does is grab data from
+# the summary file which is then used by the caller to produce the report file
+sub get_data_from_summary_file {
     my $self = shift;
     
     my ($summary_file) = @_;
