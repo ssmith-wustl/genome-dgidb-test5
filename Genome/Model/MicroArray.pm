@@ -77,8 +77,7 @@ sub get_next_line {
     my $self = shift;
     my $current_line;
 
-    ($current_line->{unparsed_line}, $current_line->{chromosome}, $current_line->{position}, $current_line->{reference}, $current_line->{allele_1}, $current_line->{allele_2})
-        = $self->_parse_genotype_submission_line($self->data_file_fh);
+    $current_line = $self->_parse_genotype_submission_line($self->data_file_fh);
 
     $self->current_line($current_line);
 
