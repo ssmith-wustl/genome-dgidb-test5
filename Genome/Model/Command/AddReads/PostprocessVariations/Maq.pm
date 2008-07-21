@@ -267,16 +267,19 @@ sub generate_experimental_variation_metrics_files {
     
     my $snp_file            = $self->snp_output_file;
     my $ref_seq             = $self->ref_seq_id;
-    my $map_file            = $self->resolve_accumulated_alignments_filename(); 
+    my $map_file            = $self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id); 
     
-    # TODO: move this to the model
     my $model = $self->model;
     my $bfa_file = sprintf("%s/all_sequences.bfa", $model->reference_sequence_path);
 
     my @f = ($map_file,$bfa_file,$snp_file);
     my $errors = 0;
     for my $f (@f) {
-        unless (-e $f) {
+        if (-e $f) {
+            $self->status_message("Found file $f");
+            $errors++;
+        }
+        else {
             $self->error_message("Failed to find file $f");
             $errors++;
         }
