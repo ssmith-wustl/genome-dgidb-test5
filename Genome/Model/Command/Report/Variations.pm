@@ -11,6 +11,8 @@ use IO::File;
 use Genome::DB::Schema;
 use Genome::VariantAnnotator;
 use Tie::File;
+use Fcntl 'O_RDONLY';
+use Carp;
 
 class Genome::Model::Command::Report::Variations
 {
@@ -142,7 +144,8 @@ sub _create_annotator
     my $self = shift;
 
     my $variant_file = $self->variant_file;
-    tie my @variants, 'Tie::File', $variant_file;
+    tie my @variants, 'Tie::File', $variant_file , mode => O_RDONLY
+        or croak "can't tie $variant_file : $!";
     my ($chromosome_name, $from) = ( split(/\s+/, $variants[0]) )[0..1];
     my ($chromosome_confirm, $to) = ( split(/\s+/, $variants[$#variants]) )[0..1];
     untie @variants;
