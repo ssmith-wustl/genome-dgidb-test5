@@ -39,7 +39,7 @@ sub create {
         $self->error_message("Genotype submission file not defined!");
         return undef;
     }
-    
+
     # check if successfully made directory and copied file (return value 0)
     my $target_dir = $self->_base_directory();
     my $target_file = $self->_data_file();
@@ -49,10 +49,10 @@ sub create {
             return undef;
         }
     }
-    
+
     unless (-e $target_file) {
         unless (system("cp $original_file $target_file") == 0) {
-            $self->error_message("Failed to cp file $original_file to $target_file (Is this a valid directory?)");
+            $self->error_message("Failed to cp file $original_file");
             return undef;
         }
     }
@@ -64,11 +64,11 @@ sub create {
         $self->error_message("Sort genotype submission file failed!");
         return undef;
     }
-    
+
     # Set up the class level file handle to the micro array data file (sorted version)
     my $data_file_fh = IO::File->new($sorted_data_file);
     $self->data_file_fh($data_file_fh);
-    
+
     return $self;
 }
 # returns the parsed from a single line of the micro array data file
@@ -76,7 +76,7 @@ sub create {
 sub get_next_line {
     my $self = shift;
     my $current_line;
-    
+
     ($current_line->{unparsed_line}, $current_line->{chromosome}, $current_line->{position}, $current_line->{reference}, $current_line->{allele_1}, $current_line->{allele_2})
         = $self->_parse_genotype_submission_line($self->data_file_fh);
 
@@ -108,9 +108,6 @@ sub _data_file {
     my $model_name = $self->name;
     my $file_location = "$base_dir/$model_name.tsv";
 
-    # Remove any existing spaces... replace with underscores...
-    $file_location =~ s/ /_/g;
-
    return $file_location; 
 }
 
@@ -126,7 +123,7 @@ sub _sort_genotype_submission_file {
         return $output_file_name;
     }
     
-    # Begin black magic
+    # Begin black magic for sorting the file by chrom and position
     open (DATA, $file); 
     my @list= <DATA>;
     my @sorted= @list[
@@ -189,26 +186,33 @@ sub _sort_genotype_submission_file {
 sub _parse_genotype_submission_line {
     my ($self, $fh) = @_;
 
-    my $current_file_line = $fh->getline();
-    
-    if (!$current_file_line) {
-        return undef;
-    }
-    
+    my $current_line;
     # Position will always be the third column
     my $position_column = 3;
-    my @current_tabs = split("\t", $current_file_line);
-    my $current_pos = $current_tabs[$position_column];
-    # Chromosome is denoted by "C22" "C7" "CY" etc.
-    my ($current_chrom) = ($current_file_line =~ m/C(\w+)/);
-    # The reference allele and allele 1 will be listed as "A:G" on the line 
-    my ($current_ref, $current_allele_1) = ($current_file_line =~ m/([A-Z]):([A-Z])/);
-    # Allele 2 will be on the line as "cns=T" if it is a het snp non ref or a homo snp...
-    # if it is a het snp matching ref there will be no cns =... so set it equal to ref...
-    my ($current_allele_2) = ($current_file_line =~ m/cns=([A-Z])/);
-    $current_allele_2 ||= $current_ref;
 
-    return ($current_file_line, $current_chrom, $current_pos, $current_ref, $current_allele_1, $current_allele_2);
+    # Get lines until data is found (skip lines with '-' for allele's)
+    while(!$current_line->{allele_1} || !$current_line->{allele_2}) {
+        my $current_file_line = $fh->getline();
+
+        if (!$current_file_line) {
+            return undef;
+        }
+
+        $current_line->{unparsed_line} = $current_file_line;
+
+        my @current_tabs = split("\t", $current_file_line);
+        $current_line->{position} = $current_tabs[$position_column];
+        # Chromosome is denoted by "C22" "C7" "CY" etc.
+        ($current_line->{chromosome}) = ($current_file_line =~ m/C(\w+)/);
+        # The reference allele and allele 1 will be listed as "A:G" on the line 
+        ($current_line->{reference}, $current_line->{allele_1}) = ($current_file_line =~ m/([A-Z]):([A-Z])/);
+        # Allele 2 will be on the line as "cns=T" if it is a het snp non ref or a homo snp...
+        # if it is a het snp matching ref there will be no cns =... so set it equal to ref...
+        ($current_line->{allele_2}) = ($current_file_line =~ m/cns=([A-Z])/);
+        $current_line->{allele_2} ||= $current_line->{reference};
+    }
+
+    return $current_line;
 }
 
 1;
