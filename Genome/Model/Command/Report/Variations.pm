@@ -297,7 +297,8 @@ sub transcript_attributes
 
 sub variation_attributes
 {
-    return ('in_coding_region', variation_sources());
+    #return ('in_coding_region', variation_sources());
+    return ( variation_sources());
     #return ('genic', variation_sources());
 }
 
