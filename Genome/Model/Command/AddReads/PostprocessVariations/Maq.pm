@@ -95,11 +95,11 @@ sub execute {
 
     $DB::single=1;
 
-    unless ($self->generate_variation_metrics_files) {        
-        $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
+    #unless ($self->generate_variation_metrics_files) {        
+        #    $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
         # cleanup...
-        return;
-    }
+        #    return;
+        #}
 
     unless ($self->generate_experimental_variation_metrics_files) {        
         $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
