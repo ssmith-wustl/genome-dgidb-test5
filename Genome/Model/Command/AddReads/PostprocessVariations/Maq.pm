@@ -277,7 +277,6 @@ sub generate_experimental_variation_metrics_files {
     for my $f (@f) {
         if (-e $f) {
             $self->status_message("Found file $f");
-            $errors++;
         }
         else {
             $self->error_message("Failed to find file $f");
