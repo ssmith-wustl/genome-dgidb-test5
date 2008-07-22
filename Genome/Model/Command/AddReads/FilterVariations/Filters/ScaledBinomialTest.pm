@@ -167,11 +167,47 @@ sub _create_r_files {
 #----------------------------------
 sub _calculate_p_values {
     my $self = shift;
+    
 
-    #TODO CHARRIS use %INC to find R-script path
-    #get absolute path to current R-code
-    # my $r_code_path;
-    #
+    ############BEGIN INLINE R CODE##########
+    my $R_code = <<'RCODE';
+
+#R script to perform binomial test on a file and produce a new file with the p-values
+
+
+#function ganked largely from qunyuan's gstat library
+aml.binomial_test=function(x,alt="greater") {
+    #we expect the x object to contain 3 columns
+    #the first is the number of successes
+    #the second is the number of trials
+    #the third is the expected proportion
+    p=numeric(0)
+    for (i in c(1:nrow(x))) {
+        xi=x[i,]
+        pi=binom.test(as.numeric(xi[1]),as.numeric(xi[2]),as.numeric(xi[3]),alternative=alt)$p.value
+        p=c(p,pi)
+    }
+    invisible(p)
+}    
+
+aml.epithelial_test=function(infile=NULL,outfile=NULL,alt="greater") {
+    if(is.null(infile) || is.null(outfile)) {
+        return(NULL)    
+    }
+
+    read.table(infile,header=T,row.names=1)->x
+    aml.binomial_test(x,alt=alt)->p
+    if(alt=="two.sided") {
+        #auto convert the p value
+        p = 1-p
+    }
+    cbind(x,p)->x
+    write.table(x,file=outfile,quote=F,sep="\t",row.names=T)
+}
+
+RCODE
+    ############END INLINE R CODE##########
+
     my $chromosome = $self->ref_seq_id;
     my $snp_file_path = "/tmp/skin_binom_test_chr$chromosome.csv";
 
@@ -183,7 +219,7 @@ sub _calculate_p_values {
         return;
     }
     $R_bridge->startR();
-    $R_bridge->send(qq{source("/gscuser/dlarson/src/perl-modules/trunk/test_project/dlarson/decision_tree/binomial_test.R")});
+    $R_bridge->send(qq{$R_code});
     $R_bridge->send(qq{aml.epithelial_test(infile="$snp_file_path",outfile="/tmp/skin_binom_test_chr$chromosome.less",alt="less")});
     $R_bridge->send(qq{aml.epithelial_test(infile="$snp_file_path",outfile="/tmp/skin_binom_test_chr$chromosome.two_sided",alt="two.sided")});
     $R_bridge->stopR();
