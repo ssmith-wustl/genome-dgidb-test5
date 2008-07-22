@@ -2,9 +2,18 @@ package Genome::Model::Command::AddReads::FilterVariations::Dtr3e;
 
 use strict;
 use warnings;
-
-use Genome;
+use above "Genome";
+use Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomialTest;
 use FileHandle;
+
+
+####################################
+#THIS IS THE NEW VERSION--DAVE LARSON WROTE IT
+#CHRIS HARRIS REFACTORED IT
+#IT EXPECTS DAVE LARSONS VERSION OF PP OUTPUT
+####################################
+
+
 
 class Genome::Model::Command::AddReads::FilterVariations::Dtr3e {
     is => ['Genome::Model::Command::AddReads::FilterVariations'],
@@ -12,9 +21,9 @@ class Genome::Model::Command::AddReads::FilterVariations::Dtr3e {
     has => [
 #        normal_id            => { is => 'Integer', 
 #                                doc => 'Identifies the normal genome model.' },
-                                   
-                                   
-    ]
+
+
+]
 };
 
 
@@ -32,7 +41,7 @@ EOS
 
 sub help_detail {
     return <<"EOS"
-Create filtered list(s) of variations.
+    Create filtered list(s) of variations.
 EOS
 }
 
@@ -40,700 +49,232 @@ sub command_subclassing_model_property {
     "filter_ruleset_name"
 }
 
-sub get_metrics_hashref_for_normal_sample {
-    my ($self) = @_;
 
-    my $chromosome = $self->ref_seq_id;
-    my $model = $self->model;
-    
-    my $model_name = $model->name;
-    my $normal_name = $model_name;
-    $normal_name =~ s/98tumor/34skin/g;
-    my $normal_model = Genome::Model->get('name like' => $normal_name);
-    unless ($normal_model) {
-        $self->error_message(sprintf("normal model matching name %s does not exist.  please verify this first.", $normal_name));
-        return undef;
-    }
-    
-    # Get metrics for the normal sample for processing.
-    my $latest_normal_build = $normal_model->latest_build_event; 
-    unless ($latest_normal_build) {
-        $self->error_message("Failed to find a build event for the comparable normal model " . $normal_model->name); 
-        return;
-    } 
-
-    my ($equivalent_skin_event) = 
-        grep { $_->isa("Genome::Model::Command::AddReads::PostprocessVariations")  } 
-        $latest_normal_build->child_events( 
-            ref_seq_id => $self->ref_seq_id
-        );
-
-    unless ($equivalent_skin_event) {
-        $self->error_message("Failed to find an event on the skin model to match the tumor.  Probably need to re-run after that completes.  In the future, we will have the tumor/skin filtering separate from the individual model processing.\n");
-        return;
-    } 
-    my $normal_sample_variation_metrics_file_name = $equivalent_skin_event->variation_metrics_file;
-    unless (-e $normal_sample_variation_metrics_file_name) {
-        $self->error_message("Failed to find variation metrics for \"normal\": $normal_sample_variation_metrics_file_name");
-        return;
-    }
-
-    # construct a hashref for the normal data
-    #my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $detail_file_sort $alignment_quality |";
-    my $ov_fh = IO::File->new($normal_sample_variation_metrics_file_name);
-    unless ($ov_fh) {
-        $self->error_message("Unable to open $normal_sample_variation_metrics_file_name for comparision to \"normal\": $!");
-        return;
-    }
-    my %normal;
-    while (<$ov_fh>) {
-        chomp;
-        unless (/^\d+\s+/) {
-            next;
-        }
-        #RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
-        s/\t\t/\t/g;
-        my ($chr, $start, $ref_sequence, $iub_sequence, $quality_score,
-            $depth, $avg_hits, $high_quality, $unknown,
-            $rc_arr, $urc_arr, $urc26_arr, $ursc_arr,
-            $ref, $ref_count_arr, @variant_pair) =
-                                split("\t");
-        my ($ref_rc, $ref_urc, $ref_urc26, $ref_ursc, $ref_bq, $ref_maxbq) =
-                split(',',$ref_count_arr);
-        $normal{$chr}{$start}{$ref} = $ref_rc;
-        do {
-            my $var = shift @variant_pair;
-            my $var_count_arr = shift @variant_pair;
-            unless (defined($var) && defined($var_count_arr)) {
-                    last;
-            }
-            my ($var_rc, $var_urc, $var_urc26, $var_ursc, $var_bq, $var_maxbq) =
-                    split(',',$var_count_arr);
-            $normal{$chr}{$start}{$var} = $var_rc;
-        } while (scalar(@variant_pair));
-    }
-    $ov_fh->close;
-    return \%normal;
-}
-
-my %IUBcode=(
-	     A=>'AA',
-	     C=>'CC',
-	     G=>'GG',
-	     T=>'TT',
-	     M=>'AC',
-	     K=>'GT',
-	     Y=>'CT',
-	     R=>'AG',
-	     W=>'AT',
-	     S=>'GC',
-	     D=>'AGT',
-	     B=>'CGT',
-	     H=>'ACT',
-	     V=>'ACG',
-	     N=>'ACGT',
-	    );
-
-sub SNPFiltered {
-	my ($self, $snp_file_filtered) = @_;
-	my $chromosome = $self->ref_seq_id;
-	my $model = $self->model;
-
-	my ($snp_file) = $model->_variant_list_files($chromosome);
-	my $snp_fh = IO::File->new($snp_file);
-	unless ($snp_fh) {
-		$self->error_message(sprintf("snp file %s does not exist.  please verify this first.",
-																 $snp_file));
-		return 0;
-	}
-	my $snp_filtered_fh = IO::File->new(">$snp_file_filtered");
-	unless ($snp_filtered_fh) {
-		$self->error_message(sprintf("snp file %s can not be created.",
-																 $snp_file_filtered));
-		return 0;
-	}
-	while (<$snp_fh>) {
-		chomp;
-		my ($id, $start, $ref_sequence, $iub_sequence, $quality_score,
-				$depth, $avg_hits, $high_quality, $unknown) = split("\t");
-		my $genotype = $IUBcode{$iub_sequence};
-		my $cns_sequence = substr($genotype,0,1);
-		my $var_sequence = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
-		if ($ref_sequence eq $cns_sequence &&
-				$ref_sequence eq $var_sequence) {
-			next;										# no variation
-		}
-		if ($depth > 2) {
-			print $snp_filtered_fh $_ . "\n";
-		}
-	}
-	$snp_fh->close;
-	$snp_filtered_fh->close;
-	return 1;
-}
 
 sub execute {
-    my $self = shift;
-    $DB::single = 1; # when debugging, stop here...
-    
-    unless ($self->revert) {
-        $self->error_message("Error ensuring previous runs have been cleaned up.");
+    my $self=shift;
+    my $model = $self->model;
+
+    my $qvalue_level;
+    my $bq;
+ 
+    ###undo previous times we did stuff for this event######
+    unless($self->revert) {
+        $self->error_message("There was a problem reverting the previous iterations changes.");
         return;
     }
 
-    my $chromosome = $self->ref_seq_id;
-    my $model = $self->model;
-
-    my ($snp_file) = $model->_variant_list_files($chromosome);
-    my ($pileup_file) = $model->_variant_pileup_files($chromosome);
-    my ($detail_file) = $model->_variant_detail_files($chromosome);
-
-		# ensure the reference sequence exists.
-    my $ref_seq_file =  $model->reference_sequence_path . "/all_sequences.bfa";
     
-    unless (-e $ref_seq_file) {
-			$self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
-			return;
+#this file should be the output of the annotate step for our chromosome
+my $file=$self->variation_metrics_file_name;
+
+unless( -f $file) {
+    $self->error_message("Experimental PP output doesn't seem to be a real file: $file (where's our input?");
+    return;
+}
+
+
+my ($filtered_list_dir) = $model->_filtered_variants_dir();
+$self->status_message("Filtered variants directory is $filtered_list_dir");
+unless (-d $filtered_list_dir) {
+    mkdir $filtered_list_dir;
+    `chmod g+w $filtered_list_dir`;
+}
+
+#so this '$basename' variable basically specifies full dir and prefix for most of the files generated by this step (not including the metric code)
+my $basename= $model->_filtered_variants_dir() . '/filtered.';
+my $specificity='default';
+#end object data gathering---
+
+
+
+#begin complex mg crap 
+my %specificity_maqq = (
+    min => [ 5, 16 ],
+    default => [ 30, 16 ],
+    90 => [ 40, 22 ],
+    95 => [ 50, 26 ],
+    max => [ 120, 26 ],
+);
+
+
+my $spec_ref = (exists($specificity_maqq{$specificity})) ?
+$specificity_maqq{$specificity} : $specificity_maqq{default};
+($qvalue_level, $bq) = @$spec_ref;
+$qvalue_level ||= 30;
+$bq ||= 16;
+
+
+#left over from being a command line script....
+#croak "dtr_split -input [filename] -basename [filename]\n"
+#    unless(defined($file) && defined($basename));      
+
+
+
+
+my $handle = new FileHandle;
+$handle->open($file, "r") or die "Couldn't open annotation file\n";
+
+my $header_line = $handle->getline; #store header
+my $keep_handle = new FileHandle;
+my $remove_handle = new FileHandle;
+my $keep_file = $basename . 'chr' . $self->ref_seq_id . '.keep.csv';
+my $remove_file = $basename . 'chr' . $self->ref_seq_id . '.remove.csv';
+$keep_handle->open("$keep_file","w") or die "Couldn't open keep output file\n";
+$remove_handle->open("$remove_file","w") or die "Couldn't open remove output file\n";
+
+chomp $header_line;
+print $keep_handle $header_line . ",rule\n";
+print $remove_handle $header_line . ",rule\n";
+
+
+my %result;
+#print new header
+while(my $line=$handle->getline) {
+    chomp $line;
+    $line =~ s/NULL/0/g;
+    next if $line =~ /^chromosome/;    
+    my ($chr,$position,$al1,$al2,$qvalue,$al2_read_hg,$avg_map_quality,$max_map_quality,$n_max_map_quality,$avg_sum_of_mismatches,$max_sum_of_mismatches,$n_max_sum_of_mismatches, $base_quality, $max_base_quality, $n_max_base_quality, $avg_windowed_quality, $max_windowed_quality, $n_max_windowed_quality, $for_strand_unique_by_start_site, $rev_strand_unique_by_start_site, $al2_read_unique_dna_context, $for_strand_unique_by_start_site_pre27,$rev_strand_unique_by_start_site_pre27,$al2_read_unique_dna_context_pre27) = split ", ", $line;
+    my $al2_read_unique_dna_start = $for_strand_unique_by_start_site + $rev_strand_unique_by_start_site;
+    my $al2_read_unique_dna_start_pre27 = $for_strand_unique_by_start_site_pre27 + $rev_strand_unique_by_start_site_pre27;
+
+    my $decision = 'keep';
+    my $rule = 'none';
+
+    if ($al2_read_unique_dna_start > 7 &&
+    $qvalue >= $qvalue_level) {
+        #Rule 5:
+        #    	# of unique genomic reads supporting variant allele(starting point) > 7
+        #	->  class G  [96.8%]
+        #
+        $decision = 'keep';
+        $rule = '5';
+#		} elsif ($al2_read_unique_dna_start > 2 &&
+#						 $base_quality <= $bq + 2) {
+#			#Rule 2:
+#			#    	# of unique genomic reads supporting variant allele(starting point) > 2
+#			#    	Base Quality > 18
+#			#	->  class G  [90.7%]
+#			#
+#			$decision = 'keep';
+#			$rule = '2';
+        } elsif ($max_base_quality <= 26) {
+            #Rule 11:
+            #    	Max Base Quality <= 26
+            #	->  class WT  [85.2%]
+            #
+            $decision = 'remove';
+            $rule = '11';
+        } elsif ($al2_read_unique_dna_start <= 7 &&
+        $qvalue < $qvalue_level) {
+            #Rule 7:
+            #    	# of unique genomic reads supporting variant allele(starting point) <= 7
+            #    	Maq SNP q-value <= 29
+            #	->  class WT  [81.5%]
+            #
+            $decision = 'remove';
+            $rule = '7';
+        } elsif ($al2_read_unique_dna_start <= 2) {
+            #Rule 8:
+            #    	# of unique genomic reads supporting variant allele(starting point) <= 2
+            #	->  class WT  [74.7%]
+            #
+            $decision = 'remove';
+            $rule = '8';
+        } elsif ($base_quality <= $bq) {
+            #Rule 3:
+            #    	Base Quality <= 16
+            #	->  class WT  [73.0%]
+            #
+            $decision = 'remove';
+            $rule = '3';
+        } else {
+            #Default class: G
+            $decision = 'keep';
+            $rule = 'default';
+        }
+
+#        my $variant_detail = Genome::VariantReviewDetail->get(
+#            chromosome => $chr, 
+#            begin_position => $position, 
+#            end_position => $position,
+#            insert_sequence_allele1 => $al2,
+#            delete_sequence => $al1,
+#        );
+#        my $validation;
+#        if(!defined($variant_detail)) {
+#            #try and see if it was a biallelic variant site
+#            $variant_detail = Genome::VariantReviewDetail->get(
+#                chromosome => $chr, 
+#                begin_position => $position, 
+#                end_position => $position,
+#                insert_sequence_allele2 => $al2,
+#                delete_sequence => $al1,
+#            );
+#        }
+#        if(defined($variant_detail)) {
+#            #it's been sent to manual review
+#            my $decision = $variant_detail->pass_manual_review; 
+#            #if there is a somatic status then it probably
+#            #passed manual review but wasn't documented.
+#            #Or it was directly passed along.
+#            $validation = $variant_detail->somatic_status;
+#            $validation ||= '0';
+#        }
+#        else {
+#            $validation = 'NONE';
+#        }
+#        
+#		$result{$decision}{$validation}{n} += 1;
+#		$result{$decision}{$validation}{rule}{$rule} += 1;
+if ($decision eq 'keep') {
+    print $keep_handle $line,",$rule\n";    
+}  else {
+    print $remove_handle $line,",$rule\n";    
+}
+}
+$keep_handle->close();
+$remove_handle->close();
+$handle->close();
+
+
+
+my $basename_for_binomial = $model->_filtered_variants_dir . "/binomial.chr" . $self->ref_seq_id;
+
+###Begin scaled binomial test launch.
+my $rv = Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomialTest->execute(
+    experimental_metric_model_file=> $self->variation_metrics_file_name,   
+    experimental_metric_normal_file=>$self->normal_sample_variation_metrics_file,
+    binomial_test_basename => $basename_for_binomial, 
+    ref_seq_id => $self->ref_seq_id
+);
+    
+
+
+
+
+#this needs to operate on the output of scaled binomial test.
+$self->generate_figure_3_files($basename_for_binomial . '.nonskin.csv');
+}
+
+
+sub variation_metrics_file_name {
+    my $self = shift;
+    my $library_name = shift;
+
+    my $annotate_step = Genome::Model::Event->get(parent_event_id => $self->parent_event_id, ref_seq_id => $self->ref_seq_id, "event_type like" => '%annotate%');
+    my $post_process_step= Genome::Model::Event->get(parent_event_id => $self->parent_event_id, ref_seq_id => $self->ref_seq_id, "event_type like" => '%postprocess-variations%');
+
+    my $base_variation_file_name = $post_process_step->experimental_variation_metrics_file_basename . ".csv";
+
+    unless($library_name) {
+        return $base_variation_file_name;
     }
-
-    my ($filtered_list_dir) = $model->_filtered_variants_dir();
-    $self->status_message("Filtered variants directory is $filtered_list_dir");
-    unless (-d $filtered_list_dir) {
-        mkdir $filtered_list_dir;
-        `chmod g+w $filtered_list_dir`;
-    }
-
-		my $snp_file_filtered = $filtered_list_dir . "snp_filtered_${chromosome}.csv";
-
-		unless ($self->SNPFiltered($snp_file_filtered)) {
-			return;
-		}
-
-    # This creates a map file in /tmp which is actually a named pipe
-    # streaming the data from the original maps.
-    # It can be used only once.  Run this again if you need to use it multiple times.
-		
-
-		my $alignment_quality = 1;
-		my $normal_href = $self->get_metrics_hashref_for_normal_sample();
-		unless (defined($normal_href)) {
-			return;
-		}
-
-		my ($file, $basename, $qvalue_level, $bq);
-		my $specificity = 'default';
-		#my $ruleset = 'dtr2a';
-		my $ruleset = 'dtr3e';
+    return "$base_variation_file_name.$library_name";
+} 
 
 
 
-		my %specificity_maqq;
-		if ($ruleset eq 'dtr2a') {
-			%specificity_maqq = (
-												max => [ 121, 0 ],
-												95 => [ 110, 0 ],
-												90 => [ 70, 0 ],
-												75 => [ 30, 0 ],
-												default => [ 29, 0 ],
-												min => [ 29, 0 ]
-											 );
-		} else {
-			%specificity_maqq = (
-													 min => [ 5, 16 ],
-													 default => [ 30, 16 ],
-													 90 => [ 40, 22 ],
-													 95 => [ 50, 26 ],
-													 max => [ 120, 26 ],
-													);
-		}
-
-		my $spec_ref = (exists($specificity_maqq{$specificity})) ?
-			$specificity_maqq{$specificity} : $specificity_maqq{default};
-		($qvalue_level, $bq) = @$spec_ref;
-		$qvalue_level ||= 30;
-		$bq ||= 16;
-
-		$basename = $filtered_list_dir . '/filtered';
-
-		my %lib_urc;
-    my @libraries = $model->libraries;
-		my $library_number = 0;
-		foreach my $library_name (@libraries) {
-				$library_number += 1;
-				my $ov_lib_fh = IO::File->new($self->variation_metrics_file_name($library_name));
-				unless ($ov_lib_fh) {
-					$self->error_message("Unable to get counts for $chromosome $library_name $$");
-					return;
-				}
-				while (<$ov_lib_fh>) {
-					chomp;
-					unless (/^\d+\s+/) {
-						next;
-					}
-					#RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
-					
-					s/\t\t/\t/g;
-					my ($lib_chr, $lib_start, $lib_ref_sequence, $lib_iub_sequence, $lib_quality_score,
-							$lib_depth, $lib_avg_hits, $lib_high_quality, $lib_unknown,
-							$lib_rc_arr, $lib_urc_arr, $lib_urc26_arr, $lib_ursc_arr,
-							$lib_ref, $lib_ref_count_arr, , @lib_variant_pair) =
-								split("\t");
-					my ($lib_ref_rc, $lib_ref_urc, $lib_ref_urc26, $lib_ref_ursc, $lib_ref_bq, $lib_ref_maxbq) =
-						split(',',$lib_ref_count_arr);
-					$lib_urc{$library_number}{$lib_chr}{$lib_start}{$lib_ref} = $lib_ref_ursc;
-					do {
-						my $var = shift @lib_variant_pair;
-						my $var_count_arr = shift @lib_variant_pair;
-						unless (defined($var) && defined($var_count_arr)) {
-							last;
-						}
-						my ($var_rc, $var_urc, $var_urc26, $var_ursc, $var_bq, $var_maxbq) =
-							split(',',$var_count_arr);
-						$lib_urc{$library_number}{$lib_chr}{$lib_start}{$var} = $var_ursc;
-					} while (scalar(@lib_variant_pair));
-				}
-				$ov_lib_fh->close();
-			}
-
-		my $use_validation = 1;
-		my $status_file = '/gscmnt/sata180/info/medseq/dlarson/aml_temp_consolidate_08520.csv';
-		my %status;
-		open(STATUS,$status_file);
-		while (<STATUS>) {
-			chomp;
-			my ($chr, $pos, $status) = split("\t");
-			$status ||= '';
-			unless ($status =~ /^\s*$/) {
-				$status{$chr}{$pos} = $status;
-			}
-		}
-		close(STATUS);
-
-
-
-
-		$file = '/gscmnt/sata180/info/medseq/bshore/amll123t98_annotation/amll123t98_all_SNPs_with_conservation_new.bq.validation.csv';
-		my @values_used = ( 2, 3, 4, 28,  5, 6, 10, 11, 37, 39, 41, 33, 9, 60, 63, 64 );
-		my $header = new FileHandle;
-		$header->open($file, "r") or die "Couldn't open annotation file\n";
-		my $header_line = $header->getline; #ignore header
-		my $somatic_handle = new FileHandle;
-		my $keep_handle = new FileHandle;
-        my $keep_highly_supported_handle = new FileHandle;
-        my $keep_not_highly_supported_handle = new FileHandle;
-		my $remove_handle = new FileHandle;
-		my $report_handle = new FileHandle;
-		my $invalue_handle = new FileHandle;
-		my $somatic_file = $self->somatic_file_name;
-        my $keep_file =  $self->keep_file_name;
-		my $remove_file = $self->remove_file_name;
-        my $report_file = $self->report_file_name;
-        my $invalue_file = $self->invalue_file_name;
-        my $highly_supported_keep_file = $basename . '.chr' . $chromosome .  '.keep.highlysupported.csv';
-        my $not_highly_supported_keep_file = $basename . '.chr' . $chromosome .  '.keep.nothighlysupported.csv';
-		$somatic_handle->open("$somatic_file","w") or die "Couldn't open keep output file\n";
-		$keep_handle->open("$keep_file","w") or die "Couldn't open keep output file\n";
-		$remove_handle->open("$remove_file","w") or die "Couldn't open remove output file\n";
-		$report_handle->open("$report_file","w") or die "Couldn't open report output file\n";
-		$invalue_handle->open("$invalue_file","w") or die "Couldn't open input value (output) file\n";
-		$keep_highly_supported_handle->open("$highly_supported_keep_file","w") or die "Couldn't open keep highly supported output file\n";
-		$keep_not_highly_supported_handle->open("$not_highly_supported_keep_file","w") or die "Couldn't open keep not highly supported (output) file\n";
-		
-		chomp $header_line;
-		my $validation_header = '';
-#		if ($use_validation) {
-#			$validation_header = ',validation_status';
-#		}
-		print $somatic_handle $header_line . "$validation_header,rule\n";
-		print $keep_handle $header_line . "$validation_header,rule\n";
-		print $remove_handle $header_line . "$validation_header,rule\n";
-	    print $keep_highly_supported_handle $header_line . "$validation_header,rule\n";
-        print $keep_not_highly_supported_handle $header_line . "$validation_header,rule\n";
-		my %result = ();
-		
-		#print new header
-
-    # This creates a map file in /tmp which is actually a named pipe
-    # streaming the data from the original maps.
-    # It can be used only once.  Run this again if you need to use it multiple times.
-    #my $ov_cmd = "/gscuser/bshore/src/perl_modules/Genome/Model/Tools/Maq/ovsrc/maqval $map_file_path $snp_file_sort $alignment_quality |";
-
-    my $ov_fh = IO::File->new($self->variation_metrics_file_name());
-		unless ($ov_fh) {
-			$self->error_message("Unable to get counts $$");
-			return;
-		}
-
-#		while(my $line=$header->getline) {
-#			chomp $line;
-#			$line =~ s/NULL/0/g;
-#			my @values = split ",", $line;
-#			my (
-#					$chr,
-#					$start,
-#					$end,
-#					$ref,
-#					$var,
-##					$ref_type,
-##					$var_type,
-##					$rgg_id,
-##					$ref,
-#					$var_read_hg,
-#					$var_read_unique_dna_start,
-#					$var_read_unique_dna_context,
-#					$lib1_al1_read_unique_dna_context,
-#					$lib2_al1_read_unique_dna_context,
-#					$lib3_al1_read_unique_dna_context,
-#					$ref_read_unique_dna_start,
-#					$var_read_skin_dna,
-#					$qvalue,
-#					$base_quality,
-#					$max_base_quality
-#				 ) = @values[@values_used];
-#			my $ref_type = 'ref';
-#			my $var_type = 'SNP';
-			
-		while (<$ov_fh>) {
-			chomp;
-			unless (/^\d+\s+/) {
-				next;
-			}
-#RC(A,C,G,T) URC(A,C,G,T) URSC(A,C,G,T) REF Ref(RC,URC,URSC,Q,MQ) Var1(RC,URC,URSC,Q,MQ) Var2(RC,URC,URSC,Q,MQ)
-
-			s/\t\t/\t/g;
-			my ($chr, $start, $ref_sequence, $iub_sequence, $quality_score,
-					$depth, $avg_hits, $high_quality, $unknown,
-					$rc_arr, $urc_arr, $urc26_arr, $ursc_arr,
-					$ref, $ref_count_arr, @variant_pair) =
-						split("\t");
-			my ($ref_rc, $ref_urc, $ref_urc26, $ref_ursc, $ref_bq, $ref_maxbq) =
-				split(',',$ref_count_arr);
-			do {
-				my $var = shift @variant_pair;
-				my $var_count_arr = shift @variant_pair;
-				unless (defined($var) && defined($var_count_arr)) {
-					last;
-				}
-				my ($var_rc, $var_urc, $var_urc26, $var_ursc, $var_bq, $var_maxbq) =
-					split(',',$var_count_arr);
-				my (
-						$end,
-						$ref_type,
-						$var_type,
-						$var_read_hg,
-						$var_read_unique_dna_start,
-						$var_read_unique_dna_context,
-						$lib1_al1_read_unique_dna_context,
-						$lib2_al1_read_unique_dna_context,
-						$lib3_al1_read_unique_dna_context,
-						$ref_read_unique_dna_start,
-						$var_read_skin_dna,
-						$qvalue,
-						$base_quality,
-						$max_base_quality
-					 ) = 
-						 (
-							$start,
-							'ref',
-							'SNP',
-							$var_rc,
-							$var_urc,
-							$var_ursc,
-							$lib_urc{1}{$chr}{$start}{$var} || 0,
-							$lib_urc{2}{$chr}{$start}{$var} || 0,
-							$lib_urc{3}{$chr}{$start}{$var} || 0,
-							$ref_urc,
-							$normal_href->{$chr}{$start}{$var} || 0,
-							$quality_score,
-							$var_bq,
-							$var_maxbq,
-						 );
-				my $line = 
-					join("\t",
-							 (
-								$chr,
-								$start,
-								$end,
-								$ref,
-								$var,
-								$ref_type,
-								$var_type,
-								$var_read_hg,
-								$var_read_unique_dna_start,
-								$var_read_unique_dna_context,
-								$var_urc26,
-								$lib1_al1_read_unique_dna_context,
-								$lib2_al1_read_unique_dna_context,
-								$lib3_al1_read_unique_dna_context,
-								$ref_read_unique_dna_start,
-								$var_read_skin_dna,
-								$qvalue,
-								$base_quality,
-								$max_base_quality
-							 ));
-				
-				
-				print $invalue_handle join("\t",
-																	 (
-																		$chr,
-																		$start,
-																		$end,
-																		$ref,
-																		$var,
-																		$ref_type,
-																		$var_type,
-																		$var_read_hg,
-																		$var_read_unique_dna_start,
-																		$var_read_unique_dna_context,
-																		$var_urc26,
-																		$lib1_al1_read_unique_dna_context,
-																		$lib2_al1_read_unique_dna_context,
-																		$lib3_al1_read_unique_dna_context,
-																		$ref_read_unique_dna_start,
-																		$var_read_skin_dna,
-																		$qvalue,
-																		$base_quality,
-																		$max_base_quality
-																	 )) . "\n";
-				
-				my $validation;
-				if (exists($status{$chr}{$start})) {
-					$validation = $status{$chr}{$start};
-				}
-				$validation ||= '0';
-				my $decision = 'keep';
-				my $rule = 'none';
-				
-				# dtr2a rules
-				if ($ruleset eq 'dtr2a') {
-					if ($var_read_hg > 9 &&
-							$var_read_unique_dna_start <= 4) {
-						#Rule 8:
-						#    	# of genomic reads supporting variant allele > 9
-						#    	# of unique genomic reads supporting variant allele(starting point) <= 4
-						#	->  class WT  [93.9%]
-						#
-						$decision = 'remove';
-						$rule = '8';
-					} elsif ($ref_read_unique_dna_start > 15) {
-						#Rule 14:
-						#    	# of unique genomic reads supporting reference allele(starting point) > 15
-						#	->  class WT  [89.9%]
-						#
-						$decision = 'remove';
-						$rule = '14';
-					} elsif ($ref_read_unique_dna_start <= 15 &&
-									 $qvalue < $qvalue_level) {
-						# qvalue:
-						# 29  is > 74% (74.46%) Specifity (91.06% Sensitivity),
-						# 30  is > 75% (74.85%) Specifity (91.06% Sensitivity),
-						# 70  is > 90% (90.77%) Specifity (75.50% Sensitivity),
-						# 110 is > 95% (95.48%) Specifity (53.31% Sensitivity)
-						#Rule 2:
-						#    	# of unique genomic reads supporting reference allele(starting point) <= 15
-						#    	Maq SNP q-value <= 28
-						#	->  class WT  [78.4%]
-						#
-						$decision = 'remove';
-						$rule = '2';
-					} elsif ($var_read_unique_dna_start > 4 &&
-									 $ref_read_unique_dna_start <= 15 &&
-									 $qvalue > 33) {
-						#Rule 13:
-						#    	# of unique genomic reads supporting variant allele(starting point) > 4
-						#    	# of unique genomic reads supporting reference allele(starting point) <= 15
-						#    	Maq SNP q-value > 33
-						#	->  class G  [88.9%]
-						$decision = 'keep';
-						$rule = '13';
-					} elsif ($var_read_unique_dna_start <= 3 &&
-									 $var_read_unique_dna_context > 3  &&
-									 $lib1_al1_read_unique_dna_context <= 5 &&
-									 $lib2_al1_read_unique_dna_context <= 5 &&
-									 $lib3_al1_read_unique_dna_context <= 5
-									 #						 $lib1_al1_read_unique_dna_context <= 4 &&
-									 #						 $lib2_al1_read_unique_dna_context <= 4 &&
-									 #						 $lib3_al1_read_unique_dna_context <= 4
-									) {
-						#Rule 5:
-						#    	# of unique genomic reads supporting variant allele(starting point) <= 3
-						#    	# of unique genomic reads supporting variant allele(context) > 3
-						#    	# of unique genomic reads supporting reference allele from lib1 in first 26 bp(context) <= 4
-						#	->  class WT  [87.1%]
-						#
-						$decision = 'remove';
-						$rule = '5';
-						#		} elsif ($var_read_unique_cDNA_start_pre27 <= 9 &&
-						#						 $ref_read_unique_dna_start_pre27 > 9) {
-						#			#Rule 12:
-						#			#    	# of unique cDNA reads supporting variant allele in first 26 bp(starting point) <= 9
-						#			#    	# of unique genomic reads supporting reference allele in first 26 bp(starting point) > 9
-						#			#	->  class WT  [70.7%]
-						#			#
-						#			$decision = 'remove';
-						#			$rule = '12';
-						# Rule 12 removes somatic SNPs--not allowed!!!
-					} else {
-						#Default class: G
-						$decision = 'keep';
-						$rule = 'default';
-					}
-				} elsif ($ruleset eq 'dtr3e') {
-					# dtr3e rules
-					if ($var_read_unique_dna_start > 7 &&
-							$qvalue >= $qvalue_level) {
-						#Rule 5:
-						#    	# of unique genomic reads supporting variant allele(starting point) > 7
-						#	->  class G  [96.8%]
-						#
-						$decision = 'keep';
-						$rule = '5';
-						#		} elsif ($var_read_unique_dna_start > 2 &&
-						#						 $base_quality <= $bq + 2) {
-						#			#Rule 2:
-						#			#    	# of unique genomic reads supporting variant allele(starting point) > 2
-						#			#    	Base Quality > 18
-						#			#	->  class G  [90.7%]
-						#			#
-						#			$decision = 'keep';
-						#			$rule = '2';
-					} elsif ($max_base_quality <= 26) {
-						#Rule 11:
-						#    	Max Base Quality <= 26
-						#	->  class WT  [85.2%]
-						#
-						$decision = 'remove';
-						$rule = '11';
-					} elsif ($var_read_unique_dna_start <= 7 &&
-									 $qvalue < $qvalue_level) {
-						#Rule 7:
-						#    	# of unique genomic reads supporting variant allele(starting point) <= 7
-						#    	Maq SNP q-value <= 29
-						#	->  class WT  [81.5%]
-						#
-						$decision = 'remove';
-						$rule = '7';
-					} elsif ($var_read_unique_dna_start <= 2) {
-						#Rule 8:
-						#    	# of unique genomic reads supporting variant allele(starting point) <= 2
-						#	->  class WT  [74.7%]
-						#
-						$decision = 'remove';
-						$rule = '8';
-					} elsif ($base_quality <= $bq) {
-						#Rule 3:
-						#    	Base Quality <= 16
-						#	->  class WT  [73.0%]
-						#
-						$decision = 'remove';
-						$rule = '3';
-					} else {
-						#Default class: G
-						$decision = 'keep';
-						$rule = 'default';
-					}
-				} else {
-					return;
-				}
-				
-				my $output_validation = '';
-				if ($use_validation) {
-					$result{$decision}{$validation}{n} += 1;
-					$result{$decision}{$validation}{rule}{$rule} += 1;
-					#				$output_validation = ",$validation";
-				}
-				if ($decision eq 'keep') {
-					if ($var_read_skin_dna == 0 && $var_urc26 > 2) {
-						$decision = 'somatic';
-					}
-				}
-				if ($decision eq 'keep') {
-					print $keep_handle $line,"$output_validation,$rule\n";    
-                    if($var_urc26 > 2) {
-                        #print to a highly supported file
-                        print $keep_highly_supported_handle $line,"$output_validation,$rule\n";
-                    }
-                    else {
-                        #print to a 'not highly supported file'
-                        print $keep_not_highly_supported_handle $line,"$output_validation,$rule\n";
-                    }
-				} elsif ($decision eq 'somatic') {
-					print $somatic_handle $line,"$output_validation,$rule\n";    
-					print $keep_handle $line,"$output_validation,$rule\n";    
-                    print $keep_highly_supported_handle $line,"$output_validation,$rule\n";
-				} else {
-					print $remove_handle $line,"$output_validation,$rule\n";    
-				}
-			} while (scalar(@variant_pair));
-		}
-		$somatic_handle->close();
-		$keep_handle->close();
-		$remove_handle->close();
-		$invalue_handle->close();
-		$header->close();
-		$ov_fh->close;
-		
-		
-		
-		my $keep_wt = 0;
-		my $total_wt = 0;
-		my $keep_g = 0;
-		my $total_g = 0;
-		foreach my $type (sort (keys %result)) {
-			print $report_handle "$type\n";
-			foreach my $status (sort (keys %{$result{$type}})) {
-				my $n = $result{$type}{$status}{n};
-				if ($status eq 'WT') {
-					$total_wt += $n;
-					if ($type eq 'remove') {
-						$keep_wt += $n;
-					}
-				}
-				if ($status eq 'G') {
-					$total_g += $n;
-					if ($type eq 'keep') {
-						$keep_g += $n;
-					}
-				}
-				my @rules;
-				foreach my $rule_used (sort (keys %{$result{$type}{$status}{rule}})) {
-					push @rules, (join(':',($rule_used, $result{$type}{$status}{rule}{$rule_used})));
-				}
-				print $report_handle "\t" . 
-					join("\t",($status,$n,join(',',@rules))) . "\n";
-			}
-		}
-		if ($total_wt > 0) {
-			printf $report_handle "Specificity: %0.2f\n", (100.0 * ($keep_wt/$total_wt));
-		}
-		if ($total_g > 0) {
-			printf $report_handle "Sensitivity: %0.2f\n", (100.0 * ($keep_g/$total_g));
-		}
-		
-		$self->generate_figure_3_files($somatic_file);
-		# Clean up when we're done...
-        #I realize this is dumb to pass refseq. its an incremental refactor and will go away
-        #next iteration
-        $self->cleanup_my_mapmerge($self->ref_seq_id);
-        #commented until we test this method
-        #$self->cleanup_all_mapmerges($self->ref_seq_id);
-        
-		$self->date_completed(UR::Time->now);
-		if (0) { # replace w/ actual check
-			$self->event_status("Failed");
-			return;
-		}
-		else {
-			$self->event_status("Succeeded");
-			return 1;
-		}
-		
-	}
-
-1;
-        
-
-        
 
 sub generate_figure_3_files {
     my $self = shift;  
@@ -1089,13 +630,6 @@ sub _write_array_to_file {
     return 1;
 }
     
-#NO! BAD METHOD! THATS A BAD BAD METHOD!
-sub _report_file {
-    my ($self, $type) = @_;
-
-    return sprintf('%s/%s_report_%s', ($self->model->_reports_dir)[0], $type,$self->ref_seq_id);
-}
-
 
 sub somatic_variants_in_d_v_w {
     my $self = shift;
@@ -1336,18 +870,203 @@ sub metrics_for_class {
 }
 
 
-sub variation_metrics_file_name {
-     my $self = shift;
-     my $library_name = shift;
+sub normal_sample_variation_metrics_file {
+    my $self= shift;
+    my $model = $self->model;
 
-     my $annotate_step = Genome::Model::Event->get(parent_event_id => $self->parent_event_id, ref_seq_id => $self->ref_seq_id, "event_type like" => '%annotate%');
-     my $post_process_step= Genome::Model::Event->get(parent_event_id => $self->parent_event_id, ref_seq_id => $self->ref_seq_id, "event_type like" => '%postprocess-variations%');
-     
-     my $base_variation_file_name = $post_process_step->variation_metrics_file;
+    my $model_name = $model->name;
+    my $normal_name = $model_name;
 
-     unless($library_name) {
-         return $base_variation_file_name;
-     }
-     return "$base_variation_file_name.$library_name";
-} 
-     
+    $normal_name =~ s/98tumor/34skin/g;
+    my $normal_model = Genome::Model->get('name like' => $normal_name);
+    unless ($normal_model) {
+        $self->error_message(sprintf("normal model matching name %s does not exist.  please verify this first.", $normal_name));
+        return undef;
+    }
+
+# Get metrics for the normal sample for processing.
+my $latest_normal_build = $normal_model->latest_build_event;
+unless ($latest_normal_build) {
+    $self->error_message("Failed to find a build event for the comparable normal model " . $normal_model->name);
+    return;
+}
+
+my ($equivalent_skin_event) =
+grep { $_->isa("Genome::Model::Command::AddReads::PostprocessVariations")  }
+$latest_normal_build->child_events(
+    ref_seq_id => $self->ref_seq_id
+);
+
+unless ($equivalent_skin_event) {
+    $self->error_message("Failed to find an event on the skin model to match the tumor.  Probably need to re-run after that completes.  In the future, we will have the tumor/skin filtering separate from the individual model processing.\n");
+    return;
+}
+my $normal_sample_variation_metrics_file_name =  $equivalent_skin_event->experimental_variation_metrics_file_basename . ".csv";
+
+unless (-e $normal_sample_variation_metrics_file_name) {
+    $self->error_message("Failed to find variation metrics for \"normal\": $normal_sample_variation_metrics_file_name");
+    return;
+}
+return $normal_sample_variation_metrics_file_name
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#my $keep_wt = 0;
+#my $total_wt = 0;
+#my $keep_g = 0;
+#my $total_g = 0;
+#foreach my $type (sort (keys %result)) {
+#	print $report_handle "$type\n";
+#	foreach my $status (sort (keys %{$result{$type}})) {
+#		my $n = $result{$type}{$status}{n};
+#		if ($status eq 'WT') {
+#			$total_wt += $n;
+#			if ($type eq 'remove') {
+#				$keep_wt += $n;
+#			}
+#		}
+#		if ($status eq 'G') {
+#			$total_g += $n;
+#			if ($type eq 'keep') {
+#				$keep_g += $n;
+#			}
+#		}
+#		my @rules;
+#		foreach my $rule (sort (keys %{$result{$type}{$status}{rule}})) {
+#			push @rules, (join(':',($rule, $result{$type}{$status}{rule}{$rule})));
+#		}
+#		print $report_handle "\t" . 
+#			join("\t",($status,$n,join(',',@rules))) . "\n";
+#	}
+#}
+#if ($total_wt > 0) {
+#	printf $report_handle "Specificity: %0.2f\n", (100.0 * ($keep_wt/$total_wt));
+#}
+#if ($total_g > 0) {
+#	printf $report_handle "Sensitivity: %0.2f\n", (100.0 * ($keep_g/$total_g));
+#}
+
+
+#C4.5 [release 8] rule generator	Thu May 22 14:52:58 2008
+#-------------------------------
+#
+#    Options:
+#	Rulesets evaluated on unseen cases
+#	File stem <training>
+#
+#Read 149 cases (40 attributes) from training
+#
+#Composite ruleset:
+#
+#Rule 5:
+#    	# of unique genomic reads supporting variant allele(starting point) > 7
+#	->  class G  [96.8%]
+#
+#Rule 2:
+#    	# of unique genomic reads supporting variant allele(starting point) > 2
+#    	Base Quality > 18
+#	->  class G  [90.7%]
+#
+#Rule 11:
+#    	Max Base Quality <= 26
+#	->  class WT  [85.2%]
+#
+#Rule 7:
+#    	# of unique genomic reads supporting variant allele(starting point) <= 7
+#    	Maq SNP q-value <= 29
+#	->  class WT  [81.5%]
+#
+#Rule 8:
+#    	# of unique genomic reads supporting variant allele(starting point) <= 2
+#	->  class WT  [74.7%]
+#
+#Rule 3:
+#    	Base Quality <= 16
+#	->  class WT  [73.0%]
+#
+#Default class: G
+#
+#Composite ruleset:
+#
+#Rule  Size  Error  Used  Wrong	          Advantage
+#----  ----  -----  ----  -----	          ---------
+#   5     1   3.2%    42      0 (0.0%)	     0 (0|0) 	G
+#   2     2   9.3%    52      6 (11.5%)	    -3 (1|4) 	G
+#  11     1  14.8%    16      1 (6.2%)	     3 (3|0) 	WT
+#   7     2  18.5%     9      1 (11.1%)	     2 (2|0) 	WT
+#   8     1  25.3%    17      4 (23.5%)	     9 (12|3) 	WT
+#   3     1  27.0%     7      2 (28.6%)	     3 (5|2) 	WT
+#
+#Drop rule 2
+#
+#Rule  Size  Error  Used  Wrong	          Advantage
+#----  ----  -----  ----  -----	          ---------
+#   5     1   3.2%    42      0 (0.0%)	     0 (0|0) 	G
+#  11     1  14.8%    17      1 (5.9%)	     4 (4|0) 	WT
+#   7     2  18.5%    13      2 (15.4%)	     4 (5|1) 	WT
+#   8     1  25.3%    17      4 (23.5%)	     9 (12|3) 	WT
+#   3     1  27.0%     7      2 (28.6%)	     3 (5|2) 	WT
+#
+#Tested 149, errors 13 (8.7%)   <<
+#
+#
+#	  (a)  (b)	<-classified as
+#	 ---- ----
+#	   45    4	(a): class WT
+#	    9   91	(b): class G
+#
+#
+#Trial   Size      Errors
+#-----   ----      ------
+#   0       4   17(11.4%)
+#   1       5   20(13.4%)
+#   2       4   18(12.1%)
+#  **       5   13( 8.7%)
+#				Av size = 4.5,  av errors = 17.0 (11.4%)
+#
+#Composite ruleset:
+#
+#Rule  Size  Error  Used  Wrong	          Advantage
+#----  ----  -----  ----  -----	          ---------
+#   5     1   3.2%   152     22 (14.5%)	    -2 (4|6) 	G
+#  11     1  14.8%   142      1 (0.7%)	     4 (4|0) 	WT
+#   7     2  18.5%    49      3 (6.1%)	    18 (19|1) 	WT
+#   8     1  25.3%   170      7 (4.1%)	   154 (161|7) 	WT
+#   3     1  27.0%    36      5 (13.9%)	    26 (31|5) 	WT
+#
+#Tested 666, errors 95 (14.3%)   <<
+#
+#
+#	  (a)  (b)	<-classified as
+#	 ---- ----
+#	  381   79	(a): class WT
+#	   16  190	(b): class G
+#
+#
+#Trial   Size      Errors
+#-----   ----      ------
+#   0       4   88(13.2%)
+#   1       5  107(16.1%)
+#   2       4  120(18.0%)
+#  **       5   95(14.3%)
+#				Av size = 4.5,  av errors = 102.5 (15.4%)
+#
