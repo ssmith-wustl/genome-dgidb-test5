@@ -217,7 +217,6 @@ sub get_events_for_metric {
     #@parent_addreads_events = sort { $a->date_scheduled cmp $b->date_scheduled } @parent_addreads_events;
     @parent_pp_alignment_events= sort { $b->date_scheduled cmp $a->date_scheduled } @parent_pp_alignment_events;
     my @latest_parent_ids = ($parent_pp_alignment_events[0]->id);
-    $DB::single=1;
     my @events = $class->get(model_id => $self->id, parent_event_id => \@latest_parent_ids);
     
     if (!@events) {
@@ -1170,7 +1169,6 @@ sub get_hq_snps_for_chrom {
 # Compare files and output where they agree on chromosome, position, and alleles into a 3rd file
 sub make_gold_snp_file {
     my $self = shift;
-    $DB::single=1;
     
     my $output_file_name = $self->gold_snp_file();
     my $output_fh;
@@ -1180,12 +1178,12 @@ sub make_gold_snp_file {
 
     my @related_microarray = Genome::Model::MicroArray->get(sample_name => $self->sample_name);
     if (scalar(@related_microarray) == 0) {
-        $self->error_message("No micro array models found with the same sample");
+        $self->status_message("No micro array models found with the same sample");
         return 0;
     }
     # if theres only one related micro array... use that as the gold snp list
     elsif (scalar(@related_microarray) == 1) {
-        $self->error_message("Only one micro array model found with the same sample... using its data as the gold snp file.");
+        $self->status_message("Only one micro array model found with the same sample... using its data as the gold snp file.");
         my $model = $related_microarray[0];
         while ($model->get_next_line) {
             print $output_fh $model->current_line->{chromosome} . "\t" .
@@ -1227,18 +1225,18 @@ sub make_gold_snp_file {
                 $model->current_line->{position} . "\t"; 
 
                 # if reverse match, print reverse...
-                if (($related_microarray[0]->current_line->{allele_1} eq $related_microarray[1]->current_line->{allele_1}) && 
-                ($related_microarray[0]->current_line->{allele_2} eq $related_microarray[1]->current_line->{allele_2})) {
+                if (($related_microarray[1]->current_line->{allele_1} eq $related_microarray[0]->current_line->{allele_1}) && 
+                ($related_microarray[1]->current_line->{allele_2} eq $related_microarray[0]->current_line->{allele_2})) {
                     print $output_fh $related_microarray[0]->current_line->{allele_2} . "\t" 
-                    . $related_microarray[0]->current_line->{allele_1} . "\t"; 
+                    . $related_microarray[1]->current_line->{allele_1} . "\t"; 
                 } else {
-                    print $output_fh $related_microarray[0]->current_line->{allele_1} . "\t" 
-                    . $related_microarray[0]->current_line->{allele_2} . "\t"; 
+                    print $output_fh $related_microarray[1]->current_line->{allele_1} . "\t" 
+                    . $related_microarray[1]->current_line->{allele_2} . "\t"; 
                 }
 
                 # if homozygous
-                if ($related_microarray[1]->current_line->{allele_1} eq $related_microarray[1]->current_line->{allele_2}) {
-                    if ($related_microarray[1]->current_line->{allele_1} eq $related_microarray[1]->current_line->{reference}) {
+                if ($related_microarray[0]->current_line->{allele_1} eq $related_microarray[0]->current_line->{allele_2}) {
+                    if ($related_microarray[0]->current_line->{allele_1} eq $related_microarray[0]->current_line->{reference}) {
                         print $output_fh "ref\tref\t"; 
                     } 
                     else {
@@ -1250,8 +1248,8 @@ sub make_gold_snp_file {
                 }
 
                 # if homozygous 
-                if ($related_microarray[0]->current_line->{allele_1} eq $related_microarray[0]->current_line->{allele_2}) {
-                    if ($related_microarray[0]->current_line->{allele_1} eq $related_microarray[0]->current_line->{reference}) {
+                if ($related_microarray[1]->current_line->{allele_1} eq $related_microarray[1]->current_line->{allele_2}) {
+                    if ($related_microarray[1]->current_line->{allele_1} eq $related_microarray[1]->current_line->{reference}) {
                         print $output_fh "ref\tref\n"; 
                     } 
                     else {
@@ -1292,12 +1290,6 @@ sub get_next_microarray_input {
             }
         }
         
-        # If alleles were not captured (dashes in the file)... get a new line
-        if (!$model->current_line->{allele_1} || !$model->current_line->{allele_2}) { 
-            $model->get_next_line();
-            next;
-        }
-
         # if lowest model has not been set yet, set to current model
         if (!$lowest_model) {
             $lowest_model = $model;
@@ -1341,7 +1333,7 @@ sub find_hq_snps {
     # Command line option variables
     my($aii_file, $cns, $basename, $maxsnps, $snplist);
     $maxsnps=10000000;
-    $snplist = 0;
+    $snplist = 1;
 
     $aii_file = $self->gold_snp_file();
 
