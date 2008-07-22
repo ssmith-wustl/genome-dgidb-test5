@@ -50,11 +50,9 @@ sub create {
         }
     }
 
-    unless (-e $target_file) {
-        unless (system("cp $original_file $target_file") == 0) {
-            $self->error_message("Failed to cp file $original_file");
-            return undef;
-        }
+    unless (system("cp $original_file $target_file") == 0) {
+        $self->error_message("Failed to cp file $original_file");
+        return undef;
     }
 
     # Sort the genotype submission file
@@ -105,6 +103,10 @@ sub _data_file {
 
     my $base_dir = $self->_base_directory;
     my $model_name = $self->name;
+
+    # Replace spaces with underscores for a valid file name
+    $model_name =~ s/ /_/g;
+    
     my $file_location = "$base_dir/$model_name.tsv";
 
    return $file_location; 
@@ -117,11 +119,6 @@ sub _sort_genotype_submission_file {
 
     my $output_file_name = $file . "_sorted";
 
-    # if it is already sorted, just return the sorted name
-    if (-s $output_file_name) {
-        return $output_file_name;
-    }
-    
     # Begin black magic for sorting the file by chrom and position
     open (DATA, $file); 
     my @list= <DATA>;
@@ -143,6 +140,7 @@ sub _sort_genotype_submission_file {
     my $sample_column = 5;
 
     # if a sample name is defined, filter only that sample name in...
+    # Also check that at least one instance of that sample is found...
     if ($sample_name) {
         my $found_any = undef;
         for my $current_line (@sorted) {
