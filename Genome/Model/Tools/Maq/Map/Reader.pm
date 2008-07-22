@@ -219,7 +219,7 @@ SV * build_perl_hash(maqmap1_t *mm)
 {
     HV * rec = newHV();
     sv_2mortal((SV *)rec);
-    hv_store(rec, "name",4,newSVpv(mm->name,0),0);printf("here is the name %s\n",mm->name);
+    hv_store(rec, "name",4,newSVpv(mm->name,0),0);//printf("here is the name %s\n",mm->name);
     hv_store(rec, "size",4,newSViv(mm->size),0);
     hv_store(rec, "seq",3,newSVpvn(get_read(mm),mm->size),0);
     hv_store(rec, "pos",3,newSViv(mm->pos),0);
