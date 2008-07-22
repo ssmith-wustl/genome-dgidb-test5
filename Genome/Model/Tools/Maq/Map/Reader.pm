@@ -34,6 +34,7 @@ sub open
     my ($self, $file_name) = @_;
     $self->close() if defined $self->{input_file};
     $self->{input_file} = init_file($file_name);
+    $self->{header} = $self->init_header;
 }
 
 sub close
@@ -41,6 +42,7 @@ sub close
     my ($self) = @_;
     close_file($self->{input_file});
     $self->{input_file} = undef;
+    $self->{header} = undef;
 }
 
 sub do
@@ -134,11 +136,24 @@ sub dynaloader_has_package
     return undef;
 }
 
+sub init_header
+{
+    my ($self) = @_;
+    
+    return _init_header($self->{input_file});
+}
+
 sub read_header
 {
     my ($self) = @_;
-    return _read_header($self->{input_file});
-
+    if(defined $self->{header})
+    {
+        return $self->{header};
+    }
+    else
+    {
+        die "Header not defined.\n";
+    }
 
 }
 
@@ -156,7 +171,7 @@ use Inline C => <<'END_C';
 typedef void (*do_func)(maqmap1_t *mm);
 SV *build_perl_header(maqmap_t *mm);
 
-SV *_read_header(void * fpin)
+SV *_init_header(void * fpin)
 {
     maqmap_t  *mm = maqmap_read_header(fpin);
     SV *perl_header = build_perl_header(mm);
@@ -204,7 +219,7 @@ SV * build_perl_hash(maqmap1_t *mm)
 {
     HV * rec = newHV();
     sv_2mortal((SV *)rec);
-    hv_store(rec, "name",4,newSVpv(mm->name,0),0);//printf("%s\n",mm->name);
+    hv_store(rec, "name",4,newSVpv(mm->name,0),0);printf("here is the name %s\n",mm->name);
     hv_store(rec, "size",4,newSViv(mm->size),0);
     hv_store(rec, "seq",3,newSVpvn(get_read(mm),mm->size),0);
     hv_store(rec, "pos",3,newSViv(mm->pos),0);
