@@ -56,6 +56,12 @@ class Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomia
         is_optional => 1,
         default => .25,
         doc => 'Threshold below which to bin as non-skin in binomial test',
+    },
+    tmp_files_to_cleanup =>
+    { 
+        type => 'List',
+        is_optional=> 1,
+        doc => 'files to cleanup',
     }
     ],
 };
@@ -84,12 +90,12 @@ sub _create_r_files {
     my $self = shift;
 
     #create temporary files for R
-    my $tumor_metric_file = new IO::File "< $self->experimental_metric_model_file";
+    my $tumor_metric_file = new IO::File($self->experimental_metric_model_file);
     unless(defined($tumor_metric_file)) {
         $self->error_message("Couldn't open " . $self->experimental_metric_model_file);
         return;
     }
-    my $normal_metric_file = new IO::File "< $self->experimental_metric_normal_file";
+    my $normal_metric_file = new IO::File($self->experimental_metric_normal_file);
     unless(defined($normal_metric_file)) {
         $self->error_message("Couldn't open " . $self->experimental_metric_normal_file);
         return;
@@ -162,6 +168,7 @@ sub _create_r_files {
 
         print $r_handle "$chr.$position.$al2 $skin_al2_read_hg ", $skin_al2_read_hg + $al2_read_hg, " $coverage_adjusted_proportion\n";  
     }
+    return 1;
 }
 
 #----------------------------------
@@ -316,6 +323,7 @@ sub _convert_probabilities_to_snps {
             print $skin_output_handle $line, "\n";
         }
     }
+    return 1;
 }
 
 sub DESTROY {
