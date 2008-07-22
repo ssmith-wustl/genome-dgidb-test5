@@ -330,6 +330,7 @@ associations in four cases.
 
         SEQUENCE_ITEM                   GSC::Sequence::Item                
         SEQUENCE_ASSEMBLY               GSC::Sequence::Assembly
+        SEQUENCE_ASSEMBLY_PSE           GSC::Sequence::AssemblyPSE
         SEQUENCE_ASSEMBLY_SANGER        GSC::Sequence::Assembly::Sanger
         SEQUENCE_ASSEMBLY_454           GSC::Sequence::Assembly::454
         SEQUENCE_ASSEMBLY_SOLEXA        GSC::Sequence::Assembly::Solexa
@@ -351,7 +352,7 @@ associations in four cases.
         
         SEQUENCE_UNPLACED_CONTIG        GSC::Sequence::UnplacedContig
         SEQUENCE_ANALYSIS_OUTPUT        GSC::Sequence::AnalysisOutput
-        SEQUENCE_ANALYSIS_OUTPUT_PSE  GSC::Sequence::AnalysisOutputPSE
+        SEQUENCE_ANALYSIS_OUTPUT_PSE    GSC::Sequence::AnalysisOutputPSE
         SEQUENCE_BASE_STRING            GSC::Sequence::BaseString        
         SEQUENCE_QUALITY_STRING         GSC::Sequence::QualityString                
         SEQUENCE_PHD                    GSC::Sequence::PHD
