@@ -91,7 +91,7 @@ class Genome::Model {
                                          is_optional => 1,
                                          is_transient => 1,
                                   },
-        instrument_data              => { is=>'String', is_optional => 1 , doc => 'The instrument data for the model',},
+        instrument_data              => { is=>'String', is_optional => 1 , doc => 'The instrument data for the model', is_transient =>1},
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',

@@ -38,7 +38,7 @@ my $create_pp_command= Genome::Model::Command::Create::ProcessingProfile::ShortR
      reference_sequence    => $reference_sequence,
      genotyper             => $genotyper ,
      read_aligner          => $read_aligner,
-	 profile_name		   => $pp_name,	
+     profile_name          => $pp_name,
      bare_args => [],
  );
 
@@ -67,10 +67,10 @@ is($pp->name,$pp_name,'processing profile name accessor');
 
 diag('test command create for a genome model');
 my $create_command= Genome::Model::Command::Create::Model->create( 
-  	model_name            	=> $model_name,
+    model_name              => $model_name,
     sample                  => $sample,
-	processing_profile_name => $pp_name,
-	bare_args 				=> [],
+    processing_profile_name => $pp_name,
+    bare_args               => [],
 );
     
 isa_ok($create_command,'Genome::Model::Command::Create::Model');
@@ -171,19 +171,19 @@ isa_ok($gmiv ,'Genome::Model::ImportedVariants');
 
 my $gmma = Genome::Model::MicroArray->create(processing_profile_id => $ppma->id,
                                  name => 'micro array test',
-                                 genotype_submission_file => $genotype_submission_file 
+                                 instrument_data => $genotype_submission_file 
                                 );
 ok($gmma, 'creation worked micro array processing profile');
 isa_ok($gmma ,'Genome::Model::MicroArray');
 my $gmmai = Genome::Model::MicroArray->create(processing_profile_id => $ppmai->id,
                                  name => 'micro array illumina test',
-                                 genotype_submission_file => $genotype_submission_file 
+                                 instrument_data => $genotype_submission_file 
                                 );
 ok($gmmai, 'creation worked micro array illumina processing profile');
 isa_ok($gmmai ,'Genome::Model::MicroArrayIllumina');
 my $gmmaa = Genome::Model::MicroArray->create(processing_profile_id => $ppmaa->id,
                                  name => 'micro array affymetrix test',
-                                 genotype_submission_file => $genotype_submission_file 
+                                 instrument_data => $genotype_submission_file 
                                 );
 ok($gmmaa, 'creation worked micro array affymetrix processing profile');
 isa_ok($gmmaa ,'Genome::Model::MicroArrayAffymetrix');
