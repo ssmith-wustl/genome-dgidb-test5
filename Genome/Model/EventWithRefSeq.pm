@@ -137,6 +137,7 @@ sub resolve_accumulated_alignments_filename {
         my $start_time = time;
         until (-p "$result_file.pipe" or ( (time - $start_time) > 100) )  {
             $self->status_message("Waiting for pipe...");
+            sleep(5);
         }
         unless (-p "$result_file.pipe") {
             die "Failed to make pipe? $!";
