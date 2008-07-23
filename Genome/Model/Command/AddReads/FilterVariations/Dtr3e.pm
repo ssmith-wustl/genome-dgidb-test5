@@ -290,7 +290,7 @@ sub generate_figure_3_files {
             $self->error_message("No filtered_variants directory returned.");
             return undef;
         }
-       my $dbsnp_fh = IO::File->new(">$dir" . "/tumor_only_in_d_V_W_" . $self->ref_seq_id .
+       my $dbsnp_fh = IO::File->new(">$dir" . "/somatic_variants_in_d_v_w" . $self->ref_seq_id .
             ".csv");
        my $dbsnp_count=0;      
        my $non_coding_fh = IO::File->new(">$dir" .
@@ -302,7 +302,7 @@ sub generate_figure_3_files {
             ".csv");
        my $novel_tumor_count=0;      
        my $silent_fh = IO::File->new(">$dir" .
-           "/silent_tumor_only_" . $self->ref_seq_id .
+           "/silent_tumor_only_variants_" . $self->ref_seq_id .
             ".csv");
        my $silent_count=0;     
        my $nonsynonymous_fh = IO::File->new(">$dir" .
@@ -329,7 +329,7 @@ sub generate_figure_3_files {
             ".csv");
        my $var_complete_validation_count=0;      
        my $validated_snps_fh = IO::File->new(">$dir" .
-           "/valid_snps_" . $self->ref_seq_id .
+           "/validated_snps_" . $self->ref_seq_id .
             ".csv");
        my $validated_snps_count=0;     
        my $false_positives_fh = IO::File->new(">$dir" .
@@ -337,7 +337,7 @@ sub generate_figure_3_files {
             ".csv");
        my $false_positives_count=0;     
        my $validated_somatic_var_fh = IO::File->new(">$dir" .
-           "/validated_somatic_var_" . $self->ref_seq_id .
+           "/validated_somatic_variants_" . $self->ref_seq_id .
             ".csv");
        my $validated_somatic_var_count=0;     
         #added to track things that were passed through manual review but
@@ -345,7 +345,7 @@ sub generate_figure_3_files {
         #from db
        my $passed_but_no_status_count=0;     
        my $passed_but_no_status_fh = IO::File->new(">$dir" .
-           "/passed_manreview_no_validation" . $self->ref_seq_id .
+           "/var_pass_manreview_but_no_val_status" . $self->ref_seq_id .
             ".csv");
          my $annotation_fh = IO::File->new($snp_file);
         if(!defined($annotation_fh)) {
@@ -537,23 +537,23 @@ sub generate_figure_3_files {
                                 );
 
       $metric = $self->add_metric(
-                                    name=> "non_coding_variants",
+                                    name=> "non_coding_tumor_only_variants",
                                     value=> $non_coding_count,
                                 );
 
 
       $metric = $self->add_metric(
-                                    name=> "novel_tumor_variants",
+                                    name=> "novel_tumor_only_variants",
                                     value=> $novel_tumor_count,
                                 );
 
 
       $metric = $self->add_metric(
-                                    name=> "silent_variants",
+                                    name=> "silent_tumor_only_variants",
                                     value=> $silent_count,
                                 );
       $metric = $self->add_metric(
-                                    name=> "nonsynonymous_variants",
+                                    name=> "non_synonymous_splice_site_variants",
                                     value=> $nonsynonymous_count,
                                 );
 
@@ -637,27 +637,27 @@ sub somatic_variants_in_d_v_w {
     return $self->get_metric_value($name);
 }
 
-sub non_coding_variants {
+sub non_coding_tumor_only_variants {
     my $self = shift;
-    my $name = 'non_coding_variants';
+    my $name = 'non_coding_tumor_only_variants';
     return $self->get_metric_value($name);
 }
-sub novel_tumor_variants {
+sub novel_tumor_only_variants {
     my $self = shift;
-    my $name = 'novel_tumor_variants';
-    return $self->get_metric_value($name);
-}
-
-
-sub silent_variants {
-    my $self = shift;
-    my $name = 'silent_variants';
+    my $name = 'novel_tumor_only_variants';
     return $self->get_metric_value($name);
 }
 
-sub nonsynonymous_variants {
+
+sub silent_tumor_only_variants {
     my $self = shift;
-    my $name = 'nonsynonymous_variants';
+    my $name = 'silent_tumor_only_variants';
+    return $self->get_metric_value($name);
+}
+
+sub non_synonymous_splice_site_variants {
+    my $self = shift;
+    my $name = 'non_synonymous_splice_site_variants';
     return $self->get_metric_value($name);
 }
 
@@ -709,27 +709,27 @@ sub _calculate_somatic_variants_in_d_v_w {
     return $self->get_metric_value($name);
 }
 
-sub _calculate_non_coding_variants {
+sub _calculate_non_coding_tumor_only_variants {
     my $self = shift;
-    my $name = 'non_coding_variants';
+    my $name = 'non_coding_tumor_only_variants';
     return $self->get_metric_value($name);
 }
-sub _calculate_novel_tumor_variants {
+sub _calculate_novel_tumor_only_variants {
     my $self = shift;
-    my $name = 'novel_tumor_variants';
-    return $self->get_metric_value($name);
-}
-
-
-sub _calculate_silent_variants {
-    my $self = shift;
-    my $name = 'silent_variants';
+    my $name = 'novel_tumor_only_variants';
     return $self->get_metric_value($name);
 }
 
-sub _calculate_nonsynonymous_variants {
+
+sub _calculate_silent_tumor_only_variants {
     my $self = shift;
-    my $name = 'nonsynonymous_variants';
+    my $name = 'silent_tumor_only_variants';
+    return $self->get_metric_value($name);
+}
+
+sub _calculate_non_synonymous_splice_site_variants {
+    my $self = shift;
+    my $name = 'non_synonymous_splice_site_variants';
     return $self->get_metric_value($name);
 }
 
@@ -852,10 +852,10 @@ sub metrics_for_class {
     my $self = shift;
     my @metrics = qw| 
     somatic_variants_in_d_v_w
-    non_coding_variants
-    novel_tumor_variants
-    silent_variants
-    nonsynonymous_variants
+    non_coding_tumor_only_variants
+    novel_tumor_only_variants
+    silent_tumor_only_variants
+    non_synonymous_splice_site_variants
     var_pass_manreview
     var_fail_manreview
     var_fail_valid_assay

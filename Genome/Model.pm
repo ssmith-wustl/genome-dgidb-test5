@@ -167,10 +167,10 @@ sub metric_to_class_hash {
                    HQ_SNP_variant_allele_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
                    HQ_SNP_both_allele_count => 'Genome::Model::Command::AddReads::AnnotateVariations',
                    somatic_variants_in_d_v_w => 'Genome::Model::Command::AddReads::FilterVariations',
-                   non_coding_variants => 'Genome::Model::Command::AddReads::FilterVariations',
-                   novel_tumor_variants => 'Genome::Model::Command::AddReads::FilterVariations',
-                   silent_variants => 'Genome::Model::Command::AddReads::FilterVariations',
-                   nonsynonymous_variants => 'Genome::Model::Command::AddReads::FilterVariations',
+                   non_coding_tumor_only_variants => 'Genome::Model::Command::AddReads::FilterVariations',
+                   novel_tumor_only_variants => 'Genome::Model::Command::AddReads::FilterVariations',
+                   silent_tumor_only_variants => 'Genome::Model::Command::AddReads::FilterVariations',
+                   non_synonymous_splice_site_variants => 'Genome::Model::Command::AddReads::FilterVariations',
                    var_pass_manreview => 'Genome::Model::Command::AddReads::FilterVariations',
                    var_fail_manreview => 'Genome::Model::Command::AddReads::FilterVariations',
                    var_fail_valid_assay => 'Genome::Model::Command::AddReads::FilterVariations',
@@ -389,27 +389,27 @@ sub _calculate_somatic_variants_in_d_v_w {
     return $self->_get_sum_of_metric_values_from_events($name);
 }
 
-sub _calculate_non_coding_variants {
+sub _calculate_non_coding_tumor_only_variants {
     my $self = shift;
-    my $name = 'non_coding_variants';
+    my $name = 'non_coding_tumor_only_variants';
     return $self->_get_sum_of_metric_values_from_events($name);
 }
-sub _calculate_novel_tumor_variants {
+sub _calculate_novel_tumor_only_variants {
     my $self = shift;
-    my $name = 'novel_tumor_variants';
-    return $self->_get_sum_of_metric_values_from_events($name);
-}
-
-
-sub _calculate_silent_variants {
-    my $self = shift;
-    my $name = 'silent_variants';
+    my $name = 'novel_tumor_only_variants';
     return $self->_get_sum_of_metric_values_from_events($name);
 }
 
-sub _calculate_nonsynonymous_variants {
+
+sub _calculate_silent_tumor_only_variants {
     my $self = shift;
-    my $name = 'nonsynonymous_variants';
+    my $name = 'silent_tumor_only_variants';
+    return $self->_get_sum_of_metric_values_from_events($name);
+}
+
+sub _calculate_non_synonymous_splice_site_variants {
+    my $self = shift;
+    my $name = 'non_synonymous_splice_site_variants';
     return $self->_get_sum_of_metric_values_from_events($name);
 }
 
