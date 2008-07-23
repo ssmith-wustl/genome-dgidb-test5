@@ -100,8 +100,14 @@ sub execute {
         # cleanup...
         #    return;
         #}
-
-    unless ($self->generate_experimental_variation_metrics_files) {        
+    my $chromosome = $self->ref_seq_id;    
+    my ($filtered_list_dir) = $model->_filtered_variants_dir();
+    my $snp_file_filtered = $filtered_list_dir . "snp_filtered_${chromosome}.csv";    
+    unless($self->SNPFiltered($snp_file_filtered)) {
+        $self->error_message("Error creating depth filtered SNP file");
+        return;
+    }
+    unless ($self->generate_experimental_variation_metrics_files($snp_file_filtered)) {        
         $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
         return;
     }
@@ -256,16 +262,71 @@ sub generate_variation_metrics_files {
     return 1;
 }
 
+my %IUBcode=(
+	     A=>'AA',
+	     C=>'CC',
+	     G=>'GG',
+	     T=>'TT',
+	     M=>'AC',
+	     K=>'GT',
+	     Y=>'CT',
+	     R=>'AG',
+	     W=>'AT',
+	     S=>'GC',
+	     D=>'AGT',
+	     B=>'CGT',
+	     H=>'ACT',
+	     V=>'ACG',
+	     N=>'ACGT',
+	    );
+
+sub SNPFiltered {
+    my ($self, $snp_file_filtered) = @_;
+    my $chromosome = $self->ref_seq_id;
+    my $model = $self->model;
+
+    my ($snp_file) = $model->_variant_list_files($chromosome);
+    my $snp_fh = IO::File->new($snp_file);
+    unless ($snp_fh) {
+        $self->error_message(sprintf("snp file %s does not exist.  please verify this first.",
+                $snp_file));
+        return;
+    }
+    my $snp_filtered_fh = IO::File->new(">$snp_file_filtered");
+    unless ($snp_filtered_fh) {
+        $self->error_message(sprintf("snp file %s can not be created.",
+                $snp_file_filtered));
+        return;
+    }
+    while (<$snp_fh>) {
+        chomp;
+        my ($id, $start, $ref_sequence, $iub_sequence, $quality_score,
+            $depth, $avg_hits, $high_quality, $unknown) = split("\t");
+        my $genotype = $IUBcode{$iub_sequence};
+        my $cns_sequence = substr($genotype,0,1);
+        my $var_sequence = (length($genotype) > 2) ? 'X' : substr($genotype,1,1);
+        if ($ref_sequence eq $cns_sequence &&
+            $ref_sequence eq $var_sequence) {
+            next;										# no variation
+        }
+        if ($depth > 2) {
+            print $snp_filtered_fh $_ . "\n";
+        }
+    }
+    $snp_fh->close;
+    $snp_filtered_fh->close;
+    return 1;
+}
+
 sub generate_experimental_variation_metrics_files {
     # This generates additional bleeding-edge data.
     # It runs directly out of David Larson's home for now until merged w/ the stuff above.
     # It will be removed when bugs are worked out in the regular metric generator.
 
     my $self = shift;
-
+    my $snp_file = shift;
     my $output_basename     = $self->experimental_variation_metrics_file_basename;
     
-    my $snp_file            = $self->snp_output_file;
     my $ref_seq             = $self->ref_seq_id;
     my $map_file            = $self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id); 
     

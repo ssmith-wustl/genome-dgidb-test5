@@ -137,10 +137,12 @@ while(my $line=$handle->getline) {
     my ($chr,$position,$al1,$al2,$qvalue,$al2_read_hg,$avg_map_quality,$max_map_quality,$n_max_map_quality,$avg_sum_of_mismatches,$max_sum_of_mismatches,$n_max_sum_of_mismatches, $base_quality, $max_base_quality, $n_max_base_quality, $avg_windowed_quality, $max_windowed_quality, $n_max_windowed_quality, $for_strand_unique_by_start_site, $rev_strand_unique_by_start_site, $al2_read_unique_dna_context, $for_strand_unique_by_start_site_pre27,$rev_strand_unique_by_start_site_pre27,$al2_read_unique_dna_context_pre27) = split ", ", $line;
     my $al2_read_unique_dna_start = $for_strand_unique_by_start_site + $rev_strand_unique_by_start_site;
     my $al2_read_unique_dna_start_pre27 = $for_strand_unique_by_start_site_pre27 + $rev_strand_unique_by_start_site_pre27;
-
+    
+    next if $qvalue < 15; #hardcoded to make this work, filtering out anything that is not q 15
+    
     my $decision = 'keep';
     my $rule = 'none';
-
+    
     if ($al2_read_unique_dna_start > 7 &&
     $qvalue >= $qvalue_level) {
         #Rule 5:
@@ -192,6 +194,12 @@ while(my $line=$handle->getline) {
             #Default class: G
             $decision = 'keep';
             $rule = 'default';
+        }
+
+        ##additional arbitrary filter on pre-27 readcounts
+        unless($al2_read_unique_dna_start_pre27 > 2) {
+            $decision = 'remove';
+            $rule = 'pre-27';
         }
 
 #        my $variant_detail = Genome::VariantReviewDetail->get(
@@ -284,6 +292,20 @@ sub generate_figure_3_files {
     my $prior = Genome::Model::Event->get(id => $self->prior_event);
     my $snp_file = $prior->snp_report_file;
     #end possible break
+    
+    #Hash for ranking somatic statuses
+    my %rank = ('S' => 0,
+        'G' => 1,
+        'WT' => 2,
+        'A' => 3,
+        'V' => 3,
+        'O' => 3,
+        'LQ' => 4,
+        'X' => 4,
+        'NC' => 5,
+    );
+    #END HASH
+    
     #my $snp_file = $self->_report_file('snp');
         my $dir = $self->model->_filtered_variants_dir();
         if(!defined($dir)) {
@@ -444,28 +466,65 @@ sub generate_figure_3_files {
                              #if there is a somatic status then it probably
                              #passed manual review but wasn't documented.
                              #Or it was directly passed along.
-                             my $status = $variant_detail->somatic_status;
+                             my $db_status = $variant_detail->somatic_status;
+                             my $status;
+                             #take care of the possibility of discrepancy
+                             my ($level1_discrep) = $db_status =~ /^DISCREPANCY\((.*)/;
+                             my $level2_discrep;
+                             if(defined($level1_discrep)) {
+                                 ($level2_discrep) = $level1_discrep =~ /^DISCREPANCY\((.*)/;
+                             }
+                             if(defined($level2_discrep)) {
+                                 my @status = split /:/, $level2_discrep;
+                                 map {s/^\s*(\S*)\s*$/$1/} @status;
+                                 my $new_status = 'NC';
+                                 foreach my $discr_status (@status) {
+                                     if($rank{$discr_status} < $rank{$new_status} ) {
+                                         $new_status = $discr_status;
+                                     }
+                                 }
+                                 $status = $new_status;
+                             }
+                             elsif(defined($level1_discrep)) {
+                                 my @status = split /:/, $level1_discrep;
+                                 map {s/^\s*(\S*)\s*$/$1/} @status;
+                                 my $new_status = 'NC';
+                                 foreach my $discr_status (@status) {
+                                     unless(defined($rank{$discr_status})) {
+                                         $self->error_message("No entry for |$discr_status|");
+                                     }
+                                     if($rank{$discr_status} < $rank{$new_status} ) {
+                                         $new_status = $discr_status;
+                                     }
+                                 }
+                                 $status = $new_status;
+                             }
+                             else {
+                                 $status = $db_status;
+                             }
+
+
                              if(defined($decision) && lc($decision) eq 'yes'
                                  || defined($status)) {
                                  $self->_write_array_to_file(\@cur_anno_snp,
                                      $var_pass_manreview_fh);
-                                     $var_pass_manreview_count++;
+                                 $var_pass_manreview_count++;
 
                                  if(defined($status)) {
                                      $status = uc($status);
                                      if($status eq 'S') {
                                          $self->_write_array_to_file(\@cur_anno_snp,
-                                         $validated_somatic_var_fh);
+                                             $validated_somatic_var_fh);
                                          $validated_somatic_var_count++;
                                      }
                                      elsif($status eq 'WT') {
                                          $self->_write_array_to_file(\@cur_anno_snp,
-                                         $false_positives_fh);
+                                             $false_positives_fh);
                                          $false_positives_count++;
                                      }
                                      elsif($status eq 'G') {
                                          $self->_write_array_to_file(\@cur_anno_snp,
-                                         $validated_snps_fh);
+                                             $validated_snps_fh);
                                          $validated_snps_count++;
                                      }
                                      else {
