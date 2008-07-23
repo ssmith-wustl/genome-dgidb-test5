@@ -56,6 +56,10 @@ sub _snp_resource_name {
     my $self = shift;
     return sprintf("snips%s", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
 }
+sub _snp_filtered_resource_name {
+    my $self=shift;
+    return sprintf("snps_filtered%s", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
+}
 
 sub _pileup_resource_name {
     my $self = shift;
@@ -71,6 +75,12 @@ sub snp_output_file {
     my $self = shift;
     return sprintf("%s/identified_variations/%s", $self->model->data_directory,$self->_snp_resource_name);
 }
+
+sub snp_filtered_output_file {
+    my $self = shift;
+    return sprintf("%s/identified_variations/%s", $self->model->data_directory,$self->_snp_filtered_resource_name);
+}
+
 
 sub pileup_output_file {
     my $self = shift;
@@ -101,13 +111,11 @@ sub execute {
         #    return;
         #}
     my $chromosome = $self->ref_seq_id;    
-    my ($filtered_list_dir) = $model->_filtered_variants_dir();
-    my $snp_file_filtered = $filtered_list_dir . "snp_filtered_${chromosome}.csv";    
-    unless($self->SNPFiltered($snp_file_filtered)) {
+    unless($self->SNPFiltered) {
         $self->error_message("Error creating depth filtered SNP file");
         return;
     }
-    unless ($self->generate_experimental_variation_metrics_files($snp_file_filtered)) {        
+    unless ($self->generate_experimental_variation_metrics_files) {        
         $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
         return;
     }
@@ -281,10 +289,13 @@ my %IUBcode=(
 	    );
 
 sub SNPFiltered {
-    my ($self, $snp_file_filtered) = @_;
+    my $self=shift;
     my $chromosome = $self->ref_seq_id;
     my $model = $self->model;
 
+    #a subset of us know how to spell snp
+    my $snp_file_filtered=$self->snp_filtered_output_file;
+    
     my ($snp_file) = $model->_variant_list_files($chromosome);
     my $snp_fh = IO::File->new($snp_file);
     unless ($snp_fh) {
@@ -324,13 +335,17 @@ sub generate_experimental_variation_metrics_files {
     # It will be removed when bugs are worked out in the regular metric generator.
 
     my $self = shift;
-    my $snp_file = shift;
+    my $snp_file = $self->snp_filtered_output_file; 
     my $output_basename     = $self->experimental_variation_metrics_file_basename;
-    
+    my $model = $self->model;
+    #I hack this hack hackily.  If you wonder why this is here, ask brian and dave for
+    #some long/boring explanation
+    if($model->name =~ m/skin/) {
+        $snp_file = $self->tumor_sample_snp_filtered_file;
+    }
     my $ref_seq             = $self->ref_seq_id;
     my $map_file            = $self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id); 
     
-    my $model = $self->model;
     my $bfa_file = sprintf("%s/all_sequences.bfa", $model->reference_sequence_path);
 
     my @f = ($map_file,$bfa_file,$snp_file);
@@ -481,6 +496,50 @@ sub snp_err_log_file {
         ($self->lsf_job_id || $self->ref_seq_id),
     );
 }
+
+sub tumor_sample_snp_filtered_file {
+    my $self= shift;
+    my $model = $self->model;
+   $DB::single=1;
+    my $model_name = $model->name;
+    my $tumor_name = $model_name;
+
+    $tumor_name =~ s/34skin/98tumor/g;
+    my $tumor_model = Genome::Model->get('name like' => $tumor_name);
+    unless ($tumor_model) {
+        $self->error_message(sprintf("tumor model matching name %s does not exist.  please verify this first.", $tumor_name));
+        return undef;
+    }
+
+# Get metrics for the tumor sample for processing.
+my $latest_tumor_build = $tumor_model->latest_build_event;
+unless ($latest_tumor_build) {
+    $self->error_message("Failed to find a build event for the comparable tumor model " . $tumor_model->name);
+    return;
+}
+
+my ($equivalent_tumor_event) =
+grep { $_->isa("Genome::Model::Command::AddReads::PostprocessVariations")  }
+$latest_tumor_build->child_events(
+    ref_seq_id => $self->ref_seq_id
+);
+
+unless ($equivalent_tumor_event) {
+    $self->error_message("Failed to find an event on the tumor model to match the tumor.  Probably need to re-run after that completes.  In the future, we will have the tumor/tumor filtering separate from the individual model processing.\n");
+    return;
+}
+my $tumor_sample_snp_file_name = $equivalent_tumor_event->snp_filtered_output_file;
+
+unless (-e $tumor_sample_snp_file_name) {
+    $self->error_message("Failed to find variation metrics for \"tumor\": $tumor_sample_snp_file_name");
+    return;
+}
+return $tumor_sample_snp_file_name;
+
+}
+
+
+
 
 1;
 
