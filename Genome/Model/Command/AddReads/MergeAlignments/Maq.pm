@@ -48,7 +48,7 @@ sub execute {
 
     my $now = UR::Time->now;
     my $model = Genome::Model->get(id => $self->model_id);
-    my $maplist_dir = $model->alignments_directory;
+    my $maplist_dir = $model->accumulated_alignments_directory;
     unless (-e $maplist_dir) {
         unless (mkdir $maplist_dir) {
             $self->error_message("Failed to create directory '$maplist_dir':  $!");

@@ -509,14 +509,18 @@ sub base_parent_directory {
 
 sub alignment_links_directory {
     my $self = shift;
-    return $self->base_parent_directory . "/alignment_links/" .
-        $self->read_aligner_name .'/'.
+    return $self->base_parent_directory . "/alignment_links";
+}
+
+sub alignment_directory {
+    my $self = shift;
+    return $self->alignment_links_directory .'/'. $self->read_aligner_name .'/'.
         $self->reference_sequence_name;
 }
 
 sub model_links_directory {
     my $self = shift;
-    return $self->base_parent_directory . "/model_links"
+    return $self->base_parent_directory . "/model_links";
 }
 
 sub data_directory {
@@ -642,9 +646,9 @@ sub _files_for_pattern_and_params {
     return $self->_files_for_pattern_and_optional_ref_seq_id($pattern, $ref_seq_id);
 }
 
-sub alignments_directory {
+sub accumulated_alignments_directory {
     my $self = shift;
-    return $self->data_directory . '/alignments'; 
+    return $self->data_directory . '/alignments';
 }
 
 sub maplist_file_paths {
@@ -658,10 +662,9 @@ sub maplist_file_paths {
     } else {
         $ref_seq_id = 'all_sequences';
     }
-
-    my @map_lists = grep { -e $_ } glob($self->alignments_directory .'/*_'. $ref_seq_id .'.maplist');
+    my @map_lists = grep { -e $_ } glob($self->accumulated_alignments_directory .'/*_'. $ref_seq_id .'.maplist');
     unless (@map_lists) {
-        $self->error_message("No map lists found for ref seq $ref_seq_id in " . $self->alignments_directory);
+        $self->error_message("No map lists found for ref seq $ref_seq_id in " . $self->accumulated_alignments_directory);
     }
     return @map_lists;
 }

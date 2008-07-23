@@ -38,7 +38,7 @@ is($data_directory, "/gscmnt/839/info/medseq/model_links/H_GV-933124G-skin1-9017
 #$f = $m->resolve_accumulated_alignments_filename();
 #is($f, 'FIXME', "found accumulated alignments file name"); #FIXME WHEN WE SWITCH MODELS
 
-$f = $m->alignments_directory();
+$f = $m->accumulated_alignments_directory();
 is($f, "$data_directory/alignments", "found alignments directory");
 
 #@f = $m->maplist_file_paths();
