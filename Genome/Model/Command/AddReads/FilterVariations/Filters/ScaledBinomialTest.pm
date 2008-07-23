@@ -70,6 +70,7 @@ class Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomia
 #----------------------------------
 sub execute {
     my $self = shift;
+    $DB::single = 1;
     unless($self->_create_r_files) {
         $self->error_message("Error creating temporary files for R");
         return;
@@ -120,15 +121,15 @@ sub _create_r_files {
         chomp $skin_line;
         if($line =~ /^chromosome/) {
             $line = $tumor_metric_file->getline;   #don't check additional headers that may have been included by cat
-            chomp $skin_line;
+            chomp $line;
         }
         if($skin_line =~ /^chromosome/) {
-            $normal_metric_file->getline;
+            $skin_line = $normal_metric_file->getline;
             chomp $skin_line;
         }
         my @data_indices = (0, 1, 2, 3, 5, 24); 
         my @tumor_metrics = split ", ", $line;
-        my @skin_metrics = split ", ", $line;
+        my @skin_metrics = split ", ", $skin_line;
 
 
         my ($chr,
@@ -153,6 +154,7 @@ sub _create_r_files {
             #Probably the skin site didn't make it through filtering
             if($skin_chr eq $chr && $skin_position > $position) {
                 $self->error_message("Files de-synced during R data file creation");
+                return;
             }
             else {
                 $skin_line = $normal_metric_file->getline;
