@@ -9,20 +9,26 @@ use Command;
 class Genome::Model::Command::AddReads {
     is => 'Genome::Model::Event',
     has => [
-            model_id            => {
-                                    is => 'Integer', 
-                                    doc => 'Identifies the genome model to which we\'ll add the reads.'
-                                },
-            read_set_id         => {
-                                    is => 'String',
-                                    doc => 'The unique ID of the data set produced on the instrument'
-                                },
+        model_id    => {
+            is => 'Integer', 
+            doc => 'Identifies the genome model to which we\'ll add the reads.'
+        },
     ],
     has_optional => [
-        test                => { is => 'Boolean',
-                                  doc => 'Create run and event information in the database, but do not schedule or execute any sub-commands',
-                                  is_optional => 1,
-                                  default_value => 0},
+        read_set_id => {
+            is => 'String',
+            doc => 'The unique ID of the data set produced on the instrument'
+        },
+        test        => { 
+            is => 'Boolean',
+            doc => 'Create run and event information in the database, but do not schedule or execute any sub-commands',
+            is_optional => 1,
+            default_value => 0
+        },
+        redo_all    => {
+            is  => 'Boolean',
+            doc => 'Remove and reproduce all of the add-reads events for the specified model.'
+        },
     ],
 };
 
@@ -58,14 +64,22 @@ EOS
 our $GENOME_MODEL_BSUBBED_COMMAND = "genome-model";
 
 sub execute {
-    $DB::single=1;
     my $self = shift;
 
     my $model = $self->model;
 
     my @sub_command_classes = $self->get_sub_command_classes(); 
-    
+
+    my $redo_all = $self->redo_all();
+    if ($redo_all) {
+        return $self->_redo_all();
+    }    
+ 
     my $read_set_id = $self->read_set_id;
+    unless ($read_set_id) {
+        $self->error_message("Please specify a specific read set id.");
+        return;
+    }
     
     # hack until the GSC.pm namespace is deployed ...after we fix perl5.6 issues...
     Genome::RunChunk->class;
@@ -88,21 +102,23 @@ sub execute {
         use File::Basename;
         my $seq_fs_data_types = ["duplicate fastq path" , "unique fastq path"];
         my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id, data_type => $seq_fs_data_types);
-        unless (@fs_path) {
-            $self->error_message("Failed to find the path for data set $run_name/$lane ($read_set_id)!");
-            return;
+        #stuff scott changed - jeldred 080714
+        if (not @fs_path) {
+            $self->status_message("Failed to find the path for data set $run_name/$lane ($read_set_id)!");            
         }
-        my %dirs = map { File::Basename::dirname($_->path) => 1 } @fs_path;
-        if (keys(%dirs)>1) {
-            $self->error_message("Multiple directories for run $run_name/$lane ($read_set_id) not supported!");
-            return;
+        else {
+            my %dirs = map { File::Basename::dirname($_->path) => 1 } @fs_path;
+            if (keys(%dirs)>1) {
+                $self->error_message("Multiple directories for run $run_name/$lane ($read_set_id) not supported!");
+                return;
+            }
+            elsif (keys(%dirs)==0) {
+                $self->error_message("No directories for run $run_name/$lane ($read_set_id)??");
+                return;
+            }
+            ($full_path) = keys %dirs;
+            $full_path .= '/' unless $full_path =~ m|\/$|;
         }
-        elsif (keys(%dirs)==0) {
-            $self->error_message("No directories for run $run_name/$lane ($read_set_id)??");
-            return;
-        }
-        ($full_path) = keys %dirs;
-        $full_path .= '/' unless $full_path =~ m|\/$|;
     }
     elsif ($read_set->isa("GSC::RunRegion454")) {
         $sequencing_platform = '454';
@@ -172,16 +188,29 @@ sub execute {
     my $prior_event_id = undef;
 
     foreach my $command_class ( @sub_command_classes ) {
+        my $command;
 
-        my $command = $command_class->create(
-            run_id => $run->id,
-            model_id => $self->model_id,
-            event_status => 'Scheduled',
-            retry_count => 0,
-            prior_event_id => $prior_event_id,
-            parent_event_id => $self->id,
-        );
+        eval {
+            $command = $command_class->create(
+                run_id => $run->id,
+                model_id => $self->model_id,
+                event_status => 'Scheduled',
+                retry_count => 0,
+                prior_event_id => $prior_event_id,
+                parent_event_id => $self->id,
+            );
+        };
         unless ($command) {
+            $DB::single = 1;
+            $command = $command_class->create(
+                run_id => $run->id,
+                model_id => $self->model_id,
+                event_status => 'Scheduled',
+                retry_count => 0,
+                prior_event_id => $prior_event_id,
+                parent_event_id => $self->id,
+            );
+            
             $self->error_message(
                 "Problem creating subcommand for class $command_class run id ".$run->id
                 . " model id ".$self->model_id
@@ -216,6 +245,62 @@ sub get_sub_command_classes {
 
     return @sub_command_classes;
 }    
+
+sub _redo_all {
+    my $self = shift;
+$DB::single = 1;
+    my $model = $self->model;
+    my $model_id = $model->id;
+    
+    my @prior_add_reads_events = sort { $b->id <=> $a->id } $model->read_set_addition_events;
+    my @replacements;
+    for my $prior_add_reads_step (@prior_add_reads_events) {
+        my $replacement = $prior_add_reads_step->redo;
+        push @replacements, $replacement;
+    }
+
+    return @replacements;
+}
+
+sub redo {
+    my $self = shift;
+    my @children = $self->child_events;
+    my $read_set_id = $self->read_set_id;
+    $self->status_message("Found " . scalar(@children) . " child events under " . $self->id . "\n");
+    for my $child (sort { $b->id <=> $a->id } @children) {
+        $child->event_status("Scheduled");
+        next;
+        if ($read_set_id) {
+            if ($read_set_id != $child->read_set_id) {
+                die "Read set for " . $child->id . " is not $read_set_id!?"; 
+            }
+        }
+        else {
+            $read_set_id = $child->read_set_id;
+        }
+        #$child->delete;
+    }   
+    
+    return 1;
+         
+    if ($read_set_id) {
+        my $class = $self->class;
+        my $model_id = $self->model_id;
+        $self->delete;
+        my $retval = $class->execute(
+            model_id => $model_id,
+            read_set_id => $read_set_id, 
+        );
+        unless ($retval) {
+            die "Error adding read set $read_set_id!";
+        }
+        return $retval;
+    }
+    else {
+        $self->warning_message("No read sets found for old addition.  " . $self->id . " Just deleting.");
+        return 1;
+    }
+}
 
 1;
 
