@@ -14,12 +14,13 @@ class Genome::Model::Command::Create::Model {
     is => ['Genome::Model::Event'],
     sub_classification_method_name => 'class',
     has => [
-		#TODO: make processing_profile not a parameter, name only.
-		processing_profile     => { is => 'Genome::ProcessingProfile', doc => 'Not used as a parameter', id_by => 'processing_profile_id', is_optional => 1, },
-		processing_profile_name => { is => 'varchar', len => 255,  doc => 'The name of the processing profile to be used. '},
+        #TODO: make processing_profile not a parameter, name only.
+        processing_profile     => { is => 'Genome::ProcessingProfile', doc => 'Not used as a parameter', id_by => 'processing_profile_id', is_optional => 1, },
+        processing_profile_name => { is => 'varchar', len => 255,  doc => 'The name of the processing profile to be used. '},
         model_name             => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
         sample                 => { is => 'varchar', len => 255, doc => 'The name of the sample all the reads originate from' },
         model                  => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id', doc => 'Not used as a parameter' },
+        instrument_data => { is => 'String', doc => 'The instrument data for this model', is_optional => 1, is_transient =>1 },
     ],
     schema_name => 'Main',
 };
@@ -80,15 +81,15 @@ sub command_properties{
 sub execute {
     my $self = shift;
 
-$DB::single=1;
+    $DB::single=1;
 
-	unless ($self->_get_processing_profile_from_name()) { 
+    unless ($self->_get_processing_profile_from_name()) { 
         $self->event_status('Failed');
         $self->error_message("Error: Expecting 1 processing profile match." );
-		return;
-	}
+        return;
+    }
 
-    $self->_validate_execute_params(); 
+    $self->_validate_execute_params();
 
     # generic: abstract out
     my %params = %{ $self->_extract_command_properties_and_duplicate_keys_for__name_properties() };
@@ -156,14 +157,14 @@ sub _extract_command_properties_and_duplicate_keys_for__name_properties{
                 $params{'name'} = $value;
             }
         } else {
-			# processing_profile_name is only used to grab the processing_profile... so dont include it as a param
-			unless ($command_property eq 'processing_profile_name') { 
-	            my $object_property = $command_property;
-            	if ($target_class->can($command_property . "_name")) {
-                	$object_property .= "_name";
-            	}
-            	$params{$object_property} = $value;
-			}
+            # processing_profile_name is only used to grab the processing_profile... so dont include it as a param
+            unless ($command_property eq 'processing_profile_name') { 
+                my $object_property = $command_property;
+                if ($target_class->can($command_property . "_name")) {
+                    $object_property .= "_name";
+                }
+                $params{$object_property} = $value;
+            }
         }
     }
     
@@ -231,19 +232,19 @@ sub _create_target_class_instance_and_error_check{
 
 # Retreives the processing profile matching the name specified
 sub _get_processing_profile_from_name {
-	my $self = shift;
-	my $processing_profile_name = $self->processing_profile_name;
-	my @processing_profiles = Genome::ProcessingProfile->get(name => $processing_profile_name);
+    my $self = shift;
+    my $processing_profile_name = $self->processing_profile_name;
+    my @processing_profiles = Genome::ProcessingProfile->get(name => $processing_profile_name);
 
-	# Bomb out unless exactly 1 matching processing profile is found
-	my $num_processing_profiles = scalar(@processing_profiles);
-	unless($num_processing_profiles == 1) {
+    # Bomb out unless exactly 1 matching processing profile is found
+    my $num_processing_profiles = scalar(@processing_profiles);
+    unless($num_processing_profiles == 1) {
         return 0;
-	}
-	
-	my $pp = $processing_profiles[0];
-	$self->processing_profile_id($pp->id);
-	return $pp->id; 
+    }
+
+    my $pp = $processing_profiles[0];
+    $self->processing_profile_id($pp->id);
+    return $pp->id; 
 }
 
 1;

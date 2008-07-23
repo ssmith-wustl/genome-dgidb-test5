@@ -12,7 +12,7 @@ use Sort::Naturally;
 class Genome::Model::MicroArray{
     is => 'Genome::Model',
     has => [
-        genotype_submission_file        => { is     => 'String',
+        instrument_data => { is     => 'String',
                                              doc    => 'The genotype submission file to be used as microarray data. This file will be copied to the appropriate directory.',
         }
     ],
@@ -33,8 +33,9 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
 
+    
     # Grab the data file, make the appropriate directory and copy the file there with an appropriate name
-    my $original_file = $self->genotype_submission_file();
+    my $original_file = $self->instrument_data();
     if (!$original_file) {
         $self->error_message("Genotype submission file not defined!");
         return undef;
@@ -50,12 +51,14 @@ sub create {
         }
     }
 
+    $self->status_message("Copying $original_file...");
     unless (system("cp $original_file $target_file") == 0) {
         $self->error_message("Failed to cp file $original_file");
         return undef;
     }
 
     # Sort the genotype submission file
+    $self->status_message("Sorting the file...");
     my $sorted_data_file = $self->_sort_genotype_submission_file($target_file);
 
     if (!$sorted_data_file) {

@@ -23,7 +23,7 @@ class Genome::Model {
     has => [
         processing_profile           => { is => 'Genome::ProcessingProfile::ShortRead', id_by => 'processing_profile_id' },
         # TODO: Make processing profile generic and move all shortread specific properties down to G::M::ShortRead
-        #processing_profile           => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
+        #processing_profile          => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name      => { via => 'processing_profile', to => 'name'},
         sequencing_platform          => { via => 'processing_profile'},
         type_name                    => { via => 'processing_profile'},
@@ -63,7 +63,7 @@ class Genome::Model {
                                                 reverse_id_by => 'model',
                                                 doc => 'each case of variations filtered per chromosome',
                                            },
-
+        
         alignment_file_paths         => { via => 'alignment_events' },
         has_all_alignment_metrics    => { via => 'alignment_events', to => 'has_all_metrics' },
         has_all_filter_variation_metrics    => { via => 'filter_variation_events', to => 'has_all_metrics' },
@@ -87,6 +87,7 @@ class Genome::Model {
                                          is_optional => 1,
                                          is_transient => 1,
                                   },
+        instrument_data              => { is=>'String', is_optional => 1 , doc => 'The instrument data for the model',},
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
