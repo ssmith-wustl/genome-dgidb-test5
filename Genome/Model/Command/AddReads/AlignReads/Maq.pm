@@ -14,8 +14,6 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
         'Genome::Model::Command::MaqSubclasser'
     ],
     has => [
-        sorted_unique_fastq_file_for_lane => {via => 'prior_event'},
-        sorted_duplicate_fastq_file_for_lane => {via => 'prior_event'},
         alignment_file_paths => {
             doc => "the paths to to the map files",
             calculate_from => ['read_set_directory','run_subset_name'],
@@ -133,13 +131,31 @@ This command is usually called as part of the add-reads process
 EOS
 }
 
-sub bsub_rusage {
-    return "-R 'select[type=LINUX64]'";
+# maq map file for all this lane's alignments
 
+sub read_set_alignment_file_for_refseq {
+    my $self = shift;
+    my $ref_seq_id = shift;
+    my $event_id = $self->id;
+    return $self->read_set_alignment_directory . "/$ref_seq_id.map.$event_id";
 }
 
-sub should_bsub { 1;}
+sub aligner_output_file {
+    my $self = shift;
+    my $event_id = $self->id;
+    my $lane = $self->read_set->subset_name;
+    my $file = $self->read_set_alignment_directory . "/alignments_lane_${lane}.map.$event_id";
+    $file =~ s/\.map\./\.map.aligner_output\./g;
+    return $file;
+}
 
+sub unaligned_reads_file {
+    my $self = shift;
+    my $event_id = $self->id;
+    my $read_set = $self->read_set;
+    my $lane = $read_set->subset_name;
+    return $self->read_set_alignment_directory . "/s_${lane}_sequence.unaligned.$event_id";
+}
 
 sub metrics_for_class {
     my $class = shift;
@@ -155,7 +171,7 @@ sub metrics_for_class {
                           unaligned_read_count
                           unaligned_base_pair_count
                           total_base_pair_count
-     );
+    );
 
     return @metric_names;
 }
@@ -314,185 +330,156 @@ sub _calculate_total_base_pair_count {
     return $total_base_pair_count;
 }
 
+sub prepare_input {
+    my ($self, $read_set, $seq_dedup) = @_;
+
+    my $lane = $read_set->subset_name;
+    my $read_set_desc = $read_set->full_name . "(" . $read_set->id . ")";
+    my $gerald_directory = $read_set->_run_lane_solexa->gerald_directory;
+    unless ($gerald_directory) {
+    
+        die "No gerald directory in the database for or $read_set_desc"
+    }
+    unless (-d $gerald_directory) {
+        die "No gerald directory on the filesystem for $read_set_desc: $gerald_directory";
+    }
+    my $solexa_output_path =  "$gerald_directory/s_${lane}_sequence.txt";
+    my $aligner_path = $self->aligner_path('read_aligner_name');
+   
+    # find or create a sanger fastq 
+    my $fastq_pathname;
+    if ($seq_dedup) {
+        die "sequence-based deduplication is not supported at this time";
+        my $fastq_method = "sorted_unique_fastq_file_for_lane";
+        $fastq_pathname = $self->$fastq_method;
+        unless (-f $fastq_pathname) {
+            $self->error_message("fastq file does not exist $fastq_pathname");
+            return;
+        }
+        if (-z $fastq_pathname) {
+            $self->error_message("fastq file has zero size $fastq_pathname");
+            return;
+        }
+        $self->status_message("Found sequence-deduplicated fastq at $fastq_pathname");
+    }
+    unless ($fastq_pathname) {
+        $fastq_pathname = $self->create_temp_file_path('fastq');
+        $self->shellcmd(
+            cmd => "$aligner_path sol2sanger $solexa_output_path $fastq_pathname",
+            input_files => [$solexa_output_path],
+            output_files => [$fastq_pathname],
+            skip_if_output_is_present => 1,
+        );
+    }
+
+    # create a bfq
+    my $bfq_pathname = $self->create_temp_file_path('bfq');
+    unless ($bfq_pathname) {
+        die "Failed to create temp file for bfq!";
+    }
+    
+    $self->shellcmd(
+        cmd => "$aligner_path fastq2bfq $fastq_pathname $bfq_pathname",
+        input_files => [$fastq_pathname],
+        output_files => [$bfq_pathname],
+        skip_if_output_is_present => 1,
+    );
+
+    return $bfq_pathname;
+}
 
 sub execute {
     my $self = shift;
     
 $DB::single = 1;
-    my $model = $self->model;
-    my $maq_pathname = $self->proper_maq_pathname('read_aligner_name');
 
-   # ensure the reference sequence exists.
-    my $ref_seq_file =  $model->reference_sequence_path . "/all_sequences.bfa";
-    
+    my $model = $self->model;
+
+    # prepare the refseq
+    my $ref_seq_path =  $model->reference_sequence_path;    
+    my $ref_seq_file =  $ref_seq_path . "/all_sequences.bfa";
     unless (-e $ref_seq_file) {
         $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
         return;
     }
+
+    # prepare the reads
+    my $read_set = $self->read_set;
+    my $seq_dedup = $model->is_eliminate_all_duplicates;
+    my $bfq_pathname = $self->prepare_input($read_set,$seq_dedup);
+
+    # prepare paths for the results
+    my $read_set_alignment_directory = $self->read_set_alignment_directory;
+    unless (-d $read_set_alignment_directory) {
+        $self->create_directory($read_set_alignment_directory);
+    }        
+    my $alignment_file = $self->create_temp_file_path('all.map');
+    my $aligner_output_file = $self->aligner_output_file;
+    my $unaligned_reads_file = $self->unaligned_reads_file;
     
-    my $lane = $self->run->limit_regions;
-    unless ($lane) {
-        $self->error_message("There is no limit_regions attribute on run_id ".$self->run_id);
+    # resolve adaptor file
+    # TODO: get fresh from LIMS
+    my $adaptor_file;
+    my @dna = GSC::DNA->get(dna_name => $model->sample_name);
+    if (@dna == 1) {
+        if ($dna[0]->dna_type eq 'genomic dna') {
+            $adaptor_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer';
+        } elsif ($dna[0]->dna_type eq 'rna') {
+            $adaptor_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer_SMART';
+        }
+    }
+    unless (-e $adaptor_file) {
+        $self->error_message("Adaptor file $adaptor_file not found!: $!");
+        return;
+    }
+    
+    # prepare the alignment command
+    my $aligner_path = $self->aligner_path('read_aligner_name');
+    my $aligner_params = $model->read_aligner_params || '';
+    $aligner_params = join(' ', $aligner_params, '-d', $adaptor_file);
+    my $cmdline = 
+        $aligner_path
+        . sprintf(' map %s -u %s %s %s %s %s > ',
+                          $aligner_params,
+                          $unaligned_reads_file,
+                          $alignment_file,
+                          $ref_seq_file,
+                          $bfq_pathname) 
+        . $aligner_output_file 
+        . ' 2>&1';
+
+    # run the aligner
+    $self->shellcmd(
+        cmd                         => $cmdline,
+        input_files                 => [$ref_seq_file, $bfq_pathname],
+        output_files                => [$alignment_file, $unaligned_reads_file, $aligner_output_file],
+        skip_if_output_is_present   => 1,
+    );
+    
+    # look through the output file and make sure maq actually finished completely
+    unless ($self->_check_maq_successful_completion($aligner_output_file)) {
         return;
     }
 
-    my $working_dir = $self->resolve_run_directory;
-
-    # Make sure the output directory exists
-    unless (-d $working_dir) {
-        $self->error_message("working directory $working_dir does not exist, please run assign-run first");
+$DB::single = 1;
+    # break up the alignments by the sequence they match, if necessary
+    my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
+    my $map_split = Genome::Model::Tools::Maq::MapSplit->execute(
+        map_file => $alignment_file,
+        submap_directory => $self->read_set_alignment_directory,
+        reference_names => \@subsequences,
+    );
+    unless($map_split) {
+        $self->error_message("Failed to run map split on alignment file $alignment_file");
         return;
     }
-
-    # does this model specify to keep or eliminate duplicate reads
-    my @passes = ('unique') ;
-    unless ($model->is_eliminate_all_duplicates) {
-        push @passes, 'duplicate';
-    }
-
-    # use maq to do the alignments
-    my @prior_events_to_wait_on;
-    foreach my $pass ( @passes ) {
-        # See if we can re-use data from another run, and just symlink to it
-        my $prior_event = $self->_check_for_shortcut($pass);
-        if ($prior_event) {
-            push @prior_events_to_wait_on, $prior_event;
-            next;
-        }
-
-        # Convert the fastq files into bfq files
-
-        my $fastq_method = sprintf("sorted_%s_fastq_file_for_lane", $pass);
-        my $fastq_pathname = $self->$fastq_method;
-        unless (-f $fastq_pathname) {
-            $self->error_message("fastq file does not exist $fastq_pathname");
+    
+    for my $output_file ($map_split->output_files) {
+        my $new_file_path = $output_file .'.'. $self->id;
+        unless (rename($output_file,$new_file_path)) {
+            $self->error_message("Failed to rename file '$output_file' => '$new_file_path'");
             return;
         }
-
-        # Skip align reads for with_dups model when the duplicate fastq does not exist
-        # In other words CQADR, was faked and unique file contains all reads
-        if (-z $fastq_pathname) {
-            if ($pass eq 'duplicate') {
-                next;
-            } else {
-                $self->error_message("fastq file has zero size $fastq_pathname");
-                return;
-            }
-        }
-
-        my $bfq_method = sprintf("%s_bfq_file_for_lane", $pass);
-        my $bfq_pathname = $self->$bfq_method;
-        unless (-f $bfq_pathname) {
-            system("$maq_pathname fastq2bfq $fastq_pathname $bfq_pathname");
-        }
-
-        # Files needed/creatd by the aligner
-        my $aligner_output_method = sprintf("aligner_%s_output_file_for_lane", $pass);
-        my $aligner_output = $self->$aligner_output_method;
-        # If aligner output file already exists return
-        if (-f $aligner_output && -s $aligner_output) {
-            $self->error_message("alignner output  file already exist with nonzero size '$aligner_output'");
-            return;
-        };
-
-        my $reads_method = sprintf("unaligned_%s_reads_file_for_lane", $pass);
-        my $reads_file = $self->$reads_method;
-        # If reads file already exists return
-        if (-f $reads_file && -s $reads_file) {
-            $self->error_message("reads file already exist with nonzero size '$reads_file'");
-            return;
-        };
-
-        my $alignment_file_method = sprintf("%s_alignment_file_for_lane", $pass);
-        my $alignment_file = $self->$alignment_file_method();
-        # If output file already exists return
-        if (-f $alignment_file && -s $alignment_file) {
-            $self->error_message("alignment file already exist with nonzero size '$alignment_file'");
-            return;
-        };
-
-        my $aligner_params = $model->read_aligner_params || '';
-        if (-f $self->adaptor_file_for_run()) {
-            $aligner_params = join(' ', $aligner_params, '-d', $self->adaptor_file_for_run);
-        }
-        
-        # one of these parameters may be undefined, this is normal... turn
-        # warnings off just for a moment
-        no warnings;
-        my $cmdline = sprintf("$maq_pathname map %s -u %s %s %s %s %s > $aligner_output 2>&1",
-                              $aligner_params,
-                              $reads_file,
-                              $alignment_file,
-                              $ref_seq_file,
-                              $bfq_pathname);
-        use warnings;                      
-
-        print "running: $cmdline\n";
-        system($cmdline);
-        if ($?) {
-            my $rv = $? >> 8;
-            $self->error_message("got a nonzero exit code ($rv) \$\? ($?) from maq map; something went wrong.  cmdline was $cmdline rv was $rv");
-            return;
-        }
-
-        # Look through the output file and make sure maq actually finished completely
-        unless ($self->_check_maq_successful_completion($aligner_output)) {
-            return;
-        }
-
-        # use submap if necessary
-        my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
-
-        if (@subsequences) {
-            foreach my $seq (@subsequences) {
-                my $alignments_dir = $self->alignment_submaps_dir_for_lane;
-                unless (-d $alignments_dir ) {
-                     mkdir($alignments_dir);
-                }
-                my $submap_target = sprintf("%s/%s_%s.map",$alignments_dir,$seq,$pass);
-                unlink ($submap_target);
-              
-                # FIXME maq 0.6.4 (and later) have the submap functionality we use removed.  Newer maq's 
-                # supposedly have the same file format, so hopefully using maq 0.6.3's submap will do the
-                # job for us
-
-                # That last "1" is for the required (because of a bug) 'begin' parameter
-                #my $maq_submap_cmdline = "$maq_pathname submap $submap_target $alignment_file $seq 1";
-                my $maq_submap_cmdline = "/gsc/pkg/bio/maq/maq-0.6.3_x86_64-linux/maq submap $submap_target $alignment_file $seq 1";
-            
-                print $maq_submap_cmdline, "\n";
-                
-                my $rv = system($maq_submap_cmdline);
-                if ($rv) {
-                     $self->error_message("got a nonzero return value from maq submap; cmdline was $maq_submap_cmdline");
-                     return;
-                }
-            }
-
-            ## Don't need the whole-lane map file anymore
-            # Actually, we'll need them in the AcceptReads step, next
-            #unlink($alignment_file);
-        }  
-
-    } # end foreach unique, duplicate
-
-    # If we were waiting on any other events to finish....
-    foreach my $event ( @prior_events_to_wait_on ) {
-        my $id = $event->genome_model_event_id;
-        my $reloaded = Genome::Model::Event->load(genome_model_event_id => $id);
-        my $status = $reloaded->event_status();
-        $self->error_message("Waiting on $id with status ". $reloaded->event_status);
-        while ($reloaded->event_status eq 'Running') {
-            sleep 60;   # Wait a bit until it's done running;
-            $reloaded = Genome::Model::Event->load(genome_model_event_id => $id);
-        }
-        if ($reloaded->event_status ne 'Succeeded') {
-            # Since we're dependent on data generated by that one, we fail if they failed
-            $self->error_message("Failed after waiting on $id with status ". $reloaded->event_status);
-            return;
-        }
-        #Should attempt something like this to avoid circular symlinks
-        #if (-l read_link($self->))
     }
 
     $self->generate_metric($self->metrics_for_class);
@@ -604,6 +591,8 @@ sub _check_for_shortcut {
             # may still be Running, in which case the target of these symlinks may not
             # exist yet.  We'll block at the end of execute() until they're done
 
+            #Jim TODO - replace alignment_submaps_dir_for_lane
+            #with the new and improved SOME_METHOD from EventWithReadSet.pm
             my $prior_alignments_dir = $prior_event->alignment_submaps_dir_for_lane;
             my @prior_alignment_files = map { sprintf("%s/%s_%s.map",$prior_alignments_dir,$_,$type) } 
                                         grep { $_ ne "all_sequences" }
