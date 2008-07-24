@@ -18,10 +18,10 @@ use Inline (C => 'Config',
             
 sub new {
     croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
-    my ($caller, $arg, %params) = @_;
+    my ($caller, %params) = @_;
     my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;
-    my $self = {};#\%params;
+    my $self = \%params;
     
     bless ($self, $class);
     
@@ -34,6 +34,7 @@ sub open
 {
     my ($self, $file_name) = @_;
     $self->close() if defined $self->{output_file};
+    $self->{file_name} = $file_name;
     $self->{output_file} = init_file($file_name);
 }
 

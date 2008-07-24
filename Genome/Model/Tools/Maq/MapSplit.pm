@@ -19,10 +19,6 @@ class Genome::Model::Tools::Maq::MapSplit {
                                  doc => 'The directory to dump submap files after split',
                                  is => 'String',
                              },
-            type => {
-                     doc => 'The type of alignment(ie. unique/duplicate/all)',
-                     is => 'String',
-                 },
             reference_names => {
                              doc => "a list of expected ref names to find.  any additional ref names will be grouped into 'other'",
                              is => 'ArrayRef',
@@ -111,16 +107,20 @@ sub execute {
     # close all the writers we created
     for (keys %writers) {
         $writers{$_}->close;
+        push @{$self->{_output_files}}, $writers{$_}->{file_name};
     }
-
     return 1;
 }
 
+sub output_files {
+    return @{$_[0]->{_output_files}};
+}
 
 sub create_writer {
     my ($self,$ref_name,$header) = @_;
-    my $map_writer = Genome::Model::Tools::Maq::Map::Writer->new;
-    $map_writer->open($self->submap_directory .'/'. $ref_name .'_'. $self->type .'.map');
+    my $map_file = $self->submap_directory .'/'. $ref_name .'.map';
+    my $map_writer = Genome::Model::Tools::Maq::Map::Writer->new(file_name => $map_file);
+    $map_writer->open($map_file);
     $map_writer->write_header($header);
     return $map_writer;
 }
