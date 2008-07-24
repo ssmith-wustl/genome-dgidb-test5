@@ -2367,8 +2367,9 @@ sub GetBarcodeHistory {
 	my $pse = $el->[0];
 	
 	$lol->[$i][0] = $barcode;
-        my $test_type = GSC::PSE->get($pse)->inherited_property_value('test_type');
-        $lol->[$i][1] = $test_type;
+        #my $test_type = GSC::PSE->get($pse)->inherited_property_value('test_type');
+        #$lol->[$i][1] = $test_type;
+        $lol->[$i][1] = undef;
 
 	$lol->[$i][2] = $el->[1];
 	
