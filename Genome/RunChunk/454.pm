@@ -26,5 +26,11 @@ class Genome::RunChunk::454 {
 
 sub _dw_class { 'GSC::RunRegion454' }
 
+sub _desc_dw_obj {
+    my $class = shift;
+    my $obj = shift;
+    return "(" . $obj->id . ")";
+}
+
 1;
 

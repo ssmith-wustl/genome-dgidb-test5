@@ -30,7 +30,7 @@ class Genome::RunChunk::Solexa {
 
         #rename not to be platform specific and move up
         clusters                        => { via => "_run_lane_solexa" },
-        is_paired_end                   => { via => "_run_lane_solexa",
+        is_paired_end                   => { 
                                              calculate_from => ['run_type'],
                                              calculate => q| if ($run_type =~ m/Paired End/) {
                                                                 return 1;
@@ -45,6 +45,12 @@ class Genome::RunChunk::Solexa {
 };
 
 sub _dw_class { 'GSC::RunLaneSolexa' }
+
+sub _desc_dw_obj {
+    my $class = shift;
+    my $obj = shift;
+    return $obj->run_name . "/" . $obj->lane . " (" . $obj->id . ")";
+}
 
 
 1;
