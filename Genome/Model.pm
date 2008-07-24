@@ -25,7 +25,7 @@ class Genome::Model {
         # TODO: Make processing profile generic and move all shortread specific properties down to G::M::ShortRead
         #processing_profile          => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name      => { via => 'processing_profile', to => 'name'},
-        sequencing_platform          => { via => 'processing_profile'},
+        sequencing_platform          => { via => 'processing_profile'},        
         type_name                    => { via => 'processing_profile'},
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
@@ -40,8 +40,23 @@ class Genome::Model {
         read_aligner_params          => { via => 'processing_profile'},
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
-        reference_sequence_name      => { via => 'processing_profile'},
+        reference_sequence_name      => { via => 'processing_profile'},        
         sample_name                  => { is => 'VARCHAR2', len => 255 },
+        
+        
+                                        
+        read_set_class_name          => { 
+                                            calculate_from => ['sequencing_platform'], 
+                                            calculate => q| 'Genome::RunChunk::' . ucfirst($sequencing_platform) |,
+                                            doc => 'the class of read set assignable to this model'
+                                        },
+        
+        input_read_set_class_name    => { 
+                                            calculate_from => ['read_set_class_name'],
+                                            calculate => q|$read_set_class_name->_dw_class|,
+                                            doc => 'the class of read set assignable to this model in the dw'
+                                        },
+        
         events                       => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => 'model', 
                                           doc => 'all events which have occurred for this model',
                                         },
@@ -98,16 +113,12 @@ class Genome::Model {
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
 
-
-
 sub create {
     my $class = shift;
-
     my $self = $class->SUPER::create(@_);
     if ($^P) {
         $self->test(1);
     }
-
     return $self;
 }
 
@@ -120,6 +131,22 @@ sub libraries {
         @distinct_libraries = grep { $_ !~ /d$/ } @distinct_libraries;
     }
     return @distinct_libraries;
+}
+
+sub compatible_read_sets {
+    my $self = shift;
+    my $input_read_set_class_name = $self->input_read_set_class_name;
+    my @compatible_read_sets = $input_read_set_class_name->get(sample_name => $self->sample_name);
+    return @compatible_read_sets;
+}
+
+sub available_read_sets {
+    my $self = shift;
+    my @compatible_read_sets = $self->compatible_read_sets;
+    my @read_set_assignment_events = $self->read_set_assignment_events;
+    my %prior = map { $_->run_id => 1 } @read_set_assignment_events;
+    my @available_read_sets = grep { not $prior{$_->id} } @compatible_read_sets;
+    return @available_read_sets;
 }
 
 sub _calculate_library_count {
