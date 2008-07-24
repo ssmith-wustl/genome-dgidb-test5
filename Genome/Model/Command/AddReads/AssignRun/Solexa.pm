@@ -10,38 +10,7 @@ use GSC;
 use IO::File;
 
 class Genome::Model::Command::AddReads::AssignRun::Solexa {
-    is => [
-           'Genome::Model::Command::AddReads::AssignRun',
-       ],
-    has => [
-            model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
-            run_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },
-            adaptor_file => { is => 'String', is_optional => 1, doc => 'pathname to the adaptor file used for these reads'},
-            original_sorted_unique_fastq_file_for_lane => {
-                                                           calculate_from => [ 'read_set' ],
-                                                           calculate => q|
-                return sprintf("%s/%s_sequence.unique.sorted.fastq", $read_set->full_path, $read_set->subset_name);
-            |
-                                                       },
-            sorted_unique_fastq_file_for_lane => {
-                                                  calculate_from => [ 'read_set_directory','read_set' ],
-                                                  calculate => q|
-                return sprintf("%s/s_%s_sequence.unique.sorted.fastq", $read_set_directory, $read_set->subset_name);
-            |
-                                              },
-            original_sorted_duplicate_fastq_file_for_lane => {
-                                                              calculate_from => [ 'read_set' ],
-                                                              calculate => q|
-                return sprintf("%s/%s_sequence.duplicate.sorted.fastq", $read_set->full_path, $read_set->subset_name);
-            |
-                                                          },
-            sorted_duplicate_fastq_file_for_lane => {
-                                                     calculate_from => [ 'read_set_directory', 'read_set' ],
-                                                     calculate => q|
-                return sprintf("%s/s_%s_sequence.duplicate.sorted.fastq", $read_set_directory, $read_set->subset_name);
-            |
-                                                 },
-        ],
+    is => 'Genome::Model::Command::AddReads::AssignRun',
 };
 
 sub help_synopsis {
@@ -51,7 +20,7 @@ EOS
 }
 
 sub help_brief {
-    "Creates the appropriate items on the filesystem for a new Solexa run"
+    "initializes the model for a solexa read set (single lane)"
 }
 
 sub help_detail {
@@ -115,125 +84,19 @@ sub create {
 
 sub execute {
     my $self = shift;
-
     $DB::single=1;
-
     my $model = $self->model;
-
-    my $run = $self->run;
-    
-    unless ($run) {
-        $self->error_message("No run specified?");
-        return;
+    unless (-d $model->data_directory) {
+        $self->create_directory($model->data_directory);
     }
-
-    unless (-d $model->model_links_directory) {
-        eval { mkpath $model->model_links_directory };
-            if ($@) {
-                $self->error_message("Couldn't create run directory path $model->model_links_directory: $@");
-                return;
-            }
-        unless(-d $model->model_links_directory) {
-            $self->error_message("Failed to create data parent directory: ".$model->model_links_directory. ": $!");
-            return;
-        }
-    }
-
-    my $run_dir = $self->resolve_run_directory;
-    unless (-d $run_dir) {
-        eval { mkpath($run_dir) };
-        if ($@) {
-            $self->error_message("Couldn't create run directory path $run_dir: $@");
-            return;
-        }
-    }
-
-    # TODO: We should pull this from the run data, probably a seq_fs_path on the solexa lane summary.
-    my $adaptor_file;
-    my @dna = GSC::DNA->get(dna_name => $run->sample_name);
-    if (@dna == 1) {
-        if ($dna[0]->dna_type eq 'genomic dna') {
-            $adaptor_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer';
-        } elsif ($dna[0]->dna_type eq 'rna') {
-            $adaptor_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer_SMART';
-        }
-    }
-    unless (-e $adaptor_file) {
-        $self->error_message("Adaptor file $adaptor_file not found!: $!");
-        return;
-    }
-
-    # Copy the given adaptor file to the run's directory
-    my $local_adaptor_pathname = $self->adaptor_file_for_run;
-    system "cp $adaptor_file $local_adaptor_pathname";
-    unless (-e $local_adaptor_pathname) {
-        $self->error_message("Failed to copy $adaptor_file to $local_adaptor_pathname!: $!");
-        return;
-    }
-
-    # The LIMS PSE that ran before us has done some preparation already
-    # by making 2 files for each lane in the run.  1 containing sequences
-    # that are unique for that sample's library, and another containing
-    # sequences that have been seen before, both are fastq files
-
-    # Convert the original solexa sequence files into maq-usable files
-    my $lane = $self->run->limit_regions;
-
-    my $orig_unique_file = $self->original_sorted_unique_fastq_file_for_lane;
-    my $our_unique_file = $self->sorted_unique_fastq_file_for_lane;
-
-    unless (-f $orig_unique_file) {
-        $self->error_message("Source fastq $orig_unique_file does not exist");
-        return;
-    }
-
-    # make a symlink in our model directory pointing to the unique fastq data
-    if (-f $our_unique_file) {
-        $self->warning_message("The file $our_unique_file already exists.  Removing...");
-        unlink ($our_unique_file);
-    }
-    unless (symlink($orig_unique_file,$our_unique_file)) {
-        $self->error_message("Unable to create symlink $our_unique_file -> $orig_unique_file: $!");
-        return;
-    }
-
-    if (! $model->multi_read_fragment_strategy  or
-        $model->multi_read_fragment_strategy ne 'EliminateAllDuplicates') {
-
-        my $orig_duplicate_file = $self->original_sorted_duplicate_fastq_file_for_lane;
-        my $our_duplicate_file = $self->sorted_duplicate_fastq_file_for_lane;
-
-        unless (-f $orig_duplicate_file) {
-            $self->error_message("Source fastq $orig_duplicate_file does not exist");
-            return;
-        }
-
-        if (-f $our_duplicate_file) {
-            $self->warning_message("The file $our_duplicate_file already exists.  Removing...");
-            unlink ($our_duplicate_file);
-        }
-        unless (symlink($orig_duplicate_file, $our_duplicate_file)) {
-            $self->error_message("Unable to create symlink $our_duplicate_file -> $orig_duplicate_file: $!");
-            return;
-        }
-    }
-
     return 1;
 }
 
 sub verify_successful_completion {
     my $self = shift;
-
     my $model = $self->model;
-
-    unless (-d $model->model_links_directory) {
-    	$self->error_message("Data parent directory doesnt exist: ".$model->model_links_directory);
-        return 0;
-    }
-
-    my $run_dir = $self->resolve_run_directory;
-    unless (-d $run_dir) {
-        $self->error_message("Run directory path doesnt exist: $run_dir");
+    unless (-d $model->data_directory) {
+    	$self->error_message("Data parent directory doesnt exist: ".$model->data_directory);
         return 0;
     }
     return 1;
