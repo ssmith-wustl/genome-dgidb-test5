@@ -13,7 +13,6 @@ class Genome::Model::Command {
         model           => { is => 'Genome::Model', id_by => 'model_id' },
         model_id        => { is => 'Integer', doc => 'identifies the genome model by id' },
         model_name      => { is => 'String', via => 'model', to => 'name' },
-        #limit_runs  => { is => 'Genome::RunChunk', is_many => 1 },
     ],
 };
 
@@ -63,18 +62,13 @@ sub create {
 
 sub _sub_command_name_to_class_name_map{
     my $class = shift;
-    
-    return map {
-                    my ($type) = m/::(\w+)$/;
-                    $type => $_
-                }
+    return 
+        map { my ($type) = m/::(\w+)$/; $type => $_ }
                 $class->sub_command_classes();
 }
 
 sub _get_sub_command_class_name{
     my $class = shift;
-    
-    #my $sub_command_name = $class->_get_sub_command_name(@_);
     my $sub_command_name = $class->sub_command_delegator(@_);
     unless ($sub_command_name) {
         # The subclassing column's value was probably undef, meaning this sub-command
@@ -84,11 +78,8 @@ sub _get_sub_command_class_name{
     
     # Does the sub-command exist?
     my %sub_command_types = $class->_sub_command_name_to_class_name_map();
-
     my $sub_command_type = $sub_command_types{ucfirst($sub_command_name)};
     unless ($sub_command_type) {
-#        $class->error_message("sub command $sub_command_type is not known");
-      
         return;
     }
     
@@ -96,9 +87,9 @@ sub _get_sub_command_class_name{
 }
 
 
-# This method is used by the mid-level (like G::M::C::AddReads::AlignReads command modules
-# To return the right sub-sub-class when the subclassing property is maq-ish
 sub sub_command_delegator {
+    # This method is used by the mid-level (like ::AddReads::AlignReads modules
+    # to return the right sub-sub-class like ::AddReads::AlignReads::Maq
     my($class,%params) = @_;
 
     if (not defined $params{'model_id'}) {
@@ -131,7 +122,10 @@ sub sub_command_delegator {
 
 }
 
-sub bsub_rusage { '' }
+sub bsub_rusage { 
+    # override for tasks which require LSF resource requirements
+    '' 
+}
 
 1;
 
