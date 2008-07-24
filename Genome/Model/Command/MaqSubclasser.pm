@@ -18,7 +18,9 @@ UR::Object::Type->define(
     ],
 );
 
-
+sub aligner_path {
+    shift->proper_maq_pathname(@_);
+}
 
 sub proper_maq_pathname {
     my($self,$model_param_name) = @_;
