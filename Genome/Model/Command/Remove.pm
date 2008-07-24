@@ -17,6 +17,8 @@ UR::Object::Type->define(
     ]
 );
 
+sub sub_command_sort_position { 2 }
+
 sub help_brief {
     "remove a genome-model"
 }
@@ -66,4 +68,3 @@ $DB::single=1;
 
 1;
 
-sub sub_command_sort_position { 6 }
