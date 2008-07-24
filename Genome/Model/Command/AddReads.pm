@@ -16,18 +16,22 @@ class Genome::Model::Command::AddReads {
     ],
     has_optional => [
         read_set_id => {
-            is => 'String',
+            is => 'Number',
             doc => 'The unique ID of the data set produced on the instrument'
+        },
+        all => {
+            is => 'Boolean',
+            doc => 'Add all new reads for the associated sample which are not currently part of the model.'
+        },
+        redo_all    => {
+            is  => 'Boolean',
+            doc => 'Remove and reproduce all of the add-reads events for the specified model.'
         },
         test        => { 
             is => 'Boolean',
             doc => 'Create run and event information in the database, but do not schedule or execute any sub-commands',
             is_optional => 1,
             default_value => 0
-        },
-        redo_all    => {
-            is  => 'Boolean',
-            doc => 'Remove and reproduce all of the add-reads events for the specified model.'
         },
     ],
 };
@@ -73,159 +77,212 @@ sub execute {
     my $redo_all = $self->redo_all();
     if ($redo_all) {
         return $self->_redo_all();
-    }    
- 
-    my $read_set_id = $self->read_set_id;
-    unless ($read_set_id) {
-        $self->error_message("Please specify a specific read set id.");
-        return;
     }
-    
+
     # hack until the GSC.pm namespace is deployed ...after we fix perl5.6 issues...
     Genome::RunChunk->class;
     die $@ if $@;
-    
-    my $read_set = GSC::Sequence::Item->get($read_set_id);
-    unless ($read_set) {
-        $self->error_message("Failed to find run $read_set_id");
-        return;
+ 
+    my @read_sets;
+    if ($self->read_set_id) {        
+        @read_sets = GSC::Sequence::Item->get($self->read_set_id);
+        unless (@read_sets) {
+            $self->error_message("Failed to find specified read set: " . $self->read_set_id);
+            return;
+        }
     }
-
-    my $run_name = $read_set->run_name;
-    my $sample_name = $read_set->sample_name;
-
-    my ($sequencing_platform,$seq_fs_data_types,$lane,$full_path);
-    if ($read_set->isa("GSC::RunLaneSolexa")) {
-        $sequencing_platform = 'solexa';
-        $lane = $read_set->lane;
-
-        use File::Basename;
-        my $seq_fs_data_types = ["duplicate fastq path" , "unique fastq path"];
-        my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id, data_type => $seq_fs_data_types);
-        #stuff scott changed - jeldred 080714
-        if (not @fs_path) {
-            $self->status_message("Failed to find the path for data set $run_name/$lane ($read_set_id)!");            
+    else {
+        if ($self->all) {
+            $self->status_message("Adding all available reads to the model...!");
         }
         else {
-            my %dirs = map { File::Basename::dirname($_->path) => 1 } @fs_path;
-            if (keys(%dirs)>1) {
-                $self->error_message("Multiple directories for run $run_name/$lane ($read_set_id) not supported!");
-                return;
-            }
-            elsif (keys(%dirs)==0) {
-                $self->error_message("No directories for run $run_name/$lane ($read_set_id)??");
-                return;
-            }
-            ($full_path) = keys %dirs;
-            $full_path .= '/' unless $full_path =~ m|\/$|;
+            $self->status_message("No reads specified!");
+            # continue, b/c we'll list for the user which reads are available to add
         }
-    }
-    elsif ($read_set->isa("GSC::RunRegion454")) {
-        $sequencing_platform = '454';
-        $lane = $read_set->region_number;
-        $full_path = '/gscmnt/833/info/medseq/sample_data/'. $read_set->run_name .'/'. $read_set->region_id .'/';
-    }
-    else {
-        $self->error_message("Cannot resolve sequencing platform for "
-                             . ref($read_set)
-                             . " " 
-                             . $read_set->name 
-                             . " (" . $read_set->id . ")"
-                         );
-        return;
-    }
-
-    unless ($model->sample_name eq $sample_name) {
-        $self->error_message(
-                             "Bad sample name "
-                             . $sample_name
-                             . " on $run_name/$lane ($read_set_id) "
-                             . " does not match model sample "
-                             . $model->sample_name
-                         );
-        return;
-    }
-
-
-    my $run = Genome::RunChunk->get(
-        seq_id => $read_set_id,
-    );
-
-    if ($run) {
-        if ($run->run_name ne $run_name) {
-            $self->error_message("Bad run_name value $run_name.  Expected " . $run->run_name);
-            return;
-        }
-        if ($run->full_path ne $full_path) {
-            $self->warning_message("Run $run_name has changed location to $full_path from " . $run->full_path);
-            $run->full_path($full_path);
-        }
-        if ($run->subset_name ne $lane) {
-            $self->error_message("Bad lane/subset value $lane.  Expected " . $run->subset_name);
-            return;
-        }
-        if ($run->sample_name ne $model->sample_name) {
-            $self->error_message("Bad sample_name.  Model value is " . $model->model. ", run value is " . $run->sample_name);
-            return;
-        }
-    }
-    else {
-        $run = Genome::RunChunk->create(
-            genome_model_run_id => $read_set_id,
-            seq_id => $read_set_id,
-            run_name => $run_name,
-            full_path => $full_path,
-            subset_name => $lane,
-            sequencing_platform => $sequencing_platform,
-            sample_name => $sample_name,
+        
+        my $read_set_class_name = $model->read_set_class_name;
+        
+        $self->status_message(
+            "Checking for read sets for "
+            . $model->sample_name 
+            . " for the " . $model->sequencing_platform
+            . " sequencing platform..."
         );
-        unless ($run) {
-            $self->error_message("Failed to get or create run record information for $run_name, $lane ($read_set_id)");
+        
+        my @compatible_read_sets = $model->compatible_read_sets();
+        $self->status_message("Found " . scalar(@compatible_read_sets) . " for " . $model->sample_name);
+        
+        my @read_set_assignment_events = $model->read_set_assignment_events();
+        $self->status_message("This model has " . scalar(@read_set_assignment_events) . " read sets already assigned.");
+        my @desc = sort map { $_->read_set->full_name . " (" . $_->read_set->id . ")" } @read_set_assignment_events;
+        for my $desc (@desc) {
+            $self->status_message("    " . $desc);
+        }
+        
+        @read_sets = $model->available_read_sets;
+        $self->status_message(
+            scalar(@read_sets) 
+            . " read sets are available to add to the model" 
+            . (scalar(@read_sets) > 0 ? ':' : '.')
+        );
+        @desc = sort map { $read_set_class_name->_desc_dw_obj($_) } @read_sets;
+        for my $desc (@desc) {
+            $self->status_message("    " . $desc);
+        }
+        
+        if (@read_sets == 0) {
+            $self->status_message("No reads to add!");
+            if ($self->all) {
+                return 1;
+            }
+            else {
+                return;
+            }
+        }
+        unless ($self->all) {
+            $self->status_message("Please specify a specific --read-set-id, or run with the --all option to add all of the above to the model.");
             return;
         }
     }
-
-    my $prior_event_id = undef;
-
-    foreach my $command_class ( @sub_command_classes ) {
-        my $command;
-
-        eval {
-            $command = $command_class->create(
-                run_id => $run->id,
-                model_id => $self->model_id,
-                event_status => 'Scheduled',
-                retry_count => 0,
-                prior_event_id => $prior_event_id,
-                parent_event_id => $self->id,
-            );
-        };
-        unless ($command) {
-            $DB::single = 1;
-            $command = $command_class->create(
-                run_id => $run->id,
-                model_id => $self->model_id,
-                event_status => 'Scheduled',
-                retry_count => 0,
-                prior_event_id => $prior_event_id,
-                parent_event_id => $self->id,
-            );
-            
+        
+    for my $read_set (@read_sets) {
+        my $read_set_id = $read_set->id;
+        
+        my $run_name = $read_set->run_name;
+        my $sample_name = $read_set->sample_name;
+    
+        my ($sequencing_platform,$seq_fs_data_types,$lane,$full_path);
+        if ($read_set->isa("GSC::RunLaneSolexa")) {
+            $sequencing_platform = 'solexa';
+            $lane = $read_set->lane;
+    
+            use File::Basename;
+            my $seq_fs_data_types = ["duplicate fastq path" , "unique fastq path"];
+            my @fs_path = GSC::SeqFPath->get(seq_id => $read_set_id, data_type => $seq_fs_data_types);
+            if (not @fs_path) {
+                # no longer required, we make this ourselves at alignment time as needed
+                $self->status_message("Failed to find the path for data set $run_name/$lane ($read_set_id)!");            
+            }
+            else {
+                my %dirs = map { File::Basename::dirname($_->path) => 1 } @fs_path;
+                if (keys(%dirs)>1) {
+                    $self->error_message("Multiple directories for run $run_name/$lane ($read_set_id) not supported!");
+                    return;
+                }
+                elsif (keys(%dirs)==0) {
+                    $self->error_message("No directories for run $run_name/$lane ($read_set_id)??");
+                    return;
+                }
+                ($full_path) = keys %dirs;
+                $full_path .= '/' unless $full_path =~ m|\/$|;
+            }
+        }
+        elsif ($read_set->isa("GSC::RunRegion454")) {
+            $sequencing_platform = '454';
+            $lane = $read_set->region_number;
+            $full_path = '/gscmnt/833/info/medseq/sample_data/'. $read_set->run_name .'/'. $read_set->region_id .'/';
+        }
+        else {
+            $self->error_message("Cannot resolve sequencing platform for "
+                                 . ref($read_set)
+                                 . " " 
+                                 . $read_set->name 
+                                 . " (" . $read_set->id . ")"
+                             );
+            return;
+        }
+    
+        unless ($model->sample_name eq $sample_name) {
             $self->error_message(
-                "Problem creating subcommand for class $command_class run id ".$run->id
-                . " model id ".$self->model_id
-                . ": " . $command_class->error_message()
-            );
+                                 "Bad sample name "
+                                 . $sample_name
+                                 . " on $run_name/$lane ($read_set_id) "
+                                 . " does not match model sample "
+                                 . $model->sample_name
+                             );
             return;
         }
-        $self->status_message('Launched '. $command_class .' for run_id '. $run->id
-                              .' event_id '. $command->genome_model_event_id ."\n");
-        if ($self->test) {
-            $command->lsf_job_id("test " . UR::Context::Process->get_current());
+    
+        my $run = Genome::RunChunk->get(
+            seq_id => $read_set_id,
+        );
+    
+        if ($run) {
+            if ($run->run_name ne $run_name) {
+                $self->error_message("Bad run_name value $run_name.  Expected " . $run->run_name);
+                return;
+            }
+            if ($run->full_path ne $full_path) {
+                $self->warning_message("Run $run_name has changed location to $full_path from " . $run->full_path);
+                $run->full_path($full_path);
+            }
+            if ($run->subset_name ne $lane) {
+                $self->error_message("Bad lane/subset value $lane.  Expected " . $run->subset_name);
+                return;
+            }
+            if ($run->sample_name ne $model->sample_name) {
+                $self->error_message("Bad sample_name.  Model value is " . $model->model. ", run value is " . $run->sample_name);
+                return;
+            }
         }
-        $prior_event_id = $command->id;
+        else {
+            $run = Genome::RunChunk->create(
+                genome_model_run_id => $read_set_id,
+                seq_id => $read_set_id,
+                run_name => $run_name,
+                full_path => $full_path,
+                subset_name => $lane,
+                sequencing_platform => $sequencing_platform,
+                sample_name => $sample_name,
+            );
+            unless ($run) {
+                $self->error_message("Failed to get or create run record information for $run_name, $lane ($read_set_id)");
+                return;
+            }
+        }
+    
+        my $prior_event_id = undef;
+    
+        foreach my $command_class ( @sub_command_classes ) {
+            my $command;
+    
+            eval {
+                $command = $command_class->create(
+                    run_id => $run->id,
+                    model_id => $self->model_id,
+                    event_status => 'Scheduled',
+                    retry_count => 0,
+                    prior_event_id => $prior_event_id,
+                    parent_event_id => $self->id,
+                );
+            };
+            unless ($command) {
+                $DB::single = 1;
+                $command = $command_class->create(
+                    run_id => $run->id,
+                    model_id => $self->model_id,
+                    event_status => 'Scheduled',
+                    retry_count => 0,
+                    prior_event_id => $prior_event_id,
+                    parent_event_id => $self->id,
+                );
+                
+                $self->error_message(
+                    "Problem creating subcommand for class $command_class run id ".$run->id
+                    . " model id ".$self->model_id
+                    . ": " . $command_class->error_message()
+                );
+                return;
+            }
+            $self->status_message('Launched '. $command_class .' for run_id '. $run->id
+                                  .' event_id '. $command->genome_model_event_id ."\n");
+            if ($self->test) {
+                $command->lsf_job_id("test " . UR::Context::Process->get_current());
+            }
+            $prior_event_id = $command->id;
+        }
     }
-
+    
     return 1; 
 }
 
