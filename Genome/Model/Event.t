@@ -1,10 +1,13 @@
 
 use strict;
 use warnings;
-use Genome;
+use above "Genome";
 
 use Test::More;
-plan tests => 12;
+plan tests => 20;
+
+# prevent the ugly messages when we test known error conditions
+$SIG{__DIE__} = sub {};
 
 diag("testing sub-classification by event_type formula...");
 
@@ -13,9 +16,32 @@ my $event_class_name = "Genome::Model::Command::AddReads::AlignReads::Maq";
 my ($pp) = sort { $a->id <=> $b->id } Genome::ProcessingProfile::ShortRead->get(read_aligner_name => 'maq0_6_5');
 my $m = Genome::Model->create(id => -1, sample_name => "test_case_sample$$",  processing_profile => $pp);
 my $r = Genome::RunChunk->create(-1, sequencing_platform => 'solexa');
+
 my $e1 = Genome::Model::Event->create(event_type => $event_type, id => -2, model_id => $m->id, run_id => $r->id);
 ok($e1, "created an object");
 isa_ok($e1,$event_class_name);
+
+my $tmpdir = $e1->base_temp_directory;
+ok($tmpdir, "got a base temp directory $tmpdir");
+ok(-d $tmpdir, "it exists");
+my $tmpdir1 = $e1->create_temp_directory('foo');
+ok(-d $tmpdir1,"got a dir $tmpdir1");
+my $tmpdir4 = $e1->create_temp_directory();
+ok(-d $tmpdir4,"got a dir $tmpdir4");
+my $tmpdir2 = eval { $e1->create_temp_directory('foo'); };
+chomp $@;
+ok($@, "correctly failed to re-create named temp file: $@");
+my $tmpdir3 = $e1->create_temp_directory();
+ok(-d $tmpdir3,"got a dir $tmpdir1");
+my ($tmpfh, $tmpname)= $e1->create_temp_file("bar");
+ok($tmpfh, "made file $tmpfh $tmpname");
+my $value1 = rand();
+$tmpfh->print($value1);
+$tmpfh->close;
+my $tmpfh2 = $e1->open_file("bar_bar",$tmpname);
+my $value2 = $tmpfh2->getline;
+$tmpfh2->close;
+is($value2,$value1,"values match");
 
 my $e5 = Genome::Model::Command::AddReads::AlignReads->create(
     event_type => $event_type, 
