@@ -106,10 +106,185 @@ sub revert {
             }
     }
     for my $obj (@metrics,@outputs) {
-        $self->warning_message("Deleting " . $obj->id);
+        $self->warning_message("deleting " . $self->class . " " . $self->id);
         $obj->delete;
     }
     return 1;
+}
+
+sub delete {
+    my $self = shift;
+    $self->revert;
+    my @inputs = $self->inputs;
+    for my $obj (@inputs) { 
+        $self->warning_message("deleting " . $self->class . " " . $self->id);
+        $obj->delete;
+    };
+    return 1;
+}
+
+sub base_temp_directory {
+    my $self = shift;
+    return $self->{base_temp_directory} if $self->{base_temp_directory};
+    
+    my $id = $self->id;
+    
+    my $event_type = $self->event_type;
+    my ($base) = ($event_type =~ /([^\s]+) [^\s]+$/);
+    
+    my $time = UR::Time->now;
+    $time =~ s/\s\: /_/g;
+    
+    my $dir = "/tmp/gm-$base-$time-$id-XXXX";
+    $dir =~ s/ /-/g;
+    $dir = File::Temp::tempdir($dir, CLEANUP => 1);
+    $self->{base_temp_directory} = $dir;
+    $self->create_directory($dir);
+    
+    return $dir;
+}
+
+my $anonymous_temp_file_count=0;
+sub create_temp_file_path {
+    my $self = shift;
+    my $name = shift;
+    unless ($name) {
+        $name = 'anonymous' . $anonymous_temp_file_count++;
+    }
+    my $dir = $self->base_temp_directory;
+    my $path = "$dir/$name";
+    if (-e $path) {
+        die "temp path $path already exists!";
+    }
+    return $path;
+}
+
+sub create_temp_file {
+    my $self = shift;
+    my $path = $self->create_temp_file_path(@_);    
+    my $fh = IO::File->new(">$path");
+    unless ($fh) {
+        die "Failed to create temp file $path!";
+    }
+    return ($fh,$path) if wantarray;
+    return $fh;
+}
+
+sub create_temp_directory {
+    my $self = shift;
+    my $path = $self->create_temp_file_path(@_);
+    $self->create_directory($path);
+    return $path;
+}
+
+sub shellcmd {
+    # execute a shell command in a standard way instead of using system()\
+    # verifies inputs and ouputs, and does detailed logging...
+    
+    # TODO: add IPC::Run's w/ timeout but w/o the io redirection...
+    
+    my ($self,%params) = @_;
+    my $cmd                         = delete $params{cmd};
+    my $output_files                = delete $params{output_files};
+    my $input_files                 = delete $params{input_files};
+    my $skip_if_output_is_present   = delete $params{skip_if_output_is_present} || 1;
+    if (%params) {
+        my @crap = %params;
+        Carp::confess("Unknown params passed to shellcmd: @crap");
+    }
+    
+    if ($output_files and @$output_files) {
+        my @found_outputs = grep { -e $_ } @$output_files;
+        if ($skip_if_output_is_present
+            and @$output_files == @found_outputs
+        ) {
+            $self->status_message(
+                "SKIP RUN (output is present):     $cmd\n\t"
+                . join("\n\t",@found_outputs)
+            );
+            return 1;
+        }
+    }
+    
+    if ($input_files and @$input_files) {
+        my @missing_inputs = grep { not -s $_ } @$input_files;
+        if (@missing_inputs) {
+            die "CANNOT RUN (missing inputs):     $cmd\n\t"
+                . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_inputs);
+        }
+    }
+    
+    $self->status_message("RUN: $cmd");
+    my $exit_code = system($cmd);
+    $exit_code /= 256;
+    if ($exit_code) {
+        die "ERROR RUNNING COMMAND.  Exit code $exit_code, msg $! from: $cmd";
+    }
+    
+    if ($output_files and @$output_files) {
+        my @missing_outputs = grep { not -s $_ } @$output_files;
+        if (@missing_outputs) {
+            for (@$output_files) { unlink $_ }
+            die "MISSING OUTPUTS! @missing_outputs\n";
+            #    . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_outputs);
+        }
+    }
+    
+    return 1;
+}
+
+sub create_file {
+    my ($self, $output_name, $path) = @_;
+    my @existing = $self->outputs(name => $output_name);
+    if (@existing) {
+        die "Output $output_name already exists with value " . $existing[0]->value;
+    }
+    my $fh = IO::File->new('>'.$path);
+    die "Failed to make file $path! $?" unless $fh;    
+    unless ($self->add_output(name => $output_name, value => $path)) {
+        die "Error adding ouput $output_name $path!";
+    }
+    return $fh;
+}
+
+sub open_file {
+    my ($self, $input_name, $path) = @_;
+    my @existing = $self->inputs(name => $input_name);
+    if (@existing and $input_name and $existing[0]->value ne $input_name) {
+        die "Input $input_name already exists with value " . $existing[0]->value
+            . ".  Cannot open with value $path";
+    }
+    if (!$path and not @existing) {
+        die "Input $input_name opened without a specified path, and no path has been set yet!"
+    }
+    my $fh = IO::File->new($path);
+    die "Failed to open file $path! $?" unless $fh;
+    if ( (!-p $path) and (-z $path) ) {
+        warn "warning: opening zero-length file $path for input $input_name";
+    }
+    return $fh;
+}
+
+sub create_directory {
+    my ($self, $path) = @_;
+    my @parts = grep { length($_) } split('/',$path);
+    my $dir = "/";
+    for (@parts) {
+        $dir .= $_ . '/';
+        unless (-d $dir) {
+            $self->status_message("creating directory $dir");
+            mkdir $dir;
+            unless(-d $dir) {
+                die "Failed to create directory $dir: $!";
+            }
+            # TODO: fixme w/ Perl
+            `chmod g+ws $dir`;
+        }
+    }
+    unless (-d $path) {
+        die "Failed to create directory $path: $?";
+    }
+    return $path;
 }
 
 sub _shell_args_property_meta {
@@ -227,6 +402,7 @@ END {
     }
 }
 
+# TODO: move into subclasses
 sub resolve_log_directory {
     my $self = shift;
 
@@ -238,12 +414,6 @@ sub resolve_log_directory {
         return sprintf('%s/logs/%s', $self->model->data_directory,
                                      $self->ref_seq_id);
     }
-}
-
-sub adaptor_file_for_run {
-    my $self = shift;
-    my $pathname = $self->resolve_run_directory . '/adaptor_sequence_file';
-    return $pathname;
 }
 
 sub map_files_for_refseq {
@@ -260,6 +430,11 @@ sub map_files_for_refseq {
         push (@map_files, sprintf("%s/%s_duplicate.map",$path, $ref_seq_id));
         return @map_files;
     }
+}
+
+sub bsub_rusage {
+    # TODO: add the xeon spec
+    return "-R 'select[type=LINUX64]'";
 }
 
 sub execute_with_bsub {
