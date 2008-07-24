@@ -1,38 +1,50 @@
-package Genome::Model::Command::Services::JobMonitor;
+package Genome::Model::Command::RunJobs;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::Model::Command::Services::JobMonitor {
+class Genome::Model::Command::RunJobs {
     is => 'Genome::Model::Command',
     has => [
-        dispatcher => { is => 'String', is_optional => 1, default_value => 'lsf',
+        dispatcher  => { is => 'String', is_optional => 1, default_value => 'lsf',
                         doc => 'underlying mechanism for executing jobs ("lsf" or "inline")', },
-        run_id => {is => 'Integer', is_optional => 1, doc => 'only dispatch events with this run_id' },
-        ref_seq_id => {is => 'String', is_optional => 1, doc => 'only dispatch events with this ref_seq_id' },
-        event_id => {is => 'Integer', is_optional => 1, doc => 'only dispatch this single event' },
-        bsub_queue => {is => 'String', is_optional => 1, doc => 'lsf jobs should be put into this queue' },
-        bsub_args => {is => 'String', is_optional => 1, doc => 'additional arguments to be given to bsub' },   
+        read_set_id => {is => 'Integer', is_optional => 1, doc => 'only dispatch events with this read_set_id' },
+        ref_seq_id  => {is => 'String', is_optional => 1, doc => 'only dispatch events with this ref_seq_id' },
+        event_id    => {is => 'Integer', is_optional => 1, doc => 'only dispatch this single event' },
+        bsub_queue  => {is => 'String', is_optional => 1, doc => 'lsf jobs should be put into this queue' },
+        bsub_args   => {is => 'String', is_optional => 1, doc => 'additional arguments to be given to bsub' },   
     ],
 };
 
+sub sub_command_sort_position { 4 }
+
 sub help_brief {
-    return <<EOS
-Submit scheduled Genome Model events to be run, or reschedule failed but re-runnable events
-EOS
+    'Launch all jobs for a model, and do all other job maintenance.'
 }
 
 sub help_synopsis {
-    return <<EOS
-genome-model services job-monitor
+    return <<'EOS'
+run all jobs for a model on LSF:
+  genome-model run-jobs tumor%v0b
+
+run one job on LSF (possibly a crash/re-run):
+  genome-model run-jobs tumor%v0b --event-id 1234 
+
+run one job inline right here:
+  genome-model run-jobs tumor%v0b --event-id 1234 --dispatch inline
 EOS
 }
 
 sub help_detail {
     return <<EOS 
-Monitors and possibly launches jobs.  With the 'inline' dispatcher, you must specify a single 
-event_id to be executed.
+For the specified model, this tool does all job management, including:
+- launch newly defined jobs for the model in LSF
+- identify failed jobs and re-launch them
+- identify jobs which should be pending in LSF but are not and resubmit them
+- identify jobs which should be running in LSF but are not and resubmit them
+
+This is run by the job monitor service for all active models (not currently deployed).
 EOS
 }
 
@@ -65,8 +77,8 @@ sub execute {
     }
 
     my %addl_get_params = (model_id => $self->model_id) ; # model_id is a required param now
-    if ($self->run_id) {
-        $addl_get_params{'run_id'} = $self->run_id;
+    if ($self->read_set_id) {
+        $addl_get_params{'run_id'} = $self->read_set_id;
     }
     if (defined $self->ref_seq_id) {
         $addl_get_params{'ref_seq_id'} = $self->ref_seq_id;
