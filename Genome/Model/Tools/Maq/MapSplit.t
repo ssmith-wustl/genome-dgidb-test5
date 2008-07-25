@@ -13,7 +13,7 @@ use Genome::Model::Tools::Maq::MapSplit;
 use Genome::Model::Tools::Maq::Map::Reader;
 
 if (`uname -a` =~ /x86_64/){
-    plan tests => 159;
+    plan tests => 103;
 }
 else{
     plan skip_all => 'Must run on a 64 bit machine';
@@ -21,7 +21,7 @@ else{
 
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $map_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Map/2.map';
-my @reference_names = qw(11 12 13);
+my @reference_names = qw(11 12 other);
 
 my $map_split = Genome::Model::Tools::Maq::MapSplit->create(
                                                             map_file => $map_file,
@@ -35,6 +35,9 @@ ok($map_split->execute,'execute');
 my $maq_map_reader = Genome::Model::Tools::Maq::Map::Reader->new;
 my $mapsplit_reader = Genome::Model::Tools::Maq::Map::Reader->new;
 for my $ref_name (@reference_names) {
+    if ($ref_name eq 'other') {
+        next;
+    }
     my $maq_map = $tmp_dir .'/'. $ref_name .'_maq.map';
     my $mapsplit = $tmp_dir .'/'. $ref_name  .'.map';
     my $maq_cmd = 'maq submap '. $maq_map .' '. $map_file .' '. $ref_name .' 1';

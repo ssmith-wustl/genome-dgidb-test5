@@ -74,6 +74,10 @@ sub execute {
     # Initialize all the writers needed for split
     my %writers;
     for my $expected_ref_name (@{$self->reference_names}) {
+        if ($expected_ref_name eq 'other') {
+            $writers{'other'} = $self->create_writer('other',$header);
+            next;
+        }
         for my $ref_name (@ref_names) {
             if ($expected_ref_name eq $ref_name) {
                 $writers{$expected_ref_name} = $self->create_writer($expected_ref_name,$header);
@@ -82,14 +86,6 @@ sub execute {
         }
         unless (defined $writers{$expected_ref_name}) {
             die('Expected reference name '. $expected_ref_name .' not found in header for map file '. $self->map_file);
-        }
-    }
-
-    # Create the 'other' writer if ref names exist that were not expected
-    for my $ref_name (@ref_names) {
-        unless (defined $writers{$ref_name}) {
-            $writers{'other'} = $self->create_writer('other',$header);
-            last;
         }
     }
 
