@@ -471,6 +471,14 @@ $DB::single = 1;
         return;
     }
 
+    my $line=`/gscmnt/sata114/info/medseq/pkg/maq/branches/lh3/maq-xp/maq-xp pileup -t $aligner_output_file 2>&1`;
+    my ($evenness)=($line=~/(\S+)\%$/);
+
+    $self->add_metric(
+        name => 'evenness',
+        value => $evenness
+    );
+
 $DB::single = 1;
 
     # break up the alignments by the sequence they match, if necessary
