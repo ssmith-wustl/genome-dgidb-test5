@@ -57,10 +57,10 @@ $add_reads_test->create_test_pp(
                                 profile_name => $processing_profile_name,
                                 dna_type => 'genomic dna',
                                 align_dist_threshold => '0',
-                                multi_read_fragment_strategy => 'EliminateAllDuplicates',
-                                indel_finder => 'maq0_6_3',
-                                genotyper => 'maq0_6_3',
-                                read_aligner => 'maq0_6_3',
+                                multi_read_fragment_strategy => 'eliminate start site duplicates',
+                                indel_finder => 'maq0_6_5',
+                                genotyper => 'maq0_6_5',
+                                read_aligner => 'maq0_6_5',
                                 reference_sequence => 'refseq-for-test',
                             );
 $add_reads_test->add_directory_to_remove($tmp_dir);
@@ -81,6 +81,7 @@ sub setup_test_data {
     my $zip_file = '/gsc/var/cache/testsuite/data/Genome-Model-Command-AddReads/addreads.tgz';
     `tar -xzf $zip_file`;
 
+    $tmp_dir = '/tmp/fake-gerald';
     my @run_dirs = grep { -d $_ } glob("$tmp_dir/*_*_*_*");
     for my $run_dir (@run_dirs) {
         my $run_dir_params = GSC::PSE::SolexaSequencing::SolexaRunDirectory->parse_regular_run_directory($run_dir);
@@ -116,7 +117,10 @@ sub setup_test_data {
                                                  #seq_id                     => -1,
                                                  sral_id                    => -1,
                                                  library_name => 'TESTINGLIBRARY',
+                                                 gerald_directory           => $run_dir
                                              );
+            next;
+            
             my @files = grep { -e $_ } glob("$run_dir/${lane}_*.fastq");
             foreach my $file (@files) {
                 $file =~ /sequence\.(.*)\.sorted/;

@@ -120,7 +120,7 @@ sub execute {
 
     $self->status_message("Launching LSF jobs for the model " . $model->name . " (id " . $model->id . ")\n");
     $self->status_message("Monitor jobs at: http://gscweb/cgi-bin/solexa/genome-model-stage2.cgi?model-name=" . $model->name . "&refresh=1");
-    return Genome::Model::Command::Services::JobMonitor->execute(model_id => $model->id);
+    return Genome::Model::Command::RunJobs->execute(model_id => $model->id);
 }
 
 1;

@@ -137,6 +137,10 @@ sub compatible_read_sets {
     my $self = shift;
     my $input_read_set_class_name = $self->input_read_set_class_name;
     my @compatible_read_sets = $input_read_set_class_name->get(sample_name => $self->sample_name);
+    #TODO: move
+    if ($input_read_set_class_name eq 'GSC::RunLaneSolexa') {
+        @compatible_read_sets = grep { $_->run_type !~ /2/  } @compatible_read_sets;
+    }
     return @compatible_read_sets;
 }
 

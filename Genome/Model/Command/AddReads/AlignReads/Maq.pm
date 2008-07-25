@@ -337,6 +337,10 @@ sub _calculate_total_base_pair_count {
 sub prepare_input {
     my ($self, $read_set, $seq_dedup) = @_;
 
+    if ($read_set->is_paired_end) {
+        die "not configured to handle PAIRED END data"
+    }
+
     my $lane = $read_set->subset_name;
     my $read_set_desc = $read_set->full_name . "(" . $read_set->id . ")";
     my $gerald_directory = $read_set->_run_lane_solexa->gerald_directory;
@@ -398,34 +402,20 @@ sub execute {
 $DB::single = 1;
 
     my $model = $self->model;
-
-    # prepare the refseq
-    my $ref_seq_path =  $model->reference_sequence_path;    
-    my $ref_seq_file =  $ref_seq_path . "/all_sequences.bfa";
-    unless (-e $ref_seq_file) {
-        $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
-        return;
-    }
-
+    my $seq_dedup = $model->is_eliminate_all_duplicates;
+    
     # prepare the reads
     my $read_set = $self->read_set;
-    my $seq_dedup = $model->is_eliminate_all_duplicates;
     my $bfq_pathname = $self->prepare_input($read_set,$seq_dedup);
-
-    # prepare paths for the results
-    my $read_set_alignment_directory = $self->read_set_alignment_directory;
-    if (-d $read_set_alignment_directory) {
-        $self->warning_message("Moving old directory out of the way");
-        unless (rename ($read_set_alignment_directory,$read_set_alignment_directory . ".old.$$")) {
-            die "Failed to move old alignment directory out of the way: $!";
-        }
-    }
-    $self->create_directory($read_set_alignment_directory);
     
+    # gather parameters
     my $event_id = $self->id;
     my $alignment_file = $self->create_temp_file_path("all.map");
     my $aligner_output_file = $self->aligner_output_file;
     my $unaligned_reads_file = $self->unaligned_reads_file;
+    
+    my $aligner_path = $self->aligner_path('read_aligner_name');
+    my $aligner_params = $model->read_aligner_params || '';
     
     # resolve adaptor file
     # TODO: get fresh from LIMS
@@ -438,15 +428,75 @@ $DB::single = 1;
             $adaptor_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer_SMART';
         }
     }
+    $aligner_params = join(' ', $aligner_params, '-d', $adaptor_file);
+    
+    # prepare the refseq
+    my $ref_seq_path =  $model->reference_sequence_path;    
+    my $ref_seq_file =  $ref_seq_path . "/all_sequences.bfa";
+    unless (-e $ref_seq_file) {
+        $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
+        return;
+    }
+    my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
+    
+
+    # prepare paths for the results
+    my $read_set_alignment_directory = $self->read_set_alignment_directory;
+    if (-d $read_set_alignment_directory) {
+        $self->status_message("found existing run directory $read_set_alignment_directory");
+        my $errors;
+        my @cross_refseq_alignment_files;
+        for my $ref_seq_id (@subsequences) {
+            my @alignment_files = $self->read_set_alignment_file_name($ref_seq_id);
+            my @distinct = grep { /unique|distinct/ } @alignment_files;
+            my @duplicate = grep { /duplicate|redu/ } @alignment_files;
+            my @all = grep { /all/ } @alignment_files;
+            push @cross_refseq_alignment_files, @alignment_files;
+            if (@all) {
+                $self->status_message("ref seq $ref_seq_id has complete map files");
+            }
+            elsif (@distinct and @duplicate) { 
+                $self->status_message("ref seq $ref_seq_id has dstinct and duplicate map files");
+            }
+            else {
+                $errors++;
+                $self->error_message("ref seq $ref_seq_id has bad read set directory:\n\t" . join("\n\t",@alignment_files));
+            }
+        }
+        unless (-s $unaligned_reads_file) {
+            $self->error_message("missing unaligned reads file");
+            $errors++;
+        }
+        unless (-s $aligner_output_file) {
+            $self->error_message("missing aligner output file");
+            $errors++;
+        }
+        if ($errors) {
+            if (@cross_refseq_alignment_files) {
+                $self->error_message("REFUSING TO CONTINUE with partial map files in place in old directory.");
+                return;
+            }
+            else {
+                $self->warning_message("RE-PROCESSING: Moving old directory out of the way");
+                unless (rename ($read_set_alignment_directory,$read_set_alignment_directory . ".old.$$")) {
+                    die "Failed to move old alignment directory out of the way: $!";
+                }
+                # fall through to the regular processing and try this again...
+            }
+        }
+        else {
+            $self->status_message("SHORTCUT SUCCESS: alignment data is already present.");
+            return;
+        }
+    }
+    $self->create_directory($read_set_alignment_directory);
+    
     unless (-e $adaptor_file) {
         $self->error_message("Adaptor file $adaptor_file not found!: $!");
         return;
     }
     
     # prepare the alignment command
-    my $aligner_path = $self->aligner_path('read_aligner_name');
-    my $aligner_params = $model->read_aligner_params || '';
-    $aligner_params = join(' ', $aligner_params, '-d', $adaptor_file);
     my $cmdline = 
         $aligner_path
         . sprintf(' map %s -u %s %s %s %s %s > ',
@@ -482,7 +532,6 @@ $DB::single = 1;
 $DB::single = 1;
 
     # break up the alignments by the sequence they match, if necessary
-    my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
     my $map_split = Genome::Model::Tools::Maq::MapSplit->execute(
         map_file => $alignment_file,
         submap_directory => $self->read_set_alignment_directory,
