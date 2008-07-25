@@ -42,9 +42,26 @@ class Genome::Model {
         read_calibrator_params       => { via => 'processing_profile'},
         reference_sequence_name      => { via => 'processing_profile'},        
         sample_name                  => { is => 'VARCHAR2', len => 255 },
-        
-        
-                                        
+        creation_event               => { doc => 'The creation event for this model',
+                                          calculate => q|
+                                                            my @events = $self->events;
+                                                            for my $event (@events) {
+                                                                if ($event->event_type eq 'genome-model create model') {
+                                                                    return $event;
+                                                                }
+                                                            }
+                                                            return undef;
+                                                        |
+                                        },
+        creation_event_inputs        => { doc => 'The inputs specified for the creation event',
+                                          via => 'creation_event',
+                                          to  => 'inputs',
+                                        },
+        instrument_data              => { doc       => 'The instrument data specified for the model',
+                                          via       => 'creation_event_inputs',
+                                          to        => 'value',
+                                          where     => [ name => 'instrument_data' ],
+                                        },
         read_set_class_name          => { 
                                             calculate_from => ['sequencing_platform'], 
                                             calculate => q| 'Genome::RunChunk::' . ucfirst($sequencing_platform) |,

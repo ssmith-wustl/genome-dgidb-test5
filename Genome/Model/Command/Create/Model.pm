@@ -15,12 +15,12 @@ class Genome::Model::Command::Create::Model {
     sub_classification_method_name => 'class',
     has => [
         #TODO: make processing_profile not a parameter, name only.
-        processing_profile     => { is => 'Genome::ProcessingProfile', doc => 'Not used as a parameter', id_by => 'processing_profile_id', is_optional => 1, },
-        processing_profile_name => { is => 'varchar', len => 255,  doc => 'The name of the processing profile to be used. '},
-        model_name             => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
-        sample                 => { is => 'varchar', len => 255, doc => 'The name of the sample all the reads originate from' },
-        model                  => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id', doc => 'Not used as a parameter' },
-        instrument_data => { is => 'String', doc => 'The instrument data for this model', is_optional => 1, is_transient =>1 },
+        processing_profile          => { is => 'Genome::ProcessingProfile', doc => 'Not used as a parameter', id_by => 'processing_profile_id', is_optional => 1, },
+        processing_profile_name     => { is => 'varchar', len => 255,  doc => 'The name of the processing profile to be used. '},
+        model_name                  => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
+        sample                      => { is => 'varchar', len => 255, doc => 'The name of the sample all the reads originate from' },
+        model                       => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id', doc => 'Not used as a parameter' },
+        instrument_data             => { is => 'String', doc => 'The instrument data for this model', is_optional => 1, is_transient =>1 },
     ],
     schema_name => 'Main',
 };
@@ -91,6 +91,8 @@ sub execute {
 
     $self->_validate_execute_params();
 
+    $self->_add_instrument_data();
+    
     # generic: abstract out
     my %params = %{ $self->_extract_command_properties_and_duplicate_keys_for__name_properties() };
     
@@ -115,8 +117,8 @@ sub execute {
         return;
     }
    
-   	$self->result($obj);
-   
+    $self->result($obj);
+
     return $obj;
 }
 
@@ -245,6 +247,21 @@ sub _get_processing_profile_from_name {
     my $pp = $processing_profiles[0];
     $self->processing_profile_id($pp->id);
     return $pp->id; 
+}
+
+# Adds the instrument data as an input on the creation event
+sub _add_instrument_data {
+    my $self = shift;
+
+    my $instrument_data = $self->instrument_data;
+
+    unless ($instrument_data) {
+        return;
+    }
+
+    $self->add_input(name => 'instrument_data', value => $instrument_data);
+
+    return 1;
 }
 
 1;
