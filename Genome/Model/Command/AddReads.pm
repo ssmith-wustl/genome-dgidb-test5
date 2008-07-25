@@ -297,7 +297,6 @@ sub get_sub_command_classes {
         Genome::Model::Command::AddReads::AssignRun
         Genome::Model::Command::AddReads::AlignReads
         Genome::Model::Command::AddReads::ProcessLowQualityAlignments
-        Genome::Model::Command::AddReads::AcceptReads
     /;
 
     return @sub_command_classes;
