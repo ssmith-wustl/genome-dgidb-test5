@@ -133,11 +133,15 @@ EOS
 
 # maq map file for all this lane's alignments
 
-sub read_set_alignment_file_for_refseq {
+sub read_set_alignment_files_for_refseq {
+    # this returns the above, or will return the old-style split maps
     my $self = shift;
     my $ref_seq_id = shift;
     my $event_id = $self->id;
-    return $self->read_set_alignment_directory . "/$ref_seq_id.map.$event_id";
+    my @files = grep { $_ and -e $_ } (
+        glob($self->read_set_alignment_directory . "/${ref_seq_id}_*.map.*") #bkward compat
+    );
+    return @files;
 }
 
 sub aligner_output_file {
@@ -410,10 +414,16 @@ $DB::single = 1;
 
     # prepare paths for the results
     my $read_set_alignment_directory = $self->read_set_alignment_directory;
-    unless (-d $read_set_alignment_directory) {
-        $self->create_directory($read_set_alignment_directory);
-    }        
-    my $alignment_file = $self->create_temp_file_path('all.map');
+    if (-d $read_set_alignment_directory) {
+        $self->warning_message("Moving old directory out of the way");
+        unless (rename ($read_set_alignment_directory,$read_set_alignment_directory . ".old.$$")) {
+            die "Failed to move old alignment directory out of the way: $!";
+        }
+    }
+    $self->create_directory($read_set_alignment_directory);
+    
+    my $event_id = $self->id;
+    my $alignment_file = $self->create_temp_file_path("all.map");
     my $aligner_output_file = $self->aligner_output_file;
     my $unaligned_reads_file = $self->unaligned_reads_file;
     
@@ -462,6 +472,7 @@ $DB::single = 1;
     }
 
 $DB::single = 1;
+
     # break up the alignments by the sequence they match, if necessary
     my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
     my $map_split = Genome::Model::Tools::Maq::MapSplit->execute(
@@ -474,47 +485,37 @@ $DB::single = 1;
         return;
     }
     
-    for my $output_file ($map_split->output_files) {
+    # these will match the wildcard which pulls old and new alignment files
+    my @split_files = $map_split->output_files;
+    for my $output_file (@split_files) {
         my $new_file_path = $output_file .'.'. $self->id;
         unless (rename($output_file,$new_file_path)) {
             $self->error_message("Failed to rename file '$output_file' => '$new_file_path'");
             return;
         }
     }
-
+    
+    my $errors;
+    for my $subsequence (@subsequences) {
+        my @found = $self->read_set_alignment_files_for_refseq($_);
+        unless (@found) {
+            $self->error_message("Failed to find map file for $subsequence!");
+            $errors++;
+        }
+    }
+    if($errors) {
+        my @files = glob($self->read_set_alignment_directory . '/*');
+        $self->error_message("Files in dir are:\n\t" . join("\n\t",@files) . "\n");
+        return;
+    }
+    
     $self->generate_metric($self->metrics_for_class);
 
     return 1;
 }
 
-
 sub verify_successful_completion {
     my ($self) = @_;
-
-    my $model = $self->model;
-    # does this model specify to keep or eliminate duplicate reads
-    my @passes = ('unique') ;
-    unless ($model->is_eliminate_all_duplicates) {
-        push @passes, 'duplicate';
-    }
-    foreach my $pass ( @passes ) {
-        my $aligner_output_method = sprintf("aligner_%s_output_file_for_lane", $pass);
-        my $aligner_output = $self->$aligner_output_method;
-        unless (-f $aligner_output) {
-            if ($pass eq 'duplicate') {
-                next;
-            } else {
-                $self->error_message("Aligner output file not found for $pass '$aligner_output'");
-                return;
-            }
-        }
-        unless ($self->_check_maq_successful_completion($aligner_output)) {
-            if ($pass eq 'duplicate') {
-                next;
-            }
-            return;
-        }
-    }
     return 1;
 }
 
@@ -538,101 +539,6 @@ sub _check_maq_successful_completion {
     $self->error_message("Didn't find a line matching /match_data2mapping/ in the maq output file '$output_filename'");
     return;
 }
-
-
-# Find other successful executions working on the same data and link to it.
-# Returns undef if there is no other data suitable to link to, and we should 
-# do it the long way.  Returns 1 if the linking was successful. 0 if we tried
-# but there were problems
-#
-# $type is either 'unique' or 'duplicate'
-sub _check_for_shortcut {
-    my($self,$type) = @_;
-
-    my $model = $self->model;
-
-    $DB::single = 1;
-    my @params = (
-        sample_name => $model->sample_name,
-        reference_sequence_name => $model->reference_sequence_name,
-        read_aligner_name => $model->read_aligner_name,
-        dna_type => $model->dna_type,
-        genome_model_id => { operator => 'ne', value => $model->genome_model_id},
-    );
-    #Someone left this from testing I guess;
-    #print Data::Dumper::Dumper(\@params);
-    #exit;
-    my @similar_models = Genome::Model->get(@params);
-    my @similar_model_ids = map { $_->genome_model_id } @similar_models;
-    return unless (@similar_model_ids);
-    my @possible_events = Genome::Model::Event->get(event_type => $self->event_type,
-                                                    genome_model_event_id => {
-                                                        operator => '!=',
-                                                        value => $self->genome_model_event_id
-                                                    },
-                                                    event_status => ['Succeeded', 'Running'],
-                                                    model_id => \@similar_model_ids,
-                                                    run_id => $self->run_id,
-                                                );
-
-    foreach my $prior_event ( @possible_events ) {
-        my $prior_model = Genome::Model->get(genome_model_id => $prior_event->model_id);
-        # Do our model and the candidate model have the same number of sub-references?
-        if (scalar($prior_model->get_subreference_names) != scalar($model->get_subreference_names)) {
-            next;
-        }
-
-        # The bfq file is one of the first things created when align-reads is running, so
-        # that's what we're testing for
-        my $bfq_file_method = sprintf('%s_bfq_file_for_lane', $type);
-        my $prior_bfq_file = $prior_event->$bfq_file_method;
-        if (-f $prior_bfq_file) {
-            # This is a good candidate to make symlinks to.  Note that the event we're linking to
-            # may still be Running, in which case the target of these symlinks may not
-            # exist yet.  We'll block at the end of execute() until they're done
-
-            #Jim TODO - replace alignment_submaps_dir_for_lane
-            #with the new and improved SOME_METHOD from EventWithReadSet.pm
-            my $prior_alignments_dir = $prior_event->alignment_submaps_dir_for_lane;
-            my @prior_alignment_files = map { sprintf("%s/%s_%s.map",$prior_alignments_dir,$_,$type) } 
-                                        grep { $_ ne "all_sequences" }
-                                        $prior_model->get_subreference_names(reference_extension=>'bfa');
-
-            return 0 if (@prior_alignment_files == 0);  # The prior run didn't make the files we needed
-
-            # Find the aligner output files
-            my $unaligned_reads_file_method = sprintf('unaligned_%s_reads_file_for_lane',$type);
-            my $prior_unaligned_reads_file = $prior_event->$unaligned_reads_file_method;
-            my $this_unaligned_reads_file = $self->$unaligned_reads_file_method;
-            symlink($prior_unaligned_reads_file, $this_unaligned_reads_file);
-
-            # the bfq file
-            #my $bfq_file_method = sprintf('%s_bfq_file_for_lane', $type);
-            #my $prior_bfq_file = $prior_event->$bfq_file_method;
-            my $this_bfq_file = $self->$bfq_file_method;
-            symlink($prior_bfq_file, $this_bfq_file);
-
-            # maq's output file
-            my $output_file_method = sprintf('aligner_%s_output_file_for_lane',$type);
-            my $prior_output_file = $prior_event->$output_file_method;
-            my $this_output_file = $self->$output_file_method;
-            symlink($prior_output_file, $this_output_file);
-
-            my $this_alignments_dir = $self->alignment_submaps_dir_for_lane;
-            mkdir $this_alignments_dir;
-
-            foreach my $orig_file ( @prior_alignment_files ) {
-                my($this_filename) = ($orig_file =~ m/.*\/(\S+?)$/);
-                symlink($orig_file, $this_alignments_dir . '/' . $this_filename);
-            }
-            return $prior_event;
-        }
-    }
-
-    return undef;
-}
-
-
 
 1;
 
