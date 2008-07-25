@@ -194,7 +194,6 @@ sub _get_object_string{
 
 package Text;
 use base 'Style';
-use UR::Object::Command::List::Tab2Col;
 
 sub _get_header_string{
     my $self = shift;
