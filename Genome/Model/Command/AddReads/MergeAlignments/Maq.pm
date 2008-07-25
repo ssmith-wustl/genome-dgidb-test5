@@ -70,7 +70,7 @@ sub execute {
         push @{$library_alignments{'H_GV-933124G-tumor1-9043g-031308b'}}, glob('/gscmnt/sata182/info/medseq/aml1/submaps/amll2t12_chr' . $self->ref_seq_id . ".map");
         push @{$library_alignments{'H_GV-933124G-tumor1-9043g-031308c'}}, glob('/gscmnt/sata182/info/medseq/aml1/submaps/amll3t15_chr' . $self->ref_seq_id . ".map");
     }
-    elsif($model->id == '2667602813') {
+    elsif($model->id == 2667602813) {
         # This is the hack which allows the v0b AML nature skin model to work with old map files.
         push @{$library_alignments{'H_GV-933124G-skin1-9017g-031308a'}}, glob('/gscmnt/sata183/info/medseq/kchen/Hs_build36/maq6/analysis_skin/submaps/amlsking18_chr' . $self->ref_seq_id . ".map");
         push @{$library_alignments{'H_GV-933124G-skin1-9017g-031308b'}}, glob('/gscmnt/sata183/info/medseq/kchen/Hs_build36/maq6/analysis_skin2/submaps/amll2skin10_chr' . $self->ref_seq_id . ".map");
@@ -88,15 +88,10 @@ sub execute {
 
 
         my @run_ids = map {$_->run_id} @run_events;
-        my @runs = Genome::RunChunk->get(
-                                         genome_model_run_id => \@run_ids,
-                                     );
-        my @seq_ids = map {$_->seq_id} @runs;
 
-        my @rc = Genome::RunChunk->get(seq_id => \@seq_ids);
-
-        # pre-cache the lanes
-        my @sls = GSC::RunLaneSolexa->get(seq_id => \@seq_ids);
+        # pre-cache the data we'll grab individually below
+        my @rc = Genome::RunChunk->get(seq_id => \@run_ids);        
+        my @sls = GSC::RunLaneSolexa->get(seq_id => \@run_ids);
         
         for my $run_event (@run_events) {
             ## find the align-reads prior to this event, by model_id and run_id
@@ -107,17 +102,23 @@ sub execute {
             );
 
             # new way
-            my @map_files = $align_reads->alignment_file_paths;
+            my @map_files = $align_reads->read_set_alignment_files_for_refseq($self->ref_seq_id);
+            
+            unless (@map_files) {
+                die "Failed to find map files for read set "
+                    . $run_event->run_id 
+                    . " on event "
+                    . $align_reads->id
+                ;
+            }
+            
+            $self->status_message("Found map files:\n" . join("\n\t",@map_files));
+            
             my $ref_seq_id = $self->ref_seq_id;
             @map_files = grep { basename($_) =~ /^$ref_seq_id\_/ } @map_files;
 
-            my $run = Genome::RunChunk->is_loaded(
-                                                  genome_model_run_id => $align_reads->run_id,
-                                              );
-            my $sls = GSC::RunLaneSolexa->is_loaded(
-                                                    seq_id => $run,
-                                                );
-            my $library = $sls->library_name;
+            my $read_set = $align_reads->read_set;
+            my $library = $read_set->library_name;
             push @{$library_alignments{$library}}, @map_files;
         }
     }    
