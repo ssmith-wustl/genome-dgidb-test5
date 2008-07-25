@@ -79,46 +79,62 @@ sub execute {
     else {
         # Normal code to get the map files. 
         my @run_events = 
-            grep { my $m = $_->metrics(name => 'read set pass fail'); (!$m or $m->value eq 'pass') }
             Genome::Model::Event->get(
-                event_type => 'genome-model add-reads accept-reads maq',
+                event_type => 'genome-model add-reads align-reads maq',
                 model_id => $model->id,
                 event_status => 'Succeeded'
             );
-
-
-        my @run_ids = map {$_->run_id} @run_events;
-
+        
         # pre-cache the data we'll grab individually below
+        my @run_ids = map {$_->run_id} @run_events;
         my @rc = Genome::RunChunk->get(seq_id => \@run_ids);        
         my @sls = GSC::RunLaneSolexa->get(seq_id => \@run_ids);
         
+        my $align_dist_threshold = $model->align_dist_threshold;
+        if ($align_dist_threshold) {
+            $self->status_message("alignment distribution threshold is set to $align_dist_threshold");
+        }
+        else {
+            $self->status_message("no alignment distribution threshold is set.  accepting all read sets");
+        }
+        
         for my $run_event (@run_events) {
-            ## find the align-reads prior to this event, by model_id and run_id
             my $align_reads = Genome::Model::Command::AddReads::AlignReads::Maq->get(
                 model_id   => $model->id,
                 run_id     => $run_event->run_id,
                 event_type => 'genome-model add-reads align-reads maq'
             );
-
-            # new way
-            my @map_files = $align_reads->read_set_alignment_files_for_refseq($self->ref_seq_id);
             
+            my $read_set = $align_reads->read_set;
+            my $library = $read_set->library_name;
+            my $read_set_desc = $read_set->full_name . ' (library ' . $library . ')';
+            
+            if ($align_dist_threshold) {
+                my $evenness_metric = $align_reads->metric(name => 'evenness');
+                if ($evenness_metric) {
+                    my $evenness = $evenness_metric->value;
+                    if ($evenness < $align_dist_threshold) {
+                        $self->warning_message("SKIPPING read set $read_set_desc which has evenness $evenness");
+                    }
+                    else {
+                        $self->status_message("ADDING read set $read_set_desc with evenness $evenness");
+                    }
+                }
+                else {
+                    $self->warning_message("no evenness metric on read set $read_set_desc");
+                    $self->status_message("ADDING read set $read_set_desc");
+                }
+            }
+
+            my @map_files = $align_reads->read_set_alignment_files_for_refseq($self->ref_seq_id);
             unless (@map_files) {
                 die "Failed to find map files for read set "
                     . $run_event->run_id 
                     . " on event "
-                    . $align_reads->id
-                ;
+                    . $align_reads->id;
             }
-            
             $self->status_message("Found map files:\n" . join("\n\t",@map_files));
             
-            my $ref_seq_id = $self->ref_seq_id;
-            @map_files = grep { basename($_) =~ /^$ref_seq_id\_/ } @map_files;
-
-            my $read_set = $align_reads->read_set;
-            my $library = $read_set->library_name;
             push @{$library_alignments{$library}}, @map_files;
         }
     }    
@@ -130,6 +146,7 @@ sub execute {
             $self->error_message("Failed to create filehandle for '$library_maplist':  $!");
             return;
         }
+        my $cnt=0;
         for my $input_alignment (@{$library_alignments{$library}}) {
             unless(-f $input_alignment) {
                 $self->error_message("Expected $input_alignment not found");
@@ -137,6 +154,7 @@ sub execute {
             }
             print $fh $input_alignment ."\n";
         }
+        $self->status_message("library $library has $cnt map files");
         $fh->close;
     }
 
