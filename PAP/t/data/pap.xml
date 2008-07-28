@@ -1,0 +1,41 @@
+<?xml version='1.0' standalone='yes'?>
+<workflow name="protein annotation pipeline" executor="Workflow::Executor::SerialDeferred">
+  <link fromOperation="input connector"            fromProperty="fasta file"       toOperation="split fasta file"           toProperty="fasta_file" />
+  <link fromOperation="input connector"            fromProperty="chunk size"       toOperation="split fasta file"           toProperty="chunk_size" />
+  <link fromOperation="input connector"            fromProperty="biosql namespace" toOperation="database upload"            toProperty="biosql_namespace" />
+  <link fromOperation="split fasta file"           fromProperty="fasta_files"      toOperation="annotate protein sequences" toProperty="fasta file" />
+  <link fromOperation="split fasta file"           fromProperty="fasta_files"      toOperation="wait db upload"             toProperty="fasta_files" />
+  <link fromOperation="annotate protein sequences" fromProperty="bio seq features" toOperation="database upload"            toProperty="bio_seq_features" />
+  <link fromOperation="database upload"            fromProperty="result"           toOperation="wait db upload"             toProperty="db upload result" />
+  <link fromOperation="wait db upload"             fromProperty="fasta_files"      toOperation="delete files"               toProperty="files" />
+  <link fromOperation="wait db upload"             fromProperty="db upload result" toOperation="wait delete"                toProperty="db upload result" />
+  <link fromOperation="delete files"               fromProperty="result"           toOperation="wait delete"                toProperty="delete result" />
+  <link fromOperation="wait delete"                fromProperty="result"           toOperation="output connector"           toProperty="result" />
+  <operation name="split fasta file">
+    <operationtype commandClass="PAP::Command::FastaChunker" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="annotate protein sequences" workflowFile="pap_chunk.xml" />
+  <operation name="database upload">
+    <operationtype commandClass="PAP::Command::UploadResult" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="wait db upload">
+    <operationtype typeClass="Workflow::OperationType::Block">
+      <property>fasta_files</property>
+      <property>db upload result</property>
+    </operationtype>
+  </operation>
+  <operation name="delete files">
+    <operationtype commandClass="PAP::Command::DeleteFiles" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="wait delete">
+    <operationtype typeClass="Workflow::OperationType::Block">
+      <property>delete result</property>
+      <property>db upload result</property>
+    </operationtype>
+  </operation>
+  <operationtype typeClass="Workflow::OperationType::Model">
+    <inputproperty>fasta file</inputproperty>
+    <inputproperty>biosql_namespace</inputproperty>
+    <outputproperty>result</outputproperty>
+  </operationtype>
+</workflow>

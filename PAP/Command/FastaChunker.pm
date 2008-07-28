@@ -22,7 +22,7 @@ class PAP::Command::FastaChunker {
 };
 
 operation PAP::Command::FastaChunker {
-    input  => [ 'fasta_file', 'result_file', 'chunk_size' ],
+    input  => [ 'fasta_file', 'chunk_size' ],
     output => [ 'fasta_files'                             ],
 };
 
