@@ -1,0 +1,10 @@
+>0001398.CRK.mptest.061102.refseq.fasta GeneName:CRK, GeneID:0001398, NCBI Build 36, Chr:17, Coords 1220001-1356999, Ori (-), Ensembl Release 41_36c
+>0002064.ERBB2.mptest.061102.refseq.fasta GeneName:ERBB2, GeneID:0002064, NCBI Build 36, Chr:17, Coords 35054001-35188999, Ori (+), Ensembl Release 41_36c
+>0002263.FGFR2.mptest.061102.refseq.fasta GeneName:FGFR2, GeneID:0002263, NCBI Build 36, Chr:10, Coords 122423001-123397999, Ori (-), Ensembl Release 41_36c
+>0002888.GRB14.mptest.061102.refseq.fasta GeneName:GRB14, GeneID:0002888, NCBI Build 36, Chr:2, Coords 165007001-165236999, Ori (-), Ensembl Release 41_36c
+>0002534.FYN.mptest.061102.refseq.fasta GeneName:FYN, GeneID:0002534, NCBI Build 36, Chr:6, Coords 112038001-112351999, Ori (-), Ensembl Release 41_36c
+>0000207.AKT1.mptest.061102.refseq.fasta GeneName:AKT1, GeneID:0000207, NCBI Build 36, Chr:14, Coords 104256001-104383999, Ori (-), Ensembl Release 41_36c
+>0002260.FGFR1.mptest.061102.refseq.fasta GeneName:FGFR1, GeneID:0002260, NCBI Build 36, Chr:8, Coords 38339001-38495999, Ori (-), Ensembl Release 41_36c
+>0002066.ERBB4.mptest.061102.refseq.fasta GeneName:ERBB4, GeneID:0002066, NCBI Build 36, Chr:2, Coords 211906001-213161999, Ori (-), Ensembl Release 41_36c
+>0002264.FGFR4.mptest.061102.refseq.fasta GeneName:FGFR4, GeneID:0002264, NCBI Build 36, Chr:5, Coords 176396001-176507999, Ori (+), Ensembl Release 41_36c
+>0002065.ERBB3.mptest.061102.refseq.fasta GeneName:ERBB3, GeneID:0002065, NCBI Build 36, Chr:12, Coords 54710001-54833999, Ori (+), Ensembl Release 41_36c
