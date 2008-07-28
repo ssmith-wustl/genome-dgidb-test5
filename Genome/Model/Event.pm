@@ -610,10 +610,16 @@ sub get_metric {
         @metric_names = $self->metrics_for_class;
     }
 
-    return Genome::Model::Event::Metric->get(
+    if (@metric_names == 1) {
+        # A hack to make a cgi script faster.  It preloads all the metrics, but the UR
+        # cache system isn't able to find them because of the in-clause.  
+        return Genome::Model::Event::Metric->get(name => $metric_names[0], event_id => $self->id);
+    } else {
+        return Genome::Model::Event::Metric->get(
                                              name => \@metric_names,
                                              event_id => $self->id,
                                          );
+    }
 }
 
 sub has_all_metrics {
