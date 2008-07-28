@@ -7,7 +7,6 @@ use above "Genome";
 use Command;
 use Genome::Model;
 use Genome::Model::Command::AddReads::AlignReads;
-#use Genome::Model::Tools::Maq::MapSplit;
 
 class Genome::Model::Command::AddReads::AlignReads::Maq {
     is => [
