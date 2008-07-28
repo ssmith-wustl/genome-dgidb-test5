@@ -180,8 +180,17 @@ sub format_and_print{
     my $self = shift;
     
     $self->{output}->print("<table>");
+    
+    #cannot use super because \n screws up javascript
+    unless ( $self->{noheaders} ) {
+        $self->{output}->print($self->_get_header_string);
+    }
 
-    $self->SUPER::format_and_print();
+    my $count = 0;
+    while (my $object = $self->{iterator}->next) {
+        $self->{output}->print($self->_get_object_string($object));
+        $count++;
+    }
     
     $self->{output}->print("</table>");
 }
