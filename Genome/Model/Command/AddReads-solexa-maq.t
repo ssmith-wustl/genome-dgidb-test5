@@ -20,6 +20,7 @@ use Command;
 # Then this should run from 64-bit.
 
 use Genome::Model::Tools::Maq::CLinkage0_6_5;
+use Genome::Model::Tools::Maq::MapSplit;
 use Genome::RunChunk;
 use Genome::Model::Command::AddReads::Test;
 
@@ -42,29 +43,36 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 }
+
 plan tests => 481;
 
-my @read_sets = &setup_test_data($sample_name);
+my @read_sets = setup_test_data($sample_name);
+
 my $add_reads_test = Genome::Model::Command::AddReads::Test->new(
-                                                                 model_name => $model_name,
-                                                                 sample_name => $sample_name,
-                                                                 processing_profile_name => $processing_profile_name,
-                                                                 read_sets => \@read_sets
-                                                             );
+    model_name => $model_name,
+    sample_name => $sample_name,
+    processing_profile_name => $processing_profile_name,
+    read_sets => \@read_sets
+);
 isa_ok($add_reads_test,'Genome::Model::Command::AddReads::Test');
+
 $add_reads_test->create_test_pp(
-                                sequencing_platform  => 'solexa',
-                                profile_name => $processing_profile_name,
-                                dna_type => 'genomic dna',
-                                align_dist_threshold => '0',
-                                multi_read_fragment_strategy => 'eliminate start site duplicates',
-                                indel_finder => 'maq0_6_5',
-                                genotyper => 'maq0_6_5',
-                                read_aligner => 'maq0_6_5',
-                                reference_sequence => 'refseq-for-test',
-                            );
+    sequencing_platform  => 'solexa',
+    profile_name => $processing_profile_name,
+    dna_type => 'genomic dna',
+    align_dist_threshold => '0',
+    multi_read_fragment_strategy => 'eliminate start site duplicates',
+    indel_finder => 'maq0_6_5',
+    genotyper => 'maq0_6_5',
+    read_aligner => 'maq0_6_5',
+    reference_sequence => 'refseq-for-test',
+    #filter_ruleset_name => 'basic',
+);
+
 $add_reads_test->add_directory_to_remove($tmp_dir);
+
 $add_reads_test->runtests;
+
 exit;
 
 sub setup_test_data {
