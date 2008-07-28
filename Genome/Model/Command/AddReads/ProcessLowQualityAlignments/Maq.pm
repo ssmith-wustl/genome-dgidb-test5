@@ -22,7 +22,7 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     
     my $alignment_event = $self->prior_event;
     my $unaligned_reads_file = $alignment_event->unaligned_reads_file;

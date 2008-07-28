@@ -33,7 +33,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
+    $DB::single = $DB::stopper;
     my $options = $self->options || '';
     my $cmd = $self->full_bin_path('runProject') .' '. $options .' '. $self->dir;
     my $rv = system($cmd);

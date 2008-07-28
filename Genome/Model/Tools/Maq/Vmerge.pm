@@ -29,7 +29,7 @@ EOS
 
 sub create {
     my $class = shift;
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     my $self = $class->SUPER::create(@_);
 
 
@@ -53,7 +53,7 @@ sub create {
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
+    $DB::single = $DB::stopper;
 
     #my $maq_cmd = $self->maq_cmd();
     my $maq_pathname = '/gscuser/abrummet/maq-0.6.6/maq';

@@ -127,7 +127,7 @@ sub execute {
 ###########################################################
 #MAIN LOOP
 
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     while (my $diff = $diff_stream->next_diff){
 
         # leftover buffer from previous diff

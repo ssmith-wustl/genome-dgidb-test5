@@ -36,7 +36,7 @@ EOS
 }
 
 sub execute {
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     my $self = shift;
     my $maf_file = $self->maf;
 		my $maf_obj = new MG::MutationDiagram(maf_file => $maf_file,

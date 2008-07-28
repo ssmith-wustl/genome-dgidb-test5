@@ -48,7 +48,7 @@ sub execute {
 
     umask 0022;
 
-$DB::single=1;
+$DB::single = $DB::stopper;
     # Give the add-reads top level step a chance to sync database so these events
     # show up
     my %get_args;

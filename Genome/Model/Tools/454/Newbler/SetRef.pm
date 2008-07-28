@@ -31,7 +31,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
+    $DB::single = $DB::stopper;
     my $cmd = $self->full_bin_path('setRef') .' '. $self->dir .' '. join(' ',@{$self->reference_fasta_files});
     my $rv = system($cmd);
     unless ($rv == 0) {

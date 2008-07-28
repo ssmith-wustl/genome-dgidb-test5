@@ -37,7 +37,7 @@ sub should_bsub { 1;}
 
 sub execute {
     my $self = shift;
-$DB::single = 1;
+$DB::single = $DB::stopper;
     my $model = $self->model;
     $self->revert;
     my $maq_pathname = $self->proper_maq_pathname('genotyper_name');

@@ -40,7 +40,7 @@ sub get_mutations {
     my $find_variation = $find_variations[0];
 
     my $model = $self->model;
-$DB::single=1;
+$DB::single = $DB::stopper;
   
     my $variations = {};
 
@@ -86,7 +86,7 @@ sub _convert_output_to_mutations {
 
     my $mutations = [];
 
-$DB::single=1;
+$DB::single = $DB::stopper;
 
     # FIXME Is this right?  They used to be command line args
     my $software = 'maq';

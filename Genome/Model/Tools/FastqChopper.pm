@@ -31,7 +31,7 @@ EOS
 
 sub create {
     my $class = shift;
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     my $self = $class->SUPER::create(@_);
     unless (defined($self->size)){
         $self->size(250000);

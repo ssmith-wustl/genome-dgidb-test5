@@ -37,7 +37,7 @@ EOS
 sub c_linkage_class {
     my $self = shift;
 
-$DB::single=1;
+$DB::single = $DB::stopper;
     my $version = $self->use_version;
     $version =~ s/\./_/g;
 

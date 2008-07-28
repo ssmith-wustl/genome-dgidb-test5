@@ -257,7 +257,7 @@ sub execute {
                 );
             };
             unless ($command) {
-                $DB::single = 1;
+                $DB::single = $DB::stopper;
                 $command = $command_class->create(
                     run_id => $run->id,
                     model_id => $self->model_id,
@@ -304,7 +304,7 @@ sub get_sub_command_classes {
 
 sub _redo_all {
     my $self = shift;
-$DB::single = 1;
+$DB::single = $DB::stopper;
     my $model = $self->model;
     my $model_id = $model->id;
     

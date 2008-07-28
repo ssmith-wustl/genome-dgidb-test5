@@ -171,7 +171,7 @@ sub execute {
     my ($detail_file) = $model->_variant_detail_files($chromosome_name);
     my $log_dir = $self->resolve_log_directory;
 
-    $DB::single = 1; # when debugging, stop here...
+    $DB::single = $DB::stopper; # when debugging, stop here...
 
     my ($reports_dir) = $model->_reports_dir();
     print "$reports_dir\n";

@@ -399,7 +399,7 @@ sub prepare_input {
 sub execute {
     my $self = shift;
     
-$DB::single = 1;
+$DB::single = $DB::stopper;
 
     my $model = $self->model;
     my $seq_dedup = $model->is_eliminate_all_duplicates;
@@ -529,7 +529,7 @@ $DB::single = 1;
         value => $evenness
     );
 
-$DB::single = 1;
+$DB::single = $DB::stopper;
 
     # break up the alignments by the sequence they match, if necessary
     my $map_split = Genome::Model::Tools::Maq::MapSplit->execute(

@@ -60,7 +60,7 @@ our @TRANSLATE_BASE = ( 'A','C','G','T' );
 sub _examine_position {
     my $alignments = shift;
 
-$DB::single=1;
+$DB::single = $DB::stopper;
     my $max_base_score_seen = 0;
     my $base = undef;
 

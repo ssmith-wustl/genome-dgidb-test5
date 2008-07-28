@@ -37,7 +37,7 @@ sub execute {
 
     my $model = $self->model;
 
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
 
     # for now everything passes until criteria are determined
     $self->add_metric(name => 'read set pass fail', value => 'pass');

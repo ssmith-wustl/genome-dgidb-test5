@@ -70,7 +70,7 @@ class Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomia
 #----------------------------------
 sub execute {
     my $self = shift;
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     unless($self->_create_r_files) {
         $self->error_message("Error creating temporary files for R");
         return;

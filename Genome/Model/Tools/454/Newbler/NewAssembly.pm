@@ -27,7 +27,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
+    $DB::single = $DB::stopper;
     my $cmd = $self->full_bin_path('createProject') .' -t asm '. $self->dir;
     my $rv = system($cmd);
     unless ($rv == 0) {

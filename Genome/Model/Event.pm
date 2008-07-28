@@ -453,7 +453,7 @@ sub execute_with_bsub {
     $dep_type ||= 'ended';
     
 
-    $DB::single=1;
+    $DB::single = $DB::stopper;
     
     my $last_bsub_job_id;
     $last_bsub_job_id = $last_event->lsf_job_id if defined $last_event;
@@ -497,7 +497,7 @@ sub execute_with_bsub {
     # Header for output and error files
     for my $log_file ( $err_log_file, $out_log_file )
     {
-        $DB::single=1;
+        $DB::single = $DB::stopper;
         if(-e $log_file && (stat($log_file))[2] != 0100664) { 
             unless ( chmod(0664, $log_file) )
             {

@@ -34,7 +34,7 @@ EOS
 }
 
 sub execute {
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     my $self = shift;
     my $dir = $self->dir;
     my $group_name = $self->group;

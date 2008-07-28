@@ -137,7 +137,7 @@ sub _validate_dna_type {
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
+    $DB::single = $DB::stopper;
 
     # genome model specific
 

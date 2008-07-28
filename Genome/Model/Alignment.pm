@@ -214,7 +214,7 @@ sub decode_match_string_perl {
         #my $ref_base = $REF_BASE->[$encoded_value % 10];
         my $decode_values = $DECODE_MATCH_STRING[$encoded_value];
         unless ($decode_values) {
-            $DB::single=1;
+            $DB::single = $DB::stopper;
             1;
         }
         my $ref_base = $decode_values->[1];
@@ -232,7 +232,7 @@ sub decode_match_string_perl {
 
     my $missing = $str_idx - $ev_idx;
     if($missing) {
-        $DB::single=1;
+        $DB::single = $DB::stopper;
     
         substr($mismatch_string, $missing) = '';
         substr($reference_bases, $missing) = '';

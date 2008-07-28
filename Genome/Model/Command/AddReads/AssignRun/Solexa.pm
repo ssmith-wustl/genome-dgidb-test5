@@ -84,7 +84,7 @@ sub create {
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
+    $DB::single = $DB::stopper;
     my $model = $self->model;
     unless (-d $model->data_directory) {
         $self->create_directory($model->data_directory);

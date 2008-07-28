@@ -495,7 +495,7 @@ my($self,$pos,$alignments) = @_;
 sub foreach_reference_position{
 my($self, $each_pos_coderef, $each_result_coderef, $start_position, $end_position) = @_;
     
-$DB::single=1;
+$DB::single = $DB::stopper;
 
     $start_position ||= 1;
     $end_position ||= $self->max_alignment_pos();
@@ -529,7 +529,7 @@ $DB::single=1;
 sub foreach_aligned_position{
 my($self, $each_pos_coderef, $each_result_coderef, $start_position, $end_position) = @_;
     
-$DB::single=1;
+$DB::single = $DB::stopper;
 
     $start_position ||= 1;
     $end_position ||= $self->max_alignment_pos();

@@ -103,7 +103,7 @@ sub execute {
 
     $self->revert;
 
-    $DB::single=1;
+    $DB::single = $DB::stopper;
 
     #unless ($self->generate_variation_metrics_files) {        
         #    $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
@@ -500,7 +500,7 @@ sub snp_err_log_file {
 sub tumor_sample_snp_filtered_file {
     my $self= shift;
     my $model = $self->model;
-   $DB::single=1;
+   $DB::single = $DB::stopper;
     my $model_name = $model->name;
     my $tumor_name = $model_name;
 

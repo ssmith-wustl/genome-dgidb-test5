@@ -44,7 +44,7 @@ sub help_detail{
 sub execute {
     my $self = shift;
     
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     
     my $list_id     = $self->list_id;
     my $list_name   = $self->list_name;

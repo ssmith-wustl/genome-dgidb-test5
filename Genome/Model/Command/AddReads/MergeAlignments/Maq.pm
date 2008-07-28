@@ -44,7 +44,7 @@ sub should_bsub { 1;}
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
 
     my $now = UR::Time->now;
     my $model = Genome::Model->get(id => $self->model_id);

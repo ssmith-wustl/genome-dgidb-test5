@@ -71,7 +71,7 @@ sub proper_blat_path {
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     if ($self->_check_for_existing_alignment_files) {
         return 1;
     }

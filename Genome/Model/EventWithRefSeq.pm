@@ -41,7 +41,7 @@ sub mapmerge_filename {
 sub resolve_accumulated_alignments_filename {
     my $self = shift;
     
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
 
     my %p = @_;
     my $ref_seq_id = $p{ref_seq_id};

@@ -81,7 +81,7 @@ sub command_properties{
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
+    $DB::single = $DB::stopper;
 
     unless ($self->_get_processing_profile_from_name()) { 
         $self->event_status('Failed');

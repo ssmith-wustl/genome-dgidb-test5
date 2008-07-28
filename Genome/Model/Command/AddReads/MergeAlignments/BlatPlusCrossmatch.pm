@@ -46,7 +46,7 @@ sub should_bsub { 1;}
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
 
     my $start = UR::Time->now;
     my $model = $self->model;

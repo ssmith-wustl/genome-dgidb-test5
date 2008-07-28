@@ -48,7 +48,7 @@ sub execute {
     
     my $self = shift;
     
-$DB::single=1;
+$DB::single = $DB::stopper;
     my $model = $self->model;
 
     my @run_events = grep {defined $_->run_id} Genome::Model::Event->get(model_id=>$self->model_id,
@@ -101,7 +101,7 @@ $DB::single=1;
     # Looks like some things deep in the bowels of MG::* can call die() in some cases
     # so let's trap those
 $SIG{'__DIE__'} = sub {
-$DB::single=1;
+$DB::single = $DB::stopper;
 1;
 };
     eval {

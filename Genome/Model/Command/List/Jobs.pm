@@ -44,7 +44,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
+    $DB::single = $DB::stopper;
 
     my @get_args;
     if ($self->user and $self->user eq 'all') {

@@ -60,7 +60,7 @@ sub execute {
     #    return;
     #}
 
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
 
     if ($self->dispatcher eq 'inline') {
         if ($self->event_id) {

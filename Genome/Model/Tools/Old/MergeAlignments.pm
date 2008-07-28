@@ -50,7 +50,7 @@ EOS
 
 sub execute {
     my $self = shift;
-$DB::single=1;
+$DB::single = $DB::stopper;
 
     require Genome::Model::RefSeqAlignmentCollection;
 

@@ -26,7 +26,7 @@ EOS
 }
 
 sub execute {
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     my $self = shift;
     require Genome::Model::Tools::Maq::ExampleUsingC_C;
     my $fptr = Genome::Model::Tools::Maq::ExampleUsingC_C::test_ssmith_fptr();

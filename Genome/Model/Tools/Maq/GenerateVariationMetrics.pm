@@ -60,7 +60,7 @@ sub create {
 
 sub execute {
     my $self = shift;
-$DB::single = 1;
+$DB::single = $DB::stopper;
     my $in = $self->input;
     my $snpfile = $self->snpfile;
     my $out = $self->output;

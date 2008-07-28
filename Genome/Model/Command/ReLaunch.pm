@@ -42,7 +42,7 @@ EOS
 }
 
 sub execute {
-    $DB::single=1;
+    $DB::single = $DB::stopper;
     my $self = shift;
 
     return unless ($self->SUPER::_execute_body(@_));    

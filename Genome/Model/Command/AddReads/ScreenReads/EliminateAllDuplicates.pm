@@ -54,7 +54,7 @@ sleep 120;
     my $model = Genome::Model->get(id => $self->model_id);
     my $model_id = $model->genome_model_id;
 
-$DB::single=1;
+$DB::single = $DB::stopper;
     # This is in here because the catch_up_screen_reads script may have
     # done the work for us already.  Files smaller than 10k are probably broken anyway...
     my $test_screened_fastq_pathname = $self->sorted_screened_fastq_file_for_lane;

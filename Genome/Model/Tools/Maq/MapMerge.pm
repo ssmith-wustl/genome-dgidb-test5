@@ -27,7 +27,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
+    $DB::single = $DB::stopper;
 
     my $output = $self->output;
     my $inputs = $self->inputs;

@@ -44,7 +44,7 @@ EOS
 }
 
 sub execute {
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     my $self = shift;
     my $in = $self->input;
     my $remove = $self->remove;

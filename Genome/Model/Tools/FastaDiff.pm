@@ -27,7 +27,7 @@ EOS
 sub execute {
     my $self = shift;
 
-$DB::single=1;
+$DB::single = $DB::stopper;
     my $fasta_files = $self->bare_args();
     my @flat_files;
     foreach my $fasta_name ( @$fasta_files ) {

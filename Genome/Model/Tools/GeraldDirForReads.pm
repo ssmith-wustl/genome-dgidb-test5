@@ -29,7 +29,7 @@ EOS
 sub execute {
     my $self = shift;
 
-$DB::single=1;
+$DB::single = $DB::stopper;
     my $maq;
     my $mapfile = $self->mapfile;
     open($maq, "maq mapview $mapfile |");

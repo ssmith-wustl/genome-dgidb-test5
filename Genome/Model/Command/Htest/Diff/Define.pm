@@ -49,7 +49,7 @@ sub load_changes_file {
 sub execute {
     my $self = shift;
 
-$DB::single=1;
+$DB::single = $DB::stopper;
     my $diff_obj = $self->load_changes_file();  # subclasses for each diff type should define this
     return unless $diff_obj;
 

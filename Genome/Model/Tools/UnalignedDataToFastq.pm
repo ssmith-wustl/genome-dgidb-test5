@@ -38,7 +38,7 @@ EOS
 sub execute {
     my $self = shift;
     
-$DB::single = 1;
+$DB::single = $DB::stopper;
 
     my $unaligned_file = $self->in();
     my $unaligned = IO::File->new($unaligned_file);

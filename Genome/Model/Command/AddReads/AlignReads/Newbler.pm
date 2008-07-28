@@ -41,7 +41,7 @@ sub should_bsub { 1;}
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
     my $model = $self->model;
 
     my $add_run = Genome::Model::Tools::454::Newbler::AddRun->create(

@@ -45,7 +45,7 @@ sub execute {
     my $self = shift;
 
     # This will cause the debugger to stop here.
-    $DB::single=1;
+    $DB::single = $DB::stopper;
 
     require Genome::Model::RefSeqAlignmentCollection;
 

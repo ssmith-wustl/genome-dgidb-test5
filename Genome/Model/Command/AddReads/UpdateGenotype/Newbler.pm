@@ -35,7 +35,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
+    $DB::single = $DB::stopper;
 
     my $model = $self->model;
     my $run_project = Genome::Model::Tools::454::Newbler::RunProject->create(
