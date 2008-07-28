@@ -81,7 +81,7 @@ sub setup_test_data {
     my $zip_file = '/gsc/var/cache/testsuite/data/Genome-Model-Command-AddReads/addreads.tgz';
     `tar -xzf $zip_file`;
 
-    $tmp_dir = '/tmp/fake-gerald';
+    #$tmp_dir = '/tmp/fake-gerald';
     my @run_dirs = grep { -d $_ } glob("$tmp_dir/*_*_*_*");
     for my $run_dir (@run_dirs) {
         my $run_dir_params = GSC::PSE::SolexaSequencing::SolexaRunDirectory->parse_regular_run_directory($run_dir);
@@ -119,7 +119,7 @@ sub setup_test_data {
                                                  library_name => 'TESTINGLIBRARY',
                                                  gerald_directory           => $run_dir
                                              );
-            next;
+            #next;
             
             my @files = grep { -e $_ } glob("$run_dir/${lane}_*.fastq");
             foreach my $file (@files) {

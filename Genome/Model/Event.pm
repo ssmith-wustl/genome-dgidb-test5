@@ -114,10 +114,11 @@ sub revert {
 
 sub delete {
     my $self = shift;
+    $self->warning_message("deleting " . $self->class . " " . $self->id);
     $self->revert;
     my @inputs = $self->inputs;
     for my $obj (@inputs) { 
-        $self->warning_message("deleting " . $self->class . " " . $self->id);
+        $self->warning_message("deleting " . $obj->class . " " . $obj->id);
         $obj->delete;
     };
     return 1;

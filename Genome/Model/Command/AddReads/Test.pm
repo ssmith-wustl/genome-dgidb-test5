@@ -115,7 +115,7 @@ sub test_b : Tests {
     }
     $self->{_expected_postprocess_events} = $ref_seqs * scalar(@pp_sub_commands);
     my @read_sets = @{$self->{_read_set_array_ref}};
-    $self->{_expected_add_reads_events} = scalar(@read_sets) * scalar(@add_reads_commands);
+    $self->{_expected_add_reads_events} = scalar(@add_reads_commands);
     # At some point the number of expected tests from test_c should be set
     # This number will vary depending on platform(some tests are not performed for 454, yet)
     #$self->num_method_tests('test_c',$);
@@ -140,7 +140,7 @@ sub test_c : Tests {
                                                          model_id => $model->id,
                                                          parent_event_id => $add_reads_command->id,
                                                      );
-        is(scalar(@add_reads_events),4,'get scheduled genome_model_events');
+        is(scalar(@add_reads_events),$self->{_expected_add_reads_events},'get scheduled add_reads genome_model_events');
         # sort by event id to ensure order of events matches pipeline order
         @add_reads_events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @add_reads_events;
 
@@ -151,35 +151,7 @@ sub test_c : Tests {
         is($data_directory,$model->data_directory,"assign run data directory matches model");
         ok(-d $data_directory, "data directory '$data_directory' exists");
 
-        my $run_directory = $assign_run_command->resolve_run_directory;
-        my ($adaptor_file,$our_unique_file,$our_duplicate_file);
-        if ($model->sequencing_platform eq 'solexa') {
-            #this happens on a different granularity--- one per 8 lanes/flowcell for solexa. figure out this later
-            #ok(!-e $run_directory, "run directory '$run_directory' not created yet");
-            #my $adaptor_file = $assign_run_command->adaptor_file_for_run;
-            #ok(!-e $adaptor_file, "adaptor_file '$adaptor_file' not created yet");
-            #my $orig_unique_file = $assign_run_command->original_sorted_unique_fastq_file_for_lane;
-            #ok(-s $orig_unique_file, "orig_unique_file '$orig_unique_file' exists from CQADR with non-zero size");
-            #my $our_unique_file = $assign_run_command->sorted_unique_fastq_file_for_lane;
-            #ok(!-e $our_unique_file, "our_unique_file '$our_unique_file' not created yet");
-
-            #this test will only test uniques for now.
-            #my $orig_duplicate_file = $assign_run_command->original_sorted_duplicate_fastq_file_for_lane;
-            #ok(-s $orig_duplicate_file, "orig_duplicate_file '$orig_duplicate_file' exists from CQADR with non-zero size");
-
-            #my $our_duplicate_file = $assign_run_command->sorted_duplicate_fastq_file_for_lane;
-            #ok(!-e $our_duplicate_file, "our_duplicate_file '$our_duplicate_file' not created yet");
-        }
         $self->execute_event_test($assign_run_command,$read_set);
-
-        ok(-d $run_directory, 'run_directory created');
-        if ($model->sequencing_platform eq 'solexa') {
-            #ok(-f $adaptor_file, 'adaptor_file created');
-            #ok(-l $our_unique_file, 'our_unique_file symlink created');
-
-            #This test will only test uniques for now.
-            #ok(-l $our_duplicate_file, 'our_duplicate_file symlink created');
-        }
 
         ###RUN ALIGN-READS VIA BSUBHELPER(?). 
         my $align_reads_command = $add_reads_events[1];
@@ -200,9 +172,9 @@ sub test_c : Tests {
         isa_ok($proc_low_qual_command,'Genome::Model::Command::AddReads::ProcessLowQualityAlignments');
         $self->execute_event_test($proc_low_qual_command,$read_set);
 
-        my $accept_reads_command = $add_reads_events[3];
-        isa_ok($accept_reads_command,'Genome::Model::Command::AddReads::AcceptReads');
-        $self->execute_event_test($accept_reads_command,$read_set);
+        #$my $accept_reads_command = $add_reads_events[3];
+        #isa_ok($accept_reads_command,'Genome::Model::Command::AddReads::AcceptReads');
+        #$self->execute_event_test($accept_reads_command,$read_set);
     }
 
     my $pp_alignments = Genome::Model::Command::AddReads::PostprocessAlignments->create(

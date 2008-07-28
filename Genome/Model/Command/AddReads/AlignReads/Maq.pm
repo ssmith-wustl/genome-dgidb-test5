@@ -7,6 +7,7 @@ use above "Genome";
 use Command;
 use Genome::Model;
 use Genome::Model::Command::AddReads::AlignReads;
+use Genome::Model::Tools::Maq::MapSplit;
 
 class Genome::Model::Command::AddReads::AlignReads::Maq {
     is => [
@@ -139,7 +140,7 @@ sub read_set_alignment_files_for_refseq {
     my $ref_seq_id = shift;
     my $event_id = $self->id;
     my @files = grep { $_ and -e $_ } (
-        glob($self->read_set_alignment_directory . "/${ref_seq_id}_*.map.*") #bkward compat
+        glob($self->read_set_alignment_directory . "/${ref_seq_id}*.map.*") #bkward compat
     );
     return @files;
 }
@@ -437,7 +438,7 @@ $DB::single = 1;
         $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
         return;
     }
-    my @subsequences = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
+    my @subsequences = grep {$_ ne "all_sequences"} $model->get_subreference_names(reference_extension=>'bfa');
     
 
     # prepare paths for the results
@@ -447,7 +448,7 @@ $DB::single = 1;
         my $errors;
         my @cross_refseq_alignment_files;
         for my $ref_seq_id (@subsequences) {
-            my @alignment_files = $self->read_set_alignment_file_name($ref_seq_id);
+            my @alignment_files = $self->read_set_alignment_files_for_refseq($ref_seq_id);
             my @distinct = grep { /unique|distinct/ } @alignment_files;
             my @duplicate = grep { /duplicate|redu/ } @alignment_files;
             my @all = grep { /all/ } @alignment_files;
@@ -486,7 +487,7 @@ $DB::single = 1;
         }
         else {
             $self->status_message("SHORTCUT SUCCESS: alignment data is already present.");
-            return;
+            return 1;
         }
     }
     $self->create_directory($read_set_alignment_directory);
@@ -533,10 +534,10 @@ $DB::single = 1;
 
     # break up the alignments by the sequence they match, if necessary
     my $map_split = Genome::Model::Tools::Maq::MapSplit->execute(
-        map_file => $alignment_file,
-        submap_directory => $self->read_set_alignment_directory,
-        reference_names => \@subsequences,
-    );
+                                                                 map_file => $alignment_file,
+                                                                 submap_directory => $self->read_set_alignment_directory,
+                                                                 reference_names => \@subsequences,
+                                                             );
     unless($map_split) {
         $self->error_message("Failed to run map split on alignment file $alignment_file");
         return;
@@ -554,13 +555,13 @@ $DB::single = 1;
     
     my $errors;
     for my $subsequence (@subsequences) {
-        my @found = $self->read_set_alignment_files_for_refseq($_);
+        my @found = $self->read_set_alignment_files_for_refseq($subsequence);
         unless (@found) {
             $self->error_message("Failed to find map file for $subsequence!");
             $errors++;
         }
     }
-    if($errors) {
+    if ($errors) {
         my @files = glob($self->read_set_alignment_directory . '/*');
         $self->error_message("Files in dir are:\n\t" . join("\n\t",@files) . "\n");
         return;
