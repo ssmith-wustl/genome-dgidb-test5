@@ -15,8 +15,6 @@ class Genome::Model::Tools::Maq::CLinkage {
 sub _get_config_hash {
     my($class,$version) = @_;
 
-    $DB::single=1;
-
     # First, determine what dir we should look in
     my $p = __PACKAGE__ . '.pm';
     $p =~ s/::/\//g;
