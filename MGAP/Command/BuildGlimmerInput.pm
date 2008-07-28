@@ -24,7 +24,7 @@ class MGAP::Command::BuildGlimmerInput {
     ],
 };
 
-operation MGAP::Command::BuildGlimmerInput {
+operation_io MGAP::Command::BuildGlimmerInput {
     input  => [ 'fasta_files' ],
     output => [ 'model_file', 'pwm_file' ],
 };

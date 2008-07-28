@@ -15,7 +15,7 @@ class MGAP::Command::CalculateGcPercent {
     ],
 };
 
-operation MGAP::Command::CalculateGcPercent {
+operation_io MGAP::Command::CalculateGcPercent {
     input  => [ 'fasta_files' ],
     output => [ 'gc_percent' ],
 };

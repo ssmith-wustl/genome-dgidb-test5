@@ -14,7 +14,7 @@ class MGAP::Command::DeleteFiles {
     ],
 };
 
-operation MGAP::Command::DeleteFiles {
+operation_io MGAP::Command::DeleteFiles {
     input  => [ 'files' ],
     output => [ ],
 };

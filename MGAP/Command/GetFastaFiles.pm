@@ -22,7 +22,7 @@ class MGAP::Command::GetFastaFiles {
     ],
 };
 
-operation MGAP::Command::GetFastaFiles {
+operation_io MGAP::Command::GetFastaFiles {
     input  => [ 'dev', 'seq_set_id' ],
     output => [ 'fasta_files' ],
 };
