@@ -76,8 +76,6 @@ $DB::single=1;
         $event->date_completed(undef);
         $event->event_status('Failed');
         $event->user_name($ENV{'USER'});
-
-
         return;
     }
 
@@ -88,8 +86,9 @@ $DB::single=1;
     }
     
     my $command_obj = $event;
+    $command_obj->revert;
 
-       unless ($command_obj->lsf_job_id) {
+    unless ($command_obj->lsf_job_id) {
         $command_obj->lsf_job_id($ENV{'LSB_JOBID'});
     }
     $command_obj->date_scheduled(UR::Time->now());
