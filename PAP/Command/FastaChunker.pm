@@ -15,9 +15,9 @@ use File::Temp;
 class PAP::Command::FastaChunker {
     is  => ['PAP::Command'],
     has => [
-        fasta_file  => { is => 'SCALAR', doc => 'fasta file name'                     },
-        fasta_files => { is => 'ARRAY',  doc => 'array of fasta file names'           },
-        chunk_size  => { is => 'SCALAR', doc => 'number of sequences per output file' }
+        fasta_file  => { is => 'SCALAR', doc => 'fasta file name'                             },
+        chunk_size  => { is => 'SCALAR', doc => 'number of sequences per output file'         },
+        fasta_files => { is => 'ARRAY',  doc => 'array of fasta file names', is_optional => 1 },
     ],
 };
 
@@ -65,6 +65,8 @@ sub execute {
 
         if (($seq_count > $chunk_size) || (!defined($chunk_fh)))  {
         
+            $seq_count = 1;
+
             ##FIXME: The temp dir location should not be hardcoded.  At least not here.
             $chunk_fh = File::Temp->new(
                                         'DIR'      => '/gscmnt/temp212/info/annotation/PAP_tmp',
@@ -75,6 +77,8 @@ sub execute {
 
             $seq_out = Bio::SeqIO->new(-fh => $chunk_fh, -format => 'Fasta');
         
+            push @output_files, $chunk_fh->filename();
+
         }
 
         $seq_out->write_seq($seq);

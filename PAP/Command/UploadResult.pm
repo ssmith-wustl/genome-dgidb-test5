@@ -8,8 +8,14 @@ use Workflow;
 class PAP::Command::UploadResult {
     is  => ['PAP::Command'],
     has => [
-        biosql_namespace => { is => 'SCALAR', doc => 'biosql namespace'           },
-        bio_seq_features => { is => 'ARRAY', doc  => 'array of Bio::Seq::Feature' },
+        biosql_namespace => { 
+                             is  => 'SCALAR', 
+                             doc => 'biosql namespace'           
+                            },
+        bio_seq_features => { 
+                              is  => 'ARRAY',
+                              doc => 'array of Bio::Seq::Feature' 
+                            },
     ],
 };
 

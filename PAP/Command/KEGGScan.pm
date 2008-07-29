@@ -14,8 +14,15 @@ use English;
 class PAP::Command::KEGGScan {
     is  => ['PAP::Command'],
     has => [
-        fasta_file      => { is => 'SCALAR', doc => 'fasta file name'            },
-        bio_seq_feature => { is => 'ARRAY',  doc => 'array of Bio::Seq::Feature' },
+        fasta_file      => { 
+                            is => 'SCALAR', 
+                            doc => 'fasta file name'            
+                           },
+        bio_seq_feature => { 
+                            is          => 'ARRAY',  
+                            is_optional => 1,
+                            doc         => 'array of Bio::Seq::Feature' 
+                           },
     ],
 };
 
@@ -47,6 +54,8 @@ sub execute {
 
 
     my $fasta_file  = $self->fasta_file();
+
+    $self->bio_seq_feature([]);
 
 }
  

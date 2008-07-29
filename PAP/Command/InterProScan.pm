@@ -14,8 +14,15 @@ use English;
 class PAP::Command::InterProScan {
     is => ['PAP::Command'],
     has => [
-        fasta_file      => { is => 'SCALAR', doc => 'fasta file name'            },
-        bio_seq_feature => { is => 'ARRAY',  doc => 'array of Bio::Seq::Feature' },
+        fasta_file      => {  
+                            is  => 'SCALAR', 
+                            doc => 'fasta file name'            
+                           },
+        bio_seq_feature => { 
+                            is          => 'ARRAY',
+                            is_optional => 1,
+                            doc         => 'array of Bio::Seq::Feature' 
+                           },
     ],
 };
 
@@ -64,6 +71,10 @@ sub execute {
 
     my ($iprscan_stdout, $iprscan_stderr);
 
+    $self->bio_seq_feature([]);
+
+    return 1;
+
     IPC::Run::run(
                   \@iprscan_command, 
                   \undef, 
@@ -72,6 +83,7 @@ sub execute {
                   '2>', 
                   \$iprscan_stderr, 
                  ); 
+
 
 }
  
