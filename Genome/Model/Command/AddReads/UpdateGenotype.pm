@@ -35,10 +35,5 @@ sub command_subclassing_model_property {
     return 'genotyper_name';
 }
 
-sub is_not_to_be_run_by_add_reads {
-    return 1;
-}
-
-
 1;
 
