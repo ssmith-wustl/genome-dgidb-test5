@@ -7,7 +7,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::ShortRead {
-    is => 'Genome::Model',
+    is => 'Genome::Model::ReferenceAlignment',
     has => [
         build_events  => {
             is => 'Genome::Model::Command::AddReads::PostprocessAlignments',
@@ -73,4 +73,5 @@ sub create {
     return $self;
 }
 
-;
+1;
+
