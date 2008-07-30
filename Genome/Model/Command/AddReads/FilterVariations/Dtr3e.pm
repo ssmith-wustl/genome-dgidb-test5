@@ -124,8 +124,8 @@ $keep_handle->open("$keep_file","w") or die "Couldn't open keep output file\n";
 $remove_handle->open("$remove_file","w") or die "Couldn't open remove output file\n";
 
 chomp $header_line;
-print $keep_handle $header_line . ",rule\n";
-print $remove_handle $header_line . ",rule\n";
+print $keep_handle $header_line . ", rule\n";
+print $remove_handle $header_line . ", rule\n";
 
 
 my %result;
