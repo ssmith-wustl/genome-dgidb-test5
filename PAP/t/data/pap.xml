@@ -1,8 +1,10 @@
 <?xml version='1.0' standalone='yes'?>
 <workflow name="protein annotation pipeline" executor="Workflow::Executor::SerialDeferred">
   <link fromOperation="input connector"            fromProperty="fasta file"       toOperation="split fasta file"           toProperty="fasta_file" />
+  <link fromOperation="input connector"            fromProperty="fasta file"       toOperation="interproscan"               toProperty="fasta_file" />
   <link fromOperation="input connector"            fromProperty="chunk size"       toOperation="split fasta file"           toProperty="chunk_size" />
   <link fromOperation="input connector"            fromProperty="biosql namespace" toOperation="database upload"            toProperty="biosql_namespace" />
+  <link fromOperation="interproscan"               fromProperty="bio_seq_feature"  toOperation="annotate protein sequences" toProperty="interproscan feature" />
   <link fromOperation="split fasta file"           fromProperty="fasta_files"      toOperation="annotate protein sequences" toProperty="fasta file" />
   <link fromOperation="split fasta file"           fromProperty="fasta_files"      toOperation="wait db upload"             toProperty="fasta_files" />
   <link fromOperation="annotate protein sequences" fromProperty="bio seq features" toOperation="database upload"            toProperty="bio_seq_features" />
@@ -13,6 +15,9 @@
   <link fromOperation="wait delete"                fromProperty="delete_result"    toOperation="output connector"           toProperty="result" />
   <operation name="split fasta file">
     <operationtype commandClass="PAP::Command::FastaChunker" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="interproscan">
+    <operationtype commandClass="PAP::Command::InterProScan" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="annotate protein sequences" workflowFile="pap_chunk.xml" />
   <operation name="database upload">
