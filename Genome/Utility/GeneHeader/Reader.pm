@@ -3,6 +3,7 @@ package Genome::Utility::GeneHeader::Reader;
 use strict;
 use warnings;
 
+use IO::File;
 use Data::Dumper;
 
 use above "Genome";

@@ -4,48 +4,44 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Command;
 
 use IO::File;
 use Text::CSV_XS;
 
 class Genome::Utility::Parser {
-    is => 'Command',
+    is => 'UR::Object',
     has => [
             file => {
                      doc => 'the path to the file for parsing',
                      is => 'string',
                  },
             header => {
-                       doc => "a flag if the file does not contain a header",
+                       doc => "flag if the file contains a header",
                        is => 'Boolean',
                        default_value => 1,
                    },
+            separator => {
+                          doc => "a separator character, default is ','",
+                          is => 'string',
+                          default_value => ',',
+                      },
     ],
     has_optional => [
-                     separator => {
-                                   doc => "an optional separator charactor",
-                                   is => 'string',
-                                   default => ',',
-                               },
+                     header_fields => {
+                                       doc => "column header fields",
+                                       is => 'array',
+                                   },
+                     data_hash_ref => {
+                                       doc => "the data pulled from file",
+                                       is => 'hash',
+                                   },
                      _parser => {
                                  is => 'Text::CSV_XS',
-                            },
-                     header_fields => {
-                                        doc => "column header fields",
-                                        is => 'array',
-                                    },
-                     data_hash_ref => {
-                              doc => "the data pulled from file",
-                              is => 'hash',
-                          },
+                             },
                      _file_handle => {
                             doc => "The filehandle",
                             is => 'IO::File',
                      },
-                     _line_number => {
-                                      is => 'Integer',
-                                  }
                  ],
 };
 
@@ -62,6 +58,11 @@ EOS
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
+
+    # UR seems to add an additional un-necessary escape
+    #my $sep_char = $self->separator;
+    #$sep_char =~ s/\\\\/\\/;
+    #$self->separator($sep_char);
 
     my $parser = Text::CSV_XS->new({ sep_char => $self->separator });
     #my $parser = defined($self->separator) 
@@ -84,7 +85,6 @@ sub create {
             $self->error_message('No lines to parse from file '. $self->file);
             return;
         }
-        $self->_line_number(1);
         chomp($header);
         $self->_parser->parse($header);
         my @header_fields = $self->_parser->fields();
@@ -97,20 +97,6 @@ sub create {
     }
 
     return $self;
-}
-
-sub execute {
-    my $self = shift;
-
-    my %data_hash;
-
-    while ( my %line_hash = $self->next ) {
-        $data_hash{$self->_line_number} = \%line_hash;
-    }
-
-    $self->data_hash_ref(\%data_hash);
-
-    return 1;
 }
 
 BEGIN {
@@ -131,7 +117,6 @@ sub _read_line {
     my $line = shift;
 
     chomp($line);
-    $self->_line_number( $self->_line_number + 1 );
     $self->_parser->parse($line); # check for true parse??
 
     my @keys = @{ $self->header_fields };
@@ -152,6 +137,11 @@ sub _read_line {
     @data_hash{@keys} = @values;
 
     return ( wantarray ) ? %data_hash : \%data_hash;
+}
+
+sub close {
+    my $self = shift;
+    $self->_file_handle->close;
 }
 
 1;

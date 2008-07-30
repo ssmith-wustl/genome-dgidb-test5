@@ -7,7 +7,7 @@ use above "Genome";
 use Data::Dumper;
 use Genome::Utility::Parser;
 
-use Test::More tests => 7;
+use Test::More tests => 5;
 use Test::Differences;
 
 # Use FindBin to provie a proper full path to the test files
@@ -22,11 +22,15 @@ my @header = qw(build chromosome orientation start end sample allele1 allele2 co
 my $tsv_parser = Genome::Utility::Parser->create(
                                                   file => $tsv_file,
                                                   separator => "\t",
-                                                  );
+                                             );
 isa_ok($tsv_parser,'Genome::Utility::Parser');
 is_deeply($tsv_parser->header_fields,\@header,'header parsed correctly for tsv');
-ok($tsv_parser->execute(),'execute tsv parser');
-my $tsv_data_ref = $tsv_parser->data_hash_ref;
+my $line = 0;
+my %tsv_data;
+while (my $record = $tsv_parser->next) {
+    $tsv_data{$line++} = $record;
+}
+$tsv_parser->close;
 
 # Tests using comma delimiter
 my $csv_parser = Genome::Utility::Parser->create(
@@ -34,11 +38,17 @@ my $csv_parser = Genome::Utility::Parser->create(
                                                   );
 isa_ok($csv_parser,'Genome::Utility::Parser');
 is_deeply($csv_parser->header_fields,\@header,'header parsed correctly for csv');
-ok($csv_parser->execute(),'execute csv parser');
-my $csv_data_ref = $csv_parser->data_hash_ref;
+
+$line = 0;
+my %csv_data;
+while (my $record = $csv_parser->next) {
+    $csv_data{$line++} = $record;
+}
+$csv_parser->close;
 
 # Test equality of tab versus comma delimited
-eq_or_diff($tsv_data_ref,$csv_data_ref,'data produced by tab and comma delimited files');
+eq_or_diff(\%tsv_data,\%csv_data,'data produced by tab and comma delimited files');
+
 
 
 exit;
