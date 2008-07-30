@@ -54,7 +54,7 @@ sub execute {
 
 
     my $fasta_file  = $self->fasta_file();
-    my $result_file = $self->result_file();
+    my $result_file = '/tmp/dummy';
 
     my @iprscan_command = (
                            '/gscmnt/974/analysis/iprscan16.1/iprscan/bin/iprscan.hacked',

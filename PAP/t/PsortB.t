@@ -10,11 +10,15 @@ use File::Temp;
 use Test::More tests => 2112;
 
 BEGIN {
-    use_ok('BAP::Command');
-    use_ok('BAP::Command::PsortB');
+    use_ok('PAP::Command');
+    use_ok('PAP::Command::PsortB');
 }
 
-my $command = BAP::Command::PsortB->create('fasta_file' => 'data/HPAG1.fasta');
-isa_ok($command, 'BAP::Command::PsortB');
+my $command = PAP::Command::PsortB->create('fasta_file' => 'data/B_coprocola.fasta');
+isa_ok($command, 'PAP::Command::PsortB');
 
 ok($command->execute());
+
+my $ref = $command->bio_seq_feature();
+
+is(ref($ref), 'ARRAY');

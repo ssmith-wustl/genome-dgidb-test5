@@ -7,14 +7,18 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 2112;
+use Test::More tests => 5;
 
 BEGIN {
-    use_ok('BAP::Command');
-    use_ok('BAP::Command::BlastP');
+    use_ok('PAP::Command');
+    use_ok('PAP::Command::BlastP');
 }
 
-my $command = BAP::Command::BlastP->create('fasta_file' => 'data/HPAG1.fasta');
-isa_ok($command, 'BAP::Command::BlastP');
+my $command = PAP::Command::BlastP->create('fasta_file' => 'data/HPAG1.fasta');
+isa_ok($command, 'PAP::Command::BlastP');
 
 ok($command->execute());
+
+my $ref = $command->bio_seq_feature();
+
+is(ref($ref), 'ARRAY');

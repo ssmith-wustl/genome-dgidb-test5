@@ -6,11 +6,11 @@
   <link fromOperation="split fasta file"           fromProperty="fasta_files"      toOperation="annotate protein sequences" toProperty="fasta file" />
   <link fromOperation="split fasta file"           fromProperty="fasta_files"      toOperation="wait db upload"             toProperty="fasta_files" />
   <link fromOperation="annotate protein sequences" fromProperty="bio seq features" toOperation="database upload"            toProperty="bio_seq_features" />
-  <link fromOperation="database upload"            fromProperty="result"           toOperation="wait db upload"             toProperty="db upload result" />
+  <link fromOperation="database upload"            fromProperty="result"           toOperation="wait db upload"             toProperty="db_upload_result" />
   <link fromOperation="wait db upload"             fromProperty="fasta_files"      toOperation="delete files"               toProperty="files" />
-  <link fromOperation="wait db upload"             fromProperty="db upload result" toOperation="wait delete"                toProperty="db upload result" />
-  <link fromOperation="delete files"               fromProperty="result"           toOperation="wait delete"                toProperty="delete result" />
-  <link fromOperation="wait delete"                fromProperty="result"           toOperation="output connector"           toProperty="result" />
+  <link fromOperation="wait db upload"             fromProperty="db_upload_result" toOperation="wait delete"                toProperty="db_upload_result" />
+  <link fromOperation="delete files"               fromProperty="result"           toOperation="wait delete"                toProperty="delete_result" />
+  <link fromOperation="wait delete"                fromProperty="delete_result"    toOperation="output connector"           toProperty="result" />
   <operation name="split fasta file">
     <operationtype commandClass="PAP::Command::FastaChunker" typeClass="Workflow::OperationType::Command" />
   </operation>
@@ -21,7 +21,7 @@
   <operation name="wait db upload">
     <operationtype typeClass="Workflow::OperationType::Block">
       <property>fasta_files</property>
-      <property>db upload result</property>
+      <property>db_upload_result</property>
     </operationtype>
   </operation>
   <operation name="delete files">
@@ -29,13 +29,14 @@
   </operation>
   <operation name="wait delete">
     <operationtype typeClass="Workflow::OperationType::Block">
-      <property>delete result</property>
-      <property>db upload result</property>
+      <property>delete_result</property>
+      <property>db_upload_result</property>
     </operationtype>
   </operation>
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>fasta file</inputproperty>
-    <inputproperty>biosql_namespace</inputproperty>
+    <inputproperty>chunk size</inputproperty>
+    <inputproperty>biosql namespace</inputproperty>
     <outputproperty>result</outputproperty>
   </operationtype>
 </workflow>

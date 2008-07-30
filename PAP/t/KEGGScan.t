@@ -7,14 +7,18 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 2112;
+use Test::More tests => 5;
 
 BEGIN {
-    use_ok('BAP::Command');
-    use_ok('BAP::Command::KEGGScan');
+    use_ok('PAP::Command');
+    use_ok('PAP::Command::KEGGScan');
 }
 
-my $command = BAP::Command::KEGGScan->create('fasta_file' => 'data/HPAG1.fasta');
-isa_ok($command, 'BAP::Command::KEGGScan');
+my $command = PAP::Command::KEGGScan->create('fasta_file' => 'data/B_coprocola.fasta');
+isa_ok($command, 'PAP::Command::KEGGScan');
 
 ok($command->execute());
+
+my $ref = $command->bio_seq_feature();
+
+is(ref($ref), 'ARRAY');
