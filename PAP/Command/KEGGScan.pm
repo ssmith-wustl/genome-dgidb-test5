@@ -10,6 +10,7 @@ use Bio::SeqIO;
 use File::Slurp;
 use File::Temp qw/ tempdir tempfile /;
 use Cwd;
+use IPC::Run;
 
 use English;
 
@@ -26,6 +27,11 @@ class PAP::Command::KEGGScan {
                             is_optional => 1,
                             doc         => 'array of Bio::Seq::Feature' 
                            },
+        working_directory => {
+                              is => 'SCALAR',
+                              doc => 'working directory',
+                              is_optional => 1,
+                             },
     ],
 };
 
@@ -59,12 +65,13 @@ sub execute {
     my $fasta_file  = $self->fasta_file();
     # this incarnation of keggscan should be deployed.
     my @keggscan_command = (
-                            '~josborne/src/hgmi_annotation/proteinAnnot/KEGGScan_KO.new.070125.pl',
+                            '/gsc/scripts/gsc/annotation/KEGGscan_KO.new.070125',
                            );
-    my ($kegg_stdout, $kegg_stderr);
+    my ($kegg_stdout, $kegg_stderr) = ("test.out","test.err");
     # should create tempdir, move into it.
     my $tmpdir = tempdir("keggscanXXXXXX"); # CLEANUP=>1???
     my $current_dir = getcwd;
+    $self->working_directory($current_dir);
     chdir($current_dir . "/" . $tmpdir);
     $self->create_kscfg();
 
@@ -98,7 +105,11 @@ sub create_kscfg
     my $species = undef;
     my $subjectpath = "/gscmnt/233/analysis/sequence_analysis/species_independant/jmartin/hgm.website/KEGG/KEGG_release_41/genes.v41.faa";
     my $queryfasta = $self->fasta_file;
-    my $bladeload = 40;
+    unless($queryfasta =~ /^\//x)
+    {
+        $queryfasta = $self->working_directory() . "/". $queryfasta;
+    }
+    my $bladeload = 1;
     my $keggrel = "RELEASE-41";
 
     my @config = (
