@@ -5,8 +5,12 @@ use strict;
 use warnings;
 
 use above "Genome";
+use Term::ANSIColor;
+use Genome::Model::EqualColumnWidthTableizer;
+use File::Path;
 use File::Basename;
-
+use IO::File;
+use Sort::Naturally;
 
 class Genome::Model::ShortRead {
     is => 'Genome::Model',
