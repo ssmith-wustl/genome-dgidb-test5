@@ -236,9 +236,9 @@ while(my $line=$handle->getline) {
 #		$result{$decision}{$validation}{n} += 1;
 #		$result{$decision}{$validation}{rule}{$rule} += 1;
 if ($decision eq 'keep') {
-    print $keep_handle $line,",$rule\n";    
+    print $keep_handle $line,", $rule\n";    
 }  else {
-    print $remove_handle $line,",$rule\n";    
+    print $remove_handle $line,", $rule\n";    
 }
 }
 $keep_handle->close();
