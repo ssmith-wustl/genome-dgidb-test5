@@ -670,6 +670,13 @@ my %csp_priority = (
     'deallocate disk space'                   => 1,
     'transfer solid run'                      => 1,
     'build sequence db'                       => 1,
+    'add amplification target to region of interest' => 1,
+    'annotate reference sequence'             => 1,
+    'add region of interest to htmp project'  => 1,
+    'design amplicons'                        => 2,
+    'select amplicons for tilepath'           => 1,
+    'build project tilepath'                  => 1,
+    'add amplicon to amplification target'    => 1,
 
 #    these were given their own cron to get around the
 #    problem of running as the lims user instead of seqmgr
