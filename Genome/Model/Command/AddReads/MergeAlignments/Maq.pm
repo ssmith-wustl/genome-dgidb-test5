@@ -69,9 +69,9 @@ sub execute {
     if($model->id == 2684264955) {
         # This is the hack which allows the v0c AML nature tumor model to work with old map files after start site deduplication.
         # Note that the database's c & d libraries were treated as a single library "c".
-        push @{$library_alignments{'H_GV-933124G-tumor1-9043g-031308a'}}, glob('/gscmnt/sata182/info/medseq/aml1/ssdedup1/amll1t71_chr' . $self->ref_seq_id . ".map.keep");
+        push @{$library_alignments{'H_GV-933124G-tumor1-9043g-031308a'}}, glob('/gscmnt/sata182/info/medseq/aml1/ssdedup2/amll1t71_chr' . $self->ref_seq_id . ".map.keep");
         push @{$library_alignments{'H_GV-933124G-tumor1-9043g-031308b'}}, glob('/gscmnt/sata182/info/medseq/aml1/ssdedup2/amll2t12_chr' . $self->ref_seq_id . ".map.keep");
-        push @{$library_alignments{'H_GV-933124G-tumor1-9043g-031308c'}}, glob('/gscmnt/sata182/info/medseq/aml1/ssdedup3/amll3t15_chr' . $self->ref_seq_id . ".map.keep");
+        push @{$library_alignments{'H_GV-933124G-tumor1-9043g-031308c'}}, glob('/gscmnt/sata182/info/medseq/aml1/ssdedup2/amll3t15_chr' . $self->ref_seq_id . ".map.keep");
     }
     elsif($model->id == 2667602813) {
         # This is the hack which allows the v0b AML nature skin model to work with old map files.
