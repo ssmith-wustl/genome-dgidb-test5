@@ -7,6 +7,8 @@ use above "Genome";
 use Command;
 use Genome::Model;
 use Genome::Model::Command::AddReads::AlignReads;
+use Genome::Utility::PSL::Writer;
+use Genome::Utility::PSL::Reader;
 use File::Basename;
 
 class Genome::Model::Command::AddReads::AlignReads::Blat {
@@ -14,33 +16,26 @@ class Genome::Model::Command::AddReads::AlignReads::Blat {
         'Genome::Model::Command::AddReads::AlignReads',
     ],
     has => [
-            fasta_file => { via => "prior_event" },
-            alignment_file => {
+            fasta_file => {
+                           doc => 'the file path to the fasta file of reads',
+                           calculate_from => ['read_set_directory','read_set'],
+                           calculate => q|
+                               return $read_set_directory .'/'. $read_set->subset_name .'.fa';
+                           |
+                       },
+            _alignment_files =>{
                                doc => "the file path to store the blat alignment",
-                               calculate_from => ['read_set_directory','read_set'],
+                               calculate_from => ['new_read_set_alignment_directory','read_set'],
                                calculate => q|
-                                        return $read_set_directory .'/'. $read_set->subset_name .'.psl';
+                                        return grep { -e $_ } glob($new_read_set_alignment_directory .'/'. $read_set->subset_name .'.psl.*');
                                |
                            },
-            aligner_output_file => {
-                                    doc => "the file path to dump the blat application output",
-                                    calculate_from => ['read_set_directory','read_set'],
-                                    calculate => q|
-                                        return $read_set_directory .'/'. $read_set->subset_name .'.out';
-                                    |
-                                },
-            _existing_alignment_path => {
-                                         calculate_from => ['read_set_alignment_directory','read_set'],
-                                         calculate => q|
-                                             return $read_set_alignment_directory .'/'. $read_set->subset_name .'.psl';
-                                         |
-                                         },
-            _existing_aligner_output_path => {
-                                              calculate_from => ['read_set_alignment_directory','read_set'],
-                                              calculate => q|
-                                                  return $read_set_alignment_directory .'/'. $read_set->subset_name .'.out';
+            _aligner_output_files => {
+                                     calculate_from => ['new_read_set_alignment_directory','read_set'],
+                                     calculate => q|
+                                                  return grep { -e $_ } glob($new_read_set_alignment_directory .'/'. $read_set->subset_name .'.out.*');
                                              |
-                                          },
+                                 },
         ],
 };
 
@@ -68,51 +63,112 @@ sub proper_blat_path {
     return '/gsc/bin/blat';
 }
 
+sub alignment_file {
+    my $self = shift;
+
+    my @alignment_files = $self->_alignment_files;
+    unless (@alignment_files) {
+        $self->error_message('Missing alignment file');
+        return;
+    }
+    if (scalar(@alignment_files) > 1) {
+        die(scalar(@alignment_files) .' alignment files found for '. $self->id);
+    }
+    return $alignment_files[0];
+}
+
+sub aligner_output_file {
+    my $self = shift;
+    my @aligner_output_files = $self->_aligner_output_files;
+    unless (@aligner_output_files) {
+        $self->error_message('Missing aligner output file');
+        return;
+    }
+    if (scalar(@aligner_output_files) > 1) {
+        die(scalar(@aligner_output_files) .' aligner output files found for '. $self->id);
+    }
+    return $aligner_output_files[0];
+}
+
+sub read_set_alignment_file {
+    my $self = shift;
+    return $self->new_read_set_alignment_directory .'/'. $self->read_set->subset_name .'.psl.'. $self->id;
+}
+
+sub read_set_aligner_output_file {
+    my $self = shift;
+    return $self->new_read_set_alignment_directory .'/'. $self->read_set->subset_name .'.out.'. $self->id;
+}
+
+sub read_set_aligner_error_file {
+    my $self = shift;
+    return $self->new_read_set_alignment_directory .'/'. $self->read_set->subset_name .'.err.'. $self->id;
+}
+
 sub execute {
     my $self = shift;
 
     $DB::single = $DB::stopper;
-    if ($self->_check_for_existing_alignment_files) {
-        return 1;
+    $self->create_directory($self->read_set_directory);
+    unless (-s $self->fasta_file) {
+        unless($self->read_set->run_region_454->dump_library_region_fasta_file(filename => $self->fasta_file)) {
+            $self->error_message('Failed to dump fasta file to '. $self->fasta_file .' for event '. $self->id);
+            return;
+        }
     }
+    
+    # check_for_existing_alignment_files
+    my $read_set_alignment_directory = $self->new_read_set_alignment_directory;
+    if (-d $read_set_alignment_directory) {
+        my $errors;
+        $self->status_message("found existing run directory $read_set_alignment_directory");
+        my $alignment_file = $self->alignment_file;
+        my $aligner_output_file = $self->aligner_output_file;
+        unless (-s $alignment_file && -s $aligner_output_file) {
+            $self->warning_message("RE-PROCESSING: Moving old directory out of the way");
+            unless (rename ($read_set_alignment_directory,$read_set_alignment_directory . ".old.$$")) {
+                die "Failed to move old alignment directory out of the way: $!";
+            }
+            # fall through to the regular processing and try this again...
+        } else {
+            $self->status_message("SHORTCUT SUCCESS: alignment data is already present.");
+            return 1;
+        }
+    }
+    $self->create_directory($read_set_alignment_directory);
 
     my $model = $self->model;
-    my $read_set = $self->read_set;
-
-    my $alignment_file = $self->alignment_file;
-    if (-s $alignment_file) {
-        $self->error_message("Alignment file '$alignment_file' already exists.");
-        return;
-    }
-
-    my $ext = 'fa';
-    my @ref_seq_paths = grep {$_ !~ /all_sequences\.$ext$/ } $model->get_subreference_paths(reference_extension => $ext);
+    my @ref_seq_paths = grep {$_ !~ /all_sequences/ } $model->get_subreference_paths(reference_extension => 'fa');
 
     my $blat_path = $self->proper_blat_path;
     my $blat_params = '-mask=lower -out=pslx -noHead';
     $blat_params .= $model->read_aligner_params || '';
 
     my %jobs;
-    my @psls_to_cat;
-    my @blat_to_cat;
+    my @psl_to_cat;
+    my @out_to_cat;
+    my @err_to_cat;
     for my $ref_seq_path (@ref_seq_paths) {
         my $ref_seq_name = basename($ref_seq_path);
-        $ref_seq_name =~ s/\.$ext//;
+        $ref_seq_name =~ s/\.fa//;
 
-        my $ref_seq_psl = $self->alignment_file .'_'. $ref_seq_name;
-        push @psls_to_cat, $ref_seq_psl;
+        my $psl_file = $self->read_set_alignment_file .'_'. $ref_seq_name;
+        my $out_file = $self->read_set_aligner_output_file .'_'. $ref_seq_name;
+        my $err_file = $self->read_set_aligner_error_file .'_'. $ref_seq_name;
 
-        my $ref_seq_output = $self->aligner_output_file .'_'. $ref_seq_name;
-        push @blat_to_cat, $ref_seq_output;
+        push @psl_to_cat, $psl_file;
+        push @out_to_cat, $out_file;
+        push @err_to_cat, $err_file;
 
         my $blat_cmd = $blat_path .' '. $blat_params.' '. $ref_seq_path .' '. $self->fasta_file .' '.
-            $ref_seq_psl;
+            $psl_file;
 
         my $job = PP::LSF->create(
                                   pp_type => 'lsf',
-                                  queue => 'long',
+                                  q => 'long',
                                   command => $blat_cmd,
-                                  output => $ref_seq_output,
+                                  o => $out_file,
+                                  e => $err_file,
                               );
         unless ($job) {
             $self->error_message("Failed to create job for '$blat_cmd'");
@@ -148,20 +204,24 @@ sub execute {
             }
         }
     }
-    unless ($self->_cat_files($self->alignment_file,@psls_to_cat)) {
+    unless ($self->_cat_alignment_files(@psl_to_cat)) {
         $self->error_message("Failed to cat psl blat alignments");
         return;
     }
-    unless ($self->_cat_files($self->aligner_output_file,@blat_to_cat)) {
+    unless ($self->_cat_aligner_output_files(@out_to_cat)) {
         $self->error_message("Failed to cat blat output");
         return;
     }
-
+    unless ($self->_cat_aligner_error_files(@err_to_cat)) {
+        $self->error_message("Failed to cat blat error");
+        return;
+    }
     my @to_remove;
-    push @to_remove, @psls_to_cat;
-    push @to_remove, @blat_to_cat;
-    for my $file_to_remove (@to_remove) {
-        unlink $file_to_remove || $self->error_message("Failed to remove $file_to_remove");
+    push @to_remove, @psl_to_cat, @out_to_cat, @err_to_cat;
+    for (@to_remove) {
+        unless (unlink($_)) {
+            $self->error_message("Failed to remove file '$_'");
+        }
     }
     return 1;
 }
@@ -177,6 +237,51 @@ sub _kill_jobs {
     return 1;
 }
 
+sub _cat_alignment_files {
+    my $self = shift;
+    my @files = @_;
+
+    my $out_file = $self->read_set_alignment_file;
+    if (-s $out_file) {
+        $self->error_message("File already exists '$out_file'");
+        return;
+    }
+    my $writer = Genome::Utility::PSL::Writer->create(
+                                                      file => $out_file,
+                                                  );
+    for my $file (@files) {
+        my $reader = Genome::Utility::PSL::Reader->create(
+                                                          file => $file,
+                                                      );
+        unless ($reader) {
+            $self->error_message("Failed to read file '$file'");
+            return;
+        }
+        while (my $record = $reader->next) {
+            $writer->write_record($record);
+        }
+        $reader->close
+    }
+    $writer->close;
+    return 1;
+}
+
+sub _cat_aligner_output_files {
+    my $self = shift;
+    my @files = @_;
+
+    my $out_file = $self->read_set_aligner_output_file;
+    return $self->_cat_files($out_file,@files);
+}
+
+sub _cat_aligner_error_files {
+    my $self = shift;
+    my @files = @_;
+
+    my $out_file = $self->read_set_aligner_error_file;
+    return $self->_cat_files($out_file,@files);
+}
+
 sub _cat_files {
     my $self = shift;
     my $out_file = shift;
@@ -187,47 +292,33 @@ sub _cat_files {
         return;
     }
 
-    for my $file (@files) {
-        my $rv = system sprintf('cat %s >> %s', $file, $out_file);
-        unless ($rv == 0) {
-            $self->error_message("Failed to cat '$file' onto '$out_file'");
+    my $out_fh = IO::File->new($out_file,'w');
+    unless ($out_fh) {
+        $self->error_message("File will not open with write priveleges '$out_file'");
+        return;
+    }
+    for my $in_file (@files) {
+        my $in_fh = IO::File->new($in_file,'r');
+        unless ($in_fh) {
+            $self->error_message("File will not open with read priveleges '$in_file'");
             return;
         }
+        while (my $line = $in_fh->getline()) {
+            $out_fh->print($line);
+        }
     }
+    $out_fh->close();
     return 1;
 }
 
 sub verify_successful_completion {
-    my ($self) = @_;
-
-    return 1;
-}
-
-sub _check_for_existing_alignment_files {
     my $self = shift;
 
-    if (-s $self->_existing_alignment_path && -s $self->_existing_aligner_output_path) {
-        unless (symlink($self->_existing_alignment_path,$self->alignment_file)) {
-            $self->error_message('Failed to create symlink '. $self->alignment_file
-                                 .' => '. $self->_existing_alignment_path);
-            return;
-        }
-        unless (symlink($self->_existing_aligner_output_path,$self->aligner_output_file)) {
-            $self->error_message('Failed to create symlink '. $self->aligner_output_file
-                                 .' => '. $self->_existing_aligner_output_path);
-            # remove alignment file too since aligner output failed to symlink
-            if (-l $self->alignment_file) {
-                unless(unlink $self->alignment_file) {
-                    $self->error_message('Failed to remove symlink '. $self->alignment_file
-                                         .' after aligner output symlink error!');
-                    return;
-                }
-            }
-            return;
-        }
-        return 1;
+    unless (-s $self->alignment_file && -s $self->aligner_output_file) {
+        $self->error_message("Failed to verify successfule completion of event ". $self->id);
+        return;
     }
-    return;
+    return 1;
 }
 
 
