@@ -71,7 +71,7 @@ sub create {
 # Operating directories
 
 sub base_parent_directory {
-    "/gscmnt/839/info/medseq"
+		"/gscmnt/839/info/medseq"
 }
 
 sub alignment_links_directory {
@@ -87,7 +87,13 @@ sub alignment_directory {
 
 sub model_links_directory {
     my $self = shift;
+
+	if (defined($ENV{'GENOME_MODEL_TESTDIR'}) &&
+		  -e $ENV{'GENOME_MODEL_TESTDIR'}) {
+		return $ENV{'GENOME_MODEL_TESTDIR'};
+	} else {
     return $self->base_parent_directory . "/model_links";
+	}
 }
 
 sub data_directory {
