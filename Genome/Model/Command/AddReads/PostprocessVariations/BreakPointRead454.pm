@@ -16,7 +16,7 @@ class Genome::Model::Command::AddReads::PostprocessVariations::BreakPointRead454
             merged_fasta_file => {
                                   calculate_from => ['model'],
                                   calculate => q|
-                                          return $model->alignments_directory .'/'. $model->sample_name .'.fa';
+                                          return $model->accumulated_alignments_directory .'/'. $model->sample_name .'.fa';
                                   |,
                               },
             insertions_file => { via => 'prior_event' },
@@ -69,11 +69,10 @@ EOS
 sub execute {
     my $self = shift;
     my $model = $self->model;
-
     my @alignment_events = $model->alignment_events;
     my @fasta_files = map {$_->fasta_file} @alignment_events;
     unless ($self->_cat_files($self->merged_fasta_file,@fasta_files)){
-        $self->error_message("Could not merge all alignment files");
+        $self->error_message("Could not merge all alignment fasta files");
         return;
     }
 
@@ -89,7 +88,7 @@ sub execute {
                             $self->combined_insertions_file,
                             $self->coverage_blocks_file,
                             $model->sample_name,
-                            $model->alignments_directory,
+                            $model->accumulated_alignments_directory,
                             $model->reference_sequence_path,
                         );
     my $del_cmd = sprintf("%s --genotype-indels %s --alignment-file %s --sample-name %s --reads-fasta %s --ref-dir %s",
@@ -97,7 +96,7 @@ sub execute {
                             $self->combined_deletions_file,
                             $self->coverage_blocks_file,
                             $model->sample_name,
-                            $model->alignments_directory,
+                            $model->accumulated_alignments_directory,
                             $model->reference_sequence_path,
                         );
     my @cmds = ($snp_cmd,$in_cmd,$del_cmd);
