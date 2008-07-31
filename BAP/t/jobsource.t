@@ -17,7 +17,7 @@ BEGIN {
 }
 
 
-my $blast_db = '/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr'; 
+my $blast_db = '/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr'; 
 
 my @job_sources = ( );
 
