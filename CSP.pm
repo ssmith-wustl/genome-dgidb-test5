@@ -1195,6 +1195,8 @@ sub confirm_scheduled_pse {
     # check for a process step lock
     if ( !$ignore_locks and $class->process_locked($process_to) ) {
 
+        warn "process $process_to appears to be locked";
+        warn "deleting job and exiting";
         # delete the pse job if we have one
         my $pj = GSC::PSEJob->get( pse_id => $pse_id );
         if ($pj) {
