@@ -36,6 +36,19 @@ class Genome::Model::EventWithReadSet {
                                                             );
                                           |,
                             },
+            #This is temporary so the 454 test runs without creating a bunch of lengthy blat alignments
+            #Please fix once a standard testing scheme is developed
+        new_read_set_alignment_directory => {
+                                             calculate_from => ['alignment_directory','read_set'],
+                                             calculate => q|
+                                              return sprintf('%s/%s/%s/%s',
+                                                             $alignment_directory,
+                                                             $read_set->sample_name,
+                                                             $read_set->run_name,
+                                                             $read_set->subset_name,
+                                                            );
+                                          |,
+                                         },
 
         # deprecated
         read_set_directory  => {
