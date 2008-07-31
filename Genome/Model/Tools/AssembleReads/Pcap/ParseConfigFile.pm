@@ -15,10 +15,19 @@ class Genome::Model::Tools::AssembleReads::Pcap::ParseConfigFile
 {
     is => 'Command',
     has => [
-	    config_file => {type => 'String', doc => "configuration file",},
+	        config_file      => {type => 'String', doc => "configuration file"},
+	        disk_location    => {type => 'String', is_optional => 1, doc => "disk location"},
+	        project_name     => {type => 'String', is_optional => 1, doc => "project name"},
+	        assembly_version => {type => 'String', is_optional => 1, doc => "assembly version"},
+	        assembly_date    => {type => 'String', is_optional => 1, doc => "assembly date"},
            ],
 };
 
+operation Genome::Model::Tools::AssembleReads::Pcap::ParseConfigFile {
+    input  => [ 'config_file' ],
+    output => [ 'disk_location', 'project_name', 'assembly_version', 'assembly_date'],
+};
+        
 sub execute
 {
     my $self = shift;

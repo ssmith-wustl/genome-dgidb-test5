@@ -21,6 +21,11 @@ class Genome::Model::Tools::AssembleReads::Pcap::CreateDirectories
            ],
 };
 
+operation Genome::Model::Tools::AssembleReads::Pcap::CreateDirectories {
+    input  => [ 'disk_location', 'project_name', 'assembly_version', 'assembly_date' ],
+    output => [  ],
+};
+        
 
 sub execute
 {
