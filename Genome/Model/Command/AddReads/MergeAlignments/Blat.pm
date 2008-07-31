@@ -6,8 +6,8 @@ use warnings;
 use above "Genome";
 use Command;
 use Genome::Model;
-use IO::File;
-
+use Genome::Utility::PSL::Writer;
+use Genome::Utility::PSL::Reader;
 
 class Genome::Model::Command::AddReads::MergeAlignments::Blat {
     is => [
@@ -17,7 +17,7 @@ class Genome::Model::Command::AddReads::MergeAlignments::Blat {
             merged_alignments_file => {
                                       calculate_from => ['model'],
                                       calculate => q|
-                                          return $model->alignments_directory .'/'. $model->sample_name .'.psl';
+                                          return $model->accumulated_alignments_directory .'/'. $model->sample_name .'.psl';
                                       |,
                                    },
         ],
@@ -39,9 +39,7 @@ This command is usually called as part of the add-reads process
 EOS
 }
 
-
 sub should_bsub { 1;}
-
 
 sub execute {
     my $self = shift;
@@ -51,7 +49,7 @@ sub execute {
     my $start = UR::Time->now;
     my $model = $self->model;
 
-    my $alignments_dir = $model->alignments_directory;
+    my $alignments_dir = $model->accumulated_alignments_directory;
     unless (-e $alignments_dir) {
         unless (mkdir $alignments_dir) {
             $self->error_message("Failed to create directory '$alignments_dir':  $!");
@@ -65,11 +63,16 @@ sub execute {
     }
 
     my @alignment_events = $model->alignment_events;
-    my @sub_alignment_files;
+    my @alignment_files;
     for my $alignment_event (@alignment_events) {
-        push @sub_alignment_files, $alignment_event->alignment_file;
+        my $alignment_file = $alignment_event->alignment_file;
+        unless ($alignment_file) {
+            $self->error_message('Failed to find alignment_file for event '. $alignment_event->id);
+            return;
+        }
+        push @alignment_files, $alignment_file;
     }
-    unless ($self->_cat_files($self->merged_alignments_file,@sub_alignment_files)){
+    unless ($self->_cat_psl($self->merged_alignments_file,@alignment_files)){
         $self->error_message("Could not merge all alignment files");
         return;
     }
@@ -84,7 +87,7 @@ sub execute {
 }
 
 
-sub _cat_files {
+sub _cat_psl {
     my $self = shift;
     my $out_file = shift;
     my @files = @_;
@@ -93,23 +96,27 @@ sub _cat_files {
         $self->error_message("File already exists '$out_file'");
         return;
     }
-
-    my $out_fh = IO::File->new($out_file,'w');
-    unless ($out_fh) {
-        $self->error_message("File will not open with write priveleges '$out_file'");
+    my $writer = Genome::Utility::PSL::Writer->create(
+                                                   file => $out_file,
+                                               );
+    unless ($writer) {
+        $self->error_message("Could not create a writer for file '$out_file'");
         return;
     }
     for my $in_file (@files) {
-        my $in_fh = IO::File->new($in_file,'r');
-        unless ($in_fh) {
-            $self->error_message("File will not open with read priveleges '$in_file'");
+        my $reader = Genome::Utility::PSL::Reader->create(
+                                                          file => $in_file,
+                                                          );
+        unless ($reader) {
+            $self->error_message("Could not create a reader for file '$in_file'");
             return;
         }
-        while (my $line = $in_fh->getline()) {
-            $out_fh->print($line);
+        while (my $record = $reader->next) {
+            $writer->write_record($record);
         }
+        $reader->close;
     }
-    $out_fh->close();
+    $writer->close();
     return 1;
 }
 1;
