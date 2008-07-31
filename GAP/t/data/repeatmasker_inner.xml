@@ -1,0 +1,22 @@
+<?xml version='1.0' standalone='yes'?>
+<workflow name="inner mask sequences" parallelBy="fasta file" executor="Workflow::Executor::SerialDeferred">
+  <link fromOperation="input connector" fromProperty="fasta file"         toOperation="repeatmasker"     toProperty="input_file" />
+  <link fromOperation="repeatmasker"    fromProperty="output_file"        toOperation="cat seq file"     toProperty="fasta_file" />
+  <link fromOperation="cat seq file"    fromProperty="masked_fasta_files" toOperation="output connector" toProperty="masked fasta files" />
+  <link fromOperation="cat seq file"    fromProperty="result"             toOperation="output connector" toProperty="result" />
+  <operation name="repeatmasker">
+    <operationtype commandClass="GAP::Command::RepeatMasker" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="cat seq file">
+    <operationtype typeClass="Workflow::OperationType::Converge">
+      <inputproperty>fasta_file</inputproperty>
+      <outputproperty>masked_fasta_files</outputproperty>
+      <outputproperty>result</outputproperty>
+    </operationtype>
+  </operation>
+  <operationtype typeClass="Workflow::OperationType::Model">
+    <inputproperty>fasta file</inputproperty>
+    <outputproperty>masked fasta files</outputproperty>
+    <outputproperty>result</outputproperty>
+  </operationtype>
+</workflow>

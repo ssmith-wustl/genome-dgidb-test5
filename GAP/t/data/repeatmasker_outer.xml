@@ -1,0 +1,22 @@
+<?xml version='1.0' standalone='yes'?>
+<workflow name="outer mask sequences" executor="Workflow::Executor::SerialDeferred">
+  <link fromOperation="input connector"   fromProperty="fasta file"         toOperation="split fasta files" toProperty="fasta_file" />
+  <link fromOperation="input connector"   fromProperty="chunk size"         toOperation="split fasta files" toProperty="chunk_size" />
+  <link fromOperation="input connector"   fromProperty="masked fasta file"  toOperation="join fasta files"  toProperty="fasta_file" />
+  <link fromOperation="split fasta files" fromProperty="fasta_files"        toOperation="mask sequences"    toProperty="fasta_file" />
+  <link fromOperation="mask sequences"    fromProperty="masked fasta files" toOperation="join fasta files"  toProperty="fasta_files" />
+  <link fromOperation="join fasta files"  fromProperty="fasta_file"         toOperation="output connector"  toProperty="masked fasta file" />
+  <operation name="split fasta files">
+    <operationtype commandClass="GAP::Command::FastaSplitter" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="mask sequences" workflowFile="repeatmasker_inner.xml" />
+  <operation name="join fasta files">
+    <operationtype commandClass="GAP::Command::FastaJoiner" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operationtype typeClass="Workflow::OperationType::Model">
+    <inputproperty>fasta file</inputproperty>
+    <inputproperty>chunk size</inputproperty>
+    <inputproperty>masked fasta file</inputproperty>
+    <outputproperty>result</outputproperty>
+  </operationtype>
+</workflow>
