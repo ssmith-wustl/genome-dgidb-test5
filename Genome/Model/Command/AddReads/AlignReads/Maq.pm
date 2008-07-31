@@ -139,7 +139,7 @@ sub read_set_alignment_files_for_refseq {
     my $ref_seq_id = shift;
     my $event_id = $self->id;
     my @files = grep { $_ and -e $_ } (
-        glob($self->read_set_alignment_directory . "/${ref_seq_id}*.map.*") #bkward compat
+        glob($self->read_set_alignment_directory . "/${ref_seq_id}.map.*") #bkward compat
     );
     return @files;
 }
