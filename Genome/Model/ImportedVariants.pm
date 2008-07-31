@@ -8,6 +8,7 @@ use above "Genome";
 
 class Genome::Model::ImportedVariants {
     is => 'Genome::Model',
+    is_abstract => 1,
     has => [
         instrument_data => { is     => 'String',
                              doc    => 'The genotype submission file to be used as microarray data. This file will be copied to the appropriate directory.',
@@ -51,7 +52,7 @@ sub create {
     }
 
     # Sort the input file
-    $self->status_message("Sorting the file...");
+    $self->status_message("Sorting the file (if necessary)...");
     my $sorted_data_file = $self->_sort_input_file($target_file);
 
     if (!$sorted_data_file) {
@@ -84,6 +85,7 @@ sub get_next_line {
 }
 
 # Returns current directory where the imported variants data is housed
+# Overload this per module, probably, if we want to make subdirs for each type
 sub _base_directory {
     my $self = shift;
 
@@ -91,6 +93,7 @@ sub _base_directory {
 }
 
 # Returns the current directory where this model is housed
+# Should work for all submodules
 sub _model_directory {
     my $self = shift;
 
@@ -102,6 +105,7 @@ sub _model_directory {
 }
 
 # Returns the full path to the file where the microarray data should be
+# Should work for all submodules
 sub _data_file {
     my $self = shift;
 
@@ -117,6 +121,7 @@ sub _data_file {
 }
 
 # Generic sub for sorting the file... by default warn and do nothing
+# Overload this per module
 sub _sort_input_file {
     my ($self, $file) = @_;
 
@@ -127,6 +132,7 @@ sub _sort_input_file {
 }
 
 # Generic sub for parsing a line... by default warn and do nothing
+# Overload this per module
 sub _parse_line {
     my ($self, $fh) = @_;
 
