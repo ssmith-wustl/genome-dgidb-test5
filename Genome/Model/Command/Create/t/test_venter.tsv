@@ -1,0 +1,10 @@
+1	1104753291982	heterozygous_mixed_sequence_variant	552	565	.	.	CACACACAGA----CAC/GACACACAGACACGCAC/GACACACAG--------/GACACACAG------AC/CACAGACACA----CAG;RMR=0;TR=0	Method2_AmbiguousMapping
+1	1104753001589	heterozygous_mixed_sequence_variant	1839	1844	.	.	G---------TTAC/AAGTTTTATTTCAA;RMR=1;TR=0	Method2_AmbiguousMapping
+1	1104753336919	heterozygous_mixed_sequence_variant	2203	2213	.	.	CATCTCACTA/TATCTCAC--;RMR=1;TR=0	Method2_AmbiguousMapping
+1	1104753593429	heterozygous_deletion	2276	2280	.	.	AAAA/----;RMR=1;TR=1	Method2_AmbiguousMapping
+1	1104753109036	heterozygous_mixed_sequence_variant	2281	2324	.	.	AGGAGGAGGGGCTGAGGCTGCATGGGTGGGATTGTGGGAGGAG/GGGAGGAGGGGTGGAGGCTGCAGGGCTGGGATTGCGGGAGGA-;RMR=1;TR=1	Method2_AmbiguousMapping
+1	1104754014894	heterozygous_mixed_sequence_variant	2742	2780	.	.	ATATTATATATAATATATAAATATTATATATAATATAT-/-------------TATATAAATATTATATATAATATATA;RMR=1;TR=1	Method2_AmbiguousMapping
+1	1104753803368	heterozygous_mixed_sequence_variant	5793	5805	.	.	CATGCATGTGTG/TGTGCA------;RMR=1;TR=1	Method2_AmbiguousMapping
+1	1104753006951	heterozygous_mixed_sequence_variant	6237	6249	.	.	T------CACTTTCTGAT/GATGTCACACTTTCTGAC;RMR=1;TR=0	Method2_AmbiguousMapping
+1	1104754582630	heterozygous_mixed_sequence_variant	6622	6627	.	.	CAAAA/-AAAG;RMR=1;TR=1	Method2_AmbiguousMapping
+1	1104754158238	heterozygous_mixed_sequence_variant	8959	8963	.	.	TCTG/-CTA;RMR=1;TR=0	Method2_AmbiguousMapping
