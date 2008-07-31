@@ -71,8 +71,8 @@ sub create {
 
     $self->_parser($parser);
 
-    unless (-s $self->file) {
-        $self->error_message('File does not exist or has zero size'. $self->file);
+    unless (-e $self->file) {
+        $self->error_message('File does not exist '. $self->file);
         return;
     }
 
