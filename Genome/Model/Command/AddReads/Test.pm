@@ -26,10 +26,6 @@ sub new {
     my %args = @_;
     my $self = bless {}, $class;
 
-    if ($args{processing_profile_name} eq '454_DX_Pipeline') {
-        plan skip_all => 'currently the test for 454_DX_Pipeline does not scale well';
-    }
-
     $self->{_model_name} = $args{model_name} ||
         confess("Must define model_name for test:  $!");
     $self->{_sample_name} = $args{sample_name} ||
