@@ -312,7 +312,7 @@ sub generate_figure_3_files {
             $self->error_message("No filtered_variants directory returned.");
             return undef;
         }
-       my $dbsnp_fh = IO::File->new(">$dir" . "/somatic_variants_in_d_v_w" . $self->ref_seq_id .
+       my $dbsnp_fh = IO::File->new(">$dir" . "/somatic_variants_in_d_v_w_" . $self->ref_seq_id .
             ".csv");
        my $dbsnp_count=0;      
        my $non_coding_fh = IO::File->new(">$dir" .
@@ -367,7 +367,7 @@ sub generate_figure_3_files {
         #from db
        my $passed_but_no_status_count=0;     
        my $passed_but_no_status_fh = IO::File->new(">$dir" .
-           "/var_pass_manreview_but_no_val_status" . $self->ref_seq_id .
+           "/var_pass_manreview_but_no_val_status_" . $self->ref_seq_id .
             ".csv");
          my $annotation_fh = IO::File->new($snp_file);
         if(!defined($annotation_fh)) {
