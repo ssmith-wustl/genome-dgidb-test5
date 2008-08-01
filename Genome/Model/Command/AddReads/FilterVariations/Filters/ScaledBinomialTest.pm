@@ -50,6 +50,14 @@ class Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomia
         default => .35,
         doc => 'Threshold below which to bin as non-skin in binomial test',
     },
+    greater_p_threshold => 
+    {
+        type => 'Float',
+        is_optional => 1,
+        default => .35,
+        doc => 'something dave larson thinks is good',
+    },
+ 
     less_p_threshold => 
     {
         type => 'Float',
@@ -210,6 +218,11 @@ aml.epithelial_test=function(infile=NULL,outfile=NULL,alt="greater") {
         #auto convert the p value
         p = 1-p
     }
+    if(alt=="greater") {
+        #auto convert the p value
+        p = 1-p
+    }
+
     cbind(x,p)->x
     write.table(x,file=outfile,quote=F,sep="\t",row.names=T)
 }
@@ -229,8 +242,8 @@ RCODE
     }
     $R_bridge->startR();
     $R_bridge->send(qq{$R_code});
-    $R_bridge->send(qq{aml.epithelial_test(infile="$snp_file_path",outfile="/tmp/skin_binom_test_chr$chromosome.less",alt="less")});
-    $R_bridge->send(qq{aml.epithelial_test(infile="$snp_file_path",outfile="/tmp/skin_binom_test_chr$chromosome.two_sided",alt="two.sided")});
+    #$R_bridge->send(qq{aml.epithelial_test(infile="$snp_file_path",outfile="/tmp/skin_binom_test_chr$chromosome.less",alt="less")});
+    $R_bridge->send(qq{aml.epithelial_test(infile="$snp_file_path",outfile="/tmp/skin_binom_test_chr$chromosome.greater",alt="greater")});
     $R_bridge->stopR();
 }
 
@@ -242,7 +255,7 @@ sub _convert_probabilities_to_locations {
     }
     my $snp_filename = $self->experimental_metric_model_file;
 
-    my $handle = new IO::File "< $file";
+    my $handle = new IO::File("$file");
     unless(defined($handle)) {
         $self->error_message("Couldn't open R t-test output file $file");
         return;
@@ -277,14 +290,9 @@ sub _convert_probabilities_to_snps {
     #expects both the two-sided and one-sided(less) tests to be present
 
     my %positions;
-    my $result = $self->_convert_probabilities_to_locations("/tmp/skin_binom_test_chr$chromosome.less", $self->less_p_threshold,\%positions);
+    my $result = $self->_convert_probabilities_to_locations("/tmp/skin_binom_test_chr$chromosome.greater", $self->greater_p_threshold,\%positions);    
     unless(defined($result)) {
-        $self->error_message("Error creating locations for /tmp/skin_binom_test_chr$chromosome.less");
-        return;
-    }
-    $result = $self->_convert_probabilities_to_locations("/tmp/skin_binom_test_chr$chromosome.two_sided", $self->two_sided_p_threshold,\%positions);    
-    unless(defined($result)) {
-        $self->error_message("Error creating locations for /tmp/skin_binom_test_chr$chromosome.two_sided");
+        $self->error_message("Error creating locations for /tmp/skin_binom_test_chr$chromosome.greater");
         return;
     }
     #at this point, all the non-skin positions should be in %positions
