@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::FilterVariations::Dtr3e;
+package Genome::Model::Command::AddReads::FilterVariations::Basic;
 
 use strict;
 use warnings;
