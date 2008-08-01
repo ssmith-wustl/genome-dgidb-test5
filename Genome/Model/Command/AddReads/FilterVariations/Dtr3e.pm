@@ -251,7 +251,7 @@ my $basename_for_binomial = $model->_filtered_variants_dir . "/binomial.chr" . $
 
 ###Begin scaled binomial test launch.
 my $rv = Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomialTest->execute(
-    experimental_metric_model_file=> $self->variation_metrics_file_name,   
+    experimental_metric_model_file=> $keep_file,   
     experimental_metric_normal_file=>$self->normal_sample_variation_metrics_file,
     binomial_test_basename => $basename_for_binomial, 
     ref_seq_id => $self->ref_seq_id
@@ -395,7 +395,7 @@ sub generate_figure_3_files {
               last;
               
           }
-          @cur_somatic_snp = split(/\s+/, $somatic_line);
+          @cur_somatic_snp = split(/,\s+/, $somatic_line);
           
           while(!@cur_anno_snp || ($cur_anno_snp[1] < $cur_somatic_snp[1]) ) {
               #we hit this block because a) this is our first time through
@@ -417,7 +417,7 @@ sub generate_figure_3_files {
 
              #For Eddie's output we need to know the type of variant and also the
              #dbSNP and Watson/Venter status
-             my @report_indexes = (0,1,2,3,5,8,13,16,17,18); 
+             my @report_indexes = (0,1,2,3,5,8,13,18,19,20); 
 
              #this is taken care of implicitly by the loop actually...damn pair programming
              if(defined($cur_somatic_snp[0]) && defined($cur_anno_snp[0])) {
