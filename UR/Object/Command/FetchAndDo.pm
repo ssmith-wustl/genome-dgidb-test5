@@ -9,15 +9,15 @@ class UR::Object::Command::FetchAndDo {
     is => 'Command',
     is_abstract => 1,
     has => [
-    subject_class => {
-        is => 'UR::Object::Type', 
-        id_by => 'subject_class_name',
-    }, 
-    filter => {
-        is => 'Text',  
-        is_optional => 1,
-        doc => 'Filter results based on the parameters.  See below for how to.'
-    },
+        subject_class => {
+            is => 'UR::Object::Type', 
+            id_by => 'subject_class_name',
+        }, 
+        filter => {
+            is => 'Text',  
+            is_optional => 1,
+            doc => 'Filter results based on the parameters.  See below for how to.'
+        },
     ], 
 };
 
