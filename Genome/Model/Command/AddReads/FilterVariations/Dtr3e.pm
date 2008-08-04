@@ -239,12 +239,14 @@ sub execute {
     my $basename_for_binomial = $model->_filtered_variants_dir . "/binomial.chr" . $self->ref_seq_id;
 
     ###Begin scaled binomial test launch.
-    my $rv = Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomialTest->execute(
+    my @params = (
         experimental_metric_model_file=> $keep_file,   
         experimental_metric_normal_file=>$self->normal_sample_variation_metrics_file,
         binomial_test_basename => $basename_for_binomial, 
         ref_seq_id => $self->ref_seq_id
     );
+    $self->status_message("params for binomial test:" . Data::Dumper::Dumper(\@params));
+    my $rv = Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomialTest->execute(@params);
 
     #this needs to operate on the output of scaled binomial test.
     $self->generate_figure_3_files($basename_for_binomial . '.nonskin.csv');
