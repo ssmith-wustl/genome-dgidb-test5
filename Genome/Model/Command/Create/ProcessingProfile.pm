@@ -9,11 +9,11 @@ use above "Genome";
 class Genome::Model::Command::Create::ProcessingProfile {
     is => 'Genome::Model::Command',
     has => [
-        model                  		 => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
-		type_name                    => { is => 'VARCHAR2', len => 255, is_optional => 1, 
-										doc => "The type of processing profile. Not required unless creating a generic 'processing profile'. "},
-        profile_name 			     => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
-										doc => 'The human readable name for the processing profile'},
+        model                        => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
+        type_name                    => { is => 'VARCHAR2', len => 255, is_optional => 1, 
+                                          doc => "The type of processing profile. Not required unless creating a generic 'processing profile'. "},
+        profile_name                 => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
+                                          doc => 'The human readable name for the processing profile'},
     ],
 };
 
@@ -213,33 +213,37 @@ sub _create_target_class_instance_and_error_check{
         lsf_job_id      => undef, 
         user_name       => $ENV{USER}, 
     );
-	
-	# Check to see if the processing profile exists before creating
-	# First, enforce the name being unique since processing profiles are
-	# specified by name
-	my @existing_profiles = $self->target_class->get(name => $params{name});
-	if (scalar(@existing_profiles) > 0) {
-		my $existing_name = $existing_profiles[0]->name;
-		$self->error_message("A processing profile named $existing_name already exists. Processing profile names must be unique.");
-		return;
-	}
-	
-	
-	# Now, enforce functional uniqueness. We dont want more than one processing
-	# profile doing effectively the same thing.
-	my %get_params = %params;
-	# exclude 'name' and 'id' from the get since these parameters would make the
-	# processing_profile unique despite being effectively the same as another...
-	delete $get_params{name};
-	delete $get_params{id};
-	@existing_profiles = $self->target_class->get(%get_params);
-	if (scalar(@existing_profiles) > 0) {
-		my $existing_name = $existing_profiles[0]->name;
-		$self->error_message("A processing profile named $existing_name already exists with the same parameters. Processing profiles must be functionally unique.");
-		return;
-	}
-	
-	# If it passed the above checks, create the processing profile
+
+    # Check to see if the processing profile exists before creating
+    # First, enforce the name being unique since processing profiles are
+    # specified by name
+    my @existing_profiles = $self->target_class->get(name => $params{name});
+    if (scalar(@existing_profiles) > 0) {
+        my $existing_name = $existing_profiles[0]->name;
+        $self->error_message("A processing profile named $existing_name already exists. Processing profile names must be unique.");
+        return;
+    }
+
+
+    # Now, enforce functional uniqueness. We dont want more than one processing
+    # profile doing effectively the same thing.
+    my %get_params = %params;
+    # exclude 'name' and 'id' from the get since these parameters would make the
+    # processing_profile unique despite being effectively the same as another...
+    delete $get_params{name};
+    delete $get_params{id};
+
+    # If any params exist besides name and id... check them
+    if (scalar(keys %get_params) > 0) {
+        @existing_profiles = $self->target_class->get(%get_params);
+        if (scalar(@existing_profiles) > 0) {
+            my $existing_name = $existing_profiles[0]->name;
+            $self->error_message("A processing profile named $existing_name already exists with the same parameters. Processing profiles must be functionally unique.");
+            return;
+        }
+    }
+
+    # If it passed the above checks, create the processing profile
     my $obj = $target_class->create(%params);
     if (!$obj) {
         $self->error_message(

@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::Create::ProcessingProfile::MicroArray;
+package Genome::Model::Command::Create::ProcessingProfile::MicroArrayAffymetrix;
 
 use strict;
 use warnings;
@@ -10,13 +10,13 @@ use Genome::Model;
 use File::Path;
 use Data::Dumper;
 
-class Genome::Model::Command::Create::ProcessingProfile::MicroArray{
+class Genome::Model::Command::Create::ProcessingProfile::MicroArrayAffymetrix{
     is => ['Genome::Model::Event', 'Genome::Model::Command::Create::ProcessingProfile'],
     sub_classification_method_name => 'class',
     has => [
-        model                  		 => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
-        profile_name 			     => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
-										doc => 'The human readable name for the processing profile'},
+        model                        => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
+        profile_name                 => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
+                                          doc => 'The human readable name for the processing profile'},
     ],
     schema_name => 'Main',
 };
@@ -31,17 +31,17 @@ sub _shell_args_property_meta {
 
 
 sub sub_command_sort_position {
-    2
+    4
 }
 
 sub help_brief {
-    "create a new processing profile for micro array"
+    "create a new processing profile for micro array for affymetrix"
 }
 
 sub help_synopsis {
     return <<"EOS"
-genome-model processing-profile micro-array create 
-					--profile-name test5 
+genome-model processing-profile micro-array-affymetrix create 
+                                        --profile-name test5 
 EOS
 }
 
@@ -52,7 +52,7 @@ EOS
 }
 
 sub target_class{
-    return "Genome::ProcessingProfile::MicroArray";
+    return "Genome::ProcessingProfile::MicroArrayAffymetrix";
 }
 
 sub _validate_execute_params {
