@@ -5,7 +5,6 @@ use strict;
 use warnings;
 
 use above "Genome";
-use GSCApp;
 use File::Basename;
 use Sort::Naturally;
 
@@ -230,6 +229,11 @@ sub _parse_genotype_submission_line {
     }
 
     return $current_line;
+}
+
+# Hack for now to get genome-model list models to not break
+sub reference_sequence_name {
+    return 'N/A';
 }
 
 1;
