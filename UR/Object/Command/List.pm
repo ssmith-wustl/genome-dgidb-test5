@@ -20,7 +20,7 @@ class UR::Object::Command::List {
         is => 'Text',
         is_optional => 1,
         default_value => 'text',
-        doc => 'Style of the list: text (default), csv, pretty',
+        doc => 'Style of the list: text (default), csv, pretty, html',
     },
     noheaders => { 
         is => 'Boolean',
@@ -61,6 +61,7 @@ Listing Styles:
  text - table like
  csv - comma separated values
  pretty - objects listed singly with color enhancements
+ html - html table
 
 EOS
 }
@@ -91,9 +92,6 @@ sub create {
 sub _do
 {
     my ($self, $iterator) = @_;    
-
-    #filehandle stuff
-    $DB::single = 1;
 
     # Determine things to show
     if ( my $show = $self->show ) {
@@ -380,7 +378,7 @@ Overwrite the help_brief, help_synopsis and help_detail methods to provide speci
 
 =head1 List Styles
 
-text, csv, pretty (inprogress)
+text, csv, html, pretty (inprogress)
 
 =head1 Disclaimer
 
