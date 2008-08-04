@@ -93,7 +93,13 @@ sub execute {
     my $fi = shift(@$args);
     my $f1o = shift(@$args) || "$f1.only";
     my $f2o = shift(@$args) || "$f2.only";
- 
+
+    return $self->_intersect_lists($f1,$f2,$fi,$f1o,$f2o);
+}
+
+sub _intersect_lists {
+    my ($self,$f1,$f2,$fi,$f1o,$f2o) = @_;
+
     my $h1 = IO::File->new($f1) or die "$f1: " . $!;
     my $h2 = IO::File->new($f2) or die "$f2: " . $!;
 
@@ -208,3 +214,4 @@ sub chr_cmp {
 
 
 1;
+
