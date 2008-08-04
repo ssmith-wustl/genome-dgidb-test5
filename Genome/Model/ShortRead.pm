@@ -87,7 +87,7 @@ class Genome::Model::ShortRead {
                                      },
  
         build_events  => {
-            is => 'Genome::Model::Command::AddReads::PostprocessAlignments',
+            is => 'Genome::Model::Command::Build::ReferenceAlignment',
             reverse_id_by => 'model',
             is_many => 1,
             where => [
@@ -275,7 +275,7 @@ sub get_events_for_metric {
     #if we get here then we need to make sure we only grab events related to one add-reads 
     #or post-process_alignemnts event
     my @parent_addreads_events = Genome::Model::Command::AddReads->get(model_id => $self->id);
-    my @parent_pp_alignment_events= Genome::Model::Command::AddReads::PostprocessAlignments->get(model_id => $self->id);
+    my @parent_pp_alignment_events= Genome::Model::Command::Build::ReferenceAlignment->get(model_id => $self->id);
 
     #nothing has a frickin addreads event yet
     #@parent_addreads_events = sort { $a->date_scheduled cmp $b->date_scheduled } @parent_addreads_events;

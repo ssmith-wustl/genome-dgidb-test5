@@ -124,7 +124,7 @@ sub create_model {
     $self->add_directory_to_remove($model->data_directory);
     $self->{_model} = $model;
 
-    my @pp_sub_commands = Genome::Model::Command::AddReads::PostprocessAlignments->subordinate_job_classes;
+    my @pp_sub_commands = Genome::Model::Command::Build::ReferenceAlignment->subordinate_job_classes;
     my @add_reads_commands = Genome::Model::Command::AddReads->get_sub_command_classes;
     my $ref_seqs;
     if ($model->sequencing_platform eq '454') {
@@ -198,10 +198,10 @@ sub add_reads {
         #$self->execute_event_test($accept_reads_command,$read_set);
     }
 
-    my $pp_alignments = Genome::Model::Command::AddReads::PostprocessAlignments->create(
+    my $pp_alignments = Genome::Model::Command::Build::ReferenceAlignment->create(
                                                                                         model_id => $model->id,
                                                                                     );
-    isa_ok($pp_alignments,'Genome::Model::Command::AddReads::PostprocessAlignments');
+    isa_ok($pp_alignments,'Genome::Model::Command::Build::ReferenceAlignment');
     ok($pp_alignments->execute(), 'execute genome-model add-reads postprocess-alignments');
     UR::Context->_sync_databases();
 

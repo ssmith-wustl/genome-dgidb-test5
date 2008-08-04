@@ -41,7 +41,7 @@ sub execute {
     my @pp_models = grep {$self->model_requires_postprocess($_)} Genome::Model->get();
 
     foreach my $model (@pp_models) {
-        Genome::Model::Command::AddReads::PostprocessAlignments->execute(model_id=>$model->id);
+        Genome::Model::Command::Build::ReferenceAlignment->execute(model_id=>$model->id);
     }
 }
 
