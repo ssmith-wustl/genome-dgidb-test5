@@ -44,6 +44,7 @@ my %PROCESS_COUNT = (
     'make library start site'                => 0,
     'build sequence db'                      => 0,
 
+    'design amplicons' => 0,
 
     #Finishing QA steps
     'analyze finished clone for qa'                      => 0,
