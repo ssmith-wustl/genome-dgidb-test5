@@ -3,16 +3,18 @@ package Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinom
 use strict;
 use warnings;
 
+use above "Genome";
 use Command;
 use IO::File;
 use Genome::DB::Schema;
 use Statistics::R;
+use Workflow;
 
 class Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomialTest
 {
     is => 'Command',
     has => [
-    experimental_metric_model_file => 
+    decision_tree_output => 
     {
         type => 'String',
         is_optional => 0,
@@ -24,7 +26,7 @@ class Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomia
         is_optional => 0,
         doc => 'File of experimental metrics for the normal',
     },
-    binomial_test_basename => 
+    basedir => 
     {
         type => 'String',
         is_optional => 0,
@@ -70,10 +72,25 @@ class Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomia
         type => 'List',
         is_optional=> 1,
         doc => 'files to cleanup',
-    }
+    },
+    binomial_output_file =>
+    {
+        type => 'String',
+        is_optional=>1,
+        doc => 'the name of the output file',
+    },
+    parent_event                => { is => 'Genome::Model::Event',
+    doc => 'The parent event' },
     ],
 };
 
+operation_io Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomialTest {
+    input  => [ 'parent_event' ],
+    input  => [ 'ref_seq_id' ],
+    input  => [ 'basedir' ],
+    input  => [ 'experimental_metric_normal_file' ],
+    output => [ 'binomial_output_file' ],
+};
 
 #----------------------------------
 sub execute {
@@ -99,9 +116,9 @@ sub _create_r_files {
     my $self = shift;
 
     #create temporary files for R
-    my $tumor_metric_file = new IO::File($self->experimental_metric_model_file);
+    my $tumor_metric_file = new IO::File($self->decision_tree_output);
     unless(defined($tumor_metric_file)) {
-        $self->error_message("Couldn't open " . $self->experimental_metric_model_file);
+        $self->error_message("Couldn't open " . $self->decision_tree_output);
         return;
     }
     my $normal_metric_file = new IO::File($self->experimental_metric_normal_file);
@@ -253,7 +270,7 @@ sub _convert_probabilities_to_locations {
     if(!defined($hash_ref)) {
         return;
     }
-    my $snp_filename = $self->experimental_metric_model_file;
+    my $snp_filename = $self->decision_tree_output;
 
     my $handle = new IO::File("$file");
     unless(defined($handle)) {
@@ -284,10 +301,11 @@ sub _convert_probabilities_to_locations {
 #----------------------------------
 sub _convert_probabilities_to_snps {
     my ($self) = @_;
-    my $snp_filename = $self->experimental_metric_model_file;
+    my $snp_filename = $self->decision_tree_output;
     my $chromosome = $self->ref_seq_id; 
-    my $output = $self->binomial_test_basename;
+    my $output = $self->basedir . "/binomial.chr" . $self->ref_seq_id;
     #expects both the two-sided and one-sided(less) tests to be present
+    $self->binomial_output_file($output . '.nonskin.csv');
 
     my %positions;
     my $result = $self->_convert_probabilities_to_locations("/tmp/skin_binom_test_chr$chromosome.greater", $self->greater_p_threshold,\%positions);    
