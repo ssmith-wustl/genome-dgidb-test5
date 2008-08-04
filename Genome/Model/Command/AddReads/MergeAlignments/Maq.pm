@@ -80,11 +80,10 @@ sub execute {
         push @{$library_alignments{'H_GV-933124G-skin1-9017g-031308c'}}, glob('/gscmnt/sata183/info/medseq/kchen/Hs_build36/maq6/analysis_skin3/submaps/amll3skin6_chr' . $self->ref_seq_id . ".map");
     }
     elsif($model->id == 2684267448) {
-        die "we don't have submaps for the v0 skin runs yet...";
         # This is the hack which allows the v0b AML nature skin model to work with old map files after start site deduplication.
-        push @{$library_alignments{'H_GV-933124G-skin1-9017g-031308a'}}, glob('/gscmnt/sata183/info/medseq/kchen/Hs_build36/maq6/analysis_skin/submaps/amlsking18_chr' . $self->ref_seq_id . ".map");
-        push @{$library_alignments{'H_GV-933124G-skin1-9017g-031308b'}}, glob('/gscmnt/sata183/info/medseq/kchen/Hs_build36/maq6/analysis_skin2/submaps/amll2skin10_chr' . $self->ref_seq_id . ".map");
-        push @{$library_alignments{'H_GV-933124G-skin1-9017g-031308c'}}, glob('/gscmnt/sata183/info/medseq/kchen/Hs_build36/maq6/analysis_skin3/submaps/amll3skin6_chr' . $self->ref_seq_id . ".map");
+        push @{$library_alignments{'H_GV-933124G-skin1-9017g-031308a'}}, glob('/gscmnt/sata203/info/medseq/aml_tmp/v0_skin_dedup_maps/amlsking18_chr' . $self->ref_seq_id . ".map.keep");
+        push @{$library_alignments{'H_GV-933124G-skin1-9017g-031308b'}}, glob('/gscmnt/sata203/info/medseq/aml_tmp/v0_skin_dedup_maps/amll2skin10_chr' . $self->ref_seq_id . ".map.keep");
+        push @{$library_alignments{'H_GV-933124G-skin1-9017g-031308c'}}, glob('/gscmnt/sata203/info/medseq/aml_tmp/v0_skin_dedup_maps/amll3skin6_chr' . $self->ref_seq_id . ".map.keep");
     }
     else {
         # Normal code to get the map files. 
