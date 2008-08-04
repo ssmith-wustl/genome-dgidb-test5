@@ -1,0 +1,40 @@
+<?xml version='1.0' standalone='yes'?>
+<workflow name="Filtered Variations">
+
+    <link fromOperation="input connector" fromProperty="parent_event" toOperation="Dtr3e" toProperty="parent_event" />
+    <link fromOperation="input connector" fromProperty="ref_seq_id" toOperation="Dtr3e" toProperty="ref_seq_id" />
+    <link fromOperation="input connector" fromProperty="basedir" toOperation="Dtr3e" toProperty="basedir" />
+    <link fromOperation="input connector" fromProperty="experimental_metric_model_file" toOperation="Dtr3e" toProperty="experimental_metric_model_file" />
+
+    <link fromOperation="input connector" fromProperty="parent_event" toOperation="ScaledBinomialTest" toProperty="parent_event" />
+    <link fromOperation="input connector" fromProperty="ref_seq_id" toOperation="ScaledBinomialTest" toProperty="ref_seq_id" />
+    <link fromOperation="input connector" fromProperty="basedir" toOperation="ScaledBinomialTest" toProperty="basedir" />
+    <link fromOperation="input connector" fromProperty="experimental_metric_normal_file" toOperation="ScaledBinomialTest" toProperty="experimental_metric_normal_file" />
+    <link fromOperation="Dtr3e" fromProperty="decision_tree_output" toOperation="ScaledBinomialTest" toProperty="decision_tree_output" />
+
+    <link fromOperation="input connector" fromProperty="parent_event" toOperation="GenerateFigure3Files" toProperty="parent_event" />
+    <link fromOperation="input connector" fromProperty="ref_seq_id" toOperation="GenerateFigure3Files" toProperty="ref_seq_id" />
+    <link fromOperation="input connector" fromProperty="basedir" toOperation="GenerateFigure3Files" toProperty="basedir" />
+    <link fromOperation="ScaledBinomialTest" fromProperty="binomial_output_file" toOperation="GenerateFigure3Files" toProperty="binomial_output_file" />
+
+    <link fromOperation="GenerateFigure3Files" fromProperty="validated_somatic_variants" toOperation="output connector" toProperty="validated_somatic_variants" />
+
+    <operation name="Dtr3e">
+        <operationtype commandClass="Genome::Model::Command::AddReads::FilterVariations::Filters::Dtr3e" typeClass="Workflow::OperationType::Command" />
+    </operation>
+    <operation name="ScaledBinomialTest">
+        <operationtype commandClass="Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomialTest" typeClass="Workflow::OperationType::Command" />
+    </operation>
+    <operation name="GenerateFigure3Files">
+        <operationtype commandClass="Genome::Model::Command::AddReads::FilterVariations::Filters::GenerateFigure3Files" typeClass="Workflow::OperationType::Command" />
+    </operation>
+
+    <operationtype typeClass="Workflow::OperationType::Model">
+        <inputproperty>parent_event</inputproperty>
+        <inputproperty>ref_seq_id</inputproperty>
+        <inputproperty>basedir</inputproperty>
+        <inputproperty>experimental_metric_model_file</inputproperty>
+        <inputproperty>experimental_metric_normal_file</inputproperty>
+        <outputproperty>validated_somatic_variants</outputproperty>
+    </operationtype>
+</workflow>
