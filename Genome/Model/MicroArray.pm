@@ -59,16 +59,12 @@ sub create {
 
     # Sort the genotype submission file
     $self->status_message("Sorting the file...");
-    my $sorted_data_file = $self->_sort_genotype_submission_file($target_file);
+    my $sorted_data_file = $self->_sort_genotype_submission_file();
 
     if (!$sorted_data_file) {
         $self->error_message("Sort genotype submission file failed!");
         return undef;
     }
-
-    # Set up the class level file handle to the micro array data file (sorted version)
-    my $data_file_fh = IO::File->new($sorted_data_file);
-    $self->data_file_fh($data_file_fh);
 
     return $self;
 }
@@ -77,6 +73,11 @@ sub create {
 sub get_next_line {
     my $self = shift;
     my $current_line;
+
+    # Set up the fh if it has not been yet
+    if (!$self->data_file_fh) {
+        $self->data_file_fh(IO::File->new($self->_sorted_file));
+    }
 
     $current_line = $self->_parse_genotype_submission_line($self->data_file_fh);
 
@@ -115,12 +116,28 @@ sub _data_file {
    return $file_location; 
 }
 
+# Returns the full path to the file where the sorted microarray data should be
+sub _sorted_file {
+    my $self = shift;
+
+    my $base_dir = $self->_base_directory;
+    my $model_name = $self->name;
+
+    # Replace spaces with underscores for a valid file name
+    $model_name =~ s/ /_/g;
+    
+    my $file_location = "$base_dir/sorted_$model_name.tsv";
+
+   return $file_location; 
+}
+
 # Sort for genotype submission files (sort by chromosome and position)
 # This uses a bunch of magic that I do not fully understand. I may be opening pandora's box.
 sub _sort_genotype_submission_file {
-    my ($self, $file) = @_;
+    my ($self) = @_;
 
-    my $output_file_name = $file . "_sorted";
+    my $file = $self->_data_file;
+    my $output_file_name = $self->_sorted_file;
 
     # Begin black magic for sorting the file by chrom and position
     open (DATA, $file); 
