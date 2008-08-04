@@ -541,8 +541,8 @@ void remove_dup_frags (char *infile, char *keepfile, char *delfile, ...)
     gzFile fpdelseq = gzopen(delfileunsorted, "w");
     if (fpdelseq == NULL) { printf("Unable to open file '%s'\n",delfileunsorted); return; }
 
-    if(compare_seqs)
-    {
+    //if(compare_seqs)
+    //{
         fragdedup_yav(fpin,fpkeepseq, fpdelseq, comparison_length);
         
         gzclose(fpkeepseq);
@@ -569,9 +569,9 @@ void remove_dup_frags (char *infile, char *keepfile, char *delfile, ...)
         unlink(keepfileunsorted);
         unlink(delfileunsorted);
         exit(0);
-    }
-    else
-        fragdedup_original(fpin,fpkeepseq, fpdelseq);
+    //}
+    //else
+    //    fragdedup_original(fpin,fpkeepseq, fpdelseq);
 
     gzclose(fpin);
     gzclose(fpkeepseq);

@@ -65,7 +65,7 @@ sub execute {
     }
     else
     {
-        $result = Genome::Model::Tools::Maq::RemovePcrArtifacts_C::remove_dup_frags($in,$keep,$remove);
+        $result = Genome::Model::Tools::Maq::RemovePcrArtifacts_C::remove_dup_frags($in,$keep,$remove,0);
     }
     $result = !$result; # c -> perl
 
