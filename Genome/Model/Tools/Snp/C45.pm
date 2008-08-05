@@ -27,10 +27,18 @@ class Genome::Model::Tools::Snp::C45 {
     name_file =>
     {
         type => 'String',
-        is_optional => 0,
+        is_optional => 1,
         doc => "config file detailing name and range 
         of columns in the two snp files for C4.5",
     },
+    training_set_size =>
+    {
+        type => 'Integer',
+        is_optional => 1,
+        doc => "Size of training set. default=200.
+                Specify 'all' to use entire input.",
+        default => '200'
+    },        
     data_file =>
     {
         type => 'String',
@@ -61,10 +69,10 @@ sub execute {
         $self->error_message("bad snps file is not a file: " . $self->bad_snps_file);
         return;
     }
-    unless(-f $self->name_file) {
-        $self->error_message("bad snps file is not a file: " . $self->name_file);
-        return;
-    }
+    #unless(-f $self->name_file) {
+    #    $self->error_message("bad snps file is not a file: " . $self->name_file);
+    #     return;
+    #}
     #unless($self->test_file && -f $self->test_file) {
     #   $self->error_message("bad snps file is not a file: " . $self->test_file);
     #return;
@@ -73,9 +81,7 @@ sub execute {
     #    $self->error_message("bad snps file is not a file: " . $self->data_file);
     # return;
     # }
-
-
-    my $good_fh=IO::File->new($self->good_snps_file);
+      my $good_fh=IO::File->new($self->good_snps_file);
     my $bad_fh=IO::File->new($self->bad_snps_file);
     unless($bad_fh && $good_fh) {
         $self->error_message("Failed to open filehandles for: " .  $self->good_snps_file . " and/or " . $self->bad_snps_file);
