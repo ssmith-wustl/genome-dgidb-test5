@@ -14,7 +14,7 @@ BEGIN {
     use_ok('PAP::Command::BlastP');
 }
 
-my $command = PAP::Command::BlastP->create('fasta_file' => 'data/HPAG1.fasta');
+my $command = PAP::Command::BlastP->create('fasta_file' => 'data/B_coprocola.chunk.fasta');
 isa_ok($command, 'PAP::Command::BlastP');
 
 ok($command->execute());
