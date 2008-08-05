@@ -88,6 +88,8 @@ sub execute {
     $self->cleanup();
     $self->bio_seq_feature([]);
 
+    return 1;
+
 }
 
 sub create_kscfg
