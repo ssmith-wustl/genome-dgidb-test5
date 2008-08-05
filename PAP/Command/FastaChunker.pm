@@ -87,6 +87,8 @@ sub execute {
 
     $self->fasta_files(\@output_files);
 
+    return 1;
+
 }
  
 1;
