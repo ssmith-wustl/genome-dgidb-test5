@@ -9,6 +9,8 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use English;
+use File::Temp;
+use IPC::Run;
 
 
 class PAP::Command::InterProScan {
@@ -54,27 +56,32 @@ sub execute {
 
 
     my $fasta_file  = $self->fasta_file();
-    my $result_file = '/tmp/dummy';
+
+    my $tmp_fh = File::Temp->new();
+    my $tmp_fn = $tmp_fh->filename();
+
+    $tmp_fh->close();
 
     my @iprscan_command = (
                            '/gscmnt/974/analysis/iprscan16.1/iprscan/bin/iprscan.hacked',
                            '-cli',
-                           '-appl hmmpfam',
+                           '-appl',
+                           'hmmpfam',
                            '-goterms',
                            '-verbose',
                            '-iprlookup',
-                           '-seqtype p',
-                           '-format ebixml',
-                           "-i $fasta_file",
-                           "-o $result_file",
-                          );
+                           '-seqtype',
+                           'p',
+                           '-format',
+                           'ebixml',
+                           '-i',
+                           $fasta_file,
+                           '-o',
+                           $tmp_fn,
+                       );
 
     my ($iprscan_stdout, $iprscan_stderr);
-
-    $self->bio_seq_feature([]);
-
-    return 1;
-
+    
     IPC::Run::run(
                   \@iprscan_command, 
                   \undef, 
@@ -82,8 +89,21 @@ sub execute {
                   \$iprscan_stdout, 
                   '2>', 
                   \$iprscan_stderr, 
-                 ); 
+                 );
 
+    my $seqio = Bio::SeqIO->new(-file => $tmp_fn, -format => 'interpro');
+
+    my @features = ( );
+    
+    while (my $seq = $seqio->next_seq()) {
+        
+        push @features, $seq->get_all_SeqFeatures();
+        
+    }
+
+    $self->bio_seq_feature(\@features);
+    
+    return 1;
 
 }
  
