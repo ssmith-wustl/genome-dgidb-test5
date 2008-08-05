@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomialTest;
+package Genome::Model::Tools::Snp::Filters::ScaledBinomialTest;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Genome::DB::Schema;
 use Statistics::R;
 use Workflow;
 
-class Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomialTest
+class Genome::Model::Tools::Snp::Filters::ScaledBinomialTest
 {
     is => 'Command',
     has => [
@@ -76,15 +76,18 @@ class Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomia
     binomial_output_file =>
     {
         type => 'String',
-        is_optional=>1,
         doc => 'the name of the output file',
+        calculate => q|
+                    return $self->basedir . "/binomial.chr" . $self->ref_seq_id . ".nonskin.csv";
+                   |
+  
     },
     parent_event                => { is => 'Genome::Model::Event',
     doc => 'The parent event' },
     ],
 };
 
-operation_io Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomialTest {
+operation_io Genome::Model::Tools::Snp::Filters::ScaledBinomialTest {
     input  => [ 'parent_event' ],
     input  => [ 'ref_seq_id' ],
     input  => [ 'basedir' ],
@@ -305,7 +308,6 @@ sub _convert_probabilities_to_snps {
     my $chromosome = $self->ref_seq_id; 
     my $output = $self->basedir . "/binomial.chr" . $self->ref_seq_id;
     #expects both the two-sided and one-sided(less) tests to be present
-    $self->binomial_output_file($output . '.nonskin.csv');
 
     my %positions;
     my $result = $self->_convert_probabilities_to_locations("/tmp/skin_binom_test_chr$chromosome.greater", $self->greater_p_threshold,\%positions);    

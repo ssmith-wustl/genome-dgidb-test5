@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::FilterVariations::Filters::GenerateFigure3Files;
+package Genome::Model::Tools::Snp::Filters::GenerateFigure3Files;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Genome::DB::Schema;
 use Statistics::R;
 use Workflow;
 
-class Genome::Model::Command::AddReads::FilterVariations::Filters::GenerateFigure3Files
+class Genome::Model::Tools::Snp::Filters::GenerateFigure3Files
 {
     is => 'Command',
     has => [
@@ -31,7 +31,7 @@ class Genome::Model::Command::AddReads::FilterVariations::Filters::GenerateFigur
     ],
 };
 
-operation_io Genome::Model::Command::AddReads::FilterVariations::Filters::GenerateFigure3Files {
+operation_io Genome::Model::Tools::Snp::Filters::GenerateFigure3Files {
     input  => [ 'parent_event' ],
     input  => [ 'ref_seq_id' ],
     input  => [ 'basedir' ],
@@ -45,8 +45,9 @@ sub execute {
     my $self = shift;
     $DB::single = $DB::stopper;
     
-    $self->generate_figure_3_files();
-
+    unless($self->generate_figure_3_files()){
+        return;
+    }
     return 1;
 }
 #----------------------------------
@@ -134,13 +135,13 @@ sub generate_figure_3_files {
             ".csv");
          my $annotation_fh = IO::File->new($snp_file);
         if(!defined($annotation_fh)) {
-            $self->error_message("Could not open report file.");
-            return undef;
+            $self->error_message("Could not open report file: $snp_file");
+            return;
         }
         my $somatic_fh = IO::File->new($somatic_file);
         if(!defined($somatic_fh)) {
-            $self->error_message("Could not open file of somatic mutations.");
-            return undef;
+            $self->error_message("Could not open file of somatic mutations: $somatic_file.");
+            return;
         }
         my @cur_somatic_snp;
         my @cur_anno_snp;

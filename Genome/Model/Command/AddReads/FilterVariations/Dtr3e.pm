@@ -3,10 +3,11 @@ package Genome::Model::Command::AddReads::FilterVariations::Dtr3e;
 use strict;
 use warnings;
 use above "Genome";
-use Genome::Model::Command::AddReads::FilterVariations::Filters::ScaledBinomialTest;
-use Genome::Model::Command::AddReads::FilterVariations::Filters::Dtr3e;
-use Genome::Model::Command::AddReads::FilterVariations::Filters::GenerateFigure3Files;
+use Genome::Model::Tools::Snp::Filters::ScaledBinomialTest;
+use Genome::Model::Tools::Snp::Filters::Dtr3e;
+use Genome::Model::Tools::Snp::Filters::GenerateFigure3Files;
 use FileHandle;
+use FindBin qw($Script);
 use Workflow;
 
 
@@ -61,7 +62,7 @@ sub execute {
         return;
     }
 
-    my $workflow = Workflow::Model->create_from_xml('filtered_variations.xml');
+    my $workflow = Workflow::Model->create_from_xml("/gscuser/charris/filtered_variations.xml");
     #$workflow->as_png('filtered_variations.png');
     
     my @errors = $workflow->validate;

@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::FilterVariations::Filters::Dtr3e;
+package Genome::Model::Tools::Snp::Filters::Dtr3e;
 
 use strict;
 use warnings;
@@ -8,8 +8,7 @@ use Command;
 use IO::File;
 use Workflow;
 
-class Genome::Model::Command::AddReads::FilterVariations::Filters::Dtr3e
-{
+class Genome::Model::Tools::Snp::Filters::Dtr3e {
     is => 'Command',
     has => [
     experimental_metric_model_file => 
@@ -37,23 +36,29 @@ class Genome::Model::Command::AddReads::FilterVariations::Filters::Dtr3e
         doc => 'Put some docmumentation here' 
     },
     decision_tree_output => 
-    { 
+    {
+        doc => ".keep output file for this step.", 
         is => 'String',
-        is_optional=> 1,
-        doc => 'output file',
+        calculate => q| 
+             return $self->basedir . 'chr' . $self->ref_seq_id . '.keep.csv';
+        |
     },
     parent_event                => { is => 'Genome::Model::Event',
     doc => 'The parent event' },
     ]
 };
 
-operation_io Genome::Model::Command::AddReads::FilterVariations::Filters::Dtr3e {
+operation_io Genome::Model::Tools::Snp::Filters::Dtr3e {
     input  => [ 'parent_event' ],
     input  => [ 'ref_seq_id' ],
     input  => [ 'basedir' ],
     input  => [ 'experimental_metric_model_file' ],
     output => [ 'decision_tree_output' ],
 };
+
+sub help_synopsis {
+    "Tool version of Dtr3e"
+}
 
 sub execute {
     my $self=shift;
@@ -84,8 +89,7 @@ sub execute {
     my $header_line = $handle->getline; #store header
     my $keep_handle = new FileHandle;
     my $remove_handle = new FileHandle;
-    my $keep_file = $basename . 'chr' . $self->ref_seq_id . '.keep.csv';
-    $self->decision_tree_output($keep_file);
+    my $keep_file = $self->decision_tree_output;
     my $remove_file = $basename . 'chr' . $self->ref_seq_id . '.remove.csv';
     $keep_handle->open("$keep_file","w") or die "Couldn't open keep output file\n";
     $remove_handle->open("$remove_file","w") or die "Couldn't open remove output file\n";
