@@ -19,18 +19,22 @@ class PAP::Command::PsortB {
     has => [
         fasta_file      => { 
                             is  => 'SCALAR', 
-                            doc => 'fasta file name' 
+                            doc => 'fasta file name' ,
+                           },
+        gram_stain      => {
+                            is  => 'SCALAR',
+                            doc => 'gram stain (positive/negative)',
                            },
         bio_seq_feature => { 
                             is          => 'ARRAY', 
                             is_optional => 1,
-                            doc         => 'array of Bio::Seq::Feature' 
+                            doc         => 'array of Bio::Seq::Feature', 
                            },
     ],
 };
 
 operation PAP::Command::PsortB {
-    input  => [ 'fasta_file'      ],
+    input  => [ 'fasta_file', 'gram_stain' ],
     output => [ 'bio_seq_feature' ],
 };
 
@@ -54,11 +58,24 @@ EOS
 sub execute {
 
     my $self = shift;
+    
+    
     my $fasta_file  = $self->fasta_file();
+    my $gram_stain  = $self->gram_stain();
+
+    if ($gram_stain eq 'positive') {
+        $gram_stain = '-p';
+    }
+    elsif ($gram_stain eq 'negative') {
+        $gram_stain = '-n';
+    }
+    else {
+        die "gram stain should be positive or negative, not '$gram_stain'";
+    }
 
     my @psortb_command = (
                           'psort-b',
-                          '-p',
+                          $gram_stain, 
                           '-o terse',
                          );
 
@@ -71,6 +88,8 @@ sub execute {
     # psort-b each sub-fasta
     foreach my $i (1..$max_chunks)
     {
+        my ($psortb_out, $psortb_err);
+
         my $psortb_file = $i . ".fa";
         push(@psortb_command,$psortb_file);
         IPC::Run::run(

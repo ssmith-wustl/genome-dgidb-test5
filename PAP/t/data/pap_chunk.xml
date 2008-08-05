@@ -4,6 +4,7 @@
   <link fromOperation="input connector" fromProperty="fasta file"           toOperation="blastp"           toProperty="fasta_file" />
   <link fromOperation="input connector" fromProperty="fasta file"           toOperation="keggscan"         toProperty="fasta_file" />
   <link fromOperation="input connector" fromProperty="fasta file"           toOperation="psortb"           toProperty="fasta_file" />
+  <link fromOperation="input connector" fromProperty="gram stain"           toOperation="psortb"           toProperty="gram_stain" />
   <link fromOperation="blastp"          fromProperty="bio_seq_feature"      toOperation="cat seq feature"  toProperty="blastp feature" />
   <link fromOperation="keggscan"        fromProperty="bio_seq_feature"      toOperation="cat seq feature"  toProperty="keggscan feature" />
   <link fromOperation="psortb"          fromProperty="bio_seq_feature"      toOperation="cat seq feature"  toProperty="psortb feature" />
@@ -30,6 +31,7 @@
   </operation>
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>fasta file</inputproperty>
+    <inputproperty>gram stain</inputproperty>
     <inputproperty>interproscan feature</inputproperty>
     <outputproperty>bio seq features</outputproperty>
     <outputproperty>result</outputproperty>
