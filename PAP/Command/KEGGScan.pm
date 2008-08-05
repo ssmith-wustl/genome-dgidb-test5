@@ -7,6 +7,7 @@ use Workflow;
 
 use Bio::Seq;
 use Bio::SeqIO;
+use Bio::SeqFeature::Generic;
 use File::Slurp;
 use File::Temp qw/ tempdir tempfile /;
 use Cwd;
@@ -132,6 +133,38 @@ sub cleanup
 {
     my $self = shift;
     # get rid of crap here.
+    return;
+}
+
+sub parse_kegg
+{
+    my $self = shift;
+    my $keggout;
+    my @lines = read_file($keggout);
+    chomp;
+    my $feat = undef;
+    my $a = Bio::Annotation::Collection->new;
+    foreach my $l (@lines)
+    {
+        my ($junk,$gene,$code, $eVal,$junk2,$desc, $junk3,$ko)
+            = split(/\t/x,$l);
+        $gene =~ s/\(.*//x;
+        unless(defined($feat))
+        {
+            $feat = new Bio::SeqFeature::Generic( -seq_id => $gene );
+        }
+        $desc =~ s/\(EC .+\)//;  # removing the EC number???
+        if($ko eq "none")
+        {
+            $ko = "";
+        }
+        # create the bio seq annotation/feature object
+        my $keggstring = $code . " " . $eVal . " " . $desc . " " . $ko;
+        $feat->add_Annotation("KEGG", $keggstring);
+    }
+    # put $feat into $self->bio_seq_feature 
+    $self->bio_seq_feature( ( $feat ) );
+
     return;
 }
  
