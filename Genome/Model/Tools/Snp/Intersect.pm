@@ -19,33 +19,44 @@ class Genome::Model::Tools::Snp::Intersect {
                                     doc => 'instead of f1 data, the intersection should show cross-list'
                                             . ' comparison data' },
     ],
-    doc => "intersect two variant lists (currently only SNPs are supported) and "
+    doc => "intersect two snp lists by position, with optional genotype overlap detail"
 };
 
 sub help_synopsis {
     my $self = shift;
-    return <<EOS;
+    return qq/;
 gt snp intersect list1.snps list2.snps 
 
 gt snp intersect list1.snps list2.snps -i intersect.out -f1 f1.out -f2 f2.out
 
 maq cns2view 1.cns | gt snp intersect mypositions  | less
-EOS
+/
 }
 
 sub help_detail{
     return <<EOS;
-Intersect two SNP  and produce a report on the intersection.
+Intersect two SNP lists and produce a report on the intersection.
 
-The lists should be sorted by chromosome, then position.  Numeric chromosomes should come, first in numeric order, followed by alphabetic chromosomes in alpha order.  Positions should be in numeric order.
+The lists should be sorted by chromosome, then position.  Numeric chromosomes should come first, in numeric order, followed by alphabetic chromosomes in alpha order.  Positions should be in numeric order.
 
-The counts of the above are displayed after execution.
-You can re-create this output with a simple:
+The counts of the intersection and the f1/f2 only positions are displayed to STDERR after execution.
+You can re-create this output with a simple shell command if f1_only_output and f2_only_output are specified.
     wc -l intersection.out f1.only f2.only
 
-By default the intersection file contains all data from file 1 at the intersected positions.  If the "detail" option is specified, the intersection file will contain data from both files, and an additional field which describes the genotype difference match/miss, and the transition from homozygous to heterozygous.
+By default the intersection file contains all data from file 1 at the intersected positions.  The detail output shows data from both files.
 
-You can re-create the detail output with a shell command later w/o re-running:
+Detail Output:
+
+If the "detail" option is specified, the intersection file will contain data from both files, and an additional field which describes the genotype difference match/miss, and the transition from homozygous to heterozygous.
+
+This tool expects the 3rd and 4th columns of the inputs to be the reference call and genotype call (in IUB format).  This is the same format maq uses for cns2snp and cns2view output.
+
+The detail output will show: chromosome, position, ref genotype, f1 genotype, f2 genotype, comparison tag.
+After these columsn all of the f1 remaining fields will appear, then all of the f2 fields, with a ':' field between.
+
+The comparison tag follows the pattern (match|mismach)-(het|hom)-(het|hom)-\\d+-base-overlap.  After running a detail
+
+You can re-create the detail summary by comparison with a shell command later w/o re-running:
     cat intersection.out | columns 5 | sort |  uniq -c 
 
 EOS
@@ -135,7 +146,9 @@ sub execute {
     my $fi  = $self->intersect_output; 
     my $xi;
     if (my $fi = $self->intersect_output) {
-        $xi = IO::File->new(">$fi") or die "Failed to open $fi: $!\n";
+        unless ($fi eq '/dev/null') {
+            $xi = IO::File->new(">$fi") or die "Failed to open $fi: $!\n";
+        }
     }
     else {
         $xi = 'STDOUT';
@@ -171,7 +184,6 @@ sub execute {
         $v1 = $h1->getline;
         if (defined $v1) {
             ($c1,$p1,$r1,$g1,@t1) = split(/\s+/,$v1);
-            #print "f1: $c1 $p1 $g1\n";
         }
         else {
             $c1 = 'ZZZ';
@@ -224,7 +236,22 @@ sub execute {
     getf1();
     getf2();
     while ($v1 or $v2) {
-        my $cc = chr_cmp($c1,$c2);
+        # compare chromosomes
+        no warnings;
+        my $cc;
+        if ($c1 == 0 and $c2 > 0) {
+            $cc = 1;
+        }
+        elsif ($c2 == 0 and $c1 > 0) {
+            $cc = -1;
+        }
+        elsif ($c1 == 0 and $c2 == 0) {
+            $cc = ($c1 cmp $c2) 
+        }
+        else {
+            $cc = ($c1 <=> $c2);
+        }
+
         if (($cc == -1) or ($cc == 0 and $p1 < $p2)) {
             $n1++;
             $printer->($x1,$c1,$p1,$r1,$g1,\@t1) if $x1;
@@ -237,7 +264,7 @@ sub execute {
         }
         elsif ($cc == 0 and $p1 == $p2) {
             $ni++;
-            $printer->($xi,$c1,$p1,$r1,$g1,\@t1,$r2,$g2,\@t2);
+            $printer->($xi,$c1,$p1,$r1,$g1,\@t1,$r2,$g2,\@t2) if $xi;
             getf1();
             getf2();
         }
