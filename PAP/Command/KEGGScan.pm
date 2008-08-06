@@ -86,25 +86,33 @@ sub execute {
                  );
 
     # cleanup, move out of temp dir
+    $self->parse_kegg();
     $self->cleanup();
-    $self->bio_seq_feature([]);
+    chdir($current_dir);
 
     return 1;
 
 }
+
+=head1 create_kscfg
+
+KEGGscan needs a configuration file with these items:
+
+ SpeciesName\t"species"
+ QueryFastaPath\t"path/to/peptides"
+ SubjectFastaPath\t"path/to/KEGGrelease"
+ QuerySeqType\t"CONTIG"
+ Queue\t"long"
+ BladeLoad\t"40"
+ KeggRelease\t"RELEASE-41"
+
+=cut
 
 sub create_kscfg
 {
     my $self = shift;
 
 # need to output
-# SpeciesName\t"species"
-# QueryFastaPath\t"path/to/peptides"
-# SubjectFastaPath\t"path/to/KEGGrelease"
-# QuerySeqType\t"CONTIG"
-# Queue\t"long"
-# BladeLoad\t"40"
-# KeggRelease\t"RELEASE-41"
     my $species = undef;
     my $subjectpath = "/gscmnt/233/analysis/sequence_analysis/species_independant/jmartin/hgm.website/KEGG/KEGG_release_41/genes.v41.faa";
     my $queryfasta = $self->fasta_file;
@@ -163,7 +171,7 @@ sub parse_kegg
         $feat->add_Annotation("KEGG", $keggstring);
     }
     # put $feat into $self->bio_seq_feature 
-    $self->bio_seq_feature( ( $feat ) );
+    $self->bio_seq_feature( [ $feat ] );
 
     return;
 }
