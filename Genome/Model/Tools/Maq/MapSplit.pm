@@ -51,6 +51,17 @@ sub create {
         $self->error_message('Submap directory '. $self->submap_directory .' not found or is not a directory.');
         return;
     }
+    unless (ref($self->reference_names)) {
+        my @names = split(',',$self->reference_names);
+        unless (@names) {
+            $self->error_message('No reference names specified!');
+            return;
+        }
+        unless (grep { $_ eq 'other' } @names) {
+            push @names, 'other';
+        }
+        $self->reference_names(\@names);
+    }
     return $self;
 }
 
