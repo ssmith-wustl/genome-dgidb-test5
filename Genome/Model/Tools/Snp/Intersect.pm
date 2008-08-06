@@ -9,19 +9,21 @@ use UR;
 class Genome::Model::Tools::Snp::Intersect {
     is => 'Command',
     has => [ 
-        count_only => { is => "Boolean", doc => "do not make files of intersection/differences, just count them" },
+        intersect_output    => { is => 'FileName', is_optional => 1, doc => 'instead of stdout, direct the intersection to this file' },
+        f1_only_output      => { is => 'FileName', is_optional => 1, doc => 'items present only in the first input should be dumped here' },
+        f2_only_output      => { is => 'FileName', is_optional => 1, doc => 'items present only in the second input should be dumped here' },
     ],
-    doc => "intersect two variant lists (currently only SNPs are supported) and create intersection files"
+    doc => "intersect two variant lists (currently only SNPs are supported) and "
 };
 
 sub help_synopsis {
     my $self = shift;
     return <<EOS;
-gt snp intersect m1.snps m2.snps out-intersect.snps out-m1-only out-m2-only
-intersection: 5602634
-m1.snps only: 745011
-m2.snps only: 687379
+gt snp intersect list1.snps list2.snps -i intersect.out -f1 f1.out -f2 f2.out
 
+gt snp intersect list1.snps list2.snps | less
+
+someprogram | gt snp intersect list2.snps  | less
 EOS
 }
 
@@ -80,35 +82,81 @@ for my $c1 (sort keys %iub) {
             }
         }
         $iub_overlap{$c1}{$c2} = $c;
-        #print "$c1 ($n1)\t$c2 ($n2): $c\n";
     }
 }
 
 sub execute {
     my $self = shift;
+
+    # setting a terrible example by using 2 and 3 letter variable names...   
+    
     my $args = $self->bare_args;
     
     my $f1 = shift(@$args);
+    unless (defined $f1) {
+        $self->error_message("1 files, or 1 file plus STDIN, are required arguments!");
+        $self->usage_message();
+        return;
+    }
+    
     my $f2 = shift(@$args);
-    my $fi = shift(@$args);
-    my $f1o = shift(@$args) || "$f1.only";
-    my $f2o = shift(@$args) || "$f2.only";
+    unless (defined $f2) {
+        # when only one file is specified, STDIN becomes the "1st" file
+        $f2 = $f1;
+        $f1 = '-';
+    }
 
-    return $self->_intersect_lists($f1,$f2,$fi,$f1o,$f2o);
-}
+    if (@$args) {
+        $self->error_message("extra args: @$args");
+        return;
+    }
 
-sub _intersect_lists {
-    my ($self,$f1,$f2,$fi,$f1o,$f2o) = @_;
+    unless ($f1 eq '-' or -e $f1) {
+        $self->error_message("File not found: $f1");
+        return;
+    }
+    my $h1 = ($f1 eq '-' ? 'STDIN' : IO::File->new($f1));
+    unless ($h1) {
+        $self->error_message("Failed to open file $f1: $!");
+        return;
+    } 
 
-    my $h1 = IO::File->new($f1) or die "$f1: " . $!;
-    my $h2 = IO::File->new($f2) or die "$f2: " . $!;
+    unless (-e $f2) {
+        $self->error_message("File not found: $f2");
+        return;
+    }
+    my $h2 = IO::File->new($f2);
+    unless ($h2) {
+        $self->error_message("Failed to open file $f2: $!");
+        return;
+    } 
 
-    my $count_only = $self->count_only;
-    my ($xi,$x1,$x2);
-    unless ($count_only) {
-        $xi = IO::File->new(">$fi") or die $!;
-        $x1 = IO::File->new(">$f1o") or die $!;
-        $x2 = IO::File->new(">$f2o") or die $!;
+    my $fi  = $self->intersect_output; 
+    my $xi;
+    if (my $fi = $self->intersect_output) {
+        $xi = IO::File->new(">$fi") or die "Failed to open $fi: $!\n";
+    }
+    else {
+        $xi = 'STDOUT';
+    }
+
+    my ($x1,$x2);
+    my $f1o = $self->f1_only_output;
+    if ($f1o) {
+        $x1 = IO::File->new(">$f1o");
+        unless ($x1) {
+            $self->error_message("Failed to open file $x1: $!");
+            return;
+        } 
+    }
+
+    my $f2o = $self->f2_only_output; 
+    if ($f2o) {
+        $x2 = IO::File->new(">$f2o");
+        unless ($x2) {
+            $self->error_message("Failed to open file $x2: $!");
+            return;
+        } 
     }
 
     my $n1 = 0;
@@ -142,10 +190,10 @@ sub _intersect_lists {
     }
     use warnings;
 
-    sub printit {
+    my $format = '';
+    my $printer = sub {
         no warnings;
-        my ($h,$c,$p,$g1,$t1,$r1,$g2,$t2,$r2)=@_;
-
+        my ($h,$c1,$p1,$r1,$g1,$t1,$r2,$g2,$t2)=@_;
         my $g1_het = ($g1 eq $iub{$g1} ? 'hom' : 'het');
         if ($g2) {
             my $g2_het = ($g2 eq $iub{$g2} ? 'hom' : 'het');
@@ -155,12 +203,22 @@ sub _intersect_lists {
             }
             my $desc = ($g1 eq $g2 ? 'match' : 'miss').'-'.$g1_het.'-'.$g2_het.'-'.$m.'-base-overlap';
             $intersect_groups{$desc}++; 
-            $h->print(join("\t",$c,$p,$g1,$g2,$desc,@$t1,$r1,":",@$t2,$r2),"\n");
+            if ($format eq 'compare') {
+                $h->print(join("\t",$c1,$p1,$g1,$g2,$desc,@$t1,$r1,":",@$t2,$r2),"\n");
+            }
+            else {
+                $h->print(join("\t",$c1,$p1,$r1,$g1,@$t1),"\n");
+            }
         }
         else {
-            $h->print(join("\t",$c,$p,$g1,$g1_het,@$t1,$r1),"\n");
+            if ($format eq 'compare') {
+                $h->print(join("\t",$c1,$p1,$g1,$g1_het,@$t1,$r1),"\n");
+            } 
+            else {
+                $h->print(join("\t",$c1,$p1,$r1,$g1,@$t1),"\n");
+            }
         }
-    }
+    };
 
     getf1();
     getf2();
@@ -168,17 +226,17 @@ sub _intersect_lists {
         my $cc = chr_cmp($c1,$c2);
         if (($cc == -1) or ($cc == 0 and $p1 < $p2)) {
             $n1++;
-            printit($x1,$c1,$p1,$g1,\@t1) unless $count_only;
+            $printer->($x1,$c1,$p1,$r1,$g1,\@t1) if $x1;
             getf1();
         }
         elsif ($cc == 1 or ($cc == 0 and $p2 < $p1)) {
             $n2++;
-            printit($x2,$c2,$p2,$g2,\@t2) unless $count_only;
+            $printer->($x2,$c2,$p2,$r2,$g2,\@t2) if $x2;
             getf2();
         }
         elsif ($cc == 0 and $p1 == $p2) {
             $ni++;
-            printit($xi,$c1,$p1,$g1,\@t1,$r1,$g2,\@t2,$r2) unless $count_only;
+            $printer->($xi,$c1,$p1,$r1,$g1,\@t1,$r2,$g2,\@t2);
             getf1();
             getf2();
         }
@@ -186,12 +244,13 @@ sub _intersect_lists {
             die "$v1\n$v2\n";
         }
     }
-    print "$f1 only:\t$n1\n";
-    print "$f2 only:\t$n2\n";
-    print "intersection:\t$ni\n";
+    print STDERR "$f1 only:\t$n1\n";
+    print STDERR "$f2 only:\t$n2\n";
+    print STDERR "intersection:\t$ni\n";
     for my $g (sort keys %intersect_groups) {
-        print "\t", $g, ": ", $intersect_groups{$g}, "\n";
+        print STDERR "\t", $g, ": ", $intersect_groups{$g}, "\n";
     }
+
     1;
 }
 
