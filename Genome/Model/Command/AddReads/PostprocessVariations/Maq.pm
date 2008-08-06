@@ -364,7 +364,8 @@ sub generate_experimental_variation_metrics_files {
         }
     }
     return if $errors;
-    my $cmd = "perl /gscuser/dlarson/pipeline_mapstat/snp_stats.pl --mapfile $map_file --ref-bfa $bfa_file --basename '${output_basename}' --locfile $snp_file --minq 1 --chr=$ref_seq";
+
+    my $cmd = "perl /gscuser/dlarson/pipeline_mapstat/snp_stats2.pl --mapfile $map_file --ref-bfa $bfa_file --basename '${output_basename}' --locfile $snp_file --minq 1 --chr=$ref_seq";
     $self->status_message("Running: $cmd");
     my $result = system($cmd);
     $result /= 256;
