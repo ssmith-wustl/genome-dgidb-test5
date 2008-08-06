@@ -9,9 +9,15 @@ use UR;
 class Genome::Model::Tools::Snp::Intersect {
     is => 'Command',
     has => [ 
-        intersect_output    => { is => 'FileName', is_optional => 1, doc => 'instead of stdout, direct the intersection to this file' },
-        f1_only_output      => { is => 'FileName', is_optional => 1, doc => 'items present only in the first input should be dumped here' },
-        f2_only_output      => { is => 'FileName', is_optional => 1, doc => 'items present only in the second input should be dumped here' },
+        intersect_output    => { is => 'FileName', is_optional => 1, 
+                                    doc => 'instead of stdout, direct the intersection to this file' },
+        f1_only_output      => { is => 'FileName', is_optional => 1, 
+                                    doc => 'items present only in the first input should be dumped here' },
+        f2_only_output      => { is => 'FileName', is_optional => 1, 
+                                    doc => 'items present only in the second input should be dumped here' },
+        detail              => { is => 'Boolean', 
+                                    doc => 'instead of f1 data, the intersection should show cross-list'
+                                            . ' comparison data' },
     ],
     doc => "intersect two variant lists (currently only SNPs are supported) and "
 };
@@ -19,11 +25,11 @@ class Genome::Model::Tools::Snp::Intersect {
 sub help_synopsis {
     my $self = shift;
     return <<EOS;
+gt snp intersect list1.snps list2.snps 
+
 gt snp intersect list1.snps list2.snps -i intersect.out -f1 f1.out -f2 f2.out
 
-gt snp intersect list1.snps list2.snps | less
-
-someprogram | gt snp intersect list2.snps  | less
+maq cns2view 1.cns | gt snp intersect mypositions  | less
 EOS
 }
 
@@ -31,20 +37,15 @@ sub help_detail{
     return <<EOS;
 Intersect two SNP  and produce a report on the intersection.
 
-The lists should be sorted by chromosome, then position.
-Numeric chromosomes should come, first in numeric order, followed by alphabetic chromosomes in alpha order.
-Positions should be in numeric order.
-
-The first output file contains data for all positions which intersect, and details from both files on the genotype called there.
-The second output file contains positions only present in the first input file.
-The third output file contains positions only present in the second input file.
+The lists should be sorted by chromosome, then position.  Numeric chromosomes should come, first in numeric order, followed by alphabetic chromosomes in alpha order.  Positions should be in numeric order.
 
 The counts of the above are displayed after execution.
 You can re-create this output with a simple:
     wc -l intersection.out f1.only f2.only
 
-The information in the intersection file is then broken down by genotype intersection, and those counts are displayed.
-You can re-create the output with a shell command later w/o re-running:
+By default the intersection file contains all data from file 1 at the intersected positions.  If the "detail" option is specified, the intersection file will contain data from both files, and an additional field which describes the genotype difference match/miss, and the transition from homozygous to heterozygous.
+
+You can re-create the detail output with a shell command later w/o re-running:
     cat intersection.out | columns 5 | sort |  uniq -c 
 
 EOS
@@ -190,7 +191,7 @@ sub execute {
     }
     use warnings;
 
-    my $format = '';
+    my $format = ($self->detail ? 'compare' : 'default');
     my $printer = sub {
         no warnings;
         my ($h,$c1,$p1,$r1,$g1,$t1,$r2,$g2,$t2)=@_;
@@ -204,7 +205,7 @@ sub execute {
             my $desc = ($g1 eq $g2 ? 'match' : 'miss').'-'.$g1_het.'-'.$g2_het.'-'.$m.'-base-overlap';
             $intersect_groups{$desc}++; 
             if ($format eq 'compare') {
-                $h->print(join("\t",$c1,$p1,$g1,$g2,$desc,@$t1,$r1,":",@$t2,$r2),"\n");
+                $h->print(join("\t",$c1,$p1,$r1,$g1,$g2,$desc,@$t1,":",@$t2),"\n");
             }
             else {
                 $h->print(join("\t",$c1,$p1,$r1,$g1,@$t1),"\n");
@@ -212,7 +213,7 @@ sub execute {
         }
         else {
             if ($format eq 'compare') {
-                $h->print(join("\t",$c1,$p1,$g1,$g1_het,@$t1,$r1),"\n");
+                $h->print(join("\t",$c1,$p1,$r1,$g1,$g1_het,@$t1,),"\n");
             } 
             else {
                 $h->print(join("\t",$c1,$p1,$r1,$g1,@$t1),"\n");
