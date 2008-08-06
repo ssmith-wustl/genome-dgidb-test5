@@ -18,7 +18,7 @@ use Bio::Seq::Quality;
 use Bio::Seq::SequenceTrace;
 use Finishing::Assembly::Phd::Exporter;
 use Finishing::Assembly::Factory;
-
+use Sys::Hostname;
 
 class Genome::Model::Tools::AssembleReads::Pcap {
     is => 'Command',                       
@@ -199,7 +199,6 @@ sub execute
 	    $self->error_message ("Failed to submit jobs for phd ball");
 	    return;
 	}
-
     }
 
     $self->status_message("Creating input/pcap fof file");
@@ -879,6 +878,7 @@ sub resolve_pcap_run_type
 {
     my ($self) = @_;
 
+    #in general but this can vary
     #types: 454_raw     => .rep.454
     #       normal      => .rep
     #       poly        => .rep.poly (bcontig only, all else .rep)
@@ -890,85 +890,120 @@ sub resolve_pcap_run_type
     $self->error_message("pcap run type must be NORMAL, RAW_454 or POLY") and return
 	unless $self->pcap_run_type and grep (/^$type$/, @types);
 
-    my $ext = '.rep';
-
-    $ext = '.rep.454' if $self->pcap_run_type eq 'RAW_454';
-
-    foreach my $prog ( qw/ pcap bdocs bclean bcontig bconsen / )
+    if ($self->pcap_run_type eq 'RAW_454')
     {
-	 $self->{$prog.'_prog_type'} = $prog.$ext;
+	my $host = hostname ();
+	$self->{pcap_prog_type} = 'pcap.rep.454.64';
+	#it looks like the script is not yet deployed for the linusit platforms
+	$self->{pcap_prog_type} = 'pcap.rep.454' if $host =~ /^linusit\d+/;
+	$self->{bdocs_prog_type} = 'bdocs.rep.454';
+	$self->{bclean_prog_type} = 'bclean.rep.454';
+	$self->{bcontig_prog_type} = 'bcontig.rep.454';
+	$self->{bconsen_prog_type} = 'bconsen.454';
+	$self->{bform_prog_type} = 'bform';
     }
 
-    #not sure why but bdocs.rep.454 always runs out of memory so just use bdocs.rep for now
-#   $self->{bdocs_prog_type} = 'bdocs.rep';
+    if ($self->pcap_run_type eq 'POLY')
+    {
+	$self->{pcap_prog_type} = 'pcap.rep.poly';
+	$self->{bdocs_prog_type} = 'bdocs.rep';
+	$self->{bclean_prog_type} = 'bclean.rep';
+	$self->{bcontig_prog_type} = 'bcontig.rep.poly';
+	$self->{bconsen_prog_type} = 'bconsen';
+	$self->{bform_prog_type} = 'bform';
+    }
 
-    #bconsen.rep.454 no longer exists
-
-    #they make frequent changes to this prog name
-
-#   $self->{bconsen_prog_type} = 'bconsen.rep.454.071214'
-#      if $self->pcap_run_type eq 'RAW_454';
-
-    $self->{bconsen_prog_type} = 'bconsen.454'
-	if $self->pcap_run_type eq 'RAW_454';
-
-    $self->{bcontig_prog_type} = 'bcontig.rep.poly'
-	if $self->pcap_run_type eq 'POLY';
+    if ($self->pcap_run_type eq 'NORMAL')
+    {
+	$self->{pcap_prog_type} = 'pcap.rep';
+	$self->{bdocs_prog_type} = 'bdocs.rep';
+	$self->{bclean_prog_type} = 'bclean.rep';
+	$self->{bcontig_prog_type} = 'bcontig.rep';
+	$self->{bconsen_prog_type} = 'bconsen';
+	$self->{bform_prog_type} = 'bform';
+    }
     
     return 1;
 }
 
-sub _get_pcap_params {
+sub _get_pcap_params
+{
     my ($self) = @_;
 
-    #pcap.rep <pcap.input.fof> - params -y #proc -z #proc no
-    #this is the same for all runs for now
-    #will have to change for bigger assemblies
+    #<pcap_prog_type> <pcap.input.fof> -y <val> -z <val>
 
-    return ' -l 50 -o 40 -s 1200 -w 90';
+    return ' -l 300 -w 200' if $self->pcap_run_type eq 'RAW_454';
+    return ' -l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'POLY';
+    return ' -l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'NORMAL';
+
+    return;
 }
 
-sub _get_bdocs_params {
-    #don't need options for now but will need them later
-    #bdocs.rep <pcap.input.fof> -y #proc -z (#bjobs)
-    #no params needed for small assemblies
+sub _get_bdocs_params
+{
+    my ($self) = @_;
+
+    return ' -l 300 -y 1 -z 0' if $self->pcap_run_type eq 'RAW_454';
+    return ' -y 1 -z 0' if $self->pcap_run_type eq 'POLY';
+    return ' -y 1 -z 0' if $self->pcap_run_type eq 'NORMAL';
+
+    return;
 }
 
-sub _get_bclean_params {
-    #don't need options for now but will need them later
-    #bclean.rep <pcap.input.fof> -y #proc -w #bdoics jobs
-    #no params needed for small assemblies
+sub _get_bclean_params
+{
+    my ($self) = @_;
+
+    return ' -w 1 -y 1' if $self->pcap_run_type eq 'RAW_454';
+    return ' -w 1 -y 1' if $self->pcap_run_type eq 'POLY';
+    return ' -w 1 -y 1' if $self->pcap_run_type eq 'NORMAL';
+
+    return;
 }
 
 sub _get_bcontig_params
 {
     my ($self) = @_;
 
-    #for now don't allow users to input own params
-    #since it's only needed for bigger assemblies
-
-    my @param_types = qw / TEST NORMAL RELAXED MORE_RELAXED STRINGENT /;
+    my @param_types = qw / NORMAL RELAXED MORE_RELAXED STRINGENT /;
 
     my $type = $self->parameter_setting;
 
     $self->error_message("Parameter must be NORMAL, RELAXED, MORE_RELAXED or STRINGENT") and return
 	unless grep (/^$type$/, @param_types);
 
-    if ($self->pcap_run_type eq '454_raw')
+    if ($self->pcap_run_type eq '454_RAW')
     {
-	return '-e 0 -f 2 -g 6 -k 20 -l 120 -p 82 -s 4000 -t 3 -w 180'
+	#for now just return the same params .
+	return '-p 90 -d 80'
 	    if $self->parameter_setting eq 'NORMAL';
 
-	return '-e 0 -f 2 -g 8 -k 20 -l 75 -p 82 -q 0 -s 1400 -t 2 -w 350'
+	return '-p 90 -d 80'
 	    if $self->parameter_setting eq 'RELAXED';
 
-	return '-e 0 -f 2 -g 2 -k 9 -l 75 -p 82 -q 0 -s 1400 -t 2 -w 350'
+	return '-p 90 -d 80'
 	    if $self->parameter_setting eq 'MORE_RELAXED';
 
-	return '-e 0 -f 2 -g 8 -k 20 -l 75 -p 82 -q 0 -s 1400 -t 2 -w 350'
+	return '-p 90 -d 80'
 	    if $self->parameter_setting eq 'STRINGENT';	
     }
-    else
+
+    if ($self->pcap_run_type eq 'POLY')
+    {
+	return '-e 1 -f 2 -g 6 -k 20 -l 120 -p 82 -s 4000 -t 3 -w 180'
+	    if $self->parameter_setting eq 'NORMAL';
+
+	return '-e 1 -f 2 -g 8 -k 20 -l 120 -p 82 -s 4000 -t 3 -w 180'
+	    if $self->parameter_setting eq 'RELAXED';
+
+	return '-e 1 -f 2 -g 2 -k 9 -l 120 -p 82 -s 4000 -t 3 -w 180'
+	    if $self->parameter_setting eq 'MORE_RELAXED';
+
+	return '-e 1 -f 2 -g 2 -k 1 -l 120 -p 90 -s 4000 -t 3 -w 180'
+	    if $self->parameter_setting eq 'STRINGENT';
+    }
+
+    if ($self->pcap_run_type eq 'NORMAL')
     {
 	return '-e 1 -f 2 -g 6 -k 20 -l 120 -p 82 -s 4000 -t 3 -w 180'
 	    if $self->parameter_setting eq 'NORMAL';
@@ -986,17 +1021,29 @@ sub _get_bcontig_params
     return;
 }
 
-sub _get_bconsen_params {
-    #don't need options for now but will need them later
-    #bconsen <pcap.input.fof> -y #proc -z #proc no no
+sub _get_bconsen_params
+{
+    my ($self) = @_;
+
+    return ' -y 1 -z 0' if $self->pcap_run_type eq 'RAW_454';
+    return ' -y 1 -z 0' if $self->pcap_run_type eq 'POLY';
+    return ' -y 1 -z 0' if $self->pcap_run_type eq 'NORMAL';
+
+    return;
 }
 
-sub _get_bform_params {
-    #don't need options for now but will need them later
-    #bform <pcap.input.fof.pcap> -y #jobs
+sub _get_bform_params
+{
+    my ($self) = @_;
+
+    return ' -y 1' if $self->pcap_run_type eq 'RAW_454';
+    return ' -y 1' if $self->pcap_run_type eq 'POLY';
+    return ' -y 1' if $self->pcap_run_type eq 'NORMAL';
+
+    return;
 }
 
-#TODO: may need to add more stringent error checking for the functions below
+
 sub run_pcap
 {
     my ($self) = @_;
@@ -1030,7 +1077,7 @@ sub run_bdocs
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
 
-    my $ec = system ($bdocs_prog.' '.$self->{pcap_root_name});
+    my $ec = system ($bdocs_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bdocs_params);
 
     $self->error_message("bdocs.rep returned exit code $ec\n") and return if $ec;
 
@@ -1048,7 +1095,7 @@ sub run_bclean
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
 
-    my $ec = system ($bclean_prog.' '.$self->{pcap_root_name});
+    my $ec = system ($bclean_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bclean_params);
 
     $self->error_message("bclean returned exit code $ec\n") and return
 	if $ec;
@@ -1067,7 +1114,7 @@ sub run_bcontig
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
 
-    my $ec = system ($bcontig_prog.' '.$self->{pcap_root_name}." ".$self->_get_bcontig_params);
+    my $ec = system ($bcontig_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bcontig_params);
 
     $self->error_message("bcontig returned exit code $ec\n") and return if $ec;
 
@@ -1085,7 +1132,7 @@ sub run_bconsen
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
 
-    my $ec = system ($bconsen_prog.' '.$self->{pcap_root_name});
+    my $ec = system ($bconsen_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bconsen_params);
 
     $self->error_message("bconsen returned exit code $ec\n") and return
 	if $ec;
@@ -1102,7 +1149,7 @@ sub run_bform
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir("$dir/edit_dir") );
 
-    my $ec = system ('bform '.$self->{pcap_root_name}.'.pcap ');
+    my $ec = system ('bform '.$self->{pcap_root_name}.'.pcap '.$self->_get_bform_params);
 
     $self->error_message("bform returned exit code $ec\n") and return
 	if $ec;
