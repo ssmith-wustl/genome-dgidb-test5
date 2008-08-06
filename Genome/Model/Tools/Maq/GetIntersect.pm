@@ -1,0 +1,65 @@
+package Genome::Model::Tools::Maq::GetIntersect;
+
+use above "Genome";
+
+class Genome::Model::Tools::Maq::GetIntersect {
+    is => 'Genome::Model::Tools::Maq',
+    has => [
+        input => {
+            type => 'String',
+            doc => 'File path for input map',
+        },
+        output => {
+            type => 'String',
+            doc => 'File path for output map',
+        },
+        snpfile => {
+            type => 'String',
+            doc => 'File path for file with seqid/positions',
+        }
+    ],
+};
+
+sub help_brief {
+    "grab reads that intersect seqid/positions",
+}
+
+sub help_synopsis {
+    my $self = shift;
+    return <<"EOS"
+gt get-intersect --input=in.map --snpfile=snpfile --output=out.map
+EOS
+}
+
+sub help_detail {                           
+    return <<EOS 
+This tool removes reads that do not intersect positions in the provided snp file.
+EOS
+}
+
+sub execute {
+    $DB::single = $DB::stopper;
+    my $self = shift;
+    my $in = $self->input;
+    my $output = $self->output;
+    my $snp = $self->snpfile;
+    unless ($in and $output and $snp and -f $in and -f $snp) {
+        $self->error_message("Bad params!");
+        $self->usage_message($self->help_usage_complete_text);
+        return;
+    }
+    
+    # jit use so we don't compile when making the object for other reasons...
+    require Genome::Model::Tools::Maq::GetIntersect_C;
+    my $result;
+   
+    $result = Genome::Model::Tools::Maq::GetIntersect_C::write_seq_ov($in,$snp, $output);
+    
+    $result = !$result; # c -> perl
+
+    $self->result($result);
+    return $result;
+}
+
+1;
+
