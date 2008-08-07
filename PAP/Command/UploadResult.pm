@@ -5,6 +5,10 @@ use warnings;
 
 use Workflow;
 
+use Bio::DB::BioDB;
+use Bio::DB::Query::BioQuery;
+
+
 class PAP::Command::UploadResult {
     is  => ['PAP::Command'],
     has => [
@@ -44,13 +48,58 @@ EOS
 sub execute {
     
     my $self = shift;
+
+
+    my $biosql_namespace = 'biosql_namespace';
     
+    my $dbadp = Bio::DB::BioDB->new(
+                                    -database => 'biosql',
+                                    -user     => 'sg_user',
+                                    -pass     => 'sgus3r',
+                                    -dbname   => 'DWDEV',
+                                    -driver   => 'Oracle',
+                                );
+    
+    my $adp = $dbadp->get_object_adaptor('Bio::SeqFeatureI');
+
+    my $query = Bio::DB::Query::BioQuery->new();
+    
+    $query->datacollections(['Bio::SeqFeatureI f']);
+    $query->where(['f.display_name = ?']);
     
     foreach my $ref (@{$self->bio_seq_features()}) {
+
         foreach my $feature (@{$ref}) {
-            ## Store Feature
+
+            my $display_name = $feature->display_name();
+            
+            my $result = $adp->find_by_query(
+                                             $query,
+                                             -name   => 'pap_upload_result',
+                                             -values => [ $display_name ]
+                                         );
+            
+            my $db_feature = $result->next_object();
+            
+            unless (defined($db_feature)) {
+                warn "failed to find feature object for '$display_name'";
+                next;
+            }
+
+            my $feature_ac    = $feature->annotation();
+            my $db_feature_ac = $db_feature->annotation();
+
+            foreach my $annotation ($feature_ac->get_Annotations()) {
+
+                $db_feature_ac->add_Annotation($annotation);
+                
+            }
+            
         }
+        
     }
+
+    $adp->rollback();
     
     return 1;
     
