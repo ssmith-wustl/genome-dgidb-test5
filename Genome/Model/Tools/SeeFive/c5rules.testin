@@ -1,0 +1,50 @@
+
+SeeFive.0 [Release 2.05]     Wed Aug  6 18:16:05 2008
+-------------------
+
+    Options:
+        Application `./testing/first'
+        Rule-based classifiers
+        Boosted classifiers
+
+Read 870 cases (21 attributes) from ./testing/first.data
+Read misclassification costs from ./testing/first.costs
+
+-----  Trial 0:  -----
+
+Rules:
+
+Rule 0/1: (279/24, lift 2.1)
+        avg_sum_of_mismatches <= 35
+        avg_base_quality > 18
+        unique_variant_for_reads_ratio > 0.08
+        ->  class G  [0.911]
+
+Rule 0/2: (216/29, lift 2.0)
+        pre-27_unique_variant_context_reads_ratio > 0.3333333
+        ->  class G  [0.862]
+
+Rule 0/3: (187/5, lift 1.7)
+        max_base_quality <= 26
+        ->  class WT  [0.968]
+
+Rule 0/4: (220/10, lift 1.7)
+        avg_base_quality <= 16
+        ->  class WT  [0.950]
+
+Rule 0/5: (98/5, lift 1.7)
+        maq_snp_quality <= 23
+        ->  class WT  [0.940]
+
+Rule 0/6: (101/25, lift 1.3)
+        max_mapping_quality <= 45
+        ->  class WT  [0.748]
+
+Rule 0/7: (654/191, lift 1.3)
+        pre-27_unique_variant_context_reads_ratio <= 0.3333333
+        ->  class WT  [0.707]
+
+Default class: WT
+
+-----  Trial 1:  -----
+

@@ -14,16 +14,4 @@ UR::Object::Type->define(
     ],
 );
 
-sub help_brief{
-    return "Stupid test";
-}
-
-sub help_synopsis{
-    return "gt boolean-test-again --list <list> --logfile <log file for abnormal backups> --separation_char <char>";
-}
-
-sub help_detail{
-    return "This is a stupid module designed to test out the boolean expression engine.  If found in production, please delete.";
-}
-
 1;

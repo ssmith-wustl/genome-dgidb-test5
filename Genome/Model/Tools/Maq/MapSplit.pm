@@ -5,8 +5,6 @@ use warnings;
 
 use above "Genome";
 use Command;
-use Genome::Model::Tools::Maq::Map::Reader;
-use Genome::Model::Tools::Maq::Map::Writer;
 
 class Genome::Model::Tools::Maq::MapSplit {
     is => 'Genome::Model::Tools::Maq',
@@ -79,6 +77,8 @@ sub create {
 
 sub execute {
     my $self = shift;
+    require Genome::Model::Tools::Maq::Map::Reader;
+    require Genome::Model::Tools::Maq::Map::Writer;
 
     my $map_reader = Genome::Model::Tools::Maq::Map::Reader->new;
     $map_reader->open($self->map_file);
