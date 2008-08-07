@@ -71,7 +71,12 @@ sub create {
 # Operating directories
 
 sub base_parent_directory {
-		"/gscmnt/839/info/medseq"
+    "/gscmnt/839/info/medseq"
+}
+
+sub base_model_comparison_directory {
+    my $self = shift;
+    return $self->base_parent_directory . "/model_comparisons";
 }
 
 sub alignment_links_directory {
