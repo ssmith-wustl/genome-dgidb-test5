@@ -18,6 +18,12 @@ class Genome::Model::Tools::Snp::Filters::DtrSeeFive{
             is_optional => 0,
             doc => 'File of experimental metrics for the model'
         },
+        experimental_metric_dtr_file =>
+        {
+            type => 'String',
+            is_optional => 0 ,
+            doc => 'File of more metrics', 
+        },   
         basedir => 
         { 
             type => 'String',
@@ -62,6 +68,7 @@ sub help_synopsis {
 sub execute {
     my $self=shift;
     my $file = $self->experimental_metric_model_file;
+    my $dtr_file = $self->experimental_metric_dtr_file;
     my $basename=$self->basedir . "/filtered";
     my $specificity = $self->specificity; 
     my %specificity_maqq = (
@@ -80,8 +87,13 @@ sub execute {
     $bq ||= 16;
 
     my $handle = new FileHandle;
-    $handle->open($file, "r") or die "Couldn't open annotation file\n";
-    my $header_line = $handle->getline; #store header
+    $handle->open($file, "r") or die "Couldn't open experimental metrics file\n";
+    my $dtr_handle = new FileHandle;
+    $dtr_handle->open($dtr_file, "r") or die "Couldn't open indendified metrics file\n";
+    
+    #we want to pass over dtr's columns but save the other file.
+    my $header_line = $dtr_handle->getline; #store header
+    my $other_head= $handle->getline;
     chomp $header_line;
     my @headers = split(/,\s*/,$header_line);
     for (@headers) { s/\-/MINUS/g; s/\+/PLUS/g; };
@@ -110,19 +122,20 @@ sub execute {
         return;
     }
     
-    while(my $line=$handle->getline) {
+    while(my $line=$dtr_handle->getline) {
         chomp $line;
+        
         $line =~ s/NULL/0/g;
         if ($line =~ /^chromosome/) { die "bad line (something terrible happened): $line!" };
-       
+        my $metrics_line = $handle->getline;
         my %data; 
         @data{@headers} = split(/,\s*/,$line);
         my ($decision, $prob, $debug_info) = $fref->(\%data);
 
         if ($decision eq 'keep') {
-            print $keep_handle $line,", $debug_info\n";    
+            print $keep_handle $metrics_line,",", $line,",","$debug_info\n";    
         }  else {
-            print $remove_handle $line,", $debug_info\n";    
+            print $remove_handle $metrics_line,",", $line, "," , "$debug_info\n";    
         }
     }
     $keep_handle->close();
