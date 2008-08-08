@@ -1,0 +1,21 @@
+
+-----  Trial 0:  -----
+
+Rules:
+
+Rule 0/1: (450/170, lift 1.1)
+	avg_base_quality > 18
+	->  class G  [0.622]
+
+Rule 0/2: (76/5, lift 2.0)
+	avg_base_quality <= 18
+	->  class WT  [0.923]
+
+Rule 0/3: (111/9, lift 2.0)
+	reference allele = C
+	maq_snp_quality <= 43
+	->  class WT  [0.912]
+
+Default class: G
+
+

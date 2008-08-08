@@ -1,0 +1,41 @@
+
+-----  Trial 2:  -----
+
+Rules:
+
+Rule 2/1: (206.9/67, lift 1.5)
+	maq_snp_quality > 79
+	->  class G  [0.675]
+
+Rule 2/2: (231.6/82.7, lift 1.4)
+	maq_snp_quality > 29
+	avg_mapping_quality > 21
+	max_base_quality > 26
+	fraction_reads_with_max_base_quality > 0.05263158
+	unique_variant_for_reads_ratio > 0.07142857
+	->  class G  [0.642]
+
+Rule 2/3: (207.9/99.9, lift 1.1)
+	max_base_quality > 26
+	fraction_reads_with_max_base_quality > 0.05263158
+	maq_strong_weak_qual_difference > -72
+	->  class G  [0.519]
+
+Rule 2/4: (53.9, lift 1.1)
+	maq_snp_quality <= 79
+	max_base_quality <= 26
+	->  class WT  [0.982]
+
+Rule 2/5: (132.6/5.6, lift 1.0)
+	maq_snp_quality <= 29
+	fraction_reads_with_max_base_quality > 0.05263158
+	maq_strong_weak_qual_difference <= -72
+	->  class WT  [0.951]
+
+Rule 2/6: (141.1/8.5, lift 1.0)
+	maq_snp_quality <= 79
+	fraction_reads_with_max_base_quality <= 0.05263158
+	->  class WT  [0.934]
+
+Default class: G
+

@@ -1,0 +1,358 @@
+
+C5.0 [Release 2.05]  	Thu Aug  7 12:58:39 2008
+-------------------
+
+    Options:
+	Application `./testing/C45'
+	Boosted classifiers
+	Rule-based classifiers
+
+Read 526 cases (23 attributes) from ./testing/C45.data
+Read misclassification costs from ./testing/C45.costs
+
+-----  Trial 0:  -----
+
+Rules:
+
+Rule 0/1: (450/170, lift 1.1)
+	avg_base_quality > 18
+	->  class G  [0.622]
+
+Rule 0/2: (76/5, lift 2.0)
+	avg_base_quality <= 18
+	->  class WT  [0.923]
+
+Rule 0/3: (111/9, lift 2.0)
+	reference allele = C
+	maq_snp_quality <= 43
+	->  class WT  [0.912]
+
+Default class: G
+
+-----  Trial 1:  -----
+
+Rules:
+
+Rule 1/1: (214.5/98.1, lift 1.1)
+	fraction_reads_with_max_base_quality > 0.173913
+	->  class G  [0.542]
+
+Rule 1/2: (501.7/250.7, lift 1.0)
+	unique_variant_for_reads_ratio > 0.04545455
+	->  class G  [0.500]
+
+Rule 1/3: (111.2/0.9, lift 1.4)
+	max_mapping_quality <= 75
+	fraction_reads_with_max_base_quality <= 0.173913
+	unique_variant_for_reads_ratio <= 0.04545455
+	->  class WT  [0.983]
+
+Rule 1/4: (84/11.2, lift 1.2)
+	avg_mapping_quality <= 34
+	->  class WT  [0.858]
+
+Default class: G
+
+-----  Trial 2:  -----
+
+Rules:
+
+Rule 2/1: (206.9/67, lift 1.5)
+	maq_snp_quality > 79
+	->  class G  [0.675]
+
+Rule 2/2: (231.6/82.7, lift 1.4)
+	maq_snp_quality > 29
+	avg_mapping_quality > 21
+	max_base_quality > 26
+	fraction_reads_with_max_base_quality > 0.05263158
+	unique_variant_for_reads_ratio > 0.07142857
+	->  class G  [0.642]
+
+Rule 2/3: (207.9/99.9, lift 1.1)
+	max_base_quality > 26
+	fraction_reads_with_max_base_quality > 0.05263158
+	maq_strong_weak_qual_difference > -72
+	->  class G  [0.519]
+
+Rule 2/4: (53.9, lift 1.1)
+	maq_snp_quality <= 79
+	max_base_quality <= 26
+	->  class WT  [0.982]
+
+Rule 2/5: (132.6/5.6, lift 1.0)
+	maq_snp_quality <= 29
+	fraction_reads_with_max_base_quality > 0.05263158
+	maq_strong_weak_qual_difference <= -72
+	->  class WT  [0.951]
+
+Rule 2/6: (141.1/8.5, lift 1.0)
+	maq_snp_quality <= 79
+	fraction_reads_with_max_base_quality <= 0.05263158
+	->  class WT  [0.934]
+
+Default class: G
+
+-----  Trial 3:  -----
+
+Rules:
+
+Rule 3/1: (38/5, lift 2.0)
+	variant allele = C
+	max_sum_of_mismatches <= 47
+	unique_variant_for_reads_ratio > 0.04545455
+	->  class G  [0.851]
+
+Rule 3/2: (11.6/2.2, lift 1.8)
+	variant allele = G
+	pre-27_unique_variant_context_reads_ratio > 0.7105263
+	->  class G  [0.762]
+
+Rule 3/3: (72.5/33.9, lift 1.2)
+	variant allele = A
+	unique_variant_for_reads_ratio > 0.1538462
+	maq_avg_num_of_hits <= 1.69
+	->  class G  [0.531]
+
+Rule 3/4: (330.2/165.4, lift 1.2)
+	maq_snp_quality > 57
+	->  class G  [0.499]
+
+Default class: WT
+
+-----  Trial 4:  -----
+
+Rules:
+
+Rule 4/1: (332/152.5, lift 1.3)
+	maq_snp_quality > 43
+	avg_mapping_quality > 34
+	unique_variant_for_reads_ratio > 0.04545455
+	->  class G  [0.541]
+
+Rule 4/2: (191.8/98.2, lift 1.2)
+	maq_snp_quality > 3
+	avg_mapping_quality > 34
+	max_base_quality > 26
+	max_windowed_quality <= 28
+	unique_variant_for_reads_ratio > 0.07142857
+	maq_avg_num_of_hits <= 1
+	->  class G  [0.488]
+
+Default class: WT
+
+-----  Trial 5:  -----
+
+Rules:
+
+Rule 5/1: (52.2/7.3, lift 2.1)
+	maq_snp_quality > 144
+	max_sum_of_mismatches <= 70
+	avg_windowed_quality > 20
+	unique_variant_rev_reads_ratio > 0.05263158
+	->  class G  [0.847]
+
+Rule 5/2: (150.5/56.6, lift 1.5)
+	avg_mapping_quality <= 47
+	max_mapping_quality > 27
+	max_mapping_quality <= 77
+	max_sum_of_mismatches <= 63
+	fraction_reads_with_max_windowed_quality <= 2.5
+	unique_variant_rev_reads_ratio > 0.05263158
+	unique_variant_rev_reads_ratio <= 0.4090909
+	pre-27_unique_variant_for_reads_ratio > 0.07407407
+	->  class G  [0.622]
+
+Rule 5/3: (149.2/85.3, lift 1.0)
+	avg_mapping_quality > 48
+	unique_variant_rev_reads_ratio > 0.05263158
+	->  class G  [0.429]
+
+Rule 5/4: (180.5/105.8, lift 1.0)
+	max_sum_of_mismatches <= 63
+	unique_variant_rev_reads_ratio <= 0.4090909
+	pre-27_unique_variant_rev_reads_ratio > 0.173913
+	->  class G  [0.414]
+
+Default class: WT
+
+-----  Trial 6:  -----
+
+Rules:
+
+Rule 6/1: (456.6/271, lift 1.0)
+	maq_snp_quality > 29
+	pre-27_unique_variant_for_reads_ratio > 0
+	->  class G  [0.407]
+
+Default class: WT
+
+-----  Trial 7:  -----
+
+Rules:
+
+Rule 7/1: (14.7/2.8, lift 1.9)
+	reference allele = A
+	avg_sum_of_mismatches <= 32
+	pre-27_unique_variant_for_reads_ratio > 0.2352941
+	->  class G  [0.775]
+
+Rule 7/2: (56.3/13.5, lift 1.9)
+	reference allele = T
+	avg_sum_of_mismatches <= 32
+	max_base_quality > 26
+	->  class G  [0.752]
+
+Rule 7/3: (241.2/126.3, lift 1.2)
+	avg_sum_of_mismatches <= 32
+	max_base_quality > 26
+	unique_variant_context_reads_ratio <= 0.6818182
+	->  class G  [0.476]
+
+Rule 7/4: (175/93.2, lift 1.2)
+	maq_snp_quality > 99
+	->  class G  [0.468]
+
+Rule 7/5: (85.5/46.8, lift 1.1)
+	variant allele = A
+	reference allele = G
+	avg_sum_of_mismatches <= 32
+	->  class G  [0.454]
+
+Default class: WT
+
+-----  Trial 8:  -----
+
+Rules:
+
+Rule 8/1: (24.7/3.9, lift 2.0)
+	maq_snp_quality > 152
+	fraction_reads_with_max_windowed_quality <= 0.1081081
+	->  class G  [0.815]
+
+Rule 8/2: (335.7/195.8, lift 1.0)
+	maq_snp_quality > 16
+	avg_base_quality > 18
+	fraction_reads_with_max_windowed_quality > 0.1081081
+	->  class G  [0.417]
+
+Rule 8/3: (141.3/87.6, lift 1.0)
+	variant allele = C
+	->  class G  [0.382]
+
+Default class: WT
+
+-----  Trial 9:  -----
+
+Rules:
+
+Rule 9/1: (31.4/2.4, lift 2.3)
+	variant allele = T
+	reference allele = C
+	fraction_reads_with_max_sum > 0.02702703
+	avg_windowed_quality > 21
+	unique_variant_context_reads_ratio <= 0.6818182
+	->  class G  [0.899]
+
+Rule 9/2: (61.8/26.7, lift 1.4)
+	variant allele = A
+	reference allele = G
+	avg_mapping_quality <= 50
+	avg_windowed_quality > 21
+	fraction_reads_with_max_windowed_quality <= 1.666667
+	->  class G  [0.565]
+
+Rule 9/3: (81.5/41.6, lift 1.2)
+	reference allele = A
+	max_mapping_quality > 44
+	fraction_reads_with_max_sum <= 0.5
+	max_base_quality > 26
+	avg_windowed_quality > 21
+	->  class G  [0.490]
+
+Rule 9/4: (113.6/61.7, lift 1.2)
+	reference allele = T
+	max_base_quality > 26
+	avg_windowed_quality > 21
+	->  class G  [0.458]
+
+Default class: WT
+
+
+Evaluation on training data (526 cases):
+
+Trial	           Rules         
+-----	  -----------------------
+	    No      Errors   Cost
+
+   0	     3   95(18.1%)   0.28
+   1	     4  157(29.8%)   0.33
+   2	     6   89(16.9%)   0.29
+   3	     4   87(16.5%)   0.43
+   4	     2   86(16.3%)   0.35
+   5	     4  133(25.3%)   0.60
+   6	     1   99(18.8%)   0.41
+   7	     5  107(20.3%)   0.56
+   8	     3  127(24.1%)   0.55
+   9	     4   92(17.5%)   0.66
+boost	         51( 9.7%)   0.16   <<
+
+
+	   (a)   (b)    <-classified as
+	  ----  ----
+	   277     8    (a): class G
+	    43   198    (b): class WT
+
+
+	Attribute usage:
+
+	    100%  avg_base_quality
+	     99%  maq_snp_quality
+	     97%  unique_variant_for_reads_ratio
+	     84%  avg_mapping_quality
+	     83%  fraction_reads_with_max_base_quality
+	     82%  max_base_quality
+	     71%  reference allele
+	     67%  pre-27_unique_variant_for_reads_ratio
+	     65%  fraction_reads_with_max_windowed_quality
+	     62%  unique_variant_rev_reads_ratio
+	     50%  avg_sum_of_mismatches
+	     50%  avg_windowed_quality
+	     49%  max_sum_of_mismatches
+	     48%  max_mapping_quality
+	     47%  variant allele
+	     46%  maq_strong_weak_qual_difference
+	     40%  unique_variant_context_reads_ratio
+	     37%  maq_avg_num_of_hits
+	     29%  max_windowed_quality
+	     26%  pre-27_unique_variant_rev_reads_ratio
+	     20%  fraction_reads_with_max_sum
+	      3%  pre-27_unique_variant_context_reads_ratio
+
+
+Evaluation on test data (61878 cases):
+
+Trial	           Rules         
+-----	  -----------------------
+	    No      Errors   Cost
+
+   0	     3 3221( 5.2%)   0.25
+   1	     4 2001( 3.2%)   0.14
+   2	     6 6603(10.7%)   0.52
+   3	     4 9477(15.3%)   0.76
+   4	     2 6616(10.7%)   0.53
+   5	     4 12379(20.0%)   0.99
+   6	     1 6295(10.2%)   0.50
+   7	     5 11074(17.9%)   0.89
+   8	     3 10765(17.4%)   0.86
+   9	     4 14594(23.6%)   1.18
+boost	       2711( 4.4%)   0.21   <<
+
+
+	   (a)   (b)    <-classified as
+	  ----  ----
+	 58749  2618    (a): class G
+	    93   418    (b): class WT
+
+
+Time: 0.6 secs
