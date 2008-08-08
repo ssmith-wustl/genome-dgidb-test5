@@ -155,7 +155,7 @@ sub generate_figure_3_files {
               last;
               
           }
-          @cur_somatic_snp = split(/,\s+/, $somatic_line);
+          @cur_somatic_snp = split(/,\s*/, $somatic_line);
           
           while(!@cur_anno_snp || ($cur_anno_snp[1] < $cur_somatic_snp[1]) ) {
               #we hit this block because a) this is our first time through
@@ -168,7 +168,7 @@ sub generate_figure_3_files {
                   $self->error_message("Last somatic snp was\n " . join (" ", @cur_somatic_snp) . "last anno snp was\n " . join(" ", @cur_anno_snp) );
                   last;
               }
-              @cur_anno_snp= split (/,/, $anno_line);
+              @cur_anno_snp= split (/,\s*/, $anno_line);
           } 
           while($cur_anno_snp[1] == $cur_somatic_snp[1] ) {
           #if we get here then the idea is we have a somatic line with the same position as a snp line.
@@ -344,7 +344,7 @@ sub generate_figure_3_files {
                   $self->error_message("Last somatic snp was\n " . @cur_somatic_snp . "last anno snp was\n " . @cur_anno_snp );
                   last;
               }
-              @cur_anno_snp= split (/,/, $anno_line);
+              @cur_anno_snp= split (/,\s*/, $anno_line);
              
           }
       }
