@@ -3,7 +3,7 @@ package Genome::Model::Tools::Snp::Filters::DtrSeeFive;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use IO::File;
 use Workflow;
@@ -50,14 +50,16 @@ class Genome::Model::Tools::Snp::Filters::DtrSeeFive{
             return $self->basedir . '/chr' . $self->ref_seq_id . '.keep.csv';
             |
         },
+        c5src => 
+        {
+            doc => "the C5 source logic for the 'trial'",
+            is => 'C5',            
+        }
     ]
 };
 
 operation_io Genome::Model::Tools::Snp::Filters::DtrSeeFive {
-    input  => [ 'parent_event' ],
-    input  => [ 'ref_seq_id' ],
-    input  => [ 'basedir' ],
-    input  => [ 'experimental_metric_model_file' ],
+    input  => [ 'ref_seq_id', 'basedir', 'experimental_metric_model_file' , 'experimental_metric_dtr_file', 'c5src'  ],
     output => [ 'decision_tree_output' ],
 };
 
@@ -69,7 +71,6 @@ sub execute {
     my $self=shift;
     my $file = $self->experimental_metric_model_file;
     my $dtr_file = $self->experimental_metric_dtr_file;
-    my $basename=$self->basedir . "/filtered";
     my $specificity = $self->specificity; 
     my %specificity_maqq = (
         min => [ 5, 16 ],
@@ -94,21 +95,21 @@ sub execute {
     #we want to pass over dtr's columns but save the other file.
     my $header_line = $dtr_handle->getline; #store header
     my $other_head= $handle->getline;
+    chomp $other_head;
     chomp $header_line;
     my @headers = split(/,\s*/,$header_line);
-    for (@headers) { s/\-/MINUS/g; s/\+/PLUS/g; };
+    for (@headers) { s/\-/MINUS/g; s/\+/PLUS/g; s/\s/SPACE/; };
     
     my $keep_handle = new FileHandle;
     my $remove_handle = new FileHandle;
     my $keep_file = $self->decision_tree_output;
-    my $remove_file = $basename . 'chr' . $self->ref_seq_id . '.remove.csv';
+    my $remove_file = $self->basedir . 'chr' . $self->ref_seq_id . '.remove.csv';
     $keep_handle->open("$keep_file","w") or die "Couldn't open keep output file $keep_file: $!\n";
     $remove_handle->open("$remove_file","w") or die "Couldn't open remove output file $remove_file: $!\n";
 
-    print $keep_handle $header_line . ", rule\n";
-    print $remove_handle $header_line . ", rule\n";
+    print $keep_handle $other_head , "," , $header_line , "." , "rule\n";
+    print $remove_handle $other_head , "," , $header_line , "," , "rule\n";
 
-    $DB::single = 1;
     my $c5src = $self->c5src();
     my @trials = Genome::Model::Tools::SeeFive::Trial->create_list_from_c5src($c5src);
     unless (@trials) {
@@ -131,11 +132,19 @@ sub execute {
         my %data; 
         @data{@headers} = split(/,\s*/,$line);
         my ($decision, $prob, $debug_info) = $fref->(\%data);
-
-        if ($decision eq 'keep') {
+        unless ($decision) {
+            $DB::single=1;
+            ($decision, $prob, $debug_info) = $fref->(\%data);
+            die "failed to get a decision for $line!";
+        }
+        if ($decision eq 'G') {
             print $keep_handle $metrics_line,",", $line,",","$debug_info\n";    
-        }  else {
+        }  
+        elsif ($decision eq 'WT') {
             print $remove_handle $metrics_line,",", $line, "," , "$debug_info\n";    
+        }
+        else {
+            die "unhandled decision $decision from line $line!";
         }
     }
     $keep_handle->close();
@@ -144,7 +153,7 @@ sub execute {
     return 1;
 }
 
-sub c5src {
+sub _demo_c5src {
     return <<EOS
 
 SeeFive.0 [Release 2.05]     Wed Aug  6 18:16:05 2008
