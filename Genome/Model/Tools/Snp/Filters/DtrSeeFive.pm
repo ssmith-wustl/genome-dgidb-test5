@@ -138,6 +138,7 @@ sub execute {
             ($decision, $prob, $debug_info) = $fref->(\%data);
             die "failed to get a decision for $line!";
         }
+        $debug_info = 'default' if not defined $debug_info;
         if ($decision eq 'G') {
             print $keep_handle $metrics_line,",", $line,",","$debug_info\n";    
         }  
