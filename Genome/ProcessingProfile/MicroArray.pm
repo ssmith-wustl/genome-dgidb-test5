@@ -7,7 +7,7 @@ use warnings;
 use above "Genome";
 
 class Genome::ProcessingProfile::MicroArray {
-    is => 'Genome::ProcessingProfile',
+    is => 'Genome::ProcessingProfile::ImportedVariants',
 };
 
 my @printable_property_names;

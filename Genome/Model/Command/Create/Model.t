@@ -146,13 +146,13 @@ my $ppirs = Genome::ProcessingProfile->create(type_name => 'imported reference s
 ok($ppirs, 'creation worked imported reference sequence processing profile');
 isa_ok($ppirs ,'Genome::ProcessingProfile::ImportedReferenceSequence');
 
-my $ppivw = Genome::ProcessingProfile->create(type_name => 'imported variants watson');
-ok($ppivw, 'creation worked imported variants watson processing profile');
-isa_ok($ppivw ,'Genome::ProcessingProfile::ImportedVariantsWatson');
+my $ppivw = Genome::ProcessingProfile->create(type_name => 'watson');
+ok($ppivw, 'creation worked watson processing profile');
+isa_ok($ppivw ,'Genome::ProcessingProfile::Watson');
 
-my $ppivv = Genome::ProcessingProfile->create(type_name => 'imported variants venter');
-ok($ppivv, 'creation worked imported variants venter processing profile');
-isa_ok($ppivv,'Genome::ProcessingProfile::ImportedVariantsVenter');
+my $ppivv = Genome::ProcessingProfile->create(type_name => 'venter');
+ok($ppivv, 'creation worked venter processing profile');
+isa_ok($ppivv,'Genome::ProcessingProfile::Venter');
 
 my $ppma = Genome::ProcessingProfile->create(type_name => 'micro array');
 ok($ppma, 'creation worked micro array processing profile');
@@ -184,15 +184,15 @@ isa_ok($gmirs ,'Genome::Model::ImportedReferenceSequence');
 
 my $gmivw = Genome::Model->create(processing_profile_id => $ppivw->id,
                                  instrument_data => $watson_test_data,
-                                 name => 'imported variants watson test1');
-ok($gmivw, 'creation worked imported variants watson model');
-isa_ok($gmivw ,'Genome::Model::ImportedVariantsWatson');
+                                 name => 'watson test');
+ok($gmivw, 'creation worked watson model');
+isa_ok($gmivw ,'Genome::Model::Watson');
 
 my $gmivv = Genome::Model->create(processing_profile_id => $ppivv->id,
                                  instrument_data => $venter_test_data,
-                                 name => 'imported variants venter test1');
-ok($gmivv, 'creation worked imported variants venter model');
-isa_ok($gmivv ,'Genome::Model::ImportedVariantsVenter');
+                                 name => 'venter test');
+ok($gmivv, 'creation worked venter model');
+isa_ok($gmivv ,'Genome::Model::Venter');
 
 my $gmma = Genome::Model::MicroArray->create(processing_profile_id => $ppma->id,
                                  name => 'micro array test',

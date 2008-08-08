@@ -9,135 +9,47 @@ use File::Basename;
 use Sort::Naturally;
 
 class Genome::Model::MicroArray{
-    is => 'Genome::Model',
+    is => 'Genome::Model::ImportedVariants',
     has => [
-        instrument_data => { is     => 'String',
-                                             doc    => 'The genotype submission file to be used as microarray data. This file will be copied to the appropriate directory.',
-        }
-    ],
-    has_optional => [
-        data_file_fh                    => { is     => 'IO::File',
-                                             doc    => 'The file handle to the micro array data file. This is set internally. Not a parameter, just a class variable.',
-        },
-        current_line                    => { is     => 'Hash',
-                                             doc    => 'The current line of input most recently returned from next. Not a parameter, just a class variable.',
-        },
+        
         file_sample_name                => { is     => 'String',
                                              doc    => 'The sample name of interest in the genotype submission file (if there is more than one. This can be left blank if there is only one sample in the file.',
+                                             is_optional => 1,
         }
     ]
 };
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-
-    
-    # Grab the data file, make the appropriate directory and copy the file there with an appropriate name
-    my $original_file = $self->instrument_data();
-    if (!$original_file) {
-        $self->error_message("Genotype submission file not defined!");
-        return undef;
-    }
-
-    # check if successfully made directory and copied file (return value 0)
-    my $target_dir = $self->_base_directory();
-    my $target_file = $self->_data_file();
-    unless (-e $target_dir) {
-        unless (system("mkdir $target_dir") == 0) {
-            $self->error_message("Failed to mkdir $target_dir");
-            return undef;
-        }
-    }
-
-    $self->status_message("Copying $original_file...");
-    unless (system("cp $original_file $target_file") == 0) {
-        $self->error_message("Failed to cp file $original_file");
-        return undef;
-    }
-
-    # Sort the genotype submission file
-    $self->status_message("Sorting the file...");
-    my $sorted_data_file = $self->_sort_genotype_submission_file();
-
-    if (!$sorted_data_file) {
-        $self->error_message("Sort genotype submission file failed!");
-        return undef;
-    }
-
-    return $self;
-}
-# returns the parsed from a single line of the micro array data file
-# returns chrom, pos, ref, allele1, allele2, or undef if no more lines left on fh
-sub get_next_line {
-    my $self = shift;
-    my $current_line;
-
-    # Set up the fh if it has not been yet
-    if (!$self->data_file_fh) {
-        $self->data_file_fh(IO::File->new($self->_sorted_file));
-    }
-
-    $current_line = $self->_parse_genotype_submission_line($self->data_file_fh);
-
-    $self->current_line($current_line);
-
-    if ($current_line->{unparsed_line}) {
-        return $current_line;    
-    } else {
-        return undef;
-    }    
-}
 
 # Returns current directory where the microarray data is housed
 sub _base_directory {
     my $self = shift;
 
-    # Replace all spaces with underbars to insure proper directory access
-    my $name = $self->name;
-    $name =~ s/ /_/g;
-
-    return '/gscmnt/834/info/medseq/microarray_data/'.$name;
-}
-
-# Returns the full path to the file where the microarray data should be
-sub _data_file {
-    my $self = shift;
-
-    my $base_dir = $self->_base_directory;
-    my $model_name = $self->name;
-
-    # Replace spaces with underscores for a valid file name
-    $model_name =~ s/ /_/g;
-    
-    my $file_location = "$base_dir/$model_name.tsv";
-
-   return $file_location; 
+    return '/gscmnt/834/info/medseq/imported_variants_data/microarray_data/';
 }
 
 # Returns the full path to the file where the sorted microarray data should be
 sub _sorted_file {
     my $self = shift;
 
-    my $base_dir = $self->_base_directory;
-    my $model_name = $self->name;
+    my $base_dir = $self->_model_directory;
 
-    # Replace spaces with underscores for a valid file name
+    # Replace all spaces with underbars to insure proper file naming
+    my $model_name = $self->name;
     $model_name =~ s/ /_/g;
     
     my $file_location = "$base_dir/sorted_$model_name.tsv";
 
-   return $file_location; 
+    return $file_location; 
 }
 
+# Specialized implementation for micro array...
 # Sort for genotype submission files (sort by chromosome and position)
 # This uses a bunch of magic that I do not fully understand. I may be opening pandora's box.
-sub _sort_genotype_submission_file {
+sub _sort_input_file {
     my ($self) = @_;
 
     my $file = $self->_data_file;
     my $output_file_name = $self->_sorted_file;
-
+    
     # Begin black magic for sorting the file by chrom and position
     open (DATA, $file); 
     my @list= <DATA>;
@@ -196,10 +108,11 @@ sub _sort_genotype_submission_file {
     return $output_file_name;
 }
 
+# Specialized implementation for micro array...
 # This sub grabs a new line from the parameterized file handle...
 # It returns the chromosome, position, ref, allele1, allele2 for that line
 # This is intended to work for genotype submission files
-sub _parse_genotype_submission_line {
+sub _parse_line {
     my ($self, $fh) = @_;
 
     my $current_line;
@@ -230,6 +143,8 @@ sub _parse_genotype_submission_line {
 
     return $current_line;
 }
+
+
 
 # Hack for now to get genome-model list models to not break
 sub reference_sequence_name {

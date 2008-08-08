@@ -1,12 +1,12 @@
 
-package Genome::Model::ImportedVariantsWatson;
+package Genome::Model::Watson;
 
 use strict;
 use warnings;
 
 use above "Genome";
 
-class Genome::Model::ImportedVariantsWatson {
+class Genome::Model::Watson {
     is => 'Genome::Model::ImportedVariants',
 };
 

@@ -1,12 +1,12 @@
 
-package Genome::Model::ImportedVariantsVenter;
+package Genome::Model::Venter;
 
 use strict;
 use warnings;
 
 use above "Genome";
 
-class Genome::Model::ImportedVariantsVenter {
+class Genome::Model::Venter {
     is => 'Genome::Model::ImportedVariants',
 };
 
