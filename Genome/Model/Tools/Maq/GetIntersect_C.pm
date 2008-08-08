@@ -6,6 +6,7 @@ our $inline_dir;
 BEGIN
 {
     $inline_dir = "$ENV{HOME}/_Inline32";
+    `mkdir -p $inline_dir`;
     $cflags = `pkg-config glib-2.0 --cflags`;
     $libs = '-L/var/chroot/etch-ia32/usr/lib -L/usr/lib -L/lib '.`pkg-config glib-2.0 --libs`;        
 };
@@ -57,97 +58,12 @@ int get_next_seq_pos(FILE *fh, int *seq, int *pos, maqmap_t *mm)
     if(fgets(templine, sizeof(templine), fh))
     {
         if(sscanf(templine, "%s %d", ref_seq_name, pos)==2)
-        {
-            
+        {            
             *seq = find_ref_seq_id(ref_seq_name, mm);
-//            if(*seq == -1) 
-//                printf("Didn't find %s\n",ref_seq_name);
-//            else 
-//                printf("Found %s\n",ref_seq_name);
-            if(*seq != -1) { *pos--;return 1;  }          
+            if(*seq != -1) { (*pos)--;return 1;  }          
         }
     }
     return 0;
-}
-
-/**********************************************************************/
-void print_seq_names (char *maqfile, char *seqfile)
-{
-    gzFile fpin = NULL;
-    FILE *fp = NULL;
-    maqmap_t  *mm = NULL;
-    fpin = gzopen(maqfile, "r");
-    if (fpin == NULL) { printf("Unable to open file '%s'\n",maqfile); goto cleanup; }
-    
-    fp = fopen(seqfile, "r");
-    if (fp == NULL) { printf("Unable to open file '%s'\n",seqfile); goto cleanup; }
-    
-    mm = maqmap_read_header(fpin);    
-    if(mm == NULL) { printf("Unable to get header from maq file.\n"); goto cleanup; }
-    maqmap1_t curr_mm;    
-    int seqid, pos, ret;
-    ret = get_next_seq_pos(fp, &seqid, &pos, mm);        
-    if(!ret) goto cleanup;
-    
-    while(get_record(fpin, &curr_mm))
-    {
-        while(seqid < curr_mm.seqid || (seqid == curr_mm.seqid && pos < curr_mm.pos>>1))
-        {
-            if(!(ret = get_next_seq_pos(fp, &seqid, &pos, mm))) break;                    
-        }        
-        if(seqid == curr_mm.seqid && pos == curr_mm.pos>>1)
-        {
-            printf("%s %d %d\n", curr_mm.name, curr_mm.seqid, curr_mm.pos>>1);
-        } 
-        // before and after read count for a given start site position
-        // chromosme, position, read count before, read count after                
-    }                
-
-cleanup:
-    if(mm) maq_delete_maqmap(mm);
-    if(fpin) gzclose(fpin);
-    if(fp) fclose(fp);
-    return;
-}
-
-/**********************************************************************/
-void print_seq_ov (char *maqfile, char *seqfile)
-{
-    gzFile fpin = NULL;
-    FILE *fp = NULL;
-    maqmap_t  *mm = NULL;
-    fpin = gzopen(maqfile, "r");
-    if (fpin == NULL) { printf("Unable to open file '%s'\n",maqfile); goto cleanup; }
-    
-    fp = fopen(seqfile, "r");
-    if (fp == NULL) { printf("Unable to open file '%s'\n",seqfile); goto cleanup; }
-    
-    mm = maqmap_read_header(fpin);    
-    if(mm == NULL) { printf("Unable to get header from maq file.\n"); goto cleanup; }
-    maqmap1_t curr_mm;    
-    int seqid, pos, ret;
-    //ret = get_next_seq_pos(fp, &seqid, &pos, mm);        
-    //if(!ret) goto cleanup;
-    
-    while((ret = get_next_seq_pos(fp, &seqid, &pos, mm)))
-    {
-        while(get_record(fpin, &curr_mm))
-        {  
-            if(seqid != curr_mm.seqid) continue;
-            if((curr_mm.pos>>1) > pos) break;
-            if(((curr_mm.pos>>1) + curr_mm.size - 1) < pos) continue;
-            printf("%s %d %d %d\n", curr_mm.name, curr_mm.seqid, curr_mm.pos>>1, curr_mm.size);    
-        }    
-    }
- 
-    // before and after read count for a given start site position
-    // chromosme, position, read count before, read count after                
-
-cleanup:
-    if(mm) maq_delete_maqmap(mm);
-    if(fpin) gzclose(fpin);
-    if(fp) fclose(fp);
-    return;
 }
 
 /**********************************************************************/
@@ -186,8 +102,14 @@ void write_seq_ov (char *maqfile, char *seqfile, char * outfile)
             if((curr_mm.pos>>1) > pos) break;
             if(((curr_mm.pos>>1) + curr_mm.size - 1) < pos)
             {
+                //printf("Skipping %s at %d\n",curr_mm.name, curr_mm.pos>>1);
                 continue;
-            } 
+            }
+            //else
+            //{
+            //    printf("position is %d, read start %d read end %d\n", pos,curr_mm.pos>>1,(curr_mm.pos>>1) + curr_mm.size - 1); 
+            //                 printf("Writing %s at %d, size %d\n",curr_mm.name, curr_mm.pos>>1,curr_mm.size);
+            //}                 
             put_record(fpout, &curr_mm);                
         }
         while(get_record(fpin, &curr_mm));
