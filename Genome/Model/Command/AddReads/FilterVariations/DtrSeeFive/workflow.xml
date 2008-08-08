@@ -3,21 +3,19 @@
 
     <link fromOperation="input connector" fromProperty="ref_seq_id" toOperation="DtrSeeFive" toProperty="ref_seq_id" />
     <link fromOperation="input connector" fromProperty="basedir" toOperation="DtrSeeFive" toProperty="basedir" />
-    <link fromOperation="input connector" fromProperty="experimental_metric_model_file" toOperation="DtrSeeFive" toProperty="experimental_metric_model_file" />
+    <link fromOperation="input connector" fromProperty="experimental_metric_model_file" toOperation="ScaledBinomialTest" toProperty="decision_tree_output" />
     <link fromOperation="input connector" fromProperty="experimental_metric_dtr_file" toOperation="DtrSeeFive" toProperty="experimental_metric_dtr_file" />
     <link fromOperation="input connector" fromProperty="c5src" toOperation="DtrSeeFive" toProperty="c5src" />
-
     <link fromOperation="input connector" fromProperty="ref_seq_id" toOperation="ScaledBinomialTest" toProperty="ref_seq_id" />
     <link fromOperation="input connector" fromProperty="basedir" toOperation="ScaledBinomialTest" toProperty="basedir" />
     <link fromOperation="input connector" fromProperty="experimental_metric_normal_file" toOperation="ScaledBinomialTest" toProperty="experimental_metric_normal_file" />
-    <link fromOperation="DtrSeeFive" fromProperty="decision_tree_output" toOperation="ScaledBinomialTest" toProperty="decision_tree_output" />
-
     <link fromOperation="input connector" fromProperty="parent_event" toOperation="GenerateFigure3Files" toProperty="parent_event" />
     <link fromOperation="input connector" fromProperty="ref_seq_id" toOperation="GenerateFigure3Files" toProperty="ref_seq_id" />
     <link fromOperation="input connector" fromProperty="basedir" toOperation="GenerateFigure3Files" toProperty="basedir" />
-    <link fromOperation="ScaledBinomialTest" fromProperty="binomial_output_file" toOperation="GenerateFigure3Files" toProperty="binomial_output_file" />
-
-    <link fromOperation="GenerateFigure3Files" fromProperty="validated_somatic_variants" toOperation="output connector" toProperty="validated_somatic_variants" />
+ 
+   <link fromOperation="ScaledBinomialTest" fromProperty="binomial_output_file" toOperation="DtrSeeFive" toProperty="experimental_metric_model_file" />
+   <link fromOperation="DtrSeeFive" fromProperty="decision_tree_output" toOperation="GenerateFigure3Files" toProperty="binomial_output_file" />
+   <link fromOperation="GenerateFigure3Files" fromProperty="validated_somatic_variants" toOperation="output connector" toProperty="validated_somatic_variants" />
 
     <operation name="DtrSeeFive">
         <operationtype commandClass="Genome::Model::Tools::Snp::Filters::DtrSeeFive" typeClass="Workflow::OperationType::Command" />
