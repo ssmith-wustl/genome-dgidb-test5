@@ -153,7 +153,7 @@ sub generate_variation_metrics_files_v2 {
     #I hack this hack hackily.  If you wonder why this is here, ask brian and dave for
     #some long/boring explanation
     if($model->name =~ m/skin/) {
-        $snp_file = $self->tumor_sample_snp_filtered_file;
+        $snp_file = $self->tumor_sample_snp_file;
     }
 
     my $ref_seq             = $self->ref_seq_id;
@@ -237,7 +237,7 @@ sub snp_err_log_file {
     );
 }
 
-sub tumor_sample_snp_filtered_file {
+sub tumor_sample_snp_file {
     my $self= shift;
     my $model = $self->model;
     $DB::single = $DB::stopper;
@@ -263,6 +263,7 @@ sub tumor_sample_snp_filtered_file {
     $latest_tumor_build->child_events(
         ref_seq_id => $self->ref_seq_id
     );
+
 
     unless ($equivalent_tumor_event) {
         $self->error_message("Failed to find an event on the tumor model to match the tumor.  Probably need to re-run after that completes.  In the future, we will have the tumor/tumor filtering separate from the individual model processing.\n");
