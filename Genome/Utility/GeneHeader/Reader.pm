@@ -53,7 +53,7 @@ sub execute {
     my %data;
     while (my $line = $fh->getline) {
         my $gene_name;
-        my @fields = split(/, /,$line);
+        my @fields = split(/,\s*/,$line);
         for my $field (@fields) {
             if ($field =~ /GeneName/) {
                 my @tmp = split(/:/,$field);
