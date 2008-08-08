@@ -2,7 +2,7 @@ package Genome::Model::Command::AddReads::FilterVariations::DtrSeeFive;
 
 use strict;
 use warnings;
-use above "Genome";
+use Genome;
 use Genome::Model::Tools::Snp::Filters::ScaledBinomialTest;
 use Genome::Model::Tools::Snp::Filters::DtrSeeFive;
 use Genome::Model::Tools::Snp::Filters::GenerateFigure3Files;
@@ -49,21 +49,40 @@ sub command_subclassing_model_property {
 
 sub execute {
     my $self=shift;
+    
     $DB::single = $DB::stopper;
-    my $model = $self->model;
-
-    # TODO remove for workflow... output of another step
-    my $basename = $model->_filtered_variants_dir . '/filtered.';
-    my $keep_file = $basename . 'chr' . $self->ref_seq_id . '.keep.csv';
 
     ###undo previous times we did stuff for this event######
     unless($self->revert) {
         $self->error_message("There was a problem reverting the previous iterations changes.");
         return;
     }
+    
+    my $model = $self->model;
 
-    my $workflow = Workflow::Model->create_from_xml("/gscuser/charris/filtered_variations_dtrseefive.xml");
-    #$workflow->as_png('filtered_variations.png');
+    # TODO remove for workflow... output of another step
+    my $basename = $model->_filtered_variants_dir . '/filtered.';
+    my $keep_file = $basename . 'chr' . $self->ref_seq_id . '.keep.csv';
+
+    # Dynamically resolve the path name for the C5 rules.
+    # TODO: get this from a model parameter
+    my $rule_name = 'v1-t2.c5rules';
+    my $base_dir = $INC{"Genome/Model/Command/AddReads/FilterVariations/DtrSeeFive.pm"};
+    unless ($base_dir) {
+        die "Failed to find the module base_dir for this command!. " . Data::Dumper::Dumper(\%INC);
+    }
+    $base_dir =~ s/\.pm$//;
+
+    my $rule_path = $base_dir . '/' . $rule_name;
+    my $fh = $self->open_file("c5src",$rule_path); 
+    my @c5src = $fh->getlines;    
+
+    # Build and run the workflow.
+    my $workflow_path = $base_dir . '/workflow.xml';
+    my $workflow = Workflow::Model->create_from_xml($workflow_path);
+
+    # To debug, uncomment.
+    $workflow->as_png($base_dir .'/workflow.png');
     
     my @errors = $workflow->validate;
     die 'Too many problems: ' . join("\n", @errors) unless $workflow->is_valid;
@@ -72,17 +91,19 @@ sub execute {
         input => {
                     parent_event                        => $self,
                     ref_seq_id                          => $self->ref_seq_id,
-                    basedir                            => $model->_filtered_variants_dir,
+                    basedir                             => $model->_filtered_variants_dir,
                     experimental_metric_model_file      => $self->variation_metrics_file_name,
-                    experimental_metric_dtr_file        =>$self->dtr_metrics_filename,
-                    experimental_metric_normal_file     => $self->normal_sample_variation_metrics_file 
+                    experimental_metric_dtr_file        => $self->resolve_dtr_metrics_filename,
+                    experimental_metric_normal_file     => $self->normal_sample_variation_metrics_file,
+                    c5src                               => join('',@c5src),
                  },
         output_cb => {}
     );
 
     $workflow->wait;
-}
 
+    return 1;
+}
 
 
 sub variation_metrics_file_name {
@@ -93,6 +114,21 @@ sub variation_metrics_file_name {
     my $post_process_step= Genome::Model::Event->get(parent_event_id => $self->parent_event_id, ref_seq_id => $self->ref_seq_id, "event_type like" => '%postprocess-variations%');
 
     my $base_variation_file_name = $post_process_step->experimental_variation_metrics_file_basename . ".csv";
+
+    unless($library_name) {
+        return $base_variation_file_name;
+    }
+    return "$base_variation_file_name.$library_name";
+} 
+
+sub resolve_dtr_metrics_filename {
+    my $self = shift;
+    my $library_name = shift;
+
+    my $annotate_step = Genome::Model::Event->get(parent_event_id => $self->parent_event_id, ref_seq_id => $self->ref_seq_id, "event_type like" => '%annotate%');
+    my $post_process_step= Genome::Model::Event->get(parent_event_id => $self->parent_event_id, ref_seq_id => $self->ref_seq_id, "event_type like" => '%postprocess-variations%');
+
+    my $base_variation_file_name = $post_process_step->experimental_variation_metrics_file_basename . "_dtr.csv";
 
     unless($library_name) {
         return $base_variation_file_name;
