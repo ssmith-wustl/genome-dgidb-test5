@@ -16,7 +16,18 @@ class Genome::Model::Tools::SeeFive::Trial {
 sub generate_callback_for_headers {
     my $self = shift;
     my @headers = @_;
-    
+    my $src = $self->perl_source_for_headers(@headers);
+    print $src;
+    my $callback = eval $src;
+    unless ($callback) {
+        die $@;
+    }
+    return $callback;
+}
+
+sub perl_source_for_headers {
+    my $self = shift;
+    my @headers = @_;
     my $src;
     $src .= "sub {\n";
     $src .= "    my \$data = \$_[0];\n";
@@ -26,35 +37,26 @@ sub generate_callback_for_headers {
             . "\n";
 
     my @rules = $self->rules;
+    unless (@rules) {
+        $DB::single = $DB::stopper;
+        die "No rules for trial?";
+    }
+    my $default_value = 'G';
     $src .= '    my %answers;' . "\n";
     $src .= '    my ($answer,$prob);' . "\n";
     for my $rule (@rules) {
         my $rsrc= $rule->perl_src;
         $rsrc =~ s/\n/  /g;
         $src .= '    ($answer,$prob) = ' . $rsrc . ";\n";
-        $src .= '    if(defined $answer) { $answers{$answer}+=$prob; }' . "\n";        
+        $src .= '    if(defined $answer) { $answers{$answer}+=$prob; }' . "\n\n";        
     }
     $src .= '    my $best_prob = 0; my $best_answer = "";' . "\n";
-    $src .= '    for my $answer (keys %answers) { if ($answers{$answer}) > $best_prob) { $best_answer = $answer; $best_prob = $answers{$answer} } }' . "\n";
+    $src .= '    for my $answer (keys %answers) { if ($answers{$answer} > $best_prob) { $best_answer = $answer; $best_prob = $answers{$answer} } }' . "\n";
+    $src .= '    if (not values %answers) { $best_answer = "' . $default_value . '"' . " }\n"; 
     $src .= '    my @debug_notes = %answers;' . "\n";
-    $src .= '    return ($answer,$best_prob,"@debug_notes");' . "\n";
+    $src .= '    return ($best_answer,$best_prob,"@debug_notes");' . "\n";
     $src .= "};\n";
-    $DB::single = 1;
-    print $src;
-    my $callback = eval $src;
-    unless ($callback) {
-        die $@;
-    }
-    return $callback;
-}
-
-sub perl_src {
-    my $self = shift;
-    my $src;
-    for my $rule ($self->rules) {
-        my $rsrc = $rule->perl_src;
-        $src .= $rsrc . "\n";
-    }
+    
     return $src;
 }
 
@@ -82,7 +84,7 @@ sub create_list_from_c5src {
         
         if (
             my ($trial,$n,$possible_items,$wrong_items,$lift) 
-            = ($_ =~ qr{^Rule (\d+)/(\d+): \((\d+)\/(\d+), lift ([\d\.]+)\)\s*$}) 
+            = ($_ =~ qr{^Rule ([\d\.]+)/([\d\.]+): \(([\d\.]+)\/([\d\.]+), lift ([\d\.]+)\)\s*$}) 
         ) {
             $current_rule = Genome::Model::Tools::SeeFive::Rule->create(
                 trial_id => $current_trial->id,
