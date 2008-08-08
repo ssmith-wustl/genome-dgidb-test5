@@ -32,7 +32,7 @@ class Genome::Model::Tools::Snp::Filters::GenerateFigure3Files
 };
 
 operation_io Genome::Model::Tools::Snp::Filters::GenerateFigure3Files {
-    input  => [ 'parent_event', 'ref_seq_id', 'basedir', 'snp_report_file', 'binomial_output_file' ],
+    input  => [ 'parent_event', 'ref_seq_id', 'basedir',  'binomial_output_file' ],
     output  => [ 'validated_somatic_variants' ],
 };
 
