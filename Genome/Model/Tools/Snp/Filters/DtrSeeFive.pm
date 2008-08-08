@@ -129,6 +129,7 @@ sub execute {
         $line =~ s/NULL/0/g;
         if ($line =~ /^chromosome/) { die "bad line (something terrible happened): $line!" };
         my $metrics_line = $handle->getline;
+        chomp($metrics_line);
         my %data; 
         @data{@headers} = split(/,\s*/,$line);
         my ($decision, $prob, $debug_info) = $fref->(\%data);
