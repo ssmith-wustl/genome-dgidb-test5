@@ -14,6 +14,7 @@ class Genome::Model::Command::RunJobs {
         event_id    => {is => 'Integer', is_optional => 1, doc => 'only dispatch this single event' },
         bsub_queue  => {is => 'String', is_optional => 1, doc => 'lsf jobs should be put into this queue' },
         bsub_args   => {is => 'String', is_optional => 1, doc => 'additional arguments to be given to bsub' },   
+        force       => {is => 'Boolean', is_optional => 1, doc => 'force kill an event and restart even if running/successful' },
     ],
 };
 
@@ -61,6 +62,33 @@ sub execute {
     #}
 
     $DB::single = $DB::stopper;
+
+    if ($self->event_id) {
+        my $event = Genome::Model::Event->get($self->event_id);
+        if ($event->event_status() ne 'Failed' and $event->event_status ne 'Crashed') {
+            # this is a hack, but better than manually running these...
+            # TODO: fix me
+            unless ($self->force) {
+                $event->error_message("Job is " . $event->event_status . ".  Use --force.");
+                return;
+            }
+            if (my $lsf_job_id = $event->lsf_job_id) {
+                my @bjobs = `bjobs $lsf_job_id`;
+                if (@bjobs) {
+                    $self->status_message($bjobs[-1]);
+                    `bkill $lsf_job_id`;
+                    sleep 5;
+                    @bjobs = `bjobs $lsf_job_id`;
+                    if (@bjobs) {
+                        $self->error_message("Failed to kill job?\n" . $bjobs[-1]);
+                        return;
+                    } 
+                }
+            }
+            $event->event_status("Crashed");                
+        }
+        $event->revert;
+    }
 
     if ($self->dispatcher eq 'inline') {
         if ($self->event_id) {
