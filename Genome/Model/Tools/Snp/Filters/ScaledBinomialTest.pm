@@ -349,7 +349,7 @@ sub _convert_probabilities_to_snps {
             $position,
             $al1,
             $al2,
-        ) = split ", ", $line;
+        ) = split /,\s*/, $line;
         #nonskin
         if(exists($positions{$chr}) && exists($positions{$chr}{$position}) && exists($positions{$chr}{$position}{$al2})) {
             print $non_skin_output_handle $line,"\n";
