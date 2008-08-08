@@ -26,6 +26,7 @@ class Genome::Model {
         type_name                    => { via => 'processing_profile'},
         name                         => { is => 'VARCHAR2', len => 255 },
         sample_name                  => { is => 'VARCHAR2', len => 255 },
+        subject_name            => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         
         creation_event               => { doc => 'The creation event for this model',
                                           calculate => q|
