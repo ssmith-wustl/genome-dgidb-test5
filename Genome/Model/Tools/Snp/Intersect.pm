@@ -15,17 +15,15 @@ class Genome::Model::Tools::Snp::Intersect {
                                     doc => 'items present only in the first input should be dumped here' },
         f2_only_output      => { is => 'FileName', is_optional => 1, 
                                     doc => 'items present only in the second input should be dumped here' },
-        detail              => { is => 'Boolean', 
-                                    doc => 'instead of f1 data, the intersection should show cross-list'
-                                            . ' comparison data' },
+        format              => { is => 'Text', is_optional => 1, default_value => 'default', 
+                                    doc => 'combine: show content of both, compare: show both plus snp comparison details.' },
     ],
     doc => "intersect two snp lists by position, with optional genotype overlap detail"
 };
 
 sub help_synopsis {
     my $self = shift;
-    return qq/;
-gt snp intersect list1.snps list2.snps 
+    return qq/gt snp intersect list1.snps list2.snps 
 
 gt snp intersect list1.snps list2.snps -i intersect.out -f1 f1.out -f2 f2.out
 
@@ -203,7 +201,7 @@ sub execute {
     }
     use warnings;
 
-    my $format = ($self->detail ? 'compare' : 'default');
+    my $format = $self->format || 'default';
     my $printer = sub {
         no warnings;
         my ($h,$c1,$p1,$r1,$g1,$t1,$r2,$g2,$t2)=@_;
@@ -218,6 +216,9 @@ sub execute {
             $intersect_groups{$desc}++; 
             if ($format eq 'compare') {
                 $h->print(join("\t",$c1,$p1,$r1,$g1,$g2,$desc,@$t1,":",@$t2),"\n");
+            }
+            elsif ($format eq 'combine') {
+                $h->print(join("\t",$c1,$p1,$r1,$g1,@$t1,':',$r2,$g2,@$t2),"\n");
             }
             else {
                 $h->print(join("\t",$c1,$p1,$r1,$g1,@$t1),"\n");
