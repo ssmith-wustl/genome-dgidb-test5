@@ -32,6 +32,7 @@ sub perl_src {
             return $src;
         }
         my ($metric,$op,$value) = ($line =~ /\s+([\w\-]+)\s+(\S+)\s+(\S+)/);
+        $metric =~ s/\s/SPACE/g;
         $metric =~ s/\+/PLUS/g;
         $metric =~ s/\-/MINUS/g;
         unless ($metric) {
