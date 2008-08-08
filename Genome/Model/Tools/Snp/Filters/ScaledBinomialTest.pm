@@ -14,84 +14,79 @@ class Genome::Model::Tools::Snp::Filters::ScaledBinomialTest
 {
     is => 'Command',
     has => [
-    decision_tree_output => 
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => 'File of experimental metrics for the model',
-    },
-    experimental_metric_normal_file =>
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => 'File of experimental metrics for the normal',
-    },
-    basedir => 
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => 'Basename for the output file',
-    },
-    ratio => 
-    {
-        type => 'Float',
-        is_optional => 1,
-        default => .13,
-        doc => 'Ratio to expect between model and normal reads due to contamination (.13 by default)',
-    },
-    ref_seq_id => 
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => 'Chromosome name or something',
-    },
-    two_sided_p_threshold => 
-    {
-        type => 'Float',
-        is_optional => 1,
-        default => .35,
-        doc => 'Threshold below which to bin as non-skin in binomial test',
-    },
-    greater_p_threshold => 
-    {
-        type => 'Float',
-        is_optional => 1,
-        default => .35,
-        doc => 'something dave larson thinks is good',
-    },
- 
-    less_p_threshold => 
-    {
-        type => 'Float',
-        is_optional => 1,
-        default => .25,
-        doc => 'Threshold below which to bin as non-skin in binomial test',
-    },
-    tmp_files_to_cleanup =>
-    { 
-        type => 'List',
-        is_optional=> 1,
-        doc => 'files to cleanup',
-    },
-    binomial_output_file =>
-    {
-        type => 'String',
-        doc => 'the name of the output file',
-        calculate => q|
-                    return $self->basedir . "/binomial.chr" . $self->ref_seq_id . ".nonskin.csv";
-                   |
-  
-    },
-    parent_event                => { is => 'Genome::Model::Event',
-    doc => 'The parent event' },
+        decision_tree_output => 
+        {
+            type => 'String',
+            is_optional => 0,
+            doc => 'File of experimental metrics for the model',
+        },
+        experimental_metric_normal_file =>
+        {
+            type => 'String',
+            is_optional => 0,
+            doc => 'File of experimental metrics for the normal',
+        },
+        basedir => 
+        {
+            type => 'String',
+            is_optional => 0,
+            doc => 'Basename for the output file',
+        },
+        ratio => 
+        {
+            type => 'Float',
+            is_optional => 1,
+            default => .13,
+            doc => 'Ratio to expect between model and normal reads due to contamination (.13 by default)',
+        },
+        ref_seq_id => 
+        {
+            type => 'String',
+            is_optional => 0,
+            doc => 'Chromosome name or something',
+        },
+        two_sided_p_threshold => 
+        {
+            type => 'Float',
+            is_optional => 1,
+            default => .35,
+            doc => 'Threshold below which to bin as non-skin in binomial test',
+        },
+        greater_p_threshold => 
+        {
+            type => 'Float',
+            is_optional => 1,
+            default => .35,
+            doc => 'something dave larson thinks is good',
+        },
+     
+        less_p_threshold => 
+        {
+            type => 'Float',
+            is_optional => 1,
+            default => .25,
+            doc => 'Threshold below which to bin as non-skin in binomial test',
+        },
+        tmp_files_to_cleanup =>
+        { 
+            type => 'List',
+            is_optional=> 1,
+            doc => 'files to cleanup',
+        },
+        binomial_output_file =>
+        {
+            type => 'String',
+            doc => 'the name of the output file',
+            calculate => q|
+                        return $self->basedir . "/binomial.chr" . $self->ref_seq_id . ".nonskin.csv";
+                       |
+      
+        },
     ],
 };
 
 operation_io Genome::Model::Tools::Snp::Filters::ScaledBinomialTest {
-    input  => [ 'parent_event' ],
-    input  => [ 'ref_seq_id' ],
-    input  => [ 'basedir' ],
-    input  => [ 'experimental_metric_normal_file' ],
+    input  => [ 'ref_seq_id', 'basedir', 'experimental_metric_normal_file', 'decision_tree_output' ],
     output => [ 'binomial_output_file' ],
 };
 
@@ -143,8 +138,14 @@ sub _create_r_files {
     print $r_handle "skin_variant total_variant expected_proportion\n";
 
     my ($line,$skin_line);
-
-    while(($line = $tumor_metric_file->getline) && ($skin_line = $normal_metric_file->getline)) {
+    my $rows=0;
+    
+    while(($line = $tumor_metric_file->getline) && ($skin_line = $normal_metric_file->getline) && ++$rows) {
+        #if (!defined($line) or !defined($skin_line)) {
+        #    warn "premature end of data after row $rows!";
+        #    last;
+        #}
+        $rows++;
         chomp $line;
         chomp $skin_line;
         if($line =~ /^chromosome/) {
@@ -156,8 +157,12 @@ sub _create_r_files {
             chomp $skin_line;
         }
         my @data_indices = (0, 1, 2, 3, 5, 24); 
-        my @tumor_metrics = split ", ", $line;
-        my @skin_metrics = split ", ", $skin_line;
+        my @tumor_metrics = split /,\s*/, $line;
+        my @skin_metrics = split /,\s*/, $skin_line;
+       
+        #unless(@tumor_metrics and @skin_metrics) {
+        #    die "error parsing lines!\n$line\n$skin_line\n";
+        #}
 
 
         my ($chr,
@@ -175,7 +180,7 @@ sub _create_r_files {
             $skin_al2_read_hg,
             $skin_ref_read_hg,
         ) = @skin_metrics[@data_indices];
-
+        $DB::single=1;
         if($skin_chr ne $chr || $skin_position ne $position || $skin_al1 ne $al1 || $skin_al2 ne $al2) {
             #FILES ARE OFF
             #
@@ -189,7 +194,6 @@ sub _create_r_files {
                 redo;
             }
         }
-
         my $tumor_proportion = 1 - $ratio;
         my $tumor_coverage = $al2_read_hg + $ref_read_hg;
         my $skin_coverage = $skin_al2_read_hg + $skin_ref_read_hg;
@@ -260,11 +264,16 @@ RCODE
         $self->error_message("Couldn't access R via Statistics::R");
         return;
     }
+    $DB::single=1;
     $R_bridge->startR();
     $R_bridge->send(qq{$R_code});
     #$R_bridge->send(qq{aml.epithelial_test(infile="$snp_file_path",outfile="/tmp/skin_binom_test_chr$chromosome.less",alt="less")});
     $R_bridge->send(qq{aml.epithelial_test(infile="$snp_file_path",outfile="/tmp/skin_binom_test_chr$chromosome.greater",alt="greater")});
     $R_bridge->stopR();
+    unless(-e "/tmp/skin_binom_test_chr$chromosome.greater"){
+        $self->error_message("/tmp/skin_binom_test_chr$chromosome.greater does not exist");
+        return;
+    }
 }
 
 #-----------------------------------
@@ -275,9 +284,9 @@ sub _convert_probabilities_to_locations {
     }
     my $snp_filename = $self->decision_tree_output;
 
-    my $handle = new IO::File("$file");
+    my $handle = IO::File->new("$file");
     unless(defined($handle)) {
-        $self->error_message("Couldn't open R t-test output file $file");
+        $self->error_message("Couldn't open R t-test output file $file: $!");
         return;
     }
 
