@@ -270,10 +270,6 @@ RCODE
     #$R_bridge->send(qq{aml.epithelial_test(infile="$snp_file_path",outfile="/tmp/skin_binom_test_chr$chromosome.less",alt="less")});
     $R_bridge->send(qq{aml.epithelial_test(infile="$snp_file_path",outfile="/tmp/skin_binom_test_chr$chromosome.greater",alt="greater")});
     $R_bridge->stopR();
-    unless(-e "/tmp/skin_binom_test_chr$chromosome.greater"){
-        $self->error_message("/tmp/skin_binom_test_chr$chromosome.greater does not exist");
-        return;
-    }
 }
 
 #-----------------------------------
