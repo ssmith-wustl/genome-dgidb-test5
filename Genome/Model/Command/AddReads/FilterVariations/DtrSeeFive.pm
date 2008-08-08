@@ -82,7 +82,7 @@ sub execute {
     my $workflow = Workflow::Model->create_from_xml($workflow_path);
 
     # To debug, uncomment.
-    $workflow->as_png($base_dir .'/workflow.png');
+    #$workflow->as_png($base_dir .'/workflow.png');
     
     my @errors = $workflow->validate;
     die 'Too many problems: ' . join("\n", @errors) unless $workflow->is_valid;
