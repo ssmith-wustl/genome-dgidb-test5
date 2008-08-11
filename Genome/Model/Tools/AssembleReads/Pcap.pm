@@ -173,7 +173,7 @@ sub execute
 	return;
     }
 
-    $self->status_message("Resolving pcap data needs");
+    $self->status_message("Resolving pcap run type");
     unless ($self->resolve_pcap_run_type)
     {
 	$self->error_message("Failed to resolve pcap run type");
@@ -187,7 +187,6 @@ sub execute
 	unless ($self->create_fake_phds ('file'))
 	{
 	    $self->error_message("Failed to create jobs for phd files");
-	    return;
 	}
     }
 
@@ -197,7 +196,6 @@ sub execute
 	unless ($self->create_fake_phds ('ball'))
 	{
 	    $self->error_message ("Failed to submit jobs for phd ball");
-	    return;
 	}
     }
 
@@ -287,20 +285,18 @@ sub execute
 	$self->error_message("failed to create stats files") and return;
     }
 
-    sleep 120;#give stats file jobs time to complete
+    sleep 180;#give stats file jobs time to complete
 
     $self->status_message("Creating readinfo.txt and insert_sizes files");
     unless ($self->create_post_asm_files)
     {
 	$self->error_message("Failed to create post assembly files");
-	return;
     }
 
     $self->status_message("Creating stats");
     unless ($self->create_stats)
     {
 	$self->error_message("failed to run stats");
-	return;
     }
     $self->status_message("Creating stats");
 
@@ -314,7 +310,6 @@ sub execute
     unless ($self->clean_up)
     {
 	$self->error_message("Assembly done but ailed to clean up");
-	return;
     }
 
     return 1;
@@ -357,7 +352,7 @@ sub create_project_directories
         return;
     }
 
-    foreach my $sub_dir (qw/ edit_dir input output phd_dir chromat_dir blastdb acefiles ftp read_dump/)
+    foreach my $sub_dir (qw/ edit_dir input output phd_dir chromat_dir blastdb acefiles ftp read_dump 454_processed/)
     {
 	next if -d "$path/$sub_dir";
 
@@ -472,7 +467,8 @@ sub get_valid_db_org_names
     return \@new;
 }
 
-sub dump_reads {
+sub dump_reads
+{
     my ($self) = @_;
 
     chomp (my $date = `date +%y%m%d`);
@@ -537,6 +533,11 @@ sub dump_reads {
 sub create_fake_phds
 {
     my ($self, $type) = @_;
+
+    my $host_name = hostname();
+
+    #can't submit lsf jobs from linusit machines
+    print "Unable to submit lsf jobs to make phd files from $host_name\n" and return if $host_name =~ /linusit\d+/;
 
     my $edit_dir = $self->{project_path}.'/edit_dir';
 
@@ -710,23 +711,27 @@ sub create_pcap_input_fasta_fof
 }
 
 
-#this need to be able to differentiate 454 from reg read files
-#and just cat the 454 constraint files together.
-
-sub calc_insert_std_dev
+sub create_constraint_file
 {
-    my ($self, $line) = @_;
-    
-}
-
-sub create_constraint_file {
     my ($self) = @_;
 
     my $dir = $self->{project_path};
 
+    #need to append to the existing con file if it exists
+    #else create a new one
+
     my $con_file = $self->{pcap_root_name}.'.con';
 
-    my $con_fh = IO::File->new(">$dir/edit_dir/$con_file");
+    my $con_fh;
+
+    if (-s "$dir/edit_dir/$con_file")
+    {
+	$con_fh = IO::File->new(">>$dir/edit_dir/$con_file");
+    }
+    else
+    {
+	$con_fh = IO::File->new(">$dir/edit_dir/$con_file");
+    }
 
     $self->error_message("Unable to create con file file handle") and return
 	unless $con_fh;
@@ -735,13 +740,16 @@ sub create_constraint_file {
 
     my @con_files = glob ("$dir/edit_dir/*.con");
 
-    #cat all con files together then update the lib file
+    #append all con files together
 
     if (@con_files)
     {
 	foreach my $file (@con_files)
 	{
 	    next unless -s $file;
+
+	    next if $file =~ /$con_file$/;
+
 	    my $fh = IO::File->new("<$file");
 	    while (my $line = $fh->getline)
 	    {
@@ -799,6 +807,8 @@ sub create_constraint_file {
 		}
 	    }
 	    $fh->close;
+
+	    system ("\\mv $file $dir/454_processed");
 	}
     }
 
@@ -1154,6 +1164,8 @@ sub run_bform
     $self->error_message("bform returned exit code $ec\n") and return
 	if $ec;
 
+    #rename blastdb files
+
     return 1;
 }
 
@@ -1247,6 +1259,10 @@ sub create_sctg_fa_file
 sub create_stats_files
 {
     my ($self) = @_;
+
+    my $host_name = hostname ();
+
+    print "Unable to submit lsf jobs to create stats files from $host_name\n" and return if $host_name =~ /^linusit\d+/;
 
     #stats files object
     my $sfo = GSC::IO::Assembly::StatsFiles->new(dir => $self->{project_path});
