@@ -7,6 +7,9 @@ use Workflow;
 
 use Bio::Seq;
 use Bio::SeqIO;
+use Bio::SearchIO;
+use Bio::SeqFeature::Generic;
+use File::Temp qw/ tempfile /;
 
 use English;
 
@@ -55,39 +58,48 @@ sub execute {
 
     my $fasta_file  = $self->fasta_file();
 
-    my $version;#=???
-    my $file1;#=???
-    my $dir;#=???
-    my $3;#=???
-    my $blastp_dir = "$dir/Blastp/Version_$version/$file1";
-
-    unless (-d  $blastp_dir){
-        $self->error_message("blast_p dir doesn't exist");
-        return 0;
-    }
-    
     $self->status_message( "Running Blastp" );
  
-    chdir $blastp_dir;
-    
- unless( -e $3){
-  system("ln -s $dir/Gene_merging/Version_$version/$file1/$3 .");
-}
- my $numTotal =`array_shatter $3`;
- my $remainder = $numTotal%1000;
- my $numMax = $numTotal-$remainder;
- my $num0 = 1;
- my $num1= $num0+999;
+    #yup!
+    my ($th,$tmpout) = tempfile( "PAP-blastpXXXXXX", SUFFIX => '.blastp');
+    my @blastp_command = (
+                          'blastp',
+                          $bacterial_nr,
+                          $fasta_file,
+                          "-o $tmpout",
+                          "E=1e-10",
+                          "V=1",
+                          "B=50",
+                         );
 
- while ($num1 <= $numMax ){
-   bsub -J 'blastp_array['$num0-$num1']' -q long -n 2 -R 'span[hosts=1]' -o blastp.out -e blastp.err "blastp /gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr \$LSB_JOBINDEX.fasta -o \$LSB_JOBINDEX.blastp E=1e-10 V=1 B=50"
-  $num0= $num1+1;
-  $num1= $num0+999;
-}
+    IPC::Run::run(
+                  \@blastp_command,
+                  \undef,
+                  '>',
+                  \$blastp_out,
+                  '2>',
+                  \$blastp_err,
+                 );
+
+    # parse output file
+    $self->parse_blast_results($tmpout);
 
 #Tranlate
 $self->bio_seq_feature([]);
 
 }
+
+sub parse_blast_results
+{
+    my $self = shift;
+    my $results = shift;
+    my $bsio = new Bio::SearchIO(-format => 'blast',
+                                 -file   => $results,
+                                );
+
+
+    return 1;
+}
+
  
 1;
