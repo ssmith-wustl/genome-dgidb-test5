@@ -86,6 +86,7 @@ sub execute {
     chdir($current_dir . "/" . $tmpdir);
     my $max_chunks = $self->shatter_fasta();
     # psort-b each sub-fasta
+    my @psortbdata;
     foreach my $i (1..$max_chunks)
     {
         my ($psortb_out, $psortb_err);
@@ -101,12 +102,14 @@ sub execute {
                        \$psortb_err,
                      );
         pop(@psortb_command);
+        my @tmpdata = read_file($psortb_out);
+        push(@psortbdata,@tmpdata);
     }
     # parse output
     # turn that into bioseq features
     # clean up sub-fastas/temp dir.
     # fertig!
-
+    $self->parse_psortb_terse(\@psortbdata);
     $self->bio_seq_feature([]);
 
 }
@@ -121,6 +124,21 @@ sub shatter_fasta {
         my $so = new Bio::SeqIO(-file => ">$ofile", -format => 'fasta');
     }
     return $idx;
+}
+
+sub parse_psortb_terse
+{
+    my $self = shift;
+    my $data = shift;
+    foreach my $line (@$data)
+    {
+        # split on tabs,
+        # should get gene name, classification, and score
+        # skip score < 7.5
+        my ($gene, $class, $score) = split(/\t/,$line);
+        next unless $score >= 7.5;
+    }
+
 }
  
 1;
