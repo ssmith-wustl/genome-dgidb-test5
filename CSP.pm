@@ -765,6 +765,13 @@ sub _cron_setup {
         my $answer=App::Lock->examine_lock(mechanism   => 'file',
                                            resource_id => $resource_id);
         if(time()-$answer->{time}>2*60*60) { # Lock is more than 2 hours old
+            my $result = kill 1, $answer->{pid};
+            my $success_msg;
+            if ($result == 1) {
+              $success_msg = "It appears that kill 1, ".$answer->{pid}." has succeded.";
+            }else {
+              $success_msg = "It appears that kill 1, ".$answer->{pid}." has not succeded.";
+            }
             App::Object->status_message("Lock for resource $resource_id ".
                                         "is more than 2 hours old, notifying ".
                                         "informatics");
@@ -776,7 +783,8 @@ sub _cron_setup {
                                 "\tpid:  %d\n".
                                 "\tprogram holding lock:  %s\n".
                                 "\tlock file path:  %s\n".
-                                "\ttime of lock creation:  %s\n",
+                                "\ttime of lock creation:  %s\n".
+                                "$success_msg\n",
                                 $answer->{hostname},
                                 (time()-$answer->{time})/3600,
                                 $answer->{hostname},
