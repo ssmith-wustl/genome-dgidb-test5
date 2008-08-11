@@ -17,6 +17,10 @@ class Genome::Model::Tools::Snp::Intersect {
                                     doc => 'items present only in the second input should be dumped here' },
         format              => { is => 'Text', is_optional => 1, default_value => 'default', 
                                     doc => 'combine: show content of both, compare: show both plus snp comparison details.' },
+        delimiter1          => { is => 'Text', default_value => '\s+', },
+        delimiter2          => { is => 'Text', default_value => '\s+', },
+        headers1            => { is => 'Boolean', default_value => 0, doc => 'file 1 has n header lines' },
+        headers2            => { is => 'Boolean', default_value => 0, doc => 'file 2 has n header lines' },
     ],
     doc => "intersect two snp lists by position, with optional genotype overlap detail"
 };
@@ -176,12 +180,25 @@ sub execute {
     my $ni = 0;    
     my %intersect_groups;
 
+    my $delimiter1 = $self->delimiter1;
+    my $delimiter2 = $self->delimiter2;
+
+    if ($f1 =~ /.csv$/) {
+        $delimiter1 = ',';
+    }
+
+    if ($f2 =~ /.csv$/) {
+        $delimiter2 = ',';
+    }
+
     no warnings;
     my ($v1,$c1,$p1,$r1,$g1,@t1);
     sub getf1() {
         $v1 = $h1->getline;
+        chomp($v1);
         if (defined $v1) {
-            ($c1,$p1,$r1,$g1,@t1) = split(/\s+/,$v1);
+            ($c1,$p1,$r1,$g1,@t1) = split(/$delimiter1/,$v1);
+            #print "f1: $c1 : $p1 : $g1\n";
         }
         else {
             $c1 = 'ZZZ';
@@ -191,9 +208,10 @@ sub execute {
     my ($v2,$c2,$p2,$r2,$g2,@t2);
     sub getf2() {
         $v2 = $h2->getline;
+        chomp($v2);
         if (defined $v2) {
-            ($c2,$p2,$r2,$g2,@t2) = split(/\s+/,$v2);
-            #print "f2: $c2 $p2 $g2\n";
+            ($c2,$p2,$r2,$g2,@t2) = split(/$delimiter2/,$v2);
+            #print "f2: $c2 : $p2 : $g2\n";
         }
         else {
             $c2 = 'ZZZ';
@@ -207,14 +225,14 @@ sub execute {
         my ($h,$c1,$p1,$r1,$g1,$t1,$r2,$g2,$t2)=@_;
         my $g1_het = ($g1 eq $iub{$g1} ? 'hom' : 'het');
         if ($g2) {
-            my $g2_het = ($g2 eq $iub{$g2} ? 'hom' : 'het');
-            my $m = $iub_overlap{$g1}{$g2};
-            unless (defined $m) {
-                die "no value for >$g1< >$g2<\n";
-            }
-            my $desc = ($g1 eq $g2 ? 'match' : 'miss').'-'.$g1_het.'-'.$g2_het.'-'.$m.'-base-overlap';
-            $intersect_groups{$desc}++; 
             if ($format eq 'compare') {
+                my $g2_het = ($g2 eq $iub{$g2} ? 'hom' : 'het');
+                my $m = $iub_overlap{$g1}{$g2};
+                unless (defined $m) {
+                    die "no value for >$g1< >$g2<\n";
+                }
+                my $desc = ($g1 eq $g2 ? 'match' : 'miss').'-'.$g1_het.'-'.$g2_het.'-'.$m.'-base-overlap';
+                $intersect_groups{$desc}++; 
                 $h->print(join("\t",$c1,$p1,$r1,$g1,$g2,$desc,@$t1,":",@$t2),"\n");
             }
             elsif ($format eq 'combine') {
@@ -233,6 +251,34 @@ sub execute {
             }
         }
     };
+
+    my $headers1 = $self->headers1 || 0;
+    my $headers2 = $self->headers2 || 0;
+    my $headers_count = ($headers1 >= $headers2 ? $headers1 : $headers2);
+    while ($headers_count) {
+        if ($headers1) {
+            getf1();
+            $headers1--;
+            #print "got1\n";
+        }
+        else {
+            $c1 = $p1 = $r1 = $g1 = '';
+            @t1 = ();
+        }
+        if ($headers2) {
+            getf2();
+            $headers2--;
+            #print "got2\n";
+        }
+        else {
+            $c2 = $p2 = $r2 = $g2 = '';
+            @t2 = ();
+        }
+        $printer->($xi,$c1,$p1,$r1,$g1,\@t1,$r2,$g2,\@t2) if $xi;
+        $printer->($x1,$c1,$p1,$r1,$g1,\@t1) if $x1;
+        $printer->($x2,$c2,$p2,$r2,$g2,\@t2) if $x2;
+        $headers_count--;
+    }
 
     getf1();
     getf2();
