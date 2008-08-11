@@ -229,6 +229,8 @@ sub generate_figure_3_files {
                              my $db_status = $variant_detail->somatic_status;
                              my $status;
                              #take care of the possibility of discrepancy
+                             #NOTE: this only checks for two levels of discrepancy
+                             #This should really be recursive
                              my ($level1_discrep) = $db_status =~ /^DISCREPANCY\((.*)/;
                              my $level2_discrep;
                              if(defined($level1_discrep)) {

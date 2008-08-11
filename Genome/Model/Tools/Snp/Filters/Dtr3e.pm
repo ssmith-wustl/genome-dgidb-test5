@@ -167,11 +167,11 @@ while(my $line=$handle->getline) {
             $rule = 'default';
         }
 
-        ##additional arbitrary filter on pre-27 readcounts
-        unless($al2_read_unique_dna_start_pre27 > 2) {
-            $decision = 'remove';
-            $rule = 'pre-27';
-        }
+        ###additional arbitrary filter on pre-27 readcounts
+        #unless($al2_read_unique_dna_start_pre27 > 2) {
+        #    $decision = 'remove';
+        #    $rule = 'pre-27';
+        #}
 
         if ($decision eq 'keep') {
             print $keep_handle $line,", $rule\n";    
