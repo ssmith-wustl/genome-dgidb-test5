@@ -37,7 +37,7 @@ sub create {
 
     my $archive_dir = $self->_archive_directory;
     unless(system("mkdir $archive_dir")==0){
-        $self->error_message("Failed to mkdir $archive_dir");
+        $self->error_message("Failed to mkdir archive dir: $archive_dir");
         return undef;
     }
 
@@ -169,8 +169,7 @@ sub get_next_line {
 # Overload this per module, probably, if we want to make subdirs for each type
 sub _base_directory {
     my $self = shift;
-    $self->error_message("ImportedVariants is an abstract base class, override _base directory in your subclass");
-    die;
+    return '/gscmnt/834/info/medseq/imported_variants_data/';
 }
 
 # Returns the current directory where this model is housed

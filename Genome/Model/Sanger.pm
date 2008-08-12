@@ -13,7 +13,7 @@ class Genome::Model::Sanger{
 sub _base_directory {
     my $self = shift;
 
-    return '/gscmnt/834/info/medseq/imported_variants_data/sanger/';
+    return $self->SUPER::_base_directory.'/sanger/';
 }
 
 

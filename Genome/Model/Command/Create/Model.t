@@ -172,6 +172,7 @@ my $gmsr = Genome::Model->create(processing_profile_id => $ppsr->id,
                                  name => 'short read test');
 ok($gmsr, 'creation worked for short read model');
 isa_ok($gmsr ,'Genome::Model::ShortRead');
+
 my $gmdns = Genome::Model->create(processing_profile_id => $ppdns->id,
                                  name => 'de novo sanger test');
 ok($gmdns, 'creation worked de novo sanger model');
@@ -187,31 +188,44 @@ my $gmivw = Genome::Model->create(processing_profile_id => $ppivw->id,
                                  name => 'watson test');
 ok($gmivw, 'creation worked watson model');
 isa_ok($gmivw ,'Genome::Model::Watson');
+delete_model($gmivw);
 
 my $gmivv = Genome::Model->create(processing_profile_id => $ppivv->id,
                                  instrument_data => $venter_test_data,
                                  name => 'venter test');
 ok($gmivv, 'creation worked venter model');
 isa_ok($gmivv ,'Genome::Model::Venter');
+delete_model($gmivv);
 
 my $gmma = Genome::Model::MicroArray->create(processing_profile_id => $ppma->id,
                                  name => 'micro array test',
                                  instrument_data => $genotype_submission_file 
                                 );
-ok($gmma, 'creation worked micro array processing profile');
+ok($gmma, 'creation worked micro array model');
 isa_ok($gmma ,'Genome::Model::MicroArray');
+delete_model($gmma);
 
-my $gmmai = Genome::Model::MicroArray->create(processing_profile_id => $ppmai->id,
+my $gmmai = Genome::Model::MicroArrayIllumina->create(processing_profile_id => $ppmai->id,
                                  name => 'micro array illumina test',
                                  instrument_data => $genotype_submission_file 
                                 );
-ok($gmmai, 'creation worked micro array illumina processing profile');
+ok($gmmai, 'creation worked micro array illumina model');
 isa_ok($gmmai ,'Genome::Model::MicroArrayIllumina');
+delete_model($gmmai);
 
-my $gmmaa = Genome::Model::MicroArray->create(processing_profile_id => $ppmaa->id,
+my $gmmaa = Genome::Model::MicroArrayAffymetrix->create(processing_profile_id => $ppmaa->id,
                                  name => 'micro array affymetrix test',
                                  instrument_data => $genotype_submission_file 
                                 );
-ok($gmmaa, 'creation worked micro array affymetrix processing profile');
+ok($gmmaa, 'creation worked micro array affymetrix model');
 isa_ok($gmmaa ,'Genome::Model::MicroArrayAffymetrix');
+delete_model($gmmaa);
+
+sub delete_model{
+    my $model = shift;
+    my $model_dir = $model->_model_directory;
+    undef $model;
+    system "rm -rf $model_dir";
+}
+
 
