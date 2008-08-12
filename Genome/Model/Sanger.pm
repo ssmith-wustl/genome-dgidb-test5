@@ -1,19 +1,19 @@
 
-package Genome::Model::3730;
+package Genome::Model::Sanger;
 
 use strict;
 use warnings;
 
 use above "Genome";
 
-class Genome::Model::3730{
+class Genome::Model::Sanger{
     is => 'Genome::Model::ImportedVariants',
 };
 
 sub _base_directory {
     my $self = shift;
 
-    return '/gscmnt/834/info/medseq/imported_variants_data/3730/';
+    return '/gscmnt/834/info/medseq/imported_variants_data/sanger/';
 }
 
 

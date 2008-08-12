@@ -7,7 +7,7 @@ use Data::Dumper;
 use above "Genome";
 
 class Genome::Model::Polyscan{
-    is => 'Genome::Model::3730',
+    is => 'Genome::Model::Sanger',
 };
 
 sub create {
