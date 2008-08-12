@@ -1,3 +1,5 @@
+#Id#
+
 package PAP::Command::KEGGScan;
 
 use strict;

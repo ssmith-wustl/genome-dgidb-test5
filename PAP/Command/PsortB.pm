@@ -1,3 +1,5 @@
+#Id#
+
 package PAP::Command::PsortB;
 
 use strict;
@@ -5,9 +7,13 @@ use warnings;
 
 use Workflow;
 
+use Bio::Annotation::SimpleValue;
 use Bio::Seq;
 use Bio::SeqIO;
+use Bio::SeqFeature::Generic;
+
 use File::Temp qw/ tempdir /;
+use IO::File;
 use IPC::Run;
 use Cwd;
 
@@ -73,74 +79,75 @@ sub execute {
         die "gram stain should be positive or negative, not '$gram_stain'";
     }
 
+    my $temp_fh = File::Temp->new();
+    my $temp_fn = $temp_fh->filename();
+    $temp_fh->close();
+    
     my @psortb_command = (
                           'psort-b',
                           $gram_stain, 
-                          '-o terse',
-                         );
+                          '-o',
+                          'terse',
+                          $fasta_file,
+                      );
+    
+    my ($psortb_err);
 
-    # do tmp dir, shatter files,
-    my $current_dir = getcwd;
-    my $tmpdir = tempdir("psortbXXXXXX"); # CLEANUP => 1???
-    $self->working_directory($current_dir);
-    chdir($current_dir . "/" . $tmpdir);
-    my $max_chunks = $self->shatter_fasta();
-    # psort-b each sub-fasta
-    my @psortbdata;
-    foreach my $i (1..$max_chunks)
-    {
-        my ($psortb_out, $psortb_err);
-
-        my $psortb_file = $i . ".fa";
-        push(@psortb_command,$psortb_file);
-        IPC::Run::run(
-                       \@psortb_command,
-                       \undef,
-                       '>',
-                       \$psortb_out,
-                       '2>',
-                       \$psortb_err,
-                     );
-        pop(@psortb_command);
-        my @tmpdata = read_file($psortb_out);
-        push(@psortbdata,@tmpdata);
-    }
-    # parse output
-    # turn that into bioseq features
-    # clean up sub-fastas/temp dir.
-    # fertig!
-    $self->parse_psortb_terse(\@psortbdata);
-    $self->bio_seq_feature([]);
-
+    IPC::Run::run(
+                  \@psortb_command,
+                  \undef,
+                  '>',
+                  $temp_fn,
+                  '2>',
+                  \$psortb_err,
+              );
+    
+    my $feature_ref = $self->parse_psortb_terse($temp_fn);
+    
+    $self->bio_seq_feature($feature_ref);
+    
 }
 
-sub shatter_fasta {
-    my $self = shift;
-    my $seqfile = $self->fasta_file();
-    my $s = new Bio::SeqIO(-file => $seqfile, -format => 'fasta');
-    my $idx = 1;
-    while(my $seq = $s->next_seq()) {
-        my $ofile = $idx . ".fa"; 
-        my $so = new Bio::SeqIO(-file => ">$ofile", -format => 'fasta');
-    }
-    return $idx;
-}
+sub parse_psortb_terse {
+    
+    my ($self, $psort_fn) = (@_);
+    
+    
+    my @features = ( );
 
-sub parse_psortb_terse
-{
-    my $self = shift;
-    my $data = shift;
-    foreach my $line (@$data)
-    {
-        # split on tabs,
-        # should get gene name, classification, and score
-        # skip score < 7.5
+    my $psort_fh = IO::File->new();
+    $psort_fh->open("$psort_fn") or die "Can't open '$psort_fn': $OS_ERROR";
+
+    while (my $line = <$psort_fh>) {
+
+        chomp $line;
+        
+        if ($line =~ /^SeqID/) {
+            next;
+        }
+        
         my ($gene, $class, $score) = split(/\t/,$line);
-        next unless $score >= 7.5;
+
+        unless ($score >= 7.5) {
+            next;
+        }
+
+        my $feature = Bio::SeqFeature::Generic->new(
+                                                    -display_name => $gene,
+                                                );
+
+        my $annotation_collection = $feature->annotation();
+
+        my $sv = Bio::Annotation::SimpleValue->new(-value => $class);
+
+        $annotation_collection->add_Annotation('cellular_localization' => $sv);
+
+        push @features, $feature;
+        
     }
 
+    return \@features;
+    
 }
- 
-1;
 
-# $Id$
+1;

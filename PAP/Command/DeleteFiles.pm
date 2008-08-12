@@ -1,3 +1,5 @@
+#Id#
+
 package PAP::Command::DeleteFiles;
 
 use strict;
