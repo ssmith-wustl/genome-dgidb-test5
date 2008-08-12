@@ -1,4 +1,4 @@
-#Id#
+#$Id$
 
 package PAP::Command::PsortB;
 
@@ -12,12 +12,10 @@ use Bio::Seq;
 use Bio::SeqIO;
 use Bio::SeqFeature::Generic;
 
-use File::Temp qw/ tempdir /;
+use English;
+use File::Temp;
 use IO::File;
 use IPC::Run;
-use Cwd;
-
-use English;
 
 
 class PAP::Command::PsortB {

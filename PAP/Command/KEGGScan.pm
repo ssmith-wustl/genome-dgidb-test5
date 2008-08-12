@@ -1,4 +1,4 @@
-#Id#
+#$Id$
 
 package PAP::Command::KEGGScan;
 
@@ -179,5 +179,3 @@ sub parse_kegg
 }
  
 1;
-
-# $Id$
