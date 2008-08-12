@@ -1,5 +1,5 @@
 <?xml version='1.0' standalone='yes'?>
-<workflow name="annotate protein sequences" parallelBy="fasta file" executor="Workflow::Executor::SerialDeferred">
+<workflow name="inner protein annotation pipeline" parallelBy="fasta file" executor="Workflow::Executor::SerialDeferred">
   <link fromOperation="input connector" fromProperty="interproscan feature" toOperation="cat seq feature"  toProperty="interproscan feature" />
   <link fromOperation="input connector" fromProperty="keggscan feature"     toOperation="cat seq feature"  toProperty="keggscan feature" />
   <link fromOperation="input connector" fromProperty="fasta file"           toOperation="blastp"           toProperty="fasta_file" />
