@@ -1,20 +1,16 @@
 <?xml version='1.0' standalone='yes'?>
 <workflow name="annotate protein sequences" parallelBy="fasta file" executor="Workflow::Executor::SerialDeferred">
   <link fromOperation="input connector" fromProperty="interproscan feature" toOperation="cat seq feature"  toProperty="interproscan feature" />
+  <link fromOperation="input connector" fromProperty="keggscan feature"     toOperation="cat seq feature"  toProperty="keggscan feature" />
   <link fromOperation="input connector" fromProperty="fasta file"           toOperation="blastp"           toProperty="fasta_file" />
-  <link fromOperation="input connector" fromProperty="fasta file"           toOperation="keggscan"         toProperty="fasta_file" />
   <link fromOperation="input connector" fromProperty="fasta file"           toOperation="psortb"           toProperty="fasta_file" />
   <link fromOperation="input connector" fromProperty="gram stain"           toOperation="psortb"           toProperty="gram_stain" />
   <link fromOperation="blastp"          fromProperty="bio_seq_feature"      toOperation="cat seq feature"  toProperty="blastp feature" />
-  <link fromOperation="keggscan"        fromProperty="bio_seq_feature"      toOperation="cat seq feature"  toProperty="keggscan feature" />
   <link fromOperation="psortb"          fromProperty="bio_seq_feature"      toOperation="cat seq feature"  toProperty="psortb feature" />
   <link fromOperation="cat seq feature" fromProperty="all features"         toOperation="output connector" toProperty="bio seq features" />
   <link fromOperation="cat seq feature" fromProperty="result"               toOperation="output connector" toProperty="result" />
   <operation name="blastp">
     <operationtype commandClass="PAP::Command::BlastP" typeClass="Workflow::OperationType::Command" />
-  </operation>
-  <operation name="keggscan">
-    <operationtype commandClass="PAP::Command::KEGGScan" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="psortb">
     <operationtype commandClass="PAP::Command::PsortB" typeClass="Workflow::OperationType::Command" />
@@ -33,6 +29,7 @@
     <inputproperty>fasta file</inputproperty>
     <inputproperty>gram stain</inputproperty>
     <inputproperty>interproscan feature</inputproperty>
+    <inputproperty>keggscan feature</inputproperty>
     <outputproperty>bio seq features</outputproperty>
     <outputproperty>result</outputproperty>
   </operationtype>
