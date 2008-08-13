@@ -116,7 +116,7 @@ sub upload
     }
 
     # determine path
-    my $target = '/gsc/var/lib/ftp/private';
+    my $target = $class->target . '/private';
     if (-d $target)
     {
         $class->debug_message("private ftp directory exists: $target", 4);
@@ -167,8 +167,23 @@ sub upload
 
     # construct and return url
     my $url = "$target/" . basename($path);
-    $url =~ s{^/gsc/var/lib/ftp}{ftp://genome.wustl.edu};
+    my $bp  = $class->target;
+    $url =~ s{^$bp}{ftp://genome.wustl.edu};
     return "$url/";
+}
+
+=item target
+
+The ftp target directory.
+
+PARAMS:
+RETURNS: $target_directory
+
+
+=cut
+
+sub target {
+  return '/gsc/var/lib/ftp';
 }
 
 =item notification
@@ -233,6 +248,38 @@ sub notification {
   }
   return 1;
 }
+
+sub check_case_insensitive_dup_file {
+   my $proto = shift;
+   my $path = shift;
+   my @list = split /\n/, `find $path -print`;
+   my %h;
+   foreach my $fn (@list) {
+     chomp($fn);
+     $h{lc($fn)} ++;
+   }
+   my $dupmesg = '';
+   my $founddup = 0;
+   foreach my $m (keys %h) { 
+      if($h{$m} > 1) {
+        $founddup ++; 
+        $dupmesg .= $m . "\t" . $h{$m} ."\n"; 
+      }
+   }
+   my $msg = '';
+   if($founddup) {
+     print STDERR "WARNING: Found duplicate filenames if the case is ignored.\n";
+     print STDERR "         Please take extra care when downloading the files to the case insensitive OS. For example, Microsoft Window\n";
+     print STDERR "Shown below is the duplicate filenames.\n";
+     print STDERR $dupmesg;
+     $msg = "WARNING: Found duplicate filenames if the case is ignored.\n";
+     $msg .= "         Please take extra care when download the files to the case insensitive OS. For example, Microsoft Window\n";
+     $msg .= "Shown below is the duplicate filenames.\n";
+     $msg .= $dupmesg;
+   }
+   return ($founddup, $msg);
+}
+
 1;
 __END__
 
