@@ -41,6 +41,7 @@ sub bsub_rusage {
 sub execute {
     my $self = shift;
 
+$DB::single=1;
     $DB::single = $DB::stopper;
 
     my $now = UR::Time->now;
@@ -107,6 +108,9 @@ sub execute {
             $self->status_message("no alignment distribution threshold is set.  accepting all read sets");
         }
         
+        my @missing_maps;
+        my @found_maps;
+$DB::single=1;
         for my $run_event (@run_events) {
             my $align_reads = Genome::Model::Command::AddReads::AlignReads::Maq->get(
                 model_id   => $model->id,
@@ -134,19 +138,30 @@ sub execute {
                     $self->status_message("ADDING read set $read_set_desc");
                 }
             }
-
+            
             my @map_files = $align_reads->read_set_alignment_files_for_refseq($self->ref_seq_id);
             unless (@map_files) {
-                die "Failed to find map files for read set "
+                #$DB::single = 1;
+                @map_files = $align_reads->read_set_alignment_files_for_refseq($self->ref_seq_id);
+                my $msg = 
+                    "Failed to find map files for read set "
                     . $run_event->run_id 
+                    . "(" . $run_event->read_set->full_name . ")"
                     . " on event "
                     . $align_reads->id;
+                $self->error_message($msg);
+                push @missing_maps, $msg;
             }
             $self->status_message("Found map files:\n" . join("\n\t",@map_files));
             
             push @{$library_alignments{$library}}, @map_files;
         }
-    }    
+        if (@missing_maps) {
+            $self->error_message(join("\n",@missing_maps));
+            #$self->error_message("Looked in directory: $maplist_dir);
+            die "Map files are missing!:\n"
+        }
+    }
     
     for my $library (keys %library_alignments) {
         my $library_maplist = $maplist_dir .'/' . $library . '_' . $self->ref_seq_id . '.maplist';
