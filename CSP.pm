@@ -657,6 +657,7 @@ my %csp_priority = (
     'gather submission results'               => 1,
     'prepare read submission'                 => 1,
     'submit reads'                            => 1,
+    'transfer submission'                     => 1,
     'configure image analysis and base call'  => 1,
     'make default offsets'                    => 1,
     'configure alignment'                     => 1,
