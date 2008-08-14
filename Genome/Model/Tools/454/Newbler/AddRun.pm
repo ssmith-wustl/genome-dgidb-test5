@@ -44,7 +44,7 @@ sub execute {
     my $self = shift;
 
     $DB::single = $DB::stopper;
-    my $options = $self->is_paired_end ? ' -p ' : '';
+    my $options = $self->is_paired_end ? ' -p ' : ' ';
     my $cmd = $self->full_bin_path('addRun') . $options . $self->dir .' '. join(' ',@{$self->runs});
     my $rv = system($cmd);
     unless ($rv == 0) {
