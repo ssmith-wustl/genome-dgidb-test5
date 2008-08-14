@@ -167,6 +167,7 @@ sub execute
     }
 
     $self->status_message("Resolving data needs");
+    print "Resolving data needs\n";
     unless ($self->resolve_data_needs)
     {
 	$self->error_message("Failed to resolve data needs");
@@ -181,7 +182,7 @@ sub execute
     }
 
 
-    if ($self->make_fake_phds)
+    if ($self->make_fake_phds eq 'YES')
     {
 	$self->status_message("Creating fake phd files");
 	unless ($self->create_fake_phds ('file'))
@@ -190,7 +191,7 @@ sub execute
 	}
     }
 
-    if ($self->make_phd_ball)
+    if ($self->make_phd_ball eq 'YES')
     {
 	$self->status_message("Creating phd ball");
 	unless ($self->create_fake_phds ('ball'))
@@ -685,8 +686,6 @@ sub create_pcap_input_fasta_fof
 
     my $dir = $self->{project_path};
 
-    #return 1 if file already exists to pick up where left off??
-
     my $input_fof = $self->{pcap_root_name};
 
     my @fastas = glob ("$dir/edit_dir/*fasta.gz");
@@ -1065,6 +1064,8 @@ sub run_pcap
 
     my $pcap_prog = $self->{pcap_prog_type};
 
+    print "Running ".$pcap_prog.' '.$self->{pcap_root_name}.' '.$self->_get_pcap_params."\n";
+
     my $ec = system ($pcap_prog.' '.$self->{pcap_root_name}.' '.$self->_get_pcap_params);
 
     $self->error_message("$pcap_prog returned exit code $ec\n") and return
@@ -1087,6 +1088,8 @@ sub run_bdocs
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
 
+    print "Running ".$bdocs_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bdocs_params."\n";
+
     my $ec = system ($bdocs_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bdocs_params);
 
     $self->error_message("bdocs.rep returned exit code $ec\n") and return if $ec;
@@ -1104,6 +1107,8 @@ sub run_bclean
 
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
+
+    print "Running ".$bclean_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bclean_params."\n";
 
     my $ec = system ($bclean_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bclean_params);
 
@@ -1124,6 +1129,8 @@ sub run_bcontig
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
 
+    print "Running ".$bcontig_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bcontig_params."\n";
+
     my $ec = system ($bcontig_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bcontig_params);
 
     $self->error_message("bcontig returned exit code $ec\n") and return if $ec;
@@ -1142,6 +1149,8 @@ sub run_bconsen
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
 
+    print "Running ".$bconsen_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bconsen_params."\n";
+
     my $ec = system ($bconsen_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bconsen_params);
 
     $self->error_message("bconsen returned exit code $ec\n") and return
@@ -1158,6 +1167,8 @@ sub run_bform
 
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir("$dir/edit_dir") );
+
+    print "Running ".'bform '.$self->{pcap_root_name}.'.pcap '.$self->_get_bform_params."\n";
 
     my $ec = system ('bform '.$self->{pcap_root_name}.'.pcap '.$self->_get_bform_params);
 
