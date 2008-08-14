@@ -3,6 +3,8 @@ package Genome::Model::Tools::454::Newbler::RunProject;
 use strict;
 use warnings;
 
+use Workflow;
+
 class Genome::Model::Tools::454::Newbler::RunProject {
     is => 'Genome::Model::Tools::454::Newbler',
     has => [
@@ -18,6 +20,11 @@ class Genome::Model::Tools::454::Newbler::RunProject {
                              },
                  ],
 
+};
+
+operation_io Genome::Model::Tools::454::Newbler::RunProject {
+    input => [ 'dir', 'test'],
+    output => [ ],
 };
 
 sub help_brief {

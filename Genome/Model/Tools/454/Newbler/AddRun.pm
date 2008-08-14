@@ -3,6 +3,8 @@ package Genome::Model::Tools::454::Newbler::AddRun;
 use strict;
 use warnings;
 
+use Workflow;
+
 class Genome::Model::Tools::454::Newbler::AddRun {
     is => 'Genome::Model::Tools::454::Newbler',
     has => [
@@ -23,6 +25,11 @@ class Genome::Model::Tools::454::Newbler::AddRun {
 
 };
 
+operation_io Genome::Model::Tools::454::Newbler::AddRun {
+    input => [ 'dir', 'test', 'runs', 'is_paired_end'],
+    output => [ 'dir', 'test' ],
+};
+
 sub help_brief {
 "genome-model tools newbler add-run --dir=DIR --inputs='FileA FileB'";
 }
@@ -37,7 +44,7 @@ sub execute {
     my $self = shift;
 
     $DB::single = $DB::stopper;
-    my $options = $self->is_paired_end ? ' -p ' : ' ';
+    my $options = $self->is_paired_end ? ' -p ' : '';
     my $cmd = $self->full_bin_path('addRun') . $options . $self->dir .' '. join(' ',@{$self->runs});
     my $rv = system($cmd);
     unless ($rv == 0) {
