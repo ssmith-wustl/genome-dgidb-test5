@@ -9,7 +9,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 69;
+use Test::More tests => 74;
 use Test::Differences;
 use File::Path;
 
@@ -166,6 +166,10 @@ my $ppmaa = Genome::ProcessingProfile->create(type_name => 'micro array affymetr
 ok($ppmaa, 'creation worked micro array affymetrix processing profile');
 isa_ok($ppmaa ,'Genome::ProcessingProfile::MicroArrayAffymetrix');
 
+my $ppa = Genome::ProcessingProfile->create(type_name => 'assembly');
+ok($ppa, 'creation worked assembly processing profile');
+isa_ok($ppa ,'Genome::ProcessingProfile::Assembly');
+
 # Test creation for the corresponding models
 diag('subclassing tests - test create for a genome model object of each subclass');
 my $gmsr = Genome::Model->create(processing_profile_id => $ppsr->id,
@@ -221,11 +225,20 @@ ok($gmmaa, 'creation worked micro array affymetrix model');
 isa_ok($gmmaa ,'Genome::Model::MicroArrayAffymetrix');
 delete_model($gmmaa);
 
+my $gma = Genome::Model::Assembly->create(
+                                          processing_profile_id => $ppa->id,
+                                          name => 'assembly test',
+                                          sample_name => $sample_name,
+                                );
+ok($gma, 'creation worked assembly model');
+isa_ok($gma ,'Genome::Model::Assembly');
+is($obj->sample_name,$sample_name,'sample name accessor');
+#delete_model($gma);
+
 sub delete_model{
     my $model = shift;
     my $model_dir = $model->_model_directory;
     undef $model;
     system "rm -rf $model_dir";
 }
-
 
