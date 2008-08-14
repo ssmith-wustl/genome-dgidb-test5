@@ -49,7 +49,7 @@ sub execute {
     my $rv = system($cmd);
     unless ($rv == 0) {
         $self->error_message("non-zero return status from command '$cmd'");
-        return
+        return;
     }
     return 1;
 }
