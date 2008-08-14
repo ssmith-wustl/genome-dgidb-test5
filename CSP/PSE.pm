@@ -40,6 +40,7 @@ my %PROCESS_COUNT = (
     'remove run'                             => 0,
     'prepare read submission'                => 0,
     'submit reads'                           => 0,
+    'transfer submission'                    => 0,
     'gather submission results'              => 0,
     'make library start site'                => 0,
     'build sequence db'                      => 0,
