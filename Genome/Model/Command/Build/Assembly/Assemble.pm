@@ -38,10 +38,11 @@ sub execute {
     $DB::single = $DB::stopper;
 
     my $model = $self->model;
-    unless (Genome::Model::Tools::454::Newbler::RunProject->execute(
-                                                                    test => $model->test,
-                                                                    dir => $model->assembly_directory,
-                                                                )) {
+    my $run_project = Genome::Model::Tools::454::Newbler::RunProject->create(
+                                                                             test => $model->test,
+                                                                             dir => $model->assembly_directory,
+                                                                         );
+    unless($run_project->execute) {
         $self->error_message('Failed to run assembly project '. $model->assembly_directory);
         return;
     }
