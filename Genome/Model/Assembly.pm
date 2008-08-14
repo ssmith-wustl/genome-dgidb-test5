@@ -8,7 +8,7 @@ use above "Genome";
 class Genome::Model::Assembly {
     is => 'Genome::Model',
     has => [
-            read_set_assignment_events   => { is => 'Genome::Model::Command::Build::Assembly::AssignReadSetsToModel',
+            read_set_assignment_events   => { is => 'Genome::Model::Command::Build::Assembly::AssignReadSetToModel',
                                               is_many => 1,
                                               reverse_id_by => 'model',
                                               where => [ "event_type like" => 'genome-model build assembly assign-read-sets%'],
