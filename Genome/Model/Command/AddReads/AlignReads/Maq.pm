@@ -94,6 +94,14 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
             |,
             calculate_from => ['read_set_directory','run_subset_name'],
         },
+        subsequences => {
+                         doc => "the sub-sequence names with out 'all_sequences'",
+                         calculate_from => ['model'],
+                         calculate => q|
+                                 return grep {$_ ne "all_sequences"} $model->get_subreference_names(reference_extension=>'bfa');
+                             |,
+                     },
+        is_eliminate_all_duplicates => { via => 'model' },
             # deprecated
             output_data_dir => {
                                 doc => "The path at which the model stores all of its private data for a given run",
@@ -356,7 +364,6 @@ sub prepare_input {
     my $read_set_desc = $read_set->full_name . "(" . $read_set->id . ")";
     my $gerald_directory = $read_set->_run_lane_solexa->gerald_directory;
     unless ($gerald_directory) {
-    
         die "No gerald directory in the database for or $read_set_desc"
     }
     unless (-d $gerald_directory) {
@@ -434,21 +441,30 @@ sub execute {
 $DB::single = $DB::stopper;
 
     my $model = $self->model;
-    my $seq_dedup = $model->is_eliminate_all_duplicates;
-    
     # prepare the reads
-    my $read_set = $self->read_set;
-    my $bfq_pathname = $self->prepare_input($read_set,$seq_dedup);
-    
-    # gather parameters
-    my $event_id = $self->id;
-    my $alignment_file = $self->create_temp_file_path("all.map");
-    my $aligner_output_file = $self->aligner_output_file;
-    my $unaligned_reads_file = $self->unaligned_reads_file;
-    
+    my $bfq_pathname = $self->prepare_input($self->read_set,$self->is_eliminate_all_duplicates);
+
+    # prepare the refseq
+    my $ref_seq_path =  $model->reference_sequence_path;
+    my $ref_seq_file =  $ref_seq_path . "/all_sequences.bfa";
+    unless (-e $ref_seq_file) {
+        $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
+        return;
+    }
+
+    # prepare paths for the results
+
+    if ($self->alignment_data_available_and_correct) {
+        $self->status_message("existing alignment data is available and deemed correct");
+        return 1;
+    }
+
+    my $read_set_alignment_directory = $self->read_set_alignment_directory;
+    $self->create_directory($read_set_alignment_directory);
+
     my $aligner_path = $self->aligner_path('read_aligner_name');
     my $aligner_params = $model->read_aligner_params || '';
-    
+
     # resolve adaptor file
     # TODO: get fresh from LIMS
     my $adaptor_file;
@@ -461,95 +477,16 @@ $DB::single = $DB::stopper;
         }
     }
     $aligner_params = join(' ', $aligner_params, '-d', $adaptor_file);
-    
-    # prepare the refseq
-    my $ref_seq_path =  $model->reference_sequence_path;    
-    my $ref_seq_file =  $ref_seq_path . "/all_sequences.bfa";
-    unless (-e $ref_seq_file) {
-        $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
-        return;
-    }
-    my @subsequences = grep {$_ ne "all_sequences"} $model->get_subreference_names(reference_extension=>'bfa');
-    
-
-    # prepare paths for the results
-    my $read_set_alignment_directory = $self->read_set_alignment_directory;
-    if (-d $read_set_alignment_directory) {
-        $self->status_message("found existing run directory $read_set_alignment_directory");
-        my $errors;
-        my @cross_refseq_alignment_files;
-        for my $ref_seq_id (@subsequences) {
-            my @alignment_files = $self->read_set_alignment_files_for_refseq($ref_seq_id);
-            my @distinct = grep { /unique|distinct/ } @alignment_files;
-            my @duplicate = grep { /duplicate|redu/ } @alignment_files;
-            my @all = grep { /all/ } @alignment_files;
-            my @other = grep { /other/ } @alignment_files;
-            my @map = grep { /map/ } @alignment_files;
-
-            push @cross_refseq_alignment_files, @alignment_files;
-            
-            # this is causing the PPAV orang model (flow cell 14545)to fail....we don't expect it to have all, distinct, or duplicate
-            # it is also unclear how the 14545 flow cell directory differs from the 209N1 of the 14487 dirs
-            # we could also use an elseif that looks for "other"...but there is still a hole where there are just submaps for specific
-            # chromosomes
-
-            if (@all) {
-                $self->status_message("ref seq $ref_seq_id has complete map files");
-            }
-            elsif (@distinct and @duplicate) { 
-                $self->status_message("ref seq $ref_seq_id has distinct and duplicate map files");
-            }
-            elsif (@other){
-                $self->status_message("ref seq $ref_seq_id has an other map file");
-            }
-            elsif (@map){
-                $self->status_message("ref seq $ref_seq_id has some map file");
-                foreach my $map (@map){
-                    unless (-s $map) {
-                        $errors++;
-                        $self->error_message("ref seq $ref_seq_id has zero size map file");
-                    }
-                }
-            }
-            else {
-                $errors++;
-                $self->error_message("ref seq $ref_seq_id has bad read set directory:\n\t" . join("\n\t",@alignment_files));
-            }
-        }
-        unless (-s $unaligned_reads_file) {
-            $self->error_message("missing unaligned reads file");
-            ## this test is not finding unaligned files that are actually there....commenting out for now
-            ##$errors++;
-        }
-        unless (-s $aligner_output_file) {
-            $self->error_message("missing aligner output file");
-            ## this test is not finding aligner output files that are actually there....commenting out for now
-            ##$errors++;
-        }
-        if ($errors) {
-            if (@cross_refseq_alignment_files) {
-                $self->error_message("REFUSING TO CONTINUE with partial map files in place in old directory.");
-                return;
-            }
-            else {
-                $self->warning_message("RE-PROCESSING: Moving old directory out of the way");
-                unless (rename ($read_set_alignment_directory,$read_set_alignment_directory . ".old.$$")) {
-                    die "Failed to move old alignment directory out of the way: $!";
-                }
-                # fall through to the regular processing and try this again...
-            }
-        }
-        else {
-            $self->status_message("SHORTCUT SUCCESS: alignment data is already present.");
-            return 1;
-        }
-    }
-    $self->create_directory($read_set_alignment_directory);
-    
     unless (-e $adaptor_file) {
         $self->error_message("Adaptor file $adaptor_file not found!: $!");
         return;
     }
+
+    # gather parameters
+    my $event_id = $self->id;
+    my $alignment_file = $self->create_temp_file_path("all.map");
+    my $aligner_output_file = $self->aligner_output_file;
+    my $unaligned_reads_file = $self->unaligned_reads_file;
     
     # prepare the alignment command
     my $cmdline = 
@@ -585,7 +522,9 @@ $DB::single = $DB::stopper;
     );
 
 $DB::single = $DB::stopper;
+    
 
+    my @subsequences = $self->subsequences;
     # break up the alignments by the sequence they match, if necessary
     my $map_split = Genome::Model::Tools::Maq::MapSplit->execute(
                                                                  map_file => $alignment_file,
@@ -631,6 +570,86 @@ sub verify_successful_completion {
     return 1;
 }
 
+sub alignment_data_available_and_correct {
+    my $self = shift;
+
+    my $read_set_alignment_directory = $self->read_set_alignment_directory;
+    if (-d $read_set_alignment_directory) {
+        $self->status_message("found existing run directory $read_set_alignment_directory");
+    } else {
+        return;
+    }
+    my $errors = 0;
+    my @cross_refseq_alignment_files;
+    for my $ref_seq_id ($self->subsequences) {
+        my @alignment_files = $self->read_set_alignment_files_for_refseq($ref_seq_id);
+        my @distinct = grep { /unique|distinct/ } @alignment_files;
+        my @duplicate = grep { /duplicate|redu/ } @alignment_files;
+        my @all = grep { /all/ } @alignment_files;
+        my @other = grep { /other/ } @alignment_files;
+        my @map = grep { /map/ } @alignment_files;
+
+        push @cross_refseq_alignment_files, @alignment_files;
+
+        # this is causing the PPAV orang model (flow cell 14545)to fail....we don't expect it to have all, distinct, or duplicate
+        # it is also unclear how the 14545 flow cell directory differs from the 209N1 of the 14487 dirs
+        # we could also use an elseif that looks for "other"...but there is still a hole where there are just submaps for specific
+        # chromosomes
+
+        if (@all) {
+            $self->status_message("ref seq $ref_seq_id has complete map files");
+        } elsif (@distinct and @duplicate) { 
+            $self->status_message("ref seq $ref_seq_id has distinct and duplicate map files");
+        } elsif (@other){
+            $self->status_message("ref seq $ref_seq_id has an other map file");
+        } elsif (@map){
+            $self->status_message("ref seq $ref_seq_id has some map file");
+            foreach my $map (@map){
+                unless (-s $map) {
+                    $errors++;
+                    $self->error_message("ref seq $ref_seq_id has zero size map file '$map'");
+                }
+            }
+        } else {
+            $errors++;
+            $self->error_message("ref seq $ref_seq_id has bad read set directory:". join("\n\t",@alignment_files));
+        }
+    }
+    my $unaligned_reads_file = $self->unaligned_reads_file;
+    my $found_unaligned_reads_file = $self->check_for_existence($unaligned_reads_file);
+    if (!$found_unaligned_reads_file) {
+        $self->error_message("missing unaligned reads file '$unaligned_reads_file'");
+        $errors++;
+    } elsif (!-s $unaligned_reads_file) {
+        $self->error_message("unaligned reads file '$unaligned_reads_file' found but zero size");
+        $errors++;
+    }
+
+    my $aligner_output_file = $self->aligner_output_file;
+    my $found_aligner_output_file = $self->check_for_existence($aligner_output_file);
+    if (!$found_aligner_output_file) {
+        $self->error_message("missing aligner output file '$aligner_output_file'");
+        $errors++;
+    } elsif (!$self->_check_maq_successful_completion($aligner_output_file)) {
+        $self->error_message("aligner output file '$aligner_output_file' found, but incomplete");
+        $errors++;
+    }
+    if ($errors) {
+        if (@cross_refseq_alignment_files) {
+            die("REFUSING TO CONTINUE with partial map files in place in old directory.");
+        }
+        else {
+            $self->warning_message("RE-PROCESSING: Moving old directory out of the way");
+            unless (rename ($read_set_alignment_directory,$read_set_alignment_directory . ".old.$$")) {
+                die("Failed to move old alignment directory out of the way: $!");
+            }
+            return;
+        }
+    } else {
+        $self->status_message("SHORTCUT SUCCESS: alignment data is already present.");
+        return 1;
+    }
+}
 
 sub _check_maq_successful_completion {
     my($self,$output_filename) = @_;
