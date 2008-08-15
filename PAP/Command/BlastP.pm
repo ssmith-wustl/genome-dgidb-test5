@@ -107,13 +107,14 @@ sub parse_blast_results
     my $bsio = new Bio::SearchIO(-format => 'blast',
                                  -file   => $results,
                                 );
-
     # makeAce does this:
     # desc=`blastParseHGMI <blastoutput> | head -1`
     # does a grep for ***NONE***/hypothetical
     # then puts header in  fof file?
-    
-    while( my $r = $bsio->next_result() )
+    my $feat;    
+    $feat = new Bio::SeqFeature::Generic();
+    print "Parsing output\n";
+RES:    while( my $r = $bsio->next_result() )
     {
         while( my $hit = $r->next_hit )
         {
@@ -140,6 +141,21 @@ sub parse_blast_results
                                  $sstart,$send );
                 my $short_desc = $description;
                 $short_desc =~ s/>.*//;
+                if($short_desc =~ /hypothetical/ix)  # this should really be fixed
+                {
+                    print "is hypothetical\n";
+                    print $short_desc, "\n";
+                    last RES; # only the first top hit
+                }
+                else 
+                {
+                    # do the features here.
+                    $feat->seq_id($gene);
+                    $feat->add_Annotation("Brief_identification", "Stats: $stats TopHit: $hname");
+
+                    print "added in $gene, with $stats hit $hname\n";
+                }
+
             }
         }
     }
@@ -147,7 +163,8 @@ sub parse_blast_results
     # creates output like Sequence "sequencename"\nBrief_identification "Stats: " something " TopHit: "something"
 
     # product id part, see geneNaming.pl...
-    $self->gene_naming($results);
+    $self->gene_naming($results,$feat);
+    $self->bio_seq_feature( [ $feat ] );
 
     return 1;
 }
@@ -156,12 +173,31 @@ sub gene_naming
 {
     my $self = shift;
     my $blastoutput = shift;
+    my $sf = shift;
     # product id part, see geneNaming.pl...
     # if no hits, then ProductID "Predicted Protein"
     # if one hit, check if id/coverage >= 80, if not, just mark
     # as a hypothetical protein
     # else need to check a few things (conserved, matches a swissprot protein),
     #  or there is a similarity to something else... 
+    my $bsio = new Bio::SearchIO(-format => 'blast',
+                                 -file   => $blastoutput,
+                                );
+
+    my $res = $bsio->next_result();
+    my $hit = $res->next_hit();
+    if(defined($hit))
+    {
+
+
+    }
+    else # 'count' is 0, no hits to bact nr
+    {
+        # sequence name \t\t Predicted Protein
+        # Sequence seqname\nProduct_ID\"Predicted Protein\"\n\n
+    }
+    # need to generate 'count'
+
     return 1;
 }
 
