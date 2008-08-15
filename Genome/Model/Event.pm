@@ -234,6 +234,23 @@ sub shellcmd {
     return 1;
 }
 
+sub check_for_existence {
+    my ($self,$path,$attempts) = @_;
+
+    unless (defined $attempts) {
+        $attempts = 5;
+    }
+
+    my $try = 0;
+    my $found = -e $path;
+    while (!$found && $try < $attempts) {
+        $found = -e $path;
+        sleep(1);
+        $try++;
+    }
+    return $found;
+}
+
 sub create_file {
     my ($self, $output_name, $path) = @_;
     my @existing = $self->outputs(name => $output_name);
