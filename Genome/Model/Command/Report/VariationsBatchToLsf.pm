@@ -6,6 +6,7 @@ use warnings;
 use above "Genome";
 
 use Genome::Model::Command::Report::Variations;
+use Data::Dumper;
 use Command; 
 use PP::LSF;
 
@@ -51,9 +52,8 @@ sub execute {
     my $self = shift;
     
     # create child jobs
-    my $jobs = $self->_create_jobs;
-    $self->error_message("No jobs created")
-        and return unless $jobs and @$jobs;
+    my $jobs = $self->_create_jobs
+        or return;
 
     # run & monitor jobs
     my $success = $self->_run_and_monitor_jobs($jobs);
@@ -62,8 +62,7 @@ sub execute {
     return $self->_finish($success, $jobs);
 }
 
-sub _create_jobs
-{
+sub _create_jobs {
     my $self = shift;
 
     my $main_variant_fh = $self->_open_read_fh( $self->variant_file )
@@ -71,30 +70,29 @@ sub _create_jobs
 
     my @jobs;
     my $line_count = 0;
-    while ( my $line = $main_variant_fh->getline )
-    {
+    while ( my $line = $main_variant_fh->getline ) {
         $line_count++;
-        if ( $line_count == 1 )
-        {
-            unless ( push @jobs, $self->_setup_job($#jobs + 1) )
-            {
+        if ( $line_count == 1 ) {
+            unless ( push @jobs, $self->_setup_job($#jobs + 1) ) {
+                $self->error_msg( sprintf('Job setupt failed for job #%d.  See above for other errors', $#jobs) );
                 $self->_finish(0, \@jobs);
                 return; 
             }
             $jobs[$#jobs]->{variant_fh}->print($line);
         }
-        elsif ( $line_count == 10000 ) # TODO param??
-        {
+        elsif ( $line_count == 10000 ) { # TODO param?? 
             $jobs[$#jobs]->{variant_fh}->print($line);
             $jobs[$#jobs]->{variant_fh}->close;
             $line_count = 0;
         }
-        else
-        {
+        else {
             $jobs[$#jobs]->{variant_fh}->print($line);
         }
     }
 
+    $self->error_message("No jobs created")
+        and return unless @jobs;
+    
     $jobs[$#jobs]->{variant_fh}->close if $jobs[$#jobs]->{variant_fh}->opened;
     $main_variant_fh->close;
 
@@ -106,12 +104,9 @@ sub _open_fh
     my ($self, $file, $mode) = @_;
 
     my $fh = IO::File->new("$mode $file");
-    unless ( $fh )
-    {
-        $self->error_message
-        (
-            sprintf
-            (
+    unless ( $fh ) {
+        $self->error_message (
+            sprintf (
                 'Can\'t open file (%s) for %sing', $file, ( $mode eq '<' ? 'read' : 'writ' ),
             ) 
         );
@@ -137,12 +132,10 @@ sub _open_write_fh
     return $self->_open_fh($file, '>');
 }
 
-sub _setup_job
-{
+sub _setup_job {
     my ($self, $num) = @_;
 
-    my $variant_file = sprintf
-    (
+    my $variant_file = sprintf (
         '%s.%d', 
         $self->variant_file,
         $num,
@@ -151,8 +144,7 @@ sub _setup_job
     my $variant_fh = $self->_open_write_fh($variant_file)
         or return;
     
-    my $report_file_base = sprintf
-    (
+    my $report_file_base = sprintf (
         '%s.%d', 
         $self->report_file_base,
         $num,
@@ -160,8 +152,7 @@ sub _setup_job
 
     # If logging, get a log file for each job
     my ($out_file, $error_file);
-    if ( $self->out_log_file )
-    {
+    if ( $self->out_log_file ) {
         $out_file = sprintf
         (
             '%s.%d', 
@@ -171,8 +162,7 @@ sub _setup_job
         unlink $out_file if -e $out_file;
     }
 
-    if ( $self->error_log_file )
-    {
+    if ( $self->error_log_file ) {
         $error_file = sprintf
         (
             '%s.%d', 
@@ -182,8 +172,7 @@ sub _setup_job
         unlink $error_file if -e $error_file;
     }
 
-    my %job_params =
-    (
+    my %job_params = (
         pp_type => 'lsf',
         q => 'aml',
         R => "'select[db_dw_prod_runq<10] rusage[db_dw_prod=1]'",
@@ -209,8 +198,7 @@ sub _setup_job
     $self->error_message("Can't create job: $!")
         and return unless $job;
 
-    return 
-    {
+    return {
         job => $job,
         variant => $variant_file,
         variant_fh => $variant_fh,
@@ -226,8 +214,7 @@ sub _run_and_monitor_jobs
 
     # Start jobs.  To monitor, create hash w/ job ids as keys.
     my %running_jobs;
-    for my $num ( 0..(scalar(@$jobs) - 1) )
-    {
+    for my $num ( 0..(scalar(@$jobs) - 1) ) {
         # Set local $job for clarity
         my $job = $jobs->[$num]->{job};
         $job->start;
@@ -235,22 +222,17 @@ sub _run_and_monitor_jobs
     }
 
     # Monitor
-    MONITOR: while ( %running_jobs )
-    {
+    MONITOR: while ( %running_jobs ) {
         sleep 30;
-        for my $job_id ( keys %running_jobs )
-        {
+        for my $job_id ( keys %running_jobs ) {
             # Set local $job for clarity
             my $job = $jobs->[ $running_jobs{$job_id} ]->{job};
-            if ( $job->has_ended )
-            {
-                if ( $job->is_successful )
-                {
+            if ( $job->has_ended ) {
+                if ( $job->is_successful ) {
                     print "$job_id successful\n";
                     delete $running_jobs{$job_id};
                 }
-                else
-                {
+                else {
                     print "$job_id failed, killing other jobs\n";
                     $self->_kill_jobs($jobs);
                     last MONITOR;
@@ -266,8 +248,7 @@ sub _kill_jobs
 {
     my ($self, $jobs) = @_;
 
-    for my $job_ref ( @$jobs )
-    {
+    for my $job_ref ( @$jobs ) {
         my $job = $job_ref->{job};
         next if $job->has_ended;
         $job->kill;
@@ -276,8 +257,7 @@ sub _kill_jobs
     return 1;
 }
 
-sub _finish
-{
+sub _finish {
     my ($self, $success, $jobs) = @_;
 
     # Create the main reports, if jobs were successful
