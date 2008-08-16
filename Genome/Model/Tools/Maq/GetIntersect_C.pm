@@ -32,10 +32,10 @@ use Inline C => <<'END_C';
 
 #define get_record(a, b) gzread(a,b, sizeof(*(b)))
 #define put_record(a, b) gzwrite(a,b, sizeof(*(b)))
-void write_seq_ov (char *maqfile, char *seqfile, char * outfile);
+void write_seq_ov (char *maqfile, char *seqfile, char * outfile, int justname);
 int main(int argc, char **argv)
 {
-    write_seq_ov (argv[1], argv[2], argv[3]);
+    write_seq_ov (argv[1], argv[2], argv[3], atoi(argv[4]));
     return;
 }
 
@@ -51,10 +51,10 @@ int find_ref_seq_id(char *ref_seq_name, maqmap_t * mm)
     return -1;
 }
 
-int get_next_seq_pos(FILE *fh, int *seq, int *pos, maqmap_t *mm)
+int get_next_seq_pos(FILE *fh, char * ref_seq_name, int *seq, int *pos, maqmap_t *mm)
 {
     static char templine[180];
-    static char ref_seq_name[180];
+    
     if(fgets(templine, sizeof(templine), fh))
     {
         if(sscanf(templine, "%s %d", ref_seq_name, pos)==2)
@@ -67,7 +67,7 @@ int get_next_seq_pos(FILE *fh, int *seq, int *pos, maqmap_t *mm)
 }
 
 /**********************************************************************/
-void write_seq_ov (char *maqfile, char *seqfile, char * outfile)
+void write_seq_ov (char *maqfile, char *seqfile, char * outfile, int justname)
 {
     gzFile fpin = NULL;
     FILE *fp = NULL;
@@ -76,29 +76,53 @@ void write_seq_ov (char *maqfile, char *seqfile, char * outfile)
     if (fpin == NULL) { printf("Unable to open file '%s'\n",maqfile); goto cleanup; }
     
     gzFile fpout = NULL;
-    fpout = gzopen(outfile, "w");
+    FILE *fpout2 = NULL;
+    if(justname==0)
+        fpout = gzopen(outfile, "w");
+    else if(justname == 1)
+        fpout2 = fopen(outfile, "w");    
+    else if(justname == 2)
+    {
+        char filename[512];
+        strcpy(filename,outfile);
+        strcat(filename,".map");
+        fpout = gzopen(filename, "w");
+        strcpy(filename,outfile);
+        strcat(filename,".readlist");
+        fpout2 = fopen(filename,"w");    
+    }
     fp = fopen(seqfile, "r");
     if (fp == NULL) { printf("Unable to open file '%s'\n",seqfile); goto cleanup; }
     
     mm = maqmap_read_header(fpin);   
-    maqmap_write_header(fpout, mm); 
+    if(fpout) maqmap_write_header(fpout, mm); 
     if(mm == NULL) { printf("Unable to get header from maq file.\n"); goto cleanup; }
     maqmap1_t curr_mm;    
     int seqid, pos, ret;
-    //ret = get_next_seq_pos(fp, &seqid, &pos, mm);        
-    //if(!ret) goto cleanup;
+    char seqname[180];
     
-    get_record(fpin, &curr_mm);
-    while((ret = get_next_seq_pos(fp, &seqid, &pos, mm)))
+
+    char filename[256];
+    while((ret = get_next_seq_pos(fp, seqname, &seqid, &pos, mm)))
     {
-        if(seqid >= curr_mm.seqid) break; 
-    }
-    
-    do
-    {
-        do
+        /*if(justname)
+        {            
+            sprintf(filename, "%s_%d.readlist",seqname,pos+1);
+            fpout2 = fopen(filename, "w");
+        }*/
+        while(get_record(fpin, &curr_mm))
         {
-            if(seqid != curr_mm.seqid) continue;
+            if(seqid > curr_mm.seqid)
+            {
+                while(get_record(fpin, &curr_mm))
+                {
+                    if(curr_mm.seqid>=seqid) break;        
+                }                
+            }
+            if(seqid != curr_mm.seqid)
+            {
+                break;            
+            }
             if((curr_mm.pos>>1) > pos) break;
             if(((curr_mm.pos>>1) + curr_mm.size - 1) < pos)
             {
@@ -109,12 +133,22 @@ void write_seq_ov (char *maqfile, char *seqfile, char * outfile)
             //{
             //    printf("position is %d, read start %d read end %d\n", pos,curr_mm.pos>>1,(curr_mm.pos>>1) + curr_mm.size - 1); 
             //                 printf("Writing %s at %d, size %d\n",curr_mm.name, curr_mm.pos>>1,curr_mm.size);
-            //}                 
-            put_record(fpout, &curr_mm);                
-        }
-        while(get_record(fpin, &curr_mm));
-    }
-    while((ret = get_next_seq_pos(fp, &seqid, &pos, mm)));
+            //}
+            if(justname==1||justname==2)
+                //fprintf(fpout2, "%s\n", curr_mm.name);
+                fprintf(fpout2, "\@%s\t%s\t%d\t%c\t%d\t%u\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+				curr_mm.name, mm->ref_name[curr_mm.seqid], (curr_mm.pos>>1) + 1,
+				(curr_mm.pos&1)? '-' : '+', curr_mm.dist, curr_mm.flag, curr_mm.map_qual, (signed char)curr_mm.seq[MAX_READLEN-1],
+				curr_mm.alt_qual, curr_mm.info1&0xf, curr_mm.info2, curr_mm.c[0], curr_mm.c[1], curr_mm.size);
+            else if(justname ==0||justname==2)
+                put_record(fpout, &curr_mm);                
+        }        
+        /*if(justname)
+        {
+            if(fpout2) fclose(fpout2);
+            fpout2 = NULL;
+        }  */      
+    }   
     
     // before and after read count for a given start site position
     // chromosme, position, read count before, read count after                
@@ -122,6 +156,7 @@ void write_seq_ov (char *maqfile, char *seqfile, char * outfile)
 cleanup:
     if(mm) maq_delete_maqmap(mm);
     if(fpin) gzclose(fpin);
+    if(fpout2) fclose(fpout2);
     if(fpout) gzclose(fpout);
     if(fp) fclose(fp);
     return;

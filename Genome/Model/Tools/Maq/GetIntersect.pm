@@ -16,6 +16,11 @@ class Genome::Model::Tools::Maq::GetIntersect {
         snpfile => {
             type => 'String',
             doc => 'File path for file with seqid/positions',
+        },
+        justname => {
+            #type => 'Integer',
+            is_optional => 1,
+            doc => 'File path for file with seqid/positions',
         }
     ],
 };
@@ -43,7 +48,7 @@ sub execute {
     my $in = $self->input;
     my $output = $self->output;
     my $snp = $self->snpfile;
-    unless ($in and $output and $snp and -f $in and -f $snp) {
+    unless ($in and $output and $snp and -f $snp) {
         $self->error_message("Bad params!");
         $self->usage_message($self->help_usage_complete_text);
         return;
@@ -52,9 +57,14 @@ sub execute {
     # jit use so we don't compile when making the object for other reasons...
     require Genome::Model::Tools::Maq::GetIntersect_C;
     my $result;
-   
-    $result = Genome::Model::Tools::Maq::GetIntersect_C::write_seq_ov($in,$snp, $output);
-    
+    if($self->justname)
+    {
+        $result = Genome::Model::Tools::Maq::GetIntersect_C::write_seq_ov($in,$snp, $output,int($self->justname));
+    }
+    else
+    {
+            $result = Genome::Model::Tools::Maq::GetIntersect_C::write_seq_ov($in,$snp, $output,0);
+    }
     $result = !$result; # c -> perl
 
     $self->result($result);
