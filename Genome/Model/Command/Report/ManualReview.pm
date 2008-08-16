@@ -58,7 +58,6 @@ sub execute {
     my $self = shift;
 
     my $out_dir = $self->output_dir;
-    my $step = $self->step;
     my $snps = $self->snp_file;
     my $maplist = $self->map_list;
     
