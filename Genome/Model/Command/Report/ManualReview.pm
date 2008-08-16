@@ -60,7 +60,11 @@ sub execute {
     my $out_dir = $self->output_dir;
     my $snps = $self->snp_file;
     my $maplist = $self->map_list;
-    if(`uname -m` ne 'x86_64') {die "manual-review must be run on a x64 system.";}
+    if(`uname -m` ne 'x86_64')
+    {
+        $self->error_message( "manual-review must be run on a x64 system.");
+        return 0;
+    }
     if(!-e $out_dir) {`mkdir -p $out_dir`;}
     my $fh = IO::File->new($maplist);
     my @lines = <$fh>;
