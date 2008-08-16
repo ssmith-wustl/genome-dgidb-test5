@@ -60,7 +60,7 @@ sub execute {
     my $out_dir = $self->output_dir;
     my $snps = $self->snp_file;
     my $maplist = $self->map_list;
-    if(`uname -m` ne 'x86_64')
+    unless(`uname -m` =~ /x86_64/)
     {
         $self->error_message( "manual-review must be run on a x64 system.");
         return 0;
