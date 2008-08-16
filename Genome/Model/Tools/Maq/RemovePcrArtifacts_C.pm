@@ -12,7 +12,7 @@ use Inline 'C' => 'Config' => (
             INC => '-I/gscuser/jschindl -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
             CCFLAGS => `uname -m` =~ /ia64/ ? '-D_FILE_OFFSET_BITS=64':'-D_FILE_OFFSET_BITS=64 -m32',
             LIBS => '-L/gscuser/jschindl -L/gscuser/jschindl/svn/gsc/zlib-1.2.3 -lz -lmaq',
-            NAME => __PACKAGE__
+            NAME => __PACKAGE__,
             );
 
 use Inline C => <<'END_C';
@@ -75,10 +75,16 @@ void bl_realloc_list(bl_list *list, int size);
 void get_read_lc(maqmap1_t *mm, char * string)
 {
     int j = 0;
-    for (j = 0; j != mm->size; ++j) {
-        if (mm->seq[j] == 0) string[j] ='n';
-        else string[j]="acgt"[mm->seq[j]>>6&3];
-    }
+    if(mm->pos&0x1)
+        for (j = 0; j != mm->size; ++j) {
+            if (mm->seq[j] == 0) string[mm->size-j-1] ='n';
+            else string[mm->size-j-1]="acgt"[mm->seq[j]>>6&3];
+        }
+    else    
+        for (j = 0; j != mm->size; ++j) {
+            if (mm->seq[j] == 0) string[j] ='n';
+            else string[j]="acgt"[mm->seq[j]>>6&3];
+        }
     string[mm->size]=0x00;
     return;    
 }
@@ -113,12 +119,14 @@ bl_pos bl_find(bl_list *list, maqmap1_t *rec, int comparison_length)
     static char cmp_string[64];
     get_read_lc(rec, rec_string);
     int i =0;
+    //printf("%s %s\n", rec->name, rec_string);
     for(i=0;i<list->used;i++)
     {
         int temp_length = comparison_length < rec->size?comparison_length:rec->size;
         temp_length = list->_list[i].size<temp_length?list->_list[i].size:temp_length;
         //if(list->_list[i].size != rec->size) continue;
         get_read_lc(&list->_list[i],cmp_string);
+        //printf("%s %s\n", list->_list[i].name, cmp_string);
         if(!memcmp(rec_string, cmp_string, temp_length))
             return i;
     }
@@ -409,7 +417,7 @@ void sort_frags(gzFile fpin, gzFile fpsortseq, int rec_num)
     bl_add(sort_list->lists[position], &curr_mm);
     memcpy(&last_mm, &curr_mm, sizeof(curr_mm));
     
-    int max_position_so_far = 0;
+    int max_position_so_far = curr_mm.pos;
     int total_records = 1;
     while(get_record(fpin, &curr_mm))
     {
@@ -423,7 +431,7 @@ void sort_frags(gzFile fpin, gzFile fpsortseq, int rec_num)
         else if((int)curr_mm.seqid != (int)last_mm.seqid) 
         {
             bl_array_prune_all(sort_list, max_position_so_far-MAX_READLEN*2,fpsortseq);                   
-            max_position_so_far = 0;
+            max_position_so_far = curr_mm.pos;
         }
         int position = (curr_mm.pos);
         position = position%(MAX_READLEN*4);
@@ -431,7 +439,7 @@ void sort_frags(gzFile fpin, gzFile fpsortseq, int rec_num)
         bl_add(sort_list->lists[position], &curr_mm);        
         memcpy(&last_mm, &curr_mm, sizeof(curr_mm));                
     }
-    
+    //return;
     bl_array_prune_all(sort_list, max_position_so_far-MAX_READLEN*2,fpsortseq);
     bl_array_free(sort_list);
     printf("Sorted %d records.\n",total_records);
