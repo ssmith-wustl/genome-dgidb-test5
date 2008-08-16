@@ -48,7 +48,7 @@ sub help_synopsis {
 
 sub help_detail {
     return <<EOS 
-    Creates a manual review directory from a given map list, snp file, and output dir. 
+    Creates a manual review directory from a given map list, snp file, and output dir.  This command must be run on a x64 system.
 EOS
 }
 
@@ -60,7 +60,7 @@ sub execute {
     my $out_dir = $self->output_dir;
     my $snps = $self->snp_file;
     my $maplist = $self->map_list;
-    
+    if(`uname -m` ne 'x86_64') {die "manual-review must be run on a x64 system.";}
     if(!-e $out_dir) {`mkdir -p $out_dir`;}
     my $fh = IO::File->new($maplist);
     my @lines = <$fh>;
