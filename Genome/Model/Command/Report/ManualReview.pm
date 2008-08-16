@@ -8,6 +8,7 @@ use above "Genome";
 use Command;
 use Data::Dumper;
 use IO::File;
+#use Genome::Model::Tools::Maq::Vmerge;
 
 class Genome::Model::Command::Report::ManualReview
 {
@@ -35,7 +36,7 @@ class Genome::Model::Command::Report::ManualReview
         step =>
         {
             type => 'Integer',
-            is_optional => 0,
+            is_optional => 1,
             doc => "This is a hack since I haven't added job control in the first version",        
         }
     ], 
@@ -76,53 +77,50 @@ sub execute {
     my $fh = IO::File->new($maplist);
     my @lines = <$fh>;
     chomp @lines;
+    my $f = "$out_dir/merge.map";
+    my $vmerge_pid = fork();
+    if (! $vmerge_pid) {
+        # Child 
+        exec("gt maq vmerge --maplist $maplist --pipe $f 2>/dev/null");
+        exit();  # Should not get here...
+    }
+
+    while(1) {
+        if (-e $f) {
+            sleep 1;
+            last;
+        }
+        sleep 1;
+    }
+  
+    print ("Pipe created.\n");
+
+
+    my $o = "$out_dir/all.map";
+    exit if(-e $o);
+    system("gt maq get-intersect --input=$f --snpfile=$snps --output=$o");   
+
+    $fh = IO::File->new($snps);    
+    foreach my $line (<$fh>)
+    {
+        chomp $line;
+        my ($seq, $pos) = split /\s+/,$line; 
+        my $seqpos = $seq.'_'.$pos;
+        if(!-e "$out_dir/$seqpos"){`mkdir -p $out_dir/$seqpos`;}
+        my $temp_fh = IO::File->new(">$out_dir/$seqpos/annotation.tsv");
+        print $temp_fh $line,"\n"; 
+    }
+    $fh->seek(0,0);
+
+    foreach my $line (<$fh>)
+    {   
+        chomp $line;
+        my ($seq, $pos) = split /\s+/,$line; 
+        my $seqpos = $seq.'_'.$pos;
+        #system("bsub -q aml -W 50 -oo $seqpos.log gt maq get-intersect --input=$out_dir/all.map --snpfile=$out_dir/$seqpos/annotation.tsv --output=$out_dir/$seqpos/$seqpos.map");
+        system("gt maq get-intersect --input=$out_dir/all.map --snpfile=$out_dir/$seqpos/annotation.tsv --output=$out_dir/$seqpos/$seqpos --justname=2");
+    }
     
-    if($step == 0)
-    {
-        foreach my $line (@lines)
-        {
-            my $l = basename($line);
-            my $f = $line;
-            my $o = $f;
-            $o =~ s/keep/intersect/;
-            print $o,"\n";
-            exit if(-e $o);
-            system("bsub -q aml -oo $l.log gt maq get-intersect --input=$f --snpfile=$snps --output=$o");
-        }    
-    }
-    elsif($step == 1)
-    {
-        foreach (@lines) 
-        {
-            $_ =~ s/keep/intersect/;
-        }
-        my $maps = join ' ',@lines;       
-
-        system("bsub -q aml -R 'select[type=LINUX64]'-oo mapmerge.log maq mapmerge $out_dir/all.map $maps");
-    }
-    elsif($step == 2)
-    {
-        $fh = IO::File->new($snps);    
-        foreach my $line (<$fh>)
-        {
-            chomp $line;
-            my ($seq, $pos) = split /\s+/,$line; 
-            my $seqpos = $seq.'_'.$pos;
-            if(!-e "$out_dir/$seqpos"){`mkdir -p $out_dir/$seqpos`;}
-            my $temp_fh = IO::File->new(">$out_dir/$seqpos/annotation.tsv");
-            print $temp_fh $line,"\n"; 
-        }
-        $fh->seek(0,0);
-
-        foreach my $line (<$fh>)
-        {   
-            chomp $line;
-            my ($seq, $pos) = split /\s+/,$line; 
-            my $seqpos = $seq.'_'.$pos;
-            #system("bsub -q aml -W 50 -oo $seqpos.log gt maq get-intersect --input=$out_dir/all.map --snpfile=$out_dir/$seqpos/annotation.tsv --output=$out_dir/$seqpos/$seqpos.map");
-            system("bsub -q aml -W 50 -oo $seqpos.log gt maq get-intersect --input=$out_dir/all.map --snpfile=$out_dir/$seqpos/annotation.tsv --output=$out_dir/$seqpos/$seqpos --justname=2");
-        }
-    }
 
     return 1;
 }
