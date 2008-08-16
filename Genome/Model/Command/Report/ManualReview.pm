@@ -33,12 +33,6 @@ class Genome::Model::Command::Report::ManualReview
             is_optional => 0,
             doc => "Directory to generate Manual Review reports",    
         },
-        step =>
-        {
-            type => 'Integer',
-            is_optional => 1,
-            doc => "This is a hack since I haven't added job control in the first version",        
-        }
     ], 
 };
 
@@ -54,12 +48,7 @@ sub help_synopsis {
 
 sub help_detail {
     return <<EOS 
-    Creates a manual review directory from a given map list, snp file, and output dir.  The user is required to
-    do job monitoring as there is no automated job monitoring in this version.  So, you must rerun this
-    command three times, with the appropriate step specified in the step argument.  There are three steps.
-    In step 0, intersects of the supplied maps are performed.  In step 1, those intersected map files are 
-    merged, and this merge file is written to the output_dir.  In step 2, a tree containing the intersected
-    map files and their read lists is created in the output_dir. 
+    Creates a manual review directory from a given map list, snp file, and output dir. 
 EOS
 }
 
