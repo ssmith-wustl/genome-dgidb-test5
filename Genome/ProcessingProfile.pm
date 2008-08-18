@@ -17,6 +17,9 @@ class Genome::ProcessingProfile {
         name      => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         type_name => { is => 'VARCHAR2', len => 255, is_optional => 1 },
     ],
+    has_many_optional => [
+                          params => { is 'Genome::ProcessingProfile::Param', reverse_id_by => 'processing profile', },
+                      ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
