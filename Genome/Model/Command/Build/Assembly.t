@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 37;
+use Test::More tests => 46;
 use File::Path;
 
 $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -23,6 +23,7 @@ BEGIN {
     use_ok( 'Genome::Model::Command::Create::ProcessingProfile::Assembly' );
     use_ok( 'Genome::Model::Command::Build::Assembly' );
     use_ok( 'Genome::Model::Command::Build::Assembly::AssignReadSetToModel' );
+    use_ok( 'Genome::Model::Command::Build::Assembly::CleanReadSet' );
     use_ok( 'Genome::Model::Command::Build::Assembly::AddReadSetToProject' );
     use_ok( 'Genome::Model::Command::Build::Assembly::Assemble' );
 };
@@ -52,6 +53,12 @@ UR::Context->_sync_databases();
 my @assign_events = Genome::Model::Command::Build::Assembly::AssignReadSetToModel->get(model_id => $model->id);
 for my $event (@assign_events) {
     ok($event->execute,'execute assign read set event');
+    UR::Context->_sync_databases();
+}
+
+my @filter_events = Genome::Model::Command::Build::Assembly::CleanReadSet->get(model_id => $model->id);
+for my $event (@filter_events) {
+    ok($event->execute,'execute filter read set event');
     UR::Context->_sync_databases();
 }
 

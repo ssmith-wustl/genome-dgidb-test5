@@ -37,6 +37,7 @@ EOS
 sub subordinate_job_classes {
     return (
             'Genome::Model::Command::Build::Assembly::AssignReadSetToModel',
+            'Genome::Model::Command::Build::Assembly::CleanReadSet',
             'Genome::Model::Command::Build::Assembly::AddReadSetToProject',
     );
 }

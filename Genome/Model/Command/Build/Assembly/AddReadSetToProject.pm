@@ -8,7 +8,7 @@ use above "Genome";
 class Genome::Model::Command::Build::Assembly::AddReadSetToProject {
     is => 'Genome::Model::EventWithReadSet',
     has => [
-            sff_file => {via => 'prior_event'},
+            sff_file => {via => 'prior_event', to => 'out_sff_file'},
         ],
 };
 
