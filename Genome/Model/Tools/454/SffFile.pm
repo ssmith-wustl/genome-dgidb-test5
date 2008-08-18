@@ -25,13 +25,12 @@ class Genome::Model::Tools::454::SffFile {
 };
 
 sub help_brief {
-    "convert sff file to fasta file"
+    "constructs a single SFF file containing the reads from a list of SFF files and/or 454 runs"
 }
 
 sub help_detail {
     return <<EOS
-convert sff file to fasta file
-see sffinfo usage for valid params
+see 'sfffile' usage for valid params
 EOS
 }
 
