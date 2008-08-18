@@ -720,6 +720,9 @@ sub _cron_setup {
     # one log file per day
     my $logfile = $class->cron_logfile( $process_to );
 
+    # putting this back because things rely on it
+    umask 0002;
+
     # open file
     my $log_fh = $logfile->open('>>') or die "open $logfile failed: $!";
     $log_fh->autoflush(1);
