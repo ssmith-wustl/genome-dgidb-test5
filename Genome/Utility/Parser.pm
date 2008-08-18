@@ -25,6 +25,11 @@ class Genome::Utility::Parser {
                           is => 'string',
                           default_value => ',',
                       },
+            allow_whitespace => {
+                                 doc => "allow whitespace in each field",
+                                 is => 'Boolean',
+                                 default_value => 1,
+                             },
     ],
     has_optional => [
                      header_fields => {
@@ -64,7 +69,15 @@ sub create {
     #$sep_char =~ s/\\\\/\\/;
     #$self->separator($sep_char);
 
-    my $parser = Text::CSV_XS->new({ sep_char => $self->separator });
+
+    # Passing the allow_whitespace argument does not appear to work
+    # We will do our own whitespace trimming in execute()
+    my $parser = Text::CSV_XS->new(
+                                   {
+                                    sep_char => $self->separator,
+                                    allow_whitespace => $self->allow_whitespace,
+                                }
+                               );
     #my $parser = defined($self->separator) 
     #? Text::CSV_XS->new({'sep_char' => $self->separator}) :
     #: Text::CSV_XS->new();
@@ -88,6 +101,11 @@ sub create {
         chomp($header);
         $self->_parser->parse($header);
         my @header_fields = $self->_parser->fields();
+        if ($self->allow_whitespace) {
+            for (@header_fields) {
+                $_ =~ s/^\s*|\s*$//g;
+            }
+        }
         $self->header_fields(\@header_fields);
     }
 
@@ -121,7 +139,11 @@ sub _read_line {
 
     my @keys = @{ $self->header_fields };
     my @values = $self->_parser->fields();
-
+    if ($self->allow_whitespace) {
+        for (@values) {
+            $_ =~ s/^\s*|\s*$//g;
+        }
+    }
     unless (scalar(@values) == scalar(@keys)) {
         $self->error_message (
             sprintf('Un-balanced data found: %d values and %d expected on line %d',
