@@ -5,24 +5,32 @@ use warnings;
 
 use above "Genome";
 
+my @PARAMS = qw/
+               read_filter
+               read_trimmer
+               assembler
+              /;
+
 class Genome::ProcessingProfile::Assembly{
     is => 'Genome::ProcessingProfile',
+    has => [
+            ( map { $_ => {
+                           via => 'params',
+                           to => 'value',
+                           where => [name => $_],
+                           is_mutable => 1
+                       },
+                   } @PARAMS
+         ),
+        ],
 };
 
-
-sub assembler {
-    my $self = shift;
-    return $self->get_param_value('assembler');
+sub params_for_class {
+    my $class = shift;
+    return @PARAMS;
 }
 
-sub create {
-    my ($class,%params) = @_;
 
-    my $assembler = delete($params{'assembler'});
-    my $self = $class->SUPER::create(%params);
-    $self->add_param(name => 'assembler',value => $assembler);
-    return $self;
-}
 
 1;
 

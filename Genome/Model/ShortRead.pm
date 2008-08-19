@@ -24,7 +24,7 @@ class Genome::Model::ShortRead {
         indel_finder_name            => { via => 'processing_profile'},
         indel_finder_params          => { via => 'processing_profile'},
         multi_read_fragment_strategy => { via => 'processing_profile'},
-        prior                        => { via => 'processing_profile'},
+        prior_ref_seq                => { via => 'processing_profile'},
         read_aligner_name            => { via => 'processing_profile'},
         read_aligner_params          => { via => 'processing_profile'},
         read_calibrator_name         => { via => 'processing_profile'},

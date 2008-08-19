@@ -1,10 +1,11 @@
+#!/gsc/bin/perl
 
 use strict;
 use warnings;
+
 use above "Genome";
 
-use Test::More;
-plan tests => 20;
+use Test::More tests => 20;
 
 # prevent the ugly messages when we test known error conditions
 $SIG{__DIE__} = sub {};
@@ -13,7 +14,7 @@ diag("testing sub-classification by event_type formula...");
 
 my $event_type = "genome-model add-reads align-reads maq";
 my $event_class_name = "Genome::Model::Command::AddReads::AlignReads::Maq";
-my ($pp) = sort { $a->id <=> $b->id } Genome::ProcessingProfile::ShortRead->get(read_aligner_name => 'maq0_6_5');
+my ($pp) = sort { $a->id <=> $b->id } grep {$_->read_aligner_name eq 'maq0_6_5' } Genome::ProcessingProfile::ShortRead->get();
 my $m = Genome::Model->create(id => -1, sample_name => "test_case_sample$$",  processing_profile => $pp);
 my $r = Genome::RunChunk->create(-1, sequencing_platform => 'solexa');
 

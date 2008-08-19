@@ -24,13 +24,58 @@ class Genome::ProcessingProfile {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-sub create {
+sub params_for_class {
     my $class = shift;
-    my $self = $class->SUPER::create(@_);
+    warn("params_for_class not implemented for class '$class':  $!");
+    return;
+}
+
+sub get_with_special_parameters {
+    my $class = shift;
+    my %params = @_;
+
+    my @found;
+
+    my @pp = $class->get();
+  PP: for my $pp (@pp) {
+      PARAM: for my $param_name ($class->params_for_class) {
+            my $param_value = $pp->$param_name;
+            if (defined($params{$param_name}) && defined($param_value)) {
+                unless ( $param_value eq $params{$param_name}) {
+                    next PP;
+                }
+            } elsif (defined($params{$param_name}) || (defined($param_value))) {
+                next PP;
+            }
+        }
+        push @found, $pp;
+    }
+    return @found;
+}
+
+sub create {
+    my ($class,%params) = @_;
+
+    my %added_params;
+    unless ($class eq __PACKAGE__) {
+        for my $param_name ($class->params_for_class) {
+            if (defined($params{$param_name})) {
+                $added_params{$param_name} = delete($params{$param_name});
+            }
+        }
+    }
+
+    my $self = $class->SUPER::create(%params);
     unless ($self->type_name) {
         my $type_name =
             $class->_resolve_type_name_for_subclass_name($self->class);
         $self->type_name($type_name);
+    }
+    for my $added_param_name (keys %added_params) {
+        $self->add_param(
+                         name => $added_param_name,
+                         value => $added_params{$added_param_name},
+                     );
     }
     return $self;
 }
@@ -133,37 +178,5 @@ sub _resolve_type_name_for_subclass_name {
     return $type_name;
 }
 
-sub get_param_value {
-    my $self = shift;
-    my $param_name = shift;
-
-    return unless($param_name);
-
-    my $param = $self->get_param($param_name);
-    unless ($param) {
-         return "Not Found";
-    }
-    return $param->value;
-}
-
-sub get_param {
-    my $self = shift;
-    my @param_names = @_;
-
-    unless (@param_names) {
-        @param_names = $self->params_for_class;
-    }
-
-    if (@param_names == 1) {
-        # A hack to make a cgi script faster.  It preloads all the metrics, but the UR
-        # cache system isn't able to find them because of the in-clause.  
-        return Genome::ProcessingProfile::Param->get(name => $param_names[0], processing_profile_id => $self->id);
-    } else {
-        return Genome::ProcessingProfile::Param->get(
-                                                     name => \@param_names,
-                                                     processing_profile_id => $self->id,
-                                                 );
-    }
-}
 
 1;

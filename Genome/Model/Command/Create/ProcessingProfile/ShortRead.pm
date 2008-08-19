@@ -31,7 +31,7 @@ class Genome::Model::Command::Create::ProcessingProfile::ShortRead {
 										doc => "command line args for the indel finder"},
 		multi_read_fragment_strategy => { is => 'VARCHAR2', len => 255, is_optional => 1,
 										doc => ""},
-		prior		                 => { is => 'VARCHAR2', len => 255, sql => 'prior_ref_seq', is_optional => 1,
+		prior_ref_seq		     => { is => 'VARCHAR2', len => 255, is_optional => 1,
 										doc => ""},
 		read_aligner                 => { is => 'VARCHAR2', len => 255, is_optional => 0,
 										doc => "alignment program used for this model"},
@@ -101,12 +101,12 @@ sub _validate_execute_params {
     }
 
     unless ($self->reference_sequence) {
-        if ($self->prior eq "none") {
-            $self->error_message("No reference sequence set.  This is required w/o a prior.");
+        if ($self->prior_ref_seq eq "none") {
+            $self->error_message("No reference sequence set.  This is required w/o a prior_ref_seq.");
             $self->usage_message($self->help_usage);
             return;
         }
-        $self->reference_sequence($self->prior);
+        $self->reference_sequence($self->prior_ref_seq);
     }
     unless ($self->_validate_dna_type) {
         $self->error_message(
@@ -141,8 +141,8 @@ sub execute {
 
     # genome model specific
 
-    unless ($self->prior) {
-        $self->prior('none');
+    unless ($self->prior_ref_seq) {
+        $self->prior_ref_seq('none');
     }
 
     unless ($self->_validate_execute_params()) {

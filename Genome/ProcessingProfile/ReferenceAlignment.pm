@@ -4,32 +4,52 @@ use strict;
 use warnings;
 
 use above "Genome";
+
+my @PARAMS = qw/
+                align_dist_threshold
+                dna_type
+                genotyper_name
+                genotyper_params
+                indel_finder_name
+                indel_finder_params
+                multi_read_fragment_strategy
+                prior_ref_seq
+                read_aligner_name
+                read_aligner_params
+                read_calibrator_name
+                read_calibrator_params
+                reference_sequence_name
+                sequencing_platform
+               /;
+
 class Genome::ProcessingProfile::ReferenceAlignment {
-    table_name => 'PROCESSING_PROFILE_SHORT_READ',
-    type_name => __PACKAGE__,
-    is => 'Genome::ProcessingProfile', 
-    id_by => [
-        id                 => { is => 'NUMBER', len => 11 },
-    ],
+    is => 'Genome::ProcessingProfile',
     has => [
-        align_dist_threshold         => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        dna_type                     => { is => 'VARCHAR2', len => 64, is_optional => 1 },
-        genotyper_name               => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        genotyper_params             => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        indel_finder_name            => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        indel_finder_params          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        multi_read_fragment_strategy => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        prior		                 => { is => 'VARCHAR2', len => 255, sql => 'prior_ref_seq', is_optional => 1 }, 
-        read_aligner_name            => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        read_aligner_params          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        read_calibrator_name         => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        read_calibrator_params       => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        reference_sequence_name      => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        sequencing_platform          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-    ],
-    schema_name => 'GMSchema',
-    data_source => 'Genome::DataSource::GMSchema',
+            ( map { $_ => {
+                           via => 'params',
+                           to => 'value',
+                           where => [name => $_],
+                           is_mutable => 1
+                       },
+                   } @PARAMS
+         ),
+        ],
 };
+
+
+sub prior {
+    my $self = shift;
+    warn("For now prior has been replaced with the actual column name prior_ref_seq");
+    if (@_) {
+        die("Method prior() is read-only since it's deprecated");
+    }
+    return $self->prior_ref_seq();
+}
+
+sub params_for_class {
+    my $class = shift;
+    return @PARAMS;
+}
 
 sub filter_ruleset_name {
     #TODO: move into the db so it's not constant

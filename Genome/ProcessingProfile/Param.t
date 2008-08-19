@@ -10,6 +10,10 @@ use Test::More tests => 4;
 
 use above "Genome";
 
+BEGIN {
+    use_ok('Genome::ProcessingProfile::Param')
+};
+
 my $pp_id = '1765057';
 my $name = 'test_param';
 my $value = 'taco';
@@ -19,9 +23,10 @@ my $pp_param = Genome::ProcessingProfile::Param->create(
                                                         name => $name,
                                                         value => $value,
 );
+
 isa_ok($pp_param,'Genome::ProcessingProfile::Param');
 is($pp_param->name,$name,'name accessor');
 is($pp_param->value,$value,'value accessor');
 
-UR::Context->commit;
+#UR::Context->commit;
 exit;
