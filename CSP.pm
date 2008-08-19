@@ -633,7 +633,7 @@ my %csp_priority = (
     'normalize dna'                           => 10,
     'validate amplicon'                       => 10,
     'validate primer tube'                    => 10,
-    'pool pcr product'                        => 10,
+    'pool dna'                                => 10,
     'break empcr'                             => 10,
     'create dilutions'                        => 10, 
     # middle priority stuff
