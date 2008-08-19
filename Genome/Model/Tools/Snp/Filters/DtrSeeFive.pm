@@ -18,13 +18,7 @@ class Genome::Model::Tools::Snp::Filters::DtrSeeFive{
             is_optional => 0,
             doc => 'File of experimental metrics for the model'
         },
-        experimental_metric_dtr_file =>
-        {
-            type => 'String',
-            is_optional => 0 ,
-            doc => 'File of more metrics', 
-        },   
-        basedir => 
+       basedir => 
         { 
             type => 'String',
             is_optional =>0,
@@ -59,7 +53,7 @@ class Genome::Model::Tools::Snp::Filters::DtrSeeFive{
 };
 
 operation_io Genome::Model::Tools::Snp::Filters::DtrSeeFive {
-    input  => [ 'ref_seq_id', 'basedir', 'experimental_metric_model_file' , 'experimental_metric_dtr_file', 'c5src'  ],
+    input  => [ 'ref_seq_id', 'basedir', 'experimental_metric_model_file' , 'c5src'  ],
     output => [ 'decision_tree_output' ],
 };
 
@@ -70,7 +64,8 @@ sub help_synopsis {
 sub execute {
     my $self=shift;
     my $file = $self->experimental_metric_model_file;
-    my $dtr_file = $self->experimental_metric_dtr_file;
+    $DB::single=1;
+    my $dtr_file = Genome::Model::Tools::Maq::Metrics::ConvertForDtr->execute(input=>$self->experimental_metric_model_file)->result;
     my $specificity = $self->specificity; 
     my %specificity_maqq = (
         min => [ 5, 16 ],
@@ -152,6 +147,7 @@ sub execute {
     $keep_handle->close();
     $remove_handle->close();
     $handle->close();
+    unlink($dtr_file);
     return 1;
 }
 
