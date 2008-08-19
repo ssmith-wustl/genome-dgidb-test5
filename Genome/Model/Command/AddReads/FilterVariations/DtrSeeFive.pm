@@ -93,8 +93,7 @@ sub execute {
                     ref_seq_id                          => $self->ref_seq_id,
                     basedir                             => $model->_filtered_variants_dir,
                     experimental_metric_model_file      => $self->variation_metrics_file_name,
-                    experimental_metric_dtr_file        => $self->resolve_dtr_metrics_filename,
-                    experimental_metric_normal_file     => $self->normal_sample_variation_metrics_file,
+                    normal_snp_file     => $self->normal_sample_snp_file,
                     c5src                               => join('',@c5src),
                  },
         output_cb => {}
@@ -388,7 +387,7 @@ sub metrics_for_class {
 }
 
 
-sub normal_sample_variation_metrics_file {
+sub normal_sample_snp_file {
     my $self= shift;
     my $model = $self->model;
 
@@ -410,7 +409,7 @@ sub normal_sample_variation_metrics_file {
     }
 
     my ($equivalent_skin_event) =
-    grep { $_->isa("Genome::Model::Command::AddReads::PostprocessVariations")  }
+    grep { $_->isa("Genome::Model::Command::AddReads::FindVariations")  }
     $latest_normal_build->child_events(
         ref_seq_id => $self->ref_seq_id
     );
@@ -419,7 +418,7 @@ sub normal_sample_variation_metrics_file {
         $self->error_message("Failed to find an event on the skin model to match the tumor.  Probably need to re-run after that completes.  In the future, we will have the tumor/skin filtering separate from the individual model processing.\n");
         return;
     }
-    my $normal_sample_variation_metrics_file_name =  $equivalent_skin_event->experimental_variation_metrics_file_basename . ".csv";
+    my $normal_sample_variation_metrics_file_name =  $equivalent_skin_event->analysis_base_path .  "/" . $equivalent_skin_event->snip_resource_name;
 
     unless (-e $normal_sample_variation_metrics_file_name) {
         $self->error_message("Failed to find variation metrics for \"normal\": $normal_sample_variation_metrics_file_name");
