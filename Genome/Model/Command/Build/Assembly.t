@@ -30,6 +30,7 @@ BEGIN {
 
 my $pp = Genome::ProcessingProfile::Assembly->create(
                                                      name => $pp_name,
+                                                     assembler => 'newbler',
                                                  );
 UR::Context->_sync_databases();
 ok($pp, 'creation worked assembly processing profile');

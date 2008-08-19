@@ -17,6 +17,10 @@ class Genome::Model::Command::Create::ProcessingProfile::Assembly {
         model                        => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
         profile_name                 => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
                                           doc => 'The human readable name for the processing profile'},
+        assembler => {
+                      doc => 'the name of the assembler to use',
+                      is => 'string',
+                  },
     ],
     schema_name => 'Main',
 };

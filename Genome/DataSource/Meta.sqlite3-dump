@@ -69,6 +69,9 @@ INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','MAF','TV_TYPE','TTYPE_MAF_F','2008-08-08 15:28:42');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','MAF','GENOTYPE','GT_GID_TSEQ_F','2008-08-08 15:28:42');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','MAF','TRANSCRIPT','TRANS_MAF_F','2008-08-08 15:28:42');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','PROCESSING_PROFILE_PARAM','PROCESSING_PROFILE','PPP_PP_FK','2008-08-18 14:37:01');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_COMPOSITE_MEMBER','GENOME_MODEL','GMCP_GM2_FK','2008-08-18 14:36:59');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_COMPOSITE_MEMBER','GENOME_MODEL','GMCP_GM1_FK','2008-08-18 14:36:59');
 CREATE TABLE dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
     data_source varchar NOT NULL,
@@ -133,6 +136,9 @@ INSERT INTO "dd_fk_constraint_column" VALUES('GT_GID_TVAL_F','Genome::DataSource
 INSERT INTO "dd_fk_constraint_column" VALUES('GT_GID_NSEQ_F','Genome::DataSource::GMSchema','MG','MAF','GENOTYPE','NORMAL_SEQ_GENOTYPE','GENOTYPE_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('VARIATION_MAF_F','Genome::DataSource::GMSchema','MG','MAF','VARIATION','DBSNP_RS','VARIATION_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('TRANS_MAF_F','Genome::DataSource::GMSchema','MG','MAF','TRANSCRIPT','TRANSCRIPT_ID','TRANSCRIPT_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('GMCP_GM1_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_COMPOSITE_MEMBER','GENOME_MODEL','COMPOSITE_ID','GENOME_MODEL_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('GMCP_GM2_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_COMPOSITE_MEMBER','GENOME_MODEL','MEMBER_ID','GENOME_MODEL_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('PPP_PP_FK','Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_PARAM','PROCESSING_PROFILE','PROCESSING_PROFILE_ID','ID');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -243,6 +249,11 @@ INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG'
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_METRIC','METRIC_NAME',2);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_SHORT_READ','ID',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','MAF','MAF_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_PARAM','PARAM_VALUE',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_COMPOSITE_MEMBER','COMPOSITE_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_PARAM','PARAM_NAME',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_PARAM','PROCESSING_PROFILE_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_COMPOSITE_MEMBER','MEMBER_ID',2);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -292,7 +303,7 @@ INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PP_DETECTION_
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SAMPLE_SUBTYPE','TABLE','entity','2008-06-16 16:06:28','2008-04-15 10:35:42',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PP_MAPPING_REFERENCE','TABLE','entity','2008-06-16 16:06:27','2008-04-15 10:35:32',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GO_XREF','TABLE','entity','2008-03-07 16:38:08','2008-04-15 10:35:57',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SAMPLE_HISTOLOGY','TABLE','entity','2008-03-07 16:38:08','2008-04-15 10:35:36',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SAMPLE_HISTOLOGY','TABLE','entity','2008-08-18 13:55:01','2008-04-15 10:35:36',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SUBMITTER','TABLE','entity','2008-06-16 16:06:28','2008-04-15 10:35:10',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','EGI_TYPE','TABLE','entity','2008-06-16 16:06:25','2008-04-15 10:35:19',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SGI_ANALYSIS_METHOD','TABLE','entity','2008-03-07 16:38:08','2008-04-15 10:36:12',NULL);
@@ -353,6 +364,9 @@ INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PR
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE','TABLE','entity','2008-06-16 16:05:24','2008-05-20 10:42:01',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_METRIC','TABLE','entity','2008-06-16 16:05:22','2008-05-20 10:42:02',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MAF','TABLE','entity','2008-08-05 15:38:31','2008-08-08 15:28:42',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_COMPOSITE_MEMBER','TABLE','bridge','2008-08-12 11:16:34','2008-08-18 14:36:59','For composite genome models this will bridge the composite
+models to the member models');
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_PARAM','TABLE','entity','2008-08-18 13:50:55','2008-08-18 14:37:01',NULL);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -797,6 +811,11 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MAF','
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MAF','VALIDATION_STATUS','VARCHAR2','20','Y','2008-08-08 15:28:42',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MAF','TRANSCRIPT_ID','NUMBER','10','Y','2008-08-08 15:28:42',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MAF','COSMIC','VARCHAR2','255','Y','2008-08-08 15:28:42',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_COMPOSITE_MEMBER','COMPOSITE_ID','NUMBER','11','N','2008-08-18 14:36:59',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_PARAM','PARAM_NAME','VARCHAR2','100','N','2008-08-18 14:37:01',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_COMPOSITE_MEMBER','MEMBER_ID','NUMBER','11','N','2008-08-18 14:36:59',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_PARAM','PARAM_VALUE','VARCHAR2','1000','N','2008-08-18 14:37:01',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_PARAM','PROCESSING_PROFILE_ID','NUMBER','11','N','2008-08-18 14:37:01',NULL);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,

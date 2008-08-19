@@ -10,5 +10,19 @@ class Genome::ProcessingProfile::Assembly{
 };
 
 
+sub assembler {
+    my $self = shift;
+    return $self->get_param_value('assembler');
+}
+
+sub create {
+    my ($class,%params) = @_;
+
+    my $assembler = delete($params{'assembler'});
+    my $self = $class->SUPER::create(%params);
+    $self->add_param(name => 'assembler',value => $assembler);
+    return $self;
+}
+
 1;
 

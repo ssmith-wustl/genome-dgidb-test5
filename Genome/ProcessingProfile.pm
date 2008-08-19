@@ -18,7 +18,7 @@ class Genome::ProcessingProfile {
         type_name => { is => 'VARCHAR2', len => 255, is_optional => 1 },
     ],
     has_many_optional => [
-                          params => { is 'Genome::ProcessingProfile::Param', reverse_id_by => 'processing profile', },
+                          params => { is => 'Genome::ProcessingProfile::Param', reverse_id_by => 'processing_profile', },
                       ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -131,6 +131,39 @@ sub _resolve_type_name_for_subclass_name {
     my @words = $ext =~ /[a-z]+|[A-Z](?:[A-Z]+|[a-z]*)(?=$|[A-Z])/g;
     my $type_name = lc(join(" ", @words));
     return $type_name;
+}
+
+sub get_param_value {
+    my $self = shift;
+    my $param_name = shift;
+
+    return unless($param_name);
+
+    my $param = $self->get_param($param_name);
+    unless ($param) {
+         return "Not Found";
+    }
+    return $param->value;
+}
+
+sub get_param {
+    my $self = shift;
+    my @param_names = @_;
+
+    unless (@param_names) {
+        @param_names = $self->params_for_class;
+    }
+
+    if (@param_names == 1) {
+        # A hack to make a cgi script faster.  It preloads all the metrics, but the UR
+        # cache system isn't able to find them because of the in-clause.  
+        return Genome::ProcessingProfile::Param->get(name => $param_names[0], processing_profile_id => $self->id);
+    } else {
+        return Genome::ProcessingProfile::Param->get(
+                                                     name => \@param_names,
+                                                     processing_profile_id => $self->id,
+                                                 );
+    }
 }
 
 1;
