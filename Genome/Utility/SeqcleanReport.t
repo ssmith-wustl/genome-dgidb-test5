@@ -11,8 +11,8 @@ use File::Temp;
 
 
 BEGIN {
-    use_ok('Genome::Utility::SeqCleanReport::Reader');
-    use_ok('Genome::Utility::SeqCleanReport::Writer');
+    use_ok('Genome::Utility::SeqcleanReport::Reader');
+    use_ok('Genome::Utility::SeqcleanReport::Writer');
 }
 
 use FindBin qw($Bin);
@@ -22,17 +22,17 @@ my $file = "$Bin/test.cln";
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $out_file = "$tmp_dir/out.cln";
 
-my $reader = Genome::Utility::SeqCleanReport::Reader->create(
+my $reader = Genome::Utility::SeqcleanReport::Reader->create(
                                                              file => $file,
                                                          );
-isa_ok($reader,'Genome::Utility::SeqCleanReport::Reader');
+isa_ok($reader,'Genome::Utility::SeqcleanReport::Reader');
 is($reader->separator,"\t",'separator');
 is($reader->file,$file,'file accessor');
 
-my $writer = Genome::Utility::SeqCleanReport::Writer->create(
+my $writer = Genome::Utility::SeqcleanReport::Writer->create(
                                                              file => $out_file,
                                                          );
-isa_ok($writer,'Genome::Utility::SeqCleanReport::Writer');
+isa_ok($writer,'Genome::Utility::SeqcleanReport::Writer');
 is($writer->file,$out_file,'file accessor');
 while (my $record = $reader->next) {
     $writer->write_record($record);

@@ -1,4 +1,4 @@
-package Genome::Model::Command::Build::Assembly::AddReadSetToProject;
+package Genome::Model::Command::Build::Assembly::TrimReadSet;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 use Command;
 
-class Genome::Model::Command::Build::Assembly::AddReadSetToProject {
+class Genome::Model::Command::Build::Assembly::TrimReadSet {
     is_abstract => 1,
     is => ['Genome::Model::EventWithReadSet'],
 };
@@ -14,12 +14,12 @@ class Genome::Model::Command::Build::Assembly::AddReadSetToProject {
 sub sub_command_sort_position { 10 }
 
 sub help_brief {
-    "add reads from all or part of an instrument run to the project"
+    "trim the reads from a read set"
 }
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model build assembly add-read-set-to-project --model-id 5 --read-set-id 10
+    genome-model build assembly trim-read-set --model-id 5 --read-set-id 10
 EOS
 }
 
@@ -28,12 +28,12 @@ sub help_detail {
 This command is launched automatically by build assembly.
 
 It delegates to the appropriate sub-command according to
-the assembler.
+the read_trimmer.
 EOS
 }
 
 sub command_subclassing_model_property {
-    return 'assembler';
+    return 'read_trimmer';
 }
 
 sub should_bsub { 1;}

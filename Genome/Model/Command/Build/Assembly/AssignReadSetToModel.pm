@@ -4,69 +4,39 @@ use strict;
 use warnings;
 
 use above "Genome";
+use Command;
 
 class Genome::Model::Command::Build::Assembly::AssignReadSetToModel {
-    is => 'Genome::Model::EventWithReadSet',
-    has => [
-            read_set_data_directory => {
-                                        calculate_from => ['read_set'],
-                                        calculate => q|
-                                            return $read_set->full_path;
-                                        |,
-                                    },
-            sff_file => {
-                         calculate_from => ['read_set_data_directory','read_set'],
-                         calculate => q|
-                             return $read_set_data_directory .'/'. $read_set->seq_id .'.sff';
-                         |,
-                     },
-        ]
- };
+    is_abstract => 1,
+    is => ['Genome::Model::EventWithReadSet'],
+};
 
-sub bsub_rusage {
-    return '';
-}
-
-sub sub_command_sort_position { 40 }
+sub sub_command_sort_position { 10 }
 
 sub help_brief {
-    "assemble a genome"
+    "add reads from all or part of an instrument run to the model"
 }
 
 sub help_synopsis {
     return <<"EOS"
-genome-model build mymodel 
+    genome-model build assembly add-read-set-to-model --model-id 5 --read-set-id 10
 EOS
 }
 
 sub help_detail {
     return <<"EOS"
-One build of a given assembly model.
+This command is launched automatically by "build assembly".
+
+It delegates to the appropriate sub-command according to
+the model's sequencing platform.
 EOS
 }
 
-
-sub execute {
-    my $self = shift;
-
-    $DB::single = $DB::stopper;
-
-    my $read_set_data_directory = $self->read_set_data_directory;
-    unless (-e $read_set_data_directory) {
-        unless($self->create_directory($read_set_data_directory)) {
-            $self->error_message("Failed to create directory '$read_set_data_directory'");
-            return;
-        }
-    }
-    unless (-e $self->sff_file) {
-        unless ($self->read_set->run_region_454->dump_sff(filename => $self->sff_file)) {
-            $self->error_message('Failed to dump sff_file to '. $self->sff_file);
-            return;
-        }
-    }
-    return 1;
+sub command_subclassing_model_property {
+    return 'sequencing_platform';
 }
 
+sub should_bsub { 1;}
 
 1;
 

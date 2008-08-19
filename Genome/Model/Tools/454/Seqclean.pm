@@ -1,4 +1,4 @@
-package Genome::Model::Tools::454::SeqClean;
+package Genome::Model::Tools::454::Seqclean;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Workflow;
 use File::Basename;
 use Cwd;
 
-class Genome::Model::Tools::454::SeqClean {
+class Genome::Model::Tools::454::Seqclean {
     is => ['Command'],
     has => [
             fasta_file => {
@@ -30,7 +30,7 @@ class Genome::Model::Tools::454::SeqClean {
                  ],
 };
 
-operation_io Genome::Model::Tools::454::SeqClean {
+operation_io Genome::Model::Tools::454::Seqclean {
     input => [ 'fasta_file', 'params'],
     output => [ 'output_file' ],
 };

@@ -14,6 +14,10 @@ class Genome::Model::Assembly {
                                               where => [ "event_type like" => 'genome-model build assembly assign-read-sets%'],
                                               doc => 'each case of a read set being assigned to the model',
                                         },
+            sequencing_platform => { via => 'processing_profile', },
+            assembler           => { via => 'processing_profile', },
+            read_filter         => { via => 'processing_profile', },
+            read_trimmer        => { via => 'processing_profile', },
         ],
 };
 
@@ -46,7 +50,7 @@ sub compatible_read_set_ids {
 sub get_or_create_compatible_read_sets {
     my $self = shift;
     my @read_sets;
-    
+
     my @compatible_read_set_ids = $self->compatible_read_set_ids;
     for my $read_set_id (@compatible_read_set_ids) {
         my $read_set = $self->read_set_class_name->get_or_create_from_read_set_id($read_set_id);

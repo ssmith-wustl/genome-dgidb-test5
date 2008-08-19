@@ -1,4 +1,4 @@
-package Genome::Model::Tools::454::SffFile;
+package Genome::Model::Tools::454::Sffinfo;
 
 use strict;
 use warnings;
@@ -6,41 +6,39 @@ use warnings;
 use above "Genome";
 use Genome::Model::Tools::454;
 
-class Genome::Model::Tools::454::SffFile {
+class Genome::Model::Tools::454::Sffinfo {
     is => ['Genome::Model::Tools::454'],
     has => [
-            in_sff_file => {
+            sff_file => {
                          doc => 'The sff file to operate',
                          is => 'string',
                      },
-            out_sff_file => {
+            output_file => {
                             is => 'string',
                             doc => 'The output file path',
                         },
             params => {
                        is => 'string',
-                       doc => 'The params to pass to sfffile',
+                       doc => 'The params to pass to sffinfo',
                    },
         ],
 };
 
 sub help_brief {
-    "constructs a single SFF file containing the reads from a list of SFF files and/or 454 runs"
+    "convert sff file to fasta file"
 }
 
 sub help_detail {
     return <<EOS
-see 'sfffile' usage for valid params
+convert sff file to fasta file
+see sffinfo usage for valid params
 EOS
 }
 
 sub execute {
     my $self = shift;
 
-    my $params = $self->params .' -o '. $self->out_sff_file;
-    my $cmd = $self->bin_path .'/sfffile '. $params .' '. $self->in_sff_file;
-    print 'Running: '. $cmd ."\n";
-    
+    my $cmd = $self->bin_path .'/sffinfo '. $self->params .' '. $self->sff_file .' > '. $self->output_file;
     my $rv = system($cmd);
     unless ($rv == 0) {
         $self->error_message("non-zero exit code '$rv' returned by sffinfo");

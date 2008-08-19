@@ -9,6 +9,7 @@ my @PARAMS = qw/
                read_filter
                read_trimmer
                assembler
+               sequencing_platform
               /;
 
 class Genome::ProcessingProfile::Assembly{
