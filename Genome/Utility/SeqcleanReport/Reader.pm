@@ -1,4 +1,4 @@
-package Genome::Utility::SeqCleanReport::Reader;
+package Genome::Utility::SeqcleanReport::Reader;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use above "Genome";
 
 my @header_fields = qw(accession pc_undetermined start end length trash_code comments);
 
-class Genome::Utility::SeqCleanReport::Reader {
+class Genome::Utility::SeqcleanReport::Reader {
     is => 'Genome::Utility::Parser',
     has => [
             separator => {

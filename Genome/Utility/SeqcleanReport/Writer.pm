@@ -1,4 +1,4 @@
-package Genome::Utility::SeqCleanReport::Writer;
+package Genome::Utility::SeqcleanReport::Writer;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use above "Genome";
 
 my @header_fields = qw(accession pc_undetermined start end length trash_code comments);
 
-class Genome::Utility::SeqCleanReport::Writer {
+class Genome::Utility::SeqcleanReport::Writer {
     is => 'UR::Object',
     has => [
             file => {
