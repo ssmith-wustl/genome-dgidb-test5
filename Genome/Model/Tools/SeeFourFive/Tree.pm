@@ -64,11 +64,10 @@ sub perl_src {
             $src .= "if(\$$metric $op $value) {\n";
         }elsif($current_depth < $tree_depth_count) {
             while ($tree_depth_count > $current_depth) {
-                $DB::single=1;
                 $src .= "}\n";
                 $tree_depth_count--;
             }
-            $src .= "if($metric $op $value) {\n";
+            $src .= "if(\$$metric $op $value) {\n";
         }
         #having a [ implies a subtree
         if($decision && ($decision !~ m/\[/)) { 
@@ -79,9 +78,8 @@ sub perl_src {
             $decision =~ tr/[]//d;
             my $subtree_lines= $self->subtree_hashref_of_arrayrefs->{$decision};
             my $subtree_src = $self->perl_src($subtree_lines);
-            $DB::single=1;
             $src .= $subtree_src;
-            $src .= "}\n;";
+            $src .= "}\n";
         }
         $tree_depth_count=$current_depth;
     }
