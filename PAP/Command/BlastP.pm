@@ -121,10 +121,11 @@ RES:    while( my $r = $bsio->next_result() )
             while( my $hsp = $hit->next_hsp )
             {
                 my $gene = $r->query_name;
+                $feat->seq_id($gene);
                 my $hname = $hit->name;
                 # junk out of blastParseHGMI...
                 my $score   = $hsp->score;
-                my $evalue  = $hsp->score;
+                my $evalue  = $hsp->evalue;
                 my $pctid   = sprintf("%.1f",$hsp->percent_identity);
                 my $qstart  = $hsp->start('query');
                 my $qend    = $hsp->end('query');
@@ -150,7 +151,6 @@ RES:    while( my $r = $bsio->next_result() )
                 else 
                 {
                     # do the features here.
-                    $feat->seq_id($gene);
                     $feat->add_Annotation("Brief_identification", "Stats: $stats TopHit: $hname");
 
                     print "added in $gene, with $stats hit $hname\n";
@@ -164,8 +164,14 @@ RES:    while( my $r = $bsio->next_result() )
 
     # product id part, see geneNaming.pl...
     $self->gene_naming($results,$feat);
-    $self->bio_seq_feature( [ $feat ] );
+    my @features;
+    push(@features,$feat);
+    #$self->bio_seq_feature( [ $feat ] );
+    $self->bio_seq_feature( \@features );
+    print $feat->seq_id(),"!\n";
 
+    my $ref = $self->bio_seq_feature();
+    print $#{$ref},"!!!!\n";
     return 1;
 }
 
@@ -188,13 +194,52 @@ sub gene_naming
     my $hit = $res->next_hit();
     if(defined($hit))
     {
+        # check if %id/%coverage are both >= 80
+        # if desc =~ /fragment|homolog|hypothetical|like|predicted|probable|putative|related|similar|synthetic|unknown|unnamed/
+        # mark as conserved hypothetical protein
+        my $hsp = $hit->next_hsp();
+        my $pctid = sprintf("%.1f",$hsp->percent_identity());
+        #my $cov = $hsp->match() / $hsp->length('total');
+        #if($pctid
+        if($pctid >= 80)
+        {
+            if($hit->description =~ /fragment|homolog|hypothetical|like|predicted|probable|putative|related|similar|synthetic|unknown|unnamed/x)
+            {
+                # Product_ID "Conserved Hypothetical Protein"
+                $sf->add_Annotation("Product_ID",
+                                    "Conserved Hypothetical Protein");
+            }
+            elsif($hit->description =~ /^>sp/x)
+            {
+                # swiss prot?
+                # Product_ID $hit->description
+                $sf->add_Annotation("Product_ID",
+                                    $hit->description . "\t" . $hit->description);
+                # actually, should add a dblink here too.
+            }
+            else
+            {
+                # clean up description:
+                #           $splitLine[1] =~ s/\[.*\]//;
+                #            $splitLine[1] =~ s/\w+\|.+\|//;
+                my $desc = $hit->description;
+                $desc =~ s/\[.*\]//x;
+                $desc =~ s/\w+\|.+\|//;
+                # Product_ID "Hypothetical Protein similar to $hit->description
+                $sf->add_Annotation("Product_ID", "Hypothetical Protein similar to ". $desc );
+            }
 
+        }
+        else
+        {
+            # Product_ID "Hypothetical Protein"
+            $sf->add_Annotation("Product_ID", "Hypothetical Protein");
+        }
 
     }
     else # 'count' is 0, no hits to bact nr
     {
-        # sequence name \t\t Predicted Protein
-        # Sequence seqname\nProduct_ID\"Predicted Protein\"\n\n
+        $sf->add_Annotation("Product_ID", "Predicted Protein");
     }
     # need to generate 'count'
 
