@@ -182,12 +182,13 @@ sub make_names_array {
 
 sub make_data_array {
     my ($self, $handle, $status) = @_;
-
+    $DB::single=1;
     #useful array function
     #@shuffled = shuffle(@list);
 
     my @data;
     while(my $line = $handle->getline) {
+        chomp $line;
         my ($chr,
             $position,
             $al1,
