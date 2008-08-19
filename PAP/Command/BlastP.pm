@@ -11,6 +11,8 @@ use Bio::Seq;
 use Bio::SeqIO;
 use Bio::SearchIO;
 use Bio::SeqFeature::Generic;
+use Bio::Annotation::Collection;
+use Bio::Annotation::SimpleValue;
 use File::Temp qw/ tempfile /;
 use IPC::Run;
 
@@ -151,7 +153,13 @@ RES:    while( my $r = $bsio->next_result() )
                 else 
                 {
                     # do the features here.
-                    $feat->add_Annotation("Brief_identification", "Stats: $stats TopHit: $hname");
+                    my $col = new Bio::Annotation::Collection;
+                    my $sv = new Bio::Annotation::SimpleValue(
+                                     -value => "Stats: $stats TopHit: $hname"
+                                                             );
+                    #$feat->add_Annotation("Brief_identification", "Stats: $stats TopHit: $hname");
+                    $col->add_Annotation("Brief_identification", $sv);
+                    $feat->annotation($col);
 
                     print "added in $gene, with $stats hit $hname\n";
                 }
@@ -163,15 +171,16 @@ RES:    while( my $r = $bsio->next_result() )
     # creates output like Sequence "sequencename"\nBrief_identification "Stats: " something " TopHit: "something"
 
     # product id part, see geneNaming.pl...
-    $self->gene_naming($results,$feat);
+    my $col = $self->gene_naming($results,$feat);
+    $feat->annotation($col);
     my @features;
     push(@features,$feat);
-    #$self->bio_seq_feature( [ $feat ] );
     $self->bio_seq_feature( \@features );
-    print $feat->seq_id(),"!\n";
-
+     
+    # debug stuff
     my $ref = $self->bio_seq_feature();
     print $#{$ref},"!!!!\n";
+    print $feat->seq_id(),"!\n";
     return 1;
 }
 
@@ -190,6 +199,7 @@ sub gene_naming
                                  -file   => $blastoutput,
                                 );
 
+    my $collection = new Bio::Annotation::Collection;
     my $res = $bsio->next_result();
     my $hit = $res->next_hit();
     if(defined($hit))
@@ -206,15 +216,17 @@ sub gene_naming
             if($hit->description =~ /fragment|homolog|hypothetical|like|predicted|probable|putative|related|similar|synthetic|unknown|unnamed/x)
             {
                 # Product_ID "Conserved Hypothetical Protein"
-                $sf->add_Annotation("Product_ID",
-                                    "Conserved Hypothetical Protein");
+                my $sv = new Bio::Annotation::SimpleValue(
+                               -value => "Conserved Hypothetical Protein");
+                $collection->add_Annotation("Product_ID", $sv);
             }
             elsif($hit->description =~ /^>sp/x)
             {
                 # swiss prot?
-                # Product_ID $hit->description
-                $sf->add_Annotation("Product_ID",
-                                    $hit->description . "\t" . $hit->description);
+                # Product_ID $hit->description, db link???
+                my $sv = new Bio::Annotation::SimpleValue(
+                               -value => $hit->description . "\t" . $hit->description);
+                $collection->add_Annotation("Product_ID", $sv);
                 # actually, should add a dblink here too.
             }
             else
@@ -226,24 +238,30 @@ sub gene_naming
                 $desc =~ s/\[.*\]//x;
                 $desc =~ s/\w+\|.+\|//;
                 # Product_ID "Hypothetical Protein similar to $hit->description
-                $sf->add_Annotation("Product_ID", "Hypothetical Protein similar to ". $desc );
+                my $sv = new Bio::Annotation::SimpleValue(
+                               -value => "Hypothetical Protein similar to " . $desc);
+                $collection->add_Annotation("Product_ID", $sv);
             }
 
         }
         else
         {
             # Product_ID "Hypothetical Protein"
-            $sf->add_Annotation("Product_ID", "Hypothetical Protein");
+            my $sv = new Bio::Annotation::SimpleValue(
+                           -value => "Hypothetical Protein");
+            $collection->add_Annotation("Product_ID", $sv);
         }
 
     }
     else # 'count' is 0, no hits to bact nr
     {
+        my $sv = new Bio::Annotation::SimpleValue(
+                         -value => "Predicted Protein");
         $sf->add_Annotation("Product_ID", "Predicted Protein");
     }
     # need to generate 'count'
 
-    return 1;
+    return $collection;
 }
 
  
