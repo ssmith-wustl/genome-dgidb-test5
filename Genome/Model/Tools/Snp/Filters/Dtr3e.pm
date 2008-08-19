@@ -43,16 +43,11 @@ class Genome::Model::Tools::Snp::Filters::Dtr3e {
              return $self->basedir . 'chr' . $self->ref_seq_id . '.keep.csv';
         |
     },
-    parent_event                => { is => 'Genome::Model::Event',
-    doc => 'The parent event' },
     ]
 };
 
 operation_io Genome::Model::Tools::Snp::Filters::Dtr3e {
-    input  => [ 'parent_event' ],
-    input  => [ 'ref_seq_id' ],
-    input  => [ 'basedir' ],
-    input  => [ 'experimental_metric_model_file' ],
+    input  => [ 'ref_seq_id', 'basedir', 'experimental_metric_model_file'],
     output => [ 'decision_tree_output' ],
 };
 
