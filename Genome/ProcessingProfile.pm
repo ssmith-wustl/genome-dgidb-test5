@@ -96,6 +96,11 @@ sub pretty_print_text {
             }
         }
     }
+    for my $param ($self->params_for_class) {
+        if (defined $self->$param) {
+            push @printable_property_names, $param;
+        }
+    }
     my @out;
     for my $prop (@printable_property_names) {
         if (my @values = $self->$prop) {
