@@ -7,10 +7,9 @@ use IO::File;
 class Genome::Model::Tools::SeeFourFive::Tree {
     is => 'Command',
     has => [ 
-    #trial           => { is => 'Genome::Model::Tools::SeeFive::Rule', id_by => 'trial_id' },
-        c45_file => {},
-        lines           => {},
-        subtree_hashref_of_arrayrefs => {},
+    c45_file => {},
+    lines           => {},
+    subtree_hashref_of_arrayrefs => {},
     ],
 };
 
@@ -41,7 +40,7 @@ sub perl_src {
         #Greater than current depth: if
         #less than current depth: output difference # of clsoe brackets
 
-#        my ($metric, $op, $value, $decision) = ($line =~ /\s+([\w\-]+)\s+(\S+)\s+(\S+)\s+:\s+(\S+)/);
+        #my ($metric, $op, $value, $decision) = ($line =~ /\s+([\w\-]+)\s+(\S+)\s+(\S+)\s+:\s+(\S+)/);
         my ($metric, $op, $value, $decision) = ($line =~ /\s*([\w\-]+)\s+(\S+)\s+([\S\w]+)\s*:\s*([^\s]*)/);
         unless($metric && $op && $value) {
             $self->error_message("Parsing failure on line: $line\n");
@@ -50,15 +49,22 @@ sub perl_src {
             print "value: $value\n";
             return;
         }
+        if ($value =~ m/[A|G|C|T]/) {
+            $op = 'eq'; 
+            $value = "'$value'"; 
+        }
+        $op = '==' if $op eq '=';
+
         ##protect us o lord from the evil aliens
         $metric =~ s/\s/SPACE/g;
         $metric =~ s/\+/PLUS/g;
         $metric =~ s/\-/MINUS/g;
- 
+
         if($current_depth >= $tree_depth_count) {
-            $src .= "if($metric $op $value) {\n";
+            $src .= "if(\$$metric $op $value) {\n";
         }elsif($current_depth < $tree_depth_count) {
             while ($tree_depth_count > $current_depth) {
+                $DB::single=1;
                 $src .= "}\n";
                 $tree_depth_count--;
             }
@@ -67,17 +73,19 @@ sub perl_src {
         #having a [ implies a subtree
         if($decision && ($decision !~ m/\[/)) { 
             $src .= "return '$decision';\n}\n";
+            $tree_depth_count--;
         }
         elsif($decision) {
             $decision =~ tr/[]//d;
-            $DB::single=1;
             my $subtree_lines= $self->subtree_hashref_of_arrayrefs->{$decision};
             my $subtree_src = $self->perl_src($subtree_lines);
+            $DB::single=1;
             $src .= $subtree_src;
+            $src .= "}\n;";
         }
         $tree_depth_count=$current_depth;
     }
-    while ($tree_depth_count >= 0) {
+    while ($tree_depth_count > 0) {
         $src .= "}\n";
         $tree_depth_count--;
     }
@@ -127,10 +135,39 @@ sub load_trees {
     return 1;
 }
 
-                
-                
-            
-            
+
+sub generate_callback_for_headers {
+    my $self = shift;
+    my @headers = @_;
+    my $src = $self->tree_evaluation_function(@headers);
+    print $src;
+    my $callback = eval $src;
+    unless ($callback) {
+        die $@;
+    }
+    return $callback;
+}
+
+sub tree_evaluation_function {
+    my $self = shift;
+    my @headers = @_;
+    my $src;
+    $src .= "sub {\n";
+    $src .= "    my \$data = \$_[0];\n";
+    $src .= "    my (" 
+    . join(",", map { '$' . $_ } @headers ) 
+    . ') = @$data{@headers};'
+    . "\n";
+
+    $src .= $self->perl_src();
+    $src .= "};\n";
+
+    return $src;
+}
+
+
+
+
 
 
 
