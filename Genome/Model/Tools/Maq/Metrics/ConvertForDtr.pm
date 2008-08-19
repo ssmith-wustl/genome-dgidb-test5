@@ -1,5 +1,4 @@
-package Genome::Model::Tools::Maq::Metrics::ConvertForDtr;
-
+package Genome::Model::Tools::Maq::Metrics::ConvertForDtr; 
 use strict;
 use warnings;
 
@@ -21,6 +20,7 @@ class Genome::Model::Tools::Maq::Metrics::ConvertForDtr {
         output => {
             is => 'FileName',
             doc => 'results...',
+            calculate => q| return $self->input . ".dtr"; | 
         },
    ]
 };
@@ -53,7 +53,7 @@ sub execute {
     $fh->print(map { $_, "\n" } $self->headers);
     $fh->print(map { $_, "\n" } @data);
 
-    return 1;
+    return $self->output;
 }
 
 sub make_data_array {
@@ -65,6 +65,7 @@ sub make_data_array {
     my @data;
     while(my $line = $handle->getline) {
         chomp $line;
+        next if ($line =~ m/chromosome/);
         my ($chr,
             $position,
             $al1,
@@ -113,7 +114,7 @@ sub make_data_array {
             $cns2_avg_num_reads,
             $cns2_max_map_quality,
             $cns2_allele_qual_diff,
-        ) = split ",", $line;
+        ) = split /,\s*/, $line;
         #create dependent variable ratios
         #everything is dependent on # of reads so make a ratio
 
@@ -175,7 +176,7 @@ sub headers {
         "maq_avg_num_of_hits",
         "maq_strong_weak_qual_difference",
     );
-  return \@names;
+  return join(",",@names);
 }
 
 
