@@ -35,7 +35,7 @@ class Genome::Model::Command::Build::Assembly::FilterReadSet::Seqclean {
 };
 
 sub bsub_rusage {
-    return '';
+    return "-R 'span[hosts=1]'";
 }
 
 sub sub_command_sort_position { 40 }
@@ -77,7 +77,11 @@ sub execute {
     }
 
     unless (-e $self->seqclean_report) {
-        my $seq_clean = Genome::Model::Tools::454::Seqclean->create(fasta_file => $self->fasta_file);
+        my $params = '-c 2';
+        my $seq_clean = Genome::Model::Tools::454::Seqclean->create(
+                                                                    fasta_file => $self->fasta_file,
+                                                                    params => $params,
+                                                                );
         unless ($seq_clean->execute) {
             $self->error_message('Failed to run seq clean ');
             return;
