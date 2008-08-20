@@ -10,6 +10,8 @@ class Genome::Model::Tools::SeeFourFive::Tree {
     c45_file => {},
     lines           => {},
     subtree_hashref_of_arrayrefs => {},
+    debug_mode => {default=>0},
+    leaf_count => {default=>0},
     ],
 };
 
@@ -71,7 +73,15 @@ sub perl_src {
         }
         #having a [ implies a subtree
         if($decision && ($decision !~ m/\[/)) { 
-            $src .= "return '$decision';\n}\n";
+            unless($self->debug_mode) {
+                $src .= "return '$decision';\n}\n";
+            }
+            else {
+                my $leaf_count= $self->leaf_count;
+                $src .= "return ('$decision', $leaf_count);\n}\n";
+                $leaf_count++;
+                $self->leaf_count($leaf_count);
+            }
             $tree_depth_count--;
         }
         elsif($decision) {
