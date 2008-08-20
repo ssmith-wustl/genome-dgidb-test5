@@ -22,6 +22,7 @@ class Genome::Model::Command::Create::ProcessingProfile::Assembly {
                      assembler => { is => 'string' },
                      read_filter => {is => 'string'},
                      read_trimmer => {is => 'string'},
+                     sequencing_platform => {is => 'string'},
                  ],
     schema_name => 'Main',
 };
