@@ -663,6 +663,7 @@ my %csp_priority = (
     'configure alignment'                     => 1,
     'generate lane summary'                   => 1,
     'create short read format'                => 1,
+    'analysis completed'                      => 1,
     'import sequence'                         => 1,
 #    'copy run'                                => 1,
 #    'remove run'                              => 1,
