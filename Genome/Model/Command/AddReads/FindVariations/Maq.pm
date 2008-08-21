@@ -129,7 +129,7 @@ This command is usually called as part of the postprocess-alignments process
 EOS
 }
 
-sub bsub_rusage { return "-R 'select[type=LINUX64] span[hosts=1]'"; } 
+sub bsub_rusage { return "-R 'select[model==Intel_Xeon360] span[hosts=1]'"; } 
 
 sub execute {
     my $self = shift;

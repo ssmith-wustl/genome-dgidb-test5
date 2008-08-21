@@ -29,8 +29,7 @@ EOS
 }
 
 sub bsub_rusage {
-    return "-R 'select[type=LINUX64] span[hosts=1]'";
-
+    return "-R 'select[model==Intel_Xeon360] span[hosts=1]'";
 }
 
 sub should_bsub { 1;}
