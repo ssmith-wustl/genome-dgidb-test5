@@ -44,7 +44,7 @@ sub perl_src {
 
         #my ($metric, $op, $value, $decision) = ($line =~ /\s+([\w\-]+)\s+(\S+)\s+(\S+)\s+:\s+(\S+)/);
         my ($metric, $op, $value, $decision) = ($line =~ /\s*([\w\-]+)\s+(\S+)\s+([\S\w]+)\s*:\s*([^\s]*)/);
-        unless($metric && $op && $value) {
+        unless($metric && $op && (defined $value)) {
             $self->error_message("Parsing failure on line: $line\n");
             print "Metric: $metric\n";
             print "OP: $op\n";
