@@ -9,7 +9,7 @@ class Genome::Model::Tools::SeeFourFive::Tree {
     has => [ 
     c45_file => {},
     lines           => {},
-    subtree_hashref_of_arrayrefs => {},
+    subtree_hashref_of_arrayrefs => {is_optional=>1},
     debug_mode => {default=>0},
     leaf_count => {default=>0},
     ],
