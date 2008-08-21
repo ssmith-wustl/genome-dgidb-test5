@@ -30,7 +30,7 @@ class Genome::Model::Command::Build::Assembly::TrimReadSet::Sfffile {
 };
 
 sub bsub_rusage {
-    return '';
+    return "-R 'select[type=LINUX64]'";
 }
 
 sub sub_command_sort_position { 40 }
