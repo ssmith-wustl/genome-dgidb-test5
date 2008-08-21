@@ -48,7 +48,8 @@ class Genome::Model::Tools::Snp::Filters::DtrSeeFourFive{
         {
             is => 'String',
             doc => 'c4.5 tree output'
-        }
+        },
+        debug_mode => {default => 0},
  
         ]
 };
@@ -66,7 +67,8 @@ sub execute {
     my $self=shift;
     my $file = $self->experimental_metric_model_file;
     $DB::single=1;
-    my $dtr_file = Genome::Model::Tools::Maq::Metrics::ConvertForDtr->execute(input=>$self->experimental_metric_model_file)->result;
+    my $dtr = Genome::Model::Tools::Maq::Metrics::Dtr->create();
+#    my $dtr_file = Genome::Model::Tools::Maq::Metrics::ConvertForDtr->execute(input=>$self->experimental_metric_model_file)->result;
     my $specificity = $self->specificity; 
     my %specificity_maqq = (
         min => [ 5, 16 ],
@@ -85,15 +87,15 @@ sub execute {
 
     my $handle = new FileHandle;
     $handle->open($file, "r") or die "Couldn't open experimental metrics file\n";
-    my $dtr_handle = new FileHandle;
-    $dtr_handle->open($dtr_file, "r") or die "Couldn't open indendified metrics file\n";
+    #my $dtr_handle = new FileHandle;
+    #$dtr_handle->open($dtr_file, "r") or die "Couldn't open indendified metrics file\n";
     
     #we want to pass over dtr's columns but save the other file.
-    my $header_line = $dtr_handle->getline; #store header
+    #my $header_line = $dtr_handle->getline; #store header
     my $other_head= $handle->getline;
     chomp $other_head;
-    chomp $header_line;
-    my @headers = split(/,\s*/,$header_line);
+    #chomp $header_line;
+    my @headers = $dtr->headers; #split(/,\s*/,$header_line);
     for (@headers) { s/\-/MINUS/g; s/\+/PLUS/g; s/\s/SPACE/; };
     
     my $keep_handle = new FileHandle;
@@ -103,11 +105,14 @@ sub execute {
     $keep_handle->open("$keep_file","w") or die "Couldn't open keep output file $keep_file: $!\n";
     $remove_handle->open("$remove_file","w") or die "Couldn't open remove output file $remove_file: $!\n";
 
-    print $keep_handle $other_head , "," , $header_line , "." , "rule\n";
-    print $remove_handle $other_head , "," , $header_line , "," , "rule\n";
+    print $keep_handle $other_head ,"\n";
+    print $remove_handle $other_head , "\n";
 
     #we could probably take the below method calls and turn them into an execute!!!! OMG
-    my $c45_object = Genome::Model::Tools::Snp::SeeFourFive::Tree ->create();
+    my $c45_object = Genome::Model::Tools::SeeFourFive::Tree ->create();
+    if($self->debug_mode) {
+        $c45_object->debug_mode(1);
+    }
     $c45_object->c45_file($self->c_file);
     $c45_object->load_trees;
   
@@ -117,16 +122,22 @@ sub execute {
         return;
     }
     
-    while(my $line=$dtr_handle->getline) {
+    while(my $line=$handle->getline) {
         chomp $line;
         
-        $line =~ s/NULL/0/g;
-        if ($line =~ /^chromosome/) { die "bad line (something terrible happened): $line!" };
-        my $metrics_line = $handle->getline;
-        chomp($metrics_line);
+        next if ($line =~ /^chromosome/);
+        next if $line =~ /N/;
+        
         my %data; 
-        @data{@headers} = split(/,\s*/,$line);
-        my ($decision) = $fref->(\%data);
+        @data{@headers} = $dtr->make_attribute_array($line);
+        my ($decision, $leaf_number);
+        if($self->debug_mode) {
+            ($decision, $leaf_number) = $fref->(\%data);
+        }
+        else {
+            ($decision) = $fref->(\%data);
+        }
+
         unless ($decision) {
             $DB::single=1;
             ($decision) = $fref->(\%data);
@@ -134,10 +145,22 @@ sub execute {
         }
         #   $debug_info = 'default' if not defined $debug_info;
         if ($decision eq 'G') {
-            print $keep_handle $metrics_line,",", $line, "\n";
+            if($self->debug_mode) {
+                my $dtr_line = join ",",@data{@headers};
+                print $keep_handle $line, ",",$dtr_line,",",$leaf_number,"\n";
+            }
+            else {
+                print $keep_handle $line, "\n";
+            }
         }  
         elsif ($decision eq 'WT') {
-            print $remove_handle $metrics_line,",", $line, "\n";
+            if($self->debug_mode) {
+                my $dtr_line = join ",",@data{@headers};
+                print $remove_handle $line, ",",$dtr_line,",",$leaf_number,"\n";
+            }
+            else {
+                print $remove_handle $line, "\n";
+            }
         }
         else {
             die "unhandled decision $decision from line $line!";
@@ -146,7 +169,6 @@ sub execute {
     $keep_handle->close();
     $remove_handle->close();
     $handle->close();
-    unlink($dtr_file);
     return 1;
 }
 
