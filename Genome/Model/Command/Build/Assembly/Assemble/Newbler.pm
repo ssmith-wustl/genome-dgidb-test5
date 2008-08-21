@@ -9,10 +9,6 @@ class Genome::Model::Command::Build::Assembly::Assemble::Newbler {
     is => 'Genome::Model::Command::Build::Assembly::Assemble',
 };
 
-sub bsub_rusage {
-    return '';
-}
-
 sub sub_command_sort_position { 40 }
 
 sub help_brief {
