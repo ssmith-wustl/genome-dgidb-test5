@@ -11,6 +11,7 @@ class Genome::Model::Tools::SeeFourFive::Tree {
     lines           => {},
     subtree_hashref_of_arrayrefs => {is_optional=>1},
     debug_mode => {default=>0},
+    probability_mode => {default=>0},
     leaf_count => {default=>0},
     ],
 };
@@ -43,13 +44,21 @@ sub perl_src {
         #less than current depth: output difference # of clsoe brackets
 
         #my ($metric, $op, $value, $decision) = ($line =~ /\s+([\w\-]+)\s+(\S+)\s+(\S+)\s+:\s+(\S+)/);
-        my ($metric, $op, $value, $decision) = ($line =~ /\s*([\w\-]+)\s+(\S+)\s+([\S\w]+)\s*:\s*([^\s]*)/);
+        my ($metric, $op, $value, $decision, $total_trials, $errors) = ($line =~ /\s*([\w\-]+)\s+(\S+)\s+([\S\w]+)\s*:\s*([^\s]*)\s*\(?([\d.]*)\/?([\d.]*)\)?/);
         unless($metric && $op && (defined $value)) {
             $self->error_message("Parsing failure on line: $line\n");
             print "Metric: $metric\n";
             print "OP: $op\n";
             print "value: $value\n";
+            print "total trials: $total_trials\n";
+            print "ErrorS: $errors\n"; 
             return;
+        }
+        if(defined $decision) {
+            unless(defined $total_trials && defined $errors) {
+                $self->error_message("a decision does not have metrics about its error rate: $line");
+                return;
+            }
         }
         if ($value =~ m/[A|G|C|T]/) {
             $op = 'eq'; 
@@ -73,14 +82,24 @@ sub perl_src {
         }
         #having a [ implies a subtree
         if($decision && ($decision !~ m/\[/)) { 
-            unless($self->debug_mode) {
+            unless($self->debug_mode || $self->probability_mode) {
                 $src .= "return '$decision';\n}\n";
             }
             else {
-                my $leaf_count= $self->leaf_count;
-                $src .= "return ('$decision', $leaf_count);\n}\n";
-                $leaf_count++;
-                $self->leaf_count($leaf_count);
+                my @things_to_output;
+
+                if($self->probability_mode) {
+                    ##Laplace correction: correct classifications + 1 / $total_trials + # of classes(this is hardcoded for now)
+                    my $probability = (($total_trials - $errors) + 1) / ($total_trials + 2);
+                    push @things_to_output, $probability;
+                }
+                if($self->debug_mode) {
+                    my $leaf_count= $self->leaf_count;
+                    $leaf_count++;
+                    $self->leaf_count($leaf_count);
+                    push @things_to_output, $leaf_count;
+                }
+                $src .= "return ('$decision', " . join(',', @things_to_output) . ");\n}\n";
             }
             $tree_depth_count--;
         }

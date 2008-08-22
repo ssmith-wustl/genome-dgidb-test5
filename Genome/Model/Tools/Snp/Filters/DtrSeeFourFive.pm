@@ -50,6 +50,7 @@ class Genome::Model::Tools::Snp::Filters::DtrSeeFourFive{
             doc => 'c4.5 tree output'
         },
         debug_mode => {default => 0},
+        probability_mode => {default => 0},
  
         ]
 };
@@ -131,8 +132,10 @@ sub execute {
         my %data; 
         @data{@headers} = $dtr->make_attribute_array($line);
         my ($decision, $leaf_number);
-        if($self->debug_mode) {
-            ($decision, $leaf_number) = $fref->(\%data);
+        my @answers;
+        if($self->debug_mode || $self->probability_mode) {
+            @answers =  $fref->(\%data);
+            $decision = shift @answers;
         }
         else {
             ($decision) = $fref->(\%data);
@@ -143,20 +146,21 @@ sub execute {
             ($decision) = $fref->(\%data);
             die "failed to get a decision for $line!";
         }
-        #   $debug_info = 'default' if not defined $debug_info;
+       
+        ##this set of ifs is pretty ugly...refactor when we care enough
         if ($decision eq 'G') {
-            if($self->debug_mode) {
-                my $dtr_line = join ",",@data{@headers};
-                print $keep_handle $line, ",",$dtr_line,",",$leaf_number,"\n";
+            if($self->debug_mode || $self->probability_mode) {
+                #my $dtr_line = join ",",@data{@headers};
+                print $keep_handle $line, "," , join(',',@answers) ,"\n";
             }
             else {
                 print $keep_handle $line, "\n";
             }
         }  
         elsif ($decision eq 'WT') {
-            if($self->debug_mode) {
+             if($self->debug_mode || $self->probability_mode) {
                 my $dtr_line = join ",",@data{@headers};
-                print $remove_handle $line, ",",$dtr_line,",",$leaf_number,"\n";
+                print $keep_handle $line, ",", join(',',@answers) ,"\n";
             }
             else {
                 print $remove_handle $line, "\n";
