@@ -114,6 +114,9 @@ sub execute {
     if($self->debug_mode) {
         $c45_object->debug_mode(1);
     }
+    if($self->probability_mode) {
+        $c45_object->probability_mode(1);
+    }
     $c45_object->c45_file($self->c_file);
     $c45_object->load_trees;
   
