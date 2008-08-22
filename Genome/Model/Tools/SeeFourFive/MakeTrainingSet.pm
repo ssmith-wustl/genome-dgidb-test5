@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Snp::C45;
+package Genome::Model::Tools::SeeFourFive::MakeTrainingSet;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use IO::File;
 use List::Util 'shuffle';
 use Bio::DB::Fasta;
 
-class Genome::Model::Tools::Snp::C45 {
+class Genome::Model::Tools::SeeFourFive::MakeTrainingSet {
     is => 'Command',
     has => [
     snp_file => 
