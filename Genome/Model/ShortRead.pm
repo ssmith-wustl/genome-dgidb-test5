@@ -41,10 +41,6 @@ class Genome::Model::ShortRead {
                                             calculate => q|$read_set_class_name->_dw_class|,
                                             doc => 'the class of read set assignable to this model in the dw'
                                         },
-        
-        events                       => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => 'model', 
-                                          doc => 'all events which have occurred for this model',
-                                        },
         read_set_addition_events     => { is => 'Genome::Model::Command::AddReads',
                                           is_many => 1,
                                           reverse_id_by => 'model',
