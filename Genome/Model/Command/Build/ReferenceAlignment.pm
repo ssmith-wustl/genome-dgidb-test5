@@ -45,7 +45,8 @@ sub subordinate_job_classes {
 
 sub execute {
     my $self = shift;
-    $DB::single = $DB::stopper;
+    #$DB::single = $DB::stopper;
+    $DB::single = 1;
     
     my @sub_command_classes = $self->subordinate_job_classes;
 
