@@ -10,14 +10,14 @@ class Genome::Model::Command::Build::Assembly::TrimReadSet::Sfffile {
     has => [
             seqclean_report => { via => 'prior_event', },
             in_sff_file     => {via => 'prior_event', to => 'sff_file'},
-            out_sff_file => {
-                             calculate_from => ['in_sff_file'],
-                             calculate => q|
+            sff_file => {
+                         calculate_from => ['in_sff_file'],
+                         calculate => q|
                                  my $file = $in_sff_file;
                                  $file =~ s/\.sff$/_clean\.sff/;
                                  return $file;
                              |
-                         },
+                     },
             trim_file => {
                                  calculate_from => ['in_sff_file'],
                                  calculate => q|
@@ -70,14 +70,14 @@ sub execute {
         $writer->close;
         $reader->close;
     }
-    unless (-e $self->out_sff_file) {
+    unless (-e $self->sff_file) {
         my $sfffile = Genome::Model::Tools::454::Sfffile->create(
                                                                  in_sff_file => $self->in_sff_file,
-                                                                 out_sff_file => $self->out_sff_file,
+                                                                 out_sff_file => $self->sff_file,
                                                                  params => '-i '. $self->trim_file .' -t '. $self->trim_file,
                                                              );
         unless ($sfffile->execute) {
-            $self->error_message('Failed to output trimmed sff file '. $self->out_sff_file);
+            $self->error_message('Failed to output trimmed sff file '. $self->sff_file);
             return;
         }
     }
