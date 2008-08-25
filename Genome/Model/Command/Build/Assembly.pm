@@ -55,6 +55,11 @@ sub execute {
     for my $read_set (@available_read_sets) {
         my $prior_event_id = undef;
         foreach my $command_class ( @sub_command_classes ) {
+            my $subclassing_model_property = $command_class->command_subclassing_model_property;
+            unless ($model->$subclassing_model_property) {
+                $self->status_message("No value defined for subclassing model property '$subclassing_model_property'.  Skipping '$command_class'");
+                next;
+            }
             my $command = $command_class->create(
                                                  model_id => $self->model_id,
                                                  #should be read_set_id but still uses old name
