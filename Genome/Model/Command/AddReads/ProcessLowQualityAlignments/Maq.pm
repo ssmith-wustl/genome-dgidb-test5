@@ -26,19 +26,38 @@ sub execute {
     
     my $alignment_event = $self->prior_event;
     my $unaligned_reads_file = $alignment_event->unaligned_reads_file;
-
-    my $command = Genome::Model::Tools::UnalignedDataToFastq->execute(
-       in => $unaligned_reads_file, 
-       fastq => $unaligned_reads_file . '.fastq'
-    );
-
-    unless ($self->verify_successful_completion) {
+    
+    my @unaligned_reads_files;
+    if (-s $unaligned_reads_file) {
+        my $command = Genome::Model::Tools::UnalignedDataToFastq->execute(
+            in => $unaligned_reads_file, 
+            fastq => $unaligned_reads_file . '.fastq' 
+        );
+        unless ($command) {die "Failed Genome::Model::Tools::UnalignedDataToFastq for $unaligned_reads_file";}
+    } 
+    else {
+        @unaligned_reads_files = $alignment_event->unaligned_reads_files; 
+        foreach my $unaligned_reads_files_entry (@unaligned_reads_files){
+            my $command = Genome::Model::Tools::UnalignedDataToFastq->execute(
+                in => $unaligned_reads_files_entry, 
+                fastq => $unaligned_reads_files_entry . '.fastq'
+            );
+        unless ($command) {die "Failed Genome::Model::Tools::UnalignedDataToFastq for $unaligned_reads_files_entry";}
+        }
+    }
+    unless (-s $unaligned_reads_file || @unaligned_reads_files) {
         $self->error_message("Failed to verify successful completion!");
         return;
     }
 
+    #unless ($self->verify_successful_completion) {
+    #    $self->error_message("Failed to verify successful completion!");
+    #    return;
+    #}
+
     return 1;
 }
+
 
 sub verify_successful_completion {
     my $self = shift;
