@@ -16,8 +16,11 @@ class Genome::Model::Assembly {
                                         },
             sequencing_platform => { via => 'processing_profile', },
             assembler           => { via => 'processing_profile', },
+            assembler_params    => { via => 'processing_profile', },
             read_filter         => { via => 'processing_profile', },
+            read_filter_params  => { via => 'processing_profile', },
             read_trimmer        => { via => 'processing_profile', },
+            read_trimmer_params => { via => 'processing_profile', },
         ],
 };
 

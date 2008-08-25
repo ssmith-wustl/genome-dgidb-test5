@@ -7,8 +7,11 @@ use above "Genome";
 
 my @PARAMS = qw/
                read_filter
+               read_filter_params
                read_trimmer
+               read_trimmer_params
                assembler
+               assembler_params
                sequencing_platform
               /;
 

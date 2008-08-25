@@ -20,8 +20,11 @@ class Genome::Model::Command::Create::ProcessingProfile::Assembly {
     ],
     has_optional => [
                      assembler => { is => 'string' },
+                     assembler_params => { is => 'string'},
                      read_filter => {is => 'string'},
+                     read_filter_params => {is => 'string'},
                      read_trimmer => {is => 'string'},
+                     read_trimmer_params => {is => 'string'},
                      sequencing_platform => {is => 'string'},
                  ],
     schema_name => 'Main',
