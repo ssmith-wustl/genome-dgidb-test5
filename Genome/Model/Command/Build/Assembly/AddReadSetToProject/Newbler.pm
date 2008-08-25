@@ -8,7 +8,7 @@ use above "Genome";
 class Genome::Model::Command::Build::Assembly::AddReadSetToProject::Newbler {
     is => 'Genome::Model::Command::Build::Assembly::AddReadSetToProject',
     has => [
-            sff_file => {via => 'prior_event', to => 'out_sff_file'},
+            sff_file => {via => 'prior_event'},
         ],
 };
 
