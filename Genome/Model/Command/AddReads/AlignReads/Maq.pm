@@ -180,6 +180,18 @@ sub unaligned_reads_file {
     return $self->read_set_alignment_directory . "/s_${lane}_sequence.unaligned.$event_id";
 }
 
+sub unaligned_reads_files {
+    my $self = shift;
+    #my $event_id = $self->id;
+    my $read_set = $self->read_set;
+    my $lane = $read_set->subset_name;
+    my @unaligned_reads_files = glob ($self->read_set_alignment_directory . "/${lane}_sequence.unaligned.*");
+    return @unaligned_reads_files;
+    #return $self->read_set_alignment_directory . "/s_${lane}_sequence.unaligned.$event_id";
+}
+
+
+
 sub metrics_for_class {
     my $class = shift;
 
@@ -616,24 +628,34 @@ sub alignment_data_available_and_correct {
         }
     }
     my $unaligned_reads_file = $self->unaligned_reads_file;
-    my $found_unaligned_reads_file = $self->check_for_existence($unaligned_reads_file);
-    if (!$found_unaligned_reads_file) {
-        $self->error_message("missing unaligned reads file '$unaligned_reads_file'");
-        $errors++;
-    } elsif (!-s $unaligned_reads_file) {
-        $self->error_message("unaligned reads file '$unaligned_reads_file' found but zero size");
-        $errors++;
+    $unaligned_reads_file =~ s/\.\d+$/\*/;
+    my @possible_unaligned_shortcuts= glob($unaligned_reads_file);
+    
+    # the addition of the above glob prevents entrance into the if part of this loop in any situation that I can imagine
+    for my $possible_shortcut (@possible_unaligned_shortcuts) {
+        my $found_unaligned_reads_file = $self->check_for_existence($possible_shortcut);
+        if (!$found_unaligned_reads_file) {
+            $self->error_message("missing unaligned reads file base '$possible_shortcut'");
+            $errors++;
+        } elsif (!-s $possible_shortcut) {
+            $self->error_message("unaligned reads file '$possible_shortcut' found but zero size");
+            $errors++;
+        }
     }
-
     my $aligner_output_file = $self->aligner_output_file;
-    my $found_aligner_output_file = $self->check_for_existence($aligner_output_file);
-    if (!$found_aligner_output_file) {
-        $self->error_message("missing aligner output file '$aligner_output_file'");
-        $errors++;
-    } elsif (!$self->_check_maq_successful_completion($aligner_output_file)) {
-        $self->error_message("aligner output file '$aligner_output_file' found, but incomplete");
-        $errors++;
-    }
+    $aligner_output_file =~ s/\.\d+$/\*/;
+    my @possible_aligner_output_shortcuts = glob ($aligner_output_file);
+
+    for my $possible_shortcut (@possible_aligner_output_shortcuts) {
+        my $found_aligner_output_file = $self->check_for_existence($possible_shortcut);
+        if (!$found_aligner_output_file) {
+            $self->error_message("missing aligner output file base '$possible_shortcut'");
+            $errors++;
+        } elsif (!$self->_check_maq_successful_completion($possible_shortcut)) {
+            $self->error_message("aligner output file '$possible_shortcut' found, but incomplete");
+            $errors++;
+        }
+    }    
     if ($errors) {
         if (@cross_refseq_alignment_files) {
             die("REFUSING TO CONTINUE with partial map files in place in old directory.");
