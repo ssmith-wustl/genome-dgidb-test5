@@ -17,14 +17,6 @@ class Genome::Model::Command::Build::Assembly::FilterReadSet::Seqclean {
                                return $fasta_file;
                            |
                        },
-            qual_file => {
-                          calculate_from => ['sff_file'],
-                          calculate => q|
-                               my $qual_file = $sff_file;
-                               $qual_file =~ s/\.sff$/\.qual/;
-                               return $qual_file;
-                           |
-                      },
             seqclean_report => {
                                  calculate_from => ['fasta_file'],
                                  calculate => q|
