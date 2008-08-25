@@ -27,7 +27,12 @@ class Genome::Model {
         name                         => { is => 'VARCHAR2', len => 255 },
         sample_name                  => { is => 'VARCHAR2', len => 255 },
         subject_name            => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        
+        events                       => {
+                                         is => 'Genome::Model::Event',
+                                         is_many => 1,
+                                         reverse_id_by => 'model', 
+                                         doc => 'all events which have occurred for this model',
+                                     },
         creation_event               => { doc => 'The creation event for this model',
                                           calculate => q|
                                                             my @events = $self->events;
