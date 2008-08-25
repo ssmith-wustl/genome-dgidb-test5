@@ -35,7 +35,7 @@ EOS
 
 sub bsub_rusage {
     return "-R 'select[model==Intel_Xeon360] span[hosts=1]'";
-
+}
 
 sub execute {
     my $self = shift;
