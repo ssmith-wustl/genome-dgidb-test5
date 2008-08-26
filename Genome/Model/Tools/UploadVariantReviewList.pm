@@ -4,12 +4,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use IO::File;
-use Genome::VariantReviewDetail;
-use Genome::VariantReviewListFilter;
-use Genome::VariantReviewListMember;
-use Genome::VariantReviewList;
 use Genome::Utility::VariantReviewListReader;
-
 
 use above "Genome";
 
@@ -85,15 +80,56 @@ sub execute {
             last unless $line_hash;
             next if $line_hash->{header};
 
-            my $current_member = Genome::VariantReviewDetail->get( begin_position => $line_hash->{begin_position}, chromosome => $line_hash->{chromosome}, end_position => $line_hash->{end_position}, variant_type => $line_hash->{variant_type}, delete_sequence => $line_hash->{delete_sequence}, insert_sequence_allele1 => $line_hash->{insert_sequence_allele1}, insert_sequence_allele2 => $line_hash->{insert_sequence_allele2} );
+            my $current_member = Genome::VariantReviewDetail->get( begin_position => $line_hash->{begin_position}, chromosome => $line_hash->{chromosome} );
+
+            my $info;
             if ($current_member){
+                $info.="Current member found: ".$current_member->chromosome.", ".$current_member->begin_position."\n";
+                #notes
                 my $new_notes = $self->vtest($current_member->notes);
                 $new_notes .= ', ' if $new_notes and $line_hash->{notes};
                 $new_notes .= $line_hash->{notes} if $line_hash->{notes};
                 $current_member->notes($new_notes);
+                #genes
+                my $current_genes = $current_member->genes;
+                my @current_genes;
+                @current_genes = split(/[,\/]/, $current_genes) if $current_genes;
+                my $new_genes = $line_hash->{genes};
+                my @new_genes;
+                @new_genes = split(/[,\/]/, $new_genes) if $new_genes;
+                my @genes_to_add;
+                foreach my $new_gene (@new_genes){
+                    my $found = 0;
+                    foreach my $current_gene (@current_genes){
+                        $found++ if $new_gene =~ /$current_gene/i;
+                    }
+                    push @genes_to_add, $new_gene unless $found;
+                }
+                if (@genes_to_add){
+                    $info .= "adding genes ".join(" ", @genes_to_add)."\n";
+                }
+                my @genes = (@current_genes, @genes_to_add);
+                $current_member->genes(join(",", @genes));
+                #rest
+                foreach my $col (keys %$line_hash){
+                    next if $col =~ /genes|notes/;
+                    my $current_val = $current_member->$col;
+                    my $new_val = $line_hash->{$col};
+                    if ($current_val){
+                        if ($new_val){
+                            if ($current_val ne $new_val){
+                                $current_member->$col("DISCREPANCY($current_val : $new_val");
+                                $info .= "discrepancy at $col : $current_val || $new_val\n";
+                            }
+                        }
+                    }elsif ($new_val){
+                        $current_member->$col($new_val);
+                    }
+                }
+                print $info;
             }else{
                 $current_member = Genome::VariantReviewDetail->create(
-                   %$line_hash   
+                    %$line_hash   
                 );
             }
             my $member_id = $current_member->id;
@@ -110,21 +146,7 @@ sub execute {
         return 0;
     }
 
-=cut
-# put this at the bottom
-    unless(App::DB->sync_database) {
-        $self->error_message("Failed to save GSC objects: " . App::DB->error_message);
-        return;
-    }
-    $self->create_subscription("commit", 
-        sub {  
-            #App::DB->commit 
-            print "committing!\n";
-        }
-    );
-=cut
-
-return 1;
+    return 1;
 }
 
 sub vtest{
