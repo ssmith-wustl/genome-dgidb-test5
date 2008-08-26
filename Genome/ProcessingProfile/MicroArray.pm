@@ -10,6 +10,9 @@ class Genome::ProcessingProfile::MicroArray {
     is => 'Genome::ProcessingProfile::ImportedVariants',
 };
 
+sub params_for_class {
+    return;
+}
 
 1;
 
