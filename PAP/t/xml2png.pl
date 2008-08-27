@@ -10,7 +10,7 @@ use above 'Workflow';
 
 use Data::Dumper;
 
-my $w = Workflow::Model->create_from_xml($ARGV[0] || 'data/pap.xml');
+my $w = Workflow::Model->create_from_xml($ARGV[0] || 'data/pap_outer.xml');
 
 print join("\n", $w->validate) . "\n";
 
