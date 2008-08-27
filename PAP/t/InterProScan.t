@@ -7,7 +7,7 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 5;
+use Test::More tests => 53;
 
 BEGIN {
     use_ok('PAP::Command');
