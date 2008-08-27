@@ -59,10 +59,21 @@ sub execute {
         }
     }
     unless (-e $self->sff_file) {
-        unless ($self->read_set->run_region_454->dump_sff(filename => $self->sff_file)) {
-            $self->error_message('Failed to dump sff_file to '. $self->sff_file);
-            return;
-        }
+        my $run_region_454 = $self->read_set->run_region_454;
+        # THIS COULD SAVE SPACE BUT NOT SURE IF IT WILL WORK OR HOW TO HANDLE WHEN THE FILE DOESN'T EXIST
+        # The file may already exist on the filesystem.  If so, create a symlink
+        #my $sff_file_location = $run_region_454->sff_filesystem_location;
+        #if (-e $sff_file_location) {
+        #    unless (symlink($sff_file_location,$self->sff_file)) {
+        #        $self->error_message("Failed to create symlink '". $self->sff_file ."' to '$sff_file_location'");
+        #        return;
+        #    }
+        #} else {
+            unless ($run_region_454->dump_sff(filename => $self->sff_file)) {
+                $self->error_message('Failed to dump sff_file to '. $self->sff_file);
+                return;
+            }
+        #}
     }
     return 1;
 }
