@@ -96,6 +96,24 @@ sub execute {
                 $db_feature_ac->add_Annotation($annotation);
                 
             }
+
+            foreach my $tagname (
+                                 qw(
+                                    psort_localization 
+                                    psort_score
+                                    kegg_evalue
+                                    kegg_description
+                                   )
+                                ) {
+                
+                if ($feature->has_tag($tagname)) {
+                
+                    my ($tagvalue) = $feature->each_tag_value($tagname);
+                    $db_feature->add_tag_value($tagname, $tagvalue);
+                    
+                }
+                
+            }
             
         }
         
