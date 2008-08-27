@@ -126,20 +126,13 @@ sub parse_psortb_terse {
         
         my ($gene, $class, $score) = split(/\t/,$line);
 
-        unless ($score >= 7.5) {
-            next;
-        }
-
         my $feature = Bio::SeqFeature::Generic->new(
                                                     -display_name => $gene,
                                                 );
 
-        my $annotation_collection = $feature->annotation();
-
-        my $sv = Bio::Annotation::SimpleValue->new(-value => $class);
-
-        $annotation_collection->add_Annotation('cellular_localization' => $sv);
-
+        $feature->add_tag_value('psort_localization', $class);
+        $feature->add_tag_value('psort_score', $score);
+        
         push @features, $feature;
         
     }
