@@ -113,7 +113,7 @@ sub execute {
     $total /= $self->iterations;
     $fp /= $self->iterations;
     $fn /= $self->iterations;
-    print "Total Error: $total% False Positive: " , $fp * 100 , "% False Negative: " , $fn * 100 , "%\n"; 
+    printf "Total Error: %0.2f%% False Positive: %0.2f%% False Negative: %0.2f%%\n",$total,$fp*100, $fn*100; 
     return ($total, $fp, $fn);
 }
 
