@@ -382,7 +382,7 @@ in C for fast iteration over a Map file.
 
 my $mi = Genome::Model::Tools::Maq::Map::Reader->new;
 
-=head1  get_contig_names 
+=head1 open 
 
 $mi->open("input_file_name");
 
@@ -409,18 +409,6 @@ returns a hash containing the next record in the map file stream.
  Takes either a perl function name, perl function ref, or C function name, and performs that operation for 
  each record in the map file.  The first argument to the perl do_func is a hash containing the map file record.  
  The first argument to the C implementation of a do_func is a pointer to a maqmap1_t record.  
-
-=head1 set_assembly_tags 
-
-$ace_object->set_assembly_tags(\@assembly_tags);
-    
-replaces the current array of assembly tags in the ace file with a new list of assembly tags.
-
-=head1 write_file
-
-$ace_object->write_file;
-    
-This function will write the ace object in it's current state to the output ace file specified during object construction.
 
 =head1 Author(s)
 
