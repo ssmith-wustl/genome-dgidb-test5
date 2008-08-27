@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Command; 
+use Command;
 use Genome::Model;
 use File::Path;
 use Data::Dumper;
@@ -14,18 +14,36 @@ class Genome::Model::Command::Create::ProcessingProfile::Assembly {
     is => ['Genome::Model::Event', 'Genome::Model::Command::Create::ProcessingProfile'],
     sub_classification_method_name => 'class',
     has => [
-        model                        => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
-        profile_name                 => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
-                                          doc => 'The human readable name for the processing profile'},
+            assembler           => {
+                                    is => 'string',
+                                    doc => 'The name of the assembler to use when assembling read sets',
+                                },
+            sequencing_platform => {
+                                    is => 'string',
+                                    doc => 'The sequencing platform used to produce the read sets to be assembled',
+                                },
     ],
     has_optional => [
-                     assembler => { is => 'string' },
-                     assembler_params => { is => 'string'},
-                     read_filter => {is => 'string'},
-                     read_filter_params => {is => 'string'},
-                     read_trimmer => {is => 'string'},
-                     read_trimmer_params => {is => 'string'},
-                     sequencing_platform => {is => 'string'},
+                     assembler_params    => {
+                                             is => 'string',
+                                             doc => 'A string of parameters to pass to the assembler',
+                                         },
+                     read_filter         => {
+                                             is => 'string',
+                                             doc => 'The name of the software to use when filtering read sets',
+                                         },
+                     read_filter_params  => {
+                                             is => 'string',
+                                             doc => 'A string of parameters to pass to the read_filter',
+                                         },
+                     read_trimmer        => {
+                                             is => 'string',
+                                             doc => 'The name of the software to use when trimming read sets',
+                                         },
+                     read_trimmer_params => {
+                                             is => 'string',
+                                             doc => 'A string of parameters to pass to the read_trimmer',
+                                         },
                  ],
     schema_name => 'Main',
 };
