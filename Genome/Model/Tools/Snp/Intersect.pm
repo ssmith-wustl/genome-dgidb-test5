@@ -19,8 +19,8 @@ class Genome::Model::Tools::Snp::Intersect {
                                     doc => 'combine: show content of both, compare: show both plus snp comparison details.' },
         delimiter1          => { is => 'Text', default_value => '\s+', },
         delimiter2          => { is => 'Text', default_value => '\s+', },
-        headers1            => { is => 'Boolean', default_value => 0, doc => 'file 1 has n header lines' },
-        headers2            => { is => 'Boolean', default_value => 0, doc => 'file 2 has n header lines' },
+        headers1            => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'file 1 has n header lines' },
+        headers2            => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'file 2 has n header lines' },
     ],
     doc => "intersect two snp lists by position, with optional genotype overlap detail"
 };
@@ -229,7 +229,7 @@ sub execute {
                 my $g2_het = ($g2 eq $iub{$g2} ? 'hom' : 'het');
                 my $m = $iub_overlap{$g1}{$g2};
                 unless (defined $m) {
-                    die "no value for >$g1< >$g2<\n";
+                    print "no value for >$g1< >$g2<\n";
                 }
                 my $desc = ($g1 eq $g2 ? 'match' : 'miss').'-'.$g1_het.'-'.$g2_het.'-'.$m.'-base-overlap';
                 $intersect_groups{$desc}++; 
@@ -256,6 +256,7 @@ sub execute {
     my $headers2 = $self->headers2 || 0;
     my $headers_count = ($headers1 >= $headers2 ? $headers1 : $headers2);
     while ($headers_count) {
+        $DB::single=1;
         if ($headers1) {
             getf1();
             $headers1--;
