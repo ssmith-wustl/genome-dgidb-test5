@@ -29,7 +29,7 @@ EOS
 
 sub _snp_resource_name {
     my $self = shift;
-    return sprintf("snips%s", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
+    return sprintf("snps%s", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
 }
 
 sub _pileup_resource_name {
