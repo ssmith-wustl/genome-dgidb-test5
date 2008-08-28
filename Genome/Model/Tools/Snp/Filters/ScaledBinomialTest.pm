@@ -14,13 +14,13 @@ class Genome::Model::Tools::Snp::Filters::ScaledBinomialTest
 {
     is => 'Command',
     has => [
-        decision_tree_output => 
+        input_primary_snp_metrics => 
         {
             type => 'String',
             is_optional => 0,
             doc => 'File of experimental metrics for the model',
         },
-        experimental_metric_normal_file =>
+        input_other_snp_metrics =>
         {
             type => 'String',
             is_optional => 0,
@@ -59,7 +59,6 @@ class Genome::Model::Tools::Snp::Filters::ScaledBinomialTest
             default => .35,
             doc => 'something dave larson thinks is good',
         },
-     
         less_p_threshold => 
         {
             type => 'Float',
@@ -86,7 +85,7 @@ class Genome::Model::Tools::Snp::Filters::ScaledBinomialTest
 };
 
 operation_io Genome::Model::Tools::Snp::Filters::ScaledBinomialTest {
-    input  => [ 'ref_seq_id', 'basedir', 'experimental_metric_normal_file', 'decision_tree_output' ],
+    input  => [ 'ref_seq_id', 'basedir', 'input_other_snp_metrics', 'input_primary_snp_metrics' ],
     output => [ 'binomial_output_file' ],
 };
 
@@ -94,6 +93,16 @@ operation_io Genome::Model::Tools::Snp::Filters::ScaledBinomialTest {
 sub execute {
     my $self = shift;
     $DB::single = $DB::stopper;
+
+    my $in1     = $self->input_primary_snp_metrics;              # lie: the tumor "experimental" metrics
+    my $in2     = $self->input_other_snp_metrics;   # lie: not experimental 
+    my $out1    = $self->binomial_output_file;              # we make 2 files, the 2nd is derived
+
+    if(-e $out1) {
+        $self->warning_message("Binomial file exists. Not regenerating. You didn't see anything here.");
+        return 1;
+    }
+
     unless($self->_create_r_files) {
         $self->error_message("Error creating temporary files for R");
         return;
@@ -112,18 +121,20 @@ sub execute {
 
 sub _create_r_files {
     my $self = shift;
-
+      
+          
     #create temporary files for R
-    my $tumor_metric_file = new IO::File($self->decision_tree_output);
+    my $tumor_metric_file = new IO::File($self->input_primary_snp_metrics);
     unless(defined($tumor_metric_file)) {
-        $self->error_message("Couldn't open " . $self->decision_tree_output);
+        $self->error_message("Couldn't open " . $self->input_primary_snp_metrics);
         return;
     }
-    my $normal_metric_file = new IO::File($self->experimental_metric_normal_file);
+    my $normal_metric_file = new IO::File($self->input_other_snp_metrics);
     unless(defined($normal_metric_file)) {
-        $self->error_message("Couldn't open " . $self->experimental_metric_normal_file);
+        $self->error_message("Couldn't open " . $self->input_other_snp_metrics);
         return;
     }
+    
     my $chromosome = $self->ref_seq_id;
 
     my $ratio = $self->ratio;
@@ -278,7 +289,7 @@ sub _convert_probabilities_to_locations {
     if(!defined($hash_ref)) {
         return;
     }
-    my $snp_filename = $self->decision_tree_output;
+    my $snp_filename = $self->input_primary_snp_metrics;
 
     my $handle = IO::File->new("$file");
     unless(defined($handle)) {
@@ -309,7 +320,7 @@ sub _convert_probabilities_to_locations {
 #----------------------------------
 sub _convert_probabilities_to_snps {
     my ($self) = @_;
-    my $snp_filename = $self->decision_tree_output;
+    my $snp_filename = $self->input_primary_snp_metrics;
     my $chromosome = $self->ref_seq_id; 
     my $output = $self->basedir . "/binomial.chr" . $self->ref_seq_id;
     #expects both the two-sided and one-sided(less) tests to be present
