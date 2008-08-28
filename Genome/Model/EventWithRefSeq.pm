@@ -136,9 +136,12 @@ sub resolve_accumulated_alignments_filename {
         {
             #since deduplicating requires that we have a valid non-duplicated mapfile, we call ourself again to
             #get this mapfile (without the remove_pcr_artifacts option)
+            print "Removing PCR artifacts\n";
             my $temp_accum_align_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $ref_seq_id,library_name => $library_name);
-            my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts->execute(input => $temp_accum_align_file,keep => $result_file, remove => '/dev/null', identity_length => 0);
+            my $temp_del_file = new File::Temp( UNLINK => 1, SUFFIX => '.map');
+            my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts->execute(input => $temp_accum_align_file,keep => $result_file, remove => $temp_del_file->filename, identity_length => 0);
             $self->status_message("Error deduplicating mapfile.\n") unless $result;
+            unlink $temp_del_file->filename;
             unless (-e $result_file) {
                 $self->error_message("Error creating deduplicated mapfile, $result_file.");
                 next;
@@ -179,7 +182,7 @@ sub resolve_accumulated_alignments_filename {
             $hostname->value($ENV{HOSTNAME});
         }
         else {
-            $self->add_output(name=>"Hostname" , value=>$ENV{HOSTNAME});
+           $self->add_output(name=>"Hostname" , value=>$ENV{HOSTNAME});
         }
     }
     chmod 00664, $result_file;
