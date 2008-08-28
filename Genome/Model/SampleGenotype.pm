@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use IO::File;
-use MG::IO::Polyscan;
 use above "Genome";
 
 class Genome::Model::SampleGenotype{
@@ -17,7 +16,7 @@ sub create {
     die unless $self;
 
     my $model_dir = $self->_model_directory();
-    
+
     unless (-e $model_dir) {
         unless (system("mkdir $model_dir") == 0) {
             $self->error_message("Failed to mkdir model dir: $model_dir");
@@ -93,13 +92,14 @@ sub polyscan_model {
 sub polyphred_model {
     my $self = shift;
 
-   return  $self->get_model_of_type('polyphred');
+    return  $self->get_model_of_type('polyphred');
 }
 
 sub combine_variants{
     my $self = shift;
     my $processing_profile = $self->processing_profile;
     my $combine_variants_strategy = $processing_profile->strategy; #TODO?
+}
 
 sub create_genotype_file{
     #TODO
@@ -107,6 +107,7 @@ sub create_genotype_file{
 }
 
 sub update_genotypes{
+    my $self=shift;
     #TODO
     #archive
     #recalculate

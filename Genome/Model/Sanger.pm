@@ -13,8 +13,14 @@ class Genome::Model::Sanger{
     is => 'Genome::Model',
     is_abstract => 1,
     has_optional => [
-        gfh => 'genotype file handle',
-        pfh => 'pcr product file handle',
+        gfh => {
+            is=>'IO::Handle',
+            doc=>'genotype file handle',
+            },
+        pfh => {
+            is =>'IO::Handle',
+            doc=>'pcr product file handle',
+            },
         ],
 };
 
