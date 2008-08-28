@@ -30,10 +30,14 @@ sub mapmerge_filename {
     my $self=shift;
     my $ref_seq_id=shift;
     my $library_name=shift;
+    my %p = @_;
+    my $remove_pcr_artifacts = $p{remove_pcr_artifacts};
 
     my $result_file = '/tmp/mapmerge_' . $self->model_id;
     $result_file .=  '-' . $ref_seq_id if ($ref_seq_id);
     $result_file .= "-" . $library_name if ($library_name);
+    $result_file .= '-ssdedup' if ($remove_pcr_artifacts);
+    
     return $result_file;
 }
 
@@ -47,6 +51,7 @@ sub resolve_accumulated_alignments_filename {
     my $ref_seq_id = $p{ref_seq_id};
     my $library_name = $p{library_name};
     my $force_use_original_files = $p{force_use_original_files};
+    my $remove_pcr_artifacts = $p{remove_pcr_artifacts};
 
     my $model= Genome::Model->get($self->model_id);
     my @maplists;
@@ -75,7 +80,7 @@ sub resolve_accumulated_alignments_filename {
 
     $ref_seq_id ||= 'all_sequences';
 
-    my $result_file = $self->mapmerge_filename($ref_seq_id, $library_name);
+    my $result_file = $self->mapmerge_filename($ref_seq_id, $library_name, %p);
     my @inputs;
     foreach my $listfile ( @maplists ) {
         my $f = IO::File->new($listfile);
@@ -127,28 +132,48 @@ sub resolve_accumulated_alignments_filename {
 
     if($found==0) {
         #no one has a file we want. we should make one and add a note that we have one.
-        $self->warning_message("Performing a complete mapmerge for $result_file using @inputs.  Hold on...");
-        
-        #my $cmd = Genome::Model::Tools::Maq::MapMerge->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
-        my ($fh,$maplist) = File::Temp::tempfile;
-        $fh->print(join("\n",@inputs),"\n");
-        $fh->close;
-        system "gt maq vmerge --maplist $maplist --pipe $result_file.pipe &";
-        my $start_time = time;
-        until (-p "$result_file.pipe" or ( (time - $start_time) > 100) )  {
-            $self->status_message("Waiting for pipe...");
-            sleep(5);
+        if($remove_pcr_artifacts)
+        {
+            #since deduplicating requires that we have a valid non-duplicated mapfile, we call ourself again to
+            #get this mapfile (without the remove_pcr_artifacts option)
+            my $temp_accum_align_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $ref_seq_id,library_name => $library_name);
+            my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts->execute(input => $temp_accum_align_file,keep => $result_file, remove => '/dev/null', identity_length => 0);
+            $self->status_message("Error deduplicating mapfile.\n") unless $result;
+            unless (-e $result_file) {
+                $self->error_message("Error creating deduplicated mapfile, $result_file.");
+                next;
+            }
+            unless (-s $result_file) {
+                $self->error_message("File $result_file is empty.  Continuing.");
+                unlink $result_file;
+                next;
+            }       
         }
-        unless (-p "$result_file.pipe") {
-            die "Failed to make pipe? $!";
+        else
+        {
+            $self->warning_message("Performing a complete mapmerge for $result_file using @inputs.  Hold on...");
+
+            #my $cmd = Genome::Model::Tools::Maq::MapMerge->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
+            my ($fh,$maplist) = File::Temp::tempfile;
+            $fh->print(join("\n",@inputs),"\n");
+            $fh->close;
+            system "gt maq vmerge --maplist $maplist --pipe $result_file.pipe &";
+            my $start_time = time;
+            until (-p "$result_file.pipe" or ( (time - $start_time) > 100) )  {
+                $self->status_message("Waiting for pipe...");
+                sleep(5);
+            }
+            unless (-p "$result_file.pipe") {
+                die "Failed to make pipe? $!";
+            }
+            $self->status_message("Streaming into file $result_file.");
+            system "cp $result_file.pipe $result_file";
+            unless (-s "$result_file") {
+                die "Failed to make map from pipe? $!";
+            }
+
+            $self->warning_message("mapmerge complete.  output filename is $result_file");
         }
-        $self->status_message("Streaming into file $result_file.");
-        system "cp $result_file.pipe $result_file";
-        unless (-s "$result_file") {
-            die "Failed to make map from pipe? $!";
-        }
-        
-        $self->warning_message("mapmerge complete.  output filename is $result_file");
         my ($hostname) = $self->outputs(name => "Hostname");
         if ($hostname) {
             $hostname->value($ENV{HOSTNAME});
