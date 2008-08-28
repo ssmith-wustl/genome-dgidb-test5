@@ -57,7 +57,7 @@ sub resolve_accumulated_alignments_filename {
     unless (exists $p{remove_pcr_artifacts}) {
         # the caller didn't explicitly state whether we should de-duplicate
         # check the model
-        my $strategy = $self->model->multi_read_fragment_strategy;
+        my $strategy = $self->model->multi_read_fragment_strategy||'';
         $self->status_message("found multi read fragment strategy $strategy");
         if ($strategy =~ /eliminate start site duplicates\s*(\d*)/) {
             my $identity_length = $1 || 0;
@@ -157,7 +157,7 @@ sub resolve_accumulated_alignments_filename {
             #since deduplicating requires that we have a valid non-duplicated mapfile, we call ourself again to
             #get this mapfile (without the remove_pcr_artifacts option)
             print "Removing PCR artifacts\n";
-            my $temp_accum_align_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $ref_seq_id,library_name => $library_name);
+            my $temp_accum_align_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $ref_seq_id,library_name => $library_name,remove_pcr_artifacts => 0);
             my $temp_del_file = new File::Temp( UNLINK => 1, SUFFIX => '.map');
             my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts->execute(input => $temp_accum_align_file,keep => $result_file, remove => $temp_del_file->filename, identity_length => $identity_length);
             $self->status_message("Error deduplicating mapfile.\n") unless $result;
@@ -203,7 +203,7 @@ sub resolve_accumulated_alignments_filename {
             $self->warning_message("mapmerge complete.  output filename is $result_file");
         }
         my ($hostname) = $self->outputs(name => "Hostname");
-        if ($hostname) {
+        if ($hostname&&!$hostname->value) {
             $hostname->value($ENV{HOSTNAME});
         }
         else {
