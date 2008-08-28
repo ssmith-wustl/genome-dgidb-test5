@@ -4,8 +4,8 @@ use strict;
 use warnings;
 use Genome;            
 use IO::File;
+
 class Genome::Model::Tools::Maq::Metrics::Dtr {
-    is => 'Command',
     has => [ 
     names => {},
     decision => {},
@@ -169,3 +169,74 @@ sub make_attribute_array {
 
 1;
 
+=pod
+
+=head1 NAME
+
+Genome::Model::Tools::Maq::Metrics::Dtr 
+
+=head1 SYNOPSIS
+
+use Genome;
+
+my $dtr = Genome::Model::Tools::Maq::Metrics::Dtr->create();
+
+my @variables = $dtr->headers; #returns the names of the variables fed into the decision tree
+
+my $names_file = $dtr->names_file_string();
+
+my $line = $experimental_metrics_fh->getline;
+chomp $line;
+
+my @attributes = $dtr->make_attribute_array($line);
+
+=head1 DESCRIPTION
+
+This object contains methods for producing files for C45 training. It processes an experimental metrics line into attributes for the decision tree, and also produces names for each of these attributes to be either used in tree training or C4.5 output parsing.
+
+As it stands now, changes to this module may cause serious errors when dealing with data and trees produced by the original version.
+
+=head1 CONSTRUCTORS
+
+=head3 I<create()>
+ 
+Takes no arguments. Returns a new Dtr object.
+
+=head1 METHODS
+ 
+
+=head3 I<names_file_string()>
+
+Takes no arguments. Returns a string formatted for use as a C4.5 F<.names> file. Intended to be printed directly to a file. 
+
+=head3 I<headers()>
+
+Takes no arguments. Returns an array of attribute names passed to the decision tree. The order of these names reflects the order in which they appear in the I<make_attribute_array> method. 
+
+=head3 I<make_attribute_array($string)>
+
+Takes in a line from an experimental metrics file and transforms it into an array of attribute values. 
+
+=back
+
+=head1 EXAMPLES
+
+See Genome::Model::Tools::SeeFourFive::MakeTrainingSet for a good example of how this module is used
+
+=head1 EXPORT
+
+None by default
+
+=head1 SEE ALSO
+
+Genome::Model::Tools::SeeFourFive::MakeTrainingSet,Genome::Model::Tools::Snp::Filters::DtrSeeFourFive 
+
+=head1 BUGS
+
+There is no way to handle various versions of this module without breaking backwards compatibility. This module operates directly on the experimental metrics file format. Changes to this format may break this module.
+
+=head1 AUTHOR
+
+David Larson, E<lt>dlarson@watson.wustl.eduE<gt>
+
+=cut
