@@ -16,17 +16,9 @@ sub create {
     return $self;
 }
 
-sub _type{
+sub type{
     my $self = shift;
     return "polyscan";
 }
 
-sub _archiveable_file_names{
-    my $self = shift;
-    my @super = $self->SUPER::_archiveable_file_names;
-    #TODO any other files?
-    my @final = (@super,);  #extra_files
-    return @final;
-}
-
-#TODO implementation specific processing methods
+1;
