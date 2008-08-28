@@ -52,6 +52,26 @@ sub resolve_accumulated_alignments_filename {
     my $library_name = $p{library_name};
     my $force_use_original_files = $p{force_use_original_files};
     my $remove_pcr_artifacts = $p{remove_pcr_artifacts};
+    my $identity_length = $p{remove_pcr_artifacts_identity_length};
+
+    unless (exists $p{remove_pcr_artifacts}) {
+        # the caller didn't explicitly state whether we should de-duplicate
+        # check the model
+        my $strategy = $self->model->multi_read_fragment_strategy;
+        $self->status_message("found multi read fragment strategy $strategy");
+        if ($strategy =~ /eliminate start site duplicates\s*(\d*)/) {
+            my $identity_length = $1 || 0;
+            $self->status_message("removing duplicates with identity length $identity_length...");
+            $remove_pcr_artifacts = 1;
+        }
+        elsif ($strategy) {
+            die "unknown strategy $strategy!";
+        }
+    }
+
+    if ($remove_pcr_artifacts and not exists $p{remove_pcr_artifacts_identity_length}) {
+        $identity_length = 26;
+    }
 
     my $model= Genome::Model->get($self->model_id);
     my @maplists;
@@ -139,7 +159,7 @@ sub resolve_accumulated_alignments_filename {
             print "Removing PCR artifacts\n";
             my $temp_accum_align_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $ref_seq_id,library_name => $library_name);
             my $temp_del_file = new File::Temp( UNLINK => 1, SUFFIX => '.map');
-            my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts->execute(input => $temp_accum_align_file,keep => $result_file, remove => $temp_del_file->filename, identity_length => 0);
+            my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts->execute(input => $temp_accum_align_file,keep => $result_file, remove => $temp_del_file->filename, identity_length => $identity_length);
             $self->status_message("Error deduplicating mapfile.\n") unless $result;
             unlink $temp_del_file->filename;
             unless (-e $result_file) {
@@ -154,6 +174,11 @@ sub resolve_accumulated_alignments_filename {
         }
         else
         {
+            if (@inputs == 1) {
+                $self->status_message("skipping merge of single-item map list: $inputs[0]");
+                return $inputs[0];
+            }
+
             $self->warning_message("Performing a complete mapmerge for $result_file using @inputs.  Hold on...");
 
             #my $cmd = Genome::Model::Tools::Maq::MapMerge->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
