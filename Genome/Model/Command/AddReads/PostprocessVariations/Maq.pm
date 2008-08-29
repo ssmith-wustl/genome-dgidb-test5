@@ -44,22 +44,37 @@ sub _variation_metrics_name {
 
 sub snp_output_file {
     my $self = shift;
-    return sprintf("%s/identified_variations/%s", $self->model->data_directory,$self->_snp_resource_name);
+    return sprintf("%s/%s", $self->model->maq_snp_related_metric_directory,$self->_snp_resource_name);
 }
 
 sub pileup_output_file {
     my $self = shift;
-    return sprintf("%s/identified_variations/%s", $self->model->data_directory,$self->_pileup_resource_name);
+    return sprintf("%s/%s", $self->model->maq_snp_related_metric_directory,$self->_pileup_resource_name);
 }
 
 sub variation_metrics_file {
     my $self = shift;
-    return sprintf("%s/identified_variations/%s", $self->model->data_directory, $self->_variation_metrics_name);
+    return sprintf("%s/%s", $self->model->other_snp_related_metric_directory,$self->_variation_metrics_name);
 }
+sub variation_metrics_file_for_model {
+    my $self = shift;
+    my $model = shift;
+    my $metrics_for_other_snps_directory = $self->model->other_snp_related_metric_directory . "/metrics_for_$model" . "_snps/";
+
+    unless (-d $metrics_for_other_snps_directory) {
+        unless(mkdir $metrics_for_other_snps_directory) {
+            $self->error_message("Cannot create $metrics_for_other_snps_directory");
+            return;
+        }
+        chmod 02775, $metrics_for_other_snps_directory;
+    }
+    return $metrics_for_other_snps_directory . $self->_variation_metrics_name;
+}
+
 
 sub experimental_variation_metrics_file_basename {
     my $self = shift;
-    return sprintf("%s/identified_variations/%s", $self->model->data_directory, 'experimental_' . $self->_variation_metrics_name);
+    return sprintf("%s/%s", $self->model->maq_snp_related_metric_directory, 'experimental_' . $self->_variation_metrics_name);
 }
 
 sub execute {
@@ -74,11 +89,19 @@ sub execute {
     #    $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
     #    return;
     #}
-
-    my $chromosome = $self->ref_seq_id;    
     unless ($self->generate_variation_metrics_files_v2) {        
         $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
         return;
+    }
+    
+    #hey, this regex could probably be replaced with a formal model comparison lookup system!
+    #PS FIXME
+    if($model =~ m/tumor/) {
+        my $map_file = $self->skin_sample_map_file;
+        unless ($self->generate_variation_metrics_files_v2($map_file)) {        
+            $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
+            return;
+        }
     }
 
     unless ($self->verify_successful_completion) {
@@ -145,20 +168,22 @@ sub generate_variation_metrics_files_v2 {
     # It runs directly out of David Larson's home for now until merged w/ the stuff above.
     # It will be removed when bugs are worked out in the regular metric generator.
 
-    my $self = shift;
+    my $self                 = shift;
+    my $map_file = shift;
+    my $model_comparison_id = shift;
+    my $output_basename;
+    if($map_file) {
+        $output_basename     = $self->variation_metrics_file_for_model($model_comparison_id);
+    }
+    else {
+        $map_file            = $self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id); 
+        $output_basename     = $self->variation_metrics_file;
+    }
     my $snp_file            = $self->snp_output_file; 
-    my $output_basename     = $self->experimental_variation_metrics_file_basename;
-
     my $model = $self->model;
     #I hack this hack hackily.  If you wonder why this is here, ask brian and dave for
     #some long/boring explanation
-    if($model->name =~ m/skin/) {
-        $snp_file = $self->tumor_sample_snp_file;
-    }
-
     my $ref_seq             = $self->ref_seq_id;
-    my $map_file            = $self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id); 
-    
     my $bfa_file = sprintf("%s/all_sequences.bfa", $model->reference_sequence_path);
 
     my @f = ($map_file,$bfa_file,$snp_file);
@@ -237,46 +262,21 @@ sub snp_err_log_file {
     );
 }
 
-sub tumor_sample_snp_file {
+sub skin_sample_map_file {
     my $self= shift;
     my $model = $self->model;
     $DB::single = $DB::stopper;
     my $model_name = $model->name;
-    my $tumor_name = $model_name;
+    my $skin_name = $model_name;
 
-    $tumor_name =~ s/34skin/98tumor/g;
-    my $tumor_model = Genome::Model->get('name like' => $tumor_name);
-    unless ($tumor_model) {
-        $self->error_message(sprintf("tumor model matching name %s does not exist.  please verify this first.", $tumor_name));
+    $skin_name =~ s/98tumor/34skin/g;
+    my $skin_model = Genome::Model->get('name like' => $skin_name);
+    unless ($skin_model) {
+        $self->error_message(sprintf("tumor model matching name %s does not exist.  please verify this first.", $skin_name));
         return undef;
     }
-
-    # Get metrics for the tumor sample for processing.
-    my $latest_tumor_build = $tumor_model->latest_build_event;
-    unless ($latest_tumor_build) {
-        $self->error_message("Failed to find a build event for the comparable tumor model " . $tumor_model->name);
-        return;
-    }
-
-    my ($equivalent_tumor_event) =
-    grep { $_->isa("Genome::Model::Command::AddReads::PostprocessVariations")  }
-    $latest_tumor_build->child_events(
-        ref_seq_id => $self->ref_seq_id
-    );
-
-
-    unless ($equivalent_tumor_event) {
-        $self->error_message("Failed to find an event on the tumor model to match the tumor.  Probably need to re-run after that completes.  In the future, we will have the tumor/tumor filtering separate from the individual model processing.\n");
-        return;
-    }
-    my $tumor_sample_snp_file_name = $equivalent_tumor_event->snp_output_file;
-
-    unless (-e $tumor_sample_snp_file_name) {
-        $self->error_message("Failed to find variation metrics for \"tumor\": $tumor_sample_snp_file_name");
-        return;
-    }
-    return $tumor_sample_snp_file_name;
-
+    my $skin_map=$self->resolve_accumulated_alignments_filename(ref_seq_id => $self->ref_seq_id);
+    return $skin_map, $model->id;
 }
 
 sub _wc {
