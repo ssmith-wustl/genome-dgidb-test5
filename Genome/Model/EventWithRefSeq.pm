@@ -178,8 +178,10 @@ sub resolve_accumulated_alignments_filename {
                 $self->status_message("skipping merge of single-item map list: $inputs[0]");
                 return $inputs[0];
             }
-
-            $self->warning_message("Performing a complete mapmerge for $result_file using @inputs.  Hold on...");
+            my $inputs = join("\n", @inputs);
+            $self->warning_message("Performing a complete mapmerge for $result_file \n") 
+            #$self->warning_message("on $inputs \n ") 
+            $self->warning_message("Hold on...\n");
 
             #my $cmd = Genome::Model::Tools::Maq::MapMerge->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
             my ($fh,$maplist) = File::Temp::tempfile;
