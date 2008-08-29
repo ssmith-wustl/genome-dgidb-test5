@@ -48,11 +48,14 @@ $DB::single=1;
     my $maplist_dir = $model->accumulated_alignments_directory;
     unless (-e $maplist_dir) {
         unless (mkdir $maplist_dir) {
+            #doesn't exist can't create it...quit
             $self->error_message("Failed to create directory '$maplist_dir':  $!");
+            return;
         }
     } else {
         unless (-d $maplist_dir) {
-            $self->error_message("File already exist for directory '$maplist_dir':  $!");
+            #does exist, but is a file, not a directory? quit.
+            $self->error_message("File already exists for directory '$maplist_dir':  $!");
             return;
         }
     }
@@ -93,7 +96,10 @@ $DB::single=1;
                 model_id => $model->id,
                 event_status => 'Succeeded'
             );
-        
+        unless(@run_events) {
+            $self->error_message("Model: " . $model->id .  " has no align-reads events?");
+            return;
+        }
         # pre-cache the data we'll grab individually below
         my @run_ids = map {$_->run_id} @run_events;
         my @rc = Genome::RunChunk->get(seq_id => \@run_ids);        
@@ -114,7 +120,8 @@ $DB::single=1;
             my $align_reads = Genome::Model::Command::AddReads::AlignReads::Maq->get(
                 model_id   => $model->id,
                 run_id     => $run_event->run_id,
-                event_type => 'genome-model add-reads align-reads maq'
+                event_type => 'genome-model add-reads align-reads maq',
+                event_status => 'Succeeded'
             );
             
             my $read_set = $align_reads->read_set;
@@ -158,7 +165,8 @@ $DB::single=1;
         if (@missing_maps) {
             $self->error_message(join("\n",@missing_maps));
             #$self->error_message("Looked in directory: $maplist_dir);
-            die "Map files are missing!:\n"
+            $self->error_message("Map files are missing!");
+            return; 
         }
     }
     
