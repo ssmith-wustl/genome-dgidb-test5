@@ -194,6 +194,18 @@ sub _calculate_run_count {
     return scalar($self->run_names);
 }
 
+sub other_snp_related_metric_directory {
+    my $self=shift;
+    return $self->data_directory . "/other_snp_related_metrics/";
+}
+sub maq_snp_related_metric_directory {
+    my $self=shift;
+    return $self->data_directory . "/maq_snp_related_metrics/";
+}
+
+
+
+
 sub read_sets {
     my $self = shift;
     my %distinct_ids = map { $_->run_id => 1}  $self->read_set_assignment_events;
@@ -646,7 +658,7 @@ sub _filtered_variants_dir {
 
 sub _reports_dir {
     my $self = shift;
-    return sprintf('%s/reports/',$self->data_directory);
+    return sprintf('%s/annotation/',$self->data_directory);
 }
 
 sub _files_for_pattern_and_optional_ref_seq_id {
