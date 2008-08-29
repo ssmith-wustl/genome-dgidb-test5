@@ -33,21 +33,19 @@ EOS
 }
 
 sub subordinate_job_classes {
-    return (
-        'Genome::Model::Command::AddReads::MergeAlignments',
-        'Genome::Model::Command::AddReads::UpdateGenotype',
-        'Genome::Model::Command::AddReads::FindVariations',
-        'Genome::Model::Command::AddReads::PostprocessVariations',
-        'Genome::Model::Command::AddReads::AnnotateVariations',
-        'Genome::Model::Command::AddReads::FilterVariations'
-    );
+    my @step1 =  ('Genome::Model::Command::AddReads::MergeAlignments');
+    my @step2 =  ('Genome::Model::Command::AddReads::UpdateGenotype');
+    my @step3 =  ('Genome::Model::Command::AddReads::FindVariations'),
+    my @step4 =  ('Genome::Model::Command::AddReads::PostprocessVariations', 'Genome::Model::Command::AddReads::AnnotateVariations');
+    
+    return (\@step1, \@step2, \@step3, \@step4);
 }
 
 sub execute {
     my $self = shift;
     #$DB::single = $DB::stopper;
     $DB::single = 1;
-    
+
     my @sub_command_classes = $self->subordinate_job_classes;
 
     my $model = Genome::Model->get($self->model_id);
@@ -56,20 +54,25 @@ sub execute {
     unless (@subreferences_names > 0) {
         @subreferences_names = ('all_sequences');
     }
-    
-    foreach my $ref (@subreferences_names) { 
-        my $prior_event_id = undef;
-        foreach my $command_class ( @sub_command_classes ) {
-            my $command = $command_class->create(
-                model_id => $self->model_id, 
-                ref_seq_id=>$ref,
-                prior_event_id => $prior_event_id,
-                parent_event_id => $self->id,
-            );
-            $command->parent_event_id($self->id);
-            $command->event_status('Scheduled');
-            $command->retry_count(0);
 
+    foreach my $ref (@subreferences_names) { 
+        foreach my $command_classes ( @sub_command_classes ) {
+            
+            my $prior_event_id = undef;
+            my $command;
+            for my $command_class (@{$command_classes}) {  
+                $command = $command_class->create(
+                    model_id => $self->model_id, 
+                    ref_seq_id=>$ref,
+                    prior_event_id => $prior_event_id,
+                    parent_event_id => $self->id,
+                );
+                $command->parent_event_id($self->id);
+                $command->event_status('Scheduled');
+                $command->retry_count(0);
+            }
+            #clearly this will not work well if the pipeline wanted to come back together after a fork...
+            #don't cry about it if it happens
             $prior_event_id = $command->id;
         }
     }
