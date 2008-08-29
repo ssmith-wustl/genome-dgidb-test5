@@ -71,7 +71,7 @@ $DB::single = $DB::stopper;
 
     my $rv = system($cmd);
     if ($rv) {
-        $self->error_message("nonzero exit code $rv returned by maq, command looks like, @args");
+        $self->error_message("nonzero exit code " . $rv/256 . " returned by maq, command looks like, @args");
         return;
     }
     return $self->verify_succesful_completion;
