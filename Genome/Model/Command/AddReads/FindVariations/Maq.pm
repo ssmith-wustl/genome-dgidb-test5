@@ -21,7 +21,7 @@ class Genome::Model::Command::AddReads::FindVariations::Maq {
             doc => "the path at which all analysis output is stored",
             calculate_from => ['model'],
             calculate => q|
-                return $model->data_directory. "/identified_variations";
+                return $model->maq_snp_related_metric_directory;
             |,
             is_constant => 1,
         },
@@ -29,7 +29,7 @@ class Genome::Model::Command::AddReads::FindVariations::Maq {
             doc => "basename of the snp output file as well as resource lock name",
             calculate_from => ['ref_seq_id'],
             calculate => q|
-                return sprintf("snips%s",defined $ref_seq_id ? "_". $ref_seq_id : "");
+                return sprintf("snps%s",defined $ref_seq_id ? "_". $ref_seq_id : "");
             |,
         },
         indel_resource_name => {
@@ -84,7 +84,7 @@ sub _genotype_detail_name {
 }
 sub genotype_detail_file {
     my $self = shift;
-    return sprintf("%s/identified_variations/%s", $self->model->data_directory, $self->_genotype_detail_name);
+    return sprintf("%s/%s", $self->model->maq_snp_related_metric_directory, $self->_genotype_detail_name);
 }
 # Converts between the 1-letter genotype code into
 # its allele constituients
@@ -141,18 +141,21 @@ sub execute {
 
     # ensure the reference sequence exists.
     my $ref_seq_file = $model->reference_sequence_path . "/all_sequences.bfa";
-    unless (-e $ref_seq_file) {
+    unless ($self->check_for_existence($ref_seq_file)) {
         $self->error_message("reference sequence file $ref_seq_file does not exist.  please verify this first.");
         return;
     }
 
     unless (-d $self->analysis_base_path) {
-        mkdir($self->analysis_base_path);
+        unless(mkdir($self->analysis_base_path)) {
+            $self->error_message("Failed to create directory: " . $self->analysis_base_path . " (check permissions...)");
+            return;
+        }
         chmod 02775, $self->analysis_base_path;
     }
 
     my ($assembly_output_file) =  $model->assembly_file_for_refseq($self->ref_seq_id);
-    unless (-f $assembly_output_file) {
+    unless ($self->check_for_existence($assembly_output_file)) {
         $self->error_message("Assembly output file $assembly_output_file was not found.  It should have been created by a prior run of update-genotype-probabilities maq");
         return;
     }
@@ -160,7 +163,7 @@ sub execute {
     foreach my $resource ( $self->snip_resource_name, $self->indel_resource_name, $self->pileup_resource_name) {
         unless ($model->lock_resource(resource_id=>$resource)) {
             $self->error_message("Can't get lock for resource $resource");
-            return undef;
+            return;
         }
     }
 
@@ -186,7 +189,7 @@ sub execute {
 
     my $accumulated_alignments_file_for_indelsoa = $self->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
     unless (-s $accumulated_alignments_file_for_indelsoa ) {
-        $self->error_message("Named pipe $accumulated_alignments_file_for_indelsoa was not found.");
+        $self->error_message("Named pipe or temp file for $accumulated_alignments_file_for_indelsoa was not found.");
         return;
     }
     $retval = system("$maq_pathname indelsoa $ref_seq_file $accumulated_alignments_file_for_indelsoa > $indel_output_file");
@@ -213,7 +216,7 @@ sub execute {
 
     my $accumulated_alignments_file_for_pileup = $self->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
     unless (-s $accumulated_alignments_file_for_pileup) {
-        $self->error_message("Named pipe $accumulated_alignments_file_for_pileup was not found.");
+        $self->error_message("Named pipe or tmp file $accumulated_alignments_file_for_pileup was not found.");
         return;
     }
     my $pileup_command = sprintf("$maq_pathname pileup -v -l %s %s %s > %s",
@@ -300,18 +303,7 @@ sub generate_genotype_detail_file {
     my $pileup_output_file  = $self->pileup_output_file;
     my $report_input_file   = $self->genotype_detail_file;
 
-    my $result = $self->_generate_genotype_detail_file($snp_output_file,$pileup_output_file,$report_input_file);
-    unless ($result) {
-        $self->error_message("Error generating genotype detail!");
-        return;
-    }
-
-    return $result;
-}
-
-sub _generate_genotype_detail_file {
-    my ($self, $snp_output_file, $pileup_output_file, $report_input_file) = @_;
-    
+   
     foreach my $file ( $snp_output_file, $pileup_output_file) {
         unless (-f $file and -s $file) {
             $self->error_message("File $file dosen't exist or has no data.  It should have been filled-in in a prior step");
