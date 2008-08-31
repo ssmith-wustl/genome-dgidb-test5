@@ -573,17 +573,6 @@ sub _get_sum_of_metric_values_from_events {
     return $sum;
 }
 
-sub lock_directory {
-    my $self = shift;
-    my $data_directory = $self->data_directory;
-    my $lock_directory = $data_directory . '/locks/';
-    if (-d $data_directory and not -d $lock_directory) {
-        mkdir $lock_directory;
-        chmod 02775, $lock_directory;
-    }
-    return $lock_directory;
-}
-
 # Refseq directories and names
 
 sub reference_sequence_path {
@@ -830,43 +819,6 @@ sub is_eliminate_all_duplicates {
 
 # Functional methods
 
-sub lock_resource {
-    my($self,%args) = @_;
-    my $ret;
-    my $resource_id = $self->lock_directory . '/' . $args{'resource_id'} . ".lock";
-    my $block_sleep = $args{block_sleep} || 10;
-    my $max_try = $args{max_try} || 7200;
-
-    mkdir($self->lock_directory,0777) unless (-d $self->lock_directory);
-
-    while(! ($ret = mkdir $resource_id)) {
-        return undef unless $max_try--;
-        $self->status_message("waiting on lock for resource $resource_id");
-        sleep $block_sleep;
-    }
-
-    my $lock_info_pathname = $resource_id . '/info';
-    my $lock_info = IO::File->new(">$lock_info_pathname");
-    $lock_info->printf("HOST %s\nPID $$\nLSF_JOB_ID %s\nUSER %s\n",
-                       $ENV{'HOST'},
-                       $ENV{'LSB_JOBID'},
-                       $ENV{'USER'},
-                     );
-    $lock_info->close();
-
-    eval "END { unlink \$lock_info_pathname; rmdir \$resource_id;}";
-
-    return 1;
-}
-
-sub unlock_resource {
-    my ($self, %args) = @_;
-    my $resource_id = delete $args{resource_id};
-    Carp::confess("No resource_id specified for unlocking.") unless $resource_id;
-    $resource_id = $self->lock_directory . "/" . $resource_id . ".lock";
-    unlink $resource_id . '/info';
-    rmdir $resource_id;
-}
 
 
 # Returns the base name of the hq_snp report files
