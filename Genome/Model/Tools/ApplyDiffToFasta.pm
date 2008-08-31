@@ -135,9 +135,12 @@ sub execute {
         $buffer = undef;
 
         #generate flanking positions
-        $min_flank_size         = length $diff->{pre_diff_sequence} <=> length $diff->{post_diff_sequence} ? 
-        length $diff->{post_diff_sequence} : 
-        length $diff->{pre_diff_sequence};
+        do { 
+            no warnings;
+            $min_flank_size = length $diff->{pre_diff_sequence} <=> length $diff->{post_diff_sequence} 
+                ?  length $diff->{post_diff_sequence} 
+                : length $diff->{pre_diff_sequence}
+        };
         $flank_size             = $min_flank_size if $min_flank_size > $flank_size;
         $left_flank_position    = $diff->{position} - $flank_size;
         $left_flank_position    = 0 if $left_flank_position < 0;
