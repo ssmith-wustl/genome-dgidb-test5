@@ -7,11 +7,8 @@ our $DIRECTORY;
 sub DIRECTORY {
     unless(defined $DIRECTORY) {
         $DIRECTORY = $INC{"Genome/Inline.pm"};
-        print $DIRECTORY,"\n";
         $DIRECTORY =~ s/\.pm(\/|)//;
-        print $DIRECTORY,"\n";
         $DIRECTORY .= 32;
-        print $DIRECTORY,"\n";
         unless (-d $DIRECTORY) {
             unless(mkdir $DIRECTORY) {
                 die "failed to create directory $DIRECTORY: $!";
