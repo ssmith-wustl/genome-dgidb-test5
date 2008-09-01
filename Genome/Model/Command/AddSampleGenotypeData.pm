@@ -10,14 +10,17 @@ class Genome::Model::Command::AddSampleGenotypeData {
     is => 'Command',
     # TODO : should we be a genome model event?
     has => [
-        input_data => [is => 'Hashref',
-        ],
-        technology_type => [is => 'String',
-                            doc => 'The technology type that generated these variants (i.e polyscan, polyphred)',
-        ],
-        processing_params_id => [is => 'String',
-                                 doc => 'The id of the row containing the processing params for this technology.',
-        ],
+        input_data => {
+            is => 'Hashref', 
+        },
+        technology_type => {
+            is => 'String',
+            doc => 'The technology type that generated these variants (i.e polyscan, polyphred)',
+        },
+        processing_params_id => {
+            is => 'String',
+            doc => 'The id of the row containing the processing params for this technology.',
+        },
     ],
 };
 
