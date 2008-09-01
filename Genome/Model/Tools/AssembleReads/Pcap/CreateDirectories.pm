@@ -4,10 +4,8 @@ package Genome::Model::Tools::AssembleReads::Pcap::CreateDirectories;
 use strict;
 use warnings;
 
-use lib '/gscuser/kkyung/svn/pm';
-
 use Workflow;
-use above "Genome";
+use Genome;
 use Genome::Model::Tools::AssembleReads::Pcap;
 
 class Genome::Model::Tools::AssembleReads::Pcap::CreateDirectories

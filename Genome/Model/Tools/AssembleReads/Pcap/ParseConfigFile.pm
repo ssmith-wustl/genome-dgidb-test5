@@ -3,13 +3,10 @@ package Genome::Model::Tools::AssembleReads::Pcap::ParseConfigFile;
 use strict;
 use warnings;
 
-use lib '/gscuser/kkyung/svn/pm';
-
 use Workflow;
 use IO::File;
-use above "Genome";
+use Genome;
 use Data::Dumper;
-
 
 class Genome::Model::Tools::AssembleReads::Pcap::ParseConfigFile
 {

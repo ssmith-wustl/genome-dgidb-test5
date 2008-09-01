@@ -4,9 +4,7 @@ package Genome::Model::Tools::AssembleReads::Pcap;
 use strict;
 use warnings;
 
-use lib '/gscuser/kkyung/svn/pm';
-
-use above "Genome"; 
+use Genome; 
 use IO::File;
 use File::Basename;
 use GSC::IO::Assembly::StatsFiles; 
@@ -561,7 +559,7 @@ sub create_fake_phds
  
 	my $dir = $self->{project_path};
 
-	my $cmd = "perl -e \"use lib \'/gscuser/kkyung/svn/pm\';
+	my $cmd = "perl -e \"
                    use Genome::Model::Tools::AssembleReads::Pcap;
                    Genome::Model::Tools::AssembleReads::Pcap->create_454_phds(\'$fasta\', \'$qual\', \'$dir\', \'$type\');\"";
 
