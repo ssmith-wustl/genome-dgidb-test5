@@ -7,6 +7,7 @@ use warnings;
 use above "Genome";
 use Term::ANSIColor;
 use Genome::Model::EqualColumnWidthTableizer;
+use Genome::Model::Tools::Maq::RemovePcrArtifacts;
 use File::Path;
 use File::Basename;
 use IO::File;
@@ -237,9 +238,13 @@ sub lock_directory {
 
 sub lock_resource {
     my($self,%args) = @_;
+    $self->warning_message("locking is disabled since the new build system circumvents the need for it");
+    $self->warning_message(Carp::longmess());
+    return 1;
+
     my $ret;
     my $resource_id = $self->lock_directory . '/' . $args{'resource_id'} . ".lock";
-    my $block_sleep = $args{block_sleep} || 10;
+    my $block_sleep = $args{block_sleep} || 60;
     my $max_try = $args{max_try} || 7200;
 
     mkdir($self->lock_directory,0777) unless (-d $self->lock_directory);
