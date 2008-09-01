@@ -179,7 +179,7 @@ sub resolve_accumulated_alignments_filename {
                 return $inputs[0];
             }
             my $inputs = join("\n", @inputs);
-            $self->warning_message("Performing a complete mapmerge for $result_file \n") 
+            $self->warning_message("Performing a complete mapmerge for $result_file \n"); 
             #$self->warning_message("on $inputs \n ") 
             $self->warning_message("Hold on...\n");
 
