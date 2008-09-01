@@ -39,7 +39,11 @@ sub help_detail {
 EOS
 }
 
+sub execute { die "busted\n" };
 
+1;
+
+__END__
 sub execute {
     my $self = shift;
 
