@@ -2,18 +2,16 @@ package Genome::Model::Tools::Maq::GetIntersect_C;
 
 our $cflags;
 our $libs;
-our $inline_dir;
 BEGIN
 {
-    $inline_dir = "$ENV{HOME}/_Inline32";
-    `mkdir -p $inline_dir`;
     $cflags = `pkg-config glib-2.0 --cflags`;
     $libs = '-L/var/chroot/etch-ia32/usr/lib -L/usr/lib -L/lib '.`pkg-config glib-2.0 --libs`;        
 };
 
+use Genome::Inline;
 use Inline 'C' => 'Config' => (
             CC => '/gscmnt/936/info/jschindl/gcc32/gcc',
-            DIRECTORY => $inline_dir,
+            DIRECTORY => Genome::Inline::DIRECTORY(), 
             INC => '-I/gscuser/jschindl -I/gsc/pkg/bio/maq/zlib/include',
             CCFLAGS => '-D_FILE_OFFSET_BITS=64 -m32 '.$cflags,
             LD => '/gscmnt/936/info/jschindl/gcc32/ld',

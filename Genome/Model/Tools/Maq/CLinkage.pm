@@ -3,7 +3,8 @@ package Genome::Model::Tools::Maq::CLinkage;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
+use Genome::Inline;
 use File::Basename;
 
 class Genome::Model::Tools::Maq::CLinkage {
@@ -19,27 +20,16 @@ sub _get_config_hash {
     my $p = __PACKAGE__ . '.pm';
     $p =~ s/::/\//g;
     my $loaded_dir = dirname($INC{$p}) . "/";
-    #print "module load dir is $loaded_dir\n";
-
-    my $machine_type = 'uname -m';
-    # We want non-itanium to compile as 32-bit for now
-    my $inline_dir = $ENV{'HOME'} . ($machine_type =~ m/ia64/ ? "/_InlineItanium" : "/_Inline32");
-    mkdir($inline_dir) unless -d $inline_dir;   # Why isn't it creating this dir for us anymore?!
-
     my $libmaq = "maq" . $version;
     
     #FIXME: This home directory code is temporary until systems deploys our library fleet around the star system 
-    return ( DIRECTORY => $inline_dir,
+    return ( DIRECTORY => Genome::Inline::DIRECTORY(),
              LIBS => "-L$loaded_dir -L/gsc/lib/ -L/gsc/pkg/bio/maq/zlib/lib/ -l$libmaq -lz -lm",
              INC => "-I$loaded_dir -I/gsc/pkg/bio/maq/zlib/include/",
-             CCFLAGS => '-D_FILE_OFFSET_BITS=64' . ($machine_type =~ m/ia64/ ? '' : ' -m32'),
+             CCFLAGS => Genome::Inline::CCFLAGS(), 
              #BUILD_NOISY => 1,
            );
 }
              
-             
-
-
 1;
-
 

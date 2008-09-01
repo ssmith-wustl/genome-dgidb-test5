@@ -1,14 +1,9 @@
 package Genome::Model::Tools::Maq::RemovePcrArtifacts_C;
 
-our $inline_dir;
-BEGIN
-{
-    ($inline_dir) = "$ENV{HOME}/".(`uname -m` =~ /ia64/ ? '_InlineItanium' : '_Inline32');
-    mkdir $inline_dir;    
-};
+use Genome::Inline;
 
 use Inline 'C' => 'Config' => (
-            DIRECTORY => $inline_dir,
+            DIRECTORY => Genome::Inline::DIRECTORY(),
             INC => '-I/gscuser/jschindl -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
             CCFLAGS => `uname -m` =~ /ia64/ ? '-D_FILE_OFFSET_BITS=64':'-D_FILE_OFFSET_BITS=64 -m32',
             LIBS => '-L/gscuser/jschindl -L/gscuser/jschindl/svn/gsc/zlib-1.2.3 -lz -lmaq',

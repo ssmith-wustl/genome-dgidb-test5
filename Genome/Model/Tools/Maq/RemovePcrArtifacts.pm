@@ -1,6 +1,6 @@
 package Genome::Model::Tools::Maq::RemovePcrArtifacts;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Tools::Maq::RemovePcrArtifacts {
     is => 'Genome::Model::Tools::Maq',

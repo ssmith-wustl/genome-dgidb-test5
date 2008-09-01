@@ -7,13 +7,14 @@ use warnings;
 use above "Genome";
 
 class Genome::Model::Command::Create::ProcessingProfile {
-    is => 'Genome::Model::Command',
+    is => 'Command',
     has => [
-        model                        => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
         type_name                    => { is => 'VARCHAR2', len => 255, is_optional => 1, 
                                           doc => "The type of processing profile. Not required unless creating a generic 'processing profile'. "},
         profile_name                 => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
                                           doc => 'The human readable name for the processing profile'},
+        copy_from                    => { is => 'Genome::ProcessingProfile', is_optional => 1, id_by => 'copy_from_name',
+                                          doc => 'Copy this profile, and modify the specified properties.' },
     ],
 };
 
@@ -30,6 +31,23 @@ EOS
 }
 
 sub sub_command_sort_position { 1 }
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    if (my $copy_from = $self->copy_from) {
+        my $copy_from_name = $self->copy_from_name;
+        $self->status_message("checking $copy_from_name settings...");
+        for my $property_name ($self->get_class_object->all_property_names) {
+            my $value = $copy_from->$property_name;
+            if (defined $value and $self->can($property_name) and not defined $self->$property_name) {
+                $self->status_message("setting $property_name to '$value' from $copy_from_name");
+                $self->$property_name($value);
+            }
+        }
+    }
+    return $self;
+}
 
 # Ensures that all properties from the property_to_subclass hash are existing modules
 sub verify_params {
