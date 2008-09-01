@@ -1,6 +1,9 @@
 
 package Genome::Model::Command::Annotate::GetGeneExpressionAddCdnaReads;
 
+warn "broken";
+1;
+__END__
 use strict;
 use warnings;
 use Getopt::Long;

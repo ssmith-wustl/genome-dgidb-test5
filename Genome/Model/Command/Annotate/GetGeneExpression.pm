@@ -1,5 +1,9 @@
 package Genome::Model::Command::Annotate::GetGeneExpression;
 
+warn __PACKAGE__ . " is broken";
+1;
+__END__
+
 use strict;
 use warnings;
 
