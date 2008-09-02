@@ -189,8 +189,8 @@ sub generate_variation_metrics_files_v2 {
     my @f = ($map_file,$bfa_file,$snp_file);
     my $errors = 0;
     for my $f (@f) {
-        if (-e $f) {
-            $self->status_message("Found file $f");
+        if ($self->check_for_existence($f)) {
+            #$self->status_message("Found file $f");
         }
         else {
             $self->error_message("Failed to find file $f");
