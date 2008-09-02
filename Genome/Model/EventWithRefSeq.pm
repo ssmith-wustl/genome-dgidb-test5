@@ -248,15 +248,21 @@ sub cleanup_the_mapmerge_I_specify {
     my $self=shift;
     my $output=shift;
     my $host = $output->value;
-    
-    my $cmd = "ssh $host 'rm /tmp/mapmerge_" . $self->model_id . "*'";
+    my $file= "/tmp/mapmerge_" . $self->model_id . "*"; 
+    my $cmd = "ssh $host '$file'";
     $self->warning_message("Running $cmd");
     my $rv = system($cmd);
     if($rv && $rv!=0) {
         $self->warning_message("nonzero exit code $rv from $cmd");
+        #should this be glob?
+        if (system("ls $file") == 0) {
+            $self->error_message("$file still exists! Bad juju, exiting.");
+            return;
+        }
     }
     else{
         $self->warning_message("Removed file from $host.");
+        return 1;
     }
 }
 

@@ -102,7 +102,8 @@ sub revert {
     my @outputs = $self->outputs;
     for my $output (@outputs) {
             if ($output->name eq 'Hostname') {
-                $self->cleanup_the_mapmerge_I_specify($output);
+                $self->warning_message("Attempting to cleanup a blade /tmp/ file...");
+                return unless $self->cleanup_the_mapmerge_I_specify($output);
             }
     }
     for my $obj (@metrics,@outputs) {
@@ -242,13 +243,17 @@ sub check_for_existence {
     }
 
     my $try = 0;
-    my $found = -e $path;
+    my $found;
     while (!$found && $try < $attempts) {
         $found = -e $path;
         sleep(1);
         $try++;
+        if ($found==1) {
+            $self->status_message("existence check passed: $path");
+            return $found;
+        } 
     }
-    return $found;
+    return;
 }
 
 sub create_file {
