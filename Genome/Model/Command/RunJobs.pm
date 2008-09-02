@@ -65,7 +65,7 @@ sub execute {
 
     if ($self->event_id) {
         my $event = Genome::Model::Event->get($self->event_id);
-        if ($event->event_status() ne 'Failed' and $event->event_status ne 'Crashed') {
+        if ($event->event_status() ne 'Failed' and $event->event_status ne 'Crashed' and $event->event_status ne 'Scheduled') {
             # this is a hack, but better than manually running these...
             # TODO: fix me
             unless ($self->force) {
@@ -80,8 +80,10 @@ sub execute {
                     sleep 5;
                     @bjobs = `bjobs $lsf_job_id`;
                     if (@bjobs) {
+                        unless (grep {"DONE"} @bjobs) {
                         $self->error_message("Failed to kill job?\n" . $bjobs[-1]);
                         return;
+                        }
                     } 
                 }
             }
