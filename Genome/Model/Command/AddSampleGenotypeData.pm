@@ -10,16 +10,13 @@ class Genome::Model::Command::AddSampleGenotypeData {
     is => 'Command',
     # TODO : should we be a genome model event?
     has => [
-        input_data => {
-            is => 'Hashref', 
+        input_data => {is => 'Hashref',
         },
-        technology_type => {
-            is => 'String',
-            doc => 'The technology type that generated these variants (i.e polyscan, polyphred)',
+        technology_type => {is => 'String',
+                            doc => 'The technology type that generated these variants (i.e polyscan, polyphred)',
         },
-        processing_params_id => {
-            is => 'String',
-            doc => 'The id of the row containing the processing params for this technology.',
+        process_param_set_id => {is => 'String',
+                                 doc => 'The id of the row containing the process param set for this technology.',
         },
     ],
 };
@@ -42,20 +39,16 @@ sub help_detail {
 EOS
 }
 
-sub execute { die "busted\n" };
 
-1;
-
-__END__
 sub execute {
     my $self = shift;
 
     my $input_data = $self->input_data;
     my $technology_type = $self->technology_type;
-    my $processing_params_id = $self->processing_params_id;
+    my $process_param_set_id = $self->process_param_set_id;
 
     # The first level of the hash is by sample... iterate through each sample...
-    for my $sample_name (keys $input_data) {
+    for my $sample_name (keys %$input_data) {
         my @sample_genotype_models = Genome::Model::SampleGenotype->get(sample_name => $sample_name);
 
         # There should only be one model per sample... if we have more than 1 we needs to sort it out
@@ -79,13 +72,14 @@ sub execute {
             my $processing_profile = $processing_profiles[0];
 
             unless($processing_profile) {
-                $processing_profile = Genome::ProcessingProfile::SampleGenotype->create(name => 'sample_genotype');
+                $processing_profile = Genome::ProcessingProfile::SampleGenotype->create(name => 'sample genotype');
             }
 
             #create sample genotype model
-            $sample_genotype_model = Genome::Model::SampleGenotype->create(name => "$sample_name.sample_genotype",
-                                                  sample_name => $sample_name
-                                                  processing_profile => $processing_profile->id);
+            $sample_genotype_model = Genome::Model::SampleGenotype->create(
+                name => "$sample_name.sample_genotype",
+                sample_name => $sample_name,
+                processing_profile => $processing_profile->id);
             
         }
         
@@ -94,28 +88,32 @@ sub execute {
         #create child model under sample model for this technology if it doesnt exist
         unless ($technology_model) {
             # Get the class path for the child and its processing profile
-            my $child_class = "Genome::Model::" . ucfirst(lc($technology));
-            my $child_profile_class = "Genome::ProcessingProfile::" . ucfirst(lc($technology));
+            my $child_class = "Genome::Model::" . ucfirst(lc($technology_type));
+            my $child_profile_class = "Genome::ProcessingProfile::" . ucfirst(lc($technology_type));
 
             # Find the profile for this technology and params if it exists
-            my @child_profiles = $child_profile_class->get(processing_params_id => $processing_params_id);
+            my @child_profiles = $child_profile_class->get(
+                #process_param_set_id => $process_param_set_id  #TODO figure out w/ jwalker why this doesn't work.  Fuck appears here
+            );
             if (@child_profiles > 1){
-                $self->error_message("Multiple processing profiles for processing_params_id: $processing_params_id found");
+                $self->error_message("Multiple processing profiles for process_param_set_id: $process_param_set_id found");
                 return undef;
             }
 
             # Create the profile for the child technology if it doesnt exist
-            my $child_profile = @child_profiles[0];
+            my $child_profile = $child_profiles[0];
             unless($child_profile) {
-                $child_profile = $child_profile_class->create(name => "$technology.$processing_params_id",
-                                                              processing_params_id => $processing_params_id);
+                $child_profile = $child_profile_class->create(
+                    name => "$technology_type.$process_param_set_id",
+                    process_param_set_id => $process_param_set_id
+                );
                 unless ($child_profile) {
                     $self->error_message("Create failed for new child technology processing profile using class: $child_profile_class");
                     return undef;
                 }
             }
             
-            my $child_model_name = "$sample_name.$technology.$processing_params_id";
+            my $child_model_name = "$sample_name.$technology_type.$process_param_set_id";
             $technology_model = $child_class->create(name => $child_model_name,
                                                    sample_name => $sample_name,
                                                    processing_profile => $child_profile->id);
@@ -124,15 +122,12 @@ sub execute {
                     name = $child_model_name, sample_name = $sample_name, processing_profile = " . $child_profile->id);
                 return undef;
             }
-
         }
+        $sample_genotype_model->add_child_model($technology_model);
         
         #parse data
         my $sample_data = $input_data->{$sample_name};
-        my @data_to_add;
-        foreach $position (keys $sample_data){ 
-            push @data_to_add,  $sample_data->{$position};
-        }
+        my @data_to_add = @$sample_data;
 
         # model for technology exists or has been created... archive and add data
         $technology_model->add_pcr_product_genotypes(@data_to_add);
