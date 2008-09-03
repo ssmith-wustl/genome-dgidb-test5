@@ -255,7 +255,7 @@ sub cleanup_the_mapmerge_I_specify {
     my $output=shift;
     my $host = $output->value;
     my $file= "/tmp/mapmerge_" . $self->model_id . "*"; 
-    my $cmd = "ssh $host '$file'";
+    my $cmd = "ssh $host 'rm $file'";
     $self->warning_message("Running $cmd");
     my $rv = system($cmd);
     if($rv && $rv!=0) {
