@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use above "Genome";
-use Test::More 'no_plan';
+use Test::More skip_all => 'not ready', 'no_plan';
 use File::Basename;
 
 use MG::IO::Polyscan;
