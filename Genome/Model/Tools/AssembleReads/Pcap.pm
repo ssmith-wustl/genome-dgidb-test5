@@ -4,7 +4,7 @@ package Genome::Model::Tools::AssembleReads::Pcap;
 use strict;
 use warnings;
 
-use Genome; 
+use above "Genome"; 
 use IO::File;
 use File::Basename;
 use GSC::IO::Assembly::StatsFiles; 
@@ -180,7 +180,7 @@ sub execute
     }
 
 
-    if ($self->make_fake_phds eq 'YES')
+    if ($self->make_fake_phds and $self->make_fake_phds =~ /YES/)
     {
 	$self->status_message("Creating fake phd files");
 	unless ($self->create_fake_phds ('file'))
@@ -189,7 +189,7 @@ sub execute
 	}
     }
 
-    if ($self->make_phd_ball eq 'YES')
+    if ($self->make_phd_ball and $self->make_phd_ball =~ /YES/)
     {
 	$self->status_message("Creating phd ball");
 	unless ($self->create_fake_phds ('ball'))
@@ -373,16 +373,44 @@ sub resolve_data_needs
 
     return 1 if $self->existing_data_only and $self->existing_data_only eq 'YES';
     
-    $self->error_message ("Unable to get read prefixes") and return 
-	unless $self->get_read_prefixes;
+    #if prefixes are defined, just dump those
+    if ($self->read_prefixes)
+    {
+	my $prefixes_string = $self->read_prefixes;
+	my @dump_prefixes;
 
-    $self->error_message ("Unalbe to dump reads") and return
-	unless $self->dump_reads;
+	#string is comma separated prefixes, eg, HPAA,HPAB or single prefix HPAA
+	if ($prefixes_string =~ /\,/)
+	{
+	    my @tmp = split (/\s?\,\s?/, $prefixes_string);
+	    push @dump_prefixes, map {$_} @tmp;
+	}
+	else
+	{
+	    push @dump_prefixes, $self->read_prefixes;
+	}
+
+	$self->{prefixes_to_dump} = \@dump_prefixes;
+	$self->dump_reads;
+    }
+    #dump reads using organims name
+    else
+    {
+	#validate organism name
+	my $db_organism_name = $self->validate_organism_name;
+	#get read prefixes based on organism name
+	my $dump_prefixes = get_read_prefixes_for_organism ($db_organism_name);
+	#create array of read prefixes
+	$self->{prefixes_to_dump} = $dump_prefixes;
+	#dump reads
+	$self->dump_reads;
+    }
 
     return 1;
 }
 
-sub get_read_prefixes
+#this should be named validate_organism_name
+sub validate_organism_name
 {
     my ($self) = @_;
 
@@ -396,8 +424,6 @@ sub get_read_prefixes
 
     $regex_pat =~ s/[_|\s+]/\\s+/g;
 
-    #print $regex_pat."\n";
-
     #consider doing this if we can have organism names inputed with spaces between names
     #$organism_name =~ s/\s+/\\s+/;
 
@@ -409,18 +435,7 @@ sub get_read_prefixes
     $self->error_message("Unable to find match for $organism_name\n") and
 	return if scalar @tmp == 0;
 
-    my $prefixes = $self->get_read_prefixes_for_organism ($tmp[0]);
-
-    #print map {$_."\n"} @$prefixes;
-
-    #add in codes to exclude specific prefixes
-    #since this is needed regulary
-
-    #$self->dump_reads($prefixes);
-
-    $self->{read_prefixes} = $prefixes;
-
-    return 1;
+    return $tmp[0];
 }
 
 sub get_read_prefixes_for_organism
@@ -457,7 +472,6 @@ sub get_valid_db_org_names
 {
     my ($self) = @_;
     my $org_name_query = "select ORGANISM_NAME from organism order by organism_name";
-
     #I'm sure there's a better way to do this 
     my @names = `sqlrun "$org_name_query" --nocount --noheader`;
     $self->error_message("\nNo valid org names returned\n") and return
@@ -475,10 +489,8 @@ sub dump_reads
     my $read_dump_dir = $self->{project_path}.'/read_dump';
 
     my $edit_dir = $self->{project_path}.'/edit_dir';
-
-    my $prefixes = $self->{read_prefixes};
-
-    foreach my $prefix (@$prefixes)
+    
+    foreach my $prefix ( @{$self->{prefixes_to_dump}} )
     {
 	my $re_id_file = $read_dump_dir.'/'.$prefix.'.'.$date.'.re_id';
 
@@ -533,6 +545,9 @@ sub create_fake_phds
 {
     my ($self, $type) = @_;
 
+    print "Not creating fake phd files for 3730 data\n" and return 1
+	if $self->pcap_run_type eq 'NORMAL';
+
     my $host_name = hostname();
 
     #can't submit lsf jobs from linusit machines
@@ -559,8 +574,7 @@ sub create_fake_phds
  
 	my $dir = $self->{project_path};
 
-	my $cmd = "perl -e \"
-                   use Genome::Model::Tools::AssembleReads::Pcap;
+	my $cmd = "use Genome::Model::Tools::AssembleReads::Pcap;
                    Genome::Model::Tools::AssembleReads::Pcap->create_454_phds(\'$fasta\', \'$qual\', \'$dir\', \'$type\');\"";
 
 	my $job = PP::LSF->run
@@ -586,7 +600,8 @@ sub create_454_phds
 {
     my ($self, $fasta, $qual, $dir, $type) = @_;
 
-    #it should get dir from $self->{project_path} but had problems
+    print "Not creating fake phd files for 3730 data\n" and return 1
+	if $self->pcap_run_type eq 'NORMAL';
 
     my $edit_dir = $dir.'/edit_dir';
     my $phd_dir = $dir.'/phd_dir';
@@ -745,6 +760,9 @@ sub create_constraint_file
 	{
 	    next unless -s $file;
 
+	    #major problem here .. the lib file does not get updated
+	    #when pcap constraint file is the only constraint file
+
 	    next if $file =~ /$con_file$/;
 
 	    my $fh = IO::File->new("<$file");
@@ -876,6 +894,9 @@ sub create_constraint_file
 
     $lib_fh->print ( map {$_."\n"} @lib_infos );
 
+    $lib_fh->print ("G20_454_PE 4000 1500\n") unless
+	grep (/G20_454_PE\s+4000\s+1500/, @lib_infos);
+
     $lib_fh->close;
 
     return 1;
@@ -939,9 +960,9 @@ sub _get_pcap_params
 
     #<pcap_prog_type> <pcap.input.fof> -y <val> -z <val>
 
-    return ' -l 300 -w 200' if $self->pcap_run_type eq 'RAW_454';
-    return ' -l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'POLY';
-    return ' -l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'NORMAL';
+    return '-l 300 -w 200' if $self->pcap_run_type eq 'RAW_454';
+    return '-l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'POLY';
+    return '-l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'NORMAL';
 
     return;
 }
@@ -950,9 +971,9 @@ sub _get_bdocs_params
 {
     my ($self) = @_;
 
-    return ' -l 300 -y 1 -z 0' if $self->pcap_run_type eq 'RAW_454';
-    return ' -y 1 -z 0' if $self->pcap_run_type eq 'POLY';
-    return ' -y 1 -z 0' if $self->pcap_run_type eq 'NORMAL';
+    return '-l 300 -y 1 -z 0' if $self->pcap_run_type eq 'RAW_454';
+    return '-y 1 -z 0' if $self->pcap_run_type eq 'POLY';
+    return '-y 1 -z 0' if $self->pcap_run_type eq 'NORMAL';
 
     return;
 }
@@ -961,9 +982,9 @@ sub _get_bclean_params
 {
     my ($self) = @_;
 
-    return ' -w 1 -y 1' if $self->pcap_run_type eq 'RAW_454';
-    return ' -w 1 -y 1' if $self->pcap_run_type eq 'POLY';
-    return ' -w 1 -y 1' if $self->pcap_run_type eq 'NORMAL';
+    return '-w 1 -y 1' if $self->pcap_run_type eq 'RAW_454';
+    return '-w 1 -y 1' if $self->pcap_run_type eq 'POLY';
+    return '-w 1 -y 1' if $self->pcap_run_type eq 'NORMAL';
 
     return;
 }
@@ -1032,9 +1053,9 @@ sub _get_bconsen_params
 {
     my ($self) = @_;
 
-    return ' -y 1 -z 0' if $self->pcap_run_type eq 'RAW_454';
-    return ' -y 1 -z 0' if $self->pcap_run_type eq 'POLY';
-    return ' -y 1 -z 0' if $self->pcap_run_type eq 'NORMAL';
+    return '-y 1 -z 0' if $self->pcap_run_type eq 'RAW_454';
+    return '-y 1 -z 0' if $self->pcap_run_type eq 'POLY';
+    return '-y 1 -z 0' if $self->pcap_run_type eq 'NORMAL';
 
     return;
 }
@@ -1043,9 +1064,9 @@ sub _get_bform_params
 {
     my ($self) = @_;
 
-    return ' -y 1' if $self->pcap_run_type eq 'RAW_454';
-    return ' -y 1' if $self->pcap_run_type eq 'POLY';
-    return ' -y 1' if $self->pcap_run_type eq 'NORMAL';
+    return '-y 1' if $self->pcap_run_type eq 'RAW_454';
+    return '-y 1' if $self->pcap_run_type eq 'POLY';
+    return '-y 1' if $self->pcap_run_type eq 'NORMAL';
 
     return;
 }
@@ -1066,8 +1087,10 @@ sub run_pcap
 
     my $ec = system ($pcap_prog.' '.$self->{pcap_root_name}.' '.$self->_get_pcap_params);
 
-    $self->error_message("$pcap_prog returned exit code $ec\n") and return
-	if $ec;
+    #some pcap.rep scripts return a non-zero when it completes successfully
+
+#   $self->error_message("$pcap_prog returned exit code $ec\n") and return
+#      if $ec;
 
     return 1;
 }
@@ -1081,7 +1104,8 @@ sub run_bdocs
     my $bdocs_prog = $self->{bdocs_prog_type};
 
     #not sure but but bdocs.rep.454 runs out of memory??
-    $bdocs_prog = 'bdocs.rep';
+
+#   $bdocs_prog = 'bdocs.rep';
 
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
