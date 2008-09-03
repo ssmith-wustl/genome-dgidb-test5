@@ -571,7 +571,7 @@ void remove_dup_frags (char *infile, char *keepfile, char *delfile, ...)
         gzclose(fpdelseq);
         unlink(keepfileunsorted);
         unlink(delfileunsorted);
-        exit(0);
+        return;
     //}
     //else
     //    fragdedup_original(fpin,fpkeepseq, fpdelseq);
