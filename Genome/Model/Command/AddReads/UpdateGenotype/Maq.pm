@@ -38,7 +38,13 @@ sub execute {
     my $self = shift;
 $DB::single = $DB::stopper;
     my $model = $self->model;
-    $self->revert;
+    
+
+    unless($self->revert) {
+        $self->error_message("unable to revert...debug ->revert and ->cleanup_mapmerge_i_specify");
+        return;
+    }
+
     my $maq_pathname = $self->proper_maq_pathname('genotyper_name');
 
     my $model_dir = $model->data_directory;
