@@ -38,7 +38,7 @@ sub setup_test_data {
 
     my @run_dirs = grep { -d $_ } glob("$tmp_dir/R_2008_07_29_*");
     for my $run_dir (@run_dirs) {
-        my $run_name = basename($run_dir);
+        my $run_name = basename($run_dir) . $ENV{USER} . $$;
         my $analysis_name = $run_name;
         $analysis_name =~ s/^R/D/;
         my @files = grep { -e $_ } glob("$run_dir/*.sff");
