@@ -63,6 +63,10 @@ sub execute {
     }
 
     my @alignment_events = $model->alignment_events;
+    unless (scalar(@alignment_events)) {
+        $self->error_message('No alignment events found for model '. $model->id );
+        return;
+    }
     my @alignment_files;
     for my $alignment_event (@alignment_events) {
         my $alignment_file = $alignment_event->alignment_file;
