@@ -13,33 +13,54 @@ use File::Basename;
 use IO::File;
 use Sort::Naturally;
 
-use Genome;
 class Genome::Model {
     type_name => 'genome model',
     table_name => 'GENOME_MODEL',
     is_abstract => 1,
-    first_sub_classification_method_name => '_resolve_subclass_name',
     sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
         genome_model_id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        comparable_normal_model_id => { is => 'NUMBER', len => 10, is_optional => 1 },
-        creation_event             => { 
-                                                  doc => "The creation event for this model" },
-        creation_event_inputs      => { 
-                                                  doc => "The inputs specified for the creation event" },
-        data_directory             => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
-        events                     => { is => 'Genome::Model::Event', 
-                                                  doc => "all events which have occurred for this model" },
-        instrument_data            => { 
-                                                  doc => "The instrument data specified for the model" },
-        name                       => { is => 'VARCHAR2', len => 255 },
-        processing_profile         => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
-        sample_name                => { is => 'VARCHAR2', len => 255 },
-        subject_name               => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        test                       => { is => 'Boolean', is_optional => 1, is_transient => 1, 
-                                                  doc => "testing flag" },
+        data_directory               => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
+        processing_profile           => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
+        processing_profile_name      => { via => 'processing_profile', to => 'name'},
+        type_name                    => { via => 'processing_profile'},
+        name                         => { is => 'VARCHAR2', len => 255 },
+        sample_name                  => { is => 'VARCHAR2', len => 255 },
+        subject_name                 => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        events                       => {
+                                         is => 'Genome::Model::Event',
+                                         is_many => 1,
+                                         reverse_id_by => 'model', 
+                                         doc => 'all events which have occurred for this model',
+                                     },
+        creation_event               => { doc => 'The creation event for this model',
+                                          calculate => q|
+                                                            my @events = $self->events;
+                                                            for my $event (@events) {
+                                                                if ($event->event_type eq 'genome-model create model') {
+                                                                    return $event;
+                                                                }
+                                                            }
+                                                            return undef;
+                                                        |
+                                        },
+        creation_event_inputs        => { doc => 'The inputs specified for the creation event',
+                                          via => 'creation_event',
+                                          to  => 'inputs',
+                                        },
+        instrument_data              => { doc       => 'The instrument data specified for the model',
+                                          via       => 'creation_event_inputs',
+                                          to        => 'value',
+                                          where     => [ name => 'instrument_data' ],
+                                        },
+
+        test                         => { is => 'Boolean',
+                                          doc => 'testing flag',
+                                          is_optional => 1,
+                                          is_transient => 1,
+                                        },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
