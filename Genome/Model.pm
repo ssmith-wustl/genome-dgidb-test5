@@ -32,6 +32,8 @@ class Genome::Model {
         data_directory             => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         events                     => { is => 'Genome::Model::Event', 
                                                   doc => "all events which have occurred for this model" },
+        instrument_data            => { 
+                                                  doc => "The instrument data specified for the model" },
         name                       => { is => 'VARCHAR2', len => 255 },
         processing_profile         => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         sample_name                => { is => 'VARCHAR2', len => 255 },
