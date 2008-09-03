@@ -10,8 +10,8 @@
 s_stack * create_stack(int size)
 {
     s_stack * stack = malloc(1*sizeof(s_stack));
-    stack->stack = malloc(5000000*sizeof(s_element));
-    stack->mem_size = 5000000;
+    stack->stack = malloc(15000000*sizeof(s_element));
+    stack->mem_size = 15000000;
     stack->offset = 0;
     stack->size = 0;
 }
@@ -112,7 +112,7 @@ void s_push_head(s_stack *stack, void *element)
     stack->size++;
     if(stack->size>=stack->mem_size)
     {
-        fprintf(stderr, "Stack overflow error.  Exiting... \n");
+        printf("Stack overflow error.  Exiting... \n");
         exit(1);
     }
     else

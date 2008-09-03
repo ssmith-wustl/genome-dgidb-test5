@@ -635,7 +635,7 @@ int ovc_filter_variations(char *mapfilename,char *snpfilename, int qual_cutoff,c
     FILE *stdoutsave = stdout;
     if(output&&strlen(output))
     {
-        fprintf(stderr,"here is the output file %s\n",output);
+        //fprintf(stderr,"here is the output file %s\n",output);
         stdout = fopen(output, "w");
         if(!stdout)
         {
