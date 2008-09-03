@@ -151,16 +151,16 @@ sub combine_variants{
     my $hq_genotype_file = $self->hq_genotype_file;
     my ($hq_polyscan_model) = $self->hq_polyscan_model;
     my ($hq_polyphred_model) = $self->hq_polyphred_model;
-    $self->combine_variants_for_set($hq_polyscan, $hq_polyphred_model, $hq_genotype_file);
+    $self->combine_variants_for_set($hq_polyscan_model, $hq_polyphred_model, $hq_genotype_file);
     
-    my $hq_genotype_file = $self->hq_genotype_file;
-    my ($hq_polyscan_model) = $self->hq_polyscan_model;
-    my ($hq_polyphred_model) = $self->hq_polyphred_model;
-    $self->combine_variants_for_set($lq_polyscan, $lq_polyphred_model, $lq_genotype_file);
+    my $lq_genotype_file = $self->lq_genotype_file;
+    my ($lq_polyscan_model) = $self->lq_polyscan_model;
+    my ($lq_polyphred_model) = $self->lq_polyphred_model;
+    $self->combine_variants_for_set($lq_polyscan_model, $lq_polyphred_model, $lq_genotype_file);
 }
     
 sub combine_variants_for_set{
-    my ($self, $polyscan_model, $polyphred_model) = @_;
+    my ($self, $polyscan_model, $polyphred_model, $genotype_file) = @_;
     
     my $ofh = IO::File->new("> $genotype_file");
     unless($polyscan_model || $polyphred_model){
@@ -207,7 +207,7 @@ sub combine_variants_for_set{
             $polyscan_genotype = $self->next_or_undef($polyscan_model);
 
         }else{
-            "Could not compare polyphred and polyscan genotypes:".Dumper $polyphred_genotype.Dumper $polyscan_genotype;
+            $self->error_message("Could not compare polyphred and polyscan genotypes:".Dumper $polyphred_genotype.Dumper $polyscan_genotype);
             die;
         }
     }

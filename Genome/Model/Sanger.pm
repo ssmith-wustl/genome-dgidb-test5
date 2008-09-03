@@ -2,13 +2,12 @@ package Genome::Model::Sanger;
 
 use strict;
 use warnings;
-use Sort::Naturally;
 use IO::File;
 use File::Copy "cp";
 use Data::Dumper;
+use above "Genome";
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 
-use above "Genome";
 
 class Genome::Model::Sanger{
     is => 'Genome::Model',
