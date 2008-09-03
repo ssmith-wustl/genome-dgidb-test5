@@ -723,13 +723,9 @@ sub _cron_setup {
 
     # make up a log file name
     # one log file per day
-    my ($today) = split(/ /, App::Time->now);
-    if ($process_to) {
-        $today .= "_$process_to";
-    }
-    my $logfile = $cron_dir->file($today . '.log');
+    my $logfile = $class->cron_logfile( $process_to );
 
-    # open file
+    # putting this back because things rely on it
     umask 0002;
 
     # open file
@@ -756,7 +752,7 @@ sub _cron_setup {
     # must be on cron2 (linuscs38) because of file based locks
     App::Object->status_message("checking hostname: $hostname");
     my $proper_hostname = 'linuscs38';
-    if ( $hostname ne $proper_hostname ) {
+    if ( $arg->{hostname_check} && $hostname ne $proper_hostname ) {
         my $msg = "must run on $proper_hostname, not $hostname";
         App::Object->error_message($msg);
         die $msg;
@@ -1877,27 +1873,6 @@ sub process_step_cron {
         ignore_locks => $ignore_locks,
     });
 
-    # set up message logging
-
-    my $logfile = $class->cron_logfile("process_step_cron.$process");
-    my $log_fh = $logfile->open('>>') or die "open $logfile failed: $!";
-    $log_fh->autoflush(1);
-    $class->log_fh($log_fh);
-    $class->setup_logging_callbacks;
-    App::MsgLogger->status_message(
-        App::Name->prog_name . ' started on ' . hostname()
-        . " as " . getpwuid($<) . " with pid $$ for process $process"
-    );
-    chmod( 0664, $logfile ) or die "chmod $logfile failed";
-
-    # Don't even start running if we're locked
-    # (But at least write to the log file)
-    if ( $class->global_locked and !$ignore_locks ) {
-        App::MsgLogger->warning_message('Locked: fs lock, exiting');
-        exit 0;
-    }
-
-    # ensure we have a database connection
     App::DB->dbh or die 'cannot connect to database';
 
     # figure out the subclass we're working with
@@ -1905,19 +1880,6 @@ sub process_step_cron {
         or die "process $process not found";
     my $ps_class = $p->ps_subclass_name or die 'no ps_subclass_name ??';
     $ps_class->class;   # auto-generate
-
-    # make sure 1 and only 1 (unix) process per process (step)
-    # is running at a time
-    my $resource_id = "process_step_cron for $process";
-    my $psc_lock = App::Lock->create(
-        mechanism   => 'DB_Table',
-        resource_id => $resource_id,
-        block       => 0,
-    );
-    if ( !$psc_lock and !$ignore_locks ) {
-        $ps_class->status_message("$$ did not get db lock, exiting");
-        exit 0;
-    }
 
     # call the cron routine for this process step
     my $rv = eval { $ps_class->cron($arg) };
@@ -1935,7 +1897,7 @@ sub process_step_cron {
         $ps_class->error_message($error);
 
         # release lock
-        $psc_lock->delete if $psc_lock;
+        $cspc_lock->delete if $cspc_lock;
 
         # TODO: send email here?
     }
@@ -1946,7 +1908,7 @@ sub process_step_cron {
     App::DB->commit or die 'commit failed';
 
     # release lock
-    $psc_lock->delete if $psc_lock;
+    $cspc_lock->delete if $cspc_lock;
 
     $ps_class->status_message("process_step_cron pid $$ done");
     exit 0;
@@ -1955,8 +1917,6 @@ sub process_step_cron {
 sub cron_logfile {
     my ( $class, $process ) = @_;
 
-    $process or croak 'must pass process';
-
     # check for the log directory
     my $cron_dir = $class->cron_dir;
     die "log directory $cron_dir not found" if ( !-d $cron_dir );
@@ -1964,10 +1924,11 @@ sub cron_logfile {
     # make up a log file name
     # one log file per day per process step
     my ($today) = split( / /, App::Time->now );
-    $process =~ s/ /_/g;
-    my $logfile = $cron_dir->file(
-        join( '.', $today, $process, 'log' )
-    );
+    if ($process) {
+        $process =~ s/ /_/g;
+        $today .= "_$process";
+    }
+    my $logfile = $cron_dir->file( join( '.', $today, 'log' ) );
 
     return $logfile;
 }
