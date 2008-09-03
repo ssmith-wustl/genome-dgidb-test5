@@ -261,10 +261,10 @@ sub cleanup_the_mapmerge_I_specify {
     if($rv && $rv!=0) {
         $self->warning_message("nonzero exit code $rv from $cmd");
         #should this be glob?
-        if (system("ls $file") == 0) {
-            $self->error_message("$file still exists! Bad juju, exiting.");
-            return;
-        }
+        #if (system("ssh $host 'ls $file'") == 0) {
+            #    $self->error_message("$file still exists! Bad juju, exiting.");
+            #return;
+            #}
     }
     else{
         $self->warning_message("Removed file from $host.");
