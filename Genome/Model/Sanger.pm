@@ -6,21 +6,25 @@ use Sort::Naturally;
 use IO::File;
 use File::Copy "cp";
 use Data::Dumper;
+use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 
 use above "Genome";
 
 class Genome::Model::Sanger{
     is => 'Genome::Model',
     is_abstract => 1,
-    has_optional => [
+    has => [
         gfh => {
             is=>'IO::Handle',
             doc=>'genotype file handle',
+            is_optional => 1,
             },
         pfh => {
             is =>'IO::Handle',
             doc=>'pcr product file handle',
+            is_optional => 1,
             },
+        process_param_set_id => { via=> 'processing_profile' }
         ],
 };
 
@@ -103,16 +107,14 @@ sub parse_line {
 sub add_pcr_product_genotypes{
     my ($self, @pcr_product_data) = @_;
 
-    $DB::single = 1;
-
-    @pcr_product_data = sort { $self->position_compare($a->{chromosome}, $a->{start}, $b->{chromosome}, $b->{start}) } @pcr_product_data;
+    @pcr_product_data = sort { compare_position($a->{chromosome}, $a->{start}, $b->{chromosome}, $b->{start}) } @pcr_product_data;
     
     my $pcr_file = $self->pcr_product_genotype_file;
     my $pcr_out = $self->pcr_product_genotype_file.".tmp";
 
     my $pofh = IO::File->new("> $pcr_out");
     my $pfh = IO::File->new("< $pcr_file");
-    unless ($pofh){ #TODO, writing out for the first time
+    unless ($pofh){ 
         $self->error_message("Can't open pcr product tmp outfile!");
         die;
     }
@@ -128,7 +130,7 @@ sub add_pcr_product_genotypes{
         my @new_data_for_position;
         push @new_data_for_position, $new_pcr_product_genotype;
 
-        while (@pcr_product_data and $self->position_compare($new_chromosome, $new_start, $pcr_product_data[0]->{chromosome}, $pcr_product_data[0]->{start}) == 0){
+        while (@pcr_product_data and compare_position($new_chromosome, $new_start, $pcr_product_data[0]->{chromosome}, $pcr_product_data[0]->{start}) == 0){
             my $same_position = shift @pcr_product_data;
             push @new_data_for_position, $same_position;
         } #grap all new
@@ -140,7 +142,7 @@ sub add_pcr_product_genotypes{
             while (defined (my $pos = $pfh->tell) and my $line = $pfh->getline){
                 my ($chromosome, $start) = split("\t", $line);
 
-                my $cmp = $self->position_compare($new_chromosome, $new_start, $chromosome, $start);
+                my $cmp = compare_position($new_chromosome, $new_start, $chromosome, $start);
                 if ($cmp > 0){ #current data to add is ahead of current position in file
                     $pofh->print($line);
                 }elsif ($cmp == 0){ #current data to add is at current position
@@ -150,7 +152,7 @@ sub add_pcr_product_genotypes{
                     my @uniq = $self->uniq_pcr_product_genotypes(@previous_pcr_product_genotypes, @new_data_for_position); #pass in previous first to preserve earlier timestamp
 
                     foreach my $pcr_product_genotype (@uniq){
-                        $pofh->print($self->pcr_product_genotype_line($pcr_product_genotype));
+                        $pofh->print($self->format_pcr_product_genotype_line($pcr_product_genotype));
                     }
                     $printed = 1;
                     my $new_genotype = $self->predict_genotype(@uniq);
@@ -163,7 +165,7 @@ sub add_pcr_product_genotypes{
         unless ($printed){
             my @uniq = $self->uniq_pcr_product_genotypes(@new_data_for_position); #pass in previous first to preserve earlier timestamp
             foreach my $pcr_product_genotype (@uniq){
-                $pofh->print($self->pcr_product_genotype_line($pcr_product_genotype));
+                $pofh->print($self->format_pcr_product_genotype_line($pcr_product_genotype));
             }
             my $new_genotype = $self->predict_genotype(@uniq);
             push @new_genotypes, $new_genotype;
@@ -176,7 +178,7 @@ sub add_pcr_product_genotypes{
 
     my $gofh = IO::File->new("> $genotype_out");
     my $gfh = IO::File->new("< $genotype_file");
-    unless ($gofh){ #TODO, writing out for the first time
+    unless ($gofh){ 
         $self->error_message("Can't open genotype tmp outfile!");
         die;
     }
@@ -187,7 +189,7 @@ sub add_pcr_product_genotypes{
         my $new_chromosome = $new_genotype->{chromosome};
         my $new_start = $new_genotype->{start};
 
-        while (@new_genotypes and $self->position_compare($new_chromosome, $new_start, $new_genotypes[0]->{chromosome}, $new_genotypes[0]->{start}) == 0){
+        while (@new_genotypes and compare_position($new_chromosome, $new_start, $new_genotypes[0]->{chromosome}, $new_genotypes[0]->{start}) == 0){
             $self->error_message("Multiple genotype predictions for same position! ",Dumper $new_genotype,Dumper @new_genotypes);
             die;
         } #grab all new
@@ -197,22 +199,24 @@ sub add_pcr_product_genotypes{
             while (defined (my $pos = $gfh->tell) and my $line = $gfh->getline){
                 my ($chromosome, $start) = split("\t", $line);
 
-                my $cmp = $self->position_compare($new_chromosome, $new_start, $chromosome,$start);
+                my $cmp = compare_position($new_chromosome, $new_start, $chromosome,$start);
                 if ($cmp > 0){ #current data to add is ahead of current position in file
                     $gofh->print($line);
                 }elsif ($cmp == 0){ #current data to add is at current position
-                    $gofh->print( $self->genotype_line($new_genotype) );
+                    $gofh->print( $self->format_genotype_line($new_genotype) );
                     $printed_replacement = 1;
                 }else{ #current data position is less than the current position in the file
                     #process @previous_pcr_product_genotypes
-                    $gofh->print($self->genotype_line($new_genotype) ) unless $printed_replacement;
+                    $gofh->print($self->format_genotype_line($new_genotype) ) unless $printed_replacement;
                     $printed_replacement = 1;
                     $gfh->seek($pos, 0);
                     last;
                 }
             }
         }
-        $gofh->print($self->genotype_line($new_genotype) ) unless $printed_replacement;
+        unless ($printed_replacement){
+            $gofh->print($self->format_genotype_line($new_genotype) )
+        }
     }
 
     close $gofh;
@@ -235,7 +239,7 @@ sub uniq_pcr_product_genotypes{
     return map { $pcr_keys{$_} } keys %pcr_keys;
 }
 
-sub pcr_product_genotype_line{
+sub format_pcr_product_genotype_line{
     my ($self, $genotype) = @_;
     my $line = $genotype->{unparsed_line};
     return $line if $line;
@@ -244,7 +248,7 @@ sub pcr_product_genotype_line{
     return join("\t", map { $genotype->{$_} } $self->columns)."\n";
 }
 
-sub genotype_line{
+sub format_genotype_line{
     my ($self, $genotype) = @_;
     return join("\t", map { $genotype->{$_} } grep { $_ !~ /pcr_product_name|timestamp/} $self->columns)."\n";
 }
@@ -260,26 +264,33 @@ sub predict_genotype{
     }else{
         my %genotype_hash;
         foreach my $genotype (@genotypes){
-            $genotype_hash{$genotype->{genotype}}++;
+            push @{$genotype_hash{$genotype->{genotype}}}, $genotype;
         }
         my $max_vote=0;
         my $dupe_vote=0;
         my $genotype_call;
         foreach my $key (keys %genotype_hash){
-            if ($max_vote <= $genotype_hash{$key}){
+            if ($max_vote <= scalar @{$genotype_hash{$key} }){
                 $dupe_vote = $max_vote;
-                $max_vote = $genotype_hash{$key};
+                $max_vote = scalar @{$genotype_hash{$key}};
                 $genotype_call = $key;
             }
         }
         if ($max_vote == $dupe_vote){
-            my $return_genotype = shift @genotypes;
+            my $return_genotype = shift @genotypes;  
             $return_genotype->{genotype} = 'XX';
+            foreach my $val( qw/variant_type allele1 allele1_type allele2 allele2_type score read_count/){
+                $return_genotype->{$val} = '-';
+            }
             return $return_genotype;
         }else{
-            foreach my $genotype (@genotypes){
-                return $genotype if $genotype->{genotype} eq $genotype_call;
+            my $read_count=0;
+            foreach my $genotype (@{$genotype_hash{$genotype_call}}){
+                $read_count += $genotype->{read_count};
             }
+            my $return_genotype = shift @{$genotype_hash{$genotype_call}};
+            $return_genotype->{read_count} = $read_count;
+            return $return_genotype;
         }
     }
 }
@@ -298,41 +309,10 @@ sub columns{
     genotype 
     score 
     hugo_symbol
-    tumor_sample_barcode
-    matched_norm_sample_barcode
+    read_count
     pcr_product_name
     timestamp
     );
-}
-
-sub position_compare{
-    my ($self, $chr1, $pos1, $chr2, $pos2) = @_;
-    unless (defined $chr1 and defined $chr2 and defined $pos1 and defined $pos2){
-        return undef;
-    }
-    my $chr_cmp = $self->chromosome_compare($chr1,$chr2);
-    if ($chr_cmp < 0){
-        return -1;
-    }elsif ($chr_cmp == 0){
-        return $pos1 <=> $pos2;
-    }else{
-        return 1;
-    }
-}
-
-sub chromosome_compare{
-    my ($self, $chr1, $chr2) = @_;
-    if ($chr1 =~ /^[xyXY]$/ ){
-        if ($chr2 =~ /^[xyXY]$/ ){
-            return uc $chr1 cmp uc $chr2;
-        }else{
-            return 1; #chr1 = XY > any digit chrom
-        }
-    }elsif($chr2 =~ /^[xyXY]$/ ){
-        return -1; #chr1 = digit < any XY
-    }else{
-        return $chr1 <=> $chr2;
-    }
 }
 
 sub next_genotype{
@@ -370,4 +350,3 @@ sub next_pcr_product_genotype{
 }
 
 1;
-
