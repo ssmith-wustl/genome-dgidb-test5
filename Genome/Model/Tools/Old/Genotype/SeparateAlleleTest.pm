@@ -3,8 +3,6 @@
 use strict;
 use warnings;
 
-use lib '/gsc/scripts/test/ur-dev';
-
 package Genome::Model::Tools::Old::Genotype::SeparateAlleleTest;
 use base 'Test::Class';
 

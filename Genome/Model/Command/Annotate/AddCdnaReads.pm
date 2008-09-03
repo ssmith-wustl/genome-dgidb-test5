@@ -41,8 +41,6 @@ EOS
 sub execute {
     my $self = shift;
 
-    use lib '/gscuser/dlarson/src/mp/trunk';
-
     my $dbh = DBI->connect("dbi:SQLite:dbname=/tmp/add_cdna_genome.db","","", { RaiseError =>1, AutoCommit => 0});
 
 #create tables

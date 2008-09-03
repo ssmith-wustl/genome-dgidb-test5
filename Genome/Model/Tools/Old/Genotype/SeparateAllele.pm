@@ -4,8 +4,7 @@ package Genome::Model::Tools::Old::Genotype::SeparateAllele;
 use strict;
 use warnings;
 
-use lib '/gsc/scripts/test/ur-dev';
-use above "Genome";
+use Genome;
 use Command;
 
 use IO::File;

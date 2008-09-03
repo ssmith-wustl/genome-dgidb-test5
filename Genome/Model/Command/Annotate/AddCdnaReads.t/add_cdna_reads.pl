@@ -1,9 +1,7 @@
 #!/gsc/bin/perl
 
-
 use strict;
 use warnings;
-use lib '/gscuser/xshi/svn/mp';
 use MG::Analysis::VariantAnnotation;
 my $read_hash_unique_dna=MG::Analysis::VariantAnnotation->add_unique_reads_count($ARGV[1]);
 my $read_hash_cDNA=MG::Analysis::VariantAnnotation->add_reads_count($ARGV[2]);

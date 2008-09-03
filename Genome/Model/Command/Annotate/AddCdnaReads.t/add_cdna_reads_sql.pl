@@ -2,9 +2,7 @@
 
 use strict;
 use warnings;
-use lib '/gscuser/dlarson/src/mp/trunk';
-
-use Carp;
+se Carp;
 use DBI;
 use List::MoreUtils qw{ pairwise };
 my $dbh = DBI->connect("dbi:SQLite:dbname=/tmp/add_cdna_orig.db","","", { RaiseError =>1, AutoCommit => 0});

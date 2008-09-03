@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 
-use lib qw(/gscuser/josborne/lib/mp/);
 use FileHandle;
 use MPSampleData::RggInfo;
 

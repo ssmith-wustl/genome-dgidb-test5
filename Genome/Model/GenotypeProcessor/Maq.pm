@@ -3,12 +3,10 @@ package Genome::Model::GenotypeProcessor::Maq;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use Genome::Model;
 use IO::File;
-
-use lib "/gsc/scripts/gsc/medseq/lib";
 use MG::Transform::Coordinates::TranscriptToGenomic;
 use MG::IO::GenotypeSubmission;
 
