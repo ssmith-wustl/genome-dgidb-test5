@@ -100,7 +100,7 @@ sub resolve_accumulated_alignments_filename {
 
     $ref_seq_id ||= 'all_sequences';
 
-    my $result_file = $self->mapmerge_filename($ref_seq_id, $library_name, %p);
+    my $result_file = $self->mapmerge_filename($ref_seq_id, $library_name, remove_pcr_artifacts => $remove_pcr_artifacts);
     my @inputs;
     foreach my $listfile ( @maplists ) {
         my $f = IO::File->new($listfile);
