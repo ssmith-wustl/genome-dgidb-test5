@@ -629,15 +629,15 @@ sub _consensus_files {
 }
 
 sub _variant_list_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/map_snp_related_metrics/snips_%s',@_);
+    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/snips_%s',@_);
 }
 
 sub _variant_pileup_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/map_snp_related_metrics/pileup_%s',@_);
+    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/pileup_%s',@_);
 }
 
 sub _variant_detail_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/map_snp_related_metrics/report_input_%s',@_);
+    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/report_input_%s',@_);
 }
 
 sub _filtered_variants_dir {
