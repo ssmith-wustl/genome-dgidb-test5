@@ -193,17 +193,17 @@ $DB::single=1;
     # This effectively moves the processing to the data, instead of the other way around.
     # Note that, if jobs fail, and are re-run later on other machine's they'll scp the
     # map files from /tmp -> /tmp and resume normally, just with a touch more overhead.
-    my $next_event= Genome::Model::Event->get(prior_event_id=> $self->id);
-    while($next_event) { 
-        my $lsf_job_id = $next_event->lsf_job_id;
-        if($lsf_job_id) {
-            my $rv = system("bmod -m " .  $ENV{HOSTNAME} . " $lsf_job_id");
-            if($rv && ($rv != 0)) {
-                $self->error_message("unable to change host to " . $ENV{HOSTNAME} . " for job $lsf_job_id");
-            }
-        }
-        $next_event= Genome::Model::Event->get(prior_event_id=> $next_event->id); 
-    }
+    #my $next_event= Genome::Model::Event->get(prior_event_id=> $self->id);
+    #while($next_event) { 
+    #    my $lsf_job_id = $next_event->lsf_job_id;
+    #    if($lsf_job_id) {
+    #        my $rv = system("bmod -m " .  $ENV{HOSTNAME} . " $lsf_job_id");
+    #        if($rv && ($rv != 0)) {
+    #            $self->error_message("unable to change host to " . $ENV{HOSTNAME} . " for job $lsf_job_id");
+    #        }
+    #    }
+    #    $next_event= Genome::Model::Event->get(prior_event_id=> $next_event->id); 
+    #}
     
     $self->date_scheduled($now);
     $self->date_completed(UR::Time->now());
