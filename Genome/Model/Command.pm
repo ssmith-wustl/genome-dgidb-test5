@@ -36,18 +36,20 @@ sub create {
     unless ($class->get_class_object->get_property_meta_by_name("model")->is_optional or $self->model) {
         if ($self->bare_args) {
             my $pattern = $self->bare_args->[0];
-            my @models = Genome::Model->get(name => { operator => "like", value => '%' . $pattern . '%' });
-            if (@models >1) {
-                $self->error_message(
-                                     "No model specified, and multiple models match pattern \%${pattern}\%!\n"
-                                     . join("\n", map { $_->name } @models)
-                                     . "\n"
-                                 );
-                $self->delete;
-                return;
-            }
-            elsif (@models == 1) {
-                $self->model($models[0]);
+            if ($pattern) {
+                my @models = Genome::Model->get(name => { operator => "like", value => '%' . $pattern . '%' });
+                if (@models >1) {
+                    $self->error_message(
+                                         "No model specified, and multiple models match pattern \%${pattern}\%!\n"
+                                         . join("\n", map { $_->name } @models)
+                                         . "\n"
+                                     );
+                    $self->delete;
+                    return;
+                }
+                elsif (@models == 1) {
+                    $self->model($models[0]);
+                }
             } else {
                 # continue, the developer may set this value later...
             }
