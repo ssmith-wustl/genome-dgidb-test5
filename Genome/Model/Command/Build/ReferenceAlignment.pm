@@ -56,9 +56,9 @@ sub execute {
     }
 
     foreach my $ref (@subreferences_names) { 
+    my $prior_event_id = undef;
         foreach my $command_classes ( @sub_command_classes ) {
             
-            my $prior_event_id = undef;
             my $command;
             for my $command_class (@{$command_classes}) {  
                 $command = $command_class->create(
