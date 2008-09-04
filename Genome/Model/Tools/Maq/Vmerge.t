@@ -20,7 +20,7 @@ unlink($pipe_path);
 
 my $vmerge_pid = fork();
 if (! $vmerge_pid) {
-    # Child 
+# Child 
     exec("gt maq vmerge --maplist /gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Vmerge/all.maplist --pipe $pipe_path 2>/dev/null");
     exit();  # Should not get here...
 }
@@ -45,6 +45,7 @@ is($output,'', "No diffs");
 unlink($pipe_path);
 unlink("./${pipe_path}.virtual");
 
+print "Killing child:";
 if(`kill 0 $vmerge_pid`){
     `kill $vmerge_pid`;    
 }
