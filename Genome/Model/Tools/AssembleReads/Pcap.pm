@@ -17,17 +17,21 @@ use Bio::Seq::SequenceTrace;
 use Finishing::Assembly::Phd::Exporter;
 use Finishing::Assembly::Factory;
 use Sys::Hostname;
+use Cwd;
+
 
 class Genome::Model::Tools::AssembleReads::Pcap {
     is => 'Command',                       
     has => [ 
 	     disk_location =>       {
 		                      type => 'String',
+				      is_optional => 1, ###
 				      doc => "path to the data"
 				     },
 
 	     project_name =>        { 
 		                      type => 'String',
+				      is_optional => 1, ###
 				      doc => "project name"
 			             },
 
@@ -52,6 +56,7 @@ class Genome::Model::Tools::AssembleReads::Pcap {
 
 	     assembly_date =>       {
 		                      type => 'String',
+				      is_optional => 1, ###
 				      doc => "assembly date",
 			             },
 
@@ -63,6 +68,7 @@ class Genome::Model::Tools::AssembleReads::Pcap {
 
 	     parameter_setting =>   {
 		                      type => 'String',
+				      is_optional => 1, ####
 				      doc => "bconsen parameters",
  			             },
 
@@ -124,7 +130,7 @@ sub load_config_params_and_execute
     #redirecting self to load config params
     $self = Genome::Model::Tools::AssembleReads::Pcap->create ($self->{config_params});
 
-    $self->execute;
+    $self->execute_pcap;
 
     return 1;
 }
@@ -154,6 +160,47 @@ sub validate_params {
 }
 
 sub execute
+{
+    my ($self) = shift;
+
+    my $dir = cwd();
+
+    my $config_file = $dir.'/pcap.config';
+
+    unless (-s $config_file)
+    {
+	print "\nplease complete pcap.config file copied to this dir and try again\n";
+	system ("cp /gscuser/kkyung/bin/pcap_config/pcap.config ./");
+	exit (0);
+    }
+
+    my $obj = Genome::Model::Tools::AssembleReads::Pcap->create(config_file => $config_file);
+
+    my ($params, $keys) = $obj->parse_config_file;
+
+    my $param_text;
+
+    foreach my $key (@$keys)
+    {
+	$param_text .= $key.' => '.$params->{lc $key}."\n"
+	    if $params->{lc $key};
+    }
+
+    print "\n$param_text\nRun pcap with above parameters (yes/no)? ";
+
+    chomp (my $answer = <STDIN>);
+
+    print "Answer not a yes .. exiting\n" and exit (0) unless $answer eq 'yes';
+
+    print "Executing pcap\n";
+
+    $obj->load_config_params_and_execute ($params);
+
+    return 1;
+}
+
+
+sub execute_pcap
 {
     my ($self) = @_;
 
@@ -391,6 +438,7 @@ sub resolve_data_needs
 	}
 
 	$self->{prefixes_to_dump} = \@dump_prefixes;
+
 	$self->dump_reads;
     }
     #dump reads using organims name
@@ -435,12 +483,16 @@ sub validate_organism_name
     $self->error_message("Unable to find match for $organism_name\n") and
 	return if scalar @tmp == 0;
 
+    $self->{db_organism_name} = $tmp[0];
+
     return $tmp[0];
 }
 
 sub get_read_prefixes_for_organism
 {
     my ($self, $db_org_name) = @_;
+
+    $db_org_name = $self->{db_organism_name} unless $db_org_name;
 
     my $query = "select dr.dna_resource_prefix prefix, o.organism_name name ".
 	        "from dna_resource dr ".
@@ -492,6 +544,7 @@ sub dump_reads
     
     foreach my $prefix ( @{$self->{prefixes_to_dump}} )
     {
+
 	my $re_id_file = $read_dump_dir.'/'.$prefix.'.'.$date.'.re_id';
 
 	my $fasta_file = $edit_dir.'/'.$prefix.'.'.$date.'.fasta';
