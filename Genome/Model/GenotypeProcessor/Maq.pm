@@ -175,6 +175,8 @@ $DB::single = $DB::stopper;
 sub _convert_variations_to_output {
     my($self,$variations) = @_;
 
+    require MG::Transform::Coordinates::TranscriptToGenomic;
+    require MG::IO::GenotypeSubmission;
     
     my $model = Genome::Model->get($self->model_id);
     
