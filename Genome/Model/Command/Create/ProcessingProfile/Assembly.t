@@ -25,7 +25,7 @@ my $assembler_params = '-a 0';
 my $sequencing_platform = '454';
 
 my $create_pp_command = Genome::Model::Command::Create::ProcessingProfile::Assembly->create(
-                                                                                            profile_name		   => $pp_name,
+                                                                                            profile_name => $pp_name,
                                                                                             assembler => $assembler,
                                                                                             assembler_params => $assembler_params,
                                                                                             read_filter => $read_filter,

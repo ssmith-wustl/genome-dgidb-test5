@@ -42,5 +42,9 @@ is($assembly->assembler,$assembler,'assembler accessor');
 is($assembly->assembler_params,$assembler_params,'assembler_params accessor');
 is($assembly->sequencing_platform,$sequencing_platform,'sequencing_platform accessor');
 
+#my @assemblies = Genome::ProcessingProfile::Assembly->get(
+#                                                          read_trimmer => $read_trimmer,
+#                                                      );
+#print scalar(@assemblies) ."\n";
 
 exit;

@@ -14,8 +14,7 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 }
-#plan tests => 152;
-plan skip_all => "Need to fix the reuse of alignment data since the run_name is always unique";
+plan tests => 152;
 
 my $tmp_dir = File::Temp::tempdir();
 my $model_name = "test_454_$ENV{USER}";
@@ -44,8 +43,8 @@ sub setup_test_data {
 
     my @run_dirs = grep { -d $_ } glob("$tmp_dir/R_2008_07_29_*");
     for my $run_dir (@run_dirs) {
-        my $run_name = basename($run_dir) . $ENV{USER} . $$;
-        my $analysis_name = $run_name;
+        my $run_name = basename($run_dir);
+        my $analysis_name = $run_name . $ENV{USER} . $$;
         $analysis_name =~ s/^R/D/;
         my @files = grep { -e $_ } glob("$run_dir/*.sff");
         for my $file (@files) {
@@ -69,16 +68,9 @@ sub setup_test_data {
                                                                    region_id => $rr454->region_id,
                                                                    sff_file => $file,
                                                                );
-            #my $fs_path = GSC::SeqFPath->create(
-            #                                    path => $file,
-            #                                    seq_id => $rr454->seq_id,
-            #                                    data_type => 'sff path',
-            #                                    creation_event_id => -1,
-            #                                );
-
             push @read_sets, $rr454;
         }
     }
-    UR::Context->_sync_databases();
+    #UR::Context->_sync_databases();
     return @read_sets;
 }

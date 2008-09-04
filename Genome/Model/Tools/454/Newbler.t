@@ -5,13 +5,21 @@ use warnings;
 
 use above "Genome";
 
-use Test::More tests => 28;
+use Test::More;
 use File::Temp;
 use File::Path;
+
 use GSCApp;
 App->init;
 
+
 BEGIN {
+    my $archos = `uname -a`;
+    if ($archos !~ /64/) {
+        plan skip_all => "Must run from 64-bit machine";
+    }
+    plan tests => 28;
+
     use_ok( 'Genome::Model::Tools::454::Newbler::NewMapping');
     use_ok( 'Genome::Model::Tools::454::Newbler::NewAssembly');
     use_ok( 'Genome::Model::Tools::454::Newbler::SetRef');
@@ -85,7 +93,10 @@ foreach my $dir (@dirs) {
                                                                         test => $test,
                                                                     );
     isa_ok($run_project,'Genome::Model::Tools::454::Newbler::RunProject');
-    ok($run_project->execute,'execute newbler runProject');
+  SKIP: {
+        skip 'runProject takes too long, until smaller data set used', 1;
+        ok($run_project->execute,'execute newbler runProject');
+    }
 }
 
 rmtree $mapping_dir || die "Could not remove directory '$mapping_dir'";
