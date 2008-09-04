@@ -160,22 +160,19 @@ sub resolve_accumulated_alignments_filename {
             my $temp_accum_align_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $ref_seq_id,library_name => $library_name,remove_pcr_artifacts => 0);
             $DB::single=1;
             my $temp_del_file = new File::Temp( UNLINK => 1, SUFFIX => '.map');
-            my $temp_keep_file = new File::Temp( UNLINK => 1, SUFFIX => '.map');
-            my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts->execute(input => $temp_accum_align_file,keep => $temp_keep_file->filename, remove => $temp_del_file->filename, identity_length => $identity_length);
+            my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts->execute(input => $temp_accum_align_file,keep => $result_file, remove => $temp_del_file->filename, identity_length => $identity_length);
             $self->status_message("Error deduplicating mapfile.\n") unless $result;
-            #this keeps us from having to delete it.... lol
-            `mv $temp_keep_file $result_file`;
             
             unlink $temp_del_file->filename;
             
             unless (-e $result_file) {
                 $self->error_message("Error creating deduplicated mapfile, $result_file.");
-                next;
+                return;
             }
             unless (-s $result_file) {
                 $self->error_message("File $result_file is empty.  Continuing.");
                 unlink $result_file;
-                next;
+                return;    
             }       
         }
         else
