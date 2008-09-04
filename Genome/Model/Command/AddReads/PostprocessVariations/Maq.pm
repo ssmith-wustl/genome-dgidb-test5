@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome::Model;
+use IO::File;
 use Genome::Model::Command::Report::MetricsBatchToLsf;
 use IO::File;
 use File::Basename;
@@ -81,6 +82,14 @@ sub execute {
     my $self = shift;
     my $model = $self->model;
 
+    unless(-d $self->model->other_snp_related_metric_directory) {
+        unless(mkdir $self->model->other_snp_related_metric_directory) {
+            $self->error_message("Cannot create " . $self->model->other_snp_related_metric_directory);
+            return;
+        }
+        chmod 02775, $self->model->other_snp_related_metric_directory;
+    }
+    
     $self->revert;
 
     $DB::single = $DB::stopper;
