@@ -111,7 +111,7 @@ sub create_model {
     my $result = $create_command->execute();
     ok($result, 'execute genome-model create');
     my $genome_model_id = $result->id;
-    UR::Context->_sync_databases();
+    #UR::Context->_sync_databases();
 
     my @models = Genome::Model->get($genome_model_id);
     is(scalar(@models),1,'expected one model');
@@ -124,8 +124,9 @@ sub create_model {
     $self->add_directory_to_remove($model->data_directory);
     $self->{_model} = $model;
 
-    my @pp_sub_commands = Genome::Model::Command::Build::ReferenceAlignment->subordinate_job_classes;
     my @add_reads_commands = Genome::Model::Command::AddReads->get_sub_command_classes;
+
+    # The number of ref_seqs is hard coded, there is probably a better way to look this up
     my $ref_seqs;
     if ($model->sequencing_platform eq '454') {
         $ref_seqs = 1;
@@ -134,7 +135,16 @@ sub create_model {
     } else {
         confess('Platform '. $model->sequencing_platform .' is not supported by test');
     }
-    $self->{_expected_postprocess_events} = $ref_seqs * scalar(@pp_sub_commands);
+
+    my @sub_command_classes = Genome::Model::Command::Build::ReferenceAlignment->subordinate_job_classes;
+    my $sub_command_count = 0;
+    for my $command_classes (@sub_command_classes) {
+        for my $command_class (@{$command_classes}) {
+            $sub_command_count++;
+        }
+    }
+    $self->{_expected_postprocess_events} = $ref_seqs * $sub_command_count;
+
     my @read_sets = @{$self->{_read_set_array_ref}};
     $self->{_expected_add_reads_events} = scalar(@add_reads_commands);
     # At some point the number of expected tests from test_c should be set
@@ -155,7 +165,7 @@ sub add_reads {
                                                                      );
         isa_ok($add_reads_command,'Genome::Model::Command::AddReads');
         ok($add_reads_command->execute(),'execute genome-model add-reads');
-        UR::Context->_sync_databases();
+        #UR::Context->_sync_databases();
 
         my @add_reads_events = Genome::Model::Event->get(
                                                          model_id => $model->id,
@@ -203,7 +213,7 @@ sub add_reads {
                                                                                     );
     isa_ok($pp_alignments,'Genome::Model::Command::Build::ReferenceAlignment');
     ok($pp_alignments->execute(), 'execute genome-model add-reads postprocess-alignments');
-    UR::Context->_sync_databases();
+    #UR::Context->_sync_databases();
 
     my @pp_events = Genome::Model::Event->get(
                                               model_id => $model->id,
@@ -239,9 +249,9 @@ print "@pp_events\n";
         isa_ok($annotate_variations_command,'Genome::Model::Command::AddReads::AnnotateVariations');
         $self->execute_event_test($annotate_variations_command);
 
-        my $filter_variations_command = $pp_events[5];
-        isa_ok($filter_variations_command,'Genome::Model::Command::AddReads::FilterVariations');
-        $self->execute_event_test($filter_variations_command);
+        #my $filter_variations_command = $pp_events[5];
+        #isa_ok($filter_variations_command,'Genome::Model::Command::AddReads::FilterVariations');
+        #$self->execute_event_test($filter_variations_command);
     }
 
     #my $upload_database_command = $pp_events[6];
@@ -278,7 +288,7 @@ sub execute_event_test  {
     #TODO: Write a verify_successful_completion method in all events
     #ok($event->verify_successful_completion,'Verify: '. $event->command_name)
 
-    UR::Context->_sync_databases();
+    #UR::Context->_sync_databases();
 }
 
 sub set_event_status {
@@ -307,7 +317,7 @@ sub create_test_pp {
     unless($create_pp_command->execute()) {
         confess("Failed to create processing_profile for test:  $!");
     }
-    UR::Context->_sync_databases();
+    #UR::Context->_sync_databases();
     return 1;
 }
 
