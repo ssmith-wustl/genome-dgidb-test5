@@ -260,6 +260,13 @@ void process_record(bl_array *array, bl_array *del_array, maqmap1_t *rec, int co
     {
         maqmap1_t *matching_best = bl_get_at_pos(array->lists[position], matching_best_pos);
         if(matching_best != NULL &&
+           rec->size>matching_best->size)
+        {
+            bl_add(del_array->lists[position], matching_best);
+            bl_replace(array->lists[position], rec,matching_best_pos);
+        }
+        else if(matching_best != NULL && 
+           rec->size == matching_best->size &&
            rec->seq[MAX_READLEN-1]>matching_best->seq[MAX_READLEN-1])
         {
             bl_add(del_array->lists[position], matching_best);
