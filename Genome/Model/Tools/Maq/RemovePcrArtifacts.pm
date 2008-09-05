@@ -50,8 +50,10 @@ sub execute {
     my $remove = $self->remove;
     my $keep = $self->keep;
     my $identity_length = $self->identity_length;
-    unless ($in and $keep and $remove and -f $in) {
-        $self->error_message("Bad params!");
+    unless (-e $in) {
+        #hey, mimicking object layer messages isn't cool.
+        #$self->error_message("Bad params!");
+        $self->error_message("$in isn't a real file?");
         $self->usage_message($self->help_usage_complete_text);
         return;
     }
