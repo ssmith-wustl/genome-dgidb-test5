@@ -164,7 +164,7 @@ sub resolve_accumulated_alignments_filename {
             $self->status_message("Error deduplicating mapfile.\n") unless $result;
             
             unlink $temp_del_file->filename;
-            
+            #unlink $temp_accum_align_file; 
             unless (-e $result_file) {
                 $self->error_message("Error creating deduplicated mapfile, $result_file.");
                 return;
@@ -190,7 +190,7 @@ sub resolve_accumulated_alignments_filename {
             my ($fh,$maplist) = File::Temp::tempfile;
             $fh->print(join("\n",@inputs),"\n");
             $fh->close;
-            system "gt maq vmerge --maplist $maplist --pipe $result_file.pipe &";
+            system "gt maq vmerge --maplist $maplist --pipe $result_file &";
             my $start_time = time;
             until (-p "$result_file.pipe" or ( (time - $start_time) > 100) )  {
                 $self->status_message("Waiting for pipe...");
@@ -200,15 +200,16 @@ sub resolve_accumulated_alignments_filename {
                 die "Failed to make pipe? $!";
             }
             $self->status_message("Streaming into file $result_file.");
-            system "cp $result_file.pipe $result_file";
+            #system "cp $result_file.pipe $result_file";
             unless (-s "$result_file") {
                 die "Failed to make map from pipe? $!";
             }
 
             $self->warning_message("mapmerge complete.  output filename is $result_file");
         }
+        ##not sure why this is necessary?
         my ($hostname) = $self->outputs(name => "Hostname");
-        if ($hostname&&!$hostname->value) {
+        if ($hostname) {
             $hostname->value($ENV{HOSTNAME});
         }
         else {
