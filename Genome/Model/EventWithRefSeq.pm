@@ -192,16 +192,16 @@ sub resolve_accumulated_alignments_filename {
             $fh->close;
             system "gt maq vmerge --maplist $maplist --pipe $result_file &";
             my $start_time = time;
-            until (-p "$result_file.pipe" or ( (time - $start_time) > 100) )  {
+            until (-p "$result_file" or ( (time - $start_time) > 100) )  {
                 $self->status_message("Waiting for pipe...");
                 sleep(5);
             }
-            unless (-p "$result_file.pipe") {
+            unless (-p "$result_file") {
                 die "Failed to make pipe? $!";
             }
             $self->status_message("Streaming into file $result_file.");
             #system "cp $result_file.pipe $result_file";
-            unless (-s "$result_file") {
+            unless (-p "$result_file") {
                 die "Failed to make map from pipe? $!";
             }
 
