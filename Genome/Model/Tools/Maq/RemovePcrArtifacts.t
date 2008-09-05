@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/gsc/bin/perl
 
 package Genome::Model::Tools::Maq::RemovePcrArtifacts::Test;
 use Genome::Model::Tools::Maq::Map::Reader;
@@ -11,7 +11,7 @@ class Genome::Model::Tools::Maq::RemovePcrArtifacts::Test {
     is => 'Command',   
 };
 
-my $indata = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Map';
+my $indata = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Map/2.map';
 my ($outdata) = File::Temp::tempdir(CLEANUP => 1);
 
 
