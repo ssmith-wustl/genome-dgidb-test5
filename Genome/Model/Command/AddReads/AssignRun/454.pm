@@ -33,7 +33,7 @@ sub create {
     my $class = shift;
     my $obj = $class->SUPER::create(@_);
 
-    unless ($obj->model_id and $obj->run_id and $obj->event_type) {
+    unless ($obj->model_id and $obj->read_set_id and $obj->event_type) {
         $class->error_message("This step requires the model and run to be specified at construction time for locking concurrency.");
         $obj->delete;
         return;
@@ -41,7 +41,7 @@ sub create {
 
     my $model = $obj->model;
 
-    my $resource_id = join(".",$class,'create',$obj->run_id);
+    my $resource_id = join(".",$class,'create',$obj->read_set_id);
     my $lock = $model->lock_resource(resource_id => $resource_id);
     unless ($lock) {
         $class->error_message("Failed to lock $resource_id.");
@@ -53,7 +53,7 @@ sub create {
         grep { $_ ne $obj }
         $class->load(
             model_id    => $obj->model_id,
-            run_id      => $obj->run_id,
+            read_set_id      => $obj->read_set_id,
             event_type  => $obj->event_type,
         );
 
