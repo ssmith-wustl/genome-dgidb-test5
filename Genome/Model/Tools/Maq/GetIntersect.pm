@@ -1,6 +1,10 @@
 package Genome::Model::Tools::Maq::GetIntersect;
 
-use above "Genome";
+use strict;
+use warnings;
+
+use Genome;
+use Command;
 
 class Genome::Model::Tools::Maq::GetIntersect {
     is => 'Genome::Model::Tools::Maq',
@@ -43,7 +47,7 @@ EOS
 }
 
 sub execute {
-    $DB::single = $DB::stopper;
+    $DB::single = 1;#$DB::stopper;
     my $self = shift;
     my $in = $self->input;
     my $output = $self->output;
