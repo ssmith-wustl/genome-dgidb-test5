@@ -52,7 +52,7 @@ sub resolve_accumulated_alignments_filename {
     my $library_name = $p{library_name};
     my $force_use_original_files = $p{force_use_original_files};
     my $identity_length;
-    my $remove_pcr_artifacts;
+    my $remove_pcr_artifacts =$p{remove_pcr_artifacts};
 
     #are we going to deduplicate? figure this out from a model field.
     #also set the 'length of uniquness'
@@ -60,7 +60,9 @@ sub resolve_accumulated_alignments_filename {
     $self->status_message("found multi read fragment strategy $strategy");
     if ($strategy =~ /eliminate start site duplicates\s*(\d*)/) {
         $identity_length = $1 || 26;
-        $remove_pcr_artifacts=1;        
+        unless(defined $remove_pcr_artifacts) {
+            $remove_pcr_artifacts=1;      
+        } 
         $self->status_message("removing duplicates with identity length $identity_length...");
     }
     elsif ($strategy) {
@@ -75,7 +77,7 @@ sub resolve_accumulated_alignments_filename {
     if($remove_pcr_artifacts) {
         #since deduplicating requires that we have a valid non-duplicated mapfile, we call ourself again to
         #get this mapfile (without the remove_pcr_artifacts option)
-        print "Removing PCR artifacts\n";
+        $self->status_message("Removing PCR artifacts");
         my $temp_accum_align_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $ref_seq_id,library_name => $library_name,remove_pcr_artifacts => 0);
         $DB::single=1;
         my $temp_del_file = new File::Temp( UNLINK => 1, SUFFIX => '.map');
@@ -279,7 +281,7 @@ sub find_previously_created_mapfile {
                 $self->status_message("File not found(or something terrible happened) on $host-- cmd return value was '$rv'. Continuing.");
                 next;
             }
-            $self->status_message("Found mapmerge file on found on $host: $file_to_look_for");
+            $self->status_message("Found mapmerge file on $host: $file_to_look_for");
         }
 
         
