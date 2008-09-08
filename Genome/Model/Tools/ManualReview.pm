@@ -3,8 +3,7 @@ package Genome::Model::Tools::ManualReview;
 use strict;
 use warnings;
 
-use above "Genome"; 
-
+use Genome;
 use Command;
 use Data::Dumper;
 use IO::File;
