@@ -98,6 +98,9 @@ sub create {
 
 sub revert {
     my $self = shift;
+
+    $self->warning_message("JIM ******* in revert ********** JIM\n");
+
     my @metrics = $self->metrics;
     my @outputs = $self->outputs;
     for my $output (@outputs) {
@@ -108,6 +111,8 @@ sub revert {
     }
     for my $obj (@metrics,@outputs) {
         $self->warning_message("deleting " . $self->class . " " . $self->id);
+        $self->warning_message("getting ready to call obj delete in Event.pm\n");
+        #this delete is a general UR delete not the cute delete just below - Jim & Chris
         $obj->delete;
     }
     return 1;
@@ -115,6 +120,9 @@ sub revert {
 
 sub delete {
     my $self = shift;
+
+    $self->warning_message("in delete in Event.pm\n");
+
     $self->warning_message("deleting " . $self->class . " " . $self->id);
     $self->revert;
     my @inputs = $self->inputs;

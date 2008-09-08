@@ -65,7 +65,11 @@ sub execute {
 
     if ($self->event_id) {
         my $event = Genome::Model::Event->get($self->event_id);
-        if ($event->event_status() ne 'Failed' and $event->event_status ne 'Crashed' and $event->event_status ne 'Scheduled') {
+
+
+        if ($event->event_status() ne 'Failed' and $event->event_status ne 'Crashed' and $event->event_status ne 'Scheduled'and $event->event_status ne 'Abandoned') {
+
+
             # this is a hack, but better than manually running these...
             # TODO: fix me
             unless ($self->force) {
@@ -105,6 +109,9 @@ sub execute {
         $self->error_message("unknown dispatcher '".$self->dispatcher."'.  'lsf' and 'inline' are recognized");
         return;
     }
+
+    #we could process a model name that is passed and have it set the model_id here.
+    #if we wanted to allow model names to be passed in again
 
     my %addl_get_params = (model_id => $self->model_id) ; # model_id is a required param now
     if ($self->read_set_id) {
