@@ -44,178 +44,135 @@ sub mapmerge_filename {
 #need to link _mapmerge_locally sub name to resolve_accumulated prolly
 sub resolve_accumulated_alignments_filename {
     my $self = shift;
-    
+
     $DB::single = $DB::stopper;
 
     my %p = @_;
     my $ref_seq_id = $p{ref_seq_id};
     my $library_name = $p{library_name};
     my $force_use_original_files = $p{force_use_original_files};
-    my $remove_pcr_artifacts = $p{remove_pcr_artifacts};
-    my $identity_length = $p{remove_pcr_artifacts_identity_length};
+    my $identity_length;
+    my $remove_pcr_artifacts;
 
-    unless (exists $p{remove_pcr_artifacts}) {
-        # the caller didn't explicitly state whether we should de-duplicate
-        # check the model
-        my $strategy = $self->model->multi_read_fragment_strategy||'';
-        $self->status_message("found multi read fragment strategy $strategy");
-        if ($strategy =~ /eliminate start site duplicates\s*(\d*)/) {
-            my $identity_length = $1 || 0;
-            $self->status_message("removing duplicates with identity length $identity_length...");
-            $remove_pcr_artifacts = 1;
-        }
-        elsif ($strategy) {
-            die "unknown strategy $strategy!";
-        }
+    #are we going to deduplicate? figure this out from a model field.
+    #also set the 'length of uniquness'
+    my $strategy = $self->model->multi_read_fragment_strategy||'';
+    $self->status_message("found multi read fragment strategy $strategy");
+    if ($strategy =~ /eliminate start site duplicates\s*(\d*)/) {
+        $identity_length = $1 || 26;
+        $remove_pcr_artifacts=1;        
+        $self->status_message("removing duplicates with identity length $identity_length...");
     }
-
-    if ($remove_pcr_artifacts and not exists $p{remove_pcr_artifacts_identity_length}) {
-        $identity_length = 26;
+    elsif ($strategy) {
+        die "unknown strategy $strategy!";
     }
-
-    my $model= Genome::Model->get($self->model_id);
-    my @maplists;
-    if ($ref_seq_id) {
-        @maplists = $model->maplist_file_paths(%p);
-    } else {
-        @maplists = $model->maplist_file_paths();
-    }
-    unless (@maplists) {
-        $self->error_message("Failed to find maplists!");
-        return;
-    }
-
-    if ($library_name) {
-        my @orig_maplists = @maplists;
-        @maplists = grep { /$library_name/ } @maplists;
-        unless (@maplists) {
-            $self->error_message("Failed to find library $library_name in: @orig_maplists");
-        }
-    }
-
-    if (!@maplists) {
-        $self->error_message("No maplists found");
-        return;
-    }
-
-    $ref_seq_id ||= 'all_sequences';
 
     my $result_file = $self->mapmerge_filename($ref_seq_id, $library_name, remove_pcr_artifacts => $remove_pcr_artifacts);
-    my @inputs;
-    foreach my $listfile ( @maplists ) {
-        my $f = IO::File->new($listfile);
-        next unless $f;
-        chomp(my @lines = $f->getlines());
-        push @inputs, @lines;
-    }
+    my $found=$self->find_previously_created_mapfile($result_file);;
+    return $result_file if $found;
     
-    my $found=0;
-    unless ($force_use_original_files) {
-        # unless specifically requested, we'll try to "borrow" a copy of the file 
-        # from the current /tmp or from a previous step's temp file
+    
+    if($remove_pcr_artifacts) {
+        #since deduplicating requires that we have a valid non-duplicated mapfile, we call ourself again to
+        #get this mapfile (without the remove_pcr_artifacts option)
+        print "Removing PCR artifacts\n";
+        my $temp_accum_align_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $ref_seq_id,library_name => $library_name,remove_pcr_artifacts => 0);
+        $DB::single=1;
+        my $temp_del_file = new File::Temp( UNLINK => 1, SUFFIX => '.map');
+        my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts->execute(input => $temp_accum_align_file,keep => $result_file, remove => $temp_del_file->filename, identity_length => $identity_length);
+        $self->status_message("Error deduplicating mapfile.\n") unless $result;
 
-        #someone may have the file already complete. we should just get it from them via secure copy
-        my @host_outputs = ($self->find_possible_hosts);
-        for my $host ('localhost', map { $_->value } @host_outputs) {
-            if ($host eq 'localhost') {
-                unless (-f $result_file) {
-                    next;
-                }
-                $self->status_message("Found mapmerge file left over from previous run in /tmp on this host: $result_file");
-            }
-            else { 
-                my $cmd = "scp $host:$result_file /tmp/";
-                $self->status_message("Copying file from previous host: $cmd");
-                my $rv=system($cmd);
-                if($rv != 0){
-                    $self->status_message("File not found(or something terrible happened) on $host-- cmd return value was '$rv'. Continuing.");
-                    next;
-                }
-                $self->status_message("Found mapmerge file on found on $host: $result_file");
-            }
-            unless (-s $result_file) {
-                $self->error_message("File $result_file from $host was empty.  Continuing.");
-                unlink $result_file;
-                next;
-            }
-            my @gzip_problems = `gzip -t $result_file 2>&1`;
-            if (@gzip_problems) {
-                $self->error_message("Error in gzip file $result_file!: @gzip_problems");
-                unlink $result_file;
-                next;
-            }
-            $found=1;
-            $self->cleanup_tmp_files(1);
-            last;
+        unlink $temp_del_file->filename;
+        unless (-e $result_file) {
+            $self->error_message("Error creating deduplicated mapfile, $result_file.");
+            return;
         }
+        unless (-s $result_file) {
+            $self->error_message("File $result_file is empty. deduplication failed.");
+            unlink $result_file;
+            return;    
+        }       
+    }
+    else
+    {
+
+        #find maplists that we want to merge
+        my @maplists;
+        if ($ref_seq_id) {
+            @maplists = $self->model->maplist_file_paths(%p);
+        } else {
+            @maplists = $self->model->maplist_file_paths();
+        }
+        unless (@maplists) {
+            $self->error_message("Failed to find maplists!");
+            return;
+        }
+
+        #if they want a library specific map, grep those out.
+        if ($library_name) {
+            my @orig_maplists = @maplists;
+            @maplists = grep { /$library_name/ } @maplists;
+            unless (@maplists) {
+                $self->error_message("Failed to find library $library_name in: @orig_maplists");
+            }
+        }
+
+        if (!@maplists) {
+            $self->error_message("No maplists found");
+            return;
+        }
+
+        $ref_seq_id ||= 'all_sequences';
+
+
+        my @inputs;
+        foreach my $listfile ( @maplists ) {
+            my $f = IO::File->new($listfile);
+            next unless $f;
+            chomp(my @lines = $f->getlines());
+            push @inputs, @lines;
+        }
+
+
+        if (@inputs == 1) {
+            $self->status_message("skipping merge of single-item map list: $inputs[0]");
+            return $inputs[0];
+        }
+        my $inputs = join("\n", @inputs);
+        $self->warning_message("Performing a complete mapmerge for $result_file \n"); 
+        #$self->warning_message("on $inputs \n ") 
+        $self->warning_message("Hold on...\n");
+
+        #my $cmd = Genome::Model::Tools::Maq::MapMerge->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
+        my ($fh,$maplist) = File::Temp::tempfile;
+        $fh->print(join("\n",@inputs),"\n");
+        $fh->close;
+        system "gt maq vmerge --maplist $maplist --pipe $result_file &";
+        my $start_time = time;
+        until (-p "$result_file" or ( (time - $start_time) > 100) )  {
+            $self->status_message("Waiting for pipe...");
+            sleep(5);
+        }
+        unless (-p "$result_file") {
+            die "Failed to make pipe? $!";
+        }
+        $self->status_message("Streaming into file $result_file.");
+        #system "cp $result_file.pipe $result_file";
+        unless (-p "$result_file") {
+            die "Failed to make map from pipe? $!";
+        }
+
+        $self->warning_message("mapmerge complete.  output filename is $result_file");
+    }
+    ##not sure why this is necessary?
+    my ($hostname) = $self->outputs(name => "Hostname");
+    if ($hostname) {
+        $hostname->value($ENV{HOSTNAME});
+    }
+    else {
+        $self->add_output(name=>"Hostname" , value=>$ENV{HOSTNAME});
     }
 
-    if($found==0) {
-        #no one has a file we want. we should make one and add a note that we have one.
-        if($remove_pcr_artifacts)
-        {
-            #since deduplicating requires that we have a valid non-duplicated mapfile, we call ourself again to
-            #get this mapfile (without the remove_pcr_artifacts option)
-            print "Removing PCR artifacts\n";
-            my $temp_accum_align_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $ref_seq_id,library_name => $library_name,remove_pcr_artifacts => 0);
-            $DB::single=1;
-            my $temp_del_file = new File::Temp( UNLINK => 1, SUFFIX => '.map');
-            my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts->execute(input => $temp_accum_align_file,keep => $result_file, remove => $temp_del_file->filename, identity_length => $identity_length);
-            $self->status_message("Error deduplicating mapfile.\n") unless $result;
-            
-            unlink $temp_del_file->filename;
-            #unlink $temp_accum_align_file; 
-            unless (-e $result_file) {
-                $self->error_message("Error creating deduplicated mapfile, $result_file.");
-                return;
-            }
-            unless (-s $result_file) {
-                $self->error_message("File $result_file is empty.  Continuing.");
-                unlink $result_file;
-                return;    
-            }       
-        }
-        else
-        {
-            if (@inputs == 1) {
-                $self->status_message("skipping merge of single-item map list: $inputs[0]");
-                return $inputs[0];
-            }
-            my $inputs = join("\n", @inputs);
-            $self->warning_message("Performing a complete mapmerge for $result_file \n"); 
-            #$self->warning_message("on $inputs \n ") 
-            $self->warning_message("Hold on...\n");
-
-            #my $cmd = Genome::Model::Tools::Maq::MapMerge->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
-            my ($fh,$maplist) = File::Temp::tempfile;
-            $fh->print(join("\n",@inputs),"\n");
-            $fh->close;
-            system "gt maq vmerge --maplist $maplist --pipe $result_file &";
-            my $start_time = time;
-            until (-p "$result_file" or ( (time - $start_time) > 100) )  {
-                $self->status_message("Waiting for pipe...");
-                sleep(5);
-            }
-            unless (-p "$result_file") {
-                die "Failed to make pipe? $!";
-            }
-            $self->status_message("Streaming into file $result_file.");
-            #system "cp $result_file.pipe $result_file";
-            unless (-p "$result_file") {
-                die "Failed to make map from pipe? $!";
-            }
-
-            $self->warning_message("mapmerge complete.  output filename is $result_file");
-        }
-        ##not sure why this is necessary?
-        my ($hostname) = $self->outputs(name => "Hostname");
-        if ($hostname) {
-            $hostname->value($ENV{HOSTNAME});
-        }
-        else {
-           $self->add_output(name=>"Hostname" , value=>$ENV{HOSTNAME});
-        }
-    }
     chmod 00664, $result_file;
     return $result_file;
 }
@@ -298,4 +255,49 @@ sub DESTROY {
   }      
 
    $self->SUPER::DESTROY;
-}   
+}
+
+
+
+sub find_previously_created_mapfile {
+    my $self=shift;
+    my $file_to_look_for= shift;
+
+    my @host_outputs = ($self->find_possible_hosts);
+    for my $host ('localhost', map { $_->value } @host_outputs) {
+        if ($host eq 'localhost') {
+            unless (-f $file_to_look_for) {
+                next;
+            }
+            $self->status_message("Found mapmerge file left over from previous run in /tmp on this host: $file_to_look_for");
+        }
+        else { 
+            my $cmd = "scp $host:$file_to_look_for /tmp/";
+            $self->status_message("Copying file from previous host: $cmd");
+            my $rv=system($cmd);
+            if($rv != 0){
+                $self->status_message("File not found(or something terrible happened) on $host-- cmd return value was '$rv'. Continuing.");
+                next;
+            }
+            $self->status_message("Found mapmerge file on found on $host: $file_to_look_for");
+        }
+
+        
+        unless (-s $file_to_look_for) {
+            $self->error_message("File $file_to_look_for from $host was empty.  Continuing.");
+            unlink $file_to_look_for;
+            next;
+        }
+        my @gzip_problems = `gzip -t $file_to_look_for 2>&1`;
+        if (@gzip_problems) {
+            $self->error_message("Error in gzip file $file_to_look_for!: @gzip_problems");
+            unlink $file_to_look_for;
+            next;
+        }
+
+        
+        $self->cleanup_tmp_files(1);
+        return 1;
+    }
+    return 0;
+}
