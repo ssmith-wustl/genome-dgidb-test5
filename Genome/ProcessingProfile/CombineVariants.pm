@@ -1,11 +1,11 @@
-package Genome::ProcessingProfile::SampleGenotype;
+package Genome::ProcessingProfile::CombineVariants;
 
 use strict;
 use warnings;
 
 use above "Genome";
 
-class Genome::ProcessingProfile::SampleGenotype {
+class Genome::ProcessingProfile::CombineVariants {
     is => 'Genome::ProcessingProfile::Composite',
 };
 
