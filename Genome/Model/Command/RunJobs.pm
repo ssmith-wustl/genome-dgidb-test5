@@ -171,13 +171,13 @@ sub _verify_submitted_jobs {
             lsf_job_id => { operator => 'ne', value => undef },
             %addl_get_params
         );
-    
+    $DB::single=1;
     while (my $event = shift @queued_events) {
         unless ($event->ref_seq_id || $event->run_id) {
             $self->error_message("Event ".$event->id." has no ref_seq_id or run_id... skipping.");
             next;
         }
-
+        
         my $job_id = $event->lsf_job_id;
         my @result = `bjobs $job_id 2>/dev/null`;
         
@@ -198,7 +198,7 @@ sub _verify_submitted_jobs {
         }
 
     } # end while @launchable_events
-
+    $self->context->commit;
     return 1;
 }
 
@@ -275,6 +275,7 @@ sub _reschedule_failed_jobs {
                             #                                 date_scheduled => { operator => '>', value => $_->date_scheduled } ) }
                             Genome::Model::Event->get(event_status => ['Failed','Crashed'],%addl_get_params);  
 
+    $DB::single=1;                         
     while (my $event = shift @launchable_events) {
         # Get subsequent events that have been through a round of 'scheduling'.
         # ie. they have an lsf_job_id assigned to them.  These jobs will need to
