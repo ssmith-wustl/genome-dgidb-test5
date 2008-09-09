@@ -135,16 +135,8 @@ sub create_model {
     } else {
         confess('Platform '. $model->sequencing_platform .' is not supported by test');
     }
-
-    my @sub_command_classes = Genome::Model::Command::Build::ReferenceAlignment->subordinate_job_classes;
-    my $sub_command_count = 0;
-    for my $command_classes (@sub_command_classes) {
-        for my $command_class (@{$command_classes}) {
-            $sub_command_count++;
-        }
-    }
-    $self->{_expected_postprocess_events} = $ref_seqs * $sub_command_count;
-
+    $self->{_ref_seq_count} = $ref_seqs;
+    
     my @read_sets = @{$self->{_read_set_array_ref}};
     $self->{_expected_add_reads_events} = scalar(@add_reads_commands);
     # At some point the number of expected tests from test_c should be set
@@ -207,11 +199,19 @@ sub add_reads {
         #isa_ok($accept_reads_command,'Genome::Model::Command::AddReads::AcceptReads');
         #$self->execute_event_test($accept_reads_command,$read_set);
     }
-
     my $pp_alignments = Genome::Model::Command::Build::ReferenceAlignment->create(
-                                                                                        model_id => $model->id,
-                                                                                    );
+                                                                                  model_id => $model->id,
+                                                                              );
     isa_ok($pp_alignments,'Genome::Model::Command::Build::ReferenceAlignment');
+
+    my @sub_command_classes = $pp_alignments->subordinate_job_classes;
+    my $sub_command_count = 0;
+    for my $command_classes (@sub_command_classes) {
+        for my $command_class (@{$command_classes}) {
+            $sub_command_count++;
+        }
+    }
+    $self->{_expected_postprocess_events} = $self->{_ref_seq_count} * $sub_command_count;
     ok($pp_alignments->execute(), 'execute genome-model add-reads postprocess-alignments');
     #UR::Context->_sync_databases();
 
