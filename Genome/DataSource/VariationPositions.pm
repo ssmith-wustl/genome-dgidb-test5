@@ -15,11 +15,29 @@ class Genome::DataSource::VariationPositions {
 sub resolve_data_sources_for_rule {
     my($self,$rule) = @_;
 
-$DB::single=1;
-    my $model_id = $rule->specified_value_for_property_name('model_id');
-    unless ($model_id) {
-        $self->error_message("Can't resolve final data source: no model_id specified in rule with id ".$rule->id);
-        return;
+    unless ($rule->isa('UR::BoolExpr')) {
+        # was a rule template.  Probably in the process of doing a cross datasource join
+        return $self;
+    }
+
+    my $model_id;
+    unless ($model_id = $rule->specified_value_for_property_name('model_id')) {
+        # No model_id specified directly, try decomposing the id
+        my $rule_id = $rule->specified_value_for_property_name('id');
+        my $class_meta = $rule->subject_class_name->get_class_object();
+        my @id_property_names = $class_meta->id_property_names;
+        my @id_property_values = $class_meta->get_composite_id_decomposer->($rule_id);
+
+        for (my $i = 0; $i < @id_property_names; $i++) {
+            if ($id_property_names[$i] eq 'model_id') {
+                $model_id = $id_property_values[$i];
+                last;
+            }
+        }
+        unless ($model_id) {
+            $self->error_message("Can't resolve final data source: no model_id specified in rule with id ".$rule->id);
+            return;
+        }
     }
     unless (Genome::Model->get(id => $model_id)) {
         $self->error_message("No model for model_id $model_id");
@@ -113,11 +131,13 @@ sub _variation_data_source_factory {
         into => $args{'ds_class'},
         as   => '_generate_loading_templates_arrayref',
         code => sub { my $class = shift;
-                      $DB::single=1;
                       # This should ever only return 1 template in the listref
-                      # FIXME - why is SUPER going to UR::DataSource and not UR::DataSource::SortedCsvFile??
+                      # Note - since, at compile time, SUPER is UR::DataSource (this factory class' SUPER),
+                      # the commented-out thing below would go to the wrong package.  
                       #my $templates = $class->SUPER::_generate_loading_templates_arrayref(@_);
-                      my $templates = UR::DataSource::SortedCsvFile::_generate_loading_templates_arrayref($class,@_);
+
+                      my $subref = $class->super_can('_generate_loading_templates_arrayref');
+                      my $templates = $subref->($class,@_);
 
                       $templates->[0]->{'constant_property_names'} = ['model_id'];
                       $templates->[0]->{'constant_property_values'} = [ $model_id ];
