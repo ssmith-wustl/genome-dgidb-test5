@@ -30,52 +30,14 @@ sub params_for_class {
     return;
 }
 
-sub get_with_special_parameters {
-    my $class = shift;
-    my %params = @_;
-
-    my @found;
-
-    my @pp = $class->get();
-  PP: for my $pp (@pp) {
-      PARAM: for my $param_name ($class->params_for_class) {
-            my $param_value = $pp->$param_name;
-            if (defined($params{$param_name}) && defined($param_value)) {
-                unless ( $param_value eq $params{$param_name}) {
-                    next PP;
-                }
-            } elsif (defined($params{$param_name}) || (defined($param_value))) {
-                next PP;
-            }
-        }
-        push @found, $pp;
-    }
-    return @found;
-}
-
 sub create {
-    my ($class,%params) = @_;
-
-    my %added_params;
-    unless ($class eq __PACKAGE__) {
-        for my $param_name ($class->params_for_class) {
-            if (defined($params{$param_name})) {
-                $added_params{$param_name} = delete($params{$param_name});
-            }
-        }
-    }
-
-    my $self = $class->SUPER::create(%params);
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    return unless $self; 
     unless ($self->type_name) {
         my $type_name =
             $class->_resolve_type_name_for_subclass_name($self->class);
         $self->type_name($type_name);
-    }
-    for my $added_param_name (keys %added_params) {
-        $self->add_param(
-                         name => $added_param_name,
-                         value => $added_params{$added_param_name},
-                     );
     }
     return $self;
 }
