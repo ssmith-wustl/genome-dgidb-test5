@@ -253,7 +253,7 @@ sub _create_target_class_instance_and_error_check{
 
     # If any params exist besides name and id... check them
     if (scalar(keys %get_params) > 0) {
-        @existing_profiles = $self->target_class->get_with_special_parameters(%get_params);
+        @existing_profiles = $self->target_class->get(%get_params);
         if (scalar(@existing_profiles) > 0) {
             my $existing_name = $existing_profiles[0]->name;
             $self->error_message("A processing profile named $existing_name already exists with the same parameters. Processing profiles must be functionally unique.");
@@ -262,6 +262,7 @@ sub _create_target_class_instance_and_error_check{
     }
 
     # If it passed the above checks, create the processing profile
+    #print "Creating $target_class: " . Data::Dumper::Dumper(\%params) . "\n";
     my $obj = $target_class->create(%params);
     if (!$obj) {
         $self->error_message(
