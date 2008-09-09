@@ -61,5 +61,23 @@ foreach my $job (@jobs) {
     foreach my $gene (@genes) {
 	    isa_ok($gene, 'Bio::SeqFeature::Generic');
     }
+
+    if (ref($job) eq 'GAP::Job::RfamScan') {
+    
+        foreach my $gene (@genes) {
+        
+            ok($gene->has_tag('id');
+            ok($gene->has_tag('rfam_product');
+
+            my ($id)           = $gene->each_tag_value('id');
+            my ($rfam_product) = $gene->each_tag_value('rfam_product');
+       
+            if ($id eq 'id1') { 
+                is($rfam_product, 'product1'); 
+            }
+       
+        }
+    
+    }
     
 }
