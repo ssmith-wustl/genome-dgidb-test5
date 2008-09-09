@@ -4,7 +4,7 @@ package Genome::Model::Command::Htest::Diff::IdentifyPossibleMisalignedReads;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command; 
 
 class Genome::Model::Command::Htest::Diff::IdentifyPossibleMisalignedReads {

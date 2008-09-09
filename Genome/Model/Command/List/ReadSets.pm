@@ -5,7 +5,7 @@ package Genome::Model::Command::List::ReadSets;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::List::ReadSets {
     is => 'UR::Object::Command::List',

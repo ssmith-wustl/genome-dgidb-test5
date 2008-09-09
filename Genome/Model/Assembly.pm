@@ -3,7 +3,7 @@ package Genome::Model::Assembly;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Assembly {
     is => 'Genome::Model',

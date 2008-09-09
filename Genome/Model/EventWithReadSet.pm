@@ -3,7 +3,7 @@ package Genome::Model::EventWithReadSet;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::EventWithReadSet {
     is => 'Genome::Model::Event',

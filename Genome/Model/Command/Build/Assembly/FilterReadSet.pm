@@ -3,7 +3,7 @@ package Genome::Model::Command::Build::Assembly::FilterReadSet;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 
 class Genome::Model::Command::Build::Assembly::FilterReadSet {

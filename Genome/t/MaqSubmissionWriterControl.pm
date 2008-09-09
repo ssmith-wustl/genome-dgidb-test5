@@ -3,7 +3,7 @@ package MaqSubmissionWriterControl;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use MG::Transform::Coordinates::TranscriptToGenomic;
 use MG::IO::GenotypeSubmission;

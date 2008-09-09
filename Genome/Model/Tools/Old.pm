@@ -4,7 +4,7 @@ package Genome::Model::Tools::Old;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command; 
 
 UR::Object::Type->define(

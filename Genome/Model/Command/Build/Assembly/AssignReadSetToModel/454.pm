@@ -3,7 +3,7 @@ package Genome::Model::Command::Build::Assembly::AssignReadSetToModel::454;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::Build::Assembly::AssignReadSetToModel::454 {
     is => 'Genome::Model::Command::Build::Assembly::AssignReadSetToModel',

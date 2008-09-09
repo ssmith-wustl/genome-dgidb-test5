@@ -3,7 +3,7 @@ package Genome::Model::Command::Write::GenotypeSubmission::454;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use File::Path;
 use MG::Transform::Coordinates::TranscriptToGenomic;

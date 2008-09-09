@@ -3,7 +3,7 @@ package Genome::Model::Command::Annotate::GetAnnotationInfo;
 use strict;
 use warnings;
 
-use above "Genome"; 
+use Genome; 
 
 class Genome::Model::Command::Annotate::GetAnnotationInfo
 {

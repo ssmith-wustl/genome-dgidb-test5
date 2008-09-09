@@ -4,7 +4,7 @@ package Genome::ProcessingProfile::ImportedVariants;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::ProcessingProfile::ImportedVariants{
     is => 'Genome::ProcessingProfile',

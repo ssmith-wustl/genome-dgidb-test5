@@ -3,7 +3,7 @@ package Genome::Model::Command::AddReads::MergeAlignments::Maq;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use File::Basename;
 use Genome::Model;

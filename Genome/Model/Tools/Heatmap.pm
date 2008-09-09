@@ -5,7 +5,7 @@ package Genome::Model::Tools::Heatmap;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use Carp;
 use IO::File;

@@ -2,7 +2,7 @@ package Genome::Model::Command::AddReads::ProcessLowQualityAlignments::Maq;
 
 use strict;
 use warnings;
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::AddReads::ProcessLowQualityAlignments::Maq {
     is => 'Genome::Model::Command::AddReads::ProcessLowQualityAlignments',

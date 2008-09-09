@@ -3,7 +3,7 @@ package Genome::Model::Tools::FastaDiff;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use Bio::SeqIO;
 use File::Temp;

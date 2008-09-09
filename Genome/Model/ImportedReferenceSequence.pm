@@ -4,7 +4,7 @@ package Genome::Model::ImportedReferenceSequence;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::ImportedReferenceSequence{
     is => 'Genome::Model',

@@ -4,7 +4,7 @@ package Genome::Model::Tools::Example1;   # rename this when you give the module
 use strict;
 use warnings;
 
-use above "Genome";                         # >above< ensures YOUR copy is used during development
+use Genome;                         # >above< ensures YOUR copy is used during development
 
 class Genome::Model::Tools::Example1 {
     is => 'Command',                       

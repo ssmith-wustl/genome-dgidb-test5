@@ -3,7 +3,7 @@ package Genome::Model::Command::List::Models;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command; 
 use Data::Dumper;
 

@@ -5,7 +5,7 @@ package Genome::Model::Tools::SxogToBinary;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 
 use GSC;

@@ -3,7 +3,7 @@ package Genome::Model::Tools::SeeFourFive::CrossValidate;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use IO::File;
 use Math::Random;

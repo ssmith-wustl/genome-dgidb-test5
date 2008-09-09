@@ -3,7 +3,7 @@ package Genome::Utility::PSL::Reader;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 # This only works for blat output ran with the -noHead option
 

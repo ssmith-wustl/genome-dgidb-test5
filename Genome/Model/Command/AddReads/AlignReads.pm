@@ -3,8 +3,7 @@ package Genome::Model::Command::AddReads::AlignReads;
 use strict;
 use warnings;
 
-use above "UR";
-use Command; 
+use Genome;
 
 class Genome::Model::Command::AddReads::AlignReads {
     is => ['Genome::Model::EventWithReadSet'],

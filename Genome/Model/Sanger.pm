@@ -5,7 +5,7 @@ use warnings;
 use IO::File;
 use File::Copy "cp";
 use Data::Dumper;
-use above "Genome";
+use Genome;
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 
 

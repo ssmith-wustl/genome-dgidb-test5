@@ -3,7 +3,7 @@ package Genome::RunChunk;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use File::Basename;
 
 use GSC;

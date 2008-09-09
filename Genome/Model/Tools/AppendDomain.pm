@@ -5,7 +5,7 @@ use warnings;
 
 # this probably need a bit more documentation
 
-use above "Genome";
+use Genome;
 use Command;
 use Carp;
 use IO::File;

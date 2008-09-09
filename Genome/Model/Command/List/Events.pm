@@ -3,7 +3,7 @@ package Genome::Model::Command::List::Events;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 use Command; 
 use Data::Dumper;

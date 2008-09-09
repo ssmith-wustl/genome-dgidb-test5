@@ -4,7 +4,7 @@ package Genome::Model::ShortRead;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Term::ANSIColor;
 use Genome::Model::EqualColumnWidthTableizer;
 use File::Path;

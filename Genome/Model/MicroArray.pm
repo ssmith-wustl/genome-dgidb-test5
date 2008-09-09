@@ -4,7 +4,7 @@ package Genome::Model::MicroArray;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use File::Basename;
 use Sort::Naturally;
 

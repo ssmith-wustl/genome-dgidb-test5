@@ -3,7 +3,7 @@ package Genome::Model::Command::Build::Assembly::Assemble::Newbler;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::Build::Assembly::Assemble::Newbler {
     is => 'Genome::Model::Command::Build::Assembly::Assemble',

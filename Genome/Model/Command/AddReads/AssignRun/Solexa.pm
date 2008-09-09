@@ -3,7 +3,7 @@ package Genome::Model::Command::AddReads::AssignRun::Solexa;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use File::Path;
 use GSC;
 

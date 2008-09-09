@@ -4,7 +4,7 @@ package Genome::ProcessingProfile::DeNovoSanger;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::ProcessingProfile::DeNovoSanger{
     is => 'Genome::ProcessingProfile',

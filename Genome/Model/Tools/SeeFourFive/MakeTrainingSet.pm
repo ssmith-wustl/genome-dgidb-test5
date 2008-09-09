@@ -3,7 +3,7 @@ package Genome::Model::Tools::SeeFourFive::MakeTrainingSet;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use IO::File;
 use List::Util 'shuffle';

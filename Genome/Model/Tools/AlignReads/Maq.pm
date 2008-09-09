@@ -4,7 +4,7 @@ package Genome::Model::Tools::AlignReads::Maq;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use File::Temp;
 use IO::File;

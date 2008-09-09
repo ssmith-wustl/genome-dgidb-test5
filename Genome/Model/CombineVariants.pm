@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use IO::File;
-use above "Genome";
+use Genome;
 use Data::Dumper;
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 

@@ -4,7 +4,7 @@ package Genome::Model;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Term::ANSIColor;
 use Genome::Model::EqualColumnWidthTableizer;
 use Genome::Model::Tools::Maq::RemovePcrArtifacts;

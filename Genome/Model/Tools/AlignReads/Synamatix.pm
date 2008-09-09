@@ -4,7 +4,7 @@ package Genome::Model::Tools::AlignReads::Synamatix;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use File::Basename;
 

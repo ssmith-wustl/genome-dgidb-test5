@@ -6,7 +6,7 @@ use warnings;
 use IO::File;
 use Data::Dumper;
 
-use above "Genome";
+use Genome;
 
 # Could inherit from Parser but no known column headers
 class Genome::Utility::GeneHeader::Reader {

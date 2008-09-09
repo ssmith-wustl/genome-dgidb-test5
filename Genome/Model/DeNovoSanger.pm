@@ -4,7 +4,7 @@ package Genome::Model::DeNovoSanger;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::DeNovoSanger{
     is => 'Genome::Model',

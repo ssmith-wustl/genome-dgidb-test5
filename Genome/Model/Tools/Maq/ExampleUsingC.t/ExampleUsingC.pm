@@ -1,6 +1,6 @@
 package Genome::Model::Tools::Maq::ExampleUsingC;
 
-use above "Genome";
+use Genome;
 class Genome::Model::Tools::Maq::ExampleUsingC {
     is => 'Command',
     has => [

@@ -4,7 +4,7 @@ package Genome::ProcessingProfile::Venter;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::ProcessingProfile::Venter{
     is => 'Genome::ProcessingProfile::ImportedVariants',

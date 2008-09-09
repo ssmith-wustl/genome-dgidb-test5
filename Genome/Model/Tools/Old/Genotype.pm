@@ -4,7 +4,7 @@ package Genome::Model::Tools::Old::Genotype;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Genome::Model::Command::IterateOverRefSeq;
 
 UR::Object::Type->define(

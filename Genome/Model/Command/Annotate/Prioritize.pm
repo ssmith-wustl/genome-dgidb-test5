@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use IO::File;
 
-use above "Genome";                         
+use Genome;                         
 
 class Genome::Model::Command::Annotate::Prioritize 
 {

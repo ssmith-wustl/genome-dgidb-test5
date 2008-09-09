@@ -2,7 +2,7 @@ package Genome::Model::Command::AddReads::FilterVariations::Dtr3e;
 
 use strict;
 use warnings;
-use above "Genome";
+use Genome;
 use Genome::Model::Tools::Snp::Filters::ScaledBinomialTest;
 use Genome::Model::Tools::Snp::Filters::Dtr3e;
 use Genome::Model::Tools::Snp::Filters::GenerateFigure3Files;

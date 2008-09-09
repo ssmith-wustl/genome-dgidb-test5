@@ -3,7 +3,7 @@ package Genome::ProcessingProfile::Composite;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::ProcessingProfile::Composite {
     is => 'Genome::ProcessingProfile',

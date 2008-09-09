@@ -3,7 +3,7 @@ package Genome::Utility::SeqcleanReport::Reader;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 my @header_fields = qw(accession pc_undetermined start end length trash_code comments);
 

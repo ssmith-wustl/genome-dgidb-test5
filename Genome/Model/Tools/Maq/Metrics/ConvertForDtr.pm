@@ -2,7 +2,7 @@ package Genome::Model::Tools::Maq::Metrics::ConvertForDtr;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use IO::File;
 use List::Util 'shuffle';

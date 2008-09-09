@@ -5,7 +5,7 @@ package Genome::Model::Command::Write::Ace::Sxog;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 
 use Genome::Model::Command::Write::Ace;

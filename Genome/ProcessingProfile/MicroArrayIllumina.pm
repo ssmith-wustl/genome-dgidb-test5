@@ -4,7 +4,7 @@ package Genome::ProcessingProfile::MicroArrayIllumina;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::ProcessingProfile::MicroArrayIllumina {
     is => 'Genome::ProcessingProfile::MicroArray',

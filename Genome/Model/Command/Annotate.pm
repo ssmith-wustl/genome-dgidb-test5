@@ -4,7 +4,7 @@ package Genome::Model::Command::Annotate;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::Annotate {
     is => 'Genome::Model::Event',

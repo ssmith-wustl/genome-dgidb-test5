@@ -4,7 +4,7 @@ package Genome::Model::Watson;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Watson {
     is => 'Genome::Model::ImportedVariants',

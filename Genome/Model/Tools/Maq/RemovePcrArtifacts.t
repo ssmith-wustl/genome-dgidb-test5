@@ -3,7 +3,7 @@
 package Genome::Model::Tools::Maq::RemovePcrArtifacts::Test;
 use Genome::Model::Tools::Maq::Map::Reader;
 use Data::Dumper;
-use above "Genome";                         # >above< ensures YOUR copy is used during development
+use Genome;                         # >above< ensures YOUR copy is used during development
 use Test::More tests => 2;
 use File::Temp;
 

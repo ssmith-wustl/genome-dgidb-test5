@@ -4,7 +4,7 @@ package Genome::Model::ImportedVariants;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::ImportedVariants {
     is => 'Genome::Model',

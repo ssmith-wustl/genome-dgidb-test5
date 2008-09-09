@@ -1,6 +1,6 @@
 package Genome::Model::Tools::Maq::GenerateVariationMetrics;
 
-use above "Genome";
+use Genome;
 use File::Basename;
 use Genome;
 class Genome::Model::Tools::Maq::GenerateVariationMetrics {

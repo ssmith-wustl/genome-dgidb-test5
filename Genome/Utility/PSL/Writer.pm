@@ -3,7 +3,7 @@ package Genome::Utility::PSL::Writer;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 my @header_fields = qw(matches misMatches repMatches nCount qNumInsert qBaseInsert tNumInsert tBaseInsert strand qName qSize qStart qEnd tName tSize tStart tEnd blockCount blockSizes qStarts tStarts qSeq tSeq);
 

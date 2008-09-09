@@ -5,7 +5,7 @@ package Genome::Model::Tools::Reads::Solexa;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 
 UR::Object::Type->define(

@@ -3,7 +3,7 @@ package Genome::Model::Tools::Snp::Evaluation;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use IO::File;
 use Bio::DB::Fasta;

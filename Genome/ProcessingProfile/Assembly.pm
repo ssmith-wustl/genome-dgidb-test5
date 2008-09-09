@@ -3,7 +3,7 @@ package Genome::ProcessingProfile::Assembly;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 my @PARAMS = qw/
                read_filter

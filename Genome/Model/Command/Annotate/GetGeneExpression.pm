@@ -13,7 +13,7 @@ use Data::Dumper;
 use MPSampleData::ExternalGeneId;
 use MG::Analysis::VariantAnnotation;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::Annotate::GetGeneExpression {
     is  => 'Command',

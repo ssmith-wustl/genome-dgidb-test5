@@ -3,7 +3,7 @@ package Genome::Model::Command::AddReads::AssignRun;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 
 class Genome::Model::Command::AddReads::AssignRun {

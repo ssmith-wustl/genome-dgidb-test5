@@ -3,7 +3,7 @@ package Genome::Model::Command::Report::VariationsBatchToLsf;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 use Genome::Model::Command::Report::Variations;
 use Data::Dumper;

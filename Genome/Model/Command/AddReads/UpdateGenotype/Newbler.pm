@@ -3,7 +3,7 @@ package Genome::Model::Command::AddReads::UpdateGenotype::Newbler;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use Genome::Model;
 use Genome::Model::Tools::454::Newbler::RunProject;

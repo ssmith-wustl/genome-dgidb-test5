@@ -3,7 +3,7 @@ package Genome::Model::Tools::FastaToBfa;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use IO::File;
 use File::Path;

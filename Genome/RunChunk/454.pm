@@ -3,7 +3,7 @@ package Genome::RunChunk::454;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Genome::RunChunk;
 
 class Genome::RunChunk::454 {

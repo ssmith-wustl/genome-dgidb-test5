@@ -4,7 +4,7 @@ package Genome::Model::Command::Report;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::Report {
     is => 'Genome::Model::Command',

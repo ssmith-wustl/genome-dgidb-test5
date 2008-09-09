@@ -2,7 +2,7 @@
 
 package Genome::Model::Tools::Maq::Map::Utils::Test;
 
-use above "Genome";                         # >above< ensures YOUR copy is used during development
+use Genome;                         # >above< ensures YOUR copy is used during development
 use Test::More tests => 5;
 
 class Genome::Model::Tools::Maq::Map::Utils::Test {

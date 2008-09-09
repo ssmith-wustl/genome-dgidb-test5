@@ -12,7 +12,7 @@ use MPSampleData::DBI;
 use MPSampleData::ExternalGeneId;
 use MG::Analysis::VariantAnnotation;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::Annotate::GetGeneExpressionAddCdnaReads {
     is  => 'Command',

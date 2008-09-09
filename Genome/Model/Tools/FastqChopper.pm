@@ -3,7 +3,7 @@ package Genome::Model::Tools::FastqChopper;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use File::Temp;
 use IO::File;

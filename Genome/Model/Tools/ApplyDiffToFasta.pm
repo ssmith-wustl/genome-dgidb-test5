@@ -7,7 +7,7 @@ use Data::Dumper;
 use Genome::Utility::FastaStreamOut;
 use Genome::Utility::DiffStream;
 use Genome::Utility::FastaStreamIn;
-use above "Genome";
+use Genome;
 use Command;
 use GSCApp;
 

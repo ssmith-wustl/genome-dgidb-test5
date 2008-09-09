@@ -3,7 +3,7 @@ package Genome::Model::Tools::Maq::MapSplit;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 
 class Genome::Model::Tools::Maq::MapSplit {

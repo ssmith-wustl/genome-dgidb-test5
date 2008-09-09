@@ -3,7 +3,7 @@ package Genome::Model::Tools::ImportAlleleFreq;
 use strict;
 use warnings;
 
-use above "Genome";                         # >above< ensures YOUR copy is used during development
+use Genome;                         # >above< ensures YOUR copy is used during development
 use MPSampleData::VariationGroup;
 
 class Genome::Model::Tools::ImportAlleleFreq {

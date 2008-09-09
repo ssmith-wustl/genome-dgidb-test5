@@ -3,7 +3,7 @@ package Genome::Model::Tools::454::Sffinfo;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Genome::Model::Tools::454;
 
 class Genome::Model::Tools::454::Sffinfo {

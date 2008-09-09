@@ -4,7 +4,7 @@ package Genome::Model::Command::Htest::Diff;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command; 
 
 class Genome::Model::Command::Htest::Diff {

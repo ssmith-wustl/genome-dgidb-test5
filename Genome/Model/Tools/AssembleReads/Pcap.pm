@@ -4,7 +4,7 @@ package Genome::Model::Tools::AssembleReads::Pcap;
 use strict;
 use warnings;
 
-use above "Genome"; 
+use Genome; 
 use IO::File;
 use File::Basename;
 use GSC::IO::Assembly::StatsFiles; 

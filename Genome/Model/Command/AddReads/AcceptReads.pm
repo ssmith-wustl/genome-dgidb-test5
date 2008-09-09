@@ -4,7 +4,7 @@ package Genome::Model::Command::AddReads::AcceptReads;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command; 
 
 class Genome::Model::Command::AddReads::AcceptReads {

@@ -4,7 +4,7 @@ package Genome::Model::Command::Services;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command; 
 
 class Genome::Model::Command::Services {

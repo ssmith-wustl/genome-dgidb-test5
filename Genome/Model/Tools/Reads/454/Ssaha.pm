@@ -3,7 +3,7 @@ package Genome::Model::Tools::Reads::454::Ssaha;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use File::Path;
 use File::Basename;

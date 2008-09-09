@@ -3,7 +3,7 @@ package Genome::Model::Tools::454::Newbler;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 use File::Basename;
 

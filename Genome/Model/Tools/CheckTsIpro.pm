@@ -3,7 +3,7 @@ package Genome::Model::Tools::CheckTsIpro;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use Carp;
 use File::Slurp;

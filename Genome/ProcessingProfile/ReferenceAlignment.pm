@@ -3,7 +3,7 @@ package Genome::ProcessingProfile::ReferenceAlignment;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 my @PARAMS = qw/
                 align_dist_threshold

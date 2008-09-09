@@ -5,7 +5,7 @@ package Genome::Model::Tools::Reads::Solexa::Bustard;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use File::Basename;
 

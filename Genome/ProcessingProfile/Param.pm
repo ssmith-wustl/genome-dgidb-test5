@@ -3,7 +3,7 @@ package Genome::ProcessingProfile::Param;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::ProcessingProfile::Param {
     type_name => 'processing profile param',

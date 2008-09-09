@@ -10,7 +10,7 @@ use FileHandle;
 use IO::File;
 use MPSampleData::RggInfo;
 use Text::CSV_XS;
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::Annotate::GetQualityValues {
     is  => 'Command',

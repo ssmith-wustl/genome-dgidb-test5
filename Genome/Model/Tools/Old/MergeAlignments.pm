@@ -3,7 +3,7 @@ package Genome::Model::Tools::MergeAlignments;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 
 use Fcntl;

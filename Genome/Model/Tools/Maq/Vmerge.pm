@@ -3,7 +3,7 @@ package Genome::Model::Tools::Maq::Vmerge;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use File::Temp;
 use IO::File;

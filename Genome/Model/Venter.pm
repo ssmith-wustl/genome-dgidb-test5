@@ -4,7 +4,7 @@ package Genome::Model::Venter;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Venter {
     is => 'Genome::Model::ImportedVariants',

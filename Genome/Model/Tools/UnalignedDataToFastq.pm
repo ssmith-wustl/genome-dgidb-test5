@@ -3,7 +3,7 @@ package Genome::Model::Tools::UnalignedDataToFastq;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use Genome::Model;
 

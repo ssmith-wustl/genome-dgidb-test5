@@ -3,7 +3,7 @@ package Genome::Model::Command::Annotate::BatchSnps;
 use strict;
 use warnings;
 
-use above "Genome";                
+use Genome;                
 
 use Data::Dumper;
 #use Genome::Model::Command::Annotate::AmlReportManager;

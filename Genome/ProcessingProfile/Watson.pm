@@ -4,7 +4,7 @@ package Genome::ProcessingProfile::Watson;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::ProcessingProfile::Watson{
     is => 'Genome::ProcessingProfile::ImportedVariants',

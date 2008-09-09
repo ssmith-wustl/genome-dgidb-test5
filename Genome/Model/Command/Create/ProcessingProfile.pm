@@ -4,7 +4,7 @@ package Genome::Model::Command::Create::ProcessingProfile;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::Create::ProcessingProfile {
     is => 'Command',

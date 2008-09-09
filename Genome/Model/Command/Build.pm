@@ -5,7 +5,7 @@ use warnings;
 
 use Data::Dumper;
 
-use above "Genome";
+use Genome;
 use Command; 
 
 

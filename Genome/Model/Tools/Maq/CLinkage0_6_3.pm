@@ -3,8 +3,7 @@ package Genome::Model::Tools::Maq::CLinkage0_6_3;
 use strict;
 use warnings;
 
-use above 'Genome';
-
+use Genome;
 use Genome::Model::Tools::Maq::CLinkage;
 
 # This module is the bridge between the CLinkage perl module 

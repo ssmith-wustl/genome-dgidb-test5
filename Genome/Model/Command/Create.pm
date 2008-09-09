@@ -4,7 +4,7 @@ package Genome::Model::Command::Create;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::Create {
     is => 'Genome::Model::Command',

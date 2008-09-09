@@ -3,7 +3,7 @@ package Genome::Model::Tools::Pcap;
 use strict;
 use warnings;
 
-use above "Genome";                         # >above< ensures YOUR copy is used during development
+use Genome;                         # >above< ensures YOUR copy is used during development
 
 class Genome::Model::Tools::Pcap {
     is => 'Command',

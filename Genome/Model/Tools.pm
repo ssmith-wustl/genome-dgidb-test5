@@ -4,7 +4,7 @@ package Genome::Model::Tools;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Tools {
     is => ['Command'],

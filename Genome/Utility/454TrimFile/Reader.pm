@@ -3,7 +3,7 @@ package Genome::Utility::454TrimFile::Reader;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 my @header_fields = qw(accession start end);
 

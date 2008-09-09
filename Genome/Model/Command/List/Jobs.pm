@@ -3,7 +3,7 @@ package Genome::Model::Command::List::Jobs;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use GSC;
 use Command; 
 use Data::Dumper;

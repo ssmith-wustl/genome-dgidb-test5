@@ -11,7 +11,7 @@ use MG::Analysis::VariantAnnotation;
 use FileHandle;
 use IO::File;
 use Text::CSV_XS;
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::Annotate::AppendWatsonVenter {
     is  => 'Command',

@@ -3,7 +3,7 @@ package Genome::Model::Command::ReLaunch;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Command::ReLaunch {
     is => 'Genome::Model::Command',

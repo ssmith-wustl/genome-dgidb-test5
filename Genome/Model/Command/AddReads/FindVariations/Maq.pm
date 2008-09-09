@@ -3,7 +3,7 @@ package Genome::Model::Command::AddReads::FindVariations::Maq;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use Genome::Model;
 use File::Path;

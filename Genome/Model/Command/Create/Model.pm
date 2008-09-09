@@ -4,7 +4,7 @@ package Genome::Model::Command::Create::Model;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command; 
 use Genome::Model;
 use File::Path;

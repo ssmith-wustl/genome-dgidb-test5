@@ -4,7 +4,7 @@ package Genome::Model::Tools::AssembleReads;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Tools::AssembleReads {
     is => 'Command',

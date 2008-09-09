@@ -4,7 +4,7 @@ package Genome::Model::Command::Old::Genotype::TopAlignment;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 
 use IO::File;

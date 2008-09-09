@@ -4,7 +4,7 @@ package Genome::Model::Command::Write::Ace;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command; 
 
 use Bio::Index::Fasta;

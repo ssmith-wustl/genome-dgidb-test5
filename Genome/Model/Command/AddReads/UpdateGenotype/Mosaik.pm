@@ -3,7 +3,7 @@ package Genome::Model::Command::AddReads::UpdateGenotype::Mosaik;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 use Command;
 use Genome::Model;
 
