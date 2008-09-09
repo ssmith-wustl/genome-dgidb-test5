@@ -684,6 +684,7 @@ my %csp_priority = (
     'select amplicons for tilepath'           => 1,
     'build project tilepath'                  => 1,
     'add amplicon to amplification target'    => 1,
+    'add capture tag to amplification target' => 1,
 
 #    these were given their own cron to get around the
 #    problem of running as the lims user instead of seqmgr
