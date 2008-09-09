@@ -1,49 +1,49 @@
 
-package Genome::Model::Command::Create::ProcessingProfile::ShortRead;
+package Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment;
 
 use strict;
 use warnings;
 
-use Genome;
+use above "Genome";
 use Command; 
 use Genome::Model;
 use File::Path;
 use Data::Dumper;
 
-class Genome::Model::Command::Create::ProcessingProfile::ShortRead {
+class Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment {
     is => ['Genome::Model::Event', 'Genome::Model::Command::Create::ProcessingProfile'],
     sub_classification_method_name => 'class',
     has => [
 		# This will probably never be specified since processing profiles are used for many models
 		# this shouldnt even be here except that we need to override this to be not required
         model                  		 => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
-		align_dist_threshold         => { is => 'VARCHAR2', len => 255, is_optional => 1,
-										doc => ""},
-		dna_type                     => { is => 'VARCHAR2', len => 64, is_optional => 1,
-										doc => "The type of dna used in the reads for this model, probably 'genomic dna' or 'cdna'"},
-		genotyper	                 => { is => 'VARCHAR2', len => 255, is_optional => 1,
-										doc => "Name of the genotyper for this model"},
-		genotyper_params             => { is => 'VARCHAR2', len => 255, is_optional => 1,
-										doc => "command line args used for the genotyper"},
-		indel_finder                 => { is => 'VARCHAR2', len => 255, is_optional => 1,
-										doc => "Name of the indel finder for this model"},
-		indel_finder_params          => { is => 'VARCHAR2', len => 255, is_optional => 1,
-										doc => "command line args for the indel finder"},
-		multi_read_fragment_strategy => { is => 'VARCHAR2', len => 255, is_optional => 1,
-										doc => ""},
-		prior_ref_seq		     => { is => 'VARCHAR2', len => 255, is_optional => 1,
-										doc => ""},
-		read_aligner                 => { is => 'VARCHAR2', len => 255, is_optional => 0,
-										doc => "alignment program used for this model"},
-		read_aligner_params          => { is => 'VARCHAR2', len => 255, is_optional => 1,
-										doc => "command line args for the aligner"},
-		read_calibrator              => { is => 'VARCHAR2', len => 255, is_optional => 1,
-										doc => ""},
-		read_calibrator_params       => { is => 'VARCHAR2', len => 255, is_optional => 1,
-										doc => ""},
-		reference_sequence           => { is => 'VARCHAR2', len => 255, is_optional => 1,
-										doc => "Identifies the reference sequence used in the model"},
-		sequencing_platform          => { is => 'VARCHAR2', len => 255, is_optional => 1, 
+	align_dist_threshold         => { is => 'VARCHAR2', len => 255, is_optional => 1,
+									doc => ""},
+	dna_type                     => { is => 'VARCHAR2', len => 64, is_optional => 1,
+									doc => "The type of dna used in the reads for this model, probably 'genomic dna' or 'cdna'"},
+	genotyper	                 => { is => 'VARCHAR2', len => 255, is_optional => 1,
+									doc => "Name of the genotyper for this model"},
+	genotyper_params             => { is => 'VARCHAR2', len => 255, is_optional => 1,
+									doc => "command line args used for the genotyper"},
+	indel_finder                 => { is => 'VARCHAR2', len => 255, is_optional => 1,
+									doc => "Name of the indel finder for this model"},
+	indel_finder_params          => { is => 'VARCHAR2', len => 255, is_optional => 1,
+									doc => "command line args for the indel finder"},
+	multi_read_fragment_strategy => { is => 'VARCHAR2', len => 255, is_optional => 1,
+									doc => ""},
+	prior_ref_seq		     => { is => 'VARCHAR2', len => 255, is_optional => 1,
+									doc => ""},
+	read_aligner                 => { is => 'VARCHAR2', len => 255, is_optional => 0,
+									doc => "alignment program used for this model"},
+	read_aligner_params          => { is => 'VARCHAR2', len => 255, is_optional => 1,
+									doc => "command line args for the aligner"},
+	read_calibrator              => { is => 'VARCHAR2', len => 255, is_optional => 1,
+									doc => ""},
+	read_calibrator_params       => { is => 'VARCHAR2', len => 255, is_optional => 1,
+									doc => ""},
+	reference_sequence           => { is => 'VARCHAR2', len => 255, is_optional => 1,
+									doc => "Identifies the reference sequence used in the model"},
+	sequencing_platform          => { is => 'VARCHAR2', len => 255, is_optional => 1, 
 										doc => "The sequencing platform. Always 'solexa' at the moment"},
     ],
     schema_name => 'Main',
@@ -63,12 +63,12 @@ sub sub_command_sort_position {
 }
 
 sub help_brief {
-    "create a new processing profile for short reads"
+    "create a new processing profile for reference alignment"
 }
 
 sub help_synopsis {
     return <<"EOS"
-genome-model processing-profile short-read create 
+genome-model processing-profile reference-alignment create 
 					--profile-name test5 
 					--align-dist-threshold 0 
 					--dna-type "genomic dna" 
@@ -82,14 +82,14 @@ EOS
 
 sub help_detail {
     return <<"EOS"
-This defines a new processing profile for short reads.
+This defines a new processing profile for reference alignment.
 
 The properties of the processing profile determine what will happen when the add-reads command is run.
 EOS
 }
 
 sub target_class{
-    return "Genome::ProcessingProfile::ShortRead";
+    return "Genome::ProcessingProfile::ReferenceAlignment";
 }
 
 sub _validate_execute_params {
@@ -136,8 +136,6 @@ sub _validate_dna_type {
 # TODO: copied from create processingprofile... refactor
 sub execute {
     my $self = shift;
-
-    $DB::single = $DB::stopper;
 
     # genome model specific
 

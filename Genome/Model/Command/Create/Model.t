@@ -33,8 +33,8 @@ my $genotyper = 'maq0_6_3';
 my $read_aligner = 'maq0_6_3';
 my $pp_name = 'testing';
 
-diag('test command create for a processing profile short reads');
-my $create_pp_command= Genome::Model::Command::Create::ProcessingProfile::ShortRead->create(
+diag('test command create for a processing profile reference alignments');
+my $create_pp_command= Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment->create(
      indel_finder          => $indel_finder,
      dna_type              => $dna_type,
      align_dist_threshold  => $align_dist_threshold,
@@ -47,16 +47,16 @@ my $create_pp_command= Genome::Model::Command::Create::ProcessingProfile::ShortR
 
 
 # check and create the processing profile
-isa_ok($create_pp_command,'Genome::Model::Command::Create::ProcessingProfile::ShortRead');
+isa_ok($create_pp_command,'Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment');
 ok($create_pp_command->execute(), 'execute processing profile create');     
 
 # Get it and make sure there is one
-my @processing_profiles = Genome::ProcessingProfile::ShortRead->get(name => $pp_name);
+my @processing_profiles = Genome::ProcessingProfile::ReferenceAlignment->get(name => $pp_name);
 is(scalar(@processing_profiles),1,'expected one processing profile');
 
 # check the type
 my $pp = $processing_profiles[0];
-isa_ok($pp ,'Genome::ProcessingProfile::ShortRead');
+isa_ok($pp ,'Genome::ProcessingProfile::ReferenceAlignment');
 
 # Test the properties were set and the accessors functionality
 is($pp->indel_finder_name,$indel_finder,'processing profile indel_finder accessor');
@@ -112,7 +112,7 @@ my %params = (
 );
 my $obj = Genome::Model->create(%params);
 ok($obj, 'creation worked');
-isa_ok($obj ,'Genome::Model::ShortRead');
+isa_ok($obj ,'Genome::Model::ReferenceAlignment');
 
 # Test the accessors through the processing profile
 diag('Test accessing model for processing profile properties...');
@@ -123,7 +123,7 @@ is($obj->reference_sequence_name,$reference_sequence,'reference_sequence accesso
 is($obj->genotyper_name,$genotyper,'genotyper accessor');
 is($obj->read_aligner_name,$read_aligner,'read_aligner accessor');
 is($obj->name,$model_name,'name accessor');
-is($obj->type_name,'short read','type name accessor');
+is($obj->type_name,'reference alignment','type name accessor');
 
 # test the model accessors
 diag('Test accessing model for model properties...');
@@ -134,9 +134,9 @@ is($obj->processing_profile_id,$pp->id,'processing profile id accessor');
 diag('subclassing tests - test create for a processing profile object of each subclass');
 
 # Test creation for a processing profile of many different types
-my $ppsr = Genome::ProcessingProfile->create(type_name => 'short read');
-ok($ppsr, 'creation worked for short read processing profile');
-isa_ok($ppsr ,'Genome::ProcessingProfile::ShortRead');
+my $ppsr = Genome::ProcessingProfile->create(type_name => 'reference alignment');
+ok($ppsr, 'creation worked for reference alignment processing profile');
+isa_ok($ppsr ,'Genome::ProcessingProfile::ReferenceAlignment');
 
 my $ppdns = Genome::ProcessingProfile->create(type_name => 'de novo sanger');
 ok($ppdns, 'creation worked de novo sanger processing profile');
@@ -173,9 +173,9 @@ isa_ok($ppa ,'Genome::ProcessingProfile::Assembly');
 # Test creation for the corresponding models
 diag('subclassing tests - test create for a genome model object of each subclass');
 my $gmsr = Genome::Model->create(processing_profile_id => $ppsr->id,
-                                 name => 'short read test');
-ok($gmsr, 'creation worked for short read model');
-isa_ok($gmsr ,'Genome::Model::ShortRead');
+                                 name => 'reference alignment test');
+ok($gmsr, 'creation worked for reference alignment model');
+isa_ok($gmsr ,'Genome::Model::ReferenceAlignment');
 
 my $gmdns = Genome::Model->create(processing_profile_id => $ppdns->id,
                                  name => 'de novo sanger test');

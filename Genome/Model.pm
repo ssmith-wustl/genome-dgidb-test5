@@ -29,6 +29,10 @@ class Genome::Model {
         name                         => { is => 'VARCHAR2', len => 255 },
         sample_name                  => { is => 'VARCHAR2', len => 255 },
         subject_name                 => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        instrument_data_links        => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
+                                            doc => "for models which directly address instrument data, the list of assigned run chunks"
+                                        },
+        instrument_data              => { via => 'instrument_data_links', to => 'read_set_id', is_mutable => 1 },
         events                       => {
                                          is => 'Genome::Model::Event',
                                          is_many => 1,
@@ -46,16 +50,6 @@ class Genome::Model {
                                                             return undef;
                                                         |
                                         },
-        creation_event_inputs        => { doc => 'The inputs specified for the creation event',
-                                          via => 'creation_event',
-                                          to  => 'inputs',
-                                        },
-        instrument_data              => { doc       => 'The instrument data specified for the model',
-                                          via       => 'creation_event_inputs',
-                                          to        => 'value',
-                                          where     => [ name => 'instrument_data' ],
-                                        },
-
         test                         => { is => 'Boolean',
                                           doc => 'testing flag',
                                           is_optional => 1,
@@ -66,7 +60,6 @@ class Genome::Model {
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
-
 
 sub create {
     my $class = shift;

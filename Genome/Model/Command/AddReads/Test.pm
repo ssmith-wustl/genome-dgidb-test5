@@ -313,7 +313,7 @@ sub create_test_pp {
 
     my %processing_profile = @_;
     $processing_profile{bare_args} = [];
-    my $create_pp_command = Genome::Model::Command::Create::ProcessingProfile::ShortRead->create(%processing_profile);
+    my $create_pp_command = Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment->create(%processing_profile);
     unless($create_pp_command->execute()) {
         confess("Failed to create processing_profile for test:  $!");
     }

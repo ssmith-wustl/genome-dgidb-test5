@@ -1,5 +1,5 @@
 
-package Genome::Model::ShortRead;
+package Genome::Model::ReferenceAlignment;
 
 use strict;
 use warnings;
@@ -12,10 +12,10 @@ use File::Basename;
 use IO::File;
 use Sort::Naturally;
 
-class Genome::Model::ShortRead {
+class Genome::Model::ReferenceAlignment {
     is => 'Genome::Model',
     has => [
-        processing_profile           => { is => 'Genome::ProcessingProfile::ShortRead', id_by => 'processing_profile_id' },
+        processing_profile           => { is => 'Genome::ProcessingProfile::ReferenceAlignment', id_by => 'processing_profile_id' },
         sequencing_platform          => { via => 'processing_profile'},        
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},

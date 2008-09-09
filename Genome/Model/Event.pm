@@ -63,7 +63,6 @@ class Genome::Model::Event {
                                  return 1;
                              |,
                          },
-
     ],
     has_many_optional => [
         sibling_events                  => { via => 'parent_event', to => 'child_events' },
@@ -76,9 +75,35 @@ class Genome::Model::Event {
         metrics                         => { is => 'Genome::Model::Event::Metric', reverse_id_by => 'event' },
         metric_names                    => { via => 'metrics', to => 'name' },
     ],
+    subclass_description_preprocessor   => '_preprocess_subclass_description',
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+sub _preprocess_subclass_description {
+    my ($class,$desc) = @_;
+    my $has = $desc->{has};
+    for my $attribute (values %$has) {
+        #print "event has $attribute " . Data::Dumper::Dumper($attribute) ,"\n";
+        # via => 'inputs', to => 'value', where => [ name => 'foobar' ]
+        if ($attribute->{is_input}) {
+            delete($attribute->{is_input});
+            $attribute->{via} = 'inputs';
+            $attribute->{to} = 'value';
+            $attribute->{where} = [ name => $attribute->{property_name} ];
+        } elsif ($attribute->{is_output}) {
+            delete($attribute->{is_output});
+            $attribute->{via} = 'outputs';
+            $attribute->{to} = 'value';
+            $attribute->{where} = [ name => $attribute->{property_name} ];
+        } elsif ($attribute->{is_param}) {
+            die($attribute->{property_name} .' is a param and parameters are not handled correctly by events');
+        }
+        $has->{$attribute->{property_name}} = $attribute;
+    }
+    $desc->{has} = $has;
+    return $desc;
+}
 
 sub create {
     my $class = shift;
