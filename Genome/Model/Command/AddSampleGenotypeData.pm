@@ -92,8 +92,8 @@ sub execute {
             my $child_profile_class = "Genome::ProcessingProfile::" . ucfirst(lc($technology_type));
 
             # Find the profile for this technology and params if it exists
-            my @child_profiles = $child_profile_class->get_with_special_parameters(
-                process_param_set_id => $process_param_set_id  #TODO figure out w/ jwalker why this doesn't work.  Fuck appears here
+            my @child_profiles = $child_profile_class->get(
+                process_param_set_id => $process_param_set_id
             );
             if (@child_profiles > 1){
                 $self->error_message("Multiple processing profiles for process_param_set_id: $process_param_set_id found");
