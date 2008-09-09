@@ -5,8 +5,6 @@ use warnings;
 
 use Genome;
 
-use Workflow;
-
 use File::Basename;
 use Cwd;
 
@@ -28,11 +26,6 @@ class Genome::Model::Tools::454::Seqclean {
                                      doc => 'a file path to the seqclean output',
                                  }
                  ],
-};
-
-operation_io Genome::Model::Tools::454::Seqclean {
-    input => [ 'fasta_file', 'params'],
-    output => [ 'output_file' ],
 };
 
 sub help_brief {

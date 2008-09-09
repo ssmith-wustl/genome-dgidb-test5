@@ -3,8 +3,6 @@ package Genome::Model::Tools::454::Newbler::NewAssembly;
 use strict;
 use warnings;
 
-use Workflow;
-
 class Genome::Model::Tools::454::Newbler::NewAssembly {
     is => 'Genome::Model::Tools::454::Newbler',
     has => [
@@ -14,11 +12,6 @@ class Genome::Model::Tools::454::Newbler::NewAssembly {
                 },
         ],
 
-};
-
-operation_io Genome::Model::Tools::454::Newbler::NewAssembly {
-    input => [ 'dir', 'test'],
-    output => [ 'dir', 'test'],
 };
 
 sub help_brief {
