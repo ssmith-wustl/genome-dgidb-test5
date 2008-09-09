@@ -42,9 +42,18 @@ is($assembly->assembler,$assembler,'assembler accessor');
 is($assembly->assembler_params,$assembler_params,'assembler_params accessor');
 is($assembly->sequencing_platform,$sequencing_platform,'sequencing_platform accessor');
 
-my @assemblies = Genome::ProcessingProfile::Assembly->get(
-                                                          read_trimmer_params => $read_trimmer_params,
-                                                      );
+my %get_params = (
+                                                           read_filter => $read_filter,
+                                                           read_filter_params => $read_filter_params,
+                                                           read_trimmer => $read_trimmer,
+                                                           read_trimmer_params => $read_trimmer_params,
+                                                           assembler => $assembler,
+                                                           assembler_params => $assembler_params,
+                                                           sequencing_platform => $sequencing_platform,
+              );
+
+my @assemblies = Genome::ProcessingProfile::Assembly->get(%get_params);
+
 is(scalar(@assemblies),1,"expected 1 assembly processing profile with read_trimmer_params '$read_trimmer_params'");
 
 exit;
