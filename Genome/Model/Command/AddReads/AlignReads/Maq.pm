@@ -54,18 +54,12 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
                 return grep { -e $_ } glob("${read_set_directory}/adaptor_sequence_file");
             |,
         },
-        input_read_file_paths => {
-            doc => "the paths to the files which captured maq's standard output and error",
-            calculate_from => ['read_set_directory','run_subset_name'],
-            calculate => q|
-                unless (-d $read_set_directory) {
-                    $self->error_message("read set directory '$read_set_directory' does not exist");
-                    return;
-                }
-                $self->status_message("Looking for input read files in '$read_set_directory'\n");
-                return grep { -e $_ } glob("${read_set_directory}/s_${run_subset_name}_sequence*.sorted.fastq");
-            |,
-        },
+        input_read_file_path => {
+                  is_transient=>1,
+                  is_optional=>1,
+                  doc => "temp storage for the fake filename for the metrics to calculate later",
+                  
+                 },
         unique_reads_across_library     => { via => 'read_set' },
         duplicate_reads_across_library  => { via => 'read_set' },
         read_length                     => {
@@ -151,7 +145,7 @@ sub read_set_alignment_files_for_refseq {
 
     # Look for files in the new format: $refseqid.map.$eventid
     my @files = grep { $_ and -e $_ } (
-        glob($alignment_dir . "/$ref_seq_id.map.*")
+        glob($self->read_set_alignment_directory . "/$ref_seq_id.map.*") #bkward compat
     );
     return @files if (@files);
 
@@ -227,7 +221,7 @@ sub _calculate_total_reads_passed_quality_filter_count {
             $total_reads_passed_quality_filter_count = ($self->unique_reads_across_library + $self->duplicate_reads_across_library);
         }
         unless ($total_reads_passed_quality_filter_count) {
-            my @f = $self->input_read_file_paths;
+            my @f = $self->input_read_file_path;
             if (!@f) {
                 $self->error_message("No input read files found");
                 return;
@@ -382,6 +376,7 @@ sub prepare_input {
         die "No gerald directory on the filesystem for $read_set_desc: $gerald_directory";
     }
     my $solexa_output_path =  "$gerald_directory/s_${lane}_sequence.txt";
+    $self->_input_read_file_path($solexa_output_path);
     my $aligner_path = $self->aligner_path('read_aligner_name');
    
     # find or create a sanger fastq 
