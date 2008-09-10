@@ -52,7 +52,7 @@ class Genome::Model::ExperimentalMetric {
         ref_unique_by_sequence_content_pre27=> { is => 'Integer' },
     ],
     table_name => 'FILE1',  # A dummy table name so the properties get 'column_name' properties
-    data_source => 'Genome::DataSource::ExperimentalMetrics',
+    data_source => 'Genome::DataSource::CsvFileFactory',
 };
 
 1;

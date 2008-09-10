@@ -20,7 +20,7 @@ class Genome::Model::VariationPosition {
         metric_snp_quality => { via => 'experimental_metric', to => 'snp_quality' },
     ],
     table_name => 'FILE',  # A dummy table name so the properties get 'column_name' properties
-    data_source => 'Genome::DataSource::VariationPositions',
+    data_source => 'Genome::DataSource::CsvFileFactory',
 };
 
 1;
