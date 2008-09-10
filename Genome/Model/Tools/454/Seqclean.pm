@@ -99,7 +99,7 @@ sub execute {
     $cmd .= ' -o '. $self->out_fasta_file if $self->out_fasta_file;
     $cmd .= ' -r '. $self->seqclean_report if $self->seqclean_report;
     $cmd .= ' -v '. $self->adaptor_sequence_db if $self->adaptor_sequence_db;
-    $cmd .= ' -c '. $self->contaminant_db if $self->contaminant_db;
+    $cmd .= ' -s '. $self->contaminant_db if $self->contaminant_db;
 
     $self->status_message('Running: '. $cmd);
 
