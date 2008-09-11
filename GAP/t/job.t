@@ -63,21 +63,28 @@ foreach my $job (@jobs) {
     }
 
     if (ref($job) eq 'GAP::Job::RfamScan') {
-    
+	
         foreach my $gene (@genes) {
-        
-            ok($gene->has_tag('id');
-            ok($gene->has_tag('rfam_product');
+	    
+	    if ( $gene->source_tag('Infernal') and $gene->has_tag('id') ) {
 
-            my ($id)           = $gene->each_tag_value('id');
-            my ($rfam_product) = $gene->each_tag_value('rfam_product');
-       
-            if ($id eq 'id1') { 
-                is($rfam_product, 'product1'); 
-            }
-       
-        }
-    
+		    ok($gene->has_tag('id'));
+		    ok($gene->has_tag('rfam_prod'));
+		    
+		    my ($id)           = $gene->each_tag_value('id');
+		    my ($rfam_product) = $gene->each_tag_value('rfam_prod');
+		    
+		    if ($id eq 'tRNA') { 
+			is($rfam_product, 'tRNA'); 
+		    }
+		    
+		}else{
+		    next;
+		    
+		}
+	    
+	}
+	
     }
     
 }
