@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Snp::ConvertHapMapGenotypeToGoldSNP;
+package Genome::Model::Tools::Snp::ConvertHapMapGenotypeToGoldSnp;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Command;
 use IO::File;
 use Bio::DB::Fasta;
 
-class Genome::Model::Tools::Snp::ConvertHapMapGenotypeToGoldSNP {
+class Genome::Model::Tools::Snp::ConvertHapMapGenotypeToGoldSnp {
     is => 'Command',
     has => [
     genotype_file => 
@@ -80,6 +80,8 @@ sub execute {
     return 1;
 }
 
+1;
+
 sub help_detail {
     return "This module takes a Hapmap Genotype file for a single patient and converts it to Gold SNP style format for use with established tools";
 }
@@ -106,7 +108,5 @@ sub convert {
     unless(grep {uc($_) eq $ref_allele} @alleles) {
         print "Didn't find reference for $chr $pos where ref was $ref_allele and strand was $strand\n";
     }
-    return 1;
 }
 
-1;
