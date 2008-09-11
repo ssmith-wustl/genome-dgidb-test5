@@ -14,14 +14,14 @@ class Genome::DataSource::CsvFileFactory {
 
 my %RESOLVER = (
     'Genome::Model::VariationPosition' =>  {
-        required_in_rule => [ 'model_id', 'ref_seq_id' ],
-        constant_values => [ 'model_id' ],
-        file_sort_order => [ 'ref_seq_id', 'position' ],
-        file_column_order => [ qw(ref_seq_id position reference_base consensus_base consensus_quality
+        constant_values => [ 'model_id' ],                  # which properties will be constant across the data source
+        file_sort_order => [ 'ref_seq_id', 'position' ],    # file is sorted by these columns
+        file_column_order => [ qw(ref_seq_id position reference_base consensus_base consensus_quality  
                                   read_depth avg_num_hits max_mapping_quality min_conensus_quality) ],
-        file_delimiter => '\s+',
-        skip_first_line => 0,
-        file_resolver => sub {
+        file_delimiter => '\s+',                            # delimiter between columns
+        skip_first_line => 0,                               # does the first line have a header
+        required_in_rule => [ 'model_id', 'ref_seq_id' ],   # properties that must be in the rule
+        file_resolver => sub {                              # returns the name of the file.  args are from required_in_rule
                              my($model_id, $ref_seq_id) = @_;
                              my @e = sort { $a->date_completed <=> $b->date_completed }
                                  Genome::Model::Command::AddReads::FindVariations::Maq->get(model_id => $model_id,
