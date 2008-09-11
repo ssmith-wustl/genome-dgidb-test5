@@ -23,8 +23,6 @@ unless (-e $rfam_seed_file ){
     
 }
 
-my $io = Bio::AlignIO->new(-file => $rfam_seed_file, -format => 'stockholm' );
-
 my %rfam_basket = ( );
 
 my $io = Bio::AlignIO->new(-file => $rfam_seed_file, -format => 'stockholm' );
