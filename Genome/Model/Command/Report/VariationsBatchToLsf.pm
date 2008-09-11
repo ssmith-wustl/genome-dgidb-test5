@@ -174,7 +174,7 @@ sub _setup_job {
 
     my %job_params = (
         pp_type => 'lsf',
-        q => 'aml',
+        q => 'long',
         R => "'select[db_dw_prod_runq<10] rusage[db_dw_prod=1]'",
         command => sprintf
         (
