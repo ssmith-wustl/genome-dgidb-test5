@@ -11,9 +11,33 @@ use English;
 use File::Temp;
 use IO::File;
 use IPC::Run;
+use Bio::AlignIO;
 
 use base qw(GAP::Job);
 
+my $rfam_seed_file = '/gsc/pkg/bio/rfam/installed/Rfam.seed';
+
+unless (-e $rfam_seed_file ){
+    
+    die " Missing rfam seed file $rfam_seed_file! ";
+    
+}
+
+my $io = Bio::AlignIO->new(-file => $rfam_seed_file, -format => 'stockholm' );
+
+my %rfam_basket = ( );
+
+my $io = Bio::AlignIO->new(-file => $rfam_seed_file, -format => 'stockholm' );
+
+while ( my $aln = $io->next_aln() ) {
+
+    my $annotation = $aln->annotation();
+
+    my ( $entry_type ) = $annotation->get_Annotations('entry_type');
+
+      $rfam_basket{$aln->id()} = $aln->description(); 
+
+}
 
 sub new {
 
@@ -106,6 +130,8 @@ sub execute {
         
         my $seq_strand = $seq_start > $seq_end ? -1 : 1;
         
+	my $rfam_prod = $rfam_basket{$rfam_id};
+
         my $feature = Bio::SeqFeature::Generic->new(
                                                     -seq_id => $seq_id,
                                                     -start  => $seq_start,
@@ -114,8 +140,9 @@ sub execute {
                                                     -source => 'Infernal',
                                                     -score  => $bit_score,
                                                     -tag => {
-                                                             acc => $rfam_acc,
-                                                             id  => $rfam_id,
+                                                             acc  => $rfam_acc,
+                                                             id   => $rfam_id,
+							     prod => $rfam_prod,
                                                          },
                                                 );
     
