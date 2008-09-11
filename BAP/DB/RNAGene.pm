@@ -3,9 +3,10 @@ package BAP::DB::RNAGene;
 use base 'BAP::DB::DBI';
 
 
-my $start_col = Class::DBI::Column->new('seq_start'   => { accessor => 'start' });
-my $end_col   = Class::DBI::Column->new('seq_end'     => { accessor => 'end' });
-my $desc_col  = Class::DBI::Column->new('description' => { accessor => 'desc' });
+my $start_col      = Class::DBI::Column->new('seq_start'   => { accessor => 'start' });
+my $end_col        = Class::DBI::Column->new('seq_end'     => { accessor => 'end' });
+my $desc_col       = Class::DBI::Column->new('description' => { accessor => 'desc' });
+my $rfam_prod_col  = Class::DBI::Column->new('product'     => { accessor => 'rfam_prod' });
 
 
 __PACKAGE__->table('rna_gene');
@@ -22,6 +23,7 @@ __PACKAGE__->columns(
                      $start_col,
                      $end_col,
                      $desc_col,
+		     $rfam_prod_col,
                     );
 __PACKAGE__->sequence('gene_id_seq');
 
