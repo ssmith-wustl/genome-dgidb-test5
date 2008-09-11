@@ -138,9 +138,9 @@ sub execute {
                                                     -source => 'Infernal',
                                                     -score  => $bit_score,
                                                     -tag => {
-                                                             acc  => $rfam_acc,
-                                                             id   => $rfam_id,
-							     prod => $rfam_prod,
+                                                             acc       => $rfam_acc,
+                                                             id        => $rfam_id,
+							     rfam_prod => $rfam_prod,
                                                          },
                                                 );
     
