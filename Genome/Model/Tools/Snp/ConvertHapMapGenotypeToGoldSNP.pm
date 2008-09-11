@@ -8,7 +8,7 @@ use Command;
 use IO::File;
 use Bio::DB::Fasta;
 
-class Genome::Model::Tools::Snp::Evaluation {
+class Genome::Model::Tools::Snp::ConvertHapMapGenotypeToGoldSNP {
     is => 'Command',
     has => [
     genotype_file => 
@@ -42,7 +42,7 @@ class Genome::Model::Tools::Snp::Evaluation {
         type => 'Reference',
         is_optional => 1,
     },
-    ]
+    ],
 };
 
 
@@ -69,7 +69,7 @@ sub execute {
     }
 
     $self->refdb = Bio::DB::Fasta->new($self->REFDIR);
-    
+
     #read in header
     $output_fh->getline;
     while(my $line = $output_fh->getline) {
@@ -80,14 +80,14 @@ sub execute {
     return 1;
 }
 
-    
-
-
-1;
-
 sub help_detail {
-    return "This module take a Hapmap Genotype file for a single patient and converts it to Gold SNP style format for use with established tools"
+    return "This module takes a Hapmap Genotype file for a single patient and converts it to Gold SNP style format for use with established tools";
 }
+
+sub help_brief {
+    return "Convert a Hapmap Genotype file to Gold SNP style";
+}
+
 
 #Create hashes of gold SNPs
 
@@ -109,3 +109,4 @@ sub convert {
     return 1;
 }
 
+1;
