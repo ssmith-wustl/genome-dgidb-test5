@@ -1,6 +1,3 @@
-#!/usr/local/bin/perl
-
-
 package Genome::Model::CombineVariants;
 
 use strict;
@@ -365,6 +362,8 @@ sub next_lq_genotype{
     return $genotype;
 }
 
+=cut
+
 sub write_maf_file{
     my $self = shift;
     my $header = join("\t", $self->columns)."\n";
@@ -373,7 +372,6 @@ sub write_maf_file{
         print join("\t", map { $genotype->{$_} } $self->columns);
     }
 
-=cut
     use lib '/gscuser/xshi/svn/perl_modules/';
     use MG::Analysis::VariantAnnotation;
 
@@ -449,7 +447,35 @@ sub write_maf_file{
 
     $fh->close;
     $ofh->close;
-=cut
+
+}
+
+
+# Matches all sample genotype data into a hash with an entry per
+# Sample and position that contains matched normal and tumor data for
+# that sample and position
+# TODO this really needs to be done once per HQ and LQ
+sub get_matched_normal_tumor_hash {
+    my $self = shift;
+
+    # Grab all of the sample genotype data for this input
+    my @sample_genotype_data;
+    while (my $genotype = $self->next_hq_genotype) {
+        push @sample_genotype_data, $genotype;
+    }
+
+    # TODO: This should already be sorted by position and sample... check
+    # Sort if neededa
+    my $current_sample;
+    while ($sample_genotype_data > 0) {
+        # Grab the sample name except for the last character which will denote normal or tumor
+        unless (defined($current_sample)) {
+            $current_sample = $sample_genotype_data[0];
+        }
+
+        
+    }
+
 
 }
 
