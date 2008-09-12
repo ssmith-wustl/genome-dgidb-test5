@@ -1,3 +1,6 @@
+#!/usr/local/bin/perl
+
+
 package Genome::Model::CombineVariants;
 
 use strict;
@@ -61,12 +64,12 @@ sub base_directory {
 
 sub _is_valid_child{
     my ($self, $child) = @_;
-    return grep { $child->type =~ /$_/i } $self->valid_child_types;
+    return grep { $child->technology =~ /$_/i } $self->valid_child_types;
 }
 
 sub valid_child_types{
     my $self = shift;
-    return qw/hq_polyscan hq_polyphred lq_polyscan lq_polyphred/;
+    return qw/polyscan polyphred/;
 }
 
 # Returns the current directory where this model is housed
@@ -112,7 +115,7 @@ sub hq_polyphred_model {
 
     my @polyphred_models = $self->polyphred_models;
     for my $model (@polyphred_models) {
-        if ($model->type =~ 'hq') {
+        if (($model->technology eq 'polyphred')&&($model->sensitivity eq 'high')) {
             return $model;
         }
     }
@@ -127,7 +130,7 @@ sub lq_polyphred_model {
 
     my @polyphred_models = $self->polyphred_models;
     for my $model (@polyphred_models) {
-        if ($model->type =~ 'lq') {
+        if (($model->technology eq 'polyphred')&&($model->sensitivity eq 'low')) {
             return $model;
         }
     }
@@ -142,7 +145,7 @@ sub hq_polyscan_model {
 
     my @polyscan_models = $self->polyscan_models;
     for my $model (@polyscan_models) {
-        if ($model->type =~ 'hq') {
+        if (($model->technology eq 'polyscan')&&($model->sensitivity eq 'high')) {
             return $model;
         }
     }
@@ -157,7 +160,7 @@ sub lq_polyscan_model {
 
     my @polyscan_models = $self->polyscan_models;
     for my $model (@polyscan_models) {
-        if ($model->type =~ 'lq') {
+        if (($model->technology eq 'polyscan')&&($model->sensitivity eq 'low')) {
             return $model;
         }
     }
@@ -198,8 +201,6 @@ sub combine_variants_for_set{
         die;
     }
 
-    $polyscan_model->reset_gfh;
-    $polyphred_model->reset_gfh;
     my $polyscan_genotype = $self->next_or_undef($polyscan_model);
     my $polyphred_genotype = $self->next_or_undef($polyphred_model);
 
@@ -253,7 +254,10 @@ sub combine_variants_for_set{
 # Return the asnwer that we trust
 sub generate_genotype{
     my ($self, $scan_g, $phred_g) = @_;
-
+    
+    # This is the value at which we will trust polyscan over polyphred when running "combine variants" logic
+    my $min_polyscan_score = 75;
+    
     # If there is data from both polyscan and polyphred, decide which is right
     if ($scan_g && $phred_g){
         if ( $scan_g->{allele1} eq $phred_g->{allele1} and $scan_g->{allele2} eq $phred_g->{allele2} ){
@@ -264,7 +268,7 @@ sub generate_genotype{
 
             return $scan_g;
 
-        }elsif ($scan_g->{score} > 75){
+        }elsif ($scan_g->{score} > $min_polyscan_score){
             return $self->generate_genotype($scan_g, undef);
         }else{
             return $self->generate_genotype(undef, $phred_g);
@@ -306,17 +310,17 @@ sub columns{
     start 
     stop 
     sample_name
-    hugo_symbol
-    variant_type
+    variation_type
     allele1 
     allele1_type 
     allele2 
     allele2_type 
     polyscan_score 
     polyphred_score
-    polyscan_read_count
-    polyphred_read_count
     );
+    # hugo_symbol
+    # polyscan_read_count
+    # polyphred_read_count
 }
 
 # Reads from the hq genotype file and returns the next line

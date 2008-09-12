@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use IO::File;
 use File::Copy "cp";
+use File::Basename;
 use Data::Dumper;
 use Genome;
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
@@ -12,14 +13,22 @@ use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 class Genome::Model::Sanger{
     is => 'Genome::Model',
     has => [
-        gfh => {
-            is=>'IO::Handle',
-            doc=>'genotype file handle',
-            is_optional => 1,
+        processing_profile           => { is => 'Genome::ProcessingProfile::Sanger', id_by => 'processing_profile_id' },
+        snps => {
+            is => 'arrayref',
+            doc => 'The union of all the snps from the input files for this model',
         },
-        process_param_set_id => { 
-            via=> 'processing_profile',
+        indels => {
+            is => 'arrayref',
+            doc => 'The union of all the indels from the input files for this model',
+        },
+        sensitivity => { 
+            via => 'processing_profile',
             doc => 'The processing param set used', 
+        },
+        research_project => { 
+            via=> 'processing_profile',
+            doc => 'research project that this model belongs to', 
         },
         technology=> { 
             via=> 'processing_profile',
@@ -32,6 +41,26 @@ sub create{
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     mkdir $self->model_directory;
+
+    unless (-d $self->model_directory) {
+        $self->error_message("Failed to create model directory: " . $self->model_directory);
+        return undef;
+    }
+
+
+    #make required non-build directories
+    mkdir $self->pending_instrument_data_dir;
+    unless (-d $self->pending_instrument_data_dir) {
+        $self->error_message("Failed to create instrument data directory: " . $self->pending_instrument_data_dir);
+        return undef;
+    }
+    
+    mkdir $self->source_instrument_data_dir;
+    unless (-d $self->source_instrument_data_dir) {
+        $self->error_message("Failed to create source instrument data directory: " . $self->source_instrument_data_dir);
+        return undef;
+    }
+
     return $self;
 }
 
@@ -48,150 +77,6 @@ sub model_directory{
 sub base_directory {
     my $self = shift;
     return '/gscmnt/834/info/medseq/sanger';
-}
-
-# Returns the full path to where the current genotype file is.
-# This contains the consensus based upon the pcr product data
-# at the polyphred or polyscan level
-sub pcr_product_genotype_file {
-    my $self = shift;
-
-    my $model_dir = $self->model_directory;
-    my $type = $self->type;
-    
-    my $file_location = "$model_dir/$type" . ".genotype.tsv";
-
-    return $file_location; 
-}
-
-# Parses the line that was passed in for information and stuffs it into a hash
-# Relys on the columns function to tell us the order the data is coming in on the line
-sub parse_line {
-    my ($self, $line) = @_;
-    my $current_line;
-
-    if (!$line) {
-        return undef;
-    }
-
-    $current_line->{unparsed_line} = $line;
-    chomp $line;
-    my @split_line= split("\t", $line);
-
-    # Grab all columns from the file and stuff them into the hash
-    # Should appear in file in the order of @keys below
-    foreach my $key ($self->columns){
-        my $val = shift @split_line;
-        $current_line->{$key} = $val if $val;
-    }
-
-    return $current_line;
-}
-
-#Takes in a hash of pcr_product_genotypes and inserts these into the pcr_product_genotype file
-sub add_pcr_product_genotypes{
-    my ($self, @pcr_product_data) = @_;
-
-    # Sort the data for easier insertion
-    @pcr_product_data =  sort { compare_position($a->{chromosome}, $a->{start}, $b->{chromosome}, $b->{start}) } sort { $a->{pcr_product_name} cmp $b->{pcr_product_name} } @pcr_product_data;
-    
-    my $pcr_file = $self->pcr_product_genotype_file;
-    my $pcr_out = $self->pcr_product_genotype_file.".tmp";
-
-    my $pofh = IO::File->new("> $pcr_out");
-    unless ($pofh){ 
-        $self->error_message("Can't open pcr product tmp outfile!");
-        die;
-    }
-    $self->reset_gfh;
-
-    # Grab data from both the existing file and the new incoming data
-    my $file_pcr_product_genotype = $self->next_pcr_product_genotype;
-    my $new_pcr_product_genotype = shift @pcr_product_data;
-    
-    while ( defined $file_pcr_product_genotype ){
-        if  ($new_pcr_product_genotype){
-            my $new_chromosome = $new_pcr_product_genotype->{chromosome};
-            my $new_start = $new_pcr_product_genotype->{start};
-
-            my $file_chromosome = $file_pcr_product_genotype->{chromosome};
-            my $file_start = $file_pcr_product_genotype->{start};
-
-            # Compare positions and insert the earliest position into the output file
-            my $pos_cmp = compare_position($new_chromosome, $new_start, $file_chromosome, $file_start);
-            if ($pos_cmp < 0){ #current data to add is before current position in file
-                $pofh->print($self->format_pcr_product_genotype_line($new_pcr_product_genotype));
-                $new_pcr_product_genotype = shift @pcr_product_data;
-                next;
-            }elsif ($pos_cmp > 0){ #current data position is after current position in the file
-                $pofh->print($self->format_pcr_product_genotype_line($file_pcr_product_genotype));
-                $file_pcr_product_genotype = $self->next_pcr_product_genotype;
-                next;
-            }elsif ($pos_cmp == 0){ #current data to add is at current position
-                my $pcr_cmp = $new_pcr_product_genotype->{pcr_product_name} cmp $file_pcr_product_genotype->{pcr_product_name};
-                if ($pcr_cmp < 0){ #new_pcr name less than current file
-                    $pofh->print($self->format_pcr_product_genotype_line($new_pcr_product_genotype));
-                    $new_pcr_product_genotype = shift @pcr_product_data;
-                    next;
-                }elsif($pcr_cmp > 0 ){  #file name less than newer
-                    $pofh->print($self->format_pcr_product_genotype_line($file_pcr_product_genotype));
-                    $file_pcr_product_genotype = $self->next_pcr_product_genotype;
-                    next;
-                }elsif($pcr_cmp == 0){  #compare for equality
-                    #if the pcr products are the same... we should have the same answer here... otherwise bomb out
-                    # Check for reverse orientation as well
-                    if (($file_pcr_product_genotype->{allele1} eq $new_pcr_product_genotype->{allele1}) &&
-                         ($file_pcr_product_genotype->{allele2} eq $new_pcr_product_genotype->{allele2})) {
-                        $pofh->print($self->format_pcr_product_genotype_line($file_pcr_product_genotype));
-                        $file_pcr_product_genotype = $self->next_pcr_product_genotype;
-                        $new_pcr_product_genotype = shift @pcr_product_data;
-                        next;
-                    } else {
-                        $self->error_message("New data and old data for the same pcr product and position disagree on alleles. New data: ". 
-                            Dumper $new_pcr_product_genotype . "Old data: " . Dumper $file_pcr_product_genotype);
-                        die;
-                    }
-                } else {
-                    $self->error_message("Couldn't get a pcr product comparison for pcr products (" . 
-                        $new_pcr_product_genotype->{pcr_product_name} . ", " .
-                        $file_pcr_product_genotype->{pcr_product_name} . ").");
-                    die;
-                }
-            }else{
-                $self->error_message("Couldn't get a position comparison for coords( $new_chromosome, $new_start, $file_chromosome, $file_start )");
-                die;
-            }
-        }
-        else {
-            $pofh->print($self->format_pcr_product_genotype_line($file_pcr_product_genotype));
-            $file_pcr_product_genotype = $self->next_pcr_product_genotype;
-        }
-    }
-
-    # Old data is exhausted... add any remaining new data
-    if ($new_pcr_product_genotype){
-        $pofh->print($self->format_pcr_product_genotype_line($new_pcr_product_genotype));
-    }
-    for $new_pcr_product_genotype (@pcr_product_data) {
-        $pofh->print($self->format_pcr_product_genotype_line($new_pcr_product_genotype));
-    }
-    
-    $pofh->close;
-    $self->reset_gfh;
-
-    # TODO : figure this out.
-    cp $pcr_out, $pcr_file;
-    return 1;
-}
-
-# Formats a line from a hash to be printed
-sub format_pcr_product_genotype_line{
-    my ($self, $genotype) = @_;
-    my $line = $genotype->{unparsed_line};
-    return $line if $line;
-    my $timestamp = time; 
-    $genotype->{timestamp} ||= $timestamp;
-    return join("\t", map { $genotype->{$_} } $self->columns)."\n";
 }
 
 # Takes in an array of pcr product genotypes and finds the simple majority vote for a genotype
@@ -266,61 +151,45 @@ sub columns{
     );
 }
 
-# Closes and undefs the file handle
-sub reset_gfh{
-    my $self = shift;
-    $self->gfh->close if $self->gfh;
-    $self->gfh(undef);
-}
-
 # Returns the next line of raw data (one pcr product)
+# TODO: Switch this to get the next line from MG::IO::Polyscan or phred
+# Return 1 line from the variants in that file...
+# But probably need to somehow glob all of the input files together into one class level array?
 sub next_pcr_product_genotype{
     my $self = shift;
- 
-    # Open the file handle if we have not already
-    unless ($self->gfh){
-        my $pcr_product_genotype_file = $self->pcr_product_genotype_file;
-        my $fh = IO::File->new("< $pcr_product_genotype_file");
-        return undef unless $fh;
-        $self->gfh($fh)
-    }
     
-    # Get and parse the line or return undef
-    my $line = $self->gfh->getline;
-    unless ($line){
-        return undef;
+    unless (defined($self->snps) || defined ($self->indels)) {
+        $self->setup_input;
     }
 
-    my $pcr_product_genotype = $self->parse_line($line);
-    return $pcr_product_genotype;
+    # Get and parse the line or return undef
+    if ($self->snps){
+        my $line = shift @{$self->snps};
+        return $line;
+    }
+    if ($self->indels){
+        my $line = shift @{$self->indels};
+        return $line;
+    }
+    return undef;
 }
 
 # Returns the genotype for the next position for a sample...
 # This takes a simple majority vote from all pcr products for that sample and position
+# TODO: Switch this to get the next line from MG::IO::Polyscan or phred
+# But probably need to somehow glob all of the input files together into one class level array?
 sub next_sample_genotype {
     my $self = shift;
-
-    # Open the file handle if we have not already
-    unless ($self->gfh){
-        my $pcr_product_genotype_file = $self->pcr_product_genotype_file;
-        my $fh = IO::File->new("< $pcr_product_genotype_file");
-        return undef unless $fh;
-        $self->gfh($fh)
-    }
 
     # Get and parse the line or return undef
     my @sample_pcr_product_genotypes;
     my ($current_chromosome, $current_position, $current_sample);
     
     # Grab all of the pcr products for a position and sample
-    while ( (defined (my $pos = $self->gfh->tell)) && (my $genotype = $self->next_pcr_product_genotype)){
+    while ( my $genotype = $self->next_pcr_product_genotype){
         my $chromosome = $genotype->{chromosome};
         my $position = $genotype->{start};
         my $sample = $genotype->{sample_name};
-
-        unless($chromosome and $position and $sample){
-            $DB::single = 1;
-        }
 
         $current_chromosome ||= $chromosome;
         $current_position ||= $position;
@@ -329,7 +198,7 @@ sub next_sample_genotype {
 
         # If we have hit a new sample or position, rewind a line and return the genotype of what we have so far
         if ($current_chromosome ne $chromosome || $current_position ne $position || $current_sample ne $sample) {
-            $self->gfh->seek($pos, 0);
+            unshift @{$self->snps}, $genotype;
             my $new_genotype = $self->predict_genotype(@sample_pcr_product_genotypes);
             return $new_genotype;
         }
@@ -346,5 +215,259 @@ sub next_sample_genotype {
     my $new_genotype = $self->predict_genotype(@sample_pcr_product_genotypes);
     return $new_genotype;
 }
+
+# Returns the latest complete build number
+sub current_version{
+    my $self = shift;
+    my $archive_dir = $self->model_directory;
+    my @build_dirs = `ls $archive_dir`;
+
+    # If there are no previously existing archives
+    my $version = 0;
+    for my $dir (@build_dirs){
+        $version++ if $dir =~/build_\d+/;
+    }
+    return $version;
+
+    @build_dirs = sort {$a <=> $b} @build_dirs;
+    my $last_archived = pop @build_dirs;
+    my ($current_version) = $last_archived =~ m/build_(\d+)/;
+    return $current_version;
+}
+
+# Returns the next available build number
+sub next_version {
+    my $self = shift;
+    
+    my $current_version = $self->current_version;
+    return $current_version + 1;
+}
+
+# Returns the full path to the current build dir
+sub current_build_dir {
+    my $self = shift;
+
+    my $model_dir = $self->model_directory;
+    my $current_version = $self->current_version;
+    my $current_build_dir = "$model_dir/build_$current_version/";
+
+    unless (-e $current_build_dir) {
+        $self->error_message("Current build dir: $current_build_dir doesnt exist");
+        return undef;
+    }
+    
+    return $current_build_dir if -d $current_build_dir;
+    $self->error_message("current_build_dir $current_build_dir does not exist.  Something has gone terribly awry!");
+    die;
+
+}
+
+# Returns full path to the input data in the current build
+sub current_instrument_data_dir {
+    my $self = shift;
+    my $current_build_dir = $self->current_build_dir;
+
+    my $current_instrument_data_dir = "$current_build_dir/instrument_data/";
+
+    return $current_instrument_data_dir;
+}
+
+# Returns an array of the files in the current input dir
+sub current_instrument_data_files {
+    my $self = shift;
+
+    my $current_instrument_data_dir = $self->current_instrument_data_dir;
+    my @current_instrument_data_files = `ls $current_instrument_data_dir`;
+    
+    foreach my $file (@current_instrument_data_files){  #gets rid of the newline from ls, remove this if we switch to IO::Dir
+        $file = $current_instrument_data_dir . $file;
+        chomp $file;
+    }
+
+    return @current_instrument_data_files;
+}
+
+# Returns the full path to the pending input dir
+sub pending_instrument_data_dir {
+    my $self = shift;
+
+    my $model_dir = $self->model_directory;
+    my $pending_instrument_data_dir = "$model_dir/instrument_data/";
+
+    return $pending_instrument_data_dir;
+}
+
+# Returns an array of the files in the pending input dir
+sub pending_instrument_data_files {
+    my $self = shift;
+
+    my $pending_instrument_data_dir = $self->pending_instrument_data_dir;
+    my @pending_instrument_data_files = `ls $pending_instrument_data_dir`;
+
+    foreach my $file (@pending_instrument_data_files){  #gets rid of the newline from ls, remove this if we switch to IO::Dir
+        $file = $pending_instrument_data_dir . $file;
+        chomp $file;
+    }
+
+    return @pending_instrument_data_files;
+}
+
+# Returns the full path to the next build dir that should be created
+sub next_build_dir {
+    my $self = shift;
+
+    my $model_dir = $self->model_directory;
+    my $next_version = $self->next_version;
+    my $next_build_dir = "$model_dir/build_$next_version/";
+
+    # This should not exist yet
+    if (-e $next_build_dir) {
+        $self->error_message("next build dir: $next_build_dir already exists (and shouldnt)");
+        return undef;
+    }
+    
+    return $next_build_dir;
+}
+
+sub source_instrument_data_dir {
+    my $self = shift;
+    my $model_dir = $self->model_directory;
+    my $dir_name = 'source_instrument_data';
+    my $dir = "$model_dir/$dir_name";
+    return $dir;
+}
+
+# Creates the new build directory,
+# Copies all of the pending input files into the new build directory
+sub build {
+    my $self = shift;
+
+    # Make the new build dir
+    my $next_build_dir = $self->next_build_dir;
+    mkdir $next_build_dir;
+
+    unless (-e $next_build_dir) {
+        $self->error_message("Failed to create next build dir: $next_build_dir ");
+        return undef;
+    }
+
+    # Copy the pending input files to the new build dir
+    my @pending_instrument_data_files = $self->pending_instrument_data_files;
+    my $source_dir = $self->pending_instrument_data_dir;
+    my $destination_dir = $self->current_instrument_data_dir;
+    mkdir $destination_dir unless -d $destination_dir;
+    for my $file (@pending_instrument_data_files) {
+        cp($file, $destination_dir);
+
+        my $destination_file = $destination_dir . basename($file);
+        unless (-e $destination_file) {
+            $self->error_message("Failed to copy $file to $destination_file");
+            return undef;
+        }
+    }
+    
+    return 1;
+}
+
+# Grabs all of the input files from the current build, creates MG::IO modules for
+# each one, grabs all of their snps and indels, and stuffs them into class variables
+sub setup_input {
+    my $self = shift;
+
+    $DB::single = 1;
+
+    my @input_files = $self->current_instrument_data_files;
+
+    # Determine the type of parser to create
+    my $type;
+    if ($self->technology eq 'polyphred') {
+        $type = 'Polyphred';
+    } elsif ($self->technology eq 'polyscan') {
+        $type = 'Polyscan';
+    } else {
+        $type = $self->type;
+        $self->error_message("Type: $type not recognized.");
+        return undef;
+    }
+
+    # Create parsers for each file, append to running lists
+    # TODO eliminate duplicates!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    my (@all_snps, @all_indels);
+    for my $file (@input_files) {
+        my ($assembly_project_name) = $file =~ /\/([^\.\/]+)\.poly(scan|phred)\.(low|high)$/;  #TODO make sure assembly project names are going to be kosher
+        my $param = lc($type);
+        my $module = "MG::IO::$type";
+        my $parser = $module->new($param => $file,
+                                  assembly_project_name => $assembly_project_name
+                              );
+        my ($snps, $indels) = $parser->collate_sample_group_mutations;
+        push @all_snps, @$snps if $snps;
+        push @all_indels, @$indels if $indels;
+    }
+
+    # Sort by chromosome, position, and pcr product
+    @all_snps =  sort { compare_position($a->{chromosome}, $a->{start}, $b->{chromosome}, $b->{start}) } sort { $a->{pcr_product_name} cmp $b->{pcr_product_name} } @all_snps;
+    @all_indels =  sort { compare_position($a->{chromosome}, $a->{start}, $b->{chromosome}, $b->{start}) } sort { $a->{pcr_product_name} cmp $b->{pcr_product_name} } @all_indels;
+ 
+    # Set the class level variables
+    $self->snps(\@all_snps);
+    $self->indels(\@all_indels);
+
+    return @all_snps, @all_indels;
+}
+
+# attempts to get an existing model with the params supplied
+sub get_or_create{
+    my ($self, %p) = @_;
+    my $research_project_name = $p{research_project};
+    my $technology_type = $p{technology_type};
+    my $sensitivity = $p{sensitivity};
+    
+    unless (defined($research_project_name) && defined($technology_type) && defined($sensitivity)) {
+        $self->error_message("Insufficient params supplied to get_or_create");
+        return undef;
+    }
+    
+    # TODO : Fix this... we dont want to only get by name
+=cut
+    my $model = Genome::Model::Sanger->get_with_special_parameters(
+        research_project => $research_project_name,
+        technology => $technology_type,
+        sensitivity => $sensitivity,
+    );
+=cut
+
+    # TODO Replace this with the above
+#    my $model = Genome::Model::Sanger->get(name => $research_project_name.$technology_type.$sensitivity);
+
+    my $model;
+    unless ($model){
+=cut
+        my $pp = Genome::ProcessingProfile::Sanger->get(
+            name => "$research_project_name.$technology_type.$sensitivity",
+            research_project => $research_project_name,
+            technology => $technology_type,
+            sensitivity => $sensitivity,
+        );
+=cut
+my $pp;
+        unless ($pp){
+            $pp = Genome::ProcessingProfile::Sanger->create(
+                name => "$research_project_name.$technology_type.$sensitivity",
+                research_project => $research_project_name,
+                technology => $technology_type,
+                sensitivity => $sensitivity,
+            );
+        }
+        $model = Genome::Model::Sanger->create(
+            subject_name => $research_project_name,
+            sample_name => $research_project_name,
+            processing_profile => $pp,
+            name => $pp->name,
+        );
+    }
+    return $model;
+}
+
 
 1;
