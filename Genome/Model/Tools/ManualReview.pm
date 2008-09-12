@@ -112,8 +112,16 @@ sub execute {
         system("gt maq get-intersect --input=$out_dir/all.map --snpfile=$out_dir/$seqpos/annotation.tsv --output=$out_dir/$seqpos/$seqpos --justname=2");
     }
     
+    my $proj_fof = File::Temp->new();
+    my $projects = `\\ls -d -1 $out_dir/*/`;
+    print $proj_fof $projects;
+    #print $out_dir,"\n",$proj_fof,"\n";
+    
+    $proj_fof->close;    
+    return Genome::Model::Tools::PrepareNextgenAce->execute(fof => $proj_fof->filename, basedir => $out_dir);  
+    
 
-    return 1;
+
 }
 ############################################################
 
