@@ -8,10 +8,22 @@ use Genome;
 class Genome::ProcessingProfile::Sanger {
     is => 'Genome::ProcessingProfile',
     has => [
-        process_param_set_id => {
+        sensitivity => {
             via         => 'params',
             to          => 'value',
-            where       => [name => 'process_param_set_id'],
+            where       => [name => 'sensitivity'],
+            is_mutable  => 1,
+        },
+        research_project => {
+            via         => 'params',
+            to          => 'value',
+            where       => [name => 'research_project'],
+            is_mutable  => 1,
+        },
+        technology => {
+            via         => 'params',
+            to          => 'value',
+            where       => [name => 'technology'],
             is_mutable  => 1,
         },
     ],
@@ -19,10 +31,10 @@ class Genome::ProcessingProfile::Sanger {
 
 sub params_for_class{
     my $self = shift;
-    return qw/process_param_set_id/;
+    return qw/sensitivity research_project technology/;
 }
 
-1;
+;
 
 =cut
 =cut
