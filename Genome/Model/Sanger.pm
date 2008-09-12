@@ -427,30 +427,21 @@ sub get_or_create{
         $self->error_message("Insufficient params supplied to get_or_create");
         return undef;
     }
-    
-    # TODO : Fix this... we dont want to only get by name
-=cut
-    my $model = Genome::Model::Sanger->get_with_special_parameters(
-        research_project => $research_project_name,
-        technology => $technology_type,
-        sensitivity => $sensitivity,
+
+    my $model = Genome::Model::Sanger->get(
+        name => $research_project_name.$technology_type.$sensitivity);
+    #research_project => $research_project_name,
+    #technology => $technology_type,
+    #sensitivity => $sensitivity,
     );
-=cut
 
-    # TODO Replace this with the above
-#    my $model = Genome::Model::Sanger->get(name => $research_project_name.$technology_type.$sensitivity);
-
-    my $model;
     unless ($model){
-=cut
         my $pp = Genome::ProcessingProfile::Sanger->get(
             name => "$research_project_name.$technology_type.$sensitivity",
-            research_project => $research_project_name,
-            technology => $technology_type,
-            sensitivity => $sensitivity,
+            #research_project => $research_project_name,
+            #technology => $technology_type,
+            #sensitivity => $sensitivity,
         );
-=cut
-my $pp;
         unless ($pp){
             $pp = Genome::ProcessingProfile::Sanger->create(
                 name => "$research_project_name.$technology_type.$sensitivity",
@@ -468,6 +459,5 @@ my $pp;
     }
     return $model;
 }
-
 
 1;

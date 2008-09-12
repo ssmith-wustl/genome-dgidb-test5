@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use above "Genome";
+use UR::DataSource;
 #use Test::More skip_all => 'not ready', 'no_plan';
 use Test::More 'no_plan';
 use File::Basename;
@@ -72,19 +73,7 @@ sub test_lq_polyphred{
 sub test_type{
     my $type = shift;
     $type = lc $type;
-=cut    
-    my $pp_class = "Genome::ProcessingProfile::Sanger";
-    my $profile = $pp_class->create(name => "$type");
-    isa_ok($profile, $pp_class);
 
-    my $model_class = "Genome::Model::Sanger";
-    my $model = $model_class->create(
-        subject_name => "test",
-        sample_name => 'test',
-        name => $type,
-        processing_profile => $profile,
-    );
-=cut
     my $research_project_name = "test_research_project";
     my ($sensitivity, $technology_type) = split ("_", $type);
     
@@ -101,16 +90,6 @@ sub test_type{
                                                     
     isa_ok($model, "Genome::Model::Sanger");
     
-    $model = Genome::Model::Sanger->get_with_special_parameters(
-        research_project => $research_project_name,
-        technology_type => $technology_type,
-        sensitivity => $sensitivity,
-    );
-                                                    
-    isa_ok($model, "Genome::Model::Sanger");
-    
-
-    exit;
     my $file;
     if ($type eq 'high_polyphred') {
         $file = "$Bin/t/TCGA_Production_Set_1-0000199_00n-Ensembl-44_36f.polyphred.high";
