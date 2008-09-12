@@ -429,7 +429,7 @@ sub get_or_create{
     }
 
     my $model = Genome::Model::Sanger->get(
-        name => $research_project_name.$technology_type.$sensitivity);
+        name => $research_project_name.$technology_type.$sensitivity
     #research_project => $research_project_name,
     #technology => $technology_type,
     #sensitivity => $sensitivity,
