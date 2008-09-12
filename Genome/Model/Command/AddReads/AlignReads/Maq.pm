@@ -375,10 +375,19 @@ sub prepare_input {
     unless (-d $gerald_directory) {
         die "No gerald directory on the filesystem for $read_set_desc: $gerald_directory";
     }
-    my $solexa_output_path =  "$gerald_directory/s_${lane}_sequence.txt";
-    $self->_input_read_file_path($solexa_output_path);
+    my @solexa_output_paths;
+    if($read_set->is_paired_end) {
+
+        push @solexa_output_paths, "$gerald_directory/s_${lane}_2_sequence.txt";
+        push @solexa_output_paths, "$gerald_directory/s_${lane}_1_sequence.txt";
+    }
+    else 
+    {
+        push @solexa_output_paths, "$gerald_directory/s_${lane}_sequence.txt";
+    }
+    #i deleted soemthing to inputfile paths here 
     my $aligner_path = $self->aligner_path('read_aligner_name');
-   
+
     # find or create a sanger fastq 
     my $fastq_pathname;
     if ($seq_dedup) {
@@ -395,30 +404,34 @@ sub prepare_input {
         }
         $self->status_message("Found sequence-deduplicated fastq at $fastq_pathname");
     }
-    unless ($fastq_pathname) {
-        $fastq_pathname = $self->create_temp_file_path('fastq');
+
+    my @bfq_pathnames;
+    for my $solexa_output_path (@solexa_output_paths) {
+        unless ($fastq_pathname) {
+            $fastq_pathname = $self->create_temp_file_path('fastq');
+            $self->shellcmd(
+                cmd => "$aligner_path sol2sanger $solexa_output_path $fastq_pathname",
+                input_files => [$solexa_output_path],
+                output_files => [$fastq_pathname],
+                skip_if_output_is_present => 1,
+            );
+        }
+
+        # create a bfq
+        my $bfq_pathname = $self->create_temp_file_path('bfq');
+        unless ($bfq_pathname) {
+            die "Failed to create temp file for bfq!";
+        }
+
         $self->shellcmd(
-            cmd => "$aligner_path sol2sanger $solexa_output_path $fastq_pathname",
-            input_files => [$solexa_output_path],
-            output_files => [$fastq_pathname],
+            cmd => "$aligner_path fastq2bfq $fastq_pathname $bfq_pathname",
+            input_files => [$fastq_pathname],
+            output_files => [$bfq_pathname],
             skip_if_output_is_present => 1,
         );
+        push @bfq_pathnames, $bfq_pathname;
     }
-
-    # create a bfq
-    my $bfq_pathname = $self->create_temp_file_path('bfq');
-    unless ($bfq_pathname) {
-        die "Failed to create temp file for bfq!";
-    }
-    
-    $self->shellcmd(
-        cmd => "$aligner_path fastq2bfq $fastq_pathname $bfq_pathname",
-        input_files => [$fastq_pathname],
-        output_files => [$bfq_pathname],
-        skip_if_output_is_present => 1,
-    );
-
-    return $bfq_pathname;
+    return @bfq_pathnames;
 }
 
 # A hack replacement method for event.pm's method... it is a paste except 
@@ -449,7 +462,7 @@ $DB::single = $DB::stopper;
 
     my $model = $self->model;
     # prepare the reads
-    my $bfq_pathname = $self->prepare_input($self->read_set,$self->is_eliminate_all_duplicates);
+    my @bfq_pathnames = $self->prepare_input($self->read_set,$self->is_eliminate_all_duplicates);
 
     # prepare the refseq
     my $ref_seq_path =  $model->reference_sequence_path;
@@ -503,14 +516,14 @@ $DB::single = $DB::stopper;
                           $unaligned_reads_file,
                           $alignment_file,
                           $ref_seq_file,
-                          $bfq_pathname) 
+                          @bfq_pathnames) 
         . $aligner_output_file 
         . ' 2>&1';
 
     # run the aligner
     $self->shellcmd(
         cmd                         => $cmdline,
-        input_files                 => [$ref_seq_file, $bfq_pathname],
+        input_files                 => [$ref_seq_file, @bfq_pathnames],
         output_files                => [$alignment_file, $unaligned_reads_file, $aligner_output_file],
         skip_if_output_is_present   => 1,
     );
