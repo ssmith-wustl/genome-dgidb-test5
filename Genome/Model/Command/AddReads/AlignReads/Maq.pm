@@ -406,9 +406,10 @@ sub prepare_input {
     }
 
     my @bfq_pathnames;
+    my $counter=0;
     for my $solexa_output_path (@solexa_output_paths) {
         unless ($fastq_pathname) {
-            $fastq_pathname = $self->create_temp_file_path('fastq');
+            $fastq_pathname = $self->create_temp_file_path('fastq' . $counter);
             $self->shellcmd(
                 cmd => "$aligner_path sol2sanger $solexa_output_path $fastq_pathname",
                 input_files => [$solexa_output_path],
@@ -418,7 +419,7 @@ sub prepare_input {
         }
 
         # create a bfq
-        my $bfq_pathname = $self->create_temp_file_path('bfq');
+        my $bfq_pathname = $self->create_temp_file_path('bfq' . $counter);
         unless ($bfq_pathname) {
             die "Failed to create temp file for bfq!";
         }
@@ -430,6 +431,7 @@ sub prepare_input {
             skip_if_output_is_present => 1,
         );
         push @bfq_pathnames, $bfq_pathname;
+        $counter++;
     }
     return @bfq_pathnames;
 }
