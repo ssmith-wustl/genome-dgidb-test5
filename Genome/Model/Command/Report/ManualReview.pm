@@ -36,7 +36,7 @@ class Genome::Model::Command::Report::ManualReview
         ref_seq_id =>
         {
             type => 'String',
-            is_optional => 1,
+            is_optional => 0,
             doc => "Ref seq id",    
         },
         library_name =>
