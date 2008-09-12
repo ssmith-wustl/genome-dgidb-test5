@@ -140,7 +140,7 @@ sub _resolve_type_name_for_subclass_name {
     my ($class,$subclass_name) = @_;
     my ($ext) = ($subclass_name =~ /Genome::ProcessingProfile::(.*)/);
     return unless ($ext);
-    my @words = $ext =~ /[a-z]+|[A-Z](?:[A-Z]+|[a-z]*)(?=$|[A-Z])/g;
+    my @words = $ext =~ /[a-z\d]+|[A-Z\d](?:[A-Z\d]+|[a-z]*)(?=$|[A-Z\d])/gx;
     my $type_name = lc(join(" ", @words));
     return $type_name;
 }
