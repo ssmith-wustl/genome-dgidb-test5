@@ -420,33 +420,33 @@ sub setup_input {
 sub get_or_create{
     my ($self, %p) = @_;
     my $research_project_name = $p{research_project};
-    my $technology_type = $p{technology_type};
+    my $technology = $p{technology};
     my $sensitivity = $p{sensitivity};
     
-    unless (defined($research_project_name) && defined($technology_type) && defined($sensitivity)) {
+    unless (defined($research_project_name) && defined($technology) && defined($sensitivity)) {
         $self->error_message("Insufficient params supplied to get_or_create");
         return undef;
     }
 
     my $model = Genome::Model::Sanger->get(
-        name => $research_project_name.$technology_type.$sensitivity
+        name => $research_project_name.$technology.$sensitivity
     #research_project => $research_project_name,
-    #technology => $technology_type,
+    #technology => $technology,
     #sensitivity => $sensitivity,
     );
 
     unless ($model){
         my $pp = Genome::ProcessingProfile::Sanger->get(
-            name => "$research_project_name.$technology_type.$sensitivity",
+            name => "$research_project_name.$technology.$sensitivity",
             #research_project => $research_project_name,
-            #technology => $technology_type,
+            #technology => $technology,
             #sensitivity => $sensitivity,
         );
         unless ($pp){
             $pp = Genome::ProcessingProfile::Sanger->create(
-                name => "$research_project_name.$technology_type.$sensitivity",
+                name => "$research_project_name.$technology.$sensitivity",
                 research_project => $research_project_name,
-                technology => $technology_type,
+                technology => $technology,
                 sensitivity => $sensitivity,
             );
         }
