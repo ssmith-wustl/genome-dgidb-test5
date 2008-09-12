@@ -1,17 +1,19 @@
+
+# IN DEVELOPMENT
+
 package GroupQueuedSequenceAnalysisOutput;
 
 use strict;
 use warnings;
-use above 'Genome';
+use Genome;
 
-class package_name{
+class GroupQueuedSequenceAnalysisOutput {
     is => 'Command',
-    has =>[
-    ],
-}
+    has =>[ ],
+};
 
 
-sub execute{
+sub execute {
     my $self = shift;
 
 
@@ -33,6 +35,7 @@ sub execute{
         push @{$model_hash{$key}}, $queue_pse->id;
     }
 
+    my %params;
     for my $key (keys %model_hash){
       
 
