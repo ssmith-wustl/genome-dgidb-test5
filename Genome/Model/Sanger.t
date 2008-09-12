@@ -80,7 +80,13 @@ sub test_type{
     my $model = Genome::Model::Sanger->get_or_create(
         name => "$research_project_name.$technology_type.$sensitivity",
         research_project => $research_project_name,
-        technology_type => $technology_type,
+        technology => $technology_type,
+        sensitivity => $sensitivity,
+    );
+    
+    my $model = Genome::Model::Sanger->get(
+        research_project => $research_project_name,
+        technology => $technology_type,
         sensitivity => $sensitivity,
     );
 
