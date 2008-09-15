@@ -121,7 +121,16 @@ sub model_links_directory {
 sub data_directory {
     my $self = shift;
     my $name = $self->name;
-    return $self->model_links_directory . '/' . $self->sample_name . "_" . $name;
+
+    #FIXME: LOOKUP LATEST BUILD
+
+    my $base_dir =$self->model_links_directory . '/' . $self->sample_name . "_" . $name;
+    if(my @builds = Genome::Model::Command::Build->get(model_id=>$self->id)) {
+        @builds = sort {$a->build_id <=> $b->build_id} @builds;
+        $base_dir .= '/build' . $builds[0]->build_id;
+    }
+    return $base_dir;
+
 }
 
 # This is called by the infrastructure to appropriately classify abstract processing profiles
