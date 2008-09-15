@@ -1,4 +1,4 @@
-package Genome::Model::Sanger;
+package Genome::Model::PolyphredPolyscan;
 
 use strict;
 use warnings;
@@ -10,10 +10,10 @@ use Genome;
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 
 
-class Genome::Model::Sanger{
+class Genome::Model::PolyphredPolyscan {
     is => 'Genome::Model',
     has => [
-        processing_profile           => { is => 'Genome::ProcessingProfile::Sanger', id_by => 'processing_profile_id' },
+        processing_profile           => { is => 'Genome::ProcessingProfile::PolyphredPolyscan', id_by => 'processing_profile_id' },
         snps => {
             is => 'arrayref',
             doc => 'The union of all the snps from the input files for this model',
@@ -76,7 +76,7 @@ sub model_directory{
 
 sub base_directory {
     my $self = shift;
-    return '/gscmnt/834/info/medseq/sanger';
+    return '/gscmnt/834/info/medseq/polyphred_polyscan/';
 }
 
 # Takes in an array of pcr product genotypes and finds the simple majority vote for a genotype
@@ -130,7 +130,7 @@ sub predict_genotype{
     }
 }
 
-# List of columns present in the sanger model files
+# List of columns present in the model files
 sub columns{
     my $self=shift;
     return qw(
@@ -428,7 +428,7 @@ sub get_or_create{
         return undef;
     }
 
-    my $model = Genome::Model::Sanger->get(
+    my $model = Genome::Model::PolyphredPolyscan->get(
         name => $research_project_name.$technology.$sensitivity
     #research_project => $research_project_name,
     #technology => $technology,
@@ -436,21 +436,21 @@ sub get_or_create{
     );
 
     unless ($model){
-        my $pp = Genome::ProcessingProfile::Sanger->get(
+        my $pp = Genome::ProcessingProfile::PolyphredPolyscan->get(
             name => "$research_project_name.$technology.$sensitivity",
             #research_project => $research_project_name,
             #technology => $technology,
             #sensitivity => $sensitivity,
         );
         unless ($pp){
-            $pp = Genome::ProcessingProfile::Sanger->create(
+            $pp = Genome::ProcessingProfile::PolyphredPolyscan->create(
                 name => "$research_project_name.$technology.$sensitivity",
                 research_project => $research_project_name,
                 technology => $technology,
                 sensitivity => $sensitivity,
             );
         }
-        $model = Genome::Model::Sanger->create(
+        $model = Genome::Model::PolyphredPolyscan->create(
             subject_name => $research_project_name,
             sample_name => $research_project_name,
             processing_profile => $pp,

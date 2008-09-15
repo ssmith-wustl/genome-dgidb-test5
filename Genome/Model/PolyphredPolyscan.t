@@ -77,24 +77,24 @@ sub test_type{
     my $research_project_name = "test_research_project";
     my ($sensitivity, $technology_type) = split ("_", $type);
     
-    my $model = Genome::Model::Sanger->get_or_create(
+    my $model = Genome::Model::PolyphredPolyscan->get_or_create(
         name => "$research_project_name.$technology_type.$sensitivity",
         research_project => $research_project_name,
         technology => $technology_type,
         sensitivity => $sensitivity,
     );
     
-    my $model = Genome::Model::Sanger->get(
+    $model = Genome::Model::PolyphredPolyscan->get(
         research_project => $research_project_name,
         technology => $technology_type,
         sensitivity => $sensitivity,
     );
 
-    $model = Genome::Model::Sanger->get(
+    $model = Genome::Model::PolyphredPolyscan->get(
         name => "$research_project_name.$technology_type.$sensitivity",
     );
                                                     
-    isa_ok($model, "Genome::Model::Sanger");
+    isa_ok($model, "Genome::Model::PolyphredPolyscan");
     
     my $file;
     if ($type eq 'high_polyphred') {

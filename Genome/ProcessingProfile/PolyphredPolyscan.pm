@@ -1,11 +1,11 @@
-package Genome::ProcessingProfile::Sanger;
+package Genome::ProcessingProfile::PolyphredPolyscan;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::ProcessingProfile::Sanger {
+class Genome::ProcessingProfile::PolyphredPolyscan{
     is => 'Genome::ProcessingProfile',
     has => [
         sensitivity => {
