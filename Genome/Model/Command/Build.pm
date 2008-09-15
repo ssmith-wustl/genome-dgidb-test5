@@ -3,39 +3,22 @@ package Genome::Model::Command::Build;
 use strict;
 use warnings;
 
-use Data::Dumper;
-
 use Genome;
-use Command; 
-
-
 class Genome::Model::Command::Build {
-    is => 'Genome::Model::Event',
-    has => [],
- };
-
-sub sub_command_sort_position { 40 }
-
-sub help_brief {
-    "do all the work after creation to produce a model of the genome"
-}
-
-sub help_synopsis {
-    return <<"EOS"
-genome-model build mymodel
-EOS
-}
-
-sub help_detail {
-    return <<"EOS"
-This defines all of the steps necessary to produces a model, which are picked up by the job monitor and run.
-(You can use the "run jobs" command to launch all of the jobs directly as well.)
-EOS
-}
-
-sub subordinate_job_classes {
-    return ();
-}
+    is => ['Genome::Model::Event'],
+    type_name => 'genome model build',
+    table_name => 'GENOME_MODEL_BUILD',
+    first_sub_classification_method_name => '_resolve_subclass_name',
+    id_by => [
+        build_id                 => { is => 'NUMBER', len => 10, constraint_name => 'GMB_GME_FK' },
+    ],
+    has => [
+        model                    => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GMB_GMM_FK' },
+        data_directory           => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
+    ],
+    schema_name => 'GMSchema',
+    data_source => 'Genome::DataSource::GMSchema',
+};
 
 1;
 
