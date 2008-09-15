@@ -7,6 +7,20 @@ use Genome;
 class Genome::Model::Command::Build::ReferenceAlignment::Solexa {
     is => 'Genome::Model::Command::Build::ReferenceAlignment',
     has => [],
+    has => [
+        model_id    => {
+            is => 'Integer', 
+            doc => 'Identifies the genome model to which we\'ll add the reads.'
+        },
+      
+        #  data_directory =>{
+            #    is => 'String',
+            #    is_calculated => 1,
+            #       calculate => q| return $self->model->data_directory |,
+            #     } 
+            
+    ],
+
  };
 
 sub sub_command_sort_position { 40 }
@@ -25,7 +39,8 @@ sub help_detail {
     return <<"EOS"
 One build of a given reference-alignment model.
 EOS
-}
+}   
+ 
 
 sub subordinate_job_classes {
     my @step1 =  ('Genome::Model::Command::AddReads::MergeAlignments');
@@ -40,17 +55,29 @@ sub execute {
     my $self = shift;
     #$DB::single = $DB::stopper;
     $DB::single = 1;
+    
+    #FIXME: Do this more elegantly in the class def?
+    $self->data_directory($self->model->data_directory);
 
+    unless( -d $self->data_directory) {
+        unless(mkdir $self->data_directory ) {
+            $self->error_message("Unable to create dir: " . $self->data_directory);
+            return;
+        }
+        chmod 02775, $self->data_directory;
+    } 
     my @sub_command_classes = $self->subordinate_job_classes;
-
+    
     my $model = Genome::Model->get($self->model_id);
+    $self->status_message("Found Model: " . $model->name);
     my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
 
     unless (@subreferences_names > 0) {
         @subreferences_names = ('all_sequences');
     }
-
-    foreach my $ref (@subreferences_names) { 
+   
+    foreach my $ref (@subreferences_names) {
+       $self->status_message("Scheduling for subreference: $ref"); 
     my $prior_event_id = undef;
         foreach my $command_classes ( @sub_command_classes ) {
             
@@ -71,7 +98,7 @@ sub execute {
             $prior_event_id = $command->id;
         }
     }
-
+   
     return 1; 
 }
 
