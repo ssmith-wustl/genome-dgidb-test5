@@ -40,13 +40,21 @@ class Genome::Model::PolyphredPolyscan {
 sub create{
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-    mkdir $self->model_directory;
-
-    unless (-d $self->model_directory) {
-        $self->error_message("Failed to create model directory: " . $self->model_directory);
+    
+    my $model_dir = $self->model_directory;
+    
+    # Make the model directory
+    if (-d $model_dir) {
+        $self->error_message("Model directory: " . $model_dir . " already exists before creation");
         return undef;
     }
+    
+    mkdir $model_dir;
 
+    unless (-d $model_dir) {
+        $self->error_message("Failed to create model directory: " . $model_dir);
+        return undef;
+    }
 
     #make required non-build directories
     mkdir $self->pending_instrument_data_dir;
@@ -71,7 +79,12 @@ sub type{
 
 sub model_directory{
     my $self = shift;
-    return $self->base_directory."/".$self->name;
+    my $model_dir = $self->base_directory."/".$self->name;
+    
+    # Remove spaces, replace with underscores
+    $model_dir=~ s/ /_/;
+
+    return $model_dir;
 }
 
 sub base_directory {
@@ -251,7 +264,10 @@ sub current_build_dir {
     my $current_version = $self->current_version;
     my $current_build_dir = "$model_dir/build_$current_version/";
 
-    unless (-e $current_build_dir) {
+    # Remove spaces, replace with underscores
+    $current_build_dir =~ s/ /_/;
+
+    unless (-d $current_build_dir) {
         $self->error_message("Current build dir: $current_build_dir doesnt exist");
         return undef;
     }
@@ -269,6 +285,9 @@ sub current_instrument_data_dir {
 
     my $current_instrument_data_dir = "$current_build_dir/instrument_data/";
 
+    # Remove spaces, replace with underscores
+    $current_instrument_data_dir =~ s/ /_/;
+    
     return $current_instrument_data_dir;
 }
 
@@ -293,6 +312,9 @@ sub pending_instrument_data_dir {
 
     my $model_dir = $self->model_directory;
     my $pending_instrument_data_dir = "$model_dir/instrument_data/";
+
+    # Remove spaces, replace with underscores
+    $pending_instrument_data_dir =~ s/ /_/;
 
     return $pending_instrument_data_dir;
 }
@@ -320,6 +342,9 @@ sub next_build_dir {
     my $next_version = $self->next_version;
     my $next_build_dir = "$model_dir/build_$next_version/";
 
+    # Remove spaces, replace with underscores
+    $next_build_dir =~ s/ /_/;
+
     # This should not exist yet
     if (-e $next_build_dir) {
         $self->error_message("next build dir: $next_build_dir already exists (and shouldnt)");
@@ -334,39 +359,11 @@ sub source_instrument_data_dir {
     my $model_dir = $self->model_directory;
     my $dir_name = 'source_instrument_data';
     my $dir = "$model_dir/$dir_name";
-    return $dir;
-}
-
-# Creates the new build directory,
-# Copies all of the pending input files into the new build directory
-sub build {
-    my $self = shift;
-
-    # Make the new build dir
-    my $next_build_dir = $self->next_build_dir;
-    mkdir $next_build_dir;
-
-    unless (-e $next_build_dir) {
-        $self->error_message("Failed to create next build dir: $next_build_dir ");
-        return undef;
-    }
-
-    # Copy the pending input files to the new build dir
-    my @pending_instrument_data_files = $self->pending_instrument_data_files;
-    my $source_dir = $self->pending_instrument_data_dir;
-    my $destination_dir = $self->current_instrument_data_dir;
-    mkdir $destination_dir unless -d $destination_dir;
-    for my $file (@pending_instrument_data_files) {
-        cp($file, $destination_dir);
-
-        my $destination_file = $destination_dir . basename($file);
-        unless (-e $destination_file) {
-            $self->error_message("Failed to copy $file to $destination_file");
-            return undef;
-        }
-    }
     
-    return 1;
+    # Remove spaces, replace with underscores
+    $dir =~ s/ /_/;
+
+    return $dir;
 }
 
 # Grabs all of the input files from the current build, creates MG::IO modules for
