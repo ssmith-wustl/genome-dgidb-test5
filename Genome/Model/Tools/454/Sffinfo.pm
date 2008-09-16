@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Model::Tools::454;
 
 class Genome::Model::Tools::454::Sffinfo {
     is => ['Genome::Model::Tools::454'],
@@ -33,6 +32,15 @@ sub help_detail {
 convert sff file to fasta file
 see sffinfo usage for valid params
 EOS
+}
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    unless ($self->arch_os =~ /64/) {
+        $self->error_message('This genome-model tool '. $self->command_name .' will only run on 64-bit');
+        return;
+    }
+    return $self;
 }
 
 sub execute {

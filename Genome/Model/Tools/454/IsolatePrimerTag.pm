@@ -36,6 +36,17 @@ create a new sff file with first n(default=20) base pair were the expected prime
 EOS
 }
 
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+    unless ($self->arch_os =~ /64/) {
+        $self->error_message('This genome-model tool '. $self->command_name .' will only run on 64-bit');
+        return;
+    }
+    return $self;
+}
+
 sub execute {
     my $self = shift;
 
