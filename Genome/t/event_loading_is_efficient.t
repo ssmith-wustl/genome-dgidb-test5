@@ -3,6 +3,7 @@
 #$ENV{UR_DBI_MONITOR_SQL}=1;
 use above "Genome";
 use Test::More tests => 6;
+use Genome::Model::Command::AddReads;
 
 my $query_count;
 Genome::DataSource::GMSchema->create_subscription(method => 'query',
@@ -16,7 +17,7 @@ Genome::Model::Event->create_subscription(method => 'load',
 
 my @events = Genome::Model::Command::AddReads->get(model_id => '2509644372');
 is(scalar(@events), 0 , "Genome::Model::Command::AddReads->get() correctly returns 0 items for model_id '2509644372'");
-is($query_count, 1, "get() generated 1 queries");
+is($query_count, 2, "get() generated 2 queries, one for the main class, and one for one subclass with a table (build)");
 ok($load_count, "at least one object was loaded by the get()");
 
 $query_count = 0;
