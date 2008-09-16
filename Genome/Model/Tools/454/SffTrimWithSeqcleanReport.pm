@@ -101,7 +101,9 @@ sub execute {
     my $sfffile = Genome::Model::Tools::454::Sfffile->create(
                                                              in_sff_file => $self->in_sff_file,
                                                              out_sff_file => $self->out_sff_file,
-                                                             params => '-i '. $self->trim_file .' -t '. $self->trim_file,
+                                                             # The -t option alone seems to give unexpected results
+                                                             # I guess because old trim values are somewhere in the manifest??
+                                                             params => '-i '. $self->trim_file .' -tr '. $self->trim_file,
                                                          );
     unless ($sfffile->execute) {
         $self->error_message('Failed to output trimmed sff file '. $self->out_sff_file);
