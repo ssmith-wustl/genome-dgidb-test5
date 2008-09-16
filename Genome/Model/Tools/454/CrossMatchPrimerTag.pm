@@ -44,7 +44,7 @@ sub create {
     my $self = $class->SUPER::create(@_);
 
     unless ($self->arch_os =~ /64/) {
-        $self->error_message('This genome-model tool ' $self->command_name .' will only run on 64-bit');
+        $self->error_message('This genome-model tool '. $self->command_name .' will only run on 64-bit');
         return;
     }
     if (-s $self->cross_match_file) {
