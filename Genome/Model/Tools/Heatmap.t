@@ -15,17 +15,21 @@ my $outfile = "$Bin/t/heatmap-test-image.png";
 my $columns = 3;
 my $checksum = "007d3bb4cfa3bb2aacf152dcfa02aafa";
 
+unlink $outfile;
+
 my $hm = Genome::Model::Tools::Heatmap->create(
                                                          matrix => $file,
                                                          image => $outfile,
                                                          columns => $columns,
                                                         );
 ok($hm->execute,'heatmap image generation');
-my $imagecontents = qx(cat $outfile);
-#is(md5_hex($imagecontents), $checksum, 'image correct');
+ok((-e $outfile), 'output file exists');
 
+#my $imagecontents = qx(cat $outfile);
+#is(md5_hex($imagecontents), $checksum, 'image correct');
 #ok(0,'firetest');
 
+unlink $outfile;
 
 exit;
 
