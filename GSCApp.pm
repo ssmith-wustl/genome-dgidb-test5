@@ -66,10 +66,11 @@ BEGIN {
 END {
     if ($^O eq 'MSWin32' || $^O eq 'cygwin') {
         open(OUTPUT, '>>', '//winsvr/var/log/confirm_scheduled_pse/test/windows.txt');
-        print OUTPUT "Perl $]: $0 modules used\n";
+        print OUTPUT "\nPerl $]: $0 modules used\n";
         while( my($key,$val) = each %INC) {
             print OUTPUT "$key => $val\n";
         }
+        print OUTPUT "\n";
         close(OUTPUT);
     }
 }
