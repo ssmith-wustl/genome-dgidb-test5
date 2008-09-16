@@ -1406,5 +1406,21 @@ sub clean_up
     return 1;
 }
 
+#This is run by test case only
+#it's necessary to do this because pcap scripts do not overwrite
+#already existing output files but asks if you want to remove it
+
+sub delete_completed_assembly
+{
+    my ($self) = @_;
+    my $edit_dir = $self->{project_path}.'/edit_dir';
+    chdir "$edit_dir";
+    `\\rm *`;
+    my $read_dump_dir = $self->{project_path}.'/read_dump';
+    chdir "$read_dump_dir";
+    `\\rm *`;
+    return 1;
+}
+
 
 1;
