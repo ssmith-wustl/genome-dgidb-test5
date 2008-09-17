@@ -63,7 +63,10 @@ sub execute {
     close($temp_fh);
     
     my $tempdir = tempdir(CLEANUP => 1);
-    
+
+    ## For RNAmmer 1.2 at least, the default
+    ## behaviour when -m is not specified
+    ## is the same as -m tsu,lsu,ssu.
     my @cmd = (
                'rnammer',
                '-S',
