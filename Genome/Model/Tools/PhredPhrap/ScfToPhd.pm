@@ -43,9 +43,11 @@ class Genome::Model::Tools::PhredPhrap::ScfToPhd {
     recall => {
         is => 'Boolean',
         doc => 'Run phred on the SCF, naming it to a new version.',
-        default => 'true',
+        default => 1,
     },
-    _phd_schema => {}, 
+    _phd_schema => {
+        is_optional => 1,
+    }, 
     ],
 };
 
