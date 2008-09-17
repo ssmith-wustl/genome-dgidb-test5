@@ -1,4 +1,4 @@
-package Genome::Model::Tools::CreateManualReviewDirectory;
+package Genome::Model::Tools::ManualReview::CreateDirectory;
 use strict;
 use warnings;
 use Command;
@@ -7,7 +7,7 @@ use IO::File;
 use PP::LSF;
 use File::Temp;
 use File::Basename;
-class Genome::Model::Tools::CreateManualReviewDirectory
+class Genome::Model::Tools::ManualReview::CreateDirectory
 {
     is => 'Command',                       
     has => 

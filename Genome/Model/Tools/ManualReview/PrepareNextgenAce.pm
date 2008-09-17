@@ -1,4 +1,4 @@
-package Genome::Model::Tools::PrepareNextgenAce;
+package Genome::Model::Tools::ManualReview::PrepareNextgenAce;
 
 use Genome;
 use Command;
@@ -8,7 +8,7 @@ use Data::Dumper;
 use File::Basename;
 use warnings;
 
-class Genome::Model::Tools::PrepareNextgenAce 
+class Genome::Model::Tools::ManualReview::PrepareNextgenAce 
 {
     is => 'Command',
     has => 
