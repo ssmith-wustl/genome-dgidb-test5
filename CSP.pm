@@ -724,7 +724,7 @@ sub _cron_setup {
 
     # make up a log file name
     # one log file per day
-    my $logfile = $class->cron_logfile( $process_to );
+    my $logfile = $arg->{adjunct_name} ? $class->cron_logfile( $process_to .'.' .$arg->{adjunct_name}) : $class->cron_logfile( $process_to );
 
     # putting this back because things rely on it
     umask 0002;
@@ -763,6 +763,7 @@ sub _cron_setup {
     my $resource_id = 'confirm_scheduled_pse_cron';
     if ($process_to) {
         $resource_id .= "_$process_to";
+        $arg->{adjunct_name} ? ($resource_id .= $arg->{adjunct_name}) : ();
     }
     App::Object->status_message("$$ looking for file lock for $resource_id");
     my $cspc_lock = App::Lock->create(
