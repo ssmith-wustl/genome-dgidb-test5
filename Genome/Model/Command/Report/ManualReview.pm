@@ -104,7 +104,7 @@ $DB::single = 1;
         print $out_fh @maps;
     }
     
-    return Genome::Model::Tools::ManualReview->execute(map_list => $out_fh->filename, snp_file => $snps, output_dir => $out_dir);
+    return Genome::Model::Tools::ManualReview::CreateDirectory->execute(map_list => $out_fh->filename, snp_file => $snps, output_dir => $out_dir);
 }
 ############################################################
 
