@@ -1,7 +1,7 @@
 package Genome::Model::Tools::Maq::ExampleUsingC_C;
 
 use Genome::Model::Tools::Maq::Map::Utils;
-use Inline 'C' => 'Config' => @Genome::Model::Tools::Maq::MapUtils::CONFIG;
+use Inline 'C' => 'Config' => @Genome::Model::Tools::Maq::MapUtils::CONFIG, DIRECTORY => Genome::Inline::DIRECTORY();
 
 use strict;
 use warnings;
