@@ -138,7 +138,7 @@ void write_seq_ov (char *maqfile, char *seqfile, char * outfile, int justname)
 				curr_mm.name, mm->ref_name[curr_mm.seqid], (curr_mm.pos>>1) + 1,
 				(curr_mm.pos&1)? '-' : '+', curr_mm.dist, curr_mm.flag, curr_mm.map_qual, (signed char)curr_mm.seq[MAX_READLEN-1],
 				curr_mm.alt_qual, curr_mm.info1&0xf, curr_mm.info2, curr_mm.c[0], curr_mm.c[1], curr_mm.size);
-            else if(justname ==0||justname==2)
+            if(justname ==0||justname==2)
                 put_record(fpout, &curr_mm);                
         }        
         /*if(justname)
