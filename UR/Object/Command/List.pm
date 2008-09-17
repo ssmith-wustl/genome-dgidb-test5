@@ -160,6 +160,7 @@ sub _object_properties_to_string {
     my @v;
     return join(
         $char, 
+        map { defined $_ ? $_ : '<NULL>' } 
         map { 
             if (substr($_,0,1) eq '(') {
                 @v = eval $_;
@@ -171,6 +172,7 @@ sub _object_properties_to_string {
                 @v = map { defined $_ ? $_ : '<NULL>' } $o->$_;
             }
             if (@v > 1) {
+                no warnings;
                 join(',',@v)
             }
             else {
