@@ -2,6 +2,7 @@ package UR::Object::Command::List;
 
 use strict;
 use warnings;
+use IO::File;
 
 use above "UR";                 
 
@@ -85,6 +86,11 @@ sub create {
         ) 
     ) 
         and return unless grep { $self->style eq $_ } valid_styles();
+    unless ( ref $self->output ){
+        my $ofh = IO::File->new("> ".$self->output);
+        $self->error_message("Can't open file handle to output param ".$self->output) and die unless $ofh;
+        $self->output($ofh);
+    }
 
     return $self;
 }
