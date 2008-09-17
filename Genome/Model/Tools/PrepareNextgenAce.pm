@@ -105,8 +105,10 @@ $DB::single = 1;
             }
         }
 
-        #my ($chrom, $start) = split(/_/, $project_string);
-        my ($chrom, $start) = $project_string =~ /.*(\d+)_(\d+)/;#split(/_/, $project_string);
+        my ($chrom, $start);# = split(/_/, $project_string);
+        print $project_string, "\n";
+        ($chrom, $start) = $project_string =~ /.*\/(\d+)_(\d+)/;#split(/_/, $project_string);
+        ($chrom, $start) = $project_string =~ /.?(\d+)_(\d+)/ unless (defined $chrom && defined $start);
         $project_string = $chrom.'_'.$start;
         my $expecting ="1_34744774";
         if($start =~ /\D/ ){
