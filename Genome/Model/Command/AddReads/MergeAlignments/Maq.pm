@@ -52,6 +52,7 @@ $DB::single=1;
             $self->error_message("Failed to create directory '$maplist_dir':  $!");
             return;
         }
+        chmod 02775, $maplist_dir;
     } else {
         unless (-d $maplist_dir) {
             #does exist, but is a file, not a directory? quit.
@@ -114,9 +115,9 @@ $DB::single=1;
         my @missing_maps;
         my @found_maps;
 $DB::single=1;
-        for my $read_set (@read_sets) {
+        for my $read_set_link (@read_sets) {
                      
-            my $read_set = $read_set->read_set;
+            my $read_set = $read_set_link->read_set;
             my $library = $read_set->library_name;
             my $read_set_desc = $read_set->full_name . ' (library ' . $library . ')';
 
@@ -137,14 +138,14 @@ $DB::single=1;
             #           }
             #        }
             
-            my @map_files = $read_set->read_set_alignment_files_for_refseq($self->ref_seq_id);
+            my @map_files = $read_set_link->read_set_alignment_files_for_refseq($self->ref_seq_id);
             unless (@map_files) {
                 #$DB::single = 1;
-                @map_files = $read_set->read_set_alignment_files_for_refseq($self->ref_seq_id);
+                @map_files = $read_set_link->read_set_alignment_files_for_refseq($self->ref_seq_id);
                 my $msg = 
                     "Failed to find map files for read set "
-                    . $read_set->read_set_id
-                    . "(" . $read_set->read_set->full_name . ")";
+                    . $read_set_link->read_set_id
+                    . "(" . $read_set->full_name . ")";
                      $self->error_message($msg);
                 push @missing_maps, $msg;
             }

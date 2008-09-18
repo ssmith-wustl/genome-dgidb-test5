@@ -7,6 +7,7 @@ use Genome;
 use Command;
 use Genome::Model;
 use Genome::Model::Command::AddReads::AlignReads;
+use Genome::Model::ReadSet;
 
 class Genome::Model::Command::AddReads::AlignReads::Maq {
     is => [
@@ -14,106 +15,50 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
         'Genome::Model::Command::MaqSubclasser'
     ],
     has => [
-        alignment_file_paths => {
-            doc => "the paths to to the map files",
-            calculate_from => ['read_set_directory','run_subset_name'],
-            calculate => q|
-                return unless -d $read_set_directory;;
-                return grep { -e $_ } glob("${read_set_directory}/*${run_subset_name}.submaps/*.map");
-            |,
-        },
-        aligner_output_file_paths => {
-            doc => "the paths to the filed which captured maq's standard output and error",
-            calculate_from => ['read_set_directory','run_subset_name'],
-            calculate => q|
-                return unless -d $read_set_directory;
-                return grep { -e $_ } glob("${read_set_directory}/*${run_subset_name}.map.aligner_output");
-            |,
-        },
-        poorly_aligned_reads_list_paths => {
-            doc => "the path(s) to the file(s) which list poorly aligned reads",
-            calculate_from => ['read_set_directory','run_subset_name'],
-            calculate => q|
-                return unless -d $read_set_directory;;
-                return grep { -e $_ } grep { $_ !~ /\.fastq$/ } glob("${read_set_directory}/*${run_subset_name}_sequence.unaligned.*");
-            |,
-        },
-        poorly_aligned_reads_fastq_paths => {
-            doc => "the path(s) to the fastq(s) of poorly aligned reads",
-            calculate_from => ['read_set_directory','run_subset_name'],
-            calculate => q|
-                return unless -d $read_set_directory;;
-                return grep { -e $_ } glob("${read_set_directory}/*${run_subset_name}_sequence.unaligned.*.fastq");
-            |,
-        },
-        contaminants_file_path => {
-            doc => "the paths to the file containing adaptor sequence and other contaminants to screen",
-            calculate_from => ['read_set_directory'],
-            calculate => q|
-                return unless -d $read_set_directory;;
-                return grep { -e $_ } glob("${read_set_directory}/adaptor_sequence_file");
-            |,
-        },
-        input_read_file_path => {
-                  is_transient=>1,
-                  is_optional=>1,
-                  doc => "temp storage for the fake filename for the metrics to calculate later",
-                  
-                 },
-        unique_reads_across_library     => { via => 'read_set' },
-        duplicate_reads_across_library  => { via => 'read_set' },
-        read_length                     => {
-                                            doc => "an accessor to return the read_length",
-                                            calculate_from => ['read_set'],
-                                            calculate => q| if ($read_set->read_length <= 0) {
-                                                                die('Impossible value for read_length field. seq_id:'. $read_set->seq_id);
-                                                            }
-                                                            return $read_set->read_length;
-                                                          |,
-                                        },
-        _calculate_total_read_count     => {
-                                            doc => "an accessor to return the number of reads",
-                                            calculate_from => ['read_set'],
-                                            calculate => q| if ($read_set->clusters <= 0) {
-                                                                die('Impossible value for clusters field. seq_id:'. $read_set->seq_id);
-                                                            }
-                                                            return $read_set->clusters;
-                                                          |,
-                                        },
-        _alignment_file_paths_unsubmapped => {
-            doc => "the paths to to the map files before submapping (not always available)",
-            calculate => q|
-                return unless -d $read_set_directory;;
-                return grep { -e $_ } glob("${read_set_directory}/*${run_subset_name}.map");
-            |,
-            calculate_from => ['read_set_directory','run_subset_name'],
-        },
-        subsequences => {
-                         doc => "the sub-sequence names with out 'all_sequences'",
-                         calculate_from => ['model'],
-                         calculate => q|
-                                 return grep {$_ ne "all_sequences"} $model->get_subreference_names(reference_extension=>'bfa');
-                             |,
-                     },
-        is_eliminate_all_duplicates => { via => 'model' },
-            # deprecated
-            output_data_dir => {
-                                doc => "The path at which the model stores all of its private data for a given run",
-                                calculate_from => ['read_set_directory'],
-                                calculate => q|
-                                    return $read_set_directory
-                                |,
-                                is_constant => 1,
-                                is_deprecated => 1,
-        },
+    read_set      => { is => 'Genome::RunChunk', id_by => 'run_id' },
+    read_set_link => { is => 'Genome::Model::ReadSet', id_by => ['model_id','run_id'] },
+    read_set_alignment_directory => { via => 'read_set_link' },
+    run_subset_name => { via => 'read_set' }, 
+    _alignment_file_paths_unsubmapped => {
+        doc => "the paths to to the map files before submapping (not always available)",
+        calculate => q|
+        return unless -d $read_set_directory;;
+        return grep { -e $_ } glob("${read_set_directory}/*${run_subset_name}.map");
+        |,
+        calculate_from => ['read_set_directory','run_subset_name'],
+    },
+    subsequences => {
+        doc => "the sub-sequence names with out 'all_sequences'",
+        calculate_from => ['model'],
+        calculate => q|
+        return grep {$_ ne "all_sequences"} $model->get_subreference_names(reference_extension=>'bfa');
+        |,
+    },
+    is_eliminate_all_duplicates => { via => 'model' },
+    # deprecated
+    output_data_dir => {
+        doc => "The path at which the model stores all of its private data for a given run",
+        calculate_from => ['read_set_directory'],
+        calculate => q|
+        return $read_set_directory
+        |,
+        is_constant => 1,
+        is_deprecated => 1,
+    },
+    input_read_file_path => {
+        is_transient=>1,
+        is_optional=>1,
+        doc => "temp storage for the fake filename for the metrics to calculate later",
 
-        #make accessors for common metrics
-        (
-            map {
-                $_ => { via => 'metrics', to => 'value', where => [name => $_], is_mutable => 1 },
-            }
-            qw/total_read_count/
-        ),
+    },
+
+    #make accessors for common metrics
+    (
+        map {
+            $_ => { via => 'metrics', to => 'value', where => [name => $_], is_mutable => 1 },
+        }
+        qw/total_read_count/
+    ),
     ],
 };
 
@@ -140,12 +85,12 @@ sub read_set_alignment_files_for_refseq {
     my $self = shift;
     my $ref_seq_id = shift;
     my $event_id = $self->id;
-
-    my $alignment_dir = $self->read_set_alignment_directory;
+    my $read_set = $self->read_set_link;
+    my $alignment_dir = $read_set->read_set_alignment_directory;
 
     # Look for files in the new format: $refseqid.map.$eventid
     my @files = grep { $_ and -e $_ } (
-        glob($self->read_set_alignment_directory . "/$ref_seq_id.map.*") #bkward compat
+        glob($read_set->read_set_alignment_directory . "/$ref_seq_id.map.*") #bkward compat
     );
     return @files if (@files);
 
@@ -160,8 +105,8 @@ sub read_set_alignment_files_for_refseq {
 sub aligner_output_file {
     my $self = shift;
     my $event_id = $self->id;
-    my $lane = $self->read_set->subset_name;
-    my $file = $self->read_set_alignment_directory . "/alignments_lane_${lane}.map.$event_id";
+    my $lane = $self->read_set_link->subset_name;
+    my $file = $self->read_set_link->read_set_alignment_directory . "/alignments_lane_${lane}.map.$event_id";
     $file =~ s/\.map\./\.map.aligner_output\./g;
     return $file;
 }
@@ -169,17 +114,17 @@ sub aligner_output_file {
 sub unaligned_reads_file {
     my $self = shift;
     my $event_id = $self->id;
-    my $read_set = $self->read_set;
+    my $read_set = $self->read_set_link;
     my $lane = $read_set->subset_name;
-    return $self->read_set_alignment_directory . "/s_${lane}_sequence.unaligned.$event_id";
+    return $read_set->read_set_alignment_directory . "/s_${lane}_sequence.unaligned.$event_id";
 }
 
 sub unaligned_reads_files {
     my $self = shift;
     #my $event_id = $self->id;
-    my $read_set = $self->read_set;
+    my $read_set = $self->read_set_link;
     my $lane = $read_set->subset_name;
-    my @unaligned_reads_files = glob ($self->read_set_alignment_directory . "/${lane}_sequence.unaligned.*");
+    my @unaligned_reads_files = glob ($read_set->read_set_alignment_directory . "/${lane}_sequence.unaligned.*");
     return @unaligned_reads_files;
     #return $self->read_set_alignment_directory . "/s_${lane}_sequence.unaligned.$event_id";
 }
@@ -217,8 +162,8 @@ sub _calculate_total_reads_passed_quality_filter_count {
     do {
         no warnings;
 
-        if (defined $self->unique_reads_across_library && defined $self->duplicate_reads_across_library) {
-            $total_reads_passed_quality_filter_count = ($self->unique_reads_across_library + $self->duplicate_reads_across_library);
+        if (defined $self->read_set_link->unique_reads_across_library && defined $self->read_set_link->duplicate_reads_across_library) {
+            $total_reads_passed_quality_filter_count = ($self->read_set_link->unique_reads_across_library + $self->read_set_link->duplicate_reads_across_library);
         }
         unless ($total_reads_passed_quality_filter_count) {
             my @f = $self->input_read_file_path;
@@ -246,7 +191,7 @@ sub total_bases_passed_quality_filter_count {
 sub _calculate_total_bases_passed_quality_filter_count {
     my $self = shift;
 
-    my $total_bases_passed_quality_filter_count = $self->total_reads_passed_quality_filter_count * $self->read_length;
+    my $total_bases_passed_quality_filter_count = $self->total_reads_passed_quality_filter_count * $self->read_set_link->read_length;
     return $total_bases_passed_quality_filter_count;
 }
 
@@ -264,7 +209,7 @@ sub _calculate_poorly_aligned_read_count {
     #}
     
     my $total = 0;
-    for my $f ($self->poorly_aligned_reads_list_paths) {
+    for my $f ($self->read_set_link->poorly_aligned_reads_list_paths) {
         my $fh = IO::File->new($f);
         $fh or die "Failed to open $f to read.  Error returning value for poorly_aligned_read_count.\n";
         while (my $row = $fh->getline) {
@@ -322,7 +267,7 @@ sub aligned_base_pair_count {
 sub _calculate_aligned_base_pair_count {
     my $self = shift;
 
-    my $aligned_base_pair_count = $self->aligned_read_count * $self->read_length;
+    my $aligned_base_pair_count = $self->aligned_read_count * $self->read_set_link->read_length;
     return $aligned_base_pair_count;
 }
 sub unaligned_read_count {
@@ -343,7 +288,7 @@ sub unaligned_base_pair_count {
 
 sub _calculate_unaligned_base_pair_count {
     my $self = shift;
-    my $unaligned_base_pair_count = $self->unaligned_read_count * $self->read_length;
+    my $unaligned_base_pair_count = $self->unaligned_read_count * $self->read_set_link->read_length;
     return $unaligned_base_pair_count;
 }
 
@@ -355,7 +300,7 @@ sub total_base_pair_count {
 sub _calculate_total_base_pair_count {
     my $self = shift;
 
-    my $total_base_pair_count = $self->total_read_count * $self->read_length;
+    my $total_base_pair_count = $self->total_read_count * $self->read_set_link->read_length;
     return $total_base_pair_count;
 }
 
@@ -366,7 +311,7 @@ sub prepare_input {
         die "not configured to handle PAIRED END data"
     }
 
-    my $lane = $read_set->subset_name;
+    my $lane = $self->read_set_link->subset_name;
     my $read_set_desc = $read_set->full_name . "(" . $read_set->id . ")";
     my $gerald_directory = $read_set->_run_lane_solexa->gerald_directory;
     unless ($gerald_directory) {
@@ -481,7 +426,7 @@ $DB::single = $DB::stopper;
         return 1;
     }
 
-    my $read_set_alignment_directory = $self->read_set_alignment_directory;
+    my $read_set_alignment_directory = $self->read_set_link->read_set_alignment_directory;
     $self->create_directory($read_set_alignment_directory);
 
     my $aligner_path = $self->aligner_path('read_aligner_name');

@@ -89,6 +89,7 @@ sub execute {
     unless (-d $model->data_directory) {
         $self->create_directory($model->data_directory);
     }
+    Genome::Model::ReadSet->create(model_id=>$self->model_id, read_set_id=> $self->run_id);
     return 1;
 }
 
