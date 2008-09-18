@@ -94,6 +94,7 @@ $DB::single=1;
         my @read_sets = 
            Genome::Model::ReadSet->get(
                 model_id => $model->id,
+                first_build_id => {operator => "is", value =>"not NULL" }
             );
         unless(@read_sets) {
             $self->error_message("Model: " . $model->id .  " has no read sets?");
