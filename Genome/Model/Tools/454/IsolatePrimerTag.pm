@@ -21,7 +21,7 @@ class Genome::Model::Tools::454::IsolatePrimerTag {
             primer_length => {
                               is => 'Integer',
                               default_value => 20,
-                              doc => 'The length of the expected primer to isolate',
+                              doc => 'The length of the expected primer to isolate(default=20)',
                           },
         ],
 };
