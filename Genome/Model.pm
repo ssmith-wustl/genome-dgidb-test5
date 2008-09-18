@@ -22,6 +22,9 @@ class Genome::Model {
         genome_model_id => { is => 'NUMBER', len => 11 },
     ],
     has => [
+        read_sets =>  { is => 'Genome::Model::ReadSet', reverse_id_by => 'model', is_many=> 1 },
+        run_chunks => { is => 'Genome::RunChunk', via=>'read_sets', to=>'runchunk' },
+
         data_directory               => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         processing_profile           => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name      => { via => 'processing_profile', to => 'name'},
