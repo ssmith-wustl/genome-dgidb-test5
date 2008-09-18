@@ -4,7 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
+
+use File::Temp;
 
 class Genome::Model::Tools::454 {
     is => ['Command'],
@@ -16,7 +17,13 @@ class Genome::Model::Tools::454 {
                             return $arch_os;
                         |
                     },
-        ]
+        ],
+    has_optional => [
+                     _tmp_dir => {
+                                  is => 'string',
+                                  doc => 'a temporary directory for storing files',
+                              }
+                 ]
 };
 
 sub help_brief {
@@ -27,6 +34,16 @@ sub help_detail {                           # This is what the user will see wit
     return <<EOS
 
 EOS
+}
+
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+
+    my $tempdir = File::Temp::tempdir(CLEANUP => 1);
+    $self->_tmp_dir($tempdir);
+    return $self;
 }
 
 sub bin_path {
