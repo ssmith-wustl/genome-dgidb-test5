@@ -7,12 +7,8 @@ use File::Basename;
 use Genome;
 
 use GSCApp;
-#use GSCApp::Test qw/no_plan/ ;
 
-
-my ($ace_suffix, $review,$list);
 my $consed= 'cs';
-my $relative_target_base_pos;
 class Genome::Model::Tools::ManualReview::ViewWithConsed {
     is => "Command",
     has => [
@@ -35,6 +31,11 @@ class Genome::Model::Tools::ManualReview::ViewWithConsed {
             type => 'String',
             doc => "directory of manual review tree",
             is_optional => 1,
+        },
+        review_categories => {
+            type => 'String',
+            doc => "categories to classify contigs into",
+            is_optional => 1,
         }
     ]
 };
@@ -53,24 +54,19 @@ sub execute
     my $review = $self->review || 0;
     my $relative_target_base_pos = $self->main_contig_pos || 300;
     chdir($self->review_directory) if ($self->review_directory);
-    #my $arch = `uname -m`;
-    #chomp $arch;
-
+    my $review_categories = $self->review_categories || "tumorWildType,tumorVariant_skinWildType,tumorVariant_skinVariant,tumorVariant_skinUnknown,tumorVariant_maybe";
+    
     my $suffix = ($ace_suffix)? "." .$ace_suffix : ".1";
     $suffix = '' if $suffix eq '.ace';
     my $i=0;
     my $base = `pwd`;
     chomp $base;
 
-    my $tumorW_dir = "$base/tumorWildType";
-    my $tumorV_skinW_dir = "$base/tumorVariant_skinWildType";
-    my $tumorV_skinV_dir = "$base/tumorVariant_skinVariant";
-    my $tumorV_skinU_dir = "$base/tumorVariant_skinUnknown";
-    my $tumorV_maybe_dir = "$base/tumorVariant_maybe";
+    my @categories = split /,/,$review_categories;    
+    my @all_dirs = map { "$base/$_"; } @categories;
 
-    my @all_dirs =($tumorW_dir, $tumorV_skinW_dir, $tumorV_skinV_dir, $tumorV_skinU_dir, $tumorV_maybe_dir);
     if($review){
-        for($tumorW_dir, $tumorV_skinW_dir, $tumorV_skinV_dir, $tumorV_skinU_dir, $tumorV_maybe_dir){
+        for(@all_dirs){
             unless(-d $_){
                 mkdir $_ or die "can't mkdir $_";
             }
@@ -79,6 +75,7 @@ sub execute
 
     my @dirs;
 
+    my $list;
     if($list){
         open F, $list or die "can't open $list";
         while(<F>){
@@ -104,8 +101,6 @@ sub execute
         s/\/$//;
         my($file, $dir)= fileparse($_);
 
-        my ($seqid, $pos) = $file =~ /(\d+)_(\d+)/;
-        $relative_target_base_pos = 300;#$pos-1;
         my $edit_dir = "$base/$_/edit_dir";
         if( -d $edit_dir){
             chdir $edit_dir or die "can't cd to $edit_dir"; 
@@ -123,8 +118,8 @@ sub execute
                 next;
             }
 
-            $self->error_message("Failed to set consed project rc.\n") and return
-            unless set_project_consedrc($edit_dir);
+            #$self->error_message("Failed to set consed project rc.\n") and return
+            set_project_consedrc($edit_dir);
             
             my $c_command= "$consed -ace $ace1 -mainContigPos $relative_target_base_pos &> /dev/null";
 
@@ -133,28 +128,23 @@ sub execute
 
             if($review){
                 my $command;
-                print "What was the result:\n".
-                "[w]tumorWildType, [m]tumorMaybe, [s]tumorVariant_skinWild, [g]tumorVariant_skinVariant, [u]tumorVariant_skinUnknown ";
+                print "What was the result:\n";
+                for($i=0;$i<@categories;$i++)
+                {
+                    print "[$i]".$categories[$i]."\n";
+                }
                 $_=<STDIN>;
                 chomp;
-                if(/^w/i){
-                   $command= "mv $base/$file $tumorW_dir"; 
-                }elsif(/^s/i){
-                   $command= "mv $base/$file $tumorV_skinW_dir"; 
-                }elsif(/^g/i){
-                   $command= "mv $base/$file $tumorV_skinV_dir"; 
-                }elsif(/^u/i){
-                   $command= "mv $base/$file $tumorV_skinU_dir"; 
-                }elsif(/^m/i){
-                   $command= "mv $base/$file $tumorV_maybe_dir"; 
-
+                if(defined $_ && $_ < @categories && $_ >= 0){
+                    $command = "mv $base/$file ".$all_dirs[$_];
                 }else{
                     print "skipping action\n";
                 }
 
                 if($command){
                     print "$command\n";
-                    system($command);
+                    $self->error_message("Failed to move directory.\n") and return
+                    if system($command);
                 }
             }
         }else{
