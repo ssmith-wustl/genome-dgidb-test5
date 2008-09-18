@@ -38,7 +38,6 @@ EOS
  
 sub execute {
     my $self = shift;
-    $DB::single = 1;
     
     my $model = Genome::Model->get($self->model_id);
     unless ($model){
