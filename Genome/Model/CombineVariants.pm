@@ -186,6 +186,8 @@ sub combine_variants{
     my ($lq_polyscan_model) = $self->lq_polyscan_model;
     my ($lq_polyphred_model) = $self->lq_polyphred_model;
     $self->combine_variants_for_set($lq_polyscan_model, $lq_polyphred_model, $lq_genotype_file);
+
+    return 1;
 }
 
 # Given a set of hq or lq polyscan and polyphred models, run the combine variants logic
@@ -245,6 +247,8 @@ sub combine_variants_for_set{
             die;
         }
     }
+
+    return 1;
 }
 
 # Decide whether to trust the polyscan or polyphred genotype based upon logic,
@@ -299,6 +303,21 @@ sub format_genotype_line{
     return join("\t", map { $genotype->{$_} } $self->columns)."\n";
 }
 
+# Format a line into a hash
+sub parse_line {
+    my ($self, $line) = @_;
+    
+    my @columns = split("\t", $line);
+    my @headers = $self->columns;
+
+    my $hash;
+    for my $header (@headers) {
+        $hash->{$header} = shift(@columns);
+    }
+
+    return $hash;
+}
+
 # List of columns present in the combine variants output
 sub columns{
     my $self = shift;
@@ -326,7 +345,7 @@ sub next_hq_genotype{
 
     # Open the file handle if it hasnt been
     unless ($self->hq_gfh){
-        my $genotype_file = $self->genotype_file;
+        my $genotype_file = $self->hq_genotype_file;
         my $fh = IO::File->new("< $genotype_file");
         return undef unless $fh;
         $self->hq_gfh($fh)
@@ -347,7 +366,7 @@ sub next_lq_genotype{
 
     # Open the file handle if it hasnt been
     unless ($self->lq_gfh){
-        my $genotype_file = $self->genotype_file;
+        my $genotype_file = $self->lq_genotype_file;
         my $fh = IO::File->new("< $genotype_file");
         return undef unless $fh;
         $self->lq_gfh($fh)
@@ -360,6 +379,36 @@ sub next_lq_genotype{
     }
     my $genotype = $self->parse_line($line);
     return $genotype;
+}
+
+# Creates the model if it doesnt exist and returns it either way
+# TODO may not need this if we can guarantee the processing profile is there
+sub get_or_create {
+    my ($class , %p) = @_;
+    my $name = $p{name};
+
+
+    unless (defined($name)) {
+        $class->error_message("Insufficient params supplied to get_or_create");
+        return undef;
+    }
+
+    my $model = Genome::Model::CombineVariants->get(name => $name);
+
+    unless ($model) {
+        # TODO: More params...
+        my $pp = Genome::ProcessingProfile::CombineVariants->get();
+
+        # Make the processing profile if it doesnt exist
+        unless ($pp) {
+            $pp = Genome::ProcessingProfile::CombineVariants->create(name => 'combine variants');
+        }
+
+        $model = Genome::Model::CombineVariants->create(name => $name,
+                                                        processing_profile => $pp);
+    }
+
+    return $model;
 }
 
 =cut
