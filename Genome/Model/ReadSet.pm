@@ -11,7 +11,8 @@ class Genome::Model::ReadSet {
         read_set            => { is => 'Genome::RunChunk', id_by =>'read_set_id'},
 
     ],
-    has => [    
+    has => [   
+        first_build_id      => { is => 'NUMBER', length => '10' }, 
         alignment_directory => { via => 'model'},
         run_name            => { via => 'read_set'},
         subset_name         => { via => 'read_set'},
