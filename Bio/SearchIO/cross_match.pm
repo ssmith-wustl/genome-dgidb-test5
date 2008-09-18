@@ -120,7 +120,7 @@ sub next_result {
     } elsif(/^(\d+) matching entries/) {
       $self->{'_end_document'} = 1;
       return;
-    } elsif(($start || $self->{'_result_count'}) && /^  (\d+)/) {
+    } elsif(($start || $self->{'_result_count'}) && /^  \d+|^ALIGNMENT\s+\d+/) {
       $self->{'_result_count'} ++;
       return $self->_parse($_);
     } elsif(! $self->{_parameters}) {
