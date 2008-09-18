@@ -3,52 +3,46 @@
 use strict;
 use warnings;
 use Genome;
+
 use File::Temp;
+use File::Compare;
 
 use Test::More;
 
 if (`uname -a` =~ /x86_64/){
-    plan tests => 1;
+    plan tests => 6;
 }
 else{
     plan skip_all => 'Must run on a 64 bit machine';
 }
 
-my ($fh_pipe,$pipe_path) = File::Temp::tempfile;
-$fh_pipe->close;
-unlink($pipe_path);
+my $expected_results = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Vmerge/myresult_real';
 
-my $vmerge_pid = fork();
-if (! $vmerge_pid) {
-# Child 
-    exec("gt maq vmerge --maplist /gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Vmerge/all.maplist --pipe $pipe_path 2>/dev/null");
-    exit();  # Should not get here...
-}
+my (undef,$pipe_path) = File::Temp::tempfile;
 
+my $test_results = $pipe_path .'.virtual';
 
-while(1) {
-    if (-e $pipe_path) {
-        sleep 1;
-        last;
-    }
+ok(unlink($pipe_path),"delete existing temporary file $pipe_path");
+
+my $vmerge_cmd = "gt maq vmerge --maplist /gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Vmerge/all.maplist --pipe $pipe_path &";
+my $vmerge_rv = system($vmerge_cmd);
+ok(!$vmerge_rv,"$vmerge_cmd executed succesfully");
+
+while (!-e $pipe_path) {
     sleep 1;
 }
 
-`maq mapview $pipe_path > $pipe_path.virtual`;
-die "maq mapview: $?" if ($?);
-
-my $output= `diff $pipe_path.virtual /gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Vmerge/myresult_real`; 
-is($output,'', "No diffs");
-#ok ( (!defined($output) or !$output), "No diffs");
+my $cmd = "maq mapview $pipe_path > $test_results";
+my $rv = system($cmd);
+ok(!$rv,"$cmd executed succesfully");
+ok(!compare($test_results,$expected_results),'test result matches expected');
 
 #Clean up
-unlink($pipe_path);
-unlink("./${pipe_path}.virtual");
-
-print "Killing child:";
-if(`kill 0 $vmerge_pid`){
-    `kill $vmerge_pid`;    
+SKIP: {
+    skip 'unnecessary to unlink file if it does not exist', 1 if !-e $pipe_path;
+    ok(unlink($pipe_path),"remove pipe $pipe_path");
 }
 
-#exit off blade
-#system("exit");
+ok(unlink($test_results),"remove test results $test_results");
+
+exit;
