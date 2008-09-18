@@ -148,6 +148,7 @@ sub delete {
         $self->warning_message("deleting " . $obj->class . " " . $obj->id);
         $obj->delete;
     };
+    $self->SUPER::delete();
     return 1;
 }
 
