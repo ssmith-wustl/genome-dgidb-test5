@@ -234,14 +234,23 @@ sub execute {
                 subset_name => $lane,
                 sequencing_platform => $sequencing_platform,
                 sample_name => $sample_name,
+
             );
             unless ($run) {
                 $self->error_message("Failed to get or create run record information for $run_name, $lane ($read_set_id)");
                 return;
             }
+            my $read_set_link= Genome::Model::ReadSet->create(
+                model_id=>$self->model_id, 
+                read_set_id=> $self->run_id
+            );
+            unless($read_set_link) {
+                $self->error_message("Couldn't create a genome model read set for this run chunk.");
+                return;
+            }
         }
-    
-        my $prior_event_id = undef;
+
+            my $prior_event_id = undef;
     
         foreach my $command_class ( @sub_command_classes ) {
             my $command;
