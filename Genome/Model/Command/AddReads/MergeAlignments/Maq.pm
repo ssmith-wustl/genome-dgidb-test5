@@ -90,18 +90,16 @@ $DB::single=1;
     }
     else {
         # Normal code to get the map files. 
-        my @run_events = 
-            Genome::Model::Event->get(
-                event_type => 'genome-model add-reads align-reads maq',
+        my @read_sets = 
+           Genome::Model::ReadSet->get(
                 model_id => $model->id,
-                event_status => 'Succeeded'
             );
-        unless(@run_events) {
-            $self->error_message("Model: " . $model->id .  " has no align-reads events?");
+        unless(@read_sets) {
+            $self->error_message("Model: " . $model->id .  " has no read sets?");
             return;
         }
         # pre-cache the data we'll grab individually below
-        my @run_ids = map {$_->run_id} @run_events;
+        my @run_ids = map {$_->read_set_id} @read_sets;
         my @rc = Genome::RunChunk->get(seq_id => \@run_ids);        
         my @sls = GSC::RunLaneSolexa->get(seq_id => \@run_ids);
         
@@ -116,46 +114,38 @@ $DB::single=1;
         my @missing_maps;
         my @found_maps;
 $DB::single=1;
-        for my $run_event (@run_events) {
-            my $align_reads = Genome::Model::Command::AddReads::AlignReads::Maq->get(
-                model_id   => $model->id,
-                run_id     => $run_event->run_id,
-                event_type => 'genome-model add-reads align-reads maq',
-                event_status => 'Succeeded'
-            );
-            
-            my $read_set = $align_reads->read_set;
+        for my $read_set (@read_sets) {
+                     
+            my $read_set = $read_set->read_set;
             my $library = $read_set->library_name;
             my $read_set_desc = $read_set->full_name . ' (library ' . $library . ')';
+
+            #if ($align_dist_threshold) {
+            #    my $evenness_metric = $align_reads->metric(name => 'evenness');
+            #     if ($evenness_metric) {
+            #      my $evenness = $evenness_metric->value;
+            #     if ($evenness < $align_dist_threshold) {
+            #          $self->warning_message("SKIPPING read set $read_set_desc which has evenness $evenness");
+            #       }
+            #  else {
+            #      $self->status_message("ADDING read set $read_set_desc with evenness $evenness");
+            #      }
+            #       }
+            #   else {
+            #   $self->warning_message("no evenness metric on read set $read_set_desc");
+            #    $self->status_message("ADDING read set $read_set_desc");
+            #           }
+            #        }
             
-            if ($align_dist_threshold) {
-                my $evenness_metric = $align_reads->metric(name => 'evenness');
-                if ($evenness_metric) {
-                    my $evenness = $evenness_metric->value;
-                    if ($evenness < $align_dist_threshold) {
-                        $self->warning_message("SKIPPING read set $read_set_desc which has evenness $evenness");
-                    }
-                    else {
-                        $self->status_message("ADDING read set $read_set_desc with evenness $evenness");
-                    }
-                }
-                else {
-                    $self->warning_message("no evenness metric on read set $read_set_desc");
-                    $self->status_message("ADDING read set $read_set_desc");
-                }
-            }
-            
-            my @map_files = $align_reads->read_set_alignment_files_for_refseq($self->ref_seq_id);
+            my @map_files = $read_set->read_set_alignment_files_for_refseq($self->ref_seq_id);
             unless (@map_files) {
                 #$DB::single = 1;
-                @map_files = $align_reads->read_set_alignment_files_for_refseq($self->ref_seq_id);
+                @map_files = $read_set->read_set_alignment_files_for_refseq($self->ref_seq_id);
                 my $msg = 
                     "Failed to find map files for read set "
-                    . $run_event->run_id 
-                    . "(" . $run_event->read_set->full_name . ")"
-                    . " on event "
-                    . $align_reads->id;
-                $self->error_message($msg);
+                    . $read_set->read_set_id
+                    . "(" . $read_set->read_set->full_name . ")";
+                     $self->error_message($msg);
                 push @missing_maps, $msg;
             }
             $self->status_message("Found map files:\n" . join("\n\t",@map_files));
