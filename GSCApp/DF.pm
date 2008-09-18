@@ -109,6 +109,7 @@ __PACKAGE__->accessorize(qw(
                             used
                             avail
                             percent_capacity 
+                            percent_used
                             mount
                             group
                             )
@@ -120,6 +121,8 @@ sub new {
 
     my $self={%params};
     bless $self, $class;
+
+    $self->percent_used(int(100 * $self->{used} / $self->{total} + 0.005));
 
     return $self;
 }
