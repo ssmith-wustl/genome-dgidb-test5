@@ -176,15 +176,13 @@ sub next_pcr_product_genotype{
     }
 
     # Get and parse the line or return undef
-    if ($self->snps){
-        my $line = shift @{$self->snps};
-        return $line;
-    }
-    if ($self->indels){
-        my $line = shift @{$self->indels};
-        return $line;
-    }
-    return undef;
+    my $line = shift @{$self->snps};
+    
+    unless (defined($line)) {
+        $line = shift @{$self->indels};
+    } 
+    
+    return $line;
 }
 
 # Returns the genotype for the next position for a sample...
@@ -371,8 +369,6 @@ sub source_instrument_data_dir {
 sub setup_input {
     my $self = shift;
 
-    $DB::single = 1;
-
     my @input_files = $self->current_instrument_data_files;
 
     # Determine the type of parser to create
@@ -398,6 +394,7 @@ sub setup_input {
                                   assembly_project_name => $assembly_project_name
                               );
         my ($snps, $indels) = $parser->collate_sample_group_mutations;
+
         push @all_snps, @$snps if $snps;
         push @all_indels, @$indels if $indels;
     }
@@ -415,13 +412,14 @@ sub setup_input {
 
 # attempts to get an existing model with the params supplied
 sub get_or_create{
-    my ($self, %p) = @_;
+    my ($class , %p) = @_;
+    
     my $research_project_name = $p{research_project};
     my $technology = $p{technology};
     my $sensitivity = $p{sensitivity};
     
     unless (defined($research_project_name) && defined($technology) && defined($sensitivity)) {
-        $self->error_message("Insufficient params supplied to get_or_create");
+        $class->error_message("Insufficient params supplied to get_or_create");
         return undef;
     }
 
@@ -453,7 +451,16 @@ sub get_or_create{
             processing_profile => $pp,
             name => $pp->name,
         );
+
+        # Now, get or create the combine variants model and add this newly created model to it
+        # TODO: Should be some other parameters besides name as the research project name...
+        my $combine_variants_model = Genome::Model::CombineVariants->get_or_create(name => $research_project_name);
+
+        $combine_variants_model->add_child_model($model);
     }
+
+
+    
     return $model;
 }
 
