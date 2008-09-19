@@ -26,6 +26,11 @@ class Genome::Model::Tools::ManualReview::ViewWithConsed {
             doc => "the position to scroll consed to when opening the contig",
             is_optional => 1,
         },
+        review_list  => {
+            type => 'String',
+            doc => "list of selected directories",
+            is_optional => 1,
+        },
         review_directory => {
             type => 'String',
             doc => "directory of manual review tree",
@@ -76,7 +81,7 @@ sub execute
 
     my @dirs;
 
-    my $list;
+    my $list = $self->review_list;
     if($list){
         open F, $list or die "can't open $list";
         while(<F>){
@@ -108,7 +113,7 @@ sub execute
 
             my $ace1 = "$file.ace$suffix";
             unless(-e $ace1){
-                print "ERROR no: $ace1 ... skipping (report to sabbott)\n"; 
+                print "ERROR no: $ace1 ... skipping (report to apipe)\n"; 
                 next;
             }
             $i++;
