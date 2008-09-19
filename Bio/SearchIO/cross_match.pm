@@ -262,7 +262,7 @@ sub _parse {
 										       #LSF: Need the direction, just to fool the GenericHSP module.
 										       -algorithm => 'SW',)],
                                             );
-  my $result = new Bio::Search::Result::CrossMatchResult( -query_name        => $self->{_query_name},
+  my $result = new Bio::Search::Result::CrossMatchResult( -query_name        => $query_seq_id,
           -query_accession   => '',
           -query_description => '',
           -query_length      => 0,
