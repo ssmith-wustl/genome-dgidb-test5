@@ -10,7 +10,7 @@ use File::Basename;
 class Genome::Model::Tools::454::SeparateReadsWithCrossMatchAlignment {
     is => ['Genome::Model::Tools::454'],
     has => [
-            in_sff_file => {
+            sff_file => {
                             is_input => 1,
                             is => 'String',
                             doc => 'The sff file to divide into smaller sff files',
@@ -48,8 +48,8 @@ sub create {
         $self->error_message('cross_match output file '. $self->cross_match_file .' does not exist or is zero size.');
         return;
     }
-    unless (-s $self->in_sff_file) {
-        $self->error_message('sff file '. $self->in_sff_file .' does not exist or is zero size.');
+    unless (-s $self->sff_file) {
+        $self->error_message('sff file '. $self->sff_file .' does not exist or is zero size.');
         return;
     }
     return $self;
@@ -60,7 +60,7 @@ sub execute {
 
     my $cross_match_file_basename = basename($self->cross_match_file);
 
-    my $out_sff_file_root_name = $self->in_sff_file;
+    my $out_sff_file_root_name = $self->sff_file;
     $out_sff_file_root_name =~ s/\.sff$//;
 
     my $cm_io = Bio::SearchIO->new(
@@ -111,7 +111,7 @@ sub execute {
         my $out_sff_file = $out_sff_file_root_name .'.'. $hit .'.sff';
         $self->status_message('Writing '. scalar(@{$hit_query_ref{$hit}}) .' reads to file '. $out_sff_file);
         my $separate_reads_sfffile = Genome::Model::Tools::454::Sfffile->create(
-                                                                                in_sff_file => $self->in_sff_file,
+                                                                                in_sff_file => $self->sff_file,
                                                                                 out_sff_file => $out_sff_file,
                                                                                 params => '-i '. $reads_file,
                                                                             );
