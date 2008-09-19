@@ -5,7 +5,7 @@ use warnings;
 
 use above "Genome";
 use Genome::Model::Tools::Heatmap;
-use Test::More tests => 1;
+use Test::More tests => 2;
 use Digest::MD5 qw(md5_hex);
 use FindBin qw/$Bin/;
 #plan "skip_all";
