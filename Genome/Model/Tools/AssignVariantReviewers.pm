@@ -1,4 +1,4 @@
-package Genome::Model::Tools::AssignVariantReviewers; 
+package Genome::Model::Tools::ManualReview::AssignVariantReviewers; 
 
 use strict;
 use warnings;
@@ -34,7 +34,7 @@ sub help_brief{
 }
 
 sub help_synopsis{
-    return "gt assign-variant-reviewers --finishers 'adukes, pminx, jweible' --review-type 'manual' --list_name 'AML_ROUND_6.list'";
+    return "gt manual-review assign-variant-reviewers --finishers 'adukes, pminx, jweible' --review-type 'manual' --list_name 'AML_ROUND_6.list'";
 }
 
 sub help_detail{

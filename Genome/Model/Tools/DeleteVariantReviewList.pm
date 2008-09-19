@@ -1,4 +1,4 @@
-package Genome::Model::Tools::DeleteVariantReviewList;
+package Genome::Model::Tools::ManualReview::DeleteVariantReviewList;
 
 use strict;
 use warnings;
@@ -26,7 +26,7 @@ sub help_brief{
 }
 
 sub help_synopsis{
-    return "gt delete-variant-review-list --db-list-name <list-name>";
+    return "gt manual-review delete-variant-review-list --db-list-name <list-name>";
 }
 
 sub help_detail{
