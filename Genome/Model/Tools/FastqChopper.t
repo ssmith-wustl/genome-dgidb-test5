@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Genome::Model::Tools::FastqChopper;
+use Genome::Model::Tools::Maq::FastqChopper;
 use Test::More;
 plan "skip_all";
 
@@ -12,7 +12,7 @@ my $file = "/gscuser/charris/svn/pm2/Genome/Model/Tools/test.fastq";
 my $total = lines($file);
 
 my $size = 5;
-my $chopper = Genome::Model::Tools::FastqChopper->create(
+my $chopper = Genome::Model::Tools::Maq::FastqChopper->create(
                                                          fastq_file => $file,
                                                          size => $size,
                                                         );

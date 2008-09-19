@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastqChopper;
+package Genome::Model::Tools::Maq::FastqChopper;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Command;
 use File::Temp;
 use IO::File;
 
-class Genome::Model::Tools::FastqChopper {
+class Genome::Model::Tools::Maq::FastqChopper {
     is => 'Command',
     has => [ 
             'fastq_file'   => { is => 'String',    doc => "fastq file"},
