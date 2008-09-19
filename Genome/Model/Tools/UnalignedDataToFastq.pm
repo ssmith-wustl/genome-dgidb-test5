@@ -1,13 +1,11 @@
-package Genome::Model::Tools::UnalignedDataToFastq;
+package Genome::Model::Tools::Maq::UnalignedDataToFastq;
 
 use strict;
 use warnings;
 
 use Genome;
-use Command;
-use Genome::Model;
 
-class Genome::Model::Tools::UnalignedDataToFastq {
+class Genome::Model::Tools::Maq::UnalignedDataToFastq {
     is => 'Command',
     has => [
         in => { is => 'String', doc => "Pathname to a file generated from maq map's -u option" },
@@ -21,7 +19,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model tools unaligned-data-to-fastq --in /path/to/inputpathname.unaligned --fastq /path/to/data.fastq
+    gt maq unaligned-data-to-fastq --in /path/to/inputpathname.unaligned --fastq /path/to/data.fastq
 EOS
 }
 

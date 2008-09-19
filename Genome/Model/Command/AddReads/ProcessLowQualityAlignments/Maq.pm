@@ -29,20 +29,20 @@ sub execute {
     
     my @unaligned_reads_files;
     if (-s $unaligned_reads_file) {
-        my $command = Genome::Model::Tools::UnalignedDataToFastq->execute(
+        my $command = Genome::Model::Tools::Maq::UnalignedDataToFastq->execute(
             in => $unaligned_reads_file, 
             fastq => $unaligned_reads_file . '.fastq' 
         );
-        unless ($command) {die "Failed Genome::Model::Tools::UnalignedDataToFastq for $unaligned_reads_file";}
+        unless ($command) {die "Failed Genome::Model::Tools::Maq::UnalignedDataToFastq for $unaligned_reads_file";}
     } 
     else {
         @unaligned_reads_files = $alignment_event->unaligned_reads_files; 
         foreach my $unaligned_reads_files_entry (@unaligned_reads_files){
-            my $command = Genome::Model::Tools::UnalignedDataToFastq->execute(
+            my $command = Genome::Model::Tools::Maq::UnalignedDataToFastq->execute(
                 in => $unaligned_reads_files_entry, 
                 fastq => $unaligned_reads_files_entry . '.fastq'
             );
-        unless ($command) {die "Failed Genome::Model::Tools::UnalignedDataToFastq for $unaligned_reads_files_entry";}
+        unless ($command) {die "Failed Genome::Model::Tools::Maq::UnalignedDataToFastq for $unaligned_reads_files_entry";}
         }
     }
     unless (-s $unaligned_reads_file || @unaligned_reads_files) {
