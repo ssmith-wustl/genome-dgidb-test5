@@ -1,4 +1,4 @@
-package Genome::Model::Tools::UploadVariantReviewList;
+package Genome::Model::Tools::ManualReview::UploadVariantReviewList;
 
 use strict;
 use warnings;
@@ -46,7 +46,7 @@ sub help_brief{
 }
 
 sub help_synopsis{
-    return "gt upload-variant-review-list --list <list> --name <list_name> --author <list_author> --filter '<description of list criteria>'";
+    return "gt manual-review upload-variant-review-list --list <list> --name <list_name> --author <list_author> --filter '<description of list criteria>'";
 }
 
 sub help_detail{
