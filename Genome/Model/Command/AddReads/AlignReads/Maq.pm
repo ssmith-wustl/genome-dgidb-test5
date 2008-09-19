@@ -307,9 +307,9 @@ sub _calculate_total_base_pair_count {
 sub prepare_input {
     my ($self, $read_set, $seq_dedup) = @_;
 
-    if ($read_set->is_paired_end) {
-        die "not configured to handle PAIRED END data"
-    }
+    #if ($read_set->is_paired_end) {
+    #    die "not configured to handle PAIRED END data"
+    #}
 
     my $lane = $self->read_set_link->subset_name;
     my $read_set_desc = $read_set->full_name . "(" . $read_set->id . ")";
@@ -528,8 +528,8 @@ $DB::single = $DB::stopper;
     }
     
     $self->generate_metric($self->metrics_for_class);
-    my $read_set_link=Genome::Model::ReadSet->get(model_id=>$self->model_id, read_set_id=> $self->run_id);
-    $read_set_link->first_build_id($self->parent_event_id);
+    my $read_set_link=Genome::Model::ReadSet->create(model_id=>$self->model_id, read_set_id=> $self->run_id);
+    
     return 1;
 }
 
