@@ -1,6 +1,6 @@
 
 # Rename the final word in the full class name to match the filename <---
-package Genome::Model::Tools::SxogToBinary;
+package Genome::Model::Tools::Old::SxogToBinary;
 
 use strict;
 use warnings;
