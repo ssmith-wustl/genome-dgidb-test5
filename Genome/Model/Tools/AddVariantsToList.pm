@@ -1,4 +1,4 @@
-package Genome::Model::Tools::AddVariantsToList;
+package Genome::Model::Tools::ManualReview::AddVariantsToList;
 
 use strict;
 use warnings;
@@ -36,7 +36,7 @@ sub help_brief{
 }
 
 sub help_synopsis{
-    return "gt add-variants-to-list --list <list> --db_list_id <id>";
+    return "gt manual-review add-variants-to-list --list <list> --db_list_id <id>";
 }
 
 sub help_detail{
