@@ -71,8 +71,6 @@ $DB::single = 1;
     
     %ARGV = ();
     
-    App->init();
-
     unless($basedir){
         $basedir = `pwd`;
         chomp $basedir;
