@@ -1,4 +1,4 @@
-package Genome::Model::Tools::AlignReads::Ssahasnp;
+package Genome::Model::Tools::Old::AlignReads::Ssahasnp;
 
 use strict;
 use warnings;

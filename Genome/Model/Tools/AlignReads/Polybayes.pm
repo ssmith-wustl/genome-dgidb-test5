@@ -1,4 +1,4 @@
-package Genome::Model::Command::AlignReads::Polybayes;
+package Genome::Model::Tools::Old::AlignReads::Polybayes;
 
 use strict;
 use warnings;
