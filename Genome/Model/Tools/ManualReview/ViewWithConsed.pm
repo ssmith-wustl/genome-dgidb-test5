@@ -36,6 +36,7 @@ class Genome::Model::Tools::ManualReview::ViewWithConsed {
             type => 'String',
             doc => "categories to classify contigs into",
             is_optional => 1,
+            default => "tumorWildType,tumorVariant_skinWildType,tumorVariant_skinVariant,tumorVariant_skinUnknown,tumorVariant_maybe",
         }
     ]
 };
@@ -54,7 +55,7 @@ sub execute
     my $review = $self->review || 0;
     my $relative_target_base_pos = $self->main_contig_pos || 300;
     chdir($self->review_directory) if ($self->review_directory);
-    my $review_categories = $self->review_categories || "tumorWildType,tumorVariant_skinWildType,tumorVariant_skinVariant,tumorVariant_skinUnknown,tumorVariant_maybe";
+    my $review_categories = $self->review_categories; 
     
     my $suffix = ($ace_suffix)? "." .$ace_suffix : ".1";
     $suffix = '' if $suffix eq '.ace';
