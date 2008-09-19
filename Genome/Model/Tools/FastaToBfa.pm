@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastaToBfa;
+package Genome::Model::Tools::Old::FastaToBfa;
 
 use strict;
 use warnings;
