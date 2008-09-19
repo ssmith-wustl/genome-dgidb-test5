@@ -216,15 +216,14 @@ C H_EO-aaa01PCR02     43 TATTCTCTGAAGGCAGTTACATAGGGTTACAGAGG 9
 sub _parse {
   my $self = shift;
   my $line = shift;
-  my $is_alignment = 0;
+
   my($hit_seq, $homology_seq, $query_seq);
 #  32  5.13 0.00 0.00  H_DO-0065PCR0005792_034a.b1-1      327   365 (165)  C 1111547847_forward   (0)    39     1  
 #OR
 #ALIGNMENT   32  5.13 0.00 0.00  H_DO-0065PCR0005792_034a.b1-1      327   365 (165)  C 1111547847_forward   (0)    39     1  
   $line =~ s/^\s+|\s+$//g;
   my @r = split /\s+/, $line;
-  if($r[0] eq "ALIGNMENT") {
-    $is_alignment = 1;
+  if ($self->{_parameters}->{-alignments}) {
     shift @r;
     ($hit_seq, $homology_seq, $query_seq) = $self->_alignment();
   }
