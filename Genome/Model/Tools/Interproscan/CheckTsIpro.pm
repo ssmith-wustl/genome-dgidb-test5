@@ -1,4 +1,4 @@
-package Genome::Model::Tools::CheckTsIpro;
+package Genome::Model::Tools::Interproscan::CheckTsIpro;
 
 use strict;
 use warnings;

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Genome::Model::Tools::DomainMutationReport;
+use Genome::Model::Tools::Interproscan::DomainMutationReport;
 use Test::More;
 plan "skip_all";
 

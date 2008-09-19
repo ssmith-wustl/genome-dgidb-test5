@@ -1,4 +1,4 @@
-package Genome::Model::Tools::DomainMutationReport;
+package Genome::Model::Tools::Interproscan::DomainMutationReport;
 
 use strict;
 use warnings;
