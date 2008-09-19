@@ -6,7 +6,6 @@ use Data::Dumper;
 use File::Basename;
 use Genome;
 
-use GSCApp;
 
 my $consed= 'cs';
 class Genome::Model::Tools::ManualReview::ViewWithConsed {
@@ -45,12 +44,13 @@ sub help_brief {
     "usage: gt manual-review view-with-consed --ace <ace or 1 or 2 default is 1> feed_batch_consed_file" 
 }
 
-STDOUT->autoflush(1);
-App->init;
+
+
 
 sub execute
 {
     my $self = shift;
+    STDOUT->autoflush(1);
     my $ace_suffix = $self->ace_suffix;
     my $review = $self->review || 0;
     my $relative_target_base_pos = $self->main_contig_pos || 300;
