@@ -216,14 +216,15 @@ C H_EO-aaa01PCR02     43 TATTCTCTGAAGGCAGTTACATAGGGTTACAGAGG 9
 sub _parse {
   my $self = shift;
   my $line = shift;
-
+  my $is_alignment = 0;
   my($hit_seq, $homology_seq, $query_seq);
 #  32  5.13 0.00 0.00  H_DO-0065PCR0005792_034a.b1-1      327   365 (165)  C 1111547847_forward   (0)    39     1  
 #OR
 #ALIGNMENT   32  5.13 0.00 0.00  H_DO-0065PCR0005792_034a.b1-1      327   365 (165)  C 1111547847_forward   (0)    39     1  
   $line =~ s/^\s+|\s+$//g;
   my @r = split /\s+/, $line;
-  if ($self->{_parameters}->{-alignments}) {
+  if($r[0] eq "ALIGNMENT") {
+    $is_alignment = 1;
     shift @r;
     ($hit_seq, $homology_seq, $query_seq) = $self->_alignment();
   }
@@ -261,7 +262,7 @@ sub _parse {
 										       #LSF: Need the direction, just to fool the GenericHSP module.
 										       -algorithm => 'SW',)],
                                             );
-  my $result = new Bio::Search::Result::CrossMatchResult( -query_name        => $query_seq_id,
+  my $result = new Bio::Search::Result::CrossMatchResult( -query_name        => $self->{_query_name},
           -query_accession   => '',
           -query_description => '',
           -query_length      => 0,
