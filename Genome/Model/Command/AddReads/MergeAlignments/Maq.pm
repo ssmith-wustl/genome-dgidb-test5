@@ -94,7 +94,6 @@ $DB::single=1;
         my @read_sets = 
            Genome::Model::ReadSet->get(
                 model_id => $model->id,
-                first_build_id => {operator => "is", value =>"not NULL" }
             );
         unless(@read_sets) {
             $self->error_message("Model: " . $model->id .  " has no read sets?");
@@ -117,7 +116,10 @@ $DB::single=1;
         my @found_maps;
 $DB::single=1;
         for my $read_set_link (@read_sets) {
-                     
+            unless(defined $read_set_link->first_build_id) {
+                $read_set_link->first_build_id($self->parent_event_id);
+            }
+            
             my $read_set = $read_set_link->read_set;
             my $library = $read_set->library_name;
             my $read_set_desc = $read_set->full_name . ' (library ' . $library . ')';
