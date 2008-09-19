@@ -4,7 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
-use Bio::SearchIO;
+
+use Alignment::Crossmatch::Reader;
 use File::Basename;
 
 class Genome::Model::Tools::454::SeparateReadsWithCrossMatchAlignment {
@@ -63,12 +64,12 @@ sub execute {
     my $out_sff_file_root_name = $self->sff_file;
     $out_sff_file_root_name =~ s/\.sff$//;
 
-    my $cm_io = Bio::SearchIO->new(
-                                   -format => 'cross_match',
-                                   -file   => $self->cross_match_file
-                               );
-    unless ($cm_io) {
-        $self->error_message('Failed to create cross_match parser');
+    my $reader = Alignment::Crossmatch::Reader->new(
+                                                    io => $self->cross_match_file,
+                                                    return_as_objs => 1,
+                                                );
+    unless ($reader) {
+        $self->error_message('Failed to create cross_match reader');
         return;
     }
 
@@ -76,28 +77,27 @@ sub execute {
     my %hit_query_ref;
     my %hit_file;
     my %open_fhs;
-    while(my $r = $cm_io->next_result) {
-        my $query_name = $r->query_name;
-        while(my $hit = $r->next_hit) {
-            if (defined $query_hit{$query_name}) {
-                $self->error_message('Expecting one hit per query'. $query_name .' and found more in '. $self->cross_match_file);
-                return;
-            }
-            $query_hit{$query_name} = $hit->name;
-            push @{$hit_query_ref{$hit->name}}, $query_name;
-            unless (defined $hit_file{$hit->name}) {
-                my $out_file = $self->_tmp_dir .'/'. $cross_match_file_basename .'.'. $hit->name .'.reads';
-                my $fh = IO::File->new($out_file,'w');
-                $hit_file{$hit->name} = $out_file;
-                $open_fhs{$out_file} = $fh
-            }
-            my $hit_fh = $open_fhs{$hit_file{$hit->name}};
-            unless ($hit_fh) {
-                $self->error_message('For some reason no filehanlde exists for hit '. $hit->name);
-                return;
-            }
-            print $hit_fh $query_name ."\n";
+    while(my $hit = $reader->next) {
+        my $query_name = $hit->query_name;
+        my $subject_name = $hit->subject_name;
+        if (defined $query_hit{$query_name}) {
+            $self->error_message('Expecting one hit per query'. $query_name .' and found more in '. $self->cross_match_file);
+            return;
         }
+        $query_hit{$query_name} = $subject_name;
+        push @{$hit_query_ref{$subject_name}}, $query_name;
+        unless (defined $hit_file{$subject_name}) {
+            my $out_file = $self->_tmp_dir .'/'. $cross_match_file_basename .'.'. $subject_name .'.reads';
+            my $fh = IO::File->new($out_file,'w');
+            $hit_file{$subject_name} = $out_file;
+            $open_fhs{$out_file} = $fh
+        }
+        my $hit_fh = $open_fhs{$hit_file{$subject_name}};
+        unless ($hit_fh) {
+            $self->error_message('For some reason no filehanlde exists for hit '. $subject_name);
+            return;
+        }
+        print $hit_fh $query_name ."\n";
     }
 
     for my $open_fh (values %open_fhs) {
