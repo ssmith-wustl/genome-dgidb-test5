@@ -1,4 +1,4 @@
-package Genome::Model::Tools::AceToBaa;
+package Genome::Model::Tools::Old::AceToBaa;
 
 use strict;
 use warnings;
