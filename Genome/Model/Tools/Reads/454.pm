@@ -1,6 +1,6 @@
 
 # Rename the final word in the full class name <---
-package Genome::Model::Tools::Reads::454;
+package Genome::Model::Tools::Old::Reads::454;
 
 use strict;
 use warnings;
