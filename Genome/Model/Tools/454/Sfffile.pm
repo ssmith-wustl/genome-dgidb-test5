@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Model::Tools::454;
 
 class Genome::Model::Tools::454::Sfffile {
     is => ['Genome::Model::Tools::454'],
