@@ -10,6 +10,7 @@ class Genome::Model::Tools::Annotation::TransitionTransversion {
     has => [                                # specify the command's single-value properties (parameters) <--- 
         referance_allele      => { is => 'String',    doc => "give the referance allele" },
         variant_allele        => { is => 'String',    doc => "give the variant allele" },
+
     ], 
 };
 
@@ -46,48 +47,51 @@ sub execute {                               # replace with real execution logic.
     my $trans;
 
     if ($alleles eq "AC") {
-	$trans = "T:A>G:C(transversion)";
+	$trans = "T:A" . ">" . "G:C(transversion)";
 	#tg_ac
     } elsif ($alleles eq "AT") {
-	$trans = "T:A>A:T(transversion)";
+	$trans = "T:A" . ">" . "A:T(transversion)";
 	#ta_at
     } elsif ($alleles eq "TA") {
-	$trans = "T:A>A:T(transversion)";
+	$trans = "T:A" . ">" . "A:T(transversion)";
 	#ta_at
     } elsif ($alleles eq "TG") {
-	$trans = "T:A>G:C(transversion)";
+	$trans = "T:A" . ">" . "G:C(transversion)";
 	#tg_ac
     } elsif ($alleles eq "CA") {
-	$trans = "C:G>A:T(transversion)";
+	$trans = "C:G" . ">" . "A:T(transversion)";
 	#ca_gt
     } elsif ($alleles eq "CG") {
-	$trans = "C:G>G:C(transversion)";
+	$trans = "C:G" . ">" . "G:C(transversion)";
 	#cg_gc
     } elsif ($alleles eq "GC") {
-	$trans = "C:G>G:C(transversion)";
+	$trans = "C:G" . ">" . "G:C(transversion)";
 	#cg_gc
     } elsif ($alleles eq "GT") {
-	$trans = "C:G>A:T(transversion)";
+	$trans = "C:G" . ">" . "A:T(transversion)";
 	#ca_gt
     } elsif ($alleles eq "AG") {
-	$trans = "T:A>C:G(transition)";
+	$trans = "T:A" . ">" . "C:G(transition)";
 	#tc_ag
     } elsif ($alleles eq "TC") {
-	$trans = "T:A>C:G(transition)";
+	$trans = "T:A" . ">" . "C:G(transition)";
 	#tc_ag
     } elsif ($alleles eq "CT") {
-	$trans = "C:G>T:A(transition)";
+	$trans = "C:G" . ">" . "T:A(transition)";
 	#ct_ga
     } elsif ($alleles eq "GA") {
-	$trans = "C:G>T:A(transition)";
+	$trans = "C:G" . ">" . "T:A(transition)";
 	#ct_ga
     } else {
 	$trans = "ambiguos";
     }
     
+    #$self->result($trans);
+    #my $result = "Transversion_Transition \"$trans\"";
+    #my $result = $trans;
+    print qq($trans\n);
+    return $trans;
 
-    my $result = "Transversion_Transition \"$trans\"";
-    return $result;
 }
 
 1;
