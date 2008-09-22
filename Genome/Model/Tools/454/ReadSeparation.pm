@@ -7,6 +7,7 @@ use Genome;
 
 use File::Basename;
 
+
 class Genome::Model::Tools::454::ReadSeparation {
     is => ['Genome::Model::Tools::454'],
     has => [
@@ -17,13 +18,15 @@ class Genome::Model::Tools::454::ReadSeparation {
                      },
             _primer_fasta => {
                               is => 'String',
+                              doc => 'A private variable to store the tmp path of the created primer db',
                           },
         ],
     has_many => [
                  primers => {
                              is => 'String',
                              is_input => 1,
-                             doc => 'A comma separated list of primer names(ex. M13,MID1,MID2)',
+                             doc => 'From the command line, a comma separated list of primer names(default_value=M13,MID1).  As an object, an array ref of primer names.',
+                             is_optional => 1,
                          },
              ],
 };
@@ -35,7 +38,8 @@ sub help_brief {
 sub help_detail {
     return <<EOS
 Given an sff file this tool will separate the reads based on their alignment to a primer sequence.
-Currently, the primer fasta includes the M13, MID1 and MID2 primers with both p1 and p2 sequences.
+Currently, the primer fasta must be found here:
+/gscmnt/sata180/info/medseq/biodb/shared/Vector_sequence/\$PRIMER-primers.fasta
 First, this tool isolates the first 20 bp of the reads.
 Second, performs a cross_match alignment of the first 20 bp to the primer fasta.
 Finally, separates the whole reads based on their alignment to the primer fasta.
@@ -47,6 +51,12 @@ sub create {
     my $class = shift;
 
     my $self = $class->SUPER::create(@_);
+
+    my @default_primers = qw(M13 MID1);
+    unless ($self->primers) {
+        $self->warning_message('Using default primers: '. join(' ', @default_primers));
+        $self->primers(\@default_primers);
+    }
 
     my $primer_dir = '/gscmnt/sata180/info/medseq/biodb/shared/Vector_sequence';
 
@@ -85,13 +95,8 @@ sub execute {
     my $sff_file_basename = basename($self->sff_file);
     $sff_file_basename =~ s/\.sff$//;
 
-    #TODO: All intermediate files should be written to _tmp_dir
-
     my $out_sff_file = $self->_tmp_dir .'/'. $sff_file_basename .'_20bp.sff';
-    #my $out_sff_file = $sff_file_dirname .'/'. $sff_file_basename .'_20bp.sff';
-
     my $cross_match_file = $self->_tmp_dir .'/'. $sff_file_basename .'_20bp.cm';
-    #my $cross_match_file = $sff_file_dirname .'/'. $sff_file_basename .'_20bp.cm';
 
     my $isolate_primer = Genome::Model::Tools::454::IsolatePrimerTag->create(
                                                                              in_sff_file => $self->sff_file,
