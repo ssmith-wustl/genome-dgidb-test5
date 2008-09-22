@@ -9,12 +9,12 @@ use File::Basename;
 
 class Genome::Model::Tools::454::Newbler {
     is => ['Genome::Model::Tools::454'],
-    has => [
-            test => {
-                     is => 'Boolean',
-                     doc => 'A flag to use the test version of newbler',
-                     default_value => 0,
-                 },
+    has_optional => [
+                     test => {
+                              is => 'Boolean',
+                              doc => 'A flag to use the test version of newbler(default_value=0)',
+                              default_value => 0,
+                          },
         ],
 };
 
