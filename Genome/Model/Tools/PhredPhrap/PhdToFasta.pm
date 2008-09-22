@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Fasta::PhdToFnq;
+package Genome::Model::Tools::PhredPhrap::PhdToFasta;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use above 'Genome';
 require Cwd;
 use Data::Dumper;
 
-class Genome::Model::Tools::Fasta::PhdToFnq {
+class Genome::Model::Tools::PhredPhrap::PhdToFasta {
     is => 'Command',
     has => [  
     phd_dir => {
@@ -111,7 +111,7 @@ sub execute {
 
 =head1 Name
 
-Genome::Model::Tools::Fasta::PhdToFnq
+Genome::Model::Tools::PhredPhrap::PhdToFasta
 
 =head1 Synopsis
 
@@ -119,11 +119,10 @@ Runs ewing_phd2fasta to create a FASTA and Qualty file from a list of PHDs in a 
 
 =head1 Usage
 
- Genome::Model::Tools::Fasta::PhdToFnq
- 
- use Genome::Model::Tools::Fasta::PhdToFnq;
+ use Genome;
+ use Genome::Model::Tools::PhredPhrap::PhdToFasta
 
- my $phd2fnq = Genome::Model::Tools::Fasta::PhdToFnq->new(
+ my $phd2fnq =Genome::Model::Tools::PhredPhrap::PhdToFasta->create( # or execute
     phd_dir => 'PROJECT/phd_dir', # required
     phd_file => 'PROJECT/phds', # required 
     fasta_file => 'PROJECT/project.fasta, #required
