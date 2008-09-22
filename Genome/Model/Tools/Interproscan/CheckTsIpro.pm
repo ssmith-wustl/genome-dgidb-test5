@@ -7,10 +7,6 @@ use Genome;
 use Command;
 use Carp;
 use File::Slurp;
-use MPSampleData::Transcript;
-use MPSampleData::IproGeneTranscriptXref;
-
-
 
 my $VERSION = '$Revision$';
 
@@ -45,6 +41,12 @@ sub check_transcript_names
 {
     my $self = shift;
     my $names = shift;
+    eval qq|
+        use MPSampleData::Transcript;
+        use MPSampleData::IproGeneTranscriptXref;
+    |;
+    die $@ if $@;
+
     foreach my $name (@$names)
     {
         my ($t) = MPSampleData::Transcript->search( transcript_name => $name );

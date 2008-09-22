@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;                         # >above< ensures YOUR copy is used during development
-use MPSampleData::VariationGroup;
 
 class Genome::Model::Tools::Db::ImportAlleleFreq {
     is => 'Command',
@@ -43,6 +42,9 @@ sub execute {
         $self->error_message("No directory $dir found!");
         return;
     }
+
+    eval qq| use MPSampleData::VariationGroup; |;
+    die $@ if $@;
 
     my @groups = MPSampleData::VariationGroup->search(
         group_name => $group_name        

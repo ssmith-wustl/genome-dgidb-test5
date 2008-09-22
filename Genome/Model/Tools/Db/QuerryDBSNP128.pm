@@ -3,7 +3,8 @@ package Genome::Model::Tools::Db::QuerryDBSNP128;
 use strict;
 use warnings;
 
-use above "Genome";                         # >above< ensures this copy is used
+use Genome;
+use GSCApp;
 
 class Genome::Model::Tools::Db::QuerryDBSNP128 {
     is => 'Command',                    
@@ -13,15 +14,13 @@ class Genome::Model::Tools::Db::QuerryDBSNP128 {
     ], 
 };
 
-sub sub_command_sort_position { 12 }
-
 sub help_brief {                            # keep this to just a few words <---
     "provide the chromosome and NCBI Build 36 coordinate and get dbsnp 128 info in return"                 
 }
 
 sub help_synopsis {                         # replace the text below with real examples <---
     return <<EOS
-genome-model Db::QuerryDBSNP128 --chr=7 --coord=106311925
+genome-model db querry-dbsnp128 --chr=7 --coord=106311925
 EOS
 }
 
@@ -37,16 +36,6 @@ sub help_detail {                           # this is what the user will see wit
 EOS
 }
 
-#sub create {                               # rarely implemented.  Initialize things before execute.  Delete unless you use it. <---
-#    my $class = shift;
-#    my %params = @_;
-#    my $self = $class->SUPER::create(%params);
-#    # ..do initialization here
-#    return $self;
-#}
-
-use GSCApp;
-my $dw = GSC::Sequence::Item->dbh;
 sub execute {                               # replace with real execution logic.
     my $self = shift;
     my $chr = $self->chr;
@@ -55,7 +44,7 @@ sub execute {                               # replace with real execution logic.
 
     print "Running Db::QuerryDBSNP128 command:\n";
 
-    #my $dw = GSC::Sequence::Item->dbh;
+    my $dw = GSC::Sequence::Item->dbh;
     my $chrom_id = $dw->prepare(qq/
 				select seq_id from sequence_item si
 				where sequence_item_type = 'chromosome sequence'

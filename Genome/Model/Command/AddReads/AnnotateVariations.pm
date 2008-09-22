@@ -5,7 +5,6 @@ use warnings;
 
 use Genome;
 
-use Command;
 use Data::Dumper;
 use Genome::Model::Command::Report::VariationsBatchToLsf;
 use Genome::Model::EventWithRefSeq;

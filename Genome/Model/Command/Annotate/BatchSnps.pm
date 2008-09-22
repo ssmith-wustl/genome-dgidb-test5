@@ -9,23 +9,17 @@ use Data::Dumper;
 #use Genome::Model::Command::Annotate::AmlReportManager;
 use IO::File;
 use LSF::Job;
-use MPSampleData::DBI;
-use MPSampleData::ProcessProfile;
-use MPSampleData::ReadGroup;
-use MPSampleData::ReadGroupGenotype;
 use UR::DBI;
 use XML::Simple ':strict';
 
-class Genome::Model::Command::Annotate::BatchSnps 
-{
+class Genome::Model::Command::Annotate::BatchSnps {
     is => 'Command',                       
-    has => 
-    [   
-    db_name => { type => 'String', doc => "?", is_optional => 0 },
-    process_profile_id => { type => 'String', doc => "?", is_optional => 0 },
-    file_base => { type => 'String', doc => "?", is_optional => 0 },
-    batch_size => { type => 'String', doc => "?", is_optional => 1 },
-    launch_manager => { type => 'String', doc => "?", is_optional => 1 },
+    has => [   
+        db_name => { type => 'String', doc => "?", is_optional => 0 },
+        process_profile_id => { type => 'String', doc => "?", is_optional => 0 },
+        file_base => { type => 'String', doc => "?", is_optional => 0 },
+        batch_size => { type => 'String', doc => "?", is_optional => 1 },
+        launch_manager => { type => 'String', doc => "?", is_optional => 1 },
     ], 
 };
 
@@ -50,6 +44,14 @@ EOS
 sub execute 
 {   
     my $self = shift;
+
+    eval qq|
+        use MPSampleData::DBI;
+        use MPSampleData::ProcessProfile;
+        use MPSampleData::ReadGroup;
+        use MPSampleData::ReadGroupGenotype;
+    |;
+    die $@ if $@;
 
     MPSampleData::DBI->connect( $self->db_name );
 
