@@ -1,18 +1,21 @@
 
-package Genome::Model::Tools::Example1;   # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Example1;     # rename this when you give the module file a different name <--
 
 use strict;
 use warnings;
 
-use Genome;                         # >above< ensures YOUR copy is used during development
+use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Example1 {
     is => 'Command',                       
-    has => [                                # specify the command's properties (parameters) <--- 
-        foo     => { type => 'String',      doc => "some foozy thing" },
-        bar     => { type => 'Boolean',     doc => "a flag to turn on and off", is_optional => 1 },
-        baz     => { type => 'My::Object',  doc => "this won't appear as a command-line option since it's not a primative", is_optional => 1 },
-        yic     => { type => 'String',      doc => "some yicky thing", is_optional => 1 },
+    has => [                                # specify the command's single-value properties (parameters) <--- 
+        foo      => { is => 'Text',       doc => "some foozy thing" },
+        bar      => { is => 'Boolean',    doc => "a flag to turn on and off", is_optional => 1 },
+        baz      => { is => 'My::Object', doc => "this won't appear as a command-line option since it's not a primative", is_optional => 1 },
+    ], 
+    has_many => [                           # specify the command's multi-value properties (parameters) <--- 
+        infiles  => { is => 'Text', doc => 'this is a list of values' },
+        outfiles => { is => 'Text', doc => 'also a list of values' },
     ], 
 };
 
@@ -24,9 +27,12 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {                         # replace the text below with real examples <---
     return <<EOS
-genome-model example1 --foo=hello
-genome-model example1 --foo=goodbye --bar
-genome-model example1 --foo=hello barearg1 barearg2 barearg3
+gt example1 --bar
+gt example1 --foo=hello
+gt example1 --foo=goodbye --bar
+gt example1 --foo=hello barearg1 barearg2 barearg3
+gt example1 --infiles=a,b,c --outfiles=d,e,f 
+
 EOS
 }
 
@@ -54,7 +60,9 @@ sub execute {                               # replace with real execution logic.
         . "\n" 
         . "    baz is " . (defined $self->baz ? $self->bar : '<not defined>') 
         . "\n" 
-        . "    yic is " . (defined $self->yic ? $self->yic : '<not defined>') 
+        . "    infiles are :" . join(',',$self->infiles) 
+        . "\n" 
+        . "    outfiles are :" . join(',',$self->outfiles) 
         . "\n" 
         . "    bare args are: " . (defined $self->bare_args ? join(",",@{ $self->bare_args })  : '<not defined>') 
         . "\n";     
