@@ -15,7 +15,7 @@ class Genome::Model::Tools::PhredPhrap::Phds {
     ],
 };
 
-require Genome::Model::Tools::Fasta::PhdToFnq;
+require Genome::Model::Tools::PhredPhrap::PhdToFasta;
 use Data::Dumper;
 
 sub help_brief {
@@ -70,13 +70,11 @@ sub _verify_phds {
 sub _phd2fnq {
     my ($self, $phd_file) = @_;
 
-    my $phd2fnq = Genome::Model::Tools::PhdToFasta->new(
+    return Genome::Model::Tools::PhredPhrap::PhdToFasta->execute(
         phd_file => $phd_file,
         phd_dir => $self->_project->phd_dir,
         fasta_file => $self->fasta_file,
     );
-
-    return $phd2fnq->execute;
 }
 
 1;
