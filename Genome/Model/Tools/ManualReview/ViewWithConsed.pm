@@ -6,7 +6,6 @@ use Data::Dumper;
 use File::Basename;
 use Genome;
 
-
 my $consed= 'cs';
 class Genome::Model::Tools::ManualReview::ViewWithConsed {
     is => "Command",
@@ -48,9 +47,6 @@ class Genome::Model::Tools::ManualReview::ViewWithConsed {
 sub help_brief {
     "usage: gt manual-review view-with-consed --ace <ace or 1 or 2 default is 1> feed_batch_consed_file" 
 }
-
-
-
 
 sub execute
 {
