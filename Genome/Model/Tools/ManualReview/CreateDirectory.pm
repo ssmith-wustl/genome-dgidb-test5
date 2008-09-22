@@ -41,12 +41,7 @@ sub help_synopsis {
 }
 sub help_detail {
     return <<EOS 
-    Creates a manual review directory from a given map list, snp file, and output dir.  The user is required to
-    do job monitoring as there is no automated job monitoring in this version.  So, you must rerun this
-    command three times, with the appropriate step specified in the step argument.  There are three steps.
-    In step 0, intersects of the supplied maps are performed.  In step 1, those intersected map files are 
-    merged, and this merge file is written to the output_dir.  In step 2, a tree containing the intersected
-    map files and their read lists is created in the output_dir. 
+    Creates a manual review directory from a given map list, snp file, and output dir.  
 EOS
 }
 ############################################################
@@ -189,7 +184,7 @@ SLEEP:      sleep 30;
             {
                 if(defined $_ && $_->has_ended){
                     if($_->is_successful) {$_ = undef;}
-                    else {die "Job failed.\n"}                    
+                    else {$self->error_message( "gt maq get-intersects failed.\n"); return;}                    
                 }
             }
             foreach(@jobs)
@@ -219,7 +214,7 @@ SLEEEP:      sleep 30;
             pp_type => 'lsf',
             q => 'short',
             W => 5,
-            command => "$gt prepare-nextgen-ace --project-dir=$line --basedir=$out_dir",
+            command => "$gt manual-review prepare-nextgen-ace --project-dir=$line --basedir=$out_dir",
             oo => "$line.log",
         );
         my $job = PP::LSF->create(%job_params);
@@ -238,7 +233,7 @@ SLEEEP:      sleep 30;
         {
             if(defined $_ && $_->has_ended){
                 if($_->is_successful) {$_ = undef;}
-                else {$self->error_message( "Job failed.\n"); return;}                    
+                else {$self->error_message( "$_->{command} failed\n"); return;}                    
             }
         }
         foreach(@jobs)
