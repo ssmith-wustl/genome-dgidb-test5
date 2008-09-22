@@ -130,6 +130,12 @@ sub execute {
         
 	my $rfam_prod = $rfam_basket{$rfam_id};
 
+	if ($rfam_prod =~ /bacterial RNase P class A/i){ #genbank wanted us to replace (bacterial RNase P class A) with (RNA component of RNase P);06/15/07 per Veena Bhonagiri)
+
+	    $rfam_prod = "RNA component of RNase P";
+
+	}
+
         my $feature = Bio::SeqFeature::Generic->new(
                                                     -seq_id => $seq_id,
                                                     -start  => $seq_start,
