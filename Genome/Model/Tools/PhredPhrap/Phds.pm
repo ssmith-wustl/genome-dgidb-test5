@@ -15,7 +15,7 @@ class Genome::Model::Tools::PhredPhrap::Phds {
     ],
 };
 
-require Genome::Model::Tools::PhdToFnq;
+require Genome::Model::Tools::Fasta::PhdToFnq;
 use Data::Dumper;
 
 sub help_brief {

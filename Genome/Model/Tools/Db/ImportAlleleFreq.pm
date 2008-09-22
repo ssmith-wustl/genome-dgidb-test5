@@ -1,4 +1,4 @@
-package Genome::Model::Tools::ImportAlleleFreq;
+package Genome::Model::Tools::Db::ImportAlleleFreq;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;                         # >above< ensures YOUR copy is used during development
 use MPSampleData::VariationGroup;
 
-class Genome::Model::Tools::ImportAlleleFreq {
+class Genome::Model::Tools::Db::ImportAlleleFreq {
     is => 'Command',
     has => [
         group   => { is => 'String', doc => 'the name of the variant group to use' },

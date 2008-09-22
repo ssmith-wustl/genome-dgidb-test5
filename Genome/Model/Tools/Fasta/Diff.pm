@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastaDiff;
+package Genome::Model::Tools::Fasta::Diff;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Command;
 use Bio::SeqIO;
 use File::Temp;
 
-class Genome::Model::Tools::FastaDiff(
+class Genome::Model::Tools::Fasta::Diff(
     is => 'Command',
 );
 

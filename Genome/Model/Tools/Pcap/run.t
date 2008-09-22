@@ -4,10 +4,10 @@ use strict;
 use warnings;
 use Test::More tests => 16;
 use above 'Genome';
-use Genome::Model::Tools::AssembleReads::Pcap;
+use Genome::Model::Tools::Pcap::Run;
 use Data::Dumper;
 
-my $obj = Genome::Model::Tools::AssembleReads::Pcap->create
+my $obj = Genome::Model::Tools::Pcap::Run->create
     (
      project_name       => 'Proteus_penneri_ATCC_35198',
      disk_location      => '/gsc/var/cache/testsuite/data/Genome-Model-Tools-AssemblReads-Pcap',

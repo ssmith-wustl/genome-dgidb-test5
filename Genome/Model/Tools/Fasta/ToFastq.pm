@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastaToFastq;
+package Genome::Model::Tools::Fasta::ToFastq;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use Command;
 use Bio::SeqIO;
 use Bio::Seq::Quality;
 
-class Genome::Model::Tools::FastaToFastq {
+class Genome::Model::Tools::Fasta::ToFastq {
     is => 'Command',
     has => [                                # Specify the command's properties (parameters) <--- 
             fasta_file => {

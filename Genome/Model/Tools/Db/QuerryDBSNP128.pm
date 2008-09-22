@@ -1,11 +1,11 @@
-package Genome::Model::Tools::QuerryDBSNP128;
+package Genome::Model::Tools::Db::QuerryDBSNP128;
 
 use strict;
 use warnings;
 
 use above "Genome";                         # >above< ensures this copy is used
 
-class Genome::Model::Tools::QuerryDBSNP128 {
+class Genome::Model::Tools::Db::QuerryDBSNP128 {
     is => 'Command',                    
     has => [                                # specify the command's properties (parameters) <--- 
         chr     => { type => 'String',      doc => "give the chromosome name ie; 3 7 X" },
@@ -21,7 +21,7 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {                         # replace the text below with real examples <---
     return <<EOS
-genome-model QuerryDBSNP128 --chr=7 --coord=106311925
+genome-model Db::QuerryDBSNP128 --chr=7 --coord=106311925
 EOS
 }
 
@@ -53,7 +53,7 @@ sub execute {                               # replace with real execution logic.
     my $coord = $self->coord;
     unless ($chr && $coord) { sub help_detail; }
 
-    print "Running QuerryDBSNP128 command:\n";
+    print "Running Db::QuerryDBSNP128 command:\n";
 
     #my $dw = GSC::Sequence::Item->dbh;
     my $chrom_id = $dw->prepare(qq/

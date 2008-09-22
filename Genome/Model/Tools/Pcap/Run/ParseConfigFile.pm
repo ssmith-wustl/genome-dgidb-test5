@@ -1,4 +1,4 @@
-package Genome::Model::Tools::AssembleReads::Pcap::ParseConfigFile;
+package Genome::Model::Tools::Pcap::Run::ParseConfigFile;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use IO::File;
 use Genome;
 use Data::Dumper;
 
-class Genome::Model::Tools::AssembleReads::Pcap::ParseConfigFile
+class Genome::Model::Tools::Pcap::Run::ParseConfigFile
 {
     is => 'Command',
     has => [
@@ -20,7 +20,7 @@ class Genome::Model::Tools::AssembleReads::Pcap::ParseConfigFile
            ],
 };
 
-operation Genome::Model::Tools::AssembleReads::Pcap::ParseConfigFile {
+operation Genome::Model::Tools::Pcap::Run::ParseConfigFile {
     input  => [ 'config_file' ],
     output => [ 'disk_location', 'project_name', 'assembly_version', 'assembly_date'],
 };

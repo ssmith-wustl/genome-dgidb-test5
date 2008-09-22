@@ -1,5 +1,5 @@
 
-package Genome::Model::Tools::AssembleReads::Pcap;
+package Genome::Model::Tools::Pcap::Run;
 
 use strict;
 use warnings;
@@ -20,7 +20,7 @@ use Sys::Hostname;
 use Cwd;
 
 
-class Genome::Model::Tools::AssembleReads::Pcap {
+class Genome::Model::Tools::Pcap::Run {
     is => 'Command',                       
     has => [ 
 	     disk_location =>       {
@@ -128,7 +128,7 @@ sub load_config_params_and_execute
     my ($self) = @_;
 
     #redirecting self to load config params
-    $self = Genome::Model::Tools::AssembleReads::Pcap->create ($self->{config_params});
+    $self = Genome::Model::Tools::Pcap::Run->create ($self->{config_params});
 
     $self->execute_pcap;
 
@@ -174,7 +174,7 @@ sub execute
 	exit (0);
     }
 
-    my $obj = Genome::Model::Tools::AssembleReads::Pcap->create(config_file => $config_file);
+    my $obj = Genome::Model::Tools::Pcap::Run->create(config_file => $config_file);
 
     my ($params, $keys) = $obj->parse_config_file;
 
@@ -627,8 +627,8 @@ sub create_fake_phds
  
 	my $dir = $self->{project_path};
 
-	my $cmd = "use Genome::Model::Tools::AssembleReads::Pcap;
-                   Genome::Model::Tools::AssembleReads::Pcap->create_454_phds(\'$fasta\', \'$qual\', \'$dir\', \'$type\');\"";
+	my $cmd = "use Genome::Model::Tools::Pcap::Run;
+                   Genome::Model::Tools::Pcap::Run->create_454_phds(\'$fasta\', \'$qual\', \'$dir\', \'$type\');\"";
 
 	my $job = PP::LSF->run
 	(

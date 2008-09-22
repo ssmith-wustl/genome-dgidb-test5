@@ -1,14 +1,14 @@
 
-package Genome::Model::Tools::AssembleReads::Pcap::CreateDirectories;
+package Genome::Model::Tools::Pcap::Run::CreateDirectories;
 
 use strict;
 use warnings;
 
 use Workflow;
 use Genome;
-use Genome::Model::Tools::AssembleReads::Pcap;
+use Genome::Model::Tools::Pcap::Run;
 
-class Genome::Model::Tools::AssembleReads::Pcap::CreateDirectories
+class Genome::Model::Tools::Pcap::Run::CreateDirectories
 {
     is => 'Command',
     has => [
@@ -19,7 +19,7 @@ class Genome::Model::Tools::AssembleReads::Pcap::CreateDirectories
            ],
 };
 
-operation Genome::Model::Tools::AssembleReads::Pcap::CreateDirectories {
+operation Genome::Model::Tools::Pcap::Run::CreateDirectories {
     input  => [ 'disk_location', 'project_name', 'assembly_version', 'assembly_date' ],
     output => [  ],
 };

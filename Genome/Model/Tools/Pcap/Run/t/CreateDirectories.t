@@ -9,7 +9,7 @@ use File::Temp qw(tempdir);
 
 
 BEGIN {
-    use_ok('Genome::Model::Tools::AssembleReads::Pcap::CreateDirectories');
+    use_ok('Genome::Model::Tools::Pcap::Run::CreateDirectories');
 }
 
 my $disk_location    = tempdir(CLEANUP => 1);
@@ -19,14 +19,14 @@ my $assembly_date    = '20080731';
 
 my $path = $disk_location.'/'.$project_name.'-'.$assembly_version.'_'.$assembly_date.'.pcap';
 
-my $command = Genome::Model::Tools::AssembleReads::Pcap::CreateDirectories->create(
+my $command = Genome::Model::Tools::Pcap::Run::CreateDirectories->create(
                                                                                    disk_location    => $disk_location,
                                                                                    project_name     => $project_name,
                                                                                    assembly_version => $assembly_version,
                                                                                    assembly_date    => $assembly_date,
                                                                                   );
 
-isa_ok($command, 'Genome::Model::Tools::AssembleReads::Pcap::CreateDirectories');
+isa_ok($command, 'Genome::Model::Tools::Pcap::Run::CreateDirectories');
 
 is($command->disk_location(),    $disk_location,    'disk location');
 is($command->project_name(),     $project_name,     'project name');

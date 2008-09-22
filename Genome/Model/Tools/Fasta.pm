@@ -3,17 +3,16 @@ package Genome::Model::Tools::Fasta;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 class Genome::Model::Tools::Fasta {
     is => 'Command',
-    is_abstract => 1,
     has => [
-    fasta_file => {
-        type => 'String',
-        is_optional => 0,
-        doc => 'FASTA file. Quality file (if appropriate) will be named <fasta_file>\'.qual\'',
-    },
+        fasta_file => {
+            type => 'String',
+            is_optional => 0,
+            doc => 'FASTA file. Quality file (if appropriate) will be named <fasta_file>\'.qual\'',
+        },
     ],
 };
 

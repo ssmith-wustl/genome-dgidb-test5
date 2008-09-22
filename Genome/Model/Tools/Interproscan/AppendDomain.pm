@@ -1,4 +1,4 @@
-package Genome::Model::Tools::AppendDomain;
+package Genome::Model::Tools::Interproscan::AppendDomain;
 
 use strict;
 use warnings;
