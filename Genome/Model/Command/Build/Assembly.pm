@@ -60,16 +60,36 @@ sub execute {
                 $self->status_message("No value defined for subclassing model property '$subclassing_model_property'.  Skipping '$command_class'");
                 next;
             }
-            my $command = $command_class->create(
-                                                 model_id => $self->model_id,
-                                                 #should be read_set_id but still uses old name
-                                                 run_id => $read_set->read_set_id,
-                                                 prior_event_id => $prior_event_id,
-                                                 parent_event_id => $self->id,
-                                             );
-            $command->parent_event_id($self->id);
-            $command->event_status('Scheduled');
-            $command->retry_count(0);
+            my $command;
+            eval {
+                $command = $command_class->create(
+                                                  run_id => $read_set->read_set_id,
+                                                  model_id => $self->model_id,
+                                                  event_status => 'Scheduled',
+                                                  retry_count => 0,
+                                                  prior_event_id => $prior_event_id,
+                                                  parent_event_id => $self->id,
+                                              );
+            };
+            unless ($command) {
+                $DB::single = $DB::stopper;
+                $command = $command_class->create(
+                                                  run_id => $read_set->read_set_id,
+                                                  model_id => $self->model_id,
+                                                  event_status => 'Scheduled',
+                                                  retry_count => 0,
+                                                  prior_event_id => $prior_event_id,
+                                                  parent_event_id => $self->id,
+                                              );
+                $self->error_message(
+                                     'Problem creating subcommand for class '. $command_class
+                                     .' run id '. $read_set->read_set_id .' model id '. $self->model_id
+                                     .': '. $command_class->error_message()
+                                 );
+                return;
+            }
+            $self->status_message('Launched '. $command_class .' for run_id '. $read_set->read_set_id
+                                  .' event_id '. $command->genome_model_event_id ."\n");
             $prior_event_id = $command->id;
         }
         $last_event_id = $prior_event_id;
