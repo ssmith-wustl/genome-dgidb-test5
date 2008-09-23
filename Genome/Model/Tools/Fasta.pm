@@ -21,10 +21,6 @@ sub help_brief {
     "tools for working with FASTA files"
 }
 
-sub help_brief {
-    "Tools to work with fasta format sequence files";
-}
-
 sub create { 
     my $class = shift;
 
