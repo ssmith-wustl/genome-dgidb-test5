@@ -1,8 +1,5 @@
 package Genome::Model::Tools::454::CrossMatchPrimerTag;
 
-use Carp;
-Carp::cluck("compiling!");
-
 use strict;
 use warnings;
 
