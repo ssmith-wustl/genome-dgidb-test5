@@ -203,30 +203,30 @@ sub execute {
             return;
         }
     
-        my $run = Genome::RunChunk->get(
+        my $run_chunk = Genome::RunChunk->get(
             seq_id => $read_set_id,
         );
     
-        if ($run) {
-            if ($run->run_name ne $run_name) {
-                $self->error_message("Bad run_name value $run_name.  Expected " . $run->run_name);
+        if ($run_chunk) {
+            if ($run_chunk->run_name ne $run_name) {
+                $self->error_message("Bad run_name value $run_name.  Expected " . $run_chunk->run_name);
                 return;
             }
-            if ($run->full_path ne $full_path) {
-                $self->warning_message("Run $run_name has changed location to $full_path from " . $run->full_path);
-                $run->full_path($full_path);
+            if ($run_chunk->full_path ne $full_path) {
+                $self->warning_message("Run $run_name has changed location to $full_path from " . $run_chunk->full_path);
+                $run_chunk->full_path($full_path);
             }
-            if ($run->subset_name ne $lane) {
-                $self->error_message("Bad lane/subset value $lane.  Expected " . $run->subset_name);
+            if ($run_chunk->subset_name ne $lane) {
+                $self->error_message("Bad lane/subset value $lane.  Expected " . $run_chunk->subset_name);
                 return;
             }
-            if ($run->sample_name ne $model->sample_name) {
-                $self->error_message("Bad sample_name.  Model value is " . $model->model. ", run value is " . $run->sample_name);
+            if ($run_chunk->sample_name ne $model->sample_name) {
+                $self->error_message("Bad sample_name.  Model value is " . $model->model. ", run value is " . $run_chunk->sample_name);
                 return;
             }
         }
         else {
-            $run = Genome::RunChunk->create(
+            $run_chunk = Genome::RunChunk->create(
                 genome_model_run_id => $read_set_id,
                 seq_id => $read_set_id,
                 run_name => $run_name,
@@ -236,59 +236,78 @@ sub execute {
                 sample_name => $sample_name,
 
             );
-            unless ($run) {
+            unless ($run_chunk) {
                 $self->error_message("Failed to get or create run record information for $run_name, $lane ($read_set_id)");
                 return;
             }
-            my $read_set_link= Genome::Model::ReadSet->create(
-                model_id=>$self->model_id, 
-                read_set_id=> $self->run_id
-            );
-            unless($read_set_link) {
-                $self->error_message("Couldn't create a genome model read set for this run chunk.");
-                return;
-            }
         }
-
+        
+        my $read_set_link= Genome::Model::ReadSet->get(
+            model_id    => $model->id, 
+            read_set_id => $run_chunk->id
+        );
+        
+        if ($read_set_link) {
+            $self->warning_message(
+                "Read set " . $run_chunk->full_name 
+                . " has already been added"
+            );
+            next;
+        }
+        
+        $read_set_link = Genome::Model::ReadSet->create(
+            model_id        => $model->id, 
+            read_set_id     => $run_chunk->id,
+            first_build_id  => undef,  # set when we run the first build with this read set
+        );
+        
+        unless ($read_set_link) {
+            $self->error_message("Couldn't create a genome model read set for this run chunk.");
+            return;
+        }
+        
+        # TODO: move this section to Genome::Model::Command::Build::ReferenceAlignment
+        if ($model->processing_profile->isa("Genome::Model::Command::Build::ReferenceAlignment")) {
             my $prior_event_id = undef;
-    
-        foreach my $command_class ( @sub_command_classes ) {
-            my $command;
-    
-            eval {
-                $command = $command_class->create(
-                    run_id => $run->id,
-                    model_id => $self->model_id,
-                    event_status => 'Scheduled',
-                    retry_count => 0,
-                    prior_event_id => $prior_event_id,
-                    parent_event_id => $self->id,
-                );
-            };
-            unless ($command) {
-                $DB::single = $DB::stopper;
-                $command = $command_class->create(
-                    run_id => $run->id,
-                    model_id => $self->model_id,
-                    event_status => 'Scheduled',
-                    retry_count => 0,
-                    prior_event_id => $prior_event_id,
-                    parent_event_id => $self->id,
-                );
-                
-                $self->error_message(
-                    "Problem creating subcommand for class $command_class run id ".$run->id
-                    . " model id ".$self->model_id
-                    . ": " . $command_class->error_message()
-                );
-                return;
+        
+            foreach my $command_class ( @sub_command_classes ) {
+                my $command;
+        
+                eval {
+                    $command = $command_class->create(
+                        run_id => $run_chunk->id,
+                        model_id => $self->model_id,
+                        event_status => 'Scheduled',
+                        retry_count => 0,
+                        prior_event_id => $prior_event_id,
+                        parent_event_id => $self->id,
+                    );
+                };
+                unless ($command) {
+                    $DB::single = $DB::stopper;
+                    $command = $command_class->create(
+                        run_id => $run_chunk->id,
+                        model_id => $self->model_id,
+                        event_status => 'Scheduled',
+                        retry_count => 0,
+                        prior_event_id => $prior_event_id,
+                        parent_event_id => $self->id,
+                    );
+                    
+                    $self->error_message(
+                        "Problem creating subcommand for class $command_class run id ".$run_chunk->id
+                        . " model id ".$self->model_id
+                        . ": " . $command_class->error_message()
+                    );
+                    return;
+                }
+                $self->status_message('Launched '. $command_class .' for run_id '. $run_chunk->id
+                                      .' event_id '. $command->genome_model_event_id ."\n");
+                if ($self->test) {
+                    $command->lsf_job_id("test " . UR::Context::Process->get_current());
+                }
+                $prior_event_id = $command->id;
             }
-            $self->status_message('Launched '. $command_class .' for run_id '. $run->id
-                                  .' event_id '. $command->genome_model_event_id ."\n");
-            if ($self->test) {
-                $command->lsf_job_id("test " . UR::Context::Process->get_current());
-            }
-            $prior_event_id = $command->id;
         }
     }
     
@@ -299,6 +318,7 @@ sub _get_sub_command_class_name {
     return __PACKAGE__;
 }
 
+# TODO: move this to Genome::Model::Command::Build::ReferenceAlignment with the event creation logic
 sub get_sub_command_classes {
     my $self = shift;
 
