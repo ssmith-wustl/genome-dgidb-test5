@@ -10,6 +10,7 @@ class Genome::Model::Tools::Annotation::TransitionTransversion {
     has => [                                # specify the command's single-value properties (parameters) <--- 
         referance_allele      => { is => 'String',    doc => "give the referance allele" },
         variant_allele        => { is => 'String',    doc => "give the variant allele" },
+        trans_type        => { is => 'String',    doc => "this is the result", is_optional => 1 },
 
     ], 
 };
@@ -86,11 +87,9 @@ sub execute {                               # replace with real execution logic.
 	$trans = "ambiguos";
     }
     
-    #$self->result($trans);
-    #my $result = "Transversion_Transition \"$trans\"";
-    #my $result = $trans;
     print qq($trans\n);
-    return $trans;
+    $self->trans_type($trans);
+    return 1;
 
 }
 
