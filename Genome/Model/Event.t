@@ -61,11 +61,11 @@ my $e6 = Genome::Model::Command::AddReads::AlignReads->create(
 ok($e6, "created an object");
 isa_ok($e6,$event_class_name);
 
-my $e3 = Genome::Model::Event->get(88243964);
+my $e3 = Genome::Model::Event->get(88959149);
 ok($e3, "got an event by id");
 ok($e3->isa("Genome::Model::Command::AddReads::AlignReads::Maq"), "class " . ref($e3) . " is expected align-reads/maq");
 
-my $e4 = Genome::Model::Event->get(88243961);
+my $e4 = Genome::Model::Event->get(88958968);
 ok($e4, "got another event by id: $e4");
 ok($e4->isa("Genome::Model::Command::AddReads::AssignRun::Solexa"), "class " . ref($e4) . " is expected assign-run/solexa");
 
