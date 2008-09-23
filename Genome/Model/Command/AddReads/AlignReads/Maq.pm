@@ -35,7 +35,7 @@ class Genome::Model::Command::AddReads::AlignReads::Maq {
         |,
     },
     is_eliminate_all_duplicates => { via => 'model' },
-    # deprecated
+    _calculate_total_read_count => { via => 'read_set_link'},
     output_data_dir => {
         doc => "The path at which the model stores all of its private data for a given run",
         calculate_from => ['read_set_directory'],
@@ -166,8 +166,8 @@ sub _calculate_total_reads_passed_quality_filter_count {
             $total_reads_passed_quality_filter_count = ($self->read_set_link->unique_reads_across_library + $self->read_set_link->duplicate_reads_across_library);
         }
         unless ($total_reads_passed_quality_filter_count) {
-            my @f = $self->input_read_file_path;
-            if (!@f) {
+            my @f = grep {-f $_ } $self->input_read_file_path;
+            unless (@f) {
                 $self->error_message("No input read files found");
                 return;
             }
@@ -227,7 +227,7 @@ sub contaminated_read_count {
 sub _calculate_contaminated_read_count {
     my $self = shift;
 
-    my @f = $self->aligner_output_file_paths;
+    my @f = $self->read_set_link->aligner_output_file_paths;
     my $total = 0;
     for my $f (@f) {
         my $fh = IO::File->new($f);

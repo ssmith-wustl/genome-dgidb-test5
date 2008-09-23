@@ -73,28 +73,32 @@ sub invalid {
 
 sub alignment_file_paths {
     my $self=shift;
-    return unless -d $self->read_set_alignment_directory;;
-    return grep { -e $_ } glob("${$self->read_set_alignment_directory}/*${$self->subset_name}.submaps/*.map");
+    return unless -d $self->read_set_alignment_directory;
+    return grep { -e $_ } glob($self->read_set_alignment_directory .'/*'.
+                               $self->subset_name .'.submaps/*.map');
 }
 sub aligner_output_file_paths {
     my $self=shift;
     return unless -d $self->read_set_alignment_directory;
-    return grep { -e $_ } glob("${$self->read_set_alignment_directory}/*${$self->subset_name}.map.aligner_output");
+    return grep { -e $_ } glob($self->read_set_alignment_directory .'/*'.
+                               $self->subset_name .'.map.aligner_output');
 }
 sub poorly_aligned_reads_list_paths {
     my $self=shift;
-    return unless -d $self->read_set_alignment_directory;;
-    return grep { -e $_ } grep { $_ !~ /\.fastq$/ } glob("${$self->read_set_alignment_directory}/*${$self->subset_name}_sequence.unaligned.*");
+    return unless -d $self->read_set_alignment_directory;
+    return grep { -e $_ } grep { $_ !~ /\.fastq$/ } glob($self->read_set_alignment_directory .'/*'.
+                                                         $self->subset_name .'_sequence.unaligned.*');
 }
 sub poorly_aligned_reads_fastq_paths  {
     my $self=shift;
-    return unless -d $self->read_set_alignment_directory;;
-    return grep { -e $_ } glob("${$self->read_set_alignment_directory}/*${$self->subset_name}_sequence.unaligned.*.fastq");
+    return unless -d $self->read_set_alignment_directory;
+    return grep { -e $_ } glob($self->read_set_alignment_directory .'/*'.
+                               $self->subset_name .'_sequence.unaligned.*.fastq');
 }
 sub contaminants_file_path {
     my $self=shift;
-    return unless -d $self->read_set_alignment_directory;;
-    return grep { -e $_ } glob("${$self->read_set_alignment_directory}/adaptor_sequence_file");
+    return unless -d $self->read_set_alignment_directory;
+    return grep { -e $_ } glob($self->read_set_alignment_directory .'/adaptor_sequence_file');
 }
 sub read_length {
     my $self=shift;
@@ -104,7 +108,7 @@ sub read_length {
     return $self->read_set->read_length;
 }
 sub _calculate_total_read_count {
-    my $self=shift;
+    my $self = shift;
     if ($self->read_set->clusters <= 0) {
         die('Impossible value for clusters field. seq_id:'. $self->read_set->seq_id);
     }
