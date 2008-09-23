@@ -11,12 +11,17 @@ require Genome::Model::Tools::PhredPhrap::ScfToPhd;
 require IO::File;
 
 class Genome::Model::Tools::PhredPhrap::Scfs{
-    is => 'Genome::Model::Tools::PhredPhrap',
-    has => [],
+    is => 'Genome::Model::Tools::PhredPhrap::Phds',
+    has => [
+    ],
 };
 
 sub help_brief {
-    'Phrap starting with scfs in a chromat_dir';
+    return 'Phrap starting with scfs in a chromat_dir';
+}
+
+sub help_detail {
+    return '';
 }
 
 sub _files_to_remove {
@@ -26,13 +31,13 @@ sub _files_to_remove {
 sub _handle_input {
     my $self = shift;
 
-    $self->info_msg("Verifying SCFs");
+    $self->status_message("Verifying SCFs");
     my $scf_file = $self->_verify_scfs;
 
-    $self->info_msg("SCFs to PHD");
+    $self->status_message("SCFs to PHD");
     $self->_scf2phd($scf_file);
 
-    $self->info_msg("PHD to FASTA and Quality");
+    $self->status_message("PHD to FASTA and Quality");
     $self->_phd2fnq( $self->default_phd_file );
 
     return 1;
@@ -41,7 +46,7 @@ sub _handle_input {
 sub _verify_scfs {
     my $self = shift;
 
-    my $chromat_dir = $self->chromat_dir;
+    my $chromat_dir = $self->_directory->chromat_dir;
     my $dh = IO::Dir->new($chromat_dir)
         or ($self->error_message( sprintf('Can\'t open dir (%s): %s', $chromat_dir, $!) ) and return);
 
@@ -52,10 +57,7 @@ sub _verify_scfs {
 
     while ( my $scf_name = $dh->read ) {
         next unless $scf_name =~ /^(.+\.[bgasfrtpedxzyic]\d+)(\.gz)?$/;
-        #next unless $scf_name =~ /^(.+\.\w\d+)(\.gz)?$/;
-
         # TODO Exclude
-
         $scf_fh->print("$1\n");
     }
 
@@ -69,16 +71,15 @@ sub _verify_scfs {
 
 sub _scf2phd {
     my ($self, $scf_file) = @_;
-    my $scf2phd = Genome::Model::Tools::PhredPhrap::ScfToPhd-> new(
+
+    return Genome::Model::Tools::PhredPhrap::ScfToPhd->execute(
         scf_file => $scf_file,
-        chromat_dir => $self->chromat_dir,
+        chromat_dir => $self->_directory->chromat_dir,
         phd_file => $self->default_phd_file,
-        phd_dir => $self->phd_dir,
+        phd_dir => $self->_directory->phd_dir,
         #recall_phds => $self->recall_phds,
         #remove_all_phds => $self->remove_all_phds,
     );
-
-    return $scf2phd->execute;
 }
 
 1;

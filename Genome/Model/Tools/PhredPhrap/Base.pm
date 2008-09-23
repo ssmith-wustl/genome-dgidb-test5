@@ -5,29 +5,30 @@ use warnings;
 
 use above 'Genome';
 
+require Cwd;
+use Data::Dumper;
+use Finfo::ClassUtils 'use_class';
+require Genome::Consed::Directory;
+require IO::File;
+
 #- PROPERTIES -#
 my %properties = (
-    project_name => {
-        is_optional => 0,
+    assembly_name  => {
         type => 'String',
-        doc =>'Name of project',
+        is_optional => 0,
+        doc =>'Name of assembly (all files created will have this as a base)',
     },
     directory => {
         type => 'String', 
         is_optional => 0,
-        doc =>'Base directory to work in, with (or will create) chromat_dir, phd_dir and edit_dir.',
+        doc =>'Base directory to work in, with (or will create) chromat_dir, phd_dir and edit_dir',
     },
     user  => {
         type => 'String',
         is_optional => 1,
         default => $ENV{USER},
-        doc =>'User',
+        doc =>'User (default is current user)',
     }, 
-    sub_assembly  => {
-        type => 'String',
-        is_optional => 1,
-        doc =>'Name of asssembly, defalut will be project name',
-    },
 );
 
 #- PROCESSOR CLASSES - ADD PROPS TO THIS CLASS -#
@@ -59,66 +60,34 @@ class Genome::Model::Tools::PhredPhrap::Base {
     has => [ %properties ],
 };
 
-sub project {
-    return $_[0]->{_project};
+sub _directory {
+    return $_[0]->{_directory};
 }
 
-sub cwd {
+sub _cwd {
     return $_[0]->{_cwd};
 }
-
-require Cwd;
-use Data::Dumper;
-use Finfo::ClassUtils 'use_class';
-#require Finishing::Assembly::Factory;
-require IO::File;
 
 sub create { 
     my $class = shift;
 
-    my $self = $class->SUPER::create;
+    my $self = $class->SUPER::create(@_);
 
-    $self->_cwd( Cwd::getcwd() );
+    $self->{_cwd} = Cwd::getcwd();
+
+    my $directory = Genome::Consed::Directory->create(directory => $self->directory)
+        or return;
+    $directory->create_consed_directory_structure;
+    $self->{_directory} = $directory;
+
     $self->_create_busy_file;
-
-    # Get project/directory
-    my $project;
-    unless ( defined $self->directory ) {
-        my $gsc_factory = Finishing::Assembly::Factory->connect('gsc');
-        $project = $gsc_factory->get_project(name => $self->project_name)
-            or $self->fatal_msg("No base directory given and could not get GSC::Project for " . $self->project_name);
-        $gsc_factory->disconnect;
-    }
-
-    unless ( $project ) {
-        $self->fatal_msg(
-            sprintf('Need directory to work in for project (%s)', $self->project_name) 
-        ) unless -d $self->directory;
-
-        $self->directory( Cwd::abs_path($self->directory) );
-        
-        my $src_factory = Finishing::Assembly::Factory->connect('source');
-        $project = $src_factory->get_project(
-            name => $self->project_name,
-            directory => $self->directory,
-        );
-        $src_factory->disconnect;
-    }
-
-    $self->{_project} = $project;
-    $project->create_consed_directory_structure;
-    $self->assembly_name( $project->name ) unless $self->assembly_name;
     
-    for my $file_method ( $self->_files_to_remove ) {
+    for my $file_method ( (qw/ acefile singlets_file /), $self->_files_to_remove ) {
        my $file_name = $self->$file_method;
        unlink $file_name if -e $file_name;
     }
     
-    return 1;
-}
-
-sub _files_to_remove {
-    return (qw/ acefile singlets_file /);
+    return $self;
 }
 
 sub DESTROY {
@@ -131,34 +100,21 @@ sub DESTROY {
     return 1;
 }
 
-my @options_with_defaults = (qw/
-    assebmly_name scf_file exclude_file phd_file fasta_file qual_file
-    /);
-sub _AUTOLOAD {
-    my ($self, $id, $arg) = @_;
-
-    my $requested_method = $_;
-    if ( grep { $requested_method eq $_ } @options_with_defaults ) {
-        my $default_method = 'default_' . $requested_method;
-        return sub{ return $self->$default_method };
-    }
-
-    return; 
-}
-
 #- BUSY FILE -#
 sub busy_file {
     my $self = shift;
     
-    return sprintf('%s/MKCS.BUSY', $self->directory);
+    return sprintf('%s/%s.PHREDPHRAP.BUSY', $self->directory, $self->assembly_name);
 }
 
 sub _create_busy_file {
     my $self = shift;
 
-    #$self->fatal_msg("MKCS process already running") if -e $self->busy_file;
+    $self->error_message( 
+        sprintf('Phred phrap process already running for assembly (%s)', $self->assembly_name) 
+    ) and return if -e $self->busy_file;
 
-    return IO::File->new('>' . $self->busy_file);
+    return IO::File->new('>' . $self->busy_file)->close;
 }
 
 #- EXECUTE -#
@@ -167,38 +123,56 @@ sub execute {
 
     $self->_handle_input;
 
-    $self->info_msg("Pre Assembly Processing");
+    $self->status_message("Pre Assembly Processing");
     for my $processor_name ( $self->pre_assembly_processors ) {
         my $no_processor = 'no_' . $processor_name ;
         next if $self->$no_processor;
         my $class = class_for_pre_assembly_processor($processor_name);
         my %params = $self->_params_for_class($class);
-        my $processor = $class->new(%params);
-        $processor->info_msg('Running');
+        my $processor = $class->create(%params);
+        if ( $processor->invalid ) { 
+            print "\n\n",$processor->error_message,"\n\n";
+            #or $self->error_message("Can't create class ($class)");
+            return;
+        }
+        $processor->status_message('Running');
         unless ( $processor->execute ) {
             $self->error_msg("Pre Assembly Processing failed, cannot assemble");
             return;
         }
     }
 
-    my %params = $self->_params_for_class('Assembly::Commands::Phrap');
-    my $phrap = Assembly::Commands::Phrap->new(%params);
-    $phrap->info_msg("Assembling");
-    $phrap->execute;
+    my %params = $self->_params_for_class('Genome::Model::Tools::PhredPhrap::Fasta');
+    my $phrap = Genome::Model::Tools::PhredPhrap::Fasta->create(%params);
+    $phrap->status_message("Assembling");
+    $phrap->execute
+        or return;
 
     #POST ASEMBLY PROCESS
+    $self->status_message("Post Assembly Processing");
+
+    $self->status_message("Finished");
 
     return 1;
 }
 
+my @options_with_defaults = (qw/ scf_file exclude_file phd_file fasta_file qual_file /);
 sub _params_for_class {
     my ($self, $class) = @_;
 
     my %params_for_class;
-    for my $attribute ( $class->attributes ) {
-        my $value = $self->$attribute;
-        next unless defined $value;
-        $params_for_class{$attribute} = $value;
+    for my $property ( grep {
+            $_->class_name ne 'UR::Object' and $_->class_name ne 'Command' 
+        }$class->get_class_object->get_all_property_objects ) {
+        my $property_name = $property->property_name;
+        my $value;# = $self->$property_name;
+        unless ( $self->can($property_name) and defined($value = $self->$property_name) ) {
+            next unless grep { $property_name eq $_ } @options_with_defaults;
+            my $default_property_name = sprintf('default_%s', $property_name);
+            $value = $self->$default_property_name;
+            next unless defined $value;
+        }
+        $params_for_class{$property_name} = $value;
     }
 
     return %params_for_class;
@@ -257,46 +231,28 @@ sub class_for_post_assembly_processor {
 }
 
 #- DIRS, FILES, DEFAULTS, ETC -#
-sub edit_dir {
-    my $self = shift;
-
-    return $self->_project->edit_dir;
-}
-
-sub phd_dir {
-    my $self = shift;
-
-    return $self->_project->phd_dir;
-}
-
-sub chromat_dir {
-    my $self = shift;
-
-    return $self->_project->chromat_dir;
-}
-
 sub default_scf_file {
     my $self = shift;
 
-    return sprintf('%s/%s.include', $self->_project->edit_dir, $self->assembly_name);
+    return sprintf('%s/%s.include', $self->_directory->edit_dir, $self->assembly_name);
 }
 
 sub default_exclude_file {
     my $self = shift;
 
-    return sprintf('%s/%s.exclude', $self->_project->edit_dir, $self->assembly_name);
+    return sprintf('%s/%s.exclude', $self->_directory->edit_dir, $self->assembly_name);
 }
 
 sub default_phd_file {
     my $self = shift;
 
-    return sprintf('%s/%s.phds', $self->_project->edit_dir, $self->assembly_name);
+    return sprintf('%s/%s.phds', $self->_directory->edit_dir, $self->assembly_name);
 }
 
 sub default_fasta_file {
     my $self = shift;
 
-    return sprintf('%s/%s.fasta', $self->_project->edit_dir, $self->assembly_name);
+    return sprintf('%s/%s.fasta', $self->_directory->edit_dir, $self->assembly_name);
 }
 
 sub default_qual_file {

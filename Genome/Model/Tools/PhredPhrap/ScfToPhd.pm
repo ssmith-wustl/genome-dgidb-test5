@@ -11,7 +11,7 @@ use Finishing::Assembly::Phd::Directory;
 use IO::Dir;
 
 class Genome::Model::Tools::PhredPhrap::ScfToPhd {
-    is => 'Genome::Model::Tools::PhredPhrap',
+    is => 'Command',
     has => [
     scf_file => {
         is => 'String', #file_r
@@ -30,18 +30,20 @@ class Genome::Model::Tools::PhredPhrap::ScfToPhd {
     },
     phd_dir => {
         is => 'String', #dir_rw,
-        doc => 'Directory to put PHDs.',
         is_optional => 0,
+        doc => 'Directory to put PHDs.',
     },
     rmphd => {
         is => 'Boolean',
+        is_optional => 1,
+        default => 0,
         doc => 'Remove all phds in phd_dir, then run phred on each SCF.',
-        default => 'true',
     },
     recall => {
         is => 'Boolean',
+        is_optional => 1,
+        default => 0,
         doc => 'Run phred on the SCF, naming it to a new version.',
-        default => 1,
     },
     ],
 };
@@ -63,25 +65,18 @@ sub execute {
 
     $self->_phd_schema( Finishing::Assembly::Phd::Directory->connect($self->phd_dir) );
 
-    if ( $self->remove_all_phds and 0) { #FIXME really wanna remove all, or just in file?
-        my $dir = IO::Dir->new($self->phd_dir);
-        while ( defined ($_ = $dir->read) ) {
-            unlink $_ if $_ =~ /\.phd\.\d+/;
-        }
-    }
-#print "\t\tstep 1, scf_file = " . $self->scf_file . "\n";
+    $self->_remove_phds if $self->rmphd;
+    
     my $scf_fh = IO::File->new('<' . $self->scf_file)
         or ($self->error_message('Could not open scf file: ' . $self->scf_file) and return);
     my $phd_fh = IO::File->new('>' . $self->phd_file)
         or ($self->error_message( sprintr('Can\'t open file (%s) for writing', $self->phd_file)) and return);
-#print "\t\tstep 2, scf_fh = $scf_fh\n";
 
     while ( my $scf_name = $scf_fh->getline ) {
-#print "in loop:  $scf_name\n";
         chomp $scf_name;
 
         my $phd_name;
-        if ( $self->recall_phds ) {
+        if ( $self->recall ) {
             $phd_name = $self->_run_phred($scf_name);
         }
         else {
@@ -106,14 +101,22 @@ sub execute {
     return 1;
 }
 
-sub remove_all_phds
+sub _remove_phds
 {
-    #stub
-    return 0;
+    my $self = shift;
+
+    return 1;
+
+    my $dir = IO::Dir->new($self->phd_dir);
+    while ( defined ($_ = $dir->read) ) {
+        unlink $_ if $_ =~ /\.phd\.\d+/;
+    }
+
+    return 1;
 }
 
 
-sub recall_phds
+sub _recall_phds
 {
     #stub
     return 1;
@@ -121,7 +124,7 @@ sub recall_phds
 
 sub _run_phred {
     my ($self, $scf_name) = @_;
-    
+
     my $scf_file = sprintf('%s/%s', $self->chromat_dir, $scf_name);
     $self->error_message("Can't find scf ($scf_file\[.gz\])")
         and return unless -s $scf_file or -s "$scf_file.gz";

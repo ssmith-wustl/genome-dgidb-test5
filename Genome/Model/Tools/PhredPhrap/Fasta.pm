@@ -5,6 +5,10 @@ use warnings;
 
 use above 'Genome';
 
+require Cwd;
+use Data::Dumper;
+require File::Copy;
+
 class Genome::Model::Tools::PhredPhrap::Fasta {
     is => 'Genome::Model::Tools::PhredPhrap',
     has => [
@@ -15,35 +19,21 @@ class Genome::Model::Tools::PhredPhrap::Fasta {
     ],
 };
 
-require Cwd;
-use Data::Dumper;
-require File::Copy;
-
 sub help_brief {
     return 'Creates an assembly by running phrap on a FASTA (and Qual - <FASTA_FILE>.qual) file.';
 }
 
 sub help_detail {
-    return '';
+    return help_brief();
 }
 
-sub _command_name {
-    my $self = shift;
-
-    my $version = $self->version;
-
-    return 'phrap' if $version eq $self->default_version;
-
-    return 'phrap.' . $version;
-}
-
-sub _memlog {
+sub memlog {
     my $self = shift;
 
     return sprintf('%s.memlog', $self->fasta_file);
 }
 
-sub _out {
+sub out {
     my $self = shift;
 
     return sprintf('%s.phrap.out', $self->fasta_file);
@@ -56,27 +46,27 @@ sub execute {
         unlink $self->$file if -e $self->$file;
     }
 
-    my $cmd = sprintf('%s %s', $self->_command_name, $self->fasta_file);
-    # FIXME
-    my @attributes = grep { $_ ne 'fasta_file' } $self->attributes;
-    @attributes = grep { $_ ne 'version' } @attributes;
-    for my $attr ( @attributes ) {
-        my $value = $self->$attr;
+    my $cmd = sprintf('%s %s', $self->phrap_command_name, $self->fasta_file);
+    my @properties = grep { $_->property_name ne 'version' } Genome::Model::Tools::PhredPhrap->get_class_object->get_property_objects;
+    for my $property ( @properties ) {
+        my $property_name = $property->property_name;
+        my $value = $self->$property_name;
         next unless defined $value;
-        if ( $self->attributes_attribute($attr, 'isa') eq 'boolean' ) {
-            next unless $value;
+        if ( $property->data_type eq 'Boolean' ) {
+            next unless $value; # for 0
             $value = '';
         }
         $cmd .= sprintf(
             ' -%s %s', 
-            $attr, 
+            $property_name, 
             $value,
         );
     }
 
-    $cmd .= sprintf(' > %s 2> %s ', $self->_out, $self->_memlog);
+    $cmd .= sprintf(' -new_ace > %s 2> %s ', $self->out, $self->memlog);
 
-    $self->fatal_msg("Error running phrap:\n$cmd") if system $cmd;
+    $self->error_message("Error running phrap:\n$cmd") 
+        and return if system $cmd;
 
     return 1;
 }

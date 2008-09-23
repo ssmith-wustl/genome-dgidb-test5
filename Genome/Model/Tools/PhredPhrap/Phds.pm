@@ -8,10 +8,6 @@ use above 'Genome';
 class Genome::Model::Tools::PhredPhrap::Phds {
     is => 'Genome::Model::Tools::PhredPhrap::Base',
     has => [
-    phd_source => {
-        is => 'String', #file_r
-        doc => "Source of PHDs",
-    },
     ],
 };
 
@@ -33,10 +29,10 @@ sub _files_to_remove {
 sub _handle_input {
     my $self = shift;
 
-    $self->info_msg("Verifying PHDs");
+    $self->status_message("Verifying PHDs");
     my $phd_file = $self->_verify_phds;
 
-    $self->info_msg("PHD to FASTA and Quality");
+    $self->status_message("PHD to FASTA and Quality");
     $self->_phd2fnq($phd_file);
 
     return 1;
@@ -45,7 +41,7 @@ sub _handle_input {
 sub _verify_phds {
     my $self = shift;
 
-    my $phd_dir = $self->_project->phd_dir;
+    my $phd_dir = $self->_directory->phd_dir;
     my $dh = IO::Dir->new($phd_dir)
         or $self->fatal_msg( sprintf('Can\'t open dir (%s)', $phd_dir) );
     my $phd_file = $self->default_phd_file;
@@ -72,8 +68,8 @@ sub _phd2fnq {
 
     return Genome::Model::Tools::PhredPhrap::PhdToFasta->execute(
         phd_file => $phd_file,
-        phd_dir => $self->_project->phd_dir,
-        fasta_file => $self->fasta_file,
+        phd_dir => $self->_directory->phd_dir,
+        fasta_file => $self->default_fasta_file,
     );
 }
 
