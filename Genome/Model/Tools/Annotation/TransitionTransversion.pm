@@ -24,14 +24,14 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {                         # replace the text below with real examples <---
     return <<EOS
-genome-model TransitionTransversion --referance_allele=A --variant_allele=C
+gt annotation transition-transversion --referance-allele=A --variant-allele=C
 EOS
 }
 
 sub help_detail {                           # this is what the user will see with the longer version of help. <---
     return <<EOS 
     give the referance and variant alleles in the same orientation and get returned the Transition/Transversion annotation
-    for example genome-model TransitionTransversion --referance_allele=A --variant_allele=C
+    for example gt annotation transition-transversion --referance-allele=A --variant-allele=C
     should result in T:A>G:C(transversion)
 EOS
 }
