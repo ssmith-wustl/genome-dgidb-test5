@@ -11,6 +11,7 @@ class Genome::Model::Tools::Db::QuerryDBSNP128 {
     has => [                                # specify the command's properties (parameters) <--- 
         chr     => { type => 'String',      doc => "give the chromosome name ie; 3 7 X" },
         coord     => { type => 'String',      doc => "give the NCBI Build 36 genomic coordinate" },
+	querry_result     => { type => 'String'      ,doc => "the result", is_optional => 1  },
     ], 
 };
 
@@ -73,14 +74,15 @@ sub execute {                               # replace with real execution logic.
     $variation_exists->execute($coord, $seq_id);
     
     my ($rs_id,$allele_description,$is_validated) = $variation_exists->fetchrow_array;
-    
+    my $result;
     if ($rs_id) {
-	print qq($rs_id,$allele_description,$is_validated\n);
+	$result = qq($rs_id,$allele_description,$is_validated);
     } else {
+	$result = 0;
 	print qq(no dbSNP-128 found on NCBI-human-build36-chrom $chr at $coord\n);
     }
-    
-
+    $self->querry_result($result);
+    print qq($result\n);
     return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
