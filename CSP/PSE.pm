@@ -33,6 +33,7 @@ my %PROCESS_COUNT = (
     'configure alignment'                    => 0,
     'run alignment'                          => 0,
     'generate lane summary'                  => 0,
+    'create short read format'               => 0,
     'analysis completed'                     => 0,
     'import sequence'                        => 0,
     'clean run'                              => 0,
