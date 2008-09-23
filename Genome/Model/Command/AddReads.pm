@@ -267,7 +267,7 @@ sub execute {
         }
         
         # TODO: move this section to Genome::Model::Command::Build::ReferenceAlignment
-        if ($model->processing_profile->isa("Genome::Model::Command::Build::ReferenceAlignment")) {
+        if ($model->processing_profile->isa("Genome::ProcessingProfile::ReferenceAlignment")) {
             my $prior_event_id = undef;
         
             foreach my $command_class ( @sub_command_classes ) {
