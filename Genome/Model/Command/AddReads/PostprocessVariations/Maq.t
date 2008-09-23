@@ -8,7 +8,7 @@ use Genome::Model::Command::AddReads::FilterVariations;
 
 use Test::More tests => 3;
 
-my $event_id = 89040994;
+my $event_id = 91364902;
 my $event = Genome::Model::Event->get($event_id);
 ok($event, "got a test event");
 isa_ok($event,'Genome::Model::Command::AddReads::PostprocessVariations');
