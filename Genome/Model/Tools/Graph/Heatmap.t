@@ -10,14 +10,14 @@ use Digest::MD5 qw(md5_hex);
 use FindBin qw/$Bin/;
 #plan "skip_all";
 
-my $file = "$Bin/t/heatmap-test-matrix.csv";
-my $outfile = "$Bin/t/heatmap-test-image.png";
+my $file = "$Bin/../t/heatmap-test-matrix.csv";
+my $outfile = "$Bin/../t/heatmap-test-image.png";
 my $columns = 3;
 my $checksum = "007d3bb4cfa3bb2aacf152dcfa02aafa";
 
 unlink $outfile;
 
-my $hm = Genome::Model::Tools::Heatmap->create(
+my $hm = Genome::Model::Tools::Graph::Heatmap->create(
                                                          matrix => $file,
                                                          image => $outfile,
                                                          columns => $columns,

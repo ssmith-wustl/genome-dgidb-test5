@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
 
 class Genome::Model::Tools::Fasta {
     is => 'Command',
@@ -16,7 +17,9 @@ class Genome::Model::Tools::Fasta {
     ],
 };
 
-use Data::Dumper;
+sub help_brief {
+    "tools for working with FASTA files"
+}
 
 sub create { 
     my $class = shift;

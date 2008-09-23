@@ -10,7 +10,6 @@ use Genome::Info::CodonToAminoAcid;
 use Genome::Info::VariantPriorities;
 use MG::ConsScore;
 use List::MoreUtils qw/ uniq /;
-use SnpDom;
 
 my %trans_win :name(transcript_window:r) :isa('object');
 my %var_win :name(variation_window:r) :isa('object');
@@ -597,8 +596,8 @@ sub _ucsc_cons_annotation
 sub _protein_domain
 {
     my ($self, $snp, $gene, $transcript, $amino_acid_change) = @_;
-    #
     #my ($gene,$transcript);
+    require SnpDom;
     my $s = SnpDom->new({'-inc-ts' => 1});
     $s->add_mutation($gene ,$transcript ,$amino_acid_change);
     my %domlen;
