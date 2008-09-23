@@ -83,12 +83,12 @@ sub execute {
                                               );
                 $self->error_message(
                                      'Problem creating subcommand for class '. $command_class
-                                     .' run id '. $read_set->read_set_id .' model id '. $self->model_id
+                                     .' read_set_id '. $read_set->read_set_id .' model id '. $self->model_id
                                      .': '. $command_class->error_message()
                                  );
                 return;
             }
-            $self->status_message('Launched '. $command_class .' for run_id '. $read_set->read_set_id
+            $self->status_message('Launched '. $command_class .' for read_set_id '. $read_set->read_set_id
                                   .' event_id '. $command->genome_model_event_id ."\n");
             $prior_event_id = $command->id;
         }
