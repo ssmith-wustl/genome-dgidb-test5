@@ -233,6 +233,16 @@ sub execute {
         $total_database_present_somatic) = 
     $self->calculate_metrics($snp_fh,$dbsnp_hash_ref,$gold_het_hash_ref,$gold_ref_hash_ref,$validation_db_hash_ref);
 
+    #initialize if undefined
+    $total_snp_positions ||= 0; 
+    $total_concordant_positions ||= 0; 
+    $total_gold_het_concordant_snps ||= 0; 
+    $total_gold_hom_ref_concordant_snps ||= 0; 
+    $total_database_present_wildtype ||= 0; 
+    $total_database_present_germline ||= 0; 
+    $total_database_present_somatic ||= 0; 
+
+    
     #Set all the class variables for the primary file
     $self->total_concordant_positions($total_concordant_positions);
     $self->total_snp_positions($total_snp_positions);
@@ -287,8 +297,8 @@ sub execute {
 
 1;
 
-sub help_detail {
-    "This module calculates the dbSNP concordance and False Negative rate of a snp file. Useful for evaluating decision trees"
+sub help_brief {
+    "Calculates the dbSNP concordance and FNR/FPR of a snp file"
 }
 
 sub calculate_metrics {
