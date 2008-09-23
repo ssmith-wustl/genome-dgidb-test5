@@ -5,7 +5,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use UR::DataSource;
-#use Test::More skip_all => 'not ready', 'no_plan';
+use Test::More skip_all => 'not ready', 'no_plan';
 use Test::More 'no_plan';
 use File::Basename;
 use File::Copy "cp";
