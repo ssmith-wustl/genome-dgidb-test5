@@ -21,7 +21,7 @@ class Genome::RunChunk {
     type_name => 'run chunk',
     table_name => 'GENOME_MODEL_RUN',
     is_abstract => 1,
-    sub_classification_method_name => '_resolve_subclass_name',   
+    sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
         genome_model_run_id => { is => 'NUMBER', len => 11 },
     ],
@@ -32,10 +32,8 @@ class Genome::RunChunk {
         sample_name         => { is => 'VARCHAR2', len => 255 },
         events              => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => "run" },
         seq_id              => { is => 'NUMBER', len => 15, is_optional => 1 },
-        
         full_name           => { calculate_from => ['run_name','subset_name'], calculate => q|"$run_name/$subset_name"| },
-
-        name                => { 
+        name                => {
                                 doc => 'This is a long version of the name which is still used in some places.  Replace with full_name.',
                                 is => 'String', 
                                 calculate_from => ['run_name','sample_name'], 
@@ -45,11 +43,60 @@ class Genome::RunChunk {
         # deprecated
         limit_regions       => { is => 'String', is_optional => 1, calculate_from => ['subset_name'], calculate=> q| $subset_name | },
         full_path           => { is => 'VARCHAR2', len => 767, is_optional => 1, column_name => "FULL_PATH" },
-        
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+sub get_or_create_from_read_set {
+    my $class = shift;
+    my $read_set = shift;
+    #TODO: change something so we don't need to pass this method name in every time
+    my $read_set_query_method_name = shift;
+    my $run_chunk = Genome::RunChunk->get(
+                                          seq_id => $read_set->id,
+                                );
+    my $run_name = $read_set->run_name;
+    my $subset_name = $class->resolve_subset_name($read_set);
+    my $full_path = $class->resolve_full_path($read_set);
+    my $sequencing_platform = $class->resolve_sequencing_platform;
+    if ($run_chunk) {
+        if ($run_chunk->sequencing_platform ne $sequencing_platform) {
+            die('Bad sequencing_platform value '. $sequencing_platform .'.  Expected '. $run_chunk->sequencing_platform);
+        }
+        if ($run_chunk->run_name ne $run_name) {
+            $class->error_message("Bad run_name value $run_name.  Expected " . $run_chunk->run_name);
+            return;
+        }
+        if ($run_chunk->full_path ne $full_path) {
+            $class->warning_message("Run $run_name has changed location to $full_path from " . $run_chunk->full_path);
+            $run_chunk->full_path($full_path);
+        }
+        if ($run_chunk->subset_name ne $subset_name) {
+            $class->error_message("Bad subset_name $subset_name.  Expected " . $run_chunk->subset_name);
+            return;
+        }
+    } else {
+        my $query_name = $read_set->$read_set_query_method_name;
+        unless ($query_name) {
+            die($read_set_query_method_name .'name not found for read set: '. $class->_desc_dw_obj($read_set));
+        }
+        $run_chunk  = $class->SUPER::create(
+                                      genome_model_run_id => $read_set->id,
+                                      seq_id => $read_set->id,
+                                      run_name => $run_name,
+                                      full_path => $full_path,
+                                      subset_name => $subset_name,
+                                      sequencing_platform => $sequencing_platform,
+                                      $read_set_query_method_name => $query_name,
+                                  );
+        unless ($run_chunk) {
+            $class->error_message('Failed to get or create run record information for '. $class->_desc_dw_obj($read_set));
+            return;
+        }
+    }
+    return $run_chunk;
+}
 
 # WHY NOT USE RUN_NAME FROM THE DB????
 sub old_name {

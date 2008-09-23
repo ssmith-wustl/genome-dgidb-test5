@@ -16,7 +16,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 95;
+    plan tests => 99;
     use_ok( 'Genome::RunChunk::454');
     use_ok( 'Genome::Model::Assembly');
     use_ok( 'Genome::ProcessingProfile::Assembly');
@@ -59,48 +59,43 @@ my $sample_name = 'TSP_Round1-4_Normal_Amplicon_Pool';
 for my $pp_params (@pp_params) {
     my %pp_params = %{$pp_params};
     my $pp = Genome::ProcessingProfile::Assembly->create(%pp_params);
-    UR::Context->_sync_databases();
 
     ok($pp, 'creation worked assembly processing profile');
     isa_ok($pp ,'Genome::ProcessingProfile::Assembly');
     for my $key (keys %pp_params) {
         is($pp->$key,$pp_params{$key},"$key accessor");
     }
-    
     my $model = Genome::Model::Assembly->create(
                                                 processing_profile_id => $pp->id,
                                                 name => $model_name,
                                                 sample_name => $sample_name,
                                             );
-    UR::Context->_sync_databases();
     isa_ok($model,'Genome::Model::Assembly');
     is($model->sample_name,$sample_name,'sample_name accessor');
     is($model->name,$model_name,'name accessor');
-    
+    my $add_reads_command = Genome::Model::Command::AddReads->create(
+                                                                     model_id => $model->id,
+                                                                     all => 1,
+                                                                 );
+    isa_ok($add_reads_command,'Genome::Model::Command::AddReads');
+    ok($add_reads_command->execute(),'execute genome-model add-reads');
     my $assembly_builder = Genome::Model::Command::Build::Assembly->create(model_id => $model->id);
     isa_ok($assembly_builder,'Genome::Model::Command::Build::Assembly');
     ok($assembly_builder->execute,'execute assembly builder');
-    UR::Context->_sync_databases();
-    
     for my $class ($assembly_builder->subordinate_job_classes) {
         my @events = $class->get(model_id => $model->id);
         for my $event (@events) {
             ok($event->execute,"execute $class event");
-            UR::Context->_sync_databases();
         }
     }
-    
     my @assemble_events = Genome::Model::Command::Build::Assembly::Assemble->get(model_id => $model->id);
     is(scalar(@assemble_events),1,'one assemble event for project');
     my $assemble = $assemble_events[0];
     isa_ok($assemble,'Genome::Model::Command::Build::Assembly::Assemble');
-    
   SKIP: {
         skip "assemble takes a long time", 1;
         ok($assemble->execute,'execute assemble project');
     }
-    UR::Context->_sync_databases();
-
     rmtree($model->data_directory);
 }
 exit;

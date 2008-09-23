@@ -48,11 +48,11 @@ sub execute {
 
     $DB::single = $DB::stopper;
     my $model = $self->model;
-    
+
     my @sub_command_classes = $self->subordinate_job_classes;
     my $last_event_id;
-    my @available_read_sets = $model->available_read_sets;
-    for my $read_set (@available_read_sets) {
+    my @unbuilt_read_sets = $model->unbuilt_read_sets;
+    for my $read_set (@unbuilt_read_sets) {
         my $prior_event_id = undef;
         foreach my $command_class ( @sub_command_classes ) {
             my $subclassing_model_property = $command_class->command_subclassing_model_property;
@@ -63,7 +63,7 @@ sub execute {
             my $command = $command_class->create(
                                                  model_id => $self->model_id,
                                                  #should be read_set_id but still uses old name
-                                                 run_id => $read_set->id,
+                                                 run_id => $read_set->read_set_id,
                                                  prior_event_id => $prior_event_id,
                                                  parent_event_id => $self->id,
                                              );
@@ -97,7 +97,7 @@ sub execute {
 
 
 sub _get_sub_command_class_name{
-  return __PACKAGE__; 
+  return __PACKAGE__;
 }
 
 1;

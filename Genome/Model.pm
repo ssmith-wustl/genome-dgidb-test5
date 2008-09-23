@@ -30,8 +30,24 @@ class Genome::Model {
         processing_profile_name      => { via => 'processing_profile', to => 'name'},
         type_name                    => { via => 'processing_profile'},
         name                         => { is => 'VARCHAR2', len => 255 },
-        sample_name                  => { is => 'VARCHAR2', len => 255 },
+        sample_name                  => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         subject_name                 => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        read_set_query_method_name   => {
+                                         doc => 'This returns the method name to access the read set data',
+                                         calculate_from => ['sample_name','subject_name'],
+                                         calculate => q|
+                                                        if ($sample_name) {
+                                                            if($subject_name) {
+                                                                die ('Not supporting sample_name and subject_name');
+                                                            }
+                                                            return 'sample_name';
+                                                        } elsif ($subject_name) {
+                                                            return 'subject_name';
+                                                        } else {
+                                                            die ('Must provide sample_name of subject_name for model');
+                                                        }
+                                                     |,
+                                     },
         instrument_data_links        => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
                                             doc => "for models which directly address instrument data, the list of assigned run chunks"
                                         },
@@ -59,6 +75,24 @@ class Genome::Model {
                                           is_transient => 1,
                                         },
     ],
+    has_optional => {
+                     sequencing_platform          => { via => 'processing_profile'},
+                     read_set_class_name          => {
+                                                      calculate_from => ['sequencing_platform'],
+                                                      calculate => q| 'Genome::RunChunk::' . ucfirst($sequencing_platform) |,
+                                                      doc => 'the class of read set assignable to this model'
+                                                  },
+                     input_read_set_class_name    => { 
+                                                      calculate_from => ['read_set_class_name'],
+                                                      calculate => q|$read_set_class_name->_dw_class|,
+                                                      doc => 'the class of read set assignable to this model in the dw'
+                                        },
+                     read_set_addition_events     => { is => 'Genome::Model::Command::AddReads',
+                                                       is_many => 1,
+                                                       reverse_id_by => 'model',
+                                                       doc => 'each case of a read set being assigned to the model',
+                                                  },
+    },
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
@@ -70,8 +104,44 @@ sub create {
     if ($^P) {
         $self->test(1);
     }
+    if ($self->sample_name && $self->subject_name) {
+        die ('No support for both sample_name and subject_name');
+    }
     return $self;
 }
+
+sub compatible_input_read_sets {
+    my $self = shift;
+
+    my $input_read_set_class_name = $self->input_read_set_class_name;
+    my $read_set_query_method_name = $self->read_set_query_method_name;
+    my @input_read_sets = $input_read_set_class_name->get($read_set_query_method_name => $self->$read_set_query_method_name);
+
+    #TODO: move
+    if ($input_read_set_class_name eq 'GSC::RunLaneSolexa') {
+        @input_read_sets = grep { $_->run_type !~ /2/  } @input_read_sets;
+    }
+    return @input_read_sets;
+}
+
+sub available_read_sets {
+    my $self = shift;
+
+    my @input_read_sets = $self->compatible_input_read_sets;
+    my @read_sets = $self->read_sets;
+    my %prior = map { $_->read_set_id => 1 } @read_sets;
+    my @available_read_sets = grep { not $prior{$_->id} } @input_read_sets;
+    return @available_read_sets;
+}
+
+sub unbuilt_read_sets {
+    my $self = shift;
+
+    my @read_sets = $self->read_sets;
+    my @unbuilt_read_sets = grep {!defined($_->first_build_id)} @read_sets;
+    return @unbuilt_read_sets;
+}
+
 
 sub comparable_normal_model {
     # TODO: a dba ticket is in place to make this a database-tracked item
