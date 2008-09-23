@@ -447,7 +447,6 @@ sub get_or_create{
         }
         $model = Genome::Model::PolyphredPolyscan->create(
             subject_name => $research_project_name,
-            sample_name => $research_project_name,
             processing_profile => $pp,
             name => $pp->name,
         );
