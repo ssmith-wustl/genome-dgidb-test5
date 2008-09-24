@@ -5,8 +5,6 @@ use warnings;
 
 use above 'Genome';
 
-my @versions = (qw/ phrap manyreads longreads /);
-
 class Genome::Model::Tools::PhredPhrap {
     is => 'Command',
     is_abstract => 1,
@@ -53,15 +51,25 @@ class Genome::Model::Tools::PhredPhrap {
         default => 1,
         doc => 'Create ".view" file suitable for input to phrapview.',
     },
-    #new_ace  => {
-    #   type => 'Boolean',
-    #   is_optional => 1,
-    #   default => 1,
-    #   doc => 'Create ".ace" file for viewing in consed.',
-    #},
+    new_ace  => {
+       type => 'Boolean',
+       is_optional => 1,
+       default => 1,
+       doc => 'Create ".ace" file for viewing in consed. Default is to create an acefile.',
+    },
     ],
 };
 
+#- COMMAND -#
+sub phrap_command_name {
+    my $self = shift;
+
+    # TODO get full path of phrap executable?
+    return sprintf('phrap%s', (( $self->version ) ? ('.' . $self->version) : ''));
+}
+
+#- VERSIONS -#
+my @versions = (qw/ phrap manyreads longreads /);
 sub versions {
     return @versions;
 }
