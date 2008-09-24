@@ -7,15 +7,14 @@ use above "Genome";
 use Test::More tests => 4;
 use File::Compare;
 use File::Temp;
-use FindBin qw/$Bin/;
 
 BEGIN {
         use_ok ('Genome::Model::Tools::Fasta::ToFastq');
 }
-
-my $fasta_file = "$Bin/../t/test.fasta";
-my $qual_file = "$Bin/../t/test.qual";
-my $expected_fastq = "$Bin/../t/test.fastq";
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-ToFastq';
+my $fasta_file = $dir .'/test.fasta';
+my $qual_file = $dir .'/test.qual';
+my $expected_fastq = $dir .'/test.fastq';
 
 my ($fastq_fh,$fastq_file) = File::Temp::tempfile;
 my $fasta_to_fastq = Genome::Model::Tools::Fasta::ToFastq->create(
