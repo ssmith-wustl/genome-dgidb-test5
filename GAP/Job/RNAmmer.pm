@@ -17,28 +17,43 @@ use base qw(GAP::Job);
 
 sub new {
 
-    my ($class, $seq, $job_id) = @_;
+    my ($class, $seq, $domain, $job_id) = @_;
 
     
     my $self = { };
     bless $self, $class;
-        
-
-    unless (defined($job_id)) {
-        croak 'missing job id';
-    }
-
-    $self->job_id($job_id);
     
     unless (defined($seq)) {
         croak 'missing seq object!';
     }
-
+    
     unless ($seq->isa('Bio::PrimarySeqI')) {
         croak 'seq object is not a Bio::PrimaySeqI!';
     }
     
     $self->{_seq} = $seq;
+
+    unless (defined($domain)) {
+        croak 'missing domain';
+    }
+
+    unless (
+            ($domain eq 'archaea'  )
+            ||
+            ($domain eq 'bacteria' )
+            ||
+            ($domain eq 'eukaryota')
+        ) {
+        croak "invalid domain '$domain'";
+    }
+
+    $self->{_domain} = $domain;
+    
+    unless (defined($job_id)) {
+        croak 'missing job id';
+    }
+
+    $self->job_id($job_id);
     
     return $self;
     
@@ -51,8 +66,8 @@ sub execute {
     $self->SUPER::execute(@_);
    
    
-    my $seq = $self->{_seq};
-
+    my $seq    = $self->{_seq};
+    my $domain = $self->{_domain};
     my $seq_fh = $self->_write_seqfile($seq);
     
     my ($rnammer_stdout, $rnammer_stderr);
@@ -70,7 +85,7 @@ sub execute {
     my @cmd = (
                'rnammer',
                '-S',
-               'bac',
+               substr($domain, 0, 3),
                '-T',
                $tempdir,
                '-gff',

@@ -20,6 +20,7 @@ sub new {
     
     my (
         $seq_source,
+        $domain,
     ) = @args;
     
     unless (defined($seq_source)) {
@@ -30,12 +31,17 @@ sub new {
         croak 'seq source does not implement next_seq()!';
     }
     
+    unless (defined($domain)) {
+        croak 'missing domain';
+    }
+    
     $self->{_feature_ref} = [ ]; 
     
     while (my $seq = $seq_source->next_seq()) {
         
         push @{$self->{_jobs}}, GAP::Job::RNAmmer->new(
                                                        $seq,
+                                                       $domain,
                                                        $self->next_job_id(),
                                                       );
         

@@ -25,6 +25,7 @@ my $trnascan_job_source = GAP::JobSource::tRNAscan->new(
                                                                         -file   => 'data/BACSTEFNL_Contig26.1.fasta',
                                                                         -format => 'Fasta',
                                                                     ),
+                                                        'bacteria',
                                                     );
 
 my $rfamscan_job_source =  GAP::JobSource::RfamScan->new(
@@ -39,6 +40,7 @@ my $rnammer_job_source  = GAP::JobSource::RNAmmer->new(
                                                                        -file   => 'data/BACSTEFNL_Contig26.1.fasta',
                                                                        -format => 'Fasta',
                                                                    ),
+                                                       'bacteria',
                                                    );
 
 
