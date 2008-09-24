@@ -170,18 +170,42 @@ sub columns{
 # But probably need to somehow glob all of the input files together into one class level array?
 sub next_pcr_product_genotype{
     my $self = shift;
-    
+ 
     unless (defined($self->snps) || defined ($self->indels)) {
         $self->setup_input;
     }
-
+=cut 
     # Get and parse the line or return undef
     my $line = shift @{$self->snps};
     
     unless (defined($line)) {
         $line = shift @{$self->indels};
     } 
+=cut
     
+# TODO do we want this? For now just return the earliest postition
+
+    my $current_snp = @{$self->snps}[0];
+    my $current_indel = @{$self->indels}[0];
+
+    my $line;
+
+    if ($current_snp && $current_indel) {
+        if (compare_position($current_snp->{chromosome}, $current_snp->{start}, $current_indel->{chromosome}, $current_indel->{start}) > 0) {
+            $line = shift @{$self->indels};
+        } else {
+            $line = shift @{$self->snps};
+        }
+    }
+    else {
+        # Get and parse the line or return undef
+        $line = shift @{$self->snps};
+
+        unless (defined($line)) {
+            $line = shift @{$self->indels};
+        }
+    }
+
     return $line;
 }
 
@@ -402,7 +426,7 @@ sub setup_input {
     # Sort by chromosome, position, and pcr product
     @all_snps =  sort { compare_position($a->{chromosome}, $a->{start}, $b->{chromosome}, $b->{start}) } sort { $a->{pcr_product_name} cmp $b->{pcr_product_name} } @all_snps;
     @all_indels =  sort { compare_position($a->{chromosome}, $a->{start}, $b->{chromosome}, $b->{start}) } sort { $a->{pcr_product_name} cmp $b->{pcr_product_name} } @all_indels;
- 
+
     # Set the class level variables
     $self->snps(\@all_snps);
     $self->indels(\@all_indels);

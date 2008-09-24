@@ -6,6 +6,8 @@ use warnings;
 use IO::File;
 use Genome;
 use Data::Dumper;
+use Genome::VariantAnnotator;
+use Genome::DB::Schema;
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 
 class Genome::Model::CombineVariants{
@@ -19,6 +21,16 @@ class Genome::Model::CombineVariants{
     lq_gfh  => {
         is  =>'IO::Handle',
         doc =>'lq genotype file handle',
+        is_optional => 1,
+    },
+    hq_agfh  => {
+        is  =>'IO::Handle',
+        doc =>'hq annotated genotype file handle',
+        is_optional => 1,
+    },
+    lq_agfh  => {
+        is  =>'IO::Handle',
+        doc =>'lq annotated genotype file handle',
         is_optional => 1,
     },
     ],
@@ -47,9 +59,19 @@ sub hq_genotype_file {
     return $self->model_directory . "/hq_genotype.tsv";
 }
 
+sub hq_annotated_genotype_file {
+    my $self = shift;
+    return $self->model_directory . "/hq_annotated_genotype.tsv";
+}
+
 sub lq_genotype_file {
     my $self = shift;
     return $self->model_directory . "/lq_genotype.tsv";
+}
+
+sub lq_annotated_genotype_file {
+    my $self = shift;
+    return $self->model_directory . "/lq_annotated_genotype.tsv";
 }
 
 # Returns current directory where the microarray data is housed
@@ -173,6 +195,111 @@ sub next_or_undef{
     return $model->next_sample_genotype;
 }
 
+sub annotate_variants {
+    my ($self) = @_;
+
+    my $schema = Genome::DB::Schema->connect_to_dwrac;
+ 
+    $self->error_message("Can't connect to dwrac")
+        and return unless $schema;
+    
+    my $annotator;
+    my $db_chrom;
+
+    ####hq
+    my $hq_post_annotation_file = $self->hq_annotated_genotype_file;
+    my $hq_ofh = IO::File->new("> $hq_post_annotation_file");
+
+    my $current_hq_chromosome=0;
+    while (my $hq_genotype = $self->next_hq_genotype){
+        
+        #NEW ANNOTATOR IF WE'RE ON A NEW CHROMOSOME
+        if ( $current_hq_chromosome != $hq_genotype->{chromosome}){
+            $current_hq_chromosome = $hq_genotype->{chromosome};
+            $db_chrom = $schema->resultset('Chromosome')->find(
+                {chromosome_name => $hq_genotype->{chromosome} },
+            );
+            $annotator = Genome::VariantAnnotator->new(
+                transcript_window => $db_chrom->transcript_window(range => 0),
+                variation_window => $db_chrom->variation_window(range => 0),
+            );
+        }
+
+        my @annotations;
+        if (lc $hq_genotype->{variation_type} eq 'indel'){
+
+            @annotations = $annotator->prioritized_transcripts_for_snp( # TODO make this back into indel
+                start => $hq_genotype->{start},
+                stop => $hq_genotype->{stop},
+                reference => $hq_genotype->{allele1},
+                variant => $hq_genotype->{allele2},
+                chromosome => $hq_genotype->{chromosome},
+            );
+        }elsif (lc $hq_genotype->{variation_type} eq 'snp'){
+            @annotations = $annotator->prioritized_transcripts_for_snp(
+                start => $hq_genotype->{start},
+                reference => $hq_genotype->{allele1},
+                variant => $hq_genotype->{allele2},
+                chromosome => $hq_genotype->{chromosome},
+                stop => $hq_genotype->{stop},
+            );
+        }
+
+        for my $annotation (@annotations){
+            $annotation->{variations} = join (",",keys %{$annotation->{variations}});
+            my %combo = (%$hq_genotype, %$annotation);
+            $hq_ofh->print($self->format_annotated_genotype_line(\%combo));
+        }
+    }
+
+    ####lq
+    my $lq_post_annotation_file = $self->lq_annotated_genotype_file;
+    my $lq_ofh = IO::File->new("> $lq_post_annotation_file");
+
+    my $current_lq_chromosome=0;
+    while (my $lq_genotype = $self->next_lq_genotype){
+
+        #NEW ANNOTATOR IF WE'RE ON A NEW CHROMOSOME
+        if ( $current_lq_chromosome != $lq_genotype->{chromosome}){
+            $current_lq_chromosome = $lq_genotype->{chromosome};
+            $db_chrom = $schema->resultset('Chromosome')->find(
+                {chromosome_name => $lq_genotype->{chromosome} },
+            );
+            $annotator = Genome::VariantAnnotator->new(
+                transcript_window => $db_chrom->transcript_window(range => 0),
+                variation_window => $db_chrom->variation_window(range => 0),
+            );
+        }
+
+        my @annotations;
+        if (lc $lq_genotype->{variation_type} eq 'indel'){
+            @annotations = $annotator->transcripts_for_snp( # TODO Make this back into indel... but the function doesnt exist
+                start => $lq_genotype->{start},
+                reference => $lq_genotype->{allele1},
+                variant => $lq_genotype->{allele2},
+                chromosome => $lq_genotype->{chromosome},
+                stop => $lq_genotype->{stop},
+            );
+        }elsif (lc $lq_genotype->{variation_type} eq 'snp'){
+            @annotations = $annotator->transcripts_for_snp(
+                start => $lq_genotype->{start},
+                reference => $lq_genotype->{allele1},
+                variant => $lq_genotype->{allele2},
+                chromosome => $lq_genotype->{chromosome},
+                stop => $lq_genotype->{stop},
+            );
+        }
+        for my $annotation (@annotations){
+            $annotation->{variations} = join (",",keys %{$annotation->{variations}});
+            my %combo = (%$lq_genotype, %$annotation);
+            $lq_ofh->print($self->format_annotated_genotype_line(\%combo));
+        }
+    }
+
+    return 1;
+}
+
+
 # Calls combine_variants_for_set to combine variants for both hq and lq models
 sub combine_variants{ 
     my $self = shift;
@@ -255,10 +382,10 @@ sub combine_variants_for_set{
 # Return the asnwer that we trust
 sub generate_genotype{
     my ($self, $scan_g, $phred_g) = @_;
-    
+
     # This is the value at which we will trust polyscan over polyphred when running "combine variants" logic
     my $min_polyscan_score = 75;
-    
+
     # If there is data from both polyscan and polyphred, decide which is right
     if ($scan_g && $phred_g){
         if ( $scan_g->{allele1} eq $phred_g->{allele1} and $scan_g->{allele2} eq $phred_g->{allele2} ){
@@ -300,15 +427,26 @@ sub generate_genotype{
 # Format a hash into a printable line
 sub format_genotype_line{
     my ($self, $genotype) = @_;
-    return join("\t", map { $genotype->{$_} } $self->columns)."\n";
+    return join("\t", map { $genotype->{$_} } $self->genotype_columns)."\n";
+}
+
+sub format_annotated_genotype_line{
+    my ($self, $genotype) = @_;
+    return join("\t", map { 
+            if ( defined $genotype->{$_} ){
+                $genotype->{$_} 
+            }else{
+                'no_value'
+            } 
+        } $self->annotated_columns)."\n";
 }
 
 # Format a line into a hash
-sub parse_line {
+sub parse_genotype_line {
     my ($self, $line) = @_;
-    
+
     my @columns = split("\t", $line);
-    my @headers = $self->columns;
+    my @headers = $self->genotype_columns;
 
     my $hash;
     for my $header (@headers) {
@@ -318,8 +456,24 @@ sub parse_line {
     return $hash;
 }
 
+sub parse_annotated_genotype_line {
+    my ($self, $line) = @_;
+
+    my @columns = split("\t", $line);
+    my @headers = $self->annotated_columns;
+
+    my $hash;
+    for my $header (@headers) {
+        $hash->{$header} = shift(@columns);
+    }
+
+    return $hash;
+}
+
+
+
 # List of columns present in the combine variants output
-sub columns{
+sub genotype_columns{
     my $self = shift;
     return qw(
     chromosome 
@@ -333,6 +487,39 @@ sub columns{
     allele2_type 
     polyscan_score 
     polyphred_score
+    );
+    # hugo_symbol
+    # polyscan_read_count
+    # polyphred_read_count
+}
+
+sub annotated_columns{
+    my $self = shift;
+    return qw(
+    chromosome 
+    start 
+    stop 
+    sample_name
+    variation_type
+    allele1 
+    allele1_type 
+    allele2 
+    allele2_type 
+    polyscan_score 
+    polyphred_score
+
+    transcript_name
+    transcript_source
+    strand
+    c_position
+    trv_type
+    priority
+    gene_name
+    intensity
+    detection
+    amino_acid_length
+    amino_acid_change
+    variations 
     );
     # hugo_symbol
     # polyscan_read_count
@@ -356,7 +543,27 @@ sub next_hq_genotype{
         $self->hq_gfh(undef);
         return undef;
     }
-    my $genotype = $self->parse_line($line);
+    my $genotype = $self->parse_genotype_line($line);
+    return $genotype;
+}
+
+sub next_hq_annotated_genotype{
+    my $self = shift;
+
+    # Open the file handle if it hasnt been
+    unless ($self->hq_agfh){
+        my $genotype_file = $self->hq_annotated_genotype_file;
+        my $fh = IO::File->new("< $genotype_file");
+        return undef unless $fh;
+        $self->hq_agfh($fh)
+    }
+
+    my $line = $self->hq_agfh->getline;
+    unless ($line){
+        $self->hq_agfh(undef);
+        return undef;
+    }
+    my $genotype = $self->parse_annotated_genotype_line($line);
     return $genotype;
 }
 
@@ -377,7 +584,27 @@ sub next_lq_genotype{
         $self->lq_gfh(undef);
         return undef;
     }
-    my $genotype = $self->parse_line($line);
+    my $genotype = $self->parse_genotype_line($line);
+    return $genotype;
+}
+
+sub next_lq_annotated_genotype{
+    my $self = shift;
+
+    # Open the file handle if it hasnt been
+    unless ($self->lq_agfh){
+        my $genotype_file = $self->lq_annotated_genotype_file;
+        my $fh = IO::File->new("< $genotype_file");
+        return undef unless $fh;
+        $self->lq_agfh($fh)
+    }
+
+    my $line = $self->lq_agfh->getline;
+    unless ($line){
+        $self->lq_agfh(undef);
+        return undef;
+    }
+    my $genotype = $self->parse_annotated_genotype_line($line);
     return $genotype;
 }
 
@@ -405,7 +632,7 @@ sub get_or_create {
         }
 
         $model = Genome::Model::CombineVariants->create(name => $name,
-                                                        processing_profile => $pp);
+            processing_profile => $pp);
     }
 
     return $model;
@@ -427,7 +654,7 @@ sub write_maf_file{
     MPSampleData::DBI::myinit("dbi:Oracle:dwrac","mguser_prd"); #switch to production by default
 
     while (my $genotype = $self->next_hq_genotype){
-        
+
         my $Hugo_Symbol
         my $Entrez_Gene_Id
         my $Center
@@ -464,38 +691,38 @@ sub write_maf_file{
 
 #      ($Tumor_Sample_Barcode,$Matched_Norm_Sample_Barcode)=split(/\t|\n/,$grep)  if($grep);
 
-        $line="$Hugo_Symbol\t$Entrez_Gene_Id\t$Center\t$NCBI_Build\t$Chromosome\t$Start_position\t$End_position\t$Strand\t$Variant_Classification\t$Variant_Type\t$Reference_Allele\t$Tumor_Seq_Allele1\t$Tumor_Seq_Allele2\t$dbSNP_RS\t$dbSNP_Val_Status\t$Tumor_Sample_Barcode\t$Matched_Norm_Sample_Barcode\t$Match_Norm_Seq_Allele1\t$Match_Norm_Seq_Allele2\t$Tumor_Validation_Allele1\t$Tumor_Validation_Allele2\t$Match_Norm_Validation_Allele1\t$Match_Norm_Validation_Allele2\t$Verification_Status\t$Validation_Status\t$Mutation_Status\t$a1";
+    $line="$Hugo_Symbol\t$Entrez_Gene_Id\t$Center\t$NCBI_Build\t$Chromosome\t$Start_position\t$End_position\t$Strand\t$Variant_Classification\t$Variant_Type\t$Reference_Allele\t$Tumor_Seq_Allele1\t$Tumor_Seq_Allele2\t$dbSNP_RS\t$dbSNP_Val_Status\t$Tumor_Sample_Barcode\t$Matched_Norm_Sample_Barcode\t$Match_Norm_Seq_Allele1\t$Match_Norm_Seq_Allele2\t$Tumor_Validation_Allele1\t$Tumor_Validation_Allele2\t$Match_Norm_Validation_Allele1\t$Match_Norm_Validation_Allele2\t$Verification_Status\t$Validation_Status\t$Mutation_Status\t$a1";
 
-        my
-        $self=MG::Analysis::VariantAnnotation->new(type=>$Variant_Type,chromosome=>$Chromosome,start=>$Start_position,end=>$End_position,filter => 1);
-        my $proper_allele2 = ($Reference_Allele ne $Tumor_Seq_Allele2) ?  $Tumor_Seq_Allele2 : $Tumor_Seq_Allele1;
-        my
-        $result=$self->annotate(allele1=>$Reference_Allele,allele2=>$proper_allele2,gene=>$Hugo_Symbol);
+    my
+    $self=MG::Analysis::VariantAnnotation->new(type=>$Variant_Type,chromosome=>$Chromosome,start=>$Start_position,end=>$End_position,filter => 1);
+    my $proper_allele2 = ($Reference_Allele ne $Tumor_Seq_Allele2) ?  $Tumor_Seq_Allele2 : $Tumor_Seq_Allele1;
+    my
+    $result=$self->annotate(allele1=>$Reference_Allele,allele2=>$proper_allele2,gene=>$Hugo_Symbol);
 
 #getting the results
-        my $transcript=$self->{annotation}->{$Hugo_Symbol}->{choice} if(exists
-            $self->{annotation}->{$Hugo_Symbol}->{choice} && defined
-            $self->{annotation}->{$Hugo_Symbol}->{choice});
-        if(defined $transcript) {
+    my $transcript=$self->{annotation}->{$Hugo_Symbol}->{choice} if(exists
+        $self->{annotation}->{$Hugo_Symbol}->{choice} && defined
+        $self->{annotation}->{$Hugo_Symbol}->{choice});
+    if(defined $transcript) {
 #pro_str is the amino acid change (eg. p.W111R)
 
-            my $amino_change = $self->{annotation}->{$Hugo_Symbol}->{transcript}->{$transcript}->{pro_str};
-            $line.="\t$transcript";
-            $line.="\t".$self->{annotation}->{$Hugo_Symbol}->{transcript}->{$transcript}->{trv_type}; 
-            $line.="\t$amino_change";
+        my $amino_change = $self->{annotation}->{$Hugo_Symbol}->{transcript}->{$transcript}->{pro_str};
+        $line.="\t$transcript";
+        $line.="\t".$self->{annotation}->{$Hugo_Symbol}->{transcript}->{$transcript}->{trv_type}; 
+        $line.="\t$amino_change";
 
-            $line.="\tc.".$self->{annotation}->{$Hugo_Symbol}->{transcript}->{$transcript}->{c_position};
+        $line.="\tc.".$self->{annotation}->{$Hugo_Symbol}->{transcript}->{$transcript}->{c_position};
 #     my $prediction=$self->get_prediction($transcript,$amino_change,1,1);
 #     $line.="\t".$prediction->{sift};
 #     $line.="\t".$prediction->{polyphen};
-        }
-
-
-        print $ofh $line,"\n";
     }
 
-    $fh->close;
-    $ofh->close;
+
+    print $ofh $line,"\n";
+}
+
+$fh->close;
+$ofh->close;
 
 }
 
@@ -522,7 +749,7 @@ sub get_matched_normal_tumor_hash {
             $current_sample = $sample_genotype_data[0];
         }
 
-        
+
     }
 
 
