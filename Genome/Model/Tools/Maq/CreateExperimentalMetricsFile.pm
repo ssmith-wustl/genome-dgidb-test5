@@ -83,7 +83,7 @@ Readonly::Hash my %IUB_CODE => (
     N => ['A','C','G','T'],
 );
 
-Readonly::Scalar my $MAPSTAT_PROG => '/gscuser/dlarson/src/c-code/src/mapstat/mapstat';
+Readonly::Scalar my $MAPSTAT_PROG => '/gscuser/dlarson/src/c-code/src/mapstat2/mapstat';
 
 Readonly::Array my @mapstat_columns => qw(  name
                                             ref_name
@@ -92,11 +92,14 @@ Readonly::Array my @mapstat_columns => qw(  name
                                             strand
                                             mapping_quality
                                             alt_mapping_quality
+                                            single_stranded_map_quality
+                                            flag
                                             snp_offset
                                             length
                                             ref_allele
                                             snp_allele
                                             snp_base_quality
+                                            num_mismatches
                                             sum_of_mismatch_qualities
                                             prefix_window_bases
                                             postfix_window_bases
@@ -177,7 +180,7 @@ sub execute {
 
 1;
 
-sub help_detail {
+sub help_brief {
     return "This module generates read count metrics for a map file";
 }
 
@@ -220,6 +223,8 @@ sub write_data {
     my @ref_header = map {"ref_$_"} ExperimentalMetrics::VariantMetrics->headers($self->max_read);
     shift @ref_header;
     
+the highest mapping quality of the reads covering the position, the minimum consensus quality in the 3bp flanking regions at each side of the site (6bp in total), the second best call, log likelihood ratio of the second best and the third best call, and the third best call.
+    
     my @header = (  'chromosome',
         'position',
         'reference_base',
@@ -230,7 +235,10 @@ sub write_data {
         'cns2_depth',
         'cns2_avg_num_reads',
         'cns2_max_map_quality',
-        'cns2_quality_difference_btw_strong_and_weak_alleles',
+        'cns2_min_flanking_maq_q',
+        'cns2_second_best_call',
+        'cns2_log_likelihood_second_best',
+        'cns2_third_best',
     );
     print $output_fh (join q{,}, @header),"\n"; #print header
     my @bases = qw( A C G T N );
@@ -297,12 +305,18 @@ sub new {
                     _max_mapq => 0,
                     _num_max_mapq => 0,
                     _sum_of_mapq => 0,
+                    _max_alt_mapq => 0,
+                    _num_max_alt_mapq => 0,
+                    _sum_of_alt_mapq => 0,
                     _max_windowedq => 0,
                     _num_max_windowedq => 0,
                     _sum_of_windowedq => 0,
                     _num_bases_all_windowedq => 0,
                     _max_sum_mismatch_qualities => 0,
                     _num_max_sum_mismatch_qualities => 0,
+                    _max_num_mismatches => 0,
+                    _num_max_num_mismatches => 0,
+                    _sum_num_mismatch => 0,
                     _sum_of_mismatch_qualities => 0
                     
                 };
@@ -356,6 +370,10 @@ sub add_read {
     $self->{_sum_of_mapq} += $read_ref->{mapping_quality};
     $self->_track_max_attribute('mapq',$read_ref->{mapping_quality});
 
+    #track mapping quality
+    $self->{_sum_of_alt_mapq} += $read_ref->{alt_mapping_quality};
+    $self->_track_max_attribute('alt_mapq',$read_ref->{alt_mapping_quality});
+    
     #track Windowed base quality
     foreach my $bq_in_window (@{$read_ref->{prefix_window_qualities}}, @{$read_ref->{postfix_window_qualities}}) {
         $self->{_sum_of_windowedq} += $bq_in_window;
@@ -363,6 +381,10 @@ sub add_read {
         $self->_track_max_attribute('windowedq',$bq_in_window);
     }
 
+    #track number of mismatches
+    $self->{_sum_num_mismatch} += $read_ref->{num_mismatches};
+    $self->_track_max_attribute('num_mismatches',$read_ref->{num_mismatches});
+    
     #track sum of mismatch qualities
     $self->{_sum_of_mismatch_qualities} += $read_ref->{sum_of_mismatch_qualities};
     $self->_track_max_attribute('sum_mismatch_qualities',$read_ref->{sum_of_mismatch_qualities});
@@ -397,9 +419,15 @@ sub headers {
                         'avg_map_quality',
                         'max_map_quality',
                         'n_max_map_quality',
+                        'avg_alt_map_quality',
+                        'max_alt_map_quality',
+                        'n_max_alt_map_quality',
                         'avg_sum_of_mismatches',
                         'max_sum_of_mismatches',
                         'n_max_sum_of_mismatches',
+                        'avg_num_of_mismatches',
+                        'max_num_of_mismatches',
+                        'n_max_num_of_mismatches',
                         'avg_base_quality',
                         'max_base_quality',
                         'n_max_base_quality',
@@ -428,9 +456,15 @@ sub metrics {
                     $self->{_num_reads} > 0 ? sprintf("%.0f",$self->{_sum_of_mapq} / $self->{_num_reads}) : 0,
                     $self->{_max_mapq},
                     $self->{_num_max_mapq},
+                    $self->{_num_reads} > 0 ? sprintf("%.0f",$self->{_sum_of_alt_mapq} / $self->{_num_reads}) : 0,
+                    $self->{_max_alt_mapq},
+                    $self->{_num_max_alt_mapq},
                     $self->{_num_reads} > 0 ? sprintf("%.0f",$self->{_sum_of_mismatch_qualities} / $self->{_num_reads}) : 0,
                     $self->{_max_sum_mismatch_qualities},
                     $self->{_num_max_sum_mismatch_qualities},
+                    $self->{_num_reads} > 0 ? sprintf("%.0f",$self->{_sum_num_mismatch} / $self->{_num_reads}) : 0,
+                    $self->{_max_num_mismatches},
+                    $self->{_num_max_num_mismatches},
                     $self->{_num_reads} > 0 ? sprintf("%.0f",$self->{_sum_of_bq} / $self->{_num_reads}) : 0,
                     $self->{_max_bq},
                     $self->{_num_max_bq},
