@@ -8,7 +8,9 @@ use above 'Genome';
 BEGIN {
         use_ok('Genome::Model::Tools::PhredPhrap::PhdToFasta');
 }
-my $path = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-PhredPhrap';
+
+my $path = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-PhredPhrap'; #directory for sample data and output
+my $static = "$path/PhdToFasta/_fasta_output.static"; #static file for comparison to output
 my %params =
 (
     phd_dir => "$path/phd_dir/",
@@ -23,5 +25,11 @@ isa_ok($phd_to_fasta, "'Genome::Model::Tools::PhredPhrap::PhdToFasta");
 
 ok($phd_to_fasta->execute,'execute PhdToFasta');
 
-(unlink $phd_to_fasta->fasta_file . ".qual" and unlink $phd_to_fasta->fasta_file) if (-e $phd_to_fasta->fasta_file or die("Output file was not created"));
+(unlink $phd_to_fasta->fasta_file . ".qual" and 
+ unlink $phd_to_fasta->fasta_file)              
+                                   if ((-e $phd_to_fasta->fasta_file or 
+                                        die("Output file was not created"))
+                                   and (-s $phd_to_fasta->fasta_file == 
+                                        -s $static or
+                                        die("Generated file $phd_to_fasta->fasta_file does not match static file:$static")));
 exit;

@@ -66,7 +66,9 @@ sub execute {
         and return unless -d $self->phd_dir;
 
     # Check phd file
+    print Dumper([ Cwd::getcwd(), $self->phd_file, Cwd::abs_path($self->phd_file)]);
     $self->phd_file( Cwd::abs_path($self->phd_file) );
+
     $self->error_message(
         sprintf('File of PHDs (%s) does not exist', $self->phd_file)
     )
@@ -102,7 +104,7 @@ sub execute {
     
     chdir $self->_cwd;
 
-    return ( $rv ) ? 1 : 0;
+    return ( $rv ) ? 0 : 1;
 }
 
 1;
