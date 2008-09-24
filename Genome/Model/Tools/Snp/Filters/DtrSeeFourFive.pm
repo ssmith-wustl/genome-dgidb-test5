@@ -51,7 +51,15 @@ class Genome::Model::Tools::Snp::Filters::DtrSeeFourFive{
         },
         debug_mode => {default => 0},
         probability_mode => {default => 0},
- 
+        data_format =>
+        {
+            type => 'String',
+            is_optional => 0,
+            doc => 'Which Maq::Metrics::Dtr module to use',
+            default => 'MaqOSixThree',
+
+        },
+
         ]
 };
 
@@ -68,7 +76,13 @@ sub execute {
     my $self=shift;
     my $file = $self->experimental_metric_model_file;
     $DB::single=1;
-    my $dtr = Genome::Model::Tools::Maq::Metrics::Dtr->create();
+
+    my $type = $self->data_format;
+    my $dtr = eval "Genome::Model::Tools::Maq::Metrics::Dtr::$type->create()";
+    unless(defined($dtr)) {
+        $self->error_message($@);
+        return;
+    }
 #    my $dtr_file = Genome::Model::Tools::Maq::Metrics::ConvertForDtr->execute(input=>$self->experimental_metric_model_file)->result;
     my $specificity = $self->specificity; 
     my %specificity_maqq = (
@@ -133,7 +147,11 @@ sub execute {
         next if $line =~ /N/;
         
         my %data; 
-        @data{@headers} = $dtr->make_attribute_array($line);
+        my @dtr_data = $dtr->make_attribute_array($line);
+        unless(@dtr_data) {
+            next;
+        }
+        @data{@headers} = @dtr_data;
         my ($decision, $leaf_number);
         my @answers;
         if($self->debug_mode || $self->probability_mode) {

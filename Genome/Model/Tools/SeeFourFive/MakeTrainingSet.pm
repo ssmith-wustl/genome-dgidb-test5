@@ -70,6 +70,21 @@ class Genome::Model::Tools::SeeFourFive::MakeTrainingSet {
         is_optional => 0,
         default => "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c",
     },        
+    use_database =>
+    {
+        type => 'Boolean',
+        is_optional => 1,
+        doc => 'Use values from the variant_review database as a training set',
+        default => 1,
+    },
+    data_format =>
+    {
+        type => 'String',
+        is_optional => 0,
+        doc => 'Which Maq::Metrics::Dtr module to use',
+        default => 'MaqOSixThree',
+
+    },
     ]
 };
 
@@ -105,11 +120,16 @@ sub execute {
     #they should probably be written either to two new files or just dumped right into test and data files. 
 
     #Get object for making, and reading tree data
-    my $dtr = Genome::Model::Tools::Maq::Metrics::Dtr->create();
+    my $type = $self->data_format;
+    my $dtr = eval "Genome::Model::Tools::Maq::Metrics::Dtr::$type->create()";
+    unless(defined($dtr)) {
+        $self->error_message($@);
+        return;
+    }
     my $names = $dtr->names_file_string;
 
     my ($gold_het_href,$gold_hom_href,$gold_ref_href) = $self->create_gold_snp_hashes($gold_fh);
-    my ($validation_href) = $self->make_validation_hash();
+    my ($validation_href) = $self->use_database ? $self->make_validation_hash() : undef;
     my ($db_wildtype_aref,
         $db_germline_aref,
         $gold_wildtype_aref,
@@ -146,7 +166,7 @@ sub execute {
 #Then join together with commas etc
 #The following line does both together
     my @data_lines;
-    @data_lines = map {join ", ", @$_} splice(@data,0,$self->gold_set_size),@$db_germline_aref,@$db_wildtype_aref,@$gold_ref_href;
+    @data_lines = map {join ", ", @$_} splice(@data,0,$self->gold_set_size),@$db_germline_aref,@$db_wildtype_aref,@$gold_wildtype_aref;
 
     print $data_file_handle join "\n", @data_lines;
     print $data_file_handle "\n";
@@ -380,10 +400,11 @@ sub make_data_arrays {
         }
         next if($al1 eq ' ' || $al1 eq '' || $al1 eq 'N'); #skip 'SNPs' where the reference is N or non-existent
         next if $seen_at{$chr}{$pos}{$al2};
+        next if !@attributes;
         $seen_at{$chr}{$pos}{$al2} = 1;
         
         #First check the db
-        if(exists($db_status_href->{$chr}{$pos})) {
+        if($self->use_database && exists($db_status_href->{$chr}{$pos})) {
             #Then there is a status in the db
             if($db_status_href->{$chr}{$pos} eq 'G' ||
                 $db_status_href->{$chr}{$pos} eq 'S') {
