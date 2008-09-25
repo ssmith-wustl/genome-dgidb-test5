@@ -22,13 +22,22 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    $DB::single = $DB::stopper;
+    $DB::single = 1;
     
     my $alignment_event = $self->prior_event;
     my $unaligned_reads_file = $alignment_event->unaligned_reads_file;
-    
+    $self->status_message("searching for $unaligned_reads_file");
+    unless($self->check_for_existence($unaligned_reads_file)) {
+        $unaligned_reads_file =~ s/\.-?\d+$/\.\*/;
+        $self->status_message("Didn't find it. trying this pattern: $unaligned_reads_file");
+        $unaligned_reads_file = glob($unaligned_reads_file);
+    }
     my @unaligned_reads_files;
-    if (-s $unaligned_reads_file) {
+    if (-s $unaligned_reads_file . ".fastq" && -s $unaligned_reads_file) {
+        $self->status_message("SHORTCUTTING: ALREADY FOUND MY INPUT AND OUTPUT TO BE NONZERO");
+        return 1;
+    }
+    elsif (-s $unaligned_reads_file) {
         my $command = Genome::Model::Tools::Maq::UnalignedDataToFastq->execute(
             in => $unaligned_reads_file, 
             fastq => $unaligned_reads_file . '.fastq' 
@@ -42,7 +51,7 @@ sub execute {
                 in => $unaligned_reads_files_entry, 
                 fastq => $unaligned_reads_files_entry . '.fastq'
             );
-        unless ($command) {die "Failed Genome::Model::Tools::Maq::UnalignedDataToFastq for $unaligned_reads_files_entry";}
+            unless ($command) {die "Failed Genome::Model::Tools::Maq::UnalignedDataToFastq for $unaligned_reads_files_entry";}
         }
     }
     unless (-s $unaligned_reads_file || @unaligned_reads_files) {

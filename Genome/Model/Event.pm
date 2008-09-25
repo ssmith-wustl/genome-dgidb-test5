@@ -494,7 +494,7 @@ sub execute_with_bsub {
     my $dep_type = $params{dep_type};
     my $queue = $params{bsub_queue};
     my $bsub_args = $params{bsub_args};
-    
+    my $dependency_expression = $params{dependency_expression};
     my $model_id = $self->model_id;
 
 ## should check if $self isa Command??
@@ -503,11 +503,11 @@ sub execute_with_bsub {
     
 
     $DB::single = $DB::stopper;
-    
-    my $last_bsub_job_id;
-    $last_bsub_job_id = $last_event->lsf_job_id if defined $last_event;
 
-    
+    unless($dependency_expression) {
+        $dependency_expression = $last_event->lsf_job_id if defined $last_event;
+    }
+
     if (my $bsub_rusage = $self->bsub_rusage) {
         $bsub_args .= ' ' . $bsub_rusage;
     }
@@ -536,7 +536,7 @@ sub execute_with_bsub {
     my $cmdline;
     { no warnings 'uninitialized';
         $cmdline = "bsub -q $queue $bsub_args" .
-                   ($last_bsub_job_id && " -w '$dep_type($last_bsub_job_id)'") .
+                   ($dependency_expression && " -w '$dep_type($dependency_expression)'") .
                    " $cmd --model-id $model_id --event-id $event_id " .
                    ($prior_event_id && " --prior-event-id $prior_event_id");
     }
@@ -567,9 +567,9 @@ sub execute_with_bsub {
         $self->error_message("bsub returned a non-zero exit code ($retval), bailing out");
         return;
     }
-
+    my $bsub_job_id;
     if ($bsub_output =~ m/Job <(\d+)>/) {
-        $last_bsub_job_id = $1;
+        $bsub_job_id = $1;
 
     } else {
         $self->error_message('Unable to parse bsub output, bailing out');
@@ -577,7 +577,7 @@ sub execute_with_bsub {
         return;
     }
 
-    return $last_bsub_job_id;
+    return $bsub_job_id;
 }
 
 # Scheduling

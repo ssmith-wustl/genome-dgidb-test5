@@ -186,46 +186,8 @@ sub execute {
         }
 
         # TODO: move this section to Genome::Model::Command::Build::ReferenceAlignment
-        if ($model->processing_profile->isa("Genome::ProcessingProfile::ReferenceAlignment")) {
-            my @sub_command_classes = $self->get_sub_command_classes();
-            my $prior_event_id = undef;
-            foreach my $command_class ( @sub_command_classes ) {
-                my $command;
-                eval {
-                    $command = $command_class->create(
-                        run_id => $run_chunk->id,
-                        model_id => $self->model_id,
-                        event_status => 'Scheduled',
-                        retry_count => 0,
-                        prior_event_id => $prior_event_id,
-                        parent_event_id => $self->id,
-                    );
-                };
-                unless ($command) {
-                    $DB::single = $DB::stopper;
-                    $command = $command_class->create(
-                        run_id => $run_chunk->id,
-                        model_id => $self->model_id,
-                        event_status => 'Scheduled',
-                        retry_count => 0,
-                        prior_event_id => $prior_event_id,
-                        parent_event_id => $self->id,
-                    );
-                    $self->error_message(
-                        "Problem creating subcommand for class $command_class run id ".$run_chunk->id
-                        . " model id ".$self->model_id
-                        . ": " . $command_class->error_message()
-                    );
-                    return;
-                }
-                $self->status_message('Launched '. $command_class .' for run_id '. $run_chunk->id
-                                      .' event_id '. $command->genome_model_event_id ."\n");
-                if ($self->test) {
-                    $command->lsf_job_id("test " . UR::Context::Process->get_current());
-                }
-                $prior_event_id = $command->id;
-            }
-        }
+       
+        
     }
     return 1;
 }
@@ -249,7 +211,6 @@ sub get_sub_command_classes {
 
 sub _redo_all {
     my $self = shift;
-$DB::single = $DB::stopper;
     my $model = $self->model;
     my $model_id = $model->id;
     

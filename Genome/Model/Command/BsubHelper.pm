@@ -64,7 +64,7 @@ $DB::single = $DB::stopper;
         $self->error_message('No event found with id '.$self->event_id);
         return;
     }
-    if (($event->event_status and $event->event_status ne 'Scheduled') and ! $self->reschedule) {
+    if (($event->event_status and $event->event_status !~ /Scheduled|Waiting/) and ! $self->reschedule) {
         $self->error_message("Refusing to re-run event with status ".$event->event_status);
         return;
     }
@@ -105,9 +105,16 @@ $DB::single = $DB::stopper;
     if ($@) {
         $self->error_message($@);
         $command_obj->event_status('Crashed');
-    } else {
+    } elsif($rv <= 1) {
         $command_obj->event_status($rv ? 'Succeeded' : 'Failed');
+    }elsif($rv == 2) {
+        $command_obj->event_status('Waiting');
     }
+    else {
+        $self->status_message("Unhandled positive return code: $rv...setting Succeeded");
+        $command_obj->event_status('Succeeded');
+    }
+
 
     return $rv;
 }

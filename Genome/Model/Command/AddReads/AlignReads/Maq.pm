@@ -157,7 +157,6 @@ sub total_reads_passed_quality_filter_count {
 
 sub _calculate_total_reads_passed_quality_filter_count {
     my $self = shift;
-
     my $total_reads_passed_quality_filter_count;
     do {
         no warnings;
@@ -423,6 +422,10 @@ $DB::single = $DB::stopper;
 
     if ($self->alignment_data_available_and_correct) {
         $self->status_message("existing alignment data is available and deemed correct");
+        my $read_set_link=Genome::Model::ReadSet->get(model_id=>$self->model_id, read_set_id=> $self->run_id);
+        unless($read_set_link->first_build_id) {
+            $read_set_link->first_build_id($self->parent_event_id);
+        }
         return 1;
     }
 

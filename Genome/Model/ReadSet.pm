@@ -12,7 +12,7 @@ class Genome::Model::ReadSet {
 
     ],
     has => [   
-        first_build_id      => { is => 'NUMBER', len => '10' }, 
+        first_build_id      => { is => 'NUMBER', len => '10', is_optional=>1 }, 
         alignment_directory => { via => 'model'},
         run_name            => { via => 'read_set'},
         subset_name         => { via => 'read_set'},

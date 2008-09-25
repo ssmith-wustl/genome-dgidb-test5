@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 use Test::More tests => 12;
 
-my $m = Genome::Model->get(name => 'AML-skin1-new_maq-no_dups');
+my $m = Genome::Model->get(name => 'AML-tumor-new_maq-no_ss_dups');
 ok($m, "got a model"); 
 
 my @f = $m->_consensus_files('X');
@@ -28,12 +28,12 @@ ok(scalar(@f), "identified " . scalar(@f) . " pileup files w/o refseq filter");
 ok(all_exist(@f),"the pileup files exist");
 
 my $v = $m->variant_count();
-is($v,4071837, "got expected variant count");
+is($v,3180629, "got expected variant count");
 
 my $f;
 
 my $data_directory = $m->data_directory;
-is($data_directory, "/gscmnt/839/info/medseq/model_links/H_GV-933124G-skin1-9017g_AML-skin1-new_maq-no_dups", "resolved data directory");  # FIX WHEN WE SWITCH MODELS
+is($data_directory, "/gscmnt/839/info/medseq/model_links/H_GV-933124G-tumor1-9043g_AML-tumor-new_maq-no_ss_dups/build91849776", "resolved data directory");  # FIX WHEN WE SWITCH MODELS
 
 #$f = $m->resolve_accumulated_alignments_filename();
 #is($f, 'FIXME', "found accumulated alignments file name"); #FIXME WHEN WE SWITCH MODELS

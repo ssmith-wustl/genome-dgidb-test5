@@ -45,13 +45,6 @@ sub create {
     my $model = $obj->model;
     
     my $resource_id = join(".",$class,'create',$obj->run_id);
-    my $lock = $model->lock_resource(resource_id => $resource_id);
-    unless ($lock) {
-        $class->error_message("Failed to lock $resource_id.");
-        $obj->delete;
-        return;
-    }
-
     my @prev =
         grep { $_ ne $obj }
         $class->load(

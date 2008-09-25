@@ -138,7 +138,7 @@ sub create_model {
     $self->{_ref_seq_count} = $ref_seqs;
     
     my @read_sets = @{$self->{_read_set_array_ref}};
-    $self->{_expected_add_reads_events} = scalar(@add_reads_commands);
+    $self->{_expected_add_reads_events} = scalar(@add_reads_commands); 
     # At some point the number of expected tests from test_c should be set
     # This number will vary depending on platform(some tests are not performed for 454, yet)
     #$self->num_method_tests('test_c',$);
@@ -157,67 +157,74 @@ sub add_reads {
                                                                      );
         isa_ok($add_reads_command,'Genome::Model::Command::AddReads');
         ok($add_reads_command->execute(),'execute genome-model add-reads');
+    }
         #UR::Context->_sync_databases();
+        my $pp_alignments = Genome::Model::Command::Build::ReferenceAlignment->create(
+            model_id => $model->id,
+        );
+        $pp_alignments->testing_flag(1);
+        isa_ok($pp_alignments,'Genome::Model::Command::Build::ReferenceAlignment');
+        ok($pp_alignments->execute(), 'execute genome-model build reference-alignment');
+     
+        for my $read_set (@read_sets) {
+            my @add_reads_events = Genome::Model::Event->get(
+                                                             model_id => $model->id,
+                                                             parent_event_id => $pp_alignments->id,
+                                                             run_id => $read_set->seq_id,
+                                                         );
+            is(scalar(@add_reads_events),$self->{_expected_add_reads_events},'get scheduled build reference alignment genome_model_events');
+            # sort by event id to ensure order of events matches pipeline order
+            @add_reads_events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @add_reads_events;
+            my $assign_run_command = $add_reads_events[0];
+            isa_ok($assign_run_command,'Genome::Model::Command::AddReads::AssignRun');
 
-        my @add_reads_events = Genome::Model::Event->get(
-                                                         model_id => $model->id,
-                                                         parent_event_id => $add_reads_command->id,
-                                                     );
-        is(scalar(@add_reads_events),$self->{_expected_add_reads_events},'get scheduled add_reads genome_model_events');
-        # sort by event id to ensure order of events matches pipeline order
-        @add_reads_events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @add_reads_events;
+            my $data_directory = $assign_run_command->model->data_directory;
+            is($data_directory,$model->data_directory,"assign run data directory matches model");
 
-        my $assign_run_command = $add_reads_events[0];
-        isa_ok($assign_run_command,'Genome::Model::Command::AddReads::AssignRun');
+            $self->execute_event_test($assign_run_command);
+            ok(-d $data_directory, "data directory '$data_directory' exists");
+            ###RUN ALIGN-READS VIA BSUBHELPER(?). 
+            my $align_reads_command = $add_reads_events[1];
+            isa_ok($align_reads_command,'Genome::Model::Command::AddReads::AlignReads');
 
-        my $data_directory = $assign_run_command->model->data_directory;
-        is($data_directory,$model->data_directory,"assign run data directory matches model");
-        ok(-d $data_directory, "data directory '$data_directory' exists");
+            if ($model->sequencing_platform eq 'solexa') {
+                my $align_reads_ref_seq_file =  $align_reads_command->model->reference_sequence_path . "/all_sequences.bfa";
+                #If the files are binary then the size of an empty file is greater than zero(20?)
+                ok(-s $align_reads_ref_seq_file, 'align-reads reference sequence file exists with non-zero size');
+            }
 
-        $self->execute_event_test($assign_run_command,$read_set);
+            $self->execute_event_test($align_reads_command);
 
-        ###RUN ALIGN-READS VIA BSUBHELPER(?). 
-        my $align_reads_command = $add_reads_events[1];
-        isa_ok($align_reads_command,'Genome::Model::Command::AddReads::AlignReads');
+            #TODO: TEST THE RESULT OF ALIGN READS
+            #Compare the map file to the test data
 
-        if ($model->sequencing_platform eq 'solexa') {
-            my $align_reads_ref_seq_file =  $align_reads_command->model->reference_sequence_path . "/all_sequences.bfa";
-            #If the files are binary then the size of an empty file is greater than zero(20?)
-            ok(-s $align_reads_ref_seq_file, 'align-reads reference sequence file exists with non-zero size');
+            my $proc_low_qual_command = $add_reads_events[2];
+            isa_ok($proc_low_qual_command,'Genome::Model::Command::AddReads::ProcessLowQualityAlignments');
+            $self->execute_event_test($proc_low_qual_command);
         }
-
-        $self->execute_event_test($align_reads_command,$read_set);
-
-        #TODO: TEST THE RESULT OF ALIGN READS
-        #Compare the map file to the test data
-
-        my $proc_low_qual_command = $add_reads_events[2];
-        isa_ok($proc_low_qual_command,'Genome::Model::Command::AddReads::ProcessLowQualityAlignments');
-        $self->execute_event_test($proc_low_qual_command,$read_set);
-
         #$my $accept_reads_command = $add_reads_events[3];
         #isa_ok($accept_reads_command,'Genome::Model::Command::AddReads::AcceptReads');
         #$self->execute_event_test($accept_reads_command,$read_set);
-    }
-    my $pp_alignments = Genome::Model::Command::Build::ReferenceAlignment->create(
-                                                                                  model_id => $model->id,
-                                                                              );
-    isa_ok($pp_alignments,'Genome::Model::Command::Build::ReferenceAlignment');
 
-    my @sub_command_classes = $pp_alignments->subordinate_job_classes;
-    my $sub_command_count = 0;
-    for my $command_classes (@sub_command_classes) {
-        for my $command_class (@{$command_classes}) {
-            $sub_command_count++;
-        }
-    }
-    $self->{_expected_postprocess_events} = $self->{_ref_seq_count} * $sub_command_count;
-    ok($pp_alignments->execute(), 'execute genome-model add-reads postprocess-alignments');
-    #UR::Context->_sync_databases();
+        #when the namespace moves, the double for underneath may get uncommented
+#    my @sub_command_classes = $pp_alignments->subordinate_job_classes;
+    my $sub_command_count = 5;
+#    for my $command_classes (@sub_command_classes) {
+#        for my $command_class (@{$command_classes}) {.
+#            $sub_command_count++;
+#        }
+#    }
+
+   $pp_alignments->is_executed(0);
+   $DB::single=1;
+   ok($pp_alignments->execute(), 'REexecute genome-model add-reads postprocess-alignments');
+$self->{_expected_postprocess_events} = $self->{_ref_seq_count} * $sub_command_count;
+   #UR::Context->_sync_databases();
 
     my @pp_events = Genome::Model::Event->get(
                                               model_id => $model->id,
                                               parent_event_id => $pp_alignments->id,
+                                              run_id => undef,
                                           );
 
     is(scalar(@pp_events),$self->{_expected_postprocess_events},'get scheduled genome_model add-reads postprocess-alignments');
