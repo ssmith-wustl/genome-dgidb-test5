@@ -41,13 +41,23 @@ sub create {
     my $self = $class->SUPER::create(@_);
     die unless $self;
 
-    my $model_dir = $self->model_directory();
+    my $data_dir = $self->data_directory;
+    # If the data directory was not supplied, resolve what it should be by default
+    unless ($data_dir) {
+        $data_dir= $self->resolve_data_directory;
+        $self->data_directory($data_dir);
+    }
 
-    unless (-e $model_dir) {
-        unless (system("mkdir $model_dir") == 0) {
-            $self->error_message("Failed to mkdir model dir: $model_dir");
-            die;
-        }
+    # Make the model directory
+    if (-d $data_dir) {
+        $self->error_message("Data directory: " . $data_dir . " already exists before creation");
+        return undef;
+    }
+
+    mkdir $data_dir;
+    unless (-d $data_dir) {
+        $self->error_message("Failed to create data directory: " . $data_dir);
+        return undef;
     }
 
     return $self;
@@ -56,29 +66,22 @@ sub create {
 # The file containing the genotype for this sample
 sub hq_genotype_file {
     my $self = shift;
-    return $self->model_directory . "/hq_genotype.tsv";
+    return $self->data_directory . "/hq_genotype.tsv";
 }
 
 sub hq_annotated_genotype_file {
     my $self = shift;
-    return $self->model_directory . "/hq_annotated_genotype.tsv";
+    return $self->data_directory . "/hq_annotated_genotype.tsv";
 }
 
 sub lq_genotype_file {
     my $self = shift;
-    return $self->model_directory . "/lq_genotype.tsv";
+    return $self->data_directory . "/lq_genotype.tsv";
 }
 
 sub lq_annotated_genotype_file {
     my $self = shift;
-    return $self->model_directory . "/lq_annotated_genotype.tsv";
-}
-
-# Returns current directory where the microarray data is housed
-sub base_directory {
-    my $self = shift;
-
-    return '/gscmnt/834/info/medseq/combine_variants/';
+    return $self->data_directory . "/lq_annotated_genotype.tsv";
 }
 
 sub _is_valid_child{
@@ -91,16 +94,18 @@ sub valid_child_types{
     return qw/polyscan polyphred/;
 }
 
-# Returns the current directory where this model is housed
-# Should work for all submodules
-sub model_directory {
+# Returns the default location where this model should live on the file system
+sub resolve_data_directory {
     my $self = shift;
 
-    # Replace all spaces with underbars to insure proper directory access
+    my $base_directory = "/gscmnt/834/info/medseq/combine_variants/";
     my $name = $self->name;
-    $name =~ s/ /_/g;
+    my $data_dir = "$base_directory/$name/";
+    
+    # Remove spaces so the directory isnt a pain
+    $data_dir=~ s/ /_/;
 
-    return $self->base_directory . "/$name/";
+    return $data_dir;
 }
 
 # Returns the parameterized model associated with this composite
@@ -613,6 +618,7 @@ sub next_lq_annotated_genotype{
 sub get_or_create {
     my ($class , %p) = @_;
     my $name = $p{name};
+    my $data_directory = $p{data_directory};
 
 
     unless (defined($name)) {
@@ -632,7 +638,8 @@ sub get_or_create {
         }
 
         $model = Genome::Model::CombineVariants->create(name => $name,
-            processing_profile => $pp);
+                                                        data_directory => $data_directory,
+                                                        processing_profile => $pp);
     }
 
     return $model;

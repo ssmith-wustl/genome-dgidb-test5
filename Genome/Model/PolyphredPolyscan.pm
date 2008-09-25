@@ -41,18 +41,24 @@ sub create{
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     
-    my $model_dir = $self->model_directory;
+    my $data_dir = $self->data_directory;
+
+    # If the data directory was not supplied, resolve what it should be by default
+    unless ($data_dir) {
+        $data_dir= $self->resolve_data_directory;
+        $self->data_directory($data_dir);
+    }
     
     # Make the model directory
-    if (-d $model_dir) {
-        $self->error_message("Model directory: " . $model_dir . " already exists before creation");
+    if (-d $data_dir) {
+        $self->error_message("Data directory: " . $data_dir . " already exists before creation");
         return undef;
     }
     
-    mkdir $model_dir;
+    mkdir $data_dir;
 
-    unless (-d $model_dir) {
-        $self->error_message("Failed to create model directory: " . $model_dir);
+    unless (-d $data_dir) {
+        $self->error_message("Failed to create data directory: " . $data_dir);
         return undef;
     }
 
@@ -77,19 +83,18 @@ sub type{
     return $self->name;
 }
 
-sub model_directory{
+# Returns the default location where this model should live on the file system
+sub resolve_data_directory {
     my $self = shift;
-    my $model_dir = $self->base_directory."/".$self->name;
+
+    my $base_directory = "/gscmnt/834/info/medseq/polyphred_polyscan/";
+    my $name = $self->name;
+    my $data_dir = "$base_directory/$name/";
     
-    # Remove spaces, replace with underscores
-    $model_dir=~ s/ /_/;
+    # Remove spaces so the directory isnt a pain
+    $data_dir=~ s/ /_/;
 
-    return $model_dir;
-}
-
-sub base_directory {
-    my $self = shift;
-    return '/gscmnt/834/info/medseq/polyphred_polyscan/';
+    return $data_dir;
 }
 
 # Takes in an array of pcr product genotypes and finds the simple majority vote for a genotype
@@ -254,7 +259,7 @@ sub next_sample_genotype {
 # Returns the latest complete build number
 sub current_version{
     my $self = shift;
-    my $archive_dir = $self->model_directory;
+    my $archive_dir = $self->data_directory;
     my @build_dirs = `ls $archive_dir`;
 
     # If there are no previously existing archives
@@ -282,9 +287,9 @@ sub next_version {
 sub current_build_dir {
     my $self = shift;
 
-    my $model_dir = $self->model_directory;
+    my $data_dir = $self->data_directory;
     my $current_version = $self->current_version;
-    my $current_build_dir = "$model_dir/build_$current_version/";
+    my $current_build_dir = "$data_dir/build_$current_version/";
 
     # Remove spaces, replace with underscores
     $current_build_dir =~ s/ /_/;
@@ -332,8 +337,8 @@ sub current_instrument_data_files {
 sub pending_instrument_data_dir {
     my $self = shift;
 
-    my $model_dir = $self->model_directory;
-    my $pending_instrument_data_dir = "$model_dir/instrument_data/";
+    my $data_dir = $self->data_directory;
+    my $pending_instrument_data_dir = "$data_dir/instrument_data/";
 
     # Remove spaces, replace with underscores
     $pending_instrument_data_dir =~ s/ /_/;
@@ -360,9 +365,9 @@ sub pending_instrument_data_files {
 sub next_build_dir {
     my $self = shift;
 
-    my $model_dir = $self->model_directory;
+    my $data_dir = $self->data_directory;
     my $next_version = $self->next_version;
-    my $next_build_dir = "$model_dir/build_$next_version/";
+    my $next_build_dir = "$data_dir/build_$next_version/";
 
     # Remove spaces, replace with underscores
     $next_build_dir =~ s/ /_/;
@@ -378,9 +383,9 @@ sub next_build_dir {
 
 sub source_instrument_data_dir {
     my $self = shift;
-    my $model_dir = $self->model_directory;
+    my $data_dir = $self->data_directory;
     my $dir_name = 'source_instrument_data';
-    my $dir = "$model_dir/$dir_name";
+    my $dir = "$data_dir/$dir_name";
     
     # Remove spaces, replace with underscores
     $dir =~ s/ /_/;
@@ -441,6 +446,7 @@ sub get_or_create{
     my $research_project_name = $p{research_project};
     my $technology = $p{technology};
     my $sensitivity = $p{sensitivity};
+    my $data_directory = $p{data_directory};
     
     unless (defined($research_project_name) && defined($technology) && defined($sensitivity)) {
         $class->error_message("Insufficient params supplied to get_or_create");
@@ -473,11 +479,13 @@ sub get_or_create{
             subject_name => $research_project_name,
             processing_profile => $pp,
             name => $pp->name,
+            data_directory => $data_directory,
         );
 
         # Now, get or create the combine variants model and add this newly created model to it
         # TODO: Should be some other parameters besides name as the research project name...
-        my $combine_variants_model = Genome::Model::CombineVariants->get_or_create(name => $research_project_name);
+        my $combine_variants_name = "combine-variants.$research_project_name";
+        my $combine_variants_model = Genome::Model::CombineVariants->get_or_create(name => $combine_variants_name);
 
         $combine_variants_model->add_child_model($model);
     }
