@@ -20,5 +20,11 @@ class Genome::Model::Command::Build {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub resolve_data_directory {
+    my $self = shift;
+    my $model = $self->model;
+    return $model->data_directory . '/build' . $self->id;
+}
+
 1;
 
