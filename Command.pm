@@ -834,7 +834,7 @@ sub _shell_args_usage_string_abbreviated
     }
     else {
         my $detailed = $self->_shell_args_usage_string;
-        if (length($detailed) < 40) {
+        if (length($detailed) <= 20) {
             return $detailed;
         }
         else {
