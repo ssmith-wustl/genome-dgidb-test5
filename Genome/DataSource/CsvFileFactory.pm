@@ -23,14 +23,18 @@ my %RESOLVER = (
         required_in_rule => [ 'model_id', 'ref_seq_id' ],   # properties that must be in the rule
         file_resolver => sub {                              # returns the name of the file.  args are from required_in_rule
                              my($model_id, $ref_seq_id) = @_;
-                             my @e = sort { $a->date_completed <=> $b->date_completed }
-                                 Genome::Model::Command::AddReads::FindVariations::Maq->get(model_id => $model_id,
-                                                                                            ref_seq_id => $ref_seq_id);
-                            my $snp_file = $e[-1]->snip_output_file();
-                            # Hack to fixup data that's in transisition 
-                            $snp_file =~ s/maq_snp_related_metrics/identified_variations/;
-                            $snp_file =~ s/snps_/snips_/;
-                            return $snp_file;
+                             #my @e = sort { $a->date_completed <=> $b->date_completed }
+                             #    Genome::Model::Command::AddReads::FindVariations::Maq->get(model_id => $model_id,
+                             #                                                               ref_seq_id => $ref_seq_id);
+                             #my $snp_file = $e[-1]->snip_output_file();
+                             # Hack to fixup data that's in transisition 
+                             #$snp_file =~ s/maq_snp_related_metrics/identified_variations/;
+                             #$snp_file =~ s/snps_/snips_/;
+
+                             my $model = Genome::Model->get(id => $model_id);
+                             my($snp_file) = $model->_variant_list_files($ref_seq_id);
+
+                             return $snp_file;
                           },
     },
 
@@ -55,15 +59,18 @@ my %RESOLVER = (
         skip_first_line => 1,
         file_resolver => sub {
                              my($model_id, $chromosome) = @_;
-                             my @e = sort { $a->date_completed <=> $b->date_completed }
-                                 Genome::Model::Command::AddReads::PostprocessVariations::Maq->get(model_id => $model_id,
-                                                                                                   ref_seq_id => $chromosome);
-                            my $metric_file = $e[-1]->experimental_variation_metrics_file_basename();
-                            $metric_file .= '.csv';
-                            # Hack to fixup data that's in transisition
-                            $metric_file =~ s/maq_snp_related_metrics/identified_variations/;
-                            $metric_file =~ s/snps_/snips_/;
-                            return $metric_file;
+                             #my @e = sort { $a->date_completed <=> $b->date_completed }
+                             #    Genome::Model::Command::AddReads::PostprocessVariations::Maq->get(model_id => $model_id,
+                             #                                                                      ref_seq_id => $chromosome);
+                             #my $metric_file = $e[-1]->experimental_variation_metrics_file_basename();
+                             #$metric_file .= '.csv';
+                             ## Hack to fixup data that's in transisition
+                             #$metric_file =~ s/maq_snp_related_metrics/identified_variations/;
+                             #$metric_file =~ s/snps_/snips_/;
+
+                             my $model = Genome::Model->get(id => $model_id);
+                             my($metric_file) = $model->_variation_metrics_files($chromosome);
+                             return $metric_file;
                           },
     },
 );
