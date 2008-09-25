@@ -1,4 +1,4 @@
-package Genome::Utility::Reader;
+package Genome::Utility::IO::Reader;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use above 'Genome';
 require Cwd;
 require IO::File;
 
-class Genome::Utility::Reader {
+class Genome::Utility::IO::Reader {
     is => 'UR::Object',
     is_abstract => 1,
     has => [
@@ -99,7 +99,7 @@ sub all {
 
 =head1 Name
 
-Genome::Utility::Reader
+Genome::Utility::IO::Reader
 
 =head1 Synopsis
 
@@ -118,7 +118,7 @@ B<In your class>
 
  # Declare your class UR style
  class Album::Reader {
-    is => 'Genome::Utility::Reader',
+    is => 'Genome::Utility::IO::Reader',
  };
  
  # OPTIONAL - add a create method
@@ -159,7 +159,7 @@ B<in the code>
  use Album::Reader;
 
  my $reader = Album::Reader->create(
-    input => 'albumns.txt', # file or object that can 'getline' and 'seek'
+    input => 'albums.txt', # file or object that can 'getline' and 'seek'
  )
     or die;
 
@@ -185,7 +185,7 @@ B<in the code>
 
 =item I<Params>     none
 
-=item I<Returns>    scalar (hashref)
+=item I<Returns>    scalar (hashref or object)
 
 =back
 

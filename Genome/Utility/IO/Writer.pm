@@ -1,4 +1,4 @@
-package Genome::Utility::Writer;
+package Genome::Utility::IO::Writer;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ require Cwd;
 require File::Basename;
 require IO::File;
 
-class Genome::Utility::Writer {
+class Genome::Utility::IO::Writer {
     is => 'UR::Object',
     is_abstract => 1,
     has => [
@@ -77,7 +77,7 @@ sub print {
 
 =head1 Name
 
-Genome::Utility::Writer;
+Genome::Utility::IO::Writer;
 
 =head1 Synopsis
 
@@ -96,7 +96,7 @@ B<In your class>
 
  # Declare your class UR style
  class Album::Writer {
-    is => 'Genome::Utility::Writer',
+    is => 'Genome::Utility::IO::Writer',
  };
 
  # OPTIONAL - add a create method
