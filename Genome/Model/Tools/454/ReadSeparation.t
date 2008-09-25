@@ -19,7 +19,7 @@ BEGIN {
     use_ok('Genome::Model::Tools::454::SeparateReadsWithCrossMatchAlignment');
 }
 
-my $sff_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-454-Read-Separation/test_454_primer_tag_100k.sff';
+my $sff_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-454-ReadSeparation/test_454_primer_tag_100k.sff';
 
 my $read_separation = Genome::Model::Tools::454::ReadSeparation->create(
                                                                         sff_file => $sff_file,
