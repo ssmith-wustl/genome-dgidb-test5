@@ -600,6 +600,11 @@ sub _variant_detail_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/report_input_%s',@_);
 }
 
+sub _variation_metrics_files {
+    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/other_snp_related_metrics/variation_metrics_%s.csv',@_);
+}
+
+
 sub _filtered_variants_dir {
     my $self = shift;
     return sprintf('%s/filtered_variations/',$self->data_directory);

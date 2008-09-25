@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 12;
+use Test::More tests => 14;
 
 my $m = Genome::Model->get(name => 'AML-tumor-new_maq-no_ss_dups');
 ok($m, "got a model"); 
@@ -26,6 +26,12 @@ ok(all_exist(@f),"the snp files exist");
 @f = $m->_variant_detail_files();
 ok(scalar(@f), "identified " . scalar(@f) . " pileup files w/o refseq filter");
 ok(all_exist(@f),"the pileup files exist");
+
+@f = $m->_variation_metrics_files();
+ok(scalar(@f), "identified " . scalar(@f) . " variation metrics files w/o refseq filter");
+ok(all_exist(@f),"the variation files exist");
+
+
 
 my $v = $m->variant_count();
 is($v,3180629, "got expected variant count");
