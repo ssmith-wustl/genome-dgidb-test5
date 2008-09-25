@@ -18,6 +18,8 @@ class Genome::Model::Command::List::Models {
     ],
 };
 
+sub sub_command_sort_position { 5 } 
+
 1;
 
 #$HeadURL$

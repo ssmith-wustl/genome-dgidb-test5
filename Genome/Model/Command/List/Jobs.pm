@@ -24,6 +24,8 @@ UR::Object::Type->define(
     ],
 );
 
+sub sub_command_sort_position { 10030 } 
+
 sub help_brief {
     "list the status of Genome Model analysis jobs";
 }

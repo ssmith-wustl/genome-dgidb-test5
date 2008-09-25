@@ -26,6 +26,8 @@ class Genome::Model::Command::List::IdentifiedVariations
     ],
 };
 
+sub sub_command_sort_position { 10020 }
+
 sub help_brief {
     return "";
 }

@@ -13,6 +13,8 @@ UR::Object::Type->define(
     is => 'Command',
 );
 
+sub sub_command_sort_position { 4 } 
+
 sub help_brief {
     "list all processing profiles available for manipulation"
 }

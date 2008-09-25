@@ -18,6 +18,8 @@ class Genome::Model::Command::List::Events {
     ],
 };
 
+sub sub_command_sort_position { 10010 }
+
 1;
 
 #$HeadURL$
