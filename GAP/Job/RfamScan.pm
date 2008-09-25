@@ -15,27 +15,6 @@ use Bio::AlignIO;
 
 use base qw(GAP::Job);
 
-my $rfam_seed_file = '/gsc/pkg/bio/rfam/installed/Rfam.seed';
-
-unless (-e $rfam_seed_file ){
-    
-    die " Missing rfam seed file $rfam_seed_file! ";
-    
-}
-
-my %rfam_basket = ( );
-
-my $io = Bio::AlignIO->new(-file => $rfam_seed_file, -format => 'stockholm' );
-
-while ( my $aln = $io->next_aln() ) {
-
-    my $annotation = $aln->annotation();
-
-    my ( $entry_type ) = $annotation->get_Annotations('entry_type');
-
-      $rfam_basket{$aln->id()} = $aln->description(); 
-
-}
 
 sub new {
 
@@ -107,83 +86,105 @@ sub execute {
         die "Failed to exec rfam_scan: $EVAL_ERROR";
     }
 
+    my $rfam_seed_file = '/gsc/pkg/bio/rfam/installed/Rfam.seed';
+
+    unless (-e $rfam_seed_file ){
+    
+	die " Missing rfam seed file $rfam_seed_file! ";
+    
+    }
+
+    my %rfam_basket = ( );
+    
+    my $io = Bio::AlignIO->new(-file => $rfam_seed_file, -format => 'stockholm' );
+    
+    while ( my $aln = $io->next_aln() ) {
+	
+	my $annotation = $aln->annotation();
+	
+	my ( $entry_type ) = $annotation->get_Annotations('entry_type');
+	
+	$rfam_basket{$aln->id()} = $aln->description(); 
+	
+    }
+    
     my $rfam_fh = IO::File->new();
     $rfam_fh->open($temp_filename)
-        or die "Can't open '$temp_filename': $OS_ERROR";
-
+	or die "Can't open '$temp_filename': $OS_ERROR";
+    
     while (my $line = <$rfam_fh>) {
         
-        chomp $line;
+	chomp $line;
         
-        my (
-            $seq_id,
-            $seq_start,
-            $seq_end,
-            $rfam_acc,
-            $model_start,
-            $model_end,
-            $bit_score,
-            $rfam_id,
-        ) = split /\s+/, $line;
-        
-        my $seq_strand = $seq_start > $seq_end ? -1 : 1;
-        
+	my (
+	    $seq_id,
+	    $seq_start,
+	    $seq_end,
+	    $rfam_acc,
+	    $model_start,
+	    $model_end,
+	    $bit_score,
+	    $rfam_id,
+	    ) = split /\s+/, $line;
+	
+	my $seq_strand = $seq_start > $seq_end ? -1 : 1;
+	
 	my $rfam_prod = $rfam_basket{$rfam_id};
-
-	if ($rfam_prod =~ /bacterial RNase P class A/i){ #genbank wanted us to replace (bacterial RNase P class A) with (RNA component of RNase P);06/15/07 per Veena Bhonagiri)
-
+	
+	if ($rfam_prod =~ /Bacterial RNase P class A/i){ #genbank wanted us to replace (bacterial RNase P class A) with (RNA component of RNase P);06/15/07 per Veena Bhonagiri)
+	    
 	    $rfam_prod = "RNA component of RNase P";
-
+	    
 	}
-
-        my $feature = Bio::SeqFeature::Generic->new(
-                                                    -seq_id => $seq_id,
-                                                    -start  => $seq_start,
-                                                    -end    => $seq_end,
-                                                    -strand => $seq_strand,
-                                                    -source => 'Infernal',
-                                                    -score  => $bit_score,
-                                                    -tag => {
-                                                             acc       => $rfam_acc,
-                                                             id        => $rfam_id,
-							     rfam_prod => $rfam_prod,
-                                                         },
-                                                );
-    
-        $seq->add_SeqFeature($feature);
-
+	
+	my $feature = Bio::SeqFeature::Generic->new(
+						    -seq_id => $seq_id,
+						    -start  => $seq_start,
+						    -end    => $seq_end,
+						    -strand => $seq_strand,
+						    -source => 'Infernal',
+						    -score  => $bit_score,
+						    -tag => {
+							acc       => $rfam_acc,
+							id        => $rfam_id,
+							rfam_prod => $rfam_prod,
+						    },
+						    );
+	
+	$seq->add_SeqFeature($feature);
+	
     }
-        
+    
 }
 
 sub genes {
-
+    
     my ($self) = @_;
-
-
+    
+    
     return $self->{_genes};
-
+    
 }
 
 sub _write_seqfile {
-
+    
     my ($self, @seq) = @_;
-
-
+    
+    
     my $seq_fh = File::Temp->new();
-
+    
     my $seqstream = Bio::SeqIO->new(
-                                    -fh => $seq_fh,
-                                    -format => 'Fasta',
-                                );
-
+				    -fh => $seq_fh,
+				    -format => 'Fasta',
+				    );
+    
     foreach my $seq (@seq) {
-        $seqstream->write_seq($seq);
+	$seqstream->write_seq($seq);
     }
-
+    
     close($seq_fh);
     $seqstream->close();
-
+    
     return $seq_fh;
     
 }
