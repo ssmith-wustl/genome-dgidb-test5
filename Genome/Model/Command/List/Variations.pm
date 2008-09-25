@@ -94,7 +94,6 @@ sub next {
     my $self = shift;
     my $sub_iterators = $self->{'sub_iterators'}; # FIXME - sneaky 
   
-$DB::single=1;
     while (@$sub_iterators) {
         while (my $object = $sub_iterators->[0]->next) {
             return $object;
