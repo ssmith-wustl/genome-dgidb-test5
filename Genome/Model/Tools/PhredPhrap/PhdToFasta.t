@@ -21,7 +21,7 @@ my %params =
 
 my $phd_to_fasta = Genome::Model::Tools::PhredPhrap::PhdToFasta->create(%params);
 
-isa_ok($phd_to_fasta, "'Genome::Model::Tools::PhredPhrap::PhdToFasta");
+isa_ok($phd_to_fasta, "Genome::Model::Tools::PhredPhrap::PhdToFasta");
 
 ok($phd_to_fasta->execute,'execute PhdToFasta');
 
