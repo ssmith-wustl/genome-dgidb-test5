@@ -1,5 +1,6 @@
 use above Genome;
-use Test::More tests => 17;
+#use Test::More tests => 17;
+use Test::More skip_all => 'pending charris refactor of the solexa pipeline';
 
 
 # This is the AML-nature_34skin-v0b model
