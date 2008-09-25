@@ -587,9 +587,9 @@ sub get_subreference_names {
 sub _consensus_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/consensus/%s.cns',@_);
 }
-
+#clearly if multiple aligners/programs becomes common practice, we should be delegating to the appropriate module to construct this directory
 sub _variant_list_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/snips_%s',@_);
+    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/snps_%s',@_);
 }
 
 sub _variant_pileup_files {
