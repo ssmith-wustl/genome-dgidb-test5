@@ -18,7 +18,7 @@ class Genome::Model::Command::List::Events {
     ],
 };
 
-sub sub_command_sort_position { 10010 }
+sub sub_command_sort_position { 12 }
 
 1;
 

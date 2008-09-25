@@ -16,7 +16,7 @@ class Genome::Model::Command::List::ReadSets {
     ]    
 };
 
-sub sub_command_sort_position { 10000  }
+sub sub_command_sort_position { 6 }
 
 sub help_brief {
     'list availale reads by "set": i.e. solexa lane, 454 region, etc..'

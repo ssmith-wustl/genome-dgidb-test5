@@ -1,4 +1,4 @@
-package Genome::Model::Command::List::IdentifiedVariations;
+package Genome::Model::Command::List::VariationsForAmplicons;
 
 use strict;
 use warnings;
@@ -8,27 +8,27 @@ use Genome;
 use Data::Dumper;
 use IO::File;
 
-class Genome::Model::Command::List::IdentifiedVariations
+class Genome::Model::Command::List::VariationsForAmplicons
 {
     is => 'Genome::Model::Command',
-    has => 
-    [
-    model_id => 
-    {
-        is => 'Integer',
-        is_optional => 0,
-    },
-    primer_file => 
-    {
-        is => 'String',
-        is_optional => 0,
-    },
+    has => [
+        model_id => 
+        {
+            is => 'Integer',
+            is_optional => 0,
+        },
+        primer_file => 
+        {
+            is => 'String',
+            is_optional => 0,
+        },
     ],
+    doc => 'list variations in the amplification region of a given primer file'
 };
 
-sub sub_command_sort_position { 10020 }
+sub sub_command_sort_position { 9 }
 
-sub help_brief {
+sub Xhelp_brief {
     return "";
 }
 

@@ -1,4 +1,4 @@
-package Genome::Model::Command::List::Samples;
+package Genome::Model::Command::List::Individuals;
 
 use strict;
 use warnings;
@@ -16,7 +16,7 @@ class Genome::Model::Command::List::Individuals {
     ],
 };
 
-sub sub_command_sort_position { 2 }
+sub sub_command_sort_position { 3 }
 
 1;
 

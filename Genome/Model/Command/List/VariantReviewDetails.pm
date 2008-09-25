@@ -2,7 +2,7 @@ package Genome::Model::Command::List::VariantReviewDetails;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__, 
@@ -13,5 +13,7 @@ UR::Object::Type->define(
         show                => { default_value => 'chromosome,begin_position,end_position,variant_type,somatic_status' },
     ],
 );
+
+sub sub_command_sort_position { 11 }
 
 1;

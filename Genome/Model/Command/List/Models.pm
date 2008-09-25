@@ -18,7 +18,7 @@ class Genome::Model::Command::List::Models {
     ],
 };
 
-sub sub_command_sort_position { 5 } 
+sub sub_command_sort_position { 7 } 
 
 1;
 

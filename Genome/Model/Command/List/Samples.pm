@@ -16,7 +16,7 @@ class Genome::Model::Command::List::Samples {
     ],
 };
 
-sub sub_command_sort_position { 3 }
+sub sub_command_sort_position { 4 }
 
 1;
 

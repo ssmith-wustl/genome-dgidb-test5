@@ -24,7 +24,14 @@ sub command_name {
 }
 
 sub help_brief {
-    "modularized methods to operate on a genome model"
+    my $self = shift;
+    my $meta = $self->get_class_object;
+    if ($meta->doc) {
+        return $meta->doc;
+    }
+    else {
+        return "modularized methods to operate on a genome model"
+    }
 }
 
 sub create {
