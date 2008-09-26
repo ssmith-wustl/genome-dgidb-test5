@@ -315,7 +315,7 @@ sub lock_directory {
 sub lock_resource {
     my($self,%args) = @_;
     $self->warning_message("locking is disabled since the new build system circumvents the need for it");
-    $self->warning_message(Carp::longmess());
+    #$self->warning_message(Carp::longmess());
     return 1;
 
     my $ret;
