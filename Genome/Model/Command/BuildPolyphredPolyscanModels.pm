@@ -22,6 +22,12 @@ sub execute {
 
     my %model_ids;
     for my $pse (@queue_pses){
+        # We are only concerned with 3730 data... filter out other things.
+        my ($prior_pse_id) = $pse->added_param('control_pse_id');
+        next unless $prior_pse_id;
+        my $prior = GSC::PSE->get($prior_pse_id);
+        next unless ($prior->process_to eq 'evaluate sequence variation');
+        
         my @ids = $pse->added_param('model_id');  
         unless (@ids) { 
             $self->error_message("pse(id:".$pse->id.") did not have any model ids associated with it!");
