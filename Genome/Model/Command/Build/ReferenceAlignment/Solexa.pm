@@ -75,6 +75,8 @@ sub execute {
         if(grep (/Failed|Crashed/, @events)) {
             #Genome::Model::Command::RunJobs->execute(model_id=> $self->model_id);
             $self->status_message("Some events failed. Failing the build.");
+            $self->cry_for_help("Back end");
+            #cry for help should die...but if it failed or something.
             return;
         }
         else { 
@@ -161,7 +163,11 @@ sub find_unaligned_or_failed_read_sets {
         run_id=>$attempted_readset->read_set_id);
 
         if(my @broke_events = grep {$_->event_status =~ /Crashed|Failed/} @events ) {
-            push(@readsets_that_need_rescheduling, $attempted_readset);
+            #shit, we have problems
+            #send mail to owner, stop scheduling myself.
+            $self->cry_for_help("Alignment");
+            die "Found failed front end events...mailed user: " . $self->user_name;
+            #push(@readsets_that_need_rescheduling, $attempted_readset);
         }
 
     }
@@ -171,9 +177,9 @@ sub find_unaligned_or_failed_read_sets {
 sub schedule_backend {
     #FIXME: Do this more elegantly in the class def?
     my $self=shift;
-    unless( -d $self->data_directory) {
-        unless(mkdir $self->data_directory ) {
-            $self->error_message("Unable to create dir: " . $self->data_directory);
+    unless( -d $self->model->data_directory) {
+        unless(mkdir $self->model->data_directory ) {
+            $self->error_message("Unable to create dir: " . $self->model->data_directory);
             return;
         }
         chmod 02775, $self->data_directory;
@@ -236,9 +242,9 @@ sub schedule_frontend {
 
     my @classes_I_am_waiting_for;
     $DB::single=1;
-    for my $read_set (@readsets_to_schedule) {
 
-            my $prior_event_id = undef;
+    for my $read_set (@readsets_to_schedule) {
+           my $prior_event_id = undef;
       
         foreach my $command_class ( @sub_command_classes ) {
             my $command;
@@ -303,6 +309,35 @@ sub frontend_job_classes {
     return @sub_command_classes;
 }
 
+sub cry_for_help {
+my $self=shift;  
+my $word_that_describes_what_i_failed=shift;
+if($self->testing_flag) {
+    return 1;
+}
 
+my $sendmail = "/usr/sbin/sendmail -t";
+my $from = "From: ssmith\@genome.wustl.edu\n";
+my $reply_to = "Reply-to: thisisafakeemail\n";
+my $subject = "Subject: You're fired\n";
+my $content = "Just kidding, this is the Build failure email. your build ". $self->id . " failed some portion of the $word_that_describes_what_i_failed phase. \n\n";
+my $to = "To: " . $self->user_name . '@genome.wustl.edu' . "\n";
+
+my $helpful_link1= "https://gscweb.gsc.wustl.edu/cgi-bin/solexa/genome-model-stage1.cgi?model-name=" . $self->model->name  .    "&refresh=1\n\n";
+my $helpful_link2= "https://gscweb.gsc.wustl.edu/cgi-bin/solexa/genome-model-stage2.cgi?model-name=" . $self->model->name  .    "&refresh=1\n";
+
+ $content .= $helpful_link1 . $helpful_link2;
+
+
+
+open(SENDMAIL, "|$sendmail") or die "Cannot open $sendmail: $!";
+ print SENDMAIL $reply_to;
+ print SENDMAIL $from;
+ print SENDMAIL $subject;
+ print SENDMAIL $to;
+ print SENDMAIL $content; 
+ close(SENDMAIL);
+ return 1;
+}
 1;
 
