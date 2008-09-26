@@ -238,14 +238,14 @@ sub annotate_variants {
                 stop => $hq_genotype->{stop},
                 reference => $hq_genotype->{allele1},
                 variant => $hq_genotype->{allele2},
-                chromosome => $hq_genotype->{chromosome},
+                chromosome_name => $hq_genotype->{chromosome},
             );
         }elsif (lc $hq_genotype->{variation_type} eq 'snp'){
             @annotations = $annotator->prioritized_transcripts_for_snp(
                 start => $hq_genotype->{start},
                 reference => $hq_genotype->{allele1},
                 variant => $hq_genotype->{allele2},
-                chromosome => $hq_genotype->{chromosome},
+                chromosome_name => $hq_genotype->{chromosome},
                 stop => $hq_genotype->{stop},
             );
         }
@@ -282,7 +282,7 @@ sub annotate_variants {
                 start => $lq_genotype->{start},
                 reference => $lq_genotype->{allele1},
                 variant => $lq_genotype->{allele2},
-                chromosome => $lq_genotype->{chromosome},
+                chromosome_name => $lq_genotype->{chromosome},
                 stop => $lq_genotype->{stop},
             );
         }elsif (lc $lq_genotype->{variation_type} eq 'snp'){
@@ -290,7 +290,7 @@ sub annotate_variants {
                 start => $lq_genotype->{start},
                 reference => $lq_genotype->{allele1},
                 variant => $lq_genotype->{allele2},
-                chromosome => $lq_genotype->{chromosome},
+                chromosome_name => $lq_genotype->{chromosome},
                 stop => $lq_genotype->{stop},
             );
         }
