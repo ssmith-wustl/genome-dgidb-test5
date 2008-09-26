@@ -14,12 +14,7 @@ class Genome::Model::Command::Create::Model {
     is => ['Genome::Model::Event'],
     sub_classification_method_name => 'class',
     has => [
-        subject_name                => { is => 'Text', is_optional => 1, len => 255, doc => 'The name of the subject all the reads originate from' },
-        processing_profile_name     => { is => 'Text', len => 255,  doc => 'The name of the processing profile to be used. '},
-        instrument_data             => { is => 'Text', doc => 'The instrument data for this model', is_optional => 1, via => 'inputs', to => 'value', where => [name => 'instrument_data'] },
-        data_directory              => { is => 'Text', is_optional => 1, doc => "The base directory for the model's filesystem data.  Auto-generated if not specified." },
-        model_name                  => { is => 'Text', len => 255, doc => 'User-meaningful name for this model' },
-        model                       => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id', doc => 'Not used as a parameter' },
+        #TODO: make processing_profile not a parameter, name only.
         processing_profile          => { is => 'Genome::ProcessingProfile', doc => 'Not used as a parameter', id_by => 'processing_profile_id', is_optional => 1, },
         processing_profile_name     => { is => 'varchar', len => 255,  doc => 'The name of the processing profile to be used. '},
         model_name                  => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
@@ -51,11 +46,9 @@ sub help_brief {
 sub help_synopsis {
     return <<"EOS"
 genome-model create
-                    --subject-name ley_aml_patient1_tumor
-                    --processing-profile-name nature_aml_08
-                    --data-directory /gscmnt/839/info/medseq/
                     --model-name test5
-                    
+                    --sample ley_aml_patient1_tumor
+                    --processing-profile-name nature_aml_08
 EOS
 }
 
