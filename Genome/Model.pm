@@ -107,6 +107,13 @@ sub create {
     if ($self->sample_name && $self->subject_name) {
         die ('No support for both sample_name and subject_name');
     }
+
+    # If data directory has not been supplied, figure it out
+    unless ($self->data_directory) {
+        $self->data_directory($self->resolve_data_directory);
+    }
+
+    
     return $self;
 }
 
@@ -183,15 +190,14 @@ sub alignment_directory {
 sub model_links_directory {
     my $self = shift;
 
-	if (defined($ENV{'GENOME_MODEL_TESTDIR'}) &&
-		  -e $ENV{'GENOME_MODEL_TESTDIR'}) {
-		return $ENV{'GENOME_MODEL_TESTDIR'};
-	} else {
-    return $self->base_parent_directory . "/model_links";
-	}
+    if (defined($ENV{'GENOME_MODEL_TESTDIR'}) &&
+    -e $ENV{'GENOME_MODEL_TESTDIR'}) {
+        return $ENV{'GENOME_MODEL_TESTDIR'};
+    } else {
+        return $self->base_parent_directory . "/model_links";
+    }
 }
-
-sub data_directory {
+sub resolve_data_directory {
     my $self = shift;
     my $name = $self->name;
 
