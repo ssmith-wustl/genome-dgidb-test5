@@ -1053,7 +1053,7 @@ sub _get_bcontig_params
     $self->error_message("Parameter must be NORMAL, RELAXED, MORE_RELAXED or STRINGENT") and return
 	unless grep (/^$type$/, @param_types);
 
-    if ($self->pcap_run_type eq '454_RAW')
+    if ($self->pcap_run_type eq 'RAW_454')
     {
 	#for now just return the same params .
 	return '-p 90 -d 80'
