@@ -9,6 +9,7 @@ class Genome::Model::VariationPosition {
         model => { is => 'Genome::Model', id_by => 'model_id' },
     ],
     has => [
+        model_name  => { via => 'model', to => 'name' },
         reference_base => { is => 'String', },
         consensus_base => { is => 'String', },
         consensus_quality => { is => 'Integer' },
