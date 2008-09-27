@@ -18,7 +18,7 @@ sub new {
 
 
     $self->{_major} = 2;
-    $self->{_minor} = 6;
+    $self->{_minor} = 7;
     $self->{_activity_db_file} = '/gscmnt/temp212/info/annotation/BAP_db/mgap_activity.db';
     
     return $self;
