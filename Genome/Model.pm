@@ -200,16 +200,20 @@ sub model_links_directory {
 sub resolve_data_directory {
     my $self = shift;
     my $name = $self->name;
+    my $base_dir =$self->model_links_directory . '/' . $self->sample_name . "_" . $name;
+    return $base_dir;
+}
 
+sub latest_build_directory {
+    my $self = shift;
+    my $name = $self->name;
     #FIXME: LOOKUP LATEST BUILD
-
     my $base_dir =$self->model_links_directory . '/' . $self->sample_name . "_" . $name;
     if(my @builds = Genome::Model::Command::Build->get(model_id=>$self->id)) {
         @builds = sort {$a->build_id <=> $b->build_id} @builds;
-        $base_dir .= '/build' . $builds[0]->build_id;
+        $base_dir .= '/build' . $builds[-1]->build_id;
     }
     return $base_dir;
-
 }
 
 # This is called by the infrastructure to appropriately classify abstract processing profiles
@@ -309,7 +313,7 @@ sub pretty_print_text {
 
 sub lock_directory {
     my $self = shift;
-    my $data_directory = $self->data_directory;
+    my $data_directory = $self->latest_build_directory;
     my $lock_directory = $data_directory . '/locks/';
     if (-d $data_directory and not -d $lock_directory) {
         mkdir $lock_directory;
