@@ -306,10 +306,6 @@ sub _calculate_total_base_pair_count {
 sub prepare_input {
     my ($self, $read_set, $seq_dedup) = @_;
 
-    #if ($read_set->is_paired_end) {
-    #    die "not configured to handle PAIRED END data"
-    #}
-
     my $lane = $self->read_set_link->subset_name;
     my $read_set_desc = $read_set->full_name . "(" . $read_set->id . ")";
     my $gerald_directory = $read_set->_run_lane_solexa->gerald_directory;
@@ -319,17 +315,20 @@ sub prepare_input {
     unless (-d $gerald_directory) {
         die "No gerald directory on the filesystem for $read_set_desc: $gerald_directory";
     }
+
+    # handle fragment or paired-end data
     my @solexa_output_paths;
     if($read_set->is_paired_end) {
-
         push @solexa_output_paths, "$gerald_directory/s_${lane}_2_sequence.txt";
         push @solexa_output_paths, "$gerald_directory/s_${lane}_1_sequence.txt";
     }
-    else 
-    {
+    else {
         push @solexa_output_paths, "$gerald_directory/s_${lane}_sequence.txt";
     }
+
     #i deleted soemthing to inputfile paths here 
+
+    # determine the path to the aligner
     my $aligner_path = $self->aligner_path('read_aligner_name');
 
     # find or create a sanger fastq 
@@ -362,12 +361,32 @@ sub prepare_input {
             );
         }
 
+        # remove any reads which have 15 As in a row.
+        unless ($self->is_paired_end) {
+            my $fastq_pathname_no_poly_a = $fastq_pathname . '._no_poly_a';
+            my $fastq_in = $self->open_file('fastq',$fastq_pathname);
+            my $fastq_out = $self->create_file('fastq_no_polya',$fastq_pathname_no_poly_a);
+            while (my $header = $fastq_in->getline) {
+                my $seq = $fastq_in->getline;
+                my $sep = $fastq_in->getline;
+                my $qual = $fastq_in->getline;
+                unless ($seq =~ /A{15}/i) {
+                    next;
+                }
+                $fastq_out->print($header,$seq,$sep,$qual);
+            }
+            $fastq_in->close;
+            $fastq_out->close;
+
+            # use the new file instead below
+            $fastq_pathname = $fastq_pathname_no_poly_a;
+        }
+
         # create a bfq
         my $bfq_pathname = $self->create_temp_file_path('bfq' . $counter);
         unless ($bfq_pathname) {
             die "Failed to create temp file for bfq!";
         }
-
         $self->shellcmd(
             cmd => "$aligner_path fastq2bfq $fastq_pathname $bfq_pathname",
             input_files => [$fastq_pathname],
@@ -419,7 +438,6 @@ $DB::single = $DB::stopper;
     }
 
     # prepare paths for the results
-
     if ($self->alignment_data_available_and_correct) {
         $self->status_message("existing alignment data is available and deemed correct");
         my $read_set_link=Genome::Model::ReadSet->get(model_id=>$self->model_id, read_set_id=> $self->run_id);
@@ -457,7 +475,14 @@ $DB::single = $DB::stopper;
     my $alignment_file = $self->create_temp_file_path("all.map");
     my $aligner_output_file = $self->aligner_output_file;
     my $unaligned_reads_file = $self->unaligned_reads_file;
-    
+
+    if ($self->is_paired_end) {
+        my $read_set = $self->read_set;
+        # TODO: extract additional details from the read set
+        # about the insert size, and adjust the maq parameters.
+        $aligner_params .= ''; 
+    }   
+ 
     # prepare the alignment command
     my $cmdline = 
         $aligner_path
