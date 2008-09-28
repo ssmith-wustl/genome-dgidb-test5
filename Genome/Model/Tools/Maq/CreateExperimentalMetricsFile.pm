@@ -223,7 +223,7 @@ sub write_data {
     my @ref_header = map {"ref_$_"} ExperimentalMetrics::VariantMetrics->headers($self->max_read);
     shift @ref_header;
     
-the highest mapping quality of the reads covering the position, the minimum consensus quality in the 3bp flanking regions at each side of the site (6bp in total), the second best call, log likelihood ratio of the second best and the third best call, and the third best call.
+#the highest mapping quality of the reads covering the position, the minimum consensus quality in the 3bp flanking regions at each side of the site (6bp in total), the second best call, log likelihood ratio of the second best and the third best call, and the third best call.
     
     my @header = (  'chromosome',
         'position',
