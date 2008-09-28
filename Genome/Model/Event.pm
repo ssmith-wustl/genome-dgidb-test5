@@ -285,9 +285,21 @@ sub check_for_existence {
 
 sub create_file {
     my ($self, $output_name, $path) = @_;
-    my @existing = $self->outputs(name => $output_name);
-    if (@existing) {
-        die "Output $output_name already exists with value " . $existing[0]->value;
+    if (!$path) {
+        die "Output $output_name opened without a specified path!"
+    }
+    elsif (my @existing = $self->outputs(name => $output_name)) {
+        if ($output_name and $existing[0]->value ne $path) {
+            die "Input $output_name already exists with value " . $existing[0]->value
+                . ".  Cannot open with value $path";
+        }
+        die "Attempting to re-create already created file! $output_name: $path";
+    }
+    elsif (-e $path) {
+        die "File $path already exists!  Canot create output $output_name: $path\n";
+    }
+    else {
+        $self->add_output(name => $output_name, value => $path);
     }
     my $fh = IO::File->new('>'.$path);
     die "Failed to make file $path! $?" unless $fh;    
@@ -304,8 +316,13 @@ sub open_file {
         die "Input $input_name already exists with value " . $existing[0]->value
             . ".  Cannot open with value $path";
     }
-    if (!$path and not @existing) {
-        die "Input $input_name opened without a specified path, and no path has been set yet!"
+    if (not @existing) {
+        if (!$path) {
+            die "Input $input_name opened without a specified path, and no path has been set yet!"
+        }
+        else {
+            $self->add_input(name => $input_name, value => $path);
+        }
     }
     my $fh = IO::File->new($path);
     die "Failed to open file $path! $?" unless $fh;
