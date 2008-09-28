@@ -97,8 +97,8 @@ sub _get_sub_command_class_name{
 
 
 sub sub_command_delegator {
-    # This method is used by the mid-level (like ::AddReads::AlignReads modules
-    # to return the right sub-sub-class like ::AddReads::AlignReads::Maq
+    # This method is used by the mid-level (like ::Build::ReferenceAlignment::AlignReads modules
+    # to return the right sub-sub-class like ::Build::ReferenceAlignment::AlignReads::Maq
     my($class,%params) = @_;
 
     if (not defined $params{'model_id'}) {

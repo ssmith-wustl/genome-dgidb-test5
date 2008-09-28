@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AssignRun::454;
+package Genome::Model::Command::Build::ReferenceAlignment::AssignRun::454;
 
 use strict;
 use warnings;
@@ -8,8 +8,8 @@ use Command;
 use Genome::Model;
 use File::Path;
 
-class Genome::Model::Command::AddReads::AssignRun::454 {
-    is => 'Genome::Model::Command::AddReads::AssignRun',
+class Genome::Model::Command::Build::ReferenceAlignment::AssignRun::454 {
+    is => 'Genome::Model::Command::Build::ReferenceAlignment::AssignRun',
 };
 
 sub help_brief {

@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::ProcessLowQualityAlignments::Newbler;
+package Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments::Newbler;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use Genome;
 use Command;
 use Genome::Model;
 
-class Genome::Model::Command::AddReads::ProcessLowQualityAlignments::Newbler {
-    is => 'Genome::Model::Command::AddReads::ProcessLowQualityAlignments',
+class Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments::Newbler {
+    is => 'Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments',
     has => [
             alignment_file => {via => 'prior_event'},
         ]

@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::ProcessLowQualityAlignments::Blat;
+package Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments::Blat;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use Genome;
 use Command;
 use Genome::Model;
 
-class Genome::Model::Command::AddReads::ProcessLowQualityAlignments::Blat {
-    is => 'Genome::Model::Command::AddReads::ProcessLowQualityAlignments',
+class Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments::Blat {
+    is => 'Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments',
     has => [
             alignment_file => {via => 'prior_event'},
         ]

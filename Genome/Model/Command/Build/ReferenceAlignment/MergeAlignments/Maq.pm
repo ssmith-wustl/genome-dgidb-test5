@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::MergeAlignments::Maq;
+package Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::Maq;
 
 use strict;
 use warnings;
@@ -10,8 +10,8 @@ use Genome::Model;
 use IO::File;
 
 
-class Genome::Model::Command::AddReads::MergeAlignments::Maq {
-    is => ['Genome::Model::Command::AddReads::MergeAlignments', 'Genome::Model::Command::MaqSubclasser'],
+class Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::Maq {
+    is => ['Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments', 'Genome::Model::Command::MaqSubclasser'],
     has => [ 
         ref_seq_id   => { is => 'Integer', is_optional => 0, doc => 'the refseq on which to operate' },
     ]

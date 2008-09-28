@@ -201,9 +201,9 @@ sub get_sub_command_classes {
     my $self = shift;
 
     my @sub_command_classes= qw/
-        Genome::Model::Command::AddReads::AssignRun
-        Genome::Model::Command::AddReads::AlignReads
-        Genome::Model::Command::AddReads::ProcessLowQualityAlignments
+        Genome::Model::Command::Build::ReferenceAlignment::AssignRun
+        Genome::Model::Command::Build::ReferenceAlignment::AlignReads
+        Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments
     /;
 
     return @sub_command_classes;

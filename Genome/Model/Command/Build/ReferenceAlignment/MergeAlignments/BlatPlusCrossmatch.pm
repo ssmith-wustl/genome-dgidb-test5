@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::MergeAlignments::BlatPlusCrossmatch;
+package Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::BlatPlusCrossmatch;
 
 use strict;
 use warnings;
@@ -9,9 +9,9 @@ use Genome::Model;
 use IO::File;
 
 
-class Genome::Model::Command::AddReads::MergeAlignments::BlatPlusCrossmatch {
+class Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::BlatPlusCrossmatch {
     is => [
-           'Genome::Model::Command::AddReads::MergeAlignments',
+           'Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments',
        ],
     has => [
             merged_alignments_file => {
@@ -65,7 +65,7 @@ sub execute {
     }
     #my @succeeded_events =
     #    grep { my $m = $_->metrics(name => 'read set pass fail'); (!$m or $m->value eq 'pass') }
-    #        Genome::Model::Command::AddReads::AcceptReads::BlatPlusCrossmatch->get(
+    #        Genome::Model::Command::Build::ReferenceAlignment::AcceptReads::BlatPlusCrossmatch->get(
     #                                                                               model_id => $model->id,
     #                                                                               event_status => 'Succeeded'
     #                                                                           );
@@ -73,7 +73,7 @@ sub execute {
     my @succeeded_events = $model->alignment_events;
     my @sub_alignment_files;
     for my $event (@succeeded_events) {
-        #my $align_reads = Genome::Model::Command::AddReads::AlignReads::BlatPlusCrossmatch->get(
+        #my $align_reads = Genome::Model::Command::Build::ReferenceAlignment::AlignReads::BlatPlusCrossmatch->get(
         #                                                                                        model_id   => $model->id,
         #                                                                                        read_set_id     => $event->read_set_id,
         #                                                                                    );

@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::FindVariations::Maq;
+package Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Maq;
 
 use strict;
 use warnings;
@@ -11,9 +11,9 @@ use Data::Dumper;
 use File::Temp;
 use IO::File;
 
-class Genome::Model::Command::AddReads::FindVariations::Maq {
+class Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Maq {
     is => [
-           'Genome::Model::Command::AddReads::FindVariations',
+           'Genome::Model::Command::Build::ReferenceAlignment::FindVariations',
            'Genome::Model::Command::MaqSubclasser'
        ],
     has => [

@@ -1,11 +1,11 @@
-package Genome::Model::Command::AddReads::AlignReads;
+package Genome::Model::Command::Build::ReferenceAlignment::AlignReads;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Command::AddReads::AlignReads {
+class Genome::Model::Command::Build::ReferenceAlignment::AlignReads {
     is => ['Genome::Model::EventWithReadSet'],
     is_abstract => 1,
 };

@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::MergeAlignments::Newbler;
+package Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::Newbler;
 
 use strict;
 use warnings;
@@ -8,9 +8,9 @@ use Command;
 use Genome::Model;
 
 
-class Genome::Model::Command::AddReads::MergeAlignments::Newbler {
+class Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::Newbler {
     is => [
-           'Genome::Model::Command::AddReads::MergeAlignments',
+           'Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments',
        ],
     has => [   ],
 };

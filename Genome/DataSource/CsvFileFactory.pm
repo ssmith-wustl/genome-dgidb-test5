@@ -24,7 +24,7 @@ my %RESOLVER = (
         file_resolver => sub {                              # returns the name of the file.  args are from required_in_rule
                              my($model_id, $ref_seq_id) = @_;
                              #my @e = sort { $a->date_completed <=> $b->date_completed }
-                             #    Genome::Model::Command::AddReads::FindVariations::Maq->get(model_id => $model_id,
+                             #    Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Maq->get(model_id => $model_id,
                              #                                                               ref_seq_id => $ref_seq_id);
                              #my $snp_file = $e[-1]->snip_output_file();
                              # Hack to fixup data that's in transisition 
@@ -60,7 +60,7 @@ my %RESOLVER = (
         file_resolver => sub {
                              my($model_id, $chromosome) = @_;
                              #my @e = sort { $a->date_completed <=> $b->date_completed }
-                             #    Genome::Model::Command::AddReads::PostprocessVariations::Maq->get(model_id => $model_id,
+                             #    Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations::Maq->get(model_id => $model_id,
                              #                                                                      ref_seq_id => $chromosome);
                              #my $metric_file = $e[-1]->experimental_variation_metrics_file_basename();
                              #$metric_file .= '.csv';

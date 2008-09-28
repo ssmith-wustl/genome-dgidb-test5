@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::MergeAlignments;
+package Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Command; 
 
-class Genome::Model::Command::AddReads::MergeAlignments {
+class Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments {
     is => ['Genome::Model::EventWithRefSeq'],
 };
 

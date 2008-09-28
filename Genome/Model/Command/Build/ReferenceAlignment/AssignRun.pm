@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AssignRun;
+package Genome::Model::Command::Build::ReferenceAlignment::AssignRun;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Command;
 
-class Genome::Model::Command::AddReads::AssignRun {
+class Genome::Model::Command::Build::ReferenceAlignment::AssignRun {
     is_abstract => 1,
     is => ['Genome::Model::EventWithReadSet'],
 };

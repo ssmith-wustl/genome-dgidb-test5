@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::ProcessLowQualityAlignments;
+package Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use above "UR";
 use Command; 
 
-class Genome::Model::Command::AddReads::ProcessLowQualityAlignments {
+class Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments {
     is => ['Genome::Model::EventWithReadSet'],
 };
 

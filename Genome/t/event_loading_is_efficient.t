@@ -22,8 +22,8 @@ ok($load_count, "at least one object was loaded by the get()");
 
 $query_count = 0;
 $load_count = 0;
-@events = Genome::Model::Command::AddReads::FindVariations->get(model_id => '2509644372', event_status => 'Succeeded');
-ok(scalar(@events), "Genome::Model::Command::AddReads::FindVariations->get() returned at least one event");
+@events = Genome::Model::Command::Build::ReferenceAlignment::FindVariations->get(model_id => '2509644372', event_status => 'Succeeded');
+ok(scalar(@events), "Genome::Model::Command::Build::ReferenceAlignment::FindVariations->get() returned at least one event");
 is($query_count, 0, "get() generated no queries");
 is($load_count, 0, "and correctly loaded no objects");
 

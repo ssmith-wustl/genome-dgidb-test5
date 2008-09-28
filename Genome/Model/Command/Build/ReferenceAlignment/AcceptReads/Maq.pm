@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AcceptReads::Maq;
+package Genome::Model::Command::Build::ReferenceAlignment::AcceptReads::Maq;
 
 use strict;
 use warnings;
@@ -8,8 +8,8 @@ use Command;
 use Genome::Model;
 use File::Temp;
 
-class Genome::Model::Command::AddReads::AcceptReads::Maq {
-    is => ['Genome::Model::Command::AddReads::AcceptReads', 'Genome::Model::Command::MaqSubclasser'],
+class Genome::Model::Command::Build::ReferenceAlignment::AcceptReads::Maq {
+    is => ['Genome::Model::Command::Build::ReferenceAlignment::AcceptReads', 'Genome::Model::Command::MaqSubclasser'],
     has => [
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
         run_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },

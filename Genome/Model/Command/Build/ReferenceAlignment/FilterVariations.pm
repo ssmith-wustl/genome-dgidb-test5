@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::FilterVariations;
+package Genome::Model::Command::Build::ReferenceAlignment::FilterVariations;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Command; 
 
-class Genome::Model::Command::AddReads::FilterVariations {    
+class Genome::Model::Command::Build::ReferenceAlignment::FilterVariations {    
     is => ['Genome::Model::EventWithRefSeq'],
 };
 

@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::ProcessLowQualityAlignments::BlatPlusCrossmatch;
+package Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments::BlatPlusCrossmatch;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use Genome;
 use Command;
 use Genome::Model;
 
-class Genome::Model::Command::AddReads::ProcessLowQualityAlignments::BlatPlusCrossmatch {
-    is => 'Genome::Model::Command::AddReads::ProcessLowQualityAlignments',
+class Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments::BlatPlusCrossmatch {
+    is => 'Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments',
     has => [
             blat_output => {via => 'prior_event'},
         ]

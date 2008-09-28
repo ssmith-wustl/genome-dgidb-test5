@@ -94,7 +94,7 @@ my $new_command = Genome::Model::Command::Write::GenotypeSubmission::Maq->create
     ref_seq_id=>'all_sequences'
     );
 
-my $new_load_command = Genome::Model::Command::AddReads::UploadDatabase::Maq->create(
+my $new_load_command = Genome::Model::Command::Build::ReferenceAlignment::UploadDatabase::Maq->create(
     model_id=>5,
     ref_seq_id=>'all_sequences'
     );

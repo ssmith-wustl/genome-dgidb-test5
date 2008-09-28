@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::Test;
+package Genome::Model::Command::Build::ReferenceAlignment::Test;
 
 use strict;
 use warnings;
@@ -176,7 +176,7 @@ sub add_reads {
             # sort by event id to ensure order of events matches pipeline order
             @add_reads_events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @add_reads_events;
             my $assign_run_command = $add_reads_events[0];
-            isa_ok($assign_run_command,'Genome::Model::Command::AddReads::AssignRun');
+            isa_ok($assign_run_command,'Genome::Model::Command::Build::ReferenceAlignment::AssignRun');
 
             my $data_directory = $assign_run_command->model->data_directory;
             is($data_directory,$model->data_directory,"assign run data directory matches model");
@@ -185,7 +185,7 @@ sub add_reads {
             ok(-d $data_directory, "data directory '$data_directory' exists");
             ###RUN ALIGN-READS VIA BSUBHELPER(?). 
             my $align_reads_command = $add_reads_events[1];
-            isa_ok($align_reads_command,'Genome::Model::Command::AddReads::AlignReads');
+            isa_ok($align_reads_command,'Genome::Model::Command::Build::ReferenceAlignment::AlignReads');
 
             if ($model->sequencing_platform eq 'solexa') {
                 my $align_reads_ref_seq_file =  $align_reads_command->model->reference_sequence_path . "/all_sequences.bfa";
@@ -199,11 +199,11 @@ sub add_reads {
             #Compare the map file to the test data
 
             my $proc_low_qual_command = $add_reads_events[2];
-            isa_ok($proc_low_qual_command,'Genome::Model::Command::AddReads::ProcessLowQualityAlignments');
+            isa_ok($proc_low_qual_command,'Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments');
             $self->execute_event_test($proc_low_qual_command);
         }
         #$my $accept_reads_command = $add_reads_events[3];
-        #isa_ok($accept_reads_command,'Genome::Model::Command::AddReads::AcceptReads');
+        #isa_ok($accept_reads_command,'Genome::Model::Command::Build::ReferenceAlignment::AcceptReads');
         #$self->execute_event_test($accept_reads_command,$read_set);
 
         #when the namespace moves, the double for underneath may get uncommented
@@ -232,32 +232,32 @@ $self->{_expected_postprocess_events} = $self->{_ref_seq_count} * $sub_command_c
     @pp_events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @pp_events;
 print "@pp_events\n";
     my $merge_alignments_command = $pp_events[0];
-    isa_ok($merge_alignments_command,'Genome::Model::Command::AddReads::MergeAlignments');
+    isa_ok($merge_alignments_command,'Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments');
     $self->execute_event_test($merge_alignments_command);
 
     my $update_genotype_command = $pp_events[1];
-    isa_ok($update_genotype_command,'Genome::Model::Command::AddReads::UpdateGenotype');
+    isa_ok($update_genotype_command,'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype');
     $self->execute_event_test($update_genotype_command);
 
     my $find_variations_command = $pp_events[2];
-    isa_ok($find_variations_command,'Genome::Model::Command::AddReads::FindVariations');
+    isa_ok($find_variations_command,'Genome::Model::Command::Build::ReferenceAlignment::FindVariations');
     $self->execute_event_test($find_variations_command);
 
     ###HERES THE UNLOCK MAGIC...ARE YOU READY?
     rmtree $model->lock_directory;
 
     my $pp_variations_command = $pp_events[3];
-    isa_ok($pp_variations_command,'Genome::Model::Command::AddReads::PostprocessVariations');
+    isa_ok($pp_variations_command,'Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations');
     $self->execute_event_test($pp_variations_command);
 
     if ($model->sequencing_platform eq 'solexa') {
 
         my $annotate_variations_command = $pp_events[4];
-        isa_ok($annotate_variations_command,'Genome::Model::Command::AddReads::AnnotateVariations');
+        isa_ok($annotate_variations_command,'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations');
         $self->execute_event_test($annotate_variations_command);
 
         #my $filter_variations_command = $pp_events[5];
-        #isa_ok($filter_variations_command,'Genome::Model::Command::AddReads::FilterVariations');
+        #isa_ok($filter_variations_command,'Genome::Model::Command::Build::ReferenceAlignment::FilterVariations');
         #$self->execute_event_test($filter_variations_command);
     }
 

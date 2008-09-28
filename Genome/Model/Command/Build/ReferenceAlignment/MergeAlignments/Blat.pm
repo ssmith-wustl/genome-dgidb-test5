@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::MergeAlignments::Blat;
+package Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::Blat;
 
 use strict;
 use warnings;
@@ -9,9 +9,9 @@ use Genome::Model;
 use Genome::Utility::PSL::Writer;
 use Genome::Utility::PSL::Reader;
 
-class Genome::Model::Command::AddReads::MergeAlignments::Blat {
+class Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::Blat {
     is => [
-           'Genome::Model::Command::AddReads::MergeAlignments',
+           'Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments',
        ],
     has => [
             merged_alignments_file => {

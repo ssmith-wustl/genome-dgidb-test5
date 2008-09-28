@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::PostprocessVariations::Newbler;
+package Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations::Newbler;
 
 use strict;
 use warnings;
@@ -7,9 +7,9 @@ use Genome;
 use Command;
 use Genome::Model;
 
-class Genome::Model::Command::AddReads::PostprocessVariations::Newbler {
+class Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations::Newbler {
     is => [
-           'Genome::Model::Command::AddReads::PostprocessVariations',
+           'Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations',
        ],
     has => [ ],
 };

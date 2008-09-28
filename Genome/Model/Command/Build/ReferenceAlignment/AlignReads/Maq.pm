@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AlignReads::Maq;
+package Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq;
 
 use strict;
 use warnings;
@@ -6,12 +6,12 @@ use warnings;
 use Genome;
 use Command;
 use Genome::Model;
-use Genome::Model::Command::AddReads::AlignReads;
+use Genome::Model::Command::Build::ReferenceAlignment::AlignReads;
 use Genome::Model::ReadSet;
 
-class Genome::Model::Command::AddReads::AlignReads::Maq {
+class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq {
     is => [
-        'Genome::Model::Command::AddReads::AlignReads',
+        'Genome::Model::Command::Build::ReferenceAlignment::AlignReads',
         'Genome::Model::Command::MaqSubclasser'
     ],
     has => [

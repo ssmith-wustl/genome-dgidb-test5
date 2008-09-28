@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::PostprocessVariations;
+package Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Command; 
 
-class Genome::Model::Command::AddReads::PostprocessVariations {
+class Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations {
     is => ['Genome::Model::EventWithRefSeq'],
 };
 

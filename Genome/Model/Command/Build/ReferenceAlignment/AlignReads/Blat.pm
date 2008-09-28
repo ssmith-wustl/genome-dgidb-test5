@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AlignReads::Blat;
+package Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat;
 
 use strict;
 use warnings;
@@ -6,14 +6,14 @@ use warnings;
 use Genome;
 use Command;
 use Genome::Model;
-use Genome::Model::Command::AddReads::AlignReads;
+use Genome::Model::Command::Build::ReferenceAlignment::AlignReads;
 use Genome::Utility::PSL::Writer;
 use Genome::Utility::PSL::Reader;
 use File::Basename;
 
-class Genome::Model::Command::AddReads::AlignReads::Blat {
+class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat {
     is => [
-        'Genome::Model::Command::AddReads::AlignReads',
+        'Genome::Model::Command::Build::ReferenceAlignment::AlignReads',
     ],
     has => [
             fasta_file => {

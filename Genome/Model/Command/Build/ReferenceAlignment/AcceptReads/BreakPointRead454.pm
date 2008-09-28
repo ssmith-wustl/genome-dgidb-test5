@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AcceptReads::BreakPointRead454;
+package Genome::Model::Command::Build::ReferenceAlignment::AcceptReads::BreakPointRead454;
 
 use strict;
 use warnings;
@@ -7,9 +7,9 @@ use Genome;
 use Command;
 use Genome::Model;
 
-class Genome::Model::Command::AddReads::AcceptReads::BreakPointRead454 {
+class Genome::Model::Command::Build::ReferenceAlignment::AcceptReads::BreakPointRead454 {
     is => [
-           'Genome::Model::Command::AddReads::AcceptReads',
+           'Genome::Model::Command::Build::ReferenceAlignment::AcceptReads',
        ],
 };
 

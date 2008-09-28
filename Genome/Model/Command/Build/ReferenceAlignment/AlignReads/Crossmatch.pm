@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AlignReads::Crossmatch;
+package Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Crossmatch;
 
 use strict;
 use warnings;
@@ -8,9 +8,9 @@ use Command;
 use Genome::Model;
 
 
-class Genome::Model::Command::AddReads::AlignReads::Crossmatch {
+class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Crossmatch {
     is => [
-           'Genome::Model::Command::AddReads::AlignReads',
+           'Genome::Model::Command::Build::ReferenceAlignment::AlignReads',
        ],
     has => [],
 };

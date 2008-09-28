@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::PostprocessVariations::Maq;
+package Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations::Maq;
 
 use strict;
 use warnings;
@@ -9,8 +9,8 @@ use Genome::Model::Command::Report::MetricsBatchToLsf;
 use IO::File;
 use File::Basename;
 
-class Genome::Model::Command::AddReads::PostprocessVariations::Maq {
-    is => ['Genome::Model::Command::AddReads::PostprocessVariations', 'Genome::Model::Command::MaqSubclasser'],
+class Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations::Maq {
+    is => ['Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations', 'Genome::Model::Command::MaqSubclasser'],
 };
 
 sub help_brief {

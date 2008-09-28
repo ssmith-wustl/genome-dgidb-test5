@@ -13,7 +13,7 @@ $SIG{__DIE__} = sub {};
 diag("testing sub-classification by event_type formula...");
 
 my $event_type = "genome-model add-reads align-reads maq";
-my $event_class_name = "Genome::Model::Command::AddReads::AlignReads::Maq";
+my $event_class_name = "Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq";
 my ($pp) = sort { $a->id <=> $b->id } grep {$_->read_aligner_name eq 'maq0_6_5' } Genome::ProcessingProfile::ReferenceAlignment->get();
 my $m = Genome::Model->create(id => -1, sample_name => "test_case_sample$$",  processing_profile => $pp);
 my $r = Genome::RunChunk->create(-1, sequencing_platform => 'solexa');
@@ -44,7 +44,7 @@ my $value2 = $tmpfh2->getline;
 $tmpfh2->close;
 is($value2,$value1,"values match");
 
-my $e5 = Genome::Model::Command::AddReads::AlignReads->create(
+my $e5 = Genome::Model::Command::Build::ReferenceAlignment::AlignReads->create(
     event_type => $event_type, 
     id => -3, 
     model_id => $m->id, 
@@ -53,7 +53,7 @@ my $e5 = Genome::Model::Command::AddReads::AlignReads->create(
 ok($e5, "created an object");
 isa_ok($e5,$event_class_name);
 
-my $e6 = Genome::Model::Command::AddReads::AlignReads->create(
+my $e6 = Genome::Model::Command::Build::ReferenceAlignment::AlignReads->create(
     id => -4, 
     model_id => $m->id, 
     run_id => $r->id
@@ -63,11 +63,11 @@ isa_ok($e6,$event_class_name);
 
 my $e3 = Genome::Model::Event->get(88959149);
 ok($e3, "got an event by id");
-ok($e3->isa("Genome::Model::Command::AddReads::AlignReads::Maq"), "class " . ref($e3) . " is expected align-reads/maq");
+ok($e3->isa("Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq"), "class " . ref($e3) . " is expected align-reads/maq");
 
 my $e4 = Genome::Model::Event->get(88958968);
 ok($e4, "got another event by id: $e4");
-ok($e4->isa("Genome::Model::Command::AddReads::AssignRun::Solexa"), "class " . ref($e4) . " is expected assign-run/solexa");
+ok($e4->isa("Genome::Model::Command::Build::ReferenceAlignment::AssignRun::Solexa"), "class " . ref($e4) . " is expected assign-run/solexa");
 
 my @ds = UR::Context->get_current->resolve_data_sources_for_class_meta_and_rule(
     UR::Object::Type->get("Genome::Model::Event"),

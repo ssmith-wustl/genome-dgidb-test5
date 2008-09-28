@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::UpdateGenotype::RunMapping;
+package Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::RunMapping;
 
 use strict;
 use warnings;
@@ -8,9 +8,9 @@ use Command;
 use Genome::Model;
 
 
-class Genome::Model::Command::AddReads::UpdateGenotype::RunMapping {
+class Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::RunMapping {
     is => [
-           'Genome::Model::Command::AddReads::UpdateGenotype',
+           'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
        ],
 };
 

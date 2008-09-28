@@ -1,5 +1,5 @@
 
-package Genome::Model::Command::AddReads::AcceptReads;
+package Genome::Model::Command::Build::ReferenceAlignment::AcceptReads;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use warnings;
 use Genome;
 use Command; 
 
-class Genome::Model::Command::AddReads::AcceptReads {
+class Genome::Model::Command::Build::ReferenceAlignment::AcceptReads {
     is => ['Genome::Model::EventWithReadSet'],
 };
 

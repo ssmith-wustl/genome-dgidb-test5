@@ -54,20 +54,20 @@ my $model = test_create_model();
 test_assign_run();
 
 # align reads
-test_command("Genome::Model::Command::AddReads::AlignReads");
+test_command("Genome::Model::Command::Build::ReferenceAlignment::AlignReads");
 
 # align reads
-test_command("Genome::Model::Command::AddReads::AcceptReads");
+test_command("Genome::Model::Command::Build::ReferenceAlignment::AcceptReads");
 
 # merge alignments
 
-test_command("Genome::Model::Command::AddReads::MergeAlignments");
+test_command("Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments");
 # update genotype probabilities
 
-test_command("Genome::Model::Command::AddReads::UpdateGenotype");
+test_command("Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype");
 
 # identify variations
-test_command("Genome::Model::Command::AddReads::FindVariations");
+test_command("Genome::Model::Command::Build::ReferenceAlignment::FindVariations");
 
 
 sub test_create_model {
@@ -93,7 +93,7 @@ sub test_create_model {
 
 sub test_assign_run {
     
-    my ($command_argv) = get_example_from_synopsis("Genome::Model::Command::AddReads::AssignRun");
+    my ($command_argv) = get_example_from_synopsis("Genome::Model::Command::Build::ReferenceAlignment::AssignRun");
     #my @before = $model->run_chunk_list;
     #is(scalar(@before), 0, "has no run chunks before test");
     my $exit_code = Genome::Model::Command->_execute_with_shell_params_and_return_exit_code(@$command_argv, "test", 1);

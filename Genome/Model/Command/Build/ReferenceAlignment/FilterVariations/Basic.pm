@@ -1,12 +1,12 @@
-package Genome::Model::Command::AddReads::FilterVariations::Basic;
+package Genome::Model::Command::Build::ReferenceAlignment::FilterVariations::Basic;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Command::AddReads::FilterVariations::Basic {
-    is => ['Genome::Model::Command::AddReads::FilterVariations'],
+class Genome::Model::Command::Build::ReferenceAlignment::FilterVariations::Basic {
+    is => ['Genome::Model::Command::Build::ReferenceAlignment::FilterVariations'],
     sub_classification_method_name => 'class',
     has => [ ]
 };

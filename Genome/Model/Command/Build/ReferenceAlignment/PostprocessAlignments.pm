@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::PostprocessAlignments;
+package Genome::Model::Command::Build::ReferenceAlignment::PostprocessAlignments;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use Genome;
 use Command; 
 
 
-class Genome::Model::Command::AddReads::PostprocessAlignments {
+class Genome::Model::Command::Build::ReferenceAlignment::PostprocessAlignments {
     is => 'Genome::Model::Event',
     has => [],
  };
@@ -37,12 +37,12 @@ EOS
 
 sub subordinate_job_classes {
     return (
-        'Genome::Model::Command::AddReads::MergeAlignments',
-        'Genome::Model::Command::AddReads::UpdateGenotype',
-        'Genome::Model::Command::AddReads::FindVariations',
-        'Genome::Model::Command::AddReads::PostprocessVariations',
-        'Genome::Model::Command::AddReads::AnnotateVariations',
-        'Genome::Model::Command::AddReads::FilterVariations'
+        'Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments',
+        'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
+        'Genome::Model::Command::Build::ReferenceAlignment::FindVariations',
+        'Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations',
+        'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations',
+        'Genome::Model::Command::Build::ReferenceAlignment::FilterVariations'
     );
 }
 

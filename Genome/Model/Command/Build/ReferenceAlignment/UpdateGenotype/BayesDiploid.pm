@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::UpdateGenotype::BayesDiploid;
+package Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::BayesDiploid;
 
 use strict;
 use warnings;
@@ -7,9 +7,9 @@ use Genome;
 use Command;
 use Genome::Model;
 
-class Genome::Model::Command::AddReads::UpdateGenotype::BayesDiploid {
+class Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::BayesDiploid {
     is => [
-           'Genome::Model::Command::AddReads::UpdateGenotype',
+           'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
        ],
 };
 

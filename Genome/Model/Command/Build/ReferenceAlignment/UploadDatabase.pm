@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::UploadDatabase;
+package Genome::Model::Command::Build::ReferenceAlignment::UploadDatabase;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Command; 
 
-class Genome::Model::Command::AddReads::UploadDatabase {
+class Genome::Model::Command::Build::ReferenceAlignment::UploadDatabase {
     is => ['Genome::Model::EventWithRefSeq'],
 };
 

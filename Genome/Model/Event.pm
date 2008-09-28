@@ -390,6 +390,9 @@ sub _resolve_subclass_name_for_event_type {
     }
 
     my $class_name = join('::', 'Genome::Model::Command' , @command_parts);
+
+    # TEMP
+    $class_name =~ s/AddReads::/Build::ReferenceAlignment::/;
     return $class_name;
 }
 

@@ -8,7 +8,7 @@ use File::Basename;
 use Test::More;
 
 use above "Genome";
-use Genome::Model::Command::AddReads::Test;
+use Genome::Model::Command::Build::ReferenceAlignment::Test;
 
 my $archos = `uname -a`;
 if ($archos !~ /64/) {
@@ -23,7 +23,7 @@ my $pp_name = '454_DX_Pipeline';
 
 my @read_sets = setup_test_data($sample_name);
 #GSC::RunRegion454->get(sample_name => $sample_name);
-my $add_reads_test = Genome::Model::Command::AddReads::Test->new(
+my $add_reads_test = Genome::Model::Command::Build::ReferenceAlignment::Test->new(
                                                                  model_name => $model_name,
                                                                  sample_name => $sample_name,
                                                                  processing_profile_name => $pp_name,

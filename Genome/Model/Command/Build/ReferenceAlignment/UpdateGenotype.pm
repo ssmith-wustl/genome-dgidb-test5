@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::UpdateGenotype;
+package Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Command; 
 
-class Genome::Model::Command::AddReads::UpdateGenotype {
+class Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype {
     is => ['Genome::Model::EventWithRefSeq'],
 };
 

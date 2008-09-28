@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::FilterVariations::Dtr3e;
+package Genome::Model::Command::Build::ReferenceAlignment::FilterVariations::Dtr3e;
 
 use strict;
 use warnings;
@@ -17,8 +17,8 @@ use Workflow;
 #IT EXPECTS DAVE LARSONS VERSION OF PP OUTPUT
 ####################################
 
-class Genome::Model::Command::AddReads::FilterVariations::Dtr3e {
-    is => ['Genome::Model::Command::AddReads::FilterVariations'],
+class Genome::Model::Command::Build::ReferenceAlignment::FilterVariations::Dtr3e {
+    is => ['Genome::Model::Command::Build::ReferenceAlignment::FilterVariations'],
     sub_classification_method_name => 'class',
     has => [ ]
 };
@@ -373,7 +373,7 @@ sub normal_sample_variation_metrics_file {
     }
 
     my ($equivalent_skin_event) =
-    grep { $_->isa("Genome::Model::Command::AddReads::PostprocessVariations")  }
+    grep { $_->isa("Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations")  }
     $latest_normal_build->child_events(
         ref_seq_id => $self->ref_seq_id
     );

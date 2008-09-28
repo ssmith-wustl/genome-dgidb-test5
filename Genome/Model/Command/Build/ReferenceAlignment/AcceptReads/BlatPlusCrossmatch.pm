@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AcceptReads::BlatPlusCrossmatch;
+package Genome::Model::Command::Build::ReferenceAlignment::AcceptReads::BlatPlusCrossmatch;
 
 use strict;
 use warnings;
@@ -8,9 +8,9 @@ use Command;
 use Genome::Model;
 use File::Temp;
 
-class Genome::Model::Command::AddReads::AcceptReads::BlatPlusCrossmatch {
+class Genome::Model::Command::Build::ReferenceAlignment::AcceptReads::BlatPlusCrossmatch {
     is => [
-           'Genome::Model::Command::AddReads::AcceptReads',
+           'Genome::Model::Command::Build::ReferenceAlignment::AcceptReads',
        ],
 };
 

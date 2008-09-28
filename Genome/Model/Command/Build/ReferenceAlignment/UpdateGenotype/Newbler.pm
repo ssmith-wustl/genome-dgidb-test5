@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::UpdateGenotype::Newbler;
+package Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::Newbler;
 
 use strict;
 use warnings;
@@ -8,9 +8,9 @@ use Command;
 use Genome::Model;
 use Genome::Model::Tools::454::Newbler::RunProject;
 
-class Genome::Model::Command::AddReads::UpdateGenotype::Newbler {
+class Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::Newbler {
     is => [
-           'Genome::Model::Command::AddReads::UpdateGenotype',
+           'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
        ],
     has => [ ],
 };

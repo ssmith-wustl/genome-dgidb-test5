@@ -123,7 +123,7 @@ sub get_subclass_property_to_possible_values_hash {
     # Build a hash of hashes to map each of the subclassing properties to their
     # possible values and the class associated
     # Ex. subclassing property      value       associated class
-    #       read_aligner_name       Maq       G::M::C::AddReads::AlignReads::Maq
+    #       read_aligner_name       Maq       G::M::C::Build::ReferenceAlignment::AlignReads::Maq
     #                               Mosaik      ""                  ""::Mosaik
     #                               etc         etc     
     my %subclass_property_to_possible_values;
@@ -153,7 +153,7 @@ sub get_subclassing_value_to_subclass_hash {
     # Get the hash from the target class that maps the possible parameter values
     # to the subclass associated with it
     # Ex.   value       associated class
-    #       Maq         G::M::C::AddReads::AlignReads::Maq
+    #       Maq         G::M::C::Build::ReferenceAlignment::AlignReads::Maq
     #       Mosaik      ""                         ""::Mosaik
     #       etc         etc     
     my %subclassing_value_to_subclass =

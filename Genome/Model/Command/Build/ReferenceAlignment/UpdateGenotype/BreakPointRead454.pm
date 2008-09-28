@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::UpdateGenotype::BreakPointRead454;
+package Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::BreakPointRead454;
 
 use strict;
 use warnings;
@@ -8,9 +8,9 @@ use Command;
 use Genome::Model;
 
 
-class Genome::Model::Command::AddReads::UpdateGenotype::BreakPointRead454 {
+class Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::BreakPointRead454 {
     is => [
-           'Genome::Model::Command::AddReads::UpdateGenotype',
+           'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
        ],
     has => [
             merged_alignments_file => {via => 'prior_event'},

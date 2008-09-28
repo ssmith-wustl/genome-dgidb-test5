@@ -1,11 +1,11 @@
-package Genome::Model::Command::AddReads::ProcessLowQualityAlignments::Maq;
+package Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments::Maq;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::Model::Command::AddReads::ProcessLowQualityAlignments::Maq {
-    is => 'Genome::Model::Command::AddReads::ProcessLowQualityAlignments',
+class Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments::Maq {
+    is => 'Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments',
 };
 
 sub help_brief {

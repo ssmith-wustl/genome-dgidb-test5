@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::FindVariations;
+package Genome::Model::Command::Build::ReferenceAlignment::FindVariations;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Command; 
 
-class Genome::Model::Command::AddReads::FindVariations {    
+class Genome::Model::Command::Build::ReferenceAlignment::FindVariations {    
     is => ['Genome::Model::EventWithRefSeq'],
 };
 

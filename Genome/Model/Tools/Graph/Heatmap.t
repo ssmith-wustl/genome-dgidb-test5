@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Genome::Model::Tools::Heatmap;
+use Genome::Model::Tools::Graph::Heatmap;
 use Test::More tests => 2;
 use Digest::MD5 qw(md5_hex);
 use FindBin qw/$Bin/;

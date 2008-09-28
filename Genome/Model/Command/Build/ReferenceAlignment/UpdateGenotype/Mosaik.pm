@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::UpdateGenotype::Mosaik;
+package Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::Mosaik;
 
 use strict;
 use warnings;
@@ -8,9 +8,9 @@ use Command;
 use Genome::Model;
 
 
-class Genome::Model::Command::AddReads::UpdateGenotype::Mosaik {
+class Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::Mosaik {
     is => [
-           'Genome::Model::Command::AddReads::UpdateGenotype',
+           'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
        ],
 };
 

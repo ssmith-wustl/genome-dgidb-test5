@@ -14,7 +14,7 @@ use File::Path;
 use Test::More;
 
 use above "Genome";
-use Genome::Model::Command::AddReads::Test;
+use Genome::Model::Command::Build::ReferenceAlignment::Test;
 
 # NOTE: run from 32-bit first to compile correct inline libraries
 # Then this should run from 64-bit to actually execute.
@@ -33,13 +33,13 @@ my $processing_profile_name = "test_solexa_pp_$ENV{USER}";
 my $sample_name = 'H_GV-933124G-skin1-9017g';
 my @read_sets = setup_test_data($sample_name);
 
-my $add_reads_test = Genome::Model::Command::AddReads::Test->new(
+my $add_reads_test = Genome::Model::Command::Build::ReferenceAlignment::Test->new(
     model_name => $model_name,
     sample_name => $sample_name,
     processing_profile_name => $processing_profile_name,
     read_sets => \@read_sets
 );
-isa_ok($add_reads_test,'Genome::Model::Command::AddReads::Test');
+isa_ok($add_reads_test,'Genome::Model::Command::Build::ReferenceAlignment::Test');
 
 $add_reads_test->create_test_pp(
     sequencing_platform  => 'solexa',

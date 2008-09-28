@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AnnotateVariations;
+package Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations;
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ use Genome::Model::EventWithRefSeq;
 #use Genome::Utility::Parser;
 use IO::File;
 
-class Genome::Model::Command::AddReads::AnnotateVariations {
+class Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations {
     is => [ 'Genome::Model::EventWithRefSeq' ],
     has => [
     _snv_metrics => {

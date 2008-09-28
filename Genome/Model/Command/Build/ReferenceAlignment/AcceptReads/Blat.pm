@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AcceptReads::Blat;
+package Genome::Model::Command::Build::ReferenceAlignment::AcceptReads::Blat;
 
 use strict;
 use warnings;
@@ -7,9 +7,9 @@ use Genome;
 use Command;
 use Genome::Model;
 
-class Genome::Model::Command::AddReads::AcceptReads::Blat {
+class Genome::Model::Command::Build::ReferenceAlignment::AcceptReads::Blat {
     is => [
-           'Genome::Model::Command::AddReads::AcceptReads',
+           'Genome::Model::Command::Build::ReferenceAlignment::AcceptReads',
        ],
 };
 

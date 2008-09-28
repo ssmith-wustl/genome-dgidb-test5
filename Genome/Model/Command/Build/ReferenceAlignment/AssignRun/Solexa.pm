@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AssignRun::Solexa;
+package Genome::Model::Command::Build::ReferenceAlignment::AssignRun::Solexa;
 
 use strict;
 use warnings;
@@ -9,8 +9,8 @@ use GSC;
 
 use IO::File;
 
-class Genome::Model::Command::AddReads::AssignRun::Solexa {
-    is => 'Genome::Model::Command::AddReads::AssignRun',
+class Genome::Model::Command::Build::ReferenceAlignment::AssignRun::Solexa {
+    is => 'Genome::Model::Command::Build::ReferenceAlignment::AssignRun',
 };
 
 sub help_synopsis {

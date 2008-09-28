@@ -29,10 +29,10 @@ EOS
 }
 
 sub subordinate_job_classes {
-    my @step1 =  ('Genome::Model::Command::AddReads::MergeAlignments');
-    my @step2 =  ('Genome::Model::Command::AddReads::UpdateGenotype');
-    my @step3 =  ('Genome::Model::Command::AddReads::FindVariations'),
-    my @step4 =  ('Genome::Model::Command::AddReads::PostprocessVariations', 'Genome::Model::Command::AddReads::AnnotateVariations');
+    my @step1 =  ('Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments');
+    my @step2 =  ('Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype');
+    my @step3 =  ('Genome::Model::Command::Build::ReferenceAlignment::FindVariations'),
+    my @step4 =  ('Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations', 'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations');
     
     return (\@step1, \@step2, \@step3, \@step4);
 }

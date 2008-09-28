@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::ScreenReads::EliminateAllDuplicates;
+package Genome::Model::Command::Build::ReferenceAlignment::ScreenReads::EliminateAllDuplicates;
 
 use strict;
 use warnings;
@@ -13,7 +13,7 @@ use File::stat;
 
 use IO::File;
 
-class Genome::Model::Command::AddReads::ScreenReads::EliminateAllDuplicates {
+class Genome::Model::Command::Build::ReferenceAlignment::ScreenReads::EliminateAllDuplicates {
     is => 'Genome::Model::Event',
     has => [
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },

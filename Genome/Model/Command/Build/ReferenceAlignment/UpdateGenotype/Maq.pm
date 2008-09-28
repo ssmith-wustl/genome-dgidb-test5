@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::UpdateGenotype::Maq;
+package Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::Maq;
 
 use strict;
 use warnings;
@@ -8,8 +8,8 @@ use Command;
 use Genome::Model;
 
 
-class Genome::Model::Command::AddReads::UpdateGenotype::Maq {    
-    is => ['Genome::Model::Command::AddReads::UpdateGenotype', 'Genome::Model::Command::MaqSubclasser'],
+class Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::Maq {    
+    is => ['Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype', 'Genome::Model::Command::MaqSubclasser'],
 };
 
 sub help_brief {

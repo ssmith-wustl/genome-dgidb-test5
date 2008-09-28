@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::PostprocessVariations::BreakPointRead454;
+package Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations::BreakPointRead454;
 
 use strict;
 use warnings;
@@ -7,9 +7,9 @@ use Genome;
 use Command;
 use Genome::Model;
 
-class Genome::Model::Command::AddReads::PostprocessVariations::BreakPointRead454 {
+class Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations::BreakPointRead454 {
     is => [
-           'Genome::Model::Command::AddReads::PostprocessVariations',
+           'Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations',
        ],
     has => [
             merged_alignments_file => { via => 'prior_event' },

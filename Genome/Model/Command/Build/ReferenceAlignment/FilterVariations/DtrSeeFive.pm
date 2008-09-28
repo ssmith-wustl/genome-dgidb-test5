@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::FilterVariations::DtrSeeFive;
+package Genome::Model::Command::Build::ReferenceAlignment::FilterVariations::DtrSeeFive;
 
 use strict;
 use warnings;
@@ -17,8 +17,8 @@ use Workflow;
 #IT EXPECTS DAVE LARSONS VERSION OF PP OUTPUT
 ####################################
 
-class Genome::Model::Command::AddReads::FilterVariations::DtrSeeFive {
-    is => ['Genome::Model::Command::AddReads::FilterVariations'],
+class Genome::Model::Command::Build::ReferenceAlignment::FilterVariations::DtrSeeFive {
+    is => ['Genome::Model::Command::Build::ReferenceAlignment::FilterVariations'],
     sub_classification_method_name => 'class',
     has => [ ]
 };
@@ -409,7 +409,7 @@ sub normal_sample_snp_file {
     }
 
     my ($equivalent_skin_event) =
-    grep { $_->isa("Genome::Model::Command::AddReads::FindVariations")  }
+    grep { $_->isa("Genome::Model::Command::Build::ReferenceAlignment::FindVariations")  }
     $latest_normal_build->child_events(
         ref_seq_id => $self->ref_seq_id
     );

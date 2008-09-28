@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AlignReads::Synamatix;
+package Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Synamatix;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use Genome::Model;
 use File::Path;
 use Data::Dumper;
 
-class Genome::Model::Command::AddReads::AlignReads::Synamatix {
+class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Synamatix {
     is => 'Genome::Model::Event',
     has => [ 
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },

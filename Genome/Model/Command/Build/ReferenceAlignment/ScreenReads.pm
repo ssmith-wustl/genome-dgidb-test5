@@ -1,11 +1,11 @@
-package Genome::Model::Command::AddReads::ScreenReads;
+package Genome::Model::Command::Build::ReferenceAlignment::ScreenReads;
 
 use strict;
 use warnings;
 
 use Genome; 
 
-class Genome::Model::Command::AddReads::ScreenReads {
+class Genome::Model::Command::Build::ReferenceAlignment::ScreenReads {
     is => ['Genome::Model::EventWithReadSet'],
 };
 

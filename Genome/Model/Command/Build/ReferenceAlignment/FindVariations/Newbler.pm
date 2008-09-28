@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::FindVariations::Newbler;
+package Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Newbler;
 
 use strict;
 use warnings;
@@ -7,9 +7,9 @@ use Genome;
 use Command;
 use Genome::Model;
 
-class Genome::Model::Command::AddReads::FindVariations::Newbler {
+class Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Newbler {
     is => [
-           'Genome::Model::Command::AddReads::FindVariations',
+           'Genome::Model::Command::Build::ReferenceAlignment::FindVariations',
        ],
     has => [  ],
 

@@ -1,4 +1,4 @@
-package Genome::Model::Command::AddReads::AlignReads::Newbler;
+package Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Newbler;
 
 use strict;
 use warnings;
@@ -6,14 +6,14 @@ use warnings;
 use Genome;
 use Command;
 use Genome::Model;
-use Genome::Model::Command::AddReads::AlignReads;
+use Genome::Model::Command::Build::ReferenceAlignment::AlignReads;
 
 use Genome::Model::Tools::454::Newbler::AddRun;
 use Genome::Model::Tools::454::Newbler::RunProject;
 
-class Genome::Model::Command::AddReads::AlignReads::Newbler {
+class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Newbler {
     is => [
-        'Genome::Model::Command::AddReads::AlignReads',
+        'Genome::Model::Command::Build::ReferenceAlignment::AlignReads',
     ],
     has => [
             sff_file => { via => "prior_event" },
