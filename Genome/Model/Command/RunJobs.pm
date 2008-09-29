@@ -174,13 +174,15 @@ sub _verify_submitted_jobs {
     $DB::single=1;
     while (my $event = shift @queued_events) {
         unless ($event->ref_seq_id || $event->run_id) {
-            $self->error_message("Event ".$event->id." has no ref_seq_id or run_id... skipping.");
-            next;
+            unless ($event->event_type eq 'genome-model build assembly assemble newbler') {
+                $self->error_message("Event ".$event->id." has no ref_seq_id or run_id... skipping.");
+                next;
+            }
         }
-        
+
         my $job_id = $event->lsf_job_id;
         my @result = `bjobs $job_id 2>/dev/null`;
-        
+
         my $status = '';
         if (@result) {
             my (@cols) = split(/\s+/,$result[1]);
@@ -227,8 +229,10 @@ sub _schedule_scheduled_jobs {
                                                        %addl_get_params);
     while (my $event = shift @launchable_events) {
         unless ($event->ref_seq_id || $event->run_id) {
-            $self->error_message("Event ".$event->id." has no ref_seq_id or run_id... skipping.");
-            next;
+            unless ($event->event_type eq 'genome-model build assembly assemble newbler') {
+                $self->error_message("Event ".$event->id." has no ref_seq_id or run_id... skipping.");
+                next;
+            }
         }
 
         my $prior_event = $event->prior_event();
