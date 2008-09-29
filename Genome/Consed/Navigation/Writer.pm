@@ -6,7 +6,7 @@ use warnings;
 use above 'Genome';
 
 class Genome::Consed::Navigation::Writer {
-    is => 'Genome::Utility::Writer',
+    is => 'Genome::Utility::IO::Writer',
     has => [
     title => {
         type => 'String',

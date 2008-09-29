@@ -6,7 +6,7 @@ use warnings;
 use above 'Genome';
 
 class Genome::Consed::Navigation::Reader {
-    is => 'Genome::Utility::Reader',
+    is => 'Genome::Utility::IO::Reader',
 };
 
 # Ex of a list

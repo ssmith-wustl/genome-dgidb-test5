@@ -8,7 +8,7 @@ use above 'Genome';
 use Finishing::Assembly::Consed::Navigation;
 
 class Genome::Consed::Navigation::Reader {
-    is => 'Genome::Utility::Reader',
+    is => 'Genome::Utility::IO::Reader',
 };
 
 sub title {
