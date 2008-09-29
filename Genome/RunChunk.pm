@@ -30,6 +30,12 @@ class Genome::RunChunk {
         run_name            => { is => 'VARCHAR2', len => 500, is_optional => 1 },
         subset_name         => { is => 'VARCHAR2', len => 32, is_optional => 1, column_name => "LIMIT_REGIONS" },
         sample_name         => { is => 'VARCHAR2', len => 255 },
+        #For now the subject_name is the sample_name
+        #Not sure why via was not working so switched to calculated property
+        subject_name        => {
+                                calculate_from => ['sample_name'],
+                                calculate => q|$sample_name|
+                            },
         events              => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => "run" },
         seq_id              => { is => 'NUMBER', len => 15, is_optional => 1 },
         full_name           => { calculate_from => ['run_name','subset_name'], calculate => q|"$run_name/$subset_name"| },
@@ -51,11 +57,30 @@ class Genome::RunChunk {
 sub get_or_create_from_read_set {
     my $class = shift;
     my $read_set = shift;
-    #TODO: change something so we don't need to pass this method name in every time
+
+    #TODO:  This is now optional and once all read sets have a corresponding pse we can eliminate completely
     my $read_set_query_method_name = shift;
-    my $run_chunk = Genome::RunChunk->get(
-                                          seq_id => $read_set->id,
-                                );
+
+    my @pse_params = GSC::PSEParam->get(
+                                        param_name => 'instrument_data_id',
+                                        param_value => $read_set->id,
+                                    );
+    my $pse;
+    if (scalar(@pse_params) == 1) {
+        my $pse_param = $pse_params[0];
+        my $ps = GSC::ProcessStep->get(process_to => 'queue instrument data for genome modeling');
+        $pse = GSC::PSE->get(
+                             ps_id => $ps->ps_id,
+                             pse_id => $pse_param->pse_id,
+                         );
+    } elsif (scalar(@pse_params) > 1) {
+        #ERROR or use one?
+        $class->error_message('More than one pse found for pse param(instrument_data_id)');
+        return;
+    }
+
+    my $run_chunk = Genome::RunChunk->get(seq_id => $read_set->id);
+
     my $run_name = $read_set->run_name;
     my $subset_name = $class->resolve_subset_name($read_set);
     my $full_path = $class->resolve_full_path($read_set);
@@ -77,8 +102,16 @@ sub get_or_create_from_read_set {
             return;
         }
     } else {
-        my $query_name = $read_set->$read_set_query_method_name;
-        unless ($query_name) {
+        my $query_value;
+        if ($pse) {
+            #TODO: Should be able to use pse subject_type instead of passing '$read_set_query_method_name'
+            #Until PSEs exist for all data we will still use this crazy method name variable
+            my ($subject_type) = $pse->added_param('subject_type');
+            ($query_value) = $pse->added_param($read_set_query_method_name);
+        } else {
+            $query_value = $read_set->$read_set_query_method_name;
+        }
+        unless ($query_value) {
             die($read_set_query_method_name .'name not found for read set: '. $class->_desc_dw_obj($read_set));
         }
         $run_chunk  = $class->SUPER::create(
@@ -88,7 +121,8 @@ sub get_or_create_from_read_set {
                                       full_path => $full_path,
                                       subset_name => $subset_name,
                                       sequencing_platform => $sequencing_platform,
-                                      $read_set_query_method_name => $query_name,
+                                      #Currently there is no column for subject_name
+                                      sample_name => $query_value,
                                   );
         unless ($run_chunk) {
             $class->error_message('Failed to get or create run record information for '. $class->_desc_dw_obj($read_set));
