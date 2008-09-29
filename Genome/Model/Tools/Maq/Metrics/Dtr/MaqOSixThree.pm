@@ -134,7 +134,7 @@ sub make_attribute_array {
         $cns2_avg_num_reads,
         $cns2_max_map_quality,
         $cns2_allele_qual_diff,
-    ) = split ",", $line;
+    ) = split ",\s*", $line;
     #create dependent variable ratios
     #everything is dependent on # of reads so make a ratio
     return if $total_depth == 0;
