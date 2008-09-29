@@ -19,7 +19,7 @@ class Genome::Model::Command::Create::Model {
         processing_profile_name     => { is => 'varchar', len => 255,  doc => 'The name of the processing profile to be used. '},
         model_name                  => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
         sample                      => { is => 'varchar', is_optional => 1, len => 255, doc => 'The name of the sample all the reads originate from' },
-        subject                     => { is => 'varchar', is_optional => 1, len => 255, doc => 'The name of the subject all the reads originate from' },
+        subject_name                => { is => 'varchar', is_optional => 1, len => 255, doc => 'The name of the subject all the reads originate from' },
         model                       => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id', doc => 'Not used as a parameter' },
         instrument_data             => { is => 'String', doc => 'The instrument data for this model', is_optional => 1, via => 'inputs', to => 'value', where => [name => 'instrument_data'] },
     ],
