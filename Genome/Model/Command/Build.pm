@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+
 class Genome::Model::Command::Build {
     is => ['Genome::Model::Event'],
     type_name => 'genome model build',
@@ -19,6 +20,11 @@ class Genome::Model::Command::Build {
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+
+sub command_subclassing_model_property {
+    return 'build_subclass_name';
+}
 
 sub resolve_data_directory {
     my $self = shift;
