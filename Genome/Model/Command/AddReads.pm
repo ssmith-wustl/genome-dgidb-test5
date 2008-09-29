@@ -71,6 +71,7 @@ sub execute {
     my $self = shift;
 
     my $model = $self->model;
+
     my $read_set_query_method_name = $model->read_set_query_method_name;
 
     my $redo_all = $self->redo_all();
@@ -149,22 +150,21 @@ sub execute {
 
     for my $available_read_set (@available_read_sets) {
         my $read_set_class_name = $model->read_set_class_name;
-        unless ($model->$read_set_query_method_name eq $available_read_set->$read_set_query_method_name) {
+        my $run_chunk = $read_set_class_name->get_or_create_from_read_set( $available_read_set, $read_set_query_method_name );
+        unless ($run_chunk) {
+            $self->error_message('Could not create a genome model run chunk for this read set.');
+            return;
+        }
+        unless ($model->$read_set_query_method_name eq $run_chunk->$read_set_query_method_name) {
             $self->error_message(
                                  'Bad '. $read_set_query_method_name .' value '.
-                                 $available_read_set->$read_set_query_method_name
+                                 $run_chunk->$read_set_query_method_name
                                  .' on '. $read_set_class_name->_desc_dw_obj($available_read_set)
                                  .' does not match model '. $read_set_query_method_name .' '.
                                  $model->$read_set_query_method_name
                              );
             return;
         }
-        my $run_chunk = $read_set_class_name->get_or_create_from_read_set($available_read_set,$read_set_query_method_name);
-        unless ($run_chunk) {
-            $self->error_message('Could not create a genome model run chunk for this read set.');
-            return;
-        }
-
         my $read_set_link= Genome::Model::ReadSet->get(
                                                        model_id    => $model->id,
                                                        read_set_id => $run_chunk->id
@@ -184,15 +184,11 @@ sub execute {
             $self->error_message('Could not create a genome model read set for this run chunk.');
             return;
         }
-
-        # TODO: move this section to Genome::Model::Command::Build::ReferenceAlignment
-       
-        
     }
     return 1;
 }
 
-sub _get_sub_command_class_name { 
+sub _get_sub_command_class_name {
     return __PACKAGE__;
 }
 
@@ -207,13 +203,13 @@ sub get_sub_command_classes {
     /;
 
     return @sub_command_classes;
-}    
+}
 
 sub _redo_all {
     my $self = shift;
     my $model = $self->model;
     my $model_id = $model->id;
-    
+
     my @prior_add_reads_events = sort { $b->id <=> $a->id } $model->read_set_addition_events;
     my @replacements;
     for my $prior_add_reads_step (@prior_add_reads_events) {
