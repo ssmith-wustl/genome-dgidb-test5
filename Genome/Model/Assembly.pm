@@ -28,6 +28,9 @@ sub test {
     return 1;
 }
 
+sub build_subclass_name {
+    return 'assembly';
+}
 sub assembly_directory {
     my $self = shift;
     return $self->data_directory . '/assembly';
