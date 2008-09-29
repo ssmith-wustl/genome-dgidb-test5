@@ -7,9 +7,7 @@ use Genome;
 
 class Genome::Model::Command::Build::ReferenceAlignment {
     is => 'Genome::Model::Command::Build',
-    is_abstract => 1,
-    has => [
-        ],
+    has => [ ],
  };
 
 sub sub_command_sort_position { 40 }
