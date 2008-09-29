@@ -21,10 +21,14 @@ sub help_brief {
     "tools for working with FASTA files"
 }
 
+sub help_detail {
+    "Tools to work with fasta format sequence files";
+}
+
 sub create { 
     my $class = shift;
 
-    my $self = $class->SUPER::create;
+    my $self = $class->SUPER::create(@_);
     $self->{_cwd} = Cwd::getcwd();
     $self->fasta_file( Cwd::abs_path( $self->fasta_file ) );
     my ($base, $directory) = File::Basename::fileparse( $self->fasta_file );
@@ -32,7 +36,7 @@ sub create {
         or ( $self->error_message("Can't access directory ($directory): $!") and return );
     $self->{_fasta_base} = $base;
 
-    return 1;
+    return $self;
 }
 
 sub DESTROY {
