@@ -48,7 +48,7 @@ sub execute {
 
     $DB::single = $DB::stopper;
     my $model = $self->model;
-
+    $self->data_directory($self->model->data_directory);
     my @sub_command_classes = $self->subordinate_job_classes;
     my $last_event_id;
     my @unbuilt_read_sets = $model->unbuilt_read_sets;
