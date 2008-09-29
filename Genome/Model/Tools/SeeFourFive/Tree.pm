@@ -207,7 +207,7 @@ sub as_graphviz_obj {
     my $src;
     my %metric_names;
     unless($graph) {
-        $graph = GraphViz->new();
+        $graph = GraphViz->new(ratio => .6);
     }
     $$identifier ||= 0;
 
@@ -283,7 +283,8 @@ sub as_graphviz_obj {
         }
         #having a [ implies a subtree
         if($decision && ($decision !~ m/\[/)) { 
-            $graph->add_node($$identifier, label => "$decision");
+            my $color = ($decision eq 'WT') ? 'red' : 'green'; 
+            $graph->add_node($$identifier, label => "$decision", style => 'filled', fillcolor => $color);
             if(@parents) {
                 $graph->add_edge($parents[-1] => $$identifier);
                 ++$$identifier;
