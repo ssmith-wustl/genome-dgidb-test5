@@ -11,24 +11,24 @@ class Genome::Model::Command::Report::Amplicons
 {
     is => 'Command',
     has => [
-            sequence_item_name => {
-                                   type => 'String',
-                                   doc => 'The sequence item name',
-                               },
+            sample_name => {
+                            type => 'String',
+                            doc => 'The dna sample name',
+                        },
         ],
 };
 
 sub help_brief {
-    'a report generator for listing amplicon sequences from a sequence item'
+    'a report generator for listing amplicon sequences from a dna sample'
 }
 
 sub help_synopsis {
-    'genome-model report amplicons --sequence-item-nane'
+    'genome-model report amplicons --sample-name'
 }
 
 sub help_detail {
     return <<EOS
-given a sequence item from a pooled dna sample,
+given a pooled dna sample name,
 the generated report will include the amplicon sequences
 EOS
 }
@@ -36,14 +36,9 @@ EOS
 sub execute { 
     my $self = shift;
 
-    my $seq_item = GSC::Sequence::Item->get(sequence_item_name => $self->sequence_item_name);
-    unless ($seq_item) {
-        $self->error_message("Failed to find sequence item '$sequence_item_name'");
-        return;
-    }
-    my $dna = GSC::PooledDNA->get(dna_name => $seq_item->sample_name);
+    my $dna = GSC::PooledDNA->get(dna_name => $self->sample_name);
     unless ($dna) {
-        $self->error_message('Failed to find pooled dna for sample name '. $seq_item->sample_name);
+        $self->error_message('Failed to find pooled dna for sample name '. $self->sample_name);
         return;
     }
     my @pcr_setups = $dna->get_pcr_setups;
@@ -58,7 +53,7 @@ sub execute {
         my $primer_2 =$pcr_setup_with_info->{__pri_2__};
         my $ref_seq =$pcr_setup_with_info->{__ref_seq__};
         my $comment =$pcr_setup_with_info->{__comment__};
-        print '>'. $pcr_setup_with_info->setup_name ."\n".
+        print '>'. $pcr_setup_with_info->setup_name .' CHROMOSOME:'. $ref_seq->get_subject->chromosome .' START:'. $ref_seq->begin_position .' END:'.$ref_seq->end_position."\n".
             $ref_seq->sequence_base_string ."\n";
     }
     return 1;
