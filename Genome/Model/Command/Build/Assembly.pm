@@ -48,7 +48,7 @@ sub execute {
 
     $DB::single = $DB::stopper;
     my $model = $self->model;
-    $self->data_directory($self->model->data_directory);
+
     my @sub_command_classes = $self->subordinate_job_classes;
     my $last_event_id;
     my @unbuilt_read_sets = $model->unbuilt_read_sets;
@@ -103,6 +103,8 @@ sub execute {
             return;
         }
     }
+    $self->data_directory($data_directory);
+
     my $assembler = Genome::Model::Command::Build::Assembly::Assemble->create(
                                                                               model_id => $self->model_id,
                                                                               prior_event_id => $last_event_id,
