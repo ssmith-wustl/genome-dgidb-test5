@@ -74,8 +74,8 @@ sub execute {
         #we have events for the backend;
         if(grep (/Failed|Crashed/, @events)) {
             #Genome::Model::Command::RunJobs->execute(model_id=> $self->model_id);
-            $self->status_message("Some events failed. Failing the build.");
             $self->cry_for_help("Back end");
+            die "Some events failed. Failing the build.";
             #cry for help should die...but if it failed or something.
             return;
         }
