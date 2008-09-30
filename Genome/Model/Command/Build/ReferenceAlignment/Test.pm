@@ -178,8 +178,8 @@ sub add_reads {
             my $assign_run_command = $add_reads_events[0];
             isa_ok($assign_run_command,'Genome::Model::Command::Build::ReferenceAlignment::AssignRun');
 
-            my $data_directory = $assign_run_command->model->data_directory;
-            is($data_directory,$model->data_directory,"assign run data directory matches model");
+            my $data_directory = $assign_run_command->model->latest_build_directory;
+            is($data_directory,$model->latest_build_directory,"assign run data directory matches model");
 
             $self->execute_event_test($assign_run_command);
             ok(-d $data_directory, "data directory '$data_directory' exists");
