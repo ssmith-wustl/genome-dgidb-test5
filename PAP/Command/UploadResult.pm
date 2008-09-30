@@ -32,7 +32,7 @@ operation PAP::Command::UploadResult {
     input        => [ 'bio_seq_features', 'biosql_namespace' ],
     output       => [ ],
     lsf_queue    => 'long',
-    lsf_resource => 'rusage[tmp=100]';
+    lsf_resource => 'rusage[tmp=100]'
 };
 
 sub sub_command_sort_position { 10 }

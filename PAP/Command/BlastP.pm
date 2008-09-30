@@ -42,7 +42,7 @@ operation PAP::Command::BlastP {
     input        => [ 'fasta_file'     ],
     output       => [ 'bio_seq_feature'],
     lsf_queue    => 'long',
-    lsf_resource => 'rusage[tmp=100]';
+    lsf_resource => 'rusage[tmp=100]'
 };
 
 sub sub_command_sort_position { 10 }

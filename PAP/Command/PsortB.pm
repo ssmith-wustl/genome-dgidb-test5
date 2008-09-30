@@ -40,7 +40,7 @@ operation PAP::Command::PsortB {
     input        => [ 'fasta_file', 'gram_stain' ],
     output       => [ 'bio_seq_feature' ],
     lsf_queue    => 'short',
-    lsf_resource => 'rusage[tmp=100]';
+    lsf_resource => 'rusage[tmp=100]'
 };
 
 sub sub_command_sort_position { 10 }
