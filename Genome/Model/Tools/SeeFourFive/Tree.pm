@@ -62,7 +62,7 @@ sub perl_src {
                 return;
             }
         }
-        if ($value =~ m/[A|G|C|T]/) {
+        if ($value =~ m/^\s*\D+\s*$/) {
             $op = 'eq'; 
             $value = "'$value'"; 
         }
