@@ -108,7 +108,11 @@ sub compatible_input_read_sets {
     my $sample_name = $self->subject_name || $self->sample_name;
     my @input_read_sets = $input_read_set_class_name->get(sample_name => $sample_name);
 
-   return @input_read_sets;
+    #TODO: move
+    if ($input_read_set_class_name eq 'GSC::RunLaneSolexa') {
+        @input_read_sets = grep { $_->run_type !~ /1/  } @input_read_sets;
+    }
+    return @input_read_sets;
 }
 
 sub available_read_sets {
