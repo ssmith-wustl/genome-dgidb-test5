@@ -182,7 +182,7 @@ sub schedule_backend {
             $self->error_message("Unable to create dir: " . $self->model->latest_build_directory);
             return;
         }
-        chmod 02775, $self->latest_build_directory;
+        chmod 02775, $self->model->latest_build_directory;
     } 
     my @sub_command_classes = $self->backend_job_classes;
 
