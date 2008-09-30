@@ -476,11 +476,17 @@ $DB::single = $DB::stopper;
     my $aligner_output_file = $self->aligner_output_file;
     my $unaligned_reads_file = $self->unaligned_reads_file;
 
-    if ($read_set_link->read_set->is_paired_end) {
-        my $read_set = $self->read_set;
+    if ($read_set_link->is_paired_end) {
+        my $sd_above = $read_set_link->sd_above_insert_size;
+        my $median_insert = $read_set_link->median_insert_size;
+        my $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;
+        unless($upper_bound_on_insert_size > 0) {
+            $self->error_message("Unable to calculate a valid insert size to run maq with");
+            return;
+        }
         # TODO: extract additional details from the read set
         # about the insert size, and adjust the maq parameters.
-        $aligner_params .= ''; 
+        $aligner_params .= "-a $upper_bound_on_insert_size";
     }   
  
     # prepare the alignment command
