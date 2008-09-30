@@ -74,7 +74,14 @@ sub execute {
                                     subject_name => $subject_name,
                                     processing_profile_id => $pp->id,
                                 );
-        $model_ids{$model->id} = 1;
+        my @existing_read_sets = Genome::Model::ReadSet->get(
+                                                             read_set_id => $instrument_data_id,
+                                                             model_id => $model->id,
+                                                         );
+        if (@existing_read_sets) {
+            $self->status_message('Existing read set found for model '. $model->id .' and read set '. $instrument_data_id);
+            next;
+        }
         my $add_reads = Genome::Model::Command::AddReads->create(
                                                                  read_set_id => $instrument_data_id,
                                                                  model_id => $model->id,
@@ -83,6 +90,8 @@ sub execute {
             $self->error_message('Failed to execute add reads for model '. $model->id .' and read set '. $instrument_data_id);
             next;
         }
+        # Add model to list of models to build
+        $model_ids{$model->id} = 1;
     }
     #Execute all the builds for models with new data
     for my $model_id (keys %model_ids) {
