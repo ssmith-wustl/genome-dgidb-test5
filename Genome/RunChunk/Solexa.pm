@@ -33,8 +33,8 @@ class Genome::RunChunk::Solexa {
         clusters                        => { via => "_run_lane_solexa" },
         is_paired_end                   => { 
                                              calculate_from => ['run_type'],
-                                             calculate => q| if ($run_type =~ m/Paired End/) {
-                                                                return 1;
+                                             calculate => q| if ($run_type =~ m/Paired End Read (\d)/) {
+                                                                return $1;
                                                              }
                                                              else {
                                                                  return 0;
