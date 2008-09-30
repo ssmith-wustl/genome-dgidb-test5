@@ -47,7 +47,7 @@ $DB::single = $DB::stopper;
 
     my $maq_pathname = $self->proper_maq_pathname('genotyper_name');
 
-    my $model_dir = $model->data_directory;
+    my $model_dir = $model->latest_build_directory;
 
     unless (-d "$model_dir/consensus") {
         mkdir ("$model_dir/consensus");

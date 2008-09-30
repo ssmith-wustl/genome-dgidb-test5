@@ -362,7 +362,7 @@ sub prepare_input {
         }
 
         # remove any reads which have 15 As in a row.
-        unless ($self->is_paired_end) {
+        unless ($read_set->is_paired_end) {
             my $fastq_pathname_no_poly_a = $fastq_pathname . '._no_poly_a';
             my $fastq_in = $self->open_file('fastq',$fastq_pathname);
             my $fastq_out = $self->create_file('fastq_no_polya',$fastq_pathname_no_poly_a);
@@ -370,7 +370,7 @@ sub prepare_input {
                 my $seq = $fastq_in->getline;
                 my $sep = $fastq_in->getline;
                 my $qual = $fastq_in->getline;
-                unless ($seq =~ /A{15}/i) {
+                if($seq =~ /A{30}/i) {
                     next;
                 }
                 $fastq_out->print($header,$seq,$sep,$qual);
@@ -436,11 +436,11 @@ $DB::single = $DB::stopper;
         $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
         return;
     }
-
+    my $read_set_link=Genome::Model::ReadSet->get(model_id=>$self->model_id, read_set_id=> $self->run_id);
+ 
     # prepare paths for the results
     if ($self->alignment_data_available_and_correct) {
         $self->status_message("existing alignment data is available and deemed correct");
-        my $read_set_link=Genome::Model::ReadSet->get(model_id=>$self->model_id, read_set_id=> $self->run_id);
         unless($read_set_link->first_build_id) {
             $read_set_link->first_build_id($self->parent_event_id);
         }
@@ -476,7 +476,7 @@ $DB::single = $DB::stopper;
     my $aligner_output_file = $self->aligner_output_file;
     my $unaligned_reads_file = $self->unaligned_reads_file;
 
-    if ($self->is_paired_end) {
+    if ($read_set_link->read_set->is_paired_end) {
         my $read_set = $self->read_set;
         # TODO: extract additional details from the read set
         # about the insert size, and adjust the maq parameters.

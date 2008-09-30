@@ -22,7 +22,7 @@ class Genome::Model::Command::Build::ReferenceAlignment::Solexa {
         #  data_directory =>{
             #    is => 'String',
             #    is_calculated => 1,
-            #       calculate => q| return $self->model->data_directory |,
+            #       calculate => q| return $self->model->latest_build_directory |,
             #     } 
             
     ],
@@ -61,7 +61,7 @@ sub execute {
     my $self = shift;
     $DB::single = 1;
     my @undone_or_failed_read_sets = $self->find_unaligned_or_failed_read_sets();
-    $self->data_directory($self->model->data_directory);
+    $self->data_directory($self->model->latest_build_directory);
     #subroutine: find undone sets...if 0, don't call 'addreads' modules...
     if(@undone_or_failed_read_sets) {
         #TODO: Make this status message print out flowcell/lane
@@ -177,12 +177,12 @@ sub find_unaligned_or_failed_read_sets {
 sub schedule_backend {
     #FIXME: Do this more elegantly in the class def?
     my $self=shift;
-    unless( -d $self->model->data_directory) {
-        unless(mkdir $self->model->data_directory ) {
-            $self->error_message("Unable to create dir: " . $self->model->data_directory);
+    unless( -d $self->model->latest_build_directory) {
+        unless(mkdir $self->model->latest_build_directory ) {
+            $self->error_message("Unable to create dir: " . $self->model->latest_build_directory);
             return;
         }
-        chmod 02775, $self->data_directory;
+        chmod 02775, $self->latest_build_directory;
     } 
     my @sub_command_classes = $self->backend_job_classes;
 
