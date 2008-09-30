@@ -110,7 +110,7 @@ sub compatible_input_read_sets {
 
     #TODO: move
     if ($input_read_set_class_name eq 'GSC::RunLaneSolexa') {
-        @input_read_sets = grep { $_->run_type !~ /2/  } @input_read_sets;
+        @input_read_sets = grep { $_->run_type !~ /1/  } @input_read_sets;
     }
     return @input_read_sets;
 }
