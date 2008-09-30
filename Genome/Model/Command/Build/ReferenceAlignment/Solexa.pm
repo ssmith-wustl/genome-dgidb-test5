@@ -158,7 +158,7 @@ sub find_unaligned_or_failed_read_sets {
 
     my @attempted_or_successful_model_readsets = 
     Genome::Model::ReadSet->get(model_id=> $model->id , first_build_id=> {operator => 'ne', value=>undef});
-     for my $attempted_readset (@attempted_or_successful_model_readsets) {
+     for my $attempted_readset (@attempted_or_successful_model_readsets, @undone_model_readsets) {
         my @events = Genome::Model::Event->get(model_id=>$model->id, 
         run_id=>$attempted_readset->read_set_id, ref_seq_id=>undef);
 
