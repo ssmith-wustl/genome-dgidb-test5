@@ -42,6 +42,8 @@ class Genome::RunChunk::Solexa {
                                            },
         run_type                        => { via => "_run_lane_solexa" },
         gerald_directory                => { via => "_run_lane_solexa" },
+        median_insert_size              => { via => "_run_lane_solexa" },
+        sd_above_insert_size            => { via => "_run_lane_solexa" },
     ],
 };
 
