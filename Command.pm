@@ -250,7 +250,12 @@ sub help_brief
             return "no sub-commands implemented!"
         }
     }
-    return "!!! define help_brief() in module $self!";
+    if (my $doc = $self->get_class_object->doc) {
+        return $doc;
+    }
+    else {
+        return "no description!!!: define 'doc' in $self";
+    }
 }
 
 sub help_bare_args
