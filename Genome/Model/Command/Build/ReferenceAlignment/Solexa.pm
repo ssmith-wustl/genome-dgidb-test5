@@ -160,7 +160,7 @@ sub find_unaligned_or_failed_read_sets {
     Genome::Model::ReadSet->get(model_id=> $model->id , first_build_id=> {operator => 'ne', value=>undef});
      for my $attempted_readset (@attempted_or_successful_model_readsets) {
         my @events = Genome::Model::Event->get(model_id=>$model->id, 
-        run_id=>$attempted_readset->read_set_id);
+        run_id=>$attempted_readset->read_set_id, ref_seq_id=>undef);
 
         if(my @broke_events = grep {$_->event_status =~ /Crashed|Failed/} @events ) {
             #shit, we have problems
@@ -319,8 +319,8 @@ if($self->testing_flag) {
 my $sendmail = "/usr/sbin/sendmail -t";
 my $from = "From: ssmith\@genome.wustl.edu\n";
 my $reply_to = "Reply-to: thisisafakeemail\n";
-my $subject = "Subject: You're fired\n";
-my $content = "Just kidding, this is the Build failure email. your build ". $self->id . " failed some portion of the $word_that_describes_what_i_failed phase. \n\n";
+my $subject = "Subject: Build failed, you suck\n";
+my $content = "This is the Build failure email. your build ". $self->id . " failed some portion of the $word_that_describes_what_i_failed phase. \n\n";
 my $to = "To: " . $self->user_name . '@genome.wustl.edu' . "\n";
 
 my $helpful_link1= "https://gscweb.gsc.wustl.edu/cgi-bin/solexa/genome-model-stage1.cgi?model-name=" . $self->model->name  .    "&refresh=1\n\n";
