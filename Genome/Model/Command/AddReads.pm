@@ -72,8 +72,6 @@ sub execute {
 
     my $model = $self->model;
 
-    my $read_set_query_method_name = $model->read_set_query_method_name;
-
     my $redo_all = $self->redo_all();
     if ($redo_all) {
         return $self->_redo_all();
@@ -103,20 +101,16 @@ sub execute {
             # continue, b/c we'll list for the user which reads are available to add
         }
         my $read_set_class_name = $model->read_set_class_name;
-        $self->status_message('Checking for '. $read_set_class_name .' read sets by '. $read_set_query_method_name
-                              .' with a value of '. $model->$read_set_query_method_name
-                              .' for the '. $model->sequencing_platform .' sequencing platform...');
+        $self->status_message('Checking for '. $read_set_class_name .' read sets.');
 
         # How many potential read sets exist for read_set_class_name
-        my @input_read_sets = $model->compatible_input_read_sets();
-        $self->status_message('Found '. scalar(@input_read_sets) .' by '. $read_set_query_method_name
-                              .' with a value of '. $model->$read_set_query_method_name
-                              .' from the class '. $read_set_class_name);
+        my @input_read_sets = $model->compatible_input_read_sets;
+        $self->status_message('Found '. scalar(@input_read_sets) .' compatible read sets.');
 
         # How many read sets have been assigned to this model
-        my @read_set_assignment_events = $model->read_set_assignment_events();
-        $self->status_message('This model has '. scalar(@read_set_assignment_events) .' read sets already assigned.');
-        my @desc = sort map { $_->read_set->full_name . " (" . $_->read_set->id . ")" } @read_set_assignment_events;
+        my @read_sets = $model->read_sets;
+        $self->status_message('This model has '. scalar(@read_sets) .' read sets already assigned.');
+        my @desc = sort map { $_->read_set->full_name . " (" . $_->read_set_id . ")" } @read_sets;
         for my $desc (@desc) {
             $self->status_message("    " . $desc);
         }
@@ -150,19 +144,9 @@ sub execute {
 
     for my $available_read_set (@available_read_sets) {
         my $read_set_class_name = $model->read_set_class_name;
-        my $run_chunk = $read_set_class_name->get_or_create_from_read_set( $available_read_set, $read_set_query_method_name );
+        my $run_chunk = $read_set_class_name->get_or_create_from_read_set($available_read_set);
         unless ($run_chunk) {
             $self->error_message('Could not create a genome model run chunk for this read set.');
-            return;
-        }
-        unless ($model->$read_set_query_method_name eq $run_chunk->$read_set_query_method_name) {
-            $self->error_message(
-                                 'Bad '. $read_set_query_method_name .' value '.
-                                 $run_chunk->$read_set_query_method_name
-                                 .' on '. $read_set_class_name->_desc_dw_obj($available_read_set)
-                                 .' does not match model '. $read_set_query_method_name .' '.
-                                 $model->$read_set_query_method_name
-                             );
             return;
         }
         my $read_set_link= Genome::Model::ReadSet->get(
