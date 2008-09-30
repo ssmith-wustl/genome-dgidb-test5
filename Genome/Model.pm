@@ -32,22 +32,6 @@ class Genome::Model {
         name                         => { is => 'VARCHAR2', len => 255 },
         sample_name                  => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         subject_name                 => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        read_set_query_method_name   => {
-                                         doc => 'This returns the method name to access the read set data',
-                                         calculate_from => ['sample_name','subject_name'],
-                                         calculate => q|
-                                                        if ($sample_name) {
-                                                            if($subject_name) {
-                                                                die ('Not supporting sample_name and subject_name');
-                                                            }
-                                                            return 'sample_name';
-                                                        } elsif ($subject_name) {
-                                                            return 'subject_name';
-                                                        } else {
-                                                            die ('Must provide sample_name of subject_name for model');
-                                                        }
-                                                     |,
-                                     },
         instrument_data_links        => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
                                             doc => "for models which directly address instrument data, the list of assigned run chunks"
                                         },
@@ -121,8 +105,8 @@ sub compatible_input_read_sets {
     my $self = shift;
 
     my $input_read_set_class_name = $self->input_read_set_class_name;
-    my $read_set_query_method_name = $self->read_set_query_method_name;
-    my @input_read_sets = $input_read_set_class_name->get($read_set_query_method_name => $self->$read_set_query_method_name);
+    my $sample_name = $self->subject_name || $self->sample_name;
+    my @input_read_sets = $input_read_set_class_name->get(sample_name => $sample_name);
 
     #TODO: move
     if ($input_read_set_class_name eq 'GSC::RunLaneSolexa') {
@@ -200,7 +184,8 @@ sub model_links_directory {
 sub resolve_data_directory {
     my $self = shift;
     my $name = $self->name;
-    my $base_dir =$self->model_links_directory . '/' . $self->sample_name . "_" . $name;
+    my $subject_name = $self->subject_name || $self->sample_name;
+    my $base_dir =$self->model_links_directory . '/' . $subject_name . "_" . $name;
     return $base_dir;
 }
 
@@ -208,7 +193,8 @@ sub latest_build_directory {
     my $self = shift;
     my $name = $self->name;
     #FIXME: LOOKUP LATEST BUILD
-    my $base_dir =$self->model_links_directory . '/' . $self->sample_name . "_" . $name;
+    my $subject_name = $self->subject_name || $self->sample_name;
+    my $base_dir =$self->model_links_directory . '/' . $subject_name . "_" . $name;
     if(my @builds = Genome::Model::Command::Build->get(model_id=>$self->id)) {
         @builds = sort {$a->build_id <=> $b->build_id} @builds;
         $base_dir .= '/build' . $builds[-1]->build_id;
