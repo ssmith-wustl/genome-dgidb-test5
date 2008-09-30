@@ -42,6 +42,15 @@ class Genome::Model::Tools::Fastq::FilterPolyA {
     doc => 'Remove poly-a reads from a fastq, or pair of paired-end fastqs.',
 };
 
+sub help_synopsis {
+    return <<EOS
+gt fastq filter-poly-a --input1=lane1.fastq --output1=lane1.filtered.fastq
+
+gt fastq filter-poly-a --input1=lane1-fwd.fastq --input2=lane2-rev.fastq --output1=lane1-fwd.filtered.fastq --output2=lane1-rev.filtered.fastq
+(not implemented)
+EOS
+}
+
 sub help_detail {
     return <<EOS 
 Filters a fastq or fastq pair, removing poly-A reads.
