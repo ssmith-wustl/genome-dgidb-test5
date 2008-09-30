@@ -92,6 +92,7 @@ sub execute {
                                   .' event_id '. $command->genome_model_event_id ."\n");
             $prior_event_id = $command->id;
         }
+        $read_set->first_build_id($self->build_id);
         $last_event_id = $prior_event_id;
     }
 
