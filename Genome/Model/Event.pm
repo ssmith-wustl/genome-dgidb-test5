@@ -285,13 +285,14 @@ sub check_for_existence {
 
 sub create_file {
     my ($self, $output_name, $path) = @_;
+    $DB::single=1;
     if (!$path) {
         die "Output $output_name opened without a specified path!"
     }
     elsif (my @existing = $self->outputs(name => $output_name)) {
         if ($output_name and $existing[0]->value ne $path) {
             die "Input $output_name already exists with value " . $existing[0]->value
-                . ".  Cannot open with value $path";
+            . ".  Cannot open with value $path";
         }
         die "Attempting to re-create already created file! $output_name: $path";
     }
@@ -299,14 +300,14 @@ sub create_file {
         die "File $path already exists!  Canot create output $output_name: $path\n";
     }
     else {
-        $self->add_output(name => $output_name, value => $path);
-    }
-    my $fh = IO::File->new('>'.$path);
-    die "Failed to make file $path! $?" unless $fh;    
-    unless ($self->add_output(name => $output_name, value => $path)) {
-        die "Error adding ouput $output_name $path!";
-    }
+        my $fh = IO::File->new('>'.$path);
+        die "Failed to make file $path! $?" unless $fh;    
+        unless ($self->add_output(name => $output_name, value => $path)) {
+            die "Error adding ouput $output_name $path!";
+        }
+
     return $fh;
+    }
 }
 
 sub open_file {
@@ -477,11 +478,11 @@ sub resolve_log_directory {
     my $self = shift;
 
     if ($self->can('run') && defined $self->run) {
-        return sprintf('%s/logs/%s/%s', $self->model->data_directory,
+        return sprintf('%s/logs/%s/%s', $self->model->latest_build_directory,
                                         $self->run->sequencing_platform,
                                         $self->run->name);
     } else {
-        return sprintf('%s/logs/%s', $self->model->data_directory,
+        return sprintf('%s/logs/%s', $self->model->latest_build_directory,
                                      $self->ref_seq_id);
     }
 }

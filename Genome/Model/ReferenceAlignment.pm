@@ -156,11 +156,11 @@ sub _calculate_run_count {
 
 sub other_snp_related_metric_directory {
     my $self=shift;
-    return $self->data_directory . "/other_snp_related_metrics/";
+    return $self->latest_build_directory . "/other_snp_related_metrics/";
 }
 sub maq_snp_related_metric_directory {
     my $self=shift;
-    return $self->data_directory . "/maq_snp_related_metrics/";
+    return $self->latest_build_directory . "/maq_snp_related_metrics/";
 }
 
 
@@ -607,12 +607,12 @@ sub _variation_metrics_files {
 
 sub _filtered_variants_dir {
     my $self = shift;
-    return sprintf('%s/filtered_variations/',$self->data_directory);
+    return sprintf('%s/filtered_variations/',$self->latest_build_directory);
 }
 
 sub _reports_dir {
     my $self = shift;
-    return sprintf('%s/annotation/',$self->data_directory);
+    return sprintf('%s/annotation/',$self->latest_build_directory);
 }
 
 sub _files_for_pattern_and_optional_ref_seq_id {
@@ -624,7 +624,7 @@ sub _files_for_pattern_and_optional_ref_seq_id {
         map { 
             sprintf(
                 $pattern,
-                $self->data_directory,
+                $self->latest_build_directory,
                 $_
             )
         }
@@ -646,7 +646,7 @@ sub _files_for_pattern_and_params {
 
 sub accumulated_alignments_directory {
     my $self = shift;
-    return $self->data_directory . '/alignments';
+    return $self->latest_build_directory . '/alignments';
 }
 
 sub maplist_file_paths {
@@ -757,7 +757,7 @@ sub Xresolve_accumulated_alignments_filename {
     my %p = @_;
     my $refseq = $p{ref_seq_id};
     
-    my $model_data_directory = $self->data_directory;
+    my $model_data_directory = $self->latest_build_directory;
     
     my @subsequences = grep {$_ ne "all_sequences" } $self->get_subreference_names(reference_extension=>'bfa');
     
