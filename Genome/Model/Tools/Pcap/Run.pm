@@ -1056,16 +1056,16 @@ sub _get_bcontig_params
     if ($self->pcap_run_type eq 'RAW_454')
     {
 	#for now just return the same params .
-	return '-p 90 -d 80 -s 1400'
+	return '-d 40 -e 0 -f 2 -g 8 -k 20 -l 75 -p 82 -q 0 -s 1400'
 	    if $self->parameter_setting eq 'NORMAL';
 
-	return '-p 90 -d 80 -s 1400'
+	return '-d 40 -e 0 -f 2 -g 8 -k 20 -l 75 -p 82 -q 0 -s 1400'
 	    if $self->parameter_setting eq 'RELAXED';
 
-	return '-p 90 -d 80 -s 1400'
+	return '-d 40 -e 0 -f 2 -g 8 -k 20 -l 75 -p 82 -q 0 -s 1400'
 	    if $self->parameter_setting eq 'MORE_RELAXED';
 
-	return '-p 90 -d 80 -s 1400'
+	return '-d 40 -e 0 -f 2 -g 8 -k 20 -l 75 -p 82 -q 0 -s 1400'
 	    if $self->parameter_setting eq 'STRINGENT';	
     }
 
