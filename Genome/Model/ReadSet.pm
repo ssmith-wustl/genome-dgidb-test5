@@ -21,7 +21,8 @@ class Genome::Model::ReadSet {
         sample_name         => { via => 'read_set' },
         unique_reads_across_library     => { via => 'read_set' },
         duplicate_reads_across_library  => { via => 'read_set' },
-
+        median_insert_size => {via => 'read_set'},
+        sd_above_insert_size => {via => 'read_set'},
  
     ],
     schema_name => 'GMSchema',
