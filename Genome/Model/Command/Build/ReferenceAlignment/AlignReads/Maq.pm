@@ -486,7 +486,7 @@ $DB::single = $DB::stopper;
         }
         # TODO: extract additional details from the read set
         # about the insert size, and adjust the maq parameters.
-        $aligner_params .= "-a $upper_bound_on_insert_size";
+        $aligner_params .= " -a $upper_bound_on_insert_size";
     }   
  
     # prepare the alignment command
@@ -562,7 +562,7 @@ $DB::single = $DB::stopper;
     }
     
     $self->generate_metric($self->metrics_for_class);
-    my $read_set_link=Genome::Model::ReadSet->get(model_id=>$self->model_id, read_set_id=> $self->run_id);
+    $read_set_link=Genome::Model::ReadSet->get(model_id=>$self->model_id, read_set_id=> $self->run_id);
     $read_set_link->first_build_id($self->parent_event_id);
     
     return 1;
