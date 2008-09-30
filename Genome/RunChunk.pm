@@ -60,24 +60,26 @@ sub get_or_create_from_read_set {
 
     #TODO:  This is now optional and once all read sets have a corresponding pse we can eliminate completely
     my $read_set_query_method_name = shift;
-
+    my $ps = GSC::ProcessStep->get(process_to => 'queue instrument data for genome modeling');
     my @pse_params = GSC::PSEParam->get(
                                         param_name => 'instrument_data_id',
                                         param_value => $read_set->id,
                                     );
-    my $pse;
-    if (scalar(@pse_params) == 1) {
-        my $pse_param = $pse_params[0];
-        my $ps = GSC::ProcessStep->get(process_to => 'queue instrument data for genome modeling');
-        $pse = GSC::PSE->get(
-                             ps_id => $ps->ps_id,
-                             pse_id => $pse_param->pse_id,
-                         );
-    } elsif (scalar(@pse_params) > 1) {
-        #ERROR or use one?
-        $class->error_message('More than one pse found for pse param(instrument_data_id)');
-        return;
+    my @pses;
+    for my $pse_param (@pse_params) {
+        push @pses, GSC::PSE->get(
+                                  pse_id => $pse_param->pse_id,
+                                  ps_id => $ps->ps_id,
+                              );
     }
+    my $pse;
+    if (scalar(@pses) == 1) {
+        $pse = $pses[0];
+    } elsif (scalar(@pses) > 1) {
+        $class->warning_message('More than one pse found for pse param(instrument_data_id) and reads set id '. $read_set->id);
+        ;
+        $pse = $pses[0];
+    } 
 
     my $run_chunk = Genome::RunChunk->get(seq_id => $read_set->id);
 
