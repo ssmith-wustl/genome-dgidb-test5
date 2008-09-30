@@ -2,6 +2,9 @@
 
 package PAP::Command::UploadResult;
 
+use lib '/gscuser/mjohnson/bioperl-svn/bioperl-live';
+use lib '/gscuser/mjohnson/bioperl-svn/bioperl-run';
+
 use strict;
 use warnings;
 
@@ -26,8 +29,10 @@ class PAP::Command::UploadResult {
 };
 
 operation PAP::Command::UploadResult {
-    input  => [ 'bio_seq_features', 'biosql_namespace' ],
-    output => [ ],
+    input        => [ 'bio_seq_features', 'biosql_namespace' ],
+    output       => [ ],
+    lsf_queue    => 'long',
+    lsf_resource => 'rusage[tmp=100]';
 };
 
 sub sub_command_sort_position { 10 }
@@ -71,8 +76,20 @@ sub execute {
     
     foreach my $ref (@{$self->bio_seq_features()}) {
 
-        foreach my $feature (@{$ref}) {
+        my @fixup = ( );
 
+        if (ref($ref) eq 'ARRAY') {
+            @fixup = @{$ref};
+        }
+        else {
+            push @fixup, $ref;
+            
+        }
+        
+        FEATURE: foreach my $feature (@fixup) {
+
+            unless (defined($feature)) { next FEATURE; }
+            
             my $display_name = $feature->display_name();
             
             my $result = $adp->find_by_query(
@@ -103,6 +120,14 @@ sub execute {
                                     psort_score
                                     kegg_evalue
                                     kegg_description
+                                    blastp_bit_score
+                                    blastp_evalue
+                                    blastp_percent_identical
+                                    blastp_query_start
+                                    blastp_query_end
+                                    blastp_subject_start
+                                    blastp_subject_end
+                                    blastp_hit_name
                                    )
                                 ) {
                 
@@ -114,12 +139,14 @@ sub execute {
                 }
                 
             }
-            
+           
+            $db_feature->store();
+
         }
         
     }
 
-    $adp->rollback();
+    $adp->commit();
     
     return 1;
     

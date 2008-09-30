@@ -1,6 +1,9 @@
 use strict;
 use warnings;
 
+use lib '/gscuser/mjohnson/bioperl-svn/bioperl-live';
+use lib '/gscuser/mjohnson/bioperl-svn/bioperl-run';
+
 use Workflow;
 
 use Bio::DB::BioDB;

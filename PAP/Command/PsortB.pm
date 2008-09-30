@@ -7,7 +7,6 @@ use warnings;
 
 use Workflow;
 
-use Bio::Annotation::SimpleValue;
 use Bio::Seq;
 use Bio::SeqIO;
 use Bio::SeqFeature::Generic;
@@ -38,8 +37,10 @@ class PAP::Command::PsortB {
 };
 
 operation PAP::Command::PsortB {
-    input  => [ 'fasta_file', 'gram_stain' ],
-    output => [ 'bio_seq_feature' ],
+    input        => [ 'fasta_file', 'gram_stain' ],
+    output       => [ 'bio_seq_feature' ],
+    lsf_queue    => 'short',
+    lsf_resource => 'rusage[tmp=100]';
 };
 
 sub sub_command_sort_position { 10 }
@@ -98,7 +99,7 @@ sub execute {
                   $temp_fn,
                   '2>',
                   \$psortb_err,
-              );
+              ) || die "psort-b failed: $CHILD_ERROR";
     
     my $feature_ref = $self->parse_psortb_terse($temp_fn);
     

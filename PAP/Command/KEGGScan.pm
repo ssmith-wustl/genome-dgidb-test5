@@ -7,6 +7,7 @@ use warnings;
 
 use Workflow;
 
+use Bio::Annotation::DBLink;
 use Bio::Seq;
 use Bio::SeqIO;
 use Bio::SeqFeature::Generic;
@@ -40,8 +41,10 @@ class PAP::Command::KEGGScan {
 };
 
 operation PAP::Command::KEGGScan {
-    input  => [ 'fasta_file'      ],
-    output => [ 'bio_seq_feature' ],
+    input        => [ 'fasta_file'      ],
+    output       => [ 'bio_seq_feature' ],
+    lsf_queue    => 'long',
+    lsf_resource => 'rusage[tmp=100]';
 };
 
 sub sub_command_sort_position { 10 }
@@ -77,7 +80,8 @@ sub execute {
                              File::Temp::tempdir(
                                                  'PAP_keggscan_XXXXXXXX',
                                                  DIR     => '/gscmnt/temp212/info/annotation/PAP_tmp',
-                                                 CLEANUP => 1,
+                                                 #CLEANUP => 1,
+                                                 CLEANUP => 0,
                                              )
                          );
 
@@ -98,13 +102,13 @@ sub execute {
         local $CWD = $self->working_directory();
 
         IPC::Run::run(
-                     \@keggscan_command,
-                     \undef,
-                     '>',
-                     \$kegg_stdout,
-                     '2>',
-                     \$kegg_stderr,
-                     );
+                      \@keggscan_command,
+                      \undef,
+                      '>',
+                      \$kegg_stdout,
+                      '2>',
+                      \$kegg_stderr,
+                     ) || die "KEGGscan failed: $kegg_stderr";
                      
     }
     
@@ -181,6 +185,8 @@ sub parse_result {
     my @features = ( );
     
     while (my $line = <$output_fh>) {
+
+        chomp $line;
 
         my @fields = split /\t/, $line;
         

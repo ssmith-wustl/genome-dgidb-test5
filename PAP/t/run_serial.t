@@ -9,17 +9,17 @@ use lib '/gscuser/mjohnson/bioperl-svn/bioperl-run';
 use above 'Workflow';
 use Data::Dumper;
 
-my $w = Workflow::Model->create_from_xml('data/pap_outer.xml');
+my $w = Workflow::Model->create_from_xml($ARGV[0] || 'data/pap_outer_keggless.xml');
 
 my @errors = $w->validate;
 die 'Too many problems: ' . join("\n", @errors) unless $w->is_valid();
 
 my $out = $w->execute(
     'input' => {
-        'fasta_file'       => 'data/B_coprocola.fasta',
-        'chunk_size'       => 10,
-        'biosql_namespace' => 'MGAP',
-        'gram_stain'       => 'negative',
+        'fasta file'       => 'data/B_coprocola.chunk.fasta',
+        'chunk size'       => 10,
+        'biosql namespace' => 'MGAP',
+        'gram stain'       => 'negative',
     }
 );
 

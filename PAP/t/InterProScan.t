@@ -27,8 +27,20 @@ foreach my $feature (@{$ref}) {
 
     isa_ok($feature, 'Bio::SeqFeature::Generic');
 
+    ok($feature->has_tag('interpro_analysis'));
+    ok($feature->has_tag('interpro_evalue'));
+    ok($feature->has_tag('interpro_description'));
+
     my $annotation_collection = $feature->annotation();
 
     isa_ok($annotation_collection, 'Bio::Annotation::Collection');
+
+    my @annotations = $annotation_collection->get_Annotations();
+
+    foreach my $annotation (@annotations) {
+
+        isa_ok($annotation, 'Bio::Annotation::DBLink'); 
+
+    }
 
 }

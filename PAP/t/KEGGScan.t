@@ -8,7 +8,7 @@ use Bio::SeqIO;
 
 use Cwd;
 use File::Temp;
-use Test::More tests => 287;
+use Test::More tests => 193;
 
 BEGIN {
     use_ok('PAP::Command');
@@ -35,10 +35,10 @@ foreach my $feature (@{$ref}) {
 
     isa_ok($annotation_collection, 'Bio::Annotation::Collection');
 
-    foreach my $annotation ($annotation_collection->get_Annotations()) {
-
-        isa_ok($annotation, 'Bio::Annotation::DBLink');
+    my @annotations = $annotation_collection->get_Annotations();
+    my @dblinks     = grep { $_->isa('Bio::Annotation::DBLink') } @annotations;
     
-    }
-    
+    my ($gene_dblink)      = grep { $_->primary_id() =~ /^\w{3}\:\w+$/ } @dblinks;
+    my ($orthology_dblink) = grep { $_->primary_id() =~ /^K\d+$/       } @dblinks;
+  
 }
