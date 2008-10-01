@@ -19,9 +19,9 @@ use Genome::Model::Command::Build::ReferenceAlignment::Test;
 # NOTE: run from 32-bit first to compile correct inline libraries
 # Then this should run from 64-bit to actually execute.
 my $archos = `uname -a`;
-if ($archos !~ /64/) {
+#if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
-}
+#}
 
 plan tests => 383;;
 
@@ -30,12 +30,12 @@ my $tmp_dir;
 
 my $model_name = "test_solexa_$ENV{USER}";
 my $processing_profile_name = "test_solexa_pp_$ENV{USER}";
-my $sample_name = 'H_GV-933124G-skin1-9017g';
-my @read_sets = setup_test_data($sample_name);
+my $subject_name = 'H_GV-933124G-skin1-9017g';
+my @read_sets = setup_test_data($subject_name);
 
 my $add_reads_test = Genome::Model::Command::Build::ReferenceAlignment::Test->new(
     model_name => $model_name,
-    sample_name => $sample_name,
+    subject_name => $subject_name,
     processing_profile_name => $processing_profile_name,
     read_sets => \@read_sets
 );
@@ -61,7 +61,7 @@ $add_reads_test->runtests;
 exit;
 
 sub setup_test_data {
-    my $sample_name = shift;
+    my $subject_name = shift;
     my @read_sets;
     ####If we have a test gzip of files, we need to unzip it here
 
@@ -87,7 +87,7 @@ sub setup_test_data {
                 lane                       => $lane,
                 full_path                  => $run_dir,
                 flow_cell_id               => $$run_dir_params{'flow_cell_id'},
-                sample_name                => $sample_name,
+                sample_name                => $subject_name,
                 clusters_avg               => -1,
                 clusters_stdev             => -1,
                 filt_aligned_clusters_pct  => -1,

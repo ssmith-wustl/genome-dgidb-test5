@@ -54,7 +54,7 @@ my %pp_2_params = (
 my @pp_params = (\%pp_1_params,\%pp_2_params);
 
 my $model_name = 'test_assembly_model';
-my $sample_name = 'TSP_Round1-4_Normal_Amplicon_Pool';
+my $subject_name = 'TSP_Round1-4_Normal_Amplicon_Pool';
 
 for my $pp_params (@pp_params) {
     my %pp_params = %{$pp_params};
@@ -68,10 +68,10 @@ for my $pp_params (@pp_params) {
     my $model = Genome::Model::Assembly->create(
                                                 processing_profile_id => $pp->id,
                                                 name => $model_name,
-                                                sample_name => $sample_name,
+                                                subject_name => $subject_name,
                                             );
     isa_ok($model,'Genome::Model::Assembly');
-    is($model->sample_name,$sample_name,'sample_name accessor');
+    is($model->subject_name,$subject_name,'subject_name accessor');
     is($model->name,$model_name,'name accessor');
     my $add_reads_command = Genome::Model::Command::AddReads->create(
                                                                      model_id => $model->id,

@@ -18,14 +18,14 @@ plan tests => 152;
 
 my $tmp_dir = File::Temp::tempdir();
 my $model_name = "test_454_$ENV{USER}";
-my $sample_name = 'TSP_Round1-4_Normal_Amplicon_Pool';
+my $subject_name = 'TSP_Round1-4_Normal_Amplicon_Pool';
 my $pp_name = '454_DX_Pipeline';
 
-my @read_sets = setup_test_data($sample_name);
-#GSC::RunRegion454->get(sample_name => $sample_name);
+my @read_sets = setup_test_data($subject_name);
+#GSC::RunRegion454->get(sample_name => $subject_name);
 my $add_reads_test = Genome::Model::Command::Build::ReferenceAlignment::Test->new(
                                                                  model_name => $model_name,
-                                                                 sample_name => $sample_name,
+                                                                 subject_name => $subject_name,
                                                                  processing_profile_name => $pp_name,
                                                                  read_sets => \@read_sets
                                                              );
@@ -35,7 +35,7 @@ exit;
 
 
 sub setup_test_data {
-    my $sample_name = shift;
+    my $subject_name = shift;
     my @read_sets;
     chdir $tmp_dir;
     my $zip_file = '/gsc/var/cache/testsuite/data/Genome-Model-Command-AddReads/addreads-454.tgz';
@@ -52,10 +52,10 @@ sub setup_test_data {
             my $region_number = $1;
             my $rr454 = GSC::RunRegion454->create(
                                                   analysis_name   => $analysis_name,
-                                                  incoming_dna_name => $sample_name,
+                                                  incoming_dna_name => $subject_name,
                                                   region_number  => $region_number,
                                                   run_name       => $run_name,
-                                                  sample_name    => $sample_name,
+                                                  sample_name    => $subject_name,
                                                   total_key_pass => -1,
                                                   total_raw_wells => -1,
                                                   copies_per_bead => -1,

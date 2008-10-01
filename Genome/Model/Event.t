@@ -15,7 +15,7 @@ diag("testing sub-classification by event_type formula...");
 my $event_type = "genome-model add-reads align-reads maq";
 my $event_class_name = "Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq";
 my ($pp) = sort { $a->id <=> $b->id } grep {$_->read_aligner_name eq 'maq0_6_5' } Genome::ProcessingProfile::ReferenceAlignment->get();
-my $m = Genome::Model->create(id => -1, sample_name => "test_case_sample$$",  processing_profile => $pp);
+my $m = Genome::Model->create(id => -1, subject_name => "test_case_sample$$",  processing_profile => $pp);
 my $r = Genome::RunChunk->create(-1, sequencing_platform => 'solexa');
 
 my $e1 = Genome::Model::Event->create(event_type => $event_type, id => -2, model_id => $m->id, run_id => $r->id);
