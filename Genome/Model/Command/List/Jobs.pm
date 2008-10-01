@@ -112,7 +112,6 @@ sub _summarize_jobs {
     foreach my $event ( @events ) {
         my $jobid = $event->lsf_job_id || '<none>';
         my $model = $event->model;
-        my $run = $event->run;
 
         my $max_retries;
         {
@@ -143,12 +142,11 @@ sub _summarize_jobs {
             $jobid .= '~';
             $any_without_retries = 1;
         }
-        printf("%-9s %-8s %-10s %-27s %-35s %s\n",
+        printf('%-9s %-8s %-10s %-27s %s'."\n",
                $jobid,
                $this_job_info->{'user'} || $event->user_name || '<unknown>',
                $this_job_info->{'stat'} || $event->event_status || 'running',
                $model->name,
-               substr($run->full_path, -35),
                $event->event_type || '<unknown>',
             );
     }
