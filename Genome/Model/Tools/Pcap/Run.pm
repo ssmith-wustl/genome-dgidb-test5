@@ -141,7 +141,7 @@ sub help_brief {
 
 sub help_synopsis {                         
     return <<EOS
-genome-model tools assemble-reads pcap --project_name EA_ASSEMBLY
+gt pcap run
 EOS
 }
 
@@ -1013,7 +1013,9 @@ sub _get_pcap_params
 
     #<pcap_prog_type> <pcap.input.fof> -y <val> -z <val>
 
-    return '-l 300 -w 200' if $self->pcap_run_type eq 'RAW_454';
+#    return '-l 300 -w 200' if $self->pcap_run_type eq 'RAW_454';
+
+    return '-l 300 -o 40 -s 1200 -w 200' if $self->pcap_run_type eq 'RAW_454';
     return '-l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'POLY';
     return '-l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'NORMAL';
 
