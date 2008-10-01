@@ -96,14 +96,7 @@ sub execute {
         $last_event_id = $prior_event_id;
     }
 
-    my $data_directory = $model->data_directory;
-    unless (-e $data_directory) {
-        unless($self->create_directory($data_directory)) {
-            $self->error_message("Failed to create directory '$data_directory'");
-            return;
-        }
-    }
-    $self->data_directory($data_directory);
+    $self->data_directory($model->data_directory);
 
     my $assembler = Genome::Model::Command::Build::Assembly::Assemble->create(
                                                                               model_id => $self->model_id,
