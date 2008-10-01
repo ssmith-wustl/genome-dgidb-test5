@@ -18,7 +18,6 @@ class Genome::Model::Command::Create::Model {
         processing_profile          => { is => 'Genome::ProcessingProfile', doc => 'Not used as a parameter', id_by => 'processing_profile_id', is_optional => 1, },
         processing_profile_name     => { is => 'varchar', len => 255,  doc => 'The name of the processing profile to be used. '},
         model_name                  => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
-        sample                      => { is => 'varchar', is_optional => 1, len => 255, doc => 'The name of the sample all the reads originate from' },
         subject_name                => { is => 'varchar', is_optional => 1, len => 255, doc => 'The name of the subject all the reads originate from' },
         model                       => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id', doc => 'Not used as a parameter' },
         instrument_data             => { is => 'String', doc => 'The instrument data for this model', is_optional => 1, via => 'inputs', to => 'value', where => [name => 'instrument_data'] },
@@ -47,7 +46,7 @@ sub help_synopsis {
     return <<"EOS"
 genome-model create
                     --model-name test5
-                    --sample ley_aml_patient1_tumor
+                    --subject_name ley_aml_patient1_tumor
                     --processing-profile-name nature_aml_08
 EOS
 }
@@ -124,18 +123,30 @@ sub execute {
 sub _build_model_filesystem_paths {
     my $self = shift;
     my $model = shift;
-    
-    my $base_dir = $model->data_directory;
-    
-    eval {mkpath("$base_dir");};
-    
-    if ($@) {
-        $self->error_message("model base dir $base_dir could not be successfully created");
+
+    # This is actual data directory on the filesystem
+    # Currently the disk is hard coded in $model->base_parent_directory
+    my $model_data_dir = $model->data_directory;
+    unless ($self->create_directory($model_data_dir)) {
+        $self->error_message("model data directory '$model_data_dir could' not be successfully created");
         return;
     }
-    
+
+    # This is a human readable(model_name) symlink to the model_id based directory
+    # This symlink is created so humans can find their data on the filesystem
+    my $model_link = $model->model_link;
+    if (-l $model_link) {
+        $self->warning_message("model symlink '$model_link' already exists");
+        unless (unlink $model_link) {
+            $self->error_message("existing model symlink '$model_link' could not be removed");
+            return;
+        }
+    }
+    unless (symlink($model_data_dir,$model_link)) {
+        $self->error_message("model symlink '$model_link => $model_data_dir'  could not be successfully created");
+        return;
+    }
     return 1;
-    
 }
 
 sub _extract_command_properties_and_duplicate_keys_for__name_properties{
