@@ -14,7 +14,7 @@ class Genome::Model::Command::List::Models {
              is_constant => 1, 
             value => 'Genome::Model' 
         },
-        show => { default_value => 'id,name,sample_name,processing_profile_name' },
+        show => { default_value => 'id,name,subject_name,processing_profile_name' },
     ],
 };
 
