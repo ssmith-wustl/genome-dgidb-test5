@@ -7,7 +7,14 @@ use Genome;
 
 class Genome::Model::Command::Build::ReferenceAlignment {
     is => 'Genome::Model::Command::Build',
-    has => [ ],
+    has => [
+            testing_flag => {
+                             is => 'Integer',
+                             doc =>'When set to 1, turns off automatic RunJobsing...',
+                             is_optional=>1,
+                             default=>0,
+                         },
+    ],
  };
 
 sub sub_command_sort_position { 40 }
