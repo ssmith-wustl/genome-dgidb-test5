@@ -2,30 +2,12 @@ package Genome::Model::Command::Build::ReferenceAlignment::Solexa;
 
 use strict;
 use warnings;
+
 use Genome;
 
 class Genome::Model::Command::Build::ReferenceAlignment::Solexa {
     is => 'Genome::Model::Command::Build::ReferenceAlignment',
     has => [],
-    has => [
-        model_id    => {
-            is => 'Integer', 
-            doc => 'Identifies the genome model to which we\'ll add the reads.'
-        },
-        testing_flag => {
-            is => 'Integer',
-            doc =>'When set to 1, turns off automatic RunJobsing...',
-            is_optional=>1,
-            default=>0,
-        },
-      
-        #  data_directory =>{
-            #    is => 'String',
-            #    is_calculated => 1,
-            #       calculate => q| return $self->model->latest_build_directory |,
-            #     } 
-            
-    ],
 
  };
 
