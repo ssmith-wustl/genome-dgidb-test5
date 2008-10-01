@@ -62,6 +62,7 @@ sub get_or_create_from_read_set {
         push @pses, GSC::PSE->get(
                                   pse_id => $pse_param->pse_id,
                                   ps_id => $ps->ps_id,
+                                  pse_status => 'inprogress',
                               );
     }
     my $pse;
