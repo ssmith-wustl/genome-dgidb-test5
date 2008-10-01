@@ -90,15 +90,15 @@ $DB::single = $DB::stopper;
     my $software = 'maq';
     my $build = '36';
     my $model = Genome::Model->get($self->model_id);
-    #my $sample_temp = $model->sample_name;  
+    #my $sample_temp = $model->subject_name;  
     #$sample_temp =~ s/454_EST_S_//x;
     #my ($sample_a, $sample_b) = split('-',$sample_temp);
     ##$sample_b = sprintf "%05d",$sample_b;
     #my $sample_id = $sample_a . '-' . $sample_b;
 
-    my $sample_id = $model->sample_name;
+    my $sample_id = $model->subject_name;
 
-    #my @sample_parts = split('-',$model->sample_name);
+    #my @sample_parts = split('-',$model->subject_name);
     #my $sample_id = join('-', @sample_parts[0,-1]);
 
 
