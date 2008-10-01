@@ -30,8 +30,7 @@ class Genome::Model {
         processing_profile_name      => { via => 'processing_profile', to => 'name'},
         type_name                    => { via => 'processing_profile'},
         name                         => { is => 'VARCHAR2', len => 255 },
-        sample_name                  => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        subject_name                 => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        subject_name                 => { is => 'VARCHAR2', len => 255 },
         instrument_data_links        => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
                                             doc => "for models which directly address instrument data, the list of assigned run chunks"
                                         },
@@ -88,16 +87,12 @@ sub create {
     if ($^P) {
         $self->test(1);
     }
-    if ($self->sample_name && $self->subject_name) {
-        die ('No support for both sample_name and subject_name');
-    }
 
     # If data directory has not been supplied, figure it out
     unless ($self->data_directory) {
         $self->data_directory($self->resolve_data_directory);
     }
 
-    
     return $self;
 }
 
@@ -105,8 +100,7 @@ sub compatible_input_read_sets {
     my $self = shift;
 
     my $input_read_set_class_name = $self->input_read_set_class_name;
-    my $sample_name = $self->subject_name || $self->sample_name;
-    my @input_read_sets = $input_read_set_class_name->get(sample_name => $sample_name);
+    my @input_read_sets = $input_read_set_class_name->get(sample_name => $self->subject_name);
 
     #TODO: move
     if ($input_read_set_class_name eq 'GSC::RunLaneSolexa') {
@@ -151,8 +145,15 @@ sub comparable_normal_model {
 
 # Operating directories
 
+# This is the directory for model data, alignment data, model comparison data, etc.
 sub base_parent_directory {
     "/gscmnt/839/info/medseq"
+}
+
+# This directory should never contain data
+# only symlinks to the data directories across the filesystem
+sub model_links_directory {
+    return '/gscmnt/839/info/medseq/model_links';
 }
 
 sub base_model_comparison_directory {
@@ -171,30 +172,37 @@ sub alignment_directory {
         $self->reference_sequence_name;
 }
 
-sub model_links_directory {
+# This is actual data directory on the filesystem
+# Currently the disk is hard coded in base_parent_directory
+sub model_data_directory {
     my $self = shift;
 
     if (defined($ENV{'GENOME_MODEL_TESTDIR'}) &&
     -e $ENV{'GENOME_MODEL_TESTDIR'}) {
         return $ENV{'GENOME_MODEL_TESTDIR'};
     } else {
-        return $self->base_parent_directory . "/model_links";
+        return $self->base_parent_directory .'/model_data';
     }
 }
+
+# This is a human readable(model_name) symlink to the model_id based symlink
+# This symlink is created so humans can find their data on the filesystem
+sub model_link {
+    my $self = shift;
+    return $self->model_links_directory .'/'. $self->name;
+}
+
+# This is the model_id based directory where the model data will be stored
 sub resolve_data_directory {
     my $self = shift;
-    my $name = $self->name;
-    my $subject_name = $self->subject_name || $self->sample_name;
-    my $base_dir =$self->model_links_directory . '/' . $subject_name . "_" . $name;
-    return $base_dir;
+    return $self->model_data_directory . '/' . $self->id;
 }
 
 sub latest_build_directory {
     my $self = shift;
-    my $name = $self->name;
+
     #FIXME: LOOKUP LATEST BUILD
-    my $subject_name = $self->subject_name || $self->sample_name;
-    my $base_dir =$self->model_links_directory . '/' . $subject_name . "_" . $name;
+    my $base_dir = $self->data_directory;
     if(my @builds = Genome::Model::Command::Build->get(model_id=>$self->id)) {
         @builds = sort {$a->build_id <=> $b->build_id} @builds;
         $base_dir .= '/build' . $builds[-1]->build_id;
