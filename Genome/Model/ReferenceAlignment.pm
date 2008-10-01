@@ -1556,4 +1556,9 @@ sub get_data_from_summary_file {
     return (\%new_best_fit);
 }
 
+
+sub build_subclass_name {
+    return 'reference-alignment';
+}
+
 1;
