@@ -28,8 +28,8 @@ sub new {
 
     $self->{_model_name} = $args{model_name} ||
         confess("Must define model_name for test:  $!");
-    $self->{_sample_name} = $args{sample_name} ||
-        confess("Must define sample_name for test:  $!");
+    $self->{_subject_name} = $args{subject_name} ||
+        confess("Must define subject_name for test:  $!");
     $self->{_processing_profile_name} = $args{processing_profile_name} ||
         confess("Must define processing_profile_name for test:  $!");
     if ($args{read_sets}) {
@@ -102,7 +102,7 @@ sub create_model {
     
     my $create_command= Genome::Model::Command::Create::Model->create(
                                                                       model_name => $self->{_model_name},
-                                                                      sample => $self->{_sample_name},
+                                                                      subject_name => $self->{_subject_name},
                                                                       processing_profile_name => $self->{_processing_profile_name},
                                                                       bare_args => [],
                                                                   );
