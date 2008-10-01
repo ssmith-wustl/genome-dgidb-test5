@@ -1043,7 +1043,7 @@ sub make_gold_snp_file {
         die("Could not open $output_file_name");
     }
 
-    my @related_microarray = Genome::Model::MicroArray->get(sample_name => $self->sample_name);
+    my @related_microarray = Genome::Model::MicroArray->get(subject_name => $self->subject_name);
     if (scalar(@related_microarray) == 0) {
         $self->status_message("No micro array models found with the same sample");
         return 0;
