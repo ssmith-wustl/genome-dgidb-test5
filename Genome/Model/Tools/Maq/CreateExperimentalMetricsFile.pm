@@ -28,6 +28,11 @@ class Genome::Model::Tools::Maq::CreateExperimentalMetricsFile {
            is_optional => 0,
            doc => 'File of locations to gather metrics on. Must be whitespace separated and follow form of chr start',
        },
+       'snpfilter_file' => {
+           type => 'String',
+           is_optional => 0,
+           doc => 'File of locations that passed Maq SNPFilter',
+       },
        'output_file' => {
            type => 'String',
            is_optional => 0,
@@ -119,8 +124,20 @@ sub execute {
         return;
     }
     
+
     my $locations_href = $self->build_locations_hash($locations_fh);
     $locations_fh->close;
+
+    #Handle SNPfilter output
+    
+    my $snpfilter_fh = IO::File->new($self->snpfilter_file,"r");
+    unless(defined($snpfilter_fh)) {
+        $self->error_message("Unable to open " . $self->snpfilter_file);
+        return;
+    }
+
+    $self->annotate_snpfilter($locations_href, $snpfilter_fh);
+    $snpfilter_fh->close;
 
     #open mapstat as a pipe to catch it's output
     #this seems to only catch errors properly if we do a regular perl open
@@ -134,7 +151,7 @@ sub execute {
     while( <MAPSTAT> ) {
         chomp;
 
-        $DB::Single = 1;
+        #$DB::Single = 1;
         #store read
         my %read;
         @read{@mapstat_columns} = split /\t/;
@@ -202,6 +219,7 @@ sub build_locations_hash {
             #store additional information and initialize reference sequence
             $locations{$chr}{$pos} = {  other_metrics => \@other_metrics,
                                         total_depth => 0,
+                                        snpfilter => 'NO', #store snpfilter output yes/no
                                         $ref => ExperimentalMetrics::VariantMetrics->new(), #it's ref and thus has no quality
                                      };
             
@@ -216,6 +234,28 @@ sub build_locations_hash {
 
     return \%locations;
 }
+
+sub annotate_snpfilter {
+    my ($self,$locations_href, $snpfilter_fh) = @_;
+    while(my $line = $snpfilter_fh->getline) {
+        chomp $line;
+        my ($chr, $pos, ) = split /\s+/, $line;
+        if($self->ref_name eq q{} || $self->ref_name eq $chr) {
+            $chr =~ s/\s+.*$//; #remove whitespace
+            
+            #Zero pad chromosome for sorting
+            if($chr =~ /^ \d+ $/x) {
+                $chr = sprintf "%02d", $chr;
+            }
+
+            #store additional information and initialize reference sequence
+            $locations_href->{$chr}{$pos}{'snpfilter'} = 'YES';
+            
+        }
+    }
+   return;
+}
+    
 
 sub write_data {
     my ($self, $output_fh, $locations_href) = @_;
@@ -239,6 +279,7 @@ sub write_data {
         'cns2_second_best_call',
         'cns2_log_likelihood_second_best',
         'cns2_third_best',
+        'snpfilter',
     );
     print $output_fh (join q{,}, @header),"\n"; #print header
     my @bases = qw( A C G T N );
@@ -269,6 +310,7 @@ sub write_data {
                 print $output_fh (join q{,}, @ref_metrics), q{,};
                 print $output_fh (join q{,}, $locations_href->{$chr}{$pos}{total_depth}),q{,};
                 print $output_fh (join q{,}, @{$locations_href->{$chr}{$pos}{other_metrics}});
+                print $output_fh q{,},$locations_href->{$chr}{$pos}{snpfilter};
                 print $output_fh "\n";
             }
 
