@@ -208,18 +208,30 @@ sub generate_variation_metrics_files_v2 {
     }
     return if $errors;
 
-    my $cmd = "perl /gscuser/dlarson/pipeline_mapstat/snp_stats2.pl --mapfile $map_file --ref-bfa $bfa_file --basename '${output_basename}' --locfile $snp_file --minq 1 --chr=$ref_seq";
-    $self->status_message("Running: $cmd");
-    my $result = system($cmd);
-    $result /= 256;
-    if ($result) {
-        $self->error_message("Got exit code $result!: $?");
-        return;
-    }
-    else {
-        $self->status_message("Metrics generation complete.");
-        return 1;
-    }
+    #my $cmd = "perl /gscuser/dlarson/pipeline_mapstat/snp_stats2.pl --mapfile $map_file --ref-bfa $bfa_file --basename '${output_basename}' --locfile $snp_file --minq 1 --chr=$ref_seq";
+    #$self->status_message("Running: $cmd");
+    #my $result = system($cmd);
+    #$result /= 256;
+    
+    #if ($result) {
+        #    $self->error_message("Got exit code $result!: $?");
+        # return;
+#    }
+#    else {
+#        $self->status_message("Metrics generation complete.");
+#        return 1;
+#    }
+     my $rv = Genome::Model::Tools::Maq::CreateExperimentalMetricsFile->execute(
+         map_file=>$map_file,
+         location_file=>$snp_file,
+         ref_bfa_file => $bfa_file,
+         output_file => $output_basename,
+         snpfilter_file => "$snp_file.filtered",
+     );
+     unless($rv) {
+         $self->error_message("CreateExperimentalMetricsFile tool did not return successful");
+         return;
+     } 
 }
 
 # Converts between the 1-letter genotype code into
