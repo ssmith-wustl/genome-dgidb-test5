@@ -40,10 +40,10 @@ sub execute {
     my $model = $self->model;
     my $run_project = Genome::Model::Tools::454::Newbler::RunProject->create(
                                                                              test => $model->test,
-                                                                             dir => $model->assembly_directory,
+                                                                             dir => $model->data_directory,
                                                                          );
     unless($run_project->execute) {
-        $self->error_message('Failed to run assembly project '. $model->assembly_directory);
+        $self->error_message('Failed to run assembly project '. $model->data_directory);
         return;
     }
     return 1;
