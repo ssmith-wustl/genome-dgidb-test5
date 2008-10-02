@@ -6,7 +6,6 @@ use warnings;
 use Genome;
 use Command;
 use File::Basename;
-use Genome::Model;
 use IO::File;
 
 
@@ -25,7 +24,7 @@ sub help_synopsis {
 EOS
 }
 
-sub help_detail {                           
+sub help_detail {
     return <<EOS 
 This command is usually called as part of the add-reads process
 EOS
