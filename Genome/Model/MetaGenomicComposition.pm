@@ -15,10 +15,13 @@ class Genome::Model::MetaGenomicComposition {
         where => [ "event_type like" => 'genome-model build assembly assign-read-sets%'],
         doc => 'each case of a read set being assigned to the model',
     },
-    assembler => {
+    sequencing_center => {
         via => 'processing_profile',
     },
-    read_origin => {
+    sequencing_platform => {
+        via => 'processing_profile',
+    },
+    assembler => {
         via => 'processing_profile',
     },
     ],
