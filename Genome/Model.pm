@@ -59,22 +59,24 @@ class Genome::Model {
                                         },
     ],
     has_optional => {
-                     sequencing_platform          => { via => 'processing_profile'},
-                     read_set_class_name          => {
-                                                      calculate_from => ['sequencing_platform'],
-                                                      calculate => q| 'Genome::RunChunk::' . ucfirst($sequencing_platform) |,
-                                                      doc => 'the class of read set assignable to this model'
-                                                  },
-                     input_read_set_class_name    => { 
-                                                      calculate_from => ['read_set_class_name'],
-                                                      calculate => q|$read_set_class_name->_dw_class|,
-                                                      doc => 'the class of read set assignable to this model in the dw'
-                                        },
-                     read_set_addition_events     => { is => 'Genome::Model::Command::AddReads',
-                                                       is_many => 1,
-                                                       reverse_id_by => 'model',
-                                                       doc => 'each case of a read set being assigned to the model',
-                                                  },
+        last_complete_build         => { is => 'Genome::Model::Build', id_by => ['last_complete_build_id'] },
+        current_running_build       => { is => 'Genome::Model::Build', id_by => ['current_running_build_id'] },
+        sequencing_platform          => { via => 'processing_profile'},
+        read_set_class_name          => {
+                                          calculate_from => ['sequencing_platform'],
+                                          calculate => q| 'Genome::RunChunk::' . ucfirst($sequencing_platform) |,
+                                          doc => 'the class of read set assignable to this model'
+                                      },
+        input_read_set_class_name    => { 
+                                          calculate_from => ['read_set_class_name'],
+                                          calculate => q|$read_set_class_name->_dw_class|,
+                                          doc => 'the class of read set assignable to this model in the dw'
+                            },
+        read_set_addition_events     => { is => 'Genome::Model::Command::AddReads',
+                                           is_many => 1,
+                                           reverse_id_by => 'model',
+                                           doc => 'each case of a read set being assigned to the model',
+                                      },
     },
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
