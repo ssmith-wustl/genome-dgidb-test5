@@ -12,9 +12,7 @@ use IO::File;
 
 class Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::Maq {
     is => ['Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments', 'Genome::Model::Command::MaqSubclasser'],
-    has => [ 
-        ref_seq_id   => { is => 'Integer', is_optional => 0, doc => 'the refseq on which to operate' },
-    ]
+    has => [ ],
 };
 
 sub help_brief {
@@ -91,18 +89,15 @@ $DB::single=1;
     }
     else {
         # Normal code to get the map files. 
-        my @read_sets = 
-           Genome::Model::ReadSet->get(
-                model_id => $model->id,
-            );
+        my @read_sets = $model->read_sets;
         unless(@read_sets) {
             $self->error_message("Model: " . $model->id .  " has no read sets?");
             return;
         }
         # pre-cache the data we'll grab individually below
-        my @run_ids = map {$_->read_set_id} @read_sets;
-        my @rc = Genome::RunChunk->get(seq_id => \@run_ids);        
-        my @sls = GSC::RunLaneSolexa->get(seq_id => \@run_ids);
+        my @read_set_ids = map {$_->read_set_id} @read_sets;
+        my @rc = $model->run_chunks;
+        my @sls = GSC::RunLaneSolexa->get(seq_id => \@read_set_ids);
         
         my $align_dist_threshold = $model->align_dist_threshold;
         if ($align_dist_threshold) {
