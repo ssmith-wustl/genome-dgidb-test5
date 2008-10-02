@@ -29,53 +29,58 @@ One build of a given reference-alignment model.
 EOS
 }   
  
+sub stages {
+    my @stages = qw/
+        frontend
+        backend
+    /;
+    return @stages;
+}
 
 sub backend_job_classes {
     my @step1 =  ('Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments');
     my @step2 =  ('Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype');
     my @step3 =  ('Genome::Model::Command::Build::ReferenceAlignment::FindVariations'),
     my @step4 =  ('Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations', 'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations');
-    
+
     return (\@step1, \@step2, \@step3, \@step4);
+}
+
+sub frontend_job_classes {
+    my @sub_command_classes= qw/
+        Genome::Model::Command::Build::ReferenceAlignment::AssignRun
+        Genome::Model::Command::Build::ReferenceAlignment::AlignReads
+        Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments
+    /;
+    return @sub_command_classes;
+}
+
+sub frontend_objects {
+    my $self = shift;
+    return $self->model->unbuilt_read_sets;
+}
+
+sub backend_objects {
+    my $self = shift;
+    my $model = $self->model;
+    unless( -d $model->latest_build_directory) {
+        unless(mkdir $model->latest_build_directory ) {
+            $self->error_message("Unable to create dir: " . $model->latest_build_directory);
+            return;
+        }
+        chmod 02775, $model->latest_build_directory;
+    }
+    my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
+
+    unless (@subreferences_names > 0) {
+        @subreferences_names = ('all_sequences');
+    }
+    return @subreferences_names;
 }
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
-    my @undone_or_failed_read_sets = $self->find_unaligned_or_failed_read_sets();
-    $self->data_directory($self->model->latest_build_directory);
-    #subroutine: find undone sets...if 0, don't call 'addreads' modules...
-    if(@undone_or_failed_read_sets) {
-        #TODO: Make this status message print out flowcell/lane
-        $self->status_message("Found these readsets unaligned:\n" . join ("\n", map {$_->read_set_id } @undone_or_failed_read_sets)); 
-        $self->schedule_frontend(@undone_or_failed_read_sets);
-        #bsub helper will set 'waiting status' if you return 2
-        return 2;
-    }
-    elsif (my @events = Genome::Model::Event->get(parent_event_id=>$self->id, ref_seq_id => { operator => "ne", value =>undef} ) ) {
-        #we have events for the backend;
-        if(grep (/Failed|Crashed/, @events)) {
-            #Genome::Model::Command::RunJobs->execute(model_id=> $self->model_id);
-            $self->cry_for_help("Back end");
-            die "Some events failed. Failing the build.";
-            #cry for help should die...but if it failed or something.
-            return;
-        }
-        else { 
-            return 1;
-        }
-    }
-    else {
-        $self->status_message(  "No unaligned found\n" . "Starting the backend...");
-     
-        unless($self->schedule_backend()) {
-            $self->error_message("problems building, exiting..");
-            return;
-        }   
-        return 2; 
-    }
-    ##need third condition of backend completed set me successful
-    return 1; 
+    return $self->build_in_stages;
 }
 
 sub extend_last_execution {
@@ -129,197 +134,5 @@ sub _get_sub_command_class_name{
   return __PACKAGE__; 
 }
 
-sub find_unaligned_or_failed_read_sets {
-    my $self=shift;
-    my $model = $self->model;
-    my @readsets_that_need_rescheduling;
-    $DB::single=1;
-    my @undone_model_readsets  = 
-    Genome::Model::ReadSet->get(model_id=> $model->id , first_build_id=>undef);
-        push(@readsets_that_need_rescheduling, @undone_model_readsets);
-
-    my @attempted_or_successful_model_readsets = 
-    Genome::Model::ReadSet->get(model_id=> $model->id , first_build_id=> {operator => 'ne', value=>undef});
-     for my $attempted_readset (@attempted_or_successful_model_readsets, @undone_model_readsets) {
-        my @events = Genome::Model::Event->get(model_id=>$model->id, 
-        run_id=>$attempted_readset->read_set_id, ref_seq_id=>undef);
-
-        if(my @broke_events = grep {$_->event_status =~ /Crashed|Failed/} @events ) {
-            #shit, we have problems
-            #send mail to owner, stop scheduling myself.
-            $self->cry_for_help("Alignment");
-            die "Found failed front end events...mailed user: " . $self->user_name;
-            #push(@readsets_that_need_rescheduling, $attempted_readset);
-        }
-
-    }
-    return @readsets_that_need_rescheduling;
-}
-
-sub schedule_backend {
-    #FIXME: Do this more elegantly in the class def?
-    my $self=shift;
-    unless( -d $self->model->latest_build_directory) {
-        unless(mkdir $self->model->latest_build_directory ) {
-            $self->error_message("Unable to create dir: " . $self->model->latest_build_directory);
-            return;
-        }
-        chmod 02775, $self->model->latest_build_directory;
-    } 
-    my @sub_command_classes = $self->backend_job_classes;
-
-    my $model = Genome::Model->get($self->model_id);
-    $self->status_message("Found Model: " . $model->name);
-    my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
-
-    unless (@subreferences_names > 0) {
-        @subreferences_names = ('all_sequences');
-    }
-    my @classes_I_am_waiting_for;
-    foreach my $ref (@subreferences_names) {
-        $self->status_message("Scheduling for subreference: $ref"); 
-        my $prior_event_id = undef;
-        foreach my $command_classes ( @sub_command_classes ) {
-
-            my $command;
-            for my $command_class (@{$command_classes}) {  
-                $command = $command_class->create(
-                    model_id => $self->model_id, 
-                    ref_seq_id=>$ref,
-                    prior_event_id => $prior_event_id,
-                    parent_event_id => $self->id,
-                );
-                $command->parent_event_id($self->id);
-                $command->event_status('Scheduled');
-                $command->retry_count(0);
-            }
-            #clearly this will not work well if the pipeline wanted to come back together after a fork...
-            #don't cry about it if it happens
-            $prior_event_id = $command->id;
-            push @classes_I_am_waiting_for, $command;
-        }
-    }
-    unless($self->testing_flag) {
-        Genome::Model::Command::RunJobs->execute(model_id=> $self->model_id);
-        ###now its time to run myself with the correct dependencies on a blade!
-        my @dependencies = map {$_->lsf_job_id} @classes_I_am_waiting_for;
-        #rofl...stretched this bsub implementation far beyond the breaking point
-        unless($self->execute_with_bsub(dep_type=>'ended' , dependency_expression => join(")&&ended(", @dependencies)) )
-        {
-            $self->status_message("Hello, I am the build::referencealignment module, and I was unable to schedule myself to run after my peeps.");
-            return;
-        } 
-    }
-
-    return 1;
-}
-
-
-sub schedule_frontend {
-    my $self = shift;
-    my @readsets_to_schedule=@_;
-    my $model = $self->model;
-
-    my @sub_command_classes = $self->frontend_job_classes(); 
-
-    my @classes_I_am_waiting_for;
-    $DB::single=1;
-
-    for my $read_set (@readsets_to_schedule) {
-           my $prior_event_id = undef;
-      
-        foreach my $command_class ( @sub_command_classes ) {
-            my $command;
-    
-            eval {
-                $command = $command_class->create(
-                    run_id => $read_set->read_set_id,
-                    model_id => $self->model_id,
-                    event_status => 'Scheduled',
-                    retry_count => 0,
-                    prior_event_id => $prior_event_id,
-                    parent_event_id => $self->id,
-                );
-            };
-            unless ($command) {
-                $DB::single = $DB::stopper;
-                $command = $command_class->create(
-                    run_id => $read_set->read_set_id,
-                    model_id => $self->model_id,
-                    event_status => 'Scheduled',
-                    retry_count => 0,
-                    prior_event_id => $prior_event_id,
-                    parent_event_id => $self->id,
-                );
-                
-                $self->error_message(
-                    "Problem creating subcommand for class $command_class run id " .$read_set->read_set_id
-                    . " model id ".$self->model_id
-                    . ": " . $command_class->error_message()
-                );
-                return;
-            }
-            push @classes_I_am_waiting_for, $command;
-            $self->status_message('Scheduled '. $command_class .' for run_id '. $read_set->read_set_id
-                                  .' event_id '. $command->genome_model_event_id ."\n");
-                     $prior_event_id = $command->id;
-        }
-        
-    }
-    unless($self->testing_flag) {
-        Genome::Model::Command::RunJobs->execute(model_id=> $self->model_id);
-        ###now its time to run myself with the correct dependencies on a blade!
-        my @dependencies = map {$_->lsf_job_id} @classes_I_am_waiting_for;
-        unless($self->execute_with_bsub(dep_type=>'ended' , dependency_expression => join(")&&ended(", @dependencies) ) )
-        {
-            $self->status_message("Hello, I am the build::referencealignment module, and I was unable to schedule myself to run after my peeps.");
-            return;
-        } 
-    }
-    return 1; 
-}
-
-sub frontend_job_classes {
-    my $self = shift;
-
-    my @sub_command_classes= qw/
-        Genome::Model::Command::Build::ReferenceAlignment::AssignRun
-        Genome::Model::Command::Build::ReferenceAlignment::AlignReads
-        Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments
-    /;
-
-    return @sub_command_classes;
-}
-
-sub cry_for_help {
-my $self=shift;  
-my $word_that_describes_what_i_failed=shift;
-if($self->testing_flag) {
-    return 1;
-}
-
-my $sendmail = "/usr/sbin/sendmail -t";
-my $from = "From: ssmith\@genome.wustl.edu\n";
-my $reply_to = "Reply-to: thisisafakeemail\n";
-my $subject = "Subject: Build failed, you suck\n";
-my $content = "This is the Build failure email. your build ". $self->id . " failed some portion of the $word_that_describes_what_i_failed phase. \n\n";
-my $to = "To: " . $self->user_name . '@genome.wustl.edu' . "\n";
-
-my $helpful_link1= "https://gscweb.gsc.wustl.edu/cgi-bin/solexa/genome-model-stage1.cgi?model-name=" . $self->model->name  .    "&refresh=1\n\n";
-my $helpful_link2= "https://gscweb.gsc.wustl.edu/cgi-bin/solexa/genome-model-stage2.cgi?model-name=" . $self->model->name  .    "&refresh=1\n";
-
- $content .= $helpful_link1 . $helpful_link2;
-
-
-
-open(SENDMAIL, "|$sendmail") or die "Cannot open $sendmail: $!";
- print SENDMAIL $reply_to;
- print SENDMAIL $from;
- print SENDMAIL $subject;
- print SENDMAIL $to;
- print SENDMAIL $content; 
- close(SENDMAIL);
- return 1;
-}
 1;
 
