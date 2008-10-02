@@ -160,17 +160,17 @@ sub add_reads {
     }
         #UR::Context->_sync_databases();
         my $pp_alignments = Genome::Model::Command::Build::ReferenceAlignment->create(
-            model_id => $model->id,
+                                                                                      model_id => $model->id,
+                                                                                      auto_execute => 0,
         );
-        $pp_alignments->testing_flag(1);
         isa_ok($pp_alignments,'Genome::Model::Command::Build::ReferenceAlignment');
         ok($pp_alignments->execute(), 'execute genome-model build reference-alignment');
-     
+
         for my $read_set (@read_sets) {
             my @add_reads_events = Genome::Model::Event->get(
                                                              model_id => $model->id,
                                                              parent_event_id => $pp_alignments->id,
-                                                             run_id => $read_set->seq_id,
+                                                             read_set_id => $read_set->seq_id,
                                                          );
             is(scalar(@add_reads_events),$self->{_expected_add_reads_events},'get scheduled build reference alignment genome_model_events');
             # sort by event id to ensure order of events matches pipeline order
@@ -224,7 +224,7 @@ $self->{_expected_postprocess_events} = $self->{_ref_seq_count} * $sub_command_c
     my @pp_events = Genome::Model::Event->get(
                                               model_id => $model->id,
                                               parent_event_id => $pp_alignments->id,
-                                              run_id => undef,
+                                              read_set_id => undef,
                                           );
 
     is(scalar(@pp_events),$self->{_expected_postprocess_events},'get scheduled genome_model add-reads postprocess-alignments');
@@ -254,7 +254,7 @@ print "@pp_events\n";
 
         my $annotate_variations_command = $pp_events[4];
         SKIP: {
-            skip "don't run annotate because it takes fricking forever and always works anyway", 4;
+            skip "don't run annotate because it takes fricking forever and always works anyway", 3;
         isa_ok($annotate_variations_command,'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations');
     
         $self->execute_event_test($annotate_variations_command);
@@ -279,7 +279,7 @@ sub execute_event_test  {
     is($self->{_model}->id,$event_model->id,'genome-model id comparison');
 
     # Not working for EventWithReadSet
-    if (defined $event->run_id) {
+    if (defined $event->read_set_id) {
         my $read_set = $event->read_set;
         isa_ok($read_set,'Genome::RunChunk');
         is($read_set->seq_id,$read_set->seq_id,'genome-model read_set_id => sls seq_id ');
