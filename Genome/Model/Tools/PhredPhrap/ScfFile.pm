@@ -36,8 +36,8 @@ sub _verify_scfs {
         return;
     }
     
-    unless ( chdir $self->chromat_dir ) {
-        $self->error_message('Can\'t access directory (%s): %s', $self->chromat_dir, $!);
+    unless ( chdir $self->_directory->chromat_dir ) {
+        $self->error_message('Can\'t access directory (%s): %s', $self->_directory->chromat_dir, $!);
         return;
     }
 
@@ -52,7 +52,7 @@ sub _verify_scfs {
         # Verify
         unless ( -s $scf_name or -s "$scf_name.gz" ) {
             $self->error_message( 
-                sprintf('Can\'t find scf (%s) in directory (%s)', $scf_name, $self->chromat_dir)
+                sprintf('Can\'t find scf (%s) in directory (%s)', $scf_name, $self->_directory->chromat_dir)
             );
             return;
         }
