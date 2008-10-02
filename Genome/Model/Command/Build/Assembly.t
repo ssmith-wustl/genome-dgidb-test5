@@ -79,10 +79,13 @@ for my $pp_params (@pp_params) {
                                                                  );
     isa_ok($add_reads_command,'Genome::Model::Command::AddReads');
     ok($add_reads_command->execute(),'execute genome-model add-reads');
-    my $assembly_builder = Genome::Model::Command::Build::Assembly->create(model_id => $model->id);
+    my $assembly_builder = Genome::Model::Command::Build::Assembly->create(
+                                                                           model_id => $model->id,
+                                                                           auto_execute => 0,
+                                                                       );
     isa_ok($assembly_builder,'Genome::Model::Command::Build::Assembly');
     ok($assembly_builder->execute,'execute assembly builder');
-    for my $class ($assembly_builder->subordinate_job_classes) {
+    for my $class ($assembly_builder->stage1_job_classes) {
         my @events = $class->get(model_id => $model->id);
         for my $event (@events) {
             ok($event->execute,"execute $class event");
