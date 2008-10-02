@@ -90,16 +90,6 @@ sub create {
     return $self;
 }
 
-sub DESTROY {
-    my $self = shift;
-    
-    unlink $self->busy_file if -e $self->busy_file;
-    
-    chdir $self->_cwd;
-
-    return 1;
-}
-
 #- BUSY FILE -#
 sub busy_file {
     my $self = shift;
@@ -150,6 +140,9 @@ sub execute {
 
     #POST ASEMBLY PROCESS
     $self->status_message("Post Assembly Processing");
+
+    unlink $self->busy_file if -e $self->busy_file;
+    chdir $self->_cwd;
 
     $self->status_message("Finished");
 
