@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Model::Event; 
 use File::Temp;
 
 class Genome::Model::EventWithRefSeq {
