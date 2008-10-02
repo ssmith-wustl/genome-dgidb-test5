@@ -62,8 +62,8 @@ sub model_requires_postprocess {
                                                 %s and model_id=%s and event_status='Succeeded'",
                                                 $last_merge_done_str,
                                                 $model->id));
-    my @run_ids = map {$_->run_id} @run_events; 
-    my @target_runs = Genome::RunChunk->get(id=>\@run_ids);
+    my @read_set_ids = map {$_->read_set_id} @run_events; 
+    my @target_runs = Genome::RunChunk->get(id=>\@read_set_ids);
 
     return (@target_runs > 0);
     
