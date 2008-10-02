@@ -19,21 +19,23 @@ class Genome::Model::Event {
     ],
     has => [
         model                           => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
-        #model_name                      => { via => 'model', to => 'name' },
-        #subject_name                    => { via => 'model', to => 'sample_name' },
+
         event_type                      => { is => 'VARCHAR2', len => 255 },
         event_status                    => { is => 'VARCHAR2', len => 32 },
         user_name                       => { is => 'VARCHAR2', len => 64 },
     ],
     has_optional => [
-        run_id                          => {
-                                            is => 'NUMBER', len => 11,  
-                                            doc => "the genome_model_run on which to operate"
-                                        },
-        ref_seq_id                      => {
-                                            is => 'NUMBER', len => 11,  
-                                            doc => "identifies the refseq"
-                                        },
+                  read_set_id    => {
+                                     is => 'NUMBER',
+                                     len => 11,
+                                     column_name => 'RUN_ID',
+                                     doc => 'the id of thegenome_model_run on which to operate',
+                                 },
+                     ref_seq_id        => {
+                                           is => 'NUMBER',
+                                           len => 11,
+                                           doc => "identifies the refseq"
+                                       },
         parent_event                    => {
                                             is => 'Genome::Model::Event',
                                             id_by => ['parent_event_id'],
@@ -441,9 +443,7 @@ sub _get_msgdata {
     if (ref($self)) {
         no warnings;
         $name .= "/" . join('.', UR::Time->now, hostname(), $$, $self->id, $self->event_type, 
-            $self->model_id, 
-            $self->run_id || 'NORUN',
-            $self->ref_seq_id || 'NOREF', 
+            $self->model_id,
             ($self->lsf_job_id || 'NOJOB')
         ) . ".log";
     }
@@ -476,20 +476,6 @@ END {
             print STDERR "removing empty file $name\n";
             unlink $name;
         }
-    }
-}
-
-# TODO: move into subclasses
-sub resolve_log_directory {
-    my $self = shift;
-
-    if ($self->can('run') && defined $self->run) {
-        return sprintf('%s/logs/%s/%s', $self->model->latest_build_directory,
-                                        $self->run->sequencing_platform,
-                                        $self->run->name);
-    } else {
-        return sprintf('%s/logs/%s', $self->model->latest_build_directory,
-                                     $self->ref_seq_id);
     }
 }
 
