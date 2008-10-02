@@ -163,12 +163,10 @@ sub maq_snp_related_metric_directory {
     return $self->latest_build_directory . "/maq_snp_related_metrics/";
 }
 
-
-
-
-sub read_sets {
+#This should not be used, unless we really need caching, if so, should probably be in Genome::Model::ReadSet
+sub Xread_sets {
     my $self = shift;
-    my %distinct_ids = map { $_->run_id => 1}  $self->read_set_assignment_events;
+    my %distinct_ids = map { $_->read_set_id => 1}  $self->read_set_assignment_events;
     my @distinct_ids = keys %distinct_ids;
     my @sets = Genome::RunChunk->get(\@distinct_ids);
     return unless @sets;
