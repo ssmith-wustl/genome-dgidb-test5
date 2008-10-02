@@ -87,7 +87,13 @@ sub _get_sub_command_class_name{
     
     # Does the sub-command exist?
     my %sub_command_types = $class->_sub_command_name_to_class_name_map();
-    my $sub_command_type = $sub_command_types{ucfirst($sub_command_name)};
+    
+    #this takes the db name of the sub class, 'foo bar' and turns it into a Class equivalent name FooBar
+    my $key;
+    my @words = split(/[-_\s]/, $sub_command_name);
+    $key .= ucfirst $_ foreach @words;
+
+    my $sub_command_type = $sub_command_types{$key};
     unless ($sub_command_type) {
         return;
     }
