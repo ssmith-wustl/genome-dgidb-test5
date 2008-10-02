@@ -1556,7 +1556,7 @@ sub get_data_from_summary_file {
 
 
 sub build_subclass_name {
-    return 'reference-alignment';
+    return 'reference alignment';
 }
 
 1;
