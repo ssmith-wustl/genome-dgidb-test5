@@ -90,6 +90,16 @@ sub create {
     return $self;
 }
 
+sub DESTROY {
+    my $self = shift;
+
+    $self->SUPER::DESTROY;
+
+    unlink $self->busy_file if -e $self->busy_file;
+
+    return chdir $self->_cwd;
+}
+
 #- BUSY FILE -#
 sub busy_file {
     my $self = shift;
