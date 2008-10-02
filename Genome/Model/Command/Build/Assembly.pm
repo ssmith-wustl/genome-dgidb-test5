@@ -1,4 +1,4 @@
-epackage Genome::Model::Command::Build::Assembly;
+package Genome::Model::Command::Build::Assembly;
 
 use strict;
 use warnings;
@@ -43,17 +43,17 @@ sub stages {
 
 sub stage1_job_classes {
     my @stages = qw/
-            'Genome::Model::Command::Build::Assembly::AssignReadSetToModel',
-            'Genome::Model::Command::Build::Assembly::FilterReadSet',
-            'Genome::Model::Command::Build::Assembly::TrimReadSet',
-            'Genome::Model::Command::Build::Assembly::AddReadSetToProject',
+            Genome::Model::Command::Build::Assembly::AssignReadSetToModel
+            Genome::Model::Command::Build::Assembly::FilterReadSet
+            Genome::Model::Command::Build::Assembly::TrimReadSet
+            Genome::Model::Command::Build::Assembly::AddReadSetToProject
     /;
     return @stages;
 }
 
 sub stage2_job_classes {
     my @stages = qw/
-            'Genome::Model::Command::Build::Assembly::Assemble',
+            Genome::Model::Command::Build::Assembly::Assemble
     /;
     return @stages;
 }
