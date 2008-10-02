@@ -81,6 +81,10 @@ INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_BUILD','GENOME_MODEL_EVENT','GMB_GME_FK','2008-09-03 14:07:08');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','MAF','SAMPLE','MAF_SAMPLE_FK','2008-09-12 15:08:55');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_READ_SET','GENOME_MODEL_BUILD','GMRS_GMB_FK','2008-09-18 15:29:13');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_READ_SET_METRIC','GENOME_MODEL_RUN','GMRSMC_GMR_FK','2008-10-01 14:08:50');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_READ_SET_METRIC','GENOME_MODEL_BUILD','GMRSMC_GMB_FK','2008-10-01 14:08:50');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL','GENOME_MODEL_BUILD','GM_GMBC_FK','2008-10-01 14:08:37');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL','GENOME_MODEL_BUILD','GM_GMBL_FK','2008-10-01 14:08:37');
 CREATE TABLE dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
     data_source varchar NOT NULL,
@@ -158,6 +162,10 @@ INSERT INTO "dd_fk_constraint_column" VALUES('GMB_GME_FK','Genome::DataSource::G
 INSERT INTO "dd_fk_constraint_column" VALUES('GMRP_GM_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_RESEARCH_PROJECT','GENOME_MODEL','MODEL_ID','GENOME_MODEL_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('MAF_SAMPLE_FK','Genome::DataSource::GMSchema','MG','MAF','SAMPLE','SAMPLE_ID','SAMPLE_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMRS_GMB_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET','GENOME_MODEL_BUILD','FIRST_BUILD_ID','BUILD_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('GMRSMC_GMR_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','GENOME_MODEL_RUN','READ_SET_ID','GENOME_MODEL_RUN_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('GM_GMBL_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL','GENOME_MODEL_BUILD','LAST_COMPLETE_BUILD_ID','BUILD_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('GM_GMBC_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL','GENOME_MODEL_BUILD','CURRENT_RUNNING_BUILD_ID','BUILD_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('GMRSMC_GMB_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','GENOME_MODEL_BUILD','BUILD_ID','BUILD_ID');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -283,6 +291,10 @@ INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG'
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RESEARCH_PROJECT','RP_ID',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RESEARCH_PROJECT','MODEL_ID',2);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD','BUILD_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','METRIC_NAME',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','METRIC_VALUE',4);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','READ_SET_ID',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','BUILD_ID',1);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -296,7 +308,7 @@ CREATE TABLE dd_table (
 );
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_EVAL','TABLE','entity','2008-03-07 16:38:08','2008-02-28 17:10:43',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','TABLE','entity','2008-06-16 16:15:34','2008-02-28 17:10:41',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','TABLE','entity','2008-09-16 15:01:53','2008-02-28 17:10:40','The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.');
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','TABLE','entity','2008-09-30 14:11:20','2008-02-28 17:10:40','The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.');
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','TABLE','entity','2008-09-10 16:28:44','2008-02-28 17:10:45',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF_PART','TABLE','entity','2008-03-07 16:38:08','2008-02-28 17:10:44',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SEQUENCE_DIFF','TABLE','entity','2008-03-07 16:38:08','2008-02-28 17:10:42',NULL);
@@ -401,6 +413,7 @@ INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RESEARCH_PROJECT','TABLE','entity','2008-09-03 12:16:23','2008-09-03 02:27:54',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET','TABLE','entity','2008-09-16 16:11:27','2008-09-03 02:27:52',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD','TABLE','entity','2008-09-03 12:26:33','2008-09-03 02:27:53',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','TABLE','entity','2008-09-30 15:12:12','2008-10-01 14:08:50',NULL);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -872,6 +885,12 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MAF','
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MAF','MANUAL_REVIEW','VARCHAR2','20','Y','2008-09-12 15:08:55',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MAF','SAMPLE_ID','NUMBER','10','Y','2008-09-12 15:08:55',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET','FIRST_BUILD_ID','NUMBER','10','Y','2008-09-18 15:29:13',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','READ_SET_ID','NUMBER','10','N','2008-10-01 14:08:50',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','BUILD_ID','NUMBER','10','N','2008-10-01 14:08:50',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','CURRENT_RUNNING_BUILD_ID','NUMBER','10','Y','2008-10-01 14:08:37',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','METRIC_VALUE','VARCHAR2','1000','N','2008-10-01 14:08:50',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','LAST_COMPLETE_BUILD_ID','NUMBER','10','Y','2008-10-01 14:08:37',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','METRIC_NAME','VARCHAR2','255','N','2008-10-01 14:08:50',NULL);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
