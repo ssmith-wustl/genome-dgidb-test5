@@ -23,7 +23,7 @@ class Genome::Model {
     ],
     has => [
         read_sets =>  { is => 'Genome::Model::ReadSet', reverse_id_by => 'model', is_many=> 1 },
-        run_chunks => { is => 'Genome::RunChunk', via=>'read_sets', to=>'runchunk' },
+        run_chunks => { is => 'Genome::RunChunk', via=>'read_sets', to => 'read_set' },
 
         data_directory               => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         processing_profile           => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
@@ -125,10 +125,17 @@ sub unbuilt_read_sets {
     my $self = shift;
 
     my @read_sets = $self->read_sets;
-    my @unbuilt_read_sets = grep {!defined($_->first_build_id)} @read_sets;
+    my @unbuilt_read_sets = grep { !defined($_->first_build_id) } @read_sets;
     return @unbuilt_read_sets;
 }
 
+sub built_read_sets {
+    my $self = shift;
+
+    my @read_sets = $self->read_sets;
+    my @built_read_sets = grep { $_->first_build_id} @read_sets;
+    return @built_read_sets;
+}
 
 sub comparable_normal_model {
     # TODO: a dba ticket is in place to make this a database-tracked item
