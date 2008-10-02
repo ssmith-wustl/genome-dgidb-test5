@@ -66,7 +66,6 @@ sub execute {
         and return unless -d $self->phd_dir;
 
     # Check phd file
-    print Dumper([ Cwd::getcwd(), $self->phd_file, Cwd::abs_path($self->phd_file)]);
     $self->phd_file( Cwd::abs_path($self->phd_file) );
 
     $self->error_message(
