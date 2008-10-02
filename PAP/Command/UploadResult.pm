@@ -2,8 +2,8 @@
 
 package PAP::Command::UploadResult;
 
-use lib '/gscuser/mjohnson/bioperl-svn/bioperl-live';
-use lib '/gscuser/mjohnson/bioperl-svn/bioperl-run';
+#use lib '/gscuser/mjohnson/bioperl-svn/bioperl-live';
+#use lib '/gscuser/mjohnson/bioperl-svn/bioperl-run';
 
 use strict;
 use warnings;

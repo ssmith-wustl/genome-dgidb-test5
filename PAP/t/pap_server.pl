@@ -1,20 +1,24 @@
 #!/gsc/bin/perl
 
 use strict;
-use warnings;
 
-use lib '/gscuser/mjohnson/bioperl-svn/bioperl-live/';
-use lib '/gscuser/mjohnson/bioperl-svn/bioperl-run/';
-
-use above 'PAP';
-
-use Workflow;
-use Workflow::Server;
+use above 'Workflow::Server::Hub';
 use Workflow::Server::HTTPD;
+use Workflow::Server::UR;
+use PAP;
 
-my $server = Workflow::Server->create(
-    namespace => 'PAP'
-);
-my $http = Workflow::Server::HTTPD->create;
+POE::Kernel->stop();
 
-POE::Kernel->run();
+my $pid = fork;
+if ($pid) {
+    print "$$ parent\n";
+    Workflow::Server::Hub->start;
+} elsif (defined $pid) {
+    print "$$ child\n";
+
+    Workflow::Server::HTTPD->start;
+    Workflow::Server::UR->start;
+} else {
+    warn "no child?";
+}
+
