@@ -104,7 +104,7 @@ $DB::single = $DB::stopper;
 
     $self->status_message("Job rescheduled as jobid $job_id: ".$event->event_type);
 
-    my @all_scheduled = Genome::Model::Event->get(event_status => 'Scheduled', model_id => $event->model_id, run_id => $command_obj->run_id);
+    my @all_scheduled = Genome::Model::Event->get(event_status => 'Scheduled', model_id => $event->model_id, read_set_id => $command_obj->read_set_id);
     foreach my $sched_event (@all_scheduled) {
         next if ($command_obj->lsf_job_id == $sched_event->lsf_job_id); # dont check me
         if (my ($sched_lsf_state, $sched_lsf_events) = $self->lsf_state($sched_event->lsf_job_id)) {
