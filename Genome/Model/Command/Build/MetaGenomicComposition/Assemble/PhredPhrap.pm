@@ -9,6 +9,7 @@ use Data::Dumper;
 #require File::Copy;
 #require File::Temp;
 require Genome::Consed::Directory;
+require Genome::Model::Command;
 require Genome::Model::Tools::PhredPhrap::ScfFile;
 require IO::Dir;
 require IO::File;
@@ -46,6 +47,12 @@ sub create {
     my $class = shift;
 
     my $self = $class->SUPER::create(@_);
+
+    unless ( $self->model ) {
+        $self->error_message( sprintf('Can\'t get model for id (%s)', $self->model_id) );
+        $self->delete;
+        return;
+    }
 
     return $self;
 }
