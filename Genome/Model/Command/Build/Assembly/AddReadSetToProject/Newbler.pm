@@ -44,10 +44,10 @@ sub execute {
     my $test = $model->test;
 
     my $assembly_directory = $model->assembly_directory;
-    unless (-e $assembly_directory) {
+    unless (-d $assembly_directory) {
         my $new_assembly = Genome::Model::Tools::454::Newbler::NewAssembly->create(
                                                                                    test => $test,
-                                                                                   dir => $assembly_directory,
+                                                                                   dir => $model->data_directory,
                                                                                );
         unless ($new_assembly->execute) {
             $self->error_message("Failed to create new assembly '$assembly_directory'");
@@ -56,7 +56,7 @@ sub execute {
     }
     my $add_run = Genome::Model::Tools::454::Newbler::AddRun->create(
                                                                      test => $test,
-                                                                     dir => $assembly_directory,
+                                                                     dir => $model->data_directory,
                                                                      runs => [$self->sff_file],
                                                                      is_paired_end => $self->read_set->is_paired_end,
                                                                  );
