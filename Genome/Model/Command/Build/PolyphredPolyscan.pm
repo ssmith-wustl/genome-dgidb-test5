@@ -8,13 +8,6 @@ use File::Basename;
 
 class Genome::Model::Command::Build::PolyphredPolyscan {
     is => 'Genome::Model::Command::Build',
-    has => [],
-    has => [
-        model_id    => {
-            is => 'Integer', 
-            doc => 'Identifies the genome model to which we\'ll add the reads.'
-        },
-    ],
 
  };
 
@@ -39,7 +32,7 @@ EOS
 sub execute {
     my $self = shift;
     
-    my $model = Genome::Model->get($self->model_id);
+    my $model = $self->model;
     unless ($model){
         $self->error_message("Couldn't find model for id ".$self->model_id);
         die;
