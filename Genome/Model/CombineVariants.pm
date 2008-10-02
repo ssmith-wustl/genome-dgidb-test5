@@ -63,6 +63,10 @@ sub create {
     return $self;
 }
 
+sub build_subclass_name {
+    return 'combine_variants';
+}
+
 # The file containing the genotype for this sample
 sub hq_genotype_file {
     my $self = shift;
@@ -239,6 +243,7 @@ sub annotate_variants {
                 reference => $hq_genotype->{allele1},
                 variant => $hq_genotype->{allele2},
                 chromosome_name => $hq_genotype->{chromosome},
+                type => $hq_genotype->{variation_type},
             );
         }elsif (lc $hq_genotype->{variation_type} eq 'snp'){
             @annotations = $annotator->prioritized_transcripts_for_snp(
@@ -247,6 +252,7 @@ sub annotate_variants {
                 variant => $hq_genotype->{allele2},
                 chromosome_name => $hq_genotype->{chromosome},
                 stop => $hq_genotype->{stop},
+                type => $hq_genotype->{variation_type},
             );
         }
 
@@ -284,6 +290,7 @@ sub annotate_variants {
                 variant => $lq_genotype->{allele2},
                 chromosome_name => $lq_genotype->{chromosome},
                 stop => $lq_genotype->{stop},
+                type => $lq_genotype->{variation_type},
             );
         }elsif (lc $lq_genotype->{variation_type} eq 'snp'){
             @annotations = $annotator->transcripts_for_snp(
@@ -292,6 +299,7 @@ sub annotate_variants {
                 variant => $lq_genotype->{allele2},
                 chromosome_name => $lq_genotype->{chromosome},
                 stop => $lq_genotype->{stop},
+                type => $lq_genotype->{variation_type},
             );
         }
         for my $annotation (@annotations){
@@ -617,14 +625,16 @@ sub next_lq_annotated_genotype{
 # TODO may not need this if we can guarantee the processing profile is there
 sub get_or_create {
     my ($class , %p) = @_;
-    my $name = $p{name};
+    my $subject_name = $p{subject_name};
     my $data_directory = $p{data_directory};
 
 
-    unless (defined($name)) {
+    unless (defined($subject_name)) {
         $class->error_message("Insufficient params supplied to get_or_create");
         return undef;
     }
+    my $pp_name = 'combine_variants';
+    my $name = "$subject_name.$pp_name";
 
     my $model = Genome::Model::CombineVariants->get(name => $name);
 
@@ -634,7 +644,7 @@ sub get_or_create {
 
         # Make the processing profile if it doesnt exist
         unless ($pp) {
-            $pp = Genome::ProcessingProfile::CombineVariants->create(name => 'combine variants');
+            $pp = Genome::ProcessingProfile::CombineVariants->create(name => $pp_name);
         }
 
         $model = Genome::Model::CombineVariants->create(name => $name,
