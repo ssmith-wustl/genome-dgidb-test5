@@ -19,11 +19,11 @@ use Genome::Model::Command::Build::ReferenceAlignment::Test;
 # NOTE: run from 32-bit first to compile correct inline libraries
 # Then this should run from 64-bit to actually execute.
 my $archos = `uname -a`;
-#if ($archos !~ /64/) {
+if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
-#}
+}
 
-plan tests => 383;;
+plan tests => 383;
 
 #This should be removed when tests finish
 my $tmp_dir;
