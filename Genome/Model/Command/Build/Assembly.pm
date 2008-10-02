@@ -63,10 +63,11 @@ sub stage1_objects {
     return $self->unbuilt_read_sets;
 }
 
-my stage2_objects {
+sub stage2_objects {
     my $self = shift;
     return 1;
 }
+
 sub execute {
     my $self = shift;
     return $self->build_in_stages;
