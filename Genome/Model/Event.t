@@ -18,7 +18,7 @@ my ($pp) = sort { $a->id <=> $b->id } grep {$_->read_aligner_name eq 'maq0_6_5' 
 my $m = Genome::Model->create(id => -1, subject_name => "test_case_sample$$",  processing_profile => $pp);
 my $r = Genome::RunChunk->create(-1, sequencing_platform => 'solexa');
 
-my $e1 = Genome::Model::Event->create(event_type => $event_type, id => -2, model_id => $m->id, run_id => $r->id);
+my $e1 = Genome::Model::Event->create(event_type => $event_type, id => -2, model_id => $m->id, read_set_id => $r->id);
 ok($e1, "created an object");
 isa_ok($e1,$event_class_name);
 
@@ -48,7 +48,7 @@ my $e5 = Genome::Model::Command::Build::ReferenceAlignment::AlignReads->create(
     event_type => $event_type, 
     id => -3, 
     model_id => $m->id, 
-    run_id => $r->id
+    read_set_id => $r->id
 );
 ok($e5, "created an object");
 isa_ok($e5,$event_class_name);
@@ -56,7 +56,7 @@ isa_ok($e5,$event_class_name);
 my $e6 = Genome::Model::Command::Build::ReferenceAlignment::AlignReads->create(
     id => -4, 
     model_id => $m->id, 
-    run_id => $r->id
+    read_set_id => $r->id
 );
 ok($e6, "created an object");
 isa_ok($e6,$event_class_name);
