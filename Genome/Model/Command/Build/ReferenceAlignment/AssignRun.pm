@@ -39,15 +39,6 @@ sub command_subclassing_model_property {
 
 sub should_bsub { 0;}  # This sub-command shouldn't be bsubbed
 
-sub sub_command_delegator {
-    my($class,%params) = @_;
-
-    my $run = Genome::RunChunk->get(id => $params{'run_id'});
-    return unless $run;
-
-    return $run->sequencing_platform;
-}
-
 
 1;
 
