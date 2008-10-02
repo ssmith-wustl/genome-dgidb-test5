@@ -12,7 +12,7 @@ class Genome::Model::Command::Build::ReferenceAlignment::AcceptReads::Maq {
     is => ['Genome::Model::Command::Build::ReferenceAlignment::AcceptReads', 'Genome::Model::Command::MaqSubclasser'],
     has => [
         model_id   => { is => 'Integer', is_optional => 0, doc => 'the genome model on which to operate' },
-        run_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },
+        read_set_id => { is => 'Integer', is_optional => 0, doc => 'the genome_model_run on which to operate' },
     ],
 };
 
@@ -44,7 +44,7 @@ sub execute {
     
     my $lane = $self->run->limit_regions;
     unless ($lane) {
-        $self->error_message("No limit regions parameter on run_id ".$self->run_id);
+        $self->error_message("No limit regions parameter on read_set_id ".$self->read_set_id);
         return;
     }
 
@@ -57,7 +57,7 @@ sub execute {
 
     } else {
         # We need to build a new map file from 2 or more smaller files
-        $lane_mapfile = sprintf("/tmp/AcceptReads_%s_%s.map", $self->run_id, $self->genome_model_event_id);
+        $lane_mapfile = sprintf("/tmp/AcceptReads_%s_%s.map", $self->read_set_id, $self->genome_model_event_id);
         my @input_mapfiles;
 
         # We're always interested in the unique reads, right?
