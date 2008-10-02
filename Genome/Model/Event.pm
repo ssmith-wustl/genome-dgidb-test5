@@ -63,6 +63,12 @@ class Genome::Model::Event {
                                  return 1;
                              |,
                          },
+       build_directory => 
+                          {
+                           doc => "the directory where this step should put data",
+                           calculate_from => ['parent_event'],
+                           calculate => q| return $parent_event->data_directory |,
+                           },   
     ],
     has_many_optional => [
         sibling_events                  => { via => 'parent_event', to => 'child_events' },
