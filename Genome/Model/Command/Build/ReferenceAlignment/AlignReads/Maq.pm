@@ -15,10 +15,8 @@ class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq {
         'Genome::Model::Command::MaqSubclasser'
     ],
     has => [
-    read_set      => { is => 'Genome::RunChunk', id_by => 'run_id' },
-    read_set_link => { is => 'Genome::Model::ReadSet', id_by => ['model_id','run_id'] },
     read_set_alignment_directory => { via => 'read_set_link' },
-    run_subset_name => { via => 'read_set' }, 
+    run_subset_name => { via => 'read_set_link' }, 
     _alignment_file_paths_unsubmapped => {
         doc => "the paths to to the map files before submapping (not always available)",
         calculate => q|
@@ -436,7 +434,7 @@ $DB::single = $DB::stopper;
         $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
         return;
     }
-    my $read_set_link=Genome::Model::ReadSet->get(model_id=>$self->model_id, read_set_id=> $self->run_id);
+    my $read_set_link = $self->read_set_link;
  
     # prepare paths for the results
     if ($self->alignment_data_available_and_correct) {
@@ -488,16 +486,17 @@ $DB::single = $DB::stopper;
         # about the insert size, and adjust the maq parameters.
         $aligner_params .= " -a $upper_bound_on_insert_size";
     }   
- 
+
+    my $bfq_pathnames = join(' ', @bfq_pathnames);
     # prepare the alignment command
     my $cmdline = 
         $aligner_path
-        . sprintf(' map %s -u %s %s %s %s %s > ',
+        . sprintf(' map %s -u %s %s %s %s > ',
                           $aligner_params,
                           $unaligned_reads_file,
                           $alignment_file,
                           $ref_seq_file,
-                          @bfq_pathnames) 
+                          $bfq_pathnames) 
         . $aligner_output_file 
         . ' 2>&1';
 
@@ -562,7 +561,7 @@ $DB::single = $DB::stopper;
     }
     
     $self->generate_metric($self->metrics_for_class);
-    $read_set_link=Genome::Model::ReadSet->get(model_id=>$self->model_id, read_set_id=> $self->run_id);
+    $read_set_link=$self->read_set_link;
     $read_set_link->first_build_id($self->parent_event_id);
     
     return 1;
