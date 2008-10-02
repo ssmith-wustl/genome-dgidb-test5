@@ -5,24 +5,29 @@ use warnings;
 
 my %variant_priorities_for_annotation =
 (
-    nonsense => 1,
-    missense => 2,
-    splice_site => 3,
-    splice_region => 4,
-    nonstop => 5,
-    cryptic_splice_site => 6,
-    frameshift_del => 7,
-    inframe_del => 8,
-    frameshift_ins => 9,
-    inframe_ins => 10,
-    silent => 11,
-    '5_prime_untranslated_region' => 12,
-    '3_prime_untranslated_region' => 13,
-    intronic => 14,
-    '5_prime_flanking_region' => 15,
-    '3_prime_flanking_region' => 16,
-    undefined => 17,
-    reference => 18
+    nonsense                        => 1,
+    missense                        => 2,
+    splice_site                     => 3,
+    splice_region                   => 4,
+    nonstop                         => 5,
+    cryptic_splice_site             => 6,
+	splice_site_del                 => 7,
+    splice_site_ins                 => 8,
+    splice_region_del               => 9,
+    splice_site_ins                 => 10,
+    frameshift_del                  => 11,
+    inframe_del                     => 12,
+    frameshift_ins                  => 13,
+    inframe_ins                     => 14,
+    silent                          => 15,
+    '5_prime_untranslated_region'   => 16,
+    '3_prime_untranslated_region'   => 17,
+    intronic                        => 18,
+    '5_prime_flanking_region'       => 19,
+    '3_prime_flanking_region'       => 20,
+    undefined                       => 21,
+    reference                       => 22,
+    consensus_error                 => 100
 );
 
 sub for_annotation
