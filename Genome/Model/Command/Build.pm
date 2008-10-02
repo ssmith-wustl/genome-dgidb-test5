@@ -59,7 +59,9 @@ sub build_in_stages {
         my @objects = $self->$objects_method_name;
         if (@objects) {
             my @scheduled_objects = $self->_schedule_stage(\@stage_classes,\@objects);
-            return $self->_run_stage(@scheduled_objects);
+            if ($self->auto_execute) {
+                return $self->_run_stage(@scheduled_objects);
+            }
         }
     }
     return 1;
@@ -118,6 +120,11 @@ sub _schedule_command_classes_for_object {
         if (ref($command_class) eq 'ARRAY') {
             push @scheduled_commands, $self->_schedule_command_classes_for_object($object,$command_class,$prior_event_id);
         } else {
+            my $subclassing_model_property = $command_class->command_subclassing_model_property;
+            unless ($self->model->$subclassing_model_property) {
+                $self->status_message("No value defined for subclassing model property '$subclassing_model_property'.  Skipping '$command_class'");
+                next;
+            }
             my $command;
             if ($command_class->isa('Genome::Model::EventWithRefSeq')) {
                 if (ref($object)) {
@@ -175,7 +182,7 @@ sub _schedule_command_classes_for_object {
 sub _run_stage {
     my $self = shift;
     my @scheduled_commands = @_;
-    if ($self->auto_execute && @scheduled_commands) {
+    if (@scheduled_commands) {
         my @dependency_ids = map {$_->lsf_job_id} @scheduled_commands;
         unless (Genome::Model::Command::RunJobs->execute(model_id => $self->model_id)) {
             $self->error_message('Failed to execute run-jobs for model '. $self->model_id);
