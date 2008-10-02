@@ -115,7 +115,7 @@ sub execute {
 
     my %addl_get_params = (model_id => $self->model_id) ; # model_id is a required param now
     if ($self->read_set_id) {
-        $addl_get_params{'run_id'} = $self->read_set_id;
+        $addl_get_params{'read_set_id'} = $self->read_set_id;
     }
     if (defined $self->ref_seq_id) {
         $addl_get_params{'ref_seq_id'} = $self->ref_seq_id;
@@ -173,9 +173,9 @@ sub _verify_submitted_jobs {
         );
     $DB::single=1;
     while (my $event = shift @queued_events) {
-        unless ($event->ref_seq_id || $event->run_id) {
+        unless ($event->ref_seq_id || $event->read_set_id) {
             unless ($event->event_type eq 'genome-model build assembly assemble newbler') {
-                $self->error_message("Event ".$event->id." has no ref_seq_id or run_id... skipping.");
+                $self->error_message("Event ".$event->id." has no ref_seq_id or read_id... skipping.");
                 next;
             }
         }
@@ -208,7 +208,7 @@ sub _verify_submitted_jobs {
 sub event_desc {
     my ($event) = @_;
     my $s = $event->id . ': ' . $event->event_type . ' on ' . $event->model->name;
-    if ($event->run_id) {
+    if ($event->read_set_id) {
         $s .= ' for read set ' . $event->read_set->name;
     }
     elsif ($event->ref_seq_id) {
@@ -228,9 +228,9 @@ sub _schedule_scheduled_jobs {
                                                        lsf_job_id => undef,  # this means the job hasn't been submitted yet
                                                        %addl_get_params);
     while (my $event = shift @launchable_events) {
-        unless ($event->ref_seq_id || $event->run_id) {
+        unless ($event->ref_seq_id || $event->read_set_id) {
             unless ($event->event_type eq 'genome-model build assembly assemble newbler') {
-                $self->error_message("Event ".$event->id." has no ref_seq_id or run_id... skipping.");
+                $self->error_message("Event ".$event->id." has no ref_seq_id or read_set_id... skipping.");
                 next;
             }
         }
@@ -347,9 +347,6 @@ sub _failed_to_bsub {
         $i++;
     }
 }
-
-
-                                                          
 
 
 1;
