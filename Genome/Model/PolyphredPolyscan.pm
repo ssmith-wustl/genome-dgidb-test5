@@ -78,6 +78,10 @@ sub create{
     return $self;
 }
 
+sub build_subclass_name {
+    return 'polyphred polyscan';
+}
+
 sub type{
     my $self = shift;
     return $self->name;
@@ -447,45 +451,45 @@ sub get_or_create{
     my $technology = $p{technology};
     my $sensitivity = $p{sensitivity};
     my $data_directory = $p{data_directory};
+    my $subject_name = $p{subject_name};
     
-    unless (defined($research_project_name) && defined($technology) && defined($sensitivity)) {
+    unless (defined($research_project_name) && defined($technology) && defined($sensitivity) && defined($subject_name)) {
         $class->error_message("Insufficient params supplied to get_or_create");
         return undef;
     }
 
+    my $pp_name = "$research_project_name.$technology.$sensitivity";
+    my $model_name = "$subject_name.$pp_name";
+
     my $model = Genome::Model::PolyphredPolyscan->get(
         name => $research_project_name.$technology.$sensitivity
-    #research_project => $research_project_name,
-    #technology => $technology,
-    #sensitivity => $sensitivity,
     );
 
     unless ($model){
         my $pp = Genome::ProcessingProfile::PolyphredPolyscan->get(
-            name => "$research_project_name.$technology.$sensitivity",
+            name => $pp_name,
             #research_project => $research_project_name,
             #technology => $technology,
             #sensitivity => $sensitivity,
         );
         unless ($pp){
             $pp = Genome::ProcessingProfile::PolyphredPolyscan->create(
-                name => "$research_project_name.$technology.$sensitivity",
+                name => $pp_name, 
                 research_project => $research_project_name,
                 technology => $technology,
                 sensitivity => $sensitivity,
             );
         }
         $model = Genome::Model::PolyphredPolyscan->create(
-            subject_name => $research_project_name,
+            subject_name => $subject_name,
             processing_profile => $pp,
-            name => $pp->name,
+            name => $model_name,
             data_directory => $data_directory,
         );
 
         # Now, get or create the combine variants model and add this newly created model to it
         # TODO: Should be some other parameters besides name as the research project name...
-        my $combine_variants_name = "combine-variants.$research_project_name";
-        my $combine_variants_model = Genome::Model::CombineVariants->get_or_create(name => $combine_variants_name);
+        my $combine_variants_model = Genome::Model::CombineVariants->get_or_create(subject_name => $subject_name);
 
         $combine_variants_model->add_child_model($model);
     }
