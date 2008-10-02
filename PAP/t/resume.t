@@ -10,9 +10,8 @@ use above 'Workflow';
 use Data::Dumper;
 use PAP;
 
-my $i = Workflow::Store::Db::Operation::Instance->get(1);
+my $i = Workflow::Store::Db::Operation::Instance->get(88);
 $i->operation->set_all_executor(Workflow::Executor::SerialDeferred->create());
-$i->operation->executor->limit(1);
 
 $i->resume();
 $i->operation->wait;
