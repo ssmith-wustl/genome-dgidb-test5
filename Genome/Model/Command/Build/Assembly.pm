@@ -60,7 +60,7 @@ sub stage2_job_classes {
 
 sub stage1_objects {
     my $self = shift;
-    return $self->unbuilt_read_sets;
+    return $self->model->unbuilt_read_sets;
 }
 
 sub stage2_objects {
