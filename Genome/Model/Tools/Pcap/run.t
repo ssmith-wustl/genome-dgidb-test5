@@ -21,7 +21,7 @@ my $obj = Genome::Model::Tools::Pcap::Run->create
 
 ok($obj->create_project_directories, "created project dirs");
 ok($obj->validate_organism_name, "organism name validated");
-ok($obj->resolve_data_needs, "data needs resolved");
+ok($obj->copy_test_data_set, "test data set copied");
 ok($obj->create_pcap_input_fasta_fof, "pcap fasta fof created");
 ok($obj->create_constraint_file, "constraint file created successfully");
 ok($obj->resolve_pcap_run_type, "pcap run type resolved");
