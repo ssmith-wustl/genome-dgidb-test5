@@ -48,6 +48,7 @@ sub create {
         "maq_avg_num_of_hits: continuous",
         "maq_strong_weak_qual_difference: continuous",
         "total_depth: continuous",
+        "snpfilter: YES,NO",
     );
     $self->names(\@names);
     
@@ -134,7 +135,8 @@ sub make_attribute_array {
         $cns2_avg_num_reads,
         $cns2_max_map_quality,
         $cns2_allele_qual_diff,
-    ) = split ",\s*", $line;
+        $snpfilter,
+    ) = split /,\s*/, $line;
     #create dependent variable ratios
     #everything is dependent on # of reads so make a ratio
     return if $total_depth == 0;
@@ -162,6 +164,7 @@ sub make_attribute_array {
         $cns2_avg_num_reads,
         $cns2_allele_qual_diff,
         $total_depth,
+        $snpfilter,
     );
     return @attributes;
     
@@ -173,13 +176,13 @@ sub make_attribute_array {
 
 =head1 NAME
 
-Genome::Model::Tools::Maq::Metrics::Dtr 
+Genome::Model::Tools::Maq::Metrics::Dtr::MaqOSixThree 
 
 =head1 SYNOPSIS
 
 use Genome;
 
-my $dtr = Genome::Model::Tools::Maq::Metrics::Dtr->create();
+my $dtr = Genome::Model::Tools::Maq::Metrics::Dtr::MaqOSixThree->create();
 
 my @variables = $dtr->headers; #returns the names of the variables fed into the decision tree
 
@@ -194,7 +197,7 @@ my @attributes = $dtr->make_attribute_array($line);
 
 This object contains methods for producing files for C45 training. It processes an experimental metrics line into attributes for the decision tree, and also produces names for each of these attributes to be either used in tree training or C4.5 output parsing.
 
-As it stands now, changes to this module may cause serious errors when dealing with data and trees produced by the original version.
+This module is intended for use with Maq 0.6.3 cns2snp output and mapstat/snp_stats metrics
 
 =head1 CONSTRUCTORS
 
@@ -233,7 +236,7 @@ Genome::Model::Tools::SeeFourFive::MakeTrainingSet,Genome::Model::Tools::Snp::Fi
 
 =head1 BUGS
 
-There is no way to handle various versions of this module without breaking backwards compatibility. This module operates directly on the experimental metrics file format. Changes to this format may break this module.
+This module operates directly on the experimental metrics file format. Changes to this format may break this module.
 
 =head1 AUTHOR
 

@@ -52,9 +52,34 @@ sub create {
         "pre27_unique_variant_for_reads_ratio: continuous",
         "pre27_unique_variant_rev_reads_ratio: continuous",
         "pre27_unique_variant_context_reads_ratio: continuous",
+        "ref_avg_mapping_quality: continuous",
+        "ref_max_mapping_quality: continuous",
+        "ref_fraction_reads_with_max_mapping_quality: continuous",
+        "ref_avg_alt_mapping_quality: continuous",
+        "ref_max_alt_mapping_quality: continuous",
+        "ref_fraction_reads_with_max_alt_mapping_quality: continuous",
+        "ref_avg_sum_of_mismatches: continuous",
+        "ref_max_sum_of_mismatches: continuous",
+        "ref_fraction_reads_with_max_sum: continuous",
+        "ref_avg_num_of_mismatches: continuous",
+        "ref_max_num_of_mismatches: continuous",
+        "ref_fraction_reads_with_max_num_mismatches: continuous",
+        "ref_avg_base_quality: continuous",
+        "ref_max_base_quality: continuous",
+        "ref_fraction_reads_with_max_base_quality: continuous",
+        "ref_avg_windowed_quality: continuous",
+        "ref_max_windowed_quality: continuous",
+        "ref_fraction_reads_with_max_windowed_quality: continuous",
+        "ref_unique_variant_for_reads_ratio: continuous",
+        "ref_unique_variant_rev_reads_ratio: continuous",
+        "ref_unique_variant_context_reads_ratio: continuous",
+        "ref_pre27_unique_variant_for_reads_ratio: continuous",
+        "ref_pre27_unique_variant_rev_reads_ratio: continuous",
+        "ref_pre27_unique_variant_context_reads_ratio: continuous",
         "maq_avg_num_of_hits: continuous",
         "maq_log_likelihood_of_other_alleles: continuous",
         "total_depth: continuous",
+        "snpfilter: YES,NO",
     );
     $self->names(\@names);
     
@@ -127,9 +152,15 @@ sub make_attribute_array {
         $ref_avg_map_quality,
         $ref_max_map_quality,
         $ref_n_max_map_quality,
+        $ref_avg_alt_map_quality,
+        $ref_max_alt_map_quality,
+        $ref_n_max_alt_map_quality,
         $ref_avg_sum_of_mismatches,
         $ref_max_sum_of_mismatches,
         $ref_n_max_sum_of_mismatches,
+        $ref_avg_num_of_mismatches,
+        $ref_max_num_of_mismatches,
+        $ref_n_max_num_of_mismatches,
         $ref_base_quality,
         $ref_max_base_quality,
         $ref_n_max_base_quality,
@@ -150,6 +181,7 @@ sub make_attribute_array {
         $cns2_second_best_call,
         $cns2_log_likelihood,
         $cns2_third_best_call,
+        $snpfilter
     ) = split ",", $line;
     #create dependent variable ratios
     #everything is dependent on # of reads so make a ratio
@@ -181,9 +213,34 @@ sub make_attribute_array {
         $for_strand_unique_by_start_site_pre27/$total_depth,
         $rev_strand_unique_by_start_site_pre27/$total_depth,
         $al2_read_unique_dna_context_pre27/$total_depth,
+        $ref_avg_map_quality,
+        $ref_max_map_quality,
+        $ref_n_max_map_quality/$total_depth,
+        $ref_avg_alt_map_quality,
+        $ref_max_alt_map_quality,
+        $ref_n_max_alt_map_quality/$total_depth,
+        $ref_avg_sum_of_mismatches,
+        $ref_max_sum_of_mismatches,
+        $ref_n_max_sum_of_mismatches/$total_depth,
+        $ref_avg_num_of_mismatches,
+        $ref_max_num_of_mismatches,
+        $ref_n_max_num_of_mismatches/$total_depth,
+        $ref_base_quality,
+        $ref_max_base_quality,
+        $ref_n_max_base_quality/$total_depth,
+        $ref_avg_windowed_quality,
+        $ref_max_windowed_quality,
+        $ref_n_max_windowed_quality/$total_depth,
+        $ref_for_strand_unique_by_start_site/$total_depth,
+        $ref_rev_strand_unique_by_start_site/$total_depth,
+        $ref_read_unique_dna_context/$total_depth,
+        $ref_for_strand_unique_by_start_site_pre27/$total_depth,
+        $ref_rev_strand_unique_by_start_site_pre27/$total_depth,
+        $ref_read_unique_dna_context_pre27/$total_depth,
         $cns2_avg_num_reads,
         $cns2_log_likelihood,
         $total_depth,
+        $snpfilter,
     );
     return @attributes;
     
@@ -195,13 +252,13 @@ sub make_attribute_array {
 
 =head1 NAME
 
-Genome::Model::Tools::Maq::Metrics::Dtr 
+Genome::Model::Tools::Maq::Metrics::Dtr::MaqOSixEight
 
 =head1 SYNOPSIS
 
 use Genome;
 
-my $dtr = Genome::Model::Tools::Maq::Metrics::Dtr->create();
+my $dtr = Genome::Model::Tools::Maq::Metrics::Dtr::MaqOSixEight->create();
 
 my @variables = $dtr->headers; #returns the names of the variables fed into the decision tree
 
@@ -216,7 +273,7 @@ my @attributes = $dtr->make_attribute_array($line);
 
 This object contains methods for producing files for C45 training. It processes an experimental metrics line into attributes for the decision tree, and also produces names for each of these attributes to be either used in tree training or C4.5 output parsing.
 
-As it stands now, changes to this module may cause serious errors when dealing with data and trees produced by the original version.
+This module is intended for use with Maq 0.6.8 cns2snp output and the associated mapstat/Genome::Model::Tools::Maq::CreateExperimentalMetricsFile metrics
 
 =head1 CONSTRUCTORS
 
@@ -255,7 +312,7 @@ Genome::Model::Tools::SeeFourFive::MakeTrainingSet,Genome::Model::Tools::Snp::Fi
 
 =head1 BUGS
 
-There is no way to handle various versions of this module without breaking backwards compatibility. This module operates directly on the experimental metrics file format. Changes to this format may break this module.
+This module operates directly on the experimental metrics file format. Changes to this format may break this module.
 
 =head1 AUTHOR
 
