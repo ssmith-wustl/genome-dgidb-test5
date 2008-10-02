@@ -12,8 +12,15 @@ class Genome::Model::EventWithRefSeq {
     is_abstract => 1,
     sub_classification_method_name => '_get_sub_command_class_name',
     has => [
-        ref_seq_id => { is => 'Integer', doc => 'Identifies the refseq'},
-        cleanup_tmp_files => { is => 'Boolean', doc => 'set to force cleanup of your tmp mapmerge' },
+            ref_seq_id        => {
+                                  is => 'NUMBER',
+                                  len => 11,
+                                  doc => "identifies the refseq"
+                              },
+            cleanup_tmp_files => {
+                                  is => 'Boolean',
+                                  doc => 'set to force cleanup of your tmp mapmerge'
+                              },
     ],
 };
 
@@ -229,8 +236,11 @@ sub cleanup_the_mapmerge_I_specify {
     }
 }
 
-1;
-
+sub resolve_log_directory {
+    my $self = shift;
+    return sprintf('%s/logs/%s', $self->model->latest_build_directory,
+                                     $self->ref_seq_id);
+}
 
 sub find_possible_hosts {
     my $self = shift;
@@ -303,3 +313,5 @@ sub find_previously_created_mapfile {
     }
     return 0;
 }
+
+1;
