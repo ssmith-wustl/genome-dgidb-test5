@@ -9,7 +9,13 @@ use Genome::RunChunk;
 class Genome::Model::Command::Services::BuildQueuedInstrumentData {
     is => 'Command',
     has => [
-        ],
+        test => {
+            is => 'String',
+            doc => "This parameter, if set true, will only process pses with negative id's, allowing your test to complete in a reasonable time frame.",
+            is_optional => 1,
+            default => 0,
+        }
+    ],
 };
 
 
@@ -39,14 +45,17 @@ sub execute {
                          );
     my %model_ids;
     foreach my $pse (@pses) {
-        my ($instrument_data_type) = $pse->added_param('instrument_data_type');
-        my ($instrument_data_id) = $pse->added_param('instrument_data_id');
-        my ($subject_type) = $pse->added_param('subject_type');
-        my ($subject_name) = $pse->added_param('subject_name');
-        my ($sample_name) = $pse->added_param('sample_name');
-        my ($library_name) = $pse->added_param('library_name');
-        my ($research_project_name) = $pse->added_param('research_project_name');
-        my ($processing_profile_name) = $pse->added_param('processing_profile_name');
+        if ($self->test){
+            next if $pse->id > 0;
+        }
+        my ($instrument_data_type)      = $pse->added_param('instrument_data_type');
+        my ($instrument_data_id)        = $pse->added_param('instrument_data_id');
+        my ($subject_type)              = $pse->added_param('subject_type');
+        my ($subject_name)              = $pse->added_param('subject_name');
+        my ($sample_name)               = $pse->added_param('sample_name');
+        my ($library_name)              = $pse->added_param('library_name');
+        my ($research_project_name)     = $pse->added_param('research_project_name');
+        my ($processing_profile_name)   = $pse->added_param('processing_profile_name');
 
         my $pp = Genome::ProcessingProfile->get(name => $processing_profile_name);
         unless ($pp) {
@@ -82,13 +91,15 @@ sub execute {
             $self->status_message('Existing read set found for model '. $model->id .' and read set '. $instrument_data_id);
             next;
         }
-        my $add_reads = Genome::Model::Command::AddReads->create(
-                                                                 read_set_id => $instrument_data_id,
-                                                                 model_id => $model->id,
-                                                             );
-        unless ($add_reads->execute) {
-            $self->error_message('Failed to execute add reads for model '. $model->id .' and read set '. $instrument_data_id);
-            next;
+        unless ($model->isa('Genome::Model::PolyphredPolyscan') || $model->isa('Genome::Model::CombineVariants')){
+            my $add_reads = Genome::Model::Command::AddReads->create(
+                read_set_id => $instrument_data_id,
+                model_id => $model->id,
+            );
+            unless ($add_reads->execute) {
+                $self->error_message('Failed to execute add reads for model '. $model->id .' and read set '. $instrument_data_id);
+                next;
+            }
         }
         # Add model to list of models to build
         $model_ids{$model->id} = 1;
@@ -96,8 +107,8 @@ sub execute {
     #Execute all the builds for models with new data
     for my $model_id (keys %model_ids) {
         my $build = Genome::Model::Command::Build->create(
-                                                          model_id => $model_id,
-                                                      );
+            model_id => $model_id,
+        );
         unless ($build->execute) {
             $self->error_message('Failed to execute build '. $build->id .' for model '. $model_id);
             next;
