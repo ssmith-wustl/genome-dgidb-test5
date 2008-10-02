@@ -136,7 +136,7 @@ sub load_config_params_and_execute
 }
 
 sub help_brief {
-    "launch pcap assembler"		    
+    "launch pcap assembler";
 }
 
 sub help_synopsis {                         
@@ -1015,7 +1015,7 @@ sub _get_pcap_params
 
 #    return '-l 300 -w 200' if $self->pcap_run_type eq 'RAW_454';
 
-    return '-l 300 -o 40 -s 1200 -w 200' if $self->pcap_run_type eq 'RAW_454';
+    return '-l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'RAW_454';
     return '-l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'POLY';
     return '-l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'NORMAL';
 
@@ -1026,7 +1026,7 @@ sub _get_bdocs_params
 {
     my ($self) = @_;
 
-    return '-l 300 -y 1 -z 0' if $self->pcap_run_type eq 'RAW_454';
+    return '-y 1 -z 0' if $self->pcap_run_type eq 'RAW_454';
     return '-y 1 -z 0' if $self->pcap_run_type eq 'POLY';
     return '-y 1 -z 0' if $self->pcap_run_type eq 'NORMAL';
 
@@ -1424,5 +1424,25 @@ sub delete_completed_assembly
     return 1;
 }
 
+#Method called by test.t only to copy
+#input data over to edit_dir to avoid
+#having to dump reads
+
+sub copy_test_data_set
+{
+    my ($self) = @_;
+    
+    my $edit_dir = $self->{project_path}.'/edit_dir';
+    my $fasta = $self->{project_path}.'/input/PPBA.fasta.gz';
+    my $qual = $self->{project_path}.'/input/PPBA.fasta.qual.gz';
+
+    $self->error_message ("Test data set does not exist: $fasta $qual") and return
+	unless -s $fasta and -s $qual;
+
+    $self->error_message ("Unable to copy test data set to edit_dir") and return
+	if my $ec = system ("cp $fasta $qual $edit_dir");
+
+    return 1;
+}
 
 1;
