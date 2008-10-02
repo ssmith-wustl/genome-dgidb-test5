@@ -9,16 +9,20 @@ class Genome::Model::ReadSet {
     id_by => [
         model               => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GMRSET_GM_PK ' },
         read_set            => { is => 'Genome::RunChunk', id_by =>'read_set_id'},
-
     ],
     has => [   
         first_build_id      => { is => 'NUMBER', len => '10', is_optional=>1 }, 
         alignment_directory => { via => 'model'},
         run_name            => { via => 'read_set'},
+            # PICK ONE AND FIX EVERYTHING THAT USES THIS
         subset_name         => { via => 'read_set'},
+        run_subset_name     => { via => 'read_set', to => 'subset_name'},
+            # PICK ONE AND FIX EVERYTHING THAT USES THIS
+        short_name          => { via => 'read_set' },
         run_short_name      => { via => 'read_set', to => 'short_name' },
         library_name        => { via => 'read_set' },
         sample_name         => { via => 'read_set' },
+        sequencing_platform => { via => 'read_set' },
         unique_reads_across_library     => { via => 'read_set' },
         duplicate_reads_across_library  => { via => 'read_set' },
         median_insert_size => {via => 'read_set'},
