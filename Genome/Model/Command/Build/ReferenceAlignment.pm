@@ -7,14 +7,7 @@ use Genome;
 
 class Genome::Model::Command::Build::ReferenceAlignment {
     is => 'Genome::Model::Command::Build',
-    has => [
-            testing_flag => {
-                             is => 'Integer',
-                             doc =>'When set to 1, turns off automatic RunJobsing...',
-                             is_optional=>1,
-                             default=>0,
-                         },
-    ],
+    has => [],
  };
 
 sub sub_command_sort_position { 40 }
@@ -42,7 +35,8 @@ sub command_subclassing_model_property {
 sub subordinate_job_classes {
     my $class = shift;
     $class = ref($class) if ref($class);
-    die ("Please implement subordinate_job_classes in abstract class '$class'");
+    die ("Please implement subordinate_job_classes in class '$class'");
 }
+
 1;
 
