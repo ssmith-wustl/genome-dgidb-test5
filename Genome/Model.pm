@@ -59,8 +59,8 @@ class Genome::Model {
                                         },
     ],
     has_optional => {
-        last_complete_build         => { is => 'Genome::Model::Build', id_by => ['last_complete_build_id'] },
-        current_running_build       => { is => 'Genome::Model::Build', id_by => ['current_running_build_id'] },
+        last_complete_build         => { is => 'Genome::Model::Command::Build', id_by => ['last_complete_build_id'] },
+        current_running_build       => { is => 'Genome::Model::Command::Build', id_by => ['current_running_build_id'] },
         sequencing_platform          => { via => 'processing_profile'},
         read_set_class_name          => {
                                           calculate_from => ['sequencing_platform'],
