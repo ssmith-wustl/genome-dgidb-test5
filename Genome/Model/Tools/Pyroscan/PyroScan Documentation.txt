@@ -1,0 +1,149 @@
+PyroScan Documentation
+
+
+
+Ken Chen (kchen22@wustl.edu), July, 2008
+
+
+=Introduction
+
+PyroScan refers to a variant/mutation caller that is written to identify SNPs and small indels from the 454 sequenced amplicon/capture data. Such data are usually characterized by high depth and by sequence errors specific to the technology.
+
+PyroScan intends to support 
+* the Cohort study, e.g., to identify polymorphism from a population of samples, and 
+* the Case/Control study, e.g., to identify somatic mutations from paired tumor and normal samples, and
+* others, e.g., identify somatic mutation sites from paired pools of samples
+
+PyroScan has been designed and implemented to optimize the performance on the TSP and the TCGA data.
+
+
+=Input/Output:
+
+* Input
+* Reference sequence fasta for the region of interest
+* Reads (with Phred qualities) created by a front-end base caller
+* Paired alignments created between the reference and the reads by the front-end aligner (e.g., cross-match).
+
+* Output: List of variant 
+* Reference position
+* Variant type (snp/indels)
+* Variant class (somatic/germline/LOH/unknown for paired study)
+* Reference/variant alleles
+* Adjusted read count (total/reference/variant)
+* Variant/wildtype ratio
+* P value (confidence scores)
+
+
+=The variant calling algorithm:
+
+The Variant calling algorithm contains two major components: 
+1. a set of QC filters that remove unreliable reads,
+2. a statistic test to identify variants supported by significant amount of evidences.
+
+The current QC filters check the following aspects:
+* wrong alignment,
+* base qualities at the loci of interest,
+* systematic sequencing errors, e.g., 454 homopolymer errors
+
+PyroScan assumes that the (vector-screened) reads are already assigned to the correct loci of interest (a liability of the front end alignment programs). To ensure that is somewhat true, it removes reads that contain higher than 3% substitution errors. Reads with base quality lower than a cutoff (Q20) at the current site are excluded from counting. 1bp indels are always discarded if it is-part-of/immediately-follows-or-precedes a homopolymer of length >1.
+
+Once all the candidate discrepant sites are determined, the associated read count information is passed to the statistic test component.  Depending on the type of the test, the user specified parameters (the P value cutoff and the expected ratio), a minimal coverage depth is determined.  Only sites that have sufficient depth are scanned.  Others are classified as no-call in the case/control study.
+
+For cohort study, one can either test if the distribution of reads among the alleles meets the expected allele frequency. For example, if the data are collected from a single diploid sample, one should expect equal amounts of reads supporting both the variant and the reference alleles for any het sites.  When we sequence a pool of tumors, the allele frequency is potentially unknown because 1. we are looking for novel mutations that have unknown allele frequency, 2. tumor samples are heterogeneous and are frequently contaminated by normal samples at imprecisely characterized admixture ratio. Therefore the existence of an allele can only be ascertained if its read count is significantly larger than 0 given the total number of aligned reads. Both the cutoff (P value) and the expected read count ratios can be specified by the users who have the best knowledge of the samples.
+
+It is important to consider both the depth of coverage (total number of aligned reads) and allele specific read counts. Simple ratios test that doesn't consider the depth cannot suffice due to the large variance of ratios at low depth.  One appropriate test is the Fisher's Exact Test (FET), which consider both the depth and the read distribution.  For example, 2 A and 5 C are observed at a loci, FET gives a P value of 0.4615. However, if 20 A and 50 C are observed (same allele ratio), the P value becomes 3.9e-7 representing higher confidence resulting from higher depth.  
+
+For case/control study, e.g., the tumor/normal paired study in TSP and TCGA, variants are tested independently in the case and in the control against their expectations respectively and are then further categorized as
+* somatic (variant in tumor, wildtype in normal)
+* putative_somatic (variant in tumor, no-call in normal)
+* germline, (variant in both tumor and normal)
+* putative_germline, (no-call in tumor, variant in normal)
+* other (wildtype in tumor, variant in normal)
+
+
+
+=Code Structure:
+
+This release contains 
+* a variant caller (PyroScan.pm), 
+* a cross-match parser (CrossMatch.pm), 
+* a Fisher's Exact Test module (FET.pm), and 
+* a utility program (PyroScan.pl). 
+PyroScan.pl handles the user interface. PyroScan.pm handles the statistics that are necessary for the variant calling.  CrossMatch.pm parses the CrossMatch alignment and remove reads that don't pass QC filters. FET.pm is a straightforward implementation of Fisher's Exact Test for the 2x2 cases. Part of the code is now written in Inline C, making it about 5 times faster.
+Not all modules are fully tested but should work under most of the conditions.  CrossMatch.pm may be least reliable because crossmatch output format file changes under different options.  Please make sure to use the recommended CrossMatch parameters (see below).
+
+
+=Usage:
+
+Synopsis: Variant (SNPs and small indels) detection from 454 amplicon/capture data using Fisher's Exact Test
+
+Options:
+  -help                  display help information
+  -refseq <.fasta>       fasta file of the reference sequence
+  -qt <.qual>            quality file of the reads of the case samples
+  -cmt <.cm.out>         cross-match alignment for the case reads
+  -qn <.qual>            quality file of the reads of the control samples
+  -cmn <.cm.out>         cross-match alignment for the control reads
+  -pvalue <a P value>    P value cutoff, default=1e-6
+  -rt <variant ratio>    floor variant/wildtype read ratio in the cases, default=0
+  -rn <variant ratio>    floor variant/wildtype read ratio in the controls, default=0
+  -indel <bp>            minimum indel size to report, default=3 bp
+  -lstpos <.lst>         a text file, first column lists refseq positions for survey
+
+Most of these are options are straightforward.  The -rt and -rn can be used to specify possible contamination ratio in the tumor sample. For example, if you expects that 10% of the tumor samples are contaminated by normal, you could set -rt 0.1 to obtain more stringent result (i. e., to expect at least 10% of reads supporting variants in the tumor for it to be a true variant).
+
+
+=Examples:
+
+1. Tumor only analysis
+kchen[~]$ scripts/PyroScan.pl -cmt data/gene_dir/LTK/reads-tumor.LTK.crossmatch.kchen.p4.out -qt data/gene_dir/LTK/reads-tumor.fasta.qual -refseq data/ref_seqsByGene/LTK.fasta -p 1e-2
+
+#refseq: data/ref_seqsByGene/LTK.fasta
+#case reads quality file: data/gene_dir/LTK/reads-tumor.fasta.qual
+#case cross-match alignment file: data/gene_dir/LTK/reads-tumor.LTK.crossmatch.kchen.p4.out
+#P value cutoff: 1e-2
+#baseline variant/wildtype read ratio in case: 0
+#baseline variant/wildtype read ratio in control: 0
+#only report indels longer than: 3 bp
+#this is a cohort study
+#minimum 5 Reads required to achieve P<=1e-2 at floor_ratio=0
+53089   SNP     318     G       212     S:A     106     0.500000        3.21530356890612e-37
+57383   SNP     7       C       1       S:G     6       6.000000        0.00237262737262736
+
+2. Tumor/Normal Paired Analysis
+kchen[~]$ scripts/PyroScan.pl -cmt data/gene_dir/AXL/reads-tumor.AXL.crossmatch.kchen.p4.out -qt data/gene_dir/AXL/reads-tumor.fasta.qual -refseq data/ref_seqsByGene/AXL.fasta -cmn data/gene_dir/AXL/reads-normal.AXL.crossmatch.kchen.p4.out -qn data/gene_dir/AXL/reads-normal.fasta.qual -p 1e-2
+#refseq: data/ref_seqsByGene/AXL.fasta
+#case reads quality file: data/gene_dir/AXL/reads-tumor.fasta.qual
+#case cross-match alignment file: data/gene_dir/AXL/reads-tumor.AXL.crossmatch.kchen.p4.out
+#control reads quality file: data/gene_dir/AXL/reads-normal.fasta.qual
+#control cross-match alignment file: data/gene_dir/AXL/reads-normal.AXL.crossmatch.kchen.p4.out
+#P value cutoff: 1e-2
+#baseline variant/wildtype read ratio in case: 0
+#baseline variant/wildtype read ratio in control: 0
+#only report indels longer than: 3 bp
+#this is a case/control study
+#minimum 5 reads required for cases to achieve P<=1e-2 at floor_ratio=0
+#minimum 5 control reads required for controls to achieve P<=1e-2 at floor_ratio=0
+52378   putative_germline               SNP     244     C       237     S:A     7       0.029536        0.00848986412412798
+52487   somatic SNP     1280    C       536     S:T     744     1.388060        9.35764954591467e-293
+52490   germline        SNP     13      C       6       S:T     6       1.000000        0.00555050940007099     SNP   1185     C       1174    S:T     7       0.005963        0.00871389357970926
+52572   somatic SNP     537     C       529     S:T     7       0.013233        0.00865809764328635
+52580   somatic SNP     535     C       527     S:T     7       0.013283        0.00865716552992033
+69701   putative_somatic        SNP     85      A       42      S:G     43      1.023810        8.41660745227487e-17
+71042   somatic SNP     554     T       306     S:A     247     0.807190        9.29165915870288e-91
+
+
+
+=The Front-end alignment:
+
+We currently use BLAT based procedure developed by Dan Koboldt to assign 454 reads to individual amplicon/genes.  The purpose of this procedure is to make sure reads are truly specific to the region of interest and are not from homologous regions.
+
+I have tested that the following cross-match parameters that gives better result than the default. For 454 reads that have high indel and low substitution error rates, it is very helpful to reduce the gap initiation penalty and increase the substitution penalty.  This is supported by the TSP test result.
+cross_match.test gene_dir/$g/
+reads-$sample.fasta.screen data/ref_seqsByGene/$g.fasta -minmatch 12 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -3 -gap_ext -1
+
+Vector screening using cross-match is recommended.  It helped improve the overall result also evident in the TSP test (although it may hurt sensitivity in some individual cases):
+
+cross_match.test reads-$sample.fasta vector.fasta -minmatch 10 -minscore 15 -screen > reads-$sample.screen.out; 
+ln -s reads-$sample.fasta.qual reads-$sample.fasta.screen.qual
+where vector.fasta contains the known vector sequences (e.g., 454 adaptor sequences).
