@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+
 
 # Copyright (C) 2008 Washington University in St. Louis
 #

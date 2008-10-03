@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+
 package Genome::Model::Tools::Pyroscan::Total;
 
 use strict;
