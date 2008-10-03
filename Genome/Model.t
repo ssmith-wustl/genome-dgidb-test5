@@ -38,8 +38,8 @@ is($v,3180629, "got expected variant count");
 
 my $f;
 
-my $data_directory = $m->latest_build_directory;
-is($data_directory, "/gscmnt/839/info/medseq/model_links/H_GV-933124G-tumor1-9043g_AML-tumor-new_maq-no_ss_dups/build91849776", "resolved data directory");  # FIX WHEN WE SWITCH MODELS
+my $data_directory = $m->complete_build_directory;
+is($data_directory, "/gscmnt/835/info/medseq/model_data/H_GV-933124G-tumor1-9043g_AML-tumor-new_maq-no_ss_dups/build91849776", "resolved data directory");  # FIX WHEN WE SWITCH MODELS
 
 #$f = $m->resolve_accumulated_alignments_filename();
 #is($f, 'FIXME', "found accumulated alignments file name"); #FIXME WHEN WE SWITCH MODELS
