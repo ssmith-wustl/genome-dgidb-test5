@@ -208,17 +208,13 @@ sub add_reads {
 
         #when the namespace moves, the double for underneath may get uncommented
 #    my @sub_command_classes = $pp_alignments->subordinate_job_classes;
-    my $sub_command_count = 5;
 #    for my $command_classes (@sub_command_classes) {
 #        for my $command_class (@{$command_classes}) {.
 #            $sub_command_count++;
 #        }
 #    }
 
-   $pp_alignments->is_executed(0);
-   $DB::single=1;
-   ok($pp_alignments->execute(), 'REexecute genome-model add-reads postprocess-alignments');
-$self->{_expected_postprocess_events} = $self->{_ref_seq_count} * $sub_command_count;
+    $self->{_expected_postprocess_events} = $self->{_ref_seq_count} * 5;
    #UR::Context->_sync_databases();
 
     my @pp_events = Genome::Model::Event->get(
