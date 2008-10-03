@@ -107,9 +107,9 @@ sub resolve_accumulated_alignments_filename {
         #find maplists that we want to merge
         my @maplists;
         if ($ref_seq_id) {
-            @maplists = $self->model->maplist_file_paths(%p);
+            @maplists = $self->parent_event->maplist_file_paths(%p);
         } else {
-            @maplists = $self->model->maplist_file_paths();
+            @maplists = $self->parent_event->maplist_file_paths();
         }
         unless (@maplists) {
             $self->error_message("Failed to find maplists!");
@@ -237,7 +237,7 @@ sub cleanup_the_mapmerge_I_specify {
 
 sub resolve_log_directory {
     my $self = shift;
-    return sprintf('%s/logs/%s', $self->model->latest_build_directory,
+    return sprintf('%s/logs/%s', $self->build_directory,
                                      $self->ref_seq_id);
 }
 
