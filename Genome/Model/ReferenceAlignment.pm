@@ -100,6 +100,7 @@ class Genome::Model::ReferenceAlignment {
     doc => 'A genome model produced by aligning DNA reads to a reference sequence.' 
 };
 
+
 sub create {
     my $class = shift;
 
@@ -142,6 +143,18 @@ sub _calculate_library_count {
     return scalar($self->libraries);
 }
 
+sub complete_build_directory {
+    my $self=shift;
+    if (defined $self->latest_complete_build_event) {
+        return $self->latest_complete_build_event->data_directory;
+    }
+    else
+    {
+        return ;
+    }
+}
+
+
 sub run_names {
     my $self = shift;
     my %distinct_run_names = map { $_->run_name => 1}  $self->read_sets;
@@ -156,11 +169,11 @@ sub _calculate_run_count {
 
 sub other_snp_related_metric_directory {
     my $self=shift;
-    return $self->latest_build_directory . "/other_snp_related_metrics/";
+    return $self->complete_build_directory . "/other_snp_related_metrics/";
 }
 sub maq_snp_related_metric_directory {
     my $self=shift;
-    return $self->latest_build_directory . "/maq_snp_related_metrics/";
+    return $self->complete_build_directory . "/maq_snp_related_metrics/";
 }
 
 #This should not be used, unless we really need caching, if so, should probably be in Genome::Model::ReadSet
@@ -605,12 +618,12 @@ sub _variation_metrics_files {
 
 sub _filtered_variants_dir {
     my $self = shift;
-    return sprintf('%s/filtered_variations/',$self->latest_build_directory);
+    return sprintf('%s/filtered_variations/',$self->complete_build_directory);
 }
 
 sub _reports_dir {
     my $self = shift;
-    return sprintf('%s/annotation/',$self->latest_build_directory);
+    return sprintf('%s/annotation/',$self->complete_build_directory);
 }
 
 sub _files_for_pattern_and_optional_ref_seq_id {
@@ -622,7 +635,7 @@ sub _files_for_pattern_and_optional_ref_seq_id {
         map { 
             sprintf(
                 $pattern,
-                $self->latest_build_directory,
+                $self->complete_build_directory,
                 $_
             )
         }
@@ -644,7 +657,7 @@ sub _files_for_pattern_and_params {
 
 sub accumulated_alignments_directory {
     my $self = shift;
-    return $self->latest_build_directory . '/alignments';
+    return $self->complete_build_directory . '/alignments';
 }
 
 sub maplist_file_paths {
@@ -755,7 +768,7 @@ sub Xresolve_accumulated_alignments_filename {
     my %p = @_;
     my $refseq = $p{ref_seq_id};
     
-    my $model_data_directory = $self->latest_build_directory;
+    my $model_data_directory = $self->complete_build_directory;
     
     my @subsequences = grep {$_ ne "all_sequences" } $self->get_subreference_names(reference_extension=>'bfa');
     
