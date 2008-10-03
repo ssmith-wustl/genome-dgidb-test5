@@ -169,6 +169,7 @@ sub _verify_submitted_jobs {
         Genome::Model::Event->get(
             event_status => ['Running','Scheduled'],
             lsf_job_id => { operator => 'ne', value => undef },
+            parent_event_id => { operator => 'ne', value=>undef},
             %addl_get_params
         );
     $DB::single=1;
@@ -225,7 +226,9 @@ sub _schedule_scheduled_jobs {
     my @launchable_events = grep { $_->event_type !~ /create/ }
                             sort { ($a->model_id <=> $b->model_id) || ($a->genome_model_event_id <=> $b->genome_model_event_id) }
                             Genome::Model::Event->get( event_status => 'Scheduled',
-                                                       lsf_job_id => undef,  # this means the job hasn't been submitted yet
+                                                       lsf_job_id => undef,
+                                                       parent_event_id => { operator => 'ne', value=>undef},
+                                                        # this means the job hasn't been submitted yet
                                                        %addl_get_params);
     while (my $event = shift @launchable_events) {
         unless ($event->ref_seq_id || $event->read_set_id) {
@@ -277,7 +280,9 @@ sub _reschedule_failed_jobs {
                             #                                 model_id => $_->model_id,
                             #                                 event_type => $_->event_type,
                             #                                 date_scheduled => { operator => '>', value => $_->date_scheduled } ) }
-                            Genome::Model::Event->get(event_status => ['Failed','Crashed'],%addl_get_params);  
+                            Genome::Model::Event->get(event_status => ['Failed','Crashed'],  
+                                                      parent_event_id => { operator => 'ne', value=>undef}, 
+                                                      %addl_get_params);  
 
     $DB::single=1;                         
     while (my $event = shift @launchable_events) {
