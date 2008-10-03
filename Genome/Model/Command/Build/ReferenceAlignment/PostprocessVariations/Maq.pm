@@ -45,22 +45,22 @@ sub _variation_metrics_name {
 
 sub snp_output_file {
     my $self = shift;
-    return sprintf("%s/%s", $self->model->maq_snp_related_metric_directory,$self->_snp_resource_name);
+    return sprintf("%s/%s", $self->parent_event->maq_snp_related_metric_directory,$self->_snp_resource_name);
 }
 
 sub pileup_output_file {
     my $self = shift;
-    return sprintf("%s/%s", $self->model->maq_snp_related_metric_directory,$self->_pileup_resource_name);
+    return sprintf("%s/%s", $self->parent_event->maq_snp_related_metric_directory,$self->_pileup_resource_name);
 }
 
 sub variation_metrics_file {
     my $self = shift;
-    return sprintf("%s/%s", $self->model->other_snp_related_metric_directory,$self->_variation_metrics_name);
+    return sprintf("%s/%s", $self->parent_event->other_snp_related_metric_directory,$self->_variation_metrics_name);
 }
 sub variation_metrics_file_for_model {
     my $self = shift;
     my $model = shift;
-    my $metrics_for_other_snps_directory = $self->model->other_snp_related_metric_directory . "/metrics_for_$model" . "_snps/";
+    my $metrics_for_other_snps_directory = $self->parent_event->other_snp_related_metric_directory . "/metrics_for_$model" . "_snps/";
 
     unless (-d $metrics_for_other_snps_directory) {
         unless(mkdir $metrics_for_other_snps_directory) {
@@ -75,19 +75,19 @@ sub variation_metrics_file_for_model {
 
 sub experimental_variation_metrics_file_basename {
     my $self = shift;
-    return sprintf("%s/%s", $self->model->maq_snp_related_metric_directory, 'experimental_' . $self->_variation_metrics_name);
+    return sprintf("%s/%s", $self->parent_event->maq_snp_related_metric_directory, 'experimental_' . $self->_variation_metrics_name);
 }
 
 sub execute {
     my $self = shift;
     my $model = $self->model;
 
-    unless(-d $self->model->other_snp_related_metric_directory) {
-        unless(mkdir $self->model->other_snp_related_metric_directory) {
-            $self->error_message("Cannot create " . $self->model->other_snp_related_metric_directory);
+    unless(-d $self->parent_event->other_snp_related_metric_directory) {
+        unless(mkdir $self->parent_event->other_snp_related_metric_directory) {
+            $self->error_message("Cannot create " . $self->parent_event->other_snp_related_metric_directory);
             return;
         }
-        chmod 02775, $self->model->other_snp_related_metric_directory;
+        chmod 02775, $self->parent_event->other_snp_related_metric_directory;
     }
     
     $self->revert;

@@ -167,7 +167,7 @@ sub execute {
     
     my $chromosome_name = $self->ref_seq_id;
     my $model = $self->model;
-    my ($detail_file) = $model->_variant_detail_files($chromosome_name);
+    my ($detail_file) = $self->parent_event->_variant_detail_files($chromosome_name);
     my $log_dir = $self->resolve_log_directory;
 
     $DB::single = $DB::stopper; # when debugging, stop here...

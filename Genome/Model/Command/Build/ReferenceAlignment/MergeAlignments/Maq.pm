@@ -42,7 +42,7 @@ $DB::single=1;
 
     my $now = UR::Time->now;
     my $model = $self->model; 
-    my $maplist_dir = $model->accumulated_alignments_directory;
+    my $maplist_dir = $self->parent_event->accumulated_alignments_directory;
     unless (-e $maplist_dir) {
         unless (mkdir $maplist_dir) {
             #doesn't exist can't create it...quit

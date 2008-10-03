@@ -54,7 +54,7 @@ $DB::single = $DB::stopper;
         chmod 02775, "$model_dir/consensus";
     }
 
-    my ($consensus_file) = $model->assembly_file_for_refseq($self->ref_seq_id);
+    my ($consensus_file) = $self->parent_event->_consensus_files($self->ref_seq_id);
 
     my $ref_seq_file = sprintf("%s/all_sequences.bfa", $model->reference_sequence_path);
     #my $ref_seq_file = sprintf("%s/%s.bfa", $model->reference_sequence_path , $self->ref_seq_id);
@@ -90,7 +90,7 @@ $DB::single = $DB::stopper;
 sub verify_succesful_completion {
     my $self = shift;
 
-    my ($consensus_file) = $self->model->assembly_file_for_refseq($self->ref_seq_id);
+    my ($consensus_file) = $self->parent_event->_consensus_files($self->ref_seq_id);
     unless (-e $consensus_file && -s $consensus_file > 20) {
         $self->error_message("Consensus file $consensus_file is too small");
         return;
