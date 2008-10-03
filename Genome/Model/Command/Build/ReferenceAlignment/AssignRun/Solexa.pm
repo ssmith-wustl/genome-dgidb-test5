@@ -78,9 +78,8 @@ sub create {
 sub execute {
     my $self = shift;
     $DB::single = $DB::stopper;
-    my $model = $self->model;
-    unless (-d $model->latest_build_directory) {
-        $self->create_directory($model->latest_build_directory);
+    unless (-d $self->build_directory) {
+        $self->create_directory($self->build_directory);
     }
    return 1;
 }
@@ -88,8 +87,8 @@ sub execute {
 sub verify_successful_completion {
     my $self = shift;
     my $model = $self->model;
-    unless (-d $model->latest_build_directory) {
-    	$self->error_message("Data parent directory doesnt exist: ".$model->latest_build_directory);
+    unless (-d $self->build_directory) {
+    	$self->error_message("Data parent directory doesnt exist: " . $self->build_directory);
         return 0;
     }
     return 1;

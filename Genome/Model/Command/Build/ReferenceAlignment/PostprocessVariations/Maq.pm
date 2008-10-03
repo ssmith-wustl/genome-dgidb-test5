@@ -92,7 +92,6 @@ sub execute {
     
     $self->revert;
 
-    $DB::single = $DB::stopper;
 
     #unless ($self->generate_variation_metrics_files_v1) {        
     #    $self->error_message("Error generating variation metrics file (used downstream at filtering time)!");
@@ -221,12 +220,14 @@ sub generate_variation_metrics_files_v2 {
 #        $self->status_message("Metrics generation complete.");
 #        return 1;
 #    }
+
      my $rv = Genome::Model::Tools::Maq::CreateExperimentalMetricsFile->execute(
          map_file=>$map_file,
          location_file=>$snp_file,
          ref_bfa_file => $bfa_file,
          output_file => $output_basename,
          snpfilter_file => "$snp_file.filtered",
+         ref_name => $self->ref_seq_id,
      );
      unless($rv) {
          $self->error_message("CreateExperimentalMetricsFile tool did not return successful");
@@ -286,7 +287,6 @@ sub snp_err_log_file {
 sub skin_sample_map_file {
     my $self= shift;
     my $model = $self->model;
-    $DB::single = $DB::stopper;
     my $model_name = $model->name;
     my $skin_name = $model_name;
 

@@ -532,7 +532,6 @@ sub execute_with_bsub {
 
     my $event_id = $self->genome_model_event_id;
     my $prior_event_id = $last_event->genome_model_event_id if defined $last_event;
-
     my $log_dir = $self->resolve_log_directory;
     unless (-d $log_dir) {
         eval { mkpath($log_dir) };

@@ -107,7 +107,7 @@ sub resolve_log_directory {
     my $self = shift;
     return sprintf('%s/logs/%s/%s',
                    $self->model->latest_build_directory,
-                   $self->sequencing_platform,
+                   $self->read_set_link->sequencing_platform,
                    $self->run_name
                );
 }

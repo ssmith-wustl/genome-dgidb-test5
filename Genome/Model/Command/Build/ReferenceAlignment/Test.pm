@@ -178,7 +178,8 @@ sub add_reads {
             my $assign_run_command = $add_reads_events[0];
             isa_ok($assign_run_command,'Genome::Model::Command::Build::ReferenceAlignment::AssignRun');
 
-            my $data_directory = $assign_run_command->model->latest_build_directory;
+            my $data_directory = $assign_run_command->build_directory;
+            #this will work in test but is not a great display of 'things are working correctly'
             is($data_directory,$model->latest_build_directory,"assign run data directory matches model");
 
             $self->execute_event_test($assign_run_command);
@@ -214,7 +215,7 @@ sub add_reads {
 #        }
 #    }
 
-    $self->{_expected_postprocess_events} = $self->{_ref_seq_count} * 5;
+   $self->{_expected_postprocess_events} = $self->{_ref_seq_count} * 5;
    #UR::Context->_sync_databases();
 
     my @pp_events = Genome::Model::Event->get(
