@@ -18,7 +18,7 @@
 use strict;
 use warnings;
 use lib '/gscuser/kchen/454-TSP-Test/Analysis/Ken/scripts/';
-use CrossMatch;
+use Genome::Model::Tools::Pyroscan::CrossMatch;
 use PyroScan;
 use Bio::SeqIO;
 use Getopt::Long;
@@ -79,15 +79,15 @@ my @poses=&Readlist($f_poslst);
 my $var;
 if(defined $f_cm_control && defined $f_control_qual){  # case/control analysis
 
-  my $case_cm=new CrossMatch(fin=>$f_cm_case);
-  my $control_cm=new CrossMatch(fin=>$f_cm_control);
+  my $case_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_case);
+  my $control_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_control);
 
   my $detector=new PyroScan();
   $var=$detector->MutDetect(\@poses,$case_cm,$floor_ratio_case,$f_case_qual,$control_cm,$floor_ratio_control,$f_control_qual,$Pvalue, $floor_indel_size, $refseq);
 }
 else{  # cohort analysis
 
-  my $case_cm=new CrossMatch(fin=>$f_cm_case);
+  my $case_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_case);
   my $case_detect=new PyroScan();
   $var=$case_detect->VarDetect(\@poses,$case_cm,$floor_ratio_case,$f_case_qual,$Pvalue, $floor_indel_size, $refseq);
 }

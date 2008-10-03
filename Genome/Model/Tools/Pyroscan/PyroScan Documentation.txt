@@ -51,7 +51,7 @@ Once all the candidate discrepant sites are determined, the associated read coun
 
 For cohort study, one can either test if the distribution of reads among the alleles meets the expected allele frequency. For example, if the data are collected from a single diploid sample, one should expect equal amounts of reads supporting both the variant and the reference alleles for any het sites.  When we sequence a pool of tumors, the allele frequency is potentially unknown because 1. we are looking for novel mutations that have unknown allele frequency, 2. tumor samples are heterogeneous and are frequently contaminated by normal samples at imprecisely characterized admixture ratio. Therefore the existence of an allele can only be ascertained if its read count is significantly larger than 0 given the total number of aligned reads. Both the cutoff (P value) and the expected read count ratios can be specified by the users who have the best knowledge of the samples.
 
-It is important to consider both the depth of coverage (total number of aligned reads) and allele specific read counts. Simple ratios test that doesn't consider the depth cannot suffice due to the large variance of ratios at low depth.  One appropriate test is the Fisher's Exact Test (FET), which consider both the depth and the read distribution.  For example, 2 A and 5 C are observed at a loci, FET gives a P value of 0.4615. However, if 20 A and 50 C are observed (same allele ratio), the P value becomes 3.9e-7 representing higher confidence resulting from higher depth.  
+It is important to consider both the depth of coverage (total number of aligned reads) and allele specific read counts. Simple ratios test that doesn't consider the depth cannot suffice due to the large variance of ratios at low depth.  One appropriate test is the Fisher's Exact Test (Genome::Model::Tools::FET), which consider both the depth and the read distribution.  For example, 2 A and 5 C are observed at a loci, Genome::Model::Tools::FET gives a P value of 0.4615. However, if 20 A and 50 C are observed (same allele ratio), the P value becomes 3.9e-7 representing higher confidence resulting from higher depth.  
 
 For case/control study, e.g., the tumor/normal paired study in TSP and TCGA, variants are tested independently in the case and in the control against their expectations respectively and are then further categorized as
 * somatic (variant in tumor, wildtype in normal)
@@ -66,11 +66,11 @@ For case/control study, e.g., the tumor/normal paired study in TSP and TCGA, var
 
 This release contains 
 * a variant caller (PyroScan.pm), 
-* a cross-match parser (CrossMatch.pm), 
-* a Fisher's Exact Test module (FET.pm), and 
+* a cross-match parser (Genome::Model::Tools::CrossMatch.pm), 
+* a Fisher's Exact Test module (Genome::Model::Tools::FET.pm), and 
 * a utility program (PyroScan.pl). 
-PyroScan.pl handles the user interface. PyroScan.pm handles the statistics that are necessary for the variant calling.  CrossMatch.pm parses the CrossMatch alignment and remove reads that don't pass QC filters. FET.pm is a straightforward implementation of Fisher's Exact Test for the 2x2 cases. Part of the code is now written in Inline C, making it about 5 times faster.
-Not all modules are fully tested but should work under most of the conditions.  CrossMatch.pm may be least reliable because crossmatch output format file changes under different options.  Please make sure to use the recommended CrossMatch parameters (see below).
+PyroScan.pl handles the user interface. PyroScan.pm handles the statistics that are necessary for the variant calling.  Genome::Model::Tools::CrossMatch.pm parses the Genome::Model::Tools::CrossMatch alignment and remove reads that don't pass QC filters. Genome::Model::Tools::FET.pm is a straightforward implementation of Fisher's Exact Test for the 2x2 cases. Part of the code is now written in Inline C, making it about 5 times faster.
+Not all modules are fully tested but should work under most of the conditions.  Genome::Model::Tools::CrossMatch.pm may be least reliable because crossmatch output format file changes under different options.  Please make sure to use the recommended Genome::Model::Tools::CrossMatch parameters (see below).
 
 
 =Usage:

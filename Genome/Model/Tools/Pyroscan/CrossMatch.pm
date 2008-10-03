@@ -25,7 +25,7 @@
 use strict;
 use warnings;
 use lib '/gscuser/kchen/454-Test-Set/Analysis/Ken/scripts/';
-package CrossMatch;
+package Genome::Model::Tools::Pyroscan::CrossMatch;
 
 sub new{
   my ($class, %arg) = @_;
@@ -275,7 +275,7 @@ sub GetAlleleInfo{
       if(defined $readpos{$readname}){
 	my $align=${$self->{align}}{$readname};
 	my $rpos=$readpos{$readname};
-	warn "rpos=$rpos out of scope $#quals in getAlleleInfo in CrossMatch.pm" if($rpos<1 || $rpos>$#quals);
+	warn "rpos=$rpos out of scope $#quals in getAlleleInfo in " . __FILE__ if($rpos<1 || $rpos>$#quals);
 	my $qual=$quals[$rpos];
 	if($qual>$self->{min_base_qual}){
 	  my $base=$refbase;

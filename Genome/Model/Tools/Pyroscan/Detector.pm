@@ -27,7 +27,7 @@ use strict;
 use warnings;
 use Statistics::Distributions;
 use lib '/gscuser/kchen/454-Test-Set/Analysis/Ken/scripts/';
-use FET;
+use Genome::Model::Tools::Pyroscan::FET;
 package PyroScan;
 
 sub new{
@@ -231,7 +231,7 @@ sub VariantCall{
       push @abcd, $exp_var_reads;
       push @abcd, $exp_wt_reads;
 
-      my $FET=new FET();
+      my $FET=new Genome::Model::Tools::Pyroscan::FET();
       $Pvalue=$FET->Right_Test(@abcd,$Pvalue_Thresh);
       $var->{variant}=$var_alleles[0];
 
@@ -274,7 +274,7 @@ sub EstimateMinReads{
     my $nexp=int($nMinReads*$floor_ratio);
     push @abcd, $nexp;
     push @abcd, $nMinReads-$nexp;
-    my $FET=new FET();
+    my $FET=new Genome::Model::Tools::Pyroscan::FET();
     $Pvalue=$FET->Right_Test(@abcd);
   }
   return $nMinReads;

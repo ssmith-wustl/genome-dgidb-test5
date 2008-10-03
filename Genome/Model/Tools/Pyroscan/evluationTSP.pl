@@ -18,8 +18,8 @@
 use strict;
 use warnings;
 use lib '/gscuser/kchen/454-TSP-Test/Analysis/Ken/scripts/';
-use CrossMatch;
-use PyroScan;
+use Genome::Model::Tools::Pyroscan::CrossMatch;
+use Genome::Model::Tools::Pyroscan::Detector;
 use Bio::SeqIO;
 use Getopt::Long;
 use Pod::Usage;
@@ -72,18 +72,18 @@ my @poses=&Readlist($f_poslst);
 my $var_normal;
 if(defined $f_cm_normal && defined $f_normal_qual){  # case/control analysis
 
-  my $tumor_cm=new CrossMatch(fin=>$f_cm_tumor,loci=>$gene_info);
-  my $normal_cm=new CrossMatch(fin=>$f_cm_normal,loci=>$gene_info);
+  my $tumor_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_tumor,loci=>$gene_info);
+  my $normal_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_normal,loci=>$gene_info);
 
-  my $detector=new PyroScan();
+  my $detector=new Genome::Model::Tools::Pyroscan::Detector();
   my $var=$detector->MutDetect(\@poses,$tumor_cm,$floor_ratio_tumor,$f_tumor_qual,$normal_cm,$floor_ratio_normal,$f_normal_qual,$Pvalue, $floor_indel_size, $refseq, $gene_info);
 
   &EvaluatePair($var,10,$gene_info,$Mutation,$dbSNP);
 }
 else{  # cohort analysis
 
-  my $tumor_cm=new CrossMatch(fin=>$f_cm_tumor,loci=>$gene_info);
-  my $tumor_detect=new PyroScan();
+  my $tumor_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_tumor,loci=>$gene_info);
+  my $tumor_detect=new Genome::Model::Tools::Pyroscan::Detector();
   my $var_tumor=$tumor_detect->VarDetect(\@poses,$tumor_cm,$floor_ratio_tumor,$Pvalue, $floor_indel_size, $refseq,$f_tumor_qual, $gene_info);
   &Evaluate($var_tumor,10,$gene_info,$Mutation,$dbSNP);
 }

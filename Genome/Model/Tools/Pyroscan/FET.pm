@@ -8,7 +8,7 @@
 # http://mathworld.wolfram.com/FishersExactTest.html
 ########################################################################################
 
-package FET;
+package Genome::Model::Tools::Pyroscan::FET;
 
 use Inline C => <<'END';
 
