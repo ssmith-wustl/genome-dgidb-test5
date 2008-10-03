@@ -1,2 +1,9 @@
 
+PolyScan    Genome::Model::Tools::Polyscan::Detector
+CrossMatch  Genome::Model::Tools::Polyscan::CrossMatch
+FET         Genome::Model::Tools::Polyscan::FET
+
+PolyScan.pl Genome::Model::Tools::Polyscan
+
+
 

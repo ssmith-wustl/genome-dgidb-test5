@@ -1,38 +1,64 @@
 #!/gsc/bin/perl
-# Copyright (C) 2008 Washington University in St. Louis
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+package Genome::Model::Tools::Pyroscan::Evaluate;
 
 use strict;
 use warnings;
-#use lib '/gscuser/kchen/454-TSP-Test/Analysis/Ken/scripts/';
-use Genome::Model::Tools::Pyroscan::CrossMatch;
+
+use Genome;
 use Genome::Model::Tools::Pyroscan::Detector;
+use Genome::Model::Tools::Pyroscan::CrossMatch;
+
 use Bio::SeqIO;
 use Getopt::Long;
 use Pod::Usage;
 
-#default parameters
-my ($gene,$fa_refseq,$f_tumor_qual,$f_cm_tumor,$f_normal_qual,$f_cm_normal);
-my $Pvalue=1e-6;
-my $floor_ratio_tumor=0;
-my $floor_ratio_normal=0;
-my $floor_indel_size=3;
-my $f_poslst;
+class Genome::Model::Tools::Pyroscan::Evaluate {
+    is => 'Command',
+    has => [
+        gene    => { is => 'Text',   doc => 'Hugo Gene' },
+        refseq  => { is => 'Text',   doc => 'reference sequence'  },
+        qt      => { is => 'Text',   doc => '.qual files for the tumor reads'  },
+        cmt     => { is => 'Text',   doc => 'cross-match alignment for the tumor reads'  },
+        qn      => { is => 'Text',   doc => '.qual files for the normal reads'  },
+        cmn     => { is => 'Text',   doc => 'cross-match alignment for the normal reads'  },
+    ],
+    has_optional => [
+        pvalue  => { is => 'Text',   doc => 'P value stringency', default_value => 1e-6  },
+        rt      => { is => 'Text',   doc => 'baseline variant/wildtype read ratio in tumor', default_value => 0 },
+        rn      => { is => 'Text',   doc => 'baseline variant/wildtype read ratio in normal', default_value => 0 },
+        indel   => { is => 'Number', doc => 'minimum indel size to report', default_value => 3  },
+        lstpos  => { is => 'Text',   doc => 'list of positions for genotyping'  },
+    ],
+    doc => "?"
+};
 
-my $status=&GetOptions(
+sub help_detail {
+    return <<EOS;
+TODO: ADD THIS
+EOS
+}
+
+sub execute {
+    my $self = shift;
+    
+    my $gene               = $self->gene;
+    my $fa_refseq          = $self->refseq;
+    my $f_tumor_qual       = $self->qt;
+    my $f_cm_tumor         = $self->cmt;
+    my $f_normal_qual      = $self->qn;
+    my $f_cm_normal        = $self->cmn;
+
+    my $Pvalue             = $self->pvalue;
+    my $floor_ratio_tumor  = $self->rt;
+    my $floor_ratio_normal = $self->rn;
+    my $floor_indel_size   = $self->indel;
+    my $f_poslst           = $self->lstpos;
+    
+
+=cut
+
+    my $status=&GetOptions(
 		       "gene=s" => \$gene,  #Hugo Gene
 		       "refseq=s" => \$fa_refseq,  # reference sequence
 		       "qt=s" => \$f_tumor_qual,    # .qual files for the tumor reads
@@ -46,46 +72,49 @@ my $status=&GetOptions(
 		       "lstpos=s" => \$f_poslst   #list of positions for genotyping
 		      );
 
-print "#gene: $gene\n" if(defined $gene);
-print "#refseq: $fa_refseq\n" if(defined $fa_refseq);
-print "#tumor reads quality file: $f_tumor_qual\n" if(defined $f_tumor_qual);
-print "#tumor cross-match alignment file: $f_cm_tumor\n" if(defined $f_cm_tumor);
-print "#normal reads quality file: $f_normal_qual\n" if(defined $f_normal_qual);
-print "#normal cross-match alignment file: $f_cm_normal\n" if(defined $f_cm_normal);
-print "#P value cutoff: $Pvalue\n" if(defined $Pvalue);
-print "#baseline variant/wildtype read ratio in tumor: $floor_ratio_tumor\n" if(defined $floor_ratio_tumor);
-print "#baseline variant/wildtype read ratio in normal: $floor_ratio_normal\n" if(defined $floor_ratio_normal);
-print "#only report indels longer than: $floor_indel_size bp\n";
+=cut
 
-my $f_gene_header="/gscuser/kchen/454-TSP-Test/Analysis/Ken/data/GeneHeaders.txt";
-my $gene_info=&GetGeneInfo($f_gene_header,$gene);
-my $refseq=&getRefSeq($fa_refseq);
+    print "#gene: $gene\n" if(defined $gene);
+    print "#refseq: $fa_refseq\n" if(defined $fa_refseq);
+    print "#tumor reads quality file: $f_tumor_qual\n" if(defined $f_tumor_qual);
+    print "#tumor cross-match alignment file: $f_cm_tumor\n" if(defined $f_cm_tumor);
+    print "#normal reads quality file: $f_normal_qual\n" if(defined $f_normal_qual);
+    print "#normal cross-match alignment file: $f_cm_normal\n" if(defined $f_cm_normal);
+    print "#P value cutoff: $Pvalue\n" if(defined $Pvalue);
+    print "#baseline variant/wildtype read ratio in tumor: $floor_ratio_tumor\n" if(defined $floor_ratio_tumor);
+    print "#baseline variant/wildtype read ratio in normal: $floor_ratio_normal\n" if(defined $floor_ratio_normal);
+    print "#only report indels longer than: $floor_indel_size bp\n";
 
-#evaluation
-my $f_maf="/gscuser/kchen/454-TSP-Test/Analysis/Ken/data/valid-germline-SNPs.txt";
-my $f_dbsnp="/gscuser/kchen/454-TSP-Test/Analysis/Ken/data/dbsnp127_251TSPgenes.txt";
-my $Mutation=&ReadMAF($f_maf,$gene_info,$floor_indel_size);
-my $dbSNP=&ReadDbSNP($f_dbsnp,$gene_info,$floor_indel_size);
+    my $f_gene_header="/gscuser/kchen/454-TSP-Test/Analysis/Ken/data/GeneHeaders.txt";
+    my $gene_info=&GetGeneInfo($f_gene_header,$gene);
+    my $refseq=&getRefSeq($fa_refseq);
 
-my @poses=&Readlist($f_poslst);
+    #evaluation
+    my $f_maf="/gscuser/kchen/454-TSP-Test/Analysis/Ken/data/valid-germline-SNPs.txt";
+    my $f_dbsnp="/gscuser/kchen/454-TSP-Test/Analysis/Ken/data/dbsnp127_251TSPgenes.txt";
+    my $Mutation=&ReadMAF($f_maf,$gene_info,$floor_indel_size);
+    my $dbSNP=&ReadDbSNP($f_dbsnp,$gene_info,$floor_indel_size);
 
-my $var_normal;
-if(defined $f_cm_normal && defined $f_normal_qual){  # case/control analysis
+    my @poses=&Readlist($f_poslst);
 
-  my $tumor_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_tumor,loci=>$gene_info);
-  my $normal_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_normal,loci=>$gene_info);
+    my $var_normal;
+    if(defined $f_cm_normal && defined $f_normal_qual){  # case/control analysis
 
-  my $detector=new Genome::Model::Tools::Pyroscan::Detector();
-  my $var=$detector->MutDetect(\@poses,$tumor_cm,$floor_ratio_tumor,$f_tumor_qual,$normal_cm,$floor_ratio_normal,$f_normal_qual,$Pvalue, $floor_indel_size, $refseq, $gene_info);
+      my $tumor_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_tumor,loci=>$gene_info);
+      my $normal_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_normal,loci=>$gene_info);
 
-  &EvaluatePair($var,10,$gene_info,$Mutation,$dbSNP);
-}
-else{  # cohort analysis
+      my $detector=new Genome::Model::Tools::Pyroscan::Detector();
+      my $var=$detector->MutDetect(\@poses,$tumor_cm,$floor_ratio_tumor,$f_tumor_qual,$normal_cm,$floor_ratio_normal,$f_normal_qual,$Pvalue, $floor_indel_size, $refseq, $gene_info);
 
-  my $tumor_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_tumor,loci=>$gene_info);
-  my $tumor_detect=new Genome::Model::Tools::Pyroscan::Detector();
-  my $var_tumor=$tumor_detect->VarDetect(\@poses,$tumor_cm,$floor_ratio_tumor,$Pvalue, $floor_indel_size, $refseq,$f_tumor_qual, $gene_info);
-  &Evaluate($var_tumor,10,$gene_info,$Mutation,$dbSNP);
+      &EvaluatePair($var,10,$gene_info,$Mutation,$dbSNP);
+    }
+    else{  # cohort analysis
+
+      my $tumor_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_tumor,loci=>$gene_info);
+      my $tumor_detect=new Genome::Model::Tools::Pyroscan::Detector();
+      my $var_tumor=$tumor_detect->VarDetect(\@poses,$tumor_cm,$floor_ratio_tumor,$Pvalue, $floor_indel_size, $refseq,$f_tumor_qual, $gene_info);
+      &Evaluate($var_tumor,10,$gene_info,$Mutation,$dbSNP);
+    }
 }
 
 sub Readlist{
@@ -391,3 +420,21 @@ sub ToRefSeq{
   }
   return $refpos;
 }
+
+1;
+
+# Copyright (C) 2008 Washington University in St. Louis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
