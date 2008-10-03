@@ -149,7 +149,7 @@ sub _read_line {
             sprintf('Un-balanced data found: %d values and %d expected on line %d',
                 scalar(@values),
                 scalar(@keys),
-                $self->_line_number,
+                $line,
             )
         );
         return;
