@@ -46,22 +46,18 @@ sub resolve_data_directory {
 sub build_in_stages {
     my $self = shift;
 
-    $self->data_directory($self->model->data_directory);
+    $self->data_directory($self->resolve_data_directory);
     my @stages = $self->stages;
-    #Need to know when to return 0,1,2 or should subclass->execute handle this?
     for my $stage_name (@stages) {
         my $classes_method_name = $stage_name .'_job_classes';
         my $objects_method_name = $stage_name .'_objects';
 
         my @stage_classes = $self->$classes_method_name;
         $self->_verify_existing_events(\@stage_classes);
-
         my @objects = $self->$objects_method_name;
-        if (@objects) {
-            my @scheduled_objects = $self->_schedule_stage(\@stage_classes,\@objects);
-            if ($self->auto_execute) {
-                return $self->_run_stage(@scheduled_objects);
-            }
+        my @scheduled_objects = $self->_schedule_stage(\@stage_classes,\@objects);
+        if ($self->auto_execute) {
+            return $self->_run_stage(@scheduled_objects);
         }
     }
     return 1;
