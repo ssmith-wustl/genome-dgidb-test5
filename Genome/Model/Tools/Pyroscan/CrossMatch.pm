@@ -24,7 +24,9 @@
 
 use strict;
 use warnings;
-use lib '/gscuser/kchen/454-Test-Set/Analysis/Ken/scripts/';
+use Genome;
+
+#use lib '/gscuser/kchen/454-Test-Set/Analysis/Ken/scripts/';
 package Genome::Model::Tools::Pyroscan::CrossMatch;
 
 sub new{

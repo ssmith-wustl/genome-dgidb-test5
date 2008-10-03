@@ -10,6 +10,12 @@
 
 package Genome::Model::Tools::Pyroscan::FET;
 
+use Genome;
+
+use Inline 'C' => 'Config' => (
+    DIRECTORY => Genome::Inline::DIRECTORY()
+);
+
 use Inline C => <<'END';
 
 double LogFact(int x){

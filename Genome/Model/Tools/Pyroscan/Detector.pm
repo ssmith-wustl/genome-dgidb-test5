@@ -25,12 +25,14 @@
 
 use strict;
 use warnings;
-use Statistics::Distributions;
-use lib '/gscuser/kchen/454-Test-Set/Analysis/Ken/scripts/';
+use Genome;
 use Genome::Model::Tools::Pyroscan::FET;
-package PyroScan;
+use Statistics::Distributions;
+#use lib '/gscuser/kchen/454-Test-Set/Analysis/Ken/scripts/';
 
-sub new{
+package Genome::Model::Tools::PyroScan::Detector;
+
+sub new {
   my ($class, %arg) = @_;
   my $self={
 	    min_base_qual=>$arg{MinBaseQual} || 20,

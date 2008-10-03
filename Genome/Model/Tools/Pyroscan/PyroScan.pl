@@ -17,9 +17,9 @@
 
 use strict;
 use warnings;
-use lib '/gscuser/kchen/454-TSP-Test/Analysis/Ken/scripts/';
+#use lib '/gscuser/kchen/454-TSP-Test/Analysis/Ken/scripts/';
 use Genome::Model::Tools::Pyroscan::CrossMatch;
-use PyroScan;
+use Genome::Model::Tools::PyroScan::Detector;
 use Bio::SeqIO;
 use Getopt::Long;
 use Pod::Usage;
