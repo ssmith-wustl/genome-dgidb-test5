@@ -1,5 +1,3 @@
-
-
 package Genome::Model::Tools::Pyroscan;
 
 use strict;

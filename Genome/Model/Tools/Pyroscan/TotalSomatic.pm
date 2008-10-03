@@ -1,5 +1,3 @@
-
-
 package Genome::Model::Tools::Pyroscan::TotalSomatic;
 
 use strict;
