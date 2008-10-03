@@ -79,7 +79,12 @@ sub _verify_existing_events {
             my @events = $command_class->get( model_id => $model->id );
             my @broke_events = grep {$_->event_status =~ /Scheduled|Running|Crashed|Failed/} @events;
             if( @broke_events ) {
-                $self->fail('Found '. scalar(@broke_events) .' for class '. $command_class);
+                my $error_message = 'Found '. scalar(@broke_events) .' broken events for class '. $command_class ."\n";
+                for (@broke_events) {
+                    $error_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
+                }
+                $self->cry_for_help($error_message);
+                die($error_message);
             }
         }
     }
@@ -120,18 +125,24 @@ sub _schedule_command_classes_for_object {
         if (ref($command_class) eq 'ARRAY') {
             push @scheduled_commands, $self->_schedule_command_classes_for_object($object,$command_class,$prior_event_id);
         } else {
-            my $subclassing_model_property = $command_class->command_subclassing_model_property;
-            unless ($self->model->$subclassing_model_property) {
-                $self->status_message("No value defined for subclassing model property '$subclassing_model_property'.  Skipping '$command_class'");
-                next;
+            if ($command_class->can('command_subclassing_model_property')) {
+                my $subclassing_model_property = $command_class->command_subclassing_model_property;
+                unless ($self->model->$subclassing_model_property) {
+                    $self->status_message("No value defined for subclassing model property '$subclassing_model_property'.  Skipping '$command_class'");
+                    next;
+                }
             }
             my $command;
             if ($command_class->isa('Genome::Model::EventWithRefSeq')) {
                 if (ref($object)) {
                     unless ($object->can('ref_seq_id')) {
-                        $self->fail('No support for the new Genome::Model::RefSeq objects. FIX ME!!!');
+                        my $error_message = 'No support for the new Genome::Model::RefSeq objects. FIX ME!!!';
+                        $self->cry_for_help($error_message);
+                        die($error_message);
                     }
-                    $self->fail('Expecting non-reference for EventWithRefSeq but got '. ref($object));
+                    my $error_message = 'Expecting non-reference for EventWithRefSeq but got '. ref($object);
+                    $self->cry_for_help($error_message);
+                    die($error_message);
                 }
                 $command = $command_class->create(
                                                   model_id => $self->model_id,
@@ -139,7 +150,9 @@ sub _schedule_command_classes_for_object {
                                               );
             } elsif ($command_class->isa('Genome::Model::EventWithReadSet')) {
                 unless ($object->isa('Genome::Model::ReadSet')) {
-                    $self->fail('Expecting a Genome::Model::ReadSet object and got '. ref($object));
+                    my $error_message = 'Expecting Genome::Model::ReadSet object but got '. ref($object);
+                    $self->cry_for_help($error_message);
+                    die($error_message);
                 }
                 $command = $command_class->create(
                                                   read_set_id => $object->read_set_id,
@@ -152,12 +165,12 @@ sub _schedule_command_classes_for_object {
                                               );
             }
             unless ($command) {
-                $self->fail(
-                            'Problem creating subcommand for class '
+                my $error_message = 'Problem creating subcommand for class '
                             . ' for object class '. ref($object)
                             . ' model id '. $self->model_id
-                            . ': '. $command_class->error_message()
-                        );
+                            . ': '. $command_class->error_message();
+                $self->cry_for_help($error_message);
+                die($error_message);
             }
             $command->parent_event_id($self->id);
             $command->event_status('Scheduled');
@@ -197,24 +210,15 @@ sub _run_stage {
     return 1;
 }
 
-
-sub fail {
-    my $self = shift;
-    my $reason = shift;
-    $self->cry_for_help($reason);
-    die($reason);
-}
-
-
 sub cry_for_help {
     my $self = shift;
-    my $word_that_describes_what_i_failed = shift;
+    my $reason = shift;
 
     my $sendmail = "/usr/sbin/sendmail -t";
     my $from = "From: ssmith\@genome.wustl.edu\n";
     my $reply_to = "Reply-to: thisisafakeemail\n";
     my $subject = "Subject: Build failed, you suck\n";
-    my $content = "This is the Build failure email. your build ". $self->id . " failed some portion of the $word_that_describes_what_i_failed phase. \n\n";
+    my $content = "This is the Build failure email. your build ". $self->id . " failed. \n$reason\n";
     my $to = "To: " . $self->user_name . '@genome.wustl.edu' . "\n";
 
     my $helpful_link1= "https://gscweb.gsc.wustl.edu/cgi-bin/solexa/genome-model-stage1.cgi?model-name=" . $self->model->name  .    "&refresh=1\n\n";
