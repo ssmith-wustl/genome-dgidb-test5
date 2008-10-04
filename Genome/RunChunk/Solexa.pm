@@ -12,6 +12,7 @@ class Genome::RunChunk::Solexa {
            'Genome::RunChunk',
     ],
     has => [
+        _dw_obj             => { is => 'Genome::RunChunk::SolexaDw', id_by => 'id' },
         _run_lane_solexa    => {
                                 doc => 'Lane representation from LIMS.  This class should eventually be a base class for data like this.',
                                 is => 'GSC::RunLaneSolexa',

@@ -66,7 +66,7 @@ sub execute {
     my $version='1.0';
     
 =cut
-    
+    # This is old code, for reference until we're sure this works... -ssmith
     my $status=&GetOptions(
                            "refseq=s" => \$fa_refseq,  # reference sequence
                            "qt=s" => \$f_case_qual,    # .qual files for the case reads
