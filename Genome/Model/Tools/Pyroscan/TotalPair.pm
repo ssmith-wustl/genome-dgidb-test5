@@ -7,14 +7,18 @@ use Genome;
 class Genome::Model::Tools::Pyroscan::TotalPair {
     is => 'Command',
     has => [
-        dir     => { is => 'Text', doc => '' },
-        lst     => { is => 'Text', doc => '' },
+        dir     => { is => 'Text', doc => '', shell_args_position => 1 },
+        lst     => { is => 'Text', doc => '', shell_args_position => 2 },
     ],
     doc => "?",
 };
 
-sub bare_shell_arguments {
-    return qw/dir lst/;
+sub help_detail {
+    return <<EOS; 
+TODO: write this
+
+Report bugs to <kchen\@watson.wustl.edu>.
+EOS
 }
 
 sub execute {

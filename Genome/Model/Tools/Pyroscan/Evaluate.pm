@@ -13,27 +13,27 @@ use Pod::Usage;
 
 class Genome::Model::Tools::Pyroscan::Evaluate {
     is => 'Command',
-    has => [
+    has_optional => [
         gene    => { is => 'Text',   doc => 'Hugo Gene' },
         refseq  => { is => 'Text',   doc => 'reference sequence'  },
         qt      => { is => 'Text',   doc => '.qual files for the tumor reads'  },
         cmt     => { is => 'Text',   doc => 'cross-match alignment for the tumor reads'  },
         qn      => { is => 'Text',   doc => '.qual files for the normal reads'  },
         cmn     => { is => 'Text',   doc => 'cross-match alignment for the normal reads'  },
-    ],
-    has_optional => [
         pvalue  => { is => 'Text',   doc => 'P value stringency', default_value => 1e-6  },
         rt      => { is => 'Text',   doc => 'baseline variant/wildtype read ratio in tumor', default_value => 0 },
         rn      => { is => 'Text',   doc => 'baseline variant/wildtype read ratio in normal', default_value => 0 },
         indel   => { is => 'Number', doc => 'minimum indel size to report', default_value => 3  },
         lstpos  => { is => 'Text',   doc => 'list of positions for genotyping'  },
     ],
-    doc => "?"
+    doc => "warning: TSP-specific command which currently uses hard-coded data paths."
 };
 
 sub help_detail {
-    return <<EOS;
-TODO: ADD THIS
+    return <<EOS; 
+TODO: write this
+
+Report bugs to <kchen\@watson.wustl.edu>.
 EOS
 }
 
