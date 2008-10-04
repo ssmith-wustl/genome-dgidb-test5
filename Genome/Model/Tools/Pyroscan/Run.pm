@@ -1,10 +1,10 @@
-package Genome::Model::Tools::Pyroscan;
+package Genome::Model::Tools::Pyroscan::Run;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::Model::Tools::Pyroscan {
+class Genome::Model::Tools::Pyroscan::Run {
     is => 'Command',
     has => [
         refseq  => { is => 'Text',   doc => 'reference sequence'  },
@@ -30,6 +30,11 @@ use Genome::Model::Tools::Pyroscan::CrossMatch;
 use Bio::SeqIO;
 use Getopt::Long;
 use Pod::Usage;
+
+sub sub_command_sort_position {
+    # this should always be first in the list of commands under Pyroscan...
+    -1
+}
 
 sub help_detail {
     return <<EOS; 
