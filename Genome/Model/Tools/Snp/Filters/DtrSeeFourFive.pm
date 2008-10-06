@@ -181,7 +181,7 @@ sub execute {
         elsif ($decision eq 'WT') {
              if($self->debug_mode || $self->probability_mode) {
                 my $dtr_line = join ",",@data{@headers};
-                print $keep_handle $line, ",", join(',',@answers) ,"\n";
+                print $remove_handle $line, ",", join(',',@answers) ,"\n";
             }
             else {
                 print $remove_handle $line, "\n";
