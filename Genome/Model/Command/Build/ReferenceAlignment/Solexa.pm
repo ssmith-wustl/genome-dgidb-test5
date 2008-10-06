@@ -27,8 +27,8 @@ sub help_detail {
     return <<"EOS"
 One build of a given reference-alignment model.
 EOS
-}   
- 
+}
+
 sub stages {
     my @stages = qw/
         frontend
@@ -63,13 +63,6 @@ sub frontend_objects {
 sub backend_objects {
     my $self = shift;
     my $model = $self->model;
-    unless( -d $self->data_directory) {
-        unless(mkdir $self->data_directory ) {
-            $self->error_message("Unable to create dir: " . $self->data_directory);
-            return;
-        }
-        chmod 02775, $self->data_directory;
-    }
     my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
 
     unless (@subreferences_names > 0) {

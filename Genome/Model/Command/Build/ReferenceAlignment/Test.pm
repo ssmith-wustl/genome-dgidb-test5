@@ -65,12 +65,24 @@ sub model {
     my $self = shift;
     if (@_) {
         my $object = shift;
-        unless(ref($object) =~ /^Genome::Model/) {
-            confess('expected Genome::Model* and got '. ref($object) ." object:  $!");
+        unless ($object->isa('Genome::Model')) {
+            confess('expected Genome::Model and got '. $object->class ." object:  $!");
         }
         $self->{_model} = $object;
     }
     return $self->{_model};
+}
+
+sub build {
+    my $self = shift;
+    if (@_) {
+        my $object = shift;
+        unless ($object->isa('Genome::Model::Command::Build::ReferenceAlignment')) {
+            confess('expected Genome::Model::Command::Build::ReferenceAlignment and got '. $object->class ." object:  $!");
+        }
+        $self->{_build} = $object;
+    }
+    return $self->{_build};
 }
 
 sub runtests {
@@ -80,6 +92,8 @@ sub runtests {
                  'startup',
                  'create_model',
                  'add_reads',
+                 'schedule',
+                 'run',
                  'remove_data',
              );
     for my $test (@tests) {
@@ -99,7 +113,6 @@ sub startup {
 
 sub create_model {
     my $self = shift;
-    
     my $create_command= Genome::Model::Command::Create::Model->create(
                                                                       model_name => $self->{_model_name},
                                                                       subject_name => $self->{_subject_name},
@@ -111,7 +124,6 @@ sub create_model {
     my $result = $create_command->execute();
     ok($result, 'execute genome-model create');
     my $genome_model_id = $result->id;
-    #UR::Context->_sync_databases();
 
     my @models = Genome::Model->get($genome_model_id);
     is(scalar(@models),1,'expected one model');
@@ -122,31 +134,21 @@ sub create_model {
     is($model->genome_model_id,$genome_model_id,'genome_model_id accessor');
 
     $self->add_directory_to_remove($model->data_directory);
-    $self->{_model} = $model;
-
-    my @add_reads_commands = Genome::Model::Command::AddReads->get_sub_command_classes;
+    $self->model($model);
 
     # The number of ref_seqs is hard coded, there is probably a better way to look this up
-    my $ref_seqs;
     if ($model->sequencing_platform eq '454') {
-        $ref_seqs = 1;
+        $self->{_ref_seq_count} = 1;
     } elsif ($model->sequencing_platform eq 'solexa') {
-        $ref_seqs = 3;
+        $self->{_ref_seq_count} = 3;
     } else {
         confess('Platform '. $model->sequencing_platform .' is not supported by test');
     }
-    $self->{_ref_seq_count} = $ref_seqs;
-    
-    my @read_sets = @{$self->{_read_set_array_ref}};
-    $self->{_expected_add_reads_events} = scalar(@add_reads_commands); 
-    # At some point the number of expected tests from test_c should be set
-    # This number will vary depending on platform(some tests are not performed for 454, yet)
-    #$self->num_method_tests('test_c',$);
 }
 
 sub add_reads {
     my $self = shift;
-    my $model = $self->{_model};
+    my $model = $self->model;
     isa_ok($model,'Genome::Model');
     my @read_sets = @{$self->{_read_set_array_ref}};
     for my $read_set (@read_sets) {
@@ -158,144 +160,92 @@ sub add_reads {
         isa_ok($add_reads_command,'Genome::Model::Command::AddReads');
         ok($add_reads_command->execute(),'execute genome-model add-reads');
     }
-        #UR::Context->_sync_databases();
-        my $pp_alignments = Genome::Model::Command::Build::ReferenceAlignment->create(
-                                                                                      model_id => $model->id,
-                                                                                      auto_execute => 0,
-        );
-        isa_ok($pp_alignments,'Genome::Model::Command::Build::ReferenceAlignment');
-        ok($pp_alignments->execute(), 'execute genome-model build reference-alignment');
+}
 
-        for my $read_set (@read_sets) {
-            my @add_reads_events = Genome::Model::Event->get(
-                                                             model_id => $model->id,
-                                                             parent_event_id => $pp_alignments->id,
-                                                             read_set_id => $read_set->seq_id,
-                                                         );
-            is(scalar(@add_reads_events),$self->{_expected_add_reads_events},'get scheduled build reference alignment genome_model_events');
-            # sort by event id to ensure order of events matches pipeline order
-            @add_reads_events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @add_reads_events;
-            my $assign_run_command = $add_reads_events[0];
-            isa_ok($assign_run_command,'Genome::Model::Command::Build::ReferenceAlignment::AssignRun');
+sub schedule {
+    my $self = shift;
+    my $model = $self->model;
+    my $build = Genome::Model::Command::Build::ReferenceAlignment->create(
+                                                                          model_id => $model->id,
+                                                                          auto_execute => 0,
+                                                                      );
+    isa_ok($build,'Genome::Model::Command::Build::ReferenceAlignment');
+    ok($build->execute(), 'execute genome-model build reference-alignment');
+    $self->build($build);
+}
 
-            my $data_directory = $assign_run_command->build_directory;
-            #this will work in test but is not a great display of 'things are working correctly'
-            is($data_directory,$model->latest_build_directory,"assign run data directory matches model");
-
-            $self->execute_event_test($assign_run_command);
-            ok(-d $data_directory, "data directory '$data_directory' exists");
-            ###RUN ALIGN-READS VIA BSUBHELPER(?). 
-            my $align_reads_command = $add_reads_events[1];
-            isa_ok($align_reads_command,'Genome::Model::Command::Build::ReferenceAlignment::AlignReads');
-
-            if ($model->sequencing_platform eq 'solexa') {
-                my $align_reads_ref_seq_file =  $align_reads_command->model->reference_sequence_path . "/all_sequences.bfa";
-                #If the files are binary then the size of an empty file is greater than zero(20?)
-                ok(-s $align_reads_ref_seq_file, 'align-reads reference sequence file exists with non-zero size');
-            }
-
-            $self->execute_event_test($align_reads_command);
-
-            #TODO: TEST THE RESULT OF ALIGN READS
-            #Compare the map file to the test data
-
-            my $proc_low_qual_command = $add_reads_events[2];
-            isa_ok($proc_low_qual_command,'Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments');
-            $self->execute_event_test($proc_low_qual_command);
-        }
-        #$my $accept_reads_command = $add_reads_events[3];
-        #isa_ok($accept_reads_command,'Genome::Model::Command::Build::ReferenceAlignment::AcceptReads');
-        #$self->execute_event_test($accept_reads_command,$read_set);
-
-        #when the namespace moves, the double for underneath may get uncommented
-#    my @sub_command_classes = $pp_alignments->subordinate_job_classes;
-#    for my $command_classes (@sub_command_classes) {
-#        for my $command_class (@{$command_classes}) {.
-#            $sub_command_count++;
-#        }
-#    }
-
-   $self->{_expected_postprocess_events} = $self->{_ref_seq_count} * 5;
-   #UR::Context->_sync_databases();
-
-    my @pp_events = Genome::Model::Event->get(
-                                              model_id => $model->id,
-                                              parent_event_id => $pp_alignments->id,
-                                              read_set_id => undef,
-                                          );
-
-    is(scalar(@pp_events),$self->{_expected_postprocess_events},'get scheduled genome_model add-reads postprocess-alignments');
-    # sort by event id to ensure order of events matches pipeline order
-    @pp_events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @pp_events;
-print "@pp_events\n";
-    my $merge_alignments_command = $pp_events[0];
-    isa_ok($merge_alignments_command,'Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments');
-    $self->execute_event_test($merge_alignments_command);
-
-    my $update_genotype_command = $pp_events[1];
-    isa_ok($update_genotype_command,'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype');
-    $self->execute_event_test($update_genotype_command);
-
-    my $find_variations_command = $pp_events[2];
-    isa_ok($find_variations_command,'Genome::Model::Command::Build::ReferenceAlignment::FindVariations');
-    $self->execute_event_test($find_variations_command);
-
-    ###HERES THE UNLOCK MAGIC...ARE YOU READY?
-    rmtree $model->lock_directory;
-
-    my $pp_variations_command = $pp_events[3];
-    isa_ok($pp_variations_command,'Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations');
-    $self->execute_event_test($pp_variations_command);
-
-    if ($model->sequencing_platform eq 'solexa') {
-
-        my $annotate_variations_command = $pp_events[4];
-        SKIP: {
-            skip "don't run annotate because it takes fricking forever and always works anyway", 3;
-        isa_ok($annotate_variations_command,'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations');
-    
-        $self->execute_event_test($annotate_variations_command);
-     }
-        #my $filter_variations_command = $pp_events[5];
-        #isa_ok($filter_variations_command,'Genome::Model::Command::Build::ReferenceAlignment::FilterVariations');
-        #$self->execute_event_test($filter_variations_command);
+sub run {
+    my $self = shift;
+    my $model = $self->model;
+    my $build = $self->build;
+    my @stages = $build->stages;
+    my @events;
+    for my $stage_name ($build->stages) {
+        my @classes = $build->classes_for_stage($stage_name);
+        push @events, $self->run_events_for_class_array_ref(\@classes);
     }
+    my @failed_events = grep { $_->event_status ne 'Succeeded' } @events;
+    my $build_status;
+    if (@failed_events) {
+        $build_status = 'Failed';
+        diag("FAILED " . $build->command_name .' found '. scalar(@failed_events) .' incomplete events');
+    } else {
+        $build_status = 'Succeeded';
+    }
+    set_event_status($build,$build_status);
+    is($build->event_status,$build_status,'the build status was set correctly after execution of the events');
+    return @events;
+}
 
-    #my $upload_database_command = $pp_events[6];
-
-    ##NOTES-------------
-    ## I desire cookies...please bring cookies now.
-    return 1;
+sub run_events_for_class_array_ref {
+    my $self = shift;
+    my $classes = shift;
+    my @read_sets = @{$self->{_read_set_array_ref}};
+    my @events;
+    for my $command_class (@$classes) {
+        if (ref($command_class) eq 'ARRAY') {
+            push @events, $self->run_events_for_class_array_ref($command_class);
+        } else {
+            my @events = $command_class->get(model_id => $self->model->id);
+            @events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @events;
+            if ($command_class->isa('Genome::Model::EventWithReadSet')) {
+                is(scalar(@events),scalar(@read_sets),'the number of events matches read sets for EventWithReadSet class '. $command_class);
+            } elsif ($command_class->isa('Genome::Model::EventWithRefSeq')) {
+                is(scalar(@events),$self->{_ref_seq_count},'the number of events matches ref seqs for EventWithReadSet class '. $command_class);
+            } else {
+                is(scalar(@events),1,'Only expecting one event when for class '. $command_class);
+            }
+            for my $event (@events) {
+                $self->execute_event_test($event);
+            }
+        }
+    }
+    return @events;
 }
 
 sub execute_event_test  {
-    my ($self,$event,$read_set) = @_;
+    my ($self,$event) = @_;
 
     my $event_model = $event->model;
     $event_model->test(1);
-    is($self->{_model}->id,$event_model->id,'genome-model id comparison');
+    is($self->model->id,$event_model->id,'genome-model id comparison');
 
-    # Not working for EventWithReadSet
-    if (defined $event->read_set_id) {
-        my $read_set = $event->read_set;
-        isa_ok($read_set,'Genome::RunChunk');
-        is($read_set->seq_id,$read_set->seq_id,'genome-model read_set_id => sls seq_id ');
-    }
-
-    my $result = $event->execute();
-    ok($result,'Execute: '. $event->command_name);
-    if ($result) {
-        set_event_status($event,'Succeeded');
-    }
-    else {
-        diag("FAILED " . $event->command_name . " " . $event->error_message());
-        set_event_status($event,'Failed');
-    }
-
-    #TODO: Write a verify_successful_completion method in all events
-    #ok($event->verify_successful_completion,'Verify: '. $event->command_name)
-
-    #UR::Context->_sync_databases();
+    SKIP: {
+          skip 'AnnotateVariations takes too long', 1 if $event->isa('Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations');
+          my $result = $event->execute();
+          ok($result,'Execute: '. $event->command_name);
+          if ($result) {
+              set_event_status($event,'Succeeded');
+          }
+          else {
+              diag("FAILED " . $event->command_name . " " . $event->error_message());
+              set_event_status($event,'Failed');
+          }
+        SKIP: {
+              skip 'class '. $event->class .' does not have a verify_successful_completion method', 1 if !$event->can('verify_successful_completion');
+              ok($event->verify_successful_completion,'verify_successful_completion for class '. $event->class);
+          }
+      }
 }
 
 sub set_event_status {
@@ -324,7 +274,6 @@ sub create_test_pp {
     unless($create_pp_command->execute()) {
         confess("Failed to create processing_profile for test:  $!");
     }
-    #UR::Context->_sync_databases();
     return 1;
 }
 

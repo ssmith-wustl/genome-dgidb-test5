@@ -14,9 +14,9 @@ class Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations::
     has => [
             merged_alignments_file => { via => 'prior_event' },
             merged_fasta_file => {
-                                  calculate_from => ['model'],
+                                  calculate_from => ['parent_event', 'model'],
                                   calculate => q|
-                                          return $model->accumulated_alignments_directory .'/'. $model->sample_name .'.fa';
+                                          return $parent_event->accumulated_alignments_directory .'/'. $model->subject_name .'.fa';
                                   |,
                               },
             insertions_file => { via => 'prior_event' },
@@ -82,12 +82,12 @@ sub execute {
                           $break_point_path,
                           $self->combined_substitutions_file,
                           $self->coverage_blocks_file,
-                          $model->sample_name);
+                          $model->subject_name);
     my $in_cmd = sprintf("%s --genotype-indels %s --alignment-file %s --sample-name %s --reads-fasta %s --ref-dir %s",
                             $break_point_path,
                             $self->combined_insertions_file,
                             $self->coverage_blocks_file,
-                            $model->sample_name,
+                            $model->subject_name,
                             $model->accumulated_alignments_directory,
                             $model->reference_sequence_path,
                         );
@@ -95,7 +95,7 @@ sub execute {
                             $break_point_path,
                             $self->combined_deletions_file,
                             $self->coverage_blocks_file,
-                            $model->sample_name,
+                            $model->subject_name,
                             $model->accumulated_alignments_directory,
                             $model->reference_sequence_path,
                         );

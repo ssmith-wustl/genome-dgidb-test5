@@ -49,18 +49,35 @@ sub build_in_stages {
     $self->data_directory($self->resolve_data_directory);
     my @stages = $self->stages;
     for my $stage_name (@stages) {
-        my $classes_method_name = $stage_name .'_job_classes';
-        my $objects_method_name = $stage_name .'_objects';
-
-        my @stage_classes = $self->$classes_method_name;
+        my @stage_classes = $self->classes_for_stage($stage_name);
         $self->_verify_existing_events(\@stage_classes);
-        my @objects = $self->$objects_method_name;
+
+        my @objects = $self->objects_for_stage($stage_name);
         my @scheduled_objects = $self->_schedule_stage(\@stage_classes,\@objects);
         if ($self->auto_execute) {
-            return $self->_run_stage(@scheduled_objects);
+            my $return_value = $self->_run_stage(@scheduled_objects);
+            if ($return_value == 1) {
+                $self->event_status('Succeeded');
+                $self->date_completed(UR::Time->now);
+                return $return_value;
+            }
         }
     }
     return 1;
+}
+
+sub classes_for_stage {
+    my $self = shift;
+    my $stage_name = shift;
+    my $classes_method_name = $stage_name .'_job_classes';
+    return $self->$classes_method_name;
+}
+
+sub objects_for_stage {
+    my $self = shift;
+    my $stage_name = shift;
+    my $objects_method_name = $stage_name .'_objects';
+    return $self->$objects_method_name;
 }
 
 sub _verify_existing_events {

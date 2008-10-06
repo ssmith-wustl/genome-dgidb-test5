@@ -23,7 +23,7 @@ if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 }
 
-plan tests => 382;
+plan tests => 257;
 
 #This should be removed when tests finish
 my $tmp_dir;

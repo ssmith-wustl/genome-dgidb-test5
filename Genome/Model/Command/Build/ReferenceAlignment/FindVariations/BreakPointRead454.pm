@@ -12,23 +12,22 @@ class Genome::Model::Command::Build::ReferenceAlignment::FindVariations::BreakPo
            'Genome::Model::Command::Build::ReferenceAlignment::FindVariations',
        ],
     has => [
-            merged_alignments_file => {via => 'prior_event'},
             insertions_file => {
-                                calculate_from => ['merged_alignments_file'],
+                                calculate_from => ['parent_event'],
                                 calculate => q|
-                                    return $merged_alignments_file .'.insertions';
+                                    return $parent_event->merged_alignments_file .'.insertions';
                                 |,
                             },
             deletions_file => {
-                               calculate_from => ['merged_alignments_file'],
+                               calculate_from => ['parent_event'],
                                calculate => q|
-                                    return $merged_alignments_file .'.deletions';
+                                    return $parent_event->merged_alignments_file .'.deletions';
                                 |,
                            },
             substitutions_file => {
-                                   calculate_from => ['merged_alignments_file'],
+                                   calculate_from => ['parent_event'],
                                    calculate => q|
-                                    return $merged_alignments_file .'.substitutions';
+                                    return $parent_event->merged_alignments_file .'.substitutions';
                                 |,
                                },
     ],

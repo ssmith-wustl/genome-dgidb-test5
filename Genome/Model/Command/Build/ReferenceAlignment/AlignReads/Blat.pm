@@ -18,9 +18,9 @@ class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat {
     has => [
             fasta_file => {
                            doc => 'the file path to the fasta file of reads',
-                           calculate_from => ['read_set_directory','read_set'],
+                           calculate_from => ['read_set_link'],
                            calculate => q|
-                               return $read_set_directory .'/'. $read_set->subset_name .'.fa';
+                               return $read_set_link->read_set_data_directory .'/'. $read_set_link->subset_name .'.fa';
                            |
                        },
             _alignment_files =>{
@@ -108,15 +108,20 @@ sub read_set_aligner_error_file {
 sub execute {
     my $self = shift;
 
+    my $read_set_data_directory = $self->read_set_link->read_set_data_directory;
+    unless (-e $read_set_data_directory) {
+        unless ($self->create_directory($read_set_data_directory)) {
+            $self->error_message("Failed to created read set data directory '$read_set_data_directory'");
+            return;
+        }
+    }
     $DB::single = $DB::stopper;
-    $self->create_directory($self->read_set_directory);
     unless (-s $self->fasta_file) {
         unless($self->read_set->run_region_454->dump_library_region_fasta_file(filename => $self->fasta_file)) {
             $self->error_message('Failed to dump fasta file to '. $self->fasta_file .' for event '. $self->id);
             return;
         }
     }
-    
     # check_for_existing_alignment_files
     my $read_set_alignment_directory = $self->new_read_set_alignment_directory;
     if (-d $read_set_alignment_directory) {

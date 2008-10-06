@@ -2,6 +2,7 @@ package Genome::Model::Command::Build::ReferenceAlignment::454;
 
 use strict;
 use warnings;
+
 use Genome;
 
 class Genome::Model::Command::Build::ReferenceAlignment::454 {
@@ -27,100 +28,50 @@ sub help_detail {
 One build of a given reference-alignment model.
 EOS
 }
+sub stages {
+    my @stages = qw/
+        stage1
+        stage2
+    /;
+    return @stages;
+}
 
-sub subordinate_job_classes {
+sub stage1_job_classes {
+    my @sub_command_classes= qw/
+        Genome::Model::Command::Build::ReferenceAlignment::AssignRun
+        Genome::Model::Command::Build::ReferenceAlignment::AlignReads
+        Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments
+    /;
+    return @sub_command_classes;
+}
+
+sub stage2_job_classes {
     my @step1 =  ('Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments');
     my @step2 =  ('Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype');
     my @step3 =  ('Genome::Model::Command::Build::ReferenceAlignment::FindVariations'),
     my @step4 =  ('Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations', 'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations');
-    
+
     return (\@step1, \@step2, \@step3, \@step4);
+}
+sub stage1_objects {
+    my $self = shift;
+    return $self->model->unbuilt_read_sets;
+}
+
+sub stage2_objects {
+    my $self = shift;
+    my $model = $self->model;
+    my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
+
+    unless (@subreferences_names > 0) {
+        @subreferences_names = ('all_sequences');
+    }
+    return @subreferences_names;
 }
 
 sub execute {
     my $self = shift;
-
-    $DB::single = $DB::stopper;
-
-    my @sub_command_classes = $self->subordinate_job_classes;
-
-    my $model = Genome::Model->get($self->model_id);
-    my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
-
-    unless (@subreferences_names > 0) {
-        @subreferences_names = ('all_sequences');
-    }
-
-    foreach my $ref (@subreferences_names) { 
-    my $prior_event_id = undef;
-        foreach my $command_classes ( @sub_command_classes ) {
-            
-            my $command;
-            for my $command_class (@{$command_classes}) {  
-                $command = $command_class->create(
-                    model_id => $self->model_id, 
-                    ref_seq_id=>$ref,
-                    prior_event_id => $prior_event_id,
-                    parent_event_id => $self->id,
-                );
-                $command->parent_event_id($self->id);
-                $command->event_status('Scheduled');
-                $command->retry_count(0);
-            }
-            #clearly this will not work well if the pipeline wanted to come back together after a fork...
-            #don't cry about it if it happens
-            $prior_event_id = $command->id;
-        }
-    }
-
-    return 1; 
-}
-
-sub extend_last_execution {
-    my ($self) = @_;
-
-    # like execute, but get the existing steps, see which ones never got executed, and generates those.
-
-    my @sub_command_classes = $self->subordinate_job_classes;
-
-    my $model = Genome::Model->get($self->model_id);
-    my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
-
-    unless (@subreferences_names > 0) {
-        @subreferences_names = ('all_sequences');
-    }
-
-    my @new_events;    
-    foreach my $ref (@subreferences_names) { 
-        my $prior_event_id = undef;
-        foreach my $command_class ( @sub_command_classes ) {
-            my $command = $command_class->get(
-                model_id => $self->model_id, 
-                ref_seq_id => $ref,
-                parent_event_id => $self->id,
-            );
-
-            unless ($command) {
-                $command = $command_class->create(
-                    model_id => $self->model_id, 
-                    ref_seq_id=>$ref,
-                    prior_event_id => $prior_event_id,
-                    parent_event_id => $self->id,
-                );
-                unless ($command) {
-                    die "Failed to create command object: $command_class!" . $command_class->error_message;
-                }
-                push @new_events, $command;
-                $command->parent_event_id($self->id);
-                $command->event_status('Scheduled');
-                $command->retry_count(0);
-            }
-
-            $prior_event_id = $command->id;
-        }
-    }
-
-    return @new_events; 
+    return $self->build_in_stages;
 }
 
 sub _get_sub_command_class_name{

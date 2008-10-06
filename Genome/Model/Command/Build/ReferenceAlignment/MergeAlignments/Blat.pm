@@ -14,12 +14,6 @@ class Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::Blat {
            'Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments',
        ],
     has => [
-            merged_alignments_file => {
-                                      calculate_from => ['model'],
-                                      calculate => q|
-                                          return $model->accumulated_alignments_directory .'/'. $model->sample_name .'.psl';
-                                      |,
-                                   },
         ],
 };
 
@@ -41,6 +35,7 @@ EOS
 
 sub should_bsub { 1;}
 
+
 sub execute {
     my $self = shift;
 
@@ -49,9 +44,9 @@ sub execute {
     my $start = UR::Time->now;
     my $model = $self->model;
 
-    my $alignments_dir = $model->accumulated_alignments_directory;
+    my $alignments_dir = $self->parent_event->accumulated_alignments_directory;
     unless (-e $alignments_dir) {
-        unless (mkdir $alignments_dir) {
+        unless ($self->create_directory($alignments_dir)) {
             $self->error_message("Failed to create directory '$alignments_dir':  $!");
             return;
         }
@@ -61,7 +56,6 @@ sub execute {
             return;
         }
     }
-
     my @alignment_events = $model->alignment_events;
     unless (scalar(@alignment_events)) {
         $self->error_message('No alignment events found for model '. $model->id );
@@ -76,7 +70,7 @@ sub execute {
         }
         push @alignment_files, $alignment_file;
     }
-    unless ($self->_cat_psl($self->merged_alignments_file,@alignment_files)){
+    unless ($self->_cat_psl($self->parent_event->merged_alignments_file,@alignment_files)){
         $self->error_message("Could not merge all alignment files");
         return;
     }
@@ -89,6 +83,7 @@ sub execute {
 
     return 1;
 }
+
 
 
 sub _cat_psl {
