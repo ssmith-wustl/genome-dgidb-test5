@@ -11,6 +11,7 @@ package Genome::Project;
 
 use strict;
 use warnings;
+use Genome;
 
 class Genome::Project {
     id_properties => ['setup_project_id'],
