@@ -30,7 +30,7 @@ use Genome::Model::Tools::Pyroscan::FET;
 use Statistics::Distributions;
 #use lib '/gscuser/kchen/454-Test-Set/Analysis/Ken/scripts/';
 
-package Genome::Model::Tools::PyroScan::Detector;
+package Genome::Model::Tools::Pyroscan::Detector;
 
 sub new {
   my ($class, %arg) = @_;
