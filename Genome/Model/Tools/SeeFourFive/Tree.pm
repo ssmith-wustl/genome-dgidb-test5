@@ -46,7 +46,7 @@ sub perl_src {
         #less than current depth: output difference # of clsoe brackets
 
         #my ($metric, $op, $value, $decision) = ($line =~ /\s+([\w\-]+)\s+(\S+)\s+(\S+)\s+:\s+(\S+)/);
-        my ($metric, $op, $value, $decision, $total_trials, $errors) = ($line =~ /\s*([\w\-]+)\s+(\S+)\s+([\S\w]+)\s*:\s*([^\s]*)\s*\(?([\d.]*)\/?([\d.]*)\)?/);
+        my ($metric, $op, $value, $decision, $total_trials, $errors) = ($line =~ /\s*([\w\-]+)\s+(\S+)\s+([\S\w]+?)\s*:\s*([^\s]*)\s*\(?([\d.]*)\/?([\d.]*)\)?/);
         unless($metric && $op && (defined $value)) {
             $self->error_message("Parsing failure on line: $line\n");
             print "Metric: $metric\n";
@@ -217,8 +217,8 @@ sub as_graphviz_obj {
     my $tree_depth_count=0;
     my @parents;
     unless($root) {
-        $graph->add_node("ROOT");
-        @parents = ("ROOT");
+        $graph->add_node("All Data");
+        @parents = ("All Data");
     }
     else {
         @parents = ($root);
@@ -235,7 +235,7 @@ sub as_graphviz_obj {
         #less than current depth: output difference # of clsoe brackets
 
         #my ($metric, $op, $value, $decision) = ($line =~ /\s+([\w\-]+)\s+(\S+)\s+(\S+)\s+:\s+(\S+)/);
-        my ($metric, $op, $value, $decision, $total_trials, $errors) = ($line =~ /\s*([\w\-]+)\s+(\S+)\s+([\S\w]+)\s*:\s*([^\s]*)\s*\(?([\d.]*)\/?([\d.]*)\)?/);
+        my ($metric, $op, $value, $decision, $total_trials, $errors) = ($line =~ /\s*([\w\-]+)\s+(\S+)\s+([\S\w]+?)\s*:\s*([^\s]*)\s*\(?([\d.]*)\/?([\d.]*)\)?/);
         unless($metric && $op && (defined $value)) {
             $self->error_message("Parsing failure on line: $line\n");
             print "Metric: $metric\n";
@@ -283,8 +283,9 @@ sub as_graphviz_obj {
         }
         #having a [ implies a subtree
         if($decision && ($decision !~ m/\[/)) { 
-            my $color = ($decision eq 'WT') ? 'red' : 'green'; 
-            $graph->add_node($$identifier, label => "$decision", style => 'filled', fillcolor => $color);
+#            my $color = ($decision eq 'WT') ? 'red' : 'green'; 
+#            $graph->add_node($$identifier, label => "$decision", style => 'filled', fillcolor => $color);
+            $graph->add_node($$identifier, label => "$decision",);
             if(@parents) {
                 $graph->add_edge($parents[-1] => $$identifier);
                 ++$$identifier;

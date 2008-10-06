@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Snp::Filters::GenerateGraphicalRepresentation;
+package Genome::Model::Tools::SeeFourFive::GenerateGraphicalRepresentation;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use IO::File;
 use Workflow;
 use FileHandle;
 
-class Genome::Model::Tools::Snp::Filters::GenerateGraphicalRepresentation{
+class Genome::Model::Tools::SeeFourFive::GenerateGraphicalRepresentation{
     is => 'Command',
     has => [
         c_file =>
