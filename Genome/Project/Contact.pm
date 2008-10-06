@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 class Genome::Project::Contact {
-    table_name =>   "(select * from contact\@oltp) project ",
+    table_name =>   "(select * from contact\@oltp) contact",
     id_properties => [
         con_id      => { is => 'Number', len => 10 },
     ],
