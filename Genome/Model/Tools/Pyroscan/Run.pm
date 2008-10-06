@@ -109,7 +109,7 @@ sub execute {
       my $case_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_case);
       my $control_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_control);
 
-      my $detector=new PyroScan();
+      my $detector=new Genome::Model::Tools::Pyroscan::Detector();
       $var=$detector->MutDetect(\@poses,$case_cm,$floor_ratio_case,$f_case_qual,$control_cm,$floor_ratio_control,$f_control_qual,$Pvalue, $floor_indel_size, $refseq);
     }
     else{  # cohort analysis
