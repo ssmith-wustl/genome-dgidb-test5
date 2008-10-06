@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Genome::DB::Schema;
 use Command;
 use IO::File;
 #use Genome::DB::Schema;
