@@ -49,7 +49,7 @@ sub execute {
         die;
     }
 
-    mkdir $next_build_dir;
+    $self->create_directory($next_build_dir);
 
     my $current_build_dir = $model->current_build_dir;
 
@@ -70,7 +70,7 @@ sub execute {
         die;
     }
 
-    mkdir $current_instrument_data_dir;
+    $self->create_directory($current_instrument_data_dir);
 
     unless (-d $current_instrument_data_dir){
         $self->error_message("New current instrument data dir $current_instrument_data_dir does not exist");
