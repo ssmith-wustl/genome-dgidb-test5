@@ -479,8 +479,9 @@ $DB::single = $DB::stopper;
         my $median_insert = $read_set_link->median_insert_size;
         my $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;
         unless($upper_bound_on_insert_size > 0) {
-            $self->error_message("Unable to calculate a valid insert size to run maq with");
-            return;
+            $self->status_message("Unable to calculate a valid insert size to run maq with. Using 600 (hax)");
+            $upper_bound_on_insert_size= 600;
+            #return;
         }
         # TODO: extract additional details from the read set
         # about the insert size, and adjust the maq parameters.
