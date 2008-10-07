@@ -354,7 +354,9 @@ sub create_directory {
                 die "Failed to create directory $dir: $!";
             }
             # TODO: fixme w/ Perl
-            `chmod g+ws $dir`;
+            #`chmod g+ws $dir`;
+            chmod 02775, "$dir";
+            `chgrp info $dir`;
         }
     }
     unless (-d $path) {

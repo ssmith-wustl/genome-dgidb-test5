@@ -5,7 +5,7 @@ use warnings;
 
 use above "Genome";
 
-use Test::More tests => 20;
+use Test::More tests => 21;
 
 # prevent the ugly messages when we test known error conditions
 $SIG{__DIE__} = sub {};
@@ -79,5 +79,7 @@ ok($e2_id, "got an id from the database directly: $e2_id");
 my $e2 = Genome::Model::Event->get($e2_id);
 is(ref($e2),$event_class_name, "new object is sub-classified correctly");
 
-
+my $created_dir = $e1->create_directory('/tmp/monkey');
+ok(-d $created_dir, "create_directory successful, it exists");
+#rmdir $created_dir;
 
