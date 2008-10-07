@@ -1030,11 +1030,13 @@ sub class_for_sub_command
 # STDERR, but the test case can change it to capture the messages to somewhere else
 our $stderr = \*STDERR;
 
+our %msgdata;
+
 sub _get_msgdata {
     my $self = $_[0];
     
     if (ref($self)) {
-        return $self->{msgdata} ||= {};
+        return $msgdata{$self->id} ||= {}; # $self->{msgdata} ||= {};
     }
     else {
         no strict 'refs';
