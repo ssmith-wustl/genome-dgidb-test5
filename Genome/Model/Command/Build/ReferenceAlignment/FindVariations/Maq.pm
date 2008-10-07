@@ -147,7 +147,7 @@ sub execute {
     }
 
     unless (-d $self->analysis_base_path) {
-        unless(mkdir($self->analysis_base_path)) {
+        unless($self->create_directory($self->analysis_base_path)) {
             $self->error_message("Failed to create directory: " . $self->analysis_base_path . " (check permissions...)");
             return;
         }

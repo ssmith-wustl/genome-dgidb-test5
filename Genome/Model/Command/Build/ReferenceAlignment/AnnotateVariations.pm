@@ -175,7 +175,7 @@ sub execute {
     my ($reports_dir) = $model->_reports_dir();
     print "$reports_dir\n";
     unless (-d $reports_dir) {
-        mkdir $reports_dir;
+        $self->create_directory($reports_dir);
         `chmod g+w $reports_dir`;
     }
 

@@ -44,7 +44,7 @@ $DB::single=1;
     my $model = $self->model; 
     my $maplist_dir = $self->parent_event->accumulated_alignments_directory;
     unless (-e $maplist_dir) {
-        unless (mkdir $maplist_dir) {
+        unless ($self->create_directory($maplist_dir)) {
             #doesn't exist can't create it...quit
             $self->error_message("Failed to create directory '$maplist_dir':  $!");
             return;

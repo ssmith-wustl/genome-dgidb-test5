@@ -53,7 +53,7 @@ sub execute {
 
     my $alignments_dir = $model->alignments_directory;
     unless (-e $alignments_dir) {
-        unless (mkdir $alignments_dir) {
+        unless ($self->create_directory($alignments_dir)) {
             $self->error_message("Failed to create directory '$alignments_dir':  $!");
             return;
         }

@@ -50,7 +50,7 @@ $DB::single = $DB::stopper;
     my $model_dir = $self->build_directory;
 
     unless (-d "$model_dir/consensus") {
-        mkdir ("$model_dir/consensus");
+        $self->create_directory("$model_dir/consensus");
         chmod 02775, "$model_dir/consensus";
     }
 

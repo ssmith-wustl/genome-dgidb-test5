@@ -63,7 +63,7 @@ sub variation_metrics_file_for_model {
     my $metrics_for_other_snps_directory = $self->parent_event->other_snp_related_metric_directory . "/metrics_for_$model" . "_snps/";
 
     unless (-d $metrics_for_other_snps_directory) {
-        unless(mkdir $metrics_for_other_snps_directory) {
+        unless($self->create_directory($metrics_for_other_snps_directory)) {
             $self->error_message("Cannot create $metrics_for_other_snps_directory");
             return;
         }
@@ -83,7 +83,7 @@ sub execute {
     my $model = $self->model;
 
     unless(-d $self->parent_event->other_snp_related_metric_directory) {
-        unless(mkdir $self->parent_event->other_snp_related_metric_directory) {
+        unless($self->create_directory($self->parent_event->other_snp_related_metric_directory)) {
             $self->error_message("Cannot create " . $self->parent_event->other_snp_related_metric_directory);
             return;
         }
