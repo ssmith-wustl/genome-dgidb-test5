@@ -21,6 +21,11 @@ class Genome::Model {
     id_by => [
         genome_model_id => { is => 'NUMBER', len => 11 },
     ],
+    has_many => [
+        project_assignments         => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'model' },
+        projects                    => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
+        project_names               => { is => 'Text', via => 'projects', to => 'name' },
+    ],
     has => [
         read_sets =>  { is => 'Genome::Model::ReadSet', reverse_id_by => 'model', is_many=> 1 },
         run_chunks => { is => 'Genome::RunChunk', via=>'read_sets', to => 'read_set' },

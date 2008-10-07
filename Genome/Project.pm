@@ -41,6 +41,11 @@ class Genome::Project {
         parent_project_id   => { is => 'Number', len => 10 },
         setup_project_id    => { is => 'Number', len => 10 },
     ],
+    has_many => [
+        model_assignments   => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'project' },
+        models              => { is => 'Genome::Model', via => 'model_assignments', to => 'model' },
+        model_names         => { via => 'models', to => 'name' },
+    ],
     data_source => 'Genome::DataSource::GMSchema',
 };
 
