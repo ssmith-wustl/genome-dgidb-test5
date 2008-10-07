@@ -17,12 +17,13 @@ class Genome::Model::Tools::Fasta::ScreenVector
 {
     is => 'Genome::Model::Tools::Fasta',
     has => [
-                project_name => {
-                    is => 'String',
-                    doc => 'Name of project',
-                    default => 'none',
-                },
-            ],
+    project_name => {
+        is => 'String',
+        is_optional => 1,
+        doc => 'Name of project',
+        default => 'none',
+    },
+    ],
 };
 
 sub help_brief {
@@ -45,7 +46,7 @@ sub execute {
         VarAttr => 'name',
     );
 
-    my $conf = $xs->XMLin('screen_vector.conf.xml');
+    my $conf = $xs->XMLin('/gsc/scripts/lib/perl/Genome/Model/Tools/Fasta/screen_vector.conf.xml');
 
     # Back up FASTA
     my $fasta_bak = sprintf('%s.prescreen', $self->_fasta_base);
