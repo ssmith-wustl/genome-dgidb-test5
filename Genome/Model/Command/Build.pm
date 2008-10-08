@@ -214,6 +214,10 @@ sub _run_stage {
             $self->error_message('Failed to execute run-jobs for model '. $self->model_id);
             return;
         }
+        my $helpful_link1= "https://gscweb.gsc.wustl.edu/cgi-bin/solexa/genome-model-stage1.cgi?model-name=" . $self->model->name  .    "&refresh=1\n\n";
+ 
+        $self->status_message("You can check this link for updates on the status of your alignment jobs: \n $helpful_link1");    
+        return 1;
         unless($self->execute_with_bsub(dep_type=>'ended', dependency_expression => join(")&&ended(", @dependency_ids) )) {
             $self->error__message("Hello, I am the build module, and I was unable to schedule myself to run after my peeps.");
             return;
