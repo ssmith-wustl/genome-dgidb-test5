@@ -71,7 +71,7 @@ sub resolve_full_path {
     my $full_path;
     if (not @fs_path) {
         # no longer required, we make this ourselves at alignment time as needed
-        $class->status_message('Failed to find the path for data set'. $class->_desc_dw_obj($read_set) .'!');
+        #$class->status_message('Failed to find the path for data set '. $class->_desc_dw_obj($read_set) .'!');
         return;
     } else {
         my %dirs = map { File::Basename::dirname($_->path) => 1 } @fs_path;

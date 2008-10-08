@@ -9,7 +9,6 @@ class Genome::Model::Command::Build {
     is => ['Genome::Model::Event'],
     type_name => 'genome model build',
     table_name => 'GENOME_MODEL_BUILD',
-    first_sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
         build_id                 => { is => 'NUMBER', len => 10, constraint_name => 'GMB_GME_FK' , is_optional => 1},
     ],
@@ -26,6 +25,27 @@ class Genome::Model::Command::Build {
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+sub X_resolve_subclass_name {
+    my $class = shift;
+    my $model;
+    if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
+        $model = $_[0]->model;
+    }
+    elsif (my $model_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('model_id')) {
+        $model = Genome::Model->get($model_id);
+    }
+    else {
+        return;
+    }
+    if ($model and $model->can("build_subclass_name")) {
+        my $class = $model->build_subclass_name;
+        print "class is $class\n";
+        return $class if $class;
+    }
+    print "class is default for @_\n";
+    return __PACKAGE__
+}
 
 sub stages {
     my $class = shift;
@@ -56,6 +76,7 @@ sub build_in_stages {
         my @scheduled_objects = $self->_schedule_stage(\@stage_classes,\@objects);
         if ($self->auto_execute) {
             my $return_value = $self->_run_stage(@scheduled_objects);
+            no warnings;
             if ($return_value == 1) {
                 $self->event_status('Succeeded');
                 $self->date_completed(UR::Time->now);
@@ -120,7 +141,7 @@ sub _schedule_stage {
             $object_class = 'reference_sequence';
             $object_id = $object;
         }
-        $self->status_message('Scheduling for '. $object_class);
+        $self->status_message('Scheduling for '. $object_class . ' ' . $object_id);
         push @scheduled_commands, $self->_schedule_command_classes_for_object($object,$sub_command_classes_ref);
     }
     return @scheduled_commands;
@@ -215,11 +236,10 @@ sub _run_stage {
             return;
         }
         my $helpful_link1= "https://gscweb.gsc.wustl.edu/cgi-bin/solexa/genome-model-stage1.cgi?model-name=" . $self->model->name  .    "&refresh=1\n\n";
- 
         $self->status_message("You can check this link for updates on the status of your alignment jobs: \n $helpful_link1");    
         return 1;
         unless($self->execute_with_bsub(dep_type=>'ended', dependency_expression => join(")&&ended(", @dependency_ids) )) {
-            $self->error__message("Hello, I am the build module, and I was unable to schedule myself to run after my peeps.");
+            $self->error_message("Hello, I am the build module, and I was unable to schedule myself to run after my peeps.");
             return;
         }
         return 2;
@@ -254,7 +274,6 @@ sub cry_for_help {
     close(SENDMAIL);
     return 1;
 }
-
 
 1;
 

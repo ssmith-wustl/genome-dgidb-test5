@@ -81,6 +81,7 @@ sub get_or_create_from_read_set {
     my $full_path = $class->resolve_full_path($read_set);
     my $sequencing_platform = $class->resolve_sequencing_platform;
     if ($run_chunk) {
+        no warnings;
         if ($run_chunk->sequencing_platform ne $sequencing_platform) {
             die('Bad sequencing_platform value '. $sequencing_platform .'.  Expected '. $run_chunk->sequencing_platform);
         }
