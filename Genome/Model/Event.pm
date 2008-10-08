@@ -270,6 +270,13 @@ sub shellcmd {
     return 1;
 }
 
+sub resolve_log_directory {
+    my $self = shift;
+    return sprintf('%s/logs/',
+                   $self->model->latest_build_directory,
+               );
+}
+
 sub check_for_existence {
     my ($self,$path,$attempts) = @_;
 
