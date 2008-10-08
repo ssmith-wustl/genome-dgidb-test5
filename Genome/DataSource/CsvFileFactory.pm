@@ -126,11 +126,6 @@ sub Genome::DataSource::ExperimentalMetrics::_generate_loading_templates_arrayre
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
-#    unless ($rule->isa('UR::BoolExpr')) {
-#        # was a rule template.  Probably in the process of doing a cross datasource join
-#        return $self;
-#    }
-
 $DB::single=1;
     my $subject_class = $rule->subject_class_name;
     my $resolver_info = $RESOLVER{$subject_class};
@@ -149,6 +144,8 @@ $DB::single=1;
 
         $all_resolver_params[$i] = \@values;
     }
+    # Hack! Pass the newly resolved info up to the caller
+    $_[1] = $rule;
 
     my @resolver_param_combinations = $self->_get_combinations_of_resolver_params(@all_resolver_params);
     
