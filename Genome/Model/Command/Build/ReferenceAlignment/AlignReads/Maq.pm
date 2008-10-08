@@ -454,7 +454,7 @@ $DB::single = $DB::stopper;
     # resolve adaptor file
     # TODO: get fresh from LIMS
     my $adaptor_file;
-    my @dna = GSC::DNA->get(dna_name => $model->subject_name);
+    my @dna = GSC::DNA->get(dna_name => $self->read_set_link->sample_name);
     if (@dna == 1) {
         if ($dna[0]->dna_type eq 'genomic dna') {
             $adaptor_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer';
