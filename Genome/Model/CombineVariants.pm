@@ -223,7 +223,7 @@ sub annotate_variants {
     while (my $hq_genotype = $self->next_hq_genotype){
         
         #NEW ANNOTATOR IF WE'RE ON A NEW CHROMOSOME
-        if ( $current_hq_chromosome != $hq_genotype->{chromosome}){
+        if ( compare_chromosome($current_hq_chromosome,$hq_genotype->{chromosome}) != 0 ){
             $current_hq_chromosome = $hq_genotype->{chromosome};
             $db_chrom = $schema->resultset('Chromosome')->find(
                 {chromosome_name => $hq_genotype->{chromosome} },
@@ -235,7 +235,7 @@ sub annotate_variants {
         }
 
         my @annotations;
-        if (lc $hq_genotype->{variation_type} eq 'indel'){
+        if (lc $hq_genotype->{variation_type} =~ /ins|del/i){
 
             @annotations = $annotator->prioritized_transcripts_for_snp( # TODO make this back into indel
                 start => $hq_genotype->{start},
@@ -245,7 +245,7 @@ sub annotate_variants {
                 chromosome_name => $hq_genotype->{chromosome},
                 type => $hq_genotype->{variation_type},
             );
-        }elsif (lc $hq_genotype->{variation_type} eq 'snp'){
+        }elsif (lc $hq_genotype->{variation_type} =~ /snp/i){
             @annotations = $annotator->prioritized_transcripts_for_snp(
                 start => $hq_genotype->{start},
                 reference => $hq_genotype->{allele1},
@@ -271,7 +271,7 @@ sub annotate_variants {
     while (my $lq_genotype = $self->next_lq_genotype){
 
         #NEW ANNOTATOR IF WE'RE ON A NEW CHROMOSOME
-        if ( $current_lq_chromosome != $lq_genotype->{chromosome}){
+        if ( compare_chromosome($current_lq_chromosome, $lq_genotype->{chromosome}) != 0){
             $current_lq_chromosome = $lq_genotype->{chromosome};
             $db_chrom = $schema->resultset('Chromosome')->find(
                 {chromosome_name => $lq_genotype->{chromosome} },
@@ -283,7 +283,7 @@ sub annotate_variants {
         }
 
         my @annotations;
-        if (lc $lq_genotype->{variation_type} eq 'indel'){
+        if (lc $lq_genotype->{variation_type} =~ /ins|del/){
             @annotations = $annotator->transcripts_for_snp( # TODO Make this back into indel... but the function doesnt exist
                 start => $lq_genotype->{start},
                 reference => $lq_genotype->{allele1},
@@ -292,7 +292,7 @@ sub annotate_variants {
                 stop => $lq_genotype->{stop},
                 type => $lq_genotype->{variation_type},
             );
-        }elsif (lc $lq_genotype->{variation_type} eq 'snp'){
+        }elsif (lc $lq_genotype->{variation_type} =~ /snp/){
             @annotations = $annotator->transcripts_for_snp(
                 start => $lq_genotype->{start},
                 reference => $lq_genotype->{allele1},
