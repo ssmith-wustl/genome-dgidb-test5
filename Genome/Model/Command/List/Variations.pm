@@ -14,7 +14,7 @@ class Genome::Model::Command::List::Variations {
              is_constant => 1, 
             value => 'Genome::Model::VariationPosition' 
         },
-        show => { default_value => 'ref_seq_id,position,reference_base,consensus_base,consensus_quality,read_depth,avg_num_hits,max_mapping_quality,min_conensus_quality' },
+        show => { default_value => 'ref_seq_name,position,reference_base,consensus_base,consensus_quality,read_depth,avg_num_hits,max_mapping_quality,min_conensus_quality' },
     ],
 };
 
