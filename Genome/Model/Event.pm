@@ -507,7 +507,7 @@ sub map_files_for_refseq {
 sub bsub_rusage {
     # TODO: add the xeon spec
     #return "-R 'select[type=LINUX64]'";model=='Intel_Xeon360'
-    return "-R 'select[model==Intel_Xeon360]'";
+    return "-R 'select[model==Intel_Xeon360] span[hosts=1]'";
 }
 
 sub execute_with_bsub {
