@@ -177,18 +177,6 @@ sub _get_sub_command_class_name {
 }
 
 # TODO: move this to Genome::Model::Command::Build::ReferenceAlignment with the event creation logic
-sub get_sub_command_classes {
-    my $self = shift;
-
-    my @sub_command_classes= qw/
-        Genome::Model::Command::Build::ReferenceAlignment::AssignRun
-        Genome::Model::Command::Build::ReferenceAlignment::AlignReads
-        Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments
-    /;
-
-    return @sub_command_classes;
-}
-
 sub _redo_all {
     my $self = shift;
     my $model = $self->model;
