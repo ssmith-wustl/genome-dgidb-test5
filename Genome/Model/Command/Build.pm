@@ -138,7 +138,7 @@ sub _schedule_command_classes_for_object {
         if (ref($command_class) eq 'ARRAY') {
             push @scheduled_commands, $self->_schedule_command_classes_for_object($object,$command_class,$prior_event_id);
         } else {
-            if ($command_class->can('command_subclassing_model_property')) {
+           if ($command_class->can('command_subclassing_model_property')) {
                 my $subclassing_model_property = $command_class->command_subclassing_model_property;
                 unless ($self->model->$subclassing_model_property) {
                     $self->status_message("No value defined for subclassing model property '$subclassing_model_property'.  Skipping '$command_class'");
@@ -230,7 +230,7 @@ sub cry_for_help {
     my $sendmail = "/usr/sbin/sendmail -t";
     my $from = "From: ssmith\@genome.wustl.edu\n";
     my $reply_to = "Reply-to: thisisafakeemail\n";
-    my $subject = "Subject: Build failed, you suck\n";
+    my $subject = "Subject: Build failed.\n";
     my $content = "This is the Build failure email. your build ". $self->id . " failed. \n$reason\n";
     my $to = "To: " . $self->user_name . '@genome.wustl.edu' . "\n";
 
