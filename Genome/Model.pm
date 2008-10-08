@@ -161,7 +161,7 @@ sub comparable_normal_model {
 
 # This is the directory for model data, alignment data, model comparison data, etc.
 sub base_parent_directory {
-    "/gscmnt/sata363/info/medseq"
+    "/gscmnt/839/info/medseq"
 }
 
 # This directory should never contain data
