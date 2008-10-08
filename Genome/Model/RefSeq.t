@@ -2,11 +2,11 @@ use Test::More tests => 5;
 
 use above 'Genome';
 
-# RefSeq objects aren't in the database yet
 my $the_model_id = 2661729970;
 my $the_ref_seq_id = 123456789;
 my $the_ref_seq_name = 22;
-Genome::Model::RefSeq->create(model_id => $the_model_id, ref_seq_id => $the_ref_seq_id, ref_seq_name => $the_ref_seq_name);
+# RefSeq objects aren't in the database yet
+#Genome::Model::RefSeq->create(model_id => $the_model_id, ref_seq_id => $the_ref_seq_id, ref_seq_name => $the_ref_seq_name);
 
 # There should be at least one VariationPosition with a red depth of 2, right?
 $i = Genome::Model::RefSeq->create_iterator(where => [ model_id=> $the_model_id,
