@@ -165,7 +165,7 @@ sub _calculate_total_reads_passed_quality_filter_count {
         unless ($total_reads_passed_quality_filter_count) {
             my @f = grep {-f $_ } $self->input_read_file_path;
             unless (@f) {
-                $self->error_message("No input read files found");
+                $self->error_message("Problem calculating metric...this doesn't mean the step failed");
                 return;
             }
             my ($wc) = grep { /total/ } `wc -l @f`;
