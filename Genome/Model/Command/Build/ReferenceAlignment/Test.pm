@@ -257,6 +257,10 @@ sub set_event_status {
 
 sub remove_data {
     my $self = shift;
+    UR::Context->_sync_databases;
+
+    ok($self->model->delete,'successfully removed model');
+    ok(unlink($self->model->resolve_archive_file),'successfully unlinked archive file');
     my $directories_to_remove = $self->{_dir_array_ref};
     for my $directory_to_remove (@$directories_to_remove) {
         print $directory_to_remove . "\n";
