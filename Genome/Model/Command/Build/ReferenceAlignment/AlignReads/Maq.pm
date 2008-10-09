@@ -616,7 +616,7 @@ sub alignment_data_available_and_correct {
             }
         } else {
             $errors++;
-            $self->error_message("ref seq $ref_seq_id has bad read set directory:". join("\n\t",@alignment_files));
+            $self->status_message("Unable to shortcut this alignment(we haven't done it before):ref seq $ref_seq_id has bad read set directory:". join("\n\t",@alignment_files));
         }
     }
     my $unaligned_reads_file = $self->unaligned_reads_file;
