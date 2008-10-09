@@ -681,7 +681,7 @@ sub _check_maq_successful_completion {
         }
     }
 
-    $self->error_message("Didn't find a line matching /match_data2mapping/ in the maq output file '$output_filename'");
+    $self->status_message("Alignment shortcut failure(we can't cheat, but this doesn't mean its broken):  Didn't find a line matching /match_data2mapping/ in the maq output file '$output_filename'");
     return;
 }
 
