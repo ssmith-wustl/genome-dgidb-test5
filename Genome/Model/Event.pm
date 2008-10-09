@@ -134,13 +134,14 @@ sub revert {
     my $self = shift;
     my @metrics = $self->metrics;
     my @outputs = $self->outputs;
+    my @inputs = $self->inputs;
     for my $output (@outputs) {
             if ($output->name eq 'Hostname') {
                 $self->warning_message("Attempting to cleanup a blade /tmp/ file...");
                 return unless $self->cleanup_the_mapmerge_I_specify($output);
             }
     }
-    for my $obj (@metrics,@outputs) {
+    for my $obj (@metrics,@outputs, @inputs) {
         $self->warning_message("deleting " . $self->class . " " . $self->id);
          #this delete is a general UR delete not the cute delete just below - Jim & Chris
         $obj->delete;
@@ -771,7 +772,7 @@ sub generate_metric {
 
         my $value = $self->$calculate_method;
         unless(defined $value) {
-            $self->error_message("Value not defined for metric $metric_name using method $calculate_method");
+            $self->error_message("Non Fatal Metric Error(this doesn't kill the step):Value not defined for metric $metric_name using method $calculate_method");
             next;
         }
         if ($metric) {
