@@ -107,7 +107,7 @@ sub compatible_input_read_sets {
     my $self = shift;
 
     my $input_read_set_class_name = $self->input_read_set_class_name;
-    my @input_read_sets = $input_read_set_class_name->get(sample_name => $self->subject_name);
+    my @input_read_sets = $input_read_set_class_name->get(sample_name => { operator => "like", value => $self->subject_name });
 
     #TODO: move
     if ($input_read_set_class_name eq 'GSC::RunLaneSolexa') {
