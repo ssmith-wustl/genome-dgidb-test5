@@ -88,6 +88,11 @@ sub lq_annotated_genotype_file {
     return $self->data_directory . "/lq_annotated_genotype.tsv";
 }
 
+sub maf_file {
+    my $self = shift;
+    return $self->data_directory . "/maf_file.maf";
+}
+
 sub _is_valid_child{
     my ($self, $child) = @_;
     return grep { $child->technology =~ /$_/i } $self->valid_child_types;
@@ -256,11 +261,19 @@ sub annotate_variants {
             );
         }
 
+        # Print the annotation with the best (lowest) priority
+        my $lowest_priority_annotation;
         for my $annotation (@annotations){
-            $annotation->{variations} = join (",",keys %{$annotation->{variations}});
-            my %combo = (%$hq_genotype, %$annotation);
-            $hq_ofh->print($self->format_annotated_genotype_line(\%combo));
+            unless(defined($lowest_priority_annotation)) {
+                $lowest_priority_annotation = $annotation;
+            }
+            if ($annotation->{priority} < $lowest_priority_annotation->{priority}) {
+                $lowest_priority_annotation = $annotation;
+            }
         }
+        $lowest_priority_annotation->{variations} = join (",",keys %{$lowest_priority_annotation->{variations}});
+        my %combo = (%$hq_genotype, %$lowest_priority_annotation);
+        $hq_ofh->print($self->format_annotated_genotype_line(\%combo));
     }
 
     ####lq
@@ -302,11 +315,20 @@ sub annotate_variants {
                 type => $lq_genotype->{variation_type},
             );
         }
+
+        # Print the annotation with the best (lowest) priority
+        my $lowest_priority_annotation;
         for my $annotation (@annotations){
-            $annotation->{variations} = join (",",keys %{$annotation->{variations}});
-            my %combo = (%$lq_genotype, %$annotation);
-            $lq_ofh->print($self->format_annotated_genotype_line(\%combo));
+            unless(defined($lowest_priority_annotation)) {
+                $lowest_priority_annotation = $annotation;
+            }
+            if ($annotation->{priority} < $lowest_priority_annotation->{priority}) {
+                $lowest_priority_annotation = $annotation;
+            }
         }
+        $lowest_priority_annotation->{variations} = join (",",keys %{$lowest_priority_annotation->{variations}});
+        my %combo = (%$lq_genotype, %$lowest_priority_annotation);
+        $lq_ofh->print($self->format_annotated_genotype_line(\%combo));
     }
 
     return 1;
@@ -539,6 +561,55 @@ sub annotated_columns{
     # polyphred_read_count
 }
 
+# Meaningful names for the maf columns to us for hashes etc
+# TODO:... sample will go in either the tumor sample barcode or normal sample barcode depending if it is normal or tumor...
+# same is true of allele1 and allele2
+# FIXME This is pretty much jacked up because xshi's script seems to be lacking 4 colums and possily be in the wrong order in some cases
+sub maf_columns {
+    my $self = shift;
+    return qw(
+        gene_name
+        entrez_gene_id
+        center
+        ncbi_build
+        chromosome
+        start
+        stop
+        strand
+        variant_classification
+        variation_type
+        reference_allele
+        tumor_seq_allele1
+        tumor_seq_allele2
+        dbsnp_rs
+        dbsnp_val_status
+        tumor_sample_barcode
+        matched_norm_sample_barcode
+        match_norm_seq_allele1
+        match_norm_seq_allele2
+        tumor_validation_allele1
+        tumor_validation_allele2
+        match_norm_validation_allele1
+        match_norm_validation_allele2
+        verification_status
+        validation_status
+        mutation_status
+        transcript_name
+        trv_type
+        transcript_name
+        c_position 
+        prot_string
+        prot_string_short
+        pfam_domain
+    );
+}
+
+# actual printed header of the MAF
+sub maf_header {
+    my $self = shift;
+    return"Hugo_Symbol\tEntrez_Gene_Id\tCenter\tNCBI_Build\tChromosome\tStart_position\tEnd_position\tStrand\tVariant_Classification\tVariant_Type\tReference_Allele\tTumor_Seq_Allele1\tTumor_Seq_Allele2\tdbSNP_RS\tdbSNP_Val_Status\tTumor_Sample_Barcode\tMatched_Norm_Sample_Barcode\tMatch_Norm_Seq_Allele1\tMatch_Norm_Seq_Allele2\tTumor_Validation_Allele1\tTumor_Validation_Allele2\tMatch_Norm_Validation_Allele1\tMatch_Norm_Validation_Allele2\tVerification_Status\tValidation_Status\tMutation_Status\tCOSMIC_COMPARISON(ALL_TRANSCRIPTS)\tOMIM_COMPARISON(ALL_TRANSCRIPTS)\tTranscript\tCALLED_CLASSIFICATION\tPROT_STRING\tPROT_STRING_SHORT\tPFAM_DOMAIN";
+}
+
 # Reads from the hq genotype file and returns the next line
 sub next_hq_genotype{
     my $self = shift;
@@ -655,95 +726,33 @@ sub get_or_create {
     return $model;
 }
 
-=cut
-
 sub write_maf_file{
     my $self = shift;
-    my $header = join("\t", $self->columns)."\n";
-    print $header;
-    while (my $genotype = $self->next_hq_genotype){
-        print join("\t", map { $genotype->{$_} } $self->columns);
+
+    # Print maf header
+    my $header = $self->maf_header;
+    my $maf_file = $self->maf_file;
+    my $fh = IO::File->new(">$maf_file");
+    print $fh "$header\n";
+
+    # Print maf data
+    while (my $genotype = $self->next_hq_annotated_genotype){
+        my $line;
+        for my $column($self->maf_columns) {
+            if (lc $column eq "center") {
+                $line .= "genome.wustl.edu\t";
+            } else {
+                $line .= $genotype->{$column} || "N/A";
+                $line .= "\t";
+            }
+        }
+        print $fh "$line\n";
     }
 
-    use lib '/gscuser/xshi/svn/perl_modules/';
-    use MG::Analysis::VariantAnnotation;
-
-    MPSampleData::DBI::myinit("dbi:Oracle:dwrac","mguser_prd"); #switch to production by default
-
-    while (my $genotype = $self->next_hq_genotype){
-
-        my $Hugo_Symbol
-        my $Entrez_Gene_Id
-        my $Center
-        my $NCBI_Build
-        my $Chromosome = $genotype->{chromosome};
-        my $Start_position = $genotype->{start};
-        my $End_position = $genotype->{stop};
-        my $Strand
-        my $Variant_Classification
-        my $Variant_Type
-        my $Reference_Allele
-        my $Tumor_Seq_Allele1
-        my $Tumor_Seq_Allele2
-        my $dbSNP_RS
-        my $dbSNP_Val_Status
-        my $Tumor_Sample_Barcode
-        my $Matched_Norm_Sample_Barcode
-        my $Match_Norm_Seq_Allele1
-        my $Match_Norm_Seq_Allele2
-        my $Tumor_Validation_Allele1
-        my $Tumor_Validation_Allele2
-        my $Match_Norm_Validation_Allele1
-        my $Match_Norm_Validation_Allele2
-        my $Verification_Status
-        my $Validation_Status
-        my $Mutation_Status
-        my $a1
-        $NCBI_Build=36;
-        $Mutation_Status="Somatic" if($Mutation_Status =~ /s/i);
-
-#     my $tu_sample=$Tumor_Sample_Barcode;
-#     $tu_sample =~ s/t//;
-#     my $grep = `grep $tu_sample ~xshi/work/TCGA/MAF/CURRENT/sample_96`;
-
-#      ($Tumor_Sample_Barcode,$Matched_Norm_Sample_Barcode)=split(/\t|\n/,$grep)  if($grep);
-
-    $line="$Hugo_Symbol\t$Entrez_Gene_Id\t$Center\t$NCBI_Build\t$Chromosome\t$Start_position\t$End_position\t$Strand\t$Variant_Classification\t$Variant_Type\t$Reference_Allele\t$Tumor_Seq_Allele1\t$Tumor_Seq_Allele2\t$dbSNP_RS\t$dbSNP_Val_Status\t$Tumor_Sample_Barcode\t$Matched_Norm_Sample_Barcode\t$Match_Norm_Seq_Allele1\t$Match_Norm_Seq_Allele2\t$Tumor_Validation_Allele1\t$Tumor_Validation_Allele2\t$Match_Norm_Validation_Allele1\t$Match_Norm_Validation_Allele2\t$Verification_Status\t$Validation_Status\t$Mutation_Status\t$a1";
-
-    my
-    $self=MG::Analysis::VariantAnnotation->new(type=>$Variant_Type,chromosome=>$Chromosome,start=>$Start_position,end=>$End_position,filter => 1);
-    my $proper_allele2 = ($Reference_Allele ne $Tumor_Seq_Allele2) ?  $Tumor_Seq_Allele2 : $Tumor_Seq_Allele1;
-    my
-    $result=$self->annotate(allele1=>$Reference_Allele,allele2=>$proper_allele2,gene=>$Hugo_Symbol);
-
-#getting the results
-    my $transcript=$self->{annotation}->{$Hugo_Symbol}->{choice} if(exists
-        $self->{annotation}->{$Hugo_Symbol}->{choice} && defined
-        $self->{annotation}->{$Hugo_Symbol}->{choice});
-    if(defined $transcript) {
-#pro_str is the amino acid change (eg. p.W111R)
-
-        my $amino_change = $self->{annotation}->{$Hugo_Symbol}->{transcript}->{$transcript}->{pro_str};
-        $line.="\t$transcript";
-        $line.="\t".$self->{annotation}->{$Hugo_Symbol}->{transcript}->{$transcript}->{trv_type}; 
-        $line.="\t$amino_change";
-
-        $line.="\tc.".$self->{annotation}->{$Hugo_Symbol}->{transcript}->{$transcript}->{c_position};
-#     my $prediction=$self->get_prediction($transcript,$amino_change,1,1);
-#     $line.="\t".$prediction->{sift};
-#     $line.="\t".$prediction->{polyphen};
-    }
-
-
-    print $ofh $line,"\n";
+    return 1;
 }
 
-$fh->close;
-$ofh->close;
-
-}
-
-
+=cut
 # Matches all sample genotype data into a hash with an entry per
 # Sample and position that contains matched normal and tumor data for
 # that sample and position
@@ -771,5 +780,6 @@ sub get_matched_normal_tumor_hash {
 
 
 }
+=cut
 
 1;
