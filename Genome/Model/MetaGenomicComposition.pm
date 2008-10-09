@@ -5,6 +5,9 @@ use warnings;
 
 use Genome;
 
+use Genome::Consed::Directory;
+use Genome::ProcessingProfile::MetaGenomicComposition;
+
 class Genome::Model::MetaGenomicComposition {
     is => 'Genome::Model',
     has => [
@@ -15,15 +18,12 @@ class Genome::Model::MetaGenomicComposition {
         where => [ "event_type like" => 'genome-model build assembly assign-read-sets%'],
         doc => 'each case of a read set being assigned to the model',
     },
-    sequencing_center => {
-        via => 'processing_profile',
-    },
-    sequencing_platform => {
-        via => 'processing_profile',
-    },
-    assembler => {
-        via => 'processing_profile',
-    },
+    map({
+            $_ => {
+                via => 'processing_profile',
+            }
+        } Genome::ProcessingProfile::MetaGenomicComposition->params_for_class
+    ),
     ],
 };
 
@@ -39,6 +39,10 @@ sub _build_subclass_name {
 sub _assembly_directory {
     my $self = shift;
     return $self->data_directory . '/assembly';
+}
+
+sub consed_directory { 
+    return Genome::Consed::Directory->create(directory => $_[0]->data_directory);
 }
 
 1;
