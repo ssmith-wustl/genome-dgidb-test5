@@ -17,10 +17,12 @@ class Genome::Model::PolyphredPolyscan {
         snps => {
             is => 'arrayref',
             doc => 'The union of all the snps from the input files for this model',
+            is_optional => 1,
         },
         indels => {
             is => 'arrayref',
             doc => 'The union of all the indels from the input files for this model',
+            is_optional => 1,
         },
         sensitivity => { 
             via => 'processing_profile',
@@ -480,12 +482,19 @@ sub get_or_create{
                 sensitivity => $sensitivity,
             );
         }
-        $model = Genome::Model::PolyphredPolyscan->create(
+        my $create_command = Genome::Model::Command::Create::Model->create(
+            model_name => $model_name,
+            processing_profile_name => $pp->name,
             subject_name => $subject_name,
-            processing_profile => $pp,
-            name => $model_name,
             data_directory => $data_directory,
         );
+
+        $model = $create_command->execute();
+
+        unless ($model) {
+            $class->error_message("Failed to create model in get_or_create");
+            die;
+        }
 
         # Now, get or create the combine variants model and add this newly created model to it
         # TODO: Should be some other parameters besides name as the research project name...

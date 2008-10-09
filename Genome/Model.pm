@@ -66,6 +66,12 @@ class Genome::Model {
                                           is_optional => 1,
                                           is_transient => 1,
                                         },
+        _printable_property_names_ref =>{ is => 'array_ref',
+                                          doc => 'calculate all property names once',
+                                          is_optional => 1,
+                                          is_transient => 1,
+                                        }
+                                        
     ],
     has_optional => {
         #last_complete_build         => { is => 'Genome::Model::Command::Build', id_by => ['last_complete_build_id'] },
@@ -284,24 +290,31 @@ sub _resolve_type_name_for_subclass_name {
     return $type_name;
 }
 
-my @printable_property_names;
 sub pretty_print_text {
     my $self = shift;
-    unless (@printable_property_names) {
+    unless (defined $self->_printable_property_names_ref) {
         # do this just once...
+        my @props;
         my $class_meta = $self->get_class_object;
         for my $name ($class_meta->all_property_names) {
             next if $name eq 'name';
             my $property_meta = $class_meta->get_property_meta_by_name($name);
             unless ($property_meta->is_delegated or $property_meta->is_calculated) {
-                push @printable_property_names, $name;
+                push @props, $name;
             }
             # an exception to include the processing profile name when listed
             if ($name eq 'processing_profile_name') {
-                push @printable_property_names, $name;
+                push @props, $name;
             }
         }
+        $self->_printable_property_names_ref(\@props);
     }
+    my @printable_property_names = @{$self->_printable_property_names_ref};
+    unless (@printable_property_names){
+        $self->error_message("Can't generate property names from ".ref $self);
+        return;
+    }
+    
     my @out;
     for my $prop (@printable_property_names) {
         if (my @values = $self->$prop) {

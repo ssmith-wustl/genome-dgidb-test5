@@ -20,6 +20,7 @@ class Genome::Model::Command::Create::Model {
         model_name                  => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
         subject_name                => { is => 'varchar', is_optional => 1, len => 255, doc => 'The name of the subject all the reads originate from' },
         model                       => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id', doc => 'Not used as a parameter' },
+        data_directory              => { is => 'varchar', len => 255, doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.', is_optional => 1,},
     ],
     schema_name => 'Main',
 };
@@ -184,7 +185,8 @@ sub _extract_command_properties_and_duplicate_keys_for__name_properties{
 sub _validate_execute_params{
     my $self = shift;
 
-    if (my @args = @{ $self->bare_args }) {
+    my $ref = $self->bare_args;
+    if (($ref) && (my @args = @$ref)) {
         $self->error_message("extra arguments: @args");
         $self->usage_message($self->help_usage);
         return;
