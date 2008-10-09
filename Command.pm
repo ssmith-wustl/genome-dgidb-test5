@@ -25,12 +25,15 @@ UR::Object::Type->define(
         is_output           => { is => 'Boolean', is_optional => 1 },
         is_param            => { is => 'Boolean', is_optional => 1 },
         shell_args_position => { is => 'Integer', is_optional => 1, 
-                                doc => 'when set, this can be used as a positional argument' },
+                                 doc => 'when set, this property is a positional argument when run from a shell' },
     ],
-    has => [
-        bare_args   => { is => 'ARRAY',     is_optional => 1 },
-        is_executed => { is => 'Boolean',   is_optional => 1 },
-        result      => { is => 'Scalar',    is_optional => 1, is_output => 1 },
+    has_optional => [
+        # use the above shell_args_position to map to named args instead
+        bare_args   => { is => 'ARRAY', is_deprecated => 1 },
+        
+        is_executed => { is => 'Boolean' },
+        
+        result      => { is => 'Scalar', is_output => 1 },
     ],
 );
 
