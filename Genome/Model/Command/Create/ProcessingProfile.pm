@@ -146,7 +146,7 @@ sub get_subclass_property_to_possible_values_hash {
     my $self = shift;
     my $build_class = $self->resolve_build_class;
     my @command_subclasses = $build_class->sub_command_classes;
-
+    push @command_subclasses, $build_class;
     # Build a hash of hashes to map each of the subclassing properties to their
     # possible values and the class associated
     # Ex. subclassing property      value       associated class
