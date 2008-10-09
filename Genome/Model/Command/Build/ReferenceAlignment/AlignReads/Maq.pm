@@ -422,7 +422,7 @@ sub execute {
     my $self = shift;
     
 $DB::single = $DB::stopper;
-
+    $self->revert;
     my $model = $self->model;
     # prepare the reads
     my @bfq_pathnames = $self->prepare_input($self->read_set,$self->is_eliminate_all_duplicates);
