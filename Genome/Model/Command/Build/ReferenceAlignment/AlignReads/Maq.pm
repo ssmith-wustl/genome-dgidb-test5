@@ -425,8 +425,6 @@ $DB::single = $DB::stopper;
     $self->revert;
     my $model = $self->model;
     # prepare the reads
-    my @bfq_pathnames = $self->prepare_input($self->read_set,$self->is_eliminate_all_duplicates);
-
     # prepare the refseq
     my $ref_seq_path =  $model->reference_sequence_path;
     my $ref_seq_file =  $ref_seq_path . "/all_sequences.bfa";
@@ -444,6 +442,9 @@ $DB::single = $DB::stopper;
         }
         return 1;
     }
+
+    my @bfq_pathnames = $self->prepare_input($self->read_set,$self->is_eliminate_all_duplicates);
+
 
     my $read_set_alignment_directory = $self->read_set_link->read_set_alignment_directory;
     $self->create_directory($read_set_alignment_directory);
