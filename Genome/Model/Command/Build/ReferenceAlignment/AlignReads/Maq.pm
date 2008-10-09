@@ -641,10 +641,10 @@ sub alignment_data_available_and_correct {
     for my $possible_shortcut (@possible_aligner_output_shortcuts) {
         my $found_aligner_output_file = $self->check_for_existence($possible_shortcut);
         if (!$found_aligner_output_file) {
-            $self->error_message("missing aligner output file base '$possible_shortcut'");
+            $self->status_message("(shortcutting problem...this is not a fatal error, do not panic: missing aligner output file base '$possible_shortcut'");
             $errors++;
         } elsif (!$self->_check_maq_successful_completion($possible_shortcut)) {
-            $self->error_message("aligner output file '$possible_shortcut' found, but incomplete");
+            $self->status_message("shortcutting problem...this isn't fatal, don't panic.  aligner output file '$possible_shortcut' found, but incomplete");
             $errors++;
         }
     }    
