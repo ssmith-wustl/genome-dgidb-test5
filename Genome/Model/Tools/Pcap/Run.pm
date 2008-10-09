@@ -1013,9 +1013,17 @@ sub _get_pcap_params
 
     #<pcap_prog_type> <pcap.input.fof> -y <val> -z <val>
 
-#    return '-l 300 -w 200' if $self->pcap_run_type eq 'RAW_454';
+#   return '-l 300 -w 200' if $self->pcap_run_type eq 'RAW_454';
 
-    return '-l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'RAW_454';
+    if ($self->pcap_run_type eq 'RAW_454')
+    {
+	return '-l 50 -o 40 -s 1200 -w 90' if $self->parameter_setting eq 'RELAXED';
+
+	#this is technically test param below .. want to modify this since
+	#normally relaxed params are used and don't want to create yet
+	#another set of params .. such as test
+	return '-l 300 -o 18 -s 600 -w 100';
+    }
     return '-l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'POLY';
     return '-l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'NORMAL';
 
@@ -1059,10 +1067,12 @@ sub _get_bcontig_params
     {
 	#for now just return the same params .
 	return '-d 40 -e 0 -f 2 -g 8 -k 20 -l 75 -p 82 -q 0 -s 1400'
-	    if $self->parameter_setting eq 'NORMAL';
-
-	return '-d 40 -e 0 -f 2 -g 8 -k 20 -l 75 -p 82 -q 0 -s 1400'
 	    if $self->parameter_setting eq 'RELAXED';
+
+	#this is the params syang used to get a really contiguous assembly
+	#but doesn't appear to work for this assembly
+	return '-a 4000 -d 80 -e 3 -f 4 -g 10 -i 120 -j 2 -k 35 -l 35 -n 20 -o 10000 -p 85 -q 0 -t 3 -v 3'
+	    if $self->parameter_setting eq 'NORMAL';
 
 	return '-d 40 -e 0 -f 2 -g 8 -k 20 -l 75 -p 82 -q 0 -s 1400'
 	    if $self->parameter_setting eq 'MORE_RELAXED';
