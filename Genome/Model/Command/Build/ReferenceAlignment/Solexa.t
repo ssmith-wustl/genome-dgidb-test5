@@ -23,7 +23,7 @@ if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 }
 
-plan tests => 257;
+plan tests => 259;
 
 #This should be removed when tests finish
 my $tmp_dir;
@@ -76,13 +76,13 @@ sub setup_test_data {
 
     #$tmp_dir = '/tmp/fake-gerald';
     my @run_dirs = grep { -d $_ } glob("$tmp_dir/*_*_*_*");
-    my $seq_id = -1000;
+    my $seq_id = -10;
     for my $run_dir (@run_dirs) {
         my $run_dir_params = GSC::PSE::SolexaSequencing::SolexaRunDirectory->parse_regular_run_directory($run_dir);
         #print Dumper $run_dir_params;
         for my $lane (1 .. 8) {
             my $sls = GSC::RunLaneSolexa->create(
-                #id => $seq_id--,
+                id                         => $seq_id--,
                 run_name                   => $$run_dir_params{'run_name'},
                 lane                       => $lane,
                 full_path                  => $run_dir,
