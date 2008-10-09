@@ -2,8 +2,10 @@ package Genome::Model::ReadSet;
 
 use strict;
 use warnings;
+use YAML;
 
 use Genome;
+
 class Genome::Model::ReadSet {
     table_name => 'GENOME_MODEL_READ_SET',
     id_by => [
@@ -23,6 +25,7 @@ class Genome::Model::ReadSet {
         library_name        => { via => 'read_set' },
         sample_name         => { via => 'read_set' },
         sequencing_platform => { via => 'read_set' },
+        full_path           => { via => 'read_set' },
         unique_reads_across_library     => { via => 'read_set' },
         duplicate_reads_across_library  => { via => 'read_set' },
         median_insert_size => {via => 'read_set'},
@@ -32,6 +35,16 @@ class Genome::Model::ReadSet {
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+sub sample_data_directory {
+    my $self = shift;
+    return $self->full_path .'/'. $self->sample_name;
+}
+
+sub read_set_data_directory {
+    my $self = shift;
+    return $self->sample_data_directory .'/'. $self->run_name .'/'. $self->subset_name;
+}
 
 sub read_set_alignment_directory {
     my $self = shift;
@@ -141,8 +154,9 @@ sub read_set_alignment_files_for_refseq {
     return @files;
 }
 
-
-
-
+sub yaml_string {
+    my $self = shift;
+    return YAML::Dump($self);
+}
 
 1;
