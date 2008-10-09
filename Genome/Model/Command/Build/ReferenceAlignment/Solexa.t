@@ -42,7 +42,7 @@ my $add_reads_test = Genome::Model::Command::Build::ReferenceAlignment::Test->ne
 isa_ok($add_reads_test,'Genome::Model::Command::Build::ReferenceAlignment::Test');
 
 $add_reads_test->create_test_pp(
-    sequencing_platform  => 'solexa',
+                                sequencing_platform => 'solexa',
     profile_name => $processing_profile_name,
     dna_type => 'genomic dna',
     align_dist_threshold => '0',
@@ -82,7 +82,7 @@ sub setup_test_data {
         #print Dumper $run_dir_params;
         for my $lane (1 .. 8) {
             my $sls = GSC::RunLaneSolexa->create(
-                id                         => $seq_id--,
+                #id                         => $seq_id--,
                 run_name                   => $$run_dir_params{'run_name'},
                 lane                       => $lane,
                 full_path                  => $run_dir,
@@ -129,7 +129,7 @@ sub setup_test_data {
             push @read_sets, $sls;
         }
     }
-    UR::Context->_sync_databases();
+    #UR::Context->_sync_databases();
     return @read_sets;
 }
 
