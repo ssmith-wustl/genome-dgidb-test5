@@ -3,6 +3,7 @@ package Genome::Model::Event;
 use strict;
 use warnings;
 use File::Path;
+use YAML;
 
 our $log_base = '/gscmnt/sata114/info/medseq/model_data/logs/';
 
@@ -145,6 +146,23 @@ sub revert {
         $obj->delete;
     }
     return 1;
+}
+
+sub get_all_objects {
+    my $self = shift;
+    my @inputs = $self->inputs;
+    my @outputs = $self->outputs;
+    my @metrics = $self->metrics;
+    return sort {$a->id cmp $b->id} (@inputs, @outputs, @metrics);
+}
+
+sub yaml_string {
+    my $self = shift;
+    my $string = YAML::Dump($self);
+    for my $object ($self->get_all_objects) {
+        $string .= YAML::Dump($object);
+    }
+    return $string;
 }
 
 sub delete {
