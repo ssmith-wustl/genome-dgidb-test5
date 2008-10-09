@@ -239,41 +239,7 @@ sub annotate_variants {
             );
         }
 
-        my @annotations;
-        if (lc $hq_genotype->{variation_type} =~ /ins|del/i){
-
-            @annotations = $annotator->prioritized_transcripts_for_snp( # TODO make this back into indel
-                start => $hq_genotype->{start},
-                stop => $hq_genotype->{stop},
-                reference => $hq_genotype->{allele1},
-                variant => $hq_genotype->{allele2},
-                chromosome_name => $hq_genotype->{chromosome},
-                type => $hq_genotype->{variation_type},
-            );
-        }elsif (lc $hq_genotype->{variation_type} =~ /snp/i){
-            @annotations = $annotator->prioritized_transcripts_for_snp(
-                start => $hq_genotype->{start},
-                reference => $hq_genotype->{allele1},
-                variant => $hq_genotype->{allele2},
-                chromosome_name => $hq_genotype->{chromosome},
-                stop => $hq_genotype->{stop},
-                type => $hq_genotype->{variation_type},
-            );
-        }
-
-        # Print the annotation with the best (lowest) priority
-        my $lowest_priority_annotation;
-        for my $annotation (@annotations){
-            unless(defined($lowest_priority_annotation)) {
-                $lowest_priority_annotation = $annotation;
-            }
-            if ($annotation->{priority} < $lowest_priority_annotation->{priority}) {
-                $lowest_priority_annotation = $annotation;
-            }
-        }
-        $lowest_priority_annotation->{variations} = join (",",keys %{$lowest_priority_annotation->{variations}});
-        my %combo = (%$hq_genotype, %$lowest_priority_annotation);
-        $hq_ofh->print($self->format_annotated_genotype_line(\%combo));
+        $self->print_prioritized_annotation($hq_genotype, $annotator, $hq_ofh);
     }
 
     ####lq
@@ -295,41 +261,65 @@ sub annotate_variants {
             );
         }
 
-        my @annotations;
-        if (lc $lq_genotype->{variation_type} =~ /ins|del/){
-            @annotations = $annotator->transcripts_for_snp( # TODO Make this back into indel... but the function doesnt exist
-                start => $lq_genotype->{start},
-                reference => $lq_genotype->{allele1},
-                variant => $lq_genotype->{allele2},
-                chromosome_name => $lq_genotype->{chromosome},
-                stop => $lq_genotype->{stop},
-                type => $lq_genotype->{variation_type},
-            );
-        }elsif (lc $lq_genotype->{variation_type} =~ /snp/){
-            @annotations = $annotator->transcripts_for_snp(
-                start => $lq_genotype->{start},
-                reference => $lq_genotype->{allele1},
-                variant => $lq_genotype->{allele2},
-                chromosome_name => $lq_genotype->{chromosome},
-                stop => $lq_genotype->{stop},
-                type => $lq_genotype->{variation_type},
-            );
-        }
-
-        # Print the annotation with the best (lowest) priority
-        my $lowest_priority_annotation;
-        for my $annotation (@annotations){
-            unless(defined($lowest_priority_annotation)) {
-                $lowest_priority_annotation = $annotation;
-            }
-            if ($annotation->{priority} < $lowest_priority_annotation->{priority}) {
-                $lowest_priority_annotation = $annotation;
-            }
-        }
-        $lowest_priority_annotation->{variations} = join (",",keys %{$lowest_priority_annotation->{variations}});
-        my %combo = (%$lq_genotype, %$lowest_priority_annotation);
-        $lq_ofh->print($self->format_annotated_genotype_line(\%combo));
+        $self->print_prioritized_annotation($lq_genotype, $annotator, $lq_ofh);
     }
+
+    $lq_ofh->close;
+    $hq_ofh->close;
+
+    return 1;
+}
+
+# Gets and prints the lowest priority annotation for a given genotype
+# Takes a genotype hashref from next_hq/lq_genotype
+# Also takes in the current annotator object FIXME: Make this a class level var?
+# Also takes in the output file handle to print to
+sub print_prioritized_annotation {
+    my $self = shift;
+    my $genotype = shift;
+    my $annotator = shift;
+    my $fh = shift;
+ 
+    $DB::single=1;   
+    my @annotations;
+    if ($genotype->{variation_type} =~ /ins|del/i){
+        @annotations = $annotator->prioritized_transcripts_for_snp( # TODO Make this back into indel... but the function doesnt exist
+            start => $genotype->{start},
+            reference => $genotype->{allele1},
+            variant => $genotype->{allele2},
+            chromosome_name => $genotype->{chromosome},
+            stop => $genotype->{stop},
+            type => $genotype->{variation_type},
+        );
+    }elsif ($genotype->{variation_type} =~ /snp/i){
+        @annotations = $annotator->prioritized_transcripts_for_snp(
+            start => $genotype->{start},
+            reference => $genotype->{allele1},
+            variant => $genotype->{allele2},
+            chromosome_name => $genotype->{chromosome},
+            stop => $genotype->{stop},
+            type => $genotype->{variation_type},
+        );
+    }
+    else {
+        $self->error_message("Unrecognized variation_type " . $genotype->{variation_type});
+        return undef;
+    }
+
+    # Print the annotation with the best (lowest) priority
+    my $lowest_priority_annotation;
+    for my $annotation (@annotations){
+        unless(defined($lowest_priority_annotation)) {
+            $lowest_priority_annotation = $annotation;
+        }
+        if ($annotation->{priority} < $lowest_priority_annotation->{priority}) {
+            $lowest_priority_annotation = $annotation;
+        }
+    }
+    $lowest_priority_annotation->{variations} = join (",",keys %{$lowest_priority_annotation->{variations}});
+    my %combo = (%$genotype, %$lowest_priority_annotation);
+    
+    $fh->print($self->format_annotated_genotype_line(\%combo));
 
     return 1;
 }
