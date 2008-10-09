@@ -9,9 +9,12 @@ use Term::ANSIColor;
 use Genome::Model::EqualColumnWidthTableizer;
 use Genome::Model::Tools::Maq::RemovePcrArtifacts;
 use File::Path;
+use Cwd;
 use File::Basename;
 use IO::File;
 use Sort::Naturally;
+use YAML;
+use Archive::Tar;
 
 class Genome::Model {
     type_name => 'genome model',
@@ -28,6 +31,7 @@ class Genome::Model {
     ],
     has => [
         read_sets =>  { is => 'Genome::Model::ReadSet', reverse_id_by => 'model', is_many=> 1 },
+        builds => { is => 'Genome::Model::Command::Build', reverse_id_by => 'model', is_many => 1 },
         run_chunks => { is => 'Genome::RunChunk', via=>'read_sets', to => 'read_set' },
 
         data_directory               => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
@@ -170,14 +174,22 @@ sub model_links_directory {
     return '/gscmnt/839/info/medseq/model_links';
 }
 
+sub alignment_links_directory {
+    return '/gscmnt/839/info/medseq/alignment_links';
+}
+
+sub sample_links_directory {
+    return '/gscmnt/839/info/medseq/sample_links';
+}
+
 sub base_model_comparison_directory {
     my $self = shift;
     return $self->base_parent_directory . "/model_comparisons";
 }
 
-sub alignment_links_directory {
+sub sample_data_directory {
     my $self = shift;
-    return $self->base_parent_directory . "/alignment_links";
+    return $self->base_parent_directory . "/sample_data";
 }
 
 sub alignment_directory {
@@ -210,6 +222,11 @@ sub model_link {
 sub resolve_data_directory {
     my $self = shift;
     return $self->model_data_directory . '/' . $self->id;
+}
+
+sub resolve_archive_file {
+    my $self = shift;
+    return $self->model_data_directory .'/'. $self->id .'.tbz';
 }
 
 sub latest_build_directory {
@@ -368,7 +385,85 @@ sub unlock_resource {
     my $resource_id = delete $args{resource_id};
     Carp::confess("No resource_id specified for unlocking.") unless $resource_id;
     $resource_id = $self->lock_directory . "/" . $resource_id . ".lock";
+
     unlink $resource_id . '/info';
     rmdir $resource_id;
 }
+
+sub get_all_objects {
+    my $self = shift;
+    my @read_sets = $self->read_sets;
+    my @events = $self->events;
+    return sort {$a->id cmp $b->id} (@read_sets,@events);
+}
+
+sub yaml_string {
+    my $self = shift;
+    my $string = YAML::Dump($self);
+    my @objects = $self->get_all_objects;
+    for my $object (@objects) {
+        #Need to implement a method for read_set and event
+        $string .= $object->yaml_string;
+    }
+    return $string;
+}
+
+sub delete {
+    my $self = shift;
+
+    my $data_directory = $self->data_directory;
+    my $db_objects_dump_file = $data_directory .'/data_dump.yaml';
+    my $fh = IO::File->new($db_objects_dump_file,'w');
+    unless ($fh) {
+        $self->error_message('Failed to create file handle for file '. $db_objects_dump_file);
+        return;
+    }
+    print $fh $self->yaml_string;
+    $fh->close;
+    my $cwd = getcwd;
+    my ($filename,$dirname) = File::Basename::fileparse($data_directory);
+    $filename =~ s/^-/\.\/-/;
+    unless (chdir $dirname) {
+        $self->error_message('Failed to change directories to '. $dirname);
+        return;
+    }
+    my $cmd = 'tar --bzip2 --preserve --create --file '. $self->resolve_archive_file .' '. $filename;
+    my $rv = system($cmd);
+    unless ($rv == 0) {
+        $self->error_message('Failed to create archive of model '. $self->id .' with command '. $cmd);
+        return;
+    }
+    unless (chdir $cwd) {
+        $self->error_message('Failed to change directories to '. $cwd);
+        return;
+    }
+
+    my @objects = $self->get_all_objects;
+    for my $object (@objects) {
+        unless ($object->delete) {
+            $self->error_message('Failed to remove object '. $object->class .' '. $object->id);
+            return;
+        }
+    }
+    if (-e $self->data_directory) {
+        unless (rmtree $self->data_directory) {
+            $self->warning_message('Failed to rmtree model data directory '. $self->data_directory);
+        }
+    }
+    if (-e $self->model_link) {
+        if (-l $self->model_link) {
+            unless (unlink($self->model_link)) {
+                $self->warning_message('Failed to remove model link '. $self->model_link);
+            }
+        } else {
+            $self->warning_message('Expected symlink for the model link but got path'. $self->model_link);
+            unless (rmtree $self->model_link) {
+                $self->warning_message('Failed to rmtree model link directory '. $self->model_link);
+            }
+        }
+    }
+    $self->SUPER::delete;
+    return 1;
+}
+
 1;
