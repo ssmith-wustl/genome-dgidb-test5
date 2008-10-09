@@ -5,13 +5,12 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
-use Genome::Model;
+
 use File::Path;
 use Data::Dumper;
 
 class Genome::Model::Command::Create::ProcessingProfile::Assembly {
-    is => ['Genome::Model::Event', 'Genome::Model::Command::Create::ProcessingProfile'],
+    is => 'Genome::Model::Command::Create::ProcessingProfile',
     sub_classification_method_name => 'class',
     has => [
             assembler           => {

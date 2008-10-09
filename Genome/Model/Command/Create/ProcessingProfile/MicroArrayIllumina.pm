@@ -5,18 +5,19 @@ use strict;
 use warnings;
 
 use Genome;
-use Command; 
-use Genome::Model;
+
 use File::Path;
 use Data::Dumper;
 
 class Genome::Model::Command::Create::ProcessingProfile::MicroArrayIllumina{
-    is => ['Genome::Model::Event', 'Genome::Model::Command::Create::ProcessingProfile'],
+    is => 'Genome::Model::Command::Create::ProcessingProfile',
     sub_classification_method_name => 'class',
     has => [
-        model                        => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
-        profile_name                 => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
-                                          doc => 'The human readable name for the processing profile'},
+            instrument_data              => {
+                                             is => 'String',
+                                             doc => 'The instrument data for this processing profile',
+                                             is_optional => 1,
+                                         },
     ],
     schema_name => 'Main',
 };

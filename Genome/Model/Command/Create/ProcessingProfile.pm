@@ -7,15 +7,15 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Create::ProcessingProfile {
-    is => 'Command',
+    is => 'Genome::Model::Event',
     has => [
-        type_name                    => { is => 'VARCHAR2', len => 255, is_optional => 1, 
-                                          doc => "The type of processing profile. Not required unless creating a generic 'processing profile'. "},
-        profile_name                 => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
-                                          doc => 'The human readable name for the processing profile'},
-        copy_from                    => { is => 'Genome::ProcessingProfile', is_optional => 1, id_by => 'copy_from_name',
-                                          doc => 'Copy this profile, and modify the specified properties.' },
-    ],
+            type_name                    => { is => 'VARCHAR2', len => 255, is_optional => 1, 
+                                              doc => "The type of processing profile. Not required unless creating a generic 'processing profile'. "},
+            profile_name                 => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
+                                              doc => 'The human readable name for the processing profile'},
+            copy_from                    => { is => 'Genome::ProcessingProfile', is_optional => 1, id_by => 'copy_from_name',
+                                              doc => 'Copy this profile, and modify the specified properties.' },
+        ],
 };
 
 sub help_brief {
@@ -105,21 +105,48 @@ sub verify_params {
             if ($@) {
                 $self->error_message(
                     "No package with name $subclass_name found for property $key");
-                return undef;                        
+                return undef;
             }
         }
     }
-        
     return 1;
 }
+
+sub resolve_class_type {
+    my $self = shift;
+    my @class_components = split('::',$self->class);
+    my $class_type = pop @class_components;
+    return $class_type;
+}
+
+sub resolve_build_class {
+    my $self = shift;
+    my $model_class = 'Genome::Model::'. $self->resolve_class_type;
+    my @components = split(/[_\-\s]/,$model_class->build_subclass_name);
+    my @uc_components = map{ ucfirst $_ } @components;
+    my $subclass = join('',@uc_components);
+    return 'Genome::Model::Command::Build::'. $subclass;
+}
+
+sub X_resolve_build_subclass {
+    my $self = shift;
+    my $build_class = $self->resolve_build_class;
+    my $property_name = $build_class->command_subclassing_model_property;
+    my $build_subclass = $self->$property_name;
+    my @components = split(/[_\-\s]/,$build_subclass);
+    my @uc_components = map { ucfirst $_ } @components;
+    my $subclass = join('',@uc_components);
+    return $build_class .'::'. $subclass;
+}
+
 
 # TODO: add in postprocess sub command classes equivilant
 # For all possible subclasses of addreads 
 sub get_subclass_property_to_possible_values_hash {
     my $self = shift;
-    my @addreads_subclasses = 
-        Genome::Model::Command::AddReads->get_sub_command_classes();
-    
+    my $build_class = $self->resolve_build_class;
+    my @command_subclasses = $build_class->sub_command_classes;
+
     # Build a hash of hashes to map each of the subclassing properties to their
     # possible values and the class associated
     # Ex. subclassing property      value       associated class
@@ -127,18 +154,19 @@ sub get_subclass_property_to_possible_values_hash {
     #                               Mosaik      ""                  ""::Mosaik
     #                               etc         etc     
     my %subclass_property_to_possible_values;
-    for my $subclass (@addreads_subclasses) {
+    for my $subclass (@command_subclasses) {
         # skip PLQA for now... it and align reads both use the read_aligner
         # property... so dont let it overwrite align reads hash entry
         if ($subclass =~ m/ProcessLowQualityAlignments/) {
             next;
         }
-    
         # get the subclassing property for this class
-        my $subclassing_property = $subclass->command_subclassing_model_property();
-        # map that class's value-to-subclass hash to this subclassing property
-        $subclass_property_to_possible_values{$subclassing_property} =
-            $self->get_subclassing_value_to_subclass_hash($subclass);
+        if ($subclass->can('command_subclassing_model_property')) {
+            my $subclassing_property = $subclass->command_subclassing_model_property();
+            # map that class's value-to-subclass hash to this subclassing property
+            $subclass_property_to_possible_values{$subclassing_property} =
+                $self->get_subclassing_value_to_subclass_hash($subclass);
+        }
     }
 
     return %subclass_property_to_possible_values; 
@@ -195,7 +223,7 @@ sub _extract_command_properties_and_duplicate_keys_for__name_properties{
             if ($target_class->can($command_property . "_name")) {
                 $object_property .= "_name";
             }
-           	$params{$object_property} = $value;
+            $params{$object_property} = $value;
         }
     }
 
@@ -293,7 +321,6 @@ sub _create_target_class_instance_and_error_check{
     $self->event_status('Succeeded');
     return $obj;
 }
-
 
 
 1;

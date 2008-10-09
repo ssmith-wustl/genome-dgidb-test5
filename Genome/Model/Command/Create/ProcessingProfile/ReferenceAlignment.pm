@@ -11,12 +11,11 @@ use File::Path;
 use Data::Dumper;
 
 class Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment {
-    is => ['Genome::Model::Event', 'Genome::Model::Command::Create::ProcessingProfile'],
+    is => 'Genome::Model::Command::Create::ProcessingProfile',
     sub_classification_method_name => 'class',
     has => [
 		# This will probably never be specified since processing profiles are used for many models
 		# this shouldnt even be here except that we need to override this to be not required
-        model                  		 => { is => 'Genome::Model', is_optional => 1, doc => 'Not used as a parameter' },
 	align_dist_threshold         => { is => 'VARCHAR2', len => 255, is_optional => 1,
 									doc => ""},
 	dna_type                     => { is => 'VARCHAR2', len => 64, is_optional => 1,

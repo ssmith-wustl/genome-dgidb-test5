@@ -20,7 +20,6 @@ class Genome::Model::Command::Create::Model {
         model_name                  => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
         subject_name                => { is => 'varchar', is_optional => 1, len => 255, doc => 'The name of the subject all the reads originate from' },
         model                       => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id', doc => 'Not used as a parameter' },
-        instrument_data             => { is => 'String', doc => 'The instrument data for this model', is_optional => 1, via => 'inputs', to => 'value', where => [name => 'instrument_data'] },
     ],
     schema_name => 'Main',
 };

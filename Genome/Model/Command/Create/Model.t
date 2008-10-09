@@ -9,7 +9,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 74;
+use Test::More tests => 102;
 use Test::Differences;
 use File::Path;
 
@@ -69,15 +69,13 @@ is($pp->name,$pp_name,'processing profile name accessor');
 
 
 diag('test command create for a genome model');
-my $create_command= Genome::Model::Command::Create::Model->create( 
-    model_name              => $model_name,
-    subject_name            => $subject_name,
-    processing_profile_name => $pp_name,
-    bare_args               => [],
-);
-    
+my $create_command = Genome::Model::Command::Create::Model->create(
+                                                                   model_name              => $model_name,
+                                                                   subject_name            => $subject_name,
+                                                                   processing_profile_name => $pp_name,
+                                                                   bare_args               => [],
+                                                               );
 isa_ok($create_command,'Genome::Model::Command::Create::Model');
-
 my $result = $create_command->execute();
 ok($result, 'execute genome-model create');
 
@@ -105,12 +103,16 @@ UR::Context->_sync_databases();
 diag('test create for a genome model object');
 $model_name = 'model_name_here';
 $subject_name = 'subject_name_here';
-my %params = (
-    name => $model_name,
-    subject_name => $subject_name,
-    processing_profile_id   => $pp->id, # cannot access pp properties without the id here
-);
-my $obj = Genome::Model->create(%params);
+my $obj_create = Genome::Model::Command::Create::Model->create(
+                                                               model_name => $model_name,
+                                                               subject_name => $subject_name,
+                                                               processing_profile_name   => $pp->name,
+                                                               bare_args => [],
+                                                           );
+isa_ok($obj_create,'Genome::Model::Command::Create::Model');
+ok($obj_create->execute,'execute model create');
+
+my $obj = Genome::Model->get(name => $model_name);
 ok($obj, 'creation worked');
 isa_ok($obj ,'Genome::Model::ReferenceAlignment');
 
@@ -133,112 +135,92 @@ is($obj->processing_profile_id,$pp->id,'processing profile id accessor');
 
 diag('subclassing tests - test create for a processing profile object of each subclass');
 
-# Test creation for a processing profile of many different types
-my $ppsr = Genome::ProcessingProfile->create(type_name => 'reference alignment');
-ok($ppsr, 'creation worked for reference alignment processing profile');
-isa_ok($ppsr ,'Genome::ProcessingProfile::ReferenceAlignment');
-
-my $ppdns = Genome::ProcessingProfile->create(type_name => 'de novo sanger');
-ok($ppdns, 'creation worked de novo sanger processing profile');
-isa_ok($ppdns ,'Genome::ProcessingProfile::DeNovoSanger');
-
-my $ppirs = Genome::ProcessingProfile->create(type_name => 'imported reference sequence');
-ok($ppirs, 'creation worked imported reference sequence processing profile');
-isa_ok($ppirs ,'Genome::ProcessingProfile::ImportedReferenceSequence');
-
-my $ppivw = Genome::ProcessingProfile->create(type_name => 'watson');
-ok($ppivw, 'creation worked watson processing profile');
-isa_ok($ppivw ,'Genome::ProcessingProfile::Watson');
-
-my $ppivv = Genome::ProcessingProfile->create(type_name => 'venter');
-ok($ppivv, 'creation worked venter processing profile');
-isa_ok($ppivv,'Genome::ProcessingProfile::Venter');
-
-my $ppma = Genome::ProcessingProfile->create(type_name => 'micro array');
-ok($ppma, 'creation worked micro array processing profile');
-isa_ok($ppma ,'Genome::ProcessingProfile::MicroArray');
-
-my $ppmai = Genome::ProcessingProfile->create(type_name => 'micro array illumina');
-ok($ppmai, 'creation worked micro array illumina processing profile');
-isa_ok($ppmai ,'Genome::ProcessingProfile::MicroArrayIllumina');
-
-my $ppmaa = Genome::ProcessingProfile->create(type_name => 'micro array affymetrix');
-ok($ppmaa, 'creation worked micro array affymetrix processing profile');
-isa_ok($ppmaa ,'Genome::ProcessingProfile::MicroArrayAffymetrix');
-
-my $ppa = Genome::ProcessingProfile->create(type_name => 'assembly');
-ok($ppa, 'creation worked assembly processing profile');
-isa_ok($ppa ,'Genome::ProcessingProfile::Assembly');
-
 # Test creation for the corresponding models
 diag('subclassing tests - test create for a genome model object of each subclass');
-my $gmsr = Genome::Model->create(processing_profile_id => $ppsr->id,
-                                 name => 'reference alignment test');
-ok($gmsr, 'creation worked for reference alignment model');
-isa_ok($gmsr ,'Genome::Model::ReferenceAlignment');
 
-my $gmdns = Genome::Model->create(processing_profile_id => $ppdns->id,
-                                 name => 'de novo sanger test');
-ok($gmdns, 'creation worked de novo sanger model');
-isa_ok($gmdns ,'Genome::Model::DeNovoSanger');
+#reference alignment
+test_model_from_params(
+                       model_name => 'reference alignment',
+                   );
+#de novo sanger
+test_model_from_params(
+                       model_name => 'de novo sanger',
+                   );
+#imported reference sequence
+test_model_from_params(
+                       model_name => 'imported reference sequence',
+                   );
 
-my $gmirs = Genome::Model->create(processing_profile_id => $ppirs->id,
-                                 name => 'imported reference sequence test');
-ok($gmirs, 'creation worked imported reference sequence model');
-isa_ok($gmirs ,'Genome::Model::ImportedReferenceSequence');
+#watson
+test_model_from_params(
+                       model_name => 'watson',
+                   );
+#venter
+test_model_from_params(
+                       model_name => 'venter',
+                   );
 
-my $gmivw = Genome::Model->create(processing_profile_id => $ppivw->id,
-                                 instrument_data => $watson_test_data,
-                                 name => 'watson test');
-ok($gmivw, 'creation worked watson model');
-isa_ok($gmivw ,'Genome::Model::Watson');
-delete_model($gmivw);
+#micro array
+test_model_from_params(
+                       model_name => 'micro array',
+                   );
 
-my $gmivv = Genome::Model->create(processing_profile_id => $ppivv->id,
-                                 instrument_data => $venter_test_data,
-                                 name => 'venter test');
-ok($gmivv, 'creation worked venter model');
-isa_ok($gmivv ,'Genome::Model::Venter');
-delete_model($gmivv);
+#micro array illumina
+test_model_from_params(
+                       model_name => 'micro array illumina',
+                   );
 
-my $gmma = Genome::Model::MicroArray->create(processing_profile_id => $ppma->id,
-                                 name => 'micro array test',
-                                 instrument_data => $genotype_submission_file 
-                                );
-ok($gmma, 'creation worked micro array model');
-isa_ok($gmma ,'Genome::Model::MicroArray');
-delete_model($gmma);
+#micro array affymetrix
+test_model_from_params(
+                       model_name => 'micro array affymetrix',
+                   );
 
-my $gmmai = Genome::Model::MicroArrayIllumina->create(processing_profile_id => $ppmai->id,
-                                 name => 'micro array illumina test',
-                                 instrument_data => $genotype_submission_file 
-                                );
-ok($gmmai, 'creation worked micro array illumina model');
-isa_ok($gmmai ,'Genome::Model::MicroArrayIllumina');
-delete_model($gmmai);
+#assembly
+test_model_from_params(
+                       model_name => 'assembly',
+                       subject_name => $subject_name,
+                   );
+exit;
 
-my $gmmaa = Genome::Model::MicroArrayAffymetrix->create(processing_profile_id => $ppmaa->id,
-                                 name => 'micro array affymetrix test',
-                                 instrument_data => $genotype_submission_file 
-                                );
-ok($gmmaa, 'creation worked micro array affymetrix model');
-isa_ok($gmmaa ,'Genome::Model::MicroArrayAffymetrix');
-delete_model($gmmaa);
-
-my $gma = Genome::Model::Assembly->create(
-                                          processing_profile_id => $ppa->id,
-                                          name => 'assembly test',
-                                          subject_name => $subject_name,
-                                );
-ok($gma, 'creation worked assembly model');
-isa_ok($gma ,'Genome::Model::Assembly');
-is($obj->subject_name,$subject_name,'subject name accessor');
-#delete_model($gma);
-
-sub delete_model{
+sub delete_model {
     my $model = shift;
-    my $model_dir = $model->_model_directory;
-    undef $model;
-    system "rm -rf $model_dir";
+    my $archive_file = $model->resolve_archive_file;
+    ok($model->delete,'delete model');
+    ok(unlink($archive_file),'remove archive file');
 }
 
+sub test_model_from_params {
+    my %params = @_;
+
+    my @words = split(/ /,$params{model_name});
+    my @uc_words = map { ucfirst($_)  } @words;
+    my $class = join('',@uc_words);
+    $params{bare_args} = [];
+    $params{processing_profile_name} = $class;
+
+    my %pp_params = (
+                     type_name => $params{model_name},
+                     name => $params{processing_profile_name},
+                 );
+    if (my $instrument_data = delete $params{instrument_data}) {
+        $pp_params{instrument_data} = $instrument_data;
+    }
+    if (my $read_aligner = delete $params{read_aligner}) {
+        $pp_params{read_aligner} = $read_aligner;
+    }
+
+    my $pp = Genome::ProcessingProfile->create(%pp_params);
+    isa_ok($pp,'Genome::ProcessingProfile::'. $class);
+
+    my $create_command = Genome::Model::Command::Create::Model->create(%params);
+    isa_ok($create_command,'Genome::Model::Command::Create::Model');
+    ok($create_command->execute, 'create command execution successful');
+
+    my $model = Genome::Model->get(name => $params{model_name},);
+    ok($model, 'creation worked for '. $params{model_name} .' alignment model');
+    isa_ok($model,'Genome::Model::'.$class);
+    SKIP: {
+        skip 'no model to delete', 2 if !$model;
+        delete_model($model);
+    }
+}
