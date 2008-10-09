@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-
 use Data::Dumper;
 use IO::File;
 
@@ -27,10 +26,6 @@ class Genome::Model::Command::List::VariationsForAmplicons
 };
 
 sub sub_command_sort_position { 9 }
-
-sub Xhelp_brief {
-    return "";
-}
 
 sub help_synopsis {
     return; 
