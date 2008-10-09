@@ -11,7 +11,8 @@ class Genome::ProcessingProfile::MicroArray {
 };
 
 sub params_for_class {
-    return;
+    my $class = shift;
+    return $class->SUPER::params_for_class;
 }
 
 1;
