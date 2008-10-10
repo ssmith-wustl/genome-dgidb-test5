@@ -19,5 +19,9 @@ sub help_detail {
 EOS
 }
 
+sub command_subclass_model_property {
+    return 'assember';
+}
+
 1;
 
