@@ -41,8 +41,15 @@ sub _assembly_directory {
     return $self->data_directory . '/assembly';
 }
 
-sub consed_directory { 
-    return Genome::Consed::Directory->create(directory => $_[0]->data_directory);
+sub consed_directory { #TODO put this on class def
+    my $self = shift;
+
+    return $self->{_consed_dir} if $self->{_consed_dir};
+    
+    $self->{_consed_dir} = Genome::Consed::Directory->create(directory => $self->data_directory);
+    $self->{_consed_dir}->create_consed_directory_structure; # TODO put in create
+
+    return $self->{_consed_dir};
 }
 
 1;
