@@ -238,7 +238,7 @@ sub annotate_variants {
                 variation_window => $db_chrom->variation_window(range => 0),
             );
         }
-
+        
         $self->print_prioritized_annotation($hq_genotype, $annotator, $hq_ofh);
     }
 
@@ -279,47 +279,56 @@ sub print_prioritized_annotation {
     my $genotype = shift;
     my $annotator = shift;
     my $fh = shift;
- 
-    $DB::single=1;   
-    my @annotations;
-    if ($genotype->{variation_type} =~ /ins|del/i){
-        @annotations = $annotator->prioritized_transcripts_for_snp( # TODO Make this back into indel... but the function doesnt exist
-            start => $genotype->{start},
-            reference => $genotype->{allele1},
-            variant => $genotype->{allele2},
-            chromosome_name => $genotype->{chromosome},
-            stop => $genotype->{stop},
-            type => $genotype->{variation_type},
-        );
-    }elsif ($genotype->{variation_type} =~ /snp/i){
-        @annotations = $annotator->prioritized_transcripts_for_snp(
-            start => $genotype->{start},
-            reference => $genotype->{allele1},
-            variant => $genotype->{allele2},
-            chromosome_name => $genotype->{chromosome},
-            stop => $genotype->{stop},
-            type => $genotype->{variation_type},
-        );
-    }
-    else {
-        $self->error_message("Unrecognized variation_type " . $genotype->{variation_type});
-        return undef;
-    }
-
-    # Print the annotation with the best (lowest) priority
-    my $lowest_priority_annotation;
-    for my $annotation (@annotations){
-        unless(defined($lowest_priority_annotation)) {
-            $lowest_priority_annotation = $annotation;
-        }
-        if ($annotation->{priority} < $lowest_priority_annotation->{priority}) {
-            $lowest_priority_annotation = $annotation;
-        }
-    }
-    $lowest_priority_annotation->{variations} = join (",",keys %{$lowest_priority_annotation->{variations}});
-    my %combo = (%$genotype, %$lowest_priority_annotation);
     
-    $fh->print($self->format_annotated_genotype_line(\%combo));
+    # Decide which of the two alleles (or both) vary from the reference and annotate the ones that do
+    for my $variant ($genotype->{allele1}, $genotype->{allele2}) {
+        next if $variant eq $genotype->{reference};
+        unless (defined($variant)) {
+            $DB::single=1;
+        }
+        my @annotations;
+        if ($genotype->{variation_type} =~ /ins|del/i){
+            @annotations = $annotator->prioritized_transcripts_for_snp( # TODO Make this back into indel... but the function doesnt exist
+                start => $genotype->{start},
+                reference => $genotype->{reference},
+                variant => $variant,
+                chromosome_name => $genotype->{chromosome},
+                stop => $genotype->{stop},
+                type => $genotype->{variation_type},
+            );
+        }elsif ($genotype->{variation_type} =~ /snp/i){
+            @annotations = $annotator->prioritized_transcripts_for_snp(
+                start => $genotype->{start},
+                reference => $genotype->{reference},
+                variant => $variant,
+                chromosome_name => $genotype->{chromosome},
+                stop => $genotype->{stop},
+                type => $genotype->{variation_type},
+            );
+        }
+        else {
+            $self->error_message("Unrecognized variation_type " . $genotype->{variation_type});
+            return undef;
+        }
+
+        # Print the annotation with the best (lowest) priority
+        my $lowest_priority_annotation;
+        for my $annotation (@annotations){
+            unless(defined($lowest_priority_annotation)) {
+                $lowest_priority_annotation = $annotation;
+            }
+            if ($annotation->{priority} < $lowest_priority_annotation->{priority}) {
+                $lowest_priority_annotation = $annotation;
+            }
+        }
+        $lowest_priority_annotation->{variations} = join (",",keys %{$lowest_priority_annotation->{variations}});
+        my %combo = (%$genotype, %$lowest_priority_annotation);
+
+        $fh->print($self->format_annotated_genotype_line(\%combo));
+
+        # Dont do this again if both alleles are the same
+        last if $genotype->{allele1} eq $genotype->{allele2};
+    }
 
     return 1;
 }
@@ -506,6 +515,7 @@ sub genotype_columns{
     stop 
     sample_name
     variation_type
+    reference
     allele1 
     allele1_type 
     allele2 
@@ -526,6 +536,7 @@ sub annotated_columns{
     stop 
     sample_name
     variation_type
+    reference
     allele1 
     allele1_type 
     allele2 
@@ -568,7 +579,7 @@ sub maf_columns {
         strand
         variant_classification
         variation_type
-        reference_allele
+        reference
         tumor_seq_allele1
         tumor_seq_allele2
         dbsnp_rs
