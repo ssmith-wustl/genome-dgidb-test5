@@ -188,7 +188,7 @@ sub assembly_processors_and_classes {
 
 sub pre_assembly_processors_and_classes { 
     return (
-        #A_screen_vector => 'Genome::Model::Tools::Fasta::ScreenVector',
+        A_screen_vector => 'Genome::Model::Tools::Fasta::ScreenVector',
         B_trim_quality => 'Genome::Model::Tools::Fasta::TrimQuality',
     );
 }
