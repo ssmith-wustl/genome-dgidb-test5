@@ -464,7 +464,7 @@ sub get_or_create{
     my $model_name = "$subject_name.$pp_name";
 
     my $model = Genome::Model::PolyphredPolyscan->get(
-        name => $research_project_name.$technology.$sensitivity
+        name => $model_name,
     );
 
     unless ($model){
