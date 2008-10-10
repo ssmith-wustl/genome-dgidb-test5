@@ -15,48 +15,48 @@ class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq {
         'Genome::Model::Command::MaqSubclasser'
     ],
     has => [
-    read_set_alignment_directory => { via => 'read_set_link' },
-    run_subset_name => { via => 'read_set_link' }, 
-    _alignment_file_paths_unsubmapped => {
-        doc => "the paths to to the map files before submapping (not always available)",
-        calculate => q|
-        return unless -d $read_set_directory;;
-        return grep { -e $_ } glob("${read_set_directory}/*${run_subset_name}.map");
-        |,
-        calculate_from => ['read_set_directory','run_subset_name'],
-    },
-    subsequences => {
-        doc => "the sub-sequence names with out 'all_sequences'",
-        calculate_from => ['model'],
-        calculate => q|
-        return grep {$_ ne "all_sequences"} $model->get_subreference_names(reference_extension=>'bfa');
-        |,
-    },
-    is_eliminate_all_duplicates => { via => 'model' },
-    _calculate_total_read_count => { via => 'read_set_link'},
-    output_data_dir => {
-        doc => "The path at which the model stores all of its private data for a given run",
-        calculate_from => ['read_set_directory'],
-        calculate => q|
-        return $read_set_directory
-        |,
-        is_constant => 1,
-        is_deprecated => 1,
-    },
-    input_read_file_path => {
-        is_transient=>1,
-        is_optional=>1,
-        doc => "temp storage for the fake filename for the metrics to calculate later",
-
-    },
-
-    #make accessors for common metrics
-    (
-        map {
-            $_ => { via => 'metrics', to => 'value', where => [name => $_], is_mutable => 1 },
-        }
-        qw/total_read_count/
-    ),
+        read_set_alignment_directory => { via => 'read_set_link' },
+        run_subset_name => { via => 'read_set_link' }, 
+        _alignment_file_paths_unsubmapped => {
+            doc => "the paths to to the map files before submapping (not always available)",
+            calculate => q|
+            return unless -d $read_set_directory;;
+            return grep { -e $_ } glob("${read_set_directory}/*${run_subset_name}.map");
+            |,
+            calculate_from => ['read_set_directory','run_subset_name'],
+        },
+        subsequences => {
+            doc => "the sub-sequence names with out 'all_sequences'",
+            calculate_from => ['model'],
+            calculate => q|
+            return grep {$_ ne "all_sequences"} $model->get_subreference_names(reference_extension=>'bfa');
+            |,
+        },
+        is_eliminate_all_duplicates => { via => 'model' },
+        _calculate_total_read_count => { via => 'read_set_link'},
+        output_data_dir => {
+            doc => "The path at which the model stores all of its private data for a given run",
+            calculate_from => ['read_set_directory'],
+            calculate => q|
+            return $read_set_directory
+            |,
+            is_constant => 1,
+            is_deprecated => 1,
+        },
+        input_read_file_path => {
+            is_transient=>1,
+            is_optional=>1,
+            doc => "temp storage for the fake filename for the metrics to calculate later",
+    
+        },
+    
+        #make accessors for common metrics
+        (
+            map {
+                $_ => { via => 'metrics', to => 'value', where => [name => $_], is_mutable => 1 },
+            }
+            qw/total_read_count/
+        ),
     ],
 };
 
