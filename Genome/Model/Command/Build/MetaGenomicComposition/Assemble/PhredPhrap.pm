@@ -104,7 +104,6 @@ sub execute {
             or return;
         $self->_add_scf_fasta_and_qual($template);
         # or return; 
-        last;
     }
 
     $self->_close_output_fhs;
