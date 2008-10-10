@@ -295,7 +295,7 @@ sub _get_header_for_assembly_fasta_and_qual {
     my ($self, $template) = @_;
 
     # FIXME
-    return $template unless $self->model->name =~ /ocean/i;
+    return ">$template\n" unless $self->model->name =~ /ocean/i;
 
     my $ss = ocean_code_to_subscript($template);
     unless ( $ss ) { 
