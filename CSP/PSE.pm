@@ -45,6 +45,7 @@ my %PROCESS_COUNT = (
     'gather submission results'              => 0,
     'make library start site'                => 0,
     'build sequence db'                      => 0,
+    'archive run to tape'                    => 0,
 
     #Finishing QA steps
     'analyze finished clone for qa'                      => 0,
