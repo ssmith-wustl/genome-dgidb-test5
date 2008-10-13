@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 class Genome::VariantReviewDetailOld {
     type_name => 'variant review detail old',
-    table_name => 'MG.VARIANT_REVIEW_DETAIL_OLD',
+    table_name => 'VARIANT_REVIEW_DETAIL_OLD',
     id_by => [
         id => { is => 'NUMBER', len => 10 },
     ],
