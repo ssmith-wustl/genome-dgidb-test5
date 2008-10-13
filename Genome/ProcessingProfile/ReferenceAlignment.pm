@@ -25,15 +25,16 @@ my @PARAMS = qw/
 class Genome::ProcessingProfile::ReferenceAlignment {
     is => 'Genome::ProcessingProfile',
     has => [
-            ( map { $_ => {
-                           via => 'params',
-                           to => 'value',
-                           where => [name => $_],
-                           is_mutable => 1
-                       },
-                   } @PARAMS
-         ),
-        ],
+            map {
+                $_ => {
+                    via => 'params',
+                    where => [name => $_],
+                    to => 'value',
+                    is_mutable => 1,
+                    is_optional => 1,
+                },
+            } @PARAMS
+    ],
 };
 
 
