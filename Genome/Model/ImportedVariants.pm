@@ -26,7 +26,7 @@ sub create {
     my $self = $class->SUPER::create(@_);
     die unless $self;
 
-    my $model_dir = $self->_model_directory();
+    my $model_dir = $self->data_directory();
 
     unless (-e $model_dir) {
         unless (system("mkdir $model_dir") == 0) {
@@ -36,9 +36,11 @@ sub create {
     }
 
     my $archive_dir = $self->_archive_directory;
-    unless(system("mkdir $archive_dir")==0){
-        $self->error_message("Failed to mkdir archive dir: $archive_dir");
-        return undef;
+    unless(-e $archive_dir) {
+        unless(system("mkdir $archive_dir")==0){
+            $self->error_message("Failed to mkdir archive dir: $archive_dir");
+            return undef;
+        }
     }
 
     return $self;
@@ -82,7 +84,7 @@ sub add_data {
 sub _archive_current_version{
     my $self = shift;
     my $current_version = $self->_current_version;
-    my $current_directory = $self->_model_directory;
+    my $current_directory = $self->data_directory;
     my $archive_directory = $self->_archive_directory;
 
     my $destination_directory = "$archive_directory/$current_version";
@@ -115,7 +117,7 @@ sub _type{  #TODO, Will this work with MicroArray and AffiIllumina modules?
 # The directory where old data is archived
 sub _archive_directory{
     my $self = shift;
-    my $model_dir = $self->_model_directory;
+    my $model_dir = $self->data_directory;
     return "$model_dir/Archive";
 }
 
@@ -172,24 +174,13 @@ sub _base_directory {
     return '/gscmnt/834/info/medseq/imported_variants_data/';
 }
 
-# Returns the current directory where this model is housed
-# Should work for all submodules
-sub _model_directory {
-    my $self = shift;
-
-    # Replace all spaces with underbars to insure proper directory access
-    my $name = $self->name;
-    $name =~ s/ /_/g;
-
-    return $self->_base_directory . "/$name/";
-}
 
 # Returns the full path to the file where the microarray data should be
 # Should work for all submodules
 sub _data_file {
     my $self = shift;
 
-    my $model_dir = $self->_model_directory;
+    my $model_dir = $self->data_directory;
     my $model_name = $self->name;
 
     # Replace spaces with underscores for a valid file name
