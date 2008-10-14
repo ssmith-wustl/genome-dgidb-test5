@@ -26,12 +26,12 @@ class Genome::Model::Command::Create::ProcessingProfile::MetaGenomicComposition 
     is => 'Genome::Model::Command::Create::ProcessingProfile',
     sub_classification_method_name => 'class',
     has => [ %processing_profile_properties ],
-    
 };
 
 sub target_class {
     return "Genome::ProcessingProfile::MetaGenomicComposition";
 }
+
 
 sub help_brief {
     return 'Define a new meta genomic composition processing profile'
@@ -43,54 +43,15 @@ sub help_detail {
 EOS
 }
 
-sub _shell_args_property_meta {
-    # exclude this class' commands from shell arguments
-    return grep { 
-        $_->property_name ne 'model_id'
-        #not ($_->via and $_->via ne 'run') && not ($_->property_name eq 'run_id')
-    } shift->SUPER::_shell_args_property_meta(@_);
-}
-
-sub _validate_execute_params {
-    my $self = shift;
-    
-    unless ( $self->SUPER::_validate_execute_params ) {
-        $self->error_message('_validate_execute_params failed for SUPER');
-        return;                        
-    }
-
-    return 1;
-}
-
 sub execute {
     my $self = shift;
 
     $DB::single = $DB::stopper;
-
-    # Check extra command line params
-    $self->_validate_execute_params 
-        or return;
-
-    # Check if name exists
-    if ( my $existing_pp = $self->target_class->get(name => $self->profile_name) ) {
-        $self->error_message("Processing profile already exists with the same name:");
-        $self->_pretty_print_processing_profile($existing_pp);
+    unless ($self->_validate_execute_params) {
+        $self->error_message("Failed to validate_execute_params!");
         return;
     }
-    
-    # Get the params for the processing profile, sans name
     my %params = $self->_get_target_class_params;
-
-    # Check if the same profile params exist, w/ different name
-    my @all_pp = $self->target_class->get;
-    for my $existing_pp ( @all_pp ) {
-        my $existing_properties = grep { $params{$_} eq $existing_pp->$_ } grep { defined $existing_pp->$_ } keys %params;
-        next unless keys %params == $existing_properties;
-        $self->error_message("Processing profile already exists with the same params:");
-        $self->_pretty_print_processing_profile($existing_pp);
-        return;
-    }
-
     # Add name to processing profile params
     $params{name} = $self->profile_name;
 
@@ -100,43 +61,10 @@ sub execute {
         $self->error_message("Failed to create processing profile");
         return;
     }
-    
+
     # TODO Check problems from processing profile??
-    
     $self->status_message('Created processing profile:');
     $self->_pretty_print_processing_profile($processing_profile);
-    
-    return 1;
-}
-
-sub _get_target_class_params {
-    my $self = shift;
-    
-    my %params;
-    for my $property_name ( keys %processing_profile_properties ) {
-        my $value = $self->$property_name;
-        next unless defined $value;
-        $params{$property_name} = $value;
-    }
-
-    return %params;
-}
-
-sub _pretty_print_processing_profile {
-    my $self = shift;
-
-    for my $pp ( @_ ) {
-        UR::Object::Command::List->execute(
-            filter => 'id=' . $pp->id,
-            subject_class_name => $self->target_class,
-            style => 'pretty',
-            show => sprintf(
-                'id,name,type_name,%s', 
-                join(',', keys %processing_profile_properties),
-            ),
-            #output => IO::String->new(),
-        );
-    }
 
     return 1;
 }
