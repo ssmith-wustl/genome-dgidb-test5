@@ -48,14 +48,6 @@ class Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment {
     schema_name => 'Main',
 };
 
-sub _shell_args_property_meta {
-    # exclude this class' commands from shell arguments
-    return grep { 
-            $_->property_name ne 'model_id'
-            #not ($_->via and $_->via ne 'run') && not ($_->property_name eq 'run_id')
-        } shift->SUPER::_shell_args_property_meta(@_);
-}
-
 
 sub sub_command_sort_position {
     1
@@ -93,7 +85,7 @@ sub target_class{
 
 sub _validate_execute_params {
     my $self = shift;
-    
+
     unless($self->SUPER::_validate_execute_params) {
         $self->error_message('_validate_execute_params failed for SUPER');
         return;                        
@@ -110,12 +102,6 @@ sub _validate_execute_params {
     unless ($self->_validate_dna_type) {
         $self->error_message(
             'DNA Type is invalid... must be "genomic dna" or "cdna"');
-        return;                        
-    }
-
-    unless ($self->verify_params) {
-        $self->error_message(
-            "One or more modules could not be found for the supplied parameters");
         return;                        
     }
 
