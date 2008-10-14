@@ -1041,9 +1041,13 @@ sub _get_msgdata {
     if (ref($self)) {
         no strict 'refs';
         my $object_msgdata = $msgdata{$self->id} ||= {};
-        my $class_msgdata = ${ ref($self) . '::msgdata' } ||= {};
+        my $class_msgdata = ref($self)->_get_msgdata;
 
-        return { %$class_msgdata, %$object_msgdata };
+        while (my ($k,$v) = each(%$class_msgdata)) {
+            $object_msgdata->{$k} = $v unless (exists $object_msgdata->{$k});
+        }
+
+        return $object_msgdata;
     }
     else {
         no strict 'refs';
