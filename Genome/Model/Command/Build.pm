@@ -63,10 +63,38 @@ sub resolve_data_directory {
     return $model->data_directory . '/build' . $self->id;
 }
 
+sub all_subcommand_classes {
+    my $class = shift;
+    my @subcommands;
+    for my $stage_name ($class->stages) {
+        my @classes = $class->classes_for_stage($stage_name);
+        push @subcommands, $class->resolve_class_names_from_array_ref(\@classes);
+    }
+    return @subcommands;
+}
+
+sub resolve_class_names_from_array_ref {
+    my $class = shift;
+    my $array_ref = shift;
+    my @subcommands;
+    for my $subcommand_class (@$array_ref) {
+        if (ref($subcommand_class) eq 'ARRAY') {
+            $class->resolve_class_names_from_array_ref($subcommand_class)
+        } else {
+            push @subcommands, $subcommand_class;
+        }
+    }
+    return @subcommands;
+}
+
 sub build_in_stages {
     my $self = shift;
 
-    $self->data_directory($self->resolve_data_directory);
+    my $data_directory = $self->resolve_data_directory;
+    unless (-e $data_directory) {
+        $self->create_directory($data_directory);
+    }
+    $self->data_directory($data_directory);
     my @stages = $self->stages;
     for my $stage_name (@stages) {
         my @stage_classes = $self->classes_for_stage($stage_name);
