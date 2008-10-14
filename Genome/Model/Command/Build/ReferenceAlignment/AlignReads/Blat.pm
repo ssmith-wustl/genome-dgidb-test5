@@ -25,15 +25,15 @@ class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat {
                        },
             _alignment_files =>{
                                doc => "the file path to store the blat alignment",
-                               calculate_from => ['new_read_set_alignment_directory','read_set'],
+                               calculate_from => ['read_set_alignment_directory','read_set'],
                                calculate => q|
-                                        return grep { -e $_ } glob($new_read_set_alignment_directory .'/'. $read_set->subset_name .'.psl.*');
+                                        return grep { -e $_ } glob($read_set_alignment_directory .'/'. $read_set->subset_name .'.psl.*');
                                |
                            },
             _aligner_output_files => {
-                                     calculate_from => ['new_read_set_alignment_directory','read_set'],
+                                     calculate_from => ['read_set_alignment_directory','read_set'],
                                      calculate => q|
-                                                  return grep { -e $_ } glob($new_read_set_alignment_directory .'/'. $read_set->subset_name .'.out.*');
+                                                  return grep { -e $_ } glob($read_set_alignment_directory .'/'. $read_set->subset_name .'.out.*');
                                              |
                                  },
         ],
@@ -92,17 +92,17 @@ sub aligner_output_file {
 
 sub read_set_alignment_file {
     my $self = shift;
-    return $self->new_read_set_alignment_directory .'/'. $self->read_set->subset_name .'.psl.'. $self->id;
+    return $self->read_set_alignment_directory .'/'. $self->read_set->subset_name .'.psl.'. $self->id;
 }
 
 sub read_set_aligner_output_file {
     my $self = shift;
-    return $self->new_read_set_alignment_directory .'/'. $self->read_set->subset_name .'.out.'. $self->id;
+    return $self->read_set_alignment_directory .'/'. $self->read_set->subset_name .'.out.'. $self->id;
 }
 
 sub read_set_aligner_error_file {
     my $self = shift;
-    return $self->new_read_set_alignment_directory .'/'. $self->read_set->subset_name .'.err.'. $self->id;
+    return $self->read_set_alignment_directory .'/'. $self->read_set->subset_name .'.err.'. $self->id;
 }
 
 sub execute {
@@ -123,7 +123,7 @@ sub execute {
         }
     }
     # check_for_existing_alignment_files
-    my $read_set_alignment_directory = $self->new_read_set_alignment_directory;
+    my $read_set_alignment_directory = $self->read_set_alignment_directory;
     if (-d $read_set_alignment_directory) {
         my $errors;
         $self->status_message("found existing run directory $read_set_alignment_directory");
