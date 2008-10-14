@@ -1039,7 +1039,11 @@ sub _get_msgdata {
     my $self = $_[0];
     
     if (ref($self)) {
-        return $msgdata{$self->id} ||= {}; # $self->{msgdata} ||= {};
+        no strict 'refs';
+        my $object_msgdata = $msgdata{$self->id} ||= {};
+        my $class_msgdata = ${ ref($self) . '::msgdata' } ||= {};
+
+        return { %$class_msgdata, %$object_msgdata };
     }
     else {
         no strict 'refs';
