@@ -260,7 +260,7 @@ sub remove_data {
     #UR::Context->_sync_databases;
     my $model = $self->model;
     my @alignment_events = $model->alignment_events;
-    my @alignment_dirs = map { $_->read_set_alignment_directory } @alignment_events;
+    my @alignment_dirs = map { $_->read_set_link->read_set_alignment_directory } @alignment_events;
     my $archive_file = $model->resolve_archive_file;
     ok($self->model->delete,'successfully removed model');
     ok(unlink($archive_file),'successfully unlinked archive file');
