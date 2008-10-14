@@ -7,12 +7,13 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Create::ProcessingProfile {
-    is => 'Genome::Model::Event',
+    is => 'Command',
     has => [
             type_name                    => { is => 'VARCHAR2', len => 255, is_optional => 1, 
                                               doc => "The type of processing profile. Not required unless creating a generic 'processing profile'. "},
             profile_name                 => { is => 'VARCHAR2', len => 255, is_optional => 0 ,
                                               doc => 'The human readable name for the processing profile'},
+            name                         => { calculate_from => ['profile_name'], calculate => q| return $profile_name |, },
             copy_from                    => { is => 'Genome::ProcessingProfile', is_optional => 1, id_by => 'copy_from_name',
                                               doc => 'Copy this profile, and modify the specified properties.' },
         ],
@@ -49,12 +50,49 @@ sub create {
     return $self;
 }
 
+sub unique_processing_profile_name {
+    my $self = shift;
+    if ( my $existing_pp = $self->target_class->get(name => $self->name) ) {
+        $self->error_message("Processing profile already exists with the same name:");
+        $self->_pretty_print_processing_profile($existing_pp);
+        return;
+    }
+    return 1;
+}
+
+sub unique_processing_profile_params {
+    my $self = shift;
+
+    # Get the params for the processing profile, sans name
+    my %params = $self->_get_target_class_params;
+
+    # Check if the same profile params exist, w/ different name
+    my @all_pp = $self->target_class->get;
+    for my $existing_pp ( @all_pp ) {
+        my $existing_properties = grep { $params{$_} eq $existing_pp->$_ } grep { defined $existing_pp->$_ } keys %params;
+        next unless keys %params == $existing_properties;
+        $self->error_message("Processing profile already exists with the same params:");
+        $self->_pretty_print_processing_profile($existing_pp);
+        return;
+    }
+    return 1;
+}
+
 # Ensures that all properties from the property_to_subclass hash are existing modules
 sub verify_params {
     my $self = shift;
+
+    unless ($self->unique_processing_profile_name) {
+        $self->error_message('Must use unique processing profile name');
+        return;
+    }
+    unless ($self->unique_processing_profile_params) {
+        $self->error_messsage('Must use a unique set of processing profile params');
+        return;
+    }
+
     my %subclass_property_to_possible_values
         = $self->get_subclass_property_to_possible_values_hash();
-
     # for each property that we can check for, check if the processing profile
     # has that property and verify that it can be handled
     for my $key (keys %subclass_property_to_possible_values) {
@@ -122,21 +160,15 @@ sub resolve_class_type {
 sub resolve_build_class {
     my $self = shift;
     my $model_class = 'Genome::Model::'. $self->resolve_class_type;
-    my @components = split(/[_\-\s]/,$model_class->build_subclass_name);
-    my @uc_components = map{ ucfirst $_ } @components;
-    my $subclass = join('',@uc_components);
+    my $subclass;
+    if ($model_class->can('build_subclass_name')) {
+        my @components = split(/[_\-\s]/,$model_class->build_subclass_name);
+        my @uc_components = map{ ucfirst $_ } @components;
+        $subclass = join('',@uc_components);
+    } else {
+        $subclass = $self->resolve_class_type;
+    }
     return 'Genome::Model::Command::Build::'. $subclass;
-}
-
-sub X_resolve_build_subclass {
-    my $self = shift;
-    my $build_class = $self->resolve_build_class;
-    my $property_name = $build_class->command_subclassing_model_property;
-    my $build_subclass = $self->$property_name;
-    my @components = split(/[_\-\s]/,$build_subclass);
-    my @uc_components = map { ucfirst $_ } @components;
-    my $subclass = join('',@uc_components);
-    return $build_class .'::'. $subclass;
 }
 
 
@@ -177,32 +209,31 @@ sub get_subclass_property_to_possible_values_hash {
 sub get_subclassing_value_to_subclass_hash {
     my $self = shift;
     my $target_class = shift;
-    
     # Get the hash from the target class that maps the possible parameter values
     # to the subclass associated with it
     # Ex.   value       associated class
     #       Maq         G::M::C::Build::ReferenceAlignment::AlignReads::Maq
     #       Mosaik      ""                         ""::Mosaik
-    #       etc         etc     
+    #       etc         etc
     my %subclassing_value_to_subclass =
         $target_class->_sub_command_name_to_class_name_map();
-                        
-    return \%subclassing_value_to_subclass;                    
+
+    return \%subclassing_value_to_subclass;
 }
 
 sub command_properties{
     my $self = shift;
-    
+
     return
-        grep { $_ ne 'id' and $_ ne 'bare_args'}         
+        grep { $_ ne 'id' and $_ ne 'bare_args'}
             map { $_->property_name }
                 $self->_shell_args_property_meta;
 }
 
 sub _extract_command_properties_and_duplicate_keys_for__name_properties{
     my $self = shift;
-    
-    my $target_class = $self->target_class; 
+
+    my $target_class = $self->target_class;
     my %params;
     
     for my $command_property ($self->command_properties) {
@@ -232,33 +263,27 @@ sub _extract_command_properties_and_duplicate_keys_for__name_properties{
 
 sub _validate_execute_params{
     my $self = shift;
-    
+
     if (my @args = @{ $self->bare_args }) {
         $self->error_message("extra arguments: @args");
         $self->usage_message($self->help_usage);
         return;
     }
-
+    unless ($self->verify_params) {
+        $self->error_message('One or more modules could not be found for the supplied parameters');
+        return;
+    }
     return 1;
 }
 
 sub _create_target_class_instance_and_error_check{
     my ($self, $params_in) = @_;
-    
+
     my %params = %{$params_in};
-    
+
     my $target_class = $self->target_class;    
     my $target_class_meta = $target_class->get_class_object; 
     my $type_name = $target_class_meta->type_name;
-
-    $self->set(
-        date_scheduled  => $self->_time_now(),
-        date_completed  => undef,
-        event_status    => 'Scheduled',
-        event_type      => $self->command_name,
-        lsf_job_id      => undef, 
-        user_name       => $ENV{USER}, 
-    );
 
     # Check to see if the processing profile exists before creating
     # First, enforce the name being unique since processing profiles are
@@ -300,28 +325,60 @@ sub _create_target_class_instance_and_error_check{
         return;
     }
 
-    $self->model($obj); 
-
     if (my @problems = $obj->invalid) {
         $self->error_message("Error creating $type_name:\n\t"
             . join("\n\t", map { $_->desc } @problems)
             . "\n");
         $obj->delete;
         return;
-    }   
-
-    $self->date_completed($self->_time_now());
-    unless($obj) {
-        $self->event_status('Failed');
-        $self->error_message("Failed to create genome model: " . $obj->error_message);
-        print Dumper(\%params);
-        return;
     }
-    
-    $self->event_status('Succeeded');
+
     return $obj;
 }
 
+sub _get_defined_property_names {
+    my $self = shift;
+    my @property_names = grep { defined $self->$_ }
+        grep { $self->can($_) }
+            $self->target_class->get_class_object->all_property_names;
+    return @property_names;
+}
+
+sub _get_target_class_params {
+    my $self = shift;
+
+    my %params;
+    for my $property_name ($self->_get_defined_property_names ) {
+        unless ($self->can($property_name)) {
+            $self->warning_message('Class '. $self->class .' can not '. $property_name);
+            next;
+        }
+        my $value = $self->$property_name;
+        next unless defined $value;
+        $params{$property_name} = $value;
+    }
+    return %params;
+}
+
+sub _pretty_print_processing_profile {
+    my $self = shift;
+    my @defined_property_names = $self->_get_defined_property_names;
+    #make a hash from the objects
+    for my $pp ( @_ ) {
+        UR::Object::Command::List->execute(
+            filter => 'id=' . $pp->id,
+            subject_class_name => $self->target_class,
+            style => 'pretty',
+            show => sprintf(
+                            'id,name,type_name,%s',
+                            join(',', @defined_property_names),
+                        ),
+            #output => IO::String->new(),
+        );
+    }
+
+    return 1;
+}
 
 1;
 
