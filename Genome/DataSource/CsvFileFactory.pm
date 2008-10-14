@@ -19,17 +19,13 @@ my %RESOLVER = (
         parent_data_source_class => 'Genome::DataSource::VariationPositions',
         file_resolver => sub {                              # returns the name of the file.  args are from required_in_rule
                              my($model_id, $ref_seq_id) = @_;
-                             #my @e = sort { $a->date_completed <=> $b->date_completed }
-                             #    Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Maq->get(model_id => $model_id,
-                             #                                                               ref_seq_id => $ref_seq_id);
-                             #my $snp_file = $e[-1]->snip_output_file();
-                             # Hack to fixup data that's in transisition 
-                             #$snp_file =~ s/maq_snp_related_metrics/identified_variations/;
-                             #$snp_file =~ s/snps_/snips_/;
 
                              my $model = Genome::Model->get(id => $model_id);
                              return unless $model;
 
+                             # We're really only interested in the ref_seq_name, but we'll use
+                             # the trick of saying we require ref_seq_id so  it'll infer all the
+                             # refseqs attached to that model if the user didn't specify a model
                              my $refseq = Genome::Model::RefSeq->get(model_id => $model_id, ref_seq_id => $ref_seq_id);
                              return unless $refseq;
                                 
@@ -45,14 +41,6 @@ my %RESOLVER = (
         parent_data_source_class => 'Genome::DataSource::ExperimentalMetrics',
         file_resolver => sub {
                              my($model_id, $ref_seq_id) = @_;
-                             #my @e = sort { $a->date_completed <=> $b->date_completed }
-                             #    Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations::Maq->get(model_id => $model_id,
-                             #                                                                      ref_seq_id => $chromosome);
-                             #my $metric_file = $e[-1]->experimental_variation_metrics_file_basename();
-                             #$metric_file .= '.csv';
-                             ## Hack to fixup data that's in transisition
-                             #$metric_file =~ s/maq_snp_related_metrics/identified_variations/;
-                             #$metric_file =~ s/snps_/snips_/;
 
                              my $model = Genome::Model->get(id => $model_id);
                              return unless $model;
@@ -122,30 +110,41 @@ sub Genome::DataSource::ExperimentalMetrics::_generate_loading_templates_arrayre
 
     
 
-
+our %WORKING_RULES;
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
-$DB::single=1;
     my $subject_class = $rule->subject_class_name;
+    if ($WORKING_RULES{$rule->id}++) {
+        $self->error_message("Recursive entry into create_iterator_closure_for_rule() for class $subject_class rule_id ".$rule->id);
+        delete $WORKING_RULES{$rule->id};
+        return;
+    }
+
     my $resolver_info = $RESOLVER{$subject_class};
     unless ($resolver_info) {
         die "Don't know how to create a data source for class $subject_class";
     }
 
+    my $context = UR::Context->get_current;
     my @required_params = @{$resolver_info->{'required_in_rule'}};
     my @all_resolver_params;
     for (my $i = 0; $i < @required_params; $i++) {
         my $param_name = $required_params[$i];
-        my @values = $self->resolve_value_from_rule($param_name,$rule);
+        #my @values = $self->resolve_value_from_rule($param_name,$rule);
+        my @values = $context->infer_property_value_from_rule($param_name, $rule);
         unless (@values) {
             die "Can't resolve data source: no $param_name specified in rule with id ".$rule->id;
         }
-
+        if (scalar(@values) == 1) {
+            $rule = $rule->add_filter($param_name => $values[0]);
+        } else {
+            $rule = $rule->add_filter($param_name => \@values);
+        }
         $all_resolver_params[$i] = \@values;
     }
     # Hack! Pass the newly resolved info up to the caller
-    $_[1] = $rule;
+#    $_[1] = $rule;
 
     my @resolver_param_combinations = $self->_get_combinations_of_resolver_params(@all_resolver_params);
     
@@ -170,6 +169,8 @@ $DB::single=1;
         my $this_ds_rule = UR::BoolExpr->resolve_for_class_and_params($rule->subject_class_name,%$this_ds_rule_params);
         push @data_source_iterators, $ds_class->create_iterator_closure_for_rule($this_ds_rule);
     }
+
+    delete $WORKING_RULES{$rule->id};
 
     return $data_source_iterators[0] if (@data_source_iterators < 2);  # If we only made 1 (or 0), just return that one directly
 
@@ -205,6 +206,9 @@ sub _get_combinations_of_resolver_params {
 }
 
 
+# This, and the next method, are deprecated.  A more general version of the
+# same thing is UR::Context::infer_property_value_from_rule()
+#
 # This one works when there is a property in the rule that gives you a hint
 # about what it is you're looking for.  For example, the rule specifies model_id
 # and you want ref_seq_id.  It will fetch all the ref_seq_ids for that model
@@ -301,6 +305,7 @@ sub resolve_value_from_rule {
     if ($value) {
         return $value;
     }
+$DB::single=1;
 
     # Not directly specified... try and figure out how to get there from here
     my $subject_class_name = $rule->subject_class_name;
@@ -330,7 +335,7 @@ sub resolve_value_from_rule {
                     $reference = $references[0];
                     last;
                 } elsif (@references) {
-                    Carp::confess(sprintf("Don't know what to do with more than one %d Reference objects between %s and %s",
+                    Carp::confess(sprintf("Don't know what to do with more than one (%d) Reference objects between %s and %s",
                                            scalar(@references), $delegated_property->class_name, $join->{'foreign_class'}));
                 }
             }

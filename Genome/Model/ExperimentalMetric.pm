@@ -9,6 +9,10 @@ class Genome::Model::ExperimentalMetric {
         model => { is => 'Genome::Model', id_by => 'model_id' },
     ],
     has => [
+        model_name   => { via => 'model', to => 'name' },
+        model_refseq => { is => 'Genome::Model::RefSeq', id_by => ['model_id','chromosome'] },
+        ref_seq_id   => { via => 'model_refseq', to => 'ref_seq_id' },
+
         reference_base => { is => 'String' },
         variant_base => { is => 'String' },
         snp_quality => { is => 'Integer' },
