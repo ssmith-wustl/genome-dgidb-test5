@@ -33,7 +33,7 @@ class Genome::Model {
         read_sets =>  { is => 'Genome::Model::ReadSet', reverse_id_by => 'model', is_many=> 1 },
         builds => { is => 'Genome::Model::Command::Build', reverse_id_by => 'model', is_many => 1 },
         run_chunks => { is => 'Genome::RunChunk', via=>'read_sets', to => 'read_set' },
-
+        current_running_build_id => {is => 'NUMBER' , len => 10 },
         data_directory               => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         processing_profile           => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name      => { via => 'processing_profile', to => 'name'},
@@ -237,14 +237,14 @@ sub resolve_archive_file {
 
 sub latest_build_directory {
     my $self = shift;
+    if(defined $self->current_running_build_id) {
 
-    #FIXME: LOOKUP LATEST BUILD
-    my $base_dir = $self->data_directory;
-    if(my @builds = Genome::Model::Command::Build->get(model_id=>$self->id)) {
-        @builds = sort {$a->build_id <=> $b->build_id} @builds;
-        $base_dir .= '/build' . $builds[-1]->build_id;
+        my $build = Genome::Model::Command::Build->get($self->current_running_build_id);
+        return $build->data_directory;
     }
-    return $base_dir;
+    else {
+        return $self->data_directory; 
+    }
 }
 
 # This is called by the infrastructure to appropriately classify abstract processing profiles
