@@ -7,9 +7,6 @@ use warnings;
 use Genome;
 use Genome::Model::Tools::Pcap::RunStats;
 
-use GSC::IO::Assembly::StatsFiles; 
-use GSC::IO::Assembly::Stats;                
-
 use Bio::SeqIO;
 use Bio::Seq::Quality;
 use Bio::Seq::SequenceTrace;
@@ -1384,21 +1381,21 @@ sub create_sctg_fa_file
 #    return 1;
 #}
 
-sub create_post_asm_files
-{
-    my ($self) = @_;
+#sub create_post_asm_files
+#{
+#   my ($self) = @_;
 
-    my $dir = $self->{project_path};
+#    my $dir = $self->{project_path};
     #stats text object
 
-    my $sto = GSC::IO::Assembly::Stats->new(dir => $self->{project_path});
+#    my $sto = GSC::IO::Assembly::Stats->new(dir => $self->{project_path});
 
-    $sto->create_readinfo_file;
+#    $sto->create_readinfo_file;
 
-    $sto->create_insert_sizes_file;
+#    $sto->create_insert_sizes_file;
 
-    return 1;
-}
+#    return 1;
+#}
 
 #sub create_stats
 #{
