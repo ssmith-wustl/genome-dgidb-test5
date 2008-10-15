@@ -95,6 +95,12 @@ sub create {
     return $self;
 }
 
+sub _hint_string 
+{
+    my $self = shift;
+    return $self->show;
+}
+
 sub _do
 {
     my ($self, $iterator) = @_;    
