@@ -436,6 +436,8 @@ associations in four cases.
         SOLEXA_LANE_ALIGN_SPEC          GSC::Equipment::Solexa::RunAnalysisLaneAlignSpec
         SOLEXA_RUN_SUMMARY              GSC::Equipment::Solexa::RunAnalysis::Summary
         SOLEXA_LANE_SUMMARY             GSC::RunLaneSolexa
+        SOLID_RUN                       GSC::Equipment::Solid::Run
+        SOLID_RUN_REGION                GSC::Equipment::Solid::RunRegion
     /
 );
 
