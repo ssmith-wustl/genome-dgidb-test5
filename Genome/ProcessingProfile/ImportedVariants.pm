@@ -24,7 +24,7 @@ class Genome::ProcessingProfile::ImportedVariants{
         ],
 };
 
-params_for_class {
+sub params_for_class {
     my $class = shift;
     return @PARAMS;
 }
