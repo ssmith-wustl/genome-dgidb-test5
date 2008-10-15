@@ -31,6 +31,7 @@ class Genome::Model::ReadSet {
         median_insert_size => {via => 'read_set'},
         sd_above_insert_size => {via => 'read_set'},
         is_paired_end => {via => 'read_set' },
+ 
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -92,13 +93,12 @@ sub invalid {
 sub alignment_file_paths {
     my $self=shift;
     return unless -d $self->read_set_alignment_directory;
-    return grep { -e $_ && $_ !~ /aligner_output/ } glob($self->read_set_alignment_directory .'/*'. '*.map*');
+   return grep { -e $_ && $_ !~ /aligner_output/ } glob($self->read_set_alignment_directory .'/*'. '*.map*');
 }
 sub aligner_output_file_paths {
     my $self=shift;
     return unless -d $self->read_set_alignment_directory;
-    return grep { -e $_ } glob($self->read_set_alignment_directory .'/*'.
-                               $self->subset_name .'.map.aligner_output.*');
+    return grep { -e $_ } glob($self->read_set_alignment_directory .'/*'. '.map.aligner_output.*');
 }
 sub poorly_aligned_reads_list_paths {
     my $self=shift;
@@ -156,6 +156,30 @@ sub read_set_alignment_files_for_refseq {
 sub yaml_string {
     my $self = shift;
     return YAML::Dump($self);
+}
+
+sub get_alignment_statistics {
+    my $self=shift;
+    #this method will eventually populate the metrics table but for now it populates dave larson 
+    my ($aligner_output_file) = $self->aligner_output_file_paths;
+
+    my $fh = IO::File->new($aligner_output_file);
+    unless($fh) {
+        $self->error_message("unable to open maq's alignment output file:  " . $aligner_output_file);
+        return;
+    }
+    my @lines = $fh->getlines;
+    $fh->close;
+
+    my ($line_of_interest)=grep { /total, isPE, mapped, paired/ } @lines;
+    my ($comma_separated_metrics) = ($line_of_interest =~ m/= \((.*)\)/);
+    my @values = split(/,\s*/,$comma_separated_metrics);
+    my %hashy_hash_hash;
+    $hashy_hash_hash{total}=$values[0];
+    $hashy_hash_hash{isPE}=$values[1];
+    $hashy_hash_hash{mapped}=$values[2];
+    $hashy_hash_hash{paired}=$values[3];
+    return \%hashy_hash_hash;
 }
 
 1;
