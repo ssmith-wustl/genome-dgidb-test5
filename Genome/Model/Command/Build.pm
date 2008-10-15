@@ -9,6 +9,7 @@ class Genome::Model::Command::Build {
     is => ['Genome::Model::Event'],
     type_name => 'genome model build',
     table_name => 'GENOME_MODEL_BUILD',
+    first_sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
         build_id                 => { is => 'NUMBER', len => 10, constraint_name => 'GMB_GME_FK' , is_optional => 1},
     ],
@@ -26,27 +27,6 @@ class Genome::Model::Command::Build {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-sub X_resolve_subclass_name {
-    my $class = shift;
-    my $model;
-    if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
-        $model = $_[0]->model;
-    }
-    elsif (my $model_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('model_id')) {
-        $model = Genome::Model->get($model_id);
-    }
-    else {
-        return;
-    }
-    if ($model and $model->can("build_subclass_name")) {
-        my $class = $model->build_subclass_name;
-        print "class is $class\n";
-        return $class if $class;
-    }
-    print "class is default for @_\n";
-    return __PACKAGE__
-}
-
 sub stages {
     my $class = shift;
     $class = ref($class) if ref($class);
@@ -63,38 +43,10 @@ sub resolve_data_directory {
     return $model->data_directory . '/build' . $self->id;
 }
 
-sub all_subcommand_classes {
-    my $class = shift;
-    my @subcommands;
-    for my $stage_name ($class->stages) {
-        my @classes = $class->classes_for_stage($stage_name);
-        push @subcommands, $class->resolve_class_names_from_array_ref(\@classes);
-    }
-    return @subcommands;
-}
-
-sub resolve_class_names_from_array_ref {
-    my $class = shift;
-    my $array_ref = shift;
-    my @subcommands;
-    for my $subcommand_class (@$array_ref) {
-        if (ref($subcommand_class) eq 'ARRAY') {
-            $class->resolve_class_names_from_array_ref($subcommand_class)
-        } else {
-            push @subcommands, $subcommand_class;
-        }
-    }
-    return @subcommands;
-}
-
 sub build_in_stages {
     my $self = shift;
 
-    my $data_directory = $self->resolve_data_directory;
-    unless (-e $data_directory) {
-        $self->create_directory($data_directory);
-    }
-    $self->data_directory($data_directory);
+    $self->data_directory($self->resolve_data_directory);
     my @stages = $self->stages;
     for my $stage_name (@stages) {
         my @stage_classes = $self->classes_for_stage($stage_name);
@@ -104,7 +56,6 @@ sub build_in_stages {
         my @scheduled_objects = $self->_schedule_stage(\@stage_classes,\@objects);
         if ($self->auto_execute) {
             my $return_value = $self->_run_stage(@scheduled_objects);
-            no warnings;
             if ($return_value == 1) {
                 $self->event_status('Succeeded');
                 $self->date_completed(UR::Time->now);
@@ -169,7 +120,7 @@ sub _schedule_stage {
             $object_class = 'reference_sequence';
             $object_id = $object;
         }
-        $self->status_message('Scheduling for '. $object_class . ' ' . $object_id);
+        $self->status_message('Scheduling for '. $object_class);
         push @scheduled_commands, $self->_schedule_command_classes_for_object($object,$sub_command_classes_ref);
     }
     return @scheduled_commands;
@@ -263,11 +214,8 @@ sub _run_stage {
             $self->error_message('Failed to execute run-jobs for model '. $self->model_id);
             return;
         }
-        my $helpful_link1= "https://gscweb.gsc.wustl.edu/cgi-bin/solexa/genome-model-stage1.cgi?model-name=" . $self->model->name  .    "&refresh=1\n\n";
-        $self->status_message("You can check this link for updates on the status of your alignment jobs: \n $helpful_link1");    
-        return 1;
         unless($self->execute_with_bsub(dep_type=>'ended', dependency_expression => join(")&&ended(", @dependency_ids) )) {
-            $self->error_message("Hello, I am the build module, and I was unable to schedule myself to run after my peeps.");
+            $self->error__message("Hello, I am the build module, and I was unable to schedule myself to run after my peeps.");
             return;
         }
         return 2;
@@ -302,6 +250,7 @@ sub cry_for_help {
     close(SENDMAIL);
     return 1;
 }
+
 
 1;
 
