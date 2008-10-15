@@ -20,21 +20,33 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 }
-plan tests => 110;
+plan tests => 139;
 
 my $tmp_dir = File::Temp::tempdir();
 my $model_name = "test_454_$ENV{USER}";
 my $subject_name = 'TSP_Round1-4_Normal_Amplicon_Pool';
-my $pp_name = '454_DX_Pipeline';
+my $pp_name = '454_ReferenceAlignment_test';
+my %params = (
+              profile_name => $pp_name,
+              dna_type => 'genomic dna',
+              genotyper => 'breakPointRead454',
+              indel_finder => 'breakPointRead454',
+              read_aligner => 'blat',
+              reference_sequence => 'refseq-for-test',
+              sequencing_platform => '454',
+              bare_args => [],
+          );
+my $pp_create = Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment->execute(%params);
+ok($pp_create,'created processing profile');
 
 my @read_sets = setup_test_data($subject_name);
 #GSC::RunRegion454->get(sample_name => $subject_name);
 my $add_reads_test = Genome::Model::Command::Build::ReferenceAlignment::Test->new(
-                                                                 model_name => $model_name,
-                                                                 subject_name => $subject_name,
-                                                                 processing_profile_name => $pp_name,
-                                                                 read_sets => \@read_sets
-                                                             );
+                                                                                  model_name => $model_name,
+                                                                                  subject_name => $subject_name,
+                                                                                  processing_profile_name => $pp_name,
+                                                                                  read_sets => \@read_sets
+                                                                              );
 $add_reads_test->add_directory_to_remove($tmp_dir);
 $add_reads_test->runtests;
 exit;
