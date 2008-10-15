@@ -1,4 +1,4 @@
-package Genome::Model::Tools::HGMI::CollectSequence;
+package Genome::Model::Tools::Hgmi::CollectSequence;
 
 use strict;
 use warnings;

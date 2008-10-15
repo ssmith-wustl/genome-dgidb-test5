@@ -1,4 +1,4 @@
-package Genome::Model::Tools::HGMI::MkPredictionModels;
+package Genome::Model::Tools::Hgmi::MkPredictionModels;
 
 use strict;
 use warnings;

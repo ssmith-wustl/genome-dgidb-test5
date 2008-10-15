@@ -1,4 +1,4 @@
-package Genome::Model::Tools::HGMI::SequenceName;
+package Genome::Model::Tools::Hgmi::SequenceName;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use IO::File;
 use File::Slurp;
 use Cwd;
-require pwd.pl;
+require "pwd.pl";
 use Bio::SeqIO;
 use Bio::Seq;
 use Carp;

@@ -1,4 +1,4 @@
-package Genome::Model::Tools::HGMI::DirBuilder;
+package Genome::Model::Tools::Hgmi::DirBuilder;
 
 
 use strict;
