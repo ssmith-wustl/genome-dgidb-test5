@@ -131,21 +131,6 @@ sub _open_directory {
     return;
 }
 
-sub assembly_size { # put in proc prof
-    my $self = shift;
-
-    # HACK
-    my ($rs, $ps) = $self->name =~/^Ocean (1[68])S \d+\w? ([ABC][BCD]) /;
-    my %sizes = (
-        '16AB' => 1464,
-        '16BC' => 876,
-        '18AB' => 1640,
-        '18CD' => 1465,
-    );
-    
-    return $sizes{"$rs$ps"};
-}
-
 sub header_for_subclone {
     my ($self, $subclone) = @_;
 
