@@ -18,7 +18,7 @@ class Genome::Model::Command::Create::Model {
         processing_profile          => { is => 'Genome::ProcessingProfile', doc => 'Not used as a parameter', id_by => 'processing_profile_id', is_optional => 1, },
         processing_profile_name     => { is => 'varchar', len => 255,  doc => 'The name of the processing profile to be used. '},
         model_name                  => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
-        subject_name                => { is => 'varchar', is_optional => 1, len => 255, doc => 'The name of the subject all the reads originate from' },
+        subject_name                => { is => 'varchar', len => 255, doc => 'The name of the subject all the reads originate from' },
         model                       => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id', doc => 'Not used as a parameter' },
         data_directory              => { is => 'varchar', len => 255, doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.', is_optional => 1,},
     ],
