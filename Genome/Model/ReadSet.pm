@@ -92,14 +92,13 @@ sub invalid {
 sub alignment_file_paths {
     my $self=shift;
     return unless -d $self->read_set_alignment_directory;
-    return grep { -e $_ } glob($self->read_set_alignment_directory .'/*'.
-                               $self->subset_name .'.submaps/*.map');
+    return grep { -e $_ && $_ !~ /aligner_output/ } glob($self->read_set_alignment_directory .'/*'. '*.map*');
 }
 sub aligner_output_file_paths {
     my $self=shift;
     return unless -d $self->read_set_alignment_directory;
     return grep { -e $_ } glob($self->read_set_alignment_directory .'/*'.
-                               $self->subset_name .'.map.aligner_output');
+                               $self->subset_name .'.map.aligner_output.*');
 }
 sub poorly_aligned_reads_list_paths {
     my $self=shift;
