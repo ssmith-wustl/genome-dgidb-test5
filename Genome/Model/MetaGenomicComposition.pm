@@ -52,6 +52,18 @@ sub all_scf_fasta {
     return _fasta_file_name(@_, 'scf');
 }
 
+sub metrics_file {
+    my $self = shift;
+
+    return sprintf('%s/%s.metrics.txt', $self->data_directory, $self->subject_name);
+}
+
+sub quality_histogram_file {
+    my $self = shift;
+
+    return sprintf('%s/%s.histogram.png', $self->data_directory, $self->subject_name);
+}
+
 #< Determining subclones >#
 sub subclones_and_traces_for_assembly {
     my $self = shift;
@@ -237,6 +249,7 @@ sub convert_plate_to_decimal()
     my ($ptd) = '';
 
     if ($plate=~/(\w{3})(\d{2})/) {
+        print "=>$plate<>$1<>$2<=\n";
         $ptd = (hex($1) - $HEX) * $PLATE_BASE + $2;
     }
     else {
