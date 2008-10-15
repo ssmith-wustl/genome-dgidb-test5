@@ -234,8 +234,8 @@ sub annotate_variants {
                 {chromosome_name => $hq_genotype->{chromosome} },
             );
             $annotator = Genome::VariantAnnotator->new(
-                transcript_window => $db_chrom->transcript_window(range => 0),
-                variation_window => $db_chrom->variation_window(range => 0),
+                transcript_window => $db_chrom->transcript_window(range => 50000),
+                variation_window => $db_chrom->variation_window(range => 50000),
             );
         }
         
@@ -461,11 +461,13 @@ sub generate_genotype{
 # Format a hash into a printable line
 sub format_genotype_line{
     my ($self, $genotype) = @_;
+
     return join("\t", map { $genotype->{$_} } $self->genotype_columns)."\n";
 }
 
 sub format_annotated_genotype_line{
     my ($self, $genotype) = @_;
+
     return join("\t", map { 
             if ( defined $genotype->{$_} ){
                 $genotype->{$_} 
@@ -595,14 +597,15 @@ sub maf_columns {
         verification_status
         validation_status
         mutation_status
+        cosmic_comparison
+        omim_comparison
         transcript_name
         trv_type
-        transcript_name
-        c_position 
         prot_string
-        prot_string_short
+        c_position
         pfam_domain
-    );
+    ); #  c_position = prot_string_short
+    # called_classification = c_position
 }
 
 # actual printed header of the MAF
@@ -629,6 +632,7 @@ sub next_hq_genotype{
         return undef;
     }
     my $genotype = $self->parse_genotype_line($line);
+
     return $genotype;
 }
 
@@ -649,6 +653,7 @@ sub next_hq_annotated_genotype{
         return undef;
     }
     my $genotype = $self->parse_annotated_genotype_line($line);
+
     return $genotype;
 }
 
@@ -747,15 +752,8 @@ sub write_maf_file{
 
     # Print maf data
     while (my $genotype = $self->next_hq_annotated_genotype){
-        my $line;
-        for my $column($self->maf_columns) {
-            if (lc $column eq "center") {
-                $line .= "genome.wustl.edu\t";
-            } else {
-                $line .= $genotype->{$column} || "N/A";
-                $line .= "\t";
-            }
-        }
+        $genotype->{center} = "genome.wustl.edu";
+        my $line = join("\t", map{$genotype->{$_} || 'N/A'} $self->maf_columns);
         print $fh "$line\n";
     }
 
