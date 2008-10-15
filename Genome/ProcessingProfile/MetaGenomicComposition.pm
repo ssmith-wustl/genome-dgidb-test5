@@ -18,6 +18,19 @@ my %PROPERTIES = (
         doc => 'Assembler type for assembling said reads.',
         valid_values => [qw/ maq newbler pcap phredphrap /],
     },
+    ribosomal_subunit => {
+        doc => 'Ribsosomal subunit.',
+        valid_values => [qw/ 16 18 /],
+    },
+    amplification_forward_primer => {
+        doc => 'Primer used for amplification in the forward (5\') direction',
+    },
+    amplification_reverse_primer => {
+        doc => 'Primer used for amplification in the reverse (3\') direction',
+    },
+    assembly_size => {
+        doc => 'Estimated assembly size, used for metrics and such',
+    },
 );
 
 class Genome::ProcessingProfile::MetaGenomicComposition {
@@ -30,10 +43,10 @@ class Genome::ProcessingProfile::MetaGenomicComposition {
             where => [ name => $_ ],
             is_optional => 0,
             is_mutable => 1,
-            doc => sprintf(
-                '%s Valid values: %s.', 
-                $PROPERTIES{$_}->{doc},
-                join(', ', @{$PROPERTIES{$_}->{valid_values}}),
+            doc => (
+                ( exists $PROPERTIES{$_}->{valid_valiues} )
+                ? sprintf('%s Valid values: %s.', $PROPERTIES{$_}->{doc}, join(', ', @{$PROPERTIES{$_}->{valid_values}}))
+                : $PROPERTIES{$_}->{doc}
             ),
         },
     } keys %PROPERTIES
@@ -46,6 +59,7 @@ sub create {
     my $self = $class->SUPER::create(@_);
 
     for my $property_name ( keys %PROPERTIES ) {
+        next unless exists $PROPERTIES{$property_name}->{valid_values};
         unless ( grep { $self->$property_name eq $_ } @{$PROPERTIES{$property_name}->{valid_values}} ) {
             $self->error_message( 
                 sprintf(
