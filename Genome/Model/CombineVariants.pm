@@ -571,39 +571,39 @@ sub annotated_columns{
 sub maf_columns {
     my $self = shift;
     return qw(
-        gene_name
-        entrez_gene_id
-        center
-        ncbi_build
-        chromosome
-        start
-        stop
-        strand
-        variant_classification
-        variation_type
-        reference
-        tumor_seq_allele1
-        tumor_seq_allele2
-        dbsnp_rs
-        dbsnp_val_status
-        tumor_sample_barcode
-        matched_norm_sample_barcode
-        match_norm_seq_allele1
-        match_norm_seq_allele2
-        tumor_validation_allele1
-        tumor_validation_allele2
-        match_norm_validation_allele1
-        match_norm_validation_allele2
-        verification_status
-        validation_status
-        mutation_status
-        cosmic_comparison
-        omim_comparison
-        transcript_name
-        trv_type
-        prot_string
-        c_position
-        pfam_domain
+    gene_name
+    entrez_gene_id
+    center
+    ncbi_build
+    chromosome
+    start
+    stop
+    strand
+    variant_classification
+    variation_type
+    reference
+    tumor_seq_allele1
+    tumor_seq_allele2
+    dbsnp_rs
+    dbsnp_val_status
+    tumor_sample_barcode
+    matched_norm_sample_barcode
+    match_norm_seq_allele1
+    match_norm_seq_allele2
+    tumor_validation_allele1
+    tumor_validation_allele2
+    match_norm_validation_allele1
+    match_norm_validation_allele2
+    verification_status
+    validation_status
+    mutation_status
+    cosmic_comparison
+    omim_comparison
+    transcript_name
+    trv_type
+    prot_string
+    c_position
+    pfam_domain
     ); #  c_position = prot_string_short
     # called_classification = c_position
 }
@@ -636,6 +636,18 @@ sub next_hq_genotype{
     return $genotype;
 }
 
+sub next_hq_genotype_in_range{
+    my $self = shift;
+    my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
+    while (my $genotype = $self->next_hq_genotype){
+        return undef unless $genotype;
+        if (compare_position($chrom_start, $pos_start, $genotype->{chromosome}, $genotype->{start}) <= 0 and 
+            compare_position($genotype->{chromosome}, $genotype->{start}, $chrom_stop, $pos_stop) <= 0){
+            return $genotype;
+        }
+    }
+}
+
 sub next_hq_annotated_genotype{
     my $self = shift;
 
@@ -655,6 +667,18 @@ sub next_hq_annotated_genotype{
     my $genotype = $self->parse_annotated_genotype_line($line);
 
     return $genotype;
+}
+
+sub next_hq_annotated_genotype_in_range{
+    my $self = shift;
+    my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
+    while (my $genotype = $self->next_hq_annotated_genotype){
+        return undef unless $genotype;
+        if (compare_position($chrom_start, $pos_start, $genotype->{chromosome}, $genotype->{start}) <= 0 and 
+            compare_position($genotype->{chromosome}, $genotype->{start}, $chrom_stop, $pos_stop) <= 0){
+            return $genotype;
+        }
+    }
 }
 
 # Reads from the lq genotype file and returns the next line
@@ -678,6 +702,18 @@ sub next_lq_genotype{
     return $genotype;
 }
 
+sub next_hq_genotype_in_range{
+    my $self = shift;
+    my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
+    while (my $genotype = $self->next_lq_genotype){
+        return undef unless $genotype;
+        if (compare_position($chrom_start, $pos_start, $genotype->{chromosome}, $genotype->{start}) <= 0 and 
+            compare_position($genotype->{chromosome}, $genotype->{start}, $chrom_stop, $pos_stop) <= 0){
+            return $genotype;
+        }
+    }
+}
+
 sub next_lq_annotated_genotype{
     my $self = shift;
 
@@ -696,6 +732,18 @@ sub next_lq_annotated_genotype{
     }
     my $genotype = $self->parse_annotated_genotype_line($line);
     return $genotype;
+}
+
+sub next_lq_annotated_genotype_in_range{
+    my $self = shift;
+    my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
+    while (my $genotype = $self->next_hq_annotated_genotype){
+        return undef unless $genotype;
+        if (compare_position($chrom_start, $pos_start, $genotype->{chromosome}, $genotype->{start}) <= 0 and 
+            compare_position($genotype->{chromosome}, $genotype->{start}, $chrom_stop, $pos_stop) <= 0){
+            return $genotype;
+        }
+    }
 }
 
 # Creates the model if it doesnt exist and returns it either way
@@ -743,6 +791,7 @@ sub get_or_create {
 
 sub write_maf_file{
     my $self = shift;
+    my ($chrom_start, $pos_start, $chrom_stop, $pos_stop);
 
     # Print maf header
     my $header = $self->maf_header;
