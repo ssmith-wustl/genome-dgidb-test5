@@ -15,7 +15,7 @@ use Genome;
 
 class Genome::Project {
     id_properties => ['setup_project_id'],
-    table_name =>   "(select * from setup_project\@oltp p join setup\@oltp s on setup_id = setup_project_id where project_type != 'finishing') project ",
+    table_name =>   "(SELECT * FROM setup_project\@oltp p JOIN setup\@oltp s ON setup_id = setup_project_id WHERE project_type != 'setup project finishing' AND setup_status != 'abandoned') project ",
     has => [
         #_oltp_project       => { is => 'GSC::Setup::Project', id_by => 'setup_project_id' },
         
@@ -51,4 +51,5 @@ class Genome::Project {
 };
 
 1;
+
 
