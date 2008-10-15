@@ -31,7 +31,7 @@ sub Populate {
 			 -label => delete $args->{-label},
 			 -width => 20,
 		 	 -font => '-*-times-medium-r-*-*-18-*-*-*-*-*-*-*');
-    my $b = $w->Button(-bitmap => '@' . App->prefix . '/share/' . App->pkg_name
+    my $b = $w->Button(-bitmap => '@' . App::Path->prefix . '/share/' . App::Name->pkg_name
                        . '/images/cbxarrow2.xbm');
     $w->Advertise('entry' => $e);
     $w->Advertise('arrow' => $b);
