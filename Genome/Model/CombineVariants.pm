@@ -638,6 +638,7 @@ sub next_hq_genotype{
 
 sub next_hq_genotype_in_range{
     my $self = shift;
+    return $self->next_hq_genotype unless @_;
     my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
     while (my $genotype = $self->next_hq_genotype){
         return undef unless $genotype;
@@ -671,6 +672,7 @@ sub next_hq_annotated_genotype{
 
 sub next_hq_annotated_genotype_in_range{
     my $self = shift;
+    return $self->next_hq_annotated_genotype unless @_;
     my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
     while (my $genotype = $self->next_hq_annotated_genotype){
         return undef unless $genotype;
@@ -702,8 +704,9 @@ sub next_lq_genotype{
     return $genotype;
 }
 
-sub next_hq_genotype_in_range{
+sub next_lq_genotype_in_range{
     my $self = shift;
+    return $self->next_lq_genotype unless @_;
     my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
     while (my $genotype = $self->next_lq_genotype){
         return undef unless $genotype;
@@ -736,6 +739,7 @@ sub next_lq_annotated_genotype{
 
 sub next_lq_annotated_genotype_in_range{
     my $self = shift;
+    return $self->next_lq_annotated_genotype unless @_;
     my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
     while (my $genotype = $self->next_hq_annotated_genotype){
         return undef unless $genotype;
@@ -800,7 +804,7 @@ sub write_maf_file{
     print $fh "$header\n";
 
     # Print maf data
-    while (my $genotype = $self->next_hq_annotated_genotype){
+    while (my $genotype = $self->next_hq_annotated_genotype_in_range($chrom_start, $pos_start, $chrom_stop, $pos_stop)){
         $genotype->{center} = "genome.wustl.edu";
         my $line = join("\t", map{$genotype->{$_} || 'N/A'} $self->maf_columns);
         print $fh "$line\n";
