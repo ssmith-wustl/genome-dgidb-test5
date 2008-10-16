@@ -23,11 +23,6 @@ class Genome::Model::Assembly {
         ],
 };
 
-sub test {
-    # Hard coded param for now
-    return 1;
-}
-
 sub build_subclass_name {
     return 'assembly';
 }
