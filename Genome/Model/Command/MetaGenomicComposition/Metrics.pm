@@ -145,9 +145,10 @@ sub _create_report {
         return;
     }
 
-    for my $key ( sort { $a cmp $b } keys %$totals ) {
-        $fh->print("$key: $totals->{$key}\n");
-    }
+    $fh->print( join(',', sort { $a cmp $b } keys %$totals) );
+    $fh->print("\n");
+    $fh->print( join(',', map { $totals->{$_} } sort { $a cmp $b } keys %$totals) );
+    $fh->print("\n");
 
     return $fh->close;
 }
