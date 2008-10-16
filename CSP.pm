@@ -663,7 +663,6 @@ my %csp_priority = (
     'submit reads'                            => 1,
     'transfer submission'                     => 1,
     'configure image analysis and base call'  => 1,
-    'make default offsets'                    => 1,
     'configure alignment'                     => 1,
     'generate lane summary'                   => 1,
     'create short read format'                => 1,
