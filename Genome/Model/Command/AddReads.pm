@@ -71,7 +71,10 @@ sub execute {
     my $self = shift;
 
     my $model = $self->model;
-
+    unless ($model) {
+        $self->error_message('Failed to find model for '. $self->model_id);
+        return;
+    }
     my $redo_all = $self->redo_all();
     if ($redo_all) {
         return $self->_redo_all();
