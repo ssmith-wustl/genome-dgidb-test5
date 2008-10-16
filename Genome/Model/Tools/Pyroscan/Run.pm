@@ -115,7 +115,7 @@ sub execute {
     else{  # cohort analysis
 
       my $case_cm=new Genome::Model::Tools::Pyroscan::CrossMatch(fin=>$f_cm_case);
-      my $case_detect=new PyroScan();
+      my $case_detect=new Genome::Model::Tools::Pyroscan::Detector();
       $var=$case_detect->VarDetect(\@poses,$case_cm,$floor_ratio_case,$f_case_qual,$Pvalue, $floor_indel_size, $refseq);
     }
 
