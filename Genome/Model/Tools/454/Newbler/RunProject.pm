@@ -12,9 +12,9 @@ class Genome::Model::Tools::454::Newbler::RunProject {
                 },
         ],
     has_optional => [
-                     options => {
+                     params => {
                                  is => 'String',
-                                 doc => 'command line options to pass to newbler',
+                                 doc => 'command line params to pass to newbler',
                              },
                  ],
 
@@ -22,7 +22,7 @@ class Genome::Model::Tools::454::Newbler::RunProject {
 
 
 sub help_brief {
-"genome-model tools newbler add-run --dir=DIR [--options='-r']";
+"genome-model tools newbler add-run --dir=DIR [--params='-r']";
 }
 
 sub help_detail {
@@ -35,8 +35,9 @@ sub execute {
     my $self = shift;
 
     $DB::single = $DB::stopper;
-    my $options = $self->options || '';
-    my $cmd = $self->full_bin_path('runProject') .' '. $options .' '. $self->dir;
+    my $params = $self->params || '';
+    my $cmd = $self->full_bin_path('runProject') .' '. $params .' '. $self->dir;
+    $self->status_message("Running: $cmd");
     my $rv = system($cmd);
     unless ($rv == 0) {
         $self->error_message("non-zero return status from command '$cmd'");
