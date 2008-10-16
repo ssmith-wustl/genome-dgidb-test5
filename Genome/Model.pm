@@ -117,25 +117,23 @@ sub compatible_input_read_sets {
     my $self = shift;
 
     my $input_read_set_class_name = $self->input_read_set_class_name;
-    my @gsc_read_sets = $input_read_set_class_name->get(sample_name => { operator => "like", value => $self->subject_name });
-    my %instrument_data_ids = map { $_->id => 1 } @gsc_read_sets;
-
-    my $ps = GSC::ProcessStep->get(process_to => 'queue instrument data for genome modeling');
-    my @pses = GSC::PSE->get(
-                             ps_id => $ps->ps_id,
-                             pse_status => 'inprogress',
-                         );
-    my @input_pses;
-    for my $pse (@pses) {
-        my ($instrument_data_type) = $pse->added_param('instrument_data_type');
-        my ($subject_name) = $pse->added_param('subject_name');
-        if ( ($subject_name eq $self->subject_name) &&
-             ($instrument_data_type eq $self->sequencing_platform) ) {
-            push @input_pses, $pse;
-        }
+    my @sample_read_sets = $input_read_set_class_name->get(
+                                                           sample_name => {
+                                                                           operator => "like",
+                                                                           value => $self->subject_name
+                                                                       },
+                                                       );
+    my %instrument_data_ids = map { $_->id => 1 } @sample_read_sets;
+    if ($input_read_set_class_name eq 'GSC::RunRegion454') {
+        my @dna_read_sets = $input_read_set_class_name->get(
+                                                            incoming_dna_name => {
+                                                                                  operator => "like",
+                                                                                  value => $self->subject_name
+                                                                              },
+                                                        );
+        %instrument_data_ids = map { $_->id => 1 } @dna_read_sets;
     }
 
-    %instrument_data_ids = map { $_->added_param('instrument_data_id') => 1 } @input_pses;
     my @instrument_data_ids = keys %instrument_data_ids;
     my @input_read_sets = GSC::Sequence::Item->get(\@instrument_data_ids);
 
