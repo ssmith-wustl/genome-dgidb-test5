@@ -137,7 +137,7 @@ sub _add_fasta_and_qual {
         $self->error_mesage("Can't open fasta file ($fasta_file) for reading");
         return;
     }
-    my $fasta_fh_key = sprintf('%s_fasta_fh', $type);
+    my $fasta_fh_key = sprintf('_%s_fasta_fh', $type);
     while ( my $line = $fasta_fh->getline ) {
         $self->{$fasta_fh_key}->print($line);
     }
@@ -154,7 +154,7 @@ sub _add_fasta_and_qual {
         $self->error_mesage("Can't open fasta file ($qual_file) for reading");
         return;
     }
-    my $qual_fh_key = sprintf('%s_fasta_fh', $type);
+    my $qual_fh_key = sprintf('_%s_qual_fh', $type);
     while ( my $line = $qual_fh->getline ) {
         $self->{$qual_fh_key}->print($line);
     }
