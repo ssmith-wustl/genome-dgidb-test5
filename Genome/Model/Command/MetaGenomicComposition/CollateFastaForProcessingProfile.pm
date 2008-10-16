@@ -44,18 +44,6 @@ sub fasta_and_qual_types {
     return (qw/ assembled pre_process_input assembly_input /);
 }
 
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
-
-    unlink $self->fasta_file if -e $self->fasta_file;
-    unlink $self->qual_file if -e $self->qual_file;
-
-    return $self;
-}
-
 sub DESTROY { 
     my $self = shift;
 
