@@ -167,7 +167,7 @@ sub _calculate_totals {
     $totals{assemblies_reads_assembled} = $self->{_metrix}->{reads_assembled_total};
     $totals{assemblies_reads_assembled_pct} = sprintf(
         '%.2f',
-        100 * $self->{_metrix}->{reads_assembled_total},
+        100 * $self->{_metrix}->{reads_assembled_total} / $self->{_metrix}->{reads_attempted_total},
     );
 
     my @lengths = sort { $a <=> $b } @{ $self->{_metrix}->{lengths} };
