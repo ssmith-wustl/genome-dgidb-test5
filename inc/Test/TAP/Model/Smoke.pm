@@ -26,7 +26,7 @@ has 'smoke_dir' => (
     lazy     => 1,
     default  => sub {
         my $self = shift;
-        return $self->base_dir->subdir('smoke_db');
+        return $self->base_dir->subdir('smoke_db'.time().$$);
     },
 );
 
