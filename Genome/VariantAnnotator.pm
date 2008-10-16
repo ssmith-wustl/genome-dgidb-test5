@@ -90,6 +90,11 @@ sub prioritized_transcripts_for_indel
     return $self->_prioritize_annotations(@annotations);
 }
 
+# Prioritizes annotations on a per gene basis... 
+# Currently the "best" annotation is judged by priority, and then source, and then protein length
+# in that order.
+# I.E. If 6 annotations go in, from 3 different genes, it will select the "best" annotation 
+# that each gene has, and return 3 total annotations, one per gene
 sub _prioritize_annotations
 {
     my ($self, @annotations) = @_;
@@ -97,39 +102,69 @@ sub _prioritize_annotations
     my %prioritized_annotations;
     foreach my $annotation ( @annotations )
     {
-        # TODO add more priority info in the variat priorities...transcript source, status, etc
+        # TODO add more priority info in the variant priorities...transcript source, status, etc
         $annotation->{priority} = $variant_priorities{ $annotation->{trv_type} };
+        # If no annotation exists for this gene yet, set it
         unless ( exists $prioritized_annotations{ $annotation->{gene_name} } )
         {
             $prioritized_annotations{ $annotation->{gene_name} } = $annotation;
         }
+        # If the priority for this new annotation beats the priority for the current best
+        # Annotation for this gene, replace the current best with the new best
         elsif ( $annotation->{priority} < $prioritized_annotations{ $annotation->{gene_name} }->{priority} )
         {
             $prioritized_annotations{ $annotation->{gene_name} } = $annotation;
         }
+        # If the priorities are a tie, break the tie with source...
+        # We currently prefer NCBI annotations over ensembl, and ensembl over other annotations
         elsif ( $annotation->{priority} == $prioritized_annotations{ $annotation->{gene_name} }->{priority} )
         {
-            next if $annotation->{amino_acid_length} < $prioritized_annotations{ $annotation->{gene_name} }->{amino_acid_length};
+            my $new_source_priority = $self->_transcript_source_priority($annotation->{transcript_name});
+            my $existing_source_priority = $self->_transcript_source_priority($prioritized_annotations{ $annotation->{gene_name} }->{transcript_name} );
+            if ($new_source_priority < $existing_source_priority) {
+                $prioritized_annotations{ $annotation->{gene_name} } = $annotation;
+            } elsif ($new_source_priority > $existing_source_priority) {
+                next;
+            # Tied for priority based upon source... break the tie with protein length
+            } elsif ($new_source_priority == $existing_source_priority) {
+                next if $annotation->{amino_acid_length} < $prioritized_annotations{ $annotation->{gene_name} }->{amino_acid_length};
 
-            if  ( $annotation->{amino_acid_length} == $prioritized_annotations{ $annotation->{gene_name} }->{amino_acid_length} )
-            {
-                # amino acid length is the same, set the annotation sorted by transcript_name
-                ($annotation) = sort 
+                if  ( $annotation->{amino_acid_length} == $prioritized_annotations{ $annotation->{gene_name} }->{amino_acid_length} )
                 {
-                    $a->{transcript_name} cmp $b->{transcript_name } 
-                } ($annotation, $prioritized_annotations{ $annotation->{gene_name} })
+                    # amino acid length is the same, set the annotation sorted by transcript_name
+                    ($annotation) = sort 
+                    {
+                        $a->{transcript_name} cmp $b->{transcript_name } 
+                    } ($annotation, $prioritized_annotations{ $annotation->{gene_name} })
+                }
+
+                $prioritized_annotations{ $annotation->{gene_name} } = $annotation;
             }
-            
-            $prioritized_annotations{ $annotation->{gene_name} } = $annotation;
         }
     }
-        
+
     return values %prioritized_annotations;
 }
 
+# Takes in a transcript name... uses regex to determine if this
+# Transcript is from NCBI, ensembl, etc and returns a priority  number according to which of these we prefer.
+# Currently we prefer NCBI to ensembl, and ensembl over others.  Lower priority is preferred
+sub _transcript_source_priority {
+    my ($self, $transcript) = @_;
+
+    if ($transcript =~ /nm/i) {
+        return 1;
+    } elsif ($transcript =~ /enst/i) {
+        return 2;
+    } elsif ($transcript =~ /otthumt/i) {
+        return 3;
+    }else {
+        return 4;
+    }
+}
+
 #- Private Methods -#
-sub _determine_transcripts_to_annotate
-{
+sub _determine_transcripts_to_annotate {
     my ($self, $position) = @_;
 
     my (@transcripts_priority_1, @transcripts_priority_2);
@@ -156,12 +191,16 @@ sub _transcript_annotation
 {
     my ($self, $transcript, $snp) = @_;
 
-    my $ss_window = $transcript->sub_structure_window;
-    my ($main_structure) = $ss_window->scroll( $snp->{start} );
-    return unless $main_structure;
+    #my $ss_window = $transcript->sub_structure_window;
+    #my ($main_structure) = $ss_window->scroll( $snp->{start} );
+    #return unless $main_structure;
+
+    my $main_structure = $transcript->structure_at_position( $snp->{start} )
+        or return;
 
     # skip psuedogenes
-    return unless $ss_window->cds_exons;
+    #return unless $ss_window->cds_exons;
+    return unless $transcript->cds_exons;
 
     my $structure_type = $main_structure->structure_type;
     # skip micro rnas
@@ -185,8 +224,7 @@ sub _transcript_annotation
         $structure_annotation{domain} = 'NULL';
     }
 
-    return 
-    (
+    return (
         %structure_annotation,
         transcript_name => $transcript->transcript_name, 
         transcript_source => $source,
@@ -204,7 +242,8 @@ sub _transcript_annotation_for_utr_exon
 
     my $position = $snp->{start};
     my $strand = $transcript->strand;
-    my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
+    my ($cds_exon_start, $cds_exon_stop) = $transcript->cds_exon_range;
+    #my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
     my ($c_position, $trv_type);
     if ( $position < $cds_exon_start )	
     { 
@@ -236,7 +275,8 @@ sub _transcript_annotation_for_flank
 
     my $position = $snp->{start};
     my $strand = $transcript->strand;
-    my @cds_exon_positions = $transcript->sub_structure_window->cds_exon_range
+    my @cds_exon_positions = $transcript->cds_exon_range
+    #my @cds_exon_positions = $transcript->sub_structure_window->cds_exon_range
         or return;
     #   print Dumper([$transcript->transcript_id, $position, $cds_exon_start, $cds_exon_stop]);
     my ($c_position, $trv_type);
@@ -270,15 +310,18 @@ sub _transcript_annotation_for_intron
 
     my $strand = $transcript->strand;
     
-    my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
+    my ($cds_exon_start, $cds_exon_stop) = $transcript->cds_exon_range;
+    #my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
     my ($oriented_cds_exon_start, $oriented_cds_exon_stop) = ($cds_exon_start, $cds_exon_stop);
     
-    my $main_structure = $transcript->sub_structure_window->main_structure;
+    my $main_structure = $transcript->structure_at_position( $snp->{start} );
+    #my $main_structure = $transcript->sub_structure_window->main_structure;
     my $structure_start = $main_structure->structure_start;
     my $structure_stop = $main_structure->structure_stop;
     my ($oriented_structure_start, $oriented_structure_stop) = ($structure_start, $structure_stop);
 
-    my ($prev_structure, $next_structure) = $transcript->sub_structure_window->structures_flanking_main_structure;
+    my ($prev_structure, $next_structure) = $transcript->structures_flanking_structure_at_position( $snp->{start} );
+    #my ($prev_structure, $next_structure) = $transcript->sub_structure_window->structures_flanking_main_structure;
     #return unless $prev_structure and $next_structure;
     my ($prev_structure_type, $next_structure_type, $position_before, $position_after);
 
@@ -302,7 +345,8 @@ sub _transcript_annotation_for_intron
         $position_after = $structure_stop + 1;
     }
 
-    my $exon_pos = $transcript->sub_structure_window->length_of_cds_exons_before_main_structure($strand),
+    my $exon_pos = $transcript->length_of_cds_exons_before_structure_at_position($snp->{start}, $strand),
+    #my $exon_pos = $transcript->sub_structure_window->length_of_cds_exons_before_main_structure($strand),
     my $pre_start = abs( $snp->{start} - $oriented_structure_start ) + 1,
     my $pre_end = abs( $snp->{start} - $oriented_structure_start ) + 1,
     my $aft_start = abs( $oriented_structure_stop - $snp->{start} ) + 1,
@@ -387,7 +431,8 @@ sub _transcript_annotation_for_cds_exon
     
     my $strand = $transcript->strand;
     
-    my $main_structure = $transcript->sub_structure_window->main_structure;
+    my $main_structure = $transcript->structure_at_position( $snp->{start} );
+    #my $main_structure = $transcript->sub_structure_window->main_structure;
     my $structure_start = $main_structure->structure_start;
     my $structure_stop = $main_structure->structure_stop;
     my ($oriented_structure_start, $oriented_structure_stop) = ($structure_start, $structure_stop);
@@ -398,7 +443,8 @@ sub _transcript_annotation_for_cds_exon
         ($oriented_structure_stop, $oriented_structure_start) = ($structure_start, $structure_stop);
     }	 
 
-    my $exon_pos = $transcript->sub_structure_window->length_of_cds_exons_before_main_structure($strand);
+    my $exon_pos = $transcript->length_of_cds_exons_before_structure_at_position($snp->{start}, $strand);
+    #my $exon_pos = $transcript->sub_structure_window->length_of_cds_exons_before_main_structure($strand);
     my $pre_start = abs( $snp->{start} - $oriented_structure_start ) + 1;
     my $pre_end = abs( $snp->{start} - $oriented_structure_start ) + 1;
     my $aft_start = abs( $oriented_structure_stop - $snp->{start} ) + 1;
@@ -447,7 +493,8 @@ sub _transcript_annotation_for_cds_exon
     else
     {
         my $ordinal = $main_structure->ordinal + $chose_ord;
-        my $cds_exon = $transcript->sub_structure_window->cds_exon_with_ordinal($ordinal);
+        my $cds_exon = $transcript->cds_exon_with_ordinal($ordinal);
+        #my $cds_exon = $transcript->sub_structure_window->cds_exon_with_ordinal($ordinal);
         unless ( defined $cds_exon )
         {
             $self->error_msg
@@ -513,25 +560,30 @@ sub _transcript_annotation_for_cds_exon
     }	
 
     my $ref_codon_check = substr($codonstr, $codon_start - 1, 1);
-    if ( $ref ne $ref_codon_check )
-    {
-        $self->error_msg
-        (
-            sprintf
+
+    # Do not care about reference if the variant is an indel
+    if (!($snp->{type} =~ /ins|del/i)) {
+        if ( $ref ne $ref_codon_check )
+        {
+            $self->error_msg
             (
-                "Reference (%s) does not match the base (%s) stored in transcript (%d) at %d",
-                $ref,
-                $ref_codon_check,
-                $transcript->transcript_id,
-                $snp->{start},
-            )
-        );
-        return;
+                sprintf
+                (
+                    "Reference (%s) does not match the base (%s) stored in transcript (%d) at %d",
+                    $ref,
+                    $ref_codon_check,
+                    $transcript->transcript_id,
+                    $snp->{start},
+                )
+            );
+            return;
+        }
     }
     
     substr($codonstr, $codon_start - 1, 1) = $variant;
 
     my $aa_af = $codon2single{uc $codonstr};
+    
     my $trv_type;
     if ( $aa_af eq 'X' )
     {
@@ -559,11 +611,13 @@ sub _transcript_annotation_for_cds_exon
         $trv_type = "silent"; 
     }
 
-    my $conservation = $self->_ucsc_cons_annotation($snp);
-    my $pdom = $self->_protein_domain($snp,
-                                      $transcript->gene,
-                                      $transcript->transcript_name,
-                                      $amino_acid_change);
+#    my $conservation = $self->_ucsc_cons_annotation($snp);
+#    my $pdom = $self->_protein_domain($snp,
+#                                      $transcript->gene,
+#                                      $transcript->transcript_name,
+#                                      $amino_acid_change);
+    my $conservation = 'NO_EXEC';
+    my $pdom = 'NO_EXEC';
 
     return 
     (
@@ -610,7 +664,6 @@ sub _protein_domain
     }
     return 'NULL';
 }
-
 
 1;
 

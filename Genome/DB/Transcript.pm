@@ -106,6 +106,105 @@ sub _sub_structure_window
     return $self->{_sub_strucuture_window};
 }
 
+sub structure_at_position {
+    my ($self, $position) = @_;
+
+    # check if in range of the trascript
+    my @structures = $self->ordered_sub_structures;
+    return unless $structures[0]->structure_start <= $position
+        and $structures[$#structures]->structure_stop >= $position;
+ 
+    # get the sub structure
+    for my $struct ( @structures ) {
+        return $struct if $position >= $struct->structure_start 
+            and $position <= $struct->structure_stop;
+    }
+
+    return;
+}
+
+sub structures_flanking_structure_at_position {
+    my ($self, $position) = @_;
+
+    # check if in range of the trascript
+    my @structures = $self->ordered_sub_structures;
+    return unless $structures[0]->structure_start <= $position
+        and $structures[$#structures]->structure_stop >= $position;
+    
+    my $structure_index = 0;
+    for my $struct ( @structures ) {
+        last if $position >= $struct->structure_start 
+            and $position <= $struct->structure_stop;
+        $structure_index++;
+    }
+    
+    return ( $structure_index == 0 ) # don't return [-1], last struct!
+    ? (undef, $structures[1])
+    : ( 
+        $structures[ $structure_index - 1 ], 
+        $structures[ $structure_index + 1 ],
+    );
+}
+
+#- CDS EXONS -#
+sub cds_exons {
+    my $self = shift;
+
+    return grep { $_->structure_type eq 'cds_exon' } $self->sub_structures->all;
+}
+
+sub cds_exon_range {
+    my $self = shift;
+
+    my @cds_exons = $self->cds_exons
+        or return;
+
+    return ($cds_exons[0]->structure_start, $cds_exons[$#cds_exons]->structure_stop);
+}
+
+sub length_of_cds_exons_before_structure_at_position {
+    my ($self, $position, $strand) = @_;
+
+    my @cds_exons = $self->cds_exons
+        or return;
+
+    my $structure = $self->structure_at_position($position);
+    $strand = '+1' unless $strand;
+
+    # Make this an anon sub for slight speed increase
+    my $exon_is_before;
+    if ( $strand eq '+1' ) {
+        my $structure_start = $structure->structure_start;
+        $exon_is_before = sub {
+            return $_[0]->structure_stop < $structure_start;
+        }
+    }
+    else {
+        my $structure_stop = $structure->structure_stop;
+        $exon_is_before = sub {
+            return $_[0]->structure_start > $structure_stop;
+        }
+    }
+
+    my $length = 0;
+    foreach my $cds_exon ( @cds_exons ) {
+        next unless $exon_is_before->($cds_exon);
+        $length += $cds_exon->structure_stop - $cds_exon->structure_start + 1;
+    }
+
+    return $length;
+}
+
+sub cds_exon_with_ordinal {
+    my ($self, $ordinal) = @_;
+
+    foreach my $cds_exon ( $self->cds_exons ) {
+        return $cds_exon if $cds_exon->ordinal == $ordinal;
+    }
+
+    return;
+}
+
 #- GENE -#
 sub gene_name
 {
