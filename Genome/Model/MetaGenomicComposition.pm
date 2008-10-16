@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+use Data::Dumper;
+use File::Grep 'fgrep';
 use Genome::Consed::Directory;
 use Genome::ProcessingProfile::MetaGenomicComposition;
 use POSIX 'floor';
@@ -44,12 +46,16 @@ sub _fasta_file_name {
     );
 }
 
-sub all_assembly_fasta {
-    return _fasta_file_name(@_, 'assembly');
+sub all_assembled_fasta {
+    return _fasta_file_name(@_, 'assembled');
 }
 
-sub all_scf_fasta {
-    return _fasta_file_name(@_, 'scf');
+sub all_pre_process_input_fasta {
+    return _fasta_file_name(@_, 'pre_process_input');
+}
+
+sub all_assembly_input_fasta {
+    return _fasta_file_name(@_, 'assembly_input');
 }
 
 sub metrics_file {
@@ -131,157 +137,28 @@ sub _open_directory {
     return;
 }
 
+############################################
+#
+# Need to do something about this
+
 sub header_for_subclone {
     my ($self, $subclone) = @_;
 
-    # FIXME
     return ">$subclone\n" unless $self->name =~ /ocean/i;
 
-    my $ss = ocean_code_to_subscript($subclone);
-    unless ( $ss ) { 
-        $self->error_message("Cna't determine subscript code for subclone ($subclone)");
+    my ($match) = fgrep { /$subclone/ } "/gsc/var/lib/pwb/ocean_lookup_for_genome_model.txt"; 
+    my ($line) = values %{$match->{matches}};
+
+    unless ( $line ) { 
+        $self->error_message("Can't determine subscript code for subclone ($subclone)");
         return;
     }
+
+    chomp $line;
+    my ($ss) = (split(/\s+/, $line))[2];
     
     return sprintf(">%s%s\n", $self->subject_name, $ss);
 }
-
-#-------------------------------------------------------------------------------------------------------------------------
-=ocean_code_to_subscript
-    extracts plate and well components with regexp
-    converts each to decimal value
-    appends (rather than adds) well to plate for full value
-    sends full value to be converted to subscript
-=cut
-
-#globals
-our (@HEX) = (0 ..9, 'A' .. 'F');
-our (@MYRIAD) = (0 .. 9, 'a' .. 'z', 'A' .. 'Z');
-
-our ($WELL_BASE) = 13;
-our @ALPHA = ('a' .. 'h');
-
-our ($PLATE_BASE) = (104);
-our ($HEX) = 0xaaa;
-
-sub ocean_code_to_subscript {
-    my ($oc) = @_;
-
-    my ($ss) = '';
-
-    #expect format 'aaa01a01'
-    if ($oc=~/(\w{3}\d{2})(\w\d{2})/) {
-        #get decimal values of components
-        my ($plate,$well) = (convert_plate_to_decimal($1), convert_well_to_decimal($2));
-
-        #adjust well
-        my ($raw) = $plate * $PLATE_BASE + $well;
-        #convert
-        $ss = decimal_to_subscript($raw);
-    }
-    else {
-        __PACKAGE__->error_message("improper format for ocean code");
-        return;
-    }
-
-    return $ss;
-}#ocean_code_to_subscript
-
-#-------------------------------------------------------------------------------------------------------------------------
-=convert_well_to_decimal
-    well value of format \w\d{2}
-    use index of \w in @ALPHA to compute decimal value with \d{2}
-    ensure numerical portion is less than $WELl_BASE, otherwise can have collisions ex. g13/h00
-=cut
-
-sub convert_well_to_decimal {
-    my ($well) = @_;
-
-    my ($wtd) = -1;
-    my ($CONV, $index) = (scalar(@ALPHA),0);
-
-    if ($well=~/(\w{1})(\d{2})/ and $2 < $WELL_BASE) {
-        for ($index = 0; $index < $CONV; $index++) {
-            if ($ALPHA[$index] eq $1) { last; }
-        }
-
-        #verify ALPHA match
-        if ($index < $CONV) {
-            $wtd = $index * $WELL_BASE + $2;
-        }
-        else {
-            __PACKAGE__->error_meassge("$well not recognized for well formatting");
-            return;
-        }
-    }
-    else {
-        __PACKAGE__->error_meassge("$well:improper format ('a00 - h" . ($WELL_BASE - 1) . "')");
-        return;
-    }   
-    
-    return $wtd;
-}#convert_well_to_decimal
-
-#-------------------------------------------------------------------------------------------------------------------------
-=convert_plate_to_decimal
-    plate value of format \w{3}\d{2}
-    use hex conversion for \w{3} and add to \d{2}
-=cut
-
-sub convert_plate_to_decimal()
-{
-    my ($plate) = @_;
-    my ($ptd) = '';
-
-    if ($plate=~/(\w{3})(\d{2})/) {
-        print "=>$plate<>$1<>$2<=\n";
-        $ptd = (hex($1) - $HEX) * $PLATE_BASE + $2;
-    }
-    else {
-        __PACKAGE__->error_meassge("$plate is improper format");
-        return;
-    }
-
-    return $ptd;
-}#convert_plate_to_decimal
-
-#-------------------------------------------------------------------------------------------------------------------------
-=decimal_to_subscript
-=cut
-
-sub decimal_to_subscript {
-    my ($decimal) = @_;
-    my ($CONV) = (scalar(@MYRIAD));
-    my ($mod, $dts) = (0,'');
-
-    $decimal < 238328 or ( __PACKAGE__->error_meassge("input too large for subscripting") and return );
-
-    while ($decimal > 0) {
-        $mod = $decimal % $CONV;
-        $dts = $MYRIAD[$mod] . $dts;
-        $decimal = floor($decimal/$CONV);
-    }
-
-    #pad with leading 0's
-    return "0" x (3 - length($dts)) . $dts;
-}#decimal_to_subscript
-
-
-# Not sure what dese are...
-sub _test {
-    # Hard coded param for now
-    return 1;
-}
-
-sub _build_subclass_name {
-    return 'assembly';
-}
-
-sub _assembly_directory {
-    my $self = shift;
-    return $self->data_directory . '/assembly';
-}
-
 
 1;
 
