@@ -54,12 +54,18 @@ sub build_in_stages {
 
         my @objects = $self->objects_for_stage($stage_name);
         my @scheduled_objects = $self->_schedule_stage(\@stage_classes,\@objects);
-        if ($self->auto_execute) {
-            my $return_value = $self->_run_stage(@scheduled_objects);
+        if (!defined $self->auto_execute) {
+            $self->auto_execute(1);
+            #die "This should never happend since we are a required property, but it seems like a possiblity";
+        }
+        if ($self->auto_execute && @scheduled_objects) {
+            my $return_value = $self->_run_stage($stage_name,@scheduled_objects);
             if ($return_value == 1) {
                 $self->event_status('Succeeded');
                 $self->date_completed(UR::Time->now);
                 return $return_value;
+            } else {
+                return 1;
             }
         }
     }
@@ -207,14 +213,18 @@ sub _schedule_command_classes_for_object {
 
 sub _run_stage {
     my $self = shift;
+    my $stage_name = shift;
     my @scheduled_commands = @_;
     if (@scheduled_commands) {
-        my @dependency_ids = map {$_->lsf_job_id} @scheduled_commands;
-        unless (Genome::Model::Command::RunJobs->execute(model_id => $self->model_id)) {
+        my $job_name = $self->model_id .'_'. $stage_name .'_'. $self->build_id;
+        unless (Genome::Model::Command::RunJobs->execute(
+                                                         model_id => $self->model_id,
+                                                         bsub_args => "-J $job_name",
+                                                     )) {
             $self->error_message('Failed to execute run-jobs for model '. $self->model_id);
             return;
         }
-        unless($self->execute_with_bsub(dep_type=>'ended', dependency_expression => join(")&&ended(", @dependency_ids) )) {
+        unless($self->execute_with_bsub(dep_type=>'ended', dependency_expression => $job_name)) {
             $self->error__message("Hello, I am the build module, and I was unable to schedule myself to run after my peeps.");
             return;
         }
