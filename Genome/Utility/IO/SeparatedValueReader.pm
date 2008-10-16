@@ -3,7 +3,7 @@ package Genome::Utility::IO::SeparatedValueReader;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 use Data::Dumper;
 
@@ -57,10 +57,12 @@ sub getline {
 }
 
 sub create {
-    my ($class, %params) = @_;
+    my $class = shift;
+    my %params = @_;
 
     my $headers = delete $params{headers}; # prevent UR from sorting our headers!
-    my $self = $class->SUPER::create;
+    my $self = $class->SUPER::create(%params)
+        or return;
 
     my $sep = $self->separator;
     if ($self->is_regex){ 
@@ -68,7 +70,7 @@ sub create {
         #  are returned, regardless of empty trailing results
         $self->{_split} = sub{ return split(/$sep/, $_[0], -1) };
     }
-    else{
+    else {
         $self->{_split} = sub{ return split(/\Q$sep\E/, $_[0], -1) };
     }
 
@@ -79,8 +81,8 @@ sub create {
         my @headers = $self->_getline_and_split;
         $self->error_msg("No headers found in io")
             and return unless @headers;
+        $self->headers(\@headers);
         $self->{_headers_were_in_input} = 1;
-        return $self->headers(\@headers);
     }
 
     return $self;
@@ -118,7 +120,7 @@ sub _getline_and_split {
         or return;
     chomp $line;
 
-    return $self->_split->($line); 
+    return $self->{_split}->($line); 
 }
 
 sub _increment_line_number {
