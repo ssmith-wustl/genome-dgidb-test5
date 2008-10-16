@@ -48,6 +48,10 @@ sub create {
         $self->data_directory($data_dir);
     }
 
+    # Replace spaces with underscores
+    $data_dir =~ s/ /_/g;
+    $self->data_directory($data_dir);
+
     # Make the model directory
     if (-d $data_dir) {
         $self->error_message("Data directory: " . $data_dir . " already exists before creation");
