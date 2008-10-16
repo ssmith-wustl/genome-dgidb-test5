@@ -123,6 +123,22 @@ sub execute {
 
     $self->_handle_input;
 
+    # Save fasta and qual before processing
+    my $fasta_file = $self->_get_value_or_default_for_property_name('fasta_file');
+    my $bak_fasta_file = $fasta_file.'.pre_processing';
+    unless ( File::Copy::copy($fasta_file, $bak_fasta_file) ) {
+        $self->error_message("Can't copy $fasta_file to $bak_fasta_file: $!");
+        return;
+    }
+
+    my $qual_file = $fasta_file.'.qual';
+    my $bak_qual_file = $fasta_file.'.pre_processing.qual';
+    unless ( File::Copy::copy($qual_file, $bak_qual_file) ) {
+        $self->error_message("Can't copy $qual_file to $bak_qual_file: $!");
+        return;
+    }
+
+    # PRE ASSEMBLY PROCESSING
     $self->status_message("Pre Assembly Processing");
     for my $processor_name ( $self->pre_assembly_processors ) {
         my $no_processor = 'no_' . $processor_name ;
@@ -179,6 +195,19 @@ sub _params_for_class {
     }
 
     return %params_for_class;
+}
+
+sub _get_value_or_default_for_property_name {
+    my ($self, $property_name) = @_;
+
+    my $value;
+    unless ( $self->can($property_name) and defined($value = $self->$property_name) ) {
+        return unless grep { $property_name eq $_ } @options_with_defaults;
+        my $default_property_name = sprintf('default_%s', $property_name);
+        $value = $self->$default_property_name;
+    }
+
+    return $value;
 }
 
 #- INPUT PROCESSORS -#
