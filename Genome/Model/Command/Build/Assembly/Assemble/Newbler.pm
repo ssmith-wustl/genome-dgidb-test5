@@ -38,8 +38,9 @@ sub execute {
     $DB::single = $DB::stopper;
 
     my $model = $self->model;
+    my $params = $model->assembler_params || '';
     my $run_project = Genome::Model::Tools::454::Newbler::RunProject->create(
-                                                                             test => $model->test,
+                                                                             params => $params,
                                                                              dir => $model->data_directory,
                                                                          );
     unless($run_project->execute) {
