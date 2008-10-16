@@ -3,14 +3,13 @@ package Genome::Utility::IO::Reader;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 require Cwd;
 require IO::File;
 
 class Genome::Utility::IO::Reader {
     is => 'UR::Object',
-    is_abstract => 1,
     has => [
     input => {
         type => 'String',
@@ -21,7 +20,7 @@ class Genome::Utility::IO::Reader {
 };
 
 sub get_original_input { # Allow getting of original input (file)
-    return shift->{original_input};
+    return shift->{_original_input};
 }
 
 BEGIN {
@@ -36,7 +35,8 @@ sub create {
         return;
     }
 
-    my $self = $class->SUPER::create(@_);
+    my $self = $class->SUPER::create(@_)
+        or return;
     $self->error_message("Input is required for class ($class)")
         and return unless defined $self->input;
 
