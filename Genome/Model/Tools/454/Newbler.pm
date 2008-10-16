@@ -9,13 +9,6 @@ use File::Basename;
 
 class Genome::Model::Tools::454::Newbler {
     is => ['Genome::Model::Tools::454'],
-    has_optional => [
-                     test => {
-                              is => 'Boolean',
-                              doc => 'A flag to use the test version of newbler(default_value=0)',
-                              default_value => 0,
-                          },
-        ],
 };
 
 sub sub_command_sort_position { 12 }
@@ -40,13 +33,13 @@ sub newbler_bin {
     my $self = shift;
 
     my $bin_path = $self->bin_path;
-    if ($self->test) {
-        if ($self->arch_os =~ /64/) {
-            $bin_path = '/gsc/pkg/bio/454/newbler/applicationsBin64';
-        } else {
-            $bin_path = '/gsc/pkg/bio/454/newbler/applicationsBin32';
-        }
-    }
+    #if ($self->test) {
+    #    if ($self->arch_os =~ /64/) {
+    #        $bin_path = '/gsc/pkg/bio/454/newbler/applicationsBin64';
+    #    } else {
+    #        $bin_path = '/gsc/pkg/bio/454/newbler/applicationsBin32';
+    #    }
+    #}
     return $bin_path;
 }
 
