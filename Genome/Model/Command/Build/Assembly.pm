@@ -13,11 +13,6 @@ class Genome::Model::Command::Build::Assembly {
 
 sub sub_command_sort_position { 40 }
 
-sub command_subclassing_model_property {
-    print "hi\n";
-    'foora'
-}
-
 sub help_brief {
     "assemble a genome"
 }
