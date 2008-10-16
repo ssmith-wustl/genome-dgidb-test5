@@ -128,6 +128,14 @@ sub execute {
 	    ) = split /\s+/, $line;
 	
 	my $seq_strand = $seq_start > $seq_end ? -1 : 1;
+
+#some rfam id's (RF00079, BACEGGDFTB_Contig301.1 ) are coming back with a semicolon on the end messing up pattern matching.
+
+	if ( $rfam_id =~ /$;/ ) {
+
+	    $rfam_id = s/;//;
+	
+	}
 	
 	my $rfam_prod = $rfam_basket{$rfam_id};
 	
