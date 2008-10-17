@@ -11,7 +11,7 @@ use base qw(GAP::Job);
 
 sub new {
 
-    my ($class, $job_id, $seq, $mask_ref, $db, $expansion, $mask_char, $bit_score) = @_;
+    my ($class, $job_id, $seq, $mask_ref, $db, $core_num, $expansion, $mask_char, $bit_score) = @_;
 
     
     my $self = { };
@@ -49,6 +49,12 @@ sub new {
 
     $self->{_db} = $db;
 
+    unless (defined($core_num)) {
+	croak 'missing number of cores to run blast in Job!';
+    }
+
+    $self->{_core_num} = $core_num;
+
     unless (defined($expansion)) {
         $expansion = 300;
     }
@@ -79,14 +85,15 @@ sub execute {
  
     $self->SUPER::execute(@_);
 
-
     $self->_mask_seq();
+
+    my $core_num = $self->{_core_num};
 
     my $factory = Bio::Tools::Run::StandAloneBlast->new(
                                                         -database => $self->{_db},
                                                         -expect   => '1e-6',
                                                         -p        => 'blastx',
-                                                        -a        => 2,
+                                                        -a        => $core_num,
                                                         -b        => 1500,
                                                         -v        => 1500,
                                                     );
