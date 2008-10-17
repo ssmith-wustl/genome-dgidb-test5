@@ -357,15 +357,24 @@ sub _transcript_annotation_for_intron
 
         }
         elsif($snp->{start}<=($structure_start+9)||$snp->{stop}>=($structure_stop-9)){
-            $trv_type="splice_segion_". (lc $snp->{type});
+            $trv_type="splice_region_". (lc $snp->{type});
         }
         else {
             $trv_type="intronic";
         }
-    # FIXME: the original code returned $anno here, which contained the trv type etc. Do we continue here? I assume so.
+
+        return
+        (
+            strand => $strand,
+            c_position => 'c.' . 'NULL',
+            trv_type => $trv_type,
+            amino_acid_length => length( $transcript->protein->amino_acid_seq ),
+            amino_acid_change => 'NULL',
+        );
+        #TODO  make sure it's okay to return early w/ null c. position
     }
     #end xshi
-    
+
     my $exon_pos = $transcript->length_of_cds_exons_before_structure_at_position($snp->{start}, $strand);
     my $pre_start = abs( $snp->{start} - $oriented_structure_start ) + 1;
     my $pre_end = abs( $snp->{stop} - $oriented_structure_start ) + 1;
@@ -447,9 +456,9 @@ sub _transcript_annotation_for_intron
 sub _transcript_annotation_for_cds_exon
 {
     my ($self, $transcript, $snp) = @_;
-    
+
     my $strand = $transcript->strand;
-    
+
     my $main_structure = $transcript->structure_at_position( $snp->{start} );
     #my $main_structure = $transcript->sub_structure_window->main_structure;
     my $structure_start = $main_structure->structure_start;
@@ -496,7 +505,7 @@ sub _transcript_annotation_for_cds_exon
     my $aa_be = substr($amino_acid_seq, $pro_start - 1, 1);
     $aa_be = "*" if $aa_be eq "" or $aa_be eq "X";
     my $amino_acid_change = "p." . $aa_be . $pro_start;
-    
+
 #modifications from xshi...
     my $trv_type;
     my $snp_size=1; 
@@ -575,9 +584,9 @@ sub _transcript_annotation_for_cds_exon
 
     my $conservation = $self->_ucsc_cons_annotation($snp);
     my $pdom = $self->_protein_domain($snp,
-            $transcript->gene,
-            $transcript->transcript_name,
-            $amino_acid_change);
+        $transcript->gene,
+        $transcript->transcript_name,
+        $amino_acid_change);
 
     return 
     (
@@ -725,17 +734,17 @@ sub get_max_ord
     my $ord="ordinal";
     my ($max)=MPSampleData::TranscriptSubStructure->retrieve_from_sql
     (
-     sprintf
-     (
-      "transcript_id = ? AND structure_type = ? order by %s %s",
-      $ord,
-      $sort,
-      ),
-     $tr_id,
-     $type,
-     
-     );
-    
+        sprintf
+        (
+            "transcript_id = ? AND structure_type = ? order by %s %s",
+            $ord,
+            $sort,
+        ),
+        $tr_id,
+        $type,
+
+    );
+
     return $max->$ord if ($max);
     return 0;
 }
@@ -788,226 +797,226 @@ sub TranslationCodon1LetterAA {
     my($codon) = @_;
 
     $codon = uc $codon;
- 
+
     my(%genetic_code) = (
-    
-    'TCA' => 'S',    # Serine
-    'TCC' => 'S',    # Serine
-    'TCG' => 'S',    # Serine
-    'TCT' => 'S',    # Serine
-    'TTC' => 'F',    # Phenylalanine
-    'TTT' => 'F',    # Phenylalanine
-    'TTA' => 'L',    # Leucine
-    'TTG' => 'L',    # Leucine
-    'TAC' => 'Y',    # Tyrosine
-    'TAT' => 'Y',    # Tyrosine
-    'TAA' => 'X',    # Stop
-    'TAG' => 'X',    # Stop
-    'TGC' => 'C',    # Cysteine
-    'TGT' => 'C',    # Cysteine
-    'TGA' => 'X',    # Stop
-    'TGG' => 'W',    # Tryptophan
-    'CTA' => 'L',    # Leucine
-    'CTC' => 'L',    # Leucine
-    'CTG' => 'L',    # Leucine
-    'CTT' => 'L',    # Leucine
-    'CCA' => 'P',    # Proline
-    'CCC' => 'P',    # Proline
-    'CCG' => 'P',    # Proline
-    'CCT' => 'P',    # Proline
-    'CAC' => 'H',    # Histidine
-    'CAT' => 'H',    # Histidine
-    'CAA' => 'Q',    # Glutamine
-    'CAG' => 'Q',    # Glutamine
-    'CGA' => 'R',    # Arginine
-    'CGC' => 'R',    # Arginine
-    'CGG' => 'R',    # Arginine
-    'CGT' => 'R',    # Arginine
-    'ATA' => 'I',    # Isoleucine
-    'ATC' => 'I',    # Isoleucine
-    'ATT' => 'I',    # Isoleucine
-    'ATG' => 'M',    # Methionine
-    'ACA' => 'T',    # Threonine
-    'ACC' => 'T',    # Threonine
-    'ACG' => 'T',    # Threonine
-    'ACT' => 'T',    # Threonine
-    'AAC' => 'N',    # Asparagine
-    'AAT' => 'N',    # Asparagine
-    'AAA' => 'K',    # Lysine
-    'AAG' => 'K',    # Lysine
-    'AGC' => 'S',    # Serine
-    'AGT' => 'S',    # Serine
-    'AGA' => 'R',    # Arginine
-    'AGG' => 'R',    # Arginine
-    'GTA' => 'V',    # Valine
-    'GTC' => 'V',    # Valine
-    'GTG' => 'V',    # Valine
-    'GTT' => 'V',    # Valine
-    'GCA' => 'A',    # Alanine
-    'GCC' => 'A',    # Alanine
-    'GCG' => 'A',    # Alanine
-    'GCT' => 'A',    # Alanine
-    'GAC' => 'D',    # Aspartic Acid
-    'GAT' => 'D',    # Aspartic Acid
-    'GAA' => 'E',    # Glutamic Acid
-    'GAG' => 'E',    # Glutamic Acid
-    'GGA' => 'G',    # Glycine
-    'GGC' => 'G',    # Glycine
-    'GGG' => 'G',    # Glycine
-    'GGT' => 'G',    # Glycine
-    '-TA' => 'indel', #Indel
-    '-TC' => 'indel', #Indel
-    '-TG' => 'indel', #Indel
-    '-TT' => 'indel', #Indel
-    '-CA' => 'indel', #Indel
-    '-CC' => 'indel', #Indel
-    '-CG' => 'indel', #Indel
-    '-CT' => 'indel', #Indel
-    '-AC' => 'indel', #Indel
-    '-AT' => 'indel', #Indel
-    '-AA' => 'indel', #Indel
-    '-AG' => 'indel', #Indel
-    '-GA' => 'indel', #Indel
-    '-GC' => 'indel', #Indel
-    '-GG' => 'indel', #Indel
-    '-GT' => 'indel', #Indel
-    'T-A' => 'indel', #Indel
-    'T-C' => 'indel', #Indel
-    'T-G' => 'indel', #Indel
-    'T-T' => 'indel', #Indel
-    'C-A' => 'indel', #Indel
-    'C-C' => 'indel', #Indel
-    'C-G' => 'indel', #Indel
-    'C-T' => 'indel', #Indel
-    'A-C' => 'indel', #Indel
-    'A-T' => 'indel', #Indel
-    'A-A' => 'indel', #Indel
-    'A-G' => 'indel', #Indel
-    'G-A' => 'indel', #Indel
-    'G-C' => 'indel', #Indel
-    'G-G' => 'indel', #Indel
-    'G-T' => 'indel', #Indel
-    'TA-' => 'indel', #Indel
-    'TC-' => 'indel', #Indel
-    'TG-' => 'indel', #Indel
-    'TT-' => 'indel', #Indel
-    'CA-' => 'indel', #Indel
-    'CC-' => 'indel', #Indel
-    'CG-' => 'indel', #Indel
-    'CT-' => 'indel', #Indel
-    'AC-' => 'indel', #Indel
-    'AT-' => 'indel', #Indel
-    'AA-' => 'indel', #Indel
-    'AG-' => 'indel', #Indel
-    'GA-' => 'indel', #Indel
-    'GC-' => 'indel', #Indel
-    'GG-' => 'indel', #Indel
-    'GT-' => 'indel', #Indel
-    '+TA' => 'refseq allele', #No Indel
-    '+TC' => 'refseq allele', #No Indel
-    '+TG' => 'refseq allele', #No Indel
-    '+TT' => 'refseq allele', #No Indel
-    '+CA' => 'refseq allele', #No Indel
-    '+CC' => 'refseq allele', #No Indel
-    '+CG' => 'refseq allele', #No Indel
-    '+CT' => 'refseq allele', #No Indel
-    '+AC' => 'refseq allele', #No Indel
-    '+AT' => 'refseq allele', #No Indel
-    '+AA' => 'refseq allele', #No Indel
-    '+AG' => 'refseq allele', #No Indel
-    '+GA' => 'refseq allele', #No Indel
-    '+GC' => 'refseq allele', #No Indel
-    '+GG' => 'refseq allele', #No Indel
-    '+GT' => 'refseq allele', #No Indel
-    'T+A' => 'refseq allele', #No Indel
-    'T+C' => 'refseq allele', #No Indel
-    'T+G' => 'refseq allele', #No Indel
-    'T+T' => 'refseq allele', #No Indel
-    'C+A' => 'refseq allele', #No Indel
-    'C+C' => 'refseq allele', #No Indel
-    'C+G' => 'refseq allele', #No Indel
-    'C+T' => 'refseq allele', #No Indel
-    'A+C' => 'refseq allele', #No Indel
-    'A+T' => 'refseq allele', #No Indel
-    'A+A' => 'refseq allele', #No Indel
-    'A+G' => 'refseq allele', #No Indel
-    'G+A' => 'refseq allele', #No Indel
-    'G+C' => 'refseq allele', #No Indel
-    'G+G' => 'refseq allele', #No Indel
-    'G+T' => 'refseq allele', #No Indel
-    'TA+' => 'refseq allele', #No Indel
-    'TC+' => 'refseq allele', #No Indel
-    'TG+' => 'refseq allele', #No Indel
-    'TT+' => 'refseq allele', #No Indel
-    'CA+' => 'refseq allele', #No Indel
-    'CC+' => 'refseq allele', #No Indel
-    'CG+' => 'refseq allele', #No Indel
-    'CT+' => 'refseq allele', #No Indel
-    'AC+' => 'refseq allele', #No Indel
-    'AT+' => 'refseq allele', #No Indel
-    'AA+' => 'refseq allele', #No Indel
-    'AG+' => 'refseq allele', #No Indel
-    'GA+' => 'refseq allele', #No Indel
-    'GC+' => 'refseq allele', #No Indel
-    'GG+' => 'refseq allele', #No Indel
-    'GT+' => 'refseq allele', #No Indel
-    'XTA' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XTC' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XTG' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XTT' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XCA' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XCC' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XCG' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XCT' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XAC' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XAT' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XAA' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XAG' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XGA' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XGC' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XGG' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'XGT' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'TXA' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'TXC' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'TXG' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'TXT' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'CXA' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'CXC' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'CXG' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'CXT' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'AXC' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'AXT' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'AXA' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'AXG' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'GXA' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'GXC' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'GXG' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'GXT' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'TAX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'TCX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'TGX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'TTX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'CAX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'CCX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'CGX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'CTX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'ACX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'ATX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'AAX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'AGX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'GAX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'GCX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'GGX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    'GTX' => 'Z', #Discrepant Genotypes in Overlapping Data
+
+        'TCA' => 'S',    # Serine
+        'TCC' => 'S',    # Serine
+        'TCG' => 'S',    # Serine
+        'TCT' => 'S',    # Serine
+        'TTC' => 'F',    # Phenylalanine
+        'TTT' => 'F',    # Phenylalanine
+        'TTA' => 'L',    # Leucine
+        'TTG' => 'L',    # Leucine
+        'TAC' => 'Y',    # Tyrosine
+        'TAT' => 'Y',    # Tyrosine
+        'TAA' => 'X',    # Stop
+        'TAG' => 'X',    # Stop
+        'TGC' => 'C',    # Cysteine
+        'TGT' => 'C',    # Cysteine
+        'TGA' => 'X',    # Stop
+        'TGG' => 'W',    # Tryptophan
+        'CTA' => 'L',    # Leucine
+        'CTC' => 'L',    # Leucine
+        'CTG' => 'L',    # Leucine
+        'CTT' => 'L',    # Leucine
+        'CCA' => 'P',    # Proline
+        'CCC' => 'P',    # Proline
+        'CCG' => 'P',    # Proline
+        'CCT' => 'P',    # Proline
+        'CAC' => 'H',    # Histidine
+        'CAT' => 'H',    # Histidine
+        'CAA' => 'Q',    # Glutamine
+        'CAG' => 'Q',    # Glutamine
+        'CGA' => 'R',    # Arginine
+        'CGC' => 'R',    # Arginine
+        'CGG' => 'R',    # Arginine
+        'CGT' => 'R',    # Arginine
+        'ATA' => 'I',    # Isoleucine
+        'ATC' => 'I',    # Isoleucine
+        'ATT' => 'I',    # Isoleucine
+        'ATG' => 'M',    # Methionine
+        'ACA' => 'T',    # Threonine
+        'ACC' => 'T',    # Threonine
+        'ACG' => 'T',    # Threonine
+        'ACT' => 'T',    # Threonine
+        'AAC' => 'N',    # Asparagine
+        'AAT' => 'N',    # Asparagine
+        'AAA' => 'K',    # Lysine
+        'AAG' => 'K',    # Lysine
+        'AGC' => 'S',    # Serine
+        'AGT' => 'S',    # Serine
+        'AGA' => 'R',    # Arginine
+        'AGG' => 'R',    # Arginine
+        'GTA' => 'V',    # Valine
+        'GTC' => 'V',    # Valine
+        'GTG' => 'V',    # Valine
+        'GTT' => 'V',    # Valine
+        'GCA' => 'A',    # Alanine
+        'GCC' => 'A',    # Alanine
+        'GCG' => 'A',    # Alanine
+        'GCT' => 'A',    # Alanine
+        'GAC' => 'D',    # Aspartic Acid
+        'GAT' => 'D',    # Aspartic Acid
+        'GAA' => 'E',    # Glutamic Acid
+        'GAG' => 'E',    # Glutamic Acid
+        'GGA' => 'G',    # Glycine
+        'GGC' => 'G',    # Glycine
+        'GGG' => 'G',    # Glycine
+        'GGT' => 'G',    # Glycine
+        '-TA' => 'indel', #Indel
+        '-TC' => 'indel', #Indel
+        '-TG' => 'indel', #Indel
+        '-TT' => 'indel', #Indel
+        '-CA' => 'indel', #Indel
+        '-CC' => 'indel', #Indel
+        '-CG' => 'indel', #Indel
+        '-CT' => 'indel', #Indel
+        '-AC' => 'indel', #Indel
+        '-AT' => 'indel', #Indel
+        '-AA' => 'indel', #Indel
+        '-AG' => 'indel', #Indel
+        '-GA' => 'indel', #Indel
+        '-GC' => 'indel', #Indel
+        '-GG' => 'indel', #Indel
+        '-GT' => 'indel', #Indel
+        'T-A' => 'indel', #Indel
+        'T-C' => 'indel', #Indel
+        'T-G' => 'indel', #Indel
+        'T-T' => 'indel', #Indel
+        'C-A' => 'indel', #Indel
+        'C-C' => 'indel', #Indel
+        'C-G' => 'indel', #Indel
+        'C-T' => 'indel', #Indel
+        'A-C' => 'indel', #Indel
+        'A-T' => 'indel', #Indel
+        'A-A' => 'indel', #Indel
+        'A-G' => 'indel', #Indel
+        'G-A' => 'indel', #Indel
+        'G-C' => 'indel', #Indel
+        'G-G' => 'indel', #Indel
+        'G-T' => 'indel', #Indel
+        'TA-' => 'indel', #Indel
+        'TC-' => 'indel', #Indel
+        'TG-' => 'indel', #Indel
+        'TT-' => 'indel', #Indel
+        'CA-' => 'indel', #Indel
+        'CC-' => 'indel', #Indel
+        'CG-' => 'indel', #Indel
+        'CT-' => 'indel', #Indel
+        'AC-' => 'indel', #Indel
+        'AT-' => 'indel', #Indel
+        'AA-' => 'indel', #Indel
+        'AG-' => 'indel', #Indel
+        'GA-' => 'indel', #Indel
+        'GC-' => 'indel', #Indel
+        'GG-' => 'indel', #Indel
+        'GT-' => 'indel', #Indel
+        '+TA' => 'refseq allele', #No Indel
+        '+TC' => 'refseq allele', #No Indel
+        '+TG' => 'refseq allele', #No Indel
+        '+TT' => 'refseq allele', #No Indel
+        '+CA' => 'refseq allele', #No Indel
+        '+CC' => 'refseq allele', #No Indel
+        '+CG' => 'refseq allele', #No Indel
+        '+CT' => 'refseq allele', #No Indel
+        '+AC' => 'refseq allele', #No Indel
+        '+AT' => 'refseq allele', #No Indel
+        '+AA' => 'refseq allele', #No Indel
+        '+AG' => 'refseq allele', #No Indel
+        '+GA' => 'refseq allele', #No Indel
+        '+GC' => 'refseq allele', #No Indel
+        '+GG' => 'refseq allele', #No Indel
+        '+GT' => 'refseq allele', #No Indel
+        'T+A' => 'refseq allele', #No Indel
+        'T+C' => 'refseq allele', #No Indel
+        'T+G' => 'refseq allele', #No Indel
+        'T+T' => 'refseq allele', #No Indel
+        'C+A' => 'refseq allele', #No Indel
+        'C+C' => 'refseq allele', #No Indel
+        'C+G' => 'refseq allele', #No Indel
+        'C+T' => 'refseq allele', #No Indel
+        'A+C' => 'refseq allele', #No Indel
+        'A+T' => 'refseq allele', #No Indel
+        'A+A' => 'refseq allele', #No Indel
+        'A+G' => 'refseq allele', #No Indel
+        'G+A' => 'refseq allele', #No Indel
+        'G+C' => 'refseq allele', #No Indel
+        'G+G' => 'refseq allele', #No Indel
+        'G+T' => 'refseq allele', #No Indel
+        'TA+' => 'refseq allele', #No Indel
+        'TC+' => 'refseq allele', #No Indel
+        'TG+' => 'refseq allele', #No Indel
+        'TT+' => 'refseq allele', #No Indel
+        'CA+' => 'refseq allele', #No Indel
+        'CC+' => 'refseq allele', #No Indel
+        'CG+' => 'refseq allele', #No Indel
+        'CT+' => 'refseq allele', #No Indel
+        'AC+' => 'refseq allele', #No Indel
+        'AT+' => 'refseq allele', #No Indel
+        'AA+' => 'refseq allele', #No Indel
+        'AG+' => 'refseq allele', #No Indel
+        'GA+' => 'refseq allele', #No Indel
+        'GC+' => 'refseq allele', #No Indel
+        'GG+' => 'refseq allele', #No Indel
+        'GT+' => 'refseq allele', #No Indel
+        'XTA' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XTC' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XTG' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XTT' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XCA' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XCC' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XCG' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XCT' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XAC' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XAT' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XAA' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XAG' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XGA' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XGC' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XGG' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'XGT' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'TXA' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'TXC' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'TXG' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'TXT' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'CXA' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'CXC' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'CXG' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'CXT' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'AXC' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'AXT' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'AXA' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'AXG' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'GXA' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'GXC' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'GXG' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'GXT' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'TAX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'TCX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'TGX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'TTX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'CAX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'CCX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'CGX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'CTX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'ACX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'ATX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'AAX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'AGX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'GAX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'GCX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'GGX' => 'Z', #Discrepant Genotypes in Overlapping Data
+        'GTX' => 'Z', #Discrepant Genotypes in Overlapping Data
     );
 
     if(exists $genetic_code{$codon}) {
         return $genetic_code{$codon};
     }else{
 
-            print STDERR "Undefined codon \"$codon\" returned U!!\n";
-            #exit;
-	    return "U";
+        print STDERR "Undefined codon \"$codon\" returned U!!\n";
+        #exit;
+        return "U";
 
     }
 }
@@ -1117,25 +1126,25 @@ while ( my $line = $in_fh->getline )
 
 =item I<priority>           Priority of the trv_type (only from get_prioritized_annotations)
 
-    =item I<gene_name>          Gene name of the transcript
+=item I<gene_name>          Gene name of the transcript
 
-    =item I<intensity>          Gene intenstiy
+=item I<intensity>          Gene intenstiy
 
-    =item I<detection>          Gene detection
+=item I<detection>          Gene detection
 
-    =item I<amino_acid_length>  Amino acid length of the protein
+=item I<amino_acid_length>  Amino acid length of the protein
 
-    =item I<amino_acid_change>  Resultant change in amino acid in snp is in cds_exon
+=item I<amino_acid_change>  Resultant change in amino acid in snp is in cds_exon
 
-    =item I<variations>         Hashref w/ keys of known variations at the snp position
+=item I<variations>         Hashref w/ keys of known variations at the snp position
 
-    =back
+=back
 
-    =head1 See Also
+=head1 See Also
 
     B<Genome::DB::*>, B<Genome::DB::Window::*>, B<Genome::Model::Command::Report>
 
-    =head1 Disclaimer
+=head1 Disclaimer
 
     Copyright (C) 2008 Washington University Genome Sequencing Center
 
@@ -1147,7 +1156,7 @@ while ( my $line = $in_fh->getline )
 
     B<Xiaoqi Shi> I<ebelter@watson.wustl.edu>
 
-    =cut
+=cut
 
 #$HeadURL$
 #$Id$
