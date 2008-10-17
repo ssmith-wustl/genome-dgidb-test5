@@ -193,6 +193,7 @@ sub test_model_from_params {
     my $class = join('',@uc_words);
     $params{bare_args} = [];
     $params{processing_profile_name} = $class;
+    $params{'subject_name'} = 'Bob';
 
     my %pp_params = (
                      type_name => $params{model_name},
