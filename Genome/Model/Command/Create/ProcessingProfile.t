@@ -30,6 +30,10 @@ my %pp_params = (
                                                                                                sequencing_platform => '454',
                                                                                                assembler => 'newbler',
                                                                                                sequencing_center => 'gsc',
+                                                                                               assembly_size => 12345,
+                                                                                               amplification_forward_primer => 'something',
+                                                                                               amplification_reverse_primer => 'somethingelse',
+                                                                                               ribosomal_subunit => 16,
                                                                                            },
                  'Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment' => {
                                                                                              profile_name => 'test_reference_alignment',
