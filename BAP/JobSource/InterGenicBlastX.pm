@@ -23,6 +23,7 @@ sub new {
         $sequence_source,
         $feature_source,
         $blastx_db,
+	$core_num,
     ) = @args;
     
     unless (defined($sequence_source)) {
@@ -45,6 +46,10 @@ sub new {
         croak 'missing blastx db!';
     }
     
+    unless (defined($core_num)) {
+	croak 'missing number of cores to run blast in JobSource!';
+    }
+
     $self->{_feature_collection} = Bio::SeqFeature::Collection->new();
     
     my %features = ( );
@@ -75,6 +80,7 @@ sub new {
                                                                 $seq,
                                                                 $mask_ref,
                                                                 $blastx_db,
+								$core_num,
                                                             );
         
     }
