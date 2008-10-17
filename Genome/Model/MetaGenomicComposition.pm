@@ -146,6 +146,7 @@ sub header_for_subclone {
 
     return ">$subclone\n" unless $self->name =~ /ocean/i;
 
+    $subclone =~ s/^HMPB\-//;
     my ($match) = fgrep { /$subclone/ } "/gsc/var/lib/pwb/ocean_lookup_for_genome_model.txt"; 
     my ($line) = values %{$match->{matches}};
 
