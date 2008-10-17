@@ -319,8 +319,17 @@ sub _cat_files {
 sub verify_successful_completion {
     my $self = shift;
 
-    unless (-s $self->alignment_file && -s $self->aligner_output_file) {
-        $self->error_message("Failed to verify successfule completion of event ". $self->id);
+    my $align_file = $self->alignment_file;
+    unless (-f $align_file && -s $self->alignment_file) {
+        $self->error_message("Failed to verify successfule completion of event ". $self->id .
+                             "\nFile $align_file does not exist or has 0 size");
+        return;
+    }
+
+    my $output_file = $self->aligner_output_file;
+    unless(-f $output_file && -s $output_file) {
+        $self->error_message("Failed to verify successfule completion of event ". $self->id .
+                             "\nFile $output_file does not exist or has 0 size");
         return;
     }
     return 1;
