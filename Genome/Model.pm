@@ -131,7 +131,9 @@ sub compatible_input_read_sets {
                                                                                   value => $self->subject_name
                                                                               },
                                                         );
-        %instrument_data_ids = map { $_->id => 1 } @dna_read_sets;
+        for (@dna_read_sets) {
+            $instrument_data_ids{$_->id} = 1;
+        }
     }
 
     my @instrument_data_ids = keys %instrument_data_ids;
