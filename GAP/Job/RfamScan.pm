@@ -131,7 +131,7 @@ sub execute {
 
 #some rfam id's (RF00079, BACEGGDFTB_Contig301.1 ) are coming back with a semicolon on the end messing up pattern matching.
 
-	if ( $rfam_id =~ /$;/ ) {
+	if ( $rfam_id =~ /;/ ) {
 
 	    $rfam_id = s/;//;
 	
