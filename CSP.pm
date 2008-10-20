@@ -675,7 +675,6 @@ my %csp_priority = (
     'transfer solid run'                      => 1,
     'build sequence db'                       => 1,
     'add amplification target to region of interest' => 2,
-    'annotate reference sequence'             => 1,
     'add region of interest to htmp project'  => 1,
     'select amplicons for tilepath'           => 1,
     'build project tilepath'                  => 1,
