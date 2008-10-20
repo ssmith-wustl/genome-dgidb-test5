@@ -33,7 +33,7 @@ EOS
 }
 
 sub command_subclassing_model_property {
-    return 'read_filter';
+    return 'read_filter_name';
 }
 
 sub should_bsub { 1;}
