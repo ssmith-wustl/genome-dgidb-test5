@@ -670,7 +670,6 @@ my %csp_priority = (
 #    'copy run'                                => 1,
 #    'remove run'                              => 1,
     'import sequence annotation'              => 2,
-    'allocate disk space'                     => 1,
     'reallocate disk space'                   => 1,
     'deallocate disk space'                   => 1,
     'transfer solid run'                      => 1,
