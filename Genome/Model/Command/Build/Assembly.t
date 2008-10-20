@@ -38,16 +38,16 @@ BEGIN {
 
 my %pp_1_params = (
                  name => 'test_assembly_processing_profile_1',
-                 assembler => 'newbler',
+                 assembler_name => 'newbler',
                  assembler_params => '-a 0',
-                 read_filter => 'seqclean',
-                 read_trimmer => 'sfffile',
+                 read_filter_name => 'seqclean',
+                 read_trimmer_name => 'sfffile',
                  sequencing_platform => '454',
              );
 
 my %pp_2_params = (
                  name => 'test_assembly_processing_profile_2',
-                 assembler => 'newbler',
+                 assembler_name => 'newbler',
                  assembler_params => '-a 0',
                  sequencing_platform => '454',
              );
