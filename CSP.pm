@@ -677,7 +677,6 @@ my %csp_priority = (
     'add amplification target to region of interest' => 2,
     'add region of interest to htmp project'  => 1,
     'select amplicons for tilepath'           => 1,
-    'build project tilepath'                  => 1,
     'add amplicon to amplification target'    => 1,
     'add capture tag to amplification target' => 1,
 
