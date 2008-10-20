@@ -26,6 +26,7 @@ sub compare_position{
     }
 }
 
+# Sorts the chromosomes as X, Y, then 1-22... kinda backwards but it agrees with system sort
 sub compare_chromosome{
     my ($chr1, $chr2) = @_;
     unless (defined $chr1 and defined $chr2){
@@ -35,10 +36,10 @@ sub compare_chromosome{
         if ($chr2 =~ /^[xyXY]$/ ){
             return uc $chr1 cmp uc $chr2;
         }else{
-            return 1; #chr1 = XY > any digit chrom
+            return -1; #chr1 = digit < any XY
         }
     }elsif($chr2 =~ /^[xyXY]$/ ){
-        return -1; #chr1 = digit < any XY
+        return 1; #chr1 = XY > any digit chrom
     }else{
         return $chr1 <=> $chr2;
     }
