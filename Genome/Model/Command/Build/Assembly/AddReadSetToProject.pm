@@ -33,7 +33,7 @@ EOS
 }
 
 sub command_subclassing_model_property {
-    return 'assembler';
+    return 'assembler_name';
 }
 
 sub should_bsub { 1;}
