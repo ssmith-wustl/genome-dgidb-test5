@@ -133,7 +133,11 @@ sub execute {
 
 	if ( $rfam_id =~ /;/ ) {
 
-	    $rfam_id = s/\;//;
+	    my $check_id = \$rfam_id;
+
+	    $check_id = s/;//;
+	    
+	    $rfam_id = $check_id;
 	
 	}
 	
