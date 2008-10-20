@@ -33,10 +33,10 @@ my $pp_name = '454_ReferenceAlignment_test';
 my %params = (
               profile_name => $pp_name,
               dna_type => 'genomic dna',
-              genotyper => 'breakPointRead454',
-              indel_finder => 'breakPointRead454',
-              read_aligner => 'blat',
-              reference_sequence => 'refseq-for-test',
+              genotyper_name => 'breakPointRead454',
+              indel_finder_name => 'breakPointRead454',
+              read_aligner_name => 'blat',
+              reference_sequence_name => 'refseq-for-test',
               sequencing_platform => '454',
               bare_args => [],
           );

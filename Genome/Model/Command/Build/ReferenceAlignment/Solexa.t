@@ -56,10 +56,10 @@ $add_reads_test->create_test_pp(
     dna_type => 'genomic dna',
     align_dist_threshold => '0',
     multi_read_fragment_strategy => 'eliminate start site duplicates',
-    indel_finder => 'maq0_6_5',
-    genotyper => 'maq0_6_5',
-    read_aligner => 'maq0_6_5',
-    reference_sequence => 'refseq-for-test',
+    indel_finder_name => 'maq0_6_5',
+    genotyper_name => 'maq0_6_5',
+    read_aligner_name => 'maq0_6_5',
+    reference_sequence_name => 'refseq-for-test',
     #filter_ruleset_name => 'basic',
 );
 
