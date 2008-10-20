@@ -33,6 +33,22 @@ EOS
 
 sub sub_command_sort_position { 1 }
 
+sub resolve_property_hash_from_target_class {
+    my $proto = shift;
+    my $class = ref($proto) || $proto;
+    my $target_class = $class->target_class;
+    my $target_class_object = $target_class->get_class_object;
+    my %PROPERTIES;
+    for my $property ( $target_class_object->get_property_objects ) {
+        $PROPERTIES{ $property->property_name } = {
+                                                   type => $property->property_name,
+                                                   is_optional => $property->is_optional,
+                                                   doc => $property->doc,
+                                               };
+    };
+    return %PROPERTIES;
+}
+
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
