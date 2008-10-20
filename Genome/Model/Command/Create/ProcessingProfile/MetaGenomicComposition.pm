@@ -11,21 +11,12 @@ require Genome::ProcessingProfile::MetaGenomicComposition;
 require IO::String;
 require UR::Object::Command::List;
 
-# Derive properties from processing profile class we are creating.
-# Abstract out, put in a method
-my %processing_profile_properties;
-for my $property ( __PACKAGE__->target_class->get_class_object->get_property_objects ) {
-    $processing_profile_properties{ $property->property_name } = {
-        type => $property->property_name,
-        is_optional => $property->is_optional,
-        doc => $property->doc,
-    };
-}
+my %PROPERTIES = Genome::Model::Command::Create::ProcessingProfile::resolve_property_hash_from_target_class(__PACKAGE__);
 
 class Genome::Model::Command::Create::ProcessingProfile::MetaGenomicComposition {
     is => 'Genome::Model::Command::Create::ProcessingProfile',
     sub_classification_method_name => 'class',
-    has => [ %processing_profile_properties ],
+    has => [ %PROPERTIES ],
 };
 
 sub target_class {
