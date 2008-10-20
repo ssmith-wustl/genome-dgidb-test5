@@ -37,16 +37,6 @@ class Genome::Model::ReadSet {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-sub sample_data_directory {
-    my $self = shift;
-    return $self->full_path .'/'. $self->sample_name;
-}
-
-sub read_set_data_directory {
-    my $self = shift;
-    return $self->sample_data_directory .'/'. $self->run_name .'/'. $self->subset_name;
-}
-
 sub read_set_alignment_directory {
     my $self = shift;
 
