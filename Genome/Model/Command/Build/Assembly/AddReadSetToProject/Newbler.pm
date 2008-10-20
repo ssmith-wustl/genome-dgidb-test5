@@ -41,12 +41,9 @@ sub execute {
     $DB::single = $DB::stopper;
 
     my $model = $self->model;
-    my $test = $model->test;
-
     my $assembly_directory = $model->assembly_directory;
     unless (-d $assembly_directory) {
         my $new_assembly = Genome::Model::Tools::454::Newbler::NewAssembly->create(
-                                                                                   test => $test,
                                                                                    dir => $model->data_directory,
                                                                                );
         unless ($new_assembly->execute) {
@@ -55,7 +52,6 @@ sub execute {
         }
     }
     my $add_run = Genome::Model::Tools::454::Newbler::AddRun->create(
-                                                                     test => $test,
                                                                      dir => $model->data_directory,
                                                                      runs => [$self->sff_file],
                                                                      is_paired_end => $self->read_set->is_paired_end,
