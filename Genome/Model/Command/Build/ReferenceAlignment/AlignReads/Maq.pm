@@ -317,8 +317,8 @@ sub prepare_input {
     # handle fragment or paired-end data
     my @solexa_output_paths;
     if($read_set->is_paired_end) {
-        push @solexa_output_paths, "$gerald_directory/s_${lane}_2_sequence.txt";
         push @solexa_output_paths, "$gerald_directory/s_${lane}_1_sequence.txt";
+        push @solexa_output_paths, "$gerald_directory/s_${lane}_2_sequence.txt";
     }
     else {
         push @solexa_output_paths, "$gerald_directory/s_${lane}_sequence.txt";
@@ -349,15 +349,13 @@ sub prepare_input {
     my @bfq_pathnames;
     my $counter=0;
     for my $solexa_output_path (@solexa_output_paths) {
-        unless ($fastq_pathname) {
-            $fastq_pathname = $self->create_temp_file_path('fastq' . $counter);
+           $fastq_pathname = $self->create_temp_file_path('fastq' . $counter);
             $self->shellcmd(
                 cmd => "$aligner_path sol2sanger $solexa_output_path $fastq_pathname",
                 input_files => [$solexa_output_path],
                 output_files => [$fastq_pathname],
                 skip_if_output_is_present => 1,
             );
-        }
 
         # remove any reads which have 15 As in a row.
         unless ($read_set->is_paired_end) {
@@ -442,13 +440,13 @@ $DB::single = $DB::stopper;
         }
         return 1;
     }
-
+    $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
     my @bfq_pathnames = $self->prepare_input($self->read_set,$self->is_eliminate_all_duplicates);
 
 
     my $read_set_alignment_directory = $self->read_set_link->read_set_alignment_directory;
     $self->create_directory($read_set_alignment_directory);
-
+    $self->create_file("Processing Marker", $read_set_alignment_directory . "/processing");
     my $aligner_path = $self->aligner_path('read_aligner_name');
     my $aligner_params = $model->read_aligner_params || '';
 
