@@ -665,7 +665,6 @@ my %csp_priority = (
     'configure image analysis and base call'  => 1,
     'configure alignment'                     => 1,
     'generate lane summary'                   => 1,
-    'create short read format'                => 1,
     'analysis completed'                      => 1,
     'import sequence'                         => 1,
 #    'copy run'                                => 1,
@@ -740,7 +739,7 @@ sub _cron_setup {
         . " as " . getpwuid($<) . " with pid $$"
     );
 
-    chmod( 0664, $logfile ) or die "chmod $logfile failed";
+    chmod( 0664, $logfile );
 
     # Don't even start running if we're locked
     # (But at least write to the log file)
