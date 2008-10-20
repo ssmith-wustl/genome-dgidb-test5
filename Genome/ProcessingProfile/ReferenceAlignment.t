@@ -16,19 +16,18 @@ BEGIN {
 
 my %params = (
               profile_name => 1,
-              read_aligner => 'maq0_6_3',
-              reference_sequence => 'test ref seq',
+              read_aligner_name => 'maq0_6_3',
+              reference_sequence_name => 'test ref seq',
               dna_type => 'genomic dna',
+              sequencing_platform => 'solexa',
               bare_args => [],
           );
 my $create_ra = Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment->create(%params);
 ok($create_ra->execute,'create first processing profile');
 
-my %get_params = (
-                  read_aligner_name => $params{read_aligner},
-                  reference_sequence_name => $params{reference_sequence},
-                  dna_type => $params{dna_type},
-              );
+my %get_params = %params;
+delete $get_params{profile_name};
+delete $get_params{bare_args};
 
 my @ras = Genome::ProcessingProfile::ReferenceAlignment->get(%get_params);
 is(scalar(@ras),1,"expected 1 reference alignment processing profile");
