@@ -32,12 +32,17 @@ sub create {
     my $self = $class->SUPER::create(@_);
     my $model = $self->model;
     my @read_sets = $model->read_sets;
-    if (!@read_sets) {
-        $self->error_message('No read sets have been added to model: '. $model->name);
-        $self->error_message("The following command will add all available read sets:\ngenome-model add-reads --model-id=".
-                             $model->id .' --all');
-        return;
+
+    # Temporary hack... PolyphredPolyscan and CombineVariants models do not have read sets...
+    unless ($model->isa("Genome::Model::PolyphredPolyscan") or $model->isa("Genome::Model::CombineVariants")) {
+        if (!@read_sets) {
+            $self->error_message('No read sets have been added to model: '. $model->name);
+            $self->error_message("The following command will add all available read sets:\ngenome-model add-reads --model-id=".
+            $model->id .' --all');
+            return;
+        }
     }
+
     return $self;
 }
 
