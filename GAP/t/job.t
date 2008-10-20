@@ -20,8 +20,7 @@ my @jobs = ( );
 {
     
     my $fasta = Bio::SeqIO->new(
-                               # -file   => 'data/BACSTEFNL_Contig694.fasta',
-				-file   => 'data/BACEGGDFTB_Contig301.1.fasta',
+                                -file   => 'data/BACSTEFNL_Contig694.fasta',
                                 -format => 'Fasta',
                             );
     
