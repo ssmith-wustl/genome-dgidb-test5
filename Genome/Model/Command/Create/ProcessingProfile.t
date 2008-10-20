@@ -19,11 +19,6 @@ BEGIN {
     use_ok('Genome::Model::Command::Create::ProcessingProfile::MicroArrayIllumina');
 }
 
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Command-Create-ProcessingProfile';
-my $genotype_submission_file = $data_dir .'/test_genotype_submission.tsv';
-my $watson_test_data = $data_dir .'/test_watson.tsv';
-my $venter_test_data = $data_dir .'/test_venter.tsv';
-
 my %pp_params = (
                  'Genome::Model::Command::Create::ProcessingProfile::MetaGenomicComposition' => {
                                                                                                profile_name => 'test_meta_genomic_composition',
@@ -37,24 +32,22 @@ my %pp_params = (
                                                                                            },
                  'Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment' => {
                                                                                              profile_name => 'test_reference_alignment',
-                                                                                             sequencing_platform => 'Solexa',
-                                                                                             read_aligner => 'maq0_6_8',
-                                                                                             reference_sequence => 'refseq-for-test',
+                                                                                             sequencing_platform => 'solexa',
+                                                                                             read_aligner_name => 'maq0_6_8',
+                                                                                             reference_sequence_name => 'refseq-for-test',
                                                                                              dna_type => 'genomic dna',
                                                                                          },
                  'Genome::Model::Command::Create::ProcessingProfile::Assembly' => {
                                                                                    profile_name => 'test_assembly',
                                                                                    sequencing_platform => '454',
-                                                                                   assembler => 'newbler',
+                                                                                   assembler_name => 'newbler',
                                                                                    assembler_params => 'test',
                                                                                },
                  'Genome::Model::Command::Create::ProcessingProfile::MicroArrayAffymetrix' => {
                                                                                                   profile_name => 'test_micro_array_affymetrix',
-                                                                                                  instrument_data => $genotype_submission_file,
                                                                                               },
                  'Genome::Model::Command::Create::ProcessingProfile::MicroArrayIllumina' => {
                                                                                                 profile_name => 'test_micro_array_illumina',
-                                                                                                instrument_data => $genotype_submission_file,
                                                                                             },
              );
 
