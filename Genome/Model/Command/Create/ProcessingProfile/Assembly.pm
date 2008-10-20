@@ -9,56 +9,13 @@ use Genome;
 use File::Path;
 use Data::Dumper;
 
+my %PROPERTIES = Genome::Model::Command::Create::ProcessingProfile::resolve_property_hash_from_target_class(__PACKAGE__);
+
 class Genome::Model::Command::Create::ProcessingProfile::Assembly {
     is => 'Genome::Model::Command::Create::ProcessingProfile',
     sub_classification_method_name => 'class',
-    has => [
-            assembler           => {
-                                    is => 'string',
-                                    doc => 'The name of the assembler to use when assembling read sets',
-                                },
-            sequencing_platform => {
-                                    is => 'string',
-                                    doc => 'The sequencing platform used to produce the read sets to be assembled',
-                                },
-    ],
-    has_optional => [
-                     assembler_params    => {
-                                             is => 'string',
-                                             doc => 'A string of parameters to pass to the assembler',
-                                         },
-                     read_filter         => {
-                                             is => 'string',
-                                             doc => 'The name of the software to use when filtering read sets',
-                                         },
-                     read_filter_params  => {
-                                             is => 'string',
-                                             doc => 'A string of parameters to pass to the read_filter',
-                                         },
-                     read_trimmer        => {
-                                             is => 'string',
-                                             doc => 'The name of the software to use when trimming read sets',
-                                         },
-                     read_trimmer_params => {
-                                             is => 'string',
-                                             doc => 'A string of parameters to pass to the read_trimmer',
-                                         },
-                 ],
-    schema_name => 'Main',
+    has => [ %PROPERTIES ],
 };
-
-sub _shell_args_property_meta {
-    # exclude this class' commands from shell arguments
-    return grep { 
-            $_->property_name ne 'model_id'
-            #not ($_->via and $_->via ne 'run') && not ($_->property_name eq 'run_id')
-        } shift->SUPER::_shell_args_property_meta(@_);
-}
-
-
-sub sub_command_sort_position {
-    3
-}
 
 sub help_brief {
     "create a new processing profile for denovo assembly"
@@ -67,7 +24,6 @@ sub help_brief {
 sub help_synopsis {
     return <<"EOS"
 genome-model processing-profile assembly create 
-                                            --profile-name test5 
 EOS
 }
 
@@ -81,25 +37,11 @@ sub target_class {
     return "Genome::ProcessingProfile::Assembly";
 }
 
-sub _validate_execute_params {
-    my $self = shift;
-    
-    unless($self->SUPER::_validate_execute_params) {
-        $self->error_message('_validate_execute_params failed for SUPER');
-        return;                        
-    }
-
-    return 1;
-}
-
 # TODO: refactor... this is copied from create/processingprofile.pm...
 sub execute {
     my $self = shift;
 
     $DB::single = $DB::stopper;
-
-    # genome model specific
-
 
     unless ($self->_validate_execute_params()) {
         $self->error_message("Failed to create processing_profile!");
@@ -108,23 +50,22 @@ sub execute {
 
     # generic: abstract out
     my %params = %{ $self->_extract_command_properties_and_duplicate_keys_for__name_properties() };
-    
+
     my $obj = $self->_create_target_class_instance_and_error_check( \%params );
     unless ($obj) {
         $self->error_message("Failed to create processing_profile!");
         return;
     }
-    
+
     if (my @problems = $obj->invalid) {
         $self->error_message("Invalid processing_profile!");
         $obj->delete;
         return;
     }
-    
+
     $self->status_message("created processing profile " . $obj->name);
     print $obj->pretty_print_text,"\n";
-    
-    
+
     return 1;
 }
 
