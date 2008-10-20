@@ -4,71 +4,27 @@ package Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment;
 use strict;
 use warnings;
 
-use above "Genome";
-use Command; 
-use Genome::Model;
+use Genome;
+
 use File::Path;
 use Data::Dumper;
+
+my %PROPERTIES = Genome::Model::Command::Create::ProcessingProfile::resolve_property_hash_from_target_class(__PACKAGE__);
 
 class Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment {
     is => 'Genome::Model::Command::Create::ProcessingProfile',
     sub_classification_method_name => 'class',
-    has => [
-		# This will probably never be specified since processing profiles are used for many models
-		# this shouldnt even be here except that we need to override this to be not required
-	align_dist_threshold         => { is => 'VARCHAR2', len => 255, is_optional => 1,
-									doc => ""},
-	dna_type                     => { is => 'VARCHAR2', len => 64, is_optional => 1,
-									doc => "The type of dna used in the reads for this model, probably 'genomic dna' or 'cdna'"},
-	genotyper	                 => { is => 'VARCHAR2', len => 255, is_optional => 1,
-									doc => "Name of the genotyper for this model"},
-	genotyper_params             => { is => 'VARCHAR2', len => 255, is_optional => 1,
-									doc => "command line args used for the genotyper"},
-	indel_finder                 => { is => 'VARCHAR2', len => 255, is_optional => 1,
-									doc => "Name of the indel finder for this model"},
-	indel_finder_params          => { is => 'VARCHAR2', len => 255, is_optional => 1,
-									doc => "command line args for the indel finder"},
-	multi_read_fragment_strategy => { is => 'VARCHAR2', len => 255, is_optional => 1,
-									doc => ""},
-	prior_ref_seq		     => { is => 'VARCHAR2', len => 255, is_optional => 1,
-									doc => ""},
-	read_aligner                 => { is => 'VARCHAR2', len => 255, is_optional => 0,
-									doc => "alignment program used for this model"},
-	read_aligner_params          => { is => 'VARCHAR2', len => 255, is_optional => 1,
-									doc => "command line args for the aligner"},
-	read_calibrator              => { is => 'VARCHAR2', len => 255, is_optional => 1,
-									doc => ""},
-	read_calibrator_params       => { is => 'VARCHAR2', len => 255, is_optional => 1,
-									doc => ""},
-	reference_sequence           => { is => 'VARCHAR2', len => 255, is_optional => 1,
-									doc => "Identifies the reference sequence used in the model"},
-	sequencing_platform          => { is => 'VARCHAR2', len => 255, is_optional => 1, 
-										doc => "The sequencing platform. Always 'solexa' at the moment"},
-    ],
-    schema_name => 'Main',
+    has => [ %PROPERTIES ],
 };
-
-
-sub sub_command_sort_position {
-    1
-}
 
 sub help_brief {
     "create a new processing profile for reference alignment"
 }
 
 sub help_synopsis {
-    return <<"EOS"
-genome-model processing-profile reference-alignment create 
-					--profile-name test5 
-					--align-dist-threshold 0 
-					--dna-type "genomic dna" 
-					--genotyper maq0_6_3 
-					--indel-finder maq0_6_3 
-					--read-aligner maq0_6_3 
-					--reference-sequence NCBI-human-build36 
-					--sequencing-platform solexa
-EOS
+'genome-model processing-profile reference-alignment create --'.
+    join(' --',keys %PROPERTIES);
+
 }
 
 sub help_detail {
@@ -88,35 +44,21 @@ sub _validate_execute_params {
 
     unless($self->SUPER::_validate_execute_params) {
         $self->error_message('_validate_execute_params failed for SUPER');
-        return;                        
+        return;
     }
 
-    unless ($self->reference_sequence) {
+    unless ($self->reference_sequence_name) {
         if ($self->prior_ref_seq eq "none") {
             $self->error_message("No reference sequence set.  This is required w/o a prior_ref_seq.");
             $self->usage_message($self->help_usage);
             return;
         }
-        $self->reference_sequence($self->prior_ref_seq);
-    }
-    unless ($self->_validate_dna_type) {
-        $self->error_message(
-            'DNA Type is invalid... must be "genomic dna" or "cdna"');
-        return;                        
+        $self->reference_sequence_name($self->prior_ref_seq);
     }
 
     return 1;
 }
 
-sub _validate_dna_type {
-    my $self = shift;
-    
-    unless (($self->dna_type() eq "genomic dna")||($self->dna_type() eq "cdna")) {
-        return undef;    
-    }
-
-    return 1;
-}
 
 # TODO: copied from create processingprofile... refactor
 sub execute {
@@ -135,23 +77,21 @@ sub execute {
 
     # generic: abstract out
     my %params = %{ $self->_extract_command_properties_and_duplicate_keys_for__name_properties() };
-    
     my $obj = $self->_create_target_class_instance_and_error_check( \%params );
     unless ($obj) {
         $self->error_message("Failed to create processing_profile!");
         return;
     }
-    
+
     if (my @problems = $obj->invalid) {
         $self->error_message("Invalid processing_profile!");
         $obj->delete;
         return;
     }
-    
+
     $self->status_message("created processing profile " . $obj->name);
     print $obj->pretty_print_text,"\n";
-    
-    
+
     return 1;
 }
 
