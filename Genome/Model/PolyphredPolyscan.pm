@@ -13,16 +13,9 @@ use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 class Genome::Model::PolyphredPolyscan {
     is => 'Genome::Model',
     has => [
-        processing_profile           => { is => 'Genome::ProcessingProfile::PolyphredPolyscan', id_by => 'processing_profile_id' },
-        snps => {
-            is => 'arrayref',
-            doc => 'The union of all the snps from the input files for this model',
-            is_optional => 1,
-        },
-        indels => {
-            is => 'arrayref',
-            doc => 'The union of all the indels from the input files for this model',
-            is_optional => 1,
+        processing_profile => {
+            is => 'Genome::ProcessingProfile::PolyphredPolyscan',
+            id_by => 'processing_profile_id'
         },
         sensitivity => { 
             via => 'processing_profile',
@@ -35,6 +28,16 @@ class Genome::Model::PolyphredPolyscan {
         technology=> { 
             via=> 'processing_profile',
             doc => 'The processing param set used', 
+        },
+    ],
+    has_optional => [
+        combined_input_fh => {
+            is  =>'IO::Handle',
+            doc =>'file handle to the combined input file',
+        },
+        current_pcr_product_genotype => {
+            is => 'Hash',
+            doc => 'The current pcr product genotype... used for "peek" like functionality',
         },
     ],
 };
@@ -107,6 +110,15 @@ sub resolve_data_directory {
     return $data_dir;
 }
 
+sub combined_input_file {
+    my $self = shift;
+
+    my $data_dir = $self->data_directory;
+    my $combined_input_file_name = "$data_dir/combined_input.tsv";
+
+    return $combined_input_file_name;
+}
+
 # Takes in an array of pcr product genotypes and finds the simple majority vote for a genotype
 # For that sample and position among all pcr products
 sub predict_genotype{
@@ -158,82 +170,46 @@ sub predict_genotype{
     }
 }
 
-# List of columns present in the model files
-sub columns{
-    my $self=shift;
-    return qw(
-    chromosome 
-    start 
-    stop 
-    sample_name
-    variant_type
-    allele1 
-    allele1_type 
-    allele2 
-    allele2_type 
-    score 
-    hugo_symbol
-    read_count
-    pcr_product_name
-    timestamp
-    );
-}
-
 # Returns the next line of raw data (one pcr product)
-# TODO: Switch this to get the next line from MG::IO::Polyscan or phred
-# Return 1 line from the variants in that file...
-# But probably need to somehow glob all of the input files together into one class level array?
 sub next_pcr_product_genotype{
     my $self = shift;
  
-    unless (defined($self->snps) || defined ($self->indels)) {
+    unless ($self->combined_input_fh) {
         $self->setup_input;
     }
-=cut 
-    # Get and parse the line or return undef
-    my $line = shift @{$self->snps};
-    
-    unless (defined($line)) {
-        $line = shift @{$self->indels};
-    } 
-=cut
-    
-# TODO do we want this? For now just return the earliest postition
 
-    my $current_snp = @{$self->snps}[0];
-    my $current_indel = @{$self->indels}[0];
+    my $fh = $self->combined_input_fh;
 
-    my $line;
-
-    if ($current_snp && $current_indel) {
-        if (compare_position($current_snp->{chromosome}, $current_snp->{start}, $current_indel->{chromosome}, $current_indel->{start}) > 0) {
-            $line = shift @{$self->indels};
-        } else {
-            $line = shift @{$self->snps};
-        }
-    }
-    else {
-        # Get and parse the line or return undef
-        $line = shift @{$self->snps};
-
-        unless (defined($line)) {
-            $line = shift @{$self->indels};
-        }
+    unless ($fh) {
+        $self->error_message("Combined input file handle not defined after setup_input");
+        die;
     }
 
-    return $line;
+    my $line = $fh->getline;
+    return undef unless $line;
+    my @values = split("\t", $line);
+
+    my $genotype;
+    for my $column ($self->combined_input_columns) {
+        $genotype->{$column} = shift @values;
+    }
+
+    return $genotype;
 }
 
 # Returns the genotype for the next position for a sample...
 # This takes a simple majority vote from all pcr products for that sample and position
-# TODO: Switch this to get the next line from MG::IO::Polyscan or phred
-# But probably need to somehow glob all of the input files together into one class level array?
 sub next_sample_genotype {
     my $self = shift;
 
-    # Get and parse the line or return undef
     my @sample_pcr_product_genotypes;
     my ($current_chromosome, $current_position, $current_sample);
+    
+    # If we have a genotype saved from last time... grab it to begin the new sample pcr product group
+    if ($self->current_pcr_product_genotype) {
+        push @sample_pcr_product_genotypes, $self->current_pcr_product_genotype;
+        $self->current_pcr_product_genotype(undef);
+    }
     
     # Grab all of the pcr products for a position and sample
     while ( my $genotype = $self->next_pcr_product_genotype){
@@ -245,11 +221,10 @@ sub next_sample_genotype {
         $current_position ||= $position;
         $current_sample ||= $sample;
 
-
         # If we have hit a new sample or position, rewind a line and return the genotype of what we have so far
         if ($current_chromosome ne $chromosome || $current_position ne $position || $current_sample ne $sample) {
-            unshift @{$self->snps}, $genotype;
             my $new_genotype = $self->predict_genotype(@sample_pcr_product_genotypes);
+            $self->current_pcr_product_genotype($genotype);
             return $new_genotype;
         }
 
@@ -403,6 +378,29 @@ sub source_instrument_data_dir {
     return $dir;
 }
 
+# List of columns present in the combined input file
+sub combined_input_columns {
+    my $self = shift;
+    return qw(
+        chromosome 
+        start 
+        stop 
+        sample_name
+        pcr_product_name
+        variation_type
+        reference
+        allele1 
+        allele1_type 
+        allele2 
+        allele2_type 
+        con_pos
+        num_reads1
+        num_reads2
+        score
+    );
+    #poly_score
+}
+
 # Grabs all of the input files from the current build, creates MG::IO modules for
 # each one, grabs all of their snps and indels, and stuffs them into class variables
 sub setup_input {
@@ -412,41 +410,53 @@ sub setup_input {
 
     # Determine the type of parser to create
     my $type;
-    if ($self->technology eq 'polyphred') {
+    if ($self->technology =~ /polyphred/i) {
         $type = 'Polyphred';
-    } elsif ($self->technology eq 'polyscan') {
+    } elsif ($self->technology =~ /polyscan/i) {
         $type = 'Polyscan';
     } else {
         $type = $self->type;
         $self->error_message("Type: $type not recognized.");
         return undef;
     }
-
+    
+    # Combined input file to be created from the collates of all input files
+    my $combined_input_file = $self->combined_input_file;
+    my $fh = IO::File->new(">$combined_input_file");
+    
     # Create parsers for each file, append to running lists
     # TODO eliminate duplicates!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    my (@all_snps, @all_indels);
     for my $file (@input_files) {
-        my ($assembly_project_name) = $file =~ /\/([^\.\/]+)\.poly(scan|phred)\.(low|high)$/;  #TODO make sure assembly project names are going to be kosher
+        #TODO make sure assembly project names are going to be kosher
+        my ($assembly_project_name) = $file =~ /\/([^\.\/]+)\.poly(scan|phred)\.(low|high)$/;  
         my $param = lc($type);
         my $module = "MG::IO::$type";
         my $parser = $module->new($param => $file,
                                   assembly_project_name => $assembly_project_name
-                              );
+                                 );
         my ($snps, $indels) = $parser->collate_sample_group_mutations;
 
-        push @all_snps, @$snps if $snps;
-        push @all_indels, @$indels if $indels;
+        # Print all of the snps and indels to the combined input file
+        for my $variant (@$snps, @$indels) {
+            $fh->print( join("\t", map{$variant->{$_} } $self->combined_input_columns ) );
+            $fh->print("\n");
+        }
     }
 
-    # Sort by chromosome, position, and pcr product
-    @all_snps =  sort { compare_position($a->{chromosome}, $a->{start}, $b->{chromosome}, $b->{start}) } sort { $a->{pcr_product_name} cmp $b->{pcr_product_name} } @all_snps;
-    @all_indels =  sort { compare_position($a->{chromosome}, $a->{start}, $b->{chromosome}, $b->{start}) } sort { $a->{pcr_product_name} cmp $b->{pcr_product_name} } @all_indels;
+    $fh->close;
 
-    # Set the class level variables
-    $self->snps(\@all_snps);
-    $self->indels(\@all_indels);
+    unless (-s $combined_input_file) {
+        $self->error_message("Combined input file does not exist or has 0 size in setup_input");
+        die;
+    }
 
-    return @all_snps, @all_indels;
+    system("sort -gk1 -gk2 $combined_input_file");
+
+    # Set up the file handle to be used as input
+    my $in_fh = IO::File->new("$combined_input_file");
+    $self->combined_input_fh($in_fh);
+
+    return 1;
 }
 
 # attempts to get an existing model with the params supplied
