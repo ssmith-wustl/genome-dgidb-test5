@@ -71,6 +71,7 @@ sub execute {
             my $model_create = Genome::Model::Command::Create::Model->create(
                                                                              model_name => $model_name,
                                                                              subject_name => $subject_name,
+                                                                             subject_type => $subject_type,
                                                                              processing_profile_name => $pp->name,
                                                                              bare_args => [],
                                                                          );
