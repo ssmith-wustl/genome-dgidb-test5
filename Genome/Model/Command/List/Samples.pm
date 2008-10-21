@@ -12,7 +12,7 @@ class Genome::Model::Command::List::Samples {
             is_constant => 1, 
             value => 'Genome::Sample' 
         },
-        show => { default_value => 'id,name,source_type' },
+        show => { default_value => 'id,name,source_type,species_name' },
     ],
 };
 
