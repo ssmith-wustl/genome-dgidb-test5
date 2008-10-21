@@ -9,6 +9,7 @@ use Genome;
 use File::Path;
 use Data::Dumper;
 
+use Genome::Model::Command::Create::ProcessingProfile;
 my %PROPERTIES = Genome::Model::Command::Create::ProcessingProfile::resolve_property_hash_from_target_class(__PACKAGE__);
 
 class Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment {
@@ -90,8 +91,9 @@ sub execute {
     }
 
     $self->status_message("created processing profile " . $obj->name);
-    print $obj->pretty_print_text,"\n";
 
+    my $string = $obj->pretty_print_text;
+    $self->status_message($string);
     return 1;
 }
 

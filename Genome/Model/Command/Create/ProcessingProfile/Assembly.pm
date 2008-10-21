@@ -9,6 +9,7 @@ use Genome;
 use File::Path;
 use Data::Dumper;
 
+use Genome::Model::Command::Create::ProcessingProfile;
 my %PROPERTIES = Genome::Model::Command::Create::ProcessingProfile::resolve_property_hash_from_target_class(__PACKAGE__);
 
 class Genome::Model::Command::Create::ProcessingProfile::Assembly {
