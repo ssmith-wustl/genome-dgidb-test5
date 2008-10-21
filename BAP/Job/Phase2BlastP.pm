@@ -17,7 +17,7 @@ use base qw(GAP::Job);
 
 sub new {
 
-    my ($class, $seq, $db, $job_id) = @_;
+    my ($class, $seq, $db, $job_id, $core_num) = @_;
 
     
     my $self = { };
@@ -43,6 +43,13 @@ sub new {
         croak 'missing db!';
     }
 
+    unless (defined($core_num)) {
+        croak 'missing number of cores to run blast in Job!';
+    }
+
+    $self->{_core_num} = $core_num;
+                    
+
     $self->{_db} = $db;
     
     return $self;
@@ -65,13 +72,15 @@ sub execute {
 
     my $temp_fh = File::Temp->new();
     close($temp_fh);
+   
+    my $core_num = $self->{_core_num};
     
     my @cmd = (
                'blastp',
                $self->{_db},
                $seq_fh->filename(),
                '-cpus',
-               '4',
+               $core_num,
                'E=1e-6',
                '-o',
                $temp_fh->filename(),

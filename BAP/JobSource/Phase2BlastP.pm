@@ -31,6 +31,13 @@ sub new {
     unless (defined($fasta_file)) {
         croak 'missing fasta file!';
     }
+   
+       
+    my $core_num = shift @args;
+
+    unless (defined($core_num)) {
+        croak 'missing number of cores to run blast in JobSource!';
+    }
     
     $self->{_evidence} = { };
     
@@ -41,6 +48,7 @@ sub new {
                                                             $seq, 
                                                             $db,
                                                             $self->next_job_id(),
+                                                            $core_num,
                                                         );
     }
     
