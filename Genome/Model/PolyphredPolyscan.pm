@@ -450,7 +450,29 @@ sub setup_input {
         die;
     }
 
-    system("sort -gk1 -gk2 $combined_input_file");
+    my $sorted_file = "$combined_input_file.temp";
+
+    # Sort by chromosome, position, sample... TODO: derive these numbers from columns sub
+    system("sort -gk1 -gk2 -k4 $combined_input_file > $sorted_file");
+
+    unless(-s $sorted_file) {
+        $self->error_message("Failed to sort combined input file: $combined_input_file into $sorted_file");
+        die;
+    }
+    
+    unlink($combined_input_file);
+    if(-s $combined_input_file) {
+        $self->error_message("Failed to unlink combined input file: $combined_input_file");
+        die;
+    }
+    
+    cp($sorted_file, $combined_input_file);
+    unless(-s $combined_input_file) {
+        $self->error_message("Failed to copy sorted file: $sorted_file back to combined input file: $combined_input_file");
+        die;
+    }
+
+    unlink($sorted_file);
 
     # Set up the file handle to be used as input
     my $in_fh = IO::File->new("$combined_input_file");
