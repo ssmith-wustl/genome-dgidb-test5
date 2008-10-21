@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
+use File::Remove qw/ remove /;
 
 use Test::More tests => 3;
 
@@ -20,7 +21,13 @@ my $tool_db = Genome::Model::Tools::Hgmi::DirBuilder->create(
                     'pipe_version' => "1.0",
                     'cell_type' => "BACTERIA");
 isa_ok($tool_db,'Genome::Model::Tools::Hgmi::DirBuilder');
+if(-d "/tmp/BLah")
+{
+    # recurively remove dir
+    remove \1, qw{ /tmp/BLah };
+}
 ok($tool_db->execute,'execute dir builder');
 # check directory structure, then remove what was created.
+
 
 exit;
