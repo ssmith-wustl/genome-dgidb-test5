@@ -759,6 +759,7 @@ sub translate
     for ($i=0; $i<=$length-2; $i+=3 )
     {
         my $codon=substr($sequence, $i, 3);
+        $codon =~ s/N/X/g;
         last if(length($codon)!=3);
         my $aa = $codon_to_single{$codon};
         $aa="*" if ($aa eq 'X');
