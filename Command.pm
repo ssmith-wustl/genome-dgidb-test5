@@ -1129,6 +1129,25 @@ for my $type (qw/error warning status debug usage/) {
     *$array_subname     = $array_subref;
 }
 
+# Run the given command-line with stdout and stderr redirected to /dev/null
+sub system_inhibit_std_out_err {
+    my($self,$cmdline) = @_;
+
+    open my $oldout, ">&STDOUT"     or die "Can't dup STDOUT: $!";
+    open my $olderr, ">&", \*STDERR or die "Can't dup STDERR: $!";
+
+    open(STDOUT,'>/dev/null');
+    open(STDERR,'>/dev/null');
+
+    my $ec = system ( $cmdline );
+
+    open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
+    open STDERR, ">&", $olderr or die "Can't dup \$olderr: $!";
+
+    return $ec;
+}
+
+
 1;
 
 #$HeadURL$
