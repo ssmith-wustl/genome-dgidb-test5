@@ -237,6 +237,10 @@ sub annotate_variants {
             $db_chrom = $schema->resultset('Chromosome')->find(
                 {chromosome_name => $hq_genotype->{chromosome} },
             );
+            unless ($db_chrom){
+               $self->error_message("couldn't get db chrom from database");
+               die;
+            }
             $annotator = Genome::VariantAnnotator->new(
                 transcript_window => $db_chrom->transcript_window(range => 50000),
                 variation_window => $db_chrom->variation_window(range => 50000),
@@ -287,9 +291,6 @@ sub print_prioritized_annotation {
     # Decide which of the two alleles (or both) vary from the reference and annotate the ones that do
     for my $variant ($genotype->{allele1}, $genotype->{allele2}) {
         next if $variant eq $genotype->{reference};
-        unless (defined($variant)) {
-            $DB::single=1;
-        }
         my @annotations;
         if ($genotype->{variation_type} =~ /ins|del/i){
             @annotations = $annotator->prioritized_transcripts_for_snp( # TODO Make this back into indel... but the function doesnt exist
@@ -705,6 +706,7 @@ sub next_lq_genotype{
         return undef;
     }
     my $genotype = $self->parse_genotype_line($line);
+
     return $genotype;
 }
 
