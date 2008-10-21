@@ -187,6 +187,7 @@ sub next_pcr_product_genotype{
 
     my $line = $fh->getline;
     return undef unless $line;
+    chomp $line;
     my @values = split("\t", $line);
 
     my $genotype;
@@ -207,7 +208,11 @@ sub next_sample_genotype {
     
     # If we have a genotype saved from last time... grab it to begin the new sample pcr product group
     if ($self->current_pcr_product_genotype) {
-        push @sample_pcr_product_genotypes, $self->current_pcr_product_genotype;
+        my $genotype = $self->current_pcr_product_genotype;
+        $current_chromosome = $genotype->{chromosome};
+        $current_position = $genotype->{start};
+        $current_sample = $genotype->{sample_name};
+        push @sample_pcr_product_genotypes, $genotype;
         $self->current_pcr_product_genotype(undef);
     }
     
