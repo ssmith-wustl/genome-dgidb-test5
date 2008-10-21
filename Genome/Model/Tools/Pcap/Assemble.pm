@@ -212,7 +212,7 @@ sub execute_pcap
     }
 
     $self->status_message("Resolving data needs");
-    print "Resolving data needs\n";
+    #print "Resolving data needs\n";
     unless ($self->resolve_data_needs)
     {
 	$self->error_message("Failed to resolve data needs");
@@ -1156,7 +1156,7 @@ sub run_pcap
 
     my $pcap_prog = $self->{pcap_prog_type};
 
-    print "Running ".$pcap_prog.' '.$self->{pcap_root_name}.' '.$self->_get_pcap_params."\n";
+    $self->status_message("Running ".$pcap_prog.' '.$self->{pcap_root_name}.' '.$self->_get_pcap_params);
 
     my $ec = system ($pcap_prog.' '.$self->{pcap_root_name}.' '.$self->_get_pcap_params);
 
@@ -1183,9 +1183,11 @@ sub run_bdocs
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
 
-    print "Running ".$bdocs_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bdocs_params."\n";
+    $self->status_message("Running ".$bdocs_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bdocs_params);
 
-    my $ec = system ($bdocs_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bdocs_params);
+    #my $ec = system ($bdocs_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bdocs_params);
+    my $cmdline = $bdocs_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bdocs_params;
+    my $ec = $self->system_inhibit_std_out_err($cmdline);
 
     $self->error_message("bdocs.rep returned exit code $ec\n") and return if $ec;
 
@@ -1203,7 +1205,7 @@ sub run_bclean
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
 
-    print "Running ".$bclean_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bclean_params."\n";
+    $self->status_message("Running ".$bclean_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bclean_params);
 
     my $ec = system ($bclean_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bclean_params);
 
@@ -1224,9 +1226,11 @@ sub run_bcontig
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
 
-    print "Running ".$bcontig_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bcontig_params."\n";
+    $self->status_message("Running ".$bcontig_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bcontig_params);
 
-    my $ec = system ($bcontig_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bcontig_params);
+    #my $ec = system ($bcontig_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bcontig_params);
+    my $cmdline = $bcontig_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bcontig_params;
+    my $ec = $self->system_inhibit_std_out_err($cmdline);
 
     $self->error_message("bcontig returned exit code $ec\n") and return if $ec;
 
@@ -1244,9 +1248,11 @@ sub run_bconsen
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir ("$dir/edit_dir") );
 
-    print "Running ".$bconsen_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bconsen_params."\n";
+    $self->status_message("Running ".$bconsen_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bconsen_params);
 
-    my $ec = system ($bconsen_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bconsen_params);
+    #my $ec = system ($bconsen_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bconsen_params);
+    my $cmdline = $bconsen_prog.' '.$self->{pcap_root_name}.' '.$self->_get_bconsen_params;
+    my $ec = $self->system_inhibit_std_out_err($cmdline);
 
     $self->error_message("bconsen returned exit code $ec\n") and return
 	if $ec;
@@ -1263,7 +1269,7 @@ sub run_bform
     $self->error_mesage("Could not change dir") and return
 	unless ( chdir("$dir/edit_dir") );
 
-    print "Running ".'bform '.$self->{pcap_root_name}.'.pcap '.$self->_get_bform_params."\n";
+    $self->status_message("Running ".'bform '.$self->{pcap_root_name}.'.pcap '.$self->_get_bform_params);
 
     my $ec = system ('bform '.$self->{pcap_root_name}.'.pcap '.$self->_get_bform_params);
 
@@ -1335,7 +1341,9 @@ sub create_agp_file
     $self->error_message ("Could not find gap.txt file") and return
 	unless -e 'gap.txt';
 
-    my $ec = system ("create_agp_fa.pl -input contigs.bases -agp supercontigs.agp -gapfile gap.txt");
+    #my $ec = system ("create_agp_fa.pl -input contigs.bases -agp supercontigs.agp -gapfile gap.txt");
+    my $cmdline = "create_agp_fa.pl -input contigs.bases -agp supercontigs.agp -gapfile gap.txt";
+    my $ec = $self->system_inhibit_std_out_err($cmdline);
 
     $self->error_message ("create_agp_fa.pl returned $ec") and return if $ec;
 
@@ -1354,7 +1362,9 @@ sub create_sctg_fa_file
     $self->error_message ("Cound not find supercontigs.agp file") and return
 	unless -s 'supercontigs.agp';
 
-    my $ec = system ("create_fa_file_from_agp.pl supercontigs.agp supercontigs.fa contigs.bases.blastdb");
+    #my $ec = system ("create_fa_file_from_agp.pl supercontigs.agp supercontigs.fa contigs.bases.blastdb");
+    my $cmdline = "create_fa_file_from_agp.pl supercontigs.agp supercontigs.fa contigs.bases.blastdb";
+    my $ec = $self->system_inhibit_std_out_err($cmdline);
 
     $self->error_message ("Unable to create supercontigs fasta file") and return
 	if $ec;
@@ -1454,7 +1464,9 @@ sub delete_completed_assembly
     my ($self) = @_;
     my $edit_dir = $self->{project_path}.'/edit_dir';
     chdir "$edit_dir";
-    `\\rm *`;
+    #`\\rm *`;
+    my @files = glob("*");
+    unlink(@files);
 #    my $read_dump_dir = $self->{project_path}.'/read_dump';
 #    chdir "$read_dump_dir";
 #    `\\rm *`;

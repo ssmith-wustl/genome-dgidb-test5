@@ -18,6 +18,8 @@ my $obj = Genome::Model::Tools::Pcap::Assemble->create
      pcap_run_type      => 'NORMAL',
     );
  
+$obj->_project_path();  # Makes the object discover it's project_path
+$obj->delete_completed_assembly;  # Clean out the cruft from any past semi-completed test
 
 ok($obj->create_project_directories, "created project dirs");
 ok($obj->validate_organism_name, "organism name validated");

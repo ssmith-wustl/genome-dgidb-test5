@@ -10,7 +10,7 @@ use Test::More tests => 21;
 # prevent the ugly messages when we test known error conditions
 $SIG{__DIE__} = sub {};
 
-diag("testing sub-classification by event_type formula...");
+# testing sub-classification by event_type formula...
 
 my $event_type = "genome-model add-reads align-reads maq";
 my $event_class_name = "Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq";
@@ -25,6 +25,9 @@ isa_ok($e1,$event_class_name);
 my $tmpdir = $e1->base_temp_directory;
 ok($tmpdir, "got a base temp directory $tmpdir");
 ok(-d $tmpdir, "it exists");
+
+$e1->dump_status_messages(0);
+
 my $tmpdir1 = $e1->create_temp_directory('foo');
 ok(-d $tmpdir1,"got a dir $tmpdir1");
 my $tmpdir4 = $e1->create_temp_directory();

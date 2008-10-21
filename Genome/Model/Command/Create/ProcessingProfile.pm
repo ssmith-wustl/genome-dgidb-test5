@@ -150,7 +150,7 @@ sub verify_params {
             # to a module
             unless(defined($subclass_name)) {
                 $self->error_message(
-                    "No package could be resolved for value $subclass_name for property $command_accessor");
+                    "No package could be resolved for property $command_accessor");
                 return undef;                        
             }
             
@@ -332,6 +332,8 @@ sub _create_target_class_instance_and_error_check{
 
     # If it passed the above checks, create the processing profile
     #print "Creating $target_class: " . Data::Dumper::Dumper(\%params) . "\n";
+    # Supress printing an error messsage to the terminal during the create()
+    Genome::ProcessingProfile::ReferenceAlignment->message_callback('error', sub {});
     my $obj = $target_class->create(%params);
     if (!$obj) {
         $self->error_message(

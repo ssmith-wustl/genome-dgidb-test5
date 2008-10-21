@@ -106,7 +106,7 @@ sub create {
 
     my $self = $class->SUPER::create(@_);
 
-    if ($self->read_aligner_name eq 'newbler') {
+    if ($self->read_aligner_name and $self->read_aligner_name eq 'newbler') {
         my $new_mapping = Genome::Model::Tools::454::Newbler::NewMapping->create(
                                                                             dir => $self->alignments_directory,
                                                                         );
