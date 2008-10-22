@@ -19,6 +19,11 @@ class Genome::Model::Command::Create::Model {
         processing_profile_name     => { is => 'varchar', len => 255,  doc => 'The name of the processing profile to be used. '},
         model_name                  => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
         subject_name                => { is => 'varchar', len => 255, doc => 'The name of the subject all the reads originate from' },
+        subject_type                => {
+                                        is => 'varchar',
+                                        len => 255,
+                                        doc => 'The type of subject all the reads originate from'
+                                    },
         model                       => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id', doc => 'Not used as a parameter' },
         data_directory              => { is => 'varchar', len => 255, doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.', is_optional => 1,},
     ],
@@ -71,11 +76,24 @@ sub target_class{
 
 sub command_properties{
     my $self = shift;
-    
+
     return
-        grep { $_ ne 'id' and $_ ne 'bare_args'}         
+        grep { $_ ne 'id' and $_ ne 'bare_args'}
             map { $_->property_name }
                 $self->_shell_args_property_meta;
+}
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+
+    my @subject_types = qw/ dna_resource_item_name species_name sample_name /;
+    unless ( grep { $self->subject_type eq $_ } @subject_types) {
+        $self->error_message('Invalid subject type('. $self->subject_type .') passed to class '. $self->class);
+        die;
+    }
+
+    return $self;
 }
 
 sub execute {
