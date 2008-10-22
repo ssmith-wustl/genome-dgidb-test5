@@ -801,7 +801,11 @@ sub get_or_create {
 
 sub write_maf_file{
     my $self = shift;
-    my ($chrom_start, $pos_start, $chrom_stop, $pos_stop);
+    my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
+    $chrom_start ||= 0;
+    $pos_start ||=0;
+    $chrom_stop ||= 100;
+    $pos_stop ||= 1e12;
 
     # Print maf header
     my $header = $self->maf_header;
@@ -810,13 +814,66 @@ sub write_maf_file{
     print $fh "$header\n";
 
     # Print maf data
+    my @current_sample_basename_genotypes;
+    my $current_sample_basename;
     while (my $genotype = $self->next_hq_annotated_genotype_in_range($chrom_start, $pos_start, $chrom_stop, $pos_stop)){
-        $genotype->{center} = "genome.wustl.edu";
-        my $line = join("\t", map{$genotype->{$_} || 'N/A'} $self->maf_columns);
-        print $fh "$line\n";
+
+        my ($sample_basename) = $genotype->{sample_name} =~ /(.*)(t|n)$/;
+        $current_sample_basename ||= $sample_basename;
+
+        my $tumor_genotype;
+        my $normal_genotype;
+
+        if ($sample_basename eq $current_sample_basename){
+            push @current_sample_basename_genotypes, $genotype;
+        }else{
+            if (@current_sample_basename_genotypes > 2){
+                $self->error_message("more than two genotypes with same sample basename, continuing anyway... ".Dumper @current_sample_basename_genotypes);
+            }
+            
+            my $maf_line = $self->format_maf_line_from_matched_samples(@current_sample_basename_genotypes);
+            if ($maf_line){
+                $fh->print($maf_line);
+            }else{
+                $self->error_message("no maf line generated from matched sample genotypes".Dumper @current_sample_basename_genotypes);
+            }
+
+            @current_sample_basename_genotypes = ();
+            $current_sample_basename = $sample_basename;
+            push @current_sample_basename_genotypes, $genotype;
+        }
+        
+        my $last_line = $self->format_maf_line_from_matched_samples(@current_sample_basename_genotypes);
+        $fh->print($last_line) if $last_line;
+    }
+        
+    return 1;
+}
+
+sub format_maf_line_from_matched_samples{
+    my ($self, @matched_sample_genotypes) = @_;
+
+    my $tumor_genotype;
+    my $normal_genotype;
+    for my $sample_genotype (@matched_sample_genotypes){
+        $tumor_genotype = $sample_genotype if $sample_genotype->{sample_name} =~ /t$/;
+        $normal_genotype = $sample_genotype if $sample_genotype->{sample_name} =~ /n$/;
     }
 
-    return 1;
+    if ($tumor_genotype){
+        $tumor_genotype->{center} = "genome.wustl.edu";
+        if ($normal_genotype){
+            $tumor_genotype->{match_norm_seq_allele1} = $normal_genotype->{allele1};
+            $tumor_genotype->{match_norm_seq_allele2} = $normal_genotype->{allele2};
+        }else{
+            $tumor_genotype->{match_norm_seq_allele1} = 'N/A';
+            $tumor_genotype->{match_norm_seq_allele2} = 'N/A';
+        }
+
+        my $line = join("\t", map{$tumor_genotype->{$_} || 'N/A'} $self->maf_columns)."\n";
+        return $line;
+    }
+    return undef;
 }
 
 =cut
