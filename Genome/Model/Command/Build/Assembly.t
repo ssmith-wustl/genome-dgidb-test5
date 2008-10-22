@@ -16,7 +16,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 105;
+    plan tests => 299;
 
     use_ok( 'Genome::RunChunk::454');
     use_ok( 'Genome::Model::Assembly');
