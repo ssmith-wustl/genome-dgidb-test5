@@ -401,6 +401,7 @@ sub combined_input_columns {
         con_pos
         num_reads1
         num_reads2
+        read_count
         score
     );
     #poly_score
