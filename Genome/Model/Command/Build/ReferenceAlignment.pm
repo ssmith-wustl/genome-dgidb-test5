@@ -123,7 +123,7 @@ sub maplist_file_paths {
 
 sub merged_alignments_file {
     my $self = shift;
-    return $self->accumulated_alignments_directory .'/'. $self->model->subject_name .'.psl';
+    return $self->accumulated_alignments_directory .'/'. $self->model->id .'.psl';
 }
 
 
