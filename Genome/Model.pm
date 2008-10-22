@@ -20,6 +20,7 @@ class Genome::Model {
     type_name => 'genome model',
     table_name => 'GENOME_MODEL',
     is_abstract => 1,
+    first_sub_classification_method_name => '_resolve_subclass_name',
     sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
         genome_model_id => { is => 'NUMBER', len => 11 },
@@ -40,6 +41,7 @@ class Genome::Model {
         type_name                    => { via => 'processing_profile'},
         name                         => { is => 'VARCHAR2', len => 255 },
         subject_name                 => { is => 'VARCHAR2', len => 255 },
+        subject_type                 => { is => 'VARCHAR2', len => 255 },
         instrument_data_links        => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
                                             doc => "for models which directly address instrument data, the list of assigned run chunks"
                                         },
@@ -117,28 +119,57 @@ sub compatible_input_read_sets {
     my $self = shift;
 
     my $input_read_set_class_name = $self->input_read_set_class_name;
+    my $value_ref;
+    if ($self->subject_type eq 'species_name') {
+        my $org_taxon = GSC::Organism::Taxon->get(species_name => $self->subject_name);
+        my @eavs = GSC::EntityAttributeValue->get(
+                                                  type_name => 'dna',
+                                                  value => $org_taxon->legacy_org_id
+                                              );
+        my @dna_ids = map {$_->entity_id} @eavs;
+        my @dnas = GSC::DNA->get(\@dna_ids);
+        my @drs;
+        for my $dna (@dnas) {
+            if ($dna->dna_type eq 'dna resource') {
+                push @drs, $dna;
+            } else {
+                push @drs, $dna->get_dna_resource;
+            }
+        }
+        my @child_dnas = map {$_->get_child_dna} @drs;
+        my @dri_names = map {$_->dna_resource_item_name} @child_dnas;
+        $value_ref = \@dri_names;
+        #$self->status_message("Looking for the following dna resource items:\n". join ("\n",@dri_names));
+    } elsif ($self->subject_type eq 'sample_name') {
+        $value_ref = {
+                      operator => "like",
+                      value => $self->subject_name
+                  };
+    } elsif ($self->subject_type eq 'dna_resource_item_name') {
+        $self->error_message('Please implement compatible_input_read_sets in '.
+                             __PACKAGE__ .' for subject_type(dna_resource_item_name)');
+        die;
+    }
+    unless ($value_ref) {
+        $self->error_message('No value to get compatible input read sets');
+        die;
+    }
+    my %instrument_data_ids;
     my @sample_read_sets = $input_read_set_class_name->get(
-                                                           sample_name => {
-                                                                           operator => "like",
-                                                                           value => $self->subject_name
-                                                                       },
+                                                           sample_name => $value_ref,
                                                        );
-    my %instrument_data_ids = map { $_->id => 1 } @sample_read_sets;
+    %instrument_data_ids = map { $_->id => 1 } @sample_read_sets;
     if ($input_read_set_class_name eq 'GSC::RunRegion454') {
         my @dna_read_sets = $input_read_set_class_name->get(
-                                                            incoming_dna_name => {
-                                                                                  operator => "like",
-                                                                                  value => $self->subject_name
-                                                                              },
+                                                            incoming_dna_name => $value_ref,
                                                         );
         for (@dna_read_sets) {
             $instrument_data_ids{$_->id} = 1;
         }
     }
-
+    my @input_read_sets;
     my @instrument_data_ids = keys %instrument_data_ids;
-    my @input_read_sets = GSC::Sequence::Item->get(\@instrument_data_ids);
-
+    @input_read_sets = GSC::Sequence::Item->get(\@instrument_data_ids);
     #TODO: move
     if ($input_read_set_class_name eq 'GSC::RunLaneSolexa') {
         @input_read_sets = grep { $_->run_type !~ /1/  } @input_read_sets;
