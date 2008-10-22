@@ -40,11 +40,13 @@ my $tmp_dir;
 my $model_name = "test_solexa_$ENV{USER}";
 my $processing_profile_name = "test_solexa_pp_$ENV{USER}";
 my $subject_name = 'H_GV-933124G-skin1-9017g';
+my $subject_type = 'sample_name';
 my @read_sets = setup_test_data($subject_name);
 
 my $add_reads_test = Genome::Model::Command::Build::ReferenceAlignment::Test->new(
     model_name => $model_name,
     subject_name => $subject_name,
+    subject_type => $subject_type,
     processing_profile_name => $processing_profile_name,
     read_sets => \@read_sets
 );

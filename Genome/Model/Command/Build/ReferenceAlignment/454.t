@@ -29,6 +29,7 @@ plan tests => 63;
 my $tmp_dir = File::Temp::tempdir();
 my $model_name = "test_454_$ENV{USER}";
 my $subject_name = 'TSP_Round1-4_Normal_Amplicon_Pool';
+my $subject_type = 'sample_name';
 my $pp_name = '454_ReferenceAlignment_test';
 my %params = (
               profile_name => $pp_name,
@@ -48,6 +49,7 @@ my @read_sets = setup_test_data($subject_name);
 my $add_reads_test = Genome::Model::Command::Build::ReferenceAlignment::Test->new(
                                                                                   model_name => $model_name,
                                                                                   subject_name => $subject_name,
+                                                                                  subject_type => $subject_type,
                                                                                   processing_profile_name => $pp_name,
                                                                                   read_sets => \@read_sets
                                                                               );

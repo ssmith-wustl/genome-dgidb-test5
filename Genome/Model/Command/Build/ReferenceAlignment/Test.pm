@@ -21,6 +21,8 @@ sub new {
         confess("Must define model_name for test:  $!");
     $self->{_subject_name} = $args{subject_name} ||
         confess("Must define subject_name for test:  $!");
+    $self->{_subject_type} = $args{subject_type} ||
+        confess("Must define subject_type for test:  $!");
     $self->{_processing_profile_name} = $args{processing_profile_name} ||
         confess("Must define processing_profile_name for test:  $!");
     if ($args{read_sets}) {
@@ -108,6 +110,7 @@ sub create_model {
     my $create_command= Genome::Model::Command::Create::Model->create(
                                                                       model_name => $self->{_model_name},
                                                                       subject_name => $self->{_subject_name},
+                                                                      subject_type => $self->{_subject_type},
                                                                       processing_profile_name => $self->{_processing_profile_name},
                                                                       bare_args => [],
                                                                   );
@@ -139,15 +142,6 @@ sub create_model {
 
     $self->add_directory_to_remove($model->data_directory);
     $self->model($model);
-
-    # The number of ref_seqs is hard coded, there is probably a better way to look this up
-    if ($model->sequencing_platform eq '454') {
-        $self->{_ref_seq_count} = 1;
-    } elsif ($model->sequencing_platform eq 'solexa') {
-        $self->{_ref_seq_count} = 3;
-    } else {
-        confess('Platform '. $model->sequencing_platform .' is not supported by test');
-    }
 }
 
 sub add_reads {
@@ -217,7 +211,6 @@ sub run {
     my $self = shift;
     my $model = $self->model;
     my $build = $self->build;
-    my @stages = $build->stages;
     my @events;
     for my $stage_name ($build->stages) {
         my @classes = $build->classes_for_stage($stage_name);
@@ -241,6 +234,11 @@ sub run_events_for_class_array_ref {
     my $self = shift;
     my $classes = shift;
     my @read_sets = @{$self->{_read_set_array_ref}};
+    my $build = $self->build;
+    my @stages = $build->stages;
+    my $stage2 = $stages[1];
+    my $stage_object_method = $stage2 .'_objects';
+    my @stage2_objects = $build->$stage_object_method;
     my @events;
     for my $command_class (@$classes) {
         if (ref($command_class) eq 'ARRAY') {
@@ -251,7 +249,7 @@ sub run_events_for_class_array_ref {
             if ($command_class->isa('Genome::Model::EventWithReadSet')) {
                 is(scalar(@events),scalar(@read_sets),'the number of events matches read sets for EventWithReadSet class '. $command_class);
             } elsif ($command_class->isa('Genome::Model::EventWithRefSeq')) {
-                is(scalar(@events),$self->{_ref_seq_count},'the number of events matches ref seqs for EventWithReadSet class '. $command_class);
+                is(scalar(@events),scalar(@stage2_objects),'the number of events matches ref seqs for EventWithRefSeq class '. $command_class);
             } else {
                 is(scalar(@events),1,'Only expecting one event when for class '. $command_class);
             }
@@ -301,8 +299,11 @@ sub set_event_status {
 
 sub remove_data {
     my $self = shift;
-    #UR::Context->_sync_databases;
+
     my $model = $self->model;
+    my @data_dirs = map { $_->full_path }
+        grep { defined($_->full_path) }
+            $model->read_sets;
     my @alignment_events = $model->alignment_events;
     my @alignment_dirs = map { $_->read_set_link->read_set_alignment_directory } @alignment_events;
     my $archive_file = $model->resolve_archive_file;
@@ -316,7 +317,7 @@ $DB::single=1;
     ok(unlink($archive_file),'successfully unlinked archive file');
     my $directories_to_remove = $self->{_dir_array_ref};
     #print "Removing directories:\n";
-    for my $directory_to_remove (@$directories_to_remove, @alignment_dirs) {
+    for my $directory_to_remove (@$directories_to_remove, @alignment_dirs, @data_dirs) {
         #print $directory_to_remove . "\n";
         rmtree $directory_to_remove;
     }

@@ -16,7 +16,8 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 293;
+    plan tests => 105;
+
     use_ok( 'Genome::RunChunk::454');
     use_ok( 'Genome::Model::Assembly');
     use_ok( 'Genome::ProcessingProfile::Assembly');
@@ -53,10 +54,13 @@ my %pp_2_params = (
              );
 my @pp_params = (\%pp_1_params,\%pp_2_params);
 
-my $model_name = 'test_assembly_model';
+my $model_base_name = 'test_assembly_model';
 my $subject_name = 'TSP_Round1-4_Normal_Amplicon_Pool';
+my $subject_type = 'sample_name';
 
-for my $pp_params (@pp_params) {
+for (my $i=0; $i < scalar(@pp_params); $i++) {
+    my $pp_params = @pp_params[$i];
+    my $model_name = $model_base_name .'_'. $i;
     my %pp_params = %{$pp_params};
     my $pp = Genome::ProcessingProfile::Assembly->create(%pp_params);
 
@@ -65,13 +69,20 @@ for my $pp_params (@pp_params) {
     for my $key (keys %pp_params) {
         is($pp->$key,$pp_params{$key},"$key accessor");
     }
-    my $model = Genome::Model::Assembly->create(
-                                                processing_profile_id => $pp->id,
-                                                name => $model_name,
-                                                subject_name => $subject_name,
-                                            );
+    my $model_create = Genome::Model::Command::Create::Model->create(
+                                                              processing_profile_name => $pp->name,
+                                                              model_name => $model_name,
+                                                              subject_name => $subject_name,
+                                                              subject_type => $subject_type,
+                                                              bare_args => [],
+                                                          );
+    isa_ok($model_create,'Genome::Model::Command::Create::Model');
+    ok($model_create->execute,'execute '. $model_create->command_name);
+
+    my $model = Genome::Model->get(name => $model_name);
     isa_ok($model,'Genome::Model::Assembly');
     is($model->subject_name,$subject_name,'subject_name accessor');
+    is($model->subject_type,$subject_type,'subject_type accessor');
     is($model->name,$model_name,'name accessor');
     my $add_reads_command = Genome::Model::Command::AddReads->create(
                                                                      model_id => $model->id,
