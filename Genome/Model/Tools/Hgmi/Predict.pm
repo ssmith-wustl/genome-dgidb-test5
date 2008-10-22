@@ -8,6 +8,7 @@ use Genome;
 use Command;
 use Carp;
 use File::Slurp;
+use IO::Dir;
 use DateTime;
 use List::MoreUtils qw/ uniq /;
 use IPC::Run qw/ run /;
@@ -42,9 +43,16 @@ UR::Object::Type->define(
                                  'ncbi_taxonomy_id' => {is => 'String',
                                                         doc => "",
                                                         is_optional =>1},
+                                 'work_directory' => { is => 'String',
+                                                       doc => "",
+                                                       is_optional => 1},
                                  'dev' => {is => 'Boolean',
-                                           doc => "",
+                                           doc => "use development db",
                                            is_optional => 1},
+                                 'script_location' => {is => 'String',
+                                                       doc =>"location for bap_predict_genes",
+                                                       is_optional => 1,
+                                                       default => 'bap_predict_genes'},
 
                                  ]
                          );
@@ -139,27 +147,46 @@ sub gather_details
         croak " organism_obj is not set at line 70 ! ";
     }
 
-    my $cwd = getcwd();
-    my @cwd = split(/\//x,$cwd);
+    # cwd should look like:
+    # /gscmnt/278/analysis/HGMI/B_catenulatum/Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb/Version_1.0/BAP/Version_1.0
+    my $cwd;
+    my @cwd;
+    if(!defined($self->work_directory))
+    {
+        $cwd = getcwd();
+
+    }
+    else
+    {
+        $cwd = $self->work_directory;
+    }
+    @cwd = split(/\//x,$cwd);
 
     my ($sequence_set_name, $analysis_version_num, $hgmi_sequence_dir);
 
     # these below are dangerous
-    if ($project_type =~ /HGMI/x )
+    if (($project_type =~ /HGMI/x)  )
     {
         # these need to be based on the directory structure,
         # instead of just a 'raw' split.
+        unless($#cwd == 9)
+        {
+            croak "directory structure is wrong or broken";
+        }
         $sequence_set_name = $cwd[6]; #HGMI projects
         $analysis_version_num = $cwd[9]; #HGMI projects
         $hgmi_sequence_dir = join("\/", @cwd[0..9],'Sequence',$hgmi_locus_tag); #HGMI projects
         
     }
-    else
+    else # HMPP/Enterobacter
     {
-    
-        $sequence_set_name = $cwd[7]; #HMPP and Enterobacter
-        $analysis_version_num = $cwd[10]; #HMPP and Enterobacter
-        $hgmi_sequence_dir = join("\/", @cwd[0..10],'Sequence',$hgmi_locus_tag); #HMPP and Enterobacter
+        unless($#cwd == 10)
+        {
+            croak "directory structure is wrong or broken";
+        }
+        $sequence_set_name = $cwd[7];
+        $analysis_version_num = $cwd[10];
+        $hgmi_sequence_dir = join("\/", @cwd[0..10],'Sequence',$hgmi_locus_tag); 
         
     }
 
@@ -168,11 +195,11 @@ sub gather_details
         croak " sequence_set_name is not set! ";
     }
 
-my $sequence_set_name_obj;
-my $sequence_set_obj;
-my $sequence_set_id;
+    my $sequence_set_name_obj;
+    my $sequence_set_obj;
+    my $sequence_set_id;
 
-$sequence_set_name_obj = BAP::DB::SequenceSet->retrieve('sequence_set_name'=> $sequence_set_name);
+    $sequence_set_name_obj = BAP::DB::SequenceSet->retrieve('sequence_set_name'=> $sequence_set_name);
 
     if (defined($sequence_set_name_obj)) 
     {
@@ -181,21 +208,9 @@ $sequence_set_name_obj = BAP::DB::SequenceSet->retrieve('sequence_set_name'=> $s
     }
     else 
     {
-        my %Version_lookup = ( 
-			   'Version_1.0' => 'v1', 'Version_2.0' => 'v2',
-			   'Version_3.0' => 'v3', 'Version_4.0' => 'v4',
-			   'Version_5.0' => 'v5', 'Version_6.0' => 'v6',
-			   'Version_7.0' => 'v7', 'Version_8.0' => 'v8',
-			   );
         my $short_ver_num;
-    
-        foreach my $key ( keys (%Version_lookup)) 
-        {
-            if ($analysis_version_num eq $key)
-            {
-                $short_ver_num = $Version_lookup{$key};
-            }
-        }
+        $short_ver_num = $analysis_version_num;
+        $short_ver_num =~ s/Version_(\d)\.0/v$1/x;
 
         my $fasta_file = join(".",$hgmi_sequence_dir,$short_ver_num,'contigs','newname', 'fasta');
     
@@ -204,7 +219,7 @@ $sequence_set_name_obj = BAP::DB::SequenceSet->retrieve('sequence_set_name'=> $s
             croak "fasta-file: '$fasta_file' is not set! ";
         }
     
-        if ((-z $fasta_file) || (! -e $fasta_file)) 
+        if ((-z $fasta_file) ) 
         {
             croak "fasta-file: '$fasta_file 'is empty or non-existant!";
         }
@@ -240,8 +255,6 @@ $sequence_set_name_obj = BAP::DB::SequenceSet->retrieve('sequence_set_name'=> $s
     my @list =($organism_id,$sequence_set_name, $sequence_set_id);
     print join("\t",@list),"\n\n";
 
-#items need for bap_predict_genes.pl and print out command
-
     my (
         $glimmer2_model,
         $glimmer3_model, $glimmer3_pwm,
@@ -272,13 +285,31 @@ $sequence_set_name_obj = BAP::DB::SequenceSet->retrieve('sequence_set_name'=> $s
         croak "glimmer3-pwm: '$glimmer3_pwm' is empty!";
     }
 
-    my $model_file =<heu_11_*.mod>; # need to change this
+
+    my $model_file = <heu_11_*.mod>; # not being picked up
+
+    my $idir = IO::Dir->new($cwd);
+    while(defined(my $fname = $idir->read))
+    {
+        if($fname =~ /heu_11_(\d+).mod/)
+        {
+            $model_file = $fname;
+        }
+    }
+    $idir->close;
+
 
     $genemark_model = $cwd."/$model_file";
+
 
     if (-z $genemark_model) 
     {
         croak "genemark_model: '$genemark_model' is empty!";
+    }
+
+    unless (-f $genemark_model)
+    {
+        croak "genemark_model $genemark_model doesn't exist!";
     }
 
     $job_stdout     = $cwd."/".$hgmi_locus_tag."_bpg_BAP_job_".$sequence_set_id.".txt";
@@ -305,20 +336,8 @@ $sequence_set_name_obj = BAP::DB::SequenceSet->retrieve('sequence_set_name'=> $s
 
     print "bap_predict_genes.pl\n";
     print "\n$cmd \n";
-    # need to return $cmd as a structure of some kind
-    #
-     # should change this to a list, and be ordered similar to the output...
-#    my %ret = { 'bout' => $bsub_output, 'berr' => $bsub_error,
-#                'seq_set_id' => $sequence_set_id,
-#                'glimmer3_model' => $glimmer3_model,
-#                'glimmer3_pwm' => $glimmer3_pwm,
-#                'genemark_model' => $genemark_model,
-#                'runner_count' => $runner_count,
-#                'jobout' => $job_stdout,
-#                'joberr' => $job_stderr,
-#                'predictout' => $bappredictgenes_output};
 
-    my @command_list = ('bap_predict_genes',
+    my @command_list = ($self->script_location,
                         '--sequence-set-id',
                         $sequence_set_id,
                         '--domain',
