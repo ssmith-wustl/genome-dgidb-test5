@@ -60,13 +60,7 @@ sub stage1_objects {
 
 sub stage2_objects {
     my $self = shift;
-    my $model = $self->model;
-    my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
-
-    unless (@subreferences_names > 0) {
-        @subreferences_names = ('all_sequences');
-    }
-    return @subreferences_names;
+    return 1;
 }
 
 sub execute {
