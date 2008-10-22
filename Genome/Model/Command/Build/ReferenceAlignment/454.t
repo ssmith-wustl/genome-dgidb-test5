@@ -24,7 +24,7 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 }
-plan tests => 139;
+plan tests => 63;
 
 my $tmp_dir = File::Temp::tempdir();
 my $model_name = "test_454_$ENV{USER}";
