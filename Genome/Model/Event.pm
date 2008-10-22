@@ -271,7 +271,8 @@ sub shellcmd {
     }
     
     $self->status_message("RUN: $cmd");
-    my $exit_code = system($cmd);
+    #my $exit_code = system($cmd);
+    my $exit_code = $self->system_inhibit_std_out_err($cmd);
     $exit_code /= 256;
     if ($exit_code) {
         die "ERROR RUNNING COMMAND.  Exit code $exit_code, msg $! from: $cmd";
@@ -319,7 +320,6 @@ sub check_for_existence {
 
 sub create_file {
     my ($self, $output_name, $path) = @_;
-    $DB::single=1;
     if (!$path) {
         die "Output $output_name opened without a specified path!"
     }

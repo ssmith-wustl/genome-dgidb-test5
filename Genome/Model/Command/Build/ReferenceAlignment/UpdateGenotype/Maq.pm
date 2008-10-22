@@ -79,7 +79,8 @@ $DB::single = $DB::stopper;
     my $cmd = join(' ', @args);
     $self->status_message("Running command: $cmd\n");
 
-    my $rv = system($cmd);
+    #my $rv = system($cmd);
+    my $rv = $self->system_inhibit_std_out_err($cmd);
     if ($rv) {
         $self->error_message("nonzero exit code " . $rv/256 . " returned by maq, command looks like, @args");
         return;
