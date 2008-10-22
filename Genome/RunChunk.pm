@@ -104,6 +104,9 @@ sub get_or_create_from_read_set {
         } else {
             $sample_name = $read_set->sample_name;
         }
+        if (!defined($sample_name) && $read_set->isa('GSC::RunRegion454')) {
+            $sample_name = $read_set->incoming_dna_name;
+        }
         unless ($sample_name) {
             die('Sample name not found for read set: '. $class->_desc_dw_obj($read_set));
         }
