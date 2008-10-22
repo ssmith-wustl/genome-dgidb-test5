@@ -88,6 +88,7 @@ sub runtests {
                  'remove_data',
              );
     for my $test (@tests) {
+$DB::single=1;
         $self->$test;
     }
     return 1;
@@ -112,8 +113,20 @@ sub create_model {
                                                                   );
 
     isa_ok($create_command,'Genome::Model::Command::Create::Model');
+
+    &_trap_messages($create_command);
     my $result = $create_command->execute();
+
     ok($result, 'execute genome-model create');
+    my @status_messages = $create_command->status_messages();
+    ok(scalar(grep { $_ eq 'created model '.$self->{'_model_name'} } @status_messages),
+        'message mentioned creating the model');  # There may have been one there for creating a directory, too
+    # FIXME commented out for now - there may have been a warning about an existing symlink
+    # my @warning_messages = $create_command->warning_messages;
+    #is(scalar(@warning_messages), 0, 'no warnings');
+    my @error_messages = $create_command->error_messages;
+    is(scalar(@error_messages), 0, 'no errors');
+
     my $genome_model_id = $result->id;
 
     my @models = Genome::Model->get($genome_model_id);
@@ -161,7 +174,42 @@ sub schedule {
                                                                           auto_execute => 0,
                                                                       );
     isa_ok($build,'Genome::Model::Command::Build::ReferenceAlignment');
+
+    # supress warning messages about obsolete locking
+    Genome::Model::ReferenceAlignment->message_callback('warning', sub {});
+    &_trap_messages($build);
     ok($build->execute(), 'execute genome-model build reference-alignment');
+    
+    my @status_messages = $build->status_messages();
+    my @warning_messages = $build->warning_messages();
+    my @error_messages = $build->error_messages();
+
+    # FIXME This code is used in several different tests, each of which generate different numbers
+    # of messages about scheduling...  Is there some other method of making sure the right
+    # number of downstream events were scheduled?
+    ok(scalar(grep { $_ eq 'Scheduling for Genome::Model::ReadSet'} @status_messages),
+       'Saw a message about ReadSet');
+    ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AssignRun/} @status_messages),
+       'Saw a message about AssignRun');
+    ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AlignReads/} @status_messages),
+       'Saw a messages about  AlignReads');
+    ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments/} @status_messages),
+       'Saw a message about ProcessLowQualityAlignments');
+    is(scalar(grep { $_ eq 'Scheduling for reference_sequence'} @status_messages),
+       3, 'Got 3 reference_sequence messages');
+    is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments/} @status_messages),
+       3, 'Got 3 MergeAlignments messages');
+    is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype/} @status_messages),
+       3, 'Got 3 UpdateGenotype messages');
+    is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::FindVariations/} @status_messages),
+       3, 'Got 3 FindVariations messages');
+    is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations/} @status_messages),
+       3, 'Got 3 PostprocessVariations messages');
+    is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations/} @status_messages),
+       3, 'Got 3 AnnotateVariations messages');
+    # Not checking warning messages - for now, there are some relating to obsolete locking
+    is(scalar(@error_messages), 0, 'no errors');
+
     $self->build($build);
 }
 
@@ -173,6 +221,7 @@ sub run {
     my @events;
     for my $stage_name ($build->stages) {
         my @classes = $build->classes_for_stage($stage_name);
+$DB::single=1;
         push @events, $self->run_events_for_class_array_ref(\@classes);
     }
     my @failed_events = grep { $_->event_status ne 'Succeeded' } @events;
@@ -223,7 +272,11 @@ sub execute_event_test  {
 
     SKIP: {
           skip 'AnnotateVariations takes too long', 1 if $event->isa('Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations');
+          # FIXME - some of these events emit messages of one kind or another - are any
+          # of them worth looking at?
+          &_trap_messages($event);
           my $result = $event->execute();
+
           ok($result,'Execute: '. $event->command_name);
           if ($result) {
               set_event_status($event,'Succeeded');
@@ -253,12 +306,18 @@ sub remove_data {
     my @alignment_events = $model->alignment_events;
     my @alignment_dirs = map { $_->read_set_link->read_set_alignment_directory } @alignment_events;
     my $archive_file = $model->resolve_archive_file;
+
+$DB::single=1;
+    # FIXME - the delete below causes a lot of warning messages about deleting
+    # hangoff data.  do we need to check the contents?
+    &_trap_messages('Genome::Model::Event');
+    &_trap_messages('Genome::Model::Command::AddReads');  # Why didn't the above catch these, too?
     ok($self->model->delete,'successfully removed model');
     ok(unlink($archive_file),'successfully unlinked archive file');
     my $directories_to_remove = $self->{_dir_array_ref};
-    print "Removing directories:\n";
+    #print "Removing directories:\n";
     for my $directory_to_remove (@$directories_to_remove, @alignment_dirs) {
-        print $directory_to_remove . "\n";
+        #print $directory_to_remove . "\n";
         rmtree $directory_to_remove;
     }
 }
@@ -274,6 +333,18 @@ sub create_test_pp {
         confess("Failed to create processing_profile for test:  $!");
     }
     return 1;
+}
+
+
+sub _trap_messages {
+    my $obj = shift;
+
+    $obj->dump_error_messages(0);
+    $obj->dump_warning_messages(0);
+    $obj->dump_status_messages(0);
+    $obj->queue_error_messages(1);
+    $obj->queue_warning_messages(1);
+    $obj->queue_status_messages(1);
 }
 
 1;

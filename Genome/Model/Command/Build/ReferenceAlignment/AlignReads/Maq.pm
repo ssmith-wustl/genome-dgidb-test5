@@ -188,6 +188,8 @@ sub total_bases_passed_quality_filter_count {
 sub _calculate_total_bases_passed_quality_filter_count {
     my $self = shift;
 
+    # total_reads_passed_quality_filter_count might return "Not Found"
+    no warnings 'numeric';
     my $total_bases_passed_quality_filter_count = $self->total_reads_passed_quality_filter_count * $self->read_set_link->read_length;
     return $total_bases_passed_quality_filter_count;
 }
@@ -252,6 +254,8 @@ sub aligned_read_count {
 
 sub _calculate_aligned_read_count {
     my $self = shift;
+    no warnings 'numeric';
+    # total_reads_passed_quality_filter_count might return "Not Found"
     my $aligned_read_count = $self->total_reads_passed_quality_filter_count - $self->poorly_aligned_read_count - $self->contaminated_read_count;
     return $aligned_read_count;
 }

@@ -16,7 +16,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 99;
+    plan tests => 293;
     use_ok( 'Genome::RunChunk::454');
     use_ok( 'Genome::Model::Assembly');
     use_ok( 'Genome::ProcessingProfile::Assembly');
@@ -78,17 +78,90 @@ for my $pp_params (@pp_params) {
                                                                      all => 1,
                                                                  );
     isa_ok($add_reads_command,'Genome::Model::Command::AddReads');
+
+    &_trap_messages($add_reads_command);
+
     ok($add_reads_command->execute(),'execute genome-model add-reads');
+
+    my @status_messages = $add_reads_command->status_messages();
+    ok(scalar(@status_messages), 'add-reads execute printed some status messages');
+    ok(scalar(grep { $_ eq 'Adding all available reads to the model...!'} @status_messages), 'execute mentioned it was adding all reads');
+    ok(scalar(grep { $_ eq 'Found 8 compatible read sets.' } @status_messages), 'execute mentioned it found 8 read seta');
+    my @warning_messages = $add_reads_command->warning_messages();
+    is(scalar(@warning_messages), 0, 'execute generated no warning messages');
+    my @error_messages = $add_reads_command->error_messages();
+    is(scalar(@error_messages), 0, 'execute generated no error messages');
+    
+
     my $assembly_builder = Genome::Model::Command::Build::Assembly->create(
                                                                            model_id => $model->id,
                                                                            auto_execute => 0,
                                                                        );
     isa_ok($assembly_builder,'Genome::Model::Command::Build::Assembly');
+
+    &_trap_messages($assembly_builder);
+
     ok($assembly_builder->execute,'execute assembly builder');
+
+    @status_messages = $assembly_builder->status_messages();
+    # Each execute generates a message per ReadSet, plus 4 more for the build's 4 sub-steps (5 total)
+    # so for 8 ReadSets = 8 * 5 = 40
+    # plus 2 more for scheduling reference sequence / Build::Assembly::Assemble
+    #is(scalar(@status_messages), 42, 'executing builder generated 42 messages');
+    for(my $i = 0; $i < 8; $i++) {
+        is($status_messages[0], 'Scheduling for Genome::Model::ReadSet', 'Found scheduling ReadSet messages');
+        like($status_messages[1], qr(^Scheduled Genome::Model::Command::Build::Assembly::AssignReadSetToModel),
+             'Found Scheduled...AssignReadSetToModel message');
+        if ($pp_params->{'read_filter_name'}) {
+            like($status_messages[2], qr(^Scheduled Genome::Model::Command::Build::Assembly::FilterReadSet),
+                 'Found Scheduled...FilterReadSet messages');
+        } else {
+            is($status_messages[2], 
+               "No value defined for subclassing model property 'read_filter_name'.  Skipping 'Genome::Model::Command::Build::Assembly::FilterReadSet'",
+               'Message correctly indicates that it is skipping FilterReadSet');
+        }
+
+        if ($pp_params->{'read_trimmer_name'}) {
+            like($status_messages[3], qr(^Scheduled Genome::Model::Command::Build::Assembly::TrimReadSet),
+                 'Found Scheduled...TrimReadSet messages');
+        } else {
+            is($status_messages[3], 
+               "No value defined for subclassing model property 'read_trimmer_name'.  Skipping 'Genome::Model::Command::Build::Assembly::TrimReadSet'",
+               'Message correctly indicates that it is skipping TrimReadSet');
+        }
+        like($status_messages[4], qr(^Scheduled Genome::Model::Command::Build::Assembly::AddReadSetToProject),
+             'Found Scheduled...AddReadSetToProject messages');
+        splice(@status_messages, 0, 5);
+    }
+    is($status_messages[0], 'Scheduling for reference_sequence', 'Found reference_sequence message');
+    like($status_messages[1], qr(^Scheduled Genome::Model::Command::Build::Assembly::Assemble),
+        'Found Build Assembly message');
+    
+
+    @warning_messages = $assembly_builder->warning_messages;
+    is(scalar(@warning_messages), 0, 'executing builder generated no warming messages');
+    @error_messages = $assembly_builder->error_messages;
+    is(scalar(@error_messages), 0, 'executing builder generated no error messages');
+
     for my $class ($assembly_builder->stage1_job_classes) {
         my @events = $class->get(model_id => $model->id);
         for my $event (@events) {
-            ok($event->execute,"execute $class event");
+
+            &_trap_messages($event);
+
+            # Executing AddReadSetToProject events runs an external program that can
+            # print to stdout.  It's failure is properly caught by the caller, so we're
+            # not bothering to make sure the message is correct
+            my $foo = &_disable_std_out_err();
+            my $rv = $event->execute();
+            &_enable_std_out_err($foo);
+            
+            ok($rv,"execute $class event");
+
+            @warning_messages = $assembly_builder->warning_messages;
+            is(scalar(@warning_messages), 0, 'event execution produced no warning messages');
+            @error_messages = $assembly_builder->error_messages;
+            is(scalar(@error_messages), 0, 'event execution produced no error messages');
         }
     }
     my @assemble_events = Genome::Model::Command::Build::Assembly::Assemble->get(model_id => $model->id);
@@ -102,3 +175,36 @@ for my $pp_params (@pp_params) {
     rmtree($model->data_directory);
 }
 exit;
+
+
+
+sub _trap_messages {
+    my $obj = shift;
+
+    $obj->dump_error_messages(0);
+    $obj->dump_warning_messages(0);
+    $obj->dump_status_messages(0);
+    $obj->queue_error_messages(1);
+    $obj->queue_warning_messages(1);
+    $obj->queue_status_messages(1);
+}
+
+
+# Returns a "token" that can be used later to re-enable them
+sub _disable_std_out_err {
+    open my $oldout, ">&STDOUT"     or die "Can't dup STDOUT: $!";
+    open my $olderr, ">&", \*STDERR or die "Can't dup STDERR: $!";
+
+    open(STDOUT,'>/dev/null');
+    open(STDERR,'>/dev/null');
+
+    return { oldout => $oldout, olderr => $olderr };
+}
+
+sub _enable_std_out_err {
+    my $oldout = $_[0]->{'oldout'};
+    my $olderr = $_[0]->{'olderr'};
+
+    open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
+    open STDERR, ">&", $olderr or die "Can't dup \$olderr: $!";
+}
