@@ -16,7 +16,7 @@ class Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations::
             merged_fasta_file => {
                                   calculate_from => ['parent_event', 'model'],
                                   calculate => q|
-                                          return $parent_event->accumulated_alignments_directory .'/'. $model->subject_name .'.fa';
+                                          return $parent_event->accumulated_alignments_directory .'/'. $model->id .'.fa';
                                   |,
                               },
             insertions_file => { via => 'prior_event' },
@@ -82,12 +82,12 @@ sub execute {
                           $break_point_path,
                           $self->combined_substitutions_file,
                           $self->coverage_blocks_file,
-                          $model->subject_name);
+                          $model->id);
     my $in_cmd = sprintf("%s --genotype-indels %s --alignment-file %s --sample-name %s --reads-fasta %s --ref-dir %s",
                             $break_point_path,
                             $self->combined_insertions_file,
                             $self->coverage_blocks_file,
-                            $model->subject_name,
+                            $model->id,
                             $model->accumulated_alignments_directory,
                             $model->reference_sequence_path,
                         );
@@ -95,7 +95,7 @@ sub execute {
                             $break_point_path,
                             $self->combined_deletions_file,
                             $self->coverage_blocks_file,
-                            $model->subject_name,
+                            $model->id,
                             $model->accumulated_alignments_directory,
                             $model->reference_sequence_path,
                         );
