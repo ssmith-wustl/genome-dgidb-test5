@@ -79,7 +79,15 @@ sub execute
     my $self = shift;
 # default for nrdb
 #$nr_db = "/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr";
-
+    my ($merge_out,$merge_err);
+    my $merge_command = $self->gather_details();
+    IPC::Run::run( $merge_command,
+                   \undef,
+                   '>',
+                   \$merge_out,
+                   '2>',
+                   \$merge_err,
+                   ) || croak "can't run finish : $!";
 
 
 

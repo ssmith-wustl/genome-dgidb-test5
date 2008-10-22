@@ -40,10 +40,16 @@ UR::Object::Type->define(
                                                   is_optional => 1},
                                  'ncbi_taxonomy_id' => {is => 'String',
                                                         doc => "",
-                                                        is_optional =>1},
+                                                        is_optional => 1},
                                  'dev' => {is => 'Boolean',
                                            doc => "",
                                            is_optional => 1},
+                                 'sequence_set_name' => {is => 'String',
+                                                         doc => "",
+                                                         is_optional => 1},
+                                 'work_directory' => {is => 'String',
+                                                      doc => "",
+                                                      is_optional => 1},
                                  ]
                          );
 
@@ -109,17 +115,20 @@ sub gather_details
     $ncbi_taxonomy_id  = $organism_obj->ncbi_taxonomy_id();
     $gram_stain        = $organism_obj->gram_stain();
     $locus             = $organism_obj->locus();
-    my @cols = ($organism_id, $organism_name, $ncbi_taxonomy_id, $gram_stain, $locus);
+    my @cols = ($organism_id, $organism_name, 
+                $ncbi_taxonomy_id, $gram_stain, $locus);
     @cols = map { defined($_) ? $_ : 'NULL' } @cols;
     
     print join("\t", @cols), "\n\n";
-    
-
-    BAP::DB::DBI->dbi_commit();
-
-
-
-    my $cwd = getcwd();
+    my $cwd;
+    if(defined($self->work_directory))
+    {
+        $cwd = $self->work_directory;
+    }
+    else
+    {
+        $cwd = getcwd();
+    }
     my @cwd = split(/\//x,$cwd);
     #print "there are ", $#cwd," in \@cwd\n";
     my ($sequence_set_name, $analysis_version_num, $hgmi_sequence_dir);
@@ -130,18 +139,23 @@ sub gather_details
         # these need to be based on the directory structure,
         # instead of just a 'raw' split.
         $sequence_set_name = $cwd[6]; #HGMI projects
-        $analysis_version_num = $cwd[9]; #HGMI projects
-        $hgmi_sequence_dir = join("\/", @cwd[0..9],'Sequence',$hgmi_locus_tag); #HGMI projects
+#        $analysis_version_num = $cwd[9]; #HGMI projects
+#        $hgmi_sequence_dir = join("\/", @cwd[0..9],'Sequence',$hgmi_locus_tag); #HGMI projects
         
     }
     else # HMPP/Enterobacter
     {
     
         $sequence_set_name = $cwd[7]; #HMPP and Enterobacter
-        $analysis_version_num = $cwd[10]; #HMPP and Enterobacter
-        $hgmi_sequence_dir = join("\/", @cwd[0..10],'Sequence',$hgmi_locus_tag); #HMPP and Enterobacter
+#        $analysis_version_num = $cwd[10]; #HMPP and Enterobacter
+#        $hgmi_sequence_dir = join("\/", @cwd[0..10],'Sequence',$hgmi_locus_tag); #HMPP and Enterobacter
         
     }
+
+#    if(defined($self->sequence_set_name))
+#    {
+#        $sequence_set_name = $self->sequence_set_name;
+#    }
 
     unless (defined($sequence_set_name)) 
     {
@@ -153,8 +167,6 @@ sub gather_details
     my $sequence_set_id;
 
     $sequence_set_name_obj = BAP::DB::SequenceSet->retrieve('sequence_set_name'=> $sequence_set_name);
-
-
 
     unless(defined($sequence_set_name_obj))
     {
@@ -190,19 +202,16 @@ my (
     
     );
 
-$bsub_bfp_output = $cwd."/".$hgmi_locus_tag."_bfp_BAP_".$sequence_set_id."_blade.output";
+    $bsub_bfp_output = $cwd."/".$hgmi_locus_tag."_bfp_BAP_".$sequence_set_id."_blade.output";
 
-$bsub_bfp_error = $cwd."/".$hgmi_locus_tag."_bfp_BAP_".$sequence_set_id."_blade.error";
+    $bsub_bfp_error = $cwd."/".$hgmi_locus_tag."_bfp_BAP_".$sequence_set_id."_blade.error";
 
-$cmd3 .= qq{bsub -o $bsub_bfp_output -e $bsub_bfp_error -q long -n 2 -R 'span[hosts=1] rusage[mem=4096]' -N -u wnash\@wustl.edu \\\n};
+    $cmd3 .= qq{bsub -o $bsub_bfp_output -e $bsub_bfp_error -q long -n 2 -R 'span[hosts=1] rusage[mem=4096]' -N -u wnash\@wustl.edu \\\n};
 
-$cmd3 .= qq{/gscmnt/277/analysis/personal_dirs/wnash/Work/Scripts/BAP_TEST/bap_finish_project.pl --ssid $sequence_set_id --locus-id $hgmi_locus_tag --project-type HGMI --acedb-version V2 \\\n};
+    $cmd3 .= qq{/gscmnt/277/analysis/personal_dirs/wnash/Work/Scripts/BAP_TEST/bap_finish_project.pl --ssid $sequence_set_id --locus-id $hgmi_locus_tag --project-type HGMI --acedb-version V2 \\\n};
 
-print "\nbap_finish_project.pl\n";
-print "\n$cmd3 \n";
-
-
-
+    print "\nbap_finish_project.pl\n";
+    print "\n$cmd3 \n";
 
     my @command_list = ('bap_finish_genes',
                         '--sequence-set-id',

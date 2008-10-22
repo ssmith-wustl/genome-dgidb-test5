@@ -17,6 +17,7 @@ my $finish = Genome::Model::Tools::Hgmi::Finish->create(
   'organism_name' => "Bifidobacterium_catenulatum",
   'hgmi_locus_tag' => "BIFCATDFT",
   'project_type' => "HGMI",
+  'sequence_set_name' => "Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb",
   'dev' => 1
 );
 
