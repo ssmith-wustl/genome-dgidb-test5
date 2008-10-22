@@ -85,7 +85,6 @@ sub resolve_accumulated_alignments_filename {
         #get this mapfile (without the remove_pcr_artifacts option)
         $self->status_message("Removing PCR artifacts");
         my $temp_accum_align_file = $self->resolve_accumulated_alignments_filename(ref_seq_id => $ref_seq_id,library_name => $library_name,remove_pcr_artifacts => 0);
-        $DB::single=1;
         my $temp_del_file = new File::Temp( UNLINK => 1, SUFFIX => '.map');
         my $result = Genome::Model::Tools::Maq::RemovePcrArtifacts->execute(input => $temp_accum_align_file,keep => $result_file, remove => $temp_del_file->filename, identity_length => $identity_length);
         $self->status_message("Error deduplicating mapfile.\n") unless $result;

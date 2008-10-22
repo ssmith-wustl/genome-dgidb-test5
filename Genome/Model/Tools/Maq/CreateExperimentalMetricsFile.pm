@@ -170,7 +170,6 @@ sub execute {
             $read{ref_name} = sprintf("%02d",$read{ref_name});
         }
 
-        $DB::single = 1;
         $locations_href->{$read{ref_name}}{$read{snp_position}}{total_depth} += 1;
         if(exists($locations_href->{$read{ref_name}}{$read{snp_position}}{$read{snp_allele}})) {
             $locations_href->{$read{ref_name}}{$read{snp_position}}{$read{snp_allele}}->add_read($self->max_read,\%read);

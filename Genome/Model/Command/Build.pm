@@ -157,7 +157,6 @@ sub _schedule_command_classes_for_object {
     my $command_classes = shift;
     my $prior_event_id = shift;
 
-    $DB::single = 1;
     my @scheduled_commands;
     for my $command_class (@{$command_classes}) {
         if (ref($command_class) eq 'ARRAY') {

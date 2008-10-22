@@ -37,7 +37,6 @@ sub bsub_rusage {
 sub execute {
     my $self = shift;
 
-$DB::single=1;
     $DB::single = $DB::stopper;
 
     my $now = UR::Time->now;
@@ -108,7 +107,6 @@ $DB::single=1;
         
         my @missing_maps;
         my @found_maps;
-$DB::single=1;
         for my $read_set_link (@read_sets) {
             unless(defined $read_set_link->first_build_id) {
                 $read_set_link->first_build_id($self->parent_event_id);
