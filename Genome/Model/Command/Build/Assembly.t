@@ -59,7 +59,7 @@ my $subject_name = 'TSP_Round1-4_Normal_Amplicon_Pool';
 my $subject_type = 'sample_name';
 
 for (my $i=0; $i < scalar(@pp_params); $i++) {
-    my $pp_params = @pp_params[$i];
+    my $pp_params = $pp_params[$i];
     my $model_name = $model_base_name .'_'. $i;
     my %pp_params = %{$pp_params};
     my $pp = Genome::ProcessingProfile::Assembly->create(%pp_params);
