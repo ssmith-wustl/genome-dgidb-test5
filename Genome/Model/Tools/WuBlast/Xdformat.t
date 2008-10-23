@@ -67,5 +67,5 @@ ok(!$verify_fail->execute,'expected verify to fail');
 
 exit;
 
-#$HeadUL$
+#$HeadURL$
 #$Id$
