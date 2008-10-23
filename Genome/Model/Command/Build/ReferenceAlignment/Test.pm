@@ -308,7 +308,6 @@ sub remove_data {
     my @alignment_dirs = map { $_->read_set_link->read_set_alignment_directory } @alignment_events;
     my $archive_file = $model->resolve_archive_file;
 
-$DB::single=1;
     # FIXME - the delete below causes a lot of warning messages about deleting
     # hangoff data.  do we need to check the contents?
     &_trap_messages('Genome::Model::Event');
