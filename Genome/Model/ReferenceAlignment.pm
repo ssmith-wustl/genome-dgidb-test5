@@ -308,6 +308,34 @@ sub resolve_metrics {
     return @metrics;
 }
 
+sub get_alignment_paths {
+    my $self=shift;
+    my %p = @_;
+    my $ref_seq_id = $p{ref_seq_id};
+    my $library_name = $p{library_name};
+
+    my @readsets = Genome::Model::ReadSet->get(model_id=>$self->id);
+
+    if($library_name) {
+        @readsets= grep {$_->library_name eq $library_name} @readsets;
+    }
+
+    my @paths_to_return;
+    for my $readset (@readsets) {
+        if ($ref_seq_id) {
+            push @paths_to_return, $readset->read_set_alignment_files_for_refseq($ref_seq_id);
+        }
+        else
+        { 
+            push @paths_to_return, $readset->alignment_file_paths();
+        }
+    }
+   return @paths_to_return;
+
+} 
+
+    
+
 sub generate_metrics {
     my $self = shift;
     my %metric_to_class = $self->metric_to_class_hash;
