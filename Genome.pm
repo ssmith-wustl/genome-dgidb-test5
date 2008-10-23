@@ -14,4 +14,6 @@ UR::Object::Type->define(
     english_name => 'genome',
 );
 
+use Genome::Model::Command;
+
 1;
