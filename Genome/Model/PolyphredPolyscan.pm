@@ -404,7 +404,6 @@ sub combined_input_columns {
         read_count
         score
     );
-    #poly_score
 }
 
 # Grabs all of the input files from the current build, creates MG::IO modules for
@@ -496,7 +495,9 @@ sub get_or_create{
     my $sensitivity = $p{sensitivity};
     my $data_directory = $p{data_directory};
     my $subject_name = $p{subject_name};
-    
+    my $subject_type = $p{subject_type};
+    $subject_type ||= 'sample_name';
+
     unless (defined($research_project_name) && defined($technology) && defined($sensitivity) && defined($subject_name)) {
         $class->error_message("Insufficient params supplied to get_or_create");
         return undef;
@@ -524,11 +525,13 @@ sub get_or_create{
                 sensitivity => $sensitivity,
             );
         }
+
         my $create_command = Genome::Model::Command::Create::Model->create(
             model_name => $model_name,
             processing_profile_name => $pp->name,
             subject_name => $subject_name,
             data_directory => $data_directory,
+            subject_type => $subject_type,
         );
 
         $model = $create_command->execute();

@@ -762,6 +762,8 @@ sub get_or_create {
     my ($class , %p) = @_;
     my $subject_name = $p{subject_name};
     my $data_directory = $p{data_directory};
+    my $subject_type = $p{subject_type};
+    $subject_type ||= 'sample_name';
 
     unless (defined($subject_name)) {
         $class->error_message("Insufficient params supplied to get_or_create");
@@ -780,12 +782,13 @@ sub get_or_create {
         unless ($pp) {
             $pp = Genome::ProcessingProfile::CombineVariants->create(name => $pp_name);
         }
-
+        
         my $create_command = Genome::Model::Command::Create::Model->create(
             model_name => $name,
             processing_profile_name => $pp->name,
             subject_name => $subject_name,
             data_directory => $data_directory,
+            subject_type => $subject_type,
         );
 
         $model = $create_command->execute();
