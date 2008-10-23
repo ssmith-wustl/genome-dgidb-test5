@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 
 use File::Temp;
-use Test::More tests => 15;
+use Test::More tests => 14;
 
 BEGIN {
         use_ok('Genome::Model::Tools::WuBlast::Xdformat');
@@ -39,8 +39,8 @@ my $create_fail = Genome::Model::Tools::WuBlast::Xdformat::Create->create(
                                                                           database => $database,
                                                                           fasta_files => \@fasta_files,
                                                                       );
-ok($create_fail,'Genome::Model::Tools::WuBlast::Xdformat::Create');
-ok(!$create_fail->execute,'failed to create duplicate database');
+is($create_fail, undef, 'Genome::Model::Tools::WuBlast::Xdformat::Create');
+#ok(!$create_fail->execute,'failed to create duplicate database');
 
 # APPEND
 my $append_success = Genome::Model::Tools::WuBlast::Xdformat::Append->create(
@@ -66,3 +66,6 @@ isa_ok($verify_fail,'Genome::Model::Tools::WuBlast::Xdformat::Verify');
 ok(!$verify_fail->execute,'expected verify to fail');
 
 exit;
+
+#$HeadUL$
+#$Id$
