@@ -18,11 +18,12 @@ class Genome::Individual {
         organism_id     => { is => 'Text', len => 10 },
     ],
     has_many_optional => [
-        samples         => { is => 'Genome::Sample', reverse_id_by => 'source_individual' },
-        sample_names    => { via => 'samples', to => 'name' },
+        samples         => { is => 'Genome::Sample', reverse_id_by => 'source_id' },
+        sample_names    => { via => 'samples', to => 'sample_name' },
     ],
     has => [
-        name            => { is => 'Text',     len => 64, column_name => 'SAMPLE_NAME' }, 
+        name            => { is => 'Text', len => 64 },
+        taxon_id        => { is => 'Text', len => 10 },
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };
