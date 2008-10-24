@@ -26,6 +26,26 @@ class Genome::Model::Command::Report::SolexaStageOne {
 my %div_hash;
 my %job_to_status;
 
+sub resolve_reports_directory {
+    my $self = shift;
+    my $basedir = $self->SUPER::resolve_reports_directory();
+    my $reports_dir= $basedir . "SolexaStageOne/";
+    unless(-d $reports_dir) {
+        unless(mkdir $reports_dir) {
+            $self->error_message("Directory $reports_dir doesn't exist, can't create");
+            return;
+        }
+        chmod 02775, $reports_dir;
+    }
+   return $reports_dir;
+}
+
+
+
+
+
+
+
 sub generate_report_detail {
     my $self=shift;
     my $model= $self->model;
