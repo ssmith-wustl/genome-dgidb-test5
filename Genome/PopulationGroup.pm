@@ -18,7 +18,8 @@ class Genome::PopulationGroup {
         pg_id           => { is => 'Text', len => 10 },
     ],
     has => [
-        name            => { is => 'Text',     len => 64, column_name => 'SAMPLE_NAME' }, 
+        taxon_id        => { is => 'Text', len => 10 },
+        name            => { is => 'Text', len => 64 },
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };
