@@ -79,6 +79,11 @@ class Genome::Model::Event {
                                             is => 'Genome::Model::Event',
                                             reverse_id_by => 'parent_event'
                                         },
+        next_events                     => {
+                                            is => 'Genome::Model::Event',
+                                             reverse_id_by => 'prior_event_id',
+                                             constraint_name => 'GME_PPEID_FK'
+                                        },
         inputs                          => { is => 'Genome::Model::Event::Input',  reverse_id_by => 'event' },
         outputs                         => { is => 'Genome::Model::Event::Output', reverse_id_by => 'event' },
         metrics                         => { is => 'Genome::Model::Event::Metric', reverse_id_by => 'event' },
@@ -531,22 +536,25 @@ sub bsub_rusage {
 
 sub execute_with_bsub {
     my ($self, %params) = @_;
-    my $last_event = $params{last_event};
-    my $dep_type = $params{dep_type};
     my $queue = $params{bsub_queue};
     my $bsub_args = $params{bsub_args};
-    my $dependency_expression = $params{dependency_expression};
+    my $dependency_hash_ref = $params{dependency_hash_ref};
     my $model_id = $self->model_id;
 
-## should check if $self isa Command??
+    ## should check if $self isa Command??
     $queue ||= 'long';
-    $dep_type ||= 'ended';
-    
 
     $DB::single = $DB::stopper;
 
-    unless($dependency_expression) {
-        $dependency_expression = $last_event->lsf_job_id if defined $last_event;
+    my $dependency_expression = '';
+    for my $dep_type (keys %{$dependency_hash_ref}) {
+        for my $dep_value (@{$$dependency_hash_ref{$dep_type}}) {
+            if ($dependency_expression eq '') {
+                $dependency_expression .= "$dep_type($dep_value)";
+            } else {
+                $dependency_expression .= " && $dep_type($dep_value)";
+            }
+        }
     }
 
     if (my $bsub_rusage = $self->bsub_rusage) {
@@ -559,28 +567,20 @@ sub execute_with_bsub {
     my $cmd = "genome-model bsub-helper";
 
     my $event_id = $self->genome_model_event_id;
-    my $prior_event_id = $last_event->genome_model_event_id if defined $last_event;
     my $log_dir = $self->resolve_log_directory;
     unless (-d $log_dir) {
-        eval { mkpath($log_dir) };
-        if ($@) {
-            $self->error_message("Couldn't create run directory path $log_dir: $@");
-            return;
-        }
+        $self->create_directory($log_dir);
     }
-  
-    my $err_log_file = sprintf("%s/%s.err", $self->resolve_log_directory, $event_id);
-    my $out_log_file = sprintf("%s/%s.out", $self->resolve_log_directory, $event_id);
+    my $err_log_file = sprintf("%s/%s.err", $log_dir, $event_id);
+    my $out_log_file = sprintf("%s/%s.out", $log_dir, $event_id);
     $bsub_args .= ' -o ' . $out_log_file . ' -e ' . $err_log_file;
 
     my $cmdline;
     { no warnings 'uninitialized';
         $cmdline = "bsub -q $queue $bsub_args" .
-                   ($dependency_expression && " -w '$dep_type($dependency_expression)'") .
-                   " $cmd --model-id $model_id --event-id $event_id " .
-                   ($prior_event_id && " --prior-event-id $prior_event_id");
+                   ($dependency_expression && " -w '$dependency_expression'") .
+                   " $cmd --model-id $model_id --event-id $event_id ";
     }
-    
     $self->status_message("Running command: " . $cmdline);
 
     # Header for output and error files
@@ -599,24 +599,21 @@ sub execute_with_bsub {
         $fh->print( sprintf('Submitted at %s: %s', UR::Time->now, $cmdline) );
         $fh->close;
     }
-
     my $bsub_output = `$cmdline`;
     my $retval = $? >> 8;
 
     if ($retval) {
         $self->error_message("bsub returned a non-zero exit code ($retval), bailing out");
-        return;
+            return;
     }
     my $bsub_job_id;
     if ($bsub_output =~ m/Job <(\d+)>/) {
         $bsub_job_id = $1;
-
     } else {
         $self->error_message('Unable to parse bsub output, bailing out');
         $self->error_message("The output was: $bsub_output");
         return;
     }
-
     return $bsub_job_id;
 }
 
