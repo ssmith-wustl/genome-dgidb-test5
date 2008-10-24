@@ -10,7 +10,6 @@ class Genome::Model::Command::BsubHelper {
     is => 'Command',
     has => [
         event_id            => { is => 'Integer', doc => 'Identifies the Genome::Model::Event by id'},
-        prior_event_id      => { is => 'Integer', doc => 'Identifies the prior Genome::Model::Event by id', is_optional=>1 },
         model_id            => { is => 'Integer', doc => "Identifies the genome model on which we're operating, Used for validation" },
         model               => { is => 'Genome::Model', id_by => 'model_id' },
     ],
