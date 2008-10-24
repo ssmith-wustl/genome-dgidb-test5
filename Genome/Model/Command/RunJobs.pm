@@ -13,8 +13,10 @@ class Genome::Model::Command::RunJobs {
         ref_seq_id  => {is => 'String', is_optional => 1, doc => 'only dispatch events with this ref_seq_id' },
         event_id    => {is => 'Integer', is_optional => 1, doc => 'only dispatch this single event' },
         bsub_queue  => {is => 'String', is_optional => 1, doc => 'lsf jobs should be put into this queue' },
-        bsub_args   => {is => 'String', is_optional => 1, doc => 'additional arguments to be given to bsub' },   
-        force       => {is => 'Boolean', is_optional => 1, doc => 'force kill an event and restart even if running/successful' },
+        bsub_args   => {is => 'String', is_optional => 1, doc => 'additional arguments to be given to bsub' },
+        job_name    => {is => 'String', is_optional => 1, doc => 'a job name to group all scheduled jobs by' },
+        prior_job_name => {is => 'String', is_optional => 1, doc => 'a job name to scheduled as a dependency for this job_name' },
+        force           => {is => 'Boolean', is_optional => 1, doc => 'force kill an event and restart even if running/successful' },
     ],
 };
 
@@ -61,6 +63,10 @@ sub execute {
     #    return;
     #}
 
+    if ($self->prior_job_name && !defined($self->job_name)) {
+        $self->error_message('Found a prior job name but no job name');
+        die;
+    }
     $DB::single = $DB::stopper;
 
     if ($self->event_id) {
@@ -238,18 +244,31 @@ sub _schedule_scheduled_jobs {
             }
         }
 
-        my $prior_event = $event->prior_event();
-        my %execute_args = (bsub_queue => $self->bsub_queue, bsub_args => $self->bsub_args);
+        my $bsub_args = $self->bsub_args;
+        if ($self->job_name) {
+            $bsub_args .= ' -J "'. $self->job_name .'" ';
+        }
+        my %execute_args = (bsub_queue => $self->bsub_queue, bsub_args => $bsub_args);
 
+        my @done_dependencies;
+        my @ended_dependencies;
+        my $prior_event = $event->prior_event();
         if ($prior_event) {
             if ( $prior_event->lsf_job_id and 
                  ( $prior_event->event_status eq 'Running' or $prior_event->event_status eq 'Scheduled') ) {
-
-                $execute_args{'last_event'} = $prior_event;
+                push @done_dependencies, $prior_event->lsf_job_id;
             }
         }
-
-        my $last_bsub_job_id = $event->execute_with_bsub( %execute_args);
+        if ($self->prior_job_name) {
+            push @ended_dependencies, '"'. $self->prior_job_name .'"';
+        }
+        if (@done_dependencies) {
+            $execute_args{'dependency_hash_ref'}{done} = \@done_dependencies;
+        }
+        if (@ended_dependencies) {
+            $execute_args{'dependency_hash_ref'}{ended} = \@ended_dependencies;
+        }
+        my $last_bsub_job_id = $event->execute_with_bsub(%execute_args);
         unless ($last_bsub_job_id) {
             $self->_failed_to_bsub($event, \@launchable_events);
             next;
@@ -280,11 +299,11 @@ sub _reschedule_failed_jobs {
                             #                                 model_id => $_->model_id,
                             #                                 event_type => $_->event_type,
                             #                                 date_scheduled => { operator => '>', value => $_->date_scheduled } ) }
-                            Genome::Model::Event->get(event_status => ['Failed','Crashed'],  
-                                                      parent_event_id => { operator => 'ne', value=>undef}, 
-                                                      %addl_get_params);  
+                            Genome::Model::Event->get(event_status => ['Failed','Crashed'],
+                                                      parent_event_id => { operator => 'ne', value=>undef},
+                                                      %addl_get_params);
 
-    $DB::single=1;                         
+    $DB::single=1;
     while (my $event = shift @launchable_events) {
         # Get subsequent events that have been through a round of 'scheduling'.
         # ie. they have an lsf_job_id assigned to them.  These jobs will need to
@@ -293,16 +312,34 @@ sub _reschedule_failed_jobs {
                                 grep { $_->lsf_job_id }
                                 Genome::Model::Event->get(event_status => 'Scheduled',
                                                           prior_event_id => $event->genome_model_event_id);
+        my $event_build = $event->parent_event();
+        unless ($event_build) {
+            $self->error_message('No build event for event('. $event->id .')');
+            die;
+        }
+        my $event_stage_name = $event_build->resolve_stage_name_for_class($event->class);
+        unless ($event_stage_name) {
+            $self->error_message('Failed to resolve stage name for event('.
+                                 $event->id .':'. $event->class .') in build('.
+                                 $event_build->build_id .':'. $event_build->class .')');
+            die;
+        }
+        my $job_name = $event_build->model_id .'_'. $event_stage_name .'_'. $event_build->build_id;
+        my $bsub_args = $self->bsub_args;
+        $bsub_args .= ' -J "'. $job_name .'" ';
+        my %execute_args = (bsub_queue => $self->bsub_queue, bsub_args => $bsub_args);
 
         my $prior_event = $event->prior_event();
-        my %execute_args = (bsub_queue => $self->bsub_queue, bsub_args => $self->bsub_args);
-
+        my @done_dependencies;
         if ($prior_event) {
             if ( $prior_event->lsf_job_id and 
                  ( $prior_event->event_status eq 'Running' or $prior_event->event_status eq 'Scheduled') ) {
-
-                $execute_args{'last_event'} = $prior_event;
+                push @done_dependencies, $prior_event->lsf_job_id;
             }
+        }
+
+        if (@done_dependencies) {
+            $execute_args{'dependency_hash_ref'}{done} = \@done_dependencies;
         }
         my $new_job_id = $event->execute_with_bsub(%execute_args);
         unless ($new_job_id) {
@@ -317,20 +354,18 @@ sub _reschedule_failed_jobs {
         $event->lsf_job_id($new_job_id);
         $event->retry_count($event->retry_count + 1);
 
+        # Here since we originally scheduled in stages, we should not have to worry about job name/stage dependencies
+        # The remaining events in the stage will get the new lsf_job_id dependency and that's all they should need
         foreach my $next_event ( @subsequent_events ) {
-            my $dep = "done($new_job_id)";
+            my $new_dependency_string = "done($new_job_id)";
             my $next_job_id = $next_event->lsf_job_id;
             $self->status_message("Changing dependancy of lsf job $next_job_id to $new_job_id");
             $next_event->date_scheduled(UR::Time->now);   # Seems like the right thing to do
-            `bmod -w '$dep' $next_job_id`;
+            `bmod -w '$new_dependency_string' $next_job_id`;
         }
-
         $self->context->commit;
     }
 }
-
-
-
 
 
 # If we had a problem scheduling a job, print an error message about it and
