@@ -137,8 +137,17 @@ sub compatible_input_read_sets {
             }
         }
         my @child_dnas = map {$_->get_child_dna} @drs;
-        my @dri_names = map {$_->dna_resource_item_name} @child_dnas;
-        $value_ref = \@dri_names;
+        my @sample_names = map {$_->dna_resource_item_name} @child_dnas;
+
+        # Now look up in the backfilled tables
+        my @org_individuals = Genome::Individual->get(taxon_id => $org_taxon->taxon_id);
+        push @sample_names, map { $_->sample_names } @org_individuals;
+        my @org_population_groups = Genome::PopulationGroup->get(taxon_id => $org_taxon->taxon_id);
+        my @source_ids = map { $_->id } @org_population_groups;
+        my @org_samples = Genome::Sample->get(source_id => \@source_ids);
+        push @sample_names, map { $_->name } @org_samples;
+
+        $value_ref = \@sample_names;
         #$self->status_message("Looking for the following dna resource items:\n". join ("\n",@dri_names));
     } elsif ($self->subject_type eq 'sample_name') {
         $value_ref = {
