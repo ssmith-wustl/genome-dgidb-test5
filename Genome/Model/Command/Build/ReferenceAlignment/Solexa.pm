@@ -38,12 +38,17 @@ sub stages {
 }
 
 sub backend_job_classes {
-    my @step1 =  ('Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments');
-    my @step2 =  ('Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype');
-    my @step3 =  ('Genome::Model::Command::Build::ReferenceAlignment::FindVariations'),
-    my @step4 =  ('Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations', 'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations');
+    my @steps = (
+                 'Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments',
+                 'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
+                 'Genome::Model::Command::Build::ReferenceAlignment::FindVariations',
+                 (
+                  'Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations',
+                  'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations'
+              )
+             );
 
-    return (\@step1, \@step2, \@step3, \@step4);
+    return @steps;
 }
 
 sub frontend_job_classes {
