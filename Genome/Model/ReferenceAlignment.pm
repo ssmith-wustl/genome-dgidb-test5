@@ -86,14 +86,6 @@ class Genome::Model::ReferenceAlignment {
                 return $latest_build_event;
             |,
         },
-        latest_complete_build_event => {
-            calculate_from => ['build_event_arrayref'],
-            calculate => q|
-                my @e = grep { $_->event_status eq 'Succeeded' } sort { $a->id cmp $b->id } @$build_event_arrayref;
-                my $e = $e[-1];
-                return $e;
-            |,
-        },
         filter_ruleset_name     => { via => 'processing_profile' },
         filter_ruleset_params   => { via => 'processing_profile' },
     ],
@@ -145,12 +137,12 @@ sub _calculate_library_count {
 
 sub complete_build_directory {
     my $self=shift;
-    if (defined $self->latest_complete_build_event) {
-        return $self->latest_complete_build_event->data_directory;
+    if (defined $self->last_complete_build) {
+        return $self->last_complete_build->data_directory;
     }
     else
     {
-        return ;
+        return; 
     }
 }
 
