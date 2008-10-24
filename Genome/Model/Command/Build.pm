@@ -66,29 +66,52 @@ sub build_in_stages {
     my $self = shift;
 
     $self->data_directory($self->resolve_data_directory);
-    my @stages = $self->stages;
-    for my $stage_name (@stages) {
-        my @stage_classes = $self->classes_for_stage($stage_name);
-        $self->_verify_existing_events(\@stage_classes);
 
-        my @objects = $self->objects_for_stage($stage_name);
-        my @scheduled_objects = $self->_schedule_stage(\@stage_classes,\@objects);
-        if (!defined $self->auto_execute) {
-            $self->auto_execute(1);
-            #die "This should never happend since we are a required property, but it seems like a possiblity";
+    if ($self->_verify_existing_events) {
+        $self->event_status('Succeeded');
+        $self->date_completed(UR::Time->now);
+        return 1;
+    }
+    my $prior_job_name;
+    for my $stage_name ($self->stages) {
+        my $job_name = $self->model_id .'_'. $stage_name .'_'. $self->build_id;
+        my @scheduled_objects = $self->_schedule_stage($stage_name);
+        unless (@scheduled_objects) {
+            $self->error_message('Problem with build('. $self->build_id .") objects not scheduled for classes:\n".
+                                 join("\n",$self->classes_for_stage($stage_name)));
+            die;
         }
-        if ($self->auto_execute && @scheduled_objects) {
-            my $return_value = $self->_run_stage($stage_name,@scheduled_objects);
-            if ($return_value == 1) {
-                $self->event_status('Succeeded');
-                $self->date_completed(UR::Time->now);
-                return $return_value;
-            } else {
-                return 1;
+
+        if (!defined $self->auto_execute) {
+            # transent properties with default_values are not re-initialized when loading object from data source
+            $self->auto_execute(1);
+        }
+        if ($self->auto_execute) {
+            unless (Genome::Model::Command::RunJobs->execute(
+                                                             model_id => $self->model_id,
+                                                             job_name => $job_name,
+                                                             prior_job_name => $prior_job_name,
+                                                         )) {
+                $self->error_message('Failed to execute run-jobs for model '. $self->model_id);
+                return;
             }
         }
+        $prior_job_name = $job_name;
     }
     return 1;
+}
+
+sub resolve_stage_name_for_class {
+    my $self = shift;
+    my $class = shift;
+    for my $stage_name ($self->stages) {
+        my $found_class = grep { $_ eq $class } $self->classes_for_stage($stage_name);
+        if ($found_class) {
+            return $stage_name;
+        }
+    }
+    $self->error_message("No class found for '$class' in build ". $self->class ." stages:\n". join("\n",$self->stages));
+    return;
 }
 
 sub classes_for_stage {
@@ -98,6 +121,7 @@ sub classes_for_stage {
     return $self->$classes_method_name;
 }
 
+# TODO: write method for getting all objects for stage regardless of build status
 sub objects_for_stage {
     my $self = shift;
     my $stage_name = shift;
@@ -105,24 +129,53 @@ sub objects_for_stage {
     return $self->$objects_method_name;
 }
 
+sub abandon_failed_events_for_stage {
+    my $self = shift;
+    my $stage_name = shift;
+
+    my @failed_events;
+    for my $class ($self->classes_for_stage($stage_name)) {
+        my @class_events = $class->get(model_id => $self->model_id);
+        push @failed_events, grep {$_ =~ /Failed|Crashed/} @class_events;
+    }
+    for my $failed_event (@failed_events) {
+        $failed_event->event_status('Abandoned');
+        $failed_event->date_completed(UR::Time->now);
+        for my $next_event ($failed_event->next_events) {
+            $next_event->event_status('Abandoned');
+            $next_event->date_completed(UR::Time->now);
+            my $lsf_job_id = $next_event->lsf_job_id;
+            if ($lsf_job_id) {
+                `bkill $lsf_job_id`;
+            }
+        }
+    }
+    return 1;
+}
+
 sub _verify_existing_events {
     my $self = shift;
-    my $command_classes_ref = shift;
-
     my $model = $self->model;
-    for my $command_class (@$command_classes_ref) {
-        if (ref($command_class) eq 'ARRAY') {
-            $self->_verify_existing_events($command_class);
-        } else {
-            my @events = $command_class->get( model_id => $model->id );
-            my @broke_events = grep {$_->event_status =~ /Scheduled|Running|Crashed|Failed/} @events;
-            if( @broke_events ) {
-                my $error_message = 'Found '. scalar(@broke_events) .' broken events for class '. $command_class ."\n";
-                for (@broke_events) {
-                    $error_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
+    for my $stage_name ($self->stages) {
+        my @command_classes = $self->classes_for_stage($stage_name);
+        for my $command_class (@command_classes) {
+            if (ref($command_class) eq 'ARRAY') {
+                $self->_verify_existing_events($command_class);
+            } else {
+                my @events = $command_class->get( model_id => $model->id );
+                # TODO: check to be sure we have the correct number of events
+                unless (@events) {
+                    return;
                 }
-                $self->cry_for_help($error_message);
-                die($error_message);
+                my @broke_events = grep {$_->event_status !~ /Abandoned/} grep {$_->event_status !~ /Succeeded/} @events;
+                if( @broke_events ) {
+                    my $error_message = 'Found '. scalar(@broke_events) .' broken events for class '. $command_class ."\n";
+                    for (@broke_events) {
+                        $error_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
+                    }
+                    $self->cry_for_help($error_message);
+                    die($error_message);
+                }
             }
         }
     }
@@ -131,11 +184,15 @@ sub _verify_existing_events {
 
 sub _schedule_stage {
     my $self = shift;
-    my $sub_command_classes_ref = shift;
-    my $objects_to_schedule = shift;
+    my $stage_name = shift;
 
+    my @objects = $self->objects_for_stage($stage_name);
+    unless (@objects) {
+        $self->error_message('Problem with build('. $self->build_id .") no objects found for stage '$stage_name'\n");
+        die;
+    }
     my @scheduled_commands;
-    foreach my $object (@$objects_to_schedule) {
+    foreach my $object (@objects) {
         my $object_class;
         my $object_id;
         if (ref($object)) {
@@ -145,8 +202,9 @@ sub _schedule_stage {
             $object_class = 'reference_sequence';
             $object_id = $object;
         }
-        $self->status_message('Scheduling for '. $object_class);
-        push @scheduled_commands, $self->_schedule_command_classes_for_object($object,$sub_command_classes_ref);
+        $self->status_message('Scheduling for object '. $object_class);
+        my @command_classes = $self->classes_for_stage($stage_name);
+        push @scheduled_commands, $self->_schedule_command_classes_for_object($object,\@command_classes);
     }
     return @scheduled_commands;
 }
@@ -227,28 +285,6 @@ sub _schedule_command_classes_for_object {
         }
     }
     return @scheduled_commands;
-}
-
-sub _run_stage {
-    my $self = shift;
-    my $stage_name = shift;
-    my @scheduled_commands = @_;
-    if (@scheduled_commands) {
-        my $job_name = $self->model_id .'_'. $stage_name .'_'. $self->build_id;
-        unless (Genome::Model::Command::RunJobs->execute(
-                                                         model_id => $self->model_id,
-                                                         bsub_args => "-J $job_name",
-                                                     )) {
-            $self->error_message('Failed to execute run-jobs for model '. $self->model_id);
-            return;
-        }
-        unless($self->execute_with_bsub(dep_type=>'ended', dependency_expression => $job_name)) {
-            $self->error__message("Hello, I am the build module, and I was unable to schedule myself to run after my peeps.");
-            return;
-        }
-        return 2;
-    }
-    return 1;
 }
 
 sub cry_for_help {
