@@ -67,7 +67,7 @@ sub build_in_stages {
 
     $self->data_directory($self->resolve_data_directory);
 
-    if ($self->_verify_existing_events) {
+    if ($self->_determine_status_from_existing_events) {
         $self->event_status('Succeeded');
         $self->date_completed(UR::Time->now);
         return 1;
@@ -136,7 +136,7 @@ sub objects_for_stage {
     return $self->$objects_method_name;
 }
 
-sub abandon_failed_events_for_stage {
+sub abandon_broke_events_for_stage {
     my $self = shift;
     my $stage_name = shift;
 
@@ -160,31 +160,20 @@ sub abandon_failed_events_for_stage {
     return 1;
 }
 
-sub _verify_existing_events {
+sub _determine_status_from_existing_events {
     my $self = shift;
-    my $model = $self->model;
-    for my $stage_name ($self->stages) {
-        my @command_classes = $self->classes_for_stage($stage_name);
-        for my $command_class (@command_classes) {
-            if (ref($command_class) eq 'ARRAY') {
-                $self->_verify_existing_events($command_class);
-            } else {
-                my @events = $command_class->get( model_id => $model->id );
-                # TODO: check to be sure we have the correct number of events
-                unless (@events) {
-                    return;
-                }
-                my @broke_events = grep {$_->event_status !~ /Abandoned/} grep {$_->event_status !~ /Succeeded/} @events;
-                if( @broke_events ) {
-                    my $error_message = 'Found '. scalar(@broke_events) .' broken events for class '. $command_class ."\n";
-                    for (@broke_events) {
-                        $error_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
-                    }
-                    $self->cry_for_help($error_message);
-                    die($error_message);
-                }
-            }
+    my @events = $self->child_events;
+    unless (@events) {
+        return;
+    }
+    my @broke_events = grep { $_->event_status !~ /Succeeded|Abandoned/ } @events;
+    if( @broke_events ) {
+        my $error_message = 'Found '. scalar(@broke_events) ." broken events\n";
+        for (@broke_events) {
+            $error_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
         }
+        $self->cry_for_help($error_message);
+        die($error_message);
     }
     return 1;
 }
@@ -209,7 +198,7 @@ sub _schedule_stage {
             $object_class = 'reference_sequence';
             $object_id = $object;
         }
-        $self->status_message('Scheduling for object '. $object_class);
+        $self->status_message('Scheduling for '. $object_class .' with id '. $object_id);
         my @command_classes = $self->classes_for_stage($stage_name);
         push @scheduled_commands, $self->_schedule_command_classes_for_object($object,\@command_classes);
     }
