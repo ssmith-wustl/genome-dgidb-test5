@@ -82,7 +82,7 @@ sub have_qual_file {
 sub qual_file_with_new_extension {
     my ($self, $ext) = @_;
 
-    return sprintf('%s.qual.%s', $self->fasta_file, $ext);
+    return sprintf('%s.%s.qual', $self->fasta_file, $ext);
 }
 
 #< Back Up >#
