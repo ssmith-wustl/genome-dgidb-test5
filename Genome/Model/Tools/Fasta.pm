@@ -55,6 +55,12 @@ sub _fasta_base {
     return shift->{_fasta_base};
 }
 
+sub fasta_file_with_new_extension { # Silly, but it mirrors the qual method below
+    my ($self, $ext) = @_;
+
+    return sprintf('%s.%s', $self->fasta_file, $ext);
+}
+
 sub qual_base {
     my $self = shift;
 
@@ -66,6 +72,122 @@ sub qual_file {
 
     return sprintf('%s.qual', $self->fasta_file);
 }
+
+sub have_qual_file {
+    my $self = shift;
+
+    return -e $self->qual_file;
+}
+
+sub qual_file_with_new_extension {
+    my ($self, $ext) = @_;
+
+    return sprintf('%s.qual.%s', $self->fasta_file, $ext);
+}
+
+#< Back Up >#
+sub default_back_up_extension {
+    return 'bak';
+}
+
+sub fasta_back_up_file {
+    my ($self, $ext) = @_;
+
+    return sprintf(
+        '%s.%s', 
+        $self->fasta_file,
+        ( defined $ext ? $ext : $self->default_back_up_extension ),
+    );
+}
+
+sub qual_back_up_file {
+    my ($self, $ext) = @_;
+
+    return sprintf(
+        '%s.qual.%s',
+        $self->fasta_file, 
+        ( defined $ext ? $ext : $self->default_back_up_extension ),
+    );
+}
+
+sub back_up_fasta_and_qual_files {
+    my ($self, $ext) = @_;
+
+    $ext = $self->default_back_up_extension unless defined $ext;
+
+    my $fasta_bak = $self->back_up_fasta_file($ext)
+        or return;
+
+    my $qual_bak = $self->back_up_qual_file($ext)
+        or return;
+
+    return ( $fasta_bak, $qual_bak );
+}
+
+sub back_up_fasta_file {
+    my ($self, $ext) = @_;
+
+    my $fasta_bak = $self->fasta_back_up_file($ext);
+    unlink $fasta_bak if -e $fasta_bak;
+
+    unless ( File::Copy::copy($self->fasta_file, $fasta_bak) ) {
+        $self->error_message( sprintf('Can\'t copy %s to %s', $self->fasta_file, $fasta_bak) );
+        return;
+    }
+
+    return $fasta_bak;
+}
+
+sub back_up_qual_file {
+    my ($self, $ext) = @_;
+
+    my $qual_bak = $self->qual_back_up_file($ext);
+    unlink $qual_bak if -e $qual_bak;
+
+    unless ( File::Copy::copy($self->qual_file, $qual_bak) ) {
+        $self->error_message( sprintf('Can\'t copy %s to %s', $self->qual_file, $qual_bak) );
+        return;
+    }
+
+    return $qual_bak;
+}
+
+#< Bio::SeqIO stuff >#
+sub get_fasta_reader {
+    return _get_bioseq_reader(@_, 'Fasta');
+}
+
+sub get_qual_reader {
+    return _get_bioseq_reader(@_, 'qual');
+}
+
+sub _get_bioseq_reader {
+    return _get_bioseq(@_, '<');
+}
+
+sub get_fasta_writer {
+    return _get_bioseq_writer(@_, 'Fasta');
+}
+
+sub get_qual_writer {
+    return _get_bioseq_writer(@_, 'qual');
+}
+
+sub _get_bioseq_writer {
+    return _get_bioseq(@_, '>');
+}
+
+sub _get_bioseq {
+    my ($self, $file, $format, $rw) = @_;
+
+    # TODO error check
+    
+    return Bio::SeqIO->new(
+        '-file' => $rw.' '.$file,
+        '-format' => $format,
+    );
+}
+
 
 1;
 
