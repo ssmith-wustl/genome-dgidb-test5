@@ -120,7 +120,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     # plus 2 more for scheduling reference sequence / Build::Assembly::Assemble
     #is(scalar(@status_messages), 42, 'executing builder generated 42 messages');
     for(my $i = 0; $i < 8; $i++) {
-        is($status_messages[0], 'Scheduling for Genome::Model::ReadSet', 'Found scheduling ReadSet messages');
+        like($status_messages[0], qr(^Scheduling .* Genome::Model::ReadSet), 'Found scheduling ReadSet messages');
         like($status_messages[1], qr(^Scheduled Genome::Model::Command::Build::Assembly::AssignReadSetToModel),
              'Found Scheduled...AssignReadSetToModel message');
         if ($pp_params->{'read_filter_name'}) {
@@ -144,7 +144,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
              'Found Scheduled...AddReadSetToProject messages');
         splice(@status_messages, 0, 5);
     }
-    is($status_messages[0], 'Scheduling for reference_sequence', 'Found reference_sequence message');
+    like($status_messages[0], qr(^Scheduling .* reference_sequence), 'Found reference_sequence message');
     like($status_messages[1], qr(^Scheduled Genome::Model::Command::Build::Assembly::Assemble),
         'Found Build Assembly message');
     
