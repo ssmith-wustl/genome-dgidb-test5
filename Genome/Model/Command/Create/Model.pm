@@ -109,7 +109,7 @@ sub create {
     my $self = $class->SUPER::create(@_);
 
     unless ( $self->model_name ) {
-        my $subject_name = _sanitize_string_for_filesystem($self->subject_name);
+        my $subject_name = $self->_sanitize_string_for_filesystem($self->subject_name);
         $self->model_name($subject_name .'.'. $self->processing_profile_name);
     }
 
