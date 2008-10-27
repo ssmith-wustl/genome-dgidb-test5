@@ -14,34 +14,47 @@ class Genome::Model::Command::Create::Model {
     is => ['Genome::Model::Event'],
     sub_classification_method_name => 'class',
     has => [
-        #TODO: make processing_profile not a parameter, name only.
-        processing_profile          => { is => 'Genome::ProcessingProfile', doc => 'Not used as a parameter', id_by => 'processing_profile_id', is_optional => 1, },
-        processing_profile_name     => { is => 'varchar', len => 255,  doc => 'The name of the processing profile to be used. '},
-        model_name                  => { is => 'varchar', len => 255, doc => 'User-meaningful name for this model' },
-        subject_name                => { is => 'varchar', len => 255, doc => 'The name of the subject all the reads originate from' },
+        processing_profile_name     => {
+                                        is => 'varchar',
+                                        len => 255,
+                                        doc => 'The name of the processing profile to be used. '
+                                    },
+        subject_name                => {
+                                        is => 'varchar',
+                                        len => 255,
+                                        doc => 'The name of the subject all the reads originate from'
+                                    },
         subject_type                => {
                                         is => 'varchar',
                                         len => 255,
                                         doc => 'The type of subject all the reads originate from'
                                     },
-        model                       => { is => 'Genome::Model', is_optional => 1, id_by => 'model_id', doc => 'Not used as a parameter' },
-        data_directory              => { is => 'varchar', len => 255, doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.', is_optional => 1,},
     ],
+    has_optional => [
+                     #TODO: make processing_profile not a parameter, name only
+                     processing_profile => {
+                                            is => 'Genome::ProcessingProfile',
+                                            doc => 'Not used as a parameter',
+                                            id_by => 'processing_profile_id',
+                                        },
+                     model_name         => {
+                                            is => 'varchar',
+                                            len => 255,
+                                            doc => 'User-meaningful name for this model(default_value $SUBJECT_NAME.$PP_NAME)'
+                                        },
+                     model              => {
+                                            is => 'Genome::Model',
+                                            id_by => 'model_id',
+                                            doc => 'Not used as a parameter'
+                                        },
+                     data_directory     => {
+                                            is => 'varchar',
+                                            len => 255,
+                                            doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
+                                        },
+                 ],
     schema_name => 'Main',
 };
-
-sub _shell_args_property_meta {
-    # exclude this class' commands from shell arguments
-    return grep { 
-            $_->property_name ne 'model_id'
-            #not ($_->via and $_->via ne 'run') && not ($_->property_name eq 'run_id')
-        } shift->SUPER::_shell_args_property_meta(@_);
-}
-
-
-sub sub_command_sort_position {
-    1
-}
 
 sub help_brief {
     "create a new genome model"
@@ -74,6 +87,14 @@ sub target_class{
     return "Genome::Model";
 }
 
+sub _shell_args_property_meta {
+    # exclude this class' commands from shell arguments
+    return grep { 
+            $_->property_name ne 'model_id'
+            #not ($_->via and $_->via ne 'run') && not ($_->property_name eq 'run_id')
+        } shift->SUPER::_shell_args_property_meta(@_);
+}
+
 sub command_properties{
     my $self = shift;
 
@@ -86,6 +107,11 @@ sub command_properties{
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
+
+    unless ( $self->model_name ) {
+        my $subject_name = _sanitize_string_for_filesystem($self->subject_name);
+        $self->model_name($subject_name .'.'. $self->processing_profile_name);
+    }
 
     my @subject_types = qw/ dna_resource_item_name species_name sample_name /;
     unless ( grep { $self->subject_type eq $_ } @subject_types) {
@@ -277,5 +303,14 @@ sub _get_processing_profile_from_name {
     return $pp->id; 
 }
 
+
+sub _sanitize_string_for_filesystem {
+    my $self = shift;
+    my $string = shift;
+
+    my $OK_CHARS = '-a-zA-Z0-9_.';
+    $string =~ s/[$OK_CHARS]/_/go;
+    return $string;
+}
 1;
 
