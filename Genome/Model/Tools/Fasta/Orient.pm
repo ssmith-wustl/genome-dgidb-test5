@@ -81,7 +81,7 @@ sub execute {
         my $sense_seq_method = sprintf('%s_sequences', $sense_type);
         for my $sense_seq ( $self->$sense_seq_method ) {
             my $bioseq = Bio::Seq->new(
-                '-id' => sprintf('sense_%d', ++$arbitrary_id),
+                '-id' => sprintf('%s_%d', $sense_type, ++$arbitrary_id),
                 '-seq' => $sense_seq,
             )
                 or return;
@@ -135,8 +135,6 @@ sub execute {
             }
         }
     }
-
-    print Dumper(\%needs_complementing);
 
     $self->_write_oriented_fasta_file(\%needs_complementing);
     $self->_write_oriented_qual_file(\%needs_complementing) if $self->have_qual_file;
