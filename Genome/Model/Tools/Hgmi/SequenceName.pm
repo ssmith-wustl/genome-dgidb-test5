@@ -19,11 +19,11 @@ has => [
         'fasta' => { is => 'String',
                      doc => "fasta file" },
         'analysis_version' => { is => 'String',
-                                doc => "" },
+                                doc => "Analysis version" },
         'locus_id' => { is => 'String',
-                        doc => "" },
+                        doc => "Locus ID string" },
         'acedb_version' => { is => 'String',
-                             doc => "" },
+                             doc => "Ace DB version" },
         ]
 
 
@@ -90,7 +90,8 @@ sub execute
 
     }
 
-
+    # this dependence on being in the current directory 
+    # needs to be fixed.
     my $cwd = getcwd();
     my @cwd = split(/\//x,$cwd);
     my $hgmi_acedb_patha;
@@ -127,8 +128,14 @@ sub execute
     my $BAPseq = join("\/", @cwd[0..7],'BAP',$self->analysis_version,'Sequence');
     my $Ensemblseq = join("\/", @cwd[0..7],'Ensembl_pipeline',$self->analysis_version,'Sequence');
     my $Rfamseq = join("\/", @cwd[0..7],'Rfam',$self->analysis_version);
-    symlink "$cwd/$new_output_file","$hgmi_acedb_path/$new_output_file"
-        or croak "Can't make symlink path: $!\n";
+
+    # the presence of the symlink target should be
+    # tested before creating the symlink
+    symlink "$cwd/$new_output_file","$hgmi_acedb_path/$new_output_file";
+    unless($! eq "File exists") # skip the "File exists" problem
+    {
+        croak "Can't make symlink path: $!\n";
+    }
     # symlink OLDFILE,NEWFILE
     symlink "$cwd/$new_output_file","$Intergenic/$new_output_file"
         or croak "Can't make symlink path Intergenic: $!\n";
