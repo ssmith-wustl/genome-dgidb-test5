@@ -320,8 +320,8 @@ sub _reschedule_failed_jobs {
         my $event_stage_name = $event_build->resolve_stage_name_for_class($event->class);
         unless ($event_stage_name) {
             $self->error_message('Failed to resolve stage name for event('.
-                                 $event->id .':'. $event->class .') in build('.
-                                 $event_build->build_id .':'. $event_build->class .')');
+                                 $event->id .','. $event->class .') in build('.
+                                 $event_build->build_id .','. $event_build->class .')');
             die;
         }
         my $job_name = $event_build->model_id .'_'. $event_stage_name .'_'. $event_build->build_id;
