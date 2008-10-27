@@ -5,20 +5,14 @@ use warnings;
 
 use Genome;
 
-require File::Basename;
+use Data::Dumper;
+require Genome::Model::Tools::WuBlast::Xdformat::Verify;
 
 class Genome::Model::Tools::WuBlast::Xdformat::Create {
     is => 'Genome::Model::Tools::WuBlast::Xdformat',
-    has => [
-    database => {
-        is => 'String',
-        is_optional => 0,
-        is_input => 1,
-        doc => 'the path to a new or existing database',
-    },
+    has_optional => [
     overwrite_db => {
         is => 'Boolean',
-        is_optional => 1,
         default => 0,
         doc => 'If existing, remove the database files to be made by xdformat',
     },
@@ -26,38 +20,21 @@ class Genome::Model::Tools::WuBlast::Xdformat::Create {
     has_many => [
     fasta_files => {
         is => 'String',
-        is_optional => 0,
         is_input => 1,
         doc => 'a list of paths to fasta sequence files',
     },
     ],
 };
 
+#< Standard command methods >#
 sub help_brief {
-    "a genome-model tool for creating a nucleotide wu-blastable database",
-}
-
-sub help_synopsis {
-    my $self = shift;
-    return <<"EOS"
-gt wu-blast xdformat create --database --fasta-files
-EOS
+    return "Creates an xdformat database";
 }
 
 sub help_detail {
+    return help_brief();
     return <<EOS
 EOS
-}
-
-my @xdformat_extentions = (qw/ xnd xns xnt /);
-sub xdformat_files {
-    my $self = shift;
-    
-    return map { sprintf('%s.%s', $self->database, $_) } @xdformat_extentions;
-}
-
-sub _verify_xdformat_files {
-    return grep { -e $_ } $_[0]->xdformat_files;
 }
 
 sub create {
@@ -88,18 +65,16 @@ sub create {
     }
 
     # Handle DB
-    if ( $self->overwrite_db ) {
-        for my $file ( $self->xdformat_files ) {
-            unlink $file if -e $file;
+    for my $file ( $self->xdformat_files ) {
+        print $file;
+        next unless -e $file;
+        if ( $self->overwrite_db ) {
+            unlink $file
         }
-    }
-    else {
-        my @existing_files = $self->_verify_xdformat_files;
-        if ( @existing_files ) { 
+        else {
             $self->error_message(
                 sprintf(
-                    'Files (%s) for database (%s) already exists, and overwriting the database files was not true',
-                    join(', ', @existing_files),
+                    'Files for database (%s) already exist.  Remove, or indicate to overwrite the db.',
                     $self->database,
                 )
             );
@@ -110,18 +85,35 @@ sub create {
     return $self;
 }
 
-sub execute {
+#< Pre and Post Execute Methods >#
+sub _post_execute_methods {
+    return (qw/ _verify_db /);
+}
+
+sub _verify_db {
     my $self = shift;
 
-    my $cmd = 'xdformat -n -o '.$self->database.' '.join(' ', $self->fasta_files);
-    $self->status_message('Running: '.$cmd);
-    my $rv = system($cmd);
-    unless ( $rv == 0 ) {
-        $self->error_message("Non zero return value ($rv) from command xdformat");
-        return;
-    }
+    return Genome::Model::Tools::WuBlast::Xdformat::Verify->execute(
+        database => $self->database,
+        db_type => $self->db_type,
+    );
+}
+
+#< Operation >#
+sub _operation_name {
+    return 'create';
+}
+
+sub _operation_character {
+    return 'o';
+}
+
+#< Db files >#
+sub xdformat_files {
+    my $self = shift;
     
-    return 1;
+    #print Dumper([ glob( sprintf('%s.x%s[a-z]', $self->database, $self->db_type) )]);
+    return glob( sprintf('%s.x%s[a-z]', $self->database, $self->db_type) );
 }
 
 1;
