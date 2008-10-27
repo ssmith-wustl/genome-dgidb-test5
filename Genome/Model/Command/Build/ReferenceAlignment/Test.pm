@@ -181,7 +181,7 @@ sub schedule {
     # FIXME This code is used in several different tests, each of which generate different numbers
     # of messages about scheduling...  Is there some other method of making sure the right
     # number of downstream events were scheduled?
-    ok(scalar(grep { $_ eq 'Scheduling for Genome::Model::ReadSet'} @status_messages),
+    ok(scalar(grep { m/^Scheduling .* Genome::Model::ReadSet/} @status_messages),
        'Saw a message about ReadSet');
     ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AssignRun/} @status_messages),
        'Saw a message about AssignRun');
@@ -189,7 +189,7 @@ sub schedule {
        'Saw a messages about  AlignReads');
     ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments/} @status_messages),
        'Saw a message about ProcessLowQualityAlignments');
-    is(scalar(grep { $_ eq 'Scheduling for reference_sequence'} @status_messages),
+    is(scalar(grep { m/^Scheduling .* reference_sequence/} @status_messages),
        3, 'Got 3 reference_sequence messages');
     is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments/} @status_messages),
        3, 'Got 3 MergeAlignments messages');
