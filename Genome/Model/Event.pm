@@ -173,7 +173,9 @@ sub yaml_string {
 
 sub delete {
     my $self = shift;
-    $self->warning_message("deleting " . $self->class . " " . $self->id);
+    if ($self->{db_committed}) {
+        $self->warning_message("deleting " . $self->class . " " . $self->id);
+    }
     $self->revert;
     my @inputs = $self->inputs;
     for my $obj (@inputs) { 
