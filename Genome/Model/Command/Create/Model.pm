@@ -309,7 +309,7 @@ sub _sanitize_string_for_filesystem {
     my $string = shift;
 
     my $OK_CHARS = '-a-zA-Z0-9_.';
-    $string =~ s/[$OK_CHARS]/_/go;
+    $string =~ s/[^$OK_CHARS]/_/go;
     return $string;
 }
 1;
