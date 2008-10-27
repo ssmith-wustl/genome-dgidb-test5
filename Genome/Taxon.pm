@@ -29,7 +29,9 @@ class Genome::Taxon {
         species_latin_name              => { is => "Text",   len => 64 },
         species_name                    => { is => "Text",   len => 64 },
         strain_name                     => { is => "Text",   len => 32 },
+        samples                         => { is => 'Genome::Sample', is_many => 1, reverse_id_by => 'taxon' },
     ],
+    
     data_source => 'Genome::DataSource::GMSchema',
 };
 
