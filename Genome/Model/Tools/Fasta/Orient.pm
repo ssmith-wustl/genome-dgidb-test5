@@ -116,7 +116,7 @@ sub execute {
             while ( my $hsp = $hit->next_hsp ){
                 my $query = $hsp->query;
                 my $needs_complementing = 0;
-                if ( $query->seq_id =~ m#^\d+\_sense$# ) {
+                if ( $query->seq_id =~ m#^sense# ) {
                     # If this hit is on the - strand, it needs to complemeted
                     $needs_complementing = 1 if $query->strand == -1;
                 }
