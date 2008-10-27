@@ -31,27 +31,27 @@ class Genome::Model::Command::Create::Model {
                                     },
     ],
     has_optional => [
-                     #TODO: make processing_profile not a parameter, name only
-                     processing_profile => {
-                                            is => 'Genome::ProcessingProfile',
-                                            doc => 'Not used as a parameter',
-                                            id_by => 'processing_profile_id',
-                                        },
-                     model_name         => {
-                                            is => 'varchar',
-                                            len => 255,
-                                            doc => 'User-meaningful name for this model(default_value $SUBJECT_NAME.$PP_NAME)'
-                                        },
-                     model              => {
-                                            is => 'Genome::Model',
-                                            id_by => 'model_id',
-                                            doc => 'Not used as a parameter'
-                                        },
-                     data_directory     => {
-                                            is => 'varchar',
-                                            len => 255,
-                                            doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
-                                        },
+         #TODO: make processing_profile not a parameter, name only
+         processing_profile => {
+                                is => 'Genome::ProcessingProfile',
+                                doc => 'Not used as a parameter',
+                                id_by => 'processing_profile_id',
+                            },
+         model_name         => {
+                                is => 'varchar',
+                                len => 255,
+                                doc => 'User-meaningful name for this model(default_value $SUBJECT_NAME.$PP_NAME)'
+                            },
+         model              => {
+                                is => 'Genome::Model',
+                                id_by => 'model_id',
+                                doc => 'Not used as a parameter'
+                            },
+         data_directory     => {
+                                is => 'varchar',
+                                len => 255,
+                                doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
+                            },
                  ],
     schema_name => 'Main',
 };
@@ -109,14 +109,37 @@ sub create {
     my $self = $class->SUPER::create(@_);
 
     unless ( $self->model_name ) {
-        my $subject_name = $self->_sanitize_string_for_filesystem($self->subject_name);
-        $self->model_name($subject_name .'.'. $self->processing_profile_name);
+        if ($self->subject_name and $self->processing_profile_name) {
+            my $subject_name = $self->_sanitize_string_for_filesystem($self->subject_name);
+            unless (defined $subject_name) {
+                $class->error_message("Error removing special characteres from " . $self->subject_name);
+                $self->delete;
+                return;
+            }
+            $self->model_name($subject_name .'.'. $self->processing_profile_name);
+        }
     }
 
     my @subject_types = qw/ dna_resource_item_name species_name sample_name /;
-    unless ( grep { $self->subject_type eq $_ } @subject_types) {
-        $self->error_message('Invalid subject type('. $self->subject_type .') passed to class '. $self->class);
-        die;
+    unless ( 
+        grep { 
+            defined($self->subject_type) 
+            and 
+            $self->subject_type eq $_ 
+        } @subject_types
+    ) {
+        $self->error_message(
+            (
+                defined($self->subject_type) 
+                ?  "Invalid subject type " . $self->subject_type . "."
+                : "No subject type specified!"
+            )
+            . "  Please select one of:\n " 
+            . join("\n ",@subject_types) 
+            . "\n"
+        );
+        $self->delete;
+        return;
     }
 
     return $self;
@@ -307,7 +330,7 @@ sub _get_processing_profile_from_name {
 sub _sanitize_string_for_filesystem {
     my $self = shift;
     my $string = shift;
-
+    return $string if not defined $string;
     my $OK_CHARS = '-a-zA-Z0-9_.';
     $string =~ s/[^$OK_CHARS]/_/go;
     return $string;
