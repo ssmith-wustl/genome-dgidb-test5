@@ -121,34 +121,10 @@ sub compatible_input_read_sets {
     my $input_read_set_class_name = $self->input_read_set_class_name;
     my $value_ref;
     if ($self->subject_type eq 'species_name') {
-        my $org_taxon = GSC::Organism::Taxon->get(species_name => $self->subject_name);
-        my @eavs = GSC::EntityAttributeValue->get(
-                                                  type_name => 'dna',
-                                                  value => $org_taxon->legacy_org_id
-                                              );
-        my @dna_ids = map {$_->entity_id} @eavs;
-        my @dnas = GSC::DNA->get(\@dna_ids);
-        my @drs;
-        for my $dna (@dnas) {
-            if ($dna->dna_type eq 'dna resource') {
-                push @drs, $dna;
-            } else {
-                push @drs, $dna->get_dna_resource;
-            }
-        }
-        my @child_dnas = map {$_->get_child_dna} @drs;
-        my @sample_names = map {$_->dna_resource_item_name} @child_dnas;
+        my $taxon = Genome::Taxon->get(species_name => $self->subject_name);
+        my @samples = $taxon->samples;
+        $value_ref = [ map { $_->name } @samples ];
 
-        # Now look up in the backfilled tables
-        my @org_individuals = Genome::Individual->get(taxon_id => $org_taxon->taxon_id);
-        push @sample_names, map { $_->sample_names } @org_individuals;
-        my @org_population_groups = Genome::PopulationGroup->get(taxon_id => $org_taxon->taxon_id);
-        my @source_ids = map { $_->id } @org_population_groups;
-        my @org_samples = Genome::Sample->get(source_id => \@source_ids);
-        push @sample_names, map { $_->name } @org_samples;
-
-        $value_ref = \@sample_names;
-        #$self->status_message("Looking for the following dna resource items:\n". join ("\n",@dri_names));
     } elsif ($self->subject_type eq 'sample_name') {
         $value_ref = {
                       operator => "like",
@@ -159,6 +135,7 @@ sub compatible_input_read_sets {
                              __PACKAGE__ .' for subject_type(dna_resource_item_name)');
         die;
     }
+
     unless ($value_ref) {
         $self->error_message('No value to get compatible input read sets');
         die;
