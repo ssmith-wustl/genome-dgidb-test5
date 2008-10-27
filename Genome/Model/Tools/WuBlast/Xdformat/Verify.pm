@@ -7,43 +7,36 @@ use Genome;
 
 class Genome::Model::Tools::WuBlast::Xdformat::Verify {
     is => 'Genome::Model::Tools::WuBlast::Xdformat',
-    has => [
-            database => {
-                         is => 'String',
-                         is_input => 1,
-                         doc => 'the path to a new or existing database',
-                     },
-        ],
 };
 
+#< Standard command methods >#
 sub help_brief {
-    "a genome-model tool for verifying a nucleotide wu-blastable database",
-}
-
-sub help_synopsis {
-    my $self = shift;
-    return <<"EOS"
-gt wu-blast xdformat verify --database --fasta-files
-EOS
+    return "Verifies an xdformat database";
 }
 
 sub help_detail {
+    return help_brief();
     return <<EOS
 EOS
 }
 
-sub execute {
+#< Additional Params #>
+sub _additional_params_as_string {
     my $self = shift;
 
-    my $cmd = 'xdformat -n -V '. $self->database;
-    $self->status_message('Running: '. $cmd);
-    my $rv = system($cmd);
-    unless ($rv == 0) {
-        $self->error_message("non-zero return value($rv) from command '$cmd'");
-        return;
-    }
-    return 1;
+    return join(' ', $self->fasta_files);
+}
+
+#< Operation >#
+sub _operation_name {
+    return 'verify';
+}
+
+sub _operation_character {
+    return 'V';
 }
 
 1;
 
+#$HeadURL$
+#$Id$
