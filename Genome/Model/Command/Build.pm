@@ -105,12 +105,19 @@ sub resolve_stage_name_for_class {
     my $self = shift;
     my $class = shift;
     for my $stage_name ($self->stages) {
-        my $found_class = grep { $_ eq $class } $self->classes_for_stage($stage_name);
+        my $found_class = grep { $class =~ /^$_/ } $self->classes_for_stage($stage_name);
         if ($found_class) {
             return $stage_name;
         }
     }
-    $self->error_message("No class found for '$class' in build ". $self->class ." stages:\n". join("\n",$self->stages));
+    my $error_message = "No class found for '$class' in build ". $self->class ." stages:\n";
+    for my $stage_name ($self->stages) {
+        $error_message .= $stage_name ."\n";
+        for my $class ($self->classes_for_stage($stage_name)) {
+            $error_message .= "\t". $class ."\n";
+        }
+    }
+    $self->error_message($error_message);
     return;
 }
 
