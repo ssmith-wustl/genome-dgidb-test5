@@ -47,8 +47,13 @@ sub execute {
                                                                                    dir => $model->data_directory,
                                                                                );
         unless ($new_assembly->execute) {
-            $self->error_message("Failed to create new assembly '$assembly_directory'");
-            return;
+            # May need to add locking to prevent more than one event from creating project
+            # Currently just double check that the project still doesn't exist after a few seconds
+            sleep 5;
+            unless (-d $assembly_directory) {
+                $self->error_message("Failed to create new assembly '$assembly_directory'");
+                return;
+            }
         }
     }
     my $add_run = Genome::Model::Tools::454::Newbler::AddRun->create(
