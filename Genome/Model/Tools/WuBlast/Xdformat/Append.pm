@@ -5,57 +5,61 @@ use warnings;
 
 use Genome;
 
+require Genome::Model::Tools::WuBlast::Xdformat::Verify;
+    
 class Genome::Model::Tools::WuBlast::Xdformat::Append {
     is => 'Genome::Model::Tools::WuBlast::Xdformat',
     has => [
-            database => {
-                         is => 'String',
-                         is_input => 1,
-                         doc => 'the path to a new or existing database',
-                     },
-        ],
+    database => {
+        is => 'String',
+        is_input => 1,
+        doc => 'the path to a new or existing database',
+    },
+    ],
     has_many => [
-            fasta_files => {
-                            is => 'String',
-                            is_input => 1,
-                            doc => 'a list of paths to fasta sequence files',
-                        },
-             ],
+    fasta_files => {
+        is => 'String',
+        is_input => 1,
+        doc => 'a list of paths to fasta sequence files',
+    },
+    ],
 };
 
+#< Standard command methods >#
 sub help_brief {
-    "a genome-model tool for creating a nucleotide wu-blastable database",
-}
-
-sub help_synopsis {
-    my $self = shift;
-    return <<"EOS"
-gt wu-blast xdformat append --database --fasta-files
-EOS
+    return "Appends to an xdformat database";
 }
 
 sub help_detail {
+    return help_brief();
     return <<EOS
 EOS
 }
 
-sub execute {
+#< Pre and Post Execute Methods >#
+sub _pre_execute_methods {
+    return (qw/ _verify_db /);
+}
+
+sub _verify_db {
     my $self = shift;
 
-    my $verify = Genome::Model::Tools::WuBlast::Xdformat::Verify->execute(database => $self->database);
-    unless ($verify) {
-        $self->error_message('Failed to verify xdb database'. $self->database);
-        return;
-    }
-    my $cmd = 'xdformat -n -a '. $self->database .' '. join(' ',$self->fasta_files);
-    $self->status_message('Running: '. $cmd);
-    my $rv = system($cmd);
-    unless ($rv == 0) {
-        $self->error_message("non-zero return value($rv) from command '$cmd'");
-        return;
-    }
-    return 1;
+    return Genome::Model::Tools::WuBlast::Xdformat::Verify->execute(
+        database => $self->database,
+        db_type => $self->db_type,
+    );
+}
+
+#< Operation >#
+sub _operation_name {
+    return 'append';
+}
+
+sub _operation_character {
+    return 'a';
 }
 
 1;
 
+#$HeadURL$
+#$Id$
