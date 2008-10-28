@@ -59,7 +59,7 @@ sub execute {
     $self->status_message("Writing maf files");
     $model->write_post_annotation_maf_files();
 
-    $model->latest_complete_build_id($self->build_id);
+    $model->last_complete_build_id($self->build_id);
 
     $DB::single=1;
     return $model;
