@@ -10,6 +10,8 @@ use Carp;
 use DateTime;
 use List::MoreUtils qw/ uniq /;
 use IPC::Run qw/ run /;
+use Cwd;
+require "pwd.pl";
 
 use BAP::DB::Organism;
 use BAP::DB::SequenceSet;
