@@ -6,7 +6,9 @@ use warnings;
 use Genome;
 use Command;
 use Carp;
-use IPC::Run qw/ run /;
+use Cwd;
+use MGAP::Command::BuildGlimmerInput;
+use MGAP::Command::CalculateGcPercent;
 
 UR::Object::Type->define(
                          class_name => __PACKAGE__,
@@ -14,10 +16,15 @@ UR::Object::Type->define(
                          has => [
                                  'locus_tag_prefix' => {is => 'String',
                                                         doc => "HGMI Locus Tag Prefix" },
-                                 'mk_script' => {is => 'String',
-                                        doc => "",
-                                        default => "/gsc/scripts/gsc/annotation/mkBAPgenemod",
-                                        is_optional => 1 }, 
+                                 'fasta_file' => { is => 'String',
+                                                    doc => "Fasta file for input" },
+                                 'work_directory' => { is => 'String',
+                                                       doc => "Working directory",
+                                                       is_optional => 1},
+                                 'gc' => { is => 'Float',
+                                           doc => "GC content percent",
+                                           is_optional => 1,  },
+
 ]
                          );
 
@@ -42,7 +49,7 @@ sub help_detail
     return <<"EOS"
 mk-prediction-models creates a de-novo set of glimmer and genemark model files
 based on the GC content in the contigs.
-This tool depends on mkBAPgenemod.bsh.
+
 EOS
 }
 
@@ -51,23 +58,68 @@ sub execute
 {
     my $self = shift;
 
-    # do IPC::Run stuff and just execute mkBAPgenemod.bsh
+    my $gc_command = MGAP::Command::CalculateGcPercent->create(
+                       'fasta_files' => [ $self->fasta_file ],
+                        );
 
-    my @genemod_command = (
-                           '/gsc/bin/bash',
-                           $self->mk_script,
-                           $self->locus_tag_prefix
-                           );
-    my ($genemod_out,$genemod_err);
-    IPC::Run::run(
-                  \@genemod_command,
-                  \undef,
-                  '>',
-                  \$genemod_out,
-                  '2>',
-                  \$genemod_err,
-                  ) || croak "mkBAPgenemod failure : $!";
+    unless($gc_command)
+    {
+        croak "Failure on calculating GC content";
+    }
 
+    my $buildglimmer = MGAP::Command::BuildGlimmerInput->create(
+                          'fasta_files' => [ $self->fasta_file ],
+                         );
+
+    unless( $buildglimmer )
+    {
+        croak "Failure on building glimmer models";
+    }
+
+    # need to create links to the proper files.
+
+    $gc_command->execute() or croak "can't calculate GC percentage";
+    $buildglimmer->execute() or croak "can't build glimmer models";
+
+    # the heu_11*mod files - use the GC percent (rounding up).
+    # just take the items off the the buildglimmer when that is
+    # successful and create the necessary symlinks.
+    # or if necessary copy the files to a more permanent position
+    #print "GC content ", $gc_command->gc_percent,"%\n";
+    #print "model file ", $buildglimmer->model_file,"\n";
+    #print "pwm file ", $buildglimmer->pwm_file,"\n";
+
+
+    $self->gc(int($gc_command->gc_percent));
+
+    if(!defined($self->work_directory))
+    {
+        $self->work_directory(getcwd());
+    }
+
+    my $gmhmmp_dir = "/gscmnt/temp212/info/annotation/gmhmmp_models";
+    my $gmhmmp_mod = $gmhmmp_dir . "/heu_11_" . $self->gc . ".mod";
+    my $gmhmmp_dest = $self->work_directory ."/heu_11_".$self->gc .".mod";
+    symlink($gmhmmp_mod, $gmhmmp_dest) or croak "can't symlink gmhmmp model $gmhmmp_mod, $@";
+    my $workdir = $self->work_directory;
+    my $model = $buildglimmer->model_file;
+    my $newmodel = $workdir ."/". $self->locus_tag_prefix . "_gl3.icm";
+    my $pwm = $buildglimmer->pwm_file;
+    my $newpwm = $workdir ."/". $self->locus_tag_prefix . "_pwm_gl3.icm";
+
+    # should check if destination files exist, and create copies before 
+    #mv-ing over.
+    system("mv $model $newmodel");
+    if($@)
+    {
+        croak "problem copying $model to $newmodel";
+    }
+    system("mv $pwm $newpwm");
+
+    if($@)
+    {
+        croak "problem copying $pwm to $newpwm";
+    }
     return 1;
 }
 
