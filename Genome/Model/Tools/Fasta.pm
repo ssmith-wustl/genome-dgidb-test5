@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use Data::Dumper;
+use Bio::Seq;
 
 class Genome::Model::Tools::Fasta {
     is => 'Command',
@@ -18,11 +19,11 @@ class Genome::Model::Tools::Fasta {
 };
 
 sub help_brief {
-    "tools for working with FASTA files"
+    return "Tools for working with FASTA and Qual files"
 }
 
 sub help_detail {
-    "Tools to work with fasta format sequence files";
+    return help_brief();
 }
 
 sub create { 
@@ -31,10 +32,17 @@ sub create {
     my $self = $class->SUPER::create(@_);
     $self->{_cwd} = Cwd::getcwd();
     $self->fasta_file( Cwd::abs_path( $self->fasta_file ) );
-    my ($base, $directory) = File::Basename::fileparse( $self->fasta_file );
+
+    my ($basename, $directory, $suffix) = File::Basename::fileparse($self->fasta_file, '.fasta');
+    unless ( $suffix ) {
+        $self->error_message( sprintf('FASTA file (%s) needs to have a ".fasta" suffix.', $self->fasta_file) );
+        return;
+    }
+
     chdir $directory
         or ( $self->error_message("Can't access directory ($directory): $!") and return );
-    $self->{_fasta_base} = $base;
+
+    $self->{_fasta_basename} = $basename;
 
     return $self;
 }
@@ -48,72 +56,65 @@ sub DESTROY {
 }
 
 sub _cwd {
-    return shift->{_cwd};
+    return $_[0]->{_cwd};
 }
 
-sub _fasta_base {
-    return shift->{_fasta_base};
+#< FASTA base #>
+sub _fasta_basename {
+    return $_[0]->{_fasta_basename};
 }
 
-sub fasta_file_with_new_extension { # Silly, but it mirrors the qual method below
-    my ($self, $ext) = @_;
-
-    return sprintf('%s.%s', $self->fasta_file, $ext);
+sub fasta_base {
+    return sprintf('%s.fasta', $_[0]->{_fasta_basename});
 }
 
+#< Qual file >#
 sub qual_base {
-    my $self = shift;
-
-    return sprintf('%s.qual', $self->_fasta_base);
+    return sprintf('%s.qual', $_[0]->fasta_base);
 }
 
 sub qual_file {
-    my $self = shift;
-
-    return sprintf('%s.qual', $self->fasta_file);
+    return sprintf('%s/%s', $_[0]->{_cwd}, $_[0]->qual_base);
 }
 
 sub have_qual_file {
-    my $self = shift;
-
-    return -e $self->qual_file;
+    return -s $_[0]->qual_file;
 }
 
-sub qual_file_with_new_extension {
+#< New file names >#
+sub fasta_file_with_new_suffix { 
     my ($self, $ext) = @_;
 
-    return sprintf('%s.%s.qual', $self->fasta_file, $ext);
+    return sprintf('%s.%s.fasta', $self->{_fasta_basename}, $ext);
+}
+
+sub qual_file_with_new_suffix {
+    my ($self, $ext) = @_;
+
+    return sprintf('%s.qual', $self->fasta_file_with_new_suffix($ext));
 }
 
 #< Back Up >#
-sub default_back_up_extension {
+sub default_back_up_suffix {
     return 'bak';
 }
 
 sub fasta_back_up_file {
     my ($self, $ext) = @_;
 
-    return sprintf(
-        '%s.%s', 
-        $self->fasta_file,
-        ( defined $ext ? $ext : $self->default_back_up_extension ),
-    );
+    return $self->fasta_file_with_new_suffix( defined $ext ? $ext : $self->default_back_up_suffix );
 }
 
 sub qual_back_up_file {
     my ($self, $ext) = @_;
 
-    return sprintf(
-        '%s.qual.%s',
-        $self->fasta_file, 
-        ( defined $ext ? $ext : $self->default_back_up_extension ),
-    );
+    return $self->qual_file_with_new_suffix( defined $ext ? $ext : $self->default_back_up_suffix );
 }
 
 sub back_up_fasta_and_qual_files {
     my ($self, $ext) = @_;
 
-    $ext = $self->default_back_up_extension unless defined $ext;
+    $ext = $self->default_back_up_suffix unless defined $ext;
 
     my $fasta_bak = $self->back_up_fasta_file($ext)
         or return;
