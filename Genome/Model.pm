@@ -284,6 +284,17 @@ sub latest_build_directory {
     }
 }
 
+sub resolve_reports_directory {
+    my $self=shift;
+    my $build_dir = $self->latest_build_directory;
+    return $build_dir . "/reports/";
+}
+
+
+
+
+
+
 # This is called by the infrastructure to appropriately classify abstract processing profiles
 # according to their type name because of the "sub_classification_method_name" setting
 # in the class definiton...

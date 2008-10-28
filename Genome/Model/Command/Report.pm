@@ -34,7 +34,7 @@ sub generate_report_detail {
 
 sub resolve_reports_directory {
     my $self = shift;
-    my $reports_dir = $self->model->latest_build_directory . "/reports/";
+    my $reports_dir = $self->model->resolve_reports_directory;
     unless(-d $reports_dir) {
         unless(mkdir $reports_dir) {
             $self->error_message("Directory $reports_dir doesn't exist, can't create");
