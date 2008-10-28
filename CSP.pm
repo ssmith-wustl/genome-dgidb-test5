@@ -724,7 +724,8 @@ sub _cron_setup {
     umask 0002;
 
     # open file
-    my $log_fh = $logfile->open('>>') or die "open $logfile failed: $!";
+    my $log_fh = $logfile->open( '>>', 0664 )
+        or die "open $logfile failed: $!";
     $log_fh->autoflush(1);
     $class->log_fh($log_fh);
     $class->setup_logging_callbacks;
@@ -735,7 +736,7 @@ sub _cron_setup {
         . " as " . getpwuid($<) . " with pid $$"
     );
 
-    chmod( 0664, $logfile );
+    chmod( 0664, "$logfile" );
 
     # Don't even start running if we're locked
     # (But at least write to the log file)
@@ -1250,14 +1251,15 @@ sub confirm_scheduled_pse {
     die "log file $logfile already exists" if -e $logfile;
 
     # open log file
-    my $log_fh=IO::File->new or die 'IO::File->new failed';
-    $log_fh->open("> $logfile") or die "failed to open $logfile: $!";
+    my $log_fh = $logfile->open( '>', 0666 )
+        or die "failed to open $logfile: $!";
     $log_fh->autoflush(1);
-    chmod( 0666, $logfile ) or die "chmod $logfile failed: $!";
-    if ($tee_stdout) {        
+    chmod( 0666, "$logfile" ) or die "chmod $logfile failed: $!";
+    if ($tee_stdout) {
         require IO::Tee;
-        my $log_file_fh=$log_fh;
-        $log_fh=new IO::Tee(\*STDOUT, $log_file_fh) or die "failed to open $logfile: $!";
+        my $log_file_fh = $log_fh;
+        $log_fh = new IO::Tee( \*STDOUT, $log_file_fh )
+            or die "failed to open $logfile: $!";
     }
 
     $log_fh->autoflush(1);
@@ -1608,7 +1610,8 @@ sub confirm_scheduled_pse {
 
     # move the log file to the appropriate directory
     my $destfile = $destdir->file( $logfile->basename );
-    $destdir->mkpath(0, 0777);
+    $destdir->mkpath( 0, 042775 );
+    chmod( 042775, "$destdir" );
     if ( !-d $destdir ) {
         push @error_message, "failed to mkpath $destdir";
     }
@@ -1795,12 +1798,6 @@ sub cleanup_logs {
         }
     }
 
-    # look for empty directories under done
-#    $done_dir->recurse( callback => sub {
-#            $_ = shift;
-#            return if $_->is_file;
-#    });
-
     return 1 unless @to_gzip;
 
     # do the gzip
@@ -1811,6 +1808,14 @@ sub cleanup_logs {
         $fh->print("$file\n");
     }
     $fh->close;
+
+    # remove empty directories under done
+    $_->remove for (
+        grep { $_->children == 0 }
+        grep { $_->is_dir }
+        map { $_->is_dir ? $_->children : () }
+        $class->done_dir->children
+    );
 
     return 1;
 }
