@@ -55,7 +55,7 @@ my %pp_2_params = (
 my @pp_params = (\%pp_1_params,\%pp_2_params);
 
 my $model_base_name = 'test_assembly_model';
-my $subject_name = 'TSP_Round1-4_Normal_Amplicon_Pool';
+my $subject_name = 'H_FY-454_96normal_tspset3_indel';
 my $subject_type = 'sample_name';
 
 for (my $i=0; $i < scalar(@pp_params); $i++) {
