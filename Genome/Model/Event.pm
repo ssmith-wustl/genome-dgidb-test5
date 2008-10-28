@@ -558,7 +558,9 @@ sub execute_with_bsub {
             }
         }
     }
-
+    if ($self->lsf_job_name) {
+        $bsub_args .= ' -J "'. $self->lsf_job_name .'" ';
+    }
     if (my $bsub_rusage = $self->bsub_rusage) {
         $bsub_args .= ' ' . $bsub_rusage;
     }
@@ -799,6 +801,24 @@ sub metrics_for_class {
     my $self = shift;
     $self->error_message("Please implement me! I do not have metrics_for_class");
     return 0;
+}
+
+
+sub lsf_job_name {
+    my $self = shift;
+    my $build = $self->parent_event;
+    unless ($build) {
+        $self->error_message('No build event for event('. $self->id .')');
+        die;
+    }
+    my $stage_name = $build->resolve_stage_name_for_class($self->class);
+    unless ($stage_name) {
+        $self->error_message('Failed to resolve stage name for event('.
+                             $self->id .','. $self->class .') in build('.
+                             $build->build_id .','. $build->class .')');
+        die;
+    }
+    return $self->model_id .'_'. $self->parent_event_id .'_'. $stage_name .'_'. $self->id;
 }
 
 1;
