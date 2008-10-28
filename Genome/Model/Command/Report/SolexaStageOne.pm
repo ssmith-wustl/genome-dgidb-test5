@@ -37,6 +37,8 @@ sub resolve_reports_directory {
         }
         chmod 02775, $reports_dir;
     }
+
+   `touch $reports_dir/generation_class.SolexaStageOne`;
    return $reports_dir;
 }
 
