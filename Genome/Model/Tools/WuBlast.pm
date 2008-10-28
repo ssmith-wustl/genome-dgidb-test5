@@ -39,6 +39,11 @@ class Genome::Model::Tools::WuBlast {
         is_input => 1,
         doc => 'The path to a blastable database (xdformat)',
     },
+    query_file => {
+        type => 'String',
+        is_input => 1,
+        doc => 'Query files (comma separated from the command line)',
+    },
     ],
     has_optional => [
     output_file => {
@@ -54,13 +59,6 @@ class Genome::Model::Tools::WuBlast {
             }
         } keys %BASE_BLAST_PARAMS,
     ),
-    ],
-    has_many => [
-    query_files => {
-        type => 'String',
-        is_input => 1,
-        doc => 'Query files (comma separated from the command line)',
-    },
     ],
 };
 
@@ -85,14 +83,9 @@ sub create {
     )
         or return;
 
-    # Verify fasta files
-    my @missing_query_files;
-    for my $fasta_file ( $self->query_files ) {
-        push @missing_query_files, $fasta_file unless -e $fasta_file;
-    }
-
-    if ( @missing_query_files ) {
-        $self->error_message('Fasta files do not exist: '.join(',', @missing_query_files));
+    # Verify query file
+    unless ( -e $self->query_file ) {
+        $self->error_message( sprintf('Query file (%s) does not exist.', $self->query_file) );
         return;
     }
     
@@ -162,14 +155,18 @@ sub _construct_blast_command {
     my $blast_params = $self->_blast_params_and_values
         or return;
 
+    unlink $self->output_file if -e $self->output_file;
+    
     my $cmd = sprintf(
         '%s %s %s %s > %s',
         $self->_blast_command,
         $self->database,
-        join(' ', $self->query_files),
+        $self->query_file,
         join(' ', map({ sprintf('-%s %s', $_, $blast_params->{$_}) } keys %$blast_params)),
         $self->output_file,
     );
+
+    $self->status_message("<= $cmd =>");
 
     return $cmd;
 }
