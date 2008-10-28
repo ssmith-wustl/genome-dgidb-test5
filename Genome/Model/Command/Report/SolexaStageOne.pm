@@ -14,7 +14,10 @@ use Cwd;
 use File::Basename qw/basename/;
 use GSCApp;
 use App::Report;
+
+unless(App::Init->initialized) {
 App->init();
+}
 
 
 
