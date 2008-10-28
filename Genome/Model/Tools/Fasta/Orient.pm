@@ -38,6 +38,7 @@ sub help_brief {
 
 sub help_detail { 
     return <<EOS 
+    Orients a fasta.
 EOS
 }
 
@@ -48,7 +49,7 @@ sub create {
         or return;
 
     unless ( $self->sense_sequences or $self->anti_sense_sequences ) {
-        $self->error_mesage("Need sense or anti-sense sequences to query");
+        $self->error_message("Need sense or anti-sense sequences to query");
         return;
     }
     
@@ -94,7 +95,7 @@ sub execute {
     my $blastn = Genome::Model::Tools::WuBlast::Blastn->create(
         database => $database,
         query_files => [ $query_file ], 
-        M => 1,
+        M => 1, # these params optimized for sort sequences.
         N => -3,
         Q => 3,
         R => 1,
