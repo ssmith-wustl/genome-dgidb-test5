@@ -33,7 +33,6 @@ my %BASE_BLAST_PARAMS = (
 
 class Genome::Model::Tools::WuBlast {
     is => 'Command',
-    is_abstract => 1,
     has => [
     database => {
         type => 'String',
