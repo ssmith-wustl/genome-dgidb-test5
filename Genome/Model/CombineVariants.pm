@@ -71,37 +71,57 @@ sub build_subclass_name {
     return 'combine_variants';
 }
 
-# The file containing the genotype for this sample
+# Returns the data directory of the last complete build
+sub current_build_dir {
+    my $self = shift;
+    
+    my $build = $self->current_running_build;
+    return $build->data_directory;
+}
+
+# The file containing the high sensitivity genotype for this sample, pre annotation
 sub hq_genotype_file {
     my $self = shift;
-    return $self->data_directory . "/hq_genotype.tsv";
+    return $self->current_build_dir. "/hq_genotype.tsv";
 }
 
+# The file containing the high sensitivity genotype for this sample, post annotation
 sub hq_annotated_genotype_file {
     my $self = shift;
-    return $self->data_directory . "/hq_annotated_genotype.tsv";
+    return $self->current_build_dir . "/hq_annotated_genotype.tsv";
 }
 
+# The file containing the low sensitivity genotype for this sample, pre annotation
 sub lq_genotype_file {
     my $self = shift;
-    return $self->data_directory . "/lq_genotype.tsv";
+    return $self->current_build_dir . "/lq_genotype.tsv";
 }
 
+# The file containing the low sensitivity genotype for this sample, post annotation
 sub lq_annotated_genotype_file {
     my $self = shift;
-    return $self->data_directory . "/lq_annotated_genotype.tsv";
+    return $self->current_build_dir . "/lq_annotated_genotype.tsv";
 }
 
-sub maf_file {
+# The maf file produced from high sensitivity genotypes
+sub hq_maf_file {
     my $self = shift;
-    return $self->data_directory . "/maf_file.maf";
+    return $self->current_build_dir . "/hq_maf_file.maf";
 }
 
+# The file containing the low sensitivity genotype for this sample, pre annotation
+sub lq_maf_file {
+    my $self = shift;
+    return $self->current_build_dir . "/lq_maf_file.maf";
+}
+
+# Checks to see if the child model passed in is valid
 sub _is_valid_child{
     my ($self, $child) = @_;
     return grep { $child->technology =~ /$_/i } $self->valid_child_types;
 }
 
+# Returns the valid types that this model (as a composite model) can have as children
 sub valid_child_types{
     my $self = shift;
     return qw/polyscan polyphred/;
@@ -213,6 +233,7 @@ sub next_or_undef{
     return $model->next_sample_genotype;
 }
 
+# Runs annotation for both the high and low sensitivity genotype files using the VariantAnnotator.pm
 sub annotate_variants {
     my ($self) = @_;
 
@@ -392,7 +413,7 @@ sub combine_variants_for_set{
         if ($cmp < 0){
 
             my $genotype = $self->generate_genotype($polyscan_genotype, undef);
-            $ofh->print($self->format_genotype_line($genotype) );
+            $ofh->print($self->format_genotype_line($genotype));
             $polyscan_genotype = $self->next_or_undef($polyscan_model);
 
         }elsif ($cmp > 0){
@@ -511,8 +532,6 @@ sub parse_annotated_genotype_line {
     return $hash;
 }
 
-
-
 # List of columns present in the combine variants output
 sub genotype_columns{
     my $self = shift;
@@ -619,7 +638,7 @@ sub maf_header {
     return"Hugo_Symbol\tEntrez_Gene_Id\tCenter\tNCBI_Build\tChromosome\tStart_position\tEnd_position\tStrand\tVariant_Classification\tVariant_Type\tReference_Allele\tTumor_Seq_Allele1\tTumor_Seq_Allele2\tdbSNP_RS\tdbSNP_Val_Status\tTumor_Sample_Barcode\tMatched_Norm_Sample_Barcode\tMatch_Norm_Seq_Allele1\tMatch_Norm_Seq_Allele2\tTumor_Validation_Allele1\tTumor_Validation_Allele2\tMatch_Norm_Validation_Allele1\tMatch_Norm_Validation_Allele2\tVerification_Status\tValidation_Status\tMutation_Status\tCOSMIC_COMPARISON(ALL_TRANSCRIPTS)\tOMIM_COMPARISON(ALL_TRANSCRIPTS)\tTranscript\tCALLED_CLASSIFICATION\tPROT_STRING\tPROT_STRING_SHORT\tPFAM_DOMAIN";
 }
 
-# Reads from the hq genotype file and returns the next line
+# Reads from the high sensitivity pre annotation genotype file and returns the next line as a hash
 sub next_hq_genotype{
     my $self = shift;
 
@@ -641,6 +660,8 @@ sub next_hq_genotype{
     return $genotype;
 }
 
+# Reads from the high sensitivity pre annotation genotype file and returns the next line as a hash
+# Optionally takes a chromosome and position range and returns only genotypes in that range
 sub next_hq_genotype_in_range{
     my $self = shift;
     return $self->next_hq_genotype unless @_;
@@ -654,6 +675,7 @@ sub next_hq_genotype_in_range{
     }
 }
 
+# Reads from the high sensitivity post annotation genotype file and returns the next line as a hash
 sub next_hq_annotated_genotype{
     my $self = shift;
 
@@ -675,6 +697,8 @@ sub next_hq_annotated_genotype{
     return $genotype;
 }
 
+# Reads from the high sensitivity post annotation genotype file and returns the next line as a hash
+# Optionally takes a chromosome and position range and returns only genotypes in that range
 sub next_hq_annotated_genotype_in_range{
     my $self = shift;
     return $self->next_hq_annotated_genotype unless @_;
@@ -688,7 +712,7 @@ sub next_hq_annotated_genotype_in_range{
     }
 }
 
-# Reads from the lq genotype file and returns the next line
+# Reads from the low sensitivity pre annotation genotype file and returns the next line as a hash
 sub next_lq_genotype{
     my $self = shift;
 
@@ -710,6 +734,8 @@ sub next_lq_genotype{
     return $genotype;
 }
 
+# Reads from the low sensitivity pre annotation genotype file and returns the next line as a hash
+# Optionally takes a chromosome and position range and returns only genotypes in that range
 sub next_lq_genotype_in_range{
     my $self = shift;
     return $self->next_lq_genotype unless @_;
@@ -723,6 +749,7 @@ sub next_lq_genotype_in_range{
     }
 }
 
+# Reads from the low sensitivity post annotation genotype file and returns the next line as a hash
 sub next_lq_annotated_genotype{
     my $self = shift;
 
@@ -743,6 +770,8 @@ sub next_lq_annotated_genotype{
     return $genotype;
 }
 
+# Reads from the low sensitivity post annotation genotype file and returns the next line as a hash
+# Optionally takes a chromosome and position range and returns only genotypes in that range
 sub next_lq_annotated_genotype_in_range{
     my $self = shift;
     return $self->next_lq_annotated_genotype unless @_;
@@ -782,7 +811,7 @@ sub get_or_create {
         unless ($pp) {
             $pp = Genome::ProcessingProfile::CombineVariants->create(name => $pp_name);
         }
-        
+
         my $create_command = Genome::Model::Command::Create::Model->create(
             model_name => $name,
             processing_profile_name => $pp->name,
@@ -802,24 +831,50 @@ sub get_or_create {
     return $model;
 }
 
+# Calls write_maf_file to create both pre annotation maf files
+sub write_pre_annotation_maf_files {
+    my $self = shift;
+
+    $self->write_maf_file('next_hq_genotype_in_range', $self->hq_maf_file);
+
+    $self->write_maf_file('next_lq_genotype_in_range', $self->lq_maf_file);
+
+    return 1;
+}
+
+# Calls write_maf_file to create both pre annotation maf files
+sub write_post_annotation_maf_files {
+    my $self = shift;
+
+    $self->write_maf_file('next_hq_annotated_genotype_in_range', $self->hq_maf_file);
+
+    $self->write_maf_file('next_lq_annotated_genotype_in_range', $self->lq_maf_file);
+
+    return 1;
+}
+
+# Genotype method should be 'next_hq_annotated_genotype_in_range' 'next_hq_genotype_in_range'
+# or the lq equivilants depending on if you want a annotated maf file or pre-annotation maf file
 sub write_maf_file{
     my $self = shift;
-    my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
+    my ($genotype_method, $maf_file, $chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
     $chrom_start ||= 0;
     $pos_start ||=0;
     $chrom_stop ||= 100;
     $pos_stop ||= 1e12;
+    $genotype_method ||= 'next_hq_annotated_genotype_in_range';
+    $maf_file ||= $self->hq_maf_file;
+
 
     # Print maf header
     my $header = $self->maf_header;
-    my $maf_file = $self->maf_file;
     my $fh = IO::File->new(">$maf_file");
     print $fh "$header\n";
 
     # Print maf data
     my @current_sample_basename_genotypes;
     my $current_sample_basename;
-    while (my $genotype = $self->next_hq_annotated_genotype_in_range($chrom_start, $pos_start, $chrom_stop, $pos_stop)){
+    while (my $genotype = $self->$genotype_method($chrom_start, $pos_start, $chrom_stop, $pos_stop)){
 
         my ($sample_basename) = $genotype->{sample_name} =~ /(.*)(t|n)$/;
         $current_sample_basename ||= $sample_basename;
@@ -853,6 +908,8 @@ sub write_maf_file{
     return 1;
 }
 
+# Takes in an array containing normal and tumor genotypes
+# Returns a printable MAF line that contains the matched tumor/normal information
 sub format_maf_line_from_matched_samples{
     my ($self, @matched_sample_genotypes) = @_;
 

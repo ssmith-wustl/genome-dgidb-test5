@@ -36,8 +36,6 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single = $DB::stopper;
-
     my $ps = GSC::ProcessStep->get(process_to => 'queue instrument data for genome modeling');
     my @pses = GSC::PSE->get(
                              ps_id => $ps->ps_id,
@@ -107,7 +105,7 @@ sub execute {
     }
     #Execute all the builds for models with new data
     for my $model_id (keys %model_ids) {
-        my $build = Genome::Model::Command::Build->create(
+        my $build = Genome::Model::Command::Build::PolyphredPolyscan->create(
             model_id => $model_id,
         );
         unless ($build->execute) {
@@ -115,6 +113,43 @@ sub execute {
             next;
         }
     }
+
+    # Now, build all of the parent models of these models
+    my @composite_members = keys %model_ids;
+    my %parent_model_ids;
+
+    # For each child model, find its parent and mark the parent to be built in the hash
+    for my $child_model_id (@composite_members) {
+        my @model_links = Genome::Model::CompositeMember->get(member_id => $child_model_id);
+
+        # For each parent of this model, mark that parent to be built
+        for my $model_link (@model_links) {
+            $parent_model_ids{$model_link->composite_id} = 1;
+        }
+    }
+
+    # Now grab all parent models which have been marked for building from the hash
+    my @parent_models;
+    for my $model_id_to_build (keys %parent_model_ids) {
+        my $parent_model = Genome::Model->get($model_id_to_build);
+
+        unless ($parent_model) {
+            $self->error_message("Failed to get parent model for id $model_id_to_build");
+            die;
+        }
+        push @parent_models, $parent_model;
+    }
+ 
+    for my $model (@parent_models) {
+        my $build = Genome::Model::Command::Build::CombineVariants->create(
+            model_id => $model->id,
+        );
+        unless ($build->execute) {
+            $self->error_message('Failed to execute build '. $build->id .' for model '. $model->id);
+            next;
+        }
+    }
+    
     return 1;
 }
 
