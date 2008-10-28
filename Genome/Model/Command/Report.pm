@@ -45,6 +45,9 @@ sub resolve_reports_directory {
    return $reports_dir;
 }
 
+
+##these can be moved down to subclass or subclasses can supply a type argument to support
+##files other than HTML...don't freak out, you danglers
 sub report_brief_output_filename {
     my $self=shift;
     return $self->resolve_reports_directory . "/brief.html";
