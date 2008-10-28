@@ -30,7 +30,7 @@ plan skip_all => "workflow is broken, and this test is changing in the coming we
 
 my $tmp_dir = File::Temp::tempdir();
 my $model_name = "test_454_$ENV{USER}";
-my $subject_name = 'TSP_Round1-4_Normal_Amplicon_Pool';
+my $subject_name = 'H_FY-454_96normal_tspset3_indel';
 my $subject_type = 'sample_name';
 my $pp_name = '454_ReferenceAlignment_test';
 my %params = (
