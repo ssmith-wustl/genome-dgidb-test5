@@ -22,6 +22,12 @@ class Genome::Model::Command::Build {
                          default_value => 1,
                          is_transient => 1,
                      },
+        hold_run_jobs => {
+                          is => 'Boolean',
+                          doc => 'A flag to hold all lsf jobs that are scheduled in run-jobs',
+                          default_value => 0,
+                          is_transient => 1,
+                      },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -74,7 +80,6 @@ sub build_in_stages {
     }
     my $prior_job_name;
     for my $stage_name ($self->stages) {
-        my $job_name = $self->model_id .'_'. $stage_name .'_'. $self->build_id;
         my @scheduled_objects = $self->_schedule_stage($stage_name);
         unless (@scheduled_objects) {
             $self->error_message('Problem with build('. $self->build_id .") objects not scheduled for classes:\n".
@@ -87,16 +92,19 @@ sub build_in_stages {
             $self->auto_execute(1);
         }
         if ($self->auto_execute) {
-            unless (Genome::Model::Command::RunJobs->execute(
-                                                             model_id => $self->model_id,
-                                                             job_name => $job_name,
-                                                             prior_job_name => $prior_job_name,
-                                                         )) {
+            my %run_jobs_params = (
+                                   model_id => $self->model_id,
+                                   prior_job_name => $prior_job_name,
+                               );
+            if ($self->hold_run_jobs) {
+                $run_jobs_params{bsub_args} = ' -H ';
+            }
+            unless (Genome::Model::Command::RunJobs->execute(%run_jobs_params)) {
                 $self->error_message('Failed to execute run-jobs for model '. $self->model_id);
                 return;
             }
         }
-        $prior_job_name = $job_name;
+        $prior_job_name = $self->model_id .'_'. $self->build_id .'_'. $stage_name .'*';
     }
     return 1;
 }
