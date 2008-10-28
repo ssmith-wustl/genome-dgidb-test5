@@ -280,7 +280,7 @@ sub latest_build_directory {
         return $build->data_directory;
     }
     else {
-        return $self->data_directory; 
+       die "no builds found";
     }
 }
 
@@ -290,7 +290,14 @@ sub resolve_reports_directory {
     return $build_dir . "/reports/";
 }
 
+sub available_reports {
+    my $self=shift;
+    my $report_dir = $self->resolve_reports_directory;
 
+    my @report_subdirs = glob("$report_dir/*");
+    print join("\n", @report_subdirs);
+
+}
 
 
 
