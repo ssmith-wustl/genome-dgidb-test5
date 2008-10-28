@@ -38,7 +38,6 @@ sub help_synopsis
 {
     my $self = shift;
     return <<"EOS"
-need to put help synopsis here
 This command is intended for use with HGMI projects only!
 EOS
 }
@@ -47,7 +46,6 @@ sub help_detail
 {
     my $self = shift;
     return <<"EOS"
-need to put help detail here.
 This command is intended for use with HGMI projects only!
 EOS
 }
@@ -94,19 +92,28 @@ sub execute
     # needs to be fixed.
     my $cwd = getcwd();
     my @cwd = split(/\//x,$cwd);
+    if($#cwd)
+    {
+        croak "the current working directory seems short,\nare you in the right place?";
+    }
     my $hgmi_acedb_patha;
     # this should be cleaned up with a lookup for the V# to Version_#.0
-    if ($self->acedb_version eq 'V1') 
-    {
-        $hgmi_acedb_patha = "/gscmnt/278/analysis/HGMI/Acedb/Version_1.0/ace_files/" . 
-                            $self->locus_id;
+#    if ($self->acedb_version eq 'V1') 
+#    {
+#        $hgmi_acedb_patha = "/gscmnt/278/analysis/HGMI/Acedb/Version_1.0/ace_files/" . 
+#                            $self->locus_id;
     
-    } 
-    elsif ($self->acedb_version eq 'V2')
-    {
-        $hgmi_acedb_patha = "/gscmnt/278/analysis/HGMI/Acedb/Version_2.0/ace_files/" .
-                            $self->locus_id;
-    }
+#    } 
+#    elsif ($self->acedb_version eq 'V2')
+#    {
+#        $hgmi_acedb_patha = "/gscmnt/278/analysis/HGMI/Acedb/Version_2.0/ace_files/" .
+#                            $self->locus_id;
+#    }
+
+    my $acedb_version = $self->acedb_version;
+    $acedb_version =~ s/V(\d)/Version_$1\.0/;
+    $hgmi_acedb_patha = "/gscmnt/278/analysis/HGMI/Acedb/". $acedb_version . 
+                        "/ace_files/". $self->locus_id;
 
     unless (-e $hgmi_acedb_patha)
     {
