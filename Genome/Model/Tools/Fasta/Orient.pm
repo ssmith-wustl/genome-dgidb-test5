@@ -9,28 +9,37 @@ require Alignment::SequenceMatch::Blast::BioHspUtil;
 require Bio::SearchIO;
 require Bio::Seq;
 require Bio::SeqIO;
+require Bio::Seq::PrimaryQual;
 use Data::Dumper;
-require File::Copy;
 require File::Temp;
 require Genome::Model::Tools::WuBlast::Blastn;
 require Genome::Model::Tools::WuBlast::Xdformat::Create;
 require IO::File;
 
+my @SENSE_TYPES = (qw/ sense anti_sense /);
+
 class Genome::Model::Tools::Fasta::Orient {
     is  => 'Genome::Model::Tools::Fasta',
-    has_many => [	 
-    sense_sequences => {
-        is => 'String',
-        is_optional => 1,
-        doc => 'Sense sequences (comma separated if from comand line)',
-    },		 
-    anti_sense_sequences => {
-        is => 'String',
-        is_optional => 1,
-        doc => 'Anti-Sense sequences (comma separated if from comand line)',
-    },		 
+    has_optional => [	 
+    map(
+        {
+            $_.'_fasta_file' => {
+                is => 'String',
+                is_input => 1,
+                doc => ucfirst( join('-', split(/_/, $_)) ).' FASTA file',
+            }
+        } @SENSE_TYPES
+    ),
     ],
 };
+
+sub oriented_fasta_file {
+    return $_[0]->fasta_file_with_new_suffix('oriented');
+}
+
+sub oriented_qual_file {
+    return $_[0]->qual_file_with_new_suffix('oriented');
+}
 
 sub help_brief {
     return 'Orients FASTA (and Quality) files by given sense and anti-sense sequences';
@@ -48,11 +57,19 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
 
-    unless ( $self->sense_sequences or $self->anti_sense_sequences ) {
-        $self->error_message("Need sense or anti-sense sequences to query");
+    unless ( $self->sense_fasta_file or $self->anti_sense_fasta_file ) {
+        $self->error_message("Need sense or anti-sense fasta files to query");
         return;
     }
-    
+
+    for my $sense_type ( @SENSE_TYPES ) {
+        my $fasta_method = $sense_type.'_fasta_file';
+        if ( $self->$fasta_method and not -e $self->$fasta_method ) {
+            $self->error_message( sprintf('Sense FASTA file (%s) does not exist.', $self->$fasta_method) );
+            return;
+        }
+    }
+
     return $self;
 }
 
@@ -74,69 +91,59 @@ sub execute {
     $xdformat->execute
         or return;
 
-    # Create query file from sequences
-    my $query_bioseq_io = $self->get_fasta_writer($query_file)
-        or return;
-    my $arbitrary_id = 0;
-    for my $sense_type (qw/ sense anti_sense /) {
-        my $sense_seq_method = sprintf('%s_sequences', $sense_type);
-        for my $sense_seq ( $self->$sense_seq_method ) {
-            my $bioseq = Bio::Seq->new(
-                '-id' => sprintf('%s_%d', $sense_type, ++$arbitrary_id),
-                '-seq' => $sense_seq,
-            )
-                or return;
-            $query_bioseq_io->write_seq($bioseq)
-                or return;
-        }
-    }
-
-    # Blast
-    my $blastn = Genome::Model::Tools::WuBlast::Blastn->create(
-        database => $database,
-        query_files => [ $query_file ], 
-        M => 1, # these params optimized for sort sequences.
-        N => -3,
-        Q => 3,
-        R => 1,
-        V => 100000,
-        B => 100000,
-    )
-        or return;
-    $blastn->execute
-        or return;
-
-    # Parse blast, store results
-    my $search_io = Bio::SearchIO->new(
-        '-file' => $blastn->output_file,
-        '-format' => 'blast',
-    );
+    # Blast & parse
     my %needs_complementing;
-    while ( my $result = $search_io->next_result ) {
-        while( my $hit = $result->next_hit ) {
-            while ( my $hsp = $hit->next_hsp ){
-                my $query = $hsp->query;
-                my $needs_complementing = 0;
-                if ( $query->seq_id =~ m#^sense# ) {
-                    # If this hit is on the - strand, it needs to complemeted
-                    $needs_complementing = 1 if $query->strand == -1;
+    for my $sense_type ( @SENSE_TYPES ) {
+        my $fasta_method = $sense_type.'_fasta_file';
+
+        my $blastn = Genome::Model::Tools::WuBlast::Blastn->create(
+            database => $database,
+            query_file => $self->$fasta_method, 
+            M => 1, # these params optimized for sort sequences.
+            N => -3,
+            Q => 3,
+            R => 1,
+            V => 100000,
+            B => 100000,
+        )
+            or return;
+        $blastn->execute
+            or return;
+
+        my $search_io = Bio::SearchIO->new(
+            '-file' => $blastn->output_file,
+            '-format' => 'blast',
+        );
+
+        while ( my $result = $search_io->next_result ) {
+            while( my $hit = $result->next_hit ) {
+                while ( my $hsp = $hit->next_hsp ){
+                    my $query = $hsp->query;
+                    my $needs_complementing = 0;
+                    if ( $sense_type eq 'sense' ) {
+                        # If this hit is on the - strand, it needs to complemeted
+                        $needs_complementing = 1 if $query->strand == -1;
+                    }
+                    else { #anti sense
+                        # If this hit is on the + strand, it needs to complemeted
+                        $needs_complementing = 1 if $query->strand == 1;
+                    }
+                    #my $subject_id = $hsp->subject->seq_id;
+                    # TODO Verify?
+                    # if ( exists $needs_complementing{$subject_id}
+                    #        and $needs_complementing{$subject_id} != $needs_complementing ) {
+                    #    $self->error_message();
+                    #}
+                    $needs_complementing{ $hsp->subject->seq_id } = $needs_complementing;
+                    #last; # TODO which one to last?
                 }
-                else { #anti sense
-                    # If this hit is on the + strand, it needs to complemeted
-                    $needs_complementing = 1 if $query->strand == 1;
-                }
-                #my $subject_id = $hsp->subject->seq_id;
-                # TODO Verify?
-                # if ( exists $needs_complementing{$subject_id}
-                #        and $needs_complementing{$subject_id} != $needs_complementing ) {
-                #    $self->error_message();
-                #}
-                $needs_complementing{ $hsp->subject->seq_id } = $needs_complementing;
-                last;
             }
         }
+
+        unlink $blastn->output_file if -e $blastn->output_file;
     }
 
+    # Write FASTA nad Qual
     $self->_write_oriented_fasta_file(\%needs_complementing);
     $self->_write_oriented_qual_file(\%needs_complementing) if $self->have_qual_file;
 
@@ -150,7 +157,7 @@ sub _write_oriented_fasta_file {
     my $bioseq_in = $self->get_fasta_reader( $self->fasta_file )
         or return;
     # Open fasta writing 
-    my $oriented_fasta = $self->fasta_file_with_new_extension('oriented');
+    my $oriented_fasta = $self->oriented_fasta_file;
     unlink $oriented_fasta if -e $oriented_fasta;
     my $bioseq_out = $self->get_fasta_writer($oriented_fasta)
         or return;
@@ -184,7 +191,7 @@ sub _write_oriented_qual_file {
     my $bioseq_in = $self->get_qual_reader( $self->qual_file )
         or return;
     # Open qual reading 
-    my $oriented_qual = $self->qual_file_with_new_extension('oriented');
+    my $oriented_qual = $self->oriented_qual_file;
     unlink $oriented_qual if -e $oriented_qual;
     my $bioseq_out = $self->get_qual_writer($oriented_qual)
         or return;
