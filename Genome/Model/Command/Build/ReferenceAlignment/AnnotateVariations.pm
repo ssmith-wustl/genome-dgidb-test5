@@ -48,6 +48,10 @@ Genome::Model::Command::Report::VariationsBatchToLsf
 EOS
 }
 
+sub bsub_rusage { return "-R 'span[hosts=1]'"; } 
+
+
+
 #- PROPERTY METHODS -#
 sub cleanup_transient_properties {
     my $self = shift;
@@ -172,7 +176,7 @@ sub execute {
 
     $DB::single = $DB::stopper; # when debugging, stop here...
 
-    my ($reports_dir) = $model->_reports_dir();
+    my ($reports_dir) = $self->parent_event->_reports_dir();
     print "$reports_dir\n";
     unless (-d $reports_dir) {
         $self->create_directory($reports_dir);
