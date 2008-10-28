@@ -399,6 +399,13 @@ sub get_fail_logs{
     return @potential;
 }
 
+sub get_output_logs{
+    my $self = shift;	
+    my $cmd = "find /gsc/var/log/confirm_scheduled_pse/output/".$self->pse_id.".* 2> /dev/null";
+    my @potential = `$cmd`;
+    chomp(@potential);
+    return @potential;
+}
 
 sub current_fail_log{
     my $self = shift;	
@@ -409,6 +416,19 @@ sub current_fail_log{
 	$cmd = "find /gsc/var/log/confirm_scheduled_pse/prev_fail/".$self->pse_id.".* 2> /dev/null";
 	@potential = `$cmd`;
     }
+    chomp @potential;
+    return unless @potential;
+    return $potential[0] if @potential == 1;
+    
+    @potential = sort @potential;
+    return $potential[$#potential];
+}
+
+sub current_output_log{
+    my $self = shift;	
+    my $cmd = "find /gsc/var/log/confirm_scheduled_pse/output/".$self->pse_id.".* 2> /dev/null";
+    my @potential = `$cmd`;
+
     chomp @potential;
     return unless @potential;
     return $potential[0] if @potential == 1;
