@@ -97,15 +97,17 @@ sub execute
         $self->work_directory(getcwd());
     }
 
+    # messy, but works for now.
     my $gmhmmp_dir = "/gscmnt/temp212/info/annotation/gmhmmp_models";
     my $gmhmmp_mod = $gmhmmp_dir . "/heu_11_" . $self->gc . ".mod";
     my $gmhmmp_dest = $self->work_directory ."/heu_11_".$self->gc .".mod";
-    symlink($gmhmmp_mod, $gmhmmp_dest) or croak "can't symlink gmhmmp model $gmhmmp_mod, $@";
+    symlink($gmhmmp_mod, $gmhmmp_dest) 
+        or croak "can't symlink gmhmmp model $gmhmmp_mod, $@";
     my $workdir = $self->work_directory;
     my $model = $buildglimmer->model_file;
     my $newmodel = $workdir ."/". $self->locus_tag_prefix . "_gl3.icm";
     my $pwm = $buildglimmer->pwm_file;
-    my $newpwm = $workdir ."/". $self->locus_tag_prefix . "_pwm_gl3.icm";
+    my $newpwm = $workdir ."/". $self->locus_tag_prefix . "_gl3.motif";
 
     # should check if destination files exist, and create copies before 
     #mv-ing over.
