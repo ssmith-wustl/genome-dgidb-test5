@@ -38,6 +38,7 @@ sub create {
     my $self = $class->SUPER::create(@_);
     my $model = $self->model;
     my @read_sets = $model->read_sets;
+    $self->data_directory($self->resolve_data_directory);
 
     # Temporary hack... PolyphredPolyscan and CombineVariants models do not have read sets...
     unless ($model->isa("Genome::Model::PolyphredPolyscan") or $model->isa("Genome::Model::CombineVariants")) {
@@ -70,8 +71,6 @@ sub resolve_data_directory {
 
 sub build_in_stages {
     my $self = shift;
-
-    $self->data_directory($self->resolve_data_directory);
 
     if ($self->_determine_status_from_existing_events) {
         $self->event_status('Succeeded');
