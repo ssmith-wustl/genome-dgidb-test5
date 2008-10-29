@@ -9,7 +9,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 147;
+use Test::More tests => 157;
 use Test::Differences;
 use File::Path;
 
@@ -216,6 +216,11 @@ test_model_from_params(
                        processing_profile_name => '454_newbler_default_assembly',
                    );
 
+test_model_from_params(
+                       subject_name => 'my weird(subject,name)',
+                       processing_profile_name => '454_newbler_default_assembly',
+                   );
+
 &cleanup_model_links();
 
 exit;
@@ -234,8 +239,10 @@ sub test_model_from_params {
     my @uc_words = map { ucfirst($_)  } @words;
     my $class = join('',@uc_words);
     $params{bare_args} = [];
-    $params{'subject_name'} = 'Bob';
-    $params{'subject_type'} = 'sample_name';
+    if (!$params{subject_name}) {
+        $params{subject_name} = 'Bob';
+    }
+    $params{subject_type} = 'sample_name';
     unless ($params{processing_profile_name}) {
         $params{processing_profile_name} = $class;
         my %pp_params = (
@@ -245,6 +252,8 @@ sub test_model_from_params {
         my $pp = Genome::ProcessingProfile->create(%pp_params);
         isa_ok($pp,'Genome::ProcessingProfile::'. $class);
     }
+
+    
     my $create_command = Genome::Model::Command::Create::Model->create(%params);
     isa_ok($create_command,'Genome::Model::Command::Create::Model');
 
@@ -261,13 +270,25 @@ sub test_model_from_params {
     my @status_messages = $create_command->status_messages();
     ok(! scalar(@error_messages), 'no error messages');
     ok(! scalar(@warning_messages), 'no warning messages');
+    if (@warning_messages) {
+        print join("\n",@warning_messages);
+    }
     ok(scalar(@status_messages), 'There was a status message');
+
+    if (!$params{'model_name'}) {
+        my $subject_name = Genome::Model::Command::Create::Model->_sanitize_string_for_filesystem($params{subject_name});
+        $params{'model_name'} = $subject_name .'.'. $params{processing_profile_name};
+    }
+    
     is($status_messages[0], "created model $params{'model_name'}", 'First message is correct');
     # FIXME - some of those have a second message about creating a directory
     # should probably test for that too
 
     my $model = Genome::Model->get(name => $params{model_name},);
     ok($model, 'creation worked for '. $params{model_name} .' alignment model');
+    if (!$class) {
+        $class = 'Assembly';
+    }
     isa_ok($model,'Genome::Model::'.$class);
     SKIP: {
         skip 'no model to delete', 2 if !$model;
