@@ -182,7 +182,7 @@ sub execute {
         $self->create_directory($reports_dir);
         `chmod g+w $reports_dir`;
     }
-
+    
     # TODO run for each variant type
     my $success = Genome::Model::Command::Report::VariationsBatchToLsf->execute
     (
