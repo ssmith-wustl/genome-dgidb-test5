@@ -821,4 +821,19 @@ sub lsf_job_name {
     return $self->model_id .'_'. $self->parent_event_id .'_'. $stage_name .'_'. $self->id;
 }
 
+sub lsf_dependency_condition {
+    my $self = shift;
+    unless ($self->lsf_job_id) {
+        return;
+    }
+    my ($job_info,$events) = Genome::Model::Command::BsubHelper->lsf_state($self->lsf_job_id);
+    for my $entry (@$events) {
+        my ($time, $attributes) = (@$entry);
+        if ($$attributes{'Dependency Condition'}) {
+            return $$attributes{'Dependency Condition'};
+        }
+    };
+    return;
+}
+
 1;
