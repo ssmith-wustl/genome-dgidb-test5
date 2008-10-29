@@ -136,7 +136,7 @@ sub execute {                               # replace with real execution logic.
 			
 			## Calculate the sequence identity of the alignment ##
 			my $alignment_identity = 0;
-			$alignment_identity = ($match_bases + $rep_match_bases) / ($match_bases + $rep_match_bases + $mismatch_bases) * 100 if($match_bases);			
+			$alignment_identity = ($match_bases + $rep_match_bases) / ($match_bases + $rep_match_bases + $mismatch_bases) * 100 if($match_bases || $rep_match_bases);			
 		
 			## Calculate a BLAST-like alignment score ##
 			
@@ -191,7 +191,7 @@ sub execute {                               # replace with real execution logic.
 	## Open output files ##
 
 	open(BESTALIGNS, ">$output_basename.best-alignments.txt") or die "Can't open outfile $output_basename.best-alignments.txt: $!\n";
-	print BESTALIGNS "score\tread_name\tread_start\tread_stop\tref_name\tref_start\tref_stop\talign_strand\n";
+	print BESTALIGNS "score\tread_name\tread_start\tread_stop\tref_name\tref_start\tref_stop\talign_strand\tidentity\tpct_read_aligned\n";
 
 	if($output_psl)
 	{
@@ -253,8 +253,16 @@ sub execute {                               # replace with real execution logic.
 			
 			my @bestContents = split(/\t/, $ReadHSPs[0]);
 			my $best_score = $bestContents[0];
+			
+			my $match_bases = $bestContents[1];
+			my $mismatch_bases = $bestContents[2];
+			my $rep_match_bases = $bestContents[3];
+			my $query_gaps = $bestContents[5];
+			my $subject_gaps = $bestContents[7];
+						
 			my $best_strand = $bestContents[9];
 			my $best_read_name = $bestContents[10];
+			my $best_read_length = $bestContents[11];			
 			my $best_read_start = $bestContents[12];
 			my $best_read_stop = $bestContents[13];
 			my $best_ref_name = $bestContents[14];
@@ -267,8 +275,18 @@ sub execute {                               # replace with real execution logic.
 			$best_ref_start++;
 			$best_ref_stop++;
 			
+			## Calculate read-proportional length of the alignment ##
+			
+			my $pct_read_aligned = ($best_read_stop - $best_read_start) / $best_read_length * 100;
+			$pct_read_aligned = sprintf("%.2f", $pct_read_aligned);
+			
+			## Calculate the sequence identity of the alignment ##
+			my $alignment_identity = 0;
+			$alignment_identity = ($match_bases + $rep_match_bases) / ($match_bases + $rep_match_bases + $mismatch_bases) * 100 if($match_bases || $rep_match_bases);
+			$alignment_identity = sprintf("%.2f", $alignment_identity);
+			
 			## Print the best alignment ##
-			print BESTALIGNS "$best_score\t$best_read_name\t$best_read_start\t$best_read_stop\t$best_ref_name\t$best_ref_start\t$best_ref_stop\t$best_strand\n";
+			print BESTALIGNS "$best_score\t$best_read_name\t$best_read_start\t$best_read_stop\t$best_ref_name\t$best_ref_start\t$best_ref_stop\t$best_strand\t$alignment_identity\t$pct_read_aligned\n";
 			print BESTPSL "$ReadHSPs[0]\n" if($output_psl);
 			
 			for(my $secondCounter = 1; $secondCounter < $numReadHSPs; $secondCounter++)
