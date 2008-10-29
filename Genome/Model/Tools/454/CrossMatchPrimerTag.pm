@@ -94,12 +94,19 @@ sub execute {
         die('Failed to dump fasta data from '. $self->sff_file);
     }
 
-    my $cmd = 'cross_match.test '. $tmp_fasta_file .' '. $self->primer_fasta
-        .' -tags -masklevel 0 -gap1_only -minmatch 6 -minscore 6 -minmargin 1 > '. $self->cross_match_file;
-    $self->status_message('Running: '. $cmd);
-    my $rv = system($cmd);
-    unless ($rv == 0) {
-        die ("Failed to run command $cmd");
+    my $cross_match_tool = Genome::Model::Tools::CrossMatch::Run->create(
+                                                                         query_file => $self->primer_fasta,
+                                                                         subject_file => $tmp_fasta_file,
+                                                                         cm_params => '-tags -masklevel 0 -gap1_only -minmatch 6 -minscore 6 -minmargin 1',
+                                                                         alignment_file => $self->cross_match_file
+                                                                     );
+    unless ($cross_match_tool) {
+        $self->error_message('Failed to create cross_match tool');
+        return;
+    }
+    unless ($cross_match_tool->execute) {
+        $self->error_message('Failed to execute command '. $cross_match_tool->command_name);
+        return;
     }
     return 1;
 }
