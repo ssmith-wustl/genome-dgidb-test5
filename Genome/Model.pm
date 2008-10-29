@@ -536,12 +536,12 @@ sub delete {
             $self->warning_message('Failed to rmtree model data directory '. $self->data_directory);
         }
     }
-    if (-e $self->model_link) {
-        if (-l $self->model_link) {
-            unless (unlink($self->model_link)) {
-                $self->warning_message('Failed to remove model link '. $self->model_link);
-            }
-        } else {
+    if (-l $self->model_link) {
+        unless (unlink($self->model_link)) {
+            $self->warning_message('Failed to remove model link '. $self->model_link);
+        }
+    } else {
+        if (-e $self->model_link) {
             $self->warning_message('Expected symlink for the model link but got path'. $self->model_link);
             unless (rmtree $self->model_link) {
                 $self->warning_message('Failed to rmtree model link directory '. $self->model_link);
