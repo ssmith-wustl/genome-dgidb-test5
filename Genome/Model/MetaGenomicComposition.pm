@@ -102,7 +102,7 @@ sub subclones {
     my $subclones = $self->subclones_and_traces_for_assembly
         or return;
 
-    return [ sort { $a cmp $b } %$subclones ];
+    return [ sort { $a cmp $b } keys %$subclones ];
 }
 
 sub subclones_and_headers { 
