@@ -13,26 +13,26 @@ use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 class Genome::Model::CombineVariants{
     is => 'Genome::Model::Composite',
     has => [
-    hq_gfh  => {
-        is  =>'IO::Handle',
-        doc =>'hq genotype file handle',
-        is_optional => 1,
-    },
-    lq_gfh  => {
-        is  =>'IO::Handle',
-        doc =>'lq genotype file handle',
-        is_optional => 1,
-    },
-    hq_agfh  => {
-        is  =>'IO::Handle',
-        doc =>'hq annotated genotype file handle',
-        is_optional => 1,
-    },
-    lq_agfh  => {
-        is  =>'IO::Handle',
-        doc =>'lq annotated genotype file handle',
-        is_optional => 1,
-    },
+        hq_gfh  => {
+            is  =>'IO::Handle',
+            doc =>'hq genotype file handle',
+            is_optional => 1,
+        },
+        lq_gfh  => {
+            is  =>'IO::Handle',
+            doc =>'lq genotype file handle',
+            is_optional => 1,
+        },
+        hq_agfh  => {
+            is  =>'IO::Handle',
+            doc =>'hq annotated genotype file handle',
+            is_optional => 1,
+        },
+        lq_agfh  => {
+            is  =>'IO::Handle',
+            doc =>'lq annotated genotype file handle',
+            is_optional => 1,
+        },
     ],
 };
 
