@@ -398,10 +398,6 @@ sub combined_input_columns {
         allele1_type 
         allele2 
         allele2_type 
-        con_pos
-        num_reads1
-        num_reads2
-        read_count
         score
     );
 }
