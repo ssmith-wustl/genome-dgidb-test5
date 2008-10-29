@@ -206,7 +206,7 @@ sub _force_stage {
         return;
     }
     if ($previous_stage_name) {
-        my $dependency = $self->model_id .'_'. $self->build_id .'_'. $previous_stage_name .'*';
+        my $dependency = 'done('. $self->model_id .'_'. $self->build_id .'_'. $previous_stage_name .'*)';
         my @classes = $self->classes_for_stage($previous_stage_name);
         $self->_remove_dependency_for_classes($dependency,\@classes);
     }
