@@ -31,7 +31,8 @@ EOS
  
 sub execute {
     my $self = shift;
-    
+ 
+       
     my $model = $self->model;
     unless ($model){
         $self->error_message("Couldn't find model for id ".$self->model_id);
@@ -39,58 +40,71 @@ sub execute {
     }
     $self->status_message("Found Model: " . $model->name);
 
-    # Link the input files to the new build 
-    my $pending_instrument_data_dir = $model->pending_instrument_data_dir;
+    $self->create_directory($self->data_directory);
+    unless (-d $self->data_directory) {
+        $self->error_message("Failed to create new build dir: " . $self->data_directory);
+        die;
+    }
+    $model->current_running_build_id($self->build_id);
 
-    my $next_build_dir = $model->next_build_dir;
+    my $instrument_data_directory = $self->instrument_data_directory;
 
-    if (-d $next_build_dir){
-        $self->error_message("next build dir $next_build_dir already exists!");
+    if (-d $instrument_data_directory ){
+        $self->error_message("new current instrument data dir $instrument_data_directory exists before it should!");
         die;
     }
 
-    $self->create_directory($next_build_dir);
+    $self->create_directory($instrument_data_directory);
 
-    my $current_build_dir = $model->current_build_dir;
-
-    unless ($current_build_dir eq $next_build_dir){
-        $self->error_message("created next build dir $next_build_dir does not match current build dir $current_build_dir");
-        die;
-    }
-
-    unless (-d $current_build_dir){
-        $self->error_message("New current build dir $current_build_dir does not exist");
-        die;
-    }
-
-    my $current_instrument_data_dir = $model->current_instrument_data_dir;
-
-    if (-d $current_instrument_data_dir ){
-        $self->error_message("new current instrument data dir $current_instrument_data_dir exists before it should!");
-        die;
-    }
-
-    $self->create_directory($current_instrument_data_dir);
-
-    unless (-d $current_instrument_data_dir){
-        $self->error_message("New current instrument data dir $current_instrument_data_dir does not exist");
+    unless (-d $instrument_data_directory){
+        $self->error_message("New current instrument data dir $instrument_data_directory does not exist");
         die;
     }
 
     my @pending_instrument_data_files = $model->pending_instrument_data_files;
     
     for my $file (@pending_instrument_data_files) {
-        cp($file, $current_instrument_data_dir);
+        cp($file, $instrument_data_directory);
 
-        my $destination_file = $current_instrument_data_dir . basename($file);
+        my $destination_file = $instrument_data_directory . basename($file);
         unless (-e $destination_file) {
             $self->error_message("Failed to copy $file to $destination_file");
             die;
         }
     }
     
+    $model->last_complete_build_id($self->build_id);
     return $model;
 }
+
+# Returns full path to the input data in the current build
+sub instrument_data_directory {
+    my $self = shift;
+    my $build_data_directory = $self->data_directory;
+
+    my $instrument_data_directory = "$build_data_directory/instrument_data/";
+
+    # Remove spaces, replace with underscores
+    $instrument_data_directory =~ s/ /_/;
+    
+    return $instrument_data_directory;
+}
+
+# Returns an array of the files in the current input dir
+sub instrument_data_files {
+    my $self = shift;
+
+    my $instrument_data_directory = $self->instrument_data_directory;
+    my @current_instrument_data_files = `ls $instrument_data_directory`;
+    
+    foreach my $file (@current_instrument_data_files){  #gets rid of the newline from ls, remove this if we switch to IO::Dir
+        $file = $instrument_data_directory . $file;
+        chomp $file;
+    }
+
+    return @current_instrument_data_files;
+}
+
 
 
 sub _get_sub_command_class_name{

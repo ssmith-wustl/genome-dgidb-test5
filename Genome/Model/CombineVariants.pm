@@ -71,48 +71,40 @@ sub build_subclass_name {
     return 'combine_variants';
 }
 
-# Returns the data directory of the last complete build
-sub current_build_dir {
-    my $self = shift;
-    
-    my $build = $self->current_running_build;
-    return $build->data_directory;
-}
-
 # The file containing the high sensitivity genotype for this sample, pre annotation
 sub hq_genotype_file {
     my $self = shift;
-    return $self->current_build_dir. "/hq_genotype.tsv";
+    return $self->latest_build_directory. "/hq_genotype.tsv";
 }
 
 # The file containing the high sensitivity genotype for this sample, post annotation
 sub hq_annotated_genotype_file {
     my $self = shift;
-    return $self->current_build_dir . "/hq_annotated_genotype.tsv";
+    return $self->latest_build_directory . "/hq_annotated_genotype.tsv";
 }
 
 # The file containing the low sensitivity genotype for this sample, pre annotation
 sub lq_genotype_file {
     my $self = shift;
-    return $self->current_build_dir . "/lq_genotype.tsv";
+    return $self->latest_build_directory . "/lq_genotype.tsv";
 }
 
 # The file containing the low sensitivity genotype for this sample, post annotation
 sub lq_annotated_genotype_file {
     my $self = shift;
-    return $self->current_build_dir . "/lq_annotated_genotype.tsv";
+    return $self->latest_build_directory . "/lq_annotated_genotype.tsv";
 }
 
 # The maf file produced from high sensitivity genotypes
 sub hq_maf_file {
     my $self = shift;
-    return $self->current_build_dir . "/hq_maf_file.maf";
+    return $self->latest_build_directory . "/hq_maf_file.maf";
 }
 
 # The file containing the low sensitivity genotype for this sample, pre annotation
 sub lq_maf_file {
     my $self = shift;
-    return $self->current_build_dir . "/lq_maf_file.maf";
+    return $self->latest_build_directory . "/lq_maf_file.maf";
 }
 
 # Checks to see if the child model passed in is valid

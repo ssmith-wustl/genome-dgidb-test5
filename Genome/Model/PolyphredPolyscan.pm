@@ -246,83 +246,6 @@ sub next_sample_genotype {
     return $new_genotype;
 }
 
-# Returns the latest complete build number
-sub current_version{
-    my $self = shift;
-    my $archive_dir = $self->data_directory;
-    my @build_dirs = `ls $archive_dir`;
-
-    # If there are no previously existing archives
-    my $version = 0;
-    for my $dir (@build_dirs){
-        $version++ if $dir =~/build_\d+/;
-    }
-    return $version;
-
-    @build_dirs = sort {$a <=> $b} @build_dirs;
-    my $last_archived = pop @build_dirs;
-    my ($current_version) = $last_archived =~ m/build_(\d+)/;
-    return $current_version;
-}
-
-# Returns the next available build number
-sub next_version {
-    my $self = shift;
-    
-    my $current_version = $self->current_version;
-    return $current_version + 1;
-}
-
-# Returns the full path to the current build dir
-sub current_build_dir {
-    my $self = shift;
-
-    my $data_dir = $self->data_directory;
-    my $current_version = $self->current_version;
-    my $current_build_dir = "$data_dir/build_$current_version/";
-
-    # Remove spaces, replace with underscores
-    $current_build_dir =~ s/ /_/;
-
-    unless (-d $current_build_dir) {
-        $self->error_message("Current build dir: $current_build_dir doesnt exist");
-        return undef;
-    }
-    
-    return $current_build_dir if -d $current_build_dir;
-    $self->error_message("current_build_dir $current_build_dir does not exist.  Something has gone terribly awry!");
-    die;
-
-}
-
-# Returns full path to the input data in the current build
-sub current_instrument_data_dir {
-    my $self = shift;
-    my $current_build_dir = $self->current_build_dir;
-
-    my $current_instrument_data_dir = "$current_build_dir/instrument_data/";
-
-    # Remove spaces, replace with underscores
-    $current_instrument_data_dir =~ s/ /_/;
-    
-    return $current_instrument_data_dir;
-}
-
-# Returns an array of the files in the current input dir
-sub current_instrument_data_files {
-    my $self = shift;
-
-    my $current_instrument_data_dir = $self->current_instrument_data_dir;
-    my @current_instrument_data_files = `ls $current_instrument_data_dir`;
-    
-    foreach my $file (@current_instrument_data_files){  #gets rid of the newline from ls, remove this if we switch to IO::Dir
-        $file = $current_instrument_data_dir . $file;
-        chomp $file;
-    }
-
-    return @current_instrument_data_files;
-}
-
 # Returns the full path to the pending input dir
 sub pending_instrument_data_dir {
     my $self = shift;
@@ -349,26 +272,6 @@ sub pending_instrument_data_files {
     }
 
     return @pending_instrument_data_files;
-}
-
-# Returns the full path to the next build dir that should be created
-sub next_build_dir {
-    my $self = shift;
-
-    my $data_dir = $self->data_directory;
-    my $next_version = $self->next_version;
-    my $next_build_dir = "$data_dir/build_$next_version/";
-
-    # Remove spaces, replace with underscores
-    $next_build_dir =~ s/ /_/;
-
-    # This should not exist yet
-    if (-e $next_build_dir) {
-        $self->error_message("next build dir: $next_build_dir already exists (and shouldnt)");
-        return undef;
-    }
-    
-    return $next_build_dir;
 }
 
 sub source_instrument_data_dir {
@@ -407,7 +310,8 @@ sub combined_input_columns {
 sub setup_input {
     my $self = shift;
 
-    my @input_files = $self->current_instrument_data_files;
+    my $last_complete_build = $self->last_complete_build;
+    my @input_files = $last_complete_build->instrument_data_files;
 
     # Determine the type of parser to create
     my $type;
