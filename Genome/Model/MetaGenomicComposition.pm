@@ -23,7 +23,12 @@ class Genome::Model::MetaGenomicComposition {
     ],
 };
 
-#< Dirs, Files >#
+#< Misc >#
+sub build_subclass_name {
+    return 'meta-genomic-composition';
+}
+
+#< Dirs >#
 sub consed_directory { #TODO put this on class def
     my $self = shift;
 
@@ -35,6 +40,11 @@ sub consed_directory { #TODO put this on class def
     return $self->{_consed_dir};
 }
 
+sub primer_directory {
+    return '/gscmnt/839/info/medseq/meta-genomic-composition-primers';
+}
+
+#< Files >#
 sub _fasta_file_name {
     my ($self, $type) = @_;
 
@@ -86,6 +96,59 @@ sub subclones_and_traces_for_assembly {
     return $subclones;
 }
 
+sub subclones {
+    my $self = shift;
+
+    my $subclones = $self->subclones_and_traces_for_assembly
+        or return;
+
+    return [ sort { $a cmp $b } %$subclones ];
+}
+
+sub subclones_and_headers { 
+    my $self = shift;
+
+    my $subclones_and_traces = $self->subclones_and_traces_for_assembly
+        or return;
+
+    my $header_generator= sub{
+        return sprintf(">%s\n", $_[0]);
+    };
+    if ( $self->name =~ /ocean/i ) {
+        my @counters = (qw/ -1 Z Z /);
+        $header_generator = sub{
+            if ( $counters[2] eq '9' ) {
+                $counters[2] = 'A';
+            }
+            elsif ( $counters[2] eq 'Z' ) {
+                $counters[2] = '0';
+                if ( $counters[1] eq '9' ) {
+                    $counters[1] = 'A';
+                }
+                elsif ( $counters[1] eq 'Z' ) {
+                    $counters[1] = '0';
+                    $counters[0]++; # Hopefully we won't go over Z
+                }
+                else {
+                    $counters[1]++;
+                }
+            }
+            else {
+                $counters[2]++;
+            }
+
+            return sprintf(">%s%s%s%s\n", $self->subject_name, @counters);
+        };
+    }
+
+    my %subclones_and_headers;
+    for my $subclone ( sort { $a cmp $b } keys %$subclones_and_traces ) {
+        $subclones_and_headers{$subclone} = $header_generator->($subclone);
+    }
+
+    return \%subclones_and_headers;
+}
+
 sub _determine_subclones_in_chromat_dir_gsc {
     my $self = shift;
 
@@ -118,7 +181,7 @@ sub _determine_subclones_in_chromat_dir_broad {
         my $subclone = $scf;
         $subclone =~ s#\.T\d+$##;
         $subclone =~ s#[FR](\w\d\d?)$#\_$1#; # or next;
-        
+
         push @{$subclones{$subclone}}, $scf;
     }
     
