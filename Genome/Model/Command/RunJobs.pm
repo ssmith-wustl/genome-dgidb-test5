@@ -285,9 +285,10 @@ sub _reschedule_failed_jobs {
                             #                                 model_id => $_->model_id,
                             #                                 event_type => $_->event_type,
                             #                                 date_scheduled => { operator => '>', value => $_->date_scheduled } ) }
-                            Genome::Model::Event->get(event_status => ['Failed','Crashed'],
-                                                      parent_event_id => { operator => 'ne', value=>undef},
-                                                      %addl_get_params);
+                                Genome::Model::Event->get(event_status => ['Failed','Crashed'],
+                                                          parent_event_id => { operator => 'ne', value=>undef},
+                                                          user_name => $ENV{'USER'},
+                                                          %addl_get_params);
 
     $DB::single=1;
     while (my $event = shift @launchable_events) {
@@ -296,8 +297,11 @@ sub _reschedule_failed_jobs {
         # be bmod-ded to have their dependancy condition changed
         my @subsequent_events = sort { ($a->model_id <=> $b->model_id) || ($a->id <=> $b->id) }
                                 grep { $_->lsf_job_id }
-                                Genome::Model::Event->get(event_status => 'Scheduled',
-                                                          prior_event_id => $event->genome_model_event_id);
+                                Genome::Model::Event->get(
+                                                          event_status => 'Scheduled',
+                                                          prior_event_id => $event->genome_model_event_id,
+                                                          user_name => $ENV{'USER'},
+                                                      );
         my %execute_args = (bsub_queue => $self->bsub_queue, bsub_args => $self->bsub_args);
 
         my $prior_event = $event->prior_event();
