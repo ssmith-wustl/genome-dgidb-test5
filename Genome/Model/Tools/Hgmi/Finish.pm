@@ -55,6 +55,10 @@ UR::Object::Type->define(
                                  'work_directory' => {is => 'String',
                                                       doc => "",
                                                       is_optional => 1},
+                                 'script_location' => {is => 'String',
+                                                       doc => "path or name of bap finish project script",
+                                                       is_optional => 1,
+                                                       default => "bap_finish_project",}
                                  ]
                          );
 
@@ -218,7 +222,7 @@ my (
     print "\nbap_finish_project.pl\n";
     print "\n$cmd3 \n";
 
-    my @command_list = ('bap_finish_genes',
+    my @command_list = ($self->script_location,
                         '--sequence-set-id',
                         $sequence_set_id,
                         '--locus-id',
