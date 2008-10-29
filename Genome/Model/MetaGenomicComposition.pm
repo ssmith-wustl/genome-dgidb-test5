@@ -60,7 +60,7 @@ sub all_assembled_fasta {
     return _fasta_file_name(@_, 'assembled');
 }
 
-sub all_pre_process_input_fasta {
+sub all_pre_processing_fasta {
     return _fasta_file_name(@_, 'pre_process_input');
 }
 
