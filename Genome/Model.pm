@@ -293,9 +293,27 @@ sub resolve_reports_directory {
 sub available_reports {
     my $self=shift;
     my $report_dir = $self->resolve_reports_directory;
-
+    my %report_file_hash;
     my @report_subdirs = glob("$report_dir/*");
-    print join("\n", @report_subdirs);
+    for my $subdir (@report_subdirs) {
+        #we may be able to do away with touching generating class and just try to find reports that match this subdir name? not sure
+        my ($report_name) = ($subdir =~ /\/+reports\/+(.*)\/*/);
+        my $file=glob("$subdir/generation_class.*");
+        if($file) {
+            $DB::single=1;
+            #so, we found a generating class notation..this is a regular report
+            my ($class) = ($file =~ /generation_class.(.*)/);
+            my $reports_class = "Genome::Model::Command::Report::$class";
+            my $report = $reports_class->create(model_id =>$self->id);
+            $report_file_hash{$report_name}{'report_detail_output_filename'}= $report->report_detail_output_filename;
+            $report_file_hash{$report_name}{'report_brief_output_filename'}= $report->report_brief_output_filename;
+        }
+        else 
+        {
+            $report_file_hash{$report_name}{'report_detail_output_filename'}="$report_dir/index.html";
+        }
+    }
+    return %report_file_hash; 
 
 }
 
