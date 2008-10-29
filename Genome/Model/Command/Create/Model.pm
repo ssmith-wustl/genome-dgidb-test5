@@ -331,7 +331,7 @@ sub _sanitize_string_for_filesystem {
     my $self = shift;
     my $string = shift;
     return $string if not defined $string;
-    my $OK_CHARS = '-a-zA-Z0-9_.';
+    my $OK_CHARS = '-a-zA-Z0-9_./';
     $string =~ s/[^$OK_CHARS]/_/go;
     return $string;
 }
