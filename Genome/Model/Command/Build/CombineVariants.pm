@@ -45,8 +45,6 @@ sub execute {
         die;
     }
 
-    $model->current_running_build_id($self->build_id);
-
     $self->status_message("Combining variants");
     $model->combine_variants();
     

@@ -45,7 +45,6 @@ sub execute {
         $self->error_message("Failed to create new build dir: " . $self->data_directory);
         die;
     }
-    $model->current_running_build_id($self->build_id);
 
     my $instrument_data_directory = $self->instrument_data_directory;
 
