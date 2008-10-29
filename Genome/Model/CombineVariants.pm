@@ -240,6 +240,10 @@ sub annotate_variants {
     ####hq
     my $hq_post_annotation_file = $self->hq_annotated_genotype_file;
     my $hq_ofh = IO::File->new("> $hq_post_annotation_file");
+    unless ($hq_ofh){
+        $self->error_message("couldn't get output file handle for $hq_post_annotation_file");
+        die;
+    }
 
     my $current_hq_chromosome=0;
     while (my $hq_genotype = $self->next_hq_genotype){
@@ -266,6 +270,10 @@ sub annotate_variants {
     ####lq
     my $lq_post_annotation_file = $self->lq_annotated_genotype_file;
     my $lq_ofh = IO::File->new("> $lq_post_annotation_file");
+    unless ($lq_ofh){
+        $self->error_message("couldn't get output file handle for $lq_post_annotation_file");
+        die;
+    }
 
     my $current_lq_chromosome=0;
     while (my $lq_genotype = $self->next_lq_genotype){
@@ -647,6 +655,7 @@ sub next_hq_genotype{
         $self->hq_gfh(undef);
         return undef;
     }
+    chomp $line;
     my $genotype = $self->parse_genotype_line($line);
 
     return $genotype;
@@ -684,6 +693,7 @@ sub next_hq_annotated_genotype{
         $self->hq_agfh(undef);
         return undef;
     }
+    chomp $line;
     my $genotype = $self->parse_annotated_genotype_line($line);
 
     return $genotype;
@@ -721,6 +731,7 @@ sub next_lq_genotype{
         $self->lq_gfh(undef);
         return undef;
     }
+    chomp $line;
     my $genotype = $self->parse_genotype_line($line);
 
     return $genotype;
@@ -758,6 +769,7 @@ sub next_lq_annotated_genotype{
         $self->lq_agfh(undef);
         return undef;
     }
+    chomp $line;
     my $genotype = $self->parse_annotated_genotype_line($line);
     return $genotype;
 }
@@ -892,10 +904,10 @@ sub write_maf_file{
             $current_sample_basename = $sample_basename;
             push @current_sample_basename_genotypes, $genotype;
         }
-        
-        my $last_line = $self->format_maf_line_from_matched_samples(@current_sample_basename_genotypes);
-        $fh->print($last_line) if $last_line;
     }
+
+    my $last_line = $self->format_maf_line_from_matched_samples(@current_sample_basename_genotypes);
+    $fh->print($last_line) if $last_line;
         
     return 1;
 }
