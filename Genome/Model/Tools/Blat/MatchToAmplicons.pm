@@ -7,7 +7,7 @@ package Genome::Model::Tools::Blat::MatchToAmplicons;     # rename this when you
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
 #	CREATED:	10/20/2008 by D.K.
-#	MODIFIED:	10/21/2008 by D.K.
+#	MODIFIED:	10/28/2008 by D.K.
 #
 #	NOTES:		After PyroScan code has been improved and deployed, use LSF to run pyroscan
 #			
@@ -37,6 +37,7 @@ class Genome::Model::Tools::Blat::MatchToAmplicons {
 		run_crossmatch	=> { is => 'Text', doc => "If set to 1, launch CM alignments between reads and amplicon [0]", is_optional => 1 },	
 		run_pyroscan	=> { is => 'Text', doc => "If set to 1, run PyroScan on the CM output file [0]", is_optional => 1 },		
 		pyroscan_params	=> { is => 'Text', doc => "Optional parameters to use for pyroscan", is_optional => 1 },	
+		overlap_bases	=> { is => 'Text', doc => "Minium overlapping bp to assign read to an amplicon [1]", is_optional => 1 },	
 	],
 };
 
@@ -82,18 +83,20 @@ sub execute {                               # replace with real execution logic.
 	my $alignments_file = $self->alignments_file;
 	my $headers_file = $self->headers_file;
 	my $sample_name = $self->sample_name;
+	
 
 	## Set defaults for and then get optional parameters ##
 	
 	my $lsf_queue = "long";
 	my $output_dir = "amplicon_dir";	
 	my $refseq_dir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";	
+	my $min_overlap_bases = 1;
 	my $sff_file = "";
 	
 	$sff_file = $self->sff_file if($self->sff_file);	
 	$lsf_queue = $self->lsf_queue if($self->lsf_queue);
 	$output_dir = $self->output_dir if($self->output_dir);
-	
+	$min_overlap_bases = $self->overlap_bases if($self->overlap_bases);	
 	
 	## Grab options on which steps to run ##
 	
@@ -161,6 +164,8 @@ sub execute {                               # replace with real execution logic.
 	## Parse the read alignments file ##
 	print "Parsing alignments file...\n";
 
+	print "Requiring $min_overlap_bases overlapping bases to assign read to an amplicon\n";
+
 	my $input = new FileHandle ($alignments_file);
 	my $lineCounter = 0;
 	
@@ -190,8 +195,18 @@ sub execute {                               # replace with real execution logic.
 					(my $amplicon_start, my $amplicon_stop, my $amplicon_name) = split(/\t/, $amplicons[$gCounter]);
 					if($chr_stop >= $amplicon_start && $chr_start <= $amplicon_stop)
 					{
-						$AmpliconReads{$amplicon_name} .= "$read_name\n";
-						$NumAmpliconReads{$amplicon_name}++;
+						## Calculate the amount of overlap ##
+						my $overlap_start = $amplicon_start;
+						$overlap_start = $chr_start if($chr_start > $amplicon_start);
+						my $overlap_stop = $amplicon_stop;
+						$overlap_stop = $chr_stop if($chr_stop < $amplicon_stop);
+						my $overlap_bases = $overlap_stop - $overlap_start + 1;
+						
+						if($overlap_bases >= $min_overlap_bases)
+						{
+							$AmpliconReads{$amplicon_name} .= "$read_name\n";
+							$NumAmpliconReads{$amplicon_name}++;
+						}
 					}
 				}
 			}
@@ -273,36 +288,14 @@ sub execute {                               # replace with real execution logic.
 			{
 				if($pyroscan_params)
 				{
-#					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta $pyroscan_params >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e02");
+					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta $pyroscan_params >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan");
 				}
 				else
 				{
-#					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan");
-					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta --pvalue 1e-01 >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e01 2>/dev/null");
-#					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta --pvalue 1e-02 >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e02 2>/dev/null");				
-					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta --pvalue 1e-03 >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e03 2>/dev/null");
-					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta --pvalue 1e-04 >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e04 2>/dev/null");									
-					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta --pvalue 1e-05 >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e05 2>/dev/null");				
-#					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta --pvalue 1e-06 >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e06 2>/dev/null");
-					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta --pvalue 1e-07 >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e07 2>/dev/null");
-					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta --pvalue 1e-08 >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e08 2>/dev/null");
-					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta --pvalue 1e-09 >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e09 2>/dev/null");				
-					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta --pvalue 1e-10 >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e10 2>/dev/null");				
+					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan");
 				}
 				
-#				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.genotype_submission.tsv --sample-name $sample_name");
-#				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e02 --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e02.genotype_submission.tsv --sample-name $sample_name");
-				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e01 --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e01.genotype_submission.tsv --sample-name $sample_name");
-				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e02 --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e02.genotype_submission.tsv --sample-name $sample_name");
-				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e03 --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e03.genotype_submission.tsv --sample-name $sample_name");
-				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e04 --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e04.genotype_submission.tsv --sample-name $sample_name");
-				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e05 --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e05.genotype_submission.tsv --sample-name $sample_name");
-				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e06.genotype_submission.tsv --sample-name $sample_name");
-				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e07 --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e07.genotype_submission.tsv --sample-name $sample_name");
-				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e08 --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e08.genotype_submission.tsv --sample-name $sample_name");
-				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e09 --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e09.genotype_submission.tsv --sample-name $sample_name");
-				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e10 --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.1e10.genotype_submission.tsv --sample-name $sample_name");
-#				return(0);			
+				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.genotype_submission.tsv --sample-name $sample_name");
 			}
 		}
 	}
