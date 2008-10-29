@@ -142,18 +142,75 @@ sub create {
         return;
     }
 
+    my $pp_id;
+    unless ($pp_id = $self->_get_processing_profile_from_name()) { 
+        $self->event_status('Failed');
+        my $msg;
+        if (defined $self->processing_profile_name) {
+            $msg = "Failed to find processing profile "
+                . $self->processing_profile_name . "!\n"
+        }
+        else {
+            $msg = "No processing profile specified!\n";
+        }
+        $msg .= "Please select from:\n "
+                . join("\n ", 
+                        grep { defined $_ and length $_ } 
+                        map  { $_->name } 
+                        Genome::ProcessingProfile->get() 
+                    ) 
+                . "\n";
+        $self->error_message($msg);
+        $self->delete;
+        return;
+    }
+
+    my $pp = Genome::ProcessingProfile->get($pp_id);
+    my $subject_class;
+    my $subject_property;
+    if ($self->subject_type eq 'sample_name') {
+        $subject_class = 'Genome::Sample';
+        $subject_property = 'name';
+    }
+    elsif ($self->subject_type eq 'species_name') {
+        $subject_class = 'Genome::Taxon';
+        $subject_property = 'species_name';
+    }
+    else {
+        die "unsupported subject type " . $self->subject_type;
+    }
+
+    my @subjects = $subject_class->get($subject_property => $self->subject_name);
+ 
+    unless (@subjects) {
+        my $msg = "Failed to find " . $self->subject_type
+            . " with $subject_property " . $self->subject_name . "!\n";
+        my @possible_subjects = $subject_class->get();
+
+        #my @possible_subjects;
+        #if ($self->subject_type eq 'species_name') {
+        #    @possible_subjects = $subject_class->get();
+        #}
+        #elsif ($self->subject_type eq 'sample_name') {
+        #    my $sequencing_platform = $pp->sequencing_platform;
+        #    my @run_chunks = Genome:: 
+        #    @possible_subjects = $s
+        #}
+
+        $msg .= "Possible subjects are:\n "
+            . join("\n ", sort map { $_->$subject_property } @possible_subjects)
+            . "\n";
+        $msg .= "Please select one of the above.";
+        $self->error_message($msg);
+        #$self->delete;
+        #return;
+    }
+
     return $self;
 }
 
 sub execute {
     my $self = shift;
-
-
-    unless ($self->_get_processing_profile_from_name()) { 
-        $self->event_status('Failed');
-        $self->error_message("Error: Expecting 1 processing profile match." );
-        return;
-    }
 
     $self->_validate_execute_params();
     
