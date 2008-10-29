@@ -16,7 +16,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 299;
+    plan tests => 179;
 
     use_ok( 'Genome::RunChunk::454');
     use_ok( 'Genome::Model::Assembly');
@@ -97,7 +97,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     my @status_messages = $add_reads_command->status_messages();
     ok(scalar(@status_messages), 'add-reads execute printed some status messages');
     ok(scalar(grep { $_ eq 'Adding all available reads to the model...!'} @status_messages), 'execute mentioned it was adding all reads');
-    ok(scalar(grep { $_ eq 'Found 8 compatible read sets.' } @status_messages), 'execute mentioned it found 8 read seta');
+    ok(scalar(grep { $_ eq 'Found 4 compatible read sets.' } @status_messages), 'execute mentioned it found 4 read sets');
     my @warning_messages = $add_reads_command->warning_messages();
     is(scalar(@warning_messages), 0, 'execute generated no warning messages');
     my @error_messages = $add_reads_command->error_messages();
@@ -119,32 +119,25 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     # so for 8 ReadSets = 8 * 5 = 40
     # plus 2 more for scheduling reference sequence / Build::Assembly::Assemble
     #is(scalar(@status_messages), 42, 'executing builder generated 42 messages');
-    for(my $i = 0; $i < 8; $i++) {
-        like($status_messages[0], qr(^Scheduling .* Genome::Model::ReadSet), 'Found scheduling ReadSet messages');
-        like($status_messages[1], qr(^Scheduled Genome::Model::Command::Build::Assembly::AssignReadSetToModel),
+    for(my $i = 0; $i < 4; $i++) {
+	my $index = 0;
+        like($status_messages[$index++], qr(^Scheduling jobs for .* read set), 'Found scheduling ReadSet messages');
+        like($status_messages[$index++], qr(^Scheduled Genome::Model::Command::Build::Assembly::AssignReadSetToModel),
              'Found Scheduled...AssignReadSetToModel message');
         if ($pp_params->{'read_filter_name'}) {
-            like($status_messages[2], qr(^Scheduled Genome::Model::Command::Build::Assembly::FilterReadSet),
+            like($status_messages[$index++], qr(^Scheduled Genome::Model::Command::Build::Assembly::FilterReadSet),
                  'Found Scheduled...FilterReadSet messages');
-        } else {
-            is($status_messages[2], 
-               "No value defined for subclassing model property 'read_filter_name'.  Skipping 'Genome::Model::Command::Build::Assembly::FilterReadSet'",
-               'Message correctly indicates that it is skipping FilterReadSet');
         }
 
         if ($pp_params->{'read_trimmer_name'}) {
-            like($status_messages[3], qr(^Scheduled Genome::Model::Command::Build::Assembly::TrimReadSet),
+            like($status_messages[$index++], qr(^Scheduled Genome::Model::Command::Build::Assembly::TrimReadSet),
                  'Found Scheduled...TrimReadSet messages');
-        } else {
-            is($status_messages[3], 
-               "No value defined for subclassing model property 'read_trimmer_name'.  Skipping 'Genome::Model::Command::Build::Assembly::TrimReadSet'",
-               'Message correctly indicates that it is skipping TrimReadSet');
         }
-        like($status_messages[4], qr(^Scheduled Genome::Model::Command::Build::Assembly::AddReadSetToProject),
+        like($status_messages[$index++], qr(^Scheduled Genome::Model::Command::Build::Assembly::AddReadSetToProject),
              'Found Scheduled...AddReadSetToProject messages');
-        splice(@status_messages, 0, 5);
+        splice(@status_messages, 0, $index);
     }
-    like($status_messages[0], qr(^Scheduling .* reference_sequence), 'Found reference_sequence message');
+    like($status_messages[0], qr(^Scheduling jobs for reference sequence .*), 'Found reference_sequence message');
     like($status_messages[1], qr(^Scheduled Genome::Model::Command::Build::Assembly::Assemble),
         'Found Build Assembly message');
     
