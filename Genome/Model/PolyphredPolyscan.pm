@@ -153,8 +153,11 @@ sub predict_genotype{
             my $return_genotype = shift @genotypes;  
             $return_genotype->{allele1} = 'X';
             $return_genotype->{allele2} = 'X';
-            foreach my $val( qw/variant_type allele1_type allele2_type score read_count/){
-                $return_genotype->{$val} = '-';
+            foreach my $val( qw/variant_type allele1_type allele2_type/){
+                $return_genotype->{$val} = 'SNP';
+            }
+            foreach my $val( qw/ score /){
+                $return_genotype->{$val} = '0';
             }
             return $return_genotype;
         # Otherwise, return the majority vote     
