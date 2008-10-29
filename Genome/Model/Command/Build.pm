@@ -258,7 +258,21 @@ sub _schedule_stage {
             $object_class = 'reference_sequence';
             $object_id = $object;
         }
-        $self->status_message('Scheduling for '. $object_class .' with id '. $object_id);
+        if ($object_class->isa('Genome::Model::ReadSet')) {
+            my $run_chunk = $object->read_set;
+            $self->status_message('Scheduling jobs for ' 
+                . $run_chunk->sequencing_platform 
+                . ' read set ' 
+                . $run_chunk->full_name 
+                . ' (' . $run_chunk->id . ')'
+            );
+        }
+        elsif ($object_class eq 'reference_sequence') {
+            $self->status_message('Scheduling jobs for reference sequence ' . $object_id);
+        }
+        else {
+            $self->status_message('Scheduling for '. $object_class .' with id '. $object_id);
+        }
         my @command_classes = $self->classes_for_stage($stage_name);
         push @scheduled_commands, $self->_schedule_command_classes_for_object($object,\@command_classes);
     }
@@ -279,7 +293,8 @@ sub _schedule_command_classes_for_object {
            if ($command_class->can('command_subclassing_model_property')) {
                 my $subclassing_model_property = $command_class->command_subclassing_model_property;
                 unless ($self->model->$subclassing_model_property) {
-                    $self->status_message("No value defined for subclassing model property '$subclassing_model_property'.  Skipping '$command_class'");
+                    # TODO: move into the creation of the processing profile
+                    #$self->status_message("This processing profile doesNo value defined for $subclassing_model_property in the processing profile.  Skipping related processing...");
                     next;
                 }
             }
