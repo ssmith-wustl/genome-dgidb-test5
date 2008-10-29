@@ -32,8 +32,6 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
-    
     my $model = $self->model;
     unless ($model){
         $self->error_message("Couldn't find model for id ".$self->model_id);
@@ -47,7 +45,6 @@ sub execute {
         die;
     }
 
-    # FIXME : remove this line... should be in the base build.pm
     $model->current_running_build_id($self->build_id);
 
     $self->status_message("Combining variants");
@@ -61,7 +58,6 @@ sub execute {
 
     $model->last_complete_build_id($self->build_id);
 
-    $DB::single=1;
     return $model;
 }
 
