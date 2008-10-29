@@ -49,6 +49,7 @@ sub create {
             return;
         }
     }
+    $model->current_running_build_id($self->build_id);
 
     return $self;
 }
@@ -183,6 +184,58 @@ sub _determine_status_from_existing_events {
         die($error_message);
     }
     return 1;
+}
+
+sub _force_stage {
+    my $self = shift;
+    my $stage_name = shift;
+
+    my @stages = $self->stages;
+    my $previous_stage_name;
+    my $found_stage_name;
+    for (my $i = 0; $i < scalar(@stages); $i++) {
+        if ($stages[$i] eq $stage_name) {
+            $found_stage_name = $stages[$i];
+            $previous_stage_name = $stages[$i-1];
+            last;
+        }
+    }
+    unless ($found_stage_name) {
+        $self->error_message("Failed to find stage '$stage_name'");
+        $self->error_message("Available stages are:\n". join("\n",@stages));
+        return;
+    }
+    if ($previous_stage_name) {
+        my $dependency = $self->model_id .'_'. $self->build_id .'_'. $previous_stage_name .'*';
+        my @classes = $self->classes_for_stage($previous_stage_name);
+        $self->_remove_dependency_for_classes($dependency,\@classes);
+    }
+}
+
+sub _remove_dependency_for_classes {
+    my $self = shift;
+    my $dependency = shift;
+    my $classes = shift;
+    for my $class (@$classes) {
+        if (ref($class) eq 'ARRAY') {
+            $self->_remove_dependencey_for_classes($dependency,$class);
+        } else {
+            my @events = $class->get(
+                                     event_status => 'Scheduled',
+                                     model_id => $self->model_id,
+                                     parent_event_id => $self->build_id,
+                                     user_name => $ENV{'USER'},
+                                 );
+            for my $event (@events) {
+                my $dependency_expression = $event->lsf_dependency_expression;
+                my $original_expression = $dependency_expression;
+                $dependency_expression =~ s/$dependency//go;
+                $self->status_message("Changing dependency from '$original_expression' to '$dependency_expression' for event ". $event->id);
+                my $lsf_job_id = $event->lsf_job_id;
+                `bmod -w $dependency_expression $lsf_job_id`;
+            }
+        }
+    }
 }
 
 sub _schedule_stage {
