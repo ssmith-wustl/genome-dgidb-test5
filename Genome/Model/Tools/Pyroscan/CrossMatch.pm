@@ -84,7 +84,7 @@ sub Read{
       $ref_start=$g1; $ref_end=$g2;
     }
 
-    my $perc_match=($r_end-$r_start)*100/$rlen;
+#    my $perc_match=($r_end-$r_start)*100/$rlen;
     #skip unreliable alignments
     #next if($rlen<40 || $score<30 || $perc_match<80 || $perc_sub>10);
     next if($perc_sub>3);  #allow almost 3% substitution
