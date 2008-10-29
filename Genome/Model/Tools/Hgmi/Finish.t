@@ -18,6 +18,7 @@ my $finish = Genome::Model::Tools::Hgmi::Finish->create(
   'hgmi_locus_tag' => "BIFCATDFT",
   'project_type' => "HGMI",
   'sequence_set_name' => "Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb",
+  'acedb_version' => 'V2',
   'dev' => 1
 );
 

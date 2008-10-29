@@ -44,6 +44,11 @@ UR::Object::Type->define(
                                  'dev' => {is => 'Boolean',
                                            doc => "",
                                            is_optional => 1},
+                                 'sequence_set_id' => { is => 'Integer',
+                                                        doc => "sequence set id" ,
+                                                        is_optional => 1},
+                                 'acedb_version' => { is => 'String',
+                                                      doc => "Ace DB version (V1,V2,etc)" },
                                  'sequence_set_name' => {is => 'String',
                                                          doc => "",
                                                          is_optional => 1},
@@ -164,7 +169,7 @@ sub gather_details
 
     my $sequence_set_name_obj;
     my $sequence_set_obj;
-    my $sequence_set_id;
+    my $sequence_set_id = $self->sequence_set_id;
 
     $sequence_set_name_obj = BAP::DB::SequenceSet->retrieve('sequence_set_name'=> $sequence_set_name);
 
@@ -221,7 +226,7 @@ my (
                         '--project-type',
                         'HGMI',
                         '--acedb-version',
-                        'V2'
+                        $self->acedb_version,
                         );
     if(defined($self->dev)) { push(@command_list,"--dev"); }
     return \@command_list;
