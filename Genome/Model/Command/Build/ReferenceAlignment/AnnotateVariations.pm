@@ -63,7 +63,7 @@ sub cleanup_transient_properties {
 sub snp_report_file_base {
     my $self = shift;
 
-    return sprintf('%s/%s_snp', ($self->model->_reports_dir)[0], $self->ref_seq_id);
+    return sprintf('%s/%s_snp', $self->parent_event->_reports_dir, $self->ref_seq_id);
 }
 
 sub snp_report_file {
@@ -94,7 +94,7 @@ sub snp_metrics_report_file {
 sub indel_report_file_base {
     my $self = shift;
 
-    return sprintf('%s/%s_indel', ($self->model->_reports_dir)[0], $self->ref_seq_id);
+    return sprintf('%s/%s_indel', $self->parent_event->_reports_dir, $self->ref_seq_id);
 }
 
 sub indel_report_file {
