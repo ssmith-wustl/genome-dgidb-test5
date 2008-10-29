@@ -23,6 +23,17 @@ class Genome::ProcessingProfile {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub delete {
+    my $self = shift;
+    for my $param ($self->params) {
+        $param->delete;
+    }   
+    $self->SUPER::delete;
+
+    return $self;
+}
+
+
 sub params_for_class {
     my $class = shift;
     warn("params_for_class not implemented for class '$class':  $!");
