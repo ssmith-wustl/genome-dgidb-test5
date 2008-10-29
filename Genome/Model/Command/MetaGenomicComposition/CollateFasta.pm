@@ -6,26 +6,32 @@ use warnings;
 use Genome;
 
 use Data::Dumper;
-#require Genome::Model::Tools::Fasta::Collate;
 require IO::Dir;
 require IO::File;
 
+my $_fasta_and_qual_types = {
+    assembled => '%s/%s.fasta.contigs',
+    pre_processing => '%s/%s.fasta.pre_processing',
+    assembly_input => '%s/%s.fasta',
+};
+
 class Genome::Model::Command::MetaGenomicComposition::CollateFasta { 
     is => 'Genome::Model::Command',
-    has => [
-    map {
-        $_ => {
-            type => 'Boolean',
-            is_optional => 1,
-            default => 1,
-            doc => 'assemblies',
-        }
-    } fasta_and_qual_types(),
+    has_optional => [
+    map(
+        {
+            $_ => {
+                type => 'Boolean',
+                default => 0,
+                doc => 'Get '.join(' ', split(/_/, $_)).' FASTA and Qual for each subclone',
+            }
+        } fasta_and_qual_types()
+    ),
     ],
 };
 
 sub help_brief {
-    return '(collate ';
+    return 'Collate the FASTAs and Quality files for all assemblies in a MGC model.';
 }
 
 sub help_detail {
@@ -33,13 +39,28 @@ sub help_detail {
 }
 
 sub fasta_and_qual_types {
-    return (qw/ assembled pre_process_input assembly_input /);
+    return keys %$_fasta_and_qual_types;
+}
+
+sub fasta_and_qual_types_as_strings {
+    return map { join(' ', split(/_/)) } keys %$_fasta_and_qual_types;
+}
+
+sub _subclone_fasta_file_for_type {
+    my ($self, $type, $subclone) = @_;
+
+    return sprintf(
+        $_fasta_and_qual_types->{$type},
+        $self->model->consed_directory->edit_dir, 
+        $subclone
+    );
 }
 
 sub create {
     my $class = shift;
 
-    my $self = $class->SUPER::create(@_);
+    my $self = $class->SUPER::create(@_)
+        or return;
 
     unless ( $self->model ) {
         $self->error_message( sprintf('Can\'t get model for id (%s)', $self->model_id) );
@@ -47,6 +68,8 @@ sub create {
         return;
     }
 
+    $self->assembled(1) unless grep { $self->$_ } $self->fasta_and_qual_types;
+    
     return $self;
 }
 
@@ -62,18 +85,17 @@ sub DESTROY {
 sub execute {
     my $self = shift;
 
-    my $subclones = $self->model->subclones_and_traces_for_assembly
+    my $subclones = $self->model->subclones
         or return;
 
     $self->_open_output_fhs
         or return;
 
-    while ( my ($subclone) = each %$subclones ) {
-        $self->status_message("<=== Grabbing Fasta and Qual for $subclone ===>");
+    for my $subclone ( @$subclones ) {
+        $self->status_message("<== Grabbing Fasta and Qual for $subclone ==>");
         for my $type ( $self->fasta_and_qual_types ) {
             next unless $self->$type;
-            my $method = sprintf('_add_%s_fasta_and_qual', $type);
-            $self->$method($subclone);
+            $self->_add_fasta_and_qual($type, $subclone);
         }
     }
 
@@ -84,6 +106,7 @@ sub _open_output_fhs {
     my $self = shift;
 
     for my $type ( $self->fasta_and_qual_types ) {
+        next unless $self->$type;
         my $file_method = sprintf('all_%s_fasta', $type);
         my $fasta_file = $self->model->$file_method;
         unlink $fasta_file if -e $fasta_file;
@@ -111,74 +134,34 @@ sub _close_output_fhs {
     my $self = shift;
 
     for my $type ( $self->fasta_and_qual_types ) {
-        $self->{ sprintf('_%s_fasta_fh', $type) }->close if $self->{ sprintf('_%s_fasta_fh', $type) };
-        $self->{ sprintf('_%s_qual_fh', $type) }->close if $self->{ sprintf('_%s_qual_fh', $type) };
+        next unless $self->$type;
+        $self->{ sprintf('_%s_fasta_fh', $type) }->close;
+        $self->{ sprintf('_%s_qual_fh', $type) }->close;
     }
 
     return 1;
 }
 
-sub _add_assembled_fasta_and_qual {
-    my ($self, $subclone) = @_;
+sub _add_fasta_and_qual {
+    my ($self, $type, $subclone) = @_;
 
-    # FASTA
-    my $ctgs_fasta_file = sprintf('%s/%s.fasta.contigs', $self->model->consed_directory->edit_dir, $subclone);
-    unless ( -s $ctgs_fasta_file ) {
-        $self->status_message("subclone ($subclone) did not assemble");
-        return 1;
-    }
-
-    my $header = $self->model->header_for_subclone($subclone)
-        or return;
+    my $edit_dir = $self->model->consed_directory->edit_dir;
     
-    my $ctgs_fasta_fh = IO::File->new("< $ctgs_fasta_file")
-        or $self->fatal_msg("Can't open file ($ctgs_fasta_file) for reading");
-    my $header_cnt = 0;
-    FASTA: while ( my $line = $ctgs_fasta_fh->getline ) {
-        if ( $line =~ /(Contig\d+)/ ) {
-            last FASTA if ++$header_cnt > 1; # skip other contigs
-            $line = $header;
-        }
-        $self->{_assembled_fasta_fh}->print($line);
-    }
-    $self->{_assembled_fasta_fh}->print("\n");
-
-    #QUAL
-    my $ctgs_qual_file = sprintf('%s.qual', $ctgs_fasta_file);
-    $self->fatal_msg(
-        sprintf('No contigs qual file (%s) for subclone (%s)', $ctgs_qual_file, $subclone)
-    ) unless -e $ctgs_qual_file;
-    my $ctgs_qual_fh = IO::File->new("< $ctgs_qual_file")
-        or $self->fatal_msg("Can't open file ($ctgs_qual_file) for reading");
-    $header_cnt = 0;
-    QUAL: while ( my $line = $ctgs_qual_fh->getline ) {
-        if ( $line =~ /(Contig\d+)/ ) {
-            last QUAL if ++$header_cnt > 1; # skip other contigs
-            $line = $header;
-        }
-        $self->{_assembled_qual_fh}->print($line);
-    }
-    $self->{_assembled_qual_fh}->print("\n");
-
-    return 1;
-}
-
-sub _add_pre_process_input_fasta_and_qual {
-    my ($self, $subclone) = @_;
-
     # FASTA
-    my $fasta_file = sprintf('%s/%s.fasta.pre_processing', $self->model->consed_directory->edit_dir, $subclone);
+    my $fasta_file = $self->_subclone_fasta_file_for_type($type, $subclone);
     return 1 unless -s $fasta_file;
-    unless ( -s $fasta_file ) {
-        $self->error_message("No pre processing file ($fasta_file) for subclone ($subclone)");
-        return;
-    }
     my $fasta_fh = IO::File->new($fasta_file, 'r')
         or $self->fatal_msg("Can't open file ($fasta_file) for reading");
+    my $fasta_fh_key = sprintf('_%s_fasta_fh', $type);
     while ( my $line = $fasta_fh->getline ) {
-        $self->{_pre_process_input_fasta_fh}->print($line);
+        if ( $line =~ m#^>$edit_dir/$subclone\.fasta\.Contig(\d+)# ) {
+            $self->{$fasta_fh_key}->print(">$subclone\n");
+            #$self->{$fasta_fh_key}->print(">$subclone.Contig$1\n");
+            next;
+        }
+        $self->{$fasta_fh_key}->print($line);
     }
-    $self->{_pre_process_input_fasta_fh}->print("\n");
+    $self->{$fasta_fh_key}->print("\n");
 
     #QUAL
     my $qual_file = sprintf('%s.qual', $fasta_file);
@@ -187,38 +170,16 @@ sub _add_pre_process_input_fasta_and_qual {
     ) unless -e $qual_file;
     my $qual_fh = IO::File->new("< $qual_file")
         or $self->fatal_msg("Can't open file ($qual_file) for reading");
+    my $qual_fh_key = sprintf('_%s_qual_fh', $type);
     while ( my $line = $qual_fh->getline ) {
-        $self->{_pre_process_input_qual_fh}->print($line);
+        if ( $line =~ m#^>$edit_dir/$subclone\.fasta\.Contig(\d+)# ) {
+            $self->{$qual_fh_key}->print(">$subclone\n");
+            #$self->{$qual_fh_key}->print(">$subclone\n");
+            next;
+        }
+        $self->{$qual_fh_key}->print($line);
     }
-    $self->{_pre_process_input_qual_fh}->print("\n");
-
-    return 1;
-}
-
-sub _add_assembly_input_fasta_and_qual {
-    my ($self, $subclone) = @_;
-
-    # FASTA
-    my $fasta_file = sprintf('%s/%s.fasta', $self->model->consed_directory->edit_dir, $subclone);
-    return 1 unless -s $fasta_file;
-    my $fasta_fh = IO::File->new("< $fasta_file")
-        or $self->fatal_msg("Can't open file ($fasta_file) for reading");
-    while ( my $line = $fasta_fh->getline ) {
-        $self->{_assembly_input_fasta_fh}->print($line);
-    }
-    $self->{_assembly_input_fasta_fh}->print("\n");
-
-    #QUAL
-    my $qual_file = sprintf('%s.qual', $fasta_file);
-    $self->fatal_msg(
-        sprintf('No contigs qual file (%s) for subclone (%s)', $qual_file, $subclone)
-    ) unless -e $qual_file;
-    my $qual_fh = IO::File->new("< $qual_file")
-        or $self->fatal_msg("Can't open file ($qual_file) for reading");
-    while ( my $line = $qual_fh->getline ) {
-        $self->{_assembly_input_qual_fh}->print($line);
-    }
-    $self->{_assembly_input_qual_fh}->print("\n");
+    $self->{$qual_fh_key}->print("\n");
 
     return 1;
 }
