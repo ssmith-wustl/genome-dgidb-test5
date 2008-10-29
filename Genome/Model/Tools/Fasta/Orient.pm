@@ -147,6 +147,8 @@ sub execute {
     $self->_write_oriented_fasta_file(\%needs_complementing);
     $self->_write_oriented_qual_file(\%needs_complementing) if $self->have_qual_file;
 
+    $self->status_message( sprintf('Oriented FASTA file is:\n%s\n', $self->oriented_fasta_file);
+
     return 1;
 }
 
