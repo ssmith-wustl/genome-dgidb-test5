@@ -274,8 +274,7 @@ sub resolve_archive_file {
 
 sub latest_build_directory {
     my $self = shift;
-    if(defined $self->current_running_build_id) {
-
+    if (defined $self->current_running_build_id) {
         my $build = Genome::Model::Command::Build->get($self->current_running_build_id);
         return $build->data_directory;
     }
@@ -480,6 +479,9 @@ sub get_all_objects {
     my $self = shift;
     my @read_sets = $self->read_sets;
     my @events = $self->events;
+    if ($events[0]->id =~ /^\-/) {
+        return sort {$b->id cmp $a->id} (@read_sets,@events);
+    }
     return sort {$a->id cmp $b->id} (@read_sets,@events);
 }
 
