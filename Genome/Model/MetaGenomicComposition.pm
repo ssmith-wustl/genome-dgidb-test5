@@ -41,7 +41,7 @@ sub consed_directory { #TODO put this on class def
 }
 
 sub primer_directory {
-    return '/gscmnt/839/info/medseq/meta-genomic-composition-primers';
+    return '/gscmnt/839/info/medseq/meta-genomic-composition/primers';
 }
 
 #< Files >#
@@ -78,6 +78,29 @@ sub quality_histogram_file {
     my $self = shift;
 
     return sprintf('%s/%s.histogram.png', $self->data_directory, $self->subject_name);
+}
+
+#< Primer fastas ># 
+sub sense_primers_fasta_file { 
+    my $self = shift;
+
+    return sprintf(
+        '%s/%s.%sS.sense.fasta',
+        $self->primer_directory,
+        $self->subject_location,
+        $self->ribosomal_subunit,
+    );
+}
+
+sub anti_sense_primers_fasta_file { 
+    my $self = shift;
+
+    return sprintf(
+        '%s/%s.%sS.anti_sense.fasta',
+        $self->primer_directory,
+        $self->subject_location,
+        $self->ribosomal_subunit,
+    );
 }
 
 #< Determining subclones >#
