@@ -33,9 +33,9 @@ sub create {
     $self->{_cwd} = Cwd::getcwd();
     $self->fasta_file( Cwd::abs_path( $self->fasta_file ) );
 
-    my ($basename, $directory, $suffix) = File::Basename::fileparse($self->fasta_file, '.fasta');
+    my ($basename, $directory, $suffix) = File::Basename::fileparse($self->fasta_file, '.fasta', '.fas');
     unless ( $suffix ) {
-        $self->error_message( sprintf('FASTA file (%s) needs to have a ".fasta" suffix.', $self->fasta_file) );
+        $self->error_message( sprintf('FASTA file (%s) needs to have a ".fasta" or ".fas" suffix.', $self->fasta_file) );
         return;
     }
 
@@ -43,6 +43,7 @@ sub create {
         or ( $self->error_message("Can't access directory ($directory): $!") and return );
 
     $self->{_fasta_basename} = $basename;
+    $self->{_fasta_suffix} = $suffix;
 
     return $self;
 }
@@ -65,7 +66,7 @@ sub _fasta_basename {
 }
 
 sub fasta_base {
-    return sprintf('%s.fasta', $_[0]->{_fasta_basename});
+    return sprintf('%s.%s', $_[0]->{_fasta_basename}, $_[0]->{fasta_suffix});
 }
 
 #< Qual file >#
@@ -85,7 +86,7 @@ sub have_qual_file {
 sub fasta_file_with_new_suffix { 
     my ($self, $ext) = @_;
 
-    return sprintf('%s.%s.fasta', $self->{_fasta_basename}, $ext);
+    return sprintf('%s.%s.%s', $self->{_fasta_basename}, $ext, $self->{_fasta_suffix});
 }
 
 sub qual_file_with_new_suffix {
