@@ -19,18 +19,23 @@ my %PROPERTIES = (
         valid_values => [qw/ maq newbler pcap phredphrap /],
     },
     ribosomal_subunit => {
-        doc => 'Ribsosomal subunit.',
+        doc => 'Ribsosomal subunit',
         valid_values => [qw/ 16 18 /],
     },
-    amplification_forward_primer => {
+    amplification_forward_primer => { # TODO Remove?
         doc => 'Primer used for amplification in the forward (5\') direction',
     },
-    amplification_reverse_primer => {
+    amplification_reverse_primer => { # TODO Remove?
         doc => 'Primer used for amplification in the reverse (3\') direction',
     },
     assembly_size => {
         doc => 'Estimated assembly size, used for metrics and such',
     },
+    subject_location => {
+        doc => 'The location whence the original sample was collected', 
+    },
+    #primer_set_alias => { doc => 'An alias for the primer set used to create the amplicon', },
+    # TODO add export naming? (ex Ocean)
 );
 
 class Genome::ProcessingProfile::MetaGenomicComposition {
