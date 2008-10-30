@@ -11,7 +11,7 @@ use File::Path;
 use Data::Dumper;
 
 class Genome::Model::Command::Create::Model {
-    is => ['Genome::Model::Event'],
+    is => ['Genome::Model::Command'],
     sub_classification_method_name => 'class',
     has => [
         processing_profile_name     => {
@@ -119,104 +119,19 @@ sub create {
             $self->model_name($subject_name .'.'. $self->processing_profile_name);
         }
     }
-
-    my @subject_types = qw/ dna_resource_item_name species_name sample_name /;
-    unless ( 
-        grep { 
-            defined($self->subject_type) 
-            and 
-            $self->subject_type eq $_ 
-        } @subject_types
-    ) {
-        $self->error_message(
-            (
-                defined($self->subject_type) 
-                ?  "Invalid subject type " . $self->subject_type . "."
-                : "No subject type specified!"
-            )
-            . "  Please select one of:\n " 
-            . join("\n ",@subject_types) 
-            . "\n"
-        );
-        $self->delete;
-        return;
-    }
-
-    my $pp_id;
-    unless ($pp_id = $self->_get_processing_profile_from_name()) { 
-        $self->event_status('Failed');
-        my $msg;
-        if (defined $self->processing_profile_name) {
-            $msg = "Failed to find processing profile "
-                . $self->processing_profile_name . "!\n"
-        }
-        else {
-            $msg = "No processing profile specified!\n";
-        }
-        $msg .= "Please select from:\n "
-                . join("\n ", 
-                        grep { defined $_ and length $_ } 
-                        map  { $_->name } 
-                        Genome::ProcessingProfile->get() 
-                    ) 
-                . "\n";
-        $self->error_message($msg);
-        $self->delete;
-        return;
-    }
-
-    my $pp = Genome::ProcessingProfile->get($pp_id);
-    my $subject_class;
-    my $subject_property;
-    if ($self->subject_type eq 'sample_name') {
-        $subject_class = 'Genome::Sample';
-        $subject_property = 'name';
-    }
-    elsif ($self->subject_type eq 'species_name') {
-        $subject_class = 'Genome::Taxon';
-        $subject_property = 'species_name';
-    }
-    else {
-        die "unsupported subject type " . $self->subject_type;
-    }
-
-    my @subjects = $subject_class->get($subject_property => $self->subject_name);
- 
-    unless (@subjects) {
-        my $msg = "Failed to find " . $self->subject_type
-            . " with $subject_property " . $self->subject_name . "!\n";
-        my @possible_subjects = $subject_class->get();
-
-        #my @possible_subjects;
-        #if ($self->subject_type eq 'species_name') {
-        #    @possible_subjects = $subject_class->get();
-        #}
-        #elsif ($self->subject_type eq 'sample_name') {
-        #    my $sequencing_platform = $pp->sequencing_platform;
-        #    my @run_chunks = Genome:: 
-        #    @possible_subjects = $s
-        #}
-
-        $msg .= "Possible subjects are:\n "
-            . join("\n ", sort map { $_->$subject_property } @possible_subjects)
-            . "\n";
-        $msg .= "Please select one of the above.";
-        $self->error_message($msg);
-        #$self->delete;
-        #return;
-    }
-
     return $self;
 }
 
 sub execute {
     my $self = shift;
 
-    $self->_validate_execute_params();
-    
+    unless ($self->_validate_execute_params()) {
+        return;
+    }
+
     # generic: abstract out
     my %params = %{ $self->_extract_command_properties_and_duplicate_keys_for__name_properties() };
-    
+
     my $obj = $self->_create_target_class_instance_and_error_check( \%params );
     unless ($obj) {
         $self->error_message("Failed to create model!");
@@ -228,16 +143,16 @@ sub execute {
         $obj->delete;
         return;
     }
-    
+
     $self->status_message("created model " . $obj->name);
     print $obj->pretty_print_text,"\n";
-    
+
     unless ($self->_build_model_filesystem_paths($obj)) {
         $self->error_message('filesystem path creation failed');
         $obj->delete;
         return;
     }
-   
+
     $self->result($obj);
 
     return $obj;
@@ -274,10 +189,10 @@ sub _build_model_filesystem_paths {
 
 sub _extract_command_properties_and_duplicate_keys_for__name_properties{
     my $self = shift;
-    
+
     my $target_class = $self->target_class; 
     my %params;
-    
+
     for my $command_property ($self->command_properties) {
         my $value = $self->$command_property;
         next unless defined $value;
@@ -302,11 +217,10 @@ sub _extract_command_properties_and_duplicate_keys_for__name_properties{
             }
         }
     }
-    
     return \%params;
 }
 
-sub _validate_execute_params{
+sub _validate_execute_params {
     my $self = shift;
 
     my $ref = $self->bare_args;
@@ -315,30 +229,104 @@ sub _validate_execute_params{
         $self->usage_message($self->help_usage);
         return;
     }
+    my @subject_types = qw/ dna_resource_item_name species_name sample_name /;
+    unless ( 
+        grep { 
+            defined($self->subject_type) 
+            and 
+            $self->subject_type eq $_ 
+        } @subject_types
+    ) {
+        $self->error_message(
+            (
+                defined($self->subject_type) 
+                ?  "Invalid subject type " . $self->subject_type . "."
+                : "No subject type specified!"
+            )
+            . "  Please select one of:\n " 
+            . join("\n ",@subject_types) 
+            . "\n"
+        );
+        return;
+    }
+
+    my $pp_id;
+    unless ($pp_id = $self->_get_processing_profile_from_name()) { 
+        my $msg;
+        if (defined $self->processing_profile_name) {
+            $msg = "Failed to find processing profile "
+                . $self->processing_profile_name . "!\n"
+        }
+        else {
+            $msg = "No processing profile specified!\n";
+        }
+        $msg .= "Please select from:\n "
+                . join("\n ", 
+                        grep { defined $_ and length $_ } 
+                        map  { $_->name } 
+                        Genome::ProcessingProfile->get() 
+                    ) 
+                . "\n";
+        $self->error_message($msg);
+        return;
+    }
+
+    my $pp = Genome::ProcessingProfile->get($pp_id);
+    my $subject_class;
+    my $subject_property;
+    if ($self->subject_type eq 'sample_name') {
+        $subject_class = 'Genome::Sample';
+        $subject_property = 'name';
+    }
+    elsif ($self->subject_type eq 'species_name') {
+        $subject_class = 'Genome::Taxon';
+        $subject_property = 'species_name';
+    }
+    else {
+        $self->error_message("unsupported subject type " . $self->subject_type);
+        return;
+    }
+
+    my @subjects = $subject_class->get($subject_property => $self->subject_name);
+
+    unless (@subjects) {
+        my $msg = "Failed to find " . $self->subject_type
+            . " with $subject_property " . $self->subject_name . "!\n";
+        my @possible_subjects = $subject_class->get();
+
+        #my @possible_subjects;
+        #if ($self->subject_type eq 'species_name') {
+        #    @possible_subjects = $subject_class->get();
+        #}
+        #elsif ($self->subject_type eq 'sample_name') {
+        #    my $sequencing_platform = $pp->sequencing_platform;
+        #    my @run_chunks = Genome:: 
+        #    @possible_subjects = $s
+        #}
+
+        $msg .= "Possible subjects are:\n "
+            . join("\n ", sort map { $_->$subject_property } @possible_subjects)
+            . "\n";
+        $msg .= "Please select one of the above.";
+        $self->error_message($msg);
+        return;
+    }
+    return 1;
 }
 
 sub _create_target_class_instance_and_error_check{
     my ($self, $params_in) = @_;
-    
     my %params = %{$params_in};
-    
-    my $target_class = $self->target_class;    
-    my $target_class_meta = $target_class->get_class_object; 
+
+    my $target_class = $self->target_class;
+    my $target_class_meta = $target_class->get_class_object;
     my $type_name = $target_class_meta->type_name;
-    
-    $self->set(
-        date_scheduled  => $self->_time_now(),
-        date_completed  => undef,
-        event_status    => 'Scheduled',
-        event_type      => $self->command_name,
-        lsf_job_id      => undef, 
-        user_name       => $ENV{USER}, 
-    );
+
 
     my $obj = $target_class->create(%params);
     if (!$obj) {
         $self->error_message(
-            "Error creating $type_name: " 
+            "Error creating $type_name: "
             . $target_class->error_message
         );
         return;
@@ -352,17 +340,14 @@ sub _create_target_class_instance_and_error_check{
             . "\n");
         $obj->delete;
         return;
-    }   
+    }
 
-    $self->date_completed($self->_time_now());
     unless($obj) {
-        $self->event_status('Failed');
         $self->error_message("Failed to create genome model: " . $obj->error_message);
         print Dumper(\%params);
         return;
     }
-    
-    $self->event_status('Succeeded');
+
     return $obj;
 }
 
