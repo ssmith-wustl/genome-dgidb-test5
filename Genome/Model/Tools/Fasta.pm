@@ -66,7 +66,7 @@ sub _fasta_basename {
 }
 
 sub fasta_base {
-    return sprintf('%s.%s', $_[0]->{_fasta_basename}, $_[0]->{fasta_suffix});
+    return sprintf('%s.%s', $_[0]->{_fasta_basename}, $_[0]->{_fasta_suffix});
 }
 
 #< Qual file >#
