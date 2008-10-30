@@ -113,8 +113,8 @@ sub resolve_data_directory {
 sub combined_input_file {
     my $self = shift;
 
-    my $data_dir = $self->data_directory;
-    my $combined_input_file_name = "$data_dir/combined_input.tsv";
+    my $latest_build_directory = $self->latest_build_directory;
+    my $combined_input_file_name = "$latest_build_directory/combined_input.tsv";
 
     return $combined_input_file_name;
 }
