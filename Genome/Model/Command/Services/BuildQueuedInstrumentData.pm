@@ -102,6 +102,9 @@ sub execute {
         }
         # Add model to list of models to build
         $model_ids{$model->id} = 1;
+
+        # Set the pse as completed since this is the end of the line for the pses
+        $pse->pse_status("completed");
     }
     #Execute all the builds for models with new data
     for my $model_id (keys %model_ids) {
