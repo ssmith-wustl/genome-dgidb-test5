@@ -301,7 +301,6 @@ sub combined_input_columns {
         sample_name
         pcr_product_name
         variation_type
-        variation_tag
         reference
         allele1 
         allele1_type 

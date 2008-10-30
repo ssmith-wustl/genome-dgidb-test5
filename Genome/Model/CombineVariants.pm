@@ -299,6 +299,14 @@ sub annotate_variants {
     return 1;
 }
 
+sub reverse_complement{
+    my $self = shift;
+    my $string = shift;
+    $string = reverse $string;
+    $string =~ tr/ATGC/TACG/;
+    return $string;
+}
+
 # Gets and prints the lowest priority annotation for a given genotype
 # Takes a genotype hashref from next_hq/lq_genotype
 # Also takes in the current annotator object FIXME: Make this a class level var?
@@ -312,30 +320,25 @@ sub print_prioritized_annotation {
     # Decide which of the two alleles (or both) vary from the reference and annotate the ones that do
     for my $variant ($genotype->{allele1}, $genotype->{allele2}) {
         next if $variant eq $genotype->{reference};
+        
         my @annotations;
-        if ($genotype->{variation_type} =~ /ins|del/i){
-            @annotations = $annotator->prioritized_transcripts_for_snp( # TODO Make this back into indel... but the function doesnt exist
-                start => $genotype->{start},
-                reference => $genotype->{reference},
-                variant => $variant,
-                chromosome_name => $genotype->{chromosome},
-                stop => $genotype->{stop},
-                type => $genotype->{variation_type},
-            );
-        }elsif ($genotype->{variation_type} =~ /snp/i){
-            @annotations = $annotator->prioritized_transcripts_for_snp(
-                start => $genotype->{start},
-                reference => $genotype->{reference},
-                variant => $variant,
-                chromosome_name => $genotype->{chromosome},
-                stop => $genotype->{stop},
-                type => $genotype->{variation_type},
-            );
+
+        my $reference = $genotype->{reference};
+        my $variant = $genotype->{variant};
+
+        if ($genotype->{strand} eq '-'){
+            $reference = $self->reverse_complement($reference);
+            $variant = $self->reverse_complement($variant);
         }
-        else {
-            $self->error_message("Unrecognized variation_type " . $genotype->{variation_type});
-            return undef;
-        }
+        
+        @annotations = $annotator->prioritized_transcripts_for_snp( # TODO Make this back into indel... but the function doesnt exist
+            start => $genotype->{start},
+            reference => $reference,
+            variant => $variant,
+            chromosome_name => $genotype->{chromosome},
+            stop => $genotype->{stop},
+            type => $genotype->{variation_type},
+        );
 
         # Print the annotation with the best (lowest) priority
         my $lowest_priority_annotation;
@@ -543,7 +546,6 @@ sub genotype_columns{
     strand
     gene
     variation_type
-    variation_tag
     reference
     allele1 
     allele1_type 
@@ -569,7 +571,6 @@ sub annotated_columns{
     stop 
     sample_name
     variation_type
-    variation_tag
     reference
     allele1 
     allele1_type 

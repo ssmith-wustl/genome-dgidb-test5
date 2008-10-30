@@ -17,18 +17,9 @@ class Genome::Model::PolyphredPolyscan::CollateSampleGroupMutations {
         combined_input_columns => {
             is => 'ARRAY',
             value => [qw(
-                chromosome 
-                start 
-                stop 
-                sample_name
-                pcr_product_name
-                variation_type
-                reference
-                allele1 
-                allele1_type 
-                allele2 
-                allele2_type 
-                score
+                initialized
+                in
+                create
             )]
         }
     ],
@@ -56,20 +47,10 @@ class Genome::Model::PolyphredPolyscan::CollateSampleGroupMutations {
 sub create {
     my $self = shift->SUPER::create(@_);
 
-    $self->combined_input_columns(
-        [qw/ chromosome 
-                start 
-                stop 
-                sample_name
-                pcr_product_name
-                variation_type
-                reference
-                allele1 
-                allele1_type 
-                allele2 
-                allele2_type 
-                score/]
-    );
+    my @a = Genome::Model::PolyphredPolyscan->combined_input_columns();
+
+    $self->combined_input_columns(\@a);
+
 
     return $self;
 }
