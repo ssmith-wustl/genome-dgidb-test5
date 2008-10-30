@@ -3,7 +3,7 @@ package Genome::Model::Tools::Fasta::TrimQuality;
 use strict;
 use warnings;
 
-use above "Genome";
+use Genome;
 
 class Genome::Model::Tools::Fasta::TrimQuality {
     is  => 'Genome::Model::Tools::Fasta',
@@ -40,9 +40,12 @@ sub execute {
 		      )
      and return)unless -s $self->qual_file;
 
+    $self->chdir_fasta_directory 
+        or return;
+
     my $command = sprintf(
         'trim3 %s -m %s -q %s',# -x 10',
-        $self->_fasta_base,
+        $self->fasta_base,
         $self->min_trim_length,
         $self->min_trim_quality,
     );
@@ -75,6 +78,9 @@ sub execute {
     unlink $qual_clip;
 
     $self->status_message("No sequences made the quality and length cut.") unless -s $self->_fasta_base;
+
+    $self->chdir_cwd 
+        or return;
 
     return 1;
 }
