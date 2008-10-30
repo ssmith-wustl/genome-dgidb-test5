@@ -5,7 +5,6 @@ use warnings;
 
 use Genome;
 
-require Alignment::SequenceMatch::Blast::BioHspUtil;
 require Bio::SearchIO;
 require Bio::Seq;
 require Bio::SeqIO;
@@ -96,6 +95,8 @@ sub execute {
     for my $sense_type ( @SENSE_TYPES ) {
         my $fasta_method = $sense_type.'_fasta_file';
 
+        next unless defined $self->$fasta_method;
+        
         my $blastn = Genome::Model::Tools::WuBlast::Blastn->create(
             database => $database,
             query_file => $self->$fasta_method, 
