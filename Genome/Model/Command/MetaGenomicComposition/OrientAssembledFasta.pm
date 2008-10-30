@@ -25,7 +25,6 @@ sub execute {
         anti_sense_fasta_file => $anti_sense_primer_fasta,
     )
         or return;
-    print Dumper($orient);return 1;
     $orient->execute
         or return;
 
