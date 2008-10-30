@@ -42,8 +42,9 @@ sub create {
     chdir $directory
         or ( $self->error_message("Can't access directory ($directory): $!") and return );
 
+    $self->{_fasta_directory} = $directory;
     $self->{_fasta_basename} = $basename;
-    $self->{_fasta_suffix} = $suffix;
+    $self->{_fasta_suffix} = $suffix; # Remember it has the '.' in it!
 
     return $self;
 }
@@ -60,13 +61,21 @@ sub _cwd {
     return $_[0]->{_cwd};
 }
 
-#< FASTA base #>
-sub _fasta_basename {
+#< FASTA Fileparse #>
+sub fasta_basename {
     return $_[0]->{_fasta_basename};
 }
 
+sub fasta_directory {
+    return $_[0]->{_fasta_directory};
+}
+
+sub fasta_suffix {
+    return $_[0]->{_fasta_suffix};
+}
+
 sub fasta_base {
-    return sprintf('%s.%s', $_[0]->{_fasta_basename}, $_[0]->{_fasta_suffix});
+    return sprintf('%s%s', $_[0]->fasta_basename, $_[0]->fasta_suffix);
 }
 
 #< Qual file >#
@@ -75,7 +84,7 @@ sub qual_base {
 }
 
 sub qual_file {
-    return sprintf('%s/%s', $_[0]->{_cwd}, $_[0]->qual_base);
+    return sprintf('%s/%s', $_[0]->fasta_directory, $_[0]->qual_base);
 }
 
 sub have_qual_file {
@@ -83,16 +92,28 @@ sub have_qual_file {
 }
 
 #< New file names >#
-sub fasta_file_with_new_suffix { 
-    my ($self, $ext) = @_;
+sub fasta_base_with_new_suffix { 
+    my ($self, $suffix) = @_;
 
-    return sprintf('%s.%s.%s', $self->{_fasta_basename}, $ext, $self->{_fasta_suffix});
+    return sprintf('%s.%s%s', $self->fasta_basename, $suffix, $self->fasta_suffix);
+}
+
+sub fasta_file_with_new_suffix { 
+    my ($self, $suffix) = @_;
+
+    return sprintf('%s/%s', $self->fasta_directory, $self->fasta_base_with_new_suffix($suffix));
+}
+
+sub qual_base_with_new_suffix {
+    my ($self, $suffix) = @_;
+
+    return sprintf('%s.qual', $self->fasta_base_with_new_suffix($suffix));
 }
 
 sub qual_file_with_new_suffix {
-    my ($self, $ext) = @_;
+    my ($self, $suffix) = @_;
 
-    return sprintf('%s.qual', $self->fasta_file_with_new_suffix($ext));
+    return sprintf('%s/%s', $self->fasta_directory, $self->qual_base_with_new_suffix($suffix));
 }
 
 #< Back Up >#
