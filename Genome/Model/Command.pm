@@ -142,5 +142,29 @@ sub bsub_rusage {
     '' 
 }
 
+sub create_directory {
+    my ($self, $path) = @_;
+    my @parts = grep { length($_) } split('/',$path);
+    my $dir = "/";
+    for (@parts) {
+        $dir .= $_ . '/';
+        unless (-d $dir) {
+            $self->status_message("creating directory $dir");
+            mkdir $dir;
+            unless(-d $dir) {
+                die "Failed to create directory $dir: $!";
+            }
+            # TODO: fixme w/ Perl
+            #`chmod g+ws $dir`;
+            chmod 02775, "$dir";
+            `chgrp info $dir`;
+        }
+    }
+    unless (-d $path) {
+        die "Failed to create directory $path: $?";
+    }
+    return $path;
+}
+
 1;
 
