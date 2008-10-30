@@ -303,7 +303,7 @@ sub reverse_complement{
     my $self = shift;
     my $string = shift;
     $string = reverse $string;
-    $string =~ tr/ATGC/TACG/;
+    $string =~ tr/[ATGC]/[TACG]/;
     return $string;
 }
 
