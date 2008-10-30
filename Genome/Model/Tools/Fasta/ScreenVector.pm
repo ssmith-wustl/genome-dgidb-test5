@@ -3,8 +3,7 @@ package Genome::Model::Tools::Fasta::ScreenVector;
 use strict;
 use warnings;
 
-use above "Genome";
-use Command;
+use Genome;
 
 require Cwd;
 use Data::Dumper;
@@ -13,8 +12,7 @@ require File::Copy;
 require File::Temp;
 require XML::Simple;
 
-class Genome::Model::Tools::Fasta::ScreenVector
-{
+class Genome::Model::Tools::Fasta::ScreenVector {
     is => 'Genome::Model::Tools::Fasta',
     has => [
     project_name => {
@@ -48,9 +46,12 @@ sub execute {
 
     my $conf = $xs->XMLin('/gsc/scripts/lib/perl/Genome/Model/Tools/Fasta/screen_vector.conf.xml');
 
+    $self->chdir_fasta_directory 
+        or return;
+
     # Back up FASTA
     my $fasta_bak = sprintf('%s.prescreen', $self->_fasta_base);
-    File::Copy::copy($self->_fasta_base, $fasta_bak)
+    File::Copy::copy($self->fasta_base, $fasta_bak)
         or ($self->error_message( sprintf('Can\'t copy %s to %s: %s', $self->_fasta_base, $fasta_bak, $!) )
             and return);
     my $fasta_screen = sprintf('%s.screen', $self->_fasta_base);
@@ -67,12 +68,12 @@ sub execute {
 
     for my $screen ( @{ $project->{screen} } ) {
         my $subject_file = $project->{file};
-        my $query_file = $self->_fasta_base;
+        my $query_file = $self->fasta_base;
         my $params = $screen->{params};
 
         my $cmd = sprintf(
             "cross_match %s %s %s -screen",
-            $self->_fasta_base,
+            $self->fasta_base,
             $screen->{file},
             $screen->{params},
         );
@@ -80,12 +81,15 @@ sub execute {
         ($self->error_message("Error running cross_match:\n$cmd") and return) if system $cmd;
 
         # Copy the screen file bak to the fasta to be used as input.
-        unlink $self->_fasta_base;
+        unlink $self->fasta_base;
         File::Copy::copy($fasta_screen, $self->_fasta_base)
             or ($self->error_message( sprintf('Can\'t copy screen file (%s) to %s: %s', $fasta_screen, $self->_fasta_base, $!) )
                 and return);
         unlink $fasta_screen;
     }
+
+    $self->chdir_cwd
+        or return;
 
     return 1;
 }
