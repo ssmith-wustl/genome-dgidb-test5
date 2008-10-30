@@ -479,7 +479,7 @@ sub get_all_objects {
     my $self = shift;
     my @read_sets = $self->read_sets;
     my @events = $self->events;
-    if ($events[0]->id =~ /^\-/) {
+    if ($events[0] && $events[0]->id =~ /^\-/) {
         return sort {$b->id cmp $a->id} (@read_sets,@events);
     }
     return sort {$a->id cmp $b->id} (@read_sets,@events);
