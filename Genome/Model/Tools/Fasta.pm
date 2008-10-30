@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+
 use Data::Dumper;
 use Bio::Seq;
 
@@ -39,9 +40,6 @@ sub create {
         return;
     }
 
-    chdir $directory
-        or ( $self->error_message("Can't access directory ($directory): $!") and return );
-
     $self->{_fasta_directory} = $directory;
     $self->{_fasta_basename} = $basename;
     $self->{_fasta_suffix} = $suffix; # Remember it has the '.' in it!
@@ -52,13 +50,36 @@ sub create {
 sub DESTROY {
     my $self = shift;
 
-    chdir $self->_cwd;
+    $self->chdir_cwd;
     
     return 1;
 }
 
-sub _cwd {
+#< Dirs >#
+sub cwd {
     return $_[0]->{_cwd};
+}
+
+sub chdir_cwd {
+    my $self = shift;
+
+    unless (  chdir $self->cwd ) {
+        $self->error_message( sprintf('Can\'t access cwd (%s)', $self->cwd) );
+        return;
+    }
+
+    return 1;
+}
+
+sub chdir_fasta_directory {
+    my $self = shift;
+
+    unless (  chdir $self->fasta_directory ) {
+        $self->error_message( sprintf('Can\'t access fasta directory (%s)', $self->fasta_directroy) );
+        return;
+    }
+
+    return 1;
 }
 
 #< FASTA Fileparse #>
