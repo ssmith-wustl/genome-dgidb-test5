@@ -5,9 +5,8 @@ use warnings;
 
 use Genome;
 
+require Bio::Seq;
 use Data::Dumper;
-require IO::Dir;
-require IO::File;
 
 class Genome::Model::Command::MetaGenomicComposition::CollateFasta::Assembled { 
     is => 'Genome::Model::Command::MetaGenomicComposition',
