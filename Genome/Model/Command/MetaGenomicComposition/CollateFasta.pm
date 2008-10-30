@@ -92,7 +92,6 @@ sub execute {
         or return;
 
     for my $subclone ( @$subclones ) {
-        $self->status_message("<== Grabbing Fasta and Qual for $subclone ==>");
         for my $type ( $self->fasta_and_qual_types ) {
             next unless $self->$type;
             $self->_add_fasta_and_qual($type, $subclone);
@@ -154,11 +153,6 @@ sub _add_fasta_and_qual {
         or $self->fatal_msg("Can't open file ($fasta_file) for reading");
     my $fasta_fh_key = sprintf('_%s_fasta_fh', $type);
     while ( my $line = $fasta_fh->getline ) {
-        if ( $line =~ m#^>$edit_dir/$subclone\.fasta\.Contig(\d+)# ) {
-            $self->{$fasta_fh_key}->print(">$subclone\n");
-            #$self->{$fasta_fh_key}->print(">$subclone.Contig$1\n");
-            next;
-        }
         $self->{$fasta_fh_key}->print($line);
     }
     $self->{$fasta_fh_key}->print("\n");
@@ -172,11 +166,6 @@ sub _add_fasta_and_qual {
         or $self->fatal_msg("Can't open file ($qual_file) for reading");
     my $qual_fh_key = sprintf('_%s_qual_fh', $type);
     while ( my $line = $qual_fh->getline ) {
-        if ( $line =~ m#^>$edit_dir/$subclone\.fasta\.Contig(\d+)# ) {
-            $self->{$qual_fh_key}->print(">$subclone\n");
-            #$self->{$qual_fh_key}->print(">$subclone\n");
-            next;
-        }
         $self->{$qual_fh_key}->print($line);
     }
     $self->{$qual_fh_key}->print("\n");
