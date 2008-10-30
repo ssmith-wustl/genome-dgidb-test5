@@ -331,26 +331,72 @@ sub setup_input {
     # Combined input file to be created from the collates of all input files
     my $combined_input_file = $self->combined_input_file;
     my $fh = IO::File->new(">$combined_input_file");
+
+    if (0) { # workflow switch
     
-    # Create parsers for each file, append to running lists
-    # TODO eliminate duplicates!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    for my $file (@input_files) {
-        #TODO make sure assembly project names are going to be kosher
-        my ($assembly_project_name) = $file =~ /\/([^\.\/]+)\.poly(scan|phred)\.(low|high)$/;  
-        my $param = lc($type);
-        my $module = "MG::IO::$type";
-        my $parser = $module->new($param => $file,
-                                  assembly_project_name => $assembly_project_name
-                                 );
-        my ($snps, $indels) = $parser->collate_sample_group_mutations;
+        require Workflow::Simple;
 
-        # Print all of the snps and indels to the combined input file
-        for my $variant (@$snps, @$indels) {
-            $fh->print( join("\t", map{$variant->{$_} } $self->combined_input_columns ) );
-            $fh->print("\n");
+        ## keep the ur stuff in this process, speed optimization
+        $Workflow::Simple::fork_ur_server = 0;
+        ## dont do any tracking
+        $Workflow::Simple::store_db = 0;
+        
+        my $op = Workflow::Operation->create(
+            name => 'collate sample group mutations',
+            operation_type => Workflow::OperationType::Command->get('Genome::Model::PolyphredPolyscan::CollateSampleGroupMutations')
+        );
+        
+        $op->parallel_by('input_file');
+
+        my $output = Workflow::Simple::run_workflow_lsf(
+            $op,
+            'parser_type' => $type,
+            'input_file' => \@input_files,
+            'output_path' => '/gscmnt/sata363/info/medseq/temporary_data'
+        );
+    
+        unless ($output) {
+            $self->error_message("Collate sample group mutations failed in workflow");
+            die;
         }
-    }
+        
+        for my $file (@{ $output->{output_file} }) {
+            my $ifh = IO::File->new('<' . $file);
+            while (my $line = $ifh->getline) {
+                $fh->print($line);
+            }
+            $ifh->close;            
+            unlink($file);
+        }
+    
+    } else {
 
+        # Create parsers for each file, append to running lists
+        # TODO eliminate duplicates!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        for my $file (@input_files) {
+            my $parser_command = Genome::Model::PolyphredPolyscan::CollateSampleGroupMutations->create(
+                parser_type => $type,
+                input_file => $file,
+                output_path => '/tmp'
+            );
+
+            $parser_command->execute;
+
+            unless ($parser_command->result) {
+                $self->error_message("Collate sample group mutations failed on $file");
+                die;
+            }
+
+            my $ifh = IO::File->new('<' . $parser_command->output_file);
+            while (my $line = $ifh->getline) {
+                $fh->print($line);
+            }
+            $ifh->close;
+
+            unlink $parser_command->output_file;
+        }
+
+    }
     $fh->close;
 
     unless (-s $combined_input_file) {
