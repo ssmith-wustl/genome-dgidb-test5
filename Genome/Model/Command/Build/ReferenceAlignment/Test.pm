@@ -230,7 +230,6 @@ sub run {
     my @events;
     for my $stage_name ($build->stages) {
         my @classes = $build->classes_for_stage($stage_name);
-$DB::single=1;
         push @events, $self->run_events_for_class_array_ref(\@classes);
     }
     my @failed_events = grep { $_->event_status ne 'Succeeded' } @events;

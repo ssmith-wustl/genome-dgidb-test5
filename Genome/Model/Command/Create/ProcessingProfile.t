@@ -29,6 +29,7 @@ my %pp_params = (
                                                                                                amplification_forward_primer => 'something',
                                                                                                amplification_reverse_primer => 'somethingelse',
                                                                                                ribosomal_subunit => 16,
+                                                                                               subject_location => 'ocean',
                                                                                            },
                  'Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment' => {
                                                                                              profile_name => 'test_reference_alignment',

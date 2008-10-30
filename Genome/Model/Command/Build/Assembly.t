@@ -16,7 +16,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 179;
+    plan tests => 189;
 
     use_ok( 'Genome::RunChunk::454');
     use_ok( 'Genome::Model::Assembly');
@@ -77,7 +77,17 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
                                                               bare_args => [],
                                                           );
     isa_ok($model_create,'Genome::Model::Command::Create::Model');
+    &_trap_messages($model_create);
     ok($model_create->execute,'execute '. $model_create->command_name);
+
+    my @model_status_messages = $model_create->status_messages();
+    my @model_warning_messages = $model_create->warning_messages();
+    my @model_error_messages = $model_create->error_messages();
+    ok(scalar(@model_status_messages), $model_create->command_name .' generated status messages');
+    ok(scalar(grep { $_ eq "created model $model_name"} @model_status_messages),$model_create->command_name ." created model $model_name status message found");
+    ok(scalar(@model_warning_messages), $model_create->command_name .' generated warning messages');
+    like($model_warning_messages[0],qr(model symlink .* already exists),'warning model symlink already exists');
+    ok(!scalar(@model_error_messages),$model_create->command_name .' generated no error messages');
 
     my $model = Genome::Model->get(name => $model_name);
     isa_ok($model,'Genome::Model::Assembly');
