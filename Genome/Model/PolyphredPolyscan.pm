@@ -296,15 +296,25 @@ sub combined_input_columns {
         chromosome 
         start 
         stop 
+        strand
+        gene
         sample_name
         pcr_product_name
         variation_type
+        variation_tag
         reference
         allele1 
         allele1_type 
+        allele1_read_support
+        allele1_pcr_product_support
         allele2 
         allele2_type 
+        allele2_read_support
+        allele2_pcr_product_support
         score
+        read_type
+        con_pos
+        filename
     );
 }
 

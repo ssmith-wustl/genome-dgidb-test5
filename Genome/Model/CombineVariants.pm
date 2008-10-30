@@ -540,18 +540,25 @@ sub genotype_columns{
     start 
     stop 
     sample_name
+    strand
+    gene
     variation_type
+    variation_tag
     reference
     allele1 
     allele1_type 
+    allele1_read_support
+    allele1_pcr_product_support
     allele2 
     allele2_type 
+    allele2_read_support
+    allele2_pcr_product_support
     polyscan_score 
     polyphred_score
+    read_type
+    con_pos
+    filename
     );
-    # hugo_symbol
-    # polyscan_read_count
-    # polyphred_read_count
 }
 
 sub annotated_columns{
@@ -562,30 +569,31 @@ sub annotated_columns{
     stop 
     sample_name
     variation_type
+    variation_tag
     reference
     allele1 
     allele1_type 
+    allele1_read_support
+    allele1_pcr_product_support
     allele2 
     allele2_type 
+    allele2_read_support
+    allele2_pcr_product_support
     polyscan_score 
     polyphred_score
-
     transcript_name
     transcript_source
     strand
     c_position
     trv_type
     priority
-    gene_name
+    gene
     intensity
     detection
     amino_acid_length
     amino_acid_change
     variations 
     );
-    # hugo_symbol
-    # polyscan_read_count
-    # polyphred_read_count
 }
 
 # Meaningful names for the maf columns to us for hashes etc
@@ -595,7 +603,7 @@ sub annotated_columns{
 sub maf_columns {
     my $self = shift;
     return qw(
-    gene_name
+    gene
     entrez_gene_id
     center
     ncbi_build
@@ -892,7 +900,7 @@ sub write_maf_file{
             if (@current_sample_basename_genotypes > 2){
                 $self->error_message("more than two genotypes with same sample basename, continuing anyway... ".Dumper @current_sample_basename_genotypes);
             }
-            
+
             my $maf_line = $self->format_maf_line_from_matched_samples(@current_sample_basename_genotypes);
             if ($maf_line){
                 $fh->print($maf_line);
@@ -908,7 +916,7 @@ sub write_maf_file{
 
     my $last_line = $self->format_maf_line_from_matched_samples(@current_sample_basename_genotypes);
     $fh->print($last_line) if $last_line;
-        
+
     return 1;
 }
 
@@ -933,6 +941,8 @@ sub format_maf_line_from_matched_samples{
             $tumor_genotype->{match_norm_seq_allele1} = 'N/A';
             $tumor_genotype->{match_norm_seq_allele2} = 'N/A';
         }
+        $tumor_genotype->{tumor_seq_allele1} = $tumor_genotype->{allele1};
+        $tumor_genotype->{tumor_seq_allele2} = $tumor_genotype->{allele2};
 
         my $line = join("\t", map{$tumor_genotype->{$_} || 'N/A'} $self->maf_columns)."\n";
         return $line;
