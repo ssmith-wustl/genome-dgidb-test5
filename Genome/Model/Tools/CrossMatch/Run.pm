@@ -32,12 +32,17 @@ class Genome::Model::Tools::CrossMatch::Run {
                                         is => 'String',
                                         is_output => 1,
                                     },
+                     aligner_output_file => {
+                                             doc => 'the file to store cross_match aligner output',
+                                             is => 'String',
+                                             is_output => 1,
+                                         },
                  ],
 };
 
 operation_io Genome::Model::Tools::CrossMatch::Run {
     input  => [ 'query_file', 'subject_file', 'cm_params' ],
-    output => [ 'alignment_file', 'result' ],
+    output => [ 'alignment_file','aligner_output_file','result' ],
 };
 
 sub help_brief {
@@ -81,6 +86,9 @@ sub create {
     unless ($self->alignment_file) {
         $self->alignment_file($query_directory .'/'. $query_basename .'_'. $subject_basename .'.cm');
     }
+    unless ($self->aligner_output_file) {
+        $self->aligner_output_file($query_directory .'/'. $query_basename .'_'. $subject_basename .'.out');
+    }
     return $self;
 }
 
@@ -89,7 +97,7 @@ sub execute {
 
     my $cm_param_string = $self->cm_params || '';
 
-    my $cmd = 'cross_match.test '. $self->subject_file .' '. $self->query_file .' '. $cm_param_string .' > '. $self->alignment_file ;
+    my $cmd = '(cross_match.test '. $self->subject_file .' '. $self->query_file .' '. $cm_param_string .' > '. $self->alignment_file .') >& '. $self->aligner_output_file ;
     $self->status_message('Running: '. $cmd);
     my $rv = system($cmd);
     unless ($rv == 0) {
