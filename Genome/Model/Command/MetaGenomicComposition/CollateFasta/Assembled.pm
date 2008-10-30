@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-require Bio::Seq;
+require Bio::SeqIO;
 use Data::Dumper;
 
 class Genome::Model::Command::MetaGenomicComposition::CollateFasta::Assembled { 
