@@ -374,30 +374,6 @@ sub open_file {
     return $fh;
 }
 
-sub create_directory {
-    my ($self, $path) = @_;
-    my @parts = grep { length($_) } split('/',$path);
-    my $dir = "/";
-    for (@parts) {
-        $dir .= $_ . '/';
-        unless (-d $dir) {
-            $self->status_message("creating directory $dir");
-            mkdir $dir;
-            unless(-d $dir) {
-                die "Failed to create directory $dir: $!";
-            }
-            # TODO: fixme w/ Perl
-            #`chmod g+ws $dir`;
-            chmod 02775, "$dir";
-            `chgrp info $dir`;
-        }
-    }
-    unless (-d $path) {
-        die "Failed to create directory $path: $?";
-    }
-    return $path;
-}
-
 sub _shell_args_property_meta {
     # exclude this class' commands from shell arguments
     return grep { 
