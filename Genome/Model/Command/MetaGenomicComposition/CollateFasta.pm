@@ -18,6 +18,11 @@ my $_fasta_and_qual_types = {
 class Genome::Model::Command::MetaGenomicComposition::CollateFasta { 
     is => 'Genome::Model::Command',
     has_optional => [
+    all => {
+        type => 'Boolean',
+        default => 0,
+        doc => 'Get all FASTA and Qual types ('.join(', ', fasta_and_qual_types()).') for each subclone',
+    },
     map(
         {
             $_ => {
@@ -62,13 +67,20 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
 
-    unless ( $self->model ) {
+    unless ( $self->model ) { # TODO move up!!
         $self->error_message( sprintf('Can\'t get model for id (%s)', $self->model_id) );
         $self->delete;
         return;
     }
-
-    $self->assembled(1) unless grep { $self->$_ } $self->fasta_and_qual_types;
+    
+    if ( $self->all ) {
+        for my $type ( $self->fasta_and_qual_types ) {
+            $self->$type(1);
+        }
+    }
+    elsif ( grep { $self->$_ } $self->fasta_and_qual_types ) {
+        $self->assembled(1) 
+    }
     
     return $self;
 }
