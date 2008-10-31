@@ -42,7 +42,7 @@ class Genome::Project {
         internal_contact_name   => { is => 'Text', via => 'internal_contact', to => 'name' }, 
         internal_contact_email  => { is => 'Text', via => 'internal_contact', to => 'email' }, 
     ],
-    has_many => [
+    has_many_optional => [
         model_assignments   => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'project' },
         models              => { is => 'Genome::Model', via => 'model_assignments', to => 'model' },
         model_names         => { via => 'models', to => 'name' },
