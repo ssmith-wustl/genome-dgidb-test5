@@ -97,13 +97,13 @@ sub execute {
         my @rc = $model->run_chunks;
         my @sls = GSC::RunLaneSolexa->get(seq_id => \@read_set_ids);
         
-        my $align_dist_threshold = $model->align_dist_threshold;
-        if ($align_dist_threshold) {
-            $self->status_message("alignment distribution threshold is set to $align_dist_threshold");
-        }
-        else {
-            $self->status_message("no alignment distribution threshold is set.  accepting all read sets");
-        }
+        #my $align_dist_threshold = $model->align_dist_threshold;
+        #if ($align_dist_threshold) {
+        #    $self->status_message("alignment distribution threshold is set to $align_dist_threshold");
+        #}
+        #else {
+        #    $self->status_message("no alignment distribution threshold is set.  accepting all read sets");
+        #}
         
         my @missing_maps;
         my @found_maps;
@@ -136,7 +136,7 @@ sub execute {
             my @map_files = $read_set_link->read_set_alignment_files_for_refseq($self->ref_seq_id);
             unless (@map_files) {
                 #$DB::single = 1;
-                @map_files = $read_set_link->read_set_alignment_files_for_refseq($self->ref_seq_id);
+                #@map_files = $read_set_link->read_set_alignment_files_for_refseq($self->ref_seq_id);
                 my $msg = 
                     "Failed to find map files for read set "
                     . $read_set_link->read_set_id
@@ -169,6 +169,7 @@ sub execute {
                 $self->error_message("Expected $input_alignment not found");
                 return
             }
+            $cnt++;
             print $fh $input_alignment ."\n";
         }
         $self->status_message("library $library has $cnt map files");
