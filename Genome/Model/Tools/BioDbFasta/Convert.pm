@@ -92,7 +92,7 @@ sub execute {                               # replace with real execution logic.
 				if($record_name && $record_seq)
 				{
 #					printQualString($record_name, $record_seq);
-					my $qual_string = getQualString($record_seq);
+					my $qual_string = $self->getQualString($record_seq);
 					print OUTFILE ">$record_name\n$qual_string\n";				
 				}				
 				
@@ -111,7 +111,7 @@ sub execute {                               # replace with real execution logic.
 	if($record_name && $record_seq)
 	{
 #		printQualString($record_name, $record_seq);
-		my $qual_string = getQualString($record_seq);
+		my $qual_string = $self->getQualString($record_seq);
 		print OUTFILE ">$record_name\n$qual_string\n";
 	}
 	
@@ -127,7 +127,8 @@ sub execute {                               # replace with real execution logic.
 
 sub getQualString
 {
-	my $record_seq = shift(@_);
+    my $self = shift;
+    my $record_seq = shift;
 	
 	my @qualValues = split(/\s+/, $record_seq);
 	my $numValues = @qualValues;
