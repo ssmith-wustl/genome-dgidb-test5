@@ -57,8 +57,9 @@ sub create {
 sub pretty_print_text {
     my $self = shift;
     my @printable_property_names;
-    unless (@printable_property_names) {
-        # do this just once...
+#    unless (@printable_property_names) {
+    {
+        # do this just once... ??? confusing, its declared in my scope.  was this supposed to be a caching method?
         my $class_meta = $self->get_class_object;
         for my $name ($class_meta->all_property_names) {
             next if $name eq 'name';
@@ -77,15 +78,15 @@ sub pretty_print_text {
     for my $prop (@printable_property_names) {
         if (my @values = $self->$prop) {
             my $value;
-            if (@values > 1) {
-                if (grep { ref($_) } @values) {
-                    next;
-                }
-                $value = join(", ", grep { defined $_ } @values);
-            }
-            else {
+#            if (@values > 1) { ## this can never occur because the defined above will fail if it returns more than one
+#                if (grep { ref($_) } @values) {
+#                    next;
+#                }
+#                $value = join(", ", grep { defined $_ } @values);
+#            }
+#            else {
                 $value = $values[0];
-            }
+#            }
             next if not defined $value;
             next if ref $value;
             next if $value eq '';
@@ -105,15 +106,6 @@ sub pretty_print_text {
     $out .= join("\n", map { " @$_ " } @out);
     $out .= "\n\n";
     return $out;
-}
-
-
-
-sub Xpretty_print_text {
-	my $self = shift;
-	my $subclass = $self->_resolve_subclass_name();
-	my $subclass_instance = $subclass->get(name => $self->name);
-	$subclass_instance->pretty_print_text();
 }
 
 # This is called by the infrastructure to appropriately classify abstract processing profiles

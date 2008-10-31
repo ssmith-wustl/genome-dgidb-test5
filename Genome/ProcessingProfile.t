@@ -7,7 +7,7 @@ BEGIN {
 use strict;
 use warnings;
 use above "Genome";
-use Test::More tests => 15;
+use Test::More tests => 18;
 
 require_ok('Genome::ProcessingProfile');
 
@@ -56,20 +56,38 @@ UR::Object::Type->define(
 );
 
 sub Genome::ProcessingProfile::AbstractBaseTest::params_for_class {
-    return qw/colour size shape empty_string be_a_ref/;
+    return qw/colour size shape empty_string be_a_ref method_you_will_hate/;
+}
+
+sub Genome::ProcessingProfile::AbstractBaseTest::method_you_will_hate {
+    return if wantarray;
+    return 0;
 }
 
 my $pp;
 ok($pp = Genome::ProcessingProfile->create(name => 'tpp1', type_name => 'abstract base test'),'create with type_name');
-ok($pp->be_a_ref([]),'set be_a_ref to empty array reference');
+
+my $old_cb = UR::ModuleBase->message_callback('error');
+UR::ModuleBase->message_callback('error', sub { });
+ok(!defined Genome::ProcessingProfile->create(name => 'tpp1', type_name => 'abstract base test', id => $pp->id),'create with existing id returned undef');
+UR::ModuleBase->message_callback('error', $old_cb);
+
 ok($pp->colour('blue'),'set colour to blue');
-#ok(Genome::ProcessingProfile::Param->create(processing_profile=>$pp,name=>'colour',value=>'red'),'set colour to also be red');
-ok($pp->pretty_print_text,'pretty_print_text on object');
+ok(Genome::ProcessingProfile::Param->create(processing_profile=>$pp,name=>'colour',value=>'red'),'set colour to also be red');
+
+TODO: {
+    local $TODO = 'pretty_print_text is broken with multiple params of the same name';
+
+    ok(eval { $pp->pretty_print_text },'pretty_print_text on object');
+}
+
 ok($pp->delete,'delete processing profile');
 
 my $pp2;
 ok($pp2 = Genome::ProcessingProfile::AbstractBaseTest->create(name => 'tpp2'),'create with package'); 
+ok($pp2->be_a_ref([]),'set be_a_ref to empty array reference');
 ok($pp2->colour('blue'),'set colour to blue');
+ok($pp2->pretty_print_text,'pretty_print_text on object');
 ok($pp2->delete,'delete processing profile');
 
 my $pp3;
