@@ -52,23 +52,6 @@ sub create {
     return $self;
 }
 
-sub sub_command_sort_position { 10 }
-
-sub help_brief {
-}
-
-sub help_synopsis {
-    return <<"EOS"
-Used by Genome::Model::PolyphredPolyscan
-EOS
-}
-
-sub help_detail {
-    return <<"EOS"
-This should be filled in.
-EOS
-}
-
 sub execute {
     my $self = shift;
 
