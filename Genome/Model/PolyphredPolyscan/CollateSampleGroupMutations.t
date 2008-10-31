@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 use above "Genome";
 
 my $data_path = '/gsc/var/cache/testsuite/data/Genome-Model-PolyphredPolyscan-CollateSampleGroupMutations';
@@ -25,13 +25,17 @@ ok(-s $command->output_file,'output file has size');
 system('sort -gk1 -gk2 -k4 ' . $command->output_file . '>' . $command->output_file . '.sorted');
 
 my $linecount = 0;
+my $lines = '';
 open(FH, 'diff ' . $data_path . '/Polyscan.sorted_output ' . $command->output_file . '.sorted |');
 while (my $line = <FH>) {
     $linecount++;
+    $lines .= $line;
 }
 close FH;
 
-unlink $command->output_file . '.sorted';
-unlink $command->output_file;
+#unlink $command->output_file . '.sorted';
+#unlink $command->output_file;
 
 is($linecount,0,'zero differences between saved result');
+diag($lines) if $linecount > 0;
+
