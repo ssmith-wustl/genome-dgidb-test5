@@ -103,9 +103,6 @@ class Genome::Model {
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-    if ($^P) {
-        $self->test(1);
-    }
 
     # If data directory has not been supplied, figure it out
     unless ($self->data_directory) {
@@ -115,7 +112,7 @@ sub create {
     return $self;
 }
 
-sub compatible_input_read_sets {
+sub compatible_input_items {
     my $self = shift;
 
     my $input_read_set_class_name = $self->input_read_set_class_name;
@@ -131,7 +128,7 @@ sub compatible_input_read_sets {
                       value => $self->subject_name
                   };
     } elsif ($self->subject_type eq 'dna_resource_item_name') {
-        $self->error_message('Please implement compatible_input_read_sets in '.
+        $self->error_message('Please implement compatible_input_items in '.
                              __PACKAGE__ .' for subject_type(dna_resource_item_name)');
         die;
     }
@@ -166,7 +163,7 @@ sub compatible_input_read_sets {
 sub available_read_sets {
     my $self = shift;
 
-    my @input_read_sets = $self->compatible_input_read_sets;
+    my @input_read_sets = $self->compatible_input_items;
     my @read_sets = $self->read_sets;
     my %prior = map { $_->read_set_id => 1 } @read_sets;
     my @available_read_sets = grep { not $prior{$_->id} } @input_read_sets;
@@ -221,18 +218,9 @@ sub alignment_links_directory {
     return '/gscmnt/839/info/medseq/alignment_links';
 }
 
-sub sample_links_directory {
-    return '/gscmnt/839/info/medseq/sample_links';
-}
-
 sub base_model_comparison_directory {
     my $self = shift;
     return $self->base_parent_directory . "/model_comparisons";
-}
-
-sub sample_data_directory {
-    my $self = shift;
-    return $self->base_parent_directory . "/sample_data";
 }
 
 sub alignment_directory {

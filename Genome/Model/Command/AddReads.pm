@@ -107,7 +107,7 @@ sub execute {
         $self->status_message('Checking for '. $read_set_class_name .' read sets.');
 
         # How many potential read sets exist for read_set_class_name
-        my @input_read_sets = $model->compatible_input_read_sets;
+        my @input_read_sets = $model->compatible_input_items;
         $self->status_message('Found '. scalar(@input_read_sets) .' compatible read sets.');
 
         # How many read sets have been assigned to this model
