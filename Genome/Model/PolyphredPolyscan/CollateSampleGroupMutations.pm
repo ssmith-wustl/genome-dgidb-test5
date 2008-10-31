@@ -3,13 +3,10 @@ package Genome::Model::PolyphredPolyscan::CollateSampleGroupMutations;
 use strict;
 use warnings;
 
+use Genome::RunChunk;
 use MG::IO::Polyphred;
 use MG::IO::Polyscan;
 use File::Temp;
-
-use GSC;
-use GSCApp;
-App::Init->_restore_isa_can_hooks();
 
 class Genome::Model::PolyphredPolyscan::CollateSampleGroupMutations {
     is => ['Command'],
