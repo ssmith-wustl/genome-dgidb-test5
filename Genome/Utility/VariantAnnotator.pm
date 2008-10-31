@@ -13,57 +13,33 @@ use MG::ConsScore;
 use List::MoreUtils qw/ uniq /;
 
 my %trans_win :name(transcript_window:r) :isa('object');
-my %var_win :name(variation_window:r) :isa('object');
 
 my %variant_priorities = Genome::Info::VariantPriorities->for_annotation;
 my %codon_to_single = Genome::Info::CodonToAminoAcid->single_letter;
 
 #- Variations -#
-sub variations_for_indel
-{
-    my ($self, %indel) = @_;
+#TODO  grep this stuff out of Genome
+#removed:
+#variations_for_indel, variations_for_snp, var_window accessor
+#prioritized_transcripts_for_indel
+#prioritized_transcripts_for_snp->prioritized_transcripts
+#transcripts_for_snp->transcripts
+#return $self->variation_window->scroll($indel{start}, $indel{stop});
+#return grep { $_->start eq $_->end } $self->variation_window->scroll($variant{start});
 
-    return $self->variation_window->scroll($indel{start}, $indel{stop});
-    ######
-
-    my %sources;
-    for my $variation ( $self->variation_window->scroll($indel{start}, $indel{stop}) )
-    {
-        $sources{ $variation->source }++;
-    }
-
-    return \%sources;
-}
-
-sub variations_for_snp
-{
-    my ($self, %snp) = @_;
-
-    return grep { $_->start eq $_->end } $self->variation_window->scroll($snp{start});
-    #####
-
-    my %sources;
-    for my $variation ( $self->variation_window->scroll($snp{start}) )
-    {
-        next unless $variation->start eq $variation->end;
-        $sources{ $variation->source }++;
-    }
-
-    return \%sources;
-}
 
 #- Transcripts -#
-sub transcripts_for_snp
+sub transcripts
 {
-    my ($self, %snp) = @_;
+    my ($self, %variant) = @_;
 
-    my @transcripts_to_annotate = $self->_determine_transcripts_to_annotate($snp{start})
+    my @transcripts_to_annotate = $self->_determine_transcripts_to_annotate($variant{start})
         or return;
     
     my @annotations;
     foreach my $transcript ( @transcripts_to_annotate )
     {
-        my %annotation = $self->_transcript_annotation($transcript, \%snp)
+        my %annotation = $self->_transcript_annotation($transcript, \%variant)
             or next;
         push @annotations, \%annotation;
     }
@@ -71,25 +47,16 @@ sub transcripts_for_snp
     return @annotations;
 }
 
-sub prioritized_transcripts_for_snp
+sub prioritized_transcripts
 {
-    my ($self, %snp) = @_;
+    my ($self, %variant) = @_;
     
-    my @annotations = $self->transcripts_for_snp(%snp)
+    my @annotations = $self->transcripts(%variant)
         or return;
 
     return $self->_prioritize_annotations(@annotations);
 }
 
-sub prioritized_transcripts_for_indel
-{
-    my ($self, %indel) = @_;
-    
-    my @annotations = $self->transcripts_for_indel(%indel)
-        or return;
-
-    return $self->_prioritize_annotations(@annotations);
-}
 
 # Prioritizes annotations on a per gene basis... 
 # Currently the "best" annotation is judged by priority, and then source, and then protein length
@@ -190,13 +157,13 @@ sub _determine_transcripts_to_annotate {
 
 sub _transcript_annotation
 {
-    my ($self, $transcript, $snp) = @_;
+    my ($self, $transcript, $variant) = @_;
 
     #my $ss_window = $transcript->sub_structure_window;
-    #my ($main_structure) = $ss_window->scroll( $snp->{start} );
+    #my ($main_structure) = $ss_window->scroll( $variant->{start} );
     #return unless $main_structure;
 
-    my $main_structure = $transcript->structure_at_position( $snp->{start} )
+    my $main_structure = $transcript->structure_at_position( $variant->{start} )
         or return;
 
     # skip psuedogenes
@@ -209,7 +176,7 @@ sub _transcript_annotation
     
     my $method = '_transcript_annotation_for_' . $structure_type;
     
-    my %structure_annotation = $self->$method($transcript, $snp)
+    my %structure_annotation = $self->$method($transcript, $variant)
         or return;
 
     my $source = $transcript->source;
@@ -219,7 +186,7 @@ sub _transcript_annotation
     ? ( $expression->expression_intensity, $expression->detection )
     : (qw/ NULL NULL /);
 
-    my $conservation = $self->_ucsc_cons_annotation($snp);
+    my $conservation = $self->_ucsc_cons_annotation($variant);
     if(!exists($structure_annotation{domain}))
     {
         $structure_annotation{domain} = 'NULL';
@@ -239,9 +206,9 @@ sub _transcript_annotation
 
 sub _transcript_annotation_for_utr_exon
 {
-    my ($self, $transcript, $snp) = @_;
+    my ($self, $transcript, $variant) = @_;
 
-    my $position = $snp->{start};
+    my $position = $variant->{start};
     my $strand = $transcript->strand;
     my ($cds_exon_start, $cds_exon_stop) = $transcript->cds_exon_range;
     #my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
@@ -272,9 +239,9 @@ sub _transcript_annotation_for_utr_exon
 
 sub _transcript_annotation_for_flank
 {
-    my ($self, $transcript, $snp) = @_;
+    my ($self, $transcript, $variant) = @_;
 
-    my $position = $snp->{start};
+    my $position = $variant->{start};
     my $strand = $transcript->strand;
     my @cds_exon_positions = $transcript->cds_exon_range
     #my @cds_exon_positions = $transcript->sub_structure_window->cds_exon_range
@@ -303,11 +270,17 @@ sub _transcript_annotation_for_flank
         amino_acid_length => length( $transcript->protein->amino_acid_seq ),
         amino_acid_change => 'NULL',
     );
+# From Chapter 8 codon2aa
+#
+# A subroutine to translate a DNA 3-character codon to an amino acid
+#   Version 3, using hash lookup
+
+
 }
 
 sub _transcript_annotation_for_intron 
 {
-    my ($self, $transcript, $snp) = @_;
+    my ($self, $transcript, $variant) = @_;
 
     my $strand = $transcript->strand;
     
@@ -315,13 +288,19 @@ sub _transcript_annotation_for_intron
     #my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
     my ($oriented_cds_exon_start, $oriented_cds_exon_stop) = ($cds_exon_start, $cds_exon_stop);
     
-    my $main_structure = $transcript->structure_at_position( $snp->{start} );
+    my $main_structure = $transcript->structure_at_position( $variant->{start} );
     #my $main_structure = $transcript->sub_structure_window->main_structure;
+# From Chapter 8 codon2aa
+#
+# A subroutine to translate a DNA 3-character codon to an amino acid
+#   Version 3, using hash lookup
+
+
     my $structure_start = $main_structure->structure_start;
     my $structure_stop = $main_structure->structure_stop;
     my ($oriented_structure_start, $oriented_structure_stop) = ($structure_start, $structure_stop);
 
-    my ($prev_structure, $next_structure) = $transcript->structures_flanking_structure_at_position( $snp->{start} );
+    my ($prev_structure, $next_structure) = $transcript->structures_flanking_structure_at_position( $variant->{start} );
     #my ($prev_structure, $next_structure) = $transcript->sub_structure_window->structures_flanking_main_structure;
     #return unless $prev_structure and $next_structure;
     my ($prev_structure_type, $next_structure_type, $position_before, $position_after);
@@ -350,14 +329,14 @@ sub _transcript_annotation_for_intron
     my ($c_position, $trv_type);
     #TODO xshi modifications...comes from intron function beginning line 628
     # Should this just check for indel? Probably... since I think this is what is beting passed in right now
-    if($snp->{type} =~ /del|ins/i)
+    if($variant->{type} =~ /del|ins/i)
     {
-        if(($structure_start>=$snp->{start} && $structure_start<=$snp->{stop})||($structure_stop>=$snp->{start} && $structure_stop<=$snp->{stop})||($structure_start<=$snp->{start} && ($structure_start+1)>=$snp->{start})||($structure_stop>=$snp->{stop} && ($structure_stop-1)<=$snp->{stop})) {
-            $trv_type="splice_site_". (lc $snp->{type});
+        if(($structure_start>=$variant->{start} && $structure_start<=$variant->{stop})||($structure_stop>=$variant->{start} && $structure_stop<=$variant->{stop})||($structure_start<=$variant->{start} && ($structure_start+1)>=$variant->{start})||($structure_stop>=$variant->{stop} && ($structure_stop-1)<=$variant->{stop})) {
+            $trv_type="splice_site_". (lc $variant->{type});
 
         }
-        elsif($snp->{start}<=($structure_start+9)||$snp->{stop}>=($structure_stop-9)){
-            $trv_type="splice_region_". (lc $snp->{type});
+        elsif($variant->{start}<=($structure_start+9)||$variant->{stop}>=($structure_stop-9)){
+            $trv_type="splice_region_". (lc $variant->{type});
         }
         else {
             $trv_type="intronic";
@@ -375,11 +354,11 @@ sub _transcript_annotation_for_intron
     }
     #end xshi
 
-    my $exon_pos = $transcript->length_of_cds_exons_before_structure_at_position($snp->{start}, $strand);
-    my $pre_start = abs( $snp->{start} - $oriented_structure_start ) + 1;
-    my $pre_end = abs( $snp->{stop} - $oriented_structure_start ) + 1;
-    my $aft_start = abs( $oriented_structure_stop - $snp->{start} ) + 1;
-    my $aft_end = abs( $oriented_structure_stop - $snp->{start} ) + 1;
+    my $exon_pos = $transcript->length_of_cds_exons_before_structure_at_position($variant->{start}, $strand);
+    my $pre_start = abs( $variant->{start} - $oriented_structure_start ) + 1;
+    my $pre_end = abs( $variant->{stop} - $oriented_structure_start ) + 1;
+    my $aft_start = abs( $oriented_structure_stop - $variant->{start} ) + 1;
+    my $aft_end = abs( $oriented_structure_stop - $variant->{start} ) + 1;
 
     if ( $pre_start - 1 <= abs( $structure_stop - $structure_start ) / 2 )
     {
@@ -412,6 +391,12 @@ sub _transcript_annotation_for_intron
 
             if ( abs($diff_stop_start) < abs($diff_stop_end) )
             {
+# From Chapter 8 codon2aa
+#
+# A subroutine to translate a DNA 3-character codon to an amino acid
+#   Version 3, using hash lookup
+
+
                 $c_position = '-' . $diff_stop_start;
             }
             else
@@ -451,15 +436,21 @@ sub _transcript_annotation_for_intron
         amino_acid_length => length( $transcript->protein->amino_acid_seq ),
         amino_acid_change => 'NULL',
     );
+# From Chapter 8 codon2aa
+#
+# A subroutine to translate a DNA 3-character codon to an amino acid
+#   Version 3, using hash lookup
+
+
 }
 
 sub _transcript_annotation_for_cds_exon
 {
-    my ($self, $transcript, $snp) = @_;
+    my ($self, $transcript, $variant) = @_;
 
     my $strand = $transcript->strand;
 
-    my $main_structure = $transcript->structure_at_position( $snp->{start} );
+    my $main_structure = $transcript->structure_at_position( $variant->{start} );
     #my $main_structure = $transcript->sub_structure_window->main_structure;
     my $structure_start = $main_structure->structure_start;
     my $structure_stop = $main_structure->structure_stop;
@@ -468,21 +459,33 @@ sub _transcript_annotation_for_cds_exon
     if ( $strand eq '-1' ) 
     {
         # COMPLEMENTED
+# From Chapter 8 codon2aa
+#
+# A subroutine to translate a DNA 3-character codon to an amino acid
+#   Version 3, using hash lookup
+
+
         ($oriented_structure_stop, $oriented_structure_start) = ($structure_start, $structure_stop);
     }
 
-    my $exon_pos = $transcript->length_of_cds_exons_before_structure_at_position($snp->{start}, $strand);
+    my $exon_pos = $transcript->length_of_cds_exons_before_structure_at_position($variant->{start}, $strand);
     #my $exon_pos = $transcript->sub_structure_window->length_of_cds_exons_before_main_structure($strand);
-    my $pre_start = abs( $snp->{start} - $oriented_structure_start ) + 1;
-    my $pre_end = abs( $snp->{stop} - $oriented_structure_start ) + 1;
-    my $aft_start = abs( $oriented_structure_stop - $snp->{start} ) + 1;
-    my $aft_end = abs( $oriented_structure_stop - $snp->{start} ) + 1;
+    my $pre_start = abs( $variant->{start} - $oriented_structure_start ) + 1;
+    my $pre_end = abs( $variant->{stop} - $oriented_structure_start ) + 1;
+    my $aft_start = abs( $oriented_structure_stop - $variant->{start} ) + 1;
+    my $aft_end = abs( $oriented_structure_stop - $variant->{start} ) + 1;
 
     my $trsub_phase = $exon_pos % 3;
     unless ( $trsub_phase eq $main_structure->phase ) 
     {
         $self->error_msg
         (
+# From Chapter 8 codon2aa
+#
+# A subroutine to translate a DNA 3-character codon to an amino acid
+#   Version 3, using hash lookup
+
+
             sprintf
             (
                 'Calculated phase (%d) does not match the phase (%d, exon position: %d) for the main sub structure (%d) for transcript (%d) at %d',
@@ -491,8 +494,14 @@ sub _transcript_annotation_for_cds_exon
                 $exon_pos,
                 $main_structure->transcript_structure_id,
                 $transcript->transcript_id,
-                $snp->{start},
+                $variant->{start},
             )
+# From Chapter 8 codon2aa
+#
+# A subroutine to translate a DNA 3-character codon to an amino acid
+#   Version 3, using hash lookup
+
+
         );
         return;
     }
@@ -508,71 +517,65 @@ sub _transcript_annotation_for_cds_exon
 
 #modifications from xshi...
     my $trv_type;
-    my $snp_size=1; 
-    my $size1=length($snp->{reference});
-    my $size2=length($snp->{variant});
+    my $variant_size=1; 
+    my $size1=length($variant->{reference});
+    my $size2=length($variant->{variant});
 
     ($size1,$size2)=($size2,$size1) if ($size1 > $size2);
-    my ($reference,$variant)=($snp->{reference},$snp->{variant});
+    my ($reference,$var)=($variant->{reference},$variant->{variant});
     if($strand==-1) {
         $reference=~tr/ATGC/TACG/;
-        $variant=~tr/ATGC/TACG/;
+        $var=~tr/ATGC/TACG/;
         $reference=reverse($reference);
-        $variant=reverse($variant);
+        $var=reverse($var);
     }
 
-    my $original_seq="";
     my $mutated_seq;
     my $original_seq_translated = $transcript->protein->amino_acid_seq;
     my $mutated_seq_translated;
 
-    my ($max_ordinal)= $self->get_max_ord($transcript->transcript_id);
-    for(my $o=1;$o<=$max_ordinal;$o++)
-    {
-        $original_seq.= $self->get_exon_seqs($transcript->transcript_id,$o);
-    }
+    my $original_seq=$transcript->cds_full_nucleotide_sequence;
 
-    if($snp->{type} =~ /ins/i) {
-        $mutated_seq=substr($original_seq,0,$c_position).$variant.substr($original_seq,$c_position);
+    if($variant->{type} =~ /ins/i) {
+        $mutated_seq=substr($original_seq,0,$c_position).$var.substr($original_seq,$c_position);
     }
-    elsif($snp->{type} =~ /del/i) {
+    elsif($variant->{type} =~ /del/i) {
         $mutated_seq=substr($original_seq,0,$c_position-1).substr($original_seq,$c_position-1+$size2);
     }
     else {
         if(substr($original_seq,$c_position-1,$size2) ne $reference) {
-            my $e="allele does not match:" . $transcript->transcript_name.",".$c_position.",".$snp->{chromosome_name}.",".$snp->{start}.",".$snp->{stop}.",".$snp->{reference}.",".$snp->{variant}.",".$snp->{type}."\n";
+            my $e="allele does not match:" . $transcript->transcript_name.",".$c_position.",".$variant->{chromosome_name}.",".$variant->{start}.",".$variant->{stop}.",".$variant->{reference}.",".$variant->{variant}.",".$variant->{type}."\n";
             $self->error_msg($e);
             return ;
         }
-        $snp_size=2 if($codon_start==0);
-        #$snp_size=2 if($codon_start==0&&$self->{type}=~/dnp/i); #TODO, add this type check
-        $mutated_seq=substr($original_seq,0,$c_position-1).$variant.substr($original_seq,$c_position-1+$size2);
+        $variant_size=2 if($codon_start==0);
+        $mutated_seq=substr($original_seq,0,$c_position-1).$var.substr($original_seq,$c_position-1+$size2);
     }
     $mutated_seq_translated = $self->translate($mutated_seq);
 
 
     my $pro_str;
-    if($snp->{type} =~ /del|ins/i) {
+    if($variant->{type} =~ /del|ins/i) {
         if ($size2%3==0) {$trv_type="in_frame_";}
         else {$trv_type="frame_shift_"; }
-        $trv_type.= lc ($snp->{type});
-        my $hash_pro= $self->compare_protein_seq($trv_type,$original_seq_translated,$mutated_seq_translated,$pro_start-1,$snp_size);
+        $trv_type.= lc ($variant->{type});
+        my $hash_pro= $self->compare_protein_seq($trv_type,$original_seq_translated,$mutated_seq_translated,$pro_start-1,$variant_size);
         $pro_str="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{type}.$hash_pro->{new};
     }
     else {
         if(length($mutated_seq_translated)<$pro_start-1|| substr($original_seq_translated,$pro_start-3,2) ne substr($mutated_seq_translated,$pro_start-3,2)) {
-            my $e="protein string does not match:".$transcript->transcript_name.",".$c_position.",".$snp->{chromosome_name}.",".$snp->{start}.",".$snp->{stop}.",".$snp->{reference}.",".$snp->{allele2}.",".$snp->{type}."\n";
+            my $e="protein string does not match:".$transcript->transcript_name.",".$c_position.",".$variant->{chromosome_name}.",".$variant->{start}.",".$variant->{stop}.",".$variant->{reference}.",".$variant->{allele2}.",".$variant->{type}."\n";
             $self->error_msg($e);
             return ;
         }
-        my $hash_pro= $self->compare_protein_seq($snp->{type},$original_seq_translated,$mutated_seq_translated,$pro_start-1,$snp_size);
+        my $hash_pro= $self->compare_protein_seq($variant->{type},$original_seq_translated,$mutated_seq_translated,$pro_start-1,$variant_size);
         $trv_type = lc $hash_pro->{type};
         # $anno->{pro_str}="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{new}; #FIXME... so I guess just return this as part of the return hash? pro_str? Is there a paralell?
         $pro_str="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{new};
     }
 
     # If the variation has a range, set c_position to that range on the transcript_
-    if($snp->{start}!=$snp->{stop}) {
+    if($variant->{start}!=$variant->{stop}) {
         # If on the negative strand, reverse the range order
         if ($strand =~ '-') { 
             $c_position = ($pre_end+$exon_pos) . '_' . $c_position;
@@ -582,8 +585,8 @@ sub _transcript_annotation_for_cds_exon
     }
     # TODO end xshi modifications
 
-    my $conservation = $self->_ucsc_cons_annotation($snp);
-    my $pdom = $self->_protein_domain($snp,
+    my $conservation = $self->_ucsc_cons_annotation($variant);
+    my $pdom = $self->_protein_domain($variant,
         $transcript->gene,
         $transcript->transcript_name,
         $amino_acid_change);
@@ -602,12 +605,12 @@ sub _transcript_annotation_for_cds_exon
 
 sub _ucsc_cons_annotation
 {
-    my ($self, $snp) = @_;
+    my ($self, $variant) = @_;
     # goto the annotation files for this.
     my $c = new MG::ConsScore(-location => "/gscmnt/temp202/info/medseq/josborne/conservation/b36/fixed-records/");
 
-    my $range = [ $snp->{start}..$snp->{stop} ] ;
-    my $ref = $c->get_scores($snp->{chromosome_name},$range);
+    my $range = [ $variant->{start}..$variant->{stop} ] ;
+    my $ref = $c->get_scores($variant->{chromosome_name},$range);
     my @ret;
     foreach my $item (@$ref)
     {
@@ -618,7 +621,7 @@ sub _ucsc_cons_annotation
 
 sub _protein_domain
 {
-    my ($self, $snp, $gene, $transcript, $amino_acid_change) = @_;
+    my ($self, $variant, $gene, $transcript, $amino_acid_change) = @_;
     #my ($gene,$transcript);
     require SnpDom;
     my $s = SnpDom->new({'-inc-ts' => 1});
@@ -725,30 +728,6 @@ sub compare_protein_seq   {
 
 }
 
-sub get_max_ord
-{
-    my $self = shift;
-    my ($tr_id)=@_;
-    my $sort="DESC";
-    my $type="cds_exon";
-    my $ord="ordinal";
-    my ($max)=MPSampleData::TranscriptSubStructure->retrieve_from_sql
-    (
-        sprintf
-        (
-            "transcript_id = ? AND structure_type = ? order by %s %s",
-            $ord,
-            $sort,
-        ),
-        $tr_id,
-        $type,
-
-    );
-
-    return $max->$ord if ($max);
-    return 0;
-}
-
 sub translate
 {
     my $self = shift;
@@ -770,261 +749,18 @@ sub translate
 
 }
 
-sub get_exon_seqs
-{
-    my $self = shift;
-    my ($tr_id,$ordinal)=@_;
-    my $type="cds_exon";
-    my ($sth)=MPSampleData::TranscriptSubStructure->retrieve_from_sql
-    (
-        "transcript_id = ? AND structure_type = ?  AND ordinal = ?",
-        $tr_id,
-        $type,
-        $ordinal,
-    );
-
-    return $sth->nucleotide_seq if ($sth);
-    return 0;
-}
-
-
-# From Chapter 8 codon2aa
-#
-# A subroutine to translate a DNA 3-character codon to an amino acid
-#   Version 3, using hash lookup
-
-sub TranslationCodon1LetterAA {
-    my $self = shift;
-    my($codon) = @_;
-
-    $codon = uc $codon;
-
-    my(%genetic_code) = (
-
-        'TCA' => 'S',    # Serine
-        'TCC' => 'S',    # Serine
-        'TCG' => 'S',    # Serine
-        'TCT' => 'S',    # Serine
-        'TTC' => 'F',    # Phenylalanine
-        'TTT' => 'F',    # Phenylalanine
-        'TTA' => 'L',    # Leucine
-        'TTG' => 'L',    # Leucine
-        'TAC' => 'Y',    # Tyrosine
-        'TAT' => 'Y',    # Tyrosine
-        'TAA' => 'X',    # Stop
-        'TAG' => 'X',    # Stop
-        'TGC' => 'C',    # Cysteine
-        'TGT' => 'C',    # Cysteine
-        'TGA' => 'X',    # Stop
-        'TGG' => 'W',    # Tryptophan
-        'CTA' => 'L',    # Leucine
-        'CTC' => 'L',    # Leucine
-        'CTG' => 'L',    # Leucine
-        'CTT' => 'L',    # Leucine
-        'CCA' => 'P',    # Proline
-        'CCC' => 'P',    # Proline
-        'CCG' => 'P',    # Proline
-        'CCT' => 'P',    # Proline
-        'CAC' => 'H',    # Histidine
-        'CAT' => 'H',    # Histidine
-        'CAA' => 'Q',    # Glutamine
-        'CAG' => 'Q',    # Glutamine
-        'CGA' => 'R',    # Arginine
-        'CGC' => 'R',    # Arginine
-        'CGG' => 'R',    # Arginine
-        'CGT' => 'R',    # Arginine
-        'ATA' => 'I',    # Isoleucine
-        'ATC' => 'I',    # Isoleucine
-        'ATT' => 'I',    # Isoleucine
-        'ATG' => 'M',    # Methionine
-        'ACA' => 'T',    # Threonine
-        'ACC' => 'T',    # Threonine
-        'ACG' => 'T',    # Threonine
-        'ACT' => 'T',    # Threonine
-        'AAC' => 'N',    # Asparagine
-        'AAT' => 'N',    # Asparagine
-        'AAA' => 'K',    # Lysine
-        'AAG' => 'K',    # Lysine
-        'AGC' => 'S',    # Serine
-        'AGT' => 'S',    # Serine
-        'AGA' => 'R',    # Arginine
-        'AGG' => 'R',    # Arginine
-        'GTA' => 'V',    # Valine
-        'GTC' => 'V',    # Valine
-        'GTG' => 'V',    # Valine
-        'GTT' => 'V',    # Valine
-        'GCA' => 'A',    # Alanine
-        'GCC' => 'A',    # Alanine
-        'GCG' => 'A',    # Alanine
-        'GCT' => 'A',    # Alanine
-        'GAC' => 'D',    # Aspartic Acid
-        'GAT' => 'D',    # Aspartic Acid
-        'GAA' => 'E',    # Glutamic Acid
-        'GAG' => 'E',    # Glutamic Acid
-        'GGA' => 'G',    # Glycine
-        'GGC' => 'G',    # Glycine
-        'GGG' => 'G',    # Glycine
-        'GGT' => 'G',    # Glycine
-        '-TA' => 'indel', #Indel
-        '-TC' => 'indel', #Indel
-        '-TG' => 'indel', #Indel
-        '-TT' => 'indel', #Indel
-        '-CA' => 'indel', #Indel
-        '-CC' => 'indel', #Indel
-        '-CG' => 'indel', #Indel
-        '-CT' => 'indel', #Indel
-        '-AC' => 'indel', #Indel
-        '-AT' => 'indel', #Indel
-        '-AA' => 'indel', #Indel
-        '-AG' => 'indel', #Indel
-        '-GA' => 'indel', #Indel
-        '-GC' => 'indel', #Indel
-        '-GG' => 'indel', #Indel
-        '-GT' => 'indel', #Indel
-        'T-A' => 'indel', #Indel
-        'T-C' => 'indel', #Indel
-        'T-G' => 'indel', #Indel
-        'T-T' => 'indel', #Indel
-        'C-A' => 'indel', #Indel
-        'C-C' => 'indel', #Indel
-        'C-G' => 'indel', #Indel
-        'C-T' => 'indel', #Indel
-        'A-C' => 'indel', #Indel
-        'A-T' => 'indel', #Indel
-        'A-A' => 'indel', #Indel
-        'A-G' => 'indel', #Indel
-        'G-A' => 'indel', #Indel
-        'G-C' => 'indel', #Indel
-        'G-G' => 'indel', #Indel
-        'G-T' => 'indel', #Indel
-        'TA-' => 'indel', #Indel
-        'TC-' => 'indel', #Indel
-        'TG-' => 'indel', #Indel
-        'TT-' => 'indel', #Indel
-        'CA-' => 'indel', #Indel
-        'CC-' => 'indel', #Indel
-        'CG-' => 'indel', #Indel
-        'CT-' => 'indel', #Indel
-        'AC-' => 'indel', #Indel
-        'AT-' => 'indel', #Indel
-        'AA-' => 'indel', #Indel
-        'AG-' => 'indel', #Indel
-        'GA-' => 'indel', #Indel
-        'GC-' => 'indel', #Indel
-        'GG-' => 'indel', #Indel
-        'GT-' => 'indel', #Indel
-        '+TA' => 'refseq allele', #No Indel
-        '+TC' => 'refseq allele', #No Indel
-        '+TG' => 'refseq allele', #No Indel
-        '+TT' => 'refseq allele', #No Indel
-        '+CA' => 'refseq allele', #No Indel
-        '+CC' => 'refseq allele', #No Indel
-        '+CG' => 'refseq allele', #No Indel
-        '+CT' => 'refseq allele', #No Indel
-        '+AC' => 'refseq allele', #No Indel
-        '+AT' => 'refseq allele', #No Indel
-        '+AA' => 'refseq allele', #No Indel
-        '+AG' => 'refseq allele', #No Indel
-        '+GA' => 'refseq allele', #No Indel
-        '+GC' => 'refseq allele', #No Indel
-        '+GG' => 'refseq allele', #No Indel
-        '+GT' => 'refseq allele', #No Indel
-        'T+A' => 'refseq allele', #No Indel
-        'T+C' => 'refseq allele', #No Indel
-        'T+G' => 'refseq allele', #No Indel
-        'T+T' => 'refseq allele', #No Indel
-        'C+A' => 'refseq allele', #No Indel
-        'C+C' => 'refseq allele', #No Indel
-        'C+G' => 'refseq allele', #No Indel
-        'C+T' => 'refseq allele', #No Indel
-        'A+C' => 'refseq allele', #No Indel
-        'A+T' => 'refseq allele', #No Indel
-        'A+A' => 'refseq allele', #No Indel
-        'A+G' => 'refseq allele', #No Indel
-        'G+A' => 'refseq allele', #No Indel
-        'G+C' => 'refseq allele', #No Indel
-        'G+G' => 'refseq allele', #No Indel
-        'G+T' => 'refseq allele', #No Indel
-        'TA+' => 'refseq allele', #No Indel
-        'TC+' => 'refseq allele', #No Indel
-        'TG+' => 'refseq allele', #No Indel
-        'TT+' => 'refseq allele', #No Indel
-        'CA+' => 'refseq allele', #No Indel
-        'CC+' => 'refseq allele', #No Indel
-        'CG+' => 'refseq allele', #No Indel
-        'CT+' => 'refseq allele', #No Indel
-        'AC+' => 'refseq allele', #No Indel
-        'AT+' => 'refseq allele', #No Indel
-        'AA+' => 'refseq allele', #No Indel
-        'AG+' => 'refseq allele', #No Indel
-        'GA+' => 'refseq allele', #No Indel
-        'GC+' => 'refseq allele', #No Indel
-        'GG+' => 'refseq allele', #No Indel
-        'GT+' => 'refseq allele', #No Indel
-        'XTA' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XTC' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XTG' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XTT' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XCA' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XCC' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XCG' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XCT' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XAC' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XAT' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XAA' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XAG' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XGA' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XGC' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XGG' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'XGT' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'TXA' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'TXC' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'TXG' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'TXT' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'CXA' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'CXC' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'CXG' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'CXT' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'AXC' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'AXT' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'AXA' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'AXG' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'GXA' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'GXC' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'GXG' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'GXT' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'TAX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'TCX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'TGX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'TTX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'CAX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'CCX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'CGX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'CTX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'ACX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'ATX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'AAX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'AGX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'GAX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'GCX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'GGX' => 'Z', #Discrepant Genotypes in Overlapping Data
-        'GTX' => 'Z', #Discrepant Genotypes in Overlapping Data
-    );
-
-    if(exists $genetic_code{$codon}) {
-        return $genetic_code{$codon};
-    }else{
-
-        print STDERR "Undefined codon \"$codon\" returned U!!\n";
-        #exit;
-        return "U";
-
-    }
-}
-
 1;
 
 =pod
+sub prioritized_transcripts
+{
+    my ($self, %indel) = @_;
+    
+    my @annotations = $self->transcripts_for_indel(%indel)
+        or return;
+
+    return $self->_prioritize_annotations(@annotations);
+}
 
 =head1 Name
 
