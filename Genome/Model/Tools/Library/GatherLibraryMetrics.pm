@@ -4,10 +4,9 @@ use strict;
 use warnings;
 
 use Genome;
+use Genome::RunChunk; # get access to GSC namespace
 use Command;
 use IO::File;
-use GSCApp;
-App->init;
 
 class Genome::Model::Tools::Library::GatherLibraryMetrics {
     is => 'Command',
