@@ -5,6 +5,7 @@ use warnings;
 
 use above 'Genome';
 
+use UR;
 require Cwd;
 use Data::Dumper;
 require File::Basename;
@@ -28,9 +29,9 @@ sub create {
     my $self = $class->SUPER::create(@_);
     
     $self->directory( Cwd::abs_path( $self->directory) );
-    $self->error_msg( sprintf('Directory (%s) does not exist', $self->directory) )
+    $self->error_message( sprintf('Directory (%s) does not exist', $self->directory) )
         and return unless -e $self->directory;
-    $self->error_msg( sprintf('Alleged directory (%s) is not directory', $self->directory) )
+    $self->error_message( sprintf('Alleged directory (%s) is not directory', $self->directory) )
         and return unless -d $self->directory;
 
     return $self;
