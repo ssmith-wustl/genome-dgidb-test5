@@ -454,7 +454,7 @@ sub get_or_create{
     my $data_directory = $p{data_directory};
     my $subject_name = $p{subject_name};
     my $subject_type = $p{subject_type};
-    $subject_type ||= 'sample_name';
+    $subject_type ||= 'sample_group';
 
     unless (defined($research_project_name) && defined($technology) && defined($sensitivity) && defined($subject_name)) {
         $class->error_message("Insufficient params supplied to get_or_create");

@@ -229,7 +229,7 @@ sub _validate_execute_params {
         $self->usage_message($self->help_usage);
         return;
     }
-    my @subject_types = qw/ dna_resource_item_name species_name sample_name /;
+    my @subject_types = qw/ dna_resource_item_name species_name sample_name sample_group / ;
     unless ( 
         grep { 
             defined($self->subject_type) 
@@ -281,6 +281,10 @@ sub _validate_execute_params {
     elsif ($self->subject_type eq 'species_name') {
         $subject_class = 'Genome::Taxon';
         $subject_property = 'species_name';
+    }
+    elsif ($self->subject_type eq 'sample_group') {
+        $self->status_message("sample group subject type selected for PP-CV model.");
+        return 1;
     }
     else {
         $self->error_message("unsupported subject type " . $self->subject_type);
