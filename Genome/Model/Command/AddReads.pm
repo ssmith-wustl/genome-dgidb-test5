@@ -27,12 +27,6 @@ class Genome::Model::Command::AddReads {
             is  => 'Boolean',
             doc => 'Remove and reproduce all of the add-reads events for the specified model.'
         },
-        test        => { 
-            is => 'Boolean',
-            doc => 'Create run and event information in the database, but do not schedule or execute any sub-commands',
-            is_optional => 1,
-            default_value => 0
-        },
     ],
 };
 
@@ -64,8 +58,6 @@ All of the sub-commands listed below will be executed on the model in succession
 EOS
 }
 
-
-our $GENOME_MODEL_BSUBBED_COMMAND = "genome-model";
 
 sub execute {
     my $self = shift;
@@ -167,7 +159,9 @@ sub execute {
             first_build_id  => undef,  # set when we run the first build with this read set
         );
 
-        unless ($read_set_link) {
+        if ($read_set_link) {
+            $self->status_message('Added subset ' . $run_chunk->subset_name . ' of run ' . $run_chunk->run_name);
+        } else {
             $self->error_message('Could not create a genome model read set for this run chunk.');
             return;
         }
