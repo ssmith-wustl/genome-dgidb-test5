@@ -30,7 +30,7 @@ sub test_model_with_no_available_read_sets {
     $model->set_always('id', 12345);
     $model->set_always('read_set_class_name', 'Genome::RunChunk::Solexa');
     
-    $model->set_list('compatible_input_items;', ());
+    $model->set_list('compatible_input_items', ());
     $model->set_list('read_sets', ());
     $model->set_list('available_read_sets', ());
     $model->set_isa('Genome::Model');
@@ -88,7 +88,7 @@ sub test_new_model_and_add_new_read_sets {
 
     $model->set_list('read_sets', ());
     $model->set_list('available_read_sets', 'A', 'B');
-    $model->set_list('compatible_input_items;', 'A', 'B');
+    $model->set_list('compatible_input_items', 'A', 'B');
 
     $UR::Context::all_objects_loaded->{'Genome::Model'}->{'12345'} = $model;
     Genome::Model->all_objects_are_loaded(1);
