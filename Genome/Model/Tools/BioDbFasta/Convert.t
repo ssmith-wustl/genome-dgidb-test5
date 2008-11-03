@@ -31,3 +31,11 @@ my $c_test_gqs = Genome::Model::Tools::BioDbFasta::Convert->create('infile' => $
 
 my $string = $c_test_gqs->getQualString("55 33 55 55 10 29 34");
 is($string,'XBXX+=C','getQualString');
+
+
+my $c_out_no_x = Genome::Model::Tools::BioDbFasta::Convert->create('infile' => $infile_test ,
+                                                          'outfile' =>  '/' );
+
+my $ret;
+eval { $ret = $c_out_no_x->execute(); };
+is($ret, undef, 'trying to open file that can\'t be opened');

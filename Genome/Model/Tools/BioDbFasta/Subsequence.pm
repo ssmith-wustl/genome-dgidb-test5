@@ -95,6 +95,11 @@ sub execute {                               # replace with real execution logic.
 
 	## Access the index and retrieve the sequence ##
 	my $seqdb = Bio::DB::Fasta->new($dir); 
+        unless(defined($seqdb))
+        {
+            print "\$seqdb is undef on $dir";
+            return 0;
+        }
 	my $spiece = $seqdb->seq($self->name, $self->start => $self->stop);
 
 	print "$spiece\n" if($spiece);

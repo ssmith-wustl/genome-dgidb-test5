@@ -85,8 +85,7 @@ sub execute {                               # replace with real execution logic.
 		my $line = $_;
 		$lineCounter++;		
 	
-		if($line)
-		{
+
 			if(substr($line, 0, 1) eq ">")
 			{
 				if($record_name && $record_seq)
@@ -105,7 +104,7 @@ sub execute {                               # replace with real execution logic.
 				$record_seq .= " " if($record_seq);				
 				$record_seq .= $line;
 			}
-		}
+
 	}
 
 	if($record_name && $record_seq)

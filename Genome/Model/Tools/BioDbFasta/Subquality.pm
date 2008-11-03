@@ -18,6 +18,7 @@ use warnings;
 
 use Bio::DB::Fasta;
 use FileHandle;
+use Carp;
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
@@ -84,7 +85,8 @@ sub execute {                               # replace with real execution logic.
 	}
 
 	## Access the index and retrieve the sequence ##
-	my $seqdb = Bio::DB::Fasta->new($dir); 
+	my $seqdb = Bio::DB::Fasta->new($dir) or 
+            croak "Bio::DB::Fasta call failed!?"; 
 	my $qpiece = $seqdb->seq($self->name, $self->start => $self->stop);
 
 	## Convert to numeric ##
@@ -101,7 +103,8 @@ sub execute {                               # replace with real execution logic.
 
 	## Print it ##
 	
-	print "$qpiece_num\n" if($qpiece && length($qpiece) > 0);
+	#print "$qpiece_num\n" if($qpiece && length($qpiece) > 0);
+	print "$qpiece_num\n" if($qpiece);
 
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
