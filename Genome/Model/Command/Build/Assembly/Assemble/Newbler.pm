@@ -47,6 +47,10 @@ sub execute {
         $self->error_message('Failed to run assembly project '. $model->data_directory);
         return;
     }
+    $model->last_complete_build_id($self->parent_event_id);
+    if ($model->current_running_build_id eq $self->parent_event_id) {
+        $model->current_running_build_id('');
+    }
     return 1;
 }
 
