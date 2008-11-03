@@ -21,7 +21,7 @@ class Genome::Taxon {
         domain                          => { is => "Text",   len => 9 },
         estimated_organism_genome_size  => { is => "Number", len => 12 },
         legacy_org_id                   => { is => "Number", len => 10 },
-        locus_id                        => { is => "Text",   len => 200 },
+        locus_tag                        => { is => "Text",   len => 200 },
         model_individual_organism_id    => { is => "Number", len => 10 },
         ncbi_taxon_id                   => { is => "Number", len => 10 },
         ncbi_taxon_species_name         => { is => "Text",   len => 128 },
