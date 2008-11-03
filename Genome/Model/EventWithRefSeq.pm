@@ -312,4 +312,16 @@ sub find_previously_created_mapfile {
     return 0;
 }
 
+sub revert {
+    my $self = shift;
+    my @outputs = $self->outputs;
+    for my $output (@outputs) {
+        if ($output->name eq 'Hostname') {
+            $self->warning_message("Attempting to cleanup a blade /tmp/ file...");
+            return unless $self->cleanup_the_mapmerge_I_specify($output);
+        }
+    }
+    return $self->SUPER::revert;
+}
+
 1;
