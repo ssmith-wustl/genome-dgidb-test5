@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Command; 
+use Command;
 use Genome::Model;
 use File::Path;
 use Data::Dumper;
@@ -87,20 +87,9 @@ sub target_class{
     return "Genome::Model";
 }
 
-sub _shell_args_property_meta {
-    # exclude this class' commands from shell arguments
-    return grep { 
-            $_->property_name ne 'model_id'
-            #not ($_->via and $_->via ne 'run') && not ($_->property_name eq 'run_id')
-        } shift->SUPER::_shell_args_property_meta(@_);
-}
-
-sub command_properties{
+sub command_properties {
     my $self = shift;
-
-    return
-        grep { $_ ne 'id' and $_ ne 'bare_args'}
-            map { $_->property_name }
+    return map { $_->property_name }
                 $self->_shell_args_property_meta;
 }
 
@@ -111,11 +100,6 @@ sub create {
     unless ( $self->model_name ) {
         if ($self->subject_name and $self->processing_profile_name) {
             my $subject_name = $self->_sanitize_string_for_filesystem($self->subject_name);
-            unless (defined $subject_name) {
-                $class->error_message("Error removing special characteres from " . $self->subject_name);
-                $self->delete;
-                return;
-            }
             $self->model_name($subject_name .'.'. $self->processing_profile_name);
         }
     }
@@ -130,8 +114,7 @@ sub execute {
     }
 
     # generic: abstract out
-    my %params = %{ $self->_extract_command_properties_and_duplicate_keys_for__name_properties() };
-
+    my %params = %{ $self->_extract_target_class_object_properties() };
     my $obj = $self->_create_target_class_instance_and_error_check( \%params );
     unless ($obj) {
         $self->error_message("Failed to create model!");
@@ -145,7 +128,7 @@ sub execute {
     }
 
     $self->status_message("created model " . $obj->name);
-    print $obj->pretty_print_text,"\n";
+    $self->status_message($obj->pretty_print_text);
 
     unless ($self->_build_model_filesystem_paths($obj)) {
         $self->error_message('filesystem path creation failed');
@@ -187,10 +170,10 @@ sub _build_model_filesystem_paths {
     return 1;
 }
 
-sub _extract_command_properties_and_duplicate_keys_for__name_properties{
+sub _extract_target_class_object_properties {
     my $self = shift;
 
-    my $target_class = $self->target_class; 
+    my $target_class = $self->target_class;
     my %params;
 
     for my $command_property ($self->command_properties) {
@@ -208,12 +191,8 @@ sub _extract_command_properties_and_duplicate_keys_for__name_properties{
             }
         } else {
             # processing_profile_name is only used to grab the processing_profile... so dont include it as a param
-            unless ($command_property eq 'processing_profile_name') { 
-                my $object_property = $command_property;
-                if ($target_class->can($command_property . "_name")) {
-                    $object_property .= "_name";
-                }
-                $params{$object_property} = $value;
+            unless ($command_property eq 'processing_profile_name') {
+                $params{$command_property} = $value;
             }
         }
     }
@@ -226,7 +205,7 @@ sub _validate_execute_params {
     my $ref = $self->bare_args;
     if (($ref) && (my @args = @$ref)) {
         $self->error_message("extra arguments: @args");
-        $self->usage_message($self->help_usage);
+        $self->usage_message($self->help_usage_complete_text);
         return;
     }
     my @subject_types = qw/ dna_resource_item_name species_name sample_name sample_group / ;
