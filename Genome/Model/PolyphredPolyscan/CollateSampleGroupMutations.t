@@ -34,8 +34,8 @@ while (my $line = <FH>) {
 }
 close FH;
 
-ok(unlink $command->output_file . '.sorted','removed sorted output file');
-ok(unlink $command->output_file,'removed output file');
+ok(unlink($command->output_file . '.sorted'),'removed sorted output file');
+ok(unlink($command->output_file),'removed output file');
 
 is($linecount,0,'zero differences between saved result');
 diag($lines) if $linecount > 0;
@@ -48,9 +48,9 @@ my $command_array = Genome::Model::PolyphredPolyscan::CollateSampleGroupMutation
 
 ok($command_array,'got command object with array input_file');
 ok($command_array->execute,'executed command object');
-is($command->result,1,'result is 1');
+is($command_array->result,1,'result is 1');
 
-ok(-e $command->output_file,'output file exists');
-ok(-s $command->output_file,'output file has size');
+ok(-e $command_array->output_file,'output file exists');
+ok(-s $command_array->output_file,'output file has size');
 
-ok(unlink $command->output_file,'removed output file');
+ok(unlink($command_array->output_file),'removed output file');
