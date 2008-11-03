@@ -9,7 +9,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 120;
+use Test::More tests => 165;
 use Test::Differences;
 use File::Path;
 
@@ -20,6 +20,9 @@ my $default_subject_name = 'H_GV-933124G-skin1-9017g';
 my $default_subject_type = 'sample_name';
 my $default_pp_name = 'solexa_maq0_6_8';
 
+is(Genome::Model::Command::Create::Model->help_brief,'create a new genome model','help_brief test');
+like(Genome::Model::Command::Create::Model->help_synopsis, qr(^genome-model create),'help_synopsis test');
+like(Genome::Model::Command::Create::Model->help_detail,qr(^This defines a new genome model),'help_detail test');
 # test normal model and processing profile creation for reference alignment
 test_model_from_params(
                        model_params => {
@@ -71,6 +74,50 @@ test_model_from_params(
                                         processing_profile_name   => 'invalid_pp_name',
                                     },
                    );
+# test when no processing profile name passed as arg
+test_model_from_params(
+                       test_params => {
+                                       fail => 'No value specified for required property processing_profile_name',
+                                   },
+                       model_params => {
+                                        subject_name => $default_subject_name,
+                                        subject_type => $default_subject_type,
+                                    },
+                   );
+# test when no subject name is passed as arg
+test_model_from_params(
+                       test_params => {
+                                       fail => 'No value specified for required property subject_name',
+                                   },
+                       model_params => {
+                                        subject_type => $default_subject_type,
+                                        processing_profile_name   => $default_pp_name,
+                                    },
+                   );
+
+# test when bare args empty array_ref is passed
+test_model_from_params(
+                       model_params => {
+                                        subject_name => $default_subject_name,
+                                        subject_type => $default_subject_type,
+                                        processing_profile_name   => $default_pp_name,
+                                        bare_args => [],
+                                    },
+                   );
+
+# test when a bogus_param gets passed in as bare args
+test_model_from_params(
+                       test_params => {
+                                       fail => 'bogus_param',
+                                   },
+                       model_params => {
+                                        subject_name => $default_subject_name,
+                                        subject_type => $default_subject_type,
+                                        processing_profile_name   => $default_pp_name,
+                                        bare_args => [ 'bogus_param' ],
+                                    },
+                   );
+
 # test create for a genome model micro array illumina
 test_model_from_params(
                        model_params => {
@@ -102,8 +149,6 @@ sub test_model_from_params {
     my %test_params = %{$params{'test_params'}} if defined $params{'test_params'};
 
     my %model_params = %{$params{'model_params'}};
-    $model_params{bare_args} = [];
-
     if ($test_params{'fail'}) {
         &failed_create_model($test_params{'fail'},\%model_params);
     } else {
@@ -201,6 +246,7 @@ sub failed_create_model {
     $create_command->dump_error_messages(0);
     $create_command->dump_warning_messages(0);
     $create_command->dump_status_messages(0);
+    $create_command->dump_usage_messages(0);
     $create_command->queue_error_messages(1);
     $create_command->queue_warning_messages(1);
     $create_command->queue_status_messages(1);
