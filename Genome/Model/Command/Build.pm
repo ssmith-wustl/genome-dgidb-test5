@@ -37,6 +37,12 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     my $model = $self->model;
+
+    if ($model->current_running_build_id) {
+        $self->error_message('Build('. $model->current_running_build_id .') is already running...');
+        die;
+    }
+
     my @read_sets = $model->read_sets;
     $self->data_directory($self->resolve_data_directory);
 
