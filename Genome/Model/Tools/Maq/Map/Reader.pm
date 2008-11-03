@@ -1,7 +1,10 @@
 package Genome::Model::Tools::Maq::Map::Reader;
 
+use strict;
+use warnings;
 use Class::ISA;
 use Genome::Inline;
+use Carp;
 use Inline (C => 'Config',
             DIRECTORY => Genome::Inline::DIRECTORY(),
             INC => '-I/gscuser/jschindl -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
@@ -11,11 +14,11 @@ use Inline (C => 'Config',
             );
             
 sub new {
-    croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
-    my ($caller, $arg, %params) = @_;
+    Carp::croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
+    my ($caller, %params) = @_;
     my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;
-    my $self = {};#\%params;
+    my $self = \%params;
     
     bless ($self, $class);
     
@@ -63,16 +66,24 @@ sub get_next
     
 }
 
+sub reset
+{
+    my ($self) = @_;
+    _reset($self->{input_file});
+    return 1;
+}
+
 sub resolve_func_type
 {
     my ($self, $func_name_or_ref, $package) = @_; #print join ' ',@DynaLoader::dl_modules,"\n";
-
+    return ('','') unless defined $func_name_or_ref;
     #if this is a perl code ref we're done 
     if(ref($func_name_or_ref) eq 'CODE')
     {
        return ('perl_func', $func_name_or_ref);
     }
-    
+
+    my $temp_package;    
     my $func_ref;
     my $func_name;    
 
@@ -87,11 +98,11 @@ sub resolve_func_type
 		{	
 			my @in = Class::ISA::self_and_super_path($package);
 			my @dl = @DynaLoader::dl_modules;
-			my @dl_modules = grep {  $string = $_; grep(/^$string$/,@dl); } @in;		
+			my @dl_modules = grep {  my $string = $_; grep(/^$string$/,@dl); } @in;		
 			
 			foreach my $dl_package (@dl_modules)
 			{
-        		$package_number = dynaloader_has_package($dl_package);        	
+        		my $package_number = dynaloader_has_package($dl_package);        	
         		if(defined $package_number)
         		{
             		$func_ref = DynaLoader::dl_find_symbol($DynaLoader::dl_librefs[$package_number], $func_name);
@@ -178,6 +189,12 @@ void * init_file(char *infile)
     gzFile fpin = gzopen(infile, "r");
     //read_header((void *)fpin);
     return (void *)fpin;
+}
+
+void _reset(void *fpin)
+{
+    gzrewind(fpin);
+    maqmap_read_header((void *)fpin);
 }
 
 void close_file(void * fpin)
@@ -300,7 +317,7 @@ SV * get_next_perl_record(void * fpin)
 
 void do_with_c_func(void * fpin,void * tempfunc) 
 {
-    maqmap_t  *mm = maqmap_read_header((gzFile)fpin);
+    //maqmap_t  *mm = maqmap_read_header((gzFile)fpin);
     do_func func = tempfunc;
     
     static maqmap1_t curr_mm;

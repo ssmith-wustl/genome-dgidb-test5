@@ -1,7 +1,11 @@
 package Genome::Model::Tools::Maq::Map::Writer; 
+
 use strict;
 use warnings;
+
 use Genome::Inline;
+use Carp;
+
 use Inline (C => 'Config',
             DIRECTORY => Genome::Inline::DIRECTORY(),
             INC => '-I/gscuser/jschindl -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
@@ -11,7 +15,7 @@ use Inline (C => 'Config',
             );            
             
 sub new {
-    croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
+    Carp::croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
     my ($caller, %params) = @_;
     my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;
