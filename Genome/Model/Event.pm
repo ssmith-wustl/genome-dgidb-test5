@@ -140,14 +140,8 @@ sub revert {
     my @metrics = $self->metrics;
     my @outputs = $self->outputs;
     my @inputs = $self->inputs;
-    for my $output (@outputs) {
-            if ($output->name eq 'Hostname') {
-                $self->warning_message("Attempting to cleanup a blade /tmp/ file...");
-                return unless $self->cleanup_the_mapmerge_I_specify($output);
-            }
-    }
     for my $obj (@metrics,@outputs, @inputs) {
-        $self->warning_message("deleting " . $self->class . " " . $self->id);
+        $self->warning_message('deleting '. $obj->class .' with id '. $obj->id);
          #this delete is a general UR delete not the cute delete just below - Jim & Chris
         $obj->delete;
     }
@@ -177,11 +171,6 @@ sub delete {
         $self->warning_message("deleting " . $self->class . " " . $self->id);
     }
     $self->revert;
-    my @inputs = $self->inputs;
-    for my $obj (@inputs) { 
-        $self->warning_message("deleting " . $obj->class . " " . $obj->id);
-        $obj->delete;
-    };
     $self->SUPER::delete();
     return 1;
 }
@@ -189,25 +178,25 @@ sub delete {
 sub base_temp_directory {
     my $self = shift;
     return $self->{base_temp_directory} if $self->{base_temp_directory};
-    
+
     my $id = $self->id;
-    
+
     my $event_type = $self->event_type;
     my ($base) = ($event_type =~ /([^\s]+) [^\s]+$/);
-    
+
     my $time = UR::Time->now;
     $time =~ s/\s\: /_/g;
-    
+
     my $dir = "/tmp/gm-$base-$time-$id-XXXX";
     $dir =~ s/ /-/g;
     $dir = File::Temp::tempdir($dir, CLEANUP => 1);
     $self->{base_temp_directory} = $dir;
     $self->create_directory($dir);
-    
+
     return $dir;
 }
 
-my $anonymous_temp_file_count=0;
+my $anonymous_temp_file_count = 0;
 sub create_temp_file_path {
     my $self = shift;
     my $name = shift;
@@ -215,16 +204,16 @@ sub create_temp_file_path {
         $name = 'anonymous' . $anonymous_temp_file_count++;
     }
     my $dir = $self->base_temp_directory;
-    my $path = "$dir/$name";
+    my $path = $dir .'/'. $name;
     if (-e $path) {
-        die "temp path $path already exists!";
+        die "temp path '$path' already exists!";
     }
     return $path;
 }
 
 sub create_temp_file {
     my $self = shift;
-    my $path = $self->create_temp_file_path(@_);    
+    my $path = $self->create_temp_file_path(@_);
     my $fh = IO::File->new(">$path");
     unless ($fh) {
         die "Failed to create temp file $path!";
@@ -312,15 +301,15 @@ sub check_for_existence {
     }
 
     my $try = 0;
-    my $found;
+    my $found = 0;
     while (!$found && $try < $attempts) {
         $found = -e $path;
         sleep(1);
         $try++;
-        if ($found==1) {
+        if ($found) {
             $self->status_message("existence check passed: $path");
             return $found;
-        } 
+        }
     }
     return;
 }
@@ -435,7 +424,7 @@ sub _resolve_subclass_name_for_event_type {
 
 sub desc {
     my $self = shift;
-    return $self->id . " (" . $self->event_type . ")";
+    return $self->id .' (' . $self->event_type .')';
 }
 
 # Override the default message handling to auto-instantiate a log handle.
@@ -487,22 +476,6 @@ END {
             print STDERR "removing empty file $name\n";
             unlink $name;
         }
-    }
-}
-
-sub map_files_for_refseq {
-    my $self = shift;
-    my $ref_seq_id=shift;
-    my $model= $self->model;
-    
-    my $path = $self->alignment_submaps_dir_for_lane;
-    my @map_files =  (sprintf("%s/%s_unique.map",$path, $ref_seq_id));
-    if($model->is_eliminate_all_duplicates) {
-        return @map_files;
-    }
-    else {
-        push (@map_files, sprintf("%s/%s_duplicate.map",$path, $ref_seq_id));
-        return @map_files;
     }
 }
 
@@ -613,35 +586,16 @@ sub is_reschedulable {
     my($self) = @_;
 
     return 1; # was part of bsub helper, may change implementation again
-
-    if ($self->event_status eq 'Failed' and
-       $self->retry_count < $self->max_retries) {
-
-        return 1;
-    } else {
-        return 0;
-    }
 }
 
 sub max_retries {
-    2;  
-}
-
-sub get_prior_event {
-    my $self = shift;
-
-    if (defined $self->prior_event_id) {
-        return Genome::Model::Event->get($self->prior_event_id);
-    }
-
-    return;
+    2;
 }
 
 sub verify_prior_event {
     my $self = shift;
 
-    if (defined $self->prior_event_id) {
-        my $prior_event = $self->get_prior_event;
+    if (my $prior_event = $self->prior_event) {
         unless ($prior_event->event_status eq 'Succeeded') {
             $self->error_message('Prior event '. $self->prior_event_id .' is not Succeeded');
             return;
