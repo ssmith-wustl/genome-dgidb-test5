@@ -69,7 +69,7 @@ $DB::single = $DB::stopper;
     }
 
     unless ($event->verify_prior_event) {
-        my $prior_event =  $event->get_prior_event;
+        my $prior_event =  $event->prior_event;
         $self->error_message('Prior event did not verify: '. $prior_event->genome_model_event_id .' '.
         $prior_event->event_status);
         $event->date_completed(undef);
