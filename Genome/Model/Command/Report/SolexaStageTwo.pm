@@ -49,7 +49,7 @@ sub generate_report_brief
 {
     my $self=shift;
     my $model= $self->model;
-    $self->get_models_and_preload_related_data();
+    $self->preload_data();
     my $output_file = $self->report_brief_output_filename;
     my @details = get_run_chunk_data_for_model($model);
     my $brief = IO::File->new(">$output_file");
@@ -62,61 +62,64 @@ sub generate_report_brief
     
 }
 
-sub generate_report_detail {
+sub generate_report_detail {    
     my $self=shift;
     my $model= $self->model;
-    $self->get_models_and_preload_related_data();
+#    $self->preload_data();
     my $output_file = $self->report_detail_output_filename;
-    
+
     my $r = new CGI;
-     
-    my $start_time = time;
+
+    my $model_name = $model->name;
+    my @models = $self->preload_data(
+        ($model_name ? (name => $model_name) : ())
+    );
+
+    my $title = "Genome Model Pipeline Stage 2 " . UR::Time->now;
     my $time = UR::Time->now;
-    my $title = "Genome Model Pipeline Stage 1 as-of " . $time;
+
+    # the title doesn't end up in the report: fix me! ? 
     my $report = App::Report->create(title => $title, header => $title );
+
+    #my $report = App::Report->create(title => "Genome Model Pipeline Stage 2");
     
-       my $section_title = "<a href=\"https://gscweb.gsc.wustl.edu" . $model->data_directory . "\">" 
-                    . $model->name . " (" . $model->id . ") " 
-                    . " as of " . $time . "</a>"; 
+    for my $model (@models) {
+        my $section_title = "<a href=" . $model->latest_build_directory . ">" 
+                  . $model->name . " as of " . $time . "</a>"; 
 
         # the title doesn't end up in the report: fix me! ? 
         my $section = $report->create_section(title => \$section_title);
         
         $section->header(
-            'Library Name',
-            'Run Name',
-            'Lane',
-            'Paired',
-            'Read Length',
-            'DB ID',
-            'GERALD Dir',
-            'Assign-Run',
-            'Align-Rds',
-            'Proc-LQ',
+            'Chromosome',
+            'Merge Alignments',
+            'Update Genotype',
+            'Find Variations',
+            'PP Variations',
+            'Annotate Variations',
+            'Filter Variations',
+            'Upload Database',
         );
-        my @details = get_run_chunk_data_for_model($model);
+        my @model_chromosome_details = fetch_data_by_chromosome($model);
       
-        for my $detail_arrayref (@details) {
+        for my $detail_arrayref (@model_chromosome_details) {
             $section->add_data(@$detail_arrayref);
         }
+    }
     my $ajax_output_file= $output_file . "ajax";
     my $ajax_file= IO::File->new(">$ajax_output_file");
     for my $div_id (keys %div_hash) {
         $ajax_file->print($div_hash{$div_id} . "\n");
     }
-    my $elapsed_time = time - $start_time;
-    
+
     my $body = IO::File->new(">$output_file");
     die unless $body;
      
         #my $start_html = $r->start_html;
         #$body->print( $start_html);
         #$body->print( style($ajax_output_file) );
-        
-        $body->print( $r->start_html(-title=> 'Solexa Stage One for ' . $model->genome_model_id ,));
         $body->print( $report->generate(format => 'Html', no_header => 0));
-        $body->print("<p>(report processed in $elapsed_time seconds)<p>");
-        $body->print( $self->legend() );
+        $body->print( legend() );
         $body->print( style($ajax_output_file) );
         $body->print( $r->end_html );
       
