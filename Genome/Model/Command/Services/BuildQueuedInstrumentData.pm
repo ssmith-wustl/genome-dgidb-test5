@@ -146,6 +146,7 @@ sub execute {
     for my $model (@parent_models) {
         my $build = Genome::Model::Command::Build::CombineVariants->create(
             model_id => $model->id,
+            test => $self->test,
         );
         unless ($build->execute) {
             $self->error_message('Failed to execute build '. $build->id .' for model '. $model->id);

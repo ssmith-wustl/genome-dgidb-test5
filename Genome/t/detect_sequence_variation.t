@@ -502,19 +502,11 @@ ok($cron->execute,"Build Cron command returned true");
 # Check the files exist
 ok (-s $combine_variants_model->hq_genotype_file, "hq genotype file exists");
 ok (-s $combine_variants_model->lq_genotype_file, "lq genotype file exists");
-ok (-s $combine_variants_model->hq_annotated_genotype_file, "hq annotated genotype file exists");
-ok (-s $combine_variants_model->lq_annotated_genotype_file, "lq annotated genotype file exists");
-ok (-s $combine_variants_model->hq_maf_file, "hq maf file exists");
-ok (-s $combine_variants_model->lq_maf_file, "lq maf file exists");
 
 # test next_xx_genotype calls
 my ($hq_annotated_genotype, $lq_annotated_genotype, $hq_genotype, $lq_genotype);
 ok($hq_genotype = $combine_variants_model->next_hq_genotype, "Ran next_hq_genotype");
 ok($lq_genotype = $combine_variants_model->next_lq_genotype, "Ran next_lq_genotype");
-ok($hq_annotated_genotype = $combine_variants_model->next_hq_annotated_genotype, "Ran next_hq_annotated_genotype");
-ok($lq_annotated_genotype = $combine_variants_model->next_lq_annotated_genotype, "Ran next_lq_annotated_genotype");
-ok($hq_annotated_genotype, "Got the hq_annotated_genotype");
-ok($lq_annotated_genotype, "Got the lq_annotated_genotype");
 ok($hq_genotype, "Got the hq_genotype");
 ok($lq_genotype, "Got the lq_genotype");
 
@@ -548,3 +540,4 @@ sub delete_directory_contents {
         unlink $directory_or_file;
     }
 }
+
