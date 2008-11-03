@@ -136,10 +136,12 @@ sub create_iterator_closure_for_rule {
         unless (@values) {
             die "Can't resolve data source: no $param_name specified in rule with id ".$rule->id;
         }
-        if (scalar(@values) == 1) {
-            $rule = $rule->add_filter($param_name => $values[0]);
-        } else {
-            $rule = $rule->add_filter($param_name => \@values);
+        unless ($rule->specifies_value_for_property_name($param_name)) {
+            if (scalar(@values) == 1) {
+                $rule = $rule->add_filter($param_name => $values[0]);
+            } else {
+                $rule = $rule->add_filter($param_name => \@values);
+            }
         }
         $all_resolver_params[$i] = \@values;
     }
