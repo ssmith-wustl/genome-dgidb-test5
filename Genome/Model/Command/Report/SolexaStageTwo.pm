@@ -1,4 +1,4 @@
-package Genome::Model::Command::Report::SolexaStageOne;
+package Genome::Model::Command::Report::SolexaStageTwo;
 
 use strict;
 use warnings;
@@ -22,7 +22,7 @@ App->init();
 
 
 
-class Genome::Model::Command::Report::SolexaStageOne {
+class Genome::Model::Command::Report::SolexaStageTwo{
     is => 'Genome::Model::Command::Report',
 };
 
@@ -32,7 +32,7 @@ my %job_to_status;
 sub resolve_reports_directory {
     my $self = shift;
     my $basedir = $self->SUPER::resolve_reports_directory();
-    my $reports_dir= $basedir . "SolexaStageOne/";
+    my $reports_dir= $basedir . "SolexaStageTwo/";
     unless(-d $reports_dir) {
         unless(mkdir $reports_dir) {
             $self->error_message("Directory $reports_dir doesn't exist, can't create");
@@ -41,7 +41,7 @@ sub resolve_reports_directory {
         chmod 02775, $reports_dir;
     }
 
-   `touch $reports_dir/generation_class.SolexaStageOne`;
+   `touch $reports_dir/generation_class.SolexaStageTwo`;
    return $reports_dir;
 }
 
@@ -62,11 +62,6 @@ sub generate_report_brief
     
 }
 
-
-
-
-
-
 sub generate_report_detail {
     my $self=shift;
     my $model= $self->model;
@@ -77,7 +72,7 @@ sub generate_report_detail {
      
     my $start_time = time;
     my $time = UR::Time->now;
-    my $title = "Genome Model Pipeline Stage 1 for " .  $model->name . " as-of " . $time;
+    my $title = "Genome Model Pipeline Stage 1 as-of " . $time;
     my $report = App::Report->create(title => $title, header => $title );
     
        my $section_title = "<a href=\"https://gscweb.gsc.wustl.edu" . $model->data_directory . "\">" 
@@ -127,36 +122,41 @@ sub generate_report_detail {
       
 }
 
-sub get_models_and_preload_related_data {
-    $DB::single=1;
+sub preload_data {
     my $self=shift;
     my @models = ($self->model);
-    my %model_latest_event;
-    my %model_read_sets;
-    for my $m (@models) {
-        for my $e ($m->events) {
-            if ($e->read_set_id) {
-                $model_read_sets{$e->read_set_id}++;
-            }
-            no warnings;
-            my $date = $e->date_completed || $e->date_scheduled;
-            if ($date gt $model_latest_event{$e->model_id}) {
-                $model_latest_event{$e->model_id} = $date;
-            }
+    
+    my @postprocess_alignments = Genome::Model::Command::Build::ReferenceAlignment::PostprocessAlignments->get(model_id => [map { $_->id } @models]);
+    unless(@postprocess_alignments) {
+        @postprocess_alignments = Genome::Model::Command::Build::ReferenceAlignment->get(model_id => [map { $_->id } @models]);
+    }
+    my @model_events = Genome::Model::Event->get(parent_event_id => [ map { $_->id } @postprocess_alignments ]);
+    my %model_latest_event = map { $_->id => '' } @models;
+    for my $e (@model_events) {
+        my $date = $e->date_completed || $e->date_scheduled;
+        if ($date gt $model_latest_event{$e->model_id}) {
+            $model_latest_event{$e->model_id} = $date;
         }
     }
-    my @chunks = Genome::RunChunk->get([keys %model_read_sets]);
-    my @lanes = GSC::RunLaneSolexa->get([keys %model_read_sets]);
-    @models =
-    sort {
-        ($model_latest_event{$b->id} cmp $model_latest_event{$a->id})
+    @models = 
+        sort { 
+            ($model_latest_event{$b->id} cmp $model_latest_event{$a->id})
             or
-        ($b->id <=> $a->id)
-    }
-    @models;
+            ($b->id <=> $a->id)
+        }
+        @models;
+    return @models;
+}
+sub fetch_data_by_chromosome {
+    
+    #assert - at this point, we have been given a model, and wish 
+    #to break down its events by chromosome
+    #this will happen for all models
+    
+    my $model= shift;
+    my @chromosome_rows;
+    ##THIS IS OBVIOUSLY NOT THE BEST SOLUTION##
 
-    # Record the latest status of LSF jobs.
-    # THIS IS OBVIOUSLY NOT THE BEST SOLUTION
     my $tmp_file = '/gsc/var/cache/testsuite/lsf-tmp/bjob_query_result.txt';
     my @bjobs_lines = IO::File->new($tmp_file)->getlines;
     shift(@bjobs_lines);
@@ -165,184 +165,35 @@ sub get_models_and_preload_related_data {
         $job_to_status{$job[0]} = $job[2];
     }
 
-    return @models;
-}
-
-
-
-
-
-
-
-
-sub get_run_chunk_data_for_model {
-    #assert - at this point, we have been given a model, and wish 
-    #to break down its events by chromosome
-    #this will happen for all models
-    my $model= shift;
-   my @assigned_read_sets = $model->read_sets;
-    my @steps = Genome::Model::Command::Build::ReferenceAlignment::Solexa->frontend_job_classes;
-    my @rows;
-    for my $r (@assigned_read_sets) {
-        my $rls= GSC::RunLaneSolexa->get($r->read_set_id);
-        my @row = (
-            library_name($r->library_name),
-            run_name($r->run_name),
-            $r->subset_name,
-            (eval { $r->is_paired_end } || $@),
-            $r->read_length,
-            $r->id,
-            gerald_directory($r->full_path),
-            map { data_for_step($rls, $_, $model) } @steps
-        );
-        push @rows, \@row;
-    }
-    
-    return @rows;
-}
-
-sub library_name {
-    my ($library_name) = @_;
-    return '' if ! $library_name;
-    return \qq|<a href='http://intweb/cgi-bin/solexa/solexa_summary.cgi?action=search&by=dna_name&search_param=$library_name'>$library_name</a>|;
-}
-
-
-sub run_name {
-    my ($run_name) = @_;
-    return '' if ! $run_name;
-    my $flow_cell_id = $run_name;
-    $flow_cell_id =~ s/^.*_//;
-    return \qq|<a href='http://intweb/cgi-bin/solexa/solexa_summary.cgi?action=search&by=flow_cell_id&search_param=$flow_cell_id'>$run_name</a>|;
-}
-
-sub gerald_directory {
-    my $gerald_directory = $_[0];
-    return '' if ! $gerald_directory;
-    if (defined($gerald_directory) and -d $gerald_directory) {
-        return \qq|<a href='$gerald_directory/Summary.htm'>ok</a>|;
+    my @chromosomes;
+    if($model->dna_type eq 'genomic dna') {  
+        @chromosomes=$model->get_subreference_names(reference_extension=>'bfa');
+        #@chromosomes= ((1..22),'X','Y');
     }
     else {
-        return \qq|<a href='$gerald_directory/Summary.html' class='broken'>MISSING</a>|;
+        @chromosomes='all_sequences';  
     }
+
+    for my $chromosome (@chromosomes) {
+        my $chromosome_row=parse_events($chromosome, $model);
+        push(@chromosome_rows, $chromosome_row);
+    }
+    return @chromosome_rows;
 }
 
-
-
-
-
-
-
-sub data_for_step {
-    my ($lane,$step_class,$model,$events_override) = @_;
-    my @results;
-    $DB::single=1;
-    my $event_state;
-    my $event_text;
-
-
-    my @rc = Genome::RunChunk->is_loaded(
-        seq_id => $lane->seq_id,
-        sample_name => $lane->sample_name, # this gets around dups in this temp table from testing
-    );
-
-    if (@rc == 0) {
-        $event_state = '';
-    }
-    elsif (@rc > 1) {
-        die "multiple RC for " . $lane->seq_id . " " . $lane->sample_name;
+sub format_time {
+    my $event = shift;
+    my $diff;
+    if ($event->date_completed) {
+        $diff = UR::Time->datetime_to_time($event->date_completed) - UR::Time->datetime_to_time($event->date_scheduled)
     }
     else {
-        my @events = 
-        sort { $a->date_scheduled cmp $b->date_scheduled } 
-        $step_class->is_loaded(
-            model_id => $model->id,
-            #event_type => { operator => "like", value => "%" . $step . "%" },
-            read_set_id => $rc[0]->id
-        );
-        if (@events) {
-            $event_state = 'Unknown';
-
-            for my $event (@events) {
-                push @results, [
-                $event->id,
-                $event->event_status,
-                $event->retry_count,
-                $event->date_scheduled,
-                $event->date_completed,
-                $event->lsf_job_id,
-                format_time($event),
-                ];
-            }               
-
-            my @lsf_ids = grep { $_ } map { $_->lsf_job_id } @events;
-            my @lsf_statuses = 
-            map { $_ . ': ' . $job_to_status{$_}  } 
-            grep { $job_to_status{$_} }
-            @lsf_ids;
-
-            for my $event (reverse @events) {
-                $event_text = format_date_time($event);
-                if ($event->event_status =~ /Succeeded/) {
-                    $event_state = $event->event_status;
-                    last;
-                }
-                elsif ($event->event_status =~ /Failed|Crashed|Abandoned/) {
-                    $event_state = $event->event_status;
-                    $event_text = $event->date_scheduled;
-                    last;
-                }
-                elsif ($event->event_status =~ /Scheduled/) {
-                    if ($event->lsf_job_id && !$job_to_status{$event->lsf_job_id}) {
-                        $event_state = 'NotScheduled';
-                        $event_text = $event->date_scheduled;
-                    } else {
-                        $event_state = $event->event_status;
-                        $event_text = $event->date_scheduled;
-                    }
-                }
-                elsif ($event->event_status =~ /Running/) {
-                    if ($event->lsf_job_id && !$job_to_status{$event->lsf_job_id}) {
-                        $event_state = 'NotRunning';
-                        $event_text = $event->date_scheduled;
-                    } else {
-                        $event_state = $event->event_status;
-                        $event_text = $event->date_scheduled;
-                    }
-                }
-            }
-
-            $event_text .= " (" . scalar(@events) . ")" if scalar(@events) > 1;
-            if (@lsf_statuses) {
-                $event_text .= "\n" . join("\n",@lsf_statuses);
-            }
-        }
+        $diff = time - UR::Time->datetime_to_time( $event->date_scheduled)
     }
-
-    my @merged;
-    no warnings;
-    for my $result (@results) {
-        for (my $n=0; $n<@$result; $n++) {
-            $merged[$n] .= ", " unless $result eq $results[0];
-            $merged[$n] .= $result->[$n];
-        }
-    }
-    $DB::single=1;
-    my $gm_run = Genome::RunChunk->is_loaded(seq_id => $lane->seq_id, sample_name => $lane->sample_name);
-    my $detail = format_div_data(\@merged, $gm_run, $model);
-    my $detail_n++;
-    my $title=join(" ",$merged[0]);
-    my $id=$step_class . "-" . $title;
-    $id=~ s/\s+//g;
-    $id=~ tr/,:()=/\-\-\-\-\-/;
-    my $chopped_text=chop_time($event_text) if $event_text;
-    if ($event_state) {
-        $div_hash{$id}=qq| $id $detail |;        
-        return \qq|<div class='$event_state'><span onclick="ajax_query(this)" title="$id">$chopped_text</span></div>|;
-    }
-    else {
-        return $event_text;
-    }
+    my $m = int($diff/60);
+    my $s = $diff % 60;
+    return "${m}m ${s}s" if $m;
+    return "${s}s";
 }
 
 sub format_date_time {
@@ -368,23 +219,147 @@ sub format_date_time {
     }
 }
 
+sub parse_events {
+    my $chromosome =shift;
+    my $model = shift;
+   
+    my @finished_row_of_data = ($chromosome);
+    
+    my @steps = (
+        'merge-alignments',
+        'update-genotype',
+        'find-variations',
+        'postprocess-variations',
+        'annotate-variations',
+        'filter-variations',
+        'upload-database',
+    );
+    
+    if($chromosome eq '22') {
+        $DB::single=1;
+    } 
 
+    $DB::single=1;    
+    for my $step (@steps) {
+        my @events=
+            sort { $a->id cmp $b->id } 
+            Genome::Model::Event->is_loaded(
+                model_id => $model->id,
+                event_type => { operator => "like", value => "%" . $step . "%" },
+                ref_seq_id => $chromosome,
+            );
+            unless(@events) {
+                @events=
+                sort { $a->id cmp $b->id } 
+                Genome::Model::Event->is_loaded(
+                    model_id => $model->id,
+                    event_type => { operator => "like", value => "%" . $step . "%" },
+                    ref_seq_id => 'chr' . $chromosome,
+                );
+           }
+        my $event_text;
+        my $event_state;
+        my @results;
+        if (@events) {
+            $event_state = 'Unknown';
 
+            for my $event (reverse @events) {
+                push @results, [
+                    $event->id,
+                    $event->event_status,
+                    $event->retry_count,
+                    $event->date_scheduled,
+                    $event->date_completed,
+                    $event->lsf_job_id,
+                    format_time($event)
+                ];
+            }               
 
+            my @lsf_ids = grep { $_ } map { $_->lsf_job_id } @events;
+
+            my @lsf_statuses = 
+                map { $_ . ': ' . $job_to_status{$_}  } 
+                grep { $job_to_status{$_} }
+                @lsf_ids;
+
+            for my $event (reverse @events) {
+                $event_text = format_date_time($event);
+                if ($event->event_status =~ /Succeeded/) {
+                    $event_state = $event->event_status;
+                    last;
+                }
+                elsif ($event->event_status =~ /Failed|Crashed/) {
+                    $event_state = $event->event_status;
+                    last;
+                }
+                elsif ($event->event_status =~ /Scheduled/) {
+                    if ($event->lsf_job_id && !$job_to_status{$event->lsf_job_id}) {
+                        $event_state = 'NotScheduled';
+                        last;
+                    } else {
+                        $event_state = $event->event_status;
+                        last;
+                    }
+                }
+                elsif ($event->event_status =~ /Running/) {
+                    if ($event->lsf_job_id && !$job_to_status{$event->lsf_job_id}) {
+                        $event_state = 'NotRunning';
+                        last;
+                    } else {
+                        $event_state = $event->event_status;
+                        last; 
+                    }
+                }
+            }
+
+            $event_text .= " (" . scalar(@events) . ")" if scalar(@events) > 1;
+            if (@lsf_statuses) {
+                $event_text .= "\n" . join("\n",@lsf_statuses);
+            }
+        }   
+
+        my @merged;
+        no warnings;
+        for my $result (@results) {
+            for (my $n=0; $n<@$result; $n++) {
+                $merged[$n] .= ", " unless $result eq $results[0];
+                $merged[$n] .= $result->[$n];
+            }
+        }
+        my $detail = format_div_data(\@merged, $chromosome, $model);
+        my $detail_n++;
+        my $title=join(" ",$merged[0]);
+        my $id=$step . "-" . $title;
+        $id=~ s/\s+//g;
+        $id=~ tr/,:()=/\-\-\-\-\-/;
+        my $chopped_text=chop_time($event_text) if $event_text;
+        if ($event_state) {
+            $div_hash{$id}=qq| $id $detail  |;        
+            push(@finished_row_of_data, \qq|<div class='$event_state'><span onclick="ajax_query(this)" title="$id">$chopped_text</span></div>|);
+        }
+        else {
+            push(@finished_row_of_data, "Not Found");
+        }
+    }
+    return \@finished_row_of_data;
+}
 
 sub format_div_data {
     my $merged = shift;
-    my $read_set= shift;
+    my $chromosome= shift;
     my $model = shift;
-        my $log_directory= $model->latest_build_directory . "/logs/solexa/" . $read_set->run_name . "/";
+    my $log_directory= $model->latest_build_directory .  "/logs/$chromosome/";
     my $formatted_string;
 
     no warnings; # tolerate undef = ''
     $formatted_string .= "<b>ID:</b> ".  @$merged[0] . "<br /> ";
     $formatted_string .= "<b>Status:</b> ".  @$merged[1] . "<br /> ";
     $formatted_string .= "<b>Retries:</b> ".  @$merged[2] . "<br /> ";
-    $formatted_string .= "<b>Date:</b> ".  @$merged[3] . "<br /> ";
-    $formatted_string .= "<b>LSF Job:</b> ".  @$merged[4] . "<br /> ";
+    $formatted_string .= "<b>Date Scheduled:</b> ".  @$merged[3] . "<br /> ";
+    $formatted_string .= "<b>Date Completed:</b> ".  @$merged[4] . "<br /> ";
+    $formatted_string .= "<b>Elapsed Time:</b> ".  @$merged[6] . "<br /> ";
+    $formatted_string .= "<b>LSF Job:</b> ".  @$merged[5] . "<br /> ";
+
     my @ids = split(/,\s*/,@$merged[0]);
     use warnings;
 
@@ -406,35 +381,17 @@ sub chop_time {
     return $time;
 }
 
-sub format_time {
-    my $event = shift;
-    my $diff;
-    if ($event->date_completed) {
-        $diff = UR::Time->datetime_to_time($event->date_completed) - UR::Time->datetime_to_time($event->date_scheduled)
-    }
-    else {
-        $diff = time - UR::Time->datetime_to_time( $event->date_scheduled)
-    }
-    my $m = int($diff/60);
-    my $s = $diff % 60;
-    return "${m}m ${s}s" if $m;
-    return "${s}s";
-}
-
-
-
-
 sub style {
     my $ajax_output_file=shift;
     return "
     <script src='http://code.jquery.com/jquery-1.2.4a.js' type='text/javascript' ></script>
-    <script src='http://linus215:3000/static/js/jquery.growl.js' type='text/javascript' > </script>
+    <script src='/jquery.growl.js' type='text/javascript' > </script>
     <script type='text/javascript'>
    // \$(document).ready(function(\$) {
         \ function ajax_query(obj) {
             obj.parentNode.style.border='2px #F06 solid';
             id= obj.getAttribute('title');
-            ajax='/cgi-bin/solexa/all_runs_ajax.cgi?ajaxfile=$ajax_output_file&searchstring=' + id;
+            ajax='all_runs_ajax.cgi?ajaxfile=$ajax_output_file&searchstring=' + id;
             \$('#helper').load(ajax, function() {
             msgtext=\$('#helper').html();
             \$.growl(id, msgtext, obj);
@@ -459,12 +416,6 @@ sub style {
         background-color: #FFFF00;
         color: #000000;
     }
-    .Abandoned
-    {
-        background-color: #000;
-        color: #000000;
-    }
-
 
     .NotScheduled
     {
@@ -598,7 +549,6 @@ sub legend
 EOT
     return $text;
 }
-
 
 1;
 
