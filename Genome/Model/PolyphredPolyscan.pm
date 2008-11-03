@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use IO::File;
 use File::Copy "cp";
+use File::Spec;
+use File::Temp;
 use File::Basename;
 use Data::Dumper;
 use Genome;
@@ -341,7 +343,7 @@ sub setup_input {
     my $combined_input_file = $self->combined_input_file;
     my $fh = IO::File->new(">$combined_input_file");
 
-    if (0) { # workflow switch
+    if (1) { # workflow switch
     
         require Workflow::Simple;
 
@@ -357,10 +359,22 @@ sub setup_input {
         
         $op->parallel_by('input_file');
 
+        my $input_dir = File::Temp::tempdir('input_dir_XXXXXXXX', DIR => '/gscmnt/sata363/info/medseq/temporary_data', CLEANUP => 1);
+
+        my @copied_files = ();
+        foreach my $file (@input_files) {
+            my ($v,$dir,$filename) = File::Spec->splitpath($file);
+            my $newname = File::Spec->catpath('',$input_dir,$filename);
+
+            File::Copy::copy($file,$newname);
+
+            push @copied_files, $newname;
+        }
+
         my $output = Workflow::Simple::run_workflow_lsf(
             $op,
             'parser_type' => $type,
-            'input_file' => \@input_files,
+            'input_file' => \@copied_files,
             'output_path' => '/gscmnt/sata363/info/medseq/temporary_data'
         );
     
@@ -375,6 +389,9 @@ sub setup_input {
                 $fh->print($line);
             }
             $ifh->close;            
+            unlink($file);
+        }
+        for my $file (@copied_files) {
             unlink($file);
         }
     
