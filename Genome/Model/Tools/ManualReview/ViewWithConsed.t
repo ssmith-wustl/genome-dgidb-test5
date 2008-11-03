@@ -3,6 +3,8 @@
 use Test::More tests => 1;
 use strict;
 use warnings;
+SKIP: {
+    skip "This test is interactive, but needs to be automated", 4;
 
 BEGIN {
     use_ok('Genome::Model::Tools::ManualReview::ViewWithConsed');
@@ -42,3 +44,4 @@ my $v3 = Genome::Model::Tools::ManualReview::ViewWithConsed->create('ace_suffix'
 
 ok($v3->execute());
 
+};
