@@ -45,6 +45,22 @@ sub resolve_reports_directory {
    return $reports_dir;
 }
 
+sub generate_report_brief 
+{
+    my $self=shift;
+    my $model= $self->model;
+    $self->get_models_and_preload_related_data();
+    my $output_file = $self->report_brief_output_filename;
+    my @details = get_run_chunk_data_for_model($model);
+    my $brief = IO::File->new(">$output_file");
+    die unless $brief;
+
+    my $desc = @details . " read sets for " . $model->name . " as of " . UR::Time->now;
+    $brief->print("<div>$desc</div>");
+
+
+    
+}
 
 
 
@@ -56,6 +72,7 @@ sub generate_report_detail {
     my $model= $self->model;
     $self->get_models_and_preload_related_data();
     my $output_file = $self->report_detail_output_filename;
+    
     my $r = new CGI;
      
     my $start_time = time;
@@ -100,6 +117,8 @@ sub generate_report_detail {
         #my $start_html = $r->start_html;
         #$body->print( $start_html);
         #$body->print( style($ajax_output_file) );
+        
+        $body->print( $r->start_html(-title=> 'Solexa Stage One for ' . $model->genome_model_id ,));
         $body->print( $report->generate(format => 'Html', no_header => 0));
         $body->print("<p>(report processed in $elapsed_time seconds)<p>");
         $body->print( $self->legend() );
@@ -409,13 +428,13 @@ sub style {
     my $ajax_output_file=shift;
     return "
     <script src='http://code.jquery.com/jquery-1.2.4a.js' type='text/javascript' ></script>
-    <script src='/jquery.growl.js' type='text/javascript' > </script>
+    <script src='http://linus215:3000/static/js/jquery.growl.js' type='text/javascript' > </script>
     <script type='text/javascript'>
    // \$(document).ready(function(\$) {
         \ function ajax_query(obj) {
             obj.parentNode.style.border='2px #F06 solid';
             id= obj.getAttribute('title');
-            ajax='all_runs_ajax.cgi?ajaxfile=$ajax_output_file&searchstring=' + id;
+            ajax='/cgi-bin/solexa/all_runs_ajax.cgi?ajaxfile=$ajax_output_file&searchstring=' + id;
             \$('#helper').load(ajax, function() {
             msgtext=\$('#helper').html();
             \$.growl(id, msgtext, obj);
