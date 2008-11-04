@@ -23,13 +23,6 @@ class Genome::Model::Tools::Snp::GoldSnpIntersection {
         is_optional => 0,
         doc => "input file of snp locations and calls from the intersection of the affy and illumina platforms",
     },
-    print =>
-    {
-        type => 'Boolean',
-        is_optional => 1,
-        doc => "Print the results in human readable format",
-        default => 0,
-    },        
     exclude_y =>
     {
         type => 'Boolean',
@@ -123,9 +116,7 @@ sub execute {
         = $self->calculate_metrics($snp_fh,$gold_het_hash_ref,$gold_hom_hash_ref,$gold_ref_hash_ref);
 
 
-    if($self->print) {
         $self->print_report($ref_breakdown_ref,$self->total_gold_homozygous_ref_positions,$het_breakdown_ref, $self->total_gold_heterozygote_snps, $hom_breakdown_ref, $self->total_gold_homozygous_snps);
-    }
     return 1;
 }
 
@@ -139,13 +130,13 @@ sub help_brief {
 }
 
 sub help_detail {
-    "This script performs a comparison of a maq cns2snp output file with a Gold SNP file. The comparisons are made on a by-genotype basis. Matches are reported only on an exact genotype match. Each type of array call is reported with the maq calls broken down by match vs. mismatch and further by type. In addition, the number of each is reported along with percentage of total calls and the average depth for those calls. Currently, no distinction is made between heterozygous Gold calls where one of the alleles is the reference and heterozygous Gold calls where neither allele is the reference. These are unlikely to occur, but this should be improved upon on some point. For maq calls, the following types are reported:
+    "This script performs a comparison of a maq cns2snp output file with a Gold SNP file. The comparisons are made on a by-genotype basis. Matches are reported only on an exact genotype match. Each type of array call is reported with the maq calls broken down by match vs. partial match vs. mismatch and then further by type. In addition, the number of each is reported along with percentage of total calls and the average depth for those calls. Currently, no distinction is made between heterozygous Gold calls where one of the alleles is the reference and heterozygous Gold calls where neither allele is the reference. These are unlikely to occur, but this should be improved upon on some point. For maq calls, the following types are reported:
 'homozygous reference' - two alleles are reported, both are identical to the reference allele
 'homozygous variant' - two alleles are reported, both are identical, but not the reference
-'mono-allelic variant' - two different alleles are reported, one is reference, the other is variant
-'bi-allelic variant' - two different alleles are reported, neither are reference
-'tri-allelic with reference' - three different alleles are reported, one is reference
-'tri-allelic, no reference' - three different allelic are reported, none are reference
+'heterozygous - 1 allele variant' - two different alleles are reported, one is reference, the other is variant
+'heterozygous - 2 alleles variant' - two different alleles are reported, neither are reference
+'tri-allelic - with reference' - three different alleles are reported, one is reference
+'tri-allelic - no reference' - three different allelic are reported, none are reference
 'ambiguous call' - variant call met none of the above criteria. Should be N"
 }
 
@@ -180,6 +171,9 @@ sub calculate_metrics {
             $het_breakdown{$comparison}{$maq_type}{n} += 1;
             #print STDERR $line, "\n" if($self->compare_gold_to_maq($gold_het_hash_ref->{$chr}{$pos},$call) eq 'mismatch' && $maq_type eq 'mono-allelic variant');
             $het_breakdown{$comparison}{$maq_type}{depth} += $metrics[0];
+            #if($maq_type eq 'homozygous variant') {
+            #    print STDERR qq{"$comparison",},$metrics[0],"\n";
+            #}
         }
         elsif(exists($gold_ref_hash_ref->{$chr}{$pos})) { 
             #Gold standard ref call
@@ -215,6 +209,12 @@ sub print_breakdown {
         print STDOUT "\tMatching Gold Genotype\n";
         foreach my $type (keys %{$hash->{'match'}}) {
             printf STDOUT "\t\t%s\t%d\t%0.2f\t%0.2f\n",$type,$hash->{'match'}{$type}{'n'},$hash->{'match'}{$type}{'n'}/$total*100,$hash->{'match'}{$type}{'depth'}/$hash->{'match'}{$type}{'n'};
+        }
+    }
+    if(exists($hash->{'partial match'})) {
+        print STDOUT "\tPartially Matching Gold Genotype\n";
+        foreach my $type (keys %{$hash->{'partial match'}}) {
+            printf STDOUT "\t\t%s\t%d\t%0.2f\t%0.2f\n",$type,$hash->{'partial match'}{$type}{'n'},$hash->{'partial match'}{$type}{'n'}/$total*100,$hash->{'partial match'}{$type}{'depth'}/$hash->{'partial match'}{$type}{'n'};
         }
     }
     #next print un-matching classes
@@ -318,8 +318,8 @@ sub create_gold_snp_hashes {
                 #check that the allele is actually a snp
                 if($allele1_type1 eq $allele2_type1) {
                     #non-ref bi-allelic SNP unlikely and unhandled. Let the user know
-                    $self->error_message("Heterozygous snp where both alleles are non-reference detected");
-                    return;
+                    $self->error_message("Heterozygous snp where both alleles are non-reference detected. Not added to hash");
+                    #ignore
                 }
                 elsif($allele1_type1 eq 'SNP' ) {
                     #$total_gold++;
@@ -352,7 +352,7 @@ sub create_gold_snp_hashes {
 }
 
 sub define_maq_call {
-    my ($self,$ref, $call) = @_;
+    my ($self, $ref, $call) = @_;
     if($self->is_homozygous_IUB($call)) {
         #homozygous call
         if($ref eq $call) {
@@ -366,19 +366,19 @@ sub define_maq_call {
     elsif(length $bases_for{$call} == 2) {
         #het call
         if($bases_for{$call} =~ qr{$ref}) {
-            return 'mono-allelic variant';
+            return 'heterozygous - 1 allele variant';
         }
         else {
-            return 'bi-allelic variant';
+            return 'heterozygous - 2 alleles variant';
         }
     }
     elsif(length $bases_for{call} == 3) {
         #tri-allelic
         if($bases_for{$call} =~ qr{$ref}) {
-            return 'tri-allelic with reference';
+            return 'tri-allelic - with reference';
         }
         else {
-            return 'tri-allelic, no reference';
+            return 'tri-allelic - no reference';
         }
     }
     else {
@@ -400,11 +400,32 @@ sub is_homozygous_IUB {
 sub compare_gold_to_maq {
     my ($self, $gold_alleles, $maq_call) = @_;
     my $maq_alleles = $bases_for{$maq_call};
+    
     if($gold_alleles eq $maq_alleles || scalar(reverse($gold_alleles)) eq $maq_alleles) {
         return 'match';
+    }
+    elsif( $self->overlap($gold_alleles, $maq_call)) {
+        return 'partial match';
     }
     else {
         return 'mismatch';
     }
 }
     
+#idea borrowed from ssmith's gt snp intersect
+sub overlap {
+    $DB::single = 1;
+    my ($self, $gold_alleles, $maq_call) = @_;
+    
+    my $num_bases_overlapping = 0;
+    
+    my %gold_bases = map {$_ => 1} (split //, $gold_alleles); #make a list of unique bases in the gold call
+    
+    for my $base (keys %gold_bases) {
+       if(index($bases_for{$maq_call}, $base) != -1) {  
+           $num_bases_overlapping++;
+       }
+    }
+    
+    return $num_bases_overlapping;
+}
