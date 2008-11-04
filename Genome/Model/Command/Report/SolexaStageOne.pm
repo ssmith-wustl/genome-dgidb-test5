@@ -6,8 +6,6 @@ use warnings;
 use Genome;
 use CGI;
 use English;
-use strict;
-use warnings; # FATAL => 'all';
 use Memoize;
 use IO::File;
 use Cwd;
@@ -57,15 +55,7 @@ sub generate_report_brief
 
     my $desc = @details . " read sets for " . $model->name . " as of " . UR::Time->now;
     $brief->print("<div>$desc</div>");
-
-
-    
 }
-
-
-
-
-
 
 sub generate_report_detail {
     my $self=shift;
@@ -114,10 +104,6 @@ sub generate_report_detail {
     my $body = IO::File->new(">$output_file");
     die unless $body;
      
-        #my $start_html = $r->start_html;
-        #$body->print( $start_html);
-        #$body->print( style($ajax_output_file) );
-        
         $body->print( $r->start_html(-title=> 'Solexa Stage One for ' . $model->genome_model_id ,));
         $body->print( $report->generate(format => 'Html', no_header => 0));
         $body->print("<p>(report processed in $elapsed_time seconds)<p>");
