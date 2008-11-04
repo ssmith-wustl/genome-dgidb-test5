@@ -77,6 +77,7 @@ my @jobs = ( );
                                                 $seq,
                                                 \@features,
                                                 $blast_db,
+                                                4,
                                             );
    
     
@@ -90,7 +91,8 @@ my @jobs = ( );
         push @jobs, BAP::Job::Phase2BlastP->new(
                                                 $seq,
                                                 $blast_db,
-                                                2112
+                                                2112,
+                                                4,
                                             );
         
     }

@@ -19,11 +19,12 @@ __PACKAGE__->columns(
                                  strand
                                  score
                                  source
+                                 redundant
                                 ),
                      $start_col,
                      $end_col,
                      $desc_col,
-		     $rfam_prod_col,
+		             $rfam_prod_col,
                     );
 __PACKAGE__->sequence('gene_id_seq');
 

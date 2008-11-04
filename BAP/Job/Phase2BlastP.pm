@@ -132,10 +132,27 @@ sub execute {
                 my $bits = $hit->bits();
 
                 if (defined($bits)) {
+
                     if ($bits > 130) {
-                        $self->{_evidence}->{$query_name} = 1;
-                        next RESULT;
+
+                        while (my $hsp = $hit->next_hsp()) {
+
+                            my $coverage = (($hsp->length('hsp') / $hsp->length('query')) * 100);
+                            
+                            if (
+                                ($coverage >= 30) &&
+                                ($hsp->percent_identity() >= 30)
+                            ) {
+                                
+                                $self->{_evidence}->{$query_name} = 1;
+                                next RESULT;
+                                
+                            }
+                            
+                        }
+                        
                     }
+                    
                 }
                 
             }

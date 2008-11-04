@@ -107,43 +107,52 @@ sub execute {
     my $query_name = $result->query_name();
     
     my %seen_coords = ( );
-     
+    
     while (my $hit = $result->next_hit()) {
         
         while (my $hsp = $hit->next_hsp()) {
             
             if ($hsp->bits() >= $self->{_bit_score}) {
                 
-                my $start  = $hsp->start('query');
-                my $end    = $hsp->end('query');
+                my $coverage = (($hsp->length('hsp') / $hsp->length('query')) * 100);
                 
-                if ($start > $end) { ($start, $end) = ($end, $start) }
+                if (
+                    ($coverage >= 30) &&
+                    ($hsp->percent_identity() >= 30)
+                ) {
+                    
+                    my $start  = $hsp->start('query');
+                    my $end    = $hsp->end('query');
+                    
+                    if ($start > $end) { ($start, $end) = ($end, $start) }
+                    
+                    ## No point in processing more than one alignment to the same
+                    ## query coordinates, and it's cheapest to discard them here
+                    unless (exists($seen_coords{$start}{$end})) {
+                        
+                        my $feature = Bio::SeqFeature::Generic->new(
+                                                                    -seq_id => $self->{_seq}->display_id(), 
+                                                                    -start  => $start,
+                                                                    -end    => $end,
+                                                                    -strand => $hsp->strand(),
+                                                                    -source => 'blastx',
+                                                                    -score  => $hsp->evalue(),
+                                                                );
+                        
+                        $self->{_seq}->add_SeqFeature($feature);
+                        
+                        $seen_coords{$start}{$end} = 1;
+                        
+                    }
+                    
+                }   
                 
-                ## No point in processing more than one alignment to the same
-                ## query coordinates, and it's cheapest to discard them here
-                unless (exists($seen_coords{$start}{$end})) {
-                    
-                    my $feature = Bio::SeqFeature::Generic->new(
-                                                                -seq_id => $self->{_seq}->display_id(), 
-                                                                -start  => $start,
-                                                                -end    => $end,
-                                                                -strand => $hsp->strand(),
-                                                                -source => 'blastx',
-                                                                -score  => $hsp->evalue(),
-                                                            );
-                    
-                    $self->{_seq}->add_SeqFeature($feature);
-                    
-                    $seen_coords{$start}{$end} = 1;
-                    
-                }
-                
-            }   
+            }
             
         }
-        
-    }
 
+    }
+    
     
     ## Pitch any that do not have good translations
     $self->_check_translation();
