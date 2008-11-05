@@ -20,7 +20,6 @@ App->init();
 class Genome::Model::Command::Report::Report454StageOne{
     is => 'Genome::Model::Command::Report',
 };
-use vars qw( %div_hash);
  
 my %div_hash;
 my %job_to_status;
