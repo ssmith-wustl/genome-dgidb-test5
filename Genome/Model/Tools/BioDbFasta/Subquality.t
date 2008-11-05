@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 BEGIN {
         use_ok('Genome::Model::Tools::BioDbFasta::Subquality');
