@@ -35,7 +35,8 @@ class Genome::Model::Tools::Blat::MatchToAmplicons {
 		skip_fof	=> { is => 'Text', doc => "If set to 1, do not build per-amplicon read FOFs [0]", is_optional => 1 },
 		skip_counts	=> { is => 'Text', doc => "If set to 1, do not report amplicon readcounts [0]", is_optional => 1 },		
 		run_crossmatch	=> { is => 'Text', doc => "If set to 1, launch CM alignments between reads and amplicon [0]", is_optional => 1 },	
-		run_pyroscan	=> { is => 'Text', doc => "If set to 1, run PyroScan on the CM output file [0]", is_optional => 1 },		
+		run_pyroscan	=> { is => 'Text', doc => "If set to 1, run PyroScan on the CM output file [0]", is_optional => 1 },
+		convert_pyroscan	=> { is => 'Text', doc => "If set to 1, convert PyroScan output to genotype sub file [0]", is_optional => 1 },		
 		pyroscan_params	=> { is => 'Text', doc => "Optional parameters to use for pyroscan", is_optional => 1 },	
 		overlap_bases	=> { is => 'Text', doc => "Minium overlapping bp to assign read to an amplicon [1]", is_optional => 1 },	
 	],
@@ -105,6 +106,7 @@ sub execute {                               # replace with real execution logic.
 	my $skip_counts = $self->skip_counts if($self->skip_counts);	
 	my $run_crossmatch = $self->run_crossmatch if($self->run_crossmatch);
 	my $run_pyroscan = $self->run_pyroscan if($self->run_pyroscan);
+	my $convert_pyroscan = $self->convert_pyroscan if($self->convert_pyroscan);	
 	my $pyroscan_params = $self->pyroscan_params if($self->pyroscan_params);
 
 
@@ -278,7 +280,7 @@ sub execute {                               # replace with real execution logic.
 		{
 			if(-e "$amplicon_subdir/traces.$sample_name.fasta" && -e "$amplicon_subdir/amplicon.refseq.fasta")
 			{
-				system("bsub -q long -oo $amplicon_subdir/$sample_name.$amplicon.crossmatch.out cross_match.test $amplicon_subdir/traces.$sample_name.fasta $amplicon_subdir/amplicon.refseq.fasta -minmatch 12 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -3 -gap_ext -1");		
+				system("bsub -q $lsf_queue -oo $amplicon_subdir/$sample_name.$amplicon.crossmatch.out cross_match.test $amplicon_subdir/traces.$sample_name.fasta $amplicon_subdir/amplicon.refseq.fasta -minmatch 12 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -3 -gap_ext -1");		
 			}
 		}
 	
@@ -288,15 +290,22 @@ sub execute {                               # replace with real execution logic.
 			{
 				if($pyroscan_params)
 				{
-					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta $pyroscan_params >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan");
+#					system("bsub -q $lsf_queue -oo $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.out \"gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta $pyroscan_params >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan\"");
+					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta $pyroscan_params >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan");				
 				}
 				else
 				{
-					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan");
+#					system("bsub -q $lsf_queue -oo $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.out \"gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan\"");
+					system("gt pyroscan run --cmt $amplicon_subdir/$sample_name.$amplicon.crossmatch.out --qt $amplicon_subdir/traces.$sample_name.fasta.qual --refseq $amplicon_subdir/amplicon.refseq.fasta >$amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan 2>/dev/null");				
 				}
 				
-				system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.genotype_submission.tsv --sample-name $sample_name");
+				#system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.genotype_submission.tsv --sample-name $sample_name");
 			}
+		}
+	
+		if($convert_pyroscan)
+		{
+			system("gt pyroscan convert-output --headers-file $amplicon_subdir/amplicon.refseq.fasta --input-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan --output-file $amplicon_subdir/$sample_name.$amplicon.crossmatch.out.pyroscan.genotype_submission.tsv --sample-name $sample_name");
 		}
 	}
 	
