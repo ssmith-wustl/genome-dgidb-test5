@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 BEGIN {
         use_ok('Genome::Model::Tools::BioDbFasta::Convert');
