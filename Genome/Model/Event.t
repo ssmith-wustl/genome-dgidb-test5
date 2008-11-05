@@ -8,6 +8,7 @@ use above "Genome";
 use File::Temp;
 use File::Path;
 use File::Basename;
+use Test::MockObject;
 use Test::More tests => 81;
 
 $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -17,16 +18,31 @@ BEGIN {
     use_ok('Genome::Model::Event');
 }
 
+my $test_model_id = 12345;
 my $test_build_event_id = 92592635;
-
 my $test_data_directory = File::Temp::tempdir(CLEANUP => 1);
+
+my $model = Test::MockObject->new();
+$model->set_always('genome_model_id', $test_model_id);
+$model->set_always('model_id', $test_model_id);
+$model->set_always('id', $test_model_id);
+# how can I add this like a method
+#$model->mock('current_running_build_id',sub {};
+$model->set_always('current_running_build_id',undef);
+$model->set_always('data_directory',$test_data_directory);
+$model->set_always('latest_build_directory', $test_data_directory);
+$model->set_list('read_sets',[]);
+$model->set_isa('Genome::Model');
+
 
 my $build_event = Genome::Model::Event->get($test_build_event_id);
 $build_event->data_directory($test_data_directory);
 
+$UR::Context::all_objects_loaded->{'Genome::Model'}->{$test_model_id} = $model;
+
 my %params = (
               event_type => $build_event->event_type,
-              model_id => $build_event->model_id,
+              model_id => $test_model_id,
               read_set_id => 'test_read_set_id',
               ref_seq_id => 'test_ref_seq_id',
               event_status => 'Testing',
