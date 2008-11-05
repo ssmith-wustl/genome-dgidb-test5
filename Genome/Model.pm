@@ -35,6 +35,7 @@ class Genome::Model {
         builds => { is => 'Genome::Model::Command::Build', reverse_id_by => 'model', is_many => 1 },
         run_chunks => { is => 'Genome::RunChunk', via=>'read_sets', to => 'read_set' },
         current_running_build_id => {is => 'NUMBER' , len => 10 },
+        last_complete_build_id => {is => 'NUMBER', len=> 10 },
         data_directory               => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         processing_profile           => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name      => { via => 'processing_profile', to => 'name'},
@@ -76,7 +77,7 @@ class Genome::Model {
                                         
     ],
     has_optional => {
-        last_complete_build         => { is => 'Genome::Model::Command::Build', id_by => ['last_complete_build_id'] },
+        #   last_complete_build         => { is => 'Genome::Model::Command::Build', id_by => ['last_complete_build_id'] },
         current_running_build       => { is => 'Genome::Model::Command::Build', id_by => ['current_running_build_id'] },
         sequencing_platform          => { via => 'processing_profile'},
         read_set_class_name          => {
@@ -184,6 +185,15 @@ sub built_read_sets {
     my @read_sets = $self->read_sets;
     my @built_read_sets = grep { $_->first_build_id} @read_sets;
     return @built_read_sets;
+}
+
+
+sub last_complete_build {
+    my $self=shift;
+    if (defined $self->last_complete_build_id ) {
+        return Genome::Model::Command::Build->get($self->last_complete_build_id);
+    }
+    return;
 }
 
 sub comparable_normal_model {
