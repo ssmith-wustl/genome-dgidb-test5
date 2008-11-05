@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-
+use Genome::Model::EqualColumnWidthTableizer; 
 class Genome::ProcessingProfile {
     table_name => 'PROCESSING_PROFILE',
     is_abstract => 1,
@@ -98,7 +98,7 @@ sub pretty_print_text {
         }
     }
     
-    Genome::Model::EqualColumnWidthTableizer->new->convert_table_to_equal_column_widths_in_place( \@out );
+    Genome::Model::EqualColumnWidthTableizer->convert_table_to_equal_column_widths_in_place( \@out );
 
     my $out;
     $out .= Term::ANSIColor::colored(sprintf("Processing Profile: %s (ID %s)", $self ->name, $self->id), 'bold magenta') . "\n\n";
