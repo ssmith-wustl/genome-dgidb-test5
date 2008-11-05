@@ -1,4 +1,4 @@
-package Genome::Model::Command::Report::454StageOne;
+package Genome::Model::Command::Report::Report454StageOne;
 
 use strict;
 use warnings;
@@ -17,7 +17,7 @@ App->init();
 }
 
 
-class Genome::Model::Command::Report::454StageOne {
+class Genome::Model::Command::Report::Report454StageOne{
     is => 'Genome::Model::Command::Report',
 };
 use vars qw( %div_hash);
