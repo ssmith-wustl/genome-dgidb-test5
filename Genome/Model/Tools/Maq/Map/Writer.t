@@ -15,7 +15,7 @@ my $hash = retrieve "$indata/test.store";
 my ($outdata) = File::Temp::tempdir(CLEANUP => 1);
 
 my $mo;
-ok($mo = Genome::Model::Tools::Maq::Map::Writer->new(file_name => "$outdata/out.map",output_file => File::Temp->new), 'create writer from object with filename');
+ok($mo = Genome::Model::Tools::Maq::Map::Writer->new(file_name => "$outdata/out.map"), 'create writer from object with filename');
 ok($mo = Genome::Model::Tools::Maq::Map::Writer->new,'create writer from class');
 ok(bless({},'Genome::Model::Tools::Maq::Map::Writer')->new,'create writer from object');
 ok(do {

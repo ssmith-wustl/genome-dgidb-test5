@@ -6,14 +6,22 @@ use warnings;
 use Genome::Inline;
 use Carp;
 
-use Inline (C => 'Config',
-            DIRECTORY => Genome::Inline::DIRECTORY(),
-            INC => '-I/gscuser/jschindl -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
-            CCFLAGS => `uname -m` =~ /ia64/?'-D_FILE_OFFSET_BITS=64 -m32':'-D_FILE_OFFSET_BITS=64',
-            LIBS => '-L/gscuser/jschindl -L/gscuser/jschindl/svn/gsc/zlib-1.2.3 -lz -lmaq',
+our $libs;
+BEGIN
+{
+    $libs = '-L/var/chroot/etch-ia32/usr/lib -L/usr/lib -L/lib ';        
+};
+
+use Inline 'C' => 'Config' => (
+            CC => '/gscmnt/936/info/jschindl/gcc32/gcc',
+            DIRECTORY => Genome::Inline::DIRECTORY(), 
+            INC => '-I/gscuser/jschindl -I/gsc/pkg/bio/maq/zlib/include',
+            CCFLAGS => '-D_FILE_OFFSET_BITS=64 -m32 ',
+            LD => '/gscmnt/936/info/jschindl/gcc32/ld',
+            LIBS => '-L/gscuser/jschindl -L/gsc/pkg/bio/maq/zlib/lib -lz -lmaq '.$libs,
             NAME => __PACKAGE__
-            );            
-            
+             );
+
 sub new {
     Carp::croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
     my ($caller, %params) = @_;

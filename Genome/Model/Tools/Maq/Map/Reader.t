@@ -9,15 +9,24 @@ use Genome::Model::Tools::Maq::Map::Reader;
 
 use Test::More tests => 20;
 use Storable;
+our $cflags;
+our $libs;
+BEGIN
+{
+    $libs = '-L/var/chroot/etch-ia32/usr/lib -L/usr/lib -L/lib ';        
+};
 
-use Inline (C => 'Config',
-            DIRECTORY => Genome::Inline::DIRECTORY(),
-            INC => '-I/gscuser/jschindl -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
-            CCFLAGS => `uname -m` =~ /ia64/?'-D_FILE_OFFSET_BITS=64 -m32':'-D_FILE_OFFSET_BITS=64',
-            LIBS => '-L/gscuser/jschindl -L/gscuser/jschindl/svn/gsc/zlib-1.2.3 -lz -lmaq',
-            NAME => __PACKAGE__,
+use Genome::Inline;
+use Inline 'C' => 'Config' => (
+            CC => '/gscmnt/936/info/jschindl/gcc32/gcc',
+            DIRECTORY => Genome::Inline::DIRECTORY(), 
+            INC => '-I/gscuser/jschindl -I/gsc/pkg/bio/maq/zlib/include',
+            CCFLAGS => '-D_FILE_OFFSET_BITS=64 -m32 ',
+            LD => '/gscmnt/936/info/jschindl/gcc32/ld',
+            LIBS => '-L/gscuser/jschindl -L/gsc/pkg/bio/maq/zlib/lib -lz -lmaq '.$libs,
+            NAME => __PACKAGE__
             );
-           
+
 my $indata = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Map';
 my $stored_data = retrieve("$indata/test.store");
 my $mi;
