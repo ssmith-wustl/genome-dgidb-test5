@@ -27,10 +27,6 @@ class Genome::Model::Command::Report::SolexaStageOne {
 my %div_hash;
 my %job_to_status;
 
-sub foo()
-{
-    return "in foo main";
-}
 sub resolve_reports_directory {
     my $self = shift;
     my $basedir = $self->SUPER::resolve_reports_directory();
