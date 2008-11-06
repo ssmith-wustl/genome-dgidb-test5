@@ -27,6 +27,10 @@ class Genome::Model::Command::Report::SolexaStageOne {
 my %div_hash;
 my %job_to_status;
 
+sub foo()
+{
+    return "in foo main";
+}
 sub resolve_reports_directory {
     my $self = shift;
     my $basedir = $self->SUPER::resolve_reports_directory();
@@ -58,6 +62,8 @@ sub generate_report_brief
 }
 
 sub generate_report_detail {
+    
+     die("BLAAAAH"); 
     my $self=shift;
     my $model= $self->model;
     $self->get_models_and_preload_related_data();
@@ -110,7 +116,6 @@ sub generate_report_detail {
         $body->print( $self->legend() );
         $body->print( style($ajax_output_file) );
         $body->print( $r->end_html );
-      
 }
 
 sub get_models_and_preload_related_data {
