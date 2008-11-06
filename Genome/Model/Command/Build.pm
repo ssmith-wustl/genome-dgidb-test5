@@ -38,8 +38,8 @@ sub create {
     my $self = $class->SUPER::create(@_);
     my $model = $self->model;
 
-    if ($model->current_running_build_id) {
-        $self->error_message('Build('. $model->current_running_build_id .') is already running...');
+    if ($model->current_running_build_id  && $model->current_running_build_id ne $self->build_id) {
+        $self->error_message('Build('. $model->current_running_build_id .') is already running');
         die;
     }
 
