@@ -10,6 +10,7 @@ use File::Basename;
 use Data::Dumper;
 use Genome;
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
+use Benchmark;
 
 
 class Genome::Model::PolyphredPolyscan {
@@ -166,10 +167,10 @@ sub predict_genotype{
         }else{
             my $read_count=0;
             foreach my $genotype (@{$genotype_hash{$genotype_call}}){
-                $read_count += $genotype->{read_count};
+                #$read_count += $genotype->{read_count};  #TODO incorporate allele 1 & 2 pcr and read counts, but these should be fully calculated in collate now, so probably don't need to do any extra arithmetic here
             }
             my $return_genotype = shift @{$genotype_hash{$genotype_call}};
-            $return_genotype->{read_count} = $read_count;
+            #$return_genotype->{read_count} = $read_count;
             return $return_genotype;
         }
     }
@@ -323,6 +324,7 @@ sub combined_input_columns {
 # each one, grabs all of their snps and indels, and stuffs them into class variables
 sub setup_input {
     my $self = shift;
+    my $start = new Benchmark;
 
     my $last_complete_build = $self->last_complete_build;
     my @input_files = $last_complete_build->instrument_data_files;
@@ -457,6 +459,12 @@ sub setup_input {
     # Set up the file handle to be used as input
     my $in_fh = IO::File->new("$combined_input_file");
     $self->combined_input_fh($in_fh);
+
+    my $stop = new Benchmark;
+
+    my $time = timestr(timediff($stop,$start));
+
+    $self->status_message("Setup input for model ".$self->name." time: $time");
 
     return 1;
 }

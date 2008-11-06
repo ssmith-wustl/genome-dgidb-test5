@@ -9,6 +9,7 @@ use Data::Dumper;
 use Genome::VariantAnnotator;
 use Genome::DB::Schema;
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
+use Benchmark;
 
 class Genome::Model::CombineVariants{
     is => 'Genome::Model::Composite',
@@ -367,6 +368,8 @@ sub print_prioritized_annotation {
 sub combine_variants{ 
     my $self = shift;
 
+    my $start = new Benchmark;
+
     my $hq_genotype_file = $self->hq_genotype_file;
     my ($hq_polyscan_model) = $self->hq_polyscan_model;
     my ($hq_polyphred_model) = $self->hq_polyphred_model;
@@ -377,12 +380,18 @@ sub combine_variants{
     my ($lq_polyphred_model) = $self->lq_polyphred_model;
     $self->combine_variants_for_set($lq_polyscan_model, $lq_polyphred_model, $lq_genotype_file);
 
+    my $stop = new Benchmark;
+
+    my $time = timestr(timediff($stop, $start));
+    $self->status_message("Total combine variants time: $time");
     return 1;
 }
 
 # Given a set of hq or lq polyscan and polyphred models, run the combine variants logic
 sub combine_variants_for_set{
     my ($self, $polyscan_model, $polyphred_model, $genotype_file) = @_;
+
+    my $whole_start = new Benchmark;
 
     my $ofh = IO::File->new("> $genotype_file");
     unless($polyscan_model || $polyphred_model){
@@ -393,8 +402,11 @@ sub combine_variants_for_set{
     my $polyscan_genotype = $self->next_or_undef($polyscan_model);
     my $polyphred_genotype = $self->next_or_undef($polyphred_model);
 
+    my $while_start = new Benchmark;
+    
     # While there is data for at least one of the two,
     # Pass them into generate_genotype to make the decisions
+
     while ($polyphred_genotype or $polyscan_genotype){
         my ($chr1, $start1, $chr2, $start2);
         if ($polyscan_genotype){
@@ -437,6 +449,14 @@ sub combine_variants_for_set{
             die;
         }
     }
+
+    my $stop = new Benchmark;
+
+    my $whole_time = timestr(timediff($stop, $whole_start));
+    my $while_time = timestr(timediff($stop, $while_start));
+
+    $self->status_message("Total $genotype_file combine variants time: $whole_time");
+    $self->status_message("$genotype_file combine variants time minus setup input: $while_time");
 
     return 1;
 }
