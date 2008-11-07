@@ -79,11 +79,6 @@ class Genome::Model::Event {
                                             is => 'Genome::Model::Event',
                                             reverse_id_by => 'parent_event'
                                         },
-        next_events                     => {
-                                            is => 'Genome::Model::Event',
-                                             reverse_id_by => 'prior_event_id',
-                                             constraint_name => 'GME_PPEID_FK'
-                                        },
         inputs                          => { is => 'Genome::Model::Event::Input',  reverse_id_by => 'event' },
         outputs                         => { is => 'Genome::Model::Event::Output', reverse_id_by => 'event' },
         metrics                         => { is => 'Genome::Model::Event::Metric', reverse_id_by => 'event' },
@@ -578,9 +573,42 @@ sub schedule {
     $self->event_status("Scheduled");
     $self->date_scheduled( UR::Time->now );
     $self->date_completed(undef);
-
+    $self->retry_count(0);
     return 1;
 }
+
+sub abandon {
+    my $self = shift;
+    for my $next_event ($self->next_events) {
+        $next_event->abandon;
+    }
+    unless ($self->user_name eq $ENV{USER}) {
+        $self->error_message('Attempted to abandon event '. $self->id .' owned by '. $self->user_name);
+        die;
+    }
+    if ($self->event_status =~ /Scheduled|Running/) {
+        my $lsf_job_id = $self->lsf_job_id;
+        if ($lsf_job_id) {
+            my $cmd = 'bkill '. $lsf_job_id .' >& /dev/null';
+            my $rv = system($cmd);
+            unless ($rv == 0) {
+                $self->error_message('Failed execution of command '. $cmd);
+            }
+        }
+    }
+    $self->event_status("Abandoned");
+    $self->date_completed(UR::Time->now);
+    return 1;
+}
+
+sub next_events {
+    my $self = shift;
+    my @next_events = Genome::Model::Event->get(
+                                                prior_event_id => $self->id,
+                                            );
+    return @next_events;
+}
+
 
 sub is_reschedulable {
     my($self) = @_;
