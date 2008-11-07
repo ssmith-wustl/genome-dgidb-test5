@@ -43,6 +43,11 @@ class Genome::Model::PolyphredPolyscan {
             doc => 'The current pcr product genotype... used for "peek" like functionality',
         },
     ],
+    # Accessors to grab the parent CombineVariants models
+    has_many_optional => [
+        parent_bridges => { is => 'Genome::Model::CompositeMember', reverse_id_by => 'genome_model_member'},
+        parent_models => { is => 'Genome::Model', via => 'parent_bridges', to => 'genome_model_composite'},
+    ]
 };
 
 sub create{
@@ -346,7 +351,7 @@ sub setup_input {
     my $fh = IO::File->new(">$combined_input_file");
 
     if (1) { # workflow switch
-    
+        
         require Workflow::Simple;
 
         ## keep the ur stuff in this process, speed optimization
