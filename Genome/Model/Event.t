@@ -18,8 +18,8 @@ BEGIN {
     use_ok('Genome::Model::Event');
 }
 
-my $test_model_id = 12345;
-my $test_build_event_id = 92592635;
+my $test_model_id = '-12345';
+my $test_build_id = '-123456';
 my $test_data_directory = File::Temp::tempdir(CLEANUP => 1);
 
 my $model = Test::MockObject->new();
@@ -35,20 +35,36 @@ $model->set_list('read_sets',[]);
 $model->set_isa('Genome::Model');
 
 
-my $build_event = Genome::Model::Event->get($test_build_event_id);
-$build_event->data_directory($test_data_directory);
+my $build = Test::MockObject->new();
+$build->set_always('genome_model_event_id', $test_build_id);
+$build->set_always('build_id', $test_build_id);
+$build->set_always('id', $test_build_id);
+$build->set_always('data_directory',$test_data_directory);
+$build->set_always('event_type','genome-model build');
+$build->mock('event_status', sub {
+                 my $self = shift;
+                 if (@_) {
+                     $self->{'_event_status'} = shift;
+                 }
+                 return $self->{'_event_status'};
+             }
+         );
+$build->set_isa('Genome::Model::Command::Build','Genome::Model::Event');
+
+$build->event_status('Succeeded');
 
 $UR::Context::all_objects_loaded->{'Genome::Model'}->{$test_model_id} = $model;
+$UR::Context::all_objects_loaded->{'Genome::Model::Command::Build'}->{$test_build_id} = $build;
 
 my %params = (
-              event_type => $build_event->event_type,
-              model_id => $test_model_id,
+              event_type => $build->event_type,
+              model_id => $model->model_id,
               read_set_id => 'test_read_set_id',
               ref_seq_id => 'test_ref_seq_id',
               event_status => 'Testing',
               user_name => 'tested_by_'. $ENV{USER},
-              parent_event_id => $build_event->genome_model_event_id,
-              prior_event_id => $build_event->genome_model_event_id,
+              parent_event_id => $build->genome_model_event_id,
+              prior_event_id => $build->genome_model_event_id,
               date_scheduled => UR::Time->now(),
               date_completed => UR::Time->now(),
               lsf_job_id => 'test_lsf_job_id',
@@ -76,15 +92,15 @@ for my $property_name (keys %params) {
 # test the existence and id of parent_event
 my $parent_event = $event->parent_event;
 isa_ok($parent_event,'Genome::Model::Event');
-is($parent_event->genome_model_event_id,$build_event->genome_model_event_id,'parent event id matches expected');
+is($parent_event->genome_model_event_id,$build->genome_model_event_id,'parent event id matches expected');
 
 # test the existence and id of prior_event
 my $prior_event = $event->prior_event;
 isa_ok($prior_event,'Genome::Model::Event');
-is($prior_event->genome_model_event_id,$build_event->genome_model_event_id,'prior event id matches expected');
+is($prior_event->genome_model_event_id,$build->genome_model_event_id,'prior event id matches expected');
 $prior_event->event_status('Succeeded');
 ok($event->verify_prior_event,'prior event verified');
-$prior_event->schedule;
+$prior_event->event_status('Scheduled');
 ok(!$event->verify_prior_event,'prior event not verified');
 ok(scalar(grep { $_ =~ /Prior event .* is not Succeeded/ } $event->error_messages),'prior event not verified error message');
 
