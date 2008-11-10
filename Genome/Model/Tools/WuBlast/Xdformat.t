@@ -37,7 +37,7 @@ my $create_fail = Genome::Model::Tools::WuBlast::Xdformat::Create->create(
                                                                           database => $database,
                                                                           fasta_files => \@fasta_files,
                                                                       );
-is($create_fail, undef, 'Genome::Model::Tools::WuBlast::Xdformat::Create');
+ok(!defined $create_fail, 'Genome::Model::Tools::WuBlast::Xdformat::Create');
 #ok(!$create_fail->execute,'failed to create duplicate database');
 
 # APPEND
