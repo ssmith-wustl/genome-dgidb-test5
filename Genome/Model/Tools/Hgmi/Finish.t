@@ -33,7 +33,7 @@ isa_ok($finish, 'Genome::Model::Tools::Hgmi::Finish');
 #                    'cell_type' => "BACTERIA");
 #$d->execute();
 
-my $res = $finish->gather_details();
-print join(" ",@$res),"\n";
+#my $res = $finish->gather_details();
+#print join(" ",@$res),"\n";
 
 # remove \1, $removepath;

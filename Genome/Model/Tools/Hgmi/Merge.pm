@@ -54,7 +54,7 @@ UR::Object::Type->define(
 
 sub help_brief
 {
-    "tool for running the merge step (bap_merge_genes).  Not finished."
+    "tool for running the merge step (bap_merge_genes)."
 }
 
 sub help_synopsis
@@ -90,7 +90,6 @@ sub execute
                    '2>',
                    \$merge_err,
                    ) || croak "can't run finish : $!";
-
 
 
     return 1;
@@ -146,7 +145,7 @@ sub gather_details
 
     my ($sequence_set_name, $analysis_version_num, $hgmi_sequence_dir);
 
-    # these below are dangerous
+    # these below are dangerous, should be altered.
     if ($project_type =~ /HGMI/x )
     {
         # these need to be based on the directory structure,
