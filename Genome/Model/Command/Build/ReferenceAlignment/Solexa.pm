@@ -31,13 +31,24 @@ EOS
 
 sub stages {
     my @stages = qw/
-        frontend
-        backend
+        alignment
+        variant_detection
+        verify_succesful_completion
     /;
     return @stages;
 }
 
-sub backend_job_classes {
+sub alignment_job_classes {
+    my @sub_command_classes= qw/
+        Genome::Model::Command::Build::ReferenceAlignment::AssignRun
+        Genome::Model::Command::Build::ReferenceAlignment::AlignReads
+        Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments
+    /;
+    return @sub_command_classes;
+}
+
+
+sub variant_detection_job_classes {
     my @steps = (
                  'Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments',
                  'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
@@ -51,21 +62,19 @@ sub backend_job_classes {
     return @steps;
 }
 
-sub frontend_job_classes {
+sub verify_succesful_completion_job_classes {
     my @sub_command_classes= qw/
-        Genome::Model::Command::Build::ReferenceAlignment::AssignRun
-        Genome::Model::Command::Build::ReferenceAlignment::AlignReads
-        Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments
+        Genome::Model::Command::Build::VerifySuccesfulCompletion
     /;
     return @sub_command_classes;
 }
 
-sub frontend_objects {
+sub alignment_objects {
     my $self = shift;
     return $self->model->unbuilt_read_sets;
 }
 
-sub backend_objects {
+sub variant_detection_objects {
     my $self = shift;
     my $model = $self->model;
     my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
@@ -75,12 +84,10 @@ sub backend_objects {
     }
     return @subreferences_names;
 }
-
-sub execute {
+sub verify_succesful_completion_objects {
     my $self = shift;
-    return $self->build_in_stages;
+    return 1;
 }
-
 sub extend_last_execution {
     my ($self) = @_;
 
