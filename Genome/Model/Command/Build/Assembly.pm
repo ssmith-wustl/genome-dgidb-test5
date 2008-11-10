@@ -31,41 +31,49 @@ EOS
 
 sub stages {
     my @stages = qw/
-        stage1
-        stage2
+        setup_project
+        assemble
+        verify_succesful_completion
     /;
 }
 
-sub stage1_job_classes {
-    my @stages = qw/
+sub setup_project_job_classes {
+    my @classes = qw/
             Genome::Model::Command::Build::Assembly::AssignReadSetToModel
             Genome::Model::Command::Build::Assembly::FilterReadSet
             Genome::Model::Command::Build::Assembly::TrimReadSet
             Genome::Model::Command::Build::Assembly::AddReadSetToProject
     /;
-    return @stages;
+    return @classes;
 }
 
-sub stage2_job_classes {
-    my @stages = qw/
+sub assemble_job_classes {
+    my @classes = qw/
             Genome::Model::Command::Build::Assembly::Assemble
     /;
-    return @stages;
+    return @classes;
 }
 
-sub stage1_objects {
+sub verify_succesful_completion_job_classes {
+    my @classes = qw/
+            Genome::Model::Command::Build::VerifySuccesfulCompletion
+    /;
+    return @classes;
+}
+
+sub setup_project_objects {
     my $self = shift;
     return $self->model->unbuilt_read_sets;
 }
 
-sub stage2_objects {
+sub assemble_objects {
     my $self = shift;
     return 1;
 }
 
-sub execute {
+sub verify_succesful_completion_objects {
     my $self = shift;
-    return $self->build_in_stages;
+    return 1;
 }
 
 sub _get_sub_command_class_name{
