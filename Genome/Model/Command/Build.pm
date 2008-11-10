@@ -9,7 +9,7 @@ class Genome::Model::Command::Build {
     is => ['Genome::Model::Event'],
     type_name => 'genome model build',
     table_name => 'GENOME_MODEL_BUILD',
-    first_sub_classification_method_name => '_resolve_subclass_name',
+    #first_sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
         build_id                 => { is => 'NUMBER', len => 10, constraint_name => 'GMB_GME_FK' , is_optional => 1},
     ],
@@ -36,6 +36,7 @@ class Genome::Model::Command::Build {
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
+
     my $model = $self->model;
 
     if ($model->current_running_build_id  && $model->current_running_build_id ne $self->build_id) {
@@ -76,13 +77,12 @@ sub resolve_data_directory {
     return $model->data_directory . '/build' . $self->id;
 }
 
-sub build_in_stages {
+sub execute {
     my $self = shift;
 
-    if ($self->_determine_status_from_existing_events) {
-        $self->event_status('Succeeded');
-        $self->date_completed(UR::Time->now);
-        return 1;
+    if ($self->child_events) {
+        $self->error_message('Build '. $self->build_id .' already has child events. Will not build again.');
+        return;
     }
     my $prior_job_name;
     for my $stage_name ($self->stages) {
@@ -111,6 +111,10 @@ sub build_in_stages {
             }
         }
         $prior_job_name = $self->model_id .'_'. $self->build_id .'_'. $stage_name .'*';
+    }
+    # this is really more of a 'testing' flag and may be more appropriate named such
+    if ($self->auto_execute && !$self->hold_run_jobs) {
+        $self->mail_summary;
     }
     return 1;
 }
@@ -150,49 +154,167 @@ sub objects_for_stage {
     return $self->$objects_method_name;
 }
 
-sub abandon_broke_events_for_stage {
+sub events_for_stage {
+    my $self = shift;
+    my $stage_name = shift;
+    my @events;
+    for my $class ($self->classes_for_stage($stage_name)) {
+        my @class_events = $class->get(
+                                       model_id => $self->model_id,
+                                       parent_event_id => $self->build_id,
+                                   );
+        if ($class_events[0] =~ /^-/) {
+            push @events, sort {$b->id <=> $a->id} @class_events;
+        } else {
+            push @events, sort {$a->id <=> $b->id} @class_events;
+        }
+    }
+    return @events;
+}
+
+
+sub abandon_incomplete_events_for_stage {
     my $self = shift;
     my $stage_name = shift;
 
-    my @failed_events;
-    for my $class ($self->classes_for_stage($stage_name)) {
-        my @class_events = $class->get(model_id => $self->model_id);
-        push @failed_events, grep {$_ =~ /Failed|Crashed/} @class_events;
-    }
-    for my $failed_event (@failed_events) {
-        $failed_event->event_status('Abandoned');
-        $failed_event->date_completed(UR::Time->now);
-        for my $next_event ($failed_event->next_events) {
-            $next_event->event_status('Abandoned');
-            $next_event->date_completed(UR::Time->now);
-            my $lsf_job_id = $next_event->lsf_job_id;
-            if ($lsf_job_id) {
-                `bkill $lsf_job_id`;
+    my @stage_events = $self->events_for_stage($stage_name);
+    my @incomplete_events, grep { $_ !~ /Succeeded|Abandoned/ } @stage_events;
+    if (@incomplete_events) {
+        my $status_message = 'Found '. scalar(@incomplete_events) ." incomplete events for stage $stage_name:\n";
+        for (@incomplete_events) {
+            $status_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
+        }
+        $self->status_message($status_message);
+        my $response_1 = $self->_ask_user_question('Would you like to abandon the incomplete events?');
+        if ($response_1 eq 'yes') {
+            my $response_2 = $self->_ask_user_question('None of the data associated with these events will be included in further processing.  Are you sure?');
+            if ($response_2 eq 'yes') {
+                for my $incomplete_event (@incomplete_events) {
+                    unless ($incomplete_event->abandon) {
+                        $self->error_message('Failed to abandon event '. $incomplete_event->id);
+                        return;
+                    }
+                }
+                # all incomplete events for this stage should now be abandoned
+                #TODO: maybe look again and be sure they are all abandoned
+                return 1;
             }
         }
-    }
-    return 1;
-}
-
-sub _determine_status_from_existing_events {
-    my $self = shift;
-    my @events = $self->child_events;
-    unless (@events) {
+        # we have incomplete events but do not want to abandon
         return;
     }
-    my @broke_events = grep { $_->event_status !~ /Succeeded|Abandoned/ } @events;
-    if( @broke_events ) {
-        my $error_message = 'Found '. scalar(@broke_events) ." broken events\n";
-        for (@broke_events) {
-            $error_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
+    # we have no incomplete events for stage
+    return 1;
+}
+
+sub continue_with_abandoned_events_for_stage {
+    my $self = shift;
+    my $stage_name = shift;
+
+    my @stage_events = $self->events_for_stage($stage_name);
+    my @abandoned_events = grep { $_->event_status eq 'Abandoned' } @stage_events;
+    if (@abandoned_events) {
+        my $status_message = 'Found '. scalar(@abandoned_events) ." abandoned events for stage $stage_name:\n";
+        for (@abandoned_events) {
+            $status_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
         }
-        $self->cry_for_help($error_message);
-        die($error_message);
+        $self->status_message($status_message);
+        my $response = $self->_ask_user_question('Would you like to continue with build, ignoring these abandoned events?');
+        if ($response eq 'yes') {
+            return 1;
+        }
+        return;
     }
     return 1;
 }
 
-sub _force_stage {
+sub ignore_unverified_events_for_stage {
+    my $self = shift;
+    my $stage_name = shift;
+
+    my @stage_events = $self->events_for_stage($stage_name);
+    my @succeeded_events = grep { $_->event_status eq 'Succeeded' } @stage_events;
+    my @can_not_verify_events = grep { !$_->can('verify_succesful_completion') } @succeeded_events;
+    if (@can_not_verify_events) {
+        my $status_message = 'Found '. scalar(@can_not_verify_events) ." events that will not be verified:\n";
+        for (@can_not_verify_events) {
+            $status_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
+        }
+        $self->status_message($status_message);
+        my $response = $self->_ask_user_question('Would you like to continue, ignoring unverified events?');
+        if ($response eq 'yes') {
+            return 1;
+        }
+        return;
+    }
+    return 1;
+}
+
+sub verify_succesful_completion_for_stage {
+    my $self = shift;
+    my $stage_name = shift;
+
+    my @stage_events = $self->events_for_stage($stage_name);
+    my @succeeded_events = grep { $_->event_status eq 'Succeeded' } @stage_events;
+    my @verifiable_events = grep { $_->can('verify_succesful_completion') } @succeeded_events;
+    my @unverified_events = grep { !$_->verify_succesful_completion } @verifiable_events;
+    if (@unverified_events) {
+        my $status_message = 'Found '. scalar(@unverified_events) ." events that can not be verified succesful:\n";
+        for (@unverified_events) {
+            $status_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
+        }
+        $self->status_message($status_message);
+        my $response_1 = $self->_ask_user_question('Would you like to abandon events which failed to verify?');
+        if ($response_1 eq 'yes') {
+            my $response_2 = $self->_ask_user_question('Abandoning these events will exclued all data associated with these events from further analysis.  Are you sure?');
+            if ($response_2 eq 'yes') {
+                for my $unverified_event (@unverified_events) {
+                    unless ($unverified_event->abandon) {
+                        $self->error_message('Failed to abandon event '. $unverified_event->id);
+                        return;
+                    }
+                }
+                return 1;
+            }
+        }
+        return;
+    }
+    return 1;
+}
+
+sub verify_succesful_completion {
+    my $self = shift;
+    for my $stage_name ($self->stages) {
+        unless ($self->verify_succesful_completion_for_stage($stage_name)) {
+            $self->error_message('Failed to verify succesful completion of stage '. $stage_name);
+            return;
+        }
+    }
+    return 1;
+}
+
+sub update_build_state {
+    my $self = shift;
+
+    for my $stage_name ($self->stages) {
+        unless ($self->abandon_incomplete_events_for_stage($stage_name)) {
+            return;
+        }
+        unless ($self->continue_with_abandoned_events_for_stage($stage_name)) {
+            return;
+        }
+        unless ($self->ignore_unverified_events_for_stage($stage_name)) {
+            return;
+        }
+        unless ($self->verify_succesful_completion_for_stage($stage_name)) {
+            return;
+        }
+        $self->remove_dependencies_on_stage($stage_name);
+    }
+    return 1;
+}
+
+sub X_force_stage {
     my $self = shift;
     my $stage_name = shift;
 
@@ -214,6 +336,26 @@ sub _force_stage {
     if ($previous_stage_name) {
         my $dependency = 'done('. $self->model_id .'_'. $self->build_id .'_'. $previous_stage_name .'*)';
         my @classes = $self->classes_for_stage($previous_stage_name);
+        $self->_remove_dependency_for_classes($dependency,\@classes);
+    }
+}
+
+sub remove_dependencies_on_stage {
+    my $self = shift;
+    my $stage_name = shift;
+
+
+    my @stages = $self->stages;
+    my $next_stage_name;
+    for (my $i = 0; $i < scalar(@stages); $i++) {
+        if ($stage_name eq $stages[$i]) {
+            $next_stage_name = $stages[$i+1];
+            last;
+        }
+    }
+    if ($next_stage_name) {
+        my $dependency = 'done('. $self->model_id .'_'. $self->build_id .'_'. $stage_name .'*)';
+        my @classes = $self->classes_for_stage($next_stage_name);
         $self->_remove_dependency_for_classes($dependency,\@classes);
     }
 }
@@ -260,6 +402,8 @@ sub _schedule_stage {
         if (ref($object)) {
             $object_class = ref($object);
             $object_id = $object->id;
+        } elsif ($object == 1) {
+            $object_class = 'single_instance';
         } else {
             $object_class = 'reference_sequence';
             $object_id = $object;
@@ -272,11 +416,11 @@ sub _schedule_stage {
                 . $run_chunk->full_name 
                 . ' (' . $run_chunk->id . ')'
             );
-        }
-        elsif ($object_class eq 'reference_sequence') {
+        } elsif ($object_class eq 'reference_sequence') {
             $self->status_message('Scheduling jobs for reference sequence ' . $object_id);
-        }
-        else {
+        } elsif ($object_class eq 'single_instance') {
+            $self->status_message('Scheduling '. $object_class .' for stage '. $stage_name);
+        } else {
             $self->status_message('Scheduling for '. $object_class .' with id '. $object_id);
         }
         my @command_classes = $self->classes_for_stage($stage_name);
@@ -296,7 +440,7 @@ sub _schedule_command_classes_for_object {
         if (ref($command_class) eq 'ARRAY') {
             push @scheduled_commands, $self->_schedule_command_classes_for_object($object,$command_class,$prior_event_id);
         } else {
-           if ($command_class->can('command_subclassing_model_property')) {
+            if ($command_class->can('command_subclassing_model_property')) {
                 my $subclassing_model_property = $command_class->command_subclassing_model_property;
                 unless ($self->model->$subclassing_model_property) {
                     # TODO: move into the creation of the processing profile
@@ -309,12 +453,12 @@ sub _schedule_command_classes_for_object {
                 if (ref($object)) {
                     unless ($object->can('ref_seq_id')) {
                         my $error_message = 'No support for the new Genome::Model::RefSeq objects. FIX ME!!!';
-                        $self->cry_for_help($error_message);
-                        die($error_message);
+                        $self->error_message($error_message);
+                        die;
                     }
                     my $error_message = 'Expecting non-reference for EventWithRefSeq but got '. ref($object);
-                    $self->cry_for_help($error_message);
-                    die($error_message);
+                    $self->error_message($error_message);
+                    die;
                 }
                 $command = $command_class->create(
                                                   model_id => $self->model_id,
@@ -323,8 +467,8 @@ sub _schedule_command_classes_for_object {
             } elsif ($command_class->isa('Genome::Model::EventWithReadSet')) {
                 unless ($object->isa('Genome::Model::ReadSet')) {
                     my $error_message = 'Expecting Genome::Model::ReadSet object but got '. ref($object);
-                    $self->cry_for_help($error_message);
-                    die($error_message);
+                    $self->error_message($error_message);
+                    die;
                 }
                 $command = $command_class->create(
                                                   read_set_id => $object->read_set_id,
@@ -338,17 +482,15 @@ sub _schedule_command_classes_for_object {
             }
             unless ($command) {
                 my $error_message = 'Problem creating subcommand for class '
-                            . ' for object class '. ref($object)
-                            . ' model id '. $self->model_id
+                    . ' for object class '. ref($object)
+                        . ' model id '. $self->model_id
                             . ': '. $command_class->error_message();
-                $self->cry_for_help($error_message);
-                die($error_message);
+                $self->error_message($error_message);
+                die;
             }
             $command->parent_event_id($self->id);
-            $command->event_status('Scheduled');
-            $command->retry_count(0);
             $command->prior_event_id($prior_event_id);
-
+            $command->schedule;
             $prior_event_id = $command->id;
             push @scheduled_commands, $command;
             my $object_id;
@@ -364,23 +506,24 @@ sub _schedule_command_classes_for_object {
     return @scheduled_commands;
 }
 
-sub cry_for_help {
+sub mail_summary {
     my $self = shift;
-    my $reason = shift;
 
+    my $model = $self->model;
+    
     my $sendmail = "/usr/sbin/sendmail -t";
     my $from = "From: ssmith\@genome.wustl.edu\n";
     my $reply_to = "Reply-to: thisisafakeemail\n";
-    my $subject = "Subject: Build failed.\n";
-    my $content = "This is the Build failure email. your build ". $self->id . " failed. \n$reason\n";
+    my $subject = "Subject: Build Summary.\n";
+    my $content = 'This is the Build Summary for your model '. $model->name .' and build '. $self->id ."\n";
     my $to = "To: " . $self->user_name . '@genome.wustl.edu' . "\n";
 
-    my $helpful_link1= "https://gscweb.gsc.wustl.edu/cgi-bin/solexa/genome-model-stage1.cgi?model-name=" . $self->model->name  .    "&refresh=1\n\n";
-    my $helpful_link2= "https://gscweb.gsc.wustl.edu/cgi-bin/solexa/genome-model-stage2.cgi?model-name=" . $self->model->name  .    "&refresh=1\n";
-
-    $content .= $helpful_link1 . $helpful_link2;
-
-
+    $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/'. $model->sequencing_platform
+        .'/genome-model-stage1.cgi?model-name='. $model->name  ."&refresh=1\n\n";
+    if ($model->sequencing_platform eq 'solexa') {
+        $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/'. $model->sequencing_platform
+            .'/genome-model-stage2.cgi?model-name=' . $model->name  ."&refresh=1\n";
+    }
 
     open(SENDMAIL, "|$sendmail") or die "Cannot open $sendmail: $!";
     print SENDMAIL $reply_to;
@@ -392,6 +535,25 @@ sub cry_for_help {
     return 1;
 }
 
+sub _ask_user_question {
+    my $self = shift;
+    my $question = shift;
+
+    local $SIG{ALRM} = sub {
+        $self->warning_message("No reply for question '$question'");
+        return;
+    };
+
+    $self->status_message($question);
+    alarm 60;
+    my $input;
+    while ($input !~ /^yes$|^no$/) {
+        $self->status_message('Please reply with one of the following: yes/no');
+        chomp($input = <STDIN>);
+    }
+    alarm 0;
+    return $input;
+}
 
 1;
 
