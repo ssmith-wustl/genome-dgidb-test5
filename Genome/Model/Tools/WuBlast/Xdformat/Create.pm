@@ -66,7 +66,6 @@ sub create {
 
     # Handle DB
     for my $file ( $self->xdformat_files ) {
-        print $file;
         next unless -e $file;
         if ( $self->overwrite_db ) {
             unlink $file
