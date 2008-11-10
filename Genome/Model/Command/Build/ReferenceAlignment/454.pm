@@ -32,6 +32,7 @@ sub stages {
     my @stages = qw/
         stage1
         stage2
+        verify_succesful_completion
     /;
     return @stages;
 }
@@ -53,6 +54,14 @@ sub stage2_job_classes {
 
     return (\@step1, \@step2, \@step3, \@step4);
 }
+
+sub verify_succesful_completion_job_classes {
+    my @sub_command_classes= qw/
+        Genome::Model::Command::Build::VerifySuccesfulCompletion
+    /;
+    return @sub_command_classes;
+}
+
 sub stage1_objects {
     my $self = shift;
     return $self->model->unbuilt_read_sets;
@@ -63,9 +72,9 @@ sub stage2_objects {
     return 1;
 }
 
-sub execute {
+sub verify_succesful_completion_objects {
     my $self = shift;
-    return $self->build_in_stages;
+    return 1;
 }
 
 sub _get_sub_command_class_name{
