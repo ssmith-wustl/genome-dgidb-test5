@@ -11,6 +11,13 @@ require Genome::Model::Tools::WuBlast::Xdformat::Verify;
 #BLASTN: E, S, E2, S2, W, T, X, M, N, Y, Z, L, K, H, V, B
 #BLASTP: E, S, E2, S2, W, T, X, M,    Y, Z, L, K, H, V, B
 #BLASTX: E, S, E2, S2, W, T, X, M, C, Y, Z, L, K, H, V, B 
+
+#TODO Need better way to validate blast parameters, probably ValidParams.pm. 
+#Blast parameters are divided into two categories: key-value pairs and flags. 
+#Current way can not deal with flags and does not include all parameters. Plus,
+#wublast has a flexible way to format parameters   - by Feiyu
+
+
 my %BASE_BLAST_PARAMS = (
     E => 'Expectation threshold for reporting database hits.',
     S => 'Score-equivalence threshold for reporting database hits',
@@ -32,33 +39,38 @@ my %BASE_BLAST_PARAMS = (
 );
 
 class Genome::Model::Tools::WuBlast {
-    is => 'Command',
+    is  => 'Command',
     has => [
-    database => {
-        type => 'String',
-        is_input => 1,
-        doc => 'The path to a blastable database (xdformat)',
-    },
-    query_file => {
-        type => 'String',
-        is_input => 1,
-        doc => 'Query files (comma separated from the command line)',
-    },
+        database => {
+            type     => 'String',
+            is_input => 1,
+            doc      => 'The path to a blastable database (xdformat)',
+        },
+        query_file => {
+            type     => 'String',
+            is_input => 1,
+            doc      => 'Query files (comma separated from the command line)',
+        },
     ],
     has_optional => [
-    output_file => {
-        type => 'String',
-        is_input => 1,
-        doc => 'File name for the output.  Default is the database with an appended ".blast" extension',
-    },
-    map(
-        {
-            $_ => {
-                type => 'String',
-                doc => $BASE_BLAST_PARAMS{$_},
-            }
-        } keys %BASE_BLAST_PARAMS,
-    ),
+        params => {
+            type     => 'String',
+            is_input => 1,
+            doc      => 'the flexible parameter string, considering the huge choice of blast parameters',
+        },
+        output_file => {
+            type     => 'String',
+            is_input => 1,
+            doc      => 'File name for the output.  Default is the database with an appended ".blast" extension',
+        },
+        map(
+            {
+                $_ => {
+                    type => 'String',
+                    doc  => $BASE_BLAST_PARAMS{$_},
+                }
+            } keys %BASE_BLAST_PARAMS,
+        ),
     ],
 };
 
@@ -79,7 +91,7 @@ sub create {
     # Verify DB
     Genome::Model::Tools::WuBlast::Xdformat::Verify->execute(
         database => $self->database,
-        db_type => $self->_blast_type,
+        db_type  => $self->_blast_type,
     )
         or return;
 
@@ -151,9 +163,15 @@ sub _blast_type {
 
 sub _construct_blast_command {
     my $self = shift;
-
-    my $blast_params = $self->_blast_params_and_values
-        or return;
+    my $param_str;
+    
+    if ($self->params) {
+        $param_str = $self->params;
+    }
+    else {
+        my $blast_params = $self->_blast_params_and_values or return;
+        $param_str = join(' ', map({ sprintf('%s=%s', $_, $blast_params->{$_}) } keys %$blast_params));
+    }
 
     unlink $self->output_file if -e $self->output_file;
     
@@ -162,7 +180,7 @@ sub _construct_blast_command {
         $self->_blast_command,
         $self->database,
         $self->query_file,
-        join(' ', map({ sprintf('-%s %s', $_, $blast_params->{$_}) } keys %$blast_params)),
+        $param_str,
         $self->output_file,
     );
 
