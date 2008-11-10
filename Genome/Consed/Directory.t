@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 30;
+use Test::More tests => 5;
 
 use Genome::Consed::Directory;
 use File::Path;
@@ -38,10 +38,6 @@ ok ($directories[0] eq 'edit_dir' && $directories[1] eq 'phd_dir' && $directorie
 
 $consed_dir->create_consed_directory_structure;
 ok(-d "$path/".$directories[0] && -d "$path/".$directories[0] && -d "$path/".$directories[0], "Created directory structure");
-
-SKIP: {
-    skip "These are not used and probably will be removed at some point... just have to remove the calls from the tree", 1, if 1;
-}
 
 destroy_test_fixture();
 
