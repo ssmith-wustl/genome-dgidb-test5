@@ -26,7 +26,7 @@ my $s_bi = Genome::Model::Tools::BioDbFasta::Subsequence->create(
                                                                  stop => $stop
                                                                  );
 
-is($s_bi->execute(),0,'bad index');
+ok(!defined $s_bi->execute(),'bad index');
 
 my $s_noi =Genome::Model::Tools::BioDbFasta::Subsequence->create(
                                                                  dir => $no_index,
@@ -35,7 +35,7 @@ my $s_noi =Genome::Model::Tools::BioDbFasta::Subsequence->create(
                                                                  stop => $stop
                                                                  );
 
-is($s_noi->execute(),0,'no index');
+ok(!defined $s_noi->execute(),'no index');
 
 my $s = Genome::Model::Tools::BioDbFasta::Subsequence->create(
                                                                  dir => $indexed,
