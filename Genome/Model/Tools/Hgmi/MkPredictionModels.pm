@@ -102,7 +102,7 @@ sub execute
     my $gmhmmp_mod = $gmhmmp_dir . "/heu_11_" . $self->gc . ".mod";
     my $gmhmmp_dest = $self->work_directory ."/heu_11_".$self->gc .".mod";
     symlink($gmhmmp_mod, $gmhmmp_dest) 
-        or croak "can't symlink gmhmmp model $gmhmmp_mod, $@";
+        or croak "can't symlink gmhmmp model $gmhmmp_mod to $gmhmmp_dest, $@";
     my $workdir = $self->work_directory;
     my $model = $buildglimmer->model_file;
     my $newmodel = $workdir ."/". $self->locus_tag_prefix . "_gl3.icm";
