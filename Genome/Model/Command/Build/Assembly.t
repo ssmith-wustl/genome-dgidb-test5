@@ -16,7 +16,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 189;
+    plan tests => 195;
 
     use_ok( 'Genome::RunChunk::454');
     use_ok( 'Genome::Model::Assembly');
@@ -54,6 +54,7 @@ my %pp_2_params = (
              );
 my @pp_params = (\%pp_1_params,\%pp_2_params);
 
+my $skip_assemble = 1;
 my $model_base_name = 'test_assembly_model';
 my $subject_name = 'H_FY-454_96normal_tspset3_indel';
 my $subject_type = 'sample_name';
@@ -147,7 +148,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
              'Found Scheduled...AddReadSetToProject messages');
         splice(@status_messages, 0, $index);
     }
-    like($status_messages[0], qr(^Scheduling jobs for reference sequence .*), 'Found reference_sequence message');
+    is($status_messages[0],'Scheduling single_instance for stage assemble', 'Found single_instance message');
     like($status_messages[1], qr(^Scheduled Genome::Model::Command::Build::Assembly::Assemble),
         'Found Build Assembly message');
     
@@ -157,7 +158,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     @error_messages = $assembly_builder->error_messages;
     is(scalar(@error_messages), 0, 'executing builder generated no error messages');
 
-    for my $class ($assembly_builder->stage1_job_classes) {
+    for my $class ($assembly_builder->setup_project_job_classes) {
         my @events = $class->get(model_id => $model->id);
         for my $event (@events) {
 
@@ -183,8 +184,16 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     my $assemble = $assemble_events[0];
     isa_ok($assemble,'Genome::Model::Command::Build::Assembly::Assemble');
   SKIP: {
-        skip "assemble takes a long time", 1;
+        skip "assemble takes a long time", $skip_assemble;
         ok($assemble->execute,'execute assemble project');
+    }
+    my @verify_events = Genome::Model::Command::Build::VerifySuccesfulCompletion->get(model_id => $model->id);
+    is(scalar(@verify_events),1,'one verify event for project');
+    my $verify = $verify_events[0];
+    isa_ok($verify,'Genome::Model::Command::Build::VerifySuccesfulCompletion');
+    SKIP: {
+          skip 'no reason to verify if we skipped assemble', $skip_assemble;
+          ok($verify->execute,'execute verify_succesful_completion on build');
     }
     rmtree($model->data_directory);
 }
