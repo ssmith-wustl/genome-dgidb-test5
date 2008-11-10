@@ -408,16 +408,18 @@ sub combine_variants_for_set{
     # Pass them into generate_genotype to make the decisions
 
     while ($polyphred_genotype or $polyscan_genotype){
-        my ($chr1, $start1, $chr2, $start2);
+        my ($chr1, $start1, $sample1, $chr2, $start2, $sample2);
         if ($polyscan_genotype){
             $chr1 = $polyscan_genotype->{chromosome};
             $start1 = $polyscan_genotype->{start};
+            $sample1 = $polyscan_genotype->{sample_name};
         }
         if ($polyphred_genotype){
             $chr2 = $polyphred_genotype->{chromosome};
             $start2 = $polyphred_genotype->{start};
+            $sample2 = $polyphred_genotype->{sample_name};
         }
-        my $cmp = compare_position($chr1, $start1, $chr2, $start2);
+        my $cmp = compare_position_and_sample($chr1, $start1, $sample1, $chr2, $start2, $sample2);
         unless (defined $cmp){
             if ($polyphred_genotype and !$polyscan_genotype){
                 $cmp = 1;
@@ -969,6 +971,22 @@ sub format_maf_line_from_matched_samples{
         return $line;
     }
     return undef;
+}
+
+# Compares chromosome, position, and sample name
+sub compare_position_and_sample {
+    my ($chr1, $pos1, $sample1, $chr2, $pos2, $sample2) = @_;
+    unless (defined $chr1 and defined $chr2 and defined $pos1 and defined $pos2 and defined $sample1 and defined $sample2){
+        return undef;
+    }
+    my $pos_cmp = compare_position($chr1, $pos1, $chr2, $pos2);
+    if ($pos_cmp < 0){
+        return -1;
+    }elsif ($pos_cmp == 0){
+        return $sample1 cmp $sample2;
+    }else{
+        return 1;
+    }
 }
 
 =cut
