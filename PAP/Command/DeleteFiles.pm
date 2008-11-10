@@ -47,10 +47,12 @@ sub execute {
 
     foreach my $file (@files) {
 
-        unless(unlink($file)) {
+    	if (-e $file) {
+            unless(unlink($file)) {
 
-            die "failed to unlink '$file': $OS_ERROR";
+                die "failed to unlink '$file': $OS_ERROR";
 
+         	}	
         }
 
     }

@@ -201,7 +201,7 @@ sub parse_result {
 
         }
         
-        $feature->add_tag_value('blastp_category', => 'protein_category');
+        $feature->add_tag_value('blastp_category', => $protein_category);
         
         push @features, $feature;
         
