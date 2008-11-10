@@ -5,6 +5,7 @@ use warnings;
 
 use above "Genome";
 
+use Data::Dumper;
 use File::Temp;
 use Test::More tests => 14;
 
@@ -18,13 +19,10 @@ BEGIN {
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $database = $tmp_dir .'/test_db';
 
-my $ref_seq_dir = '/gscmnt/839/info/medseq/reference_sequences/refseq-for-test';
-opendir(DIR,$ref_seq_dir) || die "Failed to open dir $ref_seq_dir";
-my @ref_seq_files = grep { !/^all_seq/ } grep { /\.fa$/ } readdir(DIR);
-closedir(DIR);
-is(scalar(@ref_seq_files),3,'expected three ref seq files');
-
-my @fasta_files = map {$ref_seq_dir .'/'. $_} @ref_seq_files;
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-WuBlast-Xdformat';
+my @fasta_names = (qw/ 11 12 13 /);
+my @fasta_files = map { sprintf('%s/%s.fa', $test_data_dir, $_) } @fasta_names;
+is(grep({ -s } @fasta_files), 3, 'The three fasta files exist');
 
 # CREATE
 my $create_success = Genome::Model::Tools::WuBlast::Xdformat::Create->create(
