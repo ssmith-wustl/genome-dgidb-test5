@@ -83,22 +83,22 @@ sub execute {                               # replace with real execution logic.
 	{
 		if(!(-e $dir . '/directory.index'))		
 		{
-			print "Input directory index not yet built (run gt bio-db-fasta build). Exiting...\n";
-			return(0);		
+                    $self->error_message('Input directory index not yet built (run gt bio-db-fasta build). Exiting...');
+                    return;
 		}
 	}
 	else
 	{
-		print "Input directory does not exist. Exiting...\n";
-		return(0);			
+            $self->error_message('Input directory does not exist. Exiting...');
+            return(0);
 	}
 
 	## Access the index and retrieve the sequence ##
 	my $seqdb = Bio::DB::Fasta->new($dir); 
         unless(defined($seqdb))
         {
-            print "\$seqdb is undef on $dir";
-            return 0;
+            $self->error_message("Failed to create new Bio::DB::Fasta object for dir '$dir'");
+            return;
         }
 	my $spiece = $seqdb->seq($self->name, $self->start => $self->stop);
 
