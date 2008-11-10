@@ -94,9 +94,9 @@ sub get_and_validate_acefile_for_ace
     my $acefile = $self->acefile_for_ace($ace)
         or return;
 
-    $self->error_msg("Acefile ($acefile) does not exist")
+    $self->error_message("Acefile ($acefile) does not exist")
         and return unless -e $acefile;
-    $self->error_msg("Acefile ($acefile) exists but is empty")
+    $self->error_message("Acefile ($acefile) exists but is empty")
         and return unless -s $acefile;
 
     return $acefile;
@@ -233,7 +233,7 @@ sub _unique_ace_hash {
         }
     }
 
-    $self->error_msg( sprintf('No aces found in dir (%s)', $self->directory) )
+    $self->error_message( sprintf('No aces found in dir (%s)', $self->directory) )
         and return unless %aces;
     
     return \%aces;
