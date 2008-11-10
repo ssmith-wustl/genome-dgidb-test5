@@ -275,8 +275,10 @@ sub latest_build_directory {
     if (defined $self->current_running_build_id) {
         my $build = Genome::Model::Command::Build->get($self->current_running_build_id);
         return $build->data_directory;
-    }
-    else {
+    } elsif (defined $self->last_complete_build_id) {
+        my $build = Genome::Model::Command::Build->get($self->last_complete_build_id);
+        return $build->data_directory;
+    } else {
        die "no builds found";
     }
 }
