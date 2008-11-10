@@ -54,6 +54,13 @@ sub context {
     UR::Context->get_current();
 }
 
+sub event_types_without_subclass {
+    return (
+            'genome-model build verify-succesful-completion',
+            'genome-model build assembly assemble newbler'
+        );
+}
+
 sub execute {
     my $self = shift;
 
@@ -176,7 +183,7 @@ sub _verify_submitted_jobs {
     $DB::single=1;
     while (my $event = shift @queued_events) {
         unless ($event->ref_seq_id || $event->read_set_id) {
-            unless ($event->event_type eq 'genome-model build assembly assemble newbler') {
+            unless (grep { $event->event_type eq $_ }  $self->event_types_without_subclass) {
                 $self->error_message("Event ".$event->id." has no ref_seq_id or read_id... skipping.");
                 next;
             }
@@ -233,7 +240,7 @@ sub _schedule_scheduled_jobs {
                                                        %addl_get_params);
     while (my $event = shift @launchable_events) {
         unless ($event->ref_seq_id || $event->read_set_id) {
-            unless ($event->event_type eq 'genome-model build assembly assemble newbler') {
+            unless (grep { $event->event_type eq $_ }  $self->event_types_without_subclass) {
                 $self->error_message("Event ".$event->id." has no ref_seq_id or read_set_id... skipping.");
                 next;
             }
