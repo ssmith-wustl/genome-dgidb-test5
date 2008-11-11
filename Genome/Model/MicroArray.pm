@@ -10,6 +10,7 @@ use Sort::Naturally;
 
 class Genome::Model::MicroArray{
     is => 'Genome::Model::ImportedVariants',
+    is_abstract => 1,
     has => [
         
         file_sample_name                => { is     => 'String',
