@@ -23,78 +23,77 @@ class Genome::Model {
     first_sub_classification_method_name => '_resolve_subclass_name',
     sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
-        genome_model_id => { is => 'NUMBER', len => 11 },
+    genome_model_id => { is => 'NUMBER', len => 11 },
     ],
     has_many => [
-        project_assignments         => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'model' },
-        projects                    => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
-        project_names               => { is => 'Text', via => 'projects', to => 'name' },
+    project_assignments         => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'model' },
+    projects                    => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
+    project_names               => { is => 'Text', via => 'projects', to => 'name' },
     ],
     has => [
-        read_sets =>  { is => 'Genome::Model::ReadSet', reverse_id_by => 'model', is_many=> 1 },
-        builds => { is => 'Genome::Model::Command::Build', reverse_id_by => 'model', is_many => 1 },
-        run_chunks => { is => 'Genome::RunChunk', via=>'read_sets', to => 'read_set' },
-        current_running_build_id => {is => 'NUMBER' , len => 10 },
-        last_complete_build_id => {is => 'NUMBER', len=> 10 },
-        data_directory               => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
-        processing_profile           => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
-        processing_profile_name      => { via => 'processing_profile', to => 'name'},
-        type_name                    => { via => 'processing_profile'},
-        name                         => { is => 'VARCHAR2', len => 255 },
-        subject_name                 => { is => 'VARCHAR2', len => 255 },
-        subject_type                 => { is => 'VARCHAR2', len => 255 },
-        instrument_data_links        => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
-                                            doc => "for models which directly address instrument data, the list of assigned run chunks"
-                                        },
-        instrument_data              => { via => 'instrument_data_links', to => 'read_set_id', is_mutable => 1 },
-        events                       => {
-                                         is => 'Genome::Model::Event',
-                                         is_many => 1,
-                                         reverse_id_by => 'model', 
-                                         doc => 'all events which have occurred for this model',
-                                     },
-        creation_event               => { doc => 'The creation event for this model',
-                                          calculate => q|
-                                                            my @events = $self->events;
-                                                            for my $event (@events) {
-                                                                if ($event->event_type eq 'genome-model create model') {
-                                                                    return $event;
-                                                                }
-                                                            }
-                                                            return undef;
-                                                        |
-                                        },
-        test                         => { is => 'Boolean',
-                                          doc => 'testing flag',
-                                          is_optional => 1,
-                                          is_transient => 1,
-                                        },
-        _printable_property_names_ref =>{ is => 'array_ref',
-                                          doc => 'calculate all property names once',
-                                          is_optional => 1,
-                                          is_transient => 1,
-                                        }
-                                        
+    read_sets =>  { is => 'Genome::Model::ReadSet', reverse_id_by => 'model', is_many=> 1 },
+    builds => { is => 'Genome::Model::Command::Build', reverse_id_by => 'model', is_many => 1 },
+    run_chunks => { is => 'Genome::RunChunk', via=>'read_sets', to => 'read_set' },
+    current_running_build_id => {is => 'NUMBER' , len => 10 },
+    last_complete_build_id => {is => 'NUMBER', len=> 10 },
+    data_directory               => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
+    processing_profile           => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
+    processing_profile_name      => { via => 'processing_profile', to => 'name'},
+    type_name                    => { via => 'processing_profile'},
+    name                         => { is => 'VARCHAR2', len => 255 },
+    subject_name                 => { is => 'VARCHAR2', len => 255 },
+    subject_type                 => { is => 'VARCHAR2', len => 255 },
+    instrument_data_links        => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
+        doc => "for models which directly address instrument data, the list of assigned run chunks"
+    },
+    instrument_data              => { via => 'instrument_data_links', to => 'read_set_id', is_mutable => 1 },
+    events                       => {
+        is => 'Genome::Model::Event',
+        is_many => 1,
+        reverse_id_by => 'model', 
+        doc => 'all events which have occurred for this model',
+    },
+    creation_event               => { doc => 'The creation event for this model',
+        calculate => q|
+        my @events = $self->events;
+        for my $event (@events) {
+        if ($event->event_type eq 'genome-model create model') {
+        return $event;
+        }
+        }
+        return undef;
+        |
+    },
+    test                         => { is => 'Boolean',
+        doc => 'testing flag',
+        is_optional => 1,
+        is_transient => 1,
+    },
+    _printable_property_names_ref =>{ is => 'array_ref',
+        doc => 'calculate all property names once',
+        is_optional => 1,
+        is_transient => 1,
+    },
     ],
     has_optional => {
         #   last_complete_build         => { is => 'Genome::Model::Command::Build', id_by => ['last_complete_build_id'] },
         current_running_build       => { is => 'Genome::Model::Command::Build', id_by => ['current_running_build_id'] },
         sequencing_platform          => { via => 'processing_profile'},
         read_set_class_name          => {
-                                          calculate_from => ['sequencing_platform'],
-                                          calculate => q| 'Genome::RunChunk::' . ucfirst($sequencing_platform) |,
-                                          doc => 'the class of read set assignable to this model'
-                                      },
+            calculate_from => ['sequencing_platform'],
+            calculate => q| 'Genome::RunChunk::' . ucfirst($sequencing_platform) |,
+            doc => 'the class of read set assignable to this model'
+        },
         input_read_set_class_name    => { 
-                                          calculate_from => ['read_set_class_name'],
-                                          calculate => q|$read_set_class_name->_dw_class|,
-                                          doc => 'the class of read set assignable to this model in the dw'
-                            },
+            calculate_from => ['read_set_class_name'],
+            calculate => q|$read_set_class_name->_dw_class|,
+            doc => 'the class of read set assignable to this model in the dw'
+        },
         read_set_addition_events     => { is => 'Genome::Model::Command::AddReads',
-                                           is_many => 1,
-                                           reverse_id_by => 'model',
-                                           doc => 'each case of a read set being assigned to the model',
-                                      },
+            is_many => 1,
+            reverse_id_by => 'model',
+            doc => 'each case of a read set being assigned to the model',
+        },
     },
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -103,16 +102,112 @@ class Genome::Model {
 
 sub create {
     my $class = shift;
-    my $self = $class->SUPER::create(@_);
+    
+    my $self = $class->SUPER::create(@_)
+        or return;
 
+    # Verify subject_type
+    unless ( grep { $self->subject_type eq $_ } subject_types() ) {
+        $self->error_message(
+            sprintf(
+                "Invalid subject type (%s), please select from:\n %s",
+                $self->subject_type,
+                join("\n ", subject_types()), 
+            )
+        );
+        $self->SUPER::delete;
+        return;
+    }
+    
+    # Verify subjects
+    unless ( $self->_verify_subjects ) {
+        $self->SUPER::delete;
+        return;
+    }
+    
     # If data directory has not been supplied, figure it out
     unless ($self->data_directory) {
-        $self->data_directory($self->resolve_data_directory);
+        $self->data_directory( $self->resolve_data_directory );
     }
 
     return $self;
 }
 
+#< Subject Types >#
+my %SUBJECT_TYPES = (
+    species_name => {
+        needs_to_be_verified => 1,
+        class => 'Genome::Sample',
+        property => 'name',
+    },
+    sample_name => {
+        needs_to_be_verified => 1,
+        class => 'Genome::Taxon',
+        property => 'species_name',
+    },
+    sample_group => {
+        needs_to_be_verified => 0,
+        #class => 'Genome::Sample',
+        #property => 'name',
+    },
+    dna_resource_item_name => {
+        needs_to_be_verified => 1,
+        #class => 'Genome::Sample',
+        #property => 'name',
+    },
+);
+sub subject_types {
+    return keys %SUBJECT_TYPES;
+}
+
+sub subject_type_class {
+    return $SUBJECT_TYPES{ $_[0]->subject_type }->{class};
+}
+
+sub subject_type_property {
+    return $SUBJECT_TYPES{ $_[0]->subject_type }->{property};
+}
+
+sub need_to_verify_subjects_for_type {
+    return $SUBJECT_TYPES{ $_[0]->subject_type }->{needs_to_be_verified};
+}
+
+sub get_subjects {
+    my $self = shift;
+
+    my $subject_class = $self->subject_type_class;
+    my $subject_property = $self->subject_type_property;
+
+    return $subject_class->get(
+        $subject_property => $self->subject_name,
+    );
+}
+
+sub _verify_subjects {
+    my $self = shift;
+
+    return 1 unless $self->need_to_verify_subjects_for_type;
+
+    my @subjects = $self->get_subjects;
+    unless ( @subjects ) {
+        my $subject_class = $self->subject_type_class;
+        my $subject_property = $self->subject_type_property;
+        $self->error_message( 
+            sprintf(
+                "No subjects with %s (%s) found.\nPossible subjects for type (%s) include:\n %s\nPlease select from the above", 
+                $subject_property,
+                $self->subject_name,
+                $self->subject_type,
+                join("\n ", sort map { $_->$subject_property } $subject_class->get()),
+            ) 
+        );
+        return;
+    }
+
+    return @subjects;
+}
+
+#<>#
 sub compatible_input_items {
     my $self = shift;
 
@@ -555,3 +650,6 @@ sub delete {
 }
 
 1;
+
+#$HeadURL$
+#$Id$
