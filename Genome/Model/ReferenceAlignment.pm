@@ -96,7 +96,8 @@ class Genome::Model::ReferenceAlignment {
 sub create {
     my $class = shift;
 
-    my $self = $class->SUPER::create(@_);
+    my $self = $class->SUPER::create(@_)
+        or return;
 
     if ($self->read_aligner_name and $self->read_aligner_name eq 'newbler') {
         my $new_mapping = Genome::Model::Tools::454::Newbler::NewMapping->create(
