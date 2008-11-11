@@ -1,3 +1,4 @@
+
 package Genome::Model::Command::Report::SolexaStageTwo;
 
 use strict;
@@ -10,15 +11,7 @@ use Memoize;
 use IO::File;
 use Cwd;
 use File::Basename qw/basename/;
-use GSCApp;
 use App::Report;
-
-unless(App::Init->initialized) {
-App->init();
-}
-
-
-
 
 class Genome::Model::Command::Report::SolexaStageTwo{
     is => 'Genome::Model::Command::Report',
@@ -43,8 +36,7 @@ sub resolve_reports_directory {
    return $reports_dir;
 }
 
-sub generate_report_brief 
-{
+sub generate_report_brief {
     my $self=shift;
     my $model= $self->model;
     $self->preload_data();
@@ -55,9 +47,6 @@ sub generate_report_brief
 
     my $desc = @details . " read sets for " . $model->name . " as of " . UR::Time->now;
     $brief->print("<div>$desc</div>");
-
-
-    
 }
 
 sub generate_report_detail {    

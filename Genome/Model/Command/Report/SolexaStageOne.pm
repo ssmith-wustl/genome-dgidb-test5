@@ -10,18 +10,9 @@ use Memoize;
 use IO::File;
 use Cwd;
 use File::Basename qw/basename/;
-use GSCApp;
-use App::Report;
-
-unless(App::Init->initialized) {
-App->init();
-}
-
-
-
 
 class Genome::Model::Command::Report::SolexaStageOne {
-    is => 'Genome::Model::Command::Report',
+    is => 'Genome::Model::Command::Report'
 };
 
 my %div_hash;
