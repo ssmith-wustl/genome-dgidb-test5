@@ -30,7 +30,12 @@ class Genome::Model::Event {
                                      is => 'NUMBER',
                                      len => 11,
                                      column_name => 'RUN_ID',
-                                     doc => 'the id of thegenome_model_run on which to operate',
+                                     doc => 'the id of the genome_model_run on which to operate',
+                                 },
+                  instrument_data    => {
+                                     is => 'Genome::InstrumentData',
+                                     id_by => 'read_set_id',
+                                     doc => 'The id of the instrument data on which to operate',
                                  },
                      ref_seq_id        => {
                                            is => 'NUMBER',
@@ -795,3 +800,6 @@ sub lsf_dependency_condition {
 }
 
 1;
+
+#$HeadURL$
+#$Id$
