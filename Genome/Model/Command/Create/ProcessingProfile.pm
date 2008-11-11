@@ -193,7 +193,7 @@ sub resolve_build_class {
 sub get_subclass_property_to_possible_values_hash {
     my $self = shift;
     my $build_class = $self->resolve_build_class;
-    my @command_subclasses = $build_class->sub_command_classes;
+    my @command_subclasses = grep { defined $_ and length($_) } $build_class->sub_command_classes;
     push @command_subclasses, $build_class;
     # Build a hash of hashes to map each of the subclassing properties to their
     # possible values and the class associated
@@ -231,6 +231,7 @@ sub get_subclassing_value_to_subclass_hash {
     #       Maq         G::M::C::Build::ReferenceAlignment::AlignReads::Maq
     #       Mosaik      ""                         ""::Mosaik
     #       etc         etc
+    no warnings;
     my %subclassing_value_to_subclass =
         $target_class->_sub_command_name_to_class_name_map();
 
