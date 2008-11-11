@@ -2,7 +2,8 @@
 
 use strict;
 use warnings;
-use Test::More tests => 30;
+#use Test::More tests => 30;
+use Test::More skip_all => "SLOOOOOOOOOOOOOOW"; 
 use above "Genome";
 
 my $data_path = '/gsc/var/cache/testsuite/data/Genome-Model-PolyphredPolyscan-CollateSampleGroupMutations';
