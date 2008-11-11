@@ -1,4 +1,3 @@
-
 package Genome::Model::Command;
 
 use strict;
@@ -7,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command {
-    is => ['Command'],
+    is => 'Command',
     english_name => 'genome model command',
     has => [
         model           => { is => 'Genome::Model', id_by => 'model_id' },
@@ -17,21 +16,21 @@ class Genome::Model::Command {
 };
 
 sub command_name {
-    my $self = shift;
-    my $class = ref($self) || $self;
-    return 'genome-model' if $class eq __PACKAGE__;
-    return $self->SUPER::command_name(@_);
+    my $class = ref($_[0]) || $_[0];
+    return $class->SUPER::command_name unless $class eq __PACKAGE__;
+    return 'genome model';
+}
+
+sub command_name_brief {
+    my $class = ref($_[0]) || $_[0];
+    return $class->SUPER::command_name_brief unless $class eq __PACKAGE__;
+    return 'model';
 }
 
 sub help_brief {
-    my $self = shift;
-    my $meta = $self->get_class_object;
-    if ($meta->doc) {
-        return $meta->doc;
-    }
-    else {
-        return "modularized methods to operate on a genome model"
-    }
+    my $class = ref($_[0]) || $_[0];
+    return "Please define 'help_brief' in ($class)" unless $class eq __PACKAGE__;
+    return 'Operations for model';
 }
 
 sub create {
