@@ -21,10 +21,12 @@ BEGIN {
 
 my $sff_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-454-ReadSeparation/test_454_primer_tag_100k.sff';
 
-my $read_separation = Genome::Model::Tools::454::ReadSeparation->create(
-                                                                        sff_file => $sff_file,
-                                                                    );
+my $read_separation = 
+    Genome::Model::Tools::454::ReadSeparation->create(
+        sff_file => $sff_file,
+    );
 
 ok($read_separation->execute,'execute '. $read_separation->command_name);
 
 exit;
+
