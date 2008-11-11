@@ -90,6 +90,8 @@ INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','RGG_INFO_OLD','RGGI_INFO_TYPE','RENUM_21','2008-10-21 15:56:06');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','READ_GROUP_GENOTYPE_OLD','ALL_ALLELE_TYPE','RENUM_17','2008-10-21 15:55:58');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','READ_GROUP_GENOTYPE_OLD','ALL_ALLELE_TYPE','RENUM_18','2008-10-21 15:55:58');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','GENOME_MODEL','MIDA_GM_FK','2008-11-11 10:21:51');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','GENOME_MODEL_BUILD','MIDA_GMB_FK','2008-11-11 10:21:51');
 CREATE TABLE dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
     data_source varchar NOT NULL,
@@ -177,6 +179,8 @@ INSERT INTO "dd_fk_constraint_column" VALUES('GMRSM_GMRS_FK','Genome::DataSource
 INSERT INTO "dd_fk_constraint_column" VALUES('RENUM_17','Genome::DataSource::GMSchema','MG','READ_GROUP_GENOTYPE_OLD','ALL_ALLELE_TYPE','ALLELE1_TYPE','ALLELE_TYPE');
 INSERT INTO "dd_fk_constraint_column" VALUES('RENUM_18','Genome::DataSource::GMSchema','MG','READ_GROUP_GENOTYPE_OLD','ALL_ALLELE_TYPE','ALLELE2_TYPE','ALLELE_TYPE');
 INSERT INTO "dd_fk_constraint_column" VALUES('RENUM_21','Genome::DataSource::GMSchema','MG','RGG_INFO_OLD','RGGI_INFO_TYPE','INFO_TYPE','INFO_TYPE');
+INSERT INTO "dd_fk_constraint_column" VALUES('MIDA_GM_FK','Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','GENOME_MODEL','MODEL_ID','GENOME_MODEL_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('MIDA_GMB_FK','Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','GENOME_MODEL_BUILD','FIRST_BUILD_ID','BUILD_ID');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -309,6 +313,11 @@ INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG'
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_REF_SEQ','REF_SEQ_NAME',2);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','READ_GROUP_GENOTYPE_OLD','RGG_ID',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','RGG_INFO_OLD','RGGI_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','MODEL_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','INSTRUMENT_DATA_ID',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_ATTRIBUTE','ENTITY_ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_ATTRIBUTE','PROPERTY_NAME',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_ATTRIBUTE','ENTITY_CLASS_NAME',2);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -431,6 +440,8 @@ INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_RE
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL_OLD','TABLE','entity','2008-10-07 14:38:31','2008-10-09 09:17:42',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','READ_GROUP_GENOTYPE_OLD','TABLE','entity','2008-10-14 11:15:16','2008-10-21 15:55:58',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','RGG_INFO_OLD','TABLE','entity','2008-10-14 11:15:42','2008-10-21 15:56:06',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','TABLE','entity','2008-11-10 12:33:56','2008-11-11 10:21:51',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MISC_ATTRIBUTE','TABLE','entity','2008-11-10 12:33:56','2008-11-11 10:21:58',NULL);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -954,6 +965,13 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','READ_G
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','READ_GROUP_GENOTYPE_OLD','RGG_ID','NUMBER','10','N','2008-10-21 15:55:58',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','READ_GROUP_GENOTYPE_OLD','NUM_READS2','NUMBER','7','Y','2008-10-21 15:55:58',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','READ_GROUP_GENOTYPE_OLD','ALLELE1','VARCHAR2','255','Y','2008-10-21 15:55:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_ATTRIBUTE','VALUE','VARCHAR2','4000','Y','2008-11-11 10:21:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_ATTRIBUTE','ENTITY_ID','VARCHAR2','1000','N','2008-11-11 10:21:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','FIRST_BUILD_ID','NUMBER','10','Y','2008-11-11 10:21:51',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_ATTRIBUTE','PROPERTY_NAME','VARCHAR2','255','N','2008-11-11 10:21:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','INSTRUMENT_DATA_ID','VARCHAR2','1000','N','2008-11-11 10:21:51',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','MODEL_ID','NUMBER','10','N','2008-11-11 10:21:51',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_ATTRIBUTE','ENTITY_CLASS_NAME','VARCHAR2','255','N','2008-11-11 10:21:58',NULL);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
