@@ -1,71 +1,112 @@
-
-package Genome::Model::Command::Create::Model;
+package Genome::Model::Command::Define;
 
 use strict;
 use warnings;
 
 use Genome;
-use Command;
-use Genome::Model;
 use File::Path;
 use Data::Dumper;
+require Genome::Utility::FileSystem;
 
-class Genome::Model::Command::Create::Model {
-    is => ['Genome::Model::Command'],
-    sub_classification_method_name => 'class',
+class Genome::Model::Command::Define {
+    is => 'Command',
+    is_abstract => 1,
     has => [
-        processing_profile_name     => {
-                                        is => 'varchar',
-                                        len => 255,
-                                        doc => 'The name of the processing profile to be used. '
-                                    },
-        subject_name                => {
-                                        is => 'varchar',
-                                        len => 255,
-                                        doc => 'The name of the subject all the reads originate from'
-                                    },
-        subject_type                => {
-                                        is => 'varchar',
-                                        len => 255,
-                                        doc => 'The type of subject all the reads originate from'
-                                    },
+    processing_profile_name => {
+        is => 'Integer', 
+        is_optional => 0,
+        is_input => 1,
+        doc => 'identifies the processing profile by name' 
+    },
+    subject_name => {
+        is => 'varchar',
+        len => 255,
+        is_input => 1,
+        doc => 'The name of the subject all the reads originate from'
+    },
+    subject_type => {
+        is => 'varchar',
+        len => 255,
+        is_input => 1,
+        doc => 'The type of subject all the reads originate from'
+    },
     ],
     has_optional => [
-         #TODO: make processing_profile not a parameter, name only
-         processing_profile => {
-                                is => 'Genome::ProcessingProfile',
-                                doc => 'Not used as a parameter',
-                                id_by => 'processing_profile_id',
-                            },
-         model_name         => {
-                                is => 'varchar',
-                                len => 255,
-                                doc => 'User-meaningful name for this model(default_value $SUBJECT_NAME.$PP_NAME)'
-                            },
-         model              => {
-                                is => 'Genome::Model',
-                                id_by => 'model_id',
-                                doc => 'Not used as a parameter'
-                            },
-         data_directory     => {
-                                is => 'varchar',
-                                len => 255,
-                                doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
-                            },
-                 ],
+    model_name => {
+        is => 'varchar',
+        len => 255,
+        is_input => 1,
+        doc => 'User meaningful name for this model (default value: $SUBJECT_NAME.$PP_NAME)'
+    },
+    data_directory => {
+        is => 'varchar',
+        len => 255,
+        is_input => 1,
+        doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
+    },
+    ],
     schema_name => 'Main',
 };
 
+###################################################
+
+#< Auto generate the subclasses >#
+our @SUB_COMMAND_CLASSES;
+my $module = __PACKAGE__;
+$module =~ s/::/\//g;
+$module .= '.pm';
+my $pp_path = $INC{$module};
+$pp_path =~ s/$module//;
+$pp_path .= 'Genome/Model';
+for my $target ( glob("$pp_path/*pm") ) {
+    $target =~ s#$pp_path/##;
+    $target =~ s/\.pm//;
+    my $target_class = 'Genome::Model::' . $target;
+    next unless $target_class->isa('Genome::Model');
+    my $target_meta = $target_class->get_class_object;
+    unless ( $target_meta ) {
+        eval("use $target_class;");
+        die "$@\n" if $@;
+        $target_meta = $target_class->get_class_object;
+    }
+    next if $target_class->get_class_object->is_abstract;
+    my $subclass = 'Genome::Model::Command::Define::' . $target;
+    #print Dumper({mod=>$module, path=>$pp_path, target=>$target, target_class=>$target_class,subclass=>$subclass});
+
+    no strict 'refs';
+    class {$subclass} {
+        is => __PACKAGE__,
+        sub_classification_method_name => 'class',
+    };
+    push @SUB_COMMAND_CLASSES, $subclass;
+}
+
+###################################################
+
+sub sub_command_dirs {
+    my $class = ref($_[0]) || $_[0];
+    return ( $class eq __PACKAGE__ ? 1 : 0 );
+}
+
+sub sub_command_classes {
+    my $class = ref($_[0]) || $_[0];
+    return ( $class eq __PACKAGE__ ? @SUB_COMMAND_CLASSES : 0 );
+}
+
 sub help_brief {
-    "create a new genome model"
+    my $model_type = $_[0]->_model_type;
+
+    return ( $model_type )
+    ? "Create a new genome model for $model_type"
+    : "Create a new genome model";
 }
 
 sub help_synopsis {
     return <<"EOS"
 genome-model create
-                    --model-name test5
-                    --subject_name ley_aml_patient1_tumor
-                    --processing-profile-name nature_aml_08
+  --model-name test5
+  --subject_name ley_aml_patient1_tumor
+  --processing-profile-name nature_aml_08
 EOS
 }
 
@@ -83,154 +124,113 @@ processing-profiles.
 EOS
 }
 
-sub target_class{
-    return "Genome::Model";
+###################################################
+
+sub _get_subclass {
+    my $class = ref($_[0]) || $_[0];
+
+    return if $class eq __PACKAGE__;
+    
+    $class =~ s/Genome::Model::Command::Create:://;
+
+    return $class;
 }
 
-sub command_properties {
-    my $self = shift;
-    return map { $_->property_name }
-                $self->_shell_args_property_meta;
+sub _target_class {
+    my $subclass = _get_subclass(@_)
+        or return;
+    
+    return 'Genome::'.$subclass;
 }
+
+sub _model_type {
+    my $profile_name = _get_subclass(@_)
+        or return;
+    my @words = $profile_name =~ /([A-Z](?:[A-Z]*(?=$|[A-Z][a-z])|[a-z]*))/g;
+    return $profile_name = join(' ', map { lc } @words);
+}
+
+###################################################
 
 sub create {
     my $class = shift;
-    my $self = $class->SUPER::create(@_);
 
-    unless ( $self->model_name ) {
-        if ($self->subject_name and $self->processing_profile_name) {
-            my $subject_name = $self->_sanitize_string_for_filesystem($self->subject_name);
-            $self->model_name($subject_name .'.'. $self->processing_profile_name);
-        }
-    }
+    my $self = $class->SUPER::create(@_)
+        or return;
+
     return $self;
 }
 
 sub execute {
     my $self = shift;
 
-    unless ($self->_validate_execute_params()) {
-        return;
-    }
-
-    # generic: abstract out
-    my %params = %{ $self->_extract_target_class_object_properties() };
-    my $obj = $self->_create_target_class_instance_and_error_check( \%params );
-    unless ($obj) {
-        $self->error_message("Failed to create model!");
-        return;
-    }
-
-    if (my @problems = $obj->invalid) {
-        $self->error_message("Invalid model!");
-        $obj->delete;
-        return;
-    }
-
-    $self->status_message("created model " . $obj->name);
-    $self->status_message($obj->pretty_print_text);
-
-    unless ($self->_build_model_filesystem_paths($obj)) {
-        $self->error_message('filesystem path creation failed');
-        $obj->delete;
-        return;
-    }
-
-    $self->result($obj);
-
-    return $obj;
-}
-
-sub _build_model_filesystem_paths {
-    my $self = shift;
-    my $model = shift;
-
-    # This is actual data directory on the filesystem
-    # Currently the disk is hard coded in $model->base_parent_directory
-    my $model_data_dir = $model->data_directory;
-    unless ($self->create_directory($model_data_dir)) {
-        $self->error_message("model data directory '$model_data_dir could' not be successfully created");
-        return;
-    }
-
-    # This is a human readable(model_name) symlink to the model_id based directory
-    # This symlink is created so humans can find their data on the filesystem
-    my $model_link = $model->model_link;
-    if (-l $model_link) {
-        $self->warning_message("model symlink '$model_link' already exists");
-        unless (unlink $model_link) {
-            $self->error_message("existing model symlink '$model_link' could not be removed");
-            return;
-        }
-    }
-    unless (symlink($model_data_dir,$model_link)) {
-        $self->error_message("model symlink '$model_link => $model_data_dir'  could not be successfully created");
-        return;
-    }
-    return 1;
-}
-
-sub _extract_target_class_object_properties {
-    my $self = shift;
-
-    my $target_class = $self->target_class;
-    my %params;
-
-    for my $command_property ($self->command_properties) {
-        my $value = $self->$command_property;
-        next unless defined $value;
-
-        # This is an ugly hack just for creating Genome::Model objects
-        # Command-derived objects gobble up the --name parameter as part of the
-        # UR framework initialization, so we're stepping around that by
-        # knowing that Genome::Model's have names, and the related Command
-        # param is called "model_name"
-        if ($command_property eq 'model_name') {
-            if ($target_class->can('name')) {
-                $params{'name'} = $value;
-            }
-        } else {
-            # processing_profile_name is only used to grab the processing_profile... so dont include it as a param
-            unless ($command_property eq 'processing_profile_name') {
-                $params{$command_property} = $value;
-            }
-        }
-    }
-    return \%params;
-}
-
-sub _validate_execute_params {
-    my $self = shift;
-
+    # Make sure there aren't any bare args
     my $ref = $self->bare_args;
-    if (($ref) && (my @args = @$ref)) {
+    if ( $ref && (my @args = @$ref) ) {
         $self->error_message("extra arguments: @args");
         $self->usage_message($self->help_usage_complete_text);
         return;
     }
-    my @subject_types = qw/ dna_resource_item_name species_name sample_name sample_group / ;
-    unless ( 
-        grep { 
-            defined($self->subject_type) 
-            and 
-            $self->subject_type eq $_ 
-        } @subject_types
-    ) {
-        $self->error_message(
-            (
-                defined($self->subject_type) 
-                ?  "Invalid subject type " . $self->subject_type . "."
-                : "No subject type specified!"
-            )
-            . "  Please select one of:\n " 
-            . join("\n ",@subject_types) 
-            . "\n"
-        );
+
+    # Verify required params
+    for my $req (qw/ processing_profile_name subject_name subject_type /) {
+        unless ( defined $self->$req) {
+            $self->error_message("Property ($req) to define model is required");
+            return
+        }
+    }
+
+    # Default model name
+    unless ( $self->model_name ) {
+        my $subject_name = $self->_sanitize_string_for_filesystem($self->subject_name);
+        $self->model_name($subject_name .'.'. $self->processing_profile_name);
+    }
+
+    # Get processing profile id
+    my $processing_profile_id = $self->_get_procesiing_profile_id_for_name
+        or return;
+
+    # Create the model, then verify
+    my %model_params = (
+        name => $self->model_name,
+        processing_profile_id => $processing_profile_id,
+        subject_name => $self->subject_name,
+        subject_type => $self->subject_type,
+    );
+    $model_params{data_directory} = $self->data_directory if $self->data_directory;
+    my $model = Genome::Model->create(%model_params);
+    unless ( $model ) {
+        $self->error_message("Could not create a model for:");
         return;
     }
 
-    my $pp_id;
-    unless ($pp_id = $self->_get_processing_profile_from_name()) { 
+    if ( my @problems = $model->invalid ) {
+        $self->error_message(
+            "Error creating model:\n\t".  join("\n\t", map { $_->desc } @problems)
+        );
+        $model->delete;
+        return;
+    }
+
+    unless ( $self->_build_model_filesystem_paths($model) ) {
+        $self->error_message('Filesystem path creation failed');
+        $model->delete;
+        return;
+    }
+
+    $self->status_message("Created model:");
+    $self->status_message($model->pretty_print_text);
+
+    return 1;
+}
+
+#< Processing profile ># 
+sub _get_procesiing_profile_id_for_name {
+    my $self = shift;
+
+    my (@processing_profiles) = Genome::ProcessingProfile->get(name => $self->processing_profile_name);
+
+    unless ( @processing_profiles ) {
         my $msg;
         if (defined $self->processing_profile_name) {
             $msg = "Failed to find processing profile "
@@ -250,107 +250,47 @@ sub _validate_execute_params {
         return;
     }
 
-    my $pp = Genome::ProcessingProfile->get($pp_id);
-    my $subject_class;
-    my $subject_property;
-    if ($self->subject_type eq 'sample_name') {
-        $subject_class = 'Genome::Sample';
-        $subject_property = 'name';
-    }
-    elsif ($self->subject_type eq 'species_name') {
-        $subject_class = 'Genome::Taxon';
-        $subject_property = 'species_name';
-    }
-    elsif ($self->subject_type eq 'sample_group') {
-        $self->status_message("sample group subject type selected for PP-CV model.");
-        return 1;
-    }
-    else {
-        $self->error_message("unsupported subject type " . $self->subject_type);
-        return;
-    }
-
-    my @subjects = $subject_class->get($subject_property => $self->subject_name);
-
-    unless (@subjects) {
-        my $msg = "Failed to find " . $self->subject_type
-            . " with $subject_property " . $self->subject_name . "!\n";
-        my @possible_subjects = $subject_class->get();
-
-        #my @possible_subjects;
-        #if ($self->subject_type eq 'species_name') {
-        #    @possible_subjects = $subject_class->get();
-        #}
-        #elsif ($self->subject_type eq 'sample_name') {
-        #    my $sequencing_platform = $pp->sequencing_platform;
-        #    my @run_chunks = Genome:: 
-        #    @possible_subjects = $s
-        #}
-
-        $msg .= "Possible subjects are:\n "
-            . join("\n ", sort map { $_->$subject_property } @possible_subjects)
-            . "\n";
-        $msg .= "Please select one of the above.";
-        $self->error_message($msg);
-        return;
-    }
-    return 1;
-}
-
-sub _create_target_class_instance_and_error_check{
-    my ($self, $params_in) = @_;
-    my %params = %{$params_in};
-
-    my $target_class = $self->target_class;
-    my $target_class_meta = $target_class->get_class_object;
-    my $type_name = $target_class_meta->type_name;
-
-
-    my $obj = $target_class->create(%params);
-    if (!$obj) {
+    # Bomb out unless exactly 1 matching processing profile is found
+    unless ( @processing_profiles == 1 ) {
         $self->error_message(
-            "Error creating $type_name: "
-            . $target_class->error_message
+            sprintf('Found multiple processing profiles for name (%s)', $self->processing_profile_name)
         );
         return;
     }
 
-    $self->model($obj);
-
-    if (my @problems = $obj->invalid) {
-        $self->error_message("Error creating $type_name:\n\t"
-            . join("\n\t", map { $_->desc } @problems)
-            . "\n");
-        $obj->delete;
-        return;
-    }
-
-    unless($obj) {
-        $self->error_message("Failed to create genome model: " . $obj->error_message);
-        print Dumper(\%params);
-        return;
-    }
-
-    return $obj;
+    return $processing_profiles[0]->id;
 }
 
-# Retreives the processing profile matching the name specified
-sub _get_processing_profile_from_name {
+#< File system >#
+sub _build_model_filesystem_paths {
     my $self = shift;
-    my $processing_profile_name = $self->processing_profile_name;
-    my @processing_profiles = Genome::ProcessingProfile->get(name => $processing_profile_name);
+    my $model = shift;
 
-    # Bomb out unless exactly 1 matching processing profile is found
-    my $num_processing_profiles = scalar(@processing_profiles);
-    unless($num_processing_profiles == 1) {
-        return 0;
+    # This is actual data directory on the filesystem
+    # Currently the disk is hard coded in $model->base_parent_directory
+    my $model_data_dir = $model->data_directory;
+    Genome::Utility::FileSystem->create_directory($model_data_dir)
+        or die "Can't create dir: $model_data_dir\n";
+    #or return;
+
+    # This is a human readable(model_name) symlink to the model_id based directory
+    # This symlink is created so humans can find their data on the filesystem
+    my $model_link = $model->model_link;
+    if ( -l $model_link ) {
+        $self->warning_message("model symlink '$model_link' already exists");
+        unless (unlink $model_link) {
+            $self->error_message("existing model symlink '$model_link' could not be removed");
+            return;
+        }
     }
-
-    my $pp = $processing_profiles[0];
-    $self->processing_profile_id($pp->id);
-    return $pp->id; 
+    
+    unless (symlink($model_data_dir,$model_link)) {
+        $self->error_message("model symlink '$model_link => $model_data_dir'  could not be successfully created");
+        return;
+    }
+    
+    return 1;
 }
-
 
 sub _sanitize_string_for_filesystem {
     my $self = shift;
@@ -360,5 +300,8 @@ sub _sanitize_string_for_filesystem {
     $string =~ s/[^$OK_CHARS]/_/go;
     return $string;
 }
+
 1;
 
+#$HeadURL$
+#$Id$
