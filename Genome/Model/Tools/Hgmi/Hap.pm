@@ -25,7 +25,7 @@ UR::Object::Type->define(
                                  'gen_example' => { is => 'Boolean',
                                                     doc => "Generate an example yaml config file",
                                                     is_optional => 1},
-                                 'metachangeme' => { is => 'HashRef',
+                                 'internalhash' => { is => 'HashRef',
                                                      doc => "internal",
                                                      is_optional => 1},
                                  'dev' => { is => 'Boolean',
@@ -79,7 +79,7 @@ sub execute
 
     if(-f $self->config)
     {
-        $self->metachangeme(LoadFile($self->config));
+        $self->internalhash(LoadFile($self->config));
     }
     else
     {
@@ -89,8 +89,8 @@ sub execute
         return 0;
     }
 
-    return 1;
-    my $config = $self->metachangeme;
+
+    my $config = $self->internalhash;
     # dir-builder
     my $d = Genome::Model::Tools::Hgmi::DirBuilder->create(
                                                            path => $config->{path},
