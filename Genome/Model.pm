@@ -137,13 +137,13 @@ sub create {
 my %SUBJECT_TYPES = (
     species_name => {
         needs_to_be_verified => 1,
-        class => 'Genome::Sample',
-        property => 'name',
+        class => 'Genome::Taxon',
+        property => 'species_name',
     },
     sample_name => {
         needs_to_be_verified => 1,
-        class => 'Genome::Taxon',
-        property => 'species_name',
+        class => 'Genome::Sample',
+        property => 'name',
     },
     sample_group => {
         needs_to_be_verified => 0,
@@ -351,6 +351,7 @@ sub model_data_directory {
 # This symlink is created so humans can find their data on the filesystem
 sub model_link {
     my $self = shift;
+    die sprintf("Model (ID: %s) does not have a name\n", $self->id) unless defined $self->name;
     return $self->model_links_directory .'/'. $self->name;
 }
 
