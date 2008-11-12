@@ -70,7 +70,6 @@ IPRO_RESULTS
 MAF
 META_GROUP
 META_GROUP_STATUS
-MISC_ATTRIBUTE
 PF_FEATURE_TYPE
 PP_DETECTION_SOFT
 PP_MAPPING_REFERENCE
@@ -144,6 +143,19 @@ sub _ignore_table {
     return 1 if $self->SUPER::_ignore_table($table_name);
 
     return scalar(grep { $_ eq $table_name } @OLD_GM_TABLES);
+}
+
+sub _resolve_class_name_for_table_name_fixups {
+    my($self,@words) = @_;
+
+    if ($words[0] eq 'Genome') {
+        # Everything is already under Genome
+        shift @words;
+        if ($words[0] eq 'Model') {
+            splice(@words, 1, 0, '::');  # Make it Model::Blah instead of ModelBlah
+        }
+    }
+    return @words;
 }
 
 1;
