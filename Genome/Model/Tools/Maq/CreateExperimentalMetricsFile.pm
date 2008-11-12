@@ -140,8 +140,14 @@ sub execute {
     $snpfilter_fh->close;
 
     #open mapstat as a pipe to catch it's output
-    #this seems to only catch errors properly if we do a regular perl open
-    my $mapstat_cmd = sprintf("$MAPSTAT_PROG -q %d -c %s -l %s -w %d %s %s |",$self->minq,$self->ref_name,$self->location_file,$self->window_size,$self->ref_bfa_file, $self->map_file);
+    #this seems to only catch errors properly if we do a regular perl openA
+    my $mapstat_cmd;
+    if($self->ref_name ne q{}) {
+        $mapstat_cmd = sprintf("$MAPSTAT_PROG -q %d -c %s -l %s -w %d %s %s |",$self->minq,$self->ref_name,$self->location_file,$self->window_size,$self->ref_bfa_file, $self->map_file);
+    }
+    else {
+        $mapstat_cmd = sprintf("$MAPSTAT_PROG -q %d -l %s -w %d %s %s |",$self->minq,$self->location_file,$self->window_size,$self->ref_bfa_file, $self->map_file);
+    }
     unless(open(MAPSTAT, $mapstat_cmd)) {
         $self->error_message("Unable to open pipe to $MAPSTAT_PROG");
         return;
