@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 use Data::Dumper;
+require File::Path;
 
 class Genome::Utility::FileSystem {
     is => 'UR::Object',
@@ -14,22 +15,27 @@ class Genome::Utility::FileSystem {
 sub create_directory {
     my ($self, $directory) = @_;
 
-    $self->error_message("Need directory to create") unless defined $directory;
-    
-    return $directory if -d $directory;
-
-    if ( -f $directory ) {
-        $self->error_message("Can't create directory ($directory), already is a file");
+    unless ( defined $directory ) {
+        $self->error_message("Need directory to create");
         return;
     }
 
-    if ( system "mkdir -p $directory" ) {
-        $self->error_message("Can't create directory ($directory) w/ mkdir: $!");
+    return $directory if -d $directory;
+
+    if ( -f $directory ) {
+        $self->error_message("Can't create directory ($directory), already exists as a file");
+        return;
+    }
+
+    eval{ File::Path::mkpath($directory, 0, 02775); };
+
+    if ( $@ ) {
+        $self->error_message("Can't create directory ($directory) w/ File::Path::mkpath: $@");
         return;
     }
     
     unless (-d $directory) {
-        $self->error_message("No error from 'mkdir', but failed to create directory ($directory)");
+        $self->error_message("No error from 'File::Path::mkpath', but failed to create directory ($directory)");
         return;
     }
 
@@ -42,23 +48,33 @@ sub create_directory {
 
 =head1 Name
 
-ModuleTemplate
+Genome::Utility::FileSystem;
 
 =head1 Synopsis
 
+Houses some generic file and directory methods
+
 =head1 Usage
+
+ require Genome::Utility::FileSystem;
+
+ # Call methods directly:
+ Genome::Utility::FileSystem->create_directory($new_directory);
 
 =head1 Methods
 
-=head2 
+=head2 create_directory
 
+ Genome::Utility::FileSystem->create_directory('/tmp/users')
+    or die;
+ 
 =over
 
-=item I<Synopsis>
+=item I<Synopsis>   Creates the directory with the default permissions 02775
 
-=item I<Arguments>
+=item I<Arguments>  directory (string)
 
-=item I<Returns>
+=item I<Returns>    true on success, false on failure
 
 =back
 
@@ -78,4 +94,3 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 #$HeadURL$
 #$Id$
-
