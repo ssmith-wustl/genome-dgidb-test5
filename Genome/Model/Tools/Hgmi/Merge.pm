@@ -25,23 +25,23 @@ UR::Object::Type->define(
                          is => 'Command',
                          has => [
                                  'organism_name' => {is => 'String',
-                                                     doc => "" },
+                                                     doc => "Organism's latin name" },
                                  'hgmi_locus_tag' => {is => 'String',
-                                                      doc => "" },
+                                                      doc => "Locus tag for HGMI" },
                                  'project_type' => {is => 'String',
-                                                    doc => "" },
+                                                    doc => "Type of project" },
                                  'nr_db'        => {is => 'String',
                                                     doc => "path to nr seq db",
                                                     is_optional => 1,
                                                     default => "/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr"},
                                  'locus' => {is => 'String',
-                                        doc => "",
+                                        doc => "Locus name",
                                         is_optional => 1},
                                  'gram_stain' => {is => 'String',
                                                   doc => "gram stain for bacteria (positive or negative)",
                                                   is_optional => 1},
                                  'ncbi_taxonomy_id' => {is => 'String',
-                                                        doc => "",
+                                                        doc => "NCBI taxonomy id",
                                                         is_optional =>1},
                                  'dev' => {is => 'Boolean',
                                            doc => "use development db",
@@ -49,6 +49,9 @@ UR::Object::Type->define(
                                  'work_directory' => {is => 'String',
                                                       doc => "work directory",
                                                       is_optional => 1},
+                                 'sequence_set_id' => { is => 'Integer',
+                                                        doc => "sequence set id",
+                                                        is_optional => 1},
                                  ]
                          );
 
@@ -197,6 +200,7 @@ sub gather_details
         $sequence_set_id = $sequence_set_name_obj->sequence_set_id();
     }
 
+    $self->sequence_set_id($sequence_set_id);
     my @list =($organism_id,$sequence_set_name, $sequence_set_id);
     print join("\t",@list),"\n\n";
 
@@ -276,8 +280,6 @@ sub gather_details
 }
 
 
-
-
-
-
 1;
+
+# $Id$

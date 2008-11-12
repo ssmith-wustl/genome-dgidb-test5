@@ -12,6 +12,17 @@ BEGIN {
         use_ok('Genome::Model::Tools::Hgmi::DirBuilder');
 }
 
+unless( -d "/tmp/disk/")
+{
+    mkdir("/tmp/disk");
+}
+
+unless( -l "/tmp/disk/analysis")
+{
+    symlink("/gsc/var/cache/testsuite/data/Genome-Model-Tools-Hgmi/analysis",
+            "/tmp/disk/analysis");
+}
+
 #/tmp/disk/analysis/HGMI/B_catenulatum/Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb/Version_1.0/BAP/Version_1.0/
 my $tool_db = Genome::Model::Tools::Hgmi::DirBuilder->create(
                     path => "/tmp/disk/analysis/HGMI",
@@ -26,9 +37,8 @@ isa_ok($tool_db,'Genome::Model::Tools::Hgmi::DirBuilder');
 #    # recurively remove dir
 #    remove \1, qw{ /tmp/disk/analysis };
 #}
-system("mkdir -p /tmp/disk/analysis/HGMI");
+#system("mkdir -p /tmp/disk/analysis/HGMI");
 ok($tool_db->execute,'execute dir builder');
 # check directory structure, then remove what was created.
+remove \1, qw{ /tmp/disk/analysis/HGMI/B_catenulatum };
 
-
-exit;
