@@ -47,6 +47,7 @@ END
     ],
     PACKAGE => 'main',
     DIRECTORY => Genome::Inline::DIRECTORY(),
+    EXTRA_JAVA_ARGS => '-Xmx1500m',
 ) ;
 
 class Genome::Model::Tools::MetagenomicClassifier::Rdp {
