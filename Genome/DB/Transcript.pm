@@ -205,6 +205,15 @@ sub cds_exon_with_ordinal {
     return;
 }
 
+sub cds_full_nucleotide_sequence{
+    my $self = shift;
+    my $seq;
+    foreach my $cds_exon ( sort { $a->ordinal <=> $b->ordinal} $self->cds_exons ) {
+        $seq.= $cds_exon->nucleotide_seq;
+    }
+    return $seq;
+}
+
 #- GENE -#
 sub gene_name
 {
