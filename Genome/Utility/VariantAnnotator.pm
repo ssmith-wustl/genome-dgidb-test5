@@ -29,16 +29,14 @@ my %codon_to_single = Genome::Info::CodonToAminoAcid->single_letter;
 
 
 #- Transcripts -#
-sub transcripts
-{
+sub transcripts { # was transcripts_for_snp and transcripts_for_indel
     my ($self, %variant) = @_;
 
     my @transcripts_to_annotate = $self->_determine_transcripts_to_annotate($variant{start})
         or return;
     
     my @annotations;
-    foreach my $transcript ( @transcripts_to_annotate )
-    {
+    foreach my $transcript ( @transcripts_to_annotate ) {
         my %annotation = $self->_transcript_annotation($transcript, \%variant)
             or next;
         push @annotations, \%annotation;
@@ -47,8 +45,7 @@ sub transcripts
     return @annotations;
 }
 
-sub prioritized_transcripts
-{
+sub prioritized_transcripts {# was prioritized_transcripts_for_snp and prioritized_transcripts_for_indel
     my ($self, %variant) = @_;
     
     my @annotations = $self->transcripts(%variant)
@@ -56,7 +53,6 @@ sub prioritized_transcripts
 
     return $self->_prioritize_annotations(@annotations);
 }
-
 
 # Prioritizes annotations on a per gene basis... 
 # Currently the "best" annotation is judged by priority, and then source, and then protein length
@@ -827,15 +823,15 @@ while ( my $line = $in_fh->getline )
 
 =over
 
-=item I<Synopsis>   Gets one prioritized annotation per gene for a snp
+=item I<Synopsis>   Gets one prioritized annotation per gene for a variant(snp or indel)
 
-=item I<Arguments>  snp (hash; see 'SNP' below)
+=item I<Arguments>  variant (hash; see 'Variant properties' below)
 
 =item I<Returns>    annotations (array of hash refs; see 'Annotation' below)
 
 =back
 
-=head1 SNP Properties
+=head1 Variant Properties
 
 =over
 
@@ -844,6 +840,8 @@ while ( my $line = $in_fh->getline )
 =item I<variant>    The snp base
 
 =item I<reference>  The reference base at the position
+
+=item I<type>       snp, ins, or del
 
 =back
 
@@ -857,9 +855,9 @@ while ( my $line = $in_fh->getline )
 
 =item I<strand>             Strand of the transcript
 
-=item I<c_position>         Relative position of the snp
+=item I<c_position>         Relative position of the variant
 
-=item I<trv_type>           Type of snp
+=item I<trv_type>           Called Classification of variant
 
 =item I<priority>           Priority of the trv_type (only from get_prioritized_annotations)
 
@@ -873,7 +871,9 @@ while ( my $line = $in_fh->getline )
 
 =item I<amino_acid_change>  Resultant change in amino acid in snp is in cds_exon
 
-=item I<variations>         Hashref w/ keys of known variations at the snp position
+=item I<variations>         Hashref w/ keys of known variations at the variant position
+
+=item I<type>               snp, ins, or del
 
 =back
 
