@@ -9,15 +9,12 @@ class Genome::InstrumentData::Sanger {
     is  => 'Genome::InstrumentData',
 };
 
-sub _resolve_data_path {
+sub dump_data_to_filesystem {
     my $self = shift;
 
-    return sprintf('%s/%s', $self->_sample_data_base_path, $self->run_name);
-}
-
-sub _dump_data_to_filesystem {
-    my $self = shift;
-
+    my $data_dir = $self->create_sample_data_directory_and_link 
+        or return;
+        
     my $read_cnt = 0;
     my $reads = App::DB::TableRow::Iterator->new(
         class => 'GSC::Sequence::Read',
@@ -26,7 +23,6 @@ sub _dump_data_to_filesystem {
         },
     );
 
-    my $data_dir = $self->_resolve_data_path;
     while ( my $read = $reads->next ) {
         $read_cnt++;
         my $scf_name = $read->default_file_name('scf');
@@ -43,6 +39,11 @@ sub _dump_data_to_filesystem {
             $self->error_message("No scf content for $scf_name") 
                 and next unless -s $scf_file;
         }
+    }
+
+    unless ( $read_cnt ){
+        $self->error_message( sprintf("No reads found for run (%s)", $self->run_name) );
+        return;
     }
 
     return 1;
