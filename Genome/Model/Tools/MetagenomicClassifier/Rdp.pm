@@ -36,7 +36,7 @@ use Inline (
 END
 
     AUTOSTUDY => 1,
-    CLASSPATH => '/gsc/scripts/lib/java/rdp_classifier-2.0.jar',
+    CLASSPATH => '/gsc/scripts/lib/java/rdp_classifier-2.1.jar',
     STUDY => [
         'edu.msu.cme.rdp.classifier.rrnaclassifier.ClassifierFactory',
         'edu.msu.cme.rdp.classifier.rrnaclassifier.Classifier',
@@ -47,7 +47,7 @@ END
     ],
     PACKAGE => 'main',
     DIRECTORY => Genome::Inline::DIRECTORY(),
-    EXTRA_JAVA_ARGS => '-Xmx1500m',
+    EXTRA_JAVA_ARGS => '-Xmx1000m',
 ) ;
 
 class Genome::Model::Tools::MetagenomicClassifier::Rdp {
@@ -82,8 +82,9 @@ sub execute {
     }
 
     while (my $seq = $in->next_seq()) {
+        my $complemented = $self->is_reversed($seq);
         my $classification = $self->classify($seq);
-        $self->write_classification($out, $seq, $classification);
+        $self->write_classification($out, $seq, $complemented,$classification);
     }
     $in->close();
     $out->close();
@@ -93,9 +94,13 @@ sub write_classification {
     my $self = shift;
     my $out = shift;
     my $seq = shift;
+    my $complemented = shift;
     my $classification = shift;
 
     $out->print($seq->display_name);
+    if ($complemented) {
+        $out->print("-");
+    }
     $out->print(" ");
     
     do {
@@ -130,6 +135,13 @@ sub classify {
     my $classification_result = $self->{'classifier'}->classify($parsed_seq);
 
     return $self->_build_classification($classification_result);
+}
+
+sub is_reversed {
+    my $self = shift;
+    my $seq = shift;
+    my $parsed_seq = new edu::msu::cme::rdp::classifier::readseqwrapper::ParsedSequence($seq->display_name, $seq->seq);
+    return $self->{'classifier'}->isSeqReversed($parsed_seq);
 }
 
 sub _build_classification {
