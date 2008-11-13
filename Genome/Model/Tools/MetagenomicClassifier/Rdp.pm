@@ -52,13 +52,13 @@ END
 class Genome::Model::Tools::MetagenomicClassifier::Rdp {
     is => 'Command',
     has => [ 
-        input =>       {
+        input_file =>       {
             type => 'String',
             is_optional => 0, ###
             doc => "path to fasta file"
         },
 
-        output =>        { 
+        output_file =>        { 
             type => 'String',
             is_optional => 1, ###
             doc => "path to output file"
@@ -69,8 +69,12 @@ class Genome::Model::Tools::MetagenomicClassifier::Rdp {
 sub execute {
     my $self = shift;
     
-    my $in = Bio::SeqIO->new(-file => $self->input);
-    my $out = $self->output;
+    my $in = Bio::SeqIO->new(-file => $self->input_file);
+
+    my $out;
+    if ($self->output_file) {
+        $out = new IO::File(">".$self->output_file);
+    }
     unless ($out) {
         $out = new IO::Handle; 
         $out->fdopen(fileno(STDOUT),"w");
