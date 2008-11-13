@@ -16,13 +16,13 @@ plan tests => 17;
 #my $override = Sub::Override->new();
 #sub Genome::Model::Type::sub_classification_method_name {};
 
-require_ok('Genome::Model::Command::AssignInstrumentData');
+require_ok('Genome::Model::Command::InstrumentData::Assign');
 &test_model_with_no_available_read_sets();
 &test_new_model_and_add_new_read_sets();
 
 # This tests both the case when there are compatible reads, but no new ones to add,
 # and when there are no reads at all.  Since that determination is made in the model,
-# not AssignInstrumentData, by the model returning someting in $model->available_read_sets
+# not InstrumentData::Assign, by the model returning someting in $model->available_read_sets
 sub test_model_with_no_available_read_sets {
 
     my $model = Test::MockObject->new();
@@ -42,8 +42,8 @@ sub test_model_with_no_available_read_sets {
 
     $UR::Context::all_objects_loaded->{'Genome::Model'}->{'12345'} = $model;
 
-    my $assign_id = Genome::Model::Command::AssignInstrumentData->create( model => $model );
-    ok($assign_id, 'Created an AssignInstrumentData command for a model with no read sets at all');
+    my $assign_id = Genome::Model::Command::InstrumentData::Assign->create( model => $model );
+    ok($assign_id, 'Created an InstrumentData::Assign command for a model with no read sets at all');
 
     &_turn_off_messages($assign_id);
 
@@ -94,8 +94,8 @@ sub test_new_model_and_add_new_read_sets {
     Genome::Model->all_objects_are_loaded(1);
     Genome::Model::InstrumentDataAssignment->all_objects_are_loaded(1);
 
-    my $assign_id = Genome::Model::Command::AssignInstrumentData->create( model => $model, all => 1 );
-    ok($assign_id, 'Created an AssignInstrumentData command for a model without read sets, but we will add some');
+    my $assign_id = Genome::Model::Command::InstrumentData::Assign->create( model => $model, all => 1 );
+    ok($assign_id, 'Created an InstrumentData::Assign command for a model without read sets, but we will add some');
 
     &_turn_off_messages($assign_id);
 
@@ -114,7 +114,7 @@ sub test_new_model_and_add_new_read_sets {
 
     my @instrument_data = Genome::Model::InstrumentDataAssignment->is_loaded();
     @instrument_data = sort { $a->instrument_data_id cmp $b->instrument_data_id } @instrument_data;
-    is(scalar(@instrument_data), 2, 'AssignInstrumentData created 2 InstrumentDataAssignment objects');
+    is(scalar(@instrument_data), 2, 'InstrumentData::Assign created 2 InstrumentDataAssignment objects');
     is($instrument_data[0]->instrument_data_id , 'A', 'First InstrumentDataAssignment has correct instrument_data_id');
     is($instrument_data[0]->first_build_id , undef, 'First InstrumentDataAssignment correctly has null first_build_id');
     is($instrument_data[1]->instrument_data_id , 'B', 'Second InstrumentDataAssignment has correct instrument_data_id');

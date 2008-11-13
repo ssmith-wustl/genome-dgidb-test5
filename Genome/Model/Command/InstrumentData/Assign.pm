@@ -1,11 +1,11 @@
-package Genome::Model::Command::AssignInstrumentData;
+package Genome::Model::Command::InstrumentData::Assign;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Command::AssignInstrumentData {
+class Genome::Model::Command::InstrumentData::Assign {
     is => 'Genome::Model::Event',
     has => [
         model_id => {
