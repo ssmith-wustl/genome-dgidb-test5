@@ -63,16 +63,23 @@ sub execute {
     my @pending_instrument_data_files = $model->pending_instrument_data_files;
     
     for my $file (@pending_instrument_data_files) {
-        cp($file, $instrument_data_directory);
+        my $link_to = readlink $file;
+        unless ($link_to){
+            $self->error_message("couldn't extract source instrumnent data link from instrument data file $file");
+            die;
+        }
+        my $new_link = basename($file);
+        $new_link = "$instrument_data_directory/$new_link";
+        symlink($link_to, $new_link);
 
-        my $destination_file = $instrument_data_directory . basename($file);
-        unless (-e $destination_file) {
-            $self->error_message("Failed to copy $file to $destination_file");
+        unless (-e $new_link) {
+            $self->error_message("Failed to link $new_link to $file->$link_to ");
             die;
         }
     }
     
     $model->last_complete_build_id($self->build_id);
+    $model->current_running_build_id(undef);
     return $model;
 }
 
