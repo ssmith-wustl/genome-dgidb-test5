@@ -98,10 +98,14 @@ sub write_classification {
     my $classification = shift;
 
     $out->print($seq->display_name);
+    $out->print(";");
     if ($complemented) {
         $out->print("-");
     }
-    $out->print(" ");
+    else {
+        $out->print(" ");
+    }
+    $out->print(";");
     
     do {
         $out->print($classification->id.":");
