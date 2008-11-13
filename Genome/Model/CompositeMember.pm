@@ -8,13 +8,13 @@ class Genome::Model::CompositeMember {
     type_name => 'genome model composite member',
     table_name => 'GENOME_MODEL_COMPOSITE_MEMBER',
     er_role => 'bridge',
-    id_by => [ 'member_id', 'composite_id'
+    id_by => [
+        member_id    => { is => 'NUMBER', len => 11, implied_by => 'genome_model_member' },
+        composite_id => { is => 'NUMBER', len => 11, implied_by => 'genome_model_composite' },
     ],
     has => [
-        composite_id           => { is => 'NUMBER', len => 11 },
         genome_model_composite => { is => 'Genome::Model', id_by => 'composite_id', constraint_name => 'GMCP_GM1_FK' },
         genome_model_member    => { is => 'Genome::Model', id_by => 'member_id', constraint_name => 'GMCP_GM2_FK' },
-        member_id              => { is => 'NUMBER', len => 11 },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',

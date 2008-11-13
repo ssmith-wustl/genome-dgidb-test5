@@ -28,21 +28,22 @@ class Genome::RunChunk {
     has => [
         sequencing_platform => { is => 'VARCHAR2', len => 255 },
         run_name            => { is => 'VARCHAR2', len => 500, is_optional => 1 },
-        subset_name         => { is => 'VARCHAR2', len => 32, is_optional => 1, column_name => "LIMIT_REGIONS" },
+        subset_name         => { is => 'VARCHAR2', len => 32, column_name => 'LIMIT_REGIONS', is_optional => 1 },
         sample_name         => { is => 'VARCHAR2', len => 255 },
-        events              => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => "run" },
+        events              => { is => 'Genome::Model::Event', reverse_id_by => 'run', is_many => 1 },
         seq_id              => { is => 'NUMBER', len => 15, is_optional => 1 },
-        full_name           => { calculate_from => ['run_name','subset_name'], calculate => q|"$run_name/$subset_name"| },
-        name                => {
-                                doc => 'This is a long version of the name which is still used in some places.  Replace with full_name.',
-                                is => 'String', 
-                                calculate_from => ['run_name','sample_name'], 
-                                calculate => q|$run_name. '.' . $sample_name| 
-                            },
-
-        # deprecated
-        limit_regions       => { is => 'String', is_optional => 1, calculate_from => ['subset_name'], calculate=> q| $subset_name | },
-        full_path           => { is => 'VARCHAR2', len => 767, is_optional => 1, column_name => "FULL_PATH" },
+        full_name           => { calculate_from => [ 'run_name', 'subset_name' ],
+                         calculate => q("$run_name/$subset_name") },
+        name                => { is => 'String', calculate_from => [ 'run_name', 'sample_name' ],
+                         calculate => q($run_name. '.' . $sample_name), 
+                         doc => 'This is a long version of the name which is still used in some places.  Replace with full_name.' },
+        limit_regions       => { is => 'String', calculate_from => 'subset_name', is_deprecated => 1,
+                         calculate => q( $subset_name ), is_optional => 1 },
+        full_path           => { is => 'VARCHAR2', len => 767, is_optional => 1, is_deprecated => 1 },
+    ],
+    unique_constraints => [
+        { properties => [qw/seq_id/], sql => 'GMR_SEQID_U' },
+        { properties => [qw/run_name sequencing_platform subset_name/], sql => 'GMR_SP_RN_LR_U' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',

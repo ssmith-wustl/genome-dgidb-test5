@@ -9,87 +9,56 @@ our $log_base = '/gscmnt/sata114/info/medseq/model_data/logs/';
 
 use Genome;
 class Genome::Model::Event {
-    is => ['Genome::Model::Command'],
+    is => [ 'Genome::Model::Command' ],
     type_name => 'genome model event',
     table_name => 'GENOME_MODEL_EVENT',
     is_abstract => 1,
     first_sub_classification_method_name => '_resolve_subclass_name',
     sub_classification_method_name => '_resolve_subclass_name',
+    subclass_description_preprocessor => 'Genome::Model::Event::_preprocess_subclass_description',
     id_by => [
         genome_model_event_id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        model                           => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
-
-        event_type                      => { is => 'VARCHAR2', len => 255 },
-        event_status                    => { is => 'VARCHAR2', len => 32 },
-        user_name                       => { is => 'VARCHAR2', len => 64 },
+        model        => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
+        event_type   => { is => 'VARCHAR2', len => 255 },
+        event_status => { is => 'VARCHAR2', len => 32, is_optional => 1 },
+        user_name    => { is => 'VARCHAR2', len => 64, is_optional => 1 },
     ],
     has_optional => [
-                  read_set_id    => {
-                                     is => 'NUMBER',
-                                     len => 11,
-                                     column_name => 'RUN_ID',
-                                     doc => 'the id of the genome_model_run on which to operate',
-                                 },
-                  instrument_data    => {
-                                     is => 'Genome::InstrumentData',
-                                     id_by => 'read_set_id',
-                                     doc => 'The id of the instrument data on which to operate',
-                                 },
-                     ref_seq_id        => {
-                                           is => 'NUMBER',
-                                           len => 11,
-                                           doc => "identifies the refseq"
-                                       },
-        parent_event                    => {
-                                            is => 'Genome::Model::Event',
-                                            id_by => ['parent_event_id'],
-                                            constraint_name => 'GME_PAEID_FK'
-                                        },
-        prior_event                     => {
-                                            is => 'Genome::Model::Event',
-                                            id_by => ['prior_event_id'],
-                                            constraint_name => 'GME_PPEID_FK'
-                                        },
-        date_completed                  => { is => 'TIMESTAMP', len => 20 },
-        date_scheduled                  => { is => 'TIMESTAMP', len => 20 },
-
-        lsf_job_id                      => { is => 'VARCHAR2', len => 64 },
-        retry_count                     => { is => 'NUMBER', len => 3 },
-        status_detail                   => { is => 'VARCHAR2', len => 200 },
-        # bug requiring these explicitly when the reference is circular?
-        parent_event_id                 => { is => 'NUMBER', len => 11 },
-        prior_event_id                  => { is => 'NUMBER', len => 11 },
-        should_calculate => {
-                             doc => "a flag to determine metric calculations",
-                             calculate_from => ['event_status'],
-                             calculate => q|
+        read_set_id      => { is => 'NUMBER', len => 11, column_name => 'RUN_ID', implied_by => 'instrument_data' },
+        instrument_data  => { is => 'Genome::InstrumentData', id_by => 'read_set_id', 
+                         doc => 'The id of the instrument data on which to operate' },
+        ref_seq_id       => { is => 'VARCHAR2', len => 64 },
+        parent_event     => { is => 'Genome::Model::Event', id_by => 'parent_event_id', constraint_name => 'GME_PAEID_FK' },
+        prior_event      => { is => 'Genome::Model::Event', id_by => 'prior_event_id', constraint_name => 'GME_PPEID_FK' },
+        date_completed   => { is => 'TIMESTAMP(6)', len => 11 },
+        date_scheduled   => { is => 'TIMESTAMP(6)', len => 11 },
+        lsf_job_id       => { is => 'VARCHAR2', len => 64 },
+        retry_count      => { is => 'NUMBER', len => 3 },
+        status_detail    => { is => 'VARCHAR2', len => 200 },
+        parent_event_id  => { is => 'NUMBER', len => 10, implied_by => 'parent_event' },
+        prior_event_id   => { is => 'NUMBER', len => 10, implied_by => 'prior_event' },
+        should_calculate => { calculate_from => 'event_status',
+                         calculate => q(
                                  if ($event_status eq 'Failed' or $event_status eq 'Crashed') {
                                      return 0;
                                  }
                                  return 1;
-                             |,
-                         },
-       build_directory => 
-                          {
-                           doc => "the directory where this step should put data",
-                           calculate_from => ['parent_event'],
-                           calculate => q| return $parent_event->data_directory |,
-                           },   
+                             ), 
+                         doc => 'a flag to determine metric calculations' },
+        build_directory  => { calculate_from => 'parent_event',
+                         calculate => q( return $parent_event->data_directory ), 
+                         doc => 'the directory where this step should put data' },
     ],
     has_many_optional => [
-        sibling_events                  => { via => 'parent_event', to => 'child_events' },
-        child_events                    => {
-                                            is => 'Genome::Model::Event',
-                                            reverse_id_by => 'parent_event'
-                                        },
-        inputs                          => { is => 'Genome::Model::Event::Input',  reverse_id_by => 'event' },
-        outputs                         => { is => 'Genome::Model::Event::Output', reverse_id_by => 'event' },
-        metrics                         => { is => 'Genome::Model::Event::Metric', reverse_id_by => 'event' },
-        metric_names                    => { via => 'metrics', to => 'name' },
+        sibling_events => { via => 'parent_event', to => 'child_events' },
+        child_events   => { is => 'Genome::Model::Event', reverse_id_by => 'parent_event' },
+        inputs         => { is => 'Genome::Model::Event::Input', reverse_id_by => 'event' },
+        outputs        => { is => 'Genome::Model::Event::Output', reverse_id_by => 'event' },
+        metrics        => { is => 'Genome::Model::Event::Metric', reverse_id_by => 'event' },
+        metric_names   => { via => 'metrics', to => 'name' },
     ],
-    subclass_description_preprocessor   => '_preprocess_subclass_description',
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };

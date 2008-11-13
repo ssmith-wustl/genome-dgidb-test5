@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use Genome::Model::EqualColumnWidthTableizer; 
 class Genome::ProcessingProfile {
+    type_name => 'processing profile',
     table_name => 'PROCESSING_PROFILE',
     is_abstract => 1,
     sub_classification_method_name => '_resolve_subclass_name',
@@ -13,11 +14,11 @@ class Genome::ProcessingProfile {
         id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        name      => { is => 'VARCHAR2', len => 255, is_optional => 0 },
-        type_name => { is => 'VARCHAR2', len => 255, is_optional => 0 },
+        name      => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        type_name => { is => 'VARCHAR2', len => 255, is_optional => 1 },
     ],
     has_many_optional => [
-        params => { is => 'Genome::ProcessingProfile::Param', reverse_id_by => 'processing_profile', },
+        params => { is => 'Genome::ProcessingProfile::Param', reverse_id_by => 'processing_profile' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
