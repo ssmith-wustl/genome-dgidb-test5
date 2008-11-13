@@ -120,7 +120,7 @@ sub sub_command_delegator {
 
     # Which property on the model will tell is the proper subclass to call?
     unless ($class->can('command_subclassing_model_property')) {
-        $class->error_message("class $class did not implement command_subclassing_model_property()");
+        #$class->error_message("class $class did not implement command_subclassing_model_property()");
         return;
     }
     my $subclassing_property = $class->command_subclassing_model_property();
