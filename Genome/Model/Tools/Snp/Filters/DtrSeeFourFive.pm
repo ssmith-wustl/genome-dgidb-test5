@@ -41,7 +41,7 @@ class Genome::Model::Tools::Snp::Filters::DtrSeeFourFive{
             doc => ".keep output file for this step.", 
             is => 'String',
             calculate => q| 
-            return $self->basedir . '/chr' . $self->ref_seq_id . '.keep.csv';
+            return $self->basedir . 'chr' . $self->ref_seq_id . '.keep.csv';
             |
         },
         c_file =>
@@ -112,6 +112,8 @@ sub execute {
     #chomp $header_line;
     my @headers = $dtr->headers; #split(/,\s*/,$header_line);
     for (@headers) { s/\-/MINUS/g; s/\+/PLUS/g; s/\s/SPACE/; };
+
+    $DB::single = 1;
     
     my $keep_handle = new FileHandle;
     my $remove_handle = new FileHandle;
@@ -144,7 +146,7 @@ sub execute {
         chomp $line;
         
         next if ($line =~ /^chromosome/);
-        next if $line =~ /N/;
+        #next if $line =~ /N/; #This was causing a bug with the snpfilter output
         
         my %data; 
         my @dtr_data = $dtr->make_attribute_array($line);
