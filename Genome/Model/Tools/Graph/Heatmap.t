@@ -5,13 +5,12 @@ use warnings;
 
 use above "Genome";
 use Genome::Model::Tools::Graph::Heatmap;
-use Test::More tests => 2;
+use Test::More tests => 3;
 use Digest::MD5 qw(md5_hex);
-use FindBin qw/$Bin/;
 #plan "skip_all";
 
-my $file = "$Bin/../t/heatmap-test-matrix.csv";
-my $outfile = "$Bin/../t/heatmap-test-image.png";
+my $file = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Graph/heatmap-test-matrix.csv";
+my $outfile = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Graph/heatmap-test-image.png";
 my $columns = 3;
 my $checksum = "007d3bb4cfa3bb2aacf152dcfa02aafa";
 
@@ -29,6 +28,17 @@ ok((-e $outfile), 'output file exists');
 #is(md5_hex($imagecontents), $checksum, 'image correct');
 #ok(0,'firetest');
 
+unlink $outfile;
+
+my $nhfile = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Graph/heatmap-noheader-matrix.csv";
+my $hm_noheader = Genome::Model::Tools::Graph::Heatmap->create(
+                                                         matrix => $nhfile,
+                                                         image => $outfile,
+                                                         columns => $columns,
+                                                        );
+my $ret;
+eval { $ret = $hm_noheader->execute(); };
+is($ret, undef, 'bad header');
 unlink $outfile;
 
 exit;
