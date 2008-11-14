@@ -36,17 +36,17 @@ sub create {
     }
 
     my @read_sets = $model->read_sets;
-    $self->data_directory($self->resolve_data_directory);
 
     # Temporary hack... PolyphredPolyscan and CombineVariants models do not have read sets...
     unless ($model->isa("Genome::Model::PolyphredPolyscan") or $model->isa("Genome::Model::CombineVariants")) {
-        if (!@read_sets) {
+        unless (scalar(@read_sets) && ref($read_sets[0])  &&  $read_sets[0]->isa('Genome::Model::ReadSet')) {
             $self->error_message('No read sets have been added to model: '. $model->name);
             $self->error_message("The following command will add all available read sets:\ngenome-model add-reads --model-id=".
             $model->id .' --all');
             return;
         }
     }
+    $self->data_directory($self->resolve_data_directory);
     $model->current_running_build_id($self->build_id);
 
     return $self;
@@ -150,49 +150,72 @@ sub events_for_stage {
     my $stage_name = shift;
     my @events;
     for my $class ($self->classes_for_stage($stage_name)) {
-        my @class_events = $class->get(
-                                       model_id => $self->model_id,
-                                       parent_event_id => $self->build_id,
-                                   );
-        if ($class_events[0] =~ /^-/) {
-            push @events, sort {$b->id <=> $a->id} @class_events;
-        } else {
-            push @events, sort {$a->id <=> $b->id} @class_events;
-        }
+        push @events, $self->events_for_class($class);
     }
     return @events;
 }
 
+sub events_for_class {
+    my $self = shift;
+    my $class = shift;
+
+    my @class_events = $class->get(
+                                   model_id => $self->model_id,
+                                   parent_event_id => $self->build_id,
+                               );
+    my @sorted_class_events;
+    if ($class_events[0]->id =~ /^-/) {
+        @sorted_class_events = sort {$b->id <=> $a->id} @class_events;
+    } else {
+        @sorted_class_events = sort {$a->id <=> $b->id} @class_events;
+    }
+    return @sorted_class_events;
+}
 
 sub abandon_incomplete_events_for_stage {
     my $self = shift;
     my $stage_name = shift;
+    my $force_flag = shift;
 
     my @stage_events = $self->events_for_stage($stage_name);
-    my @incomplete_events, grep { $_ !~ /Succeeded|Abandoned/ } @stage_events;
+    my @incomplete_events = grep { $_->event_status !~ /Succeeded|Abandoned/ } @stage_events;
     if (@incomplete_events) {
         my $status_message = 'Found '. scalar(@incomplete_events) ." incomplete events for stage $stage_name:\n";
         for (@incomplete_events) {
             $status_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
         }
         $self->status_message($status_message);
-        my $response_1 = $self->_ask_user_question('Would you like to abandon the incomplete events?');
-        if ($response_1 eq 'yes') {
-            my $response_2 = $self->_ask_user_question('None of the data associated with these events will be included in further processing.  Are you sure?');
-            if ($response_2 eq 'yes') {
+        unless (defined $force_flag) {
+            my $response_1 = $self->_ask_user_question('Would you like to abandon the incomplete events?');
+            if ($response_1 eq 'yes') {
+                my $response_2 = $self->_ask_user_question('None of the data associated with these events will be included in further processing.  Are you sure?');
+                if ($response_2 eq 'yes') {
+                    for my $incomplete_event (@incomplete_events) {
+                        unless ($incomplete_event->abandon) {
+                            $self->error_message('Failed to abandon event '. $incomplete_event->id);
+                            return;
+                        }
+                    }
+                    return 1;
+                }
+            }
+            # we have incomplete events but do not want to abandon
+            return;
+        } else {
+            if ($force_flag == 1) {
                 for my $incomplete_event (@incomplete_events) {
                     unless ($incomplete_event->abandon) {
                         $self->error_message('Failed to abandon event '. $incomplete_event->id);
                         return;
                     }
                 }
-                # all incomplete events for this stage should now be abandoned
-                #TODO: maybe look again and be sure they are all abandoned
                 return 1;
+            } elsif ($force_flag == 0) {
+                return;
+            } else {
+                $self->error_messge('Illegal value '. $force_flag .' for abandon force flag.');
             }
         }
-        # we have incomplete events but do not want to abandon
-        return;
     }
     # we have no incomplete events for stage
     return 1;
@@ -201,7 +224,8 @@ sub abandon_incomplete_events_for_stage {
 sub continue_with_abandoned_events_for_stage {
     my $self = shift;
     my $stage_name = shift;
-
+    my $force_flag = shift;
+    
     my @stage_events = $self->events_for_stage($stage_name);
     my @abandoned_events = grep { $_->event_status eq 'Abandoned' } @stage_events;
     if (@abandoned_events) {
@@ -210,11 +234,21 @@ sub continue_with_abandoned_events_for_stage {
             $status_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
         }
         $self->status_message($status_message);
-        my $response = $self->_ask_user_question('Would you like to continue with build, ignoring these abandoned events?');
-        if ($response eq 'yes') {
-            return 1;
+        unless (defined($force_flag)) {
+            my $response = $self->_ask_user_question('Would you like to continue with build, ignoring these abandoned events?');
+            if ($response eq 'yes') {
+                return 1;
+            }
+            return;
+        } else {
+            if ($force_flag == 1) {
+                return 1;
+            } elsif ($force_flag == 0) {
+                return;
+            } else {
+                $self->error_messge('Illegal value '. $force_flag .' for continuing with abandoned force flag.');
+            }
         }
-        return;
     }
     return 1;
 }
@@ -222,7 +256,8 @@ sub continue_with_abandoned_events_for_stage {
 sub ignore_unverified_events_for_stage {
     my $self = shift;
     my $stage_name = shift;
-
+    my $force_flag = shift;
+    
     my @stage_events = $self->events_for_stage($stage_name);
     my @succeeded_events = grep { $_->event_status eq 'Succeeded' } @stage_events;
     my @can_not_verify_events = grep { !$_->can('verify_succesful_completion') } @succeeded_events;
@@ -232,11 +267,21 @@ sub ignore_unverified_events_for_stage {
             $status_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
         }
         $self->status_message($status_message);
-        my $response = $self->_ask_user_question('Would you like to continue, ignoring unverified events?');
-        if ($response eq 'yes') {
-            return 1;
+        unless (defined($force_flag)) {
+            my $response = $self->_ask_user_question('Would you like to continue, ignoring unverified events?');
+            if ($response eq 'yes') {
+                return 1;
+            }
+            return;
+        } else {
+            if ($force_flag == 1) {
+                return 1;
+            } elsif ($force_flag == 0) {
+                return;
+            } else {
+                $self->error_messge('Illegal value '. $force_flag .' for continuing with unverified events.');
+            }
         }
-        return;
     }
     return 1;
 }
@@ -244,6 +289,7 @@ sub ignore_unverified_events_for_stage {
 sub verify_succesful_completion_for_stage {
     my $self = shift;
     my $stage_name = shift;
+    my $force_flag = shift;
 
     my @stage_events = $self->events_for_stage($stage_name);
     my @succeeded_events = grep { $_->event_status eq 'Succeeded' } @stage_events;
@@ -255,10 +301,23 @@ sub verify_succesful_completion_for_stage {
             $status_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
         }
         $self->status_message($status_message);
-        my $response_1 = $self->_ask_user_question('Would you like to abandon events which failed to verify?');
-        if ($response_1 eq 'yes') {
-            my $response_2 = $self->_ask_user_question('Abandoning these events will exclued all data associated with these events from further analysis.  Are you sure?');
-            if ($response_2 eq 'yes') {
+        unless (defined($force_flag)) {
+            my $response_1 = $self->_ask_user_question('Would you like to abandon events which failed to verify?');
+            if ($response_1 eq 'yes') {
+                my $response_2 = $self->_ask_user_question('Abandoning these events will exclued all data associated with these events from further analysis.  Are you sure?');
+                if ($response_2 eq 'yes') {
+                    for my $unverified_event (@unverified_events) {
+                        unless ($unverified_event->abandon) {
+                            $self->error_message('Failed to abandon event '. $unverified_event->id);
+                            return;
+                        }
+                    }
+                    return 1;
+                }
+            }
+            return;
+        } else {
+            if ($force_flag == 1) {
                 for my $unverified_event (@unverified_events) {
                     unless ($unverified_event->abandon) {
                         $self->error_message('Failed to abandon event '. $unverified_event->id);
@@ -266,9 +325,12 @@ sub verify_succesful_completion_for_stage {
                     }
                 }
                 return 1;
+            } elsif ($force_flag == 0) {
+                return;
+            } else {
+                $self->error_messge('Illegal value '. $force_flag .' for continuing with unsuccesful events.');
             }
         }
-        return;
     }
     return 1;
 }
@@ -442,19 +504,21 @@ sub _schedule_command_classes_for_object {
             my $command;
             if ($command_class->isa('Genome::Model::EventWithRefSeq')) {
                 if (ref($object)) {
-                    unless ($object->can('ref_seq_id')) {
-                        my $error_message = 'No support for the new Genome::Model::RefSeq objects. FIX ME!!!';
+                    unless ($object->isa('Genome::Model::RefSeq')) {
+                        my $error_message = 'Expecting Genome::Model::RefSeq for EventWithRefSeq but got '. ref($object);
                         $self->error_message($error_message);
                         die;
                     }
-                    my $error_message = 'Expecting non-reference for EventWithRefSeq but got '. ref($object);
-                    $self->error_message($error_message);
-                    die;
+                    $command = $command_class->create(
+                                                      model_id => $self->model_id,
+                                                      ref_seq_id => $object->ref_seq_id,
+                                                  );
+                } else {
+                    $command = $command_class->create(
+                                                      model_id => $self->model_id,
+                                                      ref_seq_id => $object,
+                                                  );
                 }
-                $command = $command_class->create(
-                                                  model_id => $self->model_id,
-                                                  ref_seq_id => $object,
-                                              );
             } elsif ($command_class->isa('Genome::Model::EventWithReadSet')) {
                 unless ($object->isa('Genome::Model::ReadSet')) {
                     my $error_message = 'Expecting Genome::Model::ReadSet object but got '. ref($object);
@@ -530,19 +594,15 @@ sub _ask_user_question {
     my $self = shift;
     my $question = shift;
 
-    local $SIG{ALRM} = sub {
-        $self->warning_message("No reply for question '$question'");
-        return;
-    };
-
-    $self->status_message($question);
-    alarm 60;
     my $input;
-    while ($input !~ /^yes$|^no$/) {
-        $self->status_message('Please reply with one of the following: yes/no');
+  ASK: while (!$SIG{ALRM}) {
+        $self->status_message($question);
+        $self->status_message("Please reply: 'yes' or 'no'");
+        alarm(60);
         chomp($input = <STDIN>);
+        last ASK if ($input =~ m/yes|no/);
     }
-    alarm 0;
+    alarm(0);
     return $input;
 }
 
