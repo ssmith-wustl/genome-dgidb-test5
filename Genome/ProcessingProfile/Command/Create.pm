@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 use Data::Dumper;
+use Genome::ProcessingProfile;
 require UR::Object::Command::List;
 
 class Genome::ProcessingProfile::Command::Create {
@@ -13,8 +14,9 @@ class Genome::ProcessingProfile::Command::Create {
     is_abstract => 1,
     has => [
     name => {
-        is => 'VARCHAR2', 
+        is => 'VARCHAR2',
         len => 255, 
+        doc => 'Human readable name', 
     },
     ],
 };
@@ -31,13 +33,13 @@ for my $target ( glob("$pp_path/*pm") ) {
     $target =~ s#$pp_path/##;
     $target =~ s/\.pm//;
     my $target_class = 'Genome::ProcessingProfile::' . $target;
-    next unless $target_class->isa('Genome::ProcessingProfile');
     my $target_meta = $target_class->get_class_object;
     unless ( $target_meta ) {
         eval("use $target_class;");
         die "$@\n" if $@;
         $target_meta = $target_class->get_class_object;
     }
+    next unless $target_class->isa('Genome::ProcessingProfile');
     next if $target_class->get_class_object->is_abstract;
     my $subclass = 'Genome::ProcessingProfile::Command::Create::' . $target;
     #print Dumper({mod=>$module, path=>$pp_path, target=>$target, target_class=>$target_class,subclass=>$subclass});
