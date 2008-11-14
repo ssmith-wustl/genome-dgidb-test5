@@ -50,11 +50,11 @@ sub execute {
         or return;
 
     # Back up FASTA
-    my $fasta_bak = sprintf('%s.prescreen', $self->_fasta_base);
+    my $fasta_bak = sprintf('%s.prescreen', $self->fasta_base);
     File::Copy::copy($self->fasta_base, $fasta_bak)
-        or ($self->error_message( sprintf('Can\'t copy %s to %s: %s', $self->_fasta_base, $fasta_bak, $!) )
+        or ($self->error_message( sprintf('Can\'t copy %s to %s: %s', $self->fasta_base, $fasta_bak, $!) )
             and return);
-    my $fasta_screen = sprintf('%s.screen', $self->_fasta_base);
+    my $fasta_screen = sprintf('%s.screen', $self->fasta_base);
 
     # Get project w/ screen params
     my $project;
@@ -82,8 +82,8 @@ sub execute {
 
         # Copy the screen file bak to the fasta to be used as input.
         unlink $self->fasta_base;
-        File::Copy::copy($fasta_screen, $self->_fasta_base)
-            or ($self->error_message( sprintf('Can\'t copy screen file (%s) to %s: %s', $fasta_screen, $self->_fasta_base, $!) )
+        File::Copy::copy($fasta_screen, $self->fasta_base)
+            or ($self->error_message( sprintf('Can\'t copy screen file (%s) to %s: %s', $fasta_screen, $self->fasta_base, $!) )
                 and return);
         unlink $fasta_screen;
     }

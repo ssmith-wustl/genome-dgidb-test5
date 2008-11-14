@@ -56,14 +56,14 @@ sub execute {
 
     # Makes a <fasta>.clip and <fasta>.clip.qua, move to file names
     # FASTA
-    my $fasta_bak = sprintf('%s.preclip', $self->_fasta_base);
-    File::Copy::copy($self->_fasta_base, $fasta_bak)
-        or ($self->error_message(sprintf('Can\'t copy %s to %s: %s', $self->_fasta_base, $fasta_bak, $!)) 
+    my $fasta_bak = sprintf('%s.preclip', $self->fasta_base);
+    File::Copy::copy($self->fasta_base, $fasta_bak)
+        or ($self->error_message(sprintf('Can\'t copy %s to %s: %s', $self->fasta_base, $fasta_bak, $!)) 
 	    and return);
-    unlink $self->_fasta_base;
-    my $fasta_clip = sprintf('%s.clip', $self->_fasta_base);
-    File::Copy::copy($fasta_clip, $self->_fasta_base)
-        or ($self->error_message( sprintf('Can\'t copy output file (%s) to %s: %s', $fasta_clip, $self->_fasta_base, $!) )
+    unlink $self->fasta_base;
+    my $fasta_clip = sprintf('%s.clip', $self->fasta_base);
+    File::Copy::copy($fasta_clip, $self->fasta_base)
+        or ($self->error_message( sprintf('Can\'t copy output file (%s) to %s: %s', $fasta_clip, $self->fasta_base, $!) )
 	    and return);
     unlink $fasta_clip;
 
@@ -72,12 +72,12 @@ sub execute {
     File::Copy::copy($self->qual_base, $qual_bak)
         or ($self->error_message( sprintf('Can\'t copy %s to %s: %s', $self->qual_base, $qual_bak, $!) ) and return);
     unlink $self->qual_base;
-    my $qual_clip = sprintf('%s.clip.qual', $self->_fasta_base);
+    my $qual_clip = sprintf('%s.clip.qual', $self->fasta_base);
     File::Copy::copy($qual_clip, $self->qual_base)
         or ($self->error_message( sprintf('Can\'t copy output qual file (%s) to %s: %s', $qual_clip, $self->qual_base, $!) ) and return);
     unlink $qual_clip;
 
-    $self->status_message("No sequences made the quality and length cut.") unless -s $self->_fasta_base;
+    $self->status_message("No sequences made the quality and length cut.") unless -s $self->fasta_base;
 
     $self->chdir_cwd 
         or return;
