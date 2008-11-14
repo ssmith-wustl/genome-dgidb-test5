@@ -31,7 +31,7 @@ $model->set_always('id', $test_model_id);
 $model->set_always('current_running_build_id',undef);
 $model->set_always('data_directory',$test_data_directory);
 $model->set_always('latest_build_directory', $test_data_directory);
-$model->set_list('read_sets',[]);
+$model->set_list('read_sets',Genome::Model::ReadSet->get(read_set_id=> 2499312867, model_id=>2721044485));
 $model->set_isa('Genome::Model');
 
 
