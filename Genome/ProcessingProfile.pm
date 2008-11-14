@@ -14,8 +14,8 @@ class Genome::ProcessingProfile {
         id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        name      => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        type_name => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        name      => { is => 'VARCHAR2', len => 255, is_optional => 1, doc => 'Human readable name', },
+        type_name => { is => 'VARCHAR2', len => 255, is_optional => 1, doc => 'The type of processing profile' },
     ],
     has_many_optional => [
         params => { is => 'Genome::ProcessingProfile::Param', reverse_id_by => 'processing_profile' },
