@@ -18,12 +18,13 @@ BEGIN {
 my %pp_params = (
     'Genome::ProcessingProfile::Command::Create::MetaGenomicComposition' => {
         name => 'test_meta_genomic_composition',
-        sequencing_platform => '454',
-        assembler => 'newbler',
+        sequencing_platform => 'sanger',
+        assembler => 'phredphrap',
         sequencing_center => 'gsc',
         assembly_size => 12345,
-        sense_primer_sequences => 'ACCTGGTTGATCCTGCCAG',
-        anti_sense_primer_sequences => 'TGATCCTTCCGCAGGTTCAC,CCCGTGTTGAGTCAAA',
+        # FIXME once this is fixed
+        #sense_primer_sequences => [qw/ AGAGTTTGATCCTGGCTCAG /],
+        #anti_sense_primer_sequences => [qw/ GACGGGCGGTGWGTRCA CCGTCAATTCCTTTRAGTTT /],
         ribosomal_subunit => 16,
         subject_location => 'ocean',
     },
