@@ -27,6 +27,11 @@ sub create_directory {
         return;
     }
 
+    if ( -l $directory ) {
+        $self->error_message("Can't create directory ($directory), already exists as a symlink");
+        return;
+    }
+
     eval{ File::Path::mkpath($directory, 0, 02775); };
 
     if ( $@ ) {
@@ -40,6 +45,31 @@ sub create_directory {
     }
 
     return $directory;
+}
+
+sub create_symlink {
+    my ($self, $target, $link) = @_;
+
+    #TODO verify that it points to the given spot??
+    return 1 if -l $link; 
+
+    if ( -f $link ) {
+        $self->error_message("Can't create link ($link), already exists as a file");
+        return;
+    }
+
+    if ( -d $link ) {
+        $self->error_message("Can't create link ($link), already exists as a directory");
+        return;
+    }
+
+
+    unless ( symlink($target, $link) ) {
+        $self->error_message("Can't create link ($link) to $target\: $!");
+        return;
+    }
+    
+    return 1;
 }
 
 1;
