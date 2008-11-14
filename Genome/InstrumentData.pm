@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 use Data::Dumper;
+require Genome::Utility::FileSystem;
 
 class Genome::InstrumentData {
     id_by => ['id'],
@@ -126,33 +127,50 @@ sub _resolve_sequencing_platform_for_subclass_name {
 }
 
 #< Paths >#
-sub create_sample_data_link {
+sub create_sample_data_directory_and_link {
     my $self = shift;
 
-    my $link = $self->sample_data_link;
-
-    return 1 if -l $link; 
-
-    my $data_path = $self->_resolve_data_path;
+    my $data_path = $self->resolve_full_path;
+    Genome::Utility::FileSystem->create_directory($data_path)
+        or return;
     
-    unless ( symlink($data_path, $link) ) {
-        $self->error_message("Can't create link for $data_path to $link");
-        return;
-    }
-    
-    return 1;
+    Genome::Utility::FileSystem->create_symlink($data_path, $self->sample_data_link)
+        or return;
+
+    return $data_path;
 }
 
 sub _links_base_path {
-    return '/gscmnt/833/info/medseq/sample_links/';
+    return '/gscmnt/839/info/medseq/instrument_data_links/';
 }
 
 sub sample_data_link {
-    return sprintf('%s/%s', $_[0]->_links_base_path, $_[0]->seq_id);
+    return sprintf('%s/%s', _links_base_path(), $_[0]->id);
 }
 
 sub _sample_data_base_path {
-    return '/gscmnt/sata363/info/medseq/sample_data/';
+    return '/gscmnt/sata363/info/medseq/instrument_data/';
+}
+
+sub resolve_full_path{
+    my $self = shift;
+
+    return $self->full_path if $self->full_path;
+
+    return $self->full_path( $self->_default_full_path );
+}
+
+sub _default_full_path {
+    my $self = shift;
+    sprintf('%s/%s', $self->_sample_data_base_path, $self->id)
+}
+    
+
+#< Data Dumping >#
+sub dump_to_file_system {
+    my $self = shift;
+    $self->warning_message("Method 'dump_data_to_file_system' not implemented");
+    return 1;
 }
 
 ######
