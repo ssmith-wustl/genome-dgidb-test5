@@ -4,9 +4,11 @@ use strict;
 use warnings;
 
 use Genome;
+
 use Term::ANSIColor;
 use Genome::Model::EqualColumnWidthTableizer;
 use Genome::Model::Tools::Maq::RemovePcrArtifacts;
+require Genome::Utility::FileSystem;
 use File::Path;
 use Cwd;
 use File::Basename;
@@ -79,12 +81,12 @@ class Genome::Model {
     },
     built_instrument_data => {
         calculate => q| 
-        return map { $_->instument_data } grep { defined $_->first_build_id } $self->instrument_data_assignments;
+        return map { $_->instrument_data } grep { defined $_->first_build_id } $self->instrument_data_assignments;
         |,
     },
     unbuilt_instrument_data => {
         calculate => q| 
-        return map { $_->instument_data } grep { !defined $_->first_build_id } $self->instrument_data_assignments;
+        return map { $_->instrument_data } grep { !defined $_->first_build_id } $self->instrument_data_assignments;
         |,
     },
     instrument_data_assignment_events => {
@@ -168,7 +170,7 @@ my %SUBJECT_TYPES = (
         #property => 'name',
     },
     dna_resource_item_name => {
-        needs_to_be_verified => 1,
+        needs_to_be_verified => 0,
         #class => 'Genome::Sample',
         #property => 'name',
     },
@@ -257,11 +259,50 @@ sub unassigned_instrument_data {
     my $self = shift;
 
     my @compatible_instrument_data = $self->compatible_instrument_data;
-    my @instrument_data_assignments = $self->instrument_data_assignements
+    my @instrument_data_assignments = $self->instrument_data_assignments 
         or return @compatible_instrument_data;
-    my %assigned_instument_data_ids = map { $_->instrument_data_id => 1 } @instrument_data_assignments;
+    my %assigned_instrument_data_ids = map { $_->instrument_data_id => 1 } @instrument_data_assignments;
 
-    return grep { not $assigned_instument_data_ids{$_->id} } @compatible_instrument_data;
+    return grep { not $assigned_instrument_data_ids{$_->id} } @compatible_instrument_data;
+}
+
+sub dump_unbuilt_instrument_data_to_filesysytem {
+    my $self = shift;
+
+    my @unbuilt_instrument_data = $self->unbuilt_instrument_data;
+    unless ( @unbuilt_instrument_data ) {
+        $self->status_message(
+            sprintf('No unbuilt instrument data found (<id> %s <name> %s)', $self->id, $self->name) 
+        );
+        return;
+    }
+
+    my $chromat_dir = $self->consed_directory->chromat_dir;
+    
+    for my $instrument_data ( @unbuilt_instrument_data ) { 
+        $self->status_message(
+            sprintf('Dumping instrument data (<id> %s <name> %s)', $instrument_data->id, $instrument_data->run_name) 
+        );
+        $instrument_data->dump_to_file_system
+            or return;
+        
+        my $instrument_data_dir = $instrument_data->full_path;
+        my $dh = IO::Dir->new($instrument_data_dir);
+        unless ( $dh ) {
+            $self->error_message("Can'\t open directory ($instrument_data_dir)");
+            return;
+        }
+
+        while ( my $trace = $dh->read ) {
+            next if $trace =~ m#^\.#;
+            my $target = sprintf('%s/%s', $instrument_data_dir, $trace);
+            my $link = sprintf('%s/%s', $chromat_dir, $trace);
+            Genome::Utility::FileSystem->create_symlink($target, $link)
+                or return;
+        }
+    }
+
+    return 1;
 }
 
 #<>#
