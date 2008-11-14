@@ -150,7 +150,7 @@ sub structures_flanking_structure_at_position {
 sub cds_exons {
     my $self = shift;
 
-    return grep { $_->structure_type eq 'cds_exon' } $self->sub_structures->all;
+    return grep { $_->structure_type eq 'cds_exon' } $self->ordered_sub_structures->all;
 }
 
 sub cds_exon_range {
