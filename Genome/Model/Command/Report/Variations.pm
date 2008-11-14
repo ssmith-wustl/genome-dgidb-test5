@@ -9,70 +9,61 @@ use Command;
 use Data::Dumper;
 use IO::File;
 use Genome::DB::Schema;
-use Genome::VariantAnnotator;
+use Genome::Utility::IO::SeparatedValueReader;
+use Genome::Utility::VariantAnnotator;
 use Tie::File;
 use Fcntl 'O_RDONLY';
 use Carp;
 
-class Genome::Model::Command::Report::Variations
-{
+class Genome::Model::Command::Report::Variations {
     is => 'Command',                       
-    has => 
-    [ 
+    has => [ 
     # Input Variant Params
-    variant_file => 
-    {
+    variant_file => {
         type => 'String',
         is_optional => 0,
         doc => "File of variants",
     },
-    variant_type => 
-    {
+    variant_type => {
         type => 'String', 
         is_optional => 1,
         doc => "Type of variation: snp, indel",
         default => 'snp',
     },
     # Report File
-    report_file_base => 
-    {
+    report_file_base => {
         type => 'String',
         is_optional => 0,
         doc => "File base for report outputs",
     },
-    no_headers =>
-    {
+    no_headers => {
         type => 'Boolean',
         is_optional => 1,
         default => 0,
         doc => "Add headers in report outputs",
     },
     # Metrix Params
-    minimum_maq_score => 
-    {
+    minimum_maq_score => {
         is => 'Integer',
         is_optional => 1,
         default => 15,
         doc => 'Minimum quality to consider a variant high quality',
     },
-    minimum_read_count => 
-    {
+    minimum_read_count => {
         is => 'Integer',
         is_optional => 1,
         default => 3,
         doc => 'Minimum number of total reads to consider a variant high quality',
     },
     # Transcript Params
-    flank_range => 
-    {
+    flank_range => {
         type => 'Integer', 
         is_optional => 1,
         default => 50000,
         doc => "Range to look around for flaking regions of transcripts",
     },
     # Variation Params
-    variation_range => 
-    {
+    variation_range => {
        type => 'Integer', 
        is_optional => 1,
        default => 0,
@@ -93,7 +84,7 @@ sub help_synopsis {
 
 sub help_detail {
     return <<EOS 
-    Creates an annotation report for variants in a given file.  Uses Genome::VariantAnnotator for each given variant, and outputs the annotation infomation to the given report file.
+    Creates an annotation report for variants in a given file.  Uses Genome::Utility::VariantAnnotator for each given variant, and outputs the annotation infomation to the given report file.
 EOS
 }
 
@@ -102,23 +93,23 @@ EOS
 sub execute { 
     my $self = shift;
 
-    my $variant_fh = $self->_open_variant_file;
-    my $annotator = $self->_create_annotator;
-    $self->_open_report_files;
-    my ($transcripts_method, $variations_method, $print_method) = $self->_determine_methods_for_variant_type;
+    my $variant_svr = $self->_open_variant_svr
+        or return;
+    my ($chromosome, $from, $to) = $self->_get_chromosome_and_positions
+        or return;
+    my $annotator = $self->_create_annotator($chromosome, $from, $to)
+        or return;
+    my $variation_window = $self->_create_variation_window($chromosome, $from, $to)
+        or return;
+    $self->_open_report_files
+        or return;
+    my ($transcripts_method, $variations_method, $print_method) = $self->_determine_methods_for_variant_type
+        or return;
 
-    while ( my $line = $variant_fh->getline )
-    {
-        chomp $line;
-        my %variant;
-        @variant{qw/ 
-            chromosome_name start stop reference variant 
-            reference_type variant_type reference_reads variant_reads
-            maq_score
-            /} = split(/\s+/, $line);
-        my @transcripts = $annotator->$transcripts_method(%variant);
-        my @variations = $annotator->$variations_method(%variant);
-        $self->$print_method(\%variant, \@transcripts, \@variations);
+    while ( my $variant = $variant_svr->next ) {
+        my @transcripts = $annotator->prioritized_transcripts(%$variant);
+        my @variations = grep { $_->start eq $_->end } $variation_window->scroll($variant->{start});
+        $self->$print_method($variant, \@transcripts, \@variations);
     }
 
     $self->_print_metrics_report;
@@ -127,20 +118,22 @@ sub execute {
     return 1;
 }
 
-sub _open_variant_file
-{
+sub _open_variant_svr {
     my $self = shift;
 
-    my $variant_file = $self->variant_file;
-    my $variant_fh = IO::File->new("< $variant_file");
-    $self->error_message("Can't open variation file ($variant_file) for reading: $!")
-        and return unless $variant_fh;
-
-    return $variant_fh;
+    return Genome::Utility::IO::SeparatedValueReader->create(
+        input => $self->variant_file,
+        headers => [qw/
+        chromosome_name start stop reference variant 
+        reference_type type reference_reads variant_reads
+        maq_score
+        /],
+        separator => '\s+',
+        is_regex => 1,
+    );
 }
 
-sub _create_annotator
-{
+sub _get_chromosome_and_positions {
     my $self = shift;
 
     my $variant_file = $self->variant_file;
@@ -150,8 +143,7 @@ sub _create_annotator
     my ($chromosome_confirm, $to) = ( split(/\s+/, $variants[$#variants]) )[0..1];
     untie @variants;
     undef @variants;
-    $self->error_msg
-    (
+    $self->error_msg(
         "Different chromosome at beginning ($chromosome_name) and end ($chromosome_confirm) of variant file ($variant_file)"
     )
         and return unless $chromosome_name eq $chromosome_confirm;
@@ -160,55 +152,55 @@ sub _create_annotator
     $self->error_message("Can't connect to dwrac")
         and return unless $schema;
 
-    my $chromosome = $schema->resultset('Chromosome')->find
-    (
+    my $chromosome = $schema->resultset('Chromosome')->find(
         { chromosome_name => $chromosome_name },
     );
     $self->error_message("Can't find chromosome ($chromosome_name)")
         and return unless $chromosome;
 
-    my $annotator = Genome::VariantAnnotator->new
-    (
-        #variant_type => $self->variant_type,
-        transcript_window => $chromosome->transcript_window
-        (
+    return ($chromosome, $from, $to);
+}
+
+sub _create_annotator {
+    my ($self, $chromosome, $from, $to) = @_;
+    
+    return Genome::Utility::VariantAnnotator->new(
+        transcript_window => $chromosome->transcript_window (
             from => $from - $self->flank_range,
             to => $to + $self->flank_range,
             range => $self->flank_range
         ),
-        variation_window => $chromosome->variation_window
-        (
-            from => $from,
-            to => $to,
-            range => $self->variation_range,
-        ),
     );
+}
 
-    return $annotator;
+sub _create_variation_window {
+    my ($self, $chromosome, $from, $to) = @_;
+
+    return $chromosome->variation_window(
+        from => $from,
+        to => $to,
+        range => $self->variation_range,
+    );
 }
 
 #- REPORTS -#
-sub report_types
-{
+sub report_types {
     return (qw/ metrics transcript variation /);
 }
 
-sub report_file_for_type
-{
+sub report_file_for_type {
     my ($self, $type) = @_;
 
     return $self->_report_file($self->report_file_base, $type);
 }
 
-sub _report_file
-{
+sub _report_file {
     my ($self, $directory, $type) = @_;
 
     return sprintf('%s.%s', $directory, $type);
 }
 
-sub _open_report_files
-{
+sub _open_report_files {
     my $self = shift;
 
     for my $report_type ( $self->report_types )
@@ -326,8 +318,7 @@ sub _determine_methods_for_variant_type
 }
 
 #- PRINT REPORTS -#
-sub _print_reports_for_snp
-{
+sub _print_reports_for_snp {
     my ($self, $snp, $transcripts, $variations) = @_;
 
     # Calculate Metrics
@@ -416,7 +407,7 @@ sub _print_metrics_report
     my $self = shift;
 
     my $metrics = $self->{_metrics};
-    print Dumper($metrics);
+    #print Dumper($metrics);
     
     return $self->_metrics_report_fh->print
     (
@@ -442,7 +433,7 @@ Genome::Model::Command::Report::Variations
 
 =head1 Synopsis
 
-Goes through each variant in a file, retrieving annotation information from Genome::VariantAnnotator.
+Goes through each variant in a file, retrieving annotation information from Genome::Utility::VariantAnnotator.
 
 =head1 Usage
 
@@ -481,7 +472,7 @@ Goes through each variant in a file, retrieving annotation information from Geno
 
 =head1 See Also
 
-B<Genome::VariantAnnotator>, B<Genome::Model::Command::Report::VariationsBatchToLsf>, B<Genome::DB::*>, B<Genome::DB::Window::*>
+B<Genome::Utility::VariantAnnotator>, B<Genome::Model::Command::Report::VariationsBatchToLsf>, B<Genome::DB::*>, B<Genome::DB::Window::*>
 
 =head1 Disclaimer
 
