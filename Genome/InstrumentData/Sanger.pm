@@ -9,7 +9,7 @@ class Genome::InstrumentData::Sanger {
     is  => 'Genome::InstrumentData',
 };
 
-sub dump_data_to_filesystem {
+sub dump_to_file_system {
     my $self = shift;
 
     my $data_dir = $self->create_sample_data_directory_and_link 
