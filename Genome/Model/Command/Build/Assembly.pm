@@ -35,6 +35,7 @@ sub stages {
         assemble
         verify_succesful_completion
     /;
+    return @stages;
 }
 
 sub setup_project_job_classes {
