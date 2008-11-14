@@ -10,7 +10,7 @@ class Genome::Model::Command::InstrumentData::Assign {
     has => [
         model_id => {
             is => 'Integer', 
-            doc => 'Identifies the genome model by id to which the instrument data will be assigned.'
+            doc => 'ID for the genome model to assign instrument data.'
         },
     ],
     has_optional => [
@@ -21,7 +21,7 @@ class Genome::Model::Command::InstrumentData::Assign {
         all => {
             is => 'Boolean',
             default => 0,
-            doc => 'Add all new reads for the associated sample which are not currently part of the model.'
+            doc => 'Assign all available unassigned instrument data to the model.'
         },
     ],
 };
