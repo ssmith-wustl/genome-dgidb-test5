@@ -5,14 +5,14 @@ use warnings;
 
 use Genome;
 
-my %PROPERTIES = (
+my %HAS = (
     sequencing_center => {
         doc => 'Place from whence the reads have come.',
         valid_values => [qw/ gsc broad baylor nisc /],
     },
     sequencing_platform => {
         doc => 'Platform (machine) from whence the reads where created.',
-        valid_values => [qw/ 3730 454 solexa solid /],
+        valid_values => [qw/ sanger 454 solexa solid /],
     },
     assembler => {
         doc => 'Assembler type for assembling said reads.',
@@ -22,21 +22,26 @@ my %PROPERTIES = (
         doc => 'Ribsosomal subunit',
         valid_values => [qw/ 16 18 /],
     },
-    amplification_forward_primer => { # TODO Remove?
-        doc => 'Primer used for amplification in the forward (5\') direction',
-    },
-    amplification_reverse_primer => { # TODO Remove?
-        doc => 'Primer used for amplification in the reverse (3\') direction',
-    },
     assembly_size => {
         doc => 'Estimated assembly size, used for metrics and such',
     },
     subject_location => {
         doc => 'The location whence the original sample was collected', 
     },
-    #primer_set_alias => { doc => 'An alias for the primer set used to create the amplicon', },
-    # TODO add export naming? (ex Ocean)
+    #####
+    #TODO remove these props from the db
+    #amplification_forward_primer => { doc => 'Primer used for amplification in the forward (5\') direction', },
+    #amplification_reverse_primer => { doc => 'Primer used for amplification in the reverse (3\') direction', },
 );
+my %HAS_MANY = (
+    sense_primer_sequences => {
+        doc => 'Sense (5\' direction) primer sequences that can be used for to orient assemblies',
+    },
+    anti_sense_primer_sequences => { doc => 'Anti-sense (3\' direction) primer sequences that can be used for to orient assemblies', },
+);
+my %PROPERTIES = ( %HAS );
+# FIXME
+#my %PROPERTIES = ( %HAS, %HAS_MANY );
 
 class Genome::ProcessingProfile::MetaGenomicComposition {
     is => 'Genome::ProcessingProfile',
@@ -46,16 +51,17 @@ class Genome::ProcessingProfile::MetaGenomicComposition {
             via => 'params',
             to => 'value',
             where => [ name => $_ ],
-            is_optional => 0,
             is_mutable => 1,
             doc => (
-                ( exists $PROPERTIES{$_}->{valid_valiues} )
-                ? sprintf('%s Valid values: %s.', $PROPERTIES{$_}->{doc}, join(', ', @{$PROPERTIES{$_}->{valid_values}}))
-                : $PROPERTIES{$_}->{doc}
+                ( exists $HAS{$_}->{valid_values} )
+                ? sprintf('%s Valid values: %s.', $HAS{$_}->{doc}, join(', ', @{$HAS{$_}->{valid_values}}))
+                : $HAS{$_}->{doc}
             ),
         },
-    } keys %PROPERTIES
+    } keys %HAS
     ],
+    # FIXME not working
+    #  has_many => [ map { $_ => { %{$HAS_MANY{$_}}, via => 'params', to => 'value', where => [ name => $_ ], is_mutable => 1, }, } keys %HAS_MANY ],
 };
 
 sub create {
@@ -86,7 +92,50 @@ sub params_for_class {
     return keys %PROPERTIES;
 }
 
-sub instrument_data_is_applicable { #FIXME needed?
+#< Primer Seq >#
+my %iub2bases = (qw/
+    R   AG  
+    Y   CT  
+    K   GT  
+    M   AC  
+    S   GC  
+    W   AT  
+    B   CGT 
+    D   AGT 
+    H   ACT 
+    V   ACG 
+    N   AGCT 
+    /);
+sub get_sense_primer_sequences {
+    my $self = shift;
+
+    my $primer;
+    my @new_primers;
+    for my $primer_base ( split(//, $primer) ) {
+        my @new_bases;
+        if ( exists $iub2bases{$primer_base} ) {
+            for my $iub_base ( split(//, $iub2bases{$primer_base}) ) {
+                push @new_bases, $iub_base;
+                # add to  new primers
+            }
+        }
+        else {
+            @new_bases = ($primer_base);
+        }
+
+        for my $new_primer ( @new_primers ) {
+            for my $new_base ( @new_bases ) {
+                $primer .= $new_base;
+            }
+        }
+    }
+
+    return;
+}
+
+#################################################################
+##FIXME needed?
+sub instrument_data_is_applicable { 
     my $self = shift;
     my $instrument_data_type = shift;
     my $instrument_data_id = shift;
@@ -96,7 +145,7 @@ sub instrument_data_is_applicable { #FIXME needed?
     if ($self->sequencing_platform) {
         unless ($self->sequencing_platform eq $lc_instrument_data_type) {
             $self->error_message('The processing profile sequencing platform ('. $self->sequencing_platform
-                                 .') does not match the instrument data type ('. $lc_instrument_data_type);
+                .') does not match the instrument data type ('. $lc_instrument_data_type);
             return;
         }
     }
