@@ -7,7 +7,7 @@ use Bio::Seq;
 use Bio::SeqIO;
 use Bio::Taxon;
 
-use Genome::Inline;
+use Genome::InlineConfig;
 
 use Inline (
     Java => <<'END', 
@@ -46,7 +46,7 @@ END
         'edu.msu.cme.rdp.classifier.readseqwrapper.Sequence',
     ],
     PACKAGE => 'main',
-    DIRECTORY => Genome::Inline::DIRECTORY(),
+    DIRECTORY => Genome::InlineConfig::DIRECTORY(),
     EXTRA_JAVA_ARGS => '-Xmx1000m',
 ) ;
 

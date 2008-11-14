@@ -3,7 +3,7 @@ package Genome::Model::Tools::Maq::Map::Writer;
 use strict;
 use warnings;
 
-use Genome::Inline;
+use Genome::InlineConfig;
 use Carp;
 
 our $libs;
@@ -14,7 +14,7 @@ BEGIN
 
 use Inline 'C' => 'Config' => (
             CC => '/gscmnt/936/info/jschindl/gcc32/gcc',
-            DIRECTORY => Genome::Inline::DIRECTORY(), 
+            DIRECTORY => Genome::InlineConfig::DIRECTORY(), 
             INC => '-I/gscuser/jschindl -I/gsc/pkg/bio/maq/zlib/include',
             CCFLAGS => '-D_FILE_OFFSET_BITS=64 -m32 ',
             LD => '/gscmnt/936/info/jschindl/gcc32/ld',

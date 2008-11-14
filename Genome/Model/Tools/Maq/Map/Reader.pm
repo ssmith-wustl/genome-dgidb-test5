@@ -11,10 +11,10 @@ BEGIN
     $libs = '-L/var/chroot/etch-ia32/usr/lib -L/usr/lib -L/lib ';        
 };
 
-use Genome::Inline;
+use Genome::InlineConfig;
 use Inline 'C' => 'Config' => (
             CC => '/gscmnt/936/info/jschindl/gcc32/gcc',
-            DIRECTORY => Genome::Inline::DIRECTORY(), 
+            DIRECTORY => Genome::InlineConfig::DIRECTORY(), 
             INC => '-I/gscuser/jschindl -I/gsc/pkg/bio/maq/zlib/include',
             CCFLAGS => '-D_FILE_OFFSET_BITS=64 -m32 ',
             LD => '/gscmnt/936/info/jschindl/gcc32/ld',

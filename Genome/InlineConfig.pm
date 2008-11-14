@@ -1,12 +1,12 @@
 
-package Genome::Inline;
+package Genome::InlineConfig;
 use strict;
 use warnings;
 
 our $DIRECTORY;
 sub DIRECTORY {
     unless(defined $DIRECTORY) {
-        $DIRECTORY = $INC{"Genome/Inline.pm"};
+        $DIRECTORY = $INC{"Genome/InlineConfig.pm"};
         $DIRECTORY =~ s/\.pm(\/|)//;
         $DIRECTORY .= 32;
         unless (-d $DIRECTORY) {

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";                         # >above< ensures YOUR copy is used during development
-use Genome::Inline;
+use Genome::InlineConfig;
 use Genome::Model::Tools::Maq::Map::Reader;
 
 use Test::More tests => 20;
@@ -16,10 +16,9 @@ BEGIN
     $libs = '-L/var/chroot/etch-ia32/usr/lib -L/usr/lib -L/lib ';        
 };
 
-use Genome::Inline;
 use Inline 'C' => 'Config' => (
             CC => '/gscmnt/936/info/jschindl/gcc32/gcc',
-            DIRECTORY => Genome::Inline::DIRECTORY(), 
+            DIRECTORY => Genome::InlineConfig::DIRECTORY(), 
             INC => '-I/gscuser/jschindl -I/gsc/pkg/bio/maq/zlib/include',
             CCFLAGS => '-D_FILE_OFFSET_BITS=64 -m32 ',
             LD => '/gscmnt/936/info/jschindl/gcc32/ld',

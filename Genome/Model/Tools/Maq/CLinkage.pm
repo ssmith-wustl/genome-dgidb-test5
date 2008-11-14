@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Inline;
+use Genome::InlineConfig;
 use File::Basename;
 
 class Genome::Model::Tools::Maq::CLinkage {
@@ -23,10 +23,10 @@ sub _get_config_hash {
     my $libmaq = "maq" . $version;
     
     #FIXME: This home directory code is temporary until systems deploys our library fleet around the star system 
-    return ( DIRECTORY => Genome::Inline::DIRECTORY(),
+    return ( DIRECTORY => Genome::InlineConfig::DIRECTORY(),
              LIBS => "-L$loaded_dir -L/gsc/lib/ -L/gsc/pkg/bio/maq/zlib/lib/ -l$libmaq -lz -lm",
              INC => "-I$loaded_dir -I/gsc/pkg/bio/maq/zlib/include/",
-             CCFLAGS => Genome::Inline::CCFLAGS(), 
+             CCFLAGS => Genome::InlineConfig::CCFLAGS(), 
              #BUILD_NOISY => 1,
            );
 }

@@ -1,6 +1,6 @@
 package Genome::Model::Tools::Maq::GenerateVariationMetrics_C;
 
-use Genome::Inline;
+use Genome::InlineConfig;
 our $inline_dir;
 our $cflags;
 our $libs;
@@ -17,7 +17,7 @@ BEGIN
 
 use Inline 'C' => 'Config' => (
             CC => '/gscmnt/936/info/jschindl/gcc32/gcc',
-            DIRECTORY => Genome::Inline::DIRECTORY(),
+            DIRECTORY => Genome::InlineConfig::DIRECTORY(),
             INC => "-I$ovsrc".' -I/gscuser/jschindl/svn/gsc/zlib-1.2.3',
             CCFLAGS => `uname -m` =~ /ia64/ ? '-D_FILE_OFFSET_BITS=64 '.$cflags:'-D_FILE_OFFSET_BITS=64 -m32 '.$cflags,
             LD => '/gscmnt/936/info/jschindl/gcc32/ld',
