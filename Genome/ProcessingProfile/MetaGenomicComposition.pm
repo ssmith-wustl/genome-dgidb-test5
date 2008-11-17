@@ -37,7 +37,9 @@ my %HAS_MANY = (
     sense_primer_sequences => {
         doc => 'Sense (5\' direction) primer sequences that can be used for to orient assemblies',
     },
-    anti_sense_primer_sequences => { doc => 'Anti-sense (3\' direction) primer sequences that can be used for to orient assemblies', },
+    anti_sense_primer_sequences => {
+        doc => 'Anti-sense (3\' direction) primer sequences that can be used for to orient assemblies',
+    },
 );
 my %PROPERTIES = ( %HAS );
 # FIXME
@@ -53,14 +55,14 @@ class Genome::ProcessingProfile::MetaGenomicComposition {
             where => [ name => $_ ],
             is_mutable => 1,
             doc => (
-                ( exists $HAS{$_}->{valid_values} )
-                ? sprintf('%s Valid values: %s.', $HAS{$_}->{doc}, join(', ', @{$HAS{$_}->{valid_values}}))
-                : $HAS{$_}->{doc}
+                ( exists $PROPERTIES{$_}->{valid_values} )
+                ? sprintf('%s Valid values: %s.', $PROPERTIES{$_}->{doc}, join(', ', @{$PROPERTIES{$_}->{valid_values}}))
+                : $PROPERTIES{$_}->{doc}
             ),
         },
-    } keys %HAS
+    } keys %PROPERTIES
     ],
-    # FIXME not working
+    #FIXME not working
     #  has_many => [ map { $_ => { %{$HAS_MANY{$_}}, via => 'params', to => 'value', where => [ name => $_ ], is_mutable => 1, }, } keys %HAS_MANY ],
 };
 
