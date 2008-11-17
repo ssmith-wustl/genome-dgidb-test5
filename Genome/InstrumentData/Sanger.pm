@@ -12,7 +12,7 @@ class Genome::InstrumentData::Sanger {
     _gsc_run => 
         doc => 'GSC Run from LIMS',
         is => 'GSC::Run',
-        calculate_from => [qw/ id /]
+        calculate_from => [qw/ id /],
         calculate => q| GSC::Run->get($id); |,
     },
     ]
