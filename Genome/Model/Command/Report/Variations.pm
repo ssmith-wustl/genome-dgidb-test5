@@ -22,7 +22,7 @@ class Genome::Model::Command::Report::Variations {
     variant_file => {
         type => 'String',
         is_optional => 0,
-        doc => "File of variants",
+        doc => "File of variants.  Tab separated columns: chromosome_name start stop reference variant reference_type type reference_reads variant_reads maq_score",
     },
     variant_type => {
         type => 'String', 
