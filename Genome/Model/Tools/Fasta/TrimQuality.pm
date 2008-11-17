@@ -9,12 +9,12 @@ class Genome::Model::Tools::Fasta::TrimQuality {
     is  => 'Genome::Model::Tools::Fasta',
     has => [	 
     min_trim_quality => {
-        is => 'Int',
+        type => 'Integer',
         doc => 'Minimum quality value cutoff (10)',
         default => 10,
     },
     min_trim_length => {
-        is => 'Int',
+        type => 'Integer',
         doc => 'Minimum clipped read length (100)',
         default => 100,
     },		 
