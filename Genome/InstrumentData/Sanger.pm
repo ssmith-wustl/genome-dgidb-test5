@@ -7,12 +7,22 @@ use Genome;
 
 class Genome::InstrumentData::Sanger {
     is  => 'Genome::InstrumentData',
+    has => [
+    #< Run from OLTP Attrs >#
+    _gsc_run => 
+        doc => 'GSC Run from LIMS',
+        is => 'GSC::Run',
+        calculate_from => [qw/ id /]
+        calculate => q| GSC::Run->get($id); |,
+    },
+    ]
 };
 
+#< Dump to File System >#
 sub dump_to_file_system {
     my $self = shift;
 
-    my $data_dir = $self->create_sample_data_directory_and_link 
+    my $data_dir = $self->create_data_directory_and_link 
         or return;
         
     my $read_cnt = 0;
