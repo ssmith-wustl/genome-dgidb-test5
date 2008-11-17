@@ -17,7 +17,7 @@ our @SUB_COMMAND_DATA = (
     #'project'               => 'Genome::Project::Command',
     #'sample'                => 'Genome::Sample::Command',
     #'population-group'      => 'Genome::PopulationGroup::Command',
-    #'instrument-data'       => 'Genome::InstrumentData::Command',
+    'instrument-data'       => 'Genome::InstrumentData::Command',
     'processing-profile'    => 'Genome::ProcessingProfile::Command',
     'model'                 => 'Genome::Model::Command',
     'tools'                 => 'Genome::Model::Tools',
@@ -29,6 +29,7 @@ for my $class ( values %SUB_COMMAND_CLASSES ) {
     die $@ if $@; 
 }
 
+#< Command Naming >#
 sub command_name {
     my $class = ref($_[0]) || $_[0];
     return $class->SUPER::command_name unless $class eq __PACKAGE__;
@@ -41,6 +42,7 @@ sub command_name_brief {
     return 'genome';
 }
 
+#< Sub Command Stuff >#
 sub is_sub_command_delegator {
     return 1;
 }
@@ -51,10 +53,10 @@ sub sub_command_classes {
 
 sub class_for_sub_command {
     my $class = ref($_[0]) || $_[0];
-    #return $class->SUPER::class_for_sub_command unless $class eq __PACKAGE__;
+    return $class->SUPER::class_for_sub_command unless $class eq __PACKAGE__;
     return $SUB_COMMAND_CLASSES{$_[1]};
 }
-  
+
 1;
 
 #$HeadURL$
