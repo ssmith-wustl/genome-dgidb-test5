@@ -9,7 +9,7 @@ class Genome::InstrumentData::Sanger {
     is  => 'Genome::InstrumentData',
     has => [
     #< Run from OLTP Attrs >#
-    _gsc_run => 
+    _gsc_run => {
         doc => 'GSC Run from LIMS',
         is => 'GSC::Run',
         calculate_from => [qw/ id /],
