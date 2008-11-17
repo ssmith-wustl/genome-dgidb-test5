@@ -374,6 +374,10 @@ sub _resolve_subclass_name_for_event_type {
     my ($class,$event_type) = @_;
     my @command_parts = split(' ',$event_type);
     my $genome_model = shift @command_parts;
+    if ($genome_model eq 'genome'){
+        #TODO, this is to accomodate eddie's refactoring, will need to switch once command name is redeployed
+        $genome_model.= '-'.shift @command_parts;
+    }
     if ($genome_model !~ m/genome-model/) {
         $class->error_message("Malformed event-type $event_type.  Expected it to begin with 'genome-model'");
         return;
