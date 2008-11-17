@@ -63,8 +63,8 @@ sub create {
 
     for my $sense_type ( @SENSE_TYPES ) {
         my $fasta_method = $sense_type.'_fasta_file';
-        if ( $self->$fasta_method and not -e $self->$fasta_method ) {
-            $self->error_message( sprintf('Sense FASTA file (%s) does not exist.', $self->$fasta_method) );
+        if ( $self->$fasta_method and !-e $self->$fasta_method ) {
+            $self->error_message( sprintf("$sense_type FASTA file (%s) does not exist.", $self->$fasta_method) );
             return;
         }
     }
