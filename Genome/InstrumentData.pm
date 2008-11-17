@@ -59,7 +59,7 @@ EOS
             calculate_from => ['run_name','sample_name'], 
             calculate => q|$run_name. '.' . $sample_name| 
         },
-        ],
+    ],
     has_optional => [
         full_path => {
             via => 'attributes',
@@ -127,14 +127,14 @@ sub _resolve_sequencing_platform_for_subclass_name {
 }
 
 #< Paths >#
-sub create_sample_data_directory_and_link {
+sub create_data_directory_and_link {
     my $self = shift;
 
     my $data_path = $self->resolve_full_path;
     Genome::Utility::FileSystem->create_directory($data_path)
         or return;
     
-    Genome::Utility::FileSystem->create_symlink($data_path, $self->sample_data_link)
+    Genome::Utility::FileSystem->create_symlink($data_path, $self->data_link)
         or return;
 
     return $data_path;
@@ -144,11 +144,11 @@ sub _links_base_path {
     return '/gscmnt/839/info/medseq/instrument_data_links/';
 }
 
-sub sample_data_link {
+sub data_link {
     return sprintf('%s/%s', _links_base_path(), $_[0]->id);
 }
 
-sub _sample_data_base_path {
+sub _data_base_path {
     return '/gscmnt/sata363/info/medseq/instrument_data/';
 }
 
@@ -162,11 +162,11 @@ sub resolve_full_path{
 
 sub _default_full_path {
     my $self = shift;
-    sprintf('%s/%s', $self->_sample_data_base_path, $self->id)
+    sprintf('%s/%s', $self->_data_base_path, $self->id)
 }
     
 
-#< Data Dumping >#
+#< Dump to File System >#
 sub dump_to_file_system {
     my $self = shift;
     $self->warning_message("Method 'dump_data_to_file_system' not implemented");
