@@ -45,6 +45,11 @@ sub properties_hash {
                                            doc => 'A string of parameters to pass to the assembler',
                                            is_optional => 1,
                                        },
+		      assembler_test => {
+			                   doc => 'Flag to use test version of assembler',
+					   is_optional => 1,
+					   valid_values => [0, 1],
+		                       },
                       read_trimmer_name => {
                                             doc => 'The name of the software to use when trimming read sets',
                                             is_optional => 1,
@@ -61,7 +66,7 @@ sub properties_hash {
                                              doc => 'A string of parameters to pass to the read_filter',
                                              is_optional => 1,
                                          },
-                  );
+		      );
     return %properties
 }
 
