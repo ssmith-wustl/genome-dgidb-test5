@@ -167,21 +167,9 @@ sub _write_oriented_fasta_file {
 
     while ( my $bioseq = $bioseq_in->next_seq ) { 
         if ( $needs_complementing->{ $bioseq->id } ) {
-            my $seq = $bioseq->seq;
-            $seq = reverse $seq;
-            $seq =~ tr/actgACTG/tgacTGAC/;
-
-            $bioseq_out->write_seq(
-                Bio::Seq->new(
-                    '-id' => $bioseq->id,
-                    '-desc' => $bioseq->desc,
-                    '-seq' => $seq,
-                )
-            );
+            $bioseq = $bioseq->revcom;
         }
-        else {
-            $bioseq_out->write_seq($bioseq);
-        }
+        $bioseq_out->write_seq($bioseq);
     }
 
     return 1;
@@ -201,17 +189,9 @@ sub _write_oriented_qual_file {
 
     while ( my $bioseq = $bioseq_in->next_seq ) { 
         if ( $needs_complementing->{ $bioseq->id } ) {
-            $bioseq_out->write_seq(
-                Bio::Seq::PrimaryQual->new(
-                    '-id' => $bioseq->id,
-                    '-desc' => $bioseq->desc,
-                    '-qual' => [ reverse @{$bioseq->qual} ],
-                )
-            );
+            $bioseq = $bioseq->revcom;
         }
-        else {
-            $bioseq_out->write_seq($bioseq);
-        }
+        $bioseq_out->write_seq($bioseq);
     }
 
     return 1;
