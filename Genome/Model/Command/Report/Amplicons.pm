@@ -15,6 +15,11 @@ class Genome::Model::Command::Report::Amplicons
                             type => 'String',
                             doc => 'The dna sample name',
                         },
+            fasta_format => {
+                             is => 'Boolean',
+                             doc => 'This flag will print the full fasta sequence',
+                             default_value => 0,
+                         },
         ],
 };
 
@@ -53,8 +58,13 @@ sub execute {
         my $primer_2 =$pcr_setup_with_info->{__pri_2__};
         my $ref_seq =$pcr_setup_with_info->{__ref_seq__};
         my $comment =$pcr_setup_with_info->{__comment__};
-        print '>'. $pcr_setup_with_info->setup_name .' CHROMOSOME:'. $ref_seq->get_subject->chromosome .' START:'. $ref_seq->begin_position .' END:'.$ref_seq->end_position."\n".
-            $ref_seq->sequence_base_string ."\n";
+        my $chr = $ref_seq->get_subject;
+        my $genome = $chr->get_genome;
+        print '>'. $pcr_setup_with_info->setup_name .' '. $genome->sequence_item_name .', Chr:'. $chr->chromosome
+            .', Coords '. $ref_seq->begin_position .'-'.$ref_seq->end_position .', Ori(+)'."\n";
+        if ($self->fasta_format) {
+            print $ref_seq->sequence_base_string ."\n";
+        }
     }
     return 1;
 }
