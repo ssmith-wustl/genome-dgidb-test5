@@ -17,6 +17,11 @@ class Genome::Model::Tools::454 {
                             return $arch_os;
                         |
                     },
+	    test => {
+		      is      => 'boolean',
+		      doc     => 'uses test version of 454 application',
+		      default_value => 0,
+	            },
         ],
     has_optional => [
                      _tmp_dir => {
@@ -49,7 +54,15 @@ sub create {
 sub bin_path {
     my $self = shift;
 
-    my $base_path = '/gsc/pkg/bio/454/installed';
+    my $base_path = '/gsc/pkg/bio/454/';
+
+    if ($self->test) {
+	$base_path .= 'test';
+    }
+    else {
+	$base_path .= 'installed';
+    }
+    
     my $tail;
     if ($self->arch_os =~ /64/) {
         $tail = '-64/bin';
