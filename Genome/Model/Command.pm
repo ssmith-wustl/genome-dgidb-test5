@@ -20,7 +20,8 @@ class Genome::Model::Command {
 sub command_name {
     my $class = ref($_[0]) || $_[0];
     return $class->SUPER::command_name unless $class eq __PACKAGE__;
-    return 'genome model';
+    return 'genome-model';
+    #return 'genome model';
 }
 
 sub command_name_brief {
@@ -148,6 +149,10 @@ sub create_directory {
 
     Genome::Utility::FileSystem->create_directory($path)
         or die;
+
+    $self->status_message("Created directory: $path");
+
+    return 1;
 }
 
 1;
