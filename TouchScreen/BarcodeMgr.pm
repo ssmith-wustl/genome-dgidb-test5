@@ -201,8 +201,12 @@ sub CheckIfUsedInput {
 
     #allow primer prefix barcodes, which are more like reagents to be scanned multiple times
     return 1 if($new =~ /^21/);
+    
+    my $ps=GSC::ProcessStep->get($self->Get('ProcessId'));
+    unless($ps->allow_same_barcode_multiple_times_as_source) {
+        return 0 if exists $self->{'UsedInputBarcodes'}{$new}; #--already used
+    }
 
-    return 0 if exists $self->{'UsedInputBarcodes'}{$new}; #--already used
     $self -> AddUsedInputBarcode($new) if ($new ne 'empty');
     return 1;
 }
