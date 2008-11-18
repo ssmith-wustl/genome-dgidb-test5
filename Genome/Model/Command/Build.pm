@@ -429,9 +429,16 @@ sub _remove_dependency_for_classes {
                                  );
             for my $event (@events) {
                 my $dependency_expression = $event->lsf_dependency_condition;
-                my $original_expression = $dependency_expression;
-                $dependency_expression =~ s/$dependency//go;
-                if ($dependency_expression eq $original_expression) {
+                my @current_dependencies = split(" && ",$dependency_expression);
+                my @keep_dependencies;
+                for my $current_dependency (@current_dependencies) {
+                    if ($current_dependency cmp $dependency) {
+                        next;
+                    }
+                    push @keep_dependencies, $current_dependency;
+                }
+                my $new_expression = join(" && ",@keep_dependencies;
+                if ($dependency_expression eq $new_expression) {
                     $self->error_message("Failed to modify dependency expression $dependency_expression by removing $dependency");
                     die;
                 }
