@@ -41,11 +41,18 @@ sub execute {
     $DB::single = $DB::stopper;
 
     my $model = $self->model;
+
     my $assembly_directory = $model->assembly_directory;
     unless (-d $assembly_directory) {
-        my $new_assembly = Genome::Model::Tools::454::Newbler::NewAssembly->create(
-                                                                                   dir => $model->data_directory,
-                                                                               );
+	my %new_assembly_params = (
+				   dir => $model->data_directory,
+				   );
+
+	if (defined $model->assembler_test) {
+	    $new_assembly_params{test} = $model->assembler_test;
+	}
+
+        my $new_assembly = Genome::Model::Tools::454::Newbler::NewAssembly->create( %new_assembly_params );
         unless ($new_assembly->execute) {
             # May need to add locking to prevent more than one event from creating project
             # Currently just double check that the project still doesn't exist after a few seconds
@@ -56,11 +63,19 @@ sub execute {
             }
         }
     }
-    my $add_run = Genome::Model::Tools::454::Newbler::AddRun->create(
-                                                                     dir => $model->data_directory,
-                                                                     runs => [$self->sff_file],
-                                                                     is_paired_end => $self->read_set->is_paired_end,
-                                                                 );
+
+    my %add_run_params = (
+			  dir => $model->data_directory,
+			  runs => [$self->sff_file],
+			  is_paired_end => $self->read_set->is_paired_end,
+			  );
+
+    if (defined $model->assembler_test) {
+	$add_run_params{test} = $model->assembler_test;
+    }
+
+    my $add_run = Genome::Model::Tools::454::Newbler::AddRun->create( %add_run_params );
+								     
     unless($add_run->execute) {
         $self->error_message('Failed to add run '. $self->id ." to project $assembly_directory");
         return;
