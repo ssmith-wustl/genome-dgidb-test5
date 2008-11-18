@@ -39,10 +39,18 @@ sub execute {
 
     my $model = $self->model;
     my $params = $model->assembler_params || '';
-    my $run_project = Genome::Model::Tools::454::Newbler::RunProject->create(
-                                                                             params => $params,
-                                                                             dir => $model->data_directory,
-                                                                         );
+
+    my %run_project_params = (
+			      params => $params,
+			      dir => $model->data_directory,
+			      );
+
+    if (defined $model->assembler_test) {
+	$run_project_params{test} = $model->assembler_test;
+    }
+
+    my $run_project = Genome::Model::Tools::454::Newbler::RunProject->create( %run_project_params );
+
     unless($run_project->execute) {
         $self->error_message('Failed to run assembly project '. $model->data_directory);
         return;
