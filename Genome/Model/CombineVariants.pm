@@ -259,7 +259,7 @@ sub annotate_variants {
                $self->error_message("couldn't get db chrom from database");
                die;
             }
-            $annotator = Genome::VariantAnnotator->new(
+            $annotator = Genome::Utility::VariantAnnotator->new(
                 transcript_window => $db_chrom->transcript_window(range => 50000),
                 variation_window => $db_chrom->variation_window(range => 50000),
             );
@@ -285,7 +285,7 @@ sub annotate_variants {
             $db_chrom = $schema->resultset('Chromosome')->find(
                 {chromosome_name => $lq_genotype->{chromosome} },
             );
-            $annotator = Genome::VariantAnnotator->new(
+            $annotator = Genome::Utility::VariantAnnotator->new(
                 transcript_window => $db_chrom->transcript_window(range => 0),
                 variation_window => $db_chrom->variation_window(range => 0),
             );
