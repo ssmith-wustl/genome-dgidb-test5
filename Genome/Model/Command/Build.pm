@@ -407,7 +407,7 @@ sub remove_dependencies_on_stage {
         }
     }
     if ($next_stage_name) {
-        my $dependency = 'done('. $self->model_id .'_'. $self->build_id .'_'. $stage_name .'*)';
+        my $dependency = 'done("'. $self->model_id .'_'. $self->build_id .'_'. $stage_name .'*")';
         my @classes = $self->classes_for_stage($next_stage_name);
         $self->_remove_dependency_for_classes($dependency,\@classes);
     }
@@ -431,9 +431,14 @@ sub _remove_dependency_for_classes {
                 my $dependency_expression = $event->lsf_dependency_condition;
                 my $original_expression = $dependency_expression;
                 $dependency_expression =~ s/$dependency//go;
+                if ($dependency_expression eq $original_expression) {
+                    $self->error_message('Failed to modify dependency expression $dependency_expression by removing $dependency');
+                    die;
+                }
                 $self->status_message("Changing dependency from '$original_expression' to '$dependency_expression' for event ". $event->id);
                 my $lsf_job_id = $event->lsf_job_id;
-                `bmod -w $dependency_expression $lsf_job_id`;
+                my $cmd = "bmod -w '$dependency_expression' $lsf_job_id";
+                `$cmd`;
             }
         }
     }
