@@ -33,13 +33,9 @@ sub newbler_bin {
     my $self = shift;
 
     my $bin_path = $self->bin_path;
-    #if ($self->test) {
-    #    if ($self->arch_os =~ /64/) {
-    #        $bin_path = '/gsc/pkg/bio/454/newbler/applicationsBin64';
-    #    } else {
-    #        $bin_path = '/gsc/pkg/bio/454/newbler/applicationsBin32';
-    #    }
-    #}
+    if ($self->test) {
+	$bin_path = '/gsc/pkg/bio/454/newbler/applicationsBin';
+    }
     return $bin_path;
 }
 
