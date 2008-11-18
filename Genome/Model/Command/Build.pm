@@ -428,7 +428,7 @@ sub _remove_dependency_for_classes {
                                      user_name => $ENV{'USER'},
                                  );
             for my $event (@events) {
-                my $dependency_expression = $event->lsf_dependency_expression;
+                my $dependency_expression = $event->lsf_dependency_condition;
                 my $original_expression = $dependency_expression;
                 $dependency_expression =~ s/$dependency//go;
                 $self->status_message("Changing dependency from '$original_expression' to '$dependency_expression' for event ". $event->id);
