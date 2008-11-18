@@ -36,7 +36,7 @@ class Genome::Model::Command::Report::ManualReview
         ref_seq_id =>
         {
             type => 'String',
-            is_optional => 0,
+            is_optional => 1,
             doc => "Ref seq id",    
         },
         library_name =>
@@ -72,7 +72,7 @@ $DB::single = 1;
     my $out_dir = $self->output_dir;
     my $snps = $self->snp_file;
     my $model_name = $self->model_name;
-    my $ref_seq_id = $self->ref_seq_id || 'all_sequences';
+    my $ref_seq_id = $self->ref_seq_id;# || 'all_sequences';
     my $library_name = $self->library_name;
     
     my ($model) = Genome::Model->get("name like" => $model_name);
