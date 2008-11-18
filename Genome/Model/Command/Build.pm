@@ -437,12 +437,12 @@ sub _remove_dependency_for_classes {
                     }
                     push @keep_dependencies, $current_dependency;
                 }
-                my $new_expression = join(" && ",@keep_dependencies;
+                my $new_expression = join(" && ",@keep_dependencies);
                 if ($dependency_expression eq $new_expression) {
                     $self->error_message("Failed to modify dependency expression $dependency_expression by removing $dependency");
                     die;
                 }
-                $self->status_message("Changing dependency from '$original_expression' to '$dependency_expression' for event ". $event->id);
+                $self->status_message("Changing dependency from '$dependency_expression' to '$new_expression' for event ". $event->id);
                 my $lsf_job_id = $event->lsf_job_id;
                 my $cmd = "bmod -w '$dependency_expression' $lsf_job_id";
                 `$cmd`;
