@@ -92,9 +92,9 @@ sub execute
     # needs to be fixed.
     my $cwd = getcwd();
     my @cwd = split(/\//x,$cwd);
-    if($#cwd)
+    if($#cwd < 9)
     {
-        croak "the current working directory seems short,\nare you in the right place?";
+        croak "the current working directory seems short,\nare you in the right place?\n$cwd\n$#cwd";
     }
     my $hgmi_acedb_patha;
     # this should be cleaned up with a lookup for the V# to Version_#.0
