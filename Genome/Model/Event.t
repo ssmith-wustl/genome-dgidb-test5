@@ -160,7 +160,7 @@ my $dirname = File::Basename::dirname($tmp_file_path);
 my $basename = File::Basename::basename($tmp_file_path);
 is($dirname,$event_tmp_dir,'event temp dir correct');
 ok($event->create_temp_directory($basename),'create tmp file path dir '. $tmp_file_path);
-ok(scalar(grep { $_ =~ /creating directory $tmp_file_path/ } $event->status_messages),'status message found when directory created');
+ok(scalar(grep { $_ =~ /Created directory\: $tmp_file_path/ } $event->status_messages),'status message found when directory created');
 
 my $return_value;
 eval{
@@ -176,7 +176,7 @@ ok(scalar(grep { $_ =~ /existence check passed: $tmp_file_path/ } $event->status
 ok(rmtree($tmp_file_path),'remove directory '. $tmp_file_path);
 ok(!$event->check_for_existence($tmp_file_path),'temp file does not exist');
 ok($event->create_temp_directory($basename),'created directory again');
-is(scalar(grep { $_ =~ /creating directory $tmp_file_path/ } $event->status_messages),2,'two status messages found for directory creation');
+is(scalar(grep { $_ =~ /Created directory\: $tmp_file_path/ } $event->status_messages),2,'two status messages found for directory creation');
 ok($event->check_for_existence($tmp_file_path,1),'temp file exists');
 is(scalar(grep { $_ =~ /existence check passed: $tmp_file_path/ } $event->status_messages),2,'two status messages found for existence');
 ok(rmtree($tmp_file_path),'remove directory '. $tmp_file_path);
