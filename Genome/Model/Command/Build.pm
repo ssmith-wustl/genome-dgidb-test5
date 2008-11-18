@@ -429,6 +429,9 @@ sub _remove_dependency_for_classes {
                                  );
             for my $event (@events) {
                 my $dependency_expression = $event->lsf_dependency_condition;
+                unless ($dependency_expression) {
+                    next;
+                }
                 my @current_dependencies = split(" && ",$dependency_expression);
                 my @keep_dependencies;
                 for my $current_dependency (@current_dependencies) {
