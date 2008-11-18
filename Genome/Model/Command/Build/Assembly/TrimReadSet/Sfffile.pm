@@ -55,14 +55,19 @@ sub execute {
     my $self = shift;
 
     $DB::single = $DB::stopper;
-
+    my $model = $self->model;
     unless (-e $self->trim_file && -e $self->sff_file) {
-        my $sfffile_trim = Genome::Model::Tools::454::SffTrimWithSeqcleanReport->create(
-                                                                                        seqclean_report => $self->seqclean_report,
-                                                                                        in_sff_file => $self->in_sff_file,
-                                                                                        out_sff_file => $self->sff_file,
-                                                                                        trim_file =>  $self->trim_file,
-                                                                                    );
+	my %trimmer_params = (
+			      seqclean_report => $self->seqclean_report,
+			      in_sff_file => $self->in_sff_file,
+			      out_sff_file => $self->sff_file,
+			      trim_file =>  $self->trim_file,
+			      );
+	if (defined $model->assembler_test) {
+	    $trimmer_params{test} = $model->assembler_test;
+	}
+
+        my $sfffile_trim = Genome::Model::Tools::454::SffTrimWithSeqcleanReport->create( %trimmer_params );
         unless ($sfffile_trim->execute) {
             $self->error_message('Failed to execute genome-model tool '. $sfffile_trim->class_name);
             return;
