@@ -432,7 +432,7 @@ sub _remove_dependency_for_classes {
                 my $original_expression = $dependency_expression;
                 $dependency_expression =~ s/$dependency//go;
                 if ($dependency_expression eq $original_expression) {
-                    $self->error_message('Failed to modify dependency expression $dependency_expression by removing $dependency');
+                    $self->error_message("Failed to modify dependency expression $dependency_expression by removing $dependency");
                     die;
                 }
                 $self->status_message("Changing dependency from '$original_expression' to '$dependency_expression' for event ". $event->id);
