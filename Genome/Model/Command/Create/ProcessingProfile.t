@@ -26,8 +26,6 @@ my %pp_params = (
                                                                                                assembler => 'newbler',
                                                                                                sequencing_center => 'gsc',
                                                                                                assembly_size => 12345,
-                                                                                               amplification_forward_primer => 'something',
-                                                                                               amplification_reverse_primer => 'somethingelse',
                                                                                                ribosomal_subunit => 16,
                                                                                                subject_location => 'ocean',
                                                                                            },
