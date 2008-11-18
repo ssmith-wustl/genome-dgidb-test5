@@ -59,7 +59,13 @@ BEGIN {
     if ($^O eq 'MSWin32' || $^O eq 'cygwin') {
         $ENV{ORACLE_HOME} = '\\\\winsvr.gsc.wustl.edu\\gsc\\pkg\\oracle\\installed';
         $ENV{PATH} = '\\\\winsvr.gsc.wustl.edu\\gsc\\pkg\\oracle\\installed\\BIN;' . $ENV{PATH};
-        system("echo Perl $]: $0 >> \\\\winsvr\\var\\log\\confirm_scheduled_pse\\test\\windows.txt");
+
+        if ($^O eq 'cygwin') {
+            system("echo Perl $]: $0 >> //winsvr/var/log/confirm_scheduled_pse/test/windows.txt");
+        }
+        else {
+            system("echo Perl $]: $0 >> \\\\winsvr\\var\\log\\confirm_scheduled_pse\\test\\windows.txt");
+        }
     }
 }
 
