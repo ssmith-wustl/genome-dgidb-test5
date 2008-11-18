@@ -116,7 +116,7 @@ sub execute
     chdir($next_dir);
 
     # collect-sequence
-    my $cs = Genome::Model::Tools::Hgmi::CollectSequeunce->create(
+    my $cs = Genome::Model::Tools::Hgmi::CollectSequence->create(
                                                                   sequence_file => $config->{sequence_file},
                                                                   output => $config->{output},
                                                                   minimum_length => $config->{minimum_length}, 
