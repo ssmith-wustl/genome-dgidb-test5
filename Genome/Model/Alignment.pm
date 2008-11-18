@@ -245,8 +245,8 @@ sub decode_match_string {
     _decode_match_string(length($_[1]), $_[1]);
 }
 
-use Genome::Inline;
-use Inline C => 'Config' => (DIRECTORY => Genome::Inline::DIRECTORY());
+use Genome::InlineConfig;
+use Inline C => 'Config' => (DIRECTORY => Genome::InlineConfig::DIRECTORY());
 use Inline C => <<'END_C';
 
 struct decoder_table_entry {

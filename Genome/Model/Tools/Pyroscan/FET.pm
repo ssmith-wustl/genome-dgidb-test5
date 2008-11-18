@@ -11,10 +11,10 @@
 package Genome::Model::Tools::Pyroscan::FET;
 
 use Genome;
-use Genome::Inline;
+use Genome::InlineConfig;
 
 use Inline 'C' => 'Config' => (
-    DIRECTORY => Genome::Inline::DIRECTORY()
+    DIRECTORY => Genome::InlineConfig::DIRECTORY()
 );
 
 use Inline C => <<'END';
