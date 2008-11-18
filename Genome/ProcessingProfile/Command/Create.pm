@@ -153,7 +153,7 @@ sub _properties_for_class {
     my %properties;
     for my $property ( $class_meta->get_property_objects ) {
         $properties{ $property->property_name } = {
-            type => $property->property_name,
+            is => 'Text',
             is_optional => $property->is_optional,
             doc => $property->doc,
         };
