@@ -20,8 +20,7 @@ class Genome::Model::Command {
 sub command_name {
     my $class = ref($_[0]) || $_[0];
     return $class->SUPER::command_name unless $class eq __PACKAGE__;
-    return 'genome-model';
-    #return 'genome model';
+    return 'genome model';
 }
 
 sub command_name_brief {
