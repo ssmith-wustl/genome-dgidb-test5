@@ -62,11 +62,17 @@ sub execute {
 
     #Need to dump fasta or convert from sff
     unless (-e $self->fasta_file) {
-        my $fasta_converter = Genome::Model::Tools::454::Sffinfo->create(
-                                                                         sff_file => $self->sff_file,
-                                                                         output_file => $self->fasta_file,
-                                                                         params => '-s',
-                                                                     );
+	my %sff_info_params = (
+			       sff_file => $self->sff_file,
+			       output_file => $self->fasta_file,
+			       params => '-s',
+			       );
+
+	if (defined $model->assembler_test) {
+	    $sff_info_params{test} = $model->assembler_test;
+	}
+
+        my $fasta_converter = Genome::Model::Tools::454::Sffinfo->create( %sff_info_params );
         unless ($fasta_converter->execute) {
             $self->error_message("Failed to run fasta converter on event ". $self->id);
             return;
