@@ -104,6 +104,7 @@ sub execute {
                                                              # The -t option alone seems to give unexpected results
                                                              # I guess because old trim values are somewhere in the manifest??
                                                              params => '-i '. $self->trim_file .' -tr '. $self->trim_file,
+							     test => $self->test,
                                                          );
     unless ($sfffile->execute) {
         $self->error_message('Failed to output trimmed sff file '. $self->out_sff_file);
