@@ -34,6 +34,16 @@ class Genome::Model::CombineVariants{
             doc =>'lq annotated genotype file handle',
             is_optional => 1,
         },
+        current_hq_genotype_files => {
+            is => 'Arrayref',
+            doc => 'The list of hq_genotype files yet to be processed',
+            is_optional => 1,
+        },
+        current_lq_genotype_files => {
+            is => 'Arrayref',
+            doc => 'The list of lq_genotype files yet to be processed',
+            is_optional => 1,
+        },
     ],
 };
 
@@ -72,28 +82,192 @@ sub build_subclass_name {
     return 'combine_variants';
 }
 
-# The file containing the high sensitivity genotype for this sample, pre annotation
-sub hq_genotype_file {
+# Returns the next hq genotype from the conglomeration of all of the hq genotype files
+sub next_hq_genotype {
     my $self = shift;
-    return $self->latest_build_directory. "/hq_genotype.tsv";
+
+    # Set the current files if they have not been set yet
+    unless (($self->hq_gfh)||($self->current_hq_genotype_files)) {
+        $self->current_hq_genotype_files($self->hq_genotype_files);
+    }
+ 
+    # Open the file handle if it hasnt been
+    unless ($self->hq_gfh){
+        my $genotype_file;
+        
+        # Work around for UR returning a scalar if there is only one element in the array
+        if (ref($self->current_hq_genotype_files)) {
+            $genotype_file = shift @{$self->current_hq_genotype_files};
+        } else {
+            $genotype_file = $self->current_hq_genotype_files;
+            $self->current_hq_genotype_files(undef);
+        }
+        return unless $genotype_file;
+        
+        my $fh = IO::File->new("< $genotype_file");
+        return undef unless $fh;
+        
+        $self->hq_gfh($fh);
+    }
+
+    # Try to get a new line from one of the files until we are out of files
+    my $line;
+    while (!defined($line)) {
+        # Try to get a line
+        $line = $self->hq_gfh->getline;
+
+        # If we cannot get one, try the next file
+        unless ($line){
+            my $genotype_file = shift @{$self->current_hq_genotype_files};
+            # If we are out of files, unset the fh and return
+            unless ($genotype_file) {
+                $self->hq_gfh(undef);
+                return undef;
+            }
+            
+            # set the new fh
+            my $fh = IO::File->new("< $genotype_file");
+            unless ($fh) {
+                $self->error_message("Failed to get file handle for $genotype_file");
+                die;
+            }
+
+            $self->hq_gfh($fh);
+        }
+    }
+    
+    chomp $line;
+    my $genotype = $self->parse_genotype_line($line);
+
+    return $genotype;
+}
+
+# Returns the next lq genotype from the conglomeration of all of the lq genotype files
+sub next_lq_genotype {
+    my $self = shift;
+
+    # Set the current files if they have not been set yet
+    unless (($self->lq_gfh)||($self->current_lq_genotype_files)) {
+        $self->current_lq_genotype_files($self->lq_genotype_files);
+    }
+ 
+    # Open the file handle if it hasnt been
+    unless ($self->lq_gfh){
+        my $genotype_file;
+
+        # Work around for UR returning a scalar if there is only one element in the array
+        if (ref($self->current_lq_genotype_files)) {
+            $genotype_file = shift @{$self->current_lq_genotype_files};
+        } else {
+            $genotype_file = $self->current_lq_genotype_files;
+            $self->current_lq_genotype_files(undef);
+        }
+        return unless $genotype_file;
+        
+        my $fh = IO::File->new("< $genotype_file");
+        return undef unless $fh;
+        
+        $self->lq_gfh($fh);
+    }
+
+    # Try to get a new line from one of the files until we are out of files
+    my $line;
+    while (!defined($line)) {
+        # Try to get a line
+        $line = $self->lq_gfh->getline;
+
+        # If we cannot get one, try the next file
+        unless ($line){
+            my $genotype_file = shift @{$self->current_lq_genotype_files};
+            # If we are out of files, unset the fh and return
+            unless ($genotype_file) {
+                $self->lq_gfh(undef);
+                return undef;
+            }
+            
+            # set the new fh
+            my $fh = IO::File->new("< $genotype_file");
+            unless ($fh) {
+                $self->error_message("Failed to get file handle for $genotype_file");
+                die;
+            }
+
+            $self->lq_gfh($fh);
+        }
+    }
+    
+    chomp $line;
+    my $genotype = $self->parse_genotype_line($line);
+
+    return $genotype;
+}
+
+# Returns a list of all genotype files, hq and lq, that currently exist
+sub genotype_files {
+    my $self = shift;
+
+    my @hq_files = $self->hq_genotype_files;
+    my @lq_files = $self->lq_genotype_files;
+
+    return (@hq_files, @lq_files);
+}
+
+# Returns a list of hq_genotype files that currently exist
+sub hq_genotype_files {
+    my $self = shift;
+
+    my @existing_files;
+    for my $chromosome (1..22, 'X', 'Y') {
+        my $file = $self->hq_genotype_file_for_chromosome($chromosome);
+        if (-s $file) {
+            push @existing_files, $file;
+        }
+    }
+
+    return @existing_files;
+}
+
+# Returns a list of lq_genotype files that currently exist
+sub lq_genotype_files {
+    my $self = shift;
+
+    my @existing_files;
+    for my $chromosome (1..22, 'X', 'Y') {
+        my $file = $self->lq_genotype_file_for_chromosome($chromosome);
+        if (-s $file) {
+            push @existing_files, $file;
+        }
+    }
+
+    return @existing_files;
+}
+
+# The file containing the high sensitivity genotype for this sample, pre annotation
+sub hq_genotype_file_for_chromosome {
+    my $self = shift;
+    my $chromosome = shift;
+    return $self->latest_build_directory. "/hq_genotype_$chromosome.tsv";
 }
 
 # The file containing the high sensitivity genotype for this sample, post annotation
-sub hq_annotated_genotype_file {
+sub hq_annotated_genotype_file_for_chromosome {
     my $self = shift;
-    return $self->latest_build_directory . "/hq_annotated_genotype.tsv";
+    my $chromosome = shift;
+    return $self->latest_build_directory . "/hq_annotated_genotype_$chromosome.tsv";
 }
 
 # The file containing the low sensitivity genotype for this sample, pre annotation
-sub lq_genotype_file {
+sub lq_genotype_file_for_chromosome {
     my $self = shift;
-    return $self->latest_build_directory . "/lq_genotype.tsv";
+    my $chromosome = shift;
+    return $self->latest_build_directory . "/lq_genotype_$chromosome.tsv";
 }
 
 # The file containing the low sensitivity genotype for this sample, post annotation
-sub lq_annotated_genotype_file {
+sub lq_annotated_genotype_file_for_chromosome {
     my $self = shift;
-    return $self->latest_build_directory . "/lq_annotated_genotype.tsv";
+    my $chromosome = shift;
+    return $self->latest_build_directory . "/lq_annotated_genotype_$chromosome.tsv";
 }
 
 # The maf file produced from high sensitivity genotypes
@@ -226,159 +400,21 @@ sub next_or_undef{
     return $model->next_sample_genotype;
 }
 
-# Runs annotation for both the high and low sensitivity genotype files using the VariantAnnotator.pm
-sub annotate_variants {
-    my ($self) = @_;
-
-    my $schema = Genome::DB::Schema->connect_to_dwrac;
- 
-    $self->error_message("Can't connect to dwrac")
-        and return unless $schema;
-    
-    my $annotator;
-    my $db_chrom;
-
-    ####hq
-    my $hq_post_annotation_file = $self->hq_annotated_genotype_file;
-    my $hq_ofh = IO::File->new("> $hq_post_annotation_file");
-    unless ($hq_ofh){
-        $self->error_message("couldn't get output file handle for $hq_post_annotation_file");
-        die;
-    }
-
-    my $current_hq_chromosome=0;
-    while (my $hq_genotype = $self->next_hq_genotype){
-        
-        #NEW ANNOTATOR IF WE'RE ON A NEW CHROMOSOME
-        if ( compare_chromosome($current_hq_chromosome,$hq_genotype->{chromosome}) != 0 ){
-            $current_hq_chromosome = $hq_genotype->{chromosome};
-            $db_chrom = $schema->resultset('Chromosome')->find(
-                {chromosome_name => $hq_genotype->{chromosome} },
-            );
-            unless ($db_chrom){
-               $self->error_message("couldn't get db chrom from database");
-               die;
-            }
-            $annotator = Genome::Utility::VariantAnnotator->new(
-                transcript_window => $db_chrom->transcript_window(range => 50000),
-                variation_window => $db_chrom->variation_window(range => 50000),
-            );
-        }
-        
-        $self->print_prioritized_annotation($hq_genotype, $annotator, $hq_ofh);
-    }
-
-    ####lq
-    my $lq_post_annotation_file = $self->lq_annotated_genotype_file;
-    my $lq_ofh = IO::File->new("> $lq_post_annotation_file");
-    unless ($lq_ofh){
-        $self->error_message("couldn't get output file handle for $lq_post_annotation_file");
-        die;
-    }
-
-    my $current_lq_chromosome=0;
-    while (my $lq_genotype = $self->next_lq_genotype){
-
-        #NEW ANNOTATOR IF WE'RE ON A NEW CHROMOSOME
-        if ( compare_chromosome($current_lq_chromosome, $lq_genotype->{chromosome}) != 0){
-            $current_lq_chromosome = $lq_genotype->{chromosome};
-            $db_chrom = $schema->resultset('Chromosome')->find(
-                {chromosome_name => $lq_genotype->{chromosome} },
-            );
-            $annotator = Genome::Utility::VariantAnnotator->new(
-                transcript_window => $db_chrom->transcript_window(range => 0),
-                variation_window => $db_chrom->variation_window(range => 0),
-            );
-        }
-
-        $self->print_prioritized_annotation($lq_genotype, $annotator, $lq_ofh);
-    }
-
-    $lq_ofh->close;
-    $hq_ofh->close;
-
-    return 1;
-}
-
-sub reverse_complement{
-    my $self = shift;
-    my $string = shift;
-    $string = reverse $string;
-    $string =~ tr/[ATGC]/[TACG]/;
-    return $string;
-}
-
-# Gets and prints the lowest priority annotation for a given genotype
-# Takes a genotype hashref from next_hq/lq_genotype
-# Also takes in the current annotator object FIXME: Make this a class level var?
-# Also takes in the output file handle to print to
-sub print_prioritized_annotation {
-    my $self = shift;
-    my $genotype = shift;
-    my $annotator = shift;
-    my $fh = shift;
-    
-    # Decide which of the two alleles (or both) vary from the reference and annotate the ones that do
-    for my $variant ($genotype->{allele1}, $genotype->{allele2}) {
-        next if $variant eq $genotype->{reference};
-        
-        my @annotations;
-
-        my $reference = $genotype->{reference};
-        my $variant = $genotype->{variant};
-
-        if ($genotype->{strand} eq '-'){
-            $reference = $self->reverse_complement($reference);
-            $variant = $self->reverse_complement($variant);
-        }
-        
-        @annotations = $annotator->prioritized_transcripts_for_snp( # TODO Make this back into indel... but the function doesnt exist
-            start => $genotype->{start},
-            reference => $reference,
-            variant => $variant,
-            chromosome_name => $genotype->{chromosome},
-            stop => $genotype->{stop},
-            type => $genotype->{variation_type},
-        );
-
-        # Print the annotation with the best (lowest) priority
-        my $lowest_priority_annotation;
-        for my $annotation (@annotations){
-            unless(defined($lowest_priority_annotation)) {
-                $lowest_priority_annotation = $annotation;
-            }
-            if ($annotation->{priority} < $lowest_priority_annotation->{priority}) {
-                $lowest_priority_annotation = $annotation;
-            }
-        }
-        $lowest_priority_annotation->{variations} = join (",",keys %{$lowest_priority_annotation->{variations}});
-        my %combo = (%$genotype, %$lowest_priority_annotation);
-
-        $fh->print($self->format_annotated_genotype_line(\%combo));
-
-        # Dont do this again if both alleles are the same
-        last if $genotype->{allele1} eq $genotype->{allele2};
-    }
-
-    return 1;
-}
-
-
 # Calls combine_variants_for_set to combine variants for both hq and lq models
 sub combine_variants{ 
     my $self = shift;
 
     my $start = new Benchmark;
 
-    my $hq_genotype_file = $self->hq_genotype_file;
+    my $hq_genotype_file_method = 'hq_genotype_file_for_chromosome';
     my ($hq_polyscan_model) = $self->hq_polyscan_model;
     my ($hq_polyphred_model) = $self->hq_polyphred_model;
-    $self->combine_variants_for_set($hq_polyscan_model, $hq_polyphred_model, $hq_genotype_file);
+    $self->combine_variants_for_set($hq_polyscan_model, $hq_polyphred_model, $hq_genotype_file_method);
 
-    my $lq_genotype_file = $self->lq_genotype_file;
+    my $lq_genotype_file_method = 'lq_genotype_file_for_chromosome';
     my ($lq_polyscan_model) = $self->lq_polyscan_model;
     my ($lq_polyphred_model) = $self->lq_polyphred_model;
-    $self->combine_variants_for_set($lq_polyscan_model, $lq_polyphred_model, $lq_genotype_file);
+    $self->combine_variants_for_set($lq_polyscan_model, $lq_polyphred_model, $lq_genotype_file_method);
 
     my $stop = new Benchmark;
 
@@ -389,11 +425,10 @@ sub combine_variants{
 
 # Given a set of hq or lq polyscan and polyphred models, run the combine variants logic
 sub combine_variants_for_set{
-    my ($self, $polyscan_model, $polyphred_model, $genotype_file) = @_;
+    my ($self, $polyscan_model, $polyphred_model, $genotype_file_method) = @_;
 
     my $whole_start = new Benchmark;
 
-    my $ofh = IO::File->new("> $genotype_file");
     unless($polyscan_model || $polyphred_model){
         $self->error_message("No child models to combine variants on!");
         die;
@@ -407,6 +442,8 @@ sub combine_variants_for_set{
     # While there is data for at least one of the two,
     # Pass them into generate_genotype to make the decisions
 
+    my $current_chromosome = '';
+    my ($ofh, $genotype_file);
     while ($polyphred_genotype or $polyscan_genotype){
         my ($chr1, $start1, $sample1, $chr2, $start2, $sample2);
         if ($polyscan_genotype){
@@ -430,18 +467,36 @@ sub combine_variants_for_set{
         if ($cmp < 0){
 
             my $genotype = $self->generate_genotype($polyscan_genotype, undef);
+            if ($genotype->{chromosome} ne $current_chromosome) {
+                $ofh->close if $ofh;
+                $current_chromosome = $genotype->{chromosome};
+                $genotype_file = $self->$genotype_file_method($current_chromosome);
+                $ofh = IO::File->new("> $genotype_file");
+            }
             $ofh->print($self->format_genotype_line($genotype));
             $polyscan_genotype = $self->next_or_undef($polyscan_model);
 
         }elsif ($cmp > 0){
 
             my $genotype = $self->generate_genotype(undef, $polyphred_genotype);
+            if ($genotype->{chromosome} ne $current_chromosome) {
+                $ofh->close if $ofh;
+                $current_chromosome = $genotype->{chromosome};
+                $genotype_file = $self->$genotype_file_method($current_chromosome);
+                $ofh = IO::File->new("> $genotype_file");
+            }
             $ofh->print($self->format_genotype_line($genotype));
             $polyphred_genotype = $self->next_or_undef($polyphred_model);
 
         }elsif ($cmp == 0){
 
             my $genotype = $self->generate_genotype($polyscan_genotype, $polyphred_genotype);    
+            if ($genotype->{chromosome} ne $current_chromosome) {
+                $ofh->close if $ofh;
+                $current_chromosome = $genotype->{chromosome};
+                $genotype_file = $self->$genotype_file_method($current_chromosome);
+                $ofh = IO::File->new("> $genotype_file");
+            }
             $ofh->print($self->format_genotype_line($genotype));
             $polyphred_genotype = $self->next_or_undef($polyphred_model);
             $polyscan_genotype = $self->next_or_undef($polyscan_model);
@@ -451,6 +506,8 @@ sub combine_variants_for_set{
             die;
         }
     }
+
+    $ofh->close if $ofh;
 
     my $stop = new Benchmark;
 
@@ -669,44 +726,6 @@ sub maf_header {
     return"Hugo_Symbol\tEntrez_Gene_Id\tCenter\tNCBI_Build\tChromosome\tStart_position\tEnd_position\tStrand\tVariant_Classification\tVariant_Type\tReference_Allele\tTumor_Seq_Allele1\tTumor_Seq_Allele2\tdbSNP_RS\tdbSNP_Val_Status\tTumor_Sample_Barcode\tMatched_Norm_Sample_Barcode\tMatch_Norm_Seq_Allele1\tMatch_Norm_Seq_Allele2\tTumor_Validation_Allele1\tTumor_Validation_Allele2\tMatch_Norm_Validation_Allele1\tMatch_Norm_Validation_Allele2\tVerification_Status\tValidation_Status\tMutation_Status\tCOSMIC_COMPARISON(ALL_TRANSCRIPTS)\tOMIM_COMPARISON(ALL_TRANSCRIPTS)\tTranscript\tCALLED_CLASSIFICATION\tPROT_STRING\tPROT_STRING_SHORT\tPFAM_DOMAIN";
 }
 
-# Reads from the high sensitivity pre annotation genotype file and returns the next line as a hash
-sub next_hq_genotype{
-    my $self = shift;
-
-    # Open the file handle if it hasnt been
-    unless ($self->hq_gfh){
-        my $genotype_file = $self->hq_genotype_file;
-        my $fh = IO::File->new("< $genotype_file");
-        return undef unless $fh;
-        $self->hq_gfh($fh)
-    }
-
-    my $line = $self->hq_gfh->getline;
-    unless ($line){
-        $self->hq_gfh(undef);
-        return undef;
-    }
-    chomp $line;
-    my $genotype = $self->parse_genotype_line($line);
-
-    return $genotype;
-}
-
-# Reads from the high sensitivity pre annotation genotype file and returns the next line as a hash
-# Optionally takes a chromosome and position range and returns only genotypes in that range
-sub next_hq_genotype_in_range{
-    my $self = shift;
-    return $self->next_hq_genotype unless @_;
-    my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
-    while (my $genotype = $self->next_hq_genotype){
-        return undef unless $genotype;
-        if (compare_position($chrom_start, $pos_start, $genotype->{chromosome}, $genotype->{start}) <= 0 and 
-            compare_position($genotype->{chromosome}, $genotype->{start}, $chrom_stop, $pos_stop) <= 0){
-            return $genotype;
-        }
-    }
-}
-
 # Reads from the high sensitivity post annotation genotype file and returns the next line as a hash
 sub next_hq_annotated_genotype{
     my $self = shift;
@@ -737,44 +756,6 @@ sub next_hq_annotated_genotype_in_range{
     return $self->next_hq_annotated_genotype unless @_;
     my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
     while (my $genotype = $self->next_hq_annotated_genotype){
-        return undef unless $genotype;
-        if (compare_position($chrom_start, $pos_start, $genotype->{chromosome}, $genotype->{start}) <= 0 and 
-            compare_position($genotype->{chromosome}, $genotype->{start}, $chrom_stop, $pos_stop) <= 0){
-            return $genotype;
-        }
-    }
-}
-
-# Reads from the low sensitivity pre annotation genotype file and returns the next line as a hash
-sub next_lq_genotype{
-    my $self = shift;
-
-    # Open the file handle if it hasnt been
-    unless ($self->lq_gfh){
-        my $genotype_file = $self->lq_genotype_file;
-        my $fh = IO::File->new("< $genotype_file");
-        return undef unless $fh;
-        $self->lq_gfh($fh)
-    }
-
-    my $line = $self->lq_gfh->getline;
-    unless ($line){
-        $self->lq_gfh(undef);
-        return undef;
-    }
-    chomp $line;
-    my $genotype = $self->parse_genotype_line($line);
-
-    return $genotype;
-}
-
-# Reads from the low sensitivity pre annotation genotype file and returns the next line as a hash
-# Optionally takes a chromosome and position range and returns only genotypes in that range
-sub next_lq_genotype_in_range{
-    my $self = shift;
-    return $self->next_lq_genotype unless @_;
-    my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
-    while (my $genotype = $self->next_lq_genotype){
         return undef unless $genotype;
         if (compare_position($chrom_start, $pos_start, $genotype->{chromosome}, $genotype->{start}) <= 0 and 
             compare_position($genotype->{chromosome}, $genotype->{start}, $chrom_stop, $pos_stop) <= 0){
@@ -989,34 +970,62 @@ sub compare_position_and_sample {
     }
 }
 
-=cut
-# Matches all sample genotype data into a hash with an entry per
-# Sample and position that contains matched normal and tumor data for
-# that sample and position
-# TODO this really needs to be done once per HQ and LQ
-sub get_matched_normal_tumor_hash {
+sub annotate_variants {
     my $self = shift;
 
-    # Grab all of the sample genotype data for this input
-    my @sample_genotype_data;
-    while (my $genotype = $self->next_hq_genotype) {
-        push @sample_genotype_data, $genotype;
+    my @input_files = $self->genotype_files;
+    my @output_files;
+    for my $in (@input_files){
+        my $out = $in;
+        $out =~ s/genotype/annotated_genotype/;
+        push @output_files, $out;
     }
+    if (0) { # workflow switch
+        
+        require Workflow::Simple;
 
-    # TODO: This should already be sorted by position and sample... check
-    # Sort if neededa
-    my $current_sample;
-    while ($sample_genotype_data > 0) {
-        # Grab the sample name except for the last character which will denote normal or tumor
-        unless (defined($current_sample)) {
-            $current_sample = $sample_genotype_data[0];
+        ## keep the ur stuff in this process, speed optimization
+#        $Workflow::Simple::fork_ur_server = 0;
+        ## dont do any tracking
+        $Workflow::Simple::store_db = 0;
+        
+        my $op = Workflow::Operation->create(
+            name => 'annotate variations',
+            operation_type => Workflow::OperationType::Command->get('Genome::Model::CombineVariants::AnnotateVariations')
+        );
+        
+        $op->parallel_by('input_file');
+
+        my $output = Workflow::Simple::run_workflow_lsf(
+            $op,
+            'input_file_name' => \@input_files,
+            'output_file_name' => \@output_files,
+        );
+    
+        unless ($output) {
+            $self->error_message("Annotate variations failed in workflow");
+            die;
+        }
+        
+    } else {
+
+        # Create parsers for each file, append to running lists
+        for my $index (0..$#input_files) {
+            my $annotate_command = Genome::Model::CombineVariants::AnnotateVariations->create(
+                input_file_name => $input_files[$index],
+                output_file_name => $output_files[$index],
+            );
+
+            $annotate_command->execute;
+
+            unless ($annotate_command->result) {
+                $self->error_message("Annotate variations failed on input file: " . $input_files[$index]);
+                die;
+            }
         }
 
-
     }
 
-
 }
-=cut
 
 1;

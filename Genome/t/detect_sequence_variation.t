@@ -424,8 +424,8 @@ my $cron = Genome::Model::Command::Services::BuildQueuedInstrumentData->create(t
 ok($cron->execute,"Build Cron command returned true");
 
 # Check the files exist
-ok (-s $combine_variants_model->hq_genotype_file, "hq genotype file exists");
-ok (-s $combine_variants_model->lq_genotype_file, "lq genotype file exists");
+ok (-s $combine_variants_model->hq_genotype_file_for_chromosome(6), "hq genotype file exists");
+ok (-s $combine_variants_model->lq_genotype_file_for_chromosome(6), "lq genotype file exists");
 
 # test next_xx_genotype calls
 my ($hq_annotated_genotype, $lq_annotated_genotype, $hq_genotype, $lq_genotype);
