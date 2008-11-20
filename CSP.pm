@@ -681,7 +681,7 @@ my %csp_priority = (
     'add capture tag to amplification target' => 1,
     'bpt pipeline fork'                       => 1,
     'update report summary'                   => 2,
-
+    'design amplicons'                        => 1,
 #    these were given their own cron to get around the
 #    problem of running as the lims user instead of seqmgr
 #    'analyze traces'                          => 2,
