@@ -4,15 +4,17 @@ use strict;
 use warnings;
 
 use Genome;
-
+      
 class Genome::ProcessingProfile::Command {
     is => 'Command',
-    #is_abstract => 1,
+    is_abstract => 1,
     english_name => 'genome processing_profile command',
     has => [
-    processing_pofile => { is => 'Genome::processing_pofile', id_by => 'processing_pofile_id' },
-    processing_pofile_id => { is => 'Integer', doc => 'identifies the genome processing_pofile by id' },
-    processing_pofile_name => { is => 'String', via => 'processing_pofile', to => 'name' },
+    processing_profile => {
+        is => 'Genome::ProcessingProfile',
+        id_by => 'processing_profile_id',
+        doc => 'identifies the genome processing_profile by id',
+    },
     ],
 };
 
@@ -44,8 +46,8 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
     
-    unless ( $self->processing_profile ) {
-        $self->error_message("A processing profile (by id or name) is required for this command");
+    unless ( $self->processing_profile_id ) {
+        $self->error_message("A processing profile by id is required for this command");
         return;
     }
 
