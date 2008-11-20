@@ -39,6 +39,7 @@ class Genome::Model::Tools::Blat::MatchToAmplicons {
 		convert_pyroscan	=> { is => 'Text', doc => "If set to 1, convert PyroScan output to genotype sub file [0]", is_optional => 1 },		
 		pyroscan_params	=> { is => 'Text', doc => "Optional parameters to use for pyroscan", is_optional => 1 },	
 		overlap_bases	=> { is => 'Text', doc => "Minium overlapping bp to assign read to an amplicon [1]", is_optional => 1 },	
+		blocks_file	=> { is => 'Text', doc => "Best-blocks file if RefCov layers are desired", is_optional => 1 },		
 	],
 };
 
@@ -108,7 +109,7 @@ sub execute {                               # replace with real execution logic.
 	my $run_pyroscan = $self->run_pyroscan if($self->run_pyroscan);
 	my $convert_pyroscan = $self->convert_pyroscan if($self->convert_pyroscan);	
 	my $pyroscan_params = $self->pyroscan_params if($self->pyroscan_params);
-
+	my $blocks_file = $self->blocks_file if($self->blocks_file);
 
 	## Verify that alignments file exists ##
 	
@@ -161,7 +162,37 @@ sub execute {                               # replace with real execution logic.
 		$AmpliconsByChrom{$chrom} .= "$chr_start\t$chr_stop\t$amplicon\n";
 	}
 	
+	
+	
+	
+	## If a best blocks file was specified, parse it ##
+	my %ReadBlocks = ();
+	if($blocks_file && -e $blocks_file)
+	{
+		my $input = new FileHandle ($blocks_file);
+		my $lineCounter = 0;
+		
+		while (<$input>)
+		{
+			chomp;
+			my $line = $_;
+			$lineCounter++;		
+		
+			if($lineCounter > 1)
+			{
+				my @lineContents = split(/\t/, $line);
+				my $read_name = $lineContents[4];
+				$ReadBlocks{$read_name} .= "$line\n";
+			}
+		}
+		
+		close($input);	
+		print "$lineCounter alignment blocks parsed from $blocks_file\n";
+	}
+	
+	
 	my %AmpliconReads = my %NumAmpliconReads = ();
+	my %AmpliconLayers = ();
 
 	## Parse the read alignments file ##
 	print "Parsing alignments file...\n";
@@ -208,6 +239,10 @@ sub execute {                               # replace with real execution logic.
 						{
 							$AmpliconReads{$amplicon_name} .= "$read_name\n";
 							$NumAmpliconReads{$amplicon_name}++;
+							if($ReadBlocks{$read_name})
+							{
+								$AmpliconLayers{$amplicon_name} .= $ReadBlocks{$read_name};
+							}
 						}
 					}
 				}
@@ -218,10 +253,18 @@ sub execute {                               # replace with real execution logic.
 	close($input);
 	
 	
+	
 	## Get the Reference Fasta Database ##
 	
 	my $refseqdb = Bio::DB::Fasta->new($refseq_dir); 
 	
+	
+	## Open master blocks output file ##
+	
+	if($blocks_file && -e $blocks_file)
+	{
+		open(READLAYERS, ">$output_dir/$sample_name.amplicons.layers") or die "Can't open outfile: $!\n";		
+	}
 	
 	## Open the output files ##
 	if(!$skip_counts)
@@ -267,6 +310,58 @@ sub execute {                               # replace with real execution logic.
 			close(AMP_FOF);
 		}
 	
+		## If best blocks file provided, generate refcov layers ##
+	
+		if($blocks_file && -e $blocks_file && $AmpliconLayers{$amplicon})
+		{
+			## Open the layers file ##
+		
+			open(AMP_LAYERS, ">$amplicon_subdir/traces.$sample_name.layers") or die "Can't create layers file: $!\n";
+		
+			## Grep out the relevant blocks ##
+			
+#			my $BestBlocks = `grep -f $amplicon_subdir/traces.$sample_name.fof $blocks_file`;
+#			chomp($BestBlocks);
+			
+			my $BestBlocks = $AmpliconLayers{$amplicon};
+			
+			my @bestBlockLines = split(/\n/, $BestBlocks);
+			foreach my $blockLine (@bestBlockLines)
+			{
+				my @blockLineContents = split(/\t/, $blockLine);
+				my $read_chrom = $blockLineContents[0];
+				my $read_chr_start; my $read_chr_stop;
+				
+				if($blockLineContents[1] > $blockLineContents[2])
+				{
+					$read_chr_start = $blockLineContents[2];
+					$read_chr_stop = $blockLineContents[1];
+				}
+				else
+				{
+					$read_chr_start = $blockLineContents[1];
+					$read_chr_stop = $blockLineContents[2];				
+				}
+				my $read_name = $blockLineContents[4];
+			
+				## Adjust to amplicon positions ##
+				
+				my $read_amp_start = $read_chr_start - $chr_start + 1;
+				my $read_amp_stop = $read_chr_stop - $chr_start + 1;
+				$read_amp_start = 1 if($read_amp_start < 1);				
+				
+				## Print the layer ##
+				if($read_amp_stop > 0)
+				{				
+					my $layer = "$read_name\t$read_amp_start\t$read_amp_stop\t$amplicon";
+					print AMP_LAYERS "$layer\n";
+					print READLAYERS "$layer\n";
+				}
+			}
+			
+			close(AMP_LAYERS);
+		}
+	
 		## If master SFF file provided, build the sub-SFF file ##
 		
 		if($sff_file && $num_reads > 0)
@@ -275,6 +370,8 @@ sub execute {                               # replace with real execution logic.
 			system("sffinfo -s $amplicon_subdir/traces.$sample_name.sff >$amplicon_subdir/traces.$sample_name.fasta");
 			system("sffinfo -q $amplicon_subdir/traces.$sample_name.sff >$amplicon_subdir/traces.$sample_name.fasta.qual");		
 		}
+		
+		## If flag specified, run cross_match ##
 		
 		if($run_crossmatch)
 		{
