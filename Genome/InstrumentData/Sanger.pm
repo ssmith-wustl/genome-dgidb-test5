@@ -37,21 +37,19 @@ sub dump_to_file_system {
         $read_cnt++;
         my $scf_name = $read->default_file_name('scf');
         my $scf_file = sprintf('%s/%s.gz', $data_dir, $scf_name);
-        unless ( -s $scf_file ) {
-            unlink $scf_file if -e $scf_file;
-            my $scf_fh = IO::File->new($scf_file, 'w');
-            unless ( $scf_fh ) {
-                $self->error_message("Can't open scf ($scf_file)\n$!");
-                return;
-            }
-            $scf_fh->print( Compress::Zlib::memGzip($read->scf_content) );
-            $scf_fh->close;
-            $self->error_message("No scf content for $scf_name") 
-                and next unless -s $scf_file;
+        next if -s $scf_file;
+        unlink $scf_file if -e $scf_file; # remove empty file
+        my $scf_fh = IO::File->new($scf_file, 'w');
+        unless ( $scf_fh ) {
+            $self->error_message("Can't open scf ($scf_file)\n$!");
+            return;
         }
+        $scf_fh->print( Compress::Zlib::memGzip($read->scf_content) );
+        $scf_fh->close;
+        $self->error_message("No scf content for $scf_name") unless -s $scf_file;
     }
 
-    unless ( $read_cnt ){
+    unless ( $read_cnt ) {
         $self->error_message( sprintf("No reads found for run (%s)", $self->run_name) );
         return;
     }
