@@ -43,7 +43,7 @@ my %params = (
               sequencing_platform => '454',
               bare_args => [],
           );
-my $pp_create = Genome::Model::Command::Create::ProcessingProfile::ReferenceAlignment->execute(%params);
+my $pp_create = Genome::ProcessingProfile::Command::Create::ReferenceAlignment->execute(%params);
 ok($pp_create,'created processing profile');
 
 my @read_sets = setup_test_data($subject_name);
