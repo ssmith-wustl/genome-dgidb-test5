@@ -679,6 +679,7 @@ my %csp_priority = (
     'select amplicons for tilepath'           => 1,
     'add amplicon to amplification target'    => 1,
     'add capture tag to amplification target' => 1,
+    'bpt pipeline fork'                       => 1,
     'update report summary'                   => 2,
 
 #    these were given their own cron to get around the
