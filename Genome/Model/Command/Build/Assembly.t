@@ -16,14 +16,13 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 195;
+    plan tests => 194;
 
     use_ok( 'Genome::RunChunk::454');
     use_ok( 'Genome::Model::Assembly');
     use_ok( 'Genome::ProcessingProfile::Assembly');
     use_ok( 'Genome::Model::Command::Create::Model' );
-    use_ok( 'Genome::Model::Command::Create::ProcessingProfile' );
-    use_ok( 'Genome::Model::Command::Create::ProcessingProfile::Assembly' );
+    use_ok( 'Genome::ProcessingProfile::Command::Create' );
     use_ok( 'Genome::Model::Command::Build::Assembly' );
     use_ok( 'Genome::Model::Command::Build::Assembly::AssignReadSetToModel' );
     use_ok( 'Genome::Model::Command::Build::Assembly::AssignReadSetToModel::454' );
