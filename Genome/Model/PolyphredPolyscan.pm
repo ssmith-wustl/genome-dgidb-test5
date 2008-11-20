@@ -348,7 +348,16 @@ sub setup_input {
     
     # Combined input file to be created from the collates of all input files
     my $combined_input_file = $self->combined_input_file;
-    my $fh = IO::File->new(">$combined_input_file");
+
+    my $fh;
+    if (-s $combined_input_file) {
+        $fh = IO::File->new("$combined_input_file");
+        $self->combined_input_fh($fh);
+        return 1;
+    } else {
+        $fh = IO::File->new(">$combined_input_file");
+    }
+    
 
     if (1) { # workflow switch
         

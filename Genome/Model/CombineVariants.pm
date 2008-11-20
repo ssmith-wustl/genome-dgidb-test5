@@ -88,13 +88,15 @@ sub next_hq_genotype {
 
     # Set the current files if they have not been set yet
     unless (($self->hq_gfh)||($self->current_hq_genotype_files)) {
-        $self->current_hq_genotype_files($self->hq_genotype_files);
+        my @hq_genotype_files = $self->hq_genotype_files;
+        $self->current_hq_genotype_files(\@hq_genotype_files);
     }
  
     # Open the file handle if it hasnt been
     unless ($self->hq_gfh){
         my $genotype_file;
         
+        return undef unless $self->current_hq_genotype_files;
         # Work around for UR returning a scalar if there is only one element in the array
         if (ref($self->current_hq_genotype_files)) {
             $genotype_file = shift @{$self->current_hq_genotype_files};
@@ -148,13 +150,15 @@ sub next_lq_genotype {
 
     # Set the current files if they have not been set yet
     unless (($self->lq_gfh)||($self->current_lq_genotype_files)) {
-        $self->current_lq_genotype_files($self->lq_genotype_files);
+        my @lq_genotype_files = $self->lq_genotype_files;
+        $self->current_lq_genotype_files(\@lq_genotype_files);
     }
  
     # Open the file handle if it hasnt been
     unless ($self->lq_gfh){
         my $genotype_file;
 
+        return undef unless $self->current_hq_genotype_files;
         # Work around for UR returning a scalar if there is only one element in the array
         if (ref($self->current_lq_genotype_files)) {
             $genotype_file = shift @{$self->current_lq_genotype_files};
