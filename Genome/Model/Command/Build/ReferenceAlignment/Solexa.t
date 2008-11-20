@@ -59,7 +59,7 @@ isa_ok($add_reads_test,'Genome::Model::Command::Build::ReferenceAlignment::Test'
 
 $add_reads_test->create_test_pp(
                                 sequencing_platform => 'solexa',
-    profile_name => $processing_profile_name,
+    name => $processing_profile_name,
     dna_type => 'genomic dna',
     align_dist_threshold => '0',
     multi_read_fragment_strategy => 'eliminate start site duplicates',
