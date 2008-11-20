@@ -7,7 +7,7 @@ package Genome::Model::Tools::Blat::ParseAlignments;     # rename this when you 
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
 #	CREATED:	10/20/2008 by D.K.
-#	MODIFIED:	10/21/2008 by D.K.
+#	MODIFIED:	11/20/2008 by D.K.
 #
 #	NOTES:	
 #			
@@ -27,6 +27,7 @@ class Genome::Model::Tools::Blat::ParseAlignments {
 		alignments_file	=> { is => 'Text', doc => "File containing all BLAT alignments in PSL/PSLX format" },
 		min_identity	=> { is => 'Text', doc => "Minimum % identity to keep an alignment [0]", is_optional => 1},
 		output_psl	=> { is => 'Text', doc => "Output scored PSL for best alignments [0]", is_optional => 1},	
+		output_blocks	=> { is => 'Text', doc => "Output alignment blocks for best alignments [0]", is_optional => 1},		
 	],
 };
 
@@ -67,7 +68,7 @@ sub execute {                               # replace with real execution logic.
 	## Set defaults for optional parameters ##
 	
 	my $min_pct_identity = 0;
-	my $output_psl = 0;
+	my $output_psl = my $output_blocks = 0;
 	my $scoreM = 1;	# Match points for scoring alignments
 	my $scoreN = 2; # Mismatch penalty for scoring alignments
 	my $scoreQ = 3; # Gap penalty for scoring alignments
@@ -76,6 +77,7 @@ sub execute {                               # replace with real execution logic.
 	
 	$min_pct_identity = $self->min_identity if($self->min_identity);
 	$output_psl = $self->output_psl if($self->output_psl);
+	$output_blocks = $self->output_blocks if($self->output_blocks);
 
 	## Verify that alignments file exists ##
 	
@@ -195,8 +197,15 @@ sub execute {                               # replace with real execution logic.
 
 	if($output_psl)
 	{
-		open(BESTPSL, ">$output_basename.best-alignments.psl") or die "Can't open outfile $output_basename.best-alignments.spsl: $!\n";
+		open(BESTPSL, ">$output_basename.best-alignments.psl") or die "Can't open outfile $output_basename.best-alignments.psl: $!\n";
 		print BESTPSL "score\tmatch\tmismatch\trep\tN\tQgap_count\tQgap_bases\tTgap_count\tTgap_bases\tstrand\tname\tqSize\tqstart\tqend\ttname\ttsize\ttstart\ttend\tblock\tblockSizes\tblockStartQ\tblockStartT\tseq1\tseq2\n";
+	}
+
+
+	if($output_blocks)
+	{
+		open(BESTBLOCKS, ">$output_basename.best-blocks.txt") or die "Can't open outfile $output_basename.best-blocks.txt: $!\n";
+		print BESTBLOCKS "ref_name\tref_start\tref_stop\talign_strand\tread_name\tread_start\tread_stop\tblock_no\n";
 	}
 
 	## Process alignments on read basis ##
@@ -289,6 +298,13 @@ sub execute {                               # replace with real execution logic.
 			print BESTALIGNS "$best_score\t$best_read_name\t$best_read_start\t$best_read_stop\t$best_ref_name\t$best_ref_start\t$best_ref_stop\t$best_strand\t$alignment_identity\t$pct_read_aligned\n";
 			print BESTPSL "$ReadHSPs[0]\n" if($output_psl);
 			
+			## Get the best blocks ##
+			if($output_blocks)
+			{
+				my $best_align_blocks = parseAlignmentBlocks($ReadHSPs[0]);
+				print BESTBLOCKS $best_align_blocks if($best_align_blocks);			
+			}
+			
 			for(my $secondCounter = 1; $secondCounter < $numReadHSPs; $secondCounter++)
 			{
 #				print SECONDARY "$ReadHSPs[$secondCounter]\n";
@@ -297,7 +313,8 @@ sub execute {                               # replace with real execution logic.
 	}
 
 	close(BESTALIGNS);
-	close(BESTPSL);
+	close(BESTPSL) if($output_psl);
+	close(BESTBLOCKS) if($output_blocks);
 
 	## Print some statistics ##
 		
@@ -312,6 +329,60 @@ sub execute {                               # replace with real execution logic.
 	
 	
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
+}
+
+
+################################################################################################
+# parseAlignmentBlocks - get the blocks of gapped PSL alignments
+#
+################################################################################################
+
+sub parseAlignmentBlocks
+{
+	my $alignmentLine = shift(@_);
+	my @lineContents = split(/\t/, $alignmentLine);
+	
+	my $blocks = "";
+	
+	my $align_strand = $lineContents[9];
+	my $read_name = $lineContents[10];
+	my $ref_name = $lineContents[14];	
+	
+	my $num_blocks = $lineContents[18];
+	my $block_sizes = $lineContents[19];
+	my $read_block_starts = $lineContents[20];
+	my $ref_block_starts = $lineContents[21];
+
+	## Build arrays of the block info ##
+	
+	my @blockSizes = split(/,/, $block_sizes);
+	my @readBlockStarts = split(/,/, $read_block_starts);
+	my @refBlockStarts = split(/,/, $ref_block_starts);					
+
+	## Loop through each block ##
+
+	for(my $bCounter = 0; $bCounter < $num_blocks; $bCounter++)
+	{
+		my $block_number = $bCounter + 1;
+		my $block_size = $blockSizes[$bCounter];
+		
+		my $read_block_start = $readBlockStarts[$bCounter];
+		my $ref_block_start = $refBlockStarts[$bCounter];
+	
+		my $read_block_stop = $read_block_start + $block_size - 1;
+		my $ref_block_stop = $ref_block_start + $block_size - 1;	
+	
+		## Fix zero-based positions ##
+		$ref_block_start++;
+		$ref_block_stop++;
+		$read_block_start++;
+		$read_block_stop++;
+
+		## add to the list ##
+		$blocks .= "$ref_name\t$ref_block_start\t$ref_block_stop\t$align_strand\t$read_name\t$read_block_start\t$read_block_stop\t$block_number\n";
+	}
+
+	return($blocks);
 }
 
 
