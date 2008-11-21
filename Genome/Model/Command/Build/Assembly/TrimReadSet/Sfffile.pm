@@ -63,9 +63,6 @@ sub execute {
 			      out_sff_file => $self->sff_file,
 			      trim_file =>  $self->trim_file,
 			      );
-	if (defined $model->assembler_test) {
-	    $trimmer_params{test} = $model->assembler_test;
-	}
 
         my $sfffile_trim = Genome::Model::Tools::454::SffTrimWithSeqcleanReport->create( %trimmer_params );
         unless ($sfffile_trim->execute) {
