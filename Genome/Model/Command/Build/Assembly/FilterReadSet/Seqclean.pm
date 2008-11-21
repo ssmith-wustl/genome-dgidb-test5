@@ -68,10 +68,6 @@ sub execute {
 			       params => '-s',
 			       );
 
-	if (defined $model->assembler_test) {
-	    $sff_info_params{test} = $model->assembler_test;
-	}
-
         my $fasta_converter = Genome::Model::Tools::454::Sffinfo->create( %sff_info_params );
         unless ($fasta_converter->execute) {
             $self->error_message("Failed to run fasta converter on event ". $self->id);
