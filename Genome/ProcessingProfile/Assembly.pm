@@ -19,7 +19,7 @@ class Genome::ProcessingProfile::Assembly{
                                        ( exists $PROPERTIES{$_}->{is_optional} )
                                        ? $PROPERTIES{$_}->{is_optional}
                                        : 0
-                                   ),
+				       ),
                        is_mutable => 1,
                        doc => (
                                ( exists $PROPERTIES{$_}->{valid_valiues} )
@@ -45,11 +45,9 @@ sub properties_hash {
                                            doc => 'A string of parameters to pass to the assembler',
                                            is_optional => 1,
                                        },
-		      assembler_test => {
-			                   doc => 'Flag to use test version of assembler',
-					   is_optional => 1,
-					   valid_values => [0, 1],
-		                       },
+		      assembler_version => {
+			                     doc => 'Version of assembler to use',
+					 },
                       read_trimmer_name => {
                                             doc => 'The name of the software to use when trimming read sets',
                                             is_optional => 1,
