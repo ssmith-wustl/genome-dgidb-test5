@@ -128,8 +128,7 @@ sub get_brief_output
         }
         $fh->close;
     }
-#    return $bod;
-    return "STUB<BR>";
+    return $bod;
 }
 
 sub get_detail_output
