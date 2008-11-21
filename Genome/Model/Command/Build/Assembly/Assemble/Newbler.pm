@@ -45,10 +45,6 @@ sub execute {
 			      dir => $model->data_directory,
 			      );
 
-    if (defined $model->assembler_test) {
-	$run_project_params{test} = $model->assembler_test;
-    }
-
     my $run_project = Genome::Model::Tools::454::Newbler::RunProject->create( %run_project_params );
 
     unless($run_project->execute) {
