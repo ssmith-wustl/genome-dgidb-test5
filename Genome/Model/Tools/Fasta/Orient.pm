@@ -32,12 +32,20 @@ class Genome::Model::Tools::Fasta::Orient {
     ],
 };
 
-sub oriented_fasta_file {
-    return $_[0]->fasta_file_with_new_suffix('oriented');
+sub confirmed_fasta_file {
+    return $_[0]->fasta_file_with_new_suffix('confirmed');
 }
 
-sub oriented_qual_file {
-    return $_[0]->qual_file_with_new_suffix('oriented');
+sub confirmed_qual_file {
+    return $_[0]->qual_file_with_new_suffix('confirmed');
+}
+
+sub unconfirmed_fasta_file {
+    return $_[0]->fasta_file_with_new_suffix('unconfirmed');
+}
+
+sub unconfirmed_qual_file {
+    return $_[0]->qual_file_with_new_suffix('unconfirmed');
 }
 
 sub help_brief {
@@ -91,7 +99,7 @@ sub execute {
         or return;
 
     # Blast & parse
-    my %needs_complementing;
+    my %orientation_confirmation;
     for my $sense_type ( @SENSE_TYPES ) {
         my $fasta_method = $sense_type.'_fasta_file';
 
@@ -120,22 +128,22 @@ sub execute {
             while( my $hit = $result->next_hit ) {
                 while ( my $hsp = $hit->next_hsp ){
                     my $query = $hsp->query;
-                    my $needs_complementing = 0;
+                    my $orientation_confirmation = 0;
                     if ( $sense_type eq 'sense' ) {
                         # If this hit is on the - strand, it needs to complemeted
-                        $needs_complementing = 1 if $query->strand == -1;
+                        $orientation_confirmation = 1 if $query->strand == -1;
                     }
                     else { #anti sense
                         # If this hit is on the + strand, it needs to complemeted
-                        $needs_complementing = 1 if $query->strand == 1;
+                        $orientation_confirmation = 1 if $query->strand == 1;
                     }
                     #my $subject_id = $hsp->subject->seq_id;
                     # TODO Verify?
-                    # if ( exists $needs_complementing{$subject_id}
-                    #        and $needs_complementing{$subject_id} != $needs_complementing ) {
+                    # if ( exists $orientation_confirmation{$subject_id}
+                    #        and $orientation_confirmation{$subject_id} != $orientation_confirmation ) {
                     #    $self->error_message();
                     #}
-                    $needs_complementing{ $hsp->subject->seq_id } = $needs_complementing;
+                    $orientation_confirmation{ $hsp->subject->seq_id } = $orientation_confirmation;
                     #last; # TODO which one to last?
                 }
             }
@@ -144,54 +152,83 @@ sub execute {
         unlink $blastn->output_file if -e $blastn->output_file;
     }
 
-    # Write FASTA nad Qual
-    $self->_write_oriented_fasta_file(\%needs_complementing);
-    $self->_write_oriented_qual_file(\%needs_complementing) if $self->have_qual_file;
+    # Write FASTA and Qual
+    $self->_write_fasta_file(\%orientation_confirmation);
+    $self->_write_qual_file(\%orientation_confirmation) if $self->have_qual_file;
 
-    $self->status_message( sprintf("Oriented FASTA file is:\n%s\n", $self->oriented_fasta_file) );
+    $self->status_message( 
+        sprintf(
+            "<== Confirmed Files ==>\nFasta %s\nQual: %s\n<== Uncomfirmed Files ==>\nFasta%s\nQual:%s\n", 
+            $self->confirmed_fasta_file,
+            $self->confirmed_qual_file,
+            $self->unconfirmed_fasta_file,
+            $self->unconfirmed_qual_file,
+        )
+    );
 
     return 1;
 }
 
-sub _write_oriented_fasta_file {
-    my ($self, $needs_complementing) = @_;
+sub _write_fasta_file {
+    my ($self, $orientation_confirmation) = @_;
 
     # Open fasta reading 
     my $bioseq_in = $self->get_fasta_reader( $self->fasta_file )
         or return;
-    # Open fasta writing 
-    my $oriented_fasta = $self->oriented_fasta_file;
-    unlink $oriented_fasta if -e $oriented_fasta;
-    my $bioseq_out = $self->get_fasta_writer($oriented_fasta)
+    # Open confirmed fasta for writing 
+    my $confirmed_fasta = $self->confirmed_fasta_file;
+    unlink $confirmed_fasta if -e $confirmed_fasta;
+    my $confirmed_bioseq_out = $self->get_fasta_writer($confirmed_fasta)
+        or return;
+    # Open unconfirmed fasta for writing 
+    my $unconfirmed_fasta = $self->unconfirmed_fasta_file;
+    unlink $unconfirmed_fasta if -e $unconfirmed_fasta;
+    my $unconfirmed_bioseq_out = $self->get_fasta_writer($unconfirmed_fasta)
         or return;
 
     while ( my $bioseq = $bioseq_in->next_seq ) { 
-        if ( $needs_complementing->{ $bioseq->id } ) {
-            $bioseq = $bioseq->revcom;
+        if ( exists $orientation_confirmation->{ $bioseq->id } ) {
+            if ( $orientation_confirmation->{ $bioseq->id } ) {
+                $bioseq->alphabet('dna') if $bioseq->alphabet eq 'protein';
+                $bioseq = $bioseq->revcom;
+            }
+            $confirmed_bioseq_out->write_seq($bioseq);
         }
-        $bioseq_out->write_seq($bioseq);
+        else {
+            $unconfirmed_bioseq_out->write_seq($bioseq);
+        }
     }
 
     return 1;
 }
 
-sub _write_oriented_qual_file {
-    my ($self, $needs_complementing) = @_;
+sub _write_qual_file {
+    my ($self, $orientation_confirmation) = @_;
 
     # Open qual reading 
     my $bioseq_in = $self->get_qual_reader( $self->qual_file )
         or return;
-    # Open qual reading 
-    my $oriented_qual = $self->oriented_qual_file;
-    unlink $oriented_qual if -e $oriented_qual;
-    my $bioseq_out = $self->get_qual_writer($oriented_qual)
+    # Open confirmed qual for writing 
+    my $confirmed_qual = $self->confirmed_qual_file;
+    unlink $confirmed_qual if -e $confirmed_qual;
+    my $confirmed_bioseq_out = $self->get_qual_writer($confirmed_qual)
+        or return;
+    # Open unconfirmed qual for writing 
+    my $unconfirmed_qual = $self->unconfirmed_qual_file;
+    unlink $unconfirmed_qual if -e $unconfirmed_qual;
+    my $unconfirmed_bioseq_out = $self->get_qual_writer($unconfirmed_qual)
         or return;
 
     while ( my $bioseq = $bioseq_in->next_seq ) { 
-        if ( $needs_complementing->{ $bioseq->id } ) {
-            $bioseq = $bioseq->revcom;
+        if ( exists $orientation_confirmation->{ $bioseq->id } ) {
+            if ( $orientation_confirmation->{ $bioseq->id } ) {
+                $bioseq = $bioseq->revcom;
+            }
+            $confirmed_bioseq_out->write_seq($bioseq);
         }
-        $bioseq_out->write_seq($bioseq);
+        else {
+            $unconfirmed_bioseq_out->write_seq($bioseq);
+        }
     }
 
     return 1;
