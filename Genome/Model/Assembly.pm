@@ -16,7 +16,7 @@ class Genome::Model::Assembly {
                                         },
             assembler_name      => { via => 'processing_profile', },
             assembler_params    => { via => 'processing_profile', },
-	    assembler_test      => { via => 'processing_profile', },
+	    assembler_version   => { via => 'processing_profile', },
             read_filter_name    => { via => 'processing_profile', },
             read_filter_params  => { via => 'processing_profile', },
             read_trimmer_name   => { via => 'processing_profile', },
