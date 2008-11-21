@@ -49,12 +49,12 @@ sub unconfirmed_qual_file {
 }
 
 sub help_brief {
-    return 'Orients FASTA (and Quality) files by given sense and anti-sense sequences';
+    return 'Orients FASTA (and Quality) files by blastn given sense and anti-sense sequences';
 }
 
 sub help_detail { 
     return <<EOS 
-    Orients a fasta.
+    Orients FASTA (and Quality) files by given sense and anti-sense sequences.  Produces 4 files.  A 'confirmed' set of files (fasta and qual) for the sequences which their orientaion is confirmed, and an 'unconfirmed' set of files (fasta and qual) for which the orientation was not confirmed.'
 EOS
 }
 
