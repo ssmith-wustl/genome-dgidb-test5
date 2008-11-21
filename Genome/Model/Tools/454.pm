@@ -17,11 +17,12 @@ class Genome::Model::Tools::454 {
                             return $arch_os;
                         |
                     },
-	    test => {
-		      is      => 'boolean',
-		      doc     => 'uses test version of 454 application',
-		      default_value => 0,
-	            },
+
+	    assembler_version => {
+		                  is    => 'string',
+			          doc   => 'version of 454 application to use',
+	                         },
+
         ],
     has_optional => [
                      _tmp_dir => {
@@ -55,20 +56,24 @@ sub bin_path {
     my $self = shift;
 
     my $base_path = '/gsc/pkg/bio/454/';
-
-    if ($self->test) {
-	$base_path .= 'test';
+    
+    if ($self->assembler_version) {
+	$base_path = '/gsc/pkg/bio/454/offInstrumentApps-'.$self->assembler_version;
+	    
     }
     else {
 	$base_path .= 'installed';
     }
-    
+
     my $tail;
+
     if ($self->arch_os =~ /64/) {
         $tail = '-64/bin';
-    } else {
+    }
+    else {
         $tail = '/bin';
     }
+
     return $base_path . $tail;
 }
 
