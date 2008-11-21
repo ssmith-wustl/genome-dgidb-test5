@@ -48,10 +48,6 @@ sub execute {
 				   dir => $model->data_directory,
 				   );
 
-	if (defined $model->assembler_test) {
-	    $new_assembly_params{test} = $model->assembler_test;
-	}
-
         my $new_assembly = Genome::Model::Tools::454::Newbler::NewAssembly->create( %new_assembly_params );
         unless ($new_assembly->execute) {
             # May need to add locking to prevent more than one event from creating project
@@ -70,9 +66,9 @@ sub execute {
 			  is_paired_end => $self->read_set->is_paired_end,
 			  );
 
-    if (defined $model->assembler_test) {
-	$add_run_params{test} = $model->assembler_test;
-    }
+#    if (defined $model->assembler_test) {
+#	$add_run_params{test} = $model->assembler_test;
+#    }
 
     my $add_run = Genome::Model::Tools::454::Newbler::AddRun->create( %add_run_params );
 								     
