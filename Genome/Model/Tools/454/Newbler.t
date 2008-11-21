@@ -27,7 +27,8 @@ BEGIN {
 };
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-454-Newbler';
-my $expected_path = '/gsc/pkg/bio/454/newbler/applicationsBin/';
+#my $expected_path = '/gsc/pkg/bio/454/newbler/applicationsBin/';
+my $expected_path = '/gsc/pkg/bio/454/offInstrumentApps-2.0.00.17-64/bin';
 
 my $ref_seq_dir = '/gscmnt/839/info/medseq/reference_sequences/refseq-for-test';
 my @fasta_files = glob($ref_seq_dir .'/11.fasta');
@@ -106,13 +107,14 @@ isa_ok($run_assembly,'Genome::Model::Tools::454::Newbler::RunAssembly');
 ok($run_assembly->execute,'execute newbler runAssembly');
 
 
-my $test_run_assembly = Genome::Model::Tools::454::Newbler::RunAssembly->create(
-									 test => 1,
-									 assembly_dir => $assembly_dir,
-									 sff_files => \@sff_files,
-                                                                       );
+my $version_run_assembly = Genome::Model::Tools::454::Newbler::RunAssembly->create (
+										    assembly_dir => $assembly_dir,
+										    sff_files => \@sff_files,
+										    assembler_version => '2.0.00.17',
+										    );
 
-isa_ok($test_run_assembly,'Genome::Model::Tools::454::Newbler::RunAssembly');
-is ($test_run_assembly->full_bin_path, $expected_path, 'found expected path');
+isa_ok($version_run_assembly,'Genome::Model::Tools::454::Newbler::RunAssembly');
+is ($version_run_assembly->newbler_bin, $expected_path, 'found expected path');
+
 
 exit;
