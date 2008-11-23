@@ -976,7 +976,7 @@ sub sub_command_classes
         grep {
             ($_->is_sub_command_delegator or !$_->is_abstract) 
         }
-        grep { $_->isa('Command') }
+        grep { $_ and $_->isa('Command') }
         map { $class->class_for_sub_command($_) }
         map { s/_/-/g; $_ }
         map { basename($_) }
