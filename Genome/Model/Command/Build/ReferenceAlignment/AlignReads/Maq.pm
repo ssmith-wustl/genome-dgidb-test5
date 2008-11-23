@@ -321,11 +321,37 @@ sub prepare_input {
     # handle fragment or paired-end data
     my @solexa_output_paths;
     if($read_set->is_paired_end) {
-        push @solexa_output_paths, "$gerald_directory/s_${lane}_1_sequence.txt";
-        push @solexa_output_paths, "$gerald_directory/s_${lane}_2_sequence.txt";
+        
+        if (-e "$gerald_directory/s_${lane}_1_sequence.txt") {
+            push @solexa_output_paths, "$gerald_directory/s_${lane}_1_sequence.txt";
+        }
+        elsif (-e "$gerald_directory/Temp/s_${lane}_1_sequence.txt") {
+            push @solexa_output_paths, "$gerald_directory/Temp/s_${lane}_1_sequence.txt";
+        }
+        else {
+            die "No gerald forward data in directory for lane $lane! $gerald_directory";
+        }
+
+        if (-e "$gerald_directory/s_${lane}_2_sequence.txt") {
+            push @solexa_output_paths, "$gerald_directory/s_${lane}_2_sequence.txt";
+        }
+        elsif (-e "$gerald_directory/Temp/s_${lane}_2_sequence.txt") {
+            push @solexa_output_paths, "$gerald_directory/Temp/s_${lane}_2_sequence.txt";
+        }
+        else {
+            die "No gerald reverse data in directory for lane $lane! $gerald_directory";
+        }
     }
     else {
-        push @solexa_output_paths, "$gerald_directory/s_${lane}_sequence.txt";
+        if (-e "$gerald_directory/s_${lane}_sequence.txt") {
+            push @solexa_output_paths, "$gerald_directory/s_${lane}_sequence.txt";
+        }
+        elsif (-e "$gerald_directory/Temp/s_${lane}_sequence.txt") {
+            push @solexa_output_paths, "$gerald_directory/Temp/s_${lane}_sequence.txt";
+        }
+        else {
+            die "No gerald data in directory for lane $lane! $gerald_directory";
+        }
     }
 
     #i deleted soemthing to inputfile paths here 
