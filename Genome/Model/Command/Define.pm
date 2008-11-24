@@ -200,7 +200,7 @@ sub execute {
     $model_params{data_directory} = $self->data_directory if $self->data_directory;
     my $model = Genome::Model->create(%model_params);
     unless ( $model ) {
-        $self->error_message("Could not create a model for:");
+        $self->error_message('Could not create a model for: '. $self->subject_name);
         return;
     }
 
