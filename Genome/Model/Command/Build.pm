@@ -109,7 +109,7 @@ sub execute {
                 sleep(1);
                 $i++;
             }
-            print ."\n";
+            print "\n";
         }
         $prior_job_name = $self->model_id .'_'. $self->build_id .'_'. $stage_name .'*';
     }
@@ -348,6 +348,9 @@ sub verify_succesful_completion_for_stage {
 sub verify_succesful_completion {
     my $self = shift;
     for my $stage_name ($self->stages) {
+        if ($stage_name eq 'verify_succesful_completion') {
+            last;
+        }
         unless ($self->verify_succesful_completion_for_stage($stage_name)) {
             $self->error_message('Failed to verify succesful completion of stage '. $stage_name);
             return;
@@ -360,6 +363,9 @@ sub update_build_state {
     my $self = shift;
 
     for my $stage_name ($self->stages) {
+        if ($stage_name eq 'verify_succesful_completion') {
+            last;
+        }
         unless ($self->abandon_incomplete_events_for_stage($stage_name)) {
             return;
         }
@@ -373,6 +379,7 @@ sub update_build_state {
             return;
         }
         $self->remove_dependencies_on_stage($stage_name);
+        # Should we set the build as Abandoned
     }
     return 1;
 }
