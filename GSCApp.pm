@@ -290,7 +290,8 @@ associations in four cases.
     SEQUENCE_GENOME             => 'genome sequence',        
     SEQUENCE_CHROMOSOME         => 'chromosome sequence',
     SEQUENCE_TRANSCRIPTOME      => 'transcriptome sequence', 
-    SOLEXA_LANE_SUMMARY         => 'solexa run lane'
+    SOLEXA_LANE_SUMMARY         => 'solexa run lane',
+    SEQUENCE_PLASMID            => 'plasmid sequence', 
 );
 
 
