@@ -20,6 +20,10 @@ class Genome::Model::Command::Report::Amplicons
                              doc => 'This flag will print the full fasta sequence',
                              default_value => 0,
                          },
+            output_file => {
+                            is => 'String',
+                            doc => 'The name of an output file to dump headers/sequences',
+                        },
         ],
 };
 
@@ -38,6 +42,17 @@ the generated report will include the amplicon sequences
 EOS
 }
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    if (-e $self->output_file) {
+        $self->error_message($self->output_file .' file already exists.');
+        $self->delete;
+        return;
+    }
+    return $self;
+}
+
 sub execute { 
     my $self = shift;
 
@@ -51,6 +66,7 @@ sub execute {
         $self->error_message('Failed to find pcr setups for dna '. $dna->dna_name);
         return;
     }
+    my $fh = IO::File->new($self->output_file,'w');
     for my $pcr_setup (@pcr_setups) {
         my $pcr_setup_with_info = GSC::PCRSetup->get_with_related_info(setup_id => $pcr_setup->setup_id);
         my $enzyme = $pcr_setup_with_info->{__enz__};
@@ -60,12 +76,13 @@ sub execute {
         my $comment =$pcr_setup_with_info->{__comment__};
         my $chr = $ref_seq->get_subject;
         my $genome = $chr->get_genome;
-        print '>'. $pcr_setup_with_info->setup_name .' '. $genome->sequence_item_name .', Chr:'. $chr->chromosome
+        print $fh '>'. $pcr_setup_with_info->setup_name .' '. $genome->sequence_item_name .', Chr:'. $chr->chromosome
             .', Coords '. $ref_seq->begin_position .'-'.$ref_seq->end_position .', Ori(+)'."\n";
         if ($self->fasta_format) {
-            print $ref_seq->sequence_base_string ."\n";
+            print $fh $ref_seq->sequence_base_string ."\n";
         }
     }
+    $fh->close;
     return 1;
 }
 
