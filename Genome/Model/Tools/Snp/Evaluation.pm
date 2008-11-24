@@ -319,8 +319,9 @@ sub calculate_metrics {
 
     my %seen_at; #hash to store the locations we have already evaluated. Necessary because experimental metrics splits bi-allelic het sites.
     while(my $line = $snp_fh->getline) {
+        #$DB::single = 1;
         next if($line =~ /chromosome/); #Skip experimental metrics headers if included because of say cat
-        my ($chr,$pos,$ref,$var) = split /,\s*/, $line; #handle both types of experimental metrics formats
+        my ($chr,$pos,$ref,$var) = split /,\s*|\s+/, $line; #handle both types of experimental metrics formats,and SNP files
 
         if($self->exclude_y) {
             next if($chr eq 'Y'); #female patient these are BS
@@ -362,6 +363,7 @@ sub calculate_metrics {
         $total_snp_positions++;
         if(exists($gold_ref_hash_ref->{$chr}{$pos}) &&
             @{$gold_ref_hash_ref->{$chr}{$pos}}[0] eq $ref) {
+            #){
             $total_gold_hom_ref_concordant_snps++;
         }
         if(exists($dbsnp_hash_ref->{$chr}{$pos})) {
@@ -400,6 +402,10 @@ sub create_dbSNP_hash {
     while(my $line = $dbsnp_fh->getline) {
         chomp $line;
         my ($chr, $start, $end, $dbsnp, $watson, $venter) = split /\t/, $line;
+        #add in compatibility for non-watson/venter including files
+        #TODO Fix this when we get watson and venter in OLAP
+        $watson ||= 0;
+        $venter ||= 0;
         if(!exists($dbsnp_at{$chr}{$start})) {
             $dbsnp_at{$chr}{$start} = $dbsnp.$watson.$venter; #represent as a binary string
         }
