@@ -11,6 +11,8 @@ use Bio::SeqIO;
 use Bio::Seq::Quality;
 use Bio::Seq::SequenceTrace;
 use Cwd;
+use Data::Dumper;
+
 
 class Genome::Model::Tools::Pcap::RunStats {
     is => 'Command',
@@ -889,6 +891,11 @@ sub run_contig_stats
 	my @contig_names = $ace_obj->get_all_contigNames ();
 	foreach my $contig (@contig_names)
 	{
+	    my $ctg_length = $ace_obj->Contig_Length ( -contig => $contig );
+
+	    #CONSIDER ONLY MAJOR CONTIGS
+	    next unless $ctg_length > 500;
+
 	    my @all_reads = $ace_obj->ReadsInContig ( -contig => $contig );
 	    foreach my $read (@all_reads)
 	    {
@@ -947,11 +954,11 @@ sub run_contig_stats
 	$total_read_bases += scalar @numbers;
 	foreach my $depth_num (@numbers)
 	{
-	    $one_x_cov++ if $depth_num ge 1;
-	    $two_x_cov++ if $depth_num ge 2;
-	    $three_x_cov++ if $depth_num ge 3;
-	    $four_x_cov++ if $depth_num ge 4;
-	    $five_x_cov++ if $depth_num ge 5;
+	    $one_x_cov++ if $depth_num >= 1;
+	    $two_x_cov++ if $depth_num >= 2;
+	    $three_x_cov++ if $depth_num >= 3;
+	    $four_x_cov++ if $depth_num >= 4;
+	    $five_x_cov++ if $depth_num >= 5;
 	}
     }
     $df_fh->close;
