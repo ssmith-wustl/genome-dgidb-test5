@@ -187,16 +187,17 @@ sub lsf_state {
 
     my @eventlines = split(/\n/, $spool);
     shift @eventlines;  # first line is white space
+    my %jobinfo = ();
     
     my $jobinfoline = shift @eventlines;
-    # sometimes the prior regex nukes the white space between Key <Value>
-    $jobinfoline =~ s/(?<!\s{1})</ </g;
-
-    my %jobinfo = ();
-    # parse out a line such as
-    # Key <Value>, Key <Value>, Key <Value>
-    while ($jobinfoline =~ /(?:^|(?<=,\s{1}))(.+?)(?:\s+<(.*?)>)?(?=(?:$|;|,))/g) {
-        $jobinfo{$1} = $2;
+    if (defined $jobinfoline) {
+        # sometimes the prior regex nukes the white space between Key <Value>
+        $jobinfoline =~ s/(?<!\s{1})</ </g;
+        # parse out a line such as
+        # Key <Value>, Key <Value>, Key <Value>
+        while ($jobinfoline =~ /(?:^|(?<=,\s{1}))(.+?)(?:\s+<(.*?)>)?(?=(?:$|;|,))/g) {
+            $jobinfo{$1} = $2;
+        }
     }
 
     my @events = ();
