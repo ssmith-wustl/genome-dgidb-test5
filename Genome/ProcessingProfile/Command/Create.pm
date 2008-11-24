@@ -92,10 +92,10 @@ sub execute {
 
     # Get params to create.  Make sure we're not duplicating the same params
     my %params = $self->_get_target_class_params;
-    if ( %params and my $existing_pp = $target_class->get(%params) ) {
-        #if ( $target_class->get_class_object->get_property_objects and my $existing_pp = $target_class->get(%params) ) {
-        $self->_pretty_print_processing_profile($existing_pp);
-        $self->error_message('Identical processing profile (above) already exists');
+    if ( %params 
+            and my @existing_pp = $self->_get_processing_profiles_with_identical_params(\%params) ) {
+        $self->_pretty_print_processing_profile(@existing_pp);
+        $self->error_message('Existing processing profile(s) (above) with identical params, but different names already exist');
         return;
     }
 
@@ -114,6 +114,56 @@ sub execute {
     $self->_pretty_print_processing_profile($processing_profile);
 
     return 1;
+}
+
+#<>#
+sub _get_processing_profiles_with_identical_params {
+    my ($self, $params) = @_;
+
+    my $target_class = $self->_target_class;
+    my $target_meta = $target_class->get_class_object;
+    unless ( $target_meta ) {
+        $self->error_message("Can't get class meta object for class ($target_class)");
+        return;
+    }
+
+    my (%properties, @has_many_properties);
+    for my $property ( $target_meta->get_property_objects ) {
+        next unless exists $params->{ $property->property_name };
+        if ( $property->is_many ) {
+            push @has_many_properties, $property->property_name;
+        }
+        else {
+            $properties{ $property->property_name } = $params->{ $property->property_name };
+        }
+    };
+
+    #print Dumper({class=>$target_class, params=>$params, props=>\%properties,has_many=>\@has_many_properties});
+    
+    my @existing_pp = $target_class->get(%properties)
+        or return;
+
+    return @existing_pp unless @has_many_properties; # don't have any has many props to check, return what we got from the has props
+    
+    my @identical_pp;
+    EXISTING_PP: for my $pp ( @existing_pp ) {
+        for my $prop ( @has_many_properties ) {
+            next EXISTING_PP unless exists $params->{$prop}; # no values in params
+            my @pp_values = sort { $a cmp $b } $pp->$prop # no values for property
+                or next EXISTING_PP; 
+            my @param_values = ( ref $params->{$prop} ) # TODO chack if this is an array ref?  if we do this we need a way to tell the caller that there's a problem with the structrue of params and and not that there is no existing pp
+            ? sort { $a cmp $b } @{$params->{$prop}} 
+            : $params->{$prop};
+            next EXISTING_PP unless @pp_values == @param_values; # Different number of values
+            for ( my $i = 0; $i < $#pp_values; $i++) { 
+                next EXISTING_PP unless $pp_values[$i] eq $param_values[$i]; # if one of these doesn't match, we're good
+            }
+        }
+        # If we get here, it's a match
+        push @identical_pp, $pp;
+    }
+    
+    return @identical_pp;
 }
 
 #< Target class methods >#
@@ -152,6 +202,7 @@ sub _properties_for_class {
 
     my %properties;
     for my $property ( $class_meta->get_property_objects ) {
+        #next unless $property->doc;
         $properties{ $property->property_name } = {
             is => 'Text',
             is_optional => $property->is_optional,
@@ -189,50 +240,21 @@ sub _pretty_print_processing_profile {
     my $self = shift;
 
     my @defined_property_names = $self->_target_class_property_names;
+    #print Dumper(\@defined_property_names);
     for my $pp ( @_ ) {
         UR::Object::Command::List->execute(
             filter => 'id=' . $pp->id,
             subject_class_name => $self->_target_class,
             style => 'pretty',
-            show => sprintf(
-                            'id,name,type_name,%s',
-                            join(',', @defined_property_names),
-                        ),
+            show => #sprintf(
+                            'id,name,type_name',
+                            #'id,name,type_name,%s',
+                            #       join(',', @defined_property_names),
+                            #),
             #output => IO::String->new(),
         );
     }
 
-    return 1;
-}
-
-###############################
-
-
-sub unique_processing_profile_name {
-    my $self = shift;
-    if ( my $existing_pp = $self->_target_class->get(name => $self->name) ) {
-        $self->error_message("Processing profile already exists with the same name:");
-        $self->_pretty_print_processing_profile($existing_pp);
-        return;
-    }
-    return 1;
-}
-
-sub unique_processing_profile_params {
-    my $self = shift;
-
-    # Get the params for the processing profile, sans name
-    my %params = $self->_get_target_class_params;
-
-    # Check if the same profile params exist, w/ different name
-    my @all_pp = $self->_target_class->get;
-    for my $existing_pp ( @all_pp ) {
-        my $existing_properties = grep { $params{$_} eq $existing_pp->$_ } grep { defined $existing_pp->$_ } keys %params;
-        next unless keys %params == $existing_properties;
-        $self->error_message("Processing profile already exists with the same params:");
-        $self->_pretty_print_processing_profile($existing_pp);
-        return;
-    }
     return 1;
 }
 
