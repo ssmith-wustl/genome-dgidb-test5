@@ -18,52 +18,49 @@ my %HAS = (
         doc => 'Assembler type for assembling said reads.',
         valid_values => [qw/ maq newbler pcap phredphrap /],
     },
-    ribosomal_subunit => {
-        doc => 'Ribsosomal subunit',
-        valid_values => [qw/ 16 18 /],
-    },
     assembly_size => {
         doc => 'Estimated assembly size, used for metrics and such',
-    },
-    subject_location => {
-        doc => 'The location whence the original sample was collected', 
     },
     #####
     #TODO remove these props from the db
     #amplification_forward_primer => { doc => 'Primer used for amplification in the forward (5\') direction', },
     #amplification_reverse_primer => { doc => 'Primer used for amplification in the reverse (3\') direction', },
+    #subject_location => { doc => 'The location whence the original sample was collected', },
+    #ribosomal_subunit => { doc => 'Ribsosomal subunit', valid_values => [qw/ 16 18 /], },
 );
-my %HAS_MANY = (
-    sense_primer_sequences => {
-        doc => 'Sense (5\' direction) primer sequences that can be used for to orient assemblies',
-    },
-    anti_sense_primer_sequences => {
-        doc => 'Anti-sense (3\' direction) primer sequences that can be used for to orient assemblies',
-    },
-);
-my %PROPERTIES = ( %HAS );
-# FIXME
-#my %PROPERTIES = ( %HAS, %HAS_MANY );
+my @PRIMER_TYPES = (qw/ sense anti_sense /);
 
 class Genome::ProcessingProfile::MetaGenomicComposition {
     is => 'Genome::ProcessingProfile',
     has => [
-    map { 
-        $_ => {
-            via => 'params',
-            to => 'value',
-            where => [ name => $_ ],
-            is_mutable => 1,
-            doc => (
-                ( exists $PROPERTIES{$_}->{valid_values} )
-                ? sprintf('%s Valid values: %s.', $PROPERTIES{$_}->{doc}, join(', ', @{$PROPERTIES{$_}->{valid_values}}))
-                : $PROPERTIES{$_}->{doc}
-            ),
-        },
-    } keys %PROPERTIES
+    map(
+        { 
+            $_ => {
+                via => 'params',
+                to => 'value',
+                where => [ name => $_ ],
+                is_mutable => 1,
+                doc => (
+                    ( exists $HAS{$_}->{valid_values} )
+                    ? sprintf('%s. Valid values: %s.', $HAS{$_}->{doc}, join(', ', @{$HAS{$_}->{valid_values}}))
+                    : $HAS{$_}->{doc}
+                ),
+            },
+        } keys %HAS
+    ),
+    map(
+        { 
+            sprintf('%s_primer_sequences', $_) => {
+                via => 'params',
+                where => [ name => sprintf('%s_primer_sequences', $_) ],
+                to => 'value',
+                is_many => 1,
+                is_mutable => 1,
+                doc => sprintf('%s primer sequences that can be used for to orient assemblies', ucfirst $_),
+            } 
+        } @PRIMER_TYPES
+    ),
     ],
-    #FIXME not working
-    #  has_many => [ map { $_ => { %{$HAS_MANY{$_}}, via => 'params', to => 'value', where => [ name => $_ ], is_mutable => 1, }, } keys %HAS_MANY ],
 };
 
 sub create {
@@ -71,15 +68,15 @@ sub create {
 
     my $self = $class->SUPER::create(@_);
 
-    for my $property_name ( keys %PROPERTIES ) {
-        next unless exists $PROPERTIES{$property_name}->{valid_values};
-        unless ( grep { $self->$property_name eq $_ } @{$PROPERTIES{$property_name}->{valid_values}} ) {
+    for my $property_name ( keys %HAS ) {
+        next unless exists $HAS{$property_name}->{valid_values};
+        unless ( grep { $self->$property_name eq $_ } @{$HAS{$property_name}->{valid_values}} ) {
             $self->error_message( 
                 sprintf(
                     'Invalid value (%s) for %s.  Valid values: %s',
                     $self->$property_name,
                     $property_name,
-                    join(', ', @{$PROPERTIES{$property_name}->{valid_values}}),
+                    join(', ', @{$HAS{$property_name}->{valid_values}}),
                 ) 
             );
             $self->delete;
@@ -91,48 +88,7 @@ sub create {
 }
 
 sub params_for_class { 
-    return keys %PROPERTIES;
-}
-
-#< Primer Seq >#
-my %iub2bases = (qw/
-    R   AG  
-    Y   CT  
-    K   GT  
-    M   AC  
-    S   GC  
-    W   AT  
-    B   CGT 
-    D   AGT 
-    H   ACT 
-    V   ACG 
-    N   AGCT 
-    /);
-sub get_sense_primer_sequences {
-    my $self = shift;
-
-    my $primer;
-    my @new_primers;
-    for my $primer_base ( split(//, $primer) ) {
-        my @new_bases;
-        if ( exists $iub2bases{$primer_base} ) {
-            for my $iub_base ( split(//, $iub2bases{$primer_base}) ) {
-                push @new_bases, $iub_base;
-                # add to  new primers
-            }
-        }
-        else {
-            @new_bases = ($primer_base);
-        }
-
-        for my $new_primer ( @new_primers ) {
-            for my $new_base ( @new_bases ) {
-                $primer .= $new_base;
-            }
-        }
-    }
-
-    return;
+    return (keys %HAS, map { sprintf('%s_primer_sequences', $_) } @PRIMER_TYPES);
 }
 
 #################################################################
