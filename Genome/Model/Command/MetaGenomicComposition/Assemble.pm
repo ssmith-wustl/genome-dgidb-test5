@@ -9,7 +9,7 @@ use Data::Dumper;
 require Genome::Model::Tools::PhredPhrap::ScfFile;
 
 class Genome::Model::Command::MetaGenomicComposition::Assemble {
-    is => 'Genome::Model::Command',
+    is => 'Genome::Model::Command::MetaGenomicComposition',
 };
 
 sub help_brief {
@@ -20,23 +20,12 @@ sub help_detail {
     return help_brief();
 }
 
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_);
-
-    unless ( $self->model ) {
-        $self->error_message( sprintf('Can\'t get model for id (%s)', $self->model_id) );
-        $self->delete;
-        return;
-    }
-
-    return $self;
-}
-
 sub execute {
     my $self = shift;
 
+    $self->_verify_mgc_model
+        or return;
+    
     my $subclones = $self->model->subclones_and_traces_for_assembly
         or return;
 
