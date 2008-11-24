@@ -10,13 +10,12 @@ require IO::Dir;
 require IO::File;
 
 my $_fasta_and_qual_types = {
-    assembled => '%s/%s.fasta.contigs',
     pre_processing => '%s/%s.fasta.pre_processing',
     assembly_input => '%s/%s.fasta',
 };
 
 class Genome::Model::Command::MetaGenomicComposition::CollateFasta { 
-    is => 'Genome::Model::Command',
+    is => 'Genome::Model::Command::MetaGenomicComposition',
     has_optional => [
     all => {
         type => 'Boolean',
@@ -35,6 +34,7 @@ class Genome::Model::Command::MetaGenomicComposition::CollateFasta {
     ],
 };
 
+#<>#
 sub help_brief {
     return 'Collate the FASTAs and Quality files for all assemblies in a MGC model.';
 }
@@ -43,6 +43,7 @@ sub help_detail {
     return help_brief();
 }
 
+#<>#
 sub fasta_and_qual_types {
     return keys %$_fasta_and_qual_types;
 }
@@ -61,30 +62,26 @@ sub _subclone_fasta_file_for_type {
     );
 }
 
-sub create {
-    my $class = shift;
+sub _verify_fasta_and_qual_types {
+    my $self = shift;
 
-    my $self = $class->SUPER::create(@_)
-        or return;
-
-    unless ( $self->model ) { # TODO move up!!
-        $self->error_message( sprintf('Can\'t get model for id (%s)', $self->model_id) );
-        $self->delete;
-        return;
-    }
-    
     if ( $self->all ) {
         for my $type ( $self->fasta_and_qual_types ) {
             $self->$type(1);
         }
     }
-    elsif ( grep { $self->$_ } $self->fasta_and_qual_types ) {
-        $self->assembled(1) 
-    }
     
+    unless ( grep { $self->$_ } $self->fasta_and_qual_types ) {
+        $self->error_message( 
+            sprintf('Please select type of Fasta to get: %s', join(', ', 'all', $self->fasta_and_qual_types)) 
+        );
+        return;
+    }
+
     return $self;
 }
 
+#<>#
 sub DESTROY { 
     my $self = shift;
 
@@ -97,6 +94,12 @@ sub DESTROY {
 sub execute {
     my $self = shift;
 
+    $self->_verify_fasta_and_qual_types
+        or return
+    
+    $self->_verify_mgc_model
+        or return;
+    
     my $subclones = $self->model->subclones
         or return;
 
