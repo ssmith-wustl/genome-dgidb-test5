@@ -19,11 +19,13 @@ sub help_detail {
 EOS
 }
 
-sub create {
-    my $class = shift;
+sub _verify_mgc_model {
+    my $self = shift;
 
-    my $self = $class->SUPER::create(@_)
-        or return;
+    unless ( $self->model ) {
+        $self->error_message("A model is required for this command");
+        return;
+    }
 
     unless ( $self->model->isa('Genome::Model::MetaGenomicComposition') ) {
         $self->error_message(
@@ -37,7 +39,7 @@ sub create {
         return;
     }
 
-    return $self;
+    return 1;
 }
 
 1;
