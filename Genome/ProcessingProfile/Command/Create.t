@@ -40,6 +40,7 @@ my %pp_params = (
         sequencing_platform => '454',
         assembler_name => 'newbler',
         assembler_params => 'test',
+	assembler_version => '2.0.00.20',
     },
     'Genome::ProcessingProfile::Command::Create::MicroArrayAffymetrix' => {
         name => 'test_micro_array_affymetrix',
