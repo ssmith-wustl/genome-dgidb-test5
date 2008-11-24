@@ -80,29 +80,6 @@ sub quality_histogram_file {
     return sprintf('%s/%s.histogram.png', $self->data_directory, $self->subject_name);
 }
 
-#< Primer fastas ># 
-sub sense_primers_fasta_file { 
-    my $self = shift;
-
-    return sprintf(
-        '%s/%s.%sS.sense.fasta',
-        $self->primer_directory,
-        $self->subject_location,
-        $self->ribosomal_subunit,
-    );
-}
-
-sub anti_sense_primers_fasta_file { 
-    my $self = shift;
-
-    return sprintf(
-        '%s/%s.%sS.anti_sense.fasta',
-        $self->primer_directory,
-        $self->subject_location,
-        $self->ribosomal_subunit,
-    );
-}
-
 #< Determining subclones >#
 sub subclones_and_traces_for_assembly {
     my $self = shift;
