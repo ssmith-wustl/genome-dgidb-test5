@@ -632,10 +632,10 @@ sub _protein_domain
     #my ($gene,$transcript);
     require SnpDom;
     my $s = SnpDom->new({'-inc-ts' => 1});
-    $s->add_mutation($gene ,$transcript ,$amino_acid_change);
+    $s->add_mutation($gene->hugo_gene_name ,$transcript ,$amino_acid_change);
     my %domlen;
     $s->mutation_in_dom(\%domlen,"HMMPfam");
-    my $obj = $s->get_mut_obj($transcript . "," . $gene);
+    my $obj = $s->get_mut_obj($transcript . "," . $gene->hugo_gene_name);
     my $doms = $obj->get_domain($amino_acid_change);
     if(defined($doms))
     {
