@@ -9,8 +9,9 @@ class Genome::Model::Tools::454::Sfffile {
     is => ['Genome::Model::Tools::454'],
     has => [
             in_sff_file => {
-                         doc => 'The sff file to operate',
-                         is => 'string',
+                            doc => 'The sff file to operate',
+                            is => 'string',
+                            is_many => 1,
                      },
             out_sff_file => {
                             is => 'string',
@@ -19,6 +20,7 @@ class Genome::Model::Tools::454::Sfffile {
             params => {
                        is => 'string',
                        doc => 'The params to pass to sfffile',
+                       is_optional => 1,
                    },
         ],
 };
@@ -37,9 +39,8 @@ sub execute {
     my $self = shift;
 
     my $params = $self->params .' -o '. $self->out_sff_file;
-    my $cmd = $self->bin_path .'/sfffile '. $params .' '. $self->in_sff_file;
+    my $cmd = $self->bin_path .'/sfffile '. $params .' '. join(' ',$self->in_sff_file);
     print 'Running: '. $cmd ."\n";
-    
     my $rv = system($cmd);
     unless ($rv == 0) {
         $self->error_message("non-zero exit code '$rv' returned by sffinfo");
