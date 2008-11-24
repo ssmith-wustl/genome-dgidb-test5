@@ -56,8 +56,8 @@ sub context {
 
 sub event_types_without_subclass {
     return (
-            'genome-model build verify-succesful-completion',
-            'genome-model build assembly assemble newbler'
+            '^genome[\- ]model build verify-succesful-completion$',
+            '^genome[\- ]model build assembly assemble newbler$'
         );
 }
 
@@ -164,7 +164,7 @@ sub _execute_inline_event {
     $self->context->commit;
 }
 
-# Find events in a 'Scheduled' state, but haven't been submitted to lsf
+# Find events in a 'Scheduled' state, but have been submitted to lsf
 sub _verify_submitted_jobs {
     my($self,%addl_get_params) = @_;
 
@@ -180,25 +180,17 @@ sub _verify_submitted_jobs {
             parent_event_id => { operator => 'ne', value=>undef},
             %addl_get_params
         );
-    $DB::single=1;
     while (my $event = shift @queued_events) {
         unless ($event->ref_seq_id || $event->read_set_id) {
-            unless (grep { $event->event_type eq $_ }  $self->event_types_without_subclass) {
-                $self->error_message("Event ".$event->id." has no ref_seq_id or read_id... skipping.");
+            unless (grep { $event->event_type =~ qr/$_/ }  $self->event_types_without_subclass) {
+                $self->error_message('Event '. $event->id .' has no ref_seq_id or read_id... skipping.');
                 next;
             }
         }
 
         my $job_id = $event->lsf_job_id;
-        my @result = `bjobs $job_id 2>/dev/null`;
-
-        my $status = '';
-        if (@result) {
-            my (@cols) = split(/\s+/,$result[1]);
-            $status = $cols[2];
-        }
-
-        if ($status eq '' or $status eq 'EXIT') {
+        my $job_state = $event->lsf_job_state;
+        if (!$job_state || $job_state eq '' || $job_state eq 'EXIT') {
             $self->status_message(
                 $event->event_status
                 . ' event ' 
@@ -207,7 +199,6 @@ sub _verify_submitted_jobs {
             );
             $event->event_status("Crashed");
         }
-
     } # end while @launchable_events
     $self->context->commit;
     return 1;
@@ -240,7 +231,7 @@ sub _schedule_scheduled_jobs {
                                                        %addl_get_params);
     while (my $event = shift @launchable_events) {
         unless ($event->ref_seq_id || $event->read_set_id) {
-            unless (grep { $event->event_type eq $_ }  $self->event_types_without_subclass) {
+            unless (grep { $event->event_type =~ qr/$_/ }  $self->event_types_without_subclass) {
                 $self->error_message("Event ".$event->id." has no ref_seq_id or read_set_id... skipping.");
                 next;
             }
@@ -261,15 +252,15 @@ sub _schedule_scheduled_jobs {
         if (@done_dependencies) {
             $execute_args{'dependency_hash_ref'}{done} = \@done_dependencies;
         }
-        my $last_bsub_job_id = $event->execute_with_bsub(%execute_args);
-        unless ($last_bsub_job_id) {
+        my $job_id = $event->execute_with_bsub(%execute_args);
+        unless ($job_id) {
             $self->_failed_to_bsub($event, \@launchable_events);
             next;
         }
 
         $event->user_name($ENV{'USER'});
         $event->date_scheduled(UR::Time->now);
-        $event->lsf_job_id($last_bsub_job_id);
+        $event->lsf_job_id($job_id);
 
         $self->context->commit;
 
@@ -297,7 +288,6 @@ sub _reschedule_failed_jobs {
                                                           user_name => $ENV{'USER'},
                                                           %addl_get_params);
 
-    $DB::single=1;
     while (my $event = shift @launchable_events) {
         # Get subsequent events that have been through a round of 'scheduling'.
         # ie. they have an lsf_job_id assigned to them.  These jobs will need to
