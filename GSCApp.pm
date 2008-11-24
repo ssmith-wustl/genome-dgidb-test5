@@ -389,6 +389,7 @@ associations in four cases.
         SEQUENCE_SET                    GSC::Sequence::TransparentSet
         
         SEQUENCE_READ_STAT_REF_ALIGN    GSC::Sequence::Read::Stat::RefAlign
+        SEQUENCE_PLASMID                GSC::Sequence::Plasmid
         
         SETUP_SAMPLE_SET_TYPE           GSC::Setup::SampleSetType
         SETUP_SAMPLE_SET                GSC::Setup::SampleSet
