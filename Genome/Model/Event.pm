@@ -772,6 +772,18 @@ sub lsf_dependency_condition {
     return;
 }
 
+sub lsf_job_state {
+    my $self = shift;
+    unless ($self->lsf_job_id) {
+        return;
+    }
+    my ($job_info,$events) = Genome::Model::Command::BsubHelper->lsf_state($self->lsf_job_id);
+    if ($job_info) {
+        return $$job_info{Status};
+    }
+    return;
+}
+
 1;
 
 #$HeadURL$
