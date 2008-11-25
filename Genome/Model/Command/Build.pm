@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use YAML;
 
 class Genome::Model::Command::Build {
     is => [ 'Genome::Model::Event' ],
@@ -92,6 +93,7 @@ sub execute {
             my %run_jobs_params = (
                                    model_id => $self->model_id,
                                    prior_job_name => $prior_job_name,
+                                   building => 1,
                                );
             if ($self->hold_run_jobs) {
                 $run_jobs_params{bsub_args} = ' -H ';
@@ -100,16 +102,6 @@ sub execute {
                 $self->error_message('Failed to execute run-jobs for model '. $self->model_id);
                 return;
             }
-            # Give the lsf queue system time to catch up.
-            print 'Waiting for lsf to catch up';
-            my $i = 0;
-            my $timer = 30;
-            while ($i < $timer) {
-                print '.';
-                sleep(1);
-                $i++;
-            }
-            print "\n";
         }
         $prior_job_name = $self->model_id .'_'. $self->build_id .'_'. $stage_name .'*';
     }
@@ -638,11 +630,32 @@ sub _ask_user_question {
     return $input;
 }
 
+sub get_all_objects {
+    my $self = shift;
+
+    my @events = $self->child_events;
+    if ($events[0] && $events[0]->id =~ /^\-/) {
+        @events = sort {$b->id cmp $a->id} @events;
+    } else {
+        @events = sort {$a->id cmp $b->id} @events;
+    }
+    return @events;
+}
+
+sub yaml_string {
+    my $self = shift;
+    my $string = YAML::Dump($self);
+    my @objects = $self->get_all_objects;
+    for my $object (@objects) {
+        $string .= $object->yaml_string;
+    }
+    return $string;
+}
+
 sub delete {
     my $self = shift;
 
     my $model = $self->model;
-
     if ($model->current_running_build_id && $model->current_running_build_id eq $self->genome_model_event_id) {
         $model->current_running_build_id(undef);
     }
@@ -650,7 +663,13 @@ sub delete {
     if ($model->last_complete_build_id && $model->last_complete_build_id eq $self->genome_model_event_id) {
         $model->last_complete_build_id(undef);
     }
-
+    my @objects = $self->get_all_objects;
+    for my $object (@objects) {
+        unless ($object->delete) {
+            $self->error_message('Failed to remove object '. $object->class .' '. $object->id);
+            return;
+        }
+    }
     return $self->SUPER::delete;
 }
 
