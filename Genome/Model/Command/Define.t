@@ -9,7 +9,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 159;
+use Test::More tests => 160;
 use Test::Differences;
 use File::Path;
 
