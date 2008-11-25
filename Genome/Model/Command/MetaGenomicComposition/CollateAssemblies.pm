@@ -17,6 +17,20 @@ class Genome::Model::Command::MetaGenomicComposition::CollateAssemblies {
     is => 'Genome::Model::Command::MetaGenomicComposition',
 };
 
+#< >#
+sub help_brief {
+    return "Collates the assembly fastas and quals while compiling metrics for MGC models";
+}
+
+sub help_detail {
+    return help_brief();
+}
+
+sub sub_command_sort_position {
+    return 20;
+}
+
+#<>#
 sub execute {
     my $self = shift;
 
