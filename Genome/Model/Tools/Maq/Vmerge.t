@@ -32,7 +32,7 @@ while (!-e $pipe_path) {
     sleep 1;
 }
 
-my $cmd = "maq mapview $pipe_path > $test_results";
+my $cmd = "/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq mapview $pipe_path > $test_results";
 my $rv = system($cmd);
 ok(!$rv,"$cmd executed succesfully");
 ok(!compare($test_results,$expected_results),'test result matches expected');
