@@ -43,6 +43,7 @@ $build->set_always('id', $test_build_id);
 $build->set_always('data_directory',$test_data_directory);
 $build->set_always('event_type','genome-model build');
 $build->set_always('prior_event_id',undef);
+$build->set_always('parent_event_id',undef);
 $build->mock('event_status', sub {
                  my $self = shift;
                  if (@_) {
