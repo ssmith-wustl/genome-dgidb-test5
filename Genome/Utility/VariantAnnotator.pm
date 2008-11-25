@@ -188,7 +188,9 @@ sub _transcript_annotation
 
     my $source = $transcript->source;
     my $gene = $transcript->gene;
-    my $expression = $gene->expressions_by_intensity->first;
+    #my $expression = $gene->expressions_by_intensity->first;
+    my @expressions = $gene->expressions_by_intensity;
+    my $expression = $expressions[0];
     my ($intensity, $detection) = ( $expression )
     ? ( $expression->expression_intensity, $expression->detection )
     : (qw/ NULL NULL /);

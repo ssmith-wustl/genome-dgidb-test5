@@ -7,7 +7,7 @@ use above "Genome";
 
 use Data::Dumper;
 require Genome::DB::Schema;
-use Test::More 'no_plan';
+use Test::More tests => 10;
 use Storable;
 
 use_ok('Genome::Utility::VariantAnnotator');
@@ -50,7 +50,7 @@ for (my $i = 0; $i <= $#variants; $i++) {
     
     #Verify that these match
     is($variant->{transcript}, $annotation->{transcript_name}, 'Transcript matches');
-    is(lc($variant->{called_classification}), lc($annotation->{trv_type}), 'Classification matches');
+    is(lc($annotation->{trv_type}), lc($variant->{called_classification}), 'classification matches');
 }
 
 exit;

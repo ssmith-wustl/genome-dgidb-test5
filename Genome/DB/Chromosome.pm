@@ -9,6 +9,8 @@ use Finfo::Logging 'fatal_msg';
 use Genome::DB::Window::Transcript;
 use Genome::DB::Window::Variation;
 
+use Genome;
+
 __PACKAGE__->load_components(qw/ Core /);
 __PACKAGE__->table('chromosome');
 __PACKAGE__->add_columns(qw/ chrom_id chromosome_name /);
@@ -32,13 +34,16 @@ sub ordered_transcripts
         $search_params{transcript_start} = { '<' => $transcript_params{to} };
     }
     
-    return $self->transcripts->search
-    (
-        \%search_params,
-        {
-            order_by => [qw/ transcript_start /],
-        }
-    );
+    my $iter = Genome::Transcript->create_iterator(where => [ chrom_name => $self->chromosome_name ] );
+    return $iter;
+
+    #return $self->transcripts->search
+    #(
+    #    \%search_params,
+    #    {
+    #        order_by => [qw/ transcript_start /],
+    #    }
+    #);
 }
 
 sub transcript_window
