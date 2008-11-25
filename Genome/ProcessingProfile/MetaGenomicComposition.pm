@@ -28,7 +28,7 @@ my %HAS = (
     #subject_location => { doc => 'The location whence the original sample was collected', },
     #ribosomal_subunit => { doc => 'Ribsosomal subunit', valid_values => [qw/ 16 18 /], },
 );
-my @PRIMER_TYPES = (qw/ sense anti_sense /);
+#my @PRIMER_TYPES = (qw/ sense anti_sense /);
 
 class Genome::ProcessingProfile::MetaGenomicComposition {
     is => 'Genome::ProcessingProfile',
@@ -48,18 +48,7 @@ class Genome::ProcessingProfile::MetaGenomicComposition {
             },
         } keys %HAS
     ),
-    map(
-        { 
-            sprintf('%s_primer_sequences', $_) => {
-                via => 'params',
-                where => [ name => sprintf('%s_primer_sequences', $_) ],
-                to => 'value',
-                is_many => 1,
-                is_mutable => 1,
-                doc => sprintf('%s primer sequences that can be used for to orient assemblies', ucfirst $_),
-            } 
-        } @PRIMER_TYPES
-    ),
+    #   map( { sprintf('%s_primer_sequences', $_) => { via => 'params', where => [ name => sprintf('%s_primer_sequences', $_) ], to => 'value', is_many => 1, is_mutable => 1, doc => sprintf('%s primer sequences that can be used for to orient assemblies', ucfirst $_), } } @PRIMER_TYPES),
     ],
 };
 
@@ -88,7 +77,21 @@ sub create {
 }
 
 sub params_for_class { 
-    return (keys %HAS, map { sprintf('%s_primer_sequences', $_) } @PRIMER_TYPES);
+    return keys %HAS;
+    #return (keys %HAS, map { sprintf('%s_primer_sequences', $_) } @PRIMER_TYPES);
+}
+
+#< Primers >#
+sub primer_fasta_directory {
+    return '/gscmnt/839/info/medseq/meta-genomic-composition/primers';
+}
+
+sub sense_primer_fasta {
+    return sprintf('%s/%s.sense.fasta', $_[0]->primer_fasta_directory, join('_', split(/\s+/, $_[0]->name)));
+}
+
+sub anti_sense_primer_fasta {
+    return sprintf('%s/%s.anti_sense.fasta', $_[0]->primer_fasta_directory, join('_', split(/\s+/, $_[0]->name)));
 }
 
 #################################################################
