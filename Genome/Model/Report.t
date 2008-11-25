@@ -4,7 +4,9 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 3;
+use Test::More skip_all => 'This model is undergoing a new build';
+
+#use Test::More tests => 3;
 
 my $m = Genome::Model->get(id => 2721044485);
 ok($m, "got a model"); 
