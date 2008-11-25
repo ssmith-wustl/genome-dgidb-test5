@@ -36,11 +36,15 @@ class Genome::Model::Command::MetaGenomicComposition::CollateFasta {
 
 #<>#
 sub help_brief {
-    return 'Collate the FASTAs and Quality files for all assemblies in a MGC model.';
+    return 'Collate the FASTAs and Quality files from the pre-assembly stages for all assemblies in a MGC model.';
 }
 
 sub help_detail {
     return help_brief();
+}
+
+sub sub_command_sort_position {
+    return 90;
 }
 
 #<>#
