@@ -64,15 +64,30 @@ sub test_new_model_and_add_new_read_sets {
     my $override = Test::MockModule->new('Genome::RunChunk::Solexa');
     # We're going to say add all, but there will really only  be one to add
     my @mocked_run_chunks = map {
-                        my $run_chunk = Test::MockObject->new();
-                        $run_chunk->set_isa('Genome::RunChunk');
-                        $run_chunk->set_always('id', $_->{'id'});
-                        $run_chunk->set_always('run_name', $_->{'run_name'});
-                        $run_chunk->set_always('subset_name', $_->{'subset_name'});
-                        $run_chunk;
+                        my $run_chunk = Genome::RunChunk->create_mock(
+                                                                      id => $_->{'id'},
+                                                                      genome_model_run_id => $_->{'id'},
+                                                                      run_name => $_->{'run_name'},
+                                                                      subset_name => $_->{'subset_name'},
+                                                                      sample_name => $_->{'sample_name'},
+                                                                      sequencing_platform => $_->{'sequencing_platform'}
+                                                                  );
                       }
-                      ( {id => 'A', run_name => 'Foo', subset_name => 'Lane1' },
-                        {id => 'B', run_name => 'Bar', subset_name => 'Lane2' } );
+                      ( {
+                         id => 'A',
+                         run_name => 'Foo',
+                         subset_name => 'Lane1',
+                         sample_name => 'test_sample_a',
+                         sequencing_platform => 'solexa',
+                     },
+                        {
+                         id => 'B',
+                         run_name => 'Bar',
+                         subset_name => 'Lane2',
+                         sample_name => 'test_sample_b',
+                         sequencing_platform => 'solexa',
+                     },
+                   ,);
 
 
     $override->mock('get_or_create_from_read_set',
