@@ -22,8 +22,8 @@ my %pp_params = (
         assembler => 'phredphrap',
         sequencing_center => 'gsc',
         assembly_size => 12345,
-        sense_primer_sequences => [qw/ AGAGTTTGATCCTGGCTCAG /],
-        anti_sense_primer_sequences => [qw/ GACGGGCGGTGWGTRCA CCGTCAATTCCTTTRAGTTT /],
+        #sense_primer_sequences => [qw/ AGAGTTTGATCCTGGCTCAG /],
+        #anti_sense_primer_sequences => [qw/ GACGGGCGGTGWGTRCA CCGTCAATTCCTTTRAGTTT /],
     },
     'ReferenceAlignment' => {
         name => 'test_reference_alignment',
