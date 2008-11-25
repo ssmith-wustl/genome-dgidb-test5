@@ -40,7 +40,7 @@ for my $ref_name (@reference_names) {
     }
     my $maq_map = $tmp_dir .'/'. $ref_name .'_maq.map';
     my $mapsplit = $tmp_dir .'/'. $ref_name  .'.map';
-    my $maq_cmd = 'maq submap '. $maq_map .' '. $map_file .' '. $ref_name .' 1';
+    my $maq_cmd = '/gsc/pkg/bio/maq/maq-0.6.3_x86_64-linux/maq submap '. $maq_map .' '. $map_file .' '. $ref_name .' 1';
     my $rv = system($maq_cmd);
     unless ($rv ==0) {
         die "non-zero exit code($rv) from maq cmd '$maq_cmd':  $!";
