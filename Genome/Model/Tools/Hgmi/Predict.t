@@ -46,9 +46,9 @@ my $p = Genome::Model::Tools::Hgmi::Predict->create(
 );
 
 isa_ok($p, 'Genome::Model::Tools::Hgmi::Predict');
-symlink("/gscmnt/278/analysis/HGMI/B_catenulatum/Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb/Version_1.0/BAP/Version_1.0/Sequence/BIFCATDFT.v1.contigs.newname.fasta", "/tmp/disk/analysis/HGMI/B_catenulatum/Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb/Version_1.0/BAP/Version_1.0/Sequence/BIFCATDFT.v1.contigs.newname.fasta");
-symlink("/gscmnt/temp212/info/annotation/gmhmmp_models/heu_11_56.mod","/tmp/disk/analysis/HGMI/B_catenulatum/Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb/Version_1.0/BAP/Version_1.0/heu_11_56.mod");
-my $cmd = $p->gather_details();
-print join(" ",@$cmd),"\n";
+#symlink("/gscmnt/278/analysis/HGMI/B_catenulatum/Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb/Version_1.0/BAP/Version_1.0/Sequence/BIFCATDFT.v1.contigs.newname.fasta", "/tmp/disk/analysis/HGMI/B_catenulatum/Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb/Version_1.0/BAP/Version_1.0/Sequence/BIFCATDFT.v1.contigs.newname.fasta");
+#symlink("/gscmnt/temp212/info/annotation/gmhmmp_models/heu_11_56.mod","/tmp/disk/analysis/HGMI/B_catenulatum/Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb/Version_1.0/BAP/Version_1.0/heu_11_56.mod");
+#my $cmd = $p->gather_details();
+#print join(" ",@$cmd),"\n";
 
 remove \1, "/tmp/disk/analysis";

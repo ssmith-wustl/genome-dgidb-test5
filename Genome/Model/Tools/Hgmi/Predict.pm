@@ -171,7 +171,7 @@ sub gather_details
         # instead of just a 'raw' split.
         unless($#cwd == 9)
         {
-            croak "directory structure is wrong or broken";
+            croak "directory structure is wrong or broken\n$cwd\n$#cwd\n";
         }
         $sequence_set_name = $cwd[6]; #HGMI projects
         $analysis_version_num = $cwd[9]; #HGMI projects
@@ -264,31 +264,31 @@ sub gather_details
         $bappredictgenes_output
         );
 
-    $glimmer2_model = $cwd."/".$hgmi_locus_tag."_gl2.icm";
+    $glimmer2_model = $cwd."/Sequence/".$hgmi_locus_tag."_gl2.icm";
 
     if (-z $glimmer2_model) 
     {
         croak "glimmer2-model: '$glimmer2_model' is empty!";
     }
 
-    $glimmer3_model = $cwd."/".$hgmi_locus_tag."_gl3.icm";
+    $glimmer3_model = $cwd."/Sequence/".$hgmi_locus_tag."_gl3.icm";
 
     if (-z $glimmer3_model) 
     {
         croak "glimmer3-model: '$glimmer3_model ' is empty!";
     }
 
-    $glimmer3_pwm   = $cwd."/".$hgmi_locus_tag."_gl3.motif";
+    $glimmer3_pwm   = $cwd."/Sequence/".$hgmi_locus_tag."_gl3.motif";
 
     if (-z $glimmer3_pwm) 
     {
         croak "glimmer3-pwm: '$glimmer3_pwm' is empty!";
     }
 
+    my $model_file = undef;
+    #my $model_file = <heu_11_*.mod>; # not being picked up
 
-    my $model_file = <heu_11_*.mod>; # not being picked up
-
-    my $idir = IO::Dir->new($cwd);
+    my $idir = IO::Dir->new($cwd."/Sequence");
     while(defined(my $fname = $idir->read))
     {
         if($fname =~ /heu_11_(\d+).mod/)
@@ -299,7 +299,7 @@ sub gather_details
     $idir->close;
 
 
-    $genemark_model = $cwd."/$model_file";
+    $genemark_model = $cwd."/Sequence/$model_file";
 
 
     if (-z $genemark_model) 

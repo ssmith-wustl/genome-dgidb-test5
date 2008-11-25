@@ -57,7 +57,14 @@ EOS
 sub execute
 {
     my $self = shift;
-
+    my $cwd = getcwd();
+    my $newdir = $cwd . "/Sequence";
+    #chdir($newdir);
+    unless( -e $self->fasta_file)
+    {
+        my $ff = $self->fasta_file;
+        croak "$ff doesn't exist?!?\ncurrent dir: $cwd";
+    }
     my $gc_command = MGAP::Command::CalculateGcPercent->create(
                        'fasta_files' => [ $self->fasta_file ],
                         );
@@ -101,8 +108,11 @@ sub execute
     my $gmhmmp_dir = "/gscmnt/temp212/info/annotation/gmhmmp_models";
     my $gmhmmp_mod = $gmhmmp_dir . "/heu_11_" . $self->gc . ".mod";
     my $gmhmmp_dest = $self->work_directory ."/heu_11_".$self->gc .".mod";
-    symlink($gmhmmp_mod, $gmhmmp_dest) 
-        or croak "can't symlink gmhmmp model $gmhmmp_mod to $gmhmmp_dest, $@";
+    unless( -l $gmhmmp_dest)
+    {
+        symlink($gmhmmp_mod, $gmhmmp_dest) 
+            or croak "can't symlink gmhmmp model $gmhmmp_mod to $gmhmmp_dest, $@";
+    }
     my $workdir = $self->work_directory;
     my $model = $buildglimmer->model_file;
     my $newmodel = $workdir ."/". $self->locus_tag_prefix . "_gl3.icm";
@@ -122,6 +132,8 @@ sub execute
     {
         croak "problem copying $pwm to $newpwm";
     }
+
+    chdir($cwd);
     return 1;
 }
 

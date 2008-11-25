@@ -153,12 +153,12 @@ sub execute
     # mk-prediction-model
     $next_dir = $config->{path}."/".$config->{org_dirname}."/".
         $config->{assembly_name} . "/". $config->{assembly_version} . "/".
-        "BAP"."/". $config->{pipe_version};
+        "BAP"."/". $config->{pipe_version} . "/Sequence";
     chdir($next_dir);
 
-    my $model = Genome::Model::Tools::Hgmi::MkPredictionModel->create(
+    my $model = Genome::Model::Tools::Hgmi::MkPredictionModels->create(
                                                                       locus_tag_prefix => $config->{locus_tag_prefix},
-                                                                      fasta_file => $config->{output},
+                                                                      fasta_file => $sn->new_output ,
                                                                       );
 
     if($model)
@@ -169,6 +169,11 @@ sub execute
     {
         croak "can't set up mk-prediction-model";
     }
+
+    $next_dir = $config->{path}."/".$config->{org_dirname}."/".
+        $config->{assembly_name} . "/". $config->{assembly_version} . "/".
+        "BAP"."/". $config->{pipe_version} ;
+    chdir($next_dir);
 
     my $predict = Genome::Model::Tools::Hgmi::Predict->create(
                                                               organism_name => $config->{org_dirname} ,
@@ -276,11 +281,11 @@ sub build_empty_config
                   'output' => "",
                   # sequence name
                   'fasta' => "",
-                  'analysis_version' => "",
-                  'locus_id' => "",
+                  'assembly_version' => "",
+                  'locus_id' => "", # same as hgmi_locus_tag?
                   'acedb_version' => "",
                   #mk prediction mods
-                  'locus_tag_prefix' => "",
+                  'locus_tag_prefix' => "", # same as hgmi_locus_tag?
                   'fasta_file' => "",
                   #'work_directory' => "",
                   #'gc' => "",
@@ -288,7 +293,7 @@ sub build_empty_config
                   'organism_name' => "",
                   'hgmi_locus_tag' => "",
                   'project_type' => "",
-                  'locus' => "",
+                  'locus' => "", # same as hgmi_locus_tag?
                   'gram_stain' => "<optional>",
                   'ncbi_taxonomy_id' => "",
                   'work_directory' => "<optional>",

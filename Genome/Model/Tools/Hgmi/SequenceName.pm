@@ -24,6 +24,9 @@ has => [
                         doc => "Locus ID string" },
         'acedb_version' => { is => 'String',
                              doc => "Ace DB version" },
+        'new_output'    => { is => 'String',
+                             doc => "new fasta output file",
+                             is_optional => 1},
         ]
 
 
@@ -65,6 +68,7 @@ sub execute
                                    $line[0],
                                    $new,
                                    $line[1]);
+    $self->new_output($new_output_file);
 
     my $instream = new Bio::SeqIO(-file => $self->fasta, -format => 'fasta');
     my $outstream = new Bio::SeqIO(-file => ">$new_output_file",
@@ -139,19 +143,32 @@ sub execute
     # the presence of the symlink target should be
     # tested before creating the symlink
     symlink "$cwd/$new_output_file","$hgmi_acedb_path/$new_output_file";
-    unless($! eq "File exists") # skip the "File exists" problem
+
+    if($! && ($! ne "File exists")) # skip the "File exists" problem
     {
-        croak "Can't make symlink path: $!\n";
+        croak "Can't make symlink path: $!\nsource: $cwd/$new_output_file\ndest: $hgmi_acedb_path/$new_output_file";
     }
     # symlink OLDFILE,NEWFILE
-    symlink "$cwd/$new_output_file","$Intergenic/$new_output_file"
-        or croak "Can't make symlink path Intergenic: $!\n";
-    symlink "$cwd/$new_output_file","$BAPseq/$new_output_file"
-        or croak "Can't make symlink path BAP: $!\n";
-    symlink "$cwd/$new_output_file","$Ensemblseq/$new_output_file"
-        or croak "Can't make symlink path Ensembl: $!\n";
-    symlink "$cwd/$new_output_file","$Rfamseq/$new_output_file"
-        or croak "Can't make symlink path Rfam: $!\n";
+    symlink "$cwd/$new_output_file","$Intergenic/$new_output_file";
+    if($! && ($! ne "File exists")) # skip the "File exists" problem
+    {
+        croak "Can't make symlink path Intergenic: $!\nsource: $cwd/$new_output_file\ndest: $Intergenic/$new_output_file";
+    }
+    symlink "$cwd/$new_output_file","$BAPseq/$new_output_file";
+    if($! && ($! ne "File exists")) # skip the "File exists" problem
+    {
+        croak "Can't make symlink path BAP: $!\nsource: $cwd/$new_output_file\ndest: $BAPseq/$new_output_file";
+    }
+    symlink "$cwd/$new_output_file","$Ensemblseq/$new_output_file";
+    if($! && ($! ne "File exists")) # skip the "File exists" problem
+    {
+        croak "Can't make symlink path Ensembl: $!\nsource: $cwd/$new_output_file\ndest: $Ensemblseq/$new_output_file";
+    }
+    symlink "$cwd/$new_output_file","$Rfamseq/$new_output_file";
+    if($! && ($! ne "File exists")) # skip the "File exists" problem
+    {
+        croak "Can't make symlink path Rfam: $!\nsource: $cwd/$new_output_file\ndest: $Rfamseq/$new_output_file\n";
+    }
 
     chdir($Rfamseq);
     my $cwd2 = getcwd();
