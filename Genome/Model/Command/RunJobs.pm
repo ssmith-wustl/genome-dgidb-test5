@@ -16,6 +16,7 @@ class Genome::Model::Command::RunJobs {
         bsub_args   => {is => 'String', is_optional => 1, doc => 'additional arguments to be given to bsub' },
         prior_job_name => {is => 'String', is_optional => 1, doc => 'a job name to scheduled as a dependency for this job_name' },
         force           => {is => 'Boolean', is_optional => 1, doc => 'force kill an event and restart even if running/successful' },
+        building    => {is => 'Boolean', default_value => '0', doc => 'a flag for building new models'},
     ],
 };
 
@@ -131,9 +132,9 @@ sub execute {
     if ($self->event_id) {
         $addl_get_params{'genome_model_event_id'} = $self->event_id;
     }
-
-    $self->_verify_submitted_jobs(%addl_get_params);
-
+    unless ($self->building) {
+        $self->_verify_submitted_jobs(%addl_get_params);
+    }
     $self->_reschedule_failed_jobs(%addl_get_params);
 
     $self->_schedule_scheduled_jobs(%addl_get_params);
