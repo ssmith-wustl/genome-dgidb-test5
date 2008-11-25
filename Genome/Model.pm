@@ -656,12 +656,21 @@ sub unlock_resource {
 
 sub get_all_objects {
     my $self = shift;
+
     my @read_sets = $self->read_sets;
-    my @events = $self->events;
-    if ($events[0] && $events[0]->id =~ /^\-/) {
-        return sort {$b->id cmp $a->id} (@read_sets,@events);
+    if ($read_sets[0] && $read_sets[0]->id =~ /^\-/) {
+        @read_sets = sort {$b->id cmp $a->id} @read_sets;
+    } else {
+        @read_sets = sort {$a->id cmp $b->id} @read_sets;
     }
-    return sort {$a->id cmp $b->id} (@read_sets,@events);
+
+    my @builds = $self->builds;
+    if ($builds[0] && $builds[0]->id =~ /^\-/) {
+        @builds = sort {$b->id cmp $a->id} @builds;
+    } else {
+        @builds = sort {$a->id cmp $b->id} @builds;
+    }
+    return (@read_sets, @builds);
 }
 
 sub yaml_string {
@@ -687,6 +696,7 @@ sub delete {
     }
     print $fh $self->yaml_string;
     $fh->close;
+
     my $cwd = getcwd;
     my ($filename,$dirname) = File::Basename::fileparse($data_directory);
     $filename =~ s/^-/\.\/-/;
@@ -724,14 +734,14 @@ sub delete {
     } else {
         if (-e $self->model_link) {
             $self->warning_message('Expected symlink for the model link but got path'. $self->model_link);
-            unless (rmtree $self->model_link) {
-                $self->warning_message('Failed to rmtree model link directory '. $self->model_link);
-            }
+            $self->warning_message('Remove the model directory path manually if desired');
         }
     }
     $self->SUPER::delete;
     return 1;
 }
+
+
 
 1;
 
