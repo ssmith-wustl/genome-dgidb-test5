@@ -12,6 +12,7 @@ class Genome::Model::Command::MetaGenomicComposition::Assemble {
     is => 'Genome::Model::Command::MetaGenomicComposition',
 };
 
+#<>#
 sub help_brief {
     return 'Assembles MGC models as sets of reads from a single subclone';
 }
@@ -20,6 +21,11 @@ sub help_detail {
     return help_brief();
 }
 
+sub sub_command_sort_position {
+    return 10;
+}
+
+#<>#
 sub execute {
     my $self = shift;
 
