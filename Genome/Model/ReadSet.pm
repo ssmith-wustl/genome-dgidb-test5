@@ -146,6 +146,13 @@ sub yaml_string {
     return YAML::Dump($self);
 }
 
+sub delete {
+    my $self = shift;
+
+    $self->warning_message('deleting '. $self->run_name .'('. $self->subset_name .') '. $self->id);
+    return $self->SUPER::delete();
+}
+
 sub get_alignment_statistics {
     my $self=shift;
     #this method will eventually populate the metrics table but for now it populates dave larson 
