@@ -639,7 +639,8 @@ sub get_all_objects {
     } else {
         @events = sort {$a->id cmp $b->id} @events;
     }
-    return @events;
+    my @objects = $self->SUPER::get_all_objects;
+    return (@events, @objects);
 }
 
 sub yaml_string {
