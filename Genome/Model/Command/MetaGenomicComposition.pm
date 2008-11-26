@@ -11,12 +11,11 @@ class Genome::Model::Command::MetaGenomicComposition {
 };
 
 sub help_brief {
-    return "MGC";
+    return "Operations for MGC models";
 }
 
 sub help_detail {
-    return <<"EOS"
-EOS
+    return help_brief();
 }
 
 sub _verify_mgc_model {
