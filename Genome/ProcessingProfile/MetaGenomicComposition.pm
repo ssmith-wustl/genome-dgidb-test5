@@ -87,11 +87,11 @@ sub primer_fasta_directory {
 }
 
 sub sense_primer_fasta {
-    return sprintf('%s/%s.sense.fasta', $_[0]->primer_fasta_directory, join('_', split(/\s+/, $_[0]->name)));
+    return sprintf('%s/%s.sense.fasta', $_[0]->primer_fasta_directory, $_[0]->id);
 }
 
 sub anti_sense_primer_fasta {
-    return sprintf('%s/%s.anti_sense.fasta', $_[0]->primer_fasta_directory, join('_', split(/\s+/, $_[0]->name)));
+    return sprintf('%s/%s.anti_sense.fasta', $_[0]->primer_fasta_directory, $_[0]->id);
 }
 
 #################################################################
