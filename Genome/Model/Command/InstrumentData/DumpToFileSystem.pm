@@ -24,6 +24,9 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
+    $self->_verify_model
+        or return;
+
     return $self->model->dump_unbuilt_instrument_data_to_filesysytem;
 }
 
