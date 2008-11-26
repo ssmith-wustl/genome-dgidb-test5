@@ -152,24 +152,21 @@ sub _get_bioseq_from_longest_read {
     #< Determine longest read for subclone >#
     # fasta
     my $fasta_file = sprintf('%s/%s.fasta', $self->model->consed_directory->edit_dir, $subclone);
+    return unless -s $fasta_file;
     my $fasta_reader = Bio::SeqIO->new(
         '-file' => $fasta_file,
         '-format' => 'Fasta',
     )
         or return;
-    my $longest_fasta;
+    my $longest_fasta = $fasta_reader->next_seq;
     while ( my $seq = $fasta_reader->next_seq ) {
-        unless ( $longest_fasta ) {
-            $longest_fasta = $seq;
-            next;
-        }
         $longest_fasta = $seq if $seq->length > $longest_fasta->length;
     }
 
     unless ( $longest_fasta ) { # should never happen
         $self->error_message( 
             sprintf(
-                'Found fasta file for subclone (%s) reads, but could not find a fasta',
+                'Found fasta file for subclone (%s) reads, but could not find the longest fasta',
                 $subclone,
             ) 
         );
