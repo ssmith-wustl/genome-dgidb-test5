@@ -41,6 +41,9 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
+    $self->_verify_model
+        or return;
+    
     # We got an id, assign this one only
     if ( defined $self->instrument_data_id ) {
         my $instrument_data = Genome::InstrumentData->get( $self->instrument_data_id );
