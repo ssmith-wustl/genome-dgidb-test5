@@ -13,7 +13,7 @@ $x->full_path("/my/path");
 is($x->full_path,'/my/path', "set the full path on the main object");
 
 my $a = $x->add_attribute(
-    entity_class_name => 'Genome::InstrumentData',
+    entity_class_name => 'Genome::InstrumentData::Solexa',
     property_name => "full_path2",
     value => "/my/path"
 );

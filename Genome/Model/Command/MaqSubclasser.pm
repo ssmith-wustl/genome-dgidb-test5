@@ -34,6 +34,8 @@ sub proper_maq_pathname {
         return '/gsc/pkg/bio/maq/maq-0.6.5_x86_64-linux/maq';
    } elsif ($param_value eq 'maq0_6_8') {
         return '/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq';
+    } elsif ($param_value eq 'maq0_7_1') {
+        return '/gsc/pkg/bio/maq/maq-0.7.1-64/bin/maq';     
     } elsif ($param_value eq 'maq') {
         return 'maq';
     } else {

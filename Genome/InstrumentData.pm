@@ -71,7 +71,7 @@ EOS
     has_many_optional => [
         attributes => {
             is => 'Genome::MiscAttribute',
-            reverse_id_by => 'entity',
+            reverse_id_by => '_instrument_data',
             where => [ entity_class_name => __PACKAGE__ ],
         },
     ],

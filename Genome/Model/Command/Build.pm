@@ -28,6 +28,10 @@ class Genome::Model::Command::Build {
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
+    unless ($self) {
+        $class->error_message("Failed to create build: " . $class->error_message());
+        return;
+    }
 
     my $model = $self->model;
 

@@ -425,6 +425,32 @@ sub prepare_input {
     return @bfq_pathnames;
 }
 
+sub prepare_external_input {
+    my ($self, $read_set, $seq_dedup) = @_;
+    my @bfq_pathnames;
+    #we're supporting ONLY THE ONE CASE WEVE DEALT WITH SO FAr. NOTHING FANCY, NOTHING ABSTRACTABLE.
+    #WHEN WE SEE DIFFERENT CASES THIS SHOULD GET MORE LOVE
+    my $data_path_object = Genome::MiscAttribute->get(entity_id=>$read_set->seq_id, property_name=>"full_path");
+    my $fastq_pathname=$data_path_object->value;
+
+
+    my $bfq_pathname = $self->create_temp_file_path('bfq');
+    unless ($bfq_pathname) {
+        die "Failed to create temp file for bfq!";
+    }
+
+    my $aligner_path = $self->aligner_path('read_aligner_name');
+    $self->shellcmd(
+        cmd => "$aligner_path fastq2bfq $fastq_pathname $bfq_pathname",
+        input_files => [$fastq_pathname],
+        output_files => [$bfq_pathname],
+        skip_if_output_is_present => 1,
+    );
+    push @bfq_pathnames, $bfq_pathname;
+    return @bfq_pathnames;
+}
+
+
 # A hack replacement method for event.pm's method... it is a paste except 
 # doesnt use timestamps as they were causing sol2sanger issues
 sub base_temp_directory {
@@ -471,8 +497,14 @@ $DB::single = $DB::stopper;
         return 1;
     }
     $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
-    my @bfq_pathnames = $self->prepare_input($self->read_set,$self->is_eliminate_all_duplicates);
-
+    my @bfq_pathnames; 
+    if($self->read_set->_run_lane_solexa->is_external) {
+       @bfq_pathnames =  $self->prepare_external_input($self->read_set);
+    }
+    else
+    {
+        @bfq_pathnames = $self->prepare_input($self->read_set,$self->is_eliminate_all_duplicates);
+    }
 
     my $read_set_alignment_directory = $self->read_set_link->read_set_alignment_directory;
     $self->create_directory($read_set_alignment_directory);

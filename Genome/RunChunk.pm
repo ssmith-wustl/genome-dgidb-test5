@@ -78,7 +78,15 @@ sub get_or_create_from_read_set {
     my $run_chunk = Genome::RunChunk->get(seq_id => $read_set->id);
 
     my $run_name = $read_set->run_name;
+    unless($run_name) {
+        #hax to support external data with no state of knowledge
+        $run_name=$read_set->id;
+    }
     my $subset_name = $class->resolve_subset_name($read_set);
+    unless($subset_name) {
+        #hax to support external data with no state of knowledge guaranteed
+        $subset_name=1;
+    }
     my $full_path = $class->resolve_full_path($read_set);
     my $sequencing_platform = $class->resolve_sequencing_platform;
     if ($run_chunk) {
