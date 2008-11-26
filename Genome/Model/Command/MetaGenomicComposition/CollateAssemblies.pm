@@ -141,7 +141,7 @@ sub _get_bioseq_from_longest_contig {
     return Bio::Seq::Quality->new(
         '-id' => $subclone,
         '-desc' => sprintf('source=contig reads=%s', $reads->count), 
-        '-seq' => $contig->base_string,
+        '-seq' => $contig->unpadded_base_string,
         '-qual' => join(' ', @{$contig->qualities}),
     );
 }
