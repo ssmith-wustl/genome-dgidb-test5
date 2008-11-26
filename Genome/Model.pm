@@ -72,7 +72,12 @@ class Genome::Model {
     instrument_data => { 
         is => 'Genome::InstrumentData', 
         via => 'instrument_data_assignments',
-        to => 'instrument_data_assignment' 
+        to => 'instrument_data' 
+    },
+    assigned_instrument_data => { # same as instrument_data
+        is => 'Genome::InstrumentData', 
+        via => 'instrument_data_assignments',
+        to => 'instrument_data' 
     },
     instrument_data_assignments => { 
         is => 'Genome::Model::InstrumentDataAssignment', 
@@ -254,7 +259,7 @@ sub compatible_instrument_data {
     return Genome::InstrumentData->get(%params);
 }
 
-sub available_instrument_data { return unassigned_instrument_data(@_) }
+sub available_instrument_data { return unassigned_instrument_data(@_); }
 sub unassigned_instrument_data {
     my $self = shift;
 
