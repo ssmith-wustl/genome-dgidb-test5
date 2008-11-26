@@ -1,5 +1,7 @@
 package Genome::DataSource::TranscriptSubStructures;
 
+# NOTE - This isn't used at present.  See Genome::DataSource::CsvFileFactory
+
 use Genome;
 use UR::DataSource::SortedCsvFile;
 

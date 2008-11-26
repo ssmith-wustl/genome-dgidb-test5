@@ -52,6 +52,24 @@ my %RESOLVER = (
                              return $metric_file;
                           },
     },
+
+    'Genome::TranscriptSubStructure' => {
+        required_in_rule => [ 'transcript_id' ],
+        constant_values => [],
+        parent_data_source_class => 'Genome::DataSource::TranscriptSubStructures',
+        file_resolver => sub {
+                             my($transcript_id) = @_;
+
+                             my $thousand = int($transcript_id / 1000);
+                             $thousand .= '000';
+                             my $path = join('/','/gscmnt/sata363/info/medseq/annotation_data/transcript_sub_structure_tree',
+                                                 $thousand,
+                                                 $transcript_id);
+                             $path .= '.csv';
+                             return $path;
+                          },
+    },
+       
 );
 
 # Putting these things in here seems like a hack...
@@ -108,7 +126,25 @@ sub Genome::DataSource::ExperimentalMetrics::_generate_loading_templates_arrayre
 }
 
 
+
+class Genome::DataSource::TranscriptSubStructures {
+    is => 'UR::DataSource::SortedCsvFile',
+};
+sub Genome::DataSource::TranscriptSubStructures::delimeter { "\t" }
+sub Genome::DataSource::TranscriptSubStructures::skip_first_line { 0; }
+sub Genome::DataSource::TranscriptSubStructures::column_order { qw( transcript_structure_id
+                                                                    transcript_id
+                                                                    structure_type
+                                                                    structure_start
+                                                                    structure_stop
+                                                                    ordinal
+                                                                    phase
+                                                                    nucleotide_seq
+                                                                  )}
+sub Genome::DataSource::TranscriptSubStructures::sort_order { qw( transcript_id structure_start transcript_structure_id ) }
     
+
+
 
 our %WORKING_RULES;
 sub create_iterator_closure_for_rule {
@@ -145,11 +181,11 @@ sub create_iterator_closure_for_rule {
         }
         $all_resolver_params[$i] = \@values;
     }
-    # Hack! Pass the newly resolved info up to the caller
-#    $_[1] = $rule;
 
     my @resolver_param_combinations = $self->_get_combinations_of_resolver_params(@all_resolver_params);
     
+    # Each combination of params ends up being from a different data source.  Make an
+    # iterator pulling from each of them
     my @data_source_iterators;
     foreach my $resolver_params ( @resolver_param_combinations ) {
      
@@ -176,6 +212,7 @@ sub create_iterator_closure_for_rule {
 
     return $data_source_iterators[0] if (@data_source_iterators < 2);  # If we only made 1 (or 0), just return that one directly
 
+    # Results are coming from more than one data source.  Make an iterator encompassing all of them
     my $iterator = sub {
         while (@data_source_iterators) {
             while (my $thing = $data_source_iterators[0]->()) {
