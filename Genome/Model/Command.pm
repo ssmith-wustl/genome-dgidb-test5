@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 require Genome::Utility::FileSystem;
+use Regexp::Common;
 
 class Genome::Model::Command {
     is => 'Command',
@@ -68,6 +69,27 @@ sub create {
         }
     }
     return $self;
+}
+
+sub _verify_model {
+    my $self = shift;
+
+    unless ( $self->model_id ) {
+        $self->error_message("No model id given");
+        return;
+    }
+
+    unless ( $self->model_id =~ /^$RE{num}{int}$/ ) {
+        $self->error_message( sprintf('Model id given (%s) is not an integer', $self->model_id) );
+        return;
+    }
+
+    unless ( $self->model ) {
+        $self->error_message( sprintf('Can\'t get model for id (%s) ', $self->model_id) );
+        return;
+    }
+
+    return 1;
 }
 
 sub _sub_command_name_to_class_name_map{
