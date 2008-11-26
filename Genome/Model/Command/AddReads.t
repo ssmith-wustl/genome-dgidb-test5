@@ -140,7 +140,6 @@ sub test_new_model_and_add_new_read_sets {
     is($readsets[1]->read_set_id , 'B', 'Second ReadSet has correct read_set_id');
     is($readsets[1]->first_build_id , undef, 'Second ReadSet correctly has null first_build_id');
 
-    $_->delete foreach @readsets;
 }
     
 
