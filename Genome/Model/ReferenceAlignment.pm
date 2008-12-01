@@ -31,7 +31,6 @@ class Genome::Model::ReferenceAlignment {
         read_set_assignment_events   => { is => 'Genome::Model::Command::Build::ReferenceAlignment::AssignRun',
                                           is_many => 1,
                                           reverse_id_by => 'model',
-                                          where => [ "event_type like" => 'genome-model add-reads assign-run %'],
                                           doc => 'each case of a read set being assigned to the model',
                                         },
         alignment_events             => { is => 'Genome::Model::Command::Build::ReferenceAlignment::AlignReads',
