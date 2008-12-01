@@ -30,29 +30,27 @@ EOS
 }
 sub stages {
     my @stages = qw/
-        stage1
-        stage2
-        verify_succesful_completion
+                alignment
+                variant_detection
+                verify_succesful_completion
     /;
     return @stages;
 }
 
-sub stage1_job_classes {
+sub alignment_job_classes {
     my @sub_command_classes= qw/
         Genome::Model::Command::Build::ReferenceAlignment::AssignRun
         Genome::Model::Command::Build::ReferenceAlignment::AlignReads
-        Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments
     /;
     return @sub_command_classes;
 }
 
-sub stage2_job_classes {
-    my @step1 =  ('Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments');
-    my @step2 =  ('Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype');
-    my @step3 =  ('Genome::Model::Command::Build::ReferenceAlignment::FindVariations'),
-    my @step4 =  ('Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations', 'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations');
-
-    return (\@step1, \@step2, \@step3, \@step4);
+sub variant_detection_job_classes {
+    my @steps = qw/
+                 Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments
+                 Genome::Model::Command::Build::ReferenceAlignment::FindVariations
+             /;
+    return @steps;
 }
 
 sub verify_succesful_completion_job_classes {
@@ -62,12 +60,12 @@ sub verify_succesful_completion_job_classes {
     return @sub_command_classes;
 }
 
-sub stage1_objects {
+sub alignment_objects {
     my $self = shift;
     return $self->model->unbuilt_read_sets;
 }
 
-sub stage2_objects {
+sub variant_detection_objects {
     my $self = shift;
     return 1;
 }
@@ -80,6 +78,52 @@ sub verify_succesful_completion_objects {
 sub _get_sub_command_class_name{
   return __PACKAGE__; 
 }
+
+sub amplicon_header_file {
+    my $self = shift;
+    return $self->accumulated_alignments_directory .'/'. $self->model->id .'_amplicon_headers.txt';
+}
+
+sub merged_alignments_file {
+    my $self = shift;
+    return $self->accumulated_alignments_directory .'/'. $self->model->id .'.psl';
+}
+
+sub merged_aligner_output_file {
+    my $self = shift;
+    return $self->accumulated_alignments_directory .'/'. $self->model->id .'.out';
+}
+
+sub merged_sff_file {
+    my $self = shift;
+    return $self->accumulated_alignments_directory .'/'. $self->model->id .'.sff';
+}
+
+sub merged_fasta_dir {
+    my $self = shift;
+    return $self->accumulated_alignments_directory .'/fasta_dir';
+}
+
+sub merged_fasta_file {
+    my $self = shift;
+    return $self->merged_fasta_dir .'/'. $self->model->id .'.fasta';
+}
+
+sub merged_qual_file {
+    my $self = shift;
+    return $self->merged_fasta_dir .'/'. $self->model->id .'.fasta.qual';
+}
+
+sub merged_qual_dir {
+    my $self = shift;
+    return $self->accumulated_alignments_directory .'/qual_dir';
+}
+
+sub bio_db_qual_file {
+    my $self = shift;
+    return $self->merged_qual_dir .'/'. $self->model->id .'.qual.fa';
+}
+
 
 1;
 
