@@ -48,7 +48,7 @@ unless(-f $self->data_file) {
 }
 
 #the shortuct here will make your eyes bleed
-if(GSC::MiscAttribute->get(proprety_name=>'full_path', value=>$self->data_file)) {
+if(Genome::MiscAttribute->get(proprety_name=>'full_path', value=>$self->data_file)) {
     die "This external file has been referenced before! What's going on!?";
 }
 my $sls;
