@@ -99,40 +99,55 @@ sub execute {
     unless (-d $read_set->full_path) {
         $self->create_directory($read_set->full_path);
     }
+    unless ($read_set->dump_to_file_system) {
+        $self->error_message('Failed to dump sff file to file system');
+        return;
+    }
     if (-e $self->amplicon_header_file) {
-        $self->error_message('Amplicon header file already exists: '. $self->amplicon_header_file);
-        return;
+        $self->status_message('Amplicon header file already exists: '. $self->amplicon_header_file);
+    } else {
+        my $fh = $self->create_file('amplicon_header_file',$self->amplicon_header_file);
+        # Close the filehandle, delete and let the tool re-open filehandle
+        $fh->close;
+        unlink($self->amplicon_header_file);
+        #TODO: use read_set_link or instrument data to get sample_name?
+        my $amplicon = Genome::Model::Command::Report::Amplicons->create(
+                                                                         sample_name => $read_set->sample_name,
+                                                                         output_file => $self->amplicon_header_file,
+                                                                     );
+        unless ($amplicon) {
+            $self->error_message('Failed to create amplicon report tool');
+            return;
+        }
+        unless ($amplicon->execute) {
+            $self->error_message('Failed to execute command '. $amplicon->command_name);
+            return;
+        }
     }
-    my $fh = $self->create_file('amplicon_header_file',$self->amplicon_header_file);
-    # Close the filehandle, delete and let the tool re-open filehandle
-    $fh->close;
-    unlink($self->amplicon_header_file);
-    #TODO: use read_set_link or instrument data to get sample_name?
-    my $amplicon = Genome::Model::Command::Report::Amplicons->create(
-                                                                     sample_name => $read_set->sample_name,
-                                                                     output_file => $self->amplicon_header_file,
-                                                                 );
-    unless ($amplicon) {
-        $self->error_message('Failed to create amplicon report tool');
-        return;
-    }
-    unless ($amplicon->execute) {
-        $self->error_message('Failed to execute command '. $amplicon->command_name);
-        return;
-    }
-    return 1;
+    return $self->verify_successful_completion
 }
 
 sub verify_successful_completion {
     my $self = shift;
+
     my $model = $self->model;
     unless (-d $model->data_directory) {
     	$self->error_message('Data parent directory does not exist: '. $model->data_directory);
         return;
     }
+
     my $read_set = $self->read_set;
     unless (-d $read_set->full_path) {
-        $self->error_message('Read Set data directory does not exist: '. $read_set->full_path);
+        $self->error_message('Read set data directory does not exist: '. $read_set->full_path);
+        return;
+    }
+    unless (-s $read_set->sff_file) {
+        $self->error_message('Read set sff file does not exist or has zero size: '. $read_set->sff_file);
+        return;
+    }
+
+    unless (-e $self->amplicon_header_file) {
+        $self->error_message('The amplicon header file does not exist: '. $self->amplicon_header_file);
         return;
     }
     return 1;
