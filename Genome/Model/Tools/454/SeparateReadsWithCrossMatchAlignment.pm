@@ -111,7 +111,7 @@ sub execute {
         my $out_sff_file = $out_sff_file_root_name .'.'. $hit .'.sff';
         $self->status_message('Writing '. scalar(@{$hit_query_ref{$hit}}) .' reads to file '. $out_sff_file);
         my $separate_reads_sfffile = Genome::Model::Tools::454::Sfffile->create(
-                                                                                in_sff_file => $self->sff_file,
+                                                                                in_sff_files => [$self->sff_file],
                                                                                 out_sff_file => $out_sff_file,
                                                                                 params => '-i '. $reads_file,
                                                                             );
