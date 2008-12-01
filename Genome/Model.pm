@@ -169,6 +169,11 @@ my %SUBJECT_TYPES = (
         class => 'Genome::Sample',
         property => 'name',
     },
+    genomic_dna => {
+                    needs_to_be_verified => 1,
+                    class => 'Genome::Sample::Genomic',
+                    property => 'name',
+                },
     sample_group => {
         needs_to_be_verified => 0,
         #class => 'Genome::Sample',
@@ -238,7 +243,7 @@ sub get_all_possible_sample_names { #
     if ( $self->subject_type eq 'species_name' ) {
         my $taxon = Genome::Taxon->get(species_name => $self->subject_name);
         @sample_names = map { $_->name } $taxon->samples;
-    } 
+    }
     else {
         @sample_names = ( $self->subject_name );
     }
@@ -251,11 +256,23 @@ sub get_all_possible_sample_names { #
 sub compatible_instrument_data {
     my $self = shift;
 
-    my %params = ( 
-        sample_name => [ $self->get_all_possible_sample_names ],
-    );
+    #TODO: This is a hack for 454 variant detection
+    if ($self->subject_type eq 'genomic_dna' &&
+        $self->sequencing_platform eq '454' &&
+        $self->type_name eq 'reference alignment') {
+        my $dna = GSC::DNA->get(dna_name => $self->subject_name);
+        if ($dna) {
+            my @seq_ids = map { $_->region_id } GSC::RunRegion454->search_runs_for_sample($dna);
+            if (scalar(@seq_ids)) {
+                return Genome::InstrumentData->get(id => \@seq_ids);
+            }
+        }
+    }
+
+    my %params = (
+                  sample_name => [ $self->get_all_possible_sample_names ],
+              );
     $params{sequencing_platform} = $self->sequencing_platform if $self->sequencing_platform;
-    
     return Genome::InstrumentData->get(%params);
 }
 
@@ -326,6 +343,8 @@ sub compatible_input_items {
                       operator => "like",
                       value => $self->subject_name
                   };
+    } elsif ( $self->subject_type eq 'genomic_dna') {
+        $value_ref =  $self->subject_name;
     } elsif ($self->subject_type eq 'dna_resource_item_name') {
         $self->error_message('Please implement compatible_input_items in '.
                              __PACKAGE__ .' for subject_type(dna_resource_item_name)');
@@ -345,6 +364,12 @@ sub compatible_input_items {
         my @dna_read_sets = $input_read_set_class_name->get(
                                                             incoming_dna_name => $value_ref,
                                                         );
+        if ($self->subject_type eq 'genomic_dna') {
+            my $dna = GSC::DNA->get(dna_name => $value_ref);
+            if ($dna) {
+                push @dna_read_sets, $input_read_set_class_name->search_runs_for_sample($dna);
+            }
+        }
         for (@dna_read_sets) {
             $instrument_data_ids{$_->id} = 1;
         }
