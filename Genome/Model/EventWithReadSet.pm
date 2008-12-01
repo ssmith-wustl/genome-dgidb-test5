@@ -93,7 +93,7 @@ sub invalid {
                                         );
     }
 
-    unless (Genome::RunChunk->get(id => $self->read_set_id)) {
+    if (!Genome::RunChunk->get($self->read_set_id) && !Genome::InstrumentData->get($self->read_set_id)) {
         push @tags, UR::Object::Tag->create(
                                             type => 'invalid',
                                             properties => ['read_set_id'],
