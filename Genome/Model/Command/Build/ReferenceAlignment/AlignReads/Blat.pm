@@ -40,7 +40,7 @@ class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat {
 };
 
 sub help_brief {
-    "Use blat plus to align reads";
+    "Use blat to align reads";
 }
 
 sub help_synopsis {
@@ -87,17 +87,12 @@ sub aligner_output_file {
 
 sub read_set_alignment_file {
     my $self = shift;
-    return $self->read_set_link->read_set_alignment_directory .'/'. $self->read_set->subset_name .'.psl.'. $self->id;
+    return $self->read_set_link->read_set_alignment_directory .'/'. $self->read_set_link->subset_name .'.psl.'. $self->id;
 }
 
 sub read_set_aligner_output_file {
     my $self = shift;
-    return $self->read_set_link->read_set_alignment_directory .'/'. $self->read_set->subset_name .'.out.'. $self->id;
-}
-
-sub read_set_aligner_error_file {
-    my $self = shift;
-    return $self->read_set_link->read_set_alignment_directory .'/'. $self->read_set->subset_name .'.err.'. $self->id;
+    return $self->read_set_link->read_set_alignment_directory .'/'. $self->read_set_link->subset_name .'.out.'. $self->id;
 }
 
 sub execute {
@@ -112,8 +107,23 @@ sub execute {
     }
     $DB::single = $DB::stopper;
     unless (-s $self->fasta_file) {
-        unless($self->read_set->run_region_454->dump_library_region_fasta_file(filename => $self->fasta_file)) {
-            $self->error_message('Failed to dump fasta file to '. $self->fasta_file .' for event '. $self->id);
+        unless (-e $self->read_set->sff_file) {
+            unless ($self->read_set->dump_to_file_system) {
+                $self->error_message('Failed to dump the sff_file for read_set');
+                return;
+            }
+        }
+        my $fasta_tool = Genome::Model::Tools::454::Sffinfo->create(
+                                                                    sff_file => $self->read_set->sff_file,
+                                                                    output_file => $self->fasta_file,
+                                                                    params => '-s',
+                                                                );
+        unless ($fasta_tool) {
+            $self->error_message('Failed create fasta conversion tool');
+            return;
+        }
+        unless ($fasta_tool->execute) {
+            $self->error_message('Failed to execute command '. $fasta_tool->command_name);
             return;
         }
     }
@@ -122,6 +132,10 @@ sub execute {
     if (-d $read_set_alignment_directory) {
         my $errors;
         $self->status_message("found existing run directory $read_set_alignment_directory");
+        if (-e $read_set_alignment_directory . '/processing') {
+            $self->error_message('Alignment still processing somewhere....');
+            return;
+        }
         my $alignment_file = $self->alignment_file;
         my $aligner_output_file = $self->aligner_output_file;
         unless (-s $alignment_file && -s $aligner_output_file) {
@@ -135,7 +149,9 @@ sub execute {
             return 1;
         }
     }
+    $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
     $self->create_directory($read_set_alignment_directory);
+    $self->create_file("Processing Marker", $read_set_alignment_directory . '/processing');
 
     my $model = $self->model;
     my @ref_seq_paths = grep {$_ !~ /all_sequences/ } $model->get_subreference_paths(reference_extension => 'fa');
@@ -155,23 +171,25 @@ sub execute {
                              $self->fasta_file ." against:\n". join ("\n",@ref_seq_paths));
         return;
     }
-    return 1;
+    unless (unlink($read_set_alignment_directory . '/processing')) {
+        $self->error_message('Failed to remove the processing marker file');
+        return;
+    }
+    return $self->verify_successful_completion;
 }
 
 sub verify_successful_completion {
     my $self = shift;
-
-    my $align_file = $self->alignment_file;
-    unless (-f $align_file && -s $self->alignment_file) {
-        $self->error_message("Failed to verify successfule completion of event ". $self->id .
-                             "\nFile $align_file does not exist or has 0 size");
+    unless (-d $self->read_set_link->read_set_alignment_directory) {
+        $self->error_message('Read set alignment directory is not found: '. $self->read_set_link->read_set_alignment_directory);
         return;
     }
-
-    my $output_file = $self->aligner_output_file;
-    unless(-f $output_file && -s $output_file) {
-        $self->error_message("Failed to verify successfule completion of event ". $self->id .
-                             "\nFile $output_file does not exist or has 0 size");
+    unless (-s $self->alignment_file) {
+        $self->error_message('Alignment file does not exist or has zero size: '. $self->alignment_file);
+        return;
+    }
+    unless (-s $self->aligner_output_file) {
+        $self->error_message('Aligner output file does not exist or has zero size: '. $self->aligner_output_file);
         return;
     }
     return 1;
