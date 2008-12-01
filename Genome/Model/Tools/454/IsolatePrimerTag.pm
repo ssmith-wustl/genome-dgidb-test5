@@ -78,7 +78,7 @@ sub execute {
     $writer->close;
 
     my $read_trimmer = Genome::Model::Tools::454::Sfffile->create(
-                                                                  in_sff_file => $self->in_sff_file,
+                                                                  in_sff_files => [$self->in_sff_file],
                                                                   out_sff_file => $self->out_sff_file,
                                                                   params => '-tr '. $tmp_trim_file,
                                                               );
