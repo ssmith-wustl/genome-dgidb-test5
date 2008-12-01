@@ -97,6 +97,7 @@ sub _files_for_pattern_and_optional_ref_seq_id {
 
     return @files;
 }
+
 sub accumulated_alignments_directory {
     my $self = shift;
     return $self->data_directory . '/alignments';
@@ -120,14 +121,6 @@ sub maplist_file_paths {
     }
     return @map_lists;
 }
-
-sub merged_alignments_file {
-    my $self = shift;
-    return $self->accumulated_alignments_directory .'/'. $self->model->id .'.psl';
-}
-
-
-
 
 1;
 
