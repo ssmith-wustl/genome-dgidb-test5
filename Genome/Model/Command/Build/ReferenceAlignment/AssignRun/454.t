@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More skip_all => 'This simple command still takes 10 minutest or more because of the db query';
+use Test::More skip_all => 'This simple command still takes 10 minutes or more because of the db query';
 #use Test::More tests => 7;
 
 BEGIN {
@@ -63,5 +63,6 @@ my $assign_run = Genome::Model::Command::Build::ReferenceAlignment::AssignRun::4
 isa_ok($assign_run,'Genome::Model::Command::Build::ReferenceAlignment::AssignRun::454');
 
 ok($assign_run->execute,'execute command '. $assign_run->command_name);
+ok($assign_run->verify_successful_completion,'verify_successful_completion for '. $assign_run->command_name);
 
 exit;
