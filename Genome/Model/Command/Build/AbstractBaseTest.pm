@@ -57,7 +57,7 @@ class Genome::Model::Command::Build::AbstractBaseTest::StageOneJobOne {
     is => 'Genome::Model::EventWithReadSet',
 };
 
-sub verify_succesful_completion {
+sub verify_successful_completion {
     return 1;
 }
 
@@ -67,7 +67,7 @@ class Genome::Model::Command::Build::AbstractBaseTest::StageOneJobTwo {
     is => 'Genome::Model::EventWithReadSet',
 };
 
-sub verify_succesful_completion {
+sub verify_successful_completion {
     return 0;
 }
 
