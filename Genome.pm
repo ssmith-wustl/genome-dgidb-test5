@@ -2,7 +2,6 @@ package Genome;
 
 use warnings;
 use strict;
-
 use UR;
 
 # GSCApp removes our overrides to can/isa for Class::Autoloader.  Tell it to put them back.
