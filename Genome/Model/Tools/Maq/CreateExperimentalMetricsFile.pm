@@ -62,6 +62,12 @@ class Genome::Model::Tools::Maq::CreateExperimentalMetricsFile {
            default => 2,
            doc => 'Number of bases on either side of each SNP to generate metrics for',
        },
+       'long_read' => {
+           type => 'Flag',
+           is_optional => 1,
+           default => 0,
+           doc => 'Whether the map file was generated using a long reads version of maq (0.7 and up)',
+       }
        
     ]
 };
@@ -89,6 +95,7 @@ Readonly::Hash my %IUB_CODE => (
 );
 
 Readonly::Scalar my $MAPSTAT_PROG => '/gscuser/dlarson/src/c-code/src/mapstat2/mapstat';
+Readonly::Scalar my $MAPSTAT_PROG_LONG => '/gscuser/dlarson/src/c-code/src/mapstat2/mapstat_long';
 
 Readonly::Array my @mapstat_columns => qw(  name
                                             ref_name
@@ -116,7 +123,6 @@ Readonly::Array my @mapstat_columns => qw(  name
 
 sub execute {
     my $self = shift;
-
     #test locations file
     my $locations_fh = IO::File->new($self->location_file,"r");
     unless(defined($locations_fh)) {
@@ -142,14 +148,16 @@ sub execute {
     #open mapstat as a pipe to catch it's output
     #this seems to only catch errors properly if we do a regular perl openA
     my $mapstat_cmd;
+    my $mapstat_prog_to_use = ($self->long_read) ? $MAPSTAT_PROG_LONG : $MAPSTAT_PROG;
+    
     if($self->ref_name ne q{}) {
-        $mapstat_cmd = sprintf("$MAPSTAT_PROG -q %d -c %s -l %s -w %d %s %s |",$self->minq,$self->ref_name,$self->location_file,$self->window_size,$self->ref_bfa_file, $self->map_file);
+        $mapstat_cmd = sprintf("$mapstat_prog_to_use -q %d -c %s -l %s -w %d %s %s |",$self->minq,$self->ref_name,$self->location_file,$self->window_size,$self->ref_bfa_file, $self->map_file);
     }
     else {
-        $mapstat_cmd = sprintf("$MAPSTAT_PROG -q %d -l %s -w %d %s %s |",$self->minq,$self->location_file,$self->window_size,$self->ref_bfa_file, $self->map_file);
+        $mapstat_cmd = sprintf("$mapstat_prog_to_use -q %d -l %s -w %d %s %s |",$self->minq,$self->location_file,$self->window_size,$self->ref_bfa_file, $self->map_file);
     }
     unless(open(MAPSTAT, $mapstat_cmd)) {
-        $self->error_message("Unable to open pipe to $MAPSTAT_PROG");
+        $self->error_message("Unable to open pipe to $mapstat_prog_to_use");
         return;
     }
 
@@ -213,6 +221,10 @@ sub build_locations_hash {
     while(my $line = $location_fh->getline) {
         chomp $line;
         my ($chr, $pos, $ref, $iub_code, $quality, @other_metrics) = split /\s+/, $line;
+        unless($quality && $chr && $pos && $ref && $iub_code) {
+            $self->error_message("Snp file format does not have the correct number of columns. (Must have at least 5)");
+            return;
+        }
         if($self->ref_name eq q{} || $self->ref_name eq $chr) {
             $chr =~ s/\s+.*$//; #remove whitespace
             
