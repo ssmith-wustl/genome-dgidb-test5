@@ -33,7 +33,7 @@ sub stages {
     my @stages = qw/
         setup_project
         assemble
-        verify_succesful_completion
+        verify_successful_completion
     /;
     return @stages;
 }
@@ -55,9 +55,9 @@ sub assemble_job_classes {
     return @classes;
 }
 
-sub verify_succesful_completion_job_classes {
+sub verify_successful_completion_job_classes {
     my @classes = qw/
-            Genome::Model::Command::Build::VerifySuccesfulCompletion
+            Genome::Model::Command::Build::VerifySuccessfulCompletion
     /;
     return @classes;
 }
@@ -72,7 +72,7 @@ sub assemble_objects {
     return 1;
 }
 
-sub verify_succesful_completion_objects {
+sub verify_successful_completion_objects {
     my $self = shift;
     return 1;
 }
