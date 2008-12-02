@@ -242,7 +242,7 @@ sub execute {
         return;
     }
 
-    return $self->verify_succesful_completion;
+    return $self->verify_successful_completion;
 }
 
 sub generate_metrics {
@@ -277,7 +277,7 @@ sub generate_metrics {
     return 1;
 }
 
-sub verify_succesful_completion {
+sub verify_successful_completion {
     my $self = shift;
 
     for my $file ($self->snip_output_file, $self->pileup_output_file) {
