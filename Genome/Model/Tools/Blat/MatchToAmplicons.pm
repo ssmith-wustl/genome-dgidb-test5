@@ -7,7 +7,7 @@ package Genome::Model::Tools::Blat::MatchToAmplicons;     # rename this when you
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
 #	CREATED:	10/20/2008 by D.K.
-#	MODIFIED:	10/28/2008 by D.K.
+#	MODIFIED:	12/02/2008 by D.K.
 #
 #	NOTES:		After PyroScan code has been improved and deployed, use LSF to run pyroscan
 #			
