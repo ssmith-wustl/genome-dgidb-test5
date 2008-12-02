@@ -199,6 +199,23 @@ sub lsf_state {
             $jobinfo{$1} = $2;
         }
     }
+    my @pending_reasons = ();
+    foreach my $line (@eventlines) {
+        if ($line =~ /PENDING REASONS:/) {
+            @pending_reasons = (
+                                UR::Time->now,
+                                {}
+                            );
+            next;
+        }
+        if (scalar(@pending_reasons)) {
+            if ($line =~ /^\s*$/) {
+                last;
+            }
+            $line =~ s/^\s+//;
+            $pending_reasons[1]->{'PENDING REASON'} = $line;
+        }
+    }
 
     my @events = ();
     foreach my $el (@eventlines) {
@@ -223,8 +240,9 @@ sub lsf_state {
         }
         push @events, \@entry;
     }
-
-
+    if (scalar(@pending_reasons)) {
+        push @events, \@pending_reasons;
+    }
     return (\%jobinfo, \@events);
 }
 
