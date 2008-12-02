@@ -186,13 +186,13 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
         skip "assemble takes a long time", $skip_assemble;
         ok($assemble->execute,'execute assemble project');
     }
-    my @verify_events = Genome::Model::Command::Build::VerifySuccesfulCompletion->get(model_id => $model->id);
+    my @verify_events = Genome::Model::Command::Build::VerifySuccessfulCompletion->get(model_id => $model->id);
     is(scalar(@verify_events),1,'one verify event for project');
     my $verify = $verify_events[0];
-    isa_ok($verify,'Genome::Model::Command::Build::VerifySuccesfulCompletion');
+    isa_ok($verify,'Genome::Model::Command::Build::VerifySuccessfulCompletion');
     SKIP: {
           skip 'no reason to verify if we skipped assemble', $skip_assemble;
-          ok($verify->execute,'execute verify_succesful_completion on build');
+          ok($verify->execute,'execute verify_successful_completion on build');
     }
     rmtree($model->data_directory);
 }

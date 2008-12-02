@@ -179,8 +179,8 @@ ok(!$abstract_build->continue_with_abandoned_events_for_stage('stage1',0),'do no
 ok($abstract_build->continue_with_abandoned_events_for_stage('stage1',1),'continue with abandoned events');
 ok(!$abstract_build->ignore_unverified_events_for_stage('stage1',0),'do not ignore unverified events');
 ok($abstract_build->ignore_unverified_events_for_stage('stage1',1),'ignore unverified events');
-ok(!$abstract_build->verify_succesful_completion_for_stage('stage1',0),'do not continue with unsuccesful events');
-ok($abstract_build->verify_succesful_completion_for_stage('stage1',1),'continue with unsuccesful events');
+ok(!$abstract_build->verify_successful_completion_for_stage('stage1',0),'do not continue with unsuccessful events');
+ok($abstract_build->verify_successful_completion_for_stage('stage1',1),'continue with unsuccessful events');
 
 exit;
 

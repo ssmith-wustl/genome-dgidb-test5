@@ -26,7 +26,7 @@ ok(unlink($pipe_path),"delete existing temporary file $pipe_path");
 
 my $vmerge_cmd = "gt maq vmerge --maplist /gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Vmerge/all.maplist --pipe $pipe_path &";
 my $vmerge_rv = system($vmerge_cmd);
-ok(!$vmerge_rv,"$vmerge_cmd executed succesfully");
+ok(!$vmerge_rv,"$vmerge_cmd executed successfully");
 
 while (!-e $pipe_path) {
     sleep 1;
@@ -34,7 +34,7 @@ while (!-e $pipe_path) {
 
 my $cmd = "/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq mapview $pipe_path > $test_results";
 my $rv = system($cmd);
-ok(!$rv,"$cmd executed succesfully");
+ok(!$rv,"$cmd executed successfully");
 ok(!compare($test_results,$expected_results),'test result matches expected');
 
 #Clean up
