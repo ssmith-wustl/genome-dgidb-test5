@@ -201,7 +201,7 @@ sub execute {
             #print "f1: $c1 : $p1 : $g1\n";
         }
         else {
-            $c1 = 'ZZZ';
+            $c1 = undef;
         }
     }
 
@@ -214,7 +214,7 @@ sub execute {
             #print "f2: $c2 : $p2 : $g2\n";
         }
         else {
-            $c2 = 'ZZZ';
+            $c2 = undef;
         }
     }
     use warnings;
@@ -287,10 +287,10 @@ sub execute {
         # compare chromosomes
         no warnings;
         my $cc;
-        if ($c1 == 0 and $c2 > 0) {
+        if ((not defined $c1) or ($c1 == 0 and $c2 > 0)) {
             $cc = 1;
         }
-        elsif ($c2 == 0 and $c1 > 0) {
+        elsif ((not defined $c2) or ($c2 == 0 and $c1 > 0)) {
             $cc = -1;
         }
         elsif ($c1 == 0 and $c2 == 0) {
