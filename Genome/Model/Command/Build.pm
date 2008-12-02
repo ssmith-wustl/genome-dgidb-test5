@@ -266,7 +266,7 @@ sub ignore_unverified_events_for_stage {
     
     my @stage_events = $self->events_for_stage($stage_name);
     my @succeeded_events = grep { $_->event_status eq 'Succeeded' } @stage_events;
-    my @can_not_verify_events = grep { !$_->can('verify_succesful_completion') } @succeeded_events;
+    my @can_not_verify_events = grep { !$_->can('verify_successful_completion') } @succeeded_events;
     if (@can_not_verify_events) {
         my $status_message = 'Found '. scalar(@can_not_verify_events) ." events that will not be verified:\n";
         for (@can_not_verify_events) {
@@ -292,17 +292,17 @@ sub ignore_unverified_events_for_stage {
     return 1;
 }
 
-sub verify_succesful_completion_for_stage {
+sub verify_successful_completion_for_stage {
     my $self = shift;
     my $stage_name = shift;
     my $force_flag = shift;
 
     my @stage_events = $self->events_for_stage($stage_name);
     my @succeeded_events = grep { $_->event_status eq 'Succeeded' } @stage_events;
-    my @verifiable_events = grep { $_->can('verify_succesful_completion') } @succeeded_events;
-    my @unverified_events = grep { !$_->verify_succesful_completion } @verifiable_events;
+    my @verifiable_events = grep { $_->can('verify_successful_completion') } @succeeded_events;
+    my @unverified_events = grep { !$_->verify_successful_completion } @verifiable_events;
     if (@unverified_events) {
-        my $status_message = 'Found '. scalar(@unverified_events) ." events that can not be verified succesful:\n";
+        my $status_message = 'Found '. scalar(@unverified_events) ." events that can not be verified successful:\n";
         for (@unverified_events) {
             $status_message .= $_->id ."\t". $_->event_type ."\t". $_->event_status ."\n";
         }
@@ -334,21 +334,21 @@ sub verify_succesful_completion_for_stage {
             } elsif ($force_flag == 0) {
                 return;
             } else {
-                $self->error_messge('Illegal value '. $force_flag .' for continuing with unsuccesful events.');
+                $self->error_messge('Illegal value '. $force_flag .' for continuing with unsuccessful events.');
             }
         }
     }
     return 1;
 }
 
-sub verify_succesful_completion {
+sub verify_successful_completion {
     my $self = shift;
     for my $stage_name ($self->stages) {
-        if ($stage_name eq 'verify_succesful_completion') {
+        if ($stage_name eq 'verify_successful_completion') {
             last;
         }
-        unless ($self->verify_succesful_completion_for_stage($stage_name)) {
-            $self->error_message('Failed to verify succesful completion of stage '. $stage_name);
+        unless ($self->verify_successful_completion_for_stage($stage_name)) {
+            $self->error_message('Failed to verify successful completion of stage '. $stage_name);
             return;
         }
     }
@@ -359,7 +359,7 @@ sub update_build_state {
     my $self = shift;
 
     for my $stage_name ($self->stages) {
-        if ($stage_name eq 'verify_succesful_completion') {
+        if ($stage_name eq 'verify_successful_completion') {
             last;
         }
         unless ($self->abandon_incomplete_events_for_stage($stage_name)) {
@@ -371,7 +371,7 @@ sub update_build_state {
         unless ($self->ignore_unverified_events_for_stage($stage_name)) {
             return;
         }
-        unless ($self->verify_succesful_completion_for_stage($stage_name)) {
+        unless ($self->verify_successful_completion_for_stage($stage_name)) {
             return;
         }
         $self->remove_dependencies_on_stage($stage_name);
