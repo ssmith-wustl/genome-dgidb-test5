@@ -33,7 +33,7 @@ sub stages {
     my @stages = qw/
         alignment
         variant_detection
-        verify_succesful_completion
+        verify_successful_completion
     /;
     return @stages;
 }
@@ -62,9 +62,9 @@ sub variant_detection_job_classes {
     return @steps;
 }
 
-sub verify_succesful_completion_job_classes {
+sub verify_successful_completion_job_classes {
     my @sub_command_classes= qw/
-        Genome::Model::Command::Build::VerifySuccesfulCompletion
+        Genome::Model::Command::Build::VerifySuccessfulCompletion
     /;
     return @sub_command_classes;
 }
@@ -84,7 +84,7 @@ sub variant_detection_objects {
     }
     return @subreferences_names;
 }
-sub verify_succesful_completion_objects {
+sub verify_successful_completion_objects {
     my $self = shift;
     return 1;
 }
