@@ -85,10 +85,10 @@ $DB::single = $DB::stopper;
         $self->error_message("nonzero exit code " . $rv/256 . " returned by maq, command looks like, @args");
         return;
     }
-    return $self->verify_succesful_completion;
+    return $self->verify_successful_completion;
 }
 
-sub verify_succesful_completion {
+sub verify_successful_completion {
     my $self = shift;
 
     my ($consensus_file) = $self->parent_event->_consensus_files($self->ref_seq_id);
