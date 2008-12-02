@@ -165,7 +165,7 @@ sub _execute_inline_event {
     $self->context->commit;
 }
 
-# Find events in a 'Scheduled' state, but have been submitted to lsf
+# Find events in a 'Running' or 'Scheduled' state and have been submitted to lsf at some point
 sub _verify_submitted_jobs {
     my($self,%addl_get_params) = @_;
 
@@ -200,7 +200,16 @@ sub _verify_submitted_jobs {
             );
             $event->event_status("Crashed");
         }
-    } # end while @launchable_events
+        if ($job_state eq 'PEND') {
+            my @pending_reasons = $event->lsf_pending_reasons;
+            if (scalar( grep { /Dependency condition invalid or never satisfied;/ } @pending_reasons )) {
+                my $dependency_condition = $event->lsf_dependency_condition;
+                $self->warning_message("The dependency condition '$dependency_condition' is invalid or never satisfied for lsf job '$job_id'");
+                $self->error_message("The following command should help clear up this dependency issue:\ngenome model build update-build-state --model-id=". $event->model_id .' --build-id='. $event->parent_event_id);
+                die;
+            }
+        }
+    } # end while @queued_events
     $self->context->commit;
     return 1;
 }
