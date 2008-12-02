@@ -37,21 +37,25 @@ sub generate_report_detail {
 sub _resolve_subclass_name {
 	my $class = shift;
 	
-	if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
-		my $name = $_[0]->name;
-        my $model_id = $_[0]->model_id;
-		return $class->_resolve_subclass_name_for_name($model_id,$name);
+	if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) 
+        {
+	    my $name = $_[0]->name;
+            my $model_id = $_[0]->model_id;
+	    return $class->_resolve_subclass_name_for_name($model_id,$name);
 	}
-    elsif (my $name = $class->get_rule_for_params(@_)->specified_value_for_property_name('name')) {
-        my $model_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('model_id'); 
-        return $class->_resolve_subclass_name_for_model_and_name($model_id,$name);
-    }
-	else {
-		return;
+        elsif (my $name = $class->get_rule_for_params(@_)->specified_value_for_property_name('name')) 
+        {
+            my $model_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('model_id'); 
+            return $class->_resolve_subclass_name_for_model_and_name($model_id,$name);
+        }
+	else 
+        {
+	    return;
 	}
 }
 
 sub _resolve_subclass_name_for_model_and_name {
+
     my $class = shift;
     my $model_id = shift;
     my $name = shift;
@@ -64,7 +68,7 @@ sub _resolve_subclass_name_for_model_and_name {
         return;
     }
 
-    my $file=glob("$report_dir/generation_class.*");
+    my ($file)=glob("$report_dir/generation_class.*");
     if($file) {
         $DB::single=1;
         #so, we found a generating class notation..this is a regular report
@@ -72,14 +76,15 @@ sub _resolve_subclass_name_for_model_and_name {
         return "Genome::Model::Report::$class";
     }
 
-    $file = glob("$report_dir/*.html");
+    ($file) = glob("$report_dir/*.html");
     if($file) {
         $DB::single=1;
         return "Genome::Model::Report::Html";
     }
 
-    $file = glob("$report_dir/*.[ct]sv");
+    ($file) = glob("$report_dir/*.[ct]sv");
     if($file) {
+
         $DB::single=1;
         return "Genome::Model::Report::Table";
     }

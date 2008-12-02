@@ -11,8 +11,8 @@ use above "Genome";
 =cut
 =cut
 
-    my $reports_class = "Genome::Model::Report::SolexaStageOne";
-    my $report = $reports_class->create({model_id =>2722293016});
+    my ($id, $name) = (2722293016,'SolexaStageOne');
+    my $report = Genome::Model::Report->create(model_id =>$id,name=>$name);
 ok($report, "got a report"); 
 
 

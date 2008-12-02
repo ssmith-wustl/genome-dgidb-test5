@@ -13,15 +13,16 @@ use Cwd;
 use File::Basename qw/basename/;
 use App::Report;
 
-
-
-
 class Genome::Model::Report::SolexaStageTwo{
     is => 'Genome::Model::Report',
 };
 
 my %div_hash;
 my %job_to_status;
+
+sub _resolve_subclass_name {
+    return;
+}
 
 sub resolve_reports_directory {
     my $self = shift;
@@ -45,21 +46,16 @@ sub generate_report_brief
     my $model= $self->model;
     $self->preload_data();
     my $output_file = $self->report_brief_output_filename;
-    my @details = get_run_chunk_data_for_model($model);
     my $brief = IO::File->new(">$output_file");
     die unless $brief;
 
-    my $desc = @details . " read sets for " . $model->name . " as of " . UR::Time->now;
+    my $desc = $self->name . " read sets for " . $model->name . " as of " . UR::Time->now;
     $brief->print("<div>$desc</div>");
-
-
-    
 }
 
 sub generate_report_detail {    
     my $self=shift;
     my $model= $self->model;
-#    $self->preload_data();
     my $output_file = $self->report_detail_output_filename;
 
     my $r = new CGI;
@@ -75,8 +71,6 @@ sub generate_report_detail {
     # the title doesn't end up in the report: fix me! ? 
     my $report = App::Report->create(title => $title, header => $title );
 
-    #my $report = App::Report->create(title => "Genome Model Pipeline Stage 2");
-    
     for my $model (@models) {
         my $section_title = "<a href=" . $model->latest_build_directory . ">" 
                   . $model->name . " as of " . $time . "</a>"; 
