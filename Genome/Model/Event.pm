@@ -784,6 +784,25 @@ sub lsf_job_state {
     return;
 }
 
+sub lsf_pending_reasons {
+    my $self = shift;
+    unless ($self->lsf_job_id) {
+        return;
+    }
+    unless ($self->lsf_job_state eq 'PEND') {
+        return;
+    }
+    my @reasons;
+    my ($job_info,$events) = Genome::Model::Command::BsubHelper->lsf_state($self->lsf_job_id);
+    for my $entry (@$events) {
+        my ($time, $attributes) = (@$entry);
+        if ($$attributes{'PENDING REASON'}) {
+            push @reasons, $$attributes{'PENDING REASON'};
+        }
+    }
+    return @reasons;
+}
+
 1;
 
 #$HeadURL$
