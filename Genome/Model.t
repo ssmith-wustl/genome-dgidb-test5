@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 30;
+use Test::More tests => 31;
 
 # TODO: Use this for the model creation below...
 =cut
@@ -66,6 +66,8 @@ isa_ok ($unbuilt_read_sets[0], "Genome::Model::ReadSet");
 
 ok (my @built_read_sets = $model->built_read_sets, "got built_read_sets");
 isa_ok ($built_read_sets[0], "Genome::Model::ReadSet");
+
+ok (my %available_reports = $model->available_reports, "got available_reports");
 
 SKIP: {
     skip "These are not used and probably will be removed at some point... just have to remove the calls from the tree", 1, if 1;
