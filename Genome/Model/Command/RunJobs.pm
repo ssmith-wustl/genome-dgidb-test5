@@ -205,7 +205,7 @@ sub _verify_submitted_jobs {
                 my $dependency_condition = $event->lsf_dependency_condition;
                 $self->warning_message("The dependency condition '$dependency_condition' is invalid or never satisfied for lsf job '$job_id'");
                 $self->error_message("The following command should help clear up this dependency issue:\ngenome model build update-state --model-id=". $event->model_id .' --build-id='. $event->parent_event_id);
-                die;
+                #die;
             }
         }
     } # end while @queued_events
