@@ -10,7 +10,8 @@ class Genome::Project::Contact {
     ],
     has => [
         email       => { is => 'Email', column_name => 'CONTACT_EMAIL' },
-        name        => { is => 'Text',  column_name => 'CONTACT_NAME', },
+        name        => { is => 'Text',  column_name => 'CONTACT_NAME'  },
+        type        => { is => 'Text',  column_name => 'CONTACT_TYPE'  },
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };
