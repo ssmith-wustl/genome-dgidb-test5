@@ -199,13 +199,12 @@ sub _verify_submitted_jobs {
                 . " has no LSF job $job_id.  Setting to crashed."
             );
             $event->event_status("Crashed");
-        }
-        if ($job_state eq 'PEND') {
+        } elsif ($job_state eq 'PEND') {
             my @pending_reasons = $event->lsf_pending_reasons;
             if (scalar( grep { /Dependency condition invalid or never satisfied;/ } @pending_reasons )) {
                 my $dependency_condition = $event->lsf_dependency_condition;
                 $self->warning_message("The dependency condition '$dependency_condition' is invalid or never satisfied for lsf job '$job_id'");
-                $self->error_message("The following command should help clear up this dependency issue:\ngenome model build update-build-state --model-id=". $event->model_id .' --build-id='. $event->parent_event_id);
+                $self->error_message("The following command should help clear up this dependency issue:\ngenome model build update-state --model-id=". $event->model_id .' --build-id='. $event->parent_event_id);
                 die;
             }
         }
