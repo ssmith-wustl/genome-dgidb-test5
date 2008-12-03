@@ -640,6 +640,8 @@ my %csp_priority = (
     'pool dna'                                => 10,
     'break empcr'                             => 10,
     'create dilutions'                        => 10, 
+    'load agarose gel'                        => 10, 
+    'select fraction'                         => 10, 
     # middle priority stuff
     'analyze amplicon failure' => 5,
     # lower priority steps
