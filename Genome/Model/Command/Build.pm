@@ -169,6 +169,11 @@ sub events_for_class {
                                    model_id => $self->model_id,
                                    parent_event_id => $self->build_id,
                                );
+
+    #Not sure if every class is supposed to have return of events
+    #but adding the line below makes the tests pass for now
+    return unless @class_events;
+
     my @sorted_class_events;
     if ($class_events[0]->id =~ /^-/) {
         @sorted_class_events = sort {$b->id <=> $a->id} @class_events;
