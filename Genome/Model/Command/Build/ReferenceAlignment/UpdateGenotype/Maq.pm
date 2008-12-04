@@ -28,10 +28,6 @@ This command is usually called as part of the add-reads process
 EOS
 }
 
-sub bsub_rusage {
-    return "-R 'select[model==Intel_Xeon360] span[hosts=1]'";
-}
-
 sub should_bsub { 1;}
 
 sub execute {

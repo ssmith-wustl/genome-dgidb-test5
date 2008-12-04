@@ -9,7 +9,7 @@ use GSCApp;
 use Test::More;
 use Test::MockObject;
 
-plan tests => 8;
+plan tests => 9;
 
 our $MAP_FILE_DIR = "/tmp/alignmentfiles.$$/";
 
@@ -73,6 +73,7 @@ my $merge = Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::
                 parent_event => $parent_event,
             );
 ok($merge, 'Created a Mergealignments::Maq command object');
+ok($merge->bsub_rusage(), 'inherits bsub_rusage method');
 
 $merge->queue_status_messages(1);
 $merge->dump_status_messages(0);
