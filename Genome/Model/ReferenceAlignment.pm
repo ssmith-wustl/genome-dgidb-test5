@@ -568,7 +568,7 @@ sub _get_sum_of_metric_values_from_events {
 
 sub reference_sequence_path {
     my $self = shift;
-    my $path = sprintf('%s/reference_sequences/%s', $self->base_parent_directory,
+    my $path = sprintf('%s/reference_sequences/%s', '/gscmnt/839/info/medseq',
                         $self->reference_sequence_name);
 
     my $dna_type = $self->dna_type;

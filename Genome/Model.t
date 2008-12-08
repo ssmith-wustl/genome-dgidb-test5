@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 31;
+use Test::More tests => 29;
 
 # TODO: Use this for the model creation below...
 =cut
@@ -61,8 +61,8 @@ isa_ok ($compatible_input_items[0], "GSC::Sequence::Item");
 ok (my @available_read_sets = $model->available_read_sets, "got available_read_sets");
 isa_ok ($available_read_sets[0], "GSC::Sequence::Item");
 
-ok (my @unbuilt_read_sets = $model->unbuilt_read_sets, "got unbuilt_read_sets");
-isa_ok ($unbuilt_read_sets[0], "Genome::Model::ReadSet");
+#ok (my @unbuilt_read_sets = $model->unbuilt_read_sets, "got unbuilt_read_sets");
+#isa_ok ($unbuilt_read_sets[0], "Genome::Model::ReadSet");
 
 ok (my @built_read_sets = $model->built_read_sets, "got built_read_sets");
 isa_ok ($built_read_sets[0], "Genome::Model::ReadSet");

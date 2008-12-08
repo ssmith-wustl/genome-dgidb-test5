@@ -114,9 +114,16 @@ sub read_length {
 }
 sub _calculate_total_read_count {
     my $self = shift;
+    if($self->read_set->is_external) {
+        my $data_path_object = Genome::MiscAttribute->get(entity_id=>$self->seq_id, property_name=>"full_path");
+        my $data_path = $data_path_object->value;
+        my $lines = `wc -l $data_path`;
+        return $lines/4;
+    }
     if ($self->read_set->clusters <= 0) {
         die('Impossible value for clusters field. seq_id:'. $self->read_set->seq_id);
     }
+    
     return $self->read_set->clusters;
 }
 

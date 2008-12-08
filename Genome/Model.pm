@@ -438,7 +438,7 @@ sub comparable_normal_model {
 
 # This is the directory for model data, alignment data, model comparison data, etc.
 sub base_parent_directory {
-    "/gscmnt/839/info/medseq"
+    "/gscmnt/sata363/info/medseq"
 }
 
 # This directory should never contain data
@@ -453,7 +453,7 @@ sub alignment_links_directory {
 
 sub base_model_comparison_directory {
     my $self = shift;
-    return $self->base_parent_directory . "/model_comparisons";
+    return "/gscmnt/839/info/medseq/model_comparisons";
 }
 
 sub alignment_directory {
