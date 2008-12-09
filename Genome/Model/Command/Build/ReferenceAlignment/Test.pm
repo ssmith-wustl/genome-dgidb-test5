@@ -10,6 +10,7 @@ use Genome::Model::Tools::Maq::MapSplit;
 use Genome::RunChunk;
 
 use File::Path;
+use File::Copy;
 use Test::More;
 
 sub new {
@@ -36,12 +37,21 @@ sub new {
     } else {
         confess("Must define read_sets for test:  $!");
     }
+    if ($args{tmp_dir}) {
+        $self->{_tmp_dir} = $args{tmp_dir};
+        $self->add_directory_to_remove($self->tmp_dir);
+    }
     return $self;
 }
 
 sub auto_execute {
     my $self = shift;
     return $self->{_auto_execute};
+}
+
+sub tmp_dir {
+    my $self = shift;
+    return $self->{_tmp_dir};
 }
 
 sub add_directory_to_remove {
@@ -172,12 +182,27 @@ sub add_reads {
                                                                      );
         isa_ok($add_reads_command,'Genome::Model::Command::AddReads');
         ok($add_reads_command->execute(),'execute genome-model add-reads');
+        my $read_set_object = Genome::Model::ReadSet->get(
+                                                          model_id => $model->id,
+                                                          read_set_id => $read_set->seq_id,
+                                                      );
+        isa_ok($read_set_object,'Genome::Model::ReadSet');
+        if ($read_set_object->sequencing_platform eq '454') {
+            my $tmp_file = $self->tmp_dir .'/amplicon_headers.txt';
+            $add_reads_command->create_directory($read_set_object->full_path);
+            my $read_set_file = $read_set_object->full_path .'/amplicon_headers.txt';
+            copy($tmp_file,$read_set_file) || die("Failed to copy '$tmp_file' to '$read_set_file'");
+        }
+        if ($read_set_object->full_path) {
+            $self->add_directory_to_remove($read_set_object->full_path);
+        }
     }
 }
 
 sub schedule {
     my $self = shift;
     my $model = $self->model;
+
     my $build = Genome::Model::Command::Build::ReferenceAlignment->create(
                                                                           model_id => $model->id,
                                                                           auto_execute => $self->auto_execute,
@@ -203,20 +228,43 @@ sub schedule {
        'Saw a message about AssignRun');
     ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AlignReads/} @status_messages),
        'Saw a messages about  AlignReads');
-   ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments/} @status_messages),
-       'Saw a message about ProcessLowQualityAlignments');
-    is(scalar(grep { m/^Scheduling jobs for reference sequence .*/} @status_messages),
-       3, 'Got 3 reference_sequence messages');
+    SKIP : {
+        skip 'No ProcessLowQualityAlignments step for 454', 1 if $model->sequencing_platform eq '454'; 
+        ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments/} @status_messages),
+           'Saw a message about ProcessLowQualityAlignments');
+    }
+    my $variation_granularity;
+    if ($model->sequencing_platform eq '454') {
+        $variation_granularity = 1;
+    } elsif ($model->sequencing_platform eq 'solexa') {
+        $variation_granularity = 3;
+    } else {
+        die ('Unrecognized sequencing platform in ReferenceAlignment test: '. $model->sequencing_platform);
+    }
+    SKIP : {
+        skip 'No reference sequence messages for 454', 1 if $model->sequencing_platform eq '454';
+        is(scalar(grep { m/^Scheduling jobs for reference sequence .*/} @status_messages),
+           $variation_granularity, "Got $variation_granularity reference_sequence messages");
+    }
     is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments/} @status_messages),
-       3, 'Got 3 MergeAlignments messages');
-    is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype/} @status_messages),
-       3, 'Got 3 UpdateGenotype messages');
+       $variation_granularity, "Got $variation_granularity MergeAlignments messages");
+    SKIP : {
+        skip 'No UpdateGenotype step for 454', 1 if $model->sequencing_platform eq '454'; 
+        is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype/} @status_messages),
+           $variation_granularity, "Got $variation_granularity UpdateGenotype messages");
+    }
     is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::FindVariations/} @status_messages),
-       3, 'Got 3 FindVariations messages');
+       $variation_granularity, "Got $variation_granularity FindVariations messages");
+    SKIP : {
+        skip 'No PostprocessVariations step for 454', 1 if $model->sequencing_platform eq '454';
     is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations/} @status_messages),
-       3, 'Got 3 PostprocessVariations messages');
-    is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations/} @status_messages),
-       3, 'Got 3 AnnotateVariations messages');
+       $variation_granularity, "Got $variation_granularity PostprocessVariations messages");
+    }
+    SKIP : {
+        skip 'No AnnotateVariations step for 454', 1 if $model->sequencing_platform eq '454';
+        is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations/} @status_messages),
+           $variation_granularity, "Got $variation_granularity AnnotateVariations messages");
+    }
     # Not checking warning messages - for now, there are some relating to obsolete locking
     is(scalar(@error_messages), 0, 'no errors');
 
@@ -316,9 +364,6 @@ sub remove_data {
     my $self = shift;
 
     my $model = $self->model;
-    my @data_dirs = map { $_->full_path }
-        grep { defined($_->full_path) }
-            $model->read_sets;
     my @alignment_events = $model->alignment_events;
     my @alignment_dirs = map { $_->read_set_link->read_set_alignment_directory } @alignment_events;
     my $archive_file = $model->resolve_archive_file;
@@ -334,7 +379,7 @@ sub remove_data {
     }
     my $directories_to_remove = $self->{_dir_array_ref};
     #print "Removing directories:\n";
-    for my $directory_to_remove (@$directories_to_remove, @alignment_dirs, @data_dirs) {
+    for my $directory_to_remove (@$directories_to_remove, @alignment_dirs) {
         #print $directory_to_remove . "\n";
         rmtree $directory_to_remove;
     }
