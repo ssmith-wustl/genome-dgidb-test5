@@ -362,21 +362,22 @@ sub verify_successful_completion {
 
 sub update_build_state {
     my $self = shift;
-
+    my $force_flag = shift;
+    
     for my $stage_name ($self->stages) {
         if ($stage_name eq 'verify_successful_completion') {
             last;
         }
-        unless ($self->abandon_incomplete_events_for_stage($stage_name)) {
+        unless ($self->abandon_incomplete_events_for_stage($stage_name,$force_flag)) {
             return;
         }
-        unless ($self->continue_with_abandoned_events_for_stage($stage_name)) {
+        unless ($self->continue_with_abandoned_events_for_stage($stage_name,$force_flag)) {
             return;
         }
-        unless ($self->ignore_unverified_events_for_stage($stage_name)) {
+        unless ($self->ignore_unverified_events_for_stage($stage_name,$force_flag)) {
             return;
         }
-        unless ($self->verify_successful_completion_for_stage($stage_name)) {
+        unless ($self->verify_successful_completion_for_stage($stage_name,$force_flag)) {
             return;
         }
         $self->remove_dependencies_on_stage($stage_name);
@@ -453,7 +454,7 @@ sub _remove_dependency_for_classes {
                 my @current_dependencies = split(" && ",$dependency_expression);
                 my @keep_dependencies;
                 for my $current_dependency (@current_dependencies) {
-                    if ($current_dependency cmp $dependency) {
+                    if ($current_dependency eq $dependency) {
                         next;
                     }
                     push @keep_dependencies, $current_dependency;
@@ -465,8 +466,13 @@ sub _remove_dependency_for_classes {
                 }
                 $self->status_message("Changing dependency from '$dependency_expression' to '$new_expression' for event ". $event->id);
                 my $lsf_job_id = $event->lsf_job_id;
-                my $cmd = "bmod -w '$dependency_expression' $lsf_job_id";
-                `$cmd`;
+                my $cmd = "bmod -w '$new_expression' $lsf_job_id";
+                $self->status_message("Running:  $cmd");
+                my $rv = system($cmd);
+                unless ($rv == 0) {
+                    $self->error_message('non-zero exit code returned from command: '. $cmd);
+                    die;
+                }
             }
         }
     }
