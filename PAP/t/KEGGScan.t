@@ -8,7 +8,7 @@ use Bio::SeqIO;
 
 use Cwd;
 use File::Temp;
-use Test::More tests => 193;
+use Test::More tests => 75;
 
 BEGIN {
     use_ok('PAP::Command');
@@ -31,6 +31,10 @@ foreach my $feature (@{$ref}) {
     ok($feature->has_tag('kegg_evalue'));
     ok($feature->has_tag('kegg_description'));
 
+    my ($evalue) = $feature->each_tag_value('kegg_evalue');
+    
+    cmp_ok($evalue, '<', '0.01');
+    
     my $annotation_collection = $feature->annotation();
 
     isa_ok($annotation_collection, 'Bio::Annotation::Collection');

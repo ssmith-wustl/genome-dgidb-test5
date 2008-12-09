@@ -184,7 +184,7 @@ sub parse_result {
 
     my @features = ( );
     
-    while (my $line = <$output_fh>) {
+    LINE: while (my $line = <$output_fh>) {
 
         chomp $line;
 
@@ -199,14 +199,16 @@ sub parse_result {
             $orthology
            ) = @fields[1,2,3,4,6,8];
 
+        ## Prat filtered out lines with e-value >= 0.01 when 
+        ## generating AceDB .ace files.
+        if ($e_value >= 0.01) { next LINE; }
+        
         ## The values in the third column should be in this form:
-        ## gene_name (N letters; record M)
+        ## gene_name (N letters; record M).
         ($gene_name) = split /\s+/, $gene_name; 
 
         ## Some descriptions have EC numbers embedded in them.
-        ## Prat's original pipeline removed them.
-        ## The present goal is to match the output of that pipeline.
-        ## Thus, remove the EC numbers.
+        ## Prat's removed them.
         $description =~ s/\(EC .+\)//;
         
         my $feature = new Bio::SeqFeature::Generic(-display_name => $gene_name);
