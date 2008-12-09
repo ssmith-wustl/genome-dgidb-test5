@@ -181,6 +181,7 @@ sub _verify_submitted_jobs {
             parent_event_id => { operator => 'ne', value=>undef},
             %addl_get_params
         );
+    my %invalid_dependencies;
     while (my $event = shift @queued_events) {
         unless ($event->ref_seq_id || $event->read_set_id) {
             unless (grep { $event->event_type =~ qr/$_/ }  $self->event_types_without_subclass) {
@@ -204,11 +205,28 @@ sub _verify_submitted_jobs {
             if (scalar( grep { /Dependency condition invalid or never satisfied;/ } @pending_reasons )) {
                 my $dependency_condition = $event->lsf_dependency_condition;
                 $self->warning_message("The dependency condition '$dependency_condition' is invalid or never satisfied for lsf job '$job_id'");
-                $self->error_message("The following command should help clear up this dependency issue:\ngenome model build update-state --model-id=". $event->model_id .' --build-id='. $event->parent_event_id);
-                #die;
+                $invalid_dependencies{$event->model_id}{$event->parent_event_id} = 1;
             }
         }
     } # end while @queued_events
+    for my $model_id (keys %invalid_dependencies) {
+        for my $build_id (keys %{$invalid_dependencies{$model_id}}) {
+            my $update_state = Genome::Model::Command::Build::UpdateState->create(
+                                                                                  model_id => $model_id,
+                                                                                  build_id => $build_id,
+                                                                                  force_flag => 0,
+                                                                              );
+            unless ($update_state) {
+                $self->error_message("Failed to create command to update-state for model '$model_id' and  build '$build_id'");
+                die;
+            }
+            unless ($update_state->execute) {
+                $self->error_message('Failed to execute command: '. $update_state->command_name
+                                     ." for model '$model_id' and build '$build_id'");
+                die;
+            }
+        }
+    }
     $self->context->commit;
     return 1;
 }
