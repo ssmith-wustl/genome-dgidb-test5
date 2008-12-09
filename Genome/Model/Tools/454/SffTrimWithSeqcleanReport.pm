@@ -32,7 +32,7 @@ class Genome::Model::Tools::454::SffTrimWithSeqcleanReport {
                              is => 'string',
                              doc => 'a file path to the output sff file',
                              is_output => 1,
-                         }
+                         },
 	    assembler_version => {
 		                  is => 'String',
 				  doc => 'Newbler assembler version to use',

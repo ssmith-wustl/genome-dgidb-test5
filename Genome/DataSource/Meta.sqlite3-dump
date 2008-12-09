@@ -41,6 +41,7 @@ INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_READ_SET','GENOME_MODEL_BUILD','GMRS_GMB_FK','2008-11-12 18:23:10');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL','GENOME_MODEL_BUILD','GM_GMBL_FK','2008-11-12 18:23:12');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_COMPOSITE_MEMBER','GENOME_MODEL','GMCP_GM1_FK','2008-11-12 18:23:12');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','SNV_MANUAL_REVIEW','VARIANT_REVIEW_DETAIL','SMR_VRD_FK','2008-12-04 10:48:44');
 CREATE TABLE dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
     data_source varchar NOT NULL,
@@ -78,6 +79,7 @@ INSERT INTO "dd_fk_constraint_column" VALUES('GMM_GM_FK','Genome::DataSource::GM
 INSERT INTO "dd_fk_constraint_column" VALUES('GME_GM_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','GENOME_MODEL','MODEL_ID','GENOME_MODEL_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMRSMC_GMB_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','GENOME_MODEL_BUILD','BUILD_ID','BUILD_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMRP_GM_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_RESEARCH_PROJECT','GENOME_MODEL','MODEL_ID','GENOME_MODEL_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('SMR_VRD_FK','Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','VARIANT_REVIEW_DETAIL','ID','ID');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -125,6 +127,12 @@ INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG'
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','INSTRUMENT_DATA_ID',2);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_METRIC','MODEL_ID',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_COMPOSITE_MEMBER','MEMBER_ID',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST','ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST_MEMBER','MEMBER_ID',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST_MEMBER','LIST_ID',1);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -156,6 +164,11 @@ INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MODEL_INSTRUM
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','TABLE','entity','2008-09-30 15:12:12','2008-11-12 18:23:19',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_PARAM','TABLE','entity','2008-08-18 13:50:55','2008-11-12 18:23:40',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_INPUT','TABLE','entity','2008-06-16 16:05:22','2008-11-12 18:23:24',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','TABLE','entity','2008-06-16 16:15:36','2008-12-04 10:48:50',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','TABLE','entity','2008-10-14 10:52:32','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST_MEMBER','TABLE','entity','2008-11-19 14:56:37','2008-12-04 10:48:54',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','TABLE','entity','2008-12-03 16:51:14','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST','TABLE','entity','2008-12-03 14:52:25','2008-12-04 10:49:00',NULL);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -263,6 +276,50 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','STATUS_DETAIL','VARCHAR2','200','Y','2008-11-12 18:23:20',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','EVENT_TYPE','VARCHAR2','255','N','2008-11-12 18:23:20',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_REF_SEQ_METRIC','METRIC_NAME','VARCHAR2','200','N','2008-11-12 18:23:25',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','PASS_MANUAL_REVIEW','VARCHAR2','1','N','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','ID','NUMBER','10','N','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','NOTES','VARCHAR2','256','Y','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST','RT_TICKET','NUMBER','10','Y','2008-12-04 10:49:00',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','BUILD_ID','NUMBER','10','N','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','REVIEW_TYPE','VARCHAR2','1','Y','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','VARIANT_TYPE','VARCHAR2','1','Y','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','RT_TICKET','NUMBER','10','Y','2008-12-04 10:48:50',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','DUMP_DATE','DATE','19','N','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','DETAIL_ID','NUMBER','10','N','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST','AUTHOR','VARCHAR2','256','Y','2008-12-04 10:49:00',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST','NAME','VARCHAR2','256','Y','2008-12-04 10:49:00',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','NAME','VARCHAR2','256','Y','2008-12-04 10:48:50',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','GENOTYPE_IUB_CODE','VARCHAR2','1','N','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','MANUAL_GENOTYPE_IUB_NORMAL','VARCHAR2','1','Y','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','START_POSITION','NUMBER','10','N','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','SOURCE_MAPS','VARCHAR2','1024','Y','2008-12-04 10:48:50',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','ID','NUMBER','10','N','2008-12-04 10:48:50',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','GENES','VARCHAR2','256','Y','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST','SOURCE_MAPS','VARCHAR2','1024','Y','2008-12-04 10:49:00',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','DELETE_SEQUENCE','VARCHAR2','256','Y','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','STOP_POSITION','NUMBER','10','N','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST_MEMBER','LIST_ID','NUMBER','10','N','2008-12-04 10:48:54',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','SUPPORTING_SAMPLES','VARCHAR2','1024','Y','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','SUPPORTING_DBS','VARCHAR2','1024','Y','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST','POSITION_LISTS','VARCHAR2','1024','Y','2008-12-04 10:49:00',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','DATA_NEEDED','VARCHAR2','256','Y','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','ROI_SEQ_ID','NUMBER','10','Y','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','SUBJECT_NAME','VARCHAR2','1024','N','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','RGG_ID','NUMBER','10','Y','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','VARIANT_LENGTH','NUMBER','10','Y','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','MANUAL_GENOTYPE_IUB_RELAPSE','VARCHAR2','1','Y','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','INSERT_SEQUENCE_ALLELE1','VARCHAR2','256','Y','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','REVIEWER','VARCHAR2','256','N','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','SOMATIC_STATUS','VARCHAR2','256','Y','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST_MEMBER','MEMBER_ID','NUMBER','10','N','2008-12-04 10:48:54',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIST','ID','NUMBER','10','N','2008-12-04 10:49:00',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','ID','NUMBER','10','N','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','AUTHOR','VARCHAR2','256','Y','2008-12-04 10:48:50',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','MANUAL_GENOTYPE_IUB_TUMOR','VARCHAR2','1','Y','2008-12-04 10:48:58',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_LIST','POSITION_LISTS','VARCHAR2','1024','Y','2008-12-04 10:48:50',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','CHROMOSOME','VARCHAR2','32','N','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','INSERT_SEQUENCE_ALLELE2','VARCHAR2','256','Y','2008-12-04 10:48:44',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','VARIANT_SEQ_ID','NUMBER','10','Y','2008-12-04 10:48:44',NULL);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -275,4 +332,11 @@ INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema',
 INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','GMR_SEQID_U','SEQ_ID');
 INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','GMR_SP_RN_LR_U','RUN_NAME');
 INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','GMR_SP_RN_LR_U','SEQUENCING_PLATFORM');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','SMR_DBDR_U','REVIEWER');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','SMR_DBDR_U','BUILD_ID');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','VRD_SCS_U','SUBJECT_NAME');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','VRD_SCS_U','START_POSITION');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','VRD_SCS_U','CHROMOSOME');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','SMR_DBDR_U','DUMP_DATE');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SNV_MANUAL_REVIEW','SMR_DBDR_U','DETAIL_ID');
 COMMIT;
