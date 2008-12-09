@@ -10,6 +10,11 @@ class Genome::Model::Tools::454::Newbler::NewMapping {
                     is => 'String',
                     doc => 'pathname of the output directory',
                 },
+	    assembler_version => {
+		                  is => 'String',
+				  doc => 'Newbler version tool to use',
+				  is_optional => 1,
+			      },
         ],
 
 };
