@@ -25,7 +25,7 @@ my $new_read_set_id = '2684928940';
 $run_region_454 = GSC::RunRegion454->get($new_read_set_id);
 isa_ok($run_region_454,'GSC::RunRegion454');
 
-my $expected_full_path = '/gscmnt/833/info/medseq/sample_data/'. $run_region_454->run_name .'/'. $run_region_454->region_id .'/';
+my $expected_full_path = '/gscmnt/sata363/info/medseq/sample_data/'. $run_region_454->run_name .'/'. $run_region_454->region_id .'/';
 
 my $new_read_set = Genome::RunChunk::454->get_or_create_from_read_set($run_region_454,'sample_name');
 isa_ok($new_read_set,'Genome::RunChunk::454');
