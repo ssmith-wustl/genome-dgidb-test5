@@ -133,8 +133,27 @@ sub execute {
         my $errors;
         $self->status_message("found existing run directory $read_set_alignment_directory");
         if (-e $read_set_alignment_directory . '/processing') {
-            $self->error_message('Alignment still processing somewhere....');
-            return;
+            my $marker_fh = $self->open_file('Processing Marker', $read_set_alignment_directory . '/processing');
+            $DB::single = 1;
+            my $locking_event_id = $marker_fh->getline;
+            $marker_fh->close;
+            chomp($locking_event_id);
+            unless ($locking_event_id) {
+                $self->warning_message('No event id found for processing marker');
+            }
+            if ($locking_event_id && $locking_event_id ne $self->genome_model_event_id) {
+                my $locking_event = Genome::Model::Event->get($locking_event_id);
+                unless ($locking_event) {
+                    $self->error_message('No event found for genome_model_event_id '. $locking_event_id);
+                    return;
+                }
+                if ($locking_event->event_status eq 'Running') {
+                    $self->error_message('Alignment still processing by event '. $locking_event_id);
+                    return;
+                }
+            }
+            $self->warning_message('Removing bogus alignment marker file: '. $read_set_alignment_directory . '/processing');
+            unlink($read_set_alignment_directory . '/processing');
         }
         my $alignment_file = $self->alignment_file;
         my $aligner_output_file = $self->aligner_output_file;
@@ -151,10 +170,16 @@ sub execute {
     }
     $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
     $self->create_directory($read_set_alignment_directory);
-    $self->create_file("Processing Marker", $read_set_alignment_directory . '/processing');
-
+    my $marker_fh = $self->create_file('Processing Marker', $read_set_alignment_directory . '/processing');
+    print $marker_fh $self->genome_model_event_id ."\n";
+    $marker_fh->close;
+    
     my $model = $self->model;
     my @ref_seq_paths = grep {$_ !~ /all_sequences/ } $model->get_subreference_paths(reference_extension => 'fa');
+    unless (scalar(@ref_seq_paths)) {
+        $self->error_message('No reference sequences found: '. $model->reference_sequence_path);
+        return;
+    }
 
     my $blat_params = '-mask=lower -out=pslx -noHead';
     $blat_params .= $model->read_aligner_params || '';
