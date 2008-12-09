@@ -22,7 +22,7 @@ class Genome::Model::Tools::454::Newbler::NewAssembly {
 };
 
 sub help_brief {
-"genome-model tools newbler new-assembly --dir=DIR";
+    "create a new newbler project for denovo assembly"
 }
 
 sub help_detail {
