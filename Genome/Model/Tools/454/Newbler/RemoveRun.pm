@@ -24,7 +24,7 @@ class Genome::Model::Tools::454::Newbler::RemoveRun {
 };
 
 sub help_brief {
-"genome-model tools newbler add-run --dir=DIR --inputs='FileA FileB'";
+    "remove a 454 region to a newbler project"
 }
 
 sub help_detail {
