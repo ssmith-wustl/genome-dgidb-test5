@@ -20,7 +20,7 @@ class Genome::Model::Tools::454::Newbler::NewMapping {
 };
 
 sub help_brief {
-"genome-model tools newbler new-mapping --dir=DIR";
+    "create a new newbler project for reference-directed assembly"
 }
 
 sub help_detail {
