@@ -55,13 +55,18 @@ sub execute {
     my $self = shift;
 
     $DB::single = $DB::stopper;
+
     my $model = $self->model;
+
+    my $pp = Genome::ProcessingProfile->get( id => $model->processing_profile_id );
+
     unless (-e $self->trim_file && -e $self->sff_file) {
 	my %trimmer_params = (
 			      seqclean_report => $self->seqclean_report,
 			      in_sff_file => $self->in_sff_file,
 			      out_sff_file => $self->sff_file,
 			      trim_file =>  $self->trim_file,
+			      assembler_version => $pp->assembler_version,
 			      );
 
         my $sfffile_trim = Genome::Model::Tools::454::SffTrimWithSeqcleanReport->create( %trimmer_params );
