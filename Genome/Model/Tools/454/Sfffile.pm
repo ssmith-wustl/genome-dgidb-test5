@@ -21,7 +21,11 @@ class Genome::Model::Tools::454::Sfffile {
                        is => 'string',
                        doc => 'The params to pass to sfffile',
                        is_optional => 1,
-                   },
+		   },
+	    assembler_version => {
+		                  is => 'string',
+				  doc => 'newbler assembler version',
+			      },
         ],
 };
 
@@ -41,7 +45,6 @@ sub execute {
     my $params = $self->params || '';
     $params .= ' -o '. $self->out_sff_file;
     my $cmd = $self->bin_path .'/sfffile '. $params .' '. join(' ',$self->in_sff_files);
-    print 'Running: '. $cmd ."\n";
     my $rv = system($cmd);
     unless ($rv == 0) {
         $self->error_message("non-zero exit code '$rv' returned by sffinfo");
