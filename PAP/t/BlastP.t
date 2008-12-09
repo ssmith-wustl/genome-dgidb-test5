@@ -7,7 +7,7 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 399;
+use Test::More tests => 445;
 
 BEGIN {
     use_ok('PAP::Command');
@@ -47,10 +47,24 @@ foreach my $feature (@{$ref}) {
         ok($feature->has_tag('blastp_subject_start'));
         ok($feature->has_tag('blastp_subject_end'));
         ok($feature->has_tag('blastp_hit_name'));
+        ok($feature->has_tag('blastp_hit_description'));
 
+        my ($hit_description) = $feature->each_tag_value('blastp_hit_description');
+        
+        unlike($hit_description, qr/>/);
+    
     }
     
     ok($feature->has_tag('blastp_category'));
+
+    if ($feature->display_name() eq 'BACCOPFNL_Contig86.GeneMark.10') {
+        my ($blastp_category) = $feature->each_tag_value('blastp_category');    
+        is($blastp_category, 'Hypothetical Protein', 'blastp_category is plain hypothetical');
+    }
+    elsif ($feature->display_name() eq 'BACCOPFNL_Contig86.GeneMark.14') {
+         my ($blastp_category) = $feature->each_tag_value('blastp_category');
+         like($blastp_category, qr/^Hypothetical Protein similar to/, 'blastp_category is hypothetical with similarity');
+    }
 
 }
 

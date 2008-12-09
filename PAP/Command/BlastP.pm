@@ -127,6 +127,8 @@ sub parse_result {
     my @features = ( );
     
     ## There should be one result per query sequence.
+    ## The protein category is determined by the top (first) hit.
+    ## The dblink is also set from the top hit, unless it's 'hypothetical'.
   RESULT: while (my $result = $searchio->next_result()) {
 
         my $query_name = $result->query_name();
@@ -143,42 +145,51 @@ sub parse_result {
             my $hit_accession   = $hit->accession();
             my $hit_description = $hit->description();
             
-            if($hit_description !~ /hypothetical/i) {
+            my $hsp = $hit->next_hsp();
+            
+            unless (defined($hsp)) { next RESULT; }
+            
+            if (defined($hsp)) {
                 
-                my $hsp = $hit->next_hsp();
-                
-                unless (defined($hsp)) { next RESULT; }
+                my $score       = $hsp->score;
+                my $evalue      = $hsp->evalue;
+                my $pctid       = sprintf("%.1f", $hsp->percent_identity());
 
-                if (defined($hsp)) {
+                ## This is equivalent to the coverage reported by nrblast
+                my $pctcov      = sprintf("%.1f", (($hsp->num_identical() / $hit->logical_length('query')) * 100));
+                
+                my $qstart      = $hsp->start('query');
+                my $qend        = $hsp->end('query');
+                my $sstart      = $hsp->start('subject');
+                my $send        = $hsp->end('subject');
+                
+                if (($pctid >= 80) && ($pctcov >= 80)) {
                     
-                    my $score       = $hsp->score;
-                    my $evalue      = $hsp->evalue;
-                    my $pctid       = sprintf("%.1f",$hsp->percent_identity());
-                    my $qstart      = $hsp->start('query');
-                    my $qend        = $hsp->end('query');
-                    my $sstart      = $hsp->start('subject');
-                    my $send        = $hsp->end('subject');
-
-                    if ($pctid >= 80) {
+                    if ($hit_description =~ /fragment|homolog|hypothetical|like|predicted|probable|putative|related|similar|synthetic|unknown|unnamed/) {
                         
-                        if ($hit_description =~ /fragment|homolog|hypothetical|like|predicted|probable|putative|related|similar|synthetic|unknown|unnamed/) {
-
-                            $protein_category = 'Conserved Hypothetical Protein';
-                            
-                        }
-                        else {
-
-                            my $analogue = $hit_description;
-
-                            $analogue =~ s/\[.*\]//x;
-                            $analogue =~ s/\w+\|.+\|//;
-
-                            $protein_category = "Hypothetical Protein similar to $analogue";
-
-                        }
+                        $protein_category = 'Conserved Hypothetical Protein';
                         
                     }
-
+                    else {
+                        
+                        my $analogue = $hit_description;
+                        
+                        $analogue =~ s/\[.*\]//x;
+                        $analogue =~ s/\w+\|.+\|//;
+                        
+                        $protein_category = "Hypothetical Protein similar to $analogue";
+                        
+                    }
+                    
+                }
+                else {
+                    $protein_category = 'Hypothetical Protein';
+                }
+                
+                if($hit_description !~ /hypothetical/i) {
+                    
+                    $hit_description =~ s/>.*//;
+                    
                     $feature->add_tag_value('blastp_bit_score', $score);
                     $feature->add_tag_value('blastp_evalue', $evalue);
                     $feature->add_tag_value('blastp_percent_identical', $pctid);
@@ -187,6 +198,7 @@ sub parse_result {
                     $feature->add_tag_value('blastp_subject_start', $sstart);
                     $feature->add_tag_value('blastp_subject_end', $send);
                     $feature->add_tag_value('blastp_hit_name', $hit_name);
+                    $feature->add_tag_value('blastp_hit_description', $hit_description);
                     
                     my $dblink = Bio::Annotation::DBLink->new(
                                                               -database   => 'GenBank',
@@ -198,7 +210,7 @@ sub parse_result {
                 }
                 
             }
-
+            
         }
         
         $feature->add_tag_value('blastp_category', => $protein_category);
