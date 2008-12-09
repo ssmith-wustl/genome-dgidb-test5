@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
 
 class Genome::Model::Command::Build::Assembly::AddReadSetToProject::Newbler {
     is => 'Genome::Model::Command::Build::Assembly::AddReadSetToProject',
@@ -41,11 +42,14 @@ sub execute {
     $DB::single = $DB::stopper;
 
     my $model = $self->model;
+    
+    my $pp = Genome::ProcessingProfile->get( id => $model->processing_profile_id );
 
     my $assembly_directory = $model->assembly_directory;
     unless (-d $assembly_directory) {
 	my %new_assembly_params = (
 				   dir => $model->data_directory,
+				   assembler_version => $pp->assembler_version,
 				   );
 
         my $new_assembly = Genome::Model::Tools::454::Newbler::NewAssembly->create( %new_assembly_params );
@@ -64,6 +68,7 @@ sub execute {
 			  dir => $model->data_directory,
 			  runs => [$self->sff_file],
 			  is_paired_end => $self->read_set->is_paired_end,
+			  assembler_version => $pp->assembler_version,
 			  );
 
 #    if (defined $model->assembler_test) {
