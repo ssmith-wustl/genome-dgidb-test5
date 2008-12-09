@@ -1,7 +1,5 @@
 <?xml version='1.0' standalone='yes'?>
 <workflow name="inner protein annotation pipeline" parallelBy="fasta file" executor="Workflow::Executor::SerialDeferred">
-  <link fromOperation="input connector" fromProperty="interproscan feature" toOperation="cat seq feature"  toProperty="interproscan feature" />
-  <link fromOperation="input connector" fromProperty="keggscan feature"     toOperation="cat seq feature"  toProperty="keggscan feature" />
   <link fromOperation="input connector" fromProperty="fasta file"           toOperation="blastp"           toProperty="fasta_file" />
   <link fromOperation="input connector" fromProperty="fasta file"           toOperation="psortb"           toProperty="fasta_file" />
   <link fromOperation="input connector" fromProperty="gram stain"           toOperation="psortb"           toProperty="gram_stain" />
@@ -18,8 +16,6 @@
   <operation name="cat seq feature">
     <operationtype typeClass="Workflow::OperationType::Converge">
       <inputproperty>blastp feature</inputproperty>
-      <inputproperty>interproscan feature</inputproperty>
-      <inputproperty>keggscan feature</inputproperty>
       <inputproperty>psortb feature</inputproperty>
       <outputproperty>all features</outputproperty>
       <outputproperty>result</outputproperty>
@@ -28,8 +24,6 @@
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>fasta file</inputproperty>
     <inputproperty>gram stain</inputproperty>
-    <inputproperty>interproscan feature</inputproperty>
-    <inputproperty>keggscan feature</inputproperty>
     <outputproperty>bio seq features</outputproperty>
     <outputproperty>result</outputproperty>
   </operationtype>
