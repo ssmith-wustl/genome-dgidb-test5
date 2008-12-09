@@ -632,7 +632,7 @@ sub pretty_print_text {
 
 sub lock_directory {
     my $self = shift;
-    my $data_directory = $self->latest_build_directory;
+    my $data_directory = $self->data_directory;
     my $lock_directory = $data_directory . '/locks/';
     if (-d $data_directory and not -d $lock_directory) {
         mkdir $lock_directory;
