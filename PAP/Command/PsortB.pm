@@ -117,7 +117,7 @@ sub parse_psortb_terse {
     my $psort_fh = IO::File->new();
     $psort_fh->open("$psort_fn") or die "Can't open '$psort_fn': $OS_ERROR";
 
-    while (my $line = <$psort_fh>) {
+    LINE: while (my $line = <$psort_fh>) {
 
         chomp $line;
         
@@ -127,6 +127,8 @@ sub parse_psortb_terse {
         
         my ($gene, $class, $score) = split(/\t/,$line);
 
+        if ($class =~ /unknown/i) { next LINE; }
+        
         my $feature = Bio::SeqFeature::Generic->new(
                                                     -display_name => $gene,
                                                 );

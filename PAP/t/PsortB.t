@@ -7,7 +7,7 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 355;
+use Test::More tests => 205;
 
 BEGIN {
     use_ok('PAP::Command');
@@ -39,7 +39,8 @@ foreach my $feature (@{$ref}) {
     ok(@localizations == 1, 'has only one localization');
     ok(@scores == 1, 'has only one score');
 
-    like($localizations[0], qr/\w+/, 'localization is numeric');
+    unlike($localizations[0], qr/\unknown/i, 'localization is not unknown');
+    like($localizations[0], qr/\w+/, 'localization is alphanumeric');
     like($scores[0], qr/\d+\.\d+/, 'score is floating point');
     
 }
