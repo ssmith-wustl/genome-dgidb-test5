@@ -21,6 +21,10 @@ class Genome::Model::Tools::454::SeparateReadsWithCrossMatchAlignment {
                                  is => 'String',
                                  doc => 'The output file path',
                              },
+	    assembler_version => {
+		                  is => 'String',
+				  doc => 'Newbler assembler version to use',
+			      },
         ],
 };
 
@@ -97,7 +101,6 @@ sub execute {
             $self->error_message('For some reason no filehanlde exists for hit '. $subject_name);
             return;
         }
-        print $hit_fh $query_name ."\n";
     }
 
     for my $open_fh (values %open_fhs) {
@@ -114,6 +117,7 @@ sub execute {
                                                                                 in_sff_files => [$self->sff_file],
                                                                                 out_sff_file => $out_sff_file,
                                                                                 params => '-i '. $reads_file,
+										assembler_version => $self->assembler_version,
                                                                             );
         unless ($separate_reads_sfffile) {
             $self->error_message('Failed to create sffile genome-model tool');
