@@ -18,6 +18,11 @@ class Genome::Model::Command::Build::UpdateState {
                         id_by => 'build_id',
                         is_optional => 1,
                     },
+            force_flag => {
+                           is => 'Number',
+                           is_optional => 1,
+                           doc => 'This flag when False will bail out from modifying any existing events.  When set to true(1) this flag will force all events to an abandoned state.  For any other behaviour, leave undefined.',
+                         },
         ],
 };
 
@@ -32,7 +37,7 @@ sub execute {
         $self->build_id($model->current_running_build_id);
     }
     my $build = $self->build;
-    unless ($build->update_build_state) {
+    unless ($build->update_build_state($self->force_flag)) {
         $self->status_message('Build '. $self->build_id .' is still running');
     }
     return 1;
