@@ -123,7 +123,7 @@ sub setup_test_data {
                 phasing_pct                => -1,
                 prephasing_pct             => -1,
                 #these need to be valid for metric generation
-                clusters                   => 5000000,
+                filt_clusters                   => 5000000,
                 read_length                => 32, 
                 #seq_id                     => -1,
                 sral_id                    => -1,
