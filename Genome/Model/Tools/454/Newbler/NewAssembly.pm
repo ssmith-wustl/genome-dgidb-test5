@@ -3,13 +3,19 @@ package Genome::Model::Tools::454::Newbler::NewAssembly;
 use strict;
 use warnings;
 
+use Data::Dumper;
+
 class Genome::Model::Tools::454::Newbler::NewAssembly {
     is => 'Genome::Model::Tools::454::Newbler',
     has => [
             dir => {
-                    is => 'String',
+		    is => 'String',
                     doc => 'pathname of the output directory',
-                },
+                   },
+	    assembler_version => {
+		                  is => 'String',
+				  doc => 'newbler assembler version',
+			         },
         ],
 
 };
