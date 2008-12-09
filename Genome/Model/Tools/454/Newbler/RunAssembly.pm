@@ -8,7 +8,8 @@ class Genome::Model::Tools::454::Newbler::RunAssembly {
     has => [
 	    assembler_version => {
 		                  is => 'String',
-				  doc => 'Newbler tool assembler version to use',
+				  doc => 'Newbler assembler version tool to use',
+				  is_optional => 1,
 			      },
         ],
     has_optional => [
