@@ -23,6 +23,10 @@ class Genome::Model::Tools::454::IsolatePrimerTag {
                               default_value => 20,
                               doc => 'The length of the expected primer to isolate(default=20)',
                           },
+	    assembler_version => {
+		                  is => 'String',
+				  doc => 'Newbler assember version to use',
+			      },
         ],
 };
 
@@ -81,6 +85,7 @@ sub execute {
                                                                   in_sff_files => [$self->in_sff_file],
                                                                   out_sff_file => $self->out_sff_file,
                                                                   params => '-tr '. $tmp_trim_file,
+								  assembler_version => $self->assembler_version,
                                                               );
     unless ($read_trimmer->execute) {
         die ('Failed to trim file '. $self->in_sff_file);
