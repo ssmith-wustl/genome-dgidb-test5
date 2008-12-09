@@ -372,11 +372,8 @@ sub remove_data {
     # hangoff data.  do we need to check the contents?
     &_trap_messages('Genome::Model::Event');
     &_trap_messages('Genome::Model::Command::AddReads');  # Why didn't the above catch these, too?
-    SKIP: {
-          skip 'removing models just does not work yet', 2;
-          ok($self->model->delete,'successfully removed model');
-          ok(unlink($archive_file),'successfully unlinked archive file');
-    }
+    ok($self->model->delete,'successfully removed model');
+    ok(unlink($archive_file),'successfully unlinked archive file');
     my $directories_to_remove = $self->{_dir_array_ref};
     #print "Removing directories:\n";
     for my $directory_to_remove (@$directories_to_remove, @alignment_dirs) {
