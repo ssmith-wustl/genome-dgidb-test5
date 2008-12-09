@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
 
 my %PROPERTIES = &properties_hash;
 
@@ -47,6 +48,7 @@ sub properties_hash {
                                        },
 		      assembler_version => {
 			                     doc => 'Version of assembler to use',
+					     valid_values => ['2.0.00.20', '2.0.00.17', '2.0.00.12', '1.1.03.24.7', '1.1.03.24'],
 					 },
                       read_trimmer_name => {
                                             doc => 'The name of the software to use when trimming read sets',
