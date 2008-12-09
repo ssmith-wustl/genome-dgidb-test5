@@ -20,6 +20,7 @@ class Genome::Model::Tools::454 {
 	    assembler_version => {
 		                  is    => 'string',
 			          doc   => 'version of 454 application to use',
+				  is_optional => 1,
 	                         },
 
         ],
