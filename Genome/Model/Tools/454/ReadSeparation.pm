@@ -23,6 +23,7 @@ class Genome::Model::Tools::454::ReadSeparation {
 	    assembler_version => {
 		                  is => 'String',
 				  doc => 'Newbler assembler version to use',
+				  is_optional => 1,
 			      },
         ],
     has_many => [
