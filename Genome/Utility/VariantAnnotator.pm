@@ -8,7 +8,6 @@ use Finfo::Std;
 use Data::Dumper;
 use Genome::Info::CodonToAminoAcid;
 use Genome::Info::VariantPriorities;
-use MPSampleData::TranscriptSubStructure;
 use MG::ConsScore;
 use List::MoreUtils qw/ uniq /;
 use Benchmark;
@@ -17,17 +16,6 @@ my %trans_win :name(transcript_window:r) :isa('object');
 
 my %variant_priorities = Genome::Info::VariantPriorities->for_annotation;
 my %codon_to_single = Genome::Info::CodonToAminoAcid->single_letter;
-
-#- Variations -#
-#TODO  grep this stuff out of Genome
-#removed:
-#variations_for_indel, variations_for_snp, var_window accessor
-#prioritized_transcripts_for_indel
-#prioritized_transcripts_for_snp->prioritized_transcripts
-#transcripts_for_snp->transcripts
-#return $self->variation_window->scroll($indel{start}, $indel{stop});
-#return grep { $_->start eq $_->end } $self->variation_window->scroll($variant{start});
-
 
 #- Transcripts -#
 sub transcripts { # was transcripts_for_snp and transcripts_for_indel
