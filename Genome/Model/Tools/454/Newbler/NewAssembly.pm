@@ -15,6 +15,7 @@ class Genome::Model::Tools::454::Newbler::NewAssembly {
 	    assembler_version => {
 		                  is => 'String',
 				  doc => 'newbler assembler version',
+				  is_optional => 1,
 			         },
         ],
 
