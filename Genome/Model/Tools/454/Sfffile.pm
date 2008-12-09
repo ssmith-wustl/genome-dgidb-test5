@@ -25,6 +25,7 @@ class Genome::Model::Tools::454::Sfffile {
 	    assembler_version => {
 		                  is => 'string',
 				  doc => 'newbler assembler version',
+				  is_optional => 1,
 			      },
         ],
 };
