@@ -40,7 +40,7 @@ sub resolve_full_path {
     my $class = shift;
     my $read_set = shift;
 
-    my $full_path = '/gscmnt/833/info/medseq/sample_data/'. $read_set->run_name .'/'. $read_set->region_id .'/';
+    my $full_path = '/gscmnt/sata363/info/medseq/sample_data/'. $read_set->run_name .'/'. $read_set->region_id .'/';
     return $full_path;
 }
 
@@ -70,10 +70,17 @@ sub dump_to_file_system {
     $self->create_data_directory_and_link
         or return;
     unless ( -e $self->sff_file ) {
+        if (-d $self->full_path . '/processing') {
+            $self->error_message('Dump still processing: '. $self->full_path . '/processing');
+            return;
+        }
+        Genome::Utility::FileSystem->create_directory($self->full_path . '/processing')
+              or return;
         unless ( $self->run_region_454->dump_sff(filename => $self->sff_file) ) {
             $self->error_message('Failed to dump sff_file to '. $self->sff_file);
             return;
         }
+        rmdir $self->full_path . '/processing' or return;
     }
     return 1;
 }
