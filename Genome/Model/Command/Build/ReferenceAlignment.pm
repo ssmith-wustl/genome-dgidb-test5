@@ -10,6 +10,25 @@ class Genome::Model::Command::Build::ReferenceAlignment {
     has => [],
  };
 
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    
+    my $model = $self->model;
+
+    my @read_sets = $model->read_sets;
+
+    unless (scalar(@read_sets) && ref($read_sets[0])  &&  $read_sets[0]->isa('Genome::Model::ReadSet')) {
+        $self->error_message('No read sets have been added to model: '. $model->name);
+        $self->error_message("The following command will add all available read sets:\ngenome-model add-reads --model-id=".
+        $model->id .' --all');
+        return;
+    }
+    
+    return $self;
+}
+
 sub sub_command_sort_position { 40 }
 
 sub help_brief {

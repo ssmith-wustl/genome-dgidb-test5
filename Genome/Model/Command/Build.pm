@@ -40,17 +40,6 @@ sub create {
         die;
     }
 
-    my @read_sets = $model->read_sets;
-
-    # Temporary hack... PolyphredPolyscan and CombineVariants models do not have read sets...
-    unless ($model->isa("Genome::Model::PolyphredPolyscan") or $model->isa("Genome::Model::CombineVariants")) {
-        unless (scalar(@read_sets) && ref($read_sets[0])  &&  $read_sets[0]->isa('Genome::Model::ReadSet')) {
-            $self->error_message('No read sets have been added to model: '. $model->name);
-            $self->error_message("The following command will add all available read sets:\ngenome-model add-reads --model-id=".
-            $model->id .' --all');
-            return;
-        }
-    }
     $self->data_directory($self->resolve_data_directory);
     $model->current_running_build_id($self->build_id);
 
