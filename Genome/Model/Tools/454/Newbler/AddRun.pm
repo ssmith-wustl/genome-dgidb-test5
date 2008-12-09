@@ -24,6 +24,7 @@ class Genome::Model::Tools::454::Newbler::AddRun {
 	    assembler_version => {
 		                  is => 'String',
 				  doc => 'newbler assembler version',
+				  is_optional => 1,
 			      },
         ],
 
