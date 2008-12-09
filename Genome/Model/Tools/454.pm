@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-
+use Data::Dumper;
 use File::Temp;
 
 class Genome::Model::Tools::454 {
@@ -17,7 +17,6 @@ class Genome::Model::Tools::454 {
                             return $arch_os;
                         |
                     },
-
 	    assembler_version => {
 		                  is    => 'string',
 			          doc   => 'version of 454 application to use',
@@ -44,9 +43,7 @@ EOS
 
 sub create {
     my $class = shift;
-
     my $self = $class->SUPER::create(@_);
-
     my $tempdir = File::Temp::tempdir(CLEANUP => 1);
     $self->_tmp_dir($tempdir);
     return $self;
@@ -59,14 +56,12 @@ sub bin_path {
     
     if ($self->assembler_version) {
 	$base_path = '/gsc/pkg/bio/454/offInstrumentApps-'.$self->assembler_version;
-	    
     }
     else {
 	$base_path .= 'installed';
     }
 
     my $tail;
-
     if ($self->arch_os =~ /64/) {
         $tail = '-64/bin';
     }
