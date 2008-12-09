@@ -59,6 +59,8 @@ sub execute {
     $DB::single = $DB::stopper;
 
     my $model = $self->model;
+    
+    my $pp = Genome::ProcessingProfile->get( id => $model->processing_profile_id );
 
     #Need to dump fasta or convert from sff
     unless (-e $self->fasta_file) {
@@ -66,6 +68,7 @@ sub execute {
 			       sff_file => $self->sff_file,
 			       output_file => $self->fasta_file,
 			       params => '-s',
+			       assembler_version => $pp->assembler_version,
 			       );
 
         my $fasta_converter = Genome::Model::Tools::454::Sffinfo->create( %sff_info_params );
