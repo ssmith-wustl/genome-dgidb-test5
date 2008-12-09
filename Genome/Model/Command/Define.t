@@ -9,7 +9,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 160;
+use Test::More tests => 218;
 use Test::Differences;
 use File::Path;
 
@@ -23,6 +23,31 @@ my $default_pp_name = 'solexa_maq0_6_8';
 is(Genome::Model::Command::Define->help_brief,'Create a new genome model','help_brief test');
 like(Genome::Model::Command::Define->help_synopsis, qr(^genome-model create),'help_synopsis test');
 like(Genome::Model::Command::Define->help_detail,qr(^This defines a new genome model),'help_detail test');
+
+my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
+
+# test normal model and processing profile creation for reference alignment
+test_model_from_params(
+    model_params => {
+        model_name              => "test_model_incomplete_data_dir_$ENV{USER}",
+        subject_name            => $default_subject_name,
+        subject_type            => $default_subject_type,
+        processing_profile_name => $default_pp_name,
+        data_directory          => $tmp_dir,
+    },
+);
+
+test_model_from_params(
+    model_params => {
+        model_name              => "test_model_complete_data_dir_$ENV{USER}",
+        subject_name            => $default_subject_name,
+        subject_type            => $default_subject_type,
+        processing_profile_name => $default_pp_name,
+        data_directory          => $tmp_dir ."/test_model_complete_data_dir_$ENV{USER}",
+    },
+);
+
+
 # test normal model and processing profile creation for reference alignment
 test_model_from_params(
     model_params => {
@@ -174,15 +199,28 @@ sub successful_create_model {
     isa_ok($pp,'Genome::ProcessingProfile');
 
     my $subclass = join('', map { ucfirst($_) } split('\s+',$pp->type_name));
-    if ($params{'model_name'}) {
-        my $test_model_link_pathname = Genome::Model->model_links_directory . '/' . $params{'model_name'};
-        symlink('/tmp/', $test_model_link_pathname);
-    }
-
     if (!$params{subject_name}) {
         $params{subject_name} = 'invalid_subject_name';
     }
-
+    my $expected_model_name;
+    if ($params{model_name}) {
+        my $test_model_link_pathname = Genome::Model->model_links_directory . '/' . $params{'model_name'};
+        symlink('/tmp/', $test_model_link_pathname);
+        $expected_model_name = $params{model_name};
+    } else {
+        my $subject_name = Genome::Model::Command::Define->_sanitize_string_for_filesystem($params{subject_name});
+        $expected_model_name = $subject_name .'.'. $params{processing_profile_name};
+    }
+    my $expected_data_directory;
+    if ($params{data_directory}) {
+        my $base_name = File::Basename::basename($params{data_directory});
+        if ($expected_model_name eq $base_name) {
+            $expected_data_directory = $params{data_directory};
+        } else {
+            $expected_data_directory = $params{data_directory} .'/'. $expected_model_name;
+        }
+    }
+    
     my $create_command = Genome::Model::Command::Define::ReferenceAlignment->create(%params);
     isa_ok($create_command,'Genome::Model::Command::Define');
 
@@ -209,27 +247,26 @@ sub successful_create_model {
     }
     ok(scalar(@status_messages), 'There was a status message');
 
-    unless ($params{'model_name'}) {
-        my $subject_name = Genome::Model::Command::Define->_sanitize_string_for_filesystem($params{subject_name});
-        $params{'model_name'} = $subject_name .'.'. $params{processing_profile_name};
-    }
-
     like($status_messages[0], qr|Created model:|, 'First message is correct');
     # FIXME - some of those have a second message about creating a directory
     # should probably test for that too
-
-    my $model_name = delete($params{model_name});
+    delete($params{data_directory});
     delete($params{bare_args});
-    my $model = Genome::Model->get(name => $model_name,);
+    delete($params{model_name});
+    my $model = Genome::Model->get(name => $expected_model_name,);
     isa_ok($model,'Genome::Model::'. $subclass);
-    ok($model, 'creation worked for '. $model_name .' model');
-    is($model->name,$model_name,'model model_name accessor');
+    ok($model, 'creation worked for '. $expected_model_name .' model');
+    is($model->name,$expected_model_name,'model model_name accessor');
     for my $property_name (keys %params) {
         is($model->$property_name,$params{$property_name},$property_name .' model indirect accessor');
     }
 
     is($model->processing_profile_id,$pp->id,'model processing_profile_id indirect accessor');
     is($model->type_name,$pp->type_name,'model type_name indirect accessor');
+  SKIP: {
+        skip 'only test data_directory if one is expected', 1 unless $expected_data_directory;
+        is($model->data_directory,$expected_data_directory,'found expected data directory '. $expected_data_directory);
+    }
     for my $param ($pp->params) {
         my $accessor = $param->name;
         is($model->$accessor,$param->value,$accessor .' model indirect accessor');
