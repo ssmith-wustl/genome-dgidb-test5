@@ -27,7 +27,7 @@ class Genome::Model::Tools::454::Newbler::RunProject {
 
 
 sub help_brief {
-"genome-model tools newbler add-run --dir=DIR [--params='-r']";
+    "launch assembly (or reference alignment) on a given newbler project using the regions which have been added"
 }
 
 sub help_detail {
