@@ -32,7 +32,7 @@ class Genome::Model::Tools::454::Newbler::AddRun {
 
 
 sub help_brief {
-"genome-model tools newbler add-run --dir=DIR --inputs='FileA FileB'";
+    "add a 454 region to a newbler project"
 }
 
 sub help_detail {
