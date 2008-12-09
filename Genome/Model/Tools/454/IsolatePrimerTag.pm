@@ -26,6 +26,7 @@ class Genome::Model::Tools::454::IsolatePrimerTag {
 	    assembler_version => {
 		                  is => 'String',
 				  doc => 'Newbler assember version to use',
+				  is_optional => 1,
 			      },
         ],
 };
