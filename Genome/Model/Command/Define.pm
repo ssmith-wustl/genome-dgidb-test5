@@ -197,7 +197,14 @@ sub execute {
         subject_name => $self->subject_name,
         subject_type => $self->subject_type,
     );
-    $model_params{data_directory} = $self->data_directory if $self->data_directory;
+    if ($self->data_directory) {
+        my $model_name = File::Basename::basename($self->data_directory);
+        unless ($model_name eq $self->model_name) {
+            my $new_data_directory = $self->data_directory .'/'. $self->model_name;
+            $self->data_directory($new_data_directory);
+        }
+        $model_params{data_directory} = $self->data_directory;
+    }
     my $model = Genome::Model->create(%model_params);
     unless ( $model ) {
         $self->error_message('Could not create a model for: '. $self->subject_name);
