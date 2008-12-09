@@ -21,10 +21,12 @@ class Genome::Model::Tools::454::Sffinfo {
                        doc => 'The params to pass to sffinfo',
                    },
 	    assembler_version => {
-		                  is => 'string',
-				  doc => 'Newbler assembler version to use',
+		                  is => 'String',
+				  doc => 'Newbler version tool to use',
+				  is_optional => 1,
 			      },
         ],
+    
 };
 
 sub help_brief {
