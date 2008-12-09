@@ -6,6 +6,10 @@ use warnings;
 class Genome::Model::Tools::454::Newbler::RunAssembly {
     is => 'Genome::Model::Tools::454::Newbler',
     has => [
+	    assembler_version => {
+		                  is => 'String',
+				  doc => 'Newbler tool assembler version to use',
+			      },
         ],
     has_optional => [
                      params => {
