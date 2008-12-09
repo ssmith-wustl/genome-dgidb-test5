@@ -36,6 +36,7 @@ class Genome::Model::Tools::454::SffTrimWithSeqcleanReport {
 	    assembler_version => {
 		                  is => 'String',
 				  doc => 'Newbler assembler version to use',
+				  is_optional => 1,
 			      },
         ],
 };
