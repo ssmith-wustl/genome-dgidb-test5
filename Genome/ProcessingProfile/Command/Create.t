@@ -36,7 +36,7 @@ my %pp_params = (
         name => 'test_assembly',
         sequencing_platform => '454',
         assembler_name => 'newbler',
-        assembler_params => 'test',
+	assembler_params => 'test',
 	assembler_version => '2.0.00.20',
     },
     'MicroArrayAffymetrix' => {
