@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
 
 class Genome::Model::Tools::454::SffTrimWithSeqcleanReport {
     is => ['Genome::Model::Tools::454'],
@@ -32,6 +33,10 @@ class Genome::Model::Tools::454::SffTrimWithSeqcleanReport {
                              doc => 'a file path to the output sff file',
                              is_output => 1,
                          }
+	    assembler_version => {
+		                  is => 'String',
+				  doc => 'Newbler assembler version to use',
+			      },
         ],
 };
 
