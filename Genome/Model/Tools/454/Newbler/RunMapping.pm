@@ -14,6 +14,7 @@ class Genome::Model::Tools::454::Newbler::RunMapping {
 	    assembler_version => {
 		                  is => 'String',
 				  doc => 'Newbler tool assembler version to use',
+				  is_optional => 1,
 			      },
         ],
     has_optional => [
