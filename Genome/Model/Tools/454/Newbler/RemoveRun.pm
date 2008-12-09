@@ -14,6 +14,11 @@ class Genome::Model::Tools::454::Newbler::RemoveRun {
                        is => 'array',
                        doc => 'a list of sff files, directories, or fasta files',
                    },
+	    assembler_version => {
+		                  is => 'String',
+				  doc => 'Newbler version tool to use',
+				  is_optional => 1,
+			      },
         ],
 
 };
