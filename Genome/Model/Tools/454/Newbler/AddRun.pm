@@ -3,6 +3,8 @@ package Genome::Model::Tools::454::Newbler::AddRun;
 use strict;
 use warnings;
 
+use Data::Dumper;
+
 class Genome::Model::Tools::454::Newbler::AddRun {
     is => 'Genome::Model::Tools::454::Newbler',
     has => [
@@ -19,6 +21,10 @@ class Genome::Model::Tools::454::Newbler::AddRun {
                               doc => 'a flag for paired end status',
                               default_value => 0,
                           },
+	    assembler_version => {
+		                  is => 'String',
+				  doc => 'newbler assembler version',
+			      },
         ],
 
 };
@@ -40,6 +46,7 @@ sub execute {
     $DB::single = $DB::stopper;
     my $options = $self->is_paired_end ? ' -p ' : ' ';
     my $cmd = $self->full_bin_path('addRun') . $options . $self->dir .' '. join(' ',@{$self->runs});
+
     my $rv = system($cmd);
     unless ($rv == 0) {
         $self->error_message("non-zero return status from command '$cmd'");
