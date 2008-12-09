@@ -40,7 +40,7 @@ class Genome::Model::Tools::454::Newbler::RunAssembly {
 
 
 sub help_brief {
-"gt 454 newbler run-assembly --dir=DIR --ref-seq=PATH";
+    "launch a NON-PROJECT-BASED newbler denovo assembly"
 }
 
 sub help_detail {
