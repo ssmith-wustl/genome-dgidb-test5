@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
       
+use Regexp::Common;
+
 class Genome::ProcessingProfile::Command {
     is => 'Command',
     is_abstract => 1,
@@ -21,7 +23,14 @@ class Genome::ProcessingProfile::Command {
 ############################################
 
 sub help_brief {
-    return 'Operations for processing profile';
+    my $class = ref($_[0]) || $_[0];
+    return 'Operations for processing profile' if not $class or $class eq __PACKAGE__;
+    my ($func) = $class =~ /::(\w+)$/;
+    return sprintf('%s a processing profile', ucfirst($func));
+}
+
+sub help_detail {
+    return help_brief(@_);
 }
 
 ############################################
@@ -40,18 +49,25 @@ sub command_name_brief {
 
 ############################################
 
-sub create {
-    my $class = shift;
+sub _verify_processing_profile {
+    my $self = shift;
 
-    my $self = $class->SUPER::create(@_)
-        or return;
-    
     unless ( $self->processing_profile_id ) {
-        $self->error_message("A processing profile by id is required for this command");
+        $self->error_message("No processing profile id given");
         return;
     }
 
-    return $self;
+    unless ( $self->processing_profile_id =~ /^$RE{num}{int}$/ ) {
+        $self->error_message( sprintf('Processing profile id given (%s) is not an integer', $self->processing_profile_id) );
+        return;
+    }
+
+    unless ( $self->processing_profile ) {
+        $self->error_message( sprintf('Can\'t get processing profile for id (%s) ', $self->processing_profile_id) );
+        return;
+    }
+
+    return 1;
 }
 
 1;
