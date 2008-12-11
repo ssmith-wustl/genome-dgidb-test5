@@ -10,11 +10,6 @@ class Genome::Model::Tools::454::Newbler::RunProject {
                     is => 'String',
                     doc => 'pathname of the output directory for project',
                 },
-	    assembler_version => {
-		                  is => 'String',
-				  doc => 'Newbler version tool to use',
-				  is_optional => 1,
-			      },
         ],
     has_optional => [
                      params => {
