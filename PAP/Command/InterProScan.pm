@@ -119,7 +119,7 @@ sub parse_result {
 
 
     my $iprscan_fh = $self->iprscan_output();
-
+    
     my @features = ( );
     
     while (my $line = <$iprscan_fh>) {
@@ -145,16 +145,36 @@ sub parse_result {
             $go_description,
         ) = split /\t/, $line;
 
-        if ($ipr_number ne 'NULL') {
+        ## Some selection criteria of Prat's
+        ## refactored to be easier on the eyes
+        ## and brain:
+        if (
+            ($ipr_number ne 'NULL') &&
+            (
+             ($evalue eq 'NA') ||
+             ($evalue <= 0.01)
+         )
+        ){
+
+            ## More Prat logic...this had me
+            ## scratching my head, too...
+            if ($evalue eq 'NA') {
+                $evalue = 1e10;
+            }
 
             my $feature = Bio::SeqFeature::Generic->new(
                                                         -display_name => $protein_name,
+                                                        -primary      => $analysis_method,
+                                                        -source_tag   => 'InterPro',
+                                                        -start        => $start,
+                                                        -end          => $end,
+                                                        -score        => $evalue,
                                                     );
-
+            
             $feature->add_tag_value('interpro_analysis',    $analysis_method);
             $feature->add_tag_value('interpro_evalue',      $evalue);
             $feature->add_tag_value('interpro_description', $ipr_description);
-
+            
             my $dblink = Bio::Annotation::DBLink->new(
                                                       -database   => 'InterPro',
                                                       -primary_id => $ipr_number,
