@@ -56,8 +56,8 @@ sub open_file_dialog
  	my $response = $fc->run;
  	my $file = $fc->get_filename;
   	$fc->destroy;
-	$self->current_file($file);
-	$self->open_file;
+#	$self->current_file($file);
+	$self->open_file($file);
 }
 
 my %cmp_hash = (x => 30, X => 30, y => 31, Y=>31);
