@@ -217,7 +217,7 @@ sub set_project_consedrc {
 sub open_consed
 {
     my ($self, $proj_name) = @_;
-    my $relative_target_base_pos = 300;
+    my $relative_target_base_pos = 1001;
     my $consed= 'cs';
     my($file, $dir)= fileparse($self->current_file);
     my $suffix = '.1';
