@@ -12,41 +12,43 @@ class Genome::Model::Command::Define {
     is => 'Command',
     is_abstract => 1,
     has => [
-    processing_profile_name => {
-        is => 'Integer', 
-        is_optional => 0,
-        is_input => 1,
-        doc => 'identifies the processing profile by name' 
-    },
-    subject_name => {
-        is => 'varchar',
-        len => 255,
-        is_input => 1,
-        doc => 'The name of the subject all the reads originate from'
-    },
-    subject_type => {
-        is => 'varchar',
-        len => 255,
-        is_input => 1,
-        doc => 'The type of subject all the reads originate from'
-    },
-    ],
-    has_optional => [
-    model_name => {
-        is => 'varchar',
-        len => 255,
-        is_input => 1,
-        doc => 'User meaningful name for this model (default value: $SUBJECT_NAME.$PP_NAME)'
-    },
-    data_directory => {
-        is => 'varchar',
-        len => 255,
-        is_input => 1,
-        doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
-    },
+        processing_profile_name => {
+            is => 'Integer', 
+            is_optional => 0,
+            is_input => 1,
+            doc => 'identifies the processing profile by name' 
+        },
+        subject_name => {
+            is => 'varchar',
+            len => 255,
+            is_input => 1,
+            doc => 'The name of the subject all the reads originate from'
+        },
+        subject_type => {
+            is => 'varchar',
+            len => 255,
+            is_input => 1,
+            doc => 'The type of subject all the reads originate from'
+        },
+        ],
+        has_optional => [
+        model_name => {
+            is => 'varchar',
+            len => 255,
+            is_input => 1,
+            doc => 'User meaningful name for this model (default value: $SUBJECT_NAME.$PP_NAME)'
+        },
+        data_directory => {
+            is => 'varchar',
+            len => 255,
+            is_input => 1,
+            doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
+        },
     ],
     schema_name => 'Main',
 };
+
+sub sub_command_sort_position { 1 }
 
 ###################################################
 
@@ -95,15 +97,14 @@ sub sub_command_classes {
 
 sub help_brief {
     my $model_type = $_[0]->_model_type;
-
-    return ( $model_type )
-    ? "Create a new genome model for $model_type"
-    : "Create a new genome model";
+    my $msg = ($model_type ? "$model_type data model" : "data model");
+    $msg = "define a new $msg, representing knowledge about the genome of some subject with a specific processing profile"; 
+    return $msg;
 }
 
 sub help_synopsis {
     return <<"EOS"
-genome-model create
+genome model define 
   --model-name test5
   --subject_name ley_aml_patient1_tumor
   --processing-profile-name nature_aml_08

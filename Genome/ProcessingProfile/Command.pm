@@ -21,6 +21,7 @@ class Genome::ProcessingProfile::Command {
         doc => 'Identifies the genome processing profile by id',
     },
     ],
+    doc => 'work with processing profiles.',
 };
 
 ############################################
@@ -35,8 +36,6 @@ sub help_brief {
 sub help_detail {
     return help_brief(@_);
 }
-
-############################################
 
 sub command_name {
     my $class = ref($_[0]) || $_[0];

@@ -10,15 +10,15 @@ class Genome::InstrumentData::Command {
     is_abstract => 1,
     english_name => 'genome instrument_data command',
     has => [
-    instrument_data => { is => 'Genome::InstrumentData', id_by => 'instrument_data_id' },
-    instrument_data_id => { is => 'Integer', doc => 'identifies the instrument data by id' },
+        instrument_data => { is => 'Genome::InstrumentData', id_by => 'instrument_data_id' },
+        instrument_data_id => { is => 'Integer', doc => 'identifies the instrument data by id' },
     ],
 };
 
 ############################################
 
 sub help_brief {
-    return 'Operations for instrument data';
+    return 'work with instrument data';
 }
 
 ############################################

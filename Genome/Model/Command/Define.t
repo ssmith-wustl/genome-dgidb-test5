@@ -1,8 +1,5 @@
 #!/gsc/bin/perl
 
-# This test confirms the ability to create a processing profile and then create
-# a genome model using that processing profile
-
 use strict;
 use warnings;
 
@@ -20,8 +17,8 @@ my $default_subject_name = 'H_GV-933124G-skin1-9017g';
 my $default_subject_type = 'sample_name';
 my $default_pp_name = 'solexa_maq0_6_8';
 
-is(Genome::Model::Command::Define->help_brief,'Create a new genome model','help_brief test');
-like(Genome::Model::Command::Define->help_synopsis, qr(^genome-model create),'help_synopsis test');
+like(Genome::Model::Command::Define->help_brief,qr/define/i,'help_brief test');
+like(Genome::Model::Command::Define->help_synopsis, qr(genome model define),'help_synopsis test');
 like(Genome::Model::Command::Define->help_detail,qr(^This defines a new genome model),'help_detail test');
 
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
@@ -296,7 +293,15 @@ sub failed_create_model {
     $create_command->queue_error_messages(1);
     $create_command->queue_warning_messages(1);
     $create_command->queue_status_messages(1);
-    ok(!$create_command->execute, 'create command execution failed');
+    {
+        *OLD = *STDOUT;
+        my $variable;
+        open OUT ,'>',\$variable;
+        *STDOUT = *OUT;
+        ok(!$create_command->execute, 'create command execution failed');
+        *STDOUT = *OLD;
+    };
+
     my @error_messages = $create_command->error_messages();
     my @warning_messages = $create_command->warning_messages();
     my @status_messages = $create_command->status_messages();

@@ -31,7 +31,7 @@ class Genome::Model::Command::AddReads {
 };
 
 
-sub sub_command_sort_position { 3 }
+sub sub_command_sort_position { 102 }
 
 sub help_brief {
     "launch the pipeline of steps which adds reads to a model"

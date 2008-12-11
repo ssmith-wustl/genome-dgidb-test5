@@ -1,22 +1,22 @@
-package Genome::Model::Command::List::Individuals;
+package Genome::Library::Command::List;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Command::List::Individuals {
+class Genome::Library::Command::List {
     is => 'UR::Object::Command::List',
     has => [
         subject_class_name  => {
             is_constant => 1, 
-            value => 'Genome::Individual'
+            value => 'Genome::Library' 
         },
         show => { default_value => 'id,name' },
     ],
 };
 
-sub sub_command_sort_position { 3 }
+sub sub_command_sort_position { 4 }
 
 1;
 

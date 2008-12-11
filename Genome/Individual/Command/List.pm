@@ -1,11 +1,11 @@
-package Genome::Model::Command::List::Individuals;
+package Genome::Individual::Command::List;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Command::List::Individuals {
+class Genome::Individual::Command::List {
     is => 'UR::Object::Command::List',
     has => [
         subject_class_name  => {

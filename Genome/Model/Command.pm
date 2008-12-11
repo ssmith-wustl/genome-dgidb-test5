@@ -10,12 +10,12 @@ use Regexp::Common;
 
 class Genome::Model::Command {
     is => 'Command',
-    english_name => 'genome model command',
     has => [
         model           => { is => 'Genome::Model', id_by => 'model_id' },
         model_id        => { is => 'Integer', doc => 'identifies the genome model by id' },
         model_name      => { is => 'String', via => 'model', to => 'name' },
     ],
+    doc => "work with genome models",
 };
 
 sub command_name {
@@ -28,12 +28,6 @@ sub command_name_brief {
     my $class = ref($_[0]) || $_[0];
     return $class->SUPER::command_name_brief unless $class eq __PACKAGE__;
     return 'model';
-}
-
-sub help_brief {
-    my $class = ref($_[0]) || $_[0];
-    return "Please define 'help_brief' in ($class)" unless $class eq __PACKAGE__;
-    return 'Operations for model';
 }
 
 sub create {

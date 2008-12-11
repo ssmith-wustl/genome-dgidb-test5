@@ -162,12 +162,21 @@ sub _hint_string {
     return;
 }
 
+sub _base_filter {
+    return;
+}
+
+sub _complete_filter {
+    my $self = shift;
+    return join(',',$self->_base_filter,$self->filter);
+}
+
 sub _fetch
 {
     my $self = shift;
     my ($bool_expr, %extra) = UR::BoolExpr->create_from_filter_string(
         $self->subject_class_name, 
-        $self->filter, 
+        $self->_complete_filter, 
         $self->_hint_string
     );
 

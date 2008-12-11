@@ -146,6 +146,8 @@ sub execute {
 sub _execute_inline_event {
     my($self,$event_id) = @_;
 
+    $DB::single = $DB::stopper;
+
     my $event = Genome::Model::Event->get($event_id);
     unless ($event->model_id == $self->model_id) {
         $self->error_message("The model id for the loaded event ".$event->model_id.

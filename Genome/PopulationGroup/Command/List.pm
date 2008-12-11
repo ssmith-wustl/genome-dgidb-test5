@@ -1,16 +1,16 @@
-package Genome::Model::Command::List::Individuals;
+package Genome::PopulationGroup::Command::List;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Command::List::Individuals {
+class Genome::PopulationGroup::Command::List {
     is => 'UR::Object::Command::List',
     has => [
         subject_class_name  => {
             is_constant => 1, 
-            value => 'Genome::Individual'
+            value => 'Genome::PopulationGroup'
         },
         show => { default_value => 'id,name' },
     ],

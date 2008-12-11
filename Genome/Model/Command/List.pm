@@ -12,7 +12,7 @@ class Genome::Model::Command::List {
     is => ['Genome::Model::Command', 'UR::Object::Command::List'],
 };
 
-sub sub_command_sort_position { 2 }
+sub sub_command_sort_position { 104 }
 
 sub help_brief {
     "list information about genome models and available runs"

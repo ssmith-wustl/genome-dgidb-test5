@@ -21,9 +21,12 @@ class Genome::Model::Command::Build {
         hold_run_jobs  => { is => 'Boolean', default_value => 0, is_transient => 1, 
                          doc => 'A flag to hold all lsf jobs that are scheduled in run-jobs' },
     ],
+    doc => "build the model with currently assigned instrument data according to the processing profile",
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+sub sub_command_sort_position { 3 }
 
 sub create {
     my $class = shift;

@@ -15,24 +15,15 @@ class Genome::Model::Command::Remove {
                          is => 'Integer',
                          doc => 'The model_id of the model you wish to remove',
                      }
-        ]
+        ],
+    doc => "remove a genome-model",
 };
 
-sub sub_command_sort_position { 2 }
-
-sub help_brief {
-    "remove a genome-model"
-}
+sub sub_command_sort_position { 4 }
 
 sub help_synopsis {
     return <<"EOS"
     genome-model remove FooBar
-EOS
-}
-
-sub help_detail {
-    return <<"EOS"
-This command deletes the specified genome model.
 EOS
 }
 

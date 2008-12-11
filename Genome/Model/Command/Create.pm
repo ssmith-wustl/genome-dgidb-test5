@@ -14,7 +14,7 @@ sub help_brief {
     "creation of new models, processing profiles, etc" 
 }
 
-sub sub_command_sort_position { 1 }
+sub sub_command_sort_position { 101 }
 
 1;
 

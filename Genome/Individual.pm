@@ -1,7 +1,7 @@
 
 package Genome::Individual;
 
-# Adaptor for GSC::Organism::Sample
+# Adaptor for GSC::Organism::Individual
 
 # Do NOT use this module from anything in the GSC schema,
 # though the converse will work just fine.

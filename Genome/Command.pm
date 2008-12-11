@@ -10,21 +10,37 @@ require File::Basename;
 
 class Genome::Command {
     is => 'Command',
-    english_name => 'genome command',
 };
+         
+my @SUB_COMMANDS = qw/
+    project    
+    population-group     
+    individual        
+    sample     
+    library
+    instrument-data       
+    processing-profile     
+    model                  
+    tools                  
+/;
 
-our @SUB_COMMAND_DATA = (
-    #'project'               => 'Genome::Project::Command',
-    #'sample'                => 'Genome::Sample::Command',
-    #'population-group'      => 'Genome::PopulationGroup::Command',
-    'instrument-data'       => 'Genome::InstrumentData::Command',
-    'processing-profile'    => 'Genome::ProcessingProfile::Command',
-    'model'                 => 'Genome::Model::Command',
-    'tools'                 => 'Genome::Model::Tools',
-);
-our %SUB_COMMAND_CLASSES = @SUB_COMMAND_DATA;
+our %SUB_COMMAND_CLASSES = 
+    map {
+        my @words = split(/-/,$_);
+        my $class = join("::",
+            'Genome',
+            join('',map{ ucfirst($_) } @words),
+            'Command'
+        );
+        ($_ => $class);
+    }
+    @SUB_COMMANDS;
 
-for my $class ( values %SUB_COMMAND_CLASSES ) {
+$SUB_COMMAND_CLASSES{'tools'} = 'Genome::Model::Tools';
+
+our @SUB_COMMAND_CLASSES = map { $SUB_COMMAND_CLASSES{$_} } @SUB_COMMANDS;
+
+for my $class ( @SUB_COMMAND_CLASSES ) {
     eval("use $class;");
     die $@ if $@; 
 }
@@ -47,8 +63,12 @@ sub is_sub_command_delegator {
     return 1;
 }
 
+sub sorted_sub_command_classes {
+    return @SUB_COMMAND_CLASSES;
+}
+
 sub sub_command_classes {
-    return values %SUB_COMMAND_CLASSES;
+    return @SUB_COMMAND_CLASSES;
 }
 
 sub class_for_sub_command {

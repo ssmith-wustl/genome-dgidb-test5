@@ -515,6 +515,7 @@ sub resolve_reports_directory {
 
 sub available_reports {
     my $self=shift;
+    $DB::single = 1;
     my $report_dir = $self->resolve_reports_directory;
     my %report_file_hash;
     my @report_subdirs = glob("$report_dir/*");

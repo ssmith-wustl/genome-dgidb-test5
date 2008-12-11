@@ -4,19 +4,33 @@ use strict;
 use warnings;
 
 use Genome;
-use Command; 
-use Data::Dumper;
 
 class Genome::InstrumentData::Command::List {
-    is => 'UR::Object::Command::List',
-    has => [
-    subject_class_name  => {
-        is_constant => 1, 
-        value => 'Genome::InstrumentData' 
-    },
-    #show => { default_value => 'id,name,subject_name,processing_profile_name' },
-    ],
+    is => 'Command',
+    is_abstract => 1,
 };
+
+############################################
+
+sub help_brief {
+    return 'list instrument data';
+}
+
+############################################
+
+sub Xcommand_name {
+    my $class = ref($_[0]) || $_[0];
+    return $class->SUPER::command_name unless $class eq __PACKAGE__;
+    return 'genome instrument-data list';
+}
+
+sub Xcommand_name_brief {
+    my $class = ref($_[0]) || $_[0];
+    return $class->SUPER::command_name_brief unless $class eq __PACKAGE__;
+    return 'instrument-data';
+}
+
+############################################
 
 1;
 

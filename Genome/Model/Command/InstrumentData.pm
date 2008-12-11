@@ -8,15 +8,10 @@ use Genome;
 class Genome::Model::Command::InstrumentData {
     is => 'Genome::Model::Command',
     is_abstract => 1,
+    doc => "assign instrument data to a model, or work with assigned data",
 };
 
-sub help_brief {
-    return "Operations for model's instrument data";
-}
-
-sub help_detail {
-    return hlpe_brief();
-}
+sub sub_command_sort_position { 2 }
 
 1;
 

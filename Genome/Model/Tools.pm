@@ -16,7 +16,7 @@ sub command_name {
 }
 
 sub help_brief {
-    "Bioinformatics tools for genomics."
+    "bioinformatics tools for genomics"
 }
 
 
