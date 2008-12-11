@@ -14,7 +14,7 @@ use File::Basename ('fileparse');
 use base qw(Class::Accessor);
 use Time::HiRes qw(usleep);
 Genome::Model::Tools::ManualReview::MRGui->mk_accessors(qw(current_file g_handle re_g_handle header));
-=pod
+
 my %iub_hash = ( A => 1,
                 C => 2,
                 G => 3,
@@ -46,7 +46,7 @@ sub new
     return $self;
 }
 
-sub open_project_dialog
+sub open_file_dialog
 {
 	my ($self,@parms) = @_;
 	my $fc = Gtk2::FileChooserDialog->new("Open File",undef, 'open',
@@ -56,10 +56,9 @@ sub open_project_dialog
  	my $response = $fc->run;
  	my $file = $fc->get_filename;
   	$fc->destroy;
-	$self->open_file($file);
+	$self->current_file($file);
+	$self->open_file;
 }
-
-
 
 my %cmp_hash = (x => 30, X => 30, y => 31, Y=>31);
 for(my $i=0;$i<30;$i++) { $cmp_hash{$i}=$i; }
@@ -78,111 +77,6 @@ sub chrom_sort
 	}
     
 }
-
-sub load_variant_review_details
-{
-    my ($self, $name, $reviewer, $build_id, $dump_date) = @_;
-    #create snp file
-    my $review_list = Genome::VariantReviewList->get("name like" => $review_list_name);
-    
-    my @variant_review_details = $review_list->details;
-    
-    
-    #get review details from database
-    my @det_column_names = map { $_->column_name } $variant_review_detail[0]->_subject_class_filterable_properties;
-    my @det_property_names = map { $_->property_name } $variant_review_detail[0]->_subject_class_filterable_properties;
-    my %col_hash;
-    my %det_col_hash;
-    for(my $i=0;$i<@det_column_names;$i++)
-    {
-        $det_col_hash{$det_column_names[$i]}=$col_hash{$det_column_names[$i]} = $det_property_names[$i];
-    }
-    
-
-    #get corresponding variant reviews from database
-    #first set up column to property mapping
-    my @props =sort { 
-        $a->property_name cmp $b->property_name
-    } grep {
-        $_->column_name ne ''
-    } Genome::SNVManualReview->get_class_object->get_all_property_objects;
-    my @rev_column_names = map { $_->column_name } @props;
-    my @rev_property_names = map { $_->property_name } @props;
-    my %rev_col_hash;
-    for(my $i=0;$i<@rev_column_names;$i++)
-    {
-        $rev_col_hash{$rev_column_names[$i]} = $col_hash{$rev_column_names[$i]} = $rev_property_names[$i];
-    }
-    $self->header([@column_names, @rev_column_names]);
-    
-    my %detail_rev_hash;
-    
-    foreach my $det (@variant_review_details)
-    {
-        my @reviews = Genome::SNVManualReview->get(detail_id => $det->id,                                                   
-                                                  build_id => $build_id, 
-                                                  dump_date => $dump_date);
-        $detail_rev_hash{$det->id} = \@reviews;            
-    }    
-    
-    #insert into GTK treeview
-    my @col_order = $self->get_col_order(@{$self->header});
-    my $col_count = scalar @col_order;
-    my $model = Gtk2::ListStore->new(('Glib::String')x($col_count+1));
-    $tree->set_model($model);
-    $model->set_sort_func (0, \&chrom_sort);
-    foreach my $det (@variant_review_details)
-    {
-        my $iter = $model->append;
-        my @reviews;
-        @reviews = @{$detail_rev_hash{$det->id}} if defined $detail_rev_hash{$det->id};
-        my ($review) = grep { $_->reviewer eq $ENV{USER_NAME} } @reviews;
-        for(my $i = 0;$i<@col_order;$i++)
-        {
-            $model->set($iter,
-            $i => $det->$col_hash{$col_order[$i]}) if exists $det_col_hash{$col_order[$i]};
-            
-            $model->set($iter,
-            $i => $review->$col_hash{$col_order[$i]}) if (exists $rev_col_hash{$col_order[$i]} && defined $review);            
-        }
-        $model->set($iter,
-        $i => $detail_rev_hash{$det->id});            
-    }
-    $model->set_sort_column_id(0,'GTK_SORT_ASCENDING');
-
-}
-
-sub open_project
-{
-	my ($self,$file) = @_;
-	$self->current_file($directory."/.mr_project");
-	return unless (-e $directory."/.mr_project");
-
-    my $proj_file = IO::File->new($self->current_file);
-    my %proj_hash;
-    while( my $line = <$proj_file>)
-    {
-        chomp $line;
-        my ($key, $value) = split /:\s+/, $line;
-        $proj_hash{$key} = $value;
-    }
-    
-    $self->header = [ $variant_review_detail[0]->_subject_class_filterable_properties ];
-    my $handle = $self->g_handle;
-    my $tree = $handle->get_widget("review_list");
-
-    
-    my @col_order = $self->get_col_order(@{$self->header});
-    my $col_count = scalar @col_order;
-    my $model = Gtk2::ListStore->new(('Glib::String')x$col_count);
-    $tree->set_model($model);
-    $model->set_sort_func (0, \&chrom_sort);
-    $self->proj_info(\$proj_hash);
-    $self->load_variant_review_details($proj_hash{NAME}, $ENV{USERNAME}, $proj_hash{BUILD_ID}, $proj_hash{DUMP_DATE});
-}
-
-
-
 
 sub build_review_tree
 {
@@ -217,8 +111,6 @@ sub build_review_tree
                         ('Somatic Status', Gtk2::CellRendererText->new, text => 11),
          Gtk2::TreeViewColumn->new_with_attributes
                         ('Data Needed', Gtk2::CellRendererText->new, text => 12),
-         Gtk2::TreeViewColumn->new_with_attributes
-                        ('Number of Reviews', Gtk2::CellRendererText->new, text => 13),
                                                 
         );
     foreach (@col)
@@ -392,9 +284,8 @@ sub get_col_order
         'notes',
         'somatic_status',
         'data_needed',
-        'number_of_reviews',
     );
-    my %vis_cols = map { $_,1,uc($_),1; } @vis_cols;
+    my %vis_cols = map { $_,1; } @vis_cols;
     
     foreach my $col (@$header)
     {
@@ -403,24 +294,111 @@ sub get_col_order
     return @vis_cols;
 }
 
-sub get_col_mapping
+sub open_file
 {
-    my ($self) = @_;
-    
+	my ($self,$file) = @_;
 
+	return unless (-e $file);
+	$self->current_file($file);    
 
+    my $handle = $self->g_handle;
+    my $tree = $handle->get_widget("review_list");
 
+    my $list_reader = Genome::Utility::VariantReviewListReader->new($self->current_file, '|');
+    $self->header($list_reader->{separated_value_reader}->headers);
+     
+    my @col_order = $self->get_col_order(@{$self->header});
+    my $col_count = scalar @col_order;
+    my $model = Gtk2::ListStore->new(('Glib::String')x$col_count);
+    $tree->set_model($model);
+    $model->set_sort_func (0, \&chrom_sort);
+    while (my $line_hash = $list_reader->next_line_data())
+    {
+        last unless $line_hash;
+        if ($line_hash->{header}) { print $line_hash->{header},"\n"; }
+        next if $line_hash->{header};
+        my $iter = $model->append;
 
-
+        for(my $i = 0;$i<@col_order;$i++)
+        {
+            $model->set($iter,
+            $i => delete $line_hash->{$col_order[$i]});
+        }            
+    }
+    $model->set_sort_column_id(0,'GTK_SORT_ASCENDING');
 }
-
-
 
 sub open_cb
 {
 	my ($tree, $mpath, $col, $self)=@_;
     
     $self->on_review_button_clicked;    
+}
+
+sub save_file
+{
+    my ($self) = @_;
+    my $fh = IO::File->new(">".$self->current_file."-1");
+    my @col_order = $self->get_col_order;
+
+    my $tree = $self->g_handle->get_widget("review_list");
+    my $model = $tree->get_model;
+    my $header = join '|',@col_order;
+    $header .= "\n";
+    print $fh $header;
+    my $iter = $model->get_iter_first;
+    do
+    {   
+        my @cols = $model->get($iter);
+        my $row = join '|',@cols;
+        $row .= "\n";
+        print $fh $row;    
+    }
+    while($iter = $model->iter_next($iter));
+    
+    $fh->close;
+}
+
+sub on_save_file
+{
+	my ($self) = @_;
+	
+	unless(defined $self->current_file)
+	{
+		$self->save_file_as_dialog;
+	}
+	if(defined $self->current_file)
+	{
+		$self->save_file;
+	}	
+}
+
+sub save_file_dialog
+{
+	my ($self) = @_;
+	my $fc = Gtk2::FileChooserDialog->new("Save File As",undef, 'save',
+	'gtk-cancel' => 'cancel',
+	'gtk-ok' => 'ok');
+  	$fc->set_select_multiple(0);
+	if($self->current_file)
+	{
+  		$fc->set_current_folder ($self->current_file);
+ 	}
+	my $response = $fc->run;
+ 	my $file = $fc->get_filename;
+  	$fc->destroy;
+	$self->current_file($file);	
+}
+
+sub on_save_file_as
+{
+	my ($self) = @_;
+	
+	$self->save_file_as_dialog;
+	if(defined $self->current_file)
+	{
+		$self->save_file;
+	}
 }
 
 sub on_re_ok
@@ -472,7 +450,6 @@ sub on_review_button_clicked
     my $g_handle = $self->g_handle;
     my $glade = new Gtk2::GladeXML("/gscuser/jschindl/svn/dev/perl_modules/Genome/manual_review/manual_review.glade","review_editor");
     $self->re_g_handle($glade);
-    my $proj = $self->project_settings;
     #$glade->signal_autoconnect_from_package($self);
     my $review_editor = $glade->get_widget("review_editor");
     if(defined $self->{last_x} && defined $self->{last_y})
@@ -492,17 +469,6 @@ sub on_review_button_clicked
     $cancel->signal_connect("clicked", sub { $self->on_review_editor_destroy($review_editor); });
     my $ok = $glade->get_widget("re_ok");
     $ok->signal_connect("clicked", \&on_re_ok,[$self, $glade,$review_editor, $model, $row]);
-    
-    
-    my ($review) = Genome::SNVManualReview->get('reviewer like' => $proj->{USERNAME}.'%', 
-                                                build_id => $proj->{BUILD_ID},
-                                                dump_date => $proj->{DUMP_DATE},
-                                                detail_id => 
-    
-    if(!$review)
-    {
-        $review = Genome::SNVManualReview->create(
-    }
     #set widgets
 
     my %pf = (Pass => 1, Fail => 2);
@@ -619,14 +585,6 @@ sub save_row
     $model->set($row, 10 => $text) if defined $text;    
 
     return 1;
-}
-
-sub save_to_db
-{
-    my ($self, $model, $row, $glade
-
-
-
 
 }
 
@@ -671,5 +629,5 @@ sub gtk_main_quit
 {
     Gtk2->main_quit;	
 }
-=cut
+
 1;
