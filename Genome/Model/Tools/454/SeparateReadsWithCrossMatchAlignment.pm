@@ -21,10 +21,6 @@ class Genome::Model::Tools::454::SeparateReadsWithCrossMatchAlignment {
                                  is => 'String',
                                  doc => 'The output file path',
                              },
-	    assembler_version => {
-		                  is => 'String',
-				  doc => 'Newbler assembler version to use',
-			      },
         ],
 };
 
@@ -117,7 +113,7 @@ sub execute {
                                                                                 in_sff_files => [$self->sff_file],
                                                                                 out_sff_file => $out_sff_file,
                                                                                 params => '-i '. $reads_file,
-										assembler_version => $self->assembler_version,
+										version => $self->version,
                                                                             );
         unless ($separate_reads_sfffile) {
             $self->error_message('Failed to create sffile genome-model tool');
