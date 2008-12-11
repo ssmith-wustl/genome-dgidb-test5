@@ -338,7 +338,7 @@ sub open_cb
 sub save_file
 {
     my ($self) = @_;
-    my $fh = IO::File->new(">".$self->current_file."-1");
+    my $fh = IO::File->new(">".$self->current_file);
     my @col_order = $self->get_col_order;
 
     my $tree = $self->g_handle->get_widget("review_list");
@@ -373,7 +373,7 @@ sub on_save_file
 	}	
 }
 
-sub save_file_dialog
+sub save_file_as_dialog
 {
 	my ($self) = @_;
 	my $fc = Gtk2::FileChooserDialog->new("Save File As",undef, 'save',
