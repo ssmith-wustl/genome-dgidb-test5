@@ -131,6 +131,11 @@ sub create {
         or return;
 
     # Verify subject_type
+    unless ( $self->subject_type ) {
+        $self->error_message("No subject type given.");
+        return;
+    }
+
     unless ( grep { $self->subject_type eq $_ } subject_types() ) {
         $self->error_message(
             sprintf(
