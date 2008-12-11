@@ -22,11 +22,6 @@ class Genome::Model::Tools::454::Sfffile {
                        doc => 'The params to pass to sfffile',
                        is_optional => 1,
 		   },
-	    assembler_version => {
-		                  is => 'string',
-				  doc => 'newbler assembler version',
-				  is_optional => 1,
-			      },
         ],
 };
 
