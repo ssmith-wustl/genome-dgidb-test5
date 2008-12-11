@@ -11,7 +11,7 @@ BEGIN {
     use_ok('Genome::ProcessingProfile::Command::Describe');
 }
 
-# GOOD
+#< GOOD >#
 # Create a pp to describe
 my $pp = Genome::ProcessingProfile::MetaGenomicComposition->create(
     name => 'test meta genomic composition',
@@ -28,10 +28,14 @@ ok($describer, 'Created the describer');
 isa_ok($describer, 'Genome::ProcessingProfile::Command::Describe');
 ok($describer->execute, 'Executed the describer');
 
-my $bad_describer = Genome::ProcessingProfile::Command::Describe->create();
-ok($bad_describer, 'Created the describer w/o processing profile id');
-isa_ok($bad_describer, 'Genome::ProcessingProfile::Command::Describe');
-ok(!$bad_describer->execute, 'Execute failed as expected for the describer w/o processing profile id');
+#< BAD >#
+# invalid id - sanity check that we have a _verify_processing_profile method before executing
+my $bad1 = Genome::ProcessingProfile::Command::Describe->create(
+    processing_profile_id => -1,
+);
+ok($bad1, 'Created the describer w/ invalid id');
+isa_ok($bad1, 'Genome::ProcessingProfile::Command::Describe');
+ok(!$bad1->execute, 'Execute failed as expected');
 
 exit;
 
