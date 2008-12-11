@@ -34,27 +34,33 @@ ok($renamer->execute, 'Executed the renamer');
 is($pp->name, $new_name, 'Rename successful');
 
 # BAD - expected to fail
-# no id
 ok(1, "Testing the failures");
-my $bad1 = Genome::ProcessingProfile::Command::Rename->create();
-ok($bad1, 'Created the renamer w/o id');
+
+# invalid id - sanity check that we have a _verify_processing_profile method before executing
+my $bad1 = Genome::ProcessingProfile::Command::Rename->create(
+    processing_profile_id => -1,
+);
+ok($bad1, 'Created the renamer w/ invalid id');
 isa_ok($bad1, 'Genome::ProcessingProfile::Command::Rename');
-ok(!$bad1->execute, 'Could not execute the bad renamer w/o id');
+ok(!$bad1->execute, 'Execute failed as expected');
+
 # no name
 my $bad2 = Genome::ProcessingProfile::Command::Rename->create(
     processing_profile_id => $pp->id,
 );
 ok($bad2, 'Created the renamer w/o name');
 isa_ok($bad2, 'Genome::ProcessingProfile::Command::Rename');
-ok(!$bad2->execute, 'Could not execute the bad renamer w/o name');
-# no invalid name
+ok(!$bad2->execute, 'Execute failed as expected');
+
+# invalid name
 my $bad3 = Genome::ProcessingProfile::Command::Rename->create(
     processing_profile_id => $pp->id,
     new_name => '',
 );
 ok($bad3, 'Created the renamer w/ invalid name');
 isa_ok($bad3, 'Genome::ProcessingProfile::Command::Rename');
-ok(!$bad3->execute, 'Could not execute the bad renamer w/ invalid name');
+ok(!$bad3->execute, 'Execute failed as expected');
+
 # same name
 my $bad4 = Genome::ProcessingProfile::Command::Rename->create(
     processing_profile_id => $pp->id,
@@ -62,7 +68,7 @@ my $bad4 = Genome::ProcessingProfile::Command::Rename->create(
 );
 ok($bad4, 'Created the renamer w/ same name');
 isa_ok($bad4, 'Genome::ProcessingProfile::Command::Rename');
-ok(!$bad4->execute, 'Could not execute the bad renamer w/ same name');
+ok(!$bad4->execute, 'Execute failed as expected');
 
 exit;
 
