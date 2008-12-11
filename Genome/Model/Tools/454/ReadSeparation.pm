@@ -20,11 +20,6 @@ class Genome::Model::Tools::454::ReadSeparation {
                               is => 'String',
                               doc => 'A private variable to store the tmp path of the created primer db',
                           },
-	    assembler_version => {
-		                  is => 'String',
-				  doc => 'Newbler assembler version to use',
-				  is_optional => 1,
-			      },
         ],
     has_many => [
                  primers => {
@@ -106,7 +101,7 @@ sub execute {
     my $isolate_primer = Genome::Model::Tools::454::IsolatePrimerTag->create(
                                                                              in_sff_file => $self->sff_file,
                                                                              out_sff_file => $out_sff_file,
-									     assembler_version => $self->assembler_version,
+									     version => $self->version,
                                                                          );
     unless ($isolate_primer->execute) {
         $self->error_message('Failed to execute '. $isolate_primer->command_name);
@@ -116,7 +111,7 @@ sub execute {
                                                                              cross_match_file => $cross_match_file,
                                                                              sff_file => $out_sff_file,
                                                                              primer_fasta => $self->_primer_fasta,
-									     assembler_version => $self->assembler_version,
+									     version => $self->version,
                                                                          );
     unless ($cross_match->execute) {
         $self->error_message('Failed to execute '. $cross_match->command_name);
@@ -126,7 +121,7 @@ sub execute {
     my $separate_reads = Genome::Model::Tools::454::SeparateReadsWithCrossMatchAlignment->create(
                                                                                                  cross_match_file => $cross_match_file,
                                                                                                  sff_file => $self->sff_file,
-												 assembler_version => $self->assembler_version,
+												 version => $self->version,
                                                                                              );
     unless ($separate_reads->execute) {
         $self->error_message('Failed to execute '. $separate_reads->command_name);
