@@ -20,13 +20,7 @@ class Genome::Model::Tools::454::Sffinfo {
                        is => 'string',
                        doc => 'The params to pass to sffinfo',
                    },
-	    assembler_version => {
-		                  is => 'String',
-				  doc => 'Newbler version tool to use',
-				  is_optional => 1,
-			      },
         ],
-    
 };
 
 sub help_brief {
@@ -53,7 +47,6 @@ sub execute {
     my $self = shift;
 
     my $cmd = $self->bin_path .'/sffinfo '. $self->params .' '. $self->sff_file .' > '. $self->output_file;
-
     my $rv = system($cmd);
     unless ($rv == 0) {
         $self->error_message("non-zero exit code '$rv' returned by sffinfo");
