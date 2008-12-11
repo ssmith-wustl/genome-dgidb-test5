@@ -7,7 +7,7 @@ use above "Genome";
 
 use Data::Dumper;
 use File::Temp;
-use Test::More tests => 14;
+use Test::More tests => 15;
 
 BEGIN {
         use_ok('Genome::Model::Tools::WuBlast::Xdformat');
@@ -37,8 +37,8 @@ my $create_fail = Genome::Model::Tools::WuBlast::Xdformat::Create->create(
                                                                           database => $database,
                                                                           fasta_files => \@fasta_files,
                                                                       );
-ok(!defined $create_fail, 'Genome::Model::Tools::WuBlast::Xdformat::Create');
-#ok(!$create_fail->execute,'failed to create duplicate database');
+ok($create_fail, 'Create w/ a duplicate db');
+ok(!$create_fail->execute, 'Execute failed as exepected');
 
 # APPEND
 my $append_success = Genome::Model::Tools::WuBlast::Xdformat::Append->create(
