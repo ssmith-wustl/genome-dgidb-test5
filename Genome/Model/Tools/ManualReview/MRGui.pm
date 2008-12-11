@@ -256,6 +256,7 @@ sub open_consed
     if( -d $edit_dir){
         chdir $edit_dir or die "can't cd to $edit_dir"; 
         my $ace1 = "$proj_name.ace$suffix";
+        $ace1 = "$proj_name.ace" unless (-e $ace1);
         unless(-e $ace1){
             print "ERROR no: $ace1 ... skipping (report to apipe)\n"; 
             exit;
