@@ -51,7 +51,7 @@ sub execute {
     $mr->build_review_tree;
 
     $mainWin->signal_connect("destroy", sub { Gtk2->main_quit });
-    $mr->open_file("/gscuser/jschindl/svn/dev/perl_modules/out/test.csv");
+#    $mr->open_file("/gscuser/jschindl/svn/dev/perl_modules/out/test.csv");
     Gtk2->main();
     return 1;
 }
