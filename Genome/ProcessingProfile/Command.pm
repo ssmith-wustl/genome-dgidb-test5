@@ -15,7 +15,10 @@ class Genome::ProcessingProfile::Command {
     processing_profile => {
         is => 'Genome::ProcessingProfile',
         id_by => 'processing_profile_id',
-        doc => 'identifies the genome processing_profile by id',
+    },
+    processing_profile_id => {
+        is => 'Integer',
+        doc => 'Identifies the genome processing profile by id',
     },
     ],
 };
