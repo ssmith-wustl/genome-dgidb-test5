@@ -29,9 +29,17 @@ sub execute {
     my $self = shift;
     my $model = $self->model;
     unless ($self->build_id) {
+        unless ($model->current_running_build_id) {
+            $self->error_message('Current running build id not found for model '. $model->name .'('. $model->id .')');
+            return;
+        }
         $self->build_id($model->current_running_build_id);
     }
     my $build = $self->build;
+    unless ($build) {
+        $self->error_message('Build not found for build id '. $self->build_id);
+        return;
+    }
     if ($build->verify_successful_completion) {
         $build->event_status('Succeeded');
         $build->date_completed(UR::Time->now);
