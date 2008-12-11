@@ -205,7 +205,11 @@ sub shellcmd {
     my $cmd                         = delete $params{cmd};
     my $output_files                = delete $params{output_files};
     my $input_files                 = delete $params{input_files};
-    my $skip_if_output_is_present   = delete $params{skip_if_output_is_present} || 1;
+    my $allow_failed_exit_code      = delete $params{allow_failed_exit_code};
+    
+    my $skip_if_output_is_present   = delete $params{skip_if_output_is_present};
+    $skip_if_output_is_present = 1 if not defined $skip_if_output_is_present;
+
     if (%params) {
         my @crap = %params;
         Carp::confess("Unknown params passed to shellcmd: @crap");
@@ -237,7 +241,14 @@ sub shellcmd {
     my $exit_code = $self->system_inhibit_std_out_err($cmd);
     $exit_code /= 256;
     if ($exit_code) {
-        die "ERROR RUNNING COMMAND.  Exit code $exit_code, msg $! from: $cmd";
+        if ($allow_failed_exit_code) {
+            $DB::single = $DB::stopper;
+            warn "TOLERATING Exit code $exit_code, msg $! from: $cmd";
+        }
+        else {
+            $DB::single = $DB::stopper;
+            die "ERROR RUNNING COMMAND.  Exit code $exit_code, msg $! from: $cmd";
+        }
     }
     
     if ($output_files and @$output_files) {
