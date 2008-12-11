@@ -3,8 +3,6 @@ package Genome::Model::Tools::454::Newbler::AddRun;
 use strict;
 use warnings;
 
-use Data::Dumper;
-
 class Genome::Model::Tools::454::Newbler::AddRun {
     is => 'Genome::Model::Tools::454::Newbler',
     has => [
@@ -21,11 +19,6 @@ class Genome::Model::Tools::454::Newbler::AddRun {
                               doc => 'a flag for paired end status',
                               default_value => 0,
                           },
-	    assembler_version => {
-		                  is => 'String',
-				  doc => 'newbler assembler version',
-				  is_optional => 1,
-			      },
         ],
 
 };
