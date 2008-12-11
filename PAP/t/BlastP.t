@@ -14,7 +14,17 @@ BEGIN {
     use_ok('PAP::Command::BlastP');
 }
 
-my $command = PAP::Command::BlastP->create('fasta_file' => 'data/B_coprocola.chunk.fasta');
+my $tempdir = File::Temp::tempdir(
+                                  'PAP_BlastP_test_XXXXXXXX',
+                                  DIR     => '/tmp',
+                                  CLEANUP => 1,
+                                 );
+
+my $command = PAP::Command::BlastP->create(
+                                           'fasta_file'      => 'data/B_coprocola.fasta', 
+                                           'report_save_dir' => $tempdir, 
+                                          );
+                                          
 isa_ok($command, 'PAP::Command::BlastP');
 
 ok($command->execute());
@@ -66,10 +76,16 @@ foreach my $feature (@{$ref}) {
          like($blastp_category, qr/^Hypothetical Protein similar to/, 'blastp_category is hypothetical with similarity');
     }
 
+    my $display_name = $feature->display_name();
+
+    ok(-e "$tempdir/$display_name.bz2", "archived blast report exists for $display_name");
+    is(system("bzcat /$tempdir/$display_name.bz2"), 0, "bzcat can read archived blast report for $display_name");
+    
 }
 
 my $blast_report_fh = $command->blast_report();
 
 isa_ok($blast_report_fh, 'File::Temp');
 ok($blast_report_fh->opened());
+
 

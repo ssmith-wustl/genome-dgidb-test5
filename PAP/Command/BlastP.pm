@@ -13,7 +13,10 @@ use Bio::SeqIO;
 use Bio::SearchIO;
 use Bio::SeqFeature::Generic;
 
+use Compress::Bzip2;
 use English;
+use File::Basename;
+use File::Spec;
 use File::Temp;
 use IPC::Run;
 
@@ -35,11 +38,21 @@ class PAP::Command::BlastP {
                             is_optional => 1,
                             doc         => 'array of Bio::Seq::Feature' 
                            },
+        report_save_dir => {
+                            is          => 'SCALAR',
+                            is_optional => 1,
+                            doc         => 'directory to save a copy of the blast report to',
+                           },
+        query_names => {
+                        is          => 'ARRAY',
+                        is_optional => 1,
+                        doc         => 'array of sequence (query) names seen in the results',
+                       },
     ],
 };
 
 operation PAP::Command::BlastP {
-    input        => [ 'fasta_file'     ],
+    input        => [ 'fasta_file', 'report_save_dir' ],
     output       => [ 'bio_seq_feature'],
     lsf_queue    => 'long',
     lsf_resource => 'rusage[tmp=100]'
@@ -78,7 +91,9 @@ sub execute {
     my $temp_fn    = $temp_fh->filename();
 
     $self->blast_report($temp_fh);
-     
+
+    ## If 'blastp' invokes anything but WU-BLAST, stuff will probably
+    ## go seriously foul in archive_result below
     my @blastp_command = (
                           'blastp',
                           $bacterial_nr,
@@ -105,13 +120,18 @@ sub execute {
     ## so let's not surprise them.
     $temp_fh->seek(0, SEEK_SET);
 
+    $self->archive_result();
+
+    ## Second verse, same as the first.
+    $temp_fh->seek(0, SEEK_SET);
+    
     return 1;
 
 }
 
 sub parse_result {
     
-    my $self  = shift;
+    my $self = shift;
  
     
     ## According to the docs for Bio::Root::IO,
@@ -124,7 +144,8 @@ sub parse_result {
                                       -noclose => 1, 
                                   );
 
-    my @features = ( );
+    my @features    = ( );
+    my @query_names = ( );
     
     ## There should be one result per query sequence.
     ## The protein category is determined by the top (first) hit.
@@ -132,6 +153,8 @@ sub parse_result {
   RESULT: while (my $result = $searchio->next_result()) {
 
         my $query_name = $result->query_name();
+
+        push @query_names, $query_name;
         
         my $feature = Bio::SeqFeature::Generic->new(-display_name => $query_name);
 
@@ -164,18 +187,30 @@ sub parse_result {
                 my $send        = $hsp->end('subject');
                 
                 if (($pctid >= 80) && ($pctcov >= 80)) {
+
+                    my @hit_descriptions = split /\s+\>/, $hit_description;
+
+                    my ($first_description) = @hit_descriptions;
+
+                    my $all_magic_words = 1;
                     
-                    if ($hit_description =~ /fragment|homolog|hypothetical|like|predicted|probable|putative|related|similar|synthetic|unknown|unnamed/) {
+                    foreach my $description (@hit_descriptions) {
+                        unless ($hit_description =~ /fragment|homolog|hypothetical|like|predicted|probable|putative|related|similar|synthetic|unknown|unnamed/) {
+                            $all_magic_words = 0;
+                        }
+                            
+                    }
+                    
+                    if ($all_magic_words) {
                         
                         $protein_category = 'Conserved Hypothetical Protein';
                         
                     }
                     else {
                         
-                        my $analogue = $hit_description;
+                        my $analogue = $first_description;
                         
                         $analogue =~ s/\[.*\]//x;
-                        $analogue =~ s/\w+\|.+\|//;
                         
                         $protein_category = "Hypothetical Protein similar to $analogue";
                         
@@ -220,7 +255,60 @@ sub parse_result {
     }
     
     $self->bio_seq_feature(\@features);
+    $self->query_names(\@query_names);
+}
+
+sub archive_result {
+
+    my $self = shift;
+
+
+    my $report_save_dir = $self->report_save_dir();
+
+    if (defined($report_save_dir)) {
+
+        unless (-d $report_save_dir) {
+            die "does not exist or is not a directory: '$report_save_dir'";
+        }
+
+        my $report_handle = $self->blast_report();
+
+        ## This is an allegedly clever hack to split the
+        ## blast report into multiple reports and end up with
+        ## one per file, with the file named as the query
+        ## sequence.  This relies on the assumption that
+        ## we're dealing with WU-BLAST output, which separates
+        ## reports by CTRL-L.
+
+        my $bz_file;
+        
+        QUERY: foreach my $query_name (@{$self->query_names()}) {
+        
+            my $target_file = File::Spec->catfile($report_save_dir, "$query_name.bz2");
+            
+            $bz_file = bzopen($target_file, 'w') or
+                die "Cannot open '$target_file': $bzerrno";
+            
+            while (my $line = <$report_handle>) {
+
+                if ($line =~ qr/^\cL$/) {
+                    $bz_file->bzclose();
+                    next QUERY;
+                }
+                
+                $bz_file->bzwrite($line) or die "error writing: $bzerrno";
+                
+            }
+            
+        }
+
+        ## There will not be a CTRL-L at the end of the last report.
+        $bz_file->bzclose();
+        
+    }
+
+    return 1;
     
 }
- 
+
 1;
