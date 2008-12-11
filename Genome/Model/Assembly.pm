@@ -38,4 +38,8 @@ sub sff_directory {
     return $self->data_directory . '/sff';
 }
 
+sub assembly_project_xml_file {
+    my $self = shift;
+    return $self->assembly_directory .'/454AssemblyProject.xml'
+}
 1;
