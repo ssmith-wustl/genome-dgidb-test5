@@ -17,18 +17,16 @@ class Genome::Model::Tools::454 {
                             return $arch_os;
                         |
                     },
-	    version => {
-                        is    => 'string',
-                        doc   => 'version of 454 application to use',
-                        is_optional => 1,
-                    },
-
         ],
     has_optional => [
+                     version => {
+                                 is    => 'string',
+                                 doc   => 'version of 454 application to use',
+                             },
                      _tmp_dir => {
                                   is => 'string',
                                   doc => 'a temporary directory for storing files',
-                              }
+                              },
                  ]
 };
 
@@ -44,33 +42,45 @@ EOS
 
 sub create {
     my $class = shift;
+
     my $self = $class->SUPER::create(@_);
+
+    unless ($self->arch_os =~ /64/) {
+        $self->error_message('All 454 tools must be run from 64-bit architecture');
+        return;
+    }
+
     my $tempdir = File::Temp::tempdir(CLEANUP => 1);
     $self->_tmp_dir($tempdir);
+
+    unless ($self->version) {
+        my $base_path = $self->resolve_454_path .'installed';
+        if (-l $base_path) {
+            my $link = readlink($base_path);
+            unless ($link =~ /offInstrumentApps-(\d\.\d\.\d{2}\.\d{2})-64/) {
+                $self->error_message('Link to 454 tools was malformed: '. $link);
+                return;
+            }
+            $self->version($1);
+        } else {
+            $self->error_message('Expected symlink to installed software');
+            return;
+        }
+    }
+    unless ($self->version) {
+        $self->error_message('Failed to resolve version number of 454 applications');
+        return;
+    }
     return $self;
+}
+
+sub resolve_454_path {
+    return '/gsc/pkg/bio/454/';
 }
 
 sub bin_path {
     my $self = shift;
-
-    my $base_path = '/gsc/pkg/bio/454/';
-    
-    if ($self->version) {
-	$base_path = '/gsc/pkg/bio/454/offInstrumentApps-'.$self->version;
-    }
-    else {
-	$base_path .= 'installed';
-    }
-
-    my $tail;
-    if ($self->arch_os =~ /64/) {
-        $tail = '-64/bin';
-    }
-    else {
-        $tail = '/bin';
-    }
-
-    return $base_path . $tail;
+    return $self->resolve_454_path .'offInstrumentApps-'. $self->version .'-64/bin';
 }
 
 1;
