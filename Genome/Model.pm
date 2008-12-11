@@ -745,6 +745,13 @@ sub delete {
         return;
     }
 
+    # This may not be the way things are working but here is the order of operations for removing db events
+    # 1.) Remove all genome_model_read_set entries for model
+    # 2.) Set model last_complete_build_id and current_running_build_id to null
+    # 3.) Remove all genome_model_build entries
+    # 4.) Remove all genome_model_event entries
+    # 5.) Remove the genome_model entry
+    
     my @objects = $self->get_all_objects;
     for my $object (@objects) {
         unless ($object->delete) {
