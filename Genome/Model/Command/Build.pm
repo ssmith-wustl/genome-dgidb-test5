@@ -647,16 +647,6 @@ sub get_all_objects {
     return (@events, @objects);
 }
 
-sub yaml_string {
-    my $self = shift;
-    my $string = YAML::Dump($self);
-    my @objects = $self->get_all_objects;
-    for my $object (@objects) {
-        $string .= $object->yaml_string;
-    }
-    return $string;
-}
-
 sub delete {
     my $self = shift;
 
@@ -668,14 +658,11 @@ sub delete {
     if ($model->last_complete_build_id && $model->last_complete_build_id eq $self->genome_model_event_id) {
         $model->last_complete_build_id(undef);
     }
-    my @objects = $self->get_all_objects;
-    for my $object (@objects) {
-        unless ($object->delete) {
-            $self->error_message('Failed to remove object '. $object->class .' '. $object->id);
-            return;
-        }
+    unless ($self->revert) {
+        $self->error_message('Failed to revert build '. $self->id);
+        return;
     }
-    return $self->SUPER::delete;
+    return 1;
 }
 
 1;
