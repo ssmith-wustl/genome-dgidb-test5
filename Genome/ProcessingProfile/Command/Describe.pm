@@ -16,31 +16,35 @@ class Genome::ProcessingProfile::Command::Describe {
 sub execute {
     my $self = shift;
 
+    $self->_verify_processing_profile
+        or return;
+    
+    my $pp = $self->processing_profile;
+
+    # Base processing profile attrs
     printf(
-        "%s %s <ID: %s>\n", 
+        "%s %s <ID: %s>\ntype: %s\n", 
         Term::ANSIColor::colored('Processing Profile:', 'bold'),
-        Term::ANSIColor::colored($self->processing_profile->name, 'red'),
-        Term::ANSIColor::colored($self->processing_profile->id, 'red'),
+        Term::ANSIColor::colored($pp->name, 'red'),
+        Term::ANSIColor::colored($pp->id, 'red'),
+        Term::ANSIColor::colored($pp->type_name, 'red'),
     );
 
-    for my $property ( sort { $a->property_name cmp $b->property_name } $self->processing_profile->get_class_object->get_property_objects ) {
-        $self->_print_processing_profiles_values_for_property($property->property_name)
-            or return;
+    # Params
+    for my $param ( sort { $a->name cmp $b->name } $pp->params ) {
+        my $value = $param->value;
+        printf(
+            "%s: %s\n",
+            $param->name,
+            Term::ANSIColor::colored(( defined $value ? $value : '<NULL>'), 'red'),
+        );
     }
-    
+
     return 1;
 }
 
 sub _print_processing_profiles_values_for_property {
-    my ($self, $property_name) = @_;
-
-    my @values = $self->processing_profile->$property_name;
-    print sprintf(
-        "%s %s\n",
-        $property_name . ':',
-        #Term::ANSIColor::colored($property_name . ':', 'bold'),
-        Term::ANSIColor::colored((@values ? join(',', @values) : '<NULL>'), 'red'),
-    );
+    my ($self, $name, $value) = @_;
 
     return 1;
 }
