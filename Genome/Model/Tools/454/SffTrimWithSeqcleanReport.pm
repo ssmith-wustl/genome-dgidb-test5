@@ -33,11 +33,6 @@ class Genome::Model::Tools::454::SffTrimWithSeqcleanReport {
                              doc => 'a file path to the output sff file',
                              is_output => 1,
                          },
-	    assembler_version => {
-		                  is => 'String',
-				  doc => 'Newbler assembler version to use',
-				  is_optional => 1,
-			      },
         ],
 };
 
@@ -111,7 +106,7 @@ sub execute {
                                                              # I guess because old trim values are somewhere in the manifest??
                                                              params => '-i '. $self->trim_file .' -tr '. $self->trim_file,
 							     #test => $self->test,
-							     assembler_version => $self->assembler_version,
+							     version => $self->version,
                                                          );
     unless ($sfffile->execute) {
         $self->error_message('Failed to output trimmed sff file '. $self->out_sff_file);
