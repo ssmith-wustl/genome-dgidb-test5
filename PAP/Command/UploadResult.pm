@@ -2,9 +2,6 @@
 
 package PAP::Command::UploadResult;
 
-#use lib '/gscuser/mjohnson/bioperl-svn/bioperl-live';
-#use lib '/gscuser/mjohnson/bioperl-svn/bioperl-run';
-
 use strict;
 use warnings;
 
@@ -17,6 +14,10 @@ use Bio::DB::Query::BioQuery;
 class PAP::Command::UploadResult {
     is  => ['PAP::Command'],
     has => [
+        dev_flag         => {
+                             is  => 'SCALAR',
+                             doc => 'if true, connect to dev biosql',
+                            },
         biosql_namespace => { 
                              is  => 'SCALAR', 
                              doc => 'biosql namespace'           
@@ -29,7 +30,7 @@ class PAP::Command::UploadResult {
 };
 
 operation PAP::Command::UploadResult {
-    input        => [ 'bio_seq_features', 'biosql_namespace' ],
+    input        => [ 'bio_seq_features', 'dev_flag', 'biosql_namespace' ],
     output       => [ ],
     lsf_queue    => 'long',
     lsf_resource => 'rusage[tmp=100]'
@@ -57,22 +58,48 @@ sub execute {
     my $self = shift;
 
 
-    my $biosql_namespace = 'biosql_namespace';
-    
-    my $dbadp = Bio::DB::BioDB->new(
-                                    -database => 'biosql',
-                                    -user     => 'sg_user',
-                                    -pass     => 'sgus3r',
-                                    -dbname   => 'DWDEV',
-                                    -driver   => 'Oracle',
-                                );
-    
-    my $adp = $dbadp->get_object_adaptor('Bio::SeqFeatureI');
+    my $biosql_namespace = $self->biosql_namespace();
+   
+    my $dbadp;
 
-    my $query = Bio::DB::Query::BioQuery->new();
+    if ($self->dev_flag()) {
     
-    $query->datacollections(['Bio::SeqFeatureI f']);
-    $query->where(['f.display_name = ?']);
+        my $dbadp = Bio::DB::BioDB->new(
+                                        -database => 'biosql',
+                                        -user     => 'sg_user',
+                                        -pass     => 'sgus3r',
+                                        -dbname   => 'DWDEV',
+                                        -driver   => 'Oracle',
+                                       );
+    
+    }
+    else {
+        
+        $dbadp = Bio::DB::BioDB->new(
+                                     -database => 'biosql',
+                                     -user     => 'sg_user',
+                                     -pass     => 'sg_us3r',
+                                     -dbname   => 'DWRAC',
+                                     -driver   => 'Oracle',
+                                    );
+        
+    }
+    
+    my $feature_adp = $dbadp->get_object_adaptor('Bio::SeqFeatureI');
+
+    my $feature_query = Bio::DB::Query::BioQuery->new();
+    
+    $feature_query->datacollections(['Bio::SeqFeatureI f']);
+    $feature_query->where(['f.display_name = ?']);
+
+    my $seq_adp = $dbadp->get_object_adaptor('Bio::SeqI');
+
+    my $seq_query = Bio::DB::Query::BioQuery->new();
+
+    $seq_query->datacollections(['Bio::SeqI s']);
+    $seq_query->where(["s.display_id = ?"]);
+
+    my $interpro_count = 0;
     
     foreach my $ref (@{$self->bio_seq_features()}) {
 
@@ -89,64 +116,107 @@ sub execute {
         FEATURE: foreach my $feature (@fixup) {
 
             unless (defined($feature)) { next FEATURE; }
+
+            my $source_tag = $feature->source_tag();
             
-            my $display_name = $feature->display_name();
-            
-            my $result = $adp->find_by_query(
-                                             $query,
-                                             -name   => 'pap_upload_result',
-                                             -values => [ $display_name ]
-                                         );
-            
-            my $db_feature = $result->next_object();
-            
-            unless (defined($db_feature)) {
-                warn "failed to find feature object for '$display_name'";
-                next;
+            if (defined($source_tag) && ($source_tag eq 'InterPro')) {
+
+                my $display_name = $feature->display_name();
+                
+                ##FIXME:  This is a lame, pathetic, fragile shortcut.
+                my ($seq_id, $source, $number) = split /\./, $display_name;
+                
+                unless (defined($seq_id)) {
+                    warn "failed to parse seq_id from '$display_name'";
+                    next FEATURE;
+                }
+                
+                my $result = $seq_adp->find_by_query(
+                                                     $seq_query,
+                                                     -name   => 'pap_upload_result_sequence',
+                                                     -values => [ $seq_id ],
+                                                 );
+
+                my $db_seq = $result->next_object();
+
+                unless (defined($db_seq)) {
+                    warn "failed to find sequence object for '$seq_id'";
+                    next FEATURE;
+                }
+
+                $interpro_count++;
+                
+                ## Change the name so we don't fetch it back below...
+                $feature->display_name(join('.', $display_name, 'InterPro', $interpro_count));
+                
+                $db_seq->add_SeqFeature($feature);
+                $db_seq->store();
             }
 
-            my $feature_ac    = $feature->annotation();
-            my $db_feature_ac = $db_feature->annotation();
-
-            foreach my $annotation ($feature_ac->get_Annotations()) {
-
-                $db_feature_ac->add_Annotation($annotation);
+            else {
                 
-            }
+                my $display_name = $feature->display_name();
+                
+                my $result = $feature_adp->find_by_query(
+                                                         $feature_query,
+                                                         -name   => 'pap_upload_result_feature',
+                                                         -values => [ $display_name ],
+                                                     );
+                
+                my $db_feature = $result->next_object();
+                
+                unless (defined($db_feature)) {
+                    warn "failed to find feature object for '$display_name'";
+                    next;
+                }
 
-            foreach my $tagname (
-                                 qw(
-                                    psort_localization 
-                                    psort_score
-                                    kegg_evalue
-                                    kegg_description
-                                    blastp_bit_score
-                                    blastp_evalue
-                                    blastp_percent_identical
-                                    blastp_query_start
-                                    blastp_query_end
-                                    blastp_subject_start
-                                    blastp_subject_end
-                                    blastp_hit_name
-                                   )
-                                ) {
+                my $feature_ac    = $feature->annotation();
+                my $db_feature_ac = $db_feature->annotation();
                 
-                if ($feature->has_tag($tagname)) {
-                
-                    my ($tagvalue) = $feature->each_tag_value($tagname);
-                    $db_feature->add_tag_value($tagname, $tagvalue);
+                foreach my $annotation ($feature_ac->get_Annotations()) {
+                    
+                    $db_feature_ac->add_Annotation($annotation);
                     
                 }
                 
+                foreach my $tagname (
+                                     qw(
+                                        psort_localization 
+                                        psort_score
+                                        kegg_evalue
+                                        kegg_description
+                                        blastp_bit_score
+                                        blastp_evalue
+                                        blastp_percent_identical
+                                        blastp_query_start
+                                        blastp_query_end
+                                        blastp_subject_start
+                                        blastp_subject_end
+                                        blastp_hit_name
+                                        blastp_hit_description
+                                        blastp_category
+                                       )
+                                 ) {
+                    
+                    if ($feature->has_tag($tagname)) {
+                        
+                        my ($tagvalue) = $feature->each_tag_value($tagname);
+                        $db_feature->add_tag_value($tagname, $tagvalue);
+                        
+                    }
+                    
+                }
+                
+                $db_feature->store();
+                
             }
-           
-            $db_feature->store();
-
+            
         }
-        
+
     }
 
-    $adp->commit();
+    $feature_adp->commit();
+    $seq_adp->commit();
     
     return 1;
     

@@ -3,6 +3,7 @@
   <link fromOperation="input connector" fromProperty="fasta file"           toOperation="blastp"           toProperty="fasta_file" />
   <link fromOperation="input connector" fromProperty="fasta file"           toOperation="psortb"           toProperty="fasta_file" />
   <link fromOperation="input connector" fromProperty="gram stain"           toOperation="psortb"           toProperty="gram_stain" />
+  <link fromOperation="input connector" fromProperty="report save dir"      toOperation="blastp"           toProperty="report_save_dir" />
   <link fromOperation="blastp"          fromProperty="bio_seq_feature"      toOperation="cat seq feature"  toProperty="blastp feature" />
   <link fromOperation="psortb"          fromProperty="bio_seq_feature"      toOperation="cat seq feature"  toProperty="psortb feature" />
   <link fromOperation="cat seq feature" fromProperty="all features"         toOperation="output connector" toProperty="bio seq features" />
@@ -24,6 +25,7 @@
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>fasta file</inputproperty>
     <inputproperty>gram stain</inputproperty>
+    <inputproperty>report save dir</inputproperty>
     <outputproperty>bio seq features</outputproperty>
     <outputproperty>result</outputproperty>
   </operationtype>
