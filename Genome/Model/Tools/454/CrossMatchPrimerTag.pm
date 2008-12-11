@@ -25,11 +25,6 @@ class Genome::Model::Tools::454::CrossMatchPrimerTag {
                                  is => 'String',
                                  doc => 'The output file path',
                          },
-	    assembler_version => {
-		                  is => 'String',
-				  doc => 'Newbler assembler version to use',
-				  is_optional => 1,
-			      },
         ],
 };
 
@@ -84,7 +79,7 @@ sub execute {
                                                                    sff_file => $self->sff_file,
                                                                    output_file => $tmp_fasta_file,
                                                                    params => '-s',
-								   assembler_version => $self->assembler_version,
+								   version => $self->version,
                                                                );
     unless ($fasta_sffinfo->execute) {
         die('Failed to dump fasta data from '. $self->sff_file);
@@ -95,7 +90,7 @@ sub execute {
                                                                   sff_file => $self->sff_file,
                                                                   output_file => $tmp_fasta_file .'.qual',
                                                                   params => '-q',
-								  assembler_version => $self->assembler_version,
+								  version => $self->version,
                                                               );
     unless ($qual_sffinfo->execute) {
         die('Failed to dump fasta data from '. $self->sff_file);
