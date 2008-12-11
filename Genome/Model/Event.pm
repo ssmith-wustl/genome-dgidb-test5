@@ -106,10 +106,7 @@ sub create {
 
 sub revert {
     my $self = shift;
-    my @metrics = $self->metrics;
-    my @outputs = $self->outputs;
-    my @inputs = $self->inputs;
-    for my $obj (@metrics,@outputs, @inputs) {
+    for my $obj ($self->get_all_objects) {
         $self->warning_message('deleting '. $obj->class .' with id '. $obj->id);
          #this delete is a general UR delete not the cute delete just below - Jim & Chris
         $obj->delete;
