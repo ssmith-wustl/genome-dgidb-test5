@@ -37,13 +37,10 @@ class UR::Object::Command::List {
             doc => 'output handle for list, defauls to STDOUT',
         },
     ], 
+    doc => 'fetches objects and lists them',
 };
 
 ##############################
-
-sub help_brief {
-    return "Fetches objects and lists them";
-}
 
 sub help_detail {
     my $self = shift;
