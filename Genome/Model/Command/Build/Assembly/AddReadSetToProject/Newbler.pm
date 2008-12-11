@@ -56,7 +56,7 @@ sub execute {
     unless (-d $assembly_directory && -d $sff_directory) {
 	my %new_assembly_params = (
 				   dir => $model->data_directory,
-				   assembler_version => $model->assembler_version,
+				   version => $model->assembler_version,
                                );
 
         my $new_assembly = Genome::Model::Tools::454::Newbler::NewAssembly->create( %new_assembly_params );
@@ -77,7 +77,7 @@ sub execute {
 			  dir => $model->data_directory,
 			  runs => [$self->sff_file],
 			  is_paired_end => $self->read_set->is_paired_end,
-			  assembler_version => $model->assembler_version,
+			  version => $model->assembler_version,
                       );
 
     my $add_run = Genome::Model::Tools::454::Newbler::AddRun->create( %add_run_params );
