@@ -33,6 +33,17 @@ my %iub_hash = ( A => 1,
 );
 my %rev_iub_hash = map { $iub_hash{$_},$_; } keys %iub_hash;
 
+my %somatic_status = (WT => 1,
+                      O => 2,
+                      LQ => 3,
+                      A => 4,
+                      S => 5,
+                      G => 6,
+                      V => 7,
+                      NC => 8,
+);
+
+my %rev_somatic_status = map { $somatic_status{$_},$_; } keys %somatic_status;
 
 
 sub new 
@@ -407,6 +418,8 @@ sub on_re_ok
     my ($self,$glade,$review_editor,$model, $row) = @{$data};
     my %pf = (Pass => 1, Fail => 2);
     my %rpf = (1 => 'Pass', 2 => 'Fail');
+    my %dn = (Yes => 1, No => 2);
+    my %rdn = (1 => 'Yes', 2 => 'No');
     
     my $cb = $glade->get_widget('re_genotype');
     my $active = $cb->get_active();
@@ -423,7 +436,14 @@ sub on_re_ok
     $cb = $glade->get_widget('re_genotype_relapse');
     $active = $cb->get_active();
     $model->set($row,9 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
-    my $tb = $glade->get_widget('re_text_view');
+    $cb = $glade->get_widget('re_somatic_status');
+    $active = $cb->get_active();
+    $model->set($row,11 => $rev_somatic_status{$active}) if exists $rev_somatic_status{$active};
+    $cb = $glade->get_widget('re_data_needed');
+    $active = $cb->get_active();
+    $model->set($row,12 => $rdn{$active}) if exists $rdn{$active};
+    
+    my $tb = $glade->get_widget('re_text_view');    
     my ($s,$e) = $tb->get_buffer->get_bounds;
     my $text = $tb->get_buffer->get_text($s,$e,0);
     $text =~ tr/\n\t/  /;
@@ -461,7 +481,7 @@ sub on_review_button_clicked
     my $model = $review_list->get_model;
     my ($path,$column) = $review_list->get_cursor;
     my $row = $model->get_iter($path);
-    my @val = $model->get($row,5,6,7,8,9,10);    
+    my @val = $model->get($row,5,6,7,8,9,10,11,12);    
     my $re_hpaned = $glade->get_widget("re_hpaned");
     my ($width) = $review_editor->get_size_request;
     $re_hpaned->set_position($width/2.5);
@@ -472,6 +492,7 @@ sub on_review_button_clicked
     #set widgets
 
     my %pf = (Pass => 1, Fail => 2);
+    my %dn = (Yes => 1, No => 2);
     my $cb = $glade->get_widget('re_genotype');
     $cb->set_active($iub_hash{$val[0]}) if(defined $val[0] && exists $iub_hash{$val[0]});
     $cb = $glade->get_widget('re_passfail');
@@ -484,7 +505,11 @@ sub on_review_button_clicked
     $cb->set_active($iub_hash{$val[4]}) if(defined $val[4] && exists $iub_hash{$val[4]});
     my $tb = $glade->get_widget('re_text_view');
     $tb->get_buffer->set_text($val[5]) if $val[5];
-
+    $cb = $glade->get_widget('re_somatic_status');
+    $cb->set_active($somatic_status{$val[6]}) if(defined $val[6] && exists $somatic_status{$val[6]}); 
+    $cb = $glade->get_widget('re_data_needed');
+    $cb->set_active($dn{$val[7]}) if(defined $val[7] && exists $dn{$val[7]});
+    
     @val = $model->get($row,0,1);
     my $proj_dir = join '_',@val;
     $self->{pid} = $self->open_consed($proj_dir);
@@ -495,10 +520,11 @@ sub display_row
 {
     my ($self,$model, $row, $glade) = @_;
     
-    my @val = $model->get($row,5,6,7,8,9,10);
+    my @val = $model->get($row,5,6,7,8,9,10,11,12);
     #set widgets
 
     my %pf = (Pass => 1, Fail => 2);
+    my %dn = (Yes => 1, No => 2);
     my $cb = $glade->get_widget('re_genotype');
     if(defined $val[0] && exists $iub_hash{$val[0]})
     {
@@ -547,6 +573,26 @@ sub display_row
     {
         $cb->set_active(undef);
     }
+    
+    $cb = $glade->get_widget('re_somatic_status');
+    if(defined $val[6] && exists $somatic_status{$val[6]})
+    {
+        $cb->set_active($somatic_status{$val[6]});
+    }
+    else
+    {
+        $cb->set_active(undef);
+    }
+    $cb = $glade->get_widget('re_data_needed');
+    if(defined $val[7] && exists $dn{$val[7]})
+    {
+        $cb->set_active($dn{$val[7]});
+    }
+    else
+    {
+        $cb->set_active(undef);
+    }
+    
     my $tb = $glade->get_widget('re_text_view');
     $tb->get_buffer->set_text($val[5]);
 
@@ -562,6 +608,8 @@ sub save_row
     my ($self,$model, $row, $glade) = @_;
     my %pf = (Pass => 1, Fail => 2);
     my %rpf = (1 => 'Pass', 2 => 'Fail');
+    my %dn = (Yes => 1, No => 2);
+    my %rdn = (1 => 'Yes', 2 => 'No');
     
     my $cb = $glade->get_widget('re_genotype');
     my $active = $cb->get_active();
@@ -578,6 +626,13 @@ sub save_row
     $cb = $glade->get_widget('re_genotype_relapse');
     $active = $cb->get_active();
     $model->set($row,9 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
+    $cb = $glade->get_widget('re_somatic_status');
+    $active = $cb->get_active();
+    $model->set($row,11 => $rev_somatic_status{$active}) if exists $rev_somatic_status{$active};
+    $cb = $glade->get_widget('re_data_needed');
+    $active = $cb->get_active();
+    $model->set($row,12 => $rdn{$active}) if exists $rdn{$active};
+    
     my $tb = $glade->get_widget('re_text_view');
     my ($s,$e) = $tb->get_buffer->get_bounds;
     my $text = $tb->get_buffer->get_text($s,$e,0);
