@@ -2,156 +2,130 @@ package Genome::Model::Tools::ManualReview::UploadVariantReviewList;
 
 use strict;
 use warnings;
-use Data::Dumper;
-use IO::File;
 use Genome::Utility::VariantReviewListReader;
 
-use Genome;
+
+use above 'Genome';
 
 UR::Object::Type->define(
     class_name => __PACKAGE__, is => 'Command',
     has => [
         list => {
             is => 'String',
-            doc => 'Master csv to import', 
+            doc => 'Master csv to update from', 
         },
-        name => { 
-            is => 'String', 
-            doc => 'List name',
-        },
+        #project_dir => {
+        #    is => 'String',
+        #    doc => 'Directory of review project',
+        #},
     ],
     has_optional => [
-        separation_character =>{
+        db_list_name =>{
             is => 'String',
-            doc => 'character or string that separates the fields in the list',
-            default => '|',
+            doc => 'Name of list to be updated',
         },
-        author => { 
+        db_list_id => { 
             is => 'String', 
-            doc => 'Author or authors of the list',
+            doc => 'ID of list to be updated',
         },
-        filter => { 
-            is => 'String', 
-            doc => 'Filter, filters, or description of criteria use to generate the list',
-        },
-        rt_ticket => { 
-            is => 'String', 
-            doc => 'RT ticket id number',
+        separation_character => {
+            is => 'String',
+            doc => 'separation character in list of variants to be added',
         },
     ]
 );
 
 sub help_brief{
-    return "Uploads a character delimited variant list to the db";
+    return "Add new variants to an existing list";
 }
 
 sub help_synopsis{
-    return "gt manual-review upload-variant-review-list --list <list> --name <list_name> --author <list_author> --filter '<description of list criteria>'";
+    return "gt manual-review add-variants-to-list --list <list> --db_list_id <id>";
 }
 
 sub help_detail{
-    return "This command takes in a character delimited list of variants, and uploads them to the data warehouse.  The separation character is the '|' char by default, but can be specified on the command line. The list should be formatted as follows:\n".join('|', Genome::Utility::VariantReviewListReader->list_columns)."\n Once uploaded, the variants can be viewed and edited online at this address: https://gscweb.gsc.wustl.edu/view/variant_review_list.html
-";
+"Adds variants to existing lists given the list name or list id. The list must be a character delimited list.  The default delimiter is the '|' char, but this can be specified on the command line.  The list columns must be in the following format:\n".join('|', Genome::Utility::VariantReviewListReader->list_columns)."\n Once uploaded, the variants can be viewed and edited online at this address: https://gscweb.gsc.wustl.edu/view/variant_review_list.html";
 }
 
-sub execute {
-    my $self = shift;
+BEGIN {
+    my @det_property_names;
+    my @props =sort { 
+        $a->property_name cmp $b->property_name
+    } grep {
+        $_->column_name ne ''
+    } Genome::VariantReviewDetail->get_class_object->get_all_property_objects;
+    @det_property_names = map { $_->property_name } @props;
     
-    my $name = $self->name;
-    my $filter = $self->filter || $name;
-    my $author = $self->vtest($self->author);
-    my $rt_ticket = $self->vtest($self->rt_ticket);
-    my $separation_character = $self->separation_character;
-
-    eval{
-
-        my $review_list = Genome::VariantReviewList->get(name => $name);
-        if ($review_list){
-            $self->error_message("A list with this name($name) already exists in the DB! id:".$review_list->id);
-            return;
-        }else{
-            
-            $review_list = Genome::VariantReviewList->create(name => $name, author => $author, rt_ticket => $rt_ticket);
-            my $review_list_filter = Genome::VariantReviewListFilter->create(filter_name => $filter, list_id => $review_list->id);
+    my @rev_property_names;
+    my @rev_props =sort { 
+        $a->property_name cmp $b->property_name
+    } grep {
+        $_->column_name ne ''
+    } Genome::SNVManualReview->get_class_object->get_all_property_objects;
+    @rev_property_names = map { $_->property_name } @rev_props;
+    sub fix_hash_data
+    {
+        my ($line_hash) = @_;
+        my %temp_line_hash;
+        foreach my $col (@det_property_names)
+        {
+            $temp_line_hash{$col} = $line_hash->{$col} if exists $line_hash->{$col};
         }
-        my $list_id = $review_list->id;
-        my $list_reader = Genome::Utility::VariantReviewListReader->new($self->list, $separation_character);
-        while (my $line_hash = $list_reader->next_line_data()){
-            last unless $line_hash;
-            next if $line_hash->{header};
+        $temp_line_hash{start_position} = $line_hash->{begin_position} if exists $line_hash->{begin_position};
+        $temp_line_hash{stop_position} = $line_hash->{end_position} if exists $line_hash->{end_position};
+        $temp_line_hash{stop_position} = $temp_line_hash{start_position} if !defined $temp_line_hash{stop_position};
+        $line_hash = \%temp_line_hash;
 
-            my $current_member = Genome::VariantReviewDetail->get( begin_position => $line_hash->{begin_position}, chromosome => $line_hash->{chromosome} );
+        return $line_hash;
 
-            my $info;
-            if ($current_member){
-                $info.="Current member found: ".$current_member->chromosome.", ".$current_member->begin_position."\n";
-                #notes
-                my $new_notes = $self->vtest($current_member->notes);
-                $new_notes .= ', ' if $new_notes and $line_hash->{notes};
-                $new_notes .= $line_hash->{notes} if $line_hash->{notes};
-                $current_member->notes($new_notes);
-                #genes
-                my $current_genes = $current_member->genes;
-                my @current_genes;
-                @current_genes = split(/[,\/]/, $current_genes) if $current_genes;
-                my $new_genes = $line_hash->{genes};
-                my @new_genes;
-                @new_genes = split(/[,\/]/, $new_genes) if $new_genes;
-                my @genes_to_add;
-                foreach my $new_gene (@new_genes){
-                    my $found = 0;
-                    foreach my $current_gene (@current_genes){
-                        $found++ if $new_gene =~ /$current_gene/i;
-                    }
-                    push @genes_to_add, $new_gene unless $found;
-                }
-                if (@genes_to_add){
-                    $info .= "adding genes ".join(" ", @genes_to_add)."\n";
-                }
-                my @genes = (@current_genes, @genes_to_add);
-                $current_member->genes(join(",", @genes));
-                #rest
-                foreach my $col (keys %$line_hash){
-                    next if $col =~ /genes|notes/;
-                    my $current_val = $current_member->$col;
-                    my $new_val = $line_hash->{$col};
-                    if ($current_val){
-                        if ($new_val){
-                            if ($current_val ne $new_val){
-                                $current_member->$col("DISCREPANCY($current_val : $new_val");
-                                $info .= "discrepancy at $col : $current_val || $new_val\n";
-                            }
-                        }
-                    }elsif ($new_val){
-                        $current_member->$col($new_val);
-                    }
-                }
-                print $info;
-            }else{
-                $current_member = Genome::VariantReviewDetail->create(
-                    %$line_hash   
-                );
+    }
+    sub get_review_data
+    {
+        my ($self, $line_hash) = @_;
+        my %temp_line_hash;
+        foreach my $col (@rev_property_names)
+        {
+            if( exists $line_hash->{$col})
+            {
+                $temp_line_hash{$col} = $line_hash->{$col};
             }
-            my $member_id = $current_member->id;
-            my $review_list_member = Genome::VariantReviewListMember->get_or_create(
-                list_id => $list_id,
-                member_id => $member_id,
-            );
+            else
+            {
+                return undef;
+            }
+        }
+        $line_hash = \%temp_line_hash;
+        return $line_hash;
+    }
+}
 
-        }  #while ( my $line = getline);
-    };
+sub execute{
+    my $self = shift;
+    my $list = Genome::Utility::VariantReviewListReader->new($self->list, $self->separation_character);
+    my $db_list = Genome::VRList->get($self->db_list_name ? (name=>$self->db_list_name) : (id=>$self->db_list_id)); 
 
-    if ($@){
-        $self->error_message("error in execution. $@");
+#$DB::single = 1;
+    unless ($db_list){
+        $self->error_message("List doesn't exist");
         return 0;
     }
+    my $list_id = $db_list->id;
+    my ($detail) = $db_list->details;
+    my $subject_name = $detail->subject_name;
+    while (my $line_hash = $list->next_line_data()){
+        last unless $line_hash;
+        next if $line_hash->{header};
 
+        $line_hash = fix_hash_data($line_hash);
+        my $current_member = Genome::VariantReviewDetail->get( start_position => $line_hash->{start_position}, chromosome => $line_hash->{chromosome}, subject_name => $subject_name );
+        
+        my $rev_hash = $self->get_review_data($line_hash);
+        next unless $rev_hash;
+        my $review = Genome::SNVManualReview->get_or_create(detail_id => $current_member->id, dump_date => "2008-12-11 13:50:59", build_id => 1, reviewer => $ENV{USERNAME});
+        $review->set(%$rev_hash);
+
+    }  
     return 1;
-}
-
-sub vtest{
-    my ($self, $v) = @_;
-    return $v? $v : '';
 }
 
 1;
