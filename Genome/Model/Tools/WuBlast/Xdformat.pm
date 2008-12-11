@@ -21,10 +21,6 @@ class Genome::Model::Tools::WuBlast::Xdformat {
                                  default => 'n',
                                  doc => 'Database type (n)compare nucleotide sequence, (p) compare protein sequence, (x) compare peptide sequence queries to nucleotide sequence databases dynamically translated in all 6 reading frames',
                              },
-                     xdformat_output => {
-                                         is => 'String',
-                                         is_output => 1,
-                                     },
     ],
 };
 
@@ -32,15 +28,6 @@ sub help_brief {
     "Wrapper for running xdformat",
 }
 
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_);
-    unless ($self->xdformat_output) {
-        $self->xdformat_output($self->database .'.stdout');
-    }
-    return $self;
-}
 sub execute {
     my $self = shift;
 
@@ -50,12 +37,11 @@ sub execute {
     }
 
     my $cmd = sprintf(
-        'xdformat -%s -%s %s %s >& %s ',
+        'xdformat -%s -%s %s %s',
         $self->db_type,
         $self->_operation_character,
         $self->database,
         ( $self->can('fasta_files') ? join(' ', $self->fasta_files) : '' ),
-        $self->xdformat_output,
     );
     $self->status_message('Running: '.$cmd);
 
