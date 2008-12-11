@@ -5,13 +5,25 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 BEGIN {
     use_ok('Genome::ProcessingProfile::Command::List');
 }
 
-my $lister = Genome::ProcessingProfile::Command::List->create(filter => 'type_name=meta genomic composition');
+# GOOD
+# Create a pp to list
+my $pp = Genome::ProcessingProfile::MetaGenomicComposition->create(
+    name => 'test meta genomic composition',
+    sequencing_platform => 'sanger',
+    assembler => 'phredphrap',
+    sequencing_center => 'gsc',
+    assembly_size => 1300,
+);
+ok($pp, "Created processing profile to test renaming");
+die unless $pp; # can't proceed
+
+my $lister = Genome::ProcessingProfile::Command::List->create(filter => 'name=test meta genomic composition');
 ok($lister, 'Created the lister');
 isa_ok($lister, 'Genome::ProcessingProfile::Command::List');
 ok($lister->execute, 'Executed the lister, look at the listing!!');

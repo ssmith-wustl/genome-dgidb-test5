@@ -20,8 +20,8 @@ my $pp = Genome::ProcessingProfile::MetaGenomicComposition->create(
     sequencing_center => 'gsc',
     assembly_size => 1300,
 );
-ok($pp, "Created processing profile to test renaming")
-    or die;
+ok($pp, "Created processing profile to test renaming");
+die unless $pp; # can't proceed
 
 my $new_name = 'eddie awesome pp for mgc';
 my $renamer = Genome::ProcessingProfile::Command::Rename->create(
