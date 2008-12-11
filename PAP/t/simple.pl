@@ -15,8 +15,10 @@ my $output = run_workflow_lsf(
                               $xml_file,
                               'fasta file'       => $fasta_file,
                               'chunk size'       => 10,
+                              'dev flag'         => 1,
                               'biosql namespace' => 'MGAP',
                               'gram stain'       => 'negative',
+                              'report save dir'  => '/gscmnt/temp212/info/annotation/PAP_testing/blast_reports',
                           );
 
 
