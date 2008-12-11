@@ -36,17 +36,22 @@ sub help_detail{
 
 sub execute{
     my ($self) = @_;
-    my $db_list = Genome::VariantReviewList->get($self->db_list_name ? (name=>$self->db_list_name) : (id=>$self->db_list_id)); 
+    unless($self->db_list_name||$self->db_list_id)
+    {
+        $self->error_message("Need either a db_list_name or db_list_id.\n");
+        return 0;
+    }
+    my $db_list = Genome::VRList->get($self->db_list_name ? (name=>$self->db_list_name) : (id=>$self->db_list_id)); 
     
     unless ($db_list){
         $self->error_message("List doesn't exist");
         return 0;
     }
     
-    my @db_list_members = Genome::VariantReviewListMember->get(list_id=>$db_list->id);    
+    my @db_list_members = Genome::VRListMember->get(list_id=>$db_list->id);    
     foreach (@db_list_members){
         my $detail = Genome::VariantReviewDetail->get(id=>$_->member_id);
-        my @test_members = Genome::VariantReviewListMember->get(member_id=>$detail->id);
+        my @test_members = Genome::VRListMember->get(member_id=>$detail->id);
         if (@test_members > 1){
            my %list_id_hash; 
            foreach (@test_members){
@@ -62,7 +67,8 @@ sub execute{
         $_->delete;
         
     }
-    $db_list->delete;    
+    $db_list->delete;
+    return 1;    
 }
 
 1;
