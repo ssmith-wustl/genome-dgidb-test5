@@ -39,14 +39,12 @@ sub execute {
 
     my $model = $self->model;
 
-    my $pp = Genome::ProcessingProfile->get( id => $model->processing_profile_id );
-
     my $params = $model->assembler_params || '';
 
     my %run_project_params = (
 			      params => $params,
 			      dir => $model->data_directory,
-			      assembler_version => $pp->assembler_version,
+			      version => $model->assembler_version,
 			      );
 
     my $run_project = Genome::Model::Tools::454::Newbler::RunProject->create( %run_project_params );
@@ -56,12 +54,7 @@ sub execute {
         return;
     }
     my $assembly_dir = $model->data_directory .'/assembly';
-    `chmod -R g+w $assembly_dir`;
-    
-    $model->last_complete_build_id($self->parent_event_id);
-#    if ($model->current_running_build_id eq $self->parent_event_id) {
-#        $model->current_running_build_id(undef);
-#    }
+
     return 1;
 }
 
