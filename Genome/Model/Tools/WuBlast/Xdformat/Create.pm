@@ -37,13 +37,36 @@ sub help_detail {
 EOS
 }
 
-sub create {
-    my $class = shift;
+#< Pre and Post Execute Methods >#
+sub _pre_execute_methods {
+    return (qw/ _handle_db _verify_fastas /);
+}
 
-    my $self = $class->SUPER::create(@_)
-        or return;
-    
-    # Check FASTAs
+sub _handle_db {
+    my $self = shift;
+
+    for my $file ( $self->xdformat_files ) {
+        if ( $self->overwrite_db ) {
+            unlink $file
+        }
+        else {
+            $self->error_message(
+                sprintf(
+                    'Files for database (%s) already exist.  Remove, or indicate to overwrite the db.',
+                    $self->database,
+                )
+            );
+            return;
+        }
+    }
+
+    return 1;
+}
+
+sub _verify_fastas {
+    my $self = shift;
+
+    $DB::single = 1;
     unless ( $self->fasta_files ) {
         $self->error_message("No fasta files to create database from");
         return;
@@ -64,27 +87,9 @@ sub create {
         return;
     }
 
-    # Handle DB
-    for my $file ( $self->xdformat_files ) {
-        next unless -e $file;
-        if ( $self->overwrite_db ) {
-            unlink $file
-        }
-        else {
-            $self->error_message(
-                sprintf(
-                    'Files for database (%s) already exist.  Remove, or indicate to overwrite the db.',
-                    $self->database,
-                )
-            );
-            return;
-        }
-    }
-
-    return $self;
+    return 1;
 }
 
-#< Pre and Post Execute Methods >#
 sub _post_execute_methods {
     return (qw/ _verify_db /);
 }
