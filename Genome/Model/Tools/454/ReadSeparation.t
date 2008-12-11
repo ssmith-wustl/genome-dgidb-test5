@@ -24,7 +24,7 @@ my $sff_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-454-ReadSeparat
 my $read_separation = 
     Genome::Model::Tools::454::ReadSeparation->create(
         sff_file => $sff_file,
-	assembler_version => '2.0.00.20',
+	version => '2.0.00.20',
     );
 
 ok($read_separation->execute,'execute '. $read_separation->command_name);
