@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 
+use XML::Simple;
 use File::Basename;
 
 class Genome::Model::Tools::454::Newbler {
@@ -44,6 +45,18 @@ sub full_bin_path {
     return $self->newbler_bin .'/'. $cmd;
 }
 
+sub get_newbler_version_from_xml_file {
+    my $class = shift;
+    my $xml_file = shift;
+
+    if (ref($class)) {
+        $class = ref($class);
+    }
+    my $xml = XML::Simple->new( Forcearray => [ qw( book ) ], keyattr => { book => 'isbn' } );
+    my $xml_data = $xml->XMLin($xml_file);
+    return unless exists $xml_data->{ProjectInformation}->{SoftwareVersion};
+    return $xml_data->{ProjectInformation}->{SoftwareVersion};
+}
 
 
 1;
