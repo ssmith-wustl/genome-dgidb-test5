@@ -232,7 +232,7 @@ sub open_consed
         my $i=0;
         while(!-e $edit_dir."/consedSocketLocalPortNumber")
         {
-            usleep 100;
+            usleep 100000;
             $i++;
             if($i>50)
             {
@@ -448,7 +448,9 @@ sub on_re_ok
     my ($s,$e) = $tb->get_buffer->get_bounds;
     my $text = $tb->get_buffer->get_text($s,$e,0);
     $text =~ tr/\n\t/  /;
-    $model->set($row, 10 => $text) if defined $text;    
+    $model->set($row, 10 => $text) if defined $text;
+    #added later this destroys it too
+    $self->on_review_editor_destroy($review_editor);    
     return 1;
 }
 
@@ -469,7 +471,11 @@ sub on_review_button_clicked
 {
     my ($self) = @_;
     my $g_handle = $self->g_handle;
-    my $glade = new Gtk2::GladeXML("/gscuser/jschindl/svn/dev/perl_modules/Genome/manual_review/manual_review.glade","review_editor");
+    my $mr_dir = `wtf Genome::Model::Tools::ManualReview`;
+    chomp $mr_dir;
+    ($mr_dir) = $mr_dir =~ /(.*)\.pm/;
+    $mr_dir .= 'manual_review.glade';
+    my $glade = new Gtk2::GladeXML($mr_dir,"review_editor");
     $self->re_g_handle($glade);
     #$glade->signal_autoconnect_from_package($self);
     my $review_editor = $glade->get_widget("review_editor");
@@ -490,6 +496,10 @@ sub on_review_button_clicked
     $cancel->signal_connect("clicked", sub { $self->on_review_editor_destroy($review_editor); });
     my $ok = $glade->get_widget("re_ok");
     $ok->signal_connect("clicked", \&on_re_ok,[$self, $glade,$review_editor, $model, $row]);
+    my $prev = $glade->get_widget("re_prev");
+    $ok->signal_connect("clicked", \&on_prev_button_clicked,[$self, $glade,$review_editor, $model, $row]);
+    my $next = $glade->get_widget("re_next");
+    $ok->signal_connect("clicked", \&on_next_button_clicked,[$self, $glade,$review_editor, $model, $row]);
     #set widgets
 
     my %pf = (Pass => 1, Fail => 2);
@@ -599,7 +609,8 @@ sub display_row
 
     @val = $model->get($row,0,1);
     my $proj_dir = join '_',@val;
-    if($self->{pid}) {system "kill -9 $self->{pid}";}
+    #if($self->{pid}) {system "kill -9 $self->{pid}";}
+    system "killall consed";
     $self->{pid} = $self->open_consed($proj_dir);
     return ;
 }
