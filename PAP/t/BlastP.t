@@ -7,7 +7,7 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 445;
+use Test::More tests => 532;
 
 BEGIN {
     use_ok('PAP::Command');
@@ -21,7 +21,7 @@ my $tempdir = File::Temp::tempdir(
                                  );
 
 my $command = PAP::Command::BlastP->create(
-                                           'fasta_file'      => 'data/B_coprocola.fasta', 
+                                           'fasta_file'      => 'data/B_coprocola.chunk.fasta', 
                                            'report_save_dir' => $tempdir, 
                                           );
                                           
