@@ -10,7 +10,7 @@ use Genome::Utility::VariantReviewListReader;
 
 
 
-use File::Basename ('fileparse');
+use File::Basename ('fileparse','basename');
 use base qw(Class::Accessor);
 use Time::HiRes qw(usleep);
 Genome::Model::Tools::ManualReview::MRGui->mk_accessors(qw(current_file g_handle re_g_handle header));
@@ -41,6 +41,7 @@ my %somatic_status = (WT => 1,
                       G => 6,
                       V => 7,
                       NC => 8,
+                      LOH => 9,
 );
 
 my %rev_somatic_status = map { $somatic_status{$_},$_; } keys %somatic_status;
@@ -67,7 +68,6 @@ sub open_file_dialog
  	my $response = $fc->run;
  	my $file = $fc->get_filename;
   	$fc->destroy;
-#	$self->current_file($file);
 	$self->open_file($file);
 }
 
@@ -218,7 +218,7 @@ sub open_consed
 {
     my ($self, $proj_name) = @_;
     my $relative_target_base_pos = 1001;
-    my $consed= 'cs';
+    my $consed= 'consed';
     my($file, $dir)= fileparse($self->current_file);
     my $suffix = '.1';
     my $edit_dir = "$dir/$proj_name/edit_dir";
@@ -268,7 +268,7 @@ sub open_consed
         my $rc = system($c_command);
         if($rc)
         {
-            warn "Failed to launch consed.\n";
+            #warn "Failed to launch consed.\n";
             `touch consedSocketLocalPortNumber`;
         }
     }else{
@@ -314,6 +314,7 @@ sub open_file
 	$self->current_file($file);    
 
     my $handle = $self->g_handle;
+    my $mainWin = $handle->get_widget("manual_review");
     my $tree = $handle->get_widget("review_list");
 
     my $list_reader = Genome::Utility::VariantReviewListReader->new($self->current_file, '|');
@@ -338,6 +339,12 @@ sub open_file
         }            
     }
     $model->set_sort_column_id(0,'GTK_SORT_ASCENDING');
+    
+    my $project_file = $self->current_file;
+    $project_file.=".$ENV{USERNAME}" unless($project_file =~ /$ENV{USERNAME}/);
+    $self->current_file($project_file);
+    my $filename = basename($project_file);
+    $mainWin->set_title("Manual Review - $filename");
 }
 
 sub open_cb
@@ -399,7 +406,8 @@ sub save_file_as_dialog
 	my $response = $fc->run;
  	my $file = $fc->get_filename;
   	$fc->destroy;
-	$self->current_file($file);	
+    
+	$self->current_file($file) if(defined $file);	
 }
 
 sub on_save_file_as
@@ -409,6 +417,10 @@ sub on_save_file_as
 	$self->save_file_as_dialog;
 	if(defined $self->current_file)
 	{
+        my $handle = $self->g_handle;
+        my $mainWin = $handle->get_widget("manual_review");        
+        my $filename = basename($self->current_file);
+        $mainWin->set_title("Manual Review - $filename");
 		$self->save_file;
 	}
 }
@@ -471,9 +483,18 @@ sub on_review_button_clicked
 {
     my ($self) = @_;
     my $g_handle = $self->g_handle;
-    my $mr_dir = `wtf Genome::Model::Tools::ManualReview`;
+    
+    my $mr_dir = 'Genome/Model/Tools/ManualReview';
+    foreach my $path (@INC) {
+        my $fullpath = $path . "/" .$mr_dir;
+        if( -e $fullpath) {
+            $mr_dir = $fullpath;
+            last;
+        }
+    }    
+    
     chomp $mr_dir;
-    ($mr_dir) = $mr_dir =~ /(.*)\.pm/;
+    
     $mr_dir .= '/manual_review.glade';
     my $glade = new Gtk2::GladeXML($mr_dir,"review_editor");
     $self->re_g_handle($glade);
@@ -497,9 +518,9 @@ sub on_review_button_clicked
     my $ok = $glade->get_widget("re_ok");
     $ok->signal_connect("clicked", \&on_re_ok,[$self, $glade,$review_editor, $model, $row]);
     my $prev = $glade->get_widget("re_prev");
-    $ok->signal_connect("clicked", \&on_prev_button_clicked,[$self, $glade,$review_editor, $model, $row]);
+    $prev->signal_connect("clicked", sub {$self->on_prev_button_clicked;});
     my $next = $glade->get_widget("re_next");
-    $ok->signal_connect("clicked", \&on_next_button_clicked,[$self, $glade,$review_editor, $model, $row]);
+    $next->signal_connect("clicked", sub {$self->on_next_button_clicked;});
     #set widgets
 
     my %pf = (Pass => 1, Fail => 2);
@@ -694,7 +715,8 @@ sub on_next_button_clicked
 
 sub gtk_main_quit
 {
-    Gtk2->main_quit;	
+    Gtk2->main_quit;
+    system "killall consed";
 }
 
 1;
