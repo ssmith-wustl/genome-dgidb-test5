@@ -46,7 +46,10 @@ sub sff_file {
     my $sff_file;
     my $rr_454 = $self->run_region_454;
     eval {
-        $sff_file = $rr_454->sff_filesystem_location;
+        my $sff_file_object = $rr_454->sff_filesystem_location;
+        if ($sff_file_object) {
+            $sff_file = $sff_file_object->stringify;
+        }
     };
 
     if ($@ || !defined($sff_file)) {
