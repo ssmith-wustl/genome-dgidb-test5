@@ -98,10 +98,10 @@ sub get_or_create_from_read_set {
             $class->error_message("Bad run_name value $run_name.  Expected " . $run_chunk->run_name);
             return;
         }
-        if ($run_chunk->full_path ne $full_path) {
-            $class->warning_message("Run $run_name has changed location to $full_path from " . $run_chunk->full_path);
-            $run_chunk->full_path($full_path);
-        }
+        #if ($run_chunk->full_path ne $full_path) {
+            #$class->warning_message("Run $run_name has changed location to $full_path from " . $run_chunk->full_path);
+            #$run_chunk->full_path($full_path);
+        #}
         if ($run_chunk->subset_name ne $subset_name) {
             $class->error_message("Bad subset_name $subset_name.  Expected " . $run_chunk->subset_name);
             return;
