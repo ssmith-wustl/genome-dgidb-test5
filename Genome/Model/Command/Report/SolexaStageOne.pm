@@ -50,7 +50,6 @@ sub generate_report_brief
 
 sub generate_report_detail {
     
-     die("BLAAAAH"); 
     my $self=shift;
     my $model= $self->model;
     $self->get_models_and_preload_related_data();

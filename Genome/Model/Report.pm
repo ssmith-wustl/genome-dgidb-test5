@@ -45,7 +45,7 @@ sub _resolve_subclass_name {
 	}
         elsif (my $name = $class->get_rule_for_params(@_)->specified_value_for_property_name('name')) 
         {
-            my $model_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('model_id'); 
+            my $model_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('model_id');
             return $class->_resolve_subclass_name_for_model_and_name($model_id,$name);
         }
 	else 
@@ -55,16 +55,14 @@ sub _resolve_subclass_name {
 }
 
 sub _resolve_subclass_name_for_model_and_name {
-
     my $class = shift;
     my $model_id = shift;
     my $name = shift;
 
     my $model = Genome::Model->get(id => $model_id);
-
     my $report_dir = $model->resolve_reports_directory."$name";
     unless (-d $report_dir) {
-        $class->error_message("No $name report directory for ".$model->name);
+        $class->error_message("No $name report directory for ".$report_dir);
         return;
     }
 
