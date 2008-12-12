@@ -142,13 +142,16 @@ sub execute {
             # fall through to the regular processing and try this again...
         } else {
             $self->status_message("SHORTCUT SUCCESS: alignment data is already present.");
-            return 1;
+            return $self->verify_successful_completion;
         }
     }
-    $self->lock_resource(
-                         lock_directory => $read_set_alignment_directory,
-                         resource_id => $self->read_set->seq_id,
-                     );
+    unless (Genome::Utility::FileSystem->lock_resource(
+                                                       lock_directory => $read_set_alignment_directory,
+                                                       resource_id => $self->read_set->seq_id,
+                                                   )) {
+        $self->error_message('Failed to create lock for resource '. $self->read_set->seq_id);
+        return;
+    }
     $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
     $self->create_directory($read_set_alignment_directory);
     my $model = $self->model;
@@ -173,10 +176,13 @@ sub execute {
                              $self->fasta_file ." against:\n". join ("\n",@ref_seq_paths));
         return;
     }
-    $self->unlock_resource(
-                           lock_directory => $read_set_alignment_directory,
-                           resource_id => $self->read_set->seq_id,
-                       );
+    unless (Genome::Utility::FileSystem->unlock_resource(
+                                                         lock_directory => $read_set_alignment_directory,
+                                                         resource_id => $self->read_set->seq_id,
+                                                     )) {
+        $self->error_message('Failed to unlock resource '. $self->read_set->seq_id);
+        return;
+    }
     return $self->verify_successful_completion;
 }
 
