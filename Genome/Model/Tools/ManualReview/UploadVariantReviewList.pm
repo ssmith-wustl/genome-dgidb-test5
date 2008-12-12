@@ -3,6 +3,7 @@ package Genome::Model::Tools::ManualReview::UploadVariantReviewList;
 use strict;
 use warnings;
 use Genome::Utility::VariantReviewListReader;
+use Data::Dumper;
 
 
 use above 'Genome';
@@ -87,12 +88,17 @@ BEGIN {
         {
             if( exists $line_hash->{$col})
             {
-                $temp_line_hash{$col} = $line_hash->{$col};
+                if ($col eq 'pass_manual_review' or $col eq 'data_needed'){
+                    my ($match) = $line_hash->{$col} =~ /^([PFYN])/;
+                    $temp_line_hash{$col} = $match;
+                }else{
+                    $temp_line_hash{$col} = $line_hash->{$col};
+                }
             }
-            else
-            {
-                return undef;
-            }
+            #else
+            #{
+            #    return undef;
+            #}
         }
         $line_hash = \%temp_line_hash;
         return $line_hash;
@@ -104,7 +110,7 @@ sub execute{
     my $list = Genome::Utility::VariantReviewListReader->new($self->list, $self->separation_character);
     my $db_list = Genome::VRList->get($self->db_list_name ? (name=>$self->db_list_name) : (id=>$self->db_list_id)); 
 
-#$DB::single = 1;
+$DB::single = 1;
     unless ($db_list){
         $self->error_message("List doesn't exist");
         return 0;
@@ -116,14 +122,21 @@ sub execute{
         last unless $line_hash;
         next if $line_hash->{header};
 
-        $line_hash = fix_hash_data($line_hash);
-        my $current_member = Genome::VariantReviewDetail->get( start_position => $line_hash->{start_position}, chromosome => $line_hash->{chromosome}, subject_name => $subject_name );
-        
+        my $det_hash = fix_hash_data($line_hash);
+        my $current_member = Genome::VariantReviewDetail->get( start_position => $det_hash->{start_position}, chromosome => $det_hash->{chromosome}, subject_name => $subject_name );
+        unless ($current_member){
+            print "can't get member for pos=> ".$det_hash->{start_position}." chromosome => ".$det_hash->{chromosome}." subject_name => ".$subject_name;
+        die;
+        }
+        print Dumper $det_hash;
         my $rev_hash = $self->get_review_data($line_hash);
         next unless $rev_hash;
-        my $review = Genome::SNVManualReview->get_or_create(detail_id => $current_member->id, dump_date => "2008-12-11 13:50:59", build_id => 1, reviewer => $ENV{USERNAME});
+        my @file_name_split = split(/\./, $self->list);
+        my $reviewer_name = $file_name_split[-1];
+        my $review = Genome::SNVManualReview->get_or_create(detail_id => $current_member->id, dump_date => "2008-12-11 13:50:59", build_id => 93385989, reviewer => $reviewer_name);
+#        my $review = Genome::SNVManualReview->get_or_create(detail_id => $current_member->id, dump_date => "2008-12-11 13:50:59", build_id => 1, reviewer => $ENV{USERNAME});
         $review->set(%$rev_hash);
-
+        print Dumper $rev_hash;
     }  
     return 1;
 }
