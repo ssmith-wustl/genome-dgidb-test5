@@ -49,6 +49,38 @@ sub list_columns{
 }
 
 sub db_columns{
+    #BUILD_ID, REVIEW_TYPE, and DATE are read from the review info file.
+    my @columns = ( 
+#        'id',
+#        'detail_id',
+#        'build_id',,
+#        'dump_date',
+#        'review_type',
+    #read only, from VARIANT_REVIEW_DETAIL        
+        'chromosome',
+        'position',
+        'variant_type',
+        'delete_sequence',
+        'insert_sequence_allele1',
+        'insert_sequence_allele2',
+        'genes',
+        'supporting_samples',
+        'supporting_dbs',
+    #columns are editable, and used to update SNV_MANUAL_REVIEW
+        'notes',
+        'genotype_iub_code',#not null
+        'pass_manual_review',#not null
+        'manual_genotype_iub_normal',#not null
+        'manual_genotype_iub_tumor',#not null
+        'manual_genotype_iub_relapse',#not null
+        'somatic_status',
+        'data_needed',
+        
+        );
+    return @columns;
+}
+
+sub db_old_columns{
     my @columns = ( qw/
         chromosome
         begin_position
@@ -76,15 +108,14 @@ sub db_columns{
 sub set_line_hash{
     my ($self, $data) = @_;
     my %hash;
-    foreach my $col_name ($self->list_columns){
-        if ($col_name eq 'insert_sequence'){
+    foreach my $col_name (@{$self->{separated_value_reader}->headers}){#changed from db_column above
+        if ($col_name eq 'insert_sequence' && !exists $hash{'insert_sequence_allele1'}){
             my ($insert_sequence_allele1, $insert_sequence_allele2) ;
             ($insert_sequence_allele1, $insert_sequence_allele2) = split (/\//, $data->{$col_name}) if $data->{$col_name};
             $hash{'insert_sequence_allele1'} = $insert_sequence_allele1;
             $hash{'insert_sequence_allele2'} = $insert_sequence_allele2;
-        }else{
-            $hash{$col_name} = $data->{$col_name};
         }
+        $hash{$col_name} = $data->{$col_name};        
     }
     $self->{hash} = \%hash;
 }
