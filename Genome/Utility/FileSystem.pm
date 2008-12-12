@@ -131,8 +131,47 @@ sub shellcmd {
     return 1;
 }
 
+sub lock_resource {
+    my ($self,%args) = @_;
 
+    my $lock_directory =  delete $args{lock_directory} || die('Must supply lock_directory to lock resource');
+    my $resource_id = $args{'resource_id'} || die('Must supply resource_id to lock resource');
+    my $block_sleep = delete $args{block_sleep} || 60;
+    my $max_try = delete $args{max_try} || 7200;
 
+    $self->create_directory($lock_directory);
+
+    my $ret;
+    my $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
+    while(!($ret = mkdir $resource_lock)) {
+        return undef unless $max_try--;
+        $self->status_message("waiting on lock for resource $resource_lock");
+        sleep $block_sleep;
+    }
+
+    my $lock_info_pathname = $resource_lock . '/info';
+    my $lock_info = IO::File->new(">$lock_info_pathname");
+    $lock_info->printf("HOST %s\nPID $$\nLSF_JOB_ID %s\nUSER %s\n",
+                       $ENV{'HOST'},
+                       $ENV{'LSB_JOBID'},
+                       $ENV{'USER'},
+                     );
+    $lock_info->close();
+
+    eval "END { unlink \$lock_info_pathname; rmdir \$resource_lock;}";
+
+    return 1;
+}
+
+sub unlock_resource {
+    my ($self,%args) = @_;
+    my $lock_directory = delete $args{lock_directory} || die('No lock_directory specified for unlocking.');
+    my $resource_id = delete $args{resource_id} || die('No resource_id specified for unlocking.');
+    my $resource_lock = $lock_directory . "/" . $resource_id . ".lock";
+    unlink $resource_lock . '/info';
+    rmdir $resource_lock;
+    return 1;
+}
 
 1;
 
