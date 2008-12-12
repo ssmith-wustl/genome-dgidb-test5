@@ -1,4 +1,4 @@
-use Test::More tests => 0;
+use Test::More skip_all => "under development";
 
 use above 'Genome';
 
