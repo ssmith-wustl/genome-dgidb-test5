@@ -474,7 +474,7 @@ sub on_review_button_clicked
     my $mr_dir = `wtf Genome::Model::Tools::ManualReview`;
     chomp $mr_dir;
     ($mr_dir) = $mr_dir =~ /(.*)\.pm/;
-    $mr_dir .= 'manual_review.glade';
+    $mr_dir .= '/manual_review.glade';
     my $glade = new Gtk2::GladeXML($mr_dir,"review_editor");
     $self->re_g_handle($glade);
     #$glade->signal_autoconnect_from_package($self);
