@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 15;
+use Test::More tests => 8;
 
 BEGIN {
     use_ok('Genome::Model::Command');
@@ -30,52 +30,20 @@ isa_ok($model,'Genome::Model');
 
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $sub_dir = $tmp_dir .'/sub/dir/test';
-my $command_1 = Genome::Model::Command->create(
+my $command = Genome::Model::Command->create(
                                              model => $model,
                                          );
-isa_ok($command_1,'Genome::Model::Command');
+isa_ok($command,'Genome::Model::Command');
 ok(! -e $sub_dir,$sub_dir .' does not exist');
-ok($command_1->create_directory($sub_dir),'create directory');
+ok($command->create_directory($sub_dir),'create directory');
 ok(-d $sub_dir,$sub_dir .' is a directory');
 
-my $command_2 = Genome::Model::Command->create(
-                                               model => $model,
-                                           );
-isa_ok($command_2,'Genome::Model::Command');
-
-ok($command_1->lock_resource(
-                             lock_directory => $tmp_dir,
-                             resource_id => --$bogus_id,
-                         ),'command 1 lock resource_id '. $bogus_id);
-my $expected_lock_info = $tmp_dir .'/'. $bogus_id .'.lock/info';
-ok(-f $expected_lock_info,'lock info file found '. $expected_lock_info);
+my $fifo = $sub_dir .'/test_pipe';
+`mkfifo $fifo`;
 eval{
-    $command_1->create_directory($expected_lock_info);
+    $command->create_directory($fifo);
 };
-ok($@,'failed to create_directory '. $expected_lock_info);
-
-eval {
-    $command_2->lock_resource(
-                              lock_directory => $tmp_dir,
-                              resource_id => $bogus_id,
-                              max_try => 1,
-                              block_sleep => 3,
-                          );
-};
-ok($@,'command 2 failed lock resource_id '. $bogus_id);
-
-ok($command_1->unlock_resource(
-                               lock_directory => $tmp_dir,
-                               resource_id => $bogus_id,
-                           ), 'command 1 unlock resource_id '. $bogus_id);
-ok($command_2->lock_resource(
-                             lock_directory => $tmp_dir,
-                             resource_id => $bogus_id,
-                         ),'command 2 lock resource_id '. $bogus_id);
-ok($command_2->unlock_resource(
-                               lock_directory => $tmp_dir,
-                               resource_id => $bogus_id,
-                           ), 'command 2 unlock resource_id '. $bogus_id);
+ok($@,'failed to create_directory '. $fifo);
 
 exit;
 
