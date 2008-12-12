@@ -1,4 +1,4 @@
-package Genome::Model::Tools::ManualReview::MRGuiDev;
+package Genome::Model::Tools::ManualReview::MRGui;
 
 use strict;
 use warnings;
@@ -13,7 +13,7 @@ use Genome::Utility::VariantReviewListReader;
 use File::Basename ('fileparse','basename');
 use base qw(Class::Accessor);
 use Time::HiRes qw(usleep);
-Genome::Model::Tools::ManualReview::MRGuiDev->mk_accessors(qw(current_file g_handle re_g_handle header));
+Genome::Model::Tools::ManualReview::MRGui->mk_accessors(qw(current_file g_handle re_g_handle header));
 
 my %iub_hash = ( A => 1,
                 C => 2,
