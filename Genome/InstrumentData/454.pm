@@ -7,24 +7,39 @@ use Genome;
 
 class Genome::InstrumentData::454 {
     is  => 'Genome::InstrumentData',
-    has => [
-    sff_file => {
-        doc => 'The sff file associated with the 454 instrument data',
-        calculate_from => [qw/ resolve_full_path id /],
-        calculate => q| return sprintf('%s/%s.sff', $resolve_full_path, $id); |,
-    },
-    #< Run Region 454 from DW Attrs >#
-    _run_region_454     => {
-        doc => '454 Run Region from LIMS.',
-        is => 'GSC::RunRegion454',
-        calculate => q| GSC::RunRegion454->get($id); |,
-        calculate_from => [qw/ id  /]
-    },
-    region_id           => { via => "_run_region_454" },
-    library_name        => { via => "_run_region_454" },
-    total_reads         => { via => "_run_region_454", to => "total_key_pass" },
-    is_paired_end       => { via => "_run_region_454", to => "paired_end" },
-    limit_regions       => { via => "_run_region_454", to => "region_number" }, # legacy RunChunk
+    table_name => <<'EOS'
+        (
+            select 
+                to_char(region_id) id,
+                region_id genome_model_run_id, --legacy
+                region_number limit_regions, --legacy
+                r.* 
+            from run_region_454@dw r
+        ) x454_detail
+EOS
+    ,
+    has_optional => [
+        sff_file => {
+            doc => 'The sff file associated with the 454 instrument data',
+            calculate_from => [qw/ resolve_full_path id /],
+            calculate => q| return sprintf('%s/%s.sff', $resolve_full_path, $id); |,
+        },
+        #< Run Region 454 from DW Attrs >#
+        run_region_454     => {
+            doc => '454 Run Region from LIMS.',
+            is => 'GSC::RunRegion454',
+            calculate => q| GSC::RunRegion454->get($id); |,
+            calculate_from => ['id']
+        },
+        region_id           => { },
+        region_number       => { },
+        total_reads         => { column_name => "TOTAL_KEY_PASS" },
+        is_paired_end       => { column_name => "PAIRED_END" },
+        
+        # deprecated, compatible with Genome::RunChunk::Solexa
+        genome_model_run_id => {},
+        limit_regions       => {},
+        
     ],
 };
 

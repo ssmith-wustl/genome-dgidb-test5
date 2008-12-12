@@ -16,8 +16,9 @@ class Genome::InstrumentData {
                 sanger.run_name,
                 'sanger' sequencing_platform,
                 sanger.run_name seq_id,
-                '1' sample_name,
-                1 subset_name
+                'unknown' sample_name,
+                1 subset_name,
+                'unknown' library_name
         from gsc_run\@oltp sanger
 
      union all
@@ -27,9 +28,11 @@ class Genome::InstrumentData {
                 'solexa' sequencing_platform,
                 to_char(solexa.seq_id) seq_id, 
                 solexa.sample_name sample_name,
-                solexa.lane subset_name
+                solexa.lane subset_name,
+                solexa.library_name library_name
         from solexa_lane_summary\@dw solexa
-
+        where run_type in ('Standard','Paired End Read 2')
+    
      union all
 
         select to_char(x454.region_id) id,
@@ -37,10 +40,11 @@ class Genome::InstrumentData {
                 '454' sequencing_platform,
                 to_char(x454.region_id) seq_id, 
                 nvl(x454.sample_name, x454.incoming_dna_name) sample_name, 
-                x454.region_number subset_name
+                x454.region_number subset_name,
+                x454.library_name library_name
         from run_region_454\@dw x454
-
-    ) run_chunk
+        
+    ) idata
 EOS
     ,
     is_abstract => 1,
@@ -50,9 +54,11 @@ EOS
         run_name            => { is => 'VARCHAR2', len => 500, is_optional => 1 },
         subset_name         => { is => 'VARCHAR2', len => 32, is_optional => 1, },
         sample_name         => { is => 'VARCHAR2', len => 255 },
+        #sample              => { is => 'Genome::Sample', where => [ 'sample_name' => \'sample_name' ] },
+        library_name        => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         seq_id => { is => 'VARCHAR2', len => 15, is_optional => 1 },
         events => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => "instrument_data" },
-        full_name => { calculate_from => ['run_name','subset_name'], calculate => q|"$run_name/$subset_name"| },
+        full_name => { calculate_from => ['run_name','subset_name'], calculate => q|"$run_name/$subset_name"| },        
         name => {
             doc => 'This is a long version of the name which is still used in some places.  Replace with full_name.',
             is => 'String', 
