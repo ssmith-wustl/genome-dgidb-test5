@@ -669,15 +669,18 @@ sub lock_resource {
     $self->warning_message("locking is disabled since the new build system circumvents the need for it");
     #$self->warning_message(Carp::longmess());
     return 1;
-
-    $args{lock_directory} = $self->lock_directory;
-    return $self->SUPER::lock_resource(%args);
+    unless ($args{lock_directory}) {
+        $args{lock_directory} = $self->lock_directory;
+    }
+    return Genome::Utility::FileSystem->lock_resource(%args);
 }
 
 sub unlock_resource {
     my ($self, %args) = @_;
-    $args{lock_directory} = $self->lock_directory;
-    $self->SUPER::unlock_resource(%args);
+    unless ($args{lock_directory}) {
+        $args{lock_directory} = $self->lock_directory;
+    }
+    return Genome::Utility::FileSystem->unlock_resource(%args);
 }
 
 sub get_all_objects {
