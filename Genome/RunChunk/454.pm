@@ -4,7 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::RunChunk;
+
+require Genome::Utility::FileSystem;
 
 class Genome::RunChunk::454 {
     is  => 'Genome::RunChunk',
@@ -80,20 +81,29 @@ sub dump_to_file_system {
     my $self = shift;
 
     unless ( -e $self->sff_file ) {
-        $self->create_data_directory_and_link
-            or return;
-        if (-d $self->full_path . '/processing') {
-            $self->error_message('Dump still processing: '. $self->full_path . '/processing');
+        unless ($self->create_data_directory_and_link) {
+            $self->error_message('Failed to create directory and link');
             return;
         }
-        Genome::Utility::FileSystem->create_directory($self->full_path . '/processing')
-              or return;
-        unless ( $self->run_region_454->dump_sff(filename => $self->sff_file) ) {
-            $self->error_message('Failed to dump sff_file to '. $self->sff_file);
+        unless (Genome::Utility::FileSystem->lock_resource(
+                                                           lock_directory => $self->full_path,
+                                                           resource_id => $self->seq_id,
+                                                           max_try => 60,
+                                                       )) {
+            $self->error_message('Failed to lock_resource '. $self->seq_id);
             return;
         }
-        rmdir $self->full_path . '/processing'
-            or return;
+        unless ($self->run_region_454->dump_sff(filename => $self->sff_file)) {
+            $self->error_message('Failed to dump sff file to '. $self->sff_file);
+            return;
+        }
+        unless (Genome::Utility::FileSystem->unlock_resource(
+                                                             lock_directory => $self->full_path,
+                                                             resource_id => $self->seq_id,
+                                                         )) {
+            $self->error_message('Failed to unlock_resource '. $self->seq_id);
+            return;
+        }
     }
     return 1;
 }
