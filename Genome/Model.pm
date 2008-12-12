@@ -118,7 +118,24 @@ class Genome::Model {
         calculate => q( 'Genome::RunChunk::' . ucfirst($sequencing_platform) ), 
         doc => 'the class of read set assignable to this model' },
         sequencing_platform       => { via => 'processing_profile' },
+       gold_snp_path => {
+           via => 'attributes',
+           to => 'value',
+           where => [ 
+                      entity_class_name => 'Genome::Model', 
+                      property_name => 'gold_snp_path' 
+                    ],
+           is_mutable => 1,
+       }, 
     ],
+   has_many_optional => [
+       attributes => {
+           is => 'Genome::MiscAttribute',
+           reverse_id_by => '_model',
+           where => [ entity_class_name => __PACKAGE__ ],
+       },
+   ],
+
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
@@ -755,10 +772,8 @@ sub delete {
     }
     $self->SUPER::delete;
     return 1;
+
 }
-
-
-
 1;
 
 #$HeadURL$
