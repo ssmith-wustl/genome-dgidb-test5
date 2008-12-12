@@ -132,38 +132,32 @@ sub startup {
 
 sub create_model {
     my $self = shift;
-    my $create_command= Genome::Model::Command::Create::Model->create(
-                                                                      model_name => $self->{_model_name},
-                                                                      subject_name => $self->{_subject_name},
-                                                                      subject_type => $self->{_subject_type},
-                                                                      processing_profile_name => $self->{_processing_profile_name},
-                                                                      bare_args => [],
+    my $create_command= Genome::Model::Command::Define::ReferenceAlignment->create(
+                                                                                   model_name => $self->{_model_name},
+                                                                                   subject_name => $self->{_subject_name},
+                                                                                   subject_type => $self->{_subject_type},
+                                                                                   processing_profile_name => $self->{_processing_profile_name},
+                                                                                   data_directory => $self->tmp_dir,
                                                                   );
 
-    isa_ok($create_command,'Genome::Model::Command::Create::Model');
+    isa_ok($create_command,'Genome::Model::Command::Define::ReferenceAlignment');
 
     &_trap_messages($create_command);
-    my $result = $create_command->execute();
+    ok($create_command->execute, 'execute '. $create_command->command_name);
 
-    ok($result, 'execute genome-model create');
     my @status_messages = $create_command->status_messages();
-    ok(scalar(grep { $_ eq 'created model '.$self->{'_model_name'} } @status_messages),
-        'message mentioned creating the model');  # There may have been one there for creating a directory, too
+    ok(scalar(@status_messages), 'status messages generated creating the model');
     # FIXME commented out for now - there may have been a warning about an existing symlink
-    # my @warning_messages = $create_command->warning_messages;
-    #is(scalar(@warning_messages), 0, 'no warnings');
+    #my @warning_messages = $create_command->warning_messages;
+    #ok(!scalar(@warning_messages), 'no warning messages');
     my @error_messages = $create_command->error_messages;
-    is(scalar(@error_messages), 0, 'no errors');
+    ok(!scalar(@error_messages),'no error messages');
 
-    my $genome_model_id = $result->id;
-
-    my @models = Genome::Model->get($genome_model_id);
+    my @models = Genome::Model->get(name => $self->{_model_name});
     is(scalar(@models),1,'expected one model');
     my $model = $models[0];
     $model->test(1);
-
     isa_ok($model,'Genome::Model');
-    is($model->genome_model_id,$genome_model_id,'genome_model_id accessor');
 
     $self->add_directory_to_remove($model->data_directory);
     $self->model($model);
@@ -172,7 +166,6 @@ sub create_model {
 sub add_reads {
     my $self = shift;
     my $model = $self->model;
-    isa_ok($model,'Genome::Model');
     my @read_sets = @{$self->{_read_set_array_ref}};
     for my $read_set (@read_sets) {
         isa_ok($read_set,'GSC::Sequence::Item');
