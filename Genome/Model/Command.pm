@@ -170,6 +170,23 @@ sub create_directory {
     return 1;
 }
 
+sub lock_resource {
+    my ($self,%args) = @_;
+    unless (Genome::Utility::FileSystem->lock_resource(%args)) {
+        $self->error_message('Failed to lock_resource by command '. $self->command_name);
+        die;
+    }
+    return 1;
+}
+
+sub unlock_resource {
+    my ($self, %args) = @_;
+    unless (Genome::Utility::FileSystem->unlock_resource(%args)) {
+        $self->error_message('Failed to unlock_resource by command '. $self->command_name);
+        die;
+    }
+    return 1;
+}
 1;
 
 #$HeadURL$
