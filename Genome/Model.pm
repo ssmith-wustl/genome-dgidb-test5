@@ -653,41 +653,14 @@ sub lock_resource {
     #$self->warning_message(Carp::longmess());
     return 1;
 
-    my $ret;
-    my $resource_id = $self->lock_directory . '/' . $args{'resource_id'} . ".lock";
-    my $block_sleep = $args{block_sleep} || 60;
-    my $max_try = $args{max_try} || 7200;
-
-    mkdir($self->lock_directory,0777) unless (-d $self->lock_directory);
-
-    while(! ($ret = mkdir $resource_id)) {
-        return undef unless $max_try--;
-        $self->status_message("waiting on lock for resource $resource_id");
-        sleep $block_sleep;
-    }
-
-    my $lock_info_pathname = $resource_id . '/info';
-    my $lock_info = IO::File->new(">$lock_info_pathname");
-    $lock_info->printf("HOST %s\nPID $$\nLSF_JOB_ID %s\nUSER %s\n",
-                       $ENV{'HOST'},
-                       $ENV{'LSB_JOBID'},
-                       $ENV{'USER'},
-                     );
-    $lock_info->close();
-
-    eval "END { unlink \$lock_info_pathname; rmdir \$resource_id;}";
-
-    return 1;
+    $args{lock_directory} = $self->lock_directory;
+    return $self->SUPER::lock_resource(%args);
 }
 
 sub unlock_resource {
     my ($self, %args) = @_;
-    my $resource_id = delete $args{resource_id};
-    Carp::confess("No resource_id specified for unlocking.") unless $resource_id;
-    $resource_id = $self->lock_directory . "/" . $resource_id . ".lock";
-
-    unlink $resource_id . '/info';
-    rmdir $resource_id;
+    $args{lock_directory} = $self->lock_directory;
+    $self->SUPER::unlock_resource(%args);
 }
 
 sub get_all_objects {
