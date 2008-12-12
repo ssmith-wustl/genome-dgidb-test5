@@ -1,4 +1,4 @@
-package Genome::Model::Tools::ManualReview::MRGui;
+package Genome::Model::Tools::ManualReview::MRGuiDev;
 
 use strict;
 use warnings;
@@ -13,7 +13,7 @@ use Genome::Utility::VariantReviewListReader;
 use File::Basename ('fileparse','basename');
 use base qw(Class::Accessor);
 use Time::HiRes qw(usleep);
-Genome::Model::Tools::ManualReview::MRGui->mk_accessors(qw(current_file g_handle re_g_handle header));
+Genome::Model::Tools::ManualReview::MRGuiDev->mk_accessors(qw(current_file g_handle re_g_handle header));
 
 my %iub_hash = ( A => 1,
                 C => 2,
@@ -341,9 +341,10 @@ sub open_file
     $model->set_sort_column_id(0,'GTK_SORT_ASCENDING');
     
     my $project_file = $self->current_file;
-    $project_file.=".$ENV{USERNAME}" unless($project_file =~ /$ENV{USERNAME}/);
-    $self->current_file($project_file);
     my $filename = basename($project_file);
+    $project_file.=".$ENV{USERNAME}" unless($filename =~ /$ENV{USERNAME}/);
+    $self->current_file($project_file);
+    $filename = basename($project_file);
     $mainWin->set_title("Manual Review - $filename");
 }
 
