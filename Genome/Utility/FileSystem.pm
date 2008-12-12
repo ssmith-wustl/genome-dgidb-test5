@@ -32,6 +32,11 @@ sub create_directory {
         return;
     }
 
+    if ( -p $directory ) {
+        $self->error_message("Can't create directory ($directory), already exists as a named pipe");
+        return;
+    }
+
     eval{ File::Path::mkpath($directory, 0, 02775); };
 
     if ( $@ ) {
