@@ -15,12 +15,19 @@ use App::Report;
 
 class Genome::Model::Report::GoldSnp{
     is => 'Genome::Model::Report',
+    has =>
+    [
+        snp_file => {
+                        type => 'String',
+                        doc => 'snp file to run',
+                     }
+    ],
 };
 
 sub resolve_reports_directory {
     my $self = shift;
     my $basedir = $self->SUPER::resolve_reports_directory();
-    my $reports_dir= $basedir . "SolexaStageOne/";#CHANGE TO GoldSnp
+    my $reports_dir= $basedir . "GoldSnp/";
     unless(-d $reports_dir) {
         unless(mkdir $reports_dir) {
             $self->error_message("Directory $reports_dir doesn't exist, can't create");
@@ -29,18 +36,18 @@ sub resolve_reports_directory {
         chmod 02775, $reports_dir;
     }
 
-   `touch $reports_dir/generation_class.SolexaStageOne`;#CHANGE TO GoldSnp
+   `touch $reports_dir/generation_class.GoldSnp`;
    return $reports_dir;
 }
 
 sub report_brief_output_filename {
     my $self=shift;
-    return $self->resolve_reports_directory . "/gold_snp_brief.html";
+    return $self->resolve_reports_directory . "/brief.html";
 }
 
 sub report_detail_output_filename {
     my $self=shift;
-    return $self->resolve_reports_directory . "/gold_snp_detail.html";
+    return $self->resolve_reports_directory . "/detail.html";
 }
 sub generate_report_brief 
 {
@@ -61,8 +68,8 @@ sub generate_report_detail
    my $self = shift;
    my $model = $self->model;
    my $gold_snp_path = $model->gold_snp_path;
-#   my $snp_file = $self->get_snp_file;  PUT BACK!!!
-   my $snp_file  = "/gscmnt/sata146/info/medseq/dlarson/GBM_Genome_Model/tumor/2733662090.snps";
+   my $snp_file = $self->snp_file;  
+#   my $snp_file  = "/gscmnt/sata146/info/medseq/dlarson/GBM_Genome_Model/tumor/2733662090.snps";
 
    my $r = new CGI;
    my $cmd = "gt snp gold-snp-intersection " .

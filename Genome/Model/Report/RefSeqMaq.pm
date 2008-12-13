@@ -37,7 +37,7 @@ class Genome::Model::Report::RefSeqMaq{
 sub resolve_reports_directory {
     my $self = shift;
     my $basedir = $self->SUPER::resolve_reports_directory();
-    my $reports_dir= $basedir . "SolexaStageOne";
+    my $reports_dir= $basedir . "RefSeqMaq";
 #    $reports_dir .= '-' . $self->ref_seq_name if $self->ref_seq_name; 
     unless(-d $reports_dir) {
         unless(mkdir $reports_dir) {
@@ -47,19 +47,19 @@ sub resolve_reports_directory {
         chmod 02775, $reports_dir;
     }
 
-   `touch $reports_dir/generation_class.SolexaStageOne`;
+   `touch $reports_dir/generation_class.RefSeqMaq`;
    return $reports_dir;
 }
 
 
 sub report_brief_output_filename {
     my $self=shift;
-    return $self->resolve_reports_directory . "/ref_seq_brief.html";
+    return $self->resolve_reports_directory . "/brief.html";
 }
 
 sub report_detail_output_filename {
     my $self=shift;
-    return $self->resolve_reports_directory . "/ref_seq_detail.html";
+    return $self->resolve_reports_directory . "/detail.html";
 }
 
 sub generate_report_brief 

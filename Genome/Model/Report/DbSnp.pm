@@ -15,12 +15,19 @@ use App::Report;
 
 class Genome::Model::Report::DbSnp{
     is => 'Genome::Model::Report',
+    has =>
+    [
+        snp_file => {
+                        type => 'String',
+                        doc => 'snp file to run',
+                     }
+    ],
 };
 
 sub resolve_reports_directory {
     my $self = shift;
     my $basedir = $self->SUPER::resolve_reports_directory();
-    my $reports_dir= $basedir . "SolexaStageOne/";#CHANGE TO DbSnp
+    my $reports_dir= $basedir . "DbSnp/";
     unless(-d $reports_dir) {
         unless(mkdir $reports_dir) {
             $self->error_message("Directory $reports_dir doesn't exist, can't create");
@@ -29,18 +36,18 @@ sub resolve_reports_directory {
         chmod 02775, $reports_dir;
     }
 
-   `touch $reports_dir/generation_class.SolexaStageOne`;#CHANGE TO DbSnp
+   `touch $reports_dir/generation_class.DbSnp`;
    return $reports_dir;
 }
 
 sub report_brief_output_filename {
     my $self=shift;
-    return $self->resolve_reports_directory . "/db_snp_brief.html";
+    return $self->resolve_reports_directory . "/brief.html";
 }
 
 sub report_detail_output_filename {
     my $self=shift;
-    return $self->resolve_reports_directory . "/db_snp_detail.html";
+    return $self->resolve_reports_directory . "/detail.html";
 }
 sub generate_report_brief 
 {
@@ -61,16 +68,14 @@ sub generate_report_detail
    my $self = shift;
    my $model = $self->model;
    my $db_snp_path = $self->SUPER::resolve_reports_directory() . $model->genome_model_id.'snps.dbsnp';
-   #see if the snp_file exists already. If not do the method below.  
-#   my $snp_file = $self->get_snp_file;  PUT BACK!!!
-   my $snp_file  = "/gscmnt/sata146/info/medseq/dlarson/GBM_Genome_Model/tumor/2733662090.snps";
+   my $snp_file = $self->snp_file;
+   #my $snp_file  = "/gscmnt/sata146/info/medseq/dlarson/GBM_Genome_Model/tumor/2733662090.snps";
 
    my $r = new CGI;
    my $cmd = "gt snp create-dbsnp-file-from-snp-file " .
              "--output-file $db_snp_path " .
              "--snp-file $snp_file";
    my $db_rpt = `$cmd`; 
-   print $db_rpt;
 
    my $concordance_cmd = "gt snp db-snp-concordance ".
                "--dbsnp-file $db_snp_path ".
