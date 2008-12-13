@@ -9,29 +9,29 @@ use Regexp::Common;
 class Genome::Model::Command::InstrumentData::List {
     is => 'UR::Object::Command::List',
     has => [
-    model => { is => 'Genome::Model', id_by => 'model_id' },
-    model_id => { is => 'Integer', doc => 'ID of the genome model' },
-    subject_class_name => {
-        is_constant => 1,
-        value => 'Genome::InstrumentData',
-    },
+        model => { is => 'Genome::Model', id_by => 'model_id' },
+        model_id => { is => 'Integer', doc => 'ID of the genome model' },
+        subject_class_name => {
+            is_constant => 1,
+            value => 'Genome::InstrumentData',
+        },
     ],
     has_optional => [
-    assigned => {
-        is => 'Boolean',
-        default => 0,
-        doc => 'List instrument data that has been assigned to the model (default)',
-    },
-    unassigned => {
-        is => 'Boolean',
-        default => 0,
-        doc => 'List instrument data that is compatable to the model, but not yet assigned',
-    },
-    compatible => {
-        is => 'Boolean',
-        default => 0,
-        doc => 'List instrument data that has been is compatable to the model',
-    },
+        assigned => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'List instrument data that has been assigned to the model (default)',
+        },
+        unassigned => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'List instrument data that is compatable to the model, but not yet assigned',
+        },
+        compatible => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'List instrument data that has been is compatable to the model',
+        },
     ],
 };
 

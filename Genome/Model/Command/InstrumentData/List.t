@@ -11,15 +11,17 @@ BEGIN {
     use_ok('Genome::Model::Command::InstrumentData::List');
 }
 
+my $m = Genome::Model::ReferenceAlignment->create(-1);
+
 #< Successes >#
 # list assigned
-my $lister = Genome::Model::Command::InstrumentData::List->create(model_id => 2725028123);
+my $lister = Genome::Model::Command::InstrumentData::List->create(model_id => -1);
 ok($lister, 'Created the lister');
 isa_ok($lister, 'Genome::Model::Command::InstrumentData::List');
 ok($lister->execute, 'Execution succeeds!');
 # list compatible
 $lister = Genome::Model::Command::InstrumentData::List->create(
-    model_id => 2725028123,
+    model_id => -1,
     compatible => 1,
 );
 ok($lister, 'Created the lister for compatible inst data');
@@ -34,7 +36,7 @@ isa_ok($lister, 'Genome::Model::Command::InstrumentData::List');
 ok(!$lister->execute, 'Execution fails as expected');
 # assigned and compatible
 $lister = Genome::Model::Command::InstrumentData::List->create(
-    model_id => 2725028123,
+    model_id => -1,
     assigned => 1,
     compatible => 1,
 );
