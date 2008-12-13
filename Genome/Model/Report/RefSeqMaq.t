@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 1;
+use Test::More skip_all=>1;#tests => 1;
 
 use above "Genome";
 
@@ -18,7 +18,8 @@ use above "Genome";
 #    print (join("\n", @maq_content));
 
 
-    $report->generate_report_brief();
+    my $maq_content = $report->get_maq_content;#generate_report_brief();
+    print "got content:\t" . $maq_content . "\n";
 
 
 
