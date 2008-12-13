@@ -90,15 +90,17 @@ BEGIN {
             {
                 if ($col eq 'pass_manual_review' or $col eq 'data_needed'){
                     my ($match) = $line_hash->{$col} =~ /^([PFYN])/;
-                    $temp_line_hash{$col} = $match;
+                    $temp_line_hash{$col} = $match;                    
                 }else{
                     $temp_line_hash{$col} = $line_hash->{$col};
                 }
             }
-            #else
-            #{
-            #    return undef;
-            #}
+            if((($col eq 'pass_manual_review') || ($col eq 'genotype_iub_code'))&& 
+               !(defined ($temp_line_hash{$col}) && length ($temp_line_hash{$col}||'')))
+            {
+                $temp_line_hash{$col} = '-';
+#                print "setting $col to $temp_line_hash{$col}\n";
+            }
         }
         $line_hash = \%temp_line_hash;
         return $line_hash;
@@ -128,15 +130,15 @@ $DB::single = 1;
             print "can't get member for pos=> ".$det_hash->{start_position}." chromosome => ".$det_hash->{chromosome}." subject_name => ".$subject_name;
         die;
         }
-        print Dumper $det_hash;
+#        print Dumper $det_hash;
         my $rev_hash = $self->get_review_data($line_hash);
         next unless $rev_hash;
         my @file_name_split = split(/\./, $self->list);
         my $reviewer_name = $file_name_split[-1];
-        my $review = Genome::SNVManualReview->get_or_create(detail_id => $current_member->id, dump_date => "2008-12-11 13:50:59", build_id => 93385989, reviewer => $reviewer_name);
+        my $review = Genome::SNVManualReview->get_or_create(detail_id => $current_member->id, dump_date => "2008-12-11 13:50:59", build_id => 93385989, reviewer => $reviewer_name,%{$rev_hash});
 #        my $review = Genome::SNVManualReview->get_or_create(detail_id => $current_member->id, dump_date => "2008-12-11 13:50:59", build_id => 1, reviewer => $ENV{USERNAME});
-        $review->set(%$rev_hash);
-        print Dumper $rev_hash;
+#        $review->set(%$rev_hash);
+#        print Dumper $rev_hash;
     }  
     return 1;
 }
