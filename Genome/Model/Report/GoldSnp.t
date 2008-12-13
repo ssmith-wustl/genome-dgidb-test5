@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More skip_all => 'under development';
+use Test::More skip_all => 1;#tests => 1;
 
 use above "Genome";
 
@@ -22,4 +22,6 @@ use above "Genome";
     my $report = Genome::Model::Report::GoldSnp->create(model_id =>$id, name=>$name);
 
     ok($report, "got a report");
+    $report->snp_file($snp_file);   
+    $report->generate_report_detail;
 
