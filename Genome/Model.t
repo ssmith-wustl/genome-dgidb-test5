@@ -70,7 +70,7 @@ isa_ok ($built_read_sets[0], "Genome::Model::ReadSet");
 ok (my %available_reports = $model->available_reports, "got available_reports");
 foreach my $key(%available_reports)
 {
-    print "REPORT:\t$key:\t" . $available_reports{$key} . "\n";
+    diag "REPORT:\t$key:\t" . $available_reports{$key} . "\n";
 }
 
 SKIP: {
