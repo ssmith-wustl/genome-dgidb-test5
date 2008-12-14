@@ -17,6 +17,11 @@ use Sort::Naturally;
 use YAML;
 use Archive::Tar;
 
+=pod
+
+    ],
+=cut
+
 class Genome::Model {
     type_name => 'genome model',
     table_name => 'GENOME_MODEL',
@@ -24,118 +29,123 @@ class Genome::Model {
     first_sub_classification_method_name => '_resolve_subclass_name',
     sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
-        genome_model_id => { is => 'NUMBER', len => 11 },
+        genome_model_id             => { is => 'Number', len => 11 },
     ],
     has => [
-        read_sets =>  { is => 'Genome::Model::ReadSet', reverse_id_by => 'model', is_many=> 1 },
-        builds => { is => 'Genome::Model::Command::Build', reverse_id_by => 'model', is_many => 1 },
-        run_chunks => { is => 'Genome::RunChunk', via=>'read_sets', to => 'read_set' },
-        current_running_build_id => {is => 'NUMBER' , len => 10 },
-        last_complete_build_id => {is => 'NUMBER', len=> 10 },
-        data_directory               => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
-        processing_profile           => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
-        processing_profile_name      => { via => 'processing_profile', to => 'name'},
-        type_name                    => { via => 'processing_profile'},
-        name                         => { is => 'VARCHAR2', len => 255 },
-        subject_name                 => { is => 'VARCHAR2', len => 255 },
-        subject_type                 => { is => 'VARCHAR2', len => 255 },
-        events                       => {
+        name                        => { is => 'Text', len => 255 },
+        data_directory              => { is => 'Text', len => 1000, is_optional => 1 },
+        
+        subject_name                => { is => 'Text', len => 255 },
+        subject_type                => { is => 'Text', len => 255 },
+        
+        processing_profile          => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
+        processing_profile_name     => { via => 'processing_profile', to => 'name'},
+        type_name                   => { via => 'processing_profile' },       
+        
+        events                      => {
             is => 'Genome::Model::Event',
             is_many => 1,
             reverse_id_by => 'model', 
             doc => 'all events which have occurred for this model',
         },
-        creation_event               => { 
+        creation_event              => { 
             doc => 'The creation event for this model',
             calculate => q|
-            my @events = $self->events;
-            for my $event (@events) {
-            if ($event->event_type eq 'genome-model create model') {
-                return $event;
+                my @events = $self->events;
+                for my $event (@events) {
+                if ($event->event_type eq 'genome-model create model') {
+                    return $event;
+                    }
                 }
-            }
-            return undef;|,
+                return undef;|,
             doc => 'The creation event for this model' 
-    },
-    test                          => { is => 'Boolean', is_optional => 1, is_transient => 1, doc => 'testing flag' },
-    _printable_property_names_ref => { is => 'array_ref', is_optional => 1, is_transient => 1, 
-        doc => 'calculate all property names once' },
-    comparable_normal_model_id    => { is => 'NUMBER', len => 10, is_optional => 1 },
-    sample_name                   => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-    ],
-    has_many => [
-    project_assignments => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'model' },
-    projects            => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
-    project_names       => { is => 'Text', via => 'projects', to => 'name' },
-
-    #< Instrument data >#
-    instrument_data => { 
-        is => 'Genome::InstrumentData', 
-        via => 'instrument_data_assignments',
-        to => 'instrument_data' 
-    },
-    assigned_instrument_data => { # same as instrument_data
-        is => 'Genome::InstrumentData', 
-        via => 'instrument_data_assignments',
-        to => 'instrument_data' 
-    },
-    instrument_data_assignments => { 
-        is => 'Genome::Model::InstrumentDataAssignment', 
-        reverse_id_by => 'model',
-        is_many => 1,
-    },
-    built_instrument_data => {
-        calculate => q| 
-        return map { $_->instrument_data } grep { defined $_->first_build_id } $self->instrument_data_assignments;
-        |,
-    },
-    unbuilt_instrument_data => {
-        calculate => q| 
-        return map { $_->instrument_data } grep { !defined $_->first_build_id } $self->instrument_data_assignments;
-        |,
-    },
-    instrument_data_assignment_events => {
-        is => 'Genome::Model::Command::AssignInstrumentData',
-        is_many => 1,
-        reverse_id_by => 'model',
-        doc => 'Each case of an instrument data being assigned to the model',
-    },
-    # old instrument data stuff that lnked to read sets
-    instrument_data_links        => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
-        doc => "for models which directly address instrument data, the list of assigned run chunks"
-    },
-    _instrument_data              => { via => 'instrument_data_links', to => 'read_set_id', is_mutable => 1 },
-    #<>#
+        },
     ],
     has_optional => [
-    current_running_build     => { is => 'Genome::Model::Command::Build', id_by => 'current_running_build_id' },
-    input_read_set_class_name => { calculate_from => 'read_set_class_name',
-        calculate => q($read_set_class_name->_dw_class), 
-        doc => 'the class of read set assignable to this model in the dw' },
-    read_set_addition_events  => { is => 'Genome::Model::Command::AddReads', reverse_id_by => 'model', is_many => 1, 
-        doc => 'each case of a read set being assigned to the model' },
-    read_set_class_name       => { calculate_from => 'sequencing_platform',
-        calculate => q( 'Genome::RunChunk::' . ucfirst($sequencing_platform) ), 
-        doc => 'the class of read set assignable to this model' },
-        sequencing_platform       => { via => 'processing_profile' },
-       gold_snp_path => {
-           via => 'attributes',
-           to => 'value',
-           where => [ 
-                      entity_class_name => 'Genome::Model', 
-                      property_name => 'gold_snp_path' 
-                    ],
-           is_mutable => 1,
-       }, 
+        builds                      => { is => 'Genome::Model::Command::Build', reverse_id_by => 'model', is_many => 1 },
+        current_running_build_id    => { is => 'Number', len => 10 },
+        current_running_build       => { is => 'Genome::Model::Command::Build', id_by => 'current_running_build_id' },
+        last_complete_build_id      => { is => 'Number', len=> 10 },
+        last_complete_build         => { is => 'Genome::Model::Command::Build', id_by => 'last_complete_build_id' },
+        
+        # TODO: refactor
+        gold_snp_path => {
+               via => 'attributes',
+               to => 'value',
+               where => [ 
+                          entity_class_name => 'Genome::Model', 
+                          property_name => 'gold_snp_path' 
+                        ],
+               is_mutable => 1,
+        }, 
+        
+        # deprecated 
+        read_sets                     => { is => 'Genome::Model::ReadSet', reverse_id_by => 'model', is_many=> 1 },
+        run_chunks                    => { is => 'Genome::RunChunk', via=>'read_sets', to => 'read_set' },
+        instrument_data_links        => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
+            doc => "for models which directly address instrument data, the list of assigned run chunks"
+        },
+        _instrument_data              => { via => 'instrument_data_links', to => 'read_set_id', is_mutable => 1 },
+        test                          => { is => 'Boolean', is_optional => 1, is_transient => 1, doc => 'testing flag' },
+        _printable_property_names_ref => { is => 'array_ref', is_optional => 1, is_transient => 1, },
+        comparable_normal_model_id    => { is => 'Number', len => 10, is_optional => 1 },
+        sample_name                   => { is => 'Text', len => 255, is_optional => 1 },
+        input_read_set_class_name   => { calculate_from => 'read_set_class_name',
+            calculate => q($read_set_class_name->_dw_class), 
+            doc => 'the class of read set assignable to this model in the dw' },
+        read_set_addition_events    => { is => 'Genome::Model::Command::AddReads', reverse_id_by => 'model', is_many => 1, 
+            doc => 'each case of a read set being assigned to the model' },
+        read_set_class_name         => { calculate_from => 'sequencing_platform',
+            calculate => q( 'Genome::RunChunk::' . ucfirst($sequencing_platform) ), 
+            doc => 'the class of read set assignable to this model' },
+        sequencing_platform         => { via => 'processing_profile' },
     ],
-   has_many_optional => [
-       attributes => {
+    has_many_optional => [
+        ref_seqs            => { is => 'Genome::Model::RefSeq', reverse_id_by => 'model' },
+        
+        project_assignments => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'model' },
+        projects            => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
+        project_names       => { is => 'Text', via => 'projects', to => 'name' },
+
+        attributes => {
            is => 'Genome::MiscAttribute',
            reverse_id_by => '_model',
            where => [ entity_class_name => __PACKAGE__ ],
-       },
-   ],
+        },
 
+        #< Instrument data >#
+        instrument_data => { 
+            is => 'Genome::InstrumentData', 
+            via => 'instrument_data_assignments',
+            to => 'instrument_data' 
+        },
+        assigned_instrument_data => { # same as instrument_data
+            is => 'Genome::InstrumentData', 
+            via => 'instrument_data_assignments',
+            to => 'instrument_data' 
+        },
+        instrument_data_assignments => { 
+            is => 'Genome::Model::InstrumentDataAssignment', 
+            reverse_id_by => 'model',
+            is_many => 1,
+        },
+        built_instrument_data => {
+            calculate => q| 
+            return map { $_->instrument_data } grep { defined $_->first_build_id } $self->instrument_data_assignments;
+            |,
+        },
+        unbuilt_instrument_data => {
+            calculate => q| 
+            return map { $_->instrument_data } grep { !defined $_->first_build_id } $self->instrument_data_assignments;
+            |,
+        },
+        instrument_data_assignment_events => {
+            is => 'Genome::Model::Command::AssignInstrumentData',
+            is_many => 1,
+            reverse_id_by => 'model',
+            doc => 'Each case of an instrument data being assigned to the model',
+        },
+    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
