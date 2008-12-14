@@ -15,25 +15,25 @@ App->init;
 class Genome::Model::Tools::Snp::CreateDbsnpFileFromSnpFile {
     is => 'Command',
     has => [
-    snp_file => 
-    { 
-        type => 'String',
-        is_optional => 0,
-        doc => "Input file of maq cns2snp output for a single individual",
-    },
-    output_file =>
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => "Output file name for dbSNP intersect file",
-    },        
-    release =>
-    {
-        type => 'Number',
-        is_optional => 1,
-        doc => "Release of dbSNP to use",
-        default => '129',
-    },
+        snp_file => 
+        { 
+            type => 'String',
+            is_optional => 0,
+            doc => "Input file of maq cns2snp output for a single individual",
+        },
+        output_file =>
+        {
+            type => 'String',
+            is_optional => 0,
+            doc => "Output file name for dbSNP intersect file",
+        },        
+        release =>
+        {
+            type => 'Number',
+            is_optional => 1,
+            doc => "Release of dbSNP to use",
+            default => '129',
+        },
     ],
 };
 
