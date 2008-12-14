@@ -116,4 +116,108 @@ sub get_snp_file
     return $cat;
 }
 
+sub make_fabulous {
+my $self=shift;    
+my $infile = $self->report_detail_output_filename;
+my $fh = IO::File->new($infile);
+my $begin_data_string = "</h3><pre>";
+
+my @x_axis;
+my @dataset1;
+my @dataset2;
+my @current_data;
+my $string_of_data;
+my $line;
+my $header;
+my $footer;
+
+# Get the header
+while ($line = $fh->getline) {
+    if ($line =~ /$begin_data_string/) {
+        my $end_of_header;
+        ($end_of_header) = ($line =~ /(.*$begin_data_string)/);
+        $header .= $end_of_header; 
+        last;
+    } else {
+        $header .= $line;
+    }
+}
+
+($string_of_data) = ($line =~ /$begin_data_string(.*$)/);
+
+@current_data = split("\t", $string_of_data);
+push(@x_axis, $current_data[0]);
+push(@dataset1, $current_data[1]);
+push(@dataset2, $current_data[2]);
+
+# Get the body
+while (my $line = $fh->getline) {
+    if ($line =~ /^There/i) {
+        $footer .= $line;
+        last;
+    }
+
+    @current_data = split("\t", $line);
+    push(@x_axis, $current_data[0]);
+    push(@dataset1, $current_data[1]);
+    push(@dataset2, $current_data[2]);
+}
+
+# Get the footer
+while (my $line = $fh->getline) {
+    $footer .= $line;
+}
+
+my $db_snp_data = build_coordinate_string(\@x_axis, \@dataset1);
+my $all_snp_data = build_coordinate_string(\@x_axis, \@dataset2);
+
+my $db_snp_string = "{ label: \"db snp\", data: $db_snp_data }";
+my $total_snp_string = "{ label: \"all snps\", data: $all_snp_data }";
+
+my $graph_data_string = "[ $db_snp_string, $total_snp_string ]";
+
+my $javascript_block=qq|
+<script language="javascript" type="text/javascript" src="http://people.iola.dk/olau/flot/jquery.js"></script>
+<script language="javascript" type="text/javascript" src="http://people.iola.dk/olau/flot/jquery.flot.js"></script>
+<script id="source" language="javascript" type="text/javascript">
+\$(function () {
+    var options = {
+        legend: { show: true, position: "nw"},
+        lines: { show: true },
+        points: { show: true },
+        xaxis: { ticks: 10 },
+    };
+
+    \$.plot(\$("#placeholder"), $graph_data_string, options);
+});
+</script> 
+|;
+
+$header .= '<div id="placeholder" style="width:900px;height:450px;"></div>';
+my $output = $header. $javascript_block . $footer;
+$fh->close;
+($infile =~ s/.html/_fabulous.html/);
+
+my $new_report_fh = IO::File->new(">$infile");
+
+print $new_report_fh $output;
+$new_report_fh->close;
+}
+
+sub build_coordinate_string {
+    my $x_axis_ref = shift;
+    my $data_set_ref = shift;
+
+    my $formatted_return="[ ";
+    
+    for my $x_point (@{$x_axis_ref}) {
+        $formatted_return .= "[ $x_point , " . $data_set_ref->[$x_point] . "], ";
+    }
+
+    $formatted_return .= "] ";
+    return $formatted_return;
+}
+
+
+
 1;
