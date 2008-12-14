@@ -168,7 +168,7 @@ sub _base_filter {
 
 sub _complete_filter {
     my $self = shift;
-    return join(',',$self->_base_filter,$self->filter);
+    return join(',', grep { defined $_ } $self->_base_filter,$self->filter);
 }
 
 sub _fetch
