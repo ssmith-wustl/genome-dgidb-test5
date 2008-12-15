@@ -831,7 +831,7 @@ sub get_or_create {
         unless ($pp) {
             $pp = Genome::ProcessingProfile::CombineVariants->create(name => $pp_name);
         }
-        $DB::single=1;
+        
         my $create_command = Genome::Model::Command::Create::Model->create(
             model_name => $name,
             processing_profile_name => $pp->name,
