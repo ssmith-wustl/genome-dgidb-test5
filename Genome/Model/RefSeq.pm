@@ -17,9 +17,9 @@ class Genome::Model::RefSeq {
         variation_position_read_depths => { via => 'variation_positions', to => 'read_depth', is_many => 1 },
         cleanup_tmp_files => {
             is => 'Boolean',
-            doc => 'set to force cleanup of your tmp mapmerge',
             is_transient => 1,
             is_optional => 1,
+            doc => 'set to force cleanup of your tmp mapmerge',
         },
     ],
     schema_name => 'GMSchema',
@@ -274,6 +274,7 @@ sub maplist_file_paths {
     my $build = $model->last_complete_build;
     my $accumulated_alignments_directory = $build->data_directory . '/alignments';
 
+    print "Alignments dir: ". $accumulated_alignments_directory ."\n" ;
 # TODO:  Do we still need a condition here?
 #    if ($self->ref_seq_name) 
 #    {
@@ -287,6 +288,7 @@ sub maplist_file_paths {
     unless (@map_lists) {
         $self->error_message("No map lists found for ref seq $ref_seq_name in " . $accumulated_alignments_directory);
     }
+    print "Map lists: ".join("\n",@map_lists);
     return @map_lists;
 }
 sub DESTROY {

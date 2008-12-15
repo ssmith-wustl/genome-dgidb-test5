@@ -38,7 +38,7 @@ sub resolve_reports_directory {
     my $self = shift;
     my $basedir = $self->SUPER::resolve_reports_directory();
     my $reports_dir= $basedir . "RefSeqMaq";
-#    $reports_dir .= '-' . $self->ref_seq_name if $self->ref_seq_name; 
+    #$reports_dir .= '-' . $self->ref_seq_name if $self->ref_seq_name; 
     unless(-d $reports_dir) {
         unless(mkdir $reports_dir) {
             $self->error_message("Directory $reports_dir doesn't exist, can't create");
@@ -48,6 +48,7 @@ sub resolve_reports_directory {
     }
 
    `touch $reports_dir/generation_class.RefSeqMaq`;
+    print $reports_dir;
    return $reports_dir;
 }
 
@@ -85,7 +86,7 @@ sub generate_report_brief
     {
         $rpt = $maqs{$ref_seq};
         $avg =  $rpt=~m/(.*non-gap regions:\s*)(\d+\.\d+)/ ? $2 : 'Not Available';
-        $brief->print("<li>$ref_seq:<a href=\"" .$self->resolve_reports_directory . '/' .  $o->ref_seq_name . '_detail.html' . "\">$avg</a></li>");
+        $brief->print("<li>$ref_seq:<a href=\"" . $self->get_coverage_filename . "\">$avg</a></li>");
     }
     $brief->print("<ul>");
     $brief->close;
@@ -102,80 +103,59 @@ sub get_maq_content
 {
     my $self = shift;
     my $model = $self->model;
-    #my $i = $self->get_ref_seq_iterator;  #rely on get_ref_seq_iterator to filter on ref_seq_name, if necessary
-
-   # my ($o, @o);
-   # while ($o = $i->next) 
-   # {
-   #    print "Working on ".$o->ref_seq_name."\n";
-   #    push @o, $o;
-   # }
 
     my ($maq_file, $bfa_file, $cmd, @maq, $fh, $file_name, %output, $rpt,$maplist);
+    
     my $reports_dir = $self->model->resolve_reports_directory;
-
+    $file_name = $self->get_coverage_filename;#$reports_dir . '/' .  $model->genome_model_id . '_coverage_detail.html';
+    $self->status_message("Will write final report file to: ".$file_name);
+    
     my @all_map_lists;
     my @map_list;
     my $c;
     my @chromosomes = (1..22,'X','Y');
+    #my @chromosomes = (22);
     foreach $c(@chromosomes) {
         my $a_ref_seq = Genome::Model::RefSeq->get(model_id=>$model->genome_model_id,ref_seq_name=>$c);
         @map_list = $a_ref_seq->combine_maplists;
+        #print "There are ".scalar(@map_list). " map lists.  They are:\n";
         push (@all_map_lists, @map_list); 
     }
-
    
-    #my $inputs = join("\n", @all_map_lists));
-    my $result_file = '/tmp/mapmerge_file.txt';
+    my $result_file = '/tmp/mapmerge_'.$model->genome_model_id;
 
     $self->warning_message("Performing a complete mapmerge for $result_file \n"); 
-        #$self->warning_message("on $inputs \n ") 
-        $self->warning_message("Hold on...\n");
-
-        #my $cmd = Genome::Model::Tools::Maq::MapMerge->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
-        ($fh,$maplist) = File::Temp::tempfile;
-        print "Printing..." . scalar(@all_map_lists) . "\n";
-        print "Printing..." . join("",@all_map_lists ). "\n";
-        $fh->print(join("\n",@all_map_lists),"\n");
-        $fh->close;
-        print "gt maq vmerge --maplist $maplist --pipe $result_file &";
-        system "gt maq vmerge --maplist $maplist --pipe $result_file &";
-        my $start_time = time;
-        until (-p "$result_file" or ( (time - $start_time) > 100) )  {
+    ($fh,$maplist) = File::Temp::tempfile;
+    $fh->print(join("\n",@all_map_lists),"\n");
+    $fh->close;
+    $self->status_message("gt maq vmerge --maplist $maplist --pipe $result_file &");
+    system "gt maq vmerge --maplist $maplist --pipe $result_file &";
+    my $start_time = time;
+    until (-p "$result_file" or ( (time - $start_time) > 100) )  {
             $self->status_message("Waiting for pipe...");
             sleep(5);
-        }
-        unless (-p "$result_file") {
+    }
+    unless (-p "$result_file") {
             die "Failed to make pipe? $!";
-        }
-        $self->status_message("Streaming into file $result_file.");
-        #system "cp $result_file.pipe $result_file";
+    }
+    $self->status_message("Streaming into file $result_file.");
+       
+    $self->warning_message("mapmerge complete.  output filename is $result_file");
+    chmod 00664, $result_file;
 
-        $self->warning_message("mapmerge complete.  output filename is $result_file");
-        chmod 00664, $result_file;
-        return $result_file;
-
-    #foreach $o(@o)
-    #{
-    #   print "Working on ".$o->ref_seq_name."\n";
-    #   @map_list = $o->combine_map_lists;
-    #   push (@map_list, @all_map_lists); 
-    #}
-    #print "All the maps: ". join("\n",@all_map_lists);
-
-        #$maq_file = $o->resolve_accumulated_alignments_filename;
-        #$bfa_file = $self->bfa_path . $o->ref_seq_name . ".bfa " . $maq_file;
-        #$cmd = $self->cmd . " " .$bfa_file; 
-        #@maq = `$cmd`;
-        #$rpt = join('',@maq);
-        #make detail report
-        #$file_name = $reports_dir . '/' .  $o->ref_seq_name . '_detail.html';
-        #$fh = IO::File->new(">$file_name");        
-        #$fh->print($rpt);
-        #$fh->close;
-        #store for brief report
-        #$output{$o->ref_seq_name} = $rpt;
-    #return %output;
+    #$bfa_file = $self->bfa_path . "22" . ".bfa " . $result_file;
+    $bfa_file = $self->bfa_path . "all_sequences.bfa " . $result_file;
+    $cmd = $self->cmd . " " .$bfa_file; 
+    @maq = `$cmd`;
+    $rpt = join('',@maq);
+    print $rpt;
+    
+    #make detail report
+    #$file_name = $reports_dir . '/' .  $model->genome_model_id . '_coverage_detail.html';
+    $self->warning_message("Writing final report to: ".$file_name);
+    $fh = IO::File->new(">$file_name");        
+    $fh->print($rpt);
+    $fh->close;
 }
 
 sub get_ref_seq_iterator
@@ -196,5 +176,12 @@ sub get_ref_seq_iterator
     return $i;
 } 
 
+sub get_coverage_filename
+{
+    my $self = shift;
+    my $reports_dir = $self->model->resolve_reports_directory;
+    my $model = $self->model;
+    return $reports_dir . '/' .  $model->genome_model_id . '_coverage_detail.html';
+}
 
 1;

@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 
-use Test::More skip_all => "under development";
 
 use above "Genome";
 
@@ -15,14 +14,12 @@ use above "Genome";
     my $snp_file = "/gscmnt/sata146/info/medseq/dlarson/GBM_Genome_Model/tumor/2733662090.snps";
 
     my $model = Genome::Model->get(genome_model_id=>$model_id);
-    ok($model, "got a model");
     $model->gold_snp_path($gold_snp_path);
 
     my ($id, $name) = ($model_id,'GoldSnp');
     my $report = Genome::Model::Report::GoldSnp->create(model_id =>$id, name=>$name);
 
-    ok($report, "got a report");
     $report->snp_file($snp_file);  
-#    $report->generate_report_brief; 
+#   $report->generate_report_brief; 
     $report->generate_report_detail;
 

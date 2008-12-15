@@ -2,13 +2,21 @@ package Genome::Model::Tools::ManualReview::MRGui;
 
 use strict;
 use warnings;
-use Gtk2 -init;
-use Gtk2::GladeXML;
-use Glib;
+
+our $initialized = 0;
+sub init_gtk {
+    return if $initialized;
+    eval qq{
+        use Gtk2 -init;
+        use Gtk2::GladeXML;
+        use Glib;
+    };
+    die $@ if $@;
+    $initialized = 1;
+};
+
 use IO::File;
 use Genome::Utility::VariantReviewListReader;
-
-
 
 use File::Basename ('fileparse','basename');
 use base qw(Class::Accessor);
@@ -46,9 +54,10 @@ my %somatic_status = (WT => 1,
 
 my %rev_somatic_status = map { $somatic_status{$_},$_; } keys %somatic_status;
 
-
 sub new 
 {
+    init_gtk() unless $initialized;
+
     croak("__PKG__:new:no class given, quitting") if @_ < 1;
 	my ($caller, %params) = @_; 
     my $caller_is_obj = ref($caller);

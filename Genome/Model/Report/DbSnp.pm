@@ -15,12 +15,11 @@ use App::Report;
 
 class Genome::Model::Report::DbSnp{
     is => 'Genome::Model::Report',
-    has =>
-    [
-        snp_file => {
-                        type => 'String',
-                        doc => 'snp file to run',
-                     }
+    has => [
+        override_model_snp_file => {
+            type => 'Text',
+            doc => "for testing, use this snp file instead of the real file for the model/build",
+        }
     ],
 };
 
@@ -49,26 +48,39 @@ sub report_detail_output_filename {
     my $self=shift;
     return $self->resolve_reports_directory . "/detail.html";
 }
+
 sub generate_report_brief 
 {
     my $self=shift;
     my $model = $self->model;
+    my $build = $self->build;
     my $output_file =  $self->report_brief_output_filename;
     
     my $brief = IO::File->new(">$output_file");
     die unless $brief;
 
-    my $desc = "Db Snp coverage for " . $model->name . " as of " . UR::Time->now;
+    my $desc = "Db Snp coverage for " . $model->name . " (build " . $build->id . ") as of " . UR::Time->now;
     $brief->print("<div>$desc</div>");
     $brief->close;
 }
 
 sub generate_report_detail 
 {
-   my $self = shift;
-   my $model = $self->model;
-   my $db_snp_path = $self->SUPER::resolve_reports_directory() . $model->genome_model_id.'snps.dbsnp';
-   my $snp_file = $self->snp_file;
+    my $self = shift;
+    my $model = $self->model;
+    my $build = $self->build;
+    my $db_snp_path = $self->SUPER::resolve_reports_directory() . $model->genome_model_id.'snps.dbsnp';  
+    my $snp_file;
+    unless ($snp_file = $self->override_model_snp_file) {
+        $snp_file = $self->_generate_combined_snp_file;
+    }    
+    unless ($snp_file) {
+        die "Failed to generate combined snp file!";
+    }
+    unless (-e $snp_file) {
+        die "SNP file $snp_file does not exist!";
+    }
+
    #my $snp_file  = "/gscmnt/sata146/info/medseq/dlarson/GBM_Genome_Model/tumor/2733662090.snps";
 
    my $r = new CGI;
@@ -94,7 +106,7 @@ sub generate_report_detail
    
    my $body = IO::File->new(">$output_file");  
    die unless $body;
-        $body->print( $r->start_html(-title=> 'Db Snp for ' . $model->genome_model_id ,));
+        $body->print( $r->start_html(-title=> 'Db Snp for ' . $model->genome_model_id . ' build(' . $build->id . ')'));
         $body->print("<h3>Concordance Report</pre>");
         $body->print("<pre>$concordance_report</pre>");
         $body->print("<h3>Concordance by Quality Report</h3>");
@@ -104,16 +116,21 @@ sub generate_report_detail
     $body->close;
 }
 
-sub get_snp_file
+sub _generate_combined_snp_file
 {
-   #concatenate variant files 
+    # concatenate variant files from the build
+    # this may go in the model/build eventually
     my $self = shift;
-    my $model = $self->model;
-    my $last_complete_build = $model->last_complete_build;
-    my @variant_list_files = $last_complete_build->_variant_list_files;
+    my $build = $self->build;
+    my @variant_list_files = $build->_variant_list_files;
     my $file_list = join(' ', (sort @variant_list_files));
-    my $cat = `cat $file_list`;
-    return $cat;
+    my ($fh,$fname) = File::Temp::tempfile(CLEANUP => 1);
+    my $rv = system "cat $file_list > $fname";
+    $rv/=256;
+    if ($rv) {
+        die "Failed to create temp file $fname from snp files: $!";
+    }
+    return $fname;
 }
 
 sub make_fabulous {

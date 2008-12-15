@@ -81,10 +81,19 @@ sub generate_report_detail
     my $body = IO::File->new(">$output_file");  
     die unless $body;
         $body->print( $r->start_html(-title=> 'Gold Snp for ' . $model->genome_model_id ,));
-        $body->print("<pre>$gold_rpt</pre>");
+        $gold_rpt = $self->format_report($gold_rpt);
+        $body->print("$gold_rpt");
 
         $body->print( $r->end_html );
     $body->close;
+}
+
+sub format_report
+{
+   my ($self, $rpt) = @_;
+
+   $rpt=~s/\n/<\/div><div>/g;
+    return "<div>$rpt</div>"; 
 }
 
 sub get_snp_file

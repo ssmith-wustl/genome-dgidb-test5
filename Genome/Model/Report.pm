@@ -8,7 +8,11 @@ use Genome;
 
 class Genome::Model::Report {
     sub_classification_method_name => '_resolve_subclass_name',
-    has => [ 
+    has => [
+#           build => {is => 'Genome::Model::Command::Build', id_by => 'build_id'},
+#           build_id => {is => 'Integer', doc=>'identifies the build this report directory belongs to'},
+#           model => {is => 'Genome::Model', via => 'build'
+
            model => { is => 'Genome::Model', id_by => 'model_id'},
            model_id        => { is => 'Integer', doc => 'identifies the genome model by id' },
            model_name      => { is => 'String', via => 'model', to => 'name' },
@@ -18,6 +22,15 @@ class Genome::Model::Report {
            type            => { is => 'String'},
     ],
 };
+
+# TODO: make the report take a build directly, and infer the model indirectly
+# Remove this when done.
+sub build {
+    my $self = shift;
+    my $model = $self->model;
+    my $build = $model->last_complete_build;
+    return $build;
+}
 
 sub help_brief {
     "generate reports for a given model"
@@ -30,34 +43,43 @@ sub generate_report_brief {
 }
 
 sub generate_report_detail {
-        die "Implement generate_report_detail in the subclass you're writing, or this will 
+     die "Implement generate_report_detail in the subclass you're writing, or this will 
      continue to fail";
 }
 
 sub _resolve_subclass_name {
-	my $class = shift;
-	
-	if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) 
-        {
-	    my $name = $_[0]->name;
-            my $model_id = $_[0]->model_id;
-	    return $class->_resolve_subclass_name_for_name($model_id,$name);
-	}
-        elsif (my $name = $class->get_rule_for_params(@_)->specified_value_for_property_name('name')) 
-        {
-            my $model_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('model_id');
-            return $class->_resolve_subclass_name_for_model_and_name($model_id,$name);
-        }
-	else 
-        {
-	    return;
-	}
+    my $class = shift;
+
+    if ($class ne __PACKAGE__ and $class->isa(__PACKAGE__)) {
+        # already subclassed!
+        return $class;
+    }
+
+    $DB::single = $DB::stopper;
+ 
+    if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) 
+    {
+        my $name = $_[0]->name;
+        my $model_id = $_[0]->model_id;
+        return $class->_resolve_subclass_name_for_name($model_id,$name);
+    }
+    elsif (my $name = $class->get_rule_for_params(@_)->specified_value_for_property_name('name')) 
+    {
+        my $model_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('model_id');
+        return $class->_resolve_subclass_name_for_model_and_name($model_id,$name);
+    }
+    else 
+    {
+        return;
+    }
 }
 
 sub _resolve_subclass_name_for_model_and_name {
     my $class = shift;
     my $model_id = shift;
     my $name = shift;
+
+    $DB::single = $DB::stopper;
 
     my $model = Genome::Model->get(id => $model_id);
     my $report_dir = $model->resolve_reports_directory."$name";
@@ -156,6 +178,7 @@ sub get_detail_output
 }
 
 sub create {
+    #needs to return a file path, not a string 
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     return unless $self;
