@@ -64,13 +64,13 @@ sub execute {
 
     if ($self->dev_flag()) {
     
-        my $dbadp = Bio::DB::BioDB->new(
-                                        -database => 'biosql',
-                                        -user     => 'sg_user',
-                                        -pass     => 'sgus3r',
-                                        -dbname   => 'DWDEV',
-                                        -driver   => 'Oracle',
-                                       );
+        $dbadp = Bio::DB::BioDB->new(
+                                     -database => 'biosql',
+                                     -user     => 'sg_user',
+                                     -pass     => 'sgus3r',
+                                     -dbname   => 'DWDEV',
+                                     -driver   => 'Oracle',
+                                    );
     
     }
     else {
