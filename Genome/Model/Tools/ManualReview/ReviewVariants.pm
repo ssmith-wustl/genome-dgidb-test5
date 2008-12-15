@@ -40,30 +40,8 @@ sub execute {
     my $project_file = $self->project_file;
     
     $DB::single = 1;
-    my $mr_dir = 'Genome/Model/Tools/ManualReview';
-    foreach my $path (@INC) {
-        my $fullpath = $path . "/" .$mr_dir;
-        if( -e $fullpath) {
-            $mr_dir = $fullpath;
-            last;
-        }
-    }
-    
-    chomp $mr_dir;
-    
-    $mr_dir .= '/manual_review.glade';
-    
-    my $glade = new Gtk2::GladeXML($mr_dir,"manual_review");
-    my $mr = Genome::Model::Tools::ManualReview::MRGui->new(g_handle => $glade);
 
-    $glade->signal_autoconnect_from_package($mr);
-
-    my $mainWin = $glade->get_widget("manual_review");
-    my $treeview = $glade->get_widget("review_list");
-    $mr->build_review_tree;
-
-    $mainWin->signal_connect("destroy", sub { Gtk2->main_quit; system "killall consed"; });
-    $mr->open_file($project_file) if($project_file && -e $project_file);
+    my $mr = Genome::Model::Tools::ManualReview::MRGui->new(project_file => $project_file);    
 
     Gtk2->main();
     return 1;

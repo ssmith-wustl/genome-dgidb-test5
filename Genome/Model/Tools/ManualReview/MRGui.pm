@@ -4,17 +4,18 @@ use strict;
 use warnings;
 
 our $initialized = 0;
-sub init_gtk {
-    return if $initialized;
-    eval qq{
-        use Gtk2 -init;
-        use Gtk2::GladeXML;
-        use Glib;
-    };
-    die $@ if $@;
-    $initialized = 1;
-};
-
+BEGIN {
+    sub init_gtk {
+        return if $initialized;
+        eval qq{
+            use Gtk2 -init;
+            use Gtk2::GladeXML;
+            use Glib;
+        };
+        die $@ if $@;
+        $initialized = 1;
+    }
+}
 use IO::File;
 use Genome::Utility::VariantReviewListReader;
 
@@ -56,14 +57,40 @@ my %rev_somatic_status = map { $somatic_status{$_},$_; } keys %somatic_status;
 
 sub new 
 {
+    my ($caller, %params) = @_;   
     init_gtk() unless $initialized;
 
     croak("__PKG__:new:no class given, quitting") if @_ < 1;
-	my ($caller, %params) = @_; 
+	my $mr_dir = 'Genome/Model/Tools/ManualReview';
+    foreach my $path (@INC) {
+        my $fullpath = $path . "/" .$mr_dir;
+        if( -e $fullpath) {
+            $mr_dir = $fullpath;
+            last;
+        }
+    }
+    
+    chomp $mr_dir;
+    
+    $mr_dir .= '/manual_review.glade';
+    
+    my $glade = new Gtk2::GladeXML($mr_dir,"manual_review");
+    
+    $params{g_handle} = $glade;
     my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;
     my $self = $class->SUPER::new(\%params);    
-         
+    $glade->signal_autoconnect_from_package($self);
+
+    my $mainWin = $glade->get_widget("manual_review");
+    my $treeview = $glade->get_widget("review_list");
+    $self->build_review_tree;
+
+    $mainWin->signal_connect("destroy", sub { Gtk2->main_quit; system "killall consed"; });   
+    $glade->signal_autoconnect_from_package($self);
+
+    my $project_file = $params{project_file};
+    $self->open_file($project_file) if($project_file && -e $project_file);  
     return $self;
 }
 
