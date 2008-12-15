@@ -117,19 +117,19 @@ sub get_snp_file
 }
 
 sub make_fabulous {
-my $self=shift;    
-my $infile = $self->report_detail_output_filename;
-my $fh = IO::File->new($infile);
-my $begin_data_string = "</h3><pre>";
+    my $self=shift;    
+    my $infile = $self->report_detail_output_filename;
+    my $fh = IO::File->new($infile);
+    my $begin_data_string = "</h3><pre>";
 
-my @x_axis;
-my @dataset1;
-my @dataset2;
-my @current_data;
-my $string_of_data;
-my $line;
-my $header;
-my $footer;
+    my @x_axis;
+    my @dataset1;
+    my @dataset2;
+    my @current_data;
+    my $string_of_data;
+    my $line;
+    my $header;
+    my $footer;
 
 # Get the header
 while ($line = $fh->getline) {
@@ -162,6 +162,11 @@ while (my $line = $fh->getline) {
     push(@dataset1, $current_data[1]);
     push(@dataset2, $current_data[2]);
 }
+
+# Reverse the arrays since flot is printing this stuff backwards from what we would expect
+@x_axis = reverse(@x_axis);
+@dataset1 = reverse(@dataset1);
+@dataset2 = reverse(@dataset2);
 
 # Get the footer
 while (my $line = $fh->getline) {
