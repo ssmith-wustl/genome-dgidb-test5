@@ -33,8 +33,15 @@ sub command_name_brief {
 sub create {
     my $class = shift;
 
-    my $self = $class->SUPER::create(@_);
-    return unless $self;
+    my $self = $class->SUPER::create(@_)
+        or return;
+    
+    if ( defined $self->model_id ) {
+        unless ( $self->_verify_model ) {
+            $self->delete;
+            return;
+        }
+    }
     
     unless ($class->get_class_object->get_property_meta_by_name("model")->is_optional or $self->model) {
         if ($self->bare_args) {
@@ -68,7 +75,7 @@ sub create {
 sub _verify_model {
     my $self = shift;
 
-    unless ( $self->model_id ) {
+    unless ( defined $self->model_id ) {
         $self->error_message("No model id given");
         return;
     }
@@ -128,11 +135,10 @@ sub sub_command_delegator {
         return;
     }
 
-    my $model = Genome::Model->get(id => $params{'model_id'});
-    unless ($model) {
-        $class->error_message("Can't retrieve a Genome Model with ID ".$params{'model_id'});
-        return;
-    }
+    return unless $params{model_id} =~ /^$RE{num}{int}$/;
+
+    my $model = Genome::Model->get(id => $params{'model_id'})
+        or return;
 
     # Which property on the model will tell is the proper subclass to call?
     unless ($class->can('command_subclassing_model_property')) {
