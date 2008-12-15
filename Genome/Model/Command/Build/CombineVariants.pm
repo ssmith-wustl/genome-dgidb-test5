@@ -8,14 +8,6 @@ use File::Basename;
 
 class Genome::Model::Command::Build::CombineVariants {
     is => 'Genome::Model::Command::Build',
-    has => [
-        test => {
-            is => 'String',
-            doc => "This parameter, if set true, will skip annotation and maf writing, allowing your test to complete in a reasonable time frame.",
-            is_optional => 1,
-            default => 0,
-        }
-    ],
  };
 
 sub sub_command_sort_position { 40 }
@@ -55,16 +47,11 @@ sub execute {
     $self->status_message("Combining variants");
     $model->combine_variants();
     
-    unless ($self->test){
-        $self->status_message("Annotating variants");
-        $model->annotate_variants();
+    $self->status_message("Annotating variants");
+    $model->annotate_variants();
 
-        $self->status_message("Writing maf files");
-        $model->write_post_annotation_maf_files();
-    }
-    else {
-        $self->status_message("The test flag has been set, skipping annotation and maf writing for the sake of time.");
-    }
+    $self->status_message("Writing maf files");
+    $model->write_post_annotation_maf_files();
 
     $model->last_complete_build_id($self->build_id);
 
