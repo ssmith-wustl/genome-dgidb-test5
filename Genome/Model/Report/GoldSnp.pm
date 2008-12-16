@@ -90,10 +90,21 @@ sub generate_report_detail
 
 sub format_report
 {
-   my ($self, $rpt) = @_;
+    #assumes plain-text
+    #convert newlines to divs, and tabs to padded spans
+   my ($self, $content) = @_;
+    my $result = "\n<!--\n$content\n-->\n";    
+    if ($content=~m/(\s*)(.*)(\s*)/sm)
+    {
+        $content = $2;
+        my $span = "<span style=\"padding-left:10px;\">";
 
-   $rpt=~s/\n/<\/div><div>/g;
-    return "<div>$rpt</div>"; 
+        $content=~s/\n/<\/div>\n<div>/g;
+        $content=~s/(<div>)(\t)(.*)(<\/div>)/$1\n$span$3<\/span>\n$4/g;
+        $content=~s/\t/<\/span>$span/g;
+        $content = "<div>$content</div>";
+        return $content;
+    }
 }
 
 sub get_snp_file
