@@ -7,7 +7,7 @@ use above "Genome";
 
 use Data::Dumper;
 require Genome::DB::Schema;
-use Test::More skip_all => 'bugs introduced in refactoring, fixing...';
+use Test::More 'no_plan';
 use Storable;
 
 use_ok('Genome::Utility::VariantAnnotator');
@@ -27,7 +27,7 @@ my $annotator = _get_annotator($chromosome, $from, $to);
 
 for (my $i = 0; $i <= $#variants; $i++) {
     my $variant = $variants[$i];
-    unless ( $variant->{chromosome} eq $chromosome->chromosome_name ) {
+    unless ( $variant->{chromosome} eq $chromosome->chromosome_name ) { #uninit val
         $chromosome = _get_chromosome($variant->{chromosome});
         my ($from, $to) = _get_range(@variants[$i..$#variants]);
         $annotator = _get_annotator($chromosome, $from, $to);
@@ -64,7 +64,7 @@ sub _get_range {
     my $from = $variants[0]->{start};
     my $i = 0;
     for my $variant ( @variants ) {
-        last if $variant->{chromosome} ne $chromosome_name;
+        last if $variant->{chromosome} ne $chromosome_name; #uninit_val
         $i++;
     }
 
@@ -77,7 +77,7 @@ sub _get_chromosome {
     my $chromosome = $schema->resultset('Chromosome')->find(
         { chromosome_name => $chromosome_name },
     );
-    ok($chromosome, "Got chromosome ($chromosome_name)");
+    ok($chromosome, "Got chromosome ($chromosome_name)"); #uninit val
     die unless $chromosome;
 
     return $chromosome;

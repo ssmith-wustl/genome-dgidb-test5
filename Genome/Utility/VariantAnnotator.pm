@@ -21,6 +21,12 @@ my %codon_to_single = Genome::Info::CodonToAminoAcid->single_letter;
 sub transcripts { # was transcripts_for_snp and transcripts_for_indel
     my ($self, %variant) = @_;
 
+    # Make sure variant is set properly
+    unless (defined($variant{start}) and defined($variant{stop}) and defined($variant{variant}) and defined($variant{reference}) and defined($variant{type}) and defined($variant{chromosome_name})) {
+        print Dumper(\%variant);
+        die "Variant is not fully defined... start, stop, variant, reference, and type must be defined.\n";
+    }
+
     my @transcripts_to_annotate = $self->_determine_transcripts_to_annotate($variant{start})
         or return;
     
@@ -48,7 +54,7 @@ sub prioritized_transcripts {# was prioritized_transcripts_for_snp and prioritiz
 
     my $time = timestr(timediff($stop, $start));
 
-    print "Annotation Variant: ".$variant{start}."-".$variant{stop}." ".$variant{variant}." ".$variant{reference}." ".$variant{type}." took $time\n";
+    print "Annotation Variant: ".$variant{start}."-".$variant{stop}." ".$variant{variant}." ".$variant{reference}." ".$variant{type}." took $time\n"; #TODO make sure variant is getting passed in.  Add a check that dies unless the %variant is complete
 
     return @prioritized_annotations;
 }

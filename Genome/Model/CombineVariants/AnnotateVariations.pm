@@ -76,6 +76,7 @@ sub execute {
             $db_chrom = $schema->resultset('Chromosome')->find(
                 {chromosome_name => $genotype->{chromosome} },
             );
+
             unless ($db_chrom){
                $self->error_message("couldn't get db chrom from database");
                die;
@@ -118,8 +119,6 @@ sub print_prioritized_annotation {
         my @annotations;
 
         my $reference = $genotype->{reference};
-        my $variant = $genotype->{variant};
-
         if ($genotype->{strand} eq '-'){
             $reference = $self->reverse_complement($reference);
             $variant = $self->reverse_complement($variant);

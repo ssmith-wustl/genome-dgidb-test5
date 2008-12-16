@@ -4,8 +4,8 @@ use warnings;
 use strict; 
 use YAML::Syck;
 use FindBin qw($Bin);
-#use GSCApp::Test no_plan => 1;
-use Test::More skip_all => "Broken from a LIMS database change, fix is not deployed yet but will be soon";
+use GSCApp::Test no_plan => 1;
+#use Test::More skip_all => "Broken from a LIMS database change, fix is not deployed yet but will be soon";
 
 use Data::Dumper;
 use Storable;
