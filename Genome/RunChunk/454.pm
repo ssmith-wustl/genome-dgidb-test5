@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 
+use File::Basename;
 require Genome::Utility::FileSystem;
 
 class Genome::RunChunk::454 {
@@ -20,6 +21,9 @@ class Genome::RunChunk::454 {
             total_reads         => { via => "run_region_454", to => "total_key_pass" },
             is_paired_end       => { via => "run_region_454", to => "paired_end" },
     ],
+    has_optional => [
+                  _sff_file => { is => 'String' },
+              ],
 };
 
 sub resolve_sequencing_platform {
@@ -40,7 +44,7 @@ sub resolve_full_path {
     return $full_path;
 }
 
-sub sff_file {
+sub resolve_sff_path {
     my $self = shift;
 
     my $sff_file;
@@ -55,8 +59,21 @@ sub sff_file {
     if ($@ || !defined($sff_file)) {
         $sff_file = sprintf('%s/%s.sff', $self->full_path, $self->seq_id);
     }
-
     return $sff_file;
+}
+
+sub sff_file {
+    my $self = shift;
+
+    unless ($self->_sff_file) {
+        $self->_sff_file($self->resolve_sff_path);
+    }
+    return $self->_sff_file;
+}
+
+sub sff_basename {
+    my $self = shift;
+    return File::Basename::basename($self->sff_file,'.sff');
 }
 
 sub _dw_class { 'GSC::RunRegion454' }
