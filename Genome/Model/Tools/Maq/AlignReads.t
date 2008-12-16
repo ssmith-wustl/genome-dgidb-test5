@@ -33,9 +33,7 @@ my $output_dir = File::Temp::tempdir(CLEANUP => 1);
 #Case 1: single read 
 my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 							 ref_seq_file => $ref_seq,
-							 aligner_output_file => $aligner_log,
                                                          files_to_align_path => $files_to_align,
-                                                         unaligned_reads_file => $unaligned,
 							 execute_sol2sanger => $sol_flag,
 							 output_directory=> $output_dir
                                                         );
@@ -56,9 +54,7 @@ $files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignRea
 
 $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 							 ref_seq_file => $ref_seq,
-							 aligner_output_file => $aligner_log,
                                                          files_to_align_path => $files_to_align,
-                                                         unaligned_reads_file => $unaligned,
 							 execute_sol2sanger => $sol_flag,
 							 output_directory=> $output_dir
 							);
@@ -82,9 +78,7 @@ sub execute_alignment {
 
 my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
                                                          ref_seq_file => $ref_seq,
-                                                         aligner_output_file => $aligner_log,
                                                          files_to_align_path => $files_to_align,
-                                                         unaligned_reads_file => $unaligned,
                                                          execute_sol2sanger => $sol_flag,
                                                          output_directory=> $output_dir
                                                         );
