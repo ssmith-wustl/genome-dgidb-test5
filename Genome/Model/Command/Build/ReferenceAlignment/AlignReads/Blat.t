@@ -5,9 +5,14 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 6;
+use Test::More;
 
 BEGIN {
+    my $archos = `uname -a`;
+    if ($archos !~ /64/) {
+        plan skip_all => "Must run from 64-bit machine";
+    }
+    plan tests => 6;
     use_ok('Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat');
 }
 
