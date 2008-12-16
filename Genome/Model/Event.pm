@@ -107,6 +107,13 @@ sub create {
 sub revert {
     my $self = shift;
     for my $obj ($self->get_all_objects) {
+        if ($obj->isa('Genome::Model::Event')) {
+            if ($obj->parent_event_id eq $self->id) {
+                # Remove foreign keys
+                $obj->parent_event_id(undef);
+                UR::Context->_sync_databases;
+            }
+        }
         $self->warning_message('deleting '. $obj->class .' with id '. $obj->id);
          #this delete is a general UR delete not the cute delete just below - Jim & Chris
         $obj->delete;
@@ -133,8 +140,13 @@ sub yaml_string {
 
 sub delete {
     my $self = shift;
+    if (defined($self->prior_event_id)) {
+        # Remove foreign keys
+        $self->prior_event_id(undef);
+        UR::Context->_sync_databases;
+    }
     if ($self->{db_committed}) {
-        $self->warning_message("deleting " . $self->class . " " . $self->id);
+        $self->warning_message('deleting ' . $self->class . ' with id  ' . $self->id);
     }
     $self->revert;
     $self->SUPER::delete();
