@@ -768,6 +768,22 @@ sub delete {
             return;
         }
     }
+    # Get the remaining events like create and add-reads
+    for my $event ($self->events) {
+        unless ($event->delete) {
+            $self->error_message('Failed to remove event '. $event->class .' '. $event->id);
+            return;
+        }
+    }
+    my $ds = UR::Context->resolve_data_sources_for_class_meta_and_rule($self->get_class_object);
+    # Delete the create event db entry which is no longer 'gettable' through events
+    my $sql = "delete mg.genome_model_event where event_type = 'genome-model create model' and model_id = ?";
+    my $dbh = $ds->get_default_dbh;
+    my $sth = $dbh->prepare($sql);
+    unless ($sth->execute($self->id)) {
+        $self->error_message('Failed to remove creation event');
+        return;
+    }
     if (-e $self->data_directory) {
         unless (rmtree $self->data_directory) {
             $self->warning_message('Failed to rmtree model data directory '. $self->data_directory);
