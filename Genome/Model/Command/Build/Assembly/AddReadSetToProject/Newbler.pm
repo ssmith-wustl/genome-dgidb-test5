@@ -14,7 +14,7 @@ class Genome::Model::Command::Build::Assembly::AddReadSetToProject::Newbler {
                          doc => 'The symlink created by newbler after the read set is added to the newbler project',
                          calculate_from => ['model', 'read_set'],
                          calculate => q|
-                             return $model->sff_directory .'/'. $read_set->seq_id .'.sff';
+                             return $model->sff_directory .'/'. $read_set->sff_basename .'.sff';
                          |,
 
                      }
