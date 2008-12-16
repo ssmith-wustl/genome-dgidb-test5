@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More skip_all => 'too damn slow to be in the suite';
+use Test::More 'no_plan';
 use File::Compare;
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Command-Report-Variations';
