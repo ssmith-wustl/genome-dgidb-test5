@@ -624,16 +624,24 @@ sub mail_summary {
 sub _ask_user_question {
     my $self = shift;
     my $question = shift;
-
+    my $timeout = shift || 60;
     my $input;
-  ASK: while (!$SIG{ALRM}) {
+    eval {
+        local $SIG{ALRM} = sub { die "Failed to reply to question '$question' with in '$timeout' seconds\n" };
         $self->status_message($question);
         $self->status_message("Please reply: 'yes' or 'no'");
-        alarm(60);
+        alarm($timeout);
         chomp($input = <STDIN>);
-        last ASK if ($input =~ m/yes|no/);
+        alarm(0);
+    };
+    if ($@) {
+        $self->warning_message($@);
+        return;
     }
-    alarm(0);
+    unless ($input =~ m/yes|no/) {
+        $self->error_message("'$input' is an invalid answer to question '$question'");
+        return;
+    }
     return $input;
 }
 
