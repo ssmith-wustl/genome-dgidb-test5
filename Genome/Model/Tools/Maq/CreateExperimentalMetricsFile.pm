@@ -221,7 +221,7 @@ sub build_locations_hash {
     while(my $line = $location_fh->getline) {
         chomp $line;
         my ($chr, $pos, $ref, $iub_code, $quality, @other_metrics) = split /\s+/, $line;
-        unless($quality && $chr && $pos && $ref && $iub_code) {
+        unless(defined($quality) && $chr && $pos && $ref && $iub_code) {
             $self->error_message("Snp file format does not have the correct number of columns. (Must have at least 5)");
             return;
         }
