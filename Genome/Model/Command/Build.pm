@@ -641,11 +641,7 @@ sub get_all_objects {
     my $self = shift;
 
     my @events = $self->child_events;
-    if ($events[0] && $events[0]->id =~ /^\-/) {
-        @events = sort {$b->id cmp $a->id} @events;
-    } else {
-        @events = sort {$a->id cmp $b->id} @events;
-    }
+    @events = sort {$b->id cmp $a->id} @events;
     my @objects = $self->SUPER::get_all_objects;
     return (@events, @objects);
 }
@@ -656,13 +652,15 @@ sub delete {
     my $model = $self->model;
     if ($model->current_running_build_id && $model->current_running_build_id eq $self->genome_model_event_id) {
         $model->current_running_build_id(undef);
+        UR::Context->_sync_databases;
     }
 
     if ($model->last_complete_build_id && $model->last_complete_build_id eq $self->genome_model_event_id) {
         $model->last_complete_build_id(undef);
+        UR::Context->_sync_databases;
     }
-    unless ($self->revert) {
-        $self->error_message('Failed to revert build '. $self->id);
+    unless ($self->SUPER::delete()) {
+        $self->error_message('Failed to delete build '. $self->id);
         return;
     }
     return 1;
