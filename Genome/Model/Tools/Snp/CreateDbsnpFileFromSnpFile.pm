@@ -63,73 +63,60 @@ sub execute {
     #print output header
     print $output_fh "chromosome\tstart\tend\tdbSNP-129\n";
 
-    #make db connection
+    # TODO: let the caller do this from any model    
+    my $model = Genome::Model->get(name => "NCBI-human");
+    my $build = $model->build_by_version("36");
+    unless ($build) {
+        die "failed to find build 36 Hs?";
+    }
 
-    my $dw = GSC::Sequence::Item->dbh;
     my $cur_chr = 0;
-    my $cur_chrom_id;
-    my $chrom_id = $dw->prepare(qq/
-        select seq_id from sequence_item si
-        where sequence_item_type = 'chromosome sequence'
-            and sequence_item_name = ?
-        /);
-    my $variation_exists = $dw->prepare(qq/
-        select seq2_start,variation_type,allele_description from variation_sequence_tag vs
-        join sequence_correspondence scr on scr.scrr_id = vs.vstag_id
-        join sequence_collaborator sc on sc.seq_id = vs.vstag_id
-        where sc.collaborator_name = 'dbSNP'
-            and sc.role_detail = '$release'
-            and seq2_start = seq2_stop
-            and seq2_id = ? 
-        order by seq2_start
-        /);
-
-    #Potential Alternate Query worked out by Scott Smith
-    #/*+ gives Oracle a 'hint'. Ordering has changed according to tora so this may be faster.
-    #
-    #select /*+ ordered */ seq2_start,variation_type,allele_description 
-    #from sequence_collaborator sc 
-    #join sequence_correspondence scr on scr.scrr_id = sc.seq_id 
-    #join variation_sequence_tag vs on  vs.vstag_id = vs.vstag_id
-    #where sc.collaborator_name = 'dbSNP'
-    #and sc.role_detail = '129'
-    #and seq2_start = seq2_stop
-    #and seq2_id = 1676114023
-    #order by seq2_start;
-    #
-    
+    my $dbsnp_fh;
+    my $dbsnp_row;
     my ($variant_position, $variant_allele, $variant_class);
 
     #assuming we are reasonably sorted
-    while ( my $line = $snp_fh->getline) {
+    while (my $line = $snp_fh->getline) {
         chomp $line;
         my ($chr,$pos,) = split /\s+/, $line; 
         
         if($chr ne $cur_chr) {
-            #retrieve the new chr_id
-            $chrom_id->execute('NCBI-human-build36-chrom' . $chr);
-            ($cur_chrom_id) = $chrom_id->fetchrow_array;
-            next unless(defined($cur_chrom_id));
-            $variation_exists->execute($cur_chrom_id);
-            $variation_exists->bind_columns(\$variant_position,\$variant_class,\$variant_allele);
-            $variation_exists->fetch;
+            # switch to a new chromosome, and open its file
+            my $path = $build->data_directory . "/annotation/dbsnp-variations/$chr.dat";
+            $dbsnp_fh = IO::File->new($path);
+            $dbsnp_row = $dbsnp_fh->getline;
+            ($variant_position,$variant_class,$variant_allele) = split(/\s+/,$dbsnp_row);
             $cur_chr = $chr;
             print STDERR "Annotating $cur_chr\n";
         }
+       
+        # advance to the dbsnp data for this position 
+        while($variant_position < $pos) {
+            $dbsnp_row = $dbsnp_fh->getline;
+            last if not defined $dbsnp_row;
+            ($variant_position,$variant_class,$variant_allele) = split(/\s+/,$dbsnp_row);
+
+        };
         
-        while($variant_position < $pos && $variation_exists->fetch) {};
+        # if we're at the end of the dbsnp data, move onto the next snp comparison
+        last if not defined $dbsnp_row;
         
+        # there may be multiple rows of dbsnp data for this position
+        # ...just go until we find the first row which represents a snp, not an indel
         while($variant_position == $pos) {   
             if($pos == $variant_position && $variant_class eq 'snp') {
                 printf $output_fh "%s\t%d\t%d\t1\n",$chr,$pos,$pos;
                 last;
             }
             else {
-                last unless $variation_exists->fetch;
+                $dbsnp_row = $dbsnp_fh->getline;
+                last if not defined $dbsnp_row;
+                ($variant_position,$variant_class,$variant_allele) = split(/\s+/,$dbsnp_row);
             }
         }
     }
 
+    $dbsnp_fh->close;
     $snp_fh->close; 
     $output_fh->close;
 
