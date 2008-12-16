@@ -65,15 +65,15 @@ class Genome::Model::Tools::Maq::AlignReads {
            #input files
 
 	   ref_seq_file => {
-			doc => 'Optional input file name containing the reference sequence file.  If no file is provided, will default to "all_sequences.bfa"',           
+			doc => 'Required input file name containing the reference sequence file.',           
 	  		is => 'String',
-			default_value => 'all_sequences.bfa',
-			is_optional => 1,
+			#default_value => 'all_sequences.bfa',
+			#is_optional => 1,
 			#this may be optional, might require a seq id and some processing 
            }
 	   , 
 	   files_to_align_path => {
-			doc => 'Path (directory or file) containing input files to be aligned.  May be in fastq or bfq format.',
+			doc => 'Path to a directory or a file or a comma separated list of files containing the reads to be aligned.  May be in fastq or bfq format.',
 			is => 'String',
 	   }
 	   ,
@@ -85,6 +85,7 @@ class Genome::Model::Tools::Maq::AlignReads {
 			doc => 'Optional output file containing results of the run.  If no file is specified, the output will be directed to the screen.',
 			is => 'String',
 			is_optional => 1,
+			default_value => 'aligner.out',
 			#this may be optional
 	   }
 	   ,    
@@ -98,6 +99,8 @@ class Genome::Model::Tools::Maq::AlignReads {
 	   unaligned_reads_file => {
 			doc => 'Output file containing unaligned data.',
 		        is => 'String',
+                        is_optional => 1,
+		        default_value => 'unaligned.out', 
            }
 	   ,
 	   output_directory => {
@@ -129,14 +132,27 @@ sub prepare_input {
 
 }
 
+sub help_synopsis {
+return <<EOS
+    A Maq based utility for aligning reads using the "map" command.;
+EOS
+}
 
 sub help_brief {
-    'a tool for aligning reads (todo update this) ';
+    return <<EOS
+    A Maq based utility for aligning reads using the "map" command.;
+EOS
 }
 
 sub help_detail {
-    return <<"EOS"
-help detail for align reads todo: update
+    return <<EOS
+Provides an interface to the Maq "map" command.  Inputs are:
+
+'ref-seq-file' - The reference sequence file which to align reads to.  Specified by a path to a file. 
+
+'files-to-align-path' - The file or set of files which contain the read fragments which are going to be aligned to the reference sequence.  The path can be a single file, a comma seperated list of two files for paired end reads, or a directory containing one or two files.  These files can be in the fasta format or bfq format.  The application will attempt to detect which type of files are being used.    
+
+
 EOS
 }
 
@@ -190,14 +206,35 @@ sub create {
 
      my @listing;
      my $dir_flag=0;
-     #check to see if files to align path is a dir or file
-     if (-f $self->files_to_align_path) {
-	#$self->status_message('Path is a file');
-        push @listing, $self->files_to_align_path;
-     } elsif (-d $self->files_to_align_path) {
-	#$self->status_message('Path is dir.');
-        @listing = glob($self->files_to_align_path.'/*');
-     }
+     my @comma_list;
+
+     #check to see if files to align path is a comma delimited list of files
+     $self->status_message("Files to align: ".$self->files_to_align_path);
+     my $comma = index($self->files_to_align_path,',');
+     $self->status_message("Comma index: ".$comma);
+     if ($comma > -1) {
+	@comma_list = split(/,/,$self->files_to_align_path);
+	for my $comma_file (@comma_list) {
+	        #make sure each file exists
+		if (-f $comma_file) {
+			push @listing, $comma_file;
+		} else {
+           		$self->error_message('File does not exist: '.$comma_file);
+		}
+	}
+     } else {
+        #not a comma list	
+	#check to see if files to align path is a dir or file
+     	if (-f $self->files_to_align_path) {
+		#$self->status_message('Path is a file');
+       		 push @listing, $self->files_to_align_path;
+     	} elsif (-d $self->files_to_align_path) {
+		#$self->status_message('Path is dir.');
+       		 @listing = glob($self->files_to_align_path.'/*');
+     	} else {
+           	$self->error_message('Input file does not exist.');
+	}
+     } 
 
      my $binary_count = 0;
      my $ascii_count = 0;
@@ -210,7 +247,7 @@ sub create {
            #$self->status_message('File is binary.');
            $binary_count++;
         } else {
-           $self->error_message('Could not determine the input file type.');
+           $self->error_message('Could not determine the input file type or file may not exist.');
            #todo...Please specify on the command line with the "--input-file-type=bfq" option for bfq.');  
         }
      } #end for $file loop
