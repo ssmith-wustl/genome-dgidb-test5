@@ -6,7 +6,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 218;
+use Test::More tests => 234;
 use Test::Differences;
 use File::Path;
 
@@ -217,6 +217,9 @@ sub successful_create_model {
             $expected_data_directory = $params{data_directory} .'/'. $expected_model_name;
         }
     }
+    my $expected_user_name = $ENV{USER};
+    my $current_time = UR::Time->now;
+    my ($expected_date) = split('\w',$current_time);
     
     my $create_command = Genome::Model::Command::Define::ReferenceAlignment->create(%params);
     isa_ok($create_command,'Genome::Model::Command::Define');
@@ -257,7 +260,8 @@ sub successful_create_model {
     for my $property_name (keys %params) {
         is($model->$property_name,$params{$property_name},$property_name .' model indirect accessor');
     }
-
+    is($model->user_name,$expected_user_name,'model user_name accesssor');
+    like($model->creation_date,qr/$expected_date/,'model creation_date accessor');
     is($model->processing_profile_id,$pp->id,'model processing_profile_id indirect accessor');
     is($model->type_name,$pp->type_name,'model type_name indirect accessor');
   SKIP: {
