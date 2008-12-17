@@ -38,6 +38,7 @@ my $feature_ref = create_feature_ref();
 
 my $command = PAP::Command::UploadResult->create();
 
+$command->dev_flag(1);
 $command->biosql_namespace($biosql_namespace);
 $command->bio_seq_features($feature_ref);
 
@@ -93,35 +94,89 @@ sub create_seq {
 
 sub create_feature_ref {
 
-    my $bsg = Bio::SeqFeature::Generic->new(
-                                            -display_name => 'TST0001.GeneMark.1',
-                                           );
+    my $display_name = 'TST0001.GeneMark.1';
+
+    my $psort = Bio::SeqFeature::Generic->new(
+                                              -display_name => $display_name,
+                                              -tag          => {
+                                                                'psort_localization' => 'Cytoplasmic',
+                                                                'psort_score'        => 8.96,
+                                                               },
+                                             );
+
+
+    my $hit_description = 'transposase, putative [Deinococcus radiodurans] R1';                
+
+    my $blastp = Bio::SeqFeature::Generic->new(
+                                                -display_name => $display_name,
+                                                -tag          => {
+                                                                  'blastp_bit_score'         => 260,
+                                                                  'blastp_evalue'            => 2.1e-21,
+                                                                  'blastp_percent_identical' => 29.4,
+                                                                  'blastp_query_start'       => 15,
+                                                                  'blastp_query_end'         => 241,
+                                                                  'blastp_subject_start'     => 13,
+                                                                  'blastp_subject_end'       => 246,
+                                                                  'blastp_hit_name'          => 'ref|NP_051595.1|',
+                                                                  'blastp_hit_description'   => $hit_description,
+                                                                  'blastp_category'          => 'Predicted Protein',
+                                                                 },
+                                              );
+
+    $blastp->annotation->add_Annotation(
+                                        'dblink',
+                                         Bio::Annotation::DBLink->new(
+                                                                      -database   => 'GenBank',
+                                                                      -primary_id => 'NP_051595.1',
+                                                                     ),
+                                       );
+
+
+    my $kegg = Bio::SeqFeature::Generic->new(
+                                             -display_name     => $display_name,
+                                             -kegg_evalue      => 4.2e-197,
+                                             -kegg_description => 'hypothetical protein',
+                                            );
+
+    $kegg->annotation->add_Annotation(
+                                      'dblink',
+                                      Bio::Annotation::DBLink->new(
+                                                                   -database   => 'KEGG',
+                                                                   -primary_id => 'eci:UTI89_C4937',
+                                                                  ),
+                                     );
+
+    $kegg->annotation->add_Annotation(
+                                      'dblink',
+                                      Bio::Annotation::DBLink->new(
+                                                                   -database   => 'KEGG',
+                                                                   -primary_id => 'K01152',
+                                                                  ),
+                                     );
+
+
+    my $interpro = Bio::SeqFeature::Generic->new(
+                                                 -display_name => $display_name,
+                                                 -primary      => 'HMMPfam',
+                                                 -source_tag   => 'InterPro',
+                                                 -start        => 1,
+                                                 -end          => 100,
+                                                 -score        => 2.3e-12,
+                                                 -tag          => {
+                                                                   'interpro_analysis'    => 'HMMPfam',
+                                                                   'interpro_evalue'      => 2.3e-12,
+                                                                   'interpro_description' => 'ATP-binding region, ATPase-like',
+                                                                  },
+                                                );
+
+    $interpro->annotation->add_Annotation(
+                                          'dblink',
+                                          Bio::Annotation::DBLink->new(
+                                                                       -database   => 'InterPro',
+                                                                       -primary_id => 'IPR003594',
+                                                                      ),
+                                         );
     
-    $bsg->annotation->add_Annotation(
-                                     'dblink',
-                                     Bio::Annotation::DBLink->new(
-                                                                  -database   => 'KEGG',
-                                                                  -primary_id => 'psp:PSPPH_2639',
-                                                                 ),
-                                    );
-
-    $bsg->annotation->add_Annotation(
-                                     'dblink',
-                                     Bio::Annotation::DBLink->new(
-                                                                  -database   => 'KEGG',
-                                                                  -primary_id => 'K00435',
-                                                                 ),
-                                    );
-
-    $bsg->annotation->add_Annotation(
-                                     'dblink',
-                                     Bio::Annotation::DBLink->new(
-                                                                  -database   => 'GenBank',
-                                                                  -primary_id => 'YP_001300340.1',
-                                                              ),
-                                 );
-
-
-    return [ [ $bsg ] ];
+    return [ [ $psort, $blastp, $kegg, $interpro, ] ];
 
 }
