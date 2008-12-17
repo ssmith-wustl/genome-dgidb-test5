@@ -34,40 +34,27 @@ class Genome::Model {
     has => [
         name                        => { is => 'Text', len => 255 },
         data_directory              => { is => 'Text', len => 1000, is_optional => 1 },
-        
         subject_name                => { is => 'Text', len => 255 },
         subject_type                => { is => 'Text', len => 255 },
-        
         processing_profile          => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name     => { via => 'processing_profile', to => 'name'},
-        type_name                   => { via => 'processing_profile' },       
-        
+        type_name                   => { via => 'processing_profile' },
         events                      => {
             is => 'Genome::Model::Event',
             is_many => 1,
             reverse_id_by => 'model', 
             doc => 'all events which have occurred for this model',
         },
-        creation_event              => { 
-            doc => 'The creation event for this model',
-            calculate => q|
-                my @events = $self->events;
-                for my $event (@events) {
-                if ($event->event_type eq 'genome-model create model') {
-                    return $event;
-                    }
-                }
-                return undef;|,
-            doc => 'The creation event for this model' 
-        },
     ],
     has_optional => [
+        user_name                     => { is => 'VARCHAR2', len => 64 },
+        creation_date                 => { is => 'TIMESTAMP(6)', len => 11 },
         builds                      => { is => 'Genome::Model::Command::Build', reverse_id_by => 'model', is_many => 1 },
         current_running_build_id    => { is => 'Number', len => 10 },
         current_running_build       => { is => 'Genome::Model::Command::Build', id_by => 'current_running_build_id' },
         last_complete_build_id      => { is => 'Number', len=> 10 },
         last_complete_build         => { is => 'Genome::Model::Command::Build', id_by => 'last_complete_build_id' },
-        
+
         # TODO: refactor
         gold_snp_path => {
                via => 'attributes',
@@ -77,9 +64,9 @@ class Genome::Model {
                           property_name => 'gold_snp_path' 
                         ],
                is_mutable => 1,
-        }, 
-        
-        # deprecated 
+        },
+
+        # deprecated
         read_sets                     => { is => 'Genome::Model::ReadSet', reverse_id_by => 'model', is_many=> 1 },
         run_chunks                    => { is => 'Genome::RunChunk', via=>'read_sets', to => 'read_set' },
         instrument_data_links        => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
@@ -180,7 +167,14 @@ sub create {
         $self->SUPER::delete;
         return;
     }
-    
+
+    unless ($self->user_name) {
+        $self->user_name($ENV{USER});
+    }
+    unless ($self->creation_date) {
+        $self->creation_date(UR::Time->now);
+    }
+
     # If data directory has not been supplied, figure it out
     unless ($self->data_directory) {
         $self->data_directory( $self->resolve_data_directory );
@@ -774,15 +768,6 @@ sub delete {
             $self->error_message('Failed to remove event '. $event->class .' '. $event->id);
             return;
         }
-    }
-    my $ds = UR::Context->resolve_data_sources_for_class_meta_and_rule($self->get_class_object);
-    # Delete the create event db entry which is no longer 'gettable' through events
-    my $sql = "delete mg.genome_model_event where event_type = 'genome-model create model' and model_id = ?";
-    my $dbh = $ds->get_default_dbh;
-    my $sth = $dbh->prepare($sql);
-    unless ($sth->execute($self->id)) {
-        $self->error_message('Failed to remove creation event');
-        return;
     }
     if (-e $self->data_directory) {
         unless (rmtree $self->data_directory) {
