@@ -72,13 +72,14 @@ sub execute {
     my $tmp_fh = File::Temp->new();
     my $tmp_fn = $tmp_fh->filename();
 
-    $self->iprscan_output($tmp_fh);
+    my $sorted_tmp_fh = File::Temp->new();
+    my $sorted_tmp_fn = $sorted_tmp_fh->filename();
+    
+    $self->iprscan_output($sorted_tmp_fh);
     
     my @iprscan_command = (
                            '/gscmnt/974/analysis/iprscan16.1/iprscan/bin/iprscan.hacked',
                            '-cli',
-                           '-appl',
-                           'hmmpfam',
                            '-goterms',
                            '-verbose',
                            '-iprlookup',
@@ -93,7 +94,7 @@ sub execute {
                        );
 
     my ($iprscan_stdout, $iprscan_stderr);
-    
+   
     IPC::Run::run(
                   \@iprscan_command, 
                   \undef, 
@@ -103,6 +104,31 @@ sub execute {
                   \$iprscan_stderr, 
                  ) || die "iprscan failed: $CHILD_ERROR";
 
+    my ($sort_stderr);
+   
+    ## Replicate the way Prat sorted the InterProScan
+    ## output (sort -k 1,1 -k 2,2 -k 4,4), except
+    ## that the field numbers are different here
+    ## because we aren't selecting a subset of the
+    ## columns via awk first.
+    IPC::Run::run(
+                  [
+                   'sort',
+                   '-k',
+                   '1,1',
+                   '-k',
+                   '4,4',
+                   '-k',
+                   '12,12',
+                  ],
+                  '<',
+                  $tmp_fn,
+                  '>',
+                  $sorted_tmp_fn,
+                  '2>',
+                  \$sort_stderr,
+                 ) || die "sort failed: $CHILD_ERROR";
+                 
     $self->parse_result();
 
     ## Be Kind, Rewind.  Somebody will surely assume we've done this, 
@@ -121,6 +147,8 @@ sub parse_result {
     my $iprscan_fh = $self->iprscan_output();
     
     my @features = ( );
+
+    my %least_evalue = ( );
     
     while (my $line = <$iprscan_fh>) {
 
@@ -181,13 +209,37 @@ sub parse_result {
                                                   );
 
             $feature->annotation->add_Annotation('dblink', $dblink);
-    
-            push @features, $feature;
-    
+
+            ## Prat did thus, so thus do we (with more style).
+            ## The <= may be a bug, but the current target is replication
+            ## of results, bugs and all.
+            if (exists($least_evalue{$protein_name}{$analysis_method}{$ipr_number})) {
+                if ($evalue <= $least_evalue{$protein_name}{$analysis_method}{$ipr_number}->score()) {
+                    $least_evalue{$protein_name}{$analysis_method}{$ipr_number} = $feature;
+                }
+            }
+            else {
+                $least_evalue{$protein_name}{$analysis_method}{$ipr_number} = $feature
+            }
+            
         }
 
     }
 
+    foreach my $gene (keys %least_evalue) {
+
+        foreach my $analysis (keys %{$least_evalue{$gene}}) {
+
+            foreach my $ipr (keys %{$least_evalue{$gene}{$analysis}}) {
+
+                push @features, $least_evalue{$gene}{$analysis}{$ipr};
+                
+            }
+
+        }
+        
+    }
+    
     $self->bio_seq_feature(\@features);
     
 }
