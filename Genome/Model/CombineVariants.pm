@@ -44,6 +44,16 @@ class Genome::Model::CombineVariants{
             doc => 'The list of lq_genotype files yet to be processed',
             is_optional => 1,
         },
+        current_hq_annotated_genotype_files => {
+            is => 'Arrayref',
+            doc => 'The list of hq_annotated_genotype files yet to be processed',
+            is_optional => 1,
+        },
+        current_lq_annotated_genotype_files => {
+            is => 'Arrayref',
+            doc => 'The list of lq_annotated_genotype files yet to be processed',
+            is_optional => 1,
+        },
     ],
 };
 
@@ -80,6 +90,130 @@ sub create {
 
 sub build_subclass_name {
     return 'combine_variants';
+}
+
+# Returns the next hq genotype from the conglomeration of all of the hq genotype files
+sub next_hq_annotated_genotype {
+    my $self = shift;
+
+    # Set the current files if they have not been set yet
+    unless (($self->hq_agfh)||($self->current_hq_annotated_genotype_files)) {
+        my @hq_genotype_files = $self->hq_annotated_genotype_files;
+        $self->current_hq_annotated_genotype_files(\@hq_genotype_files);
+    }
+ 
+    # Open the file handle if it hasnt been
+    unless ($self->hq_agfh){
+        my $genotype_file;
+        
+        return undef unless $self->current_hq_annotated_genotype_files;
+        # Work around for UR returning a scalar if there is only one element in the array
+        if (ref($self->current_hq_annotated_genotype_files)) {
+            $genotype_file = shift @{$self->current_hq_annotated_genotype_files};
+        } else {
+            $genotype_file = $self->current_hq_annotated_genotype_files;
+            $self->current_hq_annotated_genotype_files(undef);
+        }
+        return unless $genotype_file;
+        
+        my $fh = IO::File->new("< $genotype_file");
+        return undef unless $fh;
+        
+        $self->hq_agfh($fh);
+    }
+
+    # Try to get a new line from one of the files until we are out of files
+    my $line;
+    while (!defined($line)) {
+        # Try to get a line
+        $line = $self->hq_agfh->getline;
+
+        # If we cannot get one, try the next file
+        unless ($line){
+            my $genotype_file = shift @{$self->current_hq_annotated_genotype_files};
+            # If we are out of files, unset the fh and return
+            unless ($genotype_file) {
+                $self->hq_agfh(undef);
+                return undef;
+            }
+            
+            # set the new fh
+            my $fh = IO::File->new("< $genotype_file");
+            unless ($fh) {
+                $self->error_message("Failed to get file handle for $genotype_file");
+                die;
+            }
+
+            $self->hq_agfh($fh);
+        }
+    }
+    
+    chomp $line;
+    my $genotype = $self->parse_genotype_line($line);
+
+    return $genotype;
+}
+
+# Returns the next lq genotype from the conglomeration of all of the lq genotype files
+sub next_lq_annotated_genotype {
+    my $self = shift;
+
+    # Set the current files if they have not been set yet
+    unless (($self->lq_agfh)||($self->current_lq_annotated_genotype_files)) {
+        my @lq_genotype_files = $self->lq_annotated_genotype_files;
+        $self->current_lq_annotated_genotype_files(\@lq_genotype_files);
+    }
+ 
+    # Open the file handle if it hasnt been
+    unless ($self->lq_agfh){
+        my $genotype_file;
+
+        return undef unless $self->current_hq_genotype_files;
+        # Work around for UR returning a scalar if there is only one element in the array
+        if (ref($self->current_lq_annotated_genotype_files)) {
+            $genotype_file = shift @{$self->current_lq_annotated_genotype_files};
+        } else {
+            $genotype_file = $self->current_lq_annotated_genotype_files;
+            $self->current_lq_annotated_genotype_files(undef);
+        }
+        return unless $genotype_file;
+        
+        my $fh = IO::File->new("< $genotype_file");
+        return undef unless $fh;
+        
+        $self->lq_agfh($fh);
+    }
+
+    # Try to get a new line from one of the files until we are out of files
+    my $line;
+    while (!defined($line)) {
+        # Try to get a line
+        $line = $self->lq_agfh->getline;
+
+        # If we cannot get one, try the next file
+        unless ($line){
+            my $genotype_file = shift @{$self->current_lq_annotated_genotype_files};
+            # If we are out of files, unset the fh and return
+            unless ($genotype_file) {
+                $self->lq_agfh(undef);
+                return undef;
+            }
+            
+            # set the new fh
+            my $fh = IO::File->new("< $genotype_file");
+            unless ($fh) {
+                $self->error_message("Failed to get file handle for $genotype_file");
+                die;
+            }
+
+            $self->lq_agfh($fh);
+        }
+    }
+    
+    chomp $line;
+    my $genotype = $self->parse_genotype_line($line);
+
+    return $genotype;
 }
 
 # Returns the next hq genotype from the conglomeration of all of the hq genotype files
@@ -238,6 +372,46 @@ sub lq_genotype_files {
     my @existing_files;
     for my $chromosome (1..22, 'X', 'Y') {
         my $file = $self->lq_genotype_file_for_chromosome($chromosome);
+        if (-s $file) {
+            push @existing_files, $file;
+        }
+    }
+
+    return @existing_files;
+}
+
+# Returns a list of all annotated genotype files, hq and lq, that currently exist
+sub annotated_genotype_files {
+    my $self = shift;
+
+    my @hq_files = $self->hq_annotated_genotype_files;
+    my @lq_files = $self->lq_annotated_genotype_files;
+
+    return (@hq_files, @lq_files);
+}
+
+# Returns a list of hq_annotated_genotype files that currently exist
+sub hq_annotated_genotype_files {
+    my $self = shift;
+
+    my @existing_files;
+    for my $chromosome (1..22, 'X', 'Y') {
+        my $file = $self->hq_annotated_genotype_file_for_chromosome($chromosome);
+        if (-s $file) {
+            push @existing_files, $file;
+        }
+    }
+
+    return @existing_files;
+}
+
+# Returns a list of lq_annotated_genotype files that currently exist
+sub lq_annotated_genotype_files {
+    my $self = shift;
+
+    my @existing_files;
+    for my $chromosome (1..22, 'X', 'Y') {
+        my $file = $self->lq_annotated_genotype_file_for_chromosome($chromosome);
         if (-s $file) {
             push @existing_files, $file;
         }
@@ -601,6 +775,9 @@ sub parse_genotype_line {
         $hash->{$header} = shift(@columns);
     }
 
+    #FIXME remove
+    $DB::single=1 if ($hash->{sample_name} eq 'H_GP-NA12144_02' and $hash->{polyscan_score} eq 'NM_004847');
+
     return $hash;
 }
 
@@ -731,29 +908,6 @@ sub maf_header {
 }
 
 # Reads from the high sensitivity post annotation genotype file and returns the next line as a hash
-sub next_hq_annotated_genotype{
-    my $self = shift;
-
-    # Open the file handle if it hasnt been
-    unless ($self->hq_agfh){
-        my $genotype_file = $self->hq_annotated_genotype_file;
-        my $fh = IO::File->new("< $genotype_file");
-        return undef unless $fh;
-        $self->hq_agfh($fh)
-    }
-
-    my $line = $self->hq_agfh->getline;
-    unless ($line){
-        $self->hq_agfh(undef);
-        return undef;
-    }
-    chomp $line;
-    my $genotype = $self->parse_annotated_genotype_line($line);
-
-    return $genotype;
-}
-
-# Reads from the high sensitivity post annotation genotype file and returns the next line as a hash
 # Optionally takes a chromosome and position range and returns only genotypes in that range
 sub next_hq_annotated_genotype_in_range{
     my $self = shift;
@@ -766,28 +920,6 @@ sub next_hq_annotated_genotype_in_range{
             return $genotype;
         }
     }
-}
-
-# Reads from the low sensitivity post annotation genotype file and returns the next line as a hash
-sub next_lq_annotated_genotype{
-    my $self = shift;
-
-    # Open the file handle if it hasnt been
-    unless ($self->lq_agfh){
-        my $genotype_file = $self->lq_annotated_genotype_file;
-        my $fh = IO::File->new("< $genotype_file");
-        return undef unless $fh;
-        $self->lq_agfh($fh)
-    }
-
-    my $line = $self->lq_agfh->getline;
-    unless ($line){
-        $self->lq_agfh(undef);
-        return undef;
-    }
-    chomp $line;
-    my $genotype = $self->parse_annotated_genotype_line($line);
-    return $genotype;
 }
 
 # Reads from the low sensitivity post annotation genotype file and returns the next line as a hash
@@ -902,6 +1034,8 @@ sub write_maf_file{
         my $tumor_genotype;
         my $normal_genotype;
 
+        $DB::single=1 if (!defined($sample_basename) or !defined($current_sample_basename)); # FIXME remove
+
         if ($sample_basename eq $current_sample_basename){
             push @current_sample_basename_genotypes, $genotype;
         }else{
@@ -913,7 +1047,7 @@ sub write_maf_file{
             if ($maf_line){
                 $fh->print($maf_line);
             }else{
-                $self->error_message("no maf line generated from matched sample genotypes".Dumper @current_sample_basename_genotypes);
+                $self->error_message("no maf line generated from matched sample genotypes\n".Dumper @current_sample_basename_genotypes);
             }
 
             @current_sample_basename_genotypes = ();
