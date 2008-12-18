@@ -32,10 +32,19 @@ my $interpro_fn = 'merged.raw.sorted.ace';
 
 $interpro_fh->open(">$interpro_fn") or die "Can't open '$interpro_fn': $OS_ERROR";
 
+my $interpro_ipr_fh = IO::File->new();
+my $interpro_ipr_fn = 'merged.raw.sorted.ipr.ace';
+
+$interpro_ipr_fh->open(">$interpro_ipr_fn") or die "Can't open '$interpro_ipr_fn': $OS_ERROR";
+
 my $kegg_fh = IO::File->new();
 my $kegg_fn = 'REPORT-top.ks.ace';
 
 $kegg_fh->open(">$kegg_fn") or die "Can't open '$kegg_fn': $OS_ERROR";
+
+
+## Need a unique list of IPR numbers per gene prediction
+my %ipr = ( );
 
 
 my $dbadp = Bio::DB::BioDB->new(
@@ -86,13 +95,15 @@ while (my $seq = $result->next_object()) {
 
                 my $ipr_number = $dblink->primary_id();
 
+                $ipr{$new_display_name}{$ipr_number} = 1;
+                
                 my ($analysis) = $feature->each_tag_value('interpro_analysis');
                 my ($evalue)   = $feature->each_tag_value('interpro_evalue');
                 my ($desc)     = $feature->each_tag_value('interpro_description');
 
                 print $interpro_fh qq{Sequence $new_display_name}, "\n";
                 print $interpro_fh qq{Interpro   "$analysis : $ipr_number $desc : $evalue}, "\n\n";
-                
+
             }
 
             next FEATURE;
@@ -206,4 +217,13 @@ while (my $seq = $result->next_object()) {
         
     }
     
+}
+
+foreach my $gene (sort keys %ipr) {
+
+    my $ipr_string = join " ", (sort { $a <=> $b } keys %{$ipr{$gene}});
+
+    print $interpro_ipr_fh qq{Sequence $gene}, "\n";
+    print $interpro_ipr_fh qq{IPR_ID "$ipr_string"}, "\n\n";
+
 }
