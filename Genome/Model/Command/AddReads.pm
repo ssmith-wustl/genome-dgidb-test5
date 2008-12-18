@@ -182,7 +182,20 @@ sub execute {
             $self->error_message('Could not create a genome model read set for this run chunk.');
             return;
         }
-
+        my $instrument_data = Genome::InstrumentData->get($run_chunk->id);
+        unless ($instrument_data) {
+            $self->warning_message('No corresponding InstrumentData found for RunChunk '. $run_chunk->id);
+            next;
+        }
+        if ($run_chunk->full_path) {
+            if (!defined($instrument_data->full_path)) {
+                $instrument_data->full_path;
+            } elsif ($run_chunk->full_path ne $instrument_data->full_path) {
+                $self->warning_message('Switching full_path from '. $instrument_data->full_path
+                                       .' to '. $run_chunk->full_path .' for '. $read_set_link->id);
+                $instrument_data->full_path($run_chunk->full_path);
+            }
+        }
         my $ida = Genome::Model::InstrumentDataAssignment->get(
                                                                model_id => $model->id,
                                                                instrument_data_id => $run_chunk->id
