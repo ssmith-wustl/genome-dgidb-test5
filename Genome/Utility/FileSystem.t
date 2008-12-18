@@ -29,6 +29,32 @@ sub _base_test_dir {
     return '/gsc/var/cache/testsuite/data/Genome-Utility-Filesystem';
 }
 
+sub test0_open_directory : Test(5) {
+    my $self = shift;
+
+    # Real dir
+    my $dh = Genome::Utility::FileSystem->open_directory(_base_test_dir());
+    ok($dh, "Opened dir: "._base_test_dir());
+    isa_ok($dh, 'IO::Dir');
+
+    # No dir
+    ok(!Genome::Utility::FileSystem->open_directory, 'Tried to open undef directory');
+
+    # Dir no exist 
+    ok(
+        !Genome::Utility::FileSystem->open_directory('/tmp/no_way_this_exists_for_cryin_out_loud'), 
+        'Tried to open a non existing directory'
+    );
+    
+    # Dir is file
+    ok(
+        !Genome::Utility::FileSystem->open_directory( sprintf('%s/existing_file.txt', _base_test_dir()) ),
+        'Try to open a directory, but it\'s a file',
+    );
+
+    return 1;
+}
+
 sub test1_create_directory : Test(3) {
     my $self = shift;
 
