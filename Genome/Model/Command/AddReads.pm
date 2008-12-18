@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Command; 
 
 class Genome::Model::Command::AddReads {
     is => 'Genome::Model::Event',
@@ -95,12 +94,31 @@ sub execute {
             $self->status_message("No reads specified!");
             # continue, b/c we'll list for the user which reads are available to add
         }
+        if ($model->sequencing_platform eq 'sanger') {
+            $self->error_message('Command '. $self->command_name .' is inappropriate for sanger sequencing');
+            return;
+        }
         my $read_set_class_name = $model->read_set_class_name;
         $self->status_message('Checking for '. $read_set_class_name .' read sets.');
 
         # How many potential read sets exist for read_set_class_name
-        my @input_read_sets = $model->compatible_input_items;
+        my @input_read_sets = sort {$a->id <=> $b->id} $model->compatible_input_items;
+        my @instrument_data = sort {$a->id <=> $b->id} $model->compatible_instrument_data;
+        unless (scalar(@input_read_sets) eq scalar(@instrument_data)) {
+            $self->error_message('Found '. scalar(@input_read_sets) .' RunChunks and '.
+                                 scalar(@instrument_data) .' InstrumentData. Exiting!');
+            return;
+        }
         $self->status_message('Found '. scalar(@input_read_sets) .' compatible read sets.');
+
+        for (my $i = 0; $i < scalar(@input_read_sets); $i++) {
+            unless ($input_read_sets[$i]->id eq $instrument_data[$i]->id) {
+                $self->error_message('RunChunk '. $input_read_sets[$i]->id
+                                     .' and InstrumentData '. $instrument_data[$i]->id
+                                     .' have different ids');
+                return;
+            }
+        }
 
         # How many read sets have been assigned to this model
         my @read_sets = $model->read_sets;
@@ -144,10 +162,10 @@ sub execute {
             $self->error_message('Could not create a genome model run chunk for this read set.');
             return;
         }
-        my $read_set_link= Genome::Model::ReadSet->get(
-                                                       model_id    => $model->id,
-                                                       read_set_id => $run_chunk->id
-                                                   );
+        my $read_set_link = Genome::Model::ReadSet->get(
+                                                        model_id    => $model->id,
+                                                        read_set_id => $run_chunk->id
+                                                    );
         if ($read_set_link) {
             $self->warning_message('Read set '. $run_chunk->full_name .' has already been added');
             next;
@@ -158,13 +176,45 @@ sub execute {
             read_set_id     => $run_chunk->id,
             first_build_id  => undef,  # set when we run the first build with this read set
         );
-
         if ($read_set_link) {
             $self->status_message('Added subset ' . $run_chunk->subset_name . ' of run ' . $run_chunk->run_name);
         } else {
             $self->error_message('Could not create a genome model read set for this run chunk.');
             return;
         }
+
+        my $ida = Genome::Model::InstrumentDataAssignment->get(
+                                                               model_id => $model->id,
+                                                               instrument_data_id => $run_chunk->id
+                                                           );
+        if ($ida) {
+            $self->warning_message(
+                                   sprintf(
+                                           'Instrument data (id<%s> name<%s>) has already been assigned to model (id<%s> name<%s>).',
+                                           $ida->instrument_data_id,
+                                           $ida->run_name,
+                                           $model->id,
+                                           $model->name,
+                                       )
+                               );
+        }
+        $ida = Genome::Model::InstrumentDataAssignment->create(
+            model_id        => $model->id,
+            instrument_data_id     => $run_chunk->id,
+            #first_build_id  => undef,  # set when we run the first build with this read set
+        );
+        unless ( $ida ) {
+            $self->warning_message(
+                                   sprintf(
+                                           'Failed to add instrument data (id<%s> name<%s>) to model (id<%s> name<%s>).',
+                                           $run_chunk->id,
+                                           $run_chunk->run_name,
+                                           $model->id,
+                                           $model->name,
+                                       )
+                               );
+        }
+
     }
     return 1;
 }
