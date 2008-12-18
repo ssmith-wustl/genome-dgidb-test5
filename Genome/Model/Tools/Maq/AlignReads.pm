@@ -51,6 +51,7 @@ class Genome::Model::Tools::Maq::AlignReads {
 		        is => 'String',
 			is_optional => 1,
 			default_value => 'maq-0.6.8_x86_64-linux',
+ 			#TODO : look at maqsubclasser, 'maq_0_6_8'
 	   }
 	   ,
 	   maq_path => {
@@ -60,6 +61,13 @@ class Genome::Model::Tools::Maq::AlignReads {
                         #default_value = '/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq',
            }
 	   ,
+	   force_fragments => {
+		doc => 'Optional switch to force fragment processing.',
+	        is => 'Integer',
+		is_optional => 1,
+		default_value => 0,
+           }
+           ,
 
 	   #####################################################
            #input files
@@ -82,7 +90,7 @@ class Genome::Model::Tools::Maq::AlignReads {
 	   #output files
 
 	   aligner_output_file => {
-			doc => 'Optional output file containing results of the run.  If no file is specified, the output will be directed to the screen.',
+			doc => 'Optional output log file containing results of the run. Defaults to "aligner.out"',
 			is => 'String',
 			is_optional => 1,
 			default_value => 'aligner.out',
@@ -97,21 +105,27 @@ class Genome::Model::Tools::Maq::AlignReads {
 	   }
            ,
 	   unaligned_reads_file => {
-			doc => 'Output file containing unaligned data.',
+			doc => 'Output file containing unaligned data. Defaults to "unaligned.out"',
 		        is => 'String',
                         is_optional => 1,
 		        default_value => 'unaligned.out', 
            }
 	   ,
+	   duplicate_mismatch_file => {
+			doc => 'Output file containing dumped duplicate mismatches specified by the (-H) maq parameter. There is no default value.  If this file is not specified duplicate mismatches will not be dumped',
+		        is => 'String',
+                        is_optional => 1,
+           }
+	   ,
 	   output_directory => {
-			doc => 'Optional output directory.  All output files will be placed here.',
+			doc => 'Optional output directory.  All output files will be placed here. Defaults to "output" in the current path.',
 			is => 'String',
 			is_optional => 1,
                         default_value => 'output',
 	   }
 	   ,
 	   temp_directory => {
-			doc => 'Optional temp directory where fastq and bfqs will be stored if generated.  If no temp directory is specified, a temporary directory in /tmp will be created and then removed.',
+			doc => 'Optional temp directory where fastq and bfqs will be stored when generated.  If no temp directory is specified, a temporary directory in /tmp will be created and then removed.',
 			is => 'String',
 			is_optional => 1,
                         #default_value => 'tmp',
@@ -172,12 +186,15 @@ sub create {
     	$output_dir =  Genome::Utility::FileSystem->create_directory($self->output_directory);
     }
 
-    
+   #set up the output files with the proper path 
     $self->alignment_file($self->output_directory.'/'.$self->alignment_file); 
     $self->unaligned_reads_file($self->output_directory.'/'.$self->unaligned_reads_file); 
     $self->aligner_output_file($self->output_directory.'/'.$self->aligner_output_file); 
+    if( defined($self->duplicate_mismatch_file) ) {
+    	$self->duplicate_mismatch_file($self->output_directory.'/'.$self->duplicate_mismatch_file); 
+    }
  
-    #these are constants and should probably be defined in class properties...todo
+    #these are constants and should probably be defined in class properties...TODO
     my $dna_primer_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer';
     my $rna_primer_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer_SMART';
 
@@ -211,7 +228,7 @@ sub create {
      #check to see if files to align path is a comma delimited list of files
      $self->status_message("Files to align: ".$self->files_to_align_path);
      my $comma = index($self->files_to_align_path,',');
-     $self->status_message("Comma index: ".$comma);
+     #$self->status_message("Comma index: ".$comma);
      if ($comma > -1) {
 	@comma_list = split(/,/,$self->files_to_align_path);
 	for my $comma_file (@comma_list) {
@@ -247,8 +264,8 @@ sub create {
            #$self->status_message('File is binary.');
            $binary_count++;
         } else {
-           $self->error_message('Could not determine the input file type or file may not exist.');
-           #todo...Please specify on the command line with the "--input-file-type=bfq" option for bfq.');  
+	   $self->error_message('Could not determine the input file type or file may not exist.');
+           #TODO...Please specify on the command line with the "--input-file-type=bfq" option for bfq.');  
         }
      } #end for $file loop
 
@@ -262,11 +279,13 @@ sub create {
      #if you have a mix of binary and ascii input, assume there is a problem.
      if ( $binary_count > 0  && $ascii_count > 0 ) {
 	$self->error_message("Binary AND ascii file types have been detected.  Only one type of file is allowed.");
-        #todo: $self->error_message('To bypass file type detection, please specify the "--input-file-type=bfq" option for bfq.');  
+        #TODO: $self->error_message('To bypass file type detection, please specify the "--input-file-type=bfq" option for bfq.');  
         return;
      } 
 
-     #if the input files are fastq (ascii) convert them using sol2sanger
+
+
+     #if the input files are fastq (ascii) execute sol2sanger if desired, then always fastq to bfq
      if ( $ascii_count > 0 ) {
         my $tmp_dir;
         if ( defined($self->temp_directory) ) {
@@ -276,6 +295,23 @@ sub create {
         }
      	#$self->status_message("temp dir:".$tmp_dir);
 
+     	#if the 'force_fragments' flag is set AND there are paired end reads, cat them together.  Replace the entry in @listing with the new file.
+        my $force_frag_file;	
+        #my @combined_flie;
+	if ($ascii_count > 1 && $self->force_fragments) {
+     	        $self->status_message("Forcing fragments.");
+        	$force_frag_file = "$tmp_dir/force-frag";
+     	        $self->status_message("Frag file: ".$force_frag_file);
+                my $cmd = "cat ".join(" ",@listing)." > ".$force_frag_file;
+     	        $self->status_message("Cat command: ".$cmd);
+                my @result = `$cmd`;
+                #clear the listing and replace it with the new combined file name for processing
+                @listing = ();
+                push (@listing, $force_frag_file );
+     	        $self->status_message("Listing contains: ".join(" ",@listing) );
+        }
+
+        #start processing the files 
      	my @bfq_pathnames;
      	my $counter=0;
      	for my $solexa_output_path (@listing) {
@@ -395,10 +431,12 @@ sub execute {
    	$upper_bound_option = '-a '.$self->upper_bound;
     }   
 
-    my $aligner_params = join(' ', $self->align_options, $upper_bound_option, $aligner_adaptor_option);
+    my $duplicate_mismatch_option = "";
+    if ( defined($self->duplicate_mismatch_file) ) {
+       $duplicate_mismatch_option = '-H '.$self->duplicate_mismatch_file;
+    }
 
-
-#$self->output_directory.'/'.$self->alignment_file,
+    my $aligner_params = join(' ', $self->align_options, $upper_bound_option, $aligner_adaptor_option, $duplicate_mismatch_option);
 
     my $cmdline =
         $self->maq_path
@@ -412,8 +450,6 @@ sub execute {
         . ' 2>&1';
 
     $self -> status_message($cmdline);
-
-       #output_files                => [$self->output_directory.'/'.$self->alignment_file, $self->unaligned_reads_file, $self->aligner_output_file],
    
    # run the aligner
    Genome::Utility::FileSystem->shellcmd(
