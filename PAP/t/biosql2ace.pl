@@ -95,6 +95,8 @@ while (my $seq = $result->next_object()) {
                 
             }
 
+            next FEATURE;
+
         }
         
         ## Psort-B
