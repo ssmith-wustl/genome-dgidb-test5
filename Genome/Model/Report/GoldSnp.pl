@@ -23,3 +23,5 @@ use above "Genome";
 #   $report->generate_report_brief; 
     $report->generate_report_detail;
 
+
+

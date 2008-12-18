@@ -69,7 +69,7 @@ sub generate_report_detail
    my $model = $self->model;
    my $gold_snp_path = $model->gold_snp_path;
    my $snp_file = $self->snp_file;  
-#   my $snp_file  = "/gscmnt/sata146/info/medseq/dlarson/GBM_Genome_Model/tumor/2733662090.snps";
+   #my $snp_file  = "/gscmnt/sata146/info/medseq/dlarson/GBM_Genome_Model/tumor/2733662090.snps";
 
    my $r = new CGI;
    my $cmd = "gt snp gold-snp-intersection " .
@@ -83,7 +83,6 @@ sub generate_report_detail
         $body->print( $r->start_html(-title=> 'Gold Snp for ' . $model->genome_model_id ,));
         $gold_rpt = $self->format_report($gold_rpt);
         $body->print("$gold_rpt");
-
         $body->print( $r->end_html );
     $body->close;
 }
@@ -92,7 +91,8 @@ sub format_report
 {
     #assumes plain-text
     #convert newlines to divs, and tabs to padded spans
-   my ($self, $content) = @_;
+    my ($self, $content) = @_;
+    my $model = $self->model;
     my $result = "\n<!--\n$content\n-->\n";    
     if ($content=~m/(\s*)(.*)(\s*)/sm)
     {
@@ -102,9 +102,23 @@ sub format_report
         $content=~s/\n/<\/div>\n<div>/g;
         $content=~s/(<div>)(\t)(.*)(<\/div>)/$1\n$span$3<\/span>\n$4/g;
         $content=~s/\t/<\/span>$span/g;
-        $content = "<div>$content</div>";
+        $content=~s/(.*<\/div>\s*)(<div>\s*There were .+)/$1<\/p>\n<hr align=\"left\">\n<p>$2/g;
+        $content = "<h1>Gold Concordance for " . $model->genome_model_id . "</h1>\n\n" .
+                   "<p><div>$content</div><p>" .
+                   $self->get_css;
         return $content;
     }
+}
+
+sub get_css
+{
+    return 
+"<style>
+    p {font-size:16px;background-color:tan;}
+    span {font-size:.9em}
+    hr {width:30%;} 
+</style>";
+
 }
 
 sub get_snp_file
