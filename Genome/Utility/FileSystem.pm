@@ -6,17 +6,56 @@ use warnings;
 use Genome;
 
 use Data::Dumper;
+require IO::Dir;
 require File::Path;
 
 class Genome::Utility::FileSystem {
     is => 'UR::Object',
 };
 
+#< Dirs >#
+sub validate_existing_directory {
+    my ($self, $directory) = @_;
+
+    unless ( defined $directory ) {
+        $self->error_message("No directory given");
+        return;
+    }
+
+    unless ( -e $directory ) {
+        $self->error_message("Directory ($directory) does not exist");
+        return;
+    }
+
+
+    unless ( -d $directory ) {
+        $self->error_message("Directory ($directory) exists, but is not a directory");
+        return;
+    }
+
+    return 1;
+}
+
+sub open_directory {
+    my ($self, $directory) = @_;
+
+    $self->validate_existing_directory($directory)
+        or return;
+
+    my $dh = IO::Dir->new($directory);
+
+    return $dh if $dh;
+
+    $self->error_message("Can't open directory ($directory): $!");
+    
+    return;
+}
+
 sub create_directory {
     my ($self, $directory) = @_;
 
     unless ( defined $directory ) {
-        $self->error_message("Need directory to create");
+        $self->error_message("No directory given to create");
         return;
     }
 
@@ -198,6 +237,36 @@ Houses some generic file and directory methods
  Genome::Utility::FileSystem->create_directory($new_directory);
 
 =head1 Methods
+
+=head2 validate_existing_directory
+
+ Genome::Utility::FileSystem->validate_existing_directory('/tmp/users')
+    or die;
+ 
+=over
+
+=item I<Synopsis>   Checks whether the given directory is defined, and is a directory (does not check permissions)
+
+=item I<Arguments>  directory (string)
+
+=item I<Returns>    true on success, false on failure
+
+=back
+
+=head2 open_directory
+
+ Genome::Utility::FileSystem->open_directory('/tmp/users')
+    or die;
+ 
+=over
+
+=item I<Synopsis>   First validates the directory, the opens a IO::Dir handle to it
+
+=item I<Arguments>  IO::Dir (object)
+
+=item I<Returns>    true on success, false on failure
+
+=back
 
 =head2 create_directory
 
