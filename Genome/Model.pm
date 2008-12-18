@@ -281,24 +281,32 @@ sub get_all_possible_sample_names { #
 #TODO move to class def, if possible
 sub compatible_instrument_data {
     my $self = shift;
-
+    my %params;
     #TODO: This is a hack for 454 variant detection
     if ($self->subject_type eq 'genomic_dna' &&
         $self->sequencing_platform eq '454' &&
         $self->type_name eq 'reference alignment') {
         my $dna = GSC::DNA->get(dna_name => $self->subject_name);
         if ($dna) {
-            my @seq_ids = map { $_->region_id } GSC::RunRegion454->search_runs_for_sample($dna);
+            my @read_sets = GSC::RunRegion454->search_runs_for_sample($dna);
+            my @seq_ids;
+            for my $read_set ( @read_sets ) {
+                my @genomic_dna = $read_set->get_dna_from_library('genomic dna');
+                unless (scalar(@genomic_dna) == 1 && $genomic_dna[0]->dna_name eq $self->subject_name) {
+                    next;
+                }
+                push @seq_ids, $read_set->region_id;
+            }
             if (scalar(@seq_ids)) {
-                return Genome::InstrumentData->get(id => \@seq_ids);
+                %params = (id => \@seq_ids);
             }
         }
+    } else {
+        %params = (
+                   sample_name => [ $self->get_all_possible_sample_names ],
+               );
+        $params{sequencing_platform} = $self->sequencing_platform if $self->sequencing_platform;
     }
-
-    my %params = (
-                  sample_name => [ $self->get_all_possible_sample_names ],
-              );
-    $params{sequencing_platform} = $self->sequencing_platform if $self->sequencing_platform;
     return Genome::InstrumentData->get(%params);
 }
 
@@ -387,13 +395,20 @@ sub compatible_input_items {
                                                        );
     %instrument_data_ids = map { $_->id => 1 } @sample_read_sets;
     if ($input_read_set_class_name eq 'GSC::RunRegion454') {
-        my @dna_read_sets = $input_read_set_class_name->get(
-                                                            incoming_dna_name => $value_ref,
-                                                        );
+        my @dna_read_sets = GSC::RunRegion454->get(
+                                                   incoming_dna_name => $value_ref,
+                                               );
         if ($self->subject_type eq 'genomic_dna') {
             my $dna = GSC::DNA->get(dna_name => $value_ref);
             if ($dna) {
-                push @dna_read_sets, $input_read_set_class_name->search_runs_for_sample($dna);
+                my @read_sets = GSC::RunRegion454->search_runs_for_sample($dna);
+                for my $read_set ( @read_sets ) {
+                    my @genomic_dna = $read_set->get_dna_from_library('genomic dna');
+                    unless (scalar(@genomic_dna) == 1 && $genomic_dna[0]->dna_name eq $self->subject_name) {
+                        next;
+                    }
+                    push @dna_read_sets, $read_set;
+                }
             }
         }
         for (@dna_read_sets) {
