@@ -100,8 +100,12 @@ sub execute {
             $params{-trace} = \@traces;
         }
         
-        my $swq = Bio::Seq::Quality->new(%params);        
-        $swq->chromat_file($fa->id) if $self->_format_type eq 'phd';
+        my $swq = Bio::Seq::Quality->new(%params);
+        
+        if ($self->_format_type eq 'phd') {
+            $swq->chromat_file($fa->id);
+            $swq->time($self->time) if $self->time;
+        }
 
         my $write_method = $self->write_method;
         
