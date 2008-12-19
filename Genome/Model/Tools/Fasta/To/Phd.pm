@@ -13,6 +13,10 @@ class Genome::Model::Tools::Fasta::To::Phd {
             doc     => 'The path of phd_dir to place phd files',
             default => './phd_dir',
         },
+        time => {
+            is      => 'String',
+            doc     => 'time stamp inside phd file, often need sync with timestamp in acefile',
+        }
     ],
 };
 
