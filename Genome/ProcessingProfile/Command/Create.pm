@@ -7,7 +7,7 @@ use Genome;
 
 use Data::Dumper;
 use Genome::ProcessingProfile;
-require UR::Object::Command::List;
+use Genome::ProcessingProfile::Command::Describe;
 
 class Genome::ProcessingProfile::Command::Create {
     is => 'Command',
@@ -16,7 +16,7 @@ class Genome::ProcessingProfile::Command::Create {
     name => {
         is => 'VARCHAR2',
         len => 255, 
-        doc => 'Human readable name', 
+        doc => 'Human readable name.', 
     },
     ],
 };
@@ -85,7 +85,7 @@ sub execute {
 
     # Ensure name is unique
     if ( my $existing_pp = $target_class->get(name => $self->name) ) {
-        $self->_pretty_print_processing_profile($existing_pp);
+        $self->_describe_processing_profile($existing_pp);
         $self->error_message('Processing profile (above) with same name already exists');
         return;
     }
@@ -94,7 +94,7 @@ sub execute {
     my %params = $self->_get_target_class_params;
     if ( %params 
             and my @existing_pp = $self->_get_processing_profiles_with_identical_params(\%params) ) {
-        $self->_pretty_print_processing_profile(@existing_pp);
+        $self->_describe_processing_profile(@existing_pp);
         $self->error_message('Existing processing profile(s) (above) with identical params, but different names already exist');
         return;
     }
@@ -104,16 +104,23 @@ sub execute {
         name => $self->name,
         %params
     );
+
     unless ( $processing_profile ) {
         $self->error_message("Failed to create processing profile");
         return;
     }
 
-    # TODO Check problems from processing profile??
-    $self->status_message('Created processing profile:');
-    $self->_pretty_print_processing_profile($processing_profile);
+    if ( my @problems = $processing_profile->invalid ) {
+        $self->error_message(
+            "Error(s) creating processing profile\n\t".  join("\n\t", map { $_->desc } @problems)
+        );
+        $processing_profile->delete;
+        return;
+    }
 
-    return 1;
+    $self->status_message('Created processing profile:');
+
+    return $self->_describe_processing_profile($processing_profile);
 }
 
 #<>#
@@ -201,14 +208,15 @@ sub _properties_for_class {
     }
 
     my %properties;
-    for my $property ( $class_meta->get_property_objects ) {
-        #next unless $property->doc;
+    for my $property ( $class_meta->get_all_property_objects ) {
+        next unless $property->class_name->isa('Genome::ProcessingProfile') 
+            and not $property->class_name eq 'Genome::ProcessingProfile';
         $properties{ $property->property_name } = {
             is => 'Text',
             is_optional => $property->is_optional,
             doc => $property->doc,
-        };
-    };
+        }
+    }
 
     return %properties;
 }
@@ -235,24 +243,19 @@ sub _get_target_class_params {
     return %params;
 }
 
-#< Pretty print >#
-sub _pretty_print_processing_profile {
-    my $self = shift;
+#< Describe >#
+sub _describe_processing_profile {
+    my ($self, @pp) = @_;
 
-    my @defined_property_names = $self->_target_class_property_names;
-    #print Dumper(\@defined_property_names);
-    for my $pp ( @_ ) {
-        UR::Object::Command::List->execute(
-            filter => 'id=' . $pp->id,
-            subject_class_name => $self->_target_class,
-            style => 'pretty',
-            show => #sprintf(
-                            'id,name,type_name',
-                            #'id,name,type_name,%s',
-                            #       join(',', @defined_property_names),
-                            #),
-            #output => IO::String->new(),
+    unless ( @pp ) { # Dying here cuz this should never be called w/o pps
+        Carp::confess( $self->error_message("No processing profile to describe") );
+    }
+
+    for my $pp ( @pp ) {
+        my $describer = Genome::ProcessingProfile::Command::Describe->create(
+            processing_profile_id => $pp->id,
         );
+        $describer->execute;
     }
 
     return 1;
