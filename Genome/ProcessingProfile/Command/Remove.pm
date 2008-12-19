@@ -22,17 +22,6 @@ sub execute {
     my $pp_name = $pp->name;
     my $pp_id = $pp->id;
 
-    if ( Genome::Model->get(processing_profile_name => $pp_name) ) {
-        $self->error_message(
-            sprintf(
-                'Processing profile (%s <ID: %s>) has existing models.  Remove the models first, then remove the processing profile',
-                $pp_name,
-                $pp_id,
-            )
-        );
-        return;
-    }
-    
     unless ( $pp->delete ) {
         $self->error_message(
             sprintf(
