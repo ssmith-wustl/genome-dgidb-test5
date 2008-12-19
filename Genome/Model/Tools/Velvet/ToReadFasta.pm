@@ -51,12 +51,19 @@ sub execute {
     my $fh = IO::File->new($acefile) or die "can't open $acefile\n";
 
     my $reader = GSC::IO::Assembly::Ace::Reader->new($fh);
+    my %orient;
 
     while (my $obj = $reader->next_object) {
+        if ($obj->{type} eq 'read_position') {
+            $orient{$obj->{read_name}} = $obj->{u_or_c};
+        }
         if ($obj->{type} eq 'read') {
             my $seq = $obj->{sequence};
             $seq =~ s/\*//g;
-            $io->write_seq(Bio::Seq->new(-seq => $seq, -id => $obj->{name}));
+            my $sq = Bio::Seq->new(-seq => $seq, -id => $obj->{name});
+            my $uc = delete $orient{$obj->{name}};
+            $sq = $sq->revcom if $uc eq 'C';
+            $io->write_seq($sq);
         }
     }
     $fh->close;
