@@ -49,6 +49,13 @@ sub execute {
         );
         return;
     }
+
+    printf(
+        'Renamed processing profile (<ID> %s) to "%s"', 
+        $self->processing_profile->id, 
+        $self->processing_profile->name, 
+    );
+    print "\n";
     
     return 1;
 }
