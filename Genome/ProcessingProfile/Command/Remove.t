@@ -5,6 +5,7 @@ use warnings;
 
 use above 'Genome';
 
+use Data::Dumper;
 use Test::More tests => 13;
 
 BEGIN {
@@ -13,12 +14,10 @@ BEGIN {
 
 # GOOD
 # Create a pp to test
-my $pp = Genome::ProcessingProfile::MetaGenomicComposition->create(
-    name => 'test meta genomic composition',
-    sequencing_platform => 'sanger',
-    assembler => 'phredphrap',
-    sequencing_center => 'gsc',
-    assembly_size => 1300,
+my $pp = Genome::ProcessingProfile::Test->create(
+    name => 'test for renaming',
+    colour => 'read',
+    shape => 'square',
 );
 ok($pp, "Created processing profile to test");
 die unless $pp; # can't proceed
