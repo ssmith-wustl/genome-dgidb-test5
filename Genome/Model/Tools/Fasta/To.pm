@@ -91,19 +91,20 @@ sub execute {
             -force_flush => 1,
         );
 
+        my @traces = map{$_*10}(0..$length-1);
+
         unless ($self->_format_type eq 'fastq') {
             my $outfile = $self->dir.'/'.$fa->id;
             $outfile .= '.phd.1' if $self->_format_type eq 'phd';
             $out_io = $self->get_format_writer($outfile, $self->_format_type);
-            
-            my @traces = map{$_*10}(0..$length-1);
             $params{-trace} = \@traces;
         }
         
         my $swq = Bio::Seq::Quality->new(%params);
         
-        if ($self->_format_type eq 'phd') {
+        if ($self->_format_type =~ /^(phd|scf)$/) {
             $swq->chromat_file($fa->id);
+            $swq->trace_array_max_index($traces[$#traces]);
             $swq->time($self->time) if $self->time;
         }
 
