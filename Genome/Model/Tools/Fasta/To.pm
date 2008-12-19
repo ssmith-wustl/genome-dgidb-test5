@@ -102,7 +102,7 @@ sub execute {
         
         my $swq = Bio::Seq::Quality->new(%params);
         
-        if ($self->_format_type =~ /^(phd|scf)$/) {
+        if ($self->_format_type eq 'phd') {
             $swq->chromat_file($fa->id);
             $swq->trace_array_max_index($traces[$#traces]);
             $swq->time($self->time) if $self->time;
