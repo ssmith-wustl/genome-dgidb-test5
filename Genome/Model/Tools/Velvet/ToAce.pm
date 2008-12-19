@@ -79,6 +79,7 @@ sub create {
 sub execute {
     my $self = shift;
     
+    my $time   = localtime;
     my $out    = IO::File->new('>'.$self->out_acefile) or die "can't write to out_acefile\n";
     my $writer = GSC::IO::Assembly::Ace::Writer->new($out);
 
@@ -173,8 +174,7 @@ sub execute {
                        
                         my $end5 = $seql + 1;
                         my $end3 = $seqr;
-                        my $time = localtime;
-
+                        
                         push @read_pos, {
                             type      => 'read_position',
                             read_name => $read_id,
