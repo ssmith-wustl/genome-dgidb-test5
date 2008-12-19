@@ -4,7 +4,10 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Model::EqualColumnWidthTableizer; 
+
+require Carp;
+use Data::Dumper;
+
 class Genome::ProcessingProfile {
     type_name => 'processing profile',
     table_name => 'PROCESSING_PROFILE',
@@ -24,17 +27,6 @@ class Genome::ProcessingProfile {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-sub delete {
-    my $self = shift;
-    for my $param ($self->params) {
-        $param->delete;
-    }   
-    $self->SUPER::delete;
-
-    return $self;
-}
-
-
 sub params_for_class {
     my $class = shift;
     warn("params_for_class not implemented for class '$class':  $!");
@@ -42,92 +34,104 @@ sub params_for_class {
 }
 
 sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return unless $self; 
-    unless ($self->type_name) {
-        my $type_name =
-            $class->_resolve_type_name_for_subclass_name($self->class);
-        $self->type_name($type_name);
+    my ($class, %params) = @_;
+
+    if ( defined $params{type_name} ) {
+        my $type_name = $class->_resolve_type_name_for_class;
+        if ( defined $type_name and $type_name ne $params{type_name} ) {
+            Carp::confess(
+                "Resolved type_name ($type_name) does not match given type_name ($params{type_name}) in params to create $class"
+            );
+            return;
+        }
     }
+    else {
+        Carp::confess(
+            __PACKAGE__." is a abstract base class, and no type name was provided to resolve to the appropriate subclass"
+        ) if $class eq __PACKAGE__;
+        $params{type_name} = $class->_resolve_type_name_for_class;
+    }
+
+    my $self = $class->SUPER::create(%params)
+        or return;
+
+    unless ( $self->name ) {
+        # TODO resolve??
+        $self->error_message("No name provided for processing profile");
+        $self->delete;
+        return;
+    }
+
     return $self;
 }
 
-# Calls the subclass's pretty_print_text
-
-sub pretty_print_text {
+sub delete {
     my $self = shift;
-    my @printable_property_names;
-#    unless (@printable_property_names) {
-    {
-        # do this just once... ??? confusing, its declared in my scope.  was this supposed to be a caching method?
-        my $class_meta = $self->get_class_object;
-        for my $name ($class_meta->all_property_names) {
-            next if $name eq 'name';
-            my $property_meta = $class_meta->get_property_meta_by_name($name);
-            unless ($property_meta->is_delegated or $property_meta->is_calculated) {
-                push @printable_property_names, $name;
-            }
-        }
-    }
-    for my $param ($self->params_for_class) {
-        if (defined $self->$param) {
-            push @printable_property_names, $param;
-        }
-    }
-    my @out;
-    for my $prop (@printable_property_names) {
-        if (my @values = $self->$prop) {
-            my $value;
-#            if (@values > 1) { ## this can never occur because the defined above will fail if it returns more than one
-#                if (grep { ref($_) } @values) {
-#                    next;
-#                }
-#                $value = join(", ", grep { defined $_ } @values);
-#            }
-#            else {
-                $value = $values[0];
-#            }
-            next if not defined $value;
-            next if ref $value;
-            next if $value eq '';
-            
-            push @out, [
-                Term::ANSIColor::colored($prop, 'red'),
-                Term::ANSIColor::colored($value, "cyan")
-            ]
-        }
-    }
     
-    Genome::Model::EqualColumnWidthTableizer->convert_table_to_equal_column_widths_in_place( \@out );
+    # Check if there are models connected with this pp
+    if ( Genome::Model->get(processing_profile_id => $self->id) ) {
+        $self->error_message(
+            sprintf(
+                'Processing profile (%s <ID: %s>) has existing models and cannot be removed.  Delete the models first, then remove this processing profile',
+                $self->name,
+                $self->id,
+            )
+        );
+        return;
+    }
+ 
+    # Delete params
+    for my $param ( $self->params ) {
+        unless ( $param->delete ) {
+            $self->error_message(
+                sprintf(
+                    'Can\'t delete param (%s: %s) for processing profile (%s <ID: %s>), ',
+                    $param->name,
+                    $param->value,
+                    $self->name,
+                    $self->id,
+                )
+            );
+            for my $param ( $self->params ) {
+                $param->resurrect if $param->isa('UR::DeletedRef');
+            }
+            return;
+        }
+    }   
 
-    my $out;
-    $out .= Term::ANSIColor::colored(sprintf("Processing Profile: %s (ID %s)", $self ->name, $self->id), 'bold magenta') . "\n\n";
-    $out .= Term::ANSIColor::colored("Configured Properties:", 'red'). "\n";    
-    $out .= join("\n", map { " @$_ " } @out);
-    $out .= "\n\n";
-    return $out;
+    $self->SUPER::delete
+        or return;
+
+    return 1;
 }
 
+#< SUBCLASSING >#
+#
 # This is called by the infrastructure to appropriately classify abstract processing profiles
 # according to their type name because of the "sub_classification_method_name" setting
 # in the class definiton...
 sub _resolve_subclass_name {
-	my $class = shift;
+    my $class = shift;
 	
-	if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
-		my $type_name = $_[0]->type_name;
-		return $class->_resolve_subclass_name_for_type_name($type_name);
+    my $type_name;
+	if ( ref($_[0]) and $_[0]->isa(__PACKAGE__) ) {
+		$type_name = $_[0]->type_name;
 	}
-    elsif (my $type_name = $class->get_rule_for_params(@_)->specified_value_for_property_name('type_name')) {
-        return $class->_resolve_subclass_name_for_type_name($type_name);
+    else {
+        my %params = @_;
+        $type_name = $params{type_name};
     }
-	else {
-		return;
-	}
+
+    unless ( $type_name ) {
+        my $rule = $class->get_rule_for_params(@_);
+        $type_name = $rule->specified_value_for_property_name('type_name');
+    }
+
+    return ( defined $type_name ) 
+    ? $class->_resolve_subclass_name_for_type_name($type_name)
+    : undef;
 }
 
-# This is called by both of the above.
 sub _resolve_subclass_name_for_type_name {
     my ($class,$type_name) = @_;
     my @type_parts = split(' ',$type_name);
@@ -139,14 +143,66 @@ sub _resolve_subclass_name_for_type_name {
     return $class_name;
 }
 
-sub _resolve_type_name_for_subclass_name {
-    my ($class,$subclass_name) = @_;
-    my ($ext) = ($subclass_name =~ /Genome::ProcessingProfile::(.*)/);
-    return unless ($ext);
-    my @words = $ext =~ /[a-z\d]+|[A-Z\d](?:[A-Z\d]+|[a-z]*)(?=$|[A-Z\d])/gx;
-    my $type_name = lc(join(" ", @words));
-    return $type_name;
+sub _resolve_type_name_for_class {
+    my $class = shift;
+
+    my ($subclass) = $class =~ /^Genome::ProcessingProfile::([\w\d]+)$/;
+    return unless $subclass;
+
+    return lc join(" ", ($subclass =~ /[a-z\d]+|[A-Z\d](?:[A-Z\d]+|[a-z]*)(?=$|[A-Z\d])/gx));
+    
+    my @words = $subclass =~ /[a-z\d]+|[A-Z\d](?:[A-Z\d]+|[a-z]*)(?=$|[A-Z\d])/gx;
+    return lc(join(" ", @words));
 }
 
+#########################################
+## FAKE PROCESSING PROFILE FOR TESTING ##
+#########################################
+
+package Genome::ProcessingProfile::Test; {
+    use Genome;
+
+    use strict;
+    use warnings;
+
+    my %HAS = (
+        colour =>{ 
+            doc => 'The colour of this profile',
+        },
+        shape => { 
+            doc => 'The shape of this profile',
+            is_optional => 1,
+        },
+    );
+
+    class Genome::ProcessingProfile::Test {
+        is => 'Genome::ProcessingProfile',
+        has => [
+        map(
+            { 
+                $_ => {
+                    via => 'params',
+                    to => 'value',
+                    where => [ name => $_ ],
+                    is_mutable => 1,
+                    is_optional => ( exists $HAS{$_}->{is_optional} ? $HAS{$_}->{is_optional} : 0),
+                    doc => (
+                        ( exists $HAS{$_}->{valid_values} )
+                        ? sprintf('%s. Valid values: %s.', $HAS{$_}->{doc}, join(', ', @{$HAS{$_}->{valid_values}}))
+                        : $HAS{$_}->{doc}
+                    ),
+                },
+            } keys %HAS
+        ),
+        ],
+    };
+
+    sub params_for_class {
+        return keys %HAS;
+    }
+}
 
 1;
+
+#$HeadURL
+#$Id
