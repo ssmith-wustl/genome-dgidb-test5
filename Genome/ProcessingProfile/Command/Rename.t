@@ -5,20 +5,19 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 19;
+use Test::More tests => 20;
 
 BEGIN {
+    use_ok('Genome::ProcessingProfile');
     use_ok('Genome::ProcessingProfile::Command::Rename');
 }
 
 # GOOD
 # Create a pp to rename
-my $pp = Genome::ProcessingProfile::MetaGenomicComposition->create(
-    name => 'test meta genomic composition',
-    sequencing_platform => 'sanger',
-    assembler => 'phredphrap',
-    sequencing_center => 'gsc',
-    assembly_size => 1300,
+my $pp = Genome::ProcessingProfile::Test->create(
+    name => 'test for renaming',
+    colour => 'read',
+    shape => 'square',
 );
 ok($pp, "Created processing profile to test renaming");
 die unless $pp; # can't proceed
