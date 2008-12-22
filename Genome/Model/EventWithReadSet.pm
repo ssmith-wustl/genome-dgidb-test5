@@ -11,6 +11,10 @@ class Genome::Model::EventWithReadSet {
     has => [
             read_set       => { is => 'Genome::RunChunk', id_by => 'read_set_id', constraint_name => 'event_run' },
             read_set_link  => { is => 'Genome::Model::ReadSet', id_by => ['model_id','read_set_id'] },
+            instrument_data_assignment => {
+                                           is => 'Genome::Model::InstrumentDataAssignment',
+                                           id_by => ['model_id','read_set_id'],
+                                       },
             read_set_name  => { via => 'read_set', to => 'full_name' },
             read_set_id    => {
                                is => 'NUMBER',
