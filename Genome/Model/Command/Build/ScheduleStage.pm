@@ -41,7 +41,7 @@ class Genome::Model::Command::Build::ScheduleStage {
 };
 
 sub help_detail {
-    "This module will update the state of a current running build";
+    "This module will schedule a single stage of a models build process";
 }
 
 sub create {
