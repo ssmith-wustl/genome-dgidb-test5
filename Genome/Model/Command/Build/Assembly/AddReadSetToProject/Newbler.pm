@@ -9,12 +9,12 @@ use Data::Dumper;
 class Genome::Model::Command::Build::Assembly::AddReadSetToProject::Newbler {
     is => 'Genome::Model::Command::Build::Assembly::AddReadSetToProject',
     has => [
-            sff_file => {via => 'read_set'},
+            sff_file => {via => 'instrument_data'},
             sff_link => {
                          doc => 'The symlink created by newbler after the read set is added to the newbler project',
-                         calculate_from => ['model', 'read_set'],
+                         calculate_from => ['model', 'instrument_data'],
                          calculate => q|
-                             return $model->sff_directory .'/'. $read_set->sff_basename .'.sff';
+                             return $model->sff_directory .'/'. $instrument_data->sff_basename .'.sff';
                          |,
 
                      }
@@ -28,7 +28,7 @@ sub bsub_rusage {
 sub sub_command_sort_position { 40 }
 
 sub help_brief {
-    "add read set to an assembly of a genome"
+    "add instrument data to a newbler assembly of a genome"
 }
 
 sub help_synopsis {
@@ -76,7 +76,7 @@ sub execute {
     my %add_run_params = (
 			  dir => $model->data_directory,
 			  runs => [$self->sff_file],
-			  is_paired_end => $self->read_set->is_paired_end,
+			  is_paired_end => $self->instrument_data->is_paired_end,
 			  version => $model->assembler_version,
                       );
 

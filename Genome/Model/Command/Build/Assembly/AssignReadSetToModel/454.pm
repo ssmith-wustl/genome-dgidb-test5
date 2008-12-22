@@ -9,9 +9,9 @@ class Genome::Model::Command::Build::Assembly::AssignReadSetToModel::454 {
     is => 'Genome::Model::Command::Build::Assembly::AssignReadSetToModel',
     has => [
             sff_file => {
-                         calculate_from => ['read_set'],
+                         calculate_from => ['instrument_data'],
                          calculate => q|
-                             return $read_set->sff_file;
+                             return $instrument_data->sff_file;
                          |,
                      },
         ]
@@ -20,7 +20,7 @@ class Genome::Model::Command::Build::Assembly::AssignReadSetToModel::454 {
 sub sub_command_sort_position { 40 }
 
 sub help_brief {
-    "Assigns the read set to the model by dumping the read set data to the correct filesystem location."
+    "Assigns the instrument data to the model by dumping the instrument data to the correct filesystem location."
 }
 
 sub help_synopsis {
@@ -31,8 +31,8 @@ EOS
 
 sub help_detail {
     return <<"EOS"
-Each read set assigned to an assembly model needs an sff file on the filesystem.
-This step dumps the read set data and verifies that the sff file exists and has size.
+Each instrument data assigned to an assembly model needs an sff file on the filesystem.
+This step dumps the instrument data and verifies that the sff file exists and has size.
 EOS
 }
 
@@ -40,7 +40,7 @@ sub execute {
     my $self = shift;
 
     $DB::single = $DB::stopper;
-    unless ($self->read_set->dump_to_file_system) {
+    unless ($self->instrument_data->dump_to_file_system) {
         $self->error_message('Failed to dump read set data to the filesystem');
         return;
     }

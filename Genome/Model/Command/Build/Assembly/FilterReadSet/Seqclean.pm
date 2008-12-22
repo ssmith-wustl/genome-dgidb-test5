@@ -9,8 +9,7 @@ class Genome::Model::Command::Build::Assembly::FilterReadSet::Seqclean {
     is => 'Genome::Model::Command::Build::Assembly::FilterReadSet',
     has => [
             sff_file => {
-                         is_input => 1,
-                         via => 'prior_event'
+                         via => 'instrument_data'
                      },
             fasta_file => {
                            is_output => 1,

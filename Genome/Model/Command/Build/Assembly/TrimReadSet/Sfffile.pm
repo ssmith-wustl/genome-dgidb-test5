@@ -9,7 +9,7 @@ class Genome::Model::Command::Build::Assembly::TrimReadSet::Sfffile {
     is => 'Genome::Model::Command::Build::Assembly::TrimReadSet',
     has => [
             seqclean_report => { via => 'prior_event', },
-            in_sff_file     => {via => 'prior_event', to => 'sff_file'},
+            in_sff_file     => {via => 'instrument_data', to => 'sff_file'},
             sff_file => {
                          calculate_from => ['in_sff_file'],
                          calculate => q|
