@@ -189,7 +189,7 @@ sub execute {
         }
         if ($run_chunk->full_path) {
             if (!defined($instrument_data->full_path)) {
-                $instrument_data->full_path;
+                $instrument_data->full_path($run_chunk->full_path);
             } elsif ($run_chunk->full_path ne $instrument_data->full_path) {
                 $self->warning_message('Switching full_path from '. $instrument_data->full_path
                                        .' to '. $run_chunk->full_path .' for '. $read_set_link->id);
