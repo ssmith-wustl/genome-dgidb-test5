@@ -19,11 +19,11 @@ class Genome::InstrumentData::454 {
 EOS
     ,
     has_optional => [
-        sff_file => {
-            doc => 'The sff file associated with the 454 instrument data',
-            calculate_from => [qw/ resolve_full_path id /],
-            calculate => q| return sprintf('%s/%s.sff', $resolve_full_path, $id); |,
-        },
+        _sff_file => {
+                      is => 'String',
+                      is_transient => 1,
+                      is_mutable => 1,
+                  },
         #< Run Region 454 from DW Attrs >#
         run_region_454     => {
             doc => '454 Run Region from LIMS.',
@@ -35,11 +35,11 @@ EOS
         region_number       => { },
         total_reads         => { column_name => "TOTAL_KEY_PASS" },
         is_paired_end       => { column_name => "PAIRED_END" },
-        
+
         # deprecated, compatible with Genome::RunChunk::Solexa
         genome_model_run_id => {},
         limit_regions       => {},
-        
+
     ],
 };
 
@@ -48,32 +48,70 @@ sub _default_full_path {
     return sprintf('%s/%s/%s', $self->_data_base_path, $self->run_name, $self->id);
 }
 
+sub resolve_sff_path {
+    my $self = shift;
+
+    my $sff_file;
+    my $rr_454 = $self->run_region_454;
+    eval {
+        my $sff_file_object = $rr_454->sff_filesystem_location;
+        if ($sff_file_object) {
+            $sff_file = $sff_file_object->stringify;
+        }
+    };
+
+    if ($@ || !defined($sff_file)) {
+        $sff_file = sprintf('%s/%s.sff', $self->resolve_full_path, $self->seq_id);
+    }
+    return $sff_file;
+}
+
+sub sff_file {
+    my $self = shift;
+
+    unless ($self->_sff_file) {
+        $self->_sff_file($self->resolve_sff_path);
+    }
+    return $self->_sff_file;
+}
+
+sub sff_basename {
+    my $self = shift;
+    return File::Basename::basename($self->sff_file,'.sff');
+}
+
 #< Dump to File System >#
 sub dump_to_file_system {
     my $self = shift;
 
-    $self->create_data_directory_and_link 
-        or return;
-
     unless ( -e $self->sff_file ) {
-        # THIS COULD SAVE SPACE BUT NOT SURE IF IT WILL WORK OR HOW TO HANDLE WHEN THE FILE DOESN'T EXIST
-        # The file may already exist on the filesystem.  If so, create a symlink
-        #my $sff_file_location = $run_region_454->sff_filesystem_location;
-        #if (-e $sff_file_location) {
-        #    unless (symlink($sff_file_location,$self->sff_file)) {
-        #        $self->error_message("Failed to create symlink '". $self->sff_file ."' to '$sff_file_location'");
-        #        return;
-        #    }
-        #} else {
-            unless ( $self->_run_region_454->dump_sff(filename => $self->sff_file) ) {
-                $self->error_message('Failed to dump sff_file to '. $self->sff_file);
-                return;
-            }
-        #}
+        unless ($self->create_data_directory_and_link) {
+            $self->error_message('Failed to create directory and link');
+            return;
+        }
+        unless (Genome::Utility::FileSystem->lock_resource(
+                                                           lock_directory => $self->resolve_full_path,
+                                                           resource_id => $self->seq_id,
+                                                           max_try => 60,
+                                                       )) {
+            $self->error_message('Failed to lock_resource '. $self->seq_id);
+            return;
+        }
+        unless ($self->run_region_454->dump_sff(filename => $self->sff_file)) {
+            $self->error_message('Failed to dump sff file to '. $self->sff_file);
+            return;
+        }
+        unless (Genome::Utility::FileSystem->unlock_resource(
+                                                             lock_directory => $self->resolve_full_path,
+                                                             resource_id => $self->seq_id,
+                                                         )) {
+            $self->error_message('Failed to unlock_resource '. $self->seq_id);
+            return;
+        }
     }
-    
     return 1;
 }
+
 
 1;
 
