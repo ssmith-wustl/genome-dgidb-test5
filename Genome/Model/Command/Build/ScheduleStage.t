@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 24;
+use Test::More tests => 26;
 
 BEGIN {
     use_ok('Genome::Model::Command::Build::ScheduleStage');
@@ -13,10 +13,10 @@ BEGIN {
 
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $bogus_id = 0;
+
 my $pp = Genome::ProcessingProfile->create_mock(id => --$bogus_id);
 isa_ok($pp,'Genome::ProcessingProfile');
 my $model = &get_model($pp);
-isa_ok($model,'Genome::Model');
 $model->set_always('build_subclass_name','');
 
 my $no_id = Genome::Model::Command::Build::ScheduleStage->create(
@@ -76,10 +76,7 @@ ok($stage2->execute(),'execute command '. $stage2->command_name);
 
 ## Test when events already exist for the stage
 my $model_with_events = &get_model($pp);
-isa_ok($model_with_events,'Genome::Model');
-
 my $build_with_events = &get_build_with_events($model_with_events);
-isa_ok($build_with_events,'Genome::Model::Command::Build');
 
 $model_with_events->set_always('current_running_build_id',$build_with_events->id);
 my $stage_with_events = Genome::Model::Command::Build::ScheduleStage->create(
@@ -92,10 +89,7 @@ ok(!$stage_with_events->execute,'stage already has events');
 
 ## Test when the prior stage will not verify_successful_completion
 my $model_no_verify = &get_model($pp);
-isa_ok($model_no_verify,'Genome::Model');
-
 my $build_no_verify = &get_build_no_verify($model_no_verify);
-isa_ok($build_no_verify,'Genome::Model::Command::Build');
 $model_no_verify->set_always('current_running_build_id',$build_no_verify->id);
 my $stage_no_verify = Genome::Model::Command::Build::ScheduleStage->create(
                                                                            model_id => $model_no_verify->id,
@@ -104,6 +98,19 @@ my $stage_no_verify = Genome::Model::Command::Build::ScheduleStage->create(
                                                                        );
 isa_ok($stage_no_verify,'Genome::Model::Command::Build::ScheduleStage');
 ok(!$stage_no_verify->execute,'failed to execute schedule-stage since prior did not verify');
+
+
+## Test when scheduling the stage goes wrong
+my $bad_model = &get_model($pp);
+my $bad_build = &get_bad_build($model_no_verify);
+$bad_model->set_always('current_running_build_id',$bad_build->id);
+my $bad_stage = Genome::Model::Command::Build::ScheduleStage->create(
+                                                                     model_id => $bad_model->id,
+                                                                     stage_name => 'stage2',
+                                                                     auto_execute => 0,
+                                                                 );
+isa_ok($bad_stage,'Genome::Model::Command::Build::ScheduleStage');
+ok(!$bad_stage->execute,'failed to execute schedule-stage since the stage would not schedule');
 
 
 exit;
@@ -123,6 +130,26 @@ sub get_good_build {
     $build->mock('events_for_stage',sub { return; });
     $build->set_always('_schedule_stage',1);
     $build->set_always('verify_successful_completion_for_stage',1);
+    return $build;
+}
+
+sub get_bad_build {
+    my $model = shift;
+    my $build = Genome::Model::Command::Build->create_mock(
+                                                           id => --$bogus_id,
+                                                           build_id => $bogus_id,
+                                                           genome_model_event_id => $bogus_id,
+                                                           model_id => $model->id,
+                                                           event_type => 'genome model build',
+                                                       );
+    isa_ok($build,'Genome::Model::Command::Build');
+    my @stages = qw/stage1 stage2 stage3 verify_successful_completion/;
+    $build->set_list('stages',@stages);
+    $build->mock('events_for_stage',sub { return; });
+    $build->set_always('verify_successful_completion_for_stage',1);
+    $build->mock('_schedule_stage',sub {return; });
+    my @classes = qw/class1 class2 class3/;
+    $build->set_list('classes_for_stage',@classes);
     return $build;
 }
 
@@ -171,5 +198,6 @@ sub get_model {
                                            processing_profile_id => $pp->id,
                                            data_directory => $tmp_dir,
                                        );
+    isa_ok($model,'Genome::Model');
     return $model;
 }

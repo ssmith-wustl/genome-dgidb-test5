@@ -101,7 +101,7 @@ sub execute {
         return;
     }
     my @scheduled_objects = $build->_schedule_stage($self->stage_name);
-    unless (@scheduled_objects) {svn 
+    unless (scalar(@scheduled_objects)) {
         $self->error_message('Failed to schedule stage for build('. $self->build_id ."). Objects not scheduled for classes:\n".
                              join("\n",$build->classes_for_stage($self->stage_name)));
         return;
