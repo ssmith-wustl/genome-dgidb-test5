@@ -30,12 +30,12 @@ class Genome::Model::Command::Build::ScheduleStage {
             auto_execute   => {
                                is => 'Boolean',
                                default_value => 1,
-                               doc => 'The build will execute genome-model run-jobs before completing'
+                               doc => 'The build will execute genome-model run-jobs before completing(default_value=1)'
                            },
             hold_run_jobs  => {
                                is => 'Boolean',
                                default_value => 0,
-                               doc => 'A flag to hold all lsf jobs that are scheduled in run-jobs'
+                               doc => 'A flag to hold all lsf jobs that are scheduled in run-jobs(default_value=0)'
                            },
         ],
 };
@@ -70,9 +70,12 @@ sub create {
 
 sub execute {
     my $self = shift;
+
     my $model = $self->model;
+
     my $build = $self->build;
     my @stages = $build->stages;
+
     my $index = undef;
     for (my $i = 0; $i < scalar(@stages); $i++) {
         if ($stages[$i] eq $self->stage_name) {
@@ -98,7 +101,7 @@ sub execute {
         return;
     }
     my @scheduled_objects = $build->_schedule_stage($self->stage_name);
-    unless (@scheduled_objects) {
+    unless (@scheduled_objects) {svn 
         $self->error_message('Failed to schedule stage for build('. $self->build_id ."). Objects not scheduled for classes:\n".
                              join("\n",$build->classes_for_stage($self->stage_name)));
         return;
