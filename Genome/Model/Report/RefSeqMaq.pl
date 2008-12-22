@@ -8,7 +8,9 @@ use Genome::Model::Report::RefSeqMaq;
 
 my ($id, $name) = (2733662090,'RefSeqMaq');#(2733662090,'RefSeqMaq');
 my $report = Genome::Model::Report::RefSeqMaq->create(model_id =>$id, name=>$name);
+#$report->resolve_reports_directory;
 $report->generate_report_detail();
+#$report->generate_report_brief();
 
 __END__
 # TODO: Fix this some how... we should create a model here rather than getting one

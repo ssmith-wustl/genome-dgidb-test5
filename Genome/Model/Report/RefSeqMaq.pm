@@ -48,7 +48,6 @@ sub resolve_reports_directory {
     }
 
    `touch $reports_dir/generation_class.RefSeqMaq`;
-    print $reports_dir;
    return $reports_dir;
 }
 
@@ -67,29 +66,31 @@ sub generate_report_brief
 {
     my $self=shift;
    
-    #get ref seq's 
-    my $i = $self->get_ref_seq_iterator;
-    my ($o, @o);
-    while ($o = $i->next) 
-    {
-        push @o, $o;
-    }
+    my $model = $self->model;
+    my $output_file =  $self->report_brief_output_filename;
     
-    my $output_file = $self->report_brief_output_filename;
     my $brief = IO::File->new(">$output_file");
-    $brief->print("<ul>");
     die unless $brief;
 
-    my %maqs = $self->get_maq_content;
-    my ($rpt,$avg);
-    foreach my $ref_seq(sort keys %maqs)
-    {
-        $rpt = $maqs{$ref_seq};
-        $avg =  $rpt=~m/(.*non-gap regions:\s*)(\d+\.\d+)/ ? $2 : 'Not Available';
-        $brief->print("<li>$ref_seq:<a href=\"" . $self->get_coverage_filename . "\">$avg</a></li>");
-    }
-    $brief->print("<ul>");
+    my $desc = "maq mapcheck coverage for " . $model->name . " as of " . UR::Time->now;
+    $brief->print("<div>$desc</div>");
     $brief->close;
+
+#    my $output_file = $self->report_brief_output_filename;
+#    my $brief = IO::File->new(">$output_file");
+#    $brief->print("<ul>");
+#    die unless $brief;
+
+#    my %maqs = $self->get_maq_content;
+#    my ($rpt,$avg);
+#    foreach my $ref_seq(sort keys %maqs)
+#    {
+#        $rpt = $maqs{$ref_seq};
+#        $avg =  $rpt=~m/(.*non-gap regions:\s*)(\d+\.\d+)/ ? $2 : 'Not Available';
+#        $brief->print("<li>$ref_seq:<a href=\"" . $self->report_brief_output_filename . "\">$avg</a></li>");
+#    }
+#    $brief->print("</ul>");
+#    $brief->close;
 }
 
 sub generate_report_detail 
@@ -107,7 +108,7 @@ sub get_maq_content
     my ($maq_file, $bfa_file, $cmd, @maq, $fh, $file_name, %output, $rpt,$maplist);
     
     my $reports_dir = $self->model->resolve_reports_directory;
-    $file_name = $self->get_coverage_filename;#$reports_dir . '/' .  $model->genome_model_id . '_coverage_detail.html';
+    $file_name = $self->report_detail_output_filename;#$reports_dir . '/' .  $model->genome_model_id . '_coverage_detail.html';
     $self->status_message("Will write final report file to: ".$file_name);
     
     my @all_map_lists;
@@ -148,10 +149,10 @@ sub get_maq_content
     $cmd = $self->cmd . " " .$bfa_file; 
     @maq = `$cmd`;
     $rpt = join('',@maq);
-    print $rpt;
+    $rpt = $self->format_maq_content($rpt); 
     
     #make detail report
-    #$file_name = $reports_dir . '/' .  $model->genome_model_id . '_coverage_detail.html';
+    $file_name = $self->report_detail_output_filename;#$reports_dir . '/' .  $model->genome_model_id . '_coverage_detail.html';
     $self->warning_message("Writing final report to: ".$file_name);
     $fh = IO::File->new(">$file_name");        
     $fh->print($rpt);
@@ -183,5 +184,225 @@ sub get_coverage_filename
     my $model = $self->model;
     return $reports_dir . '/' .  $model->genome_model_id . '_coverage_detail.html';
 }
+sub format_maq_report
+{
+    #format plain text for html viewability
+    my ($self,$content) = @_;
 
+    my ($stats, $table);
+    if ($content=~m/(.*)(\n\n)(.*)/sm)
+    {
+        ($stats, $table) = ($1, $3); 
+        $stats=~s/\n/\<br>\n/g; 
+        $stats = "<div id=\"stats\">$stats</div>";
+    
+        my @table = split("\n",$table);
+        for (my $row = 0, my $cell, my $formatted_cell = ''; $row < scalar(@table); $row++, $formatted_cell = '')
+        {   
+            $cell = $table[$row];
+            #trim leading & trailing
+            $cell=~ s/^\s+//;
+	    $cell=~ s/\s+$//;
+    
+            #wrap cells
+            if ($row == 0) #header
+            {
+                $cell=~s/\s*:\s/ /g;
+                $cell=~s/\s+/<\/th><th>/g;
+                $formatted_cell="<tr><td id=\"corner\"></td><th>$cell</th></tr>";
+            
+            }
+            else
+            {
+                #color-code colon-delimited sections
+                if ($cell=~m/(\s*)(\d+)(\s*)(.*?)(\s*:\s*)(.*?)(\s*:\s*)(.*?)(\s*:\s*)(.*)/)
+                {
+                    my (@sections) = ($2, $4, $6, $8, $10);
+                    for (my $i = 0, my $sec; $i < scalar(@sections); $i++)
+                    {
+                        $sec = $sections[$i];
+                        $sec=~s/\s+/<\/td><td class=\"sec$i\">/g;
+                        $sec = "<td class=\"sec$i\">$sec</td>";
+                        $formatted_cell .= $sec;
+                    }
+                
+                }
+                $formatted_cell = "<tr>$formatted_cell</tr>";
+            } 
+            $table[$row] = $formatted_cell;
+        }
+   
+        $table = join('',@table);
+        $table = "\n<table border=1 id=\"data\">$table</table>";
+
+        return "<!--\n$content\n-->\n" . 
+               "<div id=\"maq_report\">" .
+               $stats . 
+               $table . 
+               "</div>" .   
+               $self->get_style;
+    }
+    else
+    {
+        die("Expected format STATS \n\n TABLE");
+    }
+}
+
+sub format_maq_content
+{
+    my ($self,$content) = @_;
+
+    my ($stats, $table, @table);
+
+    if ($content=~m/(.*)(\n\n)(.*)/sm)
+    {
+        ($stats, $table) = ($1, $3); 
+        $stats=~s/\n/\<br>\n/g; 
+        $stats = "<div id=\"stats\">$stats</div>";
+    
+        @table = split("\n",$table);
+        for (my $row = 0, my $cell, my $formatted_cell = ''; $row < scalar(@table); $row++, $formatted_cell = '')
+        {   
+            $cell = $table[$row];
+            #trim leading & trailing
+            $cell=~ s/^\s+//;
+            $cell=~ s/\s+$//;
+    
+            #wrap cells
+            if ($row == 0) #header
+            {
+                $cell=~s/\s*:\s/ /g;
+                $cell=~s/\s+/<\/th><th>/g;
+                $formatted_cell="<tr><td id=\"corner\"></td><th>$cell</th></tr>";
+            
+            }
+            else
+            {
+                #color-code colon-delimited sections
+                if ($cell=~m/(\s*)(\d+)(\s*)(.*?)(\s*:\s*)(.*?)(\s*:\s*)(.*?)(\s*:\s*)(.*)/)
+                {
+                    my (@sections) = ($2, $4, $6, $8, $10);
+                    for (my $i = 0, my $sec; $i < scalar(@sections); $i++)
+                    {
+                        $sec = $sections[$i];
+                        $sec=~s/\s+/<\/td><td class=\"sec$i\">/g;
+                        $sec = "<td class=\"sec$i\">$sec</td>";
+                        $formatted_cell .= $sec;
+                    }
+
+                    $formatted_cell = "<tr>$formatted_cell</tr>";
+                }
+            } 
+        
+            $table[$row] = $formatted_cell;
+        }
+    }
+    $table = join('',@table);
+    $table = "\n<table border=1 id=\"data\">$table</table>";
+
+    return "<!--\n$content\n-->\n" . 
+           "<div id=\"maq_report\">" .
+           $stats .
+           $table . 
+           "</div>" . 
+           $self->get_css;
+}
+
+sub get_css
+{    
+    return
+"    <style>
+
+    #maq_report #data #corner
+    {
+        border-bottom: 2px solid #6699CC;
+        border-right: 1px solid #6699CC;
+        border-top, border-left:#000000;
+        background-color: #BEC8D1;
+    }
+
+    th
+    { border-bottom: 2px solid #6699CC;
+    border-left: 1px solid #6699CC;
+    background-color: #BEC8D1;
+    text-align: center;
+    font-family: Verdana;
+    font-weight: bold;
+    font-size: 16px;
+    color: #404040; }
+
+ td
+    { border-bottom: 1px solid #000;
+    border-top: 0px;
+    border-left: 1px solid #000;
+    border-right: 0px;
+    font-family: Verdana, sans-serif, Arial;
+    font-weight: normal;
+    font-size: 14px;
+    padding: 0 0 0 0;
+    
+    background-color: #fafafa;
+    border-spacing: 0px;
+    margin-top: 0px;
+}
+
+
+table
+{
+    text-align: center;
+    font-family: Verdana;
+    font-weight: normal;
+    font-size: 14px;
+    color: #404040;
+    background-color: #fafafa;
+    border: 1px #000 solid;
+    border-collapse: collapse;
+    border-spacing: 0px;
+}
+
+tr td{
+    background-color: #fafafa;
+}
+
+tr.row0 td{
+    background-color: #fafafa;
+}
+
+tr.row1 td{
+    background-color: #eeeeee;
+}
+a img {
+    border: medium none;
+    border-collapse: collapse;
+}
+.drag_it {
+}
+.sec0
+    { border-bottom: 2px solid #6699CC;
+    border-right: 1px solid #6699CC;
+    background-color: #BEC8D1;
+    text-align: center;
+    font-family: Verdana;
+    font-weight: bold;
+    font-size: 16px;
+    color: #404040; }
+.sec1
+{
+    background-color:#CCFFFF;
+}
+.sec2
+{
+    background-color:#FFFF99;
+}
+.sec3
+{
+    background-color:#FF9999;
+}
+.sec4
+{
+    background-color:#CCFFCC;
+}
+
+</style>";
+}
 1;

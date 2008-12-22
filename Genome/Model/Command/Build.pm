@@ -65,6 +65,21 @@ sub resolve_data_directory {
     return $model->data_directory . '/build' . $self->id;
 }
 
+sub available_reports {
+    my $self=shift;
+    $DB::single = 1;
+    my $report_dir = $self->resolve_data_directory . '/reports/';
+    my %report_file_hash;
+    my @report_subdirs = glob("$report_dir/*");
+    my @reports;
+    for my $subdir (@report_subdirs) {
+        #we may be able to do away with touching generating class and just try to find reports that match this subdir name? not sure
+        my ($report_name) = ($subdir =~ /\/+reports\/+(.*)\/*/);
+        push @reports, Genome::Model::Report->create(model_id => $self->model->genome_model_id, name => $report_name);
+    }
+    return \@reports; 
+}
+
 sub execute {
     my $self = shift;
 
