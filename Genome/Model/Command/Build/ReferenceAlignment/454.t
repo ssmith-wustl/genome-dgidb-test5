@@ -23,8 +23,8 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 }
-plan skip_all => 'Workflow is having some port binding issues when run from the test harness';
-#plan tests => 62;
+#plan skip_all => 'Workflow is having some port binding issues when run from the test harness';
+plan tests => 74;
 
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $model_name = "test_454_$ENV{USER}";
@@ -95,6 +95,12 @@ sub setup_test_data {
                                                                    sff_file => $file,
                                                                );
             push @read_sets, $rr454;
+            my $instrument_data = Genome::InstrumentData->create_mock(
+                                                                      id => $rr454->region_id,
+                                                                      sequencing_platform => '454',
+                                                                      sample_name => $rr454->sample_name,
+                                                                      run_name => $rr454->run_name,
+                                                                  );
         }
     }
     chdir $cwd || die("Failed to change directory to '$cwd'");

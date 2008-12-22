@@ -180,6 +180,7 @@ sub add_reads {
                                                           read_set_id => $read_set->seq_id,
                                                       );
         isa_ok($read_set_object,'Genome::Model::ReadSet');
+        ok(!$read_set_object->first_build_id,'undef first_build_id');
         if ($read_set_object->sequencing_platform eq '454') {
             my $tmp_file = $self->tmp_dir .'/amplicon_headers.txt';
             $add_reads_command->create_directory($read_set_object->full_path);
@@ -189,6 +190,18 @@ sub add_reads {
         if ($read_set_object->full_path) {
             $self->add_directory_to_remove($read_set_object->full_path);
         }
+        my $ida = Genome::Model::InstrumentDataAssignment->get(
+                                                               model_id => $model->id,
+                                                               instrument_data_id => $read_set->seq_id,
+                                                           );
+        isa_ok($ida,'Genome::Model::InstrumentDataAssignment');
+        is($ida->sequencing_platform,$read_set_object->sequencing_platform,'sequencing_platform matches ReadSet');
+      SKIP: {
+            skip 'full_path is resolved differently for these objects', 1;
+            is($ida->full_path,$read_set_object->full_path,'full_path matches ReadSet');
+        };
+        is($ida->run_name,$read_set_object->run_name,'run_name matches ReadSet');
+        ok(!$ida->first_build_id,'undef first_build_id');
     }
 }
 
@@ -370,7 +383,7 @@ sub remove_data {
     my $directories_to_remove = $self->{_dir_array_ref};
     #print "Removing directories:\n";
     for my $directory_to_remove (@$directories_to_remove, @alignment_dirs) {
-        #print $directory_to_remove . "\n";
+        warn("Removing $directory_to_remove\n");
         rmtree $directory_to_remove;
     }
 }
