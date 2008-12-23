@@ -14,18 +14,17 @@ class Genome::Model::Command::Build::Assembly {
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-    
+
     my $model = $self->model;
 
-    my @read_sets = $model->read_sets;
+    my @instrument_data = $model->instrument_data;
 
-    unless (scalar(@read_sets) && ref($read_sets[0])  &&  $read_sets[0]->isa('Genome::Model::ReadSet')) {
-        $self->error_message('No read sets have been added to model: '. $model->name);
-        $self->error_message("The following command will add all available read sets:\ngenome-model add-reads --model-id=".
+    unless (scalar(@instrument_data) && ref($instrument_data[0])  &&  $instrument_data[0]->isa('Genome::InstrumentData')) {
+        $self->error_message('InstrumentData has not been added to model: '. $model->name);
+        $self->error_message("The following command will add all available InstrumentData:\ngenome model add-reads --model-id=".
         $model->id .' --all');
         return;
     }
-    
     return $self;
 }
 
@@ -82,7 +81,7 @@ sub verify_successful_completion_job_classes {
 
 sub setup_project_objects {
     my $self = shift;
-    return $self->model->unbuilt_read_sets;
+    return $self->model->unbuilt_instrument_data;
 }
 
 sub assemble_objects {
