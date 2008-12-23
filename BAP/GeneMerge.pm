@@ -250,7 +250,7 @@ sub tag_redundant_rfam {
             }
         }
         elsif (
-               (($g->source_tag() eq 'rnammer') && ($g->source_tag() eq 'rfam'))
+               (($f->source_tag() eq 'rnammer') && ($g->source_tag() eq 'rfam'))
            ) {
             unless ($g->has_tag('redundant')) {
                 $g->add_tag_value('redundant', 1);
