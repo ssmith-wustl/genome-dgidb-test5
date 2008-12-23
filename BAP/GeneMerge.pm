@@ -239,21 +239,14 @@ sub tag_redundant_rfam {
 
     my $overlap = sub {
 
-        my ($f, $g) = @_;
-        
+        my ($rfam)    = grep { $_->source_tag() eq 'rfam'    } @_;
+        my ($rnammer) = grep { $_->source_tag() eq 'rnammer' } @_;
         
         if (
-            (($f->source_tag() eq 'rfam') && ($g->source_tag() eq 'rnammer'))
+            defined($rfam) && defined($rnammer)
         ) {
-            unless ($f->has_tag('redundant')) {
-                $f->add_tag_value('redundant', 1);
-            }
-        }
-        elsif (
-               (($f->source_tag() eq 'rnammer') && ($g->source_tag() eq 'rfam'))
-           ) {
-            unless ($g->has_tag('redundant')) {
-                $g->add_tag_value('redundant', 1);
+            unless ($rfam->has_tag('redundant')) {
+                $rfam->add_tag_value('redundant', 1);
             }
         }
         
