@@ -566,16 +566,32 @@ sub _schedule_command_classes_for_object {
                                                   );
                 }
             } elsif ($command_class->isa('Genome::Model::EventWithReadSet')) {
-                unless ($object->isa('Genome::Model::ReadSet')) {
-                    my $error_message = 'Expecting Genome::Model::ReadSet object but got '. ref($object);
+
+                if ($object->isa('Genome::Model::ReadSet')) {
+                    $object->first_build_id($self->build_id);
+                    $command = $command_class->create(
+                                                      read_set_id => $object->read_set_id,
+                                                      model_id => $self->model_id,
+                                                  );
+                } elsif ($object->isa('Genome::InstrumentData')) {
+                    my $ida = Genome::Model::InstrumentDataAssignment->get(
+                                                                           model_id => $self->model_id,
+                                                                           instrument_data_id => $object->id,
+                                                                       );
+                    unless ($ida) {
+                        $self->error_message('Failed to find InstrumentDataAssignment for instrument data '. $object->id .' and model '. $self->model_id);
+                        die;
+                    }
+                    $ida->first_build_id($self->build_id);
+                    $command = $command_class->create(
+                                                      read_set_id => $object->id,
+                                                      model_id => $self->model_id,
+                                                  );
+                } else {
+                    my $error_message = 'Expecting Genome::Model::ReadSet or Genome::InstrumentData object but got '. ref($object);
                     $self->error_message($error_message);
                     die;
                 }
-                $command = $command_class->create(
-                                                  read_set_id => $object->read_set_id,
-                                                  model_id => $self->model_id,
-                                              );
-                $object->first_build_id($self->build_id);
             } elsif ($command_class->isa('Genome::Model::Event')) {
                 $command = $command_class->create(
                                                   model_id => $self->model_id,
