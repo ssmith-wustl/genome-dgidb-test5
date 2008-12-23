@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-
 use Bio::SeqIO;
 use Bio::Seq::Quality;
 
@@ -91,28 +90,24 @@ sub execute {
             -force_flush => 1,
         );
 
-        my @traces = map{$_*10}(0..$length-1);
-
         unless ($self->_format_type eq 'fastq') {
             my $outfile = $self->dir.'/'.$fa->id;
             $outfile .= '.phd.1' if $self->_format_type eq 'phd';
             $out_io = $self->get_format_writer($outfile, $self->_format_type);
-            $params{-trace} = \@traces;
+            $params{-trace} = [map{$_*10}(0..$length-1)];
         }
         
         my $swq = Bio::Seq::Quality->new(%params);
         
         if ($self->_format_type eq 'phd') {
             $swq->chromat_file($fa->id);
-            $swq->trace_array_max_index($traces[$#traces]);
             $swq->time($self->time) if $self->time;
         }
 
         my $write_method = $self->write_method;
         
         if ($self->_format_type eq 'scf') {
-            my ($param_key, $param_val) = ($self->_param_type, $self->_param_value($swq));
-            $out_io->$write_method($param_key => $param_val);
+            $out_io->$write_method($self->_param_type => $self->_param_value($swq));
         }
         else {
             $out_io->$write_method($swq);
