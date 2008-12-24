@@ -1,27 +1,29 @@
-package Genome::Model::Tools::ManualReview::MRGui;
+ package Genome::Model::Tools::ManualReview::MRGui;
 
 use strict;
 use warnings;
 
-our $initialized = 0;
-BEGIN {
-    sub init_gtk {
-        return if $initialized;
-        eval qq{
-            use Gtk2 -init;
-            use Gtk2::GladeXML;
-            use Glib;
-        };
-        die $@ if $@;
-        $initialized = 1;
-    }
+        use Gtk2 -init;
+        use Gtk2::GladeXML;
+        use Glib;our $initialized = 0;
+
+sub init_gtk {
+    return if $initialized;
+    #eval {
+
+    #};
+    die $@ if $@;
+    $initialized = 1;
 }
+
 use IO::File;
 use Genome::Utility::VariantReviewListReader;
 
 use File::Basename ('fileparse','basename');
 use base qw(Class::Accessor);
 use Time::HiRes qw(usleep);
+use Cwd 'abs_path';
+
 Genome::Model::Tools::ManualReview::MRGui->mk_accessors(qw(current_file g_handle re_g_handle header));
 
 my %iub_hash = ( A => 1,
@@ -87,10 +89,9 @@ sub new
     $self->build_review_tree;
 
     $mainWin->signal_connect("destroy", sub { Gtk2->main_quit; system "killall consed"; });   
-    $glade->signal_autoconnect_from_package($self);
 
     my $project_file = $params{project_file};
-    $self->open_file($project_file) if($project_file && -e $project_file);  
+    $self->open_file(abs_path($project_file)) if($project_file && -e $project_file);  
     return $self;
 }
 
@@ -175,7 +176,7 @@ sub build_review_tree
 #my %hash = 
 #(
 #    'Chromosome' => 'chromosome',
-#    'Position' => 'begin_position',
+#    'Position' => 'start_position',
 #    'Delete Sequence' => 'delete_sequence',
 #    'Insert Sequence Allele 1' => 'insert_sequence_allele1',
 #    'Insert Sequence Allele 2' => 'insert_sequence_allele2',
@@ -189,8 +190,8 @@ sub build_review_tree
 sub db_columns{
     my @columns = ( qw/
         chromosome
-        begin_position
-        end_position
+        start_position
+        stop_position
         variant_type
         variant_length
         delete_sequence
@@ -253,7 +254,7 @@ sub set_project_consedrc {
 sub open_consed
 {
     my ($self, $proj_name) = @_;
-    my $relative_target_base_pos = 1001;
+    my $relative_target_base_pos = 300;#1001;
     my $consed= 'consed';
     my($file, $dir)= fileparse($self->current_file);
     my $suffix = '.1';
@@ -300,7 +301,6 @@ sub open_consed
         set_project_consedrc($edit_dir);
         
         my $c_command= "$consed -socket 0 -ace $ace1 -mainContigPos $relative_target_base_pos &>/dev/null";
-
         my $rc = system($c_command);
         if($rc)
         {
@@ -320,7 +320,7 @@ sub get_col_order
     my $header = $self->header;
     my @vis_cols = (
         'chromosome',
-        'begin_position',
+        'start_position',
         'delete_sequence',
         'insert_sequence_allele1',
         'insert_sequence_allele2',
@@ -403,6 +403,7 @@ sub save_file
     $header .= "\n";
     print $fh $header;
     my $iter = $model->get_iter_first;
+    no warnings;
     do
     {   
         my @cols = $model->get($iter);
@@ -411,7 +412,7 @@ sub save_file
         print $fh $row;    
     }
     while($iter = $model->iter_next($iter));
-    
+    use warnings;
     $fh->close;
 }
 

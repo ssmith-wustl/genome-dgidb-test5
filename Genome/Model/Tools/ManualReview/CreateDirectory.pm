@@ -101,7 +101,7 @@ sub execute {
             {
                 if(defined $_ && $_->has_ended){
                     if($_->is_successful) {$_ = undef;}
-                    else {die "Job failed.\n"}                    
+                    else { print Dumper $_; print "\n"; die "Job failed.\n"}                    
                 }
             }
             foreach(@jobs)
@@ -119,13 +119,28 @@ SLEEP:      sleep 30;
         {
             $_ = $out_dir."/temp_map/".basename($_);
         }
+        my $command_string;
+        my @temp_lines = @lines;
+        my $final_merge = "/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq mapmerge $out_dir/all.map";
+        for(my $i=0;$i<@lines/1000;$i++)
+        {
+            my @temp = splice(@temp_lines,0,1000);
+            my $maps = join ' ',@temp;
+            $command_string .="/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq mapmerge $out_dir/temp_map/all.map.$i $maps\n";
+            $final_merge .= " $out_dir/temp_map/all.map.$i";
+        }
+        $command_string .= "$final_merge\n";
+        my $fh = IO::File->new(">$out_dir/temp_map/command");
+        print $fh $command_string;
+        $fh->close;
+        `chmod 755 $out_dir/temp_map/command`;
         my $maps = join ' ',@lines;       
         #system("bsub -q aml -R 'select[type=LINUX64]'-oo mapmerge.log maq mapmerge $out_dir/all.map $maps");
         my %job_params = (
                 pp_type => 'lsf',
                 q => 'short',
                 R => 'select[type=LINUX64]',
-                command => "maq mapmerge $out_dir/all.map $maps",
+                command => "$out_dir/temp_map/command",#"maq mapmerge $out_dir/all.map $maps",
                 oo => "mapmerge.log",
             );
         my $job = PP::LSF->create(%job_params);
@@ -163,8 +178,8 @@ SLEEP:      sleep 30;
             #system("bsub -q aml -W 50 -oo $seqpos.log gt maq get-intersect --input=$out_dir/all.map --snpfile=$out_dir/$seqpos/annotation.tsv --output=$out_dir/$seqpos/$seqpos --justname=2");
             my %job_params = (
                 pp_type => 'lsf',
-                q => 'short',
-                W => 5,
+                q => 'long',
+                #W => 5,
                 command => "$gt maq get-intersect --input=$out_dir/all.map --snpfile=$out_dir/$seqpos/annotation.tsv --output=$out_dir/$seqpos/$seqpos --justname=2",
                 oo => "$seqpos.log",
             );
@@ -194,13 +209,13 @@ SLEEP:      sleep 30;
             last; #if we're here then we're done
 SLEEEP:      sleep 30;
         }
-        `rm -rf $out_dir/temp_map`;        
+        #`rm -rf $out_dir/temp_map`;        
     }
     @jobs = ();
     
     my $proj_fof = File::Temp->new(UNLINK => 1);
     my @projects = `\\ls -d -1 $out_dir/*/`;
-    
+    @projects = grep { !($_ =~ /temp_map/) } @projects;
     print $proj_fof @projects;
     #print $out_dir,"\n",$proj_fof,"\n";
     
@@ -212,8 +227,9 @@ SLEEEP:      sleep 30;
 
         my %job_params = (
             pp_type => 'lsf',
-            q => 'short',
-            W => 5,
+            q => 'long',
+            R => 'select[type=LINUX64]',
+            #W => 15,
             command => "$gt manual-review prepare-nextgen-ace --project-dir=$line --basedir=$out_dir",
             oo => "$line.log",
         );

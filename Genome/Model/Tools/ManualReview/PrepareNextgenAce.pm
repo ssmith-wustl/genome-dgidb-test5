@@ -105,8 +105,8 @@ $DB::single = 1;
 
         my ($chrom, $start);# = split(/_/, $project_string);
         print $project_string, "\n";
-        ($chrom, $start) = $project_string =~ /.*\/(\d+)_(\d+)/;#split(/_/, $project_string);
-        ($chrom, $start) = $project_string =~ /.?(\d+)_(\d+)/ unless (defined $chrom && defined $start);
+        ($chrom, $start) = $project_string =~ /.*\/(\w+)_(\d+)/;#split(/_/, $project_string);
+        ($chrom, $start) = $project_string =~ /.?(\w+)_(\d+)/ unless (defined $chrom && defined $start);
         $project_string = $chrom.'_'.$start;
         my $expecting ="1_34744774";
         if($start =~ /\D/ ){
@@ -170,7 +170,7 @@ $DB::single = 1;
 
     my $flag;
         if(!-e "$edit_dir/solexa.fof" or -z "$edit_dir/solexa.fof"){
-            $command  = "/gscuser/sabbott/bin/solexa_fetch_read.pl --fastq $fastq --overwrite";
+            $command  = "/gscuser/jschindl/bin/solexa_fetch_read.pl --fastq $fastq --overwrite";
             print $command . "\n";
             system($command);
             $flag++;
