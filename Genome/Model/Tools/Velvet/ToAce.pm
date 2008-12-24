@@ -26,6 +26,10 @@ class Genome::Model::Tools::Velvet::ToAce {
             doc     => 'name for output acefile, default is ./velvet_asm.ace',
             default => 'velvet_asm.ace',
         },
+        time        => {
+            is      => 'String',
+            doc     => 'timestamp inside acefile, must be sync with phd timestamp',
+        },
     ],
 };
         
@@ -79,7 +83,7 @@ sub create {
 sub execute {
     my $self = shift;
     
-    my $time   = localtime;
+    my $time   = $self->time || localtime;
     my $out    = IO::File->new('>'.$self->out_acefile) or die "can't write to out_acefile\n";
     my $writer = GSC::IO::Assembly::Ace::Writer->new($out);
 
