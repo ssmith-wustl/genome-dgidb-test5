@@ -22,4 +22,5 @@ my $output = run_workflow_lsf(
                           );
 
 
-print Data::Dumper->new([$output])->Dump;
+print Data::Dumper->new([$output,\@Workflow::Simple::ERROR])->Dump;
+

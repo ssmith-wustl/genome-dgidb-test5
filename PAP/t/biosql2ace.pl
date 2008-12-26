@@ -1,5 +1,6 @@
 #!/gsc/bin/perl
 
+
 use strict;
 use warnings;
 
@@ -38,7 +39,7 @@ my $interpro_ipr_fn = 'merged.raw.sorted.ipr.ace';
 $interpro_ipr_fh->open(">$interpro_ipr_fn") or die "Can't open '$interpro_ipr_fn': $OS_ERROR";
 
 my $kegg_fh = IO::File->new();
-my $kegg_fn = 'REPORT-top.ks.ace';
+my $kegg_fn = 'REPORT-top_new.ks.ace';
 
 $kegg_fh->open(">$kegg_fn") or die "Can't open '$kegg_fn': $OS_ERROR";
 
@@ -101,8 +102,11 @@ while (my $seq = $result->next_object()) {
                 my ($evalue)   = $feature->each_tag_value('interpro_evalue');
                 my ($desc)     = $feature->each_tag_value('interpro_description');
 
+                ## Bug for bug replication...
+                if ($evalue == 1e10) { $evalue = ''; }
+                
                 print $interpro_fh qq{Sequence $new_display_name}, "\n";
-                print $interpro_fh qq{Interpro   "$analysis : $ipr_number $desc : $evalue}, "\n\n";
+                print $interpro_fh qq{Interpro   "$analysis : $ipr_number $desc : pval $evalue"}, "\n\n";
 
             }
 
@@ -221,7 +225,7 @@ while (my $seq = $result->next_object()) {
 
 foreach my $gene (sort keys %ipr) {
 
-    my $ipr_string = join " ", (sort { $a <=> $b } keys %{$ipr{$gene}});
+    my $ipr_string = join " ", (sort { $a cmp $b } keys %{$ipr{$gene}});
 
     print $interpro_ipr_fh qq{Sequence $gene}, "\n";
     print $interpro_ipr_fh qq{IPR_ID "$ipr_string"}, "\n\n";
