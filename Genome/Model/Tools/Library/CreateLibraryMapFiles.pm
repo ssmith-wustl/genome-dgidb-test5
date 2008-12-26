@@ -38,7 +38,7 @@ sub execute {
         event_status => 'Succeeded'
     );
     #Convert events to ReadSet objects
-    my @readsets = map {Genome::Model::ReadSet->get(read_set_id => $_->read_set_id)} @events;
+    my @readsets = map {Genome::Model::ReadSet->get(read_set_id => $_->read_set_id, model_id=>$model_id )} @events;
 
     
     my %map_files;
