@@ -75,22 +75,6 @@ sub generate_report_brief
     my $desc = "maq mapcheck coverage for " . $model->name . " as of " . UR::Time->now;
     $brief->print("<div>$desc</div>");
     $brief->close;
-
-#    my $output_file = $self->report_brief_output_filename;
-#    my $brief = IO::File->new(">$output_file");
-#    $brief->print("<ul>");
-#    die unless $brief;
-
-#    my %maqs = $self->get_maq_content;
-#    my ($rpt,$avg);
-#    foreach my $ref_seq(sort keys %maqs)
-#    {
-#        $rpt = $maqs{$ref_seq};
-#        $avg =  $rpt=~m/(.*non-gap regions:\s*)(\d+\.\d+)/ ? $2 : 'Not Available';
-#        $brief->print("<li>$ref_seq:<a href=\"" . $self->report_brief_output_filename . "\">$avg</a></li>");
-#    }
-#    $brief->print("</ul>");
-#    $brief->close;
 }
 
 sub generate_report_detail 
@@ -108,7 +92,7 @@ sub get_maq_content
     my ($maq_file, $bfa_file, $cmd, @maq, $fh, $file_name, %output, $rpt,$maplist);
     
     my $reports_dir = $self->model->resolve_reports_directory;
-    $file_name = $self->report_detail_output_filename;#$reports_dir . '/' .  $model->genome_model_id . '_coverage_detail.html';
+    $file_name = $self->report_detail_output_filename;
     $self->status_message("Will write final report file to: ".$file_name);
     
     my @all_map_lists;
@@ -119,7 +103,6 @@ sub get_maq_content
     foreach $c(@chromosomes) {
         my $a_ref_seq = Genome::Model::RefSeq->get(model_id=>$model->genome_model_id,ref_seq_name=>$c);
         @map_list = $a_ref_seq->combine_maplists;
-        #print "There are ".scalar(@map_list). " map lists.  They are:\n";
         push (@all_map_lists, @map_list); 
     }
    
@@ -152,7 +135,7 @@ sub get_maq_content
     $rpt = $self->format_maq_content($rpt); 
     
     #make detail report
-    $file_name = $self->report_detail_output_filename;#$reports_dir . '/' .  $model->genome_model_id . '_coverage_detail.html';
+    $file_name = $self->report_detail_output_filename;
     $self->warning_message("Writing final report to: ".$file_name);
     $fh = IO::File->new(">$file_name");        
     $fh->print($rpt);
