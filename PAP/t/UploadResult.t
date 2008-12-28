@@ -70,7 +70,7 @@ sub create_seq {
 
     
     my $seq = Bio::Seq->new(
-                            -id               => 'TST0001',
+                            -id               => 'TST_Contig98.1',
                             -accession_number => '999999999', 
                             -namespace        => $namespace,
                             -seq              => 'GATTACA' x 1000, 
@@ -78,8 +78,8 @@ sub create_seq {
     
     $seq->add_SeqFeature(
                          Bio::SeqFeature::Generic->new(
-                                                       -seq_id       => 'TST0001',
-                                                       -display_name => 'TST0001.GeneMark.1',
+                                                       -seq_id       => 'TST_Contig98.1',
+                                                       -display_name => 'TST_Contig98.1.GeneMark.1',
                                                        -primary      => 'gene',
                                                        -source       => 'genemark',
                                                        -start        => 1,
@@ -94,7 +94,7 @@ sub create_seq {
 
 sub create_feature_ref {
 
-    my $display_name = 'TST0001.GeneMark.1';
+    my $display_name = 'TST_Contig98.1.GeneMark.1';
 
     my $psort = Bio::SeqFeature::Generic->new(
                                               -display_name => $display_name,

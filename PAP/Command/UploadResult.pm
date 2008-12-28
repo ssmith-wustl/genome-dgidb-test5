@@ -146,12 +146,26 @@ sub execute {
         
         my $display_name = $feature->display_name();
         
-        ##FIXME:  This is a lame, pathetic, fragile shortcut.
-        my ($seq_id, $source, $number) = split /\./, $display_name;
-        
-        unless (defined($seq_id)) {
-            warn "failed to parse seq_id from '$display_name'";
-            next INTERPRO;
+        my ($seq_id, $source, $number);
+       
+        ##FIXME: This is better than the previous lame, pathetic fragile
+        ##       hack that was here, but this module really should not be
+        ##       parsing stuff out of the feature display name.  However,
+        ##       it's the only way (at the moment) of batching the darn
+        ##       InterPro features together to get good performance.  
+        ##       The proper way to deal with this is probably to refactor
+        ##       the pipeline to take a list of genes as input instead of a
+        ##       protein fasta file.  The darn things have to be in BioSQL 
+        ##       anway.  That way, the seq_id could be passed along with the
+        ##       feature.  
+        if (
+            ($display_name =~ /^(\w+\d+)\.(\w+)\.(\d+)$/) ||
+            ($display_name =~ /^(\w+\d+\.\d+)\.(\w+)\.(\d+)$/)
+           ) {
+            ($seq_id, $source, $number) = ($1, $2, $3);
+        }
+        else {
+            die "failed to parse '$display_name':\n - does not match expected format (seqid.predictor.sequence)";
         }
         
         push @{$interpro_features{$seq_id}}, $feature;
