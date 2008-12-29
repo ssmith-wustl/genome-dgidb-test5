@@ -179,6 +179,10 @@ sub check_traces_fof {
 
     
     if ($no_trace_file || $empty_trace_file) {
+
+	unless($no_trace_file) {$no_trace_file=0;}
+	unless($empty_trace_file) {$empty_trace_file=0;}
+
 	my $n = $no_trace_file + $empty_trace_file;
 	print qq(nonviable trace files ==> $n\n);
 	foreach my $read (sort keys %{$trace_files_needed}) {
@@ -191,11 +195,17 @@ sub check_traces_fof {
 	if ($no_poly_file eq $read_count) {
 	    print qq(There are no poly files, they can be created in analysis\n);
 	} else {
+
+	    unless($no_poly_file) {$no_poly_file=0;}
+	    unless($empty_poly_file) {$empty_poly_file=0;}
+
 	    my $n = $no_poly_file + $empty_poly_file;
 	    if ($fix_invalid_files) {print qq(will run phred to produce $n disfunctional poly files\n);}
 	    foreach my $read (sort keys %{$poly_files_needed}) {
 		if ($trace_files_needed->{$read}) {
-		    print qq(no attempt made to produce a poly file for $read as the trace file is missing\n);
+		    if ($fix_invalid_files) {
+			print qq(no attempt made to produce a poly file for $read as the trace file is missing\n);
+		    }
 		    $invalid_files->{$read}->{poly}=1;
 		} else {
 		    if ($fix_invalid_files) {system qq(phred -dd $poly_dir $chromat_dir/$read.gz);}
@@ -212,15 +222,21 @@ sub check_traces_fof {
 	    }
 	}
     }
-
+    
     my ($check_phd_time_stamps);    
     if ($no_phd_file || $empty_phd_file) {
+	
+	unless($no_phd_file) {$no_phd_file=0;}
+	unless($empty_phd_file) {$empty_phd_file=0;}
+	
 	my $n = $no_phd_file + $empty_phd_file;
-
+	
 	if ($fix_invalid_files) {print qq(will run phred to produce $n disfunctional phd files\n);}
 	foreach my $read (sort keys %{$phd_files_needed}) {
 	    if ($trace_files_needed->{$read}) {
-		print qq(no attempt made to produce a phd file for $read as the trace file is missing\n);
+		if ($fix_invalid_files) {
+		    print qq(no attempt made to produce a phd file for $read as the trace file is missing\n);
+		}
 		$invalid_files->{$read}->{phd}=1;
 	    } else {
 		#if ($fix_invalid_files) {system qq(phred -pd $phd_dir $chromat_dir/$read.gz);}
