@@ -8,37 +8,50 @@ use DBI;
 use above 'Genome';
 
 
+###MODIFIED so that it doesn't fix anything
+my $fix_invalid_files;
 my ($traces_fof,$trace_files_needed,$phd_files_needed,$poly_files_needed);
 sub ace_support_qa {
 
     my $t0 = new Benchmark;
-    
+
+    #my ($ace_file,$fix_invalid_files) = @_; ##Give full path to ace file including ace file name
     my ($ace_file) = @_; ##Give full path to ace file including ace file name
-    chomp ($ace_file);
-    my ($no_ace) = &check_for_file($ace_file);
+
+    my $usage = "Give full path to ace file including ace file name";
+    unless (@ARGV == 1) {die "$usage\n";}
+#    chomp ($ace_file);
+
+
+    my ($no_ace) = &check_for_file($ace_file); #will only return if there is no file or an empty file
 
     if ($no_ace) { 
-	my $check = "$ace_file is $no_ace";
+	my $check;
+	if ($ace_file) {
+	    $check = "$ace_file is $no_ace";
+	} else {
+	    $check = "No ace file provided";
+	}
 	return $check;
     }
-    
+    #invalid_files will be a has of trace names and file type that are broken.
     my ($invalid_files,$project) = &parse_ace_file($ace_file); ##QA the read dump, phred and poly files
 	
     my $run;
     if ($invalid_files) {
-	if ($invalid_files == 1) {
-	    $run = qq(go ahead and try to run analysis for $project however, it will most likely fail, there was $invalid_files invalid file\n);
 
-	    #$run = "NOT_OK";
-	} else {
-	    $run = qq(go ahead and try to run analysis for $project however, it will most likely fail, there were $invalid_files invalid files\n);
-	    #$run = "NOT_OK";
+	$run = qq(There are invalid files for $project that should be fixed prior to analysis\n);
 
+	print qq(Here is a list of reads for $project with either a broken chromat, phd, or poly file\n);
+	foreach my $read (sort keys %{$invalid_files}) {
+	    print qq($read);
+	    foreach my $file_type (sort keys %{$invalid_files->{$read}}) {
+		print qq(\t$file_type);
+	    }
+	    print qq(\n);
 	}
     } else {
 	$run = qq(OK to start analysis on $project\n);
-	#$run = "OK";
-	
     }
     
     my $t1 = new Benchmark;
@@ -48,7 +61,6 @@ sub ace_support_qa {
     if ($run) {
 	return ($run);
     }
-
 }
 
 
@@ -123,7 +135,9 @@ sub check_traces_fof {
 	my $trace = "$chromat_dir/$read.gz";
 	my ($dump_trace) = &check_for_file($trace);
 	if ($dump_trace) {
-	    system qq(read_dump -scf-gz $read --output-dir=$chromat_dir);
+	    
+	    if ($fix_invalid_files) {system qq(read_dump -scf-gz $read --output-dir=$chromat_dir);}
+	    
 	    ($trace) = &check_for_file($trace);
 	    if ($trace eq "no_file") { 
 		$no_trace_file++;
@@ -156,16 +170,20 @@ sub check_traces_fof {
 	    $phd_files_needed->{$read}=1;
 	}
     }
-    print qq(Reads for analysis ==> $read_count\n);
 
     my $invalid_files;
+
+    unless ($read_count) { die "There are no reads in the ace file to be analyzed\n"; }
+
+    print qq(Reads for analysis ==> $read_count\n);
+
     
     if ($no_trace_file || $empty_trace_file) {
 	my $n = $no_trace_file + $empty_trace_file;
 	print qq(nonviable trace files ==> $n\n);
 	foreach my $read (sort keys %{$trace_files_needed}) {
-	    print qq(attempted redump of $read failed\n);
-	    $invalid_files++;
+	    if ($fix_invalid_files) {print qq(attempted redump of $read failed\n);}
+	    $invalid_files->{$read}->{trace}=1;
 	}
     }
     
@@ -174,18 +192,18 @@ sub check_traces_fof {
 	    print qq(There are no poly files, they can be created in analysis\n);
 	} else {
 	    my $n = $no_poly_file + $empty_poly_file;
-	    print qq(will run phred to produce $n disfunctional poly files\n);
+	    if ($fix_invalid_files) {print qq(will run phred to produce $n disfunctional poly files\n);}
 	    foreach my $read (sort keys %{$poly_files_needed}) {
 		if ($trace_files_needed->{$read}) {
 		    print qq(no attempt made to produce a poly file for $read as the trace file is missing\n);
-		    $invalid_files++;
+		    $invalid_files->{$read}->{poly}=1;
 		} else {
-		    system qq(phred -dd $poly_dir $chromat_dir/$read.gz);
+		    if ($fix_invalid_files) {system qq(phred -dd $poly_dir $chromat_dir/$read.gz);}
 		    my $poly = "$poly_dir/$read.poly";
 		    ($poly) = &check_for_file($poly);
 		    if ($poly) { 
-			print qq(attempted to produce a poly file for $read failed\n);
-			$invalid_files++;
+			if ($fix_invalid_files) {print qq(attempted to produce a poly file for $read failed\n);}
+			$invalid_files->{$read}->{poly}=1;
 		    } else {
 			$repaired_file++;
 			print qq(poly file for $read ok\n);
@@ -198,18 +216,19 @@ sub check_traces_fof {
     my ($check_phd_time_stamps);    
     if ($no_phd_file || $empty_phd_file) {
 	my $n = $no_phd_file + $empty_phd_file;
-	print qq(will run phred to produce $n disfunctional phd files\n);
+
+	if ($fix_invalid_files) {print qq(will run phred to produce $n disfunctional phd files\n);}
 	foreach my $read (sort keys %{$phd_files_needed}) {
 	    if ($trace_files_needed->{$read}) {
 		print qq(no attempt made to produce a phd file for $read as the trace file is missing\n);
-		$invalid_files++;
+		$invalid_files->{$read}->{phd}=1;
 	    } else {
-		#system qq(phred -pd $phd_dir $chromat_dir/$read.gz);
+		#if ($fix_invalid_files) {system qq(phred -pd $phd_dir $chromat_dir/$read.gz);}
 		my $phd = "$phd_dir/$read.phd.1";
 		($phd) = &check_for_file($phd);
 		if ($phd) { 
 		    #print qq(attempted to produce a phd file for $read failed\n);
-		    $invalid_files++;
+		    $invalid_files->{$read}->{phd}=1;
 		} else {
 		    $repaired_file++;
 		    #$check_phd_time_stamps=1;
@@ -222,16 +241,19 @@ sub check_traces_fof {
 
     ##sync_phd_time_stamps is not working correctly. It didn't change the time stamp in the ace file
     if ($check_phd_time_stamps) {
-	print qq(will attempt to sync the phd file time stamps with the ace file\n);
-	#system qq(/gscmnt/200/medseq/biodb/shared/TCGA_GBM/rmeyer/TEST/scripts/fix_autojoin_DS_line.pl $ace_file);
-
-	($ace_file)=&sync_phd_time_stamps($ace_file);
-	my ($no_ace) = &check_for_file($ace_file);
-	
-	if ($no_ace) { 
-	    my $check = "The synced ace file $ace_file is $no_ace";
-	    $invalid_files++;
-	    return $check;
+	if ($fix_invalid_files) {
+	    print qq(will attempt to sync the phd file time stamps with the ace file\n);
+	    #system qq(/gscmnt/200/medseq/biodb/shared/TCGA_GBM/rmeyer/TEST/scripts/fix_autojoin_DS_line.pl $ace_file);
+	    
+	    ($ace_file)=&sync_phd_time_stamps($ace_file);
+	    my ($no_ace) = &check_for_file($ace_file);
+	    
+	    if ($no_ace) { 
+		die "The synced ace file $ace_file is $no_ace";
+		#my $check = "The synced ace file $ace_file is $no_ace";
+		#$invalid_files++;
+		#return $check;
+	    }
 	}
     }
     
