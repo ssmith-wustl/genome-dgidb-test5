@@ -3,14 +3,14 @@
 use strict;
 use warnings;
 
-        use Gtk2 -init;
-        use Gtk2::GladeXML;
-        use Glib;our $initialized = 0;
+our $initialized = 0;
 
 sub init_gtk {
     return if $initialized;
     #eval {
-
+        use Gtk2 -init;
+        use Gtk2::GladeXML;
+        use Glib;
     #};
     die $@ if $@;
     $initialized = 1;
@@ -254,7 +254,7 @@ sub set_project_consedrc {
 sub open_consed
 {
     my ($self, $proj_name) = @_;
-    my $relative_target_base_pos = 300;#1001;
+    my $relative_target_base_pos = 1001;
     my $consed= 'consed';
     my($file, $dir)= fileparse($self->current_file);
     my $suffix = '.1';
