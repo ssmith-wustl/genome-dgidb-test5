@@ -3,11 +3,11 @@
 use strict;
 use warnings;
 
-use above "Genome";
-use above "Workflow";
+use above 'Genome';
+use above 'Workflow';
 
-#use Test::More tests => 9;
-use Test::More skip_all => 'workflow and lsf issues taking a long time to test this';
+use Test::More tests => 9;
+#use Test::More skip_all => 'workflow and lsf issues taking a long time to test this';
 use File::Compare;
 use File::Temp;
 
