@@ -58,7 +58,8 @@ sub context {
 sub event_types_without_subclass {
     return (
             '^genome[\- ]model build verify-successful-completion$',
-            '^genome[\- ]model build assembly assemble newbler$'
+            '^genome[\- ]model build assembly assemble newbler$',
+            '^genome[\- ]model build amplicon-assembly',
         );
 }
 
