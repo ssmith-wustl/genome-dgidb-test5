@@ -32,7 +32,7 @@ EOS
 
 sub execute {
     my $self = shift;
-
+    $DB::single=1;
     $DB::single = $DB::stopper;
 
     my $now = UR::Time->now;
@@ -148,7 +148,6 @@ sub execute {
             $self->error_message(join("\n",@missing_maps));
             #$self->error_message("Looked in directory: $maplist_dir);
             $self->error_message("Map files are missing!");
-            return; 
         }
     }
     
