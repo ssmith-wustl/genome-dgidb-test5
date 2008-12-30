@@ -76,6 +76,12 @@ This command is usually called as part of the add-reads process
 EOS
 }
 
+sub bsub_rusage {
+    return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=8000]'";
+}
+
+
+
 # maq map file for all this lane's alignments
 
 sub read_set_alignment_files_for_refseq {
@@ -601,18 +607,35 @@ $DB::single = $DB::stopper;
 
     my @subsequences = $self->subsequences;
     # break up the alignments by the sequence they match, if necessary
-    my $map_split = Genome::Model::Tools::Maq::MapSplit->execute(
-                                                                 map_file => $alignment_file,
-                                                                 submap_directory => $self->read_set_alignment_directory,
-                                                                 reference_names => \@subsequences,
-                                                             );
-    unless($map_split) {
-        $self->error_message("Failed to run map split on alignment file $alignment_file");
-        return;
+    #my $map_split = Genome::Model::Tools::Maq::MapSplit->execute(
+        #                                                            map_file => $alignment_file,
+        ##                                                           submap_directory => $self->read_set_alignment_directory,
+        #                                                        reference_names => \@subsequences,
+        # 
+   # );
+    my $mapsplit_cmd=$self->proper_mapsplit_pathname('read_aligner_name');
+    my $cmd = "$mapsplit_cmd " . $self->read_set_alignment_directory . "/ $alignment_file " . join(',',@subsequences);
+    #print $cmd, "\n";
+
+    $DB::single=1;
+    my $rv= system($cmd);
+    my $ok_failure_flag=0;
+    if($rv) {
+        #arbitrary convention set up with homemade mapsplit and mapsplit_long..return 2 if file is empty.
+        if($rv/256 == 2) {
+            $self->error_message("no reads in map.");
+            $ok_failure_flag=1;
+        }
+        else {
+            $self->error_message("Failed to run map split on alignment file $alignment_file");
+            return;
+        }
     }
     
     # these will match the wildcard which pulls old and new alignment files
-    my @split_files = $map_split->output_files;
+    # hacky: thsi still works even if no reads were in the map file, because one file will be touched before
+    #mapsplit quits.
+    my @split_files = glob($self->read_set_alignment_directory . "/*.map");
     for my $output_file (@split_files) {
         my $new_file_path = $output_file .'.'. $self->id;
         unless (rename($output_file,$new_file_path)) {
@@ -620,25 +643,25 @@ $DB::single = $DB::stopper;
             return;
         }
     }
-    
+   
     my $errors;
-    for my $subsequence (@subsequences) {
-        my @found = $self->read_set_alignment_files_for_refseq($subsequence);
-        unless (@found) {
-            $self->error_message("Failed to find map file for $subsequence!");
-            $errors++;
+    unless($ok_failure_flag) {
+        for my $subsequence (@subsequences) {
+            my @found = $self->read_set_alignment_files_for_refseq($subsequence);
+            unless (@found) {
+                $self->error_message("Failed to find map file for $subsequence!");
+                $errors++;
+            }
         }
-    }
-    if ($errors) {
-        my @files = glob($self->read_set_alignment_directory . '/*');
-        $self->error_message("Files in dir are:\n\t" . join("\n\t",@files) . "\n");
-        return;
-    }
-    
+        if ($errors) {
+            my @files = glob($self->read_set_alignment_directory . '/*');
+            $self->error_message("Files in dir are:\n\t" . join("\n\t",@files) . "\n");
+            return;
+        }
+    } 
     $self->generate_metric($self->metrics_for_class);
     $read_set_link=$self->read_set_link;
     $read_set_link->first_build_id($self->parent_event_id);
-    
     return 1;
 }
 
