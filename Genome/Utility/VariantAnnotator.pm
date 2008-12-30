@@ -202,7 +202,7 @@ sub _transcript_annotation
         gene_name  => $gene->name($source),
         intensity => $intensity,
         detection => $detection,
-        amino_acid_change => 'NULL',
+#         amino_acid_change => 'NULL',
         ucsc_cons => $conservation
     )
 }
