@@ -107,6 +107,7 @@ sub setup_test_data {
                 clusters_stdev             => -1,
                 filt_aligned_clusters_pct  => -1,
                 filt_aligned_clusters_stdev=> -1,
+                clusters                   => 1,
                 filt_clusters              => -1,
                 filt_clusters_avg          => -1,
                 filt_clusters_stdev        => -1,
@@ -129,7 +130,8 @@ sub setup_test_data {
                 #seq_id                     => -1,
                 sral_id                    => -1,
                 library_name => 'TESTINGLIBRARY',
-                gerald_directory           => $run_dir
+                gerald_directory           => $run_dir,
+                is_external => 0,    
             );
             #next;
             
