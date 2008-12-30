@@ -19,10 +19,11 @@ sub create {
 
     my @instrument_data = $model->instrument_data;
 
-    unless (scalar(@instrument_data) && ref($instrument_data[0])  &&  $instrument_data[0]->isa('Genome::InstrumentData')) {
+    unless (scalar(@instrument_data) && ref($instrument_data[0])  &&  $instrument_data[0]->isa('Genome::InstrumentData::454')) {
         $self->error_message('InstrumentData has not been added to model: '. $model->name);
         $self->error_message("The following command will add all available InstrumentData:\ngenome model add-reads --model-id=".
         $model->id .' --all');
+        $self->delete;
         return;
     }
     return $self;
