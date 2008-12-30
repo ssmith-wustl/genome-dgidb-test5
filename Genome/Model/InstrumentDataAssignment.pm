@@ -46,6 +46,17 @@ class Genome::Model::InstrumentDataAssignment {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub read_set_alignment_directory {
+    my $self = shift;
+
+    return sprintf('%s/%s/%s_%s',
+                       $self->alignment_directory,
+                       $self->run_name,
+                       $self->subset_name,
+                       $self->instrument_data->id
+                  );
+}
+
 1;
 
 #$HeadURL$
