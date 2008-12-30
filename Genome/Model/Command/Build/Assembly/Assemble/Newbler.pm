@@ -58,7 +58,7 @@ sub execute {
     # however, all files and sub-directories are still read-only
     # This must be a newbler default setting...
     # Here we will recursively add group write permissions to every file/directory
-    `chmod -R g+w $assembly_dir`
+    `chmod -R g+w $assembly_dir`;
     return 1;
 }
 
