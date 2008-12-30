@@ -12,18 +12,20 @@ class Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::Blat {
 };
 
 sub help_brief {
-    "Merge all blat alignments";
+    "Merge all blat alignments and sequence data for downstream analysis";
 }
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model add-reads postprocess-alignments merge-alignments blatPlusCrossmatch --model-id 5 --ref-seq-id all_sequences
+    genome model build reference-alignment merge-alignments blat --model-id
 EOS
 }
 
 sub help_detail {
     return <<EOS
-This command is usually called as part of the add-reads process
+This command merges the blat alignments and sequence data for all input
+instrument data in a 454 reference-alignement model.  In addition, we create
+a Bio::Db fasta formatted directory for use in later commands.
 EOS
 }
 
@@ -75,8 +77,8 @@ sub execute {
             return;
         }
         push @aligner_output_files, $aligner_output_file;
-        my $read_set = $alignment_event->read_set;
-        push @sff_files, $read_set->sff_file;
+        my $instrument_data = $alignment_event->instrument_data;
+        push @sff_files, $instrument_data->sff_file;
     }
 
     # Merge the blat alignments and aligner output
