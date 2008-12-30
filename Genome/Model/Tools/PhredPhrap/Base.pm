@@ -125,14 +125,14 @@ sub execute {
 
     # Save fasta and qual before processing
     my $fasta_file = $self->_get_value_or_default_for_property_name('fasta_file');
-    my $bak_fasta_file = $fasta_file.'.pre_processing';
+    my $bak_fasta_file = sprintf('%s/%s.reads.fasta', $self->_directory->edit_dir, $self->assembly_name);
     unless ( File::Copy::copy($fasta_file, $bak_fasta_file) ) {
         $self->error_message("Can't copy $fasta_file to $bak_fasta_file: $!");
         return;
     }
 
-    my $qual_file = $fasta_file.'.qual';
-    my $bak_qual_file = $fasta_file.'.pre_processing.qual';
+    my $qual_file = $self->_get_value_or_default_for_property_name('qual_file');
+    my $bak_qual_file = $bak_fasta_file.'.qual';
     unless ( File::Copy::copy($qual_file, $bak_qual_file) ) {
         $self->error_message("Can't copy $qual_file to $bak_qual_file: $!");
         return;
