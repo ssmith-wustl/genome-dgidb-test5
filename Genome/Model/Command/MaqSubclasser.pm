@@ -44,6 +44,31 @@ sub proper_maq_pathname {
     }
 }
 
+sub proper_mapsplit_pathname {
+    my($self,$model_param_name) = @_;
+
+    my $param_value = $self->model->$model_param_name;
+    if ($param_value eq 'maq0_6_3') {
+        return '/gscuser/charris/c-src-BLECH/mapsplit/mapsplit';
+    } elsif ($param_value eq 'maq0_6_4') {
+        return '/gscuser/charris/c-src-BLECH/mapsplit/mapsplit';
+    } elsif ($param_value eq 'maq0_6_5') {
+        return '/gscuser/charris/c-src-BLECH/mapsplit/mapsplit';
+   } elsif ($param_value eq 'maq0_6_8') {
+        return '/gscuser/charris/c-src-BLECH/mapsplit/mapsplit';
+    } elsif ($param_value eq 'maq0_7_1') {
+        return '/gscuser/charris/c-src-BLECH/mapsplit/mapsplit_long';
+    } elsif ($param_value eq 'maq') {
+        return;
+    } else {
+        $self->error_message("Couldn't determine mapsplit pathname for the model's $model_param_name param $param_value");
+        return;
+    }
+}
+
+
+
+
 # There's a perl script that's a frontend for some 
 # extra maq functionality.  Assumme it's in the same
 # location as the maq binary, with a ".pl" extention
