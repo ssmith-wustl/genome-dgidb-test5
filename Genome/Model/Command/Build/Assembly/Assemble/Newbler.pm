@@ -54,7 +54,11 @@ sub execute {
         return;
     }
     my $assembly_dir = $model->data_directory .'/assembly';
-
+    # We set the correct directory permissions when the project is created
+    # however, all files and sub-directories are still read-only
+    # This must be a newbler default setting...
+    # Here we will recursively add group write permissions to every file/directory
+    `chmod -R g+w $assembly_dir`
     return 1;
 }
 
