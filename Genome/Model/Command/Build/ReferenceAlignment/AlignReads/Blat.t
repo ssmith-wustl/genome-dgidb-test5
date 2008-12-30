@@ -12,7 +12,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 6;
+    plan tests => 8;
     use_ok('Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat');
 }
 
@@ -34,25 +34,30 @@ my $model = Genome::Model::ReferenceAlignment->create_mock(
                                                            read_aligner_name => 'blat',
                                                        );
 $model->set_always('alignment_directory', $tmp_dir .'/alignments');
-my $read_set = Genome::RunChunk::454->create_mock(
-                                                  id => --$bogus_id,
-                                                  genome_model_run_id => $bogus_id,
-                                                  sample_name => 'test_sample_name',
-                                                  sequencing_platform => '454',
-                                                  run_name => 'test_run',
-                                                  subset_name => 'test_subset',
-                                              );
-$read_set->set_always('full_path',$tmp_dir);
-$read_set->set_always('sff_file', $tmp_dir.'/test.sff');
-$read_set->set_always('dump_to_file_system', 1);
-my $read_set_link = Genome::Model::ReadSet->create(
-                                                   model_id => $model->id,
-                                                   read_set_id => $read_set->id,
-                                                   first_build_id => undef,
-                                               );
+my $instrument_data = Genome::InstrumentData::454->create_mock(
+                                                        id => --$bogus_id,
+                                                        genome_model_run_id => $bogus_id,
+                                                        sample_name => 'test_sample_name',
+                                                        sequencing_platform => '454',
+                                                        run_name => 'test_run',
+                                                        subset_name => 'test_subset',
+                                                    );
+isa_ok($instrument_data,'Genome::InstrumentData::454');
+$instrument_data->set_always('full_path',$tmp_dir);
+$instrument_data->set_always('sff_file', $tmp_dir.'/test.sff');
+$instrument_data->set_always('dump_to_file_system', 1);
+
+my $ida = Genome::Model::InstrumentDataAssignment->create(
+                                                          model_id => $model->id,
+                                                          instrument_data_id => $instrument_data->id,
+                                                          first_build_id => undef,
+                                                      );
+isa_ok($ida,'Genome::Model::InstrumentDataAssignment');
+$instrument_data->mock('read_set_alignment_directory',
+                       \&Genome::Model::InstrumentDataAssignment::read_set_alignment_directory);
 my $blat_aligner = Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat->create(
-                                                                                               model => $model,
-                                                                                               read_set => $read_set,
+                       model_id => $model->id,
+                       read_set_id => $instrument_data->id,
                                                                                            );
 
 isa_ok($blat_aligner,'Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat');

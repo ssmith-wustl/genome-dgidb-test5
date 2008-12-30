@@ -5,12 +5,14 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More skip_all => 'This simple command still takes 10 minutes or more because of the db query';
-#use Test::More tests => 7;
+use Test::More tests => 7;
 
 BEGIN {
         use_ok('Genome::Model::Command::Build::ReferenceAlignment::AssignRun::454');
 }
+
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Command-Build-ReferenceAlignment-AssignRun-454';
+my $sff_file = $test_data_dir .'/test.sff';
 
 my $subject_name = 'H_GP-0364t';
 my $subject_type = 'genomic dna';
@@ -37,28 +39,19 @@ my $model = Genome::Model::ReferenceAlignment->create_mock(
 isa_ok($model,'Genome::Model::ReferenceAlignment');
 $model->set_always('lock_resource',1);
 
-my $read_set = Genome::RunChunk::454->create_mock(
-                                                  id => --$bogus_id,
-                                                  genome_model_run_id => $bogus_id,
-                                                  sequencing_platform => '454',
-                                                  sample_name => 'Pooled DNA 2008-10-15 pcr product Set 2',
-                                                  full_path => $model->data_directory,
-                                              );
-isa_ok($read_set,'Genome::RunChunk::454');
-
-my $read_set_link = Genome::Model::ReadSet->create_mock(
-                                                        id => $read_set->id,
-                                                        model_id => $model->id,
-                                                        read_set_id => $read_set->id,
-                                                        sequencing_platform => $read_set->sequencing_platform,
-                                                        sample_name => $read_set->sample_name,
-                                                        full_path => $model->data_directory,
-                                                    );
-isa_ok($read_set_link,'Genome::Model::ReadSet');
+my $instrument_data = Genome::InstrumentData::454->create_mock(
+                                                               id => --$bogus_id,
+                                                               sequencing_platform => '454',
+                                                               sample_name => 'Pooled DNA 2008-10-15 pcr product Set 2',
+                                                               full_path => $test_data_dir,
+                                                           );
+isa_ok($instrument_data,'Genome::InstrumentData::454');
+$instrument_data->set_always('sff_file',$sff_file);
+$instrument_data->set_always('dump_to_file_system',1);
 
 my $assign_run = Genome::Model::Command::Build::ReferenceAlignment::AssignRun::454->create(
-                                                                                           model => $model,
-                                                                                           read_set => $read_set
+                                                                                           model_id => $model->id,
+                                                                                           read_set_id => $instrument_data->id,
                                                                                        );
 isa_ok($assign_run,'Genome::Model::Command::Build::ReferenceAlignment::AssignRun::454');
 

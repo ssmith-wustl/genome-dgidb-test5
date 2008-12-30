@@ -23,8 +23,10 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 }
-plan skip_all => 'Workflow is having some port binding issues when run from the test harness';
-#plan tests => 74;
+
+plan tests => 74;
+
+my $message_flag = 0;
 
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $model_name = "test_454_$ENV{USER}";
@@ -49,6 +51,7 @@ my $add_reads_test = Genome::Model::Command::Build::ReferenceAlignment::Test->ne
                                                                                   processing_profile_name => $pp_name,
                                                                                   read_sets => \@read_sets,
                                                                                   tmp_dir => $tmp_dir,
+                                                                                  messages => $message_flag,
                                                                               );
 isa_ok($add_reads_test,'Genome::Model::Command::Build::ReferenceAlignment::Test');
 $add_reads_test->create_test_pp(%pp_params);
@@ -64,7 +67,7 @@ sub setup_test_data {
 
     chdir $tmp_dir || die("Failed to change directory to '$tmp_dir'");
 
-    my $zip_file = '/gsc/var/cache/testsuite/data/Genome-Model-Command-AddReads/addreads-454.tgz';
+    my $zip_file = '/gsc/var/cache/testsuite/data/Genome-Model-Command-AddReads/addreads-454-new.tgz';
     `tar -xzf $zip_file`;
 
     my @run_dirs = grep { -d $_ } glob("$tmp_dir/R_2008_07_29_*");
@@ -95,12 +98,35 @@ sub setup_test_data {
                                                                    sff_file => $file,
                                                                );
             push @read_sets, $rr454;
-            my $instrument_data = Genome::InstrumentData->create_mock(
-                                                                      id => $rr454->region_id,
-                                                                      sequencing_platform => '454',
-                                                                      sample_name => $rr454->sample_name,
-                                                                      run_name => $rr454->run_name,
-                                                                  );
+            my $instrument_data = Genome::InstrumentData::454->create_mock(
+                                                                           id => $rr454->region_id,
+                                                                           sequencing_platform => '454',
+                                                                           sample_name => $rr454->sample_name,
+                                                                           run_name => $rr454->run_name,
+                                                                           subset_name => $rr454->region_number,
+                                                                       );
+            unless ($instrument_data) {
+                die ('Failed to create instrument data object for '. $rr454->run_name);
+            }
+            $instrument_data->mock('full_path',sub {
+                                       my $self = shift;
+                                       if (@_) {
+                                           $self->{_full_path} = shift;
+                                       }
+                                       return $self->{_full_path};
+                                   }
+                               );
+            $instrument_data->mock('resolve_full_path',\&Genome::InstrumentData::resolve_full_path);
+            $instrument_data->mock('resolve_sff_path',\&Genome::InstrumentData::454::resolve_sff_path);
+            $instrument_data->mock('sff_file',sub {
+                                       my $self = shift;
+                                       unless ($self->{_sff_path}) {
+                                           $self->{_sff_path} = $self->resolve_sff_path;
+                                       }
+                                       return $self->{_sff_path};
+                                       }
+                               );
+            $instrument_data->set_always('dump_to_file_system',1);
         }
     }
     chdir $cwd || die("Failed to change directory to '$cwd'");

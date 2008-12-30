@@ -41,6 +41,11 @@ sub new {
         $self->{_tmp_dir} = $args{tmp_dir};
         $self->add_directory_to_remove($self->tmp_dir);
     }
+    if ($args{messages}) {
+        $self->{_messages} = $args{messages};
+    } else {
+        $self->{_messages} = 0;
+    }
     return $self;
 }
 
@@ -109,7 +114,7 @@ sub runtests {
         $self->$test;
         if ($self->auto_execute) {
             if ($test eq 'schedule') {
-                #shoul fix test number
+                #should fix test number
                 last;
             }
         }
@@ -142,7 +147,7 @@ sub create_model {
 
     isa_ok($create_command,'Genome::Model::Command::Define::ReferenceAlignment');
 
-    &_trap_messages($create_command);
+    $self->_trap_messages($create_command);
     ok($create_command->execute, 'execute '. $create_command->command_name);
 
     my @status_messages = $create_command->status_messages();
@@ -180,13 +185,7 @@ sub add_reads {
                                                           read_set_id => $read_set->seq_id,
                                                       );
         isa_ok($read_set_object,'Genome::Model::ReadSet');
-        ok(!$read_set_object->first_build_id,'undef first_build_id');
-        if ($read_set_object->sequencing_platform eq '454') {
-            my $tmp_file = $self->tmp_dir .'/amplicon_headers.txt';
-            $add_reads_command->create_directory($read_set_object->full_path);
-            my $read_set_file = $read_set_object->full_path .'/amplicon_headers.txt';
-            copy($tmp_file,$read_set_file) || die("Failed to copy '$tmp_file' to '$read_set_file'");
-        }
+        ok(!$read_set_object->first_build_id,'undef first_build_id for ReadSet');
         if ($read_set_object->full_path) {
             $self->add_directory_to_remove($read_set_object->full_path);
         }
@@ -196,6 +195,34 @@ sub add_reads {
                                                            );
         isa_ok($ida,'Genome::Model::InstrumentDataAssignment');
         is($ida->sequencing_platform,$read_set_object->sequencing_platform,'sequencing_platform matches ReadSet');
+        if ($ida->sequencing_platform eq '454') {
+            my $tmp_sff = $self->tmp_dir .'/'. $ida->run_name .'/'. $ida->subset_name .'.sff';
+            my $tmp_amp = $self->tmp_dir .'/'. $ida->run_name .'/amplicon_headers.txt';
+
+            my $full_path = $ida->instrument_data->resolve_full_path;
+            $add_reads_command->create_directory($full_path);
+
+            my $ida_sff = $ida->instrument_data->sff_file;
+            copy($tmp_sff,$ida_sff) || die("Failed to copy '$tmp_sff' to '$ida_sff'");
+
+            my $ida_amp = $full_path .'/amplicon_headers.txt';
+            copy($tmp_amp,$ida_amp) || die("Failed to copy '$tmp_amp' to '$ida_amp'");
+            if ($ida->subset_name == 1) {
+                my $tmp_out = $self->tmp_dir .'/'. $ida->run_name .'/'. $ida->subset_name .'.out';
+                my $tmp_psl = $self->tmp_dir .'/'. $ida->run_name .'/'. $ida->subset_name .'.psl';
+                my $read_set_alignment_directory = '/gscmnt/839/info/medseq/alignment_links/blat/refseq-for-test/'.
+                    $ida->run_name .'/'. $ida->subset_name .'_'. $ida->instrument_data->id;
+                $add_reads_command->create_directory($read_set_alignment_directory);
+                my $ida_out = $read_set_alignment_directory .'/'. $ida->subset_name .'.out.-123456';
+                my $ida_psl = $read_set_alignment_directory .'/'. $ida->subset_name .'.psl.-123456';
+                copy($tmp_out,$ida_out) || die("Failed to copy '$tmp_out' to '$ida_out'");
+                copy($tmp_psl,$ida_psl) || die("Failed to copy '$tmp_psl' to '$ida_psl'");
+                $self->add_directory_to_remove($read_set_alignment_directory);
+            }
+        }
+        if ($ida->full_path) {
+            $self->add_directory_to_remove($ida->full_path);
+        }
       SKIP: {
             skip 'full_path is resolved differently for these objects', 1;
             is($ida->full_path,$read_set_object->full_path,'full_path matches ReadSet');
@@ -218,7 +245,7 @@ sub schedule {
 
     # supress warning messages about obsolete locking
     Genome::Model::ReferenceAlignment->message_callback('warning', sub {});
-    &_trap_messages($build);
+    $self->_trap_messages($build);
     ok($build->execute(), 'execute genome-model build reference-alignment');
 
     my @status_messages = $build->status_messages();
@@ -228,8 +255,13 @@ sub schedule {
     # FIXME This code is used in several different tests, each of which generate different numbers
     # of messages about scheduling...  Is there some other method of making sure the right
     # number of downstream events were scheduled?
-    ok(scalar(grep { m/^Scheduling jobs for .* read set/} @status_messages),
-       'Saw a message about ReadSet');
+    if ($model->sequencing_platform eq '454') {
+        ok(scalar(grep { m/^Scheduling for Test::MockObject with id .*/} @status_messages),
+           'Saw a message about Test::MockObject');
+    } else {
+        ok(scalar(grep { m/^Scheduling jobs for .* read set/} @status_messages),
+           'Saw a message about ReadSet');
+    }
     ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AssignRun/} @status_messages),
        'Saw a message about AssignRun');
     ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AlignReads/} @status_messages),
@@ -341,7 +373,7 @@ sub execute_event_test  {
           skip 'AnnotateVariations takes too long', 1 if $event->isa('Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations');
           # FIXME - some of these events emit messages of one kind or another - are any
           # of them worth looking at?
-          &_trap_messages($event);
+          $self->_trap_messages($event);
           my $result = $event->execute();
 
           ok($result,'Execute: '. $event->command_name);
@@ -376,8 +408,8 @@ sub remove_data {
 
     # FIXME - the delete below causes a lot of warning messages about deleting
     # hangoff data.  do we need to check the contents?
-    &_trap_messages('Genome::Model::Event');
-    &_trap_messages('Genome::Model::Command::AddReads');  # Why didn't the above catch these, too?
+    $self->_trap_messages('Genome::Model::Event');
+    $self->_trap_messages('Genome::Model::Command::AddReads');  # Why didn't the above catch these, too?
     ok($self->model->delete,'successfully removed model');
     ok(unlink($archive_file),'successfully unlinked archive file');
     my $directories_to_remove = $self->{_dir_array_ref};
@@ -403,11 +435,12 @@ sub create_test_pp {
 
 
 sub _trap_messages {
+    my $self = shift;
     my $obj = shift;
 
-    $obj->dump_error_messages(0);
-    $obj->dump_warning_messages(0);
-    $obj->dump_status_messages(0);
+    $obj->dump_error_messages($self->{_messages});
+    $obj->dump_warning_messages($self->{_messages});
+    $obj->dump_status_messages($self->{_messages});
     $obj->queue_error_messages(1);
     $obj->queue_warning_messages(1);
     $obj->queue_status_messages(1);
