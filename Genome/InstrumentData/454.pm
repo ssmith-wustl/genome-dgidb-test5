@@ -61,7 +61,7 @@ sub resolve_sff_path {
     };
 
     if ($@ || !defined($sff_file)) {
-        $sff_file = sprintf('%s/%s.sff', $self->resolve_full_path, $self->seq_id);
+        $sff_file = sprintf('%s/%s.sff', $self->resolve_full_path, $self->id);
     }
     return $sff_file;
 }
@@ -91,10 +91,10 @@ sub dump_to_file_system {
         }
         unless (Genome::Utility::FileSystem->lock_resource(
                                                            lock_directory => $self->resolve_full_path,
-                                                           resource_id => $self->seq_id,
+                                                           resource_id => $self->id,
                                                            max_try => 60,
                                                        )) {
-            $self->error_message('Failed to lock_resource '. $self->seq_id);
+            $self->error_message('Failed to lock_resource '. $self->id);
             return;
         }
         unless ($self->run_region_454->dump_sff(filename => $self->sff_file)) {
@@ -103,9 +103,9 @@ sub dump_to_file_system {
         }
         unless (Genome::Utility::FileSystem->unlock_resource(
                                                              lock_directory => $self->resolve_full_path,
-                                                             resource_id => $self->seq_id,
+                                                             resource_id => $self->id,
                                                          )) {
-            $self->error_message('Failed to unlock_resource '. $self->seq_id);
+            $self->error_message('Failed to unlock_resource '. $self->id);
             return;
         }
     }
