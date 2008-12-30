@@ -7,11 +7,98 @@ use Genome;
 
 use Data::Dumper;
 require IO::Dir;
+require IO::File;
+require File::Basename;
 require File::Path;
 
 class Genome::Utility::FileSystem {
     is => 'UR::Object',
 };
+
+#< Files >#
+sub _open_file {
+    my ($self, $file, $rw) = @_;
+
+    my $fh = IO::File->new($file, $rw);
+
+    return $fh if $fh;
+
+    $self->error_message("Can't open file ($file): $!");
+    
+    return;
+}
+
+sub validate_file_for_reading {
+    my ($self, $file) = @_;
+
+    unless ( defined $file ) {
+        $self->error_message("No file given");
+        return;
+    }
+
+    unless ( -f $file ) {
+        $self->error_message(
+            sprintf(
+                'File (%s) %s',
+                $file,
+                ( -e $file ? 'exists, but is not a file' : 'does not exist' ),
+            )
+        );
+        return;
+    }
+
+    unless ( -r $file ) { 
+        $self->error_message("Do not have READ access to file ($file)");
+        return;
+    }
+
+    return 1;
+}
+
+sub open_file_for_reading {
+    my ($self, $file) = @_;
+
+    $self->validate_file_for_reading($file)
+        or return;
+
+    return $self->_open_file($file, 'r');
+}
+
+sub validate_file_for_writing {
+    my ($self, $file) = @_;
+
+    unless ( defined $file ) {
+        $self->error_message("No file given");
+        return;
+    }
+
+    if ( -e $file ) {
+        $self->error_message("File ($file) already exists, cannot write to it");
+        return;
+    }
+
+    my ($name, $dir) = File::Basename::fileparse($file);
+    unless ( $dir ) {
+        $self->error_message("Cannot determine directory from file ($file)");
+        return;
+    }
+    
+    unless ( -w $dir ) { 
+        $self->error_message("Do not have WRITE access to directory ($dir) to create file ($name)");
+        return;
+    }
+
+    return 1;
+}
+
+sub open_file_for_writing {
+    my ($self, $file) = @_;
+
+    $self->validate_file_for_writing($file)
+        or return;
+
+    return $self->_open_file($file, 'w');
+}
 
 #< Dirs >#
 sub validate_existing_directory {
@@ -236,7 +323,69 @@ Houses some generic file and directory methods
  # Call methods directly:
  Genome::Utility::FileSystem->create_directory($new_directory);
 
-=head1 Methods
+=head1 Methods for Files
+
+=head2 validate_file_for_reading
+
+ Genome::Utility::FileSystem->validate_file_for_reading('/tmp/users.txt')
+    or ...;
+ 
+=over
+
+=item I<Synopsis>   Checks whether the given file is defined, exists, and is readable
+
+=item I<Arguments>  file (string)
+
+=item I<Returns>    true on success, false on failure
+
+=back
+
+=head2 open_file_for_reading
+
+ Genome::Utility::FileSystem->open_file_for_reading('/tmp/users.txt')
+    or die;
+ 
+=over
+
+=item I<Synopsis>   First validates the file for reading, then creates a IO::File for it.
+
+=item I<Arguments>  file (string)
+
+=item I<Returns>    IO::File object
+
+=back
+
+=head2 validate_file_for_writing
+
+ Genome::Utility::FileSystem->validate_file_for_writing('/tmp/users.txt')
+    or die;
+ 
+=over
+
+=item I<Synopsis>   Checks whether the given file is defined, does not exist, and that the directory it is in is writable
+
+=item I<Arguments>  file (string)
+
+=item I<Returns>    true on success, false on failure
+
+=back
+
+=head2 open_file_for_writing
+
+ Genome::Utility::FileSystem->open_file_for_writing('/tmp/users.txt')
+    or die;
+ 
+=over
+
+=item I<Synopsis>   First validates the file for writing, then creates a IO::File for it.
+
+=item I<Arguments>  file (string)
+
+=item I<Returns>    IO::File object
+
+=back
+
+=head1 Methods for Directories
 
 =head2 validate_existing_directory
 
@@ -260,7 +409,7 @@ Houses some generic file and directory methods
  
 =over
 
-=item I<Synopsis>   First validates the directory, the opens a IO::Dir handle to it
+=item I<Synopsis>   First validates the directory, the creates a IO::Dir handle for it
 
 =item I<Arguments>  IO::Dir (object)
 
@@ -282,6 +431,16 @@ Houses some generic file and directory methods
 =item I<Returns>    true on success, false on failure
 
 =back
+
+=head1 Methods for Locking
+
+=head2 lock_resource
+
+Document me!
+
+=head2 unlock_resource
+
+Document me!
 
 =head1 See Also
 
