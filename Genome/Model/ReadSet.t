@@ -5,16 +5,13 @@ use warnings;
 
 use above "Genome";
 
-use Test::More tests => 50;
+use Test::More tests => 48;
 
 ok(my $read_set = Genome::Model::ReadSet->get(read_set_id=> 2499312867, model_id=>2721044485), "Got a read_set");
 isa_ok($read_set, "Genome::Model::ReadSet");
 
 ok(my $read_set_alignment_directory = $read_set->read_set_alignment_directory, "Got the read_set_alignment_directory");
 ok(-d $read_set_alignment_directory, "read_set_alignment_directory exists");
-
-ok(my $new_read_set_alignment_directory = $read_set->new_read_set_alignment_directory, "Got the new_read_set_alignment_directory");
-ok(!-d $new_read_set_alignment_directory, "new_read_set_alignment_directory exists");
 
 ok(scalar($read_set->invalid) == 0, "Checked invalid, seems valid");
 
