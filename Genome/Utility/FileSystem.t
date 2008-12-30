@@ -23,13 +23,103 @@ use Test::More;
 
 sub startup : Test(startup => 1) {
     require_ok('Genome::Utility::FileSystem');
+    my $new_file = _new_file();
+    unlink $new_file if -e $new_file;
 }
 
 sub _base_test_dir {
     return '/gsc/var/cache/testsuite/data/Genome-Utility-Filesystem';
 }
 
-sub test0_open_directory : Test(5) {
+sub _new_file {
+    return sprintf('%s/new_file.txt', _base_test_dir());
+}
+
+sub _existing_file {
+    return sprintf('%s/existing_file.txt', _base_test_dir());
+}
+
+sub _existing_link {
+    return sprintf('%s/existing_link.txt', _base_test_dir());
+}
+
+sub _no_write_dir {
+    return sprintf('%s/no_write_dir', _base_test_dir());
+}
+
+sub _no_write_file {
+    return sprintf('%s/no_write_file.txt', _no_write_dir());
+}
+
+sub _no_read_file {
+    return sprintf('%s/no_read_file.txt', _no_write_dir());
+}
+
+sub test1_file : Test(12) {
+    my $self = shift;
+
+    my $existing_file = _existing_file();
+    my $new_file = _new_file();
+
+    # Read file
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($existing_file);
+    ok($fh, "Opened file ".$existing_file);
+    isa_ok($fh, 'IO::File');
+    $fh->close;
+
+    # No file
+    ok(!Genome::Utility::FileSystem->open_file_for_reading, 'Tried to open undef file');
+
+    # File no exist 
+    ok(
+        !Genome::Utility::FileSystem->open_file_for_reading($new_file),
+        'Tried to open a non existing file for reading'
+    );
+    
+    # No read access
+    ok(
+        !Genome::Utility::FileSystem->open_file_for_reading( _no_read_file() ),
+        'Try to open a file that can\'t be read from',
+    );
+
+    # File is a dir
+    ok(
+        !Genome::Utility::FileSystem->open_file_for_reading( _base_test_dir() ),
+        'Try to open a file, but it\'s a directory',
+    );
+
+    # Write file
+    my $fh = Genome::Utility::FileSystem->open_file_for_writing($new_file);
+    ok($fh, "Opened file ".$new_file);
+    isa_ok($fh, 'IO::File');
+    $fh->close;
+    unlink $new_file;
+
+    # No file
+    ok(!Genome::Utility::FileSystem->open_file_for_writing, 'Tried to open undef file');
+
+    # File exists
+    ok(
+        !Genome::Utility::FileSystem->open_file_for_writing($existing_file), 
+        'Tried to open an existing file for writing'
+    );
+
+    # No write access
+    ok(
+        !Genome::Utility::FileSystem->open_file_for_writing( _no_write_file() ),
+        'Try to open a file that can\'t be written to',
+    );
+
+    # File is a dir
+    ok(
+        !Genome::Utility::FileSystem->open_file_for_writing( _base_test_dir() ),
+        'Try to open a file, but it\'s a directory',
+    );
+
+    return 1;
+}
+
+sub test2_directory : Test(8) {
     my $self = shift;
 
     # Real dir
@@ -52,12 +142,6 @@ sub test0_open_directory : Test(5) {
         'Try to open a directory, but it\'s a file',
     );
 
-    return 1;
-}
-
-sub test1_create_directory : Test(3) {
-    my $self = shift;
-
     my $base_new_dir = sprintf('%s/new', _base_test_dir());
     my $new_dir = sprintf('%s/dir/with/sub/dirs/', $base_new_dir);
     Genome::Utility::FileSystem->create_directory($new_dir);
@@ -70,7 +154,7 @@ sub test1_create_directory : Test(3) {
     return 1;
 }
 
-sub test2_resource_locking : Test(10) {
+sub test3_resource_locking : Test(10) {
     my $bogus_id = '-55555';
     my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
     my $sub_dir = $tmp_dir .'/sub/dir/test';
