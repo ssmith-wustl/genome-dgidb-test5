@@ -4,102 +4,51 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
-use Genome::Model;
-use File::Path;
 
 class Genome::Model::Command::Build::ReferenceAlignment::AssignRun::454 {
     is => 'Genome::Model::Command::Build::ReferenceAlignment::AssignRun',
+    has => [
+            sff_file => {
+                         calculate_from => ['instrument_data'],
+                         calculate => q|
+                             return $instrument_data->sff_file;
+                         |,
+                     },
+        ],
 };
 
 sub help_brief {
-    "Creates the appropriate items on the filesystem for a new 454 run region"
+    "Creates the appropriate items on the filesystem for a new 454 run region to be aligned"
 }
 
 sub help_synopsis {
-    return <<"EOS"
-    genome-model add-reads assign-run 454 --model-id 5 --read-set-id 10
+    return <<EOS
+This command dumps and/or links instrument data to the filesystem in preparation of alignment.
 EOS
 }
 
 sub help_detail {
-    return <<EOS 
-    This command is launched automatically by "add-reads assign-run"
-    when it is determined that the run is from a 454.
+    return <<EOS
+    This command is launched automatically by build reference-alignment
+    when it is determined that the run is from a 454.  The sff file is
+    dumped to the filesystem if needed.
 EOS
 }
 
-sub create {
-    my $class = shift;
-    my $obj = $class->SUPER::create(@_);
-
-    unless ($obj->model_id and $obj->read_set_id and $obj->event_type) {
-        $class->error_message("This step requires the model and run to be specified at construction time for locking concurrency.");
-        $obj->delete;
-        return;
-    }
-
-    my $model = $obj->model;
-
-    my $resource_id = join(".",$class,'create',$obj->read_set_id);
-    my $lock = $model->lock_resource(resource_id => $resource_id);
-    unless ($lock) {
-        $class->error_message("Failed to lock $resource_id.");
-        $obj->delete;
-        return;
-    }
-
-    my @prev =
-        grep { $_ ne $obj }
-        $class->load(
-            model_id    => $obj->model_id,
-            read_set_id      => $obj->read_set_id,
-            event_type  => $obj->event_type,
-        );
-
-    if (@prev) {
-        $obj->error_message(
-            "This run/lane, " 
-            . $obj->run_name . "/" . $obj->run_subset_name. ' '
-            . '(' . $obj->read_set_id . '),'
-            . ' has already been assigned to this model '
-            . $model->id . ' (' . $model->name . ')'
-            . ' on event '
-            . $prev[0]->genome_model_event_id
-        );
-        $obj->model->unlock_resource(resource_id => $resource_id);
-        $obj->delete;
-        return;
-    }
-
-    my $unlock = sub { $model->unlock_resource(resource_id => $resource_id) };
-    $obj->create_subscription(method => 'commit', callback => $unlock);
-    $obj->create_subscription(method => 'delete', callback => $unlock);
-
-    return $obj;
-}
-
-#TODO: Move to model 
+# TODO: If the amplicons are always the same for the model, then move up to model.
 sub amplicon_header_file {
     my $self = shift;
-    #TODO: use read_set_link or instrument data?
-    my $read_set = $self->read_set;
-    return $read_set->full_path .'/amplicon_headers.txt';
+    my $instrument_data = $self->instrument_data;
+    return $instrument_data->full_path .'/amplicon_headers.txt';
 }
 
 sub execute {
     my $self = shift;
-    $DB::single = $DB::stopper;
-    my $model = $self->model;
-    unless (-d $model->data_directory) {
-        $self->create_directory($model->data_directory);
-    }
 
-    my $read_set = $self->read_set;
-    unless (-d $read_set->full_path) {
-        $self->create_directory($read_set->full_path);
-    }
-    unless ($read_set->dump_to_file_system) {
+    $DB::single = $DB::stopper;
+
+    my $instrument_data = $self->instrument_data;
+    unless ($instrument_data->dump_to_file_system) {
         $self->error_message('Failed to dump sff file to file system');
         return;
     }
@@ -110,9 +59,8 @@ sub execute {
         # Close the filehandle, delete and let the tool re-open filehandle
         $fh->close;
         unlink($self->amplicon_header_file);
-        #TODO: use read_set_link or instrument data to get sample_name?
         my $amplicon = Genome::Model::Command::Report::Amplicons->create(
-                                                                         sample_name => $read_set->sample_name,
+                                                                         sample_name => $instrument_data->sample_name,
                                                                          output_file => $self->amplicon_header_file,
                                                                      );
         unless ($amplicon) {
@@ -130,22 +78,14 @@ sub execute {
 sub verify_successful_completion {
     my $self = shift;
 
-    my $model = $self->model;
-    unless (-d $model->data_directory) {
-    	$self->error_message('Data parent directory does not exist: '. $model->data_directory);
+    unless (-e $self->sff_file) {
+        $self->error_message('Failed to find sff file '. $self->sff_file);
         return;
     }
-
-    my $read_set = $self->read_set;
-    unless (-d $read_set->full_path) {
-        $self->error_message('Read set data directory does not exist: '. $read_set->full_path);
+    unless (-s $self->sff_file) {
+        $self->error_message('Sff file does not exist or has zero size: '. $self->sff_file);
         return;
     }
-    unless (-s $read_set->sff_file) {
-        $self->error_message('Read set sff file does not exist or has zero size: '. $read_set->sff_file);
-        return;
-    }
-
     unless (-e $self->amplicon_header_file) {
         $self->error_message('The amplicon header file does not exist: '. $self->amplicon_header_file);
         return;
