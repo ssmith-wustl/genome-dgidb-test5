@@ -28,6 +28,27 @@ sub help_detail {
 One build of a given reference-alignment model.
 EOS
 }
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+
+    my $model = $self->model;
+
+    my @instrument_data = $model->instrument_data;
+
+    unless (scalar(@instrument_data) && ref($instrument_data[0])  &&  $instrument_data[0]->isa('Genome::InstrumentData::454')) {
+        $self->error_message('No instrument data has been added to model: '. $model->name);
+        $self->error_message("The following command will add all available instrument data:\ngenome model add-reads --model-id=".
+        $model->id .' --all');
+        $self->delete;
+        return;
+    }
+
+    return $self;
+}
+
+
 sub stages {
     my @stages = qw/
                 alignment
@@ -62,7 +83,7 @@ sub verify_successful_completion_job_classes {
 
 sub alignment_objects {
     my $self = shift;
-    return $self->model->unbuilt_read_sets;
+    return $self->model->unbuilt_instrument_data;
 }
 
 sub variant_detection_objects {
