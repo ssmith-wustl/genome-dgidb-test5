@@ -43,7 +43,23 @@ sub build_subclass_name {
     return 'amplicon-assembly';
 }
 
-#< Files >#
+#< Files & Dirs >#
+sub create_consed_directory_structure {
+    return $_[0]->consed_directory->create_consed_directory_structure;
+}
+
+sub edit_dir {
+    return $_[0]->consed_directory->edit_dir;
+}
+    
+sub phd_dir {
+    return $_[0]->consed_directory->phd_dir;
+}
+    
+sub chromat_dir {
+    return $_[0]->consed_directory->chromat_dir;
+}
+    
 sub _fasta_file_name {
     my ($self, $type) = @_;
 
@@ -55,6 +71,23 @@ sub _fasta_file_name {
     );
 }
 
+sub reads_fasta {
+    return _fasta_file_name(@_, 'reads');
+}
+
+sub processed_fasta {
+    return _fasta_file_name(@_, 'processed');
+}
+
+sub assembly_fasta {
+    return _fasta_file_name(@_, 'assembly');
+}
+
+sub oriented_fasta {
+    return _fasta_file_name(@_, 'oriented');
+}
+
+#< DEPRECATED 
 sub all_assembled_fasta {
     return _fasta_file_name(@_, 'assembled');
 }
@@ -66,6 +99,7 @@ sub all_pre_processing_fasta {
 sub all_assembly_input_fasta {
     return _fasta_file_name(@_, 'assembly_input');
 }
+#>#
 
 sub metrics_file {
     my $self = shift;
@@ -79,35 +113,26 @@ sub quality_histogram_file {
     return sprintf('%s/%s.histogram.png', $self->data_directory, $self->subject_name);
 }
 
-#< Determining subclones >#
-sub subclones_and_traces_for_assembly {
+#< DETERMINING AMPLICONS >#
+sub amplicons {
     my $self = shift;
 
-    my $method = sprintf('_determine_subclones_in_chromat_dir_%s', $self->sequencing_center);
-    my $subclones = $self->$method;
-    unless ( $subclones and %$subclones ) {
+    my $method = sprintf('_determine_amplicons_in_chromat_dir_%s', $self->sequencing_center);
+    my $amplicons = $self->$method;
+    unless ( $amplicons and %$amplicons ) {
         $self->error_message(
-            sprintf('No subclones found in chromat_dir of model (%s)', $self->name) 
+            sprintf('No amplicons found in chromat_dir of model (%s)', $self->name) 
         );
         return;
     }
 
-    return $subclones;
+    return $amplicons;
 }
 
-sub subclones {
+sub amplicons_and_headers { 
     my $self = shift;
 
-    my $subclones = $self->subclones_and_traces_for_assembly
-        or return;
-
-    return [ sort { $a cmp $b } keys %$subclones ];
-}
-
-sub subclones_and_headers { 
-    my $self = shift;
-
-    my $subclones_and_traces = $self->subclones_and_traces_for_assembly
+    my $amplicons_and_traces = $self->amplicons_and_traces_for_assembly
         or return;
 
     my $header_generator= sub{
@@ -140,51 +165,51 @@ sub subclones_and_headers {
         };
     }
 
-    my %subclones_and_headers;
-    for my $subclone ( sort { $a cmp $b } keys %$subclones_and_traces ) {
-        $subclones_and_headers{$subclone} = $header_generator->($subclone);
+    my %amplicons_and_headers;
+    for my $amplicon ( sort { $a cmp $b } keys %$amplicons_and_traces ) {
+        $amplicons_and_headers{$amplicon} = $header_generator->($amplicon);
     }
 
-    return \%subclones_and_headers;
+    return \%amplicons_and_headers;
 }
 
-sub _determine_subclones_in_chromat_dir_gsc {
+sub _determine_amplicons_in_chromat_dir_gsc {
     my $self = shift;
 
     my $dh = Genome::Utility::FileSystem->open_directory( $self->consed_directory->chromat_dir )
         or return;
 
-    my %subclones;
+    my %amplicons;
     while ( my $scf = $dh->read ) {
         next if $scf =~ m#^\.#;
         $scf =~ s#\.gz##;
         $scf =~ /^(.+)\.[bg]\d+$/
             or next;
-        push @{$subclones{$1}}, $scf;
+        push @{$amplicons{$1}}, $scf;
     }
     $dh->close;
 
-    return \%subclones;
+    return \%amplicons;
 }
 
-sub _determine_subclones_in_chromat_dir_broad {
+sub _determine_amplicons_in_chromat_dir_broad {
     my $self = shift;
 
     my $dh = Genome::Utility::FileSystem->open_directory( $self->consed_directory->chromat_dir )
         or return;
 
-    my %subclones;
+    my %amplicons;
     while ( my $scf = $dh->read ) {
         next if $scf =~ m#^\.#;
         $scf =~ s#\.gz$##;
-        my $subclone = $scf;
-        $subclone =~ s#\.T\d+$##;
-        $subclone =~ s#[FR](\w\d\d?)$#\_$1#; # or next;
+        my $amplicon = $scf;
+        $amplicon =~ s#\.T\d+$##;
+        $amplicon =~ s#[FR](\w\d\d?)$#\_$1#; # or next;
 
-        push @{$subclones{$subclone}}, $scf;
+        push @{$amplicons{$amplicon}}, $scf;
     }
     
-    return  \%subclones;
+    return  \%amplicons;
 }
 
 1;
