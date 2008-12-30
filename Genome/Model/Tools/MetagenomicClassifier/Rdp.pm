@@ -65,6 +65,12 @@ class Genome::Model::Tools::MetagenomicClassifier::Rdp {
             doc => "path to output file"
         },
     ],
+    has_optional => [
+        training_set => {
+            type => 'String',
+            doc => 'name of training set (broad)',
+        },
+    ],
 };
 
 sub execute {
@@ -123,7 +129,11 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
 
-    my $classifier_properties_path = '/gsc/scripts/share/rdp/rRNAClassifier.properties';
+    my $classifier_properties_path = '/gsc/scripts/share/rdp/';
+    if ($self->training_set) {
+        $classifier_properties_path .= $self->training_set.'/';
+    }
+    $classifier_properties_path .= 'rRNAClassifier.properties';
 
     my $factory = new FactoryInstance($classifier_properties_path);
     $self->{'classifier'} = $factory->createClassifier();
