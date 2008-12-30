@@ -24,7 +24,7 @@ sub help_brief {
 }
 
 sub help_detail {
-    return '';
+    return $_->[0]->help_brief;
 }
 
 sub create {
