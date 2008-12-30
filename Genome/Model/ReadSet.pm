@@ -46,16 +46,6 @@ sub read_set_alignment_directory {
                   );
 }
 
-sub new_read_set_alignment_directory {
-    my $self=shift;
-    return sprintf('%s/%s/%s/%s',
-                       $self->alignment_directory,
-                       $self->sample_name,
-                       $self->run_name,
-                       $self->subset_name,
-                  );
-}
-
 sub invalid {
     my ($self) = shift;
 
