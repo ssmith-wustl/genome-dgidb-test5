@@ -356,19 +356,37 @@ sub _transcript_annotation_for_intron
         #TODO  make sure it's okay to return early w/ null c. position
     }
     #end xshi
+    ##
+    my $utr_pos; 
+	my $trsub_start=$main_structure->structure_start-1;
+	my $trsub_stop=$main_structure->structure_stop+1;
 
+	return unless(defined $prev_structure && defined $next_structure); 	 
+ 	if($strand == -1){
+		($cds_exon_start,$cds_exon_stop)=($cds_exon_stop,$cds_exon_start);
+		($trsub_start,$trsub_stop)=($trsub_stop,$trsub_start);
+		($prev_structure,$next_structure)=($next_structure,$prev_structure);
+	}
     my $exon_pos = $transcript->length_of_cds_exons_before_structure_at_position($variant->{start}, $strand);
+
+    ##
     my $pre_start = abs( $variant->{start} - $oriented_structure_start ) + 1;
     my $pre_end = abs( $variant->{stop} - $oriented_structure_start ) + 1;
     my $aft_start = abs( $oriented_structure_stop - $variant->{start} ) + 1;
     my $aft_end = abs( $oriented_structure_stop - $variant->{start} ) + 1;
 
+    my $diff_stop_start = abs( $position_after - $oriented_cds_exon_start );
+    my $diff_stop_end = abs( $position_after - $oriented_cds_exon_stop );
+    my $diff_start_start = abs( $position_before - $oriented_cds_exon_start );
+    my $diff_start_end = abs( $position_before - $oriented_cds_exon_stop );
+    
+    my	$exon_ord=0;
+	my	$splice_site_pos;
+
     if ( $pre_start - 1 <= abs( $structure_stop - $structure_start ) / 2 )
     {
         if ( $prev_structure_type eq "utr_exon" )
         {
-            my $diff_start_start = abs( $position_before - $oriented_cds_exon_start );
-            my $diff_start_end = abs( $position_before - $oriented_cds_exon_stop );
 
             if ( abs($diff_start_start) < abs($diff_start_end) )
             {
@@ -382,8 +400,11 @@ sub _transcript_annotation_for_intron
         }
         else
         {
-            $c_position = $exon_pos . '+' . $pre_start; 
+            $c_position = $exon_pos . '+' . $pre_start;
+            $c_position.='_+'.$pre_end if($variant->{start}!=$variant->{stop});
+			$exon_ord=$prev_structure->ordinal;
         }
+        $splice_site_pos='+'.$pre_start;
     }
     else
     {
@@ -391,7 +412,7 @@ sub _transcript_annotation_for_intron
         {
             my $diff_stop_start = abs( $position_after - $oriented_cds_exon_start );
             my $diff_stop_end = abs( $position_after - $oriented_cds_exon_stop );
-
+ 
             if ( abs($diff_stop_start) < abs($diff_stop_end) )
             {
 # From Chapter 8 codon2aa
@@ -411,19 +432,25 @@ sub _transcript_annotation_for_intron
         else 
         {
             $c_position = ($exon_pos + 1) . '-' . $aft_end;
+            $c_position.='_-'.$aft_start if($variant->{start}!=$variant->{stop});
+			$exon_ord=$next_structure->ordinal;
         }
+        $splice_site_pos='-'.$aft_end;
     }
 
+    my $pro_str;
     if ( $pre_end <= 2 or $aft_start <= 2 ) 
     {
         # intron SS
         $trv_type = "splice_site";
+        $pro_str="e".$exon_ord.$splice_site_pos;#
     }
     elsif ( ($pre_start >= 3 and $pre_end <= 10) 
             or ($aft_start <= 10 and $aft_end >= 3) )
     {
         # intron SR
         $trv_type = "splice_region";
+        
     }  
     else
     {
@@ -437,7 +464,7 @@ sub _transcript_annotation_for_intron
         c_position => 'c.' . $c_position,
         trv_type => $trv_type,
         amino_acid_length => length( $transcript->protein->amino_acid_seq ),
-        amino_acid_change => 'NULL',
+        amino_acid_change => $pro_str,
     );
 # From Chapter 8 codon2aa
 #
@@ -599,7 +626,7 @@ sub _transcript_annotation_for_cds_exon
         strand => $strand,
         c_position => 'c.' . $c_position,
         trv_type => $trv_type,
-        amino_acid_change => $amino_acid_change,
+        amino_acid_change => $pro_str,
         amino_acid_length => length($amino_acid_seq),
         ucsc_cons => $conservation,
         domain => $pdom
