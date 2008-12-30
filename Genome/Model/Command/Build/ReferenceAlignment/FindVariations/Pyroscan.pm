@@ -48,8 +48,6 @@ sub execute {
             return;
         }
         push @amplicon_header_files, $amplicon_header_file;
-
-        my $read_set = $assignment_event->read_set;
     }
 
     # Merge the amplicons from all read sets
