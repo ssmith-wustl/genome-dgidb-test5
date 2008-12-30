@@ -299,6 +299,14 @@ sub open_consed
             exit;
         }        
         set_project_consedrc($edit_dir);
+        my $out = `grep SABBOTT $ace1`;
+        chomp $out;
+        if($out){
+
+            (undef, undef, undef, $relative_target_base_pos) =split(/\s+/,$out);
+
+            $relative_target_base_pos =&resolve_padded_pos($ace1, $relative_target_base_pos);
+        }
         
         my $c_command= "$consed -socket 0 -ace $ace1 -mainContigPos $relative_target_base_pos &>/dev/null";
         my $rc = system($c_command);
@@ -312,6 +320,32 @@ sub open_consed
     }
     exit;
     
+}
+sub resolve_padded_pos{
+    my ($ace, $rel)=@_;
+
+     my $obj =  AceFile->new($ace);
+         die unless $obj;
+
+    my $c;
+    my @contigs =$obj->get_valid_contigs;
+    if(@contigs == 1){
+        $c = $contigs[0];
+    }else{
+        my @grep =grep{$_ == 1}@contigs;
+        if(@grep){
+            $c=1;
+        }else{
+            die "can't find valid contig in ace $ace";
+        }
+    }
+    my %h =$obj->unpadded_positions_for_contig($c);
+    unless(%h){
+        warn "not able to get unpadded_positions for contig $c";
+        return;
+    }
+
+    return  $h{$rel};
 }
 
 sub get_col_order
@@ -756,5 +790,6 @@ sub gtk_main_quit
     Gtk2->main_quit;
     system "killall consed";
 }
+
 
 1;
