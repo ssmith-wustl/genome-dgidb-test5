@@ -9,6 +9,7 @@ use Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentData;
 use Genome::Model::Command::Build::AmpliconAssembly::Assemble;
 use Genome::Model::Command::Build::AmpliconAssembly::Collate;
 use Genome::Model::Command::Build::AmpliconAssembly::Orient;
+#use Genome::Model::Command::Build::AmpliconAssembly::QualityHistogram;
 use Genome::Model::Command::Build::AmpliconAssembly::PostProcess;
 use Genome::Model::Command::Build::AmpliconAssembly::PostProcess::Composition;
 use Genome::Model::Command::Build::AmpliconAssembly::PostProcess::Reference;
@@ -71,6 +72,8 @@ sub stages {
 
 #< Pre Assemble Process >#
 sub assemble_job_classes {
+    # TODO Add QualHist
+    #return 'Genome::Model::Command::Build::AmpliconAssembly::QualityHistogram';
     return (qw/
         Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentData
         Genome::Model::Command::Build::AmpliconAssembly::Assemble
