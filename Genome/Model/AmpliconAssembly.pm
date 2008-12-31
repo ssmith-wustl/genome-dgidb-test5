@@ -83,8 +83,12 @@ sub assembly_fasta {
     return _fasta_file_name(@_, 'assembly');
 }
 
-sub oriented_fasta {
-    return _fasta_file_name(@_, 'oriented');
+sub orientation_confirmed_fasta {
+    return _fasta_file_name(@_, 'assembly.confirmed');
+}
+
+sub orientation_unconfirmed_fasta {
+    return _fasta_file_name(@_, 'assembly.unconfirmed');
 }
 
 #< DEPRECATED 
