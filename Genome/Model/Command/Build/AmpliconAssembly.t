@@ -76,7 +76,7 @@ my @events = sort { $b->genome_model_event_id <=> $a->genome_model_event_id } Ge
     event_status => 'Scheduled',
 );
 my $expected_event_count = 6;
-is(@events, 6, "Scheduled $expected_event_count events");
+is(@events, $expected_event_count, "Scheduled $expected_event_count events");
 
 for my $event ( @events ) {
     ok($event->execute, sprintf('Executed event (%s %s)', $event->id, $event->event_type));
