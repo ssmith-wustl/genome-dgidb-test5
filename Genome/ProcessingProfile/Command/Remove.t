@@ -41,18 +41,16 @@ ok(!$bad1->execute, 'Execute failed as expected');
 
 # try to remove a pp that has models
 # Create a pp to test
-my $pp_w_model = Genome::ProcessingProfile::MetaGenomicComposition->create(
-    name => 'test meta genomic composition',
-    sequencing_platform => 'sanger',
-    assembler => 'phredphrap',
-    sequencing_center => 'gsc',
-    assembly_size => 1300,
+my $pp_w_model = Genome::ProcessingProfile::Test->create(
+    name => 'test for removing w/ a model',
+    colour => 'read',
+    shape => 'square',
 );
 ok($pp_w_model, "Created processing profile to add to a model");
 die unless $pp_w_model; # can't proceed
 
 # Create a model to test
-my $model = Genome::Model::MetaGenomicComposition->create(
+my $model = Genome::Model::Test->create(
     name => 'test meta genomic composition',
     subject_name => 'dna',
     subject_type => 'dna_resource_item_name',
