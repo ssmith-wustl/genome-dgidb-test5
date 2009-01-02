@@ -117,7 +117,7 @@ sub create {
             my $primer = $self->$method;
             next unless defined $primer;
             my ($primer_name, $primer_seq) = split(/:/, $primer);
-            unless ( $primer =~ /^([\w\d\-]+):([ATCGMRWSYKVHDBN]+)$/i ) {
+            unless ( $primer =~ /^([\w\d\-\.\_]+):([ATCGMRWSYKVHDBN]+)$/i ) {
                 $self->error_message("Invlaid format for primer ($primer).  Please use 'NAME:SEQUENCE'");
                 $self->delete;
                 return;
@@ -155,7 +155,7 @@ sub params_for_class {
 
 #< Primers >#
 sub primer_fasta_directory {
-    return '/gscmnt/839/info/medseq/meta-genomic-composition/primers';
+    return '/gscmnt/839/info/medseq/processing_profile_data/amplicon_assembly';
 }
 
 sub sense_primer_fasta {
