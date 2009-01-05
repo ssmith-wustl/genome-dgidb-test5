@@ -13,10 +13,7 @@ class Genome::Model::ImportedReferenceSequence{
 sub build_by_version {
     my $self = shift;
     my $version = shift;
-# old lines... I dont know what I'm doing here but this looks wrong
-#    my $model = $self->model; 
-#    my @b = $model->bulids("data_directory like" => "v${version}_%");
-    my @b = $self->builds("data_directory like" => "v${version}_%");
+    my @b = $self->builds("data_directory like" => "%/v${version}_%");
     if (@b > 1) {
         die "Multiple builds for version $version for model " . $self->model_id;
     }
