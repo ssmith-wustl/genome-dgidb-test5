@@ -105,7 +105,7 @@ sub graph_overlaps {
         my $overlap_percent_g = sprintf("%.1f", ($overlap_count / $g->length) * 100);
         
         if (
-            ($overlap_count     > $overlap_threshold_bases)||
+            ($overlap_count     > $overlap_threshold_bases) ||
             ($overlap_percent_f > $overlap_threshold_percent) ||
             ($overlap_percent_g > $overlap_threshold_percent)
         ) {
@@ -256,5 +256,103 @@ sub tag_redundant_rfam {
     
 }
 
+sub tag_rna_overlap {
+
+    my ($feature_ref) = @_;
+
+
+    my $overlap = sub {
+        
+        my ($f, $g) = @_;
+        
+        my ($f_gene_type) = $f->each_tag_value('type');
+        my ($g_gene_type) = $g->each_tag_value('type');
+        
+        my $overlap_count;
+        
+        if ($g->end() < $f->end()) {
+            $overlap_count = $g->length();
+        }
+        else {
+            $overlap_count = abs($f->end() - $g->start()) + 1;
+        }
+        
+        foreach my $h ($f, $g) {
+                
+            my ($h_gene_type) = $h->each_tag_value('type');
+            
+            if ($h_gene_type eq 'rRNA') {
+                
+                my $gene_name = $h->display_name();
+                my $threshold = 10;
+
+                if ($h->has_tag('overlap_50')) {
+                    $threshold = 50;
+                }
+                
+                if (
+                    ($overlap_count > $threshold)
+                ) {
+                    
+                    if ($f_gene_type eq 'coding') {
+                        unless ($f->has_tag('delete_rrna_overlap')) {
+                            $f->add_tag_value('delete_rrna_overlap', 1);
+                        }
+                        }
+                    
+                    if ($g_gene_type eq 'coding') {
+                        unless ($g->has_tag('delete_rrna_overlap')) {
+                            $g->add_tag_value('delete_rrna_overlap', 1);
+                            }
+                    }
+                    
+                }
+                
+            }
+            elsif ($h_gene_type eq 'tRNA') {
+                
+                if ($f->strand() eq $g->strand()) {
+                    
+                    if ($f_gene_type eq 'coding') {
+                        unless ($f->has_tag('delete_trna_overlap')) {
+                            $f->add_tag_value('delete_trna_overlap', 1);
+                        }
+                    }
+                    
+                    if ($g_gene_type eq 'coding') {
+                        unless ($g->has_tag('delete_trna_overlap')) {
+                                $g->add_tag_value('delete_trna_overlap', 1);
+                            }
+                    }
+                    
+                }
+                else {
+                    
+                    if ($f_gene_type eq 'coding') {
+                        unless ($f->has_tag('check_trna_overlap')) {
+                            $f->add_tag_value('check_trna_overlap', 1);
+                        }
+                    }
+                    
+                    if ($g_gene_type eq 'coding') {
+                        unless ($g->has_tag('check_trna_overlap')) {
+                            $g->add_tag_value('check_trna_overlap', 1);
+                        }
+                    }
+                    
+                }
+                
+            }
+            
+        }
+        
+    };
+    
+    find_overlaps(
+                  $overlap,
+                  $feature_ref,
+              );
+    
+}
 
 1;
