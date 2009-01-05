@@ -10,7 +10,15 @@ use Bio::Seq;
 
 use Data::Dumper;
 use English;
+use Getopt::Long;
 use IO::File;
+
+
+my $dev_flag = 0;
+
+GetOptions(
+           "--dev" => $dev_flag,
+       );
 
 
 my $product_fh = IO::File->new();
@@ -48,13 +56,30 @@ $kegg_fh->open(">$kegg_fn") or die "Can't open '$kegg_fn': $OS_ERROR";
 my %ipr = ( );
 
 
-my $dbadp = Bio::DB::BioDB->new(
-                                -database => 'biosql',
-                                -user     => 'sg_user',
-                                -pass     => 'sgus3r',
-                                -dbname   => 'DWDEV',
-                                -driver   => 'Oracle'
-                            );
+my $dbadp;
+
+if ($dev_flag) {
+    
+    $dbadp = Bio::DB::BioDB->new(
+                                 -database => 'biosql',
+                                 -user     => 'sg_user',
+                                 -pass     => 'sgus3r',
+                                 -dbname   => 'DWDEV',
+                                 -driver   => 'Oracle'
+                             );
+    
+}
+else {
+    
+    $dbadp = Bio::DB::BioDB->new(
+                                 -database => 'biosql',
+                                 -user     => 'sg_user',
+                                 -pass     => 'sg_us3r',
+                                 -dbname   => 'DWRAC',
+                                 -driver   => 'Oracle'
+                             );
+    
+}
 
 my $adp = $dbadp->get_object_adaptor("Bio::SeqI");
 
@@ -74,10 +99,25 @@ while (my $seq = $result->next_object()) {
 
     FEATURE: foreach my $feature (@features) {
 
-        my $display_name     = $feature->display_name();
-        my $new_display_name = $display_name;
+        ## Only the protein coding_genes have protein annotation to dump
+        unless ($feature->primary_tag() eq 'gene') { next FEATURE; }
+        
+        my $display_name = $feature->display_name();
 
+        my $new_display_name;
 
+        if (
+            ($display_name =~ /^(\w+\d+)\.(\w+)\.(\d+)$/) ||
+            ($display_name =~ /^(\w+\d+\.\d+)\.(\w+)\.(\d+)$/)
+           ) {
+            my ($seq_id, $source, $number) = ($1, $2, $3);
+            $new_display_name = join('.', $seq_id, $source, 'p5_hybrid', $number);
+        }
+        else {
+            die "failed to parse '$display_name':\n - does not match expected format (seqid.predictor.sequence)";
+        }
+
+        
         ## InterPro
         ##
         ## This thing is not like the others.  Whereas all
