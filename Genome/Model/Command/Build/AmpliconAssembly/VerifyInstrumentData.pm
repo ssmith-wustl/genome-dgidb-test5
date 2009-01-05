@@ -5,6 +5,9 @@ use warnings;
 
 use Genome;
 
+use Data::Dumper;
+use Genome::Utility::FileSystem;
+
 class Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentData {
     is => 'Genome::Model::Event',
 };
@@ -23,7 +26,10 @@ sub bsub_rusage {
 sub execute {
     my $self = shift;
 
-    $self->_dump_instrument_data if $self->model->sequencing_center eq 'gsc';
+    if ( $self->model->sequencing_center eq 'gsc' ) {
+        $self->_dump_instrument_data
+            or return;
+    }
 
     return $self->model->amplicons; # Error msg is on model if no amplicons
 }
@@ -31,12 +37,10 @@ sub execute {
 sub _dump_instrument_data {
     my $self = shift;
 
-    $self->model->create_consed_directory_structure;
-    
+    my $chromat_dir = $self->model->chromat_dir;
     for my $ida ( $self->model->instrument_data_assignments ) {
-        #next if $ida->first_build_id;
-        unless ( $ida->instrument_data->dump_to_file_system )
-        {
+        #unless ( $ida->first_build_id ) {
+        unless ( $ida->instrument_data->dump_to_file_system ) {
             $self->error_message(
                 sprintf(
                     'Error dumping instrument data (%s <ID: %s) for model (%s <ID %s)',
@@ -48,7 +52,20 @@ sub _dump_instrument_data {
             );
             return;
         }
-        $ida->first_build_id( $self->genome_model_event_id );
+        $ida->first_build_id( $self->parent_event_id );
+        #}
+
+        my $instrument_data_dir = $ida->instrument_data->resolve_full_path;
+        my $dh = Genome::Utility::FileSystem->open_directory($instrument_data_dir)
+            or return;
+
+        while ( my $trace = $dh->read ) {
+            next if $trace =~ m#^\.#;
+            my $target = sprintf('%s/%s', $instrument_data_dir, $trace);
+            my $link = sprintf('%s/%s', $chromat_dir, $trace);
+            Genome::Utility::FileSystem->create_symlink($target, $link)
+                or return;
+        }
     }
 
     return 1;
