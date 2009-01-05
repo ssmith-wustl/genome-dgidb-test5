@@ -16,12 +16,10 @@ BEGIN {
 }
 
 #< CREATE A PP TO TEST >#
-my $pp = Genome::ProcessingProfile::MetaGenomicComposition->create(
-    name => 'test meta genomic composition',
-    sequencing_platform => 'sanger',
-    assembler => 'phredphrap',
-    sequencing_center => 'gsc',
-    assembly_size => 1300,
+my $pp = Genome::ProcessingProfile::Test->create(
+    name => 'test',
+    colour => 'blue',
+    shape => 'hexagon',
 );
 ok($pp, "Created processing profile to test");
 die unless $pp; # can't proceed
