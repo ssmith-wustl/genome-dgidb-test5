@@ -53,9 +53,11 @@ isa_ok($model,'Genome::Model::AmpliconAssembly');
 is($pp->name, $pp_params{name}, "Model is named '$model_params{name}'");
 is($pp->type_name, $pp_params{type_name}, "Model is a '$pp_params{type_name}'");
 
-# Remove previous test dirs
+# Remove and recreate previous test dirs
 File::Path::rmtree($model->edit_dir) if -e $model->edit_dir;
+mkdir $model->edit_dir;
 File::Path::rmtree($model->phd_dir) if -e $model->phd_dir;
+mkdir $model->phd_dir;
 
 my $builder = Genome::Model::Command::Build::AmpliconAssembly->create(
     model_id => $model->id,
