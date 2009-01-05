@@ -20,9 +20,6 @@ class Genome::Model::AmpliconAssembly {
             }
         } Genome::ProcessingProfile::AmpliconAssembly->params_for_class
     ),
-    consed_directory => {
-        calculate => q| return Genome::Consed::Directory->create(directory => $self->data_directory); |,
-    },
     ],
 };
 
@@ -32,10 +29,22 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
 
+    mkdir $self->data_directory unless -d $self->data_directory;
+    
     $self->consed_directory->create_consed_directory_structure
         or return;
 
     return $self;
+}
+
+sub consed_directory {
+    my $self = shift;
+
+    unless ( $self->{_consed_directory} ) {
+        $self->{_consed_directory} = Genome::Consed::Directory->create(directory => $self->data_directory);
+    }
+
+    return $self->{_consed_directory};
 }
 
 #< Misc >#
@@ -89,6 +98,11 @@ sub orientation_confirmed_fasta {
 
 sub orientation_unconfirmed_fasta {
     return _fasta_file_name(@_, 'assembly.unconfirmed');
+}
+
+sub classification_file_for_type {
+    my ($self, $type) = @_;
+    return _fasta_file_name(@_, '.rdp');
 }
 
 #< DEPRECATED 
