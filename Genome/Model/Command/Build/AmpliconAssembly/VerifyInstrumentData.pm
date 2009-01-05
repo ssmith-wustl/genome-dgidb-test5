@@ -23,17 +23,18 @@ sub bsub_rusage {
 sub execute {
     my $self = shift;
 
-    $self->_dump_unbuilt_instrument_data if $self->model->sequencing_center eq 'gsc';
+    $self->_dump_instrument_data if $self->model->sequencing_center eq 'gsc';
 
     return $self->model->amplicons; # Error msg is on model if no amplicons
 }
 
-sub _dump_unbuilt_instrument_data {
+sub _dump_instrument_data {
     my $self = shift;
 
     $self->model->create_consed_directory_structure;
     
-    for my $ida ( $self->model->unbuilt_instrument_data ) {
+    for my $ida ( $self->model->instrument_data_assignments ) {
+        #next if $ida->first_build_id;
         unless ( $ida->instrument_data->dump_to_file_system )
         {
             $self->error_message(
