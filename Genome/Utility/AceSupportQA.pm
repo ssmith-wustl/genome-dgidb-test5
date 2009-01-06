@@ -7,6 +7,16 @@ use DBI;
 
 use above 'Genome';
 
+use GSCApp;
+
+App::DB->db_access_level('rw');
+
+App->init;
+
+#Generate a refseq;
+use Bio::DB::Fasta;
+my $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+my $refdb = Bio::DB::Fasta->new($RefDir);
 
 ###MODIFIED so that it doesn't fix anything
 my $fix_invalid_files;
@@ -36,12 +46,16 @@ sub ace_support_qa {
     }
     #invalid_files will be a has of trace names and file type that are broken.
     my ($invalid_files,$project) = &parse_ace_file($ace_file); ##QA the read dump, phred and poly files
-	
+
+    my ($refcheck) = &check_ref($project);
+    #print qq($refcheck\n);
     my $run;
     if ($invalid_files) {
-
-	$run = qq(There are invalid files for $project that should be fixed prior to analysis\n);
-
+	if ($refcheck =~ /Sequence doesn\'t look good/) {
+	    $run = qq(The reference sequence as well as some of the trace files are invalid for $project and should be fixed prior to analysis\n);
+	} else {
+	    $run = qq(There are invalid files for $project that should be fixed prior to analysis\n);
+	}
 	print qq(Here is a list of reads for $project with either a broken chromat, phd, or poly file\n);
 	foreach my $read (sort keys %{$invalid_files}) {
 	    print qq($read);
@@ -51,7 +65,12 @@ sub ace_support_qa {
 	    print qq(\n);
 	}
     } else {
-	$run = qq(OK to start analysis on $project\n);
+
+	if ($refcheck =~ /Sequence doesn\'t look good/) {
+	    $run = qq(The reference sequence is invalid for $project and should be fixed prior to analysis\n);
+	} else {
+	    $run = qq(OK to start analysis on $project\n);
+	}
     }
     
     my $t1 = new Benchmark;
@@ -62,7 +81,67 @@ sub ace_support_qa {
 	return ($run);
     }
 }
+sub check_ref {
+    my ($assembly_name) = @_;
+    my $amplicon_tag = GSC::AssemblyProject->get_reference_tag(assembly_project_name => $assembly_name);
+    unless($amplicon_tag){
+	warn "no amplicon tag from GSC::AssemblyProject->get_reference_tag(assembly_project_name => $assembly_name)... can't resolve coordinates";
+	return undef;
+    }
+    my $amplicon = $amplicon_tag->ref_id;
+    my ($chromosome) = $amplicon_tag->sequence_item_name =~ /chrom([\S]+)\./;
+#print qq($chromosome\n);
+    
+    my $amplicon_sequence = $amplicon_tag->sequence_base_string;
+    my $amplicon_offset = $amplicon_tag->begin_position;
+    
+    my $amplicon_begin = $amplicon_tag->begin_position;
+    my $amplicon_end = $amplicon_tag->end_position;
+    
+    my $assembly_length = length($amplicon_sequence);
+    my $length = $amplicon_begin - $amplicon_end;
+    my $strand = $amplicon_tag->strand;
+    
+#if ($strand eq "-") {  $amplicon_begin > $amplicon_end ; }
+    
+    
+    my $range = join( '-',sort ($amplicon_begin,$amplicon_end));
+    my ($start,$stop) = split(/\-/,$range);
+    
+    my $sequence = &get_ref_base($chromosome,$start,$stop); ##this will come reverse complemented if the $strand eq "-"
+    if ($strand eq "-") {
+	my $revseq = &reverse_complement_sequence ($sequence); 
+	$sequence = $revseq;
+    }
+    my $result;
+    if ($sequence eq $amplicon_sequence) { 
+#if ($sequence eq $seq) { 
+	#print qq($assembly_name Sequence looks good.\n);
+	$result = qq($assembly_name Sequence looks good.\n);
+    } else {
+	#print qq($assembly_name Sequence doesn\'t look good.\n);
+	$result = qq($assembly_name Sequence doesn\'t look good.\n);
+    }
+    return $result;
+}
 
+
+sub get_ref_base {
+    my ($chr_name,$chr_start,$chr_stop) = @_;
+    my $seq = $refdb->seq($chr_name, $chr_start => $chr_stop);
+    $seq =~ s/([\S]+)/\U$1/;
+    return $seq;
+    
+}
+
+sub reverse_complement_sequence {
+    my ($seq) = @_;
+    my $seq_1 = new Bio::Seq(-seq => $seq);
+    my $revseq_1 = $seq_1->revcom();
+    my $revseq = $revseq_1->seq;
+    
+    return $revseq;
+}
 
 sub check_for_file { #will only return no_file or empty
     my ($file) = @_;
