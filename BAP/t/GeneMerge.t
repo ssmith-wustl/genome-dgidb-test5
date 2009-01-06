@@ -4,7 +4,7 @@ use warnings;
 use Bio::SeqFeature::Generic;
 
 use Data::Dumper;
-use Test::More tests => 25;
+use Test::More tests => 28;
 
 BEGIN {
     use_ok('BAP::GeneMerge');
@@ -98,16 +98,58 @@ ok(!$features[2]->has_tag('redundant'), 'rfam_2 is not redundant');
 ok(!$features[3]->has_tag('redundant'), 'rnammer_2 is not redundant');
 
 @features = (
-             create_feature( 3254, 3379, 1, 'glimmer3_1', 'glimmer3' ),
-             create_feature( 3369, 4627, 1, 'rnammer_1',  'rnammer'  ),
+             create_feature( 1,    1000, 1, 'glimmer3_1', 'glimmer3' ),
+             create_feature( 1,    100,  1, 'rfam_1',     'rfam'     ),
             );
 
-$features[0]->add_tag_value('type' => 'coding');
-$features[1]->add_tag_value('type' => 'rRNA');
+$features[0]->add_tag_value('type'       => 'coding');
+$features[1]->add_tag_value('type'       => 'rRNA'  );
 
 BAP::GeneMerge::tag_rna_overlap(\@features);
 
 ok($features[0]->has_tag('delete_rrna_overlap'), 'glimmer3_1 is deleted');
+
+@features = (
+             create_feature( 1,    1000, 1, 'glimmer3_1', 'glimmer3' ),
+             create_feature( 991,  1090, 1, 'rfam_2',     'rfam'     ),
+             create_feature( 951,  1050, 1, 'rfam_3',     'rfam'     ),
+            );
+
+$features[0]->add_tag_value('type'       => 'coding');
+$features[1]->add_tag_value('type'       => 'rRNA'  );
+$features[2]->add_tag_value('type'       => 'rRNA'  );
+$features[2]->add_tag_value('overlap_50' => 1       );
+
+BAP::GeneMerge::tag_rna_overlap(\@features);
+
+ok(!$features[0]->has_tag('delete_rrna_overlap'), 'glimmer3_1 is not deleted');
+
+@features = (
+             create_feature( 1,    1000, 1, 'glimmer3_1', 'glimmer3' ),
+             create_feature( 991,  1090, 1, 'rfam_2',     'rfam'     ),
+             create_feature( 951,  1050, 1, 'rfam_3',     'rfam'     ),
+            );
+
+$features[0]->add_tag_value('type'       => 'coding');
+$features[1]->add_tag_value('type'       => 'rRNA'  );
+$features[2]->add_tag_value('type'       => 'rRNA'  );
+
+BAP::GeneMerge::tag_rna_overlap(\@features);
+
+ok($features[0]->has_tag('delete_rrna_overlap'), 'glimmer3_1 is deleted');
+
+@features = (
+             create_feature( 1,    1000, 1, 'genemark_1', 'genemark' ),
+             create_feature( 1000, 1099, 1, 'rnammer_1',  'rnammer'  ),
+            );
+
+$features[0]->add_tag_value('type'       => 'coding');
+$features[1]->add_tag_value('type'       => 'rRNA'  );
+
+BAP::GeneMerge::tag_rna_overlap(\@features);
+
+ok($features[0]->has_tag('delete_rrna_overlap'), 'genemark_1 is deleted');
+
 
 sub create_feature {
 

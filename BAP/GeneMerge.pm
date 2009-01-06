@@ -257,10 +257,10 @@ sub tag_redundant_rfam {
 }
 
 sub tag_rna_overlap {
-
+    
     my ($feature_ref) = @_;
-
-
+    
+    
     my $overlap = sub {
         
         my ($f, $g) = @_;
@@ -277,33 +277,56 @@ sub tag_rna_overlap {
             $overlap_count = abs($f->end() - $g->start()) + 1;
         }
         
+        my $overlap_percent_f = sprintf("%.1f", ($overlap_count / $f->length) * 100);
+        my $overlap_percent_g = sprintf("%.1f", ($overlap_count / $g->length) * 100);
+        
         foreach my $h ($f, $g) {
-                
+            
             my ($h_gene_type) = $h->each_tag_value('type');
             
             if ($h_gene_type eq 'rRNA') {
                 
-                my $gene_name = $h->display_name();
-                my $threshold = 10;
-
-                if ($h->has_tag('overlap_50')) {
-                    $threshold = 50;
+                if ($h->source_tag() eq 'rfam') {
+                    
+                    my $threshold = 10;
+                    
+                    if ($h->has_tag('overlap_50')) {
+                        $threshold = 50;
+                    }
+                    
+                    if (
+                        ($overlap_percent_f > $threshold)
+                        ||
+                        ($overlap_percent_g > $threshold)
+                    ) {
+                        
+                        if ($f_gene_type eq 'coding') {
+                            unless ($f->has_tag('delete_rrna_overlap')) {
+                                $f->add_tag_value('delete_rrna_overlap', 1);
+                            }
+                        }
+                        
+                        if ($g_gene_type eq 'coding') {
+                            unless ($g->has_tag('delete_rrna_overlap')) {
+                                $g->add_tag_value('delete_rrna_overlap', 1);
+                            }
+                        }
+                        
+                    }
+                    
                 }
-                
-                if (
-                    ($overlap_count > $threshold)
-                ) {
+                elsif ($h->source_tag() eq 'rnammer') {
                     
                     if ($f_gene_type eq 'coding') {
                         unless ($f->has_tag('delete_rrna_overlap')) {
                             $f->add_tag_value('delete_rrna_overlap', 1);
                         }
-                        }
+                    }
                     
                     if ($g_gene_type eq 'coding') {
                         unless ($g->has_tag('delete_rrna_overlap')) {
                             $g->add_tag_value('delete_rrna_overlap', 1);
-                            }
+                        }
                     }
                     
                 }
