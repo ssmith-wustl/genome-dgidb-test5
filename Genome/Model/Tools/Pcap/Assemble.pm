@@ -1032,8 +1032,11 @@ sub _get_pcap_params
     #<pcap_prog_type> <pcap.input.fof> -y <val> -z <val>
 
 #    return '-l 300 -w 200' if $self->pcap_run_type eq 'RAW_454';
-
-    return '-l 300 -o 40 -s 1200 -w 200' if $self->pcap_run_type eq 'RAW_454';
+    if ($self->pcap_run_type eq 'RAW_454')
+    {
+	return '-l 300 -o 40 -s 1200 -w 200' if $self->parameter_setting eq 'NORMAL';
+	return '-l 160 -o 18 -s 800 -w 90' if $self->parameter_setting eq 'RELAXED';
+    }
     return '-l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'POLY';
     return '-l 50 -o 40 -s 1200 -w 90' if $self->pcap_run_type eq 'NORMAL';
 
@@ -1079,7 +1082,7 @@ sub _get_bcontig_params
 	return '-d 40 -e 0 -f 2 -g 8 -k 20 -l 75 -p 82 -q 0 -s 1400'
 	    if $self->parameter_setting eq 'NORMAL';
 
-	return '-d 40 -e 0 -f 2 -g 8 -k 20 -l 75 -p 82 -q 0 -s 1400'
+	return '-d 40 -e 2 -f 1 -g 1 -k 5 -l 50 -p 82 -q 1 -s 800'
 	    if $self->parameter_setting eq 'RELAXED';
 
 	return '-d 40 -e 0 -f 2 -g 8 -k 20 -l 75 -p 82 -q 0 -s 1400'
