@@ -17,7 +17,7 @@ use IO::File;
 my $dev_flag = 0;
 
 GetOptions(
-           "--dev" => $dev_flag,
+           "--dev" => \$dev_flag,
        );
 
 
