@@ -48,6 +48,8 @@ sub ace_support_qa {
     my ($invalid_files,$project) = &parse_ace_file($ace_file); ##QA the read dump, phred and poly files
 
     my ($refcheck) = &check_ref($project);
+    unless ($refcheck) { print qq(The reference sequence was not checked for correctness\n);}
+
     #print qq($refcheck\n);
     my $run;
     if ($invalid_files) {
