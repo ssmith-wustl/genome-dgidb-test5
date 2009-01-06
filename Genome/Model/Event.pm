@@ -425,7 +425,7 @@ sub desc {
 
 our @process_logs;
 
-sub _get_msgdata {
+sub X_get_msgdata {
     my $self = $_[0];
     my $msgdata = $self->SUPER::_get_msgdata;
     return $msgdata if $msgdata->{gm_fh_set};
