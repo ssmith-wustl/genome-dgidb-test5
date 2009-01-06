@@ -424,21 +424,46 @@ sub GetFreezerBarcodeDescToCheckout {
 sub GetAvailableFreezerPositions {
 
     my ($self, $barcode) = @_;
+
+
+#check how many total slots for barcode, if 100 we want to eliminate perimeter units
     
 
     my $slots = $self->{'GetAvailabePosistions'} -> xSql($barcode);
     if(defined $slots->[0][0]) {
-	my $list = [];
-	foreach my $slot (@{$slots}) {
-	    push (@{$list}, $slot->[0]);
-	}
-	return $list;
+        my $list = [];
+        foreach my $slot (@{$slots}) {
+            if($self->is_perimeter_slot($barcode, $slot->[0])){
+                my $ei = GSC::EquipmentInformation->get(equinf_bs_barcode => $barcode, unit_name => $slot->[0]);
+                $ei->equipment_status('retired');
+                App::DB->sync_database;
+                App::DB->commit;
+                return $self->GetAvailableFreezerPositions($barcode);
+            }else {
+                push (@{$list}, $slot->[0]);
+            }
+        }
+        return $list;
     }
     
     $self->{'Error'} = "$pkg: GetAvailableFreezerPositions() -> Could not find vacant freezer slots for barcode = $barcode.";
     
     return 0;
 } #GetAvailableFreezerPositions
+
+sub is_perimeter_slot {
+    my ($self, $barcode, $unit) = @_;
+    
+    my $valid_box_type_flag;
+
+    my @x = GSC::EquipmentInformation->get(equinf_bs_barcode => $barcode);
+    unless(@x == 100){
+        return 0;
+    }
+
+    return ($unit =~ /^a|j/ or $unit =~ /01|10$/)? 1 : 0;
+}
+
 
 
 ##############################################
