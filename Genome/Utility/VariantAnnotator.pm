@@ -438,7 +438,7 @@ sub _transcript_annotation_for_intron
         $splice_site_pos='-'.$aft_end;
     }
 
-    my $pro_str;
+    my $pro_str = 'NULL';
     if ( $pre_end <= 2 or $aft_start <= 2 ) 
     {
         # intron SS
@@ -584,7 +584,7 @@ sub _transcript_annotation_for_cds_exon
     $mutated_seq_translated = $self->translate($mutated_seq);
 
 
-    my $pro_str;
+    my $pro_str = 'NULL';
     if($variant->{type} =~ /del|ins/i) {
         if ($size2%3==0) {$trv_type="in_frame_";}
         else {$trv_type="frame_shift_"; }
