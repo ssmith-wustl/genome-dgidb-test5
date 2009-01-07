@@ -55,7 +55,7 @@ my %pp_1_params = (
 		   name => 'test_assembly_processing_profile_1',
 		   assembler_name => 'newbler',
 		   assembler_params => '-a 0',
-		   assembler_version => '2.0.00.17',
+		   assembler_version => '2.0.00.17-64',
 		   read_filter_name => 'seqclean',
 		   read_trimmer_name => 'sfffile',
 		   sequencing_platform => '454',
@@ -64,7 +64,7 @@ my %pp_1_params = (
 my %pp_2_params = (
 		   name => 'test_assembly_processing_profile_2',
 		   assembler_name => 'newbler',
-		   assembler_version => '2.0.00.17',
+		   assembler_version => '2.0.00.17-64',
 		   assembler_params => '-a 0',
 		   sequencing_platform => '454',
 		   );
@@ -206,7 +206,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
        'expected path to assembly project xml file');
     ok(-s $model->assembly_project_xml_file, '454AssemblyProject.xml file exists with size');
 
-    my $xml_asm_version = Genome::Model::Tools::454::Newbler->get_newbler_version_from_xml_file($model->assembly_project_xml_file);
+    my $xml_asm_version = Genome::Model::Tools::454::Newbler->get_newbler_version_from_xml_file($model->assembly_project_xml_file) .'-64';
     is($xml_asm_version, $pp_params->{assembler_version}, 'verified correct assembler version');
 
     my @assemble_events = Genome::Model::Command::Build::Assembly::Assemble->get(model_id => $model->id);

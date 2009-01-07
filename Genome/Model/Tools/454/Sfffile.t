@@ -25,7 +25,7 @@ my @sff_files = glob($data_dir.'/*.sff');
 my $sfffile = Genome::Model::Tools::454::Sfffile->create(
 	in_sff_files => \@sff_files,
         out_sff_file => $out_file,
-	version => '2.0.00.20',					 
+	version => '2.0.00.20-64',					 
 );
 isa_ok($sfffile,'Genome::Model::Tools::454::Sfffile');
 ok($sfffile->execute,'execute '. $sfffile->command_name);

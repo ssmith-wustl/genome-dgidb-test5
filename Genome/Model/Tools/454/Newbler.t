@@ -30,8 +30,8 @@ BEGIN {
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-454-Newbler';
 #my $expected_path = '/gsc/pkg/bio/454/newbler/applicationsBin/';
 #my $expected_path = '/gsc/pkg/bio/454/offInstrumentApps-2.0.00.20-64/bin';
-my $version = '2.0.00.20';
-my $expected_path = '/gsc/pkg/bio/454/offInstrumentApps-'.$version.'-64/bin';
+my $version = '2.0.00.20-64';
+my $expected_path = '/gsc/pkg/bio/454/offInstrumentApps-'.$version.'/bin';
 
 
 my $ref_seq_dir = '/gscmnt/839/info/medseq/reference_sequences/refseq-for-test';
