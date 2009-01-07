@@ -48,7 +48,7 @@ sub properties_hash {
                                        },
 		      assembler_version => {
 			                     doc => 'Version of assembler to use',
-					     valid_values => ['2.0.00.20', '2.0.00.17', '2.0.00.12', '1.1.03.24.7', '1.1.03.24'],
+					     valid_values => ['2.0.00.20-1', '2.0.00.20-64', '2.0.00.17-64', '2.0.00.12-64', '1.1.03.24.7-64', '1.1.03.24-64'],
 					 },
                       read_trimmer_name => {
                                             doc => 'The name of the software to use when trimming read sets',
