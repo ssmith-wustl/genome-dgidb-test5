@@ -16,11 +16,12 @@ App->init;
 #Generate a refseq;
 use Bio::DB::Fasta;
 my $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
-my $refdb = Bio::DB::Fasta->new($RefDir);
+my $refdb = Bio::DB::Fasta->new($RefDir); #$refdb is the entire Hs_build36_mask1c 
 
-###MODIFIED so that it doesn't fix anything
+###MODIFIED so that it doesn't fix anything 
 my $fix_invalid_files;
 my ($traces_fof,$trace_files_needed,$phd_files_needed,$poly_files_needed);
+
 sub ace_support_qa {
 
     my $t0 = new Benchmark;
@@ -34,7 +35,6 @@ sub ace_support_qa {
 
 
     my ($no_ace) = &check_for_file($ace_file); #will only return if there is no file or an empty file
-
     if ($no_ace) { 
 	my $check;
 	if ($ace_file) {
@@ -44,7 +44,7 @@ sub ace_support_qa {
 	}
 	return $check;
     }
-    #invalid_files will be a has of trace names and file type that are broken.
+    #invalid_files will be a hash of trace names and file type that are broken.
     my ($invalid_files,$project) = &parse_ace_file($ace_file); ##QA the read dump, phred and poly files
 
     my ($refcheck) = &check_ref($project);
@@ -83,11 +83,12 @@ sub ace_support_qa {
 	return ($run);
     }
 }
+
 sub check_ref {
     my ($assembly_name) = @_;
     my $amplicon_tag = GSC::AssemblyProject->get_reference_tag(assembly_project_name => $assembly_name);
     unless($amplicon_tag){
-	warn "no amplicon tag from GSC::AssemblyProject->get_reference_tag(assembly_project_name => $assembly_name)... can't resolve coordinates";
+	warn "no amplicon tag from GSC::AssemblyProject->get_reference_tag(assembly_project_name => $assembly_name)... can't check the reference sequence";
 	return undef;
     }
     my $amplicon = $amplicon_tag->ref_id;
@@ -101,15 +102,15 @@ sub check_ref {
     my $amplicon_end = $amplicon_tag->end_position;
     
     my $assembly_length = length($amplicon_sequence);
-    my $length = $amplicon_begin - $amplicon_end;
     my $strand = $amplicon_tag->strand;
     
 #if ($strand eq "-") {  $amplicon_begin > $amplicon_end ; }
     
-    
-    my $range = join( '-',sort ($amplicon_begin,$amplicon_end));
-    my ($start,$stop) = split(/\-/,$range);
-    
+    my ($start,$stop) = sort ($amplicon_begin,$amplicon_end);
+    my $length = $stop - $start + 1;
+
+    unless ($assembly_length == $length) { print qq(the assembly_length doesn\'t jive with the spread on the coordinates\n); }
+
     my $sequence = &get_ref_base($chromosome,$start,$stop); ##this will come reverse complemented if the $strand eq "-"
     if ($strand eq "-") {
 	my $revseq = &reverse_complement_sequence ($sequence); 
@@ -151,21 +152,23 @@ sub check_for_file { #will only return no_file or empty
 	$file = "no_file";
 	return $file;
     }
-    $file = &check_for_empty_file($file);
-    if ($file) {
+    #$file = &check_for_empty_file($file);
+    if ($file && -s $file) {
+    } else {
+	$file = "empty";
 	return $file;
     }
 }
 
-sub check_for_empty_file {
-    my ($file) = @_;
-    my $ll = `ls -l $file`;
-    my ($n) = (split(/\s/,$ll))[4];
-
-    if ($n < 1) {
-	return ("empty");
-    }
-}
+#sub check_for_empty_file {
+#    my ($file) = @_;
+#    my $ll = `ls -l $file`;
+#    my ($n) = (split(/\s/,$ll))[4];
+#
+#    if ($n < 1) {
+#	return ("empty");
+#    }
+#}
 
 sub parse_ace_file {
 
@@ -232,38 +235,42 @@ sub check_traces_fof {
 	}
 	
 	my $poly = "$poly_dir/$read.poly";
-	($poly) = &check_for_file($poly);
-	if ($poly eq "no_file") { 
-	    $no_poly_file++;
-	    $poly_files_needed->{$read}=1;
-	} elsif ($poly eq "empty") {
-	    $empty_poly_file++;
-	    $poly_files_needed->{$read}=1;
+	my ($invalid_poly) = &check_for_file($poly);
+	if ($invalid_poly) {
+	    if ($poly eq "no_file") { 
+		$no_poly_file++;
+		$poly_files_needed->{$read}=1;
+	    } elsif ($poly eq "empty") {
+		$empty_poly_file++;
+		$poly_files_needed->{$read}=1;
+	    }
 	}
-	
+
 	my $phd = "$phd_dir/$read.phd.1";
-	($phd) = &check_for_file($phd);
-	if ($phd eq "no_file") { 
-	    $no_phd_file++;
-	    $phd_files_needed->{$read}=1;
-	} elsif ($phd eq "empty") {
-	    $empty_phd_file++;
-	    $phd_files_needed->{$read}=1;
+	my ($invalid_phd) = &check_for_file($phd);
+	if ($invalid_phd) {
+	    if ($phd eq "no_file") { 
+		$no_phd_file++;
+		$phd_files_needed->{$read}=1;
+	    } elsif ($phd eq "empty") {
+		$empty_phd_file++;
+		$phd_files_needed->{$read}=1;
+	    }
 	}
     }
-
+    
     my $invalid_files;
-
+    
     unless ($read_count) { die "There are no reads in the ace file to be analyzed\n"; }
-
+    
     print qq(Reads for analysis ==> $read_count\n);
-
+    
     
     if ($no_trace_file || $empty_trace_file) {
-
+	
 	unless($no_trace_file) {$no_trace_file=0;}
 	unless($empty_trace_file) {$empty_trace_file=0;}
-
+	
 	my $n = $no_trace_file + $empty_trace_file;
 	print qq(nonviable trace files ==> $n\n);
 	foreach my $read (sort keys %{$trace_files_needed}) {
@@ -276,10 +283,10 @@ sub check_traces_fof {
 	if ($no_poly_file eq $read_count) {
 	    print qq(There are no poly files, they can be created in analysis\n);
 	} else {
-
+	    
 	    unless($no_poly_file) {$no_poly_file=0;}
 	    unless($empty_poly_file) {$empty_poly_file=0;}
-
+	    
 	    my $n = $no_poly_file + $empty_poly_file;
 	    if ($fix_invalid_files) {print qq(will run phred to produce $n disfunctional poly files\n);}
 	    foreach my $read (sort keys %{$poly_files_needed}) {
@@ -362,8 +369,8 @@ sub check_traces_fof {
 }
 
 
-sub sync_phd_time_stamps {
-
+sub sync_phd_time_stamps {   ## this isn't being used and it doesn't appear to do what it should
+ 
     #addapted from ~kkyung/bin/fix_autojoin_DS_line.pl
 
     use IO::File;
