@@ -57,7 +57,7 @@ sub create {
         my $base_path = $self->resolve_454_path .'installed';
         if (-l $base_path) {
             my $link = readlink($base_path);
-            unless ($link =~ /offInstrumentApps-(\d\.\d\.\d{2}\.\d{2})-64/) {
+            unless ($link =~ /offInstrumentApps-(\d\.\d\.\d{2}\.\d{2}-\d+)/) {
                 $self->error_message('Link to 454 tools was malformed: '. $link);
                 return;
             }
@@ -80,7 +80,7 @@ sub resolve_454_path {
 
 sub bin_path {
     my $self = shift;
-    return $self->resolve_454_path .'offInstrumentApps-'. $self->version .'-64/bin';
+    return $self->resolve_454_path .'offInstrumentApps-'. $self->version .'/bin';
 }
 
 1;
