@@ -803,6 +803,39 @@ sub delete {
     return 1;
 
 }
+
+#######################
+## MODEL FOR TESTING ##
+#######################
+
+package Genome::Model::Test; {
+    use Genome;
+
+    use strict;
+    use warnings;
+
+    class Genome::Model::Test {
+        is => 'Genome::Model',
+        has => [
+        colour =>{ via => 'processing_profile', },
+        shape =>{ via => 'processing_profile', },
+        ],
+    };
+
+    sub create {
+        my ($class, %params) = @_;
+
+        # Create processing profile too?
+        $params{subject_type} = 'dna_resource_item_name' unless exists $params{subject_type};
+        $params{subject_name} = 'a piece of dna' unless exists $params{subject_name};
+
+        my $self = $class->SUPER::create(%params)
+            or return;
+
+        return $self;
+    }
+}
+
 1;
 
 #$HeadURL$
