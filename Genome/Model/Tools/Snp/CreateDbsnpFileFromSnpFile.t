@@ -4,9 +4,9 @@ use warnings;
 
 use above "Genome";
 use FindBin qw($Bin);
-#use Test::More tests => 3; 
+use Test::More tests => 3; 
 use Test::More; 
-plan skip_all => 'Does not pass. Do not know what we need to do to make it pass. Fix me.';
+#plan skip_all => 'Does not pass. Do not know what we need to do to make it pass. Fix me.';
 
 #gt snp create-dbsnp-file-from-snp-file --output-file create-dbsnp-file-from-snp-file.out --snp-file /gscmnt/sata146/info/medseq/dlarson/GBM_Genome_Model/tumor/2733662090.snps
 
