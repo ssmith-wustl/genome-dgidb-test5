@@ -11,7 +11,7 @@ use Genome::DB::Schema;
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 
 class Genome::Model::CombineVariants::AnnotateVariations {
-    is => ['Command', 'Genome::Model::CombineVariants'],
+    is => ['Command'],
     has => [
     ],
     has_optional => [
@@ -166,6 +166,89 @@ sub format_annotated_genotype_line{
                 'no_value'
             } 
         } $self->annotated_columns)."\n";
+}
+
+# FIXME Must be kept in sync with combinevariants->annotated_columns... bad programming yay
+sub annotated_columns{
+    my $self = shift;
+    return qw(
+    chromosome 
+    start 
+    stop 
+    sample_name
+    variation_type
+    reference
+    allele1 
+    allele1_type 
+    allele1_read_support
+    allele1_pcr_product_support
+    allele2 
+    allele2_type 
+    allele2_read_support
+    allele2_pcr_product_support
+    polyscan_score 
+    polyphred_score
+    transcript_name
+    transcript_source
+    strand
+    c_position
+    trv_type
+    priority
+    gene
+    intensity
+    detection
+    amino_acid_length
+    amino_acid_change
+    variations 
+    );
+}
+
+# List of columns present in the combine variants output
+# FIXME Must be kept in sync with combinevariants->annotated_columns... bad programming yay
+sub genotype_columns{
+    my $self = shift;
+    return qw(
+    chromosome 
+    start 
+    stop 
+    sample_name
+    strand
+    gene
+    variation_type
+    reference
+    allele1 
+    allele1_type 
+    allele1_read_support
+    allele1_pcr_product_support
+    allele2 
+    allele2_type 
+    allele2_read_support
+    allele2_pcr_product_support
+    polyscan_score 
+    polyphred_score
+    read_type
+    con_pos
+    filename
+    );
+}
+
+# Format a line into a hash
+# FIXME Must be kept in sync with combinevariants->parse_genotype_line... bad programming yay
+sub parse_genotype_line {
+    my ($self, $line) = @_;
+
+    my @columns = split("\t", $line);
+    my @headers = $self->genotype_columns;
+
+    my $hash;
+    for my $header (@headers) {
+        $hash->{$header} = shift(@columns);
+    }
+
+    #FIXME remove
+    $DB::single=1 if ($hash->{sample_name} eq 'H_GP-NA12144_02' and $hash->{polyscan_score} eq 'NM_004847');
+
+    return $hash;
 }
 
 # Reads from the current genotype file and returns the next line as a hash
