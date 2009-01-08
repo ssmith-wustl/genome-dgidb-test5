@@ -441,8 +441,8 @@ sub setup_input {
     }
     $fh->close;
 
-    unless (-s $combined_input_file) {
-        $self->error_message("Combined input file does not exist or has 0 size in setup_input");
+    unless (-e $combined_input_file) {
+        $self->error_message("Combined input file does not exist");
         die;
     }
 
@@ -451,19 +451,19 @@ sub setup_input {
     # Sort by chromosome, position, sample... TODO: derive these numbers from columns sub
     system("sort -gk1 -gk2 -k4 $combined_input_file > $sorted_file");
 
-    unless(-s $sorted_file) {
+    unless(-e $sorted_file) {
         $self->error_message("Failed to sort combined input file: $combined_input_file into $sorted_file");
         die;
     }
     
     unlink($combined_input_file);
-    if(-s $combined_input_file) {
+    if(-e $combined_input_file) {
         $self->error_message("Failed to unlink combined input file: $combined_input_file");
         die;
     }
     
     cp($sorted_file, $combined_input_file);
-    unless(-s $combined_input_file) {
+    unless(-e $combined_input_file) {
         $self->error_message("Failed to copy sorted file: $sorted_file back to combined input file: $combined_input_file");
         die;
     }
