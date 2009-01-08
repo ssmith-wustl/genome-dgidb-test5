@@ -10,7 +10,6 @@ use Genome::Info::CodonToAminoAcid;
 use Genome::Info::VariantPriorities;
 use MG::ConsScore;
 use List::MoreUtils qw/ uniq /;
-use Benchmark;
 
 my %trans_win :name(transcript_window:r) :isa('object');
 
@@ -43,18 +42,10 @@ sub transcripts { # was transcripts_for_snp and transcripts_for_indel
 sub prioritized_transcripts {# was prioritized_transcripts_for_snp and prioritized_transcripts_for_indel
     my ($self, %variant) = @_;
 
-    my $start = new Benchmark;
-    
     my @annotations = $self->transcripts(%variant)
         or return;
 
     my @prioritized_annotations = $self->_prioritize_annotations(@annotations);
-
-    my $stop = new Benchmark;
-
-    my $time = timestr(timediff($stop, $start));
-
-    print "Annotation Variant: ".$variant{start}."-".$variant{stop}." ".$variant{variant}." ".$variant{reference}." ".$variant{type}." took $time\n"; #TODO make sure variant is getting passed in.  Add a check that dies unless the %variant is complete
 
     return @prioritized_annotations;
 }
