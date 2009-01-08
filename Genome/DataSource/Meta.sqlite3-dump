@@ -160,7 +160,7 @@ INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RESEARCH_PROJECT','TABLE','entity','2008-09-03 12:16:23','2008-11-12 18:23:33',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE','TABLE','entity','2008-06-16 16:05:24','2008-11-12 18:23:27',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD','TABLE','entity','2008-09-03 12:26:33','2008-11-12 18:23:29',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','TABLE','entity','2008-09-10 16:28:44','2008-11-12 18:23:20',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','TABLE','entity','2009-01-07 16:02:45','2008-11-12 18:23:20',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_METRIC','TABLE','entity','2008-06-16 16:05:22','2008-11-12 18:23:17',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','TABLE','entity','2008-11-10 12:33:56','2008-11-12 18:23:31',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','TABLE','entity','2008-09-30 15:12:12','2008-11-12 18:23:19',NULL);
@@ -324,6 +324,7 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIAN
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_REVIEW_DETAIL','VARIANT_SEQ_ID','NUMBER','10','Y','2008-12-04 10:48:44',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','USER_NAME','VARCHAR2','64','Y','2008-12-17 11:14:07',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','CREATION_DATE','TIMESTAMP(6)','11','Y','2008-12-17 11:14:07',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','BUILD_ID','NUMBER','10','Y','2009-01-08 08:36:21',NULL);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,

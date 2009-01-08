@@ -24,6 +24,7 @@ class Genome::Model::Event {
         event_type   => { is => 'VARCHAR2', len => 255 },
         event_status => { is => 'VARCHAR2', len => 32, is_optional => 1 },
         user_name    => { is => 'VARCHAR2', len => 64, is_optional => 1 },
+        build_id     => { is => 'NUMBER', len => 10, is_optional => 1 },
     ],
     has_optional => [
         read_set_id      => { is => 'NUMBER', len => 11, column_name => 'RUN_ID', implied_by => 'instrument_data' },
@@ -32,8 +33,8 @@ class Genome::Model::Event {
         ref_seq_id       => { is => 'VARCHAR2', len => 64 },
         parent_event     => { is => 'Genome::Model::Event', id_by => 'parent_event_id', constraint_name => 'GME_PAEID_FK' },
         prior_event      => { is => 'Genome::Model::Event', id_by => 'prior_event_id', constraint_name => 'GME_PPEID_FK' },
-        date_completed   => { is => 'TIMESTAMP(6)', len => 11 },
-        date_scheduled   => { is => 'TIMESTAMP(6)', len => 11 },
+        date_completed   => { is => 'TIMESTAMP', len => 6 },
+        date_scheduled   => { is => 'TIMESTAMP', len => 6 },
         lsf_job_id       => { is => 'VARCHAR2', len => 64 },
         retry_count      => { is => 'NUMBER', len => 3 },
         status_detail    => { is => 'VARCHAR2', len => 200 },
