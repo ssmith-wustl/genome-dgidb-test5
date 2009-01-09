@@ -39,21 +39,21 @@ sub _dump_instrument_data {
 
     my $chromat_dir = $self->model->chromat_dir;
     for my $ida ( $self->model->instrument_data_assignments ) {
-        #unless ( $ida->first_build_id ) {
-        unless ( $ida->instrument_data->dump_to_file_system ) {
-            $self->error_message(
-                sprintf(
-                    'Error dumping instrument data (%s <ID: %s) for model (%s <ID %s)',
-                    $ida->instrument_data->run_name,
-                    $ida->instrument_data->id,
-                    $self->model->name,
-                    $self->model->id,
-                )
-            );
-            return;
+        unless ( $ida->first_build_id ) {
+            unless ( $ida->instrument_data->dump_to_file_system ) {
+                $self->error_message(
+                    sprintf(
+                        'Error dumping instrument data (%s <ID: %s) for model (%s <ID %s)',
+                        $ida->instrument_data->run_name,
+                        $ida->instrument_data->id,
+                        $self->model->name,
+                        $self->model->id,
+                    )
+                );
+                return;
+            }
+            $ida->first_build_id( $self->parent_event_id );
         }
-        $ida->first_build_id( $self->parent_event_id );
-        #}
 
         my $instrument_data_dir = $ida->instrument_data->resolve_full_path;
         my $dh = Genome::Utility::FileSystem->open_directory($instrument_data_dir)
