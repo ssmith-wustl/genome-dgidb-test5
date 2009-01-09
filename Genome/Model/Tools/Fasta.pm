@@ -34,9 +34,9 @@ sub create {
     $self->{_cwd} = Cwd::getcwd();
     $self->fasta_file( Cwd::abs_path( $self->fasta_file ) );
 
-    my ($basename, $directory, $suffix) = File::Basename::fileparse($self->fasta_file, '.fasta', '.fas');
+    my ($basename, $directory, $suffix) = File::Basename::fileparse($self->fasta_file, '.fasta', '.fas', '.fa');
     unless ( $suffix ) {
-        $self->error_message( sprintf('FASTA file (%s) needs to have a ".fasta" or ".fas" suffix.', $self->fasta_file) );
+        $self->error_message( sprintf('FASTA file (%s) needs to have a ".fasta", ".fas" or ".fa" suffix.', $self->fasta_file) );
         return;
     }
 
