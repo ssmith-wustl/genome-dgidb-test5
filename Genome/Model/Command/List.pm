@@ -1,4 +1,3 @@
-
 package Genome::Model::Command::List;
 
 use strict;
@@ -8,43 +7,26 @@ use Genome;
 use Command; 
 use Data::Dumper;
 
-class Genome::Model::Command::List { 
-    is => ['Genome::Model::Command', 'UR::Object::Command::List'],
+class Genome::Model::Command::List {
+    is => 'UR::Object::Command::List',
+    has => [
+    subject_class_name  => {
+        is_constant => 1, 
+        value => 'Genome::Model' 
+    },
+    ],
 };
-
-sub sub_command_sort_position { 104 }
+#Genome::Model::Command::List->get_class_object->get_property_object_for_name('show')->default_value('id,name,subject_name,processing_profile_name');
 
 sub help_brief {
-    "list information about genome models and available runs"
+    return 'List models';
 }
 
-sub help_synopsis {
-    return <<"EOS"
-    genome-model list
-EOS
+sub help_deatil {
+    return help_brief();
 }
-
-sub help_detail {
-    return <<"EOS"
-List items related to genome models.
-EOS
-}
-
-sub create {
-    my $self = shift->SUPER::create(@_);
-    if ($self->model_id) {
-        my $filter = $self->filter;
-        if ($filter) {
-            $filter .= "," if $filter;
-        }
-        else {
-            $filter = '';
-        }
-        $filter .= 'model_id=' . $self->model_id;
-    }
-    return $self;
-}
-
 
 1;
 
+#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Command/List.pm $
+#$Id: List.pm 40876 2008-11-11 22:48:58Z ebelter $
