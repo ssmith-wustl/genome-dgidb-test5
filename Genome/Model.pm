@@ -322,45 +322,6 @@ sub unassigned_instrument_data {
     return grep { not $assigned_instrument_data_ids{$_->id} } @compatible_instrument_data;
 }
 
-sub dump_unbuilt_instrument_data_to_filesysytem {
-    my $self = shift;
-
-    my @unbuilt_instrument_data = $self->unbuilt_instrument_data;
-    unless ( @unbuilt_instrument_data ) {
-        $self->status_message(
-            sprintf('No unbuilt instrument data found (<id> %s <name> %s)', $self->id, $self->name) 
-        );
-        return;
-    }
-
-    my $chromat_dir = $self->consed_directory->chromat_dir;
-    
-    for my $instrument_data ( @unbuilt_instrument_data ) { 
-        $self->status_message(
-            sprintf('Dumping instrument data (<id> %s <name> %s)', $instrument_data->id, $instrument_data->run_name) 
-        );
-        $instrument_data->dump_to_file_system
-            or return;
-        
-        my $instrument_data_dir = $instrument_data->full_path;
-        my $dh = IO::Dir->new($instrument_data_dir);
-        unless ( $dh ) {
-            $self->error_message("Can'\t open directory ($instrument_data_dir)");
-            return;
-        }
-
-        while ( my $trace = $dh->read ) {
-            next if $trace =~ m#^\.#;
-            my $target = sprintf('%s/%s', $instrument_data_dir, $trace);
-            my $link = sprintf('%s/%s', $chromat_dir, $trace);
-            Genome::Utility::FileSystem->create_symlink($target, $link)
-                or return;
-        }
-    }
-
-    return 1;
-}
-
 #<>#
 sub compatible_input_items {
     my $self = shift;
