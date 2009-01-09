@@ -74,7 +74,7 @@ sub _fasta_file_name {
 
     return sprintf(
         '%s/%s.%s.fasta',
-        $self->consed_directory->directory,
+        $self->data_directory,
         $self->subject_name,
         $type,
     );
@@ -100,9 +100,19 @@ sub orientation_unconfirmed_fasta {
     return _fasta_file_name(@_, 'assembly.unconfirmed');
 }
 
-sub classification_file_for_type {
+sub _classification_file_name {
     my ($self, $type) = @_;
-    return _fasta_file_name(@_, '.rdp');
+
+    return sprintf(
+        '%s/%s.%s',
+        $self->data_directory,
+        $self->subject_name,
+        $type,
+    );
+}
+
+sub rdp_file {
+    return _classification_file_name(@_, 'rdp');
 }
 
 #< DEPRECATED 
