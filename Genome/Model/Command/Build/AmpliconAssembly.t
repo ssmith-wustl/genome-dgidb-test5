@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 22;
+use Test::More tests => 25;
 require File::Path;
 
 use Data::Dumper;
@@ -18,6 +18,10 @@ use_ok( 'Genome::Model::AmpliconAssembly');
 use_ok( 'Genome::ProcessingProfile::AmpliconAssembly');
 use_ok( 'Genome::Model::Command::Build::AmpliconAssembly' );
 
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Command-Build-Amplicon-Assembly';
+ok(-d $test_dir, 'Test dir exists');
+
+#< PROCESSOR PROFILE >#
 my %pp_params = (
     id => -5000,
     name => '16S Composition-Test 27F to 1391R [AB] (907R)',
@@ -38,6 +42,9 @@ isa_ok($pp, 'Genome::ProcessingProfile::AmpliconAssembly');
 is($pp->name, $pp_params{name}, "Processing profile is named '$pp_params{name}'");
 is($pp->type_name, $pp_params{type_name}, "Processing profile is for '$pp_params{type_name}'");
 
+#< MODEL >#
+my $data_dir = "$test_dir/-5000";
+File::Path::rmtree($data_dir) if -e $data_dir;
 my %model_params = (
     id => -5000,
     genome_model_id => -5000,
@@ -45,19 +52,30 @@ my %model_params = (
     subject_name => '155DA1b',
     subject_type => 'dna_resource_item_name',
     processing_profile_id => $pp->id,
-    data_directory => '/gsc/var/cache/testsuite/data/Genome-Model-Command-Build-Amplicon-Assembly/-5000',
+    data_directory => $data_dir,
 );
 my $model = Genome::Model::AmpliconAssembly->create(%model_params);
 ok($model, 'Created a model');
 isa_ok($model,'Genome::Model::AmpliconAssembly');
 is($pp->name, $pp_params{name}, "Model is named '$model_params{name}'");
 is($pp->type_name, $pp_params{type_name}, "Model is a '$pp_params{type_name}'");
-
-# Remove and recreate previous test dirs
-File::Path::rmtree($model->edit_dir) if -e $model->edit_dir;
-mkdir $model->edit_dir;
-File::Path::rmtree($model->phd_dir) if -e $model->phd_dir;
-mkdir $model->phd_dir;
+my $run_name = '1jan09.1pmaa1';
+my $inst_data = Genome::InstrumentData->create(
+    run_name => $run_name,
+    sequencing_platform => 'sanger',
+    seq_id => $run_name,
+    sample_name => 'unknown',
+    subset_name => 1,
+    library_name => 'unknown',
+    full_path => "$test_dir/$run_name",
+);
+ok($inst_data, 'Created instrument data');
+my $ida = Genome::Model::InstrumentDataAssignment->create(
+    model_id => $model->id,
+    instrument_data_id => $inst_data->id,
+    first_build_id => 1,
+);
+ok($ida, sprintf('Linked instrument data assignment (%s) to model (%s)', $inst_data->id, $model->id));
 
 my $builder = Genome::Model::Command::Build::AmpliconAssembly->create(
     model_id => $model->id,
@@ -81,8 +99,13 @@ my $expected_event_count = 6;
 is(@events, $expected_event_count, "Scheduled $expected_event_count events");
 
 for my $event ( @events ) {
-    ok($event->execute, sprintf('Executed event (%s %s)', $event->id, $event->event_type));
+    ok($event->execute, sprintf('Executed event (%s %s)', $event->id, $event->event_type))
+        or die; # if one of these fails just die
 }
+
+# Remove primer fasta files made for processing profile
+unlink $pp->sense_primer_fasta;
+unlink $pp->anti_sense_primer_fasta;
 
 exit;
 
