@@ -4,6 +4,29 @@ use strict;
 use warnings;
 use Benchmark;
 use DBI;
+use Genome;
+
+class Genome::Utility::AceSupportQA {
+    is => 'UR::Object',
+    has => [
+    ],
+};
+
+
+sub help_brief {
+    "Check an ace file to see if it looks good";
+}
+sub help_detail {
+    return <<EOS 
+EOS
+}
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+        
+    return $self;
+}
 
 #Generate a refseq;
 use Bio::DB::Fasta;
@@ -14,60 +37,58 @@ my $refdb = Bio::DB::Fasta->new($RefDir); #$refdb is the entire Hs_build36_mask1
 my $fix_invalid_files;
 
 sub ace_support_qa {
-    my $class = shift;
+    my $self = shift;
     my $ace_file = shift; ##Give full path to ace file including ace file name
 
     my $t0 = new Benchmark;
-
     
     unless (-s $ace_file) {
-        warn "Ace file $ace_file does not exist";
+        $self->error_message("Ace file $ace_file does not exist");
         return;
     }
     
     #invalid_files will be a hash of trace names and file type that are broken.
-    my ($invalid_files,$project) = &parse_ace_file($ace_file); ##QA the read dump, phred and poly files
+    my ($invalid_files,$project) = $self->parse_ace_file($ace_file); ##QA the read dump, phred and poly files
 
-    my ($refcheck) = &check_ref($project);
+    my ($refcheck) = $self->check_ref($project);
     unless ($refcheck) { 
-        print qq(The reference sequence was not checked for correctness\n);
+        $self->error_message("The reference sequence was not checked for correctness");
     }
 
-    my $run;
+    my $return_value;
     if ($invalid_files) {
         if ($refcheck =~ /Sequence doesn\'t look good/) {
-            $run = qq(The reference sequence as well as some of the trace files are invalid for $project and should be fixed prior to analysis\n);
+            $self->error_message("The reference sequence as well as some of the trace files are invalid for $project and should be fixed prior to analysis");
+            $return_value = 0;
         } else {
-            $run = qq(There are invalid files for $project that should be fixed prior to analysis\n);
+            $self->error_message("There are invalid files for $project that should be fixed prior to analysis");
+            $return_value = 0;
         }
-        print qq(Here is a list of reads for $project with either a broken chromat, phd, or poly file\n);
+        $self->error_message("Here is a list of reads for $project with either a broken chromat, phd, or poly file");
+        
         foreach my $read (sort keys %{$invalid_files}) {
-            print "$read";
-            foreach my $file_type (sort keys %{$invalid_files->{$read}}) {
-                print "\t$file_type";
-            }
-            print "\n";
+            $self->error_message($read . join("\t", sort keys %{$invalid_files->{$read}}));
         }
-    } else {
 
+    } else {
         if ($refcheck =~ /Sequence doesn\'t look good/) {
-            $run = qq(The reference sequence is invalid for $project and should be fixed prior to analysis\n);
+            $self->error_message("The reference sequence is invalid for $project and should be fixed prior to analysis");
+            $return_value = 0;
         } else {
-            $run = 1;
+            $return_value = 1;
         }
     }
 
     my $t1 = new Benchmark;
     my $td = timediff($t1, $t0);
-    print "the code took:",timestr($td),"\n";
+    $self->status_message("AceSupportQA took: " . timestr($td));
 
-    if ($run) {
-        return ($run);
-    }
+    return $return_value;
 }
 
 sub check_ref {
-    my ($assembly_name) = @_;
+    my $self = shift;
+    my $assembly_name = shift;
     my $amplicon_tag = GSC::AssemblyProject->get_reference_tag(assembly_project_name => $assembly_name);
 
     unless($amplicon_tag){
@@ -94,9 +115,9 @@ sub check_ref {
         print qq(the assembly_length doesn\'t jive with the spread on the coordinates\n); 
     }
 
-    my $sequence = &get_ref_base($chromosome,$start,$stop); ##this will come reverse complemented if the $strand eq "-"
+    my $sequence = $self->get_ref_base($chromosome,$start,$stop); ##this will come reverse complemented if the $strand eq "-"
     if ($strand eq "-") {
-        my $revseq = &reverse_complement_sequence ($sequence); 
+        my $revseq = $self->reverse_complement_sequence ($sequence); 
         $sequence = $revseq;
     }
     my $result;
@@ -110,7 +131,9 @@ sub check_ref {
 
 
 sub get_ref_base {
+    my $self = shift;
     my ($chr_name,$chr_start,$chr_stop) = @_;
+
     my $seq = $refdb->seq($chr_name, $chr_start => $chr_stop);
     $seq =~ s/([\S]+)/\U$1/;
     return $seq;
@@ -118,7 +141,9 @@ sub get_ref_base {
 }
 
 sub reverse_complement_sequence {
-    my ($seq) = @_;
+    my $self = shift;
+    my $seq = shift;
+
     my $seq_1 = new Bio::Seq(-seq => $seq);
     my $revseq_1 = $seq_1->revcom();
     my $revseq = $revseq_1->seq;
@@ -127,9 +152,10 @@ sub reverse_complement_sequence {
 }
 
 sub parse_ace_file {
-    my ($ace_file) = @_;
-    my ($traces_fof);
+    my $self = shift;
+    my $ace_file = shift;
 
+    my $traces_fof;
     my @da = split(/\//,$ace_file);
     my $ace_name = pop(@da);
 
@@ -158,11 +184,12 @@ sub parse_ace_file {
     }
 
     unless ($contig_count == 1) {print qq($project Contig count is equal to $contig_count\n);}
-    my ($invalid_files)=&check_traces_fof($edit_dir,$project_dir,$chromat_dir,$phd_dir,$poly_dir,$traces_fof,$ace_file);
+    my ($invalid_files)=$self->check_traces_fof($edit_dir,$project_dir,$chromat_dir,$phd_dir,$poly_dir,$traces_fof,$ace_file);
     return ($invalid_files,$project);
 }
 
 sub check_traces_fof {
+    my $self = shift;
     my ($edit_dir,$project_dir,$chromat_dir,$phd_dir,$poly_dir,$traces_fof,$ace_file) = @_;
 
     my ($no_trace_file,$no_phd_file,$no_poly_file,$empty_trace_file,$empty_poly_file,$empty_phd_file,$ncntrl_reads,$read_count,$repaired_file);
@@ -302,7 +329,7 @@ sub check_traces_fof {
     if ($check_phd_time_stamps) {
         if ($fix_invalid_files) {
             print qq(will attempt to sync the phd file time stamps with the ace file\n);
-            ($ace_file)=&sync_phd_time_stamps($ace_file);
+            ($ace_file)=$self->sync_phd_time_stamps($ace_file);
 
             unless (-s $ace_file) {
                 die "The synced ace file $ace_file doesnt exist or has zero size";
@@ -317,15 +344,15 @@ sub check_traces_fof {
     return ($invalid_files);
 }
 
-
 sub sync_phd_time_stamps {   ## this isn't being used and it doesn't appear to do what it should
+    my $self = shift;
+    my $ace = shift;
 
     #addapted from ~kkyung/bin/fix_autojoin_DS_line.pl
 
     use IO::File;
     use Data::Dumper;
 
-    my ($ace) = @_;
     system qq(cp $ace $ace.presync);
     open(NEWACE,">$ace.synced");
 
