@@ -37,7 +37,7 @@ sub execute {
 
     my $now = UR::Time->now;
     my $model = $self->model; 
-    my $maplist_dir = $self->parent_event->accumulated_alignments_directory;
+    my $maplist_dir = $self->build->accumulated_alignments_directory;
     unless (-e $maplist_dir) {
         unless ($self->create_directory($maplist_dir)) {
             #doesn't exist can't create it...quit
@@ -105,7 +105,7 @@ sub execute {
         my @found_maps;
         for my $read_set_link (@read_sets) {
             unless(defined $read_set_link->first_build_id) {
-                $read_set_link->first_build_id($self->parent_event_id);
+                $read_set_link->first_build_id($self->build_id);
             }
             
             my $read_set = $read_set_link->read_set;
