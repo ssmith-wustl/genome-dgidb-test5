@@ -4,11 +4,9 @@ use strict;
 use warnings;
 
 use File::Temp;
-use Test::More tests => 32;
-use IO::Socket;
-use IO::Select;
+use Test::More tests => 28;
 
-use above "Genome";
+use above 'Genome';
 
 require_ok('Genome::Model::Command::Build');
 BEGIN {
@@ -42,55 +40,33 @@ my $model_wo_read_sets = Genome::Model::ReferenceAlignment->create_mock(
                                                            name => 'test',
                                                            data_directory => $tmp_dir,
                                                            read_sets => [],
+                                                           type_name => $pp->type_name,
+                                                           sequencing_platform => $pp->sequencing_platform,
                                                        );
 isa_ok($model_wo_read_sets,'Genome::Model');
 
-# The call to Solexa->create() below is expected to fail.  Normally we'd just set the
-# errror messages to queue up and interrogate them later, but since the create() call 
-# doesn't return aything, we instead need to set up an alternate file handle for the
-# errors to get printed to
-my $read = IO::Handle->new;
-my $write = IO::Handle->new;
-pipe($read,$write);
-$write->autoflush(1);
-Genome::Model::Command::Build::ReferenceAlignment::Solexa->dump_error_messages($write);
+# The call to Solexa->create() below is expected to fail.
 my $build_wo_reads = Genome::Model::Command::Build::ReferenceAlignment::Solexa->create(model => $model_wo_read_sets);
-$write->close();
-
 ok(!$build_wo_reads,'build should fail create with no read sets');
 
-my $select = IO::Select->new($read);
-if ($select->can_read(0)) {
-    my @errors = $read->getlines();
-    chomp(@errors);
-    ok(scalar(@errors), 'build generated at least one error');
-    is($errors[0], "ERROR: No read sets have been added to model: test", 'Error message line 1 ok');
-    is($errors[1], "ERROR: The following command will add all available read sets:", 'Error message line 2 ok');
-    like($errors[2], qr(^genome-model add-reads --model-id=-\w+ --all), 'Error message line 3 ok');
-
-} else {
-    ok(0, "Did not see error messages");
-}
-$read->close;
-Genome::Model::Command::Build::ReferenceAlignment::Solexa->dump_error_messages(1);
-#$select->close;
 my $mock_pp = Genome::ProcessingProfile->create_mock(
                                                      id => --$bogus_id,
                                                      name => 'test_pp_name',
-                                                     type_name => 'test_type_name',
+                                                     type_name => 'abstract base test',
                                                  );
 isa_ok($mock_pp,'Genome::ProcessingProfile');
 my $mock_model = Genome::Model->create_mock(
-                                                   id => --$bogus_id,
-                                                   genome_model_id => $bogus_id,
-                                                   subject_type => 'test_subject_type',
-                                                   subject_name => 'test_sample_name',
-                                                   processing_profile_id => $mock_pp->id,
-                                                   last_complete_build_id => 0,
-                                                   name => 'test_w_read_sets',
-                                                   data_directory => $tmp_dir,
-                                                   latest_build_directory => $tmp_dir,
-                                               );
+                                            id => --$bogus_id,
+                                            genome_model_id => $bogus_id,
+                                            subject_type => 'test_subject_type',
+                                            subject_name => 'test_sample_name',
+                                            processing_profile_id => $mock_pp->id,
+                                            last_complete_build_id => 0,
+                                            name => 'test_w_read_sets',
+                                            data_directory => $tmp_dir,
+                                            latest_build_directory => $tmp_dir,
+                                            type_name => $mock_pp->type_name,
+                                        );
 isa_ok($mock_model,'Genome::Model');
 my @run_chunks;
 for (1 .. 10) {
@@ -104,7 +80,6 @@ for (1 .. 10) {
     push @run_chunks, $run_chunk;
 }
 $mock_model->set_list('run_chunks',@run_chunks);
-$mock_model->set_always('build_subclass_name','abstract base test');
 my @read_sets;
 for my $run_chunk ($mock_model->run_chunks) {
     my $read_set = Genome::Model::ReadSet->create_mock(
@@ -132,9 +107,9 @@ my $abstract_build = Genome::Model::Command::Build::AbstractBaseTest->create(
                                                                          );
 isa_ok($abstract_build,'Genome::Model::Command::Build::AbstractBaseTest');
 
-$abstract_build->dump_error_messages(0);
-$abstract_build->dump_warning_messages(0);
-$abstract_build->dump_status_messages(0);
+$abstract_build->dump_error_messages($user_interactive_mode);
+$abstract_build->dump_warning_messages($user_interactive_mode);
+$abstract_build->dump_status_messages($user_interactive_mode);
 $abstract_build->queue_error_messages(1);
 $abstract_build->queue_warning_messages(1);
 $abstract_build->queue_status_messages(1);

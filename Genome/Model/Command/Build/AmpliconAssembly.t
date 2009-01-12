@@ -92,7 +92,7 @@ $builder->dump_error_messages(1);
 
 my @events = sort { $b->genome_model_event_id <=> $a->genome_model_event_id } Genome::Model::Event->get(
     model_id => $model->id,
-    parent_event_id => $builder->genome_model_event_id,
+    build_id => $builder->build_id,
     event_status => 'Scheduled',
 );
 my $expected_event_count = 6;

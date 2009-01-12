@@ -28,41 +28,40 @@ my @mock_run_chunks = map {
                 $run_chunk;
            }
            ( '1', '2' );
-    
-
-
-
-
 
 my @mock_read_sets = map {
-                 my $read_set = Test::MockObject->new();
-                 $read_set->set_isa('Genome::Model::ReadSet');
-                 $read_set->set_always('read_set_id', $_->{'read_set_id'});
-                 $read_set->set_always('model_id', $_->{'model_id'});
-                 $read_set->set_always('first_build_id', $_->{'first_build_id'});
+                 my $read_set = Genome::Model::ReadSet->create_mock(
+                                                                    id => $_->{'read_set_id'} .' '. $_->{'model_id'},
+                                                                    read_set_id => $_->{'read_set_id'},
+                                                                    model_id => $_->{'model_id'},
+                                                                    first_build_id => $_->{'first_build_id'},
+                                                                );
                  $read_set->set_list('read_set_alignment_files_for_refseq', @{$_->{'files'}});
                  $read_set->set_always('read_set', shift @mock_run_chunks);
                  $read_set;
              }
              ( { read_set_id => 'A', model_id => 12345, first_build_id => undef, files => ["$MAP_FILE_DIR/1", "$MAP_FILE_DIR/2"] },
                { read_set_id => 'B', model_id => 12345, first_build_id => 98765, files => ["$MAP_FILE_DIR/3", "$MAP_FILE_DIR/4"] } );
-              
 
-my $model = Test::MockObject->new();
-$model->set_isa('Genome::Model');
-$model->set_always('genome_model_id', 12345);
-$model->set_always('id', 12345);
+my $pp = Genome::ProcessingProfile->create_mock(id => 12344);
+my $model = Genome::Model->create_mock(
+                                       id => 12345,
+                                       genome_model_id => 12345,
+                                       name => 'test_model_name',
+                                       subject_name => 'test_subject_name',
+                                       subject_type => 'test_subject_type',
+                                       processing_profile_id => $pp->id,
+                                   );
 $model->set_list('read_sets', @mock_read_sets);
 $model->set_always('run_chunks', undef);
 $model->set_always('read_aligner_name','maq0.6.3');
-$UR::Context::all_objects_loaded->{'Genome::Model'}->{12345} = $model;
 
-my $parent_event = Test::MockObject->new();
-$parent_event->set_isa('Genome::Model::Event');
-$parent_event->set_always('accumulated_alignments_directory','/tmp/blah');
-$parent_event->set_always('genome_model_event_id', 8675309);
-$parent_event->set_always('id', 8675309);
-$UR::Context::all_objects_loaded->{'Genome::Model::Event'}->{8675309} = $parent_event;
+my $build = Genome::Model::Build->create_mock(
+                                              id => 8675309,
+                                              build_id => 8675309,
+                                              model_id => 12345,
+                                          );
+$build->set_always('accumulated_alignments_directory','/tmp/blah');
 
 GSC::RunLaneSolexa->class;
 GSC::RunLaneSolexa->all_objects_are_loaded(1);
@@ -70,7 +69,7 @@ GSC::RunLaneSolexa->all_objects_are_loaded(1);
 my $merge = Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::Maq->create(
                 model => $model,
                 ref_seq_id => 1,
-                parent_event => $parent_event,
+                build => $build,
             );
 ok($merge, 'Created a Mergealignments::Maq command object');
 ok($merge->bsub_rusage(), 'inherits bsub_rusage method');

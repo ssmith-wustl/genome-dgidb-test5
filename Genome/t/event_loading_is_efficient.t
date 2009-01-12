@@ -37,7 +37,7 @@ $load_count = 0;
 # Note that AddReads is now a real, logged event...
 @events = Genome::Model::Command::AddReads->get(model_id => $model_id);
 ok(scalar(@events) , "Genome::Model::Command::AddReads->get() correctly returned at least one event for model_id $model_id");
-is($query_count, 2, "get() generated 2 queries, one for the main class, and one for one subclass with a table (build)");
+is($query_count, 1, "get() generated 1 query");
 ok($load_count, "at least one object was loaded by the get()");
  
 $query_count = 0;
