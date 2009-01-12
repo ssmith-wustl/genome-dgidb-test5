@@ -63,7 +63,7 @@ sub cleanup_transient_properties {
 sub snp_report_file_base {
     my $self = shift;
 
-    return sprintf('%s/%s_snp', $self->parent_event->_reports_dir, $self->ref_seq_id);
+    return sprintf('%s/%s_snp', $self->build->_reports_dir, $self->ref_seq_id);
 }
 
 sub snp_report_file {
@@ -94,7 +94,7 @@ sub snp_metrics_report_file {
 sub indel_report_file_base {
     my $self = shift;
 
-    return sprintf('%s/%s_indel', $self->parent_event->_reports_dir, $self->ref_seq_id);
+    return sprintf('%s/%s_indel', $self->build->_reports_dir, $self->ref_seq_id);
 }
 
 sub indel_report_file {
@@ -171,12 +171,12 @@ sub execute {
     
     my $chromosome_name = $self->ref_seq_id;
     my $model = $self->model;
-    my ($detail_file) = $self->parent_event->_variant_detail_files($chromosome_name);
+    my ($detail_file) = $self->build->_variant_detail_files($chromosome_name);
     my $log_dir = $self->resolve_log_directory;
 
     $DB::single = $DB::stopper; # when debugging, stop here...
 
-    my ($reports_dir) = $self->parent_event->_reports_dir();
+    my ($reports_dir) = $self->build->_reports_dir();
     print "$reports_dir\n";
     unless (-d $reports_dir) {
         $self->create_directory($reports_dir);
