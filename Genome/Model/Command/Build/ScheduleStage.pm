@@ -18,7 +18,7 @@ class Genome::Model::Command::Build::ScheduleStage {
                          is_optional => 1,
                      },
             build   => {
-                        is => 'Genome::Model::Command::Build',
+                        is => 'Genome::Model::Build',
                         id_by => 'build_id',
                         is_optional => 1,
                     },
@@ -50,9 +50,9 @@ sub create {
     my $model = $self->model;
     unless ($self->build_id) {
         unless ($model->current_running_build_id) {
-            my $new_build = Genome::Model::Command::Build->create(model_id => $model->id);
-            unless ($new_build) {
-                $self->error_message('Failed to launch new build');
+            my $builder = Genome::Model::Command::Build->create(model_id => $model->id);
+            unless ($builder) {
+                $self->error_message('Failed to launch new builder');
                 return;
             }
         }
@@ -74,7 +74,16 @@ sub execute {
     my $model = $self->model;
 
     my $build = $self->build;
-    my @stages = $build->stages;
+    unless ($build) {
+        $self->error_message('No build found with id '. $self->build_id);
+        return;
+    }
+    my $builder = $build->builder;
+    unless ($builder) {
+        $self->error_message('Builder event not found for model '. $self->model_id .' and build '. $self->build_id);
+        return;
+    }
+    my @stages = $builder->stages;
 
     my $index = undef;
     for (my $i = 0; $i < scalar(@stages); $i++) {
@@ -89,21 +98,21 @@ sub execute {
     }
     unless ($index == 0) {
         my $prior_stage_name = $stages[$index - 1];
-        unless ($build->verify_successful_completion_for_stage($prior_stage_name,$self->force_flag)) {
+        unless ($builder->verify_successful_completion_for_stage($prior_stage_name,$self->force_flag)) {
             $self->error_message('Failed to verify completion of prior stage '. $prior_stage_name);
             return;
         }
     }
-    my @existing_events = $build->events_for_stage($self->stage_name);
+    my @existing_events = $builder->events_for_stage($self->stage_name);
     if (scalar(@existing_events)) {
         $self->error_message('Found '. scalar(@existing_events) .' existing events for stage '.
                              $self->stage_name);
         return;
     }
-    my @scheduled_objects = $build->_schedule_stage($self->stage_name);
+    my @scheduled_objects = $builder->_schedule_stage($self->stage_name);
     unless (scalar(@scheduled_objects)) {
         $self->error_message('Failed to schedule stage for build('. $self->build_id ."). Objects not scheduled for classes:\n".
-                             join("\n",$build->classes_for_stage($self->stage_name)));
+                             join("\n",$builder->classes_for_stage($self->stage_name)));
         return;
     }
     if ($self->auto_execute) {
