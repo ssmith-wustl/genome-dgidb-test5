@@ -39,6 +39,7 @@ class Genome::Model::Event {
         retry_count      => { is => 'NUMBER', len => 3 },
         status_detail    => { is => 'VARCHAR2', len => 200 },
         parent_event_id  => { is => 'NUMBER', len => 10, implied_by => 'parent_event' },
+        build            => { is => 'Genome::Model::Build', id_by => 'build_id' },
         prior_event_id   => { is => 'NUMBER', len => 10, implied_by => 'prior_event' },
         should_calculate => { calculate_from => 'event_status',
                          calculate => q(
@@ -48,8 +49,8 @@ class Genome::Model::Event {
                                  return 1;
                              ), 
                          doc => 'a flag to determine metric calculations' },
-        build_directory  => { calculate_from => 'parent_event',
-                         calculate => q( return $parent_event->data_directory ), 
+        build_directory  => { calculate_from => 'build',
+                         calculate => q( return $build->data_directory ),
                          doc => 'the directory where this step should put data' },
     ],
     has_many_optional => [
@@ -770,7 +771,7 @@ sub lsf_job_name {
     unless ($stage_name) {
         $self->error_message('Failed to resolve stage name for event('.
                              $self->id .','. $self->class .') in build('.
-                             $build->build_id .','. $build->class .')');
+                             $build->id .','. $build->class .')');
         die;
     }
     return $self->model_id .'_'. $self->parent_event_id .'_'. $stage_name .'_'. $self->id;
