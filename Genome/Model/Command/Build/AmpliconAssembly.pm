@@ -49,17 +49,6 @@ sub create {
         return;
     }
 
-    unless ( $self->model->type_name eq 'amplicon assembly' ) {
-        $self->error_message( 
-            sprintf(
-                'Incompatible model type (%s) to build as an amplicon assembly',
-                $self->model->type_name,
-            )
-        );
-        $self->delete;
-        return;
-    }
-
     return $self;
 }
 
