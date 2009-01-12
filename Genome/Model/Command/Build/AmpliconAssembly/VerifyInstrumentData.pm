@@ -52,7 +52,7 @@ sub _dump_instrument_data {
                 );
                 return;
             }
-            $ida->first_build_id( $self->parent_event_id );
+            $ida->first_build_id( $self->build_id );
         }
 
         my $instrument_data_dir = $ida->instrument_data->resolve_full_path;
