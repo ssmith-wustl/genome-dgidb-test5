@@ -498,7 +498,7 @@ $DB::single = $DB::stopper;
     if ($self->alignment_data_available_and_correct) {
         $self->status_message("existing alignment data is available and deemed correct");
         unless($read_set_link->first_build_id) {
-            $read_set_link->first_build_id($self->parent_event_id);
+            $read_set_link->first_build_id($self->build_id);
         }
         return 1;
     }
@@ -661,7 +661,7 @@ $DB::single = $DB::stopper;
     } 
     $self->generate_metric($self->metrics_for_class);
     $read_set_link=$self->read_set_link;
-    $read_set_link->first_build_id($self->parent_event_id);
+    $read_set_link->first_build_id($self->build_id);
     return 1;
 }
 
