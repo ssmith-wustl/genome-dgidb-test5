@@ -4,8 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
-use Genome::Model;
 
 class Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations::BreakPointRead454 {
     is => [
@@ -14,9 +12,9 @@ class Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations::
     has => [
             merged_alignments_file => { via => 'prior_event' },
             merged_fasta_file => {
-                                  calculate_from => ['parent_event', 'model'],
+                                  calculate_from => ['build', 'model'],
                                   calculate => q|
-                                          return $parent_event->accumulated_alignments_directory .'/'. $model->id .'.fa';
+                                          return $build->accumulated_alignments_directory .'/'. $model->id .'.fa';
                                   |,
                               },
             insertions_file => { via => 'prior_event' },
