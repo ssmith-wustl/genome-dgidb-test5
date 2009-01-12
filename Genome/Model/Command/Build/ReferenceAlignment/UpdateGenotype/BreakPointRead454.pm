@@ -38,7 +38,7 @@ sub execute {
     my $model = $self->model;
     my $break_point_path = 'perl ~jwalker/svn/perl_modules/breakPointRead/breakPointRead454.pl';
 
-    my $merged_alignments_file = $self->parent_event->merged_alignments_file;
+    my $merged_alignments_file = $self->build->merged_alignments_file;
     unless ($merged_alignments_file && -s $merged_alignments_file) {
         $self->error_message("merged alignments file '$merged_alignments_file' does not exist or has zero size");
         return;
