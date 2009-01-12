@@ -26,7 +26,7 @@ class Genome::Model::EventWithRefSeq {
 sub desc {
     my $self = shift;
     my $desc = $self->SUPER::desc;
-    $desc .= " for refseq " . $self->ref_seq_id . " on build " . $self->parent_event_id;
+    $desc .= " for refseq " . $self->ref_seq_id . " on build " . $self->build_id;
     return $desc;
 }
 
@@ -106,9 +106,9 @@ sub resolve_accumulated_alignments_filename {
         #find maplists that we want to merge
         my @maplists;
         if ($ref_seq_id) {
-            @maplists = $self->parent_event->maplist_file_paths(%p);
+            @maplists = $self->build->maplist_file_paths(%p);
         } else {
-            @maplists = $self->parent_event->maplist_file_paths();
+            @maplists = $self->build->maplist_file_paths();
         }
         unless (@maplists) {
             $self->error_message("Failed to find maplists!");
