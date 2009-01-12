@@ -19,9 +19,9 @@ class Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Maq {
     has => [
         analysis_base_path => {
             doc => "the path at which all analysis output is stored",
-            calculate_from => ['parent_event'],
+            calculate_from => ['build'],
             calculate => q|
-                return $parent_event->maq_snp_related_metric_directory;
+                return $build->maq_snp_related_metric_directory;
             |,
             is_constant => 1,
         },
@@ -84,7 +84,7 @@ sub _genotype_detail_name {
 }
 sub genotype_detail_file {
     my $self = shift;
-    return sprintf("%s/%s", $self->parent_event->maq_snp_related_metric_directory, $self->_genotype_detail_name);
+    return sprintf("%s/%s", $self->build->maq_snp_related_metric_directory, $self->_genotype_detail_name);
 }
 # Converts between the 1-letter genotype code into
 # its allele constituients
@@ -152,7 +152,7 @@ sub execute {
         chmod 02775, $self->analysis_base_path;
     }
 
-    my ($assembly_output_file) =  $self->parent_event->_consensus_files($self->ref_seq_id);
+    my ($assembly_output_file) =  $self->build->_consensus_files($self->ref_seq_id);
     unless ($self->check_for_existence($assembly_output_file)) {
         $self->error_message("Assembly output file $assembly_output_file was not found.  It should have been created by a prior run of update-genotype-probabilities maq");
         return;
