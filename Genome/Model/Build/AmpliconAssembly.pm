@@ -1,4 +1,4 @@
-package Genome::Model::Command::Build::AmpliconAssembly;
+package Genome::Model::Build::AmpliconAssembly;
 
 use strict;
 use warnings;
