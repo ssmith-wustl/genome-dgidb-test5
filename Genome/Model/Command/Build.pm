@@ -4,48 +4,65 @@ use strict;
 use warnings;
 
 use Genome;
-use YAML;
 
 class Genome::Model::Command::Build {
     is => [ 'Genome::Model::Event' ],
-    type_name => 'genome model build',
-    table_name => 'GENOME_MODEL_BUILD',
-    id_by => [
-        build_id => { is => 'NUMBER', len => 10, constraint_name => 'GMB_GME_FK' },
-    ],
     has => [
-        model          => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GMB_GMM_FK' },
-        data_directory => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
+        data_directory => { via => 'build' },
         auto_execute   => { is => 'Boolean', default_value => 1, is_transient => 1, 
                          doc => 'The build will execute genome-model run-jobs before completing' },
         hold_run_jobs  => { is => 'Boolean', default_value => 0, is_transient => 1, 
                          doc => 'A flag to hold all lsf jobs that are scheduled in run-jobs' },
     ],
     doc => "build the model with currently assigned instrument data according to the processing profile",
-    schema_name => 'GMSchema',
-    data_source => 'Genome::DataSource::GMSchema',
 };
 
 sub sub_command_sort_position { 3 }
 
 sub create {
     my $class = shift;
+
     my $self = $class->SUPER::create(@_);
     unless ($self) {
-        $class->error_message("Failed to create build: " . $class->error_message());
+        $class->error_message("Failed to create build command: " . $class->error_message());
         return;
     }
 
     my $model = $self->model;
-
-    if ($model->current_running_build_id  && $model->current_running_build_id ne $self->build_id) {
-        $self->error_message('Build('. $model->current_running_build_id .') is already running');
-        die;
+    unless ($self->build_id) {
+        if ($model->current_running_build_id) {
+            $self->build_id($model->current_running_build_id);
+        } else {
+            my $build = Genome::Model::Build->create(
+                                                     model_id => $model->id,
+                                                 );
+            unless ($build) {
+                $self->error_message('Failed to create new build for model '. $model->id);
+                $self->delete;
+                return;
+            }
+            $self->build_id($build->id);
+        }
     }
-
-    $self->data_directory($self->resolve_data_directory);
-    $model->current_running_build_id($self->build_id);
-
+    my @builders = Genome::Model::Command::Build->get(
+                                                      model_id => $model->id,
+                                                      build_id => $model->current_running_build_id,
+                                                      genome_model_event_id => { operator => 'ne', value => $self->id},
+                                                  );
+    if (scalar(@builders)) {
+        my $error_message = 'Found '. scalar(@builders) .' builders that already exist for current running build '.
+            $model->current_running_build_id;
+        for (@builders) {
+            $error_message .= "\n". $_->desc ."\t". $_->event_status ."\n";
+        }
+        $self->error_message($error_message);
+        $self->delete;
+        return;
+    }
+    $self->date_scheduled(UR::Time->now());
+    $self->date_completed(undef);
+    $self->event_status('Running');
+    $self->user_name($ENV{'USER'});
     return $self;
 }
 
@@ -56,34 +73,13 @@ sub stages {
 }
 
 sub command_subclassing_model_property {
-    return 'build_subclass_name';
-}
-
-sub resolve_data_directory {
-    my $self = shift;
-    my $model = $self->model;
-    return $model->data_directory . '/build' . $self->id;
-}
-
-sub available_reports {
-    my $self=shift;
-    my $report_dir = $self->resolve_data_directory . '/reports/';
-    my %report_file_hash;
-    my @report_subdirs = glob("$report_dir/*");
-    my @reports;
-    for my $subdir (@report_subdirs) {
-        #we may be able to do away with touching generating class and just try to find reports that match this subdir name? not sure
-        my ($report_name) = ($subdir =~ /\/+reports\/+(.*)\/*/);
-        push @reports, Genome::Model::Report->create(model_id => $self->model->genome_model_id, name => $report_name);
-    }
-    return \@reports; 
+    return 'type_name';
 }
 
 sub execute {
     my $self = shift;
-
     if ($self->child_events) {
-        $self->error_message('Build '. $self->build_id .' already has child events. Will not build again.');
+        $self->error_message('Build '. $self->build_id .' already has child events. Will not execute the builder again.');
         return;
     }
     my $prior_job_name;
@@ -92,6 +88,7 @@ sub execute {
         unless (@scheduled_objects) {
             $self->error_message('Problem with build('. $self->build_id .") objects not scheduled for classes:\n".
                                  join("\n",$self->classes_for_stage($stage_name)));
+            $self->event_status('Running');
             die;
         }
 
@@ -173,7 +170,7 @@ sub events_for_class {
 
     my @class_events = $class->get(
                                    model_id => $self->model_id,
-                                   parent_event_id => $self->build_id,
+                                   build_id => $self->build_id,
                                );
 
     #Not sure if every class is supposed to have return of events
@@ -392,32 +389,6 @@ sub update_build_state {
     return 1;
 }
 
-sub X_force_stage {
-    my $self = shift;
-    my $stage_name = shift;
-
-    my @stages = $self->stages;
-    my $previous_stage_name;
-    my $found_stage_name;
-    for (my $i = 0; $i < scalar(@stages); $i++) {
-        if ($stages[$i] eq $stage_name) {
-            $found_stage_name = $stages[$i];
-            $previous_stage_name = $stages[$i-1];
-            last;
-        }
-    }
-    unless ($found_stage_name) {
-        $self->error_message("Failed to find stage '$stage_name'");
-        $self->error_message("Available stages are:\n". join("\n",@stages));
-        return;
-    }
-    if ($previous_stage_name) {
-        my $dependency = 'done('. $self->model_id .'_'. $self->build_id .'_'. $previous_stage_name .'*)';
-        my @classes = $self->classes_for_stage($previous_stage_name);
-        $self->_remove_dependency_for_classes($dependency,\@classes);
-    }
-}
-
 sub remove_dependencies_on_stage {
     my $self = shift;
     my $stage_name = shift;
@@ -449,7 +420,7 @@ sub _remove_dependency_for_classes {
             my @events = $class->get(
                                      event_status => 'Scheduled',
                                      model_id => $self->model_id,
-                                     parent_event_id => $self->build_id,
+                                     build_id => $self->build_id,
                                      user_name => $ENV{'USER'},
                                  );
             for my $event (@events) {
@@ -604,7 +575,7 @@ sub _schedule_command_classes_for_object {
                 $self->error_message($error_message);
                 die;
             }
-            $command->parent_event_id($self->id);
+            $command->build_id($self->build_id);
             $command->prior_event_id($prior_event_id);
             $command->schedule;
             $prior_event_id = $command->id;
@@ -698,7 +669,7 @@ sub delete {
         UR::Context->_sync_databases;
     }
     unless ($self->SUPER::delete()) {
-        $self->error_message('Failed to delete build '. $self->id);
+        $self->error_message('Failed to delete build event '. $self->id);
         return;
     }
     return 1;
