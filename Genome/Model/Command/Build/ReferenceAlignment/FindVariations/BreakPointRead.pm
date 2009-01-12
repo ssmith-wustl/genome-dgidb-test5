@@ -38,10 +38,10 @@ sub execute {
 
     my $model = $self->model;
 
-    my $cmd = 'bprStandalone --alignments-file '.  $self->parent_event->merged_alignments_file
-        .' --sample-name '. $model->subject_name .' --sff-file '. $self->parent_event->merged_sff_file
-            .' --output-dir '. $self->parent_event->accumulated_alignments_directory
-                .' --fasta-dir '. $self->parent_event->merged_fasta_dir .' --qual-dir '. $self->parent_event->merged_qual_dir;
+    my $cmd = 'bprStandalone --alignments-file '.  $self->build->merged_alignments_file
+        .' --sample-name '. $model->subject_name .' --sff-file '. $self->build->merged_sff_file
+            .' --output-dir '. $self->build->accumulated_alignments_directory
+                .' --fasta-dir '. $self->build->merged_fasta_dir .' --qual-dir '. $self->build->merged_qual_dir;
     $self->status_message('Running: '. $cmd);
     my $rv = system($cmd);
     unless ($rv == 0) {
