@@ -49,11 +49,11 @@ class Genome::Model {
     has_optional => [
         user_name                     => { is => 'VARCHAR2', len => 64 },
         creation_date                 => { is => 'TIMESTAMP(6)', len => 11 },
-        builds                      => { is => 'Genome::Model::Command::Build', reverse_id_by => 'model', is_many => 1 },
+        builds                      => { is => 'Genome::Model::Build', reverse_id_by => 'model', is_many => 1 },
         current_running_build_id    => { is => 'Number', len => 10 },
-        current_running_build       => { is => 'Genome::Model::Command::Build', id_by => 'current_running_build_id' },
+        current_running_build       => { is => 'Genome::Model::Build', id_by => 'current_running_build_id' },
         last_complete_build_id      => { is => 'Number', len=> 10 },
-        last_complete_build         => { is => 'Genome::Model::Command::Build', id_by => 'last_complete_build_id' },
+        last_complete_build         => { is => 'Genome::Model::Build', id_by => 'last_complete_build_id' },
 
         # TODO: refactor
         gold_snp_path => {
