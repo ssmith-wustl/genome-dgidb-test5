@@ -41,7 +41,7 @@ sub execute {
     my $model = $self->model;
 
     # Create the model alignments director if it does not exist
-    my $alignments_dir = $self->parent_event->accumulated_alignments_directory;
+    my $alignments_dir = $self->build->accumulated_alignments_directory;
     unless (-e $alignments_dir) {
         unless ($self->create_directory($alignments_dir)) {
             $self->error_message("Failed to create directory '$alignments_dir':  $!");
@@ -85,8 +85,8 @@ sub execute {
     my $cat_blat_tool = Genome::Model::Tools::Blat::Cat->create(
                                                                psl_files => \@alignment_files,
                                                                output_files => \@aligner_output_files,
-                                                               psl_path => $self->parent_event->merged_alignments_file,
-                                                               blat_output_path => $self->parent_event->merged_aligner_output_file,
+                                                               psl_path => $self->build->merged_alignments_file,
+                                                               blat_output_path => $self->build->merged_aligner_output_file,
                                                            );
     unless ($cat_blat_tool){
         $self->error_message('Failed to creaet tool to cat all blat alignments and aligner output');
@@ -100,7 +100,7 @@ sub execute {
 # Merge the sff files
     my $sfffile_tool = Genome::Model::Tools::454::Sfffile->create(
                                                                   in_sff_files => \@sff_files,
-                                                                  out_sff_file => $self->parent_event->merged_sff_file,
+                                                                  out_sff_file => $self->build->merged_sff_file,
                                                          );
     unless ($sfffile_tool) {
         $self->error_message('Failed to create tool to merge sff files');
@@ -111,7 +111,7 @@ sub execute {
         return;
     }
 
-    for my $dir ($self->parent_event->merged_fasta_dir, $self->parent_event->merged_qual_dir) {
+    for my $dir ($self->build->merged_fasta_dir, $self->build->merged_qual_dir) {
         unless (-e $dir) {
             unless ($self->create_directory($dir)) {
                 $self->error_message('Failed to create directory '. $dir);
@@ -120,10 +120,10 @@ sub execute {
         }
     }
 
-    my $sff_file = $self->parent_event->merged_sff_file;
+    my $sff_file = $self->build->merged_sff_file;
     my $fasta_convert = Genome::Model::Tools::454::Sffinfo->create(
                                                                    sff_file => $sff_file,
-                                                                   output_file => $self->parent_event->merged_fasta_file,
+                                                                   output_file => $self->build->merged_fasta_file,
                                                                    params => '-s',
                                                                );
     unless ($fasta_convert) {
@@ -137,7 +137,7 @@ sub execute {
 
     my $qual_convert = Genome::Model::Tools::454::Sffinfo->create(
                                                                    sff_file => $sff_file,
-                                                                   output_file => $self->parent_event->merged_qual_file,
+                                                                   output_file => $self->build->merged_qual_file,
                                                                    params => '-q',
                                                                );
     unless ($qual_convert) {
@@ -150,8 +150,8 @@ sub execute {
     }
 
     my $bio_db_convert = Genome::Model::Tools::BioDbFasta::Convert->create(
-                                                                           infile => $self->parent_event->merged_qual_file,
-                                                                           outfile => $self->parent_event->bio_db_qual_file,
+                                                                           infile => $self->build->merged_qual_file,
+                                                                           outfile => $self->build->bio_db_qual_file,
                                                                        );
     unless ($bio_db_convert) {
         $self->error_message('Could not create BioDbFasta quality conversion tool');
@@ -161,7 +161,7 @@ sub execute {
         $self->error_message('Failed to execute command '. $bio_db_convert->command_name);
         return;
     }
-    my $bio_db_build_fasta = Genome::Model::Tools::BioDbFasta::Build->create(dir => $self->parent_event->merged_fasta_dir);
+    my $bio_db_build_fasta = Genome::Model::Tools::BioDbFasta::Build->create(dir => $self->build->merged_fasta_dir);
     unless ($bio_db_build_fasta) {
         $self->error_message('Could not create BioDbFasta build tool for fasta dir');
         return;
@@ -170,7 +170,7 @@ sub execute {
         $self->error_message('Failed to execute command '. $bio_db_build_fasta->command_name);
         return;
     }
-    my $bio_db_build_qual = Genome::Model::Tools::BioDbFasta::Build->create(dir => $self->parent_event->merged_qual_dir);
+    my $bio_db_build_qual = Genome::Model::Tools::BioDbFasta::Build->create(dir => $self->build->merged_qual_dir);
     unless ($bio_db_build_qual) {
         $self->error_message('Could not create BioDbFasta build tool for qual dir');
         return;
@@ -179,7 +179,7 @@ sub execute {
         $self->error_message('Failed to execute command '. $bio_db_build_qual->command_name);
         return;
     }
-    my $blat_parser = Genome::Model::Tools::Blat::ParseAlignments->create(alignments_file => $self->parent_event->merged_alignments_file);
+    my $blat_parser = Genome::Model::Tools::Blat::ParseAlignments->create(alignments_file => $self->build->merged_alignments_file);
     unless ($blat_parser) {
         $self->error_message('Could not create blat parser tool');
         return;
@@ -205,32 +205,32 @@ sub execute {
 
 sub verify_successful_completion {
     my $self = shift;
-    unless (-s $self->parent_event->merged_alignments_file) {
-        $self->error_message('No merged alignments file: '. $self->parent_event->merged_alignments_file);
+    unless (-s $self->build->merged_alignments_file) {
+        $self->error_message('No merged alignments file: '. $self->build->merged_alignments_file);
         return;
     }
-    unless (-s $self->parent_event->merged_aligner_output_file) {
-        $self->error_message('No merged aligner output file: '. $self->parent_event->merged_aligner_output_file);
+    unless (-s $self->build->merged_aligner_output_file) {
+        $self->error_message('No merged aligner output file: '. $self->build->merged_aligner_output_file);
         return;
     }
-    unless (-s $self->parent_event->merged_fasta_file) {
-        $self->error_message('No merged fasta sequence file: '. $self->parent_event->merged_fasta_file);
+    unless (-s $self->build->merged_fasta_file) {
+        $self->error_message('No merged fasta sequence file: '. $self->build->merged_fasta_file);
         return;
     }
-    unless (-s $self->parent_event->merged_qual_file) {
-        $self->error_message('No merged fasta quality file: '. $self->parent_event->merged_qual_file);
+    unless (-s $self->build->merged_qual_file) {
+        $self->error_message('No merged fasta quality file: '. $self->build->merged_qual_file);
         return;
     }
-    unless (-s $self->parent_event->bio_db_qual_file) {
-        $self->error_message('No Bio::Db format quality file: '. $self->parent_event->bio_db_qual_file);
+    unless (-s $self->build->bio_db_qual_file) {
+        $self->error_message('No Bio::Db format quality file: '. $self->build->bio_db_qual_file);
         return;
     }
-    unless (-d $self->parent_event->merged_fasta_dir) {
-        $self->error_message('No Bio::Db fasta directory: '. $self->parent_event->merged_fasta_dir);
+    unless (-d $self->build->merged_fasta_dir) {
+        $self->error_message('No Bio::Db fasta directory: '. $self->build->merged_fasta_dir);
         return;
     }
-    unless (-d $self->parent_event->merged_qual_dir) {
-        $self->error_message('No Bio::Db qual directory: '. $self->parent_event->merged_qual_dir);
+    unless (-d $self->build->merged_qual_dir) {
+        $self->error_message('No Bio::Db qual directory: '. $self->build->merged_qual_dir);
         return;
     }
     return 1;
