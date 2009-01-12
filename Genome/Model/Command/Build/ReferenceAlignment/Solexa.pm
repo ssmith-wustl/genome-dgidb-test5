@@ -29,24 +29,6 @@ One build of a given reference-alignment model.
 EOS
 }
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-
-    my $model = $self->model;
-
-    my @read_sets = $model->read_sets;
-
-    unless (scalar(@read_sets) && ref($read_sets[0])  &&  $read_sets[0]->isa('Genome::Model::ReadSet')) {
-        $self->error_message('No read sets have been added to model: '. $model->name);
-        $self->error_message("The following command will add all available read sets:\ngenome-model add-reads --model-id=".
-        $model->id .' --all');
-        return;
-    }
-
-    return $self;
-}
-
 sub stages {
     my @stages = qw/
         alignment
@@ -102,55 +84,10 @@ sub variant_detection_objects {
     }
     return @subreferences_names;
 }
+
 sub verify_successful_completion_objects {
     my $self = shift;
     return 1;
-}
-sub extend_last_execution {
-    my ($self) = @_;
-
-    # like execute, but get the existing steps, see which ones never got executed, and generates those.
-
-    my @sub_command_classes = $self->subordinate_job_classes;
-
-    my $model = Genome::Model->get($self->model_id);
-    my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
-
-    unless (@subreferences_names > 0) {
-        @subreferences_names = ('all_sequences');
-    }
-
-    my @new_events;    
-    foreach my $ref (@subreferences_names) { 
-        my $prior_event_id = undef;
-        foreach my $command_class ( @sub_command_classes ) {
-            my $command = $command_class->get(
-                model_id => $self->model_id, 
-                ref_seq_id => $ref,
-                parent_event_id => $self->id,
-            );
-
-            unless ($command) {
-                $command = $command_class->create(
-                    model_id => $self->model_id, 
-                    ref_seq_id=>$ref,
-                    prior_event_id => $prior_event_id,
-                    parent_event_id => $self->id,
-                );
-                unless ($command) {
-                    die "Failed to create command object: $command_class!" . $command_class->error_message;
-                }
-                push @new_events, $command;
-                $command->parent_event_id($self->id);
-                $command->event_status('Scheduled');
-                $command->retry_count(0);
-            }
-
-            $prior_event_id = $command->id;
-        }
-    }
-
-    return @new_events; 
 }
 
 sub _get_sub_command_class_name{
