@@ -24,7 +24,7 @@ class Genome::Model::Event {
         event_type   => { is => 'VARCHAR2', len => 255 },
         event_status => { is => 'VARCHAR2', len => 32, is_optional => 1 },
         user_name    => { is => 'VARCHAR2', len => 64, is_optional => 1 },
-        build_id     => { is => 'NUMBER', len => 10, is_optional => 1 },
+        build_id     => { is => 'NUMBER', len => 10, implied_by => 'build', is_optional => 1 },
     ],
     has_optional => [
         read_set_id      => { is => 'NUMBER', len => 11, column_name => 'RUN_ID', implied_by => 'instrument_data' },
@@ -50,7 +50,7 @@ class Genome::Model::Event {
                              ), 
                          doc => 'a flag to determine metric calculations' },
         build_directory  => { calculate_from => 'build',
-                         calculate => q( return $build->data_directory ),
+                         calculate => q( return $build->data_directory ), 
                          doc => 'the directory where this step should put data' },
     ],
     has_many_optional => [
