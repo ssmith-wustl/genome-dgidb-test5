@@ -181,7 +181,7 @@ sub _verify_submitted_jobs {
         Genome::Model::Event->get(
             event_status => ['Running','Scheduled'],
             lsf_job_id => { operator => 'ne', value => undef },
-            parent_event_id => { operator => 'ne', value=>undef},
+            build_id => { operator => 'ne', value => undef},
             %addl_get_params
         );
     my %invalid_dependencies;
@@ -208,7 +208,7 @@ sub _verify_submitted_jobs {
             if (scalar( grep { /Dependency condition invalid or never satisfied;/ } @pending_reasons )) {
                 my $dependency_condition = $event->lsf_dependency_condition;
                 $self->warning_message("The dependency condition '$dependency_condition' is invalid or never satisfied for lsf job '$job_id'");
-                $invalid_dependencies{$event->model_id}{$event->parent_event_id} = 1;
+                $invalid_dependencies{$event->model_id}{$event->build_id} = 1;
             }
         }
     } # end while @queued_events
@@ -256,8 +256,8 @@ sub _schedule_scheduled_jobs {
                             sort { ($a->model_id <=> $b->model_id) || ($a->genome_model_event_id <=> $b->genome_model_event_id) }
                             Genome::Model::Event->get( event_status => 'Scheduled',
                                                        lsf_job_id => undef,
-                                                       parent_event_id => { operator => 'ne', value=>undef},
-                                                        # this means the job hasn't been submitted yet
+                                                       build_id => { operator => 'ne', value => undef},
+                                                       # this means the job hasn't been submitted yet
                                                        %addl_get_params);
     while (my $event = shift @launchable_events) {
         unless ($event->ref_seq_id || $event->read_set_id) {
@@ -314,7 +314,7 @@ sub _reschedule_failed_jobs {
                             #                                 event_type => $_->event_type,
                             #                                 date_scheduled => { operator => '>', value => $_->date_scheduled } ) }
                                 Genome::Model::Event->get(event_status => ['Failed','Crashed'],
-                                                          parent_event_id => { operator => 'ne', value=>undef},
+                                                          build_id => { operator => 'ne', value => undef},
                                                           user_name => $ENV{'USER'},
                                                           %addl_get_params);
 
