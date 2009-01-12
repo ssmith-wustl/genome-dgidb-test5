@@ -53,7 +53,7 @@ sub execute {
     # Merge the amplicons from all read sets
     my $amplicon_merge = Genome::Model::Tools::Blat::MergeAmplicons->create(
                                                                             amplicon_files => \@amplicon_header_files,
-                                                                            output_file => $self->parent_event->amplicon_header_file,
+                                                                            output_file => $self->build->amplicon_header_file,
                                                                         );
     unless ($amplicon_merge) {
         $self->error_message('Failed to create tool to merge amplicon header files');
@@ -65,11 +65,11 @@ sub execute {
     }
 
     my $cross_match_tool = Genome::Model::Tools::Blat::MatchToAmplicons->create(
-        output_dir => $self->parent_event->accumulated_alignments_directory,
-        alignments_file => $self->parent_event->merged_alignments_file .'.best-alignments.txt',
-        headers_file => $self->parent_event->amplicon_header_file,
+        output_dir => $self->build->accumulated_alignments_directory,
+        alignments_file => $self->build->merged_alignments_file .'.best-alignments.txt',
+        headers_file => $self->build->amplicon_header_file,
         sample_name => $model->subject_name,
-        sff_file => $self->parent_event->merged_sff_file,
+        sff_file => $self->build->merged_sff_file,
         run_crossmatch  => 1,
         overlap_bases  => 50,
     );
@@ -83,9 +83,9 @@ sub execute {
     }
 
     my $pyroscan_tool = Genome::Model::Tools::Blat::MatchToAmplicons->create(
-        output_dir => $self->parent_event->accumulated_alignments_directory,
-        alignments_file => $self->parent_event->merged_alignments_file .'.best-alignments.txt',
-        headers_file => $self->parent_event->amplicon_header_file,
+        output_dir => $self->build->accumulated_alignments_directory,
+        alignments_file => $self->build->merged_alignments_file .'.best-alignments.txt',
+        headers_file => $self->build->amplicon_header_file,
         sample_name => $model->subject_name,
         run_pyroscan  => 1,
         overlap_bases  => 50,
@@ -102,9 +102,9 @@ sub execute {
     }
 
     my $convert_tool = Genome::Model::Tools::Blat::MatchToAmplicons->create(
-        output_dir => $self->parent_event->accumulated_alignments_directory,
-        alignments_file => $self->parent_event->merged_alignments_file .'.best-alignments.txt',
-        headers_file => $self->parent_event->amplicon_header_file,
+        output_dir => $self->build->accumulated_alignments_directory,
+        alignments_file => $self->build->merged_alignments_file .'.best-alignments.txt',
+        headers_file => $self->build->amplicon_header_file,
         sample_name => $model->subject_name,
         convert_pyroscan  => 1,
         overlap_bases  => 50,
