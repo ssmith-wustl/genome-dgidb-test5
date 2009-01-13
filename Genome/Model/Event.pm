@@ -767,11 +767,16 @@ sub lsf_job_name {
         $self->error_message('No build object found for event('. $self->id .')');
         die;
     }
-    my $stage_name = $build->resolve_stage_name_for_class($self->class);
+    my $builder = $build->builder;
+    unless ($builder) {
+        $self->error_message('No build event found for build('. $self->build_id .')');
+        die;
+    }
+    my $stage_name = $builder->resolve_stage_name_for_class($self->class);
     unless ($stage_name) {
         $self->error_message('Failed to resolve stage name for event('.
-                             $self->id .','. $self->class .') in build('.
-                             $build->id .','. $build->class .')');
+                             $self->id .','. $self->class .') with build event('.
+                             $builder->id .','. $builder->class .')');
         die;
     }
     return $self->model_id .'_'. $self->build_id .'_'. $stage_name .'_'. $self->id;
