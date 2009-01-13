@@ -427,7 +427,7 @@ sub desc {
 
 our @process_logs;
 
-sub X_get_msgdata {
+sub _get_msgdata {
     my $self = $_[0];
     my $msgdata = $self->SUPER::_get_msgdata;
     return $msgdata if $msgdata->{gm_fh_set};
@@ -458,7 +458,7 @@ sub X_get_msgdata {
     $self->dump_status_messages($fh);
     $self->dump_warning_messages($fh);
     $self->dump_error_messages($fh);
- 
+
     return $msgdata;
 }
 
@@ -467,8 +467,8 @@ END {
         my ($name,$logfh,$fh) = @$_;
         eval { $fh->close; };
         eval { $logfh->close; };
-        if (-z $name) {
-            print STDERR "removing empty file $name\n";
+        if (-f $name) {
+            print STDERR "removing temporary log file $name\n";
             unlink $name;
         }
     }
@@ -762,9 +762,9 @@ sub metrics_for_class {
 
 sub lsf_job_name {
     my $self = shift;
-    my $build = $self->parent_event;
+    my $build = $self->build;
     unless ($build) {
-        $self->error_message('No build event for event('. $self->id .')');
+        $self->error_message('No build object found for event('. $self->id .')');
         die;
     }
     my $stage_name = $build->resolve_stage_name_for_class($self->class);
@@ -774,7 +774,7 @@ sub lsf_job_name {
                              $build->id .','. $build->class .')');
         die;
     }
-    return $self->model_id .'_'. $self->parent_event_id .'_'. $stage_name .'_'. $self->id;
+    return $self->model_id .'_'. $self->build_id .'_'. $stage_name .'_'. $self->id;
 }
 
 sub lsf_dependency_condition {
