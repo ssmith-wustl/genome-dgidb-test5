@@ -412,15 +412,6 @@ sub built_read_sets {
     return @built_read_sets;
 }
 
-
-sub last_complete_build {
-    my $self=shift;
-    if (defined $self->last_complete_build_id ) {
-        return Genome::Model::Command::Build->get($self->last_complete_build_id);
-    }
-    return;
-}
-
 sub comparable_normal_model {
     # TODO: a dba ticket is in place to make this a database-tracked item
     my $self = shift;
@@ -499,10 +490,10 @@ sub resolve_archive_file {
 sub latest_build_directory {
     my $self = shift;
     if (defined $self->current_running_build_id) {
-        my $build = Genome::Model::Command::Build->get($self->current_running_build_id);
+        my $build = Genome::Model::Build->get($self->current_running_build_id);
         return $build->data_directory;
     } elsif (defined $self->last_complete_build_id) {
-        my $build = Genome::Model::Command::Build->get($self->last_complete_build_id);
+        my $build = Genome::Model::Build->get($self->last_complete_build_id);
         return $build->data_directory;
     } else {
        die "no builds found";
