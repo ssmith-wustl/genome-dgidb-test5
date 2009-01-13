@@ -37,9 +37,7 @@ INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','GENOME_MODEL_BUILD','MIDA_GMB_FK','2008-11-12 18:23:29');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_READ_SET_METRIC','GENOME_MODEL_BUILD','GMRSMC_GMB_FK','2008-11-12 18:23:19');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_EVENT_OUTPUT','GENOME_MODEL_EVENT','GMEO_GME_FK','2008-11-12 18:23:20');
-INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL','GENOME_MODEL_BUILD','GM_GMBC_FK','2008-11-12 18:23:12');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_READ_SET','GENOME_MODEL_BUILD','GMRS_GMB_FK','2008-11-12 18:23:10');
-INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL','GENOME_MODEL_BUILD','GM_GMBL_FK','2008-11-12 18:23:12');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_COMPOSITE_MEMBER','GENOME_MODEL','GMCP_GM1_FK','2008-11-12 18:23:12');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','SNV_MANUAL_REVIEW','VARIANT_REVIEW_DETAIL','SMR_VRD_FK','2008-12-04 10:48:44');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','SNV_MANUAL_REVIEW','VARIANT_REVIEW_DETAIL','SMRD_VRD_FK','2008-12-17 11:14:11');
@@ -63,8 +61,6 @@ INSERT INTO "dd_fk_constraint_column" VALUES('GMRSET_GM_PK','Genome::DataSource:
 INSERT INTO "dd_fk_constraint_column" VALUES('GMRSM_GMRS_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_REF_SEQ_METRIC','GENOME_MODEL_REF_SEQ','REF_SEQ_NAME','REF_SEQ_NAME');
 INSERT INTO "dd_fk_constraint_column" VALUES('GM_PP_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL','PROCESSING_PROFILE','PROCESSING_PROFILE_ID','ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('PPP_PP_FK','Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_PARAM','PROCESSING_PROFILE','PROCESSING_PROFILE_ID','ID');
-INSERT INTO "dd_fk_constraint_column" VALUES('GM_GMBC_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL','GENOME_MODEL_BUILD','CURRENT_RUNNING_BUILD_ID','BUILD_ID');
-INSERT INTO "dd_fk_constraint_column" VALUES('GM_GMBL_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL','GENOME_MODEL_BUILD','LAST_COMPLETE_BUILD_ID','BUILD_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMCP_GM1_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_COMPOSITE_MEMBER','GENOME_MODEL','COMPOSITE_ID','GENOME_MODEL_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMEM_GME_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_METRIC','GENOME_MODEL_EVENT','EVENT_ID','GENOME_MODEL_EVENT_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GME_PAEID_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT','GENOME_MODEL_EVENT','PARENT_EVENT_ID','GENOME_MODEL_EVENT_ID');
@@ -151,7 +147,7 @@ CREATE TABLE dd_table (
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_EVENT_OUTPUT','TABLE','entity','2008-06-16 16:05:22','2008-11-12 18:23:39',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','MISC_ATTRIBUTE','TABLE','entity','2008-11-11 14:32:16','2008-11-12 18:23:35',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_RUN','TABLE','entity','2008-06-16 16:15:34','2008-11-12 18:23:06',NULL);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','TABLE','entity','2008-12-16 15:27:34','2008-11-12 18:23:12','The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.');
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL','TABLE','entity','2009-01-13 15:17:04','2008-11-12 18:23:12','The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.');
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_REF_SEQ_METRIC','TABLE','entity','2008-10-08 13:31:00','2008-11-12 18:23:25',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_REF_SEQ','TABLE','entity','2008-10-08 11:26:37','2008-11-12 18:23:15',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_METRIC','TABLE','entity','2008-06-16 16:05:22','2008-11-12 18:23:22',NULL);
