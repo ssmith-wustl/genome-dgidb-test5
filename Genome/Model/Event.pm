@@ -447,7 +447,8 @@ sub _get_msgdata {
     }
     $name =~ s/\s/_/g;
 
-    my $logfh = $msgdata->{gm_logfh} = IO::File->new(">$name");
+    my $logfh = $msgdata->{gm_logfh} = IO::File->new(">$name")
+        or die "Can't open file ($name): $!\n";
     $logfh->autoflush(1);
     chmod(0644, $name) or die "chmod $name failed: $!";
     require IO::Tee;
