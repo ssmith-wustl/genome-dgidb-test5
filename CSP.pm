@@ -638,6 +638,7 @@ my %csp_priority = (
     'validate amplicon'                       => 10,
     'validate primer tube'                    => 10,
     'pool dna'                                => 10,
+    'pool rna'                                => 10,
     'break empcr'                             => 10,
     'create dilutions'                        => 10, 
     'load agarose gel'                        => 10, 
