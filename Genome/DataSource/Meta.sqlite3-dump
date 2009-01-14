@@ -28,7 +28,6 @@ INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_EVENT','GENOME_MODEL','GME_GM_FK','2008-11-12 18:23:12');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','PROCESSING_PROFILE_SHORT_READ','PROCESSING_PROFILE','PPSR__PP_FK','2008-11-12 18:23:27');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_EVENT','GENOME_MODEL_EVENT','GME_PPEID_FK','2008-11-12 18:23:20');
-INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_BUILD','GENOME_MODEL_EVENT','GMB_GME_FK','2008-11-12 18:23:20');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_EVENT_METRIC','GENOME_MODEL_EVENT','GMEM_GME_FK','2008-11-12 18:23:17');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_READ_SET','GENOME_MODEL','GMRSET_GM_PK','2008-11-12 18:23:10');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_EVENT','GENOME_MODEL_EVENT','GME_PAEID_FK','2008-11-12 18:23:20');
@@ -67,7 +66,6 @@ INSERT INTO "dd_fk_constraint_column" VALUES('GME_PAEID_FK','Genome::DataSource:
 INSERT INTO "dd_fk_constraint_column" VALUES('MIDA_GMB_FK','Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','GENOME_MODEL_BUILD','FIRST_BUILD_ID','BUILD_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMRSM_GMRS_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_REF_SEQ_METRIC','GENOME_MODEL_REF_SEQ','MODEL_ID','MODEL_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMRSMC_GMR_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET_METRIC','GENOME_MODEL_RUN','READ_SET_ID','GENOME_MODEL_RUN_ID');
-INSERT INTO "dd_fk_constraint_column" VALUES('GMB_GME_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD','GENOME_MODEL_EVENT','BUILD_ID','GENOME_MODEL_EVENT_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMRS_GMB_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_READ_SET','GENOME_MODEL_BUILD','FIRST_BUILD_ID','BUILD_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('MIDA_GM_FK','Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','GENOME_MODEL','MODEL_ID','GENOME_MODEL_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('PPSR__PP_FK','Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE_SHORT_READ','PROCESSING_PROFILE','ID','ID');
