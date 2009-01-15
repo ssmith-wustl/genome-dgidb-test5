@@ -2,13 +2,26 @@ package Genome::Utility::AceSupportQA;
 
 use strict;
 use warnings;
-use Benchmark;
 use DBI;
 use Genome;
+use GSC::IO::Assembly::Ace;
+use Bio::DB::Fasta;
 
 class Genome::Utility::AceSupportQA {
     is => 'UR::Object',
     has => [
+        check_phd_time_stamps => { 
+            is => 'String', 
+            is_optional => 1,
+            default => 0, 
+            doc => 'Whether or not to check the phd time stamps, maybe not currently functional?' 
+        },
+        fix_invalid_files => { 
+            is => 'String', 
+            is_optional => 1,
+            default => 0, 
+            doc => 'Whether or not to attempt to fix invalid files' 
+        },
     ],
 };
 
@@ -29,19 +42,13 @@ sub create {
 }
 
 #Generate a refseq;
-use Bio::DB::Fasta;
 my $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
 my $refdb = Bio::DB::Fasta->new($RefDir); #$refdb is the entire Hs_build36_mask1c 
-
-###MODIFIED so that it doesn't fix anything 
-my $fix_invalid_files;
 
 sub ace_support_qa {
     my $self = shift;
     my $ace_file = shift; ##Give full path to ace file including ace file name
 
-    my $t0 = new Benchmark;
-    
     unless (-s $ace_file) {
         $self->error_message("Ace file $ace_file does not exist");
         return;
@@ -51,39 +58,22 @@ sub ace_support_qa {
     my ($invalid_files,$project) = $self->parse_ace_file($ace_file); ##QA the read dump, phred and poly files
 
     my ($refcheck) = $self->check_ref($project);
-    unless ($refcheck) { 
-        $self->error_message("The reference sequence was not checked for correctness");
-    }
 
-    my $return_value;
     if ($invalid_files) {
-        if ($refcheck =~ /Sequence doesn\'t look good/) {
-            $self->error_message("The reference sequence as well as some of the trace files are invalid for $project and should be fixed prior to analysis");
-            $return_value = 0;
-        } else {
-            $self->error_message("There are invalid files for $project that should be fixed prior to analysis");
-            $return_value = 0;
-        }
+        $self->error_message("There are invalid files for $project that should be fixed prior to analysis");
         $self->error_message("Here is a list of reads for $project with either a broken chromat, phd, or poly file");
         
         foreach my $read (sort keys %{$invalid_files}) {
             $self->error_message($read . join("\t", sort keys %{$invalid_files->{$read}}));
         }
 
-    } else {
-        if ($refcheck =~ /Sequence doesn\'t look good/) {
-            $self->error_message("The reference sequence is invalid for $project and should be fixed prior to analysis");
-            $return_value = 0;
-        } else {
-            $return_value = 1;
-        }
+        return 0;
+    } elsif (!$refcheck) {
+        $self->error_message("The reference sequence is invalid for $project and should be fixed prior to analysis");
+        return 0;
     }
 
-    my $t1 = new Benchmark;
-    my $td = timediff($t1, $t0);
-    $self->status_message("AceSupportQA took: " . timestr($td));
-
-    return $return_value;
+    return 1;
 }
 
 sub check_ref {
@@ -92,8 +82,8 @@ sub check_ref {
     my $amplicon_tag = GSC::AssemblyProject->get_reference_tag(assembly_project_name => $assembly_name);
 
     unless($amplicon_tag){
-        warn "no amplicon tag from GSC::AssemblyProject->get_reference_tag(assembly_project_name => $assembly_name)... can't check the reference sequence";
-        return undef;
+        $self->error_message("no amplicon tag from GSC::AssemblyProject->get_reference_tag(assembly_project_name => $assembly_name)... can't check the reference sequence");
+        return;
     }
     
     my $amplicon = $amplicon_tag->ref_id;
@@ -112,7 +102,7 @@ sub check_ref {
     my $length = $stop - $start + 1;
 
     unless ($assembly_length == $length) { 
-        print qq(the assembly_length doesn\'t jive with the spread on the coordinates\n); 
+        $self->error_message("the assembly_length doesn\'t jive with the spread on the coordinates"); 
     }
 
     my $sequence = $self->get_ref_base($chromosome,$start,$stop); ##this will come reverse complemented if the $strand eq "-"
@@ -120,15 +110,13 @@ sub check_ref {
         my $revseq = $self->reverse_complement_sequence ($sequence); 
         $sequence = $revseq;
     }
-    my $result;
-    if ($sequence eq $amplicon_sequence) { 
-        $result = qq($assembly_name Sequence looks good.\n);
-    } else {
-        $result = qq($assembly_name Sequence doesn\'t look good.\n);
-    }
-    return $result;
-}
+    unless ($sequence eq $amplicon_sequence) { 
+        $self->error_message("$assembly_name reference sequence doesn't look good.");
+        return 0;
+    } 
 
+    return 1;
+}
 
 sub get_ref_base {
     my $self = shift;
@@ -137,7 +125,6 @@ sub get_ref_base {
     my $seq = $refdb->seq($chr_name, $chr_start => $chr_stop);
     $seq =~ s/([\S]+)/\U$1/;
     return $seq;
-
 }
 
 sub reverse_complement_sequence {
@@ -169,11 +156,10 @@ sub parse_ace_file {
     my $phd_dir = "$project_dir/phd_dir";
     my $poly_dir = "$project_dir/poly_dir";
 
-    use GSC::IO::Assembly::Ace;
     my $ao = GSC::IO::Assembly::Ace->new(input_file => $ace_file);
 
     my $contig_count;
-    foreach my $name (@{ $ao->get_contig_names }) {
+    for my $name (@{ $ao->get_contig_names }) {
         $contig_count++;
         my $contig = $ao->get_contig($name);
         foreach my $read_name (keys %{ $contig->reads }) {
@@ -183,8 +169,12 @@ sub parse_ace_file {
         }
     }
 
-    unless ($contig_count == 1) {print qq($project Contig count is equal to $contig_count\n);}
-    my ($invalid_files)=$self->check_traces_fof($edit_dir,$project_dir,$chromat_dir,$phd_dir,$poly_dir,$traces_fof,$ace_file);
+    unless ($contig_count == 1) {
+        $self->error_message("$project Contig count is equal to $contig_count, should be 1");
+    }
+
+    my ($invalid_files) = $self->check_traces_fof($edit_dir,$project_dir,$chromat_dir,$phd_dir,$poly_dir,$traces_fof,$ace_file);
+
     return ($invalid_files,$project);
 }
 
@@ -195,7 +185,7 @@ sub check_traces_fof {
     my ($no_trace_file,$no_phd_file,$no_poly_file,$empty_trace_file,$empty_poly_file,$empty_phd_file,$ncntrl_reads,$read_count,$repaired_file);
     my ($trace_files_needed,$phd_files_needed,$poly_files_needed);
 
-    foreach my $read (sort keys %{$traces_fof}) {
+    for my $read (sort keys %{$traces_fof}) {
         $read_count++;
 
         if ($read =~ /^n\-cntrl/) {$ncntrl_reads++;}
@@ -203,7 +193,7 @@ sub check_traces_fof {
         my $trace = "$chromat_dir/$read.gz";
 
         unless (-s $trace) {
-            if ($fix_invalid_files) {
+            if ($self->fix_invalid_files) {
                 system qq(read_dump -scf-gz $read --output-dir=$chromat_dir);
             }
             if (-s $trace) {
@@ -244,51 +234,59 @@ sub check_traces_fof {
 
     my $invalid_files;
 
-    unless ($read_count) { die "There are no reads in the ace file to be analyzed\n"; }
+    unless ($read_count) { 
+        die "There are no reads in the ace file to be analyzed\n"; 
+    }
 
-    print qq(Reads for analysis ==> $read_count\n);
+    $self->status_message("Reads for analysis ==> $read_count");
 
 
     if ($no_trace_file || $empty_trace_file) {
 
-        unless($no_trace_file) {$no_trace_file=0;}
-        unless($empty_trace_file) {$empty_trace_file=0;}
+        $no_trace_file ||= 0;
+        $empty_trace_file ||= 0;
 
         my $n = $no_trace_file + $empty_trace_file;
-        print qq(nonviable trace files ==> $n\n);
+        $self->error_message("nonviable trace files ==> $n");
         foreach my $read (sort keys %{$trace_files_needed}) {
-            if ($fix_invalid_files) {print qq(attempted redump of $read failed\n);}
+            if ($self->fix_invalid_files) {
+                $self->error_message("attempted redump of $read failed");
+            }
             $invalid_files->{$read}->{trace}=1;
         }
     }
 
     if ($no_poly_file || $empty_poly_file) {
         if ($no_poly_file eq $read_count) {
-            print qq(There are no poly files, they can be created in analysis\n);
+            $self->status_message("There are no poly files, they can be created in analysis"); # is this logic correct? FIXME
         } else {
 
-            unless($no_poly_file) {$no_poly_file=0;}
-            unless($empty_poly_file) {$empty_poly_file=0;}
+            $no_poly_file ||= 0;
+            $empty_poly_file ||= 0;
 
             my $n = $no_poly_file + $empty_poly_file;
-            if ($fix_invalid_files) {print qq(will run phred to produce $n disfunctional poly files\n);}
-            foreach my $read (sort keys %{$poly_files_needed}) {
+            if ($self->fix_invalid_files) {
+                $self->status_message("will run phred to produce $n disfunctional poly files");
+            }
+            for my $read (sort keys %{$poly_files_needed}) {
                 if ($trace_files_needed->{$read}) {
-                    if ($fix_invalid_files) {
-                        print qq(no attempt made to produce a poly file for $read as the trace file is missing\n);
+                    if ($self->fix_invalid_files) {
+                        $self->status_messaage("no attempt made to produce a poly file for $read as the trace file is missing");
                     }
                     $invalid_files->{$read}->{poly}=1;
                 } else {
-                    if ($fix_invalid_files) {system qq(phred -dd $poly_dir $chromat_dir/$read.gz);}
+                    if ($self->fix_invalid_files) {
+                        system qq(phred -dd $poly_dir $chromat_dir/$read.gz);
+                    }
                     my $poly = "$poly_dir/$read.poly";
 
                     if (-s $poly) {
                         $repaired_file++;
-                        print "poly file for $read ok\n";
+                        $self->status_message("poly file for $read ok");
                     }
                     else {
-                        if ($fix_invalid_files) {
-                            print qq(attempted to produce a poly file for $read failed\n);
+                        if ($self->fix_invalid_files) {
+                            $self->status_message("Failed to produce a poly file for $read");
                         }
                         $invalid_files->{$read}->{poly}=1;
                     }
@@ -297,7 +295,6 @@ sub check_traces_fof {
         }
     }
 
-    my ($check_phd_time_stamps);    
     if ($no_phd_file || $empty_phd_file) {
 
         unless($no_phd_file) {$no_phd_file=0;}
@@ -305,11 +302,13 @@ sub check_traces_fof {
 
         my $n = $no_phd_file + $empty_phd_file;
 
-        if ($fix_invalid_files) {print qq(will run phred to produce $n disfunctional phd files\n);}
+        if ($self->fix_invalid_files) {
+            $self->status_message("will run phred to produce $n disfunctional phd files");
+        }
         foreach my $read (sort keys %{$phd_files_needed}) {
             if ($trace_files_needed->{$read}) {
-                if ($fix_invalid_files) {
-                    print qq(no attempt made to produce a phd file for $read as the trace file is missing\n);
+                if ($self->fix_invalid_files) {
+                    $self->status_message("no attempt made to produce a phd file for $read as the trace file is missing");
                 }
                 $invalid_files->{$read}->{phd}=1;
             } else {
@@ -326,9 +325,9 @@ sub check_traces_fof {
 
 
     ##sync_phd_time_stamps is not working correctly. It didn't change the time stamp in the ace file
-    if ($check_phd_time_stamps) {
-        if ($fix_invalid_files) {
-            print qq(will attempt to sync the phd file time stamps with the ace file\n);
+    if ($self->check_phd_time_stamps) {
+        if ($self->fix_invalid_files) {
+            $self->status_message("will attempt to sync the phd file time stamps with the ace file");
             ($ace_file)=$self->sync_phd_time_stamps($ace_file);
 
             unless (-s $ace_file) {
@@ -338,7 +337,7 @@ sub check_traces_fof {
     }
 
     if ($ncntrl_reads) {
-        print OUT qq(There were $ncntrl_reads n-cntrl reads\n);
+        $self->status_message("There were $ncntrl_reads n-cntrl reads");
     }
 
     return ($invalid_files);
