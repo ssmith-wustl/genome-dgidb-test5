@@ -7,6 +7,7 @@ use Genome;
 
 use Data::Dumper;
 use Bio::Seq;
+require File::Copy;
 
 class Genome::Model::Tools::Fasta {
     is => 'Command',
@@ -30,16 +31,26 @@ sub help_detail {
 sub create { 
     my $class = shift;
 
-    my $self = $class->SUPER::create(@_);
-    $self->{_cwd} = Cwd::getcwd();
+    my $self = $class->SUPER::create(@_)
+        or return;
+    
+    unless ( defined $self->fasta_file ) {
+        $self->error_message("A fasta file is required");
+        return;
+    }
+
     $self->fasta_file( Cwd::abs_path( $self->fasta_file ) );
 
+    Genome::Utility::FileSystem->validate_file_for_reading( $self->fasta_file )
+        or return;
+    
     my ($basename, $directory, $suffix) = File::Basename::fileparse($self->fasta_file, '.fasta', '.fas', '.fa');
     unless ( $suffix ) {
         $self->error_message( sprintf('FASTA file (%s) needs to have a ".fasta", ".fas" or ".fa" suffix.', $self->fasta_file) );
         return;
     }
 
+    $self->{_cwd} = Cwd::getcwd();
     $self->{_fasta_directory} = $directory;
     $self->{_fasta_basename} = $basename;
     $self->{_fasta_suffix} = $suffix; # Remember it has the '.' in it!
@@ -50,7 +61,7 @@ sub create {
 sub DESTROY {
     my $self = shift;
 
-    $self->chdir_cwd;
+    $self->chdir_cwd if defined $self->{_cwd};
     
     return 1;
 }
@@ -105,7 +116,7 @@ sub qual_base {
 }
 
 sub qual_file {
-    return sprintf('%s/%s', $_[0]->fasta_directory, $_[0]->qual_base);
+    return sprintf('%s%s', $_[0]->fasta_directory, $_[0]->qual_base);
 }
 
 sub have_qual_file {
@@ -122,7 +133,7 @@ sub fasta_base_with_new_suffix {
 sub fasta_file_with_new_suffix { 
     my ($self, $suffix) = @_;
 
-    return sprintf('%s/%s', $self->fasta_directory, $self->fasta_base_with_new_suffix($suffix));
+    return sprintf('%s%s', $self->fasta_directory, $self->fasta_base_with_new_suffix($suffix));
 }
 
 sub qual_base_with_new_suffix {
@@ -134,7 +145,7 @@ sub qual_base_with_new_suffix {
 sub qual_file_with_new_suffix {
     my ($self, $suffix) = @_;
 
-    return sprintf('%s/%s', $self->fasta_directory, $self->qual_base_with_new_suffix($suffix));
+    return sprintf('%s%s', $self->fasta_directory, $self->qual_base_with_new_suffix($suffix));
 }
 
 #< Back Up >#
@@ -198,7 +209,7 @@ sub back_up_qual_file {
 
 #< Bio::SeqIO stuff >#
 sub get_fasta_reader {
-    return _get_bioseq_reader(@_, 'Fasta');
+    return _get_bioseq_reader(@_, 'fasta');
 }
 
 sub get_qual_reader {
@@ -206,14 +217,20 @@ sub get_qual_reader {
 }
 
 sub _get_bioseq_reader {
+    Genome::Utility::FileSystem->validate_file_for_reading($_[1]) 
+        or return;
     return _get_bioseq(@_, '<');
 }
 
 sub get_fasta_writer {
-    return _get_bioseq_writer(@_, 'Fasta');
+    Genome::Utility::FileSystem->validate_file_for_writing($_[1]) 
+        or return;
+    return _get_bioseq_writer(@_, 'fasta');
 }
 
 sub get_qual_writer {
+    Genome::Utility::FileSystem->validate_file_for_writing($_[1]) 
+        or return;
     return _get_bioseq_writer(@_, 'qual');
 }
 
@@ -224,8 +241,6 @@ sub _get_bioseq_writer {
 sub _get_bioseq {
     my ($self, $file, $format, $rw) = @_;
 
-    # TODO error check
-    
     return Bio::SeqIO->new(
         '-file' => $rw.' '.$file,
         '-format' => $format,
