@@ -1557,6 +1557,11 @@ sub default_barcode_printer
         return $default_barcode_printer;
     }
 
+    if(exists $ENV{DEFAULT_BARCODE_PRINTER} && $ENV{DEFAULT_BARCODE_PRINTER}){
+        $default_barcode_printer = $ENV{DEFAULT_BARCODE_PRINTER};
+        return $default_barcode_printer;
+    }
+
     # try to get default regular printer
     my $lpstat = qx(lpstat -d);
     if ($?)
