@@ -33,12 +33,22 @@ sub help_detail {
 EOS
 }
 
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_)
+        or return;
+
+    unless ( $self->have_qual_file ) {
+        $self->error_message("A qual file (fasta file name w/ .qual) is required");
+        return;
+    }
+
+    return $self;
+}
+
 sub execute {
     my $self = shift;
-    ($self->error_message( 
-		      sprintf('Quality file (%s) does not exist.', $self->qual_file)
-		      )
-     and return)unless -s $self->qual_file;
 
     $self->chdir_fasta_directory 
         or return;
