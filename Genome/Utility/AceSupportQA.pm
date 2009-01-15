@@ -22,6 +22,11 @@ class Genome::Utility::AceSupportQA {
             default => 0, 
             doc => 'Whether or not to attempt to fix invalid files' 
         },
+        contig_count => {
+            is => 'Number',
+            is_optional => 1,
+            doc => 'The number of contigs found in the ace file',
+        }
     ],
 };
 
@@ -169,9 +174,7 @@ sub parse_ace_file {
         }
     }
 
-    unless ($contig_count == 1) {
-        $self->error_message("$project Contig count is equal to $contig_count, should be 1");
-    }
+    $self->contig_count($contig_count);
 
     my ($invalid_files) = $self->check_traces_fof($edit_dir,$project_dir,$chromat_dir,$phd_dir,$poly_dir,$traces_fof,$ace_file);
 
