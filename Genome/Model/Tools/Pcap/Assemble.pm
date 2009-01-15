@@ -1047,7 +1047,11 @@ sub _get_bdocs_params
 {
     my ($self) = @_;
 
-    return '-l 300 -y 1 -z 0' if $self->pcap_run_type eq 'RAW_454';
+    if ($self->pcap_run_type eq 'RAW_454')
+    {
+	return '-l 300 -y 1 -z 0' if $self->parameter_setting eq 'NORMAL';
+	return '-l 160 -y 1 -z 0' if $self->parameter_setting eq 'RELAXED';
+    }
     return '-y 1 -z 0' if $self->pcap_run_type eq 'POLY';
     return '-y 1 -z 0' if $self->pcap_run_type eq 'NORMAL';
 
