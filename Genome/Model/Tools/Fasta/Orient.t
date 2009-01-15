@@ -22,16 +22,16 @@ my $qual     = $dir.'/assembled.fasta.qual';
 my $s_fasta  = $dir.'/primers_sense.fasta';
 my $as_fasta = $dir.'/primers_anti_sense.fasta';
 
-my $orient1 = Genome::Model::Tools::Fasta::Orient->create(
+my $orient = Genome::Model::Tools::Fasta::Orient->create(
     fasta_file       => $fasta,
     sense_fasta_file => $s_fasta,
     anti_sense_fasta_file => $as_fasta,
 );
 
-my $confirmed_fasta_file = $orient1->confirmed_fasta_file;
-my $confirmed_qual_file  = $orient1->confirmed_qual_file;
-my $unconfirmed_fasta_file = $orient1->unconfirmed_fasta_file;
-my $unconfirmed_qual_file  = $orient1->unconfirmed_qual_file;
+my $confirmed_fasta_file = $orient->confirmed_fasta_file;
+my $confirmed_qual_file  = $orient->confirmed_qual_file;
+my $unconfirmed_fasta_file = $orient->unconfirmed_fasta_file;
+my $unconfirmed_qual_file  = $orient->unconfirmed_qual_file;
 
 my $confirmed_fasta_file_name = basename $confirmed_fasta_file;
 my $confirmed_qual_file_name  = basename $confirmed_qual_file;
@@ -43,7 +43,7 @@ is($confirmed_qual_file_name,'assembled.confirmed.fasta.qual', "confirmed_qual_f
 is($unconfirmed_fasta_file_name,'assembled.unconfirmed.fasta', "unconfirmed_fasta_file return ok");
 is($unconfirmed_qual_file_name,'assembled.unconfirmed.fasta.qual', "unconfirmed_qual_file return ok");
 
-ok($orient1->execute, "Orient1 test fine");
+ok($orient->execute, "Orient test fine");
 
 is(compare($confirmed_fasta_file, "$dir/expected.confirmed.fasta"), 0, 'Expected and generated confirmed fasta matches');
 is(compare($confirmed_qual_file, "$dir/expected.confirmed.fasta.qual"), 0, 'Expected and generated confirmed qual matches');
@@ -56,29 +56,24 @@ unlink $unconfirmed_fasta_file;
 unlink $unconfirmed_qual_file;
 
 #< Test failing conditions #>
-my $no_fasta = "$dir/no.fasta";
-
-my $orient3 = Genome::Model::Tools::Fasta::Orient->create(
-    fasta_file            => $no_fasta,
-    anti_sense_fasta_file => $as_fasta,
-);
-
-ok(!$orient3->execute, "No Fasta file provided");
-
-my $non_sense = $dir.'/non_sense';
-my $orient4 = Genome::Model::Tools::Fasta::Orient->create(
-    fasta_file            => $fasta,
-    anti_sense_fasta_file => $non_sense,
-);
-
-ok(!$orient4, "anti_sense file is invalid");
-
-
-my $orient5 = Genome::Model::Tools::Fasta::Orient->create(
+# no primer files
+$orient = Genome::Model::Tools::Fasta::Orient->create(
     fasta_file => $fasta,
 );
+ok(!$orient, "Neither sense nor anti_sense file provided");
 
-ok(!$orient5, "Neither sense nor anti_sense file provided");
+# non existing primer files
+$orient = Genome::Model::Tools::Fasta::Orient->create(
+    fasta_file            => $fasta,
+    anti_sense_fasta_file => $dir.'/no_way_this_exists.fasta',
+);
+ok(!$orient, "anti_sense file is invalid");
+
+$orient = Genome::Model::Tools::Fasta::Orient->create(
+    fasta_file            => $fasta,
+    sense_fasta_file => $dir.'/no_way_this_exists.fasta',
+);
+ok(!$orient, "anti_sense file is invalid");
 
 exit;
 

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 8;
+use Test::More tests => 11;
 use File::Compare;
 use File::Temp;
 use File::Copy;
@@ -14,35 +14,41 @@ BEGIN {
 }
 
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta/TrimQuality';
+ok(-d $dir, "Test dir ($dir) exists");
 my $fasta = $dir .'/test.fasta';
-my $qual = $dir .'/test.fasta.qual';
+ok(-f $fasta, "Fasta ($fasta) exists");
+my $qual = $fasta .'.qual';
+ok(-f $qual, "Qual ($qual) exists");
 
+# Should work
 my $trim1 = Genome::Model::Tools::Fasta::TrimQuality->create(
     fasta_file => $fasta,
     min_trim_quality => 10,
     min_trim_length  => 100,
 );
-
 ok($trim1->execute, "trim1 finished ok");
 
 reset_file($fasta, $qual, $dir);
 
-my $no_fasta = $dir.'/no.fasta';
-my $trim2 = Genome::Model::Tools::Fasta::TrimQuality->create(
-    fasta_file => $no_fasta,
-    min_trim_quality => 12,
-    min_trim_length  => 80,
+# No fasta
+ok(
+    ! Genome::Model::Tools::Fasta::TrimQuality->create(
+        fasta_file => $dir.'/no.fasta',
+        min_trim_quality => 12,
+        min_trim_length  => 80,
+    ),
+    "This supposed to fail because of no fasta",
 );
 
-ok(!$trim2->execute, "This supposed to fail because of no fasta");
-
-my $some_fasta = $dir.'some.fasta';
-my $trim3 = Genome::Model::Tools::Fasta::TrimQuality->create(
-    fasta_file => $some_fasta,
-    min_trim_quality => 12,
-    min_trim_length  => 80,
+# No qual for fasta 
+ok(
+    ! Genome::Model::Tools::Fasta::TrimQuality->create(
+        fasta_file => $dir.'/test.no_qual.fasta',
+        min_trim_quality => 12,
+        min_trim_length  => 80,
+    ),
+    "This supposed to fail because of no quality file",
 );
-ok(!$trim3->execute, "This supposed to fail because of no quality file");
 
 my $trim4 = Genome::Model::Tools::Fasta::TrimQuality->create(
     fasta_file => $fasta,
