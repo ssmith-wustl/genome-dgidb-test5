@@ -71,6 +71,10 @@ sub help_detail {
     return 'This script retrieves data from an acefile and then prints it directly to the screen.  To capture the output, use a redirect (>) to a file.';
 }
 
+sub formats {
+    return @FORMATS;
+}
+
 sub execute {
     my $self = shift;
 
@@ -210,9 +214,10 @@ sub _get_bioseq_from_contig {
 
     my ($bases, $quals, $start, $stop);
     if ( my $pos = delete $self->{_ctgs}->{ $contig->name } ) {
-        ($start, $stop) = split('to', $pos);
-        $bases = substr($contig->unpadded_base_string, $start, $stop);
-        $quals = substr($contig->unpadded_base_string, $start, $stop);
+        my $offset = $pos->{start} - 1;
+        my $length = $pos->{stop} - $pos->{start} + 1;
+        $bases = substr($contig->unpadded_base_string, $offset, $length);
+        $quals = join(' ', splice(@{$contig->qualities}, $offset, $length));
     }
     else {
         $bases = $contig->unpadded_base_string;
@@ -223,7 +228,7 @@ sub _get_bioseq_from_contig {
     
     return Bio::Seq::Quality->new(
         '-id' => sprintf('%s%s', ( $self->inc_name ? $self->acefile : '' ), $contig->name),
-        '-desc' => "from $start to $stop",
+        #'-desc' => "from $start to $stop",
         '-alphabet' => 'dna',
         '-seq' => $bases,
         '-qual' => $quals,
