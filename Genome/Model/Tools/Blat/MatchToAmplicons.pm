@@ -342,8 +342,10 @@ sub execute {                               # replace with real execution logic.
 					$read_chr_start = $blockLineContents[1];
 					$read_chr_stop = $blockLineContents[2];				
 				}
+				
 				my $read_name = $blockLineContents[4];
-			
+				my $block_no = $blockLineContents[7];
+				
 				## Adjust to amplicon positions ##
 				
 				my $read_amp_start = $read_chr_start - $chr_start + 1;
@@ -353,7 +355,7 @@ sub execute {                               # replace with real execution logic.
 				## Print the layer ##
 				if($read_amp_stop > 0)
 				{				
-					my $layer = "$read_name\t$read_amp_start\t$read_amp_stop\t$amplicon";
+					my $layer = "$read_name.$block_no\t$read_amp_start\t$read_amp_stop\t$amplicon";
 					print AMP_LAYERS "$layer\n";
 					print READLAYERS "$layer\n";
 				}
