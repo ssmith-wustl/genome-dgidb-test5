@@ -26,7 +26,7 @@ class Genome::Model::Tools::Maq::CreateExperimentalMetricsFile {
        'location_file' => {
            type => 'String',
            is_optional => 0,
-           doc => 'File of locations to gather metrics on. Must be whitespace separated and follow form of chr start',
+           doc => 'File of locations to gather metrics on. Must be in maq-0.6.8 cns2snp format.',
        },
        'snpfilter_file' => {
            type => 'String',
@@ -474,7 +474,7 @@ sub _track_max_attribute {
 sub headers {
     my ($self, $max_read) = @_;
     my @headers = (   'maq_quality',
-                        'total_reads',
+                        'supporting_reads',
                         'avg_map_quality',
                         'max_map_quality',
                         'n_max_map_quality',
