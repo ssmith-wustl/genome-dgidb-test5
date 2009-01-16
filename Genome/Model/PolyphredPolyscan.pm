@@ -493,6 +493,7 @@ sub get_or_create{
     my $data_directory = $p{data_directory};
     my $subject_name = $p{subject_name};
     my $subject_type = $p{subject_type};
+    my $model_name = $p{model_name};
     $subject_type ||= 'sample_group';
 
     unless (defined($research_project_name) && defined($technology) && defined($sensitivity) && defined($subject_name)) {
@@ -501,7 +502,7 @@ sub get_or_create{
     }
 
     my $pp_name = "$research_project_name.$technology.$sensitivity";
-    my $model_name = "$subject_name.$pp_name";
+    $model_name ||= "$subject_name.$pp_name";
 
     my $model = Genome::Model::PolyphredPolyscan->get(
         name => $model_name,
