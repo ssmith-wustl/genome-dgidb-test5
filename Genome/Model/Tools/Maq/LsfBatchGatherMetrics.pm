@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Dave::LsfBatchGatherMetrics;
+package Genome::Model::Tools::Maq::LsfBatchGatherMetrics;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use Command;
 use IO::File;
 
-class Genome::Model::Tools::Dave::LsfBatchGatherMetrics {
+class Genome::Model::Tools::Maq::LsfBatchGatherMetrics {
     is => 'Command',
     has => [
     snp_file => 
