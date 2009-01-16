@@ -97,6 +97,7 @@ sub execute {
             $self->error_message('For some reason no filehanlde exists for hit '. $subject_name);
             return;
         }
+        print $hit_fh $query_name ."\n";
     }
 
     for my $open_fh (values %open_fhs) {
