@@ -4,20 +4,18 @@ use strict;
 use warnings;
 
 use Genome;
-use IO::File;
 use Cwd 'abs_path';
 use File::Basename;
-
-use Bio::SeqIO;
-use GSC::IO::Assembly::Ace::Reader;
-use Genome::Model::Tools::Velvet::ToAce;
-use Genome::Model::Tools::Velvet::ToReadFasta;
-use Genome::Model::Tools::Fasta::To::Scf;
-use Genome::Model::Tools::Fasta::To::Phd;
 
 
 class Genome::Model::Tools::Velvet::ToConsed {
     is           => 'Command',
+    has          => [
+        fastq_file  => {
+            is      => 'String',
+            doc     => 'Input fastq file to start the velvet assembly',
+        }
+    ],
     has_many     => [
         afg_files   => {
             is      => 'String', 
@@ -30,12 +28,17 @@ class Genome::Model::Tools::Velvet::ToConsed {
             doc     => 'name for output acefile, default is ./velvet_asm.ace',
             default => 'velvet_asm.ace',
         },
+        chunk_size  => {
+            is      => 'Integer',
+            doc     => 'number of fastq sequences each chunk',
+            default => 10000,
+        },
     ],
 };
         
 
 sub help_brief {
-    'This tool combines workflow: ToAce, ToReadFasta, Fasta::To::Scf, Fasta::To::Phd',
+    'This tool converts velvet assembly to acefile, then convert input read fastq file into phdball and scf files',
 }
 
 
@@ -58,45 +61,27 @@ sub execute {
     }
     my $base_dir = dirname $edit_dir;
     
-    my @steps = qw(Velvet_to_Ace Ace_to_ReadFasta Fasta_to_Phd Fasta_to_Scf);
-    
+    my @steps = qw(Velvet_to_Ace Fastq_to_phdball_scf);
+
     my $to_ace  = Genome::Model::Tools::Velvet::ToAce->create(
         afg_files   => [$self->afg_files],
         out_acefile => $acefile,
         time        => $time,
     );
     my $rv = $to_ace->execute;
-
     return unless $self->_check_rv($steps[0], $rv);
-     
-    my $fa_file = $edit_dir.'/reads.fasta';
     
-    my $to_fa = Genome::Model::Tools::Velvet::ToReadFasta->create(
-        ace_file => $acefile,
-        out_file => $fa_file,
-    );
-    $rv = $to_fa->execute;
-    
-    return unless $self->_check_rv($steps[1], $rv);
-    
-    my $fa_to_phd = Genome::Model::Tools::Fasta::To::Phd->create(
-        fasta_file => $fa_file,
-        dir        => $base_dir.'/phd_dir',
+    my $to_phdscf = Genome::Model::Tools::Fastq::ToPhdballScf::Chunk->create(
+        fastq_file => $self->fastq_file,
+        scf_dir    => $base_dir.'/chromat_dir',
+        ball_file  => $edit_dir.'/phd.ball',
+        base_fix   => 1,
         time       => $time,
+        chunk_size => $self->chunk_size,
     );
-    #probably need check phd/scf list for existing ones
-    $rv = $fa_to_phd->execute;
-    
-    return unless $self->_check_rv($steps[2], $rv);
-    
-    my $to_scf = Genome::Model::Tools::Fasta::To::Scf->create(
-        fasta_file => $fa_file,
-        dir        => $base_dir.'/chromat_dir',
-    );
-    $rv = $to_scf->execute;
+    $rv = $to_phdscf->execute;
+    return unless $self->_check_rv($steps[1], $rv);
 
-    return unless $self->_check_rv($steps[3], $rv);
-    
     return 1;
 }
 
@@ -112,7 +97,6 @@ sub _check_rv {
     }
     return $rv;
 }
-    
-    
+
 1;
 
