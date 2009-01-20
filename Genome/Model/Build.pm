@@ -81,7 +81,7 @@ sub available_reports {
 # in the class definiton...
 sub _resolve_subclass_name {
     my $class = shift;
-
+    $DB::single = 1;
     my $type_name;
 	if ( ref($_[0]) and $_[0]->isa(__PACKAGE__) ) {
 		$type_name = $_[0]->model->type_name;
@@ -101,9 +101,18 @@ sub _resolve_subclass_name {
         $type_name = $rule->specified_value_for_property_name('type_name');
     }
 
-    return ( defined $type_name ) 
-    ? $class->_resolve_subclass_name_for_type_name($type_name)
-    : undef;
+    if (defined $type_name ) {
+        my $subclass_name = $class->_resolve_subclass_name_for_type_name($type_name);
+        my $sub_classification_method_name = $class->get_class_object->sub_classification_method_name;
+        if ($subclass_name->can($sub_classification_method_name)
+            eq $class->can($sub_classification_method_name)) {
+            return $subclass_name;
+        } else {
+            return $subclass_name->$sub_classification_method_name(@_);
+        }
+    } else {
+        return undef;
+    }
 }
 
 sub _resolve_subclass_name_for_type_name {
@@ -115,6 +124,7 @@ sub _resolve_subclass_name_for_type_name {
 
     my $class_name = join('::', 'Genome::Model::Build' , $subclass);
     return $class_name;
+
 }
 
 sub _resolve_type_name_for_class {

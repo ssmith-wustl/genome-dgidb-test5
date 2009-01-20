@@ -25,8 +25,10 @@ sub _resolve_subclass_name {
     my $class = shift;
 
     my $sequencing_platform;
-    if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
-        $sequencing_platform = $_[0]->model->sequencing_platform;
+    if (ref($_[0])) {
+        if ($_[0]->isa(__PACKAGE__) || $_[0]->can('model')) {
+            $sequencing_platform = $_[0]->model->sequencing_platform;
+        }
     } else {
         my %params = @_;
         my $model_id = $params{model_id};
