@@ -23,8 +23,8 @@ class Genome::Model::VariationPosition {
         experimental_metric => { is => 'Genome::Model::ExperimentalMetric', id_by => ['ref_seq_name', 'position','model_id'] },
         metric_snp_quality => { via => 'experimental_metric', to => 'snp_quality' },
     ],
-    table_name => 'FILE',  # A dummy table name so the properties get 'column_name' properties
-    data_source => 'Genome::DataSource::CsvFileFactory',
+#    table_name => 'FILE',  # A dummy table name so the properties get 'column_name' properties
+    data_source => 'Genome::DataSource::VariationPosition',
 };
 
 1;

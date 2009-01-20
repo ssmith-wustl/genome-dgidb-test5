@@ -22,9 +22,7 @@ class Genome::TranscriptSubStructure {
 
         transcript => { is => 'Genome::Transcript', id_by => 'transcript_id' },
     ],
-    #schema_name => 'GMSchema',
-    #data_source => 'Genome::DataSource::TranscriptSubStructures',
-    data_source => 'Genome::DataSource::CsvFileFactory',
+    data_source => 'Genome::DataSource::TranscriptSubStructures',
 };
 
 

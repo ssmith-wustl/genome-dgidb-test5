@@ -55,8 +55,8 @@ class Genome::Model::ExperimentalMetric {
         ref_minus_strand_unique_by_start_site_pre27 => { is => 'Integer' },
         ref_unique_by_sequence_content_pre27=> { is => 'Integer' },
     ],
-    table_name => 'FILE1',  # A dummy table name so the properties get 'column_name' properties
-    data_source => 'Genome::DataSource::CsvFileFactory',
+#    table_name => 'FILE1',  # A dummy table name so the properties get 'column_name' properties
+    data_source => 'Genome::DataSource::ExperimentalMetric',
 };
 
 1;
