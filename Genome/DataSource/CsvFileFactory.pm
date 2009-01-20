@@ -1,7 +1,7 @@
 package Genome::DataSource::CsvFileFactory;
 
 use Genome;
-use UR::DataSource::SortedCsvFile;
+use UR::DataSource::File;
 
 use strict;
 use warnings;
@@ -76,7 +76,7 @@ my %RESOLVER = (
 # If we get a bunch of these, move them out to perl modules of their own, 
 # which is slightly less hacky, but still...
 class Genome::DataSource::VariationPositions {
-    is => 'UR::DataSource::SortedCsvFile',
+    is => 'UR::DataSource::File',
 };
 sub Genome::DataSource::VariationPositions::delimiter { '\s+'; }
 sub Genome::DataSource::VariationPositions::column_order { qw(ref_seq_name position reference_base consensus_base consensus_quality  
@@ -98,7 +98,7 @@ sub Genome::DataSource::VariationPositions::_generate_loading_templates_arrayref
 
 
 class Genome::DataSource::ExperimentalMetrics {
-    is => 'UR::DataSource::SortedCsvFile',
+    is => 'UR::DataSource::File',
 };
 sub Genome::DataSource::ExperimentalMetrics::delimiter { ',\s*' }
 sub Genome::DataSource::ExperimentalMetrics::column_order { qw(chromosome position reference_base variant_base snp_quality
@@ -128,7 +128,7 @@ sub Genome::DataSource::ExperimentalMetrics::_generate_loading_templates_arrayre
 
 
 class Genome::DataSource::TranscriptSubStructures {
-    is => 'UR::DataSource::SortedCsvFile',
+    is => 'UR::DataSource::File',
 };
 sub Genome::DataSource::TranscriptSubStructures::delimeter { "\t" }
 sub Genome::DataSource::TranscriptSubStructures::skip_first_line { 0; }

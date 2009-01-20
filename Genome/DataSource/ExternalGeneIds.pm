@@ -3,7 +3,7 @@ package Genome::DataSource::ExternalGeneIds;
 use Genome;
 
 class Genome::DataSource::ExternalGeneIds {
-    is => [ 'UR::DataSource::SortedCsvFile'],
+    is => [ 'UR::DataSource::File'],
 };
 
 sub delimiter {

@@ -3,7 +3,7 @@ package Genome::DataSource::Proteins;
 use Genome;
 
 class Genome::DataSource::Proteins {
-    is => [ 'UR::DataSource::SortedCsvFile'],
+    is => [ 'UR::DataSource::File'],
 };
 
 sub delimiter {

@@ -3,7 +3,7 @@ package Genome::DataSource::GeneExpressions;
 use Genome;
 
 class Genome::DataSource::GeneExpressions {
-    is => [ 'UR::DataSource::SortedCsvFile'],
+    is => [ 'UR::DataSource::File'],
 };
 
 sub delimiter {

@@ -3,7 +3,7 @@ package Genome::DataSource::Transcripts;
 use Genome;
 
 class Genome::DataSource::Transcripts {
-    is => [ 'UR::DataSource::SortedCsvFile'],
+    is => [ 'UR::DataSource::File'],
 };
 
 sub delimiter {
