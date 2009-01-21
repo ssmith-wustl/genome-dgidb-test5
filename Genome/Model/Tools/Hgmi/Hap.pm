@@ -13,6 +13,7 @@ use Genome::Model::Tools::Hgmi::MkPredictionModels;
 use Genome::Model::Tools::Hgmi::Predict;
 use Genome::Model::Tools::Hgmi::Merge;
 use Genome::Model::Tools::Hgmi::Finish;
+use Genome::Model::Tools::Hgmi::SendToPap;
 use YAML qw( LoadFile DumpFile );
 
 # should have a crap load of options.
@@ -242,6 +243,32 @@ sub execute
         croak "can't set up finish step";
     }
 
+    unless(defined($config->{workflowxml}))
+    {
+        return 1;
+    }
+
+    my $send = Genome::Model::Tools::Hgmi::SendToPap->create(
+                     'locus_tag' => $config->{locus_tag_prefix},
+                     'sequence_set_id' => $ssid, 
+                     'workflow_xml' => $config->{workflowxml},
+# pepfile should be constructed automagically here.
+                  );
+
+    if($self->dev)
+    {
+        $send->dev(1);
+    }
+    
+    if($send)
+    {
+        $send->execute() or croak "can't run workflow pap step";
+    }
+    else
+    {
+        croak "can't set up workflow pap step";
+    }
+
     return 1;
 }
 
@@ -307,6 +334,7 @@ sub build_empty_config
                   'sequence_set_name' => "",
                   'sequence_set_id' => "",
                   'finish_script_location' => "<optional>",
+                  'workflowxml' => "",
                   };
     DumpFile($dumpfile, $config); # check return?
     return 1;

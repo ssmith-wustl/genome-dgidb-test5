@@ -16,6 +16,7 @@ use Bio::DB::BioDB;
 use Bio::DB::Query::BioQuery;
 use IPC::Run;
 use Workflow::Simple;
+use Data::Dumper;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -206,14 +207,14 @@ sub mgap_to_biosql
     my $taxid     = $self->taxon_id;
     my $testnorun = shift;
     my @command = (
-        '/gscuser/josborne/src/hgmi_annotation/BAP/bap_load_biosql.pl', '--sequence-set-id', $ssid,
+        'bap_load_biosql', '--sequence-set-id', $ssid,
         '--tax-id',        $taxid,
     );
 
     if($self->dev)
     {
         push(@command,'--dev');
-        #push(@command,'--dev-biosql');
+        push(@command,'--dev-biosql');
     }
     my ($cmd_out,$cmd_err);
 
@@ -233,6 +234,7 @@ sub mgap_to_biosql
         \$cmd_err,
     ) or croak "can't load biosql from mgap!!!\n$cmd_err";
 
+    print STDERR $cmd_err,"\n";
     return 1;
 
 }
@@ -262,6 +264,15 @@ sub do_pap_workflow
                               'gram stain'       => 'negative',
                               'report save dir'  => '/gscmnt/temp212/info/annotation/PAP_testing/blast_reports',
     );
+
+    # do quick check on the return value.
+    print STDERR Dumper($output),"\n";
+    if($output->{'result'} != 1)
+    {
+        print STDERR "workflow returned an error result, ", 
+                     $output->{'result'}, "\n"; 
+        return 0;
+    }
 
     return 1;
 }
