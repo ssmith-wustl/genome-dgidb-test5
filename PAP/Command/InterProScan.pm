@@ -44,7 +44,7 @@ class PAP::Command::InterProScan {
 };
 
 operation PAP::Command::InterProScan {
-    input        => [ 'fasta_file', 'repot_save_dir' ],
+    input        => [ 'fasta_file', 'report_save_dir' ],
     output       => [ 'bio_seq_feature' ],
     lsf_queue    => 'long',
     lsf_resource => 'rusage[tmp=100]',
