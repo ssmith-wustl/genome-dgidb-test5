@@ -11,6 +11,7 @@ use Bio::Seq;
 use Bio::SeqFeature::Generic;
 use Bio::SeqIO;
 
+use Compress::Bzip2;
 use English;
 use File::Temp;
 use IO::File;
@@ -25,20 +26,25 @@ class PAP::Command::InterProScan {
                             doc => 'fasta file name',
                            },
         iprscan_output => {
-                           is            => 'SCALAR',
-                           is_optional   => 1,
-                           doc           => 'instance of File::Temp pointing to raw iprscan output',
+                           is          => 'SCALAR',
+                           is_optional => 1,
+                           doc         => 'instance of File::Temp pointing to raw iprscan output',
                           },
         bio_seq_feature => { 
                             is          => 'ARRAY',
                             is_optional => 1,
                             doc         => 'array of Bio::Seq::Feature' 
                            },
+        report_save_dir => {
+                            is          => 'ARRAY',
+                            is_optional => 1,
+                            doc         => 'directory to save a copy of the raw output to'
+                           },
     ],
 };
 
 operation PAP::Command::InterProScan {
-    input        => [ 'fasta_file'      ],
+    input        => [ 'fasta_file', 'repot_save_dir' ],
     output       => [ 'bio_seq_feature' ],
     lsf_queue    => 'long',
     lsf_resource => 'rusage[tmp=100]',
@@ -133,8 +139,13 @@ sub execute {
 
     ## Be Kind, Rewind.  Somebody will surely assume we've done this, 
     ## so let's not surprise them.  
-    $tmp_fh->seek(0, SEEK_SET);
-    
+    $sorted_tmp_fh->seek(0, SEEK_SET);
+
+    $self->archive_result();
+
+    ## Second verse, same as the first.
+    $sorted_tmp_fh->seek(0, SEEK_SET);
+
     return 1;
 
 }
@@ -241,6 +252,38 @@ sub parse_result {
     }
     
     $self->bio_seq_feature(\@features);
+    
+}
+
+sub archive_result {
+
+    my $self = shift;
+
+
+    my $report_save_dir = $self->report_save_dir();
+
+    if (defined($report_save_dir)) {
+
+        unless (-d $report_save_dir) {
+            die "does not exist or is not a directory: '$report_save_dir'";
+        }
+
+        my $output_handle = $self->iprscan_output();
+
+        my $target_file = File::Spec->catfile($report_save_dir, 'interpro.bz2');
+        
+        my $bz_file = bzopen($target_file, 'w') or
+            die "Cannot open '$target_file': $bzerrno";
+
+        while (my $line = <$output_handle>) {
+            $bz_file->bzwrite($line) or die "error writing: $bzerrno"; 
+        }
+
+        $bz_file->bzclose();
+        
+    }
+
+    return 1;
     
 }
 

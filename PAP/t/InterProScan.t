@@ -7,14 +7,23 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 281;
+use Test::More tests => 285;
 
 BEGIN {
     use_ok('PAP::Command');
     use_ok('PAP::Command::InterProScan');
 }
 
-my $command = PAP::Command::InterProScan->create('fasta_file' => 'data/B_coprocola.chunk.fasta');
+my $tempdir = File::Temp::tempdir(
+                                  'PAP_InterPro_test_XXXXXXXX',
+                                  DIR     => '/tmp',
+                                  CLEANUP => 1,
+                                 );
+
+my $command = PAP::Command::InterProScan->create(
+                                                 'fasta_file'      => 'data/B_coprocola.chunk.fasta',
+                                                 'report_save_dir' => $tempdir,
+                                                );
 isa_ok($command, 'PAP::Command::InterProScan');
 
 ok($command->execute());
@@ -44,3 +53,11 @@ foreach my $feature (@{$ref}) {
     }
 
 }
+
+ok(-e "$tempdir/interpro.bz2", "archive interpro raw output exists");
+is(system("bzcat $tempdir/interpro.bz2 > /dev/null"), 0, "bzcat can read archived raw output");
+
+my $interpro_output_fh = $command->iprscan_output();
+
+isa_ok($interpro_output_fh, 'File::Temp');
+ok($interpro_output_fh->opened());
