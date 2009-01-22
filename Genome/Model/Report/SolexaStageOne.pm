@@ -160,7 +160,7 @@ sub get_run_chunk_data_for_model {
     #this will happen for all models
     my $model= shift;
     my @assigned_read_sets = $model->read_sets;
-    my @steps = Genome::Model::Command::Build::ReferenceAlignment::Solexa->alignment_job_classes;
+    my @steps = Genome::ProcessingProfile::ReferenceAlignment::Solexa->alignment_job_classes;
     my @rows;
     for my $r (@assigned_read_sets) {
         my $rls= GSC::RunLaneSolexa->get($r->read_set_id);
