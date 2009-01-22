@@ -34,6 +34,25 @@ sub params_for_class{
     return qw/sensitivity research_project technology/;
 }
 
+sub stages {
+    return (qw/
+            polyphred_polyscan
+            verify_successful_completion
+            /);
+}
+
+sub polyphred_polyscan_job_classes {
+    return (qw/
+            Genome::Model::Command::Build::CombineVariants::Run
+        /);
+}
+
+sub polyphred_polyscan_objects {
+    return 1;
+}
+
+
+
 ;
 
 =cut
