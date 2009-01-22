@@ -29,56 +29,5 @@ One build of a given reference-alignment model.
 EOS
 }
 
-sub stages {
-    my @stages = qw/
-                alignment
-                variant_detection
-                verify_successful_completion
-    /;
-    return @stages;
-}
-
-sub alignment_job_classes {
-    my @sub_command_classes= qw/
-        Genome::Model::Command::Build::ReferenceAlignment::AssignRun
-        Genome::Model::Command::Build::ReferenceAlignment::AlignReads
-    /;
-    return @sub_command_classes;
-}
-
-sub variant_detection_job_classes {
-    my @steps = qw/
-                 Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments
-                 Genome::Model::Command::Build::ReferenceAlignment::FindVariations
-             /;
-    return @steps;
-}
-
-sub verify_successful_completion_job_classes {
-    my @sub_command_classes= qw/
-        Genome::Model::Command::Build::VerifySuccessfulCompletion
-    /;
-    return @sub_command_classes;
-}
-
-sub alignment_objects {
-    my $self = shift;
-    return $self->model->unbuilt_instrument_data;
-}
-
-sub variant_detection_objects {
-    my $self = shift;
-    return 1;
-}
-
-sub verify_successful_completion_objects {
-    my $self = shift;
-    return 1;
-}
-
-sub _get_sub_command_class_name{
-  return __PACKAGE__; 
-}
-
 1;
 
