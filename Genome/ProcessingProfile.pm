@@ -105,6 +105,45 @@ sub delete {
     return 1;
 }
 
+sub stages {
+    my $class = shift;
+    $class = ref($class) if ref($class);
+    die("Please implement stages in class '$class'");
+}
+
+sub classes_for_stage {
+    my $self = shift;
+    my $stage_name = shift;
+    my $classes_method_name = $stage_name .'_job_classes';
+    #unless (defined $self->can('$classes_method_name')) {
+    #    die('Please implement '. $classes_method_name .' in class '. $self->class);
+    #}
+    return $self->$classes_method_name;
+}
+
+sub objects_for_stage {
+    my $self = shift;
+    my $stage_name = shift;
+    my $model = shift;
+    my $objects_method_name = $stage_name .'_objects';
+    #unless (defined $self->can('$objects_method_name')) {
+    #    die('Please implement '. $objects_method_name .' in class '. $self->class);
+    #}
+    return $self->$objects_method_name($model);
+}
+
+sub verify_successful_completion_job_classes {
+    my @sub_command_classes= qw/
+        Genome::Model::Command::Build::VerifySuccessfulCompletion
+    /;
+    return @sub_command_classes;
+}
+
+sub verify_successful_completion_objects {
+    my $self = shift;
+    return 1;
+}
+
 #< SUBCLASSING >#
 #
 # This is called by the infrastructure to appropriately classify abstract processing profiles
@@ -112,12 +151,11 @@ sub delete {
 # in the class definiton...
 sub _resolve_subclass_name {
     my $class = shift;
-	
+
     my $type_name;
-	if ( ref($_[0]) and $_[0]->isa(__PACKAGE__) ) {
-		$type_name = $_[0]->type_name;
-	}
-    else {
+    if ( ref($_[0]) and $_[0]->can('type_name') ) {
+        $type_name = $_[0]->type_name;
+    } else {
         my %params = @_;
         $type_name = $params{type_name};
     }
@@ -127,9 +165,22 @@ sub _resolve_subclass_name {
         $type_name = $rule->specified_value_for_property_name('type_name');
     }
 
-    return ( defined $type_name ) 
-    ? $class->_resolve_subclass_name_for_type_name($type_name)
-    : undef;
+    if ( defined $type_name ) {
+        my $subclass_name = $class->_resolve_subclass_name_for_type_name($type_name);
+        my $sub_classification_method_name = $class->get_class_object->sub_classification_method_name;
+        if ($sub_classification_method_name) {
+            if ( $subclass_name->can($sub_classification_method_name)
+                 eq $class->can($sub_classification_method_name)) {
+                return $subclass_name;
+            } else {
+                return $subclass_name->$sub_classification_method_name(@_);
+            }
+        } else {
+            return $subclass_name;
+        }
+    } else {
+        return undef;
+    }
 }
 
 sub _resolve_subclass_name_for_type_name {
