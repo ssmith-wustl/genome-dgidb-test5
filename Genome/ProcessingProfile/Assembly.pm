@@ -100,6 +100,44 @@ sub create {
     return $self;
 }
 
+sub stages {
+    my @stages = qw/
+        setup_project
+        assemble
+        verify_successful_completion
+    /;
+    return @stages;
+}
+
+sub setup_project_job_classes {
+    my @classes = qw/
+            Genome::Model::Command::Build::Assembly::AssignReadSetToModel
+            Genome::Model::Command::Build::Assembly::FilterReadSet
+            Genome::Model::Command::Build::Assembly::TrimReadSet
+            Genome::Model::Command::Build::Assembly::AddReadSetToProject
+    /;
+    return @classes;
+}
+
+sub assemble_job_classes {
+    my @classes = qw/
+            Genome::Model::Command::Build::Assembly::Assemble
+    /;
+    return @classes;
+}
+
+sub setup_project_objects {
+    my $self = shift;
+    my $model = shift;
+    return $model->unbuilt_instrument_data;
+}
+
+sub assemble_objects {
+    my $self = shift;
+    my $model = shift;
+    return 1;
+}
+
 sub instrument_data_is_applicable {
     my $self = shift;
     my $instrument_data_type = shift;
