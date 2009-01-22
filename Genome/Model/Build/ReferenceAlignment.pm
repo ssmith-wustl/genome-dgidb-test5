@@ -12,10 +12,6 @@ class Genome::Model::Build::ReferenceAlignment {
     has => [],
 };
 
-sub command_subclassing_model_property {
-    return 'sequencing_platform';
-}
-
 sub accumulated_alignments_directory {
     my $self = shift;
     return $self->data_directory . '/alignments';
