@@ -132,21 +132,21 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     my @error_messages = $add_reads_command->error_messages();
     is(scalar(@error_messages), 0, 'execute generated no error messages');
 
-    my $assembly_builder = Genome::Model::Command::Build::Assembly->create(
+    my $assembly_build_event = Genome::Model::Command::Build::Assembly->create(
                                                                            model_id => $model->id,
                                                                            auto_execute => 0,
 									   );
 
-    isa_ok($assembly_builder,'Genome::Model::Command::Build::Assembly');
-    &_trap_messages($assembly_builder);
+    isa_ok($assembly_build_event,'Genome::Model::Command::Build::Assembly');
+    &_trap_messages($assembly_build_event);
 
-    ok($assembly_builder->execute,'execute assembly builder');
-    @status_messages = $assembly_builder->status_messages();
+    ok($assembly_build_event->execute,'execute assembly build_event');
+    @status_messages = $assembly_build_event->status_messages();
 
     # Each execute generates a message per ReadSet, plus 4 more for the build's 4 sub-steps (5 total)
     # so for 8 ReadSets = 8 * 5 = 40
     # plus 2 more for scheduling reference sequence / Build::Assembly::Assemble
-    #is(scalar(@status_messages), 42, 'executing builder generated 42 messages');
+    #is(scalar(@status_messages), 42, 'executing build_event generated 42 messages');
     for(my $i = 0; $i < 4; $i++) {
 	my $index = 0;
         like($status_messages[$index++], qr(^Scheduling for Genome::InstrumentData::454 with id .*), 'Found scheduling InstrumentData messages');
@@ -170,12 +170,12 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     like($status_messages[1], qr(^Scheduled Genome::Model::Command::Build::Assembly::Assemble),
 	 'Found Build Assembly message');
 
-    @warning_messages = $assembly_builder->warning_messages;
-    is(scalar(@warning_messages), 0, 'executing builder generated no warning messages');
-    @error_messages = $assembly_builder->error_messages;
-    is(scalar(@error_messages), 0, 'executing builder generated no error messages');
+    @warning_messages = $assembly_build_event->warning_messages;
+    is(scalar(@warning_messages), 0, 'executing build_event generated no warning messages');
+    @error_messages = $assembly_build_event->error_messages;
+    is(scalar(@error_messages), 0, 'executing build_event generated no error messages');
 
-    for my $class ($assembly_builder->setup_project_job_classes) {
+    for my $class ($pp->setup_project_job_classes) {
         my @events = $class->get(model_id => $model->id);
 
         for my $event (@events) {
@@ -195,9 +195,9 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
             }
 
             ok($rv,"execute $class event");
-            @warning_messages = $assembly_builder->warning_messages;
+            @warning_messages = $assembly_build_event->warning_messages;
             is(scalar(@warning_messages), 0, 'event execution produced no warning messages');
-            @error_messages = $assembly_builder->error_messages;
+            @error_messages = $assembly_build_event->error_messages;
             is(scalar(@error_messages), 0, 'event execution produced no error messages');
         }
     }
