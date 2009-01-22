@@ -14,7 +14,7 @@ class Genome::Model::Command::Build::UpdateState {
                          is_optional => 1,
                      },
             build   => {
-                        is => 'Genome::Model::Command::Build',
+                        is => 'Genome::Model::Build',
                         id_by => 'build_id',
                         is_optional => 1,
                     },
@@ -37,7 +37,16 @@ sub execute {
         $self->build_id($model->current_running_build_id);
     }
     my $build = $self->build;
-    unless ($build->update_build_state($self->force_flag)) {
+    unless ($build) {
+        $self->error_message('Build not found for model id '. $self->model_id .' and build id '. $self->build_id);
+        return;
+    }
+    my $build_event = $build->build_event;
+    unless ($build_event) {
+        $self->error_message('No build event found for build '. $self->build_id);
+        return;
+    }
+    unless ($build_event->update_build_state($self->force_flag)) {
         $self->status_message('Build '. $self->build_id .' is still running');
     }
     return 1;
