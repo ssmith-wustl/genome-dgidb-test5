@@ -1764,6 +1764,7 @@ sub cleanup_logs {
         $class->prev_fail_dir,
         $class->done_dir,
         $class->output_dir,
+        ( grep { $_->is_dir } $class->output_dir->children ),
         $class->fail_dir,
     )
     {
