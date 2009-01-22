@@ -393,7 +393,9 @@ sub is_failed{
 
 sub get_fail_logs{
     my $self = shift;	
-    my $cmd = "find /gsc/var/log/confirm_scheduled_pse/{fail,prev_fail}/".$self->pse_id.".* 2> /dev/null";
+    my $cmd = q(find '/gsc/var/log/confirm_scheduled_pse/{fail,prev_fail}/' -name )
+              . q(') . $self->pse_id
+              . q(.*' 2> /dev/null);
     my @potential = `$cmd`;
     chomp(@potential);
     return @potential;
@@ -401,7 +403,9 @@ sub get_fail_logs{
 
 sub get_output_logs{
     my $self = shift;	
-    my $cmd = "find /gsc/var/log/confirm_scheduled_pse/output/".$self->pse_id.".* 2> /dev/null";
+    my $cmd = q(find '/gsc/var/log/confirm_scheduled_pse/output/' -name )
+              . q(') . $self->pse_id
+              . q(.*' 2> /dev/null);
     my @potential = `$cmd`;
     chomp(@potential);
     return @potential;
@@ -409,11 +413,15 @@ sub get_output_logs{
 
 sub current_fail_log{
     my $self = shift;	
-    my $cmd = "find /gsc/var/log/confirm_scheduled_pse/fail/".$self->pse_id.".* 2> /dev/null";
+    my $cmd = q(find '/gsc/var/log/confirm_scheduled_pse/fail/' -name )
+              . q(') . $self->pse_id
+              . q(.*' 2> /dev/null);
     my @potential = `$cmd`;
 
     unless(@potential){ #-- check previous fail!
-	$cmd = "find /gsc/var/log/confirm_scheduled_pse/prev_fail/".$self->pse_id.".* 2> /dev/null";
+	$cmd = q(find '/gsc/var/log/confirm_scheduled_pse/prev_fail/' -name )
+               . q(') . $self->pse_id
+               . q(.*' 2> /dev/null);
 	@potential = `$cmd`;
     }
     chomp @potential;
@@ -426,7 +434,9 @@ sub current_fail_log{
 
 sub current_output_log{
     my $self = shift;	
-    my $cmd = "find /gsc/var/log/confirm_scheduled_pse/output/".$self->pse_id.".* 2> /dev/null";
+    my $cmd = q(find '/gsc/var/log/confirm_scheduled_pse/output/' -name )
+              . q(') . $self->pse_id
+              . q(.*' 2> /dev/null);
     my @potential = `$cmd`;
 
     chomp @potential;
