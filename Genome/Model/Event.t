@@ -42,7 +42,7 @@ my $build = Genome::Model::Build->create_mock(
                                               model_id => $model->id,
                                               data_directory => $test_data_directory .'/build'. $bogus_id,
                                           );
-my $builder = Genome::Model::Command::Build->create_mock(
+my $build_event = Genome::Model::Command::Build->create_mock(
                                                          id => --$bogus_id,
                                                          genome_model_event_id => $bogus_id,
                                                          build_id => $build->id,
@@ -50,17 +50,24 @@ my $builder = Genome::Model::Command::Build->create_mock(
                                                          event_type => 'genome model build',
                                                          event_status => 'Succeeded',
                                                    );
-$builder->set_always('data_directory',$build->data_directory);
+$build_event->set_always('data_directory',$build->data_directory);
+
+my $new_build = Genome::Model::Build->create_mock(
+                                                  id => --$bogus_id,
+                                                  build_id => $bogus_id,
+                                                  model_id => $model->id,
+                                                  data_directory => $test_data_directory .'/build'. $bogus_id,
+                                              );
 
 my %params = (
-              event_type => $builder->event_type,
+              event_type => $build_event->event_type,
               model_id => $model->id,
               read_set_id => 'test_read_set_id',
               ref_seq_id => 'test_ref_seq_id',
               user_name => $ENV{USER},
-              parent_event_id => $builder->genome_model_event_id,
-              build_id => $build->id,
-              prior_event_id => $builder->genome_model_event_id,
+              parent_event_id => $build_event->genome_model_event_id,
+              build_id => $new_build->id,
+              prior_event_id => $build_event->genome_model_event_id,
               lsf_job_id => 'test_lsf_job_id',
               retry_count => 'test_retry_count',
               status_detail => 'test_status_detail',
@@ -87,17 +94,17 @@ isa_ok($event_model,'Genome::Model');
 for my $property_name (keys %params) {
     is($event->$property_name,$params{$property_name},$property_name .' event accessor');
 }
-is($event->build_id,$build->id,'build_id event accessor');
+is($event->build_id,$new_build->id,'build_id event accessor');
 
 # test the existence and id of parent_event
 my $parent_event = $event->parent_event;
 isa_ok($parent_event,'Genome::Model::Event');
-is($parent_event->genome_model_event_id,$builder->genome_model_event_id,'parent event id matches expected');
+is($parent_event->genome_model_event_id,$build_event->genome_model_event_id,'parent event id matches expected');
 
 # test the existence and id of prior_event
 my $prior_event = $event->prior_event;
 isa_ok($prior_event,'Genome::Model::Event');
-is($prior_event->genome_model_event_id,$builder->genome_model_event_id,'prior event id matches expected');
+is($prior_event->genome_model_event_id,$build_event->genome_model_event_id,'prior event id matches expected');
 $prior_event->event_status('Succeeded');
 ok($event->verify_prior_event,'prior event verified');
 $prior_event->event_status('Scheduled');
@@ -106,7 +113,7 @@ ok(scalar(grep { $_ =~ /Prior event .* is not Succeeded/ } $event->error_message
 
 ok($event->should_calculate,'should calculate metrics for event status'. $event->event_status);
 
-is($event->build_directory,$build->data_directory,'data directory from parent event');
+is($event->build_directory,$new_build->data_directory,'data directory from parent event');
 
 for my $hang_off qw(input output metric) {
     my %hang_off_params =  (
