@@ -26,27 +26,5 @@ One build of a given imported reference sequence
 EOS
 }
 
-sub execute {
-    my $self = shift;
-    my $model = $self->model;
-
-    $self->status_message("Found Model: " . $model->name);
-    
-    $self->create_directory($self->data_directory);
-    unless (-d $self->data_directory) {
-        $self->error_message("Failed to create new build dir: " . $self->data_directory);
-        die;
-    }
-
-    $self->status_message("Build logic not implemented for " . __PACKAGE__ . " models yet.  Implement me to downoad new references from NCBI, and link to LIMS references.");
-    return 1;
-    
-    return $model;
-}
-
-
-sub _get_sub_command_class_name{
-  return __PACKAGE__; 
-}
 
 1;
