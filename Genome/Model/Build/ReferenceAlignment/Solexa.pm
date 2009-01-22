@@ -106,9 +106,5 @@ sub maplist_file_paths {
     return @map_lists;
 }
 
-sub _get_sub_command_class_name{
-  return __PACKAGE__; 
-}
-
 1;
 
