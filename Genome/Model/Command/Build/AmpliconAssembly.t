@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 25;
+use Test::More tests => 27;
 require File::Path;
 
 use Data::Dumper;
@@ -16,7 +16,8 @@ my $turn_on_messages = 0;
 
 use_ok( 'Genome::Model::AmpliconAssembly');
 use_ok( 'Genome::ProcessingProfile::AmpliconAssembly');
-use_ok( 'Genome::Model::Command::Build::AmpliconAssembly' );
+use_ok( 'Genome::Model::Build::AmpliconAssembly' );
+use_ok( 'Genome::Model::Command::Build' );
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Command-Build-Amplicon-Assembly';
 ok(-d $test_dir, 'Test dir exists');
@@ -77,25 +78,25 @@ my $ida = Genome::Model::InstrumentDataAssignment->create(
 );
 ok($ida, sprintf('Linked instrument data assignment (%s) to model (%s)', $inst_data->id, $model->id));
 
-my $builder = Genome::Model::Command::Build::AmpliconAssembly->create(
+my $build_event = Genome::Model::Command::Build->create(
     model_id => $model->id,
     auto_execute => 0,
 );
-isa_ok($builder, 'Genome::Model::Command::Build::AmpliconAssembly');
-$builder->queue_error_messages(1);
-$builder->queue_warning_messages(1);
-ok($builder->execute,'Execute builder');
-is($builder->warning_messages, undef, 'No warning messages for builder');
-$builder->dump_warning_messages(1);
-is($builder->error_messages, undef, 'No error messages for builder');
-$builder->dump_error_messages(1);
+isa_ok($build_event, 'Genome::Model::Command::Build');
+$build_event->queue_error_messages(1);
+$build_event->queue_warning_messages(1);
+ok($build_event->execute,'Execute build_event');
+is($build_event->warning_messages, undef, 'No warning messages for build_event');
+$build_event->dump_warning_messages(1);
+is($build_event->error_messages, undef, 'No error messages for build_event');
+$build_event->dump_error_messages(1);
 
 my @events = sort { $b->genome_model_event_id <=> $a->genome_model_event_id } Genome::Model::Event->get(
     model_id => $model->id,
-    build_id => $builder->build_id,
+    build_id => $build_event->build_id,
     event_status => 'Scheduled',
 );
-my $expected_event_count = 6;
+my $expected_event_count = 7;
 is(@events, $expected_event_count, "Scheduled $expected_event_count events");
 
 for my $event ( @events ) {
