@@ -153,6 +153,30 @@ sub params_for_class {
     return keys %HAS;
 }
 
+sub stages {
+    return (qw/
+        assemble
+        verify_successful_completion
+        /);
+}
+
+sub assemble_job_classes {
+    # TODO Add QualHist
+    #return 'Genome::Model::Command::Build::AmpliconAssembly::QualityHistogram';
+    return (qw/
+        Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentData
+        Genome::Model::Command::Build::AmpliconAssembly::Assemble
+        Genome::Model::Command::Build::AmpliconAssembly::Collate
+        Genome::Model::Command::Build::AmpliconAssembly::Orient
+        Genome::Model::Command::Build::AmpliconAssembly::PostProcess
+        Genome::Model::Command::Build::AmpliconAssembly::CleanUp
+        /);
+}
+
+sub assemble_objects {
+    return 1;
+}
+
 #< Primers >#
 sub primer_fasta_directory {
     return '/gscmnt/839/info/medseq/processing_profile_data/amplicon_assembly';
