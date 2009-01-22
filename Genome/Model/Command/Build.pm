@@ -9,10 +9,20 @@ class Genome::Model::Command::Build {
     is => [ 'Genome::Model::Event' ],
     has => [
         data_directory => { via => 'build' },
-        auto_execute   => { is => 'Boolean', default_value => 1, is_transient => 1, 
-                         doc => 'The build will execute genome-model run-jobs before completing' },
-        hold_run_jobs  => { is => 'Boolean', default_value => 0, is_transient => 1, 
-                         doc => 'A flag to hold all lsf jobs that are scheduled in run-jobs' },
+        auto_execute   => {
+                           is => 'Boolean',
+                           default_value => 1,
+                           is_transient => 1,
+                           is_optional => 1,
+                           doc => 'The build will execute genome-model run-jobs before completing(default_value=1)',
+                       },
+        hold_run_jobs  => {
+                           is => 'Boolean',
+                           default_value => 0,
+                           is_transient => 1,
+                           is_optional => 1,
+                           doc => 'A flag to hold all lsf jobs that are scheduled in run-jobs(default_value=0)',
+                       },
     ],
     doc => "build the model with currently assigned instrument data according to the processing profile",
 };
@@ -27,32 +37,38 @@ sub create {
         $class->error_message("Failed to create build command: " . $class->error_message());
         return;
     }
-
+    unless (defined $self->auto_execute) {
+        $self->auto_execute(1);
+    }
+    unless (defined $self->hold_run_jobs) {
+        $self->hold_run_jobs(0);
+    }
     my $model = $self->model;
     unless ($self->build_id) {
-        if ($model->current_running_build_id) {
-            $self->build_id($model->current_running_build_id);
+        my $current_running_build = $model->current_running_build;
+        if ($current_running_build) {
+            $self->build_id($current_running_build->build_id);
         } else {
             my $build = Genome::Model::Build->create(
                                                      model_id => $model->id,
-                                                 );
+                                                   );
             unless ($build) {
                 $self->error_message('Failed to create new build for model '. $model->id);
                 $self->delete;
                 return;
             }
-            $self->build_id($build->id);
+            $self->build_id($build->build_id);
         }
     }
-    my @builders = Genome::Model::Command::Build->get(
-                                                      model_id => $model->id,
-                                                      build_id => $model->current_running_build_id,
-                                                      genome_model_event_id => { operator => 'ne', value => $self->id},
-                                                  );
-    if (scalar(@builders)) {
-        my $error_message = 'Found '. scalar(@builders) .' builders that already exist for current running build '.
-            $model->current_running_build_id;
-        for (@builders) {
+    my @build_events = Genome::Model::Command::Build->get(
+                                                          model_id => $model->id,
+                                                          build_id => $self->build_id,
+                                                          genome_model_event_id => { operator => 'ne', value => $self->id},
+                                                      );
+    if (scalar(@build_events)) {
+        my $error_message = 'Found '. scalar(@build_events) .' build event(s) that already exist for build id '.
+            $self->build_id;
+        for (@build_events) {
             $error_message .= "\n". $_->desc ."\t". $_->event_status ."\n";
         }
         $self->error_message($error_message);
@@ -63,31 +79,40 @@ sub create {
     $self->date_completed(undef);
     $self->event_status('Running');
     $self->user_name($ENV{'USER'});
+
+    my $build = $self->build;
+    unless ($build) {
+        $self->error_message('No build found for build id '. $self->build_id);
+        $self->delete;
+        return;
+    }
+
     return $self;
-}
-
-sub stages {
-    my $class = shift;
-    $class = ref($class) if ref($class);
-    die("Please implement stages in class '$class'");
-}
-
-sub command_subclassing_model_property {
-    return 'type_name';
 }
 
 sub execute {
     my $self = shift;
-    if ($self->child_events) {
-        $self->error_message('Build '. $self->build_id .' already has child events. Will not execute the builder again.');
+    my $build = $self->build;
+    unless ($build) {
+        $self->error_message('No build found for build id '. $self->build_id);
         return;
     }
+    my @events = grep { $_->id != $self->id } $build->events;
+    if (scalar(@events)) {
+        my $error_message = 'Build '. $build->build_id .' already has events.' ."\n";
+        for (@events) {
+            $error_message .= "\t". $_->desc .' '. $_->event_status ."\n";
+        }
+        $error_message .= 'For build event: '. $self->desc .' '. $self->event_status;
+        return;
+    }
+    my $pp = $self->model->processing_profile;
     my $prior_job_name;
-    for my $stage_name ($self->stages) {
+    for my $stage_name ($pp->stages) {
         my @scheduled_objects = $self->_schedule_stage($stage_name);
         unless (@scheduled_objects) {
             $self->error_message('Problem with build('. $self->build_id .") objects not scheduled for classes:\n".
-                                 join("\n",$self->classes_for_stage($stage_name)));
+                                 join("\n",$pp->classes_for_stage($stage_name)));
             $self->event_status('Running');
             die;
         }
@@ -122,16 +147,17 @@ sub execute {
 sub resolve_stage_name_for_class {
     my $self = shift;
     my $class = shift;
-    for my $stage_name ($self->stages) {
-        my $found_class = grep { $class =~ /^$_/ } $self->classes_for_stage($stage_name);
+    my $pp = $self->model->processing_profile;
+    for my $stage_name ($pp->stages) {
+        my $found_class = grep { $class =~ /^$_/ } $pp->classes_for_stage($stage_name);
         if ($found_class) {
             return $stage_name;
         }
     }
     my $error_message = "No class found for '$class' in build ". $self->class ." stages:\n";
-    for my $stage_name ($self->stages) {
+    for my $stage_name ($pp->stages) {
         $error_message .= $stage_name ."\n";
-        for my $class ($self->classes_for_stage($stage_name)) {
+        for my $class ($pp->classes_for_stage($stage_name)) {
             $error_message .= "\t". $class ."\n";
         }
     }
@@ -139,26 +165,12 @@ sub resolve_stage_name_for_class {
     return;
 }
 
-sub classes_for_stage {
-    my $self = shift;
-    my $stage_name = shift;
-    my $classes_method_name = $stage_name .'_job_classes';
-    return $self->$classes_method_name;
-}
-
-# TODO: write method for getting all objects for stage regardless of build status
-sub objects_for_stage {
-    my $self = shift;
-    my $stage_name = shift;
-    my $objects_method_name = $stage_name .'_objects';
-    return $self->$objects_method_name;
-}
-
 sub events_for_stage {
     my $self = shift;
     my $stage_name = shift;
+    my $pp = $self->model->processing_profile;
     my @events;
-    for my $class ($self->classes_for_stage($stage_name)) {
+    for my $class ($pp->classes_for_stage($stage_name)) {
         push @events, $self->events_for_class($class);
     }
     return @events;
@@ -351,7 +363,8 @@ sub verify_successful_completion_for_stage {
 
 sub verify_successful_completion {
     my $self = shift;
-    for my $stage_name ($self->stages) {
+    my $pp = $self->model->processing_profile;
+    for my $stage_name ($pp->stages) {
         if ($stage_name eq 'verify_successful_completion') {
             last;
         }
@@ -366,8 +379,8 @@ sub verify_successful_completion {
 sub update_build_state {
     my $self = shift;
     my $force_flag = shift;
-    
-    for my $stage_name ($self->stages) {
+    my $pp = $self->model->processing_profile;
+    for my $stage_name ($pp->stages) {
         if ($stage_name eq 'verify_successful_completion') {
             last;
         }
@@ -392,9 +405,9 @@ sub update_build_state {
 sub remove_dependencies_on_stage {
     my $self = shift;
     my $stage_name = shift;
+    my $pp = $self->model->processing_profile;
 
-
-    my @stages = $self->stages;
+    my @stages = $pp->stages;
     my $next_stage_name;
     for (my $i = 0; $i < scalar(@stages); $i++) {
         if ($stage_name eq $stages[$i]) {
@@ -404,7 +417,7 @@ sub remove_dependencies_on_stage {
     }
     if ($next_stage_name) {
         my $dependency = 'done("'. $self->model_id .'_'. $self->build_id .'_'. $stage_name .'*")';
-        my @classes = $self->classes_for_stage($next_stage_name);
+        my @classes = $pp->classes_for_stage($next_stage_name);
         $self->_remove_dependency_for_classes($dependency,\@classes);
     }
 }
@@ -458,8 +471,8 @@ sub _remove_dependency_for_classes {
 sub _schedule_stage {
     my $self = shift;
     my $stage_name = shift;
-
-    my @objects = $self->objects_for_stage($stage_name);
+    my $pp = $self->model->processing_profile;
+    my @objects = $pp->objects_for_stage($stage_name,$self->model);
     unless (@objects) {
         $self->error_message('Problem with build('. $self->build_id .") no objects found for stage '$stage_name'\n");
         die;
@@ -492,7 +505,7 @@ sub _schedule_stage {
         } else {
             $self->status_message('Scheduling for '. $object_class .' with id '. $object_id);
         }
-        my @command_classes = $self->classes_for_stage($stage_name);
+        my @command_classes = $pp->classes_for_stage($stage_name);
         push @scheduled_commands, $self->_schedule_command_classes_for_object($object,\@command_classes);
     }
     return @scheduled_commands;
