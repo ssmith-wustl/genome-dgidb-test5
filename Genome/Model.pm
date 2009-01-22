@@ -49,11 +49,7 @@ class Genome::Model {
     has_optional => [
         user_name                     => { is => 'VARCHAR2', len => 64 },
         creation_date                 => { is => 'TIMESTAMP(6)', len => 11 },
-        builds                      => { is => 'Genome::Model::Build', reverse_id_by => 'model', is_many => 1 },
-        current_running_build_id    => { is => 'Number', len => 10 },
-        current_running_build       => { is => 'Genome::Model::Build', id_by => 'current_running_build_id' },
-        last_complete_build_id      => { is => 'Number', len=> 10 },
-        last_complete_build         => { is => 'Genome::Model::Build', id_by => 'last_complete_build_id' },
+        builds                        => { is => 'Genome::Model::Build', reverse_id_by => 'model', is_many => 1 },
 
         # TODO: refactor
         gold_snp_path => {
@@ -69,7 +65,7 @@ class Genome::Model {
         # deprecated
         read_sets                     => { is => 'Genome::Model::ReadSet', reverse_id_by => 'model', is_many=> 1 },
         run_chunks                    => { is => 'Genome::RunChunk', via=>'read_sets', to => 'read_set' },
-        instrument_data_links        => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
+        instrument_data_links         => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
             doc => "for models which directly address instrument data, the list of assigned run chunks"
         },
         _instrument_data              => { via => 'instrument_data_links', to => 'read_set_id', is_mutable => 1 },
@@ -89,7 +85,7 @@ class Genome::Model {
     ],
     has_many_optional => [
         ref_seqs            => { is => 'Genome::Model::RefSeq', reverse_id_by => 'model' },
-        
+
         project_assignments => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'model' },
         projects            => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
         project_names       => { is => 'Text', via => 'projects', to => 'name' },
@@ -487,14 +483,113 @@ sub resolve_archive_file {
     return $self->model_data_directory .'/'. $self->id .'.tbz';
 }
 
+sub succeeded_builds {
+    my $self = shift;
+    my @builds = $self->builds;
+    unless (scalar(@builds)) {
+        return;
+    }
+    my @build_events;
+    for my $build (@builds) {
+        my $build_event = $build->build_event;
+        if ($build_event) {
+            push @build_events, $build_event;
+        }
+    }
+    unless (scalar(@build_events)) {
+        return;
+    }
+    my @build_events_w_status = grep { $_->event_status } @build_events;
+    my @succeeded_build_events = grep {$_->event_status eq 'Succeeded'} @build_events_w_status;
+    my @events_wo_date = grep { !$_->date_completed } @succeeded_build_events;
+    if (scalar(@events_wo_date)) {
+        my $error_message = 'Found '. scalar(@events_wo_date) .' Running build events without date completed.' ."\n";
+        for (@events_wo_date) {
+            $error_message .= "\t". $_->desc ."\n";
+        }
+        die($error_message);
+    }
+    my @sorted_succeeded_build_events = sort {$a->date_completed cmp $b->date_completed} @succeeded_build_events;
+    my @succeeded_builds = map { $_->build } @sorted_succeeded_build_events;
+    return @succeeded_builds;
+}
+
+sub last_complete_build {
+    my $self = shift;
+
+    my @succeeded_builds = $self->succeeded_builds;
+    my $last_complete_build = pop(@succeeded_builds);
+    return $last_complete_build;
+}
+
+sub last_complete_build_id {
+    my $self = shift;
+
+    my $last_complete_build = $self->last_complete_build;
+    unless ($last_complete_build) {
+        return;
+    }
+    return $last_complete_build->id;
+}
+
+sub running_builds {
+    my $self = shift;
+    my @builds = $self->builds;
+    unless (scalar(@builds)) {
+        return;
+    }
+    my @build_events;
+    for my $build (@builds) {
+        my $build_event = $build->build_event;
+        if ($build_event) {
+            push @build_events, $build_event;
+        }
+    }
+    unless (scalar(@build_events)) {
+        return;
+    }
+    my @build_events_w_status = grep { $_->event_status } @build_events;
+    my @running_build_events = grep {$_->event_status eq 'Running'} @build_events_w_status;
+    my @events_wo_date = grep { !$_->date_scheduled } @running_build_events;
+    if (scalar(@events_wo_date)) {
+        my $error_message = 'Found '. scalar(@events_wo_date) .' Running build events without date scheduled.' ."\n";
+        for (@events_wo_date) {
+            $error_message .= "\t". $_->desc ."\n";
+        }
+        die($error_message);
+    }
+    my @sorted_running_build_events = sort {$a->date_scheduled cmp $b->date_scheduled} @running_build_events;
+    my @running_builds = map { $_->build } @sorted_running_build_events;
+    return @running_builds;
+}
+
+sub current_running_build {
+    my $self = shift;
+
+    my @running_builds = $self->running_builds;
+    my $current_running_build = pop(@running_builds);
+    return $current_running_build;
+}
+
+sub current_running_build_id {
+    my $self = shift;
+
+    my $current_running_build = $self->current_running_build;
+    unless ($current_running_build) {
+        return;
+    }
+    return $current_running_build->id;
+}
+
 sub latest_build_directory {
     my $self = shift;
-    if (defined $self->current_running_build_id) {
-        my $build = Genome::Model::Build->get($self->current_running_build_id);
-        return $build->data_directory;
-    } elsif (defined $self->last_complete_build_id) {
-        my $build = Genome::Model::Build->get($self->last_complete_build_id);
-        return $build->data_directory;
+    my $current_running_build = $self->current_running_build;
+    if (defined $current_running_build) {
+        return $current_running_build->data_directory;
+    }
+    my $last_complete_build = $self->last_complete_build;
+    if (defined $last_complete_build) {
+        return $last_complete_build->data_directory;
     } else {
        die "no builds found";
     }
