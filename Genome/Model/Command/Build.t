@@ -30,18 +30,21 @@ my $pp = Genome::ProcessingProfile::ReferenceAlignment->create_mock(
                                                                     type_name => 'reference alignment',
                                                                 );
 isa_ok($pp,'Genome::ProcessingProfile');
+$pp->set_list('stages',[]);
+$pp->set_list('objects_for_stage',[]);
+
 my $model_wo_read_sets = Genome::Model::ReferenceAlignment->create_mock(
                                                            id => --$bogus_id,
                                                            genome_model_id => $bogus_id,
                                                            subject_type => 'sample_name',
                                                            subject_name => 'test_sample_name',
                                                            processing_profile_id => $pp->id,
-                                                           last_complete_build_id => 0,
                                                            name => 'test',
                                                            data_directory => $tmp_dir,
                                                            read_sets => [],
                                                            type_name => $pp->type_name,
                                                            sequencing_platform => $pp->sequencing_platform,
+                                                           processing_profile => $pp
                                                        );
 isa_ok($model_wo_read_sets,'Genome::Model');
 
@@ -55,17 +58,32 @@ my $mock_pp = Genome::ProcessingProfile->create_mock(
                                                      type_name => 'abstract base test',
                                                  );
 isa_ok($mock_pp,'Genome::ProcessingProfile');
+$mock_pp->set_list('stages','stage1','stage2');
+$mock_pp->set_list('stage1_job_classes',
+                   'Genome::Model::Command::Build::AbstractBaseTest::StageOneJobOne',
+                   'Genome::Model::Command::Build::AbstractBaseTest::StageOneJobTwo',
+                   'Genome::Model::Command::Build::AbstractBaseTest::StageOneJobThree',
+               );
+$mock_pp->set_list('stage2_job_classes',
+                   'Genome::Model::Command::Build::AbstractBaseTest::StageTwoJobOne',
+                   'Genome::Model::Command::Build::AbstractBaseTest::StageTwoJobTwo',
+               );
+$mock_pp->mock('classes_for_stage',\&Genome::ProcessingProfile::classes_for_stage);
+$mock_pp->mock('objects_for_stage',\&Genome::ProcessingProfile::objects_for_stage);
+$mock_pp->mock('verify_successful_completion_objects',\&Genome::ProcessingProfile::verify_successful_completion_objects);
+$mock_pp->mock('verify_successful_completion_job_classes',\&Genome::ProcessingProfile::verify_successful_completion_job_classes);
+
 my $mock_model = Genome::Model->create_mock(
                                             id => --$bogus_id,
                                             genome_model_id => $bogus_id,
                                             subject_type => 'test_subject_type',
                                             subject_name => 'test_sample_name',
                                             processing_profile_id => $mock_pp->id,
-                                            last_complete_build_id => 0,
                                             name => 'test_w_read_sets',
                                             data_directory => $tmp_dir,
                                             latest_build_directory => $tmp_dir,
                                             type_name => $mock_pp->type_name,
+                                            processing_profile => $mock_pp,
                                         );
 isa_ok($mock_model,'Genome::Model');
 my @run_chunks;
@@ -90,6 +108,8 @@ for my $run_chunk ($mock_model->run_chunks) {
     push @read_sets, $read_set;
 }
 $mock_model->set_list('read_sets',@read_sets);
+$mock_pp->set_list('stage1_objects',@read_sets);
+
 my @ref_seqs;
 for (1 .. 5) {
     my $ref_seq = Genome::Model::RefSeq->create_mock(
@@ -101,6 +121,8 @@ for (1 .. 5) {
     push @ref_seqs, $ref_seq;
 }
 $mock_model->set_list('ref_seqs',@ref_seqs);
+$mock_pp->set_list('stage2_objects',@ref_seqs);
+
 my $abstract_build = Genome::Model::Command::Build::AbstractBaseTest->create(
                                                                              model => $mock_model,
                                                                              auto_execute => 0,
@@ -114,9 +136,9 @@ $abstract_build->queue_error_messages(1);
 $abstract_build->queue_warning_messages(1);
 $abstract_build->queue_status_messages(1);
 
-is(scalar($abstract_build->stages),2,'two stages for abstract build');
-is(scalar($abstract_build->stage1_objects),10,'ten objects for stage 1');
-is(scalar($abstract_build->stage2_objects),5,'five objects for stage 2');
+is(scalar($mock_pp->stages),2,'two stages for abstract build');
+is(scalar($mock_pp->stage1_objects),10,'ten objects for stage 1');
+is(scalar($mock_pp->stage2_objects),5,'five objects for stage 2');
 ok($abstract_build->execute,'execute '. $abstract_build->command_name);
 is(scalar(grep { /^Scheduling for Test::MockObject with id .*/ } $abstract_build->status_messages),15,
           'found fifteen status messages for scheduling mock objects');
@@ -179,5 +201,4 @@ SKIP: {
 };
 
 exit;
-
 
