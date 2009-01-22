@@ -19,11 +19,6 @@ class Genome::Model::Command::Build::AmpliconAssembly {
     is => 'Genome::Model::Command::Build',
 };
 
-#< Subclassing...default is to not >#
-sub _get_sub_command_class_name{
-    return __PACKAGE__;
-}
-
 #< Helps >#
 sub help_brief {
     return
@@ -37,45 +32,6 @@ sub help_detail {
     return;
 }
 
-#< Beef >#
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
-
-    unless ( $self->_verify_model ) {
-        $self->delete;
-        return;
-    }
-
-    return $self;
-}
-
-#< Stages >#
-sub stages {
-    return (qw/
-        assemble
-        /);
-}
-
-#< Pre Assemble Process >#
-sub assemble_job_classes {
-    # TODO Add QualHist
-    #return 'Genome::Model::Command::Build::AmpliconAssembly::QualityHistogram';
-    return (qw/
-        Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentData
-        Genome::Model::Command::Build::AmpliconAssembly::Assemble
-        Genome::Model::Command::Build::AmpliconAssembly::Collate
-        Genome::Model::Command::Build::AmpliconAssembly::Orient
-        Genome::Model::Command::Build::AmpliconAssembly::PostProcess
-        Genome::Model::Command::Build::AmpliconAssembly::CleanUp
-        /);
-}
-
-sub assemble_objects {
-    return 1;
-}
 
 1;
 
