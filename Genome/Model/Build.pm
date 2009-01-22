@@ -32,25 +32,41 @@ sub create {
     unless ($self->data_directory) {
         $self->data_directory($self->resolve_data_directory);
     }
-    $self->model->current_running_build_id($self->build_id);
     return $self;
 }
 
-sub builder {
+sub events {
     my $self = shift;
 
-    my @builders = Genome::Model::Command::Build->get(
-                                                      model_id => $self->model_id,
-                                                      build_id => $self->build_id,
-                                                  );
-    unless (scalar(@builders)) {
-        return;
+    my @events = Genome::Model::Event->get(
+                                           model_id => $self->model_id,
+                                           build_id => $self->build_id,
+                                       );
+    return @events;
+}
+
+sub build_events {
+    my $self = shift;
+
+    my @build_events = Genome::Model::Command::Build->get(
+                                                    model_id => $self->model_id,
+                                                    build_id => $self->build_id,
+                                                );
+    return @build_events;
+}
+
+sub build_event {
+    my $self = shift;
+    my @build_events = $self->build_events;
+    if (scalar(@build_events) > 1) {
+        my $error_message = 'Found '. scalar(@build_events) .' build events for model id '.
+            $self->model_id .' and build id '. $self->build_id ."\n";
+        for (@build_events) {
+            $error_message .= "\t". $_->desc .' '. $_->event_status ."\n";
+        }
+        die($error_message);
     }
-    unless (scalar(@builders)) {
-        $self->error_message('Found '. scalar(@builders) .' build events(builders) for model '. $self->model_id .' and build '. $self->build_id);
-        return;
-    }
-    return $builders[0];
+    return $build_events[0];
 }
 
 sub resolve_data_directory {
@@ -81,7 +97,7 @@ sub available_reports {
 # in the class definiton...
 sub _resolve_subclass_name {
     my $class = shift;
-    $DB::single = 1;
+
     my $type_name;
 	if ( ref($_[0]) and $_[0]->isa(__PACKAGE__) ) {
 		$type_name = $_[0]->model->type_name;
@@ -104,11 +120,15 @@ sub _resolve_subclass_name {
     if (defined $type_name ) {
         my $subclass_name = $class->_resolve_subclass_name_for_type_name($type_name);
         my $sub_classification_method_name = $class->get_class_object->sub_classification_method_name;
-        if ($subclass_name->can($sub_classification_method_name)
-            eq $class->can($sub_classification_method_name)) {
-            return $subclass_name;
+        if ( $sub_classification_method_name ) {
+            if ( $subclass_name->can($sub_classification_method_name)
+                 eq $class->can($sub_classification_method_name) ) {
+                return $subclass_name;
+            } else {
+                return $subclass_name->$sub_classification_method_name(@_);
+            }
         } else {
-            return $subclass_name->$sub_classification_method_name(@_);
+            return $subclass_name;
         }
     } else {
         return undef;
