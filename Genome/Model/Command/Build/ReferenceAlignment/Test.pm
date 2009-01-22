@@ -313,9 +313,10 @@ sub run {
     my $self = shift;
     my $model = $self->model;
     my $build = $self->build;
+    my $pp = $model->processing_profile;
     my @events;
-    for my $stage_name ($build->stages) {
-        my @classes = $build->classes_for_stage($stage_name);
+    for my $stage_name ($pp->stages) {
+        my @classes = $pp->classes_for_stage($stage_name);
         push @events, $self->run_events_for_class_array_ref(\@classes);
     }
     my @failed_events = grep { $_->event_status ne 'Succeeded' } @events;
@@ -335,11 +336,11 @@ sub run_events_for_class_array_ref {
     my $self = shift;
     my $classes = shift;
     my @read_sets = @{$self->{_read_set_array_ref}};
-    my $build = $self->build;
-    my @stages = $build->stages;
+    my $pp = $self->model->processing_profile;
+    my @stages = $pp->stages;
     my $stage2 = $stages[1];
     my $stage_object_method = $stage2 .'_objects';
-    my @stage2_objects = $build->$stage_object_method;
+    my @stage2_objects = $pp->$stage_object_method($self->model);
     my @events;
     for my $command_class (@$classes) {
         if (ref($command_class) eq 'ARRAY') {
