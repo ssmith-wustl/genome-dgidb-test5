@@ -195,7 +195,7 @@ sub _verify_submitted_jobs {
 
         my $job_id = $event->lsf_job_id;
         my $job_state = $event->lsf_job_state;
-        if (!$job_state || $job_state eq '' || $job_state eq 'EXIT') {
+        if (!$job_state || $job_state eq '' || $job_state eq 'EXIT' || $job_state eq 'DONE') {
             $self->status_message(
                 $event->event_status
                 . ' event ' 
