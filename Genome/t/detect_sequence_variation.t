@@ -2,7 +2,8 @@
 
 use warnings;
 use strict; 
-use Test::More no_plan => 1;
+#use Test::More no_plan => 1;
+use Test::More skip_all => "Broken from GSC/PSE change. Skipping until this is remedied.";
 
 use Genome;
 
