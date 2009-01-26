@@ -57,6 +57,10 @@ class Genome::Model::CombineVariants{
     ],
 };
 
+sub sequencing_platform{
+    return 'sanger';
+}
+
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);

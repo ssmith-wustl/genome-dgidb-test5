@@ -60,6 +60,7 @@ sub event_types_without_subclass {
             '^genome[\- ]model build verify-successful-completion$',
             '^genome[\- ]model build assembly assemble newbler$',
             '^genome[\- ]model build amplicon-assembly',
+            '^genome[\- ]model build combine-variants',
         );
 }
 

@@ -50,6 +50,11 @@ class Genome::Model::PolyphredPolyscan {
     ]
 };
 
+sub sequencing_platform{
+    my $self = shift;
+    return "sanger";
+}
+
 sub create{
     my $class = shift;
     my $self = $class->SUPER::create(@_);
