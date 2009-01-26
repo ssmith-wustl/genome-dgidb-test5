@@ -38,8 +38,7 @@ sub execute {
         event_status => 'Succeeded'
     );
     #Convert events to ReadSet objects
-    my @readsets = map {Genome::Model::ReadSet->get(read_set_id => $_->read_set_id, model_id=>$model_id )} @events;
-
+    my @readsets = map {Genome::Model::ReadSet->get(read_set_id => $_->read_set_id, model_id => $model_id)} @events;
     
     my %map_files;
     #Completely undeprecated loop over the readsets
@@ -69,7 +68,6 @@ sub execute {
             print $fh join("\n",@fof), "\n"; #must end in a new-line or the vmerge tool will hang horribly
         }
     }
-
     #That's right I'm dynamically generating a bash script 
     #deal with it
     #At some point this will need to be moved to a file or something in order to avoid truncation by bash
@@ -93,12 +91,12 @@ sub execute {
 gt maq vmerge --maplist ${model_id}_\${LIBRARY}_readsets.fof --pipe /tmp/${model_id}_\${LIBRARY}.map & 
 sleep 5
 mkdir -p -m a+rw \${LIBRARY}
-cp -f /tmp/${model_id}_\${LIBRARY}.map \${LIBRARY}/\${LIBRARY}.map
+/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq rmdup \${LIBRARY}/\${LIBRARY}.rmdup.map /tmp/${model_id}_\${LIBRARY}.map
 COMMANDS
 
 
 #now we have all the files, send out the jobs
-    system("bsub -N -u \${USER}\@watson.wustl.edu -R 'select[type==LINUX64]' -J '${model_id}_library_vmerge[1-$num_libraries]' -oo 'stdout.\%I' -eo 'stderr.\%I' '$bash_script$commands'");
+system("bsub -N -u \${USER}\@watson.wustl.edu -R 'select[type==LINUX64]' -J '${model_id}_library_vmerge[1-$num_libraries]' -oo 'stdout.\%I' -eo 'stderr.\%I' '$bash_script$commands'");
 
     return 1;
 }
