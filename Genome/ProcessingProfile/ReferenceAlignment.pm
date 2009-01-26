@@ -89,6 +89,14 @@ sub properties_hash {
                                            doc => '',
                                            is_optional => 1,
                                        },
+                  auto_assign_inst_data => {
+                                           doc => 'indicates intent to have new instrument data automatically assigned to the model',
+                                           is_optional => 1,
+                                       },
+                  auto_build_alignments => {
+                                           doc => 'indicates intent to have new instrument data assignments automatically aligned (stage1)',
+                                           is_optional => 1,
+                                       }
                   );
     return %properties;
 }
