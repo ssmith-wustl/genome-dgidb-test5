@@ -15,6 +15,8 @@ use Sort::Naturally;
 class Genome::Model::ReferenceAlignment {
     is => 'Genome::Model',
     has => [       
+        auto_assign_inst_data        => { via => 'processing_profile'},
+        auto_build_alignments        => { via => 'processing_profile'},
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
         genotyper_name               => { via => 'processing_profile'},
