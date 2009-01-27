@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 16;
+use Test::More tests => 18;
 use above 'Genome';
 use Genome::Model::Tools::Pcap::Assemble;
 use Data::Dumper;
@@ -31,10 +31,12 @@ ok($obj->run_pcap, "test pcap.rep");
 ok($obj->run_bdocs, "test bdocs.rep");
 ok($obj->run_bclean, "test bclean.rep");
 ok($obj->run_bcontig, "test bcontig.rep");
+ok($obj->check_for_results_file, "test check for results file");
 ok($obj->run_bconsen, "test bconsen.test");
 ok($obj->run_bform, "test bform.rep");
 ok($obj->create_gap_file, "test create_gap_file");
 ok($obj->create_agp_file, "test create_agp_file");
 ok($obj->create_sctg_fa_file, "test create_sctg_fa_file");
+ok($obj->add_wa_tags_to_ace, "test add WA tags to ace");
 ok($obj->delete_completed_assembly, "remove this assembly");
-
+#ok($obj->clean_up, "test clean up step");
