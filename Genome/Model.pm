@@ -758,6 +758,13 @@ sub get_all_objects {
     } else {
         @read_sets = sort {$a->id cmp $b->id} @read_sets;
     }
+    
+    my @idas = $self->instrument_data_assignments;
+    if ($idas[0] && $idas[0]->id =~ /^\-/) {
+        @idas = sort {$b->id cmp $a->id} @idas;
+    } else {
+        @idas = sort {$a->id cmp $b->id} @idas;
+    }
 
     my @builds = $self->builds;
     if ($builds[0] && $builds[0]->id =~ /^\-/) {
@@ -765,7 +772,7 @@ sub get_all_objects {
     } else {
         @builds = sort {$a->id cmp $b->id} @builds;
     }
-    return (@read_sets, @builds);
+    return (@read_sets, @idas, @builds);
 }
 
 sub yaml_string {
@@ -781,34 +788,6 @@ sub yaml_string {
 
 sub delete {
     my $self = shift;
-
-    my $data_directory = $self->data_directory;
-    my $db_objects_dump_file = $data_directory .'/data_dump.yaml';
-    my $fh = IO::File->new($db_objects_dump_file,'w');
-    unless ($fh) {
-        $self->error_message('Failed to create file handle for file '. $db_objects_dump_file);
-        return;
-    }
-    print $fh $self->yaml_string;
-    $fh->close;
-
-    my $cwd = getcwd;
-    my ($filename,$dirname) = File::Basename::fileparse($data_directory);
-    $filename =~ s/^-/\.\/-/;
-    unless (chdir $dirname) {
-        $self->error_message('Failed to change directories to '. $dirname);
-        return;
-    }
-    my $cmd = 'tar --bzip2 --preserve --create --file '. $self->resolve_archive_file .' '. $filename;
-    my $rv = system($cmd);
-    unless ($rv == 0) {
-        $self->error_message('Failed to create archive of model '. $self->id .' with command '. $cmd);
-        return;
-    }
-    unless (chdir $cwd) {
-        $self->error_message('Failed to change directories to '. $cwd);
-        return;
-    }
 
     # This may not be the way things are working but here is the order of operations for removing db events
     # 1.) Remove all genome_model_read_set entries for model
