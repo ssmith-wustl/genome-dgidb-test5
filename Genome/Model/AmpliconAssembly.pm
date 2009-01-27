@@ -160,7 +160,7 @@ sub amplicons {
 sub amplicons_and_headers { 
     my $self = shift;
 
-    my $amplicons_and_traces = $self->amplicons_and_traces_for_assembly
+    my $amplicons = $self->amplicons
         or return;
 
     my $header_generator= sub{
@@ -194,7 +194,7 @@ sub amplicons_and_headers {
     }
 
     my %amplicons_and_headers;
-    for my $amplicon ( sort { $a cmp $b } keys %$amplicons_and_traces ) {
+    for my $amplicon ( sort { $a cmp $b } keys %$amplicons ) {
         $amplicons_and_headers{$amplicon} = $header_generator->($amplicon);
     }
 
@@ -241,9 +241,6 @@ sub _determine_amplicons_in_chromat_dir_broad {
 }
 
 1;
-
-=pod
-=cut
 
 #$HeadURL$
 #$Id$
