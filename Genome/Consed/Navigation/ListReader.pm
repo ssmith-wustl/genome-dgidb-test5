@@ -3,9 +3,9 @@ package Genome::Consed::Navigation::ListReader;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
-class Genome::Consed::Navigation::Reader {
+class Genome::Consed::Navigation::ListReader {
     is => 'Genome::Utility::IO::Reader',
 };
 
