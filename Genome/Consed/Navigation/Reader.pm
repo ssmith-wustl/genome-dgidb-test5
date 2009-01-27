@@ -3,7 +3,7 @@ package Genome::Consed::Navigation::Reader;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 use Finishing::Assembly::Consed::Navigation;
 
@@ -12,7 +12,7 @@ class Genome::Consed::Navigation::Reader {
 };
 
 sub title {
-    return shift->{_title};
+    return $_[0]->{_title};
 }
 
 sub create {
