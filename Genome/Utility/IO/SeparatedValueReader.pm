@@ -9,7 +9,7 @@ use Data::Dumper;
 
 class Genome::Utility::IO::SeparatedValueReader {
     is => 'Genome::Utility::IO::Reader', 
-    has => [
+    has_optional => [
     headers => {
         type => 'Array',
         doc => 'Headers for the file.  If none given, they will be retrieved from the input.'
@@ -98,15 +98,18 @@ sub next {
         $_ =~ s/['"]?\s*$//;
     }
 
-    $self->fatal_msg (
-        sprintf(
-            'Expected %d values, got %d on line %d in %s', 
-            scalar @{$self->headers}, 
-            scalar @values,
-            $self->_line_number,
-            ( $self->_file || ref $self->io ),
-        )
-    ) unless @{$self->headers} == @values;
+    unless ( @{$self->headers} == @values ) {
+        $self->error_message(
+            sprintf(
+                'Expected %d values, got %d on line %d in %s', 
+                scalar @{$self->headers}, 
+                scalar @values,
+                $self->line_number,
+                ( $self->get_original_input || ref $self->io ),
+            )
+        );
+        return;
+    }
     
     my %data;
     @data{ @{$self->headers} } = @values;
