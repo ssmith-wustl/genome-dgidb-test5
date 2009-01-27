@@ -6,8 +6,6 @@ use warnings;
 use above 'Genome';
 
 require Cwd;
-require File::Basename;
-require IO::File;
 
 class Genome::Utility::IO::Writer {
     is => 'UR::Object',
@@ -22,45 +20,44 @@ class Genome::Utility::IO::Writer {
 };
 
 sub get_original_output { # Allow getting of original output (file)
-    return shift->{original_output};
+    return $_[0]->{_original_output};
 }
 
-BEGIN {
-    *new = \&create;
+sub new { 
+    my $class = shift;
+    return $class->create(@_);
 }
 
 sub create {
-    my $class = shift;
+    my ($class, %params) = @_;
 
     unless ( $class->can('write_one') ) {
         $class->error_message("Can't write because there isn't a 'write_one' method in class ($class)");
         return;
     }
 
-    my $self = $class->SUPER::create(@_);
+    my $output = delete $params{output};
+    my $self = $class->SUPER::create(%params)
+        or return;
+    
     $self->error_message("Output is required for class ($class)")
-        and return unless defined $self->output;
+        and return unless defined $output;
 
-    if ( my $output_class = ref($self->output) ) {
+    if ( my $output_class = ref($output) ) {
         for my $required_method (qw/ print /) {
             unless ( $output_class->can($required_method) ) {
-                $self->error_message("output class ($output_class) can't do required method ($required_method)");
+                $self->error_message("Output class ($output_class) can't do required method ($required_method)");
                 return;
             }
         }
+        $self->output($output);
     }
     else {
-        $self->output( Cwd::abs_path( $self->output ) );
-        $self->error_message( sprintf('Output file (%s) exists', $self->output) ) 
-            and return if -e $self->output;
-        my ($directory, $file) = File::Basename::basename($self->output);
-        $self->error_message( sprintf('Directory (%s) for file (%s) is not writable', $directory, $file) ) 
-            and return unless -w $directory;
-
-        my $fh = IO::File->new('>'.$self->output);
-        $self->error_message( sprintf('Can\'t open file (%s) for writing: %s', $self->output, $!) )
-            and return unless $fh;
-        $self->{_original_output} = $self->output;
+        $output = Cwd::abs_path($output);
+        my $fh = Genome::Utility::FileSystem->open_file_for_writing($output)
+            or return;
+        $fh->autoflush;
+        $self->{_original_output} = $output;
         $self->output($fh);
     }
 
