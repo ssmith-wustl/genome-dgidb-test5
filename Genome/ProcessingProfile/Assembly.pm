@@ -80,17 +80,21 @@ sub params_for_class {
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
+    unless ($self) {
+        return;
+    }
     my $class_object = $self->get_class_object;
     for my $property_name ( keys %PROPERTIES ) {
         next if $class_object->{has}->{$property_name}->{is_optional} && !$self->$property_name;
         next unless exists $PROPERTIES{$property_name}->{valid_values};
-        unless ( grep { $self->$property_name eq $_ } @{$PROPERTIES{$property_name}->{valid_values}} ) {
+        unless ( $self->$property_name &&
+                 (grep { $self->$property_name eq $_ } @{$PROPERTIES{$property_name}->{valid_values}}) ) {
             $self->error_message(
                 sprintf(
-                    'Invalid value (%s) for %s.  Valid values: %s',
-                    $self->$property_name,
-                    $property_name,
-                    join(', ', @{$PROPERTIES{$property_name}->{valid_values}}),
+                        'Invalid value (%s) for %s.  Valid values: %s',
+                        $self->$property_name || '',
+                        $property_name,
+                        join(', ', @{$PROPERTIES{$property_name}->{valid_values}}),
                 )
             );
             $self->delete;
@@ -148,7 +152,7 @@ sub instrument_data_is_applicable {
     if ($self->sequencing_platform) {
         unless ($self->sequencing_platform eq $lc_instrument_data_type) {
             $self->error_message('The processing profile sequencing platform ('. $self->sequencing_platform
-                                 .') does not match the instrument data type ('. $lc_instrument_data_type);
+                                 .') does not match the instrument data type ('. $lc_instrument_data_type .')');
             return;
         }
     }
