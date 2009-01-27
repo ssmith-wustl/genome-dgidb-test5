@@ -37,6 +37,10 @@ my @SANITATION_PROPERTIES = ( # used arrow format for convenience
         is => 'Boolean',
         doc => 'Captilize all characters',
     },
+    rm_descs => {
+        is => 'Boolean',
+        doc => 'Removes the description in each fasta header',
+    },
 );
 class Genome::Model::Tools::Fasta::Sanitize {
     is  => 'Genome::Model::Tools::Fasta',
@@ -154,13 +158,21 @@ sub _find_and_replace {
 sub _replace {
     my ($self, $bioseq) = @_;
 
-    return  $self->_find_and_replace( $bioseq, split(':', $self->replace) );
+    return $self->_find_and_replace( $bioseq, split(':', $self->replace) );
 }
 
 sub _replace_xs_with_ns {
     my ($self, $bioseq) = @_;
 
-    return  $self->_find_and_replace($bioseq, 'x', 'N');
+    return $self->_find_and_replace($bioseq, 'x', 'N');
+}
+
+sub _rm_descs {
+    my ($self, $bioseq) = @_;
+
+    $bioseq->desc(undef);
+    
+    return 1;
 }
 
 1;
