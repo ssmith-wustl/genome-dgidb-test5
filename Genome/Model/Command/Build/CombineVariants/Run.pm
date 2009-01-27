@@ -13,7 +13,7 @@ sub execute {
     }
     $self->status_message("Found Model: " . $model->name);
 
-    $self->create_directory($self->data_directory);
+    $self->create_directory($self->build->data_directory);
     unless (-d $self->build->data_directory) {
         $self->error_message("Failed to create new build dir: " . $self->build->data_directory);
         die;
