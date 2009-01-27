@@ -3,6 +3,7 @@ package Genome::Model::Command::Build::PolyphredPolyscan::Run;
 use strict;
 use warnings;
 
+use File::Basename;
 use Genome;
 
 class Genome::Model::Command::Build::PolyphredPolyscan::Run {
