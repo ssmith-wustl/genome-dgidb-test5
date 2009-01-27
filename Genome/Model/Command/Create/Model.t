@@ -9,7 +9,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 166;
+use Test::More tests => 160;
 use Test::Differences;
 use File::Path;
 
@@ -262,9 +262,7 @@ sub failed_create_model {
 
 sub delete_model {
     my $model = shift;
-    my $archive_file = $model->resolve_archive_file;
     ok($model->delete,'delete model');
-    ok(unlink($archive_file),'remove archive file');
 }
 
 1;

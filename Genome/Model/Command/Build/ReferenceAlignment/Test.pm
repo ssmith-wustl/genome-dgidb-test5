@@ -412,7 +412,6 @@ sub remove_data {
     $self->_trap_messages('Genome::Model::Event');
     $self->_trap_messages('Genome::Model::Command::AddReads');  # Why didn't the above catch these, too?
     ok($self->model->delete,'successfully removed model');
-    ok(unlink($archive_file),'successfully unlinked archive file');
     my $directories_to_remove = $self->{_dir_array_ref};
     #print "Removing directories:\n";
     for my $directory_to_remove (@$directories_to_remove, @alignment_dirs) {
