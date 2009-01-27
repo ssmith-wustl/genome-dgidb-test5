@@ -72,8 +72,8 @@ sub validate_file_for_writing {
         return;
     }
 
-    if ( -e $file ) {
-        $self->error_message("File ($file) already exists, cannot write to it");
+    if ( -s $file ) {
+        $self->error_message("File ($file) already has data, cannot write to it");
         return;
     }
 
@@ -97,6 +97,8 @@ sub open_file_for_writing {
     $self->validate_file_for_writing($file)
         or return;
 
+    unlink $file if -e $file;
+    
     return $self->_open_file($file, 'w');
 }
 
