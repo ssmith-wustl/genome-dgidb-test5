@@ -6,7 +6,6 @@ use warnings;
 use Genome;
 
 require Cwd;
-require IO::File;
 
 class Genome::Utility::IO::Reader {
     is => 'UR::Object',
@@ -23,46 +22,40 @@ sub get_original_input { # Allow getting of original input (file)
     return shift->{_original_input};
 }
 
-BEGIN {
-    *new = \&create;
+sub new { 
+    my $class = shift;
+    return $class->create(@_);
 }
 
 sub create {
-    my $class = shift;
+    my ($class, %params) = @_;
 
     unless ( $class->can('next') ) {
         $class->error_message("Can't read because there isn't a 'next' method in class ($class)");
         return;
     }
 
-    my $self = $class->SUPER::create(@_)
+    my $input = delete $params{input};
+    my $self = $class->SUPER::create(%params)
         or return;
-    $self->error_message("Input is required for class ($class)")
-        and return unless defined $self->input;
 
-    if ( my $input_class = ref($self->input) ) {
+    $self->error_message("Input is required for class ($class)")
+        and return unless defined $input;
+
+    if ( my $input_class = ref($input) ) {
         for my $required_method (qw/ getline seek /) {
             unless ( $input_class->can($required_method) ) {
                 $self->error_message("Input class ($input_class) can't do required method ($required_method)");
                 return;
             }
         }
+        $self->input($input);
     }
     else {
-        $self->input( Cwd::abs_path( $self->input ) );
-        $self->error_message( sprintf('File (%s) does not exist', $self->input) ) 
-            and return unless -e $self->input;
-        $self->error_message( sprintf('File (%s) is not a file', $self->input) ) 
-            and return unless -f $self->input;
-        $self->error_message( sprintf('File (%s) is empty', $self->input) ) 
-            and return unless -s $self->input;
-        $self->error_message( sprintf('File (%s) cannot be read from', $self->input) ) 
-            and return unless -r $self->input;
-
-        my $fh = IO::File->new('<'.$self->input);
-        $self->error_message( sprintf('Can\'t open file (%s) for reading: %s', $self->input, $!) )
-            and return unless $fh;
-        $self->{_original_input} = $self->input;
+        $input = Cwd::abs_path($input);
+        my $fh = Genome::Utility::FileSystem->open_file_for_reading($input)
+            or return;
+        $self->{_original_input} = $input;
         $self->input($fh);
     }
 
