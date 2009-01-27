@@ -190,4 +190,11 @@ sub delete {
     return $self->SUPER::delete;
 }
 
+
+package Genome::Model::Build::AbstractBaseTest;
+
+class Genome::Model::Build::AbstractBaseTest {
+    is => 'Genome::Model::Build',
+};
+
 1;
