@@ -45,10 +45,6 @@ my %HAS = (
         doc => 'Primer used for *internal* sequencing in the reverse (3\') direction.  Enter both the name and sequence of the primer, separated by a colon as "NAME:SEQUENCE".  This will be used for naming the profile as well as orientation of the assemblies.', 
     },
 );
-my %PRIMER_SENSES = (
-    sense => 'forward',
-    anti_sense => 'reverse',
-);
 
 class Genome::ProcessingProfile::AmpliconAssembly {
     is => 'Genome::ProcessingProfile',
@@ -81,21 +77,22 @@ sub create {
     # Check valid values
     for my $property ( keys %HAS ) {
         my $value = $self->$property;
-        unless ( $HAS{$property}->{is_optional} ) { 
+        unless ( $self->param_is_optional($property) ) { 
             unless ( defined $value ) {
                 $self->error_message("Property ($property) is required");
                 $self->delete;
                 return;
             }
         }
-        next unless exists $HAS{$property}->{valid_values};
-        unless ( grep { $self->$property eq $_ } @{$HAS{$property}->{valid_values}} ) {
+        my $valid_values = $self->valid_values_for_param($property);
+        next unless $valid_values;
+        unless ( grep { $self->$property eq $_ } @$valid_values ) {
             $self->error_message( 
                 sprintf(
                     'Invalid value (%s) for %s.  Valid values: %s',
                     $self->$property,
                     $property,
-                    join(', ', @{$HAS{$property}->{valid_values}}),
+                    join(', ', @$valid_values),
                 ) 
             );
             $self->delete;
@@ -104,7 +101,7 @@ sub create {
     }
 
     # Check primers, create sense fastas and create name
-    for my $sense ( sort { $b cmp $a } keys %PRIMER_SENSES ) {
+    for my $sense ( primer_senses() ) {
         my $file_method = sprintf('%s_primer_fasta', $sense);
         my $file = $self->$file_method;
         unlink $file if -e $file;
@@ -112,8 +109,8 @@ sub create {
             '-file' => ">$file",
             '-format' => 'Fasta',
         );
-        for my $primer_purpose (qw/ amp seq /) {
-            my $method = sprintf('primer_%s_%s', $primer_purpose, $PRIMER_SENSES{$sense});
+        for my $primer_purpose ( primer_purposes() ) {
+            my $method = sprintf('primer_%s_%s', $primer_purpose, _primer_direction_for_sense($sense));
             my $primer = $self->$method;
             next unless defined $primer;
             my ($primer_name, $primer_seq) = split(/:/, $primer);
@@ -132,6 +129,12 @@ sub create {
         }
     }
 
+    unless ( grep { defined $self->$_ and -s $self->$_ } primer_fasta_methods() ) {
+        $self->error_message("No primers indicated for processing profile");
+        $self->delete;
+        return;
+    }
+
     return $self;
 }
 
@@ -139,10 +142,8 @@ sub delete {
     my $self = shift;
 
     # Remove primer files
-    for my $sense ( keys %PRIMER_SENSES ) {
-        my $file_method = sprintf('%s_primer_fasta', $sense);
-        my $file = $self->$file_method;
-        unlink $file if -e $file;
+    for my $method ( primer_fasta_methods() ) {
+        unlink $self->$method if -e $self->$method;
     }
 
     return $self->SUPER::delete;
@@ -153,6 +154,17 @@ sub params_for_class {
     return keys %HAS;
 }
 
+sub param_is_optional {
+    die "Need param to test if optional\n" unless defined $_[1];
+    return $HAS{$_[1]}->{is_optional};
+}
+
+sub valid_values_for_param {
+    die "Need param to test if optional\n" unless defined $_[1];
+    return $HAS{$_[1]}->{valid_values};
+}
+
+#< BUILDING >#
 sub stages {
     return (qw/
         assemble
@@ -178,6 +190,31 @@ sub assemble_objects {
 }
 
 #< Primers >#
+my %PRIMER_SENSES_AND_DIRECTIONS = (
+    sense => 'forward',
+    anti_sense => 'reverse',
+);
+sub primer_senses {
+    return keys %PRIMER_SENSES_AND_DIRECTIONS;
+}
+
+sub primer_directions {
+    return values %PRIMER_SENSES_AND_DIRECTIONS;
+}
+
+sub _primer_direction_for_sense {
+    die "Need primer sense to get direction\n" if not defined $_[0] or $_[0] eq __PACKAGE__;
+    return $PRIMER_SENSES_AND_DIRECTIONS{$_[0]};
+}
+
+sub primer_purposes {
+    return (qw/ amp seq /);
+}
+
+sub primer_fasta_methods {
+    return map { sprintf('%s_primer_fasta', $_) } primer_senses();
+}
+
 sub primer_fasta_directory {
     return '/gscmnt/839/info/medseq/processing_profile_data/amplicon_assembly';
 }
@@ -188,30 +225,6 @@ sub sense_primer_fasta {
 
 sub anti_sense_primer_fasta {
     return sprintf('%s/%s.anti_sense.fasta', $_[0]->primer_fasta_directory, $_[0]->id);
-}
-
-# TODO map sense to f/r
-#sub sense_primer_names {
-#} # etc...
-
-#################################################################
-##FIXME needed?
-sub instrument_data_is_applicable { 
-    my $self = shift;
-    my $instrument_data_type = shift;
-    my $instrument_data_id = shift;
-    my $subject_name = shift;
-
-    my $lc_instrument_data_type = lc($instrument_data_type);
-    if ($self->sequencing_platform) {
-        unless ($self->sequencing_platform eq $lc_instrument_data_type) {
-            $self->error_message('The processing profile sequencing platform ('. $self->sequencing_platform
-                .') does not match the instrument data type ('. $lc_instrument_data_type);
-            return;
-        }
-    }
-
-    return 1;
 }
 
 1;
