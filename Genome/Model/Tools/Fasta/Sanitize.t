@@ -10,7 +10,7 @@ use Data::Dumper 'Dumper';
 use File::Compare 'compare';
 use File::Temp 'tempdir';
 use File::Basename;
-use Test::More tests => 27;
+use Test::More tests => 30;
 
 #< README >#
 # All of the expected fasta files were made by hand
@@ -46,6 +46,7 @@ my %sanitizers_and_params = (
     max_threshold => 1000,
     replace_xs_with_ns => 1,
     replace => 'a{22,}:'.('NX' x 11),
+    rm_descs => 1,
 );
 
 for my $sanitizer ( keys %sanitizers_and_params ) {
