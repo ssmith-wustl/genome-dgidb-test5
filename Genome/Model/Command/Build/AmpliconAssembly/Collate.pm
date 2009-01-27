@@ -116,7 +116,7 @@ sub _collate_assembly {
 
     # Check contigs file to see if an assembly was generated
     my $bioseq;
-    if ( -s sprintf('%s/%s.fasta.contigs', $self->model->consed_directory->edit_dir, $amplicon) ) {
+    if ( -s sprintf('%s/%s.fasta.contigs', $self->model->edit_dir, $amplicon) ) {
         # Get fasta/qual from contig from assembly / Calc metrics
         $bioseq = $self->_get_bioseq_from_longest_contig($amplicon);
     }
@@ -137,7 +137,7 @@ sub _get_bioseq_from_longest_contig {
     my ($self, $amplicon) = @_;
 
     #< Determine longest contig >#
-    my $acefile = sprintf('%s/%s.fasta.ace', $self->model->consed_directory->edit_dir, $amplicon);
+    my $acefile = sprintf('%s/%s.fasta.ace', $self->model->edit_dir, $amplicon);
     my $factory = Finishing::Assembly::Factory->connect('ace', $acefile);
     my $contigs = $factory->get_assembly->contigs;
     my $contig = $contigs->first
@@ -160,10 +160,10 @@ sub _get_bioseq_from_longest_contig {
     # Reads
     $self->{_metrix}->{reads_assembled_total} += $reads->count;
     push @{ $self->{_metrix}->{reads_assembled} }, $reads->count;
-    my $reads_attempted = fgrep { /phd/ } sprintf('%s/%s.phds', $self->model->consed_directory->edit_dir, $amplicon);
+    my $reads_attempted = fgrep { /phd/ } sprintf('%s/%s.phds', $self->model->edit_dir, $amplicon);
     unless ( $reads_attempted ) {
         $self->error_message(
-            sprintf('No attempted reads in phds file (%s/%s.phds)', $self->model->consed_directory->edit_dir, $amplicon)
+            sprintf('No attempted reads in phds file (%s/%s.phds)', $self->model->edit_dir, $amplicon)
         );
         return;
     }
@@ -197,7 +197,7 @@ sub _get_bioseq_from_longest_read {
 
     #< Determine longest read for amplicon >#
     # fasta
-    my $fasta_file = sprintf('%s/%s.fasta', $self->model->consed_directory->edit_dir, $amplicon);
+    my $fasta_file = sprintf('%s/%s.fasta', $self->model->edit_dir, $amplicon);
     return unless -s $fasta_file;
     my $fasta_reader = Bio::SeqIO->new(
         '-file' => $fasta_file,
@@ -220,7 +220,7 @@ sub _get_bioseq_from_longest_read {
     }
 
     # qual
-    my $qual_file = sprintf('%s/%s.fasta.qual', $self->model->consed_directory->edit_dir, $amplicon);
+    my $qual_file = sprintf('%s/%s.fasta.qual', $self->model->edit_dir, $amplicon);
     my $qual_reader = Bio::SeqIO->new(
         '-file' => $qual_file,
         '-format' => 'qual',
@@ -262,7 +262,7 @@ sub _collate_amplicon_fasta_and_qual {
     for my $type ( keys %pre_assembly_fasta_and_qual_types ) {
         # FASTA
         my $fasta_file = sprintf(
-            $pre_assembly_fasta_and_qual_types{$type}, $self->model->consed_directory->edit_dir, $amplicon, 
+            $pre_assembly_fasta_and_qual_types{$type}, $self->model->edit_dir, $amplicon, 
         );
         next unless -s $fasta_file;
         my $fasta_fh = IO::File->new($fasta_file, 'r')
