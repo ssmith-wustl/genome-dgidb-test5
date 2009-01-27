@@ -635,30 +635,6 @@ sub mail_summary {
     return 1;
 }
 
-sub _ask_user_question {
-    my $self = shift;
-    my $question = shift;
-    my $timeout = shift || 60;
-    my $input;
-    eval {
-        local $SIG{ALRM} = sub { die "Failed to reply to question '$question' with in '$timeout' seconds\n" };
-        $self->status_message($question);
-        $self->status_message("Please reply: 'yes' or 'no'");
-        alarm($timeout);
-        chomp($input = <STDIN>);
-        alarm(0);
-    };
-    if ($@) {
-        $self->warning_message($@);
-        return;
-    }
-    unless ($input =~ m/yes|no/) {
-        $self->error_message("'$input' is an invalid answer to question '$question'");
-        return;
-    }
-    return $input;
-}
-
 sub get_all_objects {
     my $self = shift;
 
@@ -668,25 +644,6 @@ sub get_all_objects {
     return (@events, @objects);
 }
 
-sub delete {
-    my $self = shift;
-
-    my $model = $self->model;
-    if ($model->current_running_build_id && $model->current_running_build_id eq $self->genome_model_event_id) {
-        $model->current_running_build_id(undef);
-        UR::Context->_sync_databases;
-    }
-
-    if ($model->last_complete_build_id && $model->last_complete_build_id eq $self->genome_model_event_id) {
-        $model->last_complete_build_id(undef);
-        UR::Context->_sync_databases;
-    }
-    unless ($self->SUPER::delete()) {
-        $self->error_message('Failed to delete build event '. $self->id);
-        return;
-    }
-    return 1;
-}
 
 1;
 
