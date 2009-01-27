@@ -337,6 +337,10 @@ sub setup_input {
     my $start = new Benchmark;
 
     my $last_complete_build = $self->last_complete_build;
+    unless ($last_complete_build){
+        $self->error_message("Couldn't find last complete build");
+        die;
+    }
     my @input_files = $last_complete_build->instrument_data_files;
 
     # Determine the type of parser to create
@@ -348,7 +352,7 @@ sub setup_input {
     } else {
         $type = $self->type;
         $self->error_message("Type: $type not recognized.");
-        return undef;
+        die;
     }
     
     # Combined input file to be created from the collates of all input files
