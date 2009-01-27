@@ -26,12 +26,8 @@ sub dump_to_file_system {
         or return;
         
     my $read_cnt = 0;
-    my $reads = App::DB::TableRow::Iterator->new(
-        class => 'GSC::Sequence::Read',
-        params => {
-            prep_group_id => $self->run_name,
-        },
-    );
+    my $reads = $self->_get_read_iterator
+        or return;
 
     while ( my $read = $reads->next ) {
         $read_cnt++;
@@ -55,6 +51,24 @@ sub dump_to_file_system {
     }
 
     return 1;
+}
+
+sub _get_read_iterator {
+    my $self = shift;
+
+    my $reads = App::DB::TableRow::Iterator->new(
+        class => 'GSC::Sequence::Read',
+        params => {
+            prep_group_id => $self->run_name,
+        },
+    );
+
+    unless ( $reads ) {
+        $self->error_message( sprintf('Could not make read iterartor for run name (%s)', $self->run_name) );
+        return;
+    }
+
+    return $reads;
 }
 
 1;
