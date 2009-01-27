@@ -65,7 +65,7 @@ sub test001_create_processing_profile : Test(4) {
 }
 
 #< INVALID >#
-sub test002_invalid_params : Test(15) {
+sub test002_invalid_params : Test(14) {
     my $self = shift;
 
     my %params = _valid_params();
