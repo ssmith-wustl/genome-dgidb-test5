@@ -288,6 +288,13 @@ sub execute_pcap
 	return;
     }
 
+    $self->status_message("Checking for results file");
+    unless ($self->check_for_results_file)
+    {
+	$self->error_message("Could not complete check for results file");
+	return;
+    }
+
     $self->status_message("Running bconsen");
     unless ($self->run_bconsen)
     {
@@ -322,6 +329,11 @@ sub execute_pcap
 	$self->error_message("failed to create supercontigs fasta file") and return;
     }
 
+    $self->status_message("adding wa tags to ace");
+    unless ($self->add_wa_tags_to_ace)
+    {
+	$self->error_message("failed to add WA tags to ace") and return;
+    }
 
     #CREATE POST ASSEMBLY FILES
 
@@ -361,14 +373,6 @@ sub execute_pcap
 #    $self->status_message("Creating stats");
 
     #CLEAN UP
-
-    #don't clean up for now ..need to make sure stats are done
-    #before cleaning up
-
-
-    return 1;
-
-    #Don't do the clean up for now
 
     $self->status_message("Assembly done .. cleanin up");
     unless ($self->clean_up)
@@ -800,6 +804,14 @@ sub create_constraint_file
 
     my $dir = $self->{project_path};
 
+    #if no constraint files are present from sff processing
+    #step assume this is a frag only assembly so don't create
+    #neither constraint nor lib file
+
+    my @con_files = glob ("$dir/edit_dir/*.con");
+
+    return 1 if scalar @con_files == 0;
+
     #need to append to the existing con file if it exists
     #else create a new one
 
@@ -820,8 +832,6 @@ sub create_constraint_file
 	unless $con_fh;
 
     my @lib_infos;
-
-    my @con_files = glob ("$dir/edit_dir/*.con");
 
     #append all con files together
 
@@ -1244,6 +1254,56 @@ sub run_bcontig
     return 1;
 }
 
+sub check_for_results_file
+{
+    my ($self) = @_;
+
+    my $dir = $self->{project_path};
+
+    my @results_files = glob ("$dir/edit_dir/*con.pcap.results");
+
+    if (scalar @results_files == 0)
+    {
+	$self->create_fake_pcap_results_file;
+    }
+
+    return 1;
+}
+
+sub create_fake_pcap_results_file
+{
+    my ($self) = @_;
+
+    my $dir = $self->{project_path};
+
+    my $results_file_name = $self->{pcap_root_name}.'.fake.con.pcap.results';
+
+    my $results_file = $self->{project_path}.'/edit_dir/'.$results_file_name;
+
+    my $content = "No. of satisfied constraints in contigs:           0\n".
+	          "No. of unsatisfied in distance in contigs:         0\n".
+		  "No. of satisfied links in scaffolds:               0\n".
+		  "No. of unsatisfied in dist. in scaffolds:          0\n".
+		  "No. of unsatisfied due to singlets:                0\n".
+		  "No. of unsatisfied due to short scaffolds:         0\n".
+		  "No. of unsatisfied due to scaffold ends:           0\n".
+		  "No. of other unsatisfied constraints:              0\n".
+		  "No. of redundant constraints:                      0\n".
+		  "Total no. of satisfied constraints:                0\n".
+		  "Total no. of unsatisfied constraints:              0\n".
+		  "Total no. of constraints:                          0\n";
+
+    my $fh = IO::File->new("> $results_file") ||
+	die "Can not create file handle for results file";
+
+    $fh->print ("$content\n");
+
+    $fh->close;
+
+    return 1;
+}
+
+
 sub run_bconsen
 {
     my ($self) = @_;
@@ -1379,54 +1439,6 @@ sub create_sctg_fa_file
     return 1;
 }
 
-#sub create_stats_files
-#{
-#    my ($self) = @_;#
-
-#    my $host_name = hostname ();
-
-#    print "Unable to submit lsf jobs to create stats files from $host_name\n" and return if $host_name =~ /^linusit\d+/;
-
-    #stats files object
-#    my $sfo = GSC::IO::Assembly::StatsFiles->new(dir => $self->{project_path});
-
-#    $self->error_message("Unable to get stats file object") and return
-#	unless $sfo;
-
-#    $sfo->cache_stats;
-
-#    return 1;
-#}
-
-#sub create_post_asm_files
-#{
-#   my ($self) = @_;
-
-#    my $dir = $self->{project_path};
-    #stats text object
-
-#    my $sto = GSC::IO::Assembly::Stats->new(dir => $self->{project_path});
-
-#    $sto->create_readinfo_file;
-
-#    $sto->create_insert_sizes_file;
-
-#    return 1;
-#}
-
-#sub create_stats
-#{
-#    my ($self) = @_;
-
-#    my $dir = $self->{project_path};
-
-#    my $sto = GSC::IO::Assembly::Stats->new(dir => $self->{project_path});
-
-#    $sto->print_stats;
-
-#    return 1;
-#}
-
 sub generate_stats
 {
     my ($self) = @_;
@@ -1446,18 +1458,83 @@ sub generate_stats
     return 1;
 }
 
+#MOVE INPUT FILES, BLASTDB FILES AND OUTOUT FILES TO PROPER DIR
 sub clean_up
 {
     my ($self) = @_;
-    my $edit_dir = $self->{project_path}.'/edit_dir';
+    my $dir = $self->{project_path};
 
-    chdir "$edit_dir";
+    my @fastas = glob("$dir/edit_dir/*fasta.gz");
+    if (scalar @fastas > 0)
+    {
+	foreach (@fastas)
+	{
+	    system ("mv $_ $dir/input");
+	}
+    }
 
-    `mv *fasta.gz *qual.gz ../input`;
-    `mv *blastdb.x* ../blastdb`;
-    `mv contigs.bases contigs.quals supercontigs* reads.placed reads.unplaced ../output`;
-    `cat *tmp_phd_ball > phd.ball` if $self->make_phd_ball;
-    `\\rm *tmp_phd_ball` if $self->make_phd_ball;
+    my @quals = glob("$dir/edit_dir/*qual.gz");
+    if (scalar @quals > 0)
+    {
+	foreach (@quals)
+	{
+	    system ("mv $_ $dir/input");
+	}
+    }
+
+    my @db_files = glob("$dir/edit_dir/*blastdb.x*");
+    if (scalar @db_files > 0)
+    {
+	foreach (@db_files)
+	{
+	    system ("mv $_ $dir/blastdb");
+	}
+    }
+
+    my @out_files = qw/ contigs.bases contigs.quals supercontigs supercontigs.fa supercontigs.agp reads.placed reads.unplaced /;
+    foreach (@out_files)
+    {
+	if (-s "$dir/edit_dir/$_")
+	{
+	    system ("mv $_ $dir/output");
+	}
+    }
+
+    return 1;
+}
+
+sub add_wa_tags_to_ace
+{
+    my ($self) = @_;
+
+    my $dir = $self->{project_path};
+
+    my $scaf_ace = "$dir/edit_dir/".$self->{pcap_root_name}.'.pcap.scaffold0.ace';
+
+    $self->error_message("Can not find $scaf_ace to append tags")
+	and return unless -s $scaf_ace;
+
+    my $new_ace = $scaf_ace.'.trace_view';
+
+    system ("cp $scaf_ace $new_ace");
+
+    my @ball_files = glob ("$dir/phdball_dir/*phdball");
+
+    if (scalar @ball_files > 0)
+    {
+	my $fh = IO::File->new(">> $new_ace") || die "Unable to append tags to $new_ace";
+
+	foreach (@ball_files)
+	{
+	    chomp (my $date = `date '+%y%m%d:%H%M%S'`);
+
+	    my $tag = "\nWA{\nphdBAll newbler $date\n$_\n}\n";
+
+	    $fh->print($tag);
+	}
+
+	$fh->close;
+    }
 
     return 1;
 }
