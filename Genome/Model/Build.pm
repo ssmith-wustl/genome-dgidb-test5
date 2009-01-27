@@ -161,7 +161,14 @@ sub _resolve_type_name_for_class {
 
 sub get_all_objects {
     my $self = shift;
-    return;
+
+    my @events = $self->events;
+    if ($events[0] && $events[0]->id =~ /^\-/) {
+        @events = sort {$a->id cmp $b->id} @events;
+    } else {
+        @events = sort {$b->id cmp $a->id} @events;
+    }
+    return @events;
 }
 
 sub yaml_string {
@@ -171,6 +178,16 @@ sub yaml_string {
         $string .= YAML::Dump($object);
     }
     return $string;
+}
+
+sub delete {
+    my $self = shift;
+
+    my @objects = $self->get_all_objects;
+    for my $object (@objects) {
+        $object->delete;
+    }
+    return $self->SUPER::delete;
 }
 
 1;
