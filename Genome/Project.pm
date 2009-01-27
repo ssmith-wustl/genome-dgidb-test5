@@ -46,6 +46,9 @@ class Genome::Project {
         model_assignments   => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'project' },
         models              => { is => 'Genome::Model', via => 'model_assignments', to => 'model' },
         model_names         => { via => 'models', to => 'name' },
+        sample_assignments  => { is => 'Genome::Sample::ProjectAssignment', reverse_id_by => 'project' },
+        samples             => { is => 'Genome::Sample', via => 'sample_assignments', to => 'sample' },
+        sample_names        => { via => 'samples', to => 'name' },
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };
