@@ -3,14 +3,13 @@ package Genome::Consed::Navigation::Writer;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 class Genome::Consed::Navigation::Writer {
     is => 'Genome::Utility::IO::Writer',
     has => [
     title => {
-        type => 'String',
-        is_optional => 0,
+        is => 'Text',
         doc => 'Navigation title',
     },
     ],
@@ -19,17 +18,16 @@ class Genome::Consed::Navigation::Writer {
 sub create {
     my $class = shift;
 
-    my $self = $class->SUPER::create(@_);
-
-    $self->error_message("Need navigation title")
-        and return unless defined $self->title;
+    my $self = $class->SUPER::create(@_) 
+        or return;
     
-    $self->print(
-        sprintf(
-            "TITLE: %s\n\n",
-            $self->title,
-        )
-    );
+    unless ( $self->title ) {
+        $self->error_message("Need navigation title");
+        $self->delete;
+        return;
+    }
+
+    $self->print('TITLE: '.$self->title."\n\n");
 
     return $self;
 }
