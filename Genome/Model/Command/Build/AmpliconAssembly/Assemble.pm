@@ -50,7 +50,7 @@ sub _assemble {
     my ($self, $amplicon, $scfs) = @_;
 
     # Create SCF file
-    my $scf_file = sprintf('%s/%s.scfs', $self->model->consed_directory->edit_dir, $amplicon);
+    my $scf_file = sprintf('%s/%s.scfs', $self->model->edit_dir, $amplicon);
     unlink $scf_file if -e $scf_file;
     my $scf_fh = Genome::Utility::FileSystem->open_file_for_writing($scf_file)
         or return;
