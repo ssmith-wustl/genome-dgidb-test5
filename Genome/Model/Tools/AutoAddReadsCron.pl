@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-my $cmd='gt auto-add-reads';
+my $cmd='/gsc/scripts/bin/gt auto-add-reads';
 system($cmd);
 
 1;
