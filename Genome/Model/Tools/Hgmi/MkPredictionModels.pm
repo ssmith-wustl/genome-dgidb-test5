@@ -97,7 +97,7 @@ sub execute
     #print "pwm file ", $buildglimmer->pwm_file,"\n";
 
 
-    $self->gc(int($gc_command->gc_percent));
+    $self->gc(sprintf("%.0f", $gc_command->gc_percent()));
 
     if(!defined($self->work_directory))
     {
