@@ -52,18 +52,21 @@ sub execute {
     foreach my $file (@files) {
 
         my $seqio = Bio::SeqIO->new(-file => $file, -format => 'Fasta');
-
-        my $seq        = $seqio->next_seq();
-        my $seq_string = $seq->seq();
-
-        ## Ns are usually gaps...
-        my $n_count = $seq_string =~ tr/nN/nN/;
         
-        $gc_count   += $seq_string =~ tr/gcGC/gcGC/;
+        while (my $seq = $seqio->next_seq()) {
+            
+            my $seq_string = $seq->seq();
+            
+            ## Ns are usually gaps...
+            my $n_count = $seq_string =~ tr/nN/nN/;
+            
+            $gc_count   += $seq_string =~ tr/gcGC/gcGC/;
+            
+            ## ...so don't count them when determining the sequence length
+            $seq_length += ($seq->length() - $n_count); 
+            
+        }
 
-        ## ...so don't count them when determining the sequence length
-        $seq_length += ($seq->length() - $n_count); 
-        
     }
 
     $self->gc_percent(sprintf("%.1f", (($gc_count / $seq_length) * 100)));

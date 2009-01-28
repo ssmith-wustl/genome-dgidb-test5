@@ -14,16 +14,23 @@ BEGIN {
     use_ok('MGAP::Command::CalculateGcPercent');
 }
 
-my $seq = Bio::Seq->new(
-                        -id   => 'TST000001',
-                        -desc => 'GC Test Sequence',
-                        -seq  => 'GATNNNNNNNNNNNNNTACA',
-                       );
+my $seq1 = Bio::Seq->new(
+                         -id   => 'TST000001',
+                         -desc => 'GC Test Sequence',
+                         -seq  => 'GATNNNNNNNNNNNNNTACA',
+                        );
 
+my $seq2 = Bio::Seq->new(
+                         -id   => 'TST000002',
+                         -desc => 'GC Test Sequence',
+                         -seq  => 'GATNNNNNNNNNNNNNTACA',
+                        );
+                        
 my $temp_fh = File::Temp->new();
 my $seqio   = Bio::SeqIO->new(-fh => $temp_fh, -format => 'Fasta');
 
-$seqio->write_seq($seq);
+$seqio->write_seq($seq1);
+$seqio->write_seq($seq2);
 $seqio->close();
 $temp_fh->close();
 
