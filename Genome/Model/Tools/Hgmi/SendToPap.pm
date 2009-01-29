@@ -106,13 +106,28 @@ sub get_gene_peps
     my $self = shift;
     # this needs to handle switching to
     # either dev or prod
-    my $dbadp = Bio::DB::BioDB->new(
-        -database => 'biosql',
-        -user     => 'sg_user',
-        -pass     => 'sgus3r',
-        -dbname   => 'DWDEV',
-        -driver   => 'Oracle'
-    );
+    my $dbadp;
+
+    if($self->dev())
+    {
+        $dbadp = Bio::DB::BioDB->new(
+            -database => 'biosql',
+            -user     => 'sg_user',
+            -pass     => 'sgus3r',
+            -dbname   => 'DWDEV',
+            -driver   => 'Oracle'
+        );
+    }
+    else
+    {
+        $dbadp = Bio::DB::BioDB->new(
+            -database => 'biosql',
+            -user     => 'sg_user',
+            -pass     => 'sg_us3r',
+            -dbname   => 'DWRAC',
+            -driver   => 'Oracle'
+        );
+    }
 
     my $cleanup = $self->keep_pep ? 0 : 1;
     my $tempdir = tempdir( CLEANUP => $cleanup );
