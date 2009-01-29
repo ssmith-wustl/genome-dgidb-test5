@@ -66,9 +66,35 @@ sub execute {
                                'TEMPLATE'=> 'MGAP_XXXXXXXX',
                                'UNLINK'  => 0,
                            );
-    
-    my @fasta_files = @{$self->fasta_files()};
 
+    ## Semi-ugly hack to handle multi-fasta input outside
+    ## of a Workflow
+    my @input_fasta_files = @{$self->fasta_files()};
+    my @fasta_handles     = ( );
+    my @fasta_files       = ( );
+
+    foreach my $fasta_file (@input_fasta_files) {
+
+        my $seqin = Bio::SeqIO->new(-file => $fasta_file, -format => 'Fasta');
+
+        while (my $seq = $seqin->next_seq()) {
+        
+            my $tmp_fh = File::Temp->new();
+            my $tmp_fn = $tmp_fh->filename();
+
+            $tmp_fh->close();
+       
+            my $seqout = Bio::SeqIO->new(-file => ">$tmp_fn", -format => 'Fasta');
+            
+            $seqout->write_seq($seq);
+
+            push @fasta_handles, $tmp_fh;
+            push @fasta_files,   $tmp_fn;
+            
+        }
+    
+    }
+    
     my $train_fh    = File::Temp->new();
     my $train_seqio = Bio::SeqIO->new(-fh => $train_fh, -format => 'Fasta');
     
