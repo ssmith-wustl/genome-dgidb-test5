@@ -13,7 +13,7 @@ use warnings;
 class Genome::Taxon {
     table_name => '(select * from organism_taxon@dw) taxon',
     id_by => [
-            taxon_id         => { is => 'Number', len => 10 },
+        taxon_id         => { is => 'Number', len => 10 },
     ],
     has => [
         current_default_org_prefix      => { is => "Text",   len => 2 },

@@ -14,6 +14,7 @@ class Genome::Command {
          
 my @SUB_COMMANDS = qw/
     project    
+    taxon
     population-group     
     individual        
     sample     
