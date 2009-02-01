@@ -28,7 +28,7 @@ class Genome::ProcessingProfile::Command {
 
 sub help_brief {
     my $class = ref($_[0]) || $_[0];
-    return 'Operations for processing profile' if not $class or $class eq __PACKAGE__;
+    return $class->get_class_object->doc if not $class or $class eq __PACKAGE__;
     my ($func) = $class =~ /::(\w+)$/;
     return sprintf('%s a processing profile', ucfirst($func));
 }
