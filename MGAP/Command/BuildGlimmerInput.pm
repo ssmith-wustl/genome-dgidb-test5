@@ -252,7 +252,7 @@ sub execute {
     ## motif_file
     my $motif_fh = File::Temp->new(%network_temp_params);
 
-    print $motif_fh, "6", "\n";
+    print $motif_fh "6", "\n";
 
     my $found_motif_counts = 0;
     my $motif_line_count   = 0;
