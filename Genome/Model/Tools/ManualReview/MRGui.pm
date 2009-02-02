@@ -7,11 +7,12 @@ our $initialized = 0;
 
 sub init_gtk {
     return if $initialized;
-    #eval {
-        use Gtk2 -init;
-        use Gtk2::GladeXML;
-        use Glib;
-    #};
+    eval {
+        require Gtk2;
+        Gtk2->init;
+        require Gtk2::GladeXML;
+        require Glib;
+    };
     die $@ if $@;
     $initialized = 1;
 }
