@@ -1528,7 +1528,7 @@ sub add_wa_tags_to_ace
 	{
 	    chomp (my $date = `date '+%y%m%d:%H%M%S'`);
 
-	    my $tag = "\nWA{\nphdBAll newbler $date\n$_\n}\n";
+	    my $tag = "\nWA{\nphdBall newbler $date\n$_\n}\n";
 
 	    $fh->print($tag);
 	}
