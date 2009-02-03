@@ -1,7 +1,7 @@
-package Genome::Model::Command::Build::CombineVariants::Run;
+package Genome::Model::Command::Build::CombineVariants::CombineAndAnnotate;
 
-class Genome::Model::Command::Build::CombineVariants::Run {
-    is => ['Genome::Model::Event'],
+class Genome::Model::Command::Build::CombineVariants::CombineAndAnnotate {
+    is => 'Genome::Model::Event',
 };
 
 sub execute {
