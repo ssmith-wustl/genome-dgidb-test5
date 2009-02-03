@@ -20,7 +20,7 @@ class Genome::Model::Tools::Fasta::Chunk {
     has_optional => [
         chunk_dir => {
             is  => 'String',
-            doc => 'directory to hold chunk fasta (qual) files, default is the same dir as fasta_file',
+            doc => 'Root directory of temp dir to hold chunk fasta(qual) files, default is dir of fasta_file',
         },
         show_list => {
             is  => 'boolean',
@@ -45,15 +45,16 @@ EOS
 
 sub create {
     my $class = shift;
+    
     my $self = $class->SUPER::create(@_);
+    my $root_dir = $self->chunk_dir || dirname $self->fasta_file;
+    
+    my $chunk_dir = File::Temp::tempdir(
+        "FastaChunkDir_XXXXXX", 
+        DIR => $root_dir,
+    );
+    $self->chunk_dir($chunk_dir);
 
-    unless ($self->chunk_dir) {
-        my $chunk_dir = File::Temp::tempdir(
-            "FastaChunkDir_XXXXXX", 
-            DIR => dirname $self->fasta_file,
-        );
-        $self->chunk_dir($chunk_dir);
-    }
     return $self;
 }
         
