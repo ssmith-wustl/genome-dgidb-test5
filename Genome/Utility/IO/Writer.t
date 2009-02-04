@@ -58,6 +58,11 @@ my $writer = Album::Writer->create(
 ok($writer, 'Created writer w/ temp fh');
 $writer->delete;
 
+#< VALID WRITER W/ STDOUT >#
+$writer = Album::Writer->create();
+ok($writer, 'Created writer w/ STDOUT');
+$writer->delete;
+
 #< VALID WRITER W/ FILE >#
 my $tmp_file = $tmp_dir.'/albums.csv';
 $writer = Album::Writer->create(
@@ -74,8 +79,6 @@ is(compare($tmp_file, $albums_file), 0, 'Generated and expected album files matc
 $writer->delete;
 
 #< INVALID PARAMS >#
-$writer = Album::Writer->create();
-ok(!$writer, 'Failed as expected - create writer w/o output');
 $writer = Album::Writer->create(output => $albums_file);
 ok(!$writer, 'Failed as expected - create writer w/ existing file');
 $writer = Album::Writer->create(output => IO::NoPrint->create());
