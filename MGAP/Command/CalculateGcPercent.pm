@@ -3,9 +3,13 @@ package MGAP::Command::CalculateGcPercent;
 use strict;
 use warnings;
 
+
+use Workflow;
+use MGAP::Command;
+
 use Bio::Seq;
 use Bio::SeqIO;
-use Workflow;
+
 
 class MGAP::Command::CalculateGcPercent {
     is => ['MGAP::Command'],
