@@ -132,7 +132,7 @@ sub _sub_class {
         return;
     }
     
-    my ($sub_class) = $class =~ m#\:\:(Blast[npx])$#;
+    my ($sub_class) = $class =~ m#\:\:(Blast[npx])#;
     unless ( $sub_class ) {
         $class->error_message("Can't determine subclass from class ($class)");
         return;
