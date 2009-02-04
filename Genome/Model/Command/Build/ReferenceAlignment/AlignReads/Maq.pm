@@ -115,6 +115,25 @@ sub aligner_output_file {
     return $file;
 }
 
+#added this method to only return the unqualified name of the file
+sub aligner_output_file_name {
+    my $self = shift;
+    my $event_id = $self->id;
+    my $lane = $self->read_set_link->subset_name;
+    my $file = "/alignments_lane_${lane}.map.$event_id";
+    $file =~ s/\.map\./\.map.aligner_output\./g;
+    return $file;
+}
+
+#added this method to only return the unqualified name of the file
+sub unaligned_reads_file_name {
+    my $self = shift;
+    my $event_id = $self->id;
+    my $read_set = $self->read_set_link;
+    my $lane = $read_set->subset_name;
+    return "/s_${lane}_sequence.unaligned.$event_id";
+}
+
 sub unaligned_reads_file {
     my $self = shift;
     my $event_id = $self->id;
@@ -360,75 +379,7 @@ sub prepare_input {
         }
     }
 
-    #i deleted soemthing to inputfile paths here 
-
-    # determine the path to the aligner
-    my $aligner_path = $self->aligner_path('read_aligner_name');
-
-    # find or create a sanger fastq 
-    my $fastq_pathname;
-    if ($seq_dedup) {
-        die "sequence-based deduplication is not supported at this time";
-        my $fastq_method = "sorted_unique_fastq_file_for_lane";
-        $fastq_pathname = $self->$fastq_method;
-        unless (-f $fastq_pathname) {
-            $self->error_message("fastq file does not exist $fastq_pathname");
-            return;
-        }
-        if (-z $fastq_pathname) {
-            $self->error_message("fastq file has zero size $fastq_pathname");
-            return;
-        }
-        $self->status_message("Found sequence-deduplicated fastq at $fastq_pathname");
-    }
-
-    my @bfq_pathnames;
-    my $counter=0;
-    for my $solexa_output_path (@solexa_output_paths) {
-           $fastq_pathname = $self->create_temp_file_path('fastq' . $counter);
-            $self->shellcmd(
-                cmd => "$aligner_path sol2sanger $solexa_output_path $fastq_pathname",
-                input_files => [$solexa_output_path],
-                output_files => [$fastq_pathname],
-                skip_if_output_is_present => 1,
-            );
-
-        # remove any reads which have 15 As in a row.
-        unless ($read_set->is_paired_end) {
-            my $fastq_pathname_no_poly_a = $fastq_pathname . '._no_poly_a';
-            my $fastq_in = $self->open_file('fastq',$fastq_pathname);
-            my $fastq_out = $self->create_file('fastq_no_polya',$fastq_pathname_no_poly_a);
-            while (my $header = $fastq_in->getline) {
-                my $seq = $fastq_in->getline;
-                my $sep = $fastq_in->getline;
-                my $qual = $fastq_in->getline;
-                if($seq =~ /A{30}/i) {
-                    next;
-                }
-                $fastq_out->print($header,$seq,$sep,$qual);
-            }
-            $fastq_in->close;
-            $fastq_out->close;
-
-            # use the new file instead below
-            $fastq_pathname = $fastq_pathname_no_poly_a;
-        }
-
-        # create a bfq
-        my $bfq_pathname = $self->create_temp_file_path('bfq' . $counter);
-        unless ($bfq_pathname) {
-            die "Failed to create temp file for bfq!";
-        }
-        $self->shellcmd(
-            cmd => "$aligner_path fastq2bfq $fastq_pathname $bfq_pathname",
-            input_files => [$fastq_pathname],
-            output_files => [$bfq_pathname],
-            skip_if_output_is_present => 1,
-        );
-        push @bfq_pathnames, $bfq_pathname;
-        $counter++;
-    }
-    return @bfq_pathnames;
+    return @solexa_output_paths;
 }
 
 sub prepare_external_input {
@@ -445,13 +396,15 @@ sub prepare_external_input {
         die "Failed to create temp file for bfq!";
     }
 
-    my $aligner_path = $self->aligner_path('read_aligner_name');
-    $self->shellcmd(
-        cmd => "$aligner_path fastq2bfq $fastq_pathname $bfq_pathname",
-        input_files => [$fastq_pathname],
-        output_files => [$bfq_pathname],
-        skip_if_output_is_present => 1,
-    );
+    ##Moved this functionality into AlignReads.pm
+    #my $aligner_path = $self->aligner_path('read_aligner_name');
+    #$self->shellcmd(
+    #    cmd => "$aligner_path fastq2bfq $fastq_pathname $bfq_pathname",
+    #    input_files => [$fastq_pathname],
+    #    output_files => [$bfq_pathname],
+    #    skip_if_output_is_present => 1,
+    #);
+    
     push @bfq_pathnames, $bfq_pathname;
     return @bfq_pathnames;
 }
@@ -484,6 +437,8 @@ sub execute {
 $DB::single = $DB::stopper;
     $self->revert;
     my $model = $self->model;
+    my $event_id = $self->id;
+    
     # prepare the reads
     # prepare the refseq
     my $ref_seq_path =  $model->reference_sequence_path;
@@ -492,6 +447,7 @@ $DB::single = $DB::stopper;
         $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
         return;
     }
+  
     my $read_set_link = $self->read_set_link;
  
     # prepare paths for the results
@@ -502,8 +458,11 @@ $DB::single = $DB::stopper;
         }
         return 1;
     }
+    #is this message below really true?
     $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
     my @bfq_pathnames; 
+    #These will not be bfqs when returned from prepare_input. That is now handled in AlignReads
+  
     if($self->read_set->_run_lane_solexa->is_external) {
        @bfq_pathnames =  $self->prepare_external_input($self->read_set);
     }
@@ -512,39 +471,46 @@ $DB::single = $DB::stopper;
         @bfq_pathnames = $self->prepare_input($self->read_set,$self->is_eliminate_all_duplicates);
     }
 
+    #I believe we will always want to execute sol2sanger here 
+    my $sol_flag='y'; 
+
+    #output dir
     my $read_set_alignment_directory = $self->read_set_link->read_set_alignment_directory;
     $self->create_directory($read_set_alignment_directory);
     $self->create_file("Processing Marker", $read_set_alignment_directory . "/processing");
+
+    #additional params for AlignReads
     my $aligner_path = $self->aligner_path('read_aligner_name');
     my $aligner_params = $model->read_aligner_params || '';
 
     # resolve adaptor file
     # TODO: get fresh from LIMS
-    my $adaptor_file;
+    my $adaptor_flag;
     my @dna = GSC::DNA->get(dna_name => $self->read_set_link->sample_name);
     if (@dna == 1) {
         if ($dna[0]->dna_type eq 'genomic dna') {
-            $adaptor_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer';
+       		$adaptor_flag = 'dna'; 
         } elsif ($dna[0]->dna_type eq 'rna') {
-            $adaptor_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer_SMART';
+       		$adaptor_flag = 'rna'; 
         }
     }
-    $aligner_params = join(' ', $aligner_params, '-d', $adaptor_file);
-    unless (-e $adaptor_file) {
-        $self->error_message("Adaptor file $adaptor_file not found!: $!");
+    unless (defined($adaptor_flag)) {
+        $self->error_message("Adaptor not defined.");
         return;
     }
 
-    # gather parameters
-    my $event_id = $self->id;
-    my $alignment_file = $self->create_temp_file_path("all.map");
-    my $aligner_output_file = $self->aligner_output_file;
-    my $unaligned_reads_file = $self->unaligned_reads_file;
+    ###input/output files
+    my $alignment_file = $self->create_temp_file_path("all.map");  
+    #changed the two methods below to only return the file name and not the absolute path 
+    my $aligner_output_file = $self->aligner_output_file_name;
+    my $unaligned_reads_file = $self->unaligned_reads_file_name;
 
+    ###upper bound insert param
+    my $upper_bound_on_insert_size;
     if ($read_set_link->is_paired_end) {
         my $sd_above = $read_set_link->sd_above_insert_size;
         my $median_insert = $read_set_link->median_insert_size;
-        my $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;
+        $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;
         unless($upper_bound_on_insert_size > 0) {
             $self->status_message("Unable to calculate a valid insert size to run maq with. Using 600 (hax)");
             $upper_bound_on_insert_size= 600;
@@ -552,45 +518,52 @@ $DB::single = $DB::stopper;
         }
         # TODO: extract additional details from the read set
         # about the insert size, and adjust the maq parameters.
-        $aligner_params .= " -a $upper_bound_on_insert_size";
-    }   
-
-    my $bfq_pathnames = join(' ', @bfq_pathnames);
-    # prepare the alignment command
-    my $cmdline = 
-        $aligner_path
-        . sprintf(' map %s -u %s %s %s %s > ',
-                          $aligner_params,
-                          $unaligned_reads_file,
-                          $alignment_file,
-                          $ref_seq_file,
-                          $bfq_pathnames) 
-        . $aligner_output_file 
-        . ' 2>&1';
-
-    # run the aligner
-    $self->shellcmd(
-        cmd                         => $cmdline,
-        input_files                 => [$ref_seq_file, @bfq_pathnames],
-        output_files                => [$alignment_file, $aligner_output_file],
-        skip_if_output_is_present   => 1,
-        allow_failed_exit_code      => 1,
-    );
-
-    
-    # look through the output file and make sure maq actually finished completely
-    unless ($self->_check_maq_successful_completion($aligner_output_file)) {
-        return;
+        # $aligner_params .= " -a $upper_bound_on_insert_size";
     }
+  
+ 
+ 
+    #call AlignReads ###########################
+
+    $self->status_message("ref_seq_file =>". $ref_seq_file);
+    $self->status_message("files_to_align_path =>". join(",", @bfq_pathnames) );
+    $self->status_message("execute_sol2sanger =>". $sol_flag );
+    $self->status_message("maq_path =>". $aligner_path );
+    $self->status_message("align_options =>". $aligner_params );
+    $self->status_message("dna_type =>".$adaptor_flag);
+    $self->status_message("alignment_file =>". $alignment_file);
+    $self->status_message("aligner_output_file =>". $aligner_output_file);
+    $self->status_message("unaligned_reads_file =>". $unaligned_reads_file);
+    $self->status_message("upper_bound =>". $upper_bound_on_insert_size); 
+    $self->status_message("readset alignment dir =>". $read_set_alignment_directory);
+  
+    $self->status_message("Creating aligner.");
+    my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
+							 ref_seq_file => $ref_seq_file,
+                                                         files_to_align_path => join(",", @bfq_pathnames),
+							 execute_sol2sanger => $sol_flag,
+                                                         maq_path => $aligner_path,
+                                                         align_options => $aligner_params, 
+ 	                                                 dna_type => $adaptor_flag,
+							 alignment_file => $alignment_file,
+ 							 aligner_output_file => $aligner_output_file,
+							 unaligned_reads_file => $unaligned_reads_file,
+							 upper_bound => $upper_bound_on_insert_size, 
+							 output_directory=> $read_set_alignment_directory,
+							);
+ 
+    $self->status_message("Executing aligner.");
+    $aligner->execute; 
+    $self->status_message("Aligner executed.");
+    ##############################################
 
     # in some cases maq will "work" but not make an unaligned reads file
     # this happens when all reads are filtered out
     # make an empty file to represent our zero-item list of unaligned reads
-    unless (-e $unaligned_reads_file) {
-        if (my $fh = IO::File->new(">$unaligned_reads_file")) {
+    unless (-e $self->unaligned_reads_file) {
+        if (my $fh = IO::File->new(">".$self->unaligned_reads_file)) {
             $self->status_message("Made empty unaligned reads file since that file is was not generated by maq.");
-        }
-        else {
+        } else {
             $self->error_message("Failed to make empty unaligned reads file!: $!");
         }
     }
