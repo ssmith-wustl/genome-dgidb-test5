@@ -393,6 +393,7 @@ associations in four cases.
         SEQUENCE_PLASMID                GSC::Sequence::Plasmid
         
         SETUP_SAMPLE_SET_TYPE           GSC::Setup::SampleSetType
+        SETUP_WORK_ORDER                GSC::Setup::WorkOrder
         SETUP_SAMPLE_SET                GSC::Setup::SampleSet
         SETUP_PROJECT                   GSC::Setup::Project
         SETUP_PROCESS_PARAM             GSC::Setup::ProcessParam
