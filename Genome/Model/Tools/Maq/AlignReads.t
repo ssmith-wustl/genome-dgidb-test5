@@ -14,7 +14,7 @@ if (`uname -a` =~ /x86_64/){
     plan skip_all => 'Must run on a 64 bit machine';
 }
 
-my $expected_output = 3;
+my $expected_output = 2;
 
 my $ref_seq = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignReads/all_sequences.bfa";
 my $files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignReads/single-solexa";
@@ -42,7 +42,7 @@ my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 #execute the tool 
 ok($aligner->execute,'AlignReads execution, single read solexa input with sol2sanger conversion.');
 
-#check the number of files in the output directory, should be 3.
+#check the number of files in the output directory, should be 2.
 my @listing = glob($output_dir.'/*');
 ok( scalar(@listing) eq $expected_output, "Number of output files expected = ".$expected_output );
 
@@ -63,7 +63,7 @@ $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 #execute the tool 
 ok($aligner->execute,'AlignReads execution, paired read solexa input with sol2sanger conversion.');
 
-#check the number of files in the output directory, should be 3.
+#check the number of files in the output directory, should be 2.
 @listing = glob($output_dir.'/*');
 ok( scalar(@listing) eq $expected_output, "Number of output files expected = ".$expected_output );
 
@@ -89,16 +89,15 @@ $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 #execute the tool 
 ok($aligner->execute,'AlignReads execution, paired read solexa input with sol2sanger conversion, forcing fragments.');
 
-#check the number of files in the output directory, should be 3.
+#check the number of files in the output directory, should be 2.
 @listing = glob($output_dir.'/*');
 ok( scalar(@listing) eq $expected_output, "Number of output files expected = ".$expected_output );
-
 
 
 #Case 4: test for dumping duplicate mismatch file
 #get a new output dir
 $output_dir = File::Temp::tempdir(CLEANUP => 1);
-$expected_output = 4;
+$expected_output = 3;
 #get new input test data
 $files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignReads/paired-solexa";
 
@@ -113,8 +112,9 @@ $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 #execute the tool 
 ok($aligner->execute,'AlignReads execution, paired read input with sol2sanger conversion, dump duplicates');
 
-#check the number of files in the output directory, should be 4.
+#check the number of files in the output directory, should be 3.
 @listing = glob($output_dir.'/*');
+#print "\n\nListing: ".join(", ",@listing)."\n\n";
 ok( scalar(@listing) eq $expected_output, "Number of output files expected = ".$expected_output );
 
 
