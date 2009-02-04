@@ -6,6 +6,7 @@ use warnings;
 use above 'Genome';
 
 require Cwd;
+require IO::Handle;
 
 class Genome::Utility::IO::Writer {
     is => 'UR::Object',
@@ -14,7 +15,7 @@ class Genome::Utility::IO::Writer {
     output => {
         type => 'String',
         is_optional => 0,
-        doc => 'Output (file, if from command line) to write',
+        doc => 'Output (file, if from command line) to write.  Defaults to STDOUT',
     },
     ],
 };
@@ -36,14 +37,18 @@ sub create {
         return;
     }
 
-    my $output = delete $params{output};
+    my $output = delete $params{output}; # UR will complain if output doesn't match 'is' in class def
+
     my $self = $class->SUPER::create(%params)
         or return;
     
-    $self->error_message("Output is required for class ($class)")
-        and return unless defined $output;
-
-    if ( my $output_class = ref($output) ) {
+    unless ( $output ) { # STDOUT
+        my $handle = IO::Handle->new();
+        $handle->fdopen(fileno(STDOUT), "w");
+        $handle->autoflush;
+        $self->output($handle);
+    }
+    elsif ( my $output_class = ref($output) ) { # Some object?
         for my $required_method (qw/ print /) {
             unless ( $output_class->can($required_method) ) {
                 $self->error_message("Output class ($output_class) can't do required method ($required_method)");
@@ -52,7 +57,7 @@ sub create {
         }
         $self->output($output);
     }
-    else {
+    else { # Assume it is a file
         $output = Cwd::abs_path($output);
         my $fh = Genome::Utility::FileSystem->open_file_for_writing($output)
             or return;
