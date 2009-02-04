@@ -77,7 +77,9 @@ sub execute {
 print("cmd:  $cmd\n");
     my $success = system $cmd;
 print "success:  $success\n";
-#    $model->gold_snp_file($self->file_name) if $success;  #throw error
+    $model->gold_snp_file($self->file_name);  #throw error
+    my $foobar = Genome::MiscAttribute->create(entity_id=>$model->id, 
+    entity_class_name=>'Genome::Model', property_name=>'gold_snp_path', value=>$self->file_name);
 }
 
 sub _get_sub_command_class_name {
