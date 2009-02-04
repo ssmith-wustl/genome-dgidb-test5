@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Workflow;
+use MGAP::Command;
 
 use Bio::Seq;
 use Bio::SeqIO;
@@ -13,7 +14,6 @@ use Bio::Tools::Run::Glimmer;
 use English;
 use IO::File;
 use IPC::Run;
-
 
 class MGAP::Command::BuildGlimmerInput {
     is => ['MGAP::Command'],
