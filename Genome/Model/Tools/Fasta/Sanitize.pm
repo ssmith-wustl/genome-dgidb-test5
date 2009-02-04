@@ -24,14 +24,14 @@ my @SANITATION_PROPERTIES = ( # used arrow format for convenience
     max_threshold => {
         is => 'Integer',
         doc => 'Contig maximum threshold, includes contigs with an unpadded length less than or equal to this value',
-    },
-    replace => {
-        is => 'Text',
-        doc => 'Replace a case insensitive string (or regular expression) of a characters with a new string.  Separate the match and new string by a colon. Use a reExamples: Replace 15 As with 10 Ns => AAAAAAAAAAAAAAA:NNNNNNNNNN; Replace 15 As using a reg exp with 10 Ns => A{15}:NNNNNNNNNN or AAAAAAAAAAAAAAA:NNNNNNNNNN; Replace at least 15 As (must use reg exp) w/ 10 Ns => A{15,}:NNNNNNNNNN',
-    },
+    }, 
     replace_xs_with_ns => {
         is => 'Boolean',
         doc => 'Replace all Xs (case insensitive) with Ns.  This is an alias to "replace" with parameter "x:N"',
+    },
+    replace => {
+        is => 'Text',
+        doc => 'Replace a case insensitive string (or regular expression) of a characters with a new string.  Separate the match and new string by a colon. From the command line, enclose the replace string w/in single quotes (as shown in the examples) to ensure that it is not interperetted by the operating system.  Examples: Replace 15 As with 10 Ns => \'AAAAAAAAAAAAAAA:NNNNNNNNNN\', or as a reg exp => \'A{15}:NNNNNNNNNN\'; Replace 15 or more As w/ Ns (must use reg exp) => \'A{15,}:NNNNNNNNNN\'',
     },
     capitalize => {
         is => 'Boolean',
