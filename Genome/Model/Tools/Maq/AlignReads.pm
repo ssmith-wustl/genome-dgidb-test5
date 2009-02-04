@@ -187,7 +187,8 @@ sub create {
     }
 
    #set up the output files with the proper path 
-    $self->alignment_file($self->output_directory.'/'.$self->alignment_file); 
+    #$self->alignment_file($self->output_directory.'/'.$self->alignment_file); 
+    $self->alignment_file($self->alignment_file); 
     $self->unaligned_reads_file($self->output_directory.'/'.$self->unaligned_reads_file); 
     $self->aligner_output_file($self->output_directory.'/'.$self->aligner_output_file); 
     if( defined($self->duplicate_mismatch_file) ) {
@@ -291,7 +292,7 @@ sub create {
         if ( defined($self->temp_directory) ) {
      		$tmp_dir =  Genome::Utility::FileSystem->create_directory($self->temp_directory);
         } else {
-	        $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
+	        $tmp_dir = File::Temp::tempdir(CLEANUP => 0);
         }
      	#$self->status_message("temp dir:".$tmp_dir);
 
