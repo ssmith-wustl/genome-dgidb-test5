@@ -33,6 +33,7 @@ UR::Object::Type->define(
         'taxon_id' => {
             is  => 'Integer',
             doc => "NCBI Taxonomy id",
+            is_optional => 1,
         },
         'workflow_xml' => {
             is => 'String',
@@ -223,8 +224,14 @@ sub mgap_to_biosql
     my $testnorun = shift;
     my @command = (
         'bap_load_biosql', '--sequence-set-id', $ssid,
-        '--tax-id',        $taxid,
+        #'--tax-id',        $taxid,
     );
+
+    if(defined($taxid))
+    {
+        push(@command, '--tax-id');
+        push(@command, $taxid);
+    }
 
     if($self->dev)
     {
