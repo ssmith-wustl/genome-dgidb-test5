@@ -236,7 +236,7 @@ sub mgap_to_biosql
     if($self->dev)
     {
         push(@command,'--dev');
-        push(@command,'--dev-biosql');
+        push(@command,'--biosql-dev');
     }
     my ($cmd_out,$cmd_err);
 
