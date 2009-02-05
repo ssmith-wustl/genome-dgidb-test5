@@ -6,8 +6,8 @@ use strict;
 use UR;
 use Workflow;
 
-use lib '/gscuser/mjohnson/bioperl-svn/bioperl-live';
-use lib '/gscuser/mjohnson/bioperl-svn/bioperl-run';
+use lib '/gscmnt/temp212/info/annotatin/bioperl-cvs/bioperl-live';
+use lib '/gscmnt/temp212/info/annotatin/bioperl-cvs/bioperl-run';
 
 class PAP {
     is => ['UR::Namespace'],
