@@ -1,4 +1,4 @@
- package Genome::Model::Tools::ManualReview::MRGui;
+package Genome::Model::Tools::ManualReview::MRGui;
 
 use strict;
 use warnings;
@@ -18,6 +18,7 @@ sub init_gtk {
 }
 
 use IO::File;
+use GSC::IO::Assembly::Ace::Reader;
 use Genome::Utility::VariantReviewListReader;
 
 use File::Basename ('fileparse','basename');
@@ -89,7 +90,7 @@ sub new
     my $treeview = $glade->get_widget("review_list");
     $self->build_review_tree;
 
-    $mainWin->signal_connect("destroy", sub { Gtk2->main_quit; system "killall consed"; });   
+    $mainWin->signal_connect("destroy", sub { Gtk2->main_quit; system "killall -s QUIT -q consed"; });   
 
     my $project_file = $params{project_file};
     $self->open_file(abs_path($project_file)) if($project_file && -e $project_file);  
@@ -114,15 +115,23 @@ for(my $i=0;$i<30;$i++) { $cmp_hash{$i}=$i; }
 sub chrom_sort
 {
     my ($liststore, $itera, $iterb) = @_;
-    my ($a1, $a2) = $liststore->get($itera,0,1);
-    my ($b1, $b2) = $liststore->get($iterb,0,1);
+    my ($a1, $a2) = $liststore->get($itera,1,2);
+    my ($b1, $b2) = $liststore->get($iterb,1,2);
+    if(!defined $a1 || !defined $b1) {return 0;}
     if($a1 eq $b1) 
 	{
 		return $a2 <=> $b2;
 	}
 	else
 	{
-		return $cmp_hash{$a1} <=> $cmp_hash{$b1};
+        if(exists $cmp_hash{$a1} && exists $cmp_hash{$b1})
+        {
+		    return $cmp_hash{$a1} <=> $cmp_hash{$b1};
+        }
+        else
+        {
+            return $a1 cmp $b1;
+        }
 	}
     
 }
@@ -135,31 +144,33 @@ sub build_review_tree
     my $tree = $handle->get_widget("review_list");
 
     my @col = (Gtk2::TreeViewColumn->new_with_attributes
-                        ('Chromosome', Gtk2::CellRendererText->new, text => 0),
+                        ('Sample Name', Gtk2::CellRendererText->new, text => 0),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Position', Gtk2::CellRendererText->new, text => 1),
+                        ('Chromosome', Gtk2::CellRendererText->new, text => 1),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Delete Sequence', Gtk2::CellRendererText->new, text => 2),
+                        ('Position', Gtk2::CellRendererText->new, text => 2),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Insert Sequence Allele 1', Gtk2::CellRendererText->new, text => 3),
+                        ('Delete Sequence', Gtk2::CellRendererText->new, text => 3),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Insert Sequence Allele 2', Gtk2::CellRendererText->new, text => 4),
+                        ('Insert Sequence Allele 1', Gtk2::CellRendererText->new, text => 4),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Genotype', Gtk2::CellRendererText->new, text => 5),
+                        ('Insert Sequence Allele 2', Gtk2::CellRendererText->new, text => 5),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Pass Manual Review', Gtk2::CellRendererText->new, text => 6),
+                        ('Genotype', Gtk2::CellRendererText->new, text => 6),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Manual Genotype Normal', Gtk2::CellRendererText->new, text => 7),
+                        ('Pass Manual Review', Gtk2::CellRendererText->new, text => 7),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Manual Genotype Tumor', Gtk2::CellRendererText->new, text => 8),
+                        ('Manual Genotype Normal', Gtk2::CellRendererText->new, text => 8),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Manual Genotype Relapse', Gtk2::CellRendererText->new, text => 9),
+                        ('Manual Genotype Tumor', Gtk2::CellRendererText->new, text => 9),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Notes', Gtk2::CellRendererText->new, text => 10),
+                        ('Manual Genotype Relapse', Gtk2::CellRendererText->new, text => 10),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Somatic Status', Gtk2::CellRendererText->new, text => 11),
+                        ('Notes', Gtk2::CellRendererText->new, text => 11),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Data Needed', Gtk2::CellRendererText->new, text => 12),
+                        ('Somatic Status', Gtk2::CellRendererText->new, text => 12),
+         Gtk2::TreeViewColumn->new_with_attributes
+                        ('Data Needed', Gtk2::CellRendererText->new, text => 13),
                                                 
         );
     foreach (@col)
@@ -172,45 +183,6 @@ sub build_review_tree
     return $tree;
 
 
-}
-
-#my %hash = 
-#(
-#    'Chromosome' => 'chromosome',
-#    'Position' => 'start_position',
-#    'Delete Sequence' => 'delete_sequence',
-#    'Insert Sequence Allele 1' => 'insert_sequence_allele1',
-#    'Insert Sequence Allele 2' => 'insert_sequence_allele2',
-#    'Genotype' => 'genotype_iub_code',
-#    'Pass Manual Review' => 'pass_manual_review',
-#    'Manual Genotype Normal' => 'manual_genotype_iub_normal',
-#    'Manual Genotype Tumor' => 'manual_genotype_iub_tumor',
-#    'Manual Genotype Relapse' => 'manual_genotype_iub_relapse'
-#);
-
-sub db_columns{
-    my @columns = ( qw/
-        chromosome
-        start_position
-        stop_position
-        variant_type
-        variant_length
-        delete_sequence
-        insert_sequence_allele1
-        insert_sequence_allele2
-        genes
-        supporting_samples
-        supporting_dbs
-        finisher_manual_review
-        pass_manual_review
-        finisher_3730_review
-        manual_genotype_normal
-        manual_genotype_tumor
-        manual_genotype_relapse
-        somatic_status
-        notes
-        /);
-    return @columns;
 }
 
 sub set_project_consedrc {
@@ -252,10 +224,32 @@ sub set_project_consedrc {
     return 1;
 }
 
+sub get_contig_start_pos
+{
+    my ($self,$ace_file_name) = @_;
+    my $fh = IO::File->new($ace_file_name);
+    
+    my $reader = GSC::IO::Assembly::Ace::Reader->new(input => $fh);
+    while(my $line = <$fh>)
+    {
+        if($line =~ /CT\{/)
+        {
+            $fh->seek(-strlen($line),1);
+            my $tag = $reader->next_object;
+            if($tag->{type} eq 'startNumberingConsensus')
+            {
+                my ($pos) = split (/\n/,$tag->{data});
+                return $pos;
+            }
+            
+        }
+    }
+}
+
 sub open_consed
 {
-    my ($self, $proj_name) = @_;
-    my $relative_target_base_pos = 1001;
+    my ($self, $proj_name, $relative_target_base_pos) = @_;
+    
     my $consed= 'consed';
     my($file, $dir)= fileparse($self->current_file);
     my $suffix = '.1';
@@ -279,28 +273,34 @@ sub open_consed
             }
         }
         unlink $edit_dir."/consedSocketLocalPortNumber";
-        my @lines = `ps -C consed -o pid=`;
         
-        my $line = pop @lines;
-        chomp $line;        
-
-        my (undef, $pid) = split /\s+/,$line;
-        return $pid;
+        return 1;
     }
     
     if(!defined $pid) {print "fork unsuccessful.\n"; }
     
-
+    my $ace1 = "$proj_name.ace$suffix";
+    $ace1 = "$proj_name.ace" unless (-e $ace1);;
+    my $contig_start_pos = $self->get_contig_start_pos($edit_dir.'/'.$ace1);
+    if($contig_start_pos)#don't assume consed starts at 1, convert coords if necessary
+    {
+        $relative_target_base_pos = $relative_target_base_pos - $contig_start_pos + 1;
+    }
+    else
+    {
+        $relative_target_base_pos = 1001;# if(!defined $relative_target_base_pos);    
+    }
     if( -d $edit_dir){
         chdir $edit_dir or die "can't cd to $edit_dir"; 
-        my $ace1 = "$proj_name.ace$suffix";
         $ace1 = "$proj_name.ace" unless (-e $ace1);
         unless(-e $ace1){
             print "ERROR no: $ace1 ... skipping (report to apipe)\n"; 
             exit;
         }        
         set_project_consedrc($edit_dir);
-        my $out = `grep SABBOTT $ace1`;
+
+        my $out = `grep SABBOTT $ace1`;# hack that Lynn added, may remove later, since we can just use the position
+        #that is provided in the review editor
         chomp $out;
         if($out){
 
@@ -308,8 +308,10 @@ sub open_consed
 
             $relative_target_base_pos =&resolve_padded_pos($ace1, $relative_target_base_pos);
         }
+        #end hack
         
         my $c_command= "$consed -socket 0 -ace $ace1 -mainContigPos $relative_target_base_pos &>/dev/null";
+        #print $c_command,"\n";
         my $rc = system($c_command);
         if($rc)
         {
@@ -322,6 +324,7 @@ sub open_consed
     exit;
     
 }
+
 sub resolve_padded_pos{
     my ($ace, $rel)=@_;
 
@@ -354,6 +357,7 @@ sub get_col_order
     my ($self) = @_;
     my $header = $self->header;
     my @vis_cols = (
+        'sample_name',
         'chromosome',
         'start_position',
         'delete_sequence',
@@ -402,7 +406,22 @@ sub open_file
         if ($line_hash->{header}) { print $line_hash->{header},"\n"; }
         next if $line_hash->{header};
         my $iter = $model->append;
-
+        
+        #check if we at least have a chromosome and position for the variant, if not,
+        #then we are clearly looking at invalid data (or have a parser error)
+        if(!defined $line_hash->{$col_order[1]} || !defined $line_hash->{$col_order[2]})
+        {
+            $tree->set_model(Gtk2::ListStore->new(('Glib::String')x$col_count));
+            my $dialog = Gtk2::MessageDialog->new ($mainWin,
+                                      'destroy-with-parent',
+                                      'error', # message type
+                                      'ok', # which set of buttons?
+                                      "There was an error opening the csv file.'\n");
+            my $response = $dialog->run;
+  
+            $dialog->destroy;
+            return;        
+        }
         for(my $i = 0;$i<@col_order;$i++)
         {
             $model->set($iter,
@@ -509,31 +528,31 @@ sub on_re_ok
     
     my $cb = $glade->get_widget('re_genotype');
     my $active = $cb->get_active();
-    $model->set($row,5 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
+    $model->set($row,6 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
     $cb = $glade->get_widget('re_passfail');
     $active = $cb->get_active();
-    $model->set($row,6 => $rpf{$active}) if exists $rpf{$active};
+    $model->set($row,7 => $rpf{$active}) if exists $rpf{$active};
     $cb = $glade->get_widget('re_genotype_normal');
     $active = $cb->get_active();
-    $model->set($row,7 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
+    $model->set($row,8 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
     $cb = $glade->get_widget('re_genotype_tumor');
     $active = $cb->get_active();
-    $model->set($row,8 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};    
+    $model->set($row,9 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};    
     $cb = $glade->get_widget('re_genotype_relapse');
     $active = $cb->get_active();
-    $model->set($row,9 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
+    $model->set($row,10 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
     $cb = $glade->get_widget('re_somatic_status');
     $active = $cb->get_active();
-    $model->set($row,11 => $rev_somatic_status{$active}) if exists $rev_somatic_status{$active};
+    $model->set($row,12 => $rev_somatic_status{$active}) if exists $rev_somatic_status{$active};
     $cb = $glade->get_widget('re_data_needed');
     $active = $cb->get_active();
-    $model->set($row,12 => $rdn{$active}) if exists $rdn{$active};
+    $model->set($row,13 => $rdn{$active}) if exists $rdn{$active};
     
     my $tb = $glade->get_widget('re_text_view');    
     my ($s,$e) = $tb->get_buffer->get_bounds;
     my $text = $tb->get_buffer->get_text($s,$e,0);
     $text =~ tr/\n\t/  /;
-    $model->set($row, 10 => $text) if defined $text;
+    $model->set($row, 11 => $text) if defined $text;
     #added later this destroys it too
     $self->on_review_editor_destroy($review_editor);    
     return 1;
@@ -542,10 +561,9 @@ sub on_re_ok
 sub on_review_editor_destroy
 {
     my ($self, $review_editor) = @_;
-    print "caught destroy signal.\n";
+    
     #saving window location
-    my ($x, $y) = $review_editor->get_position;
-    print "window position is $x, $y.\n";
+    my ($x, $y) = $review_editor->get_position;    
     $self->{last_x} = $x;
     $self->{last_y} = $y;
     $review_editor->destroy;
@@ -556,7 +574,31 @@ sub on_review_button_clicked
 {
     my ($self) = @_;
     my $g_handle = $self->g_handle;
-    
+    my $review_list = $g_handle->get_widget("review_list");
+    my $mainWin = $g_handle->get_widget("manual_review");
+    if(!defined $review_list)
+    {
+        my $dialog = Gtk2::MessageDialog->new ($mainWin,
+                                      'destroy-with-parent',
+                                      'error', # message type
+                                      'ok', # which set of buttons?
+                                      "There are no reviews to edit, please open a review list.\n");
+        my $response = $dialog->run;
+        $dialog->destroy;
+        return 1;
+    }
+    my ($path,$column) = $review_list->get_cursor;
+    if(!defined $path || !defined $column)
+    {
+        my $dialog = Gtk2::MessageDialog->new ($mainWin,
+                                      'destroy-with-parent',
+                                      'error', # message type
+                                      'ok', # which set of buttons?
+                                      "Please select a review to edit first, then click Review.\n");
+        my $response = $dialog->run;
+        $dialog->destroy;
+        return 1;    
+    }
     my $mr_dir = 'Genome/Model/Tools/ManualReview';
     foreach my $path (@INC) {
         my $fullpath = $path . "/" .$mr_dir;
@@ -577,12 +619,12 @@ sub on_review_button_clicked
     {
         $review_editor->move($self->{last_x},$self->{last_y});
     }
-    my $review_list = $g_handle->get_widget("review_list");
+    
     $review_editor->signal_connect("delete_event", sub { $self->on_review_editor_destroy($review_editor); });
     my $model = $review_list->get_model;
-    my ($path,$column) = $review_list->get_cursor;
+    
     my $row = $model->get_iter($path);
-    my @val = $model->get($row,5,6,7,8,9,10,11,12);    
+    my @val = $model->get($row,6,7,8,9,10,11,12,13);    
     my $re_hpaned = $glade->get_widget("re_hpaned");
     my ($width) = $review_editor->get_size_request;
     $re_hpaned->set_position($width/2.5);
@@ -591,9 +633,9 @@ sub on_review_button_clicked
     my $ok = $glade->get_widget("re_ok");
     $ok->signal_connect("clicked", \&on_re_ok,[$self, $glade,$review_editor, $model, $row]);
     my $prev = $glade->get_widget("re_prev");
-    $prev->signal_connect("clicked", sub {$self->on_prev_button_clicked;});
+    $prev->signal_connect("clicked", sub {$self->on_prev_button_clicked($glade);});
     my $next = $glade->get_widget("re_next");
-    $next->signal_connect("clicked", sub {$self->on_next_button_clicked;});
+    $next->signal_connect("clicked", sub {$self->on_next_button_clicked($glade);});
     #set widgets
 
     my %pf = (Pass => 1, Fail => 2);
@@ -615,17 +657,38 @@ sub on_review_button_clicked
     $cb = $glade->get_widget('re_data_needed');
     $cb->set_active($dn{$val[7]}) if(defined $val[7] && exists $dn{$val[7]});
     
-    @val = $model->get($row,0,1);
-    my $proj_dir = join '_',@val;
-    $self->{pid} = $self->open_consed($proj_dir);
+    @val = $model->get($row,1,2);
+    my $row_hash = $self->get_row_hash($model,$row);
+    my $proj_dir;
+    if(exists $row_hash->{project_type} &&
+       $row_hash->{project_type} eq 'amplicon')
+    {
+        $proj_dir = $val[0];
+    }
+    else
+    {
+        $proj_dir = join '_',@val;
+    }
+    $self->open_consed($proj_dir,$val[1]);
     return $review_editor;
+}
+
+sub get_row_hash
+{
+    my ($self,$model, $row) = @_;
+    my @col_order = $self->get_col_order;
+    my @val = $model->get($row);
+    my %row_hash;
+    @row_hash{@col_order} = @val;
+    return \%row_hash;
+
 }
 
 sub display_row
 {
     my ($self,$model, $row, $glade) = @_;
     
-    my @val = $model->get($row,5,6,7,8,9,10,11,12);
+    my @val = $model->get($row,6,7,8,9,10,11,12,13);
     #set widgets
 
     my %pf = (Pass => 1, Fail => 2);
@@ -701,11 +764,10 @@ sub display_row
     my $tb = $glade->get_widget('re_text_view');
     $tb->get_buffer->set_text($val[5]);
 
-    @val = $model->get($row,0,1);
+    @val = $model->get($row,1,2);
     my $proj_dir = join '_',@val;
-    #if($self->{pid}) {system "kill -9 $self->{pid}";}
-    system "killall consed";
-    $self->{pid} = $self->open_consed($proj_dir);
+    system "killall -s QUIT -q consed";
+    $self->open_consed($proj_dir,$val[1]);
     return ;
 }
 
@@ -719,31 +781,31 @@ sub save_row
     
     my $cb = $glade->get_widget('re_genotype');
     my $active = $cb->get_active();
-    $model->set($row,5 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
+    $model->set($row,6 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
     $cb = $glade->get_widget('re_passfail');
     $active = $cb->get_active();
-    $model->set($row,6 => $rpf{$active}) if exists $rpf{$active};
+    $model->set($row,7 => $rpf{$active}) if exists $rpf{$active};
     $cb = $glade->get_widget('re_genotype_normal');
     $active = $cb->get_active();
-    $model->set($row,7 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
+    $model->set($row,8 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
     $cb = $glade->get_widget('re_genotype_tumor');
     $active = $cb->get_active();
-    $model->set($row,8 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};    
+    $model->set($row,9 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};    
     $cb = $glade->get_widget('re_genotype_relapse');
     $active = $cb->get_active();
-    $model->set($row,9 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
+    $model->set($row,10 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
     $cb = $glade->get_widget('re_somatic_status');
     $active = $cb->get_active();
-    $model->set($row,11 => $rev_somatic_status{$active}) if exists $rev_somatic_status{$active};
+    $model->set($row,12 => $rev_somatic_status{$active}) if exists $rev_somatic_status{$active};
     $cb = $glade->get_widget('re_data_needed');
     $active = $cb->get_active();
-    $model->set($row,12 => $rdn{$active}) if exists $rdn{$active};
+    $model->set($row,13 => $rdn{$active}) if exists $rdn{$active};
     
     my $tb = $glade->get_widget('re_text_view');
     my ($s,$e) = $tb->get_buffer->get_bounds;
     my $text = $tb->get_buffer->get_text($s,$e,0);
     $text =~ tr/\n\t/  /;
-    $model->set($row, 10 => $text) if defined $text;    
+    $model->set($row, 11 => $text) if defined $text;    
 
     return 1;
 
@@ -751,35 +813,84 @@ sub save_row
 
 sub on_prev_button_clicked
 {
-    my ($self, $button) = @_;
+    my ($self, $glade) = @_;
     my $g_handle = $self->g_handle;
     my $review_list = $g_handle->get_widget("review_list");
+    my $mainWin = $g_handle->get_widget("manual_review");
+    if(!defined $review_list)
+    {
+        my $dialog = Gtk2::MessageDialog->new ($mainWin,
+                                      'destroy-with-parent',
+                                      'error', # message type
+                                      'ok', # which set of buttons?
+                                      "There are no reviews to edit, please open a review list.\n");
+        my $response = $dialog->run;
+        $dialog->destroy;
+        return 1;
+    }
+    my ($path,$column) = $review_list->get_cursor;
+    if(!defined $path || !defined $column)
+    {
+        my $dialog = Gtk2::MessageDialog->new ($mainWin,
+                                      'destroy-with-parent',
+                                      'error', # message type
+                                      'ok', # which set of buttons?
+                                      "Please select a review to edit first, then click Review.\n");
+        my $response = $dialog->run;
+        $dialog->destroy;
+        return 1;    
+    }
+
     my $model = $review_list->get_model;
-    my ($path,$column) = $review_list->get_cursor; 
     my $iter = $model->get_iter($path);  
-    $self->save_row($model, $iter, $self->re_g_handle) if $self->re_g_handle; 
+    $self->save_row($model, $iter, $glade) if $glade; 
     return unless $path;
     return unless $path->prev;
     $iter = $model->get_iter($path);
-    $self->display_row($model, $iter, $self->re_g_handle) if ($self->re_g_handle && $path);
-    print "attempted to reset cursor.'\n";
+    $self->display_row($model, $iter, $glade) if ($glade && $path);
+    
     $review_list->set_cursor($path);
 
 }
 
 sub on_next_button_clicked
 {
-    my ($self, $button) = @_;
+    my ($self, $glade) = @_;
+#    $DB::single = 1;
     my $g_handle = $self->g_handle;
     my $review_list = $g_handle->get_widget("review_list");
+    my $mainWin = $g_handle->get_widget("manual_review");
+    if(!defined $review_list)
+    {
+        my $dialog = Gtk2::MessageDialog->new ($mainWin,
+                                      'destroy-with-parent',
+                                      'error', # message type
+                                      'ok', # which set of buttons?
+                                      "There are no reviews to edit, please open a review list.\n");
+        my $response = $dialog->run;
+        $dialog->destroy;
+        return 1;
+    }
+    my ($path,$column) = $review_list->get_cursor;
+    if(!defined $path || !defined $column)
+    {
+        my $dialog = Gtk2::MessageDialog->new ($mainWin,
+                                      'destroy-with-parent',
+                                      'error', # message type
+                                      'ok', # which set of buttons?
+                                      "Please select a review to edit first, then click Review.\n");
+        my $response = $dialog->run;
+        $dialog->destroy;
+        return 1;    
+    }
+    
     my $model = $review_list->get_model;
-    my ($path,$column) = $review_list->get_cursor; 
     my $iter = $model->get_iter($path);   
-    $self->save_row($model, $iter, $self->re_g_handle) if $self->re_g_handle; 
+    $self->save_row($model, $iter, $glade) if $glade; 
     return unless $path;
     $path->next;
     $iter = $model->get_iter($path);
-    $self->display_row($model, $iter, $self->re_g_handle) if ($self->re_g_handle && $path);
+    $self->display_row($model, $iter, $glade) if ($glade && $path);
     $review_list->set_cursor($path);
     #set widgets
 
@@ -789,7 +900,7 @@ sub on_next_button_clicked
 sub gtk_main_quit
 {
     Gtk2->main_quit;
-    system "killall consed";
+    system "killall -s QUIT -q consed";
 }
 
 
