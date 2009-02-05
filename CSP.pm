@@ -652,6 +652,7 @@ my %csp_priority = (
     'transfer 454 run'                        => 1,
     'transfer tagged 454 run'                 => 1,
     'assemble 454 regions'                    => 1,
+    'align 454 region'                        => 1,
     'align reads to recent runs'              => 1,
     'analyze sequenced dna'                   => 2,
     'analyze digested dna'                    => 1,
