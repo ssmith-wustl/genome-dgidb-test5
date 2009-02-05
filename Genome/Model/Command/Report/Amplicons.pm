@@ -76,7 +76,7 @@ sub execute {
         my $comment =$pcr_setup_with_info->{__comment__};
         my $chr = $ref_seq->get_subject;
         my $genome = $chr->get_genome;
-        print $fh '>'. $pcr_setup_with_info->setup_name .' '. $genome->sequence_item_name .', Chr:'. $chr->chromosome
+        print $fh '>'. $pcr_setup_with_info->setup_name .' '. $genome->sequence_item_name .', Chr:'. uc($chr->chromosome)
             .', Coords '. $ref_seq->begin_position .'-'.$ref_seq->end_position .', Ori(+)'."\n";
         if ($self->fasta_format) {
             print $fh $ref_seq->sequence_base_string ."\n";
