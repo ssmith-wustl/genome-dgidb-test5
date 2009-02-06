@@ -39,25 +39,10 @@ sub execute {
     foreach my $assign_model (
         Genome::Model::ReferenceAlignment->get( auto_assign_inst_data => 1 ) )
     {
-        my $assign_cmd =
-            'genome model add-reads --model-id='
-          . $assign_model->genome_model_id()
-          . ' --all';
-        my $assign_result = system($assign_cmd);
-    }
+        Genome::Model::Command::AddReads->execute(model_id => $assign_model->genome_model_id(),all=>1);
+     }
 
-    foreach my $build_model (
-        Genome::Model::ReferenceAlignment->get( auto_build_alignments => 1 ) )
-    {
-        my $build_cmd =
-          'genome model build schedule-stage --stage-name=alignment --model-id='
-          . $build_model->genome_model_id();
-        my $build_result = system($build_cmd);
-
-        my $run_jobs_cmd =
-          'genome model run-jobs --model-id=' . $build_model->genome_model_id();
-        my $run_jobs_result = system($run_jobs_cmd);
-    }
+   
     return 1;
 }
 
