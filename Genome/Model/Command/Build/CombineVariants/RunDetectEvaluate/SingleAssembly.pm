@@ -245,6 +245,7 @@ sub run_detect_pse {
     $pse->add_param(asp_id => $pse_params->{assembly_project}->asp_id);
     $pse->add_param(project_dir => $self->assembly_directory);
     $pse->add_param(pps_id => $pse_params->{process_param_set}->id);
+    $pse->add_param(model_id => $self->model->id);
     $pse->confirmable;
     $pse->confirm;
 
@@ -276,6 +277,7 @@ sub run_evaluate_pse {
     $pse->add_param(asp_id => $pse_params->{assembly_project}->asp_id);
     $pse->add_param(project_dir => $self->assembly_directory);
     $pse->add_param(pps_id => $pse_params->{process_param_set}->id);
+    $pse->add_param(model_id => $self->model->id);
 
     unless ($pse->confirmable) {
         $self->error_message("PSE is not confirmable");

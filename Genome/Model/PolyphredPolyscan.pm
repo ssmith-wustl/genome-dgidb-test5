@@ -503,6 +503,7 @@ sub get_or_create{
     my $subject_name = $p{subject_name};
     my $subject_type = $p{subject_type};
     my $model_name = $p{model_name};
+    my $parent_model_id = $p{parent_model_id};
     $subject_type ||= 'sample_group';
 
     unless (defined($research_project_name) && defined($technology) && defined($sensitivity) && defined($subject_name)) {
@@ -548,9 +549,15 @@ sub get_or_create{
             die;
         }
 
-        # Now, get or create the combine variants model and add this newly created model to it
-        # TODO: Should be some other parameters besides name as the research project name...
-        my $combine_variants_model = Genome::Model::CombineVariants->get_or_create(subject_name => $subject_name);
+        unless($parent_model_id) {
+            $class->error_message("No parent_model_id provided for child polyphredpolyscan model");
+            die;
+        }
+        my $combine_variants_model = Genome::Model::CombineVariants->get($parent_model_id);
+        unless($combine_variants_model) {
+            $class->error_message("Could not get parent combine variants model for id $parent_model_id");
+            die;
+        }
 
         $combine_variants_model->add_child_model($model);
     }
