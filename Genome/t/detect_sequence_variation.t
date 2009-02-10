@@ -2,8 +2,8 @@
 
 use warnings;
 use strict; 
-#use Test::More no_plan => 1;
-use Test::More skip_all => "Broken from GSC/PSE change. Skipping until this is remedied.";
+use Test::More tests=> 170;
+#use Test::More skip_all => "Broken from GSC/PSE change. Skipping until this is remedied.";
 
 use Genome;
 
@@ -27,12 +27,30 @@ where ap.assembly_project_name =  ? and rownum =1)/;
 
 my $asp_name = 'TCGA_Production-0005156_017-Ensembl-46_36h';
 
+# Explicitly create the combine variants model this ONCE to be retreived later
+
+my $subject_name = "detect_sequence_variation_test";
+my $combine_variants_data_directory = "/tmp/test_combine_variants_$ENV{USER}/";
+
+my $pp = Genome::ProcessingProfile::CombineVariants->create(
+    name => 'test-detect-sequence-variation',
+);
+my $new_combine_variants_model = Genome::Model::CombineVariants->create(
+    name => 'test-detect-sequence-variation',
+    processing_profile_id   => $pp->id,
+    subject_name            =>  $subject_name,  #TODO this has changed
+    subject_type            => 'sample_group',
+    data_directory          =>  $combine_variants_data_directory,
+);
+ok($new_combine_variants_model, "Created the new combine variants model explicitly for the new PolyphredPolyscan models");
+isa_ok($new_combine_variants_model, "Genome::Model::CombineVariants");
+
 my @directories_to_cleanup;
 my @detect_seq_var_pses;
 my $asp = GSC::AssemblyProject->get(assembly_project_name => $asp_name);
 ok($asp, "got assembly project");
 
-my $project_dir = "/gsc/var/cache/testsuite/data/GSC-detectsequencevariation/$asp_name";
+my $project_dir = "/gsc/var/cache/testsuite/data/Genome-detectsequencevariation/$asp_name";
 
 my $sth = App::DB->dbh->prepare($q);
 $sth->execute($asp_name);
@@ -72,6 +90,7 @@ ok( $pse1->add_param(control_pse_id => $control_pse_id), "added control_pse_id")
 ok( $pse1->add_param(asp_id => $asp->asp_id), "added asp_id");
 ok( $pse1->add_param(project_dir => $project_dir), "added /gsc/var/cache/testsuite dir");
 ok( $pse1->add_param(pps_id => $pps->id), "added pps_id");
+ok( $pse1->add_param(model_id => $new_combine_variants_model->id), "added model id");
 ok( $pse1->confirmable, "confirmable");
 ok( $pse1->confirm, "confirmed");
 push @detect_seq_var_pses, $pse1;
@@ -100,6 +119,7 @@ ok( $pse1->add_param(control_pse_id => $control_pse_id), "added control_pse_id")
 ok( $pse1->add_param(asp_id => $asp->asp_id), "added asp_id");
 ok( $pse1->add_param(project_dir => $project_dir), "added /gsc/var/cache/testsuite dir");
 ok( $pse1->add_param(pps_id => $pps->id), "added pps_id");
+ok( $pse1->add_param(model_id => $new_combine_variants_model->id), "added model id");
 ok( $pse1->confirmable, "confirmable");
 ok( $pse1->confirm, "confirmed");
 
@@ -130,6 +150,7 @@ ok( $pse->add_param(control_pse_id => $control_pse_id), "added control_pse_id");
 ok( $pse->add_param(asp_id => $asp->asp_id), "added asp_id");
 ok( $pse->add_param(pps_id => $pps->id), "added pps_id");
 ok( $pse->add_param(project_dir => $project_dir), "added /gsc/var/cache/testsuite dir");
+ok( $pse->add_param(model_id => $new_combine_variants_model->id), "added model id");
 ok( $pse->confirmable, "confirmable");
 ok( $pse->confirm, "confirmed");
 push @detect_seq_var_pses, $pse;
@@ -159,6 +180,7 @@ ok( $pse->add_param(control_pse_id => $control_pse_id), "added control_pse_id");
 ok( $pse->add_param(asp_id => $asp->asp_id), "added asp_id");
 ok( $pse->add_param(project_dir => $project_dir), "added /gsc/var/cache/testsuite dir");
 ok( $pse->add_param(pps_id => $pps->id), "added pps_id");
+ok( $pse->add_param(model_id => $new_combine_variants_model->id), "added model id");
 ok( $pse->confirmable, "confirmable");
 ok( $pse->confirm, "confirmed");
 push @detect_seq_var_pses, $pse;
@@ -197,23 +219,13 @@ ok( $pse2->add_param(control_pse_id => [map{$_->id}@detect_seq_var_pses]), "adde
 ok( $pse2->add_param(asp_id => $asp->asp_id), "added asp_id");
 ok( $pse2->add_param(project_dir => $project_dir), "added /gsc/var/cache/testsuite dir");
 ok( $pse2->add_param(pps_id => $pps->id), "added pps_id");
+ok( $pse2->add_param(model_id => $new_combine_variants_model->id), "added model id");
 ok( $pse2->confirmable, "confirmable");
 ok( $pse2->confirm, "confirmed");
 
 $bridge = GSC::Sequence::AnalysisOutputPSE->get(pse_id => $pse2->id);
 ok($bridge, "got analysis_output_pse");
 
-# Explicitly create the combine variants model this ONCE to be retreived later
-
-my $subject_name = "detect_sequence_variation_test";
-my $combine_variants_data_directory = "/tmp/test_combine_variants_$ENV{USER}/";
-
-my $new_combine_variants_model = Genome::Model::CombineVariants->get_or_create(
-    subject_name    =>  $subject_name,  #TODO this has changed
-    data_directory  =>  $combine_variants_data_directory,
-);
-ok($new_combine_variants_model, "Created the new combine variants model explicitly for the new PolyphredPolyscan models");
-isa_ok($new_combine_variants_model, "Genome::Model::CombineVariants");
 
 # Check the next step
 ok( $pse2->post_confirm, "post_confirm");
@@ -258,6 +270,7 @@ ok( $pse3->add_param(control_pse_id => [map{$_->id}@detect_seq_var_pses]), "adde
 ok( $pse3->add_param(asp_id => $asp->asp_id), "added asp_id");
 ok( $pse3->add_param(project_dir => $project_dir), "added /gsc/var/cache/testsuite dir");
 ok( $pse3->add_param(pps_id => $pps->id), "added pps_id");
+ok( $pse3->add_param(model_id => $new_combine_variants_model->id), "added model id");
 ok( $pse3->confirmable, "confirmable");
 ok( $pse3->confirm, "confirmed");
 $bridge = GSC::Sequence::AnalysisOutputPSE->get(pse_id => $pse3->id);
@@ -298,6 +311,7 @@ ok( $pse2->add_param(control_pse_id => [map{$_->id}@detect_seq_var_pses]), "adde
 ok( $pse2->add_param(asp_id => $asp->asp_id), "added asp_id");
 ok( $pse2->add_param(pps_id => $pps->id), "added pps_id");
 ok( $pse2->add_param(project_dir => $project_dir), "added /gsc/var/cache/testsuite dir");
+ok( $pse2->add_param(model_id => $new_combine_variants_model->id), "added model id");
 
 
 ok( $pse2->confirmable, "confirmable");
@@ -338,6 +352,7 @@ ok( $pse2->add_param(control_pse_id => [map{$_->id}@detect_seq_var_pses]), "adde
 ok( $pse2->add_param(asp_id => $asp->asp_id), "added asp_id");
 ok( $pse2->add_param(project_dir => $project_dir), "added /gsc/var/cache/testsuite dir");
 ok( $pse2->add_param(pps_id => $pps->id), "added pps_id");
+ok( $pse2->add_param(model_id => $new_combine_variants_model->id), "added model id");
 ok( $pse2->confirmable, "confirmable");
 ok( $pse2->confirm, "confirmed");
 $bridge = GSC::Sequence::AnalysisOutputPSE->get(pse_id => $pse2->id);
@@ -367,12 +382,10 @@ ok(@variances, "collatted");
 # Test combine variants stuff
 
 # Check the combine variants model
-my $combine_variants_model = Genome::Model::CombineVariants->get( name => "$subject_name.combine_variants" );
-ok($combine_variants_model, "Got the combine variants model");
-isa_ok($combine_variants_model, "Genome::Model::CombineVariants");
+#my $new_combine_variants_model = Genome::Model::CombineVariants->get( name => "$subject_name.combine_variants" );
 
 # Check its children and their params
-my @combine_variants_children = $combine_variants_model->child_models;
+my @combine_variants_children = $new_combine_variants_model->child_models;
 is(@combine_variants_children, 4, "Got (exactly) all 4 combine variants children");
 
 my ($high_count, $low_count, $polyphred_count, $polyscan_count);
@@ -395,41 +408,45 @@ is ($low_count, 2, "Two of the children are low sensitivity");
 is ($polyphred_count, 2, "Two of the children are polyphred technology");
 is ($polyscan_count, 2, "Two of the children are polyscan technology");
 
-my $hq_polyphred_model = $combine_variants_model->hq_polyphred_model;
+my $hq_polyphred_model = $new_combine_variants_model->hq_polyphred_model;
 ok ($hq_polyphred_model, "got the hq_polyphred_model via combine variants accessor");
 isa_ok ($hq_polyphred_model, "Genome::Model::PolyphredPolyscan");
 
-my $lq_polyphred_model = $combine_variants_model->lq_polyphred_model;
+my $lq_polyphred_model = $new_combine_variants_model->lq_polyphred_model;
 ok ($lq_polyphred_model, "got the lq_polyphred_model via combine variants accessor");
 isa_ok ($lq_polyphred_model, "Genome::Model::PolyphredPolyscan");
 
-my $hq_polyscan_model = $combine_variants_model->hq_polyscan_model;
+my $hq_polyscan_model = $new_combine_variants_model->hq_polyscan_model;
 ok ($hq_polyscan_model, "got the hq_polyscan_model via combine variants accessor");
 isa_ok ($hq_polyscan_model, "Genome::Model::PolyphredPolyscan");
 
-my $lq_polyscan_model = $combine_variants_model->lq_polyscan_model;
+my $lq_polyscan_model = $new_combine_variants_model->lq_polyscan_model;
 ok ($lq_polyscan_model, "got the lq_polyscan_model via combine variants accessor");
 isa_ok ($lq_polyscan_model, "Genome::Model::PolyphredPolyscan");
+
+# dont build for now
+=cut 
 
 # Test build... should build all 4 child models and the combine variants model
 my $cron = Genome::Model::Command::Services::BuildQueuedInstrumentData->create(test=>1);
 ok($cron->execute,"Build Cron command returned true");
 
 # Check the files exist
-ok (-s $combine_variants_model->hq_genotype_file_for_chromosome(4), "hq genotype file exists");
-ok (-s $combine_variants_model->lq_genotype_file_for_chromosome(4), "lq genotype file exists");
+ok (-s $new_combine_variants_model->hq_genotype_file_for_chromosome(4), "hq genotype file exists");
+ok (-s $new_combine_variants_model->lq_genotype_file_for_chromosome(4), "lq genotype file exists");
 
 # test next_xx_genotype calls
 my ($hq_annotated_genotype, $lq_annotated_genotype, $hq_genotype, $lq_genotype);
-ok($hq_genotype = $combine_variants_model->next_hq_genotype, "Ran next_hq_genotype");
-ok($lq_genotype = $combine_variants_model->next_lq_genotype, "Ran next_lq_genotype");
+ok($hq_genotype = $new_combine_variants_model->next_hq_genotype, "Ran next_hq_genotype");
+ok($lq_genotype = $new_combine_variants_model->next_lq_genotype, "Ran next_lq_genotype");
 ok($hq_genotype, "Got the hq_genotype");
 ok($lq_genotype, "Got the lq_genotype");
+=cut 
 
 
 # Attempt to clean up after the test...
 END {
-    push @directories_to_cleanup, $combine_variants_model->data_directory if $combine_variants_model;
+    push @directories_to_cleanup, $new_combine_variants_model->data_directory if $new_combine_variants_model;
     push @directories_to_cleanup, $hq_polyscan_model->data_directory if $hq_polyscan_model;
     push @directories_to_cleanup, $lq_polyscan_model->data_directory if $lq_polyscan_model;
     push @directories_to_cleanup, $hq_polyphred_model->data_directory if $hq_polyphred_model;
