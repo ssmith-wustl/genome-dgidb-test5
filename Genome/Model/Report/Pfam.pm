@@ -17,7 +17,11 @@ use IPC::Run;
 
 class Genome::Model::Report::Pfam{
     is => 'Genome::Model::Report',
-    has => [ ],
+    has => [ 'test_no_load' => { is          => 'BOOLEAN',
+                                 is_optional => 1,
+                                 default     => 0, 
+                               }, 
+           ],
 };
 
 sub resolve_reports_directory {
@@ -95,6 +99,7 @@ sub generate_report_detail
     my @transcript_annotation_files = $self->_get_transcript_annotation_files();
 
     my $output_file = $self->report_detail_output_filename;   
+    my ($snpdat_fh, $snpdat_file) =  File::Temp::tempfile(CLEANUP => 1);
     print "producing: $output_file\n";
     for my $transcript_file (@transcript_annotation_files) {
         print "processing $transcript_file\n";
@@ -106,7 +111,7 @@ sub generate_report_detail
         my $transcript_fh = IO::File->new($transcript_file);
         die "failed to open transcript file $transcript_file!: $!" unless $transcript_file;
         while (my $line = $transcript_fh->getline) {
-            if ($line =~ /nonsense|missense|silent/) {
+            if ($line =~ /nonsense|missense|silent/) { # should silent be included?
                 $filtered_transcript_fh->print($line);
                 $coding_transcripts++;
             }
@@ -114,21 +119,25 @@ sub generate_report_detail
         }
         $self->status_message("found $coding_transcripts coding transcripts out of $all_transcripts.");
 
-        $self->_process_coding_transcript_file($filtered_transcript_file);        
+        $self->_process_coding_transcript_file($filtered_transcript_file, $snpdat_file);        
     }
+    $self->_run_report($snpdat_file, $output_file);
     return 1;
 
     # TODO: replace this; 
-    my $r = new CGI;
-    
-    my $body = IO::File->new(">$output_file");  
-    die unless $body;
-    $body->print( $r->start_html(-title=> 'Pfam Annotation for ' . $model->genome_model_id ,));
-    my $formatted_report;
-    # $formatted_report = $self->format_report($unformatted_report);
-    $body->print("$formatted_report");
-    $body->print( $r->end_html );
-    $body->close;
+
+#    my $r = new CGI;
+#    
+#    my $body = IO::File->new(">$output_file");  
+#    die unless $body;
+#    $body->print( $r->start_html(-title=> 'Pfam Annotation for ' . $model->genome_model_id ,));
+#    my $formatted_report;
+#    # $formatted_report = $self->format_report($unformatted_report);
+#    $body->print("$formatted_report");
+#    $body->print( $r->end_html );
+#    $body->close;
+#
+
 }
 
 sub _process_coding_transcript_file {
@@ -140,11 +149,10 @@ sub _process_coding_transcript_file {
     my $transcript_names_file = $coding_transcript_file . ".transcript_names";
     my $peptide_fasta_file = $coding_transcript_file . '.pep.fasta';
     my $iprscan_output = $coding_transcript_file . '.iprout';
-    my $iprscan_gff = $coding_transcript_file . '.gff';
+    my $iprscan_gff = $coding_transcript_file . '.gff'; # does this need to be defined?
+    my $snpdat_file = $coding_transcript_file . '.snps.dat';
 
-goto CNT;
-
-    #my $model = $self->model;
+    my $model = $self->model;
    
     # get the names of all of the transcripts in the input 
     my @lines = read_file($coding_transcript_file);
@@ -169,7 +177,64 @@ goto CNT;
     );
     $self->status_message("made peptide fasta file " . $peptide_fasta_file);
     
-CNT:
+    # run interproscan. now in the _run_iprscan method
+    $self->_run_iprscan( $peptide_fasta_file,$iprscan_gff);
+#    $self->_call(
+#        "$iprscan_path/iprscan.hacked",
+#        '-cli',
+#        '-i'            => $peptide_fasta_file, 
+#        '-o'            => $iprscan_output,
+#        '-iprlookup',
+#        '-goterms',
+#        '-appl'         => 'hmmpfam',
+#        '-appl'         => 'superfamily',
+#        '-format'       => 'raw'
+#    );
+#
+#    # convert raw output to gff; maybe we could just specify gff3 above?
+#    $self->_call(
+#        "$iprscan_path/converter.pl",
+#        '-input'  => $iprscan_output,
+#        '-output' => $iprscan_gff,
+#        '-format' => 'gff3',
+#    );
+
+    # load it up.
+    unless($self->test_no_load())
+    {
+        $self->_call(
+            "mg-load-ipro",
+            "-gff" => $iprscan_gff,
+        );
+    } 
+    # this is in a method by itself now...
+    $self->_create_snpsdat_file(\@lines,$snpdat_file);
+    # need to create the snps.dat file, based on the 
+#    my @snps_dat;
+#    foreach my $line (@lines)
+#    {
+#        my @fields = split(/,/, $line);
+#        my $snprecord = $fields[8]."\t".$fields[11].",".$fields[8]."\t".$fields[14]."\n";
+#        push(@snps_dat,$snprecord);
+#    }
+#    # write that out to the tmp snp file
+#    write_file($snpdat_file,@snps_dat);
+
+    return 1;    
+}
+
+=head2 _run_iprscan
+
+separate out the running of interproscan
+
+=cut
+
+sub _run_iprscan
+{
+    my ($self,$peptide_fasta_file,$iprgff) = @_;
+
+    my $iprscan_path = '/gscmnt/974/analysis/iprscan16.1/iprscan/bin';
+    my ($fh, $iprscan_output) = File::Temp::tempfile(CLEANUP => 1, SUFFIX => '.raw');
     # run interproscan
     $self->_call(
         "$iprscan_path/iprscan.hacked",
@@ -179,6 +244,7 @@ CNT:
         '-iprlookup',
         '-goterms',
         '-appl'         => 'hmmpfam',
+        '-appl'         => 'superfamily',
         '-format'       => 'raw'
     );
 
@@ -186,31 +252,43 @@ CNT:
     $self->_call(
         "$iprscan_path/converter.pl",
         '-input'  => $iprscan_output,
-        '-output' => $iprscan_gff,
+        '-output' => $iprgff,
         '-format' => 'gff3',
     );
 
-    # load it up.
-    $self->_call(
-        "mg-load-ipro",
-        "-gff" => $iprscan_gff,
-    );
+    return 1;
+}
 
-    # need to create the snps.dat file, based on the 
+
+=head2 _create_snpsdat_file
+
+the creation of the snpsdat file separated out
+
+=cut
+
+sub _create_snpsdat_file
+{
+    my ($self,$lines,$snpdat_file) = @_;
+
     my @snps_dat;
-    foreach my $line (@lines)
+    foreach my $line (@$lines)
     {
         my @fields = split(/,/, $line);
         my $snprecord = $fields[8]."\t".$fields[11].",".$fields[8]."\t".$fields[14]."\n";
         push(@snps_dat,$snprecord);
     }
     # write that out to the tmp snp file
-    write_file($snpdat_file,@snps_dat);
+    unless(write_file($snpdat_file, {append => 1, err_mode => 'carp'}, @snps_dat))
+    {
+        $self->error_message("problem writing out to $snpdat_file");
+        return 0;
+    }
 
-    return 1;    
+    return 1;
 }
 
-sub run_report 
+
+sub _run_report 
 {
     my ($self,$tmpsnp_file,$report_file) = @_;
 
@@ -220,7 +298,7 @@ sub run_report
         "--snps" => $tmpsnp_file,
         "--coords" => "1,2",
         "--output" => $report_file,
-        "--filter" => "\"(HMMPfam)\"",
+#        "--filter" => "\"(HMMPfam)\"", # do we want to create the report on everything or just HMMPfam
     );
     return 1;
 }
