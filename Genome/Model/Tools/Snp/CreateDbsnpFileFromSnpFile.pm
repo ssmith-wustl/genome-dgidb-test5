@@ -9,9 +9,6 @@ use Command;
 use IO::File;
 use GSCApp;
 
-App->init;
-#use Genome::DB::Schema;
-
 class Genome::Model::Tools::Snp::CreateDbsnpFileFromSnpFile {
     is => 'Command',
     has => [
