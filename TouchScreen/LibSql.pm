@@ -2307,13 +2307,17 @@ sub CreateGlycerolGrowth {
 	    
 	    my ($new_pse_id) = $self->{'CoreSql'} -> xOneToManyProcess($pellet_ps_id, $pre_pse_id, $update_status, $update_result, $growth_bar, undef, $emp_id);
 	    return ($self->GetCoreError) if(!$new_pse_id);
-	    
+
 	    #my $dl_id = Query($self->{'dbh'}, qq/select dl_id from dna_location where location_type = 'tube' and location_name = '1'/);
             my $dl_id = $self->getTubeLocation;
 
 	    $result = $self ->{'CoreSql'}-> InsertDNAPSE($cg_id, $new_pse_id, $dl_id);
 	    return 0 if($result == 0);
 
+            my $pse=GSC::PSE->get($new_pse_id);
+            if($pse) {
+                $pse->create_inherited_assigned_directed_setups;
+            }
 	}
 	$count++;
     }
