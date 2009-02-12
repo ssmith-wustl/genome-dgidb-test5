@@ -18,12 +18,10 @@ class Genome::Model::Build {
             model_id        => { is => 'NUMBER', len => 10, constraint_name => 'GMB_GMM_FK' },
             data_directory  => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
             model           => { is => 'Genome::Model', id_by => 'model_id' },
-            date_scheduled  => { via => '_creation_event' },
+            date_scheduled  => { via => 'build_event' },
             _creation_event => { calculate_from => ['class','build_id'],
                                  calculate => q|
-                                        my ($ext) = ($class =~ /Genome::Model::Build::(.*)/);
-                                        no strict;
-                                        my $build_event = "Genome::Model::Command::Build::$ext"->get(build_id => $build_id);
+                                        my $build_event = "Genome::Model::Build"->get(build_id => $build_id);
                                         return $build_event;
                                    | # temporary
                                }, 
