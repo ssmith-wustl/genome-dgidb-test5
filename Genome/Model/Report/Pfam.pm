@@ -47,7 +47,7 @@ sub report_brief_output_filename {
 
 sub report_detail_output_filename {
     my $self=shift;
-    return $self->resolve_reports_directory . "/detail.html";
+    return $self->resolve_reports_directory . "/detail.csv";
 }
 sub generate_report_brief 
 {
@@ -94,14 +94,18 @@ sub generate_report_detail
 {
     my $self = shift;
     my $model = $self->model;
-
-
+    my %args = @_;
+    
     my @transcript_annotation_files = $self->_get_transcript_annotation_files();
 
     my $output_file = $self->report_detail_output_filename;   
+    if(exists($args{report_detail}))
+    {
+        $output_file = $args{report_detail};
+    }
     my ($snpdat_fh, $snpdat_file) =  File::Temp::tempfile(CLEANUP => 1);
     print "producing: $output_file\n";
-    for my $transcript_file (@transcript_annotation_files) {
+TRANSCRIPTFILE:    for my $transcript_file (@transcript_annotation_files) {
         print "processing $transcript_file\n";
 
         # make a file of only the annotation on coding transcripts
@@ -109,9 +113,14 @@ sub generate_report_detail
         my $all_transcripts;
         my ($filtered_transcript_fh, $filtered_transcript_file) = File::Temp::tempfile(CLEANUP => 1);
         my $transcript_fh = IO::File->new($transcript_file);
-        die "failed to open transcript file $transcript_file!: $!" unless $transcript_file;
+        #die "failed to open transcript file $transcript_file!: $!" unless $transcript_fh;
+        unless($transcript_fh)
+        {
+            $self->error_message("failed to open transcript file $transcript_file!: $!");
+            next TRANSCRIPTFILE;
+        }
         while (my $line = $transcript_fh->getline) {
-            if ($line =~ /nonsense|missense|silent/) { # should silent be included?
+            if ($line =~ /nonsense|missense/) { # should silent be included?
                 $filtered_transcript_fh->print($line);
                 $coding_transcripts++;
             }
@@ -160,6 +169,7 @@ sub _process_coding_transcript_file {
     foreach my $line (@lines)
     {
         my @cols = split(/,/,$line);
+        next unless defined($cols[11]);
         push(@transcript_names, $cols[11]."\n");
     }
     @transcript_names = uniq @transcript_names;
@@ -274,11 +284,12 @@ sub _create_snpsdat_file
     foreach my $line (@$lines)
     {
         my @fields = split(/,/, $line);
+        next unless($#fields > -1);
         my $snprecord = $fields[8]."\t".$fields[11].",".$fields[8]."\t".$fields[14]."\n";
         push(@snps_dat,$snprecord);
     }
     # write that out to the tmp snp file
-    unless(write_file($snpdat_file, {append => 1, err_mode => 'carp'}, @snps_dat))
+    unless(write_file($snpdat_file, {err_mode => 'carp'}, @snps_dat))
     {
         $self->error_message("problem writing out to $snpdat_file");
         return 0;
@@ -341,8 +352,8 @@ sub _get_transcript_annotation_files {
     my $self = shift;
     my $model = $self->model;
     my $last_complete_build = $model->last_complete_build;
-    #my @files = $last_complete_build->_transcript_annotation_files;
-    my @files = $last_complete_build->_transcript_annotation_files(22);
+    my @files = $last_complete_build->_transcript_annotation_files;
+    #my @files = $last_complete_build->_transcript_annotation_files(22);
     return @files;
 }
 

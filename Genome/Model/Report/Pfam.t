@@ -75,3 +75,18 @@ my @comparison1 = read_file("pfam_test_report.comparison");
 my @comparison2 = read_file($test_report);
 is_deeply(\@comparison2,\@comparison1, 'report contents match');
 unlink $test_report;
+
+$p = undef;
+# test full run of the generate_report_detail method.
+
+$p = Genome::Model::Report::Pfam->create(
+                                         model_id     => $model_id,
+                                         name         => 'Pfam',
+                                         test_no_load => 1,
+                                        );
+
+SKIP: {
+    skip "need to set environment variable to run iprscan", 1 unless $ENV{RUNIPRSCAN} eq 1;
+ok($p->generate_report_detail(report_detail => "full_report_test.csv"),'run a full report via generate_report_detail()');
+unlink "full_report_test.csv";
+} # end skip
