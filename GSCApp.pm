@@ -419,6 +419,8 @@ associations in four cases.
         ORGANISM_INDIVIDUAL             GSC::Organism::Individual
         ORGANISM_TAXON                  GSC::Organism::Taxon
         ORGANISM_SAMPLE                 GSC::Organism::Sample
+        ORGANISM_SAMPLE_POOLED_MEMBER   GSC::Organism::Sample::PooledMember
+        ORGANISM_SAMPLE_TARGET_REGION   GSC::Organism::Sample::TargetRegion
         ORGANISM_SUBMISSION_ID          GSC::Organism::SubmissionID
         PHENOTYPE_MEASURABLE            GSC::Phenotype::Measurable
         PHENOTYPE_MEASUREMENT           GSC::Phenotype::Measurement
