@@ -5,6 +5,7 @@ use warnings;
 
 use base 'Test::Class';
 
+use Data::Dumper 'Dumper';
 use File::Copy 'copy';
 use File::Temp 'tempdir';
 use Genome::InstrumentData::Sanger::Test;
@@ -47,20 +48,23 @@ sub create_mock_model {
         data_directory => $data_dir,
     )
         or die "Can't create mock model for amplicon assembly\n";
+    
     for my $pp_param ( Genome::ProcessingProfile::AmpliconAssembly->params_for_class ) {
         $model->set_always($pp_param, $pp->$pp_param);
     }
+    
     for my $dir_type ( Genome::Consed::Directory->directories ) {
         my $dir = $data_dir.'/'.$dir_type; 
         $model->set_always($dir_type, $dir);
         mkdir $dir
             or die "Can't make directory ($dir): $!\n";
     }
+    
     $model->mock(
         'amplicons',
         sub{  
             my $dh = Genome::Utility::FileSystem->open_directory( $model->chromat_dir )
-                or return;
+                or die;
 
             my %amplicons;
             while ( my $scf = $dh->read ) {
@@ -73,6 +77,24 @@ sub create_mock_model {
             $dh->close;
 
             return \%amplicons;
+        },
+    );
+
+    $model->mock(
+        'get_amplicons',
+        sub{
+            my $amplicons = $model->amplicons;
+            my @amplicons;
+            my $edit_dir = $model->edit_dir;
+            for my $name ( keys %$amplicons ) {
+                push @amplicons, Genome::Model::AmpliconAssembly::Amplicon->new(
+                    name => $name,
+                    reads => $amplicons->{$name},
+                    directory => $edit_dir,
+                );
+            }
+
+            return @amplicons;
         },
     );
 
@@ -149,6 +171,84 @@ sub _copy_dir {
 }
 
 #< REAL MODEL FOR TESTING >#
+#TODO
+
+package Genome::Model::AmpliconAssembly::AmpliconTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::TestBase';
+
+use Test::More;
+
+sub amplicon {
+    return $_[0]->{_object};
+}
+
+sub test_class {
+    'Genome::Model::AmpliconAssembly::Amplicon';
+}
+
+sub params_for_test_class {
+        name => 'HMPB-aad13e12',
+        directory => '/gsc/var/cache/testsuite/data/Genome-Model-AmpliconAssembly/edit_dir',
+        reads => [qw/ HMPB-aad13e12.b1 HMPB-aad13e12.b2 HMPB-aad13e12.b3 HMPB-aad13e12.b4 HMPB-aad13e12.g1 HMPB-aad13e12.g2 /],
+}
+
+sub invalid_params_for_test_class {
+    return (
+        directory => 'does_not_exist',
+    );
+}
+
+sub test01_reads : Test(5) {
+    my $self = shift;
+
+    my $amplicon = $self->amplicon;
+    is($amplicon->is_built, 0, 'Amplicon is not built');
+    is($amplicon->was_assembled_successfully, 1, 'Amplicon was assembled successfully');
+    is($amplicon->is_built, 1, 'Amplicon is now built');
+    is_deeply($amplicon->get_assembled_reads, $amplicon->get_reads, 'Amplicon reads match thos assembled');
+    my $bioseq = $amplicon->get_bioseq;
+    ok($bioseq, 'Got bioseq');
+
+    return 1;
+}
+
+package Genome::Model::AmpliconAssembly::Report::AssemblyStatsTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub stats {
+    return $_[0]->{_object};
+}
+
+sub test_class {
+    'Genome::Model::AmpliconAssembly::Report::AssemblyStats';
+}
+
+sub test_01_add_amplicon : Tests {
+    my $self = shift;
+
+    my $stats = $self->stats;
+
+    my $amplicon = Genome::Model::AmpliconAssembly::AmpliconTest->create_valid_object;
+    ok($amplicon, 'Got amplicon');
+    ok($stats->add_amplicon($amplicon), 'Added amplicon');
+    ok($stats->add_amplicon($amplicon), 'Added again');
+    my %totals = $stats->calculate_totals;
+    ok(%totals, 'Got totals');
+    print Dumper(\%totals);
+    
+    return 1;
+}
 
 1;
 
