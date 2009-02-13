@@ -55,11 +55,14 @@ sub get_read_count {
 sub build {
     my $self = shift;
 
-    if ( -s sprintf('%s/%s.fasta.contigs', $self->get_directory, $self->get_name) ) {
-        $self->_build_bioseq_from_longest_contig;
+    if ( $self->_build_bioseq_from_longest_contig ) {
+        $self->{_bioseq_source} = 'assembly';
+    }
+    elsif ( $self->_build_bioseq_from_longest_read ) {
+        $self->{_bioseq_source} = 'read';
     }
     else {
-        $self->_build_bioseq_from_longest_read;
+        $self->{_bioseq_source} = 'none';
     }
 
     $self->{_is_built} = 1;
@@ -89,6 +92,14 @@ sub get_assembled_read_count {
     return scalar(@{$_[0]->get_assembled_reads});
 }
 
+sub get_bioseq_source {
+    my $self = shift;
+
+    $self->build unless $self->is_built;
+    
+    return $self->{_bioseq_source};
+}
+
 sub get_bioseq {
     my $self = shift;
 
@@ -100,7 +111,6 @@ sub get_bioseq {
 sub _build_bioseq_from_longest_contig {
     my $self = shift;
 
-    #< Determine longest contig >#
     my $acefile = sprintf('%s/%s.fasta.ace', $self->get_directory, $self->get_name);
     my $factory = Finishing::Assembly::Factory->connect('ace', $acefile);
     my $contigs = $factory->get_assembly->contigs;
