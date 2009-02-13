@@ -20,8 +20,12 @@ sub create {
         or return;
 
     $self->{_metrix} = {
-        assembled => 0,
-        attempted => 0,
+        sequence_srcs => {
+            assembly => 0,
+            read => 0,
+            none => 0,
+        },
+        has_one_valid_read => 0,
         #length => 0,
         lengths => [],
         qual => 0,
@@ -36,12 +40,10 @@ sub create {
 sub add_amplicon {
     my ($self, $amplicon) = @_;
     
-    $self->{_metrix}->{attempted}++;
+    $self->{_metrix}->{sequence_srcs}->{ $amplicon->get_bioseq_source }++;
 
     return 1 unless $amplicon->was_assembled_successfully;
 
-    $self->{_metrix}->{assembled}++;
-    
     # Length
     my $bioseq = $amplicon->get_bioseq;
     # $self->{_metrix}->{length} += $bioseq->length;
@@ -85,14 +87,17 @@ sub output_csv {
 sub calculate_totals {
     my $self = shift;
 
-    confess ref($self)." ERROR: Cannot calculate totals because no amplicons added" unless $self->{_metrix}->{attempted};
-
     my $sum = sub{
         my $total = 0;
         for ( @_ ) { $total += $_; }
         return $total;
     };
+
+    my $attempted = $sum->( values %{$self->{_metrix}->{sequence_srcs}} );
+
+    confess ref($self)." ERROR: Cannot calculate totals because no amplicons added" unless $attempted;
     
+    my $assembled = $self->{_metrix}->{sequence_srcs}->{assembly};
     my $read_cnt = $sum->( @{$self->{_metrix}->{reads}} );
     my $assembled_read_cnt = $sum->( @{$self->{_metrix}->{reads_assembled}} );
     my @lengths = sort { $a <=> $b } @{ $self->{_metrix}->{lengths} };
@@ -104,11 +109,12 @@ sub calculate_totals {
     }
 
     my %totals = (
-        assembled => $self->{_metrix}->{assembled},
-        attempted => $self->{_metrix}->{attempted},
+        map( { 'src_is_'.$_ => $self->{_metrix}->{sequence_srcs}->{$_} } keys %{$self->{_metrix}->{sequence_srcs}}),
+        assembled => $assembled,
+        attempted => $attempted,
         assembled_pct => sprintf(
             '%.2f', 
-            100 * $self->{_metrix}->{assembled} / $self->{_metrix}->{attempted}
+            100 * $assembled / $attempted,
         ),
         reads => $read_cnt,
         reads_assembled => $assembled_read_cnt,
@@ -121,7 +127,7 @@ sub calculate_totals {
         length_median => $lengths[( $#lengths / 2 )],
         length_avg => sprintf(
             '%.0f',
-            $length / $self->{_metrix}->{assembled},
+            $length / $assembled,
         ),
         qual_avg => sprintf(
             '%.2f', 
@@ -129,14 +135,14 @@ sub calculate_totals {
         ),
         greater_than_qual20_per_assembly => sprintf(
             '%.2f',
-            $self->{_metrix}->{qual_gt_20} / $self->{_metrix}->{assembled},
+            $self->{_metrix}->{qual_gt_20} / $assembled,
         ),
         reads_assembled_min => $reads[0],
         reads_assembled_max => $reads[$#reads],
         reads_assembled_median => $reads[( $#reads / 2 )],
         reads_assembled_avg_per_assembly => sprintf(
             '%.2F',
-            $assembled_read_cnt / $self->{_metrix}->{assembled},
+            $assembled_read_cnt / $assembled,
         ),
         %read_cnts,
     );
