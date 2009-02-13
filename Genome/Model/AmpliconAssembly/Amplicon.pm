@@ -111,6 +111,7 @@ sub get_bioseq {
 sub _build_bioseq_from_longest_contig {
     my $self = shift;
 
+    return unless -s sprintf('%s/%s.fasta.contigs', $self->get_directory, $self->get_name);
     my $acefile = sprintf('%s/%s.fasta.ace', $self->get_directory, $self->get_name);
     my $factory = Finishing::Assembly::Factory->connect('ace', $acefile);
     my $contigs = $factory->get_assembly->contigs;
