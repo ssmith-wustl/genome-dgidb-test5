@@ -107,7 +107,7 @@ sub generate_report_detail
    my $body = IO::File->new(">$output_file");  
    die unless $body;
         $body->print( $r->start_html(-title=> 'Db Snp for ' . $model->genome_model_id . ' build(' . $build->id . ')'));
-        $body->print("<h3>Concordance Report</pre>");
+        $body->print("<h3>Concordance Report</h3>");
         $body->print("<pre>$concordance_report</pre>");
         $body->print("<h3>Concordance by Quality Report</h3>");
         $body->print("<pre>$concordance_quality_report</pre>");
