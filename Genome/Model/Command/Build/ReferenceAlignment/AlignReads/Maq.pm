@@ -15,8 +15,12 @@ class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq {
         'Genome::Model::Command::MaqSubclasser'
     ],
     has => [
+        # stop using self, go to the delegate
         read_set_alignment_directory => { via => 'read_set_link' },
         run_subset_name => { via => 'read_set_link' }, 
+        _calculate_total_read_count => { via => 'read_set_link'},
+        
+        # move to the tool
         _alignment_file_paths_unsubmapped => {
             doc => "the paths to to the map files before submapping (not always available)",
             calculate => q|
@@ -25,6 +29,8 @@ class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq {
             |,
             calculate_from => ['read_set_directory','run_subset_name'],
         },
+        
+        # part of the reference sequence
         subsequences => {
             doc => "the sub-sequence names with out 'all_sequences'",
             calculate_from => ['model'],
@@ -32,22 +38,15 @@ class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq {
             return grep {$_ ne "all_sequences"} $model->get_subreference_names(reference_extension=>'bfa');
             |,
         },
+        
+        # pull from the model at the top
         is_eliminate_all_duplicates => { via => 'model' },
-        _calculate_total_read_count => { via => 'read_set_link'},
-        output_data_dir => {
-            doc => "The path at which the model stores all of its private data for a given run",
-            calculate_from => ['read_set_directory'],
-            calculate => q|
-            return $read_set_directory
-            |,
-            is_constant => 1,
-            is_deprecated => 1,
-        },
+        
+        # used for one metric, but perhaps just during backfill?
         input_read_file_path => {
             is_transient=>1,
             is_optional=>1,
             doc => "temp storage for the fake filename for the metrics to calculate later",
-    
         },
     
         #make accessors for common metrics
@@ -537,21 +536,21 @@ $DB::single = $DB::stopper;
     $self->status_message("upper_bound =>". $upper_bound_on_insert_size); 
     $self->status_message("readset alignment dir =>". $read_set_alignment_directory);
   
-    $self->status_message("Creating aligner.");
-    my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
-							 ref_seq_file => $ref_seq_file,
-                                                         files_to_align_path => join(",", @bfq_pathnames),
-							 execute_sol2sanger => $sol_flag,
-                                                         maq_path => $aligner_path,
-                                                         align_options => $aligner_params, 
- 	                                                 dna_type => $adaptor_flag,
-							 alignment_file => $alignment_file,
- 							 aligner_output_file => $aligner_output_file,
-							 unaligned_reads_file => $unaligned_reads_file,
-							 upper_bound => $upper_bound_on_insert_size, 
-							 output_directory=> $read_set_alignment_directory,
-							);
- 
+    $self->status_message("Creating aligner."); 
+     my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
+        ref_seq_file            => $ref_seq_file,
+        files_to_align_path     => join(",", @bfq_pathnames),
+        execute_sol2sanger      => $sol_flag,
+        maq_path                => $aligner_path,
+        align_options           => $aligner_params, 
+        dna_type                => $adaptor_flag,
+        alignment_file          => $alignment_file,
+        aligner_output_file     => $aligner_output_file,
+        unaligned_reads_file    => $unaligned_reads_file,
+        upper_bound             => $upper_bound_on_insert_size, 
+        output_directory        => $read_set_alignment_directory,
+    );
+
     $self->status_message("Executing aligner.");
     $aligner->execute; 
     $self->status_message("Aligner executed.");
