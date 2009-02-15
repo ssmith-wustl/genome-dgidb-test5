@@ -585,25 +585,36 @@ $DB::single = $DB::stopper;
         #                                                        reference_names => \@subsequences,
         # 
    # );
-    my $mapsplit_cmd=$self->proper_mapsplit_pathname('read_aligner_name');
+    my $mapsplit_cmd = $self->proper_mapsplit_pathname('read_aligner_name');
+    my $ok_failure_flag=0;
+    if (@subsequences){
     my $cmd = "$mapsplit_cmd " . $self->read_set_alignment_directory . "/ $alignment_file " . join(',',@subsequences);
     #print $cmd, "\n";
-
     $DB::single=1;
     my $rv= system($cmd);
-    my $ok_failure_flag=0;
-    if($rv) {
-        #arbitrary convention set up with homemade mapsplit and mapsplit_long..return 2 if file is empty.
-        if($rv/256 == 2) {
-            $self->error_message("no reads in map.");
-            $ok_failure_flag=1;
-        }
-        else {
-            $self->error_message("Failed to run map split on alignment file $alignment_file");
-            return;
+        if($rv) {
+            #arbitrary convention set up with homemade mapsplit and mapsplit_long..return 2 if file is empty.
+            if($rv/256 == 2) {
+                $self->error_message("no reads in map.");
+                $ok_failure_flag=1;
+            }
+            else {
+                $self->error_message("Failed to run map split on alignment file $alignment_file");
+                return;
+            }
         }
     }
+    else 
+    {
+    @subsequences='all_sequences';
+    my $copy_cmd = "cp $alignment_file " . $self->read_set_alignment_directory . "/all_sequences.map";
+    my $copy_rv = system($copy_cmd);
+    if ($copy_rv) {
+        $self->error_message('copy of all_sequences.map failed');
+        die;
+        }
     
+    }
     # these will match the wildcard which pulls old and new alignment files
     # hacky: thsi still works even if no reads were in the map file, because one file will be touched before
     #mapsplit quits.
