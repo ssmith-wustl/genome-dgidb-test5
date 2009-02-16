@@ -81,7 +81,7 @@ class Genome::Model::Tools::Maq::AlignReads {
            }
 	   , 
 	   files_to_align_path => {
-			doc => 'Path to a directory or a file or a comma separated list of files containing the reads to be aligned.  May be in fastq or bfq format.',
+			doc => 'Path to a directory or a file or a pipe separated list of files containing the reads to be aligned.  May be in fastq or bfq format.',
 			is => 'String',
 	   }
 	   ,
@@ -164,7 +164,7 @@ Provides an interface to the Maq "map" command.  Inputs are:
 
 'ref-seq-file' - The reference sequence file which to align reads to.  Specified by a path to a file. 
 
-'files-to-align-path' - The file or set of files which contain the read fragments which are going to be aligned to the reference sequence.  The path can be a single file, a comma seperated list of two files for paired end reads, or a directory containing one or two files.  These files can be in the fasta format or bfq format.  The application will attempt to detect which type of files are being used.    
+'files-to-align-path' - The file or set of files which contain the read fragments which are going to be aligned to the reference sequence.  The path can be a single file, a pipe seperated list of two files for paired end reads, or a directory containing one or two files.  These files can be in the fasta format or bfq format.  The application will attempt to detect which type of files are being used.    
 
 
 EOS
@@ -224,24 +224,24 @@ sub create {
 
      my @listing;
      my $dir_flag=0;
-     my @comma_list;
+     my @pipe_list;
 
-     #check to see if files to align path is a comma delimited list of files
+     #check to see if files to align path is a pipe delimited list of files
      $self->status_message("Files to align: ".$self->files_to_align_path);
-     my $comma = index($self->files_to_align_path,',');
-     #$self->status_message("Comma index: ".$comma);
-     if ($comma > -1) {
-	@comma_list = split(/,/,$self->files_to_align_path);
-	for my $comma_file (@comma_list) {
+     my $pipe_char_index = index($self->files_to_align_path,'|');
+     #$self->status_message("Comma index: ".$pipe_char);
+     if ($pipe_char_index > -1) {
+	@pipe_list = split(/\|/,$self->files_to_align_path);
+	for my $pipe_file (@pipe_list) {
 	        #make sure each file exists
-		if (-f $comma_file) {
-			push @listing, $comma_file;
+		if (-f $pipe_file) {
+			push @listing, $pipe_file;
 		} else {
-           		$self->error_message('File does not exist: '.$comma_file);
+           		$self->error_message('File does not exist: '.$pipe_file);
 		}
 	}
      } else {
-        #not a comma list	
+        #not a pipe delimited list	
 	#check to see if files to align path is a dir or file
      	if (-f $self->files_to_align_path) {
 		#$self->status_message('Path is a file');

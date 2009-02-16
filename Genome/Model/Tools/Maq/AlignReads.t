@@ -52,6 +52,8 @@ ok( scalar(@listing) eq $expected_output, "Number of output files expected = ".$
 $output_dir = File::Temp::tempdir(CLEANUP => 1);
 #get new input test data
 $files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignReads/paired-solexa";
+#Add a pipe delimited test eventually...
+#$files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignReads/paired-solexa/s_1_1_sequence_test.txt|/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignReads/paired-solexa/s_1_2_sequence_test.txt";
 
 $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 							 ref_seq_file => $ref_seq,

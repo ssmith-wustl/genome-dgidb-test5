@@ -539,7 +539,7 @@ $DB::single = $DB::stopper;
     $self->status_message("Creating aligner."); 
      my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
         ref_seq_file            => $ref_seq_file,
-        files_to_align_path     => join(",", @bfq_pathnames),
+        files_to_align_path     => join("|", @bfq_pathnames),
         execute_sol2sanger      => $sol_flag,
         maq_path                => $aligner_path,
         align_options           => $aligner_params, 
