@@ -97,6 +97,9 @@ sub contaminants_file_path {
 }
 sub read_length {
     my $self=shift;
+    unless ($self->read_set) {
+        die "no read set for id " . $self->read_set_id . "  " . Data::Dumper::Dumper($self);
+    }
     if ($self->read_set->read_length <= 0) {
         die('Impossible value for read_length field. seq_id:'. $self->read_set->seq_id);
     }
