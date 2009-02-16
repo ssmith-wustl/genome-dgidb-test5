@@ -323,19 +323,23 @@ sub format_date_time {
     my $s = format_time($event);
     if ($event->event_status eq 'Successful') {
         my $date = $event->date_completed;
+        $date ||= '';
         $date =~ s/ .*//g;
         return "$date ($s)";
     }
     elsif ($event->event_status eq 'Scheduled') {
         my $date = $event->date_scheduled;
+        $date ||= '';
         return "$date";
     }
     elsif ($event->event_status eq 'Running') {
         my $date = $event->date_scheduled;
+        $date ||= '';
         return "$date ($s)";
     }
     else {
         my $date = $event->date_completed;
+        $date ||= '';
         $date =~ s/ .*//g;
         return "$date ($s)";
     }
