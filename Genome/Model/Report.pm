@@ -169,8 +169,8 @@ sub get_detail_output
     #ensure file exists (do check)
 
     #(-e $self->report_detail_output_filename ) or die("no have it");#$self->generate_report_detail();
-    (-e $self->report_detail_output_filename ) or 
-        $self->generate_report_detail and 
+    (-e $self->report_detail_output_filename or 
+        $self->generate_report_detail() and 
         return "File not found.  Generating now...");
     if ($fh->open("< " . $self->report_detail_output_filename )) 
     {
