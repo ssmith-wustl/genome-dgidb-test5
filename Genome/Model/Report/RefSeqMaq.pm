@@ -52,8 +52,21 @@ sub resolve_reports_directory {
 }
 
 
+sub default_format {
+    'html'
+}
+
+sub available_formats {
+    return ('html')
+}
+
 sub report_brief_output_filename {
     my $self=shift;
+    my $format = shift;
+    $format ||= $self->default_format;
+    if ($format ne 'html') {
+        return;
+    }
     return $self->resolve_reports_directory . "/brief.html";
 }
 
