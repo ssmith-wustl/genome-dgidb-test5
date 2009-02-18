@@ -17,7 +17,7 @@ class Genome::Model::Tools::WuBlast::OligoHit {
 };
 
 sub help_brief {                            # keep this to just a few words <---
-    "provide the chromosome and NCBI Build 36 coordinate and get dbsnp 128 info in return"                 
+    "provide a fasta file and get human B36 blast result back"                 
 }
 
 sub help_synopsis {                         # replace the text below with real examples <---
