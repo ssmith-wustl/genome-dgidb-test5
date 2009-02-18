@@ -4,10 +4,9 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More;
+use Test::More tests => 2;
 
-plan skip_all =>" :'( mah testin data is gon ";
-my $m = Genome::Model->get(id =>2722293016);
+my $m = Genome::Model->get(id =>2733662090);
 
 ok($m, "got a model"); 
 

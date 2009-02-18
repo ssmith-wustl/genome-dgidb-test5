@@ -11,12 +11,8 @@ use above "Genome";
 =cut
 =cut
 
-    my ($id, $name) = (2661729970,'SolexaStageOne');
-    my $report = Genome::Model::Report->create(model_id =>$id,name=>$name);
+    my ($id, $name) = (93293206,'SolexaStageOne');
+    my $report = Genome::Model::Report->create(build_id=>$id,name=>$name);
 ok($report, "got a report"); 
 
-
-
-$report->generate_report_detail();
-$report->generate_report_brief();
 

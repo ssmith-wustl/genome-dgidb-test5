@@ -10,7 +10,7 @@ use above "Genome";
 # TODO: Fix this some how... we should create a model here rather than getting one
 =cut
 =cut
-    my $html_rpt = Genome::Model::Report->create(model_id => 2722293016, name => "Html");
+    my $html_rpt = Genome::Model::Report->create(build_id => 93293206, name => "Html");
 
 
     ok($html_rpt, "got report");

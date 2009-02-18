@@ -9,28 +9,19 @@ use Genome;
 class Genome::Model::Report {
     sub_classification_method_name => '_resolve_subclass_name',
     has => [
-#           build => {is => 'Genome::Model::Command::Build', id_by => 'build_id'},
-#           build_id => {is => 'Integer', doc=>'identifies the build this report directory belongs to'},
-#           model => {is => 'Genome::Model', via => 'build'
+           build => {is => 'Genome::Model::Command::Build', id_by => 'build_id'},
+           build_id => {is => 'Integer', doc=>'identifies the build this report directory belongs to'},
 
-           model => { is => 'Genome::Model', id_by => 'model_id'},
+           model => {is => 'Genome::Model', via => 'build'},
            model_id        => { is => 'Integer', doc => 'identifies the genome model by id' },
            model_name      => { is => 'String', via => 'model', to => 'name' },
+
            name            => { is => 'String'},
     ],
     has_optional => [
            type            => { is => 'String'},
     ],
 };
-
-# TODO: make the report take a build directly, and infer the model indirectly
-# Remove this when done.
-sub build {
-    my $self = shift;
-    my $model = $self->model;
-    my $build = $model->last_complete_build;
-    return $build;
-}
 
 sub help_brief {
     "generate reports for a given model"
@@ -60,13 +51,13 @@ sub _resolve_subclass_name {
     if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) 
     {
         my $name = $_[0]->name;
-        my $model_id = $_[0]->model_id;
-        return $class->_resolve_subclass_name_for_name($model_id,$name);
+        my $build_id = $_[0]->build_id;
+        return $class->_resolve_subclass_name_for_name($build_id,$name);
     }
     elsif (my $name = $class->get_rule_for_params(@_)->specified_value_for_property_name('name')) 
     {
-        my $model_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('model_id');
-        return $class->_resolve_subclass_name_for_model_and_name($model_id,$name);
+        my $build_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('build_id');
+        return $class->_resolve_subclass_name_for_model_and_name($build_id,$name);
     }
     else 
     {
@@ -76,13 +67,12 @@ sub _resolve_subclass_name {
 
 sub _resolve_subclass_name_for_model_and_name {
     my $class = shift;
-    my $model_id = shift;
+    my $build_id = shift;
     my $name = shift;
 
     $DB::single = $DB::stopper;
-
-    my $model = Genome::Model->get(id => $model_id);
-    my $report_dir = $model->resolve_reports_directory."$name";
+    my $build = Genome::Model::Build->get(id => $build_id);
+    my $report_dir = $build->resolve_reports_directory;
     unless (-d $report_dir) {
         $class->error_message("No $name report directory for ".$report_dir);
         return;

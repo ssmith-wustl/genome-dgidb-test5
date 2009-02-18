@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 use above "Genome";
 use File::Slurp;
 
@@ -11,13 +11,18 @@ BEGIN {
     use_ok("Genome::Model::Report::Pfam");
 }
 
+my $build_id = 93293206;
+my $build = Genome::Model::Build->get(build_id => $build_id);
+ok($build, "got a build");
 
-my $model_id = 2733662090; #2661729970;
-my $name = 'Pfam';
+my ($id, $name) = ($build_id,'Pfam');
+
+#my $model_id = 2733662090; #2661729970;
 #$report->_process_coding_transcript_file('Pfam.t.dat');
 
-my $p = Genome::Model::Report::Pfam->create(
-                                            model_id => $model_id,
+my $p = Genome::Model::Report->create(
+                                            build_id => $build_id,
+                                            #model_id => $model_id,
                                             name     => 'Pfam'
                                            );
 
@@ -44,8 +49,9 @@ $p = undef;
 SKIP: {
     skip "need to set environment variable to run iprscan", 1 unless $ENV{RUNIPRSCAN} eq 1;
 # test checking the transcripts/getting the peps/prots.
-    $p = Genome::Model::Report::Pfam->create(
-                                         model_id     => $model_id,
+    $p = Genome::Model::Report->create(
+                                          build_id      => $build_id,
+                                         #model_id     => $model_id,
                                          name         => 'Pfam',
                                          test_no_load => 1,
                                         );
@@ -60,8 +66,9 @@ SKIP: {
 } # end skip
 $p = undef;
 
-$p = Genome::Model::Report::Pfam->create(
-                                         model_id     => $model_id,
+$p = Genome::Model::Report->create(
+                                        build_id => $build_id,
+                                         #model_id     => $model_id,
                                          name         => 'Pfam',
                                          test_no_load => 1,
                                         );
@@ -79,8 +86,9 @@ unlink $test_report;
 $p = undef;
 # test full run of the generate_report_detail method.
 
-$p = Genome::Model::Report::Pfam->create(
-                                         model_id     => $model_id,
+$p = Genome::Model::Report->create(
+                                        build_id => $build_id,
+                                         #model_id     => $model_id,
                                          name         => 'Pfam',
                                          test_no_load => 1,
                                         );

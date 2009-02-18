@@ -34,8 +34,42 @@ class Genome::Model {
     has => [
         name                        => { is => 'Text', len => 255 },
         data_directory              => { is => 'Text', len => 1000, is_optional => 1 },
+
+        # TODO: get the subject_id and subject_class_name into the table so this is less ugly
         subject_name                => { is => 'Text', len => 255 },
         subject_type                => { is => 'Text', len => 255 },
+        subject                     => { 
+                                            calculate_from => ['subject_name','subject_type'],
+                                            calculate => q| 
+                                                if (not defined $subject_type) {
+                                                    # this should not happen
+                                                    return;
+                                                }
+                                                elsif ($subject_type eq 'dna_resource_item_name') {
+                                                    # wtf is this?
+                                                    return GSC::DNAResourceItem->get(dna_name => $subject_name);
+                                                }
+                                                elsif ($subject_type eq 'genomic_dna') {
+                                                    # 454 issue with 
+                                                    return;
+                                                    die "not sure how to handle sample type $subject_type";
+                                                }
+                                                elsif ($subject_type eq 'sample_name') {
+                                                    return Genome::Sample->get(name => $subject_name);
+                                                }
+                                                elsif ($subject_type eq 'species_name') {
+                                                    return Genome::Taxon->get(name => $subject_name); 
+                                                }
+                                                elsif ($subject_type eq 'sample_group') {
+                                                    return;
+                                                    die "not sure how to handle sample type $subject_type";
+                                                }
+                                                else {
+                                                    die "unkown sample type $subject_type!";
+                                                }
+                                            |
+                                       },
+
         processing_profile          => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name     => { via => 'processing_profile', to => 'name'},
         type_name                   => { via => 'processing_profile' },
@@ -603,6 +637,8 @@ sub resolve_reports_directory {
 
 sub available_reports {
     my $self=shift;
+    my $current_running_build = $self->current_running_build;
+    return $current_running_build->available_reports;
     $DB::single = 1;
     my $report_dir = $self->resolve_reports_directory;
     my %report_file_hash;
@@ -611,6 +647,7 @@ sub available_reports {
     for my $subdir (@report_subdirs) {
         #we may be able to do away with touching generating class and just try to find reports that match this subdir name? not sure
         my ($report_name) = ($subdir =~ /\/+reports\/+(.*)\/*/);
+        print ($report_name . "<br>");
         push @reports, Genome::Model::Report->create(model_id => $self->id, name => $report_name);
     }
     return \@reports; 

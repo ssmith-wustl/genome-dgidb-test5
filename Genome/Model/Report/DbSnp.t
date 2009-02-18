@@ -3,23 +3,18 @@
 use strict;
 use warnings;
 
-use Test::More skip_all => "under development";
+use Test::More tests => 2;
 
 use above "Genome";
 
-# TODO: Fix this some how... we should create a model here rather than getting one
-my $model_id = 2733662090;#2661729970;
-# my $gold_snp_path = "/gscmnt/sata160/info/medseq/tcga/TCGA-06-0124/TCGA-06-0124-01A-01D.gold2";
 my $snp_file = "/gscmnt/sata146/info/medseq/dlarson/GBM_Genome_Model/tumor/2733662090.snps";
 
-my $model = Genome::Model->get(genome_model_id=>$model_id);
-ok($model, "got a model");
+my $build_id = 93293206;
+my $build = Genome::Model::Build->get(build_id => $build_id);
+ok($build, "got a build");
 
-my ($id, $name) = ($model_id,'DbSnp');
-my $report = Genome::Model::Report::DbSnp->create(model_id =>$id, name=>$name);
+my ($id, $name) = ($build_id,'DbSnp');
+my $report = Genome::Model::Report->create(build_id =>$id, name=>$name);
 
 ok($report, "got a report");
- $report->override_combined_snp_file($snp_file);
-$report->generate_report_detail; 
-#$report->generate_report_brief;
 
