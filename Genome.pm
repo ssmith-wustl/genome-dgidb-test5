@@ -6,7 +6,7 @@ use UR;
 
 # GSCApp removes our overrides to can/isa for Class::Autoloader.  Tell it to put them back.
 use GSCApp;
-$DB::single=1;
+
 unless (App::Init->initialized) {
 App::DB->db_access_level('rw');
 }
