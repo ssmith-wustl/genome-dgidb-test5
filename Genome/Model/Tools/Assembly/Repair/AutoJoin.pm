@@ -31,6 +31,12 @@ class Genome::Model::Tools::Assembly::Repair::AutoJoin
         is_optional => 0,
         doc => "input ace file"        
     },
+#    assembler =>
+#    {
+#        type => 'String',
+#        is_optional => 0,
+#        doc => "assembler that created the ace file"
+#    },
     min_length =>
     {
         type => 'String',
@@ -53,13 +59,13 @@ class Genome::Model::Tools::Assembly::Repair::AutoJoin
     {
         type => 'String',
         is_optional => 1,
-        doc => ""        
+        doc => "Length of sequences at each ends to run cross match"        
     },
     cm_min_match =>
     {
         type => 'String',
         is_optional => 1,
-        doc => ""        
+        doc => "Minimum length of cross match to consider for join"        
     },
     ], 
 };
@@ -70,26 +76,27 @@ sub execute
 {
     my $self = shift;
     my $ace_in = $self->ace;
-    my $min_length = $self->min_length;
-    my $max_length = $self->max_length;
-    my $min_read_num = $self->min_read_num;
-    my $cm_seg = $self->cm_segments;
-    my $cm_min_match = $self->cm_min_match;
+
+#    my $min_length = $self->min_length;
+#    my $max_length = $self->max_length;
+#    my $min_read_num = $self->min_read_num;
+#    my $cm_seg = $self->cm_segments;
+#    my $cm_min_match = $self->cm_min_match;
 
     my $log_fh = IO::File->new(">$ace_in".'_autojoins.log');
 
     #TODO: check to make sure phd file is there
 
     #exclude contigs that are less than this bp
-    $min_length = 100 unless $min_length;
+#    $min_length = 100 unless $min_length;
     #exclude contigs that are more than this bp
-    $max_length = 10000000 unless $max_length;
+#    $max_length = 10000000 unless $max_length;
     #exclude contigs with less than this number of reads
-    $min_read_num = 2 unless $min_read_num;
+#    $min_read_num = 2 unless $min_read_num;
     #number of bases to consider in running cross_match
-    $cm_seg = 500 unless $cm_seg;
+#    $cm_seg = 500 unless $cm_seg;
     #minimum cross match
-    $cm_min_match = 25 unless $cm_min_match;
+#    $cm_min_match = 25 unless $cm_min_match;
 
     my $time;
 
@@ -131,7 +138,7 @@ sub execute
     $time = time2str('%y%m%d:%H%M%S', time);
     print "Pleae wait running cross_match: $time\n";
     $log_fh->print("Pleae wait running cross_match: $time\n");
-    my $cm_out = $self->run_cross_match ($cm_output_file, $auto_ace, $cm_min_match);
+    my $cm_out = $self->run_cross_match ($cm_output_file, $auto_ace);
 
     #parse cross_match out file and get joins
     $time = time2str('%y%m%d:%H%M%S', time);
@@ -189,6 +196,8 @@ sub execute
 
     return 1;
 }
+
+
 
 sub cat_all_phdballs
 {
@@ -782,7 +791,11 @@ sub find_joins
 
 sub run_cross_match
 {
-    my ($self, $fasta_file, $ace, $cm_min_match) = @_;
+    my ($self, $fasta_file, $ace) = @_;
+
+    my $cm_min_match = 25;
+    $cm_min_match = $self->cm_min_match if $self->cm_min_match;
+
     #need to fix this
     my $cm_out = "$ace".'_aj_cm_out';
     unlink $cm_out if -e $cm_out;
@@ -901,10 +914,17 @@ sub print_out_ctg_ends
 {
     my ($self, $ace, $ctg_hash) = @_;
 
-    my $min_read_num = $self->min_read_num;
-    my $min_length = $self->min_length;
-    my $max_length = $self->max_length;
-    my $cm_seg = $self->cm_segments;
+    my $min_read_num = 2;
+    $min_read_num = $self->min_read_num if $self->min_read_num;
+
+    my $min_length = 100;
+    $min_length = $self->min_length if $self->min_length;
+
+    my $max_length = 10000000;
+    $max_length = $self->max_length if $self->max_length;
+
+    my $cm_seg = 500;
+    $cm_seg = $self->cm_segments if $self->cm_segments;
 
     my $ace_obj = GSC::IO::Assembly::Ace->new( input_file => $ace, conserve_memory => 1);
 
@@ -1069,7 +1089,6 @@ sub clean_up_tags
     my $self = shift;
 
     my $ace = $self->ace;
-    print "ACE: $ace xxxxxxxxxxxxxxxxx\n";
 
     my $fh = IO::File->new("<$ace");
     my $out_fh = IO::File->new(">$ace".'_tags_resolved');
@@ -1116,7 +1135,9 @@ sub clean_up_tags
         }
     }
     $fh->close;
-    unlink $ace;
+    
+#   unlink $ace;
+
     return $ace.'_tags_resolved';
 }
 
