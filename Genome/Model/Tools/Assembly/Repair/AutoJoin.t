@@ -12,6 +12,6 @@ use Storable;
 my $indata = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-Repair-AutoJoin/edit_dir';
 
 chdir($indata);
-ok(Genome::Model::Tools::Assembly::Repair::AutoJoin->execute(ace => 'autojoin_test.ace.DS_line_fixed.final'), 'successfully ran AutoJoins tool');
+ok(Genome::Model::Tools::Assembly::Repair::AutoJoin->execute(ace => 'autojoin_test.ace'), 'successfully ran AutoJoins tool');
 
 
