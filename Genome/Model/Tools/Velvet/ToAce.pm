@@ -134,19 +134,23 @@ sub execute {
                     my ($srec, $sfields, $srecs) = parseRecord($recs->[$r]);
                                         
                     if ($srec eq 'TLE') {
-                        my $read_id = $sfields->{src};
-                        unless ($read_id) {
+                        my $ori_read_id = $sfields->{src};
+                        unless ($ori_read_id) {
                             $self->error_message('TLE record contains no src: field');
                             return;
                         }
-
-                        my $info = $seqinfo->{$read_id};
+                        
+                        my $info = $seqinfo->{$ori_read_id};
                         unless ($info) {
-                            $self->error_message("Sequence of $read_id not found, check RED");
+                            $self->error_message("Sequence of $ori_read_id not found, check RED");
                             return;
                         }
                         
-                        my $sequence = $self->get_seq($info->{afg}, $info->{pos}, $read_id);
+                        my $read_id = $ori_read_id;
+                        $read_id .= '_' . $info->{ct} if exists $info->{ct};
+                        $seqinfo->{$ori_read_id}->{ct}++;
+
+                        my $sequence = $self->get_seq($info->{afg}, $info->{pos}, $ori_read_id);
                         my ($asml, $asmr) = split /,/, $sfields->{clr};
 
                         ($asml, $asmr) = $asml < $asmr 
