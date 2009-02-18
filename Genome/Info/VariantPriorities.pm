@@ -25,8 +25,9 @@ my %variant_priorities_for_annotation =
     intronic                        => 18,
     '5_prime_flanking_region'       => 19,
     '3_prime_flanking_region'       => 20,
-    undefined                       => 21,
-    reference                       => 22,
+    rna                             => 21,
+    undefined                       => 22,
+    reference                       => 23,
     consensus_error                 => 100
 );
 
