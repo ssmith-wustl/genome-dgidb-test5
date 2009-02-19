@@ -5,15 +5,29 @@ use warnings;
 
 use Genome;
 
-use Gtk2::Ext::Dialogs;
-use Gtk2::Ext::EntryCrate;
-use Gtk2::Ext::PackingFactory;
-use Gtk2::Ext::Utils;
 use Data::Dumper;
 require File::Basename;
 require IO::Socket;
-use POE::Session;
-use POE::Kernel { loop => 'Glib' };
+
+our $initialized = 0;
+
+sub require_requires {
+    return if $initialized;
+    eval {
+        require Gtk2;
+        Gtk2->init;
+        require Gtk2::Ext::Dialogs;
+        require Gtk2::Ext::EntryCrate;
+        require Gtk2::Ext::PackingFactory;
+        require Gtk2::Ext::Utils;
+        require POE::Session;
+        POE::Session->import;
+        require POE::Kernel;
+        POE::Kernel->import( { loop => 'Glib' });
+    };
+    die $@ if $@;
+    $initialized = 1;
+}
 
 class Genome::Model::Tools::Consed::ExternalNavigation { 
     is => 'Command',
@@ -34,6 +48,7 @@ class Genome::Model::Tools::Consed::ExternalNavigation {
 # _port :default(1024);
 
 sub execute {
+    require_requires() unless $initialized;
     my $self = shift;
 
     $self->{_preferences} = {
@@ -73,7 +88,7 @@ sub factory {
 }
 
 sub _ui_start {
-    my ($self, $session, $kernel) = @_[ OBJECT, SESSION, KERNEL ];
+    my ($self, $session, $kernel) = @_[ &OBJECT, &SESSION, &KERNEL ];
 
     my $factory = $self->factory;
 
@@ -439,7 +454,7 @@ sub _ui_prev {
 }
 
 sub _ui_run {
-    my ($self, $kernel, $heap) = @_[ 0, KERNEL, HEAP ];
+    my ($self, $kernel, $heap) = @_[ 0, &KERNEL, &HEAP ];
 
     $kernel->yield('ev_next');
 
@@ -458,7 +473,7 @@ sub _ui_run {
 
 sub _ui_stop
 {
-    my ($self, $kernel, $heap) = @_[ 0, KERNEL, HEAP ];
+    my ($self, $kernel, $heap) = @_[ 0, &KERNEL, &HEAP ];
 
     $kernel->alarm_remove($heap->{alarm_id});
     
