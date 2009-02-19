@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 6;
+use Test::More tests => 9;
 use above "Genome";
 use File::Slurp;
 
@@ -20,7 +20,7 @@ my ($id, $name) = ($build_id,'Pfam');
 #my $model_id = 2733662090; #2661729970;
 #$report->_process_coding_transcript_file('Pfam.t.dat');
 
-my $p = Genome::Model::Report->create(
+my $p = Genome::Model::Report::Pfam->create(
                                             build_id => $build_id,
                                             #model_id => $model_id,
                                             name     => 'Pfam'
@@ -49,7 +49,7 @@ $p = undef;
 SKIP: {
     skip "need to set environment variable to run iprscan", 1 unless $ENV{RUNIPRSCAN} eq 1;
 # test checking the transcripts/getting the peps/prots.
-    $p = Genome::Model::Report->create(
+    $p = Genome::Model::Report::Pfam->create(
                                           build_id      => $build_id,
                                          #model_id     => $model_id,
                                          name         => 'Pfam',
@@ -66,7 +66,7 @@ SKIP: {
 } # end skip
 $p = undef;
 
-$p = Genome::Model::Report->create(
+$p = Genome::Model::Report::Pfam->create(
                                         build_id => $build_id,
                                          #model_id     => $model_id,
                                          name         => 'Pfam',
@@ -86,7 +86,7 @@ unlink $test_report;
 $p = undef;
 # test full run of the generate_report_detail method.
 
-$p = Genome::Model::Report->create(
+$p = Genome::Model::Report::Pfam->create(
                                         build_id => $build_id,
                                          #model_id     => $model_id,
                                          name         => 'Pfam',
