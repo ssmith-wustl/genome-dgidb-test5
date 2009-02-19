@@ -67,10 +67,10 @@ isa_ok ($available_read_sets[0], "GSC::Sequence::Item");
 ok (my @built_read_sets = $model->built_read_sets, "got built_read_sets");
 isa_ok ($built_read_sets[0], "Genome::Model::ReadSet");
 
-ok (my %available_reports = $model->available_reports, "got available_reports");
-foreach my $key(%available_reports)
+ok (my $available_reports = $model->available_reports, "got available_reports");
+foreach my $key(@$available_reports)
 {
-    diag "REPORT:\t$key:\t" . $available_reports{$key} . "\n";
+    diag "REPORT:\t" . $key->name . "\n";
 }
 
 SKIP: {

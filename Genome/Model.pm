@@ -638,8 +638,9 @@ sub resolve_reports_directory {
 
 sub available_reports {
     my $self=shift;
-    my $current_running_build = $self->current_running_build;
-    return $current_running_build->available_reports;
+    #if we don't have a completed build, we don't have reports
+    $self->last_complete_build and return $self->last_complete_build->available_reports or
+    return {};
     $DB::single = 1;
     my $report_dir = $self->resolve_reports_directory;
     my %report_file_hash;
