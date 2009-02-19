@@ -22,7 +22,8 @@ my @SUB_COMMANDS = qw/
     instrument-data       
     processing-profile     
     model                  
-    tools                  
+    tools
+    disk-allocation
 /;
 
 our %SUB_COMMAND_CLASSES = 
