@@ -6,6 +6,7 @@ use warnings;
 use Test::More tests => 9;
 use above "Genome";
 use File::Slurp;
+use FindBin qw/ $Bin /;
 
 BEGIN {
     use_ok("Genome::Model::Report::Pfam");
@@ -18,7 +19,7 @@ ok($build, "got a build");
 my ($id, $name) = ($build_id,'Pfam');
 
 #my $model_id = 2733662090; #2661729970;
-#$report->_process_coding_transcript_file('Pfam.t.dat');
+#$report->_process_coding_transcript_file($Bin . '/Pfam.t.dat');
 
 my $p = Genome::Model::Report::Pfam->create(
                                             build_id => $build_id,
@@ -32,17 +33,17 @@ is(ref($p), 'Genome::Model::Report::Pfam');
 my $snpstestfile = "snpfiletest.pfam.dat";
 my $testoutput = "testoutput.snps.dat";
 my $readonly_testfile = "readonly.snps.dat";
-my @lines = read_file($snpstestfile);
+my @lines = read_file($Bin."/".$snpstestfile);
 
 # test creating the snps dat list file
-ok($p->_create_snpsdat_file(\@lines, $testoutput), 'can write out file');
+ok($p->_create_snpsdat_file(\@lines, $Bin."/".$testoutput), 'can write out file');
 unlink $testoutput;
 
-write_file($readonly_testfile, ('blah'));
-chmod 0444, $readonly_testfile;
-ok($p->_create_snpsdat_file(\@lines, $readonly_testfile) eq 0, 'test for failure on writing file out');
-chmod 0644, $readonly_testfile;
-unlink $readonly_testfile;
+write_file($Bin."/".$readonly_testfile, ('blah'));
+chmod 0444, $Bin."/".$readonly_testfile;
+ok($p->_create_snpsdat_file(\@lines, $Bin."/".$readonly_testfile) eq 0, 'test for failure on writing file out');
+chmod 0644, $Bin."/".$readonly_testfile;
+unlink $Bin."/".$readonly_testfile;
 
 $p = undef;
 
@@ -56,11 +57,11 @@ SKIP: {
                                          test_no_load => 1,
                                         );
     my $coding_ts_file = "pfam_coding_transcript_data.dat";
-    ok($p->_process_coding_transcript_file($coding_ts_file),'processing coding transcript annotation file');
+    ok($p->_process_coding_transcript_file($Bin."/".$coding_ts_file),'processing coding transcript annotation file');
 
     foreach my $file ((".snps.dat",".gff",".pep.fasta",".transcript_names"))
     {
-        unlink $coding_ts_file . $file;
+        unlink $Bin."/".$coding_ts_file . $file;
     }
 
 } # end skip
@@ -75,11 +76,11 @@ $p = Genome::Model::Report::Pfam->create(
 
 my $test_report = "pfam_test_report.csv";
 my $test_snpsdat_report = "pfam_test_report.snps.dat";
-ok($p->_run_report($test_snpsdat_report, $test_report),'test running the report');
+ok($p->_run_report($Bin."/".$test_snpsdat_report, $Bin."/".$test_report),'test running the report');
 
 # should check the output...
-my @comparison1 = read_file("pfam_test_report.comparison");
-my @comparison2 = read_file($test_report);
+my @comparison1 = read_file($Bin."/"."pfam_test_report.comparison");
+my @comparison2 = read_file($Bin."/".$test_report);
 is_deeply(\@comparison2,\@comparison1, 'report contents match');
 unlink $test_report;
 
@@ -95,6 +96,6 @@ $p = Genome::Model::Report::Pfam->create(
 
 SKIP: {
     skip "need to set environment variable to run iprscan", 1 unless $ENV{RUNIPRSCAN} eq 1;
-ok($p->generate_report_detail(report_detail => "full_report_test.csv"),'run a full report via generate_report_detail()');
-unlink "full_report_test.csv";
+ok($p->generate_report_detail(report_detail => $Bin."/"."full_report_test.csv"),'run a full report via generate_report_detail()');
+unlink $Bin."/"."full_report_test.csv";
 } # end skip
