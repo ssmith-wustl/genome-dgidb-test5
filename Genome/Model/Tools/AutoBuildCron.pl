@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Genome;
+use above 'Genome';
 
 #use lib '/gsc/scripts/lib/perl';
 #$ENV{'PERL5LIB'} = '/gsc/scripts/lib/perl/:' . $ENV{'PERL5LIB'};

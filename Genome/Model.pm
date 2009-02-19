@@ -38,6 +38,8 @@ class Genome::Model {
         # TODO: get the subject_id and subject_class_name into the table so this is less ugly
         subject_name                => { is => 'Text', len => 255 },
         subject_type                => { is => 'Text', len => 255 },
+        auto_assign_inst_data       => { is => 'Number', len => 4, is_optional => 1},
+        auto_build_alignments       => { is => 'Number', len => 4, is_optional => 1},
         subject                     => { 
                                             calculate_from => ['subject_name','subject_type'],
                                             calculate => q| 
@@ -69,7 +71,6 @@ class Genome::Model {
                                                 }
                                             |
                                        },
-
         processing_profile          => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name     => { via => 'processing_profile', to => 'name'},
         type_name                   => { via => 'processing_profile' },

@@ -24,12 +24,6 @@ class Genome::Model::Command::Define {
             is_input => 1,
             doc => 'The name of the subject all the reads originate from'
         },
-        subject_type => {
-            is => 'varchar',
-            len => 255,
-            is_input => 1,
-            doc => 'The type of subject all the reads originate from'
-        },
         ],
         has_optional => [
         model_name => {
@@ -43,6 +37,12 @@ class Genome::Model::Command::Define {
             len => 255,
             is_input => 1,
             doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
+        },
+        subject_type => {
+            is => 'varchar',
+            len => 255,
+            is_input => 1,
+            doc => 'The type of subject all the reads originate from'
         },
     ],
     schema_name => 'Main',
@@ -166,6 +166,9 @@ sub execute {
     my $self = shift;
 
     # Make sure there aren't any bare args
+
+    $DB::single = 1;
+
     my $ref = $self->bare_args;
     if ( $ref && (my @args = @$ref) ) {
         $self->error_message("extra arguments: @args");
@@ -174,7 +177,7 @@ sub execute {
     }
 
     # Verify required params
-    for my $req (qw/ processing_profile_name subject_name subject_type /) {
+    for my $req (qw/ processing_profile_name subject_name /) {
         unless ( defined $self->$req) {
             $self->error_message("Property ($req) to define model is required");
             return
@@ -191,12 +194,32 @@ sub execute {
     my $processing_profile_id = $self->_get_procesiing_profile_id_for_name
         or return;
 
+    #attempt derive subject_type if not passed as an arg
+    #die if subject type isnt sample_name for now
+    my $subject_type;
+    if  ($self->subject_type){
+        $subject_type = $self->subject_type;
+        }
+    else {
+        my $sample = Genome::Sample->get(name => $self->subject_name);
+        if ($sample){
+            $subject_type = 'sample_name'; 
+        }
+        else {
+            $self->status_message('subject_name did not specify a sample, other subject types not yet supported.'); 
+            $self->status_message('specify a sample or contact apipe@genome.wustl.edu for creation of a custom model');
+        exit;
+        }
+    }
+
     # Create the model, then verify
     my %model_params = (
         name => $self->model_name,
         processing_profile_id => $processing_profile_id,
         subject_name => $self->subject_name,
-        subject_type => $self->subject_type,
+        subject_type => $subject_type,
+        auto_assign_inst_data => 1,
+        auto_build_alignments => 1,
     );
     if ($self->data_directory) {
         my $model_name = File::Basename::basename($self->data_directory);

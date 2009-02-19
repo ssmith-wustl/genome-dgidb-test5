@@ -16,8 +16,6 @@ class Genome::Model::ReferenceAlignment {
     is => 'Genome::Model',
     has => [       
         processing_profile    => { is => 'Genome::ProcessingProfile::ReferenceAlignment', id_by => 'processing_profile_id' },
-        auto_assign_inst_data        => { via => 'processing_profile'},
-        auto_build_alignments        => { via => 'processing_profile'},
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
         genotyper_name               => { via => 'processing_profile'},
