@@ -131,7 +131,10 @@ sub get_gene_peps
     }
 
     my $cleanup = $self->keep_pep ? 0 : 1;
-    my $tempdir = tempdir( CLEANUP => $cleanup );
+    my $tempdir = tempdir( 
+                          CLEANUP => $cleanup,
+                          DIR     => '/gscmnt/temp212/info/annotation/PAP_tmp',
+                         );
     my ( $fh, $file ) = tempfile(
         "pap-XXXXXX",
         DIR    => $tempdir,
