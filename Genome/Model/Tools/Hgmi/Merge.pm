@@ -82,20 +82,14 @@ EOS
 sub execute
 {
     my $self = shift;
-# default for nrdb
-#$nr_db = "/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr";
-    my ($merge_out,$merge_err);
-    my $merge_command = $self->gather_details();
-    IPC::Run::run( $merge_command,
-                   \undef,
-                   '>',
-                   \$merge_out,
-                   '2>',
-                   \$merge_err,
-                   ) || croak "can't run finish : $!";
 
+    my @merge = $self->gather_details();
+
+   
+    IPC::Run::run(@merge) || croak "can't run merge : $!";
 
     return 1;
+    
 }
 
 
@@ -134,16 +128,7 @@ sub gather_details
     {
         croak " organism_obj is not set at line 70 ! ";
     }
-    my $cwd;
-
-    if(defined($self->work_directory))
-    {
-        $cwd = $self->work_directory;
-    }
-    else
-    {
-        $cwd = getcwd();
-    }
+    my $cwd = $self->_cwd();
     my @cwd = split(/\//x,$cwd);
 
     my ($sequence_set_name, $analysis_version_num, $hgmi_sequence_dir);
@@ -203,30 +188,8 @@ sub gather_details
     $self->sequence_set_id($sequence_set_id);
     my @list =($organism_id,$sequence_set_name, $sequence_set_id);
     print join("\t",@list),"\n\n";
-
-#items need for bap_predict_genes.pl and print out command
-
-    my (
-        $glimmer2_model,
-        $glimmer3_model, $glimmer3_pwm,
-        $genemark_model,
-        $job_stdout, $job_stderr,
-        $runner_count,
-        $bappredictgenes_output
-        );
-
-    $job_stdout     = $cwd."/".$hgmi_locus_tag."_bpg_BAP_job_".$sequence_set_id.".txt";
-
-    $job_stderr     = $cwd."/".$hgmi_locus_tag."_bpg_BAP_job_err_".$sequence_set_id.".txt";
-
-    $runner_count   = 50;
-
-    $bappredictgenes_output = $cwd."/".$hgmi_locus_tag."_bpg_BAP_screenoutput_".$sequence_set_id.".txt";
-
-    my $bsub_output = $cwd."/".$hgmi_locus_tag."_bpg_BAP_".$sequence_set_id.".output";
-
-    my $bsub_error = $cwd."/".$hgmi_locus_tag."_bpg_BAP_".$sequence_set_id.".error";
-
+   
+    my $runner_count = 50;
 
     if (!defined($nr_db)) 
     {
@@ -237,48 +200,61 @@ sub gather_details
         croak "nr-db: ". $nr_db . " doesn't exist!";
     }
     
-    my $bmg_job_stdout = $cwd."/".$hgmi_locus_tag."_bmg_BAP_job_".$sequence_set_id.".txt";
-    
-    my $bmg_job_stderr = $cwd."/".$hgmi_locus_tag."_bmg_BAP_job_err_".$sequence_set_id.".txt";
-
-    my $debug_file     = $cwd."/".$hgmi_locus_tag."_bmg_debug_file_".$sequence_set_id.".txt";
-
+    my $bmg_job_stdout       = $cwd."/".$hgmi_locus_tag."_bmg_BAP_job_".$sequence_set_id.".txt";
+    my $bmg_job_stderr       = $cwd."/".$hgmi_locus_tag."_bmg_BAP_job_err_".$sequence_set_id.".txt";
+    my $debug_file           = $cwd."/".$hgmi_locus_tag."_bmg_debug_file_".$sequence_set_id.".txt";
     my $bapmergegenes_output = $cwd."/".$hgmi_locus_tag."_bmg_BAP_screenoutput_".$sequence_set_id.".txt";
-
-    my $bsub_bmg_output = $cwd."/".$hgmi_locus_tag."_bmg_BAP_".$sequence_set_id."_blade.output";
-
-    my $bsub_bmg_error = $cwd."/".$hgmi_locus_tag."_bmg_BAP_".$sequence_set_id."_blade.error";
-    
-    my $cmd2;
-    $cmd2 .= qq{(bsub -o $bsub_bmg_output -e $bsub_bmg_error -q long -n 2 -R 'span[hosts=1] rusage[mem=4096]' -N -u wnash\@wustl.edu \\\n};
-#$cmd2 .= qq{(bap_merge_genes --sequence-set-id $sequence_set_id --job-stdout $bmg_job_stdout \\\n};
-            $cmd2 .= qq{bap_merge_genes --sequence-set-id $sequence_set_id --job-stdout $bmg_job_stdout \\\n};
-            $cmd2 .= qq{--job-stderr $bmg_job_stderr --runner-count $runner_count --debug-file $debug_file \\\n};
-#$cmd2 .= qq{--nr-db $nr_db ) > &  $bapmergegenes_output &\\\n};
-            $cmd2 .= qq{--nr-db $nr_db ) > &  $bapmergegenes_output \\\n};
     
     print "\nbap_merge_genes.pl\n";
-    print "\n$cmd2 \n";
+    
 
+    my @command = (
+                   'bap_merge_genes',
+                   '--sequence-set-id',
+                   $sequence_set_id,
+                   '--job-stdout',
+                   $bmg_job_stdout,
+                   '--job-stderr',
+                   $bmg_job_stderr,
+                   '--runner-count',
+                   $runner_count,
+                   '--debug-file',
+                   $debug_file,
+                   '--nr-db',
+                   $self->nr_db,
+               );
 
-    my @command_list = ('bap_merge_genes',
-                        '--sequence-set-id',
-                        $sequence_set_id,
-                        '--job-stdout',
-                        $job_stdout,
-                        '--job-stderr',
-                        $job_stderr,
-                        '--runner-count',
-                        $runner_count,
-                        '--debug-file',
-                        $debug_file,
-                        '--nr-db',
-                        $self->nr_db
-                        );
-    if(defined($self->dev)) { push(@command_list,"--dev"); }
-    return \@command_list;
+    if(defined($self->dev)) { push(@command,"--dev"); }
+    
+    print "\n", join(' ', @command), "\n";
+    
+    my @ipc = (
+               \@command,
+               \undef,
+               '2>&1',
+               $bapmergegenes_output,
+           );
+    
+    return @ipc;
+    
 }
 
+sub _cwd {
+
+    my ($self) = @_;
+
+    my $cwd;
+    
+    if (defined($self->work_directory)) {
+        $cwd = $self->work_directory;
+    }
+    else {
+        $cwd = getcwd();
+    }
+
+    return $cwd;
+    
+}
 
 1;
 
