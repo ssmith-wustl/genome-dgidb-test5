@@ -51,14 +51,14 @@ sub create {
 
 
 sub execute {
-    my $self  = shift;
+    my $self = shift;
+    my $type = $self->_format_type;
     
     my $fa_io   = $self->get_fasta_reader($self->fasta_file);
-    my $qual_io = $self->get_qual_reader($self->qual_file)
-        if $self->have_qual_file;
+    my $qual_io = $self->get_qual_reader($self->qual_file) if $self->have_qual_file;
         
-    my $out_io = $self->get_format_writer($self->out_file, $self->_format_type)
-        if $self->_format_type eq 'fastq';
+    my $out_io = $self->get_format_writer($self->out_file, $type) if $type eq 'fastq';
+       $out_io = $self->get_format_writer($self->out_file, 'phd') if $type eq 'phdball';
     
     while (my $fa = $fa_io->next_seq) {
         my $qual_val; 
@@ -90,23 +90,23 @@ sub execute {
             -force_flush => 1,
         );
 
-        unless ($self->_format_type eq 'fastq') {
+        unless ($type eq 'fastq') {
             my $outfile = $self->dir.'/'.$fa->id;
-            $outfile .= '.phd.1' if $self->_format_type eq 'phd';
-            $out_io = $self->get_format_writer($outfile, $self->_format_type);
+            $outfile .= '.phd.1' if $type eq 'phd';
+            $out_io = $self->get_format_writer($outfile, $type) unless $type eq 'phdball';
             $params{-trace} = [map{$_*10}(0..$length-1)];
         }
         
         my $swq = Bio::Seq::Quality->new(%params);
         
-        if ($self->_format_type eq 'phd') {
+        if ($type =~ /^phd/) {
             $swq->chromat_file($fa->id);
             $swq->time($self->time) if $self->time;
         }
 
         my $write_method = $self->write_method;
         
-        if ($self->_format_type eq 'scf') {
+        if ($type eq 'scf') {
             $out_io->$write_method($self->_param_type => $self->_param_value($swq));
         }
         else {
