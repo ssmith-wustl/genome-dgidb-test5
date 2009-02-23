@@ -156,21 +156,17 @@ sub build_review_tree
          Gtk2::TreeViewColumn->new_with_attributes
                         ('Insert Sequence Allele 2', Gtk2::CellRendererText->new, text => 5),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Genotype', Gtk2::CellRendererText->new, text => 6),
+                        ('Reference Genotype', Gtk2::CellRendererText->new, text => 6),
          Gtk2::TreeViewColumn->new_with_attributes
                         ('Pass Manual Review', Gtk2::CellRendererText->new, text => 7),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Manual Genotype Normal', Gtk2::CellRendererText->new, text => 8),
+                        ('Manual Genotype Variant', Gtk2::CellRendererText->new, text => 8),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Manual Genotype Tumor', Gtk2::CellRendererText->new, text => 9),
+                        ('Notes', Gtk2::CellRendererText->new, text => 9),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Manual Genotype Relapse', Gtk2::CellRendererText->new, text => 10),
+                        ('Somatic Status', Gtk2::CellRendererText->new, text => 10),
          Gtk2::TreeViewColumn->new_with_attributes
-                        ('Notes', Gtk2::CellRendererText->new, text => 11),
-         Gtk2::TreeViewColumn->new_with_attributes
-                        ('Somatic Status', Gtk2::CellRendererText->new, text => 12),
-         Gtk2::TreeViewColumn->new_with_attributes
-                        ('Data Needed', Gtk2::CellRendererText->new, text => 13),
+                        ('Data Needed', Gtk2::CellRendererText->new, text => 11),
                                                 
         );
     foreach (@col)
@@ -229,12 +225,12 @@ sub get_contig_start_pos
     my ($self,$ace_file_name) = @_;
     my $fh = IO::File->new($ace_file_name);
     
-    my $reader = GSC::IO::Assembly::Ace::Reader->new(input => $fh);
+    my $reader = GSC::IO::Assembly::Ace::Reader->new($fh);
     while(my $line = <$fh>)
     {
         if($line =~ /CT\{/)
         {
-            $fh->seek(-strlen($line),1);
+            $fh->seek(-length($line),1);
             my $tag = $reader->next_object;
             if($tag->{type} eq 'startNumberingConsensus')
             {
@@ -280,7 +276,8 @@ sub open_consed
     if(!defined $pid) {print "fork unsuccessful.\n"; }
     
     my $ace1 = "$proj_name.ace$suffix";
-    $ace1 = "$proj_name.ace" unless (-e $ace1);;
+    $ace1 = "$proj_name.ace" unless (-e $edit_dir.'/'.$ace1);
+    print $edit_dir.'/'.$ace1,"\n";
     my $contig_start_pos = $self->get_contig_start_pos($edit_dir.'/'.$ace1);
     if($contig_start_pos)#don't assume consed starts at 1, convert coords if necessary
     {
@@ -292,7 +289,7 @@ sub open_consed
     }
     if( -d $edit_dir){
         chdir $edit_dir or die "can't cd to $edit_dir"; 
-        $ace1 = "$proj_name.ace" unless (-e $ace1);
+        #$ace1 = "$proj_name.ace" unless (-e $ace1);
         unless(-e $ace1){
             print "ERROR no: $ace1 ... skipping (report to apipe)\n"; 
             exit;
@@ -311,7 +308,7 @@ sub open_consed
         #end hack
         
         my $c_command= "$consed -socket 0 -ace $ace1 -mainContigPos $relative_target_base_pos &>/dev/null";
-        #print $c_command,"\n";
+        print $c_command,"\n";
         my $rc = system($c_command);
         if($rc)
         {
@@ -365,9 +362,7 @@ sub get_col_order
         'insert_sequence_allele2',
         'genotype_iub_code',
         'pass_manual_review',
-        'manual_genotype_iub_normal',
-        'manual_genotype_iub_tumor',
-        'manual_genotype_iub_relapse',
+        'manual_genotype_iub_variant',
         'notes',
         'somatic_status',
         'data_needed',
@@ -532,27 +527,21 @@ sub on_re_ok
     $cb = $glade->get_widget('re_passfail');
     $active = $cb->get_active();
     $model->set($row,7 => $rpf{$active}) if exists $rpf{$active};
-    $cb = $glade->get_widget('re_genotype_normal');
+    $cb = $glade->get_widget('re_genotype_variant');
     $active = $cb->get_active();
     $model->set($row,8 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
-    $cb = $glade->get_widget('re_genotype_tumor');
-    $active = $cb->get_active();
-    $model->set($row,9 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};    
-    $cb = $glade->get_widget('re_genotype_relapse');
-    $active = $cb->get_active();
-    $model->set($row,10 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
     $cb = $glade->get_widget('re_somatic_status');
     $active = $cb->get_active();
-    $model->set($row,12 => $rev_somatic_status{$active}) if exists $rev_somatic_status{$active};
+    $model->set($row,10 => $rev_somatic_status{$active}) if exists $rev_somatic_status{$active};
     $cb = $glade->get_widget('re_data_needed');
     $active = $cb->get_active();
-    $model->set($row,13 => $rdn{$active}) if exists $rdn{$active};
+    $model->set($row,11 => $rdn{$active}) if exists $rdn{$active};
     
     my $tb = $glade->get_widget('re_text_view');    
     my ($s,$e) = $tb->get_buffer->get_bounds;
     my $text = $tb->get_buffer->get_text($s,$e,0);
     $text =~ tr/\n\t/  /;
-    $model->set($row, 11 => $text) if defined $text;
+    $model->set($row, 9 => $text) if defined $text;
     #added later this destroys it too
     $self->on_review_editor_destroy($review_editor);    
     return 1;
@@ -624,7 +613,7 @@ sub on_review_button_clicked
     my $model = $review_list->get_model;
     
     my $row = $model->get_iter($path);
-    my @val = $model->get($row,6,7,8,9,10,11,12,13);    
+    my @val = $model->get($row,6,7,8,9,10,11);    
     my $re_hpaned = $glade->get_widget("re_hpaned");
     my ($width) = $review_editor->get_size_request;
     $re_hpaned->set_position($width/2.5);
@@ -644,18 +633,14 @@ sub on_review_button_clicked
     $cb->set_active($iub_hash{$val[0]}) if(defined $val[0] && exists $iub_hash{$val[0]});
     $cb = $glade->get_widget('re_passfail');
     $cb->set_active($pf{$val[1]}) if(defined $val[1] && exists $pf{$val[1]});
-    $cb = $glade->get_widget('re_genotype_normal');
+    $cb = $glade->get_widget('re_genotype_variant');
     $cb->set_active($iub_hash{$val[2]}) if(defined $val[2] && exists $iub_hash{$val[2]});
-    $cb = $glade->get_widget('re_genotype_tumor');
-    $cb->set_active($iub_hash{$val[3]}) if(defined $val[3] && exists $iub_hash{$val[3]});
-    $cb = $glade->get_widget('re_genotype_relapse');
-    $cb->set_active($iub_hash{$val[4]}) if(defined $val[4] && exists $iub_hash{$val[4]});
     my $tb = $glade->get_widget('re_text_view');
-    $tb->get_buffer->set_text($val[5]) if $val[5];
+    $tb->get_buffer->set_text($val[3]) if $val[3];
     $cb = $glade->get_widget('re_somatic_status');
-    $cb->set_active($somatic_status{$val[6]}) if(defined $val[6] && exists $somatic_status{$val[6]}); 
+    $cb->set_active($somatic_status{$val[5]}) if(defined $val[5] && exists $somatic_status{$val[5]}); 
     $cb = $glade->get_widget('re_data_needed');
-    $cb->set_active($dn{$val[7]}) if(defined $val[7] && exists $dn{$val[7]});
+    $cb->set_active($dn{$val[6]}) if(defined $val[6] && exists $dn{$val[6]});
     
     @val = $model->get($row,1,2);
     my $row_hash = $self->get_row_hash($model,$row);
@@ -688,7 +673,7 @@ sub display_row
 {
     my ($self,$model, $row, $glade) = @_;
     
-    my @val = $model->get($row,6,7,8,9,10,11,12,13);
+    my @val = $model->get($row,6,7,8,9,10,11);
     #set widgets
 
     my %pf = (Pass => 1, Fail => 2);
@@ -712,7 +697,7 @@ sub display_row
     {
         $cb->set_active(undef);
     }
-    $cb = $glade->get_widget('re_genotype_normal');
+    $cb = $glade->get_widget('re_genotype_variant');
     
     if(defined $val[2] && exists $iub_hash{$val[2]})
     {
@@ -721,40 +706,21 @@ sub display_row
     else
     {
         $cb->set_active(undef);
-    }
-    $cb = $glade->get_widget('re_genotype_tumor');
-    
-    if(defined $val[3] && exists $iub_hash{$val[3]})
-    {
-        $cb->set_active($iub_hash{$val[3]});
-    }
-    else
-    {
-        $cb->set_active(undef);
-    }
-    $cb = $glade->get_widget('re_genotype_relapse');
-    if(defined $val[4] && exists $iub_hash{$val[4]})
-    {
-        $cb->set_active($iub_hash{$val[4]});
-    }
-    else
-    {
-        $cb->set_active(undef);
-    }
+    }    
     
     $cb = $glade->get_widget('re_somatic_status');
-    if(defined $val[6] && exists $somatic_status{$val[6]})
+    if(defined $val[4] && exists $somatic_status{$val[4]})
     {
-        $cb->set_active($somatic_status{$val[6]});
+        $cb->set_active($somatic_status{$val[4]});
     }
     else
     {
         $cb->set_active(undef);
     }
     $cb = $glade->get_widget('re_data_needed');
-    if(defined $val[7] && exists $dn{$val[7]})
+    if(defined $val[5] && exists $dn{$val[5]})
     {
-        $cb->set_active($dn{$val[7]});
+        $cb->set_active($dn{$val[5]});
     }
     else
     {
@@ -762,7 +728,7 @@ sub display_row
     }
     
     my $tb = $glade->get_widget('re_text_view');
-    $tb->get_buffer->set_text($val[5]);
+    $tb->get_buffer->set_text($val[3]);
 
     @val = $model->get($row,1,2);
     my $proj_dir = join '_',@val;
@@ -785,27 +751,22 @@ sub save_row
     $cb = $glade->get_widget('re_passfail');
     $active = $cb->get_active();
     $model->set($row,7 => $rpf{$active}) if exists $rpf{$active};
-    $cb = $glade->get_widget('re_genotype_normal');
-    $active = $cb->get_active();
+    $cb = $glade->get_widget('re_genotype_variant');
+    $active = $cb->get_active();   
+    
     $model->set($row,8 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
-    $cb = $glade->get_widget('re_genotype_tumor');
-    $active = $cb->get_active();
-    $model->set($row,9 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};    
-    $cb = $glade->get_widget('re_genotype_relapse');
-    $active = $cb->get_active();
-    $model->set($row,10 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
     $cb = $glade->get_widget('re_somatic_status');
     $active = $cb->get_active();
-    $model->set($row,12 => $rev_somatic_status{$active}) if exists $rev_somatic_status{$active};
+    $model->set($row,10 => $rev_somatic_status{$active}) if exists $rev_somatic_status{$active};
     $cb = $glade->get_widget('re_data_needed');
     $active = $cb->get_active();
-    $model->set($row,13 => $rdn{$active}) if exists $rdn{$active};
+    $model->set($row,11 => $rdn{$active}) if exists $rdn{$active};
     
     my $tb = $glade->get_widget('re_text_view');
     my ($s,$e) = $tb->get_buffer->get_bounds;
     my $text = $tb->get_buffer->get_text($s,$e,0);
     $text =~ tr/\n\t/  /;
-    $model->set($row, 11 => $text) if defined $text;    
+    $model->set($row, 9 => $text) if defined $text;    
 
     return 1;
 
