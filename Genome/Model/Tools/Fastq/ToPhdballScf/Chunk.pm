@@ -35,7 +35,7 @@ EOS
 
 
 sub execute {
-    my $self  = shift;
+    my $self = shift;
 
     my $ball_file = $self->ball_file;
     my $ball_dir  = dirname($self->ball_file);
@@ -54,7 +54,12 @@ sub execute {
             my $opt_name = $property;
             $opt_name =~ s/_/-/g;
             $cmd .= " --$opt_name";
-            $cmd .= ' '.$self->$property unless $property eq 'base_fix';
+            
+            unless ($property eq 'base_fix') {
+                my $prop_val = $self->$property;
+                $prop_val = '"'.$prop_val.'"' if $property eq 'time';
+                $cmd .= ' '.$prop_val;
+            }
         }
     }
     
