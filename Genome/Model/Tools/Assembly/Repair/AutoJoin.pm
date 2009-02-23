@@ -77,16 +77,16 @@ sub execute
     my $self = shift;
     my $ace_in = $self->ace;
 
+########################################################
+# IT WOULD BE BETTER IF EACH OF THE BELOW WERE METHODS #
+########################################################
+
+
 #    my $min_length = $self->min_length;
 #    my $max_length = $self->max_length;
 #    my $min_read_num = $self->min_read_num;
 #    my $cm_seg = $self->cm_segments;
 #    my $cm_min_match = $self->cm_min_match;
-
-    my $log_fh = IO::File->new(">$ace_in".'_autojoins.log');
-
-    #TODO: check to make sure phd file is there
-
     #exclude contigs that are less than this bp
 #    $min_length = 100 unless $min_length;
     #exclude contigs that are more than this bp
@@ -98,6 +98,9 @@ sub execute
     #minimum cross match
 #    $cm_min_match = 25 unless $cm_min_match;
 
+
+
+    my $log_fh = IO::File->new(">$ace_in".'_autojoins.log');
     my $time;
 
     #cat all the phdball files together since we can only
@@ -170,24 +173,8 @@ sub execute
     $log_fh->print("Please wait making joins: $time\n");
     my $merged_ace = $self->make_joins ($new_scafs, $auto_ace, $log_fh);
 
-    unlink $auto_ace;
-
-    my $qa_fixed_ace = $self->fix_ace_qa_line ($merged_ace);
-
-    unlink $merged_ace;
-
-    my $new_tags_ace = $self->clean_up_tags ($qa_fixed_ace);
-
-    unlink $qa_fixed_ace;
-    #need to fix DS line again .. add in VERSION: 1
-
-    my $final_ace = $self->add_version_to_DS_line ($new_tags_ace);
-
-    unlink $new_tags_ace;
-
-    #need to add wa_tags to load phd balls
-
-    $final_ace = $self->add_WA_tags_to_ace ($final_ace);
+    #have to do some post merge clean up of ace file
+    my $final_ace = $self->clean_up_merged_ace ($merged_ace);
 
     $time = time2str('%y%m%d:%H%M%S', time);
     print "Done, $time\n";
@@ -197,6 +184,17 @@ sub execute
     return 1;
 }
 
+sub clean_up_merged_ace
+{
+    my ($self, $ace) = @_;
+    #NEED TO FIX THE DS LINE HERE TO MAKE IT WORK FOR 454 DATA
+    my $ds_fixed_ace = $self->add_version_to_DS_line ($ace);
+
+    #NEED TO APPEND ACE FILE WITH WA TAGS TO MAKE TRACES VIEWABLE
+    my $wa_tagged_ace = $self->add_WA_tags_to_ace ($ds_fixed_ace);
+
+    return $wa_tagged_ace;
+}
 
 
 sub cat_all_phdballs
@@ -212,18 +210,15 @@ sub cat_all_phdballs
 
     if (-d $phdball_dir)
     {
-        my @ball_files = glob ("$phdball_dir/*phdball");
+        my @ball_files = glob ("$phdball_dir/*");
 
         if (scalar @ball_files > 0)
         {
-            my $ec = `touch autoJoinPhdBall`;
-            print "Cannot create autoJoinPhdBall file\n" and exit (1) if $ec;
             foreach my $ball_file (@ball_files)
             {
                 my $ec = `cat $ball_file >> $phdball_dir/autoJoinPhdBall`;
                 print "Cannot cat $ball_file to autoJoinPhdBall\n" and exit (1) if $ec;
             }
-
         }
     }
 
@@ -243,7 +238,7 @@ sub add_WA_tags_to_ace
     $ball_dir =~ s/edit_dir$/phdball_dir/;
     if (-d $ball_dir)
     {
-        my @phdball_files = glob ("$ball_dir/*phdball");
+        my @phdball_files = glob ("$ball_dir/*");
         if (scalar @phdball_files > 0)
         {
             chomp (my $date = `date '+%y%m%d:%H%M%S'`);
@@ -264,8 +259,11 @@ sub add_version_to_DS_line
 {
     my ($self, $ace) = @_;
 
-    my $ace_in = $self->ace;
-    my $ace_out = $ace_in.'.final';
+#    my $ace_in = $self->ace;
+#    my $ace_out = $ace_in.'.final';
+
+    my $ace_out = $ace.'.final';
+
     my $fh = IO::File->new("< $ace") || die "Cannot open file: $ace";
     my $out_fh = IO::File->new (">$ace_out") || die "Cannot create file handle: $ace_out";
     while (my $line = $fh->getline)
@@ -441,6 +439,8 @@ sub make_joins
     }
 
     $xport->close;
+
+    unlink $phd_ball if -s $phd_ball;
 
     return $ace_out;
 }
