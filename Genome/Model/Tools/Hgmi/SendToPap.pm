@@ -62,6 +62,10 @@ UR::Object::Type->define(
             is_optional => 1,
             default => 10,
         },
+        'gram_stain' => {
+            is => 'String',
+            doc => 'Gram Stain'
+        },
     ]
 );
 
@@ -280,13 +284,18 @@ sub do_pap_workflow
         print STDERR "\nwhere is the fasta file ", $fasta_file, "?\n";
         croak "fasta file doesn't exist!";
     }
+    
+    my $workflow_dev_flag = 0;
+
+    if ($self->dev()) { $workflow_dev_flag = 1; }
+
     my $output = run_workflow_lsf(
                               $xml_file,
                               'fasta file'       => $fasta_file,
                               'chunk size'       => 10,
-                              'dev flag'         => 1,
+                              'dev flag'         => $workflow_dev_flag,
                               'biosql namespace' => 'MGAP',
-                              'gram stain'       => 'negative',
+                              'gram stain'       => $self->gram_stain(), 
                               'report save dir'  => '/gscmnt/temp212/info/annotation/PAP_testing/blast_reports',
     );
 

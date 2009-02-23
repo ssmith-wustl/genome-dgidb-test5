@@ -31,6 +31,7 @@ my $s1 = Genome::Model::Tools::Hgmi::SendToPap->create(
           'taxon_id' => 166486,
           'dev' => 1,
           'keep_pep' => 1,
+          'gram_stain' => 'negative',
 );
 
 $s1->get_gene_peps();

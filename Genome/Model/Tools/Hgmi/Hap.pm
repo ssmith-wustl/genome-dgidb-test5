@@ -248,10 +248,15 @@ sub execute
         return 1;
     }
 
+    unless (defined($config->{gram_stain})) {
+        die 'cannot start workflow - no gram_stain specified in config file';
+    }
+    
     my $send = Genome::Model::Tools::Hgmi::SendToPap->create(
                      'locus_tag' => $config->{locus_tag_prefix},
                      'sequence_set_id' => $ssid, 
                      'workflow_xml' => $config->{workflowxml},
+                     'gram_stain' => $config->{gram_stain},
 # pepfile should be constructed automagically here.
                   );
 
