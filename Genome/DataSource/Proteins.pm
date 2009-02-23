@@ -3,7 +3,7 @@ package Genome::DataSource::Proteins;
 use Genome;
 
 class Genome::DataSource::Proteins {
-    is => [ 'UR::DataSource::File'],
+    is => [ 'UR::DataSource::FileMux'],
 };
 
 sub delimiter {
@@ -22,8 +22,14 @@ sub skip_first_line {
     return 0;
 }
 
-sub file_list {
-    return qw( /gscmnt/sata363/info/medseq/annotation_data/proteins.csv );
+sub required_for_get { qw( transcript_id ) }
+
+sub file_resolver {
+    my($transcript_id) = @_;
+
+    my $thousand = int($transcript_id / 1000);
+    my $path = '/gscmnt/sata363/info/medseq/annotation_data/proteins_' . $thousand . ".csv";
+    return $path;
 }
 
 1;

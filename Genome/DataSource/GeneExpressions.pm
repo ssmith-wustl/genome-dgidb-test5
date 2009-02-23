@@ -3,7 +3,7 @@ package Genome::DataSource::GeneExpressions;
 use Genome;
 
 class Genome::DataSource::GeneExpressions {
-    is => [ 'UR::DataSource::File'],
+    is => 'UR::DataSource::FileMux',
 };
 
 sub delimiter {
@@ -22,8 +22,14 @@ sub skip_first_line {
     return 0;
 }
 
-sub file_list {
-    return qw( /gscmnt/sata363/info/medseq/annotation_data/gene_expressions.csv );
+sub required_for_get { qw( expression_id ) }
+
+sub file_resolver {
+    my($expression_id) = @_;
+
+    my $thousand = int($expression_id / 1000);
+    my $path = '/gscmnt/sata363/info/medseq/annotation_data/gene_expressions_' . $thousand . ".csv";
+    return $path;
 }
 
 1;
