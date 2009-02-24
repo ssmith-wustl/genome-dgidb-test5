@@ -15,7 +15,7 @@ my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/ToAce';
 my $file = $test_dir.'/velvet_asm_1.afg';
 
 my $ta = Genome::Model::Tools::Velvet::ToAce->create(
-    afg_files   => [$file],
+    afg_file    => $file,
     out_acefile => $test_dir.'/velvet_asm.ace',
 );
 
