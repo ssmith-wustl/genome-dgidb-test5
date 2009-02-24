@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use IO::File;
 use Tie::File;
+use Bio::SeqIO;
 use Date::Format;
 use AMOS::AmosLib;
 use File::Basename;
@@ -14,10 +15,10 @@ use GSC::IO::Assembly::Ace::Writer;
 
 class Genome::Model::Tools::Velvet::ToAce {
     is           => 'Command',
-    has_many     => [
-        afg_files   => {
+    has          => [
+        afg_file    => {
             is      => 'String', 
-            doc     => 'input velvet_asm.afg file path(s)',
+            doc     => 'input velvet_asm.afg file path',
         }
     ],
     has_optional => [
@@ -25,6 +26,10 @@ class Genome::Model::Tools::Velvet::ToAce {
             is      => 'String', 
             doc     => 'name for output acefile, default is ./velvet_asm.ace',
             default => 'velvet_asm.ace',
+        },
+        fastq_file  => {
+            is      => 'String', 
+            doc     => 'path name for original velvet fastq file. If giving the option, read names in acefile will use the same in fastq file, rather than incremented id. useful for pair ends',
         },
         time        => {
             is      => 'String',
@@ -41,7 +46,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gt velvet to-ace --afg-files afg.1,afg.2 [--out-acefile acefile_name]
+gt velvet to-ace --afg-file velvet_asm.afg [--out-acefile acefile_name]
 EOS
 }
 
@@ -59,20 +64,20 @@ sub create {
     my $class = shift;
     my $self  = $class->SUPER::create(@_);
 
-    for my $file ($self->afg_files) {
-        my $base = basename $file;
-        unless ($base =~ /\.afg$/) {
-            $self->error_message("Input file must be .afg file, not $base");
+    my $file = $self->afg_file;    
+    unless (-s $file and $file =~ /\.afg$/) {
+        $self->error_message("Input velvet afg file: $file must NOT be valid or existing");
+        return;
+    }    
+         
+    if ($self->fastq_file) {
+        unless (-s $self->fastq_file) {
+            $self->error_message("fastq file provided does not exist");
             return;
-        }    
-        unless (-s $file) {
-            $self->error_message("Input file: $file, not existing or is empty");
-            return;
-        }  
+        }
     }
     
     my $out_file = $self->out_acefile;
-    
     $self->warning_message("out_acefile: $out_file exists and will be overwritten") 
         if -s $out_file;
         
@@ -90,148 +95,156 @@ sub execute {
     my $seqinfo  = {};
     my $nReads   = 0;
     my $nContigs = 0;
+
+    #velvet sequentially names input reads in fastq file as 1,2,3,4,5... based on the original order
+    if ($self->fastq_file) {
+        my $io = Bio::SeqIO->new(-format => 'fastq', -file => $self->fastq_file);
+        my $ct = 0;
+        
+        while (my $seq = $io->next_seq) {
+            $ct++;
+            $seqinfo->{$ct}->{name} = $seq->display_id;
+        }
+    }
     
-    for my $file ($self->afg_files) {
-        my $fh = IO::File->new($file) or die "can't open $file\n";
-        my $seekpos = $fh->tell;
+    my $file    = $self->afg_file;
+    my $fh      = IO::File->new($file) or die "can't open $file\n";
+    my $seekpos = $fh->tell;
 
-        while (my $record = getRecord($fh)){
-            my ($rec, $fields, $recs) = parseRecord($record);
-            my $nseqs = 0;
-            my $id = $fields->{iid};
+    while (my $record = getRecord($fh)){
+        my ($rec, $fields, $recs) = parseRecord($record);
+        my $nseqs = 0;
+        my $id = $fields->{iid};
 
-            if ($rec eq 'RED') {
-                $seqinfo->{$id} = {
-                    pos => $seekpos,
-                    afg => $fh,
-                };
+        if ($rec eq 'RED') {
+            $seqinfo->{$id}->{pos} = $seekpos;
+        }
+        elsif ($rec eq 'CTG') {
+            $nContigs++;
+            my $ctg_seq = $fields->{seq};
+            $ctg_seq =~ s/\n//g;
+            $ctg_seq =~ s/-/*/g;
+                
+            my $ctg_id     = 'Contig'.$fields->{iid};
+            my $ctg_length = length $ctg_seq;
+                
+            my $ctg_qual = $fields->{qlt};
+            $ctg_qual =~ s/\n//g;
+                
+            my @ctg_quals;
+            for my $i (0..length($ctg_qual)-1) {
+                unless (substr($ctg_seq, $i, 1) eq '*') {
+                    push @ctg_quals, ord(substr($ctg_qual, $i, 1)) - ord('0');
+                }
             }
-            elsif ($rec eq 'CTG') {
-                $nContigs++;
-                my $ctg_seq = $fields->{seq};
-                $ctg_seq =~ s/\n//g;
-                $ctg_seq =~ s/-/*/g;
-                
-                my $ctg_id     = 'Contig'.$fields->{iid};
-                my $ctg_length = length $ctg_seq;
-                
-                my $ctg_qual = $fields->{qlt};
-                $ctg_qual =~ s/\n//g;
-                
-                my @ctg_quals;
-                for my $i (0..length($ctg_qual)-1) {
-                    unless (substr($ctg_seq, $i, 1) eq '*') {
-                        push @ctg_quals, ord(substr($ctg_qual, $i, 1)) - ord('0');
-                    }
-                }
                                 
-                my @read_pos;
-                my @reads;
-                my %left_pos;
-                my %right_pos;
+            my @read_pos;
+            my @reads;
+            my %left_pos;
+            my %right_pos;
                 
-                for my $r (0..$#$recs) {
-                    my ($srec, $sfields, $srecs) = parseRecord($recs->[$r]);
+            for my $r (0..$#$recs) {
+                my ($srec, $sfields, $srecs) = parseRecord($recs->[$r]);
                                         
-                    if ($srec eq 'TLE') {
-                        my $ori_read_id = $sfields->{src};
-                        unless ($ori_read_id) {
-                            $self->error_message('TLE record contains no src: field');
-                            return;
-                        }
+                if ($srec eq 'TLE') {
+                    my $ori_read_id = $sfields->{src};
+                    unless ($ori_read_id) {
+                        $self->error_message('TLE record contains no src: field');
+                        return;
+                    }
                         
-                        my $info = $seqinfo->{$ori_read_id};
-                        unless ($info) {
-                            $self->error_message("Sequence of $ori_read_id not found, check RED");
-                            return;
-                        }
+                    my $info = $seqinfo->{$ori_read_id};
+                    unless ($info) {
+                        $self->error_message("Sequence of $ori_read_id not found, check RED");
+                        return;
+                    }
                         
-                        my $read_id = $ori_read_id;
-                        $read_id .= '_' . $info->{ct} if exists $info->{ct};
-                        $seqinfo->{$ori_read_id}->{ct}++;
+                    my $read_id = $self->fastq_file ? $info->{name} : $ori_read_id;
+                    $read_id .= '-' . $info->{ct} if exists $info->{ct};
+                    $seqinfo->{$ori_read_id}->{ct}++;
 
-                        my $sequence = $self->get_seq($info->{afg}, $info->{pos}, $ori_read_id);
-                        my ($asml, $asmr) = split /,/, $sfields->{clr};
+                    my $sequence = $self->get_seq($fh, $info->{pos}, $ori_read_id);
+                    my ($asml, $asmr) = split /,/, $sfields->{clr};
 
-                        ($asml, $asmr) = $asml < $asmr 
-                                       ? (0, $asmr - $asml)
-                                       : ($asml - $asmr, 0);
+                    ($asml, $asmr) = $asml < $asmr 
+                                   ? (0, $asmr - $asml)
+                                   : ($asml - $asmr, 0);
                         
-                        my ($seql, $seqr) = ($asml, $asmr);
+                    my ($seql, $seqr) = ($asml, $asmr);
 
-                        my $ori = ($seql > $seqr) ? 'C' : 'U';
-                        $asml += $sfields->{off};
-		                $asmr += $sfields->{off};
+                    my $ori = ($seql > $seqr) ? 'C' : 'U';
+                    $asml += $sfields->{off};
+		            $asmr += $sfields->{off};
 
-                        if ($asml > $asmr){
-                            $sequence = reverseComplement($sequence);
-                            my $tmp = $asmr;
-			                $asmr = $asml;
-			                $asml = $tmp;
+                    if ($asml > $asmr){
+                        $sequence = reverseComplement($sequence);
+                        my $tmp = $asmr;
+			            $asmr = $asml;
+			            $asml = $tmp;
 			
-			                $tmp  = $seqr;
-			                $seqr = $seql;
-			                $seql = $tmp;
-                        }
+			            $tmp  = $seqr;
+			            $seqr = $seql;
+			            $seql = $tmp;
+                    }
                         
-                        my $off = $sfields->{off} + 1;
+                    my $off = $sfields->{off} + 1;
 
-                        $asml = 0 if $asml < 0;
-		                $left_pos{$read_id}  = $asml + 1;
-		                $right_pos{$read_id} = $asmr;
+                    $asml = 0 if $asml < 0;
+		            $left_pos{$read_id}  = $asml + 1;
+		            $right_pos{$read_id} = $asmr;
                        
-                        my $end5 = $seql + 1;
-                        my $end3 = $seqr;
+                    my $end5 = $seql + 1;
+                    my $end3 = $seqr;
                         
-                        push @read_pos, {
-                            type      => 'read_position',
-                            read_name => $read_id,
-                            u_or_c    => $ori,
-                            position  => $off,
-                        };
+                    push @read_pos, {
+                        type      => 'read_position',
+                        read_name => $read_id,
+                        u_or_c    => $ori,
+                        position  => $off,
+                    };
                         
-                        push @reads, {
-                            type              => 'read',
-                            name              => $read_id,
-                            padded_base_count => length $sequence,
-                            info_count        => 0, 
-                            tag_count         => 0,
-                            sequence          => $sequence,
-                            qual_clip_start   => $end5,
-                            qual_clip_end     => $end3,
-                            align_clip_start  => $end5,
-                            align_clip_end    => $end3,
-                            description       => {
-                                CHROMAT_FILE => $read_id,
-                                PHD_FILE     => $read_id.'.phd.1',
-                                TIME         => $time,
-                            },
-                        }
-                    }         
-                }
+                    push @reads, {
+                        type              => 'read',
+                        name              => $read_id,
+                        padded_base_count => length $sequence,
+                        info_count        => 0, 
+                        tag_count         => 0,
+                        sequence          => $sequence,
+                        qual_clip_start   => $end5,
+                        qual_clip_end     => $end3,
+                        align_clip_start  => $end5,
+                        align_clip_end    => $end3,
+                        description       => {
+                            CHROMAT_FILE => $read_id,
+                            PHD_FILE     => $read_id.'.phd.1',
+                            TIME         => $time,
+                        },
+                    }
+                }         
+            }
                         
-                my @base_segments = get_base_segments(\%left_pos, \%right_pos, $ctg_length);
+            my @base_segments = get_base_segments(\%left_pos, \%right_pos, $ctg_length);
                 
-                my $nBS = scalar @base_segments;
-                my $nRd = scalar @read_pos;
+            my $nBS = scalar @base_segments;
+            my $nRd = scalar @read_pos;
 
-                my $contig = {
-                    type           => 'contig',
-                    name           => $ctg_id,
-                    base_count     => $ctg_length,
-                    read_count     => $nRd,
-                    base_seg_count => $nBS,
-                    u_or_c         => 'U',
-                    consensus      => $ctg_seq,
-                    base_qualities => \@ctg_quals,
-                };
+            my $contig = {
+                type           => 'contig',
+                name           => $ctg_id,
+                base_count     => $ctg_length,
+                read_count     => $nRd,
+                base_seg_count => $nBS,
+                u_or_c         => 'U',
+                consensus      => $ctg_seq,
+                base_qualities => \@ctg_quals,
+            };
                 
-                map{$writer->write_object($_)}($contig, @read_pos, @base_segments, @reads);
+            map{$writer->write_object($_)}($contig, @read_pos, @base_segments, @reads);
                 $nReads += $nRd;
-            }#if 'CTG'
-            $seekpos = $fh->tell;
-        }#While loop
-    }#for loop
+        }#if 'CTG'
+        $seekpos = $fh->tell;
+    }#While loop
+    
     $writer->write_object({
         type     => 'assembly_tag',
         tag_type => 'comment',
