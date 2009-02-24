@@ -9,7 +9,7 @@ use Genome;
 class Genome::Model::Report {
     sub_classification_method_name => '_resolve_subclass_name',
     has => [
-           build => {is => 'Genome::Model::Command::Build', id_by => 'build_id'},
+           build => {is => 'Genome::Model::Build', id_by => 'build_id'},
            build_id => {is => 'Integer', doc=>'identifies the build this report directory belongs to'},
 
            model => {is => 'Genome::Model', via => 'build'},
@@ -134,10 +134,10 @@ sub get_brief_output
     my $fh = new FileHandle;
     my $bod;
     #ensure file exists (do check)
-    #(-e $self->report_brief_output_filename) or die("no have it");#$self->generate_report_brief();
-    (-e $self->report_brief_output_filename or 
-        $self->generate_report_brief() and 
-        return "File not found. Generating now...");
+    (-e $self->report_brief_output_filename) or return("Report not found");
+    #(-e $self->report_brief_output_filename or 
+    #    $self->generate_report_brief() and 
+    #    return "File not found. Generating now...");
 
     if ($fh->open("< " . $self->report_brief_output_filename )) 
     {
@@ -158,10 +158,11 @@ sub get_detail_output
 
     #ensure file exists (do check)
 
-    #(-e $self->report_detail_output_filename ) or die("no have it");#$self->generate_report_detail();
-    (-e $self->report_detail_output_filename or 
-        $self->generate_report_detail() and 
-        return "File not found.  Generating now...");
+    (-e $self->report_detail_output_filename ) or return ("Report not found");
+    #(-e $self->report_detail_output_filename or 
+    #    $self->generate_report_detail() and 
+    #    return "File not found.  Generating now...");
+
     if ($fh->open("< " . $self->report_detail_output_filename )) 
     {
         while (!$fh->eof())
