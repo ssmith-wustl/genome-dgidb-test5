@@ -9,7 +9,7 @@ use Test::More;
 #tests => 1;
 
 if (`uname -a` =~ /x86_64/){
-    plan tests => 8;
+    plan tests => 10;
 } else{
     plan skip_all => 'Must run on a 64 bit machine';
 }
@@ -36,7 +36,8 @@ my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 							 ref_seq_file => $ref_seq,
                                                          files_to_align_path => $files_to_align,
 							 execute_sol2sanger => $sol_flag,
-							 output_directory=> $output_dir
+							 output_directory=> $output_dir,
+                                                         aligner_output_file => $aligner_log,
                                                         );
 
 #execute the tool 
@@ -45,6 +46,8 @@ ok($aligner->execute,'AlignReads execution, single read solexa input with sol2sa
 #check the number of files in the output directory, should be 2.
 my @listing = glob($output_dir.'/*');
 ok( scalar(@listing) eq $expected_output, "Number of output files expected = ".$expected_output );
+
+test_paired_end_result($aligner,0);
 
 #Case 2: paired end 
 
@@ -59,7 +62,8 @@ $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 							 ref_seq_file => $ref_seq,
                                                          files_to_align_path => $files_to_align,
 							 execute_sol2sanger => $sol_flag,
-							 output_directory=> $output_dir
+							 output_directory => $output_dir,
+                                                         aligner_output_file => $aligner_log,
 							);
 
 #execute the tool 
@@ -69,6 +73,7 @@ ok($aligner->execute,'AlignReads execution, paired read solexa input with sol2sa
 @listing = glob($output_dir.'/*');
 ok( scalar(@listing) eq $expected_output, "Number of output files expected = ".$expected_output );
 
+test_paired_end_result($aligner,1);
 
 #Case 3: paired end, force fragment
 #get a new output dir
@@ -144,3 +149,18 @@ my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 
 }
 
+
+sub test_paired_end_result {
+    my $aligner = shift;
+    my $expected_value = shift;
+
+    open(IN,$aligner->aligner_output_file);
+    my @aligner_log_file = <IN>;
+    close IN;
+
+    my $last_line = pop @aligner_log_file;
+    chomp($last_line);
+    my @columns = split(/,\s*/,$last_line);
+    my $isPE = $columns[4];
+    is($isPE,$expected_value,'expected aligner paired end result');
+}
