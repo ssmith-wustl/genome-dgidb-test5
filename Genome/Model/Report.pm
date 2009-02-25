@@ -30,7 +30,9 @@ sub help_brief {
 sub sub_command_sort_position { 12 }
 
 sub generate_report_brief {
-    die "Implement me in the subclass, owangutang";
+    my $self = shift;
+
+    die $self->type . ":  Implement me in the subclass, owangutang";
 }
 
 sub generate_report_detail {
@@ -104,7 +106,7 @@ sub _resolve_subclass_name_for_model_and_name {
 # This is called by both of the above.
 sub resolve_reports_directory {
     my $self = shift;
-    my $reports_dir = $self->model->resolve_reports_directory;
+    my $reports_dir = $self->build->resolve_reports_directory;
     unless(-d $reports_dir) {
         unless(mkdir $reports_dir) {
             $self->error_message("Directory $reports_dir doesn't exist, can't create");
@@ -134,8 +136,8 @@ sub get_brief_output
     my $fh = new FileHandle;
     my $bod;
     #ensure file exists (do check)
-    (-e $self->report_brief_output_filename) or return("Report not found");
-    #(-e $self->report_brief_output_filename or 
+    #(-e $self->report_brief_output_filename) or die("no have it");#$self->generate_report_brief();
+    (-e $self->report_brief_output_filename or return "Report not found");
     #    $self->generate_report_brief() and 
     #    return "File not found. Generating now...");
 
@@ -158,11 +160,10 @@ sub get_detail_output
 
     #ensure file exists (do check)
 
-    (-e $self->report_detail_output_filename ) or return ("Report not found");
-    #(-e $self->report_detail_output_filename or 
+    #(-e $self->report_detail_output_filename ) or die("no have it");#$self->generate_report_detail();
+    (-e $self->report_detail_output_filename or return "Report not found");
     #    $self->generate_report_detail() and 
     #    return "File not found.  Generating now...");
-
     if ($fh->open("< " . $self->report_detail_output_filename )) 
     {
         while (!$fh->eof())
