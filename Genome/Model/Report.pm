@@ -32,7 +32,7 @@ sub sub_command_sort_position { 12 }
 sub generate_report_brief {
     my $self = shift;
 
-    die $self->type . ":  Implement me in the subclass, owangutang";
+    die "Implement me in the subclass, owangutang";
 }
 
 sub generate_report_detail {
@@ -42,7 +42,6 @@ sub generate_report_detail {
 
 sub _resolve_subclass_name {
     my $class = shift;
-
     if ($class ne __PACKAGE__ and $class->isa(__PACKAGE__)) {
         # already subclassed!
         return $class;
@@ -74,12 +73,11 @@ sub _resolve_subclass_name_for_model_and_name {
 
     $DB::single = $DB::stopper;
     my $build = Genome::Model::Build->get(id => $build_id);
-    my $report_dir = $build->resolve_reports_directory;
+    my $report_dir = $build->resolve_reports_directory . $name;
     unless (-d $report_dir) {
-        $class->error_message("No $name report directory for ".$report_dir);
+        $class->error_message("No name report directory for ".$report_dir . $name);
         return;
     }
-
     my ($file)=glob("$report_dir/generation_class.*");
     if($file) {
         $DB::single=1;
@@ -135,11 +133,13 @@ sub get_brief_output
     my $self=shift;
     my $fh = new FileHandle;
     my $bod;
-    #ensure file exists (do check)
-    #(-e $self->report_brief_output_filename) or die("no have it");#$self->generate_report_brief();
-    (-e $self->report_brief_output_filename or return "Report not found");
-    #    $self->generate_report_brief() and 
-    #    return "File not found. Generating now...");
+
+    #ensure file exists (do check, kick off if not exists)
+    unless(-e $self->report_brief_output_filename) 
+    { 
+        $self->generate_report_brief(); 
+        return "File not found for " . $self->name . ".  Generating now...";
+    };
 
     if ($fh->open("< " . $self->report_brief_output_filename )) 
     {
@@ -158,12 +158,13 @@ sub get_detail_output
     my $fh = new FileHandle;
     my $bod;
 
-    #ensure file exists (do check)
+    #ensure file exists (do check, kick off if not exists)
+    unless(-e $self->report_detail_output_filename) 
+    { 
+        $self->generate_report_detail(); 
+        return "File not found for " . $self->name . ".  Generating now...";
+    };
 
-    #(-e $self->report_detail_output_filename ) or die("no have it");#$self->generate_report_detail();
-    (-e $self->report_detail_output_filename or return "Report not found");
-    #    $self->generate_report_detail() and 
-    #    return "File not found.  Generating now...");
     if ($fh->open("< " . $self->report_detail_output_filename )) 
     {
         while (!$fh->eof())
@@ -205,7 +206,7 @@ sub create {
             $self->delete;
             return;
         }
-    }
+   }
     return $self;
 }
 1;

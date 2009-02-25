@@ -97,7 +97,8 @@ sub available_reports {
     for my $subdir (@report_subdirs) {
         #we may be able to do away with touching generating class and just try to find reports that match this subdir name? not sure
         my ($report_name) = ($subdir =~ /\/+reports\/+(.*)\/*/);
-        push @reports, Genome::Model::Report->create(build_id => $self->build_id, name => $report_name);
+        my $rpt = Genome::Model::Report->create(build_id => $self->build_id, name => $report_name);
+        push @reports, $rpt;
     }
     return \@reports; 
 }
