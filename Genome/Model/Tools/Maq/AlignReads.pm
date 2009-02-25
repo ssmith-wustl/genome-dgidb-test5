@@ -349,13 +349,13 @@ sub create {
                 push @bfq_pathnames, $bfq_pathname; 
     	} 
 
-	$self->_files_to_align_list(@bfq_pathnames); 		
+	$self->_files_to_align_list(\@bfq_pathnames); 		
 
      #end sol2sanger conversion if-block	
      } elsif ( $binary_count > 0 ) { 
         #files are already binary, use those
         $self->status_message("Using bfqs.");
-     	$self->_files_to_align_list(@listing);
+     	$self->_files_to_align_list(\@listing);
      }  
 
     return $self;
@@ -397,7 +397,7 @@ sub execute {
     $self -> status_message('Input Files:');
     $self -> status_message('Reference sequence file:'.$self->ref_seq_file);
     $self -> status_message('Files to align path:'.$self->files_to_align_path);
-    $self -> status_message('Files to align list:'.$self->_files_to_align_list);
+    $self -> status_message('Files to align list:'. $self->_files_to_align_list);
     $self -> status_message('');
     $self -> status_message('Output Files:');
     $self -> status_message('Alignment file:'.$self->alignment_file);
@@ -418,7 +418,7 @@ sub execute {
     #my $aligner_path = '/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq';
 
     #get the files to align ready   
-    my @tmp_list = $self->_files_to_align_list;
+    my @tmp_list = @{$self->_files_to_align_list};
     my $files_to_align = join(' ',@tmp_list); 
     
     #insert the primer or adaptor file if it is specified  
