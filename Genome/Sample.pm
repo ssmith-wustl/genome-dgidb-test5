@@ -14,7 +14,20 @@ use warnings;
 
 class Genome::Sample {
     table_name => "
-(select d.*, s.*, o.taxon_id
+(
+select 
+    d.*,  
+    s.cell_type,    
+    s.full_name,    
+    s.organ_name,    
+    s.organism_sample_id, 
+    s.sample_name,    
+    s.sample_type,    
+    s.source_id,    
+    s.source_type,    
+    s.tissue_label,    
+    s.tissue_name,
+    o.taxon_id
 from (
 	select sample_name
 	from solexa_lane_summary\@dw
