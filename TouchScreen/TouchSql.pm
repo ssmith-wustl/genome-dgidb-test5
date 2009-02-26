@@ -2512,7 +2512,7 @@ sub GetBarcodeDesc {
     if($mbar){
         my $label = $mbar->barcode_label();
         if($label){
-            return (1, [[$barcode.' '.$label]]);
+            return (1, [[$barcode.' '.$label . ($mbar->volume ? ' VOLUME:' . $mbar->volume : '') . ($mbar->concentration_level ? ' CONCENTRATION:' . $mbar->concentration_level : '')]]);
         }
         else{
             return (1, [[$barcode.' : '.$mbar->barcode_description."  exists, but has no content label"]]);
