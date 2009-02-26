@@ -17,42 +17,42 @@ class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat {
                          |,
                      },
             fasta_file => {
-                           doc => 'the file path to the fasta file of reads',
+                           doc => 'the file path to the fasta file for instrument data',
                            calculate_from => ['instrument_data'],
                            calculate => q|
                                return $instrument_data->full_path .'/'. $instrument_data->subset_name .'.fa';
                            |
                        },
-            _alignment_files =>{
+            _existing_alignment_files =>{
                                doc => "the file path to store the blat alignment",
                                calculate_from => ['instrument_data_assignment'],
                                calculate => q|
-                                        return grep { -e $_ } glob($instrument_data_assignment->read_set_alignment_directory .'/'. $instrument_data_assignment->subset_name .'.psl.*');
+                                        return grep { -e $_ } glob($instrument_data_assignment->alignment_directory .'/'. $instrument_data_assignment->subset_name .'.psl.*');
                                |
                            },
-            _aligner_output_files => {
+            _existing_aligner_output_files => {
                                      calculate_from => ['instrument_data_assignment'],
                                      calculate => q|
-                                                  return grep { -e $_ } glob($instrument_data_assignment->read_set_alignment_directory .'/'. $instrument_data_assignment->subset_name .'.out.*');
+                                                  return grep { -e $_ } glob($instrument_data_assignment->alignment_directory .'/'. $instrument_data_assignment->subset_name .'.out.*');
                                              |
                                  },
-            read_set_alignment_directory => {via => 'instrument_data_assignment'}
+            alignment_directory => {via => 'instrument_data_assignment'}
         ],
 };
 
 sub help_brief {
-    "Use blat to align reads";
+    "Use blat to align instrument data reads";
 }
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model add-reads align-reads blat --model-id 5 --run-id 10
+    genome model build reference-alignment align-reads blat --model-id 5 --run-id 10
 EOS
 }
 
 sub help_detail {
     return <<EOS
-This command is usually called as part of the add-reads process
+This command is usually called as part of the build process
 EOS
 }
 
@@ -62,7 +62,7 @@ sub should_bsub { 1;}
 sub alignment_file {
     my $self = shift;
 
-    my @alignment_files = $self->_alignment_files;
+    my @alignment_files = $self->_existing_alignment_files;
     unless (@alignment_files) {
         $self->error_message('Missing alignment file');
         return;
@@ -75,7 +75,7 @@ sub alignment_file {
 
 sub aligner_output_file {
     my $self = shift;
-    my @aligner_output_files = $self->_aligner_output_files;
+    my @aligner_output_files = $self->_existing_aligner_output_files;
     unless (@aligner_output_files) {
         $self->error_message('Missing aligner output file');
         return;
@@ -86,27 +86,28 @@ sub aligner_output_file {
     return $aligner_output_files[0];
 }
 
-sub read_set_alignment_file {
+sub instrument_data_alignment_file {
     my $self = shift;
-    return $self->read_set_alignment_directory .'/'. $self->instrument_data->subset_name .'.psl.'. $self->id;
+    return $self->alignment_directory .'/'. $self->instrument_data->subset_name .'.psl.'. $self->id;
 }
 
-sub read_set_aligner_output_file {
+sub instrument_data_aligner_output_file {
     my $self = shift;
-    return $self->read_set_alignment_directory .'/'. $self->instrument_data->subset_name .'.out.'. $self->id;
+    return $self->alignment_directory .'/'. $self->instrument_data->subset_name .'.out.'. $self->id;
 }
 
 sub execute {
     my $self = shift;
 
-    my $read_set_data_directory = $self->instrument_data->full_path;
-    unless (-e $read_set_data_directory) {
-        unless ($self->create_directory($read_set_data_directory)) {
-            $self->error_message("Failed to created read set data directory '$read_set_data_directory'");
+    $DB::single = $DB::stopper;
+
+    my $instrument_data_directory = $self->instrument_data->full_path;
+    unless (-e $instrument_data_directory) {
+        unless ($self->create_directory($instrument_data_directory)) {
+            $self->error_message("Failed to create instrument data directory '$instrument_data_directory'");
             return;
         }
     }
-    $DB::single = $DB::stopper;
     unless (-s $self->fasta_file) {
         unless (-e $self->sff_file) {
             $self->error_message('Failed to find sff_file: '. $self->sff_file);
@@ -127,15 +128,15 @@ sub execute {
         }
     }
     # check_for_existing_alignment_files
-    my $read_set_alignment_directory = $self->read_set_alignment_directory;
-    if (-d $read_set_alignment_directory) {
+    my $alignment_directory = $self->alignment_directory;
+    if (-d $alignment_directory) {
         my $errors;
-        $self->status_message("found existing run directory $read_set_alignment_directory");
+        $self->status_message("found existing run directory $alignment_directory");
         my $alignment_file = $self->alignment_file;
         my $aligner_output_file = $self->aligner_output_file;
         unless (-s $alignment_file && -s $aligner_output_file) {
             $self->warning_message("RE-PROCESSING: Moving old directory out of the way");
-            unless (rename ($read_set_alignment_directory,$read_set_alignment_directory . ".old.$$")) {
+            unless (rename ($alignment_directory,$alignment_directory . ".old.$$")) {
                 die "Failed to move old alignment directory out of the way: $!";
             }
             # fall through to the regular processing and try this again...
@@ -145,14 +146,14 @@ sub execute {
         }
     }
     unless (Genome::Utility::FileSystem->lock_resource(
-                                                       lock_directory => $read_set_alignment_directory,
+                                                       lock_directory => $alignment_directory,
                                                        resource_id => $self->instrument_data->id,
                                                    )) {
         $self->error_message('Failed to create lock for resource '. $self->instrument_data->id);
         return;
     }
     $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
-    $self->create_directory($read_set_alignment_directory);
+    $self->create_directory($alignment_directory);
     my $model = $self->model;
     my @ref_seq_paths = grep {$_ !~ /all_sequences/ } $model->get_subreference_paths(reference_extension => 'fa');
     unless (scalar(@ref_seq_paths)) {
@@ -167,8 +168,8 @@ sub execute {
                                                                      query_file => $self->fasta_file,
                                                                      subject_files => \@ref_seq_paths,
                                                                      blat_params => $blat_params,
-                                                                     psl_path => $self->read_set_alignment_file,
-                                                                     blat_output_path => $self->read_set_aligner_output_file
+                                                                     psl_path => $self->instrument_data_alignment_file,
+                                                                     blat_output_path => $self->instrument_data_aligner_output_file
                                                                  );
     unless ($blat_subjects->execute) {
         $self->error_message('Failed to execute '. $blat_subjects->command_name .' for '.
@@ -176,7 +177,7 @@ sub execute {
         return;
     }
     unless (Genome::Utility::FileSystem->unlock_resource(
-                                                         lock_directory => $read_set_alignment_directory,
+                                                         lock_directory => $alignment_directory,
                                                          resource_id => $self->instrument_data->id,
                                                      )) {
         $self->error_message('Failed to unlock resource '. $self->instrument_data->id);
@@ -188,16 +189,24 @@ sub execute {
 sub verify_successful_completion {
     my $self = shift;
 
-    unless (-d $self->read_set_alignment_directory) {
-        $self->error_message('Read set alignment directory is not found: '. $self->read_set_alignment_directory);
+    unless (-d $self->alignment_directory) {
+        $self->error_message('Alignment directory is not found: '. $self->alignment_directory);
+        return;
+    }
+    unless ($self->alignment_file) {
+        $self->error_message('Alignment file does not exist!');
         return;
     }
     unless (-s $self->alignment_file) {
-        $self->error_message('Alignment file does not exist or has zero size: '. $self->alignment_file);
+        $self->error_message('Alignment file has zero size: '. $self->alignment_file);
+        return;
+    }
+    unless ($self->aligner_output_file) {
+        $self->error_message('Aligner output file does not exist!');
         return;
     }
     unless (-s $self->aligner_output_file) {
-        $self->error_message('Aligner output file does not exist or has zero size: '. $self->aligner_output_file);
+        $self->error_message('Aligner output file has zero size: '. $self->aligner_output_file);
         return;
     }
     return 1;
