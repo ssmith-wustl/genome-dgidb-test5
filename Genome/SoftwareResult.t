@@ -22,6 +22,9 @@ my $mock_command = Genome::Model::Tools::Maq::AlignReads->create_mock(
                                                                       id => --$mock_id,
                                                                       files_to_align_path => $tmp_dir,
                                                                       ref_seq_file => $tmp_dir .'/test.refseq',
+                                                                      alignment_file => $tmp_dir .'/test.map',
+                                                                      aligner_output_file => $tmp_dir .'/test.out',
+                                                                      unaligned_reads_file => $tmp_dir .'/test.unaligned',
                                                                   );
 
 my $software_result = Genome::SoftwareResult->create(
