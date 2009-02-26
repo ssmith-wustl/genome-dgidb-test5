@@ -25,6 +25,7 @@ class Genome::Model::ReferenceAlignment {
         multi_read_fragment_strategy => { via => 'processing_profile'},
         prior_ref_seq                => { via => 'processing_profile'},
         read_aligner_name            => { via => 'processing_profile'},
+        read_aligner_version         => { via => 'processing_profile'},
         read_aligner_params          => { via => 'processing_profile'},
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
@@ -565,48 +566,38 @@ sub _get_sum_of_metric_values_from_events {
     return $sum;
 }
 
-# Refseq directories and names
+sub reference_build {
+    # we'll eventually have this return a real model build
+    # for now we return an object which handles making some
+    # of this API cleaner
+    my $self = shift;
+    unless ($self->{reference_build}) {
+        my $name = $self->reference_sequence_name;
+        my $build = Genome::Model::Build::ReferencePlaceholder->get(name => $name);
+        unless ($build) {
+            $build = Genome::Model::Build::ReferencePlaceholder->create(
+                name => $name,
+                sample_type => $self->dna_type,
+            );
+        }
+        return $self->{reference_build} = $build;
+    }
+    return $self->{reference_build};
+}
+
+
+# TODO: DEPRECATED
 
 sub reference_sequence_path {
-    my $self = shift;
-    my $path = sprintf('%s/reference_sequences/%s', '/gscmnt/839/info/medseq',
-                        $self->reference_sequence_name);
-
-    my $dna_type = $self->dna_type;
-    $dna_type =~ tr/ /_/;
-
-    if (-d $path . '.' . $dna_type) {
-        $path .= '.' . $dna_type
-    }
-
-    return $path;
+    shift->reference_build->data_directory(@_);
 }
 
 sub get_subreference_paths {
-    my $self = shift;
-    my %p = @_;
-
-    my $ext = $p{reference_extension};
-
-    return glob(sprintf("%s/*.%s",
-                        $self->reference_sequence_path,
-                        $ext));
+    return shift->reference_build->subreference_paths(@_);
 }
 
 sub get_subreference_names {
-    my $self = shift;
-    my %p = @_;
-
-    my $ext = $p{reference_extension} || 'fasta';
-
-    my @paths = $self->get_subreference_paths(reference_extension=>$ext);
-
-    my @basenames = map {basename($_)} @paths;
-    for (@basenames) {
-        s/\.$ext$//;
-    }
-
-    return @basenames;
+    return shift->reference_build->subreference_names(@_);
 }
 
 
