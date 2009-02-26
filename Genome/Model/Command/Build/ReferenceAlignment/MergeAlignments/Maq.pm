@@ -32,7 +32,7 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
+
     $DB::single = $DB::stopper;
 
     my $now = UR::Time->now;
@@ -52,7 +52,7 @@ sub execute {
             return;
         }
     }
-    
+
     my %library_alignments;
     
     if($model->id == 2667602812) {
@@ -83,65 +83,27 @@ sub execute {
     }
     else {
         # Normal code to get the map files. 
-        my @read_sets = $model->read_sets;
-        unless(@read_sets) {
-            $self->error_message("Model: " . $model->id .  " has no read sets?");
+        my @instrument_data_assignments = $model->instrument_data_assignments;
+        unless (@instrument_data_assignments) {
+            $self->error_message("Model: " . $model->id .  " has no instrument data assignments?");
             return;
         }
-        # pre-cache the data we'll grab individually below
-        my @read_set_ids = map {$_->read_set_id} @read_sets;
-        my @rc = $model->run_chunks;
-        my @sls = GSC::RunLaneSolexa->get(seq_id => \@read_set_ids);
-        
-        #my $align_dist_threshold = $model->align_dist_threshold;
-        #if ($align_dist_threshold) {
-        #    $self->status_message("alignment distribution threshold is set to $align_dist_threshold");
-        #}
-        #else {
-        #    $self->status_message("no alignment distribution threshold is set.  accepting all read sets");
-        #}
-        
+
         my @missing_maps;
         my @found_maps;
-        for my $read_set_link (@read_sets) {
-            unless(defined $read_set_link->first_build_id) {
-                $read_set_link->first_build_id($self->build_id);
+        for my $ida (@instrument_data_assignments) {
+            unless(defined $ida->first_build_id) {
+                $ida->first_build_id($self->build_id);
             }
-            
-            my $read_set = $read_set_link->read_set;
-            my $library = $read_set->library_name;
-            my $read_set_desc = $read_set->full_name . ' (library ' . $library . ')';
-
-            #if ($align_dist_threshold) {
-            #    my $evenness_metric = $align_reads->metric(name => 'evenness');
-            #     if ($evenness_metric) {
-            #      my $evenness = $evenness_metric->value;
-            #     if ($evenness < $align_dist_threshold) {
-            #          $self->warning_message("SKIPPING read set $read_set_desc which has evenness $evenness");
-            #       }
-            #  else {
-            #      $self->status_message("ADDING read set $read_set_desc with evenness $evenness");
-            #      }
-            #       }
-            #   else {
-            #   $self->warning_message("no evenness metric on read set $read_set_desc");
-            #    $self->status_message("ADDING read set $read_set_desc");
-            #           }
-            #        }
-            
-            my @map_files = $read_set_link->read_set_alignment_files_for_refseq($self->ref_seq_id);
+            my $library = $ida->library_name;
+            my $ida_desc = $ida->full_name . ' (library ' . $library . ')';
+            my @map_files = $ida->alignment_files_for_refseq($self->ref_seq_id);
             unless (@map_files) {
-                #$DB::single = 1;
-                #@map_files = $read_set_link->read_set_alignment_files_for_refseq($self->ref_seq_id);
-                my $msg = 
-                    "Failed to find map files for read set "
-                    . $read_set_link->read_set_id
-                    . "(" . $read_set->full_name . ")";
-                     $self->error_message($msg);
+                my $msg = 'Failed to find map files for instrument data '. $ida_desc;
+                $self->error_message($msg);
                 push @missing_maps, $msg;
             }
             $self->status_message("Found map files:\n" . join("\n\t",@map_files));
-            
             push @{$library_alignments{$library}}, @map_files;
         }
         if (@missing_maps) {
@@ -150,7 +112,7 @@ sub execute {
             $self->error_message("Map files are missing!");
         }
     }
-    
+
     for my $library (keys %library_alignments) {
         my $library_maplist = $maplist_dir .'/' . $library . '_' . $self->ref_seq_id . '.maplist';
         my $fh = IO::File->new($library_maplist,'w');
@@ -186,7 +148,7 @@ sub execute {
     #    }
     #    $next_event= Genome::Model::Event->get(prior_event_id=> $next_event->id); 
     #}
-    
+
     $self->date_scheduled($now);
     $self->date_completed(UR::Time->now());
     $self->event_status('Succeeded');
