@@ -1,0 +1,93 @@
+package Genome::Model::Build::ReferencePlaceholder;
+
+use strict;
+use warnings;
+
+use Genome;
+use File::Basename;
+
+# This class is an OO-representation of the reference used for reference alignments.
+# It will be replaced with a real model once we have one in place for all reference sequences used.
+# For now reference alignment models just make this upon first call to the accessor.
+
+class Genome::Model::Build::ReferencePlaceholder {
+    id_by => [
+        name            => { is => 'Text' },
+    ],
+    has => [
+        sample_type     => { is => 'Text' },
+        data_directory  => { is => 'Text' },
+    ],
+    doc => 'Temporary object representing the reference used in reference alignment models.  To be replaced with a real model build.',
+};
+
+sub get {
+    my $class = shift;
+    my $bx = $class->get_boolexpr_for_params(@_);
+    my %p = $bx->params_list;
+    unless ($p{id} || $p{name}) {
+        die __PACKAGE__ . ' can only be gotten by name!';
+    }
+    my $obj = $class->SUPER::get($bx);
+    return $obj if $obj;
+
+    $obj = $class->SUPER::create_object($bx);
+    return unless $obj;
+
+    my $path = sprintf('%s/reference_sequences/%s','/gscmnt/839/info/medseq',$obj->name);
+    $obj->data_directory($path);
+
+    return $obj;
+}
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    return unless $self;
+    
+    my $path = sprintf('%s/reference_sequences/%s','/gscmnt/839/info/medseq',$self->name);
+    my $dna_type = $self->sample_type;
+    $dna_type =~ tr/ /_/;
+    if (-d $path . '.' . $dna_type) {
+        $path .= '.' . $dna_type
+    }
+    $self->data_directory($path);
+    
+    return $self;
+}
+
+sub full_consensus_path {
+    my ($self,$format) = @_;
+    $format ||= 'bfa';
+    return $self->data_directory . '/all_sequences.bfa';
+}
+
+sub subreference_paths {
+    my $self = shift;
+    my %p = @_;
+
+    my $ext = $p{reference_extension};
+
+    return glob(sprintf("%s/*.%s",
+                        $self->data_directory,
+                        $ext));
+}
+
+sub subreference_names {
+    my $self = shift;
+    my %p = @_;
+
+    my $ext = $p{reference_extension} || 'fasta';
+
+    my @paths = $self->subreference_paths(reference_extension=>$ext);
+
+    my @basenames = map {basename($_)} @paths;
+    for (@basenames) {
+        s/\.$ext$//;
+    }
+
+    return @basenames;
+}
+
+
+1;
