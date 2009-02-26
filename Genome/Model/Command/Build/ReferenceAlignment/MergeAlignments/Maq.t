@@ -20,28 +20,25 @@ END {
 &cleanup();
 &setup_files();
 
-my @mock_run_chunks = map {
-                my $run_chunk = Test::MockObject->new();
-                $run_chunk->set_isa('Genome::RunChunk');
-                $run_chunk->set_always('library_name', 'Alexandria');
-                $run_chunk->set_always('full_name', 'Foo T. Blarg');
-                $run_chunk;
-           }
-           ( '1', '2' );
-
-my @mock_read_sets = map {
-                 my $read_set = Genome::Model::ReadSet->create_mock(
-                                                                    id => $_->{'read_set_id'} .' '. $_->{'model_id'},
-                                                                    read_set_id => $_->{'read_set_id'},
-                                                                    model_id => $_->{'model_id'},
-                                                                    first_build_id => $_->{'first_build_id'},
-                                                                );
-                 $read_set->set_list('read_set_alignment_files_for_refseq', @{$_->{'files'}});
-                 $read_set->set_always('read_set', shift @mock_run_chunks);
-                 $read_set;
-             }
-             ( { read_set_id => 'A', model_id => 12345, first_build_id => undef, files => ["$MAP_FILE_DIR/1", "$MAP_FILE_DIR/2"] },
-               { read_set_id => 'B', model_id => 12345, first_build_id => 98765, files => ["$MAP_FILE_DIR/3", "$MAP_FILE_DIR/4"] } );
+my @mock_instrument_data_assignments = map {
+    my $ida = Genome::Model::InstrumentDataAssignment->create_mock(
+                                                                   id => $_->{'instrument_data_id'} .' '. $_->{'model_id'},
+                                                                   instrument_data_id => $_->{'instrument_data_id'},
+                                                                   model_id => $_->{'model_id'},
+                                                                   first_build_id => $_->{'first_build_id'},
+                                                                   library_name => 'Alexandria',
+                                                                   full_name => 'Foo T. Blarg',
+                                                               );
+    $ida->set_list('alignment_files_for_refseq', @{$_->{'files'}});
+}
+    ( { instrument_data_id => '-1',
+        model_id => 12345,
+        first_build_id => undef,
+        files => ["$MAP_FILE_DIR/1", "$MAP_FILE_DIR/2"] },
+      { instrument_data_id => '-2',
+        model_id => 12345,
+        first_build_id => 98765,
+        files => ["$MAP_FILE_DIR/3", "$MAP_FILE_DIR/4"] } );
 
 my $pp = Genome::ProcessingProfile->create_mock(id => 12344);
 my $model = Genome::Model->create_mock(
@@ -52,9 +49,8 @@ my $model = Genome::Model->create_mock(
                                        subject_type => 'test_subject_type',
                                        processing_profile_id => $pp->id,
                                    );
-$model->set_list('read_sets', @mock_read_sets);
-$model->set_always('run_chunks', undef);
-$model->set_always('read_aligner_name','maq0.6.3');
+$model->set_list('instrument_data_assignments', @mock_instrument_data_assignments);
+$model->set_always('read_aligner_name','maq0_6_3');
 
 my $build = Genome::Model::Build->create_mock(
                                               id => 8675309,
