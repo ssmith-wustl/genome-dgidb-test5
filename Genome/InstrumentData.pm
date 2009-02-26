@@ -179,6 +179,63 @@ sub dump_to_file_system {
     return 1;
 }
 
+sub alignment_directory_for_aligner_and_refseq{
+    my $self = shift;
+    my $aligner_name = shift;
+    my $reference_sequence_name = shift;
+
+    unless ($aligner_name) {
+        die ('Must provide aligner name to alignment_directory_for_aligner_and_refseq');
+    }
+    unless ($reference_sequence_name ) {
+        die ('Must provide reference sequence name to alignment_directory_for_aligner_and_refseq');
+    }
+
+    my $base_alignment_directory = 
+        Genome::Config->alignment_links_directory()
+            .'/'. $aligner_name 
+            .'/'. $reference_sequence_name;
+
+    return sprintf('%s/%s/%s_%s',
+                       $base_alignment_directory,
+                       $self->run_name,
+                       $self->subset_name,
+                       $self->id
+                  );
+}
+
+sub find_or_generate_alignments_dir {
+    my $self = shift;
+    my %params = @_;
+
+    my $aligner_name = delete $params{aligner_name};
+
+    # delegate to the correct module by aligner name
+    my $aligner_ext = ucfirst($aligner_name);
+    my $cmd = "Genome::InstrumentData::Command::Align::$aligner_ext";
+    my $align_cmd = $cmd->create(%params, instrument_data => $self);
+    unless ($align_cmd) {
+        $self->error_message('Failed to create align command '. $cmd);
+        return;
+    }
+    unless ($align_cmd->execute) {
+        $self->error_message('Failed to execute align command '. $align_cmd->command_name);
+        return;
+    }
+    my $aligner_label = $align_cmd->version;
+    $aligner_label =~ s/\./_/g;
+    $aligner_label = $aligner_name . $aligner_label;
+
+    my $dir = $self->alignment_directory_for_aligner_and_refseq(
+                                                                $aligner_label,
+                                                                $align_cmd->reference_name,
+                                                            );
+    unless (-d $dir) {
+        die "no directory $dir found!"
+    }
+    return $dir;
+}
+
 ######
 # Needed??
 # WHY NOT USE RUN_NAME FROM THE DB????
