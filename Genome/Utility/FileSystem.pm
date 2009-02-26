@@ -242,7 +242,7 @@ sub shellcmd {
                 . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_inputs);
         }
     }
- $self->status_message("RUN: $cmd");
+    $self->status_message("RUN: $cmd");
     my $exit_code = system($cmd);
     #jpeck switched exit_code to 0, was the line below 
     #my $exit_code = $self->system_inhibit_std_out_err($cmd);
@@ -267,22 +267,45 @@ sub shellcmd {
 sub lock_resource {
     my ($self,%args) = @_;
 
-    my $lock_directory =  delete $args{lock_directory} || die('Must supply lock_directory to lock resource');
-    my $resource_id = $args{'resource_id'} || die('Must supply resource_id to lock resource');
+    my $resource_lock = delete $args{resource_lock};
+    my ($lock_directory,$resource_id);
+    if ($resource_lock) {
+        use File::Basename;
+        my $parent_dir = File::Basename::dirname($resource_lock);
+        $self->create_directory($parent_dir);
+        unless (-d $parent_dir) {
+            die "failed to make parent directory $parent_dir for lock $resource_lock!: $!";
+        }
+    }
+    else {
+        $lock_directory =  delete $args{lock_directory} || die('Must supply lock_directory to lock resource');
+        $self->create_directory($lock_directory);
+        $resource_id = $args{'resource_id'} || die('Must supply resource_id to lock resource');
+        $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
+    }
+    
     my $block_sleep = delete $args{block_sleep} || 60;
     my $max_try = delete $args{max_try} || 7200;
 
-    $self->create_directory($lock_directory);
-
     my $ret;
-    my $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
+    my $lock_info_pathname = $resource_lock . '/info';
     while(!($ret = mkdir $resource_lock)) {
         return undef unless $max_try--;
-        $self->status_message("waiting on lock for resource $resource_lock");
+        my $info_fh = IO::File->new($lock_info_pathname);
+        my $info_content;
+        if ($info_fh) {
+            $info_content = join('',$info_fh->getlines);
+        }
+        else {
+            $info_content = "unable to open file: $!";
+        }
+        $self->status_message(
+            "waiting on lock for resource $resource_lock\n"
+            . "lock info is: $info_content"
+        );
         sleep $block_sleep;
     }
 
-    my $lock_info_pathname = $resource_lock . '/info';
     my $lock_info = IO::File->new(">$lock_info_pathname");
     $lock_info->printf("HOST %s\nPID $$\nLSF_JOB_ID %s\nUSER %s\n",
                        $ENV{'HOST'},
@@ -292,19 +315,44 @@ sub lock_resource {
     $lock_info->close();
 
     eval "END { unlink \$lock_info_pathname; rmdir \$resource_lock;}";
-
-    return 1;
+    return $resource_lock;
 }
 
 sub unlock_resource {
     my ($self,%args) = @_;
-    my $lock_directory = delete $args{lock_directory} || die('No lock_directory specified for unlocking.');
-    my $resource_id = delete $args{resource_id} || die('No resource_id specified for unlocking.');
-    my $resource_lock = $lock_directory . "/" . $resource_id . ".lock";
+    my $resource_lock = delete $args{resource_lock};
+    my ($lock_directory,$resource_id);
+    unless ($resource_lock) {
+        $lock_directory =  delete $args{lock_directory} || die('Must supply lock_directory to lock resource');
+        $resource_id = $args{'resource_id'} || die('Must supply resource_id to lock resource');
+        $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
+    }
     unlink $resource_lock . '/info';
     rmdir $resource_lock;
     return 1;
 }
+
+sub check_for_path_existence {
+    my ($self,$path,$attempts) = @_;
+
+    unless (defined $attempts) {
+        $attempts = 5;
+    }
+
+    my $try = 0;
+    my $found = 0;
+    while (!$found && $try < $attempts) {
+        $found = -e $path;
+        sleep(1);
+        $try++;
+        if ($found) {
+            $self->status_message("existence check passed: $path");
+            return $found;
+        }
+    }
+    return;
+}
+
 
 1;
 
