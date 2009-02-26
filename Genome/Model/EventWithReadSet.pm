@@ -9,8 +9,6 @@ class Genome::Model::EventWithReadSet {
     is => 'Genome::Model::Event',
     is_abstract => 1,
     has => [
-            read_set       => { is => 'Genome::RunChunk', id_by => 'read_set_id', constraint_name => 'event_run' },
-            read_set_link  => { is => 'Genome::Model::ReadSet', id_by => ['model_id','read_set_id'] },
             instrument_data_assignment => {
                                            is => 'Genome::Model::InstrumentDataAssignment',
                                            id_by => ['model_id','read_set_id'],
@@ -26,19 +24,22 @@ class Genome::Model::EventWithReadSet {
             run_subset_name     => { via => 'read_set_link', to => 'subset_name' },
             library_name        => { via => 'read_set_link' },
             sample_name         => { via => 'read_set_link' },
-            alignment_directory => { via => 'read_set_link'},
-            read_set_alignment_directory  => {
-                                          calculate_from => ['alignment_directory','read_set_link'],
-                                          calculate => q|
-                                              return sprintf('%s/%s/%s_%s',
-                                                             $alignment_directory,
-                                                             $read_set_link->run_name,
-                                                             $read_set_link->subset_name,
-                                                             $read_set_link->seq_id,
-                                                            );
-                                          |,
-                            },
+            
         # deprecated
+        read_set       => { is => 'Genome::RunChunk', id_by => 'read_set_id', constraint_name => 'event_run' },
+        read_set_link  => { is => 'Genome::Model::ReadSet', id_by => ['model_id','read_set_id'] },
+        alignment_directory => { via => 'read_set_link'},
+        read_set_alignment_directory  => {
+                                      calculate_from => ['alignment_directory','read_set_link'],
+                                      calculate => q|
+                                          return sprintf('%s/%s/%s_%s',
+                                                         $alignment_directory,
+                                                         $read_set_link->run_name,
+                                                         $read_set_link->subset_name,
+                                                         $read_set_link->seq_id,
+                                                        );
+                                      |,
+                        },
         read_set_directory  => {
                                 calculate_from => ['model','read_set_link'],
                                 calculate => q|
