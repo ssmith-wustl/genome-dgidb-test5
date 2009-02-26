@@ -19,7 +19,8 @@ my %pp_params = (
     'ReferenceAlignment' => {
         name => 'test_reference_alignment',
         sequencing_platform => 'solexa',
-        read_aligner_name => 'maq0_6_8',
+        read_aligner_name => 'maq',
+        read_aligner_version => '0.6.8',
         reference_sequence_name => 'refseq-for-test',
         dna_type => 'genomic dna',
     },
