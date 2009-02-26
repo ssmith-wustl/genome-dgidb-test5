@@ -167,8 +167,6 @@ sub execute {
 
     # Make sure there aren't any bare args
 
-    $DB::single = 1;
-
     my $ref = $self->bare_args;
     if ( $ref && (my @args = @$ref) ) {
         $self->error_message("extra arguments: @args");
