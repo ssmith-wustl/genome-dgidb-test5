@@ -4,147 +4,94 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Utility::FileSystem; 
+use Genome::Utility::FileSystem;
 
 class Genome::Model::Tools::Maq::AlignReads {
-    is => 'Command',
+    is => 'Genome::Model::Tools::Maq',
     has => [
-           #######################################################		
+           #######################################################
+            use_version => {
+                            is => 'Version',
+                            default_value => '0.6.8',
+                            doc => "Version of maq to use"
+                        },
            dna_type => {
 			 doc => 'Optional switch which can be "dna" or "rna".  Each choice causes the application to use a specific primer file.  If no dna_type value is provided, an adaptor_file parameter must be used.',
 		         is => 'String',
 			 is_optional => 1,
-           }
-           ,
+           },
 	   adaptor_file => {
 			doc => 'Optional input file containing the appropriate pcr primer or adaptor strings.',
  			is => 'String',
 			is_optional => 1,
-	   }  
-	   ,
+	   },
 	   align_options => {
 			doc => 'The maq align reads parameters. These should be specified in a quoted string with single dashes, e.g. "-x -y -z"',
 		        is => 'String',
 			is_optional => 1,
                         default_value => '',
-	   }
-	   ,
-
+	   },
 	   upper_bound => {
 			doc => 'The maq option (-a) designating the upper bound on insert size. Defaults to 600.',
 		        is => 'Integer',
 			is_optional => 1,
 			default_value => 600,
-	   }
-	   ,
-
+	   },
 	   execute_sol2sanger => {
 			doc => 'An option to execute a sol2sanger conversion on the input fastq files.  "y"=yes, "n"=no.  Defaults to "no".',
 		        is => 'String',
 			is_optional => 1,
 			default_value => 'n',
-	   }
-	   ,
-
-	   maq_version => {
-			doc => 'An option containing the maq version to use.',
-		        is => 'String',
-			is_optional => 1,
-			default_value => 'maq-0.6.8_x86_64-linux',
- 			#TODO : look at maqsubclasser, 'maq_0_6_8'
-	   }
-	   ,
-	   maq_path => {
-			doc => 'Optional parameter containing full maq tool path.',
-		        is => 'String',
-			is_optional => 1,
-                        #default_value = '/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq',
-           }
-	   ,
+	   },
 	   force_fragments => {
 		doc => 'Optional switch to force fragment processing.',
 	        is => 'Integer',
 		is_optional => 1,
 		default_value => 0,
-           }
-           ,
-
+           },
 	   #####################################################
            #input files
-
 	   ref_seq_file => {
 			doc => 'Required input file name containing the reference sequence file.',           
 	  		is => 'String',
-			#default_value => 'all_sequences.bfa',
-			#is_optional => 1,
-			#this may be optional, might require a seq id and some processing 
-           }
-	   , 
+           },
 	   files_to_align_path => {
 			doc => 'Path to a directory or a file or a pipe separated list of files containing the reads to be aligned.  May be in fastq or bfq format.',
 			is => 'String',
-	   }
-	   ,
-
+	   },
 	   #####################################################
 	   #output files
-
 	   aligner_output_file => {
-			doc => 'Optional output log file containing results of the run. Defaults to "aligner.out"',
+			doc => 'Optional output log file containing results of the run.',
 			is => 'String',
-			is_optional => 1,
-			default_value => 'aligner.out',
-			#this may be optional
-	   }
-	   ,    
+	   },
 	   alignment_file => {
-			doc => 'Optional output file containing the aligned map data.  If no file is provided, will default to "all.map"',
+			doc => 'Optional output file containing the aligned map data.',
 			is => 'String',
-			is_optional => 1,
-			default_value => 'all.map',
-	   }
-           ,
+	   },
 	   unaligned_reads_file => {
-			doc => 'Output file containing unaligned data. Defaults to "unaligned.out"',
+			doc => 'Output file containing unaligned data.',
 		        is => 'String',
-                        is_optional => 1,
-		        default_value => 'unaligned.out', 
-           }
-	   ,
+           },
 	   duplicate_mismatch_file => {
 			doc => 'Output file containing dumped duplicate mismatches specified by the (-H) maq parameter. There is no default value.  If this file is not specified duplicate mismatches will not be dumped',
 		        is => 'String',
                         is_optional => 1,
-           }
-	   ,
-	   output_directory => {
-			doc => 'Optional output directory.  All output files will be placed here. Defaults to "output" in the current path.',
-			is => 'String',
-			is_optional => 1,
-                        default_value => 'output',
-	   }
-	   ,
+           },
 	   temp_directory => {
 			doc => 'Optional temp directory where fastq and bfqs will be stored when generated.  If no temp directory is specified, a temporary directory in /tmp will be created and then removed.',
 			is => 'String',
 			is_optional => 1,
-                        #default_value => 'tmp',
-	   }
-	   ,
+	   },
            #####################################################
            #private variables
            _files_to_align_list => {
 			 doc => 'The list of input files to align.',
 			 is => 'List',
 			 is_optional => 1,
-	   }
-           ,
+	   },
         ],
 };
-
-sub prepare_input {
-
-}
 
 sub help_synopsis {
 return <<EOS
@@ -172,29 +119,24 @@ EOS
 
 sub create {
     my $class = shift;
-    my $self = $class->SUPER::create(@_);
- 
-    #switch based on version
-    unless ( defined($self->maq_path) ) {
-	$self->maq_path('/gsc/pkg/bio/maq/'.$self->maq_version.'/maq');
-    }   
-    $self->status_message("Using aligner tool: ".$self->maq_path);
-    #default maq_path is '/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq';
+    my $self = $class->SUPER::create(@_); 
 
-    my $output_dir;
-    unless (-d $self->output_directory) {
-    	$output_dir =  Genome::Utility::FileSystem->create_directory($self->output_directory);
+    unless ($self) {
+        return;
     }
 
-   #set up the output files with the proper path 
-    #$self->alignment_file($self->output_directory.'/'.$self->alignment_file); 
-    $self->alignment_file($self->alignment_file); 
-    $self->unaligned_reads_file($self->output_directory.'/'.$self->unaligned_reads_file); 
-    $self->aligner_output_file($self->output_directory.'/'.$self->aligner_output_file); 
-    if( defined($self->duplicate_mismatch_file) ) {
-    	$self->duplicate_mismatch_file($self->output_directory.'/'.$self->duplicate_mismatch_file); 
+    unless ($self->use_version) {
+        my $msg = 'use_version is a required parameter to '. $class;
+        $self->delete;
+        die($msg);
     }
- 
+    unless ($self->maq_path) {
+        my $msg = 'No path found for maq version '. $self->use_version .".  Available versions are:\n";
+        $msg .= join("\n", $self->available_maq_versions);
+        $self->delete;
+        die($msg);
+    }
+    
     #these are constants and should probably be defined in class properties...TODO
     my $dna_primer_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer';
     my $rna_primer_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer_SMART';
@@ -214,7 +156,7 @@ sub create {
        } 
     } #end unless 
 
-     #if the adaptor file has been defined, make sure it exists 
+     #if the adaptor file has been defined, make sure it exists
      if ( defined($self->adaptor_file) ) {
      	unless(-f $self->adaptor_file) {
        	         $self->error_message('Specified adaptor file'.$self->adaptor_file.' does not exist.');
@@ -316,11 +258,10 @@ sub create {
      	my @bfq_pathnames;
      	my $counter=0;
      	for my $solexa_output_path (@listing) {
-		
 		my $fastq_pathname;
                 if ( $self->execute_sol2sanger eq lc('y') ) {
 		        $fastq_pathname = "$tmp_dir/fastq-$counter";
-                	my $sol_cmd = $self->maq_path." sol2sanger $solexa_output_path $fastq_pathname";
+                	my $sol_cmd = $self->maq_path ." sol2sanger $solexa_output_path $fastq_pathname";
 			$self->status_message('sol2sanger cmd:'.$sol_cmd);
 
      	        	Genome::Utility::FileSystem->shellcmd(
@@ -333,9 +274,8 @@ sub create {
 		  	$fastq_pathname = $solexa_output_path;
 			$self->status_message('No sol2sanger conversion is being performed.');
 		}
-            	
 		my $bfq_pathname = "$tmp_dir/bfq-$counter";
-        	my $bfq_cmd = $self->maq_path." fastq2bfq  $fastq_pathname $bfq_pathname";
+        	my $bfq_cmd = $self->maq_path ." fastq2bfq  $fastq_pathname $bfq_pathname";
 		$self->status_message('fastq2bfq cmd:'.$bfq_cmd);
 
      	        Genome::Utility::FileSystem->shellcmd(
@@ -346,23 +286,19 @@ sub create {
                 );
 
 		$counter++;
-                push @bfq_pathnames, $bfq_pathname; 
-    	} 
+                push @bfq_pathnames, $bfq_pathname;
+    	}
 
-	$self->_files_to_align_list(\@bfq_pathnames); 		
+	$self->_files_to_align_list(\@bfq_pathnames);
 
-     #end sol2sanger conversion if-block	
-     } elsif ( $binary_count > 0 ) { 
+     #end sol2sanger conversion if-block
+     } elsif ( $binary_count > 0 ) {
         #files are already binary, use those
         $self->status_message("Using bfqs.");
      	$self->_files_to_align_list(\@listing);
-     }  
+     }
 
     return $self;
-}
-
-sub create_temp_file {
-
 }
 
 sub _check_maq_successful_completion {
@@ -385,9 +321,6 @@ sub _check_maq_successful_completion {
      return;
 }
 
-
-
-
 sub execute {
     my $self = shift;
 
@@ -401,8 +334,8 @@ sub execute {
     $self -> status_message('');
     $self -> status_message('Output Files:');
     $self -> status_message('Alignment file:'.$self->alignment_file);
-    $self -> status_message('Unaligned reads file:'.$self->unaligned_reads_file);
-    $self -> status_message('Aligner output messages:'.$self->aligner_output_file);
+    $self -> status_message('Unaligned reads file:'.$self->unaligned_reads_file) if defined($self->unaligned_reads_file);
+    $self -> status_message('Aligner output messages:'.$self->aligner_output_file) if defined($self->aligner_output_file);
     $self -> status_message('');
     $self -> status_message('Other Parameters:');
     $self -> status_message('DNA type:'.$self->dna_type) if defined($self->dna_type);
@@ -410,7 +343,7 @@ sub execute {
     $self -> status_message('Align options:'.$self->align_options) if defined($self->align_options);
     $self -> status_message('Upper bound value:'.$self->upper_bound) if defined($self->upper_bound);
     $self -> status_message('Sol2sanger flag:'.$self->execute_sol2sanger) if defined($self->execute_sol2sanger);
-    $self -> status_message('Maq version:'.$self->maq_version) if defined($self->maq_version);
+    $self -> status_message('Maq version:'. $self->use_version) if defined($self->use_version);
     $self -> status_message("\n");
 
     
@@ -451,7 +384,7 @@ sub execute {
         . ' 2>&1';
 
     $self -> status_message($cmdline);
-   
+
    # run the aligner
    Genome::Utility::FileSystem->shellcmd(
        cmd                         => $cmdline,
@@ -459,12 +392,10 @@ sub execute {
        output_files                => [$self->alignment_file, $self->unaligned_reads_file, $self->aligner_output_file],
        skip_if_output_is_present   => 1,
    );
-   
    unless ($self->_check_maq_successful_completion($self->aligner_output_file))
    {
      return;
    }
-  
    return 1;
 }
 
