@@ -65,6 +65,10 @@ sub properties_hash {
                   read_aligner_name => {
                                         doc => 'alignment algorithm/software used for this model',
                                     },
+                  read_aligner_version => {
+                                           doc => 'the aligner version used for this model',
+                                           is_optional => 1,
+                                       },
                   read_aligner_params => {
                                           doc => 'command line args for the aligner',
                                           is_optional => 1,
