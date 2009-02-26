@@ -9,12 +9,12 @@ use Test::More;
 #tests => 1;
 
 if (`uname -a` =~ /x86_64/){
-    plan tests => 10;
+    plan tests => 11;
 } else{
     plan skip_all => 'Must run on a 64 bit machine';
 }
 
-my $expected_output = 2;
+my $expected_output = 3;
 
 my $ref_seq = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignReads/all_sequences.bfa";
 my $files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignReads/single-solexa";
@@ -33,12 +33,15 @@ my $force_fragments = 1;
  
 #Case 1: single read 
 my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
-							 ref_seq_file => $ref_seq,
-                                                         files_to_align_path => $files_to_align,
-							 execute_sol2sanger => $sol_flag,
-							 output_directory=> $output_dir,
-                                                         aligner_output_file => $aligner_log,
+                                                            ref_seq_file => $ref_seq,
+                                                            files_to_align_path => $files_to_align,
+                                                            execute_sol2sanger => $sol_flag,
+                                                            alignment_file => $output_dir .'/single_read.map',
+                                                            aligner_output_file => $output_dir .'/single_read.out',
+                                                            unaligned_reads_file => $output_dir .'/single_read.unaligned',
                                                         );
+
+is($aligner->use_version,'0.6.8','using 0.6.8 version of maq');
 
 #execute the tool 
 ok($aligner->execute,'AlignReads execution, single read solexa input with sol2sanger conversion.');
@@ -62,8 +65,9 @@ $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 							 ref_seq_file => $ref_seq,
                                                          files_to_align_path => $files_to_align,
 							 execute_sol2sanger => $sol_flag,
-							 output_directory => $output_dir,
-                                                         aligner_output_file => $aligner_log,
+                                                         alignment_file => $output_dir .'/paired-solexa.map',
+                                                         aligner_output_file => $output_dir .'/paired-solexa.out',
+                                                         unaligned_reads_file => $output_dir .'/paired-solexa.unaligned',
 							);
 
 #execute the tool 
@@ -90,7 +94,10 @@ $aligner = Genome::Model::Tools::Maq::AlignReads->create(
                                                          files_to_align_path => $files_to_align,
 							 execute_sol2sanger => $sol_flag,
 							 force_fragments => $force_fragments,
-							 output_directory=> $output_dir,
+                                                         alignment_file => $output_dir .'/paired-solexa-frag.map',
+                                                         aligner_output_file => $output_dir .'/paired-solexa-frag.out',
+                                                         unaligned_reads_file => $output_dir .'/paired-solexa-frag.unaligned',
+
 							);
 
 #execute the tool 
@@ -104,7 +111,7 @@ ok( scalar(@listing) eq $expected_output, "Number of output files expected = ".$
 #Case 4: test for dumping duplicate mismatch file
 #get a new output dir
 $output_dir = File::Temp::tempdir(CLEANUP => 1);
-$expected_output = 3;
+$expected_output++;
 #get new input test data
 $files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignReads/paired-solexa";
 
@@ -112,8 +119,10 @@ $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 							 ref_seq_file => $ref_seq,
                                                          files_to_align_path => $files_to_align,
 							 execute_sol2sanger => $sol_flag,
-							 duplicate_mismatch_file => "mismatch",
-							 output_directory=> $output_dir
+							 duplicate_mismatch_file => $output_dir .'/paired-solexa-mismatch.dat',
+                                                         alignment_file => $output_dir .'/paired-solexa-mismatch.map',
+                                                         aligner_output_file => $output_dir .'/paired-solexa-mismatch.out',
+                                                         unaligned_reads_file => $output_dir .'/paired-solexa-mismatch.unaligned',
 							);
 
 #execute the tool 

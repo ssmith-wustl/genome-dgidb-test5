@@ -40,7 +40,7 @@ if ($auto_execute) {
 
 #This should be removed when tests finish
 my $tmp_dir;
-
+my $message_flag = 1;
 my $model_name = "test_solexa_$ENV{USER}";
 my $processing_profile_name = "test_solexa_pp_$ENV{USER}";
 my $subject_name = 'H_GV-933124G-skin1-9017g';
@@ -55,6 +55,7 @@ my $add_reads_test = Genome::Model::Command::Build::ReferenceAlignment::Test->ne
     auto_execute => $auto_execute,
     read_sets => \@read_sets,
     tmp_dir => $tmp_dir,
+    messages => $message_flag,
 );
 isa_ok($add_reads_test,'Genome::Model::Command::Build::ReferenceAlignment::Test');
 
@@ -108,7 +109,7 @@ sub setup_test_data {
                 filt_aligned_clusters_pct  => -1,
                 filt_aligned_clusters_stdev=> -1,
                 clusters                   => 1,
-                filt_clusters              => -1,
+                filt_clusters              => 1,
                 filt_clusters_avg          => -1,
                 filt_clusters_stdev        => -1,
                 filt_error_rate_avg        => -1,
@@ -147,15 +148,15 @@ sub setup_test_data {
             }
             push @read_sets, $sls;
 
-            my $instrument_data = Genome::InstrumentData->create_mock(
-                                                                      id => $sls->seq_id,
-                                                                      sequencing_platform => 'solexa',
-                                                                      sample_name => $sls->sample_name,
-                                                                      run_name => $sls->run_name,
-                                                                  );
+            my $instrument_data = Genome::InstrumentData::Solexa->create(
+                                                                         id => $sls->seq_id,
+                                                                         sequencing_platform => 'solexa',
+                                                                         sample_name => $sls->sample_name,
+                                                                         subset_name => $lane,
+                                                                         run_name => $sls->run_name,
+                                                                     );
         }
     }
-    #UR::Context->_sync_databases();
     return @read_sets;
 }
 

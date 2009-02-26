@@ -119,6 +119,8 @@ sub setup_test_data {
                                );
             $instrument_data->mock('resolve_full_path',\&Genome::InstrumentData::resolve_full_path);
             $instrument_data->mock('resolve_sff_path',\&Genome::InstrumentData::454::resolve_sff_path);
+            $instrument_data->mock('alignment_directory_for_aligner_and_refseq',
+                                   \&Genome::InstrumentData::alignment_directory_for_aligner_and_refseq);
             $instrument_data->mock('sff_file',sub {
                                        my $self = shift;
                                        unless ($self->{_sff_path}) {
@@ -131,6 +133,5 @@ sub setup_test_data {
         }
     }
     chdir $cwd || die("Failed to change directory to '$cwd'");
-    #UR::Context->_sync_databases();
     return @read_sets;
 }
