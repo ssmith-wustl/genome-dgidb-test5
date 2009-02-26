@@ -32,6 +32,7 @@ my $model = Genome::Model::ReferenceAlignment->create_mock(
                                                            subject_name => 'test_subject_name',
                                                            last_complete_build_id => undef,
                                                            read_aligner_name => 'blat',
+                                                           reference_sequence_name => 'refseq-for-test',
                                                        );
 $model->set_always('alignment_directory', $tmp_dir .'/alignments');
 my $instrument_data = Genome::InstrumentData::454->create_mock(
@@ -43,6 +44,8 @@ my $instrument_data = Genome::InstrumentData::454->create_mock(
                                                         subset_name => 'test_subset',
                                                     );
 isa_ok($instrument_data,'Genome::InstrumentData::454');
+$instrument_data->mock('alignment_directory_for_aligner_and_refseq',
+                       \&Genome::InstrumentData::alignment_directory_for_aligner_and_refseq);
 $instrument_data->set_always('full_path',$tmp_dir);
 $instrument_data->set_always('sff_file', $tmp_dir.'/test.sff');
 $instrument_data->set_always('dump_to_file_system', 1);
@@ -53,8 +56,8 @@ my $ida = Genome::Model::InstrumentDataAssignment->create(
                                                           first_build_id => undef,
                                                       );
 isa_ok($ida,'Genome::Model::InstrumentDataAssignment');
-$instrument_data->mock('read_set_alignment_directory',
-                       \&Genome::Model::InstrumentDataAssignment::read_set_alignment_directory);
+$instrument_data->mock('alignment_directory',
+                       \&Genome::Model::InstrumentDataAssignment::alignment_directory);
 my $blat_aligner = Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat->create(
                        model_id => $model->id,
                        read_set_id => $instrument_data->id,
