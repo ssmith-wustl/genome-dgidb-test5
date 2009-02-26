@@ -17,11 +17,6 @@ use Sort::Naturally;
 use YAML;
 use Archive::Tar;
 
-=pod
-
-    ],
-=cut
-
 class Genome::Model {
     type_name => 'genome model',
     table_name => 'GENOME_MODEL',
@@ -458,64 +453,55 @@ sub comparable_normal_model {
     return $other;
 }
 
-# Operating directories
-
-# This is the directory for model data, alignment data, model comparison data, etc.
+# TODO: remove these since they're not supposed to vary on a per-model basis.
 sub base_parent_directory {
-    "/gscmnt/sata363/info/medseq"
+    return Genome::Config->root_directory;
 }
 
-# This directory should never contain data
-# only symlinks to the data directories across the filesystem
 sub model_links_directory {
-    return '/gscmnt/839/info/medseq/model_links';
+    return Genome::Config->model_links_directory;
 }
 
 sub alignment_links_directory {
-    return '/gscmnt/839/info/medseq/alignment_links';
+    return Genome::Config->alignment_links_directory;;
 }
 
 sub base_model_comparison_directory {
-    my $self = shift;
-    return "/gscmnt/839/info/medseq/model_comparisons";
+    return Genome::Config->model_comparison_link_directory;
 }
 
+sub model_data_directory {
+    return Genome::Config->model_data_directory;
+}
+
+# we should not expect that everything for a given
+# refseq and aligner be under one tree...
 sub alignment_directory {
     my $self = shift;
-    return $self->alignment_links_directory .'/'. $self->read_aligner_name .'/'.
-        $self->reference_sequence_name;
+    return Genome::Config->alignment_links_directory 
+        .'/'. $self->read_aligner_name 
+        .'/'. $self->reference_sequence_name;
 }
 
-# This is actual data directory on the filesystem
-# Currently the disk is hard coded in base_parent_directory
-sub model_data_directory {
-    my $self = shift;
-
-    if (defined($ENV{'GENOME_MODEL_TESTDIR'}) &&
-    -e $ENV{'GENOME_MODEL_TESTDIR'}) {
-        return $ENV{'GENOME_MODEL_TESTDIR'};
-    } else {
-        return $self->base_parent_directory .'/model_data';
-    }
-}
 
 # This is a human readable(model_name) symlink to the model_id based symlink
 # This symlink is created so humans can find their data on the filesystem
 sub model_link {
     my $self = shift;
     die sprintf("Model (ID: %s) does not have a name\n", $self->id) unless defined $self->name;
-    return $self->model_links_directory .'/'. $self->name;
+    return Genome::Config->model_links_directory .'/'. $self->name;
 }
 
-# This is the model_id based directory where the model data will be stored
+# These vary based on the current configuration, which could vary over
+# time.  This value is set when the model is created if not specified by the creator.
 sub resolve_data_directory {
     my $self = shift;
-    return $self->model_data_directory . '/' . $self->id;
+    return Genome::Config->model_data_directory . '/' . $self->id;
 }
 
 sub resolve_archive_file {
     my $self = shift;
-    return $self->model_data_directory .'/'. $self->id .'.tbz';
+    return $self->data_directory . '.tbz';
 }
 
 sub succeeded_builds {
