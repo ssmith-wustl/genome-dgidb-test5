@@ -101,7 +101,7 @@ sub read_length {
         die "no read set for id " . $self->read_set_id . "  " . Data::Dumper::Dumper($self);
     }
     if ($self->read_set->read_length <= 0) {
-        die('Impossible value for read_length field. seq_id:'. $self->read_set->seq_id);
+        die('Impossible value for read_length field. seq_id:'. $self->read_set->id);
     }
     return $self->read_set->read_length;
 }
@@ -124,8 +124,19 @@ sub read_set_alignment_files_for_refseq {
     # this returns the above, or will return the old-style split maps
     my $self = shift;
     my $ref_seq_id = shift;
+
+    unless (defined($ref_seq_id)) {
+        $self->error_message('No ref_seq_id passed to method read_set_alignment_files_for_refseq');
+        return;
+    }
+
     my $read_set = $self->read_set;
     my $alignment_dir = $self->read_set_alignment_directory;
+
+    unless (-d $alignment_dir) {
+        $self->error_message("The read_set_alignment_directory '$alignment_dir' does not exist.");
+        return;
+    }
 
     # Look for files in the new format: $refseqid.map.$eventid
     my @files = grep { $_ and -e $_ } (
@@ -154,9 +165,15 @@ sub delete {
 }
 
 sub get_alignment_statistics {
-    my $self=shift;
+    my $self = shift;
+
     #this method will eventually populate the metrics table but for now it populates dave larson 
     my ($aligner_output_file) = $self->aligner_output_file_paths;
+
+    unless ($aligner_output_file) {
+        $self->error_message('No aligner output files found.');
+        return;
+    }
 
     my $fh = IO::File->new($aligner_output_file);
     unless($fh) {
@@ -167,8 +184,17 @@ sub get_alignment_statistics {
     $fh->close;
 
     my ($line_of_interest)=grep { /total, isPE, mapped, paired/ } @lines;
+    unless ($line_of_interest) {
+        return;
+    }
     my ($comma_separated_metrics) = ($line_of_interest =~ m/= \((.*)\)/);
+    unless ($comma_separated_metrics) {
+        return;
+    }
     my @values = split(/,\s*/,$comma_separated_metrics);
+    unless (@values) {
+        return;
+    }
     my %hashy_hash_hash;
     $hashy_hash_hash{total}=$values[0];
     $hashy_hash_hash{isPE}=$values[1];
