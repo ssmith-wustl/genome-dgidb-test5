@@ -20,5 +20,19 @@ sub build_by_version {
     return $b[0];
 }
 
+sub sequence
+{
+    my $self = shift;
+    my $build = $self->last_complete_build();
+    return $build->sequence(@_);
+}
+
+sub get_bases_file
+{
+    my $self = shift;
+    my $build = $self->last_complete_build();
+    return $build->get_bases_file(@_);
+}
+
 1;
 
