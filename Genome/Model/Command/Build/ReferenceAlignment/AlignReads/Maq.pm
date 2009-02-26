@@ -12,43 +12,9 @@ use Genome::Model::ReadSet;
 class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq {
     is => [
         'Genome::Model::Command::Build::ReferenceAlignment::AlignReads',
-        'Genome::Model::Command::MaqSubclasser'
     ],
     has => [
-        # stop using self, go to the delegate
-        read_set_alignment_directory => { via => 'read_set_link' },
-        run_subset_name => { via => 'read_set_link' }, 
-        _calculate_total_read_count => { via => 'read_set_link'},
-        
-        # move to the tool
-        _alignment_file_paths_unsubmapped => {
-            doc => "the paths to to the map files before submapping (not always available)",
-            calculate => q|
-            return unless -d $read_set_directory;;
-            return grep { -e $_ } glob("${read_set_directory}/*${run_subset_name}.map");
-            |,
-            calculate_from => ['read_set_directory','run_subset_name'],
-        },
-        
-        # part of the reference sequence
-        subsequences => {
-            doc => "the sub-sequence names with out 'all_sequences'",
-            calculate_from => ['model'],
-            calculate => q|
-            return grep {$_ ne "all_sequences"} $model->get_subreference_names(reference_extension=>'bfa');
-            |,
-        },
-        
-        # pull from the model at the top
-        is_eliminate_all_duplicates => { via => 'model' },
-        
-        # used for one metric, but perhaps just during backfill?
-        input_read_file_path => {
-            is_transient=>1,
-            is_optional=>1,
-            doc => "temp storage for the fake filename for the metrics to calculate later",
-        },
-    
+            _calculate_total_read_count => { via => 'instrument_data'},
         #make accessors for common metrics
         (
             map {
@@ -187,7 +153,7 @@ sub _calculate_total_reads_passed_quality_filter_count {
             $total_reads_passed_quality_filter_count = ($self->read_set_link->unique_reads_across_library + $self->read_set_link->duplicate_reads_across_library);
         }
         unless ($total_reads_passed_quality_filter_count) {
-            my @f = grep {-f $_ } $self->input_read_file_path;
+            my @f = grep {-f $_ } $self->instrument_data->bfq_filenames;
             unless (@f) {
                 $self->error_message("Problem calculating metric...this doesn't mean the step failed");
                 return;
@@ -329,85 +295,6 @@ sub _calculate_total_base_pair_count {
     return $total_base_pair_count;
 }
 
-sub prepare_input {
-    my ($self, $read_set, $seq_dedup) = @_;
-
-    my $lane = $self->read_set_link->subset_name;
-    my $read_set_desc = $read_set->full_name . "(" . $read_set->id . ")";
-    my $gerald_directory = $read_set->_run_lane_solexa->gerald_directory;
-    unless ($gerald_directory) {
-        die "No gerald directory in the database for or $read_set_desc"
-    }
-    unless (-d $gerald_directory) {
-        die "No gerald directory on the filesystem for $read_set_desc: $gerald_directory";
-    }
-
-    # handle fragment or paired-end data
-    my @solexa_output_paths;
-    if($read_set->is_paired_end) {
-        
-        if (-e "$gerald_directory/s_${lane}_1_sequence.txt") {
-            push @solexa_output_paths, "$gerald_directory/s_${lane}_1_sequence.txt";
-        }
-        elsif (-e "$gerald_directory/Temp/s_${lane}_1_sequence.txt") {
-            push @solexa_output_paths, "$gerald_directory/Temp/s_${lane}_1_sequence.txt";
-        }
-        else {
-            die "No gerald forward data in directory for lane $lane! $gerald_directory";
-        }
-
-        if (-e "$gerald_directory/s_${lane}_2_sequence.txt") {
-            push @solexa_output_paths, "$gerald_directory/s_${lane}_2_sequence.txt";
-        }
-        elsif (-e "$gerald_directory/Temp/s_${lane}_2_sequence.txt") {
-            push @solexa_output_paths, "$gerald_directory/Temp/s_${lane}_2_sequence.txt";
-        }
-        else {
-            die "No gerald reverse data in directory for lane $lane! $gerald_directory";
-        }
-    }
-    else {
-        if (-e "$gerald_directory/s_${lane}_sequence.txt") {
-            push @solexa_output_paths, "$gerald_directory/s_${lane}_sequence.txt";
-        }
-        elsif (-e "$gerald_directory/Temp/s_${lane}_sequence.txt") {
-            push @solexa_output_paths, "$gerald_directory/Temp/s_${lane}_sequence.txt";
-        }
-        else {
-            die "No gerald data in directory for lane $lane! $gerald_directory";
-        }
-    }
-
-    return @solexa_output_paths;
-}
-
-sub prepare_external_input {
-    my ($self, $read_set, $seq_dedup) = @_;
-    my @bfq_pathnames;
-    #we're supporting ONLY THE ONE CASE WEVE DEALT WITH SO FAr. NOTHING FANCY, NOTHING ABSTRACTABLE.
-    #WHEN WE SEE DIFFERENT CASES THIS SHOULD GET MORE LOVE
-    my $data_path_object = Genome::MiscAttribute->get(entity_id=>$read_set->seq_id, property_name=>"full_path");
-    my $fastq_pathname=$data_path_object->value;
-
-
-    my $bfq_pathname = $self->create_temp_file_path('bfq');
-    unless ($bfq_pathname) {
-        die "Failed to create temp file for bfq!";
-    }
-
-    ##Moved this functionality into AlignReads.pm
-    #my $aligner_path = $self->aligner_path('read_aligner_name');
-    #$self->shellcmd(
-    #    cmd => "$aligner_path fastq2bfq $fastq_pathname $bfq_pathname",
-    #    input_files => [$fastq_pathname],
-    #    output_files => [$bfq_pathname],
-    #    skip_if_output_is_present => 1,
-    #);
-    
-    push @bfq_pathnames, $bfq_pathname;
-    return @bfq_pathnames;
-}
-
 
 # A hack replacement method for event.pm's method... it is a paste except 
 # doesnt use timestamps as they were causing sol2sanger issues
@@ -433,220 +320,75 @@ sub base_temp_directory {
 sub execute {
     my $self = shift;
     
-$DB::single = $DB::stopper;
-    $self->revert;
-    my $model = $self->model;
-    my $event_id = $self->id;
+    $DB::single = $DB::stopper;
     
-    # prepare the reads
-    # prepare the refseq
-    my $ref_seq_path =  $model->reference_sequence_path;
-    my $ref_seq_file =  $ref_seq_path . "/all_sequences.bfa";
-    unless (-e $ref_seq_file) {
-        $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
-        return;
-    }
-  
-    my $read_set_link = $self->read_set_link;
- 
-    # prepare paths for the results
-    if ($self->alignment_data_available_and_correct) {
-        $self->status_message("existing alignment data is available and deemed correct");
-        unless($read_set_link->first_build_id) {
-            $read_set_link->first_build_id($self->build_id);
-        }
-        return 1;
-    }
-    #is this message below really true?
-    $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
-    my @bfq_pathnames; 
-    #These will not be bfqs when returned from prepare_input. That is now handled in AlignReads
-  
-    if($self->read_set->_run_lane_solexa->is_external) {
-       @bfq_pathnames =  $self->prepare_external_input($self->read_set);
-    }
-    else
-    {
-        @bfq_pathnames = $self->prepare_input($self->read_set,$self->is_eliminate_all_duplicates);
-    }
+    # undo any changes from a prior run
+    $self->revert;
 
-    #I believe we will always want to execute sol2sanger here 
-    my $sol_flag='y'; 
-
-    #output dir
-    my $read_set_alignment_directory = $self->read_set_link->read_set_alignment_directory;
-    $self->create_directory($read_set_alignment_directory);
-    $self->create_file("Processing Marker", $read_set_alignment_directory . "/processing");
-
-    #additional params for AlignReads
-    my $aligner_path = $self->aligner_path('read_aligner_name');
-    my $aligner_params = $model->read_aligner_params || '';
-
-    # resolve adaptor file
-    # TODO: get fresh from LIMS
-    my $adaptor_flag;
-    my @dna = GSC::DNA->get(dna_name => $self->read_set_link->sample_name);
-    if (@dna == 1) {
-        if ($dna[0]->dna_type eq 'genomic dna') {
-       		$adaptor_flag = 'dna'; 
-        } elsif ($dna[0]->dna_type eq 'rna') {
-       		$adaptor_flag = 'rna'; 
+    # extract params to run the alignment
+    # from the model
+    my $model = $self->model;
+    my $aligner_name    = $model->read_aligner_name;
+    my $aligner_version = $model->read_aligner_version;
+    if ($aligner_name =~ /^(maq)(\d_\d_\d)$/) {
+        $aligner_name = $1;
+        unless ($aligner_version) {
+            $aligner_version = $2;
+            $aligner_version =~ s/_/\./g;
         }
     }
-    unless (defined($adaptor_flag)) {
-        $self->error_message("Adaptor not defined.");
-        return;
-    }
+    my $aligner_params  = $model->read_aligner_params;
+    my $reference_build = $model->reference_build;
 
-    ###input/output files
-    my $alignment_file = $self->create_temp_file_path("all.map");  
-    #changed the two methods below to only return the file name and not the absolute path 
-    my $aligner_output_file = $self->aligner_output_file_name;
-    my $unaligned_reads_file = $self->unaligned_reads_file_name;
+    # extract the data to align from this event's params
+    my $instrument_data = $self->instrument_data;
 
-    ###upper bound insert param
-    my $upper_bound_on_insert_size;
-    if ($read_set_link->is_paired_end) {
-        my $sd_above = $read_set_link->sd_above_insert_size;
-        my $median_insert = $read_set_link->median_insert_size;
-        $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;
-        unless($upper_bound_on_insert_size > 0) {
-            $self->status_message("Unable to calculate a valid insert size to run maq with. Using 600 (hax)");
-            $upper_bound_on_insert_size= 600;
-            #return;
-        }
-        # TODO: extract additional details from the read set
-        # about the insert size, and adjust the maq parameters.
-        # $aligner_params .= " -a $upper_bound_on_insert_size";
-    }
-  
- 
- 
-    #call AlignReads ###########################
-
-    $self->status_message("ref_seq_file =>". $ref_seq_file);
-    $self->status_message("files_to_align_path =>". join(",", @bfq_pathnames) );
-    $self->status_message("execute_sol2sanger =>". $sol_flag );
-    $self->status_message("maq_path =>". $aligner_path );
-    $self->status_message("align_options =>". $aligner_params );
-    $self->status_message("dna_type =>".$adaptor_flag);
-    $self->status_message("alignment_file =>". $alignment_file);
-    $self->status_message("aligner_output_file =>". $aligner_output_file);
-    $self->status_message("unaligned_reads_file =>". $unaligned_reads_file);
-    $self->status_message("upper_bound =>". $upper_bound_on_insert_size); 
-    $self->status_message("readset alignment dir =>". $read_set_alignment_directory);
-  
-    $self->status_message("Creating aligner."); 
-     my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
-        ref_seq_file            => $ref_seq_file,
-        files_to_align_path     => join("|", @bfq_pathnames),
-        execute_sol2sanger      => $sol_flag,
-        maq_path                => $aligner_path,
-        align_options           => $aligner_params, 
-        dna_type                => $adaptor_flag,
-        alignment_file          => $alignment_file,
-        aligner_output_file     => $aligner_output_file,
-        unaligned_reads_file    => $unaligned_reads_file,
-        upper_bound             => $upper_bound_on_insert_size, 
-        output_directory        => $read_set_alignment_directory,
+    # ensure the alignments are present
+    my $alignment_dir = $instrument_data->find_or_generate_alignments_dir(
+        aligner_name    => $aligner_name,
+        version         => $aligner_version,
+        params          => $aligner_params,
+        reference_build => $reference_build,
+        event           => $self,                       # for logging
     );
-
-    $self->status_message("Executing aligner.");
-    $aligner->execute; 
-    $self->status_message("Aligner executed.");
-    ##############################################
-
-    # in some cases maq will "work" but not make an unaligned reads file
-    # this happens when all reads are filtered out
-    # make an empty file to represent our zero-item list of unaligned reads
-    unless (-e $self->unaligned_reads_file) {
-        if (my $fh = IO::File->new(">".$self->unaligned_reads_file)) {
-            $self->status_message("Made empty unaligned reads file since that file is was not generated by maq.");
-        } else {
-            $self->error_message("Failed to make empty unaligned reads file!: $!");
+    
+    unless ($alignment_dir and -d $alignment_dir) {
+        if ($alignment_dir) {
+            $self->error_message("Missing alignment directory '$alignment_dir'!");
         }
+        $self->error_message("Error generating alignments!:\n" .  join("\n",$instrument_data->error_messages));
+        return;
     }
-
-    my $line=`/gscmnt/sata114/info/medseq/pkg/maq/branches/lh3/maq-xp/maq-xp pileup -t $aligner_output_file 2>&1`;
-    my ($evenness)=($line=~/(\S+)\%$/);
-
+    
+    my $instrument_data_assignment = $self->instrument_data_assignment;
+    unless($instrument_data_assignment->first_build_id) {
+        $instrument_data_assignment->first_build_id($self->build_id);
+    }
+    
+    # support the old links as well as the new for now...
+    my $read_set_link = $self->read_set_link;
+    unless($read_set_link->first_build_id) {
+        $read_set_link->first_build_id($self->build_id);
+    }
+    
+    $self->generate_metric($self->metrics_for_class);
+    
+    # the hard way to get one value...
+    my $evenness = IO::File->new($alignment_dir . '/evenness')->getline;
+    chomp $evenness;
     $self->add_metric(
         name => 'evenness',
         value => $evenness
     );
-
-$DB::single = $DB::stopper;
-
-    my @subsequences = $self->subsequences;
-    # break up the alignments by the sequence they match, if necessary
-    #my $map_split = Genome::Model::Tools::Maq::MapSplit->execute(
-        #                                                            map_file => $alignment_file,
-        ##                                                           submap_directory => $self->read_set_alignment_directory,
-        #                                                        reference_names => \@subsequences,
-        # 
-   # );
-    my $mapsplit_cmd = $self->proper_mapsplit_pathname('read_aligner_name');
-    my $ok_failure_flag=0;
-    if (@subsequences){
-    my $cmd = "$mapsplit_cmd " . $self->read_set_alignment_directory . "/ $alignment_file " . join(',',@subsequences);
-    #print $cmd, "\n";
-    $DB::single=1;
-    my $rv= system($cmd);
-        if($rv) {
-            #arbitrary convention set up with homemade mapsplit and mapsplit_long..return 2 if file is empty.
-            if($rv/256 == 2) {
-                $self->error_message("no reads in map.");
-                $ok_failure_flag=1;
-            }
-            else {
-                $self->error_message("Failed to run map split on alignment file $alignment_file");
-                return;
-            }
-        }
-    }
-    else 
-    {
-    @subsequences='all_sequences';
-    my $copy_cmd = "cp $alignment_file " . $self->read_set_alignment_directory . "/all_sequences.map";
-    my $copy_rv = system($copy_cmd);
-    if ($copy_rv) {
-        $self->error_message('copy of all_sequences.map failed');
-        die;
-        }
     
+    unless ($self->verify_successful_completion) {
+        $self->error_message("Error verifying completion!");
+        return;
     }
-    # these will match the wildcard which pulls old and new alignment files
-    # hacky: thsi still works even if no reads were in the map file, because one file will be touched before
-    #mapsplit quits.
-    my @split_files = glob($self->read_set_alignment_directory . "/*.map");
-    for my $output_file (@split_files) {
-        my $new_file_path = $output_file .'.'. $self->id;
-        unless (rename($output_file,$new_file_path)) {
-            $self->error_message("Failed to rename file '$output_file' => '$new_file_path'");
-            return;
-        }
-    }
-   
-    my $errors;
-    unless($ok_failure_flag) {
-        for my $subsequence (@subsequences) {
-            my @found = $self->read_set_alignment_files_for_refseq($subsequence);
-            unless (@found) {
-                $self->error_message("Failed to find map file for $subsequence!");
-                $errors++;
-            }
-        }
-        if ($errors) {
-            my @files = glob($self->read_set_alignment_directory . '/*');
-            $self->error_message("Files in dir are:\n\t" . join("\n\t",@files) . "\n");
-            return;
-        }
-    } 
-    $self->generate_metric($self->metrics_for_class);
-    $read_set_link=$self->read_set_link;
-    $read_set_link->first_build_id($self->build_id);
+
     return 1;
 }
+    
 
 sub verify_successful_completion {
     my ($self) = @_;
