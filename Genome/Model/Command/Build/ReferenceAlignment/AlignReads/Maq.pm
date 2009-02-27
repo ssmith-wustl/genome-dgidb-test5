@@ -42,7 +42,7 @@ EOS
 }
 
 sub bsub_rusage {
-    return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=8000]'";
+    return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=8000]' -M 8000000";
 }
 
 
