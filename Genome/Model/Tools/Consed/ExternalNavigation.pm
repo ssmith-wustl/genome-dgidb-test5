@@ -368,7 +368,7 @@ sub _change_preferences_select {
         Gtk2::Ext::EntryCrate->new(
             name => 'interval', 
             label => 'Time Interval', 
-            is => 'int >= 5',
+            is => 'int >= 1',
             default => $self->{_preferences}->{interval},
         ),
         Gtk2::Ext::EntryCrate->new(
