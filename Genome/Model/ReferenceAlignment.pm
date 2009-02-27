@@ -573,7 +573,10 @@ sub reference_build {
     my $self = shift;
     unless ($self->{reference_build}) {
         my $name = $self->reference_sequence_name;
-        my $build = Genome::Model::Build::ReferencePlaceholder->get(name => $name);
+        my $build = Genome::Model::Build::ReferencePlaceholder->get(
+                                                                    name => $name,
+                                                                    sample_type => $self->dna_type,
+                                                                );
         unless ($build) {
             $build = Genome::Model::Build::ReferencePlaceholder->create(
                 name => $name,
