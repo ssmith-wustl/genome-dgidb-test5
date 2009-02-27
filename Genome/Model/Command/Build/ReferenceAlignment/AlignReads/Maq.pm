@@ -356,7 +356,7 @@ sub execute {
         if ($alignment_dir) {
             $self->error_message("Missing alignment directory '$alignment_dir'!");
         }
-        $self->error_message("Error generating alignments!:\n" .  join("\n",$instrument_data->error_messages));
+        $self->error_message("Error generating alignments!:\n" .  join("\n",$instrument_data->error_message));
         return;
     }
     
