@@ -18,6 +18,10 @@ class Genome::InstrumentData::Sanger {
     ]
 };
 
+sub _data_base_path {
+    return '/gscmnt/402/core/16S/info/instrument_data/';
+}
+
 #< Dump to File System >#
 sub dump_to_file_system {
     my $self = shift;
