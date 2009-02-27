@@ -6,14 +6,15 @@ use warnings;
 use PP;
 use Genome;
 use File::Temp;
+use File::Path;
 use File::Basename;
 use Bio::SeqIO;
 use Bio::Seq::Quality;
 
 
 class Genome::Model::Tools::Fastq::ToPhdballScf::Chunk {
-    is           => 'Genome::Model::Tools::Fastq::ToPhdballScf',
-    has_optional => [
+    is  => 'Genome::Model::Tools::Fastq::ToPhdballScf',
+    has => [
         chunk_size => {
             is  => 'Integer',
             doc => 'number of each chunk fastq',
@@ -39,14 +40,7 @@ sub execute {
 
     my $ball_file = $self->ball_file;
     my $ball_dir  = dirname($self->ball_file);
-    my $tmp_file  = _get_tmp_file($ball_dir);
     
-    my $fq_io  = $self->get_fastq_reader($self->fastq_file);   
-    my $out_io = $self->get_fastq_writer($tmp_file);
-
-    my %jobs;
-    my @ball_files;
-
     my $cmd = 'gt fastq to-phdball-scf';
     
     for my $property (qw(time scf_dir base_fix)) {
@@ -63,36 +57,32 @@ sub execute {
         }
     }
     
-    my $fq_ct = 0;
-    my $id_ct = 0;
+    my $chunk = Genome::Model::Tools::Fastq::Chunk->create(
+        fastq_file => $self->fastq_file,
+        chunk_size => $self->chunk_size,
+        chunk_dir  => $ball_dir,
+    );
+    my $fq_chunk_files = $chunk->execute;
+
+    my %jobs;
+    my @ball_files;
+    my $fq_chunk_dir;
     my $bl_ct = 0;
-
-    while (my $fq = $fq_io->next_seq) {
-        if ($fq_ct == $self->chunk_size) {
-            $fq_ct = 0;
-            $bl_ct++;
-            
-            my $ball_chunk_file = $ball_dir.'/phd.ball.'.$bl_ct;
-            push @ball_files, $ball_chunk_file;
-
-            my $job = $self->_lsf_job($cmd, $id_ct, $ball_chunk_file, $tmp_file);           
-            $jobs{$bl_ct} = $job;
-            
-            $tmp_file = _get_tmp_file($ball_dir);
-            $out_io = $self->get_fastq_writer($tmp_file);
+    
+    for my $fq_chunk_file (@$fq_chunk_files) {
+        unless (-s $fq_chunk_file) {
+            $self->error_message("fastq chunk file: $fq_chunk_file not existing");
+            return;
         }
-        $out_io->write_fastq($fq);
-        $fq_ct++;
-        $id_ct++;
-    }
-    
-    $bl_ct++;
-    my $ball_chunk_file = $ball_dir.'/phd.ball.'.$bl_ct;
-    push @ball_files, $ball_chunk_file;
+        $fq_chunk_dir = dirname $fq_chunk_file unless $fq_chunk_dir;
+        $bl_ct++;
+        my $ball_chunk_file = $ball_dir.'/phd.ball.'.$bl_ct;
+        push @ball_files, $ball_chunk_file;
 
-    my $job = $self->_lsf_job($cmd, $id_ct, $ball_chunk_file, $tmp_file);   
-    $jobs{$bl_ct} = $job;
-    
+        my $job = $self->_lsf_job($cmd, $fq_chunk_file, $ball_chunk_file);           
+        $jobs{$bl_ct} = $job;
+    }
+            
     map{$_->start()}values %jobs;
 
     my %run;
@@ -120,31 +110,17 @@ sub execute {
     my $files = join ' ', @ball_files;
     system "cat $files > $ball_file";
     map{unlink $_}@ball_files;
+    rmtree $fq_chunk_dir;
     
     return 1;
 }
             
 
-sub _get_tmp_file {
-    my (undef, $tmp_file) = File::Temp::tempfile(
-        'FastqChunkXXXXX',
-        UNLINK => 1,
-        DIR    => shift,
-        SUFFIX => '.fq',
-    );
-    return $tmp_file;
-}
-
-
 sub _lsf_job {
-    my ($self, $command, $id_ct, $ball_chunk_file, $tmp_file) = @_;
-    
-    my $chunk_size = $self->chunk_size;
-    my $id_range   = ($id_ct - $chunk_size + 1).'-'.$id_ct;
-                  
+    my ($self, $command, $fq_chunk_file, $ball_chunk_file) = @_;
+                      
     $command .= ' --ball-file '.$ball_chunk_file;
-    $command .= ' --id-range '.$id_range;
-    $command .= ' --fastq-file '.$tmp_file;
+    $command .= ' --fastq-file '.$fq_chunk_file;
 
     return PP->create(
         pp_type => 'lsf',
