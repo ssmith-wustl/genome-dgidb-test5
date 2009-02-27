@@ -139,7 +139,7 @@ sub _run_phred {
         system "$command -process_nomatch";
     }
 
-    $self->error_msg("Phred failed on $scf_file")
+    $self->error_message("Phred failed on $scf_file")
         and return unless -s $phd_file;
 
     return $phd_name;
