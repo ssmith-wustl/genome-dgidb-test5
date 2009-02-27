@@ -54,6 +54,10 @@ sub build_subclass_name {
 }
 
 #< Files & Dirs >#
+sub base_parent_directory {
+    return '/gscmnt/402/core/16S/info/model_data';
+}
+
 sub create_consed_directory_structure {
     return $_[0]->consed_directory->create_consed_directory_structure;
 }
