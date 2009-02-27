@@ -404,14 +404,21 @@ sub remove_data {
 
     my $model = $self->model;
     my @alignment_events = $model->alignment_events;
-    my @alignment_dirs = map { $_->read_set_link->read_set_alignment_directory } @alignment_events;
+    my @idas = map { $_->instrument_data_assignment }@alignment_events;
+    my @alignment_dirs = map { $_->alignment_directory } @idas;
+    my @instrument_data = map { $_->instrument_data } @idas;
+
+    # These must be deleted before we save
     my $archive_file = $model->resolve_archive_file;
 
     # FIXME - the delete below causes a lot of warning messages about deleting
     # hangoff data.  do we need to check the contents?
     $self->_trap_messages('Genome::Model::Event');
     $self->_trap_messages('Genome::Model::Command::AddReads');  # Why didn't the above catch these, too?
+
+    ok(UR::Context->_sync_databases,'sync with the database');
     ok($self->model->delete,'successfully removed model');
+
     my $directories_to_remove = $self->{_dir_array_ref};
     #print "Removing directories:\n";
     for my $directory_to_remove (@$directories_to_remove, @alignment_dirs) {
