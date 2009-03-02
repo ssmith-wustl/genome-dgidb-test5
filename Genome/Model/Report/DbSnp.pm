@@ -18,7 +18,18 @@ class Genome::Model::Report::DbSnp{
     has => [
         override_model_snp_file => {
             type => 'Text',
+            is_optional => 1,
             doc => "for testing, use this snp file instead of the real file for the model/build",
+        },
+        override_model_db_snp_file => {
+            type => 'Text',
+            is_optional => 1,
+            doc => "Use this db snp file instead of generating a new one.",
+        },
+        override_build => {
+            type => 'Text',
+            is_optional => 1,
+            doc => "Use this build instead of looking it up.",
         }
     ],
 };
@@ -68,31 +79,58 @@ sub generate_report_detail
 {
     my $self = shift;
     my $model = $self->model;
-    my $build = $self->build;
-    my $db_snp_path = $self->SUPER::resolve_reports_directory() . $model->genome_model_id.'snps.dbsnp';  
+
+    #my $build = $self->build;
+    my $build;
+    $build = $model->current_running_build;
+
+    my $output_file = $self->report_detail_output_filename;  
+    #print("Will write report to output file: $output_file"); 
+   
     my $snp_file;
-    unless ($snp_file = $self->override_model_snp_file) {
-        $snp_file = $self->_generate_combined_snp_file;
-    }    
+    my $db_snp_file;
+    my $db_snp_path;
+
+    my $cmd;
+
+    my $r = new CGI;
+    
+
+    if  (defined $self->override_model_snp_file) {
+   	$snp_file =  $self->override_model_snp_file;
+    }  else { 
+	$snp_file = $self->_generate_combined_snp_file;
+    }  
+
     unless ($snp_file) {
-        die "Failed to generate combined snp file!";
+	die "Failed to generate or assign combined snp file!";
     }
+
     unless (-e $snp_file) {
-        die "SNP file $snp_file does not exist!";
+	die "SNP file $snp_file does not exist!";
     }
 
-   #my $snp_file  = "/gscmnt/sata146/info/medseq/dlarson/GBM_Genome_Model/tumor/2733662090.snps";
+    if (defined $self->override_model_db_snp_file) {
+  
+        $db_snp_file = $self->override_model_db_snp_file;
+	#print("\nUsing provided db snp file: $db_snp_file\n");
+	$db_snp_path = $db_snp_file;
+        $cmd = "No command executed.  Using provided db snp file: $db_snp_file";
 
-   my $r = new CGI;
-   my $cmd = "gt snp create-dbsnp-file-from-snp-file " .
+    } else {
+        $db_snp_path = $self->resolve_reports_directory() . $model->genome_model_id.'snps.dbsnp';  
+
+   	$cmd = "gt snp create-dbsnp-file-from-snp-file " .
              "--output-file $db_snp_path " .
              "--snp-file $snp_file";
-   my $db_rpt = `$cmd`; 
-
+  	my $db_rpt = `$cmd`; 
+   }
+	 
    my $concordance_cmd = "gt snp db-snp-concordance ".
                "--dbsnp-file $db_snp_path ".
                "--snp-file $snp_file"; 
- 
+
+   #print("Generating concordance report using cmd: $concordance_cmd"); 
    my $concordance_report = `$concordance_cmd`;
 
    my $concordance_quality_cmd = "gt snp db-snp-concordance ".
@@ -100,14 +138,29 @@ sub generate_report_detail
              "--dbsnp-file $db_snp_path ".
              "--snp-file $snp_file"; 
    
+   #print("Generating concordance quality report using cmd: $concordance_quality_cmd"); 
    my $concordance_quality_report = `$concordance_quality_cmd`;
  
-   my $output_file = $self->report_detail_output_filename;   
-   
+  
+   my $build_id;
+   if (defined $build) {
+	$build_id = $build->build_id; 
+   } else {
+        $build_id = 'UNKNOWN';
+   }
+ 
    my $body = IO::File->new(">$output_file");  
    die unless $body;
-        $body->print( $r->start_html(-title=> 'Db Snp for ' . $model->genome_model_id . ' build(' . $build->id . ')'));
-        $body->print("<h3>Concordance Report</h3>");
+        $body->print( $r->start_html(-title=> 'Db Snp for ' . $model->genome_model_id . ' build(' . $build_id . ')'));
+        $body->print("<h3>Concordance Report<h3>");
+        $body->print("<p/>");
+        $body->print("DbSnp create command:  ".$cmd);
+        $body->print("<p/>");
+        $body->print("DbSnp concordance command:  ".$concordance_cmd);
+        $body->print("<p/>");
+        $body->print("DbSnp concordance quality command:  ".$concordance_quality_cmd);
+        $body->print("<p/>");
+        $body->print("");
         $body->print("<pre>$concordance_report</pre>");
         $body->print("<h3>Concordance by Quality Report</h3>");
         $body->print("<pre>$concordance_quality_report</pre>");
