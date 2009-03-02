@@ -71,7 +71,11 @@ sub _files_for_pattern_and_optional_ref_seq_id {
     my $self=shift;
     my $pattern = shift;
     my $ref_seq=shift;
-
+    
+    if($ref_seq eq 'all_sequences') {
+        return sprintf($pattern,$self->data_directory,$ref_seq);
+    }
+    
     my @files = 
     map { 
         sprintf(
