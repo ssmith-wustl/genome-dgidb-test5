@@ -23,8 +23,21 @@ class Genome::Model::Report::RefSeqMaq{
         {
             type => 'String',
             doc => "Path for .bfa file", #does this need to be a param?
+            #default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/",
             default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/",
         }, 
+        accumulated_alignments_file =>
+        {
+            type => 'String',
+            doc => "Accumulated alignments file name i.e. the big map file",
+            is_optional => 1,
+        },
+        version   => { 
+            is => 'String', 
+            default =>'maq0_6_8', 
+            doc =>"vmerge for 'maq0_6_8' or 'maq0_7_1'",
+        },
+
         cmd =>
         {
             type => 'String',
@@ -107,42 +120,29 @@ sub get_maq_content
     my $reports_dir = $self->model->resolve_reports_directory;
     $file_name = $self->report_detail_output_filename;
     $self->status_message("Will write final report file to: ".$file_name);
-    
-    my @all_map_lists;
-    my @map_list;
-    my $c;
-    my @chromosomes = (1..22,'X','Y');
-    #my @chromosomes = (22);
-    foreach $c(@chromosomes) {
-        my $a_ref_seq = Genome::Model::RefSeq->get(model_id=>$model->genome_model_id,ref_seq_name=>$c);
-        @map_list = $a_ref_seq->combine_maplists;
-        push (@all_map_lists, @map_list); 
-    }
-   
-    my $result_file = '/tmp/mapmerge_'.$model->genome_model_id;
+ 
+    my $result_file = $self->accumulated_alignments_file;
 
-    $self->warning_message("Performing a complete mapmerge for $result_file \n"); 
-    ($fh,$maplist) = File::Temp::tempfile;
-    $fh->print(join("\n",@all_map_lists),"\n");
-    $fh->close;
-    $self->status_message("gt maq vmerge --maplist $maplist --pipe $result_file &");
-    system "gt maq vmerge --maplist $maplist --pipe $result_file &";
-    my $start_time = time;
-    until (-p "$result_file" or ( (time - $start_time) > 100) )  {
-            $self->status_message("Waiting for pipe...");
-            sleep(5);
-    }
-    unless (-p "$result_file") {
-            die "Failed to make pipe? $!";
-    }
-    $self->status_message("Streaming into file $result_file.");
-       
-    $self->warning_message("mapmerge complete.  output filename is $result_file");
-    chmod 00664, $result_file;
+    #my $result_file; 
+    #if ($model->id < 10 ) {
+    #	   $result_file = $self->accumulated_alignments_file; 
+    #} else {
+    #   #moved to EventWithRefSeq	
+    #} 
 
     #$bfa_file = $self->bfa_path . "22" . ".bfa " . $result_file;
     $bfa_file = $self->bfa_path . "all_sequences.bfa " . $result_file;
-    $cmd = $self->cmd . " " .$bfa_file; 
+    if ($self->version eq 'maq0_6_8') {
+        $cmd = '/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq';
+    } elsif ($self->version eq 'maq0_7_1') {
+        $cmd = '/gsc/pkg/bio/maq/maq-0.7.1-64/bin/maq';
+    }
+    else {
+        die "wtf?";
+    }    
+ 
+    $cmd .=  " mapcheck $bfa_file"; 
+    $self->status_message("Mapcheck command: ".$cmd);
     @maq = `$cmd`;
     $rpt = join('',@maq);
     $rpt = $self->format_maq_content($rpt); 
