@@ -75,11 +75,12 @@ sub generate_report_detail
    my $cmd = "gt snp gold-snp-intersection " .
              "--gold-snp-file $gold_snp_path " .
              "--snp-file $snp_file";
+   $self->status_message("GoldSnp command: ".$cmd);
    my $gold_rpt = `$cmd`; 
    my $output_file = $self->report_detail_output_filename;   
     
     my $body = IO::File->new(">$output_file");  
-    die unless $body;
+    die $! unless $body;
         $body->print( $r->start_html(-title=> 'Gold Snp for ' . $model->genome_model_id ,));
         $gold_rpt = $self->format_report($gold_rpt);
         $body->print("$gold_rpt");
