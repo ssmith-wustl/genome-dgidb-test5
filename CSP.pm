@@ -669,6 +669,7 @@ my %csp_priority = (
     'configure image analysis and base call'  => 1,
     'configure alignment'                     => 1,
     'generate lane summary'                   => 1,
+    'copy sequence files'                     => 1,
     'analysis completed'                      => 1,
     'import sequence'                         => 1,
 #    'copy run'                                => 1,
