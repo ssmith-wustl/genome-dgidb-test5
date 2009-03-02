@@ -15,7 +15,6 @@ use Sort::Naturally;
 class Genome::Model::ReferenceAlignment {
     is => 'Genome::Model',
     has => [       
-        processing_profile    => { is => 'Genome::ProcessingProfile::ReferenceAlignment', id_by => 'processing_profile_id' },
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
         genotyper_name               => { via => 'processing_profile'},
@@ -729,7 +728,7 @@ sub _mapmerge_locally {
 }
 
 
-sub resolve_accumulated_alignments_filename {
+sub XXXXXresolve_accumulated_alignments_filename {
     my $self = shift;
     my %p = @_;
     my $ref_seq_id = $p{ref_seq_id};
