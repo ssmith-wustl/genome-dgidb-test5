@@ -630,12 +630,12 @@ sub combine_variants_for_set{
         my ($chr1, $start1, $sample1, $chr2, $start2, $sample2);
         if ($polyscan_genotype){
             $chr1 = $polyscan_genotype->{chromosome};
-            $start1 = $polyscan_genotype->{start};
+            $start1 = $polyscan_genotype->{begin_position};
             $sample1 = $polyscan_genotype->{sample_name};
         }
         if ($polyphred_genotype){
             $chr2 = $polyphred_genotype->{chromosome};
-            $start2 = $polyphred_genotype->{start};
+            $start2 = $polyphred_genotype->{begin_position};
             $sample2 = $polyphred_genotype->{sample_name};
         }
         my $cmp = compare_position_and_sample($chr1, $start1, $sample1, $chr2, $start2, $sample2);
@@ -779,9 +779,6 @@ sub parse_genotype_line {
         $hash->{$header} = shift(@columns);
     }
 
-    #FIXME remove
-    $DB::single=1 if ($hash->{sample_name} eq 'H_GP-NA12144_02' and $hash->{polyscan_score} eq 'NM_004847');
-
     return $hash;
 }
 
@@ -804,10 +801,9 @@ sub genotype_columns{
     my $self = shift;
     return qw(
     chromosome 
-    start 
-    stop 
+    begin_position
+    end_position
     sample_name
-    strand
     gene
     variation_type
     reference
@@ -831,8 +827,8 @@ sub annotated_columns{
     my $self = shift;
     return qw(
     chromosome 
-    start 
-    stop 
+    begin_position
+    end_position
     sample_name
     variation_type
     reference
@@ -848,7 +844,6 @@ sub annotated_columns{
     polyphred_score
     transcript_name
     transcript_source
-    strand
     c_position
     trv_type
     priority
@@ -873,8 +868,8 @@ sub maf_columns {
     center
     ncbi_build
     chromosome
-    start
-    stop
+    begin_position
+    end_position
     strand
     variant_classification
     variation_type
@@ -919,8 +914,8 @@ sub next_hq_annotated_genotype_in_range{
     my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
     while (my $genotype = $self->next_hq_annotated_genotype){
         return undef unless $genotype;
-        if (compare_position($chrom_start, $pos_start, $genotype->{chromosome}, $genotype->{start}) <= 0 and 
-            compare_position($genotype->{chromosome}, $genotype->{start}, $chrom_stop, $pos_stop) <= 0){
+        if (compare_position($chrom_start, $pos_start, $genotype->{chromosome}, $genotype->{begin_position}) <= 0 and 
+            compare_position($genotype->{chromosome}, $genotype->{begin_position}, $chrom_stop, $pos_stop) <= 0){
             return $genotype;
         }
     }
@@ -934,8 +929,8 @@ sub next_lq_annotated_genotype_in_range{
     my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
     while (my $genotype = $self->next_hq_annotated_genotype){
         return undef unless $genotype;
-        if (compare_position($chrom_start, $pos_start, $genotype->{chromosome}, $genotype->{start}) <= 0 and 
-            compare_position($genotype->{chromosome}, $genotype->{start}, $chrom_stop, $pos_stop) <= 0){
+        if (compare_position($chrom_start, $pos_start, $genotype->{chromosome}, $genotype->{begin_position}) <= 0 and 
+            compare_position($genotype->{chromosome}, $genotype->{begin_position}, $chrom_stop, $pos_stop) <= 0){
             return $genotype;
         }
     }
@@ -1037,8 +1032,6 @@ sub write_maf_file{
 
         my $tumor_genotype;
         my $normal_genotype;
-
-        $DB::single=1 if (!defined($sample_basename) or !defined($current_sample_basename)); # FIXME remove
 
         if ($sample_basename eq $current_sample_basename){
             push @current_sample_basename_genotypes, $genotype;

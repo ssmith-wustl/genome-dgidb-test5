@@ -67,14 +67,21 @@ sub execute {
     $self->output_file($output_filename);
 
     # Create parsers for each file, append to running lists
-    # TODO eliminate duplicates!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     for my $file (@input_files) {
-        #TODO make sure assembly project names are going to be kosher
-        my ($assembly_project_name) = $file =~ /\/([^\.\/]+)\.poly(scan|phred)\.(low|high)$/;
+        #my ($cluster_name, $chromosome, $begin_position, $end_position) = $file =~ /\/(([^_]+)_(\d+)_(\d+))\.poly(scan|phred)\.(low|high)$/;
+        my ($cluster_name, $chromosome, $begin_position, $end_position) = $file =~ /\/(([^_]+)_(\d+)_(\d+))\.evaluate_sequence_variation/;
         my $param = lc($type);
         my $module = "MG::IO::$type";
+
+        # TODO TODO TODO FIXME FIXME FIXME TODO FIXME hardcoded goodness
+        my $assemblies_dump_dir = '/gscmnt/sata820/info/medseq/tcga_assemblies/';
+        my $cluster_path = $assemblies_dump_dir.$cluster_name."/";
+        my $fasta_file = "$cluster_path/edit_dir/$cluster_name.c1.refseq.fasta";
         my $parser = $module->new($param => $file,
-                                  assembly_project_name => $assembly_project_name
+                                  chromosome => $chromosome,
+                                  begin_position => $begin_position,
+                                  end_position => $end_position,
+                                  fasta => $fasta_file,
                                  );
         my ($snps, $indels) = $parser->collate_sample_group_mutations;
 

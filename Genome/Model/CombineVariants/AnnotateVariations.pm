@@ -119,17 +119,13 @@ sub print_prioritized_annotation {
         my @annotations;
 
         my $reference = $genotype->{reference};
-        if ($genotype->{strand} eq '-'){
-            $reference = $self->reverse_complement($reference);
-            $variant = $self->reverse_complement($variant);
-        }
         
         @annotations = $annotator->prioritized_transcripts(
-            start => $genotype->{start},
+            start => $genotype->{begin_position},
             reference => $reference,
             variant => $variant,
             chromosome_name => $genotype->{chromosome},
-            stop => $genotype->{stop},
+            stop => $genotype->{end_position},
             type => $genotype->{variation_type},
         );
 
@@ -168,68 +164,12 @@ sub format_annotated_genotype_line{
         } $self->annotated_columns)."\n";
 }
 
-# FIXME Must be kept in sync with combinevariants->annotated_columns... bad programming yay
 sub annotated_columns{
-    my $self = shift;
-    return qw(
-    chromosome 
-    start 
-    stop 
-    sample_name
-    variation_type
-    reference
-    allele1 
-    allele1_type 
-    allele1_read_support
-    allele1_pcr_product_support
-    allele2 
-    allele2_type 
-    allele2_read_support
-    allele2_pcr_product_support
-    polyscan_score 
-    polyphred_score
-    transcript_name
-    transcript_source
-    strand
-    c_position
-    trv_type
-    priority
-    gene
-    intensity
-    detection
-    amino_acid_length
-    amino_acid_change
-    variations 
-    );
+    return Genome::Model::CombineVariants->annotated_columns;
 }
 
-# List of columns present in the combine variants output
-# FIXME Must be kept in sync with combinevariants->annotated_columns... bad programming yay
 sub genotype_columns{
-    my $self = shift;
-    return qw(
-    chromosome 
-    start 
-    stop 
-    sample_name
-    strand
-    gene
-    variation_type
-    reference
-    allele1 
-    allele1_type 
-    allele1_read_support
-    allele1_pcr_product_support
-    allele2 
-    allele2_type 
-    allele2_read_support
-    allele2_pcr_product_support
-    polyscan_score 
-    polyphred_score
-    read_type
-    con_pos
-    filename
-    );
+    return Genome::Model::CombineVariants->genotype_columns;
 }
 
 # Format a line into a hash
@@ -244,9 +184,6 @@ sub parse_genotype_line {
     for my $header (@headers) {
         $hash->{$header} = shift(@columns);
     }
-
-    #FIXME remove
-    $DB::single=1 if ($hash->{sample_name} eq 'H_GP-NA12144_02' and $hash->{polyscan_score} eq 'NM_004847');
 
     return $hash;
 }

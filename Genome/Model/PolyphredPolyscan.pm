@@ -226,7 +226,7 @@ sub next_sample_genotype {
     if ($self->current_pcr_product_genotype) {
         my $genotype = $self->current_pcr_product_genotype;
         $current_chromosome = $genotype->{chromosome};
-        $current_position = $genotype->{start};
+        $current_position = $genotype->{begin_position};
         $current_sample = $genotype->{sample_name};
         push @sample_pcr_product_genotypes, $genotype;
         $self->current_pcr_product_genotype(undef);
@@ -235,7 +235,7 @@ sub next_sample_genotype {
     # Grab all of the pcr products for a position and sample
     while ( my $genotype = $self->next_pcr_product_genotype){
         my $chromosome = $genotype->{chromosome};
-        my $position = $genotype->{start};
+        my $position = $genotype->{begin_position};
         my $sample = $genotype->{sample_name};
 
         $current_chromosome ||= $chromosome;
@@ -307,9 +307,8 @@ sub combined_input_columns {
     my $self = shift;
     return qw(
         chromosome 
-        start 
-        stop 
-        strand
+        begin_position
+        end_position
         gene
         sample_name
         pcr_product_name
@@ -360,6 +359,7 @@ sub setup_input {
 
     my $fh;
     if (-s $combined_input_file) {
+        $self->status_message("Combined input file already present, skipping setup_input");
         $fh = IO::File->new("$combined_input_file");
         $self->combined_input_fh($fh);
         return 1;
@@ -368,7 +368,7 @@ sub setup_input {
     }
     
 
-    if (1) { # workflow switch
+    if (0) { # workflow switch
         
         require Workflow::Simple;
 

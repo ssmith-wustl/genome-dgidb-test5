@@ -31,14 +31,15 @@ sub stages {
             /);
 }
 
+#Genome::Model::Command::Build::CombineVariants::DeriveAssemblyNames
+#Genome::Model::Command::Build::CombineVariants::DumpAssemblies
+#Genome::Model::Command::Build::CombineVariants::VerifyAndFixAssembly
+#Genome::Model::Command::Build::CombineVariants::RunDetectEvaluate
+#Genome::Model::Command::Build::CombineVariants::ConfirmQueues
+# 
 sub combine_variants_job_classes {
     return (qw/
-            Genome::Model::Command::Build::CombineVariants::DeriveAssemblyNames
-            Genome::Model::Command::Build::CombineVariants::DumpAssemblies
-            Genome::Model::Command::Build::CombineVariants::VerifyAndFixAssembly
-            Genome::Model::Command::Build::CombineVariants::RunDetectEvaluate
-            Genome::Model::Command::Build::CombineVariants::ConfirmQueues
-            Genome::Model::Command::Build::CombineVariants::BuildChildren
+           Genome::Model::Command::Build::CombineVariants::BuildChildren
             Genome::Model::Command::Build::CombineVariants::CombineAndAnnotate
         /);
 }
