@@ -105,9 +105,10 @@ sub execute {
                     } 
                 }
             }
-            $event->event_status("Crashed");                
+            $event->event_status("Crashed");
         }
         $event->revert;
+        $self->context->commit;
     }
 
     if ($self->dispatcher eq 'inline') {
