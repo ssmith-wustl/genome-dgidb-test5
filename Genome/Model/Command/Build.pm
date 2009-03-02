@@ -33,6 +33,7 @@ sub create {
     my $class = shift;
 
     my $self = $class->SUPER::create(@_);
+    $DB::single=1;
     unless ($self) {
         $class->error_message("Failed to create build command: " . $class->error_message());
         return;
@@ -49,6 +50,7 @@ sub create {
         if ($current_running_build) {
             $self->build_id($current_running_build->build_id);
         } else {
+            $DB::single=1;
             my $build = Genome::Model::Build->create(
                                                      model_id => $model->id,
                                                    );
@@ -90,6 +92,31 @@ sub create {
     return $self;
 }
 
+sub clean {
+    my $self=shift;
+    my @events = Genome::Model::Event->get(parent_event_id=>$self->id);
+    for my $event (@events) {
+        $event->delete;
+    }
+    if ($self->model->current_running_build_id == $self->id) {
+        $self->model->current_running_build_id(undef);
+    }
+    if ($self->model->last_complete_build_id == $self->id) {
+        $self->model->last_complete_build_id(undef);
+    }
+    $self->delete;
+    return;
+}
+
+
+
+
+sub resolve_data_directory {
+    my $self = shift;
+    my $model = $self->model;
+    return $model->data_directory . '/build' . $self->id;
+}
+
 sub execute {
     my $self = shift;
     my $build = $self->build;
@@ -110,11 +137,12 @@ sub execute {
     my $prior_job_name;
     for my $stage_name ($pp->stages) {
         my @scheduled_objects = $self->_schedule_stage($stage_name);
-        unless (@scheduled_objects) {
+       
+          unless (@scheduled_objects) {
             $self->error_message('Problem with build('. $self->build_id .") objects not scheduled for classes:\n".
                                  join("\n",$pp->classes_for_stage($stage_name)));
             $self->event_status('Running');
-            die;
+            #    die;
         }
 
         if (!defined $self->auto_execute) {
@@ -473,14 +501,11 @@ sub _schedule_stage {
     my $stage_name = shift;
     my $pp = $self->model->processing_profile;
     my @objects = $pp->objects_for_stage($stage_name,$self->model);
-    unless (@objects) {
-        $self->error_message('Problem with build('. $self->build_id .") no objects found for stage '$stage_name'\n");
-        die;
-    }
-    my @scheduled_commands;
+       my @scheduled_commands;
     foreach my $object (@objects) {
         my $object_class;
         my $object_id;
+        $DB::single = 1; 
         if (ref($object)) {
             $object_class = ref($object);
             $object_id = $object->id;
