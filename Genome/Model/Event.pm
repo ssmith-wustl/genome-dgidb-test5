@@ -280,7 +280,7 @@ sub shellcmd {
 sub resolve_log_directory {
     my $self = shift;
     return sprintf('%s/logs/',
-                   $self->model->latest_build_directory,
+                   $self->build_directory,
                );
 }
 
@@ -432,7 +432,6 @@ sub _get_msgdata {
     my $msgdata = $self->SUPER::_get_msgdata;
     return $msgdata if $msgdata->{gm_fh_set};
     $msgdata->{gm_fh_set} = 1;
-
     my $name = $log_base;
     use Sys::Hostname;
     if (ref($self)) {
