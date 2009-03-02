@@ -24,6 +24,11 @@ class Genome::Model::Tools::ParallelCommand {
             is_optional => 1, 
         }
     ],
+    has_param => [
+        lsf_resource => {
+            default_value => 'select[type==LINUX64] rusage[mem=2000]',
+        }
+    ],
 };
 
 sub create {
@@ -34,7 +39,7 @@ sub create {
 sub status_message {
    my $self=shift;
    my $msg=shift;
-   print $msg . "\n";
+   #print $msg . "\n";
 }
 
 sub execute {
@@ -42,13 +47,13 @@ sub execute {
     my $pid = getppid();
     my $log_target;
 
-    if (defined($self->log_file) ) {
+    if (defined($self->log_file) && $self->log_file ne '' ) {
 	$log_target = $self->log_path."/".$self->log_file;
     } else {
 	$log_target = $self->log_path."/parallel_$pid.log";
     } 
-    open(STDOUT, ">>$log_target") || die "Can't redirect stdout.";
-    open(STDERR, ">&STDOUT"); 
+    #open(STDOUT, ">>$log_target") || die "Can't redirect stdout.";
+    #open(STDERR, ">&STDOUT"); 
     $self->status_message("Log target is: ".$log_target);  
     my @list;
     if ( ref($self->command_list) ne 'ARRAY' ) {
@@ -64,6 +69,7 @@ sub execute {
       	#my $cmd = ${$list_item};    		
         $self->status_message("parallel command: ".$list_item);
        	$rv = `$list_item`;
+        #$self->status_message($rv);
        	#$rv = system($list_item);
    	#if($rv) {
        	#	$self->error_message("problem running $list_item");
@@ -73,8 +79,8 @@ sub execute {
     $now = UR::Time->now;
     $self->status_message("*** Parallel command completed at $now. ***");
          
-    #return 1;
-    return $rv;
+    return 1;
+    #return $rv;
 
 } #end execute
 
