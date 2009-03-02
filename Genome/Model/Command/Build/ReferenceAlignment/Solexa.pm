@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-
+use Term::ReadKey;
 class Genome::Model::Command::Build::ReferenceAlignment::Solexa {
     is => 'Genome::Model::Command::Build::ReferenceAlignment',
     has => [],
