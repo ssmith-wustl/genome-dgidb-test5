@@ -1,3 +1,4 @@
+
 package Genome::Model::Command::Build::ReferenceAlignment::Test;
 
 use strict;
@@ -164,6 +165,9 @@ sub create_model {
     $model->test(1);
     isa_ok($model,'Genome::Model');
 
+    my $test_gold_snp_path = '/gsc/var/cache/testsuite/data/Genome-Model-Report-GoldSnp/test.gold2';
+    $model->gold_snp_path($test_gold_snp_path);
+
     $self->add_directory_to_remove($model->data_directory);
     $self->model($model);
 }
@@ -268,8 +272,8 @@ sub schedule {
        'Saw a messages about  AlignReads');
     SKIP : {
         skip 'No ProcessLowQualityAlignments step for 454', 1 if $model->sequencing_platform eq '454'; 
-        ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments/} @status_messages),
-           'Saw a message about ProcessLowQualityAlignments');
+   ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments/} @status_messages),
+       'Saw a message about ProcessLowQualityAlignments');
     }
     my $variation_granularity;
     if ($model->sequencing_platform eq '454') {
@@ -282,16 +286,19 @@ sub schedule {
     SKIP : {
         skip 'No reference sequence messages for 454', 1 if $model->sequencing_platform eq '454';
         is(scalar(grep { m/^Scheduling jobs for reference sequence .*/} @status_messages),
-           $variation_granularity, "Got $variation_granularity reference_sequence messages");
+           5, "Got 5 reference_sequence messages");
     }
+    SKIP : {
+        skip 'No merge alignments for Solexa', 1 if $model->sequencing_platform eq 'solexa';
     is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments/} @status_messages),
        $variation_granularity, "Got $variation_granularity MergeAlignments messages");
+    } 
     SKIP : {
         skip 'No UpdateGenotype step for 454', 1 if $model->sequencing_platform eq '454'; 
-        is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype/} @status_messages),
+    is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype/} @status_messages),
            $variation_granularity, "Got $variation_granularity UpdateGenotype messages");
     }
-    is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::FindVariations/} @status_messages),
+   is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::FindVariations/} @status_messages),
        $variation_granularity, "Got $variation_granularity FindVariations messages");
     SKIP : {
         skip 'No PostprocessVariations step for 454', 1 if $model->sequencing_platform eq '454';
@@ -303,7 +310,7 @@ sub schedule {
         is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations/} @status_messages),
            $variation_granularity, "Got $variation_granularity AnnotateVariations messages");
     }
-    # Not checking warning messages - for now, there are some relating to obsolete locking
+   # Not checking warning messages - for now, there are some relating to obsolete locking
     is(scalar(@error_messages), 0, 'no errors');
 
     $self->build($build);
@@ -315,11 +322,42 @@ sub run {
     my $build = $self->build;
     my $pp = $model->processing_profile;
     my @events;
+    my @objects;
+
+    my @all_events;
+
     for my $stage_name ($pp->stages) {
         my @classes = $pp->classes_for_stage($stage_name);
-        push @events, $self->run_events_for_class_array_ref(\@classes);
+       
+	if ($stage_name eq 'alignment') {
+    		if ($model->sequencing_platform eq 'solexa') {
+        		@objects = $model->read_sets;
+    		} elsif ($model->sequencing_platform eq '454') {
+        		@objects = $model->instrument_data;
+    		}   
+	} else {
+        	@objects = $pp->objects_for_stage($stage_name,$self->model);
+	} 
+        
+	for my $command_class (@classes) {
+            @events = $command_class->get(model_id => $self->model->id);
+            @events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @events;
+            
+	    is( scalar(@events),scalar(@objects), 'For command '.$command_class.' number of events matches number of objects: '.scalar(@events).' = '.scalar(@objects)); 
+            
+            for my $event (@events) {
+                $self->execute_event_test($event);
+            }
+
+        }
+
+	#accumulate the events for further testing below 
+    	push @all_events, @events;	
     }
-    my @failed_events = grep { $_->event_status ne 'Succeeded' } @events;
+
+    #die();
+
+    my @failed_events = grep { $_->event_status ne 'Succeeded' } @all_events;
     my $build_status;
     if (@failed_events) {
         $build_status = 'Failed';
@@ -329,7 +367,7 @@ sub run {
     }
     set_event_status($build,$build_status);
     is($build->event_status,$build_status,'the build status was set correctly after execution of the events');
-    return @events;
+    return @all_events;
 }
 
 sub run_events_for_class_array_ref {
@@ -338,9 +376,9 @@ sub run_events_for_class_array_ref {
     my @read_sets = @{$self->{_read_set_array_ref}};
     my $pp = $self->model->processing_profile;
     my @stages = $pp->stages;
-    my $stage2 = $stages[1];
-    my $stage_object_method = $stage2 .'_objects';
-    my @stage2_objects = $pp->$stage_object_method($self->model);
+    my $stage3 = $stages[2];
+    my $stage_object_method = $stage3 .'_objects';
+    my @stage3_objects = $pp->$stage_object_method($self->model);
     my @events;
     for my $command_class (@$classes) {
         if (ref($command_class) eq 'ARRAY') {
@@ -351,7 +389,7 @@ sub run_events_for_class_array_ref {
             if ($command_class->isa('Genome::Model::EventWithReadSet')) {
                 is(scalar(@events),scalar(@read_sets),'the number of events matches read sets for EventWithReadSet class '. $command_class);
             } elsif ($command_class->isa('Genome::Model::EventWithRefSeq')) {
-                is(scalar(@events),scalar(@stage2_objects),'the number of events matches ref seqs for EventWithRefSeq class '. $command_class);
+                is(scalar(@events),scalar(@stage3_objects),'the number of events matches ref seqs for EventWithRefSeq class '. $command_class);
             } else {
                 is(scalar(@events),1,'Only expecting one event when for class '. $command_class);
             }

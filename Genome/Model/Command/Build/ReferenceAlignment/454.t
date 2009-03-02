@@ -27,7 +27,7 @@ if ($archos !~ /64/) {
 #plan skip_all => 'this test is hanging presumambly from a workflow related issue';
 plan tests => 74;
 
-my $message_flag = 0;
+my $message_flag = 1;
 
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $model_name = "test_454_$ENV{USER}";
