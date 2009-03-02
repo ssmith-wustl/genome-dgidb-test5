@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 
+
 class Genome::Model::Command::Build::AmpliconAssembly {
     is => 'Genome::Model::Command::Build',
 };
