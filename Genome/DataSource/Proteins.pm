@@ -28,7 +28,7 @@ sub file_resolver {
     my($transcript_id) = @_;
 
     my $thousand = int($transcript_id / 1000);
-    my $path = '/gscmnt/sata363/info/medseq/annotation_data/proteins_' . $thousand . ".csv";
+    my $path = '/gscmnt/sata363/info/medseq/annotation_data/proteins/proteins_' . $thousand . ".csv";
     return $path;
 }
 
