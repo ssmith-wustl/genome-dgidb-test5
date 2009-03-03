@@ -154,7 +154,7 @@ sub test2_directory : Test(8) {
     return 1;
 }
 
-sub test3_resource_locking : Test(10) {
+sub test3_resource_locking : Test(13) {
     my $bogus_id = '-55555';
     my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
     my $sub_dir = $tmp_dir .'/sub/dir/test';
@@ -189,6 +189,26 @@ sub test3_resource_locking : Test(10) {
                                                     lock_directory => $tmp_dir,
                                                     resource_id => $bogus_id,
                                                 ), 'unlock resource_id '. $bogus_id);
+    my $init_lsf_job_id = $ENV{'LSB_JOBID'};
+    $ENV{'LSB_JOBID'} = 1;
+    ok(Genome::Utility::FileSystem->lock_resource(
+                                               lock_directory => $tmp_dir,
+                                               resource_id => $bogus_id,
+                                              ),'lock resource with bogus lsf_job_id');
+    ok(Genome::Utility::FileSystem->lock_resource(
+                                                  lock_directory => $tmp_dir,
+                                                  resource_id => $bogus_id,
+                                              ),'lock resource with invalid lsf_job_id');
+    ok(Genome::Utility::FileSystem->unlock_resource(
+                                                    lock_directory => $tmp_dir,
+                                                    resource_id => $bogus_id,
+                                                ), 'unlock resource_id '. $bogus_id);
+    # TODO: add skip test but if we are on a blade, lets see that the locking works correctly
+    # Above the test is that old bogus locks can get removed when the lsf_job_id no longer exists
+    # We should test that while an lsf_job_id does exist (ie. our current job) we still hold the lock
+    if ($init_lsf_job_id) {
+        $ENV{'LSB_JOBID'} = $init_lsf_job_id;
+    }
 }
 
 =pod
