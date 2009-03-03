@@ -374,13 +374,16 @@ sub execute {
     $self->generate_metric($self->metrics_for_class);
     
     # the hard way to get one value...
-    my $evenness = IO::File->new($alignment_dir . '/evenness')->getline;
-    chomp $evenness;
-    $self->add_metric(
-        name => 'evenness',
-        value => $evenness
-    );
-    
+    my $evenness_path = $alignment_dir . '/evenness';
+    if (-s $evenness_path) {
+    	my $evenness = IO::File->new($evenness_path)->getline;
+    	chomp $evenness;
+    	$self->add_metric(
+        	name => 'evenness',
+        	value => $evenness
+    	);
+    }
+ 
     unless ($self->verify_successful_completion) {
         $self->error_message("Error verifying completion!");
         return;
