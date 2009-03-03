@@ -86,5 +86,13 @@ left join (
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub models
+{
+    my $self = shift;
+    my @m = Genome::Model->get(subject_name => $self->name);
+    return @m;
+    
+}
+
 1;
 

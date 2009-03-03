@@ -20,6 +20,10 @@ class Genome::Model::Report {
     ],
     has_optional => [
            type            => { is => 'String'},
+        override_model_snp_file => {
+            type => 'Text',
+            doc => "for testing, use this snp file instead of the real file for the model/build",
+        },
     ],
 };
 
