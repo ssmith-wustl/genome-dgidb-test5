@@ -295,6 +295,17 @@ sub lock_resource {
         my $info_content;
         if ($info_fh) {
             $info_content = join('',$info_fh->getlines);
+            if ($info_content =~ /LSF_JOB_ID (\d+)/) {
+                my $waiting_on_lsf_job_id  = $1;
+                my ($job_info,$events) = Genome::Model::Command::BsubHelper->lsf_state($waiting_on_lsf_job_id);
+                unless ($job_info) {
+                    $self->warning_message("Invalid lock for resource $resource_lock\n"
+                                           ." lock info was:\n". $info_content ."\n"
+                                           ."Removing old resource lock $resource_lock\n");
+                    $self->unlock_resource(resource_lock => $resource_lock);
+                    next;
+                }
+            }
         }
         else {
             $info_content = "unable to open file: $!";
