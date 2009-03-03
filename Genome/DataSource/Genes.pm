@@ -28,7 +28,7 @@ sub file_resolver {
     my($gene_id) = @_;
 
     my $thousand = int($gene_id / 1000);
-    my $path = '/gscmnt/sata363/info/medseq/annotation_data/genes_' . $thousand . ".csv";
+    my $path = '/gscmnt/sata363/info/medseq/annotation_data/genes/genes_' . $thousand . ".csv";
     return $path;
 }
 
