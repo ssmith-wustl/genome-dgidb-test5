@@ -89,7 +89,7 @@ sub execute {
     my $event = $self->event;
     my $fsmgr = $event;
     my $logger = $event;
-    my $generator_id = $event->id;
+    my $generator_id = $event->genome_model_event_id;
 
     # we resolve these first, since we might just print the paths we work with then exit
     my @input_pathnames = $instrument_data->bfq_filenames;
@@ -111,7 +111,7 @@ sub execute {
     # check the status of this data set
     # be sure the check is atomic...
     my $resource_lock_name = $results_dir . '.generate';
-    my $lock = $self->lock_resource(resource_lock => $resource_lock_name, max_try => 1);
+    my $lock = $self->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
     unless ($lock) {
         $logger->status_message("This data set is still being processed by its creator.  Waiting for lock...");
         $lock = $self->lock_resource(resource_lock => $resource_lock_name);
