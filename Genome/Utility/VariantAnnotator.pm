@@ -3,15 +3,25 @@ package Genome::Utility::VariantAnnotator;
 use strict;
 use warnings;
 
-use Finfo::Std;
-
 use Data::Dumper;
 use Genome::Info::CodonToAminoAcid;
 use Genome::Info::VariantPriorities;
 use MG::ConsScore;
 use List::MoreUtils qw/ uniq /;
+use Benchmark;
 
-my %trans_win :name(transcript_window:r) :isa('object');
+#UR::Context->_light_cache(1); # uh, seems to break things...
+
+class Genome::Utility::VariantAnnotator{
+    is => 'UR::Object',
+    has => [
+        transcript_window => {is => 'Genome::DB::Window::Transcript'},
+        benchmark => {
+            is => 'boolean',
+            is_optional => 1,
+                    },
+    ]
+};
 
 my %variant_priorities = Genome::Info::VariantPriorities->for_annotation;
 my %codon_to_single = Genome::Info::CodonToAminoAcid->single_letter;
@@ -26,14 +36,23 @@ sub transcripts { # was transcripts_for_snp and transcripts_for_indel
         die "Variant is not fully defined... start, stop, variant, reference, and type must be defined.\n";
     }
 
+    my $start = new Benchmark;
     my @transcripts_to_annotate = $self->_determine_transcripts_to_annotate($variant{start})
         or return;
-    
+
     my @annotations;
     foreach my $transcript ( @transcripts_to_annotate ) {
         my %annotation = $self->_transcript_annotation($transcript, \%variant)
             or next;
         push @annotations, \%annotation;
+    }
+
+    my $stop = new Benchmark;
+
+    my $time = timestr(timediff($stop, $start));
+
+    if ($self->benchmark){
+        print "Annotation Variant: ".$variant{start}."-".$variant{stop}." ".$variant{variant}." ".$variant{reference}." ".$variant{type}." took $time\n"; #TODO make sure variant is getting passed in.  Add a check that dies unless the %variant is complete
     }
 
     return @annotations;
@@ -42,12 +61,24 @@ sub transcripts { # was transcripts_for_snp and transcripts_for_indel
 sub prioritized_transcripts {# was prioritized_transcripts_for_snp and prioritized_transcripts_for_indel
     my ($self, %variant) = @_;
 
+
     my @annotations = $self->transcripts(%variant)
         or return;
 
-    my @prioritized_annotations = $self->_prioritize_annotations(@annotations);
+    my @prioritized_annotations = $self->_prioritize_annotations_per_gene(@annotations);
+
 
     return @prioritized_annotations;
+}
+
+sub prioritized_transcript{
+    my ($self, %variant) = @_;
+    my @annotations = $self->transcripts(%variant)
+        or return;
+
+    my $annotation = $self->_prioritize_annotations_across_genes(@annotations);
+
+    return $annotation;
 }
 
 # Prioritizes annotations on a per gene basis... 
@@ -55,7 +86,7 @@ sub prioritized_transcripts {# was prioritized_transcripts_for_snp and prioritiz
 # in that order.
 # I.E. If 6 annotations go in, from 3 different genes, it will select the "best" annotation 
 # that each gene has, and return 3 total annotations, one per gene
-sub _prioritize_annotations
+sub _prioritize_annotations_per_gene
 {
     my ($self, @annotations) = @_;
 
@@ -85,7 +116,7 @@ sub _prioritize_annotations
                 $prioritized_annotations{ $annotation->{gene_name} } = $annotation;
             } elsif ($new_source_priority > $existing_source_priority) {
                 next;
-            # Tied for priority based upon source... break the tie with protein length
+                # Tied for priority based upon source... break the tie with protein length
             } elsif ($new_source_priority == $existing_source_priority) {
                 next if $annotation->{amino_acid_length} < $prioritized_annotations{ $annotation->{gene_name} }->{amino_acid_length};
 
@@ -106,13 +137,46 @@ sub _prioritize_annotations
     return values %prioritized_annotations;
 }
 
+
+#Takes in prioritized transcripts, returns top annotation among all top gene annotations
+sub _prioritize_annotations_across_genes{
+    my ($self, @annotations) = @_;
+    my $top_annotation;
+    for my $annotation (@annotations){
+        $annotation->{priority} = $variant_priorities{$annotation->{trv_type}};
+        if (!$top_annotation){
+            $top_annotation = $annotation;
+        }elsif ($annotation->{priority} < $top_annotation->{priority}){
+            $top_annotation = $annotation;
+        }elsif($annotation->{priority} == $top_annotation->{priority}){
+            my $new_source_priority = $self->_transcript_source_priority($annotation->{transcript_name});  
+            my $current_source_priority = $self->_transcript_source_priority($top_annotation->{transcript_name});  
+            if ($new_source_priority < $current_source_priority){
+                $top_annotation = $annotation;
+            }elsif ($new_source_priority > $current_source_priority){
+                next;
+            }elsif($new_source_priority == $current_source_priority){
+                next if $annotation->{amino_acid_length} < $top_annotation->{amino_acid_length};
+
+                if ( $annotation->{amino_acid_length} == $top_annotation->{amino_acid_length} )
+                {
+                    ($top_annotation) = sort {$a->{transcript_name} cmp $b->{transcript_name}}($annotation, $top_annotation);
+                }else{
+                    $top_annotation = $annotation;
+                }
+            }
+        }
+    }
+    return $top_annotation;
+}
+
 # Takes in a transcript name... uses regex to determine if this
 # Transcript is from NCBI, ensembl, etc and returns a priority  number according to which of these we prefer.
 # Currently we prefer NCBI to ensembl, and ensembl over others.  Lower priority is preferred
 sub _transcript_source_priority {
     my ($self, $transcript) = @_;
 
-    if ($transcript =~ /nm/i) {
+    if ($transcript =~ /[nx]m/i) {
         return 1;
     } elsif ($transcript =~ /enst/i) {
         return 2;
@@ -128,6 +192,7 @@ sub _determine_transcripts_to_annotate {
     my ($self, $position) = @_;
 
     my (@transcripts_priority_1, @transcripts_priority_2);
+    $DB::single = 1;
     foreach my $transcript ( $self->transcript_window->scroll($position) )
     {
         if ( grep { $transcript->transcript_status eq $_ } (qw/ known reviewed validated /) )
@@ -160,14 +225,14 @@ sub _transcript_annotation
 
     # skip psuedogenes
     #return unless $ss_window->cds_exons;
-    return unless $transcript->cds_exons;
+    #return unless $transcript->cds_exons;
 
     my $structure_type = $main_structure->structure_type;
     # skip micro rnas
-    return if $structure_type eq 'rna';
-    
+    #return if $structure_type eq 'rna';
+
     my $method = '_transcript_annotation_for_' . $structure_type;
-    
+
     my %structure_annotation = $self->$method($transcript, $variant)
         or return;
 
@@ -198,6 +263,23 @@ sub _transcript_annotation
     )
 }
 
+sub _transcript_annotation_for_rna
+{
+    my ($self, $transcript, $variant) = @_;
+
+    my $position = $variant->{start};
+    my $strand = $transcript->strand;
+
+    return
+    (
+        strand => $strand,
+        c_position => 'NULL',
+        trv_type => 'rna',
+        amino_acid_length => length( $transcript->protein->amino_acid_seq ),
+        amino_acid_change => 'NULL',
+    );
+}
+
 sub _transcript_annotation_for_utr_exon
 {
     my ($self, $transcript, $variant) = @_;
@@ -226,7 +308,7 @@ sub _transcript_annotation_for_utr_exon
         strand => $strand,
         c_position => 'c.' . $c_position,
         trv_type => $trv_type,
-        amino_acid_length => length( $transcript->protein->amino_acid_seq ),
+        amino_acid_length => 0,
         amino_acid_change => 'NULL',
     );
 }
@@ -237,10 +319,12 @@ sub _transcript_annotation_for_flank
 
     my $position = $variant->{start};
     my $strand = $transcript->strand;
-    my @cds_exon_positions = $transcript->cds_exon_range
-    #my @cds_exon_positions = $transcript->sub_structure_window->cds_exon_range
-        or return;
-    #   print Dumper([$transcript->transcript_id, $position, $cds_exon_start, $cds_exon_stop]);
+    my @cds_exon_positions = $transcript->cds_exon_range or (0,0);
+    my $aas_length=0;
+    my $protein = $transcript->protein;
+    if ($protein){
+        $aas_length = length($protein->amino_acid_seq);
+    }
     my ($c_position, $trv_type);
     if ( $position < $transcript->transcript_start )
     {	 
@@ -255,17 +339,17 @@ sub _transcript_annotation_for_flank
         : (("*" . ($position - $cds_exon_positions[1])), "3_prime_flanking_region");
     }
     # TODO else??
-    
+
     return
     (
         strand => $strand,
         c_position => 'c.' . $c_position,
         trv_type => $trv_type,
-        amino_acid_length => length( $transcript->protein->amino_acid_seq ),
+        amino_acid_length => $aas_length,
         amino_acid_change => 'NULL',
     );
 # From Chapter 8 codon2aa
-#
+    #
 # A subroutine to translate a DNA 3-character codon to an amino acid
 #   Version 3, using hash lookup
 
@@ -277,15 +361,15 @@ sub _transcript_annotation_for_intron
     my ($self, $transcript, $variant) = @_;
 
     my $strand = $transcript->strand;
-    
+
     my ($cds_exon_start, $cds_exon_stop) = $transcript->cds_exon_range;
     #my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
     my ($oriented_cds_exon_start, $oriented_cds_exon_stop) = ($cds_exon_start, $cds_exon_stop);
-    
+
     my $main_structure = $transcript->structure_at_position( $variant->{start} );
     #my $main_structure = $transcript->sub_structure_window->main_structure;
 # From Chapter 8 codon2aa
-#
+    #
 # A subroutine to translate a DNA 3-character codon to an amino acid
 #   Version 3, using hash lookup
 
@@ -295,8 +379,8 @@ sub _transcript_annotation_for_intron
     my ($oriented_structure_start, $oriented_structure_stop) = ($structure_start, $structure_stop);
 
     my ($prev_structure, $next_structure) = $transcript->structures_flanking_structure_at_position( $variant->{start} );
-    #my ($prev_structure, $next_structure) = $transcript->sub_structure_window->structures_flanking_main_structure;
-    #return unless $prev_structure and $next_structure;
+#my ($prev_structure, $next_structure) = $transcript->sub_structure_window->structures_flanking_main_structure;
+#return unless $prev_structure and $next_structure;
     my ($prev_structure_type, $next_structure_type, $position_before, $position_after);
 
     if ( $strand eq '-1' ) 
@@ -321,8 +405,8 @@ sub _transcript_annotation_for_intron
 
 
     my ($c_position, $trv_type);
-    #TODO xshi modifications...comes from intron function beginning line 628
-    # Should this just check for indel? Probably... since I think this is what is beting passed in right now
+#TODO xshi modifications...comes from intron function beginning line 628
+# Should this just check for indel? Probably... since I think this is what is beting passed in right now
     if($variant->{type} =~ /del|ins/i)
     {
         if(($structure_start>=$variant->{start} && $structure_start<=$variant->{stop})||($structure_stop>=$variant->{start} && $structure_stop<=$variant->{stop})||($structure_start<=$variant->{start} && ($structure_start+1)>=$variant->{start})||($structure_stop>=$variant->{stop} && ($structure_stop-1)<=$variant->{stop})) {
@@ -346,21 +430,21 @@ sub _transcript_annotation_for_intron
         );
         #TODO  make sure it's okay to return early w/ null c. position
     }
-    #end xshi
-    ##
+#end xshi
+##
     my $utr_pos; 
-	my $trsub_start=$main_structure->structure_start-1;
-	my $trsub_stop=$main_structure->structure_stop+1;
+    my $trsub_start=$main_structure->structure_start-1;
+    my $trsub_stop=$main_structure->structure_stop+1;
 
-	return unless(defined $prev_structure && defined $next_structure); 	 
- 	if($strand == -1){
-		($cds_exon_start,$cds_exon_stop)=($cds_exon_stop,$cds_exon_start);
-		($trsub_start,$trsub_stop)=($trsub_stop,$trsub_start);
-		($prev_structure,$next_structure)=($next_structure,$prev_structure);
-	}
+    return unless((defined $prev_structure && defined $next_structure) && $prev_structure->structure_stop == $trsub_start && $next_structure->structure_start == $trsub_stop); 	 
+    if($strand == -1){
+        ($cds_exon_start,$cds_exon_stop)=($cds_exon_stop,$cds_exon_start);
+        ($trsub_start,$trsub_stop)=($trsub_stop,$trsub_start);
+        ($prev_structure,$next_structure)=($next_structure,$prev_structure);
+    }
     my $exon_pos = $transcript->length_of_cds_exons_before_structure_at_position($variant->{start}, $strand);
 
-    ##
+##
     my $pre_start = abs( $variant->{start} - $oriented_structure_start ) + 1;
     my $pre_end = abs( $variant->{stop} - $oriented_structure_start ) + 1;
     my $aft_start = abs( $oriented_structure_stop - $variant->{start} ) + 1;
@@ -370,9 +454,9 @@ sub _transcript_annotation_for_intron
     my $diff_stop_end = abs( $position_after - $oriented_cds_exon_stop );
     my $diff_start_start = abs( $position_before - $oriented_cds_exon_start );
     my $diff_start_end = abs( $position_before - $oriented_cds_exon_stop );
-    
+
     my	$exon_ord=0;
-	my	$splice_site_pos;
+    my	$splice_site_pos;
 
     if ( $pre_start - 1 <= abs( $structure_stop - $structure_start ) / 2 )
     {
@@ -393,7 +477,7 @@ sub _transcript_annotation_for_intron
         {
             $c_position = $exon_pos . '+' . $pre_start;
             $c_position.='_+'.$pre_end if($variant->{start}!=$variant->{stop});
-			$exon_ord=$prev_structure->ordinal;
+            $exon_ord=$prev_structure->ordinal;
         }
         $splice_site_pos='+'.$pre_start;
     }
@@ -403,11 +487,11 @@ sub _transcript_annotation_for_intron
         {
             my $diff_stop_start = abs( $position_after - $oriented_cds_exon_start );
             my $diff_stop_end = abs( $position_after - $oriented_cds_exon_stop );
- 
+
             if ( abs($diff_stop_start) < abs($diff_stop_end) )
             {
 # From Chapter 8 codon2aa
-#
+                #
 # A subroutine to translate a DNA 3-character codon to an amino acid
 #   Version 3, using hash lookup
 
@@ -424,7 +508,7 @@ sub _transcript_annotation_for_intron
         {
             $c_position = ($exon_pos + 1) . '-' . $aft_end;
             $c_position.='_-'.$aft_start if($variant->{start}!=$variant->{stop});
-			$exon_ord=$next_structure->ordinal;
+            $exon_ord=$next_structure->ordinal;
         }
         $splice_site_pos='-'.$aft_end;
     }
@@ -441,7 +525,7 @@ sub _transcript_annotation_for_intron
     {
         # intron SR
         $trv_type = "splice_region";
-        
+
     }  
     else
     {
@@ -449,16 +533,24 @@ sub _transcript_annotation_for_intron
         $trv_type = "intronic";
     }
 
+    my $protein = $transcript->protein;
+    my $aa_seq;
+    if ($protein){
+        $aa_seq = $protein->amino_acid_seq;
+    }else{
+        $self->error_message("Couldn't find a protein for transcript ".$transcript->id."! This is bad!");
+    }
+
     return
     (
         strand => $strand,
         c_position => 'c.' . $c_position,
         trv_type => $trv_type,
-        amino_acid_length => length( $transcript->protein->amino_acid_seq ),
+        amino_acid_length => length( $aa_seq ),
         amino_acid_change => $pro_str,
     );
 # From Chapter 8 codon2aa
-#
+    #
 # A subroutine to translate a DNA 3-character codon to an amino acid
 #   Version 3, using hash lookup
 
@@ -481,7 +573,7 @@ sub _transcript_annotation_for_cds_exon
     {
         # COMPLEMENTED
 # From Chapter 8 codon2aa
-#
+        #
 # A subroutine to translate a DNA 3-character codon to an amino acid
 #   Version 3, using hash lookup
 
@@ -502,7 +594,7 @@ sub _transcript_annotation_for_cds_exon
         $self->error_msg
         (
 # From Chapter 8 codon2aa
-#
+            #
 # A subroutine to translate a DNA 3-character codon to an amino acid
 #   Version 3, using hash lookup
 
@@ -518,7 +610,7 @@ sub _transcript_annotation_for_cds_exon
                 $variant->{start},
             )
 # From Chapter 8 codon2aa
-#
+            #
 # A subroutine to translate a DNA 3-character codon to an amino acid
 #   Version 3, using hash lookup
 
@@ -569,7 +661,7 @@ sub _transcript_annotation_for_cds_exon
             $self->error_msg($e);
             return ;
         }
-        $variant_size=2 if($codon_start==0);
+        $variant_size=2 if($codon_start==0&&$variant->{type}=~/dnp/i);
         $mutated_seq=substr($original_seq,0,$c_position-1).$var.substr($original_seq,$c_position-1+$size2);
     }
     $mutated_seq_translated = $self->translate($mutated_seq);
@@ -595,7 +687,7 @@ sub _transcript_annotation_for_cds_exon
         $pro_str="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{new};
     }
 
-    # If the variation has a range, set c_position to that range on the transcript_
+# If the variation has a range, set c_position to that range on the transcript_
     if($variant->{start}!=$variant->{stop}) {
         # If on the negative strand, reverse the range order
         if ($strand =~ '-') { 
@@ -604,7 +696,7 @@ sub _transcript_annotation_for_cds_exon
             $c_position.='_'.($pre_end+$exon_pos);
         }      
     }
-    # TODO end xshi modifications
+# TODO end xshi modifications
 
     my $conservation = $self->_ucsc_cons_annotation($variant);
     my $pdom = $self->_protein_domain($variant,
@@ -773,16 +865,6 @@ sub translate
 1;
 
 =pod
-sub prioritized_transcripts
-{
-    my ($self, %indel) = @_;
-    
-    my @annotations = $self->transcripts_for_indel(%indel)
-        or return;
-
-    return $self->_prioritize_annotations(@annotations);
-}
-
 =head1 Name
 
 Genome::SnpAnnotator
@@ -795,36 +877,36 @@ Given information about a 'snp', this modules retrieves annotation information.
 
 my $schema = Genome::DB::Schema->connect_to_dwrac;
 $self->error_message("Can't connect to dwrac")
-and return unless $schema;
+    and return unless $schema;
 
 my $chromosome_name = $self->chromosome_name;
 my $chromosome = $schema->resultset('Chromosome')->find
 (
- { chromosome_name => $chromosome_name },
+    { chromosome_name => $chromosome_name },
 );
 $self->error_message("Can't find chromosome ($chromosome_name)")
-and return unless $chromosome;
+    and return unless $chromosome;
 
 my $annotator = Genome::SnpAnnotator->new
 (
- transcript_window => $chromosome->transcript_window(range => $self->flank_range),
- variation_window => $chromosome->variation_window(range => 0),
+    transcript_window => $chromosome->transcript_window(range => $self->flank_range),
+    variation_window => $chromosome->variation_window(range => 0),
 );
 
 while ( my $line = $in_fh->getline )
 {
     my (
-            $chromosome_name, $start, $stop, $reference, $variant,
-            $reference_type, $variant_type, $reference_reads, $variant_reads,
-            $consensus_quality, $read_count
-       ) = split(/\s+/, $line);
+        $chromosome_name, $start, $stop, $reference, $variant,
+        $reference_type, $variant_type, $reference_reads, $variant_reads,
+        $consensus_quality, $read_count
+    ) = split(/\s+/, $line);
 
     my @annotations = $annotator->get_prioritized_annotations # TODO param whether or not we do prioritized annos?
-        (
-         position => $start,
-         variant => $variant,
-         reference => $reference,
-        )
+    (
+        position => $start,
+        variant => $variant,
+        reference => $reference,
+    )
         or next;
 
     ...
@@ -906,19 +988,19 @@ while ( my $line = $in_fh->getline )
 
 =head1 See Also
 
-    B<Genome::DB::*>, B<Genome::DB::Window::*>, B<Genome::Model::Command::Report>
+B<Genome::DB::*>, B<Genome::DB::Window::*>, B<Genome::Model::Command::Report>
 
 =head1 Disclaimer
 
-    Copyright (C) 2008 Washington University Genome Sequencing Center
+Copyright (C) 2008 Washington University Genome Sequencing Center
 
-    This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 =head1 Author(s)
 
-    B<Eddie Belter> I<ebelter@watson.wustl.edu>
+B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
-    B<Xiaoqi Shi> I<ebelter@watson.wustl.edu>
+B<Xiaoqi Shi> I<ebelter@watson.wustl.edu>
 
 =cut
 

@@ -8,7 +8,7 @@ use Genome;
 use Command;
 use Data::Dumper;
 use IO::File;
-use Genome::DB::Schema;
+#use Genome::DB::Schema;
 use Genome::Utility::IO::SeparatedValueReader;
 use Genome::Utility::VariantAnnotator;
 use Tie::File;
@@ -64,7 +64,7 @@ class Genome::Model::Command::Report::Variations {
     },
     # Variation Params
     variation_range => {
-       type => 'Integer', 
+       type => 'Integer',
        is_optional => 1,
        default => 0,
        doc => "Range to look around a variant for known variations",
@@ -93,14 +93,31 @@ EOS
 sub execute { 
     my $self = shift;
 
+    $DB::single =1;
+
     my $variant_svr = $self->_open_variant_svr
         or return;
-    my ($chromosome, $from, $to) = $self->_get_chromosome_and_positions
+    
+    my $variant_file = $self->variant_file;
+    tie my @variants, 'Tie::File', $variant_file , mode => O_RDONLY
+        or croak "can't tie $variant_file : $!";
+    my ($chromosome_name) = split(/\s+/, $variants[0]);
+    my ($chromosome_confirm) =  split(/\s+/, $variants[$#variants]);
+    untie @variants;
+    undef @variants;
+    $self->error_msg(
+        "Different chromosome at beginning ($chromosome_name) and end ($chromosome_confirm) of variant file ($variant_file)"
+    )
+        and return unless $chromosome_name eq $chromosome_confirm;
+    
+    my $transcript_window = $self->_create_transcript_window($chromosome_name);
+    
+    my $annotator = $self->_create_annotator($transcript_window)  #TODO make this return an annotator like VariationInstance.pm
         or return;
-    my $annotator = $self->_create_annotator($chromosome, $from, $to)
+ 
+    my $variation_window = $self->_create_variation_window($chromosome_name)  #TODO make DB::Window::Variation in line w/ Transcript.pm
         or return;
-    my $variation_window = $self->_create_variation_window($chromosome, $from, $to)
-        or return;
+
     $self->_open_report_files
         or return;
     my ($transcripts_method, $variations_method, $print_method) = $self->_determine_methods_for_variant_type
@@ -108,7 +125,7 @@ sub execute {
 
     while ( my $variant = $variant_svr->next ) {
         my @transcripts = $annotator->prioritized_transcripts(%$variant);
-        my @variations = grep { $_->start eq $_->end } $variation_window->scroll($variant->{start});
+        my @variations = grep { $_->start eq $_->stop } $variation_window->scroll($variant->{start});
         $self->$print_method($variant, \@transcripts, \@variations);
     }
 
@@ -133,54 +150,30 @@ sub _open_variant_svr {
     );
 }
 
-sub _get_chromosome_and_positions {
-    my $self = shift;
-
-    my $variant_file = $self->variant_file;
-    tie my @variants, 'Tie::File', $variant_file , mode => O_RDONLY
-        or croak "can't tie $variant_file : $!";
-    my ($chromosome_name, $from) = ( split(/\s+/, $variants[0]) )[0..1];
-    my ($chromosome_confirm, $to) = ( split(/\s+/, $variants[$#variants]) )[0..1];
-    untie @variants;
-    undef @variants;
-    $self->error_msg(
-        "Different chromosome at beginning ($chromosome_name) and end ($chromosome_confirm) of variant file ($variant_file)"
-    )
-        and return unless $chromosome_name eq $chromosome_confirm;
+sub _create_annotator { #TODO update
+    my ($self, $transcript_window) = @_;
     
-    my $schema = Genome::DB::Schema->connect_to_dwrac;
-    $self->error_message("Can't connect to dwrac")
-        and return unless $schema;
-
-    my $chromosome = $schema->resultset('Chromosome')->find(
-        { chromosome_name => $chromosome_name },
-    );
-    $self->error_message("Can't find chromosome ($chromosome_name)")
-        and return unless $chromosome;
-
-    return ($chromosome, $from, $to);
-}
-
-sub _create_annotator {
-    my ($self, $chromosome, $from, $to) = @_;
-    
-    return Genome::Utility::VariantAnnotator->new(
-        transcript_window => $chromosome->transcript_window (
-            from => $from - $self->flank_range,
-            to => $to + $self->flank_range,
-            range => $self->flank_range
-        ),
+    return Genome::Utility::VariantAnnotator->create(
+        transcript_window => $transcript_window 
     );
 }
 
-sub _create_variation_window {
-    my ($self, $chromosome, $from, $to) = @_;
 
-    return $chromosome->variation_window(
-        from => $from,
-        to => $to,
-        range => $self->variation_range,
-    );
+sub _create_transcript_window {  #TODO update
+
+    my ($self, $chromosome) = @_;
+
+    my $iter = Genome::Transcript->create_iterator(where => [ chrom_name => $chromosome] );
+    my $window =  Genome::DB::Window::Transcript->create ( iterator => $iter, range => $self->flank_range);
+    return $window
+}
+
+sub _create_variation_window {  #TODO update
+    my ($self, $chromosome) = @_;
+
+    my $iter = Genome::Variation->create_iterator(where => [ chrom_name => $chromosome] );
+    my $window =  Genome::DB::Window::Variation->create ( iterator => $iter, range => $self->variation_range);
+    return $window
 }
 
 #- REPORTS -#
@@ -444,7 +437,7 @@ Goes through each variant in a file, retrieving annotation information from Geno
      variant_file => $detail_file, # required
      report_file => sprintf('%s/variant_report_for_chr_%s', $reports_dir, $chromosome), # required
      flank_range => 10000, # default 50000
-     variant_range => 0, # default 0
+     variation_range => 0, # default 0
  );
 
  if ( $success )

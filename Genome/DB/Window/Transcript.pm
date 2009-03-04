@@ -3,9 +3,9 @@ package Genome::DB::Window::Transcript;
 use strict;
 use warnings;
 
-use base 'Genome::DB::Window';
-
-use Data::Dumper;
+class Genome::DB::Window::Transcript{
+    is => 'Genome::DB::Window'
+};
 
 sub object_start_method
 {

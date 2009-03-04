@@ -21,16 +21,18 @@ ok(-s $file, "Storable file ($file) has data!");
 my @variants = @{retrieve($file)};
 ok(@variants, "Got data from storable file");
 
-my $chromosome = _get_chromosome($variants[0]->{chromosome});
-my ($from, $to) = _get_range(@variants);
-my $annotator = _get_annotator($chromosome, $from, $to);
+my $chromosome = $variants[0]->{chromosome};
+my $window = _get_window($chromosome);
+my $annotator = _get_annotator($window);
+ok($annotator, "got annotator for chromosome $chromosome");
 
 for (my $i = 0; $i <= $#variants; $i++) {
     my $variant = $variants[$i];
-    unless ( $variant->{chromosome} eq $chromosome->chromosome_name ) { #uninit val
-        $chromosome = _get_chromosome($variant->{chromosome});
-        my ($from, $to) = _get_range(@variants[$i..$#variants]);
-        $annotator = _get_annotator($chromosome, $from, $to);
+    unless ( $variant->{chromosome} eq $chromosome ) { #uninit val
+        $chromosome = $variant->{chromosome};
+        $window = _get_window($chromosome);
+        $annotator = _get_annotator($window);
+        ok($annotator, "got annotator from next chromosome $chromosome");
     }
 
     my @annotations = $annotator->prioritized_transcripts(
@@ -73,26 +75,22 @@ sub _get_range {
     return ($from, $variants[$i - 1]->{stop});
 }
 
-sub _get_chromosome {
-    my ($chromosome_name) = @_;
-
-    my $chromosome = $schema->resultset('Chromosome')->find(
-        { chromosome_name => $chromosome_name },
-    );
-    ok($chromosome, "Got chromosome ($chromosome_name)"); #uninit val
-    die unless $chromosome;
-
-    return $chromosome;
+sub _get_window{
+    my $chromosome = shift;
+    my $iter = Genome::Transcript->create_iterator(where => [ chrom_name => $chromosome] );
+    my $window =  Genome::DB::Window::Transcript->create ( iterator => $iter, range => 50000);
+    return $window
 }
 
-sub _get_annotator {
-    my ($chromosome, $from, $to) = @_;
 
-    my $annotator = Genome::Utility::VariantAnnotator->new(
-        transcript_window => $chromosome->transcript_window(range => 0),
-        #transcript_window => $chromosome->transcript_window(from => $from, to => $to, range => 0),
+sub _get_annotator {
+    my ($transcript_window) = @_;
+
+    my $annotator = Genome::Utility::VariantAnnotator->create(
+        transcript_window => $transcript_window,
+        benchmark => 1,
     );
-    ok($annotator, sprintf('Got annotator for chromosome (%s)', $chromosome->chromosome_name));
+    ok($annotator, sprintf('Got annotator for chromosome (%s)', $chromosome));
     die unless $annotator;
 
     return $annotator;

@@ -3,18 +3,20 @@ package Genome::DB::Window::Variation;
 use strict;
 use warnings;
 
-use base 'Genome::DB::Window';
+class Genome::DB::Window::Variation{
+    is => 'Genome::DB::Window'
+};
 
 use Data::Dumper;
 
 sub object_start_method
 {
-    return 'start_';
+    return 'start';
 }
 
 sub object_stop_method
 {
-    return 'end';
+    return 'stop';
 }
 
 sub variations

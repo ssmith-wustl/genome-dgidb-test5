@@ -2,33 +2,44 @@ package Genome::DB::Window;
 
 use strict;
 use warnings;
+use Genome; 
 
-use Finfo::Std;
+class Genome::DB::Window{
+    is => 'UR::Object',
+    has => [
+        iterator => {is => 'UR::Object::Iterator'},
+        range   => { is => 'Integer', default_value => 0 },
 
-use Data::Dumper;
+        _start => { is => 'Integer', default_value => 0},
+        _stop => { is => 'Integer', default_value => 0},
+        _max => { is => 'Integer'},
+        _min => { is => 'Integer'},
 
-my %iterator :name(iterator:r);
-my %range :name(range:o) :isa('int gte 0') :default(0);
+        _iterator_position => { is => 'Integer', default_value => 0},
+        _iterator_done => { is => 'boolean'},
 
-my %start :name(_start:p) :default(0);
-my %stop :name(_stop:p) :default(0);
-my %max :name(_max:p);
-my %min :name(_min:p);
+        #_object_is_in_range => { is => 'boolean'},
+        _leftover_object => { is => 'UR::Object'},
 
-my %it_pos :name(_iterator_position:p) :default(-1);
-my %done :name(_iterator_done:p) :default(0);
+        _objects => { is => 'UR::Object', is_many => 1 },
+    ]
+};
 
-my %obj_range_code :name(_object_is_in_range:p) :isa(code);
-my %objs :name(_objects:p) :ds(aryref) :empty_ok(1) :default([]);
-my %lo_obj :name(_leftover_object:p);
-
-sub START
+sub create
 {
-    my $self = shift;
+    $DB::single =1;
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
 
+    $self->_start(0);
+    $self->_stop(0);
+    $self->_iterator_position(0);
+    return $self;
+
+=cut
     my $start_method = $self->object_start_method;
     my $stop_method = $self->object_stop_method;
-    
+
     $self->_object_is_in_range
     (
         sub
@@ -39,8 +50,8 @@ sub START
             return 0;
         }
     );
+=cut
 
-    return 1;
 }
 
 sub objects
@@ -76,22 +87,22 @@ sub scroll
 
     $stop = $start unless defined $stop;
     
-    return @{ $self->_objects } unless $self->_set_ranges($start, $stop);
+    return  $self->_objects  unless $self->_set_ranges($start, $stop);
     
     $self->_remove_objects;
     $self->_add_objects;
     
-    return @{ $self->_objects };
+    return  $self->_objects ;
 }
 
 sub validate_objects
 {
     my $self = shift;
 
-    foreach my $object ( @{ $self->_objects } )
+    foreach my $object (  $self->_objects  )
     {
-        #$self->error_msg("Object not in range") unless $self->_object_is_in_range($object) == 0;
-        $self->error_msg("Object not in range") unless $self->_object_is_in_range->($object) == 0;
+        $self->error_msg("Object not in range") unless $self->_object_is_in_range($object) == 0;
+        #$self->error_msg("Object not in range") unless $self->_object_is_in_range->($object) == 0;
     }
 
     return 1;
@@ -123,10 +134,10 @@ sub _remove_objects
     my $self = shift;
 
     my @objects;
-    foreach my $object ( @{ $self->_objects } )
+    foreach my $object (  $self->_objects  )
     {
-        #push @objects, $object if $self->_object_is_in_range($object) eq 0;
-        push @objects, $object if $self->_object_is_in_range->($object) eq 0;
+        push @objects, $object if $self->_object_is_in_range($object) eq 0;
+        #push @objects, $object if $self->_object_is_in_range->($object) eq 0;
     }
 
     return $self->_objects(\@objects);
@@ -138,8 +149,8 @@ sub _add_objects
 
     if ( my $leftover_object = $self->_leftover_object )
     {
-        #my $in_range = $self->_object_is_in_range($leftover_object); 
-        my $in_range = $self->_object_is_in_range->($leftover_object); 
+        my $in_range = $self->_object_is_in_range($leftover_object); 
+        #my $in_range = $self->_object_is_in_range->($leftover_object); 
 
         if ( $in_range == 1 ) # ahead
         {
@@ -149,8 +160,10 @@ sub _add_objects
         elsif ( $in_range == 0 ) # in range
         {
             # add leftover to objects, contignue
-            $self->undef_attribute('_leftover_object');
-            push @{ $self->_objects }, $leftover_object;
+
+            $self->_leftover_object(undef);
+            $self->_objects([$self->_objects, $leftover_object]);
+            #push @{ $self->_objects }, $leftover_object;
         }
         # else behind, continue
     }
@@ -160,8 +173,8 @@ sub _add_objects
         my $object = $self->_next_from_iterator
             or return;
 
-        #my $in_range = $self->_object_is_in_range($object);
-        my $in_range = $self->_object_is_in_range->($object);
+        my $in_range = $self->_object_is_in_range($object);
+        #my $in_range = $self->_object_is_in_range->($object);
         if ( $in_range == 1 ) # ahead
         {
             # done.  save object and return
@@ -171,7 +184,8 @@ sub _add_objects
         elsif ( $in_range == 0 ) # in range
         {
             # add to objects, continue
-            push @{ $self->_objects }, $object;
+            $self->_objects([$self->_objects, $object]);
+            #push @{ $self->_objects }, $object;
         }
         # else behind, continue
     }
@@ -196,8 +210,9 @@ sub _next_from_iterator
     return $object;
 }
 
-sub __object_is_in_range
+sub _object_is_in_range
 {
+    $DB::single = $DB::stopper;
     my ($self, $object) = @_;
     
     my $stop_method = $self->object_stop_method;
