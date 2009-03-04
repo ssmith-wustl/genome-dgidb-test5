@@ -34,7 +34,7 @@ sub execute {
     my $model = $self->model;
 
     # Collect the amplicon header files from all read sets
-    my @assignment_events = $model->read_set_assignment_events;
+    my @assignment_events = $model->assignment_events;
     unless (scalar(@assignment_events)) {
         $self->error_message('No assignment events found for model '. $model->id );
         return;
