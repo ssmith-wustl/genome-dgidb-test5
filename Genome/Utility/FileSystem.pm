@@ -351,7 +351,6 @@ sub unlock_resource {
         $self->error_message("Resource lock info file '$info_file' not validated.");
         return;
     }
-    my $info_file = $resource_lock . '/info';
     my $unlink_rv = unlink($info_file);
     if (!$unlink_rv) {
         $self->error_message("Failed to remove info file '$info_file':  $!");
