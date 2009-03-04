@@ -8,7 +8,6 @@ use Genome;
 use Command;
 use Data::Dumper;
 use IO::File;
-#use Genome::DB::Schema;
 use Genome::Utility::IO::SeparatedValueReader;
 use Genome::Utility::VariantAnnotator;
 use Tie::File;
@@ -465,7 +464,7 @@ Goes through each variant in a file, retrieving annotation information from Geno
 
 =head1 See Also
 
-B<Genome::Utility::VariantAnnotator>, B<Genome::Model::Command::Report::VariationsBatchToLsf>, B<Genome::DB::*>, B<Genome::DB::Window::*>
+B<Genome::Utility::VariantAnnotator>, B<Genome::Model::Command::Report::VariationsBatchToLsf>
 
 =head1 Disclaimer
 

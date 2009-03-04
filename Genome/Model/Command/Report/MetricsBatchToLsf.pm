@@ -422,7 +422,7 @@ For a given variant file, this module will split it up into files containing 100
 
 =head1 See Also
 
-B<Genome::SnpAnnotator>, B<Genome::Model::Command::Report::Variations>, B<Genome::DB::*>, B<Genome::DB::Window::*>
+B<Genome::SnpAnnotator>, B<Genome::Model::Command::Report::Variations>>
 
 =head1 Disclaimer
 
