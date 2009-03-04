@@ -9,7 +9,7 @@ class Genome::Model::Command::RunJobs {
     has => [
         dispatcher  => { is => 'String', is_optional => 1, default_value => 'lsf',
                         doc => 'underlying mechanism for executing jobs ("lsf" or "inline")', },
-        read_set_id => {is => 'Integer', is_optional => 1, doc => 'only dispatch events with this read_set_id' },
+        instrument_data_id => {is => 'Integer', is_optional => 1, doc => 'only dispatch events with this instrument_data_id' },
         ref_seq_id  => {is => 'String', is_optional => 1, doc => 'only dispatch events with this ref_seq_id' },
         event_id    => {is => 'Integer', is_optional => 1, doc => 'only dispatch this single event' },
         bsub_queue  => {is => 'String', is_optional => 1, doc => 'lsf jobs should be put into this queue' },
@@ -130,8 +130,8 @@ sub execute {
     #if we wanted to allow model names to be passed in again
 
     my %addl_get_params = (model_id => $self->model_id) ; # model_id is a required param now
-    if ($self->read_set_id) {
-        $addl_get_params{'read_set_id'} = $self->read_set_id;
+    if ($self->instrument_data_id) {
+        $addl_get_params{'instrument_data_id'} = $self->instrument_data_id;
     }
     if (defined $self->ref_seq_id) {
         $addl_get_params{'ref_seq_id'} = $self->ref_seq_id;
@@ -192,9 +192,9 @@ sub _verify_submitted_jobs {
         );
     my %invalid_dependencies;
     while (my $event = shift @queued_events) {
-        unless ($event->ref_seq_id || $event->read_set_id) {
+        unless ($event->ref_seq_id || $event->instrument_data_id) {
             unless (grep { $event->event_type =~ qr/$_/ }  $self->event_types_without_subclass) {
-                $self->error_message('Event '. $event->id .' has no ref_seq_id or read_id... skipping.');
+                $self->error_message('Event '. $event->id .' has no ref_seq_id or instrument id... skipping.');
                 next;
             }
         }
@@ -244,8 +244,8 @@ sub _verify_submitted_jobs {
 sub event_desc {
     my ($event) = @_;
     my $s = $event->id . ': ' . $event->event_type . ' on ' . $event->model->name;
-    if ($event->read_set_id) {
-        $s .= ' for read set ' . $event->read_set->name;
+    if ($event->instrument_data_id) {
+        $s .= ' for instrument data ' . $event->instrument_data->name;
     }
     elsif ($event->ref_seq_id) {
         $s .= ' for ref seq ' . $event->ref_seq_id
@@ -266,9 +266,9 @@ sub _schedule_scheduled_jobs {
                                                        # this means the job hasn't been submitted yet
                                                        %addl_get_params);
     while (my $event = shift @launchable_events) {
-        unless ($event->ref_seq_id || $event->read_set_id) {
+        unless ($event->ref_seq_id || $event->instrument_data_id) {
             unless (grep { $event->event_type =~ qr/$_/ }  $self->event_types_without_subclass) {
-                $self->error_message("Event ".$event->id." has no ref_seq_id or read_set_id... skipping.");
+                $self->error_message("Event ".$event->id." has no ref_seq_id or instrument_data_id... skipping.");
                 next;
             }
         }
