@@ -61,6 +61,7 @@ sub event_types_without_subclass {
             '^genome[\- ]model build assembly assemble newbler$',
             '^genome[\- ]model build amplicon-assembly',
             '^genome[\- ]model build combine-variants',
+            '^genome[\- ]model build polyphred-polyscan',
             '^genome[\- ]model build reference-alignment deduplicate-libraries maq',
             '^genome[\- ]model build reference-alignment run-reports',
             
