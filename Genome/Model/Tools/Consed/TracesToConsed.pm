@@ -137,11 +137,10 @@ if neither of these two options are used consed will follow it order of preciden
 
 ==================================================================================================
 
-*Here are 4 examples of how this script was intened to be used. Fill in the appropriate values for the options used in these examples
+*Here are 4 examples of how this script was intened to be used. 
 
 
-
-building assemblies to be used by ==>  gt manual-review review-variants 
+building Human NCBI Build36 assemblies to be used by ==>  gt manual-review review-variants 
 
   if your reviewing snps, you could get by with the minimume requirements base dir was added for this example
  
@@ -155,7 +154,7 @@ building assemblies to be used by ==>  gt manual-review review-variants
                 ======================================================
 
 
-building assemblies to be used by detect-sequence-variation
+building Human NCBI Build36 assemblies to be used by detect-sequence-variation
 
        gt consed traces-to-consed --chromosome 10 --start 126008345 --stop 126010576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --restrict-contigs --link-traces --project 10_126008345_126010576 --assembly-traces /gscmnt/238/medseq/human_misc/TEST/10_126008345_126010576.traces.fof
 
@@ -163,9 +162,14 @@ building assemblies to be used by detect-sequence-variation
                 ======================================================
 
 
-building assemblies to be used in the abbreviated Legacy pipeline
+building Human NCBI Build36 assemblies to be used in the abbreviated Legacy pipeline
 
        gt consed traces-to-consed --chromosome 10 --start 126000345 --stop 126020576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --project Collaborator_project_test_assembly --assembly-traces /gscmnt/238/medseq/human_misc/TEST/10_126008345_126010576.traces.fof
+
+
+
+With regard to the limitations of this script, it is restricted to the use of UCSC/NCBI Human Build 36
+
 
 
 ==================================================================================================
