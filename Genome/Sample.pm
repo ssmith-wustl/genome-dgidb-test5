@@ -80,7 +80,7 @@ left join (
             cell_type                   => { is => 'Text', len => 100 }, 
     ],
     has_many => [
-            solexa_lanes                => { is => 'Genome::RunChunk::SolexaDw', reverse_id_by => 'sample_id' },
+            solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'sample_id' },
             solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
     ],
     data_source => 'Genome::DataSource::GMSchema',
