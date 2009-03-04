@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::RunChunk;
 
 class Genome::Model::Command::Services::BuildQueuedInstrumentData {
     is => 'Command',
@@ -20,7 +19,7 @@ class Genome::Model::Command::Services::BuildQueuedInstrumentData {
 
 
 sub help_brief {
-    'Find all QueueInstrumentDataForGenomeModeling PSEs, create appropriate models, AddReads, and finally trigger Build on the model'
+    'Find all QueueInstrumentDataForGenomeModeling PSEs, create appropriate models, assign instrument data, and finally trigger Build on the model'
 }
 
 sub help_synopsis {
@@ -82,21 +81,21 @@ sub execute {
                                     subject_name => $subject_name,
                                     processing_profile_id => $pp->id,
                                 );
-        my @existing_read_sets = Genome::Model::ReadSet->get(
-                                                             read_set_id => $instrument_data_id,
-                                                             model_id => $model->id,
-                                                         );
-        if (@existing_read_sets) {
-            $self->status_message('Existing read set found for model '. $model->id .' and read set '. $instrument_data_id);
+        my @existing_instrument_data = Genome::Model::InstrumentDataAssignments->get(
+                                                                                     instrument_data_id => $instrument_data_id,
+                                                                                     model_id => $model->id,
+                                                                                 );
+        if (@existing_instrument_data) {
+            $self->status_message('Existing instrument_data found for model '. $model->id .' and instrument_data_id '. $instrument_data_id);
             next;
         }
         unless ($model->isa('Genome::Model::PolyphredPolyscan') || $model->isa('Genome::Model::CombineVariants')){
-            my $add_reads = Genome::Model::Command::AddReads->create(
-                read_set_id => $instrument_data_id,
+            my $assign = Genome::Model::Command::InstrumentData::Assign->create(
+                instrument_data_id => $instrument_data_id,
                 model_id => $model->id,
             );
-            unless ($add_reads->execute) {
-                $self->error_message('Failed to execute add reads for model '. $model->id .' and read set '. $instrument_data_id);
+            unless ($assign->execute) {
+                $self->error_message('Failed to execute instrument-data assign for model '. $model->id .' and instrument data '. $instrument_data_id);
                 next;
             }
         }
