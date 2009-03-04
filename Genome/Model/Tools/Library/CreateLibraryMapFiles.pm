@@ -37,14 +37,14 @@ sub execute {
         model_id => $model_id,
         event_status => 'Succeeded'
     );
-    #Convert events to ReadSet objects
-    my @readsets = map {Genome::Model::ReadSet->get(read_set_id => $_->read_set_id, model_id => $model_id)} @events;
+    #Convert events to InstrumentDataAssignment objects
+    my @idas = map { $_->instrument_data_assignment } @events;
     
     my %map_files;
-    #Completely undeprecated loop over the readsets
-    foreach my $read_set_link (@readsets) {
-        my @files = $read_set_link->alignment_file_paths; #this should work now, and will include things aligned to non-chromosomal references 
-        push @{$map_files{$read_set_link->library_name}}, @files;
+    #Completely undeprecated loop over the instrument data assignments
+    foreach my $ida (@idas) {
+        my @files = $ida->alignment_file_paths; #this should work now, and will include things aligned to non-chromosomal references 
+        push @{$map_files{$ida->library_name}}, @files;
     }
 
     foreach my $library (keys %map_files) {
