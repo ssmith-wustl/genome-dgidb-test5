@@ -15,17 +15,17 @@ class Genome::Model::Command::Build::ReferenceAlignment::AssignRun::Solexa {
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model add-reads assign-run solexa --model-id 5 --run-id 10
+    genome model build reference-alignment assign-run solexa --model-id 5 --run-id 10
 EOS
 }
 
 sub help_brief {
-    "initializes the model for a solexa read set (single lane)"
+    "initializes the model for solexa instrument data  (single lane)"
 }
 
 sub help_detail {
     return <<EOS
-This command is normally run automatically as part of "add-reads assign-run"
+This command is normally run automatically as part of "build assign-run"
 when it is determined that the run is from Solexa.
 EOS
 }
@@ -36,7 +36,7 @@ sub create {
     my $class = shift;
     my $obj = $class->SUPER::create(@_);
 
-    unless ($obj->model_id and $obj->read_set_id and $obj->event_type) {
+    unless ($obj->model_id and $obj->instrument_data_id and $obj->event_type) {
         $class->error_message("This step requires the model and run to be specified at construction time for locking concurrency.");
         $obj->delete;
         return;
@@ -44,12 +44,12 @@ sub create {
     
     my $model = $obj->model;
     
-    my $resource_id = join(".",$class,'create',$obj->read_set_id);
+    my $resource_id = join(".",$class,'create',$obj->instrument_data_id);
     my @prev =
         grep { $_ ne $obj }
         $class->load(
             model_id    => $obj->model_id,
-            read_set_id => $obj->read_set_id,
+            instrument_data_id => $obj->instrument_data_id,
             event_type  => $obj->event_type,
         );
 
@@ -57,7 +57,7 @@ sub create {
         $obj->error_message(
             "This run/lane, " 
             . $obj->run_name . "/" . $obj->run_subset_name. ' '
-            . '(' . $obj->read_set_id . '),'
+            . '(' . $obj->instrument_data_id . '),'
             . ' has already been assigned to this model '
             . $model->id . ' (' . $model->name . ')'
             . ' on event '
