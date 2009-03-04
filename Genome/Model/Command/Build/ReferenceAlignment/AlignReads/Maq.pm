@@ -7,7 +7,6 @@ use Genome;
 use Command;
 use Genome::Model;
 use Genome::Model::Command::Build::ReferenceAlignment::AlignReads;
-use Genome::Model::ReadSet;
 
 class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq {
     is => [
@@ -54,7 +53,7 @@ sub read_set_alignment_files_for_refseq {
     my $self = shift;
     my $ref_seq_id = shift;
     my $event_id = $self->id;
-    my $read_set = $self->read_set_link;
+    my $read_set = $self->instrument_data_assignment;
     my $alignment_dir = $read_set->read_set_alignment_directory;
 
     # Look for files in the new format: $refseqid.map.$eventid
@@ -74,8 +73,8 @@ sub read_set_alignment_files_for_refseq {
 sub aligner_output_file {
     my $self = shift;
     my $event_id = $self->id;
-    my $lane = $self->read_set_link->subset_name;
-    my $file = $self->read_set_link->read_set_alignment_directory . "/alignments_lane_${lane}.map.$event_id";
+    my $lane = $self->instrument_data_assignment->subset_name;
+    my $file = $self->instrument_data_assignment->read_set_alignment_directory . "/alignments_lane_${lane}.map.$event_id";
     $file =~ s/\.map\./\.map.aligner_output\./g;
     return $file;
 }
@@ -84,7 +83,7 @@ sub aligner_output_file {
 sub aligner_output_file_name {
     my $self = shift;
     my $event_id = $self->id;
-    my $lane = $self->read_set_link->subset_name;
+    my $lane = $self->instrument_data_assignment->subset_name;
     my $file = "/alignments_lane_${lane}.map.$event_id";
     $file =~ s/\.map\./\.map.aligner_output\./g;
     return $file;
@@ -94,7 +93,7 @@ sub aligner_output_file_name {
 sub unaligned_reads_file_name {
     my $self = shift;
     my $event_id = $self->id;
-    my $read_set = $self->read_set_link;
+    my $read_set = $self->instrument_data_assignment;
     my $lane = $read_set->subset_name;
     return "/s_${lane}_sequence.unaligned.$event_id";
 }
@@ -102,7 +101,7 @@ sub unaligned_reads_file_name {
 sub unaligned_reads_file {
     my $self = shift;
     my $event_id = $self->id;
-    my $read_set = $self->read_set_link;
+    my $read_set = $self->instrument_data_assignment;
     my $lane = $read_set->subset_name;
     return $read_set->read_set_alignment_directory . "/s_${lane}_sequence.unaligned.$event_id";
 }
@@ -110,7 +109,7 @@ sub unaligned_reads_file {
 sub unaligned_reads_files {
     my $self = shift;
     #my $event_id = $self->id;
-    my $read_set = $self->read_set_link;
+    my $read_set = $self->instrument_data_assignment;
     my $lane = $read_set->subset_name;
     my @unaligned_reads_files = glob ($read_set->read_set_alignment_directory . "/${lane}_sequence.unaligned.*");
     return @unaligned_reads_files;
@@ -149,8 +148,8 @@ sub _calculate_total_reads_passed_quality_filter_count {
     do {
         no warnings;
 
-        if (defined $self->read_set_link->unique_reads_across_library && defined $self->read_set_link->duplicate_reads_across_library) {
-            $total_reads_passed_quality_filter_count = ($self->read_set_link->unique_reads_across_library + $self->read_set_link->duplicate_reads_across_library);
+        if (defined $self->instrument_data_assignment->unique_reads_across_library && defined $self->instrument_data_assignment->duplicate_reads_across_library) {
+            $total_reads_passed_quality_filter_count = ($self->instrument_data_assignment->unique_reads_across_library + $self->instrument_data_assignment->duplicate_reads_across_library);
         }
         unless ($total_reads_passed_quality_filter_count) {
             my @f = grep {-f $_ } $self->instrument_data->bfq_filenames;
@@ -180,7 +179,7 @@ sub _calculate_total_bases_passed_quality_filter_count {
 
     # total_reads_passed_quality_filter_count might return "Not Found"
     no warnings 'numeric';
-    my $total_bases_passed_quality_filter_count = $self->total_reads_passed_quality_filter_count * $self->read_set_link->read_length;
+    my $total_bases_passed_quality_filter_count = $self->total_reads_passed_quality_filter_count * $self->instrument_data_assignment->read_length;
     return $total_bases_passed_quality_filter_count;
 }
 
@@ -198,7 +197,7 @@ sub _calculate_poorly_aligned_read_count {
     #}
     
     my $total = 0;
-    for my $f ($self->read_set_link->poorly_aligned_reads_list_paths) {
+    for my $f ($self->instrument_data_assignment->poorly_aligned_reads_list_paths) {
         my $fh = IO::File->new($f);
         $fh or die "Failed to open $f to read.  Error returning value for poorly_aligned_read_count.\n";
         while (my $row = $fh->getline) {
@@ -216,7 +215,7 @@ sub contaminated_read_count {
 sub _calculate_contaminated_read_count {
     my $self = shift;
 
-    my @f = $self->read_set_link->aligner_output_file_paths;
+    my @f = $self->instrument_data_assignment->aligner_output_file_paths;
     my $total = 0;
     for my $f (@f) {
         my $fh = IO::File->new($f);
@@ -258,7 +257,7 @@ sub aligned_base_pair_count {
 sub _calculate_aligned_base_pair_count {
     my $self = shift;
 
-    my $aligned_base_pair_count = $self->aligned_read_count * $self->read_set_link->read_length;
+    my $aligned_base_pair_count = $self->aligned_read_count * $self->instrument_data_assignment->read_length;
     return $aligned_base_pair_count;
 }
 sub unaligned_read_count {
@@ -279,7 +278,7 @@ sub unaligned_base_pair_count {
 
 sub _calculate_unaligned_base_pair_count {
     my $self = shift;
-    my $unaligned_base_pair_count = $self->unaligned_read_count * $self->read_set_link->read_length;
+    my $unaligned_base_pair_count = $self->unaligned_read_count * $self->instrument_data_assignment->read_length;
     return $unaligned_base_pair_count;
 }
 
@@ -291,7 +290,7 @@ sub total_base_pair_count {
 sub _calculate_total_base_pair_count {
     my $self = shift;
 
-    my $total_base_pair_count = $self->total_read_count * $self->read_set_link->read_length;
+    my $total_base_pair_count = $self->total_read_count * $self->instrument_data_assignment->read_length;
     return $total_base_pair_count;
 }
 
@@ -351,7 +350,7 @@ sub execute {
         reference_build => $reference_build,
         event           => $self,                       # for logging
     );
-    
+
     unless ($alignment_dir and -d $alignment_dir) {
         if ($alignment_dir) {
             $self->error_message("Missing alignment directory '$alignment_dir'!");
@@ -359,21 +358,16 @@ sub execute {
         $self->error_message("Error generating alignments!:\n" .  join("\n",$instrument_data->error_message));
         return;
     }
-    
+
     my $instrument_data_assignment = $self->instrument_data_assignment;
     unless($instrument_data_assignment->first_build_id) {
         $instrument_data_assignment->first_build_id($self->build_id);
     }
-    
-    # support the old links as well as the new for now...
-    my $read_set_link = $self->read_set_link;
-    unless($read_set_link->first_build_id) {
-        $read_set_link->first_build_id($self->build_id);
-    }
-    
+
     $self->generate_metric($self->metrics_for_class);
-    
+
     # the hard way to get one value...
+
     my $evenness_path = $alignment_dir . '/evenness';
     if (-s $evenness_path) {
     	my $evenness = IO::File->new($evenness_path)->getline;
