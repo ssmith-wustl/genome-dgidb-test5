@@ -15,7 +15,7 @@ class Genome::Utility::FileSystem {
     is => 'UR::Object',
 };
 
-$SIG{'INT'} = \&DESTROY;
+$SIG{'INT'} = \&INT_cleanup;
 
 
 my %DIR_TO_REMOVE;
@@ -402,16 +402,16 @@ sub check_for_path_existence {
     return;
 }
 
-sub END {
+END {
     for my $dir_to_remove (keys %DIR_TO_REMOVE) {
         if (-e $dir_to_remove) {
             warn("Removing remaining resource lock: '$dir_to_remove'");
             File::Path::rmtree($dir_to_remove);
         }
     }
-}
+};
 
-sub DESTROY {
+sub INT_cleanup {
     for my $dir_to_remove (keys %DIR_TO_REMOVE) {
         if (-e $dir_to_remove) {
             warn("Removing remaining resource lock: '$dir_to_remove'");
