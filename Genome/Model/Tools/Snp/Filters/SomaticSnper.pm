@@ -6,7 +6,6 @@ use warnings;
 use Genome;
 use Command;
 use IO::File;
-use Genome::DB::Schema;
 use Statistics::R;
 use Workflow;
 
