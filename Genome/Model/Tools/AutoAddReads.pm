@@ -31,7 +31,7 @@ sub execute {
 
     foreach my $mod ( Genome::Model::ReferenceAlignment->get() ) {
         my $cmd =
-            'genome model add-reads --model-id='
+            'genome model instrument-data assign --model-id='
           . $mod->genome_model_id()
           . ' --all';
     }
@@ -39,7 +39,7 @@ sub execute {
     foreach my $assign_model (
         Genome::Model::ReferenceAlignment->get( auto_assign_inst_data => 1 ) )
     {
-        Genome::Model::Command::AddReads->execute(model_id => $assign_model->genome_model_id(),all=>1);
+        Genome::Model::Command::InstrumentData::Assign->execute(model_id => $assign_model->genome_model_id(),all=>1);
      }
 
    
