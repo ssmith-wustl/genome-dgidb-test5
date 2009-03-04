@@ -34,7 +34,10 @@ my $model = Genome::Model->create_mock(
                                        data_directory => $test_data_directory,
                                    );
 $model->set_always('latest_build_directory', $test_data_directory);
-$model->set_list('read_sets',Genome::Model::ReadSet->get(read_set_id=> 2499312867, model_id=>2721044485));
+$model->set_list('instrument_data_assignments',Genome::Model::InstrumentDataAssignment->get(
+                                                                                            instrument_data_id => 2499312867,
+                                                                                            model_id => 2721044485
+                                                                                        ));
 
 my $build = Genome::Model::Build->create_mock(
                                               id => --$bogus_id,
@@ -62,7 +65,7 @@ my $new_build = Genome::Model::Build->create_mock(
 my %params = (
               event_type => $build_event->event_type,
               model_id => $model->id,
-              read_set_id => 'test_read_set_id',
+              instrument_data_id => 'test_instrument_data_id',
               ref_seq_id => 'test_ref_seq_id',
               user_name => $ENV{USER},
               parent_event_id => $build_event->genome_model_event_id,
