@@ -72,7 +72,7 @@ class Genome::Model::Tools::Consed::TracesToConsed {
 	     },
 	     project          => {
 		 type         => 'string',
-		 doc          => "provide a project name or use the default chromosome_start",
+		 doc          => "provide a project name or use the default chromosome_start; No "." allowed in project the assembly will fail to produce a phd file with the expected name for the refseq",
 		 is_optional  => 1,
 	     },
 	     
@@ -93,7 +93,7 @@ gt consed traces-to-consed --chromosome --start --trace_dir
 
 running...
 
-gt consed traces-to-consed --chromosome 10 --start 126009345 --stop 126009576 --base_dir /gscmnt/238/medseq/human_misc/TEST --trace_dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --project_info 11+11-INS --extend_ref 1000
+gt consed traces-to-consed --chromosome 10 --start 126009345 --stop 126009576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --project-details 11+11-INS --extend-ref 1000
 
 will produce the project 10_126009345 
 
@@ -143,13 +143,13 @@ if neither of these two options are used consed will follow it order of preciden
 
 building assemblies to be used by ==>  gt manual-review review-variants 
 
-  if your reviewing snps, you could get by with the minimume requirements
+  if your reviewing snps, you could get by with the minimume requirements base dir was added for this example
  
-       gt consed traces-to-consed --chromosome  --start --trace_dir 
+       gt consed traces-to-consed --chromosome 10 --start 126009345 --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --base-dir /gscmnt/238/medseq/human_misc/TEST
 
   if your reviewing indels your minimum input would be 
 
-       gt consed traces-to-consed --chromosome  --start --trace_dir --stop --extend-ref 1000 
+       gt consed traces-to-consed --chromosome 10 --start 126009344 --stop 126009576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --extend-ref 1000
 
 
                 ======================================================
@@ -157,7 +157,7 @@ building assemblies to be used by ==>  gt manual-review review-variants
 
 building assemblies to be used by detect-sequence-variation
 
-       gt consed traces-to-consed --chromosome  --start --trace_dir --stop --base-dir --assembly-traces --restrict-contigs --link-traces --project 
+       gt consed traces-to-consed --chromosome 10 --start 126008345 --stop 126010576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --restrict-contigs --link-traces --project 10_126008345_126010576 --assembly-traces /gscmnt/238/medseq/human_misc/TEST/10_126008345_126010576.traces.fof
 
 
                 ======================================================
@@ -165,7 +165,7 @@ building assemblies to be used by detect-sequence-variation
 
 building assemblies to be used in the abbreviated Legacy pipeline
 
-       gt consed traces-to-consed --chromosome  --start --trace_dir --stop --base-dir --extend-ref --project 
+       gt consed traces-to-consed --chromosome 10 --start 126000345 --stop 126020576 --base-dir /gscmnt/238/medseq/human_misc/TEST --trace-dir /gscmnt/238/medseq/human_misc/TEST/chromat_dir/ --project Collaborator_project_test_assembly --assembly-traces /gscmnt/238/medseq/human_misc/TEST/10_126008345_126010576.traces.fof
 
 
 ==================================================================================================
@@ -190,6 +190,7 @@ sub execute {                               # replace with real execution logic.
 
     my $assembly_traces_fof = $self->assembly_traces;
     my $assembly_traces;
+
     if ($assembly_traces_fof && -e $assembly_traces_fof) {
 	open(TFOF,$assembly_traces_fof);
 	while (<TFOF>) {
@@ -329,38 +330,40 @@ sub execute {                               # replace with real execution logic.
 	
 	my $read;
 	
-	if ($trace =~ /(^\S+).gz/) {
+	if ($trace =~ /^(\S+).gz/) {
 	    $read = $1;
 	} else {
 	    $read = $trace;
 	}
 	
     #guide the reads from a traces fof provided by the user
-	if ($assembly_traces->{$trace} || $assembly_traces->{$read}) {
-	    unless ($trace =~ /\.gz$/) {system qq(gzip $trace_dir/$trace); $trace="$read.gz";}
-	    
-	    
-	    if ($link_traces) {
-		system qq(ln -s $trace_dir/$trace $chromat_dir/$trace);
-	    } else {
-		system qq(cp $trace_dir/$trace $chromat_dir);   
+
+	if ($assembly_traces_fof && -e $assembly_traces_fof) {
+	    if ($assembly_traces->{$trace} || $assembly_traces->{$read}) {
+		unless ($trace =~ /\.gz$/) {system qq(gzip $trace_dir/$trace); $trace="$read.gz";}
+		
+		
+		if ($link_traces) {
+		    system qq(ln -s $trace_dir/$trace $chromat_dir/$trace);
+		} else {
+		    system qq(cp $trace_dir/$trace $chromat_dir);   
+		}
+		
+		my $amplicon;     #H _ 0 9 _ 0 0 e f q
+		if ($read =~ /PCR(H\_\S\S\_\S\S\S\S\S)\S+/) {
+		    $amplicon = $1;
+		} else {
+		    ($amplicon) = $read =~ /PCR(\S\S\S\S\S\S\S\_\S\S\S)\S+/; #substr($trace,13,11);
+		}
+		
+		if ($amplicon) {
+		    push @{$ampread{$amplicon}},$read;
+		    push (@amplist,$amplicon);
+		}
+		
+		print FOF qq($read\n);
+		system qq(/gsc/scripts/bin/phred -dd $poly_dir -pd $phd_dir $chromat_dir/$read.gz);
 	    }
-	    
-	    my $amplicon;     #H _ 0 9 _ 0 0 e f q
-	    if ($read =~ /PCR(H\_\S\S\_\S\S\S\S\S)\S+/) {
-		$amplicon = $1;
-	    } else {
-		($amplicon) = $read =~ /PCR(\S\S\S\S\S\S\S\_\S\S\S)\S+/; #substr($trace,13,11);
-	    }
-	    
-	    if ($amplicon) {
-		push @{$ampread{$amplicon}},$read;
-		push (@amplist,$amplicon);
-	    }
-	    
-	    print FOF qq($read\n);
-	    system qq(/gsc/scripts/bin/phred -dd $poly_dir -pd $phd_dir $chromat_dir/$read.gz);
-	
 	} elsif ($amplicons) {
 	    foreach my $amplicon (sort keys %{$amps}) {
 		if ($read =~ /$amplicon/) {
@@ -472,6 +475,9 @@ sub get_ref_base {
     my ($chr_name,$chr_start,$chr_stop) = @_;
     my $seq = $refdb->seq($chr_name, $chr_start => $chr_stop);
     $seq =~ s/([\S]+)/\U$1/;
+
+    if ($seq =~ /N/) {warn "your sequence has N in it\n";}
+
     return $seq;
     
 }
