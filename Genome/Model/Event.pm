@@ -27,8 +27,8 @@ class Genome::Model::Event {
         build_id     => { is => 'NUMBER', len => 10, implied_by => 'build', is_optional => 1 },
     ],
     has_optional => [
-        read_set_id      => { is => 'NUMBER', len => 11, column_name => 'RUN_ID', implied_by => 'instrument_data' },
-        instrument_data  => { is => 'Genome::InstrumentData', id_by => 'read_set_id', 
+        instrument_data_id      => { is => 'NUMBER', len => 11, column_name => 'RUN_ID', implied_by => 'instrument_data' },
+        instrument_data  => { is => 'Genome::InstrumentData', id_by => 'instrument_data_id', 
                          doc => 'The id of the instrument data on which to operate' },
         ref_seq_id       => { is => 'VARCHAR2', len => 64 },
         parent_event     => { is => 'Genome::Model::Event', id_by => 'parent_event_id', constraint_name => 'GME_PAEID_FK' },
