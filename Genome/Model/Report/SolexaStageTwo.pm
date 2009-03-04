@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::RunChunk;
 use CGI;
 use English;
 use Memoize;
