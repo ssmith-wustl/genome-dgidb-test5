@@ -19,7 +19,7 @@ class Genome::Model::Command::AddGoldSnp {
         },
     ],
     has_optional => [
-        read_set_id => {
+        instrument_data_id => {
             is => 'Number',
             doc => 'The unique ID of the data set produced on the instrument'
         },
@@ -92,10 +92,10 @@ sub _redo_all {
     my $model = $self->model;
     my $model_id = $model->id;
 
-    my @prior_add_reads_events = sort { $b->id <=> $a->id } $model->read_set_addition_events;
+    my @prior_assign_events = sort { $b->id <=> $a->id } $model->instrument_data_assignment_events;
     my @replacements;
-    for my $prior_add_reads_step (@prior_add_reads_events) {
-        my $replacement = $prior_add_reads_step->redo;
+    for my $prior_assign_step (@prior_assign_events) {
+        my $replacement = $prior_assign_step->redo;
         push @replacements, $replacement;
     }
 
@@ -105,34 +105,34 @@ sub _redo_all {
 sub redo {
     my $self = shift;
     my @children = $self->child_events;
-    my $read_set_id = $self->read_set_id;
+    my $instrument_data_id = $self->instrument_data_id;
     $self->status_message("Found " . scalar(@children) . " child events under " . $self->id . "\n");
     for my $child (sort { $b->id <=> $a->id } @children) {
         $child->event_status("Scheduled");
         next;
-        if ($read_set_id) {
-            if ($read_set_id != $child->read_set_id) {
-                die "Read set for " . $child->id . " is not $read_set_id!?"; 
+        if ($instrument_data_id) {
+            if ($instrument_data_id != $child->instrument_data_id) {
+                die "Read set for " . $child->id . " is not $instrument_data_id!?"; 
             }
         }
         else {
-            $read_set_id = $child->read_set_id;
+            $instrument_data_id = $child->instrument_data_id;
         }
         #$child->delete;
     }   
     
     return 1;
          
-    if ($read_set_id) {
+    if ($instrument_data_id) {
         my $class = $self->class;
         my $model_id = $self->model_id;
         $self->delete;
         my $retval = $class->execute(
             model_id => $model_id,
-            read_set_id => $read_set_id, 
+            instrument_data_id => $instrument_data_id, 
         );
         unless ($retval) {
-            die "Error adding read set $read_set_id!";
+            die "Error adding read set $instrument_data_id!";
         }
         return $retval;
     }
