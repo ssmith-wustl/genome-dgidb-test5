@@ -3,7 +3,6 @@ package Genome::Model::Report::Table;
 use strict;
 use warnings;
 
-use Genome::RunChunk;
 use CGI;
 use English;
 use Memoize;
