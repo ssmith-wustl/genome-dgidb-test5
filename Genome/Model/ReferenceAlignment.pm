@@ -29,11 +29,11 @@ class Genome::Model::ReferenceAlignment {
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
         reference_sequence_name      => { via => 'processing_profile'},
-        read_set_assignment_events   => { is => 'Genome::Model::Command::Build::ReferenceAlignment::AssignRun',
-                                          is_many => 1,
-                                          reverse_id_by => 'model',
-                                          doc => 'each case of a read set being assigned to the model',
-                                        },
+        assignment_events   => { is => 'Genome::Model::Command::Build::ReferenceAlignment::AssignRun',
+                                 is_many => 1,
+                                 reverse_id_by => 'model',
+                                 doc => 'each case of an instrument data being assigned to the model',
+                            },
         alignment_events             => { is => 'Genome::Model::Command::Build::ReferenceAlignment::AlignReads',
                                           is_many => 1,
                                           reverse_id_by => 'model',
@@ -122,7 +122,7 @@ sub create {
 
 sub libraries {
     my $self = shift;
-    my %libraries = map {$_->library_name => 1} $self->read_sets;
+    my %libraries = map {$_->library_name => 1} $self->instrument_data;
     my @distinct_libraries = keys %libraries;
     if ($self->name =~ /v0b/) {
         warn "removing any *d libraries from v0b models.  temp hack for AML v0b models.";
@@ -150,7 +150,7 @@ sub complete_build_directory {
 
 sub run_names {
     my $self = shift;
-    my %distinct_run_names = map { $_->run_name => 1}  $self->read_sets;
+    my %distinct_run_names = map { $_->run_name => 1}  $self->instrument_data;
     my @distinct_run_names = keys %distinct_run_names;
     return @distinct_run_names;
 }
@@ -167,20 +167,6 @@ sub other_snp_related_metric_directory {
 sub maq_snp_related_metric_directory {
     my $self=shift;
     return $self->complete_build_directory . "/maq_snp_related_metrics/";
-}
-
-#This should not be used, unless we really need caching, if so, should probably be in Genome::Model::ReadSet
-sub Xread_sets {
-    my $self = shift;
-    my %distinct_ids = map { $_->read_set_id => 1}  $self->read_set_assignment_events;
-    my @distinct_ids = keys %distinct_ids;
-    my @sets = Genome::RunChunk->get(\@distinct_ids);
-    return unless @sets;
-    if (my $dw_class = $sets[0]->_dw_class) {
-        # cache the equivalent dw data in bulk
-        my @tmp = $dw_class->get(id => [ map { $_->id } @sets]);
-    }
-    return @sets;
 }
 
 sub metric_to_class_hash {
@@ -246,11 +232,9 @@ sub get_events_for_metric {
 
     #if we get here then we need to make sure we only grab events related to one add-reads 
     #or post-process_alignemnts event
-    my @parent_addreads_events = Genome::Model::Command::AddReads->get(model_id => $self->id);
     my @parent_pp_alignment_events= Genome::Model::Command::Build::ReferenceAlignment->get(model_id => $self->id);
 
     #nothing has a frickin addreads event yet
-    #@parent_addreads_events = sort { $a->date_scheduled cmp $b->date_scheduled } @parent_addreads_events;
     @parent_pp_alignment_events= sort { $b->date_scheduled cmp $a->date_scheduled } @parent_pp_alignment_events;
     my @latest_parent_ids = ($parent_pp_alignment_events[0]->id);
     my @events = $class->get(model_id => $self->id, parent_event_id => \@latest_parent_ids);
@@ -307,20 +291,20 @@ sub get_alignment_paths {
     my $ref_seq_id = $p{ref_seq_id};
     my $library_name = $p{library_name};
 
-    my @readsets = Genome::Model::ReadSet->get(model_id=>$self->id);
+    my @idas = $self->instrument_data_assignments;
 
-    if($library_name) {
-        @readsets= grep {$_->library_name eq $library_name} @readsets;
+    if ($library_name) {
+        @idas = grep {$_->library_name eq $library_name} @idas;
     }
 
     my @paths_to_return;
-    for my $readset (@readsets) {
+    for my $ida (@idas) {
         if ($ref_seq_id) {
-            push @paths_to_return, $readset->read_set_alignment_files_for_refseq($ref_seq_id);
+            push @paths_to_return, $ida->alignment_files_for_refseq($ref_seq_id);
         }
         else
         { 
-            push @paths_to_return, $readset->alignment_file_paths();
+            push @paths_to_return, $ida->alignment_file_paths();
         }
     }
    return @paths_to_return;
