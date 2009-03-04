@@ -3,12 +3,15 @@ package Genome::DB::Window::TranscriptSubStructure;
 use strict;
 use warnings;
 
-use base 'Genome::DB::Window';
-
 use Data::Dumper;
 
-my %structs :name(_structures:p) :ds(aryref) :empty_ok(1);
-my %cds_exons :name(_cds_exons:p) :ds(aryref) :empty_ok(1);
+class Genome::DB::Window::TranscriptSubStructure{
+    is => 'Genome::DB::Window',
+    has => {
+        _structures => { is => 'Array'},
+        _cds_exons => { is => 'Array'},
+    },
+};
 
 sub START
 {
