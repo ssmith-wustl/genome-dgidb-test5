@@ -8,12 +8,12 @@ use Genome;
 class Genome::Model::Assembly {
     is => 'Genome::Model',
     has => [
-            read_set_assignment_events   => { is => 'Genome::Model::Command::Build::Assembly::AssignReadSetToModel',
-                                              is_many => 1,
-                                              reverse_id_by => 'model',
-                                              where => [ "event_type like" => 'genome-model build assembly assign-read-sets%'],
-                                              doc => 'each case of a read set being assigned to the model',
-                                        },
+            assignment_events   => { is => 'Genome::Model::Command::Build::Assembly::AssignReadSetToModel',
+                                     is_many => 1,
+                                     reverse_id_by => 'model',
+                                     where => [ "event_type like" => 'genome-model build assembly assign-read-sets%'],
+                                     doc => 'each case of an instrument data being assigned to the model',
+                                },
             assembler_name      => { via => 'processing_profile', },
             assembler_params    => { via => 'processing_profile', },
 	    assembler_version   => { via => 'processing_profile', },
