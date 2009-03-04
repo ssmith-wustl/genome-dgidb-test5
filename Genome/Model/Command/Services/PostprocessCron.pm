@@ -17,7 +17,7 @@ UR::Object::Type->define(
 
 sub help_brief {
     return <<EOS
-calls genome-model add-reads postprocess-alignments if necessary 
+calls genome model build postprocess-alignments if necessary 
 EOS
 }
 
@@ -50,7 +50,7 @@ sub model_requires_postprocess {
     my $model = shift;
 
         # find when the last merge happened
-    my ($last_merge_event) = Genome::Model::Event->get(sql=>sprintf("select * from GENOME_MODEL_EVENT where event_type = 'genome-model add-reads postprocess-alignments'
+    my ($last_merge_event) = Genome::Model::Event->get(sql=>sprintf("select * from GENOME_MODEL_EVENT where event_type = 'genome model build postprocess-alignments'
                                                        and event_status='Succeeded' and model_id=%s order by date_completed DESC",
                                                        $model->id));
     
@@ -58,12 +58,12 @@ sub model_requires_postprocess {
     my $last_merge_done_str = (defined $last_merge_event ? sprintf("and date_completed >= '%s'",
                                                                    $last_merge_event->date_completed)
                                                          : "");
-    my @run_events = Genome::Model::Event->get(sql=>sprintf("select * from GENOME_MODEL_EVENT where event_type='genome-model add-reads accept-reads maq'
+    my @run_events = Genome::Model::Event->get(sql=>sprintf("select * from GENOME_MODEL_EVENT where event_type='genome model build accept-reads maq'
                                                 %s and model_id=%s and event_status='Succeeded'",
                                                 $last_merge_done_str,
                                                 $model->id));
-    my @read_set_ids = map {$_->read_set_id} @run_events; 
-    my @target_runs = Genome::RunChunk->get(id=>\@read_set_ids);
+    my @instrument_data_ids = map {$_->instrument_data_id} @run_events; 
+    my @target_runs = Genome::InstrumentData->get(id=>\@instrument_data_ids);
 
     return (@target_runs > 0);
     
