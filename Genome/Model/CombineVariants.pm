@@ -7,7 +7,6 @@ use IO::File;
 use Genome;
 use Data::Dumper;
 use Genome::Utility::VariantAnnotator;
-use Genome::DB::Schema;
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 use Benchmark;
 
