@@ -50,6 +50,9 @@ sub get_disk_group {
 
 sub create {
     my $class = shift;
+
+    App->init unless App::Init->initialized;
+    
     my %params = @_;
     my $self = $class->SUPER::create(%params);
     unless ($self) {
@@ -108,6 +111,7 @@ sub create {
 
 sub execute {
     my $self = shift;
+
     my $disk_volume;
     if ($self->mount_path) {
         ($disk_volume) = $self->get_disk_volumes;
