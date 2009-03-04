@@ -3,7 +3,6 @@ package Genome::Model::Report::SolexaStageOne;
 use strict;
 use warnings;
 
-use Genome::RunChunk;
 use CGI;
 use English;
 use Memoize;
@@ -48,11 +47,11 @@ sub generate_report_brief
     my $model= $self->model;
     $self->get_models_and_preload_related_data();
     my $output_file = $self->report_brief_output_filename;
-    my @details = get_run_chunk_data_for_model($model);
+    my @details = get_instrument_data_for_model($model);
     my $brief = IO::File->new(">$output_file");
     die unless $brief;
 
-    my $desc = @details . " read sets for " . $model->name . " as of " . UR::Time->now;
+    my $desc = @details . " instrument data for " . $model->name . " as of " . UR::Time->now;
     $brief->print("<div>$desc</div>");
 }
 
@@ -88,7 +87,7 @@ sub generate_report_detail {
             'Align-Rds',
             'Proc-LQ',
         );
-        my @details = get_run_chunk_data_for_model($model);
+        my @details = get_instrument_data_for_model($model);
       
         for my $detail_arrayref (@details) {
             $section->add_data(@$detail_arrayref);
@@ -116,11 +115,11 @@ sub get_models_and_preload_related_data {
     my $self=shift;
     my @models = ($self->model);
     my %model_latest_event;
-    my %model_read_sets;
+    my %model_instrument_data;
     for my $m (@models) {
         for my $e ($m->events) {
-            if ($e->read_set_id) {
-                $model_read_sets{$e->read_set_id}++;
+            if ($e->instrument_data_id) {
+                $model_instrument_data{$e->instrument_data_id}++;
             }
             no warnings;
             my $date = $e->date_completed || $e->date_scheduled;
@@ -129,8 +128,8 @@ sub get_models_and_preload_related_data {
             }
         }
     }
-    my @chunks = Genome::RunChunk->get([keys %model_read_sets]);
-    my @lanes = GSC::RunLaneSolexa->get([keys %model_read_sets]);
+    my @instrument_data = Genome::InstrumentData->get([keys %model_instrument_data]);
+    my @lanes = GSC::RunLaneSolexa->get([keys %model_instrument_data]);
     @models =
     sort {
         ($model_latest_event{$b->id} cmp $model_latest_event{$a->id})
@@ -154,16 +153,16 @@ sub get_models_and_preload_related_data {
 
 
 
-sub get_run_chunk_data_for_model {
+sub get_instrument_data_for_model {
     #assert - at this point, we have been given a model, and wish 
     #to break down its events by chromosome
     #this will happen for all models
     my $model= shift;
-    my @assigned_read_sets = $model->read_sets;
+    my @assigned_instrument_data = $model->instrument_data;
     my @steps = Genome::ProcessingProfile::ReferenceAlignment::Solexa->alignment_job_classes;
     my @rows;
-    for my $r (@assigned_read_sets) {
-        my $rls= GSC::RunLaneSolexa->get($r->read_set_id);
+    for my $r (@assigned_instrument_data) {
+        my $rls= GSC::RunLaneSolexa->get($r->id);
         my @row = (
             library_name($r->library_name),
             run_name($r->run_name),
@@ -214,8 +213,8 @@ sub data_for_step {
     my $event_text;
 
 
-    my @rc = Genome::RunChunk->is_loaded(
-        seq_id => $lane->seq_id,
+    my @rc = Genome::InstrumentData->is_loaded(
+        instrument_data_id => $lane->id,
         sample_name => $lane->sample_name, # this gets around dups in this temp table from testing
     );
 
@@ -231,7 +230,7 @@ sub data_for_step {
         $step_class->is_loaded(
             model_id => $model->id,
             #event_type => { operator => "like", value => "%" . $step . "%" },
-            read_set_id => $rc[0]->id
+            instrument_data_id => $rc[0]->id
         );
         if (@events) {
             $event_state = 'Unknown';
@@ -301,7 +300,7 @@ sub data_for_step {
         }
     }
     $DB::single=1;
-    my $gm_run = Genome::RunChunk->is_loaded(seq_id => $lane->seq_id, sample_name => $lane->sample_name);
+    my $gm_run = Genome::InstrumentData->is_loaded(instrument_data_id => $lane->id, sample_name => $lane->sample_name);
     my $detail = format_div_data(\@merged, $gm_run, $model);
     my $detail_n++;
     my $title=join(" ",$merged[0]);
@@ -351,9 +350,9 @@ sub format_date_time {
 
 sub format_div_data {
     my $merged = shift;
-    my $read_set= shift;
+    my $instrument_data= shift;
     my $model = shift;
-        my $log_directory= $model->latest_build_directory . "/logs/solexa/" . $read_set->run_name . "/";
+        my $log_directory= $model->latest_build_directory . "/logs/solexa/" . $instrument_data->run_name . "/";
     my $formatted_string;
 
     no warnings; # tolerate undef = ''
