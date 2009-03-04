@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::RunChunk; # get access to GSC namespace
 use Command;
 use IO::File;
 use GSCApp; 
@@ -40,21 +39,21 @@ sub execute {
         model_id => $model_id,
         event_status => 'Succeeded'
     );
-    #Convert events to ReadSet objects
-    my @readsets = map {Genome::Model::ReadSet->get(read_set_id => $_->read_set_id, model_id => $model_id)} @events;
+    #Convert events to InstrumentDataAssignment objects
+    my @idas = map { $_->instrument_data_assignment } @events;
 
     my %stats_for;
     my %readset_stats;
 
         print STDOUT join "\t",("Name","#Reads_Mapped","#Reads_Total","isPaired","#Reads_Mapped_asPaired","Median_Insert_Size","Standard_Deviation_Above_Insert_Size",),"\n";
 #Completely undeprecated loop over the readsets
-    foreach my $read_set_link (@readsets) {
-        my $library = $read_set_link->library_name;
+    foreach my $ida (@idas) {
+        my $library = $ida->library_name;
         unless(defined($library)) {
-            $self->error_message("No library defined for ".$read_set_link->read_set_id);
+            $self->error_message("No library defined for ".$ida->instrument_data_id);
             next;
         }
-        my $hash = $read_set_link->get_alignment_statistics;
+        my $hash = $ida->get_alignment_statistics;
         $stats_for{$library}{total_read_sets} += 1;
         unless(defined($hash)) {
             #ignore runs where there are no aligner outputs (shouldn't really happen anymore)
@@ -65,14 +64,14 @@ sub execute {
         $stats_for{$library}{$hash->{isPE}}{total} += $hash->{total};
         $stats_for{$library}{$hash->{isPE}}{paired} += $hash->{paired};
         $stats_for{$library}{$hash->{isPE}}{read_sets} += 1;
-        my $sls = GSC::RunLaneSolexa->get($read_set_link->read_set_id); 
+        my $sls = GSC::RunLaneSolexa->get($ida->instrument_dataid); 
         unless(defined($sls)) {
-            $self->error_message("Unable to find RunLaneSolexa object for ".$read_set_link->read_set_id);
+            $self->error_message("Unable to find RunLaneSolexa object for ".$ida->instrument_data_id);
             next;
         }
         my $median_insert_size = $sls->median_insert_size;
         my $sd_above_insert_size = $sls->sd_above_insert_size;
-        my $lane_name = $read_set_link->short_name."_".$read_set_link->subset_name;
+        my $lane_name = $ida->short_name."_".$ida->subset_name;
         if(defined($median_insert_size) && $hash->{isPE}) {
             $stats_for{$library}{median_insert_size} += $median_insert_size;
             $stats_for{$library}{median_insert_size_n} +=1;
