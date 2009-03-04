@@ -515,13 +515,11 @@ sub _schedule_stage {
             $object_class = 'reference_sequence';
             $object_id = $object;
         }
-        if ($object_class->isa('Genome::Model::ReadSet')) {
-            my $run_chunk = $object->read_set;
-            $self->status_message('Scheduling jobs for ' 
-                . $run_chunk->sequencing_platform 
-                . ' read set ' 
-                . $run_chunk->full_name 
-                . ' (' . $run_chunk->id . ')'
+        if ($object_class->isa('Genome::InstrumentData')) {
+            $self->status_message('Scheduling jobs for '
+                . $object_class . ' '
+                . $object->full_name
+                . ' (' . $object->id . ')'
             );
         } elsif ($object_class eq 'reference_sequence') {
             $self->status_message('Scheduling jobs for reference sequence ' . $object_id);
@@ -574,29 +572,27 @@ sub _schedule_command_classes_for_object {
                                                   );
                 }
             } elsif ($command_class->isa('Genome::Model::EventWithReadSet')) {
-
-                if ($object->isa('Genome::Model::ReadSet')) {
-                    $object->first_build_id($self->build_id);
-                    $command = $command_class->create(
-                                                      read_set_id => $object->read_set_id,
-                                                      model_id => $self->model_id,
-                                                  );
-                } elsif ($object->isa('Genome::InstrumentData')) {
+                if ($object->isa('Genome::InstrumentData')) {
                     my $ida = Genome::Model::InstrumentDataAssignment->get(
                                                                            model_id => $self->model_id,
                                                                            instrument_data_id => $object->id,
                                                                        );
                     unless ($ida) {
-                        $self->error_message('Failed to find InstrumentDataAssignment for instrument data '. $object->id .' and model '. $self->model_id);
-                        die;
+                        #This seems like duplicate logic but works best for the mock models in test case
+                        my $model = $self->model;
+                        ($ida) = grep { $_->instrument_data_id == $object->id} $model->instrument_data_assignments;
+                        unless ($ida) {
+                            $self->error_message('Failed to find InstrumentDataAssignment for instrument data '. $object->id .' and model '. $self->model_id);
+                            die $self->error_message;
+                        }
                     }
                     $ida->first_build_id($self->build_id);
                     $command = $command_class->create(
-                                                      read_set_id => $object->id,
+                                                      instrument_data_id => $object->id,
                                                       model_id => $self->model_id,
                                                   );
                 } else {
-                    my $error_message = 'Expecting Genome::Model::ReadSet or Genome::InstrumentData object but got '. ref($object);
+                    my $error_message = 'Expecting Genome::InstrumentData object but got '. ref($object);
                     $self->error_message($error_message);
                     die;
                 }
