@@ -154,7 +154,7 @@ sub test2_directory : Test(8) {
     return 1;
 }
 
-sub test3_resource_locking : Test(13) {
+sub test3_resource_locking : Test(19) {
     my $bogus_id = '-55555';
     my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
     my $sub_dir = $tmp_dir .'/sub/dir/test';
@@ -162,43 +162,59 @@ sub test3_resource_locking : Test(13) {
     ok(Genome::Utility::FileSystem->create_directory($sub_dir),'create directory');
     ok(-d $sub_dir,$sub_dir .' is a directory');
 
-    ok(Genome::Utility::FileSystem->lock_resource(
-                                                  lock_directory => $tmp_dir,
-                                                  resource_id => $bogus_id,
-                                              ),'lock resource_id '. $bogus_id);
+    test_locking(successful => 1,
+                 message => 'lock resource_id '. $bogus_id,
+                 lock_directory => $tmp_dir,
+                 resource_id => $bogus_id,);
+
     my $expected_lock_info = $tmp_dir .'/'. $bogus_id .'.lock/info';
     ok(-f $expected_lock_info,'lock info file found '. $expected_lock_info);
     ok(!Genome::Utility::FileSystem->create_directory($expected_lock_info),
        'failed to create_directory '. $expected_lock_info);
-    ok(!Genome::Utility::FileSystem->lock_resource(
-                                                   lock_directory => $tmp_dir,
-                                                   resource_id => $bogus_id,
-                                                   max_try => 1,
-                                                   block_sleep => 3,
-                                               ),
-       'failed lock resource_id '. $bogus_id);
+
+    test_locking(successful => 0,
+                 message => 'failed lock resource_id '. $bogus_id,
+                 lock_directory => $tmp_dir,
+                 resource_id => $bogus_id,
+                 max_try => 1,
+                 block_sleep => 3,);
+    
     ok(Genome::Utility::FileSystem->unlock_resource(
                                                     lock_directory => $tmp_dir,
                                                     resource_id => $bogus_id,
                                                 ), 'unlock resource_id '. $bogus_id);
-    ok(Genome::Utility::FileSystem->lock_resource(
-                                                  lock_directory => $tmp_dir,
-                                                  resource_id => $bogus_id,
-                                              ),'lock resource_id '. $bogus_id);
+    my $lock = test_locking(successful => 1,
+                            message => 'lock resource_id '. $bogus_id,
+                            lock_directory => $tmp_dir,
+                            resource_id => $bogus_id,);
+    my $file_to_break_unlocking = $lock .'/break_stuff';
+    my $break_unlock_fh = Genome::Utility::FileSystem->open_file_for_writing($file_to_break_unlocking);
+    print $break_unlock_fh "This will break the unlock";
+    $break_unlock_fh->close;
+    ok(-s $file_to_break_unlocking,'file to break unlocking exists with size');
+    ok(!Genome::Utility::FileSystem->unlock_resource(
+                                                     lock_directory => $tmp_dir,
+                                                     resource_id => $bogus_id,
+                                                 ), 'failed unlock because of junk file');
+    ok(rename($file_to_break_unlocking,$lock.'/info'),'copy file breaking unlock to lock info file name');
     ok(Genome::Utility::FileSystem->unlock_resource(
-                                                    lock_directory => $tmp_dir,
-                                                    resource_id => $bogus_id,
-                                                ), 'unlock resource_id '. $bogus_id);
+                                                     lock_directory => $tmp_dir,
+                                                     resource_id => $bogus_id,
+                                                 ), 'unlock works after removing junk file');
+    
     my $init_lsf_job_id = $ENV{'LSB_JOBID'};
     $ENV{'LSB_JOBID'} = 1;
-    ok(Genome::Utility::FileSystem->lock_resource(
-                                               lock_directory => $tmp_dir,
-                                               resource_id => $bogus_id,
-                                              ),'lock resource with bogus lsf_job_id');
-    ok(Genome::Utility::FileSystem->lock_resource(
-                                                  lock_directory => $tmp_dir,
-                                                  resource_id => $bogus_id,
-                                              ),'lock resource with invalid lsf_job_id');
+    test_locking(successful => 1,
+                 message => 'lock resource with bogus lsf_job_id',
+                 lock_directory => $tmp_dir,
+                 resource_id => $bogus_id,);
+    test_locking(
+                 successful=> 1,
+                 message => 'lock resource with removing invalid lock with bogus lsf_job_id first',
+                 lock_directory => $tmp_dir,
+                 resource_id => $bogus_id,
+                 max_try => 1,
+                 block_sleep => 3,);
     ok(Genome::Utility::FileSystem->unlock_resource(
                                                     lock_directory => $tmp_dir,
                                                     resource_id => $bogus_id,
@@ -206,9 +222,42 @@ sub test3_resource_locking : Test(13) {
     # TODO: add skip test but if we are on a blade, lets see that the locking works correctly
     # Above the test is that old bogus locks can get removed when the lsf_job_id no longer exists
     # We should test that while an lsf_job_id does exist (ie. our current job) we still hold the lock
-    if ($init_lsf_job_id) {
-        $ENV{'LSB_JOBID'} = $init_lsf_job_id;
+    SKIP: {
+          skip 'only test the state of the lsf job if we are running on a blade with a job id',
+              3 unless ($init_lsf_job_id);
+          $ENV{'LSB_JOBID'} = $init_lsf_job_id;
+          ok(Genome::Utility::FileSystem->lock_resource(
+                                                        lock_directory => $tmp_dir,
+                                                        resource_id => $bogus_id,
+                                                    ),'lock resource with real lsf_job_id');
+          ok(!Genome::Utility::FileSystem->lock_resource(
+                                                         lock_directory => $tmp_dir,
+                                                         resource_id => $bogus_id,
+                                                         max_try => 1,
+                                                         block_sleep => 3,
+                                                     ),'failed lock resource with real lsf_job_id blocking');
+          ok(Genome::Utility::FileSystem->unlock_resource(
+                                                          lock_directory => $tmp_dir,
+                                                          resource_id => $bogus_id,
+                                                      ), 'unlock resource_id '. $bogus_id);
+      };
+}
+
+sub test_locking {
+    my %params = @_;
+    my $successful = delete $params{successful};
+    die unless defined($successful);
+    my $message = delete $params{message};
+    die unless defined($message);
+
+    my $lock = Genome::Utility::FileSystem->lock_resource(%params);
+    if ($successful) {
+        ok($lock,$message);
+        if ($lock) { return $lock; }
+    } else {
+        ok(!$lock,$message);
     }
+    return;
 }
 
 =pod
