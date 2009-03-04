@@ -92,25 +92,19 @@ class Genome::Model {
                is_mutable => 1,
         },
 
+        input_instrument_data_class_name   => { calculate_from => 'instrument_data_class_name',
+            calculate => q($instrument_data_class_name->_dw_class), 
+            doc => 'the class of instrument_data assignable to this model in the dw' },
+        instrument_data_class_name         => { calculate_from => 'sequencing_platform',
+            calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ), 
+            doc => 'the class of instrument data assignable to this model' },
+
         # deprecated
-        read_sets                     => { is => 'Genome::Model::ReadSet', reverse_id_by => 'model', is_many=> 1 },
-        run_chunks                    => { is => 'Genome::RunChunk', via=>'read_sets', to => 'read_set' },
-        instrument_data_links         => { is => 'Genome::Model::ReadSet', is_many => 1, reverse_id_by => 'model', is_mutable => 1, 
-            doc => "for models which directly address instrument data, the list of assigned run chunks"
-        },
-        _instrument_data              => { via => 'instrument_data_links', to => 'read_set_id', is_mutable => 1 },
         test                          => { is => 'Boolean', is_optional => 1, is_transient => 1, doc => 'testing flag' },
         _printable_property_names_ref => { is => 'array_ref', is_optional => 1, is_transient => 1, },
         comparable_normal_model_id    => { is => 'Number', len => 10, is_optional => 1 },
         sample_name                   => { is => 'Text', len => 255, is_optional => 1 },
-        input_read_set_class_name   => { calculate_from => 'read_set_class_name',
-            calculate => q($read_set_class_name->_dw_class), 
-            doc => 'the class of read set assignable to this model in the dw' },
-        read_set_addition_events    => { is => 'Genome::Model::Command::AddReads', reverse_id_by => 'model', is_many => 1, 
-            doc => 'each case of a read set being assigned to the model' },
-        read_set_class_name         => { calculate_from => 'sequencing_platform',
-            calculate => q( 'Genome::RunChunk::' . ucfirst($sequencing_platform) ), 
-            doc => 'the class of read set assignable to this model' },
+
         sequencing_platform         => { via => 'processing_profile' },
     ],
     has_many_optional => [
@@ -153,7 +147,7 @@ class Genome::Model {
             |,
         },
         instrument_data_assignment_events => {
-            is => 'Genome::Model::Command::AssignInstrumentData',
+            is => 'Genome::Model::Command::InstrumentData::Assign',
             is_many => 1,
             reverse_id_by => 'model',
             doc => 'Each case of an instrument data being assigned to the model',
@@ -314,14 +308,14 @@ sub compatible_instrument_data {
         $self->type_name eq 'reference alignment') {
         my $dna = GSC::DNA->get(dna_name => $self->subject_name);
         if ($dna) {
-            my @read_sets = GSC::RunRegion454->search_runs_for_sample($dna);
+            my @rr454 = GSC::RunRegion454->search_runs_for_sample($dna);
             my @seq_ids;
-            for my $read_set ( @read_sets ) {
-                my @genomic_dna = $read_set->get_dna_from_library('genomic dna');
+            for my $rr454 ( @rr454 ) {
+                my @genomic_dna = $rr454->get_dna_from_library('genomic dna');
                 unless (scalar(@genomic_dna) == 1 && $genomic_dna[0]->dna_name eq $self->subject_name) {
                     next;
                 }
-                push @seq_ids, $read_set->region_id;
+                push @seq_ids, $rr454->region_id;
             }
             if (scalar(@seq_ids)) {
                 %params = (id => \@seq_ids);
@@ -349,95 +343,6 @@ sub unassigned_instrument_data {
 }
 
 #<>#
-sub compatible_input_items {
-    my $self = shift;
-
-    my $input_read_set_class_name = $self->input_read_set_class_name;
-    my $value_ref;
-    if ($self->subject_type eq 'species_name') {
-        my $taxon = Genome::Taxon->get(species_name => $self->subject_name);
-        my @samples = $taxon->samples;
-        $value_ref = [ map { $_->name } @samples ];
-
-    } elsif ($self->subject_type eq 'sample_name') {
-        $value_ref = {
-                      operator => "like",
-                      value => $self->subject_name
-                  };
-    } elsif ( $self->subject_type eq 'genomic_dna') {
-        $value_ref =  $self->subject_name;
-    } elsif ($self->subject_type eq 'dna_resource_item_name') {
-        $self->error_message('Please implement compatible_input_items in '.
-                             __PACKAGE__ .' for subject_type(dna_resource_item_name)');
-        die;
-    }
-
-    unless ($value_ref) {
-        $self->error_message('No value to get compatible input read sets');
-        die;
-    }
-    my %instrument_data_ids;
-    my @sample_read_sets = $input_read_set_class_name->get(
-                                                           sample_name => $value_ref,
-                                                       );
-    %instrument_data_ids = map { $_->id => 1 } @sample_read_sets;
-    if ($input_read_set_class_name eq 'GSC::RunRegion454') {
-        my @dna_read_sets = GSC::RunRegion454->get(
-                                                   incoming_dna_name => $value_ref,
-                                               );
-        if ($self->subject_type eq 'genomic_dna') {
-            my $dna = GSC::DNA->get(dna_name => $value_ref);
-            if ($dna) {
-                my @read_sets = GSC::RunRegion454->search_runs_for_sample($dna);
-                for my $read_set ( @read_sets ) {
-                    my @genomic_dna = $read_set->get_dna_from_library('genomic dna');
-                    unless (scalar(@genomic_dna) == 1 && $genomic_dna[0]->dna_name eq $self->subject_name) {
-                        next;
-                    }
-                    push @dna_read_sets, $read_set;
-                }
-            }
-        }
-        for (@dna_read_sets) {
-            $instrument_data_ids{$_->id} = 1;
-        }
-    }
-    my @input_read_sets;
-    my @instrument_data_ids = keys %instrument_data_ids;
-    @input_read_sets = GSC::Sequence::Item->get(\@instrument_data_ids);
-    #TODO: move
-    if ($input_read_set_class_name eq 'GSC::RunLaneSolexa') {
-        @input_read_sets = grep { $_->run_type !~ /1/  } @input_read_sets;
-    }
-    return @input_read_sets;
-}
-
-sub available_read_sets {
-    my $self = shift;
-
-    my @input_read_sets = $self->compatible_input_items;
-    my @read_sets = $self->read_sets;
-    my %prior = map { $_->read_set_id => 1 } @read_sets;
-    my @available_read_sets = grep { not $prior{$_->id} } @input_read_sets;
-    return @available_read_sets;
-}
-
-sub unbuilt_read_sets {
-    my $self = shift;
-
-    my @read_sets = $self->read_sets;
-    my @unbuilt_read_sets = grep { !defined($_->first_build_id) } @read_sets;
-    return @unbuilt_read_sets;
-}
-
-sub built_read_sets {
-    my $self = shift;
-
-    my @read_sets = $self->read_sets;
-    my @built_read_sets = grep { $_->first_build_id} @read_sets;
-    return @built_read_sets;
-}
-
 sub comparable_normal_model {
     # TODO: a dba ticket is in place to make this a database-tracked item
     my $self = shift;
@@ -777,13 +682,6 @@ sub unlock_resource {
 sub get_all_objects {
     my $self = shift;
 
-    my @read_sets = $self->read_sets;
-    if ($read_sets[0] && $read_sets[0]->id =~ /^\-/) {
-        @read_sets = sort {$b->id cmp $a->id} @read_sets;
-    } else {
-        @read_sets = sort {$a->id cmp $b->id} @read_sets;
-    }
-    
     my @idas = $self->instrument_data_assignments;
     if ($idas[0] && $idas[0]->id =~ /^\-/) {
         @idas = sort {$b->id cmp $a->id} @idas;
@@ -797,7 +695,7 @@ sub get_all_objects {
     } else {
         @builds = sort {$a->id cmp $b->id} @builds;
     }
-    return (@read_sets, @idas, @builds);
+    return ( @idas, @builds );
 }
 
 sub yaml_string {
@@ -805,7 +703,6 @@ sub yaml_string {
     my $string = YAML::Dump($self);
     my @objects = $self->get_all_objects;
     for my $object (@objects) {
-        #Need to implement a method for read_set and event
         $string .= $object->yaml_string;
     }
     return $string;
@@ -815,7 +712,7 @@ sub delete {
     my $self = shift;
 
     # This may not be the way things are working but here is the order of operations for removing db events
-    # 1.) Remove all genome_model_read_set entries for model
+    # 1.) Remove all instrument data assignment entries for model
     # 2.) Set model last_complete_build_id and current_running_build_id to null
     # 3.) Remove all genome_model_build entries
     # 4.) Remove all genome_model_event entries
@@ -828,7 +725,7 @@ sub delete {
             return;
         }
     }
-    # Get the remaining events like create and add-reads
+    # Get the remaining events like create and assign instrument data
     for my $event ($self->events) {
         unless ($event->delete) {
             $self->error_message('Failed to remove event '. $event->class .' '. $event->id);
