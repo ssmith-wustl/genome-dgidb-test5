@@ -15,6 +15,11 @@ class Genome::Utility::FileSystem {
     is => 'UR::Object',
 };
 
+$SIG{'INT'} = \&DESTROY;
+
+
+my %DIR_TO_REMOVE;
+
 #< Files >#
 sub _open_file {
     my ($self, $file, $rw) = @_;
@@ -295,17 +300,6 @@ sub lock_resource {
         my $info_content;
         if ($info_fh) {
             $info_content = join('',$info_fh->getlines);
-            if ($info_content =~ /LSF_JOB_ID (\d+)/) {
-                my $waiting_on_lsf_job_id  = $1;
-                my ($job_info,$events) = Genome::Model::Command::BsubHelper->lsf_state($waiting_on_lsf_job_id);
-                unless ($job_info) {
-                    $self->warning_message("Invalid lock for resource $resource_lock\n"
-                                           ." lock info was:\n". $info_content ."\n"
-                                           ."Removing old resource lock $resource_lock\n");
-                    $self->unlock_resource(resource_lock => $resource_lock);
-                    next;
-                }
-            }
         }
         else {
             $info_content = "unable to open file: $!";
@@ -314,6 +308,16 @@ sub lock_resource {
             "waiting on lock for resource $resource_lock\n"
             . "lock info is: $info_content"
         );
+        if ($info_content =~ /LSF_JOB_ID (\d+)/) {
+            my $waiting_on_lsf_job_id  = $1;
+            my ($job_info,$events) = Genome::Model::Command::BsubHelper->lsf_state($waiting_on_lsf_job_id);
+            unless ($job_info) {
+                $self->warning_message("Invalid lock for resource $resource_lock\n"
+                                       ." lock info was:\n". $info_content ."\n"
+                                       ."Removing old resource lock $resource_lock\n");
+                $self->unlock_resource(resource_lock => $resource_lock);
+            }
+        }
         sleep $block_sleep;
     }
 
@@ -325,7 +329,7 @@ sub lock_resource {
                      );
     $lock_info->close();
 
-    eval "END { unlink \$lock_info_pathname; rmdir \$resource_lock;}";
+    $DIR_TO_REMOVE{$resource_lock} = 1;
     return $resource_lock;
 }
 
@@ -338,8 +342,42 @@ sub unlock_resource {
         $resource_id = $args{'resource_id'} || die('Must supply resource_id to lock resource');
         $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
     }
-    unlink $resource_lock . '/info';
-    rmdir $resource_lock;
+    unless ($self->validate_existing_directory($resource_lock)) {
+        $self->error_message("Resource lock directory '$resource_lock' does not validate existance.");
+        return;
+    }
+    my $info_file = $resource_lock . '/info';
+    unless ($self->validate_file_for_reading($info_file)) {
+        $self->error_message("Resource lock info file '$info_file' not validated.");
+        return;
+    }
+    my $info_file = $resource_lock . '/info';
+    my $unlink_rv = unlink($info_file);
+    if (!$unlink_rv) {
+        $self->error_message("Failed to remove info file '$info_file':  $!");
+        return;
+    } elsif ($unlink_rv && -e $info_file) {
+        $self->error_message("Info file '$info_file' still exists.");
+        return;
+    }
+    my $rmdir_rv = rmdir($resource_lock);
+    if (!$rmdir_rv) {
+        $self->error_message("Failed to remove directory '$resource_lock':  $!");
+        if ($self->validate_existing_directory($resource_lock)) {
+            opendir(DIR,$resource_lock);
+            my @files = map { $resource_lock .'/'. $_ }  grep { $_ !~ /^\.{1,2}$/ } readdir(DIR);
+            closedir(DIR);
+            my $error_message;
+            for (@files) {
+                $error_message .= `ls -l $_`;
+            }
+            $self->error_message($error_message);
+        }
+        return;
+    } elsif ($rmdir_rv && -e $resource_lock) {
+        $self->error_message("Resource lock directory '$resource_lock' still exists.");
+        return;
+    }
     return 1;
 }
 
@@ -364,6 +402,24 @@ sub check_for_path_existence {
     return;
 }
 
+sub END {
+    for my $dir_to_remove (keys %DIR_TO_REMOVE) {
+        if (-e $dir_to_remove) {
+            warn("Removing remaining resource lock: '$dir_to_remove'");
+            File::Path::rmtree($dir_to_remove);
+        }
+    }
+}
+
+sub DESTROY {
+    for my $dir_to_remove (keys %DIR_TO_REMOVE) {
+        if (-e $dir_to_remove) {
+            warn("Removing remaining resource lock: '$dir_to_remove'");
+            File::Path::rmtree($dir_to_remove);
+        }
+    }
+    die;
+}
 
 1;
 
