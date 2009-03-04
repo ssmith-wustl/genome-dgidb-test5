@@ -118,63 +118,6 @@ $DB::single = $DB::stopper;
     return $rv;
 }
 
-
-###Bad juju####
-sub Xredo_bsub {
-    my ($self, $command_obj, $prior_command_obj, $dep_type) = @_;
-    $dep_type ||= 'ended';
-
-    my %add_reads_queue;
-    {
-        my ($old_jobinfo, $old_events) = $self->lsf_state($prior_command_obj->lsf_job_id);
-        if ($old_jobinfo && $old_jobinfo->{'Queue'}) {
-            $add_reads_queue{'bsub_queue'} = $old_jobinfo->{'Queue'};
-        } else {
-            $add_reads_queue{'bsub_queue'} = 'aml'
-        }
-    }
-
-    ## create a dummy object to call this method, refactor candidate
-    my $ar = Genome::Model::Command::AddReads->create(
-        model_id => $self->model_id,
-        sequencing_platform => 'solexa',
-        read_set_id => '0_but_true', ## execute never gets fired but this is required
-        %add_reads_queue
-    );
-
-    ## since i'm rerunning prior, set its job_id to me
-    ## then run a new copy of the command i was supposed to run, dependent on my job_id
-    ## finally set the command i should have ran to the new job_id
-    my $job_id = $ar->Genome::Model::Event::run_command_with_bsub($command_obj, $prior_command_obj, $dep_type);
-
-    $ar->delete;  ## ditch the dummy
-
-    my $current_lsf_job_id = $ENV{'LSB_JOBID'};
-    my @all_scheduled = Genome::Model::Event->get(
-        event_status => 'Scheduled', 
-        user_name => $ENV{'USER'}, 
-        model_id => $self->model_id
-    );
-    foreach my $sched_event (@all_scheduled) {
-        next if ($command_obj->lsf_job_id == $sched_event->lsf_job_id); # dont check me
-
-        if (my ($sched_lsf_state, $sched_lsf_events) = $self->lsf_state($sched_event->lsf_job_id)) {
-
-            if (exists $sched_lsf_events->[0]->[1]->{'Dependency Condition'} &&
-                $sched_lsf_events->[0]->[1]->{'Dependency Condition'} =~ /^(ended|done)\($current_lsf_job_id\)$/) {
-
-                # replace here, add to hash like LSF_ID => NEW_DEP_STR
-
-                my $dep_lsf_job = $sched_event->lsf_job_id;
-                my $bmod_out = `bmod -w '$1($job_id)' $dep_lsf_job`;
-
-            }
-        }
-    }
-    
-    return $job_id;
-}
-
 # utility function that parses bjobs long format
 sub lsf_state {
     my ($self, $lsf_job_id) = @_;
