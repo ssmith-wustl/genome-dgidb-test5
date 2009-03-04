@@ -17,11 +17,11 @@ sub create {
 
     my $model = $self->model;
 
-    my @read_sets = $model->read_sets;
+    my @idas = $model->instrument_data_assignments;
 
-    unless (scalar(@read_sets) && ref($read_sets[0])  &&  $read_sets[0]->isa('Genome::Model::ReadSet')) {
-        $self->error_message('No read sets have been added to model: '. $model->name);
-        $self->error_message("The following command will add all available read sets:\ngenome-model add-reads --model-id=".
+    unless (scalar(@idas) && ref($idas[0])  &&  $idas[0]->isa('Genome::Model::InstrumentDataAssignment')) {
+        $self->error_message('No instrument data have been added to model: '. $model->name);
+        $self->error_message("The following command will add all available instrument data:\ngenome model instrument-data assign  --model-id=".
         $model->id .' --all');
         return;
     }
