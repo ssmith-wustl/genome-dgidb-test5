@@ -21,7 +21,7 @@ BEGIN {
     }
     plan tests => 201;
 
-    use_ok( 'Genome::RunChunk::454');
+    use_ok( 'Genome::InstrumentData::454');
     use_ok( 'Genome::Model::Assembly');
     use_ok( 'Genome::ProcessingProfile::Assembly');
     use_ok( 'Genome::Model::Command::Define' );
@@ -116,32 +116,32 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     is($model->subject_name,$subject_name,'subject_name accessor');
     is($model->subject_type,$subject_type,'subject_type accessor');
     is($model->name,$model_name,'name accessor');
-    my $add_reads_command = Genome::Model::Command::AddReads->create(
-                                                                     model_id => $model->id,
-                                                                     all => 1,
-								     );
-    isa_ok($add_reads_command,'Genome::Model::Command::AddReads');
-    &_trap_messages($add_reads_command);
-    ok($add_reads_command->execute(),'execute genome-model add-reads');
-    my @status_messages = $add_reads_command->status_messages();
-    ok(scalar(@status_messages), 'add-reads execute printed some status messages');
-    ok(scalar(grep { $_ eq 'Adding all available reads to the model...!'} @status_messages), 'execute mentioned it was adding all reads');
-    ok(scalar(grep { $_ eq 'Found 4 compatible read sets.' } @status_messages), 'execute mentioned it found 4 read sets');
-    my @warning_messages = $add_reads_command->warning_messages();
+    my $assign_command = Genome::Model::Command::InstrumentData::Assign->create(
+                                                                                   model_id => $model->id,
+                                                                                   all => 1,
+                                                                               );
+    isa_ok($assign_command,'Genome::Model::Command::InstrumentData::Assign');
+    &_trap_messages($assign_command);
+    ok($assign_command->execute(),'execute '. $assign_command->command_name);
+    my @status_messages = $assign_command->status_messages();
+    ok(scalar(@status_messages), 'instrument-data assign execute printed some status messages');
+    ok(scalar(grep { $_ eq 'Attempting to assign all availble instrument data'} @status_messages), 'execute mentioned it was adding all reads');
+    ok(scalar(grep { $_ =~ /Instrument data .* assigned to model .*/ } @status_messages), '4 instrument data status messages');
+    my @warning_messages = $assign_command->warning_messages();
     is(scalar(@warning_messages), 0, 'execute generated no warning messages');
-    my @error_messages = $add_reads_command->error_messages();
+    my @error_messages = $assign_command->error_messages();
     is(scalar(@error_messages), 0, 'execute generated no error messages');
 
-    my $assembly_build_event = Genome::Model::Command::Build::Assembly->create(
-                                                                           model_id => $model->id,
-                                                                           auto_execute => 0,
-									   );
+    my $build_event = Genome::Model::Command::Build->create(
+                                                            model_id => $model->id,
+                                                            auto_execute => 0,
+                                                        );
 
-    isa_ok($assembly_build_event,'Genome::Model::Command::Build::Assembly');
-    &_trap_messages($assembly_build_event);
+    isa_ok($build_event,'Genome::Model::Command::Build');
+    &_trap_messages($build_event);
 
-    ok($assembly_build_event->execute,'execute assembly build_event');
-    @status_messages = $assembly_build_event->status_messages();
+    ok($build_event->execute,'execute assembly build_event');
+    @status_messages = $build_event->status_messages();
 
     # Each execute generates a message per ReadSet, plus 4 more for the build's 4 sub-steps (5 total)
     # so for 8 ReadSets = 8 * 5 = 40
@@ -149,7 +149,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     #is(scalar(@status_messages), 42, 'executing build_event generated 42 messages');
     for(my $i = 0; $i < 4; $i++) {
 	my $index = 0;
-        like($status_messages[$index++], qr(^Scheduling for Genome::InstrumentData::454 with id .*), 'Found scheduling InstrumentData messages');
+        like($status_messages[$index++], qr(^Scheduling jobs for Genome::InstrumentData::454 .*), 'Found scheduling InstrumentData messages');
         like($status_messages[$index++], qr(^Scheduled Genome::Model::Command::Build::Assembly::AssignReadSetToModel),
              'Found Scheduled...AssignReadSetToModel message');
         if ($pp_params->{'read_filter_name'}) {
@@ -170,9 +170,9 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     like($status_messages[1], qr(^Scheduled Genome::Model::Command::Build::Assembly::Assemble),
 	 'Found Build Assembly message');
 
-    @warning_messages = $assembly_build_event->warning_messages;
+    @warning_messages = $build_event->warning_messages;
     is(scalar(@warning_messages), 0, 'executing build_event generated no warning messages');
-    @error_messages = $assembly_build_event->error_messages;
+    @error_messages = $build_event->error_messages;
     is(scalar(@error_messages), 0, 'executing build_event generated no error messages');
 
     for my $class ($pp->setup_project_job_classes) {
@@ -195,9 +195,9 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
             }
 
             ok($rv,"execute $class event");
-            @warning_messages = $assembly_build_event->warning_messages;
+            @warning_messages = $build_event->warning_messages;
             is(scalar(@warning_messages), 0, 'event execution produced no warning messages');
-            @error_messages = $assembly_build_event->error_messages;
+            @error_messages = $build_event->error_messages;
             is(scalar(@error_messages), 0, 'event execution produced no error messages');
         }
     }

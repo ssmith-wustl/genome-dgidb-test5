@@ -25,9 +25,9 @@ if ($archos !~ /64/) {
 }
 
 #plan skip_all => 'this test is hanging presumambly from a workflow related issue';
-plan tests => 74;
+plan tests => 64;
 
-my $message_flag = 1;
+my $message_flag = 0;
 
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $model_name = "test_454_$ENV{USER}";
@@ -43,26 +43,26 @@ my %pp_params = (
                  sequencing_platform => '454',
              );
 
-my @read_sets = setup_test_data($subject_name);
+my @instrument_data = setup_test_data($subject_name);
 #GSC::RunRegion454->get(sample_name => $subject_name);
-my $add_reads_test = Genome::Model::Command::Build::ReferenceAlignment::Test->new(
+my $build_test = Genome::Model::Command::Build::ReferenceAlignment::Test->new(
                                                                                   model_name => $model_name,
                                                                                   subject_name => $subject_name,
                                                                                   subject_type => $subject_type,
                                                                                   processing_profile_name => $pp_name,
-                                                                                  read_sets => \@read_sets,
+                                                                                  instrument_data => \@instrument_data,
                                                                                   tmp_dir => $tmp_dir,
                                                                                   messages => $message_flag,
                                                                               );
-isa_ok($add_reads_test,'Genome::Model::Command::Build::ReferenceAlignment::Test');
-$add_reads_test->create_test_pp(%pp_params);
-$add_reads_test->runtests;
+isa_ok($build_test,'Genome::Model::Command::Build::ReferenceAlignment::Test');
+$build_test->create_test_pp(%pp_params);
+$build_test->runtests;
 exit;
 
 
 sub setup_test_data {
     my $subject_name = shift;
-    my @read_sets;
+    my @instrument_data;
     
     my $cwd = getcwd;
 
@@ -98,7 +98,7 @@ sub setup_test_data {
                                                                    region_id => $rr454->region_id,
                                                                    sff_file => $file,
                                                                );
-            push @read_sets, $rr454;
+            #push @read_sets, $rr454;
             my $instrument_data = Genome::InstrumentData::454->create_mock(
                                                                            id => $rr454->region_id,
                                                                            sequencing_platform => '454',
@@ -117,6 +117,9 @@ sub setup_test_data {
                                        return $self->{_full_path};
                                    }
                                );
+            # TODO:switch these paths to something like /gsc/var/cache/testsuite/data/BLAH
+            $instrument_data->mock('_data_base_path',\&Genome::InstrumentData::_data_base_path);
+            $instrument_data->mock('_default_full_path',\&Genome::InstrumentData::_default_full_path);
             $instrument_data->mock('resolve_full_path',\&Genome::InstrumentData::resolve_full_path);
             $instrument_data->mock('resolve_sff_path',\&Genome::InstrumentData::454::resolve_sff_path);
             $instrument_data->mock('alignment_directory_for_aligner_and_refseq',
@@ -130,8 +133,9 @@ sub setup_test_data {
                                        }
                                );
             $instrument_data->set_always('dump_to_file_system',1);
+            push @instrument_data, $instrument_data;
         }
     }
     chdir $cwd || die("Failed to change directory to '$cwd'");
-    return @read_sets;
+    return @instrument_data;
 }

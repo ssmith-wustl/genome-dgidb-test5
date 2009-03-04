@@ -33,7 +33,7 @@ isa_ok($pp,'Genome::ProcessingProfile');
 $pp->set_list('stages',[]);
 $pp->set_list('objects_for_stage',[]);
 
-my $model_wo_read_sets = Genome::Model::ReferenceAlignment->create_mock(
+my $model_wo_instrument_data = Genome::Model::ReferenceAlignment->create_mock(
                                                            id => --$bogus_id,
                                                            genome_model_id => $bogus_id,
                                                            subject_type => 'sample_name',
@@ -41,15 +41,15 @@ my $model_wo_read_sets = Genome::Model::ReferenceAlignment->create_mock(
                                                            processing_profile_id => $pp->id,
                                                            name => 'test',
                                                            data_directory => $tmp_dir,
-                                                           read_sets => [],
+                                                           instrument_data => [],
                                                            type_name => $pp->type_name,
                                                            sequencing_platform => $pp->sequencing_platform,
                                                            processing_profile => $pp
                                                        );
-isa_ok($model_wo_read_sets,'Genome::Model');
+isa_ok($model_wo_instrument_data,'Genome::Model');
 
 # The call to Solexa->create() below is expected to fail.
-my $build_wo_reads = Genome::Model::Command::Build::ReferenceAlignment::Solexa->create(model => $model_wo_read_sets);
+my $build_wo_reads = Genome::Model::Command::Build::ReferenceAlignment::Solexa->create(model => $model_wo_instrument_data);
 ok(!$build_wo_reads,'build should fail create with no read sets');
 
 my $mock_pp = Genome::ProcessingProfile->create_mock(
@@ -79,36 +79,35 @@ my $mock_model = Genome::Model->create_mock(
                                             subject_type => 'test_subject_type',
                                             subject_name => 'test_sample_name',
                                             processing_profile_id => $mock_pp->id,
-                                            name => 'test_w_read_sets',
+                                            name => 'test_w_instrument_data',
                                             data_directory => $tmp_dir,
                                             latest_build_directory => $tmp_dir,
                                             type_name => $mock_pp->type_name,
                                             processing_profile => $mock_pp,
                                         );
 isa_ok($mock_model,'Genome::Model');
-my @run_chunks;
+my @instrument_data;
 for (1 .. 10) {
-    my $run_chunk = Genome::RunChunk->create_mock(
-                                                  genome_model_run_id => --$bogus_id,
-                                                  seq_id => $bogus_id,
-                                                  id => $bogus_id,
-                                                  sample_name => 'test_sample_name',
-                                                  sequencing_platform => 'test_sequence_platform',
-                                              );
-    push @run_chunks, $run_chunk;
+    my $instrument_data = Genome::InstrumentData->create_mock(
+                                                        seq_id => --$bogus_id,
+                                                        id => $bogus_id,
+                                                        sample_name => 'test_sample_name',
+                                                        sequencing_platform => 'test_sequence_platform',
+                                                    );
+    push @instrument_data, $instrument_data;
 }
-$mock_model->set_list('run_chunks',@run_chunks);
-my @read_sets;
-for my $run_chunk ($mock_model->run_chunks) {
-    my $read_set = Genome::Model::ReadSet->create_mock(
-                                                       read_set_id => $run_chunk->id,
-                                                       model_id => $mock_model->id,
-                                                       id => $run_chunk->id .' '. $mock_model->id,
-                                                   );
-    push @read_sets, $read_set;
+$mock_model->set_list('instrument_data',@instrument_data);
+$mock_pp->set_list('stage1_objects',@instrument_data);
+my @idas;
+for my $instrument_data ($mock_model->instrument_data) {
+    my $ida = Genome::Model::InstrumentDataAssignment->create_mock(
+                                                                   instrument_data_id => $instrument_data->id,
+                                                                   model_id => $mock_model->id,
+                                                                   id => $instrument_data->id .' '.$mock_model->id,
+                                                               );
+    push @idas, $ida;
 }
-$mock_model->set_list('read_sets',@read_sets);
-$mock_pp->set_list('stage1_objects',@read_sets);
+$mock_model->set_list('instrument_data_assignments',@idas);
 
 my @ref_seqs;
 for (1 .. 5) {

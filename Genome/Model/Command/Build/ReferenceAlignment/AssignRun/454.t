@@ -51,7 +51,7 @@ $instrument_data->set_always('dump_to_file_system',1);
 
 my $assign_run = Genome::Model::Command::Build::ReferenceAlignment::AssignRun::454->create(
                                                                                            model_id => $model->id,
-                                                                                           read_set_id => $instrument_data->id,
+                                                                                           instrument_data_id => $instrument_data->id,
                                                                                        );
 isa_ok($assign_run,'Genome::Model::Command::Build::ReferenceAlignment::AssignRun::454');
 

@@ -60,7 +60,7 @@ $instrument_data->mock('alignment_directory',
                        \&Genome::Model::InstrumentDataAssignment::alignment_directory);
 my $blat_aligner = Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat->create(
                        model_id => $model->id,
-                       read_set_id => $instrument_data->id,
+                       instrument_data_id => $instrument_data->id,
                                                                                            );
 
 isa_ok($blat_aligner,'Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat');

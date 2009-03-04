@@ -1,4 +1,3 @@
-
 package Genome::Model::Command::Build::ReferenceAlignment::Test;
 
 use strict;
@@ -8,7 +7,6 @@ use Carp;
 use Genome;
 use Genome::Model::Tools::Maq::CLinkage0_6_5;
 use Genome::Model::Tools::Maq::MapSplit;
-use Genome::RunChunk;
 
 use File::Path;
 use File::Copy;
@@ -28,19 +26,26 @@ sub new {
     $self->{_processing_profile_name} = $args{processing_profile_name} ||
         confess("Must define processing_profile_name for test:  $!");
     $self->{_auto_execute} = $args{auto_execute} || 0;
-    if ($args{read_sets}) {
-        my $read_sets = $args{read_sets};
-        if (ref($read_sets) eq 'ARRAY') {
-            $self->{_read_set_array_ref} = $read_sets;
+    if ($args{instrument_data}) {
+        my $instrument_data = $args{instrument_data};
+        if (ref($instrument_data) eq 'ARRAY') {
+            $self->{_instrument_data_array_ref} = $instrument_data;
         } else {
-            confess('Supplied object type is '. ref($read_sets) ." and expected array ref:  $!");
+            confess('Supplied object type is '. ref($instrument_data) ." and expected array ref:  $!");
         }
     } else {
-        confess("Must define read_sets for test:  $!");
+        confess("Must define instrument_data for test:  $!");
+    }
+    if ($args{data_dir}) {
+        $self->{_data_dir} = $args{data_dir};
     }
     if ($args{tmp_dir}) {
+        if ($args{data_dir}) {
+            die 'Defined both tmp_dir and data_dir.  oops!';
+        }
         $self->{_tmp_dir} = $args{tmp_dir};
-        $self->add_directory_to_remove($self->tmp_dir);
+        $self->{_data_dir} = $args{tmp_dir};
+        $self->add_directory_to_remove($self->data_dir);
     }
     if ($args{messages}) {
         $self->{_messages} = $args{messages};
@@ -55,9 +60,9 @@ sub auto_execute {
     return $self->{_auto_execute};
 }
 
-sub tmp_dir {
+sub data_dir {
     my $self = shift;
-    return $self->{_tmp_dir};
+    return $self->{_data_dir};
 }
 
 sub add_directory_to_remove {
@@ -106,7 +111,7 @@ sub runtests {
     my @tests = (
                  'startup',
                  'create_model',
-                 'add_reads',
+                 'add_instrument_data',
                  'schedule',
                  'run',
                  'remove_data',
@@ -143,7 +148,7 @@ sub create_model {
                                                                                    subject_name => $self->{_subject_name},
                                                                                    subject_type => $self->{_subject_type},
                                                                                    processing_profile_name => $self->{_processing_profile_name},
-                                                                                   data_directory => $self->tmp_dir,
+                                                                                   data_directory => $self->data_dir,
                                                                   );
 
     isa_ok($create_command,'Genome::Model::Command::Define::ReferenceAlignment');
@@ -172,39 +177,35 @@ sub create_model {
     $self->model($model);
 }
 
-sub add_reads {
+sub add_instrument_data {
     my $self = shift;
     my $model = $self->model;
-    my @read_sets = @{$self->{_read_set_array_ref}};
-    for my $read_set (@read_sets) {
-        isa_ok($read_set,'GSC::Sequence::Item');
-        my $add_reads_command = Genome::Model::Command::AddReads->create(
+    my @instrument_data = @{$self->{_instrument_data_array_ref}};
+    for my $instrument_data (@instrument_data) {
+        isa_ok($instrument_data,'Genome::InstrumentData');
+        my $assign_command = Genome::Model::Command::InstrumentData::Assign->create(
                                                                          model_id => $model->id,
-                                                                         read_set_id => $read_set->seq_id,
+                                                                         instrument_data_id => $instrument_data->id,
                                                                      );
-        isa_ok($add_reads_command,'Genome::Model::Command::AddReads');
-        ok($add_reads_command->execute(),'execute genome-model add-reads');
-        my $read_set_object = Genome::Model::ReadSet->get(
-                                                          model_id => $model->id,
-                                                          read_set_id => $read_set->seq_id,
-                                                      );
-        isa_ok($read_set_object,'Genome::Model::ReadSet');
-        ok(!$read_set_object->first_build_id,'undef first_build_id for ReadSet');
-        if ($read_set_object->full_path) {
-            $self->add_directory_to_remove($read_set_object->full_path);
-        }
+        isa_ok($assign_command,'Genome::Model::Command::InstrumentData::Assign');
+        ok($assign_command->execute(),'execute '. $assign_command->command_name);
+
         my $ida = Genome::Model::InstrumentDataAssignment->get(
                                                                model_id => $model->id,
-                                                               instrument_data_id => $read_set->seq_id,
+                                                               instrument_data_id => $instrument_data->id,
                                                            );
         isa_ok($ida,'Genome::Model::InstrumentDataAssignment');
-        is($ida->sequencing_platform,$read_set_object->sequencing_platform,'sequencing_platform matches ReadSet');
+        ok(!$ida->first_build_id,'undef first_build_id for InstrumentDataAssignment');
+        if ($ida->full_path) {
+            $self->add_directory_to_remove($ida->full_path);
+        }
+
         if ($ida->sequencing_platform eq '454') {
-            my $tmp_sff = $self->tmp_dir .'/'. $ida->run_name .'/'. $ida->subset_name .'.sff';
-            my $tmp_amp = $self->tmp_dir .'/'. $ida->run_name .'/amplicon_headers.txt';
+            my $tmp_sff = $self->data_dir .'/'. $ida->run_name .'/'. $ida->subset_name .'.sff';
+            my $tmp_amp = $self->data_dir .'/'. $ida->run_name .'/amplicon_headers.txt';
 
             my $full_path = $ida->instrument_data->resolve_full_path;
-            $add_reads_command->create_directory($full_path);
+            $assign_command->create_directory($full_path);
 
             my $ida_sff = $ida->instrument_data->sff_file;
             copy($tmp_sff,$ida_sff) || die("Failed to copy '$tmp_sff' to '$ida_sff'");
@@ -212,27 +213,21 @@ sub add_reads {
             my $ida_amp = $full_path .'/amplicon_headers.txt';
             copy($tmp_amp,$ida_amp) || die("Failed to copy '$tmp_amp' to '$ida_amp'");
             if ($ida->subset_name == 1) {
-                my $tmp_out = $self->tmp_dir .'/'. $ida->run_name .'/'. $ida->subset_name .'.out';
-                my $tmp_psl = $self->tmp_dir .'/'. $ida->run_name .'/'. $ida->subset_name .'.psl';
-                my $read_set_alignment_directory = '/gscmnt/839/info/medseq/alignment_links/blat/refseq-for-test/'.
+                my $tmp_out = $self->data_dir .'/'. $ida->run_name .'/'. $ida->subset_name .'.out';
+                my $tmp_psl = $self->data_dir .'/'. $ida->run_name .'/'. $ida->subset_name .'.psl';
+                my $alignment_directory = '/gscmnt/839/info/medseq/alignment_links/blat/refseq-for-test/'.
                     $ida->run_name .'/'. $ida->subset_name .'_'. $ida->instrument_data->id;
-                $add_reads_command->create_directory($read_set_alignment_directory);
-                my $ida_out = $read_set_alignment_directory .'/'. $ida->subset_name .'.out.-123456';
-                my $ida_psl = $read_set_alignment_directory .'/'. $ida->subset_name .'.psl.-123456';
+                $assign_command->create_directory($alignment_directory);
+                my $ida_out = $alignment_directory .'/'. $ida->subset_name .'.out.-123456';
+                my $ida_psl = $alignment_directory .'/'. $ida->subset_name .'.psl.-123456';
                 copy($tmp_out,$ida_out) || die("Failed to copy '$tmp_out' to '$ida_out'");
                 copy($tmp_psl,$ida_psl) || die("Failed to copy '$tmp_psl' to '$ida_psl'");
-                $self->add_directory_to_remove($read_set_alignment_directory);
+                $self->add_directory_to_remove($alignment_directory);
             }
         }
         if ($ida->full_path) {
             $self->add_directory_to_remove($ida->full_path);
         }
-      SKIP: {
-            skip 'full_path is resolved differently for these objects', 1;
-            is($ida->full_path,$read_set_object->full_path,'full_path matches ReadSet');
-        };
-        is($ida->run_name,$read_set_object->run_name,'run_name matches ReadSet');
-        ok(!$ida->first_build_id,'undef first_build_id');
     }
 }
 
@@ -259,13 +254,13 @@ sub schedule {
     # FIXME This code is used in several different tests, each of which generate different numbers
     # of messages about scheduling...  Is there some other method of making sure the right
     # number of downstream events were scheduled?
-    if ($model->sequencing_platform eq '454') {
+    #if ($model->sequencing_platform eq '454') {
         ok(scalar(grep { m/^Scheduling for Test::MockObject with id .*/} @status_messages),
            'Saw a message about Test::MockObject');
-    } else {
-        ok(scalar(grep { m/^Scheduling jobs for .* read set/} @status_messages),
-           'Saw a message about ReadSet');
-    }
+    #} else {
+    #    ok(scalar(grep { m/^Scheduling jobs for .* read set/} @status_messages),
+    #       'Saw a message about ReadSet');
+    #}
     ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AssignRun/} @status_messages),
        'Saw a message about AssignRun');
     ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AlignReads/} @status_messages),
@@ -331,7 +326,7 @@ sub run {
        
 	if ($stage_name eq 'alignment') {
     		if ($model->sequencing_platform eq 'solexa') {
-        		@objects = $model->read_sets;
+        		@objects = $model->instrument_data;
     		} elsif ($model->sequencing_platform eq '454') {
         		@objects = $model->instrument_data;
     		}   
@@ -373,7 +368,7 @@ sub run {
 sub run_events_for_class_array_ref {
     my $self = shift;
     my $classes = shift;
-    my @read_sets = @{$self->{_read_set_array_ref}};
+    my @instrument_data = @{$self->{_instrument_data_array_ref}};
     my $pp = $self->model->processing_profile;
     my @stages = $pp->stages;
     my $stage3 = $stages[2];
@@ -387,7 +382,7 @@ sub run_events_for_class_array_ref {
             my @events = $command_class->get(model_id => $self->model->id);
             @events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @events;
             if ($command_class->isa('Genome::Model::EventWithReadSet')) {
-                is(scalar(@events),scalar(@read_sets),'the number of events matches read sets for EventWithReadSet class '. $command_class);
+                is(scalar(@events),scalar(@instrument_data),'the number of events matches read sets for EventWithReadSet class '. $command_class);
             } elsif ($command_class->isa('Genome::Model::EventWithRefSeq')) {
                 is(scalar(@events),scalar(@stage3_objects),'the number of events matches ref seqs for EventWithRefSeq class '. $command_class);
             } else {
@@ -442,7 +437,7 @@ sub remove_data {
 
     my $model = $self->model;
     my @alignment_events = $model->alignment_events;
-    my @idas = map { $_->instrument_data_assignment }@alignment_events;
+    my @idas = map { $_->instrument_data_assignment } @alignment_events;
     my @alignment_dirs = map { $_->alignment_directory } @idas;
     my @instrument_data = map { $_->instrument_data } @idas;
 
@@ -452,7 +447,6 @@ sub remove_data {
     # FIXME - the delete below causes a lot of warning messages about deleting
     # hangoff data.  do we need to check the contents?
     $self->_trap_messages('Genome::Model::Event');
-    $self->_trap_messages('Genome::Model::Command::AddReads');  # Why didn't the above catch these, too?
 
     ok(UR::Context->_sync_databases,'sync with the database');
     ok($self->model->delete,'successfully removed model');

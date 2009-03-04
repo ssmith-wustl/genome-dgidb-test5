@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 29;
+use Test::More tests => 33;
 
 # TODO: Use this for the model creation below...
 =cut
@@ -55,17 +55,26 @@ ok(my $resolve_reports_directory = $model->resolve_reports_directory, "Resolved 
 
 ok(my $pretty_print_output = $model->pretty_print_text, "Got a string from pretty_print_text");
 
-ok (my @compatible_input_items = $model->compatible_input_items, "got compatible_input_items");
-isa_ok ($compatible_input_items[0], "GSC::Sequence::Item");
+ok (my @compatible_instrument_data = $model->compatible_instrument_data, "got compatible_instrument_data");
+isa_ok ($compatible_instrument_data[0], "Genome::InstrumentData");
 
-ok (my @available_read_sets = $model->available_read_sets, "got available_read_sets");
-isa_ok ($available_read_sets[0], "GSC::Sequence::Item");
+ok (my @available_instrument_data = $model->available_instrument_data, "got available_instrument_data");
+isa_ok ($available_instrument_data[0], "Genome::InstrumentData");
 
-#ok (my @unbuilt_read_sets = $model->unbuilt_read_sets, "got unbuilt_read_sets");
-#isa_ok ($unbuilt_read_sets[0], "Genome::Model::ReadSet");
+ok (my @built_instrument_data = $model->built_instrument_data, "got built_instrument_data");
+isa_ok ($built_instrument_data[0], "Genome::InstrumentData");
 
-ok (my @built_read_sets = $model->built_read_sets, "got built_read_sets");
-isa_ok ($built_read_sets[0], "Genome::Model::ReadSet");
+ok (!$model->unbuilt_instrument_data, "no unbuilt_instrument_data");
+my $ida = Genome::Model::InstrumentDataAssignment->get(
+                                                       model_id => $model->id,
+                                                       instrument_data_id => $built_instrument_data[0]->id,
+                                                   );
+isa_ok($ida,'Genome::Model::InstrumentDataAssignment');
+$ida->first_build_id(undef);
+
+ok (my @unbuilt_instrument_data = $model->unbuilt_instrument_data, "got unbuilt_instrument_data");
+isa_ok ($unbuilt_instrument_data[0], "Genome::InstrumentData");
+
 
 ok (my $available_reports = $model->available_reports, "got available_reports");
 foreach my $key(@$available_reports)
