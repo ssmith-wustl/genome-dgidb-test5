@@ -48,7 +48,7 @@ sub execute {
     if ( defined $self->instrument_data_id ) {
         my $instrument_data = Genome::InstrumentData->get( $self->instrument_data_id );
         unless ( $instrument_data ) {
-            $self->error_message( sprintf('Failed to find specified instrument data for id (%s)', $self->read_set_id) );
+            $self->error_message( sprintf('Failed to find specified instrument data for id (%s)', $self->instrument_data_id) );
             return;
         }
         return $self->_assign_instrument_data($instrument_data);
@@ -113,7 +113,7 @@ sub _assign_instrument_data {
     my $ida = Genome::Model::InstrumentDataAssignment->create(
         model_id => $self->model->id,
         instrument_data_id => $instrument_data->id,
-        #first_build_id  => undef,  # set when we run the first build with this read set
+        #first_build_id  => undef,  # set when we run the first build with this instrument data
     );
 
     unless ( $ida ) { 
