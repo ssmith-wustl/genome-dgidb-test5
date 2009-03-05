@@ -32,7 +32,8 @@ EOS
 
 sub should_bsub { 0;}
 
-sub create {
+# There is no need to go through creating unlock subscriptions when locking is disabled
+sub Xcreate {
     my $class = shift;
     my $obj = $class->SUPER::create(@_);
 
