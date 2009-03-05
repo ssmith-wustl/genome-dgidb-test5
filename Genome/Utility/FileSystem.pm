@@ -295,6 +295,7 @@ sub lock_resource {
     my $ret;
     my $lock_info_pathname = $resource_lock . '/info';
     while(!($ret = mkdir $resource_lock)) {
+        my $mkdir_error = $!;
         return undef unless $max_try--;
         my $info_fh = IO::File->new($lock_info_pathname);
         my $info_content;
@@ -305,9 +306,9 @@ sub lock_resource {
             $info_content = "unable to open file: $!";
         }
         $self->status_message(
-            "waiting on lock for resource $resource_lock\n"
-            . "lock info is: $info_content"
-        );
+                              "waiting on lock for resource '$resource_lock':  $mkdir_error\n"
+                              . "lock info is: $info_content"
+                          );
         if ($info_content =~ /LSF_JOB_ID (\d+)/) {
             my $waiting_on_lsf_job_id  = $1;
             my ($job_info,$events) = Genome::Model::Command::BsubHelper->lsf_state($waiting_on_lsf_job_id);
@@ -342,9 +343,12 @@ sub unlock_resource {
         $resource_id = $args{'resource_id'} || die('Must supply resource_id to lock resource');
         $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
     }
-    unless ($self->validate_existing_directory($resource_lock)) {
-        $self->error_message("Resource lock directory '$resource_lock' does not validate existance.");
-        return;
+    my $dir_exists;
+    eval {
+        $dir_exists = $self->validate_existing_directory($resource_lock);
+    };
+    unless ($dir_exists) {
+        return 1;
     }
     my $info_file = $resource_lock . '/info';
     unless ($self->validate_file_for_reading($info_file)) {
