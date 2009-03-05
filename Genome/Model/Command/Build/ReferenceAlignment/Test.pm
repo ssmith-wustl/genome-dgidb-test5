@@ -47,6 +47,13 @@ sub new {
         $self->{_data_dir} = $args{tmp_dir};
         $self->add_directory_to_remove($self->data_dir);
     }
+
+    my $tmp_dir = File::Temp::tempdir('ReferenceAlignmentTestXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+    $ENV{GENOME_MODEL_ROOT} = $tmp_dir;
+    $ENV{GENOME_MODEL_DATA} = $tmp_dir;
+    Genome::Utility::FileSystem->create_directory(
+                                                  Genome::Config->model_links_directory
+                                              );
     if ($args{messages}) {
         $self->{_messages} = $args{messages};
     } else {
@@ -148,7 +155,6 @@ sub create_model {
                                                                                    subject_name => $self->{_subject_name},
                                                                                    subject_type => $self->{_subject_type},
                                                                                    processing_profile_name => $self->{_processing_profile_name},
-                                                                                   data_directory => $self->data_dir,
                                                                   );
 
     isa_ok($create_command,'Genome::Model::Command::Define::ReferenceAlignment');
@@ -173,8 +179,11 @@ sub create_model {
     my $test_gold_snp_path = '/gsc/var/cache/testsuite/data/Genome-Model-Report-GoldSnp/test.gold2';
     $model->gold_snp_path($test_gold_snp_path);
 
-    $self->add_directory_to_remove($model->data_directory);
     $self->model($model);
+
+    my $base_alignment_directory = Genome::Config->alignment_links_directory .'/'.
+        $model->read_aligner_name .'/'. $model->reference_sequence_name;
+    Genome::Utility::FileSystem->create_directory($base_alignment_directory);
 }
 
 sub add_instrument_data {
@@ -436,13 +445,11 @@ sub remove_data {
     my $self = shift;
 
     my $model = $self->model;
-    my @alignment_events = $model->alignment_events;
-    my @idas = map { $_->instrument_data_assignment } @alignment_events;
+    my @idas = $model->instrument_data_assignments;
     my @alignment_dirs = map { $_->alignment_directory } @idas;
-    my @instrument_data = map { $_->instrument_data } @idas;
-
-    # These must be deleted before we save
-    my $archive_file = $model->resolve_archive_file;
+    for my $alignment_dir (@alignment_dirs) {
+        $self->add_directory_to_remove($alignment_dir);
+    }
 
     # FIXME - the delete below causes a lot of warning messages about deleting
     # hangoff data.  do we need to check the contents?
@@ -450,15 +457,13 @@ sub remove_data {
 
     ok(UR::Context->_sync_databases,'sync with the database');
     ok($self->model->delete,'successfully removed model');
-
     my $directories_to_remove = $self->{_dir_array_ref};
-    #print "Removing directories:\n";
-    for my $directory_to_remove (@$directories_to_remove, @alignment_dirs) {
-        warn("Removing $directory_to_remove\n");
-        rmtree $directory_to_remove;
+    for my $dir (@{$directories_to_remove}) {
+        unless (rmtree $dir) {
+            warn("Failed to remove directory '$dir':  $!");
+        }
     }
 }
-
 
 sub create_test_pp {
     my $self = shift;
