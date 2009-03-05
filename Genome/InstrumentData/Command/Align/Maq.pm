@@ -265,7 +265,7 @@ sub execute {
         # mapsplit quits.
         my @split_files = glob($self->results_dir . "/*.map");
         for my $output_file (@split_files) {
-            my $new_file_path = $output_file .'.'. $self->id;
+            my $new_file_path = $output_file .'.'. $generator_id;
             unless (rename($output_file,$new_file_path)) {
                 $logger->error_message("Failed to rename file '$output_file' => '$new_file_path'");
                 return;
