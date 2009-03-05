@@ -368,7 +368,7 @@ sub setup_input {
     }
     
 
-    if (0) { # workflow switch
+    if (1) { # workflow switch
         
         require Workflow::Simple;
 

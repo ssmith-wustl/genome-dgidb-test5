@@ -1114,7 +1114,7 @@ sub annotate_variants {
         $out =~ s/genotype/annotated_genotype/;
         push @output_files, $out;
     }
-    if (0) { # workflow switch
+    if (1) { # workflow switch
         
         require Workflow::Simple;
 
