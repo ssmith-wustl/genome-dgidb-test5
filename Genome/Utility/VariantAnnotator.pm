@@ -15,11 +15,11 @@ use Benchmark;
 class Genome::Utility::VariantAnnotator{
     is => 'UR::Object',
     has => [
-        transcript_window => {is => 'Genome::DB::Window::Transcript'},
+        transcript_window => {is => 'Genome::Utility::Window::Transcript'},
         benchmark => {
             is => 'boolean',
             is_optional => 1,
-                    },
+        },
     ]
 };
 
@@ -875,10 +875,6 @@ Given information about a 'snp', this modules retrieves annotation information.
 
 =head1 Usage
 
-my $schema = Genome::DB::Schema->connect_to_dwrac;
-$self->error_message("Can't connect to dwrac")
-    and return unless $schema;
-
 my $chromosome_name = $self->chromosome_name;
 my $chromosome = $schema->resultset('Chromosome')->find
 (
@@ -988,7 +984,7 @@ while ( my $line = $in_fh->getline )
 
 =head1 See Also
 
-B<Genome::DB::*>, B<Genome::DB::Window::*>, B<Genome::Model::Command::Report>
+B<Genome::Model::Command::Report>
 
 =head1 Disclaimer
 
@@ -998,9 +994,17 @@ This module is distributed in the hope that it will be useful, but WITHOUT ANY W
 
 =head1 Author(s)
 
+Core Logic:
+
+B<Xiaoqi Shi> I<xshi@genome.wustl.edu>
+
+Optimization:
+
 B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
-B<Xiaoqi Shi> I<ebelter@watson.wustl.edu>
+B<Gabe Sanderson> l<gsanders@genome.wustl.edu>
+
+B<Adam Dukes l<adukes@genome.wustl.edu>
 
 =cut
 

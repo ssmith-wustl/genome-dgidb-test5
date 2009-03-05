@@ -6,15 +6,10 @@ use warnings;
 use above "Genome";
 
 use Data::Dumper;
-require Genome::DB::Schema;
 use Test::More 'no_plan';
 use Storable;
 
 use_ok('Genome::Utility::VariantAnnotator');
-
-my $schema = Genome::DB::Schema->connect_to_dwrac;
-ok($schema, "Connect to dw");
-die unless $schema;
 
 my $file = "/gsc/var/cache/testsuite/data/Genome-Utility-VariantAnnotator/variants.stor";
 ok(-s $file, "Storable file ($file) has data!");
@@ -78,7 +73,7 @@ sub _get_range {
 sub _get_window{
     my $chromosome = shift;
     my $iter = Genome::Transcript->create_iterator(where => [ chrom_name => $chromosome] );
-    my $window =  Genome::DB::Window::Transcript->create ( iterator => $iter, range => 50000);
+    my $window =  Genome::Utility::Window::Transcript->create ( iterator => $iter, range => 50000);
     return $window
 }
 
@@ -90,7 +85,6 @@ sub _get_annotator {
         transcript_window => $transcript_window,
         benchmark => 1,
     );
-    ok($annotator, sprintf('Got annotator for chromosome (%s)', $chromosome));
     die unless $annotator;
 
     return $annotator;

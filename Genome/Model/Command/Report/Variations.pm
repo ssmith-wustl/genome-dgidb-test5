@@ -163,7 +163,7 @@ sub _create_transcript_window {  #TODO update
     my ($self, $chromosome) = @_;
 
     my $iter = Genome::Transcript->create_iterator(where => [ chrom_name => $chromosome] );
-    my $window =  Genome::DB::Window::Transcript->create ( iterator => $iter, range => $self->flank_range);
+    my $window =  Genome::Utility::Window::Transcript->create ( iterator => $iter, range => $self->flank_range);
     return $window
 }
 
@@ -171,7 +171,7 @@ sub _create_variation_window {  #TODO update
     my ($self, $chromosome) = @_;
 
     my $iter = Genome::Variation->create_iterator(where => [ chrom_name => $chromosome] );
-    my $window =  Genome::DB::Window::Variation->create ( iterator => $iter, range => $self->variation_range);
+    my $window =  Genome::Utility::Window::Variation->create ( iterator => $iter, range => $self->variation_range);
     return $window
 }
 
