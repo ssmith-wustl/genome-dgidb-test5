@@ -415,36 +415,38 @@ sub succeeded_builds {
     unless (scalar(@builds)) {
         return;
     }
-    my @build_events;
-    for my $build (@builds) {
-        my $build_event = $build->build_event;
-        if ($build_event) {
-            push @build_events, $build_event;
-        }
-    }
-    unless (scalar(@build_events)) {
-        return;
-    }
-    my @build_events_w_status = grep { $_->event_status } @build_events;
-    my @succeeded_build_events = grep {$_->event_status eq 'Succeeded'} @build_events_w_status;
-    my @events_wo_date = grep { !$_->date_completed } @succeeded_build_events;
-    if (scalar(@events_wo_date)) {
-        my $error_message = 'Found '. scalar(@events_wo_date) .' Running build events without date completed.' ."\n";
-        for (@events_wo_date) {
+
+    my @builds_w_status = grep { $_->build_status } @builds;
+    my @succeeded_builds = grep {$_->build_status eq 'Succeeded'} @builds_w_status;
+    my @builds_wo_date = grep { !$_->date_completed } @succeeded_builds;
+    if (scalar(@builds_wo_date)) {
+        my $error_message = 'Found '. scalar(@builds_wo_date) .' Succeeded builds without date completed.' ."\n";
+        for (@builds_wo_date) {
             $error_message .= "\t". $_->desc ."\n";
         }
         die($error_message);
     }
-    my @sorted_succeeded_build_events = sort {$a->date_completed cmp $b->date_completed} @succeeded_build_events;
-    my @succeeded_builds = map { $_->build } @sorted_succeeded_build_events;
-    return @succeeded_builds;
+    my @sorted_succeeded_builds = sort {$a->date_completed cmp $b->date_completed} @succeeded_builds;
+    return @sorted_succeeded_builds;
+}
+
+sub completed_builds {
+    my $self = shift;
+    my @builds = $self->builds;
+    unless (scalar(@builds)) {
+        return;
+    }
+    my @builds_w_status = grep { $_->build_status } @builds;
+    my @completed_builds = grep { $_->date_completed } @builds_w_status;
+    my @sorted_completed_builds = sort { $a->date_completed cmp $b->date_completed } @completed_builds;
+    return @sorted_completed_builds;
 }
 
 sub last_complete_build {
     my $self = shift;
 
-    my @succeeded_builds = $self->succeeded_builds;
-    my $last_complete_build = pop(@succeeded_builds);
+    my @completed_builds = $self->completed_builds;
+    my $last_complete_build = pop(@completed_builds);
     return $last_complete_build;
 }
 
@@ -464,29 +466,18 @@ sub running_builds {
     unless (scalar(@builds)) {
         return;
     }
-    my @build_events;
-    for my $build (@builds) {
-        my $build_event = $build->build_event;
-        if ($build_event) {
-            push @build_events, $build_event;
-        }
-    }
-    unless (scalar(@build_events)) {
-        return;
-    }
-    my @build_events_w_status = grep { $_->event_status } @build_events;
-    my @running_build_events = grep {$_->event_status eq 'Running'} @build_events_w_status;
-    my @events_wo_date = grep { !$_->date_scheduled } @running_build_events;
-    if (scalar(@events_wo_date)) {
-        my $error_message = 'Found '. scalar(@events_wo_date) .' Running build events without date scheduled.' ."\n";
-        for (@events_wo_date) {
+    my @builds_w_status = grep { $_->build_status } @builds;
+    my @running_builds = grep {$_->build_status eq 'Running'} @builds_w_status;
+    my @builds_wo_date = grep { !$_->date_scheduled } @running_builds;
+    if (scalar(@builds_wo_date)) {
+        my $error_message = 'Found '. scalar(@builds_wo_date) .' Running builds without date scheduled.' ."\n";
+        for (@builds_wo_date) {
             $error_message .= "\t". $_->desc ."\n";
         }
         die($error_message);
     }
-    my @sorted_running_build_events = sort {$a->date_scheduled cmp $b->date_scheduled} @running_build_events;
-    my @running_builds = map { $_->build } @sorted_running_build_events;
-    return @running_builds;
+    my @sorted_running_builds = sort {$a->date_scheduled cmp $b->date_scheduled} @running_builds;
+    return @sorted_running_builds;
 }
 
 sub current_running_build {
