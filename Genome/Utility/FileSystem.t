@@ -154,7 +154,7 @@ sub test2_directory : Test(8) {
     return 1;
 }
 
-sub test3_resource_locking : Test(19) {
+sub test3_resource_locking : Test(20) {
     my $bogus_id = '-55555';
     my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
     my $sub_dir = $tmp_dir .'/sub/dir/test';
@@ -188,20 +188,36 @@ sub test3_resource_locking : Test(19) {
                             lock_directory => $tmp_dir,
                             resource_id => $bogus_id,);
     my $file_to_break_unlocking = $lock .'/break_stuff';
+    my $file_to_break_unlocking_in_stale_dir = $lock . '.stale/break_stuff';
+
     my $break_unlock_fh = Genome::Utility::FileSystem->open_file_for_writing($file_to_break_unlocking);
     print $break_unlock_fh "This will break the unlock";
     $break_unlock_fh->close;
     ok(-s $file_to_break_unlocking,'file to break unlocking exists with size');
-    ok(!Genome::Utility::FileSystem->unlock_resource(
-                                                     lock_directory => $tmp_dir,
-                                                     resource_id => $bogus_id,
-                                                 ), 'failed unlock because of junk file');
-    ok(rename($file_to_break_unlocking,$lock.'/info'),'copy file breaking unlock to lock info file name');
+    # The $file_to_break_unlocking should revent the lock.stale dir from getting removed, though
+    # the unlocking should succeed
     ok(Genome::Utility::FileSystem->unlock_resource(
                                                      lock_directory => $tmp_dir,
                                                      resource_id => $bogus_id,
-                                                 ), 'unlock works after removing junk file');
-    
+                                                 ), 'unlocked resource even with junk file in the lock dir');
+    #ok(rename($file_to_break_unlocking,$lock.'/info'),'copy file breaking unlock to lock info file name');
+    #ok(Genome::Utility::FileSystem->unlock_resource(
+    #                                                 lock_directory => $tmp_dir,
+    #                                                 resource_id => $bogus_id,
+    #                                             ), 'unlock works after removing junk file');
+
+    ok(unlink ($file_to_break_unlocking_in_stale_dir), 'Unlinked junk file in stale lock dir');
+    $lock = test_locking(successful => 1,
+                         message => 'lock resource_id '.$bogus_id,
+                         lock_directory => $tmp_dir,
+                         resource_id => $bogus_id);
+    # The unlock will see that the .stale lock is still around, but since we've unlinked the 
+    # $file_to_break_unlocking file, it'l lbe able to remove the .stale this time
+    ok(Genome::Utility::FileSystem->unlock_resource(
+                                                     lock_directory => $tmp_dir,
+                                                     resource_id => $bogus_id,)
+                                                   ,'Unlock works the second time after removing the junk file');
+
     my $init_lsf_job_id = $ENV{'LSB_JOBID'};
     $ENV{'LSB_JOBID'} = 1;
     test_locking(successful => 1,

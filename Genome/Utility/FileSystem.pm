@@ -10,6 +10,7 @@ require IO::Dir;
 require IO::File;
 require File::Basename;
 require File::Path;
+require File::Copy;
 
 class Genome::Utility::FileSystem {
     is => 'UR::Object',
@@ -355,31 +356,39 @@ sub unlock_resource {
         $self->error_message("Resource lock info file '$info_file' not validated.");
         return;
     }
-    my $unlink_rv = unlink($info_file);
-    if (!$unlink_rv) {
-        $self->error_message("Failed to remove info file '$info_file':  $!");
-        return;
-    } elsif ($unlink_rv && -e $info_file) {
-        $self->error_message("Info file '$info_file' still exists.");
+    
+    my $moved_resource_lock = $resource_lock . '.stale';
+    my $moved_info_file = $moved_resource_lock . '/info';
+    
+    if (-d $moved_resource_lock) {
+            unless( rmdir $moved_resource_lock ) {
+                $self->error_message("Failed to remove stale lock directory $moved_resource_lock: $!");
+                return;
+        }
+    }
+    unless  (rename $resource_lock,$moved_resource_lock) {
+        $self->error_message("Failed move of $resource_lock to $moved_resource_lock");
         return;
     }
-    my $rmdir_rv = rmdir($resource_lock);
+    if (!unlink($moved_info_file)) {
+        $self->error_message("Failed to remove info file '$moved_info_file':  $!");
+        return;
+    }
+    #my $moved_resource_lock = $resource_lock . '.stale';
+    #my $mv_rv = File::Copy->copy($resource_lock,$moved_resource_lock);
+    my $rmdir_rv = rmdir($moved_resource_lock);
     if (!$rmdir_rv) {
-        $self->error_message("Failed to remove directory '$resource_lock':  $!");
-        if ($self->validate_existing_directory($resource_lock)) {
-            opendir(DIR,$resource_lock);
-            my @files = map { $resource_lock .'/'. $_ }  grep { $_ !~ /^\.{1,2}$/ } readdir(DIR);
+        $self->warning_message("Failed to remove directory '$moved_resource_lock':  $!");
+        if ($self->validate_existing_directory($moved_resource_lock)) {
+            opendir(DIR,$moved_resource_lock);
+            my @files = map { $moved_resource_lock .'/'. $_ }  grep { $_ !~ /^\.{1,2}$/ } readdir(DIR);
             closedir(DIR);
             my $error_message;
             for (@files) {
                 $error_message .= `ls -l $_`;
             }
-            $self->error_message($error_message);
+            $self->warning_message($error_message);
         }
-        return;
-    } elsif ($rmdir_rv && -e $resource_lock) {
-        $self->error_message("Resource lock directory '$resource_lock' still exists.");
-        return;
     }
     return 1;
 }
