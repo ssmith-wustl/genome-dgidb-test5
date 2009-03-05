@@ -33,7 +33,6 @@ sub create {
     my $class = shift;
 
     my $self = $class->SUPER::create(@_);
-    $DB::single=1;
     unless ($self) {
         $class->error_message("Failed to create build command: " . $class->error_message());
         return;
@@ -50,7 +49,6 @@ sub create {
         if ($current_running_build) {
             $self->build_id($current_running_build->build_id);
         } else {
-            $DB::single=1;
             my $build = Genome::Model::Build->create(
                                                      model_id => $model->id,
                                                    );
@@ -137,14 +135,12 @@ sub execute {
     my $prior_job_name;
     for my $stage_name ($pp->stages) {
         my @scheduled_objects = $self->_schedule_stage($stage_name);
-       
-          unless (@scheduled_objects) {
+        unless (@scheduled_objects) {
             $self->error_message('Problem with build('. $self->build_id .") objects not scheduled for classes:\n".
                                  join("\n",$pp->classes_for_stage($stage_name)));
             $self->event_status('Running');
             #    die;
         }
-
         if (!defined $self->auto_execute) {
             # transent properties with default_values are not re-initialized when loading object from data source
             $self->auto_execute(1);
@@ -161,6 +157,18 @@ sub execute {
             unless (Genome::Model::Command::RunJobs->execute(%run_jobs_params)) {
                 $self->error_message('Failed to execute run-jobs for model '. $self->model_id);
                 return;
+            }
+            my $max_try = 10;
+            for my $scheduled_event (@scheduled_objects) {
+                my $state = $scheduled_event->lsf_state;
+                while ( !$state && $max_try ) {
+                    sleep 6;
+                    $max_try--;
+                    $state = $scheduled_event->lsf_state;
+                }
+                unless ($state) {
+                    $self->error_message('LSF is taking way too long and job dependencies may be jacked.');
+                }
             }
         }
         $prior_job_name = $self->model_id .'_'. $self->build_id .'_'. $stage_name .'*';
@@ -504,8 +512,7 @@ sub _schedule_stage {
        my @scheduled_commands;
     foreach my $object (@objects) {
         my $object_class;
-        my $object_id;
-        $DB::single = 1; 
+        my $object_id; 
         if (ref($object)) {
             $object_class = ref($object);
             $object_id = $object->id;
