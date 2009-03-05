@@ -7,7 +7,6 @@ use IO::File;
 use Genome;
 use Data::Dumper;
 use Genome::Utility::VariantAnnotator;
-use Genome::DB::Schema;
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 
 class Genome::Model::CombineVariants::AnnotateVariations {
@@ -51,11 +50,6 @@ sub create {
 sub execute {
     my ($self) = @_;
 
-    my $schema = Genome::DB::Schema->connect_to_dwrac;
- 
-    $self->error_message("Can't connect to dwrac")
-        and return unless $schema;
-    
     $self->output_file($self->output_file_name);
 
     my $annotator;
@@ -73,17 +67,8 @@ sub execute {
         #NEW ANNOTATOR IF WE'RE ON A NEW CHROMOSOME
         if ( compare_chromosome($current_chromosome,$genotype->{chromosome}) != 0 ){
             $current_chromosome = $genotype->{chromosome};
-            $db_chrom = $schema->resultset('Chromosome')->find(
-                {chromosome_name => $genotype->{chromosome} },
-            );
-
-            unless ($db_chrom){
-               $self->error_message("couldn't get db chrom from database");
-               die;
-            }
-            $annotator = Genome::Utility::VariantAnnotator->new(
-                transcript_window => $db_chrom->transcript_window(range => 50000),
-            );
+            my $window = $self->_get_window($current_chromosome);
+            my $annotator = $self->_get_annotator($window);
         }
         
         $self->print_prioritized_annotation($genotype, $annotator, $ofh);
@@ -213,6 +198,7 @@ sub next_genotype{
 
 # Reads from the current pre annotation genotype file and returns the next line as a hash
 # Optionally takes a chromosome and position range and returns only genotypes in that range
+
 sub next_genotype_in_range{
     my $self = shift;
     return $self->next_genotype unless @_;
@@ -224,6 +210,28 @@ sub next_genotype_in_range{
             return $genotype;
         }
     }
+}
+
+sub _get_window{
+    my $self = shift;
+    my $chromosome = shift;
+    my $iter = Genome::Transcript->create_iterator(where => [ chrom_name => $chromosome] );
+    my $window =  Genome::Utility::Window::Transcript->create ( iterator => $iter, range => 50000);
+    return $window
+}
+
+
+sub _get_annotator {
+    my $self = shift;
+    my ($transcript_window) = @_;
+
+    my $annotator = Genome::Utility::VariantAnnotator->create(
+        transcript_window => $transcript_window,
+        benchmark => 1,
+    );
+    die unless $annotator;
+
+    return $annotator;
 }
 
 1;
