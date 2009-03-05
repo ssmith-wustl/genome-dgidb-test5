@@ -60,8 +60,10 @@ sub event_types_without_subclass {
             '^genome[\- ]model build verify-successful-completion$',
             '^genome[\- ]model build assembly assemble newbler$',
             '^genome[\- ]model build amplicon-assembly',
-            '^genome[\- ]model build combine-variants',
-            '^genome[\- ]model build polyphred-polyscan',
+            '^genome[\- ]model build combine-variants',     #
+            '^genome[\- ]model build imported-annotation',  #TODO this question should be answered by the build
+            '^genome[\- ]model build imported-variation',  #TODO  this question should be answered by the build
+            '^genome[\- ]model build polyphred-polyscan',   #
             '^genome[\- ]model build reference-alignment deduplicate-libraries maq',
             '^genome[\- ]model build reference-alignment run-reports',
             
