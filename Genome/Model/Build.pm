@@ -56,9 +56,9 @@ sub build_events {
     my $self = shift;
 
     my @build_events = Genome::Model::Command::Build->get(
-                                                    model_id => $self->model_id,
-                                                    build_id => $self->build_id,
-                                                );
+                                                          model_id => $self->model_id,
+                                                          build_id => $self->build_id,
+                                                      );
     return @build_events;
 }
 
@@ -75,6 +75,25 @@ sub build_event {
     }
     return $build_events[0];
 }
+
+sub build_status {
+    my $self = shift;
+
+    return $self->build_event->event_status;
+}
+
+sub date_scheduled {
+    my $self = shift;
+
+    return $self->build_event->date_scheduled;
+}
+
+sub date_completed {
+    my $self = shift;
+
+    return $self->build_event->date_completed;
+}
+
 
 sub resolve_data_directory {
     my $self = shift;
