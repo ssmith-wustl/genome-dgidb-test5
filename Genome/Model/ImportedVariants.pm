@@ -10,14 +10,14 @@ class Genome::Model::ImportedVariants {
     is => 'Genome::Model',
     is_abstract => 1,
     has => [
-    data_file_fh    => { is          => 'IO::File',
-        doc         => 'The file handle to the micro array data file. This is set internally. Not a parameter, just a class variable.',
-        is_optional => 1,
-    },
-    current_line    => { is          => 'Hash',
-        doc         => 'The current line of input most recently returned from next. Not a parameter, just a class variable.',
-        is_optional => 1,
-    },
+        data_file_fh    => { is          => 'IO::File',
+            doc         => 'The file handle to the micro array data file. This is set internally. Not a parameter, just a class variable.',
+            is_optional => 1,
+        },
+        current_line    => { is          => 'Hash',
+            doc         => 'The current line of input most recently returned from next. Not a parameter, just a class variable.',
+            is_optional => 1,
+        },
     ],
 };
 
