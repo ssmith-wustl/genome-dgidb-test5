@@ -54,6 +54,11 @@ class Genome::Model::ExperimentalMetric {
         ref_plis_strand_unique_by_start_site_pre27=> { is => 'Integer' },
         ref_minus_strand_unique_by_start_site_pre27 => { is => 'Integer' },
         ref_unique_by_sequence_content_pre27=> { is => 'Integer' },
+        total_depth => { is => 'Integer' },
+        cns2_snp_depth => { is => 'Integer' },
+        cns2_avg_num_reads => { is => 'Float' },
+        cns2_max_map_quality => { is => 'Integer' },
+        cns2_quality_difference_btw_strong_and_weak_alleles => { is => 'Integer' },
     ],
 #    table_name => 'FILE1',  # A dummy table name so the properties get 'column_name' properties
     data_source => 'Genome::DataSource::ExperimentalMetric',

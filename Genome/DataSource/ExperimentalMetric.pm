@@ -21,7 +21,8 @@ sub column_order { qw(chromosome position reference_base variant_base snp_qualit
                       ref_n_max_base_quality ref_avg_windowed_quality ref_max_windowed_quality ref_n_max_windowed_quality
                       ref_plus_strand_unique_by_start_site ref_minus_strand_unique_by_start_site
                       ref_unique_by_sequence_content ref_plis_strand_unique_by_start_site_pre27
-                      ref_minus_strand_unique_by_start_site_pre27 ref_unique_by_sequence_content_pre27) }
+                      ref_minus_strand_unique_by_start_site_pre27 ref_unique_by_sequence_content_pre27
+                      total_depth cns2_snp_depth cns2_avg_num_reads cns2_max_map_quality cns2_quality_difference_btw_strong_and_weak_alleles) }
 sub sort_order { qw(chromosome position) }
 sub skip_first_line { 1; }
 
