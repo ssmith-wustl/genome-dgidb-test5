@@ -10,16 +10,16 @@ use File::Temp;
 use File::Copy;
 use File::Compare;
 
+BEGIN {
+    if (`uname -a` =~ /x86_64/){
+        plan tests => 5;
+    }
+    else{
+        plan skip_all => 'Must run on a 64 bit machine';
+    }
 
-if (`uname -a` =~ /x86_64/){
-    plan tests => 5;
+    use_ok('Genome::Model::Tools::Maq::MapToBam');
 }
-else{
-    plan skip_all => 'Must run on a 64 bit machine';
-}
-
-use_ok ('Genome::Model::Tools::Maq::MapToBam');
-
 
 my $root_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-MapToBam';
 
