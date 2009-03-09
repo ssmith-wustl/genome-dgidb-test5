@@ -704,7 +704,7 @@ sub _mapmerge_locally {
         $self->warning_message("Using mapmerge file left over from previous run: $result_file");
     } else {
         $self->warning_message("Performing a complete mapmerge.  Hold on...");
-        my $cmd = Genome::Model::Tools::Maq::MapMerge->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
+        my $cmd = Genome::Model::Tools::Maq::MapMergeC->create(use_version => '0.6.5', output => $result_file, inputs => \@inputs);
         $cmd->execute();
         $self->warning_message("mapmerge complete.  output filename is $result_file");
     }
