@@ -227,6 +227,7 @@ sub execute
                                                          organism_name => $config->{org_dirname},
                                                          project_type => $config->{project_type},
                                                          acedb_version => $config->{acedb_version},
+							 skip_acedb_parse => $config->{skip_acedb_parse},
                                                         );
 
     if($self->dev)
