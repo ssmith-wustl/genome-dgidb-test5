@@ -192,7 +192,6 @@ sub _determine_transcripts_to_annotate {
     my ($self, $position) = @_;
 
     my (@transcripts_priority_1, @transcripts_priority_2);
-    $DB::single = 1;
     foreach my $transcript ( $self->transcript_window->scroll($position) )
     {
         if ( grep { $transcript->transcript_status eq $_ } (qw/ known reviewed validated /) )
@@ -270,12 +269,19 @@ sub _transcript_annotation_for_rna
     my $position = $variant->{start};
     my $strand = $transcript->strand;
 
+    my $length = 0;
+    if ($transcript->protein) {
+        $length = length( $transcript->protein->amino_acid_seq );
+    } else {
+        print "No protein for this transcript, setting length to 0:\n";
+        print Data::Dumper::Dumper $transcript;
+    }
     return
     (
         strand => $strand,
         c_position => 'NULL',
         trv_type => 'rna',
-        amino_acid_length => length( $transcript->protein->amino_acid_seq ),
+        amino_acid_length => $length,
         amino_acid_change => 'NULL',
     );
 }
@@ -591,7 +597,7 @@ sub _transcript_annotation_for_cds_exon
     my $trsub_phase = $exon_pos % 3;
     unless ( $trsub_phase eq $main_structure->phase ) 
     {
-        $self->error_msg
+        $self->error_message
         (
 # From Chapter 8 codon2aa
             #
@@ -658,7 +664,7 @@ sub _transcript_annotation_for_cds_exon
     else {
         if(substr($original_seq,$c_position-1,$size2) ne $reference) {
             my $e="allele does not match:" . $transcript->transcript_name.",".$c_position.",".$variant->{chromosome_name}.",".$variant->{start}.",".$variant->{stop}.",".$variant->{reference}.",".$variant->{variant}.",".$variant->{type}."\n";
-            $self->error_msg($e);
+            $self->error_message($e);
             return ;
         }
         $variant_size=2 if($codon_start==0&&$variant->{type}=~/dnp/i);
@@ -678,7 +684,7 @@ sub _transcript_annotation_for_cds_exon
     else {
         if(length($mutated_seq_translated)<$pro_start-1|| substr($original_seq_translated,$pro_start-3,2) ne substr($mutated_seq_translated,$pro_start-3,2)) {
             my $e="protein string does not match:".$transcript->transcript_name.",".$c_position.",".$variant->{chromosome_name}.",".$variant->{start}.",".$variant->{stop}.",".$variant->{reference}.",".$variant->{allele2}.",".$variant->{type}."\n";
-            $self->error_msg($e);
+            $self->error_message($e);
             return ;
         }
         my $hash_pro= $self->compare_protein_seq($variant->{type},$original_seq_translated,$mutated_seq_translated,$pro_start-1,$variant_size);

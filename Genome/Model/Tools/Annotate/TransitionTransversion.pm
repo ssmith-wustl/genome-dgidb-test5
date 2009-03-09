@@ -1,11 +1,11 @@
-package Genome::Model::Tools::Annotation::TransitionTransversion;
+package Genome::Model::Tools::Annotate::TransitionTransversion;
 
 use strict;
 use warnings;
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-class Genome::Model::Tools::Annotation::TransitionTransversion {
+class Genome::Model::Tools::Annotate::TransitionTransversion {
     is => 'Command',                       
     has => [                                # specify the command's single-value properties (parameters) <--- 
         referance_allele      => { is => 'String',    doc => "give the referance allele" },

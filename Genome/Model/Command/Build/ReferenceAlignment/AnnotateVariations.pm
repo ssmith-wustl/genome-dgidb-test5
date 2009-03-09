@@ -6,22 +6,21 @@ use warnings;
 use Genome;
 
 use Data::Dumper;
-use Genome::Model::Command::Report::VariationsBatchToLsf;
 use Genome::Model::EventWithRefSeq;
-#use Genome::Utility::Parser;
 use IO::File;
 
 class Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations {
     is => [ 'Genome::Model::EventWithRefSeq' ],
     has => [
-    _snv_metrics => {
-        is => 'list',
-        doc => "",
-        is_transient => 1,
-        is_optional =>1,
-    },
+        _snv_metrics => {
+            is => 'list',
+            doc => "",
+            is_transient => 1,
+            is_optional =>1,
+        },
     ],
     sub_classification_method_name => 'class',
+    doc => 'translate genome sequence differences into transcript changes',
 };
 
 #########################################################
@@ -30,7 +29,7 @@ sub sub_command_sort_position { 90 } # TODO needed?
 
 # TODO Add doc
 sub help_brief {
-    "Automates variant annotation reporting during add reads"
+    
 }
 
 sub help_synopsis {
@@ -39,94 +38,74 @@ sub help_synopsis {
 
 sub help_detail {
     return <<"EOS"
-This module implements the automation of annotating variants discovered during the add reads pipeline.
-For the actual annotation process see: 
-Genome::SnpAnnotator
-For the report process (which runs the annotator) see:
-Genome::Model::Command::Report::Variations 
-Genome::Model::Command::Report::VariationsBatchToLsf
+Runs the standard Genome::Model::Tools::Annotate::TranscriptVariations on all SNVs for this build.
 EOS
 }
 
 sub bsub_rusage { return "-R 'span[hosts=1]'"; } 
 
-
-
 #- PROPERTY METHODS -#
 sub cleanup_transient_properties {
     my $self = shift;
-    
     $self->_snv_metrics(undef);
 }
 
 #- SNP REPORTS -#
 sub snp_report_file_base {
     my $self = shift;
-
     return sprintf('%s/%s_snp', $self->build->_reports_dir, $self->ref_seq_id);
 }
 
 sub snp_report_file {
     my $self = shift;
-
     return sprintf('%s.transcript', $self->snp_report_file_base);
 }
 
 sub snp_transcript_report_file {
     my $self = shift;
-
     return sprintf('%s.transcript', $self->snp_report_file_base);
 }
 
 sub snp_variation_report_file {
     my $self = shift;
-
     return sprintf('%s.variation', $self->snp_report_file_base);
 }
 
 sub snp_metrics_report_file {
     my $self = shift;
-
     return sprintf('%s.metrics', $self->snp_report_file_base);
 }
 
 #- INDEL REPORTS -#
 sub indel_report_file_base {
     my $self = shift;
-
     return sprintf('%s/%s_indel', $self->build->_reports_dir, $self->ref_seq_id);
 }
 
 sub indel_report_file {
     my $self = shift;
-
     return sprintf('%s.transcript', $self->indel_report_file_base);
 }
 
 sub indel_transcript_report_file {
     my $self = shift;
-
     return sprintf('%s.transcript', $self->indel_report_file_base);
 }
 
 sub indel_variation_report_file {
     my $self = shift;
-
     return sprintf('%s.variation', $self->indel_report_file_base);
 }
 
 sub indel_metrics_report_file {
     my $self = shift;
-
     return sprintf('%s.metrics', $self->indel_report_file_base);
 }
 
 #- LOG FILES -#
 sub snp_out_log_file {
     my $self = shift;
-
-    return sprintf
-    (
+    return sprintf(
         '%s/%s.out', #'%s/%s_snp.out',
         $self->resolve_log_directory,
         ($self->lsf_job_id || $self->ref_seq_id),
@@ -135,9 +114,7 @@ sub snp_out_log_file {
 
 sub snp_err_log_file {
     my $self = shift;
-
-    return sprintf
-    (
+    return sprintf(
         '%s/%s.err', #'%s/%s_snp.err',
         $self->resolve_log_directory,
         ($self->lsf_job_id || $self->ref_seq_id),
@@ -146,8 +123,7 @@ sub snp_err_log_file {
 
 sub indel_out_log_file {
     my $self = shift;
-    return sprintf
-    (
+    return sprintf(
         '%s/%s.err', #'%s/%s_indel.err',
         $self->resolve_log_directory,
         ($self->lsf_job_id || $self->ref_seq_id),
@@ -156,9 +132,7 @@ sub indel_out_log_file {
 
 sub indel_err_log_file {
     my $self = shift;
-
-    return sprintf
-    (
+    return sprintf(
         '%s/%s.out', #'%s/%s_indel.err',
         $self->resolve_log_directory,
         ($self->lsf_job_id || $self->ref_seq_id),
@@ -183,7 +157,48 @@ sub execute {
         `chmod g+w $reports_dir`;
     }
     
-    # TODO run for each variant type
+    my $report_base = $self->snp_report_file_base;
+    my $output_file = "$report_base.transcript";
+    my $summary_file = "$report_base.metrics";
+    
+    $self->status_message("Annotating SNVs from: " . $detail_file);
+    $self->status_message("Output file: $output_file");
+    $self->status_message("Summary file: $summary_file");
+    
+    # TODO run for each variant type, though these will probably 
+    # happen in different branches of the pipeline for indels/SV.
+    my $success = Genome::Model::Tools::Annotate::TranscriptVariations->execute(
+        snv_file => $detail_file,
+        output_file => $output_file,
+        summary_file => $summary_file,
+        # OTHER PARAMS:
+        # flank_range => ??,
+        # variant_range => ??,
+        # format => ??,
+    );
+
+    $self->status_message("Annotator returned $success");
+    
+    unless ( $success ) { 
+        $self->error_message("Exiting after annotator failure.");
+        $self->event_status("Failed");
+        return;
+    }
+
+    unless (-e $self->snp_transcript_report_file) {
+        $self->error_message("no transcript output found?!");
+        return;
+    }
+    
+    unless (-e $self->snp_metrics_report_file) {
+        $self->error_message("no summary metrics file found?!");
+        return;
+    }
+    
+
+=pod
+    
+    # This is the old wrapper
     my $success = Genome::Model::Command::Report::VariationsBatchToLsf->execute
     (
         variant_type => 'snp', 
@@ -197,19 +212,32 @@ sub execute {
         # format => ??,
     );
 
+    # ...which called this
+        R => "'select[db_dw_prod_runq<10] rusage[db_dw_prod=1]'",
+        command => sprintf
+        (
+            '`which genome-model` report variations --report-file-base %s --variant-file %s --variant-type %s --flank-range %s --variation-range %s --minimum-maq-score %s --minimum-read-count %s --no-header',
+            $report_file_base,
+            $variant_file,
+            $self->variant_type,
+            $self->flank_range,
+            $self->variation_range,
+            $self->minimum_maq_score,
+            $self->minimum_read_count,
+        ),
+
+=cut
+
     $self->generate_metric( $self->snv_metric_names );
 
-    if ( $success )
-    { 
+    if ( $success ) { 
         $self->event_status("Succeeded");
     }
-    else 
-    {
+    else {
         $self->event_status("Failed");
     }
 
-    $self->date_completed( UR::Time->now );
-
+    $self->date_completed( UR::Time->now);
     return $success;
 }
 

@@ -9,8 +9,8 @@ class Genome::Variation{
     table_name => 'GENOME_VARIATION',
     id_by => [
         variation_id => {is => 'Number'},
-        ],
-    has =>[
+    ],
+    has => [
         external_variation_id => {is => 'Number'},
         allele_string => {is => 'String'},
         variation_type => {is => 'String'},
@@ -18,14 +18,13 @@ class Genome::Variation{
         start => {is => 'Number'},
         stop => {is => 'Number'},
         pubmed_id => {is => 'Number'},
-        ],
+    ],
     has_many => [
         variation_instances => {is => 'Genome::VariationInstance', reverse_id_by => 'variation'},
         submitters => {is => 'Genome::Submitter', via => 'variation_instances', to => 'submitter'},
-        ],
-
-        schema_name => 'files',
-        data_source => 'Genome::DataSource::Variations',
+    ],
+    schema_name => 'files',
+    data_source => 'Genome::DataSource::Variations',
 };
 
 sub submitter_name
@@ -47,6 +46,34 @@ sub source
 
     return $submitters[0]->variation_source;
 }
+
+__END__
+    [
+        is                  => 'UR::DataSource::FileMux',
+        required_for_get    => ['chrom_name'],
+        file_resolver       => sub {
+                                my($chrom_name) = @_;
+                                $DB::single =1;
+                                # TODO: this will connect to a watson/venter/dbSNP/etc. model instead
+                                my $path = '/gscmnt/sata363/info/medseq/annotation_data/variations/variations_' . $chrom_name . ".csv";
+                                return $path;
+                            },
+        delimiter   =>"\t",
+        skip_first_line => 0,
+        column_order => [
+            qw(
+                variation_id
+                external_variation_id
+                allele_string
+                variation_type
+                chrom_name
+                start
+                stop
+                pubmed_id
+            )
+        ],
+        sort_order => 'start',
+    ],
 
 
 1;

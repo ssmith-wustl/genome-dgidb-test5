@@ -1,11 +1,11 @@
-package Genome::Model::Tools::Annotation;
+package Genome::Model::Tools::Annotate;
 
 use strict;
 use warnings;
 
 use Genome;     
 
-class Genome::Model::Tools::Annotation {
+class Genome::Model::Tools::Annotate {
     is => 'Command',
 };
 
