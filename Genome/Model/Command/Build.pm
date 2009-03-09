@@ -160,11 +160,11 @@ sub execute {
             }
             my $max_try = 10;
             for my $scheduled_event (@scheduled_objects) {
-                my $state = $scheduled_event->lsf_state;
+                my $state = $scheduled_event->lsf_job_state;
                 while ( !$state && $max_try ) {
                     sleep 6;
                     $max_try--;
-                    $state = $scheduled_event->lsf_state;
+                    $state = $scheduled_event->lsf_job_state;
                 }
                 unless ($state) {
                     $self->error_message('LSF is taking way too long and job dependencies may be jacked.');
