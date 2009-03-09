@@ -58,7 +58,11 @@ UR::Object::Type->define(
                                  'script_location' => {is => 'String',
                                                        doc => "path or name of bap finish project script",
                                                        is_optional => 1,
-                                                       default => "bap_finish_project",}
+                                                       default => "bap_finish_project",},
+				 'skip_acedb_parse' => {is => 'Boolean',
+							doc => "skip parsing into acedb for testing",
+							is_optional => 1, default => 0 }
+				 
                                  ]
                          );
 
@@ -233,6 +237,7 @@ my (
                         $self->acedb_version,
                         );
     if(defined($self->dev)) { push(@command_list,"--dev"); }
+    if(defined($self->skip_acedb_parse)) { push(@command_list, "--no-acedb");}
     return \@command_list;
 }
 
