@@ -23,7 +23,7 @@ my @SUB_COMMANDS = qw/
     processing-profile     
     model                  
     tools
-    disk-allocation
+    disk
 /;
 
 our %SUB_COMMAND_CLASSES = 
