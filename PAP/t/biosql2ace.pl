@@ -99,16 +99,31 @@ while (my $seq = $result->next_object()) {
 
     FEATURE: foreach my $feature (@features) {
 
-        ## Only the protein coding_genes have protein annotation to dump
-        unless ($feature->primary_tag() eq 'gene') { next FEATURE; }
+        ## Only the protein coding_genes have protein annotation to dump.
+        ## The 'InterPro' features are special in that they have their 
+        ## source_tag set to something other than 'gene', but we want them,
+        ## too.  Perhaps PAP::Command::InterProScan should just set the 
+        ## source to gene...
+        unless (
+                ($feature->primary_tag() eq 'gene')
+                ||
+                ($feature->source_tag() eq 'InterPro')
+               ) { 
+            next FEATURE; 
+        }
         
         my $display_name = $feature->display_name();
-
+        
         my $new_display_name;
 
         if (
-            ($display_name =~ /^(\w+\d+)\.(\w+)\.(\d+)$/) ||
+            ($display_name =~ /^(\w+\d+)\.(\w+)\.(\d+)$/) 
+            ||
+            ($display_name =~ /^(\w+\d+)\.(\w+)\.(\d+)\.InterPro\.\d+$/) 
+            ||
             ($display_name =~ /^(\w+\d+\.\d+)\.(\w+)\.(\d+)$/)
+            ||
+            ($display_name =~ /^(\w+\d+\.\d+)\.(\w+)\.(\d+)\.InterPro\.\d+$/)
            ) {
             my ($seq_id, $source, $number) = ($1, $2, $3);
             $new_display_name = join('.', $seq_id, $source, 'p5_hybrid', $number);
