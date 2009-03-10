@@ -12,6 +12,7 @@ use Bio::Seq;
 use Bio::SeqIO;
 use Bio::SeqFeature::Generic;
 
+use Compress::Bzip2;
 use English;
 use File::Basename;
 use File::chdir;
@@ -32,16 +33,26 @@ class PAP::Command::KEGGScan {
                               is_optional => 1,
                               doc         => 'analysis program working directory',
                              },
+        keggscan_output   => {
+                              is          => 'SCALAR',
+                              is_optional => 1,
+                              doc         => 'instance of IO::File pointing to raw KEGGscan output',
+                             },
         bio_seq_feature   => { 
                               is          => 'ARRAY',  
                               is_optional => 1,
                               doc         => 'array of Bio::Seq::Feature', 
-                           },
+                             },
+        report_save_dir   => {
+                              is          => 'SCALAR',
+                              is_optional => 1,
+                              doc         => 'directory to save a copy of the raw output to',
+                             },
     ],
 };
 
 operation PAP::Command::KEGGScan {
-    input        => [ 'fasta_file'      ],
+    input        => [ 'fasta_file', 'report_save_dir' ],
     output       => [ 'bio_seq_feature' ],
     lsf_queue    => 'long',
     lsf_resource => 'rusage[tmp=100]'
@@ -114,6 +125,17 @@ sub execute {
     
     $self->parse_result();
 
+    my $output_fh = $self->keggscan_output();
+    
+    ## Be Kind, Rewind.  Somebody will surely assume we've done this,
+    ## so let's not surprise them.
+    $output_fh->seek(0, SEEK_SET);
+
+    $self->archive_result();
+
+    ## Second verse, same as the first.
+    $output_fh->seek(0, SEEK_SET);
+
     return 1;
 
 }
@@ -176,12 +198,14 @@ sub parse_result {
 
 
     my $output_fn = join('.', 'KS-OUTPUT', File::Basename::basename($self->fasta_file()));
-    $output_fn = join('/', $self->working_directory(), $output_fn, 'REPORT-top.ks');
+    $output_fn = join('/', $self->working_directory(), $output_fn, 'REPORT-top.ks');    
     
     my $output_fh = IO::File->new();
     
     $output_fh->open("$output_fn") or die "Can't open '$output_fn': $OS_ERROR";
 
+    $self->keggscan_output($output_fh);
+    
     my @features = ( );
     
     LINE: while (my $line = <$output_fh>) {
@@ -239,13 +263,42 @@ sub parse_result {
         push @features, $feature;
         
     }
-
-    $output_fh->close();
     
     $self->bio_seq_feature( \@features );
 
     return;
     
 }
- 
+
+sub archive_result {
+
+    my $self = shift;
+    
+    
+    my $report_save_dir = $self->report_save_dir();
+    
+    if (defined($report_save_dir)) {
+        
+        unless (-d $report_save_dir) {
+            die "does not exist or is not a directory: '$report_save_dir'";
+        }
+        
+        my $output_handle = $self->keggscan_output();
+        
+        my $target_file = File::Spec->catfile($report_save_dir, 'keggscan.bz2');
+        my $bz_file = bzopen($target_file, 'w') or
+            die "Cannot open '$target_file': $bzerrno";
+        
+        while (my $line = <$output_handle>) {
+            $bz_file->bzwrite($line) or die "error writing: $bzerrno";
+        }
+        
+        $bz_file->bzclose();
+        
+    }
+
+    return 1;
+    
+}
+
 1;

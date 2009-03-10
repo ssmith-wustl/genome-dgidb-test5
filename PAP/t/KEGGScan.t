@@ -8,14 +8,23 @@ use Bio::SeqIO;
 
 use Cwd;
 use File::Temp;
-use Test::More tests => 75;
+use Test::More tests => 77;
 
 BEGIN {
     use_ok('PAP::Command');
     use_ok('PAP::Command::KEGGScan');
 }
 
-my $command = PAP::Command::KEGGScan->create('fasta_file' => 'data/B_coprocola.chunk.fasta');
+my $tempdir = File::Temp::tempdir(
+                                  'PAP_KEGGscan_test_XXXXXXXX',
+                                  DIR     => '/tmp',
+                                  CLEANUP => 1,
+                                 );
+
+my $command = PAP::Command::KEGGScan->create(
+                                             'fasta_file'      => 'data/B_coprocola.chunk.fasta',
+                                             'report_save_dir' => $tempdir,
+                                            );
 isa_ok($command, 'PAP::Command::KEGGScan');
 
 ok($command->execute());
@@ -46,3 +55,6 @@ foreach my $feature (@{$ref}) {
     my ($orthology_dblink) = grep { $_->primary_id() =~ /^K\d+$/       } @dblinks;
   
 }
+
+ok(-e "$tempdir/keggscan.bz2", "archive KEGGScan output exists");
+is(system("bzcat $tempdir/keggscan.bz2 > /dev/null"), 0, 'bzcat can read archived raw output');
