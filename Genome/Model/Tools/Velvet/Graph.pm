@@ -77,7 +77,7 @@ my %properties = (
 
 
 class Genome::Model::Tools::Velvet::Graph {
-    is           => 'Command',
+    is           => 'Genome::Model::Tools::Velvet',
     has_optional => [%properties],
 };        
 
@@ -130,9 +130,9 @@ sub create {
 
 sub execute {
     my $self = shift;
-    my $dir  = $self->directory;
     
-    my $command = 'velvetg '.$dir;
+    my $dir     = $self->directory;
+    my $command = $self->resolve_version.' '.$dir;
 
     for my $property_name (keys %properties) {
         next if $property_name eq 'directory';
