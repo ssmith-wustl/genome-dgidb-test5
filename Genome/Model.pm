@@ -74,7 +74,7 @@ class Genome::Model {
         user_name                        => { is => 'VARCHAR2', len => 64 },
         creation_date                    => { is => 'TIMESTAMP', len => 6 },
         builds                           => { is => 'Genome::Model::Build', reverse_id_by => 'model', is_many => 1 },
-        gold_snp_path                    => { via => 'attributes', to => 'value', where => [ property_name => 'gold_snp_path', entity_class_name => 'Genome::Model' ] },
+        gold_snp_path                    => { via => 'attributes', to => 'value', where => [ property_name => 'gold_snp_path', entity_class_name => 'Genome::Model' ], is_mutable => 1 },
         input_instrument_data_class_name => { calculate_from => 'instrument_data_class_name',
                          calculate => q($instrument_data_class_name->_dw_class), 
                          doc => 'the class of instrument_data assignable to this model in the dw' },
