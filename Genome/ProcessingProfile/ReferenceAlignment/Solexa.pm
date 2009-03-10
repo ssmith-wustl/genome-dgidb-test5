@@ -66,7 +66,7 @@ sub verify_successful_completion_job_classes {
 sub alignment_objects {
     my $self = shift;
     my $model = shift;
-    return $model->unbuilt_instrument_data;
+    return $model->instrument_data;
 }
 
 sub variant_detection_objects {
