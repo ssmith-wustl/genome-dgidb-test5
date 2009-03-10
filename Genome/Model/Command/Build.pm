@@ -593,7 +593,9 @@ sub _schedule_command_classes_for_object {
                             die $self->error_message;
                         }
                     }
-                    $ida->first_build_id($self->build_id);
+                    unless ($ida->first_build_id) {
+                        $ida->first_build_id($self->build_id);
+                    }
                     $command = $command_class->create(
                                                       instrument_data_id => $object->id,
                                                       model_id => $self->model_id,
@@ -627,7 +629,7 @@ sub _schedule_command_classes_for_object {
             } else {
                 $object_id = $object;
             }
-            $self->status_message('Scheduled '. $command_class .' for  '. $object_id
+            $self->status_message('Scheduled '. $command_class .' for '. $object_id
                                   .' event_id '. $command->genome_model_event_id ."\n");
         }
     }
@@ -665,11 +667,25 @@ sub mail_summary {
 
 sub get_all_objects {
     my $self = shift;
-
+    #TODO: child events no longer works
     my @events = $self->child_events;
     @events = sort {$b->id cmp $a->id} @events;
     my @objects = $self->SUPER::get_all_objects;
     return (@events, @objects);
+}
+
+sub abandon {
+    my $self = shift;
+    my $build = $self->build;
+    my @events = sort { $a->genome_model_event_id <=> $b->genome_model_event_id }
+        grep { $_->genome_model_event_id ne $self->genome_model_event_id } $build->events;
+    for my $event (@events) {
+        unless ($event->abandon) {
+            $self->error_message('Failed to abandon event with id '. $event->id);
+            return;
+        }
+    }
+    return $self->SUPER::abandon;
 }
 
 
