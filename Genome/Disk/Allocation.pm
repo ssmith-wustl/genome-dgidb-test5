@@ -50,7 +50,13 @@ class Genome::Disk::Allocation {
             group_subdirectory => {
                                    is => 'Text',
                                    doc => 'The group specific subdirectory where space is allocated',
-            }
+            },
+            absolute_path => {
+                              calculate_from => ['mount_path','group_subdirectory','allocation_path'],
+                              calculate => q|
+                                  return $mount_path .'/'. $group_subdirectory .'/'. $allocation_path;
+                              |,
+                          },
         ],
         has_optional => [
                          allocator => {
@@ -63,6 +69,8 @@ class Genome::Disk::Allocation {
                      ],
         data_source => 'Genome::DataSource::GMSchema',
 };
+
+
 
 1;
 
