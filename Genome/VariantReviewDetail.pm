@@ -26,12 +26,14 @@ class Genome::VariantReviewDetail {
         insert_sequence_allele1 => { is => 'VARCHAR2', len => 256, is_optional => 1 },
         insert_sequence_allele2 => { is => 'VARCHAR2', len => 256, is_optional => 1 },
         variant_length          => { is => 'NUMBER', len => 10, is_optional => 1 },
+        sample_name             => { is => 'VARCHAR2', len => 256, is_optional => 1 },
+        project_type            => { is => 'VARCHAR2', len => 1, is_optional => 1 },
     ],
     has_many => [
         reviews => { is => 'Genome::SNVManualReview', reverse_id_by => 'detail_id' },
     ],
     unique_constraints => [
-        { properties => [qw/chromosome start_position subject_name/], sql => 'VRD_SCS_U' },
+        { properties => [qw/chromosome sample_name start_position subject_name/], sql => 'VRD_SCS_U' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',

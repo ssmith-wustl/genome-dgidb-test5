@@ -12,20 +12,20 @@ class Genome::Model::Build {
     is_abstract => 1,
     sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
-              build_id => { is => 'NUMBER', len => 10, },
-          ],
+        build_id => { is => 'NUMBER', len => 10 },
+    ],
     has => [
-            model_id        => { is => 'NUMBER', len => 10, constraint_name => 'GMB_GMM_FK' },
-            data_directory  => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
-            model           => { is => 'Genome::Model', id_by => 'model_id' },
-            date_scheduled  => { via => 'build_event' },
-            _creation_event => { calculate_from => ['class','build_id'],
-                                 calculate => q|
+        model_id          => { is => 'NUMBER', len => 10, implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
+        data_directory    => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
+        model             => { is => 'Genome::Model', id_by => 'model_id' },
+        date_scheduled    => { via => 'build_event' },
+        _creation_event   => { calculate_from => [ 'class', 'build_id' ],
+                         calculate => q(
                                         my $build_event = "Genome::Model::Build"->get(build_id => $build_id);
                                         return $build_event;
-                                   | # temporary
-                               }, 
-        ],
+                                   ) },
+        software_revision => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
+    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };

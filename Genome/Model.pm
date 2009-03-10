@@ -24,20 +24,17 @@ class Genome::Model {
     first_sub_classification_method_name => '_resolve_subclass_name',
     sub_classification_method_name => '_resolve_subclass_name',
     id_by => [
-        genome_model_id             => { is => 'Number', len => 11 },
+        genome_model_id => { is => 'Number', len => 11 },
     ],
     has => [
-        name                        => { is => 'Text', len => 255 },
-        data_directory              => { is => 'Text', len => 1000, is_optional => 1 },
-
-        # TODO: get the subject_id and subject_class_name into the table so this is less ugly
-        subject_name                => { is => 'Text', len => 255 },
-        subject_type                => { is => 'Text', len => 255 },
-        auto_assign_inst_data       => { is => 'Number', len => 4, is_optional => 1},
-        auto_build_alignments       => { is => 'Number', len => 4, is_optional => 1},
-        subject                     => { 
-                                            calculate_from => ['subject_name','subject_type'],
-                                            calculate => q| 
+        name                    => { is => 'Text', len => 255 },
+        data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
+        subject_name            => { is => 'Text', len => 255 },
+        subject_type            => { is => 'Text', len => 255 },
+        auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
+        auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
+        subject                 => { calculate_from => [ 'subject_name', 'subject_type' ],
+                         calculate => q( 
                                                 if (not defined $subject_type) {
                                                     # this should not happen
                                                     return;
@@ -64,94 +61,50 @@ class Genome::Model {
                                                 else {
                                                     die "unkown sample type $subject_type!";
                                                 }
-                                            |
-                                       },
-        processing_profile          => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
-        processing_profile_name     => { via => 'processing_profile', to => 'name'},
-        type_name                   => { via => 'processing_profile' },
-        events                      => {
-            is => 'Genome::Model::Event',
-            is_many => 1,
-            reverse_id_by => 'model', 
-            doc => 'all events which have occurred for this model',
-        },
+                                            ) },
+        processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
+        processing_profile_name => { via => 'processing_profile', to => 'name' },
+        type_name               => { via => 'processing_profile' },
+        events                  => { is => 'Genome::Model::Event', reverse_id_by => 'model', is_many => 1, 
+                         doc => 'all events which have occurred for this model' },
+        subject_class_name      => { is => 'VARCHAR2', len => 500, is_optional => 1 },
+        subject_id              => { is => 'NUMBER', len => 15, is_optional => 1 },
     ],
     has_optional => [
-        user_name                     => { is => 'VARCHAR2', len => 64 },
-        creation_date                 => { is => 'TIMESTAMP(6)', len => 11 },
-        builds                        => { is => 'Genome::Model::Build', reverse_id_by => 'model', is_many => 1 },
-
-        # TODO: refactor
-        gold_snp_path => {
-               via => 'attributes',
-               to => 'value',
-               where => [ 
-                          entity_class_name => 'Genome::Model', 
-                          property_name => 'gold_snp_path' 
-                        ],
-               is_mutable => 1,
-        },
-
-        input_instrument_data_class_name   => { calculate_from => 'instrument_data_class_name',
-            calculate => q($instrument_data_class_name->_dw_class), 
-            doc => 'the class of instrument_data assignable to this model in the dw' },
-        instrument_data_class_name         => { calculate_from => 'sequencing_platform',
-            calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ), 
-            doc => 'the class of instrument data assignable to this model' },
-
-        # deprecated
-        test                          => { is => 'Boolean', is_optional => 1, is_transient => 1, doc => 'testing flag' },
-        _printable_property_names_ref => { is => 'array_ref', is_optional => 1, is_transient => 1, },
-        comparable_normal_model_id    => { is => 'Number', len => 10, is_optional => 1 },
-        sample_name                   => { is => 'Text', len => 255, is_optional => 1 },
-
-        sequencing_platform         => { via => 'processing_profile' },
+        user_name                        => { is => 'VARCHAR2', len => 64 },
+        creation_date                    => { is => 'TIMESTAMP', len => 6 },
+        builds                           => { is => 'Genome::Model::Build', reverse_id_by => 'model', is_many => 1 },
+        gold_snp_path                    => { via => 'attributes', to => 'value', where => [ property_name => 'gold_snp_path', entity_class_name => 'Genome::Model' ] },
+        input_instrument_data_class_name => { calculate_from => 'instrument_data_class_name',
+                         calculate => q($instrument_data_class_name->_dw_class), 
+                         doc => 'the class of instrument_data assignable to this model in the dw' },
+        instrument_data_class_name       => { calculate_from => 'sequencing_platform',
+                         calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ), 
+                         doc => 'the class of instrument data assignable to this model' },
+        test                             => { is => 'Boolean', is_transient => 1, 
+                         doc => 'testing flag' },
+        _printable_property_names_ref    => { is => 'array_ref', is_transient => 1 },
+        comparable_normal_model_id       => { is => 'Number', len => 10 },
+        sample_name                      => { is => 'Text', len => 255 },
+        sequencing_platform              => { via => 'processing_profile' },
     ],
     has_many_optional => [
-        ref_seqs            => { is => 'Genome::Model::RefSeq', reverse_id_by => 'model' },
-
-        project_assignments => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'model' },
-        projects            => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
-        project_names       => { is => 'Text', via => 'projects', to => 'name' },
-
-        attributes => {
-           is => 'Genome::MiscAttribute',
-           reverse_id_by => '_model',
-           where => [ entity_class_name => __PACKAGE__ ],
-        },
-
-        #< Instrument data >#
-        instrument_data => { 
-            is => 'Genome::InstrumentData', 
-            via => 'instrument_data_assignments',
-            to => 'instrument_data' 
-        },
-        assigned_instrument_data => { # same as instrument_data
-            is => 'Genome::InstrumentData', 
-            via => 'instrument_data_assignments',
-            to => 'instrument_data' 
-        },
-        instrument_data_assignments => { 
-            is => 'Genome::Model::InstrumentDataAssignment', 
-            reverse_id_by => 'model',
-            is_many => 1,
-        },
-        built_instrument_data => {
-            calculate => q| 
+        ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_id_by => 'model' },
+        project_assignments               => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'model' },
+        projects                          => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
+        project_names                     => { is => 'Text', via => 'projects', to => 'name' },
+        attributes                        => { is => 'Genome::MiscAttribute', reverse_id_by => '_model', where => [ entity_class_name => 'Genome::Model' ] },
+        instrument_data                   => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments' },
+        assigned_instrument_data          => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments', to => 'instrument_data' },
+        instrument_data_assignments       => { is => 'Genome::Model::InstrumentDataAssignment', reverse_id_by => 'model' },
+        built_instrument_data             => { calculate => q( 
             return map { $_->instrument_data } grep { defined $_->first_build_id } $self->instrument_data_assignments;
-            |,
-        },
-        unbuilt_instrument_data => {
-            calculate => q| 
+            ) },
+        unbuilt_instrument_data           => { calculate => q( 
             return map { $_->instrument_data } grep { !defined $_->first_build_id } $self->instrument_data_assignments;
-            |,
-        },
-        instrument_data_assignment_events => {
-            is => 'Genome::Model::Command::InstrumentData::Assign',
-            is_many => 1,
-            reverse_id_by => 'model',
-            doc => 'Each case of an instrument data being assigned to the model',
-        },
+            ) },
+        instrument_data_assignment_events => { is => 'Genome::Model::Command::InstrumentData::Assign', reverse_id_by => 'model', 
+                         doc => 'Each case of an instrument data being assigned to the model' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
