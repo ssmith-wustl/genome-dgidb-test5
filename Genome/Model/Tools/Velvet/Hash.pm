@@ -3,10 +3,11 @@ package Genome::Model::Tools::Velvet::Hash;
 use strict;
 use warnings;
 
+use POSIX;
 use Genome;
 
 class Genome::Model::Tools::Velvet::Hash {
-    is           => 'Command',
+    is           => 'Genome::Model::Tools::Velvet',
     has_many     => [
         file_names  => {
             is      => 'String', 
@@ -34,7 +35,7 @@ class Genome::Model::Tools::Velvet::Hash {
             doc     => 'read type: short, shortPaired, short2, shortPaired2, long, longPaired. default: short',
             default => 'short',
         },
-    ],
+     ],
 };
         
 
@@ -84,7 +85,7 @@ sub create {
             return;
         }
     }
-    
+        
     return $self;
 }
 
@@ -95,7 +96,8 @@ sub execute {
     my $files = join ' ', $self->file_names;
     
     my $command = sprintf(
-        'velveth %s %d -%s -%s %s',
+        '%s %s %d -%s -%s %s',
+        $self->resolve_version,
         $self->directory,
         $self->hash_length,
         $self->file_format,
@@ -104,7 +106,7 @@ sub execute {
     );
     
     if (system $command) {
-        $self->error_message('velveth failed.');
+        $self->error_message("$command failed.");
         return;
     }
 
