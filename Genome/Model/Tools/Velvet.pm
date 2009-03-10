@@ -8,8 +8,8 @@ use Genome;
 
 class Genome::Model::Tools::Velvet {
     is  => 'Command',
-    is_abstract => 1,
-    has => [
+    is_abstract  => 1,
+    has_optional => [
         version => {
             is   => 'String',
             doc  => 'velvet version, must be one of old, installed, test. default is installed',
