@@ -58,12 +58,7 @@ sub execute {
         return;
     }
 
-    #unless ($self->verify_successful_completion) {
-    #    $self->error_message("Failed to verify successful completion!");
-    #    return;
-    #}
-
-    return 1;
+    return $self->verify_successful_completion;
 }
 
 
