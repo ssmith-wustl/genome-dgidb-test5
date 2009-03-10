@@ -345,6 +345,7 @@ sub build_empty_config
                   'acedb_version' => "",
                   'sequence_set_name' => "",
                   'sequence_set_id' => "",
+		  'skip_acedb_parse' => "<optional>",
                   'finish_script_location' => "<optional>",
                   'workflowxml' => "",
                   };
