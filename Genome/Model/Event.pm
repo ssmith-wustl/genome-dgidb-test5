@@ -30,7 +30,7 @@ class Genome::Model::Event {
     has_optional => [
         instrument_data_id => { is => 'VARCHAR2', len => 100, implied_by => 'instrument_data' },
         instrument_data    => { is => 'Genome::InstrumentData', id_by => 'instrument_data_id', 
-                         doc => 'The id of the instrument data on which to operate' },
+                                doc => 'The id of the instrument data on which to operate' },
         ref_seq_id         => { is => 'VARCHAR2', len => 64 },
         parent_event       => { is => 'Genome::Model::Event', id_by => 'parent_event_id', constraint_name => 'GME_PAEID_FK' },
         prior_event        => { is => 'Genome::Model::Event', id_by => 'prior_event_id', constraint_name => 'GME_PPEID_FK' },
@@ -578,6 +578,10 @@ sub schedule {
 
 sub abandon {
     my $self = shift;
+
+    if ($self->event_status eq 'Abandoned') {
+        return 1;
+    }
     for my $next_event ($self->next_events) {
         $next_event->abandon;
     }
