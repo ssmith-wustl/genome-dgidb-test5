@@ -103,7 +103,8 @@ sub generate_report_detail
     {
         $output_file = $args{report_detail};
     }
-    my ($snpdat_fh, $snpdat_file) =  File::Temp::tempfile(CLEANUP => 1);
+    my ($snpdat_fh, $snpdat_file) =  File::Temp::tempfile(CLEANUP => 1, 
+                                              DIR => $self->_reports_dir());
     print "producing: $output_file\n";
 TRANSCRIPTFILE:    for my $transcript_file (@transcript_annotation_files) {
         print "processing $transcript_file\n";
@@ -111,7 +112,9 @@ TRANSCRIPTFILE:    for my $transcript_file (@transcript_annotation_files) {
         # make a file of only the annotation on coding transcripts
         my $coding_transcripts;
         my $all_transcripts;
-        my ($filtered_transcript_fh, $filtered_transcript_file) = File::Temp::tempfile(CLEANUP => 1);
+        my ($filtered_transcript_fh, 
+            $filtered_transcript_file) = File::Temp::tempfile(CLEANUP => 1,
+                                                              DIR => $self->_reports_dir());
         my $transcript_fh = IO::File->new($transcript_file);
         #die "failed to open transcript file $transcript_file!: $!" unless $transcript_fh;
         unless($transcript_fh)
@@ -244,7 +247,9 @@ sub _run_iprscan
     my ($self,$peptide_fasta_file,$iprgff) = @_;
 
     my $iprscan_path = '/gscmnt/974/analysis/iprscan16.1/iprscan/bin';
-    my ($fh, $iprscan_output) = File::Temp::tempfile(CLEANUP => 1, SUFFIX => '.raw');
+    my ($fh, $iprscan_output) = File::Temp::tempfile(CLEANUP => 1,
+                                                     DIR => $self->_reports_dir(),
+                                                     SUFFIX => '.raw');
     # run interproscan
     $self->_call(
         "$iprscan_path/iprscan.hacked",
