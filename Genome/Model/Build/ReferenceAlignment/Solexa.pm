@@ -48,6 +48,11 @@ sub _variant_detail_files {
 sub _variation_metrics_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/other_snp_related_metrics/variation_metrics_%s.csv',@_);
 }
+
+sub _transcript_annotation_files {
+    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/annotation/%s_snp.transcript',@_);
+}
+
 sub other_snp_related_metric_directory {
     my $self = shift;
     return $self->data_directory . "/other_snp_related_metrics/";
