@@ -47,6 +47,10 @@ sub _no_write_dir {
     return sprintf('%s/no_write_dir', _base_test_dir());
 }
 
+sub _no_read_dir {
+    return sprintf('%s/no_read_dir', _base_test_dir());
+}
+
 sub _no_write_file {
     return sprintf('%s/no_write_file.txt', _no_write_dir());
 }
@@ -89,7 +93,7 @@ sub test1_file : Test(12) {
     );
 
     # Write file
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($new_file);
+    $fh = Genome::Utility::FileSystem->open_file_for_writing($new_file);
     ok($fh, "Opened file ".$new_file);
     isa_ok($fh, 'IO::File');
     $fh->close;
@@ -119,7 +123,7 @@ sub test1_file : Test(12) {
     return 1;
 }
 
-sub test2_directory : Test(8) {
+sub test2_directory : Test(15) {
     my $self = shift;
 
     # Real dir
@@ -133,13 +137,46 @@ sub test2_directory : Test(8) {
     # Dir no exist 
     ok(
         !Genome::Utility::FileSystem->open_directory('/tmp/no_way_this_exists_for_cryin_out_loud'), 
-        'Tried to open a non existing directory'
+        'Tried to open a non existing directory',
     );
     
     # Dir is file
     ok(
         !Genome::Utility::FileSystem->open_directory( sprintf('%s/existing_file.txt', _base_test_dir()) ),
         'Try to open a directory, but it\'s a file',
+    );
+
+    # Read access
+    ok( # good
+        Genome::Utility::FileSystem->validate_directory_for_read_access( _base_test_dir() ),
+        'validate_directory_for_read_access',
+    );
+    ok( # fail
+        !Genome::Utility::FileSystem->validate_directory_for_read_access( _no_read_dir() ),
+        'Failed as expected - can\'t read from dir',
+    );
+
+    # Write access
+    ok( # good
+        Genome::Utility::FileSystem->validate_directory_for_write_access( _base_test_dir() ),
+        'validate_directory_for_write_access',
+    );
+    ok( # fail
+        !Genome::Utility::FileSystem->validate_directory_for_write_access( _no_write_dir() ),
+        'Failed as expected - can\'t write to dir',
+    );
+    # R+W access
+    ok( # good
+        Genome::Utility::FileSystem->validate_directory_for_read_write_access( _base_test_dir() ),
+        'validate_directory_for_read_write_access',
+    );
+    ok( # fail - read
+        !Genome::Utility::FileSystem->validate_directory_for_read_write_access( _no_read_dir() ),
+        'Failed as expected - can\'t read from dir',
+    );
+    ok( # fail - write
+        !Genome::Utility::FileSystem->validate_directory_for_read_write_access( _no_write_dir() ),
+        'Failed as expected - can\'t write to dir',
     );
 
     my $base_new_dir = sprintf('%s/new', _base_test_dir());
