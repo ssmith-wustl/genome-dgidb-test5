@@ -131,6 +131,58 @@ sub validate_existing_directory {
     return 1;
 }
 
+sub validate_directory_for_read_access {
+    my ($self, $directory) = @_;
+
+    $self->validate_existing_directory($directory)
+        or return;
+    
+    return $self->_can_read_from_directory($directory);
+}
+
+sub validate_directory_for_write_access {
+    my ($self, $directory) = @_;
+
+    $self->validate_existing_directory($directory)
+        or return;
+    
+    return $self->_can_write_to_directory($directory);
+}
+
+sub validate_directory_for_read_write_access {
+    my ($self, $directory) = @_;
+
+    $self->validate_existing_directory($directory)
+        or return;
+    
+    $self->_can_read_from_directory($directory)
+        or return;
+
+    return $self->_can_write_to_directory($directory);
+}
+
+sub _can_read_from_directory {
+    my ($self, $directory) = @_;
+
+    unless ( -r $directory ) {
+        $self->error_message("Cannot read from directory ($directory)");
+        return;
+    }
+
+    return 1;
+}
+
+sub _can_write_to_directory {
+    my ($self, $directory) = @_;
+
+    unless ( -w $directory ) {
+        $self->error_message("Cannot write to directory ($directory)");
+        return;
+    }
+
+    return 1;
+}
+
 sub open_directory {
     my ($self, $directory) = @_;
 
