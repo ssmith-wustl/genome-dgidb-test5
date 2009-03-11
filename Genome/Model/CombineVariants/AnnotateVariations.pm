@@ -68,7 +68,7 @@ sub execute {
         if ( compare_chromosome($current_chromosome,$genotype->{chromosome}) != 0 ){
             $current_chromosome = $genotype->{chromosome};
             my $window = $self->_get_window($current_chromosome);
-            my $annotator = $self->_get_annotator($window);
+            $annotator = $self->_get_annotator($window);
         }
         
         $self->print_prioritized_annotation($genotype, $annotator, $ofh);
