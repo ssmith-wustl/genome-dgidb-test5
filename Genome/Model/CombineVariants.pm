@@ -100,7 +100,7 @@ sub next_hq_annotated_genotype {
     my $self = shift;
 
     # Set the current files if they have not been set yet
-    unless (($self->hq_agfh)||($self->current_hq_annotated_genotype_files)) {
+    unless (defined($self->hq_agfh)||defined($self->current_hq_annotated_genotype_files)) {
         my @hq_genotype_files = $self->hq_annotated_genotype_files;
         $self->current_hq_annotated_genotype_files(\@hq_genotype_files);
     }
@@ -162,7 +162,7 @@ sub next_lq_annotated_genotype {
     my $self = shift;
 
     # Set the current files if they have not been set yet
-    unless (($self->lq_agfh)||($self->current_lq_annotated_genotype_files)) {
+    unless (defined($self->lq_agfh)||defined($self->current_lq_annotated_genotype_files)) {
         my @lq_genotype_files = $self->lq_annotated_genotype_files;
         $self->current_lq_annotated_genotype_files(\@lq_genotype_files);
     }
@@ -224,7 +224,7 @@ sub next_hq_genotype {
     my $self = shift;
 
     # Set the current files if they have not been set yet
-    unless (($self->hq_gfh)||($self->current_hq_genotype_files)) {
+    unless (defined($self->hq_gfh)||defined($self->current_hq_genotype_files)) {
         my @hq_genotype_files = $self->hq_genotype_files;
         $self->current_hq_genotype_files(\@hq_genotype_files);
     }
@@ -286,7 +286,7 @@ sub next_lq_genotype {
     my $self = shift;
 
     # Set the current files if they have not been set yet
-    unless (($self->lq_gfh)||($self->current_lq_genotype_files)) {
+    unless (defined($self->lq_gfh)||defined($self->current_lq_genotype_files)) {
         my @lq_genotype_files = $self->lq_genotype_files;
         $self->current_lq_genotype_files(\@lq_genotype_files);
     }
@@ -1135,7 +1135,7 @@ sub annotate_variants {
             'input_file_name' => \@input_files,
             'output_file_name' => \@output_files,
         );
-    
+ 
         unless ($output) {
             $self->error_message("Annotate variations failed in workflow");
             die;
