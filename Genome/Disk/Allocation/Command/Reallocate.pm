@@ -14,17 +14,30 @@ class Genome::Disk::Allocation::Command::Reallocate {
                          },
         ],
     has_optional => [
-            kilobytes_requested => {
-                                    is => 'Number',
-                                    doc => 'The disk space allocated in kilobytes',
-                                },
-                 ],
-    doc => 'A reallocate command to free up disk space',
+                     kilobytes_requested => {
+                                             is => 'Number',
+                                             doc => 'The disk space allocated in kilobytes',
+                                         },
+                     reallocator_id => {
+                                        is => 'Number',
+                                        doc => 'The id for the reallocator pse',
+                                  },
+                     reallocator => {
+                                     calculate_from => 'reallocator_id',
+                                     calculate => q|
+                                         return GSC::PSE::ReallocateDiskSpace->get($reallocator_id);
+                                     |,
+                                 },
+    ],
+    doc => 'A reallocate command to update the allocated disk space',
 };
 
 
 sub create {
     my $class = shift;
+
+    App->init unless App::Init->initialized;
+
     my $self = $class->SUPER::create(@_);
     unless ($self) {
         return;
@@ -39,8 +52,17 @@ sub create {
         $self->delete;
         return;
     }
-    unless ($self->gsc_disk_allocation) {
-        $self->error_message('GSC::DiskAllocation not found for id '. $self->allocator_id);
+    unless ($self->reallocator_id) {
+        my $reallocate_pse = $self->allocator->reallocate($self->kilobytes_requested);
+        unless ($reallocate_pse) {
+            $self->error_message('Failed to reallocate disk space');
+            $self->delete;
+            return;
+        }
+        $self->reallocator_id($reallocate_pse->pse_id);
+    }
+    unless ($self->reallocator) {
+        $self->error_message('Reallocator not found for reallocator id: '. $self->reallocator_id);
         $self->delete;
         return;
     }
@@ -49,13 +71,12 @@ sub create {
 
 sub execute {
     my $self = shift;
-    unless ($self->allocator->reallocate($self->kilobytes_requested)) {
-        $self->error_message('Failed to reallocate disk space');
-        $self->delete;
+    my $reallocator = $self->reallocator;
+    $self->status_message('Reallocate PSE id: '. $reallocator->pse_id);
+    unless ($self->wait_for_pse_to_confirm(pse => $reallocator)) {
+        $self->error_message('Failed to confirm reallocate pse: '. $reallocator->pse_id);
         return;
     }
-    my $gsc_disk_allocation = $self->gsc_disk_allocation;
-    $gsc_disk_allocation->kilobytes_requested($self->kilobytes_requested);
     return 1;
 }
 
