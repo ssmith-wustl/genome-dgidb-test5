@@ -29,14 +29,6 @@ sub get {
         die __PACKAGE__ . ' can only be gotten by name!';
     }
     my $obj = $class->SUPER::get($bx);
-    return $obj if $obj;
-
-    $obj = $class->SUPER::create_object($bx);
-    return unless $obj;
-
-    my $path = sprintf('%s/reference_sequences/%s','/gscmnt/839/info/medseq',$obj->name);
-    $obj->data_directory($path);
-
     return $obj;
 }
 
