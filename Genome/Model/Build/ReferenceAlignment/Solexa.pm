@@ -29,6 +29,23 @@ sub create {
     return $self;
 }
 
+sub calculate_estimated_kb_usage {
+    my $self = shift;
+    my $model = $self->model;
+    my $reference_build = $model->reference_build;
+    my $reference_file_path = $reference_build->full_consensus_path;
+
+    my $du_output = `du -sk $reference_file_path`;
+    my @fields = split(/\s+/,$du_output);
+    my $reference_kb = $fields[0];
+    my $estimate_from_reference = $reference_kb * 30;
+
+    my @idas = $model->instrument_data_assignments;
+    my $estimate_from_instrument_data = scalar(@idas) * 10000;
+
+    return ($estimate_from_reference + $estimate_from_instrument_data);
+}
+
 sub _consensus_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/consensus/%s.cns',@_);
 }
