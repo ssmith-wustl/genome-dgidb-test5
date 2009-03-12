@@ -12,6 +12,11 @@ class Genome::Disk::Allocation::Command::Reallocate {
                              is => 'Number',
                              doc => 'The id for the allocator event',
                          },
+            wait_for_pse => {
+                             is => 'Boolean',
+                             default_value => 1,
+                             doc => 'Wait for the pse to confirm before returning',
+                         }
         ],
     has_optional => [
                      kilobytes_requested => {
@@ -73,9 +78,11 @@ sub execute {
     my $self = shift;
     my $reallocator = $self->reallocator;
     $self->status_message('Reallocate PSE id: '. $reallocator->pse_id);
-    unless ($self->wait_for_pse_to_confirm(pse => $reallocator)) {
-        $self->error_message('Failed to confirm reallocate pse: '. $reallocator->pse_id);
-        return;
+    if ($self->wait_for_pse) {
+        unless ($self->wait_for_pse_to_confirm(pse => $reallocator)) {
+            $self->error_message('Failed to confirm reallocate pse: '. $reallocator->pse_id);
+            return;
+        }
     }
     return 1;
 }
