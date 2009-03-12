@@ -90,11 +90,15 @@ sub lock_directory {
     return '/gscmnt/839/info/medseq/allocation_lock';
 }
 
+sub resource_id {
+    return 'GenomeDiskAllocation';
+}
+
 sub unlock {
     my $self = shift;
     unless (Genome::Utility::FileSystem->unlock_resource(
                                                          lock_directory => $self->lock_directory,
-                                                         resource_id => $self->command_name,
+                                                         resource_id => $self->resource_id,
                                                      ) ) {
         $self->error_message('Failed to unlock resource '. $self->command_name
                              .' in lock directory '. $self->lock_directory);
@@ -108,13 +112,82 @@ sub lock {
     my %params = @_;
     unless (Genome::Utility::FileSystem->lock_resource(
                                                        lock_directory => $self->lock_directory,
-                                                       resource_id => $self->command_name,
+                                                       resource_id => $self->resource_id,
                                                        %params,
                                                    ) ) {
         $self->error_message('Failed to lock resource '. $self->command_name
                              .' in lock directory '. $self->lock_directory );
         $self->delete;
         die;
+    }
+    return 1;
+}
+
+sub confirm_scheduled_pse {
+    my $self = shift;
+    my $pse = shift;
+
+    unless ($pse->pse_status eq 'scheduled') {
+        $self->error_message('PSE '. $pse->pse_id .' does not have a scheduled status the status is '. $pse->pse_status);
+        return;
+    }
+
+    my $unlock_and_delete_pse = sub { $pse->uninit_pse; $self->unlock; };
+    $self->create_subscription(method => 'delete', callback => $unlock_and_delete_pse);
+    unless ($self->lock) {
+        $self->error_message('Failed to create lock.');
+        $self->delete;
+        return;
+    }
+    unless ($pse->confirm(no_pse_job_check => 1)) {
+        $self->error_message('Failed to confirm PSE: '. $pse->pse_id);
+        $self->delete;
+        return;
+    }
+    unless ($pse->pse_status eq 'inprogress') {
+        $self->error_message('PSE pse_status not inprogress: '. $pse->pse_status);
+        $self->delete;
+        return;
+    }
+    my $unlock = sub { $self->unlock; };
+    UR::Context->create_subscription(method => 'commit', callback => $unlock);
+    return 1;
+}
+
+sub wait_for_pse_to_confirm {
+    my $self = shift;
+    my %params = @_;
+
+    my $pse = $params{pse};
+    unless ($pse) {
+        $self->error_message('Missing pse param for wait_for_pse_to_confirm');
+        die($self->error_message);
+    }
+    if ($pse->has_uncommitted_changes) {
+        UR::Context->commit;
+    }
+    my $max_try = $params{max_try} || 60;
+    my $block_sleep = $params{block_sleep} || 30;
+    while ($self->pse_not_complete($pse)) {
+        return unless $max_try--;
+        sleep $block_sleep;
+        my $pse_id = $pse->pse_id;
+        GSC::PSE->unload;
+        $pse = GSC::PSE->get($pse_id);
+    }
+    unless ($pse->pse_status eq 'inprogress' || $pse->pse_status eq 'completed') {
+        $self->error_message('PSE '. $pse->pse_id .' did not confirm. PSE status of '. $pse->pse_status);
+        return
+    }
+    return 1;
+}
+
+sub pse_not_complete {
+    my $self = shift;
+    my $pse = shift;
+    my @not_completed = grep { $_ eq $pse->pse_status } ('scheduled', 'wait', 'confirm', 'confirming');
+    unless (@not_completed) {
+        return;
     }
     return 1;
 }
