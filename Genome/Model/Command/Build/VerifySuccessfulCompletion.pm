@@ -35,6 +35,13 @@ sub execute {
         return;
     }
     if ($build_event->verify_successful_completion) {
+        my $disk_allocation = $build->disk_allocation;
+        if ($disk_allocation) {
+            my $reallocate = Genome::Disk::Allocation::Command::Reallocate->execute( allocator_id => $disk_allocation->allocator_id);
+            unless ($reallocate) {
+                $self->warning_message('Failed to reallocate disk space.');
+            }
+        }
         $build_event->event_status('Succeeded');
         $build_event->date_completed(UR::Time->now);
         $self->event_status('Succeeded');
