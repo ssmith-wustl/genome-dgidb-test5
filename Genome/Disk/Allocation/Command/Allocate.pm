@@ -34,6 +34,11 @@ class Genome::Disk::Allocation::Command::Allocate {
                                         is => 'Number',
                                         doc => 'The actual disk space used by owner',
                                     },
+                     local_confirm => {
+                                       is => 'Boolean',
+                                       default_value => 0,
+                                       doc => 'A flag to confirm the pse locally',
+                                   },
               ],
     doc => 'An allocate command to create and confirm GSC::PSE::AllocateDiskSpace and GSC::DiskAllocation',
 };
@@ -42,7 +47,7 @@ sub create {
     my $class = shift;
 
     App->init unless App::Init->initialized;
-    
+
     my %params = @_;
     my $self = $class->SUPER::create(%params);
     unless ($self) {
@@ -96,24 +101,11 @@ sub create {
         return;
     }
 
-    return $self;
-}
-
-sub execute {
-    my $self = shift;
-
     my $disk_volume;
     if ($self->mount_path) {
         ($disk_volume) = $self->get_disk_volumes;
     }
-    if ($self->allocator_id) {
-        unless ($self->allocator) {
-            $self->error_message('Allocator not found for allocator id '. $self->allocator_id);
-            $self->delete;
-            return;
-        }
-    } else {
-        # owner_class_name and owner_id are passed to the pse but never used
+    unless ($self->allocator_id) {
         my %pse_params = (
                           process_to => 'allocate disk space',
                           disk_group_name => $self->disk_group_name,
@@ -134,67 +126,32 @@ sub execute {
         }
         $self->allocator_id($allocator->pse_id);
     }
+    unless ($self->allocator) {
+        $self->error_message('Allocator not found for allocator id '. $self->allocator_id);
+        $self->delete;
+        return;
+    }
+    return $self;
+}
+
+sub execute {
+    my $self = shift;
+
     my $allocator = $self->allocator;
-    # If we delete this object we also need to delete the uncommited PSE
-    my $unlock_and_delete_pse = sub { $allocator->uninit_pse; $self->unlock; };
-    $self->create_subscription(method => 'delete', callback => $unlock_and_delete_pse);
 
-    unless ($self->lock) {
-        $self->error_message('Failed to create lock for disk allocation.');
-        $self->delete;
-        return;
-    }
-    unless ($allocator->confirm(no_pse_job_check => 1)) {
-        $self->error_message('Failed to confirm allocate PSE.');
-        $self->delete;
-        return;
-    }
-    unless ($allocator->pse_status eq 'inprogress') {
-        $self->error_message('PSE pse_status not inprogress: '. $allocator->pse_status);
-        $self->delete;
-        return;
-    }
-    #unless ($allocator->pse_result eq 'successful') {
-    #    $self->error_message('PSE pse_result not successful: '. $allocator->pse_result);
-    #    $self->delete;
-    #    return;
-    #}
-    if ($disk_volume) {
-        my $allocator_disk_volume = $allocator->disk_volume;
-        unless ($disk_volume->id eq $allocator_disk_volume->id) {
-            $self->error_message('Allocator returned disk volume '.
-                                 $allocator_disk_volume->mount_path
-                                 .' but expected disk volume '.
-                                 $disk_volume->mount_path);
-            $self->delete;
-            return;
-        }
+    $self->status_message('Confirming allocate PSE id: '. $allocator->pse_id);
+
+    my $rv;
+    if ($self->local_confirm) {
+        $rv = $self->confirm_scheduled_pse($allocator);
     } else {
-        $disk_volume = $allocator->disk_volume;
+        $rv = $self->wait_for_pse_to_confirm(pse => $allocator);
     }
-    unless ($self->gsc_disk_allocation) {
-        my $dg = $self->get_disk_group;
-        my $gsc_disk_allocation = GSC::DiskAllocation->create(
-                                                              disk_group_name => $self->disk_group_name,
-                                                              mount_path => $disk_volume->mount_path,
-                                                              allocation_path => $self->allocation_path,
-                                                              kilobytes_requested => $self->kilobytes_requested,
-                                                              kilobytes_used => $self->kilobytes_used,
-                                                              owner_class_name => $self->owner_class_name,
-                                                              owner_id => $self->owner_id,
-                                                              allocator_id => $self->allocator_id,
-                                                              group_subdirectory => $dg->subdirectory,
-                                                          );
-        unless ($gsc_disk_allocation) {
-            $self->error_message('Failed to create disk allocation in data warehouse');
-            $self->delete;
-            return;
-        }
-    }
-    # Once we commit we can remove the lock
-    my $unlock = sub { $self->unlock; };
-    $self->create_subscription(method => 'commit', callback => $unlock);
 
+    unless ($rv) {
+        $self->error_message('Failed to confirm pse '. $allocator->pse_id);
+        return;
+    }
     return 1;
 }
 
@@ -202,7 +159,7 @@ sub verify_no_parent_allocation {
     my $self = shift;
     my $path = shift;
 
-    my ($allocation) = GSC::DiskAllocation->get(allocation_path => $path);
+    my ($allocation) = Genome::Disk::Allocation->get(allocation_path => $path);
     if ($allocation) {
         return;
     }
