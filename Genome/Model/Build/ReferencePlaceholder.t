@@ -9,10 +9,13 @@ my $BASE = Genome::Config->root_directory;
 
 use_ok('Genome::Model::Build::ReferencePlaceholder');
 
-my $model = Genome::Model::Build::ReferencePlaceholder->get(
-                                                            name => 'NCBI-human-build36',
-                                                            sample_type => 'genomic dna'
-                                                        );
+my $model = Genome::Model::Build::ReferencePlaceholder->get('NCBI-human-build36');
+unless ($model) {
+    $model = Genome::Model::Build::ReferencePlaceholder->create(
+                                                                name => 'NCBI-human-build36',
+                                                                sample_type => 'genomic dna'
+                                                            );
+}
 
 my $reference_sequence_path = $model->data_directory;
 is($reference_sequence_path,"$BASE/reference_sequences/NCBI-human-build36",'got reference_sequence_path');
