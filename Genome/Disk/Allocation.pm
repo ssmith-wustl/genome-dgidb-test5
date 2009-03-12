@@ -9,6 +9,7 @@ package Genome::Disk::Allocation;
 
 use strict;
 use warnings;
+use Genome;
 
 class Genome::Disk::Allocation {
     table_name => "(select * from disk_allocation\@dw) disk_allocation",
