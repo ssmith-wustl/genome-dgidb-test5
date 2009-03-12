@@ -76,6 +76,26 @@ Also see Genome::Model::Tools::Maq::AlignReads, for a lower-level interface to m
 EOS
 }
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    unless ($self->reference_build) {
+        unless ($self->reference_name) {
+            $self->error_message('No way to resolve reference build without reference_name or refrence_build');
+            return;
+        }
+        my $ref_build = Genome::Model::Build::ReferencePlaceholder->get($self->reference_name);
+        unless ($ref_build) {
+            $ref_build = Genome::Model::Build::ReferencePlaceholder->create(
+                                                                            name => $self->reference_name,
+                                                                            sample_type => 'dna',
+                                                                        );
+        }
+        $self->reference_build($ref_build);
+    }
+    return $self;
+}
+
 sub execute {
     my $self = shift;
 
