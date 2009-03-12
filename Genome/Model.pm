@@ -386,11 +386,17 @@ sub succeeded_builds {
 sub completed_builds {
     my $self = shift;
     my @builds = $self->builds;
-    unless (scalar(@builds)) {
+    unless (@builds) {
         return;
     }
     my @builds_w_status = grep { $_->build_status } @builds;
-    my @completed_builds = grep { $_->date_completed } @builds_w_status;
+    unless (@builds_w_status) {
+        return;
+    }
+    my @completed_builds = grep { $_->date_completed } grep { defined($_) } @builds_w_status;
+    unless (@completed_builds) {
+        return;
+    }
     my @sorted_completed_builds = sort { $a->date_completed cmp $b->date_completed } @completed_builds;
     return @sorted_completed_builds;
 }
