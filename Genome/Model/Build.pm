@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use File::Path;
 use YAML;
 
 class Genome::Model::Build {
@@ -24,6 +25,16 @@ class Genome::Model::Build {
                                         my $build_event = "Genome::Model::Build"->get(build_id => $build_id);
                                         return $build_event;
                                    ) },
+        disk_allocation => {
+                            calculate_from => [ 'class', 'id' ],
+                            calculate => q|
+                                my $disk_allocation = Genome::Disk::Allocation->get(
+                                                          owner_class_name => $class,
+                                                          owner_id => $id,
+                                                      );
+                                return $disk_allocation;
+                            |,
+                        },
         software_revision => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
     ],
     schema_name => 'GMSchema',
@@ -79,32 +90,72 @@ sub build_event {
 sub build_status {
     my $self = shift;
 
-    return $self->build_event->event_status;
+    my $build_event = $self->build_event;
+    unless ($build_event) {
+        return;
+    }
+    return $build_event->event_status;
 }
 
 sub date_scheduled {
     my $self = shift;
 
-    return $self->build_event->date_scheduled;
+    my $build_event = $self->build_event;
+    unless ($build_event) {
+        return;
+    }
+    return $build_event->date_scheduled;
 }
 
 sub date_completed {
     my $self = shift;
 
-    return $self->build_event->date_completed;
+    my $build_event = $self->build_event;
+    unless ($build_event) {
+        return;
+    }
+    return $build_event->date_completed;
 }
 
+sub calculate_estimated_kb_usage {
+    my $self = shift;
+    return;
+}
 
 sub resolve_data_directory {
     my $self = shift;
     my $model = $self->model;
-    return $model->data_directory . '/build' . $self->build_id;
+    my $data_directory = $model->data_directory;
+
+    if ($data_directory =~ /(\/gscmnt\/.*)\/info\/medseq\/(.*)/) {
+        my $mount_path = $1;
+        my $allocation_path = $2;
+        $allocation_path .= '/build'. $self->build_id;
+        my $kb_requested = $self->calculate_estimated_kb_usage;
+        if ($kb_requested) {
+            my $allocate = Genome::Disk::Allocation::Command::Allocate->execute(
+                                                                                allocation_path => $allocation_path,
+                                                                                mount_path => $mount_path,
+                                                                                kilobytes_requested => $kb_requested,
+                                                                                owner_class_name => $self->class,
+                                                                                owner_id => $self->id,
+                                                                            );
+            unless ($allocate) {
+                $self->error_message('Failed to allocate '. $kb_requested .'kb for build.');
+                $self->delete;
+                die;
+            }
+            my $disk_allocation = $allocate->disk_allocation;
+            return $disk_allocation->absolute_path;
+        }
+    }
+    return $data_directory . '/build' . $self->build_id;
 }
 
 sub resolve_reports_directory
 {
     my $self = shift;
-    return  $self->resolve_data_directory . '/reports/';
+    return  $self->data_directory . '/reports/';
 }
 
 sub available_reports {
@@ -219,6 +270,22 @@ sub delete {
     my @objects = $self->get_all_objects;
     for my $object (@objects) {
         $object->delete;
+    }
+    if ($self->data_directory && -e $self->data_directory) {
+        unless (rmtree $self->data_directory) {
+            $self->warning_message('Failed to rmtree build data directory '. $self->data_directory);
+        }
+    }
+    my $disk_allocation = $self->disk_allocation;
+    if ($disk_allocation) {
+        my $allocator_id = $disk_allocation->allocator_id;
+        my $deallocate_cmd = Genome::Disk::Allocation::Command::Deallocate->create(allocator_id =>$allocator_id);
+        unless ($deallocate_cmd) {
+            $self->warning_message('Failed to create a deallocate command.');
+        }
+        unless ($deallocate_cmd->execute) {
+            $self->warning_message('Failed to deallocate disk space.');
+        }
     }
     return $self->SUPER::delete;
 }
