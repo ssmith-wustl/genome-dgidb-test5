@@ -355,8 +355,8 @@ sub get_irx_primer_design_seq {
     if ($rpo eq "mm") {
 	my $seq1_mm_start = $breakpoint1;
 	my $seq1_mm_end = $breakpoint1 + $breakpoint_depth;
-	my $seq2_mm_start = $breakpoint2 - $breakpoint_depth;
-	my $seq2_mm_end = $breakpoint2;
+	my $seq2_mm_start = $breakpoint2;
+	my $seq2_mm_end = $breakpoint2 + $breakpoint_depth;
 
 	my $seq1_mm = $chr->sequence_base_substring($seq1_mm_start, $seq1_mm_end);
     	my $seq2_mm = $chr->sequence_base_substring($seq2_mm_start, $seq2_mm_end);
