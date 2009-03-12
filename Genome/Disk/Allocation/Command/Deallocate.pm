@@ -12,6 +12,11 @@ class Genome::Disk::Allocation::Command::Deallocate {
                              is => 'Number',
                              doc => 'The id for the allocator event',
                          },
+            wait_for_pse => {
+                             is => 'Boolean',
+                             default_value => 1,
+                             doc => 'Wait for the pse to confirm before returning',
+                         }
         ],
     has_optional => [
                      deallocator_id => {
@@ -68,9 +73,11 @@ sub execute {
     my $self = shift;
     my $deallocator = $self->deallocator;
     $self->status_message('Deallocate PSE id: '. $deallocator->pse_id);
-    unless ($self->wait_for_pse_to_confirm(pse => $deallocator)) {
-        $self->error_message('Failed to confirm deallocate pse: '. $deallocator->pse_id);
-        return;
+    if ($self->wait_for_pse) {
+        unless ($self->wait_for_pse_to_confirm(pse => $deallocator)) {
+            $self->error_message('Failed to confirm deallocate pse: '. $deallocator->pse_id);
+            return;
+        }
     }
     return 1;
 }
