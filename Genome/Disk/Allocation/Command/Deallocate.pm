@@ -13,12 +13,26 @@ class Genome::Disk::Allocation::Command::Deallocate {
                              doc => 'The id for the allocator event',
                          },
         ],
+    has_optional => [
+                     deallocator_id => {
+                                      is => 'Number',
+                                      doc => 'The id for the deallocator pse',
+                                  },
+                     deallocator => {
+                                     calculate_from => 'deallocator_id',
+                                     calculate => q|
+                                         return GSC::PSE::DeallocateDiskSpace->get($deallocator_id);
+                                     |,
+                                 },
+    ],
     doc => 'A deallocate command to free up disk space',
 };
 
-
 sub create {
     my $class = shift;
+
+    App->init unless App::Init->initialized;
+
     my $self = $class->SUPER::create(@_);
     unless ($self) {
         return;
@@ -33,8 +47,17 @@ sub create {
         $self->delete;
         return;
     }
-    unless ($self->gsc_disk_allocation) {
-        $self->error_message('GSC::DiskAllocation not found for id '. $self->allocator_id);
+    unless ($self->deallocator_id) {
+        my $deallocate_pse = $self->allocator->deallocate;
+        unless ($deallocate_pse) {
+            $self->error_message('Failed to deallocate disk space');
+            $self->delete;
+            return;
+        }
+        $self->deallocator_id($deallocate_pse->pse_id);
+    }
+    unless ($self->deallocator) {
+        $self->error_message('Deallocator not found for deallocator id: '. $self->deallocator_id);
         $self->delete;
         return;
     }
@@ -43,15 +66,10 @@ sub create {
 
 sub execute {
     my $self = shift;
-    unless ($self->allocator->deallocate) {
-        $self->error_message('Failed to deallocate disk space');
-        $self->delete;
-        return;
-    }
-    my $gsc_disk_allocation = $self->gsc_disk_allocation;
-    unless ($gsc_disk_allocation->delete) {
-        $self->error_message('Failed to remove GSC::DiskAllocation!');
-        $self->delete;
+    my $deallocator = $self->deallocator;
+    $self->status_message('Deallocate PSE id: '. $deallocator->pse_id);
+    unless ($self->wait_for_pse_to_confirm(pse => $deallocator)) {
+        $self->error_message('Failed to confirm deallocate pse: '. $deallocator->pse_id);
         return;
     }
     return 1;
