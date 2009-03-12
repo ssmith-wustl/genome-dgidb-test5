@@ -36,6 +36,13 @@ class Genome::Model::Tools::BreakpointPal {
 		 is_optional  => 1,
 
 	     },
+	         span         => {
+		 type         => 'Boolean',
+		 doc          => "You can use this flag to design pcr primers that get designed as if the region between BP1 and BP2 was a gap",
+		 is_optional  => 1,
+
+	     },
+
 	     max_pcr_product_size => {
 		 type         => 'Number',
 		 doc          => "Set this parameter if you'd like to specify a maximum length for the sequence that's used to design the PCR primers default is set to twice the flank which by default will be (2 x 300) or 600 ",
@@ -84,6 +91,22 @@ and the result from the pal
 chr11:36287905-36288124.BP1-2.fasta.BP2.pal100.ghostview
 
 "pal -files chr12:36287905-36288124.BP1-2.fasta chr12:36287905-36288124.BP1.300.fasta chr12:36287905-36288124.BP2.300.fasta -s 100 -all -out chr12:36287905-36288124.BP1-2.fasta.BP2.pal100.ghostview"
+
+
+irx -- if this option is used you will need to state the read pair orientation/s at the breakpoints inorder for pcr primer pair to be selected 
+   ie running ...     gt break-point-pal --breakpoint-id chr11:36287905-36288124 --irx mp 
+   would produce the additional file chr11:36287905-36288124.irx.300.mp.primer3.blast.result
+
+inv -- if this flag is used, 4 primer pair sets will be designed first for BP1 (gap1) then BP2 (gap2) and again for BP1-R (gap3) and BP2-R (gap4) where the R means the sequence between BP1 and BP2 was revercomplemented prior to selecting the primers for gaps 3 and 4
+   ie running ...     gt break-point-pal --breakpoint-id chr11:36287905-36288124 --inv 
+   would produce 4 additional files chr11:36287905-36288124.inv.300.gap1.primer3.blast.result
+                                    chr11:36287905-36288124.inv.300.gap2.primer3.blast.result
+				    chr11:36287905-36288124.inv.300.gap3.primer3.blast.result
+				    chr11:36287905-36288124.inv.300.gap4.primer3.blast.result
+
+span -- if this flag is used, a pcr primer pair will be selected that will encompass the sequence from BP1 to BP2. This option can be used in junction with any combination of options or by itself 
+   ie running ...     gt break-point-pal --breakpoint-id chr11:36287905-36288124 --span
+   would produce the additional file chr11:36287905-36288124.span.300.primer3.blast.result
 
 EOS
 }
@@ -174,17 +197,44 @@ sub execute {                               # replace with real execution logic.
 ######primer3 
     my $irx = $self->irx;
     my $inv = $self->inv;
-
+    my $span = $self->span;
 
     my @irx_primer_results;
     if ($irx) {
 	@irx_primer_results = &get_irx_primer($bp_id,$irx,$flank,$self);
+	my $irx_primer_files = join' ',@irx_primer_results;
+	my $n = @irx_primer_results;
+	if ($n > 1) {
+	    print qq(see irx primer picks in these files; $irx_primer_files\n);
+	} elsif ($n == 1) {
+	    print qq(see irx primer picks in this file; $irx_primer_files\n);
+	} else {
+	    print qq(no irx primer picks were made\n);
+	}
     }
-    my $inv_primer_results;
+    my @inv_primer_results;
     if ($inv) {
 
-	print qq(the --inv option is currently unavailable please try again later\n);
+	@inv_primer_results = &get_inv_primer($bp_id,$flank,$self);
+	my $inv_primer_files = join' ',@inv_primer_results;
+	my $n = @inv_primer_results;
+	if ($n > 1) {
+	    print qq(see inv primer picks in these files; $inv_primer_files\n);
+	} elsif ($n == 1) {
+	    print qq(see inv primer picks in this file; $inv_primer_files\n);
+	} else {
+	    print qq(no inv primer picks were made\n);
+	}
+	
+	#print qq(the --inv option is currently unavailable please try again later\n);
 	#$inv_primer_results = &get_inv_primer($bp_id);
+
+    }
+
+    my $span_primer_results;
+    if ($span) {
+	$span_primer_results = &get_span_primers($bp_id,$flank,$self);
+
     }
 
     my $irx_primer_files;
@@ -210,6 +260,70 @@ sub get_ref_base {
 
     return $seq;
     
+}
+
+sub get_span_primers {
+
+    my ($bp_id,$flank,$self) = @_;
+
+    my $breakpoint_depth;
+    my $max_pcr_product_size = $self->max_pcr_product_size;
+    if ($max_pcr_product_size) {
+	$breakpoint_depth = sprintf("%d",($max_pcr_product_size/2));
+    } else {
+	$breakpoint_depth = $flank;
+    }
+
+    my ($seq_span) = &get_span_primer_design_seq($bp_id,$breakpoint_depth);
+
+    my $primer_name = "$bp_id.span.$breakpoint_depth";
+    my $seq_l = length($seq_span);
+    
+    print qq(\nprimers for inv span will be pick from a sequence that is $seq_l bp in length\n\n);
+    
+    my $pick = &pick_primer($primer_name,$seq_span);
+    return ($pick);
+}
+
+
+sub get_inv_primer {
+
+    my ($bp_id,$flank,$self) = @_;
+
+    my $breakpoint_depth;
+    my $max_pcr_product_size = $self->max_pcr_product_size;
+    if ($max_pcr_product_size) {
+	$breakpoint_depth = sprintf("%d",($max_pcr_product_size/2));
+    } else {
+	$breakpoint_depth = $flank;
+    }
+
+    my ($seq_g1,$seq_g2,$seq_g3,$seq_g4) = &get_inv_primer_design_seq($bp_id,$breakpoint_depth);
+
+    my @picks;
+
+    my $primer_g1_name = "$bp_id.inv.$breakpoint_depth.gap1";
+    my $primer_g2_name = "$bp_id.inv.$breakpoint_depth.gap2";
+    my $primer_g3_name = "$bp_id.inv.$breakpoint_depth.gap3";
+    my $primer_g4_name = "$bp_id.inv.$breakpoint_depth.gap4";
+    my $seq_l = length($seq_g1);
+    print qq(\nprimers for inv gap1 will be pick from a sequence that is $seq_l bp in length\n\n);
+    my $pick_g1 = &pick_primer($primer_g1_name,$seq_g1);
+    push (@picks,$pick_g1);
+    $seq_l = length($seq_g2);
+    print qq(\nprimers for inv gap2 will be pick from a sequence that is $seq_l bp in length\n\n);
+    my $pick_g2 = &pick_primer($primer_g2_name,$seq_g2);
+    push (@picks,$pick_g2);
+    $seq_l = length($seq_g3);
+    print qq(\nprimers for inv gap3 will be pick from a sequence that is $seq_l bp in length\n\n);
+    my $pick_g3 = &pick_primer($primer_g3_name,$seq_g3);
+    push (@picks,$pick_g3);
+    $seq_l = length($seq_g4);
+    print qq(\nprimers for inv gap4 will be pick from a sequence that is $seq_l bp in length\n\n);
+    my $pick_g4 = &pick_primer($primer_g4_name,$seq_g4);
+    push (@picks,$pick_g4);
+    
+    return(@picks); 
 }
 
 sub get_irx_primer {
@@ -374,6 +488,123 @@ sub get_irx_primer_design_seq {
 	my $seq_mm = "$masked_rev_seq2_mm$masked_seq1_mm";
 	return ($seq_mm);
     }
+}
+
+sub get_inv_primer_design_seq {
+    
+    my ($bp_id,$breakpoint_depth) = @_;
+    my ($chromosome,$breakpoint1,$breakpoint2);
+    unless ($bp_id) {die "please provide the breakpoint id\n";}
+    if ($bp_id =~ /chr([\S]+)\:(\d+)\-(\d+)/) { 
+	$chromosome = $1;
+	$breakpoint1 = $2;
+	$breakpoint2 = $3;
+    } else { die "please check the format of your breakpoint id\n"; }
+    
+    
+    my $genome = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-human-build36');
+    my $chr = $genome->get_chromosome($chromosome);
+
+    my $bp_diff = $breakpoint2 - $breakpoint1;
+    if ($breakpoint_depth > $bp_diff) { 
+	$breakpoint_depth = $bp_diff; 
+	my $max_pcrproduct_size = $breakpoint_depth + $breakpoint_depth + 1;
+	print qq(The max pcr product size was readjusted to $max_pcrproduct_size for the length of sequence from BP1 to BP2\n);
+    }
+
+
+    my $seq_g1_start = $breakpoint1 - $breakpoint_depth;
+    my $seq_g1_end = $breakpoint1 + $breakpoint_depth;
+    
+    my $seq_g1 = $chr->sequence_base_substring($seq_g1_start, $seq_g1_end);
+    
+    my $masked_seq_g1 = $chr->mask_snps_and_repeats(begin_position       => $seq_g1_start, 
+						    end_position         => $seq_g1_end,
+						    sequence_base_string => $seq_g1);
+    
+    
+    my $seq_g2_start = $breakpoint2 - $breakpoint_depth;
+    my $seq_g2_end = $breakpoint2 + $breakpoint_depth;
+    
+    my $seq_g2 = $chr->sequence_base_substring($seq_g2_start, $seq_g2_end);
+    
+    my $masked_seq_g2 = $chr->mask_snps_and_repeats(begin_position       => $seq_g2_start, 
+						    end_position         => $seq_g2_end,
+						    sequence_base_string => $seq_g2);
+    
+        
+#for gaps 3 and 4 the seq from BP1 to BP2 will need to be revcomp and cut
+    
+    my $g34_inv_seq_base = $chr->sequence_base_substring($breakpoint1, $breakpoint2);
+    my $masked_g34_inv_seq_base = $chr->mask_snps_and_repeats(begin_position       => $breakpoint1, 
+							      end_position         => $breakpoint2,
+							      sequence_base_string => $g34_inv_seq_base);
+    
+    my $class = q(GSC::Sequence);
+    my $masked_rev_g34_inv_seq_base = GSC::Sequence::reverse_complement($class, $masked_g34_inv_seq_base);
+    
+        
+    my $seq1_g3_start = $breakpoint1 - $breakpoint_depth;
+    my $seq1_g3_end = $breakpoint1;
+    my $seq2_g4_start = $breakpoint2;
+    my $seq2_g4_end = $breakpoint2 + $breakpoint_depth;
+    
+    my $seq1_g3 = $chr->sequence_base_substring($seq1_g3_start, $seq1_g3_end);
+    my $seq2_g4 = $chr->sequence_base_substring($seq2_g4_start, $seq2_g4_end);
+    
+    my $masked_seq1_g3 = $chr->mask_snps_and_repeats(begin_position          => $seq1_g3_start, 
+						     end_position            => $seq1_g3_end,
+						     sequence_base_string    => $seq1_g3);
+    my $masked_seq2_g4 = $chr->mask_snps_and_repeats(begin_position          => $seq2_g4_start, 
+						     end_position            => $seq2_g4_end,
+						     sequence_base_string    => $seq2_g4);
+    
+    my $masked_seq2_g3 = substr($masked_rev_g34_inv_seq_base,1,$breakpoint_depth);
+    
+    my $revseq1_g4 = substr($masked_g34_inv_seq_base,1,$breakpoint_depth);
+    my $masked_seq1_g4 = GSC::Sequence::reverse_complement($class, $revseq1_g4);
+    
+    
+    my $masked_seq_g3 = "$masked_seq1_g3$masked_seq2_g3";
+    my $masked_seq_g4 = "$masked_seq1_g4$masked_seq2_g4";
+    
+    return ($masked_seq_g1,$masked_seq_g2,$masked_seq_g3,$masked_seq_g4);
+}
+
+sub get_span_primer_design_seq {
+    
+    my ($bp_id,$breakpoint_depth) = @_;
+
+    my ($chromosome,$breakpoint1,$breakpoint2);
+    unless ($bp_id) {die "please provide the breakpoint id\n";}
+    if ($bp_id =~ /chr([\S]+)\:(\d+)\-(\d+)/) { 
+	$chromosome = $1;
+	$breakpoint1 = $2;
+	$breakpoint2 = $3;
+    } else { die "please check the format of your breakpoint id\n"; }
+    
+    
+    my $genome = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-human-build36');
+    my $chr = $genome->get_chromosome($chromosome);
+    
+    my $seq1_start = $breakpoint1 - $breakpoint_depth;
+    my $seq1_end = $breakpoint1;
+    my $seq2_start = $breakpoint2;
+    my $seq2_end = $breakpoint2 + $breakpoint_depth;
+    
+    my $seq1 = $chr->sequence_base_substring($seq1_start, $seq1_end);
+    my $seq2 = $chr->sequence_base_substring($seq2_start, $seq2_end);
+    
+    my $masked_seq1 = $chr->mask_snps_and_repeats(begin_position       => $seq1_start, 
+						  end_position         => $seq1_end,
+						  sequence_base_string => $seq1);
+    my $masked_seq2 = $chr->mask_snps_and_repeats(begin_position       => $seq2_start, 
+						  end_position         => $seq2_end,
+						  sequence_base_string => $seq2);
+    
+    my $span_seq = "$masked_seq1$masked_seq2";
+    return ($span_seq);
+    
 }
 
 sub pick_primer {
