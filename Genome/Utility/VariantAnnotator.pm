@@ -270,18 +270,12 @@ sub _transcript_annotation_for_rna
     my $strand = $transcript->strand;
 
     my $length = 0;
-    if ($transcript->protein) {
-        $length = length( $transcript->protein->amino_acid_seq );
-    } else {
-        print "No protein for this transcript, setting length to 0:\n";
-        print Data::Dumper::Dumper $transcript;
-    }
     return
     (
         strand => $strand,
         c_position => 'NULL',
         trv_type => 'rna',
-        amino_acid_length => $length,
+        amino_acid_length => 'NULL',
         amino_acid_change => 'NULL',
     );
 }
