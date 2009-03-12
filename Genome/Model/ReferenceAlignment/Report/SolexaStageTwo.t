@@ -3,23 +3,13 @@
 use strict;
 use warnings;
 
-use Test::More tests => 1;
+use above 'Genome';
 
-use above "Genome";
+use Genome::Model::ReferenceAlignment::Report::Test;
 
-BEGIN {
-   # use_ok('Genome::Model::Report::SolexaStageTwo');
-}
+Genome::Model::ReferenceAlignment::Report::SolexaStageTwoTest->runtests;
 
-# TODO: Fix this some how... we should create a model here rather than getting one
-=cut
-=cut
+exit;
 
-    my ($id, $name) = (93293206,'SolexaStageTwo');
-    my $report = Genome::Model::Report->create(build_id=>$id,name=>$name);
-ok($report, "got a report"); 
-
-
-
-
-
+#$HeadURL$
+#$Id$
