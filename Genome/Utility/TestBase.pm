@@ -5,20 +5,32 @@ use warnings;
 
 use base 'Test::Class';
 
+use Data::Dumper 'Dumper';
 use File::Temp 'tempdir';
 use Storable qw/ store retrieve /;
 use Test::More;
 
 #< CLASS >#
-sub create_valid_object { 
-    eval "use ".$_[0]->test_class;
-    return $_[0]->_create_valid_object;
+sub create_object { # public method for creating
+    my $self = shift;
+    eval "use ".$self->test_class;
+    return $self->_create_object(@_);
+}
+
+sub create_valid_object { # public method for creating
+    my $self = shift;
+    eval "use ".$self->test_class;
+    return $self->_create_valid_object(@_);
 }
 
 sub _create_valid_object { 
+    return $_[0]->_create_object( $_[0]->params_for_test_class );
+}
+
+sub _create_object {
     my $self = shift;
     my $method = $self->new_or_create;
-    return $self->test_class->$method( $self->params_for_test_class );
+    return $self->test_class->$method(@_);
 }
 
 sub new_or_create {
@@ -44,18 +56,11 @@ sub base_test_dir {
 }
 
 sub test_class_sub_dir {
-    my @words = $_[0]->test_class =~ /([A-Z](?:[A-Z]*(?=$|[A-Z][a-z])|[a-z]*))/;
-    return join('-', @words);
+    return join('-', split('::', $_[0]->test_class));
 }
 
 sub dir { 
-    my $self = shift;
-
-    unless ( $self->{_dir} ) {
-        $self->{_dir} = base_dir().'/'.test_class_sub_dir();
-    }
-    
-    return $self->{_dir};
+    return $_[0]->base_test_dir.'/'.$_[0]->test_class_sub_dir;
 }
 
 sub tmp_dir {
@@ -66,6 +71,47 @@ sub tmp_dir {
     }
     
     return $self->{_tmp_dir};
+}
+
+#< Mocking >#
+sub create_mock {
+    my $self = shift;
+
+    # TODO - move all mocking from UR::Object to here or into UR::Object::Mock
+    return $self->test_class->create_mock(id => -10000, $self->params_for_test_class );
+}
+
+sub mock_accessors {
+    my ($self, $obj, @methods) = @_;
+
+    no strict 'refs';
+    for my $method ( @methods ) {
+        $obj->mock(
+            $method,
+            sub{
+                my ($obj, $param) = @_;
+                $obj->{$method} = $param if defined $param;
+                return $obj->{$param}; 
+            },
+        );
+    }
+
+    return 1;
+}
+
+sub mock_methods {
+    my ($self, $obj, $class, @methods) = @_;
+
+    no strict 'refs';
+    for my $method ( @methods ) {
+        my $class_method = $class.'::'.$method;
+        $obj->mock(
+            $method,
+            sub{ &{$class_method}(@_); },
+        );
+    }
+
+    return 1;
 }
 
 #< Base Tests >#
@@ -98,7 +144,7 @@ sub test003_required_attrs : Tests {
         my $val = delete $params{$attr};
         my $eval;
         eval {
-            $eval = $self->test_class->new(%params);
+            $eval = $self->_create_object(%params);
         };
         ok(!$eval, "Failed as expected - create w/o $attr");
         $params{$attr} = $val;
@@ -120,7 +166,7 @@ sub test004_invalid_params : Tests {
         $params{$attr} = $invalid_params{$attr};
         my $eval;
         eval {
-            $eval = $self->test_class->new(%params);
+            $eval = $self->_create_object(%params);
         };
 
         diag("$@\n");
