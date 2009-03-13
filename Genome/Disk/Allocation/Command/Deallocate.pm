@@ -14,7 +14,7 @@ class Genome::Disk::Allocation::Command::Deallocate {
                          },
             wait_for_pse => {
                              is => 'Boolean',
-                             default_value => 1,
+                             default_value => 0,
                              doc => 'Wait for the pse to confirm before returning',
                          }
         ],
