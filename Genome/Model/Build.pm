@@ -168,18 +168,9 @@ sub resolve_reports_directory
 sub available_reports {
     my $self = shift;
     my $report_dir = $self->resolve_reports_directory;
-    my %report_file_hash;
-    my @report_subdirs = glob("$report_dir/*");
-    my @reports;
-    for my $subdir (@report_subdirs) {
-        #we may be able to do away with touching generating class and just try to find reports that match this subdir name? not sure
-        my ($report_name) = ($subdir =~ /\/+reports\/+(.*)\/*/);
-        my $rpt = Genome::Model::Report->create(build_id => $self->build_id, name => $report_name);
-        push @reports, $rpt;
-    }
-    return \@reports; 
+    return unless -d $report_dir;
+    return Genome::Report->get_reports_in_parent_directory($report_dir);
 }
-
 
 #< SUBCLASSING >#
 #
