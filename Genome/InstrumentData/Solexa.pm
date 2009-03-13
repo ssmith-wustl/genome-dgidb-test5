@@ -32,7 +32,7 @@ EOS
         flow_cell_id                    => { }, # = short name
         lane                            => { }, # = subset_name
         is_external                     => { },
-        clusters                        => { via => '_run_lane_solexa', to => 'filt_clusters' },
+        clusters                        => { column_name => 'FILT_CLUSTERS' },
         short_name => {
             doc => 'The essential portion of the run name which identifies the run.  The rest is redundent information about the instrument, date, etc.',
             is => 'Text', 
