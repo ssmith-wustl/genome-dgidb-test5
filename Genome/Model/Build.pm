@@ -146,6 +146,13 @@ sub resolve_data_directory {
                 die;
             }
             my $disk_allocation = $allocate->disk_allocation;
+            unless ($disk_allocation) {
+                $disk_allocation = GSC::DiskAllocation->get($allocate->allocator_id);
+                unless ($disk_allocation) {
+                    $self->error_message('Failed to get disk allocation for allocator_id: '. $allocate->allocator_id);
+                    die $self->error_message;
+                }
+            }
             return $disk_allocation->absolute_path;
         }
     }
