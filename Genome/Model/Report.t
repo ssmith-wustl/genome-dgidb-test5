@@ -4,14 +4,12 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 2;
 
-my $m = Genome::Model->get(id =>2733662090);
+use Test::More tests => 1;
 
-ok($m, "got a model"); 
+use_ok('Genome::Model::Report');
 
-my @reports = @{$m->available_reports};
+exit;
 
-ok(@reports, "got reports");
-
-
+#$HeadURL$
+#$Id$
