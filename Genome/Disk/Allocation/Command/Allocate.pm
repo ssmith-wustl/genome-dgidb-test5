@@ -36,7 +36,7 @@ class Genome::Disk::Allocation::Command::Allocate {
                                     },
                      local_confirm => {
                                        is => 'Boolean',
-                                       default_value => 0,
+                                       default_value => 1,
                                        doc => 'A flag to confirm the pse locally',
                                    },
               ],
