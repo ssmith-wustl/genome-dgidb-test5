@@ -76,10 +76,12 @@ ok (my @unbuilt_instrument_data = $model->unbuilt_instrument_data, "got unbuilt_
 isa_ok ($unbuilt_instrument_data[0], "Genome::InstrumentData");
 
 
-ok (my $available_reports = $model->available_reports, "got available_reports");
-foreach my $key(@$available_reports)
-{
-    diag "REPORT:\t" . $key->name . "\n";
+SKIP: {
+    skip("No reports in this build", 1);
+    ok (my @available_reports = $model->available_reports, "got available_reports");
+    foreach my $report (@available_reports) {
+        diag "Report Name:\t". $report->name."\n";
+    }
 }
 
 SKIP: {
