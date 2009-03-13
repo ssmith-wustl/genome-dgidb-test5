@@ -396,13 +396,11 @@ sub unlock_resource {
         $resource_id = $args{'resource_id'} || die('Must supply resource_id to lock resource');
         $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
     }
-    my $dir_exists;
-    eval {
-        $dir_exists = $self->validate_existing_directory($resource_lock);
-    };
-    unless ($dir_exists) {
+    
+    unless ( -e $resource_lock ) {
         return 1;
     }
+
     my $info_file = $resource_lock . '/info';
     unless ($self->validate_file_for_reading($info_file)) {
         $self->error_message("Resource lock info file '$info_file' not validated.");
