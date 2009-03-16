@@ -15,7 +15,16 @@ class Genome::Protein {
         protein_name => { is => 'String' },
         transcript_id => { is => 'Number' },
         amino_acid_seq => { is => 'String' },
-        transcript => { is => 'Genome::Transcript', id_by => 'transcript_id' },
+        transcript => {
+            calculate_from => [qw/ transcript_id build_id/],
+            calculate => q|
+                Genome::Transcript->get(transcript_id => $transcript_id, build_id => $build_id);
+            |,
+        },
+        build => {
+                    is => "Genome::Model::Build",
+                    id_by => 'build_id',
+                    },
     ],
     schema_name => 'files',
     data_source => 'Genome::DataSource::Proteins',

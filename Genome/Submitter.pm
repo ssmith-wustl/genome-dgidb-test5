@@ -14,9 +14,18 @@ class Genome::Submitter {
     has => [
         submitter_name => { is => 'String' },
         variation_source => { is => 'String' },
+        build => {
+                    is => "Genome::Model::Build",
+                    id_by => 'build_id',
+        },
     ],
     has_many => [
-        variation_instances => { is => 'Genome::VariationInstance', reverse_id_by => 'submitter' },
+        variation_instances => {
+            calculate_from => [qw/ submitter_id build_id/],
+            calculate => q|
+                Genome::VariationInstance->get(submitter_id => $submitter_id, build_id => $build_id);
+            |,
+        },
         variations => { is => 'Genome::Gene', via => 'variation_instances', to => 'variation' },
     ],
  

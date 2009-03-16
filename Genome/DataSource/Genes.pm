@@ -22,13 +22,16 @@ sub skip_first_line {
     return 0;
 }
 
-sub required_for_get { qw( gene_id ) }
+sub constant_values { qw(build_id) };
+sub required_for_get { qw( gene_id build_id ) }
 
 sub file_resolver {
-    my($gene_id) = @_;
+    my($gene_id, $build_id) = @_;
 
     my $thousand = int($gene_id / 1000);
-    my $path = '/gscmnt/sata363/info/medseq/annotation_data/genes/genes_' . $thousand . ".csv";
+    my $build = Genome::Model::Build::ImportedAnnotation->get($build_id);
+    my $annotation_dir = $build->annotation_data_directory;
+    my $path = "$annotation_dir/genes/genes_" . $thousand . ".csv";
     return $path;
 }
 

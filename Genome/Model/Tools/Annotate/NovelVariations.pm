@@ -8,8 +8,6 @@ use Genome;
 use Command;
 use Data::Dumper;
 use IO::File;
-use Genome::Utility::IO::SeparatedValueReader;
-use Genome::Utility::VariantAnnotator;
 use Tie::File;
 use Fcntl 'O_RDONLY';
 use Carp;
@@ -67,6 +65,11 @@ class Genome::Model::Tools::Annotate::NovelVariations {
            default => 0,
            doc => 'Range to look around a variant for known variations',
         },
+	    build => {
+	        is => "Genome::Model::Build",
+	        id_by => 'build_id',
+            is_optional => 1, 
+	    },
     ],
 };
 
@@ -118,6 +121,18 @@ sub execute {
     }
     $self->_variation_report_fh($output_fh);
     
+    #if no build is provided, use the v0 of our generic NCBI-human-36 imported annotation model
+    unless ($self->build){
+        my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
+        my $build = $model->build_by_version(0);
+        
+        unless ($build){
+            $self->error_message("couldn't get build v0 from 'NCBI-human.combined-annotation'");
+            return;
+        }
+        $self->build($build);
+    }
+    
     # emit headers as necessary
     $output_fh->print( join(',', $self->variation_report_headers), "\n" ) unless $self->no_headers;
     
@@ -131,7 +146,10 @@ sub execute {
             $self->status_message("generating overlap iterator for $chromosome_name");
             
             my $variant_iterator = Genome::Variation->create_iterator(
-                where => [ chrom_name => $chromosome_name] 
+                where => [ 
+                chrom_name => $chromosome_name,
+                build_id => $self->build->build_id,
+                ]
             );
             $variation_window =  Genome::Utility::Window::Variation->create( 
                 iterator => $variant_iterator,
@@ -285,7 +303,7 @@ Genome::Model::Tools::Annotate::TranscriptVariations
 
 =head1 Synopsis
 
-Goes through each variant in a file, retrieving annotation information from Genome::Utility::VariantAnnotator.
+Goes through each variant in a file, retrieving annotation information from Genome::Transcript::VariantAnnotator.
 
 =head1 Usage
 
@@ -332,7 +350,7 @@ A one-row csv "table" with some metrics on the SNVs analyzed.
 
 =head1 See Also
 
-B<Genome::Utility::VariantAnnotator>, 
+B<Genome::Transcript::VariantAnnotator>, 
 
 =head1 Disclaimer
 

@@ -83,7 +83,7 @@ sub scroll
 {
     my ($self, $start, $stop) = @_;
 
-    $self->fatal_msg("Need position to scroll") unless defined $start;
+    $self->error_message("Need position to scroll") unless defined $start;
 
     $stop = $start unless defined $stop;
     
@@ -101,8 +101,8 @@ sub validate_objects
 
     foreach my $object (  $self->_objects  )
     {
-        $self->error_msg("Object not in range") unless $self->_object_is_in_range($object) == 0;
-        #$self->error_msg("Object not in range") unless $self->_object_is_in_range->($object) == 0;
+        $self->error_message("Object not in range") unless $self->_object_is_in_range($object) == 0;
+        #$self->error_message("Object not in range") unless $self->_object_is_in_range->($object) == 0;
     }
 
     return 1;
@@ -117,9 +117,9 @@ sub _set_ranges
 
     return if $current_start == $start and $current_stop == $stop;
 
-    $self->fatal_msg("Start position to scroll to ($start) is less than the current start position ($current_start)") if  $start < $current_start;
+    $self->error_message("Start position to scroll to ($start) is less than the current start position ($current_start)") and die if  $start < $current_start;
 
-    $self->fatal_msg("Stop position to scroll to ($stop) is less than the current stop position ($current_stop)") if $stop < $current_stop;
+    $self->error_message("Stop position to scroll to ($stop) is less than the current stop position ($current_stop)") and die if $stop < $current_stop;
 
     $self->_start($start);
     $self->_stop($stop);

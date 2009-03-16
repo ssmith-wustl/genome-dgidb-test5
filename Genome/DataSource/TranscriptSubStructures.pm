@@ -6,8 +6,8 @@ class Genome::DataSource::TranscriptSubStructures {
     is => 'UR::DataSource::FileMux',
 };
 
-sub constant_values { qw() };
-sub required_for_get { qw( transcript_id ) }
+sub constant_values { qw(build_id) };
+sub required_for_get { qw( transcript_id build_id) }
 sub delimiter { "\t" }
 sub column_order { qw( transcript_structure_id
                        transcript_id
@@ -22,11 +22,13 @@ sub column_order { qw( transcript_structure_id
 sub sort_order { qw( transcript_id structure_start transcript_structure_id ) }
 
 sub file_resolver {
-    my($transcript_id) = @_;
+    my($transcript_id, $build_id) = @_;
 
     my $thousand = int($transcript_id / 1000);
     $thousand .= '000';
-    my $path = join('/','/gscmnt/sata363/info/medseq/annotation_data/transcript_sub_structure_tree',
+    my $build = Genome::Model::Build::ImportedAnnotation->get($build_id);
+    my $annotation_dir = $build->annotation_data_directory;
+    my $path = join('/',"/$annotation_dir/transcript_sub_structure_tree",
                     $thousand,
                     $transcript_id);
     $path .= '.csv';

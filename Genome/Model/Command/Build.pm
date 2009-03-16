@@ -640,6 +640,7 @@ sub mail_summary {
     my $self = shift;
 
     my $model = $self->model;
+    return unless $model->can('sequencing_platform');
     
     my $sendmail = "/usr/sbin/sendmail -t";
     my $from = "From: ssmith\@genome.wustl.edu\n";

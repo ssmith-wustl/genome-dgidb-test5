@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::DataSource::Submitters{
-    is => 'UR::DataSource::File',
+    is => 'UR::DataSource::FileMux',
 };
 
 sub delimiter {
@@ -30,10 +30,15 @@ sub skip_first_line {
     return 0;
 }
 
-sub file_list {
-    return qw( 
-    /gscmnt/sata363/info/medseq/annotation_data/submitters.csv 
-    )
+sub constant_values { qw(build_id) };
+sub required_for_get { qw( build_id ) }
+
+sub file_resolver {
+    my ($build_id) = @_;
+    my $build = Genome::Model::Build::ImportedAnnotation->get($build_id);
+    my $annotation_dir = $build->annotation_data_directory;
+    my $path = "$annotation_dir/submitters.csv";
+    return $path;
 }
 
 1;

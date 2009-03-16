@@ -14,8 +14,23 @@ class Genome::VariationInstance {
     has => [
         method_id => { is => 'Number' },
         date_stamp => { is => 'String'},
-        variation => {is => 'Genome::Variation', id_by => 'variation_id'},
-        submitter => {is => 'Genome::Submitter', id_by => 'submitter_id'},
+        build => {
+                    is => "Genome::Model::Build",
+                    id_by => 'build_id',
+        },
+        variation => {
+            calculate_from => [qw/ variation_id build_id/],
+            calculate => q|
+                Genome::Variation->get(variation_id => $variation_id, build_id => $build_id);
+            |,
+ 
+        },
+        submitter => {
+            calculate_from => [qw/ submitter_id build_id/],
+            calculate => q|
+                Genome::Submitter->get(submitter_id => $submitter_id, build_id => $build_id);
+            |,
+        },
     ],
     schema_name => 'files',
     data_source => 'Genome::DataSource::VariationInstances',

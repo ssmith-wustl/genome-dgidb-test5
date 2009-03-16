@@ -30,5 +30,11 @@ sub build_by_version {
     return $b[0];
 }
 
+sub annotation_data_directory{
+    my $self = shift;
+    my $build = $self->last_complete_build;
+    return $build->annotation_data_directory;
+}
+
 1;
 

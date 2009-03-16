@@ -18,9 +18,18 @@ class Genome::Variation{
         start => {is => 'Number'},
         stop => {is => 'Number'},
         pubmed_id => {is => 'Number'},
+        build => {
+            is => "Genome::Model::Build",
+            id_by => 'build_id',
+        },
     ],
     has_many => [
-        variation_instances => {is => 'Genome::VariationInstance', reverse_id_by => 'variation'},
+        variation_instances => {
+            calculate_from => [qw/ variation_id build_id/],
+            calculate => q|
+                Genome::VariationInstance->get(variation_id => $variation_id, build_id => $build_id);
+            |,
+        },
         submitters => {is => 'Genome::Submitter', via => 'variation_instances', to => 'submitter'},
     ],
     schema_name => 'files',

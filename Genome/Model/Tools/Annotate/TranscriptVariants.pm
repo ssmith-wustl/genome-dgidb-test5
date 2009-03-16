@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Annotate::TranscriptVariations;
+package Genome::Model::Tools::Annotate::TranscriptVariants;
 
 use strict;
 use warnings;
@@ -8,13 +8,11 @@ use Genome;
 use Command;
 use Data::Dumper;
 use IO::File;
-use Genome::Utility::IO::SeparatedValueReader;
-use Genome::Utility::VariantAnnotator;
 use Tie::File;
 use Fcntl 'O_RDONLY';
 use Carp;
 
-class Genome::Model::Tools::Annotate::TranscriptVariations {
+class Genome::Model::Tools::Annotate::TranscriptVariants {
     is => 'Command',
     has => [ 
         snv_file => {
@@ -26,7 +24,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariations {
     has_optional => [
         output_file => {
             type => 'Text',
-            is_optional => 0,
+            is_optional => 1,
             doc => "Store annotation in the specified file instead of sending it to STDOUT."
         },
         summary_file => {
@@ -60,12 +58,20 @@ class Genome::Model::Tools::Annotate::TranscriptVariations {
             default => 50000,
             doc => 'Range to look around for flaking regions of transcripts',
         },
-        # Variation Params
-        variation_range => {
-           type => 'Integer',
-           is_optional => 1,
-           default => 0,
-           doc => 'Range to look around a variant for known variations',
+        reference_transcripts => {
+            is => 'String',
+            is_optional => 1, 
+            doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db'
+        },
+	    build => {
+	        is => "Genome::Model::Build",
+	        id_by => 'build_id',
+            is_optional => 1, 
+	    },
+        build_id =>{
+            is => "Number",
+            is_optional => 1,
+            doc => 'build id for the imported annotation model to grab transcripts to annotate from.  Use this or --reference-transcripts to specify a non-default annotation db',
         },
     ], 
 };
@@ -74,18 +80,24 @@ class Genome::Model::Tools::Annotate::TranscriptVariations {
 
 sub help_synopsis { 
     return <<EOS
-gt annotate transcript-variations --snv-file snvs.csv --output-file transcript-changes.csv --summary-file myresults.csv
-EOS;
+gt annotate transcript-variants --snv-file snvs.csv --output-file transcript-changes.csv --summary-file myresults.csv
+EOS
 }
 
 sub help_detail {
     return <<EOS 
-This launches Xiaoqi's variation annotator.  It takes genome sequence variations and outputs transcript variations, 
+This launches the variant annotator.  It takes genome sequence variants and outputs transcript variants, 
 with details on the gravity of the change to the transcript.
 
 The current version presumes that the SNVs are human, and that positions are relative to Hs36.  The transcript data 
 set is a mix of Ensembl 45 and Genbank transcripts.  Work is in progress to support newer transcript sets, and 
-variations from a different reference.
+variants from a different reference.
+
+INPUT COLUMNS (TAB SEPARATED)
+chromosome_name start stop reference variant reference_type type reference_reads variant_reads maq_score
+
+OUTPUT COLUMNS (COMMMA SEPARATED)
+chromosome_name start stop variant variant_reads reference reference_reads maq_score gene_name intensity detection transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain
 EOS
 }
 
@@ -112,7 +124,7 @@ sub execute {
         return;
     }
     
-    # establish the output handle for the transcript variations
+    # establish the output handle for the transcript variants
     my $output_fh;
     if (my $output_file = $self->output_file) {
         $output_fh = $self->_create_file($output_file);
@@ -122,9 +134,51 @@ sub execute {
     }
     $self->_transcript_report_fh($output_fh);
     
+    #check to see if reference_transcripts set name and build_id given
+    if ($self->build and $self->reference_transcripts){
+        $self->error_message("Please provide a build id OR a reference transcript set name, not both");
+        return;
+    }
+    
+    #if no build is provided, use the v0 of our generic NCBI-human-36 imported annotation model
+    unless ($self->build){
+        if ($self->reference_transcripts){
+            my ($name, $version) = split(/\//, $self->reference_transcripts);
+            my $model = Genome::Model->get(name => $name);
+            unless ($model){
+                $self->error_message("couldn't get reference transcripts set for $name");
+                return;
+            }
+            if ($version){
+                my $build = $model->build_by_version($version);
+                unless ($build){
+                    $self->error_message("couldn't get version $version from reference transcripts set $name");
+                    return;
+                }
+                $self->build($build);
+            }else{
+                my $build = $model->last_complete_build;
+                unless ($build){
+                    $self->error_message("couldn't get last complete build from reference transcripts set $name");
+                    return;
+                }
+                $self->build($build);
+            }
+        }else{
+            my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
+            my $build = $model->build_by_version(0);
+
+            unless ($build){
+                $self->error_message("couldn't get build v0 from 'NCBI-human.combined-annotation'");
+                return;
+            }
+            $self->build($build);
+        }
+    }
+
     # emit headers as necessary
     $output_fh->print( join(',', $self->transcript_report_headers), "\n" ) unless $self->no_headers;
-    
+
     # annotate all of the input SNVs...
     my $chromosome_name = '';
     my $annotator = undef;
@@ -133,23 +187,26 @@ sub execute {
         unless ($variant->{chromosome_name} eq $chromosome_name) {
             $chromosome_name = $variant->{chromosome_name};
             $self->status_message("generating annotator for $chromosome_name");
-            
+
             my $transcript_iterator = Genome::Transcript->create_iterator(
-                where => [ chrom_name => $chromosome_name]
+                where => [ 
+                chrom_name => $chromosome_name,
+                build_id => $self->build->build_id,
+                ],
             );
             die Genome::Transcript->error_message unless $transcript_iterator;
-            
+
             my $transcript_window =  Genome::Utility::Window::Transcript->create (
                 iterator => $transcript_iterator, 
                 range => $self->flank_range
             );
             die Genome::Utility::Window::Transcript->error_message unless $transcript_window;
-            
-            $annotator = Genome::Utility::VariantAnnotator->create(
+            $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window 
             );
-            die Genome::Utility::VariantAnnotator->error_message unless $annotator;
+            die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
         }
+        #
         # get the data and output it
         my @transcripts = $annotator->prioritized_transcripts(%$variant);
         $self->_print_reports_for_snp($variant, \@transcripts);
@@ -172,7 +229,7 @@ sub execute {
         }
         $summary_fh->close;
     }
-    
+
     $output_fh->close unless $output_fh eq 'STDOUT';
     return 1;
 }
@@ -180,7 +237,7 @@ sub execute {
 sub _create_file {
     my ($self, $output_file) = @_;
     my $output_fh;
-    
+
     unlink $output_file if -e $output_file;
     if (-e $output_file) {
         $self->warning_message("found previous output file, removing $output_file");
@@ -193,7 +250,7 @@ sub _create_file {
     unless ($output_fh) {
         die "Can't open file ($output_file) for writing: $!";
     }
-    
+
     return $output_fh;
 }
 
@@ -225,7 +282,7 @@ sub transcript_attributes {
 
 #- PRINT REPORTS -#
 sub _print_reports_for_snp {
-    my ($self, $snp, $transcripts, $variations) = @_;
+    my ($self, $snp, $transcripts, $variants) = @_;
 
     # Calculate Metrics
     my $is_hq_snp = ( $snp->{maq_score} >= $self->minimum_maq_score 
@@ -245,7 +302,7 @@ sub _print_reports_for_snp {
 
     $self->{_metrics}->{distinct}++ if $is_hq_snp;
     $self->{_metrics}->{genic}++ if @$transcripts;
-    
+
     # Transcripts
     for my $transcripts ( @$transcripts )
     {
@@ -260,7 +317,6 @@ sub _print_reports_for_snp {
             "\n",
         );
     }
-
     return 1;
 }
 
@@ -270,26 +326,25 @@ sub _print_reports_for_snp {
 
 =head1 Name
 
-Genome::Model::Tools::Annotate::TranscriptVariations
+Genome::Model::Tools::Annotate::TranscriptVariants
 
 =head1 Synopsis
 
-Goes through each variant in a file, retrieving annotation information from Genome::Utility::VariantAnnotator.
+Goes through each variant in a file, retrieving annotation information from Genome::Transcript::VariantAnnotator.
 
 =head1 Usage
 
  in the shell:
- 
-     gt annotate transcript-variations --snv-file myinput.csv --output-file myoutput.csv --metric-summary metrics.csv
+
+     gt annotate transcript-variants --snv-file myinput.csv --output-file myoutput.csv --metric-summary metrics.csv
 
  in Perl:
- 
-     $success = Genome::Model::Tools::Annotate::TranscriptVariations->execute(
+
+     $success = Genome::Model::Tools::Annotate::TranscriptVariants->execute(
          snv_file => 'myoutput.csv',
          output_file => 'myoutput.csv',
          summary_file => 'metrics.csv', # optional
          flank_range => 10000, # default 50000
-         variation_range => 0, # default 0
      );
 
 =head1 Methods
@@ -298,7 +353,7 @@ Goes through each variant in a file, retrieving annotation information from Geno
 
 =item snv_file
 
-An input list of single-nucleotide variations.  The format is:
+An input list of single-nucleotide variants.  The format is:
  chromosome
  position
  reference value
@@ -321,7 +376,7 @@ A one-row csv "table" with some metrics on the SNVs analyzed.
 
 =head1 See Also
 
-B<Genome::Utility::VariantAnnotator>, 
+B<Genome::Transcript::VariantAnnotator>, 
 
 =head1 Disclaimer
 
@@ -332,11 +387,11 @@ This module is distributed in the hope that it will be useful, but WITHOUT ANY W
 =head1 Author(s)
 
 Core Logic:
- 
+
  B<Xiaoqi Shi> I<xshi@genome.wustl.edu>
 
 Optimization, Testing, Data Management:
- 
+
  B<Dave Larson> I<dlarson@genome.wustl.edu>
  B<Eddie Belter> I<ebelter@watson.wustl.edu>
  B<Gabriel Sanderson> I<gsanderes@genome.wustl.edu>

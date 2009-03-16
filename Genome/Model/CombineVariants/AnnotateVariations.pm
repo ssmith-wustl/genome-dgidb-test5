@@ -6,7 +6,6 @@ use warnings;
 use IO::File;
 use Genome;
 use Data::Dumper;
-use Genome::Utility::VariantAnnotator;
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 
 class Genome::Model::CombineVariants::AnnotateVariations {
@@ -225,7 +224,7 @@ sub _get_annotator {
     my $self = shift;
     my ($transcript_window) = @_;
 
-    my $annotator = Genome::Utility::VariantAnnotator->create(
+    my $annotator = Genome::Transcript::VariantAnnotator->create(
         transcript_window => $transcript_window,
         benchmark => 1,
     );

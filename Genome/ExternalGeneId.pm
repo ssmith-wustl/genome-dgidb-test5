@@ -15,8 +15,16 @@ class Genome::ExternalGeneId {
         gene_id => { is => 'NUMBER' },
         id_type => { is => 'String' },
         id_value => { is => 'String' },
-        
-        gene => { is => 'Genome::Gene', id_by => 'gene_id' },
+        build => {
+                    is => "Genome::Model::Build",
+                    id_by => 'build_id',
+        },
+        gene => {
+            calculate_from => [qw/ gene_id build_id/],
+            calculate => q|
+                Genome::GeneId->get(gene_id => $gene_id, build_id => $build_id);
+            |,
+        },
     ],
     schema_name => 'files',
     data_source => 'Genome::DataSource::ExternalGeneIds',

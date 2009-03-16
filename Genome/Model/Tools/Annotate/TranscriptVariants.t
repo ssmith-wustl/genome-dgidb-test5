@@ -6,7 +6,7 @@ use Data::Dumper;
 use Test::More tests => 9;
 use File::Compare;
 
-my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptVariations';
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptVariants';
 
 ok(-d $test_dir, "test data dir exists");
 
@@ -21,7 +21,7 @@ my $ref_transcript = "$test_dir/known_output.transcript";
 ok(-e $ref_transcript, 'ref transcript exists');
 
 my $output_base = "$test_dir/output";
-my $command = "gt annotate transcript-variations --snv-file $input --output-file $output_base.transcript --summary-file $output_base.metrics";
+my $command = "gt annotate transcript-variants --snv-file $input --output-file $output_base.transcript --summary-file $output_base.metrics";
 
 is(system($command),0, "executed $command w/ return value of 0");
 
@@ -40,4 +40,3 @@ is(compare($transcript, $ref_transcript), 0, "transcript and ref transcript are 
     or diag(`sdiff $transcript $ref_transcript`);
 
 unlink($metrics,$transcript);
-

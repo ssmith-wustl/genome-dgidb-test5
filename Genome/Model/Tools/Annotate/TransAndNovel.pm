@@ -8,8 +8,6 @@ use Genome;
 use Command;
 use Data::Dumper;
 use IO::File;
-use Genome::Utility::IO::SeparatedValueReader;
-use Genome::Utility::VariantAnnotator;
 use Tie::File;
 use Fcntl 'O_RDONLY';
 use Carp;
@@ -68,6 +66,11 @@ class Genome::Model::Tools::Annotate::TransAndNovel {
            default => 0,
            doc => "Range to look around a variant for known variations",
         },
+	    build => {
+	        is => "Genome::Model::Build",
+	        id_by => 'build_id',
+            is_optional => 1, 
+	    },
     ], 
 };
 
@@ -83,7 +86,7 @@ sub help_synopsis {
 
 sub help_detail {
     return <<EOS 
-    Creates an annotation report for variants in a given file.  Uses Genome::Utility::VariantAnnotator for each given variant, and outputs the annotation infomation to the given report file.
+    Creates an annotation report for variants in a given file.  Uses Genome::Transcript::VariantAnnotator for each given variant, and outputs the annotation infomation to the given report file.
 EOS
 }
 
@@ -108,6 +111,18 @@ sub execute {
         $self->error_message("error opening file $variant_file");
         return;
     }
+    
+    #if no build is provided, use the v0 of our generic NCBI-human-36 imported annotation model
+    unless ($self->build){
+        my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
+        my $build = $model->build_by_version(0);
+        
+        unless ($build){
+            $self->error_message("couldn't get build v0 from 'NCBI-human.combined-annotation'");
+            return;
+        }
+        $self->build($build);
+    }
 
     # determine chromosome to speed annotation and sanity check both ends of the file
     $self->status_message(UR::Time->now . " checking chromosome at beginning and end of file");
@@ -127,18 +142,23 @@ sub execute {
     # create windowed iterators to go over transcripts
     
     my $transcript_iterator = Genome::Transcript->create_iterator(
-        where => [ chrom_name => $chromosome_name]
+        where => [
+        chrom_name => $chromosome_name,
+        build_id => $self->build->build_id,
+        ]
     );
     my $transcript_window =  Genome::Utility::Window::Transcript->create (
         iterator => $transcript_iterator, 
         range => $self->flank_range
     );
-    my $annotator = Genome::Utility::VariantAnnotator->create(
+    my $annotator = Genome::Transcript::VariantAnnotator->create(
         transcript_window => $transcript_window 
     );
     
     my $variant_iterator = Genome::Variation->create_iterator(
-        where => [ chrom_name => $chromosome_name] 
+        where => [ chrom_name => $chromosome_name,
+        build_id => $self->build->build_id,
+        ] 
     );
     my $variation_window =  Genome::Utility::Window::Variation->create( 
         iterator => $variant_iterator,
@@ -362,15 +382,15 @@ sub _print_reports_for_indel
 
 =head1 Name
 
-Genome::Model::Tools::Annotate::TranscriptVariations
+Genome::Model::Tools::Annotate::TransAndNovel
 
 =head1 Synopsis
 
-Goes through each variant in a file, retrieving annotation information from Genome::Utility::VariantAnnotator.
+Goes through each variant in a file, retrieving annotation information from Genome::Transcript::VariantAnnotator.
 
 =head1 Usage
 
- $success = Genome::Model::Tools::Annotate::TranscriptVariations->execute
+ $success = Genome::Model::Tools::Annotate::TransAndNovel->execute
  (
      chromosome_name => $chromosome, # required
      variant_type => 'snp', # opt, default snp, valid types: snp, indel
@@ -405,7 +425,7 @@ Goes through each variant in a file, retrieving annotation information from Geno
 
 =head1 See Also
 
-B<Genome::Utility::VariantAnnotator>, B<Genome::Model::Tools::Annotate::TranscriptVariationsBatchToLsf>
+B<Genome::Transcript::VariantAnnotator>, B<Genome::Model::Tools::Annotate::TransAndNovel>
 
 =head1 Disclaimer
 

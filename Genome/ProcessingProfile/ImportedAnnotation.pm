@@ -27,10 +27,14 @@ sub stages {
             /);
 }
 
-sub imported_reference_sequence_job_classes {
+sub imported_annotation_job_classes {
     return (qw/
         Genome::Model::Command::Build::ImportedAnnotation::Run
         /);
 }
 
+
+sub imported_annotation_objects {
+    return 1;
+}
 1;

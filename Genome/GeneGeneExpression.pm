@@ -13,8 +13,22 @@ class Genome::GeneGeneExpression {
         expression_id => { is => 'NUMBER' },
     ],
     has => [
-        gene => { is => 'Genome::Gene', id_by => 'gene_id' },
-        expression => { is => 'Genome::GeneExpression', id_by => 'expression_id' },
+        gene => {
+            calculate_from => [qw/ gene_id build_id/],
+            calculate => q|
+                Genome::Gene->get(gene_id => $gene_id, build_id => $build_id);
+            |,
+        },
+        expression => {
+            calculate_from => [qw/ expression_id build_id/],
+            calculate => q|
+                Genome::GeneExpression->get(expression_id => $expression_id, build_id => $build_id);
+            |,
+        },
+        build => {
+            is => "Genome::Model::Build",
+            id_by => 'build_id',
+        },
     ],
     schema_name => 'files',
     data_source => 'Genome::DataSource::GeneGeneExpressions',

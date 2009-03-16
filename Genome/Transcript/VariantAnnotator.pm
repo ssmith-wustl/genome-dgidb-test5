@@ -1,4 +1,4 @@
-package Genome::Utility::VariantAnnotator;
+package Genome::Transcript::VariantAnnotator;
 
 use strict;
 use warnings;
@@ -12,7 +12,7 @@ use Benchmark;
 
 #UR::Context->_light_cache(1); # uh, seems to break things...
 
-class Genome::Utility::VariantAnnotator{
+class Genome::Transcript::VariantAnnotator{
     is => 'UR::Object',
     has => [
         transcript_window => {is => 'Genome::Utility::Window::Transcript'},
@@ -192,6 +192,7 @@ sub _determine_transcripts_to_annotate {
     my ($self, $position) = @_;
 
     my (@transcripts_priority_1, @transcripts_priority_2);
+    $DB::single = 1;
     foreach my $transcript ( $self->transcript_window->scroll($position) )
     {
         if ( grep { $transcript->transcript_status eq $_ } (qw/ known reviewed validated /) )
@@ -269,13 +270,12 @@ sub _transcript_annotation_for_rna
     my $position = $variant->{start};
     my $strand = $transcript->strand;
 
-    my $length = 0;
     return
     (
         strand => $strand,
         c_position => 'NULL',
         trv_type => 'rna',
-        amino_acid_length => 'NULL',
+        amino_acid_length => length( $transcript->protein->amino_acid_seq ),
         amino_acid_change => 'NULL',
     );
 }

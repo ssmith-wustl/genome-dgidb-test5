@@ -14,12 +14,33 @@ class Genome::Gene {
     has => [
         hugo_gene_name => { is => 'String' },
         strand => { is => 'String' },
+        build => {
+                    is => "Genome::Model::Build",
+                    id_by => 'build_id',
+        },
     ],
     has_many => [
-        transcripts => { is => 'Genome::Transcript', reverse_id_by => 'gene' },
-        external_ids => { is => 'Genome::ExternalGeneId', reverse_id_by => 'gene' },
-        gene_expressions => { is => 'Genome::GeneGeneExpression', reverse_id_by => 'gene' },
-        expressions => { is => 'Genome::GeneExpression', via => 'gene_expressions', to => 'expression' },
+        transcripts => { 
+            calculate_from => [qw/ gene_id build_id/],
+            calculate => q|
+                Genome::Transcript->get(gene_id => $gene_id,  build_id => $build_id);
+            |,
+        },
+        external_ids => { 
+            calculate_from => [qw/ gene_id build_id/],
+            calculate => q|
+                Genome::ExternalGeneId->get(gene_id => $gene_id, build_id => $build_id);
+            |,
+        },
+        gene_expressions => { 
+            calculate_from => [qw/ gene_id build_id/],
+            calculate => q|
+                Genome::GeneGeneExpression->get(gene_id => $gene_id, build_id => $build_id);
+            |,
+        },
+        expressions => {
+            is => 'Genome::GeneExpression', via => 'gene_expressions', to => 'expression'
+        },
     ],
     schema_name => 'files',
     data_source => 'Genome::DataSource::Genes',

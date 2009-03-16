@@ -3,7 +3,7 @@ package Genome::DataSource::Transcripts;
 use Genome;
 
 class Genome::DataSource::Transcripts {
-    is => [ 'UR::DataSource::File'],
+    is => [ 'UR::DataSource::FileMux'],
 };
 
 sub delimiter {
@@ -24,6 +24,8 @@ sub column_order {
     )
 }
 
+sub constant_values { qw(build_id) };
+
 sub sort_order {
     return qw(
         chrom_name transcript_start transcript_id
@@ -34,13 +36,17 @@ sub skip_first_line {
     return 0;
 }
 
-sub file_list {
-    return qw( /gscmnt/sata363/info/medseq/annotation_data/transcripts.csv /gscmnt/sata363/info/medseq/annotation_data/transcripts-copy.csv /gscmnt/sata363/info/medseq/annotation_data/transcripts-copy2.csv );
-}
+sub required_for_get { return qw( build_id) }
 
-#sub server {
-#    return '/gscmnt/sata363/info/medseq/annotation_data/transcripts.csv';
-#}
+sub file_resolver {
+    my ($build_id) = @_;
+
+    my $build = Genome::Model::Build::ImportedAnnotation->get($build_id);
+    my $annotation_dir = $build->annotation_data_directory;
+    my $path = "$annotation_dir/transcripts.csv";
+
+    return $path;
+}
 
 1;
 

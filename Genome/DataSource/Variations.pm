@@ -33,14 +33,15 @@ sub skip_first_line {
     return 0;
 }
 
-sub required_for_get { qw( chrom_name ) }
+sub constant_values { qw( build_id ) };
+sub required_for_get { qw( chrom_name build_id) }
 
 sub file_resolver {
-    my($chrom_name) = @_;
+    my($chrom_name, $build_id) = @_;
 
-    $DB::single =1;
-    
-    my $path = '/gscmnt/sata363/info/medseq/annotation_data/variations/variations_' . $chrom_name . ".csv";
+    my $build = Genome::Model::Build::ImportedAnnotation->get($build_id);
+    my $annotation_dir = $build->annotation_data_directory;
+    my $path = "$annotation_dir/variations/variations_" . $chrom_name . ".csv";
     return $path;
 }
 

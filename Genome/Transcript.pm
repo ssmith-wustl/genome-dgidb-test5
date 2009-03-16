@@ -21,12 +21,29 @@ class Genome::Transcript {
         strand => { is => 'VARCHAR', len => 2, is_optional => 1 },
         chrom_name => { is => 'String', len => 10 },
 
-        sub_structures => { is => 'Genome::TranscriptSubStructure', reverse_id_by => 'transcript', is_many => 1},
-        gene => { is => 'Genome::Gene', id_by => 'gene_id' },
-        #ordered_sub_structures => { calculate_perl => q( sort { $a->structure_start <=> $b->structure_start } $self->sub_structures ) },
-        #cds_exons => { is => 'Genome::TranscriptSubStructure', reverse_id_by => 'transcript', where => [structure_type => 'cds_exon'], is_many => 1 },
-
-        protein => { is => 'Genome::Protein', reverse_id_by => 'transcript', is_many => 1 } , #not really is_many
+        sub_structures => { 
+            calculate_from => [qw/ transcript_id build_id/],
+            calculate => q|
+                Genome::TranscriptSubStructure->get(transcript_id => $transcript_id, build_id => $build_id);
+            |,
+        },
+        protein => { 
+            calculate_from => [qw/ transcript_id build_id/],
+            calculate => q|
+                Genome::Protein->get(transcript_id => $transcript_id, build_id => $build_id);
+            |,
+        },
+        gene => {
+            calculate_from => [qw/ gene_id build_id/],
+            calculate => q|
+                Genome::Gene->get(gene_id => $gene_id, build_id => $build_id);
+            |,
+        },
+        build => {
+                    is => "Genome::Model::Build",
+                    id_by => 'build_id',
+                    },
+ 
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::Transcripts',
@@ -39,7 +56,6 @@ class Genome::Transcript {
 #    my $protein = Genome::Protein->get(transcript_id => $self->transcript_id);
 #    return $protein;
 #}
-
 
 sub structure_at_position {
     my ($self, $position) = @_;

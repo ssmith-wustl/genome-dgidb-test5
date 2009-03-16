@@ -18,9 +18,18 @@ class Genome::GeneExpression {
         probe_identifier  => { is => 'String' },
         tech_type => { is => 'String' },
         detection => { is => 'String' },
+        build => {
+                    is => "Genome::Model::Build",
+                    id_by => 'build_id',
+        },
     ],
     has_many => [
-        gene_expressions => { is => 'Genome::GeneGeneExpression', reverse_id_by => 'gene_expression' },
+        gene_expressions => {
+             calculate_from => [qw/ expression_id build_id/],
+             calculate => q|
+                Genome::GeneGeneExpression->get(expression_id => $expression_id, build_id => $build_id);
+            |,
+        },
         genes => { is => 'Genome::Gene', via => 'gene_expressions', to => 'gene' },
     ],
  

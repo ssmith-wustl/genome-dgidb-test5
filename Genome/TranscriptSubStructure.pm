@@ -21,6 +21,11 @@ class Genome::TranscriptSubStructure {
         nucleotide_seq => { is => 'CLOB', is_optional => 1},
 
         transcript => { is => 'Genome::Transcript', id_by => 'transcript_id' },
+        build => {
+                    is => "Genome::Model::Build",
+                    id_by => 'build_id',
+                    },
+ 
     ],
     data_source => 'Genome::DataSource::TranscriptSubStructures',
 };
