@@ -9,7 +9,7 @@ use Data::Dumper 'Dumper';
 use Genome::Model::ReferenceAlignment::Test;
 use Test::More;
 
-sub report {
+sub generator {
     return $_[0]->{_object};
 }
 
@@ -17,8 +17,6 @@ sub base_params_for_test_class {
     my $build = $_[0]->get_mock_model->last_complete_build;
     return (
         build_id => $build->id,
-        #parent_directory => '/gscuser/ebelter/dev/reports',
-        #parent_directory => $build->resolve_reports_directory,
     );
 }
 
@@ -51,16 +49,15 @@ sub test01_generate_report : Tests {
 
     if ( $self->skip_generate ) {
         # Skipping generate...too many methods and data to mock.  This was not tested before
-        ok(1, 'Skip generate');
+        can_ok($self->test_class, '_generate_data');
     }
     else {
-        my $report = $self->report;
-        ok($report->generate_data, 'Generated report');
+        my $report = $self->generator->generate_report;
+        ok($report, 'Generated report');
         #print Dumper($report);
     }
     
-    # Save...maybe?  Gotta change the name, or (re)move after testing, otherwise the
-    #  future tests will get (not create) the report, and not allow data to be generated
+    # Save...maybe?  For comparison?
     # $report->name('Saved '.$report->name);
     # ok($self->report->save, 'Saved report');
 
