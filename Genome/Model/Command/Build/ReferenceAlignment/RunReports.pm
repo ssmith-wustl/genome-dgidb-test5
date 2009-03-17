@@ -60,7 +60,7 @@ sub execute {
   
     ###############################################
     $self->status_message('Starting MapCheck report.');
-    my $MapCheck_report_name = 'Ref Seq Maq';
+    my $MapCheck_report_name = 'RefSeqMaq';
     #model id for previous test:  2733662090
     my $MapCheck_report = Genome::Model::ReferenceAlignment::Report::RefSeqMaq->create(build_id =>$build_id, name=>$MapCheck_report_name, version=>$self->model->read_aligner_name);
     #my $MapCheck_report = Genome::Model::Report::RefSeqMaq->create(build_id =>$build_id, name=>$MapCheck_report_name, version=>$self->model->read_aligner_name);
@@ -68,8 +68,7 @@ sub execute {
     $self->status_message('The accumulated alignments file is: '.$accumulated_alignments_file);
     $MapCheck_report->accumulated_alignments_file($accumulated_alignments_file);
     #$MapCheck_report->generate_report_detail();
-    $MapCheck_report->generate_data();
-    $MapCheck_report->save();
+    $self->build->add_report( $MapCheck_report->generate_report );
     $self->status_message('Finished MapCheck report.');
   
     ###############################################
@@ -105,7 +104,7 @@ sub execute {
     
     ###############################################
     $self->status_message('Starting GoldSnp report.');
-    my $name = 'Gold Snp';
+    my $name = 'GoldSnp';
     $DB::single=1; 
     
     #my $report = Genome::Model::Report::GoldSnp->create(build_id =>$build_id, name=>$name);
@@ -118,8 +117,7 @@ sub execute {
 
     $report->snp_file($snp_file); 
     #$report->generate_report_detail;
-    $report->generate_data;
-    $report->save;
+    $self->build->add_report( $report->generate_report );
     $self->status_message('Finished GoldSnp report. '); 
     #Indelpe##############################################
     
@@ -147,7 +145,7 @@ sub execute {
     my ($tmp_file_handle, $tmp_file_path) = File::Temp::tempfile( DIR => "/tmp");
     $self->status_message("DbSnp temp file is: ".$tmp_file_path);
     
-    my $DbSnp_report_name = 'Db Snp';
+    my $DbSnp_report_name = 'DbSnp';
     #my $DbSnp_report = Genome::Model::Report::DbSnp->create(build_id =>$build_id, name=>$DbSnp_report_name);
     my $DbSnp_report = Genome::Model::ReferenceAlignment::Report::DbSnp->create(build_id =>$build_id, name=>$DbSnp_report_name);
 
@@ -157,13 +155,13 @@ sub execute {
     #$DbSnp_report->override_model_snp_file($tmp_file_path);
     $DbSnp_report->override_model_snp_file($snp_file);
     #$DbSnp_report->generate_report_detail;
-    $DbSnp_report->generate_data;
-    $DbSnp_report->save;
+    $self->build->add_report( $DbSnp_report->generate_report );
     $self->status_message('Finished DbSnp report.');
    
     ############################################### 
         my $success = 1;
  
+        
     if ( $success )
     { 
         $self->event_status("Succeeded");
