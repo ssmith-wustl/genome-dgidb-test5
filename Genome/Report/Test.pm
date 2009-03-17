@@ -12,6 +12,10 @@ sub report {
     return $_[0]->{_object};
 }
 
+sub reports_dir {
+    return $_[0]->dir.'/reports';
+}
+
 sub test_class {
     'Genome::Report';
 }
@@ -19,71 +23,60 @@ sub test_class {
 sub params_for_test_class {
     return (
         name => 'Test Report',
-        parent_directory => $_[0]->tmp_dir,
+        data => $_[0]->report_data,
     );
 }
 
 sub report_data {
-    return { 
+    return {
+        generator => 'Genome::Report::Generator',
+        generator_params => {
+            who => 'employees',
+            what => [qw/ name email /],
+        },
+        date => '2009-03-16 15:13:20',
         description => 'html test report',
-        html => '<html><title>Report</title></html>',
-        csv => "c1,c2\nr1,r2\n",
+        html => '<html><title>Report</title><h1>GC Employees</h1><br><table><th>Name</th><th>Email</th><tr><td>Rick Wilson</td><td>rwilson@genome.wustl.edu</td></tr></table></html>',
+        csv => "Name,Email\nRick Wilson,rwilson\@genome.wustl.edu\n",
     };
 }
 
-sub test01_save_report : Test(3) {
+sub test01_save_report : Test(4) {
     my $self = shift;
 
-    # Save w/o data - fails
-    ok(!$self->report->save, 'Failed as expected - save report w/o data');
-    # Set data
-    ok($self->report->set_data( $self->report_data ), 'Set data');
-    # Save for real
-    ok($self->report->save, 'Saved report');
+    # Save - fails
+    ok(!$self->report->save, 'Failed as expected - no directory');
+    ok(!$self->report->save('invalid_directory'), 'Failed as expected - invalid directory');
+
+    # Save
+    ok($self->report->save( $self->tmp_dir ), 'Saved report to tmp dir');
+    
+    # Resave - fails
+    ok(!$self->report->save( $self->tmp_dir ), 'Failed as expected - resave report');
     
     return 1;
 }
 
-sub test02_get_from_cache : Test(3) {
+sub test03_create_report_from_directories : Test(9) {
     my $self = shift;
-    
-    my $report = $self->test_class->get(
-        $self->params_for_test_class,
-    );
-    ok($report, 'Got report from cache');
-    is(scalar(Genome::Report->all_objects_loaded), 1, 'Only one report in cache');
-    is_deeply(
-        $report->get_data,
-        $self->report->get_data,
-        'Report data matches',
-    );
-
-    return 1;
-}
-
-sub test03_get_report : Test(5) {
-    my $self = shift;
-    
-    # Get 
-    my $report = $self->test_class->get(
-        name => 'Test Report 1',
-        parent_directory => $self->dir,
-    );
-    ok($report, 'Got report using get');
-    is($report->name, 'Test Report 1', 'Report has correct name');
-    $report->delete; # remove from cache
     
     # Get it w/ parent dir
-    my @reports = $self->test_class->get_reports_in_parent_directory($self->dir);
-    @reports = $self->test_class->get_reports_in_parent_directory($self->dir);
-    is(@reports, 2, 'Got two reports using get_reports_in_parent_directory');
+    my @reports = $self->test_class->create_reports_from_parent_directory( $self->reports_dir );
+    is(@reports, 2, 'Got two reports using create_reports_from_parent_directory');
     is($reports[0]->name, 'Test Report 1', 'Report 1 has correct name');
     is($reports[1]->name, 'Test Report 2', 'Report 2 has correct name');
 
+    # Check data
+    my $data = $self->report_data;
+    for my $type (qw/ generator generator_params description html csv xml /) {
+        my $method = 'get_'.$type;
+        is_deeply($reports[0]->$method, $data->{$type}, $reports[0]->name." $type matches");
+    }
+
     return 1;
 }
 
-sub test04_other_get_and_create_fails : Tests {
+sub test04_other_get_and_create_fails {# : Tests {
     my $self = shift;
     
     my $valid_name = 'Test Report';
@@ -102,19 +95,54 @@ sub test04_other_get_and_create_fails : Tests {
         'Failed as expected - tried to get report w/ data',
     );
 
+
     return 1;
 }
 
 #######################################################################
 
-package Genome::Report::TestClass;
+package Genome::Report::GeneratorTest;
 
 use strict;
 use warnings;
 
-class Genome::Report::TestClass {
-    is => 'Genome::Report',
-};
+use base 'Genome::Utility::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub generator { 
+    return $_[0]->{_object};
+}
+
+sub test_class {
+    return 'Genome::Report::Generator::ForTesting';
+}
+
+sub params_for_test_class {
+    return (
+        name => 'Generator Tester',
+    );
+}
+
+sub test001_use : Test(1) { # overwrote cuz testing class using a subclass 
+    my $self = shift;
+
+    use_ok('Genome::Report::Generator')
+        or die;
+
+    return 1;
+}
+
+sub test01_generate : Test(2) {
+    my $self = shift;
+
+    my $report = $self->generator->generate_report;
+    ok($report, 'Generate report');
+    isa_ok($report, 'Genome::Report');
+
+    return 1;
+}
 
 #######################################################################
 
