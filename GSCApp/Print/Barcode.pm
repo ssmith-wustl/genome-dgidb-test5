@@ -1404,7 +1404,7 @@ sub spool
 
     # close the file handles
     $bc_fh->close;
-    $printer->close;
+    #$printer->close;
 
     # if we specified a printer, send it through lpr
     if (exists($opts{printer}) && $opts{printer})
@@ -1427,6 +1427,7 @@ sub spool
         }
     }
 
+    $printer->close;
     return 1;
 }
 
