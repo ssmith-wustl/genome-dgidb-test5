@@ -9,7 +9,7 @@ our @ISA = qw(GSCApp::Print::Barcode::Interface);
 
 =pod
 
-=description
+=head1 description
 
 Interface for the Intermec barcode printer.
 

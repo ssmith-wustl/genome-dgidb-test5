@@ -9,7 +9,7 @@ our @ISA = qw(GSCApp::Print::Barcode);
 
 =pod
 
-=description
+=head1 description
 
 Interface for the Zebra barcode printer.
 

@@ -95,7 +95,7 @@ EOL
 
 =pod
 
-=description
+=head1 description
 
 Interface for the Zebra barcode printer.
 
