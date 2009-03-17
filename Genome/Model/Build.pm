@@ -159,10 +159,22 @@ sub resolve_data_directory {
     return $data_directory . '/build' . $self->build_id;
 }
 
+#< Reports >#
 sub resolve_reports_directory
 {
     my $self = shift;
     return  $self->data_directory . '/reports/';
+}
+
+sub add_report {
+    my ($self, $report) = @_;
+
+    my $directory = $self->resolve_reports_directory;
+
+    Genome::Utility::FileSystem->create_directory($directory)
+        or return;
+
+    return $report->save($directory);
 }
 
 sub available_reports {
