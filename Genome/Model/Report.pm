@@ -8,7 +8,7 @@ use Genome;
 use Data::Dumper 'Dumper';
 
 class Genome::Model::Report {
-    is => 'Genome::Report',
+    is => 'Genome::Report::Generator',
     has => [
     build => {
         is => 'Genome::Model::Build', 
@@ -33,7 +33,7 @@ class Genome::Model::Report {
     ],
 };
 
-sub get_or_create {
+sub create {
     my ($class, %params) = @_;
 
     unless ( $params{build_id} ) {
@@ -41,19 +41,7 @@ sub get_or_create {
         return;
     }
 
-    unless ( $params{parent_directory} ) {
-        my $build = Genome::Model::Build->get(build_id => $params{build_id});
-        unless ( $build) {
-            $class->error_message("Can't get build for id: ".$params{build_id});
-            return;
-        }
-        my $reports_directory = $build->resolve_reports_directory;
-        Genome::Utility::FileSystem->create_directory($reports_directory)
-            or return;
-        $params{parent_directory} =  $reports_directory;
-    }
-
-    my $self = $class->SUPER::get_or_create(%params)
+    my $self = $class->SUPER::create(%params)
         or return;
 
     unless ( $self->build ) {
