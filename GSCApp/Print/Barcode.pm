@@ -1427,7 +1427,7 @@ sub spool
         }
     }
 
-    $printer->close;
+    #$printer->close;
     return 1;
 }
 
