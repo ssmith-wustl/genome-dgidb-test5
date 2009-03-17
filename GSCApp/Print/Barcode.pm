@@ -1303,24 +1303,10 @@ sub spool
     {
         # printer should be configured on host
         $self->debug_message("printer set: $opts{printer}", 4);
-
-        # if printing through lpr, first we'll write the data to
-        # a temporary file, then use lpr to print that file
-        my $tmpdir = ($^O eq 'MSWin32' || $^O eq 'cygwin') ? '/temp' : $ENV{'TMPDIR'} || '/tmp';
-        $printer = File::Temp->new
-        (
-            DIR => $tmpdir,
-            UNLINK => 1,
-            TEMPLATE => App::Name->prog_name . '-XXXX'
-        );
-        if (defined($printer))
-        {
-            $self->debug_message("opened tempfile $printer for lpr", 4);
-        }
-        else
-        {
-            $self->error_message("failed to open tempfile for lpr: $!");
-            return;
+        if($opts{printer} eq 'barcode10') {
+          $printer = new GSCApp::Print::Barcode::Intermec(printer_name => $opts{printer}, printer_model => 'EasyCoder 3240');      
+        } else {
+          $printer = new GSCApp::Print::Barcode::Zebra(printer_name => $opts{printer});
         }
 
         # set delay between barcodes
@@ -1410,85 +1396,8 @@ sub spool
             next;
         }
 
-        # print logo if we are printing an id
-        if ($type eq 'id')
-        {
-            $printer->print($barcode_id_logo);
-        }
-
-        # initialize the printing
-        $printer->print("^XA\n");
-
-        # send data to the printer
-        if ($type eq 'barcode')
-        {
-            my ($barcode, @text) = @fields;
-
-            # determine font size
-            my ($f, $a);
-            if (exists($opts{font}) && $opts{font} eq 'large')
-            {
-                $f = '2';
-                $a = 'PN25,14';
-            }
-            else
-            {
-                $f = '4';
-                $a = '028,17';
-            }
-
-            # send the instructions to the printer
-            $printer->print("^LH15,25\n");
-            $printer->print("^FO0,0^BCN,40,N,N,N,^FD$barcode^FS\n");
-            $printer->print("^FO2${f}0,2^A$a^FD$text[0]^FS\n");
-            $printer->print("^FO2${f}0,22^A$a^FD$text[1]^FS\n");
-
-            $self->debug_message("printed barcode=$barcode,label=$text[0],"
-                                 . "$text[1]", 5);
-        }
-        elsif ($type eq 'label')
-        {
-            $printer->print("^LH35,25\n");
-            $printer->print("^FO0,0^A032,25^FD$fields[0]^FS\n");
-
-            $self->debug_message("printed label: $fields[0]", 5);
-        }
-        elsif ($type eq 'label6')
-        {
-            $printer->print("^LH15,30\n");
-            $printer->print("^FO10,0^A044,34^FD$fields[0]^FS\n");
-            $printer->print("^FO50,50^A040,30^FDa1 = $fields[1]^FS\n");
-            $printer->print("^FO300,50^A040,30^FDa2 = $fields[2]^FS\n");
-            $printer->print("^FO50,100^A040,30^FDb1 = $fields[3]^FS\n");
-            $printer->print("^FO300,100^A040,30^FDb2 = $fields[4]^FS\n");
-            $printer->print("^FO475,150^A040,30^FD$fields[5]^FS\n");
-
-            $self->debug_message("printed label6: $line", 5);
-        }
-        elsif ($type eq 'id')
-        {
-            my ($barcode, $first, $last, $userid) = @fields;
-            my $name = "$first $last";
-            my $start = 275 - (length($name) * 10);
-
-            $printer->print("^FO150,44^XGGSC,1,2^FS\n");
-            $printer->print("^FO25,44^GB75,220,100^FS\n");
-            $printer->print("^FO25,50^FR^XGDNA,1,3^FS\n");
-            $printer->print("^LH5,40^FO175,100^BCN,150,N,N,N,^FD$barcode^FS\n");
-            $printer->print("^FO$start,275^A065,45^FD$name^FS\n");
-            $printer->print("^FO275,320^A065,45^FD$userid^FS\n");
-
-            $self->debug_message("printed id: $line", 5);
-        }
-        else
-        {
-            $self->error_message("thought we had a valid type but do not: "
-                                 . $type);
-        }
-
-        # close out the label
-        $printer->print("^XZ\n");
-
+        $printer->print(%opts, data => \@fields);
+        
         # do not feed too much too fast
         Time::HiRes::usleep($delay) if $delay;
     }
@@ -1504,7 +1413,7 @@ sub spool
         (
             protocol => 'lpr',
             printer => $opts{'printer'},
-            path => "$printer"
+            path => $printer->handle
         );
         if ($rv)
         {
