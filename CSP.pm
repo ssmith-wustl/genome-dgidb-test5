@@ -1272,6 +1272,7 @@ sub confirm_scheduled_pse {
     $log_fh->autoflush(1);
     $class->log_fh($log_fh);
     $class->setup_logging_callbacks;
+    $pse->status_message( "script started at $^T : " . localtime($^T) );
 
 
     # write dump-sql to the log when monitoring is turned-on
@@ -1613,9 +1614,15 @@ sub confirm_scheduled_pse {
 
     # log elapsed time
     my $elapsed_time = Time::HiRes::time() - $start_time;
-    App->status_message(sprintf("elapsed running time: %.2f s", $elapsed_time));
+    App->status_message(
+        sprintf( "elapsed running time: %.2f s", $elapsed_time ) );
+    my $script_run_time = Time::HiRes::time() - $^T;
+    App->status_message(
+        sprintf( "script running time: %.2f s", $script_run_time ) );
+
 
     # move the log file to the appropriate directory
+    App->status_message("now closing log file to rename, gzip, etc");
     my $destfile = $destdir->file( $logfile->basename );
     $destdir->mkpath( 0, 042775 );
     chmod( 042775, "$destdir" );
