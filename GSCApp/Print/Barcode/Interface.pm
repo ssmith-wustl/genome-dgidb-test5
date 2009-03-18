@@ -55,7 +55,15 @@ RETURNS: boolean
 =cut
 
 sub setup {
-  carp 'must be implemented by subclass.';
+  my $self = shift;
+  my %opts = @_;
+  my $type = $opts{type};
+  if(my $ref = $self->can('setup_' . $type)) {
+    return $self->$ref(@_);
+  }
+  $self->error_message("thought we had a valid type but do not: "
+                                 . $type);
+  return;
 }
 
 =pod
