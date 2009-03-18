@@ -1,4 +1,4 @@
-package Genome::Model::CombineVariants::AnnotateVariations;
+package Genome::Model::CombineVariants::AnnotateVariants;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Genome;
 use Data::Dumper;
 use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 
-class Genome::Model::CombineVariants::AnnotateVariations {
+class Genome::Model::CombineVariants::AnnotateVariants{
     is => ['Command'],
     has => [
     ],
@@ -16,9 +16,7 @@ class Genome::Model::CombineVariants::AnnotateVariations {
         input_file => {
             is => 'IO::File',
             doc => 'The input file handle'
-        }
-    ],
-    has_input => [
+        },
         input_file_name => {
             is => 'String',
             doc => 'The name of the input file.'
@@ -28,12 +26,19 @@ class Genome::Model::CombineVariants::AnnotateVariations {
             doc => 'The name of the output file.'
         },
     ],
-    has_output => [
-        output_file => { 
-            is => 'String', 
-            is_optional => 1, 
-            doc => 'tab delimited output representing the annotated file' 
-        }
+    has_input => [
+        chromosome => {
+           is  => 'String', 
+           doc => 'chromosome to annotate',
+       },
+       quality => {
+           is => 'String',
+           doc => 'hq or lq',
+       },
+       directory => {
+           is => 'String',
+           doc => 'latest build directory',
+       },
     ],
 };
 
@@ -49,11 +54,18 @@ sub create {
 sub execute {
     my ($self) = @_;
 
-    $self->output_file($self->output_file_name);
+    my $dir = $self->directory;
+    my $chromosome = $self->chromosome;
+    my $quality = $self->quality;
+
+    my $input_file = "$dir/$quality" . "_genotype_$chromosome.tsv";
+    my $output_file = "$dir/$quality" . "_annotated_genotype_$chromosome.tsv";
+    $self->input_file_name($input_file);
+    $self->output_file_name($output_file);
 
     my $annotator;
     my $db_chrom;
-    my $post_annotation_file = $self->output_file;
+    my $post_annotation_file = $self->output_file_name;
     my $ofh = IO::File->new("> $post_annotation_file");
     unless ($ofh){
         $self->error_message("couldn't get output file handle for $post_annotation_file");
@@ -214,9 +226,17 @@ sub next_genotype_in_range{
 sub _get_window{
     my $self = shift;
     my $chromosome = shift;
-    my $iter = Genome::Transcript->create_iterator(where => [ chrom_name => $chromosome] );
+    
+    ############
+    #TODO don't hardcode this, maybe override create iterator in Genome::Transcript
+    #this build id is for the v0 build of ImportedAnnotation
+    my $build_id = 96047134;
+    #TODO remove when fixed
+    ############
+    
+    my $iter = Genome::Transcript->create_iterator(where => [ chrom_name => $chromosome, build_id=> $build_id ] );
     my $window =  Genome::Utility::Window::Transcript->create ( iterator => $iter, range => 50000);
-    return $window
+    return $window;
 }
 
 
@@ -226,7 +246,6 @@ sub _get_annotator {
 
     my $annotator = Genome::Transcript::VariantAnnotator->create(
         transcript_window => $transcript_window,
-        benchmark => 1,
     );
     die unless $annotator;
 

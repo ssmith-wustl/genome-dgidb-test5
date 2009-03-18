@@ -1120,23 +1120,52 @@ sub annotate_variants {
         ## keep the ur stuff in this process, speed optimization
 #        $Workflow::Simple::fork_ur_server = 0;
         ## dont do any tracking
-        $Workflow::Simple::store_db = 0;
-        
-        my $op = Workflow::Operation->create(
-            name => 'annotate variations',
-            operation_type => Workflow::OperationType::Command->get('Genome::Model::CombineVariants::AnnotateVariations')
+#        $Workflow::Simple::store_db = 0;
+       
+        my $m = Workflow::Model->create(
+            name => 'annotate variants wrapper',
+            input_properties => [qw/quality chromosome directory/],
+            output_properties => [qw/result/]
+        );
+
+        $m->parallel_by('quality');
+
+        my $op = $m->add_operation(
+            name => 'annotate variants',
+            operation_type => Workflow::OperationType::Command->get('Genome::Model::CombineVariants::AnnotateVariants')
         );
         
-        $op->parallel_by('input_file');
+        $op->parallel_by('chromosome');
+        
+        foreach my $input_property (@{ $m->operation_type->input_properties }) {
+            $m->add_link(
+                left_operation => $m->get_input_connector,
+                left_property => $input_property,
+                right_operation => $op,
+                right_property => $input_property,
+            );
+        }
+        
+        $m->add_link(
+            left_operation => $op,
+            left_property => 'result',
+            right_operation => $m->get_output_connector,
+            right_property => 'result',
+        );
+
 
         my $output = Workflow::Simple::run_workflow_lsf(
-            $op,
-            'input_file_name' => \@input_files,
-            'output_file_name' => \@output_files,
+            $m,
+            'chromosome' => [1..22,'X','Y'],
+            quality => ['hq','lq'],
+            directory => $self->latest_build_directory,
         );
  
         unless ($output) {
-            $self->error_message("Annotate variations failed in workflow");
+            $self->error_message("Annotate variants failed in workflow");
+            foreach my $error (@Workflow::Simple::ERROR) {
+                print STDERR Data::Dumper->new([$error],['error'])->Dump;
+            }
             die;
         }
         
@@ -1144,7 +1173,7 @@ sub annotate_variants {
 
         # Create parsers for each file, append to running lists
         for my $index (0..$#input_files) {
-            my $annotate_command = Genome::Model::CombineVariants::AnnotateVariations->create(
+            my $annotate_command = Genome::Model::CombineVariants::AnnotateVariants->create(
                 input_file_name => $input_files[$index],
                 output_file_name => $output_files[$index],
             );
@@ -1152,7 +1181,7 @@ sub annotate_variants {
             $annotate_command->execute;
 
             unless ($annotate_command->result) {
-                $self->error_message("Annotate variations failed on input file: " . $input_files[$index]);
+                $self->error_message("Annotate variants failed on input file: " . $input_files[$index]);
                 die;
             }
         }
