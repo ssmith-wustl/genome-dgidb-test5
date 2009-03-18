@@ -272,6 +272,8 @@ sub print_contig_ends
 
     my $fasta_file = 'AutoJoin_CM_fasta';
 
+    unlink $fasta_file if -s $fasta_file;
+
     my $fh = IO::File->new(">> $fasta_file");
 
     $self->error_message("Can not create file handle for cross_match fasta") and
