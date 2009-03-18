@@ -135,6 +135,8 @@ sub new {
 
 Setup the printer for printing barcodes.
 
+Overriden here to return set the samething every call.
+
 PARAMS:
 RETURNS: boolean
 
@@ -145,63 +147,6 @@ sub setup {
   $self->handle->print("^XA\n");
   
  return 1;
-}
-
-=pod
-
-=item handle
-
-Printer handle.
-
-PARAMS:
-RETURNS: $printer_handle
-
-=cut
-
-sub handle {
-  my $self = shift;
-  unless($self->{handle}) {
-    my $tmpdir = ($^O eq 'MSWin32' || $^O eq 'cygwin') ? '/temp' : $ENV{'TMPDIR'} || '/tmp';
-    $self->{handle} = File::Temp->new
-    (
-        DIR => $tmpdir,
-        UNLINK => 1,
-        TEMPLATE => App::Name->prog_name . '-XXXX'
-    );
-    if (defined($self->{handle}))
-    {
-        $self->debug_message("opened tempfile $self->{handle} for lpr", 4);
-    }
-    else
-    {
-        $self->error_message("failed to open tempfile for lpr: $!");
-        return;
-    }
-  }
-  return $self->{handle};
-}
-
-=pod
-
-=item print
-
-Print to the printer.
-
-PARAMS: $type, @data
-RETURNS: boolean
-
-=cut
-
-sub print {
-  my $self = shift;
-  my %opts = @_;
-  my $type = $opts{type};
-  if(my $ref = $self->can('print_' . $type)) {
-    return $self->$ref(@_);
-  }
-  $self->error_message("thought we had a valid type but do not: "
-                                 . $type);
-   return;
 }
 
 =pod
@@ -225,7 +170,7 @@ sub print_barcode {
                       ('2', 'PN25,14') : 
                       ('4', '028,17');
 
-  $self->setup();
+  $self->setup(@_);
   # send the instructions to the printer
   $self->handle->print("^LH15,25\n");
   $self->handle->print("^FO0,0^BCN,40,N,N,N,^FD$barcode^FS\n");
@@ -255,7 +200,7 @@ sub print_id {
   my $type = $opts{type};
   # determine font size
   $self->handle->print($BARCODE_ID_LOGO);
-  $self->setup();
+  $self->setup(@_);
   my ($barcode, $first, $last, $userid) = @{$opts{data}};
   my $name = "$first $last";
   my $start = 275 - (length($name) * 10);
@@ -288,7 +233,7 @@ sub print_label {
   my %opts = @_;
   my $type = $opts{type};
   my @fields = @{$opts{data}};
-  $self->setup();
+  $self->setup(@_);
   $self->handle->print("^LH35,25\n");
   $self->handle->print("^FO0,0^A032,25^FD$fields[0]^FS\n");
   $self->debug_message("printed label: $fields[0]", 5);
@@ -312,7 +257,7 @@ sub print_label6 {
   my %opts = @_;
   my $type = $opts{type};
   my @fields = @{$opts{data}};
-  $self->setup();
+  $self->setup(@_);
   $self->handle->print("^LH15,30\n");
   $self->handle->print("^FO10,0^A044,34^FD$fields[0]^FS\n");
   $self->handle->print("^FO50,50^A040,30^FDa1 = $fields[1]^FS\n");
