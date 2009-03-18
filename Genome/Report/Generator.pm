@@ -103,5 +103,73 @@ sub _generate_data {
 
 1;
 
+=pod
+
+=head1 Name
+
+Genome::Report::Generator
+
+=head1 Synopsis
+
+Base class for report generators.  Use this class as a base for yours...then implement a '_generate_data' method that returns a hashref.
+
+=head1 Usage
+
+ my $generator = Genome::Report::Generator->create(
+    name => 'Happy', # required
+    ..other params...
+ );
+
+ my $report = $generator->generate_report
+    or die;
+ 
+ $report->save('some_directory')
+    or die;
+
+=head1 Public Methods
+
+=head2 generate_report
+
+ my $report = $generator->generate_report
+    or die;
+
+=over
+
+=item I<Synopsis>   Generates data and creates a Genome::Report
+
+=item I<Arguments>  none
+
+=item I<Returns>    Genome::Report
+
+=back
+
+=head1 Private Methods Implemented in Subclasses
+
+=head2 _generate_data
+
+=over
+
+=item I<Synopsis>   Generates data and returns a hashref containing keys description, html (opt) and csv (opt)
+
+=item I<Arguments>  none
+
+=item I<Returns>    hashref 
+
+=back
+
+=head1 See Also
+
+=head1 Disclaimer
+
+Copyright (C) 2005 - 2008 Washington University Genome Sequencing Center
+
+This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+=head1 Author(s)
+
+B<Eddie Belter> I<ebelter@watson.wustl.edu>
+
+=cut
+
 #$HeadURL$
 #$Id$
