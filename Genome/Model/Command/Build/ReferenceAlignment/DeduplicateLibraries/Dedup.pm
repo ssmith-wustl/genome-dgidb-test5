@@ -254,7 +254,7 @@ sub execute {
 			    lib_tag => $library,
 		);
 		my $map_to_bam_rv =  $map_to_bam->execute;
-		unless ($map_to_bam_rv == 0) {
+		unless ($map_to_bam_rv == 1) {
 			$self->error_message("MapToBam failed for library: $library with return value: $map_to_bam_rv");
 		}
 		$now = UR::Time->now;
