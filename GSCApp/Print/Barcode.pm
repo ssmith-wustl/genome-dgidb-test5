@@ -1396,7 +1396,7 @@ sub spool
             next;
         }
 
-        $printer->print(%opts, data => \@fields);
+        $printer->print(%opts, type => $type, data => \@fields);
         
         # do not feed too much too fast
         Time::HiRes::usleep($delay) if $delay;
@@ -1405,7 +1405,6 @@ sub spool
     # close the file handles
     $bc_fh->close;
     $printer->close;
-
     # if we specified a printer, send it through lpr
     if (exists($opts{printer}) && $opts{printer})
     {
