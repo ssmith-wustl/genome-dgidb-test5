@@ -40,7 +40,6 @@ EOS
 sub execute {
     my $self = shift;
     my $now = UR::Time->now;
-    $DB::single=1;
     $self->parallel_switch(1);
     $self->status_message("Running in PARALLEL.") if ($self->parallel_switch eq '1');
     $self->status_message("Running in SERIAL.") if ($self->parallel_switch ne '1');
@@ -151,13 +150,129 @@ sub execute {
                     mapsplit_cmd => $self->proper_mapsplit_pathname('read_aligner_name'),
                   );
        
-	#$self->_trap_messages($rmdup);
 	#execute the tool
 	
 	$rmdup->execute;
 
    }
+ 
+   #merge those Bam files...BAM!!!
+   $now = UR::Time->now;
+   $self->status_message(">>> Beginning Bam merge at $now.");
+   my $bam_merge_tool = "/gscuser/dlarson/src/samtools/tags/samtools-0.1.2/samtools merge";
+   my $bam_index_tool = "/gscuser/dlarson/src/samtools/tags/samtools-0.1.2/samtools index";
+   my $bam_merged_output_file = $maplist_dir."/".$self->model->subject_name."_merged_rmdup.bam";
+   my $bam_non_merged_output_file = $maplist_dir."/".$self->model->subject_name."_rmdup.bam";
+   my $bam_final;
 
+ 
+   if (-s $bam_merged_output_file )  {
+   	$self->error_message("The bam file: $bam_merged_output_file already exists.  Skipping bam processing.  Please remove this file and rerun to generate new bam files.");
+   } if (-s $bam_non_merged_output_file )  {
+   	$self->error_message("The bam file: $bam_non_merged_output_file already exists.  Skipping bam processing.  Please remove this file and rerun to generate new bam files.");
+   }  else {
+ 
+   	   #get the bam files from the alignments directory
+   	   my @bam_files = <$maplist_dir/*.bam>;
+
+	   #remove previously merged/rmdup bam files from the list of files to merge... 
+	   my $i=0;
+	   for my $each_bam (@bam_files) {
+		#if the bam file name contains the string '_rmdup.bam', remove it from the list of files to merge
+		my $substring_index = index($each_bam, "_rmdup.bam");
+		unless ($substring_index == -1) {
+			$self->status_message($bam_files[$i]. " will not be merged.");
+			delete $bam_files[$i];
+		}		
+		$i++;
+	   }
+
+	   if (scalar(@bam_files) == 0 ) {
+		$self->error_message("No bam files have been found at: $maplist_dir");
+	   } elsif (scalar(@bam_files) == 1) {
+		my $single_file = shift(@bam_files);
+		$self->status_message("Only one bam file has been found at: $maplist_dir. Not merging, only renaming.");
+		my $rename_cmd = "mv ".$single_file." ".$bam_non_merged_output_file;
+		$self->status_message("Bam rename commmand: $rename_cmd");
+		my $bam_rename_rv = system($rename_cmd);
+		unless ($bam_rename_rv==0) {
+			$self->error_message("Bam file rename error!  Return value: $bam_rename_rv");
+		} else {
+			#renaming success
+			$bam_final = $bam_non_merged_output_file; 
+		} 
+	   } else {
+		$self->status_message("Multiple Bam files found.  Bam files to merge: ".join(",",@bam_files) );
+		my $bam_merge_cmd = "$bam_merge_tool $bam_merged_output_file ".join(" ",@bam_files); 
+		$self->status_message("Bam merge command: $bam_merge_cmd");
+		my $bam_merge_rv = system($bam_merge_cmd);
+		$self->status_message("Bam merge return value: $bam_merge_rv");
+		unless ($bam_merge_rv == 0) {
+			$self->error_message("Bam merge error!  Return value: $bam_merge_rv");
+		} else {
+			#merging success
+			$bam_final = $bam_merged_output_file;
+		}
+	   }
+
+	   my $bam_index_rv;
+	   if (defined $bam_final) {
+		$self->status_message("Indexing bam file: $bam_final");
+		my $bam_index_cmd = $bam_index_tool ." ". $bam_final;
+		$bam_index_rv = system($bam_index_cmd);
+		unless ($bam_index_rv == 0) {
+			$self->error_message("Bam index error!  Return value: $bam_index_rv");
+		} else {
+			#indexing success
+			$self->status_message("Bam indexed successfully.");
+		}
+	   }  else {
+		#no final file defined, something went wrong	
+		$self->error_message("Bam index error!  Return value: $bam_index_rv");
+	   }
+
+	   $now = UR::Time->now;
+	   $self->status_message("<<< Completing Bam merge at $now.");
+
+	   #remove intermediate files
+	   $now = UR::Time->now;
+	   $self->status_message(">>> Removing intermediate files at $now");
+	   
+	   #remove the library bam files and indicies
+	  
+	   #remove maps 
+	   my $glob_expr = $maplist_dir."/*.map";
+	   my @lib_map_files = glob($glob_expr);
+	  
+	   for my $each_lib_map_file (@lib_map_files) {
+		my $rm_map_cmd = "unlink $each_lib_map_file";
+		$self->status_message("Executing remove command: $rm_map_cmd");
+		my $rm_map_rv = system("$rm_map_cmd");
+		unless ($rm_map_rv == 0) {
+			$self->error_message("There was a problem with the map remove command: $rm_map_rv");
+		} 
+	   } 
+	   
+	   #remove bam files 
+	   for my $each_bam_file (@bam_files) {
+		my $rm_cmd = "unlink $each_bam_file";
+		$self->status_message("Executing remove command: $rm_cmd");
+		my $rm_rv1 = system("$rm_cmd");
+		my $rm_rv2 = system("$rm_cmd".".bai"); #remove each index as well
+		unless ($rm_rv1 == 0) {
+			$self->error_message("There was a problem with the bam remove command: $rm_rv1");
+		}  
+		unless ($rm_rv2 == 0) {
+			$self->error_message("There was a problem with the bam index remove command: $rm_rv2");
+		}
+	   } 
+
+      } #end else for skipping Bam process
+
+   $now = UR::Time->now;
+   $self->status_message("<<< Completed removing intermediate files at $now");
+
+   #######################################
    #starting mixed map merge of all maps 
    $now = UR::Time->now;
    $self->status_message(">>> Beginning mapmerge at $now .");
@@ -231,24 +346,39 @@ sub execute {
   #my @status_messages = $rmdup->status_messages();
   #$self->status_message("Messages: ".join("\n",@status_messages) );
 
+#return verify_successful_completion();
 return 1;
 
 }
 
-sub _trap_messages {
-    my $self = shift;
-    my $obj = shift;
-
-    $obj->dump_error_messages($self->{_messages});
-    $obj->dump_warning_messages($self->{_messages});
-    $obj->dump_status_messages($self->{_messages});
-    $obj->queue_error_messages(0);
-    $obj->queue_warning_messages(0);
-    $obj->queue_status_messages(0);
-}
 
 sub verify_successful_completion {
-	return 1;
+
+    my $self = shift;
+
+    my $return_value = 1;
+    my $build = $self->build;
+
+    if ( defined($build) ) {
+	    my $maplist_dir = $self->build->accumulated_alignments_directory;
+	    my $mixed_library_dir = $maplist_dir."/mixed_library_submaps";
+
+	    unless (-d $mixed_library_dir) {
+		$self->error_message("Can't verify successful completeion of Deduplication step.  Mixed library submap directory does not exist:  $mixed_library_dir");	  	
+		return 0;
+	    } else {
+		my @submap_files = glob("$maplist_dir/mixed_library_submaps");
+		unless ( scalar(@submap_files) > 0 ) { 
+			$self->error_message("Can't verify successful completion of Deduplication step.  There should be at least 1 submap in the $maplist_dir/mixed_library_submaps directory.");	  	
+			$self->error_message("$maplist_dir/mixed_library_submaps directory contents:");
+			return 0; 
+		}
+	    }
+    } else {
+	$self->error_message("Can't verify successful completion of Deduplication step. Build is undefined.");
+   	return 0;	
+    }
+    return $return_value;
 }
 
 
