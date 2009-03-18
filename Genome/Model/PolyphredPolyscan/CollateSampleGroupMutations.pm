@@ -67,8 +67,8 @@ sub execute {
 
     # Create parsers for each file, append to running lists
     for my $file (@input_files) {
-        #my ($cluster_name, $chromosome, $begin_position, $end_position) = $file =~ /\/(([^_]+)_(\d+)_(\d+))\.poly(scan|phred)\.(low|high)$/;
-        my ($cluster_name, $chromosome, $begin_position, $end_position) = $file =~ /\/(([^_]+)_(\d+)_(\d+))\.evaluate_sequence_variation/;
+        #my ($cluster_name, $chromosome, $begin_position, $end_position) = $file =~ /\/(([^\/_]+)_(\d+)_(\d+))\.poly(scan|phred)\.(low|high)$/;
+        my ($cluster_name, $chromosome, $begin_position, $end_position) = $file =~ /\/(([^\/_]+)_(\d+)_(\d+))\.evaluate_sequence_variation/;
         my $param = lc($type);
         my $module = "MG::IO::$type";
 
