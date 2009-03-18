@@ -154,6 +154,7 @@ sub generate_report_detail
 
     $body->seek(0,0);
     return join('', $body->getlines);
+
 }
 
 sub _generate_combined_snp_file
@@ -176,7 +177,7 @@ sub _generate_combined_snp_file
 sub make_fabulous {
     # TODO - not used, but will not work cuz of outfile stuff
     my $self=shift;    
-    my $infile = $self->report_detail_output_filename;
+    my $infile = "graph_".$self->report_detail_output_filename;
     my $fh = IO::File->new($infile);
     my $begin_data_string = "</h3><pre>";
 
@@ -259,7 +260,7 @@ my $javascript_block=qq|
 $header .= '<div id="placeholder" style="width:900px;height:450px;"></div>';
 my $output = $header. $javascript_block . $footer;
 $fh->close;
-($infile =~ s/.html/_fabulous.html/);
+($infile =~ s/.html/_graph.html/);
 
 my $new_report_fh = IO::File->new(">$infile");
 
