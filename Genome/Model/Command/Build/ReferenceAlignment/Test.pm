@@ -305,12 +305,12 @@ sub schedule {
    is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::FindVariations/} @status_messages),
        $variation_granularity, "Got $variation_granularity FindVariations messages");
     SKIP : {
-        skip 'No PostprocessVariations step for 454', 1 if $model->sequencing_platform eq '454';
+        skip 'No PostprocessVariations step for 454 or solexa', 1 if $model->sequencing_platform eq '454' || $model->sequencing_platform eq 'solexa';
     is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations/} @status_messages),
        $variation_granularity, "Got $variation_granularity PostprocessVariations messages");
     }
     SKIP : {
-        skip 'No AnnotateVariations step for 454', 1 if $model->sequencing_platform eq '454';
+        skip 'No AnnotateVariations step for 454 or solexa', 1 if $model->sequencing_platform eq '454' || $model->sequencing_platform eq 'solexa';
         is(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations/} @status_messages),
            $variation_granularity, "Got $variation_granularity AnnotateVariations messages");
     }
@@ -413,8 +413,10 @@ sub execute_event_test  {
     is($self->model->id,$event_model->id,'genome-model id comparison');
 
     SKIP: {
+          #skip 'Never should see this.', 1 if 0;
           skip 'AnnotateVariations takes too long', 1 if $event->isa('Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations');
-          # FIXME - some of these events emit messages of one kind or another - are any
+          
+	  # FIXME - some of these events emit messages of one kind or another - are any
           # of them worth looking at?
           $self->_trap_messages($event);
           my $result = $event->execute();
