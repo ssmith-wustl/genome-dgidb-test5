@@ -228,7 +228,7 @@ sub execute {
             $self->status_message("<<< Completed make_real_rmdupped_map_file() at $now for library: $library .");
 
             unless($map_file) {
-                $self->error_message("something went wrong with 'make_real_rmdupped_map_file'");
+                $self->error_message("Something went wrong with 'make_real_rmdupped_map_file'");
                 return;
             }
 
@@ -236,14 +236,34 @@ sub execute {
             $self->status_message(">>> Starting mapsplit() at $now for library: $library .");
             $self->mapsplit($map_file, $library);
             $now = UR::Time->now;
-            $self->status_message("<<< Completed mapsplit() at $now for library: $library .");
+            $self->status_message("\n<<< Completed mapsplit() at $now for library: $library .");
 
-        }
+		###############
+		#Beginning Map-2-Bam conversion
+
+		$now = UR::Time->now;
+		$self->status_message(">>> Beginning MapToBam conversion at $now for library: $library .");
+	 
+		$self->status_message("MapToBam inputs for library: $library");
+		$self->status_message("maq_version: ".$self->aligner); 
+		$self->status_message("map_file: ".$map_file);
+		$self->status_message("lib_tag: ".$library); 
+		my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
+			    maq_version => $self->aligner, 
+			    map_file => $map_file, 
+			    lib_tag => $library,
+		);
+		my $map_to_bam_rv =  $map_to_bam->execute;
+		unless ($map_to_bam_rv == 0) {
+			$self->error_message("MapToBam failed for library: $library with return value: $map_to_bam_rv");
+		}
+		$now = UR::Time->now;
+		$self->status_message("<<< Ending MapToBam conversion at $now for library: $library .");
+	
+	}#end library loop 
 
 
-        $self->status_message("*** Dedup process completed ***");
-
-
+    $self->status_message("*** Dedup process completed ***");
     }#end parallelized item loop
 
    return 1;
