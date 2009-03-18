@@ -12,7 +12,7 @@ class Genome::Model::Tools::Velvet {
     has_optional => [
         version => {
             is   => 'String',
-            doc  => 'velvet version, must be one of old, installed, test. default is installed',
+            doc  => 'velvet version, must be valid velvet version number like 0.7.22, 0.7.30. It takes installed as default.',
             default => 'installed',
         },
     ],
@@ -43,8 +43,10 @@ sub resolve_version {
     my ($type) = ref($self) =~ /\:\:(\w+)$/;
     $type = 'velvet'.lc(substr $type, 0, 1);
 
+    my $ver = $self->version;
+    $ver = 'velvet_'.$ver unless $ver eq 'installed';
+    
     my @uname = POSIX::uname();
-    my $ver   = $self->version;
     $ver .= '-64' if $uname[4] eq 'x86_64';
     
     my $exec = "/gsc/pkg/bio/velvet/$ver/$type";
