@@ -232,11 +232,11 @@ sub execute {                               # replace with real execution logic.
 
     my ($ref_start,$ref_stop,);
     if ($start < $stop) {
-	$ref_start= $start - 1000;
-	$ref_stop= $stop + 1000;
+	$ref_start= $start - $extend_ref;
+	$ref_stop= $stop + $extend_ref;
     } else {
-	$ref_start= $stop - 1000;
-	$ref_stop= $start + 1000;
+	$ref_start= $stop - $extend_ref;
+	$ref_stop= $start + $extend_ref;
     }
     
     my $project_dir = "$base_dir/$project";
