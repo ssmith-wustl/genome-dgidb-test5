@@ -33,9 +33,9 @@ sub alignment_job_classes {
 sub variant_detection_job_classes {
     my @steps = (
                  'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
-                 'Genome::Model::Command::Build::ReferenceAlignment::FindVariations',
-                  'Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations',
-                  'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations'
+                 'Genome::Model::Command::Build::ReferenceAlignment::FindVariations'
+                 # 'Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations',
+                 # 'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations'
              );
 
     return @steps;
