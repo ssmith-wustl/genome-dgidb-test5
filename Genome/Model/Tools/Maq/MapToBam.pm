@@ -93,6 +93,7 @@ sub execute {
     $self->error_message("$cmd failed") and return if $rv or !-s $sam_file;
     
     $cmd = sprintf('%s import %s %s %s', $samtools, $self->ref_list, $sam_file, $bam_file);
+    $self->status_message("MapToBam conversion command: $cmd");
     $rv  = system $cmd;
     $self->error_message("$cmd failed") and return if $rv or !-s $bam_file;
      
