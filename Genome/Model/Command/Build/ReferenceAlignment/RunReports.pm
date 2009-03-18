@@ -159,7 +159,17 @@ sub execute {
     $self->status_message('Finished DbSnp report.');
    
     ############################################### 
-        my $success = 1;
+    #PFAM Reports
+    #$self->status_message("Starting Pfam report for build id: $build_id");
+    #my $p = Genome::Model::ReferenceAlignment::Report::Pfam->create(
+    #                                     build_id     => $build_id,
+    #                                      name         => 'Pfam',
+    #                                    );
+    #$p->generate_report_detail(report_detail => "full_report_test.csv");
+    #$self->status_message('Completed Pfam report.');
+    ############################################### 
+    
+    my $success = 1;
  
         
     if ( $success )
@@ -174,6 +184,38 @@ sub execute {
     $self->date_completed( UR::Time->now );
 
     return $success;
+}
+
+sub verify_successful_completion {
+
+    my $self = shift;
+
+    my $return_value = 1;
+    my $build = $self->build;
+
+    if ( defined($build) ) {
+            my $report_dir = $self->build->resolve_reports_directory;
+            $self->status_message('Report dir: '.$report_dir);
+            my @report_dirs = glob($report_dir."/*");
+            $self->status_message('Contents of report dir: '.join(",",@report_dirs) );
+	    my $dir_count = 0;
+	    for my $each_dir (@report_dirs) {
+		if (-d $each_dir) {
+			$dir_count = $dir_count + 1;
+ 	        }	
+	    }
+            
+ 	    unless ( $dir_count == 3 ) {
+                $self->error_message("Can't verify successful completeion of RunReports step.  Expecting 3 report directories.  Got: $dir_count");
+                return 0;
+            }
+ 
+    } else {
+        $self->error_message("Can't verify successful completion of RunReports step. Build is undefined.");
+        return 0;
+    }
+    return $return_value;
+
 }
 
 1;
