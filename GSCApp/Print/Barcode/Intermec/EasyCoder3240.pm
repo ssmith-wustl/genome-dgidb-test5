@@ -29,9 +29,6 @@ sub new {
   
   bless $self, $class;
   
-  #LSF: Setup automatically.
-  $self->setup();
-  
   #LSF: Initialize the handle.
   #$self->handle;
   return $self;
@@ -60,7 +57,7 @@ sub handle_not_use {
 
 =pod
 
-=item print
+=item print_barcode
 
 Print to the printer.
 
@@ -69,15 +66,43 @@ RETURNS: boolean
 
 =cut
 
-sub print {
+sub print_barcode {
   my $self = shift;
   my %opts = @_;
+  $self->setup(@_);
+
   my $type = $opts{type};
   my ($barcode, @text) = @{$opts{data}};
+  
   return $self->handle->print("<STX><CAN><ETX>
 <STX>$text[0]<CR><ETX>
 <STX>$text[1]<ETX>
 <STX><ESC>F2<LF>$barcode<ETX>
+<STX><ETB><ETX>
+");  
+
+}
+
+=pod
+
+=item print_label
+
+Print to the printer.
+
+PARAMS: $type, @data
+RETURNS: boolean
+
+=cut
+
+sub print_label {
+  my $self = shift;
+  my %opts = @_;
+  $self->setup(@_);
+
+  my $type = $opts{type};
+  my (@text) = @{$opts{data}};
+  return $self->handle->print("<STX><CAN><ETX>
+<STX>$text[0]<CR><ETX>
 <STX><ETB><ETX>
 ");  
 
