@@ -244,5 +244,63 @@ sub get_detail_output {
 
 1;
 
+=pod
+
+=head1 Name
+
+Genome::Report
+
+=head1 Synopsis
+
+A generic report object that stores on the filesystem.
+
+=head1 Usage
+
+ my $report = Genome::Report->create(
+    name => 'Happy', # required
+    data => { # required
+        generator => 'Genome::Report::Happy', # required
+        generator_params => { # required
+            happy_level => 9,
+        },
+        date => 'today',
+        description => 'This is a happy report', # required
+        html => '<html></html>', # html data
+        csv => ..., # csv data
+        xml => ..., # xml data
+    },
+ );
+
+ $report->save('some_directory')
+    or die;
+
+=head1 Methods
+
+=head2 
+
+=over
+
+=item I<Synopsis>
+
+=item I<Arguments>
+
+=item I<Returns>
+
+=back
+
+=head1 See Also
+
+=head1 Disclaimer
+
+Copyright (C) 2005 - 2008 Washington University Genome Sequencing Center
+
+This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+=head1 Author(s)
+
+B<Eddie Belter> I<ebelter@watson.wustl.edu>
+
+=cut
+
 #$HeadURL$
 #$Id$
