@@ -60,7 +60,7 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-	Align contigs only by scaffolding
+	Align and join contigs based on scaffold names
 EOS
 }
 
@@ -656,6 +656,8 @@ sub _find_joins
 sub _make_joins
 {
     my ($self, $scafs, $ace_obj, $ctg_tool) = @_;
+
+    print Dumper $scafs;
 
     my $dir = cwd();
 
