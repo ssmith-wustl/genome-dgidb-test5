@@ -44,17 +44,21 @@ sub new {
 
 =pod
 
-=item setup
+=item setup_barcode
 
 Setup the printer for printing barcodes.
 
-PARAMS:
+PARAMS:  type => $type
 RETURNS: boolean
 
 =cut
 
-sub setup {
+sub setup_barcode {
   my $self = shift;
+  if($self->{current_setup} && $self->{current_setup} eq 'barcode') {
+    return 1;
+  }
+  $self->{current_setup} = 'barcode';
   $self->handle->print('
 <STX><ESC>C<ETX>
 <STX><ESC>P<ETX>
@@ -71,17 +75,31 @@ sub setup {
 
 =pod
 
-=item print
+=item setup_label
 
-Print to the printer.
+Setup the printer for printing label.
 
-PARAMS: $type, @data
+PARAMS:
 RETURNS: boolean
 
 =cut
 
-sub print {
-  carp 'must be implemented by subclass.';
+sub setup_label {
+  my $self = shift;
+  if($self->{current_setup} && $self->{current_setup} eq 'label') {
+    return 1;
+  }
+  $self->{current_setup} = 'label';
+  $self->handle->print('
+<STX><ESC>C<ETX>
+<STX><ESC>P<ETX>
+<STX>E1;F1<ETX>
+<STX>H0;o0,190;f1;c0;d0,30;h1;w1;<ETX>
+<STX>R;<ETX>
+<STX><ESC>E1<ETX>
+');
+  
+ return 1;
 }
 
 1;
