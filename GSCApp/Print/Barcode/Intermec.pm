@@ -94,7 +94,7 @@ sub setup_label {
 <STX><ESC>C<ETX>
 <STX><ESC>P<ETX>
 <STX>E1;F1<ETX>
-<STX>H0;o0,190;f1;c0;d0,30;h1;w1;<ETX>
+<STX>H0;o0,420;f1;c0;d0,30;h2;w2;<ETX>
 <STX>R;<ETX>
 <STX><ESC>E1<ETX>
 ');
