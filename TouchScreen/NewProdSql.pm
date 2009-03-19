@@ -1535,6 +1535,47 @@ sub CheckIfUsedAsOutput {
 
 } #CheckIfUsedAsOutput
 
+
+sub CheckOutput384A1 {
+    my ($self, $barcode) = @_;
+
+    my $result = $self -> CheckIfUsedAsOutput($barcode);
+    return $result;
+}
+
+
+sub CheckOutput384A2 {
+    my ($self, $barcode) = @_;
+    
+    return $self -> CheckIfQuardrantIsEmpty($barcode, 'A2');
+}
+sub CheckOutput384B1 {
+    my ($self, $barcode) = @_;
+    
+    return $self -> CheckIfQuardrantIsEmpty($barcode, 'B1');
+}
+sub CheckOutput384B2 {
+    my ($self, $barcode) = @_;
+    
+    return $self -> CheckIfQuardrantIsEmpty($barcode, 'B2');
+}
+
+sub CheckIfQuardrantIsEmpty {
+
+    my ($self, $barcode, $quadrant) = @_;
+
+    my $used_quads = $self -> GetAvailableQuads($barcode);
+
+    my @found = grep {$_ eq $quadrant} @$used_quads;
+
+    return 0 if(@found);
+
+    return 1;
+}
+
+
+
+
 ############################################################
 # Get the Available quadrants for a 384 plate to inoculate #
 ############################################################
@@ -1800,6 +1841,51 @@ sub Pick384ProductionArchive {
     return $pse_ids;
 } #Pick384ProductionArchive
 
+##############################################
+# Process a 384 pick archive barcode request #
+##############################################
+sub Pick384ProductionArchiveA1 {
+
+    my ($self, $ps_id, $bar_in, $bar_outs, $emp_id, $options, $pre_pse_ids) = @_;
+    
+    my $pse_ids = $self -> PickArchive($ps_id, $bar_in, $bar_outs, $emp_id, $options, $pre_pse_ids, '384', 'production', 'a1');
+
+    return $pse_ids;
+} #Pick384ProductionArchive
+##############################################
+# Process a 384 pick archive barcode request #
+##############################################
+sub Pick384ProductionArchiveA2 {
+
+    my ($self, $ps_id, $bar_in, $bar_outs, $emp_id, $options, $pre_pse_ids) = @_;
+    
+    my $pse_ids = $self -> PickArchive($ps_id, $bar_in, $bar_outs, $emp_id, $options, $pre_pse_ids, '384', 'production', 'a2');
+
+    return $pse_ids;
+} #Pick384ProductionArchive
+##############################################
+# Process a 384 pick archive barcode request #
+##############################################
+sub Pick384ProductionArchiveB1 {
+
+    my ($self, $ps_id, $bar_in, $bar_outs, $emp_id, $options, $pre_pse_ids) = @_;
+    
+    my $pse_ids = $self -> PickArchive($ps_id, $bar_in, $bar_outs, $emp_id, $options, $pre_pse_ids, '384', 'production', 'b1');
+
+    return $pse_ids;
+} #Pick384ProductionArchive
+##############################################
+# Process a 384 pick archive barcode request #
+##############################################
+sub Pick384ProductionArchiveB2 {
+
+    my ($self, $ps_id, $bar_in, $bar_outs, $emp_id, $options, $pre_pse_ids) = @_;
+    
+    my $pse_ids = $self -> PickArchive($ps_id, $bar_in, $bar_outs, $emp_id, $options, $pre_pse_ids, '384', 'production', 'b2');
+
+    return $pse_ids;
+} #Pick384ProductionArchive
+
 
 
 ###############################################
@@ -1807,7 +1893,7 @@ sub Pick384ProductionArchive {
 #############################################
 sub PickArchive {
 
-    my ($self, $ps_id, $bars_in, $bars_out, $emp_id, $options, $pre_pse_ids, $plate_type, $purpose) = @_;
+    my ($self, $ps_id, $bars_in, $bars_out, $emp_id, $options, $pre_pse_ids, $plate_type, $purpose, $sector) = @_;
 
     my $pse_id=[];
     my $update_status = 'completed';
@@ -1841,7 +1927,12 @@ sub PickArchive {
 	push(@sectors, 'a1');
     }
     elsif($plate_type eq '384') {
-	push(@sectors, qw(a1 a2 b1 b2));
+        if($sector) {
+            push(@sectors, $sector);
+        }
+        else {
+            push(@sectors, qw(a1 a2 b1 b2));
+        }
     }
     else {
 	$self->{'Error'} = "$pkg: PickArchive() -> Not a valid plate type, use 384 or 96.";
