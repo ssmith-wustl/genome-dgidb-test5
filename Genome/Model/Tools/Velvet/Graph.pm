@@ -37,25 +37,29 @@ my %properties = (
         is  => 'Integer', 
         doc => 'expected distance between two paired-end reads in the second short-read dataset (default: no read pairing)',
     },
-    insert_length_long    => {
+    ins_length_long    => {
         is  => 'Integer', 
         doc => 'expected distance between two long paired-end reads (default: no read pairing)',
     },
-    insert_length1_sd     => {
+    ins_length_sd      => {
         is  => 'Integer', 
         doc => 'est. standard deviation of respective dataset (default: 10% of corresponding length)',
     },
-    insert_length2_sd     => {
+    ins_length2_sd     => {
         is  => 'Integer', 
         doc => 'est. standard deviation of respective dataset (default: 10% of corresponding length)',
     },
-    insert_length_long_sd => {
+    ins_length_long_sd => {
         is  => 'Integer', 
         doc => 'est. standard deviation of respective dataset (default: 10% of corresponding length)',
     },
     min_contig_lgth       => {
         is  => 'Integer', 
         doc => 'minimum contig length exported to contigs.fa file (default: hash length * 2)',
+    },
+    min_pair_count        => {
+        is  => 'Integer',
+        doc => 'minimum number of paired end connections to justify the scaffolding of two long contigs (default: 10)',
     },
     max_branch_length     => {
         is  => 'Integer', 
@@ -65,6 +69,10 @@ my %properties = (
         is  => 'Integer', 
         doc => 'maximum length difference allowed between the two branches of a bubble (default: 3)',
     },
+    max_coverage          => {
+        is  => 'Number',
+        doc => 'removal of high coverage nodes AFTER tour bus (default: no removal)',
+    },
     max_divergence        => {
         is  => 'Number', 
         doc => 'maximum divergence rate between two branches in a bubble (default: 0.2)',
@@ -72,6 +80,10 @@ my %properties = (
     max_gap_count         => {
         is  => 'Integer', 
         doc => 'maximum number of gaps allowed in the alignment of the two branches of a bubble (default: 3)',
+    },
+    long_mult_cutoff      => {
+        is  => 'Integer',
+        doc => 'minimum number of long reads required to merge contigs (default: 2)',
     },
 );
 
