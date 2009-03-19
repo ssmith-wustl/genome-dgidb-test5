@@ -528,7 +528,7 @@ sub execute_with_bsub {
 
     my $cmdline;
     { no warnings 'uninitialized';
-        $cmdline = "bsub -q $queue $bsub_args" .
+        $cmdline = "bsub -q $queue -H $bsub_args" .
                    ($dependency_expression && " -w '$dependency_expression'") .
                    " $cmd --model-id $model_id --event-id $event_id ";
     }
