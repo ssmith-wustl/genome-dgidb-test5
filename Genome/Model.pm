@@ -370,7 +370,13 @@ sub succeeded_builds {
     }
 
     my @builds_w_status = grep { $_->build_status } @builds;
-    my @succeeded_builds = grep {$_->build_status eq 'Succeeded'} @builds_w_status;
+    unless (@builds_w_status) {
+        return;
+    }
+    my @succeeded_builds = grep {$_->build_status eq 'Succeeded'} grep { defined($_) } @builds_w_status;
+    unless (@succeeded_builds) {
+        return;
+    }
     my @builds_wo_date = grep { !$_->date_completed } @succeeded_builds;
     if (scalar(@builds_wo_date)) {
         my $error_message = 'Found '. scalar(@builds_wo_date) .' Succeeded builds without date completed.' ."\n";
