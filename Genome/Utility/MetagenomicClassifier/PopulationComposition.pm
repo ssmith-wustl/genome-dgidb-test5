@@ -23,9 +23,13 @@ sub new {
     }
 
     $self->_fatal_message(
-        "Unknown params sent to 'new': ".join(',', map { $_.'=>'.$params{$_} } keys %params)
+        "Unknown params sent to 'new': ".join(',', map { $_.' => '.$params{$_} } keys %params)
     ) if %params;
         
+    $self->{_classifications} = [ [], [] ];
+    
+    # track stats?? would need to track when a classification is added, too
+    
     return $self;
 }
 
@@ -42,29 +46,48 @@ sub get_confidence_threshold {
 sub add_classification {
     my ($self, $classification) = @_;
 
-    my $classifications = ( ($classification->get_root_taxon->get_tag_values('confidence'))[0] >= $self->get_confidence_threshold ) 
-    ? $self->get_confident_classifications
-    : $self->get_unconfident_classifications;
-
-    push @$classifications, $classification;
-
+    my $i = ( ($classification->get_root_taxon->get_tag_values('confidence'))[0] >= $self->get_confidence_threshold ) 
+    ? 1
+    : 0;
+    
+    push @{$self->{_classifications}->[$i]}, $classification;
+    
     return 1;
 }
 
 sub get_classifications {
-    return $_[0]->{_classifications};
-    #return @{$_[0]->{_classifications}};
+    return map { @$_ } @{$_[0]->{_classifications}};
 }
 
 sub get_confident_classifications {
-    return $_[0]->{_classifications}->[1];
+    return @{$_[0]->{_classifications}->[1]};
 }
 
 sub get_unconfident_classifications {
-    return $_[0]->{_classifications}->[0];
+    return @{$_[0]->{_classifications}->[0]};
+}
+
+sub _get_genus_count_for_confident_domain {
+    my ($self, $domain_name) = @_;
+
+    my %genus_counts;
+    for my $classification ( $self->get_confident_classifications ) {
+        #print Dumper({ domain => [ $classification->get_domain_name_and_confidence ], genus => [ $classification->get_genus_name_and_confidence ]});
+        next unless $classification->get_domain eq $domain_name;
+        my ($genus, $conf) = $classification->get_genus_name_and_confidence 
+                or next;
+        $genus_counts{$genus}++ if $conf >= $self->get_confidence_threshold;
+    }
+    
+    return \%genus_counts;
 }
 
 sub get_genus_count_for_confident_bacteria_domain {
+    return $_[0]->_get_genus_count_for_confident_domain('Bacteria');
+}
+
+sub get_genus_count_for_confident_arch_domain {
+    return $_[0]->_get_genus_count_for_confident_domain('Archaea');
 }
 
 1;
