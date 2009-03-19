@@ -13,7 +13,6 @@ class Genome::Disk::Allocation::Command::List {
             value => 'Genome::Disk::Allocation' 
         },
         show => { default_value => 'absolute_path,kilobytes_requested,kilobytes_used,allocator_id,owner_class_name,owner_id' },
-        filter => { default_value => 'disk_group_name=info_apipe' },
     ],
 };
 
