@@ -1303,7 +1303,7 @@ sub spool
     {
         # printer should be configured on host
         $self->debug_message("printer set: $opts{printer}", 4);
-        if($opts{printer} eq 'barcode10') {
+        if($opts{printer} eq 'barcode4') {
           $printer = new GSCApp::Print::Barcode::Intermec(printer_name => $opts{printer}, printer_model => 'Easy Coder 3240');      
         } else {
           $printer = new GSCApp::Print::Barcode::Zebra(printer_name => $opts{printer});
