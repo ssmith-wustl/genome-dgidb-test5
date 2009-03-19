@@ -126,16 +126,16 @@ sub resolve_data_directory {
     my $self = shift;
     my $model = $self->model;
     my $data_directory = $model->data_directory;
-
+    my $build_subdirectory = '/build'. $self->build_id;
     if ($data_directory =~ /(\/gscmnt\/.*)\/info\/medseq\/(.*)/) {
         my $mount_path = $1;
         my $allocation_path = $2;
-        $allocation_path .= '/build'. $self->build_id;
+        $allocation_path .= $build_subdirectory;
         my $kb_requested = $self->calculate_estimated_kb_usage;
         if ($kb_requested) {
             my $allocate = Genome::Disk::Allocation::Command::Allocate->execute(
+                                                                                disk_group_name => 'info_genome_models',
                                                                                 allocation_path => $allocation_path,
-                                                                                mount_path => $mount_path,
                                                                                 kilobytes_requested => $kb_requested,
                                                                                 owner_class_name => $self->class,
                                                                                 owner_id => $self->id,
@@ -147,13 +147,18 @@ sub resolve_data_directory {
             }
             my $disk_allocation = $allocate->disk_allocation;
             unless ($disk_allocation) {
-                $disk_allocation = GSC::DiskAllocation->get($allocate->allocator_id);
-                unless ($disk_allocation) {
-                    $self->error_message('Failed to get disk allocation for allocator_id: '. $allocate->allocator_id);
-                    die $self->error_message;
-                }
+                $self->error_message('Failed to get disk allocation for allocator_id: '. $allocate->allocator_id);
+                $self->delete;
+                die $self->error_message;
             }
-            return $disk_allocation->absolute_path;
+            my $build_symlink = $data_directory . $build_subdirectory;
+            my $build_data_directory = $disk_allocation->absolute_path;
+            unless (Genome::Utility::FileSystem->create_symlink($build_data_directory,$build_symlink)) {
+                $self->error_message("Failed to make symlink '$build_symlink' with target '$build_data_directory'");
+                $self->delete;
+                die $self->error_message;
+            }
+            return $build_data_directory;
         }
     }
     return $data_directory . '/build' . $self->build_id;
