@@ -267,6 +267,7 @@ sub _schedule_scheduled_jobs {
                                                        build_id => { operator => 'ne', value => undef},
                                                        # this means the job hasn't been submitted yet
                                                        %addl_get_params);
+    my @bsubed_lsf_job_ids;
     while (my $event = shift @launchable_events) {
         unless ($event->ref_seq_id || $event->instrument_data_id) {
             unless (grep { $event->event_type =~ qr/$_/ }  $self->event_types_without_subclass) {
@@ -302,8 +303,31 @@ sub _schedule_scheduled_jobs {
 
         $self->context->commit;
 
+        my $max_try = 10;
+        my $state = $event->lsf_job_state;
+        while ( !$state && $max_try ) {
+            sleep 6;
+            $max_try--;
+            $state = $event->lsf_job_state;
+        }
+        unless ($state) {
+            $self->error_message('Waited one minute for LSF to catch up. Job '. $job_id .' not found.');
+            die $self->error_message;
+        }
+        push @bsubed_lsf_job_ids, $job_id;
+
     } # end while @launchable_events
 
+    #Release jobs from hold state
+    for my $job_id (@bsubed_lsf_job_ids) {
+        my $bresume_output = `bresume $job_id`;
+        my $retval = $? >> 8;
+
+        if ($retval) {
+            $self->error_message("bresume returned a non-zero exit code ($retval), bailing out");
+            die $self->error_message;
+        }
+    }
     return 1;
 }
 
