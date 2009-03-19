@@ -392,7 +392,8 @@ sub verify_successful_completion {
     return 1;
 }
 
-sub alignment_data_available_and_correct {
+# This method is deprecated. For the correct method see Genome::InstrumentData::Command::Align::Maq
+sub Xalignment_data_available_and_correct {
     my $self = shift;
 
     my $read_set_alignment_directory = $self->read_set_alignment_directory;
@@ -483,7 +484,8 @@ sub alignment_data_available_and_correct {
     }
 }
 
-sub _check_maq_successful_completion {
+# This method is deprecated. For the correct method see Genome::InstrumentData::Command::Align::Maq
+sub X_check_maq_successful_completion {
     my($self,$output_filename) = @_;
 
     my $aligner_output_fh = IO::File->new($output_filename);
