@@ -10,6 +10,12 @@ use Bio::DB::Fasta;
 class Genome::Utility::AceSupportQA {
     is => 'UR::Object',
     has => [
+        ref_check => { 
+            is => 'String', 
+            is_optional => 1,
+            default => 0, 
+            doc => 'Whether or not to check the reference sequence, to be used only with amplicon assemblies dumped from the database' 
+        },
         check_phd_time_stamps => { 
             is => 'String', 
             is_optional => 1,
@@ -62,8 +68,14 @@ sub ace_support_qa {
     #invalid_files will be a hash of trace names and file type that are broken.
     my ($invalid_files,$project) = $self->parse_ace_file($ace_file); ##QA the read dump, phred and poly files
 
-    my ($refcheck) = $self->check_ref($project);
 
+    if ($self->ref_check) {
+	my ($refcheck) = $self->check_ref($project);
+	if (!$refcheck) {
+	    $self->error_message("The reference sequence is invalid for $project and should be fixed prior to analysis");
+	    return 0;
+	}
+    }
     if ($invalid_files) {
         $self->error_message("There are invalid files for $project that should be fixed prior to analysis");
         $self->error_message("Here is a list of reads for $project with either a broken chromat, phd, or poly file");
@@ -72,9 +84,6 @@ sub ace_support_qa {
             $self->error_message($read . join("\t", sort keys %{$invalid_files->{$read}}));
         }
 
-        return 0;
-    } elsif (!$refcheck) {
-        $self->error_message("The reference sequence is invalid for $project and should be fixed prior to analysis");
         return 0;
     }
 
