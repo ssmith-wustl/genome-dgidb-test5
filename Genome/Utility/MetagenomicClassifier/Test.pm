@@ -3,7 +3,7 @@ package Genome::Utility::MetagenomicClassifier::TestBase;
 use strict;
 use warnings;
 
-use base 'Test::Class';
+use base 'Genome::Utility::TestBase';
 
 use File::Temp 'tempdir';
 use Storable qw/ store retrieve /;
@@ -11,16 +11,6 @@ use Test::More;
 
 sub dir { 
     return '/gsc/var/cache/testsuite/data/Genome-Utility-MetagenomicClassifier';
-}
-
-sub tmp_dir {
-    my $self = shift;
-
-    unless ( $self->{_tmp_dir} ) {
-        $self->{_tmp_dir} = tempdir(CLEANUP => 1);
-    }
-    
-    return $self->{_tmp_dir};
 }
 
 sub fasta {
@@ -50,28 +40,6 @@ sub store_classifications {
     return store($classifications, $self->classifications_stor);
 }
 
-#< Base Tests >#
-sub test001_use_test_class : Test(1) {
-    my $self = shift;
-
-    use_ok( $self->test_class )
-        or die;
-
-    return 1;
-}
-
-sub test002_create_test_class : Test(2) {
-    my $self = shift;
-
-    my $class = $self->test_class;
-    my %params = $self->params_for_test_class;
-    $self->{_object} = $class->new(%params);
-    ok($self->{_object}, "Created $class");
-    isa_ok($self->{_object}, $class);
-
-    return 1;
-}
-
 #####################################################################################################
 
 package Genome::Utility::MetagenomicClassifier::SequenceClassification::Test;
@@ -93,9 +61,13 @@ sub test_class {
     return 'Genome::Utility::MetagenomicClassifier::SequenceClassification';
 }
 
+sub required_attrs {
+    return (qw/ name classifier taxon /);
+}
+
 sub params_for_test_class {
     my $self = shift;
-    
+
     my %params = $self->_get_string_params;
     $params{taxon} = $self->_get_taxon;
 
@@ -131,7 +103,7 @@ sub _get_taxon {
 }
 
 
-sub test003_gets : Test(8) {
+sub test01_gets : Test(8) {
     my $self = shift;
 
     my $seq_classification = $self->sequence_classification;
@@ -149,7 +121,7 @@ sub test003_gets : Test(8) {
     return 1;
 }
 
-sub test004_taxons_and_names : Test(46) {
+sub test02_taxons_and_names : Tests {
     my $self = shift;
 
     my $seq_classification = $self->sequence_classification;
@@ -192,7 +164,11 @@ sub params_for_test_class {
     return ( confidence_threshold => .8 );
 }
 
-sub test003_add_classifications : Test(1) {
+sub required_attrs { 
+    return;
+}
+
+sub test01_add_classifications : Test(1) {
     my $self = shift;
     
     my $population_composition = $self->population_composition;
@@ -205,7 +181,7 @@ sub test003_add_classifications : Test(1) {
     return 1;
 }
 
-sub test004_invalid_params : Test(1) {
+sub test02_invalid_params : Test(1) {
     my $self = shift;
 
     my $eval;
@@ -322,6 +298,7 @@ use warnings;
 
 use base 'Genome::Utility::MetagenomicClassifier::TestBase';
 
+use Data::Dumper 'Dumper';
 use File::Compare 'compare';
 use Test::More;
 
@@ -333,6 +310,10 @@ sub params_for_test_class {
     return ( output => $_[0]->tmp_dir.'/classification.rdp' );
 }
 
+sub required_attrs {
+    return;
+}
+
 sub test003_write_and_compare : Test(1) {
     my $self = shift;
 
@@ -341,6 +322,8 @@ sub test003_write_and_compare : Test(1) {
         $self->{_object}->write_one($classification);
     }
     is(compare($self->{_object}->get_original_output, $self->rdp_file), 0, 'Generated and expected classification files match');
+    
+    #print Dumper([$self->{_object}->get_original_output, $self->rdp_file]); <STDIN>;
 
     return 1;
 }
@@ -400,6 +383,10 @@ sub params_for_test_class {
         output_file => $_[0]->tmp_rdp_file,
         training_set => 'broad',
     );
+}
+
+sub required_attrs {
+    return;
 }
 
 sub test003_execute_read_and_compare : Test(11) {
