@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 11;
+use Test::More tests => 16;
 
 use_ok('Genome::Utility::AceSupportQA');
 
@@ -13,11 +13,18 @@ my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Utility-AceSupportQA';
 # Sample ace files to check. All should succeed the checker except 030 should fail
 my @assemblies = (
                  'TCGA_Production-0005156_051-Ensembl-46_36h',
-                 'TCGA_Production-0007157_030-Ensembl-46_36h'
+                 'TCGA_Production-0007157_030-Ensembl-46_36h',
+		 '10_126008345_126010576'
 );
 
 for my $assembly (@assemblies) {
-    my $ace_checker = Genome::Utility::AceSupportQA->create();
+
+    my $ace_checker;
+    if ($assembly =~ /TCGA_Production/) {
+	$ace_checker = Genome::Utility::AceSupportQA->create(ref_check => 1);
+    } else {
+	$ace_checker = Genome::Utility::AceSupportQA->create();
+    }
     ok($ace_checker, "created ace checker");
     isa_ok($ace_checker, "Genome::Utility::AceSupportQA");
 
