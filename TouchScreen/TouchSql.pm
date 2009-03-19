@@ -13,6 +13,8 @@ use DBI;
 use DbAss;
 use TouchScreen::CoreSql;
 use Date::Calc;
+use Sort::Key::Natural qw(natsort);
+
 #############################################################
 # Production sql code package
 #############################################################
@@ -943,7 +945,8 @@ sub GetOutputDevices {
 		}
 	    }
 	}
-	return $list;
+	return [natsort @$list];
+
     }
     elsif(defined $DBI::errstr){
 	$Error = $DBI::errstr;
