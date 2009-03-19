@@ -170,7 +170,6 @@ sub _default_full_path {
     my $self = shift;
     sprintf('%s/%s', $self->_data_base_path, $self->id)
 }
-    
 
 #< Dump to File System >#
 sub dump_to_file_system {
@@ -179,29 +178,169 @@ sub dump_to_file_system {
     return 1;
 }
 
-sub alignment_directory_for_aligner_and_refseq{
+sub allocations {
+    my $self = shift;
+
+    my @allocations = Genome::Disk::Allocation->get(
+                                                    owner_class_name => $self->class,
+                                                    owner_id => $self->id,
+                                                );
+    return @allocations;
+}
+
+sub calculate_alignment_estimated_kb_usage {
+    my $self = shift;
+    return;
+}
+
+sub move_alignment_directory_for_aligner_and_refseq {
+    my $self = shift;
+    my $aligner_name = shift;
+    my $reference_sequence_name = shift;
+    my $reason = shift;
+    unless ($reason && $reason =~ /old|bad/) {
+        if ($reason) {
+            die('Only two reasons are acceptable for moving alignment data: old or bad');
+        }
+        die('Must provide reason for moving alignment data: old or bad');
+    }
+
+    my $current_allocation = $self->alignment_allocation_for_aligner_and_refseq($aligner_name,$reference_sequence_name,check_only => 1);
+    unless ($current_allocation) {
+        die('No alignment allocation found for instrumen data '. $self->id .' with aligner '. $aligner_name .' and refseq '. $reference_sequence_name);
+    }
+
+    my $allocation_path = $current_allocation->allocation_path .".$reason.$$";
+    my $existing_allocation = Genome::Disk::Allocation->get(
+                                                            allocation_path => $allocation_path,
+                                                            owner_class_name => $self->class,
+                                                            owner_id => $self->id,
+                                                        );
+    if ($existing_allocation) {
+        die('Disk allocation '. $existing_allocation->allocator_id .' already exists for path '. $allocation_path);
+    }
+    my $allocation_cmd = Genome::Disk::Allocation::Command::Allocate->create(
+                                                                             disk_group_name => 'info_alignments',
+                                                                             allocation_path => $allocation_path,
+                                                                             kilobytes_requested => $current_allocation->kilobytes_requested,
+                                                                             owner_class_name => $self->class,
+                                                                             owner_id => $self->id,
+                                                                         );
+    unless ($allocation_cmd) {
+        die('Failed to create command to allocate disk space for '. $allocation_path);
+    }
+    unless ($allocation_cmd->execute) {
+        die('Failed to execute command to allocate disk space for '. $allocation_path);
+    }
+    my $new_allocation = $allocation_cmd->disk_allocation;
+    unless ($new_allocation) {
+        $self->error_message('Failed to get disk allocation for '. $allocation_cmd->allocator_id);
+        die $self->error_message;
+    }
+    unless (rename($existing_allocation->absolute_path,$new_allocation->absolute_path)) {
+        die('Failed to move '. $reason .' directory '. $existing_allocation->absolute_path .' to '. $new_allocation->absolute_path .":  $!");
+    }
+    return 1;
+}
+
+sub alignment_allocation_for_aligner_and_refseq {
+    my $self = shift;
+    my $aligner_name = shift;
+    my $reference_sequence_name = shift;
+    my %params = @_;
+
+    my $allocation_path = $self->resolve_alignment_path_for_aligner_and_refseq($aligner_name,$reference_sequence_name);
+
+    my @allocations = $self->allocations;
+    my @matches = grep { $_->allocation_path eq $allocation_path } @allocations;
+    unless (@matches) {
+        my $kb_requested = $self->calculate_alignment_estimated_kb_usage;
+        if ($kb_requested && !($params{check_only}) ) {
+            my $allocation_cmd = Genome::Disk::Allocation::Command::Allocate->create(
+                                                                                     disk_group_name => 'info_alignments',
+                                                                                     allocation_path => $allocation_path,
+                                                                                     kilobytes_requested => $kb_requested,
+                                                                                     owner_class_name => $self->class,
+                                                                                     owner_id => $self->id,
+                                                                                 );
+            unless ($allocation_cmd) {
+                $self->error_message('Failed to create command to allocate disk space');
+                return;
+            }
+            unless ($allocation_cmd->execute) {
+                $self->error_message('Failed to execute command to allocate disk space');
+                return;
+            }
+            my $disk_allocation = $allocation_cmd->disk_allocation;
+            unless ($disk_allocation) {
+                $self->error_message('Failed to get disk allocation for '. $allocation_cmd->allocator_id);
+                die $self->error_message;
+            }
+            push @matches, $disk_allocation;
+        }
+    }
+    if (scalar(@matches) > 1) {
+        die('More than one allocation found for allocation_path: '. $allocation_path);
+    }
+    return $matches[0];
+}
+
+sub resolve_alignment_path_for_aligner_and_refseq {
     my $self = shift;
     my $aligner_name = shift;
     my $reference_sequence_name = shift;
 
     unless ($aligner_name) {
-        die ('Must provide aligner name to alignment_directory_for_aligner_and_refseq');
+        die ('Must provide aligner name to resolve the alignment path for aligner and refseq');
     }
     unless ($reference_sequence_name ) {
-        die ('Must provide reference sequence name to alignment_directory_for_aligner_and_refseq');
+        die ('Must provide reference sequence name to resolve the alignment path for aligner and refseq');
     }
-
-    my $base_alignment_directory = 
-        Genome::Config->alignment_links_directory()
-            .'/'. $aligner_name 
-            .'/'. $reference_sequence_name;
-
-    return sprintf('%s/%s/%s_%s',
-                       $base_alignment_directory,
+    unless ($self->id) {
+        die ($self->class .' is missing the id!');
+    }
+    unless ($self->subset_name) {
+        die ($self->class .'('. $self->id .') is missing the subset_name or lane!');
+    }
+    if ($self->is_external) {
+        return sprintf('alignment_data/%s/%s/%s/%s_%s',
+                       $aligner_name,
+                       $reference_sequence_name,
+                       $self->id,
+                       $self->subset_name,
+                       $self->id
+                   );
+    } else {
+        unless ($self->run_name) {
+            die ($self->class .'('. $self->id .') is missing the run_name!');
+        }
+        return sprintf('alignment_data/%s/%s/%s/%s_%s',
+                       $aligner_name,
+                       $reference_sequence_name,
                        $self->run_name,
                        $self->subset_name,
                        $self->id
-                  );
+                   );
+    }
+}
+
+sub alignment_directory_for_aligner_and_refseq {
+    my $self = shift;
+    my $aligner_name = shift;
+    my $reference_sequence_name = shift;
+    my %params = @_;
+
+    my $allocation = $self->alignment_allocation_for_aligner_and_refseq($aligner_name,$reference_sequence_name,%params);
+    if ($allocation) {
+        return $allocation->absolute_path;
+    } else {
+        my $allocation_path = $self->resolve_alignment_path_for_aligner_and_refseq($aligner_name,$reference_sequence_name);
+        $allocation_path =~ s/^alignment_data\///;
+        return sprintf('%s/%s',
+                       Genome::Config->alignment_links_directory(),
+                       $allocation_path,
+                   );
+    }
 }
 
 sub find_or_generate_alignments_dir {
@@ -229,6 +368,7 @@ sub find_or_generate_alignments_dir {
     my $dir = $self->alignment_directory_for_aligner_and_refseq(
                                                                 $aligner_label,
                                                                 $align_cmd->reference_name,
+                                                                %params,
                                                             );
     unless (-d $dir) {
         die "no directory $dir found!"
