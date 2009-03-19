@@ -391,6 +391,16 @@ sub last_succeeded_build {
     return $last_succeeded_build;
 }
 
+sub last_succeeded_build_id {
+    my $self = shift;
+
+    my $last_succeeded_build = $self->last_succeeded_build;
+    unless ($last_succeeded_build) {
+        return;
+    }
+    return $last_succeeded_build->id;
+}
+
 sub completed_builds {
     my $self = shift;
     my @builds = $self->builds;
