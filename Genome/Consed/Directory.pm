@@ -3,15 +3,13 @@ package Genome::Consed::Directory;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
-use UR;
+use Carp 'confess';
 require Cwd;
-use Data::Dumper;
+use Data::Dumper 'Dumper';
 require File::Basename;
-require File::Glob;
 require File::Spec;
-require GSC::IO::Assembly::Phd;
 
 class Genome::Consed::Directory {
     is => 'UR::Object',
@@ -26,13 +24,13 @@ class Genome::Consed::Directory {
 sub create {
     my $class = shift;
 
-    my $self = $class->SUPER::create(@_);
+    my $self = $class->SUPER::create(@_)
+        or return;
     
     $self->directory( Cwd::abs_path( $self->directory) );
-    $self->error_message( sprintf('Directory (%s) does not exist', $self->directory) )
-        and return unless -e $self->directory;
-    $self->error_message( sprintf('Alleged directory (%s) is not directory', $self->directory) )
-        and return unless -d $self->directory;
+
+    Genome::Utility::FileSystem->validate_existing_directory($self->directory)
+        or return;
 
     return $self;
 }
@@ -42,37 +40,71 @@ sub directories {
     return (qw/ edit_dir phd_dir chromat_dir /);
 }
 
+sub extended_directories {
+    return ( directories(), (qw/ fasta abi_dir reports /) );
+}
+
 sub edit_dir {
-    return shift->directory_for_type('edit_dir');
+    return $_[0]->concat_directory('edit_dir');
 }
 
 sub phd_dir {
-    return shift->directory_for_type('phd_dir');
+    return $_[0]->concat_directory('phd_dir');
 }
 
 sub chromat_dir {
-    return shift->directory_for_type('chromat_dir');
+    return $_[0]->concat_directory('chromat_dir');
 }
 
-sub directory_for_type {
-    my ($self, $type) = @_;
+sub fasta_dir {
+    return $_[0]->concat_directory('fasta');
+}
+
+sub abi_dir {
+    return $_[0]->concat_directory('abi_dir');
+}
+
+sub reports_dir {
+    return $_[0]->concat_directory('reports');
+}
+
+sub concat_directory {
+    my ($self, $sub_dir) = @_;
     
-    $self->error_message("Need type to get directory")
-        and return unless $type;
+    $self->error_message("Need sub directory to concatenate")
+        and return unless $sub_dir;
     
-    return sprintf('%s/%s', $self->directory, $type);
+    return File::Spec->catfile($self->directory, $sub_dir);
 }
 
 sub create_consed_directory_structure {
     my $self = shift;
     
-    for my $dir_name ( $self->directories ) {
-        my $dir = $self->$dir_name;
-        next if -d $dir;
-        mkdir $dir;
-        $self->fatal_msg("Could make dir ($dir): $!") unless -d $dir;
+    for my $sub_dir ( $self->directories ) {
+        $self->create_directory($sub_dir);
     }
 
+    return 1;
+}
+
+sub create_extended_directory_structure {
+    my $self = shift;
+    
+    for my $sub_dir ( $self->extended_directories ) {
+        $self->create_directory($sub_dir);
+    }
+
+    return 1;
+}
+ 
+sub create_directory {
+    my ($self, $sub_dir) = @_;
+
+    my $dir = $self->concat_directory($sub_dir);
+    
+    Genome::Utility::FileSystem->create_directory($dir)
+        or confess "Can't make directory ($dir)\n";
+    
     return 1;
 }
 
@@ -84,7 +116,7 @@ sub acefile_for_ace
     $self->error_message("Need ace to get acefile")
         and return;
     
-    return File::Spec->catfile($self->directory, $ace);
+    return File::Spec->catfile($self->edit_dir, $ace);
 }
     
 sub get_and_validate_acefile_for_ace
@@ -132,8 +164,6 @@ sub next_iteration_acefile_for_ace
  
 sub all_acefiles {
     my $self = shift;
-    
-    my $acedir = $self->directory;
     
     my %acefiles;
     for my $acefile ( glob( sprintf('%s/*.ace*', $self->edit_dir) ) ) {
