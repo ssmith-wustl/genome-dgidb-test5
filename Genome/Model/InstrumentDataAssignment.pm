@@ -41,6 +41,12 @@ class Genome::Model::InstrumentDataAssignment {
         sd_above_insert_size => {via => 'instrument_data'},
         is_paired_end => {via => 'instrument_data' },
     ],
+    has_many_optional => [
+                          events => {
+                                     is => 'Genome::Model::Event',
+                                     reverse_id_by => 'instrument_data_assignment',
+                                 },
+                          ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
@@ -73,9 +79,13 @@ sub alignment_directory {
     my $self = shift;
     my $model = $self->model;
     my $instrument_data = $self->instrument_data;
+    unless ($instrument_data) {
+        die('No instrument data found for id: '. $self->instrument_data_id);
+    }
     return $instrument_data->alignment_directory_for_aligner_and_refseq(
                                                                         $model->read_aligner_name,
                                                                         $model->reference_sequence_name,
+                                                                        check_only => 1,
                                                                     );
 }
 
