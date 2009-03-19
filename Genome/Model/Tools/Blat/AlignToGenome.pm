@@ -7,10 +7,16 @@ package Genome::Model::Tools::Blat::AlignToGenome;     # rename this when you gi
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
 #	CREATED:	10/20/2008 by D.K.
-#	MODIFIED:	10/20/2008 by D.K.
+#	MODIFIED:	03/19/2009 by D.K.
 #
 #	NOTES:	
-#			
+#			Default BLAT parameters are:
+#				-mask=lower 	(takes advantage of soft-masking of repeats, HIGHLY recommended)
+#				-out=pslx	(provides extended-PSL output with read/ref sequences)
+#				-noHead		(specifies output without header)
+#
+#			Default BSUB parameters are: -q long -R"select[mem>3000] rusage[mem=3000]" 
+#
 #####################################################################################################################################
 
 use strict;
@@ -28,7 +34,7 @@ class Genome::Model::Tools::Blat::AlignToGenome {
 		search_string	=> { is => 'Text', doc => "Seach string to identify chromosome files, [chr*.fa]", is_optional => 1 },		
 		query_file	=> { is => 'Text', doc => "Query file in FASTA format" },
 		output_dir	=> { is => 'Text', doc => "Directory to store output files" },
-		params		=> { is => 'Text', doc => "BLAT parameters [-mask=lower -output=pslx -noHead]", is_optional => 1 },
+		params		=> { is => 'Text', doc => "BLAT parameters [-mask=lower -out=pslx -noHead]", is_optional => 1 },
 		lsf_queue	=> { is => 'Text', doc => "LSF queue if other than long [long]", is_optional => 1 },	
 	],
 };
@@ -127,7 +133,7 @@ sub execute {                               # replace with real execution logic.
 
 			## Launch the BLAT alignment ##
 			
-			system("bsub -q $lsf_queue blat $ref_file $query_file $blat_params $output_file");
+			system("bsub -q $lsf_queue -R\"select[mem>3000] rusage[mem=3000]\" -oo $output_file.out blat $ref_file $query_file $blat_params $output_file");
 		}
 		
 		print "BLAT alignments launched against $numRefFiles ref files\n";
