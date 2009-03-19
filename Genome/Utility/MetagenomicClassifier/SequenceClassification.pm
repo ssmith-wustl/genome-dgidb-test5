@@ -17,6 +17,7 @@ sub new {
 
     $self->{complemented} = 0 unless $self->{complemented};
 
+   
     return $self;
 }
 
@@ -46,38 +47,82 @@ sub get_classifier {
 }
 
 #< TAXON >#
+sub _set_ranks_and_taxa {
+    my $self = shift;
+
+    return 1 if $self->{_taxa};
+    
+    my $i = 0;
+    my (%ranks, @taxa);
+
+    my $taxon = $self->get_taxon;
+    do { 
+        push @taxa, $taxon;
+        $ranks{ $taxon->rank } = $i++;
+        ($taxon) = $taxon->get_Descendents;
+    } until not defined $taxon;
+
+    unless ( @taxa ) { 
+        _fatal_message("No descendant taxa found in taxon: ".$self->get_taxon->id);
+        return;
+    }
+
+    $self->{_taxa} = \@taxa;
+    $self->{_ranks} = \%ranks;
+
+    return 1;
+}
+
 sub get_taxon {
     return $_[0]->{taxon};
+}
+
+sub get_ranks {
+    my $self = shift;
+
+    $self->_set_ranks_and_taxa
+        or return;
+ 
+    my $ranks = $self->{_ranks};
+    
+    return map { $ranks->{$_} } sort keys %$ranks;
 }
 
 sub get_taxa {
     my $self = shift;
 
-    my @taxa;
-    unless ( $self->{taxa} ) {
-        my $taxon = $self->get_taxon;
-        do { 
-            push @taxa, $taxon;
-            ($taxon) = $taxon->get_Descendents;
-        } until not defined $taxon;
-        $self->{taxa} = \@taxa;
-    }
-
-    return @{$self->{taxa}};
+    $self->_set_ranks_and_taxa
+        or return;
+ 
+    return @{$self->{_taxa}};
 }
 
 sub taxa_count { 
-    return scalar($_[0]->get_taxa);
+    return scalar( $_[0]->get_taxa );
 }
 
 sub _get_taxon_for_rank {
-    return (grep { $_->rank eq $_[1] } $_[0]->get_taxa)[0];
+    my ($self, $rank) = @_;
+    
+    return ($self->get_taxa)[ $self->{_ranks}->{$rank} ];
 }
 
 sub _get_taxon_name_for_rank {
-    my $taxon = $_[0]->_get_taxon_for_rank($_[1])
+    my ($self, $rank) = @_;
+
+    my $taxon = $self->_get_taxon_for_rank($rank)
         or return 'none';
+
     return $taxon->id;
+}
+
+sub _get_taxon_name_and_confidence {
+    my ($self, $rank) = @_;
+
+    my $taxon = $self->_get_taxon_for_rank($rank)
+        or return;
+
+    return ($taxon->id, ($taxon->get_tag_values('confidence'))[0]);
 }
 
 sub get_root_taxon {
@@ -94,6 +139,10 @@ sub get_domain_taxon {
 
 sub get_domain {
     return $_[0]->_get_taxon_name_for_rank('domain');
+}
+
+sub get_domain_name_and_confidence {
+    return $_[0]->_get_taxon_name_and_confidence('domain');
 }
 
 sub get_kingdom_taxon {
@@ -142,6 +191,10 @@ sub get_genus_taxon {
 
 sub get_genus {
     return $_[0]->_get_taxon_name_for_rank('genus');
+}
+
+sub get_genus_name_and_confidence {
+    return $_[0]->_get_taxon_name_and_confidence('genus');
 }
 
 sub get_species_taxon {
