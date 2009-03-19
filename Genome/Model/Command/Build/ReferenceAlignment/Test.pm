@@ -344,7 +344,14 @@ sub run {
 	} 
         
 	for my $command_class (@classes) {
-            @events = $command_class->get(model_id => $self->model->id);
+            @events = Genome::Model::Event->get(
+                                                model_id => $model->id,
+                                                build_id => $build->build_id,
+                                                event_type => {
+                                                               operator => 'like',
+                                                               value => $command_class->command_name .'%',
+                                                           },
+                                            );
             @events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @events;
             
 	    is( scalar(@events),scalar(@objects), 'For command '.$command_class.' number of events matches number of objects: '.scalar(@events).' = '.scalar(@objects)); 

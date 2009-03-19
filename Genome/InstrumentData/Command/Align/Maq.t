@@ -10,7 +10,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 10;
+        plan tests => 9;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -25,16 +25,30 @@ my $gerald_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Alig
 
 # Existing
 my $instrument_data = Genome::InstrumentData::Solexa->create(
-                                                             id => 'test_instrument_data_id',
+                                                             id => '-123456',
                                                              sequencing_platform => 'solexa',
                                                              sample_name => 'test_sample_name',
                                                              run_name => 'test_run_name',
                                                              subset_name => 4,
-                                                             run_type => 'Paired End Read 1',
+                                                             run_type => 'Paired End Read 2',
                                                              gerald_directory => $gerald_directory,
                                                          );
 isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
 ok($instrument_data->is_paired_end,'instrument data is paired end');
+
+
+my $fake_allocation = Genome::Disk::Allocation->define(
+                                                       disk_group_name => 'info_alignments',
+                                                       group_subdirectory => 'info',
+                                                       mount_path => '/gscmnt/sata828',
+                                                       allocation_path => 'alignment_data/maq0_6_8/refseq-for-test/test_run_name/4_-123456',
+                                                       allocator_id => '-123457',
+                                                       kilobytes_requested => 100000,
+                                                       kilobutes_used => 0,
+                                                       owner_id => $instrument_data->id,
+                                                       owner_class_name => $instrument_data->class,
+                                                   );
+isa_ok($fake_allocation,'Genome::Disk::Allocation');
 
 # TODO: create mock event or use some fake event for logging
 
@@ -48,8 +62,8 @@ my $dir = $instrument_data->find_or_generate_alignments_dir(
                                                         );
 ok($dir, "alignments found/generated");
 ok(-d $dir, "result is a real directory");
-my $expected_dir = Genome::Config->root_directory . '/alignment_links/maq0_6_8/refseq-for-test/test_run_name/4_'. $instrument_data->id;
-is($dir,$expected_dir, 'directory is the expected value');
+
+#No need to commit because we short cut
 
 
 $instrument_data = Genome::InstrumentData::Solexa->create(
@@ -57,7 +71,7 @@ $instrument_data = Genome::InstrumentData::Solexa->create(
                                                           sample_name => 'test_sample_name',
                                                           run_name => 'test_run_name',
                                                           subset_name => 4,
-                                                          run_type => 'Paired End Read 1',
+                                                          run_type => 'Paired End Read 2',
                                                           gerald_directory => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name',
                                                       );
 # once to make new data
@@ -70,9 +84,7 @@ my $dir2 = $instrument_data->find_or_generate_alignments_dir(
                                                          );
 ok($dir2, "alignments found/generated");
 ok(-d $dir2, "result is a real directory");
-my $expected_dir2 = Genome::Config->root_directory .'/alignment_links/maq0_6_5/refseq-for-test/test_run_name/4_'. $instrument_data->id;
-is($dir2,$expected_dir2, 'directory is the expected value');
 
-rmtree $expected_dir2;
+rmtree $dir2;
 
 exit;

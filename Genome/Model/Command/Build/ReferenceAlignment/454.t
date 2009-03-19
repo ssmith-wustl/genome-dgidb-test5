@@ -25,11 +25,12 @@ if ($archos !~ /64/) {
 }
 
 #plan skip_all => 'this test is hanging presumambly from a workflow related issue';
-plan tests => 63;
+plan tests => 64;
 
 my $message_flag = 0;
 
-my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
+
+my $tmp_dir = File::Temp::tempdir('TestAlignmentDataXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $model_name = "test_454_$ENV{USER}";
 my $subject_name = 'H_FY-454_96normal_tspset3_indel';
 my $subject_type = 'sample_name';
@@ -122,8 +123,8 @@ sub setup_test_data {
             $instrument_data->mock('_default_full_path',\&Genome::InstrumentData::_default_full_path);
             $instrument_data->mock('resolve_full_path',\&Genome::InstrumentData::resolve_full_path);
             $instrument_data->mock('resolve_sff_path',\&Genome::InstrumentData::454::resolve_sff_path);
-            $instrument_data->mock('alignment_directory_for_aligner_and_refseq',
-                                   \&Genome::InstrumentData::alignment_directory_for_aligner_and_refseq);
+            $instrument_data->set_always('alignment_directory_for_aligner_and_refseq',
+                                         $tmp_dir .'/test_alignment_data/'. $instrument_data->subset_name .'_'. $instrument_data->id);
             $instrument_data->mock('sff_file',sub {
                                        my $self = shift;
                                        unless ($self->{_sff_path}) {

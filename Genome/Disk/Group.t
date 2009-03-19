@@ -13,7 +13,7 @@ BEGIN {
 
 my $group = Genome::Disk::Group->get(disk_group_name => 'info_apipe');
 isa_ok($group,'Genome::Disk::Group');
-my @assignments = $group->group_volume_assignments;
+my @assignments = $group->assignments;
 ok(scalar(@assignments) > 1,'more than one group/volume assignments');
 isa_ok(shift(@assignments),'Genome::Disk::GroupVolumeAssignment');
 my @volumes = $group->volumes;

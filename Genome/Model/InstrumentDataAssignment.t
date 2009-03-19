@@ -56,6 +56,12 @@ my $mock_instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                  subset_name => 'test_subset_name',
                                                                  sequencing_platform => 'solexa',
                                                        );
+$mock_instrument_data->set_list('allocations');
+$mock_instrument_data->set_always('calculate_alignment_estimated_kb_usage',undef);
+$mock_instrument_data->mock('resolve_alignment_path_for_aligner_and_refseq',
+                            \&Genome::InstrumentData::resolve_alignment_path_for_aligner_and_refseq);
+$mock_instrument_data->mock('alignment_allocation_for_aligner_and_refseq',
+                            \&Genome::InstrumentData::alignment_allocation_for_aligner_and_refseq);
 $mock_instrument_data->mock('alignment_directory_for_aligner_and_refseq',
                             \&Genome::InstrumentData::alignment_directory_for_aligner_and_refseq);
 
@@ -100,7 +106,7 @@ isa_ok($new_instrument_data,'Genome::Model::InstrumentDataAssignment');
 
 my $expected_alignment_directory = $tmp_dir .'/alignment_links/'. $mock_model->read_aligner_name .'/'. $mock_model->reference_sequence_name .'/'.
     $mock_instrument_data->run_name .'/'. $mock_instrument_data->subset_name .'_'. $mock_instrument_data->id;
-is($new_instrument_data->alignment_directory,$expected_alignment_directory,
+is($new_instrument_data->alignment_directory(check_only => 1),$expected_alignment_directory,
    'got expected instrument_data_alignment_directory: '. $expected_alignment_directory);
 
 ###############################
