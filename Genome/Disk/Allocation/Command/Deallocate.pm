@@ -36,8 +36,6 @@ class Genome::Disk::Allocation::Command::Deallocate {
 sub create {
     my $class = shift;
 
-    App->init unless App::Init->initialized;
-
     my $self = $class->SUPER::create(@_);
     unless ($self) {
         return;
