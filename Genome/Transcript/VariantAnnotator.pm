@@ -275,7 +275,7 @@ sub _transcript_annotation_for_rna
         strand => $strand,
         c_position => 'NULL',
         trv_type => 'rna',
-        amino_acid_length => length( $transcript->protein->amino_acid_seq ),
+        amino_acid_length => 'NULL',  #no protein for rna transcript
         amino_acid_change => 'NULL',
     );
 }
