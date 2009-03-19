@@ -71,7 +71,35 @@ class Genome::Disk::Allocation {
         data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub reallocate {
+    my $self = shift;
 
+    my $reallocate_cmd = Genome::Disk::Allocation::Command::Reallocate->create(allocator_id => $self->id);
+    unless ($reallocate_cmd) {
+        $self->error_message('Failed to create command to reallocate disk space for disk allocation: '. $self->id);
+        return;
+    }
+    unless ($reallocate_cmd->execute) {
+        $self->error_message('Failed to execute command to reallocate disk space for disk allocation: '. $self->id);
+        return;
+    }
+    return $reallocate_cmd;
+}
+
+sub deallocate {
+    my $self = shift;
+
+    my $deallocate_cmd = Genome::Disk::Allocation::Command::Deallocate->create(allocator_id => $self->id);
+    unless ($deallocate_cmd) {
+        $self->error_message('Failed to create command to deallocate disk space for disk allocation: '. $self->id);
+        return;
+    }
+    unless ($deallocate_cmd->execute) {
+        $self->error_message('Failed to execute command to deallocate disk space for disk allocation: '. $self->id);
+        return;
+    }
+    return $deallocate_cmd;
+}
 
 1;
 
