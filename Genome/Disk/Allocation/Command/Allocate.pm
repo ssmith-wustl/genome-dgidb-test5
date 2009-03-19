@@ -46,8 +46,6 @@ class Genome::Disk::Allocation::Command::Allocate {
 sub create {
     my $class = shift;
 
-    App->init unless App::Init->initialized;
-
     my %params = @_;
     my $self = $class->SUPER::create(%params);
     unless ($self) {
@@ -139,7 +137,7 @@ sub execute {
 
     my $allocator = $self->allocator;
 
-    $self->status_message('Confirming allocate PSE id: '. $allocator->pse_id);
+    $self->status_message('Confirming allocate PSE id: '. $self->allocator_id);
 
     my $rv;
     if ($self->local_confirm) {
@@ -149,7 +147,28 @@ sub execute {
     }
 
     unless ($rv) {
-        $self->error_message('Failed to confirm pse '. $allocator->pse_id);
+        $self->error_message('Failed to confirm pse '. $self->allocator_id);
+        return;
+    }
+
+    my $gsc_disk_allocation = $self->gsc_disk_allocation;
+    unless ($gsc_disk_allocation) {
+        $self->error_message('Failed to get GSC::DiskAllocation for alloction '. $self->allocator_id);
+        return;
+    }
+    my %params;
+    my $gsc_disk_allocation_class_object = $gsc_disk_allocation->get_class_object;
+    for my $property ($gsc_disk_allocation_class_object->all_property_names) {
+        $params{$property} = $gsc_disk_allocation->$property;
+    }
+    my $defined_allocation = Genome::Disk::Allocation->define(%params);
+    unless ($defined_allocation) {
+        $self->error_message('Failed to define a Genome::Disk::Allocation for: '. Data::Dumper::Dumper(%params));
+        return;
+    }
+    my $disk_allocation = $self->disk_allocation;
+    unless ($disk_allocation) {
+        $self->error_message('Failed to get Genome::Disk::Allocation for allocator_id '. $self->allocator_id);
         return;
     }
     return 1;
