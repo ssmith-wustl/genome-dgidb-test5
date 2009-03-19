@@ -55,7 +55,15 @@ sub command_name_brief {
 }
 
 ############################################
+sub create {
+    my $class = shift;
 
+    App->init unless App::Init->initialized;
+
+    my $self = $class->SUPER::create(@_);
+    return unless $self;
+    return $self;
+}
 
 
 ############################################
