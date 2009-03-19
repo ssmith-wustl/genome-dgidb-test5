@@ -16,19 +16,22 @@ class Genome::Disk::Group {
             unix_uid => { is => 'Number' },
             unix_gid => { is => 'Number' },
         ],
+         has_many_optional => [
+                          mount_paths => {
+                                          via => 'volumes',
+                                          to => 'mount_path',
+                                      },
+                          volumes => {
+                                     is => 'Genome::Disk::Volume',
+                                     via => 'assignments',
+                                     to =>  'volume',
+                                 },
+                          assignments => {
+                                          is => 'Genome::Disk::GroupVolumeAssignment',
+                                          reverse_id_by => 'group',
+                                      },
+                      ],
     data_source => 'Genome::DataSource::GMSchema',
 };
-
-sub group_volume_assignments {
-    my $self = shift;
-    return Genome::Disk::GroupVolumeAssignment->get(dg_id => $self->dg_id);
-}
-
-sub volumes {
-    my $self = shift;
-    my @group_volume_assignments = $self->group_volume_assignments;
-    my @volumes = map { $_->volume } @group_volume_assignments;
-    return @volumes;
-}
 
 1;
