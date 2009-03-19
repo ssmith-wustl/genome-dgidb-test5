@@ -125,7 +125,8 @@ sub execute {
             $ctg_seq =~ s/\n//g;
             $ctg_seq =~ s/-/*/g;
                 
-            my $ctg_id     = 'Contig'.$fields->{iid};
+            my $ctg_id = 'Contig'.$fields->{eid};
+            $ctg_id =~ s/\-/\./ if $ctg_id =~ /\-/;
             my $ctg_length = length $ctg_seq;
                 
             my $ctg_qual = $fields->{qlt};
