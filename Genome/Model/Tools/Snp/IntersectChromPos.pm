@@ -21,7 +21,7 @@ class Genome::Model::Tools::Snp::IntersectChromPos {
     headers1            => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'file 1 has n header lines' },
     headers2            => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'file 2 has n header lines' },
     ],
-    doc => "intersect two snp lists by position, with optional genotype overlap detail"
+    consider_genotype => { is_optional=>1, default=>0, doc=>'thingy for dave larson he knows what it means' },
 };
 
 sub execute {
@@ -56,9 +56,9 @@ sub execute {
     #both files exist  
 
     my $line2 = $file2_fh->getline;
-    my ($chr2, $pos2) = split ($self->delimiter2, $line2);
+    my ($chr2, $pos2, $ref1, $genotype1) = split ($self->delimiter2, $line2);
     my $line1 = $file1_fh->getline;
-    my ($chr1, $pos1) = split ($self->delimiter1, $line1);
+    my ($chr1, $pos1, $ref2, $genotype2) = split ($self->delimiter1, $line1);
     my ($prev_chrom1, $prev_chrom2); 
     $DB::single=1;
     while(defined $line1 && defined $line2) {
@@ -71,7 +71,18 @@ sub execute {
 
             } 
             elsif ($pos1 == $pos2) { 
-                $intersect_fh->print($line1);
+                if($self->consider_genotype) {
+                    if($genotype1 eq $genotype2) {
+                        $intersect_fh->print($line1);
+                    }
+                    else {
+                        $f1_only_fh->print($line1);
+                        $f2_only_fh->print($line2);
+                    }
+                }
+                else {
+                    $intersect_fh->print($line1);
+                }
                 $line1 = $file1_fh->getline;
                 $prev_chrom1=$chr1;
                 ($chr1, $pos1) = split ($self->delimiter1, $line1);
