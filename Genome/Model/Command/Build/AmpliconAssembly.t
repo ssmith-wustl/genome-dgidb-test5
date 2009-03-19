@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 27;
+use Test::More 'no_plan';
 require File::Path;
 
 use Data::Dumper;
@@ -99,10 +99,11 @@ my @events = sort { $b->genome_model_event_id <=> $a->genome_model_event_id } Ge
 my $expected_event_count = 7;
 is(@events, $expected_event_count, "Scheduled $expected_event_count events");
 
-for my $event ( @events ) {
-    ok($event->execute, sprintf('Executed event (%s %s)', $event->id, $event->event_type))
-        or die; # if one of these fails just die
-}
+# The execution of these events are tested via the unit tests...
+#for my $event ( @events ) {
+#    ok($event->execute, sprintf('Executed event (%s %s)', $event->id, $event->event_type))
+#        or die; # if one of these fails just die
+#}
 
 # Remove primer fasta files made for processing profile
 unlink $pp->sense_primer_fasta;
