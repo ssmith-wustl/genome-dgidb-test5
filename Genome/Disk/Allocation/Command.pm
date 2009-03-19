@@ -117,11 +117,11 @@ sub unlock {
 
 sub lock {
     my $self = shift;
-    my %params = @_;
     unless (Genome::Utility::FileSystem->lock_resource(
                                                        lock_directory => $self->lock_directory,
                                                        resource_id => $self->resource_id,
-                                                       %params,
+                                                       block_sleep => 3,
+                                                       max_try => 300,
                                                    ) ) {
         $self->error_message('Failed to lock resource '. $self->command_name
                              .' in lock directory '. $self->lock_directory );
