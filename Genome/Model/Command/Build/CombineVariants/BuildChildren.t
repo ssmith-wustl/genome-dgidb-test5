@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use above "Genome";
-use Test::More tests => 5;
+use Test::More tests => 6;
 use File::Path;
 
 $ENV{UR_DBI_NO_COMMIT} = 1;
