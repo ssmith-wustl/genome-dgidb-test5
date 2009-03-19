@@ -17,6 +17,21 @@ class Genome::Disk::Volume {
             disk_status => { is => 'Text' },
             can_allocate => { is => 'Number' },
         ],
+    has_many_optional => [
+                          disk_group_names => {
+                                               via => 'groups',
+                                               to => 'disk_group_name',
+                                           },
+                          groups => {
+                                     is => 'Genome::Disk::Group',
+                                     via => 'assignments',
+                                     to =>  'group',
+                                 },
+                          assignments => {
+                                          is => 'Genome::Disk::GroupVolumeAssignment',
+                                          reverse_id_by => 'volume',
+                                      },
+                      ],
     data_source => 'Genome::DataSource::GMSchema',
 };
 
