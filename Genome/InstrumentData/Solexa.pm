@@ -62,6 +62,20 @@ EOS
     ],
 };
 
+sub calculate_alignment_estimated_kb_usage {
+    my $self = shift;
+    # These default values should be replaced with an equation that takes into account:
+    # 1.) read_length
+    # 2.) reference sequence size
+    # 3.) clusters
+    # 4.) paired end
+    if ($self->is_paired_end) {
+        return 2000000;
+    } else {
+        return 1000000;
+    }
+}
+
 sub resolve_full_path {
     my $self = shift;
 
