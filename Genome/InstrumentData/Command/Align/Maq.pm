@@ -312,7 +312,11 @@ sub execute {
 
     if ($@ or !$retval) {
         my $exception = $@;
-        rename $results_dir, $results_dir . ".bad$$";
+        $instrument_data->move_alignment_directory_for_aligner_and_refseq(
+                                                                          $self->aligner_label,
+                                                                          $self->reference_name,
+                                                                          'bad',
+                                                                      );
         eval { $self->unlock_resource(resource_lock => $results_dir . '.generating'); };
         if ($exception) {
             die $exception;
@@ -327,24 +331,47 @@ sub execute {
         $self->unlock_resource(resource_lock => $resource_lock_name);
         return;
     }
-
     $self->unlock_resource(resource_lock => $resource_lock_name);
+
+    my $alignment_allocation = $self->get_alignment_allocation;
+    if ($alignment_allocation) {
+        unless ($alignment_allocation->reallocate) {
+            $logger->error_message('Failed to reallocate disk space with for disk allocation: '. $alignment_allocation->id);
+            return;
+        }
+    }
     return $retval;
 }
 
-sub results_dir {
+sub aligner_label {
     my $self = shift;
 
     my $aligner_name    = $self->aligner_name;
     my $aligner_version = $self->version;
     $aligner_version =~ s/\./_/g;
+
     my $aligner_label   = $aligner_name . $aligner_version;
 
-    my $dir = $self->instrument_data->alignment_directory_for_aligner_and_refseq(
-        $aligner_label,
-        $self->reference_name
-    );
+    return $aligner_label;
+}
 
+sub get_alignment_allocation {
+    my $self = shift;
+
+    my $allocation = $self->instrument_data->alignment_allocation_for_aligner_and_refseq(
+                                                                                         $self->aligner_label,
+                                                                                         $self->reference_name
+                                                                                     );
+    return $allocation;
+}
+
+sub results_dir {
+    my $self = shift;
+
+    my $dir = $self->instrument_data->alignment_directory_for_aligner_and_refseq(
+                                                                                 $self->aligner_label,
+                                                                                 $self->reference_name
+                                                                             );
     return $dir;
 }
 
@@ -446,9 +473,11 @@ sub alignment_data_available_and_correct {
         }
         else {
             $self->warning_message("RE-PROCESSING: Moving old directory out of the way");
-            unless (rename ($results_dir,$results_dir . ".old.$$")) {
-                die("Failed to move old alignment directory out of the way: $!");
-            }
+            $instrument_data->move_alignment_directory_for_aligner_and_refseq(
+                                                                              $self->aligner_label,
+                                                                              $self->reference_name,
+                                                                              'old',
+                                                                          );
             return;
         }
     } else {
