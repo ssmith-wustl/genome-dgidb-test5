@@ -3,7 +3,7 @@ package Genome::Utility::IO::Writer;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 require Cwd;
 require IO::Handle;
