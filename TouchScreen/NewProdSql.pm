@@ -1564,9 +1564,9 @@ sub CheckIfQuardrantIsEmpty {
 
     my ($self, $barcode, $quadrant) = @_;
 
-    my $used_quads = $self -> GetAvailableQuads($barcode);
+    my $used_quads = $self ->{'GetAvailableQuadsPses'} -> xSql($barcode);
 
-    my @found = grep {$_ eq $quadrant} @$used_quads;
+    my @found = grep {$_->[0] eq $quadrant} @$used_quads;
 
     return 0 if(@found);
 
@@ -1585,7 +1585,7 @@ sub GetAvailableQuads {
 
     my $dbh = $self -> {'dbh'};
     my $schema = $self -> {'Schema'};
-    
+
     my $lol = $self->GetAvailableQuadsPses($barcode);
    
     if(defined $lol && defined $lol->[0] && defined $lol->[0][0]) {
