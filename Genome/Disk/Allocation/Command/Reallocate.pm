@@ -41,8 +41,6 @@ class Genome::Disk::Allocation::Command::Reallocate {
 sub create {
     my $class = shift;
 
-    App->init unless App::Init->initialized;
-
     my $self = $class->SUPER::create(@_);
     unless ($self) {
         return;
@@ -77,10 +75,10 @@ sub create {
 sub execute {
     my $self = shift;
     my $reallocator = $self->reallocator;
-    $self->status_message('Reallocate PSE id: '. $reallocator->pse_id);
+    $self->status_message('Reallocate PSE id: '. $self->reallocator_id);
     if ($self->wait_for_pse) {
         unless ($self->wait_for_pse_to_confirm(pse => $reallocator)) {
-            $self->error_message('Failed to confirm reallocate pse: '. $reallocator->pse_id);
+            $self->error_message('Failed to confirm reallocate pse: '. $self->reallocator_id);
             return;
         }
     }
