@@ -383,6 +383,14 @@ sub succeeded_builds {
     return @sorted_succeeded_builds;
 }
 
+sub last_succeeded_build {
+    my $self = shift;
+
+    my @succeeded_builds = $self->succeeded_builds;
+    my $last_succeeded_build = pop(@succeeded_builds);
+    return $last_succeeded_build;
+}
+
 sub completed_builds {
     my $self = shift;
     my @builds = $self->builds;
