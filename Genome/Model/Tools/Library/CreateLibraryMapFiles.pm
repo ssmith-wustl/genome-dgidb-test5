@@ -30,13 +30,75 @@ sub execute {
         $self->error_message("Unable to find model $model_id");
         return;
     }
-
+    #additions to just get alignments from the latest build of this model
+    my $last_complete_build = $model->last_complete_build;
+    my $current_running_build = $model->current_running_build;
+    my $align_count = 0;
+    my @events;
+    
     #Grab all alignment events so we can filter out ones that are still running or are abandoned
-    my @events = Genome::Model::Event->get(event_type => 
-        {operator => 'like', value => '%align-reads%'},
-        model_id => $model_id,
-        event_status => 'Succeeded'
-    );
+    if ($current_running_build) {
+        my $current_align_count = 0; 
+        # get all align events for the current running build
+        my @current_running_build_align_events = Genome::Model::Event->get(event_type => 
+                {operator => 'like', value => '%align-reads%'},
+                build_id => $current_running_build,
+            );
+        # check to see if any of the events have not succeeded and throw a warning
+        foreach my $current_align_event (@current_running_build_align_events){
+            if (($current_align_event->event_status eq 'Succeeded') || ($current_align_event->event_status eq 'Abandoned')){
+                $current_align_count++;
+            }
+            else {
+                $self->status_message(" $current_align_count alignments have succeeded as part of the current running build ");
+                $self->status_message(" Some alignments are still running or have failed ");
+                $self->status_message(" CONTINUING WITH POTENTIALLY INCOMPLETE SET OF ALIGNMENTS ");
+            }
+        }
+        #now just get the Succeeded events to pass along for further processing
+        # THIS MAY NOT INCLUDE ANY EVENTS
+        @events = Genome::Model::Event->get(event_type => 
+                    {operator => 'like', value => '%align-reads%'},
+                    build_id => $current_running_build,
+                    event_status => 'Succeeded'
+                    );
+        # if it does not include any succeeded events - die
+        unless (@events) {
+            $self->error_message(" No alignments have Succeeded on the current running build ");
+            return;
+        }
+        $align_count = $current_align_count;
+    }
+    elsif ($last_complete_build){
+        my $last_complete_align_count = 0;
+        my @last_complete_build_align_events = Genome::Model::Event->get(event_type => 
+                {operator => 'like', value => '%align-reads%'},
+                build_id => $last_complete_build,
+            );
+        foreach my $last_complete_event (@last_complete_build_align_events){
+            if (($last_complete_event->event_status eq 'Succeeded') || ($last_complete_event->event_status eq 'Abandoned')){
+                $last_complete_align_count++;
+            }
+            else {
+            $self->error_message(" $last_complete_align_count alignments have succeeded as part of the last complete build,  some alignments from this build are still running or have failed");
+            return;
+            }
+        }
+        @events = Genome::Model::Event->get(event_type => 
+                    {operator => 'like', value => '%align-reads%'},
+                    build_id => $last_complete_build,
+                    event_status => 'Succeeded'
+                    );
+        unless (@events) {
+            $self->error_message(" No alignments have Succeeded on the current running build ");
+            return;
+        }
+        $align_count = $last_complete_align_count;
+    }
+    else{
+        $self->error_message(" No Running or Complete Builds Found ");
+        return;
+    }
     #Convert events to InstrumentDataAssignment objects
     my @idas = map { $_->instrument_data_assignment } @events;
     
