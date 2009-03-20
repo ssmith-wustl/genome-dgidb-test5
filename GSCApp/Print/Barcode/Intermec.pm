@@ -63,8 +63,8 @@ sub setup_barcode {
 <STX><ESC>C<ETX>
 <STX><ESC>P<ETX>
 <STX>E3;F3<ETX>
-<STX>H0;o0,190;f1;c0;d0,30;h1;w1;<ETX>
-<STX>H1;o20,190;f1;c0;d1,30;h1;w1;<ETX>
+<STX>H0;o0,190;f1;c0;d0,32;h1;w1;<ETX>
+<STX>H1;o20,190;f1;c0;d1,32;h1;w1;<ETX>
 <STX>B2;o0,420;f1;c6,0;h32;w2;d2,10;i0;<ETX>
 <STX>R;<ETX>
 <STX><ESC>E3<ETX>
@@ -94,7 +94,7 @@ sub setup_label {
 <STX><ESC>C<ETX>
 <STX><ESC>P<ETX>
 <STX>E1;F1<ETX>
-<STX>H0;o0,420;f1;c0;d0,30;h2;w2;<ETX>
+<STX>H0;o0,420;f1;c2;d0,50;h1;w1;<ETX>
 <STX>R;<ETX>
 <STX><ESC>E1<ETX>
 ');
