@@ -86,18 +86,20 @@ RETURNS: boolean
 
 sub setup_label {
   my $self = shift;
+  my %params = @_;
   if($self->{current_setup} && $self->{current_setup} eq 'label') {
     return 1;
   }
+  my $font_type = $params{font_type} || 20;
   $self->{current_setup} = 'label';
-  $self->handle->print('
+  $self->handle->print("
 <STX><ESC>C<ETX>
 <STX><ESC>P<ETX>
 <STX>E1;F1<ETX>
-<STX>H0;o0,420;f1;c32;d0,50;h1;w1;<ETX>
+<STX>H0;o0,420;f1;c$font_type;d0,50;h1;w1;<ETX>
 <STX>R;<ETX>
 <STX><ESC>E1<ETX>
-');
+");
   
  return 1;
 }
