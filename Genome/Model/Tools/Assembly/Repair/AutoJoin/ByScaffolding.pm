@@ -44,13 +44,21 @@ class Genome::Model::Tools::Assembly::Repair::AutoJoin::ByScaffolding
 	    cm_fasta_length => {
 		type => 'String',
 		is_optional => 1,
+		default => 500,
 		doc => "Length of sequences at each ends to run cross match"        
 		},
 	    cm_min_match => {
 		type => 'String',
 		is_optional => 1,
+		default => 25,
 		doc => "Minimum length of cross match to consider for join"        
 		},
+	    report_only => {
+		type => 'Boolean',
+		is_optional => 1,
+		default => 0,
+		doc => "Option to print joins the program finds but not make the joins",
+	        },
 	    ],
 };
 
@@ -160,16 +168,26 @@ sub execute {
     }
 
     #ALIGN JOINS
-    my $aligned_joins;
-    unless ($aligned_joins = $self->_align_joins ($joins))
+    my $new_scaffolds;
+    unless ($new_scaffolds = $self->_align_joins ($joins))
     {
 	$self->error_message("Align joins failed");
 	return;
     }
 
+    #PRINT REPORT ONLY
+    if ($self->report_only)
+    {
+	$self->status_message("Printing autojoin report");
+	unless ($self->print_report ($new_scaffolds)) {
+	    $self->error_message("Unable to print report");
+	}
+	return 1;
+    }
+
     #MAKE JOINS
     my $merged_ace;
-    unless ($merged_ace = $self->_make_joins($aligned_joins, $ace_obj, $contig_tool))
+    unless ($merged_ace = $self->_make_joins($new_scaffolds, $ace_obj, $contig_tool))
     {
 	$self->error_message("Make joins failed");
 	return;
@@ -190,9 +208,7 @@ sub _run_cross_match
 {
     my ($self) = @_;
 
-    my $min_match = 25;
-
-    $min_match = $self->cm_min_match if $self->cm_min_match;
+    my $min_match = $self->cm_min_match;
     
     return unless ($self->run_cross_match ($min_match));
 
@@ -214,9 +230,7 @@ sub _print_contig_ends
 {
     my ($self, $ao, $scaf_contigs) = @_;
 
-    my $length = 500;
-
-    $length = $self->cm_fasta_length if $self->cm_fasta_length;
+    my $length = $self->cm_fasta_length;
 
     unless ($self->print_contig_ends ($ao, $scaf_contigs, $length))
     {
@@ -657,8 +671,6 @@ sub _make_joins
 {
     my ($self, $scafs, $ace_obj, $ctg_tool) = @_;
 
-    print Dumper $scafs;
-
     my $dir = cwd();
 
     print "Please wait: gathering phds and ace file .. this could take up to 10 minutes\n";
@@ -714,6 +726,7 @@ sub _make_joins
 
     my $join_count = 0;
     my $ace_version = 0;
+    my $last_merge_failed = 0;
 
     foreach my $line (@$scafs)
     {
@@ -736,38 +749,43 @@ sub _make_joins
 
         my $left_ctg_obj;
 
-	unless ($left_ctg_obj = $ace_obj->get_contig ($left_ctg_name))
-	{
+	unless ($left_ctg_obj = $ace_obj->get_contig ($left_ctg_name)) {
+
 	    $self->error_message("Unable to get contig object for $left_ctg_name");
 	    return;
 	}
 
-	if ($left_comp eq 'yes')
-	{
-	    unless ($left_ctg_obj->complement)
-	    {
+	if ($left_comp eq 'yes') {
+
+	    unless ($left_ctg_obj->complement) {
+
 		$self->error_message("Unable to complement contig: $left_ctg_name");
 		return;
 	    }
 	}
 
-        while (scalar @ctgs > 0)
-        {
+        while (scalar @ctgs > 0) {
+
             $next_ctg = shift @ctgs;
             my ($right_ctg_name, $right_comp) = $self->_resolve_complementation ($next_ctg);
 
+	    #NEED TO RE DEFINE LEFT CONTIG NAME HERE
+
+	    my $left_contig_name = $left_ctg_obj->name;
+	    print "Trying to merge $left_contig_name to $right_ctg_name\n";
+
             my $right_ctg_obj;
 
-	    unless ($right_ctg_obj = $ace_obj->get_contig($right_ctg_name))
-	    {
+	    unless ($right_ctg_obj = $ace_obj->get_contig($right_ctg_name)) {
+
 		$self->error_message("Unable to get contig_obj: $right_ctg_name");
 		return;
 	    }
 
-	    if ($right_comp eq 'yes')
-	    {
-		unless ($right_ctg_obj->complement)
-		{
+	    if ($right_comp eq 'yes') {
+
+		unless ($right_ctg_obj->complement) {
+
 		    $self->error_message("Unable to complement contig: $right_ctg_name");
 		    return;
 		}
@@ -777,47 +795,72 @@ sub _make_joins
                 $left_ctg_obj = $ctg_tool->merge($left_ctg_obj, $right_ctg_obj, undef, phd_array => \@phd_objs);
             };
 
-            if ($@)
-            {
+            if ($@) {
+		$last_merge_failed = 1;
 		#MERGE FAILED SO EXPORT THE LEFT CONTIG
+		print " => Merge failed! \n\tExporting $left_contig_name\n";
+
+		#IT LOOKS LIKE THERE ARE PROBLEMS WITH CONTIG OBJECTS
+		#WHEN MERGE FAILS .. SO GET A NEW CONTIG OBJECT
+
+		$left_ctg_obj = $ace_obj->get_contig ($left_ctg_name);
+
 		$xport->export_contig(contig => $left_ctg_obj);
 
-		#REMOVE IT FROM LIST OF CONTIGS THAT WILL LATER ALL BE EXPORTED
-		delete $unused_contig_names{$left_ctg_name} if exists $unused_contig_names{$left_ctg_name};
+		print "Finished exporting ".$left_ctg_obj->name."\n";
 
+		#REMOVE IT FROM LIST OF CONTIGS THAT WILL LATER ALL BE EXPORTED
+		delete $unused_contig_names{$left_ctg_name} if
+		    exists $unused_contig_names{$left_ctg_name};
+		print "The real right contig name".$right_ctg_obj->name."\n";
 		#IF RIGHT CONTIG WAS THE LAST CONTIG IN SCAFFOLD JUST EXPORT THAT TOO
-		if (scalar @ctgs == 0)
-		{
+		if (scalar @ctgs == 0) {
+		    print "\tExporting $right_ctg_name too\n\tIt's the last contig in scaffold\n";
+
+		    $right_ctg_obj = $ace_obj->get_contig ($right_ctg_name);
+
 		    $xport->export_contig(contig => $right_ctg_obj);
-		    delete $unused_contig_names{$right_ctg_name} if exists $unused_contig_names{$right_ctg_name};
+		    delete $unused_contig_names{$right_ctg_name} if
+			exists $unused_contig_names{$right_ctg_name};
 		    next;
 		}
 
 		#MAKE THE RIGHT CONTIG OBJECT THE LEFT CONTIG OBJECT
-		$right_ctg_obj = $left_ctg_obj;
+		print "\tMaking $right_ctg_name left contig to continue merging\n";
+
+		$left_ctg_obj = $right_ctg_obj;
+		$left_ctg_name = $left_ctg_obj->name;
 
 		#CONTINUE TO MERGE USING RIGHT CONTIG AS THE NEXT LEFT CONTIG
 		next;
             }
+	    else {
+		print " => Successfully merged $left_ctg_name to $right_ctg_name\n";
+		$last_merge_failed = 0;
+	    }
 
 	    #TODO CREATE LOG FILE THAT LISTS ALL THE JOINS
 
-            foreach ($left_ctg_name, $right_ctg_name)
-            {
+            foreach ($left_ctg_name, $right_ctg_name) {
                 delete $unused_contig_names{$_} if exists $unused_contig_names{$_};
             }
         }
 
-        $xport->export_contig(contig => $left_ctg_obj, new_name => $left_ctg_name);
+	unless ($last_merge_failed == 1) {
+
+	    $xport->export_contig(contig => $left_ctg_obj, new_name => $left_ctg_name);
+	}
     }
 
     #need to export all the unused contigs
-    if (scalar keys %unused_contig_names > 0)
-    {
-        foreach (keys %unused_contig_names)
-        {
+    if (scalar keys %unused_contig_names > 0) {
+
+	print "Exporting unmerged contigs\n";
+        foreach (keys %unused_contig_names) {
+
             my $contig_obj = $ace_obj->get_contig($_);
-            $xport->export_contig(contig => $contig_obj);
+	    print "\t".$contig_obj->name."\n";
+	    $xport->export_contig(contig => $contig_obj);
         }
     }
 
