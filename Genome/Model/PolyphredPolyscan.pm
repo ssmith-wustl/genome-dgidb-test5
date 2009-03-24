@@ -458,7 +458,7 @@ sub setup_input {
     my $sorted_file = "$combined_input_file.temp";
 
     # Sort by chromosome, position, sample... TODO: derive these numbers from columns sub
-    system("sort -gk1 -gk2 -k4 $combined_input_file > $sorted_file");
+    system("sort -k1,1 -k2,2n -k5,5 $combined_input_file > $sorted_file");
 
     unless(-e $sorted_file) {
         $self->error_message("Failed to sort combined input file: $combined_input_file into $sorted_file");
