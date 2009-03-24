@@ -12,7 +12,8 @@ class Genome::Disk::Group::Command::List {
                                     is_constant => 1,
                                     value => 'Genome::Disk::Group',
                                 },
-            show => { default_value => 'disk_group_name,dg_id,subdirectory,permissions,sticky' },
+            show => { default_value => 'disk_group_name,dg_id,user_name,group_name,subdirectory' },
+            filter => { default_value => 'user_name=apipe' },
     ],
 };
 
