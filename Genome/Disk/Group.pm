@@ -15,6 +15,20 @@ class Genome::Disk::Group {
             subdirectory => { is => 'Text' },
             unix_uid => { is => 'Number' },
             unix_gid => { is => 'Number' },
+            user_name => {
+                          calculate_from => 'unix_uid',
+                          calculate => q|
+                               my ($user_name) = getpwuid($unix_uid);
+                               return $user_name;
+                           |,
+                      },
+            group_name => {
+                           calculate_from => 'unix_gid',
+                           calculate => q|
+                               my ($group_name) = getgrgid($unix_gid);
+                               return $group_name;
+                           |,
+                      },
         ],
          has_many_optional => [
                           mount_paths => {
@@ -27,7 +41,7 @@ class Genome::Disk::Group {
                                      to =>  'volume',
                                  },
                           assignments => {
-                                          is => 'Genome::Disk::GroupVolumeAssignment',
+                                          is => 'Genome::Disk::Assignment',
                                           reverse_id_by => 'group',
                                       },
                       ],
