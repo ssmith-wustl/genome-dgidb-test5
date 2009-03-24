@@ -234,7 +234,7 @@ sub create {
         if ( defined($self->temp_directory) ) {
      		$tmp_dir =  Genome::Utility::FileSystem->create_directory($self->temp_directory);
         } else {
-	        $tmp_dir = File::Temp::tempdir(CLEANUP => 0);
+	        $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
         }
      	#$self->status_message("temp dir:".$tmp_dir);
 
