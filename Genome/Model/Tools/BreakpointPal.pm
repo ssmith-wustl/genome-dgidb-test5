@@ -26,7 +26,7 @@ class Genome::Model::Tools::BreakpointPal {
 	     },
 	         irx          => {
 		 type         => 'String',
-		 doc          => "give a quoted list of readpair  orientions or the single oriention you would like to use in order to pick primer pairs to resolve an interchromosomal rearangement [pp, pm, mp,or mm where p=plus and m=minus] [.eg pp means reads running from BP1 are in the plus orientation and reads from BP2 are also in the plus orientation] if there are read pairs supporting two or more readpair orientations the option would be used as ie --irx \"pp mp\"",
+		 doc          => "give a quoted list of readpair orientions or the single oriention you would like to use in order to pick primer pairs to resolve an interchromosomal rearangement [pp, pm, mp &/or mm where p=plus and m=minus] [.eg pp means reads running from BP1 are in the plus orientation and reads from BP2 are also in the plus orientation] if there are read pairs supporting two or more readpair orientations the option would be used as ie --irx \"pp mp\"",
 		 is_optional  => 1,
 
 	     },
@@ -56,19 +56,23 @@ class Genome::Model::Tools::BreakpointPal {
 };
 
 
-sub help_brief {                            # keep this to just a few words <---
-    "This tool will make three fasta files from the Human NCBI build 36based on you breakpoint id and run a pal -all on them."                 
+sub help_brief {
+    "This tool will make three fasta files from the Human NCBI build 36 based on you breakpoint id and run a pal -all on them. It also gives several options for selecting primer pairs from SNP/Repeat masked sequence."
 }
 
-sub help_synopsis {                         # replace the text below with real examples <---
+sub help_synopsis {
     return <<EOS
 
-gt break-point-pal --breakpoint-id chr11:36287905-36288124
+running...
+
+gt breakpoint-pal --breakpoint-id chr11:36287905-36288124 --span
  
+...will give three fastas around the breakpoints and a pal with them as well as a a file of primer pair picks that span the breakpoints
+
 EOS
 }
 
-sub help_detail {                           # this is what the user will see with the longer version of help. <---
+sub help_detail {
     return <<EOS 
 
 running this breakpoint id with the default options
@@ -87,13 +91,13 @@ chr11:36287905-36288124.BP1.300.fasta    300 flank either side of BP1 "36287905"
 chr11:36287905-36288124.BP2.300.fasta    300 flank either side of BP2 "36288124" 
       (5prime => 36287823-36288123 and 3prime => 36288124-36288424)
 
-and the result from the pal
+and the result from the pal between them
 chr11:36287905-36288124.BP1-2.fasta.BP2.pal100.ghostview
 
 "pal -files chr12:36287905-36288124.BP1-2.fasta chr12:36287905-36288124.BP1.300.fasta chr12:36287905-36288124.BP2.300.fasta -s 100 -all -out chr12:36287905-36288124.BP1-2.fasta.BP2.pal100.ghostview"
 
 
-irx -- if this option is used you will need to state the read pair orientation/s at the breakpoints inorder for pcr primer pair to be selected 
+irx -- if this option is used you will need to state the read pair orientation/s at the breakpoints inorder for the pcr primer pairs to be selected 
    ie running ...     gt break-point-pal --breakpoint-id chr11:36287905-36288124 --irx mp 
    would produce the additional file chr11:36287905-36288124.irx.300.mp.primer3.blast.result
 
@@ -235,12 +239,11 @@ sub execute {                               # replace with real execution logic.
     if ($span) {
 	$span_primer_results = &get_span_primers($bp_id,$flank,$self);
 
-    }
-
-    my $irx_primer_files;
-    if (@irx_primer_results) {
-	$irx_primer_files = join' ',@irx_primer_results;
-	print qq(see primer picks in these files; $irx_primer_files\n);
+	if ($span_primer_results) {
+	    print qq(See the spanning primmers picked in $span_primer_results\n);
+	} else {
+	    print qq(No spanning primmers were picked\n);
+	}
     }
 }
 
@@ -279,7 +282,7 @@ sub get_span_primers {
     my $primer_name = "$bp_id.span.$breakpoint_depth";
     my $seq_l = length($seq_span);
     
-    print qq(\nprimers for inv span will be pick from a sequence that is $seq_l bp in length\n\n);
+    print qq(\nspanning primers will be picked from a sequence that is $seq_l bp in length\n\n);
     
     my $pick = &pick_primer($primer_name,$seq_span);
     return ($pick);
@@ -307,19 +310,19 @@ sub get_inv_primer {
     my $primer_g3_name = "$bp_id.inv.$breakpoint_depth.gap3";
     my $primer_g4_name = "$bp_id.inv.$breakpoint_depth.gap4";
     my $seq_l = length($seq_g1);
-    print qq(\nprimers for inv gap1 will be pick from a sequence that is $seq_l bp in length\n\n);
+    print qq(\nprimers for inv gap1 will be picked from a sequence that is $seq_l bp in length\n\n);
     my $pick_g1 = &pick_primer($primer_g1_name,$seq_g1);
     push (@picks,$pick_g1);
     $seq_l = length($seq_g2);
-    print qq(\nprimers for inv gap2 will be pick from a sequence that is $seq_l bp in length\n\n);
+    print qq(\nprimers for inv gap2 will be picked from a sequence that is $seq_l bp in length\n\n);
     my $pick_g2 = &pick_primer($primer_g2_name,$seq_g2);
     push (@picks,$pick_g2);
     $seq_l = length($seq_g3);
-    print qq(\nprimers for inv gap3 will be pick from a sequence that is $seq_l bp in length\n\n);
+    print qq(\nprimers for inv gap3 will be picked from a sequence that is $seq_l bp in length\n\n);
     my $pick_g3 = &pick_primer($primer_g3_name,$seq_g3);
     push (@picks,$pick_g3);
     $seq_l = length($seq_g4);
-    print qq(\nprimers for inv gap4 will be pick from a sequence that is $seq_l bp in length\n\n);
+    print qq(\nprimers for inv gap4 will be picked from a sequence that is $seq_l bp in length\n\n);
     my $pick_g4 = &pick_primer($primer_g4_name,$seq_g4);
     push (@picks,$pick_g4);
     
@@ -345,16 +348,19 @@ sub get_irx_primer {
     my @picks;
     my ($picks_pp,$picks_pm,$picks_mp,$picks_mm);
     for my $rpo (@irx_rpo) {
-	my $primer_name = "$bp_id.irx.$breakpoint_depth.$rpo";
-	my ($seq) = &get_irx_primer_design_seq($bp_id,$rpo,$flank,$breakpoint_depth);
-	my $seq_l = length($seq);
-	print qq(\nprimers for irx with readpair orientation $rpo will be pick from a sequence that is $seq_l bp in length\n\n);
-	my $pick = &pick_primer($primer_name,$seq);
-
-	push (@picks,$pick);
-
+	if ($rpo eq "pp" || $rpo eq "pm" || $rpo eq "mp" || $rpo eq "mm") {
+	    my $primer_name = "$bp_id.irx.$breakpoint_depth.$rpo";
+	    my ($seq) = &get_irx_primer_design_seq($bp_id,$rpo,$flank,$breakpoint_depth);
+	    my $seq_l = length($seq);
+	    print qq(\nprimers for irx with readpair orientation $rpo will be picked from a sequence that is $seq_l bp in length\n\n);
+	    my $pick = &pick_primer($primer_name,$seq);
+	    
+	    push (@picks,$pick);
+	    
+	} else {
+	    print qq($rpo is an invalid read pair orientation, no primers will be picked for $rpo\n);
+	}
     }
-
     return(@picks); 
     #print qq(see $picks_pp, $picks_pm, $picks_mp, or $picks_mm for your primer pair info\n);
 }
@@ -765,3 +771,4 @@ sub count_blast_hits {
     return ($blast_hit_counts,$location);
 }
 
+1;
