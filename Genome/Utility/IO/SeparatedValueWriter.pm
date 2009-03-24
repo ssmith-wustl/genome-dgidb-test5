@@ -5,10 +5,17 @@ use warnings;
 
 use Genome;
 
-use Data::Dumper;
+use Data::Compare 'Compare';
+use Data::Dumper 'Dumper';
 
 class Genome::Utility::IO::SeparatedValueWriter {
     is => 'Genome::Utility::IO::Writer', 
+    has => [
+    headers => {
+        type => 'Array',
+        doc => 'Headers to write and use in ordering value order.'
+    },
+    ],
     has_optional => [
     separator => {
         type => 'String',
@@ -18,16 +25,27 @@ class Genome::Utility::IO::SeparatedValueWriter {
     ],
 };
 
-sub get_column_count {
-    return $_[0]->{_column_count};
+sub create {
+    my ($class, %params) = @_;
+
+    my $headers = delete $params{headers}; # prevent UR from sorting our headers!
+    unless ( $headers ) {
+        $class->error_message("Headers are required to create.");
+        return;
+    }
+
+    my $self = $class->SUPER::create(%params)
+        or return;
+
+    $self->headers($headers);
+    $self->{_column_count} = scalar @$headers;
+    $self->output->print( join($self->separator, @$headers)."\n" );
+    
+    return $self;
 }
 
-sub _get_or_set_column_count {
-    my ($self, $aryref) = @_;
-
-    return $self->{_column_count} if $self->{_column_count};
-
-    return $self->{_column_count} = scalar @$aryref;
+sub get_column_count {
+    return $_[0]->{_column_count};
 }
 
 sub print { 
@@ -36,36 +54,39 @@ sub print {
 }
 
 sub write_one {
-    my ($self, $aryref) = @_;
+    my ($self, $data) = @_;
 
-    $self->_validate_aryref($aryref)
+    $self->_validate_data_to_write($data)
         or return;
 
     return $self->output->print(
-        join(',', map { defined $_ ? $_ : '' } @$aryref)."\n"
+        join(
+            $self->separator,
+            map { defined $_ ? $_ : '' } map { $data->{$_} } @{$self->headers}
+        )."\n"
     );
 }
 
-sub _validate_aryref {
-    my ($self, $aryref) = @_;
+sub _validate_data_to_write {
+    my ($self, $data) = @_;
 
-    unless ( $aryref ) {
+    unless ( $data ) {
         $self->error_message("No data sent to 'write_one'");
         return;
     }
 
-    unless ( ref $aryref eq 'ARRAY' ) {
-        $self->error_message("Need data as an array ref to 'write_one'. Received:\n".Dumper($aryref));
+    unless ( ref $data eq 'HASH' ) {
+        $self->error_message("Need data as an hash ref to 'write_one'. Received:\n".Dumper($data));
         return;
     }
 
-    unless ( @$aryref ) {
-        $self->error_message("Empty array ref sent to 'write_one'");
+    unless ( %$data ) {
+        $self->error_message("No data in data hash ref sent to 'write_one'");
         return;
     }
     
-    unless ( @$aryref == $self->_get_or_set_column_count($aryref) ) {
-        $self->error_message("Array values differ than those previously written:\n".Dumper($aryref));
+    unless ( Compare([ sort @{$self->headers} ], [ sort keys %$data ]) ) {
+        $self->error_message("Headers in data do not match headers being written:\n".Dumper($data));
         return;
     }
 
