@@ -15,6 +15,7 @@ my @SUB_COMMANDS = qw/
     allocation
     volume
     group
+    assignment
 /;
 
 our %SUB_COMMAND_CLASSES = 
