@@ -57,7 +57,7 @@ sub test01_save_report : Test(4) {
     return 1;
 }
 
-sub test03_create_report_from_directories : Test(9) {
+sub test02_create_report_from_directories : Test(9) {
     my $self = shift;
     
     # Get it w/ parent dir
@@ -76,7 +76,7 @@ sub test03_create_report_from_directories : Test(9) {
     return 1;
 }
 
-sub test04_other_get_and_create_fails {# : Tests {
+sub test03_other_get_and_create_fails {# : Tests {
     my $self = shift;
     
     my $valid_name = 'Test Report';
@@ -111,12 +111,8 @@ use base 'Genome::Utility::TestBase';
 use Data::Dumper 'Dumper';
 use Test::More;
 
-sub generator { 
-    return $_[0]->{_object};
-}
-
 sub test_class {
-    return 'Genome::Report::Generator::ForTesting';
+    return 'Genome::Report::Generator';
 }
 
 sub params_for_test_class {
@@ -125,28 +121,84 @@ sub params_for_test_class {
     );
 }
 
-sub test001_use : Test(1) { # overwrote cuz testing class using a subclass 
+sub headers {
+    return [qw/ Assembled Attempted Success /];
+}
+
+sub data {
+    return [ [qw/ 5 5 100% /] ];
+}
+
+sub test01_generate_report : Test(1) {
     my $self = shift;
 
-    use_ok('Genome::Report::Generator')
-        or die;
+    can_ok($self->test_class, 'generate_report');
 
     return 1;
 }
 
-sub test01_generate : Test(2) {
+sub test02_validate_aryref : Test(2) { 
     my $self = shift;
 
-    my $report = $self->generator->generate_report;
-    ok($report, 'Generate report');
-    isa_ok($report, 'Genome::Report');
+    ok(
+        !$self->test_class->_validate_aryref(
+            name => 'data',
+            value => undef,
+            method => '_generate_vertical_html_table',
+        ),
+        'Failed as expected - no value'
+    );
+    ok(
+        !$self->test_class->_validate_aryref(
+            name => 'data',
+            value => 'string',
+            method => '_generate_vertical_html_table',
+        ),
+        'Failed as expected - value not aryref headers'
+    );
 
     return 1;
 }
 
+sub test03_generate_cvs : Test(1) {
+    my $self = shift;
+
+    my $svs =  $self->test_class->_generate_csv_string(
+        headers => $self->headers,
+        data => $self->data,
+    );
+    ok($svs, 'Generated csv string');
+    #print Dumper($svs);
+
+    return 1;
+}
+
+sub test04_generate_html_tables : Test(2) {
+    my $self = shift;
+
+    # note - not testing if headers and data are included, testing the _validate_aryref method above
+    
+    my $table =  $self->test_class->_generate_html_table(
+        headers => $self->headers,
+        data => $self->data,
+    );
+    ok($table, 'Generated html table');
+    #print Dumper($table);
+
+    my $vert_table = $self->test_class->_generate_vertical_html_table(
+        headers => [qw/ Category Assembly1 /],
+        horizontal_headers => $self->headers,
+        data => $self->data,
+    );
+    ok($vert_table, 'Generated vertical html table');
+
+    return 1;
+}
+
+ 
 #######################################################################
 
-package Genome::Report::CsvTest;
+package Genome::Report::FromSeparatedValueFileTest;
 
 use strict;
 use warnings;
@@ -158,75 +210,39 @@ use File::Compare 'compare';
 use Test::More;
 use Storable 'retrieve';
 
-sub report {
+sub generator {
     return $_[0]->{_object};
 }
 
 sub test_class_sub_dir {
-    return 'Genome-Model-Report';
+    return 'Genome-Utility-IO';
 }
 
 sub test_class {
-    return 'Genome::Report::Csv';
+    return 'Genome::Report::FromSeparatedValueFile';
 }
 
 sub params_for_test_class {
     my $self = shift;
     return (
-        headers => $self->_headers,
-        file => $self->dir.'/myalbums.html',
+        name => 'Report from Albums SVF',
+        file => $self->dir.'/albums.csv',
+        description => 'Albums on Hand Today',
     );
 }
 
 sub required_attrs {
-    return (qw/ headers /);
+    return (qw/ name file description /);
 }
 
-sub _headers {
+sub test_01_generate_report : Test(2) {
     my $self = shift;
 
-    $self->_set_headers_and_rows unless $self->{_headers};
+    can_ok($self->generator, '_generate_data');
 
-    return $self->{_headers};
-}
-
-sub _rows {
-    my $self = shift;
-
-    $self->_set_headers_and_rows unless $self->{_headers};
-
-    return $self->{_rows};
-}
-
-sub _albums_csv {
-    return $_[0]->dir.'/albums.csv';
-}
-
-sub _set_headers_and_rows {
-    my $self = shift;
-
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $self->_albums_csv )
-        or die;
-    my $header_line = $fh->getline;
-    chomp $header_line;
-    $self->{_headers} = [ split(',', $header_line) ];
-    while ( my $line = $fh->getline ) {
-        chomp $line;
-        push @{$self->{_rows}}, [ split(',', $line) ];
-    }
-    
-    return 1;
-}
-
-sub test01_write_and_compare : Test(1) {
-    my $self = shift;
-
-    my $svw = $self->svw;
-    for my $row ( @{$self->_rows} ) {
-        $svw->write_one($row);
-    }
-
-    is(compare($svw->get_original_output, $self->_albums_csv, ), 0, 'Compared generated and files');
+    my $report = $self->generator->generate_report;
+    ok($report, 'Generated report');
+    print Dumper($report);
 
     return 1;
 }
