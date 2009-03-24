@@ -1,0 +1,23 @@
+package Genome::Disk::Assignment::Command::List;
+
+use strict;
+use warnings;
+
+use Genome;
+
+class Genome::Disk::Assignment::Command::List {
+    is => 'UR::Object::Command::List',
+    has => [
+            subject_class_name  => {
+                                    is_constant => 1,
+                                    value => 'Genome::Disk::Assignment',
+                                },
+            show => { default_value => 'disk_group_name,absolute_path,total_kb,unallocated_kb,percent_used' },
+            filter => { default_value => 'user_name=apipe' },
+    ],
+};
+
+sub sub_command_sort_position { 4 }
+
+1;
+
