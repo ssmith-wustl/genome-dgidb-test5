@@ -28,7 +28,7 @@ class Genome::Disk::Volume {
                                      to =>  'group',
                                  },
                           assignments => {
-                                          is => 'Genome::Disk::GroupVolumeAssignment',
+                                          is => 'Genome::Disk::Assignment',
                                           reverse_id_by => 'volume',
                                       },
                       ],
