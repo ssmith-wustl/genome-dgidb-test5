@@ -314,7 +314,8 @@ sub accumulate_maps {
 
 
 #replace 999999 with the cut off value... 
- if ($model->id < 0 || $model->id >= 2766822526 ) {
+#2761337261 is an old AML2 model with newer data
+ if ($model->id < 0 || $model->id >= 2766822526 || $model->id == 2761337261) {
 
         $result_file = $self->resolve_accumulated_alignments_filename;
 
