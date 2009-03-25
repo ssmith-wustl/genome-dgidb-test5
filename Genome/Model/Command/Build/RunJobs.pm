@@ -121,8 +121,9 @@ sub execute {
                                                                                                           $first_event->id
                                                                                                       )
                                                 );
+        my $first_event_log_resource = $self->resolve_log_resource($first_event);
 
-        $first_operation->operation_type->lsf_resource($first_event->bsub_rusage);
+        $first_operation->operation_type->lsf_resource($first_event->bsub_rusage . $first_event_log_resource);
         $first_operation->operation_type->lsf_queue($lsf_queue);
 
         $stage->add_link(
@@ -145,9 +146,10 @@ sub execute {
                                                                                                                   $n_event->id
                                                                                                               )
                                                         );
-                    $n_operation->operation_type->lsf_resource($n_event->bsub_rusage);
+                    my $n_event_log_resource = $self->resolve_log_resource($n_event);
+                    $n_operation->operation_type->lsf_resource($n_event->bsub_rusage . $n_event_log_resource);
                     $n_operation->operation_type->lsf_queue($lsf_queue);
-                    
+
                     $stage->add_link(
                                      left_operation => $prior_op,
                                      left_property => 'result',
@@ -214,6 +216,20 @@ sub execute {
 
     }
     return 1;
+}
+
+sub resolve_log_resource {
+    my $self = shift;
+    my $event = shift;
+
+    my $event_id = $event->genome_model_event_id;
+    my $log_dir = $event->resolve_log_directory;
+    unless (-d $log_dir) {
+        $event->create_directory($log_dir);
+    }
+    my $err_log_file = sprintf("%s/%s.err", $log_dir, $event_id);
+    my $out_log_file = sprintf("%s/%s.out", $log_dir, $event_id);
+    return ' -o ' . $out_log_file . ' -e ' . $err_log_file;
 }
 
 1;
