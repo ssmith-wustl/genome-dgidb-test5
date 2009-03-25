@@ -9,7 +9,6 @@ use File::Temp;
 use File::Basename;
 use Data::Dumper;
 use Genome;
-use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 use Benchmark;
 
 

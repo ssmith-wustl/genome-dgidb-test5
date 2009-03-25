@@ -6,7 +6,6 @@ use warnings;
 use IO::File;
 use Genome;
 use Data::Dumper;
-use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 use Benchmark;
 
 class Genome::Model::CombineVariants{
@@ -969,7 +968,7 @@ sub get_or_create {
 }
 
 # Calls write_maf_file to create both pre annotation maf files
-sub write_pre_annotation_maf_files {
+sub write_pre_annotation_maf_files { #TODO  fix maf file writing, remove range
     my $self = shift;
 
     $self->write_maf_file('next_hq_genotype_in_range', $self->hq_maf_file);
@@ -980,7 +979,7 @@ sub write_pre_annotation_maf_files {
 }
 
 # Calls write_maf_file to create both pre annotation maf files
-sub write_post_annotation_maf_files {
+sub write_post_annotation_maf_files {  #TODO  fix maf file writing, remove range
     my $self = shift;
 
     $self->write_maf_file('next_hq_annotated_genotype_in_range', $self->hq_maf_file);
@@ -1176,6 +1175,21 @@ sub annotate_variants {
 
     }
 
+}
+
+sub compare_position{
+    my ($chr1, $pos1, $chr2, $pos2) = @_;
+    unless (defined $chr1 and defined $chr2 and defined $pos1 and defined $pos2){
+        return undef;
+    }
+    my $chr_cmp = "$chr1" cmp "$chr2";  #Using cmp because this is how the setup input files are sorted
+    if ($chr_cmp < 0){
+        return -1;
+    }elsif ($chr_cmp == 0){
+        return $pos1 <=> $pos2;
+    }else{
+        return 1;
+    }
 }
 
 1;
