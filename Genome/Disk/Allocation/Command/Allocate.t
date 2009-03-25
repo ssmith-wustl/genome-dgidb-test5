@@ -144,7 +144,8 @@ unless (copy($known_file,$allocated_directory .'/'. $known_base_filename)) {
     die $!;
 }
 
-my $reallocation = $disk_allocation->reallocate;
+#my $reallocation = $disk_allocation->reallocate;
+my $reallocation = Genome::Disk::Allocation::Command::Reallocate->execute(allocator_id => $disk_allocation->allocator_id);
 isa_ok($reallocation,'Genome::Disk::Allocation::Command::Reallocate');
 
 my $reallocator = $reallocation->reallocator;
@@ -167,7 +168,10 @@ SKIP : {
     skip 'not sure what the actual usage is for the file'. $known_file, 1 if 1;
     is($gsc_disk_allocation->kilobytes_requested,23600,'kilobytes_requested matches expected amount');
 }
-my $deallocation = $disk_allocation->deallocate;
+
+
+my $deallocation = Genome::Disk::Allocation::Command::Deallocate->execute(allocator_id => $disk_allocation->allocator_id);
+#my $deallocation = $disk_allocation->deallocate;
 isa_ok($deallocation,'Genome::Disk::Allocation::Command::Deallocate');
 
 my $deallocator = $deallocation->deallocator;
