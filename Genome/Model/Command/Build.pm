@@ -14,14 +14,7 @@ class Genome::Model::Command::Build {
                            default_value => 1,
                            is_transient => 1,
                            is_optional => 1,
-                           doc => 'The build will execute genome-model run-jobs before completing(default_value=1)',
-                       },
-        hold_run_jobs  => {
-                           is => 'Boolean',
-                           default_value => 0,
-                           is_transient => 1,
-                           is_optional => 1,
-                           doc => 'A flag to hold all lsf jobs that are scheduled in run-jobs(default_value=0)',
+                           doc => 'The build will execute genome model build run-jobs(default_value=1)',
                        },
     ],
     doc => "build the model with currently assigned instrument data according to the processing profile",
@@ -39,9 +32,6 @@ sub create {
     }
     unless (defined $self->auto_execute) {
         $self->auto_execute(1);
-    }
-    unless (defined $self->hold_run_jobs) {
-        $self->hold_run_jobs(0);
     }
     my $model = $self->model;
     unless ($self->build_id) {
@@ -109,14 +99,14 @@ sub clean {
 
 
 
-sub resolve_data_directory {
+sub Xresolve_data_directory {
     my $self = shift;
     my $model = $self->model;
     return $model->data_directory . '/build' . $self->id;
 }
 
 sub execute {
-    my $self = shift;
+    my $self = shift; 
     my $build = $self->build;
     unless ($build) {
         $self->error_message('No build found for build id '. $self->build_id);
@@ -131,8 +121,11 @@ sub execute {
         $error_message .= 'For build event: '. $self->desc .' '. $self->event_status;
         return;
     }
+
+    $self->create_directory($self->data_directory);
+    my $run_jobs_script = $self->data_directory .'/run_jobs.sh';
+    open(FILE,'>'.$run_jobs_script) || die ('Failed to open run jobs script: '. $run_jobs_script .":  $!");
     my $pp = $self->model->processing_profile;
-    my $prior_job_name;
     for my $stage_name ($pp->stages) {
         my @scheduled_objects = $self->_schedule_stage($stage_name);
         unless (@scheduled_objects) {
@@ -145,36 +138,29 @@ sub execute {
             # transent properties with default_values are not re-initialized when loading object from data source
             $self->auto_execute(1);
         }
-        if ($self->auto_execute) {
-            my %run_jobs_params = (
-                                   model_id => $self->model_id,
-                                   prior_job_name => $prior_job_name,
-                                   building => 1,
-                               );
-            if ($self->hold_run_jobs) {
-                $run_jobs_params{bsub_args} = ' -H ';
-            }
-            unless (Genome::Model::Command::RunJobs->execute(%run_jobs_params)) {
-                $self->error_message('Failed to execute run-jobs for model '. $self->model_id);
-                return;
-            }
-            my $max_try = 10;
-            for my $scheduled_event (@scheduled_objects) {
-                my $state = $scheduled_event->lsf_job_state;
-                while ( !$state && $max_try ) {
-                    sleep 6;
-                    $max_try--;
-                    $state = $scheduled_event->lsf_job_state;
-                }
-                unless ($state) {
-                    $self->error_message('LSF is taking way too long and job dependencies may be jacked.');
-                }
-            }
-        }
-        $prior_job_name = $self->model_id .'_'. $self->build_id .'_'. $stage_name .'*';
+        print FILE 'genome model build run-jobs --model-id='. $build->model_id .' --build-id='. $build->build_id .' --stage-name='. $stage_name ."\n";
     }
+    close(FILE);
+    `chmod u+x $run_jobs_script`;
     # this is really more of a 'testing' flag and may be more appropriate named such
-    if ($self->auto_execute && !$self->hold_run_jobs) {
+    if ($self->auto_execute) {
+        my $cmdline = 'bsub -q long -u '. $ENV{USER} .'@genome.wustl.edu '. $run_jobs_script;
+        my $bsub_output = `$cmdline`;
+        my $retval = $? >> 8;
+
+        if ($retval) {
+            $self->error_message("bsub returned a non-zero exit code ($retval), bailing out");
+            return;
+        }
+        my $bsub_job_id;
+        if ($bsub_output =~ m/Job <(\d+)>/) {
+            $bsub_job_id = $1;
+        } else {
+            $self->error_message('Unable to parse bsub output, bailing out');
+            $self->error_message("The output was: $bsub_output");
+            return;
+        }
+        $self->lsf_job_id($bsub_job_id);
         $self->mail_summary;
     }
     return 1;
