@@ -94,7 +94,7 @@ sub _prioritize_annotations_per_gene
     foreach my $annotation ( @annotations )
     {
         # TODO add more priority info in the variant priorities...transcript source, status, etc
-        $annotation->{priority} = $variant_priorities{ $annotation->{trv_type} };
+        $annotation->{priority} = $variant_priorities{ lc($annotation->{trv_type}) };
         # If no annotation exists for this gene yet, set it
         unless ( exists $prioritized_annotations{ $annotation->{gene_name} } )
         {
@@ -143,7 +143,7 @@ sub _prioritize_annotations_across_genes{
     my ($self, @annotations) = @_;
     my $top_annotation;
     for my $annotation (@annotations){
-        $annotation->{priority} = $variant_priorities{$annotation->{trv_type}};
+        $annotation->{priority} = $variant_priorities{lc($annotation->{trv_type})};
         if (!$top_annotation){
             $top_annotation = $annotation;
         }elsif ($annotation->{priority} < $top_annotation->{priority}){
