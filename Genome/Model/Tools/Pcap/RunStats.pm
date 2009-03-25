@@ -119,11 +119,12 @@ sub validate
     $self->error_message ("No input qual files found") and return
 	unless @{$self->{input_qual_files}} = grep (/fasta\.qual\.gz$/, @dir_files);
     
-    $self->error_message ("No pcap unused output file") and return
-	unless @{$self->{reads_unused_files}} = grep (/unused\d+$/, @dir_files);
+#    $self->error_message ("No pcap unused output file") and return
+#	unless @{$self->{reads_unused_files}} = grep (/unused\d+$/, @dir_files);
 
     $self->error_message ("No scaffold ace files") and return
 	unless @{$self->{scaffold_ace}} = grep (/\.scaffold\d+\.ace$/, @dir_files);
+
     #There should only be one scaffold ace file
     $self->error_message ("Multiple scaffold ace files") and return
 	if @{$self->{scaffold_ace}} > 1;
@@ -142,6 +143,9 @@ sub validate
 
     $self->error_message ("No reads.placed file") and return
 	unless $self->{reads_placed_file} = $project_dir.'/reads.placed';
+
+    $self->error_message ("No reads.unplaced file") and return
+	unless $self->{reads_unplaced_file} = $project_dir.'/reads.unplaced';
 
 
     #validate tier values
@@ -254,18 +258,69 @@ sub run_contig_stats
 	}
 	$fh->close;
     }
-    foreach my $file ( @{$self->{reads_unused_files}} )
-    {
-	my $fh = IO::File->new("< $file");
 
-	while (my $line = $fh->getline)
-	{
-	    next unless ($line =~ /\S+/);
-	    $unplaced_reads++;
-	    $unplaced_prefin_reads++ if $line =~ /_t/;
+    my @unplaced_reasons = qw/ unused chimera short small repeat /;
+
+    my $unplaced = {};
+    my $reads_unplaced_fh = IO::File->new("< $self->{reads_unplaced_file}") || die
+	"Can not open reads.unplaced file";
+    while (my $line = $reads_unplaced_fh->getline) {
+	next if $line =~ /^\s+$/;
+	my @tmp = split (/\s+/, $line);
+	print "Warning: Incorrect format for line in reads.unplaced file: $line\n" and
+	    next unless scalar @tmp == 3;
+	my $read_name = $tmp[1];
+	my $reason = $tmp[2];
+	if (grep (/^$reason$/, @unplaced_reasons)) {
+	    $unplaced->{$reason}++;
 	}
-	$fh->close;
+	else {
+	    $unplaced->{unknown}++;
+	}
+	$unplaced->{total_reads}++;
+	
+	if ($read_name =~ /_t/) {
+	    $unplaced->{prefinish_reads}++;
+	}
     }
+
+    $reads_unplaced_fh->close;
+
+    my $unplaced_unused = 0;
+    $unplaced_unused = $unplaced->{unused} if
+	exists $unplaced->{unused};
+    my $unplaced_chimera = 0;
+    $unplaced_chimera = $unplaced->{chimera} if
+	exists $unplaced->{chimera};
+    my $unplaced_small = 0;
+    $unplaced_small = $unplaced->{small} if
+	exists $unplaced->{small};
+    my $unplaced_short = 0;
+    $unplaced_short = $unplaced->{short} if
+	exists $unplaced->{short};
+    my $unplaced_repeat = 0;
+    $unplaced_repeat = $unplaced->{repeat} if
+	exists $unplaced->{repeat};
+    my $unplaced_prefinish_reads = 0;
+    $unplaced_prefinish_reads = $unplaced->{prefinish_reads} if
+	exists $unplaced->{prefinish_reads};
+    my $all_unplaced_reads = 0;
+    $all_unplaced_reads = $unplaced->{total_reads} if
+	exists $unplaced->{total_reads};
+    
+#    foreach my $file ( @{$self->{reads_unused_files}} )
+#    {
+#	my $fh = IO::File->new("< $file");
+
+#	while (my $line = $fh->getline)
+#	{
+#	    next unless ($line =~ /\S+/);
+#	    $unplaced_reads++;
+#	    $unplaced_prefin_reads++ if $line =~ /_t/;
+#	}
+#	$fh->close;
+#    }
+
 
     my $rp_fh = IO::File->new("< $self->{reads_placed_file}");
     while (my $line = $rp_fh->getline)
@@ -279,14 +334,11 @@ sub run_contig_stats
     $ave_Q20_bases_per_read = int($total_Q20_bases / $total_input_reads + 0.5);
     $ave_input_read_length = int($total_input_read_bases / $total_input_reads + 0.5);
     
-    my $placed_reads_num = $total_input_reads - $unplaced_reads;
-    my $reads_in_singleton = $total_input_reads - $unplaced_reads - $reads_in_scaf;
+#    my $placed_reads_num = $total_input_reads - $unplaced_reads;
+#    my $reads_in_singleton = $total_input_reads - $unplaced_reads - $reads_in_scaf;
 
-    my $chaff_rate = int( $unplaced_reads*10000/$total_input_reads + 0.5 ) / 100;
+    my $chaff_rate = int( $all_unplaced_reads*10000/$total_input_reads + 0.5 ) / 100;
     my $Q20_redundancy = int( $total_Q20_bases * 10 / $total_ctg_length ) / 10;
-
-
-
 
 
     $stats =  "\n*** SIMPLE READ STATS ***\n".
@@ -295,13 +347,19 @@ sub run_contig_stats
 	  "Total Q20 bases: $total_Q20_bases bp\n".
 	  "Average Q20 bases per read: $ave_Q20_bases_per_read bp\n".
 	  "Average read length: $ave_input_read_length bp\n".
-	  "Placed reads: $placed_reads_num\n".
+	  "Placed reads: $reads_in_scaf\n".
 #	  "Placed reads: ", $total_input_reads - $unplaced_reads, "\n".
-	  "  (reads in scaffold: $reads_in_scaf)\n".
+#	  "  (reads in scaffold: $reads_in_scaf)\n".
 #	  "  (reads in singleton: ", $total_input_reads - $unplaced_reads-$reads_in_scaf, ")\n".
-	  "  (reads in singleton: $reads_in_singleton)\n".    
-	  "Unplaced reads: $unplaced_reads\n".
+#	  "  (reads in singleton: $reads_in_singleton)\n".    
+#	  "Unplaced reads: $unplaced_reads\n".
 #	  "Chaff rate: ", int( $unplaced_reads*10000/$total_input_reads + 0.5 ) / 100, "%\n".
+          "Unplaced reads: $all_unplaced_reads\n".
+          "  (Singletons: $unplaced_unused)\n".
+          "  (Chimera: $unplaced_chimera)\n".
+          "  (Repat: $unplaced_repeat)\n".
+          "  (Short: $unplaced_short)\n".
+          "  (Small: $unplaced_small)\n".
 	  "Chaff rate: $chaff_rate"."%\n".
 #	  "Q20 base redundancy: ", int( $total_Q20_bases * 10 / $total_ctg_length ) / 10, "X\n".
 	  "Q20 base redundancy: $Q20_redundancy"."X\n".
