@@ -56,7 +56,7 @@ sub execute {
 
     # Assign all unassigned if requested 
     if ( $self->all ) {
-        $self->status_message("Attempting to assign all availble instrument data");
+        $self->status_message("Attempting to assign all available instrument data");
         my @unassigned_instrument_data = $self->model->unassigned_instrument_data;
         unless ( @unassigned_instrument_data ){
             $self->error_message("Attempted to assign all instrument data that was unassigned for model, but found none");
