@@ -123,8 +123,15 @@ sub execute {
     }
 
     $self->create_directory($self->data_directory);
-    my $run_jobs_script = $self->data_directory .'/run_jobs.sh';
+    my $run_jobs_script = $self->data_directory .'/run_jobs.pl';
     open(FILE,'>'.$run_jobs_script) || die ('Failed to open run jobs script: '. $run_jobs_script .":  $!");
+
+    print FILE "#!/gsc/bin/perl\n
+                use strict;\n
+                use warnings;\n
+                use Genome;\n";
+    print FILE 'my $rv;'. "\n";
+
     my $pp = $self->model->processing_profile;
     for my $stage_name ($pp->stages) {
         my @scheduled_objects = $self->_schedule_stage($stage_name);
@@ -138,13 +145,14 @@ sub execute {
             # transent properties with default_values are not re-initialized when loading object from data source
             $self->auto_execute(1);
         }
-        print FILE 'genome model build run-jobs --model-id='. $build->model_id .' --build-id='. $build->build_id .' --stage-name='. $stage_name ."\n";
+        my $command = 'genome model build run-jobs --model-id='. $build->model_id .' --build-id='. $build->build_id .' --stage-name='. $stage_name;
+        print FILE '$rv' . " = system('$command');\n";
+        print FILE 'unless ($rv == 0) { die $!; }'. "\n";
     }
     close(FILE);
-    `chmod u+x $run_jobs_script`;
     # this is really more of a 'testing' flag and may be more appropriate named such
     if ($self->auto_execute) {
-        my $cmdline = 'bsub -q long -u '. $ENV{USER} .'@genome.wustl.edu '. $run_jobs_script;
+        my $cmdline = 'bsub -q long -u '. $ENV{USER} .'@genome.wustl.edu perl '. $run_jobs_script;
         my $bsub_output = `$cmdline`;
         my $retval = $? >> 8;
 
