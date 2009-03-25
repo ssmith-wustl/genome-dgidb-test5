@@ -29,37 +29,28 @@ sub execute {
     if ( $self->model->sequencing_center eq 'gsc' ) {
         $self->_link_instrument_data
             or return;
-    }
+    } # TODO add logic for other centers...
 
-    return $self->model->amplicons; # Error msg is on model if no amplicons
+    return $self->build->get_amplicons; # Error msg is on model if no amplicons
 }
 
 sub _link_instrument_data {
     my $self = shift;
 
-    my $chromat_dir = $self->model->chromat_dir;
+    my $chromat_dir = $self->build->chromat_dir;
     for my $ida ( $self->model->instrument_data_assignments ) {
-        $self->_dump_unbuilt_instrument_data($ida) or return;
-
-        my $instrument_data_dir = $ida->instrument_data->resolve_full_path;
-        my $dh = Genome::Utility::FileSystem->open_directory($instrument_data_dir)
+        $self->_dump_unbuilt_instrument_data($ida)
             or return;
-
-        while ( my $trace = $dh->read ) {
-            next if $trace =~ m#^\.#;
-            my $target = sprintf('%s/%s', $instrument_data_dir, $trace);
-            my $link = sprintf('%s/%s', $chromat_dir, $trace);
-            Genome::Utility::FileSystem->create_symlink($target, $link)
-                or return;
-        }
+        $self->build->link_instrument_data( $ida->instrument_data )
+            or return;
     }
 
     return 1;
 }
 
 sub _dump_unbuilt_instrument_data {
-    my $self = shift;
-    my $ida = shift;
+    my ($self, $ida) = @_;
+
     unless ( $ida->first_build_id ) {
         unless ( $ida->instrument_data->dump_to_file_system ) {
             $self->error_message(
@@ -75,6 +66,7 @@ sub _dump_unbuilt_instrument_data {
         }
         $ida->first_build_id( $self->build_id );
     }
+    
     return 1;
 }
 

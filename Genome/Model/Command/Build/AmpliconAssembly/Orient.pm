@@ -25,12 +25,13 @@ sub bsub_rusage {
 sub execute {
     my $self = shift;
 
-    unless ( -s $self->model->assembly_fasta ) {
+    unless ( -s $self->build->assembly_fasta ) {
         $self->error_message(
             sprintf(
-                "The assembly fasta file for model (<id> %s <name> %s) does not exist.  Please collate it first.",
+                "The assembly fasta file for model's (<id> %s <name> %s) build (<ID> %s) does not exist.  Please collate it first.",
                 $self->model->id,
                 $self->model->name,
+                $self->build->id,
             )
         );
         return;
@@ -58,7 +59,7 @@ sub execute {
     }
 
     my $orient = Genome::Model::Tools::Fasta::Orient->create(
-        fasta_file => $self->model->assembly_fasta,
+        fasta_file => $self->build->assembly_fasta,
         %primer_fastas,
     )
         or return;

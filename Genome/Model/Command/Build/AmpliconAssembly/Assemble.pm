@@ -26,35 +26,26 @@ sub bsub_rusage {
 sub execute {
     my $self = shift;
 
-    my $amplicons = $self->model->amplicons
+    my $amplicons = $self->build->get_amplicons
         or return;
 
-    $self->status_message( 
-        printf(
-            "<=== Assembling %d amplicons for model (%s <ID: %s>) ===>\n",
-            scalar(keys %$amplicons),
-            $self->model->name,
-            $self->model->id,
-        )
-    );
-
-    while ( my ($amplicon, $scfs) = each %$amplicons ) {
-        $self->_assemble($amplicon, $scfs)
+    for my $amplicon ( @$amplicons ) {
+        $self->_assemble_amplicon($amplicon)
             or return;
     }
 
     return 1;
 }
 
-sub _assemble {
-    my ($self, $amplicon, $scfs) = @_;
+sub _assemble_amplicon {
+    my ($self, $amplicon) = @_;
 
     # Create SCF file
-    my $scf_file = sprintf('%s/%s.scfs', $self->model->edit_dir, $amplicon);
+    my $scf_file = sprintf('%s/%s.scfs', $self->build->edit_dir, $amplicon->get_name);
     unlink $scf_file if -e $scf_file;
     my $scf_fh = Genome::Utility::FileSystem->open_file_for_writing($scf_file)
         or return;
-    for my $scf ( @$scfs ) { 
+    for my $scf ( @{$amplicon->get_reads} ) { 
         $scf_fh->print("$scf\n");
     }
     $scf_fh->close;
@@ -66,8 +57,8 @@ sub _assemble {
 
     # Create and run the Command
     my $command = Genome::Model::Tools::PhredPhrap::ScfFile->create(
-        directory => $self->model->data_directory,
-        assembly_name => $amplicon,
+        directory => $self->build->data_directory,
+        assembly_name => $amplicon->get_name,
         scf_file => $scf_file,
     );
     #eval{ # if this fatals, we still want to go on
