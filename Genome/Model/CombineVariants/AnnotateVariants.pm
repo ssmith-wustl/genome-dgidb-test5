@@ -6,7 +6,6 @@ use warnings;
 use IO::File;
 use Genome;
 use Data::Dumper;
-use Genome::Utility::ComparePosition qw/compare_position compare_chromosome/;
 
 class Genome::Model::CombineVariants::AnnotateVariants{
     is => ['Command'],
@@ -76,7 +75,7 @@ sub execute {
     while (my $genotype = $self->next_genotype){
         
         #NEW ANNOTATOR IF WE'RE ON A NEW CHROMOSOME
-        if ( compare_chromosome($current_chromosome,$genotype->{chromosome}) != 0 ){
+        if ( $current_chromosome ne $genotype->{chromosome} ){
             $current_chromosome = $genotype->{chromosome};
             my $window = $self->_get_window($current_chromosome);
             $annotator = $self->_get_annotator($window);
@@ -209,19 +208,6 @@ sub next_genotype{
 
 # Reads from the current pre annotation genotype file and returns the next line as a hash
 # Optionally takes a chromosome and position range and returns only genotypes in that range
-
-sub next_genotype_in_range{
-    my $self = shift;
-    return $self->next_genotype unless @_;
-    my ($chrom_start, $pos_start, $chrom_stop, $pos_stop) = @_;
-    while (my $genotype = $self->next_genotype){
-        return undef unless $genotype;
-        if (compare_position($chrom_start, $pos_start, $genotype->{chromosome}, $genotype->{start}) <= 0 and 
-            compare_position($genotype->{chromosome}, $genotype->{start}, $chrom_stop, $pos_stop) <= 0){
-            return $genotype;
-        }
-    }
-}
 
 sub _get_window{
     my $self = shift;
