@@ -256,24 +256,15 @@ sub alignment_allocation_for_aligner_and_refseq {
     unless (@matches) {
         my $kb_requested = $self->calculate_alignment_estimated_kb_usage;
         if ($kb_requested && !($params{check_only}) ) {
-            my $allocation_cmd = Genome::Disk::Allocation::Command::Allocate->create(
-                                                                                     disk_group_name => 'info_alignments',
-                                                                                     allocation_path => $allocation_path,
-                                                                                     kilobytes_requested => $kb_requested,
-                                                                                     owner_class_name => $self->class,
-                                                                                     owner_id => $self->id,
-                                                                                 );
-            unless ($allocation_cmd) {
-                $self->error_message('Failed to create command to allocate disk space');
-                return;
-            }
-            unless ($allocation_cmd->execute) {
-                $self->error_message('Failed to execute command to allocate disk space');
-                return;
-            }
-            my $disk_allocation = $allocation_cmd->disk_allocation;
+            my $disk_allocation = Genome::Disk::Allocation->create(
+                                                                  disk_group_name => 'info_alignments',
+                                                                  allocation_path => $allocation_path,
+                                                                  kilobytes_requested => $kb_requested,
+                                                                  owner_class_name => $self->class,
+                                                                  owner_id => $self->id,
+                                                              );
             unless ($disk_allocation) {
-                $self->error_message('Failed to get disk allocation for '. $allocation_cmd->allocator_id);
+                $self->error_message('Failed to get disk allocation');
                 die $self->error_message;
             }
             push @matches, $disk_allocation;
