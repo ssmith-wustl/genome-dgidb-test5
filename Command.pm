@@ -475,7 +475,6 @@ sub resolve_class_and_params_for_argv
     local @ARGV;
     @ARGV = @argv;
    
-    $DB::single = 1;
     unless (GetOptions($params_hash,@spec)) {
         my @failed = grep { /^--/ } grep { /\W*(\w+)/; not exists $params_hash->{$1} } @argv;
         $self->error_message("Bad params ! @failed");
