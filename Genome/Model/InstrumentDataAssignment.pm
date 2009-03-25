@@ -18,7 +18,7 @@ class Genome::Model::InstrumentDataAssignment {
     ],
     has => [
         first_build_id => { is => 'NUMBER', len => 10, is_optional => 1 },
-
+        first_build => { is => 'Genome::Model::Build', id_by => 'first_build_id', is_optional => 1 },
         #< Attributes from the instrument data >#
         run_name => { via => 'instrument_data'},
 
