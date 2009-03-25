@@ -103,7 +103,7 @@ sub test_new_model_and_add_new_read_sets {
     ok($worked, 'Execute returned true');
 
     my @status_messages = $assign_id->status_messages();
-    ok(scalar(grep { m/Attempting to assign all availble instrument data/ } @status_messages),
+    ok(scalar(grep { m/Attempting to assign all available instrument data/ } @status_messages),
        'Status messages mentioned adding all instrument data');
     ok(scalar(grep { m/assigned to model/ } @status_messages) == 2, 'Saw 2 success messages for aassigning instrument data');
 

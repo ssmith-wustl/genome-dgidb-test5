@@ -19,7 +19,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 201;
+    plan tests => 203;
 
     use_ok( 'Genome::InstrumentData::454');
     use_ok( 'Genome::Model::Assembly');
@@ -125,7 +125,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     ok($assign_command->execute(),'execute '. $assign_command->command_name);
     my @status_messages = $assign_command->status_messages();
     ok(scalar(@status_messages), 'instrument-data assign execute printed some status messages');
-    ok(scalar(grep { $_ eq 'Attempting to assign all availble instrument data'} @status_messages), 'execute mentioned it was adding all reads');
+    ok(scalar(grep { $_ eq 'Attempting to assign all available instrument data'} @status_messages), 'execute mentioned it was adding all reads');
     ok(scalar(grep { $_ =~ /Instrument data .* assigned to model .*/ } @status_messages), '4 instrument data status messages');
     my @warning_messages = $assign_command->warning_messages();
     is(scalar(@warning_messages), 0, 'execute generated no warning messages');
@@ -149,6 +149,9 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     #is(scalar(@status_messages), 42, 'executing build_event generated 42 messages');
     for(my $i = 0; $i < 4; $i++) {
 	my $index = 0;
+        if ($i == 0) {
+            like($status_messages[$index++], qr(^Created directory: .*/build.*), 'Found creating build directory status message');
+        }
         like($status_messages[$index++], qr(^Scheduling jobs for Genome::InstrumentData::454 .*), 'Found scheduling InstrumentData messages');
         like($status_messages[$index++], qr(^Scheduled Genome::Model::Command::Build::Assembly::AssignReadSetToModel),
              'Found Scheduled...AssignReadSetToModel message');

@@ -247,7 +247,6 @@ sub schedule {
     my $build = Genome::Model::Command::Build::ReferenceAlignment->create(
                                                                           model_id => $model->id,
                                                                           auto_execute => $self->auto_execute,
-                                                                          hold_run_jobs => $self->auto_execute,
                                                                       );
     isa_ok($build,'Genome::Model::Command::Build::ReferenceAlignment');
 
