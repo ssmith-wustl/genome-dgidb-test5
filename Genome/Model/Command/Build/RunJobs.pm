@@ -93,14 +93,12 @@ sub execute {
     my $build = $self->build;
     my $build_event = $build->build_event;
 
-    my $uniq = 0;
-
     $DB::single=1;
     
     my $lsf_queue = $self->bsub_queue || 'long';
 
     my $stage = Workflow::Model->create(
-                                        name => $self->stage_name . $uniq++,
+                                        name => $self->build_id . ' ' . $self->stage_name,
                                         input_properties => [
                                                              'prior_result',
                                                          ],
@@ -194,16 +192,26 @@ sub execute {
                      right_property => 'result'
                  );
     $stage->as_png($self->build->data_directory .'/'. $self->stage_name .'.png');
-    print $stage->save_to_xml;
+    $stage->save_to_xml(OutputFile => $self->build->data_directory . '/' . $self->stage_name . '.xml');
+#    print $stage->save_to_xml;
 
     if ($self->auto_execute) {
         require Workflow::Simple;
 
 #        $Workflow::Simple::store_db = 0;
-        Workflow::Simple::run_workflow_lsf(
+        my $output = Workflow::Simple::run_workflow_lsf(
                                            $stage,
                                            prior_result => 1
                                        );
+                                       
+        unless ($output) {
+            $self->error_message("Stage '" . $self->stage_name . "' failed.");
+            foreach my $error (@Workflow::Simple::ERROR) {
+                $self->error_message($error->path_name . ':' . $error->error);
+            }
+            die;
+        }
+
     }
     return 1;
 }
