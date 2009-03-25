@@ -37,6 +37,9 @@ class Genome::Model::Build {
                         },
         software_revision => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
     ],
+    has_many_optional => [
+	instrument_data_assignments => { is => 'Genome::Model::InstrumentDataAssignment', reverse_id_by => 'first_build' },
+    ], 
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
@@ -270,6 +273,8 @@ sub get_all_objects {
     return @events;
 }
 
+
+
 sub yaml_string {
     my $self = shift;
     my $string = YAML::Dump($self);
@@ -285,6 +290,11 @@ sub delete {
     my @objects = $self->get_all_objects;
     for my $object (@objects) {
         $object->delete;
+    }
+    #idas = instrument data assignments
+    my @idas = $self->instrument_data_assignments;
+    for my $ida (@idas) {
+	$ida->first_build_id(undef);
     }
     if ($self->data_directory && -e $self->data_directory) {
         unless (rmtree $self->data_directory) {
