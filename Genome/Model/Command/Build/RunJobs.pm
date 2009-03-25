@@ -29,6 +29,7 @@ class Genome::Model::Command::Build::RunJobs {
                           is_optional => 1,
                           doc => 'run-jobs will execute the workflow(default_value=1)',
                       },
+            bsub_queue  => {is => 'String', is_optional => 1, doc => 'lsf jobs should be put into this queue' },
         ],
 };
 
@@ -95,6 +96,8 @@ sub execute {
     my $uniq = 0;
 
     $DB::single=1;
+    
+    my $lsf_queue = $self->bsub_queue || 'long';
 
     my $stage = Workflow::Model->create(
                                         name => $self->stage_name . $uniq++,
@@ -121,6 +124,9 @@ sub execute {
                                                                                                       )
                                                 );
 
+        $first_operation->operation_type->lsf_resource($first_event->bsub_rusage);
+        $first_operation->operation_type->lsf_queue($lsf_queue);
+
         $stage->add_link(
                          left_operation => $input_connector,
                          left_property => 'prior_result',
@@ -141,6 +147,9 @@ sub execute {
                                                                                                                   $n_event->id
                                                                                                               )
                                                         );
+                    $n_operation->operation_type->lsf_resource($n_event->bsub_rusage);
+                    $n_operation->operation_type->lsf_queue($lsf_queue);
+                    
                     $stage->add_link(
                                      left_operation => $prior_op,
                                      left_property => 'result',
@@ -185,23 +194,12 @@ sub execute {
                      right_property => 'result'
                  );
     $stage->as_png($self->build->data_directory .'/'. $self->stage_name .'.png');
+    print $stage->save_to_xml;
+
     if ($self->auto_execute) {
-        print $stage->save_to_xml;
-
-        my $n = $stage->execute(
-                                input => {
-                                          prior_result => 1
-                                      },
-                                output_cb => sub { print "Done\n" },
-                                error_cb => sub { print "Error\n" },
-                                store => Workflow::Store::None->get()
-                            );
-        $stage->wait;
-        $n->treeview_debug;
-
         require Workflow::Simple;
 
-        $Workflow::Simple::store_db = 0;
+#        $Workflow::Simple::store_db = 0;
         Workflow::Simple::run_workflow_lsf(
                                            $stage,
                                            prior_result => 1
