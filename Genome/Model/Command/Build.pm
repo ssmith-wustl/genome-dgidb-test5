@@ -393,12 +393,14 @@ sub verify_successful_completion_for_stage {
 
 sub verify_successful_completion {
     my $self = shift;
+    my $force_flag = shift;
+
     my $pp = $self->model->processing_profile;
     for my $stage_name ($pp->stages) {
         if ($stage_name eq 'verify_successful_completion') {
             last;
         }
-        unless ($self->verify_successful_completion_for_stage($stage_name)) {
+        unless ($self->verify_successful_completion_for_stage($stage_name,$force_flag)) {
             $self->error_message('Failed to verify successful completion of stage '. $stage_name);
             return;
         }

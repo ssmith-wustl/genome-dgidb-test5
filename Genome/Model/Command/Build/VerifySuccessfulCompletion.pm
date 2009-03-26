@@ -7,6 +7,13 @@ use Genome;
 
 class Genome::Model::Command::Build::VerifySuccessfulCompletion {
     is => ['Genome::Model::Event'],
+    has_optional => [
+                     force_abandon => {
+                                       is => 'Boolean',
+                                       default_value => 0,
+                                       doc => 'A flag to force abandon of failed events(default=0)',
+                                   },
+                 ],
 };
 
 sub help_detail {
@@ -34,7 +41,7 @@ sub execute {
                              $self->model_id .' and build '. $self->build_id);
         return;
     }
-    if ($build_event->verify_successful_completion) {
+    if ($build_event->verify_successful_completion($self->force_abandon)) {
         my $disk_allocation = $build->disk_allocation;
         if ($disk_allocation) {
             my $reallocate = Genome::Disk::Allocation::Command::Reallocate->execute( allocator_id => $disk_allocation->allocator_id);
