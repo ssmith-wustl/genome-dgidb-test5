@@ -6,17 +6,20 @@ use warnings;
 use Genome;
 use Command;
 use Carp;
-use File::Slurp;
-use File::Temp qw/ tempfile tempdir /;
-use DateTime;
-use List::MoreUtils qw/ uniq /;
+
 use Bio::SeqIO;
 use Bio::Seq;
 use Bio::DB::BioDB;
 use Bio::DB::Query::BioQuery;
+
+use File::Slurp;
+use File::Temp qw/ tempfile tempdir /;
+use DateTime;
+use List::MoreUtils qw/ uniq /;
 use IPC::Run;
 use Workflow::Simple;
 use Data::Dumper;
+
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -66,6 +69,18 @@ UR::Object::Type->define(
             is => 'String',
             doc => 'Gram Stain'
         },
+        'blastp_archive_dir' => {
+                                 is  => 'String',
+                                 doc => 'blastp raw output archive directory',
+                             },
+        'interpro_archive_dir' => {
+                                   is  => 'String',
+                                   doc => 'intepro raw output archive directory',
+                               },
+        'keggscan_archive_dir' => {
+                                   is  => 'String',
+                                   doc => 'keggscan raw output archive directory',
+                               },
     ]
 );
 
@@ -158,6 +173,9 @@ sub get_gene_peps
 
     my $adp = $dbadp->get_object_adaptor("Bio::SeqI");
 
+    $adp->dbh->{'LongTruncOk'} = 0;
+    $adp->dbh->{'LongReadLen'} = 1000000000;
+
     my $query = Bio::DB::Query::BioQuery->new();
     $query->datacollections( [ "Bio::PrimarySeqI s", ] );
 
@@ -177,9 +195,14 @@ GENE: while ( my $seq = $res->next_object() )
             next GENE if $f->primary_tag ne 'gene';
             my $ss;
             $ss = $seq->subseq( $f->start, $f->end );
+
+            unless(defined($ss)) { 
+                die "failed to fetch sequence for '$display_name' from BioSQL";
+            }
+            
             my $pep = $self->make_into_pep( $f->strand,
-                #$ss,
-                $seq->subseq($f->start,$f->end),
+                $ss,
+                #$seq->subseq($f->start,$f->end),
                 $display_name );
             $seqout->write_seq($pep);
             #print STDERR "sequence should be written out\n";
@@ -291,12 +314,14 @@ sub do_pap_workflow
 
     my $output = run_workflow_lsf(
                               $xml_file,
-                              'fasta file'       => $fasta_file,
-                              'chunk size'       => 10,
-                              'dev flag'         => $workflow_dev_flag,
-                              'biosql namespace' => 'MGAP',
-                              'gram stain'       => $self->gram_stain(), 
-                              'report save dir'  => '/gscmnt/temp212/info/annotation/PAP_testing/blast_reports',
+                              'fasta file'           => $fasta_file,
+                              'chunk size'           => 10,
+                              'dev flag'             => $workflow_dev_flag,
+                              'biosql namespace'     => 'MGAP',
+                              'gram stain'           => $self->gram_stain(),
+                              'blastp archive dir'   => $self->blastp_archive_dir(),
+                              'interpro archive dir' => $self->interpro_archive_dir(),
+                              'keggscan archive dir' => $self->keggscan_archive_dir(),
     );
 
     # do quick check on the return value.

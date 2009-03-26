@@ -5,7 +5,6 @@ use warnings;
 
 use Genome;
 use Command;
-use Carp;
 use Genome::Model::Tools::Hgmi::DirBuilder;
 use Genome::Model::Tools::Hgmi::CollectSequence;
 use Genome::Model::Tools::Hgmi::SequenceName;
@@ -14,6 +13,10 @@ use Genome::Model::Tools::Hgmi::Predict;
 use Genome::Model::Tools::Hgmi::Merge;
 use Genome::Model::Tools::Hgmi::Finish;
 use Genome::Model::Tools::Hgmi::SendToPap;
+
+use Carp;
+use File::Path qw(mkpath);
+use File::Spec;
 use YAML qw( LoadFile DumpFile );
 
 # should have a crap load of options.
@@ -258,14 +261,57 @@ sub execute
     unless (defined($config->{gram_stain})) {
         die 'cannot start workflow - no gram_stain specified in config file';
     }
+
+
+    my $base_archive_dir = File::Spec->catdir(
+                                              $config->{path},
+                                              $config->{org_dirname},
+                                              $config->{assembly_name},
+                                              $config->{assembly_version},
+                                          );
+    
+    my $blastp_archive_dir   = File::Spec->catdir(
+                                                  $base_archive_dir,
+                                                  'Blastp',
+                                                  $config->{pipe_version},
+                                                  'Hybrid',
+                                              );
+    
+    my $interpro_archive_dir = File::Spec->catdir(
+                                                  $base_archive_dir,
+                                                  'Interpro',
+                                                  $config->{pipe_version},
+                                                  'Hybrid',
+                                              );
+
+    my $keggscan_archive_dir = File::Spec->catfile(
+                                                   $base_archive_dir,
+                                                   'Kegg',
+                                                   $config->{pipe_version},
+                                                   'Hybrid',
+                                                   join(
+                                                        '.',
+                                                        'KS-OUTPUT',
+                                                        $config->{locus_id},
+                                                        'CDS',
+                                                        'pep',
+                                                        ),
+                                               );
+   
+    foreach my $archive_dir ($blastp_archive_dir, $interpro_archive_dir, $keggscan_archive_dir) {
+        mkpath($archive_dir);
+    }
     
     my $send = Genome::Model::Tools::Hgmi::SendToPap->create(
-                     'locus_tag' => $config->{locus_tag_prefix},
-                     'sequence_set_id' => $ssid, 
-                     'workflow_xml' => $config->{workflowxml},
-                     'gram_stain' => $config->{gram_stain},
-# pepfile should be constructed automagically here.
-                  );
+                                                             'locus_tag'            => $config->{locus_tag_prefix},
+                                                             'sequence_set_id'      => $ssid, 
+                                                             'workflow_xml'         => $config->{workflowxml},
+                                                             'gram_stain'           => $config->{gram_stain},
+                                                             'blastp_archive_dir'   => $blastp_archive_dir,
+                                                             'interpro_archive_dir' => $interpro_archive_dir,
+                                                             'keggscan_archive_dir' => $keggscan_archive_dir,
+                                                             # pepfile should be constructed automagically here.
+                                                         );
 
     if($self->dev)
     {
