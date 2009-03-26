@@ -39,6 +39,21 @@ B<GSCApp> makes the following customizations to applications:
 
 =over 4
 
+=item To Add or Change a database login.
+
+You will need to do the following:
+
+1. add the login information to the @logins array 
+
+ [qw(server-identifier ?user? ?schema? login password rw|ro database-type schema) ]
+
+2. add the server field to the @servers array
+ [ qw( server-identifier database-vendor (oltp|dw|olap|mg)_(prod|dev) ) ]
+
+3. add the varaint to @variants
+
+ [ qw( database-type oltp|warehouse|mg|olap  server-identifier ) ]
+
 =cut
 
 use warnings;
@@ -597,41 +612,33 @@ my @logins = (
     ['mysql2', 'gsc', 'sample_data', 'sample_data', 'Zl0*rCh', 'ro', 'production', 'GSC'],
     ['mysql2', 'gsc', 'sample_data', 'sample_data', 'Zl0*rCh', 'rw', 'production', 'GSC'],
 
-    # OLTP development
-    [qw(gscdev gsc GSC gscuser user_dev rw development GSC)],
-#    [qw(gscdev gsc GSC devuser iamonrac rw-developer development GSC)],
-    [qw(gscdev gsc GSC gscguest guest_dev ro development GSC)],
-#    [qw(gscdev gsc GSC devguest dg_rac ro-developer development GSC)],
+    # OLTP testing and integration server
+    [qw(gscdev gsc GSC gscuser user_dev rw integration GSC)],
+    [qw(gscdev gsc GSC gscguest guest_dev ro integration GSC)],
 
-    # OLTP development
-#    [qw(dbdev gsc GSC gscuser g_user rw development GSC)],
-#    [qw(dbdev gsc GSC devuser iamonrac rw-developer development GSC)],
-#    [qw(dbdev gsc GSC gscguest g_guest ro development GSC)],
-#    [qw(dbdev gsc GSC devguest dg_rac ro-developer development GSC)],
+    # DW Integration
+    [qw(dwdev gsc GSC gscuser user_dev rw integration GSC)],
+    [qw(dwdev gsc GSC devuser iamondwdev rw-developer integration GSC)],
+    [qw(dwdev gsc GSC gscguest guest_dev ro integration GSC)],
+    [qw(dwdev gsc GSC devguest dg_dwdev ro-developer integration GSC)],
 
-#    # OLTP development
-#    [qw(devdb gsc GSC gscuser dev_user rw development GSC)],
-#    [qw(devdb gsc GSC devuser iamonracdev rw-developer development GSC)],
-#    [qw(devdb gsc GSC gscguest dev_guest ro development GSC)],
-#    [qw(devdb gsc GSC devguest dg_racdev ro-developer development GSC)],
 
-    # OLTP old development
-#    [qw(gscnew gsc GSC gscuser user_new rw old-development GSC)],
-#    [qw(gscnew gsc GSC devuser iamonracnew rw-developer old-development GSC)],
-#    [qw(gscnew gsc GSC gscguest guest_new ro old-development GSC)],
-#    [qw(gscnew gsc GSC devguest dg_new ro-developer old-development GSC)],
+    # development
+    #    defaults to the developer's personal schema
+    [qw(gcdev gsc), uc(App::Name->real_user_name), '', '', qw(rw development GSC)],
+    [qw(gcdev gsc), uc(App::Name->real_user_name), '', '', qw(ro development GSC)],
 
-    # DW development
-    [qw(dwdev gsc GSC gscuser user_dev rw development GSC)],
-    [qw(dwdev gsc GSC devuser iamondwdev rw-developer development GSC)],
-    [qw(dwdev gsc GSC gscguest guest_dev ro development GSC)],
-    [qw(dwdev gsc GSC devguest dg_dwdev ro-developer development GSC)],
+    #    this allows the developer to manually specify their own schema
+    [qw(gcdev), lc(App::Name->real_user_name), uc(App::Name->real_user_name), '', '', 
+     qw(rw development GSC)],
+    [qw(gcdev), lc(App::Name->real_user_name), uc(App::Name->real_user_name), '', '', 
+     qw(ro development GSC)],
 
-    # tilepath
-#    [qw(gscprod tilepath SSMITH ssmith blue22 rw tilepath_production GSC)],
-#    [qw(gscnew tilepath SSMITH ssmith blue22 rw tilepath_development GSC)],
-#    [qw(gscprod tilepath SSMITH ssmith blue22 ro tilepath_production GSC)],
-#    [qw(gscnew tilepath SSMITH ssmith blue22 ro tilepath_development GSC)],
+    #    lims' shared schema
+    [qw(gcdev lims LIMS), 'lims', 'lims1', qw(rw development GSC)],
+    [qw(gcdev lims LIMS), 'lims', 'lims1', qw(ro development GSC)],
+
+
 );
 
 for my $login (@logins) {
@@ -653,7 +660,9 @@ my @servers = (
 #    [qw(gscnew   Oracle  old_oltp_dev)],
 #    [qw(dbdev    Oracle  oltp_dev)],
     [qw(gscdev   Oracle  oltp_dev)],
-    [qw(dwdev    Oracle  dw_dev)],
+    [qw(gcdev    Oracle  dw_dev)],
+    [qw(gcdev   Oracle  oltp_dev)],
+
 );
 
 for my $server (@servers) {
@@ -671,9 +680,13 @@ my @variants = (
     [qw(production       olap       ldb64)],
     [qw(production       mg         mysql2)],
 
+    # integration-testing variants
+    [qw(integration      oltp       gscdev)],
+    [qw(integration      warehouse  dwdev)],
+
     # development variants
-    [qw(development      oltp       gscdev)],
-    [qw(development      warehouse  dwdev)],
+    [qw(development      oltp       gcdev)], # +
+    [qw(development      warehouse  gcdev)], # +
 
     # old development variants
 #    [qw(old-development  oltp       gscnew)],
