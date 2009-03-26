@@ -36,6 +36,11 @@ class Genome::Disk::Allocation::Command {
                                                  return GSC::DiskAllocation->get(allocator_id => $allocator_id);
                                              |,
                                          },
+                     local_confirm => {
+                                       is => 'Boolean',
+                                       default_value => 1,
+                                       doc => 'A flag to confirm the pse locally',
+                                   },
         ],
     doc => 'work with disk allocations',
 };
@@ -102,7 +107,7 @@ sub resource_id {
     return 'GenomeDiskAllocation';
 }
 
-sub unlock {
+sub Xunlock {
     my $self = shift;
     unless (Genome::Utility::FileSystem->unlock_resource(
                                                          lock_directory => $self->lock_directory,
@@ -115,7 +120,7 @@ sub unlock {
     return 1;
 }
 
-sub lock {
+sub Xlock {
     my $self = shift;
     unless (Genome::Utility::FileSystem->lock_resource(
                                                        lock_directory => $self->lock_directory,
@@ -140,25 +145,16 @@ sub confirm_scheduled_pse {
         return;
     }
 
-    my $unlock_and_delete_pse = sub { $pse->uninit_pse; $self->unlock; };
-    $self->create_subscription(method => 'delete', callback => $unlock_and_delete_pse);
-    unless ($self->lock) {
-        $self->error_message('Failed to create lock.');
-        $self->delete;
-        return;
-    }
     unless ($pse->confirm(no_pse_job_check => 1)) {
         $self->error_message('Failed to confirm PSE: '. $pse->pse_id);
-        $self->delete;
+        $pse->uninit_pse;
         return;
     }
-    unless ($pse->pse_status eq 'inprogress') {
+    unless ($pse->pse_status eq 'inprogress' || $pse->pse_status eq 'completed') {
         $self->error_message('PSE pse_status not inprogress: '. $pse->pse_status);
-        $self->delete;
+        $pse->uninit_pse;
         return;
     }
-    my $unlock = sub { $self->unlock; };
-    UR::Context->create_subscription(method => 'commit', callback => $unlock);
     return 1;
 }
 
