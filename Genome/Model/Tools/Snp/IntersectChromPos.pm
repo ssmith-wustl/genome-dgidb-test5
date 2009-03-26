@@ -8,20 +8,20 @@ use UR;
 class Genome::Model::Tools::Snp::IntersectChromPos {
     is => 'Command',
     has => [
-    file1               => { is => 'filename', is_optional=>0,},
-    file2               => { is => 'filename', is_optional=>0,},
-    intersect_output    => { is => 'FileName', is_optional => 1, 
-    doc => 'instead of stdout, direct the intersection to this file' },
-    f1_only_output      => { is => 'FileName', is_optional => 1, 
-    doc => 'items present only in the first input should be dumped here' },
-    f2_only_output      => { is => 'FileName', is_optional => 1, 
-    doc => 'items present only in the second input should be dumped here' },
-    delimiter1          => { is => 'Text', default_value => '\s+', },
-    delimiter2          => { is => 'Text', default_value => '\s+', },
-    headers1            => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'file 1 has n header lines' },
-    headers2            => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'file 2 has n header lines' },
+        file1               => { is => 'filename', is_optional=>0,},
+        file2               => { is => 'filename', is_optional=>0,},
+        intersect_output    => { is => 'FileName', is_optional => 1, 
+                                doc => 'instead of stdout, direct the intersection to this file' },
+        f1_only_output      => { is => 'FileName', is_optional => 1, 
+                                doc => 'items present only in the first input should be dumped here' },
+        f2_only_output      => { is => 'FileName', is_optional => 1, 
+                                doc => 'items present only in the second input should be dumped here' },
+        delimiter1          => { is => 'Text', default_value => '\s+', },
+        delimiter2          => { is => 'Text', default_value => '\s+', },
+        headers1            => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'file 1 has n header lines' },
+        headers2            => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'file 2 has n header lines' },
+        consider_genotype   => { is_optional=>1, default=>0, doc=>'thingy for dave larson he knows what it means' },
     ],
-    consider_genotype => { is_optional=>1, default=>0, doc=>'thingy for dave larson he knows what it means' },
 };
 
 sub execute {
