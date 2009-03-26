@@ -7,7 +7,7 @@ use above 'Genome';
 
 use File::Copy;
 use String::Random;
-use Test::More tests => 33;
+use Test::More tests => 29;
 
 use GSCApp;
 App::DB->db_access_level('rw');
@@ -108,8 +108,6 @@ ok(!$allocation->wait_for_pse_to_confirm(
                                          block_sleep => 1,
                                      ),'pse has not been confirmed');
 
-
-
 # Confirm locally since this is a test case
 ok($allocation->execute,'execute allocate disk space');
 
@@ -123,17 +121,6 @@ ok($allocation->wait_for_pse_to_confirm(
                                              max_try => 1,
                                              block_sleep => 1,
                                          ),'pse has been confirmed');
-my $lock;
-eval {
-    $lock = Genome::Disk::Allocation::Command::Allocate->lock(block_sleep => 1,max_try => 2);
-};
-ok($lock,'existing lock was removed after commit subscription callback, new one in place');
-
-my $unlock;
-eval {
-    $unlock = Genome::Disk::Allocation::Command::Allocate->unlock;
-};
-ok($unlock,'cleanup the new lock');
 
 my $disk_allocation = $allocation->disk_allocation;
 
@@ -144,23 +131,13 @@ unless (copy($known_file,$allocated_directory .'/'. $known_base_filename)) {
     die $!;
 }
 
-#my $reallocation = $disk_allocation->reallocate;
 my $reallocation = Genome::Disk::Allocation::Command::Reallocate->execute(allocator_id => $disk_allocation->allocator_id);
 isa_ok($reallocation,'Genome::Disk::Allocation::Command::Reallocate');
 
 my $reallocator = $reallocation->reallocator;
 isa_ok($reallocator,'GSC::PSE::ReallocateDiskSpace');
-GSC::PSE::ReallocateDiskSpace->class;
-my $rds_mock = Test::MockModule->new('GSC::PSE::ReallocateDiskSpace');
-$rds_mock->mock(
-                '_lock_volume_allocation' => sub { return 1; },
-            );
-my $reallocate_pj = GSC::PSEJob->create(
-                                        pse_id => $reallocator,
-                                        job_id => String::Random::random_regex('Test-[a-z_]{15}'),
-                                    );
-ok($reallocate_pj, 'PSEJob for reallocation PSE created');
-ok($reallocator->confirm,'confirm reallocation pse');
+ok(!$reallocation->pse_not_complete($reallocator),'pse is complete');
+
 #$disk_allocation = $reallocation->disk_allocation;
 my $gsc_disk_allocation = $reallocation->gsc_disk_allocation;
 
@@ -171,22 +148,13 @@ SKIP : {
 
 
 my $deallocation = Genome::Disk::Allocation::Command::Deallocate->execute(allocator_id => $disk_allocation->allocator_id);
-#my $deallocation = $disk_allocation->deallocate;
+
 isa_ok($deallocation,'Genome::Disk::Allocation::Command::Deallocate');
 
 my $deallocator = $deallocation->deallocator;
 isa_ok($deallocator,'GSC::PSE::DeallocateDiskSpace');
-GSC::PSE::DeallocateDiskSpace->class;
-my $dds_mock = Test::MockModule->new('GSC::PSE::DeallocateDiskSpace');
-$dds_mock->mock(
-                '_lock_volume_allocation' => sub { return 1; },
-            );
-my $deallocate_pj = GSC::PSEJob->create(
-                                        pse_id => $deallocator,
-                                        job_id => String::Random::random_regex('Test-[a-z_]{15}'),
-                                    );
-ok($deallocate_pj, 'PSEJob for deallocation PSE created'); 
-ok($deallocator->confirm,'confirm deallocation pse');
+ok(!$deallocation->pse_not_complete($deallocator),'pse is complete');
+
 #$disk_allocation = $deallocation->disk_allocation;
 $gsc_disk_allocation = $deallocation->gsc_disk_allocation;
 ok(!$gsc_disk_allocation,'Disk allocation summary is undef');
