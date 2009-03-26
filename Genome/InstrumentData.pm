@@ -207,7 +207,7 @@ sub move_alignment_directory_for_aligner_and_refseq {
 
     my $current_allocation = $self->alignment_allocation_for_aligner_and_refseq($aligner_name,$reference_sequence_name,check_only => 1);
     unless ($current_allocation) {
-        die('No alignment allocation found for instrumen data '. $self->id .' with aligner '. $aligner_name .' and refseq '. $reference_sequence_name);
+        die('No alignment allocation found for instrument data '. $self->id .' with aligner '. $aligner_name .' and refseq '. $reference_sequence_name);
     }
 
     my $allocation_path = $current_allocation->allocation_path .".$reason.$$";
@@ -219,13 +219,13 @@ sub move_alignment_directory_for_aligner_and_refseq {
     if ($existing_allocation) {
         die('Disk allocation '. $existing_allocation->allocator_id .' already exists for path '. $allocation_path);
     }
-    my $allocation_cmd = Genome::Disk::Allocation::Command::Allocate->create(
-                                                                             disk_group_name => 'info_alignments',
-                                                                             allocation_path => $allocation_path,
-                                                                             kilobytes_requested => $current_allocation->kilobytes_requested,
-                                                                             owner_class_name => $self->class,
-                                                                             owner_id => $self->id,
-                                                                         );
+    my $allocation_cmd = Genome::Disk::Allocation->allocate(
+                                                            disk_group_name => 'info_alignments',
+                                                            allocation_path => $allocation_path,
+                                                            kilobytes_requested => $current_allocation->kilobytes_requested,
+                                                            owner_class_name => $self->class,
+                                                            owner_id => $self->id,
+                                                        );
     unless ($allocation_cmd) {
         die('Failed to create command to allocate disk space for '. $allocation_path);
     }
@@ -243,6 +243,28 @@ sub move_alignment_directory_for_aligner_and_refseq {
     return 1;
 }
 
+sub remove_alignment_directory_for_aligner_and_refseq {
+    my $self = shift;
+    my $aligner_name = shift;
+    my $reference_sequence_name = shift;
+
+    my $allocation = $self->alignment_allocation_for_aligner_and_refseq($aligner_name,$reference_sequence_name,check_only => 1);
+    unless ($allocation) {
+        die('No alignment allocation found for instrument data '. $self->id .' with aligner '. $aligner_name .' and refseq '. $reference_sequence_name);
+    }
+    my $allocation_path = $allocation->absolute_path;
+    unless (File::Path::rmtree($allocation_path)) {
+        $self->error_message('Failed to remove alignment data directory: '. $allocation_path .":  $!");
+        die $self->error_message;
+    }
+    unless ($allocation->deallocate) {
+        $self->error_message('Failed to deallocate alignment data directory disk space for allocator id '. $allocation->allocator_id);
+        die $self->error_message;
+    }
+    return 1;
+}
+
+
 sub alignment_allocation_for_aligner_and_refseq {
     my $self = shift;
     my $aligner_name = shift;
@@ -256,13 +278,13 @@ sub alignment_allocation_for_aligner_and_refseq {
     unless (@matches) {
         my $kb_requested = $self->calculate_alignment_estimated_kb_usage;
         if ($kb_requested && !($params{check_only}) ) {
-            my $disk_allocation = Genome::Disk::Allocation->create(
-                                                                  disk_group_name => 'info_alignments',
-                                                                  allocation_path => $allocation_path,
-                                                                  kilobytes_requested => $kb_requested,
-                                                                  owner_class_name => $self->class,
-                                                                  owner_id => $self->id,
-                                                              );
+            my $disk_allocation = Genome::Disk::Allocation->allocate(
+                                                                     disk_group_name => 'info_alignments',
+                                                                     allocation_path => $allocation_path,
+                                                                     kilobytes_requested => $kb_requested,
+                                                                     owner_class_name => $self->class,
+                                                                     owner_id => $self->id,
+                                                                 );
             unless ($disk_allocation) {
                 $self->error_message('Failed to get disk allocation');
                 die $self->error_message;
