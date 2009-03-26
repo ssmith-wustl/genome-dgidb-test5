@@ -49,6 +49,12 @@ class Genome::Model::Tools::BreakpointPal {
 		 is_optional  => 1,
 		 
 	     },
+	     no_masked_primer_seq => {
+		 type         => 'Boolean',
+		 doc          => "Set this parameter if do not want to use masked sequence for you're primer picking",
+		 is_optional  => 1,
+		 
+	     },
 
 	     ],
     
@@ -277,7 +283,7 @@ sub get_span_primers {
 	$breakpoint_depth = $flank;
     }
 
-    my ($seq_span) = &get_span_primer_design_seq($bp_id,$breakpoint_depth);
+    my ($seq_span) = &get_span_primer_design_seq($bp_id,$breakpoint_depth,$self);
 
     my $primer_name = "$bp_id.span.$breakpoint_depth";
     my $seq_l = length($seq_span);
@@ -301,7 +307,7 @@ sub get_inv_primer {
 	$breakpoint_depth = $flank;
     }
 
-    my ($seq_g1,$seq_g2,$seq_g3,$seq_g4) = &get_inv_primer_design_seq($bp_id,$breakpoint_depth);
+    my ($seq_g1,$seq_g2,$seq_g3,$seq_g4) = &get_inv_primer_design_seq($bp_id,$breakpoint_depth,$self);
 
     my @picks;
 
@@ -350,7 +356,7 @@ sub get_irx_primer {
     for my $rpo (@irx_rpo) {
 	if ($rpo eq "pp" || $rpo eq "pm" || $rpo eq "mp" || $rpo eq "mm") {
 	    my $primer_name = "$bp_id.irx.$breakpoint_depth.$rpo";
-	    my ($seq) = &get_irx_primer_design_seq($bp_id,$rpo,$flank,$breakpoint_depth);
+	    my ($seq) = &get_irx_primer_design_seq($bp_id,$rpo,$flank,$breakpoint_depth,$self);
 	    my $seq_l = length($seq);
 	    print qq(\nprimers for irx with readpair orientation $rpo will be picked from a sequence that is $seq_l bp in length\n\n);
 	    my $pick = &pick_primer($primer_name,$seq);
@@ -367,7 +373,7 @@ sub get_irx_primer {
 
 sub get_irx_primer_design_seq {
 
-    my ($bp_id,$rpo,$flank,$breakpoint_depth) = @_;
+    my ($bp_id,$rpo,$flank,$breakpoint_depth,$self) = @_;
 
     #my $bp_id = "chr11:36287905-36289124"; #$self->breakpoint_id;
     my ($chromosome,$breakpoint1,$breakpoint2);
@@ -406,10 +412,22 @@ sub get_irx_primer_design_seq {
 							 sequence_base_string => $seq2_pp);
 	my $class = q(GSC::Sequence);
 	my $masked_rev_seq2_pp = GSC::Sequence::reverse_complement($class, $masked_seq2_pp);
-	
+	my $rev_seq2_pp = GSC::Sequence::reverse_complement($class, $seq2_pp);
+
 	my $seq_pp = "$masked_seq1_pp$masked_rev_seq2_pp";
-	return ($seq_pp);
+
+	my $no_masked_primer_seq = $self->no_masked_primer_seq;
+
+	if ($no_masked_primer_seq) {
+
+	    $seq_pp = "$seq1_pp$rev_seq2_pp";
+	    return ($seq_pp);
+	    
+	} else {
+	    
+	    return ($seq_pp);
 	
+	}
     }
     
     if ($rpo eq "pm") {
@@ -428,8 +446,17 @@ sub get_irx_primer_design_seq {
 							 end_position         => $seq2_pm_end,
 							 sequence_base_string => $seq2_pm);
 	my $seq_pm = "$masked_seq1_pm$masked_seq2_pm";
-	return ($seq_pm);
-	
+
+	my $no_masked_primer_seq = $self->no_masked_primer_seq;
+	if ($no_masked_primer_seq) {
+
+	    $seq_pm = "$seq1_pm$seq2_pm";
+	    return ($seq_pm);
+
+	} else {
+	    
+	    return ($seq_pm);
+	}
     }
     if ($rpo eq "mp") {
 
@@ -469,7 +496,17 @@ sub get_irx_primer_design_seq {
 	#my $masked_rev_seq1_mp = GSC::Sequence::reverse_complement($class, $masked_seq1_mp);
 	my $seq_mp = "$masked_seq2_mp$masked_seq1_mp";
 
-	return ($seq_mp);
+	my $no_masked_primer_seq = $self->no_masked_primer_seq;
+	if ($no_masked_primer_seq) {
+
+	    $seq_mp = "$seq2_mp$seq1_mp";
+	    return ($seq_mp);
+
+	} else {
+
+	    return ($seq_mp);
+
+	}
     }
 
     if ($rpo eq "mm") {
@@ -490,15 +527,27 @@ sub get_irx_primer_design_seq {
 
 	my $class = q(GSC::Sequence);
 	my $masked_rev_seq2_mm = GSC::Sequence::reverse_complement($class, $masked_seq2_mm);
+	my $rev_seq2_mm = GSC::Sequence::reverse_complement($class, $seq2_mm);
 
 	my $seq_mm = "$masked_rev_seq2_mm$masked_seq1_mm";
-	return ($seq_mm);
+
+
+	my $no_masked_primer_seq = $self->no_masked_primer_seq;
+	if ($no_masked_primer_seq) {
+
+	    $seq_mm = "$rev_seq2_mm$seq1_mm";
+	    return ($seq_mm);
+
+	} else {
+	    
+	    return ($seq_mm);
+	}
     }
 }
 
 sub get_inv_primer_design_seq {
     
-    my ($bp_id,$breakpoint_depth) = @_;
+    my ($bp_id,$breakpoint_depth,$self) = @_;
     my ($chromosome,$breakpoint1,$breakpoint2);
     unless ($bp_id) {die "please provide the breakpoint id\n";}
     if ($bp_id =~ /chr([\S]+)\:(\d+)\-(\d+)/) { 
@@ -548,7 +597,7 @@ sub get_inv_primer_design_seq {
     
     my $class = q(GSC::Sequence);
     my $masked_rev_g34_inv_seq_base = GSC::Sequence::reverse_complement($class, $masked_g34_inv_seq_base);
-    
+    my $rev_g34_inv_seq_base = GSC::Sequence::reverse_complement($class, $g34_inv_seq_base);
         
     my $seq1_g3_start = $breakpoint1 - $breakpoint_depth;
     my $seq1_g3_end = $breakpoint1;
@@ -566,20 +615,35 @@ sub get_inv_primer_design_seq {
 						     sequence_base_string    => $seq2_g4);
     
     my $masked_seq2_g3 = substr($masked_rev_g34_inv_seq_base,1,$breakpoint_depth);
-    
-    my $revseq1_g4 = substr($masked_g34_inv_seq_base,1,$breakpoint_depth);
-    my $masked_seq1_g4 = GSC::Sequence::reverse_complement($class, $revseq1_g4);
-    
+    my $seq2_g3 = substr($rev_g34_inv_seq_base,1,$breakpoint_depth);
+
+    my $masked_seq1_g4 = substr($masked_g34_inv_seq_base,1,$breakpoint_depth);
+    my $masked_revseq1_g4 = GSC::Sequence::reverse_complement($class, $masked_seq1_g4);
+
+    my $seq1_g4 = substr($g34_inv_seq_base,1,$breakpoint_depth);
+    my $revseq1_g4 = GSC::Sequence::reverse_complement($class, $seq1_g4);
+
     
     my $masked_seq_g3 = "$masked_seq1_g3$masked_seq2_g3";
-    my $masked_seq_g4 = "$masked_seq1_g4$masked_seq2_g4";
-    
-    return ($masked_seq_g1,$masked_seq_g2,$masked_seq_g3,$masked_seq_g4);
+    my $masked_seq_g4 = "$masked_revseq1_g4$masked_seq2_g4";
+
+    my $no_masked_primer_seq = $self->no_masked_primer_seq;
+    if ($no_masked_primer_seq) {
+	my $seq_g3 = "$seq1_g3$seq2_g3";
+	my $seq_g4 = "$revseq1_g4$seq2_g4";
+
+	return ($seq_g1,$seq_g2,$seq_g3,$seq_g4);
+	
+    } else {
+	
+	return ($masked_seq_g1,$masked_seq_g2,$masked_seq_g3,$masked_seq_g4);
+	
+    }
 }
 
 sub get_span_primer_design_seq {
     
-    my ($bp_id,$breakpoint_depth) = @_;
+    my ($bp_id,$breakpoint_depth,$self) = @_;
 
     my ($chromosome,$breakpoint1,$breakpoint2);
     unless ($bp_id) {die "please provide the breakpoint id\n";}
@@ -609,32 +673,37 @@ sub get_span_primer_design_seq {
 						  sequence_base_string => $seq2);
     
     my $span_seq = "$masked_seq1$masked_seq2";
+
+    my $no_masked_primer_seq = $self->no_masked_primer_seq;
+    if ($no_masked_primer_seq) {
+	$span_seq = "$seq1$seq2";
+    } 
     return ($span_seq);
     
 }
 
 sub pick_primer {
-
+    
     my ($id,$seq) = @_;
     my $length = length($seq);
-
+    
     my $boundary = sprintf("%d",(($length/2) - 1));  #exonstart ==> boundary
     my $boundary_size = 3;
-
+    
     my $includestart; ##not using this parameter
     my $includesize; ##not using this parameter
     my $excludestart; ##not using this parameter
     my $excludesize; ##not using this parameter
 
 
-    my $product_range = "150-850"; #150-250 100-300 301-400 401-500 501-600 601-700 701-850 
+    my $product_range = "150-$length"; #150-250 100-300 301-400 401-500 501-600 601-700 701-850 
     my $product_opt_size = "400";
 
     my $tm_min = 45;
     my $tm_max = 65;
     my $tm_opt = 60;
-    my $tm_max_diff = 2; 
-    my $product_tm_max = 120;
+    my $tm_max_diff = 3; 
+    my $product_tm_max = 130;
     my $ppoly_max = 3; #AAA
 
     my $psize_max = 27;
