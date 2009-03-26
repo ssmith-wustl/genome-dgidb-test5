@@ -37,19 +37,6 @@ sub command_name_brief {
 
 ############################################
 
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
-    
-    unless ( $self->processing_profile ) {
-        $self->error_message("A processing profile (by id or name) is required for this command");
-        return;
-    }
-
-    return $self;
-}
 
 1;
 
