@@ -34,11 +34,6 @@ class Genome::Disk::Allocation::Command::Allocate {
                                         is => 'Number',
                                         doc => 'The actual disk space used by owner',
                                     },
-                     local_confirm => {
-                                       is => 'Boolean',
-                                       default_value => 1,
-                                       doc => 'A flag to confirm the pse locally',
-                                   },
               ],
     doc => 'An allocate command to create and confirm GSC::PSE::AllocateDiskSpace and GSC::DiskAllocation',
 };
@@ -74,13 +69,15 @@ sub create {
         $self->delete;
         return;
     }
-    my $owner_object = $owner_class_name->get($owner_id);
-    unless ($owner_object) {
-        $self->error_message('Failed to get object of class '.
-                             $owner_class_name .' and id '. $owner_id);
-        $self->delete;
-        return;
-    }
+    
+    # TODO: this would be nice but we have to fork to commit the allocate PSE
+    #my $owner_object = $owner_class_name->get($owner_id);
+    #unless ($owner_object) {
+    #    $self->error_message('Failed to get object of class '.
+    #                         $owner_class_name .' and id '. $owner_id);
+    #    $self->delete;
+    #    return;
+    #}
 
     unless ($self->allocation_path) {
         $self->error_message('Allocation path is required! See --help.');
