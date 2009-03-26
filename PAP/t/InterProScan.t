@@ -7,7 +7,7 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 285;
+use Test::More tests => 289;
 
 BEGIN {
     use_ok('PAP::Command');
@@ -54,8 +54,12 @@ foreach my $feature (@{$ref}) {
 
 }
 
-ok(-e "$tempdir/interpro.bz2", "archive interpro raw output exists");
-is(system("bzcat $tempdir/interpro.bz2 > /dev/null"), 0, "bzcat can read archived raw output");
+ok(-e "$tempdir/merged.raw.sorted.bz2", "archive interpro sorted output exists");
+ok(! -z "$tempdir/merged.raw.sorted.bz2", "archive interpro sorted output is not empty");
+ok(-e "$tempdir/merged.raw.bz2", "archive interpro raw output exists");
+ok(! -z "$tempdir/merged.raw.bz2", "archive interpro raw output is not empty");
+is(system("bzcat $tempdir/merged.raw.sorted.bz2 > /dev/null"), 0, "bzcat can read archived sorted output");
+is(system("bzcat $tempdir/merged.raw.bz2 > /dev/null"), 0, "bzcat can read archived raw output");
 
 my $interpro_output_fh = $command->iprscan_output();
 

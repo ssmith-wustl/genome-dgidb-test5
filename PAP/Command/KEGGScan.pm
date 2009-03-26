@@ -24,31 +24,36 @@ use IPC::Run;
 class PAP::Command::KEGGScan {
     is  => ['PAP::Command'],
     has => [
-        fasta_file        => { 
-                              is  => 'SCALAR', 
-                              doc => 'fasta file name',            
-                             },
-        working_directory => {
-                              is          => 'SCALAR',
-                              is_optional => 1,
-                              doc         => 'analysis program working directory',
-                             },
-        keggscan_output   => {
-                              is          => 'SCALAR',
-                              is_optional => 1,
-                              doc         => 'instance of IO::File pointing to raw KEGGscan output',
-                             },
-        bio_seq_feature   => { 
-                              is          => 'ARRAY',  
-                              is_optional => 1,
-                              doc         => 'array of Bio::Seq::Feature', 
-                             },
-        report_save_dir   => {
-                              is          => 'SCALAR',
-                              is_optional => 1,
-                              doc         => 'directory to save a copy of the raw output to',
-                             },
-    ],
+            fasta_file        => { 
+                                  is  => 'SCALAR', 
+                                  doc => 'fasta file name',            
+                              },
+            working_directory => {
+                                  is          => 'SCALAR',
+                                  is_optional => 1,
+                                  doc         => 'analysis program working directory',
+                              },
+            keggscan_top_output => {
+                                    is          => 'SCALAR',
+                                    is_optional => 1,
+                                    doc         => 'instance of IO::File pointing to raw KEGGscan output',
+                                },
+            keggscan_full_output => {
+                                     is          => 'SCALAR',
+                                     is_optional => 1,
+                                     doc         => 'instance of IO::File pointing to raw KEGGscan output',
+                                 },
+            bio_seq_feature   => { 
+                                  is          => 'ARRAY',  
+                                  is_optional => 1,
+                                  doc         => 'array of Bio::Seq::Feature', 
+                              },
+            report_save_dir   => {
+                                  is          => 'SCALAR',
+                                  is_optional => 1,
+                                  doc         => 'directory to save a copy of the raw output to',
+                              },
+        ],
 };
 
 operation PAP::Command::KEGGScan {
@@ -114,6 +119,7 @@ sub execute {
 
         IPC::Run::run(
                       \@keggscan_command,
+                      '<',
                       \undef,
                       '>',
                       \$kegg_stdout,
@@ -125,17 +131,20 @@ sub execute {
     
     $self->parse_result();
 
-    my $output_fh = $self->keggscan_output();
+    my $top_output_fh = $self->keggscan_top_output();
+    my $full_output_fh = $self->keggscan_full_output();
     
     ## Be Kind, Rewind.  Somebody will surely assume we've done this,
     ## so let's not surprise them.
-    $output_fh->seek(0, SEEK_SET);
-
+    $top_output_fh->seek(0, SEEK_SET);
+    $full_output_fh->seek(0, SEEK_SET);
+    
     $self->archive_result();
 
     ## Second verse, same as the first.
-    $output_fh->seek(0, SEEK_SET);
-
+    $top_output_fh->seek(0, SEEK_SET);
+    $full_output_fh->seek(0, SEEK_SET);
+    
     return 1;
 
 }
@@ -196,19 +205,29 @@ sub parse_result {
 
     my $self = shift;
 
-
-    my $output_fn = join('.', 'KS-OUTPUT', File::Basename::basename($self->fasta_file()));
-    $output_fn = join('/', $self->working_directory(), $output_fn, 'REPORT-top.ks');    
     
-    my $output_fh = IO::File->new();
+    my $top_output_fh  = IO::File->new();
+    my $full_output_fh = IO::File->new();
     
-    $output_fh->open("$output_fn") or die "Can't open '$output_fn': $OS_ERROR";
+    my $top_output_fn = join('.', 'KS-OUTPUT', File::Basename::basename($self->fasta_file()));
 
-    $self->keggscan_output($output_fh);
+    $top_output_fn = join('/', $self->working_directory(), $top_output_fn, 'REPORT-top.ks');    
+    
+    $top_output_fh->open("$top_output_fn") or die "Can't open '$top_output_fn': $OS_ERROR";
+
+    $self->keggscan_top_output($top_output_fh);
+
+    my $full_output_fn = join('.', 'KS-OUTPUT', File::Basename::basename($self->fasta_file()));
+
+    $full_output_fn = join('/', $self->working_directory(), $full_output_fn, 'REPORT-full.ks');    
+    
+    $full_output_fh->open("$full_output_fn") or die "Can't open '$full_output_fn': $OS_ERROR";
+
+    $self->keggscan_full_output($full_output_fh);
     
     my @features = ( );
     
-    LINE: while (my $line = <$output_fh>) {
+    LINE: while (my $line = <$top_output_fh>) {
 
         chomp $line;
 
@@ -283,17 +302,30 @@ sub archive_result {
             die "does not exist or is not a directory: '$report_save_dir'";
         }
         
-        my $output_handle = $self->keggscan_output();
+        my $top_output_handle  = $self->keggscan_top_output();
+        my $full_output_handle = $self->keggscan_full_output();
+            
+        my $top_target_file  = File::Spec->catfile($report_save_dir, 'REPORT-top.ks.bz2');
+        my $full_target_file = File::Spec->catfile($report_save_dir, 'REPORT-full.ks.bz2');
         
-        my $target_file = File::Spec->catfile($report_save_dir, 'keggscan.bz2');
-        my $bz_file = bzopen($target_file, 'w') or
-            die "Cannot open '$target_file': $bzerrno";
+        my $top_bz_file = bzopen($top_target_file, 'w') or
+            die "Cannot open '$top_target_file': $bzerrno";
         
-        while (my $line = <$output_handle>) {
-            $bz_file->bzwrite($line) or die "error writing: $bzerrno";
+        while (my $line = <$top_output_handle>) {
+            $top_bz_file->bzwrite($line) or die "error writing: $bzerrno";
         }
         
-        $bz_file->bzclose();
+        $top_bz_file->bzclose();
+
+        
+        my $full_bz_file = bzopen($full_target_file, 'w') or
+            die "Cannot open '$full_target_file': $bzerrno";
+        
+        while (my $line = <$full_output_handle>) {
+            $full_bz_file->bzwrite($line) or die "error writing: $bzerrno";
+        }
+        
+        $full_bz_file->bzclose();
         
     }
 

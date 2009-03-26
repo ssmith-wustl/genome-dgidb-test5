@@ -20,27 +20,32 @@ use IPC::Run;
 
 class PAP::Command::InterProScan {
     is => ['PAP::Command'],
-    has => [
-        fasta_file      => {  
-                            is  => 'SCALAR', 
-                            doc => 'fasta file name',
+        has => [
+                fasta_file => {  
+                               is  => 'SCALAR', 
+                               doc => 'fasta file name',
                            },
-        iprscan_output => {
-                           is          => 'SCALAR',
-                           is_optional => 1,
-                           doc         => 'instance of File::Temp pointing to raw iprscan output',
-                          },
-        bio_seq_feature => { 
-                            is          => 'ARRAY',
-                            is_optional => 1,
-                            doc         => 'array of Bio::Seq::Feature' 
-                           },
-        report_save_dir => {
-                            is          => 'ARRAY',
-                            is_optional => 1,
-                            doc         => 'directory to save a copy of the raw output to'
-                           },
-    ],
+                iprscan_output => {
+                                   is          => 'SCALAR',
+                                   is_optional => 1,
+                                   doc         => 'instance of File::Temp pointing to raw iprscan output',
+                               },
+                iprscan_sorted_output => {
+                                          is          => 'SCALAR',
+                                          is_optional => 1,
+                                          doc         => 'instance of File::Temp pointing to sorted iprscan output',
+                                      },
+                bio_seq_feature => { 
+                                    is          => 'ARRAY',
+                                    is_optional => 1,
+                                    doc         => 'array of Bio::Seq::Feature' 
+                                },
+                report_save_dir => {
+                                    is          => 'ARRAY',
+                                    is_optional => 1,
+                                    doc         => 'directory to save a copy of the raw output to'
+                                },
+            ],
 };
 
 operation PAP::Command::InterProScan {
@@ -81,7 +86,8 @@ sub execute {
     my $sorted_tmp_fh = File::Temp->new();
     my $sorted_tmp_fn = $sorted_tmp_fh->filename();
     
-    $self->iprscan_output($sorted_tmp_fh);
+    $self->iprscan_sorted_output($sorted_tmp_fh);
+    $self->iprscan_output($tmp_fh);
     
     my @iprscan_command = (
                            '/gscmnt/974/analysis/iprscan16.1/iprscan/bin/iprscan.hacked',
@@ -139,11 +145,13 @@ sub execute {
 
     ## Be Kind, Rewind.  Somebody will surely assume we've done this, 
     ## so let's not surprise them.  
+    $tmp_fh->seek(0, SEEK_SET);
     $sorted_tmp_fh->seek(0, SEEK_SET);
 
     $self->archive_result();
 
     ## Second verse, same as the first.
+    $tmp_fh->seek(0, SEEK_SET);
     $sorted_tmp_fh->seek(0, SEEK_SET);
 
     return 1;
@@ -268,17 +276,31 @@ sub archive_result {
             die "does not exist or is not a directory: '$report_save_dir'";
         }
 
+        my $sorted_output_handle = $self->iprscan_sorted_output();
+
+        my $sorted_target_file = File::Spec->catfile($report_save_dir, 'merged.raw.sorted.bz2');
+        
+        my $sorted_bz_file = bzopen($sorted_target_file, 'w') or
+            die "Cannot open '$sorted_target_file': $bzerrno";
+
+        while (my $line = <$sorted_output_handle>) {
+            $sorted_bz_file->bzwrite($line) or die "error writing: $bzerrno"; 
+        }
+
+        $sorted_bz_file->bzclose();
+
+
         my $output_handle = $self->iprscan_output();
 
-        my $target_file = File::Spec->catfile($report_save_dir, 'interpro.bz2');
+        my $target_file = File::Spec->catfile($report_save_dir, 'merged.raw.bz2');
         
         my $bz_file = bzopen($target_file, 'w') or
             die "Cannot open '$target_file': $bzerrno";
-
+        
         while (my $line = <$output_handle>) {
             $bz_file->bzwrite($line) or die "error writing: $bzerrno"; 
         }
-
+        
         $bz_file->bzclose();
         
     }

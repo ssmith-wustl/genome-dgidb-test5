@@ -78,8 +78,8 @@ foreach my $feature (@{$ref}) {
 
     my $display_name = $feature->display_name();
 
-    ok(-e "$tempdir/$display_name.bz2", "archived blast report exists for $display_name");
-    is(system("bzcat /$tempdir/$display_name.bz2"), 0, "bzcat can read archived blast report for $display_name");
+    ok(-e "$tempdir/$display_name.blastp.bz2", "archived blast report exists for $display_name");
+    is(system("bzcat /$tempdir/$display_name.blastp.bz2"), 0, "bzcat can read archived blast report for $display_name");
     
 }
 

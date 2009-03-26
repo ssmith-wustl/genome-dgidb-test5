@@ -284,7 +284,7 @@ sub archive_result {
         
         QUERY: foreach my $query_name (@{$self->query_names()}) {
         
-            my $target_file = File::Spec->catfile($report_save_dir, "$query_name.bz2");
+            my $target_file = File::Spec->catfile($report_save_dir, "$query_name.blastp.bz2");
             
             $bz_file = bzopen($target_file, 'w') or
                 die "Cannot open '$target_file': $bzerrno";
