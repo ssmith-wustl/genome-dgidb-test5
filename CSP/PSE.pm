@@ -436,7 +436,15 @@ sub current_fail_log{
 
 sub current_output_log{
     my $self = shift;	
-    my $cmd = q(find '/gsc/var/log/confirm_scheduled_pse/output/' -name )
+
+    my $ps = $self->get_process_step;
+    my $pro_process_to = $ps->process_to;
+    $pro_process_to =~ y/ /_/;
+
+    my $output_directory = 
+        qq(/gsc/var/log/confirm_scheduled_pse/output/$pro_process_to/);
+
+    my $cmd = qq(find '$output_directory' -name )
               . q(') . $self->pse_id
               . q(.*' 2> /dev/null);
     my @potential = `$cmd`;
