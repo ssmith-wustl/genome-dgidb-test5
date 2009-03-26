@@ -136,13 +136,13 @@ sub resolve_data_directory {
         $allocation_path .= $build_subdirectory;
         my $kb_requested = $self->calculate_estimated_kb_usage;
         if ($kb_requested) {
-            my $disk_allocation = Genome::Disk::Allocation->create(
-                                                            disk_group_name => 'info_genome_models',
-                                                            allocation_path => $allocation_path,
-                                                            kilobytes_requested => $kb_requested,
-                                                            owner_class_name => $self->class,
-                                                            owner_id => $self->id,
-                                                        );
+            my $disk_allocation = Genome::Disk::Allocation->allocate(
+                                                                     disk_group_name => 'info_genome_models',
+                                                                     allocation_path => $allocation_path,
+                                                                     kilobytes_requested => $kb_requested,
+                                                                     owner_class_name => $self->class,
+                                                                     owner_id => $self->id,
+                                                                 );
             unless ($disk_allocation) {
                 $self->error_message('Failed to get disk allocation');
                 $self->delete;
