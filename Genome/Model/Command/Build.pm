@@ -123,7 +123,7 @@ sub execute {
     }
 
     $self->create_directory($self->data_directory);
-    my $run_jobs_script = $self->data_directory .'/run_jobs.pl';
+    my $run_jobs_script = $self->data_directory .'/run_jobs_'. $build->build_id .'.pl';
     open(FILE,'>'.$run_jobs_script) || die ('Failed to open run jobs script: '. $run_jobs_script .":  $!");
 
     print FILE "#!/gsc/bin/perl\n
