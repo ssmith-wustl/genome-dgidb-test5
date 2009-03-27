@@ -57,9 +57,13 @@ sub new {
     my $self = bless \%params, $class;
 
     my $classifier_properties_path = '/gsc/scripts/share/rdp/';
-    if ($self->{training_set}) {
+    if ($self->{training_path}) {
+        $classifier_properties_path = $self->{training_path};
+    }
+    elsif ($self->{training_set}) {
         $classifier_properties_path .= $self->{training_set}.'/';
     }
+
     $classifier_properties_path .= 'rRNAClassifier.properties';
 
     Genome::Utility::FileSystem->validate_file_for_reading($classifier_properties_path)
@@ -79,7 +83,12 @@ sub classify {
     my ($self, $seq) = @_;
 
     unless ( $seq ) {
-        $self->error_message("No sequence to classify");
+        #$self->error_message("No sequence to classify");
+        return;
+    }
+
+    if ($seq->length < 200) {
+        #$self->error_message("Sequence to short");
         return;
     }
     
