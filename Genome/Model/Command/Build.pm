@@ -152,7 +152,7 @@ sub execute {
     close(FILE);
     # this is really more of a 'testing' flag and may be more appropriate named such
     if ($self->auto_execute) {
-        my $cmdline = 'bsub -q long -u '. $ENV{USER} .'@genome.wustl.edu perl '. $run_jobs_script;
+        my $cmdline = 'bsub -H -q long -u '. $ENV{USER} .'@genome.wustl.edu perl '. $run_jobs_script;
         my $bsub_output = `$cmdline`;
         my $retval = $? >> 8;
 
@@ -170,6 +170,8 @@ sub execute {
         }
         $self->lsf_job_id($bsub_job_id);
         $self->mail_summary;
+        my $resume = sub { `bresume $bsub_job_id`};
+        UR::Context->create_subscription(method => 'commit', callback => $resume);
     }
     return 1;
 }
