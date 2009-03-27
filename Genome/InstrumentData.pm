@@ -219,22 +219,15 @@ sub move_alignment_directory_for_aligner_and_refseq {
     if ($existing_allocation) {
         die('Disk allocation '. $existing_allocation->allocator_id .' already exists for path '. $allocation_path);
     }
-    my $allocation_cmd = Genome::Disk::Allocation->allocate(
+    my $new_allocation = Genome::Disk::Allocation->allocate(
                                                             disk_group_name => 'info_alignments',
                                                             allocation_path => $allocation_path,
                                                             kilobytes_requested => $current_allocation->kilobytes_requested,
                                                             owner_class_name => $self->class,
                                                             owner_id => $self->id,
                                                         );
-    unless ($allocation_cmd) {
-        die('Failed to create command to allocate disk space for '. $allocation_path);
-    }
-    unless ($allocation_cmd->execute) {
-        die('Failed to execute command to allocate disk space for '. $allocation_path);
-    }
-    my $new_allocation = $allocation_cmd->disk_allocation;
     unless ($new_allocation) {
-        $self->error_message('Failed to get disk allocation for '. $allocation_cmd->allocator_id);
+        $self->error_message('Failed to get new alignment disk allocation for '. $allocation_path);
         die $self->error_message;
     }
     unless (rename($existing_allocation->absolute_path,$new_allocation->absolute_path)) {
