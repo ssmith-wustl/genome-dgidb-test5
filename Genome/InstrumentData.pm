@@ -230,8 +230,8 @@ sub move_alignment_directory_for_aligner_and_refseq {
         $self->error_message('Failed to get new alignment disk allocation for '. $allocation_path);
         die $self->error_message;
     }
-    unless (rename($existing_allocation->absolute_path,$new_allocation->absolute_path)) {
-        die('Failed to move '. $reason .' directory '. $existing_allocation->absolute_path .' to '. $new_allocation->absolute_path .":  $!");
+    unless (rename($current_allocation->absolute_path,$new_allocation->absolute_path)) {
+        die('Failed to move '. $reason .' directory '. $current_allocation->absolute_path .' to '. $new_allocation->absolute_path .":  $!");
     }
     return 1;
 }
