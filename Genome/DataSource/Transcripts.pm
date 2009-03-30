@@ -3,7 +3,7 @@ package Genome::DataSource::Transcripts;
 use Genome;
 
 class Genome::DataSource::Transcripts {
-    is => [ 'UR::DataSource::FileMux'],
+    is => [ 'UR::DataSource::FileMux', 'UR::Singleton'],
 };
 
 sub delimiter {
@@ -11,7 +11,7 @@ sub delimiter {
 }
 
 sub column_order {
-    return qw(
+    return [qw(
         transcript_id
         gene_id
         transcript_start
@@ -21,22 +21,20 @@ sub column_order {
         transcript_status
         strand
         chrom_name
-    )
+    )]
 }
 
-sub constant_values { qw(build_id) };
+sub constant_values { ['build_id'] };
 
 sub sort_order {
-    return qw(
-        chrom_name transcript_start transcript_id
-    )
+    return [qw(chrom_name transcript_start transcript_id)];
 }
 
 sub skip_first_line {
     return 0;
 }
 
-sub required_for_get { return qw( build_id) }
+sub required_for_get { ['build_id'] }
 
 sub file_resolver {
     my ($build_id) = @_;

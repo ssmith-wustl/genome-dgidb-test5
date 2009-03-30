@@ -3,13 +3,13 @@ package Genome::DataSource::TranscriptSubStructures;
 use Genome;
 
 class Genome::DataSource::TranscriptSubStructures {
-    is => 'UR::DataSource::FileMux',
+    is => ['UR::DataSource::FileMux', 'UR::Singleton'],
 };
 
-sub constant_values { qw(build_id) };
-sub required_for_get { qw( transcript_id build_id) }
+sub constant_values { ['build_id'] };
+sub required_for_get { ['transcript_id','build_id'] }
 sub delimiter { "\t" }
-sub column_order { qw( transcript_structure_id
+sub column_order { [ qw( transcript_structure_id
                        transcript_id
                        structure_type
                        structure_start
@@ -17,9 +17,9 @@ sub column_order { qw( transcript_structure_id
                        ordinal
                        phase
                        nucleotide_seq
-               )}
+               )]}
 
-sub sort_order { qw( transcript_id structure_start transcript_structure_id ) }
+sub sort_order {[qw( transcript_id structure_start transcript_structure_id )] }
 
 sub file_resolver {
     my($transcript_id, $build_id) = @_;

@@ -3,7 +3,7 @@ package Genome::DataSource::GeneExpressions;
 use Genome;
 
 class Genome::DataSource::GeneExpressions {
-    is => 'UR::DataSource::FileMux',
+    is => ['UR::DataSource::FileMux', 'UR::Singleton'],
 };
 
 sub delimiter {
@@ -11,19 +11,19 @@ sub delimiter {
 }
 
 sub column_order {
-    return qw( expression_id expression_intensity dye_type probe_sequence probe_identifier tech_type detection );
+    return [ qw( expression_id expression_intensity dye_type probe_sequence probe_identifier tech_type detection )];
 }
 
 sub sort_order {
-    return qw( expression_id );
+    return ['expression_id'];
 }
 
 sub skip_first_line {
     return 0;
 }
 
-sub constant_values { qw(build_id) };
-sub required_for_get { qw( expression_id build_id ) }
+sub constant_values { ['build_id'] };
+sub required_for_get { ['expression_id', 'build_id'] }
 
 sub file_resolver {
     my($expression_id,$build_id) = @_;

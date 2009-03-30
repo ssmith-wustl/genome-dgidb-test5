@@ -3,7 +3,7 @@ package Genome::DataSource::Variations;
 use Genome;
 
 class Genome::DataSource::Variations{
-    is => 'UR::DataSource::FileMux',
+    is => ['UR::DataSource::FileMux', 'UR::Singleton'],
 };
 
 sub delimiter {
@@ -11,30 +11,19 @@ sub delimiter {
 }
 
 sub column_order {
-
-return
-qw(
-variation_id
-external_variation_id
-allele_string
-variation_type
-chrom_name
-start
-stop
-pubmed_id
-);
+return [qw( variation_id external_variation_id allele_string variation_type chrom_name start stop pubmed_id)];
 }
 
 sub sort_order {
-    return qw( start );
+    return ['start'];
 }
 
 sub skip_first_line {
     return 0;
 }
 
-sub constant_values { qw( build_id ) };
-sub required_for_get { qw( chrom_name build_id) }
+sub constant_values { ['build_id'] };
+sub required_for_get { [qw( chrom_name build_id)] }
 
 sub file_resolver {
     my($chrom_name, $build_id) = @_;

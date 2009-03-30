@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::DataSource::Submitters{
-    is => 'UR::DataSource::FileMux',
+    is => ['UR::DataSource::FileMux', 'UR::Singleton'],
 };
 
 sub delimiter {
@@ -13,25 +13,23 @@ sub delimiter {
 }
 
 sub column_order{
-    return qw( 
+    return [qw( 
     submitter_id 
     submitter_name 
     variation_source 
-    )
+    )];
 }
 
 sub sort_order{
-    return qw( 
-    submitter_id 
-    )
+    return ['submitter_id'];
 }
 
 sub skip_first_line {
     return 0;
 }
 
-sub constant_values { qw(build_id) };
-sub required_for_get { qw( build_id ) }
+sub constant_values { ['build_id'] };
+sub required_for_get { ['build_id'] }
 
 sub file_resolver {
     my ($build_id) = @_;

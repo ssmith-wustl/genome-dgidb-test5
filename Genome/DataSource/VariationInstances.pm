@@ -3,22 +3,22 @@ package Genome::DataSource::VariationInstances;
 use Genome;
 
 class Genome::DataSource::VariationInstances {
-    is => 'UR::DataSource::FileMux',
+    is => ['UR::DataSource::FileMux', 'UR::Singleton'],
 };
 
-sub constant_values { qw(build_id) };
-sub required_for_get { qw( variation_id build_id) }
+sub constant_values { ['build_id'] };
+sub required_for_get { [qw( variation_id build_id)] }
 sub delimiter { "\t" }
 sub column_order {
-    qw(
+    [ qw(
         variation_id
         submitter_id
         method_id
         date_stamp
-    )
+    ) ]
 }
 
-sub sort_order { qw( variation_id ) }
+sub sort_order { ['variation_id'] }
 
 sub file_resolver {
     my($transcript_id, $build_id) = @_;

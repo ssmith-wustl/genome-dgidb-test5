@@ -3,7 +3,7 @@ package Genome::DataSource::ExternalGeneIds;
 use Genome;
 
 class Genome::DataSource::ExternalGeneIds {
-    is => [ 'UR::DataSource::FileMux'],
+    is => [ 'UR::DataSource::FileMux', 'UR::Singleton'],
 };
 
 sub delimiter {
@@ -11,19 +11,19 @@ sub delimiter {
 }
 
 sub column_order {
-    return qw( egi_id gene_id id_type id_value );
+    return [ qw( egi_id gene_id id_type id_value )];
 }
 
 sub sort_order {
-    return qw( gene_id egi_id );
+    return [qw( gene_id egi_id )];
 }
 
 sub skip_first_line {
     return 0;
 }
 
-sub constant_values { qw(build_id) };
-sub required_for_get { qw(build_id ) }
+sub constant_values { ['build_id'] };
+sub required_for_get { ['build_id'] }
 
 
 # All the possible locations of files

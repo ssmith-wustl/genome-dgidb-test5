@@ -3,15 +3,15 @@ package Genome::DataSource::VariationPosition;
 use Genome;
 
 class Genome::DataSource::VariationPosition {
-    is => 'UR::DataSource::FileMux',
+    is => ['UR::DataSource::FileMux', 'UR::Singleton'],
 };
 
-sub constant_values { qw( model_id ) };
-sub required_for_get { qw( model_id ref_seq_id ) }
+sub constant_values { ['model_id'] };
+sub required_for_get { [qw( model_id ref_seq_id )] }
 sub delimiter { '\s+' }
-sub column_order { qw(ref_seq_name position reference_base consensus_base consensus_quality
-                      read_depth avg_num_hits max_mapping_quality min_conensus_quality) }
-sub sort_order { qw(ref_seq_name position ) }
+sub column_order { [ qw(ref_seq_name position reference_base consensus_base consensus_quality
+                      read_depth avg_num_hits max_mapping_quality min_conensus_quality)] }
+sub sort_order { [qw(ref_seq_name position )] }
 sub skip_first_line { 0; }
 
 sub file_resolver {
