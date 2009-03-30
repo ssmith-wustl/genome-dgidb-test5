@@ -80,7 +80,7 @@ sub _verify_build {
     }
 
     unless ( $self->build ) {
-        $self->error_message( sprintf('Can\'t get build for id (%s) ', $self->buil_id) );
+        $self->error_message( sprintf('Can\'t get build for id (%s) ', $self->build_id) );
         return;
     }
 
