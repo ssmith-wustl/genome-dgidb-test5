@@ -14,13 +14,11 @@ class Genome::Model::Tools::Velvet::ToConsed {
         fastq_file  => {
             is      => 'String',
             doc     => 'Input fastq file to start the velvet assembly',
-        }
-    ],
-    has_many     => [
-        afg_files   => {
+        },
+        afg_file    => {
             is      => 'String', 
             doc     => 'input velvet_asm.afg file path(s)',
-        }
+        },
     ],
     has_optional => [
         out_acefile => {
@@ -64,7 +62,7 @@ sub execute {
     my @steps = qw(Velvet_to_Ace Fastq_to_phdball_scf);
 
     my $to_ace  = Genome::Model::Tools::Velvet::ToAce->create(
-        afg_files   => [$self->afg_files],
+        afg_file    => $self->afg_file,
         out_acefile => $acefile,
         time        => $time,
     );
