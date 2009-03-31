@@ -109,6 +109,12 @@ sub execute
 {
     my $self = shift;
 
+    my $gram_stain = $self->gram_stain();
+
+    unless (($gram_stain eq 'positive') || ($gram_stain eq 'negative')) {
+        die "gram_stain must be 'positive' or 'negative', not '$gram_stain'";
+    }
+    
     print STDERR "moving data from mgap to biosql\n";
     $self->mgap_to_biosql();
 

@@ -258,8 +258,17 @@ sub execute
         return 1;
     }
 
-    unless (defined($config->{gram_stain})) {
-        die 'cannot start workflow - no gram_stain specified in config file';
+    {
+        my $gram_stain = $config->{gram_stain};
+    
+        unless (defined($gram_stain)) {
+            die 'cannot start workflow - no gram_stain specified in config file';
+        }
+       
+        unless (($gram_stain eq 'positive') || ($gram_stain eq 'negative')) {
+            die "cannot start workflow - gram_stain must be 'postive' or 'negative', not '$gram_stain'";
+        }
+       
     }
 
 
