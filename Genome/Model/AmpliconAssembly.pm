@@ -8,7 +8,6 @@ use Genome;
 use Data::Dumper;
 use File::Grep 'fgrep';
 require Genome::Consed::Directory;
-require Genome::Model::AmpliconAssembly::Amplicon;
 require Genome::ProcessingProfile::AmpliconAssembly;
 use POSIX 'floor';
 
@@ -171,7 +170,7 @@ sub get_amplicons {
     my @amplicons;
     my $edit_dir = $self->edit_dir;
     for my $name ( keys %$amplicons ) {
-        push @amplicons, Genome::Model::AmpliconAssembly::Amplicon->new(
+        push @amplicons, Genome::Model::Build::AmpliconAssembly::Amplicon->new(
             name => $name,
             reads => $amplicons->{$name},
             directory => $edit_dir,
