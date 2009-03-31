@@ -3,6 +3,14 @@
 use strict;
 use warnings;
 
+use above 'Genome';
+
+use Genome::Model::Command::Build::AmpliconAssembly::Test;
+
+Genome::Model::Command::Build::AmpliconAssembly::Test->runtests;
+
+exit;
+
 use above "Genome";
 use Test::More 'no_plan';
 require File::Path;
@@ -83,6 +91,7 @@ my $build_event = Genome::Model::Command::Build->create(
     auto_execute => 0,
 );
 isa_ok($build_event, 'Genome::Model::Command::Build');
+print $build_event->build->data_directory,"\n"; <STDIN>;
 $build_event->queue_error_messages(1);
 $build_event->queue_warning_messages(1);
 ok($build_event->execute,'Execute build_event');
@@ -99,7 +108,7 @@ my @events = sort { $b->genome_model_event_id <=> $a->genome_model_event_id } Ge
 my $expected_event_count = 7;
 is(@events, $expected_event_count, "Scheduled $expected_event_count events");
 
-# The execution of these events are tested via the unit tests...
+# The execution of these events are tested via the unit tests...but you may wanna see the results
 #for my $event ( @events ) {
 #    ok($event->execute, sprintf('Executed event (%s %s)', $event->id, $event->event_type))
 #        or die; # if one of these fails just die
