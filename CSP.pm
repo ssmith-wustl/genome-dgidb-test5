@@ -1772,8 +1772,6 @@ sub cleanup_logs {
     for my $dir (
         $class->prev_fail_dir,
         $class->done_dir,
-        $class->output_dir,
-        ( grep { $_->is_dir } $class->output_dir->children ),
         $class->fail_dir,
     )
     {
@@ -1800,6 +1798,8 @@ sub cleanup_logs {
     for my $dir (
         $class->cron_dir,
         $class->jobs_dir,
+        $class->output_dir,
+        ( grep { $_->is_dir } $class->output_dir->children ),
     )
     {
         while ( $_ = $dir->next ) {
