@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+require Genome::Model::Build::AmpliconAssembly::Amplicon;
+
 class Genome::Model::Build::AmpliconAssembly {
     is => 'Genome::Model::Build',
 };
@@ -75,7 +77,11 @@ sub reports_dir {
 }
     
 #< FASTA >#
-sub _fasta_file_name {
+sub amplicon_fasta_types {
+    return (qw/ reads processed assembly oriented /);
+}
+
+sub fasta_file_for_type {
     my ($self, $type) = @_;
 
     return sprintf(
@@ -86,51 +92,8 @@ sub _fasta_file_name {
     );
 }
 
-sub reads_fasta {
-    return _fasta_file_name(@_, 'reads');
-}
-
-sub processed_fasta {
-    return _fasta_file_name(@_, 'processed');
-}
-
-sub assembly_fasta {
-    return _fasta_file_name(@_, 'assembly');
-}
-
-sub orientation_confirmed_fasta {
-    return _fasta_file_name(@_, 'assembly.confirmed');
-}
-
-sub orientation_unconfirmed_fasta {
-    return _fasta_file_name(@_, 'assembly.unconfirmed');
-}
-
-#< REPORTS >#
-sub add_report {
-}
-
-sub _report_file_name {
-    my ($self, $type) = @_;
-
-    return sprintf(
-        '%s/%s.%s',
-        $self->reports_dir,
-        $self->model->subject_name,
-        $type,
-    );
-}
-
-sub rdp_report_file {
-    return _report_file_name(@_, 'rdp');
-}
-
-sub assembly_stats_report_file {
-    return _report_file_name(@_, 'stats.txt');
-}
-
-sub quality_histogram_report_file {
-    return _report_file_name(@_, 'stats.txt');
+sub qual_file_for_type {
+    return $_[0]->fasta_file_for_type($_[1]).'.qual';
 }
 
 #< INTR DATA >#
@@ -196,7 +159,7 @@ sub get_amplicons {
     my @amplicons;
     my $edit_dir = $self->edit_dir;
     for my $name ( keys %$amplicons ) {
-        push @amplicons, Genome::Model::AmpliconAssembly::Amplicon->new(
+        push @amplicons, Genome::Model::Build::AmpliconAssembly::Amplicon->new(
             name => $name,
             reads => $amplicons->{$name},
             directory => $edit_dir,
