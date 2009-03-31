@@ -5,24 +5,43 @@ use warnings;
 
 use Genome;
 
-require Genome::Model::Tools::Fasta::Orient;
-
 class Genome::Model::Command::Build::AmpliconAssembly::Orient {
     is => 'Genome::Model::Event',
 };
 
-#< Subclassing...don't >#
-sub _get_sub_command_class_name {
-  return __PACKAGE__;
-}
-
-#< LSF >#
-sub bsub_rusage {
-    return "";
-}
-
-#< The Beef >#
 sub execute {
+    my $self = shift;
+
+    my $amplicons = $self->build->get_amplicons
+        or return;
+
+    for my $amplicon ( @$amplicons ) {
+        my $bioseq = $amplicon->get_bioseq;
+        next unless $bioseq; # ok - not all will have a bioseq
+
+        my $classification = $amplicon->get_classification;
+        unless ( $classification ) {
+            $self->error_message(
+                sprintf(
+                    'Can\'t get classification from amplicon (%s) for build (<ID %s> <Model %s>)', 
+                    $amplicon->get_name,
+                    $self->build->id,
+                    $self->model->name,
+                )
+            );
+            return;
+        }
+
+        $amplicon->confirm_orientation( $classification->is_complemented )
+            or return;
+    }
+    
+    #print $self->build->data_directory."\n"; <STDIN>;
+    
+    return 1;
+}
+
+sub _execute {
     my $self = shift;
 
     unless ( -s $self->build->assembly_fasta ) {

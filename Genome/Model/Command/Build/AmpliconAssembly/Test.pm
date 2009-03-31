@@ -435,6 +435,6 @@ sub test_03_verify : Test(1) {
 
 =cut
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Command/Build/AmpliconAssembly/Orient.t $
-#$Id: Orient.t 45038 2009-03-25 18:00:17Z ebelter $
+#$HeadURL$
+#$Id$
 

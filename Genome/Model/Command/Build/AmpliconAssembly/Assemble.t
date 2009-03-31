@@ -5,25 +5,9 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 6;
+use Genome::Model::Command::Build::AmpliconAssembly::Test;
 
-use_ok('Genome::Model::Command::Build::AmpliconAssembly::Assemble')
-    or die;
-use_ok('Genome::Model::AmpliconAssembly::Test') # necessary cuz mock objects are in here
-    or die;
-my $model = Genome::Model::AmpliconAssembly::Test->create_mock_model;
-ok($model, 'Got mock amplicon assembly model');
-my $build = $model->latest_complete_build;
-ok($build, 'Got build from model');
-$build->link_instrument_data( $model->instrument_data )
-    or die "Can't link traces\n";
-my $assemble = Genome::Model::Command::Build::AmpliconAssembly::Assemble->create(
-    model => $model,
-    build => $build,
-);
-ok($assemble, "Created assemble")
-    or die;
-ok($assemble->execute, "Execute");
+Genome::Model::Command::Build::AmpliconAssembly::AssembleTest->runtests;
 
 exit;
 

@@ -4,24 +4,22 @@ use strict;
 use warnings;
 
 use Genome;
-
+      
 class Genome::Model::Command::Build::AmpliconAssembly::CleanUp {
     is => 'Genome::Model::Event',
 };
 
-#< Subclassing...don't >#
-sub _get_sub_command_class_name {
-  return __PACKAGE__;
-}
-
-#< LSF >#
-sub bsub_rusage {
-    return "";
-}
-
-#< The Beef >#
 sub execute {
     my $self = shift;
+
+    my $amplicons = $self->build->get_amplicons
+        or return;
+    
+    for my $amplicon ( @$amplicons ) {
+        $amplicon->remove_unneeded_files;
+    }
+
+    #print $self->build->data_directory,"\n"; <STDIN>;
 
     return 1;
 }

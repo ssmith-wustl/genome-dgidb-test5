@@ -5,99 +5,70 @@ use warnings;
 
 use Genome;
 
-use Bio::Seq::Quality;
-use Bio::SeqIO;
-use Data::Dumper;
-use File::Grep 'fgrep';
-require Finishing::Assembly::Factory;
-require GD::Graph::lines;
-require Genome::Utility::FileSystem;
-require IO::File;
+use Data::Dumper 'Dumper';
 
 class Genome::Model::Command::Build::AmpliconAssembly::Collate {
     is => 'Genome::Model::Event',
 };
 
-#< Subclassing...don't >#
-sub _get_sub_command_class_name {
-  return __PACKAGE__;
-}
-
-#< LSF >#
-sub bsub_rusage {
-    return "";
-}
-
-#< Beef >#
 sub execute {
     my $self = shift;
 
     my $amplicons = $self->build->get_amplicons
         or return;
+    
+    my @amplicon_fasta_types = $self->build->amplicon_fasta_types;
 
-    $self->_open_collating_fhs
+    $self->_open_build_fasta_and_qual_fhs(@amplicon_fasta_types)
         or return;
 
     for my $amplicon ( @$amplicons ) {
-        if ( $amplicon->get_bioseq ) {
-            $self->{_fasta_writer}->write_seq($amplicon->get_bioseq);
-            $self->{_qual_writer}->write_seq($amplicon->get_bioseq);
+        for my $type ( @amplicon_fasta_types ) {
+            $self->_collate_amplicon_fasta_and_qual($amplicon, $type);
         }
-        $self->_collate_amplicon_fasta_and_qual($amplicon);
     }
 
-    $self->_close_collating_fhs;
+    $self->_close_build_fasta_and_qual_fhs(@amplicon_fasta_types)
+        or return;
+
+    #print $self->build->data_directory,"\n"; <STDIN>;
 
     return 1;
 }
 
 #< FHs >#
-my %pre_assembly_fasta_and_qual_types = (
-    reads => '%s/%s.reads.fasta', 
-    processed => '%s/%s.fasta',
-);
-sub _open_collating_fhs {
-    my $self = shift;
+sub _fasta_fh_key_for_type {
+    return '_'.$_[0].'_fasta_fh';
+}
 
-    # Assemblies
-    my $fasta_file = $self->build->assembly_fasta;
-    unlink $fasta_file if -e $fasta_file;
-    $self->{_fasta_writer} = Bio::SeqIO->new(
-        '-file' => ">$fasta_file",
-        '-format' => 'Fasta',
-    )
-        or return; # this should die
-    my $qual_file = $fasta_file.'.qual';
-    unlink $qual_file if -e $qual_file;
-    $self->{_qual_writer} = Bio::SeqIO->new(
-        '-file' => ">$qual_file",
-        '-format' => 'qual',
-    )
-        or return; # this should die
-    
-    # Pre assembly fastas and quals
-    for my $type ( keys %pre_assembly_fasta_and_qual_types ) {
-        my $file_method = sprintf('%s_fasta', $type);
-        my $fasta_file = $self->build->$file_method;
+sub _qual_fh_key_for_type {
+    return '_'.$_[0].'_qual_fh';
+}
+
+sub _open_build_fasta_and_qual_fhs {
+    my ($self, @types) = @_;
+
+    for my $type ( @types ) {
+        my $fasta_file = $self->build->fasta_file_for_type($type);
         unlink $fasta_file if -e $fasta_file;
-        $self->{ sprintf('_%s_fasta_fh', $type) } = Genome::Utility::FileSystem->open_file_for_writing($fasta_file)
+        $self->{ _fasta_fh_key_for_type($type) } = Genome::Utility::FileSystem->open_file_for_writing($fasta_file)
             or return;
 
-        my $qual_file = $fasta_file . '.qual';
+        my $qual_file = $self->build->qual_file_for_type($type);
         unlink $qual_file if -e $qual_file;
-        $self->{ sprintf('_%s_qual_fh', $type) } = Genome::Utility::FileSystem->open_file_for_writing($qual_file)
+        $self->{ _qual_fh_key_for_type($type) } = Genome::Utility::FileSystem->open_file_for_writing($qual_file)
             or return;
     }
 
     return 1;
 }
 
-sub _close_collating_fhs {
-    my $self = shift;
+sub _close_build_fasta_and_qual_fhs {
+    my ($self, @types) = @_;
 
-    for my $type ( keys %pre_assembly_fasta_and_qual_types ) {
-        $self->{ sprintf('_%s_fasta_fh', $type) }->close;
-        $self->{ sprintf('_%s_qual_fh', $type) }->close;
+    for my $type ( @types ) {
+        $self->{ _fasta_fh_key_for_type($type) }->close;
+        $self->{ _qual_fh_key_for_type($type) }->close;
     }
 
     return 1;
@@ -105,35 +76,32 @@ sub _close_collating_fhs {
 
 #< Collating the Amplicon Fastas >#
 sub _collate_amplicon_fasta_and_qual {
-    my ($self, $amplicon) = @_;
+    my ($self, $amplicon, $type) = @_;
 
-    for my $type ( keys %pre_assembly_fasta_and_qual_types ) {
-        # FASTA
-        my $fasta_file = sprintf(
-            $pre_assembly_fasta_and_qual_types{$type}, $self->build->edit_dir, $amplicon->get_name, 
-        );
-        next unless -s $fasta_file;
-        my $fasta_fh = IO::File->new($fasta_file, 'r')
-            or $self->fatal_msg("Can't open file ($fasta_file) for reading");
-        my $fasta_fh_key = sprintf('_%s_fasta_fh', $type);
-        while ( my $line = $fasta_fh->getline ) {
-            $self->{$fasta_fh_key}->print($line);
-        }
-        $self->{$fasta_fh_key}->print("\n");
-
-        #QUAL
-        my $qual_file = sprintf('%s.qual', $fasta_file);
-        $self->fatal_msg(
-            sprintf('No contigs qual file (%s) for amplicon (%s)', $qual_file, $amplicon->get_name)
-        ) unless -e $qual_file;
-        my $qual_fh = IO::File->new("< $qual_file")
-            or $self->fatal_msg("Can't open file ($qual_file) for reading");
-        my $qual_fh_key = sprintf('_%s_qual_fh', $type);
-        while ( my $line = $qual_fh->getline ) {
-            $self->{$qual_fh_key}->print($line);
-        }
-        $self->{$qual_fh_key}->print("\n");
+    # FASTA
+    my $fasta_file = $amplicon->fasta_file_for_type($type);
+    return unless -s $fasta_file;
+    #print "Found $fasta_file\n";
+    my $fasta_fh = Genome::Utility::FileSystem->open_file_for_reading($fasta_file)
+        or return;
+    my $fasta_fh_key = _fasta_fh_key_for_type($type);
+    while ( my $line = $fasta_fh->getline ) {
+        $self->{$fasta_fh_key}->print($line);
     }
+    $self->{$fasta_fh_key}->print("\n");
+
+    #QUAL
+    my $qual_file = $amplicon->qual_file_for_type($type);
+    $self->fatal_msg(
+        sprintf('Fasta file, but no qual file (%s) for amplicon (%s)', $qual_file, $amplicon->get_name)
+    ) unless -e $qual_file;
+    my $qual_fh = Genome::Utility::FileSystem->open_file_for_reading($qual_file)
+        or return;
+    my $qual_fh_key = _qual_fh_key_for_type($type);
+    while ( my $line = $qual_fh->getline ) {
+        $self->{$qual_fh_key}->print($line);
+    }
+    $self->{$qual_fh_key}->print("\n");
 
     return 1;
 }

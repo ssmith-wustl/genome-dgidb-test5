@@ -5,28 +5,9 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 6;
+use Genome::Model::Command::Build::AmpliconAssembly::Test;
 
-use_ok('Genome::Model::Command::Build::AmpliconAssembly::Orient')
-    or die;
-use_ok('Genome::Model::AmpliconAssembly::Test') # necessary cuz mock objects are in here
-    or die;
-my $model = Genome::Model::AmpliconAssembly::Test->create_mock_model;
-ok($model, 'Got mock amplicon assembly model');
-my $build = $model->latest_complete_build;
-ok($build, 'Got build from model');
-Genome::Model::AmpliconAssembly::Test->copy_test_dir(
-    'fasta',
-    $build->fasta_dir,
-)
-    or die "Can't copy test data\n";
-my $orient = Genome::Model::Command::Build::AmpliconAssembly::Orient->create(
-    model => $model,
-    build => $model->latest_complete_build,
-);
-ok($orient, "Created orient")
-    or die;
-ok($orient->execute, "Execute");
+Genome::Model::Command::Build::AmpliconAssembly::OrientTest->runtests;
 
 exit;
 

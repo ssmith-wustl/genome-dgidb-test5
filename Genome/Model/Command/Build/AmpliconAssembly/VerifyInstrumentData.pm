@@ -5,24 +5,16 @@ use warnings;
 
 use Genome;
 
-use Data::Dumper;
-use Genome::Utility::FileSystem;
+use Data::Dumper 'Dumper';
 
 class Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentData {
     is => 'Genome::Model::Event',
 };
 
-#< Subclassing...don't >#
-sub _get_sub_command_class_name {
-  return __PACKAGE__;
-}
-
-#< LSF >#
 sub bsub_rusage {
     return "-R 'span[hosts=1]'";
 }
 
-#< The Beef >#
 sub execute {
     my $self = shift;
 
@@ -31,7 +23,11 @@ sub execute {
             or return;
     } # TODO add logic for other centers...
 
-    return $self->build->get_amplicons; # Error msg is on model if no amplicons
+    my @links = glob($self->build->chromat_dir.'/*');
+    
+    return ( @links )
+    ? 1
+    : 0;
 }
 
 sub _link_instrument_data {
