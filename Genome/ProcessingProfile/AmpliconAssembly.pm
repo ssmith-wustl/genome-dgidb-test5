@@ -173,15 +173,14 @@ sub stages {
 }
 
 sub assemble_job_classes {
-    # TODO Add QualHist
-    #return 'Genome::Model::Command::Build::AmpliconAssembly::QualityHistogram';
     return (qw/
         Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentData
         Genome::Model::Command::Build::AmpliconAssembly::Assemble
-        Genome::Model::Command::Build::AmpliconAssembly::Collate
+        Genome::Model::Command::Build::AmpliconAssembly::Classify
         Genome::Model::Command::Build::AmpliconAssembly::Orient
-        Genome::Model::Command::Build::AmpliconAssembly::PostProcess
+        Genome::Model::Command::Build::AmpliconAssembly::Collate
         Genome::Model::Command::Build::AmpliconAssembly::CleanUp
+        Genome::Model::Command::Build::AmpliconAssembly::Reports
         /);
 }
 
