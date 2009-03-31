@@ -55,11 +55,23 @@ sub create_mock_processing_profile {
     $pp->set_always('anti_sense_primer_fasta', $self->dir.'/anti_sense.fasta');
     confess "No anti sense primer fasta in ".$self->dir."\n" unless -f $pp->anti_sense_primer_fasta;
 
+    # Genome::ProcessingProfile::AmpliconAssembly
     $self->mock_methods(
         $pp,
         'Genome::ProcessingProfile::AmpliconAssembly',
         (qw/ 
             stages params_for_class
+            assemble_objects assemble_job_classes
+            /),
+    );
+
+    #Genome::ProcessingProfile
+    $self->mock_methods(
+        $pp,
+        'Genome::ProcessingProfile',
+        (qw/
+            objects_for_stage classes_for_stage
+            verify_successful_completion_objects verify_successful_completion_job_classes
             /),
     );
 
