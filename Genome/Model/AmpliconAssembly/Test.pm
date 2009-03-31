@@ -73,6 +73,8 @@ sub create_mock_model {
         'Genome::Model',
         (qw/
             running_builds build_event 
+            current_running_build_id
+            last_complete_build_id last_complete_build
             /),
     );
 
@@ -89,22 +91,34 @@ sub create_mock_model {
     $model->set_always('latest_complete_build', $build);
     $model->mock('current_running_build', sub{ Genome::Model::current_running_build(@_); } );
 
+    # Genome::Model::Build
+    $self->mock_methods(
+        $build,
+        'Genome::Model::Build',
+        (qw/
+            build_events build_event build_status
+            add_report resolve_reports_directory
+            /),
+    );
+    # Accessors
+    $self->mock_accessors(
+        $build,
+        (qw/
+            event_status date_scheduled date_completed
+            /),
+    );
+    # Genome::Model::Build::AmpliconAssembly
     $self->mock_methods(
         $build,
         'Genome::Model::Build::AmpliconAssembly',
         (qw/
             consed_directory create_directory_structure
             edit_dir chromat_dir phd_dir fasta_dir
+            amplicon_fasta_types fasta_file_for_type qual_file_for_type
             link_instrument_data 
             get_amplicons _determine_amplicons_in_chromat_dir_gsc 
             assembly_fasta reads_fasta processed_fasta 
             metrics_report 
-            /),
-    );
-    $self->mock_accessors(
-        $build,
-        (qw/
-            event_status date_scheduled date_completed
             /),
     );
 
@@ -152,143 +166,6 @@ sub copy_test_dir {
     }
 
     return 1;
-}
-
-######################################################################
-
-package Genome::Model::AmpliconAssembly::AmpliconTest;
-
-use strict;
-use warnings;
-
-use base 'Genome::Utility::TestBase';
-
-use Test::More;
-
-sub amplicon {
-    return $_[0]->{_object};
-}
-
-sub test_class {
-    'Genome::Model::AmpliconAssembly::Amplicon';
-}
-
-sub params_for_test_class {
-        name => 'HMPB-aad13e12',
-        directory => '/gsc/var/cache/testsuite/data/Genome-Model-AmpliconAssembly/edit_dir',
-        reads => [qw/ HMPB-aad13e12.b1 HMPB-aad13e12.b2 HMPB-aad13e12.b3 HMPB-aad13e12.b4 HMPB-aad13e12.g1 HMPB-aad13e12.g2 /],
-}
-
-sub invalid_params_for_test_class {
-    return (
-        directory => 'does_not_exist',
-    );
-}
-
-sub test01_reads : Test(5) {
-    my $self = shift;
-
-    my $amplicon = $self->amplicon;
-    is($amplicon->is_built, 0, 'Amplicon is not built');
-    is($amplicon->was_assembled_successfully, 1, 'Amplicon was assembled successfully');
-    is($amplicon->is_built, 1, 'Amplicon is now built');
-    is_deeply($amplicon->get_assembled_reads, $amplicon->get_reads, 'Amplicon reads match thos assembled');
-    my $bioseq = $amplicon->get_bioseq;
-    ok($bioseq, 'Got bioseq');
-
-    return 1;
-}
-
-######################################################################
-
-package Genome::Model::AmpliconAssembly::Report::TestBase;
-
-use strict;
-use warnings;
-
-use base 'Genome::Utility::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub generator {
-    return $_[0]->{_object};
-}
-
-sub report_name {
-    my $self = shift;
-
-    my ($pkg) = $self->test_class =~ m/Genome::Model::AmpliconAssembly::Report::(\w+)$/;
-
-    return 'Test '.$pkg.' Report',
-}
-
-sub params_for_test_class {
-    my $self = shift;
-
-    return (
-        name => $self->report_name,
-        build_ids => [ $self->mock_model->latest_complete_build->id ],
-    );
-}
-
-sub mock_model {
-    my $self = shift;
-
-    unless ( $self->{_mock_model} ) {
-        $self->{_mock_model} = Genome::Model::AmpliconAssembly::Test->create_mock_model(use_test_dir => 1);
-    }
-    
-    return $self->{_mock_model};
-}
-
-sub test_01_generate_report : Test(2) {
-    my $self = shift;
-
-    can_ok($self->generator, '_generate_data');
-
-    my $report = $self->generator->generate_report;
-    ok($report, 'Generated report');
-    #print Dumper($report);
-
-    return 1;
-}
-
-######################################################################
-
-package Genome::Model::AmpliconAssembly::Report::AssemblyStatsTest;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::AmpliconAssembly::Report::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    'Genome::Model::AmpliconAssembly::Report::AssemblyStats';
-}
-
-######################################################################
-
-package Genome::Model::AmpliconAssembly::Report::QualityHistogramTest;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::AmpliconAssembly::Report::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    'Genome::Model::AmpliconAssembly::Report::QualityHistogram';
-}
-
-
-sub test_01_generate_report : Test(1) {
-    ok(1, 'skip generate');
 }
 
 1;
