@@ -832,7 +832,7 @@ sub annotated_columns{
     c_position
     trv_type
     priority
-    gene
+    gene_name
     intensity
     detection
     amino_acid_length
@@ -1157,22 +1157,7 @@ sub annotate_variants {
         }
         
     } else {
-
-        # Create parsers for each file, append to running lists
-        for my $index (0..$#input_files) {
-            my $annotate_command = Genome::Model::CombineVariants::AnnotateVariants->create(
-                input_file_name => $input_files[$index],
-                output_file_name => $output_files[$index],
-            );
-
-            $annotate_command->execute;
-
-            unless ($annotate_command->result) {
-                $self->error_message("Annotate variants failed on input file: " . $input_files[$index]);
-                die;
-            }
-        }
-
+        # If we dont want to run workflow... add code here
     }
 
 }
