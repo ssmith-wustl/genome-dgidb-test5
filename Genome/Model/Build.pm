@@ -37,9 +37,6 @@ class Genome::Model::Build {
                         },
         software_revision => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
     ],
-    has_many_optional => [
-	instrument_data_assignments => { is => 'Genome::Model::InstrumentDataAssignment', reverse_id_by => 'first_build' },
-    ], 
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
@@ -54,6 +51,19 @@ sub create {
         $self->data_directory($self->resolve_data_directory);
     }
     return $self;
+}
+
+sub instrument_data_assignments {
+    my $self = shift;
+
+    my @idas = Genome::Model::InstrumentDataAssignment->get(
+                                                            model_id => $self->model_id,
+                                                            first_build_id => {
+                                                                               operator => '<=',
+                                                                               value => $self->build_id,
+                                                                           },
+                                                        );
+    return @idas;
 }
 
 sub events {
