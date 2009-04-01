@@ -81,6 +81,10 @@ UR::Object::Type->define(
                                    is  => 'String',
                                    doc => 'keggscan raw output archive directory',
                                },
+        'resume_workflow' => { 
+                              is => 'String',
+                              doc => 'resume (crashed) workflow from previous invocation',
+                             },
     ]
 );
 
@@ -115,12 +119,16 @@ sub execute
         die "gram_stain must be 'positive' or 'negative', not '$gram_stain'";
     }
     
-    print STDERR "moving data from mgap to biosql\n";
-    $self->mgap_to_biosql();
+    my $previous_workflow_id = $self->resume_workflow();
 
-    print STDERR "creating peptide file\n";
-    $self->get_gene_peps();
+    unless (defined($previous_workflow_id)) {
+        print STDERR "moving data from mgap to biosql\n";
+        $self->mgap_to_biosql();
 
+        print STDERR "creating peptide file\n";
+        $self->get_gene_peps();
+    }
+    
     # interface to workflow to start the PAP.
     $self->do_pap_workflow();
 
@@ -318,28 +326,60 @@ sub do_pap_workflow
 
     if ($self->dev()) { $workflow_dev_flag = 1; }
 
-    my $output = run_workflow_lsf(
-                              $xml_file,
-                              'fasta file'           => $fasta_file,
-                              'chunk size'           => 10,
-                              'dev flag'             => $workflow_dev_flag,
-                              'biosql namespace'     => 'MGAP',
-                              'gram stain'           => $self->gram_stain(),
-                              'blastp archive dir'   => $self->blastp_archive_dir(),
-                              'interpro archive dir' => $self->interpro_archive_dir(),
-                              'keggscan archive dir' => $self->keggscan_archive_dir(),
-    );
+    my $output;
 
-    # do quick check on the return value.
-    print STDERR Dumper($output),"\n";
-    if($output->{'result'} != 1)
-    {
-        print STDERR "workflow returned an error result, ", 
-                     $output->{'result'}, "\n"; 
-        return 0;
+    my $previous_workflow_id = $self->resume_workflow();
+
+    if (defined($previous_workflow_id)) {
+
+        $output = resume_lsf($previous_workflow_id);
+
     }
 
-    return 1;
+    else {
+    
+        $output = run_workflow_lsf(
+                                   $xml_file,
+                                   'fasta file'           => $fasta_file,
+                                   'chunk size'           => 10,
+                                   'dev flag'             => $workflow_dev_flag,
+                                   'biosql namespace'     => 'MGAP',
+                                   'gram stain'           => $self->gram_stain(),
+                                   'blastp archive dir'   => $self->blastp_archive_dir(),
+                                   'interpro archive dir' => $self->interpro_archive_dir(),
+                                   'keggscan archive dir' => $self->keggscan_archive_dir(),
+                                  );
+
+    }
+    
+    # do quick check on the return value.
+    #print STDERR Dumper($output),"\n";
+   
+    if (defined($output)) {
+        print STDERR "workflow completed successfully";
+        return 0;
+    }
+    else {
+        
+        foreach my $error (@Workflow::Simple::ERROR) {
+ 
+            print STDERR join("\t", 
+                              $error->dispatch_identifier(),
+                              $error->name(), 
+                              $error->start_time(), 
+                              $error->end_time(),
+                              $error->exit_code(),
+                             ), "\n";
+
+            print STDERR $error->stdout(), "\n";
+            print STDERR $error->stderr(), "\n";
+
+        }
+    
+        return 1;
+
+    }
+
 }
 
 1;
