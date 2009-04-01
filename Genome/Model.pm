@@ -183,6 +183,11 @@ my %SUBJECT_TYPES = (
         #class => 'Genome::Sample',
         #property => 'name',
     },
+    flow_cell_id => {
+                     needs_to_be_verified => 1,
+                     class => 'Genome::InstrumentData::Solexa',
+                     property => 'flow_cell_id',
+                 },
 );
 sub subject_types {
     return keys %SUBJECT_TYPES;
@@ -242,8 +247,9 @@ sub get_all_possible_sample_names { #
     if ( $self->subject_type eq 'species_name' ) {
         my $taxon = Genome::Taxon->get(species_name => $self->subject_name);
         @sample_names = map { $_->name } $taxon->samples;
-    }
-    else {
+    } elsif ( $self->subject_type eq 'flow_cell_id' ) {
+        return;
+    } else {
         @sample_names = ( $self->subject_name );
     }
 
@@ -255,6 +261,8 @@ sub get_all_possible_sample_names { #
 sub compatible_instrument_data {
     my $self = shift;
     my %params;
+
+    my $subject_type_class;
     #TODO: This is a hack for 454 variant detection
     if ($self->subject_type eq 'genomic_dna' &&
         $self->sequencing_platform eq '454' &&
@@ -274,13 +282,21 @@ sub compatible_instrument_data {
                 %params = (id => \@seq_ids);
             }
         }
-    } else {
+    } elsif ($self->get_all_possible_sample_names)  {
         %params = (
                    sample_name => [ $self->get_all_possible_sample_names ],
                );
         $params{sequencing_platform} = $self->sequencing_platform if $self->sequencing_platform;
+    } else {
+        %params = (
+                   $self->subject_type => $self->subject_name,
+               );
+        $subject_type_class = $self->subject_type_class;
     }
-    return Genome::InstrumentData->get(%params);
+    unless ($subject_type_class) {
+        $subject_type_class = 'Genome::InstrumentData';
+    }
+    return $subject_type_class->get(%params);
 }
 
 sub available_instrument_data { return unassigned_instrument_data(@_); }
