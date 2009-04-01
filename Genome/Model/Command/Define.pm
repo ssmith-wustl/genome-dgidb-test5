@@ -44,6 +44,18 @@ class Genome::Model::Command::Define {
             is_input => 1,
             doc => 'The type of subject all the reads originate from'
         },
+        auto_assign_inst_data => {
+                                  is => 'Boolean',
+                                  default_value => 1,
+                                  is_input => 1,
+                                  doc => 'Assigning instrument data to the model is performed automatically',
+                              },
+        auto_build_alignments => {
+                                  is => 'Boolean',
+                                  default_value => 1,
+                                  is_input => 1,
+                                  doc => 'The building of the model is performed automatically',
+                              },
     ],
     schema_name => 'Main',
 };
@@ -216,8 +228,8 @@ sub execute {
         processing_profile_id => $processing_profile_id,
         subject_name => $self->subject_name,
         subject_type => $subject_type,
-        auto_assign_inst_data => 1,
-        auto_build_alignments => 1,
+        auto_assign_inst_data => $self->auto_assign_inst_data,
+        auto_build_alignments => $self->auto_build_alignments,
     );
     if ($self->data_directory) {
         my $model_name = File::Basename::basename($self->data_directory);
