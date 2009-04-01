@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 6;
+use Test::More tests => 10;
 
 BEGIN {
     $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -43,5 +43,33 @@ my $build_w_data_dir = Genome::Model::Build->create(
 isa_ok($build_w_data_dir,'Genome::Model::Build');
 is($build_w_data_dir->data_directory,$temp_dir,'build directory resolved');
 
+
+my @idas = $build->instrument_data_assignments;
+ok(!scalar(@idas),'no instrument data assignments');
+
+
+my $mock_idas_lt = Genome::Model::InstrumentDataAssignment->define(
+                                                                   id => $model->id .' '. --$bogus_id,
+                                                                   model_id => $model->id,
+                                                                   instrument_data_id => $bogus_id,
+                                                                   first_build_id => ($build->id - 1),
+                                                               );
+my $mock_idas_eq = Genome::Model::InstrumentDataAssignment->define(
+                                                                   id => $model->id .' '. --$bogus_id,
+                                                                   model_id => $model->id,
+                                                                   instrument_data_id => $bogus_id,
+                                                                   first_build_id => $build->id,
+                                                               );
+my $mock_idas_gt = Genome::Model::InstrumentDataAssignment->define(
+                                                                   id => $model->id .' '. --$bogus_id,
+                                                                   model_id => $model->id,
+                                                                   instrument_data_id => $bogus_id,
+                                                                   first_build_id => ($build->id + 1),
+                                                               );
+@idas = $build->instrument_data_assignments;
+is(scalar(@idas),2,'two instrument data assignments found');
+for my $ida (@idas) {
+    ok($ida->first_build_id <= $build->id,'instrument data first_build_id less than build_id');
+}
 
 1;
