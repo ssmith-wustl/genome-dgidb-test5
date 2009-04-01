@@ -316,19 +316,23 @@ sub do_pap_workflow
     my $chunk_size = $self->chunk_size;
     #print STDERR "\n",$xml_file,"\n";
     #print STDERR "\nfasta file is ",$fasta_file,"\n";
-    if(! -f $fasta_file)
-    {
-        print STDERR "\nwhere is the fasta file ", $fasta_file, "?\n";
-        croak "fasta file doesn't exist!";
-    }
+
+    my $previous_workflow_id = $self->resume_workflow();
+   
+    unless (defined($previous_workflow_id)) {
     
+        if (! -f $fasta_file) {
+            print STDERR "\nwhere is the fasta file ", $fasta_file, "?\n";
+            croak "fasta file doesn't exist!";
+        }
+    
+    }
+
     my $workflow_dev_flag = 0;
 
     if ($self->dev()) { $workflow_dev_flag = 1; }
 
     my $output;
-
-    my $previous_workflow_id = $self->resume_workflow();
 
     if (defined($previous_workflow_id)) {
 
@@ -351,6 +355,7 @@ sub do_pap_workflow
                                   );
 
     }
+
     
     # do quick check on the return value.
     #print STDERR Dumper($output),"\n";
