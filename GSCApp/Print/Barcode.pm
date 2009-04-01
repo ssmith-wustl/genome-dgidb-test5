@@ -1298,44 +1298,18 @@ sub spool
     }
 
     # see where we should print
-    my ($printer, $delay, $debug);
-    if (exists($opts{printer}) && $opts{printer})
-    {
-        # printer should be configured on host
-        $self->debug_message("printer set: $opts{printer}", 4);
-        if($opts{printer} eq 'barcode4') {
-          $printer = new GSCApp::Print::Barcode::Intermec(printer_name => $opts{printer}, printer_model => 'Easy Coder 3240');      
-        } else {
-          $printer = new GSCApp::Print::Barcode::Zebra(printer_name => $opts{printer});
-        }
-
-        # set delay between barcodes
-        $delay = 0;
+    my ($printer, $debug);
+    my $printer_name = exists($opts{printer}) && $opts{printer} ? $opts{printer} : (exists($opts{serial_port}) && $opts{serial_port} ? 'local' : undef);
+    # printer should be configured on host
+    $self->debug_message("printer set: $opts{printer}", 4);
+    if($opts{printer} eq 'barcode4') {
+      $printer = new GSCApp::Print::Barcode::Intermec(printer_name => $opts{printer}, printer_model => 'Easy Coder 3240');      
+    } else {
+      $printer = new GSCApp::Print::Barcode::Zebra(printer_name => $opts{printer} ? $opts{printer} : 'local');
     }
-    elsif (exists($opts{serial_port}) && $opts{serial_port})
-    {
-        $self->debug_message("serial port set: $opts{serial_port}", 4);
 
-        # open serial port
-        $printer = IO::File->new(">>$opts{serial_port}");
-        if (defined($printer))
-        {
-            $self->debug_message("opened serial port $opts{serial_port} for "
-                                 . "appending", 4);
-        }
-        else
-        {
-            $self->error_message("failed to open serial port "
-                                 . "$opts{serial_port} for appending: $!");
-            return;
-        }
-
-        # set delay between barcodes
-        $delay = 1.0e5; # 0.1s
-
-        # disable buffering on printer
-        $printer->autoflush(1);
-    }
+    # set delay between barcodes
+    my $delay = $printer_name eq 'local' ? 1.0e5 : 0;
 
     # check file format and see what we are printing
     my $base = basename($opts{path});
@@ -1405,25 +1379,22 @@ sub spool
     # close the file handles
     $bc_fh->close;
     $printer->close;
-    # if we specified a printer, send it through lpr
-    if (exists($opts{printer}) && $opts{printer})
+
+    my $rv = App::Print->print
+    (
+        protocol => ($printer_name eq 'local' ? 'SerialPort' : 'lpr'),
+        ($printer_name eq 'local' ? (serial_port => $opts{serial_port}) : (printer => $opts{'printer'})),
+        path => $printer->handle . ''
+    );
+    if ($rv)
     {
-        my $rv = App::Print->print
-        (
-            protocol => 'lpr',
-            printer => $opts{'printer'},
-            path => $printer->handle . ''
-        );
-        if ($rv)
-        {
-            $self->debug_message("printed tempfile $printer via App::Print", 4);
-        }
-        else
-        {
-            $self->warning_message("failed to print tempfile $printer via "
-                                   . "App::Print");
-            return $rv;
-        }
+        $self->debug_message("printed tempfile $printer via App::Print", 4);
+    }
+    else
+    {
+        $self->warning_message("failed to print tempfile $printer via "
+                               . "App::Print");
+        return $rv;
     }
 
     return 1;
