@@ -1733,13 +1733,17 @@ sub find_previous_failures {
     # or somesuch
 
     # is this better or worse than a glob?
-    $class->fail_dir->recurse(
-        callback => sub {
-            return if($_[0]->is_dir);
-            return if ( $_[0]->basename !~ /^$pse_id\./ );
-            push @previous_failures, $_[0];
-        }
-    );
+    # (we think worse)
+#    $class->fail_dir->recurse(
+#        callback => sub {
+#            return if($_[0]->is_dir);
+#            return if ( $_[0]->basename !~ /^$pse_id\./ );
+#            push @previous_failures, $_[0];
+#        }
+#    );
+
+    @previous_failures = map { Path::Class::File->new($_) }
+        glob( $class->fail_dir . "/$pse_id.*" );
 
     return @previous_failures;
 }
