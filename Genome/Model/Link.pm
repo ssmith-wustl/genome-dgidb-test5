@@ -9,14 +9,21 @@ class Genome::Model::Link {
     table_name => 'GENOME_MODEL_LINK',
     data_source_id => 'Genome::DataSource::GMSchema',
     id_by => [
-        to_model   => { is => 'NUMBER', len => 11 },
-        from_model => { is => 'NUMBER', len => 11 },
+        from_model_id => { is => 'NUMBER', len => 11, implied_by => 'from_model' },
+        to_model_id   => { is => 'NUMBER', len => 11, implied_by => 'to_model' },
     ],
     has => [
         role => { is => 'VARCHAR2', len => 56 },
+        from_model => { is => 'Genome::Model', 
+                        id_by => 'from_model_id',
+                        constraint_name => 'GML_FB_GM_FK',
+                    },
+        to_model => {   is => 'Genome::Model', 
+                        id_by => 'to_model_id',
+                        constraint_name => 'GML_TB_GM_FK',
+                    },
     ],
     schema_name => 'GMSchema',
-    data_source => 'Genome::DataSource::GMSchema=HASH(0xa333e14)',
 };
 
 1;
