@@ -13,6 +13,15 @@ use File::Basename;
 
 use GSC::IO::Assembly::Ace::Writer;
 
+#Notes from Feiyu (Mar 2009):
+#velvet 7.30 change RED id naming for iid(internal) and eid(external): eid = iid + 1, so iid is 0-based and eid is 1-based.
+#Sequences file lists reads 0-based.
+#Pcap names scaffold 0-based, while contig 1-based.
+#Original velvet_asm.afg file names scaffold 1-based, while it names contig 0-based. This tool will convert to pcap scaffold/contig naming
+#In afg file's TLE field, src lists read's iid(0-based) not eid(1-based).
+#contigs.fa is actually supercontig/scaffold fasta for recent velvet version so it is 1-based.
+
+
 class Genome::Model::Tools::Velvet::ToAce {
     is           => 'Command',
     has          => [
@@ -101,6 +110,7 @@ sub execute {
         my $io = Bio::SeqIO->new(-format => 'fastq', -file => $self->fastq_file);
         my $ct = 0;
         
+        #%seqinfo is 1-based.
         while (my $seq = $io->next_seq) {
             $ct++;
             $seqinfo->{$ct}->{name} = $seq->display_id;
@@ -114,9 +124,9 @@ sub execute {
     while (my $record = getRecord($fh)){
         my ($rec, $fields, $recs) = parseRecord($record);
         my $nseqs = 0;
-        my $id = $fields->{iid};
 
         if ($rec eq 'RED') {
+            my $id = $fields->{eid};
             $seqinfo->{$id}->{pos} = $seekpos;
         }
         elsif ($rec eq 'CTG') {
@@ -125,8 +135,17 @@ sub execute {
             $ctg_seq =~ s/\n//g;
             $ctg_seq =~ s/-/*/g;
                 
-            my $ctg_id = 'Contig'.$fields->{eid};
-            $ctg_id =~ s/\-/\./ if $ctg_id =~ /\-/;
+            my $ctg_id = $fields->{eid};
+            if ($ctg_id =~ /\-/) {
+                my ($scaf_num, $ctg_num) = split /\-/, $ctg_id;
+                $scaf_num--; #To fit silly pcap scaffold naming
+                $ctg_num++;  #To fit silly pcap contig naming
+                $ctg_id = 'Contig'.$scaf_num.".$ctg_num";
+            }
+            else {
+                $ctg_id = 'Contig'.$ctg_id;
+            }
+            
             my $ctg_length = length $ctg_seq;
                 
             my $ctg_qual = $fields->{qlt};
@@ -149,14 +168,15 @@ sub execute {
                                         
                 if ($srec eq 'TLE') {
                     my $ori_read_id = $sfields->{src};
-                    unless ($ori_read_id) {
+                    unless (defined $ori_read_id) {
                         $self->error_message('TLE record contains no src: field');
                         return;
                     }
+                    $ori_read_id++; #TLE field src uses iid (0-based) that needs convert to eid to use seqinfo
                         
                     my $info = $seqinfo->{$ori_read_id};
                     unless ($info) {
-                        $self->error_message("Sequence of $ori_read_id not found, check RED");
+                        $self->error_message("Sequence of $ori_read_id (eid) not found, check RED");
                         return;
                     }
                         
@@ -281,8 +301,8 @@ sub get_seq {
         $self->error_message("Error for read $id : expect RED not $rec at pos $seekpos");
         return;
     }
-    unless ($fields->{iid} == $id) {
-        $self->error_message("Error for read $id : expect $id not ".$fields->{iid});
+    unless ($fields->{eid} == $id) {
+        $self->error_message("Error for read $id : expect $id not ".$fields->{eid});
         return;
     }
 
