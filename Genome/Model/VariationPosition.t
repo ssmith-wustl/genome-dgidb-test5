@@ -1,17 +1,20 @@
 use above Genome;
 use Test::More tests => 19;
-#use Test::More skip_all => 'pending charris refactor of the solexa pipeline';
+use Test::More skip_all => 'This model leans heavily on metric_snp_quality, which uses experimental metrics, which live in the other_snp_related_metrics folder, which is no longer produced!  If you know what any of this means, fix it!';
 
 
 # This is the AML-nature_34skin-v0b model
-my $the_model_id = 2661729970;
+my $the_model_id = 2771359026;  #jpecks test-pipeline-model
 my $the_ref_seq_name = 2;
+my $the_ref_seq_bridge = Genome::Model::RefSeq->get(ref_seq_name => $the_ref_seq_name, model_id => $the_model_id);
+my $the_ref_seq_id = $the_ref_seq_bridge->ref_seq_id;
 my @s = Genome::Model::VariationPosition->get(model_id => $the_model_id,
-                                              ref_seq_name => $the_ref_seq_name,
+                                              ref_seq_id => $the_ref_seq_id,
                                               position => { operator => '<', value => '10000' },
                                               metric_snp_quality => { operator => '>', value => 2 },
                                             );
 
+die;
 # There should be at least 2 snps, right?
 ok(@s >= 2, 'Got at least 2 snps for model');
 
