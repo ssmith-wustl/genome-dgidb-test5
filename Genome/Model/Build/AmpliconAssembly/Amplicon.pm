@@ -246,9 +246,11 @@ sub confirm_orientation {
     return unless $bioseq;
 
     if ( $complement ) {
-        my $revcom_bioseq = $bioseq->revcom;
+        my $revcom_bioseq;
+        eval { $revcom_bioseq = $bioseq->revcom; };
         unless ( $revcom_bioseq ) {
-            $self->_fatal_msg("Can't reverse complement bioseq");
+            print "$!\n";
+            $self->_fatal_msg("Can't reverse complement bioseq for amplicon: ".$self->get_name);
         }
         $bioseq = $revcom_bioseq;
     }
