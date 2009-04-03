@@ -10,6 +10,7 @@ require Genome::Utility::FileSystem;
 require Genome::Utility::MetagenomicClassifier;
 require Genome::Utility::MetagenomicClassifier::SequenceClassification;
 
+$ENV{PERL_INLINE_JAVA_JNI} = 1;
 use Inline(
     Java => <<'END', 
       import edu.msu.cme.rdp.classifier.rrnaclassifier.*;
@@ -49,6 +50,7 @@ END
     PACKAGE => 'main',
     DIRECTORY => Genome::InlineConfig::DIRECTORY(),
     EXTRA_JAVA_ARGS => '-Xmx1000m',
+    JNI => 1,
 ) ;
 
 sub new {
