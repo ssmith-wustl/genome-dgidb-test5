@@ -229,6 +229,7 @@ sub _get_bioseq_info {
                     ( join(',', @{$info{assembled_reads}}) || '' ),
                 )
             );
+            $info{bioseq}->alphabet('dna');
             $info{bioseq}->force_flush(1);
         }
 
