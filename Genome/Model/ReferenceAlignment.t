@@ -6,7 +6,8 @@ use warnings;
 use above "Genome";
 use Test::More tests => 14;
 
-my $m = Genome::Model->get(name => 'AML-tumor-new_maq-no_ss_dups');
+#my $m = Genome::Model->get(name => 'AML-tumor-new_maq-no_ss_dups');
+my $m = Genome::Model->get(2771359026);
 ok($m, "got a model"); 
 
 my @f = $m->_consensus_files('X');
@@ -29,17 +30,20 @@ ok(all_exist(@f),"the pileup files exist");
 
 @f = $m->_variation_metrics_files();
 ok(scalar(@f), "identified " . scalar(@f) . " variation metrics files w/o refseq filter");
-ok(all_exist(@f),"the variation files exist");
 
+SKIP: {
+    skip 'We do not generate other_snp_related_metrics subdir right now', 1;
+    ok(all_exist(@f),"the variation files exist");
+}
 
-
+$DB::single=1;
 my $v = $m->variant_count();
-is($v,3180629, "got expected variant count");
+is($v,6619300, "got expected variant count");
 
 my $f;
 
 my $data_directory = $m->complete_build_directory;
-is($data_directory, "/gscmnt/835/info/medseq/model_data/H_GV-933124G-tumor1-9043g_AML-tumor-new_maq-no_ss_dups/build91849776", "resolved data directory");  # FIX WHEN WE SWITCH MODELS
+is($data_directory, "/gscmnt/sata821/info/model_data/2771359026/build96426120", "resolved data directory");  # FIX WHEN WE SWITCH MODELS
 
 #$f = $m->resolve_accumulated_alignments_filename();
 #is($f, 'FIXME', "found accumulated alignments file name"); #FIXME WHEN WE SWITCH MODELS
