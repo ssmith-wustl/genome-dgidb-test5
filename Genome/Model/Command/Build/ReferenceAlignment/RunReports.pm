@@ -157,6 +157,35 @@ sub execute {
     #$DbSnp_report->generate_report_detail;
     $self->build->add_report( $DbSnp_report->generate_report );
     $self->status_message('Finished DbSnp report.');
+
+    ##############################################
+    #Report Summary
+    
+    $self->status_message('Starting report summary.');
+    my $r = Genome::Model::ReferenceAlignment::Report::Summary->create( build_id => $self->build_id );
+
+    my @templates = $r->report_templates;
+    $self->status_message("Using report templates: ".join(",",@templates));  
+
+    my $generated_report = $r->generate_report;
+
+    my $result = $generated_report->save($self->build->resolve_reports_directory);
+
+    $self->status_message("Save result return value: $result. Saved report: ".$generated_report->name. " to ". $self->build->resolve_reports_directory);
+ 
+    $self->status_message('Report summary complete.');
+
+    ################################################### 
+    $self->status_message('Sending summary e-mail.');
+    my $summary_report_dir_name = $r->name;
+    $summary_report_dir_name =~ s/ /_/g;
+    my $summary_report_path = $self->build->resolve_reports_directory."/".$summary_report_dir_name."/report.html";
+    $self->status_message("Sending the file: $summary_report_path");
+    my $mail_cmd = 'mail -s "Summary Report for Build '.$self->build->build_id.'" jeldred@genome.wustl.edu,jpeck@genome.wustl.edu < '.$summary_report_path;
+    $self->status_message("E-mail command: $mail_cmd");
+    my $mail_rv = system($mail_cmd);
+    $self->status_message("E-mail command executed.  Return value: $mail_rv");
+
    
     ############################################### 
     #PFAM Reports
@@ -205,8 +234,8 @@ sub verify_successful_completion {
  	        }	
 	    }
             
- 	    unless ( $dir_count == 3 ) {
-                $self->error_message("Can't verify successful completeion of RunReports step.  Expecting 3 report directories.  Got: $dir_count");
+ 	    unless ( $dir_count == 4 ) {
+                $self->error_message("Can't verify successful completeion of RunReports step.  Expecting 4 report directories.  Got: $dir_count");
                 return 0;
             }
  
