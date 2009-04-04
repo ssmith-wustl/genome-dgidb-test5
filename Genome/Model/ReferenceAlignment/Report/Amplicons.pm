@@ -3,10 +3,14 @@ package Genome::Model::Command::Report::Amplicons;
 use strict;
 use warnings;
 
+warn "module " . __PACKAGE__ . " has bee re-located from the old report directory, but not updated!\n";
+
+1;
+
+__END__
 use Genome;
 use GSCApp;
 use Command;
-
 class Genome::Model::Command::Report::Amplicons
 {
     is => 'Command',
