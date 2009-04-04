@@ -18,8 +18,8 @@ class Genome::Model::ReferenceAlignment::Report::Summary {
             is => 'String',
             is_many => 1,
             default_value => [
-                'build_report_template_html.tt2',
-                'build_report_template_txt.tt2'
+                 '/gscmnt/839/info/medseq/report_templates/build_report_template_html.tt2',
+                 '/gscmnt/839/info/medseq/report_templates/build_report_template_txt.tt2',
             ],
             doc => 'The paths of template(s) to use to format the report.  (In .tt2 format)',
         },
@@ -175,7 +175,8 @@ $DB::single = 1;
     ##################################
       
     my $tt = Template->new({
-        INCLUDE_PATH => '/gscuser/jpeck/svn/pm2/Genome/Model/ReferenceAlignment/Report',
+         ABSOLUTE => 1,
+        #INCLUDE_PATH => '/gscuser/jpeck/svn/pm2/Genome/Model/ReferenceAlignment/Report',
         #INTERPOLATE  => 1,
     }) || die "$Template::ERROR\n";
 
