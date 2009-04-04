@@ -25,7 +25,7 @@ class Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Maq {
             |,
             is_constant => 1,
         },
-        snip_resource_name => {
+        snp_resource_name => {
             doc => "basename of the snp output file as well as resource lock name",
             calculate_from => ['ref_seq_id'],
             calculate => q|
@@ -46,18 +46,18 @@ class Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Maq {
                 return sprintf("pileup%s",defined $ref_seq_id ? "_". $ref_seq_id : "");
             |,
         },
-        snip_output_file => {
+        snp_output_file => {
             doc => "",
-            calculate_from => ['analysis_base_path','snip_resource_name'],
+            calculate_from => ['analysis_base_path','snp_resource_name'],
             calculate => q|
-                return $analysis_base_path ."/". $snip_resource_name;
+                return $analysis_base_path ."/". $snp_resource_name;
             |,
         },
-        filtered_snip_output_file => {
+        filtered_snp_output_file => {
             doc => "",
-            calculate_from => ['snip_output_file'],
+            calculate_from => ['snp_output_file'],
             calculate => q|
-                return $snip_output_file .".filtered";
+                return $snp_output_file .".filtered";
             |,
         },
         indel_output_file => {
@@ -114,7 +114,7 @@ sub _lookup_iub_code {
 
 
 sub help_brief {
-    "Use maq to find snips and idels"
+    "Use maq to find snps and idels"
 }
 
 sub help_synopsis {
@@ -158,28 +158,28 @@ sub execute {
         return;
     }
 
-    foreach my $resource ( $self->snip_resource_name, $self->indel_resource_name, $self->pileup_resource_name) {
+    foreach my $resource ( $self->snp_resource_name, $self->indel_resource_name, $self->pileup_resource_name) {
         unless ($model->lock_resource(resource_id=>$resource)) {
             $self->error_message("Can't get lock for resource $resource");
             return;
         }
     }
 
-    my $snip_output_file =  $self->snip_output_file;
-    my $filtered_snip_output_file = $self->filtered_snip_output_file;
+    my $snp_output_file =  $self->snp_output_file;
+    my $filtered_snp_output_file = $self->filtered_snp_output_file;
     my $indel_output_file =  $self->indel_output_file;
     my $pileup_output_file = $self->pileup_output_file;
 
     # Remove the result files from any previous run
-    unlink($snip_output_file,$filtered_snip_output_file,$indel_output_file,$pileup_output_file);
+    unlink($snp_output_file,$filtered_snp_output_file,$indel_output_file,$pileup_output_file);
 
-    my $retval = system("$maq_pathname cns2snp $assembly_output_file > $snip_output_file");
+    my $retval = system("$maq_pathname cns2snp $assembly_output_file > $snp_output_file");
     unless ($retval == 0) {
         $self->error_message("running maq cns2snp returned non-zero exit code $retval");
         return;
     }
 
-    $retval = system("$maq_pl_pathname SNPfilter $snip_output_file > $filtered_snip_output_file");
+    $retval = system("$maq_pl_pathname SNPfilter $snp_output_file > $filtered_snp_output_file");
     unless ($retval == 0) {
         $self->error_message("running maq.pl SNPfilter returned non-zero exit code $retval");
         return;
@@ -197,21 +197,21 @@ sub execute {
         return;
     }
 
-    # Running pileup requires some parsing of the snip file
+    # Running pileup requires some parsing of the snp file
     my $tmpfh = File::Temp->new();
-    my $snip_fh = IO::File->new($snip_output_file);
-    unless ($snip_fh) {
-        $self->error_message("Can't open snip output file for reading: $!");
+    my $snp_fh = IO::File->new($snp_output_file);
+    unless ($snp_fh) {
+        $self->error_message("Can't open snp output file for reading: $!");
         return;
     }
-    while(<$snip_fh>) {
+    while(<$snp_fh>) {
         chomp;
         my ($id, $start, $ref_sequence, $iub_sequence, $quality_score,
             $depth, $avg_hits, $high_quality, $unknown) = split("\t");
         $tmpfh->print("$id\t$start\n");
     }
     $tmpfh->close();
-    $snip_fh->close();
+    $snp_fh->close();
 
     my $accumulated_alignments_file_for_pileup = $self->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
     unless (-s $accumulated_alignments_file_for_pileup || -p $accumulated_alignments_file_for_pileup) {
@@ -249,7 +249,7 @@ sub generate_metrics {
     my @m = $self->metrics;
     for (@m) { $_->delete };
 
-    my $snp_output_file = $self->snip_output_file;
+    my $snp_output_file = $self->snp_output_file;
     my $snp_fh = IO::File->new($snp_output_file);
     my $snp_count = 0;
     my $snp_count_filtered = 0;
@@ -278,13 +278,13 @@ sub generate_metrics {
 sub verify_successful_completion {
     my $self = shift;
 
-    for my $file ($self->snip_output_file, $self->pileup_output_file) {
+    for my $file ($self->snp_output_file, $self->pileup_output_file) {
         unless (-e $file && -s $file) {
            $self->error_message("file does not exist or is zero size $file");
             return;
         }
     }
-    for my $file ($self->filtered_snip_output_file, $self->indel_output_file) {
+    for my $file ($self->filtered_snp_output_file, $self->indel_output_file) {
          unless (-e $file )  {
            $self->error_message("file does not exist or is zero size $file");
             return;
@@ -298,7 +298,7 @@ sub generate_genotype_detail_file {
     my $self = shift;
     my $model = $self->model; 
 
-    my $snp_output_file     = $self->snip_output_file;
+    my $snp_output_file     = $self->snp_output_file;
     my $pileup_output_file  = $self->pileup_output_file;
     my $report_input_file   = $self->genotype_detail_file;
 

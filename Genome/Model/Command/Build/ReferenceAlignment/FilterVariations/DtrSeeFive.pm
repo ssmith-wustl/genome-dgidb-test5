@@ -418,7 +418,7 @@ sub normal_sample_snp_file {
         $self->error_message("Failed to find an event on the skin model to match the tumor.  Probably need to re-run after that completes.  In the future, we will have the tumor/skin filtering separate from the individual model processing.\n");
         return;
     }
-    my $normal_sample_variation_metrics_file_name =  $equivalent_skin_event->analysis_base_path .  "/" . $equivalent_skin_event->snip_resource_name;
+    my $normal_sample_variation_metrics_file_name =  $equivalent_skin_event->analysis_base_path .  "/" . $equivalent_skin_event->snp_resource_name;
 
     unless (-e $normal_sample_variation_metrics_file_name) {
         $self->error_message("Failed to find variation metrics for \"normal\": $normal_sample_variation_metrics_file_name");

@@ -25,7 +25,7 @@ class Genome::Model::Command::Build::ReferenceAlignment::RunReports {
 
 # TODO Add doc
 sub help_brief {
-    "Automates report generation."
+    "generate standard reports"
 }
 
 sub help_synopsis {
@@ -181,7 +181,7 @@ sub execute {
     $summary_report_dir_name =~ s/ /_/g;
     my $summary_report_path = $self->build->resolve_reports_directory."/".$summary_report_dir_name."/report.txt";
     $self->status_message("Sending the file: $summary_report_path");
-    my $mail_cmd = 'mail -s "Summary Report for Build '.$self->build->build_id.'" jeldred@genome.wustl.edu,jpeck@genome.wustl.edu < '.$summary_report_path;
+    my $mail_cmd = 'mail -s "Summary Report for Build '.$self->build->build_id.'" jeldred@genome.wustl.edu,jpeck@genome.wustl.edu,ssmith@genome.wustl.edu < '.$summary_report_path;
     $self->status_message("E-mail command: $mail_cmd");
     my $mail_rv = system($mail_cmd);
     $self->status_message("E-mail command executed.  Return value: $mail_rv");

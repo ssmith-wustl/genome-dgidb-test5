@@ -42,22 +42,22 @@ $DB::single = $DB::stopper;
   
     my $variations = {};
 
-    foreach my $file ( $find_variation->snip_output_file, $find_variation->pileup_output_file) {
+    foreach my $file ( $find_variation->snp_output_file, $find_variation->pileup_output_file) {
         unless (-f $file and -s $file) {
             $self->error_message("File $file dosen't exist or has no data.  It should have been filled-in in a prior step");
             return;
         }
     }
 
-    foreach my $resource ( $find_variation->snip_resource_name, $find_variation->pileup_resource_name) {
+    foreach my $resource ( $find_variation->snp_resource_name, $find_variation->pileup_resource_name) {
         unless ($model->lock_resource(resource_id => $resource)) {
             $self->error_message("Can't get lock for resource $resource");
             return undef;
         }
     }
 
-    $self->status_message("Parsing snip file ". $find_variation->snip_output_file);
-    $self->_parse_snip_file($find_variation->snip_output_file, $variations);
+    $self->status_message("Parsing snp file ". $find_variation->snp_output_file);
+    $self->_parse_snp_file($find_variation->snp_output_file, $variations);
 
     $self->status_message("Parsing pileup file ". $find_variation->pileup_output_file);
     $self->_parse_pileup_file($find_variation->pileup_output_file, $variations);
@@ -66,7 +66,7 @@ $DB::single = $DB::stopper;
 
     my $mutations = $self->_convert_output_to_mutations($output);
 
-     foreach my $resource ( $find_variation->snip_resource_name, $find_variation->pileup_resource_name) {
+     foreach my $resource ( $find_variation->snp_resource_name, $find_variation->pileup_resource_name) {
         unless ($model->unlock_resource(resource_id => $resource)) {
             $self->error_message("Can't release lock for resource $resource");
             return undef;
@@ -269,7 +269,7 @@ sub _parse_pileup_file {
 
     my $fh = IO::File->new($filename);
     unless ($fh) {
-        $self->error_message("Can't open snip file $filename: $!");
+        $self->error_message("Can't open snp file $filename: $!");
         return;
     }
 
@@ -306,12 +306,12 @@ sub _parse_pileup_file {
 
 
 # The variations hashref is modified in-place, not returned
-sub _parse_snip_file {
+sub _parse_snp_file {
     my($self,$filename,$variations) = @_;
 
     my $fh = IO::File->new($filename);
     unless ($fh) {
-        $self->error_message("Can't open snip file $filename: $!");
+        $self->error_message("Can't open snp file $filename: $!");
         return;
     }
 
@@ -352,7 +352,7 @@ sub _parse_snip_file {
         $variations->{$key}->{'avg_hits'} = $avg_hits;
         $variations->{$key}->{'high_quality'} = $high_quality;
         $variations->{$key}->{'unknown'} = $unknown;
-    } # end reading from snip file
+    } # end reading from snp file
     
     return 1;
 }

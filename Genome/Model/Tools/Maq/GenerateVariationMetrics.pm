@@ -116,7 +116,7 @@ $DB::single = $DB::stopper;
     my @snpfh_parts;
     for my $i (1..$parallel_units) {
         unless ($snpfh_parts[$i] = IO::File->new(">$snpfile-part.$i")) {
-            die "Error opening temp file for part of the snips!"
+            die "Error opening temp file for part of the snps!"
         }
     }
     my $i=0;
