@@ -123,7 +123,7 @@ sub save {
     }
 
     # Save a file for known data types
-    my @known_data_types = (qw/ html csv /);
+    my @known_data_types = (qw/ html csv txt/);
     for my $type ( @known_data_types ) {
         next unless exists $data->{$type};
         my $file = $directory.'/report.'.$type;
