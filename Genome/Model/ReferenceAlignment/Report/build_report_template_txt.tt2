@@ -1,0 +1,55 @@
+============================================================
+[% model_name %] Build Report
+============================================================
+
+The full build for [% model_name %] is now 
+available at the following URL:
+
+https://gscweb[% model_data_directory %]
+
+The build summary is shown below:
+
+Model Details
+------------------------------------------------------------
+                 model name: [% model_name %]
+                   model id: [% model_id %]
+                model owner: [% model_owner %]
+         model subject name: [% model_subject_name %]
+        model creation date: [% model_creation_date %]
+        
+
+Build Details
+------------------------------------------------------------
+                   build id: [% build_id %]
+               build status: [% build_status %]
+            build scheduled: [% build_scheduled %]
+            build completed: [% build_completed %]
+ instrument data assignment: [% number_of_instrument_data_assignments %]
+------------------------------------------------------------
+Build Data Directory: https://gscweb[% model_data_directory %]/build[% build_id %]/
+
+
+Haploid
+------------------------------------------------------------
+           haploid coverage: [% haploid_coverage %]
+------------------------------------------------------------
+Haploid ref seq maq report: https://gscweb[% model_data_directory %]/build[% build_id %]/reports/RefSeqMaq/report.html
+
+
+Diploid
+------------------------------------------------------------
+    diploid coverage actual: [% diploid_coverage_actual_number %]
+diploid coverage percentage: [% diploid_coverage_percent %]
+------------------------------------------------------------
+Diploid gold snp report: https://gscweb[% model_data_directory %]/build[% build_id %]/reports/GoldSnp/report.html
+
+
+DbSnp
+------------------------------------------------------------
+         dbsnp concordance: [% dbsnp_concordance %]
+------------------------------------------------------------
+DbSnp concordance report: https://gscweb[% model_data_directory %]/build[% build_id %]/reports/DbSnp/report.html
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+                  The Genome Center at Washington University
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
