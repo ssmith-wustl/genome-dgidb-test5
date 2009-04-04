@@ -179,7 +179,7 @@ sub execute {
     $self->status_message('Sending summary e-mail.');
     my $summary_report_dir_name = $r->name;
     $summary_report_dir_name =~ s/ /_/g;
-    my $summary_report_path = $self->build->resolve_reports_directory."/".$summary_report_dir_name."/report.html";
+    my $summary_report_path = $self->build->resolve_reports_directory."/".$summary_report_dir_name."/report.txt";
     $self->status_message("Sending the file: $summary_report_path");
     my $mail_cmd = 'mail -s "Summary Report for Build '.$self->build->build_id.'" jeldred@genome.wustl.edu,jpeck@genome.wustl.edu < '.$summary_report_path;
     $self->status_message("E-mail command: $mail_cmd");
