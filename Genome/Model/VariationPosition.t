@@ -1,5 +1,5 @@
 use above Genome;
-use Test::More tests => 19;
+#use Test::More tests => 19;
 use Test::More skip_all => 'This model leans heavily on metric_snp_quality, which uses experimental metrics, which live in the other_snp_related_metrics folder, which is no longer produced!  If you know what any of this means, fix it!';
 
 
