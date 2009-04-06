@@ -193,7 +193,7 @@ sub available_reports {
     my $self = shift;
     my $report_dir = $self->resolve_reports_directory;
     return unless -d $report_dir;
-    return Genome::Report->get_reports_in_parent_directory($report_dir);
+    return Genome::Report->create_reports_from_parent_directory($report_dir);
 }
 
 #< SUBCLASSING >#
