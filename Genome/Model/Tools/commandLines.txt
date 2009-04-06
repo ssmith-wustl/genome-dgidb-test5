@@ -1,0 +1,17 @@
+/gsc/scripts/bin/auto-GC-check.pl &
+/gsc/scripts/bin/auto-GCSeqsize-check.pl &
+getorf -sequence query.fna -out orfs.faa.orig -minsize 120
+/gsc/scripts/bin/removeOverlappingORFsFromFasta.pl orfs.faa.orig > orfs.faa
+blastall -p blastn -d /gscmnt/temp100/research/jxu/HGMI/dbs//SSU -i query.fna -e 1e-20 -a 2 > query.fna_blastn_SSU_1e-20.out
+/gsc/scripts/bin/blast2firstKnownHit.pl query.fna_blastn_SSU_1e-20.out |grep -v hypothe > query.fna_blastn_SSU_1e-20.out.firstKnownHit
+/gsc/scripts/bin/sortColumn.pl query.fna_blastn_SSU_1e-20.out.firstKnownHit 5 > query.fna_blastn_SSU_1e-20.out.firstKnownHit.sorted
+blastall -p blastn -d /gscmnt/temp100/research/jxu/HGMI/dbs//16S -i query.fna -e 1e-20 -a 2 > query.fna_blastn_16S_1e-20.out
+/gsc/scripts/bin/blast2firstKnownHit.pl query.fna_blastn_16S_1e-20.out |grep -v hypothe > query.fna_blastn_16S_1e-20.out.firstKnownHit
+/gsc/scripts/bin/sortColumn.pl query.fna_blastn_16S_1e-20.out.firstKnownHit 5 > query.fna_blastn_16S_1e-20.out.firstKnownHit.sorted
+blastall -p blastp -d /gscmnt/temp100/research/jxu/dbs/nr//nr -i orfs.faa -e 1e-20 -a 2 > orfs.faa_blastp_nr_1e-20.out
+megablast -d /gscmnt/temp100/research/jxu/HGMI/dbs/nt/nt -i query.fna -p 0.9 -e 1e-20 -D 3 >query.fna_megablast_nt_1e-20.out
+cat query.fna_megablast_nt_1e-20.out |sort -k 1 | /gsc/scripts/bin/sortHitsInBlock_1.pl | /gsc/scripts/bin/getBestScoreOneHit.pl > query.fna_megablast_nt_1e-20.out.bestHit
+/gsc/scripts/bin/crossTables.pl /gsc/scripts/share/bacterial_contamination_screening/nt.header.index query.fna_megablast_nt_1e-20.out.bestHit | sort -k 12 -n -r > query.fna_megablast_nt_1e-20.out.bestHit.annot
+megablast -d /gscmnt/temp100/research/jxu/HGMI/dbs//SSU -i query.fna -p 0.9 -e 1e-20 -D 3 >query.fna_megablast_SSU_1e-20.out
+cat query.fna_megablast_SSU_1e-20.out |sort -k 1 | /gsc/scripts/bin/sortHitsInBlock_1.pl | /gsc/scripts/bin/getBestScoreOneHit.pl > query.fna_megablast_SSU_1e-20.out.bestHit
+/gsc/scripts/bin/crossTables.pl /gsc/scripts/share/bacterial_contamination_screening/SSU.header.index query.fna_megablast_SSU_1e-20.out.bestHit | sort -k 12 -n -r > query.fna_megablast_SSU_1e-20.out.bestHit.annot
