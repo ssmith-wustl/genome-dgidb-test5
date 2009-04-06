@@ -16,7 +16,7 @@ sub execute {
 
     # Assembly Stats
     my $stats_generator = Genome::Model::Build::AmpliconAssembly::Report::AssemblyStats->create(
-        name => 'Assembly Stats',
+        name => 'Assembly Stats for '.$self->build->model->subject_name,
         build_ids => [ $self->build->id ],
     );
     unless ( $stats_generator ) {
@@ -54,6 +54,8 @@ sub execute {
         );
     }
 
+    #print $self->build->data_directory."\n"; <STDIN>;
+    
     return 1;
 }
 
