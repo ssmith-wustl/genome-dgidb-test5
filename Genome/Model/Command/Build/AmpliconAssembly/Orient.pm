@@ -23,13 +23,12 @@ sub execute {
         unless ( $classification ) {
             $self->error_message(
                 sprintf(
-                    'Can\'t get classification from amplicon (%s) for build (<ID %s> <Model %s>)', 
+                    'Can\'t get classification for amplicon (<Amplicon %s> <Build Id %s>)', 
                     $amplicon->get_name,
                     $self->build->id,
-                    $self->model->name,
                 )
             );
-            return;
+            next;
         }
 
         $amplicon->confirm_orientation( $classification->is_complemented )
