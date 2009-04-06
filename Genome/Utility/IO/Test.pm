@@ -227,6 +227,38 @@ sub test04_create_with_different_number_of_headers_than_values_in_file : Test(2)
     return 1;
 }
 
+# This should fail because we ignore extra columns but we dont have the minimum
+sub test05_create_with_too_few_data_columns_while_ignore_extra_columns : Test(2) {
+    my $self = shift;
+
+    my $svr = $self->test_class->create(
+        input => $self->_albums_no_headers, # w/o headers
+        headers => [qw/ dont have data to fill all these columns /],
+        ignore_extra_columns => 1,
+    );
+    ok($svr, 'Created SVR to test too few columns while ignoring extra columns');
+    ok(!$svr->next, 'Failed as expected - next');
+
+    return 1;
+}
+
+# This should succeed because we ignore extra columns
+sub test05_create_with_too_many_data_columns_while_ignore_extra_columns : Test(2) {
+    my $self = shift;
+
+    my $svr = $self->test_class->create(
+        input => $self->_albums_no_headers, # w/o headers
+        headers => [qw/ have enough data /],
+        ignore_extra_columns => 1,
+    );
+    ok($svr, 'Created SVR to test too many columns while ignoring extra columns');
+    ok($svr->next, 'Succeeded as expected');
+
+    return 1;
+}
+
+
+
 1;
 
 =pod

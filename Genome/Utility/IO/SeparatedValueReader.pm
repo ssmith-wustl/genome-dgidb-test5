@@ -24,6 +24,11 @@ class Genome::Utility::IO::SeparatedValueReader {
         default => 0,
         doc => 'Interprets separator as regex'
     },
+    ignore_extra_columns => {
+        type => 'Boolean',
+        default => 0,
+        doc => 'Rather than crash when extra columns are found, just drop/ignore them.'
+    },
     ],
 };
 
@@ -99,16 +104,21 @@ sub next {
     }
 
     unless ( @{$self->headers} == @values ) {
-        $self->error_message(
-            sprintf(
-                'Expected %d values, got %d on line %d in %s', 
-                scalar @{$self->headers}, 
-                scalar @values,
-                $self->line_number,
-                ( $self->get_original_input || ref $self->io ),
-            )
-        );
-        return;
+
+        # If we dont care about extra columns, all is well... unless we dont at least have the minimum required
+        if (!($self->ignore_extra_columns)||(@{$self->headers} > @values)) {
+            #  Bomb out if we dont want extra columns
+            $self->error_message(
+                sprintf(
+                    'Expected %d values, got %d on line %d in %s', 
+                    scalar @{$self->headers}, 
+                    scalar @values,
+                    $self->line_number,
+                    ( $self->get_original_input || ref $self->io ),
+                )
+            );
+            return;
+        }
     }
     
     my %data;
