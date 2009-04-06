@@ -21,7 +21,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariantsSimple {
     ],
     has_optional => [
         # IO Params
-        output_file => {
+       output_file => {
             is => 'Text',
             is_optional => 1,
             doc => "Store annotation in the specified file instead of sending it to STDOUT."
@@ -88,6 +88,8 @@ The variant can be an IUB code, in which case every possible variant base will b
 INPUT COLUMNS (TAB SEPARATED)
 chromosome_name start stop reference variant type 
 
+Any number of additional columns may be in the input following these columns, but they will be disregarded
+
 OUTPUT COLUMNS (COMMMA SEPARATED)
 chromosome_name start stop reference variant type gene_name transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain
 EOS
@@ -101,13 +103,12 @@ sub execute {
     # generate an iterator for the input list of SNVs
     my $variant_file = $self->snv_file;
 
-    # TODO: Perhaps be more flexible about input here... we could be flexible here and allow any input column order
-    # and preserve any extra columns that exist in the input
-    # TODO: Also... if the type is 'snp' then we really dont need a 'stop', just use start for it
+    # TODO: preserve additional columns from input (currently throwing away)
     my $variant_svr = Genome::Utility::IO::SeparatedValueReader->create(
         input => $variant_file,
         headers => [$self->variant_attributes],
         separator => "\t",
+        ignore_extra_columns => 1,
     );
     unless ($variant_svr) {
         $self->error_message("error opening file $variant_file");
@@ -191,12 +192,25 @@ sub execute {
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
         }
 
-        # If we have an IUB code, annotate once per possible base
-        my @variant_alleles = $self->variant_alleles($variant->{reference}, $variant->{variant});
-        for my $variant_allele (@variant_alleles) {
-            # annotate variant with this allele
-            $variant->{variant} = $variant_allele;
-            
+        # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
+        if (uc $variant->{type} eq 'SNP') {
+            my @variant_alleles = $self->variant_alleles($variant->{reference}, $variant->{variant});
+            for my $variant_allele (@variant_alleles) {
+                # annotate variant with this allele
+                $variant->{variant} = $variant_allele;
+
+                # get the data and output it
+                my @transcripts;
+                if ($self->multi_gene_annotation) {
+                    # Top annotation per gene
+                    @transcripts = $annotator->prioritized_transcripts(%$variant);
+                } else {
+                    # Top annotation between all genes
+                    @transcripts = $annotator->prioritized_transcript(%$variant);
+                }
+                $self->_print_annotation($variant, \@transcripts);
+            }
+        } else {
             # get the data and output it
             my @transcripts;
             if ($self->multi_gene_annotation) {
@@ -311,10 +325,6 @@ sub iub_to_alleles {
     my ($self, $iub) = @_;
 
     my %IUB_CODE = (
-#        A => ['A','A'],
-#        C => ['C','C'],
-#        G => ['G','G'],
-#        T => ['T','T'],
         A => ['A'],
         C => ['C'],
         G => ['G'],
@@ -374,6 +384,8 @@ An input list of single-nucleotide variants.  The format is:
  reference
  variant
  type
+
+ Any number of additional columns may be in the input, but they will be disregarded.
 
 =item output_file
 
