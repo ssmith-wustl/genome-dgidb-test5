@@ -444,6 +444,10 @@ sub get_classification {
 sub save_classification {
     my ($self, $classification) = @_;
 
+    unless ( $classification ) {
+        $self->_fatal_msg('No classification to save for amplicon: '.$self->get_name);
+    }
+    
     my $classification_file = $self->classification_file;
     unlink $classification_file if -e $classification_file;
     store($classification, $classification_file);
