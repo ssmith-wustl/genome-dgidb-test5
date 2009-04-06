@@ -27,6 +27,18 @@ sub execute {
         my $bioseq = $amplicon->get_bioseq
             or next;
         my $classification = $classifier->classify($bioseq);
+        unless ( $classification ) {
+            $self->error_message(
+                sprintf(
+                    'Can\'t get classification from RDP classifier for amplicon (<Amplicon %s> <Build Id %s>)', 
+                    $amplicon->get_name,
+                    $self->build->id,
+                )
+            );
+            # have a counter and error if all fail?
+            # $no_classification++;
+            next;
+        }
         $amplicon->save_classification($classification); # error?
     }
 
