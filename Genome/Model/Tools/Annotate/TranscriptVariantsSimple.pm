@@ -8,53 +8,58 @@ use Genome;
 use Command;
 use Data::Dumper;
 use IO::File;
-use Tie::File;
-use Fcntl 'O_RDONLY';
-use Carp;
+
 
 class Genome::Model::Tools::Annotate::TranscriptVariantsSimple {
     is => 'Command',
     has => [ 
-        indel_file => {
-            type => 'Text',
+        snv_file => {
+            is => 'Text',
             is_optional => 0,
-            doc => "File of single-nucleotide variants.  Tab separated columns: chromosome_name start stop reference variant reference_type type reference_reads variant_reads maq_score",
+            doc => "File of single-nucleotide variants. Tab separated columns: chromosome_name start stop reference variant type",
         },
     ],
     has_optional => [
+        # IO Params
         output_file => {
-            type => 'Text',
+            is => 'Text',
             is_optional => 1,
             doc => "Store annotation in the specified file instead of sending it to STDOUT."
         },
         no_headers => {
-            type => 'Boolean',
+            is => 'Boolean',
             is_optional => 1,
             default => 0,
             doc => 'Exclude headers in report output',
         },
         # Transcript Params
+        multi_gene_annotation => {
+            is => 'boolean',
+            is_optional => 1,
+            default => 1,
+            doc => 'If set to true, this will find the top annotation per gene for a given variant and print one line for each. If this is set to false it will find the top annotation between all genes for a given variant and only print a single line per variant.',
+        },
         flank_range => {
-            type => 'Integer', 
+            is => 'Integer', 
             is_optional => 1,
             default => 50000,
-            doc => 'Range to look around for flaking regions of transcripts',
+            doc => 'Range to look around for flanking regions of transcripts',
         },
         reference_transcripts => {
             is => 'String',
             is_optional => 1, 
-            doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db'
+            doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db (not both)'
+        },
+        build_id =>{
+            is => "Number",
+            is_optional => 1,
+            doc => 'build id for the imported annotation model to grab transcripts to annotate from.  Use this or --reference-transcripts to specify a non-default annotation db (not both)',
         },
 	    build => {
 	        is => "Genome::Model::Build",
 	        id_by => 'build_id',
             is_optional => 1, 
 	    },
-        build_id =>{
-            is => "Number",
-            is_optional => 1,
-            doc => 'build id for the imported annotation model to grab transcripts to annotate from.  Use this or --reference-transcripts to specify a non-default annotation db',
-        },
     ], 
 };
 
@@ -62,7 +67,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariantsSimple {
 
 sub help_synopsis { 
     return <<EOS
-gt annotate transcript-variants --snv-file snvs.csv --output-file transcript-changes.csv --summary-file myresults.csv
+gt annotate transcript-variants-simple --snv-file snvs.csv --output-file transcript-changes.csv
 EOS
 }
 
@@ -74,6 +79,11 @@ with details on the gravity of the change to the transcript.
 The current version presumes that the SNVs are human, and that positions are relative to Hs36.  The transcript data 
 set is a mix of Ensembl 45 and Genbank transcripts.  Work is in progress to support newer transcript sets, and 
 variants from a different reference.
+
+This is a bare-bones simplified version of the annotation tool which uses the bare minimum inputs required
+to produce annotation.
+
+The variant can be an IUB code, in which case every possible variant base will be annotated.
 
 INPUT COLUMNS (TAB SEPARATED)
 chromosome_name start stop reference variant type 
@@ -90,11 +100,14 @@ sub execute {
     
     # generate an iterator for the input list of SNVs
     my $variant_file = $self->snv_file;
+
+    # TODO: Perhaps be more flexible about input here... we could be flexible here and allow any input column order
+    # and preserve any extra columns that exist in the input
+    # TODO: Also... if the type is 'snp' then we really dont need a 'stop', just use start for it
     my $variant_svr = Genome::Utility::IO::SeparatedValueReader->create(
         input => $variant_file,
-        headers => $self->variant_attributes,
-        separator => '\s+',
-        is_regex => 1,
+        headers => [$self->variant_attributes],
+        separator => "\t",
     );
     unless ($variant_svr) {
         $self->error_message("error opening file $variant_file");
@@ -177,10 +190,24 @@ sub execute {
             );
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
         }
-        #
-        # get the data and output it
-        my @transcripts = $annotator->prioritized_transcripts(%$variant);
-        $self->_print_annotation($variant, \@transcripts);
+
+        # If we have an IUB code, annotate once per possible base
+        my @variant_alleles = $self->variant_alleles($variant->{reference}, $variant->{variant});
+        for my $variant_allele (@variant_alleles) {
+            # annotate variant with this allele
+            $variant->{variant} = $variant_allele;
+            
+            # get the data and output it
+            my @transcripts;
+            if ($self->multi_gene_annotation) {
+                # Top annotation per gene
+                @transcripts = $annotator->prioritized_transcripts(%$variant);
+            } else {
+                # Top annotation between all genes
+                @transcripts = $annotator->prioritized_transcript(%$variant);
+            }
+            $self->_print_annotation($variant, \@transcripts);
+        }
     }
 
     $output_fh->close unless $output_fh eq 'STDOUT';
@@ -215,11 +242,19 @@ sub _transcript_report_fh {
 
 # attributes
 sub variant_attributes {
+    my $self = shift;
     return (qw/ chromosome_name start stop reference variant type /);
+#    return ("chromosome_name start stop reference variant type");
 }
 
 sub transcript_attributes {
+    my $self = shift;
     return (qw/ gene_name transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain /);
+}
+
+sub transcript_report_headers {
+    my $self = shift;
+    return ($self->variant_attributes, $self->transcript_attributes);
 }
 
 sub _print_annotation {
@@ -248,6 +283,58 @@ sub _print_annotation {
     }
     return 1;
 }
+
+# Gets the next variant from the snv file, preserves any "extra" columns in an arrayref
+sub get_next_variant {
+    my $self = shift;
+
+
+}
+
+# Takes an iub code, translates it, and returns an array of the possible bases that code represents, excludes the reference
+sub variant_alleles {
+    my ($self, $ref, $iub) = @_;
+
+    my @alleles = $self->iub_to_alleles($iub);
+    my @variants = ();
+    foreach my $allele (@alleles) {
+        if($allele ne $ref) {
+            push @variants, $allele;
+        }
+    }
+
+    return @variants;
+}
+
+# Translates an IUB code, returns the bases
+sub iub_to_alleles {
+    my ($self, $iub) = @_;
+
+    my %IUB_CODE = (
+#        A => ['A','A'],
+#        C => ['C','C'],
+#        G => ['G','G'],
+#        T => ['T','T'],
+        A => ['A'],
+        C => ['C'],
+        G => ['G'],
+        T => ['T'],
+        M => ['A','C'],
+        K => ['G','T'],
+        Y => ['C','T'],
+        R => ['A','G'],
+        W => ['A','T'],
+        S => ['G','C'],
+        D => ['A','G','T'],
+        B => ['C','G','T'],
+        H => ['A','C','T'],
+        V => ['A','C','G'],
+        N => ['A','C','G','T'],
+    );
+
+    return @{$IUB_CODE{$iub}};
+}
+
 1;
 
 =pod
@@ -271,7 +358,6 @@ Goes through each variant in a file, retrieving annotation information from Geno
      $success = Genome::Model::Tools::Annotate::TranscriptVariants->execute(
          snv_file => 'myoutput.csv',
          output_file => 'myoutput.csv',
-         summary_file => 'metrics.csv', # optional
          flank_range => 10000, # default 50000
      );
 
@@ -282,10 +368,12 @@ Goes through each variant in a file, retrieving annotation information from Geno
 =item snv_file
 
 An input list of single-nucleotide variants.  The format is:
- chromosome
- position
- reference value
- variant value
+ chromosome_name
+ start
+ stop 
+ reference
+ variant
+ type
 
 =item output_file
 
