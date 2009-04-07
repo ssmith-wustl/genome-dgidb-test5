@@ -9,7 +9,7 @@ require Genome::Utility::FileSystem;
 use Regexp::Common;
 
 class Genome::Model::Command {
-    is => 'Command',
+    is => ['Command','Genome::Utility::FileSystem'],
     has => [
         model           => { is => 'Genome::Model', id_by => 'model_id' },
         model_id        => { is => 'Integer', doc => 'identifies the genome model by id' },

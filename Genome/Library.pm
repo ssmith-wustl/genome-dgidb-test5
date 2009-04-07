@@ -14,15 +14,16 @@ use warnings;
 
 class Genome::Library {
     table_name => "(
-            select d.*, o.taxon_id
+            select a.*, l.dna_id library_id, s.dna_id sample_id, o.taxon_id
             from (
-                    select library_name
+                    select library_name, sample_name
                     from solexa_lane_summary\@dw
                     union
-                    select library_name
+                    select library_name, sample_name
                     from run_region_454\@dw
             ) a
-            join dna\@oltp d on d.dna_name = a.library_name
+            join dna\@oltp l on l.dna_name = a.library_name
+            join dna\@oltp s on s.dna_name = a.sample_name
             left join (
                     dna_resource\@oltp dr 
                     join entity_attribute_value\@oltp eav		
@@ -31,19 +32,22 @@ class Genome::Library {
                             and eav.attribute_name = 'org id'	
                     join organism_taxon\@dw o 
                             on o.legacy_org_id = eav.value
-            ) on dr.dna_resource_prefix = substr(dna_name,0,4)	
+            ) on dr.dna_resource_prefix = substr(l.dna_name,0,4)	
         ) library ",
     id_by => [
-            #organism_sample_id            => { is => 'Text', len => 10 },
-            id                          => { is => 'Number', column_name => 'DNA_ID' },
+        id                  => { is => 'Number', column_name => 'LIBRARY_ID' },
     ],
     has => [
-            name                        => { is => 'Text',     len => 64, column_name => 'DNA_NAME' }, # 'LIBRARY_NAME' }, 
+        name                => { is => 'Text',     len => 64, column_name => 'LIBRARY_NAME' },
     ],
     has_optional => [
-            taxon                       => { is => 'Genome::Taxon', id_by => 'taxon_id' },
-            species_name                => { via => 'taxon' },
-            #projects                   => {},
+        sample              => { is => 'Genome::Sample', id_by => 'sample_id' },
+        taxon               => { is => 'Genome::Taxon', id_by => 'taxon_id' },
+        species_name        => { via => 'taxon' },
+    ],
+    has_many => [
+        #solexa_lanes        => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'library' },
+        #solexa_lane_names   => { via => 'solexa_lanes', to => 'full_name' },
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };

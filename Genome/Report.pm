@@ -12,10 +12,10 @@ use Storable;
 class Genome::Report {
     is => 'UR::Object',
     has => [
-    name => { 
-        is => 'Text',
-        doc => 'Name of the report',
-    },
+        name => { 
+            is => 'Text',
+            doc => 'Name of the report',
+        },
     ],
 };
 
@@ -228,6 +228,10 @@ sub get_csv {
 
 sub get_xml {
     return $_[0]->get_data->{xml};
+}
+
+sub get_txt {
+    return $_[0]->get_data->{txt};
 }
 
 # Old data methods

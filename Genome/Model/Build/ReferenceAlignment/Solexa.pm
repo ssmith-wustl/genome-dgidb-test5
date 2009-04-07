@@ -54,6 +54,10 @@ sub _variant_list_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/snps_%s',@_);
 }
 
+sub _variant_filtered_list_files {
+    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/snps_%s.filtered',@_);
+}
+
 sub _variant_pileup_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/pileup_%s',@_);
 }
@@ -94,7 +98,7 @@ sub _files_for_pattern_and_optional_ref_seq_id {
     my $pattern = shift;
     my $ref_seq=shift;
     
-    if($ref_seq eq 'all_sequences') {
+    if(defined($ref_seq) and $ref_seq eq 'all_sequences') {
         return sprintf($pattern,$self->data_directory,$ref_seq);
     }
     

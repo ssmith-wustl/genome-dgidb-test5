@@ -1,4 +1,3 @@
-
 package Genome::PopulationGroup;
 
 # Adaptor for GSC::PopulationGroup
@@ -12,15 +11,15 @@ package Genome::PopulationGroup;
 use strict;
 use warnings;
 
+use Genome;
+
 class Genome::PopulationGroup {
-    table_name => '(select * from population_group@dw) population_group',
-    id_by => [
-        pg_id           => { is => 'Text', len => 10 },
+    is => 'Genome::SampleSource',
+    has_many => [
+        member_links        => { is => 'Genome::PopulationGroup::Member', reverse_id_by => 'population_group' },
+        members             => { via => 'member_links', to => 'member' },
     ],
-    has => [
-        taxon_id        => { is => 'Text', len => 10 },
-        name            => { is => 'Text', len => 64 },
-    ],
+    doc => 'an defined, possibly arbitrary, group of individual organisms',
     data_source => 'Genome::DataSource::GMSchema',
 };
 

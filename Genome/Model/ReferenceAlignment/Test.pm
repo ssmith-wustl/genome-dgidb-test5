@@ -96,9 +96,10 @@ sub create_mock_model {
         $model,
         'Genome::Model::ReferenceAlignment',
         (qw/ 
-            complete_build_directory _filtered_variants_dir 
+            complete_build_directory 
+            _filtered_variants_dir 
             gold_snp_file 
-            /),
+        /),
     );
     
 

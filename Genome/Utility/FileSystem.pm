@@ -12,14 +12,95 @@ require File::Basename;
 require File::Path;
 require File::Copy;
 
-class Genome::Utility::FileSystem {
-    is => 'UR::Object',
-};
+# this helps us clean-up locks
 
 $SIG{'INT'} = \&INT_cleanup;
-
-
 my %DIR_TO_REMOVE;
+
+class Genome::Utility::FileSystem { };
+
+# temp file management
+
+sub _temp_directory_prefix {
+    my $self = shift;
+    my $base = join("_", map { lc($_) } split('::',$self->class));
+    return $base;
+}
+
+our $base_temp_directory;
+sub base_temp_directory {
+    my $self = shift;
+    my $class = ref($self) || $self;
+    my $template = shift;
+
+    my $id;
+    if (ref($self)) {
+        return $self->{base_temp_directory} if $self->{base_temp_directory};
+        $id = $self->id;
+    }
+    else {
+        # work as a class method
+        return $base_temp_directory if $base_temp_directory;
+        $id = '';
+    }
+
+    unless ($template) {
+        my $prefix = $self->_temp_directory_prefix();
+        $prefix ||= $class;
+        my $time = UR::Time->now;
+        $time =~ s/\s\: /_/g;
+        $template = "/tmp/gm-$prefix-$time-$id-XXXX";
+        $template =~ s/ /-/g;
+    }
+
+    my $dir = File::Temp::tempdir($template, CLEANUP => 1);
+    $self->create_directory($dir);
+
+    if (ref($self)) {
+        return $self->{base_temp_directory} = $dir;
+    }
+    else {
+        # work as a class method
+        return $base_temp_directory = $dir;
+    }
+
+    return $dir;
+}
+
+my $anonymous_temp_file_count = 0;
+sub create_temp_file_path {
+    my $self = shift;
+    my $name = shift;
+    unless ($name) {
+        $name = 'anonymous' . $anonymous_temp_file_count++;
+    }
+    my $dir = $self->base_temp_directory;
+    my $path = $dir .'/'. $name;
+    if (-e $path) {
+        die "temp path '$path' already exists!";
+    }
+    return $path;
+}
+
+sub create_temp_file {
+    my $self = shift;
+    my $path = $self->create_temp_file_path(@_);
+    my $fh = IO::File->new(">$path");
+    unless ($fh) {
+        die "Failed to create temp file $path!";
+    }
+    return ($fh,$path) if wantarray;
+    return $fh;
+}
+
+sub create_temp_directory {
+    my $self = shift;
+    my $path = $self->create_temp_file_path(@_);
+    $self->create_directory($path);
+    return $path;
+}
+
+
 
 #< Files >#
 sub _open_file {
@@ -261,41 +342,6 @@ sub create_symlink {
     }
     
     return 1;
-}
-
-
-sub base_temp_directory {
-    my $self = shift;
-    my $class = ref($self) || $self;
-    my $template = shift;
-
-    unless ($template) {
-        my $time = UR::Time->now;
-        $time =~ s/\s\: /_/g;
-        $template = "/tmp/$class-$time--XXXX";
-        $template =~ s/ /-/g;
-    }
-    my $dir = File::Temp::tempdir(
-                                  TEMPLATE => $template,
-                                  CLEANUP => 1
-                              );
-    $self->create_directory($dir);
-    return $dir;
-}
-
-my $anonymous_temp_file_count = 0;
-sub create_temp_file_path {
-    my $self = shift;
-    my $name = shift;
-    unless ($name) {
-        $name = 'anonymous' . $anonymous_temp_file_count++;
-    }
-    my $dir = Genome::Utility::FileSystem->base_temp_directory;
-    my $path = $dir .'/'. $name;
-    if (-e $path) {
-        die "temp path '$path' already exists!";
-    }
-    return $path;
 }
 
 sub shellcmd {

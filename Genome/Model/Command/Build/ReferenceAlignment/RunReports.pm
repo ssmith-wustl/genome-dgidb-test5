@@ -44,20 +44,66 @@ EOS
 sub execute {
     my $self = shift;
     
+    my $ts = time();
+    my $build_id = $self->build_id;
     my $model = $self->model;
-    my $id = $model->genome_model_id;  
+    
+    my $id = $model->genome_model_id;
+    
     #my $log_dir = $self->resolve_log_directory;
     #print ("Log dir: ".$log_dir);
     
     my $report_dir = $self->build->maq_snp_related_metric_directory;
  
+ 
     $self->status_message('Report dir: '.$report_dir);
 
-    my $ts = time();
+    ###############################################
+    # TODO: get the rest of them to fit here, 
+    # then put the list in the processing profile,
+    # then allow it to be extended arbitrarily with model hang-offs.
+    my $failures = 0;
+    for my $report_type (qw/
+        DbSnpConcordance 
+        GoldSnpConcordance
+    /) {
+        my $report_class = 'Genome::Model::ReferenceAlignment::Report::' . $report_type;
+        my $report_name = 'unknown';
+        eval {
+            
+            $self->status_message("Starting $report_type report.");
+            
+            my $report_def = $report_class->create(build_id =>$build_id);
+            unless ($report_def) {
+                $self->error_message("Error creating report $report_class!: " . $report_class->error_message());
+                $failures++;
+                next;
+            }
+            $report_name = $report_def->name;
+            $self->status_message("Defined report with name $report_name");
+            
+            my $report = $report_def->generate_report;
+            unless ($report) {
+                $self->error_message("Error generating $report_name ($report_class)!: " . $report_class->error_message());
+                $failures++;
+                $report_def->delete;
+                next;
+            }
+            
+            unless ($self->build->add_report($report)) {
+                $self->error_message('Error saving dbSnp Concordance report!: ' . $self->build->error_message);
+            }
+            $self->status_message('Saved dbSnp Concordance report.');
+        };
+        if ($@) {
+            $self->error_message("Error generationg report named '$report_name' (class: $report_class):\n$@");
+            $failures++;
+            next;
+        }
+    }
+
     my $accumulated_alignments_file;
 
-    my $build_id = $self->build_id;
-  
     ###############################################
     $self->status_message('Starting MapCheck report.');
     my $MapCheck_report_name = 'RefSeqMaq';
@@ -101,7 +147,6 @@ sub execute {
      
     ###SNP Filter############################################
     $self->status_message('Starting SNP Filter report.');
-    
     #maq.pl SNPfilter [snpfile] > [outputfile]
     my $snp_filter_path = "$report_dir/snpfilter_report_$id"."_$ts.out";
     $self->status_message('Dumping SNPfilter output to: '.$snp_filter_path);
@@ -110,28 +155,10 @@ sub execute {
     my $snp_filter_result = `$snp_filter_cmd`;
     $self->status_message('Completed SNP Filter report.');
     
-    ###############################################
-    $self->status_message('Starting GoldSnp report.');
-    my $name = 'GoldSnp';
-    $DB::single=1; 
     
-    #my $report = Genome::Model::Report::GoldSnp->create(build_id =>$build_id, name=>$name);
-    my $report = Genome::Model::ReferenceAlignment::Report::GoldSnp->create(build_id =>$build_id, name=>$name);
-
-    #$self->status_message("GoldSnp temp file is: ".$tmp_file_path);
-
-    #$tmp_file_handle->print($snp_file);
-    #$tmp_file_handle->close(); 
-
-    $report->snp_file($snp_file); 
-    #$report->generate_report_detail;
-    $self->build->add_report( $report->generate_report );
-    $self->status_message('Finished GoldSnp report. '); 
     #Indelpe##############################################
-    
     #cd /gscmnt/sata810/info/medseq/GBM_71_maps/
     #maq indelpe /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.bfa bigmap.map > normal.indelpe
-
     $self->status_message('Starting Indelpe report.');
     my $aligner_path = $self->aligner_path('read_aligner_version'); 
     my $ref_seq = $model->reference_sequence_path."/all_sequences.bfa"; 
@@ -155,23 +182,7 @@ sub execute {
     $self->status_message("Removing accumlated file with command: $rm_cmd");
     $rv = `$rm_cmd`;
     $self->status_message("Result of remove: $rv");
-    ###############################################
-    $self->status_message('Starting DbSnp report.');
-    my ($tmp_file_handle, $tmp_file_path) = File::Temp::tempfile( DIR => "/tmp");
-    $self->status_message("DbSnp temp file is: ".$tmp_file_path);
     
-    my $DbSnp_report_name = 'DbSnp';
-    #my $DbSnp_report = Genome::Model::Report::DbSnp->create(build_id =>$build_id, name=>$DbSnp_report_name);
-    my $DbSnp_report = Genome::Model::ReferenceAlignment::Report::DbSnp->create(build_id =>$build_id, name=>$DbSnp_report_name);
-
-    $self->status_message("DbSnp model id: ".$DbSnp_report->model->id );
-    #$self->status_message("DbSnp build id: ".$DbSnp_report->build->id );
-    
-    #$DbSnp_report->override_model_snp_file($tmp_file_path);
-    $DbSnp_report->override_model_snp_file($snp_file);
-    #$DbSnp_report->generate_report_detail;
-    $self->build->add_report( $DbSnp_report->generate_report );
-    $self->status_message('Finished DbSnp report.');
 
     ##############################################
     #Report Summary
@@ -248,7 +259,8 @@ sub verify_successful_completion {
 			$dir_count = $dir_count + 1;
  	        }	
 	    }
-            
+
+$DB::single = 1;            
  	    unless ( $dir_count == 4 ) {
                 $self->error_message("Can't verify successful completeion of RunReports step.  Expecting 4 report directories.  Got: $dir_count");
                 return 0;
@@ -258,6 +270,7 @@ sub verify_successful_completion {
         $self->error_message("Can't verify successful completion of RunReports step. Build is undefined.");
         return 0;
     }
+
     return $return_value;
 
 }

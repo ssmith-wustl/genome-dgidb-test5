@@ -1,0 +1,61 @@
+============================================================
+[% model_name %] Build Report
+============================================================
+
+HTML version of Build Report: https://gscweb[% data_directory %]reports/Summary/report.html
+
+
+Model Details
+------------------------------------------------------------
+                genome model: [% model_id %] "[% model_name %]"
+                     patient: [% patient_upn %]
+               tissue sample: [% tissue_sample_label %]
+                  extraction: [% extraction_label %] ([% extraction_name %]) [% extraction_type %]
+          processing profile: [% processing_profile_name %] [% processing_profile_type %] ([% processing_profile_id %])
+
+Build Details
+------------------------------------------------------------
+                    build id: [% build_id %]
+             completion date: [% build_date %]
+                  lane count: [% total_number_of_lanes %]
+------------------------------------------------------------
+Build Data Directory: https://gscweb[% data_directory %]
+
+
+Haploid
+------------------------------------------------------------
+            haploid coverage: [% haploid_coverage %]X
+        unfiltered SNP calls: [% unfiltered_snp_calls %]
+          filtered SNP calls: [% filtered_snp_calls %]
+------------------------------------------------------------
+
+
+Diploid
+------------------------------------------------------------
+unfiltered diploid heterozygous count: [% unfiltered_diploid_het_coverage_actual_number %]
+    unfiltered diploid heterozygous %: [% unfiltered_diploid_het_coverage_percent %]
+
+  unfiltered diploid homozygous count: [% unfiltered_diploid_hom_coverage_actual_number %]
+      unfiltered diploid homozygous %: [% unfiltered_diploid_hom_coverage_percent %]
+
+  filtered diploid heterozygous count: [% filtered_diploid_het_coverage_actual_number %]
+      filtered diploid heterozygous %: [% filtered_diploid_het_coverage_percent %]
+
+    filtered diploid homozygous count: [% filtered_diploid_hom_coverage_actual_number %]
+        filtered diploid homozygous %: [% filtered_diploid_hom_coverage_percent %]
+
+
+------------------------------------------------------------
+gold SNP report: https://gscweb[% data_directory %]reports/Gold_SNP_Concordance/report.html
+
+
+dbSNP
+------------------------------------------------------------
+unfiltered dbsnp concordance: [% unfiltered_dbsnp_concordance %]
+  filtered dbsnp concordance: [% filtered_dbsnp_concordance %]
+------------------------------------------------------------
+dbSNP concordance report: https://gscweb[% data_directory %]reports/dbSNP_Concordance/report.html
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+                  The Genome Center at Washington University
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

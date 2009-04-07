@@ -8,10 +8,10 @@ use Genome;
 use Data::Dumper 'Dumper';
 
 class Genome::Model::Report {
-    is => 'Genome::Report::Generator',
+    is => ['Genome::Report::Generator','Genome::Utility::FileSystem'],
     has => [
         build => {
-            is => 'Genome::Model::Build', 
+            is => 'Genome::Model::Build',
             id_by => 'build_id'
         },
         build_id => {

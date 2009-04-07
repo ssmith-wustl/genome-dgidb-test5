@@ -14,31 +14,48 @@ class Genome::InstrumentData::Solexa {
             select to_char(seq_id) id, 
                 seq_id genome_model_run_id, 
                 lane limit_regions,
-                s.* 
+                
+                flow_cell_id, 
+                lane,
+                unique_reads_across_library,
+                duplicate_reads_across_library,
+                read_length,
+                run_type,
+                gerald_directory,
+                median_insert_size,
+                sd_above_insert_size,
+                is_external,
+                FILT_CLUSTERS,
+                
+                sample.dna_id sample_id,
+                library.dna_id library_id 
             from solexa_lane_summary\@dw s
+            left join dna\@oltp sample on sample.dna_name = s.sample_name
+            left join dna\@oltp library on library.dna_name = s.library_name
         ) 
         solexa_detail
 EOS
     ,
     has_optional => [
-        # TODO: fill these, even though this is a non-creatable class
+        flow_cell_id                    => { }, # = short name
+        lane                            => { }, # = subset_name
+        read_length                     => { },
         unique_reads_across_library     => { },
         duplicate_reads_across_library  => { },
-        read_length                     => { },
         run_type                        => { },
         gerald_directory                => { },
         median_insert_size              => { },
         sd_above_insert_size            => { },
-        flow_cell_id                    => { }, # = short name
-        lane                            => { }, # = subset_name
         is_external                     => { },
         clusters                        => { column_name => 'FILT_CLUSTERS' },
+        
         short_name => {
             doc => 'The essential portion of the run name which identifies the run.  The rest is redundent information about the instrument, date, etc.',
             is => 'Text', 
             calculate_from => ['run_name'],
             calculate => q|($run_name =~ /_([^_]+)$/)[0]|
         },
+
         is_paired_end                   => {
                                             calculate_from => ['run_type'],
                                             calculate => q| if (defined($run_type) and $run_type =~ m/Paired End Read (\d)/) {
@@ -59,6 +76,21 @@ EOS
         genome_model_run_id => {},
         limit_regions       => {},
 
+        # basic relationship to the "source" of the lane
+        library         => { is => 'Genome::Library', id_by => ['library_id'] },
+        library_id      => { is => 'Number', },
+    
+        # these are indirect via library, but must be set directly for lanes missing library info
+        sample              => { is => 'Genome::Sample', id_by => ['sample_id'] },
+        sample_id           => { is => 'Number', },
+        
+        sample_source       => { via => 'sample', to => 'source' },
+        sample_source_name  => { via => 'sample_source', to => 'name' },
+        
+        # indirect via the sample source, but we let the sample manage that
+        # since we sometimes don't know the source, it also tracks taxon directly
+        taxon               => { via => 'sample', to => 'taxon' },
+        species_name        => { via => 'taxon' },
     ],
 };
 

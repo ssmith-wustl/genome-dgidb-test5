@@ -6,8 +6,9 @@ use warnings;
 use above "Genome";
 use Test::More tests => 8;
 use FindBin qw/$Bin/;
+use Genome::Utility::FileSystem;
  
-my $tmp = $Bin . '/' . $0 . '-tmp-results';
+my $tmp = Genome::Utility::FileSystem->create_temp_directory();
 
 sub rmtree {
     system "/bin/rm -r $tmp";
@@ -16,12 +17,14 @@ sub rmtree {
     }
 }
 
+die "temp in odd location! $tmp" unless $tmp =~ /\/tmp/;
+
 if (-e $tmp) {
     warn "removing previously left-behind directory $tmp...";
     rmtree();
 }
 
-mkdir($tmp) or die $!;
+mkdir($tmp) or die "Failed to create directory $tmp: $!";
 
 my $build_id = "96267575";
 my $build = Genome::Model::Build->get($build_id);

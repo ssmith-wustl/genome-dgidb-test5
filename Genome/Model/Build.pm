@@ -16,26 +16,35 @@ class Genome::Model::Build {
         build_id => { is => 'NUMBER', len => 10 },
     ],
     has => [
-        model_id          => { is => 'NUMBER', len => 10, implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
-        data_directory    => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
-        model             => { is => 'Genome::Model', id_by => 'model_id' },
-        date_scheduled    => { via => 'build_event' },
-        _creation_event   => { calculate_from => [ 'class', 'build_id' ],
-                         calculate => q(
+        data_directory      => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
+        
+        model               => { is => 'Genome::Model', id_by => 'model_id' },
+        model_id            => { is => 'NUMBER', len => 10, implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
+        
+        date_scheduled      => { via => 'build_event' },
+        
+        _creation_event     => { calculate_from => [ 'class', 'build_id' ],
+                                calculate => q(
                                         my $build_event = "Genome::Model::Build"->get(build_id => $build_id);
                                         return $build_event;
-                                   ) },
-        disk_allocation => {
-                            calculate_from => [ 'class', 'id' ],
-                            calculate => q|
-                                my $disk_allocation = Genome::Disk::Allocation->get(
+                                )
+        },
+        
+        disk_allocation     => {
+                                calculate_from => [ 'class', 'id' ],
+                                calculate => q|
+                                    my $disk_allocation = Genome::Disk::Allocation->get(
                                                           owner_class_name => $class,
                                                           owner_id => $id,
                                                       );
-                                return $disk_allocation;
-                            |,
-                        },
-        software_revision => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
+                                    return $disk_allocation;
+                                |,
+        },
+        
+        software_revision   => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
+        
+        gold_snp_path       => { via => 'model' },  # this should be updated to have an underlying merged microarray model
+                                                    # which could update, and result in a new build
     ],
     has_many_optional => [
     
@@ -202,11 +211,39 @@ sub add_report {
     my ($self, $report) = @_;
 
     my $directory = $self->resolve_reports_directory;
-
-    Genome::Utility::FileSystem->create_directory($directory)
-        or return;
-
-    return $report->save($directory);
+    if (-d $directory) {
+        my $subdir = $directory . '/' . $report->name_to_subdirectory($report->name);
+        if (-e $subdir) {
+            $self->status_message("Sub-directory $subdir exists!   Moving it out of the way...");
+            my $n = 1;
+            my $max = 20;
+            while ($n < $max and -e $subdir . '.' . $n) {
+                $n++;
+            }
+            if ($n == $max) {
+                die "Too many re-runs of this report!  Contact Informatics..."
+            }
+            rename $subdir, "$subdir.$n";
+            if (-e $subdir) {
+                die "failed to move old report dir $subdir to $subdir.$n!: $!";
+            }
+        }
+    }
+    else {
+        $self->status_message("creating directory $directory...");
+        unless (Genome::Utility::FileSystem->create_directory($directory)) {
+            die "failed to make directory $directory!: $!";
+        }
+    }
+    
+    if ($report->save($directory)) {
+        $self->status_message("Saved report to override directory: $directory");
+        return 1;
+    }
+    else {
+        $self->error_message("Error saving report!: " . $report->error_message());
+        return;
+    }
 }
 
 sub available_reports {

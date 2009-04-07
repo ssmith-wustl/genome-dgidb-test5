@@ -13,86 +13,119 @@ use strict;
 use warnings;
 
 class Genome::Sample {
-    table_name => "
+    table_name => q|
 (
-select 
-    d.*,  
-    s.cell_type,    
-    s.full_name,    
-    s.organ_name,    
-    s.organism_sample_id, 
-    s.sample_name,    
-    s.sample_type,    
-    s.source_id,    
-    s.source_type,    
-    s.tissue_label,    
-    s.tissue_name,
-    o.taxon_id
-from (
-	select sample_name
-	from solexa_lane_summary\@dw
-	union
-	select sample_name
-	from run_region_454\@dw
-	union
-	select incoming_dna_name
-	from run_region_454\@dw
-	where sample_name is null
-) a
-join dna\@oltp d on d.dna_name = a.sample_name
-left join organism_sample\@dw s on a.sample_name = s.sample_name
-left join (
-	dna_resource\@oltp dr 
-	join entity_attribute_value\@oltp eav		
-		on eav.entity_id = dr.dr_id
-		and eav.type_name = 'dna'
-		and eav.attribute_name = 'org id'	
-	join organism_taxon\@dw o 
-		on o.legacy_org_id = eav.value
-) on dr.dna_resource_prefix = substr(dna_name,0,4)	
-) sample ",
+    select 
+        --temporary
+        d.dna_id                id,
+        a.sample_name           name,
+        o.taxon_id,
+        
+        --futuristic
+        s.organism_sample_id    id_new,
+        s.full_name             name_new,
+        s.taxon_id              taxon_id_new,
+        
+        --common
+        s.sample_name           extraction_label,
+        s.sample_type           extraction_type,
+        s.description           extraction_desc,
+        s.cell_type,        
+        s.tissue_label,    
+        s.tissue_name           tissue_desc,
+        s.organ_name,    
+        s.source_id,    
+        s.source_type
+    from (
+        select sample_name
+        from solexa_lane_summary@dw
+        union
+        select sample_name
+        from run_region_454@dw
+        union
+        select incoming_dna_name
+        from run_region_454@dw
+        where sample_name is null
+    ) a
+    join dna@oltp d on d.dna_name = a.sample_name
+    left join organism_sample@dw s on a.sample_name = s.sample_name
+    left join (
+        dna_resource@oltp dr 
+        join entity_attribute_value@oltp eav        
+            on eav.entity_id = dr.dr_id
+            and eav.type_name = 'dna'
+            and eav.attribute_name = 'org id'   
+        join organism_taxon@dw o 
+            on o.legacy_org_id = eav.value
+    ) on dr.dna_resource_prefix = substr(dna_name,0,4)
+) sample
+|,
     id_by => [
-            #organism_sample_id            => { is => 'Text', len => 10 },
-            id                          => { is => 'Number', column_name => 'DNA_ID' },
+        id                          => { is => 'Number',
+                                        doc => 'the numeric ID for the specimen in both the LIMS and the analysis system' },
     ],
     has => [
-            name                        => { is => 'Text',     len => 64, column_name => 'DNA_NAME' }, # 'SAMPLE_NAME' }, 
+        name                        => { is => 'Text',     len => 64, 
+        								doc => 'the fully qualified name for the sample (the "DNA NAME" in LIMS for both DNA and RNA)' },
     ],
-    has_optional => [
-            source_id                   => { is => 'Number',   len => 10 },
-            source_type                 => { is => 'Text',     len => 64 }, 
-            source_individual           => { is => 'Genome::Individual', id_by => 'source_id' },
-            source_population           => { is => 'Genome::PopulationGroup', id_by => 'source_id' },
-            source                      => { is => 'Genome::Sample::Source', calculate_from => ['source_type','source_id'], 
-                                            calculate => q|
-                                                my $class = $source_type eq 'population group' ? 'Genome::PopulationGroup' : 'Genome::Individual';
-                                                $class->get(id => $source_id, @_) 
-                                            | },
-            source_name                 => { via => 'source', to => 'name' },
-            # The join over to organism_taxon is not working correctly
-            # the query has a n extra iteration of the above table_name query
-            # thrown in 
-            taxon                       => { is => 'Genome::Taxon', id_by => 'taxon_id' },
-            species_name                => { via => 'taxon' },
-            #projects                   => {},
-            organ_name                  => { is => 'Text', len => 64 }, 
-            tissue_name                 => { is => 'Text', len => 64 }, 
-            cell_type                   => { is => 'Text', len => 100 }, 
+    has_optional => [	
+        extraction_label            => { is => 'Text', 
+                                        doc => 'identifies the specimen sent from the laboratory which extracted DNA/RNA' },
+                
+        extraction_type             => { is => 'Text', 
+                                        doc => 'either "genomic dna" or "rna" in most cases' },
+                
+        extraction_desc             => { is => 'Text', 
+                                        doc => 'notes specified when the specimen entered this site' },
+                
+        cell_type                   => { is => 'Text', len => 100,
+                                        doc => 'typically "primary"' },
+
+        tissue_label	            => { is => 'Text', 
+                                        doc => 'identifies/labels the original tissue sample from which this extraction was made' },
+        								
+        tissue_desc                 => { is => 'Text', len => 64, 
+                                        doc => 'describes the original tissue sample' },
+        
+        organ_name                  => { is => 'Text', len => 64, 
+                                        doc => 'the name of the organ from which the sample was taken' }, 
+        
+        # these are optional only b/c our data is not fully back-filled
+        source                      => { is => 'Genome::SampleSource', id_by => 'source_id',
+                                        doc => 'The patient/individual organism from which the sample was taken, or the population for pooled samples.' },
+        
+        source_type                 => { is => 'Text',
+                                        doc => 'either "organism individual" for individual patients, or "population group" for cross-individual samples' },
+        
+        source_name                 => { via => 'source', to => 'name' },
+        
+        taxon                       => { is => 'Genome::Taxon', id_by => 'taxon_id', 
+										doc => 'the taxon of the sample\'s source' },
+        
+        species_name                => { via => 'taxon', to => 'species_name', 
+        								doc => 'the name of the species of the sample source\'s taxonomic category' },
+                                        
+        _id_new                     => { column_name => 'ID_NEW' },
+        _name_new                   => { column_name => 'NAME_NEW' },
+        _taxon_id_new               => { column_name => 'TAXON_ID_NEW' },
     ],
     has_many => [
-            solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'sample_id' },
-            solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
+        libraries                   => { is => 'Genome::Library', reverse_id_by => 'sample' },
+        #solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'sample' },
+        #solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
     ],
+    doc         => 'a single specimen of DNA or RNA extracted from some tissue sample',
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-sub models
-{
+sub sample_type {
+    shift->extraction_type(@_);
+}
+
+sub models {
     my $self = shift;
     my @m = Genome::Model->get(subject_name => $self->name);
-    return \@m;
-    
+    return @m;
 }
 
 1;
-

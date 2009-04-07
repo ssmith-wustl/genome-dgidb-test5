@@ -12,10 +12,10 @@ use IO::String;
 class Genome::Model::ReferenceAlignment::Report::GoldSnp {
     is => 'Genome::Model::Report',
     has => [
-    snp_file => {
-        type => 'String',
-        doc => 'snp file to run',
-    },
+        snp_file => {
+            type => 'String',
+            doc => 'snp file to run',
+        },
     ],
 };
 

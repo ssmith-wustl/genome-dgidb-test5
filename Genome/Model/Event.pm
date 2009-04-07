@@ -160,60 +160,6 @@ sub delete {
     return 1;
 }
 
-sub base_temp_directory {
-    my $self = shift;
-    return $self->{base_temp_directory} if $self->{base_temp_directory};
-
-    my $id = $self->id;
-
-    my $event_type = $self->event_type;
-    my ($base) = ($event_type =~ /([^\s]+) [^\s]+$/);
-
-    my $time = UR::Time->now;
-    $time =~ s/\s\: /_/g;
-
-    my $dir = "/tmp/gm-$base-$time-$id-XXXX";
-    $dir =~ s/ /-/g;
-    $dir = File::Temp::tempdir($dir, CLEANUP => 1);
-    $self->{base_temp_directory} = $dir;
-    $self->create_directory($dir);
-
-    return $dir;
-}
-
-my $anonymous_temp_file_count = 0;
-sub create_temp_file_path {
-    my $self = shift;
-    my $name = shift;
-    unless ($name) {
-        $name = 'anonymous' . $anonymous_temp_file_count++;
-    }
-    my $dir = $self->base_temp_directory;
-    my $path = $dir .'/'. $name;
-    if (-e $path) {
-        die "temp path '$path' already exists!";
-    }
-    return $path;
-}
-
-sub create_temp_file {
-    my $self = shift;
-    my $path = $self->create_temp_file_path(@_);
-    my $fh = IO::File->new(">$path");
-    unless ($fh) {
-        die "Failed to create temp file $path!";
-    }
-    return ($fh,$path) if wantarray;
-    return $fh;
-}
-
-sub create_temp_directory {
-    my $self = shift;
-    my $path = $self->create_temp_file_path(@_);
-    $self->create_directory($path);
-    return $path;
-}
-
 sub shellcmd {
     # execute a shell command in a standard way instead of using system()\
     # verifies inputs and ouputs, and does detailed logging...
