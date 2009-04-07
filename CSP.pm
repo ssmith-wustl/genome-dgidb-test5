@@ -7,7 +7,7 @@ use GSCApp;
 
 use Path::Class qw(dir file);
 use Sys::Hostname qw(hostname);
-use Carp;
+use Carp qw(croak confess);
 use IO::Handle;
 use IO::File;
 use Time::HiRes;
@@ -451,24 +451,70 @@ put stuff here...
 
 =cut
 
-my $log_fh;
+{
+    my $log_fh;
 
-sub log_fh {
-    my $class = shift;
-    $log_fh = shift if (@_);
-    return $log_fh;
+    sub log_fh {
+        my $class = shift;
+        $log_fh = shift if (@_);
+        return $log_fh;
+    }
+
+    # central logging function
+    sub log_this {
+        my ( $type, $text ) = @_;
+        my $msg = sprintf( "%-9s %s\t%s\n",
+            uc($type) . ':',
+            App::Time->now, $text, );
+        $log_fh->print($msg) if $log_fh;
+    }
+
+    sub close_log_file {
+        my $class = shift or confess;
+        $log_fh->close or confess "close failed: $!";
+        $log_fh = undef;
+    }
 }
 
-# central logging function
-sub log_this {
-    my ( $type, $text ) = @_;
-    my $msg = sprintf(
-        "%-9s %s\t%s\n",
-        uc($type) . ':',
-        App::Time->now,
-        $text,
-    );
-    $log_fh->print($msg) if $log_fh;
+{
+    my $logfile;
+    my %log_arg;
+
+    sub open_log_file {
+        my $class = shift or confess;
+        $logfile = shift or confess;
+        %log_arg = ( ( 'set_sql_fh' => 1 ), @_ );
+        return $class->_open_log_file;
+    }
+
+    sub reopen_log_file {
+        my $class = shift or confess;
+        ( $logfile && -f $logfile )
+            or confess "no log file: $logfile";
+        return $class->_open_log_file;
+    }
+
+    sub _open_log_file {
+        my $class = shift or confess;
+
+       # open log file
+        my $log_fh = $logfile->open( '>>', 0666 )
+            or confess "failed to open $logfile: $!";
+        $log_fh->autoflush(1);
+        chmod( 0666, "$logfile" ) or confess "chmod $logfile failed: $!";
+        if ( $log_arg{tee_stdout} ) {
+            require IO::Tee;
+            my $log_file_fh = $log_fh;
+            $log_fh = IO::Tee->new( \*STDOUT, $log_file_fh )
+                or confess "failed to open $logfile: $!";
+        }
+
+        # write dump-sql to the log when monitoring is turned-on
+        App::DBI->sql_fh($log_fh) if $log_arg{'set_sql_fh'};
+
+        $log_fh->autoflush(1);
+        return $class->log_fh($log_fh);
+    }
 }
 
 sub log_callback {
@@ -732,10 +778,8 @@ sub _cron_setup {
     umask 0002;
 
     # open file
-    my $log_fh = $logfile->open( '>>', 0664 )
+    $class->open_log_file( $logfile, ( 'set_sql_fh' => 0, %$arg ) )
         or die "open $logfile failed: $!";
-    $log_fh->autoflush(1);
-    $class->log_fh($log_fh);
     $class->setup_logging_callbacks;
 
     my $hostname = hostname();
@@ -778,7 +822,8 @@ sub _cron_setup {
         App::Object->status_message("$$ did not get lock");
         my $answer=App::Lock->examine_lock(mechanism   => 'file',
                                            resource_id => $resource_id);
-        if(time()-$answer->{time}>2*60*60) { # Lock is more than 2 hours old
+        my $max_lock_time = $arg->{max_lock_time} || 2*60*60;
+        if(time()-$answer->{time}>$max_lock_time) { # Lock too old
             my $result = kill 1, $answer->{pid};
             my $success_msg;
             if ($result == 1) {
@@ -787,7 +832,7 @@ sub _cron_setup {
               $success_msg = "It appears that kill 1, ".$answer->{pid}." has not succeded.";
             }
             App::Object->status_message("Lock for resource $resource_id ".
-                                        "is more than 2 hours old, notifying ".
+                                        "is too old, notifying ".
                                         "informatics");
             my $message=sprintf("There is a lock for the CSP cron on hostname %s".
                                 " that is %.1f hours old.\n".
@@ -1156,20 +1201,23 @@ put stuff here...
 
 # perhaps this should be a method on GSC::PSE ???
 # maybe called "make_up_new_log_file_name" ???       -thepler
-sub log_file_name {
+sub new_log_file_name {
     my ( $class, $pse ) = @_;
-
-    croak 'must pass a PSE' if ( !$pse );
+    $pse         or croak 'must pass a PSE';
+    ( ref $pse ) or croak 'must pass a PSE object';
 
     # make up a log file name
     my $pse_id = $pse->pse_id;
-    my $pt     = $pse->get_process_step->process_to;
+    my $pt     = $pse->process_to;
     $pt =~ s/\s+/_/g;
     my $now = App::Time->now;
     $now =~ s/\s+/_/g;
+    $now =~ tr/:/_/;     # cannot put ":" in filenames in windows
     return join( '.', $pse_id, $pt, $now, 'log' );
 }
 
+# for back-compat
+sub log_file_name { (shift)->new_log_file_name(@_) }
 
 =head2 confirm_scheduled_pse
 
@@ -1245,40 +1293,20 @@ sub confirm_scheduled_pse {
     $class->deal_with_previous_failures($pse_id);
 
     # make up a log file name
-    my $_process_to_ = $process_to;
-    $_process_to_ =~ s/\s+/_/g;
-    my $now = App::Time->now;
-    my ($today) = split( / /, $now );
-    $now =~ s/\s+/_/g;
-    if ( $^O eq 'MSWin32' || $^O eq 'cygwin' ) {
-        $now =~ tr/:/_/;    # cannot put ":" in filenames in windows
-    }
-    my $logfile = $jobs_dir->file(
-        join( '.', $pse_id, $_process_to_, $now, 'log' )
-    );
+    my $file_name = $class->new_log_file_name($pse)
+        or die 'no new csp log file name';
+    my $logfile = $jobs_dir->file($file_name);
     die "log file $logfile already exists" if -e $logfile;
 
     # open log file
-    my $log_fh = $logfile->open( '>', 0666 )
-        or die "failed to open $logfile: $!";
-    $log_fh->autoflush(1);
-    chmod( 0666, "$logfile" ) or die "chmod $logfile failed: $!";
-    if ($tee_stdout) {
-        require IO::Tee;
-        my $log_file_fh = $log_fh;
-        $log_fh = new IO::Tee( \*STDOUT, $log_file_fh )
-            or die "failed to open $logfile: $!";
-    }
-
-    $log_fh->autoflush(1);
-    $class->log_fh($log_fh);
+    $class->open_log_file( $logfile, %$arg )
+        or die "open $logfile failed: $!";
     $class->setup_logging_callbacks;
+
     $pse->status_message( "script started at $^T : " . localtime($^T) );
-
-
-    # write dump-sql to the log when monitoring is turned-on
-    # note that this is turned-on by default below
-    App::DBI->sql_fh($class->log_fh);
+    my ($today) = split( qr/ /, App::Time->now );
+    my $_process_to_ = $pse->process_to;
+    $_process_to_ =~ s/\s+/_/g;
 
     ######################################################
     # Initialize everything.
@@ -1449,7 +1477,7 @@ sub confirm_scheduled_pse {
             $pse->status_message("successfully set status to 'scheduled'");
             
             # Don't keep the log file in this case
-            $class->log_fh->close;
+            $class->close_log_fh;
             $logfile->remove;
             
             die 'required resource NOT met';
@@ -1633,7 +1661,7 @@ sub confirm_scheduled_pse {
     else {
 
         # Place the new log file.
-        $class->log_fh->close;
+        $class->close_log_fh;
         if ( !rename( $logfile, $destfile ) ) {
             push @error_message, "Failed to rename the logfile, too!";
         }
