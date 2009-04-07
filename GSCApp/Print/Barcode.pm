@@ -108,6 +108,7 @@ use IO::Handle;
 use IO::Pipe;
 use Sys::Hostname;
 use Time::HiRes;
+use UNIVERSAL::require;
 
 use App::Path;
 
@@ -1298,15 +1299,11 @@ sub spool
     }
 
     # see where we should print
-    my ($printer, $debug);
+    my ($debug);
     my $printer_name = exists($opts{printer}) && $opts{printer} ? $opts{printer} : (exists($opts{serial_port}) && $opts{serial_port} ? 'local' : undef);
     # printer should be configured on host
     $self->debug_message("printer set: $opts{printer}", 4);
-    if($opts{printer} eq 'barcode4') {
-      $printer = new GSCApp::Print::Barcode::Intermec(printer_name => $opts{printer}, printer_model => 'Easy Coder 3240');      
-    } else {
-      $printer = new GSCApp::Print::Barcode::Zebra(printer_name => $opts{printer} ? $opts{printer} : 'local');
-    }
+    my $printer = $self->driver(printer => $opts{printer});
 
     # set delay between barcodes
     my $delay = $printer_name eq 'local' ? 1.0e5 : 0;
@@ -1398,6 +1395,55 @@ sub spool
     }
 
     return 1;
+}
+
+=pod
+
+=item driver
+
+Get the printer drive object.
+
+PARAMS: printer => $printer
+RETURNS: GSCApp::Print::Barcode object
+
+=cut
+
+sub driver {
+  my $proto = shift;
+  my %params = @_;
+
+  my ($type) = App::Path->find_files_in_path('bpr.type', 'share', 'gsc-print');
+  unless($type) {
+      $proto->debug_message("no type file found", 4);
+      # return default
+      return;
+  }
+
+  # open the map file
+  my $fh = IO::File->new("<$type") or do {
+    $proto->error_message("failed to open type file for reading: $!");
+    return;  
+  };
+  my $driver_class = 'GSCApp::Print::Barcode::Zebra';
+  my $printer_model = '';
+  while (defined(my $line = $fh->getline)) {
+      # clean up line
+      $line = $proto->_clean_input($line);
+      next unless $line =~ m/\S/;
+
+      my (@data) = split(m/\s*:\s*/, $line);
+      if ($data[0] eq $params{printer}) {
+          $driver_class = 'GSCApp::Print::Barcode::' . ucfirst(lc($data[1]));
+          $printer_model = $data[2] if($data[2]);
+          last;
+      }
+  }
+  $fh->close;
+  unless($driver_class->require) {
+    $proto->error_message('no driver class found for ' . $driver_class . '.');
+    return;
+  }
+  return $driver_class->new(printer_name => $params{printer}, ($printer_model ? (printer_model => 'Easy Coder 3240') : ()));  
 }
 
 =pod
