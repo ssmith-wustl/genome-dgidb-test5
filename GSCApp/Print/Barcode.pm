@@ -108,7 +108,6 @@ use IO::Handle;
 use IO::Pipe;
 use Sys::Hostname;
 use Time::HiRes;
-use UNIVERSAL::require;
 
 use App::Path;
 
@@ -1439,6 +1438,7 @@ sub driver {
       }
   }
   $fh->close;
+  require UNIVERSAL::require;
   unless($driver_class->require) {
     $proto->error_message('no driver class found for ' . $driver_class . '.');
     return;
