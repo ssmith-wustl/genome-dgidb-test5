@@ -16,7 +16,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariantsSimple {
         snv_file => {
             is => 'Text',
             is_optional => 0,
-            doc => "File of single-nucleotide variants. Tab separated columns: chromosome_name start stop reference variant type",
+            doc => "File of single-nucleotide variants. Tab separated columns: chromosome_name start stop reference variant",
         },
     ],
     has_optional => [
@@ -55,11 +55,11 @@ class Genome::Model::Tools::Annotate::TranscriptVariantsSimple {
             is_optional => 1,
             doc => 'build id for the imported annotation model to grab transcripts to annotate from.  Use this or --reference-transcripts to specify a non-default annotation db (not both)',
         },
-	    build => {
-	        is => "Genome::Model::Build",
-	        id_by => 'build_id',
+        build => {
+            is => "Genome::Model::Build",
+            id_by => 'build_id',
             is_optional => 1, 
-	    },
+        },
     ], 
 };
 
@@ -80,15 +80,14 @@ The current version presumes that the SNVs are human, and that positions are rel
 set is a mix of Ensembl 45 and Genbank transcripts.  Work is in progress to support newer transcript sets, and 
 variants from a different reference.
 
-This is a bare-bones simplified version of the annotation tool which uses the bare minimum inputs required
-to produce annotation.
-
-The variant can be an IUB code, in which case every possible variant base will be annotated.
+The variant (if it is a SNP) can be an IUB code, in which case every possible variant base will be annotated.
 
 INPUT COLUMNS (TAB SEPARATED)
-chromosome_name start stop reference variant type 
+chromosome_name start stop reference variant
 
-Any number of additional columns may be in the input following these columns, but they will be disregarded
+The mutation type will be inferred based upon start, stop, reference, and variant alleles.
+
+Any number of additional columns may be in the input following these columns, but they will be disregarded.
 
 OUTPUT COLUMNS (COMMMA SEPARATED)
 chromosome_name start stop reference variant type gene_name transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain
@@ -174,6 +173,7 @@ sub execute {
     my $chromosome_name = '';
     my $annotator = undef;
     while ( my $variant = $variant_svr->next ) {
+        $variant->{type} = $self->infer_variant_type($variant);
         # make a new annotator when we begin and when we switch chromosomes
         unless ($variant->{chromosome_name} eq $chromosome_name) {
             $chromosome_name = $variant->{chromosome_name};
@@ -193,7 +193,7 @@ sub execute {
         }
 
         # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
-        if (uc $variant->{type} eq 'SNP') {
+        if ($variant->{type} eq 'SNP') {
             my @variant_alleles = $self->variant_alleles($variant->{reference}, $variant->{variant});
             for my $variant_allele (@variant_alleles) {
                 # annotate variant with this allele
@@ -257,8 +257,7 @@ sub _transcript_report_fh {
 # attributes
 sub variant_attributes {
     my $self = shift;
-    return (qw/ chromosome_name start stop reference variant type /);
-#    return ("chromosome_name start stop reference variant type");
+    return (qw/ chromosome_name start stop reference variant /);
 }
 
 sub transcript_attributes {
@@ -296,13 +295,6 @@ sub _print_annotation {
         );
     }
     return 1;
-}
-
-# Gets the next variant from the snv file, preserves any "extra" columns in an arrayref
-sub get_next_variant {
-    my $self = shift;
-
-
 }
 
 # Takes an iub code, translates it, and returns an array of the possible bases that code represents, excludes the reference
@@ -345,6 +337,34 @@ sub iub_to_alleles {
     return @{$IUB_CODE{$iub}};
 }
 
+# Figures out what the 'type' of this variant should be (snp, dnp, ins, del) based upon
+# the start, stop, reference, and variant
+# Takes in a variant hash, returns the type
+sub infer_variant_type {
+    my ($self, $variant) = @_;
+
+    # If the start and stop are the same, and ref and variant are defined its a SNP
+    if (($variant->{stop} == $variant->{start})&&
+        ($variant->{reference} ne '0')&&
+        ($variant->{variant} ne '0')) {
+        return 'SNP';
+    # If start and stop are 1 off, and ref and variant are defined its a DNP
+    } elsif (($variant->{stop} - $variant->{start} == 1)&&
+             ($variant->{reference} ne '0')&&
+             ($variant->{variant} ne '0')) {
+        return 'DNP';
+    # If reference is a dash, we have an insertion
+    } elsif ($variant->{reference} eq '0') {
+        return 'INS';
+    } elsif ($variant->{variant} eq '0') {
+        return 'DEL';
+    } else {
+        $self->error_message("Could not determine variant type from variant:");
+        $self->error_message(Dumper($variant));
+        die;
+    }
+}
+
 1;
 
 =pod
@@ -361,7 +381,7 @@ Goes through each variant in a file, retrieving annotation information from Geno
 
  in the shell:
 
-     gt annotate transcript-variants --snv-file myinput.csv --output-file myoutput.csv --metric-summary metrics.csv
+     gt annotate transcript-variants --snv-file myinput.csv --output-file myoutput.csv
 
  in Perl:
 
@@ -383,7 +403,8 @@ An input list of single-nucleotide variants.  The format is:
  stop 
  reference
  variant
- type
+
+The mutation type will be inferred based upon start, stop, reference, and variant alleles.
 
  Any number of additional columns may be in the input, but they will be disregarded.
 
