@@ -348,9 +348,9 @@ sub model_data_directory {
     return Genome::Config->model_data_directory;
 }
 
-# we should not expect that everything for a given
-# refseq and aligner be under one tree...
-sub alignment_directory {
+# alignment data now uses disk allocations owned by the instrument data
+# this is deprecated
+sub Xalignment_directory {
     my $self = shift;
     return Genome::Config->alignment_links_directory 
         .'/'. $self->read_aligner_name 

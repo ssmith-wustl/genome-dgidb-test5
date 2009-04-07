@@ -36,7 +36,6 @@ class Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Blat {
                                                   return grep { -e $_ } glob($instrument_data_assignment->alignment_directory .'/'. $instrument_data_assignment->subset_name .'.out.*');
                                              |
                                  },
-            alignment_directory => {via => 'instrument_data_assignment'}
         ],
 };
 
@@ -88,18 +87,26 @@ sub aligner_output_file {
 
 sub instrument_data_alignment_file {
     my $self = shift;
-    return $self->alignment_directory .'/'. $self->instrument_data->subset_name .'.psl.'. $self->id;
+
+    my $instrument_data_assignment = $self->instrument_data_assignment;
+    my $alignment = $instrument_data_assignment->alignment;
+    return $alignment->alignment_directory .'/'. $self->instrument_data->subset_name .'.psl.'. $self->id;
 }
 
 sub instrument_data_aligner_output_file {
     my $self = shift;
-    return $self->alignment_directory .'/'. $self->instrument_data->subset_name .'.out.'. $self->id;
+
+    my $instrument_data_assignment = $self->instrument_data_assignment;
+    my $alignment = $instrument_data_assignment->alignment;
+    return $alignment->alignment_directory .'/'. $self->instrument_data->subset_name .'.out.'. $self->id;
 }
 
 sub execute {
     my $self = shift;
 
     $DB::single = $DB::stopper;
+    my $instrument_data_assignment = $self->instrument_data_assignment;
+    my $alignment = $instrument_data_assignment->alignment;
 
     my $instrument_data_directory = $self->instrument_data->full_path;
     unless (-e $instrument_data_directory) {
@@ -128,8 +135,8 @@ sub execute {
         }
     }
     # check_for_existing_alignment_files
-    my $alignment_directory = $self->alignment_directory;
-    if (-d $alignment_directory) {
+    my $alignment_directory = $alignment->alignment_directory;
+    if ($alignment_directory && -d $alignment_directory) {
         my $errors;
         $self->status_message("found existing run directory $alignment_directory");
         my $alignment_file = $self->alignment_file;
@@ -144,6 +151,9 @@ sub execute {
             $self->status_message("SHORTCUT SUCCESS: alignment data is already present.");
             return $self->verify_successful_completion;
         }
+    }
+    unless ($alignment_directory) {
+        $alignment_directory = $alignment->get_or_create_alignment_directory;
     }
     unless (Genome::Utility::FileSystem->lock_resource(
                                                        lock_directory => $alignment_directory,
@@ -188,9 +198,12 @@ sub execute {
 
 sub verify_successful_completion {
     my $self = shift;
+    my $instrument_data_assignment = $self->instrument_data_assignment;
+    my $alignment = $instrument_data_assignment->alignment;
 
-    unless (-d $self->alignment_directory) {
-        $self->error_message('Alignment directory is not found: '. $self->alignment_directory);
+    my $alignment_directory = $alignment->alignment_directory;
+    unless ($alignment_directory && -d $alignment_directory) {
+        $self->error_message('Alignment directory is not found: '. $alignment_directory);
         return;
     }
     unless ($self->alignment_file) {

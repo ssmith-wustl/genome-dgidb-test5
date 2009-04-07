@@ -263,6 +263,41 @@ sub create_symlink {
     return 1;
 }
 
+
+sub base_temp_directory {
+    my $self = shift;
+    my $class = ref($self) || $self;
+    my $template = shift;
+
+    unless ($template) {
+        my $time = UR::Time->now;
+        $time =~ s/\s\: /_/g;
+        $template = "/tmp/$class-$time--XXXX";
+        $template =~ s/ /-/g;
+    }
+    my $dir = File::Temp::tempdir(
+                                  TEMPLATE => $template,
+                                  CLEANUP => 1
+                              );
+    $self->create_directory($dir);
+    return $dir;
+}
+
+my $anonymous_temp_file_count = 0;
+sub create_temp_file_path {
+    my $self = shift;
+    my $name = shift;
+    unless ($name) {
+        $name = 'anonymous' . $anonymous_temp_file_count++;
+    }
+    my $dir = Genome::Utility::FileSystem->base_temp_directory;
+    my $path = $dir .'/'. $name;
+    if (-e $path) {
+        die "temp path '$path' already exists!";
+    }
+    return $path;
+}
+
 sub shellcmd {
     # execute a shell command in a standard way instead of using system()\
     # verifies inputs and ouputs, and does detailed logging...
@@ -274,14 +309,16 @@ sub shellcmd {
     my $output_files                = delete $params{output_files}
 ;
     my $input_files                 = delete $params{input_files};
-    my $skip_if_output_is_present   = delete $params{skip_if_output_is_present} || 1;
+    my $allow_failed_exit_code      = delete $params{allow_failed_exit_code};
+    my $skip_if_output_is_present   = delete $params{skip_if_output_is_present};
+    $skip_if_output_is_present = 1 if not defined $skip_if_output_is_present;
     if (%params) {
         my @crap = %params;
         Carp::confess("Unknown params passed to shellcmd: @crap");
     }
 
     if ($output_files and @$output_files) {
-        my @found_outputs = grep { -e $_ } @$output_files;
+        my @found_outputs = grep { -e $_ } grep { not -p $_ } @$output_files;
         if ($skip_if_output_is_present
             and @$output_files == @found_outputs
         ) {
@@ -307,11 +344,18 @@ sub shellcmd {
     #my $exit_code = 0; 
     $exit_code /= 256;
     if ($exit_code) {
-        die "ERROR RUNNING COMMAND.  Exit code $exit_code, msg $!  from: $cmd";
+        if ($allow_failed_exit_code) {
+            $DB::single = $DB::stopper;
+            warn "TOLERATING Exit code $exit_code, msg $! from: $cmd";
+        }
+        else {
+            $DB::single = $DB::stopper;
+            die "ERROR RUNNING COMMAND.  Exit code $exit_code, msg $! from: $cmd";
+        }
     }
 
     if ($output_files and @$output_files) {
-        my @missing_outputs = grep { not -s $_ } @$output_files;
+        my @missing_outputs = grep { not -s $_ }  grep { not -p $_ }@$output_files;
         if (@missing_outputs) {
             for (@$output_files) { unlink $_ }
             die "MISSING OUTPUTS! @missing_outputs\n";
@@ -457,7 +501,7 @@ sub check_for_path_existence {
         sleep(1);
         $try++;
         if ($found) {
-            $self->status_message("existence check passed: $path");
+            #$self->status_message("existence check passed: $path");
             return $found;
         }
     }

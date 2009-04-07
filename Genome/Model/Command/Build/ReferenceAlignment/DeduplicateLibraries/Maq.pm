@@ -14,7 +14,7 @@ class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::M
           parallel_switch => {
                   is => 'String',
               doc => 'Set to 0 for serial execution.  Set to 1 for parallel execution.',
-              default_value => '1',
+              default_value => '0',
               is_optional =>1,
            },  
            ],
@@ -40,7 +40,7 @@ EOS
 sub execute {
     my $self = shift;
     my $now = UR::Time->now;
-    $self->parallel_switch(1);
+    $self->parallel_switch(0);
     $self->status_message("Running in PARALLEL.") if ($self->parallel_switch eq '1');
     $self->status_message("Running in SERIAL.") if ($self->parallel_switch ne '1');
   
@@ -51,9 +51,7 @@ sub execute {
     my $maplist_dir = $self->build->accumulated_alignments_directory;
     #my $log_dir = $self->resolve_log_directory;
     my $log_dir = "/tmp/";
-    my $maq_pathname = $self->proper_maq_pathname('genotyper_name');
-   
-    $self->status_message("Using maq cmd path: ".$maq_pathname);
+
     $self->status_message("Using maplist directory: ".$maplist_dir);
    
     unless (-e $maplist_dir) { 
@@ -71,18 +69,20 @@ sub execute {
         }
     }
 
-    my @read_sets = $self->model->instrument_data_assignments;
+   my @idas = $self->model->instrument_data_assignments;
     my %library_alignments;
     my $count = 0;
     #accumulate the readsets per library
-    for my $read_set_link (@read_sets) {
+    for my $ida (@idas) {
         #$self->status_message("Read set: \n".$read_set_link->short_name .", ". $read_set_link->sample_name.", ".$read_set_link->full_path ) if ($count eq 1);
-        my $library = $read_set_link->library_name;
+        my $library = $ida->library_name;
+        my $alignment = $ida->alignment;
         #$self->status_message("Original Library: ".$library);
-        my @read_set_maps = $read_set_link->alignment_file_paths;
+        my @read_set_maps = $alignment->alignment_file_paths;
         #$self->status_message("library $library alignment file paths: \n".join("\n",@read_set_maps) ) if ($count eq 1);
         push @{$library_alignments{$library}}, @read_set_maps;
     }
+
 
     $self->status_message("About to call Dedup. Input params are... \n");
     #$self->status_message("Libraries and readsets: \n");
@@ -111,8 +111,7 @@ sub execute {
 
     $self->status_message("Accumulated Alignments Dir: ".$maplist_dir);
     $self->status_message("Subref names: ".join (",", @subsequences) );
-    $self->status_message("Size of library alignments: ".@list_of_library_alignments ); 
-    $self->status_message("Aligner: ". $self->model->read_aligner_name ); 
+    $self->status_message("Size of library alignments: ".@list_of_library_alignments );
 
 #parallelization starts here
     if ( $self->parallel_switch eq "1" ) {
@@ -130,11 +129,8 @@ sub execute {
             $op,
             'accumulated_alignments_dir' =>$maplist_dir, 
             'library_alignments' =>\@list_of_library_alignments,
-            'subreference_names' =>\@subsequences, 
-            'maq_cmd' =>$maq_pathname,
-            'aligner' => $self->model->read_aligner_name,
-            'mapsplit_cmd' => $self->proper_mapsplit_pathname('read_aligner_name'),
-             
+            'subreference_names' =>\@subsequences,
+            'aligner_version' => $self->model->read_aligner_version,
         );
  
         $self->status_message("Output: ".$output);
@@ -142,12 +138,10 @@ sub execute {
     } else {
 
     	my $rmdup = Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Dedup->create(
-                    accumulated_alignments_dir =>$maplist_dir, 
+                    accumulated_alignments_dir => $maplist_dir, 
                     library_alignments =>\@list_of_library_alignments,
-                    subreference_names =>\@subsequences, 
-                    maq_cmd =>$maq_pathname,
-                    aligner => $self->model->read_aligner_name,
-                    mapsplit_cmd => $self->proper_mapsplit_pathname('read_aligner_name'),
+                    subreference_names =>\@subsequences,
+                    aligner_version => $self->model->read_aligner_version,
                   );
        
 	#execute the tool
@@ -306,17 +300,23 @@ sub execute {
  	for my $sub_map (@subsequences) {
         	my @maps_to_merge;
         	for my $library_submap (@libraries) {
-			push @maps_to_merge, $maplist_dir."/".$library_submap."/".$sub_map.".map";	
-        	} 
-        	$now = UR::Time->now;
-      		my $cmd ="$maq_pathname mapmerge $out_filepath$sub_map.map ".join(" ",@maps_to_merge);
-                push (@merge_commands, $cmd);
-    		$self->status_message("Creating string: $cmd at $now.");
-       		#my $rv = system($cmd);
-   		#if($rv) {
-       		#	$self->error_message("problem running $cmd");
-       		#	return;
-    		#}
+                    my $library_sub_map_file = $maplist_dir .'/'. $library_submap .'/'. $sub_map .'.map';
+                    if (-e $library_sub_map_file) {
+			push @maps_to_merge, $library_sub_map_file;
+                    }
+        	}
+                if (@maps_to_merge) {
+                    $now = UR::Time->now;
+                    my $maq_pathname = $self->proper_maq_pathname('read_aligner_version');
+                    my $cmd ="$maq_pathname mapmerge $out_filepath$sub_map.map ".join(" ",@maps_to_merge);
+                    push (@merge_commands, $cmd);
+                    $self->status_message("Creating string: $cmd at $now.");
+                    #my $rv = system($cmd);
+                    #if($rv) {
+                    #	$self->error_message("problem running $cmd");
+                    #	return;
+                    #}
+                }
    	}
 
         #running commands
@@ -324,20 +324,18 @@ sub execute {
         if ( $self->parallel_switch eq '1' ) {
 		my $pcrunner = Genome::Model::Tools::ParallelCommandRunner->create(command_list=>\@merge_commands,log_path=>$log_path);
         	$pcrunner->execute;
+                #TODO: check return value or result of parallel command runner
         } else {
                 for my $merge_cmd (@merge_commands) {
         	        $now = UR::Time->now;
     		        $self->status_message("Executing $merge_cmd at $now.");
                 	my $rv = system($merge_cmd);
    			if($rv) {
-       				$self->error_message("problem running $merge_cmd");
-       				return;
+                            $self->error_message("non-zero return value($rv) from command: $merge_cmd");
+                            die($self->error_message);
     			}
 		}
         }
-       
-
-
   }
 
   $now = UR::Time->now;

@@ -41,6 +41,12 @@ class Genome::Model::InstrumentDataAssignment {
         sd_above_insert_size => {via => 'instrument_data'},
         is_paired_end => {via => 'instrument_data' },
     ],
+    has_optional => [
+                     _alignment => {
+                                    is => 'Genome::InstrumentData::Alignment',
+                                    is_transient => 1,
+                                },
+                 ],
     has_many_optional => [
                           events => {
                                      is => 'Genome::Model::Event',
@@ -73,94 +79,44 @@ sub invalid {
     return @tags;
 }
 
-*read_set_alignment_directory = \&alignment_directory;
-
 sub alignment_directory {
     my $self = shift;
+
+    my $alignment = $self->alignment;
+    return unless $alignment;
+    return $alignment->alignment_directory;
+}
+
+sub alignment {
+    my $self = shift;
+
     my $model = $self->model;
-    my $instrument_data = $self->instrument_data;
-    unless ($instrument_data) {
-        die('No instrument data found for id: '. $self->instrument_data_id);
-    }
-    return $instrument_data->alignment_directory_for_aligner_and_refseq(
-                                                                        $model->read_aligner_name,
-                                                                        $model->reference_sequence_name,
-                                                                        check_only => 1,
-                                                                    );
-}
-
-*read_set_alignment_files_for_refseq = \&alignment_files_for_refseq;
-
-sub alignment_files_for_refseq {
-    # this returns the above, or will return the old-style split maps
-    my $self = shift;
-    my $ref_seq_id = shift;
-    unless (defined($ref_seq_id)) {
-        $self->error_message('No ref_seq_id passed to method alignment_files_for_refseq');
+    unless ($model->type_name eq 'reference alignment') {
+        $self->error_message('Can not create an alignment object for model type '. $model->type_name);
         return;
     }
-
-    my $alignment_dir = $self->alignment_directory;
-    unless (-d $alignment_dir) {
-        $self->error_message("The read_set_alignment_directory '$alignment_dir' does not exist.");
-        return;
+    unless ($self->_alignment) {
+        my %params = (
+                      instrument_data_id => $self->instrument_data_id,
+                      aligner_name => $model->read_aligner_name,
+                      reference_name => $model->reference_sequence_name,
+                  );
+        if ($model->read_aligner_version) {
+            $params{'aligner_version'} = $model->read_aligner_version;
+        }
+        if ($model->read_aligner_params) {
+            $params{'aligner_params'} = $model->read_aligner_params;
+        }
+        my $alignment = Genome::InstrumentData::Alignment->create(%params);
+        unless ($alignment) {
+            $self->error_message('Failed to create an alignment object');
+            return;
+        }
+        $self->_alignment($alignment);
     }
-
-    # Look for files in the new format: $refseqid.map.$eventid
-    my @files = grep { $_ and -e $_ } (
-        glob($alignment_dir . "/$ref_seq_id.map.*") #bkward compat
-    );
-    return @files if (@files);
-
-    # Now try the old format: $refseqid_{unique,duplicate}.map.$eventid
-    my $glob_pattern = sprintf('%s/%s_*.map.*', $alignment_dir, $ref_seq_id);
-    @files = grep { $_ and -e $_ } (
-        glob($glob_pattern)
-    );
-    return @files;
+    return $self->_alignment;
 }
 
-sub alignment_file_paths {
-    my $self=shift;
-    return unless -d $self->alignment_directory;
-   return grep { -e $_ && $_ !~ /aligner_output/ } glob($self->alignment_directory .'/*'. '*.map*');
-}
-
-sub aligner_output_file_paths {
-    my $self=shift;
-    return unless -d $self->alignment_directory;
-    return grep { -e $_ } glob($self->alignment_directory .'/*'. '.map.aligner_output.*');
-}
-
-sub poorly_aligned_reads_list_paths {
-    my $self=shift;
-    return unless -d $self->alignment_directory;
-    return grep { -e $_ } grep { $_ !~ /\.fastq$/ } glob($self->alignment_directory .'/*'.
-                                                         $self->subset_name .'_sequence.unaligned.*');
-}
-
-sub poorly_aligned_reads_fastq_paths  {
-    my $self=shift;
-    return unless -d $self->alignment_directory;
-    return grep { -e $_ } glob($self->alignment_directory .'/*'.
-                               $self->subset_name .'_sequence.unaligned.*.fastq');
-}
-
-sub contaminants_file_path {
-    my $self=shift;
-    return unless -d $self->alignment_directory;
-    return grep { -e $_ } glob($self->alignment_directory .'/adaptor_sequence_file');
-}
-
-sub get_alignment_statistics {
-    my $self = shift;
-    my ($aligner_output_file) = $self->aligner_output_file_paths;
-    unless ($aligner_output_file && -s $aligner_output_file) {
-        $self->error_message("No aligner output file '$aligner_output_file' found or zero size");
-        return;
-    }
-    return Genome::InstrumentData::Command::Align::Maq->get_alignment_statistics($aligner_output_file);
-}
 sub read_length {
     my $self = shift;
     my $instrument_data = $self->instrument_data;

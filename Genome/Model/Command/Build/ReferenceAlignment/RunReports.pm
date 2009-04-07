@@ -62,9 +62,17 @@ sub execute {
     $self->status_message('Starting MapCheck report.');
     my $MapCheck_report_name = 'RefSeqMaq';
     #model id for previous test:  2733662090
-    my $MapCheck_report = Genome::Model::ReferenceAlignment::Report::RefSeqMaq->create(build_id =>$build_id, name=>$MapCheck_report_name, version=>$self->model->read_aligner_name);
-    #my $MapCheck_report = Genome::Model::Report::RefSeqMaq->create(build_id =>$build_id, name=>$MapCheck_report_name, version=>$self->model->read_aligner_name);
-    $accumulated_alignments_file = $self->accumulate_maps(); 
+    my $MapCheck_report = Genome::Model::ReferenceAlignment::Report::RefSeqMaq->create(
+                                                                                       build_id => $build_id,
+                                                                                       name => $MapCheck_report_name,
+                                                                                       version => $self->model->read_aligner_version
+                                                                                   );
+    #my $MapCheck_report = Genome::Model::Report::RefSeqMaq->create(build_id =>$build_id, name=>$MapCheck_report_name, version=>$self->model->read_aligner_version);
+    $accumulated_alignments_file = $self->accumulate_maps();
+    unless ($accumulated_alignments_file) {
+        $self->error_message('Failed to get accumulated maps file');
+        return;
+    }
     $self->status_message('The accumulated alignments file is: '.$accumulated_alignments_file);
     $MapCheck_report->accumulated_alignments_file($accumulated_alignments_file);
     #$MapCheck_report->generate_report_detail();
@@ -125,10 +133,17 @@ sub execute {
     #maq indelpe /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.bfa bigmap.map > normal.indelpe
 
     $self->status_message('Starting Indelpe report.');
-    my $aligner_path = $self->aligner_path('read_aligner_name'); 
+    my $aligner_path = $self->aligner_path('read_aligner_version'); 
     my $ref_seq = $model->reference_sequence_path."/all_sequences.bfa"; 
     my $indelpe_output_path = "$report_dir/indelpe_report_$id"."_$ts.out";
-    $accumulated_alignments_file = $self->accumulate_maps(); 
+
+    $accumulated_alignments_file = $self->accumulate_maps();
+
+    unless ($accumulated_alignments_file) {
+        $self->error_message('Failed to get accumulated map file');
+        return;
+    }
+
     $self->status_message('The accumulated alignments file is: '.$accumulated_alignments_file);
     my $indelpe_cmd = "$aligner_path indelpe $ref_seq $accumulated_alignments_file > $indelpe_output_path";
     $self->status_message('Indelpe report command: '.$indelpe_cmd);

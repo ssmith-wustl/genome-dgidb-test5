@@ -17,7 +17,7 @@ class Genome::SoftwareResult {
         _inputs_bx   => { is => 'UR::BoolExpr', id_by => '_inputs_id', is_optional => 1 },
         _inputs_id   => { is => 'VARCHAR2', len => 4000, column_name => 'INPUTS_ID', implied_by => '_inputs_bx', is_optional => 1 },
         _params_bx   => { is => 'UR::BoolExpr', id_by => '_params_id', is_optional => 1 },
-        _params_id   => { is => 'VARCHAR2', len => 4000, column_name => 'ARAMS_ID', implied_by => '_params_bx', is_optional => 1 },
+        _params_id   => { is => 'VARCHAR2', len => 4000, column_name => 'PARAMS_ID', implied_by => '_params_bx', is_optional => 1 },
         outputs_path => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
     ],
     schema_name => 'GMSchema',
@@ -33,7 +33,6 @@ sub inputs {
     }
     else {
         $bx = $self->_inputs_bx;
-        
     }
     return $bx->params_list;
 }

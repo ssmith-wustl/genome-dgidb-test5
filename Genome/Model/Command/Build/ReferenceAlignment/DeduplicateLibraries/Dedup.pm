@@ -9,7 +9,7 @@ use File::Basename;
 use IO::File;
 
 class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Dedup {
-    is => ['Command', 'Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries', 'Genome::Model::Command::MaqSubclasser'],
+    is => ['Genome::Model::Command::MaqSubclasser'],
     has_input => [
     accumulated_alignments_dir => {
         is => 'String',
@@ -23,18 +23,10 @@ class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::D
         is => 'ARRAY',
         doc => 'List of subreference names: 1..22,X,Y,all_sequences'
     },
-    maq_cmd => {
-        is => 'String',
-        doc => 'Maq command path to use.'
-    },
-    aligner => {
-        is => 'String',
-        doc => 'stupid hack to get this to work',    
-    },
-    mapsplit_cmd => {
-        is => 'String',
-        doc => 'the mapsplit command',
-      }
+    aligner_version => {
+                        is => 'Text',
+                        doc => 'The maq read aligner version used',
+                    },
     ],
     has_param => [
         lsf_resource => {
@@ -51,10 +43,6 @@ class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::D
     ],
 };
 
-sub create {
-    my $self = shift->SUPER::create(@_);
-    return $self;
-}
 
 sub make_real_rmdupped_map_file {
     my $self=shift;
@@ -71,8 +59,8 @@ sub make_real_rmdupped_map_file {
     } else {
         my $tmp_file = "/tmp/" . $self->mapmerge_filename($library);
         $self->status_message("Rmdup'd file DOES NOT exist: ".$final_file);
-        my $aligner_name = $self->aligner;
-        my $maq_cmd = "gt maq vmerge --version=$aligner_name --maplist $maplist --pipe $tmp_file &";
+        my $aligner_version = $self->aligner_version;
+        my $maq_cmd = "gt maq vmerge --version=$aligner_version --maplist $maplist --pipe $tmp_file &";
         $self->status_message("Executing:  $maq_cmd");
         system "$maq_cmd";
         my $start_time = time;
@@ -89,7 +77,7 @@ sub make_real_rmdupped_map_file {
         }
 
         ##TODO: where should i be getting this.
-        my $maq_pathname = $self->maq_cmd;
+        my $maq_pathname = Genome::Model::Tools::Maq->path_for_maq_version($self->aligner_version);
         my $cmd = $maq_pathname . " rmdup " . $final_file . " " . $tmp_file;
         $self->status_message("running $cmd");
         my $rv = system($cmd);
@@ -109,7 +97,7 @@ sub mapsplit{
 
     my $submap_directory = $self->accumulated_alignments_dir . "/$submap_dir_name/";
     unless (-e $submap_directory) {
-        unless ($self->create_directory($submap_directory)) {
+        unless (Genome::Utility::FileSystem->create_directory($submap_directory)) {
             #doesn't exist can't create it...quit
             $self->error_message("Failed to create directory '$submap_directory':  $!");
             return;
@@ -132,14 +120,18 @@ sub mapsplit{
     #this is handled by the calling object:  my @subsequences = grep { $_ ne 'all_sequences' } $self->subreference_names;
     my @subsequences = @{$self->subreference_names};
     # break up the alignments by the sequence they match, if necessary
-    my $mapsplit_cmd_line = $self->mapsplit_cmd . " $submap_directory $map_file " . join(',',@subsequences);
+    my $mapsplit_cmd_line = Genome::Model::Tools::Maq->path_for_mapsplit_version($self->aligner_version) . " $submap_directory $map_file " . join(',',@subsequences);
     $self->status_message("Map split command: $mapsplit_cmd_line");
     my $rv = system($mapsplit_cmd_line);
-    if($rv) {
-        $self->status_message("non zero exit code from system");
-        return 0;
+    if ($rv) {
+        #arbitrary convention set up with homemade mapsplit and mapsplit_long..return 2 if file is empty.
+        if($rv/256 == 2) {
+            $self->status_message('Map split returned an empty file');
+        } else {
+            $self->error_message("Failed to run map split on map file $map_file");
+            die $self->error_message;
+        }
     }
-
     return 1;
 }
 
@@ -171,7 +163,7 @@ sub execute {
     my $pid = getppid(); 
     my $log_dir = $self->accumulated_alignments_dir.'/../logs/';
     unless (-e $log_dir ) {
-	unless( $self->create_directory($log_dir) ) {
+	unless( Genome::Utility::FileSystem->create_directory($log_dir) ) {
             $self->error_message("Failed to create log directory for dedup process: $log_dir");
             return;
 	}
@@ -245,12 +237,12 @@ sub execute {
 		$self->status_message(">>> Beginning MapToBam conversion at $now for library: $library .");
 	 
 		$self->status_message("MapToBam inputs for library: $library");
-		$self->status_message("maq_version: ".$self->aligner); 
+		$self->status_message("maq_version: ".$self->aligner_version);
 		$self->status_message("map_file: ".$map_file);
 		$self->status_message("lib_tag: ".$library); 
 		my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
-			    maq_version => $self->aligner, 
-			    map_file => $map_file, 
+			    use_version => $self->aligner_version,
+			    map_file => $map_file,
 			    lib_tag => $library,
 		);
 		my $map_to_bam_rv =  $map_to_bam->execute;

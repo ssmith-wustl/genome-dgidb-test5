@@ -12,7 +12,7 @@ class Genome::Model::Tools::Maq::AlignReads {
            #######################################################
             use_version => {
                             is => 'Version',
-                            default_value => '0.6.8',
+                            default_value => '0.7.1',
                             doc => "Version of maq to use"
                         },
            dna_type => {

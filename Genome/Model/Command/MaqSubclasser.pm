@@ -26,17 +26,17 @@ sub proper_maq_pathname {
     my($self,$model_param_name) = @_;
 
     my $param_value = $self->model->$model_param_name;
-    if ($param_value eq 'maq0_6_3') {
+    if ($param_value eq '0.6.3') {
         return '/gsc/pkg/bio/maq/maq-0.6.3_x86_64-linux/maq';
-    } elsif ($param_value eq 'maq0_6_4') {
+    } elsif ($param_value eq '0.6.4') {
         return '/gsc/pkg/bio/maq/maq-0.6.4_x86_64-linux/maq';
-    } elsif ($param_value eq 'maq0_6_5') {
+    } elsif ($param_value eq '0.6.5') {
         return '/gsc/pkg/bio/maq/maq-0.6.5_x86_64-linux/maq';
-   } elsif ($param_value eq 'maq0_6_8') {
+    } elsif ($param_value eq '0.6.8') {
         return '/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq';
-    } elsif ($param_value eq 'maq0_7_1') {
-        return '/gsc/pkg/bio/maq/maq-0.7.1-64/bin/maq';     
-    } elsif ($param_value eq 'maq') {
+    } elsif ($param_value eq '0.7.1') {
+        return '/gsc/pkg/bio/maq/maq-0.7.1-64/bin/maq';
+    } elsif ($param_value eq '') {
         return 'maq';
     } else {
         $self->error_message("Couldn't determine maq pathname for the model's $model_param_name param $param_value");
@@ -48,18 +48,16 @@ sub proper_mapsplit_pathname {
     my($self,$model_param_name) = @_;
 
     my $param_value = $self->model->$model_param_name;
-    if ($param_value eq 'maq0_6_3') {
+    if ($param_value eq '0.6.3') {
         return '/gscuser/charris/c-src-BLECH/mapsplit/mapsplit';
-    } elsif ($param_value eq 'maq0_6_4') {
+    } elsif ($param_value eq '0.6.4') {
         return '/gscuser/charris/c-src-BLECH/mapsplit/mapsplit';
-    } elsif ($param_value eq 'maq0_6_5') {
+    } elsif ($param_value eq '0.6.5') {
         return '/gscuser/charris/c-src-BLECH/mapsplit/mapsplit';
-   } elsif ($param_value eq 'maq0_6_8') {
+    } elsif ($param_value eq '0.6.8') {
         return '/gscuser/charris/c-src-BLECH/mapsplit/mapsplit';
-    } elsif ($param_value eq 'maq0_7_1') {
+    } elsif ($param_value eq '0.7.1') {
         return '/gscuser/charris/c-src-BLECH/mapsplit/mapsplit_long';
-    } elsif ($param_value eq 'maq') {
-        return;
     } else {
         $self->error_message("Couldn't determine mapsplit pathname for the model's $model_param_name param $param_value");
         return;

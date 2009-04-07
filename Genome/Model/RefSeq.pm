@@ -142,7 +142,7 @@ my @inputs = $self->combine_maplists($library_name);
         my ($fh,$maplist) = File::Temp::tempfile;
         $fh->print(join("\n",@inputs),"\n");
         $fh->close;
-        my $maq_version=$self->model->read_aligner_name;
+        my $maq_version=$self->model->read_aligner_version;
         system "gt maq vmerge --maplist $maplist --pipe $result_file --version $maq_version &";
         my $start_time = time;
         until (-p "$result_file" or ( (time - $start_time) > 100) )  {

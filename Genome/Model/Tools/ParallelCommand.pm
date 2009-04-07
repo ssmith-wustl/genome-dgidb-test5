@@ -79,8 +79,8 @@ sub execute {
     $now = UR::Time->now;
     $self->status_message("*** Parallel command completed at $now. ***");
          
-    return 1;
-    #return $rv;
+    #return 1;
+    return $rv;
 
 } #end execute
 

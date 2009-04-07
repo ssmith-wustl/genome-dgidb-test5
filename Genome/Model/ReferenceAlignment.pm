@@ -14,7 +14,7 @@ use Sort::Naturally;
 
 class Genome::Model::ReferenceAlignment {
     is => 'Genome::Model',
-    has => [       
+    has => [
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
         genotyper_name               => { via => 'processing_profile'},
@@ -23,7 +23,16 @@ class Genome::Model::ReferenceAlignment {
         indel_finder_params          => { via => 'processing_profile'},
         multi_read_fragment_strategy => { via => 'processing_profile'},
         prior_ref_seq                => { via => 'processing_profile'},
-        read_aligner_name            => { via => 'processing_profile'},
+        read_aligner_name            => {
+                                         calculate_from => 'processing_profile',
+                                         calculate => q|
+                                             my $read_aligner_name = $processing_profile->read_aligner_name;
+                                             if ($read_aligner_name =~ /^maq/) {
+                                                 return 'maq';
+                                             }
+                                             return $read_aligner_name;
+                                         |,
+                                     },
         read_aligner_version         => { via => 'processing_profile'},
         read_aligner_params          => { via => 'processing_profile'},
         read_calibrator_name         => { via => 'processing_profile'},

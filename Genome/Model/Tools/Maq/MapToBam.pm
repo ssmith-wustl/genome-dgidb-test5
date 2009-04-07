@@ -10,7 +10,7 @@ use File::Temp;
 use IO::File;
 
 class Genome::Model::Tools::Maq::MapToBam {
-    is  => 'Command',
+    is  => 'Genome::Model::Tools::Maq',
     has => [ 
         map_file    => { 
             is  => 'String',      
@@ -18,11 +18,6 @@ class Genome::Model::Tools::Maq::MapToBam {
         }
     ],
     has_optional => [
-        maq_version => {
-            is  => 'String',
-            doc => 'maq version used to make map file',
-            default => '0.6.8',
-        },
         lib_tag     => {
             is  => 'String',
             doc => 'library name used in sam/bam file to identify read group',
@@ -77,7 +72,7 @@ sub execute {
     my $tosam_path = $tool_path.'/misc/maq2sam-';
     my $samtools   = $tool_path.'/samtools';
 
-    my ($ver) = $self->maq_version =~ /^\D*\d\D*(\d)\D*\d/;
+    my ($ver) = $self->use_version =~ /^\D*\d\D*(\d)\D*\d/;
     $self->error_message("Give correct maq version") and return unless $ver;
     $tosam_path = $ver < 7 ? $tosam_path.'short' : $tosam_path.'long';
 

@@ -122,16 +122,16 @@ sub dump_to_file_system {
     return 1;
 }
 
-sub bfq_filenames {
+sub fastq_filenames {
     my $self = shift;
     my $seq_dedup = shift;
-    my @bfqs;
+    my @fastqs;
     if ($self->is_external) {
-        @bfqs = $self->resolve_external_bfq_filenames;
+        @fastqs = $self->resolve_external_fastq_filenames;
     } else {
-        @bfqs = $self->resolve_bfq_filenames;
+        @fastqs = $self->resolve_fastq_filenames;
     }
-    return @bfqs;
+    return @fastqs;
 }
 
 sub desc {
@@ -139,7 +139,7 @@ sub desc {
     return $self->full_name .'('. $self->id .')';
 }
 
-sub resolve_bfq_filenames {
+sub resolve_fastq_filenames {
     my $self = shift;
     my $seq_dedup = shift;
 
@@ -202,16 +202,16 @@ sub resolve_bfq_filenames {
     return @solexa_output_paths;
 }
 
-sub resolve_external_bfq_filenames {
+sub resolve_external_fastq_filenames {
     my $self = shift;
     my $seq_dedup = shift;
 
-    my @bfq_pathnames;
-    my $bfq_pathname = $self->create_temp_file_path('bfq');
-    unless ($bfq_pathname) {
-        die "Failed to create temp file for bfq!";
+    my @fastq_pathnames;
+    my $fastq_pathname = $self->create_temp_file_path('fastq');
+    unless ($fastq_pathname) {
+        die "Failed to create temp file for fastq!";
     }
-    return ($bfq_pathname);
+    return ($fastq_pathname);
 }
 
 sub _calculate_total_read_count {

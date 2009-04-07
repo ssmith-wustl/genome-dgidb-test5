@@ -134,8 +134,11 @@ sub execute {
 
     my $model = $self->model;
 
-    my $maq_pathname = $self->proper_maq_pathname('indel_finder_name');
-    my $maq_pl_pathname = $self->proper_maq_pl_pathname('indel_finder_name');
+    #TODO: we need to have a indel_finder_version
+    #my $maq_pathname = $self->proper_maq_pathname('indel_finder_name');
+    #my $maq_pl_pathname = $self->proper_maq_pl_pathname('indel_finder_name');
+    my $maq_pathname = $self->proper_maq_pathname('read_aligner_version');
+    my $maq_pl_pathname = $self->proper_maq_pl_pathname('read_aligner_version');
 
     # ensure the reference sequence exists.
     my $ref_seq_file = $model->reference_sequence_path . "/all_sequences.bfa";

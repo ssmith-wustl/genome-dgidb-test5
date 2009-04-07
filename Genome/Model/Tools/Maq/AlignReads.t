@@ -41,7 +41,7 @@ my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
                                                             unaligned_reads_file => $output_dir .'/single_read.unaligned',
                                                         );
 
-is($aligner->use_version,'0.6.8','using 0.6.8 version of maq');
+is($aligner->use_version,'0.7.1','using 0.7.1 version of maq');
 
 #execute the tool 
 ok($aligner->execute,'AlignReads execution, single read solexa input with sol2sanger conversion.');

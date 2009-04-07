@@ -33,8 +33,12 @@ my $model = Genome::Model::ReferenceAlignment->create_mock(
                                                            last_complete_build_id => undef,
                                                            read_aligner_name => 'blat',
                                                            reference_sequence_name => 'refseq-for-test',
+                                                           type_name => 'reference alignment',
                                                        );
 $model->set_always('alignment_directory', $tmp_dir .'/alignments');
+$model->set_always('read_aligner_name','blat');
+$model->set_always('read_aligner_params','');
+
 my $instrument_data = Genome::InstrumentData::454->create_mock(
                                                         id => --$bogus_id,
                                                         genome_model_run_id => $bogus_id,
@@ -49,6 +53,7 @@ $instrument_data->mock('alignment_directory_for_aligner_and_refseq',
 $instrument_data->set_always('full_path',$tmp_dir);
 $instrument_data->set_always('sff_file', $tmp_dir.'/test.sff');
 $instrument_data->set_always('dump_to_file_system', 1);
+$instrument_data->set_always('sample_type','dna');
 
 my $ida = Genome::Model::InstrumentDataAssignment->create(
                                                           model_id => $model->id,

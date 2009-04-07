@@ -40,9 +40,9 @@ $DB::single = $DB::stopper;
         $self->error_message("unable to revert...debug ->revert and ->cleanup_mapmerge_i_specify");
         return;
     }
-
-    my $maq_pathname = $self->proper_maq_pathname('genotyper_name');
-
+    #TODO: Eventually we should have a genotyper_version to pass here
+    #my $maq_pathname = $self->proper_maq_pathname('genotyper_name');
+    my $maq_pathname = $self->proper_maq_pathname('read_aligner_version');
     my $model_dir = $self->build_directory;
 
     unless (-d "$model_dir/consensus") {

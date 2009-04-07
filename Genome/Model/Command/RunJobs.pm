@@ -11,10 +11,12 @@ class Genome::Model::Command::RunJobs {
                         doc => 'underlying mechanism for executing jobs ("lsf" or "inline")', },
         instrument_data_id => {is => 'Integer', is_optional => 1, doc => 'only dispatch events with this instrument_data_id' },
         ref_seq_id  => {is => 'String', is_optional => 1, doc => 'only dispatch events with this ref_seq_id' },
+        hold_run_jobs  => {is => 'Integer', is_optional => 1, doc => 'testing flag for holding run jobs' },
         event_id    => {is => 'Integer', is_optional => 1, doc => 'only dispatch this single event' },
         bsub_queue  => {is => 'String', is_optional => 1, doc => 'lsf jobs should be put into this queue' },
         bsub_args   => {is => 'String', is_optional => 1, doc => 'additional arguments to be given to bsub' },
         prior_job_name => {is => 'String', is_optional => 1, doc => 'a job name to scheduled as a dependency for this job_name' },
+        prior_job_ids => {is => 'List', is_optional => 1, doc => 'a list of job dependency ids for this job_name' },
         force           => {is => 'Boolean', is_optional => 1, doc => 'force kill an event and restart even if running/successful' },
         building    => {is => 'Boolean', default_value => '0', doc => 'a flag for building new models'},
     ],
@@ -278,16 +280,22 @@ sub _schedule_scheduled_jobs {
         my %execute_args = (bsub_queue => $self->bsub_queue, bsub_args => $self->bsub_args);
 
         my @done_dependencies;
+        my @prior_job_ids = @{$self->prior_job_ids};
         my $prior_event = $event->prior_event();
-        if ($prior_event) {
+        
+        if (@prior_job_ids) {
+            push @done_dependencies, @prior_job_ids;
+          #this used to be just an "if" below...
+        } elsif ($prior_event) {
             if ( $prior_event->lsf_job_id and 
                  ( $prior_event->event_status eq 'Running' or $prior_event->event_status eq 'Scheduled') ) {
                 push @done_dependencies, $prior_event->lsf_job_id;
             }
         }
-        if ($self->prior_job_name) {
-            push @done_dependencies, '"'. $self->prior_job_name .'"';
-        }
+        #if ($self->prior_job_name) {
+            #push @done_dependencies, '"'. $self->prior_job_name .'"';
+        #    push @done_dependencies, @{$self->prior_job_ids};
+        #}
         if (@done_dependencies) {
             $execute_args{'dependency_hash_ref'}{done} = \@done_dependencies;
         }
@@ -319,15 +327,17 @@ sub _schedule_scheduled_jobs {
     } # end while @launchable_events
 
     #Release jobs from hold state
-    for my $job_id (@bsubed_lsf_job_ids) {
-        my $bresume_output = `bresume $job_id`;
-        my $retval = $? >> 8;
+    unless ($self->hold_run_jobs) {
+	    for my $job_id (@bsubed_lsf_job_ids) {
+		my $bresume_output = `bresume $job_id`;
+		my $retval = $? >> 8;
 
-        if ($retval) {
-            $self->error_message("bresume returned a non-zero exit code ($retval), bailing out");
-            die $self->error_message;
-        }
-    }
+		if ($retval) {
+		    $self->error_message("bresume returned a non-zero exit code ($retval), bailing out");
+		    die $self->error_message;
+		}
+	    }
+    } 
     return 1;
 }
 

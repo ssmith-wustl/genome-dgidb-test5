@@ -142,7 +142,7 @@ sub reallocate {
 sub deallocate {
     my $self = shift;
     if ($ENV{UR_DBI_NO_COMMIT}) {
-        my $deallocate_cmd = Genome::Disk::Allocation::Command::Deallocate->execute($self->allocator_id);
+        my $deallocate_cmd = Genome::Disk::Allocation::Command::Deallocate->execute(allocator_id => $self->allocator_id);
         unless ($deallocate_cmd) {
             $self->error_message('Failed to deallocate disk space with command '. $deallocate_cmd);
             return;

@@ -38,7 +38,7 @@ sub execute {
     my $self = shift;
     
     my $model = Genome::Model->get(id => $self->model_id);
-    my $maq_pathname = $self->proper_maq_pathname('read_aligner_name');
+    my $maq_pathname = $self->proper_maq_pathname('read_aligner_version');
 
     $DB::single = 1;
     
@@ -101,7 +101,7 @@ sub execute {
     }
 
     # The align-reads step make submap files for each chromosome.  We can delete this one now
-    if ($model->read_aligner_name ne 'maq0_6_3') {
+    if ($model->read_aligner_version ne 'maq0_6_3') {
         # FIXME For 0.6.4 and 0.6.5, don't remove the whole-lane map files, only any new file
         # we may have created in /tmp.  When we're convinced that we can submap and mapmerge
         # successfully with newer maq's, the, we only need to keep the three unlink()s

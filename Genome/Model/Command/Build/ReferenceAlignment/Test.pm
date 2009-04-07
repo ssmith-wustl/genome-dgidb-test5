@@ -48,7 +48,7 @@ sub new {
         $self->add_directory_to_remove($self->data_dir);
     }
 
-    my $tmp_dir = File::Temp::tempdir('ReferenceAlignmentTestXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+    my $tmp_dir = File::Temp::tempdir('ReferenceAlignmentTestXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 0);
     $ENV{GENOME_MODEL_ROOT} = $tmp_dir;
     $ENV{GENOME_MODEL_DATA} = $tmp_dir;
     Genome::Utility::FileSystem->create_directory(
@@ -269,15 +269,13 @@ sub schedule {
     #    ok(scalar(grep { m/^Scheduling jobs for .* read set/} @status_messages),
     #       'Saw a message about ReadSet');
     #}
-    ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AssignRun/} @status_messages),
-       'Saw a message about AssignRun');
+    SKIP : {
+        skip 'No AssignRun step for Solexa', 1 if $model->sequencing_platform eq 'solexa'; 
+        ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AssignRun/} @status_messages),
+           'Saw a message about AssignRun');
+    }
     ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AlignReads/} @status_messages),
        'Saw a messages about  AlignReads');
-    SKIP : {
-        skip 'No ProcessLowQualityAlignments step for 454', 1 if $model->sequencing_platform eq '454'; 
-   ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments/} @status_messages),
-       'Saw a message about ProcessLowQualityAlignments');
-    }
     my $variation_granularity;
     if ($model->sequencing_platform eq '454') {
         $variation_granularity = 1;

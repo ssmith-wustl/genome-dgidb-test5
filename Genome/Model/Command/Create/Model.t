@@ -223,7 +223,11 @@ sub successful_create_model {
     is($model->type_name,$pp->type_name,'model type_name indirect accessor');
     for my $param ($pp->params) {
         my $accessor = $param->name;
-        is($model->$accessor,$param->value,$accessor .' model indirect accessor');
+        my $value = $param->value;
+        if ($accessor eq 'read_aligner_name' and $value =~ /^maq/) {
+            $value = 'maq';
+        }
+        is($model->$accessor,$value,$accessor .' model indirect accessor');
     }
 
   SKIP: {

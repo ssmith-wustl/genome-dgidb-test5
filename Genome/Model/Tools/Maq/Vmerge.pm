@@ -13,7 +13,7 @@ class Genome::Model::Tools::Maq::Vmerge {
     has => [ 
             'maplist'   => { is => 'list',      doc => "maplist file",},
             'pipe'      => { is => 'String',      doc => "the named pipe",      is_optional => 1},
-            'version'   => { is => 'String', default =>'maq0_6_8', doc =>"vmerge for 'maq0_6_8' or 'maq0_7_1'" },
+            'version'   => { is => 'String', default => '0.6.8', doc =>"vmerge for '0.6.8' or '0.7.1'" },
             'tmp_script' => { is => 'String',     doc => "temp script to run",  is_optional => 1},
     ],
 };
@@ -57,9 +57,9 @@ sub execute {
     $DB::single = $DB::stopper;
 
     my $maq_pathname;
-    if($self->version eq 'maq0_6_8') {
+    if($self->version eq '0.6.8') {
     $maq_pathname = '/gscuser/abrummet/maq-0.6.6/maq';
-    }elsif($self->version eq 'maq0_7_1') {
+    }elsif($self->version eq '0.7.1') {
     $maq_pathname = '/gscuser/charris/c-src-BLECH/maq-0.7.2/maq';
     }
     my $maplist = $self->maplist;

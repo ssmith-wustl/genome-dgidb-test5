@@ -55,7 +55,7 @@ sub resolve_accumulated_alignments_filename {
     #    return $self->old_resolve_accumulated_alignments_filename(@_);
     #}
     
-    my $aligner_path = $self->aligner_path('read_aligner_name');
+    my $aligner_path = $self->aligner_path('read_aligner_version');
 
     my %p = @_;
     my $ref_seq_id = $p{ref_seq_id};
@@ -72,15 +72,28 @@ sub resolve_accumulated_alignments_filename {
     else {
         $DB::single=1;
         my @files = glob("$alignments_dir/mixed_library_submaps/*.map");
-        my $tmp_map_file = "/tmp/". $self->model->id . ".map";
+        my $tmp_map_file = $self->create_temp_file_path('ACCUMULATED_ALIGNMENTS-'. $self->model_id .'.map');
+        if (-e $tmp_map_file) {
+            unless (unlink $tmp_map_file) {
+                $self->error_message('Could not unlink existing temp file '. $tmp_map_file .": $!");
+                die($self->error_message);
+            }
+        }
         require POSIX;
         unless (POSIX::mkfifo($tmp_map_file, 0700)) {
             $self->error_message("Can not create named pipe ". $tmp_map_file .":  $!");
-            return;
+            die($self->error_message);
         }
-        my $cmd ="$aligner_path mapmerge $tmp_map_file " . join(" ", @files) . "&";
-        system($cmd);
-
+        my $cmd = "$aligner_path mapmerge $tmp_map_file " . join(" ", @files) . " &";
+        my $rv = Genome::Utility::FileSystem->shellcmd(
+                                                       cmd => $cmd,
+                                                       input_files => \@files,
+                                                       output_files => [$tmp_map_file],
+                                                   );
+        unless ($rv) {
+            $self->error_message('Failed to execute mapmerge command '. $cmd);
+            die($self->error_message);
+        }
         return $tmp_map_file;
     }
 }
@@ -192,7 +205,7 @@ sub old_resolve_accumulated_alignments_filename {
         my ($fh,$maplist) = File::Temp::tempfile;
         $fh->print(join("\n",@inputs),"\n");
         $fh->close;
-        my $maq_version = $self->model->read_aligner_name;
+        my $maq_version = $self->model->read_aligner_version;
         system "gt maq vmerge --maplist $maplist --pipe $result_file --version $maq_version &";
         my $start_time = time;
         until (-p "$result_file" or ( (time - $start_time) > 100) )  {
@@ -320,7 +333,7 @@ sub accumulate_maps {
         $result_file = $self->resolve_accumulated_alignments_filename;
 
  } else {
-         
+
    	my @all_map_lists;
 	my @map_list;
 	my $c;
@@ -338,7 +351,7 @@ sub accumulate_maps {
 	my ($fh,$maplist) = File::Temp::tempfile;
 	$fh->print(join("\n",@all_map_lists),"\n");
 	$fh->close;
-    my $maq_version = $self->model->read_aligner_name;
+    my $maq_version = $self->model->read_aligner_version;
     system "gt maq vmerge --maplist $maplist --pipe $result_file --version $maq_version &";
         
     $self->status_message("gt maq vmerge --maplist $maplist --pipe $result_file --version $maq_version &");

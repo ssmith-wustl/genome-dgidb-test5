@@ -22,9 +22,14 @@ for my $model (@genome_models) {
 		if ($model->can($property)) {
 			# cannot compare names because they are not necessarily similar
 			unless ($property eq 'name') {
-				is($model->$property, $processing_profile->$property , "The value for $property in genome_model matches the value in processing_profile");
-			}	
-		}	
+                            my $model_value = $model->$property;
+                            my $pp_value = $processing_profile->$property;
+                            if ($property eq 'read_aligner_name' and $pp_value =~ /^maq/) {
+                                $pp_value = 'maq';
+                            }
+                            is($model_value, $pp_value , "The value for $property in genome_model matches the value in processing_profile");
+			}
+		}
 	}
 }
 

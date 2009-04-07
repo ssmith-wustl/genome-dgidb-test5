@@ -15,7 +15,7 @@ use List::MoreUtils qw/ uniq /;
 use App::Report;
 use IPC::Run;
 
-class Genome::Model::Report::Pfam{
+class Genome::Model::ReferenceAlignment::Report::Pfam{
     is => 'Genome::Model::Report',
     has => [ 'test_no_load' => { is          => 'BOOLEAN',
                                  is_optional => 1,
@@ -46,7 +46,7 @@ sub generate_report_brief
     #$brief->print("<div>$desc</div>");
     #$brief->close;
 
-    return '<div>Gold Snp coverage for ' . $model->name . " as of " . UR::Time->now . '</div>';
+    return '<div>Pfam report for ' . $model->name . " as of " . UR::Time->now . '</div>';
 }
 
 sub _call {
@@ -54,12 +54,14 @@ sub _call {
     print STDERR "RUNNING: " . join(" ",$cmd,@params) . "\n";
     my ($stdout,$stderr);
     my $retval = IPC::Run::run( [ $cmd, @params ],
-                                #[ 'mg-check-ts', $file ],
                                 '>',
                                 \$stdout,
                                 '2>',
                                 \$stderr,
-                              ) or die " failed to run $cmd!\nparams were" . Data::Dumper::Dumper(\@params);
+                              ) or die "failed to run $cmd! \n$stderr\n";
+
+#or die " failed to run $cmd!($retval)\nparams were" . Data::Dumper::Dumper(\@params) . "\nstderr:\n" .$stderr ."\n";
+
     if (wantarray) {
         my @lines = split(/\n/,$stdout);
         return @lines;
@@ -72,7 +74,7 @@ sub _call {
 sub status_message {
     my ($self,$msg) = @_;
     chomp $msg;
-    print STDERR "STAUS: $msg\n";
+    print STDERR "STATUS: $msg\n";
 }
 
 
@@ -84,24 +86,30 @@ sub generate_report_detail
     my %args = @_;
     
     my @transcript_annotation_files = $self->_get_transcript_annotation_files();
-
-    my $output_file = $self->report_detail_output_filename;   
-    if(exists($args{report_detail}))
+    my $reports_dir = $self->build->resolve_reports_directory() . "/Pfam";
+    unless(-d $reports_dir) 
     {
-        $output_file = $args{report_detail};
+        mkdir($reports_dir);
     }
+
+    #my $output_file = $self->report_detail_output_filename;
+    my $output_buffer = "";
+    #if(exists($args{report_detail}))
+    #{
+    #    $output_file = $args{report_detail};
+    #}
     my ($snpdat_fh, $snpdat_file) =  File::Temp::tempfile(CLEANUP => 1, 
-                                              DIR => $self->_reports_dir());
-    print "producing: $output_file\n";
+                                              DIR => $reports_dir );
+    #print "producing: $output_file\n";
 TRANSCRIPTFILE:    for my $transcript_file (@transcript_annotation_files) {
         print "processing $transcript_file\n";
 
         # make a file of only the annotation on coding transcripts
-        my $coding_transcripts;
+        my $coding_transcripts = 0;
         my $all_transcripts;
         my ($filtered_transcript_fh, 
             $filtered_transcript_file) = File::Temp::tempfile(CLEANUP => 1,
-                                                              DIR => $self->_reports_dir());
+                                                              DIR => $reports_dir);
         my $transcript_fh = IO::File->new($transcript_file);
         #die "failed to open transcript file $transcript_file!: $!" unless $transcript_fh;
         unless($transcript_fh)
@@ -120,22 +128,19 @@ TRANSCRIPTFILE:    for my $transcript_file (@transcript_annotation_files) {
 
         $self->_process_coding_transcript_file($filtered_transcript_file, $snpdat_file);        
     }
-    $self->_run_report($snpdat_file, $output_file);
-    return 1;
+    $self->_run_report($snpdat_file, \$output_buffer);
 
-    # TODO: replace this; 
-
-#    my $r = new CGI;
-#    
-#    my $body = IO::File->new(">$output_file");  
-#    die unless $body;
-#    $body->print( $r->start_html(-title=> 'Pfam Annotation for ' . $model->genome_model_id ,));
-#    my $formatted_report;
-#    # $formatted_report = $self->format_report($unformatted_report);
-#    $body->print("$formatted_report");
-#    $body->print( $r->end_html );
-#    $body->close;
-#
+    my $r = new CGI;
+    my $body = IO::String->new();  
+    die $! unless $body;
+    $body->print( $r->start_html(-title=> 'Pfam report for ' . $model->genome_model_id ,));
+    my $pfam_rpt = $self->format_report($output_buffer);
+    $body->print("$pfam_rpt");
+    $body->print( $r->end_html );
+    #$body->close;
+    
+    $body->seek(0, 0);
+    return join('', $body->getlines);
 
 }
 
@@ -154,6 +159,7 @@ sub _process_coding_transcript_file {
     my $model = $self->model;
    
     # get the names of all of the transcripts in the input 
+    print $coding_transcript_file,"\n";
     my @lines = read_file($coding_transcript_file);
     my @transcript_names;
     foreach my $line (@lines)
@@ -168,17 +174,18 @@ sub _process_coding_transcript_file {
     # determine which transcripts are new
     my @new_transcripts = $self->_call('mg-check-ts',$transcript_names_file);    
     $self->status_message("got " . scalar(@new_transcripts) . " new transcripts.");
-
-    # make a fasta file of transcript sequences
-    $self->_call(
-        'mg-get-pep', 
-        '--listfile', $transcript_names_file, 
-        '--fasta', $peptide_fasta_file
-    );
-    $self->status_message("made peptide fasta file " . $peptide_fasta_file);
+    if($#new_transcripts > 0)
+    {
+        # make a fasta file of transcript sequences
+        $self->_call(
+            'mg-get-pep', 
+            '--listfile', $transcript_names_file, 
+            '--fasta', $peptide_fasta_file
+        );
+        $self->status_message("made peptide fasta file " . $peptide_fasta_file);
     
     # run interproscan. now in the _run_iprscan method
-    $self->_run_iprscan( $peptide_fasta_file,$iprscan_gff);
+        $self->_run_iprscan( $peptide_fasta_file,$iprscan_gff);
 #    $self->_call(
 #        "$iprscan_path/iprscan.hacked",
 #        '-cli',
@@ -200,13 +207,19 @@ sub _process_coding_transcript_file {
 #    );
 
     # load it up.
-    unless($self->test_no_load())
+        unless($self->test_no_load())
+        {
+            $self->_call(
+                "mg-load-ipro",
+                "-gff" => $iprscan_gff,
+            );
+        } 
+    }
+    else
     {
-        $self->_call(
-            "mg-load-ipro",
-            "-gff" => $iprscan_gff,
-        );
-    } 
+        $self->status_message("no new transcripts to run, skipping interproscan,  and will run report.");
+    }
+
     # this is in a method by itself now...
     $self->_create_snpsdat_file(\@lines,$snpdat_file);
     # need to create the snps.dat file, based on the 
@@ -232,10 +245,11 @@ separate out the running of interproscan
 sub _run_iprscan
 {
     my ($self,$peptide_fasta_file,$iprgff) = @_;
-
+    my $reports_dir = $self->build->resolve_reports_directory() . "/Pfam";
     my $iprscan_path = '/gscmnt/974/analysis/iprscan16.1/iprscan/bin';
     my ($fh, $iprscan_output) = File::Temp::tempfile(CLEANUP => 1,
                                                      DIR => $self->_reports_dir(),
+                                                     DIR => $reports_dir,
                                                      SUFFIX => '.raw');
     # run interproscan
     $self->_call(
@@ -293,8 +307,12 @@ sub _create_snpsdat_file
 
 sub _run_report 
 {
-    my ($self,$tmpsnp_file,$report_file) = @_;
-
+    my ($self,$tmpsnp_file) = @_;
+    my $reports_dir = $self->build->resolve_reports_directory() . "/Pfam";
+    my ($report_fh, $report_file) = File::Temp::tempfile(DIR => $reports_dir,
+                                                         CLEANUP => 1,
+                                                         SUFFIX => 'pfam.csv',);
+    my $report_buffer;
     # run report generation.
     $self->_call(
         "mg-ipr-families",
@@ -303,7 +321,10 @@ sub _run_report
         "--output" => $report_file,
 #        "--filter" => "\"(HMMPfam)\"", # do we want to create the report on everything or just HMMPfam
     );
-    return 1;
+
+    $report_buffer = read_file($report_file);
+
+    return $report_buffer;
 }
 
 sub format_report
@@ -313,20 +334,21 @@ sub format_report
     my ($self, $content) = @_;
     my $model = $self->model;
     my $result = "\n<!--\n$content\n-->\n";    
-    if ($content=~m/(\s*)(.*)(\s*)/sm)
-    {
-        $content = $2;
-        my $span = "<span style=\"padding-left:10px;\">";
+    $content = "<pre>\n".$content."</pre>\n";
+#    if ($content=~m/(\s*)(.*)(\s*)/sm)
+#    {
+#        $content = $2;
+#        my $span = "<span style=\"padding-left:10px;\">";#
 
-        $content=~s/\n/<\/div>\n<div>/g;
-        $content=~s/(<div>)(\t)(.*)(<\/div>)/$1\n$span$3<\/span>\n$4/g;
-        $content=~s/\t/<\/span>$span/g;
-        $content=~s/(.*<\/div>\s*)(<div>\s*There were .+)/$1<\/p>\n<hr align=\"left\">\n<p>$2/g;
-        $content = "<h1>Gold Concordance for " . $model->genome_model_id . "</h1>\n\n" .
-                   "<p><div>$content</div><p>" .
-                   $self->get_css;
+#        $content=~s/\n/<\/div>\n<div>/g;
+#        $content=~s/(<div>)(\t)(.*)(<\/div>)/$1\n$span$3<\/span>\n$4/g;
+#        $content=~s/\t/<\/span>$span/g;
+#        $content=~s/(.*<\/div>\s*)(<div>\s*There were .+)/$1<\/p>\n<hr align=\"left\">\n<p>$2/g;
+#        $content = "<h1>Gold Concordance for " . $model->genome_model_id . "</h1>\n\n" .
+#                   "<p><div>$content</div><p>" .
+#                   $self->get_css;
         return $content;
-    }
+#    }
 }
 
 sub get_css
@@ -343,8 +365,16 @@ sub get_css
 sub _get_transcript_annotation_files {
     my $self = shift;
     my $model = $self->model;
-    my $last_complete_build = $model->last_complete_build;
-    my @files = $last_complete_build->_transcript_annotation_files;
+
+    my $build = $model->current_running_build;
+    unless (defined $build) {
+        $build = $model->last_complete_build;
+    }
+    unless (defined $build) {
+        die "No builds are available to retrieve transcript annotation files";
+    }
+
+    my @files = $build->_transcript_annotation_files;
     #my @files = $last_complete_build->_transcript_annotation_files(22);
     return @files;
 }

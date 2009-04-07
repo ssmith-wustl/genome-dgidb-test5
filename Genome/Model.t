@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 33;
+use Test::More tests => 31;
 
 # TODO: Use this for the model creation below...
 =cut
@@ -40,9 +40,6 @@ ok(-d $alignment_links_directory, "alignment links dir exists: $alignment_links_
 
 ok(my $base_model_comparison_directory = $model->base_model_comparison_directory, "Got model comparison dir");
 ok(-d $base_model_comparison_directory, "Model comparison dir exists: $base_model_comparison_directory");
-
-ok(my $alignment_directory = $model->alignment_directory, "Got alignment dir");
-ok(-d $alignment_directory, "alignment dir exists: $alignment_directory");
 
 ok(my $model_data_directory = $model->model_data_directory, "Got model_data dir");
 ok(-d $model_data_directory, "model_data dir exists: $model_data_directory");

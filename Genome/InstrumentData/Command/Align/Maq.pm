@@ -1,13 +1,13 @@
-
 package Genome::InstrumentData::Command::Align::Maq;
 
 use strict;
 use warnings;
 
 use Genome;
+use Genome::Model::Tools::Maq::Map::Writer;
 
 class Genome::InstrumentData::Command::Align::Maq {
-    is => ['Genome::Utility::FileSystem', 'Command'],
+    is => ['Genome::Utility::FileSystem','Command'],
     has_input => [
         instrument_data                 => {
                                             is => 'Genome::InstrumentData',
@@ -16,10 +16,6 @@ class Genome::InstrumentData::Command::Align::Maq {
         instrument_data_id              => {
                                             is => 'Number',
                                             doc => 'the local database id of the instrument data (reads) to align'
-                                        },
-        event                           => {
-                                            is => 'Genome::Model::Event', id_by => 'event_id', 
-                                            doc => 'handles logging, and will eventually not be required'
                                         },
     ],
     has_optional_param => [
@@ -31,10 +27,6 @@ class Genome::InstrumentData::Command::Align::Maq {
                                             doc => 'the reference to use by EXACT name, defaults to NCBI-human-build36',
                                             default_value => 'NCBI-human-build36'
                                         },
-        adaptor_flag                  => {
-                                          is => 'Text',
-                                          doc => 'a flag for the adaptor to use in alignment(dna or rna)',
-                                        },
         version                         => {
                                             is => 'Text', default_value => '0.7.1',
                                             doc => 'the version of maq to use, i.e. 0.6.8, 0.7.1, etc.'
@@ -43,14 +35,15 @@ class Genome::InstrumentData::Command::Align::Maq {
                                             is => 'Text', default_value => '', 
                                             doc => 'any additional params for the aligner in a single string'
                                         },
-        check_only                      => {
-                                            is => 'Boolean',
-                                            doc => 'do not run alignments, just check to see if they are present/running'
-                                        },
     ],
     has_constant => [
         aligner_name                    => { value => 'maq' },
     ],
+    has_optional => [
+                     _alignment         => {
+                                            is => 'Genome::InstrumentData::Alignment',
+                                        },
+                 ],
     doc => 'align instrument data using maq (see http://maq.sourceforge.net)',
 };
 
@@ -93,105 +86,87 @@ sub create {
         }
         $self->reference_build($ref_build);
     }
+    unless ($self->_alignment) {
+        my $alignment = Genome::InstrumentData::Alignment->create(
+                                                                  instrument_data => $self->instrument_data,
+                                                                  reference_build => $self->reference_build,
+                                                                  aligner_name => $self->aligner_name,
+                                                                  aligner_version => $self->version,
+                                                                  aligner_params => $self->params,
+                                                              );
+        $self->_alignment($alignment);
+    }
     return $self;
 }
 
 sub execute {
     my $self = shift;
 
-    # inputs and params for the alignment are on the object
-    my $instrument_data = $self->instrument_data;
-    my $reference_build = $self->reference_build;
-    my $aligner_version = $self->version;
-    my $aligner_params  = $self->params;
-
-    # for now filesystem activity and logging go to an event which is passed-in
-    my $event = $self->event;
-    my $fsmgr = $event;
-    my $logger = $event;
-    my $generator_id = $event->genome_model_event_id;
+    my $alignment = $self->_alignment;
+    my $instrument_data = $alignment->instrument_data;
+    my $reference_build = $alignment->reference_build;
 
     # we resolve these first, since we might just print the paths we work with then exit
-    my @input_pathnames = $instrument_data->bfq_filenames;
-    $logger->status_message("INPUT PATHS: @input_pathnames\n");
+    my @input_pathnames = $instrument_data->fastq_filenames;
+    $self->status_message("INPUT PATHS: @input_pathnames\n");
 
     # prepare the refseq
     my $ref_seq_path =  $reference_build->data_directory;
     my $ref_seq_file =  $reference_build->full_consensus_path('bfa');
     unless (-e $ref_seq_file) {
-        $logger->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
+        $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
         return;
     }
-    $logger->status_message("REFSEQ PATH: $ref_seq_file\n");
+    $self->status_message("REFSEQ PATH: $ref_seq_file\n");
 
-    # the directory for results is constant given our parameters
-    my $results_dir = $self->results_dir;
-    $logger->status_message("OUTPUT PATH: $results_dir\n");
-
+    my $alignment_directory = $alignment->get_or_create_alignment_directory;
     # check the status of this data set
     # be sure the check is atomic...
-    my $resource_lock_name = $results_dir . '.generate';
+    my $resource_lock_name = $alignment_directory . '.generate';
     my $lock = $self->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
     unless ($lock) {
-        $logger->status_message("This data set is still being processed by its creator.  Waiting for lock...");
+        $self->status_message("This data set is still being processed by its creator.  Waiting for lock...");
         $lock = $self->lock_resource(resource_lock => $resource_lock_name);
         unless ($lock) {
-            $logger->error_message("Failed to get lock!");
+            $self->error_message("Failed to get lock!");
             return;
         }
     }
-    if ($self->alignment_data_available_and_correct($results_dir)) {
-        $logger->status_message("Existing alignment data is available and deemed correct.");
+    if ($alignment->verify_alignment_data) {
+        $self->status_message("Existing alignment data is available and deemed correct.");
         $self->unlock_resource(resource_lock => $lock);
         return 1;
+    } elsif ( -d $alignment_directory) {
+        #We can remove the current alignment directory because we have the lock
+        $self->status_message('Alignment directory exists but failed to verify data. Removing old alignment directory '. $alignment_directory);
+        $alignment->remove_alignment_directory;
+        $alignment_directory = $alignment->get_or_create_alignment_directory;
+    } else {
+        $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
     }
-    $logger->status_message("No previous alignment data at $results_dir.");
-    if ($self->check_only) {
-        # check for the data only, do not process
-        $self->unlock_resource(resource_lock => $resource_lock_name);
-        return 1;
-    }
-    $logger->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
 
-    my $aligner_output_file;
+    $self->status_message("OUTPUT PATH: $alignment_directory\n");
     # do this in an eval block so we can unlock the resource cleanly when we finish
-    my $retval = eval {
+    eval {
 
         # the base directory for results
-        $fsmgr->create_directory($results_dir);
-
-        # this was the old lock file
-        $fsmgr->create_file("Processing Marker", $results_dir . "/processing");
-
-        # these are standard constant values set by the structure of the output directory
-        my $lane = $instrument_data->subset_name;
-
-        my $aligner_output_file_name = "/alignments_lane_${lane}.map.$generator_id";
-        $aligner_output_file_name =~ s/\.map\./\.map.aligner_output\./g;
-        $aligner_output_file = $results_dir . $aligner_output_file_name;
-
-        my $unaligned_reads_file_name = "/s_${lane}_sequence.unaligned.$generator_id";
-        my $unaligned_reads_file = $results_dir . $unaligned_reads_file_name;
-
-        # resolve adaptor file
-        # TODO: get fresh from LIMS
-        unless ($self->adaptor_flag) {
-            my @dna = GSC::DNA->get(dna_name => $instrument_data->sample_name);
-            if (@dna == 1) {
-                if ($dna[0]->dna_type eq 'genomic dna') {
-                    $self->adaptor_flag('dna');
-                } elsif ($dna[0]->dna_type eq 'rna') {
-                    $self->adaptor_flag('rna');
-                }
-            }
+        unless ($self->create_directory($alignment_directory)) {
+            die('Failed to create directory '. $alignment_directory);
         }
-        unless (defined($self->adaptor_flag)) {
-            $logger->error_message("Adaptor not defined.");
-            return;
+
+        # resolve sample type
+        my $sample_type = $instrument_data->sample_type;
+        unless (defined($sample_type)) {
+            $self->error_message('Sample type not defined for instrument data');
+            die($self->error_message);;
         }
 
         ###input/output files
-        my $alignment_file = $fsmgr->create_temp_file_path("all.map");  
+        my $alignment_file = $self->create_temp_file_path('all.map');
+        unless ($alignment_file) {
+            $self->error_message('Failed to create temp alignment file for all sequences');
+            die($self->error_message);
+        }
 
         ###upper bound insert param
         my $upper_bound_on_insert_size;
@@ -200,7 +175,7 @@ sub execute {
             my $median_insert = $instrument_data->median_insert_size;
             $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;
             unless($upper_bound_on_insert_size > 0) {
-                $logger->status_message("Unable to calculate a valid insert size to run maq with. Using 600 (hax)");
+                $self->status_message("Unable to calculate a valid insert size to run maq with. Using 600 (hax)");
                 $upper_bound_on_insert_size= 600;
             }
             # TODO: extract additional details from the read set
@@ -212,372 +187,171 @@ sub execute {
             ref_seq_file            => $ref_seq_file,
             files_to_align_path     => join("|", @input_pathnames),
             execute_sol2sanger      => 'y',
-            use_version             => $aligner_version,
-            align_options           => $aligner_params,
-            dna_type                => $self->adaptor_flag,
+            use_version             => $alignment->aligner_version,
+            align_options           => $alignment->aligner_params,
+            dna_type                => $sample_type,
             alignment_file          => $alignment_file,
-            aligner_output_file     => $aligner_output_file,
-            unaligned_reads_file    => $unaligned_reads_file,
+            aligner_output_file     => $alignment->aligner_output_file_path,
+            unaligned_reads_file    => $alignment->unaligned_reads_list_path,
             upper_bound             => $upper_bound_on_insert_size,
         );
-        $logger->status_message("Alignment params:\n" . Data::Dumper::Dumper(\%params));
-        
-        $logger->status_message("Executing aligner...");
+        $self->status_message("Alignment params:\n" . Data::Dumper::Dumper(\%params));
+
+        $self->status_message("Executing aligner...");
         my $alignments = Genome::Model::Tools::Maq::AlignReads->execute(%params);
-        $logger->status_message("Aligner executed.");
-        
+        $self->status_message("Aligner executed.");
+
         ##############################################
-    
+
         # in some cases maq will "work" but not make an unaligned reads file
         # this happens when all reads are filtered out
         # make an empty file to represent our zero-item list of unaligned reads
-        unless (-e $unaligned_reads_file) {
-            if (my $fh = IO::File->new(">".$unaligned_reads_file)) {
-                $logger->status_message("Made empty unaligned reads file since that file is was not generated by maq.");
+        unless (-e $alignment->unaligned_reads_list_path) {
+            if (my $fh = IO::File->new(">".$alignment->unaligned_reads_list_path)) {
+                $self->status_message("Made empty unaligned reads file since that file is was not generated by maq.");
             } else {
-                $logger->error_message("Failed to make empty unaligned reads file!: $!");
+                $self->error_message("Failed to make empty unaligned reads file!: $!");
             }
         }
-
-        my $line=`/gscmnt/sata114/info/medseq/pkg/maq/branches/lh3/maq-xp/maq-xp pileup -t $aligner_output_file 2>&1`;
+        my $cmd = '/gscmnt/sata114/info/medseq/pkg/maq/branches/lh3/maq-xp/maq-xp pileup -t '. $alignment->aligner_output_file_path .' 2>&1';
+        my $line = `$cmd`;
         my ($evenness)=($line=~/(\S+)\%$/);
-        IO::File->new(">$results_dir/evenness")->print($evenness);
-    
+        IO::File->new(">$alignment_directory/evenness")->print($evenness);
+
         $DB::single = $DB::stopper;
-        
+
         my @subsequences = grep {$_ ne "all_sequences"} $reference_build->subreference_names(reference_extension=>'bfa');
-        
+
         # break up the alignments by the sequence they match, if necessary
         # my $map_split = Genome::Model::Tools::Maq::MapSplit->execute(
         #   map_file => $alignment_file,
-        #   submap_directory => $self->results_dir,
+        #   submap_directory => $alignment_directory,
         #   reference_names => \@subsequences,
         # );
-        my $mapsplit_cmd = Genome::Model::Tools::Maq->path_for_mapsplit_version($aligner_version);
-        my $ok_failure_flag=0;
+        my $mapsplit_cmd = Genome::Model::Tools::Maq->path_for_mapsplit_version($alignment->aligner_version);
         if (@subsequences) {
-            my $cmd = "$mapsplit_cmd " . $self->results_dir . "/ $alignment_file " . join(',',@subsequences);
-            my $rv= system($cmd);
+            my $cmd = "$mapsplit_cmd " . $alignment_directory . "/ $alignment_file " . join(',',@subsequences);
+            my $rv = system($cmd);
             if($rv) {
                 #arbitrary convention set up with homemade mapsplit and mapsplit_long..return 2 if file is empty.
                 if($rv/256 == 2) {
-                    $logger->error_message("no reads in map.");
-                    $ok_failure_flag=1;
-                }
-                else {
-                    $logger->error_message("Failed to run map split on alignment file $alignment_file");
-                    return;
+                    my $first_subsequence = $subsequences[0];
+                    my ($empty_map_file) = $alignment->alignment_file_paths_for_subsequence_name($first_subsequence);
+                    unless ($empty_map_file) {
+                        $self->error_message('Failed to find empty map file after return value 2 from mapsplit comand '. $cmd);
+                        die $self->error_message;
+                    }
+                    unless (-s $empty_map_file) {
+                        $self->error_message('Empty map file '. $empty_map_file .' does not have size.');
+                        die $self->error_message;
+                    }
+                    for my $subsequence (@subsequences) {
+                        if ($subsequence eq $first_subsequence) { next; }
+                        my $subsequence_map_file = $alignment_directory .'/'. $subsequence .'.map';
+                        unless (File::Copy::copy($empty_map_file,$subsequence_map_file)) {
+                            $self->error_message('Failed to copy empty map file '. $empty_map_file .' to '. $subsequence_map_file .":  $!");
+                            die $self->error_message;
+                        }
+                    }
+                } else {
+                    $self->error_message("Failed to run map split on alignment file $alignment_file");
+                    die $self->error_message;
                 }
             }
-        }
-        else {
-            @subsequences='all_sequences';
-            my $copy_cmd = "cp $alignment_file " . $self->results_dir . "/all_sequences.map";
-            my $copy_rv = system($copy_cmd);
-            if ($copy_rv) {
-                $logger->error_message('copy of all_sequences.map failed');
-                die;
-            }
-        }
-
-        # these will match the wildcard which pulls old and new alignment files
-        # hacky: this still works even if no reads were in the map file, because one file will be touched before
-        # mapsplit quits.
-        my @split_files = glob($self->results_dir . "/*.map");
-        for my $output_file (@split_files) {
-            my $new_file_path = $output_file .'.'. $generator_id;
-            unless (rename($output_file,$new_file_path)) {
-                $logger->error_message("Failed to rename file '$output_file' => '$new_file_path'");
-                return;
+        } else {
+            @subsequences = 'all_sequences';
+            my $all_sequences_map_file = $alignment_directory .'/all_sequences.map';
+            unless (File::Copy::copy($alignment_file,$all_sequences_map_file)) {
+                $self->error_message('Failed to copy map file from '. $alignment_file .' to '. $all_sequences_map_file);
+                die $self->error_message;
             }
         }
 
         my $errors;
-        unless($ok_failure_flag) {
-            for my $subsequence (@subsequences) {
-                my @found = $self->results_files_for_refseq($subsequence);
-                unless (@found) {
-                    $logger->error_message("Failed to find map file for $subsequence!");
-                    $errors++;
-                }
+        for my $subsequence (@subsequences) {
+            my @found = $alignment->alignment_file_paths_for_subsequence_name($subsequence);
+            unless (@found) {
+                $self->error_message("Failed to find map file for subsequence name $subsequence!");
+                $errors++;
             }
-            if ($errors) {
-                my @files = glob($self->results_dir . '/*');
-                $logger->error_message("Files in dir are:\n\t" . join("\n\t",@files) . "\n");
-                return;
-            }
+        }
+        if ($errors) {
+            my @files = glob($alignment_directory . '/*');
+            $self->error_message("Files in dir are:\n\t" . join("\n\t",@files) . "\n");
+            die('Failed to find map files after alignment');
         }
         return 1;
     };
 
-    if ($@ or !$retval) {
+    if ($@) {
         my $exception = $@;
-        $instrument_data->move_alignment_directory_for_aligner_and_refseq(
-                                                                          $self->aligner_label,
-                                                                          $self->reference_name,
-                                                                          'bad',
-                                                                      );
-        eval { $self->unlock_resource(resource_lock => $results_dir . '.generating'); };
-        if ($exception) {
-            die $exception;
-        }
-        else {
-            return;
-        }
+        $alignment->remove_alignment_directory;
+        eval { $self->unlock_resource(resource_lock => $resource_lock_name); };
+        die ($exception);
     }
 
-    unless ($self->_check_maq_successful_completion($aligner_output_file)) {
-        $logger->error_message('Aligner output file incorrect after maq finished seemingly successfully');
-        $self->unlock_resource(resource_lock => $resource_lock_name);
+    unless ($self->process_low_quality_alignments) {
+        $self->error_message('Failed to process_low_quality_alignments');
+        $self->unlock_resource(resource_lock => $lock);
         return;
     }
-    $self->unlock_resource(resource_lock => $resource_lock_name);
 
-    my $alignment_allocation = $self->get_alignment_allocation;
+    unless ($alignment->verify_alignment_data) {
+        $self->error_message('Alignment data failed to verify after alignment');
+        $self->unlock_resource(resource_lock => $lock);
+        return;
+    }
+    $self->unlock_resource(resource_lock => $lock);
+
+    my $alignment_allocation = $alignment->get_allocation;
     if ($alignment_allocation) {
         unless ($alignment_allocation->reallocate) {
-            $logger->error_message('Failed to reallocate disk space with for disk allocation: '. $alignment_allocation->id);
+            $self->error_message('Failed to reallocate disk space for disk allocation: '. $alignment_allocation->id);
             return;
         }
     }
-    return $retval;
+    return 1;
 }
 
-sub aligner_label {
+
+sub process_low_quality_alignments {
     my $self = shift;
 
-    my $aligner_name    = $self->aligner_name;
-    my $aligner_version = $self->version;
-    $aligner_version =~ s/\./_/g;
+    my $alignment = $self->_alignment;
 
-    my $aligner_label   = $aligner_name . $aligner_version;
+    my $unaligned_reads_file = $alignment->unaligned_reads_list_path;
+    my @unaligned_reads_files = $alignment->unaligned_reads_list_paths;
 
-    return $aligner_label;
-}
-
-sub get_alignment_allocation {
-    my $self = shift;
-
-    my $allocation = $self->instrument_data->alignment_allocation_for_aligner_and_refseq(
-                                                                                         $self->aligner_label,
-                                                                                         $self->reference_name
-                                                                                     );
-    return $allocation;
-}
-
-sub results_dir {
-    my $self = shift;
-
-    my $dir = $self->instrument_data->alignment_directory_for_aligner_and_refseq(
-                                                                                 $self->aligner_label,
-                                                                                 $self->reference_name
-                                                                             );
-    return $dir;
-}
-
-sub alignment_data_available_and_correct {
-    my $self = shift;
-    my $results_dir = $self->results_dir;
-
-    my $instrument_data = $self->instrument_data;
-    my $reference_build = $self->reference_build;
-    my $logger          = $self->event;
-
-    my @subsequences = grep { $_ ne 'all_sequences' } $reference_build->subreference_names;
-
-    if (-d $results_dir) {
-        $logger->status_message("found existing run directory $results_dir");
-    } else {
-        return;
-    }
-
-    my $errors = 0;
-    my @cross_refseq_alignment_files;
-    $logger->status_message("verifying reference sequences...");
-    for my $ref_seq_id (@subsequences) {
-        my @alignment_files = $self->results_files_for_refseq($ref_seq_id);
-        my @distinct = grep { /unique|distinct/ } @alignment_files;
-        my @duplicate = grep { /duplicate|redu/ } @alignment_files;
-        my @all = grep { /all/ } @alignment_files;
-        my @other = grep { /other/ } @alignment_files;
-        my @map = grep { /map/ } @alignment_files;
-
-        push @cross_refseq_alignment_files, @alignment_files;
-
-        # this is causing the PPAV orang model (flow cell 14545)to fail....we don't expect it to have all, distinct, or duplicate
-        # it is also unclear how the 14545 flow cell directory differs from the 209N1 of the 14487 dirs
-        # we could also use an elseif that looks for "other"...but there is still a hole where there are just submaps for specific
-        # chromosomes
-
-        if (@all) {
-            $logger->status_message("  ref seq $ref_seq_id has complete map files");
-        } elsif (@distinct and @duplicate) { 
-            $logger->status_message("  ref seq $ref_seq_id has distinct and duplicate map files");
-        } elsif (@other){
-            $logger->status_message("  ref seq $ref_seq_id has an other map file");
-        } elsif (@map){
-            $logger->status_message("  ref seq $ref_seq_id has some map file");
-            foreach my $map (@map){
-                unless (-s $map) {
-                    $errors++;
-                    $logger->error_message("ref seq $ref_seq_id has zero size map file '$map'");
-                }
-            }
-        } else {
-            $errors++;
-            $logger->status_message("Unable to shortcut this alignment(we haven't done it before):ref seq $ref_seq_id has bad read set directory:". join("\n\t",@alignment_files));
-        }
-    }
-
-    my $lane = $self->instrument_data->subset_name;
-
-    # THIS SEEMS BAD, it never actually tested for the existence of an unaligned file........
-    #my $unaligned_reads_file_pattern = "/alignments_lane_${lane}.map.*";
-    #$unaligned_reads_file_pattern =~ s/\.map\./\.map.aligner_output\./g;
-    #$unaligned_reads_file_pattern =~ s/\.\d+$/\*/;
-    my $unaligned_reads_file_pattern =    "/s_${lane}_sequence\.unaligned\.*";
-
-    my @possible_unaligned_shortcuts= glob($unaligned_reads_file_pattern);
-
-    # the addition of the above glob prevents entrance into the if part of this loop in any situation that I can imagine
-    for my $possible_shortcut (@possible_unaligned_shortcuts) {
-        my $found_unaligned_reads_file = $self->check_for_path_existence($possible_shortcut);
-        if (!$found_unaligned_reads_file) {
-            $logger->error_message("missing unaligned reads file base '$possible_shortcut'");
-            $errors++;
-        } elsif (!-s $possible_shortcut) {
-            $logger->error_message("unaligned reads file '$possible_shortcut' found but zero size");
-            $errors++;
-        }
-    }
-
-    my $aligner_output_file_pattern = "/alignments_lane_${lane}.map.*";
-    $aligner_output_file_pattern =~ s/\.map\./\.map.aligner_output\./g;
-    my @possible_aligner_output_shortcuts = glob ($results_dir . $aligner_output_file_pattern);
-
-    for my $possible_shortcut (@possible_aligner_output_shortcuts) {
-        my $found_aligner_output_file = $self->check_for_path_existence($possible_shortcut);
-        if (!$found_aligner_output_file) {
-            $logger->status_message("this is not a fatal error, do not panic: missing aligner output file base '$possible_shortcut'");
-            $errors++;
-        } elsif (!$self->_check_maq_successful_completion($possible_shortcut)) {
-            $logger->status_message("this isn't fatal, don't panic.  aligner output file '$possible_shortcut' found, but incomplete");
-            $errors++;
-        }
-    }
-    if ($errors) {
-        if (@cross_refseq_alignment_files) {
-            my $msg = 'REFUSING TO CONTINUE with partial map files in place in old directory:' ."\n";
-            $msg .= join("\n",@cross_refseq_alignment_files) ."\n";
-            die($msg);
-        }
-        else {
-            $self->warning_message("RE-PROCESSING: Moving old directory out of the way");
-            $instrument_data->move_alignment_directory_for_aligner_and_refseq(
-                                                                              $self->aligner_label,
-                                                                              $self->reference_name,
-                                                                              'old',
-                                                                          );
-            return;
-        }
-    } else {
-        $logger->status_message("SHORTCUT SUCCESS: alignment data is present and correct");
+    if (-s $unaligned_reads_file . '.fastq' && -s $unaligned_reads_file) {
+        $self->status_message("SHORTCUTTING: ALREADY FOUND MY INPUT AND OUTPUT TO BE NONZERO");
         return 1;
     }
-}
-
-sub results_files_for_refseq {
-    # this returns the above, or will return the old-style split maps
-    my $self = shift;
-    my $ref_seq_id = shift;
-
-    my $results_dir = $self->results_dir;
-
-    # Look for files in the new format: $refseqid.map.$eventid
-    my @files = grep { $_ and -e $_ } (
-        glob($results_dir . "/$ref_seq_id.map.*") #bkward compat
-    );
-    return @files if (@files);
-
-    # Now try the old format: $refseqid_{unique,duplicate}.map.$eventid
-    my $glob_pattern = sprintf('%s/%s_*.map.*', $results_dir, $ref_seq_id);
-    @files = grep { $_ and -e $_ } (
-        glob($glob_pattern)
-    );
-    return @files;
-}
-
-sub _check_maq_successful_completion {
-    my $self = shift;
-    my $aligner_output_file = shift;
-
-    unless ($aligner_output_file && -s $aligner_output_file) {
-        $self->error_message("No aligner output file '$aligner_output_file' found or zero size.");
-        return;
+    elsif (-s $unaligned_reads_file) {
+        my $command = Genome::Model::Tools::Maq::UnalignedDataToFastq->execute(
+            in => $unaligned_reads_file, 
+            fastq => $unaligned_reads_file . '.fastq',
+        );
+        unless ($command) {die "Failed Genome::Model::Tools::Maq::UnalignedDataToFastq for $unaligned_reads_file";}
     }
-    my $aligner_output_fh = IO::File->new($aligner_output_file);
-    unless ($aligner_output_fh) {
-        $self->error_message("Can't open aligner output file $aligner_output_file: $!");
-        return;
-    }
-    my $instrument_data = $self->instrument_data;
-    if ($instrument_data->is_paired_end) {
-        my $stats = $self->get_alignment_statistics($aligner_output_file);
-        unless ($stats) {
-            $self->error_message($instrument_data->error_message);
-            return;
-        }
-        if ($$stats{'isPE'} != 1) {
-            $self->error_message('Paired-end read set was not aligned as paired end data.');
-            return;
-        }
-    }
-    while(<$aligner_output_fh>) {
-        if (m/match_data2mapping/) {
-            $aligner_output_fh->close();
-            return 1;
-        }
-        if (m/\[match_index_sorted\] no reasonable reads are available. Exit!/) {
-            $aligner_output_fh->close();
-            return 1;
+    else {
+        foreach my $unaligned_reads_files_entry (@unaligned_reads_files){
+            my $command = Genome::Model::Tools::Maq::UnalignedDataToFastq->execute(
+                in => $unaligned_reads_files_entry, 
+                fastq => $unaligned_reads_files_entry . '.fastq'
+            );
+            unless ($command) {die "Failed Genome::Model::Tools::Maq::UnalignedDataToFastq for $unaligned_reads_files_entry";}
         }
     }
 
-    $self->status_message("Alignment shortcut failure(we can't cheat, but this doesn't mean its broken):  Didn't find a line matching /match_data2mapping/ in the maq output file '$aligner_output_file', and did not find the 'no reasonable reads are available' line either.");
-    return;
+    unless (-s $unaligned_reads_file || @unaligned_reads_files) {
+        $self->error_message("Could not find any unaligned reads files.");
+        return;
+    }
+
+    return 1;
 }
 
-sub get_alignment_statistics {
-    my $self = shift;
-    my $aligner_output_file = shift;
 
-    unless ($aligner_output_file && -s $aligner_output_file) {
-        $self->error_message("No aligner output file '$aligner_output_file' found or zero size.");
-        return;
-    }
 
-    my $fh = IO::File->new($aligner_output_file);
-    unless($fh) {
-        $self->error_message("unable to open maq's alignment output file:  " . $aligner_output_file);
-        return;
-    }
-    my @lines = $fh->getlines;
-    $fh->close;
-
-    my ($line_of_interest)=grep { /total, isPE, mapped, paired/ } @lines;
-    unless ($line_of_interest) {
-        $self->error_message('Aligner summary statistics line not found');
-        return;
-    }
-    my ($comma_separated_metrics) = ($line_of_interest =~ m/= \((.*)\)/);
-    my @values = split(/,\s*/,$comma_separated_metrics);
-
-    my %hashy_hash_hash;
-    $hashy_hash_hash{total}=$values[0];
-    $hashy_hash_hash{isPE}=$values[1];
-    $hashy_hash_hash{mapped}=$values[2];
-    $hashy_hash_hash{paired}=$values[3];
-    return \%hashy_hash_hash;
-}
 
 1;
