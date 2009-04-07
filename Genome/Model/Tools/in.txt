@@ -1,5 +1,0 @@
-blastn	query.fna	SSU	/gscmnt/temp100/research/jxu/HGMI/dbs/
-blastn	query.fna	16S	/gscmnt/temp100/research/jxu/HGMI/dbs/
-blastp	orfs.faa	nr	/gscmnt/temp100/research/jxu/dbs/nr/	
-megablast       query.fna       nt      /gscmnt/temp100/research/jxu/HGMI/dbs/nt
-megablast       query.fna       SSU	/gscmnt/temp100/research/jxu/HGMI/dbs/
