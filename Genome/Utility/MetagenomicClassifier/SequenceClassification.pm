@@ -108,17 +108,35 @@ sub to_string {
     return $string;
 }
 
+#< Ranks >#
 sub get_ranks {
+    my $self = shift;
+
+    my %ranks = $self->_get_ranks_and_positions
+        or return;
+ 
+    return map { $ranks{$_} } sort keys %ranks;
+}
+
+sub _get_ranks_and_positions {
     my $self = shift;
 
     $self->_set_ranks_and_taxa
         or return;
- 
-    my $ranks = $self->{_ranks};
-    
-    return map { $ranks->{$_} } sort keys %$ranks;
+
+    return %{$self->{_ranks}};
 }
 
+sub _get_taxa_position_for_rank {
+    my ($self, $rank) = @_;
+
+    my %ranks = $self->_get_ranks_and_positions
+        or return;
+ 
+    return $ranks{$rank};
+}
+
+#< Taxa >#
 sub get_taxa {
     my $self = shift;
 
@@ -136,8 +154,11 @@ sub _get_taxon_for_rank {
     my ($self, $rank) = @_;
     
     $rank = lc $rank;
-    my @taxa = $self->get_taxa;
-    return $taxa[ $self->{_ranks}->{$rank} ];
+    my @taxa = $self->get_taxa
+        or return;
+    my $pos = $self->_get_taxa_position_for_rank($rank);
+    
+    return $taxa[$pos];
 }
 
 sub _get_taxon_name_for_rank {
