@@ -37,6 +37,26 @@ class Genome::Model::Build {
                         },
         software_revision => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
     ],
+    has_many_optional => [
+    
+    from_build_links                  => { is => 'Genome::Model::Build::Link',
+                                               reverse_id_by => 'to_build',
+                                               doc => 'bridge table entries where this is the "to" build(used to retrieve builds this build is "from")'
+                                           },
+    from_builds                       => { is => 'Genome::Model::Build',
+                                               via => 'from_build_links', to => 'from_build',
+                                               doc => 'Genome builds that contribute "to" this build',
+                                           },
+    to_build_links                    => { is => 'Genome::Model::Build::Link',
+                                               reverse_id_by => 'from_build',
+                                               doc => 'bridge entries where this is the "from" build(used to retrieve builds builds this build is "to")'
+                                           },
+    to_builds                       => { is => 'Genome::Model::Build',
+                                               via => 'to_build_links', to => 'to_build',
+                                               doc => 'Genome builds this build contributes "to"',
+                                           },
+    ], 
+
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
@@ -277,8 +297,6 @@ sub get_all_objects {
     return @events;
 }
 
-
-
 sub yaml_string {
     my $self = shift;
     my $string = YAML::Dump($self);
@@ -287,6 +305,80 @@ sub yaml_string {
     }
     return $string;
 }
+
+sub add_to_build{
+    my $self = shift;
+    my (%params) = @_;
+    my $build = delete $params{to_build};
+    my $role = delete $params{role};
+    $role||='member';
+   
+    $self->error_message("no to_build provided!") and die unless $build;
+    my $from_id = $self->id;
+    my $to_id = $build->id;
+    unless( $to_id and $from_id){
+        $self->error_message ( "no value for this build(from_build) id: <$from_id> or to_build id: <$to_id>");
+        die;
+    }
+    my $reverse_bridge = Genome::Model::Build::Link->get(from_build_id => $to_id, to_build_id => $from_id);
+    if ($reverse_bridge){
+        my $string =  "A build link already exists for these two builds, and in the opposite direction than you specified:\n";
+        $string .= "to_build: ".$reverse_bridge->to_build." (this build)\n";
+        $string .= "from_build: ".$reverse_bridge->from_build." (the build you are trying to set as a 'to' build for this one)\n";
+        $string .= "role: ".$reverse_bridge->role;
+        $self->error_message($string);
+        die;
+    }
+    my $bridge = Genome::Model::Build::Link->get(from_build_id => $from_id, to_build_id => $to_id);
+    if ($bridge){
+        my $string =  "A build link already exists for these two builds:\n";
+        $string .= "to_build: ".$bridge->to_build." (the build you are trying to set as a 'to' build for this one)\n";
+        $string .= "from_build: ".$bridge->from_build." (this build)\n";
+        $string .= "role: ".$bridge->role;
+        $self->error_message($string);
+        die;
+    }
+    $bridge = Genome::Model::Build::Link->create(from_build_id => $from_id, to_build_id => $to_id, role => $role);
+    return $bridge;
+}
+
+sub add_from_build{
+    my $self = shift;
+    my (%params) = @_;
+    my $build = delete $params{from_build};
+    my $role = delete $params{role};
+    $role||='member';
+   
+    $self->error_message("no from_build provided!") and die unless $build;
+    my $to_id = $self->id;
+    my $from_id = $build->id;
+    unless( $to_id and $from_id){
+        $self->error_message ( "no value for this build(to_build) id: <$to_id> or from_build id: <$from_id>");
+        die;
+    }
+    my $reverse_bridge = Genome::Model::Build::Link->get(from_build_id => $to_id, to_build_id => $from_id);
+    if ($reverse_bridge){
+        my $string =  "A build link already exists for these two builds, and in the opposite direction than you specified:\n";
+        $string .= "to_build: ".$reverse_bridge->to_build." (the build you are trying to set as a 'from' build for this one)\n";
+        $string .= "from_build: ".$reverse_bridge->from_build." (this build)\n";
+        $string .= "role: ".$reverse_bridge->role;
+        $self->error_message($string);
+        die;
+    }
+    my $bridge = Genome::Model::Build::Link->get(from_build_id => $from_id, to_build_id => $to_id);
+    if ($bridge){
+        my $string =  "A build link already exists for these two builds:\n";
+        $string .= "to_build: ".$bridge->to_build." (this build)\n";
+        $string .= "from_build: ".$bridge->from_build." (the build you are trying to set as a 'from' build for this one)\n";
+        $string .= "role: ".$bridge->role;
+        $self->error_message($string);
+        die;
+    }
+    $bridge = Genome::Model::Build::Link->create(from_build_id => $from_id, to_build_id => $to_id, role => $role);
+    return $bridge;
+}
+
+
 
 sub delete {
     my $self = shift;
@@ -298,7 +390,7 @@ sub delete {
     #idas = instrument data assignments
     my @idas = $self->instrument_data_assignments;
     for my $ida (@idas) {
-	$ida->first_build_id(undef);
+        $ida->first_build_id(undef);
     }
     if ($self->data_directory && -e $self->data_directory) {
         unless (rmtree $self->data_directory) {

@@ -105,6 +105,23 @@ class Genome::Model {
             ) },
         instrument_data_assignment_events => { is => 'Genome::Model::Command::InstrumentData::Assign', reverse_id_by => 'model', 
                          doc => 'Each case of an instrument data being assigned to the model' },
+
+        from_model_links                  => { is => 'Genome::Model::Link',
+                                               reverse_id_by => 'to_model',
+                                               doc => 'bridge table entries where this is the "to" model(used to retrieve models this model is "from")'
+                                           },
+        from_models                       => { is => 'Genome::Model',
+                                               via => 'from_model_links', to => 'from_model',
+                                               doc => 'Genome models that contribute "to" this model',
+                                           },
+        to_model_links                    => { is => 'Genome::Model::Link',
+                                               reverse_id_by => 'from_model',
+                                               doc => 'bridge entries where this is the "from" model(used to retrieve models models this model is "to")'
+                                           },
+        to_models                       => { is => 'Genome::Model',
+                                               via => 'to_model_links', to => 'to_model',
+                                               doc => 'Genome models this model contributes "to"',
+                                           },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -696,6 +713,79 @@ sub yaml_string {
         $string .= $object->yaml_string;
     }
     return $string;
+}
+
+sub add_to_model{
+    my $self = shift;
+    my (%params) = @_;
+    my $model = delete $params{to_model};
+    my $role = delete $params{role};
+    $role||='member';
+   
+    $self->error_message("no to_model provided!") and die unless $model;
+    my $from_id = $self->id;
+    my $to_id = $model->id;
+    unless( $to_id and $from_id){
+        $self->error_message ( "no value for this model(from_model) id: <$from_id> or to_model id: <$to_id>");
+        die;
+    }
+    my $reverse_bridge = Genome::Model::CompositeMember->get(from_model_id => $to_id, to_model_id => $from_id);
+    if ($reverse_bridge){
+        my $string =  "A model link already exists for these two models, and in the opposite direction than you specified:\n";
+        $string .= "to_model: ".$reverse_bridge->to_model." (this model)\n";
+        $string .= "from_model: ".$reverse_bridge->from_model." (the model you are trying to set as a 'to' model for this one)\n";
+        $string .= "role: ".$reverse_bridge->role;
+        $self->error_message($string);
+        die;
+    }
+    my $bridge = Genome::Model::CompositeMember->get(from_model_id => $from_id, to_model_id => $to_id);
+    if ($bridge){
+        my $string =  "A model link already exists for these two models:\n";
+        $string .= "to_model: ".$bridge->to_model." (the model you are trying to set as a 'to' model for this one)\n";
+        $string .= "from_model: ".$bridge->from_model." (this model)\n";
+        $string .= "role: ".$bridge->role;
+        $self->error_message($string);
+        die;
+    }
+    $bridge = Genome::Model::CompositeMember->create(from_model_id => $from_id, to_model_id => $to_id, role => $role);
+    return $bridge;
+}
+
+sub add_from_model{
+    my $self = shift;
+    $DB::single = 1;
+    my (%params) = @_;
+    my $model = delete $params{from_model};
+    my $role = delete $params{role};
+    $role||='member';
+   
+    $self->error_message("no from_model provided!") and die unless $model;
+    my $to_id = $self->id;
+    my $from_id = $model->id;
+    unless( $to_id and $from_id){
+        $self->error_message ( "no value for this model(to_model) id: <$to_id> or from_model id: <$from_id>");
+        die;
+    }
+    my $reverse_bridge = Genome::Model::Link->get(from_model_id => $to_id, to_model_id => $from_id);
+    if ($reverse_bridge){
+        my $string =  "A model link already exists for these two models, and in the opposite direction than you specified:\n";
+        $string .= "to_model: ".$reverse_bridge->to_model." (the model you are trying to set as a 'from' model for this one)\n";
+        $string .= "from_model: ".$reverse_bridge->from_model." (this model)\n";
+        $string .= "role: ".$reverse_bridge->role;
+        $self->error_message($string);
+        die;
+    }
+    my $bridge = Genome::Model::Link->get(from_model_id => $from_id, to_model_id => $to_id);
+    if ($bridge){
+        my $string =  "A model link already exists for these two models:\n";
+        $string .= "to_model: ".$bridge->to_model." (this model)\n";
+        $string .= "from_model: ".$bridge->from_model." (the model you are trying to set as a 'from' model for this one)\n";
+        $string .= "role: ".$bridge->role;
+        $self->error_message($string);
+        die;
+    }
+    $bridge = Genome::Model::Link->create(from_model_id => $from_id, to_model_id => $to_id, role => $role);
+    return $bridge;
 }
 
 sub delete {
