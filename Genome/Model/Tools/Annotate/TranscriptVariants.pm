@@ -97,7 +97,7 @@ INPUT COLUMNS (TAB SEPARATED)
 chromosome_name start stop reference variant reference_type type reference_reads variant_reads maq_score
 
 OUTPUT COLUMNS (COMMMA SEPARATED)
-chromosome_name start stop variant variant_reads reference reference_reads maq_score gene_name intensity detection transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain
+chromosome_name start stop variant variant_reads reference reference_reads maq_score gene_name transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain
 EOS
 }
 
@@ -156,8 +156,8 @@ sub execute {
                     return;
                 }
                 $self->build($build);
-            }else{
-                my $build = $model->last_complete_build;
+            }else{ 
+                my $build = $model->last_complete_build;  #TODO latest by version
                 unless ($build){
                     $self->error_message("couldn't get last complete build from reference transcripts set $name");
                     return;
@@ -188,12 +188,7 @@ sub execute {
             $chromosome_name = $variant->{chromosome_name};
             $self->status_message("generating annotator for $chromosome_name");
 
-            my $transcript_iterator = Genome::Transcript->create_iterator(
-                where => [ 
-                chrom_name => $chromosome_name,
-                build_id => $self->build->build_id,
-                ],
-            );
+            my $transcript_iterator = $self->build->transcript_iterator;
             die Genome::Transcript->error_message unless $transcript_iterator;
 
             my $transcript_window =  Genome::Utility::Window::Transcript->create (
@@ -276,7 +271,7 @@ sub variant_attributes {
 }
 
 sub transcript_attributes {
-    return (qw/ gene_name intensity detection transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain /);
+    return (qw/ gene_name transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain /);
 }
 
 

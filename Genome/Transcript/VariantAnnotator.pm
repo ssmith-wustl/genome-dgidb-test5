@@ -52,7 +52,7 @@ sub transcripts { # was transcripts_for_snp and transcripts_for_indel
     my $time = timestr(timediff($stop, $start));
 
     if ($self->benchmark){
-        print "Annotation Variant: ".$variant{start}."-".$variant{stop}." ".$variant{variant}." ".$variant{reference}." ".$variant{type}." took $time\n"; #TODO make sure variant is getting passed in.  Add a check that dies unless the %variant is complete
+        print "Annotation Variant: ".$variant{start}."-".$variant{stop}." ".$variant{variant}." ".$variant{reference}." ".$variant{type}." took $time\n"; 
     }
 
     return @annotations;
@@ -192,7 +192,6 @@ sub _determine_transcripts_to_annotate {
     my ($self, $position) = @_;
 
     my (@transcripts_priority_1, @transcripts_priority_2);
-    $DB::single = 1;
     foreach my $transcript ( $self->transcript_window->scroll($position) )
     {
         if ( grep { $transcript->transcript_status eq $_ } (qw/ known reviewed validated /) )
@@ -238,12 +237,6 @@ sub _transcript_annotation
 
     my $source = $transcript->source;
     my $gene = $transcript->gene;
-    #my $expression = $gene->expressions_by_intensity->first;
-    my @expressions = $gene->expressions_by_intensity;
-    my $expression = $expressions[0];
-    my ($intensity, $detection) = ( $expression )
-    ? ( $expression->expression_intensity, $expression->detection )
-    : (qw/ NULL NULL /);
 
     my $conservation = $self->_ucsc_cons_annotation($variant);
     if(!exists($structure_annotation{domain}))
@@ -256,8 +249,6 @@ sub _transcript_annotation
         transcript_name => $transcript->transcript_name, 
         transcript_source => $source,
         gene_name  => $gene->name($source),
-        intensity => $intensity,
-        detection => $detection,
 #         amino_acid_change => 'NULL',
         ucsc_cons => $conservation
     )
@@ -287,7 +278,8 @@ sub _transcript_annotation_for_utr_exon
     my $position = $variant->{start};
     my $strand = $transcript->strand;
     my ($cds_exon_start, $cds_exon_stop) = $transcript->cds_exon_range;
-    #my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
+    $cds_exon_start ||= 0;
+    $cds_exon_stop ||= 0;
     my ($c_position, $trv_type);
     if ( $position < $cds_exon_start )	
     { 
@@ -319,7 +311,11 @@ sub _transcript_annotation_for_flank
 
     my $position = $variant->{start};
     my $strand = $transcript->strand;
-    my @cds_exon_positions = $transcript->cds_exon_range or (0,0);
+
+    my @cds_exon_positions = $transcript->cds_exon_range;
+    unless (@cds_exon_positions){
+        @cds_exon_positions = (0,0);
+    }
     my $aas_length=0;
     my $protein = $transcript->protein;
     if ($protein){
@@ -327,7 +323,7 @@ sub _transcript_annotation_for_flank
     }
     my ($c_position, $trv_type);
     if ( $position < $transcript->transcript_start )
-    {	 
+    {	
         ($c_position, $trv_type) = ( $transcript->strand eq '+1' )
         ? (($position - $cds_exon_positions[0]), "5_prime_flanking_region")
         : (("*" . ($cds_exon_positions[0] - $position)), "3_prime_flanking_region"); 
@@ -363,7 +359,8 @@ sub _transcript_annotation_for_intron
     my $strand = $transcript->strand;
 
     my ($cds_exon_start, $cds_exon_stop) = $transcript->cds_exon_range;
-    #my ($cds_exon_start, $cds_exon_stop) = $transcript->sub_structure_window->cds_exon_range;
+    $cds_exon_start ||= 0;
+    $cds_exon_stop ||= 0;
     my ($oriented_cds_exon_start, $oriented_cds_exon_stop) = ($cds_exon_start, $cds_exon_stop);
 
     my $main_structure = $transcript->structure_at_position( $variant->{start} );
@@ -738,10 +735,10 @@ sub _protein_domain
     #my ($gene,$transcript);
     require SnpDom;
     my $s = SnpDom->new({'-inc-ts' => 1});
-    $s->add_mutation($gene->hugo_gene_name ,$transcript ,$amino_acid_change);
+    $s->add_mutation($gene->name ,$transcript ,$amino_acid_change);
     my %domlen;
     $s->mutation_in_dom(\%domlen,"HMMPfam");
-    my $obj = $s->get_mut_obj($transcript . "," . $gene->hugo_gene_name);
+    my $obj = $s->get_mut_obj($transcript . "," . $gene->name);
     my $doms = $obj->get_domain($amino_acid_change);
     if(defined($doms))
     {

@@ -217,10 +217,11 @@ sub _get_window{
     #TODO don't hardcode this, maybe override create iterator in Genome::Transcript
     #this build id is for the v0 build of ImportedAnnotation
     my $build_id = 96047134;
+    my $build = Genome::Model::Build->get($build_id);
     #TODO remove when fixed
     ############
     
-    my $iter = Genome::Transcript->create_iterator(where => [ chrom_name => $chromosome, build_id=> $build_id ] );
+    my $iter = $build->transcript_iterator;
     my $window =  Genome::Utility::Window::Transcript->create ( iterator => $iter, range => 50000);
     return $window;
 }
