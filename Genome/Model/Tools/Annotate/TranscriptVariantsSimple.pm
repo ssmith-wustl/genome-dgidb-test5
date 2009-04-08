@@ -345,18 +345,18 @@ sub infer_variant_type {
 
     # If the start and stop are the same, and ref and variant are defined its a SNP
     if (($variant->{stop} == $variant->{start})&&
-        ($variant->{reference} ne '0')&&
-        ($variant->{variant} ne '0')) {
+        ($variant->{reference} ne '-')&&($variant->{reference} ne '0')&&
+        ($variant->{variant} ne '-')&&($variant->{variant} ne '0')) {
         return 'SNP';
     # If start and stop are 1 off, and ref and variant are defined its a DNP
     } elsif (($variant->{stop} - $variant->{start} == 1)&&
-             ($variant->{reference} ne '0')&&
-             ($variant->{variant} ne '0')) {
+             ($variant->{reference} ne '-')&&($variant->{reference} ne '0')&&
+             ($variant->{variant} ne '-')&&($variant->{variant} ne '0')) {
         return 'DNP';
     # If reference is a dash, we have an insertion
-    } elsif ($variant->{reference} eq '0') {
+    } elsif (($variant->{reference} eq '-')||($variant->{reference} eq '0')) {
         return 'INS';
-    } elsif ($variant->{variant} eq '0') {
+    } elsif (($variant->{variant} eq '-')||($variant->{variant} eq '0')) {
         return 'DEL';
     } else {
         $self->error_message("Could not determine variant type from variant:");
