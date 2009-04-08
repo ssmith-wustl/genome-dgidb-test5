@@ -126,16 +126,29 @@ sub test02_taxons_and_names : Tests {
 
     my $seq_classification = $self->sequence_classification;
     for my $rank ( 'root', Genome::Utility::MetagenomicClassifier->taxonomic_ranks ) {
+        # taxon
         my $get_taxon_method = 'get_'.$rank.'_taxon';
         can_ok($seq_classification, $get_taxon_method);
         my $taxon = $seq_classification->$get_taxon_method;
         ok($taxon, "Got $rank taxon");
         is($taxon->rank, $rank, "Taxon is $rank");
+        # name
         my $get_name_method = 'get_'.$rank;
         my $name = $seq_classification->$get_name_method;
         ok($name, "Got $rank name ($name) for taxon");
         is($taxon->id, $name, "Taxon name and $get_name_method match");
+        # name and confidence
+        my $get_conf_method = 'get_'.$rank.'_confidence';
+        my $conf = $seq_classification->$get_conf_method;
+        ok($conf, "Got confidence ($conf) for $rank with $get_conf_method");
+        my ($conf_from_taxon) = $taxon->get_tag_values('confidence');
+        is($conf, $conf_from_taxon, "Confidence from $get_conf_method and taxon match");
     }
+
+    # Check that these private methods do not return stuff that doesn't exist
+    ok(!$seq_classification->_get_taxon_for_rank('blah'), "As expected - no blah taxon");
+    ok(!$seq_classification->_get_taxon_name_for_rank('blah'), "As expected - no blah taxon name");
+    ok(!$seq_classification->_get_taxon_confidence_for_rank('blah'), "As expected - no blah confidence");
 
     return 1;
 }
