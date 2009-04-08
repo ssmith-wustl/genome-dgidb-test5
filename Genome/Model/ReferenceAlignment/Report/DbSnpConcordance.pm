@@ -416,7 +416,13 @@ sub build_concordance_string {
   for my $x_point (@{$x_axis_ref}) {
     my $v1 =  $data_set_ref1->[$x_point];
     my $v2 = $data_set_ref2->[$x_point];
-    my $v3 = $v1/$v2;
+		my $v3;
+		if (!$v2) {
+			$v3 = 0;
+		} else {
+			$v3 = $v1/$v2;
+		}
+
     $formatted_return .= "[ $x_point , " . sprintf("%.2f", 100 * $v3) . "], /* $v1\t$v2\t$v3 */\n";
   }
   
