@@ -40,7 +40,7 @@ EOS
 sub execute {
     my $self = shift;
     my $now = UR::Time->now;
-    $self->parallel_switch(0);
+    $self->parallel_switch(1);
     $self->status_message("Running in PARALLEL.") if ($self->parallel_switch eq '1');
     $self->status_message("Running in SERIAL.") if ($self->parallel_switch ne '1');
   
