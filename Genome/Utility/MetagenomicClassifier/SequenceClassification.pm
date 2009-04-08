@@ -132,7 +132,7 @@ sub _get_taxa_position_for_rank {
 
     my %ranks = $self->_get_ranks_and_positions
         or return;
- 
+
     return $ranks{$rank};
 }
 
@@ -157,6 +157,8 @@ sub _get_taxon_for_rank {
     my @taxa = $self->get_taxa
         or return;
     my $pos = $self->_get_taxa_position_for_rank($rank);
+
+    return unless defined $pos;
     
     return $taxa[$pos];
 }
@@ -165,9 +167,19 @@ sub _get_taxon_name_for_rank {
     my ($self, $rank) = @_;
 
     my $taxon = $self->_get_taxon_for_rank($rank)
-        or return 'none';
+    #or return 'none';
+        or return;
 
     return $taxon->id;
+}
+
+sub _get_taxon_confidence_for_rank {
+    my ($self, $rank) = @_;
+
+    my $taxon = $self->_get_taxon_for_rank($rank)
+        or return;
+
+    return ($taxon->get_tag_values('confidence'))[0];
 }
 
 sub _get_taxon_name_and_confidence {
@@ -185,6 +197,10 @@ sub get_root_taxon {
 
 sub get_root {
     return $_[0]->_get_taxon_name_for_rank('root');
+}
+
+sub get_root_confidence {
+    return $_[0]->_get_taxon_confidence_for_rank('root');
 }
 
 sub get_domain_taxon {
