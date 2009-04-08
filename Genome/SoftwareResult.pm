@@ -20,6 +20,10 @@ class Genome::SoftwareResult {
         _params_id   => { is => 'VARCHAR2', len => 4000, column_name => 'PARAMS_ID', implied_by => '_params_bx', is_optional => 1 },
         outputs_path => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
     ],
+    attributes_have => [
+                        is_input => { is => 'Boolean' },
+                        is_param => { is => 'Boolean' },
+                    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
@@ -41,7 +45,7 @@ sub params {
     my $self = shift;
     my $bx;
     if (@_) {
-        $bx = UR::BoolExpr->resolve_for_class_and_params($self->class_name,@_);
+        $bx = UR::BoolExpr->resolve_for_class_and_params($self->class_name,@_); 
         $self->_params_id($bx->id);
     }
     else {
@@ -50,4 +54,9 @@ sub params {
     return $bx->params_list;
 }
 
+
 1;
+
+#$HeadURL$
+#$Id$
+    
