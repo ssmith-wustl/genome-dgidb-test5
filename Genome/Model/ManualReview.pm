@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 class Genome::Model::ManualReview{
-    is => 'Genome::Model::Composite',
+    is => 'Genome::Model',
 };
 
 sub create {
