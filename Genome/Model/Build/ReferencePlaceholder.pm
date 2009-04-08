@@ -15,7 +15,11 @@ class Genome::Model::Build::ReferencePlaceholder {
         name            => { is => 'Text' },
     ],
     has => [
-        sample_type     => { is => 'Text' },
+        sample_type     => {
+                            is => 'Text',
+                            is_optional => 1,
+                            default_value => 'dna'
+                        },
         data_directory  => { is => 'Text' },
     ],
     doc => 'Temporary object representing the reference used in reference alignment models.  To be replaced with a real model build.',
@@ -36,7 +40,19 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     return unless $self;
-    
+
+    my $sequence_item = Genome::Reference->get(description => $self->name);
+    if ($sequence_item) {
+        my $db = $sequence_item->bfa_directory;
+        if ($db) {
+            $self->data_directory($db);
+            return $self;
+        } else {
+            $self->delete;
+            die('Failed to find bfa directory for genome reference '. $self->name);
+        }
+    }
+
     my $path = sprintf('%s/reference_sequences/%s','/gscmnt/839/info/medseq',$self->name);
     my $dna_type = $self->sample_type;
     $dna_type =~ tr/ /_/;
@@ -44,14 +60,22 @@ sub create {
         $path .= '.' . $dna_type
     }
     $self->data_directory($path);
-    
+
     return $self;
 }
 
 sub full_consensus_path {
     my ($self,$format) = @_;
     $format ||= 'bfa';
-    return $self->data_directory . '/all_sequences.bfa';
+    my $file = $self->data_directory . '/all_sequences.bfa';
+    if ( -e $file){
+        return $file;
+    }
+    $file = $self->data_directory . '/ALL.bfa';
+    if ( -e $file){
+        return $file;
+    }
+    return;
 }
 
 sub subreference_paths {
