@@ -9,7 +9,7 @@ use Data::Dumper;
 use Benchmark;
 
 class Genome::Model::CombineVariants{
-    is => 'Genome::Model::Composite',
+    is => 'Genome::Model',
     has => [
         hq_gfh  => {
             is  =>'IO::Handle',
