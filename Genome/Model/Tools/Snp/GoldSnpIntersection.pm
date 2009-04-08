@@ -254,6 +254,10 @@ sub create_gold_snp_hashes {
         my ($chr, $pos, $pos2, $allele1, $allele2, $allele1_type1,$allele2_type1, $allele1_type2, $allele2_type2) = split /\t/, $line;
 
         my $ref_a= $refdb->seq($chr, $pos => $pos2);  
+        unless($ref_a) {
+            $self->error_message("No reference base for position $chr $pos $pos2");
+            next;
+        }
         chomp($ref_a);
         $ref_a=uc($ref_a);
 
@@ -318,7 +322,7 @@ sub create_gold_snp_hashes {
                 #check that the allele is actually a snp
                 if($allele1_type1 eq $allele2_type1) {
                     #non-ref bi-allelic SNP unlikely and unhandled. Let the user know
-                    $self->error_message("Heterozygous snp where both alleles are non-reference detected. Not added to hash");
+                    $self->error_message("Heterozygous snp where both alleles are non-reference detected at $chr\t$pos. Not added to hash");
                     #ignore
                 }
                 elsif($allele1_type1 eq 'SNP' ) {
