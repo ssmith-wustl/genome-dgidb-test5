@@ -193,6 +193,7 @@ sub execute {
         }
 
         # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
+        # TODO... unduplicate this code
         if ($variant->{type} eq 'SNP') {
             my @variant_alleles = $self->variant_alleles($variant->{reference}, $variant->{variant});
             for my $variant_allele (@variant_alleles) {
@@ -273,11 +274,11 @@ sub transcript_report_headers {
 sub _print_annotation {
     my ($self, $snp, $transcripts) = @_;
 
-    # Basic SNP Info
+    # Basic SNP Info # FIXME (plus also print out the type that is inferred... should clean this up)
     my $snp_info_string = join
     (
         ',', 
-        map { $snp->{$_} } $self->variant_attributes,
+        map { $snp->{$_} } ($self->variant_attributes,"type"),
     );
 
     # Transcripts
