@@ -161,6 +161,13 @@ sub execute {
             die($self->error_message);;
         }
 
+        # resolve quality conversion
+        my $quality_converter = $instrument_data->resolve_quality_converter;
+        unless (defined($quality_converter)) {
+            $self->error_message('Quality converter not resolved for instrument data');
+            die($self->error_message);;
+        }
+
         ###input/output files
         my $alignment_file = $self->create_temp_file_path('all.map');
         unless ($alignment_file) {
@@ -186,7 +193,7 @@ sub execute {
         my %params = (
             ref_seq_file            => $ref_seq_file,
             files_to_align_path     => join("|", @input_pathnames),
-            execute_sol2sanger      => 'y',
+            quality_converter          => $quality_converter,
             use_version             => $alignment->aligner_version,
             align_options           => $alignment->aligner_params,
             dna_type                => $sample_type,
