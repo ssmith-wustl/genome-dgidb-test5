@@ -37,12 +37,11 @@ class Genome::Model::Tools::Maq::AlignReads {
 			is_optional => 1,
 			default_value => 600,
 	   },
-	   execute_sol2sanger => {
-			doc => 'An option to execute a sol2sanger conversion on the input fastq files.  "y"=yes, "n"=no.  Defaults to "no".',
-		        is => 'String',
-			is_optional => 1,
-			default_value => 'n',
-	   },
+           quality_converter => {
+                              is => 'String',
+                              is_optional => 1,
+                              doc => 'The algorithm to use for converting fastq quality scores, sol2sanger(old) or sol2phred(new)',
+                          },
 	   force_fragments => {
 		doc => 'Optional switch to force fragment processing.',
 	        is => 'Integer',
@@ -228,7 +227,7 @@ sub create {
 
 
 
-     #if the input files are fastq (ascii) execute sol2sanger if desired, then always fastq to bfq
+     #if the input files are fastq (ascii) execute quality conversion if desired, then always fastq to bfq
      if ( $ascii_count > 0 ) {
         my $tmp_dir;
         if ( defined($self->temp_directory) ) {
@@ -259,20 +258,25 @@ sub create {
      	my $counter=0;
      	for my $solexa_output_path (@listing) {
 		my $fastq_pathname;
-                if ( $self->execute_sol2sanger eq lc('y') ) {
+                if ( $self->quality_converter ) {
 		        $fastq_pathname = "$tmp_dir/fastq-$counter";
-                	my $sol_cmd = $self->maq_path ." sol2sanger $solexa_output_path $fastq_pathname";
-			$self->status_message('sol2sanger cmd:'.$sol_cmd);
+                	my $quality_converter_cmd;
+                        if ($self->quality_converter eq 'sol2sanger') {
+                            $quality_converter_cmd = $self->maq_path ." sol2sanger $solexa_output_path $fastq_pathname";
+                        } elsif ($self->quality_converter eq 'sol2phred') {
+                            $quality_converter_cmd = "gt fastq sol2phred --fastq-file=$solexa_output_path --phred-fastq-file=$fastq_pathname";
+                        }
+			$self->status_message('quality converter cmd:'. $quality_converter_cmd);
 
      	        	Genome::Utility::FileSystem->shellcmd(
-                   		cmd => $sol_cmd,
+                   		cmd => $quality_converter_cmd,
                   		input_files => [$solexa_output_path],
                  		output_files => [$fastq_pathname],
                  		skip_if_output_is_present => 1,
             		);
  		} else {
 		  	$fastq_pathname = $solexa_output_path;
-			$self->status_message('No sol2sanger conversion is being performed.');
+			$self->status_message('No quality conversion is being performed.');
 		}
 		my $bfq_pathname = "$tmp_dir/bfq-$counter";
         	my $bfq_cmd = $self->maq_path ." fastq2bfq  $fastq_pathname $bfq_pathname";
@@ -342,7 +346,7 @@ sub execute {
     $self -> status_message('Adaptor file:'.$self->adaptor_file) if defined($self->adaptor_file);
     $self -> status_message('Align options:'.$self->align_options) if defined($self->align_options);
     $self -> status_message('Upper bound value:'.$self->upper_bound) if defined($self->upper_bound);
-    $self -> status_message('Sol2sanger flag:'.$self->execute_sol2sanger) if defined($self->execute_sol2sanger);
+    $self -> status_message('Quality conversion:'.$self->quality_converter) if defined($self->quality_converter);
     $self -> status_message('Maq version:'. $self->use_version) if defined($self->use_version);
     $self -> status_message("\n");
 
