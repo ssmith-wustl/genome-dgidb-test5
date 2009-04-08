@@ -35,6 +35,7 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                               );
 isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
 $instrument_data->set_always('sample_type','dna');
+$instrument_data->set_always('resolve_quality_converter','sol2sanger');
 $instrument_data->set_always('is_paired_end',1);
 ok($instrument_data->is_paired_end,'instrument data is paired end');
 
@@ -85,6 +86,7 @@ $instrument_data = Genome::InstrumentData::Solexa->create_mock(
 my @fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
 $instrument_data->set_always('sample_type','dna');
 $instrument_data->set_always('is_paired_end',1);
+$instrument_data->set_always('resolve_quality_converter','sol2sanger');
 $instrument_data->set_always('class','Genome::InstrumentData::Solexa');
 $instrument_data->mock('allocations',\&Genome::InstrumentData::allocations);
 $instrument_data->set_list('fastq_filenames',@fastq_files);

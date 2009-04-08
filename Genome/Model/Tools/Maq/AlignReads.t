@@ -35,7 +35,7 @@ my $force_fragments = 1;
 my $aligner = Genome::Model::Tools::Maq::AlignReads->create(
                                                             ref_seq_file => $ref_seq,
                                                             files_to_align_path => $files_to_align,
-                                                            execute_sol2sanger => $sol_flag,
+                                                            quality_converter => 'sol2sanger',
                                                             alignment_file => $output_dir .'/single_read.map',
                                                             aligner_output_file => $output_dir .'/single_read.out',
                                                             unaligned_reads_file => $output_dir .'/single_read.unaligned',
@@ -64,7 +64,7 @@ $files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignRea
 $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 							 ref_seq_file => $ref_seq,
                                                          files_to_align_path => $files_to_align,
-							 execute_sol2sanger => $sol_flag,
+							 quality_converter => 'sol2phred',
                                                          alignment_file => $output_dir .'/paired-solexa.map',
                                                          aligner_output_file => $output_dir .'/paired-solexa.out',
                                                          unaligned_reads_file => $output_dir .'/paired-solexa.unaligned',
@@ -92,7 +92,7 @@ $files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignRea
 $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 							 ref_seq_file => $ref_seq,
                                                          files_to_align_path => $files_to_align,
-							 execute_sol2sanger => $sol_flag,
+							 quality_converter => 'sol2sanger',
 							 force_fragments => $force_fragments,
                                                          alignment_file => $output_dir .'/paired-solexa-frag.map',
                                                          aligner_output_file => $output_dir .'/paired-solexa-frag.out',
@@ -118,7 +118,7 @@ $files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignRea
 $aligner = Genome::Model::Tools::Maq::AlignReads->create(
 							 ref_seq_file => $ref_seq,
                                                          files_to_align_path => $files_to_align,
-							 execute_sol2sanger => $sol_flag,
+							 quality_converter => 'sol2phred',
 							 duplicate_mismatch_file => $output_dir .'/paired-solexa-mismatch.dat',
                                                          alignment_file => $output_dir .'/paired-solexa-mismatch.map',
                                                          aligner_output_file => $output_dir .'/paired-solexa-mismatch.out',
@@ -132,8 +132,6 @@ ok($aligner->execute,'AlignReads execution, paired read input with sol2sanger co
 @listing = glob($output_dir.'/*');
 #print "\n\nListing: ".join(", ",@listing)."\n\n";
 ok( scalar(@listing) eq $expected_output, "Number of output files expected = ".$expected_output );
-
-
 
 exit;
 
