@@ -57,6 +57,7 @@ sub params {
 
 1;
 
-#$HeadURL$
-#$Id$
+#$Rev$:
+#$HeadURL$:
+#$Id$:
     
