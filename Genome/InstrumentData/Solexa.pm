@@ -26,7 +26,7 @@ class Genome::InstrumentData::Solexa {
                 sd_above_insert_size,
                 is_external,
                 FILT_CLUSTERS,
-                
+                analysis_software_version,
                 sample.dna_id sample_id,
                 library.dna_id library_id 
             from solexa_lane_summary\@dw s
@@ -47,6 +47,7 @@ EOS
         median_insert_size              => { },
         sd_above_insert_size            => { },
         is_external                     => { },
+        analysis_software_version       => { },             
         clusters                        => { column_name => 'FILT_CLUSTERS' },
         
         short_name => {
@@ -260,6 +261,36 @@ sub _calculate_total_read_count {
     }
 
     return $self->clusters;
+}
+
+sub resolve_quality_converter {
+    my $self = shift;
+
+    my %analysis_software_versions = (
+                                     'GAPipeline-0.3.0'       => 'sol2sanger',
+                                     'GAPipeline-0.3.0b1'     => 'sol2sanger',
+                                     'GAPipeline-0.3.0b2'     => 'sol2sanger',
+                                     'GAPipeline-0.3.0b3'     => 'sol2sanger',
+                                     'GAPipeline-1.0'         => 'sol2sanger',
+                                     'GAPipeline-1.0-64'      => 'sol2sanger',
+                                     'GAPipeline-1.0rc4'      => 'sol2sanger',
+                                     'GAPipeline-1.1rc1p4'    => 'sol2sanger',
+                                     'SolexaPipeline-0.2.2.5' => 'sol2sanger',
+                                     'SolexaPipeline-0.2.2.6' => 'sol2sanger',
+                                     #Anything newer than GAPipeline-1.3* uses sol2phred
+                                     'GAPipeline-1.3.2'       => 'sol2phred',
+                                     'GAPipeline-1.3.4'       => 'sol2phred',
+                                     'GAPipeline-1.3rc4'      => 'sol2phred',
+                                     'GAPipeline-1.3rc6'      => 'sol2phred',
+                                 );
+    my $analysis_software_version = $self->analysis_software_version;
+    unless ($analysis_software_version) {
+        die('No analysis_software_version found for instrument data '. $self->id);
+    }
+    unless ($analysis_software_versions{$analysis_software_version}) {
+        die('No quality converter defined for anlaysis_software_version '. $analysis_software_version );
+    }
+    return $analysis_software_versions{$analysis_software_version};
 }
 
 1;
