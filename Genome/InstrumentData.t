@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 7;
+use Test::More tests => 8;
 
 use above 'Genome';
 
@@ -29,6 +29,7 @@ my $solexa_instrument_data = Genome::InstrumentData->get(2338813239);
 isa_ok($solexa_instrument_data,'Genome::InstrumentData::Solexa');
 
 is($solexa_instrument_data->sample_type,'rna','got expected sample type');
+is($solexa_instrument_data->resolve_quality_converter,'sol2sanger','got expected quality converter');
 
 #$HeadURL$
 #$Id$
