@@ -228,9 +228,48 @@ sub PrepIncomingArchive {
         my $pre_pse_id=$quad_pre_pse_ids{$quad};
 	
         unless($pre_pse_id) {
-
-            $self->{'Error'} = "Could not derive the prior pse for barcode.";
-            return;
+            
+            #check and see if the pse exists in any state.  if not, assume the quad is empty
+            my $pre_pse_sth2 = App::DB->dbh->prepare(qq/select distinct s.sector_name, pse.pse_id  from 
+                                                    process_steps ps1
+                                                    join process_steps ps2 on ps2.pro_process_to = ps1.pro_process
+                                                    join process_step_executions pse on pse.ps_ps_id = ps2.ps_id
+                                                    join pse_barcodes pb on pb.pse_pse_id = pse.pse_id
+                                                    join dna_pse dp on dp.pse_id = pse.prior_pse_id
+                                                    join dna_location dl on dl.dl_id = dp.dl_id
+                                                    join sectors s on s.sec_id = dl.sec_id
+                                                    where
+                                                    ps1.ps_id = $ps_id
+                                                    and pb.bs_barcode = '$bars_in->[0]'
+                                                    and s.sector_name = '$quad'
+                                                    and pb.direction = 'in'/);    
+            my %quad_pre_pse_ids=();
+            $pre_pse_sth->execute;
+            if ($pre_pse_sth->fetchrow_array) {
+                $self->{'Error'} = "Could not derive the prior pse for barcode.";
+                return;
+            }
+            $pre_pse_sth2 = App::DB->dbh->prepare(qq/select distinct s.sector_name, pse.pse_id from 
+                                                  process_steps ps1
+                                                  join process_steps ps2 on ps2.pro_process_to = ps1.pro_process
+                                                  join process_step_executions pse on pse.ps_ps_id = ps2.ps_id
+                                                  join pse_barcodes pb on pb.pse_pse_id = pse.pse_id
+                                                  join pse_barcodes bar_source on pb.bs_barcode = bar_source.bs_barcode
+                                                  AND bar_source.direction = 'out'
+                                                  join dna_pse dp on bar_source.pse_pse_id = dp.pse_id
+                                                  join dna_location dl on dl.dl_id = dp.dl_id
+                                                  join sectors s on s.sec_id = dl.sec_id
+                                                  where
+                                                  ps1.ps_id = $ps_id
+                                                  and pb.bs_barcode = '$bars_in->[0]'
+                                                  and s.sector_name = '$quad'
+                                                  and pb.direction = 'in'/);    
+            $pre_pse_sth->execute;
+            if ($pre_pse_sth->fetchrow_array) {
+                $self->{'Error'} = "Could not derive the prior pse for barcode.";
+                return;
+            }
+            next;
         }
         
         my ($fnew_pse_id) = $self-> xOneToManyProcess($ps_id, $pre_pse_id, $update_status, $update_result, $bars_in->[0], [$bar_out->[0]], $emp_id);
