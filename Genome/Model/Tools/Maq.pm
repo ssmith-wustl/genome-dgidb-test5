@@ -61,7 +61,7 @@ my %MAQ_VERSIONS = (
                     '0.6.4' => '/gsc/pkg/bio/maq/maq-0.6.4_x86_64-linux/maq',
                     '0.6.5' => '/gsc/pkg/bio/maq/maq-0.6.5_x86_64-linux/maq',
                     '0.6.8' => '/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq',
-                    '0.7.1' => '/gsc/pkg/bio/maq/maq-0.7.1-64/bin/maq',
+                    '0.7.1' => '/gsc/pkg/bio/maq/maq-0.7.1-6-64/bin/maq',
                     'maq'   => 'maq',
                 );
 
@@ -77,7 +77,7 @@ sub path_for_maq_version {
     if (defined $MAQ_VERSIONS{$version}) {
         return $MAQ_VERSIONS{$version};
     }
-    return;
+    die('No path for maq version '. $version);
 }
 
 sub path_for_mapsplit_version {
@@ -97,7 +97,7 @@ sub path_for_mapsplit_version {
     } elsif ($version eq 'maq') {
         return;
     } else {
-        return;
+        die('No path for mapsplit maq version '. $version);
     }
 }
 
