@@ -3,8 +3,8 @@
 use strict;
 use warnings;
 
-use Genome;
-use Test::More tests => 11;
+use above 'Genome';
+use Test::More skip_all => 'update once composite_member relationship has been replaced with to_ and from_ models';
 use File::Path;
 
 $ENV{UR_DBI_NO_COMMIT} = 1;
