@@ -8,70 +8,57 @@ use Genome;
 use Command;
 use Data::Dumper;
 use IO::File;
-use Tie::File;
-use Fcntl 'O_RDONLY';
-use Carp;
 
-class Genome::Model::Tools::Annotate::TranscriptVariants {
+
+class Genome::Model::Tools::Annotate::TranscriptVariants{
     is => 'Command',
     has => [ 
-        snv_file => {
-            type => 'Text',
+        variant_file => {
+            is => 'Text',
             is_optional => 0,
-            doc => "File of single-nucleotide variants.  Tab separated columns: chromosome_name start stop reference variant reference_type type reference_reads variant_reads maq_score",
+            doc => "File of variants. Tab separated columns: chromosome_name start stop reference variant",
         },
     ],
     has_optional => [
-        output_file => {
-            type => 'Text',
+        # IO Params
+       output_file => {
+            is => 'Text',
             is_optional => 1,
             doc => "Store annotation in the specified file instead of sending it to STDOUT."
         },
-        summary_file => {
-            type => 'Text',
-            is_optional => 1,
-            doc => "Store summary metrics about the SNVs analyzed in a file with the specified name."
-        },
         no_headers => {
-            type => 'Boolean',
+            is => 'Boolean',
             is_optional => 1,
             default => 0,
             doc => 'Exclude headers in report output',
         },
-        # Metrix Params
-        minimum_maq_score => {
-            is => 'Integer',
-            is_optional => 1,
-            default => 15,
-            doc => 'Minimum quality to consider a variant high quality',
-        },
-        minimum_read_count => {
-            is => 'Integer',
-            is_optional => 1,
-            default => 3,
-            doc => 'Minimum number of total reads to consider a variant high quality',
-        },
         # Transcript Params
+        multi_gene_annotation => {
+            is => 'boolean',
+            is_optional => 1,
+            default => 1,
+            doc => 'If set to true, this will find the top annotation per gene for a given variant and print one line for each. If this is set to false it will find the top annotation between all genes for a given variant and only print a single line per variant.',
+        },
         flank_range => {
-            type => 'Integer', 
+            is => 'Integer', 
             is_optional => 1,
             default => 50000,
-            doc => 'Range to look around for flaking regions of transcripts',
+            doc => 'Range to look around for flanking regions of transcripts',
         },
         reference_transcripts => {
             is => 'String',
             is_optional => 1, 
-            doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db'
+            doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db (not both)'
         },
-	    build => {
-	        is => "Genome::Model::Build",
-	        id_by => 'build_id',
-            is_optional => 1, 
-	    },
         build_id =>{
             is => "Number",
             is_optional => 1,
-            doc => 'build id for the imported annotation model to grab transcripts to annotate from.  Use this or --reference-transcripts to specify a non-default annotation db',
+            doc => 'build id for the imported annotation model to grab transcripts to annotate from.  Use this or --reference-transcripts to specify a non-default annotation db (not both)',
+        },
+        build => {
+            is => "Genome::Model::Build",
+            id_by => 'build_id',
+            is_optional => 1, 
         },
     ], 
 };
@@ -80,7 +67,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants {
 
 sub help_synopsis { 
     return <<EOS
-gt annotate transcript-variants --snv-file snvs.csv --output-file transcript-changes.csv --summary-file myresults.csv
+gt annotate transcript-variants-simple --variant-file variants.csv --output-file transcript-changes.csv
 EOS
 }
 
@@ -89,15 +76,21 @@ sub help_detail {
 This launches the variant annotator.  It takes genome sequence variants and outputs transcript variants, 
 with details on the gravity of the change to the transcript.
 
-The current version presumes that the SNVs are human, and that positions are relative to Hs36.  The transcript data 
+The current version presumes that the variants are human, and that positions are relative to Hs36.  The transcript data 
 set is a mix of Ensembl 45 and Genbank transcripts.  Work is in progress to support newer transcript sets, and 
 variants from a different reference.
 
+The variant (if it is a SNP) can be an IUB code, in which case every possible variant base will be annotated.
+
 INPUT COLUMNS (TAB SEPARATED)
-chromosome_name start stop reference variant reference_type type reference_reads variant_reads maq_score
+chromosome_name start stop reference variant
+
+The mutation type will be inferred based upon start, stop, reference, and variant alleles.
+
+Any number of additional columns may be in the input following these columns, but they will be disregarded.
 
 OUTPUT COLUMNS (COMMMA SEPARATED)
-chromosome_name start stop variant variant_reads reference reference_reads maq_score gene_name transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain
+chromosome_name start stop reference variant type gene_name transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain
 EOS
 }
 
@@ -105,19 +98,16 @@ EOS
 
 sub execute { 
     my $self = shift;
-    $DB::single =1;
     
-    # generate an iterator for the input list of SNVs
-    my $variant_file = $self->snv_file;
+    # generate an iterator for the input list of variants
+    my $variant_file = $self->variant_file;
+
+    # TODO: preserve additional columns from input (currently throwing away)
     my $variant_svr = Genome::Utility::IO::SeparatedValueReader->create(
         input => $variant_file,
-        headers => [qw/
-            chromosome_name start stop reference variant 
-            reference_type type reference_reads variant_reads
-            maq_score
-        /],
-        separator => '\s+',
-        is_regex => 1,
+        headers => [$self->variant_attributes],
+        separator => "\t",
+        ignore_extra_columns => 1,
     );
     unless ($variant_svr) {
         $self->error_message("error opening file $variant_file");
@@ -179,14 +169,14 @@ sub execute {
     # emit headers as necessary
     $output_fh->print( join(',', $self->transcript_report_headers), "\n" ) unless $self->no_headers;
 
-    # annotate all of the input SNVs...
+    # annotate all of the input variants
     my $chromosome_name = '';
     my $annotator = undef;
     while ( my $variant = $variant_svr->next ) {
+        $variant->{type} = $self->infer_variant_type($variant);
         # make a new annotator when we begin and when we switch chromosomes
         unless ($variant->{chromosome_name} eq $chromosome_name) {
             $chromosome_name = $variant->{chromosome_name};
-            $self->status_message("generating annotator for $chromosome_name");
 
             my $transcript_iterator = $self->build->transcript_iterator;
             die Genome::Transcript->error_message unless $transcript_iterator;
@@ -201,28 +191,37 @@ sub execute {
             );
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
         }
-        #
-        # get the data and output it
-        my @transcripts = $annotator->prioritized_transcripts(%$variant);
-        $self->_print_reports_for_snp($variant, \@transcripts);
-    }
 
-    # produce a summary as needed
-    if (my $summary_file = $self->summary_file) {
-        my $summary_fh = $self->_create_file($summary_file);
-        $summary_fh->print( join(',', $self->metrics_report_headers), "\n" );
-        my $metrics = $self->{_metrics};
-        my $result = $summary_fh->print(
-            join(
-                ',',
-                map({ $metrics->{$_} || 0 } $self->metrics_report_headers),
-            ),
-            "\n",
-        );
-        unless ($result) {
-            die "failed to print a summary report?! : $!";
+        # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
+        if ($variant->{type} eq 'SNP') {
+            my @variant_alleles = $self->variant_alleles($variant->{reference}, $variant->{variant});
+            for my $variant_allele (@variant_alleles) {
+                # annotate variant with this allele
+                $variant->{variant} = $variant_allele;
+
+                # get the data and output it
+                my @transcripts;
+                if ($self->multi_gene_annotation) {
+                    # Top annotation per gene
+                    @transcripts = $annotator->prioritized_transcripts(%$variant);
+                } else {
+                    # Top annotation between all genes
+                    @transcripts = $annotator->prioritized_transcript(%$variant);
+                }
+                $self->_print_annotation($variant, \@transcripts);
+            }
+        } else {
+            # get the data and output it
+            my @transcripts;
+            if ($self->multi_gene_annotation) {
+                # Top annotation per gene
+                @transcripts = $annotator->prioritized_transcripts(%$variant);
+            } else {
+                # Top annotation between all genes
+                @transcripts = $annotator->prioritized_transcript(%$variant);
+            }
+            $self->_print_annotation($variant, \@transcripts);
         }
-        $summary_fh->close;
     }
 
     $output_fh->close unless $output_fh eq 'STDOUT';
@@ -249,44 +248,30 @@ sub _create_file {
     return $output_fh;
 }
 
-
 sub _transcript_report_fh {
     my ($self, $fh) = @_;
     $self->{_transcript_fh} = $fh if $fh;
     return $self->{_transcript_fh};
 }
 
-# report headers
-sub metrics_report_headers {
-    return (qw/ total confident distinct genic /);
-}
-
-sub transcript_report_headers {
-    return ( variant_attributes(), transcript_attributes());
-}
-
 # attributes
 sub variant_attributes {
-    return (qw/ chromosome_name start stop variant variant_reads reference reference_reads maq_score /);
+    my $self = shift;
+    return (qw/ chromosome_name start stop reference variant /);
 }
 
 sub transcript_attributes {
+    my $self = shift;
     return (qw/ gene_name transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain /);
 }
 
+sub transcript_report_headers {
+    my $self = shift;
+    return ($self->variant_attributes, $self->transcript_attributes);
+}
 
-#- PRINT REPORTS -#
-sub _print_reports_for_snp {
-    my ($self, $snp, $transcripts, $variants) = @_;
-
-    # Calculate Metrics
-    my $is_hq_snp = ( $snp->{maq_score} >= $self->minimum_maq_score 
-            and $snp->{reference_reads} + $snp->{variant_reads} >= $self->minimum_read_count )
-    ? 1
-    : 0;
-
-    $self->{_metrics}->{total}++;
-    $self->{_metrics}->{confident}++ if $is_hq_snp;
+sub _print_annotation {
+    my ($self, $snp, $transcripts) = @_;
 
     # Basic SNP Info
     my $snp_info_string = join
@@ -294,9 +279,6 @@ sub _print_reports_for_snp {
         ',', 
         map { $snp->{$_} } $self->variant_attributes,
     );
-
-    $self->{_metrics}->{distinct}++ if $is_hq_snp;
-    $self->{_metrics}->{genic}++ if @$transcripts;
 
     # Transcripts
     for my $transcripts ( @$transcripts )
@@ -315,6 +297,74 @@ sub _print_reports_for_snp {
     return 1;
 }
 
+# Takes an iub code, translates it, and returns an array of the possible bases that code represents, excludes the reference
+sub variant_alleles {
+    my ($self, $ref, $iub) = @_;
+
+    my @alleles = $self->iub_to_alleles($iub);
+    my @variants = ();
+    foreach my $allele (@alleles) {
+        if($allele ne $ref) {
+            push @variants, $allele;
+        }
+    }
+
+    return @variants;
+}
+
+# Translates an IUB code, returns the bases
+sub iub_to_alleles {
+    my ($self, $iub) = @_;
+
+    my %IUB_CODE = (
+        A => ['A'],
+        C => ['C'],
+        G => ['G'],
+        T => ['T'],
+        M => ['A','C'],
+        K => ['G','T'],
+        Y => ['C','T'],
+        R => ['A','G'],
+        W => ['A','T'],
+        S => ['G','C'],
+        D => ['A','G','T'],
+        B => ['C','G','T'],
+        H => ['A','C','T'],
+        V => ['A','C','G'],
+        N => ['A','C','G','T'],
+    );
+
+    return @{$IUB_CODE{$iub}};
+}
+
+# Figures out what the 'type' of this variant should be (snp, dnp, ins, del) based upon
+# the start, stop, reference, and variant
+# Takes in a variant hash, returns the type
+sub infer_variant_type {
+    my ($self, $variant) = @_;
+
+    # If the start and stop are the same, and ref and variant are defined its a SNP
+    if (($variant->{stop} == $variant->{start})&&
+        ($variant->{reference} ne '-')&&($variant->{reference} ne '0')&&
+        ($variant->{variant} ne '-')&&($variant->{variant} ne '0')) {
+        return 'SNP';
+    # If start and stop are 1 off, and ref and variant are defined its a DNP
+    } elsif (($variant->{stop} - $variant->{start} == 1)&&
+             ($variant->{reference} ne '-')&&($variant->{reference} ne '0')&&
+             ($variant->{variant} ne '-')&&($variant->{variant} ne '0')) {
+        return 'DNP';
+    # If reference is a dash, we have an insertion
+    } elsif (($variant->{reference} eq '-')||($variant->{reference} eq '0')) {
+        return 'INS';
+    } elsif (($variant->{variant} eq '-')||($variant->{variant} eq '0')) {
+        return 'DEL';
+    } else {
+        $self->error_message("Could not determine variant type from variant:");
+        $self->error_message(Dumper($variant));
+        die;
+    }
+}
+
 1;
 
 =pod
@@ -331,14 +381,13 @@ Goes through each variant in a file, retrieving annotation information from Geno
 
  in the shell:
 
-     gt annotate transcript-variants --snv-file myinput.csv --output-file myoutput.csv --metric-summary metrics.csv
+     gt annotate transcript-variants --variant-file myinput.csv --output-file myoutput.csv
 
  in Perl:
 
      $success = Genome::Model::Tools::Annotate::TranscriptVariants->execute(
-         snv_file => 'myoutput.csv',
+         variant_file => 'myoutput.csv',
          output_file => 'myoutput.csv',
-         summary_file => 'metrics.csv', # optional
          flank_range => 10000, # default 50000
      );
 
@@ -346,24 +395,25 @@ Goes through each variant in a file, retrieving annotation information from Geno
 
 =over
 
-=item snv_file
+=item variant_file
 
-An input list of single-nucleotide variants.  The format is:
- chromosome
- position
- reference value
- variant value
+An input list of variants.  The format is:
+ chromosome_name
+ start
+ stop 
+ reference
+ variant
+
+The mutation type will be inferred based upon start, stop, reference, and variant alleles.
+
+ Any number of additional columns may be in the input, but they will be disregarded.
 
 =item output_file
 
 The list of transcript changes which would occur as a result of the associated genome sequence changes.
 
-One SNV may result in multiple transcript entries if it intersects multiple transcripts.  One 
-transcript may occur multiple times in results if multiple SNVs intersect it.
-
-=item summary_file
-
-A one-row csv "table" with some metrics on the SNVs analyzed.
+One variant may result in multiple transcript entries if it intersects multiple transcripts.  One 
+transcript may occur multiple times in results if multiple variants intersect it.
 
 =item 
 
@@ -395,5 +445,5 @@ Optimization, Testing, Data Management:
 
 =cut
 
-#$HeadURL$
-#$Id$
+#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Tools/Annotate/TranscriptVariants.pm $
+#$Id: TranscriptVariants.pm 44679 2009-03-16 17:55:52Z adukes $
