@@ -102,6 +102,7 @@ sub execute {
                                                                              in_sff_file => $self->sff_file,
                                                                              out_sff_file => $out_sff_file,
 									     version => $self->version,
+									     version_subdirectory => $self->version_subdirectory,
                                                                          );
     unless ($isolate_primer->execute) {
         $self->error_message('Failed to execute '. $isolate_primer->command_name);
@@ -112,6 +113,7 @@ sub execute {
                                                                              sff_file => $out_sff_file,
                                                                              primer_fasta => $self->_primer_fasta,
 									     version => $self->version,
+									     version_subdirectory => $self->version_subdirectory,
                                                                          );
     unless ($cross_match->execute) {
         $self->error_message('Failed to execute '. $cross_match->command_name);
@@ -122,6 +124,7 @@ sub execute {
                                                                                                  cross_match_file => $cross_match_file,
                                                                                                  sff_file => $self->sff_file,
 												 version => $self->version,
+												 version_subdirectory => $self->version_subdirectory,
                                                                                              );
     unless ($separate_reads->execute) {
         $self->error_message('Failed to execute '. $separate_reads->command_name);
