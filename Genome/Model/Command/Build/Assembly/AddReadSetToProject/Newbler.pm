@@ -50,6 +50,7 @@ sub execute {
     $DB::single = $DB::stopper;
 
     my $model = $self->model;
+    print Dumper $model;
 
     my $assembly_directory = $model->assembly_directory;
     my $sff_directory = $model->sff_directory;
@@ -57,6 +58,7 @@ sub execute {
 	my %new_assembly_params = (
 				   dir => $model->data_directory,
 				   version => $model->assembler_version,
+				   version_subdirectory=> $model->version_subdirectory,
                                );
 
         my $new_assembly = Genome::Model::Tools::454::Newbler::NewAssembly->create( %new_assembly_params );
@@ -78,6 +80,7 @@ sub execute {
 			  runs => [$self->sff_file],
 			  is_paired_end => $self->instrument_data->is_paired_end,
 			  version => $model->assembler_version,
+			  version_subdirectory=> $model->version_subdirectory,
                       );
 
     my $add_run = Genome::Model::Tools::454::Newbler::AddRun->create( %add_run_params );
