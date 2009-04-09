@@ -103,11 +103,13 @@ sub execute {
         my $seq = $fq->seq;
         $seq =~ s/[^AaTtCcGg]/A/g if $self->base_fix;
         
-        my $id = $id_range ? $new_id : $fq->id;
+        my $id   = $id_range ? $new_id : $fq->id;
+        my $qual = $fq->qual;
+        map{$_ -= 31}@$qual if $self->solexa_format; #solexa format fastq qual = Qphred + 64. Bio::SeqIO fastq quality = sanger fastq quality = Qphred + 33
         
         my %params = (
             -seq  => $seq,
-            -qual => $fq->qual,
+            -qual => $qual,
             -id   => $id,
             -force_flush => 1,
             -trace       => [map{$_*10}(0..$fq->length-1)], 
