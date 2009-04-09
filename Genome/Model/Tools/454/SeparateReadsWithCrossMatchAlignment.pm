@@ -115,6 +115,7 @@ sub execute {
                                                                                 out_sff_file => $out_sff_file,
                                                                                 params => '-i '. $reads_file,
 										version => $self->version,
+										version_subdirectory => $self->version_subdirectory,
                                                                             );
         unless ($separate_reads_sfffile) {
             $self->error_message('Failed to create sffile genome-model tool');
