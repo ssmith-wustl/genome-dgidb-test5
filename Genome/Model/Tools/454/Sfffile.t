@@ -12,7 +12,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 3;
+    plan tests => 5;
     use_ok('Genome::Model::Tools::454::Sfffile');
 }
 
@@ -22,12 +22,22 @@ my $out_file = $tmp_dir .'/tmp.sff';
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-454-Newbler/R_2008_09_22_14_01_00_FLX12345678_TEST_12345678';
 
 my @sff_files = glob($data_dir.'/*.sff');
-my $sfffile = Genome::Model::Tools::454::Sfffile->create(
-	in_sff_files => \@sff_files,
-        out_sff_file => $out_file,
-	version => '2.0.00.20-64',					 
-);
-isa_ok($sfffile,'Genome::Model::Tools::454::Sfffile');
-ok($sfffile->execute,'execute '. $sfffile->command_name);
+
+my @version_subdirs = qw/ offInstrumentApps mapasm454_source /;
+
+foreach my $sub_dir (@version_subdirs) {
+    my $version;
+    $version = '2.0.00.20-64' if $sub_dir eq 'offInstrumentApps';
+    $version = '10282008' if $sub_dir eq 'mapasm454_source';
+
+    my $sfffile = Genome::Model::Tools::454::Sfffile->create(
+							     in_sff_files => \@sff_files,
+							     out_sff_file => $out_file,
+							     version => $version,
+							     version_subdirectory => $sub_dir,
+							     );
+    isa_ok($sfffile,'Genome::Model::Tools::454::Sfffile');
+    ok($sfffile->execute,'execute '. $sfffile->command_name);
+}
 
 exit;
