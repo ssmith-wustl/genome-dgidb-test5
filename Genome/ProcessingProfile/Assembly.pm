@@ -48,8 +48,12 @@ sub properties_hash {
                                        },
 		      assembler_version => {
 			                     doc => 'Version of assembler to use',
-					     valid_values => ['2.0.00.20-1', '2.0.00.20-64', '2.0.00.17-64', '2.0.00.12-64', '1.1.03.24.7-64', '1.1.03.24-64'],
+					     valid_values => ['2.0.00.20-1', '2.0.00.20-64', '2.0.00.17-64', '2.0.00.12-64', '1.1.03.24.7-64', '1.1.03.24-64', '03092009', '01212009', '10282008', '07252008', '01252008'],
 					 },
+		      version_subdirectory => {
+			                   doc => '454 version subdirectory name',
+					   valid_values => ['offInstrumentApps','mapasm454_source'],
+		                     },
                       read_trimmer_name => {
                                             doc => 'The name of the software to use when trimming read sets',
                                             is_optional => 1,
@@ -79,6 +83,7 @@ sub params_for_class {
 
 sub create {
     my $class = shift;
+
     my $self = $class->SUPER::create(@_);
     unless ($self) {
         return;
@@ -101,6 +106,7 @@ sub create {
             return;
         }
     }
+
     return $self;
 }
 
