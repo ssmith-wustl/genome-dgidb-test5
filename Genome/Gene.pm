@@ -70,7 +70,10 @@ sub name
         @egis = $self->external_ids(id_type => $source);
     }
 
-    #return $egis->first->id_value;
+    unless ($egis[0]) {
+        return '';
+    }
+
     return $egis[0]->id_value;
 }
 
