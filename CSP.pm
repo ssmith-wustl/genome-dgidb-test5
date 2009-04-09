@@ -1477,7 +1477,7 @@ sub confirm_scheduled_pse {
             $pse->status_message("successfully set status to 'scheduled'");
             
             # Don't keep the log file in this case
-            $class->close_log_fh;
+            $class->close_log_file;
             $logfile->remove;
             
             die 'required resource NOT met';
@@ -1661,7 +1661,7 @@ sub confirm_scheduled_pse {
     else {
 
         # Place the new log file.
-        $class->close_log_fh;
+        $class->close_log_file;
         if ( !rename( $logfile, $destfile ) ) {
             push @error_message, "Failed to rename the logfile, too!";
         }
