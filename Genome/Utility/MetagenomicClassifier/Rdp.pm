@@ -53,6 +53,14 @@ END
     JNI => 1,
 ) ;
 
+sub get_training_path {
+    my $class = shift;
+    my $training_set = shift;
+
+    $training_set |= '';
+    return "/gsc/scripts/share/rdp/$training_set";
+}
+
 sub new {
     my ($class, %params) = @_;
     
