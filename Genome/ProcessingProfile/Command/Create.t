@@ -30,6 +30,7 @@ my %pp_params = (
         assembler_name => 'newbler',
 	assembler_params => 'test',
 	assembler_version => '2.0.00.20-64',
+	version_subdirectory => 'offInstrumentApps',
     },
     'MicroArrayAffymetrix' => {
         name => 'test_micro_array_affymetrix',
