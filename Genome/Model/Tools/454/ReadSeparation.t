@@ -12,7 +12,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 5;
+    plan tests => 6;
     use_ok('Genome::Model::Tools::454::ReadSeparation');
     use_ok('Genome::Model::Tools::454::IsolatePrimerTag');
     use_ok('Genome::Model::Tools::454::CrossMatchPrimerTag');
@@ -21,13 +21,17 @@ BEGIN {
 
 my $sff_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-454-ReadSeparation/test_454_primer_tag_100k.sff';
 
-my $read_separation = 
-    Genome::Model::Tools::454::ReadSeparation->create(
-        sff_file => $sff_file,
-	version => '2.0.00.20-64',
-    );
-
-ok($read_separation->execute,'execute '. $read_separation->command_name);
-
+my @version_subdirs = qw/ offInstrumentApps mapasm454_source /;
+foreach my $sub_dir (@version_subdirs) {
+    my $version;
+    $version = '2.0.00.20-64' if $sub_dir eq 'offInstrumentApps';
+    $version = '10282008' if $sub_dir eq 'mapasm454_source';
+    my $read_separation = Genome::Model::Tools::454::ReadSeparation->create(
+									    sff_file => $sff_file,
+									    version => $version,
+									    version_subdirectory => $sub_dir,
+									    );
+    ok($read_separation->execute,'execute '. $read_separation->command_name);
+}
 exit;
 
