@@ -82,6 +82,7 @@ sub execute {
                                                                   out_sff_file => $self->out_sff_file,
                                                                   params => '-tr '. $tmp_trim_file,
 								  version => $self->version,
+								  version_subdirectory => $self->version_subdirectory,
                                                               );
     unless ($read_trimmer->execute) {
         die ('Failed to trim file '. $self->in_sff_file);
