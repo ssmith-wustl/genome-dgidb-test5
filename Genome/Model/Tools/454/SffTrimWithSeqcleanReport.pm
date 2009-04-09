@@ -107,6 +107,7 @@ sub execute {
                                                              params => '-i '. $self->trim_file .' -tr '. $self->trim_file,
 							     #test => $self->test,
 							     version => $self->version,
+							     version_subdirectory => $self->version_subdirectory,
                                                          );
     unless ($sfffile->execute) {
         $self->error_message('Failed to output trimmed sff file '. $self->out_sff_file);
