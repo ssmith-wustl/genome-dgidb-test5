@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 use Test::More tests => 20;
+use above "Genome";
 use Genome::Info::IUB;
 
 #Test variant_alleles_for_iub
