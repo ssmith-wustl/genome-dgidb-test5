@@ -66,6 +66,7 @@ sub execute {
 			       output_file => $self->fasta_file,
 			       params => '-s',
 			       version => $model->assembler_version,
+			       version_subdirectory => $model->version_subdirectory,
 			       );
 
         my $fasta_converter = Genome::Model::Tools::454::Sffinfo->create( %sff_info_params );
