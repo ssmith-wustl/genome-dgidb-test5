@@ -14,6 +14,12 @@ class Genome::Model::Tools::Fastq {
             is_optional => 0,
             doc         => 'FASTQ file that contains both sequences and quality values',
         },
+        solexa_format => {
+            type        => 'Boolean',
+            is_optional => 1,
+            default     => 0,
+            doc         => 'There are two types of fastq, sanger fastq quality = Qphred + 33, Solexa fastq quality = Qphred + 64. default is sanger format',
+        },
     ],
 };
 
