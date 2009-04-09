@@ -80,6 +80,7 @@ sub execute {
                                                                    output_file => $tmp_fasta_file,
                                                                    params => '-s',
 								   version => $self->version,
+								   version_subdirectory => $self->version_subdirectory,
                                                                );
     unless ($fasta_sffinfo->execute) {
         die('Failed to dump fasta data from '. $self->sff_file);
@@ -91,6 +92,7 @@ sub execute {
                                                                   output_file => $tmp_fasta_file .'.qual',
                                                                   params => '-q',
 								  version => $self->version,
+								  version_subdirectory => $self->version_subdirectory,
                                                               );
     unless ($qual_sffinfo->execute) {
         die('Failed to dump fasta data from '. $self->sff_file);
