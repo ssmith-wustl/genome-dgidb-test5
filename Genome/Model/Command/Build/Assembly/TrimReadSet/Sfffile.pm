@@ -65,6 +65,7 @@ sub execute {
 			      out_sff_file => $self->sff_file,
 			      trim_file =>  $self->trim_file,
 			      version => $model->assembler_version,
+			      version_subdirectory => $model->version_subdirectory,
 			      );
 
         my $sfffile_trim = Genome::Model::Tools::454::SffTrimWithSeqcleanReport->create( %trimmer_params );
