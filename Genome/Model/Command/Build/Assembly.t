@@ -19,7 +19,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 203;
+    plan tests => 392;
 
     use_ok( 'Genome::InstrumentData::454');
     use_ok( 'Genome::Model::Assembly');
@@ -43,6 +43,7 @@ my %pp_0_params = (
 		   name => 'test_assembly_processing_profile_1',
 		   assembler_name => 'newbler',
 		   assembler_params => '-a 0',
+		   version_subdirectory => 'offInstrumentApps',
 		   read_filter_name => 'seqclean',
 		   read_trimmer_name => 'sfffile',
 		   sequencing_platform => '454',
@@ -61,15 +62,51 @@ my %pp_1_params = (
 		   sequencing_platform => '454',
 		   );
 
+$pp = Genome::ProcessingProfile::Assembly->create(%pp_1_params);
+ok(!$pp, "correctly failed to make a processing profile with no version_subdirectory specified");
+
 my %pp_2_params = (
+		   name => 'test_assembly_processing_profile_1',
+		   assembler_name => 'newbler',
+		   assembler_params => '-a 0',
+		   assembler_version => '2.0.00.17-64',
+		   version_subdirectory => 'offInstrumentApps', 
+		   read_filter_name => 'seqclean',
+		   read_trimmer_name => 'sfffile',
+		   sequencing_platform => '454',
+		   );
+
+my %pp_3_params = (
 		   name => 'test_assembly_processing_profile_2',
 		   assembler_name => 'newbler',
 		   assembler_version => '2.0.00.17-64',
+		   version_subdirectory => 'offInstrumentApps',
+		   assembler_params => '-a 0',
+		   sequencing_platform => '454',
+		   );
+my %pp_4_params = (
+		   name => 'test_assembly_processing_profile_3',
+		   assembler_name => 'newbler',
+		   assembler_params => '-a 0',
+		   assembler_version => '10282008',
+		   version_subdirectory => 'mapasm454_source', 
+		   read_filter_name => 'seqclean',
+		   read_trimmer_name => 'sfffile',
+		   sequencing_platform => '454',
+		   );
+
+my %pp_5_params = (
+		   name => 'test_assembly_processing_profile_4',
+		   assembler_name => 'newbler',
+		   assembler_version => '10282008',
+		   version_subdirectory => 'mapasm454_source',
 		   assembler_params => '-a 0',
 		   sequencing_platform => '454',
 		   );
 
-my @pp_params = (\%pp_1_params,\%pp_2_params);
+
+
+my @pp_params = (\%pp_2_params,\%pp_3_params, \%pp_4_params, \%pp_5_params);
 
 my $skip_assemble = 1;
 
@@ -78,6 +115,8 @@ my $subject_name = 'H_FY-454_96normal_tspset3_indel';
 my $subject_type = 'sample_name';
 
 for (my $i=0; $i < scalar(@pp_params); $i++) {
+    print "Count $i\n\n";
+
     my $pp_params = $pp_params[$i];
     my $model_name = $model_base_name .'_'. $i;
     my %pp_params = %{$pp_params};
@@ -97,6 +136,7 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
                                                                         subject_type => $subject_type,
                                                                         data_directory => $data_directory,
                                                                     );
+
     isa_ok($model_define,'Genome::Model::Command::Define::Assembly');
     &_trap_messages($model_define);
     ok($model_define->execute,'execute '. $model_define->command_name);
@@ -186,7 +226,6 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
             # Executing AddReadSetToProject events runs an external program that can
             # print to stdout.  It's failure is properly caught by the caller, so we're
             # not bothering to make sure the message is correct
-
             my $foo;
             unless ($turn_on_messages) {
                 $foo = &_disable_std_out_err();
@@ -196,7 +235,6 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
             unless ($turn_on_messages) {
                 &_enable_std_out_err($foo);
             }
-
             ok($rv,"execute $class event");
             @warning_messages = $build_event->warning_messages;
             is(scalar(@warning_messages), 0, 'event execution produced no warning messages');
@@ -210,8 +248,12 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
     ok(-s $model->assembly_project_xml_file, '454AssemblyProject.xml file exists with size');
 
     my $xml_asm_version = Genome::Model::Tools::454::Newbler->get_newbler_version_from_xml_file($model->assembly_project_xml_file) .'-64';
-    is($xml_asm_version, $pp_params->{assembler_version}, 'verified correct assembler version');
 
+    #skipping this test for mapasm_source runs since xml file for these runs will point to
+    #original compelete offInstrumentsApp versions
+    unless ($pp->version_subdirectory eq 'mapasm454_source') {
+	is($xml_asm_version, $pp_params->{assembler_version}, 'verified correct assembler version');
+    }
     my @assemble_events = Genome::Model::Command::Build::Assembly::Assemble->get(model_id => $model->id);
     is(scalar(@assemble_events),1,'one assemble event for project');
 
