@@ -27,6 +27,14 @@ class Genome::Model::Tools::454 {
                                   is => 'string',
                                   doc => 'a temporary directory for storing files',
                               },
+		     version_subdirectory => {
+			                      is => 'string',
+					      doc => '454 subdirectory name',
+					  },
+		     test_link => {
+			            is => 'string',
+				    doc => 'link names to default 454 versions',
+		     },
                  ]
 };
 
@@ -42,8 +50,21 @@ EOS
 
 sub create {
     my $class = shift;
-
     my $self = $class->SUPER::create(@_);
+
+    my $link;
+    #FOR TEST DATA .. GETS EITHER installed or newbler
+    if ($self->test_link) {
+	$link = $self->test_link;
+    }
+    #FOR ACTUAL RUNS .. GETS EITHER offIns or mapasm
+    elsif ($self->version_subdirectory) {
+	$link = $self->version_subdirectory;
+    }
+    #FOR REFERENCE ALIGNEMNT TESTS
+    else {
+	$link = 'installed';
+    }
 
     unless ($self->arch_os =~ /64/) {
         $self->error_message('All 454 tools must be run from 64-bit architecture');
@@ -52,20 +73,34 @@ sub create {
 
     my $tempdir = File::Temp::tempdir(CLEANUP => 1);
     $self->_tmp_dir($tempdir);
-
     unless ($self->version) {
-        my $base_path = $self->resolve_454_path .'installed';
-        if (-l $base_path) {
-            my $link = readlink($base_path);
-            unless ($link =~ /offInstrumentApps-(\d\.\d\.\d{2}\.\d{2}-\d+)/) {
-                $self->error_message('Link to 454 tools was malformed: '. $link);
-                return;
-            }
-            $self->version($1);
-        } else {
-            $self->error_message('Expected symlink to installed software');
-            return;
-        }
+#	my $base_path = $self->resolve_454_path .'installed';
+	my $base_path = $self->resolve_454_path . $link;
+	if (-l $base_path) {
+	    my $link_path = readlink($base_path);
+	    if ($link_path =~ /^offInstrumentApps/){
+		unless ($link_path =~ /(offInstrumentApps)-(\d\.\d\.\d{2}\.\d{2}-\d+)/) {
+		    $self->error_message('Link to 454 tools was malformed: '. $link_path);
+		    return;
+		}
+		$self->version($2);
+		$self->version_subdirectory($1);
+	    }
+	    elsif ($link_path =~ /^mapasm454_source/) {
+		unless ($link_path =~ /(mapasm454_source)_(\d{8})/) {
+		    $self->error_message('Link to 454 tools was malformed: '.$link_path);
+		    return;
+		}
+		$self->version($2);
+		$self->version_subdirectory($1);
+	    }
+	    else {
+		return;
+	    }
+	} else {
+	    $self->error_message('Expected symlink to installed software');
+	    return;
+	}
     }
     unless ($self->version) {
         $self->error_message('Failed to resolve version number of 454 applications');
@@ -78,9 +113,27 @@ sub resolve_454_path {
     return '/gsc/pkg/bio/454/';
 }
 
+sub resolve_app_bin_name {
+    my $self = shift;
+    my $app_bin_name;
+    $app_bin_name = 'bin' if
+	$self->version_subdirectory eq 'offInstrumentApps';
+    $app_bin_name =  'applicationsBin' if
+	$self->version_subdirectory eq 'mapasm454_source';
+    return $app_bin_name;
+}
+
 sub bin_path {
     my $self = shift;
-    return $self->resolve_454_path .'offInstrumentApps-'. $self->version .'/bin';
+    my $bin_path;
+    #difference is - vs _;
+    if ($self->version_subdirectory eq 'offInstrumentApps') {
+	$bin_path = $self->resolve_454_path.$self->version_subdirectory.'-'.$self->version.'/'.$self->resolve_app_bin_name;
+    }
+    if ($self->version_subdirectory eq 'mapasm454_source') {
+	$bin_path = $self->resolve_454_path.$self->version_subdirectory.'_'.$self->version.'/'.$self->resolve_app_bin_name;
+    }
+    return $bin_path;
 }
 
 1;
