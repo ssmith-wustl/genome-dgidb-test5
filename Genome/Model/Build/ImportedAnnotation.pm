@@ -67,7 +67,10 @@ sub transcript_cmp {
     return ($cached_transcript->transcript_id <=> $lowest->transcript_id);
 }
 
-sub Genome::Model::ImportedAnnotation::Iterator::next{
+package Genome::Model::ImportedAnnotation::Iterator;
+our @ISA = ('UR::Object::Iterator');
+
+sub next {
     my $self = shift;
     return $self->();
 }
