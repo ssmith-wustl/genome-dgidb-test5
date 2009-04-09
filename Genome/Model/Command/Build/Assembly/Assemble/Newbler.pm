@@ -45,6 +45,7 @@ sub execute {
 			      params => $params,
 			      dir => $model->data_directory,
 			      version => $model->assembler_version,
+			      version_subdirectory => $model->version_subdirectory,
 			      );
 
     my $run_project = Genome::Model::Tools::454::Newbler::RunProject->create( %run_project_params );
