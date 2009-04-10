@@ -207,12 +207,16 @@ $DB::single = 1;
     }
     
     unless ($saved) {
+        $self->error_message("Error saving report!");
+        $self->error_message($@) if $@;
         my $build_id = $build->id;
-        my $path = "/tmp/gm-build-errors-$build_id";
-        $self->error_message("Saving to $path on " . Sys::Hostname::hostname());
+        my $path = "/tmp/gm-build-errors-$build_id." . time() . '.' . $$;
+        $self->warning_message("Saving to $path on " . Sys::Hostname::hostname() . ' instead for troubleshooting.');
+        mkdir $path;
         unless ($report_output->save($path)) {
-            $self->error_message("Eror saving to temp! $!");
+            $self->error_message("Error saving to temp! $!");
         }
+        $self->warning_message("Save complete.");
         $report_output->delete;
         $report_specification->delete;
         return;
