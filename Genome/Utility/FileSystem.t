@@ -19,6 +19,7 @@ use base 'Test::Class';
 
 use Data::Dumper;
 use File::Path;
+use File::Temp;
 use Test::More;
 
 sub startup : Test(startup => 1) {
@@ -31,6 +32,16 @@ sub _base_test_dir {
     return '/gsc/var/cache/testsuite/data/Genome-Utility-Filesystem';
 }
 
+sub _tmpdir {
+    my $self = shift;
+
+    unless ( $self->{_tmpdir} ) {
+        $self->{_tmpdir} = File::Temp::tempdir(CLEANUP => 1);
+    }
+
+    return $self->{_tmpdir};
+}
+
 sub _new_file {
     return sprintf('%s/new_file.txt', _base_test_dir());
 }
@@ -41,6 +52,14 @@ sub _existing_file {
 
 sub _existing_link {
     return sprintf('%s/existing_link.txt', _base_test_dir());
+}
+
+sub _new_link {
+    return sprintf('%s/existing_link.txt', _tmpdir());
+}
+
+sub _new_dir {
+    return sprintf('%s/new_dir', _tmpdir());
 }
 
 sub _no_write_dir {
@@ -123,7 +142,7 @@ sub test1_file : Test(12) {
     return 1;
 }
 
-sub test2_directory : Test(15) {
+sub test2_directory : Test(14) {
     my $self = shift;
 
     # Real dir
@@ -179,19 +198,38 @@ sub test2_directory : Test(15) {
         'Failed as expected - can\'t write to dir',
     );
 
-    my $base_new_dir = sprintf('%s/new', _base_test_dir());
-    my $new_dir = sprintf('%s/dir/with/sub/dirs/', $base_new_dir);
-    Genome::Utility::FileSystem->create_directory($new_dir);
-    ok(-d $new_dir, "Created new dir: $new_dir");
+    my $new_dir = _new_dir();
+    ok( Genome::Utility::FileSystem->create_directory($new_dir), "Created new dir: $new_dir");
+
     my $fifo = $new_dir .'/test_pipe';
     `mkfifo $fifo`;
     ok(!Genome::Utility::FileSystem->create_directory($fifo),'failed to create_directory '. $fifo);
-    ok(File::Path::rmtree($base_new_dir), "Removed base new dir: $base_new_dir");
 
     return 1;
 }
 
-sub test3_resource_locking : Test(20) {
+sub test3_symlink : Test(5) {
+    my $self = shift;
+
+    my $target = _existing_file();
+    my $new_link = _new_link();
+
+    # Good
+    ok( Genome::Utility::FileSystem->create_symlink($target, $new_link), 'Created symlink');
+
+    # Link Failures
+    ok( !Genome::Utility::FileSystem->create_symlink($target), 'Failed as expected - create_symlink w/o link');
+    ok( !Genome::Utility::FileSystem->create_symlink($target, $new_link), 'Failed as expected - create_symlink when link already exists');
+    unlink $new_link; # remove to not influence target failures below
+    
+    # Target Failures
+    ok( !Genome::Utility::FileSystem->create_symlink(undef, $new_link), 'Failed as expected - create_symlink w/o target');
+    ok( !Genome::Utility::FileSystem->create_symlink(_tmpdir().'/target', $new_link), 'Failed as expected - create_symlink when target does not exist');
+    
+    return 1;
+}
+
+sub test4_resource_locking : Test(20) {
     my $bogus_id = '-55555';
     my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
     my $sub_dir = $tmp_dir .'/sub/dir/test';
