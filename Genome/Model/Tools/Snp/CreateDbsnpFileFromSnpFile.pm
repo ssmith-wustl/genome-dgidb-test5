@@ -33,26 +33,37 @@ class Genome::Model::Tools::Snp::CreateDbsnpFileFromSnpFile {
     ],
 };
 
+sub create {
+	my $class = shift;
+	my $self = $class->SUPER::create(@_);
+	return undef unless $self;
+
+	unless (Genome::Utility::FileSystem->validate_file_for_reading($self->snp_file)) {
+		$self->error_message('Failed to validate snp file '. $self->snp_file .' for reading');
+		return;
+	}	
+	unless (Genome::Utility::FileSystem->validate_file_for_writing($self->output_file)) {
+		$self->error_message('Failed to validate output file '. $self->output_file .' for writing');
+		return;
+	}
+	return $self;
+}
+
 
 sub execute {
     my $self=shift;
     # local $| = 1;
     my $release = $self->release;
 
-    unless(-f $self->snp_file) {
-        $self->error_message("Snp file is not a file: " . $self->snp_file);
-        return;
-    }
-
-    my $snp_fh = IO::File->new($self->snp_file);
+    my $snp_fh = Genome::Utility::FileSystem->open_file_for_reading($self->snp_file);
     unless($snp_fh) {
-        $self->error_message("Failed to open filehandle for: " .  $self->snp_file );
+        $self->error_message("Failed to open input filehandle for: " .  $self->snp_file );
         return;
     }
 
-    my $output_fh = IO::File->new($self->output_file, "w");
+    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
     unless($output_fh) {
-        $self->error_message("Failed to open filehandle for: " .  $self->output_file );
+        $self->error_message("Failed to open output filehandle for: " .  $self->output_file );
         return;
     }
 
@@ -112,9 +123,17 @@ sub execute {
         }
     }
 
-    $dbsnp_fh->close;
-    $snp_fh->close; 
-    $output_fh->close;
+    if (defined($dbsnp_fh)) {
+	$dbsnp_fh->close;
+    }
+   
+    if (defined($snp_fh)) { 
+    	$snp_fh->close; 
+    }
+
+    if (defined($output_fh)) { 
+    	$output_fh->close;
+    }
 
     return 1;
 }
