@@ -116,6 +116,7 @@ sub link_instrument_data {
         $cnt++;
         my $target = sprintf('%s/%s', $instrument_data_dir, $trace);
         my $link = sprintf('%s/%s', $chromat_dir, $trace);
+        next if -e $link;
         Genome::Utility::FileSystem->create_symlink($target, $link)
             or return;
     }
