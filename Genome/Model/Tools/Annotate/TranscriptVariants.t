@@ -5,6 +5,7 @@ use warnings;
 use Data::Dumper;
 use Test::More tests => 10;
 use File::Compare;
+use above "Genome";
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-TranscriptVariants';
 

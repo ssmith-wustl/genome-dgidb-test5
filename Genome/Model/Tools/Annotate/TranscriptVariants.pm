@@ -8,10 +8,11 @@ use Genome;
 use Command;
 use Data::Dumper;
 use IO::File;
+use Genome::Info::IUB;
 
 
 class Genome::Model::Tools::Annotate::TranscriptVariants{
-    is => 'Command',
+    is => 'Genome::Model::Tools::Annotate',
     has => [ 
         variant_file => {
             is => 'Text',
@@ -195,7 +196,7 @@ sub execute {
         # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
         # TODO... unduplicate this code
         if ($variant->{type} eq 'SNP') {
-            my @variant_alleles = $self->variant_alleles($variant->{reference}, $variant->{variant});
+            my @variant_alleles = Genome::Info::IUB->variant_alleles_for_iub($variant->{reference}, $variant->{variant});
             for my $variant_allele (@variant_alleles) {
                 # annotate variant with this allele
                 $variant->{variant} = $variant_allele;
@@ -229,46 +230,10 @@ sub execute {
     return 1;
 }
 
-sub _create_file {
-    my ($self, $output_file) = @_;
-    my $output_fh;
-
-    unlink $output_file if -e $output_file;
-    if (-e $output_file) {
-        $self->warning_message("found previous output file, removing $output_file");
-        unlink $output_file;
-        if (-e $output_file) {
-            die "failed to remove previous file: $! ($output_file)";
-        }
-    }
-    $output_fh = IO::File->new("> $output_file");
-    unless ($output_fh) {
-        die "Can't open file ($output_file) for writing: $!";
-    }
-
-    return $output_fh;
-}
-
 sub _transcript_report_fh {
     my ($self, $fh) = @_;
     $self->{_transcript_fh} = $fh if $fh;
     return $self->{_transcript_fh};
-}
-
-# attributes
-sub variant_attributes {
-    my $self = shift;
-    return (qw/ chromosome_name start stop reference variant /);
-}
-
-sub transcript_attributes {
-    my $self = shift;
-    return (qw/ gene_name transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain /);
-}
-
-sub transcript_report_headers {
-    my $self = shift;
-    return ($self->variant_attributes, $self->transcript_attributes);
 }
 
 sub _print_annotation {
@@ -282,7 +247,7 @@ sub _print_annotation {
     );
 
     # Transcripts
-    for my $transcripts ( @$transcripts )
+    for my $transcript ( @$transcripts )
     {
         $self->_transcript_report_fh->print
         (
@@ -290,80 +255,12 @@ sub _print_annotation {
             (
                 ',',                   
                 $snp_info_string,
-                map({ $transcripts->{$_} } $self->transcript_attributes),
+                map({ $transcript->{$_} } $self->transcript_attributes),
             ), 
             "\n",
         );
     }
     return 1;
-}
-
-# Takes an iub code, translates it, and returns an array of the possible bases that code represents, excludes the reference
-sub variant_alleles {
-    my ($self, $ref, $iub) = @_;
-
-    my @alleles = $self->iub_to_alleles($iub);
-    my @variants = ();
-    foreach my $allele (@alleles) {
-        if($allele ne $ref) {
-            push @variants, $allele;
-        }
-    }
-
-    return @variants;
-}
-
-# Translates an IUB code, returns the bases
-sub iub_to_alleles {
-    my ($self, $iub) = @_;
-
-    my %IUB_CODE = (
-        A => ['A'],
-        C => ['C'],
-        G => ['G'],
-        T => ['T'],
-        M => ['A','C'],
-        K => ['G','T'],
-        Y => ['C','T'],
-        R => ['A','G'],
-        W => ['A','T'],
-        S => ['G','C'],
-        D => ['A','G','T'],
-        B => ['C','G','T'],
-        H => ['A','C','T'],
-        V => ['A','C','G'],
-        N => ['A','C','G','T'],
-    );
-
-    return @{$IUB_CODE{$iub}};
-}
-
-# Figures out what the 'type' of this variant should be (snp, dnp, ins, del) based upon
-# the start, stop, reference, and variant
-# Takes in a variant hash, returns the type
-sub infer_variant_type {
-    my ($self, $variant) = @_;
-
-    # If the start and stop are the same, and ref and variant are defined its a SNP
-    if (($variant->{stop} == $variant->{start})&&
-        ($variant->{reference} ne '-')&&($variant->{reference} ne '0')&&
-        ($variant->{variant} ne '-')&&($variant->{variant} ne '0')) {
-        return 'SNP';
-    # If start and stop are 1 off, and ref and variant are defined its a DNP
-    } elsif (($variant->{stop} - $variant->{start} == 1)&&
-             ($variant->{reference} ne '-')&&($variant->{reference} ne '0')&&
-             ($variant->{variant} ne '-')&&($variant->{variant} ne '0')) {
-        return 'DNP';
-    # If reference is a dash, we have an insertion
-    } elsif (($variant->{reference} eq '-')||($variant->{reference} eq '0')) {
-        return 'INS';
-    } elsif (($variant->{variant} eq '-')||($variant->{variant} eq '0')) {
-        return 'DEL';
-    } else {
-        $self->error_message("Could not determine variant type from variant:");
-        $self->error_message(Dumper($variant));
-        die;
-    }
 }
 
 1;
