@@ -188,6 +188,7 @@ sub resolve_data_directory {
                 die $self->error_message;
             }
             my $build_symlink = $data_directory . $build_subdirectory;
+            unlink $build_symlink if -e $build_symlink;
             my $build_data_directory = $disk_allocation->absolute_path;
             unless (Genome::Utility::FileSystem->create_symlink($build_data_directory,$build_symlink)) {
                 $self->error_message("Failed to make symlink '$build_symlink' with target '$build_data_directory'");
