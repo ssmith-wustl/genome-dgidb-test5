@@ -322,20 +322,26 @@ sub create_directory {
 sub create_symlink {
     my ($self, $target, $link) = @_;
 
-    #TODO verify that it points to the given spot??
-    return 1 if -l $link; 
-
-    if ( -f $link ) {
-        $self->error_message("Can't create link ($link), already exists as a file");
+    unless ( $target ) {
+        $self->error_message("No target given to create create_symlink");
         return;
     }
 
-    if ( -d $link ) {
-        $self->error_message("Can't create link ($link), already exists as a directory");
+    unless ( -e $target ) {
+        $self->error_message("Cannot create link ($link) to target ($target) does not exist");
         return;
     }
 
+    unless ( $link ) {
+        $self->error_message("No link given to create create_symlink");
+        return;
+    }
 
+    if ( -e $link ) { 
+        $self->error_message("Requested link ($link) for target ($target) already exists");
+        return;
+    }
+    
     unless ( symlink($target, $link) ) {
         $self->error_message("Can't create link ($link) to $target\: $!");
         return;
