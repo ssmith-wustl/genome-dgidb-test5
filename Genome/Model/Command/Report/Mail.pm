@@ -122,68 +122,109 @@ sub execute {
 $DB::single = 1;
     
     my $build = $self->build;
+    my $model = $build->model;
     my $report_name = $self->report_name;
 
     my $report_path = $self->directory;
     unless ( defined($report_path) ) {
     	$report_path = $build->resolve_reports_directory;
     }
-   
+  
+    my @mail_parts;
+ 
     my $html_file = $report_path."/".$self->report_name."/report.html"; 
     my $txt_file = $report_path."/".$self->report_name."/report.txt"; 
 
-    unless (-e $html_file) {
-	die "Could not find the report at: ".$html_file;
+    #Need at least one part to send!
+    my $file_count = 0;
+    if (-e $html_file) {
+       #print("\nFound html file.\n");	
+       $file_count++; 
+    }
+    if (-e $txt_file) {
+       #print("\nFound txt file.\n");	
+   	$file_count++; 
     }
 
-    my $txt_option = ""; 
-    if (-e $txt_file) {
-	$txt_option = " -a $txt_file ";
-    } else {
-	print("Can't find a .txt file for this report.\n");	
-    } 
-
-    my $null_body = "/dev/null";
-    my $subject = '"Report: '.$report_name.' from Build: '.$self->build_id.'"'; 
-    my $mail_cmd = "mutt -a ".$html_file." ".$txt_option." -s ".$subject." ".$self->to." < ".$null_body;   
-    print "Sending mail via: $mail_cmd\n"; 
-    #system($mail_cmd);   
-    send_mail(); 
+    if ( $file_count == 0 ) {
+	print("\nDid not find any reports at the specified paths. Quiting.\n");
+	print("Expected HTML report at: $html_file");
+	print("Expected Text report at: $txt_file");
+	die;
+    }
+    $report_name =~ s/_/ /g; 
+    my $subject = 'Genome Model '.$model->id.' "'.$model->name.'" '.$report_name.' Report for Build '.$build->id;
+    $self->send_mail($subject,$html_file,$txt_file); 
     return 1;
 }
 
 
 sub send_mail {
+   
+    my $self  = shift;
+    my $subject = shift;
+    my $msg_html = shift;
+    my $msg_txt = shift;
 
-    my $msg_txt = "This is my txt msg.";
-    my $msg_html = "<html><body><h1>This is my html message</h1><img src=\"cid:img1\"></body></html>";
-
-eval {
-                (new Mail::Sender)->OpenMultipart({
+    my $recipients = $self->to;
+ 
+    my $sender = Mail::Sender->new(
+		{
 			smtp => 'gscsmtp.wustl.edu',
-                        to => 'jpeck@genome.wustl.edu',
-                        from => 'jpeck@genome.wustl.edu',
-                        subject => 'Alternatives with images',
-                        debug => '/gscuser/ssmith/svn/pmr3/Genome/err.log',
+                        to => $recipients, 
+                        from => 'apipe@genome.wustl.edu',
+                        subject => $subject,
+                        #debug => '/gscuser/ssmith/svn/pmr3/Genome/err.log',
                         multipart => 'related',
-                })
-                        ->Part({ctype => 'multipart/alternative'})
-                                ->Part({ ctype => 'text/plain', disposition => 'NONE', msg => $msg_txt })
-                                ->Part({ctype => 'text/html', disposition => 'NONE', msg => $msg_html})
-                        ->EndPart("multipart/alternative")
-                        ->Attach({
-                                description => 'gsc logo gif',
-                                ctype => 'image/jpeg',
-                                encoding => 'base64',
-                                disposition => "inline; filename=\"genome_center_logo.gif\";\r\nContent-ID: <img1>",
-                                file => '/gscmnt/839/info/medseq/images/genome_center_logo.gif'
-                        })
-                ->Close();
-        } or print "Error sending mail: $Mail::Sender::Error\n";
+    		}
+	);
+
+   $sender->OpenMultipart;
+
+   $sender->Part({ctype => 'multipart/alternative'});
+   
+   if (-e $msg_txt) {
+        my $msg_txt_contents = get_contents($msg_txt); 
+   	$sender->Part({ctype => 'text/plain', disposition => 'NONE', msg => $msg_txt_contents})
+   }
+   if (-e $msg_html) {
+        my $msg_html_contents = get_contents($msg_html);
+   	$sender->Part({ctype => 'text/html', disposition => 'NONE', msg => $msg_html_contents})
+   } 
+
+   $sender->EndPart("multipart/alternative");
+
+   $sender->Attach(
+		{
+                description => 'gsc logo gif',
+                ctype => 'image/jpeg',
+                encoding => 'base64',
+                disposition => "inline; filename=\"genome_center_logo.gif\";\r\nContent-ID: <img1>",
+                file => '/gscmnt/839/info/medseq/images/genome_center_logo.gif'
+                }
+	);
+
+   $sender->Close;
+   #or print "Error sending mail: $Mail::Sender::Error\n";
+   if ($@) {
+        print("failed to send mail: $@");
+        return;
+    }
 
 
 }
 
+sub get_contents {
+   my $in_file_name = shift;
+   my $in = new IO::File($in_file_name, "r");
+   #print ("\nGetting contents for : $in_file_name\n");
+   my $ret = "";
+   while (<$in>) {
+      $ret.= $_;
+   }
+   $in->close();
+   return $ret;
+}
 
 # TODO: move onto the build or report as a method
 sub _resolve_valid_report_class_for_build_and_name{
