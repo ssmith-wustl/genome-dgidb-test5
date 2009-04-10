@@ -91,7 +91,7 @@
 														</h2>
 													</td>
 													<td style="border-bottom: 2px solid #CCC;" align="right">
-														<a href="https://gscweb[% data_directory %]" style="text-decoration:none;font-size:70%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view details &gt;</a>
+														<a href="https://gscweb.gsc.wustl.edu[% data_directory %]" style="text-decoration:none;font-size:70%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view details &gt;</a>
 													</td>
 												</tr>
 											</table>
@@ -133,7 +133,7 @@
 														</h2>
 													</td>
 													<td style="border-bottom: 2px solid #CCC;" align="right">
-														<!--<a href="https://gscweb[% data_directory %]reports/RefSeqMaq/report.html" style="text-decoration:none;font-size:70%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view details &gt;</a>-->
+														<!--<a href="https://gscweb.gsc.wustl.edu[% data_directory %]reports/RefSeqMaq/report.html" style="text-decoration:none;font-size:70%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view details &gt;</a>-->
 													</td>
 												</tr>
 											</table>
@@ -196,7 +196,7 @@
 														</h2>
 													</td>
 													<td style="border-bottom: 2px solid #CCC;" align="right">
-														<a href="https://gscweb[% data_directory %]reports/Gold_SNP_Concordance/report.html" style="text-decoration:none;font-size:70%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view details &gt;</a>
+														<a href="https://gscweb.gsc.wustl.edu[% data_directory %]reports/Gold_SNP_Concordance/report.html" style="text-decoration:none;font-size:70%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view details &gt;</a>
 													</td>
 												</tr>
 											</table>
@@ -283,7 +283,7 @@
 														</h2>
 													</td>
 													<td style="border-bottom: 2px solid #CCC;" align="right">
-														<a href="https://gscweb[% data_directory %]reports/dbSNP_Concordance/report.html" style="text-decoration:none;font-size:70%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view details &gt;</a>
+														<a href="https://gscweb.gsc.wustl.edu[% data_directory %]reports/dbSNP_Concordance/report.html" style="text-decoration:none;font-size:70%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view details &gt;</a>
 													</td>
 												</tr>
 											</table>
