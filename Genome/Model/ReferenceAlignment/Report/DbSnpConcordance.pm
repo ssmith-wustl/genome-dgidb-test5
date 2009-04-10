@@ -104,6 +104,7 @@ sub generate_report_detail
             die "unknown SNV list $list!.  cannot resolve report header!";
         }
         
+$DB::single = 1;            
         my $snp_file;
         if  (defined $self->override_variant_file) {
             # override SNP list for testing
@@ -114,6 +115,13 @@ sub generate_report_detail
             # get the SNV lists from the build and put them together
             $snp_file = $self->create_temp_file_path($list);
             my @files = $self->$list;
+	    #my $file_list = join(" ", @files);
+            #my $cat_cmd = "cat $file_list > $snp_file";
+            #switching this back for the time being... 
+            #my $cat_rv = Genome::Utility::FileSystem->shellcmd( cmd=>$cat_cmd, input_files=>\@files, output_files=>[$snp_file] ); 
+            #unless ($cat_rv) {
+	    #	die "Cat'ing snp files failed. Return value: $cat_rv";
+	    # } 
             system "cat @files > $snp_file";
         }
         
@@ -128,26 +136,21 @@ sub generate_report_detail
         # TODO: this should come from the latest build of the dbSNP imported variations model
         my $db_snp_file;
         my $db_snp_path;
-        my $dbsnp_cmd;
         
         if (defined $self->override_db_snp_file) {
             $db_snp_file = $self->override_model_db_snp_file;
             #print("\nUsing provided db snp file: $db_snp_file\n");
             $db_snp_path = $db_snp_file;
-            $dbsnp_cmd = "No command executed.  Using provided db snp file: $db_snp_file";
-            $self->status_message($dbsnp_cmd);
         }
         else {
-            $db_snp_path = $self->build->resolve_reports_directory() . $model->genome_model_id. "$list.dbsnp";
-            
-            $dbsnp_cmd = "gt snp create-dbsnp-file-from-snp-file " .
-                "--output-file $db_snp_path " .
-                "--snp-file $snp_file";
+            $db_snp_path = $self->build->resolve_reports_directory() ."/". $model->genome_model_id. "$list.dbsnp";
             
             $self->status_message("Generating dbSNP intersection for concordance checking...");
             
             unless ($self->test and -e $db_snp_path) {
-                system "$dbsnp_cmd";
+                unless (Genome::Model::Tools::Snp::CreateDbsnpFileFromSnpFile->execute(output_file=>$db_snp_path,snp_file=>$snp_file) ) {
+			die "Could not execute create-db-snp-file-from-snp-file.";		
+		} 
             }
             
             unless (-e $db_snp_path) {
@@ -156,18 +159,31 @@ sub generate_report_detail
             }
         }
         
-        my $concordance_cmd = 
-            "gt snp db-snp-concordance ".
-            "--dbsnp-file $db_snp_path ".
-            "--snp-file $snp_file"; 
+        #my $concordance_cmd = 
+        #    "gt snp db-snp-concordance ".
+        #    "--dbsnp-file $db_snp_path ".
+        #    "--snp-file $snp_file".
+        #    "--output-file $cc_output"; 
         #print("Generating concordance report using cmd: $concordance_cmd");
+        
         my $concordance_report;
         
         if ($self->test and -e "./concordance-$list") {
             $concordance_report = `cat ./concordance-$list`;
         }
         else {
-            $concordance_report = `$concordance_cmd`;
+            my $cc_output = $self->create_temp_file_path();
+            $self->status_message("Output file for DbSnpConcordance: ".$cc_output.",".-s $cc_output);
+            $self->status_message("snp_file for DbSnpConcordance: ".$snp_file.",".-s $snp_file);
+            $self->status_message("dbsnp_file for DbSnpConcordance: ".$db_snp_path.",".-s $db_snp_path);
+            unless (Genome::Model::Tools::Snp::DbSnpConcordance->execute(output_file=>$cc_output,snp_file=>$snp_file,dbsnp_file=>$db_snp_path) ) {
+		die "Could not execute db-snp-concordance.";		
+	    }
+            $self->status_message("output result: ".-s $cc_output);
+            #TODO this cat should be done differently.   
+            $concordance_report = `cat $cc_output`; 
+            $self->status_message("concordance report: ".$concordance_report);
+            # $concordance_report = `$concordance_cmd`;
             if ($self->test) {
                 IO::File->new(">./concordance-$list")->print($concordance_report);
             }
@@ -181,18 +197,26 @@ sub generate_report_detail
         $body->print("<pre>$concordance_report</pre>");
         $body->print("<p/>");
         
-        my $concordance_quality_cmd = 
-            "gt snp db-snp-concordance ".
-            "--report-by-quality ".
-            "--dbsnp-file $db_snp_path ".
-            "--snp-file $snp_file"; 
+        #my $concordance_quality_cmd = 
+        #    "gt snp db-snp-concordance ".
+        #    "--report-by-quality ".
+        #    "--dbsnp-file $db_snp_path ".
+        #    "--snp-file $snp_file"; 
+
         #print("Generating concordance quality report using cmd: $concordance_quality_cmd"); 
         my $concordance_quality_report;
         if ($self->test and -e "./concordance-quality-$list") {
             $concordance_quality_report = `cat ./concordance-quality-$list`;
         }
-        else {
-            $concordance_quality_report = `$concordance_quality_cmd`;
+        else { 
+  
+            my $cq_output = $self->create_temp_file_path();
+            unless (Genome::Model::Tools::Snp::DbSnpConcordance->execute(report_by_quality=>1,output_file=>$cq_output,snp_file=>$snp_file,dbsnp_file=>$db_snp_path) ) {
+		die "Could not execute DbSnpConcordance.";		
+	    }
+            #$concordance_quality_report = `$concordance_quality_cmd`;
+            #TODO find a better way than cat...
+            $concordance_quality_report = `cat $cq_output`;
             if ($self->test) {
                 IO::File->new(">./concordance-quality-$list")->print($concordance_quality_report);
             }
@@ -221,11 +245,9 @@ sub generate_report_detail
         
         # this now appears in the page source, but not in the page itself
         $body->print("<!--\n");
-        $body->print("DbSnp create command:  ".$dbsnp_cmd);
-        $body->print("\n");
-        $body->print("DbSnp concordance command:  ".$concordance_cmd);
-        $body->print("\n");
-        $body->print("DbSnp concordance quality command:  ".$concordance_quality_cmd);
+        #$body->print("DbSnp concordance command:  ".$concordance_cmd);
+        #$body->print("\n");
+        #$body->print("DbSnp concordance quality command:  ".$concordance_quality_cmd);
         $body->print("\n");
         $body->print("\n-->");
 
