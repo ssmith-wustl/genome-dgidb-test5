@@ -50,13 +50,36 @@ sub execute {
     
     my $id = $model->genome_model_id;
     
-    #my $log_dir = $self->resolve_log_directory;
-    #print ("Log dir: ".$log_dir);
+    unless ($self->create_directory($self->build->resolve_reports_directory) ) {
+	die "Could not create reports directory at: ".$self->build->resolve_reports_directory;
+    } 
+ 
+    my $maq_snp_dir = $self->build->maq_snp_related_metric_directory;
+    $self->status_message('Maq snp related dir: '.$maq_snp_dir);
     
-    my $report_dir = $self->build->maq_snp_related_metric_directory;
- 
- 
-    $self->status_message('Report dir: '.$report_dir);
+    ###############################################
+    ###Generate the big snp file
+
+    my @snp_list = $self->build->_variant_list_files;
+    my $file_list = join(" ", @snp_list);
+    $self->status_message("Variant list files: $file_list");
+    my $snp_file = "$maq_snp_dir/snpfile_$id"."_$ts.snp";
+    my $snp_file_cmd = "cat $file_list > $snp_file";
+    $self->status_message('Snp file concatenation command: '.$snp_file_cmd);
+    my $snp_file_result = `$snp_file_cmd`;
+   
+    #Note:  maq_snp_related_metric_directory in Solex.pm
+     
+    ###SNP Filter############################################
+    $self->status_message('Starting SNP Filter report.');
+    #maq.pl SNPfilter [snpfile] > [outputfile]
+    my $snp_filter_path = "$maq_snp_dir/snpfilter_report_$id"."_$ts.out";
+    $self->status_message('Dumping SNPfilter output to: '.$snp_filter_path);
+    my $snp_filter_cmd = "maq.pl SNPfilter $snp_file > $snp_filter_path";
+    $self->status_message("SNPfilter command: $snp_filter_cmd");
+    my $snp_filter_result = `$snp_filter_cmd`;
+    $self->status_message('Completed SNP Filter report.');
+    
 
     ###############################################
     # TODO: get the rest of them to fit here, 
@@ -88,12 +111,16 @@ sub execute {
                 $failures++;
                 $report_def->delete;
                 next;
+            } else {
+		$self->status_message("Successfully generated report: $report_name");
             }
-            
-            unless ($self->build->add_report($report)) {
-                $self->error_message('Error saving dbSnp Concordance report!: ' . $self->build->error_message);
-            }
-            $self->status_message('Saved dbSnp Concordance report.');
+ 
+            $self->status_message("About to add report: $report_name to build: ".$self->build->id);
+            if ($self->build->add_report($report)) {
+            	$self->status_message('Saved report: '.$report);
+            } else {
+                $self->error_message('Error saving '.$report.'. Error: '. $self->build->error_message);
+	    }
         };
         if ($@) {
             $self->error_message("Error generationg report named '$report_name' (class: $report_class):\n$@");
@@ -132,37 +159,14 @@ sub execute {
     my $rv = `$rm_cmd`;
     $self->status_message("Result of remove: $rv");
    
-    ###############################################
-    ###Generate the big snp file
-
-    my @snp_list = $self->build->_variant_list_files;
-    my $file_list = join(" ", @snp_list);
-    $self->status_message("Variant list files: $file_list");
-    my $snp_file = "$report_dir/snpfile_$id"."_$ts.snp";
-    my $snp_file_cmd = "cat $file_list > $snp_file";
-    $self->status_message('Snp file concatenation command: '.$snp_file_cmd);
-    my $snp_file_result = `$snp_file_cmd`;
-   
-    #Note:  maq_snp_related_metric_directory in Solex.pm
-     
-    ###SNP Filter############################################
-    $self->status_message('Starting SNP Filter report.');
-    #maq.pl SNPfilter [snpfile] > [outputfile]
-    my $snp_filter_path = "$report_dir/snpfilter_report_$id"."_$ts.out";
-    $self->status_message('Dumping SNPfilter output to: '.$snp_filter_path);
-    my $snp_filter_cmd = "maq.pl SNPfilter $snp_file > $snp_filter_path";
-    $self->status_message("SNPfilter command: $snp_filter_cmd");
-    my $snp_filter_result = `$snp_filter_cmd`;
-    $self->status_message('Completed SNP Filter report.');
-    
-    
+        
     #Indelpe##############################################
     #cd /gscmnt/sata810/info/medseq/GBM_71_maps/
     #maq indelpe /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.bfa bigmap.map > normal.indelpe
     $self->status_message('Starting Indelpe report.');
     my $aligner_path = $self->aligner_path('read_aligner_version'); 
     my $ref_seq = $model->reference_sequence_path."/all_sequences.bfa"; 
-    my $indelpe_output_path = "$report_dir/indelpe_report_$id"."_$ts.out";
+    my $indelpe_output_path = "$maq_snp_dir/indelpe_report_$id"."_$ts.out";
 
     $accumulated_alignments_file = $self->accumulate_maps();
 
@@ -224,8 +228,7 @@ sub execute {
     #$self->status_message('Completed Pfam report.');
     ############################################### 
     
-    my $success = 1;
- 
+    my $success = $self->verify_successful_completion();
         
     if ( $success )
     { 
@@ -263,6 +266,8 @@ sub verify_successful_completion {
 $DB::single = 1;            
  	    unless ( $dir_count == 4 ) {
                 $self->error_message("Can't verify successful completeion of RunReports step.  Expecting 4 report directories.  Got: $dir_count");
+                $self->error_message('Report dir: '.$report_dir);
+                $self->error_message('Contents of report dir: '.join(",",@report_dirs) );
                 return 0;
             }
  
