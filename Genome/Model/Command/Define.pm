@@ -325,7 +325,7 @@ sub _build_model_filesystem_paths {
         }
     }
     
-    unless (symlink($model_data_dir,$model_link)) {
+    unless ( Genome::Utility::FileSystem->create_symlink($model_data_dir, $model_link) ) {
         $self->error_message("model symlink '$model_link => $model_data_dir'  could not be successfully created");
         return;
     }
