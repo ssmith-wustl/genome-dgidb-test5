@@ -11,16 +11,19 @@ use Bio::DB::Fasta;
 class Genome::Model::Tools::Snp::DbSnpConcordance {
     is => 'Command',
     has => [
+    output_file =>
+    {
+        type => 'String',
+        doc => "Output file containing the results of the command.",
+    },
     snp_file => 
     { 
         type => 'String',
-        is_optional => 0,
         doc => "maq0.6.8 cns2snp output",
     },
     dbsnp_file =>
     {
         type => 'String',
-        is_optional => 0,
         doc => "input file of snp locations and calls from the intersection of the affy and illumina platforms",
     },
     exclude_y =>
@@ -128,6 +131,7 @@ sub calculate_metrics {
 
 sub print_report {
     my ($self, $total_snps_ref, $concordance_ref) = @_; 
+    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file); 
     my $batch = $self->report_by_quality;
     foreach my $sample (sort keys %$concordance_ref) {
         my $total_concordant = 0;
@@ -136,12 +140,22 @@ sub print_report {
             $total_concordant += $concordance_ref->{$sample}{$quality};
             $total_snps += $total_snps_ref->{$quality};
             if($batch) {
-                print STDOUT "$quality\t$total_concordant\t$total_snps\n";
+                print $output_fh "$quality\t$total_concordant\t$total_snps\n";
             }
         }
-        print STDOUT "There were $total_snps in the snp file\n";
-        printf STDOUT "There were %d positions in %s for a concordance of %0.02f%%\n",$total_concordant,$sample,$total_concordant/$total_snps*100;
+        print $output_fh "There were $total_snps in the snp file\n";
+        printf $output_fh "There were %d positions in %s for a concordance of %0.02f%%\n",$total_concordant,$sample,$total_concordant/$total_snps*100;
     }
+
+    #produce something when there are no results i.e. Solexa testing...
+    my $number_of_keys = scalar(keys %$concordance_ref);
+    if ($number_of_keys == 0) {
+        print $output_fh "There were 0 in the snp file.  No output was generated.\n";
+    } 
+ 
+    if (defined($output_fh) ) {
+    	$output_fh->close;
+    } 
 }
 #Functions to create hashes of data
 
