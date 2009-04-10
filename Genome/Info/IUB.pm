@@ -41,7 +41,11 @@ my %iub_as_string = (
 );
 
 sub variant_alleles_for_iub {
-   my ($ref,$iub) = @_;
+    my $class;
+    if ((defined($_[0]))&&($_[0] eq __PACKAGE__)) {
+        $class = shift;
+    }
+    my ($ref,$iub) = @_;
 
    unless(defined $ref && defined $iub) {
        return;
@@ -65,6 +69,10 @@ sub variant_alleles_for_iub {
 }
 
 sub iub_for_alleles {
+    my $class;
+    if ((defined($_[0]))&&($_[0] eq __PACKAGE__)) {
+        $class = shift;
+    }
    my @alleles = @_;
    if(@alleles != 2) {
        warn "Conversion of more than 2 alleles to IUB code is currently unsupported";
@@ -85,6 +93,10 @@ sub iub_for_alleles {
 }
 
 sub iub_to_alleles {
+    my $class;
+    if ((defined($_[0]))&&($_[0] eq __PACKAGE__)) {
+        $class = shift;
+    }
    my ($iub) = @_;
    if(defined $iub and exists($iub_as_allele_array{uc $iub})) { 
        return @{$iub_as_allele_array{uc $iub}};
@@ -95,6 +107,10 @@ sub iub_to_alleles {
 }
 
 sub iub_to_bases {
+    my $class;
+    if ((defined($_[0]))&&($_[0] eq __PACKAGE__)) {
+        $class = shift;
+    }
    my ($iub) = @_;
    my %bases = map {$_ => 1} @{$iub_as_allele_array{uc $iub}};
    return sort keys %bases;
