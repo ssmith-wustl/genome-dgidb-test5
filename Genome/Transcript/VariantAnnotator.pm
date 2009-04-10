@@ -617,6 +617,7 @@ sub _transcript_annotation_for_cds_exon
     }
 
     my $c_position = $pre_start + $exon_pos;
+    $c_position-=1 if($strand == -1 && $variant->{type} =~ /ins|del/i );
     my $codon_start = $c_position % 3;
     my $pro_start = int( $c_position / 3 );
     $pro_start++ if $codon_start != 0; 
