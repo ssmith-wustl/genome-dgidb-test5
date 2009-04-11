@@ -62,15 +62,15 @@ is($alignment_directory,$alignment_allocation->absolute_path, 'found absolute pa
 
 ###############################
 #Test file accessors before creating directory
-ok(!defined($alignment->alignment_file_paths),'alignment_file_paths returns undef');
-ok(!defined($alignment->aligner_output_file_paths),'aligner_output_file_paths returns undef');
-ok(!defined($alignment->unaligned_reads_list_paths),'unaligned_reads_list_paths returns undef');
-ok(!defined($alignment->unaligned_reads_fastq_paths),'unaligned_reads_fastq_paths returns undef');
+ok(!scalar($alignment->alignment_file_paths),'alignment_file_paths returns undef');
+ok(!scalar($alignment->aligner_output_file_paths),'aligner_output_file_paths returns undef');
+ok(!scalar($alignment->unaligned_reads_list_paths),'unaligned_reads_list_paths returns undef');
+ok(!scalar($alignment->unaligned_reads_fastq_paths),'unaligned_reads_fastq_paths returns undef');
 
 # TODO: trap error messages and parse 
-ok(!defined($alignment->alignment_file_paths_for_subsequence_name),'no ref_seq_id passed to alignment_file_paths_for_subsequence_name');
-ok(!defined($alignment->alignment_file_paths_for_subsequence_name('test_ref_seq_id')),'alignment_directory does not exist');
-ok(!defined($alignment->get_alignment_statistics),'no aligner output file found for get_alignment_statistics');
+ok(!scalar($alignment->alignment_file_paths_for_subsequence_name),'no ref_seq_id passed to alignment_file_paths_for_subsequence_name');
+ok(!scalar($alignment->alignment_file_paths_for_subsequence_name('test_ref_seq_id')),'alignment_directory does not exist');
+ok(!scalar($alignment->get_alignment_statistics),'no aligner output file found for get_alignment_statistics');
 
 ok(Genome::Utility::FileSystem->create_directory($alignment_directory),'create alignment directory '. $alignment_directory);
 
