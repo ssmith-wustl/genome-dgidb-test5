@@ -76,8 +76,17 @@ sub create {
     unless ($self) {
         return;
     }
+    $DB::single = 1;
     unless ($self->data_directory) {
-        $self->data_directory($self->resolve_data_directory);
+        my $dir;
+        eval {
+            $dir = $self->resolve_data_directory;
+        };
+        if ($@) {
+            $self->delete;
+            return;
+        }
+        $self->data_directory($dir);
     }
     return $self;
 }
@@ -192,7 +201,6 @@ sub resolve_data_directory {
             my $build_data_directory = $disk_allocation->absolute_path;
             unless (Genome::Utility::FileSystem->create_symlink($build_data_directory,$build_symlink)) {
                 $self->error_message("Failed to make symlink '$build_symlink' with target '$build_data_directory'");
-                $self->delete;
                 die $self->error_message;
             }
             return $build_data_directory;
