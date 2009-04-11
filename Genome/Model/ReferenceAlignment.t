@@ -5,10 +5,26 @@ use warnings;
 
 use above "Genome";
 use Test::More tests => 14;
+$ENV{UR_DBI_NO_COMMIT} = 1;
 
-#my $m = Genome::Model->get(name => 'AML-tumor-new_maq-no_ss_dups');
-my $m = Genome::Model->get(2771359026);
+my $m = Genome::Model->get(2771359026); 
 ok($m, "got a model"); 
+
+# we may build and build again, but just test this build...
+# TODO: mock
+my $build_id = 96402993; 
+my @completed = $m->completed_builds;
+for my $b (@completed) {
+    next if $b->id == $build_id;
+    my $e = $b->build_event;
+    $e->event_status('Running');    
+    $e->date_completed(undef);
+}
+
+my $last_complete_build = $m->last_complete_build;
+unless ($last_complete_build->id == $build_id) {
+    die "Failed to force model " . $m->id . " to use build " . $build_id . " as its last complete build.  Got " . $last_complete_build->id;
+}
 
 my @f = $m->_consensus_files('X');
 ok(scalar(@f), "identified " . scalar(@f) . " consensus file by refseq");
@@ -18,15 +34,18 @@ ok(scalar(@f), "identified " . scalar(@f) . " consensus file by refseq");
 
 @f = $m->_consensus_files();
 ok(scalar(@f), "identified " . scalar(@f) . " consensus files w/o refseq filter");
-ok(all_exist(@f),"the consensus files exist");
+ok(all_exist(@f),"the consensus files exist")
+    or diag('example path: ' . $f[0]);
 
 @f = $m->_variant_list_files();
 ok(scalar(@f), "identified " . scalar(@f) . " snp files w/o refseq filter");
-ok(all_exist(@f),"the snp files exist");
+ok(all_exist(@f),"the snp files exist")
+    or diag('example path: ' . $f[0]);
 
 @f = $m->_variant_detail_files();
 ok(scalar(@f), "identified " . scalar(@f) . " pileup files w/o refseq filter");
-ok(all_exist(@f),"the pileup files exist");
+ok(all_exist(@f),"the pileup files exist")
+    or diag('example path: ' . $f[0]);
 
 @f = $m->_variation_metrics_files();
 ok(scalar(@f), "identified " . scalar(@f) . " variation metrics files w/o refseq filter");
@@ -43,7 +62,8 @@ is($v,6619300, "got expected variant count");
 my $f;
 
 my $data_directory = $m->complete_build_directory;
-is($data_directory, "/gscmnt/sata821/info/model_data/2771359026/build96426120", "resolved data directory");  # FIX WHEN WE SWITCH MODELS
+my $expected = '/gscmnt/sata821/info/model_data/2771359026/build96402993';
+is($data_directory, $expected, "resolved data directory");  # FIX WHEN WE SWITCH MODELS
 
 #$f = $m->resolve_accumulated_alignments_filename();
 #is($f, 'FIXME', "found accumulated alignments file name"); #FIXME WHEN WE SWITCH MODELS
