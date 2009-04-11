@@ -168,6 +168,13 @@ sub execute {
         $self->error_message('Failed to get Genome::Disk::Allocation for allocator_id '. $self->allocator_id);
         return;
     }
+    my $path = $disk_allocation->absolute_path;
+    unless (-e $path) {
+        Genome::Utility::FileSystem->create_directory($path);        
+        unless (-e $path) {
+            die $self->error_message("Failed to create directory $path! $!");
+        }
+    }
     return 1;
 }
 
