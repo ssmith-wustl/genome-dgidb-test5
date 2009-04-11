@@ -14,6 +14,9 @@ class Genome::Model::Build::ReferenceAlignment::Solexa {
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
+    unless ($self) {
+        return;
+    }
 
     my $model = $self->model;
 
