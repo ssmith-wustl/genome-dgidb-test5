@@ -48,7 +48,7 @@ class Genome::Sample {
         where sample_name is null
     ) a
     join dna@oltp d on d.dna_name = a.sample_name
-    left join organism_sample@dw s on a.sample_name = s.sample_name
+    left join organism_sample@dw s on d.dna_id = s.organism_sample_id
     left join (
         dna_resource@oltp dr 
         join entity_attribute_value@oltp eav        
@@ -111,8 +111,8 @@ class Genome::Sample {
     ],
     has_many => [
         libraries                   => { is => 'Genome::Library', reverse_id_by => 'sample' },
-        #solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'sample' },
-        #solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
+        solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'sample' },
+        solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
     ],
     doc         => 'a single specimen of DNA or RNA extracted from some tissue sample',
     data_source => 'Genome::DataSource::GMSchema',
@@ -129,3 +129,4 @@ sub models {
 }
 
 1;
+
