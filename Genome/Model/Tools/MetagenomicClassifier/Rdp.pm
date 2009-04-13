@@ -57,7 +57,12 @@ sub execute {
 
     while ( my $seq = $bioseq_in->next_seq ) {
         my $classification = $classifier->classify($seq);
-        $writer->write_one($classification);
+        if ($classification) {
+            $writer->write_one($classification);
+        }
+        else {
+            warn "failed to classify ". $seq->id;
+        }
     }
 
     return 1;
