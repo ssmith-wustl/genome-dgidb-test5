@@ -140,7 +140,7 @@ sub execute {
                 $self->error_message("couldn't get reference transcripts set for $name");
                 return;
             }
-            if ($version){
+            if (defined($version)){
                 my $build = $model->build_by_version($version);
                 unless ($build){
                     $self->error_message("couldn't get version $version from reference transcripts set $name");
