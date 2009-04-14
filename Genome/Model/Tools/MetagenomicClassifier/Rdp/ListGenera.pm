@@ -54,9 +54,12 @@ sub _to_string {
 
     my $taxonomy_string = "";
     my $first = 1;
-    my $rank = 0;
+    my $rank = 1;
+
+    my $root = shift @ancestors;
+    $taxonomy_string = $root->node_name.";";
     foreach my $taxon (@ancestors) {
-        next if $taxon->rank =~ /sub|super/;
+        next if lc($taxon->rank) =~ /sub|super/;
         if ($first) {
             $first = 0;
         }
@@ -64,7 +67,7 @@ sub _to_string {
             $taxonomy_string.= ";";
         }
 
-        while ($taxon->rank !~ $ranks[$rank]) {
+        while (lc($taxon->rank) !~ $ranks[$rank]) {
             $taxonomy_string .= "unknown_".$ranks[$rank++].";"; 
         }
         $taxonomy_string .= $taxon->node_name;
