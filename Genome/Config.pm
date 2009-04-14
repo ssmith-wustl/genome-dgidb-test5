@@ -3,6 +3,13 @@ package Genome::Config;
 use strict;
 use warnings;
 
+sub user_email {
+    my $self = shift;
+    my $user = shift;
+    $user ||= $ENV{USER};
+    return $user . '@genome.wustl.edu';
+}
+
 # operating directories
 
 sub root_directory {
