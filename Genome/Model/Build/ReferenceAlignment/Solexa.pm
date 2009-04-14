@@ -52,6 +52,7 @@ sub calculate_estimated_kb_usage {
 sub _consensus_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/consensus/%s.cns',@_);
 }
+
 #clearly if multiple aligners/programs becomes common practice, we should be delegating to the appropriate module to construct this directory
 sub _variant_list_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/snps_%s',@_);
@@ -59,6 +60,101 @@ sub _variant_list_files {
 
 sub _variant_filtered_list_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/snps_%s.filtered',@_);
+}
+
+# TODO: we should abstract the genotyper the way we do the aligner
+# for now these are hard-coded maq-ish values.
+
+sub _snv_file_unfiltered {
+    my $self = shift;
+    my $dd = $self->data_directory;
+    my $unfiltered = "$dd/maq_snp_related_metrics/all.snps";
+    unless (-e $unfiltered) {
+        # make a combined snp file
+        my @old = $self->_variant_list_files();
+        if (@old) {
+            warn "building $unfiltered\n";
+            my $tmp = Genome::Utility::FileSystem->create_temp_file_path("snpfilter");
+            Genome::Utility::FileSystem->shellcmd(
+                cmd => "cat @old >$tmp; gt snp sort -s $tmp >$unfiltered",
+                input_files => \@old,
+                output_files => [$unfiltered],
+            );
+        }
+    }
+    return $unfiltered;
+}
+
+
+sub _indel_file {
+    my $self = shift;
+    my $dd = $self->data_directory;
+    my $path = $dd . '/maq_snp_related_metrics/indelpe.sorted.out';
+    unless (-e $path) {
+        # make a sorted indelpe file
+        my @indelpe_orig = grep { -e $_ } glob("$dd/maq_snp_related_metrics/indelpe*out");
+        die "multiple indelpe results?\n@indelpe_orig" if @indelpe_orig > 1;
+        my $indelpe_orig = $indelpe_orig[0];
+        if (-e $indelpe_orig) {
+            if (-s $indelpe_orig) {
+                warn "generating $path from $indelpe_orig";
+                # note: not running directly in Perl b/c we want to redirect IO
+                Genome::Utility::FileSystem->shellcmd(
+                    cmd => "gt snp sort -s $indelpe_orig > $path",
+                    input_files => [$indelpe_orig],
+                    output_files => [$path],
+                );
+            }
+            else {
+                warn "generating empty $path from empty $indelpe_orig";
+                my $fh = Genome::Utility::FileSystem->open_file_for_writing($path);
+                unless ($fh) {
+                    die "failed to open $path!: $!";
+                }
+                $fh->close;
+            }
+        }
+    }
+    return $path;
+}
+
+sub _snv_file_filtered {
+    my $self = shift;
+    my $unfiltered = $self->_snv_file_unfiltered;
+    my $filtered = $unfiltered;
+    $filtered =~ s/all/filtered.indelpe/g;
+    if (-e $unfiltered and not -e $filtered) {
+        # run SNPfilter w/ indelpe data
+        my $pp = $self->model->processing_profile;
+        unless ($pp->genotyper_name =~ /maq/) {
+            die "THIS LOGIC IS CURRENTLY HARD-CODED FOR MAQ!!!";
+        }
+        my $dd = $self->data_directory;
+        my $indelpe = $self->_indel_file;
+        my $version = $pp->genotyper_version;
+        unless ($version) {
+            $version = $pp->genotyper_name;
+            $version =~ s/^\D+//;
+            $version =~ s/_/\./g;
+        }
+        my $bin = Genome::Model::Tools::Maq->path_for_maq_version($version);
+        my $script = $bin . '.pl';
+
+        my $indelpe_param;
+        if (-s $indelpe) {
+            warn "omitting indelpe data from the SNPfilter results because no indels were found...";
+            $indelpe_param = "-F '$indelpe'";
+        }
+        else {
+            $indelpe_param = '';
+        }
+        Genome::Utility::FileSystem->shellcmd(
+            cmd => "$script SNPfilter $indelpe_param $unfiltered > $filtered",
+            input_files => [$script,$indelpe,$unfiltered],
+            output_files => [$filtered],
+        );
+    }
+    return $filtered; 
 }
 
 sub _variant_pileup_files {
