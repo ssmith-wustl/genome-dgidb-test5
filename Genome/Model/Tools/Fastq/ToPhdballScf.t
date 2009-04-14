@@ -24,7 +24,7 @@ my %params = (
     id_range   => '1-33',
     base_fix   => 1,
     time       => $time,
-    solexa_format => 1,
+    solexa_fastq => 1,
 );
 
 my $to_ballscf = Genome::Model::Tools::Fastq::ToPhdballScf->create(%params);
