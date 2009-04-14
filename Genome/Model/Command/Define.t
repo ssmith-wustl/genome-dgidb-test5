@@ -6,7 +6,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 231;
+use Test::More tests => 241;
 use Test::Differences;
 use File::Path;
 
