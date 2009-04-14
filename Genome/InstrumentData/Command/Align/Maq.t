@@ -10,7 +10,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 13;
+        plan tests => 14;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -86,9 +86,29 @@ $instrument_data = Genome::InstrumentData::Solexa->create_mock(
 my @fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
 $instrument_data->set_always('sample_type','dna');
 $instrument_data->set_always('is_paired_end',1);
-$instrument_data->set_always('resolve_quality_converter','sol2sanger');
+$instrument_data->set_always('resolve_quality_converter','sol2phred');
 $instrument_data->set_always('class','Genome::InstrumentData::Solexa');
-$instrument_data->mock('allocations',\&Genome::InstrumentData::allocations);
+
+my $tmp_dir = File::Temp::tempdir('Align-Maq-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $tmp_allocation = Genome::Disk::Allocation->create_mock(
+                                                           id => '-123459',
+                                                           disk_group_name => 'info_alignments',
+                                                           group_subdirectory => 'test',
+                                                           mount_path => '/tmp/mount_path',
+                                                           allocation_path => 'alignment_data/maq0_6_5/refseq-for-test/test_run_name/4_-123458',
+                                                           allocator_id => '-123459',
+                                                           kilobytes_requested => 100000,
+                                                           kilobytes_used => 0,
+                                                           owner_id => $instrument_data->id,
+                                                           owner_class_name => 'Genome::InstrumentData::Solexa',
+                                                       );
+$tmp_allocation->mock('absolute_path',
+                      sub { return $tmp_dir; }
+                  );
+$tmp_allocation->set_always('reallocate',1);
+$tmp_allocation->set_always('deallocate',1);
+isa_ok($tmp_allocation,'Genome::Disk::Allocation');
+$instrument_data->set_list('allocations',$tmp_allocation);
 $instrument_data->set_list('fastq_filenames',@fastq_files);
 $instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
 
