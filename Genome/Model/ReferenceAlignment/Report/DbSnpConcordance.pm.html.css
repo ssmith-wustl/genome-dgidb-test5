@@ -14,6 +14,7 @@ div.background {
 	float: left;
 	background: #FFF;
 	width: 990px;
+	border-bottom: 5px solid #8dc643
 }
 
 h1.section_title {
@@ -34,4 +35,24 @@ div.graph_placeholder {
 
 div.content_padding {
 	padding: 0 10px 20px 10px;
+}
+
+div#plots {
+	width: 98%;
+	padding: 1%;
+	background: #EFEFEF;
+	border: 1px solid #CCC;
+	float: left;
+	font-size: 90%;
+}
+
+div#plots p {
+	margin: 0 0 5px 0;
+	padding: 0;
+}
+
+div.plot_checkbox {
+	display: inline-block;
+	float: left;
+	padding: 0 10px;
 }
