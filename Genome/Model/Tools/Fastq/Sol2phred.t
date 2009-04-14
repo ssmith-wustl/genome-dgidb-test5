@@ -25,7 +25,7 @@ BEGIN {
 
 my $tmp_dir = File::Temp::tempdir('Fastq-SolToPhred-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $fastq_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq/SolToPhred/test.fq';
-my $expected_phred_fastq_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq/SolToPhred/test.fq.phred';
+my $expected_phred_fastq_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq/SolToPhred/test.fq.utf8.phred';
 
 my $sol2phred = Genome::Model::Tools::Fastq::Sol2phred->create(
                                                                 fastq_file => $fastq_file,

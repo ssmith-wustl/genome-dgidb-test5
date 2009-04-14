@@ -18,7 +18,6 @@ class Genome::Model::Tools::Fastq::Sol2phred {
 
 sub create {
     my $class = shift;
-
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
@@ -30,9 +29,9 @@ sub create {
 }
 
 # prints solexa ascii characters for 0-40
-#perl -e 'for (0 .. 40) { print  chr($_ + 64) ."\n"; }'
+#perl -e 'for (0 .. 40) { print  chr($_ + 64); }'
 # prints phred ascii characters for 0-40
-#perl -e 'for (0 .. 40) { print  chr($_ + 33) ."\n"; }'
+#perl -e 'for (0 .. 40) { print  chr($_ + 33); }'
 
 #For the new Solexa-Phred qualities with an offset of 64, the equation
 #simplifies to
@@ -42,17 +41,28 @@ sub create {
 
 sub execute {
     my $self = shift;
+    my $reader = Genome::Utility::FileSystem->open_file_for_reading($self->fastq_file);
+    binmode $reader, ":utf8";
+    my $writer = Genome::Utility::FileSystem->open_file_for_writing($self->phred_fastq_file);
+    binmode $writer, ":utf8";
+    while (my $line = $reader->getline) {
+        chomp($line);
+        if ($line =~ /^\+/) {
+            # print the quality read name line
+            print $writer $line ."\n";
 
-    my $reader = $self->get_fastq_reader($self->fastq_file);
-    my $writer = $self->get_fastq_writer($self->phred_fastq_file);
-    while (my $seq = $reader->next_seq) {
-        my $sol_quals_ref = $seq->qual;
-        my @phred_quals;
-        for my $solq (@{$sol_quals_ref}) {
-            push @phred_quals, $solq - 31;
+            # parse the solexa quality data line and interpolate to phred quality values
+            my $qual_line = $reader->getline;
+            my @sol_quals = split("",$qual_line);
+            my @phred_quals;
+            for my $solq (@sol_quals) {
+                push @phred_quals, chr(ord($solq) - 31);
+            }
+            print $writer join("",@phred_quals) ."\n";
+        } else {
+            # print the sequence read name and sequence data lines
+            print $writer $line ."\n";
         }
-        $seq->qual(\@phred_quals);
-        $writer->write_fastq($seq);
     }
     $writer->close;
     $reader->close;
