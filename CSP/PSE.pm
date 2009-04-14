@@ -104,6 +104,19 @@ sub new_from_pse_id{
     return $self;
 }
 
+sub reschedule_count{
+    my $self = shift;
+    return $self->{reschedule_count} if exists $self->{reschedule_count};
+
+    my ($count) = App::DB->dbh->selectrow_array
+        (qq/select count(*) 
+         from pse_history where pse_id = ?
+         and program_name = '\/gsc\/scripts\/bin\/csp_rescheduler_cron'/,
+         undef, $self->pse_id);
+    die unless defined $count;
+    $self->{reschedule_count} = $count;
+    return $count;
+}
 
 sub count_for_process{
     my $self = shift;
@@ -116,9 +129,10 @@ sub count_for_process{
 sub should_reschedule{
     #--- returns true if it maches all criteria that it should be attempted
     my $self = shift;
-    my $prior_count = shift;
+    my $prior_count = $self->reschedule_count();
     my $top_count = $self->count_for_process;
-    return 0 if $self->alert_informatics($prior_count) || $self->beyond_help($prior_count);
+    return 0 unless $top_count;
+    return 0 if $self->alert_informatics() || $self->beyond_help();
     return 1 if $self->is_lost || $self->is_hanged || $self->is_failed;
     0;
 }
@@ -180,17 +194,17 @@ sub reschedule{
 
 sub beyond_help{
     my $self = shift;
-    my $prior_count = shift;
-    $prior_count = 0 unless $prior_count;
-    return ($prior_count > ($self->count_for_process + 1));
+    my $prior_count = $self->reschedule_count();
+    return 0 unless $self->count_for_process();
+    return ($prior_count > $self->count_for_process);
 }
 
 
 sub alert_informatics{
     my $self = shift;
-    my $prior_count = shift;
-    $prior_count = 0 unless $prior_count;
-    return ($prior_count == ($self->count_for_process + 1));
+    my $prior_count = $self->reschedule_count();
+    return 0 unless $self->count_for_process();
+    return ($prior_count == $self->count_for_process);
 }
 
 sub refresh{
