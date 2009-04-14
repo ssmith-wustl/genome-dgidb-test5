@@ -178,8 +178,7 @@ sub resolve_data_directory {
     my $model = $self->model;
     my $data_directory = $model->data_directory;
     my $build_subdirectory = '/build'. $self->build_id;
-    if ($data_directory =~ /(\/gscmnt\/.*)\/info\/medseq\/(.*)/) {
-        my $mount_path = $1;
+    if ($data_directory =~ /\/gscmnt\/.*\/info\/(medseq\/)?(.*)/) {
         my $allocation_path = $2;
         $allocation_path .= $build_subdirectory;
         my $kb_requested = $self->calculate_estimated_kb_usage;
@@ -199,6 +198,10 @@ sub resolve_data_directory {
             my $build_symlink = $data_directory . $build_subdirectory;
             unlink $build_symlink if -e $build_symlink;
             my $build_data_directory = $disk_allocation->absolute_path;
+            unless (Genome::Utility::FileSystem->create_directory($build_data_directory)) {
+                $self->error_message("Failed to create directory '$build_data_directory'");
+                die $self->error_message;
+            }
             unless (Genome::Utility::FileSystem->create_symlink($build_data_directory,$build_symlink)) {
                 $self->error_message("Failed to make symlink '$build_symlink' with target '$build_data_directory'");
                 die $self->error_message;
@@ -206,7 +209,7 @@ sub resolve_data_directory {
             return $build_data_directory;
         }
     }
-    return $data_directory . '/build' . $self->build_id;
+    return $data_directory . $build_subdirectory;
 }
 
 #< Reports >#
