@@ -105,7 +105,7 @@ sub execute {
         
         my $id   = $id_range ? $new_id : $fq->id;
         my $qual = $fq->qual;
-        map{$_ -= 31}@$qual if $self->solexa_format; #solexa format fastq qual = Qphred + 64. Bio::SeqIO fastq quality = sanger fastq quality = Qphred + 33
+        map{$_ -= 31}@$qual if $self->solexa_fastq; #solexa fastq qual = Qphred + 64. Bio::SeqIO fastq quality = sanger fastq quality = Qphred + 33
         
         my %params = (
             -seq  => $seq,
