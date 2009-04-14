@@ -17,7 +17,7 @@ my $DEFAULT_BASE = '/gsc/var/log/confirm_scheduled_pse/rescheduler_cache';
 
 CSP::Rescheduler->accessorize
     (qw(show_critical show_rescheduled show_summary show_ignored report_only
-	_base_path _cache_filename email report report_type _log no_log
+	_base_path email report report_type _log no_log
 	reschedule_failed reschedule_lost reschedule_hanged
 	reference));
 
@@ -78,39 +78,6 @@ sub DESTROY{
     $self->_log->close;
 }
 
-sub cache_filename{
-    my $class = shift;
-    my %p = @_;
-    
-    return $class->_cache_filename if ref $class && $class->_cache_filename;
-    my $path = $class->_base_path || $DEFAULT_BASE;
-    
-    return $path.'/csp.cache';
-}
-
-sub get_cache{
-    my $class = shift;
-    my %p = @_;
-    my $lost_file = $class->cache_filename(%p);
-    my @stuff = split /\s+/mixs, `cat $lost_file`;
-    my %already;
-    while(@stuff){
-	my $pse = shift @stuff;
-	$already{$pse} = [split ',', shift @stuff];
-    }
-    return %already;
-}
-sub set_cache{
-    my $class = shift;
-    my %p = @_;
-    my $lost_file = $class->cache_filename(%p);
-    open(O, '>'.$lost_file) || die "couldn't open $lost_file";
-    while(my ($pseid, $ref) = each %p){
-	print O $pseid.' '.$ref->[0].','.$ref->[1].' ';
-    }
-    return 1;
-}
-
 sub get_critical_pses{
     my $class = shift;
     my %params = @_;
@@ -123,7 +90,6 @@ sub get_critical_pses{
 	}
     }
     #----------- go through the scheduling
-    my %already = $self->get_cache(%params);
     my @csp_pses = (exists $params{'csp_pse'} ? @{$params{'csp_pse'}} : CSP->find_jobs(%params));
 
     my %critical;
@@ -131,8 +97,7 @@ sub get_critical_pses{
     foreach my $cp(@csp_pses){
 	$cp->refresh;
 	next unless $cp->is_failed;
-	next unless $cp->alert_informatics($already{$cp->pse_id}->[1]) 
-	    || $cp->beyond_help($already{$cp->pse_id}->[1]);
+	next unless $cp->alert_informatics() || $cp->beyond_help();
 	$critical{$cp->process} = [] unless exists $critical{$cp->process};
 	push @{$critical{$cp->process}}, $cp;
     }
@@ -204,29 +169,18 @@ sub auto_reschedule{
     }
     
     #----------- go through the scheduling
-    my %already = $self->get_cache(%params);
     my @csp_pses = (exists $params{'csp_pse'} ? @{$params{'csp_pse'}}
 		    : CSP->find_jobs(%params));
-    my %current;
-
     foreach my $cp(@csp_pses){
 	my $problem_type = $cp->is_problematic;
 	next unless $problem_type;
 	my $doing_report = 'reschedule_'.$problem_type;
 
 	unless ($self->$doing_report){
-	    #----- if we're only doing some reports, make sure we don't kill the cache
-	    if(exists $already{$cp->pse_id}){
-		$current{$cp->pse_id} = $already{$cp->pse_id};
-	    }
 	    next;
 	}
 
-	my ($result, $object, $count) = $self->reschedule_and_report
-	    ($problem_type, $cp, $already{$cp->pse_id}, $report);
-	if($result){
-	    $current{$cp->pse_id} = [$object, $count];
-	}
+	my ($result, $object) = $self->reschedule_and_report($problem_type, $cp, $report);
     }
     App::DB->sync_database;
     App::DB->commit;
@@ -267,27 +221,18 @@ sub auto_reschedule{
 	}
     }
     
-    #=== update the files
-    unless($self->report_only){
-	$self->set_cache(%current);
-    }    
     return 1;
 }
 
 sub reschedule_and_report{
-    my ($self, $type, $csp_pse, $prior_attempts, $report) = @_;
+    my ($self, $type, $csp_pse, $report) = @_;
     
-    my $attempt_count;
-    my $base_count = (($prior_attempts->[0] && $prior_attempts->[0] eq $type) 
-		      ? $prior_attempts->[1] : 0);
-    $attempt_count = $base_count+1;
-    
+    my $attempt_count = $csp_pse->reschedule_count() + 1;
     #-------------- SHOULD THIS BE RESCHEDULED?
-    if($csp_pse->should_reschedule($attempt_count)){
+    if($csp_pse->should_reschedule()){
 	my $qualifier = '';
 	
-	if($self->can_reschedule($type)){
-	    $base_count = $attempt_count;
+	if($self->can_reschedule($type)){            
 	    unless($csp_pse->reschedule()){
 		$self->log("Failed to reschedule pse_id ".$csp_pse->pse_id." : ".$csp_pse->error_message);
 		return (0);
@@ -306,16 +251,15 @@ sub reschedule_and_report{
 	}
     }
     #-------------- IS IT WORTHY OF AN ALERT?
-    elsif($csp_pse->alert_informatics($attempt_count)){
+    elsif($csp_pse->alert_informatics()){
 	$self->log("Alerting informatics of over-fail on $type pse ".$csp_pse->pse_id);
 	$self->_increment_summary('Alert!', $type, $csp_pse->process);
 	if($self->show_critical){
 	    $report->get_section('critical')->add_data(ucfirst($type), $csp_pse->process, $csp_pse->pse_id, $csp_pse->pse_status, $csp_pse->user, $csp_pse->date_scheduled, $csp_pse->job_id);
 	}
-	$base_count = $attempt_count unless $self->report_only; #-- for the record
     }
     #-------------- IS IT BEYOND HELP?
-    elsif($csp_pse->beyond_help($attempt_count)){ 
+    elsif($csp_pse->beyond_help()){ 
 	$self->_increment_summary('auto-ignored', $type, $csp_pse->process);
 	if($self->show_ignored){ #--- ignored because it's much too high
 	    $report->get_section('ignored')->add_data(ucfirst($type), $csp_pse->process, $csp_pse->pse_id, $csp_pse->pse_status, $csp_pse->user, $csp_pse->date_scheduled, $csp_pse->job_id);
@@ -324,7 +268,7 @@ sub reschedule_and_report{
     else{ #--- no longer a problem
 	return (0);
     }
-    return (1, $type, $base_count);
+    return (1, $type);
 }
 
 sub can_reschedule{
@@ -402,18 +346,6 @@ If you set the csp_pse parameter to an arrayref of CSP::PSE objects, it will use
 =item reschedule_and_report ( failure_type, CSP::PSE, [prior_failure_type, prior_number_of_rescheduling_attempts], App::Report );
 
 Run the relatively complex rescheduling algorithm to reschedule-or-ignore-or-alert and add its information to the report, as necessary.
-
-=item cache_filename ( ?PATH? )
-
-Sets the cache filename.  This is on the phase-out to use the database
-
-=item get_cache ()
-
-Gets a hash of pse_ids to [prior-rescheduling-type, number-of-attempts].  This information is stored in the database
-
-=item set_cache ( %new_cache )
-
-Takes in a hash of pse_ids to [rescheduling-type, total-number-of-attempts-to-date].  This information is then stored or updated in the database.
 
 =back
 
