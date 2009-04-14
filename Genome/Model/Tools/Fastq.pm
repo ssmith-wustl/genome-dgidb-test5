@@ -14,7 +14,7 @@ class Genome::Model::Tools::Fastq {
             is_optional => 0,
             doc         => 'FASTQ file that contains both sequences and quality values',
         },
-        solexa_format => {
+        solexa_fastq => {
             type        => 'Boolean',
             is_optional => 1,
             default     => 0,
