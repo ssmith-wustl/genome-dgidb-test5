@@ -114,6 +114,27 @@ sub mock_methods {
     return 1;
 }
 
+#< Helper Methods >#
+sub store_file  {
+    my ($self, $ref, $file) = @_;
+    
+    die "Invalid ref to store\n" unless $ref and ref $ref;
+    
+    Genome::Utility::FileSystem->validate_file_for_writing($file)
+        or die;
+    
+    return store($ref, $file);
+}
+
+sub retrieve_file {
+    my ($self, $file) = @_;
+
+    Genome::Utility::FileSystem->validate_file_for_reading($file)
+        or die;
+    
+    return retrieve($file);
+}
+
 #< Base Tests >#
 sub test001_use : Test(1) {
     my $self = shift;
