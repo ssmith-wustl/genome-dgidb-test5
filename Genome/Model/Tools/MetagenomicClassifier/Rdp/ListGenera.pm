@@ -40,10 +40,12 @@ sub execute {
     return 1;
 }
 
+
 sub _to_string {
     my $genus = shift;
     my @ancestors;
 
+    my @ranks = ('no rank', 'domain',  'phylum',  'class', 'order', 'family', 'genus');
     my $current_taxon = $genus;
     while (defined $current_taxon) {
         unshift @ancestors, $current_taxon;
@@ -52,7 +54,9 @@ sub _to_string {
 
     my $taxonomy_string = "";
     my $first = 1;
+    my $rank = 0;
     foreach my $taxon (@ancestors) {
+        next if $taxon->rank =~ /sub|super/;
         if ($first) {
             $first = 0;
         }
@@ -60,7 +64,11 @@ sub _to_string {
             $taxonomy_string.= ";";
         }
 
+        while ($taxon->rank !~ $ranks[$rank]) {
+            $taxonomy_string .= "unknown_".$ranks[$rank++].";"; 
+        }
         $taxonomy_string .= $taxon->node_name;
+        $rank++;
     }
 
     return $taxonomy_string;
