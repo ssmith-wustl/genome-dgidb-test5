@@ -43,13 +43,13 @@ sub execute {
     
     my $cmd = 'gt fastq to-phdball-scf';
     
-    for my $property (qw(time scf_dir base_fix)) {
+    for my $property (qw(time scf_dir base_fix solexa_fastq)) {
         if ($self->$property) {
             my $opt_name = $property;
             $opt_name =~ s/_/-/g;
             $cmd .= " --$opt_name";
             
-            unless ($property eq 'base_fix') {
+            unless ($property =~ /^(base_fix|solexa_fastq)$/) {
                 my $prop_val = $self->$property;
                 $prop_val = '"'.$prop_val.'"' if $property eq 'time';
                 $cmd .= ' '.$prop_val;
