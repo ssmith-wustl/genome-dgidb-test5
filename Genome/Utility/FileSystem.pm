@@ -189,6 +189,26 @@ sub open_file_for_writing {
     return $self->_open_file($file, 'w');
 }
 
+sub copy_file {
+    my ($self, $file, $dest) = @_;
+
+    $self->validate_file_for_reading($file)
+        or return;
+
+    $self->validate_file_for_writing($dest)
+        or return;
+
+    # Note: since the file is validate_file_for_reading, and the dest is validate_file_for_writing, 
+    #  the files can never be exactly the same.
+    
+    unless ( File::Copy::copy($file, $dest) ) {
+        $self->error_message("Can't copy $file to $dest: $!");
+        return;
+    }
+    
+    return 1;
+}
+
 #< Dirs >#
 sub validate_existing_directory {
     my ($self, $directory) = @_;
@@ -657,6 +677,21 @@ Houses some generic file and directory methods
 =item I<Arguments>  file (string)
 
 =item I<Returns>    IO::File object
+
+=back
+
+=head2 copy_file
+
+ Genome::Utility::FileSystem->copy_file($FROM, $TO)
+    or ...;
+ 
+=over
+
+=item I<Synopsis>   Validates the $FROM as a file for reading, and validates the $TO as a file for writing.
+
+=item I<Arguments>  from file (string), to file (string)
+
+=item I<Returns>    true on success, false on failure
 
 =back
 
