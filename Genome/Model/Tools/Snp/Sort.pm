@@ -16,6 +16,7 @@ class Genome::Model::Tools::Snp::Sort {
         type => 'String',
         is_optional => 0,
         doc => "maq cns2snp output",
+        shell_args_position => 1,
     },
     ]
 };
