@@ -23,9 +23,13 @@ use File::Temp;
 use Test::More;
 
 sub startup : Test(startup => 1) {
+    my $self = shift;
+
     require_ok('Genome::Utility::FileSystem');
-    my $new_file = _new_file();
+    my $new_file = $self->_new_file;
     unlink $new_file if -e $new_file;
+
+    return 1;
 }
 
 sub _base_test_dir {
@@ -55,11 +59,11 @@ sub _existing_link {
 }
 
 sub _new_link {
-    return sprintf('%s/existing_link.txt', _tmpdir());
+    return sprintf('%s/existing_link.txt', _tmpdir(@_));
 }
 
 sub _new_dir {
-    return sprintf('%s/new_dir', _tmpdir());
+    return sprintf('%s/new_dir', _tmpdir(@_));
 }
 
 sub _no_write_dir {
@@ -78,7 +82,7 @@ sub _no_read_file {
     return sprintf('%s/no_read_file.txt', _no_write_dir());
 }
 
-sub test1_file : Test(12) {
+sub test1_file : Tests {
     my $self = shift;
 
     my $existing_file = _existing_file();
@@ -101,13 +105,13 @@ sub test1_file : Test(12) {
     
     # No read access
     ok(
-        !Genome::Utility::FileSystem->open_file_for_reading( _no_read_file() ),
+        !Genome::Utility::FileSystem->open_file_for_reading( $self->_no_read_file() ),
         'Try to open a file that can\'t be read from',
     );
 
     # File is a dir
     ok(
-        !Genome::Utility::FileSystem->open_file_for_reading( _base_test_dir() ),
+        !Genome::Utility::FileSystem->open_file_for_reading( $self->_base_test_dir() ),
         'Try to open a file, but it\'s a directory',
     );
 
@@ -139,6 +143,26 @@ sub test1_file : Test(12) {
         'Try to open a file, but it\'s a directory',
     );
 
+    #< Copying >#
+    my $file_to_copy_to = $self->_tmpdir.'/file_to_copy_to';
+    ok(
+        Genome::Utility::FileSystem->copy_file(_existing_file(), $file_to_copy_to),
+        'copy_file',
+    );
+    ok( # destination already exists
+        !Genome::Utility::FileSystem->copy_file(_existing_file(), $file_to_copy_to),
+        'copy_file',
+    );
+    unlink $file_to_copy_to;
+    ok( # no file to copy 
+        !Genome::Utility::FileSystem->copy_file('does_not_exist', $file_to_copy_to),
+        'copy_file',
+    );
+    ok( # no dest
+        !Genome::Utility::FileSystem->copy_file(_existing_file()),
+        'copy_file failed as expected - no destination given',
+    );
+    
     return 1;
 }
 
@@ -198,7 +222,7 @@ sub test2_directory : Test(14) {
         'Failed as expected - can\'t write to dir',
     );
 
-    my $new_dir = _new_dir();
+    my $new_dir = $self->_new_dir;
     ok( Genome::Utility::FileSystem->create_directory($new_dir), "Created new dir: $new_dir");
 
     my $fifo = $new_dir .'/test_pipe';
@@ -212,7 +236,7 @@ sub test3_symlink : Test(5) {
     my $self = shift;
 
     my $target = _existing_file();
-    my $new_link = _new_link();
+    my $new_link = $self->_new_link;
 
     # Good
     ok( Genome::Utility::FileSystem->create_symlink($target, $new_link), 'Created symlink');
