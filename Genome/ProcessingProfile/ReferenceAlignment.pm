@@ -46,6 +46,10 @@ sub properties_hash {
                                      doc => 'name of the genotyper for this model',
                                      is_optional => 1,
                                  },
+                  genotyper_version => {
+                                        doc => 'version of the genotyper for this model',
+                                        is_optional => 1,
+                                 },
                   genotyper_params => {
                                        doc => 'command line args used for the genotyper',
                                        is_optional => 1,
@@ -53,6 +57,10 @@ sub properties_hash {
                   indel_finder_name => {
                                         doc => 'name of the indel finder for this model',
                                         is_optional => 1,
+                                    },
+                  indel_finder_version => {
+                                           doc => 'version of the indel finder for this model',
+                                           is_optional => 1,
                                     },
                   indel_finder_params => {
                                           doc => 'command line args for the indel finder',
