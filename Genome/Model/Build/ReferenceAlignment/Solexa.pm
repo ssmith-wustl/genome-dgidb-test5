@@ -141,18 +141,24 @@ sub _snv_file_filtered {
         my $script = $bin . '.pl';
 
         my $indelpe_param;
+	my @inputs = ($script, $unfiltered);
         if (-s $indelpe) {
-            warn "omitting indelpe data from the SNPfilter results because no indels were found...";
             $indelpe_param = "-F '$indelpe'";
+	    push @inputs, $indelpe;
         }
         else {
+            warn "omitting indelpe data from the SNPfilter results because no indels were found...";
             $indelpe_param = '';
         }
         Genome::Utility::FileSystem->shellcmd(
             cmd => "$script SNPfilter $indelpe_param $unfiltered > $filtered",
-            input_files => [$script,$indelpe,$unfiltered],
-            output_files => [$filtered],
+            input_files => \@inputs,
+            # TODO: add flag to allow zero size output?
+            #output_files => [$filtered],
         );
+	unless (-s $filtered) {
+	    $self->status_message('Zero size or non-existent filtered indel file '. $filtered);
+	}
     }
     return $filtered; 
 }
