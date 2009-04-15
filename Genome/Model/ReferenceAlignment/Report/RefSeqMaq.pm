@@ -12,8 +12,7 @@ use App::Report;
 
 class Genome::Model::ReferenceAlignment::Report::RefSeqMaq {
     is => 'Genome::Model::Report',
-    has =>
-    [
+    has => [
         #if we have a ref seq, just get that, otherwise get 'em all
         ref_seq_name => {is => 'VARCHAR2', len => 64, is_optional => 1, doc => 'Identifies Ref Sequence'},
         bfa_path =>
@@ -34,7 +33,6 @@ class Genome::Model::ReferenceAlignment::Report::RefSeqMaq {
             default =>'0.6.8', 
             doc =>"vmerge for maq '0.6.8' or '0.7.1'",
         },
-
         cmd =>
         {
             type => 'String',
@@ -110,18 +108,15 @@ sub get_maq_content
 
     #$bfa_file = $self->bfa_path . "22" . ".bfa " . $result_file;
     $bfa_file = $self->bfa_path . "all_sequences.bfa " . $result_file;
-    if ($self->version eq '0.6.8') {
-        $cmd = '/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq';
-    } elsif ($self->version eq '0.7.1') {
-        $cmd = '/gsc/pkg/bio/maq/maq-0.7.1-64/bin/maq';
-    }
-    else {
-        die "wtf?";
-    }    
+
+    $cmd = Genome::Model::Tools::Maq->path_for_maq_version($self->version);
  
     $cmd .=  " mapcheck $bfa_file"; 
     $self->status_message("Mapcheck command: ".$cmd);
     @maq = `$cmd`;
+    unless (@maq) {
+        die "Error running $cmd!"
+    }
     $rpt = join('',@maq);
     $rpt = $self->format_maq_content($rpt); 
     
