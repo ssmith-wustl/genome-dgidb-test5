@@ -2,7 +2,7 @@
 [% model_name %] Build Report
 ============================================================
 
-HTML version of Build Report: https://gscweb.gsc.wustl.edu[% data_directory %]reports/Summary/report.html
+HTML version of this report: https://gscweb.gsc.wustl.edu[% data_directory %]reports/Summary/report.html
 
 
 Model Details
