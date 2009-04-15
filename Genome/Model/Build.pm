@@ -8,7 +8,6 @@ use File::Path;
 use YAML;
 
 class Genome::Model::Build {
-    type_name => 'genome model build',
     table_name => 'GENOME_MODEL_BUILD',
     is_abstract => 1,
     sub_classification_method_name => '_resolve_subclass_name',
@@ -20,15 +19,12 @@ class Genome::Model::Build {
         
         model               => { is => 'Genome::Model', id_by => 'model_id' },
         model_id            => { is => 'NUMBER', len => 10, implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
-        
-        date_scheduled      => { via => 'build_event' },
-        
-        _creation_event     => { calculate_from => [ 'class', 'build_id' ],
-                                calculate => q(
-                                        my $build_event = "Genome::Model::Build"->get(build_id => $build_id);
-                                        return $build_event;
-                                )
-        },
+        model_name          => { via => 'model', to => 'name' },
+        type_name           => { via => 'model' },
+    ],
+    has_optional => [
+        date_scheduled      => { calculate => q|my $e = $self->build_event; return unless $e; return $e->date_scheduled| },
+        date_completed      => { calculate => q|my $e = $self->build_event; return unless $e; return $e->date_completed| },
         
         disk_allocation     => {
                                 calculate_from => [ 'class', 'id' ],
@@ -47,23 +43,23 @@ class Genome::Model::Build {
                                                     # which could update, and result in a new build
     ],
     has_many_optional => [
-    
-    from_build_links                  => { is => 'Genome::Model::Build::Link',
-                                               reverse_id_by => 'to_build',
-                                               doc => 'bridge table entries where this is the "to" build(used to retrieve builds this build is "from")'
-                                           },
-    from_builds                       => { is => 'Genome::Model::Build',
-                                               via => 'from_build_links', to => 'from_build',
-                                               doc => 'Genome builds that contribute "to" this build',
-                                           },
-    to_build_links                    => { is => 'Genome::Model::Build::Link',
-                                               reverse_id_by => 'from_build',
-                                               doc => 'bridge entries where this is the "from" build(used to retrieve builds builds this build is "to")'
-                                           },
-    to_builds                       => { is => 'Genome::Model::Build',
-                                               via => 'to_build_links', to => 'to_build',
-                                               doc => 'Genome builds this build contributes "to"',
-                                           },
+        
+        from_build_links                  => { is => 'Genome::Model::Build::Link',
+                                                   reverse_id_by => 'to_build',
+                                                   doc => 'bridge table entries where this is the "to" build(used to retrieve builds this build is "from")'
+                                               },
+        from_builds                       => { is => 'Genome::Model::Build',
+                                                   via => 'from_build_links', to => 'from_build',
+                                                   doc => 'Genome builds that contribute "to" this build',
+                                               },
+        to_build_links                    => { is => 'Genome::Model::Build::Link',
+                                                   reverse_id_by => 'from_build',
+                                                   doc => 'bridge entries where this is the "from" build(used to retrieve builds builds this build is "to")'
+                                               },
+        to_builds                       => { is => 'Genome::Model::Build',
+                                                   via => 'to_build_links', to => 'to_build',
+                                                   doc => 'Genome builds this build contributes "to"',
+                                               },
     ], 
 
     schema_name => 'GMSchema',
