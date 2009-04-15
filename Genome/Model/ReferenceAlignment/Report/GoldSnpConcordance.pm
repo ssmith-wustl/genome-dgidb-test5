@@ -11,8 +11,8 @@ class Genome::Model::ReferenceAlignment::Report::GoldSnpConcordance {
     is => 'Genome::Model::Report',
     has => [
         # inputs come from the build
-        variant_list_files          => { via => 'build', to => '_variant_list_files' },
-        variant_filtered_list_files => { via => 'build', to => '_variant_filtered_list_files' },
+        variant_list_files          => { via => 'build', to => '_snv_file_unfiltered' },
+        variant_filtered_list_files => { via => 'build', to => '_snv_file_filtered' },
         gold_snp_path               => { via => 'build' },
         
         # the name is essentially constant
