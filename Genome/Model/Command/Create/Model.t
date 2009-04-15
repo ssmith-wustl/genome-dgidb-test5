@@ -193,7 +193,7 @@ sub successful_create_model {
         ok(scalar(@warning_messages), 'create model generated a warning message');
         like($warning_messages[0], qr(model symlink.*already exists), 'Warning message complains about the model link already existing');
     } else {
-        ok(!scalar(@warning_messages), 'no warning messages');
+        ok(!scalar(@warning_messages), 'no warning messages') or diag("@warning_messages");
         if (@warning_messages) {
             print join("\n",@warning_messages);
         }
