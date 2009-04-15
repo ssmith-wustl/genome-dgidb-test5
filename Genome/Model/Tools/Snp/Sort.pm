@@ -27,8 +27,8 @@ sub execute {
     my $self=shift;
 
     #Check on the file names
-    unless(-f $self->snp_file) {
-        $self->error_message("Snps file is not a file: " . $self->snp_file);
+    unless(-e $self->snp_file) {
+        $self->error_message("Snps file not found: " . $self->snp_file);
         return;
     }
 
