@@ -88,7 +88,7 @@ sub resolve_accumulated_alignments_filename {
         my $rv = Genome::Utility::FileSystem->shellcmd(
                                                        cmd => $cmd,
                                                        input_files => \@files,
-                                                       output_files => [$tmp_map_file],
+                                                      output_files => [$tmp_map_file],
                                                    );
         unless ($rv) {
             $self->error_message('Failed to execute mapmerge command '. $cmd);
@@ -320,58 +320,52 @@ sub DESTROY {
 }
 
 sub accumulate_maps {
- 
-   	my $self=shift;
-        my $model = $self->model;
-        my $result_file;
+    my $self=shift;
+    my $model = $self->model;
+    my $result_file;
 
-
-#replace 999999 with the cut off value... 
-#2761337261 is an old AML2 model with newer data
- if ($model->id < 0 || $model->id >= 2766822526 || $model->id == 2761337261) {
-
+    #replace 999999 with the cut off value... 
+    #2761337261 is an old AML2 model with newer data
+    if ($model->id < 0 || $model->id >= 2766822526 || $model->id == 2761337261) {
         $result_file = $self->resolve_accumulated_alignments_filename;
+    } 
+    else {
+        my @all_map_lists;
+        my @map_list;
+        my $c;
+        my @chromosomes = (1..22,'X','Y');
+        #my @chromosomes = (1..22,'X','Y','other');
+        foreach $c(@chromosomes) {
+            my $a_ref_seq = Genome::Model::RefSeq->get(model_id=>$self->model->id, ref_seq_name=>$c); 
+            @map_list = $a_ref_seq->combine_maplists;
+            push (@all_map_lists, @map_list); 
+        }
 
- } else {
+        $result_file = '/tmp/mapmerge_'.$model->genome_model_id;
 
-   	my @all_map_lists;
-	my @map_list;
-	my $c;
-	my @chromosomes = (1..22,'X','Y');
-	#my @chromosomes = (1..22,'X','Y','other');
-	foreach $c(@chromosomes) {
-		my $a_ref_seq = Genome::Model::RefSeq->get(model_id=>$self->model->id, ref_seq_name=>$c); 
-		@map_list = $a_ref_seq->combine_maplists;
-		push (@all_map_lists, @map_list); 
-	}
+        $self->warning_message("Performing a complete mapmerge for $result_file \n"); 
+        my ($fh,$maplist) = File::Temp::tempfile;
+        $fh->print(join("\n",@all_map_lists),"\n");
+        $fh->close;
+        my $maq_version = $self->model->read_aligner_version;
+        system "gt maq vmerge --maplist $maplist --pipe $result_file --version $maq_version &";
 
-	$result_file = '/tmp/mapmerge_'.$model->genome_model_id;
+        $self->status_message("gt maq vmerge --maplist $maplist --pipe $result_file --version $maq_version &");
+        #ystem "gt maq vmerge --maplist $maplist --pipe $result_file &";
+        my $start_time = time;
+        until (-p "$result_file" or ( (time - $start_time) > 100) )  {
+            $self->status_message("Waiting for pipe...");
+            sleep(5);
+        }
+        unless (-p "$result_file") {
+            die "Failed to make pipe? $!";
+        }
+        $self->status_message("Streaming into file $result_file.");
+        $self->warning_message("mapmerge complete.  output filename is $result_file");
+        chmod 00664, $result_file;
+    }
 
-	$self->warning_message("Performing a complete mapmerge for $result_file \n"); 
-	my ($fh,$maplist) = File::Temp::tempfile;
-	$fh->print(join("\n",@all_map_lists),"\n");
-	$fh->close;
-    my $maq_version = $self->model->read_aligner_version;
-    system "gt maq vmerge --maplist $maplist --pipe $result_file --version $maq_version &";
-        
-    $self->status_message("gt maq vmerge --maplist $maplist --pipe $result_file --version $maq_version &");
-    #ystem "gt maq vmerge --maplist $maplist --pipe $result_file &";
-	my $start_time = time;
-	until (-p "$result_file" or ( (time - $start_time) > 100) )  {
-	    $self->status_message("Waiting for pipe...");
-	    sleep(5);
-	}
-	unless (-p "$result_file") {
-	    die "Failed to make pipe? $!";
-	}
-	$self->status_message("Streaming into file $result_file.");
-
-	$self->warning_message("mapmerge complete.  output filename is $result_file");
-	chmod 00664, $result_file;
-
- }
-
-        return $result_file;
+    return $result_file;
 } 
 
 
