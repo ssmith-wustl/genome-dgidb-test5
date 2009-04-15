@@ -65,6 +65,45 @@ sub create {
     return $self;
 }
 
+sub param_summary {
+    my $self = shift;
+    my @params = $self->params_for_class();
+    my $summary;
+    for my $param (@params) {
+        my @values;
+        eval { @values = $self->$param(); };
+
+        if (@values == 0) {
+            next;
+        }
+        elsif (not defined $values[0] or $values[0] eq '') {
+            next; 
+        };
+
+        if (defined $summary) {
+            $summary .= ' '
+        }
+        else {
+            $summary = ''
+        }
+
+        $summary .= $param . '=';
+        if ($@) {
+            $summary .= '!ERROR!';
+        } 
+        elsif (@values > 1) {
+            $summary .= join(",",@values)
+        } 
+        elsif ($values[0] =~ /\s/) {
+            $summary .= '"$values[0]"'
+        }
+        else {
+            $summary .= $values[0]
+        }
+    }
+    return $summary;
+}
+
 sub delete {
     my $self = shift;
     
