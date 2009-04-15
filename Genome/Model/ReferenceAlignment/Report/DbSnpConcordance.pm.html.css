@@ -40,10 +40,10 @@ div.content_padding {
 div#plots {
 	width: 98%;
 	padding: 1%;
-	background: #EFEFEF;
+	background: #EFEFED;
 	border: 1px solid #CCC;
 	float: left;
-	font-size: 90%;
+	font-size: 85%;
 }
 
 div#plots p {
