@@ -10,11 +10,11 @@ use Data::Dumper;
 class Genome::ProcessingProfile::Command::List {
     is => 'UR::Object::Command::List',
     has => [
-    subject_class_name  => {
-        is_constant => 1, 
-        value => 'Genome::ProcessingProfile' 
-    },
-    #show => { default_value => 'id,name,subject_name,processing_profile_name' },
+        subject_class_name  => {
+            is_constant => 1, 
+            value => 'Genome::ProcessingProfile' 
+        },
+        show => { default_value => 'id,type_name,name' },
     ],
 };
 
