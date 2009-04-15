@@ -13,8 +13,8 @@ BEGIN {
     $override_testdir = pop(@ARGV);
     unless ($override_testdir =~ /^\//) {
         $override_testdir = '/gsc/var/cache/testsuite/data/' . $override_testdir;
+        warn "\n!!!!!!!!!!!!!!!!! using test directory override $override_testdir !!!!!!!!!!!!!!!\n";
     }
-    warn "\n!!!!!!!!!!!!!!!!! using test directory override $override_testdir !!!!!!!!!!!!!!!\n";
 }
 
 use Test::More;
