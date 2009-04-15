@@ -103,7 +103,7 @@ sub setup_test_data {
         my $paired_end = 0;
         if ($$run_dir_params{'flow_cell_id'} eq '30LN0') {
             $paired_end = 1;
-	    $library = "TESTINGLIBRARY_PAIRED";	
+	    $library = "TESTINGLIBRARY_PAIRED";
         }
         my @quality_converters  = ('sol2sanger', 'sol2phred');
         for my $lane (1 .. 8) {
@@ -151,6 +151,7 @@ sub setup_test_data {
             my $index = $lane % 2;
             $instrument_data->set_always('resolve_quality_converter',$quality_converters[$index]);
 
+            $instrument_data->set_always('dump_illumina_fastq_archive',$run_dir);
             $instrument_data->mock('fastq_filenames',
                                    \&Genome::InstrumentData::Solexa::fastq_filenames);
             $instrument_data->mock('resolve_fastq_filenames',
