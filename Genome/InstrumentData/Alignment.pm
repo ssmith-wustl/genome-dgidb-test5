@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Digest::MD5 qw(md5_hex);
 
 class Genome::InstrumentData::Alignment {
     has => [
@@ -148,12 +149,18 @@ sub aligner_label {
 
     my $aligner_name    = $self->aligner_name;
     my $aligner_version = $self->aligner_version;
+    my $aligner_params = $self->aligner_params;
 
     return $aligner_name unless $aligner_version;
 
     $aligner_version =~ s/\./_/g;
 
-    my $aligner_label   = $aligner_name . $aligner_version;
+    my $aligner_label = $aligner_name . $aligner_version;
+
+    if ($aligner_params and $aligner_params ne '') {
+        my $params_md5 = md5_hex($aligner_params);
+        $aligner_label .= '/'. $params_md5;
+    }
 
     return $aligner_label;
 }
