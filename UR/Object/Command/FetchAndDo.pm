@@ -136,11 +136,11 @@ sub _validate_subject_class {
     
     $self->error_message(
         sprintf(
-            'Can\'t find method (get_all_property_objects) in %s.  Is this a properly declared UR::Object class?',
+            'Can\'t find method (all_property_metas) in %s.  Is this a properly declared UR::Object class?',
             $subject_class_name,
         ) 
     )
-        and return unless $subject_class->can('get_all_property_objects');
+        and return unless $subject_class->can('all_property_metas');
 
     return 1;
 }
@@ -155,7 +155,7 @@ sub _subject_class_filterable_properties {
         $a->property_name cmp $b->property_name
     } grep {
         $_->column_name ne ''
-    } $self->subject_class->get_all_property_objects;
+    } $self->subject_class->all_property_metas;
 }
 
 sub _hint_string {

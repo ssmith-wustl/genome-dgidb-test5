@@ -135,7 +135,7 @@ sub _get_processing_profiles_with_identical_params {
     }
 
     my (%properties, @has_many_properties);
-    for my $property ( $target_meta->get_property_objects ) {
+    for my $property ( $target_meta->direct_property_metas ) {
         next unless exists $params->{ $property->property_name };
         if ( $property->is_many ) {
             push @has_many_properties, $property->property_name;
@@ -208,7 +208,7 @@ sub _properties_for_class {
     }
 
     my %properties;
-    for my $property ( $class_meta->get_all_property_objects ) {
+    for my $property ( $class_meta->all_property_metas ) {
         next unless $property->class_name->isa('Genome::ProcessingProfile') 
             and not $property->class_name eq 'Genome::ProcessingProfile';
         $properties{ $property->property_name } = {

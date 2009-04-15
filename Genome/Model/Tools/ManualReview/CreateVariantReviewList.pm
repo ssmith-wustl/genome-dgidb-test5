@@ -70,7 +70,7 @@ sub execute {
         $a->property_name cmp $b->property_name
     } grep {
         $_->column_name ne ''
-    } Genome::VariantReviewDetail->get_class_object->get_all_property_objects;
+    } Genome::VariantReviewDetail->get_class_object->all_property_metas;
     my @det_property_names = map { $_->property_name } @props;
     eval{
         my $review_list = Genome::VRList->get(name => $name);

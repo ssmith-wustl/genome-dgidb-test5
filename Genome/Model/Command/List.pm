@@ -16,7 +16,7 @@ class Genome::Model::Command::List {
     },
     ],
 };
-#Genome::Model::Command::List->get_class_object->get_property_object_for_name('show')->default_value('id,name,subject_name,processing_profile_name');
+#Genome::Model::Command::List->get_class_object->property_meta_for_name('show')->default_value('id,name,subject_name,processing_profile_name');
 
 sub help_brief {
     return 'List models';

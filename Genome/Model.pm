@@ -605,7 +605,7 @@ sub pretty_print_text {
         my $class_meta = $self->get_class_object;
         for my $name ($class_meta->all_property_names) {
             next if $name eq 'name';
-            my $property_meta = $class_meta->get_property_meta_by_name($name);
+            my $property_meta = $class_meta->property_meta_for_name($name);
             unless ($property_meta->is_delegated or $property_meta->is_calculated) {
                 push @props, $name;
             }

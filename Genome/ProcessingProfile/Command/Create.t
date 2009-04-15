@@ -70,7 +70,7 @@ for my $subclass (keys %pp_params) {
 for my $subclass (keys %pp_params) {
     my $class = sprintf('Genome::ProcessingProfile::Command::Create::%s', $subclass);
     # Skip classes that don't have params
-    next unless $class->get_class_object->get_property_objects;
+    next unless ( my @props = $class->get_class_object->direct_property_metas);
 
     # Create 'new' name
     my %params = %{$pp_params{$subclass}}; # Copy so we don't stomp on the name

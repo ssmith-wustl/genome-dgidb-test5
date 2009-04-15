@@ -43,7 +43,7 @@ for my $processor ( pre_assembly_processors(), post_assembly_processors() ) {
     };
 
     my $acc_class_meta = $class->get_class_object;
-    for my $property ( $acc_class_meta->get_property_objects ) {
+    for my $property ( $acc_class_meta->direct_property_metas ) {
         next if $property->property_name eq 'fasta_file'
             or exists $properties{ $property->property_name };
         $properties{ $property->property_name } = {
@@ -182,7 +182,7 @@ sub _params_for_class {
     my %params_for_class;
     for my $property ( grep {
             $_->class_name ne 'UR::Object' and $_->class_name ne 'Command' 
-        }$class->get_class_object->get_all_property_objects ) {
+        }$class->get_class_object->all_property_metas ) {
         my $property_name = $property->property_name;
         my $value;# = $self->$property_name;
         unless ( $self->can($property_name) and defined($value = $self->$property_name) ) {

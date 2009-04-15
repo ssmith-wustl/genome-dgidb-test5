@@ -43,7 +43,7 @@ sub create {
         }
     }
     
-    unless ($class->get_class_object->get_property_meta_by_name("model")->is_optional or $self->model) {
+    unless ($class->get_class_object->property_meta_for_name("model")->is_optional or $self->model) {
         if ($self->bare_args) {
             my $pattern = $self->bare_args->[0];
             if ($pattern) {

@@ -818,7 +818,7 @@ sub _shell_args_property_meta
 {
     my $self = shift;
     my $class_meta = $self->get_class_object;
-    my @property_meta = $class_meta->get_all_property_objects(@_);
+    my @property_meta = $class_meta->get_all_property_metas(@_);
     my @result;
     my %seen;
     my (@positional,@required,@optional);

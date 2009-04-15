@@ -65,7 +65,7 @@ sub _get_params_for_generation {
     my $self = shift;
 
     my %params;
-    for my $property ( $self->get_class_object->get_all_property_objects ) {
+    for my $property ( $self->get_class_object->all_property_metas ) {
         my $property_name = $property->property_name;
         next if $property_name =~ /^_/;
         next if $property->via or $property->id_by;

@@ -102,7 +102,7 @@ $DB::single = 1;
         $a->property_name cmp $b->property_name
     } grep {
         $_->column_name ne ''
-    } Genome::VariantReviewDetail->get_class_object->get_all_property_objects;
+    } Genome::VariantReviewDetail->get_class_object->all_property_metas;
     my @column_names = map { $_->column_name } @props;
     my @property_names = map { $_->property_name } @props;
     #print header
