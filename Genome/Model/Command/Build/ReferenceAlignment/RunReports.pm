@@ -45,6 +45,7 @@ sub execute {
     my $self = shift;
     
     my $ts = time();
+    my $build = $self->build;
     my $build_id = $self->build_id;
     my $model = $self->model;
     
@@ -81,6 +82,69 @@ sub execute {
     $self->status_message('Completed SNP Filter report.');
     
 
+    my $accumulated_alignments_file;
+
+    ###############################################
+    $self->status_message('Starting MapCheck report.');
+    my $MapCheck_report_name = 'RefSeqMaq';
+    #model id for previous test:  2733662090
+    my $MapCheck_report = Genome::Model::ReferenceAlignment::Report::RefSeqMaq->create(
+                                                                                       build_id => $build_id,
+                                                                                       name => $MapCheck_report_name,
+                                                                                       version => $self->model->read_aligner_version
+                                                                                   );
+    #my $MapCheck_report = Genome::Model::Report::RefSeqMaq->create(build_id =>$build_id, name=>$MapCheck_report_name, version=>$self->model->read_aligner_version);
+    $accumulated_alignments_file = $self->accumulate_maps();
+    unless ($accumulated_alignments_file) {
+        $self->error_message('Failed to get accumulated maps file');
+        return;
+    }
+    $self->status_message('The accumulated alignments file is: '.$accumulated_alignments_file);
+    $MapCheck_report->accumulated_alignments_file($accumulated_alignments_file);
+    #$MapCheck_report->generate_report_detail();
+    $self->build->add_report( $MapCheck_report->generate_report );
+    $self->status_message('Finished MapCheck report.');
+  
+    ###############################################
+    #cleaning up accumulated file
+    my $rm_cmd = "rm $accumulated_alignments_file";
+    $self->status_message("Removing accumlated file with command: $rm_cmd");
+    my $rv = `$rm_cmd`;
+    $self->status_message("Result of remove: $rv");
+   
+        
+    #Indelpe##############################################
+    #cd /gscmnt/sata810/info/medseq/GBM_71_maps/
+    #maq indelpe /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.bfa bigmap.map > normal.indelpe
+    $self->status_message('Starting Indelpe report.');
+    my $aligner_path = $self->aligner_path('read_aligner_version'); 
+    my $ref_seq = $model->reference_sequence_path."/all_sequences.bfa"; 
+    my $indelpe_output_path = "$maq_snp_dir/indelpe_report_$id"."_$ts.out";
+$DB::single = 1;
+    $accumulated_alignments_file = $self->accumulate_maps();
+
+    unless ($accumulated_alignments_file) {
+        $self->error_message('Failed to get accumulated map file');
+        return;
+    }
+
+    $self->status_message('Acc. alignments file: '.$accumulated_alignments_file);
+    $self->status_message('Ref Seq file: '.$ref_seq.' has a size of: '.-s $ref_seq);
+    $self->status_message('The accumulated alignments file is: '.$accumulated_alignments_file);
+    my $indelpe_cmd = "$aligner_path indelpe $ref_seq $accumulated_alignments_file > $indelpe_output_path";
+    my $indelpe_result = $self->shellcmd(
+        cmd => $indelpe_cmd,
+        input_files => [$aligner_path, $ref_seq, $accumulated_alignments_file],
+        #TODO: add flag to allow for null/zero size outputs
+        #output_files => [$indelpe_output_path],
+    );
+    unless (-s $indelpe_output_path) {
+	$self->status_message('Zero size or non-existent indelpe output file '. $indelpe_output_path); 
+    }
+    $self->status_message('Indelpe result: '.$indelpe_result);
+    $self->status_message('Indelpe output file:'.$indelpe_output_path.' has a size of: '.-s $indelpe_output_path);
+    $self->status_message('Completed Indelpe report.');
+   
     ###############################################
     # TODO: get the rest of them to fit here, 
     # then put the list in the processing profile,
@@ -129,68 +193,7 @@ sub execute {
         }
     }
 
-    my $accumulated_alignments_file;
-
-    ###############################################
-    $self->status_message('Starting MapCheck report.');
-    my $MapCheck_report_name = 'RefSeqMaq';
-    #model id for previous test:  2733662090
-    my $MapCheck_report = Genome::Model::ReferenceAlignment::Report::RefSeqMaq->create(
-                                                                                       build_id => $build_id,
-                                                                                       name => $MapCheck_report_name,
-                                                                                       version => $self->model->read_aligner_version
-                                                                                   );
-    #my $MapCheck_report = Genome::Model::Report::RefSeqMaq->create(build_id =>$build_id, name=>$MapCheck_report_name, version=>$self->model->read_aligner_version);
-    $accumulated_alignments_file = $self->accumulate_maps();
-    unless ($accumulated_alignments_file) {
-        $self->error_message('Failed to get accumulated maps file');
-        return;
-    }
-    $self->status_message('The accumulated alignments file is: '.$accumulated_alignments_file);
-    $MapCheck_report->accumulated_alignments_file($accumulated_alignments_file);
-    #$MapCheck_report->generate_report_detail();
-    $self->build->add_report( $MapCheck_report->generate_report );
-    $self->status_message('Finished MapCheck report.');
-  
-    ###############################################
-    #cleaning up accumulated file
-    my $rm_cmd = "rm $accumulated_alignments_file";
-    $self->status_message("Removing accumlated file with command: $rm_cmd");
-    my $rv = `$rm_cmd`;
-    $self->status_message("Result of remove: $rv");
-   
-        
-    #Indelpe##############################################
-    #cd /gscmnt/sata810/info/medseq/GBM_71_maps/
-    #maq indelpe /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.bfa bigmap.map > normal.indelpe
-    $self->status_message('Starting Indelpe report.');
-    my $aligner_path = $self->aligner_path('read_aligner_version'); 
-    my $ref_seq = $model->reference_sequence_path."/all_sequences.bfa"; 
-    my $indelpe_output_path = "$maq_snp_dir/indelpe_report_$id"."_$ts.out";
-
-    $accumulated_alignments_file = $self->accumulate_maps();
-
-    unless ($accumulated_alignments_file) {
-        $self->error_message('Failed to get accumulated map file');
-        return;
-    }
-
-    $self->status_message('The accumulated alignments file is: '.$accumulated_alignments_file);
-    my $indelpe_cmd = "$aligner_path indelpe $ref_seq $accumulated_alignments_file > $indelpe_output_path";
-    $self->status_message('Indelpe report command: '.$indelpe_cmd);
-    my $indelpe_result = `$indelpe_cmd`;
-    $self->status_message('Completed Indelpe report.');
-   
-    ###############################################
-    $rm_cmd = "rm $accumulated_alignments_file";
-    $self->status_message("Removing accumlated file with command: $rm_cmd");
-    $rv = `$rm_cmd`;
-    $self->status_message("Result of remove: $rv");
-    
-
     ##############################################
-    #Report Summary
-    
     $self->status_message('Starting report summary.');
     my $r = Genome::Model::ReferenceAlignment::Report::Summary->create( build_id => $self->build_id );
 
@@ -206,16 +209,15 @@ sub execute {
     $self->status_message('Report summary complete.');
 
     ################################################### 
-    $self->status_message('Sending summary e-mail.');
-    my $summary_report_dir_name = $r->name;
-    $summary_report_dir_name =~ s/ /_/g;
-    my $summary_report_path = $self->build->resolve_reports_directory."/".$summary_report_dir_name."/report.txt";
-    $self->status_message("Sending the file: $summary_report_path");
-    my $mail_cmd = 'mail -s "Summary Report for Build '.$self->build->build_id.'" jeldred@genome.wustl.edu,jpeck@genome.wustl.edu,ssmith@genome.wustl.edu < '.$summary_report_path;
-    $self->status_message("E-mail command: $mail_cmd");
-    my $mail_rv = system($mail_cmd);
+    my $mail_dest = ($build_id < 0 ? Genome::Config->user_email() . ',charris@genome.wustl.edu' : 'apipe@genome.wustl.edu');
+    $self->status_message('Sending summary e-mail to ' . $mail_dest);
+    my $mail_rv = Genome::Model::Command::Report::Mail->execute(
+        model => $build->model,
+        build => $build,
+        report_name => "Summary",
+        to => $mail_dest,
+    );
     $self->status_message("E-mail command executed.  Return value: $mail_rv");
-
    
     ############################################### 
     #PFAM Reports
@@ -227,6 +229,12 @@ sub execute {
     #$p->generate_report_detail(report_detail => "full_report_test.csv");
     #$self->status_message('Completed Pfam report.');
     ############################################### 
+    
+    ###############################################
+    $rm_cmd = "rm $accumulated_alignments_file";
+    $self->status_message("Removing accumlated file with command: $rm_cmd");
+    $rv = `$rm_cmd`;
+    $self->status_message("Result of remove: $rv");
     
     my $success = $self->verify_successful_completion();
         
