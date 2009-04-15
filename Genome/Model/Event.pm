@@ -160,72 +160,11 @@ sub delete {
     return 1;
 }
 
+#TODO: fix the way this method is called an either inherit from G:U:F 
+#      or call class method directly like below
 sub shellcmd {
-    # execute a shell command in a standard way instead of using system()\
-    # verifies inputs and ouputs, and does detailed logging...
-    
-    # TODO: add IPC::Run's w/ timeout but w/o the io redirection...
-    
-    my ($self,%params) = @_;
-    my $cmd                         = delete $params{cmd};
-    my $output_files                = delete $params{output_files};
-    my $input_files                 = delete $params{input_files};
-    my $allow_failed_exit_code      = delete $params{allow_failed_exit_code};
-    
-    my $skip_if_output_is_present   = delete $params{skip_if_output_is_present};
-    $skip_if_output_is_present = 1 if not defined $skip_if_output_is_present;
-
-    if (%params) {
-        my @crap = %params;
-        Carp::confess("Unknown params passed to shellcmd: @crap");
-    }
-    
-    if ($output_files and @$output_files) {
-        my @found_outputs = grep { -e $_ } @$output_files;
-        if ($skip_if_output_is_present
-            and @$output_files == @found_outputs
-        ) {
-            $self->status_message(
-                "SKIP RUN (output is present):     $cmd\n\t"
-                . join("\n\t",@found_outputs)
-            );
-            return 1;
-        }
-    }
-    
-    if ($input_files and @$input_files) {
-        my @missing_inputs = grep { not -s $_ } @$input_files;
-        if (@missing_inputs) {
-            die "CANNOT RUN (missing inputs):     $cmd\n\t"
-                . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_inputs);
-        }
-    }
-    
-    $self->status_message("RUN: $cmd");
-    #my $exit_code = system($cmd);
-    my $exit_code = $self->system_inhibit_std_out_err($cmd);
-    $exit_code /= 256;
-    if ($exit_code) {
-        if ($allow_failed_exit_code) {
-            $DB::single = $DB::stopper;
-            warn "TOLERATING Exit code $exit_code, msg $! from: $cmd";
-        }
-        else {
-            $DB::single = $DB::stopper;
-            die "ERROR RUNNING COMMAND.  Exit code $exit_code, msg $! from: $cmd";
-        }
-    }
-    
-    if ($output_files and @$output_files) {
-        my @missing_outputs = grep { not -s $_ } @$output_files;
-        if (@missing_outputs) {
-            for (@$output_files) { unlink $_ }
-            die "MISSING OUTPUTS! @missing_outputs\n";
-            #    . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_outputs);
-        }
-    }
-    
-    return 1;
+    my $self = shift;
+    return Genome::Utility::FileSystem->shellcmd(@_);
 }
 
 sub resolve_log_directory {
