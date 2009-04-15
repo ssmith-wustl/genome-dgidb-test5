@@ -205,8 +205,27 @@ $DB::single = 1;
     if (my $txt = $report_output->get_txt) {
         print $txt,"\n"; 
     }
-    
-    unless ($saved) {
+
+    if ($saved) {
+        # mail whoever ran the tools so they don't have to mail themselves
+        my $me = Genome::Config->user_email();
+        $self->status_message("Sending you the report (to $me)");
+        my $r = Genome::Model::Command::Report::Mail->execute(
+            model_id => $build->model_id,
+            build_id => $self->build_id,
+            report_name => $report_output->name,
+            (
+                $self->save_as 
+                    ? (directory => $self->save_as) 
+                    : ()
+            ),    
+            to => $me,
+        );
+        unless ($r) {
+            $self->error_message("Failed to send email!");
+        }
+    }    
+    else {
         $self->error_message("Error saving report!");
         $self->error_message($@) if $@;
         my $build_id = $build->id;
