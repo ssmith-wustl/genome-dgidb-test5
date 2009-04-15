@@ -65,13 +65,12 @@ sub generate_report_detail
     my $module_path = $INC{"Genome/Model/ReferenceAlignment/Report/DbSnpConcordance.pm"};
     die 'failed to find module path!' unless $module_path;
 
-	my @cqr_unfiltered;
-	my @cqr_filtered;
+    my @cqr_unfiltered;
+    my @cqr_filtered;
 
-	my $concordance_report;
+    my $concordance_report;
 
     for my $list (qw/variant_list_files variant_filtered_list_files/) {
-        
         my $snp_file;
         if  (defined $self->override_variant_file) {
             # override SNP list for testing
@@ -82,14 +81,17 @@ sub generate_report_detail
             # get the SNV lists from the build and put them together
             $snp_file = $self->create_temp_file_path($list);
             my @files = $self->$list;
-			#my $file_list = join(" ", @files);
+            #my $file_list = join(" ", @files);
             #my $cat_cmd = "cat $file_list > $snp_file";
             #switching this back for the time being... 
             #my $cat_rv = Genome::Utility::FileSystem->shellcmd( cmd=>$cat_cmd, input_files=>\@files, output_files=>[$snp_file] ); 
             #unless ($cat_rv) {
-	    #	die "Cat'ing snp files failed. Return value: $cat_rv";
-	    # } 
-            system "cat @files > $snp_file";
+            #	die "Cat'ing snp files failed. Return value: $cat_rv";
+            # } 
+            Genome::Utility::FileSystem->shellcmd(
+                cmd => "cat @files > $snp_file",
+            );
+            # TODO: verify counts!
         }
         
         unless ($snp_file) {
@@ -112,26 +114,35 @@ sub generate_report_detail
         else {
             $db_snp_path = $self->build->resolve_reports_directory() ."/". $model->genome_model_id. "$list.dbsnp";
             
-            $self->status_message("Generating dbSNP intersection for concordance checking...");
-			if (! ($self->test || -e $db_snp_path) ) { 
-            # unless ($self->test and -e $db_snp_path) {
-                unless (Genome::Model::Tools::Snp::CreateDbsnpFileFromSnpFile->execute(output_file=>$db_snp_path,snp_file=>$snp_file) ) {
-			die "Could not execute create-db-snp-file-from-snp-file.";		
-		} 
+            # TODO: make this called from _inside_ the DbSnpConcordance checker and throw it away afterwards
+            if ($self->test and -e $db_snp_path) {
+                $self->status_message("Re-using existing dbSNP intersection file because the testing flag is set, and it already exists:  $db_snp_path");
             }
-            
-            unless (-e $db_snp_path) {
-                die "No dbSNP output file found!";
-                return;
+            else {
+                if (-e $db_snp_path) {           
+                    $self->status_message("Found existing dbSNP intersection file.  Deleting... $db_snp_path");
+                    unlink $db_snp_path;
+                    if (-e $db_snp_path) {
+                        die "Failed to remove previous dbsnp file!: $!";
+                    }
+                }
+
+                $self->status_message("Generating dbSNP intersection for concordance checking...");
+                unless (
+                    Genome::Model::Tools::Snp::CreateDbsnpFileFromSnpFile->execute(
+                        output_file     => $db_snp_path,
+                        snp_file        => $snp_file
+                    ) 
+                ) {
+                    die "Could not execute create-db-snp-file-from-snp-file.";
+                }
+
+                unless (-e $db_snp_path) {
+                    die "No dbSNP output file found!";
+                    return;
+                }
             }
         }
-        
-        #my $concordance_cmd = 
-        #    "gt snp db-snp-concordance ".
-        #    "--dbsnp-file $db_snp_path ".
-        #    "--snp-file $snp_file".
-        #    "--output-file $cc_output"; 
-        #print("Generating concordance report using cmd: $concordance_cmd");
         
         if ($self->test and -e "./concordance-$list") {
             $concordance_report = `cat ./concordance-$list`;
@@ -141,9 +152,15 @@ sub generate_report_detail
             $self->status_message("Output file for DbSnpConcordance: ".$cc_output.",".-s $cc_output);
             $self->status_message("snp_file for DbSnpConcordance: ".$snp_file.",".-s $snp_file);
             $self->status_message("dbsnp_file for DbSnpConcordance: ".$db_snp_path.",".-s $db_snp_path);
-            unless (Genome::Model::Tools::Snp::DbSnpConcordance->execute(output_file=>$cc_output,snp_file=>$snp_file,dbsnp_file=>$db_snp_path) ) {
-		die "Could not execute db-snp-concordance.";		
-	    }
+            unless (
+                Genome::Model::Tools::Snp::DbSnpConcordance->execute(
+                    output_file     =>$cc_output,
+                    snp_file        =>$snp_file,
+                    dbsnp_file      =>$db_snp_path
+                ) 
+            ) {
+                die "Could not execute db-snp-concordance.";
+            }
             $self->status_message("output result: ".-s $cc_output);
             #TODO this cat should be done differently.   
             $concordance_report = `cat $cc_output`; 
@@ -158,27 +175,30 @@ sub generate_report_detail
             die "Error generating concordance report!"
         }
         
-        #my $concordance_quality_cmd = 
-        #    "gt snp db-snp-concordance ".
-        #    "--report-by-quality ".
-        #    "--dbsnp-file $db_snp_path ".
-        #    "--snp-file $snp_file"; 
-
-        #print("Generating concordance quality report using cmd: $concordance_quality_cmd"); 
         my $concordance_quality_report;
         if ($self->test and -e "./concordance-quality-$list") {
+            $self->status_message("Re-using previous conconcordance quality data for testing...");
             $concordance_quality_report = `cat ./concordance-quality-$list`;
         }
         else { 
-  
             my $cq_output = $self->create_temp_file_path();
-            unless (Genome::Model::Tools::Snp::DbSnpConcordance->execute(report_by_quality=>1,output_file=>$cq_output,snp_file=>$snp_file,dbsnp_file=>$db_snp_path) ) {
-		die "Could not execute DbSnpConcordance.";		
-	    }
+            $self->status_message("Generating dbSNP concordance...");
+            unless (
+                Genome::Model::Tools::Snp::DbSnpConcordance->execute(
+                    report_by_quality   =>1,
+                    output_file         =>$cq_output,
+                    snp_file            =>$snp_file,
+                    dbsnp_file          =>$db_snp_path
+                ) 
+            ) {
+                die "Could not execute DbSnpConcordance.";
+            }
+
             #$concordance_quality_report = `$concordance_quality_cmd`;
             #TODO find a better way than cat...
             $concordance_quality_report = `cat $cq_output`;
             if ($self->test) {
+                $self->status_message("Saving dbSNP concordance data for subsequent tests...");
                 IO::File->new(">./concordance-quality-$list")->print($concordance_quality_report);
             }
         }
@@ -190,31 +210,22 @@ sub generate_report_detail
         $DB::single = 1;
         
         my @concordance_quality_report = split(/\n/,$concordance_quality_report);
-		pop @concordance_quality_report;
-		pop @concordance_quality_report;
+        pop @concordance_quality_report;
+        pop @concordance_quality_report;
                 
         if ($list eq 'variant_list_files') {
-			@cqr_unfiltered = @concordance_quality_report;
+            @cqr_unfiltered = @concordance_quality_report;
         }
         elsif ($list eq 'variant_filtered_list_files') {
-			@cqr_filtered = @concordance_quality_report;
+            @cqr_filtered = @concordance_quality_report;
         }
         else {
             die "unknown SNV list $list!.  Cannot properly assign graph data strings!";
         }
-
     }
 
-	
     # let's make sure that the reports made it out of the loop:
     $DB::single = 1;
-
-    # print "\@cqr_unfiltered:\n";
-    # print Dumper \@cqr_unfiltered;
-
-    # print "\@cqr_filtered:\n";
-    # print Dumper \@cqr_filtered;
-
 
     #
     # BUILD HTML REPORT
@@ -224,9 +235,8 @@ sub generate_report_detail
     die unless $body;
     my $r = new CGI;
 
-
     # load page resources
-	
+    
     my $css_file = "$module_path.html.css";
     my $css_fh = IO::File->new($css_file);
     unless ($css_fh) {
@@ -237,13 +247,13 @@ sub generate_report_detail
     my $title =  'Db Snp for model ' . $model->id . ' ("' . $model->name . '")  build ' . $build_id . ')';
     
     $body->print($r->start_html(
-		-title  => $title,
-		-style  => { -code => $css_content },
-		-script => [
-			{ -type => 'text/javascript', -src => 'https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/js/jquery.js'},
-			{ -type => 'text/javascript', -src => 'https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/js/jquery.flot.js'}
-		]
-	));
+        -title  => $title,
+        -style  => { -code => $css_content },
+        -script => [
+            { -type => 'text/javascript', -src => 'https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/js/jquery.js'},
+            { -type => 'text/javascript', -src => 'https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/js/jquery.flot.js'}
+        ]
+    ));
     
     # $body->print("<small><a href='../../reports/Summary/report.html'>full report</a></small>");
     $body->print('<div class="container">');
@@ -263,10 +273,10 @@ sub generate_report_detail
     # BUILD GRAPH
     #
 
-	## TODO: Parse the data and create the graph data strings using a proper function
-	## instead of repeating the same process twice. - jmcmicha
+    ## TODO: Parse the data and create the graph data strings using a proper function
+    ## instead of repeating the same process twice. - jmcmicha
 
-	## begin filtered graph data assembly
+    ## begin filtered graph data assembly
     my $filtered_lines = \@cqr_filtered;
 
     my @filtered_x_axis;
@@ -290,11 +300,11 @@ sub generate_report_detail
     my $filtered_db_snp_data = build_coordinate_string(\@filtered_x_axis, \@filtered_dataset1);
     my $filtered_all_snp_data = build_coordinate_string(\@filtered_x_axis, \@filtered_dataset2);
     my $filtered_concordance_data = build_concordance_string(\@filtered_x_axis, \@filtered_dataset1, \@filtered_dataset2);
-	## end filtered graph data assembly
+    ## end filtered graph data assembly
 
-	## yeah, this is a horrible kludge.
-	
-	## begin unfiltered graph data assembly
+    ## yeah, this is a horrible kludge.
+    
+    ## begin unfiltered graph data assembly
     my $unfiltered_lines = \@cqr_unfiltered;
 
     my @unfiltered_x_axis;
@@ -318,8 +328,8 @@ sub generate_report_detail
     my $unfiltered_db_snp_data = build_coordinate_string(\@unfiltered_x_axis, \@unfiltered_dataset1);
     my $unfiltered_all_snp_data = build_coordinate_string(\@unfiltered_x_axis, \@unfiltered_dataset2);
     my $unfiltered_concordance_data = build_concordance_string(\@unfiltered_x_axis, \@unfiltered_dataset1, \@unfiltered_dataset2);
-	## end unfiltered graph data assembly
-	
+    ## end unfiltered graph data assembly
+    
     my $js_datasets = qq|
     var datasets = {
         "db SNP filtered": {
@@ -379,14 +389,14 @@ sub generate_report_detail
         die "failed to open file $js_file!"; 
     }
     my $js_content = join('',$js_fh->getlines);
-	
-	$body->print("<script type='text/javascript'>//<![CDATA[\n\n");
-	$body->print("\$(function() {");
-	$body->print($js_datasets);
-	$body->print($js_content);
-	$body->print("});");
-	$body->print("\n\n//]]></script>");
-	
+    
+    $body->print("<script type='text/javascript'>//<![CDATA[\n\n");
+    $body->print("\$(function() {");
+    $body->print($js_datasets);
+    $body->print($js_content);
+    $body->print("});");
+    $body->print("\n\n//]]></script>");
+    
     my $flot_graph = qq|
 
 <table width="100%" cellpadding="5" cellspacing="0">
@@ -406,8 +416,9 @@ sub generate_report_detail
    </td>
   </tr>
 </table>
+
         |;
-		
+        
     $body->print($flot_graph);
     $body->print("</div>"); #close content_padding div
     $body->print("</div>"); #close background div
@@ -438,43 +449,43 @@ sub _generate_combined_snp_file
 }
 
 sub build_coordinate_string {
-  my $x_axis_ref = shift;
-  my $data_set_ref = shift;
-  
-  my $formatted_return="[ ";
-  
-  for my $x_point (@{$x_axis_ref}) {
-	  my $v1 = $data_set_ref->[$x_point] || 0;
-	  $formatted_return .= "[ $x_point , " . $v1 . "], ";
-  }
-  
-  $formatted_return .= "] ";
-  return $formatted_return;
-}
-
-sub build_concordance_string {
-  my $x_axis_ref = shift;
-  my $data_set_ref1 = shift;
-  my $data_set_ref2 = shift;
-
-  my $formatted_return="[ ";
+    my $x_axis_ref = shift;
+    my $data_set_ref = shift;
     
-  for my $x_point (@{$x_axis_ref}) {
-    my $v1 =  $data_set_ref1->[$x_point];
-    my $v2 = $data_set_ref2->[$x_point];
-	my $v3;
-
-	if (!$v2) {
-	 	$v3 = 0;
-	} else {
-	 	$v3 = $v1/$v2;
-	}
-
-    $formatted_return .= "[ $x_point , " . sprintf("%.2f", 100 * $v3) . "], ";
-  }
-  
-  $formatted_return .= "] ";
-  return $formatted_return;
+    my $formatted_return="[ ";
+    
+    for my $x_point (@{$x_axis_ref}) {
+        my $v1 = $data_set_ref->[$x_point] || 0;
+        $formatted_return .= "[ $x_point , " . $v1 . "], ";
+    }
+    
+    $formatted_return .= "] ";
+    return $formatted_return;
+}
+    
+sub build_concordance_string {
+    my $x_axis_ref = shift;
+    my $data_set_ref1 = shift;
+    my $data_set_ref2 = shift;
+    
+    my $formatted_return="[ ";
+    
+    for my $x_point (@{$x_axis_ref}) {
+        my $v1 =  $data_set_ref1->[$x_point];
+        my $v2 = $data_set_ref2->[$x_point];
+        my $v3;
+    
+        if (!$v2) {
+            $v3 = 0;
+        } else {
+            $v3 = $v1/$v2;
+        }
+    
+        $formatted_return .= "[ $x_point , " . sprintf("%.2f", 100 * $v3) . "], ";
+    }
+    
+    $formatted_return .= "] ";
+    return $formatted_return;
 }
 
 1;
