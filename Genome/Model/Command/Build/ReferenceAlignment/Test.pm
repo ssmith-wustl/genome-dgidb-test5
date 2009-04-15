@@ -48,7 +48,7 @@ sub new {
         $self->add_directory_to_remove($self->data_dir);
     }
 
-    my $tmp_dir = File::Temp::tempdir('ReferenceAlignmentTestXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 0);
+    my $tmp_dir = File::Temp::tempdir('ReferenceAlignmentTestXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
     $ENV{GENOME_MODEL_ROOT} = $tmp_dir;
     $ENV{GENOME_MODEL_DATA} = $tmp_dir;
     Genome::Utility::FileSystem->create_directory(
@@ -453,9 +453,12 @@ sub remove_data {
     my $model = $self->model;
     my @idas = $model->instrument_data_assignments;
     my @alignment_dirs = map { $_->alignment_directory } @idas;
-    for my $alignment_dir (@alignment_dirs) {
-        $self->add_directory_to_remove($alignment_dir);
-    }
+    
+    # we now rely on tempdir to cause cleanup
+    # there is an override, and that should NOT get cleaned-up
+    #for my $alignment_dir (@alignment_dirs) {
+    #    $self->add_directory_to_remove($alignment_dir);
+    #}
 
     # FIXME - the delete below causes a lot of warning messages about deleting
     # hangoff data.  do we need to check the contents?
