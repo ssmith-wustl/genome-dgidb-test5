@@ -263,7 +263,7 @@ sub help_brief
         return $doc;
     }
     else {
-        my @parents = $self->get_class_object->ordered_inherited_class_objects;
+        my @parents = $self->get_class_object->ancestry_class_metas;
         for my $parent (@parents) {
             if (my $doc = $parent->doc) {
                 return $doc;
