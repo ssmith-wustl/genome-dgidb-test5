@@ -14,7 +14,7 @@ class Genome::Taxon::Command {
             id_by => 'tax_id',
         },
     ],
-    doc => 'work with samples',
+    doc => 'work with species, strains etc.',
 };
 
 ############################################
