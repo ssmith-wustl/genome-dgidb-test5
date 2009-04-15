@@ -403,7 +403,7 @@ sub shellcmd {
     }
 
     if ($input_files and @$input_files) {
-        my @missing_inputs = grep { not -s $_ } @$input_files;
+        my @missing_inputs = grep { not -s $_ } grep { not -p $_ } @$input_files;
         if (@missing_inputs) {
             die "CANNOT RUN (missing inputs):     $cmd\n\t"
                 . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_inputs);
@@ -427,7 +427,7 @@ sub shellcmd {
     }
 
     if ($output_files and @$output_files) {
-        my @missing_outputs = grep { not -s $_ }  grep { not -p $_ }@$output_files;
+        my @missing_outputs = grep { not -s $_ }  grep { not -p $_ } @$output_files;
         if (@missing_outputs) {
             for (@$output_files) { unlink $_ }
             die "MISSING OUTPUTS! @missing_outputs\n";
