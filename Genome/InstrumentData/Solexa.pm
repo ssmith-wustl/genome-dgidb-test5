@@ -8,7 +8,7 @@ use Genome;
 use File::Basename;
 
 class Genome::InstrumentData::Solexa {
-    is => 'Genome::InstrumentData',
+    is => ['Genome::InstrumentData', 'Genome::Utility::FileSystem'],
     table_name => <<EOS
         (
             select to_char(seq_id) id, 
@@ -157,7 +157,6 @@ sub dump_to_file_system {
 
 sub fastq_filenames {
     my $self = shift;
-    my $seq_dedup = shift;
     my @fastqs;
     if ($self->is_external) {
         @fastqs = $self->resolve_external_fastq_filenames;
@@ -174,70 +173,83 @@ sub desc {
 
 sub resolve_fastq_filenames {
     my $self = shift;
-    my $seq_dedup = shift;
 
+    my $fastq_directory = $self->dump_illumina_fastq_archive;
     my $lane = $self->subset_name;
 
-    ###################
-    #
-    #srf 2 fastq goes here
-    #if ->srf_path filename is not null and exists, run srf2fastq.
-    #figure out how it will spit out paired data.
-    #dump this crap into temp on the blade, PROBABLY don't run sol2sanger...
-    #still run fastq2bfq, rest of pipeline continues unaltered.
-    #####################
-
-
-
-    my $gerald_directory = $self->gerald_directory;
-    unless ($gerald_directory) {
-        die('No gerald directory in the database for or '. $self->desc);
-    }
-    unless (-d $gerald_directory) {
-        die('No gerald directory on the filesystem for '. $self->desc .' : '. $gerald_directory);
-    }
-
-    # handle fragment or paired-end data
-    my @solexa_output_paths;
-    if ($self->is_paired_end) {
-        if (-e "$gerald_directory/s_${lane}_1_sequence.txt") {
-            push @solexa_output_paths, "$gerald_directory/s_${lane}_1_sequence.txt";
+    my @illumina_output_paths;
+    my @errors;
+    # First check the archive directory and second get the gerald directory
+    for my $directory ($fastq_directory, $self->gerald_directory) {
+        eval {
+            unless ($directory) {
+                die('No directory found for '. $self->desc);
+            }
+            unless (-d $directory) {
+                die('No directory on the filesystem for '. $self->desc .' : '. $directory);
+            }
+            # handle fragment or paired-end data
+            if ($self->is_paired_end) {
+                if (-e "$directory/s_${lane}_1_sequence.txt") {
+                    push @illumina_output_paths, "$directory/s_${lane}_1_sequence.txt";
+                } elsif (-e "$directory/Temp/s_${lane}_1_sequence.txt") {
+                    push @illumina_output_paths, "$directory/Temp/s_${lane}_1_sequence.txt";
+                } else {
+                    die "No illumina forward data in directory for lane $lane! $directory";
+                }
+                if (-e "$directory/s_${lane}_2_sequence.txt") {
+                    push @illumina_output_paths, "$directory/s_${lane}_2_sequence.txt";
+                } elsif (-e "$directory/Temp/s_${lane}_2_sequence.txt") {
+                    push @illumina_output_paths, "$directory/Temp/s_${lane}_2_sequence.txt";
+                } else {
+                    die "No illumina reverse data in directory for lane $lane! $directory";
+                }
+            } else {
+                if (-e "$directory/s_${lane}_sequence.txt") {
+                    push @illumina_output_paths, "$directory/s_${lane}_sequence.txt";
+                } elsif (-e "$directory/Temp/s_${lane}_sequence.txt") {
+                    push @illumina_output_paths, "$directory/Temp/s_${lane}_sequence.txt";
+                } else {
+                    die "No illumina data in directory for lane $lane! $directory";
+                }
+            }
+        };
+        if ($@) {
+            push @errors, $@;
         }
-        elsif (-e "$gerald_directory/Temp/s_${lane}_1_sequence.txt") {
-            push @solexa_output_paths, "$gerald_directory/Temp/s_${lane}_1_sequence.txt";
-        }
-        else {
-            die "No gerald forward data in directory for lane $lane! $gerald_directory";
-        }
-
-        if (-e "$gerald_directory/s_${lane}_2_sequence.txt") {
-            push @solexa_output_paths, "$gerald_directory/s_${lane}_2_sequence.txt";
-        }
-        elsif (-e "$gerald_directory/Temp/s_${lane}_2_sequence.txt") {
-            push @solexa_output_paths, "$gerald_directory/Temp/s_${lane}_2_sequence.txt";
-        }
-        else {
-            die "No gerald reverse data in directory for lane $lane! $gerald_directory";
-        }
-    }
-    else {
-        if (-e "$gerald_directory/s_${lane}_sequence.txt") {
-            push @solexa_output_paths, "$gerald_directory/s_${lane}_sequence.txt";
-        }
-        elsif (-e "$gerald_directory/Temp/s_${lane}_sequence.txt") {
-            push @solexa_output_paths, "$gerald_directory/Temp/s_${lane}_sequence.txt";
-        }
-        else {
-            die "No gerald data in directory for lane $lane! $gerald_directory";
+        if (@illumina_output_paths) {
+            last;
         }
     }
+    unless (@illumina_output_paths) {
+        if (@errors) {
+            die(join("\n",@errors));
+        } else {
+            die('Failed to trap error messages!  However, no fastq files were found for '. $self->desc);
+        }
+    }
+    return @illumina_output_paths;
+}
 
-    return @solexa_output_paths;
+sub dump_illumina_fastq_archive {
+    my $self = shift;
+
+    my $rls = $self->_run_lane_solexa;
+    my $archive = $rls->illumina_fastq_archive_path;
+    my $tmp_dir = $self->base_temp_directory;
+    my $cmd = "tar -xzf $archive --directory=$tmp_dir";
+    unless ($self->shellcmd(
+                            cmd => $cmd,
+                            input_files => [$archive],
+                        ) ) {
+        $self->error_message('Failed to run tar command '. $cmd);
+        die($self->error_message);
+    }
+    return $tmp_dir;
 }
 
 sub resolve_external_fastq_filenames {
     my $self = shift;
-    my $seq_dedup = shift;
 
     my @fastq_pathnames;
     my $fastq_pathname = $self->create_temp_file_path('fastq');
