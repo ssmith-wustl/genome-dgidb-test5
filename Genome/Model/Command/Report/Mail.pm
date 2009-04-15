@@ -30,7 +30,7 @@ class Genome::Model::Command::Report::Mail {
     has_optional => [
         directory => {
             is => 'Text', 
-            doc => 'the path of report directory to mail.  the de',
+            doc => 'the path of report directory to mail (needed only if the report was saved to a non-default location)',
         }
     ],
 };
