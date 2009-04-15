@@ -32,16 +32,19 @@ $mock_instrument_data->set_always('class','Genome::InstrumentData');
 
 my $test_aligner = 'maq';
 my $test_version = '0.7.1';
+my $test_params = '-q 1';
 my $test_reference_name = 'refseq-for-test';
 my $alignment = Genome::InstrumentData::Alignment->create(
                                                           instrument_data_id => $instrument_data_id,
                                                           aligner_name => $test_aligner,
                                                           aligner_version => $test_version,
+                                                          aligner_params => $test_params,
                                                           reference_name => $test_reference_name,
                                                       );
 isa_ok($alignment->reference_build,'Genome::Model::Build::ReferencePlaceholder');
 my $aligner_label = $alignment->aligner_label;
-is($aligner_label,'maq0_7_1','got expected aligner label');
+is($aligner_label,'maq0_7_1/35ac500a3003311e8a326ac6ef15d57a','got expected aligner label');
+
 
 my $alignment_path = $alignment->resolve_alignment_subdirectory();
 my $expected_alignment_subdirectory = "alignment_data/$aligner_label/$test_reference_name/$run_name/${subset_name}_$instrument_data_id";
