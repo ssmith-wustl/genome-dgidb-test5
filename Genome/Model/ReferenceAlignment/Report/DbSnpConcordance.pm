@@ -68,7 +68,10 @@ sub generate_report_detail
     my @cqr_unfiltered;
     my @cqr_filtered;
 
-    my $concordance_report;
+    my $cqr_unfiltered_summary;
+    my $cqr_filtered_summary;
+    
+	my $concordance_report;
 
     for my $list (qw/variant_list_files variant_filtered_list_files/) {
         my $snp_file;
@@ -215,9 +218,11 @@ sub generate_report_detail
                 
         if ($list eq 'variant_list_files') {
             @cqr_unfiltered = @concordance_quality_report;
+            $cqr_unfiltered_summary = $concordance_report;            
         }
         elsif ($list eq 'variant_filtered_list_files') {
             @cqr_filtered = @concordance_quality_report;
+            $cqr_filtered_summary = $concordance_report;            
         }
         else {
             die "unknown SNV list $list!.  Cannot properly assign graph data strings!";
@@ -264,7 +269,7 @@ sub generate_report_detail
 
     $body->print("<h1 class=\"section_title\">$header</h1>");
     $body->print("<div class='content_padding'>");
-    $body->print("<pre>$concordance_report</pre>");
+    $body->print("<table width='100%' cellpadding='10' cellspacing='0'><tr><td width='50%'><h3>Unfiltered Concordance Summary:</h3><pre>$cqr_unfiltered_summary</pre></td><td width='50%'><h3>Filtered Concordance Summary:</h3><pre>$cqr_filtered_summary</pre></td></tr></table>");    
     $body->print("<p/>");
 
     $body->print("<h3>$header by Quality</h3>");
