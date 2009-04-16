@@ -141,7 +141,7 @@ sub execute {
     
     # create windowed iterators to go over transcripts
     
-    my $transcript_iterator = $self->build->transcript_iterator;
+    my $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
     my $transcript_window =  Genome::Utility::Window::Transcript->create (
         iterator => $transcript_iterator, 
         range => $self->flank_range
