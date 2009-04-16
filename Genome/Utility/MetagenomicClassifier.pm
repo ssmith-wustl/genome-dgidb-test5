@@ -29,6 +29,8 @@ sub kingdoms {
 sub create_taxon {
     my ($self, %params) = @_;
 
+    $params{id} =~ s/['"]//g;
+    
     my $taxon = Bio::Taxon->new(
         '-id' => $params{id},
         '-rank' => $params{rank},
