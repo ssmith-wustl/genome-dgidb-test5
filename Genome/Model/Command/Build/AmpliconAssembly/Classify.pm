@@ -19,7 +19,7 @@ sub execute {
 
     require Genome::Utility::MetagenomicClassifier::Rdp;
     my $classifier = Genome::Utility::MetagenomicClassifier::Rdp->new(
-        training_set => 'broad',
+        #training_set => 'broad', # switched to regular set 4/14
     )
         or return;
 
