@@ -16,10 +16,19 @@ sub annotation_data_directory{
 
 sub transcript_iterator{
     my $self = shift;
+    my %p = @_;
+
+    my $chrom_name = $p{chrom_name};
+
     my @composite_builds = $self->from_builds; #TODO, implement build links
     if (@composite_builds){
         my @build_ids = map {$_->build_id} @composite_builds;
-        my @iterators = map { Genome::Transcript->create_iterator( where => [ build_id => $_ ] ) } @build_ids;
+        my @iterators;
+        if ($chrom_name){
+            @iterators = map { Genome::Transcript->create_iterator( where => [ build_id => $_ , chrom_name => $chrom_name ] ) } @build_ids;
+        }else{
+            @iterators = map { Genome::Transcript->create_iterator( where => [ build_id => $_ ] ) } @build_ids;
+        }
         my @cached_transcripts;
         for (my $i = 0; $i < @iterators; $i++){
             push @cached_transcripts, $iterators[$i]->next;
@@ -31,8 +40,8 @@ sub transcript_iterator{
                 next unless $cached_transcripts[$i];
                 $lowest ||= $cached_transcripts[$i];
                 if ($self->transcript_cmp($cached_transcripts[$i], $lowest) < 0) {
-                     $index = $i;
-                     $lowest = $cached_transcripts[$index];
+                    $index = $i;
+                    $lowest = $cached_transcripts[$index];
                 }
             }
             my $next_cache =  $iterators[$index]->next();
@@ -44,7 +53,11 @@ sub transcript_iterator{
         bless $iterator, "Genome::Model::ImportedAnnotation::Iterator";
         return $iterator;
     }else{
-        return Genome::Transcript->create_iterator(where => [build_id => $self->build_id]);
+        if ($chrom_name){
+            return Genome::Transcript->create_iterator(where => [build_id => $self->build_id, chrom_name => $chrom_name]);
+        }else{
+            return Genome::Transcript->create_iterator(where => [build_id => $self->build_id]);
+        }
     }
 }
 
