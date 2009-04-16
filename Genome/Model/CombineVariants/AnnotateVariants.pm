@@ -221,7 +221,7 @@ sub _get_window{
     #TODO remove when fixed
     ############
     
-    my $iter = $build->transcript_iterator;
+    my $iter = $build->transcript_iterator(chrom_name => $chromosome);
     my $window =  Genome::Utility::Window::Transcript->create ( iterator => $iter, range => 50000);
     return $window;
 }
