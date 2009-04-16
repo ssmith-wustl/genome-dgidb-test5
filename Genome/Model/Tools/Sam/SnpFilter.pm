@@ -36,7 +36,7 @@ class Genome::Model::Tools::Sam::SnpFilter {
             doc => 'maximum read depth to call a SNP, default 256',
             default => 256,
         },
-        window_size => {
+        snp_win_size => {
             is  => 'Integer',
             doc => 'window size for filtering dense SNPs, default 10',
             default => 10,
@@ -46,9 +46,23 @@ class Genome::Model::Tools::Sam::SnpFilter {
             doc => 'maximum number of SNPs in a sized window',
             default => 2,
         },
+        min_snp_qual  => {
+            is  => 'Integer',
+            doc => 'check minimum snp quality if consensus qual is lower than min_cns_qual, default 20',
+            default => 20,
+        },
         out_file => {
             is  => 'String',
             doc => 'snp output file after filter',
+        },
+        indel_file => {
+            is  => 'String',
+            doc => 'path of sam format indel file to be used as a filter to screen out snps close to indel',
+        },
+        indel_win_size => {
+            is  => 'Integer',
+            doc => 'window size of indel position in which SNPs should be filtered out',
+            default => 1,
         },
     ],
 };
@@ -77,6 +91,19 @@ sub execute {
         return;
     }
     
+    my %indel_filter;
+
+    if ($self->indel_file) {
+        my $indel_fh = Genome::Utility::FileSystem->open_file_for_reading($self->indel_file) or return;
+
+        while (my $indel = $indel_fh->getline) {
+            my ($chr, $pos, $id) = $indel =~ /^(\S+)\s+(\S+)\s+(\S+)\s+/;
+            next unless $id eq '*';
+            map{$indel_filter{$chr, $_}= 1}($pos-1..$pos+2*$self->indel_win_size);
+        }
+        $indel_fh->close;
+    }
+
     my @snps = ();
     my $last_chr = '';
     
@@ -84,31 +111,35 @@ sub execute {
     my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($out_file) or return;
     my $snp_fh = Genome::Utility::FileSystem->open_file_for_reading($snp_file) or return;
     
-    while (my $line = $snp_fh->getline) {
-        my ($chr, $pos, $cns_qual, $map_qual, $rd_depth) = $line =~ /^(\S+)\s+(\S+)\s+\S+\s+\S+\s+(\S+)\s+\S+\s+(\S+)\s+(\S+)\s+/;
-        next unless $cns_qual >= $self->min_cns_qual and $map_qual >= $self->max_map_qual and $rd_depth >= $self->min_read_depth and $rd_depth <= $self->max_read_depth;
+    while (my $snp = $snp_fh->getline) {
+        my ($chr, $pos, $cns_qual, $snp_qual, $map_qual, $rd_depth) = $snp =~ /^(\S+)\s+(\S+)\s+\S+\s+\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+/;
+        next if $indel_filter{$chr,$pos};
+        
+        my $pass = 1 if $map_qual >= $self->max_map_qual and $rd_depth >= $self->min_read_depth and $rd_depth <= $self->max_read_depth;
+        $pass = 0 unless $cns_qual >= $self->min_cns_qual || $snp_qual >= $self->min_snp_qual;
+        next unless $pass;
         
         if ($chr ne $last_chr) {
-            map{$out_fh->print($_->{line}) if $_->{flag}}@snps;
+            map{$out_fh->print($_->{line}) if $_->{pass}}@snps;
             @snps = ();       #reset
             $last_chr = $chr; #reset
         }
 
         push @snps, {
-            line => $line,
+            line => $snp,
             pos  => $pos,
-            flag => 1,
+            pass => 1,
         };
 
         if ($#snps == $self->max_snp_per_win) {
-            if ($snps[$#snps]->{pos} - $snps[0]->{pos} < $self->window_size) {
-                map{$_->{flag} = 0}@snps;
+            if ($snps[$#snps]->{pos} - $snps[0]->{pos} < $self->snp_win_size) {
+                map{$_->{pass} = 0}@snps;
             }
-            $out_fh->print($snps[0]->{line}) if $snps[0]->{flag};
+            $out_fh->print($snps[0]->{line}) if $snps[0]->{pass};
             shift @snps; # keep the size of @snps, moving the window snp by snp, check the snp density in a window for all snps.
         }
     }
-    map{$out_fh->print($_->{line}) if $_->{flag}}@snps;
+    map{$out_fh->print($_->{line}) if $_->{pass}}@snps;
 
     $snp_fh->close;
     $out_fh->close;
