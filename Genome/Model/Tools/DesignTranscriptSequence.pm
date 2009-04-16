@@ -55,9 +55,9 @@ class Genome::Model::Tools::DesignTranscriptSequence {
 };
 
 sub help_brief {
-
-  "This tool was design to retrieve, from the data base, coding sequence of a transcript centered around some variation."
-
+    return <<EOS
+  This tool was design to retrieve, from the data base, coding sequence of a transcript centered around some variation.
+  EOS
 }
 
 sub help_synopsis {
@@ -121,37 +121,37 @@ EOS
 sub execute {
 
     my $self = shift;
-    my $error;
+    
     my $chromosome = $self->chromosome;
-    unless ($chromosome) {die "please provide the chromosome\n";}
+    unless ($chromosome =~ /[1..22]/ || $chromosome =~ /^[XY]$/) {$self->error_message("please provide the chromosome"); return 0;}
     my $start = $self->start;
-    unless ($start) {die "please provide the Build 36 start coordinate\n";}
+    unless ($start =~ /^[\d]+$/) {$self->error_message("please provide the Build 36 start coordinate"); return 0; }
     my $stop = $self->stop;
     my $variation_type = $self->variation_type; #{coding_snp,coding_ins,coding_del,splice_site_snp,splice_site_ins,splice_site_del}
-
+    
     unless ($stop) {if ($variation_type =~ /ins/) {$stop=$start+1;} else {$stop=$start;}} #will assume start and stop to be the same
-
+    
     #unless ($variation_type eq "coding_snp" || $variation_type eq "coding_ins" || $variation_type eq "coding_del" || $variation_type eq "splice_site_snp" || $variation_type eq "splice_site_ins" || $variation_type eq "splice_site_del") { die "please provide the variation_type\n"; }
-    unless ($variation_type eq "coding_snp" || $variation_type eq "coding_ins" || $variation_type eq "coding_del" || $variation_type eq "splice_site_snp") { die "please provide the variation_type\n"; }
-
+    unless ($variation_type eq "coding_snp" || $variation_type eq "coding_ins" || $variation_type eq "coding_del" || $variation_type eq "splice_site_snp") { $self->error_message("please provide the variation_type"); return 0; }
+    
     my $transcript = $self->transcript;
-    unless ($transcript) {die "please provide the transcript id\n";}
+    unless ($transcript) {$self->error_message("please provide the transcript id"); return 0;}
     my $reference_allele = $self->reference_allele;
     unless ($reference_allele) { if ($variation_type =~ /ins/) {$reference_allele = "-";} else {$reference_allele = &get_ref_base($chromosome,$start,$stop); }}
     my $variant_allele = $self->variant_allele;
     if ($variation_type =~ /del/) {$variant_allele = "-";}
-
-    if ($variation_type =~ /snp/ && $start != $stop) { die "the start and stop coordinates for a snp should be equal\n"; }
-
-    unless ($variant_allele) {die "please provide the variant allele\n";}
+    
+    if ($variation_type =~ /snp/ && $start != $stop) {$self->error_message("the start and stop coordinates for a snp should be equal"); return 0; }
+						       
+    unless ($variant_allele) {$self->error_message("please provide the variant allele"); return 0;}
     my $number_of_flank_bases = $self->number_of_flank_bases;
     unless ($number_of_flank_bases) {$number_of_flank_bases=200;}
     
     my $line = "$chromosome,$start,$stop,$variation_type,$transcript,$reference_allele,$variant_allele,$number_of_flank_bases";
-
+    
 ###########################
-
-    #exit 1;
+    
+    #return 0;
     #open(OUT,">transcript_coords.txt");
     
     my $build = Genome::Model::ImportedAnnotation->get(name => 'NCBI-human.combined-annotation')->build_by_version(0);
@@ -163,7 +163,7 @@ sub execute {
     my $t = Genome::Transcript->get( transcript_name => $transcript, build_id => $build_id );
     my $tseq = $t->cds_full_nucleotide_sequence;
     #my $gene_name = $t->gene_name;
-
+    
     my @substructures = $t->ordered_sub_structures;
     
     my $total_substructures = @substructures;
@@ -181,7 +181,7 @@ sub execute {
     my $frame;
     my $aa_n;
     if (@substructures) {
-
+	
 	my @mask_snps_and_repeats_sequence;
 	my ($ttss,$ssttss);
 
@@ -318,12 +318,18 @@ sub execute {
 	if ($variation_type =~ /ins/) {$reference_allele = "-";}
 	if ($variation_type =~ /splice_site/) { unless ($ssttss) {print qq(Your coordinate was not identified in a splice site of this transcript, your result will reflect that of a coding_snp\n);}}
 	#if ($ssttss) { unless ($variation_type =~ /splice_site/) { print qq(\nYour coordinate was identified in a splice site of this transcript, try rerunning with the variant type as splice_site_snp\n\n);exit(1);}}
-	if ($ssttss) { unless ($variation_type =~ /splice_site/) { $error = "Your coordinate was identified in a splice site of this transcript, try rerunning with the variant type as splice_site_snp"; return ($error); }}
-	print qq($line,$left_flank_seq_masked [$reference_allele\/$variant_allele] $right_flank_seq_masked,$left_flank_seq [$reference_allele\/$variant_allele] $right_flank_seq\n);
+	if ($ssttss) { unless ($variation_type =~ /splice_site/) { $self->error_message("Your coordinate was identified in a splice site of this transcript, try rerunning with the variant type as splice_site_snp"); return 0; }}
+
+	#$self->result = "$line,$left_flank_seq_masked [$reference_allele\/$variant_allele] $right_flank_seq_masked,$left_flank_seq [$reference_allele\/$variant_allele] $right_flank_seq";
+
+	my $result = "$line,$left_flank_seq_masked [$reference_allele\/$variant_allele] $right_flank_seq_masked,$left_flank_seq [$reference_allele\/$variant_allele] $right_flank_seq";
+	print qq($result\n);
 	
+	return 1;
 	
     } else {
-	print qq($line\nNo sequence defined\n);
+	$self->error_message("No sequence defined");
+	return 0;
     }
 }
 
