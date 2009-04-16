@@ -675,7 +675,7 @@ sub _transcript_annotation_for_cds_exon
     }
     else {
         if(length($mutated_seq_translated)<$pro_start-1|| substr($original_seq_translated,$pro_start-3,2) ne substr($mutated_seq_translated,$pro_start-3,2)) {
-            my $e="protein string does not match:".$transcript->transcript_name.",".$c_position.",".$variant->{chromosome_name}.",".$variant->{start}.",".$variant->{stop}.",".$variant->{reference}.",".$variant->{allele2}.",".$variant->{type}."\n";
+            my $e="protein string does not match:".$transcript->transcript_name.",".$c_position.",".$variant->{chromosome_name}.",".$variant->{start}.",".$variant->{stop}.",".$variant->{reference}.",".$variant->{variant}.",".$variant->{type}."\n";
             $self->error_message($e);
             return ;
         }
@@ -740,6 +740,7 @@ sub _protein_domain
     my %domlen;
     $s->mutation_in_dom(\%domlen,"HMMPfam");
     my $obj = $s->get_mut_obj($transcript . "," . $gene->name);
+    return 'NULL' unless $obj;
     my $doms = $obj->get_domain($amino_acid_change);
     if(defined($doms))
     {
