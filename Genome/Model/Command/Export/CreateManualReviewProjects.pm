@@ -1,4 +1,4 @@
-package Genome::Model::Command::Report::CreateManualReviewProjects;
+package Genome::Model::Command::Export::CreateManualReviewProjects;
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ use File::Temp;
 use IO::File;
 use Genome::Model::Tools::Maq::Map::Reader;
 
-class Genome::Model::Command::Report::CreateManualReviewProjects
+class Genome::Model::Command::Export::CreateManualReviewProjects
 {
     is => 'Command',                       
     has => 
