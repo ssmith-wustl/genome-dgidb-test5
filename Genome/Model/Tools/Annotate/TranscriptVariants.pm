@@ -179,7 +179,7 @@ sub execute {
         unless ($variant->{chromosome_name} eq $chromosome_name) {
             $chromosome_name = $variant->{chromosome_name};
 
-            my $transcript_iterator = $self->build->transcript_iterator;
+            my $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
             die Genome::Transcript->error_message unless $transcript_iterator;
 
             my $transcript_window =  Genome::Utility::Window::Transcript->create (
