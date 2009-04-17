@@ -56,7 +56,8 @@ sub help_brief
 sub help_synopsis
 {
     return <<EOS
-    need to put real examples here
+
+gt import-annotation ensembl --ensembl-version <ensembl version string> --host <ensembl db hostname> --user <ensembl db user> [--pass <ensembl db password>] --outputdir <directory to dump annotation data>
 EOS
 }
 

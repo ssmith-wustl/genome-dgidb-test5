@@ -32,7 +32,7 @@ sub help_brief
 sub help_synopsis
 {
     return <<EOS
-    need to put real examples here
+    gt import-annotation split-files --workdir <path to annotation dumps>
 EOS
 }
 
@@ -50,7 +50,7 @@ sub execute
     my $workdir = $self->workdir;
 
     # split up genes by gene_id
-    $DB::single = 1;
+    #$DB::single = 1;
     $self->split_files( 0, "genes.csv" );
 
     # split up transcripts by chromosome

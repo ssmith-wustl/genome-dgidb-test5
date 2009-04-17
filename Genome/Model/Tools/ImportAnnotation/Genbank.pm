@@ -54,7 +54,8 @@ sub help_brief
 sub help_synopsis
 {
     return <<EOS
-    need to put real examples here
+
+gt import-annotation genbank --flatfile <genbank asn1 file> --genbank-file <gb format file of transcripts> --outputdir <output directory> --version <ensembl associated version>
 EOS
 }
 
@@ -194,13 +195,17 @@ sub get_from_flatfile
         my $locus_id = $f[0];
         my $hugo     = $f[1];
 
-        #print STDERR "getting gene for $hugo , $locus_id\n";
+        # sometimes we get an odd error here, and this hangs, because
+        # the bioperl interface way deep in GSC::ImportExport::GenBank::Gene
+        # has this odd notion that it wants to rebuild the index, and tries
+        # to remove it...  I changed that little bit, so hopefully that won't
+        # happen again.
         my $gene = GSC::ImportExport::GenBank::Gene->retrieve(
             species_name => 'human',
             version      => $version,
             locus_id     => $locus_id,
         );
-        #print STDERR "got gene for $locus_id\n";
+
         my @tr
             = GSC::ImportExport::GenBank::Transcript->retrieve( gene => $gene,
             );
@@ -229,13 +234,14 @@ sub get_from_flatfile
             my $transcript_name  = $transcript->{accession};
             my $source           = 'genbank';                  # genbank???
             my $status           = 'unknown';
+            # these give out warnings every once in a while.
+            # usually for clone sequences that are associated with a gene
+            # ....
             my @cds = GSC::ImportExport::GenBank::CDS->retrieve(
                 transcript => $transcript, );
             my @utr = GSC::ImportExport::GenBank::UTR->convert_to_gsc_params(
                 transcript => $transcript, );
 
-            #print Dumper(\@items), "\n\n";
-            #print Dumper(\@utr), "\n\n";
 
             if ( !defined($strand) )
             {
@@ -243,7 +249,6 @@ sub get_from_flatfile
                     ->{'int'}->[0]->{strand};
                 $strand = ( $strand eq 'plus' ) ? '+1' : '-1';
 
-                #        print STDERR join("\t",sort keys %$transcript),"\n";
             }
 
             # split out all the exons
@@ -377,7 +382,6 @@ sub get_from_flatfile
             $transcript_id++;
             my $protein_name = $transcript->{products}->[0]->{accession};
 
-            #my $amino_acid_seq = undef; # create aa seq
             my $amino_acid_seq
                 = $self->create_protein( \@seqs );    # create aa seq
             my @protein_info = (
@@ -478,8 +482,7 @@ sub get_seq_slice
     my ( $self, $build, $chrom, $start, $stop ) = @_;
     my $slice = undef;
 
-# this should be using the Genome::Model::Build for this.
-#my $file = "/gscmnt/sata363/info/medseq/reference_sequences/NCBI-human-buil36-flat/" . $chrom . ".bases";
+
     my $file = $build->get_bases_file($chrom);
     $slice = $build->sequence( $file, $start, $stop );
     return $slice;
