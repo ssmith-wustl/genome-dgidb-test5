@@ -14,7 +14,7 @@ class Genome::InstrumentData::Solexa {
             select to_char(seq_id) id, 
                 seq_id genome_model_run_id, 
                 lane limit_regions,
-                
+                research_project project_name,                
                 flow_cell_id, 
                 lane,
                 unique_reads_across_library,
@@ -66,6 +66,11 @@ EOS
                                                                  return 0;
                                                              } |
                                         },
+        project_name => { },
+        project => {
+            is => "Genome::Project",
+            calculate => q|Genome::Project->get(name => $self->research_project_name)| 
+        },
         _run_lane_solexa => {
             doc => 'Solexa Lane Summary from LIMS.',
             is => 'GSC::RunLaneSolexa',
@@ -90,7 +95,7 @@ EOS
         
         # indirect via the sample source, but we let the sample manage that
         # since we sometimes don't know the source, it also tracks taxon directly
-        taxon               => { via => 'sample', to => 'taxon' },
+        taxon               => { via => 'sample', to => 'taxon', is => 'Genome::Taxon' },
         species_name        => { via => 'taxon' },
     ],
 };
