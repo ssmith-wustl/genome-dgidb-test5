@@ -14,7 +14,7 @@ class Genome::Library::Command {
             id_by => 'library_id',
         },
     ],
-    doc => 'work with libraries',
+    doc => 'work with libraries made from a sample for sequencing',
 };
 
 ############################################
