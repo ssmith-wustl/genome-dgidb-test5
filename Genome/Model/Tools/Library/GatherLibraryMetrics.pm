@@ -6,18 +6,15 @@ use warnings;
 use Genome;
 use Command;
 use IO::File;
-use GSCApp; 
-App->init;
 
 class Genome::Model::Tools::Library::GatherLibraryMetrics {
     is => 'Command',
     has => [
-    model_id => 
-    { 
-        type => 'String',
-        is_optional => 0,
-        doc => "model id of the model to gather library metrics for",
-    },
+        model_id => { 
+            type => 'String',
+            is_optional => 0,
+            doc => "model id of the model to gather library metrics for",
+        },
     ]
 };
 
