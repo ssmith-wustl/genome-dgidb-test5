@@ -14,8 +14,8 @@ class Genome::Model::ReferenceAlignment::Report::DbSnpConcordance {
     is => 'Genome::Model::Report',
     has => [
         # inputs come from the build
-        variant_list_files          => { via => 'build', to => '_variant_list_files' },
-        variant_filtered_list_files => { via => 'build', to => '_variant_filtered_list_files' },
+        variant_list_files          => { via => 'build', to => '_snv_file_unfiltered' },
+        variant_filtered_list_files => { via => 'build', to => '_snv_file_filtered' },
         db_snp_file                 => { via => 'build' },
         
         name                        => { default_value => 'dbSNP Concordance' },
