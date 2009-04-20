@@ -317,21 +317,16 @@ sub resolve_adaptor_file {
     my $dna_primer_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer';
     my $rna_primer_file = '/gscmnt/sata114/info/medseq/adaptor_sequences/solexa_adaptor_pcr_primer_SMART';
 
-    if ( defined($self->sample_type) ){
-        my $adaptor_file;
-        if ( $self->sample_type eq 'dna' ) {
-            $adaptor_file = $dna_primer_file;
-        } elsif ( $self->sample_type eq 'rna' ) {
-            $adaptor_file = $rna_primer_file;
-        }
-        if ($adaptor_file) {
-            unless (-f $adaptor_file) {
-                $self->error_message('Specified adaptor file'. $adaptor_file .' does not exist.');
-                die($self->error_message);
-            }
-        }
+    my $adaptor_file;
+    if ( !defined($self->sample_type) or $self->sample_type eq 'dna' ) {
+        $adaptor_file = $dna_primer_file;
+    } elsif ( $self->sample_type eq 'rna' ) {
+        $adaptor_file = $rna_primer_file;
     }
-    return;
+    unless (-f $adaptor_file) {
+        $self->error_message('Specified adaptor file'. $adaptor_file .' does not exist.');
+        die($self->error_message);
+    }
 }
 
 
