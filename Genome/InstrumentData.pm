@@ -12,38 +12,41 @@ class Genome::InstrumentData {
     id_by => ['id'],
     table_name => <<EOS
     (
-        select run_name id,
-                sanger.run_name,
-                'sanger' sequencing_platform,
-                sanger.run_name seq_id,
-                'unknown' sample_name,
-                1 subset_name,
-                'unknown' library_name
-        from gsc_run\@oltp sanger
-
-     union all
-
-        select to_char(seq_id) id,
-                solexa.run_name,
-                'solexa' sequencing_platform,
-                to_char(solexa.seq_id) seq_id, 
-                solexa.sample_name sample_name,
-                solexa.lane subset_name,
-                solexa.library_name library_name
-        from solexa_lane_summary\@dw solexa
-        where run_type in ('Standard','Paired End Read 2')
-    
-     union all
-
-        select to_char(x454.region_id) id,
-                x454.run_name,
-                '454' sequencing_platform,
-                to_char(x454.region_id) seq_id, 
-                nvl(x454.sample_name, x454.incoming_dna_name) sample_name, 
-                x454.region_number subset_name,
-                x454.library_name library_name
-        from run_region_454\@dw x454
-        
+        SELECT run_name id,
+               sanger.run_name,
+               'sanger' sequencing_platform,
+               sanger.run_name seq_id,
+               NVL(sample.value, 'unknown') sample_name,
+               1 subset_name,
+               NVL(library.value, 'unknown') library_name
+          FROM gsc_run\@oltp sanger,
+               mg.misc_attribute\@dw sample,
+               mg.misc_attribute\@dw library
+         WHERE sanger.run_name = sample.entity_id(+) AND
+               sanger.run_name = library.entity_id(+) AND
+               sample.entity_class_name(+) = 'Genome::InstrumentData::Sanger' AND
+               sample.property_name(+) = 'sample_name' AND
+               library.entity_class_name(+) = 'Genome::InstrumentData::Sanger' AND
+               library.property_name(+) = 'library_name'
+     UNION ALL
+        SELECT to_char(seq_id) id,
+               solexa.run_name,
+               'solexa' sequencing_platform,
+               to_char(solexa.seq_id) seq_id, 
+               solexa.sample_name sample_name,
+               solexa.lane subset_name,
+               solexa.library_name library_name
+          FROM solexa_lane_summary\@dw solexa
+         WHERE run_type in ('Standard','Paired End Read 2')
+     UNION ALL
+        SELECT to_char(x454.region_id) id,
+               x454.run_name,
+               '454' sequencing_platform,
+               to_char(x454.region_id) seq_id, 
+               nvl(x454.sample_name, x454.incoming_dna_name) sample_name, 
+               x454.region_number subset_name,
+               x454.library_name library_name
+          FROM run_region_454\@dw x454
     ) idata
 EOS
     ,
