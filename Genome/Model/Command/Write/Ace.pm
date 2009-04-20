@@ -200,6 +200,7 @@ sub GetRefSeq{
   }
 
   my $ref_seq_name = $arg{chromosome};
+  $ref_seq_name = ($fasta_index->get_all_primary_ids)[0];
   my $ref_seq_obj = $fasta_index->fetch($ref_seq_name);
 
   unless (defined($ref_seq_obj)) {
