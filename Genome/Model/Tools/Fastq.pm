@@ -35,11 +35,15 @@ sub help_detail {
 
 sub create { 
     my $class = shift;
-
-    my $self = $class->SUPER::create(@_);
+    my $self  = $class->SUPER::create(@_);
+    
+    my $fastq_file = $self->fastq_file;
+    $self->error_message("A valid fastq file is required, not $fastq_file") and return 
+        unless $fastq_file and -s $fastq_file;
+    
     $self->{_cwd} = Cwd::getcwd();
-    $self->fastq_file(Cwd::abs_path($self->fastq_file));
-    my ($basename, $directory) = File::Basename::fileparse( $self->fastq_file );
+    $self->fastq_file(Cwd::abs_path($fastq_file));
+    my ($basename, $directory) = File::Basename::fileparse($self->fastq_file);
     
     $self->{_fastq_basename}  = $basename;
     $self->{_fastq_directory} = $directory;
