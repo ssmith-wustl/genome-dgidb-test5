@@ -133,7 +133,8 @@ sub execute {
     my $self = shift;
 
     my $model = $self->model;
-
+    my $build = $self->build;
+    
     #TODO: we need to have a indel_finder_version
     #my $maq_pathname = $self->proper_maq_pathname('indel_finder_name');
     #my $maq_pl_pathname = $self->proper_maq_pl_pathname('indel_finder_name');
@@ -155,7 +156,7 @@ sub execute {
         chmod 02775, $self->analysis_base_path;
     }
 
-    my ($assembly_output_file) =  $self->build->_consensus_files($self->ref_seq_id);
+    my ($assembly_output_file) =  $build->_consensus_files($self->ref_seq_id);
     unless ($self->check_for_existence($assembly_output_file)) {
         $self->error_message("Assembly output file $assembly_output_file was not found.  It should have been created by a prior run of update-genotype-probabilities maq");
         return;
@@ -188,7 +189,7 @@ sub execute {
         return;
     }
 
-    my $accumulated_alignments_file_for_indelsoa = $self->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
+    my $accumulated_alignments_file_for_indelsoa = $build->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
     #OK, if jon's stuff doesn't run, then this would be a pipe
     unless (-s $accumulated_alignments_file_for_indelsoa || -p $accumulated_alignments_file_for_indelsoa) {
         $self->error_message("Named pipe or temp file for $accumulated_alignments_file_for_indelsoa was not found.");
@@ -216,7 +217,7 @@ sub execute {
     $tmpfh->close();
     $snp_fh->close();
 
-    my $accumulated_alignments_file_for_pileup = $self->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
+    my $accumulated_alignments_file_for_pileup = $build->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
     unless (-s $accumulated_alignments_file_for_pileup || -p $accumulated_alignments_file_for_pileup) {
         $self->error_message("Named pipe or tmp file $accumulated_alignments_file_for_pileup was not found.");
         return;
