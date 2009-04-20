@@ -84,6 +84,7 @@ $build_test->create_test_pp(
     multi_read_fragment_strategy => 'eliminate start site duplicates',
     indel_finder_name => 'maq0_7_1',
     genotyper_name => 'maq0_7_1',
+    genotyper_version => '0.7.1',
     read_aligner_name => 'maq',
     read_aligner_version => '0.7.1',
     reference_sequence_name => 'refseq-for-test',
