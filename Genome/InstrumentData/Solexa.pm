@@ -328,7 +328,6 @@ sub resolve_adaptor_file {
         $self->error_message('Specified adaptor file'. $adaptor_file .' does not exist.');
         die($self->error_message);
     }
-    print "ADAPTOR::::::: $adaptor_file\n";
     return $adaptor_file;
 }
 
