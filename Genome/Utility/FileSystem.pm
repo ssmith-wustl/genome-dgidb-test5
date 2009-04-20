@@ -377,12 +377,13 @@ sub shellcmd {
     # TODO: add IPC::Run's w/ timeout but w/o the io redirection...
 
     my ($self,%params) = @_;
-    my $cmd                         = delete $params{cmd};
-    my $output_files                = delete $params{output_files}
+    my $cmd                          = delete $params{cmd};
+    my $output_files                 = delete $params{output_files}
 ;
-    my $input_files                 = delete $params{input_files};
-    my $allow_failed_exit_code      = delete $params{allow_failed_exit_code};
-    my $skip_if_output_is_present   = delete $params{skip_if_output_is_present};
+    my $input_files                  = delete $params{input_files};
+    my $allow_failed_exit_code       = delete $params{allow_failed_exit_code};
+    my $allow_zero_size_output_files = delete $params{allow_zero_size_output_files};
+    my $skip_if_output_is_present    = delete $params{skip_if_output_is_present};
     $skip_if_output_is_present = 1 if not defined $skip_if_output_is_present;
     if (%params) {
         my @crap = %params;
@@ -411,9 +412,7 @@ sub shellcmd {
     }
     $self->status_message("RUN: $cmd");
     my $exit_code = system($cmd);
-    #jpeck switched exit_code to 0, was the line below 
     #my $exit_code = $self->system_inhibit_std_out_err($cmd);
-    #my $exit_code = 0; 
     $exit_code /= 256;
     if ($exit_code) {
         if ($allow_failed_exit_code) {
@@ -429,13 +428,34 @@ sub shellcmd {
     if ($output_files and @$output_files) {
         my @missing_outputs = grep { not -s $_ }  grep { not -p $_ } @$output_files;
         if (@missing_outputs) {
-            for (@$output_files) { unlink $_ }
-            die "MISSING OUTPUTS! @missing_outputs\n";
-            #    . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_outputs);
+            if ($allow_zero_size_output_files
+                and @$output_files == @missing_outputs) {
+                for my $output_file (@$output_files) {
+                    warn "ALLOWING zero size output file '$output_file' for command: $cmd";
+                    my $fh = $self->open_file_for_writing($output_file);
+                    unless ($fh) {
+                        die "failed to open $output_file!: $!";
+                    }
+                    $fh->close;
+                }
+            } else {
+                for (@$output_files) { unlink $_ }
+                die ("MISSING OUTPUTS:\n". join("\n",@missing_outputs) ."\n");
+            }
         }
     }
-
     return 1;
+}
+
+sub cat {
+    my ($self,%params) = @_;
+    my $input_files = delete $params{input_files};
+    my $output_file = delete $params{output_file};
+    return $self->shellcmd(
+                           cmd => "cat @$input_files > $output_file",
+                           input_files => $input_files,
+                           output_files => [$output_file],
+                       );
 }
 
 sub lock_resource {
