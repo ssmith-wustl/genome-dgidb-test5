@@ -840,6 +840,7 @@ sub _shell_args_property_meta
         next if $seen{$property_name};
         $seen{$property_name} = 1;
         next if $property_meta->is_constant;
+        next if $property_meta->{is_output};
         if ($property_meta->{shell_args_position}) {
             push @positional, $property_meta;
         }
