@@ -21,24 +21,24 @@ class Genome::InstrumentData::Alignment {
                                             is => 'Text', default_value => 'maq',
                                             doc => 'the name of the aligner to use, maq, blat, newbler etc.'
                                         },
-            ],
+    ],
     has_optional => [
-                     aligner_version    => {
-                                            is => 'Text',
-                                            doc => 'the version of maq to use, i.e. 0.6.8, 0.7.1, etc.'
-                                        },
-                     aligner_params     => {
-                                            is => 'Text',
-                                            doc => 'any additional params for the aligner in a single string'
-                                        },
-                     reference_build    => {
-                                            is => 'Genome::Model::Build::ReferencePlaceholder',
-                                            id_by => 'reference_name',
-                                        },
-                     reference_name     => {
-                                            doc => 'the reference to use by EXACT name, defaults to NCBI-human-build36',
-                                            default_value => 'NCBI-human-build36'
-                                        },
+         aligner_version    => {
+                                is => 'Text',
+                                doc => 'the version of maq to use, i.e. 0.6.8, 0.7.1, etc.'
+                            },
+         aligner_params     => {
+                                is => 'Text',
+                                doc => 'any additional params for the aligner in a single string'
+                            },
+         reference_build    => {
+                                is => 'Genome::Model::Build::ReferencePlaceholder',
+                                id_by => 'reference_name',
+                            },
+         reference_name     => {
+                                doc => 'the reference to use by EXACT name, defaults to NCBI-human-build36',
+                                default_value => 'NCBI-human-build36'
+                            },
     ],
 
 };
