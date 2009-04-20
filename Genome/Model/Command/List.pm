@@ -10,13 +10,13 @@ use Data::Dumper;
 class Genome::Model::Command::List {
     is => 'UR::Object::Command::List',
     has => [
-    subject_class_name  => {
-        is_constant => 1, 
-        value => 'Genome::Model' 
-    },
+        subject_class_name  => {
+            is_constant => 1, 
+            value => 'Genome::Model' 
+        },
+        show => { default_value => 'id,name,subject_name,processing_profile_name' }
     ],
 };
-#Genome::Model::Command::List->get_class_object->property_meta_for_name('show')->default_value('id,name,subject_name,processing_profile_name');
 
 sub help_brief {
     return 'List models';
@@ -25,6 +25,8 @@ sub help_brief {
 sub help_deatil {
     return help_brief();
 }
+
+sub is_subcommand_delegator { 1 }
 
 1;
 
