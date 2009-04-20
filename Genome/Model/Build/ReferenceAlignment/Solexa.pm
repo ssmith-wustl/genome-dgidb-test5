@@ -49,6 +49,11 @@ sub calculate_estimated_kb_usage {
     return ($estimate_from_reference + $estimate_from_instrument_data);
 }
 
+sub consensus_directory {
+    my $self = shift;
+    return $self->data_directory .'/consensus';
+
+}
 sub _consensus_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/consensus/%s.cns',@_);
 }
@@ -67,55 +72,88 @@ sub _variant_filtered_list_files {
 
 sub _snv_file_unfiltered {
     my $self = shift;
-    my $dd = $self->data_directory;
-    my $unfiltered = "$dd/maq_snp_related_metrics/all.snps";
+    my $unfiltered = $self->maq_snp_related_metric_directory .'/all.snps';
     unless (-e $unfiltered) {
         # make a combined snp file
         my @old = $self->_variant_list_files();
         if (@old) {
             warn "building $unfiltered\n";
             my $tmp = Genome::Utility::FileSystem->create_temp_file_path("snpfilter");
-            Genome::Utility::FileSystem->shellcmd(
-                cmd => "cat @old >$tmp; gt snp sort -s $tmp >$unfiltered",
-                input_files => \@old,
-                output_files => [$unfiltered],
-            );
+            Genome::Utility::FileSystem->cat(
+                                             input_files => \@old,
+                                             output_file => $tmp,
+                                         );
+            unless (Genome::Model::Tools::Snp::Sort->execute(
+                                                             snp_file => $tmp,
+                                                             output_file => $unfiltered,
+                                                         )) {
+                $self->error_message('Failed to execute snp sort command for snv file unfiltered'. $unfiltered);
+            }
         }
     }
     return $unfiltered;
 }
 
+sub _unsorted_indel_file {
+    my $self = shift;
+    my $map_snp_dir = $self->maq_snp_related_metric_directory;
+    my $unsorted_indel_file = $map_snp_dir .'/indelpe.out';
+    unless (-e $unsorted_indel_file) {
+        my @unsorted_indel_files = grep {$_ !~ /sorted/} grep { -e $_ } glob("$map_snp_dir/indelpe*out");
+        unless (@unsorted_indel_files) {
+            my $model = $self->model;
+            my $aligner_path = $self->path_for_maq_version('genotyper_version');
+            my $ref_seq = $model->reference_build->full_consensus_path;
+
+            my $accumulated_alignments_file = $self->accumulate_maps;
+            unless ($accumulated_alignments_file) {
+                $self->error_message('Failed to get accumulated map file');
+                return;
+            }
+            my $indelpe_cmd = "$aligner_path indelpe $ref_seq $accumulated_alignments_file > $unsorted_indel_file";
+            Genome::Utility::FileSystem->shellcmd(
+                                                  cmd => $indelpe_cmd,
+                                                  input_files => [$aligner_path, $ref_seq, $accumulated_alignments_file],
+                                                  allow_zero_size_output_files => 1,
+                                                  output_files => [$unsorted_indel_file],
+                                              );
+            my $rm_cmd = "rm $accumulated_alignments_file";
+            Genome::Utility::FileSystem->shellcmd(cmd => $rm_cmd);
+            return $unsorted_indel_file;
+        }
+        if (scalar(@unsorted_indel_files) > 1) {
+            $self->error_message('Found '. scalar(@unsorted_indel_files) .' unsorted indel files but only expecting one for build '. $self->id);
+            die($self->error_message);
+        }
+        return $unsorted_indel_files[0];
+    }
+    return $unsorted_indel_file;
+}
 
 sub _indel_file {
     my $self = shift;
-    my $dd = $self->data_directory;
-    my $path = $dd . '/maq_snp_related_metrics/indelpe.sorted.out';
-    unless (-e $path) {
-        # make a sorted indelpe file
-        my @indelpe_orig = grep { -e $_ } glob("$dd/maq_snp_related_metrics/indelpe*out");
-        die "multiple indelpe results?\n@indelpe_orig" if @indelpe_orig > 1;
-        my $indelpe_orig = $indelpe_orig[0];
-        if (-e $indelpe_orig) {
-            if (-s $indelpe_orig) {
-                warn "generating $path from $indelpe_orig";
-                # note: not running directly in Perl b/c we want to redirect IO
-                Genome::Utility::FileSystem->shellcmd(
-                    cmd => "gt snp sort -s $indelpe_orig > $path",
-                    input_files => [$indelpe_orig],
-                    output_files => [$path],
-                );
+
+    my $maq_snp_dir = $self->maq_snp_related_metric_directory;
+    my $sorted_indelpe = $maq_snp_dir .'/indelpe.sorted.out';
+    unless (-e $sorted_indelpe) {
+        # lookup or make a sorted indelpe file
+        my $unsorted_indel_file = $self->_unsorted_indel_file;
+        if (-s $unsorted_indel_file) {
+            unless (Genome::Model::Tools::Snp::Sort->execute(
+                                                             snp_file => $unsorted_indel_file,
+                                                             output_file => $sorted_indelpe,
+                                                         )) {
+                $self->error_message('Failed to execute snp sort command for indelpe file '. $unsorted_indel_file);
             }
-            else {
-                warn "generating empty $path from empty $indelpe_orig";
-                my $fh = Genome::Utility::FileSystem->open_file_for_writing($path);
-                unless ($fh) {
-                    die "failed to open $path!: $!";
-                }
-                $fh->close;
+        } else {
+            my $fh = Genome::Utility::FileSystem->open_file_for_writing($sorted_indelpe);
+            unless ($fh) {
+                die "failed to open $sorted_indelpe!: $!";
             }
+            $fh->close;
         }
     }
-    return $path;
+    return $sorted_indelpe;
 }
 
 sub _snv_file_filtered {
@@ -125,19 +163,8 @@ sub _snv_file_filtered {
     $filtered =~ s/all/filtered.indelpe/g;
     if (-e $unfiltered and not -e $filtered) {
         # run SNPfilter w/ indelpe data
-        my $pp = $self->model->processing_profile;
-        unless ($pp->genotyper_name =~ /maq/) {
-            die "THIS LOGIC IS CURRENTLY HARD-CODED FOR MAQ!!!";
-        }
-        my $dd = $self->data_directory;
         my $indelpe = $self->_indel_file;
-        my $version = $pp->genotyper_version;
-        unless ($version) {
-            $version = $pp->genotyper_name;
-            $version =~ s/^\D+//;
-            $version =~ s/_/\./g;
-        }
-        my $bin = Genome::Model::Tools::Maq->path_for_maq_version($version);
+        my $bin = $self->path_for_maq_version('genotyper_version');
         my $script = $bin . '.pl';
 
         my $indelpe_param;
@@ -153,14 +180,11 @@ sub _snv_file_filtered {
         Genome::Utility::FileSystem->shellcmd(
             cmd => "$script SNPfilter $indelpe_param $unfiltered > $filtered",
             input_files => \@inputs,
-            # TODO: add flag to allow zero size output?
-            #output_files => [$filtered],
+            allow_zero_size_output_files => 1,
+            output_files => [$filtered],
         );
-	unless (-s $filtered) {
-	    $self->status_message('Zero size or non-existent filtered indel file '. $filtered);
-	}
     }
-    return $filtered; 
+    return $filtered;
 }
 
 sub _variant_pileup_files {
@@ -202,11 +226,11 @@ sub _files_for_pattern_and_optional_ref_seq_id {
     my $self=shift;
     my $pattern = shift;
     my $ref_seq=shift;
-    
+
     if(defined($ref_seq) and $ref_seq eq 'all_sequences') {
         return sprintf($pattern,$self->data_directory,$ref_seq);
     }
-    
+
     my @files = 
     map { 
         sprintf(
@@ -240,6 +264,127 @@ sub maplist_file_paths {
     }
     return @map_lists;
 }
+
+
+sub accumulate_maps {
+    my $self=shift;
+
+    my $model = $self->model;
+    my $result_file;
+
+    #replace 999999 with the cut off value... 
+    #2761337261 is an old AML2 model with newer data
+    if ($model->id < 0 || $model->id >= 2766822526 || $model->id == 2761337261) {
+        $result_file = $self->resolve_accumulated_alignments_filename;
+    } else {
+        my @all_map_lists;
+        my @chromosomes = $model->reference_build->subreference_names;
+        foreach my $c (@chromosomes) {
+            my $a_ref_seq = Genome::Model::RefSeq->get(model_id => $model->id, ref_seq_name=>$c);
+            my @map_list = $a_ref_seq->combine_maplists;
+            push (@all_map_lists, @map_list);
+        }
+
+        $result_file = '/tmp/mapmerge_'. $model->genome_model_id;
+        $self->warning_message("Performing a complete mapmerge for $result_file \n"); 
+
+        my ($fh,$maplist) = File::Temp::tempfile;
+        $fh->print(join("\n",@all_map_lists),"\n");
+        $fh->close;
+
+        my $maq_version = $model->read_aligner_version;
+        system "gt maq vmerge --maplist $maplist --pipe $result_file --version $maq_version &";
+
+        $self->status_message("gt maq vmerge --maplist $maplist --pipe $result_file --version $maq_version &");
+        my $start_time = time;
+        until (-p "$result_file" or ( (time - $start_time) > 100) )  {
+            $self->status_message("Waiting for pipe...");
+            sleep(5);
+        }
+        unless (-p "$result_file") {
+            die "Failed to make pipe? $!";
+        }
+        $self->status_message("Streaming into file $result_file.");
+        $self->warning_message("mapmerge complete.  output filename is $result_file");
+        chmod 00664, $result_file;
+    }
+    return $result_file;
+}
+
+sub maq_version_for_pp_parameter {
+    my $self = shift;
+    my $pp_param = shift;
+
+    $pp_param = 'read_aligner_version' unless defined $pp_param;
+    my $pp = $self->model->processing_profile;
+    unless ($pp->$pp_param) {
+        die("Failed to resolve path for maq version using processing profile parameter '$pp_param'");
+    }
+    my $version = $pp->$pp_param;
+    unless ($version) {
+        $pp_param =~ s/version/name/;
+        $version = $pp->$pp_param;
+        $version =~ s/^\D+//;
+        $version =~ s/_/\./g;
+    }
+    unless ($version) {
+        die("Failed to resolve a version for maq using processing profile parameter '$pp_param'");
+    }
+    return $version;
+}
+
+sub path_for_maq_version {
+    my $self = shift;
+    my $pp_param = shift;
+
+    my $version = $self->maq_version_for_pp_parameter($pp_param);
+    return Genome::Model::Tools::Maq->path_for_maq_version($version);
+}
+
+
+sub resolve_accumulated_alignments_filename {
+    my $self = shift;
+
+    my $aligner_path = $self->path_for_maq_version('read_aligner_version');
+
+    my %p = @_;
+    my $ref_seq_id = $p{ref_seq_id};
+    my $library_name = $p{library_name};
+
+    my $alignments_dir = $self->accumulated_alignments_directory;
+
+    if ($library_name && $ref_seq_id) {
+        return "$alignments_dir/$library_name/$ref_seq_id.map";
+    } elsif ($ref_seq_id) {
+        return $alignments_dir . "/mixed_library_submaps/$ref_seq_id.map";
+    } else {
+        my @files = glob("$alignments_dir/mixed_library_submaps/*.map");
+        my $tmp_map_file = Genome::Utility::FileSystem->create_temp_file_path('ACCUMULATED_ALIGNMENTS-'. $self->model_id .'.map');
+        if (-e $tmp_map_file) {
+            unless (unlink $tmp_map_file) {
+                $self->error_message('Could not unlink existing temp file '. $tmp_map_file .": $!");
+                die($self->error_message);
+            }
+        }
+        require POSIX;
+        unless (POSIX::mkfifo($tmp_map_file, 0700)) {
+            $self->error_message("Can not create named pipe ". $tmp_map_file .":  $!");
+            die($self->error_message);
+        }
+        my $cmd = "$aligner_path mapmerge $tmp_map_file " . join(" ", @files) . " &";
+        my $rv = Genome::Utility::FileSystem->shellcmd(
+                                                       cmd => $cmd,
+                                                       input_files => \@files,
+                                                       output_files => [$tmp_map_file],
+                                                   );
+        unless ($rv) {
+            $self->error_message('Failed to execute mapmerge command '. $cmd);
+            die($self->error_message);
+        }
+        return $tmp_map_file;
+    }
+}
+
 
 1;
 
