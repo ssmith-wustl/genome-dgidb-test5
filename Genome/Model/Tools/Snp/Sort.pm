@@ -11,53 +11,20 @@ use Sort::Naturally qw| nsort |;
 class Genome::Model::Tools::Snp::Sort {
     is => 'Command',
     has => [
-    snp_file => 
-    { 
-        type => 'String',
-        is_optional => 0,
-        doc => "maq cns2snp output",
-        shell_args_position => 1,
-    },
-    ]
+            snp_file => {
+                         type => 'String',
+                         is_optional => 0,
+                         doc => "maq cns2snp output",
+                         shell_args_position => 1,
+                     },
+    ],
+    has_optional => [
+                     output_file => {
+                                     type => 'Text',
+                                     doc => 'optional output file',
+                                 },
+              ],
 };
-
-
-
-sub execute {
-    my $self=shift;
-
-    #Check on the file names
-    unless(-e $self->snp_file) {
-        $self->error_message("Snps file not found: " . $self->snp_file);
-        return;
-    }
-
-    #Check and open filehandles
-    my $snp_fh=IO::File->new($self->snp_file);
-    unless($snp_fh) {
-        $self->error_message("Failed to open filehandle for: " .  $self->snp_file );
-        return;
-    }
-    my %snp_at;
-    
-    while(my $line = $snp_fh->getline) {
-        my ($chr, $pos,) = split /\t/, $line;
-        $snp_at{$chr}{$pos} = $line;
-    }
-
-    for my $chr (nsort keys %snp_at) {
-        for my $pos (sort { $a <=> $b } keys %{$snp_at{$chr}}) {
-            print $snp_at{$chr}{$pos};
-        }
-    }
-    
-    return 1;
-}
-
-    
-
-
-1;
 
 sub help_brief {
     "Sorts a SNP file using Sort::Naturally to sort the chromosomes";
@@ -66,6 +33,54 @@ sub help_brief {
 sub help_detail {
 }
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    return unless $self;
+
+    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->snp_file)) {
+        $self->error_message('Failed to validate snp file '. $self->snp_file .'  for reading.');
+        return;
+    }
+    if ($self->output_file) {
+        unless (Genome::Utility::FileSystem->validate_file_for_writing($self->output_file)) {
+            $self->error_message('Failed to validate output file '. $self->output_file .' for writing.');
+            return;
+        }
+    }
+    return $self;
+}
+
+sub execute {
+    my $self=shift;
+
+    my $snp_fh = Genome::Utility::FileSystem->open_file_for_reading($self->snp_file);
+    my $output_fh;
+    if ($self->output_file) {
+        $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    } else {
+        $output_fh = IO::Handle->new;
+        $output_fh->fdopen(fileno(STDOUT),'w');
+    }
+
+    my %snp_at;
+    while(my $line = $snp_fh->getline) {
+        my ($chr, $pos,) = split /\t/, $line;
+        $snp_at{$chr}{$pos} = $line;
+    }
+    $snp_fh->close;
+    for my $chr (nsort keys %snp_at) {
+        for my $pos (sort { $a <=> $b } keys %{$snp_at{$chr}}) {
+            print $output_fh $snp_at{$chr}{$pos};
+        }
+    }
+    $output_fh->close;
+    return 1;
+}
 
 
-    
+1;
+
+
+
+
