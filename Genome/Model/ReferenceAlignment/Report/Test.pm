@@ -169,7 +169,7 @@ sub skip_generate { return 1; }
 
 #######################################################################
 
-package Genome::Model::ReferenceAlignment::Report::RefSeqMaqTest;
+package Genome::Model::ReferenceAlignment::Report::MapcheckTest;
 
 use strict;
 use warnings;
@@ -180,12 +180,11 @@ use Data::Dumper 'Dumper';
 use Test::More;
 
 sub test_class {
-    return 'Genome::Model::ReferenceAlignment::Report::RefSeqMaq';
+    return 'Genome::Model::ReferenceAlignment::Report::Mapcheck';
 }
 
 sub params_for_test_class {
     return (
-        name => 'Ref Seq',
         $_[0]->base_params_for_test_class,
     );
 }
