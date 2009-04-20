@@ -7,6 +7,7 @@ use Genome;
 use Digest::MD5 qw(md5_hex);
 
 class Genome::InstrumentData::Alignment {
+    is => ['Genome::Utility::FileSystem'],
     has => [
         instrument_data                 => {
                                             is => 'Genome::InstrumentData',
@@ -282,7 +283,7 @@ sub verify_alignment_data {
     }
     my @possible_unaligned_shortcuts= $self->unaligned_reads_list_paths;
     for my $possible_unaligned_shortcut (@possible_unaligned_shortcuts) {
-        my $found_unaligned_reads_file = Genome::Utility::FileSystem->check_for_path_existence($possible_unaligned_shortcut);
+        my $found_unaligned_reads_file = $self->check_for_path_existence($possible_unaligned_shortcut);
         if (!$found_unaligned_reads_file) {
             $self->error_message("Missing unaligned reads file '$possible_unaligned_shortcut'");
             $errors++;
@@ -294,7 +295,7 @@ sub verify_alignment_data {
 
     my @possible_aligner_output_shortcuts = $self->aligner_output_file_paths;
     for my $possible_aligner_output_shortcut (@possible_aligner_output_shortcuts) {
-        my $found_aligner_output_file = Genome::Utility::FileSystem->check_for_path_existence($possible_aligner_output_shortcut);
+        my $found_aligner_output_file = $self->check_for_path_existence($possible_aligner_output_shortcut);
         if (!$found_aligner_output_file) {
             $self->error_message("Missing aligner output file '$possible_aligner_output_shortcut'.");
             $errors++;
@@ -484,6 +485,95 @@ sub get_alignment_statistics {
     $hashy_hash_hash{mapped}=$values[2];
     $hashy_hash_hash{paired}=$values[3];
     return \%hashy_hash_hash;
+}
+
+
+###EVERYTHING BELOW THIS IS PROBABLY SPECIFIC TO MAQ AND MAY BECOME SEPARATE COMMANDS OR A PART OF THE ALIGN/MAQ COMMAND###
+###SOME SUBROUTINES ABOVE MAY NEED COPIED BELOW THIS CHECKPOINT IF THEY ARE MAQ SPECIFIC###
+
+sub sanger_bfq_filenames {
+    my $self = shift;
+
+    my @sanger_bfq_pathnames;
+    if ($self->{_sanger_bfq_pathnames}) {
+        @sanger_bfq_pathnames = $self->{_sanger_bfq_pathnames};
+        my $errors;
+        for my $sanger_bfq (@sanger_bfq_pathnames) {
+            unless (-e $sanger_bfq && -f $sanger_bfq && -s $sanger_bfq) {
+                $self->error_message('Missing or zero size sanger bfq file: '. $sanger_bfq);
+                die($self->error_message);
+            }
+        }
+    } else {
+        my @sanger_fastq_pathnames = $self->sanger_fastq_filenames;
+        my $counter = 0;
+        for my $sanger_fastq_pathname (@sanger_fastq_pathnames) {
+            my $sanger_bfq_pathname = $self->create_temp_file_path('sanger-bfq-'. $counter++);
+            unless (Genome::Model::Tools::Maq::Fastq2bfq->execute(
+                                                                  fastq_file => $sanger_fastq_pathname,
+                                                                  bfq_file => $sanger_bfq_pathname,
+                                                              )) {
+                $self->error_message('Failed to execute fastq2bfq quality conversion.');
+                die($self->error_message);
+            }
+            unless (-e $sanger_bfq_pathname && -f $sanger_bfq_pathname && -s $sanger_bfq_pathname) {
+                $self->error_message('Failed to validate the conversion of sanger fastq file '. $sanger_fastq_pathname .' to sanger bfq.');
+                die($self->error_message);
+            }
+            push @sanger_bfq_pathnames, $sanger_bfq_pathname;
+        }
+        $self->{_sanger_bfq_pathnames} = \@sanger_bfq_pathnames;
+    }
+    return @sanger_bfq_pathnames;
+}
+
+sub sanger_fastq_filenames {
+    my $self = shift;
+
+    my $instrument_data = $self->instrument_data;
+
+    my @sanger_fastq_pathnames;
+    if ($self->{_sanger_fastq_pathnames}) {
+        @sanger_fastq_pathnames = @{$self->{_sanger_fastq_pathnames}};
+        my $errors;
+        for my $sanger_fastq (@sanger_fastq_pathnames) {
+            unless (-e $sanger_fastq && -f $sanger_fastq && -s $sanger_fastq) {
+                $self->error_message('Missing or zero size sanger fastq file: '. $sanger_fastq);
+                die($self->error_message);
+            }
+        }
+    } else {
+        my @illumina_fastq_pathnames = $instrument_data->fastq_filenames;
+        my $counter = 0;
+        for my $illumina_fastq_pathname (@illumina_fastq_pathnames) {
+            my $sanger_fastq_pathname = $self->create_temp_file_path('sanger-fastq-'. $counter++);
+            if ($instrument_data->resolve_quality_converter eq 'sol2sanger') {
+                unless (Genome::Model::Tools::Maq::Sol2sanger->execute(
+                                                                       use_version => $self->aligner_version,
+                                                                       solexa_fastq_file => $illumina_fastq_pathname,
+                                                                       sanger_fastq_file => $sanger_fastq_pathname,
+                                                                   )) {
+                    $self->error_message('Failed to execute sol2sanger quality conversion.');
+                    die($self->error_message);
+                }
+            } elsif ($instrument_data->resolve_quality_converter eq 'sol2phred') {
+                unless (Genome::Model::Tools::Fastq::Sol2phred->execute(
+                                                                        fastq_file => $illumina_fastq_pathname,
+                                                                        phred_fastq_file => $sanger_fastq_pathname,
+                                                                    )) {
+                    $self->error_message('Failed to execute sol2phred quality conversion.');
+                    die($self->error_message);
+                }
+            }
+            unless (-e $sanger_fastq_pathname && -f $sanger_fastq_pathname && -s $sanger_fastq_pathname) {
+                $self->error_message('Failed to validate the conversion of solexa fastq file '. $illumina_fastq_pathname .' to sanger quality scores');
+                die($self->error_message);
+            }
+            push @sanger_fastq_pathnames, $sanger_fastq_pathname;
+        }
+        $self->{_sanger_fastq_pathnames} = \@sanger_fastq_pathnames;
+    }
+    return @sanger_fastq_pathnames;
 }
 
 

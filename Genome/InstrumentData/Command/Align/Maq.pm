@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Model::Tools::Maq::Map::Writer;
 
 class Genome::InstrumentData::Command::Align::Maq {
     is => ['Genome::Utility::FileSystem','Command'],
@@ -107,44 +106,57 @@ sub execute {
     my $reference_build = $alignment->reference_build;
 
     # we resolve these first, since we might just print the paths we work with then exit
-    my @input_pathnames = $instrument_data->fastq_filenames;
-    $self->status_message("INPUT PATHS: @input_pathnames\n");
+    my @input_pathnames = $alignment->sanger_bfq_filenames;
+    $self->status_message("SANGER BFQ PATHS: @input_pathnames\n");
 
     # prepare the refseq
-    my $ref_seq_path =  $reference_build->data_directory;
     my $ref_seq_file =  $reference_build->full_consensus_path('bfa');
-    unless (-e $ref_seq_file) {
-        $self->error_message(sprintf("reference sequence file %s does not exist.  please verify this first.", $ref_seq_file));
-        return;
+    unless ($ref_seq_file && -e $ref_seq_file) {
+        $self->error_message("Reference build full consensus path '$ref_seq_file' does not exist.");
+        die($self->error_message);
     }
     $self->status_message("REFSEQ PATH: $ref_seq_file\n");
 
-    my $alignment_directory = $alignment->get_or_create_alignment_directory;
+    my $alignment_directory = $alignment->alignment_directory;
+    my $lock;
+    my $resource_lock_name;
+    if ($alignment_directory) {
+        if (-d $alignment_directory) {
+            $resource_lock_name = $alignment_directory . '.generate';
+            $lock = $self->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
+            unless ($lock) {
+                $self->status_message("This data set is still being processed by its creator.  Waiting for existing data lock...");
+                $lock = $self->lock_resource(resource_lock => $resource_lock_name);
+                unless ($lock) {
+                    $self->error_message("Failed to get existing data lock!");
+                    return;
+                }
+            }
+            if ($alignment->verify_alignment_data) {
+                $self->status_message("Existing alignment data is available and deemed correct.");
+                $self->unlock_resource(resource_lock => $lock);
+                return 1;
+            }
+        } else {
+            $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
+        }
+    } else {
+        $alignment_directory = $alignment->get_or_create_alignment_directory;
+    }
     # check the status of this data set
     # be sure the check is atomic...
-    my $resource_lock_name = $alignment_directory . '.generate';
-    my $lock = $self->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
+    $resource_lock_name = $alignment_directory . '.generate';
     unless ($lock) {
-        $self->status_message("This data set is still being processed by its creator.  Waiting for lock...");
-        $lock = $self->lock_resource(resource_lock => $resource_lock_name);
+        $lock = $self->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
         unless ($lock) {
-            $self->error_message("Failed to get lock!");
-            return;
+            $self->status_message("This data set is still being processed by its creator.  Waiting for lock...");
+            $lock = $self->lock_resource(resource_lock => $resource_lock_name);
+            unless ($lock) {
+                $self->error_message("Failed to get lock!");
+                return;
+            }
         }
     }
-    if ($alignment->verify_alignment_data) {
-        $self->status_message("Existing alignment data is available and deemed correct.");
-        $self->unlock_resource(resource_lock => $lock);
-        return 1;
-    } elsif ( -d $alignment_directory) {
-        #We can remove the current alignment directory because we have the lock
-        $self->status_message('Alignment directory exists but failed to verify data. Removing old alignment directory '. $alignment_directory);
-        $alignment->remove_alignment_directory;
-        $alignment_directory = $alignment->get_or_create_alignment_directory;
-    } else {
-        $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
-    }
-
     $self->status_message("OUTPUT PATH: $alignment_directory\n");
     # do this in an eval block so we can unlock the resource cleanly when we finish
     eval {
@@ -154,25 +166,20 @@ sub execute {
             die('Failed to create directory '. $alignment_directory);
         }
 
-        # resolve sample type
-        my $sample_type = $instrument_data->sample_type;
-        unless (defined($sample_type)) {
-            $self->error_message('Sample type not defined for instrument data');
-            die($self->error_message);;
-        }
-
-        # resolve quality conversion
-        my $quality_converter = $instrument_data->resolve_quality_converter;
-        unless (defined($quality_converter)) {
-            $self->error_message('Quality converter not resolved for instrument data');
-            die($self->error_message);;
-        }
-
         ###input/output files
         my $alignment_file = $self->create_temp_file_path('all.map');
         unless ($alignment_file) {
             $self->error_message('Failed to create temp alignment file for all sequences');
             die($self->error_message);
+        }
+
+        #RESOLVE A STRING OF ALIGNMENT PARAMETERS
+        my $aligner_params = $alignment->aligner_params;
+
+        # resolve sample type
+        my $adaptor_file = $instrument_data->resolve_adaptor_file;
+        if ($adaptor_file) {
+            $aligner_params .= ' -d '. $adaptor_file;
         }
 
         ###upper bound insert param
@@ -187,26 +194,39 @@ sub execute {
             }
             # TODO: extract additional details from the read set
             # about the insert size, and adjust the maq parameters.
-            # $aligner_params .= " -a $upper_bound_on_insert_size";
+            $aligner_params .= ' -a '. $upper_bound_on_insert_size;
         }
 
-        my %params = (
-            ref_seq_file            => $ref_seq_file,
-            files_to_align_path     => join("|", @input_pathnames),
-            quality_converter          => $quality_converter,
-            use_version             => $alignment->aligner_version,
-            align_options           => $alignment->aligner_params,
-            dna_type                => $sample_type,
-            alignment_file          => $alignment_file,
-            aligner_output_file     => $alignment->aligner_output_file_path,
-            unaligned_reads_file    => $alignment->unaligned_reads_list_path,
-            upper_bound             => $upper_bound_on_insert_size,
-        );
-        $self->status_message("Alignment params:\n" . Data::Dumper::Dumper(\%params));
+        #NOT SURE IF THIS IS USED BUT COULD BE IMPLEMENTED
+        #if ( defined($self->duplicate_mismatch_file) ) {
+        #    $duplicate_mismatch_option = '-H '.$self->duplicate_mismatch_file;
+        #}
 
-        $self->status_message("Executing aligner...");
-        my $alignments = Genome::Model::Tools::Maq::AlignReads->execute(%params);
-        $self->status_message("Aligner executed.");
+        my $files_to_align = join(' ',@input_pathnames);
+        my $cmdline = Genome::Model::Tools::Maq->path_for_maq_version($self->version)
+            . sprintf(' map %s -u %s %s %s %s > ',
+                      $aligner_params,
+                      $alignment->unaligned_reads_list_path,
+                      $alignment_file,
+                      $ref_seq_file,
+                      $files_to_align)
+                . $alignment->aligner_output_file_path . ' 2>&1';
+        my @input_files = ($ref_seq_file, @input_pathnames);
+        if ($adaptor_file) {
+            push @input_files, $adaptor_file;
+        }
+        my @output_files = ($alignment_file, $alignment->unaligned_reads_list_path, $alignment->aligner_output_file_path);
+        Genome::Utility::FileSystem->shellcmd(
+                                              cmd                         => $cmdline,
+                                              input_files                 => \@input_files,
+                                              output_files                => \@output_files,
+                                              skip_if_output_is_present   => 1,
+                                          );
+
+        unless ($alignment->verify_aligner_successful_completion($alignment->aligner_output_file_path)) {
+            $self->error_message('Failed to verify maq successful completion from output file '. $alignment->aligner_output_file_path);
+            die($self->error_message);
+        }
 
         ##############################################
 
@@ -224,18 +244,11 @@ sub execute {
         my $line = `$cmd`;
         my ($evenness)=($line=~/(\S+)\%$/);
         IO::File->new(">$alignment_directory/evenness")->print($evenness);
-
         $DB::single = $DB::stopper;
 
         my @subsequences = grep {$_ ne "all_sequences"} $reference_build->subreference_names(reference_extension=>'bfa');
 
-        # break up the alignments by the sequence they match, if necessary
-        # my $map_split = Genome::Model::Tools::Maq::MapSplit->execute(
-        #   map_file => $alignment_file,
-        #   submap_directory => $alignment_directory,
-        #   reference_names => \@subsequences,
-        # );
-        my $mapsplit_cmd = Genome::Model::Tools::Maq->path_for_mapsplit_version($alignment->aligner_version);
+        my $mapsplit_cmd = Genome::Model::Tools::Maq->path_for_mapsplit_version($self->version);
         if (@subsequences) {
             my $cmd = "$mapsplit_cmd " . $alignment_directory . "/ $alignment_file " . join(',',@subsequences);
             my $rv = system($cmd);
@@ -357,7 +370,6 @@ sub process_low_quality_alignments {
 
     return 1;
 }
-
 
 
 
