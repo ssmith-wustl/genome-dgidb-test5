@@ -610,7 +610,7 @@ sub help_usage_complete_text {
                 Text::Wrap::wrap(' ', ' ', $self->help_detail)
             ),
             ( $sub_commands 
-                ? sprintf("%s\n %s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
+                ? sprintf("%s\n%s\n", Term::ANSIColor::colored("SUB-COMMANDS", 'underline'), $sub_commands)
                 : ''
             ),
         );
