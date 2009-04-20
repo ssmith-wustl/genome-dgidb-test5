@@ -1,4 +1,3 @@
-
 // hard code color indices to prevent from shifting as plots are toggled
 var i = 0;
 $.each(datasets, function(key, val) {

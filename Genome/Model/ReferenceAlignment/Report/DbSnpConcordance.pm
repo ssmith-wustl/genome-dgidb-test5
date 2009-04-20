@@ -9,42 +9,103 @@ use App::Report;
 use CGI;
 use IO::String;
 use Data::Dumper;
+use Template;
+use POSIX; 
+
+
+my $base_template_path = __PACKAGE__->_base_path_for_templates;
 
 class Genome::Model::ReferenceAlignment::Report::DbSnpConcordance {
     is => 'Genome::Model::Report',
     has => [
+        
         # inputs come from the build
         variant_list_files          => { via => 'build', to => '_snv_file_unfiltered' },
         variant_filtered_list_files => { via => 'build', to => '_snv_file_filtered' },
         db_snp_file                 => { via => 'build' },
         
         name                        => { default_value => 'dbSNP Concordance' },
+
+        report_templates => {
+            is => 'String',
+            is_many => 1,
+            default_value => [
+                 "$base_template_path.html.tt2",
+                 "$base_template_path.txt.tt2"
+            ],
+            doc => 'The paths of template(s) to use to format the report.  (In .tt2 format)',
+        },
         
         test => {
-            is => 'Boolean',
-            default_value => 0,
-            doc => "Saves copies of the generated data in the pwd if they do not exist.  Re-uses them on the next run(s)."
+            is             => 'Boolean',
+            default_value  => 0,
+            doc            => "Saves copies of the generated data in the pwd if they do not exist.  Re-uses them on the next run(s)."
         },
         override_variant_file => {
-            type => 'Text',
-            is_optional => 1,
-            doc => "for testing, use this snp file instead of the real file for the model/build",
+            type         => 'Text',
+            is_optional  => 1,
+            doc          => "for testing, use this snp file instead of the real file for the model/build",
         },
         override_db_snp_file => {
-            type => 'Text',
-            is_optional => 1,
-            doc => "Use this db snp file instead of generating a new one.",
-        },
-    ],
+            type         => 'Text',
+            is_optional  => 1,
+            doc          => "Use this db snp file instead of generating a new one.",
+        }
+    ]
 };
 
-sub _generate_data {
-    my $self = shift;
+# TODO: move up into base class
+sub _base_path_for_templates 
+{
+    my $module = __PACKAGE__;
+    $module =~ s/::/\//g;
+    $module .= '.pm';
+    my $module_path = $INC{$module};
+    unless ($module_path) {
+        die "Module " . __PACKAGE__ . " failed to find its own path!  Checked for $module in \%INC...";
+    }
+    return $module_path;
+}
 
-    return {
-        description => $self->generate_report_brief,
-        html => $self->generate_report_detail,
+# sub _generate_data {
+#     my $self = shift;
+
+#     return {
+#         description => $self->generate_report_brief,
+#         html => $self->generate_report_detail,
+#     };
+# }
+
+sub _generate_data 
+{
+    my $self = shift;
+    my $template = shift;
+
+    my @templates = $self->report_templates;
+    unless (@templates) {
+        die "No report templates assigned!  Cannot generate any content."
+    }
+
+    my $data = { description => $self->generate_report_brief };
+    
+    for my $template (@templates) {
+        my $content = $self->generate_report_detail($template);
+        my ($format,$key);
+        if ($content =~ /\<\s*HTML/i) {
+            $format = 'HTML';
+            $key = 'html';
+        }
+        else {
+            $format = 'text';
+            $key = 'txt'; 
+        }
+        if (exists $data->{$key}) {
+            die "Multiple templates return content in $format format.  This is not supported, sadly."
+                . "  Error processing $template";
+        }
+        $data->{$key} = $content;
     };
+    return $data;
 }
 
 sub generate_report_brief 
@@ -57,10 +118,18 @@ sub generate_report_brief
 sub generate_report_detail 
 {
     my $self = shift;
-
+    my $template = shift;
+    unless ($template) {
+        die "Please specify which template to use for this report!";
+    }
+    
     my $build = $self->build;
     my $build_id = $build->id;
     my $model = $build->model;
+
+    my $content;
+    
+    $self->status_message("Running dbSNP Concordance Report for build ".$build->id.".");
     
     my $module_path = $INC{"Genome/Model/ReferenceAlignment/Report/DbSnpConcordance.pm"};
     die 'failed to find module path!' unless $module_path;
@@ -73,6 +142,7 @@ sub generate_report_detail
     
 	my $concordance_report;
 
+    
     for my $list (qw/variant_list_files variant_filtered_list_files/) {
         my $snp_file;
         if  (defined $self->override_variant_file) {
@@ -81,22 +151,14 @@ sub generate_report_detail
             $snp_file =  $self->override_variant_file
         }  
         else {
-            # get the SNV lists from the build and put them together
-            $snp_file = $self->create_temp_file_path($list);
-            my @files = $self->$list;
-            #my $file_list = join(" ", @files);
-            #my $cat_cmd = "cat $file_list > $snp_file";
-            #switching this back for the time being... 
-            #my $cat_rv = Genome::Utility::FileSystem->shellcmd( cmd=>$cat_cmd, input_files=>\@files, output_files=>[$snp_file] ); 
-            #unless ($cat_rv) {
-            #	die "Cat'ing snp files failed. Return value: $cat_rv";
-            # } 
-            Genome::Utility::FileSystem->shellcmd(
-                cmd => "cat @files > $snp_file",
-            );
-            # TODO: verify counts!
+            my @extra;
+            ($snp_file,@extra) = $self->$list;           
+            if (@extra) {
+                die "Expected only one file of SNPs!"
+                    . join("\n",@extra);
+            } 
         }
-        
+
         unless ($snp_file) {
             die "Failed to generate or assign combined snp file!";
         }
@@ -161,7 +223,7 @@ sub generate_report_detail
                     snp_file        =>$snp_file,
                     dbsnp_file      =>$db_snp_path
                 ) 
-            ) {
+            ) { 
                 die "Could not execute db-snp-concordance.";
             }
             $self->status_message("output result: ".-s $cc_output);
@@ -236,43 +298,34 @@ sub generate_report_detail
     # BUILD HTML REPORT
     #
 
-    my $body = IO::String->new();
-    die unless $body;
-    my $r = new CGI;
-
-    # load page resources
+    # my $body = IO::String->new();
+    # die unless $body;
+    #my $r = new CGI;
     
-    my $css_file = "$module_path.html.css";
-    my $css_fh = IO::File->new($css_file);
-    unless ($css_fh) {
-        die "failed to open file $css_file!"; 
-    }
-    my $css_content = join('',$css_fh->getlines);
+    #my $title =  'Db Snp for model ' . $model->id . ' ("' . $model->name . '")  build ' . $build_id . ')';
     
-    my $title =  'Db Snp for model ' . $model->id . ' ("' . $model->name . '")  build ' . $build_id . ')';
-    
-    $body->print($r->start_html(
-        -title  => $title,
-        -style  => { -code => $css_content },
-        -script => [
-            { -type => 'text/javascript', -src => 'https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/js/jquery.js'},
-            { -type => 'text/javascript', -src => 'https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/js/jquery.flot.js'}
-        ]
-    ));
+    # $body->print($r->start_html(
+    #     -title  => $title,
+    #     -style  => { -code => $css_content },
+    #     -script => [
+    #         { -type => 'text/javascript', -src => 'https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/js/jquery.js'},
+    #         { -type => 'text/javascript', -src => 'https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/js/jquery.flot.js'}
+    #     ]
+    # ));
     
     # $body->print("<small><a href='../../reports/Summary/report.html'>full report</a></small>");
-    $body->print('<div class="container">');
-    $body->print('<div class="background">');
+    # $body->print('<div class="container">');
+    # $body->print('<div class="background">');
 
 
-    my $header = "dbSNP Concordance for SNVs";
+    # my $header = "dbSNP Concordance for SNVs";
 
-    $body->print("<h1 class=\"section_title\">$header</h1>");
-    $body->print("<div class='content_padding'>");
-    $body->print("<table width='100%' cellpadding='10' cellspacing='0'><tr><td width='50%'><h3>Unfiltered Concordance Summary:</h3><pre>$cqr_unfiltered_summary</pre></td><td width='50%'><h3>Filtered Concordance Summary:</h3><pre>$cqr_filtered_summary</pre></td></tr></table>");    
-    $body->print("<p/>");
+    # $body->print("<h1 class=\"section_title\">$header</h1>");
+    # $body->print("<div class='content_padding'>");
+    # $body->print("<table width='100%' cellpadding='10' cellspacing='0'><tr><td width='50%'><h3>Unfiltered Concordance Summary:</h3><pre>$cqr_unfiltered_summary</pre></td><td width='50%'><h3>Filtered Concordance Summary:</h3><pre>$cqr_filtered_summary</pre></td></tr></table>");    
+    # $body->print("<p/>");
 
-    $body->print("<h3>$header by Quality</h3>");
+    # $body->print("<h3>$header by Quality</h3>");
 
     #
     # BUILD GRAPH
@@ -334,106 +387,69 @@ sub generate_report_detail
     my $unfiltered_all_snp_data = build_coordinate_string(\@unfiltered_x_axis, \@unfiltered_dataset2);
     my $unfiltered_concordance_data = build_concordance_string(\@unfiltered_x_axis, \@unfiltered_dataset1, \@unfiltered_dataset2);
     ## end unfiltered graph data assembly
-    
-    my $js_datasets = qq|
-    var datasets = {
-        "db SNP filtered": {
-            label: "db SNP filtered",
-            hoverable: true,
-            clickable: true,
-            shadowSize: 0,
-            data: $filtered_db_snp_data
-        },
 
-        "all SNPs filtered": {
-            label: "all SNPs filtered",
-            hoverable: true,
-            clickable: true,
-            shadowSize: 0,
-            data: $filtered_all_snp_data
-        },
-
-        "concordance filtered": {
-            label: "filtered concordance",
-            yaxis: 2,
-            hoverable: true,
-            clickable: true,
-            shadowSize: 0,
-            data: $filtered_concordance_data
-        },
-        "db SNP unfiltered": {
-            label: "db SNP unfiltered",
-            hoverable: true,
-            clickable: true,
-            shadowSize: 0,
-            data: $unfiltered_db_snp_data
-        },
-
-        "all SNPs unfiltered": {
-            label: "all SNPs unfiltered",
-            hoverable: true,
-            clickable: true,
-            shadowSize: 0,
-            data: $unfiltered_all_snp_data
-        },
-
-        "concordance unfiltered": {
-            label: "unfiltered concordance",
-            yaxis: 2,
-            hoverable: true,
-            clickable: true,
-            shadowSize: 0,
-            data: $unfiltered_concordance_data
-        }
-
-    };|;
-
-    my $js_file = "$module_path.html.js";
-    my $js_fh = IO::File->new($js_file);
-    unless ($js_fh) {
-        die "failed to open file $js_file!"; 
+    ## get CSS resources
+    my $css_file = "$module_path.html.css";
+    my $css_fh = IO::File->new($css_file);
+    unless ($css_fh) {
+        die "failed to open file $css_file!"; 
     }
-    my $js_content = join('',$js_fh->getlines);
+    my $page_css = join('',$css_fh->getlines);
     
-    $body->print("<script type='text/javascript'>//<![CDATA[\n\n");
-    $body->print("\$(function() {");
-    $body->print($js_datasets);
-    $body->print($js_content);
-    $body->print("});");
-    $body->print("\n\n//]]></script>");
-    
-    my $flot_graph = qq|
+    ## get javascript resources
+    my $graph_script_file = "$module_path.html.js";
+    my $graph_script_fh = IO::File->new($graph_script_file);
+    unless ($graph_script_fh) {
+        die "failed to open file $graph_script_file"; 
+    }
+    my $graph_script = join('',$graph_script_fh->getlines);
 
-<table width="100%" cellpadding="5" cellspacing="0">
-  <tr>
-   <td valign="middle"><img src="https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/images/axis_label_v_SNPs.png" width="19" height="49"/></td>
-   <td align="center" valign="middle"><div id="placeholder" class="graph_placeholder"/></td>
-   <td valign="middle"><img src="https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/images/axis_label_v_pct_Concordance.png" width="19" height="151"/></td>
-  </tr>
-  <tr>
-   <td>&nbsp;</td>
-   <td align="center"><img src="https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/images/axis_label_h_Quality.png" width="67" height="23"/></td>
-   <td>&nbsp;</td>
-  </tr>
-  <tr>
-   <td colspan="3">
-    <div id="plots"><p><strong>Show:</strong</p></div>
-   </td>
-  </tr>
-</table>
+    ########## RENDER TEMPLATE #############
 
-        |;
+    my @vars = (
+        model_id                          => $model->id,
+        model_name                        => $model->name,
+        page_title                        => "Db Snp for model " . $model->id . ' (&quot;' . $model->name . "&quot;) build $build_id",
         
-    $body->print($flot_graph);
-    $body->print("</div>"); #close content_padding div
-    $body->print("</div>"); #close background div
-    $body->print("</div>"); #close container div	
-    $body->print( $r->end_html );
-    $body->seek(0,0);
+        unfiltered_concordance_summary    => $cqr_unfiltered_summary,
+        filtered_concordance_summary      => $cqr_filtered_summary,
+        
+        filtered_db_snp_data              => $filtered_db_snp_data, 
+        filtered_all_snp_data             => $filtered_all_snp_data,
+        filtered_concordance_data         => $filtered_concordance_data,
+        unfiltered_db_snp_data            => $unfiltered_db_snp_data,
+        unfiltered_all_snp_data           => $unfiltered_all_snp_data,
+        unfiltered_concordance_data       => $unfiltered_concordance_data,
+
+        graph_script                      => $graph_script,
+        page_css                          => $page_css
+    );
+
+    $self->status_message("Summary Report values: ".Dumper(\@vars) );
     
-    my @lines = $body->getlines;
-    my $text = join('',@lines);
-    return $text;
+    ##################################
+      
+    my $tt = Template->new({
+         ABSOLUTE => 1,
+        #INCLUDE_PATH => '/gscuser/jpeck/svn/pm2/Genome/Model/ReferenceAlignment/Report',
+        #INTERPOLATE  => 1,
+    }) || die "$Template::ERROR\n";
+
+    $self->status_message("processing template $template");
+
+    my $rv = $tt->process($template, { @vars }, \$content) || die $tt->error(), "\n";
+    if ($rv != 1) {
+   	    die "Bad return value from template processing for summary report generation: $rv ";
+    }
+    unless ($content) {
+        die "No content returned from template processing!";
+    }
+    
+    my $body = IO::String->new();  
+    die $! unless $body;
+    $body->print($content);
+    $body->seek(0, 0);
+    return join('', $body->getlines);        
 }
 
 sub _generate_combined_snp_file
@@ -461,7 +477,7 @@ sub build_coordinate_string {
     
     for my $x_point (@{$x_axis_ref}) {
         my $v1 = $data_set_ref->[$x_point] || 0;
-        $formatted_return .= "[ $x_point , " . $v1 . "], ";
+        $formatted_return .= "[ $x_point, " . $v1 . "], ";
     }
     
     $formatted_return .= "] ";
@@ -486,7 +502,7 @@ sub build_concordance_string {
             $v3 = $v1/$v2;
         }
     
-        $formatted_return .= "[ $x_point , " . sprintf("%.2f", 100 * $v3) . "], ";
+        $formatted_return .= "[ $x_point, " . sprintf("%.2f", 100 * $v3) . "], ";
     }
     
     $formatted_return .= "] ";

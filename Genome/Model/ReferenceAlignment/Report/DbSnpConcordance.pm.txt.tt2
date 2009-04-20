@@ -1,0 +1,34 @@
+============================================================
+[% page_title %]
+============================================================
+
+Model Id: [% model_id %]
+Model Name: [% model_name %]
+
+Unfiltered Concordance Summary:
+[% unfiltered_concordance_summary %]
+
+Filtered Concordance Summary:
+[% filtered_concordance_summary %]
+
+Unfiltered DbSNP Data:
+[% unfiltered_db_snp_data %]
+
+Unfiltered All SNP Data:
+[% unfiltered_all_snp_data %]
+
+Unfiltered Concordance Data:
+[% unfiltered_concordance_data %]
+
+Filtered DbSNP Data:
+[% filtered_db_snp_data %]
+
+Filtered All SNP Data:
+[% filtered_all_snp_data %]
+
+Filtered Concordance Data:
+[% filtered_concordance_data %]
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+                  The Genome Center at Washington University
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
