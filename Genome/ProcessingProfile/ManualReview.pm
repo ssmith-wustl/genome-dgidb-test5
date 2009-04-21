@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::ProcessingProfile::ManualReview {
-    is => 'Genome::ProcessingProfile::Composite',
+    is => 'Genome::ProcessingProfile',
 };
 
 sub stages {
