@@ -7,11 +7,18 @@ use Genome;
 use Genome::Model::Tools::Maq::Map::Reader;
 
 class Genome::Model::Tools::Maq::MapToLayers {
-    is => 'Genome::Model::Tools::Maq',
+    is => ['Genome::Model::Tools::Maq','Genome::Utility::FileSystem'],
     has => [
             map_file => { is => 'Text'},
             layers_file => { is => 'Text'},
         ],
+    has_optional => [
+                     randomize => {
+                                   is => 'Boolean',
+                                   doc => 'run shuf to randomize the reads',
+                                   default_value => 0,
+                               },
+                 ]
 };
 
 sub create {
@@ -20,11 +27,11 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
-    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->map_file)) {
+    unless ($self->validate_file_for_reading($self->map_file)) {
         $self->error_message('Failed to validata map file for reading '. $self->map_file);
         return;
     }
-    unless (Genome::Utility::FileSystem->validate_file_for_writing($self->layers_file)) {
+    unless ($self->validate_file_for_writing($self->layers_file)) {
         $self->error_message('Failed to validate layers file for writing '. $self->layers_file);
         return;
     }
@@ -37,9 +44,9 @@ sub execute {
 
     my $basename = File::Basename::basename($self->map_file);
 
-    my $map_view_file = Genome::Utility::FileSystem->create_temp_file_path($basename .'.mapview');
+    my $map_view_file = $self->create_temp_file_path($basename .'.mapview');
     $self->status_message('Mapview file: '. $map_view_file);
-    
+
     my $mapview = Genome::Model::Tools::Maq::Mapview->execute(
                                                               use_version => $self->use_version,
                                                               map_file => $self->map_file,
@@ -49,12 +56,14 @@ sub execute {
         $self->error_message('Failed to execute mapview on map file '. $self->map_file);
         return;
     }
-    my $mapview_fh = Genome::Utility::FileSystem->open_file_for_reading($mapview->output_file);
+    my $mapview_fh = $self->open_file_for_reading($mapview->output_file);
     unless ($mapview_fh) {
         $self->error_message('Failed to open mapview file for reading '. $mapview->output_file);
         return;
     }
-    my $layers_fh = Genome::Utility::FileSystem->open_file_for_writing($self->layers_file);
+
+
+    my $layers_fh = $self->open_file_for_writing($self->layers_file);
     unless ($layers_fh) {
         $self->error_message('Failed to open layers file for writing '. $self->layers_file);
         return;
@@ -72,6 +81,24 @@ sub execute {
     }
     $layers_fh->close;
     $mapview_fh->close;
+    my $file_to_copy;
+    if ($self->randomize) {
+        my $random_file = $self->create_temp_file_path($basename .'.randomized');
+        my $cmd = '/gsc/scripts/gsc/techd/shuf-64 -o '. $random_file .' '. $self->layers_file;
+        $self->shellcmd(
+                                              cmd => $cmd,
+                                              input_files => [$self->layers_file],
+                                              output_files => [$random_file],
+                                          );
+        unless (unlink $self->layers_file) {
+            $self->error_message('Failed to remove un-randomized layers file'. $self->layers_file .": $!");
+            die($self->error_message);
+        }
+        unless ($self->copy_file($random_file,$self->layers_file)) {
+            $self->error_message('Failed to copy randomized file '. $random_file .' to output layers file '. $self->layers_file .":  $!");
+            die($self->error_message);
+        }
+    }
     return 1;
 }
 
