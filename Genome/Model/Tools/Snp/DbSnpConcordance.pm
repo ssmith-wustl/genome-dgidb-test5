@@ -143,7 +143,7 @@ sub print_report {
                 print $output_fh "$quality\t$total_concordant\t$total_snps\n";
             }
         }
-        print $output_fh "There were $total_snps in the snp file\n";
+        print $output_fh "There were $total_snps SNVs with unambiguous reference positions\n";
         printf $output_fh "There were %d positions in %s for a concordance of %0.02f%%\n",$total_concordant,$sample,$total_concordant/$total_snps*100;
     }
 
