@@ -95,7 +95,7 @@ my $tmp_allocation = Genome::Disk::Allocation->create_mock(
                                                            disk_group_name => 'info_alignments',
                                                            group_subdirectory => 'test',
                                                            mount_path => '/tmp/mount_path',
-                                                           allocation_path => 'alignment_data/maq0_6_5/refseq-for-test/test_run_name/4_-123458',
+                                                           allocation_path => 'alignment_data/maq0_6_8/refseq-for-test/test_run_name/4_-123458',
                                                            allocator_id => '-123459',
                                                            kilobytes_requested => 100000,
                                                            kilobytes_used => 0,
@@ -115,7 +115,7 @@ $instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
 $alignment = Genome::InstrumentData::Alignment->create(
                                                        instrument_data_id => $instrument_data->id,
                                                        aligner_name => 'maq',
-                                                       aligner_version => '0.6.5',
+                                                       aligner_version => '0.6.8',
                                                        reference_name => 'refseq-for-test',
                                                    );
 
