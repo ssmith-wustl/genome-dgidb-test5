@@ -118,7 +118,7 @@ class Genome::Model {
                                                reverse_id_by => 'from_model',
                                                doc => 'bridge entries where this is the "from" model(used to retrieve models models this model is "to")'
                                            },
-        to_models                       => { is => 'Genome::Model',
+        to_models                         => { is => 'Genome::Model',
                                                via => 'to_model_links', to => 'to_model',
                                                doc => 'Genome models this model contributes "to"',
                                            },
@@ -729,7 +729,7 @@ sub add_to_model{
         $self->error_message ( "no value for this model(from_model) id: <$from_id> or to_model id: <$to_id>");
         die;
     }
-    my $reverse_bridge = Genome::Model::CompositeMember->get(from_model_id => $to_id, to_model_id => $from_id);
+    my $reverse_bridge = Genome::Model::Link->get(from_model_id => $to_id, to_model_id => $from_id);
     if ($reverse_bridge){
         my $string =  "A model link already exists for these two models, and in the opposite direction than you specified:\n";
         $string .= "to_model: ".$reverse_bridge->to_model." (this model)\n";
@@ -738,7 +738,7 @@ sub add_to_model{
         $self->error_message($string);
         die;
     }
-    my $bridge = Genome::Model::CompositeMember->get(from_model_id => $from_id, to_model_id => $to_id);
+    my $bridge = Genome::Model::Link->get(from_model_id => $from_id, to_model_id => $to_id);
     if ($bridge){
         my $string =  "A model link already exists for these two models:\n";
         $string .= "to_model: ".$bridge->to_model." (the model you are trying to set as a 'to' model for this one)\n";
@@ -747,7 +747,7 @@ sub add_to_model{
         $self->error_message($string);
         die;
     }
-    $bridge = Genome::Model::CompositeMember->create(from_model_id => $from_id, to_model_id => $to_id, role => $role);
+    $bridge = Genome::Model::Link->create(from_model_id => $from_id, to_model_id => $to_id, role => $role);
     return $bridge;
 }
 
