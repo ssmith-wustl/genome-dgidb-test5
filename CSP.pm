@@ -1306,6 +1306,10 @@ sub confirm_scheduled_pse {
     my ($today) = split( qr/ /, App::Time->now );
     my $_process_to_ = $pse->process_to;
     $_process_to_ =~ s/\s+/_/g;
+    $pse->status_message("dumping ENV");
+    for my $key ( sort keys %ENV ) {
+        $pse->status_message("$key:   $ENV{$key}");
+    }
 
     ######################################################
     # Initialize everything.
