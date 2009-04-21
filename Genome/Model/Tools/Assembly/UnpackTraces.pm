@@ -8,6 +8,7 @@ use Bio::SeqIO;
 use Getopt::Long;
 use Cwd;
 use Data::Dumper;
+use File::Path;
 
 class Genome::Model::Tools::Assembly::UnpackTraces {
     is => 'Command',
@@ -36,6 +37,12 @@ class Genome::Model::Tools::Assembly::UnpackTraces {
 		type => 'Boolean',
 		is_optional => 1,
 		doc => "set to zip output files",
+	        },
+	    delete_trace_directory => {
+		type => 'Boolean',
+		is_optional => 1,
+		doc => "delete directory created from archive",
+		default_value => 1,
 	        },
 	    ],
 };
@@ -178,6 +185,10 @@ sub execute {
 	if ( system ("gzip $fasta_out $qual_out") ) {
 	    $self->error_message ("Warning: Unable to zip $fasta_out and $qual_out files");
 	}
+    }
+
+    if ($self->delete_trace_directory) {
+	rmtree $base_path;
     }
 }
 
