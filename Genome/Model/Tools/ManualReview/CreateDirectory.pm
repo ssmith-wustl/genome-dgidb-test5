@@ -219,18 +219,28 @@ SLEEEP:      sleep 30;
     print $proj_fof @projects;
     #print $out_dir,"\n",$proj_fof,"\n";
     
-    $proj_fof->close;    
+    $proj_fof->close;  
+    my $gm = `which genome`;  
+    chomp $gm;$gm .= " model";
     #return Genome::Model::Tools::PrepareNextgenAce->execute(fof => $proj_fof->filename, basedir => $out_dir);
     foreach my $line (@projects)
     {   
         chomp $line;
-
+        my $seqposline = `cat $line/annotation.tsv`;
+        chomp $seqposline;
+        my ($seq, $pos) = $seqposline =~ /(\S+)\t(\S+)/;
+        my $start = $pos-300;
+        my $end = $pos +300;
+        mkdir ("$line/edit_dir");
+        mkdir("$line/phd_dir");
+        my $command = "$gm write ace maq  --ace=$line/edit_dir/$seq"."_$pos.ace --chromosome=$seq --start=$start --end=$end --refseq=/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/$seq.fasta --maq=$line/$seq"."_$pos.map";
+        print $command,"\n";
         my %job_params = (
             pp_type => 'lsf',
             q => 'long',
             R => 'select[type=LINUX64]',
             #W => 15,
-            command => "$gt manual-review prepare-nextgen-ace --project-dir=$line --basedir=$out_dir",
+            command =>$command,#"$gt manual-review prepare-nextgen-ace --project-dir=$line --basedir=$out_dir",
             oo => "$line.log",
         );
         my $job = PP::LSF->create(%job_params);
