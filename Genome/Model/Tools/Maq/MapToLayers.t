@@ -10,7 +10,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/){
-        plan tests => 4;
+        plan tests => 7;
     } else{
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -27,5 +27,14 @@ my $cmd = Genome::Model::Tools::Maq::MapToLayers->create(
 isa_ok($cmd,'Genome::Model::Tools::Maq::MapToLayers');
 ok($cmd->execute,'execute command '. $cmd->command_name);
 ok(!compare($expected_layers_file,$cmd->layers_file),'layers file matches expected');
+
+my $rand_cmd = Genome::Model::Tools::Maq::MapToLayers->create(
+                                                              map_file => $map_file,
+                                                              layers_file => $tmp_dir .'/2.randomized.layers',
+                                                              randomize => 1,
+                                                     );
+isa_ok($rand_cmd,'Genome::Model::Tools::Maq::MapToLayers');
+ok($rand_cmd->execute,'execute command '. $rand_cmd->command_name);
+ok(compare($expected_layers_file,$rand_cmd->layers_file),'randomized layers file does not match expected');
 
 exit;
