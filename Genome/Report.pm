@@ -194,7 +194,7 @@ sub validate_data {
         return;
     }
 
-    $data->{date} = UR::Time->now;
+    $data->{date} = UR::Time->now unless $data->{date};
 
     for my $req ( $self->expected_data_keys ) {
         unless ( defined $data->{$req} ) {
@@ -208,6 +208,10 @@ sub validate_data {
 
 sub get_generator {
     return $_[0]->get_data->{generator};
+}
+
+sub get_date { 
+    return $_[0]->get_data->{date};
 }
 
 sub get_generator_params {
