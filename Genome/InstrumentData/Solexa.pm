@@ -331,7 +331,24 @@ sub resolve_adaptor_file {
     return $adaptor_file;
 }
 
+sub create_mock {
+    my $class = shift;
+    my $self = $class->SUPER::create_mock(@_);
+    return unless $self;
 
+    for my $method (qw/
+        fastq_filenames
+        resolve_fastq_filenames
+        _calculate_total_read_count
+        resolve_adaptor_file
+    /) {
+        my $ref = $class->can($method);
+        die "Unknown method $method on " . $class . ".  Cannot make a pass-through for mock object!" unless $ref;
+        $self->mock($method,$ref);
+    }
+
+    return $self;
+}
 
 1;
 
