@@ -38,11 +38,11 @@ class Genome::Model::Tools::Assembly::UnpackTraces {
 		is_optional => 1,
 		doc => "set to zip output files",
 	        },
-	    delete_trace_directory => {
+	    save_trace_directory => {
 		type => 'Boolean',
 		is_optional => 1,
 		doc => "delete directory created from archive",
-		default_value => 1,
+		default_value => 0,
 	        },
 	    ],
 };
@@ -180,14 +180,14 @@ sub execute {
 	    }
 	}
     }
-
+    #ZIP OUTPUT FILES FOR PCAP
     if ($self->zip_files){
 	if ( system ("gzip $fasta_out $qual_out") ) {
 	    $self->error_message ("Warning: Unable to zip $fasta_out and $qual_out files");
 	}
     }
-
-    if ($self->delete_trace_directory) {
+    #REMOVE DIRECTORY CREATED FROM ARCHIVE SINCE IT'S NOT NEEDED FOR ASSEMBLIES
+    if (! $self->save_trace_directory) {
 	rmtree $base_path;
     }
 }
