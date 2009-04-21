@@ -149,17 +149,20 @@ sub test1_file : Tests {
         Genome::Utility::FileSystem->copy_file(_existing_file(), $file_to_copy_to),
         'copy_file',
     );
-    ok( # destination already exists
-        !Genome::Utility::FileSystem->copy_file(_existing_file(), $file_to_copy_to),
-        'copy_file',
+
+    eval { Genome::Utility::FileSystem->copy_file(_existing_file(), $file_to_copy_to) };
+    ok( $@, 
+       'copy_file fails as expected when destination already exists'
     );
     unlink $file_to_copy_to;
-    ok( # no file to copy 
-        !Genome::Utility::FileSystem->copy_file('does_not_exist', $file_to_copy_to),
-        'copy_file',
+
+    eval { Genome::Utility::FileSystem->copy_file('does_not_exist', $file_to_copy_to) };
+    ok( $@, 
+        'copy_file fails when there is not file to copy',
     );
-    ok( # no dest
-        !Genome::Utility::FileSystem->copy_file(_existing_file()),
+
+    eval { Genome::Utility::FileSystem->copy_file(_existing_file()) };
+    ok( $@, 
         'copy_file failed as expected - no destination given',
     );
     
