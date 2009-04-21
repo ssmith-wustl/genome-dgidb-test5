@@ -15,7 +15,7 @@ sub execute {
     my $self = shift;
 
     # Assembly Stats
-    my $stats_generator = Genome::Model::Build::AmpliconAssembly::Report::AssemblyStats->create(
+    my $stats_generator = Genome::Model::AmpliconAssembly::Report::AssemblyStats->create(
         name => 'Assembly Stats for '.$self->build->model->subject_name,
         build_ids => [ $self->build->id ],
     );
