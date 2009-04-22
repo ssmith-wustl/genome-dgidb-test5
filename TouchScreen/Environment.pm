@@ -28,5 +28,6 @@ foreach my $envkey (keys %ENVIRONMENT){
 
 use lib "/gsc/lib/perl/test/lib/perl5/5.8.7";
 use lib "/gsc/lib/perl/test/lib/perl5/site_perl/5.8.7";
+use lib "/gsc/lib/perl/test/lib/perl5/site_perl/5.8.7/i686-linux";
 
 1;
