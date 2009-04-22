@@ -84,7 +84,7 @@ sub execute {
     my $file_to_copy;
     if ($self->randomize) {
         my $random_file = $self->create_temp_file_path($basename .'.randomized');
-        my $cmd = '/gsc/pkg/coreutils/coreutils-6.10-64/shuf-64 -o '. $random_file .' '. $self->layers_file;
+        my $cmd = '/gsc/pkg/coreutils/coreutils-6.10-64/shuf -o '. $random_file .' '. $self->layers_file;
         $self->shellcmd(
                                               cmd => $cmd,
                                               input_files => [$self->layers_file],
