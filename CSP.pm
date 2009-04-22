@@ -880,6 +880,12 @@ sub confirm_scheduled_pse_cron {
         process_to   => $process_to,
         ignore_locks => $ignore_locks,
     });
+    my $exit = sub {
+        App->status_message("pid $$ exiting");
+        $cspc_lock->delete if $cspc_lock;
+        App::DB->disconnect;
+        exit 0;
+    };
 
     ###################
     # do the real work
@@ -922,8 +928,7 @@ sub confirm_scheduled_pse_cron {
             GSC::ProcessStep->warning_message(
                 "did not find any active process steps with a process_to of $process_to_string"
             );
-            $cspc_lock->delete if $cspc_lock;
-            exit 0;
+            $exit->();
         };
 
         @pse_infos = CSP::find_scheduled_pses(
@@ -935,6 +940,7 @@ sub confirm_scheduled_pse_cron {
 
     GSC::PSE->status_message(
         "found " . scalar(@pse_infos) . " PSEs to confirm" );
+    $exit->() if ( @pse_infos == 0 );
 
     #   sort by priority and pse_id
     @pse_ids =
@@ -1010,8 +1016,7 @@ sub confirm_scheduled_pse_cron {
         }
     }
 
-    $cspc_lock->delete if $cspc_lock;
-    exit 0;
+    $exit->();
 }
 
 sub group_by (@) {
