@@ -873,7 +873,8 @@ sub confirm_scheduled_pse_cron {
     my $ignore_locks = $arg->{ignore_locks};
     my $process_to   = $arg->{process_to};
     my $queue        = $arg->{queue};
-#    my $MAX_JOBS     = 2500;
+
+    #    my $MAX_JOBS     = 2500;
 
     my $cspc_lock = $class->_cron_setup({
         process_to   => $process_to,
@@ -889,41 +890,53 @@ sub confirm_scheduled_pse_cron {
         grep { !$class->process_locked($_) }
         keys %csp_priority;
 
-    my @pse_infos=();
+    my @pse_infos = ();
     if (@pse_ids) {
-        # Get scheduled PSE IDs from pse_ids passed on command line
-        # There is a chance this could break if you passed in more than 1000 PSE IDs
-        @pse_infos=CSP::find_scheduled_pses(constraint => 'pse.pse_id',
-                                            inputs     => \@pse_ids);
 
-    } else {
+        # Get scheduled PSE IDs from pse_ids passed on command line
+        # There is a chance this could break if you passed in
+        # more than 1000 PSE IDs
+        @pse_infos = CSP::find_scheduled_pses(
+            constraint => 'pse.pse_id',
+            inputs     => \@pse_ids
+        );
+
+    }
+    else {
+
         # find PSEs from the database
 
         # override default with command-line --process flag
         @process_to = ($process_to) if $process_to;
 
-        my $process_to_string = join(', ', map { "'$_'" } @process_to);
+        my $process_to_string = join( ', ', map {"'$_'"} @process_to );
 
         # get the process step objects
-        GSC::ProcessStep->status_message("Looking for active process steps with a process_to in ($process_to_string)");
+        GSC::ProcessStep->status_message(
+            "Looking for active process steps with a process_to in ($process_to_string)"
+        );
         my @ps = GSC::ProcessStep->get(
-                        process_to          => \@process_to,
-                        process_step_status => 'active',
+            process_to          => \@process_to,
+            process_step_status => 'active',
         ) or do {
-            GSC::ProcessStep->warning_message("did not find any active process steps with a process_to of $process_to_string");
+            GSC::ProcessStep->warning_message(
+                "did not find any active process steps with a process_to of $process_to_string"
+            );
             $cspc_lock->delete if $cspc_lock;
             exit 0;
         };
 
-        @pse_infos=CSP::find_scheduled_pses(constraint => 'pse.ps_ps_id',
-                                            inputs     => [map {$_->id} @ps]);
-        
+        @pse_infos = CSP::find_scheduled_pses(
+            constraint => 'pse.ps_ps_id',
+            inputs     => [ map { $_->id } @ps ]
+        );
+
     }
 
-    GSC::PSE->status_message("found " . scalar(@pse_infos) . " PSEs to confirm");
+    GSC::PSE->status_message(
+        "found " . scalar(@pse_infos) . " PSEs to confirm" );
 
-
-#   sort by priority and pse_id
+    #   sort by priority and pse_id
     @pse_ids =
         map  { $_->[0] }
         sort {
@@ -937,41 +950,46 @@ sub confirm_scheduled_pse_cron {
     my $use_dbh = App::DB->dbh->clone();
 
     for my $pse_id (@pse_ids) {
+
         # see if there is a global lock
         if ( $class->global_locked and !$ignore_locks ) {
             App::MsgLogger->warning_message('Locked: exiting');
             last;
         }
 
-        my $pse=GSC::PSE->get($pse_id) or next;
-	
-	if(my @resources = $pse->resource_needed) {
-	  my $is_wait = 0;
-	  foreach my $resource (@resources) {
-	    if($WAIT_ON_RESOURCE{$resource}) {
-	      $is_wait = 1;
-	      last;
-	    }
-	  }
-	  next if($is_wait);
-	  foreach my $resource (@resources) {
-	    $WAIT_ON_RESOURCE{$resource} = 1;
-	  }
-	}
-	
+        my $pse = GSC::PSE->get($pse_id) or next;
+
+        if ( my @resources = $pse->resource_needed ) {
+            my $is_wait = 0;
+            foreach my $resource (@resources) {
+                if ( $WAIT_ON_RESOURCE{$resource} ) {
+                    $is_wait = 1;
+                    last;
+                }
+            }
+            next if ($is_wait);
+            foreach my $resource (@resources) {
+                $WAIT_ON_RESOURCE{$resource} = 1;
+            }
+        }
+
         my $process_to = $pse->get_ps->process_to;
 
         # see if there is a lock for this process step
         if ( $class->process_locked($process_to) and !$ignore_locks ) {
-            $pse->status_message("$process_to is locked, skipping $pse_id");
+            $pse->status_message(
+                "$process_to is locked, skipping $pse_id");
             next;
         }
 
-        $pse->status_message("checking for a pse job for $pse_id ($process_to)");
-        my $pj = GSC::PSEJob->get(pse_id => $pse_id);
+        $pse->status_message(
+            "checking for a pse job for $pse_id ($process_to)");
+        my $pj = GSC::PSEJob->get( pse_id => $pse_id );
         if ($pj) {
             my $job_id = $pj->job_id;
-            $pse->status_message("pse job found for $pse_id ($process_to), job_id $job_id skipping");
+            $pse->status_message(
+                "pse job found for $pse_id ($process_to), job_id $job_id skipping"
+            );
             next;
         }
 
@@ -982,7 +1000,7 @@ sub confirm_scheduled_pse_cron {
         $pse->{_queue} = $queue if $queue;
 
         # kick off the job
-        my $rv = $pse->confirm_scheduling(dbh=>$use_dbh);
+        my $rv = $pse->confirm_scheduling( dbh => $use_dbh );
 
         if ($rv) {
             $pse->status_message("successful $msg");
