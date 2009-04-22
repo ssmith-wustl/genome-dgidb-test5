@@ -179,7 +179,10 @@ sub desc {
 sub resolve_fastq_filenames {
     my $self = shift;
 
-    my $fastq_directory = $self->dump_illumina_fastq_archive;
+    my $fastq_directory;
+    eval {
+        $fastq_directory = $self->dump_illumina_fastq_archive;
+    };
     my $lane = $self->subset_name;
 
     my @illumina_output_paths;
