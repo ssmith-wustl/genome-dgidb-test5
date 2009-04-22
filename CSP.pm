@@ -953,7 +953,7 @@ sub confirm_scheduled_pse_cron {
 
     #####################################################################
 
-    my $use_dbh = App::DB->dbh->clone();
+    my $use_dbh;
 
     for my $pse_id (@pse_ids) {
 
@@ -1006,6 +1006,7 @@ sub confirm_scheduled_pse_cron {
         $pse->{_queue} = $queue if $queue;
 
         # kick off the job
+        $use_dbh ||= App::DB->dbh->clone();
         my $rv = $pse->confirm_scheduling( dbh => $use_dbh );
 
         if ($rv) {
