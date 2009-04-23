@@ -20,6 +20,8 @@ sub stages {
     return @stages;
 }
 
+    #Note: pulled these out of stages:
+
 sub alignment_job_classes {
 
     my @sub_command_classes= qw/
@@ -37,18 +39,16 @@ sub alignment_job_classes {
 
 sub variant_detection_job_classes {
     my @steps = (
-                 'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
-                 'Genome::Model::Command::Build::ReferenceAlignment::FindVariations'
-                 # 'Genome::Model::Command::Build::ReferenceAlignment::PostprocessVariations',
-                 # 'Genome::Model::Command::Build::ReferenceAlignment::AnnotateVariations'
-             );
+        'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
+        'Genome::Model::Command::Build::ReferenceAlignment::FindVariations'
+    );
 
     return @steps;
 }
 
 sub deduplication_job_classes {
     my @steps = ( 
-        'Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries'
+        'Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries',
     );
     return @steps;
 }
@@ -77,11 +77,12 @@ sub alignment_objects {
 sub variant_detection_objects {
     my $self = shift;
     my $model = shift;
-    my @subreferences_names = grep {$_ ne "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
+    my @subreferences_names = grep {$_ eq "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
 
-    unless (@subreferences_names > 0) {
-        @subreferences_names = ('all_sequences');
-    }
+    #Note: commented out for change in granularity from per chromosome to whole genome
+    #unless (@subreferences_names > 0) {
+    #    @subreferences_names = ('all_sequences');
+    #}
     return @subreferences_names;
 }
 
