@@ -280,14 +280,14 @@ sub schedule {
     if ($model->sequencing_platform eq '454') {
         $variation_granularity = 1;
     } elsif ($model->sequencing_platform eq 'solexa') {
-        $variation_granularity = 3;
+        $variation_granularity = 1; #was 3 
     } else {
         die ('Unrecognized sequencing platform in ReferenceAlignment test: '. $model->sequencing_platform);
     }
     SKIP : {
         skip 'No reference sequence messages for 454', 1 if $model->sequencing_platform eq '454';
         is(scalar(grep { m/^Scheduling jobs for reference sequence .*/} @status_messages),
-           5, "Got 5 reference_sequence messages");
+           3, "Got 3 reference_sequence messages");
     }
     SKIP : {
         skip 'No merge alignments for Solexa', 1 if $model->sequencing_platform eq 'solexa';
