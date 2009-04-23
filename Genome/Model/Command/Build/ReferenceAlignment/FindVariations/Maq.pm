@@ -189,18 +189,19 @@ sub execute {
         return;
     }
 
-    my $accumulated_alignments_file_for_indelsoa = $build->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
+    my $accumulated_alignments_file_for_indelsoa = $build->resolve_accumulated_alignments_filename();
     #OK, if jon's stuff doesn't run, then this would be a pipe
     unless (-s $accumulated_alignments_file_for_indelsoa || -p $accumulated_alignments_file_for_indelsoa) {
         $self->error_message("Named pipe or temp file for $accumulated_alignments_file_for_indelsoa was not found.");
         return;
     }
     $retval = system("$maq_pathname indelsoa $ref_seq_file $accumulated_alignments_file_for_indelsoa > $indel_output_file");
+    unlink $accumulated_alignments_file_for_indelsoa; 
     unless ($retval == 0) {
         $self->error_message("running maq indelsoa returned non-zero exit code $retval");
         return;
     }
-
+    
     # Running pileup requires some parsing of the snp file
     my $tmpfh = File::Temp->new();
     my $snp_fh = IO::File->new($snp_output_file);
@@ -217,7 +218,8 @@ sub execute {
     $tmpfh->close();
     $snp_fh->close();
 
-    my $accumulated_alignments_file_for_pileup = $build->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
+    #my $accumulated_alignments_file_for_pileup = $build->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
+    my $accumulated_alignments_file_for_pileup = $build->resolve_accumulated_alignments_filename();
     unless (-s $accumulated_alignments_file_for_pileup || -p $accumulated_alignments_file_for_pileup) {
         $self->error_message("Named pipe or tmp file $accumulated_alignments_file_for_pileup was not found.");
         return;
@@ -229,6 +231,7 @@ sub execute {
                                  $pileup_output_file);
 
     $retval = system($pileup_command);
+    unlink $accumulated_alignments_file_for_pileup; 
     unless ($retval == 0) {
         $self->error_message("running maq pileup returned non-zero exit code $retval");
         return;
