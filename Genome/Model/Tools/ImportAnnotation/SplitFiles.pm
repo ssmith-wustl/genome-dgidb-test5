@@ -68,11 +68,15 @@ sub execute
         mkdir( $workdir . "/source_data" );
     }
 
+    my ($stdout,$stderr);
     # copy transcripts to source_data, move others to source_data
     IPC::Run::run(
         ['cp',$self->workdir.'/transcripts.csv',
          $self->workdir."/source_data", ],
-        ) or croak "problem copying transcripts $!";
+        \undef,
+        '>', $stdout,
+        '2>', $stderr,
+        ) or croak "problem copying transcripts $!\n$stderr";
 
     # move the rest.
     IPC::Run::run(
@@ -80,7 +84,10 @@ sub execute
          $self->workdir.'/proteins.csv',
          $self->workdir.'transcript_sub_structures.csv',
          $self->workdir.'source_data',],
-        ) or croak "problem moving other datafiles $!";
+        \undef,
+        '>', $stdout,
+        '2>', $stderr,
+        ) or croak "problem moving other datafiles $!\n$stderr";
 
     return 1;
 }
@@ -159,16 +166,27 @@ sub split_transcripts
     my ($stdout, $stderr);
     my $retval;
     # run sort on the transcripts.csv file
+
     IPC::Run::run(
         ['sort', '-n', '-k3,9', '-o', 
          $self->workdir.'transcripts.csv.sorted', 
          $self->workdir."transcripts.csv" ],
-        ) or croak "sorting transcripts.csv $!";
+        \undef,
+        '>',
+        \$stdout,
+        '2>',
+        \$stderr,
+        ) or croak "sorting transcripts.csv $!\n$stderr";
 
     IPC::Run::run(
         [ 'cp', $self->workdir.'transcripts.csv.sorted',
-          $self->workdir."transcripts.csv",]
-        ) or croak "copying sorted transcripts.csv $!";
+          $self->workdir."transcripts.csv",],
+        \undef,
+        '>',
+        \$stdout,
+        '2>',
+        \$stderr,
+        ) or croak "copying sorted transcripts.csv $!\n$stderr";
 
     my $fh = IO::File->new( $self->workdir . "/transcripts.csv" );
     my $csv = Text::CSV_XS->new( { sep_char => "\t" } );
