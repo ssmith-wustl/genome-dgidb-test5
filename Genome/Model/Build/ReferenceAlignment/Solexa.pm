@@ -70,7 +70,30 @@ sub _variant_filtered_list_files {
 # TODO: we should abstract the genotyper the way we do the aligner
 # for now these are hard-coded maq-ish values.
 
+
 sub _snv_file_unfiltered {
+    my $self = shift;
+    my $build_id = $self->build_id;
+
+    #Note:  This switch is used to ensure backwards compatibility with 'old' per chromosome data.  
+    #Eventually will be removed.
+ 
+    #The 'new' whole genome way 
+    if ( $build_id < 0 || $build_id > 96763806 ) {
+        my $unfiltered = $self->maq_snp_related_metric_directory .'/snps_all_sequences';
+        unless (-e $unfiltered) {
+            die 'No variant snps files were found.';
+        }
+        return $unfiltered;
+    } else {
+    #The 'old' per chromosome way
+        $self->X_snv_file_unfiltered();
+    }
+
+}
+
+
+sub X_snv_file_unfiltered {
     my $self = shift;
     my $unfiltered = $self->maq_snp_related_metric_directory .'/all.snps';
     unless (-e $unfiltered) {
@@ -158,9 +181,26 @@ sub _indel_file {
 
 sub _snv_file_filtered {
     my $self = shift;
+
+    my $filtered;
     my $unfiltered = $self->_snv_file_unfiltered;
-    my $filtered = $unfiltered;
-    $filtered =~ s/all/filtered.indelpe/g;
+
+    my $build_id = $self->build_id;
+ 
+    #Note:  This switch is to insure backward compatibility while generating reports.  
+    #Builds before the id below generated files on a per chromosome basis.
+    #Test builds and current production builds generate data on a whole genome basis.
+
+    #'new', whole genome 
+    if ( $build_id < 0 || $build_id > 96763806 ) {
+        my $path = File::Basename->dirname($unfiltered);
+        $filtered = $path."/filtered.indelpe.snps";
+    } else {
+    #'old', per chromosme
+       $filtered = $unfiltered; 
+       $filtered =~ s/all/filtered.indelpe/g;
+    }
+
     if (-e $unfiltered and not -e $filtered) {
         # run SNPfilter w/ indelpe data
         my $indelpe = $self->_indel_file;
