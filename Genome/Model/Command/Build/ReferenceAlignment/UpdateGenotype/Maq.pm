@@ -51,7 +51,10 @@ sub execute {
             return;
         }
     }
+    
     my ($consensus_file) = $build->_consensus_files($self->ref_seq_id);
+    #assuming the ref_seq_id (above) is 'all_sequences', if not, use line below.
+    #my ($consensus_file) = $build->_consensus_files("all_sequences");
 
     my $ref_seq_file = sprintf("%s/all_sequences.bfa", $model->reference_sequence_path);
     #my $ref_seq_file = sprintf("%s/%s.bfa", $model->reference_sequence_path , $self->ref_seq_id);
@@ -63,17 +66,22 @@ sub execute {
         return undef;
     }
     my $accumulated_alignments_file;
-    unless ($accumulated_alignments_file = $build->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id)) {
+    #unless ($accumulated_alignments_file = $build->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id)) {
+    unless ($accumulated_alignments_file = $build->resolve_accumulated_alignments_filename() ) {
          $self->error_message("Couldn't resolve accumulated alignments file");
          return;
     }
 
     my $cmd = $maq_pathname .' assemble '. $assembly_opts .' '. $consensus_file .' '. $ref_seq_file .' '. $accumulated_alignments_file;
+    $self->status_message("\n************* UpdateGenotype cmd: $cmd *************************\n\n");
     $self->shellcmd(
                     cmd => $cmd,
                     input_files => [$ref_seq_file,$accumulated_alignments_file],
                     output_files => [$consensus_file],
                 );
+
+    unlink $accumulated_alignments_file;
+
     return $self->verify_successful_completion;
 }
 
