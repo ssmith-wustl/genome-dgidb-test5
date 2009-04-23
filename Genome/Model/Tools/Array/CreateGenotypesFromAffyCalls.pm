@@ -29,6 +29,11 @@ class Genome::Model::Tools::Array::CreateGenotypesFromAffyCalls {
         is_optional => 0,
         doc => "Directory to place individual files for each header in the file",
     },
+    output_filename => {
+        type => 'String',
+        is_optional => 0,
+        doc => "Filename of the output file",
+    },
 
     ]
 };
@@ -41,34 +46,24 @@ sub execute {
 
     my $call_href = $self->create_call_file_hash;
 
-    #Store the header information for creating filenames later
-    my @filehandles = @{$call_href->{PS_ID}};
-
     $call_href = $self->convert_to_genotype($call_href);
 
     #Convert each call into a genotype and write to a new file by chromosome and position
     #create file handles to write out each sample
     my $out_dir = $self->output_directory;
-    for my $file (@filehandles) {
-        my $filehandle = new IO::File "$out_dir/$file.genotype", "w";
-        unless(defined($filehandle)) {
-            $self->error_message("Couldn't open filehandle for file: $file");
-            return;
-        }   
-        $file = $filehandle;
-    }
-
+    my $file = $self->output_filename;
+    my $filehandle = new IO::File "$out_dir/$file.genotype", "w";
+    unless(defined($filehandle)) {
+        $self->error_message("Couldn't open filehandle for file: $file");
+        return;
+    }   
     for my $chromosome (nsort keys %$call_href) {
         for my $position (sort {$a <=> $b} keys %{$call_href->{$chromosome}}) {
-            my $i;
-            for($i = 0; $i < scalar(@{$call_href->{$chromosome}{$position}}); $i++) {
-                print {$filehandles[$i]} "$chromosome\t$position\t",${$call_href->{$chromosome}{$position}}[$i],"\n";
-            }
+            print $filehandle "$chromosome\t$position\t",$call_href->{$chromosome}{$position},"\n";
         }
     }
 
-    map { $_->close; } @filehandles;
-    
+   $filehandle->close; 
     
     return 1;
 }
@@ -82,22 +77,12 @@ sub create_call_file_hash {
     unless(defined($fh)) {
         return 0;
     }
-
-    my $expected_calls = undef;
-
+    #This is somewhat different as the convention seems to have switched to having a single file per sample
     while(my $line = $fh->getline) {
+        next if $line =~ /^#%/; #these are comments in affy apt-chp-to-text output
 
-        my ($PS_ID, $dbSNP_rs_id, $chromosome, $phys_pos, @calls) = split /\s+/, $line;
-
-        if(defined($expected_calls) && $expected_calls != scalar(@calls)) {
-            $self->error_message("Unexpected number of calls");
-            $self->return;
-        }
-        else {
-            $expected_calls = scalar(@calls);
-        }
-        
-        $call_hash{$PS_ID} = \@calls; 
+        my ($PS_ID, $call, $confidence) = split /\s+/, $line;
+        $call_hash{$PS_ID} = $call; 
     }
     return \%call_hash;
 }
@@ -110,7 +95,8 @@ sub convert_to_genotype {
     my $afh = new IO::File "$file","r";
 
     my %new_calls;
-
+    
+    LINE:
     while(my $line = <$afh>) {
         chomp ($line);    
 
@@ -138,27 +124,25 @@ sub convert_to_genotype {
         next if $phys =~ /\-/; #exclude ambiguous sites
 
         if(exists($calls->{$snp_id})) {
-            foreach my $call (@{$calls->{$snp_id}}) {
-
-                if($call eq 'AA') {
-                    $call = $alleleA x 2;
-                }
-                elsif($call eq 'AB') {
-                    $call = $alleleA . $alleleB;
-                }
-                elsif($call eq 'BB') {
-                    $call = $alleleB x 2;
-                }
-                elsif($call eq 'NC') {
-                    $call = '--';
-                }
-                else {
-                    warn "Unrecognized genotype call $call. Skipping...\n";
-                    next;
-                }
-                $call =~ tr/ACTGactg/TGACtgac/ if $strand eq '-';
+            my $call = $calls->{$snp_id};
+            if($call eq 'AA') {
+                $call = $alleleA x 2;
             }
-            $new_calls{$chr}{$phys} = $calls->{$snp_id};
+            elsif($call eq 'AB') {
+                $call = $alleleA . $alleleB;
+            }
+            elsif($call eq 'BB') {
+                $call = $alleleB x 2;
+            }
+            elsif($call eq 'NC') {
+                $call = '--';
+            }
+            else {
+                warn "Unrecognized genotype call $call. Skipping...\n";
+                next LINE;
+            }
+            $call =~ tr/ACTGactg/TGACtgac/ if $strand eq '-';
+            $new_calls{$chr}{$phys} = $call;
             delete $calls->{$snp_id};
         }
 
