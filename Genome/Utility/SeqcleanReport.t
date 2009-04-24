@@ -15,9 +15,8 @@ BEGIN {
     use_ok('Genome::Utility::SeqcleanReport::Writer');
 }
 
-use FindBin qw($Bin);
-
-my $file = "$Bin/test.cln";
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Utility-SeqcleanReport';
+my $file = "$test_dir/test.cln";
 
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $out_file = "$tmp_dir/out.cln";
