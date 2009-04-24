@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use Genome;
-use Genome::Util;
+use Genome::Info::IUB;
 use Sort::Windowed;
 use Sort::Merge;
 
@@ -109,7 +109,7 @@ sub _refseq_position_summary_iterator {
             my @bcall_fields = (3,4,5,6);
             if ($max_count >= $min_read_count) {
                 $result = [                                       
-                    $chrom1,$p1,$r1,$Genome::Util::diploid_iub{$r1}{$call},
+                    $chrom1,$p1,$r1,Genome::Info::IUB->iub_for_alleles($r1,$call),
                     $total_read_count{A},
                     $total_read_count{C},
                     $total_read_count{G},
