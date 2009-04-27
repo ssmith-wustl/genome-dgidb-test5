@@ -5,7 +5,6 @@ use warnings;
 
 use Genome::Model;
 use IO::File;
-use Genome::Model::Command::Report::MetricsBatchToLsf;
 use IO::File;
 use File::Basename;
 
