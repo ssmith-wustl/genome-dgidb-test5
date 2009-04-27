@@ -1,18 +1,11 @@
-package Genome::Model::Command::Report::Amplicons;
+package Genome::Model::Tools::Db::AmpliconSummary;
 
 use strict;
 use warnings;
 
-warn "module " . __PACKAGE__ . " has bee re-located from the old report directory, but not updated!\n";
-
-1;
-
-__END__
 use Genome;
-use GSCApp;
-use Command;
-class Genome::Model::Command::Report::Amplicons
-{
+
+class Genome::Model::Tools::Db::AmpliconSummary {
     is => 'Command',
     has => [
             sample_name => {
@@ -36,7 +29,7 @@ sub help_brief {
 }
 
 sub help_synopsis {
-    'genome-model report amplicons --sample-name'
+    'gt db amplicon-summary --sample-name'
 }
 
 sub help_detail {
