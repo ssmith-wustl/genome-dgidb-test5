@@ -82,6 +82,7 @@ sub execute {
     my $dbsnp_row;
     my ($variant_position, $variant_allele, $variant_class);
 
+    my $path;
     #assuming we are reasonably sorted
     while (my $line = $snp_fh->getline) {
         chomp $line;
@@ -89,17 +90,35 @@ sub execute {
         
         if($chr ne $cur_chr) {
             # switch to a new chromosome, and open its file
-            my $path = $build->data_directory . "/annotation/dbsnp-variations/$chr.dat";
+            $path = $build->data_directory . "/annotation/dbsnp-variations/$chr.dat";
             $dbsnp_fh = IO::File->new($path);
-            $dbsnp_row = $dbsnp_fh->getline;
-            ($variant_position,$variant_class,$variant_allele) = split(/\s+/,$dbsnp_row);
-            $cur_chr = $chr;
-            print STDERR "Annotating $cur_chr\n";
+            
+            ###jpeck added if/then after per chromosome to whole genome pipeline conversion in April 2009
+            ###confirmed approach with D. Larson 
+            if ( -s $path )  {
+   
+                #original code 
+                $dbsnp_row = $dbsnp_fh->getline;
+                ($variant_position,$variant_class,$variant_allele) = split(/\s+/,$dbsnp_row);
+                $cur_chr = $chr;
+                print STDERR "Annotating $cur_chr\n";
+
+            } else {
+                print "*** Path $path does not exist(1).  Skipping $cur_chr \n";
+            }
         }
-       
+
         # advance to the dbsnp data for this position 
         while($variant_position < $pos) {
-            $dbsnp_row = $dbsnp_fh->getline;
+
+            ###jpeck added if/then. See note above.
+            if ( -s $path )  {
+                $dbsnp_row = $dbsnp_fh->getline;
+            } else {
+                print "*** Path $path does not exist(2).\n";
+                $dbsnp_row = undef;
+            }
+ 
             last if not defined $dbsnp_row;
             ($variant_position,$variant_class,$variant_allele) = split(/\s+/,$dbsnp_row);
 
@@ -116,7 +135,14 @@ sub execute {
                 last;
             }
             else {
-                $dbsnp_row = $dbsnp_fh->getline;
+                ###jpeck, added if/then
+                if ( -s $path )  {
+                     $dbsnp_row = $dbsnp_fh->getline;
+                } else {
+                    print STDERR "*** Path is undefined(3): $path \n";
+                    $dbsnp_row = undef;
+                } 
+
                 last if not defined $dbsnp_row;
                 ($variant_position,$variant_class,$variant_allele) = split(/\s+/,$dbsnp_row);
             }
