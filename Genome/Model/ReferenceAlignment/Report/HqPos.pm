@@ -1,14 +1,14 @@
+package Genome::Model::ReferenceAlignment::Report::HqPos;
 
 use strict;
 use warnings;
+
 use Genome;
 use Genome::Info::IUB;
 use Sort::Windowed;
 use Sort::Merge;
 
-package Genome::Model::Command::Report::HqPos;
-
-class Genome::Model::Command::Report::HqPos  {
+class Genome::Model::ReferenceAlignment::Report::HqPos {
     is => 'Genome::Model::Command',
     has => [
         min_alignment_quality   =>  { is => 'Integer', default_value => 15, is_optional => 1,  
@@ -407,3 +407,6 @@ my $hqp  = hqp($hqds);
 
 # transform: ($chrom,$pos,$ref,$var,$ss,$o,$lib,@other)
 
+
+#$HeadURL$
+#$Id$

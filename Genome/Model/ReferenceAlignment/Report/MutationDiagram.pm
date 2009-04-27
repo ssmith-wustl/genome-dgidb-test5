@@ -1,5 +1,4 @@
-
-package Genome::Model::Command::Report::MutationDiagram;
+package Genome::Model::ReferenceAlignment::Report::MutationDiagram;
 
 use strict;
 use warnings;
@@ -7,8 +6,7 @@ use warnings;
 use Genome;
 use MG::MutationDiagram;
 
-class Genome::Model::Command::Report::MutationDiagram {
-    class_name => __PACKAGE__,
+class Genome::Model::ReferenceAlignment::Report::MutationDiagram {
     is => 'Command',
     has => [
         maf     => { type => 'String',  doc => "MAF file"},
@@ -50,3 +48,5 @@ sub execute {
 
 1;
 
+#$HeadURL$
+#$Id$

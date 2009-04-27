@@ -1,4 +1,4 @@
-package Genome::Model::Command::Report::MetricSummary;
+package Genome::Model::ReferenceAlignment::Report::MetricSummary;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use Data::Dumper;
 use IO::File;
 
-class Genome::Model::Command::Report::MetricSummary {
+class Genome::Model::ReferenceAlignment::Report::MetricSummary { 
     is => 'Genome::Model::Command',
     has => [ 
         exclude_chromosomes => {
@@ -61,5 +61,5 @@ sub execute {
 
 1;
 
-#$HeadURL: /gscpan/perl_modules/trunk/Genome/Model/Command/List/Events.pm $
-#$Id: /gscpan/perl_modules/trunk/Genome/Model/Command/List/Events.pm 36295 2008-07-07T20:18:56.305844Z ebelter  $
+#$HeadURL$
+#$Id$

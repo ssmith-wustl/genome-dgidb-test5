@@ -1,4 +1,4 @@
-package Genome::Model::Command::Report::MetricsBatchToLsf;
+package Genome::Model::ReferenceAlignment::Report::MetricsBatchToLsf;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Command;
 use PP::LSF;
 use File::Basename;
 
-class Genome::Model::Command::Report::MetricsBatchToLsf 
+class Genome::Model::ReferenceAlignment::Report::MetricsBatchToLsf 
 {
     is => 'Command',                       
     has => 
@@ -67,6 +67,11 @@ sub help_detail {
     return <<"EOS"
     For a given variant file, this module will split it up into files containing 10000 variants.  Then for each of these split files, a job will be spawned and monitored that will run Genome::Model::Command::Report::Variation.  When the jobs are completed, the resulting report files will be combined into one report.  If requested the output and error logs from lsf can also be combined.
 EOS
+}
+
+sub create {
+    use Carp;
+    confess "Moved this module from G:M:C:Report to G:M:RefAlign:Report and needs to be updated";
 }
 
 sub execute {
@@ -436,5 +441,5 @@ B<Eddie Belter> I<ebelter@watson.wustl.edu>
 
 =cut
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Command/Report/VariationsBatchToLsf.pm $
-#$Id: VariationsBatchToLsf.pm 35950 2008-06-26 15:54:24Z ebelter $
+#$HeadURL$
+#$Id$
