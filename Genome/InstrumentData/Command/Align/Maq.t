@@ -10,7 +10,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 14;
+        plan tests => 19;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -120,11 +120,30 @@ $alignment = Genome::InstrumentData::Alignment->create(
                                                    );
 
 # once to make new data
-ok($alignment->find_or_generate_alignment_data,'generated new alignment data');
+ok($alignment->find_or_generate_alignment_data,'generated new alignment data for paired end data');
 my $dir2 = $alignment->alignment_directory;
 ok($dir2, "alignments found/generated");
 ok(-d $dir2, "result is a real directory");
 ok($alignment->remove_alignment_directory,'removed alignment directory '. $dir2);
 ok(! -e $dir2, 'alignment directory does not exist');
+
+
+#Run paired end as fragment
+$tmp_allocation->allocation_path('alignment_data/maq0_6_8/refseq-for-test/test_run_name/fragment/4_-123458');
+$tmp_dir = File::Temp::tempdir('Align-Maq-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+$instrument_data->set_list('fastq_filenames',$fastq_files[0]);
+$alignment = Genome::InstrumentData::Alignment->create(
+                                                       instrument_data_id => $instrument_data->id,
+                                                       aligner_name => 'maq',
+                                                       aligner_version => '0.6.8',
+                                                       reference_name => 'refseq-for-test',
+                                                       force_fragment => 1,
+                                                   );
+ok($alignment->find_or_generate_alignment_data,'generated new alignment data for paired end data as fragment alignment');
+my $dir3 = $alignment->alignment_directory;
+ok($dir3, "alignments found/generated");
+ok(-d $dir3, "result is a real directory");
+ok($alignment->remove_alignment_directory,'removed alignment directory '. $dir3);
+ok(! -e $dir3, 'alignment directory does not exist');
 
 exit;

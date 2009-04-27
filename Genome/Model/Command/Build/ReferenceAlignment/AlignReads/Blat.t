@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More;
+use Test::More skip_all => "Please move to Genome::InstrumentData::Command::Align::Blat";
 
 BEGIN {
     my $archos = `uname -a`;

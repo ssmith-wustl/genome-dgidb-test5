@@ -39,15 +39,44 @@ class Genome::InstrumentData::Alignment {
                                 doc => 'the reference to use by EXACT name, defaults to NCBI-human-build36',
                                 default_value => 'NCBI-human-build36'
                             },
+         alignment_directory => {
+                                 is => 'Text',
+                                 doc => 'A directory to output aligment data. NOTE: this bypasses the disk allocation system',
+                             },
+         force_fragment     => {
+                                is => 'Boolean',
+                                default_value => 0,
+                            },
+         _fragment_seq_id => { is => 'Number' },
     ],
 
 };
 
 sub create {
     my $class = shift;
+
     my $self = $class->SUPER::create(@_);
     return unless $self;
-    
+
+    if ($self->instrument_data) {
+        if ($self->force_fragment) {
+            $self->_fragment_seq_id($self->instrument_data_id);
+        }
+    } else {
+        unless ($self->force_fragment) {
+            $self->error_message('No instrument data found for instrument data id '. $self->instrument_data_id);
+            return;
+        }
+        my $reverse_instrument_data = Genome::InstrumentData::Solexa->get(fwd_seq_id => $self->instrument_data_id);
+        unless ($reverse_instrument_data) {
+            $self->error_message('Failed to find reverse instrument data by forward id: '. $self->instrument_data_id);
+            return;
+        }
+        $self->_fragment_seq_id($self->instrument_data_id);
+        $self->instrument_data_id($reverse_instrument_data->id);
+    }
+
+
     unless ($self->reference_build) {
         unless ($self->reference_name) {
             $self->error_message('No way to resolve reference build without reference_name or refrence_build');
@@ -62,6 +91,17 @@ sub create {
         }
         $self->reference_build($ref_build);
     }
+
+    unless ($self->alignment_directory) {
+        $self->resolve_alignment_directory;
+    }
+    unless (-d $self->alignment_directory) {
+        unless ($self->create_directory($self->alignment_directory)) {
+            $self->error_message('Failed to create alignment directory '. $self->alignment_directory .":  $!");
+            die($self->error_message);
+        }
+    }
+
     return $self;
 }
 
@@ -131,6 +171,14 @@ sub resolve_alignment_subdirectory {
                        $instrument_data->subset_name,
                        $instrument_data->id
                    );
+    } elsif ($self->force_fragment) {
+        return sprintf('alignment_data/%s/%s/%s/fragment/%s_%s',
+                       $self->aligner_label,
+                       $reference_sequence_name,
+                       $instrument_data->run_name,
+                       $instrument_data->subset_name,
+                       $self->_fragment_seq_id,
+                   );
     } else {
         unless ($instrument_data->run_name) {
             die ($instrument_data->class .'('. $instrument_data->id .') is missing the run_name!');
@@ -150,7 +198,7 @@ sub aligner_label {
 
     my $aligner_name    = $self->aligner_name;
     my $aligner_version = $self->aligner_version;
-    my $aligner_params = $self->aligner_params;
+    my $aligner_params  = $self->aligner_params;
 
     return $aligner_name unless $aligner_version;
 
@@ -167,33 +215,18 @@ sub aligner_label {
 }
 
 
-sub get_or_create_alignment_directory {
+sub resolve_alignment_directory {
     my $self = shift;
 
-    my $dir = $self->alignment_directory;
-    unless ($dir) {
+    unless ($self->alignment_directory) {
         my $allocation = $self->get_or_create_allocation;
         unless ($allocation) {
             $self->error_message('Failed to get or create alignment allocation.');
             die($self->error_message);
         }
-        $dir = $self->alignment_directory;
-        unless ($dir) {
-            $self->error_message('Failed to get or create an alignment directory.');
-            die($self->error_message);
-        }
+        $self->alignment_directory($allocation->absolute_path);
     }
-    return $dir;
-}
-
-sub alignment_directory {
-    my $self = shift;
-
-    my $allocation = $self->get_allocation;
-    unless ($allocation) {
-        return;
-    }
-    return $allocation->absolute_path;
+    return $self->alignment_directory;
 }
 
 sub remove_alignment_directory {
@@ -228,17 +261,18 @@ sub find_or_generate_alignment_data {
         }
         my $aligner_ext = ucfirst($aligner_name);
         my $cmd = "Genome::InstrumentData::Command::Align::$aligner_ext";
-	
+
 	my %create_params = (
-		reference_build => $self->reference_build,
-		instrument_data => $self->instrument_data,
-	);	        
+                             reference_build => $self->reference_build,
+                             instrument_data => $self->instrument_data,
+                             force_fragment  => $self->force_fragment,
+	);
 	if ($self->aligner_version) {
 		$create_params{'version'} = $self->aligner_version;
 	}
 	if ($self->aligner_params) {
 		$create_params{'params'} = $self->aligner_params;
-	}		
+	}
 	my $align_cmd = $cmd->create(%create_params);
         $align_cmd->dump_status_messages($self->message_object('status'));
         unless ($align_cmd) {
@@ -259,13 +293,17 @@ sub find_or_generate_alignment_data {
     return 1;
 }
 
-#TODO: remove the "existing" from this method name
 sub verify_alignment_data {
     my $self = shift;
 
     my $alignment_dir = $self->alignment_directory;
     return unless $alignment_dir;
     return unless -d $alignment_dir;
+
+    unless ($self->output_files) {
+        $self->status_message('No output files found in alignment directory: '. $alignment_dir);
+        return;
+    }
 
     my $reference_build = $self->reference_build;
     my @subsequence_names = grep { $_ ne 'all_sequences' } $reference_build->subreference_names(reference_extension => 'bfa');
@@ -304,10 +342,10 @@ sub verify_alignment_data {
         }
     }
     if ($errors) {
-        my @alignment_files = $self->alignment_file_paths;
-        if (@alignment_files) {
-            my $msg = 'REFUSING TO CONTINUE with partial map files in place in old directory:' ."\n";
-            $msg .= join("\n",@alignment_files) ."\n";
+        my @output_files = $self->output_files;
+        if (@output_files) {
+            my $msg = 'REFUSING TO CONTINUE with files in place in alignment directory:' ."\n";
+            $msg .= join("\n",@output_files) ."\n";
             die($msg);
         }
         return;
@@ -316,11 +354,21 @@ sub verify_alignment_data {
     return 1;
 }
 
+sub output_files {
+    my $self = shift;
+    my @output_files;
+    for my $method ('alignment_file_paths', 'aligner_output_file_paths','unaligned_reads_list_paths','unaligned_reads_fastq_paths') {
+        push @output_files, $self->$method;
+    }
+    return @output_files;
+}
+
 
 #####ALIGNMENTS#####
 #a glob for all alignment files
 sub alignment_file_paths {
     my $self = shift;
+    return unless $self->alignment_directory;
     return unless -d $self->alignment_directory;
     return grep { -e $_ && $_ !~ /aligner_output/ }
             glob($self->alignment_directory .'/*.map*');
@@ -334,6 +382,7 @@ sub alignment_file_paths_for_subsequence_name {
         $self->error_message('No subsequence_name passed to method alignment_file_paths_for_subsequence_name.');
         return;
     }
+    return unless $self->alignment_directory;
     return unless -d $self->alignment_directory;
     my @files = grep { -e $_ && $_ !~ /aligner_output/ }
             glob($self->alignment_directory ."/${subsequence_name}.map*");
@@ -351,6 +400,7 @@ sub alignment_file_paths_for_subsequence_name {
 #a glob for existing aligner output files
 sub aligner_output_file_paths {
     my $self=shift;
+    return unless $self->alignment_directory;
     return unless -d $self->alignment_directory;
     return grep { -e $_ } glob($self->alignment_directory .'/*.map.aligner_output*');
 }
@@ -374,6 +424,7 @@ sub aligner_output_file_name {
 sub unaligned_reads_list_paths {
     my $self = shift;
     my $subset_name = $self->instrument_data->subset_name;
+    return unless $self->alignment_directory;
     return unless -d $self->alignment_directory;
     return grep { -e $_ } grep { $_ !~ /\.fastq$/ } glob($self->alignment_directory .'/*'.
                                                          $subset_name .'_sequence.unaligned*');
@@ -396,6 +447,7 @@ sub unaligned_reads_list_file_name {
 sub unaligned_reads_fastq_paths  {
     my $self=shift;
     my $subset_name = $self->instrument_data->subset_name;
+    return unless $self->alignment_directory;
     return unless -d $self->alignment_directory;
     return grep { -e $_ } glob($self->alignment_directory .'/*'.
                                $subset_name .'_sequence.unaligned*.fastq');
@@ -434,9 +486,16 @@ sub verify_aligner_successful_completion {
         unless ($stats) {
             return;
         }
-        if ($$stats{'isPE'} != 1) {
-            $self->error_message('Paired-end instrument data '. $instrument_data->id .' was not aligned as paired end data according to aligner output '. $aligner_output_file);
-            return;
+        if ($self->force_fragment) {
+            if ($$stats{'isPE'} != 0) {
+                $self->error_message('Paired-end instrument data '. $instrument_data->id .' was not aligned as fragment data according to aligner output '. $aligner_output_file);
+                return;
+            }
+        }  else {
+            if ($$stats{'isPE'} != 1) {
+                $self->error_message('Paired-end instrument data '. $instrument_data->id .' was not aligned as paired end data according to aligner output '. $aligner_output_file);
+                return;
+            }
         }
     }
     while(<$aligner_output_fh>) {
@@ -543,7 +602,15 @@ sub sanger_fastq_filenames {
             }
         }
     } else {
-        my @illumina_fastq_pathnames = $instrument_data->fastq_filenames;
+        my %params;
+        if ($self->force_fragment) {
+            if ($self->instrument_data_id eq $self->_fragment_seq_id) {
+                $params{paired_end_as_fragment} = 2;
+            } else {
+                $params{paired_end_as_fragment} = 1;
+            }
+        }
+        my @illumina_fastq_pathnames = $instrument_data->fastq_filenames(%params);
         my $counter = 0;
         for my $illumina_fastq_pathname (@illumina_fastq_pathnames) {
             my $sanger_fastq_pathname = $self->create_temp_file_path('sanger-fastq-'. $counter++);

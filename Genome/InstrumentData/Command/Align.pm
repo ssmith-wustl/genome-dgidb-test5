@@ -38,6 +38,10 @@ class Genome::InstrumentData::Command::Align {
                                             is => 'Text', default_value => '', 
                                             doc => 'any additional params for the aligner in a single string'
                                         },
+        force_fragment                  => {
+                                            is => 'Boolean', default_value => 0,
+                                            doc => 'force paired end instrument data to align as fragment',
+                                        }
     ],
     has_optional_output => [
         _alignment                      => { is => 'Genome::InstrumentData::Alignment' },
@@ -90,6 +94,7 @@ sub create {
                                                                   aligner_name => $self->aligner_name,
                                                                   aligner_version => $self->version,
                                                                   aligner_params => $self->params,
+                                                                  force_fragment => $self->force_fragment,
                                                               );
         $self->_alignment($alignment);
     }
@@ -104,58 +109,31 @@ sub execute {
     my $reference_build = $alignment->reference_build;
 
     my $alignment_directory = $alignment->alignment_directory;
-    my $lock;
-    my $resource_lock_name;
-    if ($alignment_directory) {
-        if (-d $alignment_directory) {
-            $resource_lock_name = $alignment_directory . '.generate';
-            $lock = $self->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
-            unless ($lock) {
-                $self->status_message("This data set is still being processed by its creator.  Waiting for existing data lock...");
-                $lock = $self->lock_resource(resource_lock => $resource_lock_name);
-                unless ($lock) {
-                    $self->error_message("Failed to get existing data lock!");
-                    return;
-                }
-            }
-            if ($alignment->verify_alignment_data) {
-                $self->status_message("Existing alignment data is available and deemed correct.");
-                $self->unlock_resource(resource_lock => $lock);
-                return 1;
-            }
-        } else {
-            $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
-        }
-    } else {
-        $alignment_directory = $alignment->get_or_create_alignment_directory;
-    }
-    # check the status of this data set
-    # be sure the check is atomic...
-    $resource_lock_name = $alignment_directory . '.generate';
+    my $resource_lock_name = $alignment_directory . '.generate';
+    my $lock = $self->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
     unless ($lock) {
-        $lock = $self->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
+        $self->status_message("This data set is still being processed by its creator.  Waiting for existing data lock...");
+        $lock = $self->lock_resource(resource_lock => $resource_lock_name);
         unless ($lock) {
-            $self->status_message("This data set is still being processed by its creator.  Waiting for lock...");
-            $lock = $self->lock_resource(resource_lock => $resource_lock_name);
-            unless ($lock) {
-                $self->error_message("Failed to get lock!");
-                return;
-            }
+            $self->error_message("Failed to get existing data lock!");
+            return;
         }
+    }
+    if ($alignment->verify_alignment_data) {
+        $self->status_message("Existing alignment data is available and deemed correct.");
+        $self->unlock_resource(resource_lock => $lock);
+        return 1;
+    } else {
+        $self->status_message("No alignment files found...beginning processing and setting marker to prevent simultaneous processing.");
     }
     $self->status_message("OUTPUT PATH: $alignment_directory\n");
+
     # do this in an eval block so we can unlock the resource cleanly when we finish
     eval {
-
-        # the base directory for results
-        unless ($self->create_directory($alignment_directory)) {
-            die('Failed to create directory '. $alignment_directory);
-        }
-
         # TODO: move onto the instrument data itself as a method
         my $is_paired_end;
         my $upper_bound_on_insert_size;
-        if ($instrument_data->is_paired_end) {
+        if ($instrument_data->is_paired_end && !$self->force_fragment) {
             my $sd_above = $instrument_data->sd_above_insert_size;
             my $median_insert = $instrument_data->median_insert_size;
             $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;

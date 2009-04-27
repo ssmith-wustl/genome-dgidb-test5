@@ -227,7 +227,7 @@ sub process_low_quality_alignments {
         return 1;
     }
     elsif (-s $unaligned_reads_file) {
-        if ($self->_alignment->instrument_data->is_paired_end) {
+        if ($self->_alignment->instrument_data->is_paired_end && !$self->force_fragment) {
             $result = Genome::Model::Tools::Maq::UnalignedDataToFastq->execute(
                 in => $unaligned_reads_file, 
                 fastq => $unaligned_reads_file . '.1.fastq',
@@ -244,7 +244,7 @@ sub process_low_quality_alignments {
     }
     else {
         foreach my $unaligned_reads_files_entry (@unaligned_reads_files){
-            if ($self->_alignment->instrument_data->is_paired_end) {
+            if ($self->_alignment->instrument_data->is_paired_end && !$self->force_fragment) {
                 $result = Genome::Model::Tools::Maq::UnalignedDataToFastq->execute(
                     in => $unaligned_reads_files_entry, 
                     fastq => $unaligned_reads_files_entry . '.1.fastq',

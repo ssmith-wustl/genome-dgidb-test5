@@ -305,6 +305,11 @@ sub maplist_file_paths {
     return @map_lists;
 }
 
+sub duplicates_map_file {
+    my $self = shift;
+    return $self->accumulated_alignments_directory .'/all_sequences.duplicates.map';
+}
+
 
 sub accumulate_maps {
     my $self=shift;

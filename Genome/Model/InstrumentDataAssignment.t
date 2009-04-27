@@ -5,7 +5,7 @@ use warnings;
 
 use above "Genome";
 
-use Test::More tests => 28;
+use Test::More tests => 26;
 
 BEGIN {
     use_ok('Genome::Model::InstrumentDataAssignment');
@@ -102,9 +102,6 @@ my $new_instrument_data = Genome::Model::InstrumentDataAssignment->create(
                                               );
 isa_ok($new_instrument_data,'Genome::Model::InstrumentDataAssignment');
 
-my $alignment = $new_instrument_data->alignment;
-isa_ok($alignment,'Genome::InstrumentData::Alignment');
-is($new_instrument_data->alignment_directory,undef,'instrument_data alignment_directory is not define');
 
 ###############################
 # Test methods that use indirect accessor on the run chunk object to calculate return values

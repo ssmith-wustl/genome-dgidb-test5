@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 67;
+use Test::More tests => 71;
 
 use above 'Genome';
 
@@ -45,23 +45,22 @@ isa_ok($alignment->reference_build,'Genome::Model::Build::ReferencePlaceholder')
 my $aligner_label = $alignment->aligner_label;
 is($aligner_label,'maq0_7_1/35ac500a3003311e8a326ac6ef15d57a','got expected aligner label');
 
-
 my $alignment_path = $alignment->resolve_alignment_subdirectory();
 my $expected_alignment_subdirectory = "alignment_data/$aligner_label/$test_reference_name/$run_name/${subset_name}_$instrument_data_id";
 is($alignment_path,$expected_alignment_subdirectory,'got expected alignment subdirectory');
 
 my $alignment_allocation = $alignment->get_allocation();
-ok(!$alignment_allocation,'no disk allocation for alignment directory');
-
-my $alignment_directory = $alignment->alignment_directory();
-is($alignment_directory,undef, 'got undef alignment directory');
+ok(!$alignment_allocation,'no disk allocation for alignment directory since ');
 
 $alignment_allocation = $alignment->get_or_create_allocation();
 isa_ok($alignment_allocation,'Genome::Disk::Allocation');
 $mock_instrument_data->set_list('allocations',$alignment_allocation);
 
-$alignment_directory = $alignment->get_or_create_alignment_directory();
-is($alignment_directory,$alignment_allocation->absolute_path, 'found absolute path to alignment directory');
+my $resolved_alignment_directory = $alignment->resolve_alignment_directory();
+is($resolved_alignment_directory,$alignment_allocation->absolute_path, 'found absolute path to alignment directory');
+
+my $alignment_directory = $alignment->alignment_directory();
+is($alignment_directory,$resolved_alignment_directory, 'got alignment directory');
 
 ###############################
 #Test file accessors before creating directory
@@ -102,6 +101,8 @@ my $real_alignment = Genome::InstrumentData::Alignment->create(
                                                                reference_name => 'NCBI-human-build36',
                                                            );
 
+my $real_alignment_directory = $real_alignment->resolve_alignment_directory;
+is($real_alignment_directory,'/gscmnt/sata363/info/medseq/alignment_data/maq0_6_8/NCBI-human-build36/080428_HWI-EAS292_0039_3035U/8_2499312867','got expected alignment directory');
 
 ok(my @alignment_file_paths = $real_alignment->alignment_file_paths, "Got the alignment_file_paths");
 for my $file_path (@alignment_file_paths) {
@@ -144,3 +145,31 @@ for my $aligner_output_file (@aligner_output_file_paths) {
     ok($alignment_statistics->{paired}, "alignment statistics has a paired");
     ok($real_alignment->verify_aligner_successful_completion($aligner_output_file),'verify aligner successful completion of');
 }
+
+
+###### TEST A PAIRED END READ 1 ########
+my $pe2_instrument_data = $real_alignment->instrument_data;
+my $pe1_seq_id = $pe2_instrument_data->fwd_seq_id;
+
+my $pe1_alignment = Genome::InstrumentData::Alignment->create(
+                                                              instrument_data_id => $pe1_seq_id,
+                                                              aligner_name => 'maq',
+                                                              aligner_version => '0.6.8',
+                                                              reference_name => 'NCBI-human-build36',
+                                                          );
+ok(!$pe1_alignment,'Can not create an alignment for paired end read 1 in paired end alignment mode');
+
+my $ff_alignment = Genome::InstrumentData::Alignment->create(
+                                                              instrument_data_id => $pe1_seq_id,
+                                                              aligner_name => 'maq',
+                                                              aligner_version => '0.6.8',
+                                                              reference_name => 'NCBI-human-build36',
+                                                              force_fragment => 1,
+                                                          );
+isa_ok($ff_alignment,'Genome::InstrumentData::Alignment');
+is(scalar($ff_alignment->sanger_fastq_filenames),1,'only found one fastq for paired-end instrument data run as fragment alignment');
+
+
+
+exit;
+

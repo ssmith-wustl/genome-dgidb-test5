@@ -11,28 +11,36 @@ class Genome::InstrumentData::Solexa {
     is => ['Genome::InstrumentData', 'Genome::Utility::FileSystem'],
     table_name => <<EOS
         (
-            select to_char(seq_id) id, 
-                seq_id genome_model_run_id, 
-                lane limit_regions,
-                research_project project_name,                
-                flow_cell_id, 
-                lane,
-                unique_reads_across_library,
-                duplicate_reads_across_library,
-                read_length,
-                run_type,
-                gerald_directory,
-                median_insert_size,
-                sd_above_insert_size,
-                is_external,
-                FILT_CLUSTERS,
-                analysis_software_version,
-                sample.dna_id sample_id,
-                library.dna_id library_id 
-            from solexa_lane_summary\@dw s
-            left join dna\@oltp sample on sample.dna_name = s.sample_name
-            left join dna\@oltp library on library.dna_name = s.library_name
-        ) 
+       select to_char(s_rev.seq_id) id,
+       s_rev.seq_id rev_seq_id,
+       s_fwd.seq_id fwd_seq_id,
+       s_rev.research_project project_name,
+       s_rev.flow_cell_id,
+       s_rev.lane,
+       s_rev.read_length,
+       (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.read_length else null end) fwd_read_length,
+       (case when s_rev.run_type = 'Paired End Read 2' then s_rev.read_length else null end) rev_read_length,
+       (case when s_rev.run_type = 'Paired End Read 2' then 'Paired' else 'Standard' end) run_type,
+       (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.run_type else null end) fwd_run_type,
+       (case when s_rev.run_type = 'Paired End Read 2' then s_rev.run_type else null end) rev_run_type,
+       s_rev.gerald_directory,
+       s_rev.median_insert_size,
+       s_rev.sd_above_insert_size,
+       s_rev.is_external,
+       (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.FILT_CLUSTERS else null end) fwd_filt_clusters,
+       (case when s_rev.run_type = 'Paired End Read 2' then s_rev.FILT_CLUSTERS else null end) rev_filt_clusters,
+       /** s_rev.FILT_CLUSTERS is still the expected value for fragment reads **/
+       (nvl(s_fwd.FILT_CLUSTERS,0) + s_rev.FILT_CLUSTERS) filt_clusters,
+       s_rev.analysis_software_version,
+       s_rev.sample_id,
+       library.dna_id library_id,
+      s_rev.run_name
+from solexa_lane_summary\@dw s_rev
+left join dna\@oltp library on library.dna_name = s_rev.library_name
+left join solexa_lane_summary\@dw s_fwd on s_fwd.sral_id = s_rev.sral_id
+	and s_fwd.run_type = 'Paired End Read 1'
+where s_rev.run_type in ('Standard','Paired End Read 2')
+        )
         solexa_detail
 EOS
     ,
@@ -40,16 +48,21 @@ EOS
         flow_cell_id                    => { }, # = short name
         lane                            => { }, # = subset_name
         read_length                     => { },
-        unique_reads_across_library     => { },
-        duplicate_reads_across_library  => { },
+        fwd_read_length                 => { },
+        rev_read_length                 => { },
         run_type                        => { },
+        fwd_run_type                    => { },
+        rev_run_type                    => { },
         gerald_directory                => { },
         median_insert_size              => { },
         sd_above_insert_size            => { },
         is_external                     => { },
         analysis_software_version       => { },             
         clusters                        => { column_name => 'FILT_CLUSTERS' },
-        
+        fwd_clusters                    => { column_name => 'fwd_filt_clusters' },
+        rev_clusters                    => { column_name => 'rev_filt_clusters' },
+        fwd_seq_id                      => { },
+        rev_seq_id                      => { },
         short_name => {
             doc => 'The essential portion of the run name which identifies the run.  The rest is redundent information about the instrument, date, etc.',
             is => 'Text', 
@@ -59,8 +72,8 @@ EOS
 
         is_paired_end                   => {
                                             calculate_from => ['run_type'],
-                                            calculate => q| if (defined($run_type) and $run_type =~ m/Paired End Read (\d)/) {
-                                                                return $1;
+                                            calculate => q| if (defined($run_type) and $run_type =~ m/^Paired$/) {
+                                                                return 1;
                                                              }
                                                              else {
                                                                  return 0;
@@ -78,9 +91,7 @@ EOS
             calculate_from => ['id']
         },
 
-        # deprecated, compatible with Genome::RunChunk::Solexa
-        genome_model_run_id => {},
-        limit_regions       => {},
+
 
         # basic relationship to the "source" of the lane
         library         => { is => 'Genome::Library', id_by => ['library_id'] },
@@ -164,9 +175,9 @@ sub fastq_filenames {
     my $self = shift;
     my @fastqs;
     if ($self->is_external) {
-        @fastqs = $self->resolve_external_fastq_filenames;
+        @fastqs = $self->resolve_external_fastq_filenames(@_);
     } else {
-        @fastqs = $self->resolve_fastq_filenames;
+        @fastqs = $self->resolve_fastq_filenames(@_);
     }
     return @fastqs;
 }
@@ -178,11 +189,16 @@ sub desc {
 
 sub resolve_fastq_filenames {
     my $self = shift;
+    my %params = @_;
+
+
+    my $paired_end_as_fragment = delete $params{'paired_end_as_fragment'};
 
     my $fastq_directory;
     eval {
         $fastq_directory = $self->dump_illumina_fastq_archive;
     };
+
     my $lane = $self->subset_name;
 
     my @illumina_output_paths;
@@ -198,19 +214,23 @@ sub resolve_fastq_filenames {
             }
             # handle fragment or paired-end data
             if ($self->is_paired_end) {
-                if (-e "$directory/s_${lane}_1_sequence.txt") {
-                    push @illumina_output_paths, "$directory/s_${lane}_1_sequence.txt";
-                } elsif (-e "$directory/Temp/s_${lane}_1_sequence.txt") {
-                    push @illumina_output_paths, "$directory/Temp/s_${lane}_1_sequence.txt";
-                } else {
-                    die "No illumina forward data in directory for lane $lane! $directory";
+                if (!$paired_end_as_fragment || $paired_end_as_fragment == 1) {
+                    if (-e "$directory/s_${lane}_1_sequence.txt") {
+                        push @illumina_output_paths, "$directory/s_${lane}_1_sequence.txt";
+                    } elsif (-e "$directory/Temp/s_${lane}_1_sequence.txt") {
+                        push @illumina_output_paths, "$directory/Temp/s_${lane}_1_sequence.txt";
+                    } else {
+                        die "No illumina forward data in directory for lane $lane! $directory";
+                    }
                 }
-                if (-e "$directory/s_${lane}_2_sequence.txt") {
-                    push @illumina_output_paths, "$directory/s_${lane}_2_sequence.txt";
-                } elsif (-e "$directory/Temp/s_${lane}_2_sequence.txt") {
-                    push @illumina_output_paths, "$directory/Temp/s_${lane}_2_sequence.txt";
-                } else {
-                    die "No illumina reverse data in directory for lane $lane! $directory";
+                if (!$paired_end_as_fragment || $paired_end_as_fragment == 2) {
+                    if (-e "$directory/s_${lane}_2_sequence.txt") {
+                        push @illumina_output_paths, "$directory/s_${lane}_2_sequence.txt";
+                    } elsif (-e "$directory/Temp/s_${lane}_2_sequence.txt") {
+                        push @illumina_output_paths, "$directory/Temp/s_${lane}_2_sequence.txt";
+                    } else {
+                        die "No illumina reverse data in directory for lane $lane! $directory";
+                    }
                 }
             } else {
                 if (-e "$directory/s_${lane}_sequence.txt") {
