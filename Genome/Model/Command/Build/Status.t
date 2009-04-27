@@ -13,9 +13,9 @@ my $build_id = '96791303';
 my $build_status = Genome::Model::Command::Build::Status->create(build_id=>$build_id);
 ok($build_status);
 my $rv = $build_status->execute;
-print "\n\n";
-print $rv;
-print "\n\n";
+#print "\n\n";
+#print $rv;
+#print "\n\n";
 my $length_test = 0;
 if (length($rv) > 7000 ) {
     $length_test = 1 ;
