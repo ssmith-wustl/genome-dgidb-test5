@@ -89,7 +89,7 @@ sub make_real_rmdupped_map_file {
     return $final_file;
 }
 
-sub mapsplit{
+sub mapsplit {
     my $self=shift;
 
     my $map_file=shift;
@@ -118,18 +118,20 @@ sub mapsplit{
 
     #TODO need the get_subreferenc_names parameter...
     #this is handled by the calling object:  my @subsequences = grep { $_ ne 'all_sequences' } $self->subreference_names;
-    my @subsequences = @{$self->subreference_names};
-    # break up the alignments by the sequence they match, if necessary
-    my $mapsplit_cmd_line = Genome::Model::Tools::Maq->path_for_mapsplit_version($self->aligner_version) . " $submap_directory $map_file " . join(',',@subsequences);
-    $self->status_message("Map split command: $mapsplit_cmd_line");
-    my $rv = system($mapsplit_cmd_line);
-    if ($rv) {
-        #arbitrary convention set up with homemade mapsplit and mapsplit_long..return 2 if file is empty.
-        if($rv/256 == 2) {
-            $self->status_message('Map split returned an empty file');
-        } else {
-            $self->error_message("Failed to run map split on map file $map_file");
-            die $self->error_message;
+    my @subsequences = grep { $_ ne 'all_sequences' } @{$self->subreference_names};
+    if (@subsequences) {
+        # break up the alignments by the sequence they match, if necessary
+        my $mapsplit_cmd_line = Genome::Model::Tools::Maq->path_for_mapsplit_version($self->aligner_version) . " $submap_directory $map_file " . join(',',@subsequences);
+        $self->status_message("Map split command: $mapsplit_cmd_line");
+        my $rv = system($mapsplit_cmd_line);
+        if ($rv) {
+            #arbitrary convention set up with homemade mapsplit and mapsplit_long..return 2 if file is empty.
+            if($rv/256 == 2) {
+                $self->status_message('Map split returned an empty file');
+            } else {
+                $self->error_message("Failed to run map split on map file $map_file");
+                die $self->error_message;
+            }
         }
     }
     return 1;
