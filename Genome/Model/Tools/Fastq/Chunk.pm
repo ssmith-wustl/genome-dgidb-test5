@@ -27,6 +27,11 @@ class Genome::Model::Tools::Fastq::Chunk {
             doc => 'print file path of fastq chunk file fof to std out',
             default => 0,
         },
+        fast_mode => {
+            is  => 'boolean',
+            doc => 'Avoid bio perl codes to speed up, useful for large dataset.',
+            default => 0,
+        },
     ],
 };
 
@@ -61,29 +66,49 @@ sub create {
     
 sub execute {
     my $self = shift;
+
+    my $chunk_dir      = $self->chunk_dir;
+    my @chunk_fq_files = ();
+    my $file_ct        = 0;
+
     $self->dump_status_messages($self->show_list);
 
-    my $in_io     = $self->get_fastq_reader($self->fastq_file);
-    my $chunk_dir = $self->chunk_dir;
+    if ($self->fast_mode) {
+        my $fq_fh = IO::File->new($self->fastq_file) or
+            ($self->error_message("Failed to open fastq file: ".$self->fastq_file) and return);
+        my @fq_lines = $fq_fh->getlines;
 
-    my $seq_ct  = 0;
-    my $file_ct = 0;
-
-    my ($out_io, $chunk_fq_file, @chunk_fq_files);
-    
-    while (my $seq = $in_io->next_seq) {
-        $seq_ct++;
-        
-        if ($seq_ct > $self->chunk_size || !defined $chunk_fq_file) {
-            $seq_ct = 1;
+        while (@fq_lines) {
             $file_ct++;
-            
-            $chunk_fq_file = $chunk_dir."/Chunk$file_ct.fastq";
-            $out_io = $self->get_fastq_writer($chunk_fq_file);
-            
+            my @chunk_fq_lines = splice(@fq_lines, 0, $self->chunk_size * 4);
+            my $chunk_fq_file  = $chunk_dir."/Chunk$file_ct.fastq";
+            my $out_fh = IO::File->new(">$chunk_fq_file") or
+                ($self->error_message("Failed to open chunk fastq file to write: $chunk_fq_file") and return);
+            map{$out_fh->print($_)}@chunk_fq_lines;
             push @chunk_fq_files, $chunk_fq_file;
+            $out_fh->close;
         }
-        $out_io->write_fastq($seq);
+    }
+    else {
+        my $seq_ct = 0;
+        my $in_io  = $self->get_fastq_reader($self->fastq_file);
+    
+        my ($out_io, $chunk_fq_file);
+    
+        while (my $seq = $in_io->next_seq) {
+            $seq_ct++;
+        
+            if ($seq_ct > $self->chunk_size || !defined $chunk_fq_file) {
+                $seq_ct = 1;
+                $file_ct++;
+            
+                $chunk_fq_file = $chunk_dir."/Chunk$file_ct.fastq";
+                $out_io = $self->get_fastq_writer($chunk_fq_file);
+            
+                push @chunk_fq_files, $chunk_fq_file;
+            }
+            $out_io->write_fastq($seq);
+        }
     }
     
     my $fof_file = $chunk_dir.'/chunk_fastq_file.fof';
