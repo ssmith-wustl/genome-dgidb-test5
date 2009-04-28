@@ -287,7 +287,7 @@ sub schedule {
     SKIP : {
         skip 'No reference sequence messages for 454', 1 if $model->sequencing_platform eq '454';
         is(scalar(grep { m/^Scheduling jobs for reference sequence .*/} @status_messages),
-           3, "Got 3 reference_sequence messages");
+           4, "Got 4 reference_sequence messages");
     }
     SKIP : {
         skip 'No merge alignments for Solexa', 1 if $model->sequencing_platform eq 'solexa';
@@ -312,7 +312,8 @@ sub schedule {
            $variation_granularity, "Got $variation_granularity AnnotateVariations messages");
     }
    # Not checking warning messages - for now, there are some relating to obsolete locking
-    is(scalar(@error_messages), 0, 'no errors');
+    my $expected_errors = $model->sequencing_platform eq 'solexa' && $model->dna_type eq 'genomic dna' ? 1 : 0;
+    is(scalar(@error_messages), $expected_errors, "found $expected_errors errors");
 
     $self->build($build);
 }
