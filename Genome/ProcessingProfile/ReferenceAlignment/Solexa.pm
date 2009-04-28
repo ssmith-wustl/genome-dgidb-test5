@@ -10,9 +10,9 @@ class Genome::ProcessingProfile::ReferenceAlignment::Solexa {
 };
 sub stages {
     my @stages = qw/
-
         alignment
         deduplication
+        reference_coverage
         variant_detection
         generate_reports
         verify_successful_completion
@@ -20,20 +20,23 @@ sub stages {
     return @stages;
 }
 
-    #Note: pulled these out of stages:
-
 sub alignment_job_classes {
-
     my @sub_command_classes= qw/
         Genome::Model::Command::Build::ReferenceAlignment::AlignReads
     /;
-
-    #my @sub_command_classes= qw/
-    #    Genome::Model::Command::Build::ReferenceAlignment::AssignRun
-    #    Genome::Model::Command::Build::ReferenceAlignment::AlignReads
-    #    Genome::Model::Command::Build::ReferenceAlignment::ProcessLowQualityAlignments
-    #/;
     return @sub_command_classes;
+}
+
+sub reference_coverage_job_classes {
+    my $self = shift;
+    if ($self->dna_type eq 'cdna' || $self->dna_type eq 'rna') {
+        my @steps = (
+                   'Genome::Model::Command::Build::ReferenceAlignment::Layers',
+                   'Genome::Model::Command::Build::ReferenceAlignment::RefCov',
+               );
+        return @steps;
+    }
+    return;
 }
 
 
@@ -74,39 +77,35 @@ sub alignment_objects {
     return $model->instrument_data;
 }
 
+sub reference_coverage_objects {
+    my $self = shift;
+    my $model = shift;
+    return 'all_sequences';
+}
+
+
 sub variant_detection_objects {
     my $self = shift;
     my $model = shift;
-    my @subreferences_names = grep {$_ eq "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
-
-    #Note: commented out for change in granularity from per chromosome to whole genome
-    #unless (@subreferences_names > 0) {
-    #    @subreferences_names = ('all_sequences');
-    #}
-    return @subreferences_names;
+    return 'all_sequences';
 }
 
 sub deduplication_objects {
     my $self = shift;
     my $model = shift;
-    my @subreferences_names = grep {$_ eq "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
-   
-   return @subreferences_names;
+    return 'all_sequences';
 }
 
 sub generate_reports_objects {
     my $self = shift;
     my $model = shift;
-    my @subreferences_names = grep {$_ eq "all_sequences" } $model->get_subreference_names(reference_extension=>'bfa');
-   
-   return @subreferences_names;
+    return 'all_sequences';
 }
 
 
 sub verify_successful_completion_objects {
     my $self = shift;
     return 1;
-    $self->model->current_running_build_id($self->id);
 }
 1;
 
