@@ -75,9 +75,6 @@ sub _calculate_total_reads_passed_quality_filter_count {
     do {
         no warnings;
 
-        if (defined $self->instrument_data_assignment->unique_reads_across_library && defined $self->instrument_data_assignment->duplicate_reads_across_library) {
-            $total_reads_passed_quality_filter_count = ($self->instrument_data_assignment->unique_reads_across_library + $self->instrument_data_assignment->duplicate_reads_across_library);
-        }
         unless ($total_reads_passed_quality_filter_count) {
             my @f = grep {-f $_ } $self->instrument_data->fastq_filenames;
             unless (@f) {
