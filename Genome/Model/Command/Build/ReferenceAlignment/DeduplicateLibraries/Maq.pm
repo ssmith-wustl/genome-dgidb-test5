@@ -69,8 +69,9 @@ sub execute {
         }
     }
 
-   my @idas = $self->model->instrument_data_assignments;
+    my @idas = $self->model->instrument_data_assignments;
     my %library_alignments;
+    my @all_alignments;
     my $count = 0;
     #accumulate the readsets per library
     for my $ida (@idas) {
@@ -81,8 +82,16 @@ sub execute {
         my @read_set_maps = $alignment->alignment_file_paths;
         #$self->status_message("library $library alignment file paths: \n".join("\n",@read_set_maps) ) if ($count eq 1);
         push @{$library_alignments{$library}}, @read_set_maps;
+        push @all_alignments, @read_set_maps;
     }
-
+    unless (Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::WholeMap->execute(
+                                                                                                       accumulated_alignments_dir => $maplist_dir,
+                                                                                                       alignments => \@all_alignments,
+                                                                                                       aligner_version => $self->model->read_aligner_version,
+                                                                                                   )) {
+        $self->error_message('Failed to create whole map file for cdna or rna');
+        return;
+    }
 
     $self->status_message("About to call Dedup. Input params are... \n");
     #$self->status_message("Libraries and readsets: \n");
@@ -94,9 +103,7 @@ sub execute {
         my %library_alignments_item = ( $library_key => \@read_set_list );  
         push @list_of_library_alignments, \%library_alignments_item; 
         $count = $count + 1;
-    }  
-
-    
+    }
     $self->status_message("Libraries added: ".$count ); 
 
     $self->status_message("Size of library alignments: ".@list_of_library_alignments ); 
@@ -233,19 +240,19 @@ sub execute {
 	   $self->status_message(">>> Removing intermediate files at $now");
 	   
 	   #remove the library bam files and indicies
-	  
-	   #remove maps 
-	   my $glob_expr = $maplist_dir."/*.map";
-	   my @lib_map_files = glob($glob_expr);
-	  
-	   for my $each_lib_map_file (@lib_map_files) {
-		my $rm_map_cmd = "unlink $each_lib_map_file";
-		$self->status_message("Executing remove command: $rm_map_cmd");
-		my $rm_map_rv = system("$rm_map_cmd");
-		unless ($rm_map_rv == 0) {
-			$self->error_message("There was a problem with the map remove command: $rm_map_rv");
-		} 
-	   } 
+	   #remove maps
+           if (@subsequences) {
+               my $glob_expr = $maplist_dir."/*.map";
+               my @lib_map_files = grep { $_ !~ /\/whole\.map/ } glob($glob_expr);
+               for my $each_lib_map_file (@lib_map_files) {
+                   my $rm_map_cmd = "unlink $each_lib_map_file";
+                   $self->status_message("Executing remove command: $rm_map_cmd");
+                   my $rm_map_rv = system("$rm_map_cmd");
+                   unless ($rm_map_rv == 0) {
+                       $self->error_message("There was a problem with the map remove command: $rm_map_rv");
+                   }
+               }
+           }
 	   
 	   #remove bam files 
 	   for my $each_bam_file (@bam_files) {
