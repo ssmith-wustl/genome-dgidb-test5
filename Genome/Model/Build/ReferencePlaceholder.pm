@@ -38,6 +38,7 @@ sub get {
 
 sub create {
     my $class = shift;
+
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
@@ -56,8 +57,9 @@ sub create {
     my $path = sprintf('%s/reference_sequences/%s','/gscmnt/839/info/medseq',$self->name);
     my $dna_type = $self->sample_type;
     $dna_type =~ tr/ /_/;
-    if (-d $path . '.' . $dna_type) {
-        $path .= '.' . $dna_type
+    my $dna_path = $path .'.'. $dna_type;
+    if (-d $dna_path || -l $dna_path) {
+        $path = $dna_path;
     }
     $self->data_directory($path);
 
