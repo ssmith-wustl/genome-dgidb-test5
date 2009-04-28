@@ -4,20 +4,19 @@ use strict;
 use warnings;
 
 use File::Path;
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 use above 'Genome';
 
 my $build_id = '96791303';
 
-my $build_status = Genome::Model::Command::Build::Status->create(build_id=>$build_id);
+my $build_status = Genome::Model::Command::Build::Status->create(build_id=>$build_id, display_output=>0);
 ok($build_status);
 my $rv = $build_status->execute;
-#print "\n\n";
-#print $rv;
-#print "\n\n";
+is($rv, 1, 'Testing for successful execution.  Expecting 1.  Got: $rv');
 my $length_test = 0;
-if (length($rv) > 7000 ) {
+my $xml = $build_status->xml();
+if (length($xml) > 7000 ) {
     $length_test = 1 ;
 } 
-is($length_test,1,'Testing success: Expecting a long XML string (>7000 chars). Got a string of length: '.length($rv));
+is($length_test,1,'Testing success: Expecting a long XML string (>7000 chars). Got a string of length: '.length($xml));
