@@ -49,9 +49,22 @@ sub execute {
         $self->error_message('Failed to run RefCov tool!');
         return;
     }
-    return 1;
+    return $self->verify_successful_completion;
 }
 
+sub verify_successful_completion {
+    my $self = shift;
+    my $build = $self->build;
+    unless (-d $build->reference_coverage_directory .'/FROZEN') {
+        $self->error_message('Failed to find frozen directory');
+        return;
+    }
+    unless (-e $build->reference_coverage_directory .'/STATS.tsv') {
+        $self->error_message('Failed to find stats file');
+        return;
+    }
+    return 1;
+}
 
 
 1;

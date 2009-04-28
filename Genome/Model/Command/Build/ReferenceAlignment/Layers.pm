@@ -40,14 +40,33 @@ sub execute {
         $self->error_message('Failed to create reference_coverage directory '. $build->reference_coverage_directory .":  $!");
         return;
     }
-    my $layers = Genome::Model::Tools::Maq::MapToLayers->execute(
-                                                                 use_version => $model->read_aligner_version,
-                                                                 map_file => $build->whole_map_file,
-                                                                 layers_file => $build->layers_file,
-                                                                 randomize => 1,
-                                                             );
-    unless ($layers) {
-        $self->error_message('Failed to run MapToLayers tool!');
+    unless (-s $build->layers_file) {
+        my $layers = Genome::Model::Tools::Maq::MapToLayers->execute(
+                                                                     use_version => $model->read_aligner_version,
+                                                                     map_file => $build->whole_map_file,
+                                                                     layers_file => $build->layers_file,
+                                                                     randomize => 1,
+                                                                 );
+        unless ($layers) {
+            $self->error_message('Failed to run MapToLayers tool!');
+            return;
+        }
+    }
+    return $self->verify_successful_completion;
+}
+
+sub verify_successful_completion {
+    my $self = shift;
+
+    my $build = $self->build;
+
+    unless (-d $build->reference_coverage_directory) {
+        $self->error_message('Failed to create reference coverage directory '. $build->reference_coverage_directory);
+        return;
+    }
+    unless (-s $build->layers_file > -s $build->whole_map_file) {
+        $self->error_message('The size of the layers file '. $build->layers_file
+                             .' is smaller than the compressed map file '. $build->whole_map_file);
         return;
     }
     return 1;
