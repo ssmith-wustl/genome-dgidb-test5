@@ -146,7 +146,6 @@ sub get_instrument_data_node {
     my $self = shift;
     my $object = shift; 
 
-    #print Dumper($object);
 
     my $id = $self->anode("instrument_data","id",$object->id);
     $id->addChild( $self->tnode("project_name",$object->project_name)); 
