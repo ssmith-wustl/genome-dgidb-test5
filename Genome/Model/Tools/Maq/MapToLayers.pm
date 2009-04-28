@@ -76,7 +76,7 @@ sub execute {
         my $start = $fields[2];
         my $length = $fields[13];
         my $seq = uc($fields[14]);
-        my $stop = ($start - $length) - 1;
+        my $stop = ($start + $length) - 1;
         print $layers_fh $read_name ."\t". $start ."\t". $stop ."\t". $ref_name ."\t". $seq ."\n";
     }
     $layers_fh->close;
