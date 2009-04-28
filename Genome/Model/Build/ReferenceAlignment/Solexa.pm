@@ -286,6 +286,28 @@ sub _files_for_pattern_and_optional_ref_seq_id {
     return @files;
 }
 
+sub whole_map_file {
+    my $self = shift;
+    return $self->accumulated_alignments_directory .'/whole.map';
+}
+
+sub reference_coverage_directory {
+    my $self = shift;
+    return $self->data_directory .'/reference_coverage';
+}
+
+sub layers_file {
+    my $self = shift;
+    return $self->reference_coverage_directory .'/whole.layers';
+}
+
+sub genes_file {
+    my $self = shift;
+
+    my $model = $self->model;
+    my $reference_build = $model->reference_build;
+    return $reference_build->data_directory .'/BACKBONE.tsv';
+}
 
 sub maplist_file_paths {
     my $self = shift;
