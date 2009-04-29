@@ -12,8 +12,8 @@ class Genome::InstrumentData::Solexa {
     table_name => <<EOS
         (
        select to_char(s_rev.seq_id) id,
-       s_rev.seq_id rev_seq_id,
-       s_fwd.seq_id fwd_seq_id,
+       (case when s_rev.run_type = 'Paired End Read 2' then s_rev.seq_id else null end) rev_seq_id,
+       (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.seq_id else null end) fwd_seq_id,
        s_rev.research_project project_name,
        s_rev.flow_cell_id,
        s_rev.lane,
