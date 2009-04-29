@@ -3,8 +3,8 @@
 use strict;
 use warnings;
 
-#use Test::More tests => 4;
-use Test::More skip_all => 'new and busted'; 
+use Test::More tests => 4;
+
 use File::Compare;
 
 use above 'Genome';
@@ -12,7 +12,7 @@ use above 'Genome';
 BEGIN {
         use_ok('Genome::Model::Tools::Fasta::GenerateBackbone');
 }
-my $file_name = 'BACKBONES_FIX.tsv';
+my $file_name = 'GENES.tsv';
 
 my $tmp_dir = File::Temp::tempdir('Genome-Model-Tools-Fasta-GenerateBackbone-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $backbone_file = $tmp_dir .'/'. $file_name;
