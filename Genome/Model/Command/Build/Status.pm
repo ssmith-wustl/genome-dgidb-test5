@@ -61,44 +61,39 @@ sub execute  {
         my %job_status_hash = $self->load_lsf_job_status();
         $self->_job_to_status(\%job_status_hash);
     }
-    #my %hash2 = %{$self->_job_to_status}; 
    
     #create the XML doc and add it to the object 
     my $doc = XML::LibXML->createDocument();
     $self->_doc($doc);
 
-    my $buildnode = $doc->createElement("build");
-
-    my $model = $self->build->model;
-
-    $buildnode->addChild( $doc->createAttribute("model-id",$model->id) );
-    $buildnode->addChild( $doc->createAttribute("build-id",$self->build_id) );
-    $buildnode->addChild( $doc->createAttribute("status",$self->build->build_status) );
+    #create the xml nodes and fill them up with data
+    #root node
+    my $build_status_node = $doc->createElement("build-status");
     my $time = UR::Time->now(); 
-    $buildnode->addChild( $doc->createAttribute("status-generated-at",$time) );
- 
+    $build_status_node->addChild( $doc->createAttribute("generated-at",$time) );
+  
+    #build node 
+    my $buildnode = $self->get_build_node;
+    $build_status_node->addChild($buildnode);
+   
+    #processing profile 
     $buildnode->addChild ( $self->get_processing_profile_node() );
     
     #TODO:  add method to build for logs, reports
-    $buildnode->addChild ( $self->tnode("logs","") );
-    $buildnode->addChild ( $self->tnode("reports","") );
- 
-    my $events_list = $doc->createElement("events");
-    my @events = $self->build->events;
+    #$buildnode->addChild ( $self->tnode("logs","") );
+    $buildnode->addChild ( $self->get_reports_node );
 
-    for my $event (@events) {
-        my $event_node = $self->get_event_node($event);
-        $events_list->addChild($event_node);
-    }
- 
-    $buildnode->addChild($events_list);
 
-    #print Dumper(@events);
+    #events
+    $buildnode->addChild($self->get_events_node);
 
-    $doc->setDocumentElement($buildnode); 
+    #set the build status node to be the root
+    $doc->setDocumentElement($build_status_node); 
 
+    #generate the XML string
     $self->_xml($doc->toString(1) );
 
+    #print to the screen if desired
     if ( $self->display_output ) {
         print $self->_xml;
     } 
@@ -109,6 +104,55 @@ sub execute  {
 sub xml {
     my $self = shift;
     return $self->_xml;
+}
+
+sub get_reports_node {
+    my $self = shift;
+
+    my $report_dir = $self->build->resolve_reports_directory;
+    my $reports_node = $self->anode("reports", "directory", $report_dir);
+    my @report_list = $self->build->reports;
+    for my $each_report (@report_list) {
+        my $report_node = $self->anode("report","name", $each_report->name );
+        $self->add_attribute($report_node, "subdirectory", $each_report->name_to_subdirectory($each_report->name) );
+        $reports_node->addChild($report_node); 
+    }
+
+    return $reports_node;
+ 
+
+}
+
+sub get_events_node {
+    my $self = shift;
+    my $doc = $self->_doc;
+
+    my $events_list = $doc->createElement("events");
+    my @events = $self->build->events;
+
+    for my $event (@events) {
+        my $event_node = $self->get_event_node($event);
+        $events_list->addChild($event_node);
+    }
+
+    return $events_list;
+
+}
+
+sub get_build_node {
+    my $self = shift;
+    my $doc = $self->_doc;
+    
+    my $buildnode = $doc->createElement("build");
+
+    my $model = $self->build->model;
+
+    $buildnode->addChild( $doc->createAttribute("model-id",$model->id) );
+    $buildnode->addChild( $doc->createAttribute("build-id",$self->build_id) );
+    $buildnode->addChild( $doc->createAttribute("status",$self->build->build_status) );
+    $buildnode->addChild( $doc->createAttribute("data-directory",$self->build->data_directory) );
+ 
+    return $buildnode; 
 }
 
 #Note:  Since the Web server cannot execute bjob commands, use the cron'd results from the tmp file
@@ -178,6 +222,7 @@ sub get_instrument_data_node {
     my $self = shift;
     my $object = shift; 
 
+    #print Dumper($object);
 
     my $id = $self->anode("instrument_data","id",$object->id);
     $id->addChild( $self->tnode("project_name",$object->project_name)); 
@@ -303,6 +348,18 @@ sub create_node_with_text {
 
 } 
 
+sub add_attribute {
+    my $self = shift;
+    my $node = shift;
+    my $attr_name = shift;
+    my $attr_value = shift;
+
+    my $doc = $self->_doc;
+
+    $node->addChild($doc->createAttribute($attr_name,$attr_value) );
+    return $node;
+
+}
 
 1;
 
