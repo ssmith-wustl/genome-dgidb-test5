@@ -191,24 +191,19 @@ sub _transcript_source_priority {
 sub _determine_transcripts_to_annotate {
     my ($self, $position) = @_;
 
-    my (@transcripts_priority_1, @transcripts_priority_2);
+    my @transcripts_priority_1;
     foreach my $transcript ( $self->transcript_window->scroll($position) )
     {
-        if ( grep { $transcript->transcript_status eq $_ } (qw/ known reviewed validated /) )
+        if ( $transcript->transcript_status ne 'unknown' and $transcript->source ne 'ccds' )
         {
-            push @transcripts_priority_1, $transcript;
-        }
-        elsif ( $transcript->transcript_status ne 'unknown' and $transcript->source ne 'ccds' )
-        {
-            push @transcripts_priority_2, $transcript;
+            # Do not annotate with transcripts that have non-contiguous sub structures
+            if ($transcript->substructures_are_contiguous) {
+                push @transcripts_priority_1, $transcript;
+            }
         }
     }
 
-    my @transcripts_to_evaluate = ( @transcripts_priority_1 )
-    ? @transcripts_priority_1
-    : ( @transcripts_priority_2 )
-    ? @transcripts_priority_2
-    : return;
+    return @transcripts_priority_1;
 }
 
 sub _transcript_annotation

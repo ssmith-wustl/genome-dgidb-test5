@@ -33,6 +33,11 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             default => 0,
             doc => 'Exclude headers in report output',
         },
+        extra_columns => {
+            is => 'Text',
+            is_optional => 1,
+            doc => "A comma delimited list of any extra columns that exist after the expected 5 in the input. Use this option if it is desired to preserve additional columns from the input file, which will then appear in output.Preserved columns must be contiguous and in order as they appear in the infile after the mandatory input columns. Any desired naming or number of columns can be specified so long as it does not exceed the actual number of columns in the file."
+        },
         # Transcript Params
         multi_gene_annotation => {
             is => 'boolean',
@@ -103,10 +108,12 @@ sub execute {
     # generate an iterator for the input list of variants
     my $variant_file = $self->variant_file;
 
-    # TODO: preserve additional columns from input (currently throwing away)
+    # preserve additional columns from input if desired
+    my @columns = (($self->variant_attributes), $self->get_extra_columns);
+    
     my $variant_svr = Genome::Utility::IO::SeparatedValueReader->create(
         input => $variant_file,
-        headers => [$self->variant_attributes],
+        headers => \@columns,
         separator => "\t",
         ignore_extra_columns => 1,
     );
@@ -167,7 +174,7 @@ sub execute {
         }
     }
 
-    # emit headers as necessary
+    # omit headers as necessary
     $output_fh->print( join(',', $self->transcript_report_headers), "\n" ) unless $self->no_headers;
 
     # annotate all of the input variants
@@ -236,6 +243,7 @@ sub _transcript_report_fh {
     return $self->{_transcript_fh};
 }
 
+# Prints the variant and corresponding annotation info for each transcript we have, or dashes if no transcripts
 sub _print_annotation {
     my ($self, $snp, $transcripts) = @_;
 
@@ -243,10 +251,24 @@ sub _print_annotation {
     my $snp_info_string = join
     (
         ',', 
-        map { $snp->{$_} } ($self->variant_attributes,"type"),
+        map { $snp->{$_} } ($self->variant_attributes,"type", $self->get_extra_columns),
     );
 
-    # Transcripts
+    # If we have no transcripts, print the original variant with dashes for annotation info
+    unless( defined @$transcripts ) {
+        $self->_transcript_report_fh->print
+        (
+            join
+            (
+                ',',                   
+                $snp_info_string,
+                map({ '-' } $self->transcript_attributes),
+            ), 
+            "\n",
+        );
+    }
+    
+    # Otherwise, print an annotation line for each transcript we have
     for my $transcript ( @$transcripts )
     {
         $self->_transcript_report_fh->print
@@ -260,9 +282,26 @@ sub _print_annotation {
             "\n",
         );
     }
+
     return 1;
 }
 
+sub get_extra_columns {
+    my $self = shift;
+
+    my $unparsed_columns = $self->extra_columns;
+    return unless $unparsed_columns;
+
+    my @columns = split(",", $unparsed_columns);
+    chomp @columns;
+
+    return @columns;
+}
+
+sub transcript_report_headers {
+    my $self = shift;
+    return ($self->variant_attributes, $self->get_extra_columns, $self->transcript_attributes);
+}
 1;
 
 =pod

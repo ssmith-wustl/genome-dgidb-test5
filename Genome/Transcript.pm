@@ -97,9 +97,6 @@ sub structures_flanking_structure_at_position {
     );
 }
 
-
-
-
 sub ordered_sub_structures {
     my $self = shift;
 
@@ -111,6 +108,21 @@ sub ordered_sub_structures {
     return @{$self->{'_ordered_sub_structures'}};
 }
 
+sub substructures_are_contiguous {
+    my $self = shift;
+    my @ss = $self->ordered_sub_structures;
+    my $stop_position;
+    my $last_ss_type;
+    while (my $ss = shift @ss){
+        if ($stop_position){
+            return 0 unless $ss->structure_start == $stop_position + 1;
+            $stop_position = $ss->structure_stop;
+        }else{
+            $stop_position = $ss->structure_stop;
+        }
+    }
+    return 1;
+}
 
 #- CDS EXONS -#
 
@@ -130,8 +142,6 @@ sub cds_exon_range {
 
     return ($cds_exons[0]->structure_start, $cds_exons[$#cds_exons]->structure_stop);
 }
-
-
 
 sub length_of_cds_exons_before_structure_at_position {
     my ($self, $position, $strand) = @_;
@@ -193,15 +203,9 @@ sub gene_name
     my $self = shift;
 
     my $gene = $self->gene;
-    my $gene_name = $gene->hugo_gene_name;
+    my $gene_name = $gene->name($self->source);;
 
-    return ( $gene_name )
-    ? $gene_name
-    : ( $self->source eq "genbank" )
-    ? $gene->external_ids({ id_type => 'entrez' })->first->id_value
-    : $gene->external_ids({ id_type => $self->source })->first->id_value;
+    return $gene_name;
 }
-
-
 
 1;
