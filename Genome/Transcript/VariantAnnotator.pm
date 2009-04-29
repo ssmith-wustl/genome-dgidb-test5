@@ -196,10 +196,7 @@ sub _determine_transcripts_to_annotate {
     {
         if ( $transcript->transcript_status ne 'unknown' and $transcript->source ne 'ccds' )
         {
-            # Do not annotate with transcripts that have non-contiguous sub structures
-            if ($transcript->substructures_are_contiguous) {
                 push @transcripts_priority_1, $transcript;
-            }
         }
     }
 
