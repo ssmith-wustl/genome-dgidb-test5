@@ -240,6 +240,7 @@ sub GetAvailRearrayBarcodeInInprogress { #rearray version
 
 
     if(@$pses!=1) {
+        # FIX THIS
         return(0, $pses);
         #Something's wrong--but what do we do about it?
     }
