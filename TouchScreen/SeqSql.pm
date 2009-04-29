@@ -240,9 +240,12 @@ sub GetAvailRearrayBarcodeInInprogress { #rearray version
 
 
     if(@$pses!=1) {
-        # FIX THIS
+        if(@$pses>1) {
+            $self->{'Error'} = "$barcode has too many inprogress PSEs";
+        } else {
+            $self->{'Error'} = "$barcode has no inprogress PSEs";
+        }
         return(0, $pses);
-        #Something's wrong--but what do we do about it?
     }
     my $pse=GSC::PSE->get($pses);
 
