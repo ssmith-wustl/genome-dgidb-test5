@@ -8,9 +8,9 @@ use Genome;
 class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::WholeMap {
     is => ['Command'],
     has_input => [
-                  accumulated_alignments_dir => {
+                  whole_map_file => {
                                                  is => 'String',
-                                                 doc => 'Accumulated alignments directory.'
+                                                 doc => 'A whole, non-deduplicated map file.'
                                              },
                   alignments => {
                                  is => 'Array',
@@ -40,7 +40,7 @@ sub make_whole_map_file {
 
     $self->status_message('Maplist: '.$maplist);
 
-    my $final_file = $self->accumulated_alignments_dir .'/whole.map';
+    my $final_file = $self->whole_map_file;
     $self->status_message('Whole map file: '. $final_file );
 
     if (-s $final_file) {
@@ -68,26 +68,8 @@ sub make_whole_map_file {
     return $final_file;
 }
 
-sub status_message {
-    my $self=shift;
-    my $msg=shift;
-    print $msg . "\n";
-}
-
 sub execute {
     my $self=shift;
-
-    my $pid = getppid(); 
-    my $log_dir = $self->accumulated_alignments_dir.'/../logs/';
-    unless (-e $log_dir ) {
-	unless( Genome::Utility::FileSystem->create_directory($log_dir) ) {
-            $self->error_message("Failed to create log directory for dedup process: $log_dir");
-            return;
-	}
-    } 
-    my $log_file = $log_dir.'/parallel_dedup_'.$pid.'.log';
-    open(STDOUT, ">$log_file") || die "Can't redirect stdout.";
-    open(STDERR, ">&STDOUT"); 
 
     my $now = UR::Time->now;
     $self->status_message("Executing WholeMap.pm at $now");
@@ -98,7 +80,7 @@ sub execute {
     } else {
         @maps = @{$self->alignments};   	#the parallelized code will only receive a list of one item.
     }
-    my $maplist = $self->accumulated_alignments_dir .'/whole.maplist';
+    my $maplist = Genome::Utility::FileSystem->create_temp_file_path('whole.maplist');
     my $fh = IO::File->new($maplist,'w');
     unless ($fh) {
         $self->error_message("Failed to create filehandle for '$maplist':  $!");
