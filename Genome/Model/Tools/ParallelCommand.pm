@@ -8,7 +8,6 @@ use File::Basename;
 use IO::File;
 
 class Genome::Model::Tools::ParallelCommand {
-    #is => ['Command','Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries', 'Genome::Model::Command::MaqSubclasser'],
     is => ['Command'],
     has_input => [
         command_list => {

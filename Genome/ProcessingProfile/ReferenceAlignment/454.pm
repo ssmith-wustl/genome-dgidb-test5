@@ -20,7 +20,6 @@ sub stages {
 
 sub alignment_job_classes {
     my @sub_command_classes= qw/
-        Genome::Model::Command::Build::ReferenceAlignment::AssignRun
         Genome::Model::Command::Build::ReferenceAlignment::AlignReads
     /;
     return @sub_command_classes;

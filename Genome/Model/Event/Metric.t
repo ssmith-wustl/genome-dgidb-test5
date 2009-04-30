@@ -5,7 +5,7 @@ use warnings;
 use above "Genome"; 
 use Test::More tests => 4;
 
-my $event_id = 88958395;
+my $event_id = 90005615;
 my $event = Genome::Model::Event->get($event_id);
 ok($event, "got an event");
 

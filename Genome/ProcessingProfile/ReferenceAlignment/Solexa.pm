@@ -45,7 +45,6 @@ sub variant_detection_job_classes {
         'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
         'Genome::Model::Command::Build::ReferenceAlignment::FindVariations'
     );
-
     return @steps;
 }
 

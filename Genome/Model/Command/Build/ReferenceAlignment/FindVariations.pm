@@ -6,8 +6,8 @@ use warnings;
 use Genome;
 use Command; 
 
-class Genome::Model::Command::Build::ReferenceAlignment::FindVariations {    
-    is => ['Genome::Model::EventWithRefSeq'],
+class Genome::Model::Command::Build::ReferenceAlignment::FindVariations {
+    is => ['Genome::Model::Event'],
 };
 
 sub sub_command_sort_position { 80 }

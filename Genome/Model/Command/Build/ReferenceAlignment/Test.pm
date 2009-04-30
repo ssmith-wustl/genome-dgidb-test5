@@ -270,7 +270,7 @@ sub schedule {
     #       'Saw a message about ReadSet');
     #}
     SKIP : {
-        skip 'No AssignRun step for Solexa', 1 if $model->sequencing_platform eq 'solexa'; 
+        skip 'No AssignRun step for Solexa', 1 if $model->sequencing_platform eq 'solexa' || $model->sequencing_platform eq '454';
         ok(scalar(grep { m/^Scheduled Genome::Model::Command::Build::ReferenceAlignment::AssignRun/} @status_messages),
            'Saw a message about AssignRun');
     }
@@ -395,9 +395,9 @@ sub run_events_for_class_array_ref {
         } else {
             my @events = $command_class->get(model_id => $self->model->id);
             @events = sort {$b->genome_model_event_id <=> $a->genome_model_event_id} @events;
-            if ($command_class->isa('Genome::Model::EventWithReadSet')) {
+            if ($command_class =~ /AlignReads/) {
                 is(scalar(@events),scalar(@instrument_data),'the number of events matches read sets for EventWithReadSet class '. $command_class);
-            } elsif ($command_class->isa('Genome::Model::EventWithRefSeq')) {
+            } elsif ($command_class =~ /MergeAlignments|UpdateGenotype|FindVariations/) {
                 is(scalar(@events),scalar(@stage3_objects),'the number of events matches ref seqs for EventWithRefSeq class '. $command_class);
             } else {
                 is(scalar(@events),1,'Only expecting one event when for class '. $command_class);

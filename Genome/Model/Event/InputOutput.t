@@ -5,7 +5,7 @@ use warnings;
 use above "Genome"; 
 use Test::More tests => 11;
 
-my $e = Genome::Model::Event->get(88958395);
+my $e = Genome::Model::Event->get(90005615);
 ok(scalar($e), "got a list of events");
 
 for my $io (qw/input output/) {

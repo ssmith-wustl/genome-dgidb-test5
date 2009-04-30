@@ -4,12 +4,12 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
+
 use File::Basename;
 use IO::File;
 
 class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Dedup {
-    is => ['Genome::Model::Command::MaqSubclasser'],
+    is => ['Command'],
     has_input => [
     accumulated_alignments_dir => {
         is => 'String',

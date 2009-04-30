@@ -72,6 +72,10 @@ sub sff_file {
     unless ($self->_sff_file) {
         $self->_sff_file($self->resolve_sff_path);
     }
+    unless ($self->dump_to_file_system) {
+        $self->error_message('Failed to dump sff file to filesystem');
+        return;
+    }
     return $self->_sff_file;
 }
 
@@ -84,7 +88,7 @@ sub sff_basename {
 sub dump_to_file_system {
     my $self = shift;
 
-    unless ( -e $self->sff_file ) {
+    unless ( -e $self->_sff_file ) {
         unless ($self->create_data_directory_and_link) {
             $self->error_message('Failed to create directory and link');
             return;
@@ -97,8 +101,8 @@ sub dump_to_file_system {
             $self->error_message('Failed to lock_resource '. $self->id);
             return;
         }
-        unless ($self->run_region_454->dump_sff(filename => $self->sff_file)) {
-            $self->error_message('Failed to dump sff file to '. $self->sff_file);
+        unless ($self->run_region_454->dump_sff(filename => $self->_sff_file)) {
+            $self->error_message('Failed to dump sff file to '. $self->_sff_file);
             return;
         }
         unless (Genome::Utility::FileSystem->unlock_resource(
@@ -110,6 +114,29 @@ sub dump_to_file_system {
         }
     }
     return 1;
+}
+
+sub amplicon_header_file {
+    my $self = shift;
+    my $amplicon_header_file = $self->full_path .'/amplicon_headers.txt';
+    unless (-e $amplicon_header_file) {
+        my $fh = $self->create_file('amplicon_header_file',$amplicon_header_file);
+        $fh->close;
+        unlink($amplicon_header_file);
+        my $amplicon = Genome::Model::Command::Report::Amplicons->create(
+                                                                         sample_name => $self->sample_name,
+                                                                         output_file => $amplicon_header_file,
+                                                                     );
+        unless ($amplicon) {
+            $self->error_message('Failed to create amplicon report tool');
+            return;
+        }
+        unless ($amplicon->execute) {
+            $self->error_message('Failed to execute command '. $amplicon->command_name);
+            return;
+        }
+    }
+    return $amplicon_header_file;
 }
 
 

@@ -365,15 +365,6 @@ sub model_data_directory {
     return Genome::Config->model_data_directory;
 }
 
-# alignment data now uses disk allocations owned by the instrument data
-# this is deprecated
-sub Xalignment_directory {
-    my $self = shift;
-    return Genome::Config->alignment_links_directory 
-        .'/'. $self->read_aligner_name 
-        .'/'. $self->reference_sequence_name;
-}
-
 
 # This is a human readable(model_name) symlink to the model_id based symlink
 # This symlink is created so humans can find their data on the filesystem
@@ -654,36 +645,6 @@ sub pretty_print_text {
     $out .= join("\n", map { " @$_ " } @out);
     $out .= "\n\n";
     return $out;
-}
-
-sub lock_directory {
-    my $self = shift;
-    my $data_directory = $self->data_directory;
-    my $lock_directory = $data_directory . '/locks/';
-    if (-d $data_directory and not -d $lock_directory) {
-        mkdir $lock_directory;
-        chmod 02775, $lock_directory;
-    }
-    return $lock_directory;
-}
-
-sub lock_resource {
-    my($self,%args) = @_;
-    $self->warning_message("locking is disabled since the new build system circumvents the need for it");
-    #$self->warning_message(Carp::longmess());
-    return 1;
-    unless ($args{lock_directory}) {
-        $args{lock_directory} = $self->lock_directory;
-    }
-    return Genome::Utility::FileSystem->lock_resource(%args);
-}
-
-sub unlock_resource {
-    my ($self, %args) = @_;
-    unless ($args{lock_directory}) {
-        $args{lock_directory} = $self->lock_directory;
-    }
-    return Genome::Utility::FileSystem->unlock_resource(%args);
 }
 
 sub get_all_objects {

@@ -101,5 +101,20 @@ sub path_for_mapsplit_version {
     }
 }
 
+sub proper_maq_pl_pathname {
+    my $self = shift;
+    my $version = shift;
+
+    unless ($version) {
+        unless ($self->use_version) {
+            die('Failed to pass version to method proper_maq_pl_pathname.');
+        }
+        $version = $self->use_version;
+    }
+    my $path = $self->path_for_maq_version($version);
+
+    return $path . '.pl';
+}
+
 1;
 

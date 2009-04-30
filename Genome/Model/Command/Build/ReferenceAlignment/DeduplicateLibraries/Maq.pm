@@ -9,7 +9,7 @@ use File::Basename;
 use IO::File;
 
 class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Maq {
-    is => ['Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries', 'Genome::Model::Command::MaqSubclasser'],
+    is => ['Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries'],
     has => [ 
           parallel_switch => {
                   is => 'String',
@@ -291,7 +291,7 @@ sub execute {
         }
         if (@maps_to_merge) {
             $now = UR::Time->now;
-            my $maq_pathname = $self->proper_maq_pathname('read_aligner_version');
+            my $maq_pathname = Genome::Model::Tools::Maq->path_for_maq_version($self->model->read_aligner_version);                                
             $cmd ="$maq_pathname mapmerge ". $self->build->whole_rmdup_map_file ." ".join(" ",@maps_to_merge);
             $self->status_message("Creating string: $cmd at $now.");
         }

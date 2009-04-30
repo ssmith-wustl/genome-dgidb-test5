@@ -8,7 +8,7 @@ use Command;
 
 class Genome::Model::Command::Build::Assembly::AddReadSetToProject {
     is_abstract => 1,
-    is => ['Genome::Model::EventWithReadSet'],
+    is => ['Genome::Model::Event'],
 };
 
 sub sub_command_sort_position { 10 }

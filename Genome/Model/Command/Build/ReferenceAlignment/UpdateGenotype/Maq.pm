@@ -4,9 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
-use Genome::Model;
-
 
 class Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype::Maq {
     is => ['Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype'],
@@ -27,8 +24,6 @@ sub help_detail {
 This command is usually called as part of the add-reads process
 EOS
 }
-
-sub should_bsub { 1;}
 
 sub execute {
     my $self = shift;
@@ -51,17 +46,13 @@ sub execute {
             return;
         }
     }
-    
+
     my ($consensus_file) = $build->_consensus_files($self->ref_seq_id);
 
     my $ref_seq_file = sprintf("%s/all_sequences.bfa", $model->reference_sequence_path);
 
     my $assembly_opts = $model->genotyper_params || '';
 
-    unless ($model->lock_resource(resource_id=>"assembly_" . $self->ref_seq_id)) {
-        $self->error_message("Can't get lock for model's maq assemble output assembly_" . $self->ref_seq_id);
-        return undef;
-    }
     my $accumulated_alignments_file = $build->whole_rmdup_map_file;
 
     my $cmd = $maq_pathname .' assemble '. $assembly_opts .' '. $consensus_file .' '. $ref_seq_file .' '. $accumulated_alignments_file;

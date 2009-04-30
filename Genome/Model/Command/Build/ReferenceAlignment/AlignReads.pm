@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Build::ReferenceAlignment::AlignReads {
-    is => ['Genome::Model::EventWithReadSet'],
+    is => ['Genome::Model::Event'],
     is_abstract => 1,
 };
 

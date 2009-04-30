@@ -559,7 +559,7 @@ sub _schedule_command_classes_for_object {
                 }
             }
             my $command;
-            if ($command_class->isa('Genome::Model::EventWithRefSeq')) {
+            if ($command_class =~ /MergeAlignments|UpdateGenotype|FindVariations/) {
                 if (ref($object)) {
                     unless ($object->isa('Genome::Model::RefSeq')) {
                         my $error_message = 'Expecting Genome::Model::RefSeq for EventWithRefSeq but got '. ref($object);
@@ -576,7 +576,7 @@ sub _schedule_command_classes_for_object {
                                                       ref_seq_id => $object,
                                                   );
                 }
-            } elsif ($command_class->isa('Genome::Model::EventWithReadSet')) {
+            } elsif ($command_class =~ /AlignReads|TrimReadSet|AssignReadSetToModel|AddReadSetToProject|FilterReadSet/) {
                 if ($object->isa('Genome::InstrumentData')) {
                     my $ida = Genome::Model::InstrumentDataAssignment->get(
                                                                            model_id => $self->model_id,
@@ -697,7 +697,7 @@ class Genome::Model::Command::Build::AbstractBaseTest {
 package Genome::Model::Command::Build::AbstractBaseTest::StageOneJobOne;
 
 class Genome::Model::Command::Build::AbstractBaseTest::StageOneJobOne {
-    is => 'Genome::Model::EventWithReadSet',
+    is => 'Genome::Model::Event',
 };
 
 sub verify_successful_completion {
@@ -707,7 +707,7 @@ sub verify_successful_completion {
 package Genome::Model::Command::Build::AbstractBaseTest::StageOneJobTwo;
 
 class Genome::Model::Command::Build::AbstractBaseTest::StageOneJobTwo {
-    is => 'Genome::Model::EventWithReadSet',
+    is => 'Genome::Model::Event',
 };
 
 sub verify_successful_completion {
@@ -717,19 +717,19 @@ sub verify_successful_completion {
 package Genome::Model::Command::Build::AbstractBaseTest::StageOneJobThree;
 
 class Genome::Model::Command::Build::AbstractBaseTest::StageOneJobThree {
-    is => 'Genome::Model::EventWithReadSet',
+    is => 'Genome::Model::Event',
 };
 
 package Genome::Model::Command::Build::AbstractBaseTest::StageTwoJobOne;
 
 class Genome::Model::Command::Build::AbstractBaseTest::StageTwoJobOne {
-    is => 'Genome::Model::EventWithRefSeq',
+    is => 'Genome::Model::Event',
 };
 
 package Genome::Model::Command::Build::AbstractBaseTest::StageTwoJobTwo;
 
 class Genome::Model::Command::Build::AbstractBaseTest::StageTwoJobTwo {
-    is => 'Genome::Model::EventWithRefSeq',
+    is => 'Genome::Model::Event',
 };
 
 1;

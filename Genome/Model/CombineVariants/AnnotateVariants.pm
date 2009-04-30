@@ -89,14 +89,6 @@ sub execute {
     return 1;
 }
 
-sub reverse_complement{
-    my $self = shift;
-    my $string = shift;
-    $string = reverse $string;
-    $string =~ tr/[ATGC]/[TACG]/;
-    return $string;
-}
-
 # Gets and prints the lowest priority annotation for a given genotype
 # Takes a genotype hashref from next_hq/lq_genotype
 # Also takes in the current annotator object FIXME: Make this a class level var?

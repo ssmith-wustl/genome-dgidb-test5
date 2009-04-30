@@ -4,10 +4,9 @@ use strict;
 use warnings;
 
 use Genome;
-use Command; 
 
 class Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype {
-    is => ['Genome::Model::EventWithRefSeq'],
+    is => ['Genome::Model::Event'],
 };
 
 sub sub_command_sort_position { 70 }

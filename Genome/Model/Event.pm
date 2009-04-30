@@ -169,9 +169,16 @@ sub shellcmd {
 
 sub resolve_log_directory {
     my $self = shift;
-    return sprintf('%s/logs/',
-                   $self->build_directory,
-               );
+    my $log_directory = sprintf('%s/logs/',
+                                $self->build_directory,
+                            );
+    if (defined $self->instrument_data_id) {
+        $log_directory .= $self->instrument_data_assignment->sequencing_platform .'/'. $self->instrument_data_assignment->run_name
+    }
+    if (defined $self->ref_seq_id) {
+        $log_directory .= $self->ref_seq_id;
+    }
+    return $log_directory
 }
 
 sub check_for_existence {
@@ -307,9 +314,38 @@ sub _resolve_subclass_name_for_event_type {
     return $class_name;
 }
 
+sub invalid {
+    my ($self) = shift;
+
+    my @tags = $self->SUPER::invalid(@_);
+    unless (Genome::Model->get($self->model_id)) {
+        push @tags, UR::Object::Tag->create(
+                                            type => 'invalid',
+                                            properties => ['model_id'],
+                                            desc => "There is no model with id ". $self->model_id,
+                                        );
+    }
+
+    if ($self->instrument_data_id && !Genome::InstrumentData->get($self->instrument_data_id)) {
+        push @tags, UR::Object::Tag->create(
+                                            type => 'invalid',
+                                            properties => ['instrument_data_id'],
+                                            desc => "There is no instrument data with instrument_data_id ". $self->instrument_data_id,
+                                        );
+    }
+    return @tags;
+}
+
 sub desc {
     my $self = shift;
-    return $self->id .' (' . $self->event_type .')';
+    my $desc = $self->id .' (' . $self->event_type .')';
+    if (defined $self->instrument_data_id) {
+        $desc .= " for read set " . $self->instrument_data->full_name;
+    }
+    if (defined $self->ref_seq_id) {
+        $desc .= " for refseq " . $self->ref_seq_id . " on build " . $self->build_id;
+    }
+    return $desc;
 }
 
 # Override the default message handling to auto-instantiate a log handle.
@@ -681,7 +717,7 @@ sub lsf_dependency_condition {
     unless ($self->lsf_job_id) {
         return;
     }
-    my ($job_info,$events) = Genome::Model::Command::BsubHelper->lsf_state($self->lsf_job_id);
+    my ($job_info,$events) = $self->lsf_state($self->lsf_job_id);
     for my $entry (@$events) {
         my ($time, $attributes) = (@$entry);
         if ($$attributes{'Dependency Condition'}) {
@@ -696,7 +732,7 @@ sub lsf_job_state {
     unless ($self->lsf_job_id) {
         return;
     }
-    my ($job_info,$events) = Genome::Model::Command::BsubHelper->lsf_state($self->lsf_job_id);
+    my ($job_info,$events) = $self->lsf_state($self->lsf_job_id);
     if ($job_info) {
         return $$job_info{Status};
     }
@@ -712,7 +748,7 @@ sub lsf_pending_reasons {
         return;
     }
     my @reasons;
-    my ($job_info,$events) = Genome::Model::Command::BsubHelper->lsf_state($self->lsf_job_id);
+    my ($job_info,$events) = $self->lsf_state($self->lsf_job_id);
     for my $entry (@$events) {
         my ($time, $attributes) = (@$entry);
         if ($$attributes{'PENDING REASON'}) {
@@ -721,6 +757,77 @@ sub lsf_pending_reasons {
     }
     return @reasons;
 }
+
+sub lsf_state {
+    my ($self, $lsf_job_id) = @_;
+
+    my $spool = `bjobs -l $lsf_job_id 2>&1`;
+    return if ($spool =~ /Job <$lsf_job_id> is not found/);
+
+    # this regex nukes the indentation and line feed    
+    $spool =~ s/\s{22}//gm; 
+
+    my @eventlines = split(/\n/, $spool);
+    shift @eventlines;  # first line is white space
+    my %jobinfo = ();
+    
+    my $jobinfoline = shift @eventlines;
+    if (defined $jobinfoline) {
+        # sometimes the prior regex nukes the white space between Key <Value>
+        $jobinfoline =~ s/(?<!\s{1})</ </g;
+        # parse out a line such as
+        # Key <Value>, Key <Value>, Key <Value>
+        while ($jobinfoline =~ /(?:^|(?<=,\s{1}))(.+?)(?:\s+<(.*?)>)?(?=(?:$|;|,))/g) {
+            $jobinfo{$1} = $2;
+        }
+    }
+    my @pending_reasons = ();
+    foreach my $line (@eventlines) {
+        if ($line =~ /PENDING REASONS:/) {
+            @pending_reasons = (
+                                UR::Time->now,
+                                {}
+                            );
+            next;
+        }
+        if (scalar(@pending_reasons)) {
+            if ($line =~ /^\s*$/) {
+                last;
+            }
+            $line =~ s/^\s+//;
+            $pending_reasons[1]->{'PENDING REASON'} = $line;
+        }
+    }
+
+    my @events = ();
+    foreach my $el (@eventlines) {
+        $el =~ s/(?<!\s{1})</ </g;
+
+        my $time = substr($el,0,21,'');
+        substr($time,-2,2,'');
+
+        # see if we really got the time string
+        if ($time !~ /\w{3} \w{3}\s+\d{1,2}\s+\d{1,2}:\d{2}:\d{2}/) {
+            # there's stuff we dont care about at the bottom, just skip it
+            next;
+        }
+
+        my @entry = (
+            $time,
+            {}
+        );
+
+        while ($el =~ /(?:^|(?<=,\s{1}))(.+?)(?:\s+<(.*?)>)?(?=(?:$|;|,))/g) {
+            $entry[1]->{$1} = $2;
+        }
+        push @events, \@entry;
+    }
+    if (scalar(@pending_reasons)) {
+        push @events, \@pending_reasons;
+    }
+    return (\%jobinfo, \@events);
+}
+
 
 1;
 

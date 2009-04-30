@@ -4,88 +4,61 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
-use Genome::Model;
+
 use File::Path;
 use Data::Dumper;
 use File::Temp;
 use IO::File;
 
 class Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Maq {
-    is => [
-           'Genome::Model::Command::Build::ReferenceAlignment::FindVariations',
-           'Genome::Model::Command::MaqSubclasser'
-       ],
+    is => ['Genome::Model::Command::Build::ReferenceAlignment::FindVariations'],
     has => [
         analysis_base_path => {
-            doc => "the path at which all analysis output is stored",
-            calculate_from => ['build'],
-            calculate => q|
-                return $build->maq_snp_related_metric_directory;
-            |,
-            is_constant => 1,
-        },
-        snp_resource_name => {
-            doc => "basename of the snp output file as well as resource lock name",
-            calculate_from => ['ref_seq_id'],
-            calculate => q|
-                return sprintf("snps%s",defined $ref_seq_id ? "_". $ref_seq_id : "");
-            |,
-        },
-        indel_resource_name => {
-            doc => "basename of the indel output file as well as resource lock name",
-            calculate_from => ['ref_seq_id'],
-            calculate => q|
-                return sprintf("indels%s",defined $ref_seq_id ? "_". $ref_seq_id : "");
-            |,
-        },
-        pileup_resource_name => {
-            doc => "basename of the pileup output file as well as resource lock name",
-            calculate_from => ['ref_seq_id'],
-            calculate => q|
-                return sprintf("pileup%s",defined $ref_seq_id ? "_". $ref_seq_id : "");
-            |,
-        },
+                               doc => "the path at which all analysis output is stored",
+                               calculate_from => ['build'],
+                               calculate => q|
+                                   return $build->maq_snp_related_metric_directory;
+                               |,
+                               is_constant => 1,
+                           },
         snp_output_file => {
-            doc => "",
-            calculate_from => ['analysis_base_path','snp_resource_name'],
-            calculate => q|
-                return $analysis_base_path ."/". $snp_resource_name;
-            |,
-        },
-        filtered_snp_output_file => {
-            doc => "",
-            calculate_from => ['snp_output_file'],
-            calculate => q|
-                return $snp_output_file .".filtered";
-            |,
-        },
+                            doc => "",
+                            calculate_from => ['analysis_base_path','ref_seq_id'],
+                            calculate => q|
+                                return $analysis_base_path .'/snps_'. $ref_seq_id;
+                            |,
+                        },
         indel_output_file => {
-            doc => "",
-            calculate_from => ['analysis_base_path','indel_resource_name'],
-            calculate => q|
-                return $analysis_base_path ."/". $indel_resource_name;
-            |,
-        },
+                              doc => "",
+                              calculate_from => ['analysis_base_path','ref_seq_id'],
+                              calculate => q|
+                                  return $analysis_base_path .'/indels_'. $ref_seq_id;
+                              |,
+                          },
         pileup_output_file => {
-            doc => "",
-            calculate_from => ['analysis_base_path','pileup_resource_name'],
-            calculate => q|
-                return $analysis_base_path ."/". $pileup_resource_name;
-            |,
-        },
+                               doc => "",
+                               calculate_from => ['analysis_base_path','ref_seq_id'],
+                               calculate => q|
+                                   return $analysis_base_path .'/pileup_'. $ref_seq_id;
+                               |,
+                           },
+        filtered_snp_output_file => {
+                                     doc => "",
+                                     calculate_from => ['snp_output_file'],
+                                     calculate => q|
+                                         return $snp_output_file .'.filtered';
+                                     |,
+                                 },
+        genotype_detail_file => {
+                                 doc => "",
+                                 calculate_from => ['analysis_base_path','ref_seq_id'],
+                                 calculate => q|
+                                     return $analysis_base_path .'/report_input_'. $ref_seq_id;
+                                 |,
+                             },
     ],
 };
 
-# TODO: move above
-sub _genotype_detail_name {
-    my $self = shift;
-    return sprintf("report_input%s", defined $self->ref_seq_id ? "_".$self->ref_seq_id : "");
-}
-sub genotype_detail_file {
-    my $self = shift;
-    return sprintf("%s/%s", $self->build->maq_snp_related_metric_directory, $self->_genotype_detail_name);
-}
 # Converts between the 1-letter genotype code into
 # its allele constituients
 sub _lookup_iub_code {
@@ -111,8 +84,6 @@ sub _lookup_iub_code {
     return @{$self->{'_iub_code_table'}->{$code}};
 }
 
-
-
 sub help_brief {
     "Use maq to find snps and idels"
 }
@@ -134,12 +105,9 @@ sub execute {
 
     my $model = $self->model;
     my $build = $self->build;
-    
-    #TODO: we need to have a indel_finder_version
-    #my $maq_pathname = $self->proper_maq_pathname('indel_finder_name');
-    #my $maq_pl_pathname = $self->proper_maq_pl_pathname('indel_finder_name');
-    my $maq_pathname = $self->proper_maq_pathname('read_aligner_version');
-    my $maq_pl_pathname = $self->proper_maq_pl_pathname('read_aligner_version');
+
+    my $maq_pathname = Genome::Model::Tools::Maq->path_for_maq_version($model->indel_finder_version);
+    my $maq_pl_pathname = Genome::Model::Tools::Maq->proper_maq_pl_pathname($model->indel_finder_version);
 
     # ensure the reference sequence exists.
     my $ref_seq_file = $model->reference_sequence_path . "/all_sequences.bfa";
@@ -160,13 +128,6 @@ sub execute {
     unless ($self->check_for_existence($assembly_output_file)) {
         $self->error_message("Assembly output file $assembly_output_file was not found.  It should have been created by a prior run of update-genotype-probabilities maq");
         return;
-    }
-
-    foreach my $resource ( $self->snp_resource_name, $self->indel_resource_name, $self->pileup_resource_name) {
-        unless ($model->lock_resource(resource_id=>$resource)) {
-            $self->error_message("Can't get lock for resource $resource");
-            return;
-        }
     }
 
     my $snp_output_file =  $self->snp_output_file;
