@@ -189,14 +189,8 @@ sub execute {
         return;
     }
 
-    my $accumulated_alignments_file_for_indelsoa = $build->resolve_accumulated_alignments_filename();
-    #OK, if jon's stuff doesn't run, then this would be a pipe
-    unless (-s $accumulated_alignments_file_for_indelsoa || -p $accumulated_alignments_file_for_indelsoa) {
-        $self->error_message("Named pipe or temp file for $accumulated_alignments_file_for_indelsoa was not found.");
-        return;
-    }
-    $retval = system("$maq_pathname indelsoa $ref_seq_file $accumulated_alignments_file_for_indelsoa > $indel_output_file");
-    unlink $accumulated_alignments_file_for_indelsoa; 
+    my $accumulated_alignments = $build->whole_rmdup_map_file;
+    $retval = system("$maq_pathname indelsoa $ref_seq_file $accumulated_alignments > $indel_output_file");
     unless ($retval == 0) {
         $self->error_message("running maq indelsoa returned non-zero exit code $retval");
         return;
@@ -218,20 +212,13 @@ sub execute {
     $tmpfh->close();
     $snp_fh->close();
 
-    #my $accumulated_alignments_file_for_pileup = $build->resolve_accumulated_alignments_filename(ref_seq_id=>$self->ref_seq_id);
-    my $accumulated_alignments_file_for_pileup = $build->resolve_accumulated_alignments_filename();
-    unless (-s $accumulated_alignments_file_for_pileup || -p $accumulated_alignments_file_for_pileup) {
-        $self->error_message("Named pipe or tmp file $accumulated_alignments_file_for_pileup was not found.");
-        return;
-    }
     my $pileup_command = sprintf("$maq_pathname pileup -v -l %s %s %s > %s",
                                  $tmpfh->filename,
                                  $ref_seq_file,
-                                 $accumulated_alignments_file_for_pileup,
+                                 $accumulated_alignments,
                                  $pileup_output_file);
 
     $retval = system($pileup_command);
-    unlink $accumulated_alignments_file_for_pileup; 
     unless ($retval == 0) {
         $self->error_message("running maq pileup returned non-zero exit code $retval");
         return;
