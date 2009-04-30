@@ -51,13 +51,13 @@ sub make_real_rmdupped_map_file {
 
     $self->status_message("Library: ".$library." Maplist: ".$maplist);
 
-    my $final_file = $self->accumulated_alignments_dir .  "/" .  $self->mapmerge_filename($library);
-    $self->status_message("Final file: ". $self->accumulated_alignments_dir .  "/" .  $self->mapmerge_filename($library) );
+    my $final_file = $self->accumulated_alignments_dir .  "/" .  $library.".map";
+    $self->status_message("Final file: ". $final_file );
 
     if (-s "$final_file") {
         $self->status_message("Rmdup'd file exists: ".$final_file);
     } else {
-        my $tmp_file = "/tmp/" . $self->mapmerge_filename($library);
+        my $tmp_file = Genome::Utility::FileSystem->create_temp_file_path($library.".map" );
         $self->status_message("Rmdup'd file DOES NOT exist: ".$final_file);
         my $aligner_version = $self->aligner_version;
         my $maq_cmd = "gt maq vmerge --version=$aligner_version --maplist $maplist --pipe $tmp_file &";
@@ -71,7 +71,6 @@ sub make_real_rmdupped_map_file {
             die "failed to make intemediate file for (library) maps $!";
         }
         $self->status_message("Streaming into file $tmp_file.");
-        #system "cp $result_file.pipe $result_file";
         unless (-p "$tmp_file") {
             die "Failed to make intermediate file for (library) maps $!";
         }
@@ -87,68 +86,6 @@ sub make_real_rmdupped_map_file {
         }
     }	
     return $final_file;
-}
-
-sub mapsplit {
-    my $self=shift;
-
-    my $map_file=shift;
-    my $submap_dir_name=shift;
-
-    my $submap_directory = $self->accumulated_alignments_dir . "/$submap_dir_name/";
-    unless (-e $submap_directory) {
-        unless (Genome::Utility::FileSystem->create_directory($submap_directory)) {
-            #doesn't exist can't create it...quit
-            $self->error_message("Failed to create directory '$submap_directory':  $!");
-            return;
-        }
-        chmod 02775, $submap_directory;
-    } else {
-        unless (-d $submap_directory) {
-            #does exist, but is a file, not a directory? quit.
-            $self->error_message("File already exists for directory '$submap_directory':  $!");
-            return;
-        }
-    }
-
-    if ( scalar <$submap_directory/*> ) { 
-        $self->status_message("Directory $submap_directory is not empty.  Not executing mapsplit.  Remove directory contents and rerun to generate new maps.");
-        return;
-    } 
-
-    #TODO need the get_subreferenc_names parameter...
-    #this is handled by the calling object:  my @subsequences = grep { $_ ne 'all_sequences' } $self->subreference_names;
-    my @subsequences = grep { $_ ne 'all_sequences' } @{$self->subreference_names};
-    if (@subsequences) {
-        # break up the alignments by the sequence they match, if necessary
-        my $mapsplit_cmd_line = Genome::Model::Tools::Maq->path_for_mapsplit_version($self->aligner_version) . " $submap_directory $map_file " . join(',',@subsequences);
-        $self->status_message("Map split command: $mapsplit_cmd_line");
-        my $rv = system($mapsplit_cmd_line);
-        if ($rv) {
-            #arbitrary convention set up with homemade mapsplit and mapsplit_long..return 2 if file is empty.
-            if($rv/256 == 2) {
-                $self->status_message('Map split returned an empty file');
-            } else {
-                $self->error_message("Failed to run map split on map file $map_file");
-                die $self->error_message;
-            }
-        }
-    }
-    return 1;
-}
-
-sub verify_successful_completion {
-    return 1;
-}
-
-sub mapmerge_filename {
-    my $self=shift;
-    my $library_name=shift;
-    unless($library_name) {
-        die "can't find a library name. this is really bad.";
-    }
-    #return "map-$library_name";
-    return "map-$library_name".".map";
 }
 
 sub status_message {
@@ -226,13 +163,7 @@ sub execute {
                 return;
             }
 
-            $now = UR::Time->now;
-            $self->status_message(">>> Starting mapsplit() at $now for library: $library .");
-            $self->mapsplit($map_file, $library);
-            $now = UR::Time->now;
-            $self->status_message("\n<<< Completed mapsplit() at $now for library: $library .");
-
-		###############
+                ###############
 		#Beginning Map-2-Bam conversion
 
 		$now = UR::Time->now;
