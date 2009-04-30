@@ -291,6 +291,11 @@ sub whole_map_file {
     return $self->accumulated_alignments_directory .'/whole.map';
 }
 
+sub whole_rmdup_map_file {
+    my $self = shift;
+    return $self->accumulated_alignments_directory .'/whole_rmdup.map';
+}
+
 sub reference_coverage_directory {
     my $self = shift;
     return $self->data_directory .'/reference_coverage';
