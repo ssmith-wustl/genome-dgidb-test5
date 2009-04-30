@@ -54,7 +54,8 @@ sub get_maq_content {
     my $build = $self->build;
 
     my $mapcheck_output = Genome::Utility::FileSystem->create_temp_file_path('mapcheck');
-    my $accumulated_alignments_file = $build->accumulate_maps;
+    #my $accumulated_alignments_file = $build->accumulate_maps;
+    my $accumulated_alignments_file = $build->whole_rmdup_map_file;
     unless (Genome::Model::Tools::Maq::Mapcheck->execute(
                                                          use_version => $build->maq_version_for_pp_parameter,
                                                          bfa_file => $model->reference_build->full_consensus_path,
@@ -64,8 +65,8 @@ sub get_maq_content {
         $self->error_message();
         die($self->error_message);
     }
-    my $rm_cmd = "rm $accumulated_alignments_file";
-    $self->shellcmd(cmd => $rm_cmd);
+    #my $rm_cmd = "rm $accumulated_alignments_file";
+    #$self->shellcmd(cmd => $rm_cmd);
 
     my $mapcheck_output_fh = Genome::Utility::FileSystem->open_file_for_reading($mapcheck_output);
     my @maq = $mapcheck_output_fh->getlines;
