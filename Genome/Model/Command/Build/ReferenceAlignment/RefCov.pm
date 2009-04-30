@@ -40,11 +40,11 @@ sub execute {
         $self->error_message('Failed to create ref_cov directory '. $ref_cov_dir .":  $!");
         return;
     }
-    my $ref_cov = Genome::Model::Tools::RefCov->execute(
-                                                        layers_file_path => $build->layers_file,
-                                                        genes_file_path => $build->genes_file,
-                                                        output_directory => $ref_cov_dir,
-                                                    );
+    my $ref_cov = Genome::Model::Tools::RefCov::Parallel->execute(
+                                                                  layers_file_path => $build->layers_file,
+                                                                  genes_file_path => $build->genes_file,
+                                                                  output_directory => $ref_cov_dir,
+                                                              );
     unless ($ref_cov) {
         $self->error_message('Failed to run RefCov tool!');
         return;

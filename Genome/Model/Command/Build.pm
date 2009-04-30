@@ -136,10 +136,9 @@ sub execute {
     for my $stage_name ($pp->stages) {
         my @scheduled_objects = $self->_schedule_stage($stage_name);
         unless (@scheduled_objects) {
-            $self->error_message('Problem with build('. $self->build_id .") objects not scheduled for classes:\n".
+            $self->error_message('WARNING: build ('. $self->build_id .") objects not scheduled for classes:\n".
                                  join("\n",$pp->classes_for_stage($stage_name)));
-            $self->event_status('Running');
-            #    die;
+            next;
         }
         if (!defined $self->auto_execute) {
             # transent properties with default_values are not re-initialized when loading object from data source

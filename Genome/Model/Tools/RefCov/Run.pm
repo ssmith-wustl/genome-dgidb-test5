@@ -1,18 +1,4 @@
-package Genome::Model::Tools::RefCov;
-
-# T. Wylie
-# Fri Jun 13 09:40:15 CDT 2008
-# USAGE:  himem_refcov.pl <LAYERS file> <GENES file>
-# 
-# UPDATED: Sun Jun 22 18:05:06 CDT 2008
-#          -added support for redundancy stat tracking.
-# 
-# **NOTE**
-#         This version runs fairly quickly, at the cost of higher memory.
-#         A test of 2.5 million reads against 75,000 transcripts ran in
-#         about an hour's time and less than 4Gb of memory. This previous
-#         held the LAYERS in memory, though--and the current version streams
-#         the LAYER reads instead.
+package Genome::Model::Tools::RefCov::Run;
 
 use strict;
 use warnings;
@@ -21,52 +7,9 @@ use Genome;
 
 use RefCov;
 
-class Genome::Model::Tools::RefCov {
-    is => ['Genome::Model::Tools','Genome::Utility::FileSystem'],
-    has => [
-            layers_file_path => {
-                                 is => 'Text',
-                                 doc => 'The layers file path(fully qualified) formatted from maq alignments',
-                             },
-            genes_file_path  => {
-                                 is => 'Text',
-                                 doc => 'The genes or backbone file path(fully qualified) containing reference sequence data',
-                             },
-            output_directory => {
-                                 is => 'Text',
-                                 doc => 'The output directory where files are written',
-                             },
-            stats_file_path  => {
-                                 calculate_from => ['output_directory', 'stats_file_name'],
-                                 calculate => q|
-                                    return $output_directory .'/'. $stats_file_name;
-                                 |,
-                             },
-            log_file_path    => {
-                                 calculate_from => ['output_directory', 'log_file_name'],
-                                 calculate => q|
-                                    return $output_directory .'/'. $log_file_name;
-                                 |,
-                             },
-            frozen_directory => {
-                                 calculate_from => ['output_directory',],
-                                 calculate => q|
-                                    return $output_directory .'/FROZEN';
-                                 |,
-                             },
-    ],
-    has_optional  => [
-                      stats_file_name => {
-                                          is => 'Text',
-                                          doc => 'The output file name to dump RefCov stats(default_value=STATS.tsv)',
-                                          default_value => 'STATS.tsv',
-                                      },
-                      log_file_name => {
-                                        is => 'Text',
-                                        doc => 'The output log file name(default_value=time.LOG)',
-                                        default_value => 'time.LOG',
-                                    },
-                  ],
+class Genome::Model::Tools::RefCov::Run {
+    is => ['Genome::Model::Tools::RefCov','Genome::Utility::FileSystem'],
+
 };
 
 sub create {
@@ -83,19 +26,25 @@ sub create {
 
     unless ($self->create_directory($self->output_directory)) {
         $self->error_message('Failed to create output directory '. $self->output_directory);
-        return;
+        die($self->error_message);
     }
     unless ($self->validate_directory_for_write_access($self->output_directory)) {
         $self->error_message('Failed to validate directory for writing '. $self->output_directory);
-        return;
+        die($self->error_message);
     }
     unless ($self->validate_file_for_reading($self->layers_file_path)) {
         $self->error_message('Failed to validate file for reading '. $self->layers_file_path);
-        return;
+        die($self->error_message);
     }
     unless ($self->validate_file_for_reading($self->genes_file_path)) {
         $self->error_message('Failed to validate file for reading '. $self->genes_file_path);
-        return;
+        die($self->error_message);
+    }
+    if (-e $self->log_file_path) {
+        unless (unlink $self->log_file_path) {
+            $self->error_message('Failed to remove existing log file '. $self->log_file_path .":  $!");
+            die($self->error_message);
+        }
     }
     return $self;
 }
@@ -162,7 +111,7 @@ sub execute {
                                   );
         }
         else {
-            print $log_fh "Had to skip $ref!!!\n";
+            #print $log_fh "Had to skip $ref!!!\n";
         }
     }
     $layers_fh->close;
