@@ -46,6 +46,11 @@ class Genome::Sample {
         select incoming_dna_name
         from run_region_454@dw
         where sample_name is null
+        union
+        select value
+        from mg.misc_attribute@dw
+        where entity_class_name = 'Genome::InstrumentData::Sanger' and
+        property_name = 'sample_name'
     ) a
     join dna@oltp d on d.dna_name = a.sample_name
     left join organism_sample@dw s on d.dna_id = s.organism_sample_id
