@@ -79,11 +79,11 @@
             <tr>
               <td width='50%'>
                 <h3>Unfiltered Concordance Summary:</h3>
-                <pre>[% unfiltered_concordance_summary  %]</pre>
+                <p>[% unfiltered_concordance_summary  %] </p>
               </td>
               <td width='50%'>
                 <h3>Filtered Concordance Summary:</h3>
-                <pre>[% filtered_concordance_summary  %]</pre>
+                <p>[% filtered_concordance_summary  %]</p>
               </td>
             </tr>
           </table>          
