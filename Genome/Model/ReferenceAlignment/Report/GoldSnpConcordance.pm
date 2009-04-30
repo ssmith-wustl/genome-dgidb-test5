@@ -7,6 +7,8 @@ use Genome;
 use CGI;
 use IO::String;
 
+my $base_template_path = __PACKAGE__->_base_path_for_templates;
+
 class Genome::Model::ReferenceAlignment::Report::GoldSnpConcordance {
     is => 'Genome::Model::Report',
     has => [
@@ -19,6 +21,18 @@ class Genome::Model::ReferenceAlignment::Report::GoldSnpConcordance {
         name                        => { default_value => 'Gold_SNP_Concordance' },
     ],
 };
+
+sub _base_path_for_templates 
+{
+    my $module = __PACKAGE__;
+    $module =~ s/::/\//g;
+    $module .= '.pm';
+    my $module_path = $INC{$module};
+    unless ($module_path) {
+        die "Module " . __PACKAGE__ . " failed to find its own path!  Checked for $module in \%INC...";
+    }
+    return $module_path;
+}
 
 sub _generate_data 
 {
@@ -48,8 +62,17 @@ $DB::single = 1;
     my $r = new CGI;
     my $body = IO::String->new();  
     die $! unless $body;
-    $body->print( $r->start_html(-title=> 'Gold SNP Concordance Report for ' . $build->id) );
-   
+    $body->print( $r->start_html(-title=> 'Gold SNP Concordance Report for Model' . $self->model_id . ', build ' .$build->id) );
+
+    my $style = $self->get_css();
+    my $report_start = "<div class=\"container\">\n<div class=\"background\">\n" .
+                       "<h1 class=\"report_title\">Gold SNP Concordance Report for Model " .
+                       $self->model_id . " (<em>" . $self->model_name . "</em>), build " .
+                       $build->id . "</h1>\n";
+    my $report_end = "</div>&nbsp;</div>";
+    $body->print("<style>$style</style>");
+    $body->print("$report_start");
+
     for my $list (qw/variant_list_files variant_filtered_list_files/) {
         my $snp_file = $self->create_temp_file_path($list);
         my @files = $self->$list;
@@ -82,6 +105,7 @@ $DB::single = 1;
         
     }
 
+    $body->print("$report_end");
     $body->print( $r->end_html );
     $body->seek(0, 0);
     return join('', $body->getlines);
@@ -90,34 +114,42 @@ $DB::single = 1;
 sub format_report
 {
     #assumes plain-text
-    #convert newlines to divs, and tabs to padded spans
+    #convert newlines to table rows, and tabs to table cells
     my ($self, $content, $label) = @_;
     my $model = $self->model;
-    my $result = "\n<!--\n$content\n-->\n";    
+    my $result = "\n<!--\n$content\n-->\n";
     if ($content=~m/(\s*)(.*)(\s*)/sm)
     {
         $content = $2;
         my $span = "<span style=\"padding-left:10px;\">";
 
-        $content=~s/\n/<\/div>\n<div>/g;
-        $content=~s/(<div>)(\t)(.*)(<\/div>)/$1\n$span$3<\/span>\n$4/g;
-        $content=~s/\t/<\/span>$span/g;
-        $content=~s/(.*<\/div>\s*)(<div>\s*There were .+)/$1<\/p>\n<hr align=\"left\">\n<p>$2/g;
-        $content = "<h1>$label</h1>\n\n" .
-                   "<p><div>$content</div><p>" .
-                   $self->get_css;
+        $content=~s/\n\t\t/<\/td><\/tr>\n<tr><td class=\"maq_class\">/g;
+        $content=~s/\n\t/<\/td><\/tr>\n<tr><td class=\"match_class\" colspan=\"4\">/g;
+        $content=~s/\t/<\/td><td>/g;
+        $content=~s/(\n)(There were .+)/<\/td><\/tr>\n<tr><td class=\"gold_class\">$2/g;
+        $content=~s/(There were )(\d+)(\s)(.+)(<\/td><\/tr>)/$4<\/td><td class=\"gold_class\">$2<\/td><td colspan=\"2\" class=\"gold_class\">&nbsp;$5/g;
+        $content=~s/(<td colspan=\"2\" class=\"gold_class\">&nbsp;<\/td><\/tr>\n)/$1<tr><th>&nbsp;<\/th><th>reads<\/th><th>\%<\/th><th>depth<\/th><\/tr>\n/g;
+        $content=~s/calls \(could/calls<br \/>(could/g;
+        $content = "<h2 class=\"section_title\">$label</h2>\n" .
+                   "<table class=\"snp\">\n" .
+                   "<tr><td class=\"gold_class\">$content</tr>\n</table>\n";
+
         return $content;
     }
 }
 
 sub get_css
 {
-    return 
-"<style>
-    p {font-size:16px;background-color:tan;}
-    span {font-size:.9em}
-    hr {width:30%;} 
-</style>";
+    my $module_path = $INC{"Genome/Model/ReferenceAlignment/Report/GoldSnpConcordance.pm"};
+    die 'failed to find module path!' unless $module_path;
+    
+    ## get CSS resources
+    my $css_file = "$module_path.html.css";
+    my $css_fh = IO::File->new($css_file);
+    unless ($css_fh) {
+        die "failed to open file $css_file!"; 
+    }
+    my $page_css = join('',$css_fh->getlines);
 
 }
 
