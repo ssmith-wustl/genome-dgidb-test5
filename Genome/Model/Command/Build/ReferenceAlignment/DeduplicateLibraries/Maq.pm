@@ -85,7 +85,7 @@ sub execute {
         push @all_alignments, @read_set_maps;
     }
     unless (Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::WholeMap->execute(
-                                                                                                       accumulated_alignments_dir => $maplist_dir,
+                                                                                                       whole_map_file => $self->build->whole_map_file,
                                                                                                        alignments => \@all_alignments,
                                                                                                        aligner_version => $self->model->read_aligner_version,
                                                                                                    )) {
@@ -239,21 +239,6 @@ sub execute {
 	   $now = UR::Time->now;
 	   $self->status_message(">>> Removing intermediate files at $now");
 	   
-	   #remove the library bam files and indicies
-	   #remove maps
-           if (@subsequences) {
-               my $glob_expr = $maplist_dir."/*.map";
-               my @lib_map_files = grep { $_ !~ /\/whole\.map/ } glob($glob_expr);
-               for my $each_lib_map_file (@lib_map_files) {
-                   my $rm_map_cmd = "unlink $each_lib_map_file";
-                   $self->status_message("Executing remove command: $rm_map_cmd");
-                   my $rm_map_rv = system("$rm_map_cmd");
-                   unless ($rm_map_rv == 0) {
-                       $self->error_message("There was a problem with the map remove command: $rm_map_rv");
-                   }
-               }
-           }
-	   
 	   #remove bam files 
 	   for my $each_bam_file (@bam_files) {
 		my $rm_cmd = "unlink $each_bam_file";
@@ -270,86 +255,57 @@ sub execute {
 
       } #end else for skipping Bam process
 
-   $now = UR::Time->now;
-   $self->status_message("<<< Completed removing intermediate files at $now");
+       $now = UR::Time->now;
+       $self->status_message("<<< Completed removing intermediate files at $now");
 
-   #######################################
-   #starting mixed map merge of all maps 
-   $now = UR::Time->now;
-   $self->status_message(">>> Beginning mapmerge at $now .");
-   my $out_filepath= $maplist_dir . "/mixed_library_submaps/";
+       #######################################
+       #starting mixed map merge of all maps 
+       $now = UR::Time->now;
+       $self->status_message(">>> Beginning mapmerge at $now .");
+       my $out_filepath= $maplist_dir;
 
-   unless (-e $out_filepath) { 
-        unless ($self->create_directory($out_filepath)) {
-            #doesn't exist can't create it...quit
-            $self->error_message("Failed to create directory '$out_filepath':  $!");
-            return;
-        }
-        chmod 02775, $out_filepath;
-    } else {
-        unless (-d $maplist_dir) {
-            #does exist, but is a file, not a directory? quit.
-            $self->error_message("File already exists for directory '$out_filepath':  $!");
-            return;
-        }
-    }
-
-
-   if ( scalar <$out_filepath/*> ) { 
-  	$self->status_message("Directory $out_filepath is not empty.  Not executing mapmerge.  Remove directory contents and rerun to generate mixed maps.");
-   } else { 
-
-   	my @libraries =  keys %library_alignments; 
-   	$self->status_message("Libraries: ".join(",",@libraries));
-   	$self->status_message("Maps: ".join(",",@subsequences));
-        my @merge_commands;
-        push @subsequences, "other";	
- 	for my $sub_map (@subsequences) {
-        	my @maps_to_merge;
-        	for my $library_submap (@libraries) {
-                    my $library_sub_map_file = $maplist_dir .'/'. $library_submap .'/'. $sub_map .'.map';
-                    if (-e $library_sub_map_file) {
-			push @maps_to_merge, $library_sub_map_file;
-                    }
-        	}
-                if (@maps_to_merge) {
-                    $now = UR::Time->now;
-                    my $maq_pathname = $self->proper_maq_pathname('read_aligner_version');
-                    my $cmd ="$maq_pathname mapmerge $out_filepath$sub_map.map ".join(" ",@maps_to_merge);
-                    push (@merge_commands, $cmd);
-                    $self->status_message("Creating string: $cmd at $now.");
-                    #my $rv = system($cmd);
-                    #if($rv) {
-                    #	$self->error_message("problem running $cmd");
-                    #	return;
-                    #}
-                }
-   	}
-
-        #running commands
-	my $log_path = $log_dir."/rmdup/";
-        if ( $self->parallel_switch eq '1' ) {
-		my $pcrunner = Genome::Model::Tools::ParallelCommandRunner->create(command_list=>\@merge_commands,log_path=>$log_path);
-        	$pcrunner->execute;
-                #TODO: check return value or result of parallel command runner
+       unless (-e $out_filepath) { 
+            unless ($self->create_directory($out_filepath)) {
+                #doesn't exist can't create it...quit
+                $self->error_message("Failed to create directory '$out_filepath':  $!");
+                return;
+            }
+            chmod 02775, $out_filepath;
         } else {
-                for my $merge_cmd (@merge_commands) {
-        	        $now = UR::Time->now;
-    		        $self->status_message("Executing $merge_cmd at $now.");
-                	my $rv = system($merge_cmd);
-   			if($rv) {
-                            $self->error_message("non-zero return value($rv) from command: $merge_cmd");
-                            die($self->error_message);
-    			}
-		}
+            unless (-d $maplist_dir) {
+                #does exist, but is a file, not a directory? quit.
+                $self->error_message("File already exists for directory '$out_filepath':  $!");
+                return;
+            }
         }
-  }
+
+        my @libraries =  keys %library_alignments; 
+        $self->status_message("Libraries: ".join(",",@libraries));
+        my @maps_to_merge;
+        my $cmd;
+        for my $library (@libraries) {
+            my $library_file = $maplist_dir .'/'. $library.'.map';
+            if (-e $library_file) {
+                push @maps_to_merge, $library_file;
+            }
+        }
+        if (@maps_to_merge) {
+            $now = UR::Time->now;
+            my $maq_pathname = $self->proper_maq_pathname('read_aligner_version');
+            $cmd ="$maq_pathname mapmerge ". $self->build->whole_rmdup_map_file ." ".join(" ",@maps_to_merge);
+            $self->status_message("Creating string: $cmd at $now.");
+        }
+
+        $self->status_message("Executing $cmd at $now.");
+        my $rv = system($cmd);
+        if($rv) {
+            $self->error_message("non-zero return value($rv) from command: $cmd");
+            die($self->error_message);
+        }
 
   $now = UR::Time->now;
   $self->status_message("<<< Completed mapmerge at $now .");
   $self->status_message("*** All processes completed. ***");
-  #my @status_messages = $rmdup->status_messages();
-  #$self->status_message("Messages: ".join("\n",@status_messages) );
 
 #return verify_successful_completion();
 return 1;
@@ -364,26 +320,13 @@ sub verify_successful_completion {
     my $return_value = 1;
     my $build = $self->build;
 
-    if ( defined($build) ) {
-	    my $maplist_dir = $self->build->accumulated_alignments_directory;
-	    my $mixed_library_dir = $maplist_dir."/mixed_library_submaps";
-
-	    unless (-d $mixed_library_dir) {
-		$self->error_message("Can't verify successful completeion of Deduplication step.  Mixed library submap directory does not exist:  $mixed_library_dir");	  	
-		return 0;
-	    } else {
-		my @submap_files = glob("$maplist_dir/mixed_library_submaps");
-		unless ( scalar(@submap_files) > 0 ) { 
-			$self->error_message("Can't verify successful completion of Deduplication step.  There should be at least 1 submap in the $maplist_dir/mixed_library_submaps directory.");	  	
-			$self->error_message("$maplist_dir/mixed_library_submaps directory contents:");
-			return 0; 
-		}
-	    }
-    } else {
-	$self->error_message("Can't verify successful completion of Deduplication step. Build is undefined.");
-   	return 0;	
-    }
+            
+    unless (-e $build->whole_rmdup_map_file) {
+	$self->error_message("Can't verify successful completeion of Deduplication step. ".$build->whole_rmdup_map_file." does not exist!");	  	
+	return 0;
+    } 
     return $return_value;
+
 }
 
 
