@@ -128,7 +128,9 @@ sub _unsorted_indel_file {
             my $aligner_path = $self->path_for_maq_version('genotyper_version');
             my $ref_seq = $model->reference_build->full_consensus_path;
 
-            my $accumulated_alignments_file = $self->accumulate_maps;
+            #my $accumulated_alignments_file = $self->accumulate_maps;
+            my $accumulated_alignments_file = $self->whole_rmdup_map_file;
+            
             unless ($accumulated_alignments_file) {
                 $self->error_message('Failed to get accumulated map file');
                 return;
@@ -140,8 +142,8 @@ sub _unsorted_indel_file {
                                                   allow_zero_size_output_files => 1,
                                                   output_files => [$unsorted_indel_file],
                                               );
-            my $rm_cmd = "rm $accumulated_alignments_file";
-            Genome::Utility::FileSystem->shellcmd(cmd => $rm_cmd);
+            #my $rm_cmd = "rm $accumulated_alignments_file";
+            #Genome::Utility::FileSystem->shellcmd(cmd => $rm_cmd);
             return $unsorted_indel_file;
         }
         if (scalar(@unsorted_indel_files) > 1) {
