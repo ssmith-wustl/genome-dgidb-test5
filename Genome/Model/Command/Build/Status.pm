@@ -83,10 +83,6 @@ sub execute  {
     #$buildnode->addChild ( $self->tnode("logs","") );
     $buildnode->addChild ( $self->get_reports_node );
 
-
-    #events
-    $buildnode->addChild($self->get_events_node);
-
     #set the build status node to be the root
     $doc->setDocumentElement($build_status_node); 
 
@@ -207,7 +203,11 @@ sub get_processing_profile_node {
 
         my @command_classes = $pp->classes_for_stage($stage_name);
         foreach my $classes (@command_classes) {
-            $commands_node->addChild( $self->anode("command_class","value",$classes ) ); 
+            #$commands_node->addChild( $self->anode("command_class","value",$classes ) );
+            my $command_node =  $self->anode("command_class","value",$classes );
+            #get the events for each command class
+            $command_node->addChild($self->get_events_for_class_node($classes));  
+            $commands_node->addChild( $command_node );
         }
         $stage_node->addChild($commands_node);
         $stage_node->addChild($operating_on_node);
@@ -216,6 +216,25 @@ sub get_processing_profile_node {
 
     return $stages_node;
 }
+
+sub get_events_for_class_node {
+    my $self = shift;
+    my $class = shift;
+    my $doc = $self->_doc;
+
+    my $events_list_node = $doc->createElement("events");
+    my @events = $class->get( model_id => $self->build->model->id, build_id => $self->build->build_id);
+
+    for my $event (@events) {
+        my $event_node = $self->get_event_node($event);
+        $events_list_node->addChild($event_node);
+    }
+
+    return $events_list_node;
+
+}
+
+
 
 sub get_instrument_data_node {
   
