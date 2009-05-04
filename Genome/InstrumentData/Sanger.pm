@@ -35,6 +35,17 @@ class Genome::InstrumentData::Sanger {
                      is_optional => 1,
                      is_mutable  => 1,
                  },
+    research_project => {
+                         via   => 'attributes',
+                         to    => 'value',
+                         where => [
+                                   entity_class_name => 'Genome::InstrumentData::Sanger',
+                                   property_name     => 'research_project',
+                               ],
+                         is_optional => 1,
+                         is_mutable  => 1,
+                         default_value => 'unknown',
+                     },
     ],
 };
 
