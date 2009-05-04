@@ -4,8 +4,13 @@ use strict;
 use warnings;
 
 use Genome;
+
+use App::Report;
 use CGI;
 use IO::String;
+use Data::Dumper;
+use Template;
+use POSIX; 
 
 my $base_template_path = __PACKAGE__->_base_path_for_templates;
 
@@ -19,7 +24,18 @@ class Genome::Model::ReferenceAlignment::Report::GoldSnpConcordance {
         
         # the name is essentially constant
         name                        => { default_value => 'Gold_SNP_Concordance' },
-    ],
+        report_templates => {
+            is => 'String',
+            is_many => 0,
+            default_value => "$base_template_path.html.tt2",
+            doc => 'The paths of template(s) to use to format the report.  (In .tt2 format)',
+        },
+        test => {
+            is             => 'Boolean',
+            default_value  => 0,
+            doc            => "Saves copies of the generated data in the pwd if they do not exist. Re-uses them on the next run(s)."
+        }
+    ]
 };
 
 sub _base_path_for_templates 
@@ -37,41 +53,81 @@ sub _base_path_for_templates
 sub _generate_data 
 {
     my $self = shift;
-    return {
-        description => $self->generate_report_brief,
-        html => $self->generate_report_detail,
+#    return {
+#        description => $self->generate_report_brief,
+#        html => $self->generate_report_detail,
+#    };
+#  below is part of shift to templating system
+    my $template = shift;
+
+    my @templates = $self->report_templates;
+    unless (@templates) {
+        die "No report templates assigned! Cannot generate any content."
+    }
+
+    my $data = { description => $self->generate_report_brief };
+    
+    for my $template (@templates) {
+        my $content = $self->generate_report_detail($template);
+        my ($format,$key);
+        if ($content =~ /\<\s*HTML/i) {
+            $format = 'HTML';
+            $key = 'html';
+        }
+#        else {
+#            $format = 'text';
+#            $key = 'txt'; 
+#        }
+        if (exists $data->{$key}) {
+            die "Multiple templates return content in $format format. This is not supported, sadly."
+                . "  Error processing $template";
+        }
+        $data->{$key} = $content;
     };
+    return $data;
+# end of additions
 }
 
 sub generate_report_brief 
 {
     my $self=shift;
-
-    return "<div>Gold Snp coverage for " . $self->model_name . " as of " . UR::Time->now.'</div>';
+#    my $build = $self->build;
+    return "<div>Gold Snp coverage for " . $self->model_name . " (build " . $self->build_id . ") as of " . UR::Time->now.'</div>';
 }
 
 sub generate_report_detail 
 {
     my $self = shift;
+    my $template = shift;
+    unless ($template) {
+        die "Please specify which template to use for this report.";
+    }
+
     my $build = $self->build;
-    
+    my $model = $build->model;
     my $gold_snp_path = $self->gold_snp_path;
+
+    my $module_path = $INC{"Genome/Model/ReferenceAlignment/Report/GoldSnpConcordance.pm"};
+    die 'failed to find module path!' unless $module_path;
    
 $DB::single = 1;
 
     my $r = new CGI;
-    my $body = IO::String->new();  
-    die $! unless $body;
-    $body->print( $r->start_html(-title=> 'Gold SNP Concordance Report for Model' . $self->model_id . ', build ' .$build->id) );
-
     my $style = $self->get_css();
-    my $report_start = "<div class=\"container\">\n<div class=\"background\">\n" .
-                       "<h1 class=\"report_title\">Gold SNP Concordance Report for Model " .
-                       $self->model_id . " (<em>" . $self->model_name . "</em>), build " .
-                       $build->id . "</h1>\n";
-    my $report_end = "</div>&nbsp;</div>";
-    $body->print("<style>$style</style>");
-    $body->print("$report_start");
+#    my $body = IO::String->new();  
+#    die $! unless $body;
+#    $body->print( $r->start_html(-title=> 'Gold SNP Concordance Report for Model' . $self->model_id . ', build ' .$build->id) );
+
+#    my $report_start = "<div class=\"container\">\n<div class=\"background\">\n" .
+#                       "<h1 class=\"report_title\">Gold SNP Concordance Report for Model " .
+#                       $self->model_id . " (<em>" . $self->model_name . "</em>), build " .
+#                       $build->id . "</h1>\n";
+#    my $report_end = "</div>&nbsp;</div>";
+#    $body->print("<style>$style</style>");
+#    $body->print("$report_start");
+
+    my $content;
+    my $report_content;
 
     for my $list (qw/variant_list_files variant_filtered_list_files/) {
         my $snp_file = $self->create_temp_file_path($list);
@@ -101,14 +157,43 @@ $DB::single = 1;
         }
        
         my $formatted_gold_rpt = $self->format_report($gold_rpt, $label);
-        $body->print("$formatted_gold_rpt");
+#        $body->print("$formatted_gold_rpt");
+        $report_content = $report_content . $formatted_gold_rpt;
         
     }
 
-    $body->print("$report_end");
-    $body->print( $r->end_html );
+#    $body->print("$report_end");
+#    $body->print( $r->end_html );
+#    $body->seek(0, 0);
+#    return join('', $body->getlines);
+
+    my @vars = (
+        model_id       => $model->id,
+        model_name     => $model->name,
+        build_id       => $build->id,
+        page_title     => "Gold SNP Concordance Report for Model" . $model->id . " (" . $model->name . "), build " .$build->id,
+        style          => $style,
+        report_content => $report_content
+    );
+
+    my $tt = Template->new({
+        ABSOLUTE => 1,
+    }) || die "$Template::ERROR\n";
+
+    my $rv = $tt->process($template, { @vars }, \$content) || die $$tt->error(), "\n";
+    if ($rv != 1) {
+        die "Bad return value from template processing for summary report generation: $rv ";
+    }
+    unless ($report_content) {
+        die "No content returned from template processing!";
+    }
+
+    my $body = IO::String->new();  
+    die $! unless $body;
+    $body->print($content);
     $body->seek(0, 0);
-    return join('', $body->getlines);
+    return join('', $body->getlines);        
+
 }
 
 sub format_report
