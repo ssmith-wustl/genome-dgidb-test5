@@ -316,6 +316,7 @@ sub get_event_node {
         $event_node->addChild( $self->tnode("lsf_job_status",$lsf_job_status));
         $event_node->addChild( $self->tnode("date_scheduled",$event->date_scheduled));
         $event_node->addChild( $self->tnode("date_completed",$event->date_completed));
+        $event_node->addChild( $self->tnode("elapsed_time", $self->calculate_elapsed_time($event->date_scheduled,$event->date_completed) ));
         $event_node->addChild( $self->tnode("instrument_data_id",$event->instrument_data_id));
         my $log_file = $event->resolve_log_directory ."/".$event->id.".err";
         $event_node->addChild( $self->tnode("log_file",$log_file));
@@ -379,6 +380,29 @@ sub add_attribute {
     return $node;
 
 }
+
+sub calculate_elapsed_time {
+    my $self = shift;
+    my $date_scheduled = shift;
+    my $date_completed = shift;
+
+    my $diff;
+
+    if ($date_completed) {
+        $diff = UR::Time->datetime_to_time($date_completed) - UR::Time->datetime_to_time($date_scheduled);
+    } else {
+        $diff = time - UR::Time->datetime_to_time( $date_scheduled);
+    }
+
+    my $m = int($diff/60);
+    my $s = $diff % 60;
+    return "${m}m ${s}s" if $m;
+    return "${s}s";
+}
+
+
+
+
 
 1;
 
