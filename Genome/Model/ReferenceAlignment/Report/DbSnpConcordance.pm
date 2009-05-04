@@ -293,6 +293,8 @@ sub generate_report_detail
                 $total_unfiltered_snps = $1;
                 $dbsnp_unfiltered_positions = $2;
                 $unfiltered_concordance = $3;
+                print("total_unfiltered_snps: $total_unfiltered_snps\n dbsnp_unfiltered_positions: $dbsnp_unfiltered_positions\n unfiltered_concordance: $unfiltered_concordance\n\n");
+                
             } else {
                 die ("Could not extract unfiltered summary report data from dbSNP concordance report!");
             }
@@ -304,10 +306,11 @@ sub generate_report_detail
             $cqr_filtered_summary = $concordance_report;
 
             ## extract snp positions, dbsnp positions, and concordance data so we can display them in a nice table            
-            if ($cqr_unfiltered_summary =~ m/(\d+) .* (\d+) .* (\d+\.\d+\%)/s) {
+            if ($cqr_filtered_summary =~ m/(\d+) .* (\d+) .* (\d+\.\d+\%)/s) {
                 $total_filtered_snps = $1;
                 $dbsnp_filtered_positions = $2;
                 $filtered_concordance = $3;
+                print("total_filtered_snps: $total_filtered_snps\n dbsnp_filtered_positions: $dbsnp_filtered_positions\n filtered_concordance: $filtered_concordance\n\n");
             } else {
                 die ("Could not extract filtered summary report data from dbSNP concordance report!");
             }
