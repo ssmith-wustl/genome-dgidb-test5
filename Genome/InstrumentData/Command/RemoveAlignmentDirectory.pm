@@ -8,33 +8,33 @@ use Genome;
 class Genome::InstrumentData::Command::RemoveAlignmentDirectory {
     is => 'Genome::InstrumentData::Command',
     has => [
-            aligner_name => {
-                             is => 'Text',
-                             doc => 'The name of the aligner used to create alignment data',
-                         },
-
-            reference_name => {
-                               is => 'Text',
-                               doc => 'The name of the reference sequence to which instrument data was aligned',
-                           },
-        ],
+        aligner_name => {
+            is => 'Text',
+            doc => 'The name of the aligner used to create alignment data',
+        },
+        reference_name => {
+            is => 'Text',
+            doc => 'The name of the reference sequence to which instrument data was aligned',
+        },
+    ],
     has_optional => [
-                  _alignment      => {
-                                      is => 'Genome::InstrumentData::Alignment'
-                                  },
-                  reference_build => {
-                                      is => 'Genome::Model::Build::ReferencePlaceholder',
-                                      id_by => 'reference_name',
-                                  },
-                  aligner_version => {
-                                      is => 'Text',
-                                      doc => 'The version of the aligner used to create alignment data',
-                                  },
-                  aligner_params  => {
-                                      is => 'Text',
-                                      doc => 'any additional params for the aligner in a single string'
-                                  },
-                 ],
+        _alignment      => {
+            is => 'Genome::InstrumentData::Alignment'
+        },
+        reference_build => {
+            is => 'Genome::Model::Build::ReferencePlaceholder',
+            id_by => 'reference_name',
+        },
+        aligner_version => {
+            is => 'Text',
+            doc => 'The version of the aligner used to create alignment data',
+        },
+        aligner_params  => {
+            is => 'Text',
+            doc => 'any additional params for the aligner in a single string'
+        },
+    ],
+    doc => 'delete alignment data from the system',
 };
 
 sub create {
