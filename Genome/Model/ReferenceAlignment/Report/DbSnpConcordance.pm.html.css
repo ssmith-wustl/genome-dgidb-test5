@@ -28,6 +28,35 @@ h1.section_title {
 	border-bottom: 5px solid #8dc643
 }
 
+h3 {
+    margin: 10px 0 5px 0;
+    padding: 0;
+}
+
+h3.graph_title {
+    margin: 10px 0 5px 10px;
+    padding: 0;
+}
+
+table.summary_table {
+    margin: 0;
+    padding: 0;
+}
+
+table.summary_table td {
+    padding: 3px 5px;
+    font-size: 83%
+}
+
+table.summary_table td.label {
+    font-weight: bold;
+    
+}
+
+table.summary_table td.value {
+    text-align: right;
+}
+
 div.graph_placeholder {
 	width: 880px;
 	height: 450px;
