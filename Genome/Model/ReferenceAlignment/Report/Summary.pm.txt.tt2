@@ -24,7 +24,7 @@ Build Data Directory: https://gscweb.gsc.wustl.edu[% data_directory %]
 
 Haploid
 ------------------------------------------------------------
-            haploid coverage: [% haploid_coverage %]X
+            haploid coverage: [% haploid_coverage %]
         unfiltered SNP calls: [% unfiltered_snp_calls %]
           filtered SNP calls: [% filtered_snp_calls %]
 ------------------------------------------------------------
