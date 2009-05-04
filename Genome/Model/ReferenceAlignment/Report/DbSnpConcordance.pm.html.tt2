@@ -79,15 +79,65 @@
             <tr>
               <td width='50%'>
                 <h3>Unfiltered Concordance Summary:</h3>
-                <p>[% unfiltered_concordance_summary  %] </p>
+                <table cellpadding="0" cellspacing="0" border="0" class="summary_table">
+                  <tr>
+                    <td class="label">
+                      Total Unfiltered SNPs:
+                    </td>
+                    <td class="value">
+                      [% total_unfiltered_snps %]
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="label">
+                      dbSNP positions:
+                    </td>
+                    <td class="value">
+                      [% dbsnp_unfiltered_positions %]
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="label">
+                      concordance:
+                    </td>
+                    <td class="value">
+                      [% unfiltered_concordance %]
+                    </td>
+                  </tr>
+                </table>
               </td>
               <td width='50%'>
                 <h3>Filtered Concordance Summary:</h3>
-                <p>[% filtered_concordance_summary  %]</p>
+                <table cellpadding="0" cellspacing="0" border="0" class="summary_table">
+                  <tr>
+                    <td class="label">
+                      Total Unfiltered SNPs:
+                    </td>
+                    <td class="value">
+                      [% total_unfiltered_snps %]
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="label">
+                      dbSNP positions:
+                    </td>
+                    <td class="value">
+                      [% dbsnp_unfiltered_positions %]
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="label">
+                      concordance:
+                    </td>
+                    <td class="value">
+                      [% unfiltered_concordance %]
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
           </table>          
-          <h3>dbSNP Concordance for SNVs by Quality</h3>
+          <h3 class="graph_title">dbSNP Concordance for SNVs by Quality</h3>
           <table width="100%" cellpadding="5" cellspacing="0">
             <tr>
               <td valign="middle"><img src="https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/images/axis_label_v_SNPs.png" width="19" height="49"/></td>

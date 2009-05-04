@@ -139,6 +139,13 @@ sub generate_report_detail
 
     my $cqr_unfiltered_summary;
     my $cqr_filtered_summary;
+
+    my $total_unfiltered_snps;
+    my $total_filtered_snps;
+    my $dbsnp_unfiltered_positions;
+    my $dbsnp_filtered_positions;
+    my $unfiltered_concordance;
+    my $filtered_concordance;
     
 	my $concordance_report;
 
@@ -272,19 +279,40 @@ sub generate_report_detail
             die "Error generating concordance quality report!";
         }
         
-        $DB::single = 1;
-        
         my @concordance_quality_report = split(/\n/,$concordance_quality_report);
         pop @concordance_quality_report;
         pop @concordance_quality_report;
-                
+        
         if ($list eq 'variant_list_files') {
             @cqr_unfiltered = @concordance_quality_report;
-            $cqr_unfiltered_summary = $concordance_report;            
+            $cqr_unfiltered_summary = $concordance_report;
+
+            ## extract snp positions, dbsnp positions, and concordance data so we can display them in a nice table
+            ## TODO: create a sub for this so we're not doing it twice in a row
+            if ($cqr_unfiltered_summary =~ m/(\d+) .* (\d+) .* (\d+\.\d+\%)/s) {
+                $total_unfiltered_snps = $1;
+                $dbsnp_unfiltered_positions = $2;
+                $unfiltered_concordance = $3;
+            } else {
+                die ("Could not extract unfiltered summary report data from dbSNP concordance report!");
+            }
+
+            $DB::single = 1;
         }
         elsif ($list eq 'variant_filtered_list_files') {
             @cqr_filtered = @concordance_quality_report;
-            $cqr_filtered_summary = $concordance_report;            
+            $cqr_filtered_summary = $concordance_report;
+
+            ## extract snp positions, dbsnp positions, and concordance data so we can display them in a nice table            
+            if ($cqr_unfiltered_summary =~ m/(\d+) .* (\d+) .* (\d+\.\d+\%)/s) {
+                $total_filtered_snps = $1;
+                $dbsnp_filtered_positions = $2;
+                $filtered_concordance = $3;
+            } else {
+                die ("Could not extract filtered summary report data from dbSNP concordance report!");
+            }
+
+            $DB::single = 1;
         }
         else {
             die "unknown SNV list $list!.  Cannot properly assign graph data strings!";
@@ -295,44 +323,11 @@ sub generate_report_detail
     $DB::single = 1;
 
     #
-    # BUILD HTML REPORT
-    #
-
-    # my $body = IO::String->new();
-    # die unless $body;
-    #my $r = new CGI;
-    
-    #my $title =  'Db Snp for model ' . $model->id . ' ("' . $model->name . '")  build ' . $build_id . ')';
-    
-    # $body->print($r->start_html(
-    #     -title  => $title,
-    #     -style  => { -code => $css_content },
-    #     -script => [
-    #         { -type => 'text/javascript', -src => 'https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/js/jquery.js'},
-    #         { -type => 'text/javascript', -src => 'https://gscweb.gsc.wustl.edu/report_resources/db_snp_concordance/js/jquery.flot.js'}
-    #     ]
-    # ));
-    
-    # $body->print("<small><a href='../../reports/Summary/report.html'>full report</a></small>");
-    # $body->print('<div class="container">');
-    # $body->print('<div class="background">');
-
-
-    # my $header = "dbSNP Concordance for SNVs";
-
-    # $body->print("<h1 class=\"section_title\">$header</h1>");
-    # $body->print("<div class='content_padding'>");
-    # $body->print("<table width='100%' cellpadding='10' cellspacing='0'><tr><td width='50%'><h3>Unfiltered Concordance Summary:</h3><pre>$cqr_unfiltered_summary</pre></td><td width='50%'><h3>Filtered Concordance Summary:</h3><pre>$cqr_filtered_summary</pre></td></tr></table>");    
-    # $body->print("<p/>");
-
-    # $body->print("<h3>$header by Quality</h3>");
-
-    #
     # BUILD GRAPH
     #
 
     ## TODO: Parse the data and create the graph data strings using a proper function
-    ## instead of repeating the same process twice. - jmcmicha
+    ## instead of repeating the same process twice.
 
     ## begin filtered graph data assembly
     my $filtered_lines = \@cqr_filtered;
@@ -407,25 +402,32 @@ sub generate_report_detail
     ########## RENDER TEMPLATE #############
 
     my @vars = (
-        model_id                          => $model->id,
-        model_name                        => $model->name,
-        page_title                        => "Db Snp for model " . $model->id . ' (&quot;' . $model->name . "&quot;) build $build_id",
+        model_id                       => $model->id,
+        model_name                     => $model->name,
+        page_title                     => "Db Snp for model " . $model->id . ' (&quot;' . $model->name . "&quot;) build $build_id",
         
-        unfiltered_concordance_summary    => $cqr_unfiltered_summary,
-        filtered_concordance_summary      => $cqr_filtered_summary,
-        
-        filtered_db_snp_data              => $filtered_db_snp_data, 
-        filtered_all_snp_data             => $filtered_all_snp_data,
-        filtered_concordance_data         => $filtered_concordance_data,
-        unfiltered_db_snp_data            => $unfiltered_db_snp_data,
-        unfiltered_all_snp_data           => $unfiltered_all_snp_data,
-        unfiltered_concordance_data       => $unfiltered_concordance_data,
+        unfiltered_concordance_summary => $cqr_unfiltered_summary,
+        filtered_concordance_summary   => $cqr_filtered_summary,
 
-        graph_script                      => $graph_script,
-        page_css                          => $page_css
+        total_unfiltered_snps          => commify($total_unfiltered_snps),
+        total_filtered_snps            => commify($total_filtered_snps),
+        dbsnp_unfiltered_positions     => commify($dbsnp_unfiltered_positions),
+        dbsnp_filtered_positions       => commify($dbsnp_filtered_positions),
+        unfiltered_concordance         => $unfiltered_concordance,
+        filtered_concordance           => $filtered_concordance,
+        
+        filtered_db_snp_data           => $filtered_db_snp_data, 
+        filtered_all_snp_data          => $filtered_all_snp_data,
+        filtered_concordance_data      => $filtered_concordance_data,
+        unfiltered_db_snp_data         => $unfiltered_db_snp_data,
+        unfiltered_all_snp_data        => $unfiltered_all_snp_data,
+        unfiltered_concordance_data    => $unfiltered_concordance_data,
+
+        graph_script                   => $graph_script,
+        page_css                       => $page_css
     );
 
-    $self->status_message("Summary Report values: ".Dumper(\@vars) );
+    ## $self->status_message("Summary Report values: ".Dumper(\@vars) );
     
     ##################################
       
@@ -467,6 +469,12 @@ sub _generate_combined_snp_file
         die "Failed to create temp file $fname from snp files: $!";
     }
     return $fname;
+}
+
+sub commify {
+    my $text = reverse $_[0];
+    $text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+    return scalar reverse $text;
 }
 
 sub build_coordinate_string {
