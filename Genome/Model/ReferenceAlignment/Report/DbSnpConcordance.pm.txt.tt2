@@ -6,10 +6,14 @@ Model Id: [% model_id %]
 Model Name: [% model_name %]
 
 Unfiltered Concordance Summary:
-[% unfiltered_concordance_summary %]
+ total SNPs: [% total_unfiltered_snps %]
+ dbSNP positions: [% dbsnp_unfiltered_positions %]
+ concordance: [% unfiltered_concordance %]
 
 Filtered Concordance Summary:
-[% filtered_concordance_summary %]
+ total SNPs: [% total_filtered_snps %]
+ dbSNP positions: [% dbsnp_filtered_positions %]
+ concordance: [% filtered_concordance %]
 
 Unfiltered DbSNP Data:
 [% unfiltered_db_snp_data %]
