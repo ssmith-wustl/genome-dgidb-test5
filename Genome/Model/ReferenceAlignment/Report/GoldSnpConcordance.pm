@@ -171,7 +171,7 @@ $DB::single = 1;
         model_id       => $model->id,
         model_name     => $model->name,
         build_id       => $build->id,
-        page_title     => "Gold SNP Concordance Report for Model" . $model->id . " (" . $model->name . "), build " .$build->id,
+        page_title     => "Gold SNP Concordance Report for Model " . $model->id . " (" . $model->name . "), build " .$build->id,
         style          => $style,
         report_content => $report_content
     );
