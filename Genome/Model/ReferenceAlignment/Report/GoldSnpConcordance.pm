@@ -215,9 +215,9 @@ sub format_report
         $content=~s/(There were )(\d+)(\s)(.+)(<\/td><\/tr>)/$4<\/td><td class=\"gold_class\">$2<\/td><td colspan=\"2\" class=\"gold_class\">&nbsp;$5/g;
         $content=~s/(<td colspan=\"2\" class=\"gold_class\">&nbsp;<\/td><\/tr>\n)/$1<tr><th>&nbsp;<\/th><th>reads<\/th><th>\%<\/th><th>depth<\/th><\/tr>\n/g;
         $content=~s/calls \(could/calls<br \/>(could/g;
-        $content = "<h2 class=\"section_title\">$label</h2>\n" .
+        $content = "<div class=\"section_content\">\n<h2 class=\"section_title\">$label</h2>\n" .
                    "<table class=\"snp\">\n" .
-                   "<tr><td class=\"gold_class\">$content</tr>\n</table>\n";
+                   "<tr><td class=\"gold_class\">$content</tr>\n</table>\n</div>";
 
         return $content;
     }

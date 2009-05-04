@@ -86,4 +86,10 @@ table.snp td.maq_class {
     height: 22px;
     text-align: right;
 }
+div.section_content {
+    width: 495px;
+    padding: 0;
+    margin: 0;
+    float: left;
+}
 
