@@ -49,17 +49,18 @@ table.snp td {
 }
 
 table.snp th {
-   font-size:80%;
-   text-align: right;
-   font-style: italic;
-   background: #DDD;
-   border-bottom: 1px solid #CCC;
-   border-top: 1px solid #CCC;
+    font-size: 80%;
+    text-align: right;
+    font-style: italic;
+    background: #DDD;
+    border-bottom: 1px solid #CCC;
+    border-top: 1px solid #CCC;
     color: #5f604c;
 }
 
 table.snp td {
     text-align: right;
+    font-size: 90%;
 }
 
 table.snp td.gold_class {
