@@ -56,11 +56,12 @@ sub execute {
             }
         }
     }
-    
+    # add fast_mode to avoid Bio perl slowness 
     my $chunk = Genome::Model::Tools::Fastq::Chunk->create(
         fastq_file => $self->fastq_file,
         chunk_size => $self->chunk_size,
         chunk_dir  => $ball_dir,
+        fast_mode  => 1,
     );
     my $fq_chunk_files = $chunk->execute;
 
