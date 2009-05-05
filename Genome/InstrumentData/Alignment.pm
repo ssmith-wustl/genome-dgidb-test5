@@ -306,17 +306,19 @@ sub verify_alignment_data {
     }
 
     my $reference_build = $self->reference_build;
-    my @subsequence_names = grep { $_ ne 'all_sequences' } $reference_build->subreference_names(reference_extension => 'bfa');
-
-    unless  (@subsequence_names) {
-        @subsequence_names = 'all_sequences';
-    }
+    my ($all_sequences_alignment_file) = $self->alignment_file_paths_for_subsequence_name('all_sequences');
     my $errors = 0;
-    for my $subsequence_name (@subsequence_names) {
-        my ($alignment_file) = $self->alignment_file_paths_for_subsequence_name($subsequence_name);
-        unless ($alignment_file) {
-            $errors++;
-            $self->error_message('No alignment file found for subsequence '. $subsequence_name .' in alignment directory '. $self->alignment_directory);
+    unless ($all_sequences_alignment_file) {
+        my @subsequence_names = grep { $_ ne 'all_sequences' } $reference_build->subreference_names(reference_extension => 'bfa');
+        unless  (@subsequence_names) {
+            @subsequence_names = 'all_sequences';
+        }
+        for my $subsequence_name (@subsequence_names) {
+            my ($alignment_file) = $self->alignment_file_paths_for_subsequence_name($subsequence_name);
+            unless ($alignment_file) {
+                $errors++;
+                $self->error_message('No alignment file found for subsequence '. $subsequence_name .' in alignment directory '. $self->alignment_directory);
+            }
         }
     }
     my @possible_unaligned_shortcuts= $self->unaligned_reads_list_paths;

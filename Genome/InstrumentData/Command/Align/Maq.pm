@@ -65,11 +65,8 @@ sub run_aligner {
     $self->status_message("REFSEQ PATH: $ref_seq_file\n");
 
     # input/output files
-    my $alignment_file = $self->create_temp_file_path('all.map');
-    unless ($alignment_file) {
-        $self->error_message('Failed to create temp alignment file for all sequences');
-        die($self->error_message);
-    }
+    my $alignment_file = $alignment_directory .'/all_sequences.map';
+
 
     # RESOLVE A STRING OF ALIGNMENT PARAMETERS
     if ($is_paired_end) {
@@ -153,54 +150,11 @@ sub run_aligner {
     IO::File->new(">$alignment_directory/evenness")->print($evenness);
     $DB::single = $DB::stopper;
 
-    # TODO: stop splitting the files up by chromosome as soon as downstream stuff handles a single file
-    my @subsequences = grep {$_ ne "all_sequences"} $reference_build->subreference_names(reference_extension=>'bfa');
-    my $mapsplit_cmd = Genome::Model::Tools::Maq->path_for_mapsplit_version($self->version);
-    if (@subsequences) {
-        my $cmd = "$mapsplit_cmd " . $alignment_directory . "/ $alignment_file " . join(',',@subsequences);
-        my $rv = system($cmd);
-        if($rv) {
-            #arbitrary convention set up with homemade mapsplit and mapsplit_long..return 2 if file is empty.
-            if($rv/256 == 2) {
-                my $first_subsequence = $subsequences[0];
-                my ($empty_map_file) = $alignment->alignment_file_paths_for_subsequence_name($first_subsequence);
-                unless ($empty_map_file) {
-                    $self->error_message('Failed to find empty map file after return value 2 from mapsplit comand '. $cmd);
-                    die $self->error_message;
-                }
-                unless (-s $empty_map_file) {
-                    $self->error_message('Empty map file '. $empty_map_file .' does not have size.');
-                    die $self->error_message;
-                }
-                for my $subsequence (@subsequences) {
-                    if ($subsequence eq $first_subsequence) { next; }
-                    my $subsequence_map_file = $alignment_directory .'/'. $subsequence .'.map';
-                    unless (File::Copy::copy($empty_map_file,$subsequence_map_file)) {
-                        $self->error_message('Failed to copy empty map file '. $empty_map_file .' to '. $subsequence_map_file .":  $!");
-                        die $self->error_message;
-                    }
-                }
-            } else {
-                $self->error_message("Failed to run map split on alignment file $alignment_file");
-                die $self->error_message;
-            }
-        }
-    } else {
-        @subsequences = 'all_sequences';
-        my $all_sequences_map_file = $alignment_directory .'/all_sequences.map';
-        unless (File::Copy::copy($alignment_file,$all_sequences_map_file)) {
-            $self->error_message('Failed to copy map file from '. $alignment_file .' to '. $all_sequences_map_file);
-            die $self->error_message;
-        }
-    }
-
     my $errors;
-    for my $subsequence (@subsequences) {
-        my @found = $alignment->alignment_file_paths_for_subsequence_name($subsequence);
-        unless (@found) {
-            $self->error_message("Failed to find map file for subsequence name $subsequence!");
-            $errors++;
-        }
+    my @found = $alignment->alignment_file_paths_for_subsequence_name('all_sequences');
+    unless (@found) {
+        $self->error_message("Failed to find map file for all_sequences!");
+        $errors++;
     }
     if ($errors) {
         my @files = glob($alignment_directory . '/*');

@@ -6,7 +6,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 241;
+use Test::More tests => 242;
 use Test::Differences;
 use File::Path;
 
@@ -168,7 +168,7 @@ test_model_from_params(
     model_params => {
         subject_name => $default_subject_name,
         subject_type => $default_subject_type,
-        processing_profile_name   => '454_newbler_default_assembly',
+        processing_profile_name   => '454_newbler_assembly_with_consed_flag',
     },
 );
 
