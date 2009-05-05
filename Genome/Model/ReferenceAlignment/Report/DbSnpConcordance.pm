@@ -296,7 +296,7 @@ sub generate_report_detail
                 print("total_unfiltered_snps: $total_unfiltered_snps\n dbsnp_unfiltered_positions: $dbsnp_unfiltered_positions\n unfiltered_concordance: $unfiltered_concordance\n\n");
                 
             } else {
-                die ("Could not extract unfiltered summary report data from dbSNP concordance report!");
+                $self->status_message("Could not extract unfiltered summary report data from dbSNP concordance report!");
             }
 
             $DB::single = 1;
@@ -312,7 +312,7 @@ sub generate_report_detail
                 $filtered_concordance = $3;
                 print("total_filtered_snps: $total_filtered_snps\n dbsnp_filtered_positions: $dbsnp_filtered_positions\n filtered_concordance: $filtered_concordance\n\n");
             } else {
-                die ("Could not extract filtered summary report data from dbSNP concordance report!");
+                $self->status_message("Could not extract filtered summary report data from dbSNP concordance report!");
             }
 
             $DB::single = 1;
