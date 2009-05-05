@@ -13,10 +13,6 @@ class Genome::Model::Tools::Somatic::UcscAnnotator{
             is  => 'String',
             doc => 'The input file of variants to be annotated',
         },
-        chromosome => {
-            is  => 'String',
-            doc => 'The current chromosome (skips all others for parallelization purposes)',
-        },
        output_file => {
             is => 'Text',
             doc => "Store annotation in the specified file"
@@ -43,7 +39,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    my $Chromosome = $self->chromosome;
     my $InputFile = $self->input_file;
     my $outfile = $self->output_file;
 
@@ -218,7 +213,6 @@ sub execute {
         $DB::single=1;
         chomp $line;
         my ($Chr, $start, $stop) = split /\s+/, $line;
-        if ($Chr ne $Chromosome) { next; }
 
         print OUT "$Chr\t$start\t$stop\t"; 
         $start = $start - 1; #change to 0 based
