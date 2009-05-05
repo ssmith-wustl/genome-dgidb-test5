@@ -67,7 +67,6 @@ sub prioritized_transcripts {# was prioritized_transcripts_for_snp and prioritiz
 
     my @prioritized_annotations = $self->_prioritize_annotations_per_gene(@annotations);
 
-
     return @prioritized_annotations;
 }
 
@@ -196,7 +195,7 @@ sub _determine_transcripts_to_annotate {
     {
         if ( $transcript->transcript_status ne 'unknown' and $transcript->source ne 'ccds' )
         {
-                push @transcripts_priority_1, $transcript;
+            push @transcripts_priority_1, $transcript;
         }
     }
 
@@ -313,21 +312,41 @@ sub _transcript_annotation_for_flank
     if ($protein){
         $aas_length = length($protein->amino_acid_seq);
     }
-    my ($c_position, $trv_type);
-    if ( $position < $transcript->transcript_start )
-    {	
-        ($c_position, $trv_type) = ( $transcript->strand eq '+1' )
-        ? (($position - $cds_exon_positions[0]), "5_prime_flanking_region")
-        : (("*" . ($cds_exon_positions[0] - $position)), "3_prime_flanking_region"); 
+    my ($c_position, $trv_type, $distance_to_transcript);
+    if ( $position < $transcript->transcript_start ) {
+        #($c_position, $trv_type) = ( $transcript->strand eq '+1' )
+        #? (($position - $cds_exon_positions[0]), "5_prime_flanking_region")
+        # : (("*" . ($cds_exon_positions[0] - $position)), "3_prime_flanking_region");
+        if ( $transcript->strand eq '+1' ) {
+            $c_position = $position - $cds_exon_positions[0];
+            $trv_type = "5_prime_flanking_region";
+            $distance_to_transcript =  $position - $transcript->transcript_start;
+        } else {
+            $c_position = "*" . ($cds_exon_positions[0] - $position);
+            $trv_type = "3_prime_flanking_region";
+            $distance_to_transcript = $transcript->transcript_start - $position;
+        } 
     }
     elsif ( $position > $transcript->transcript_stop )	
     {
-        ($c_position, $trv_type) = ( $transcript->strand eq '-1' )
-        ? (($cds_exon_positions[1] - $position), "5_prime_flanking_region")
-        : (("*" . ($position - $cds_exon_positions[1])), "3_prime_flanking_region");
+        #($c_position, $trv_type) = ( $transcript->strand eq '-1' )
+        #? (($cds_exon_positions[1] - $position), "5_prime_flanking_region")
+        #: (("*" . ($position - $cds_exon_positions[1])), "3_prime_flanking_region");
+        if ( $transcript->strand eq '-1' ) {
+            $c_position = $cds_exon_positions[1] - $position;
+            $trv_type = "5_prime_flanking_region";
+            $distance_to_transcript = $transcript->transcript_stop - $position;
+        } else {
+            $c_position = "*" . ($position - $cds_exon_positions[1]);
+            $trv_type = "3_prime_flanking_region";
+            $distance_to_transcript =  $position - $transcript->transcript_stop;
+        }
+    } else {
+        $self->warning_message("In _transcript_annotation_for_flank and probably shouldnt be (position falls within the transcript)...");
+        print Dumper($transcript);
+        print Dumper($variant);
     }
-    # TODO else??
-
+    
     return
     (
         strand => $strand,
@@ -335,6 +354,7 @@ sub _transcript_annotation_for_flank
         trv_type => $trv_type,
         amino_acid_length => $aas_length,
         amino_acid_change => 'NULL',
+        distance_to_transcript => $distance_to_transcript,
     );
 # From Chapter 8 codon2aa
     #
@@ -394,8 +414,6 @@ sub _transcript_annotation_for_intron
 
 
     my ($c_position, $trv_type);
-#TODO xshi modifications...comes from intron function beginning line 628
-# Should this just check for indel? Probably... since I think this is what is beting passed in right now
     if($variant->{type} =~ /del|ins/i)
     {
         if(($structure_start>=$variant->{start} && $structure_start<=$variant->{stop})||($structure_stop>=$variant->{start} && $structure_stop<=$variant->{stop})||($structure_start<=$variant->{start} && ($structure_start+1)>=$variant->{start})||($structure_stop>=$variant->{stop} && ($structure_stop-1)<=$variant->{stop})) {
@@ -419,8 +437,6 @@ sub _transcript_annotation_for_intron
         );
         #TODO  make sure it's okay to return early w/ null c. position
     }
-#end xshi
-##
     my $utr_pos; 
     my $trsub_start=$main_structure->structure_start-1;
     my $trsub_stop=$main_structure->structure_stop+1;
@@ -433,7 +449,6 @@ sub _transcript_annotation_for_intron
     }
     my $exon_pos = $transcript->length_of_cds_exons_before_structure_at_position($variant->{start}, $strand);
 
-##
     my $pre_start = abs( $variant->{start} - $oriented_structure_start ) + 1;
     my $pre_end = abs( $variant->{stop} - $oriented_structure_start ) + 1;
     my $aft_start = abs( $oriented_structure_stop - $variant->{start} ) + 1;
@@ -673,7 +688,6 @@ sub _transcript_annotation_for_cds_exon
         }
         my $hash_pro= $self->compare_protein_seq($variant->{type},$original_seq_translated,$mutated_seq_translated,$pro_start-1,$variant_size);
         $trv_type = lc $hash_pro->{type};
-        # $anno->{pro_str}="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{new}; #FIXME... so I guess just return this as part of the return hash? pro_str? Is there a paralell?
         $pro_str="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{new};
     }
 
@@ -686,7 +700,6 @@ sub _transcript_annotation_for_cds_exon
             $c_position.='_'.($pre_end+$exon_pos);
         }      
     }
-# TODO end xshi modifications
 
     my $conservation = $self->_ucsc_cons_annotation($variant);
     my $pdom = $self->_protein_domain($variant,
@@ -888,7 +901,7 @@ while ( my $line = $in_fh->getline )
         $consensus_quality, $read_count
     ) = split(/\s+/, $line);
 
-    my @annotations = $annotator->get_prioritized_annotations # TODO param whether or not we do prioritized annos?
+    my @annotations = $annotator->get_prioritized_annotations
     (
         position => $start,
         variant => $variant,

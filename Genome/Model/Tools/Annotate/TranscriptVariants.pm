@@ -66,6 +66,12 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             id_by => 'build_id',
             is_optional => 1, 
         },
+        extra_details => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'enabling this flag produces an additional four columns: flank_annotation_distance_to_transcript, intron_annotation_substructure_ordinal, intron_annotation_substructure_size, and intron_annotation_substructure_position',
+        },
     ], 
 };
 
@@ -284,6 +290,15 @@ sub _print_annotation {
     }
 
     return 1;
+}
+
+sub transcript_attributes{
+    my $self = shift;
+    my @attrs = $self->SUPER::transcript_attributes;
+    if ($self->extra_details){
+        push @attrs, (qw/ flank_annotation_distance_to_transcript intron_annotation_substructure_ordinal intron_annotation_substructure_size intron_annotation_substructure_position/);
+    }
+    return @attrs;
 }
 
 sub get_extra_columns {

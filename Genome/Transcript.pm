@@ -133,6 +133,13 @@ sub cds_exons {
     return @ex;
 }
 
+sub introns {
+    my $self = shift;
+
+    my @int = grep { $_->structure_type eq 'intron' } $self->ordered_sub_structures;
+    return @int;
+}
+
 
 sub cds_exon_range {
     my $self = shift;
