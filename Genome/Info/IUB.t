@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 20;
+use Test::More tests => 23;
 use above "Genome";
 use Genome::Info::IUB;
 
@@ -38,5 +38,9 @@ is_deeply([Genome::Info::IUB::iub_to_bases('A')],['A'], "iub_to_bases: returns o
 my @bases = sort(Genome::Info::IUB::iub_to_bases('w'));
 is_deeply(\@bases, ['A','T'], "iub_to_bases: case insensitivity and valid result");
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Info/CodonToAminoAcid.pm $
-#$Id: CodonToAminoAcid.pm 34977 2008-05-23 22:34:14Z ebelter $
+is(Genome::Info::IUB::iub_to_string(undef),undef, "iub_to_string: undefined inputs return undef");  #test to make sure it handles undefined values
+is(Genome::Info::IUB::iub_to_bases('Q'), undef, "iub_to_string: invalid input returns undef");
+is(Genome::Info::IUB::iub_to_string('d'), 'AGT', 'iub_to_string: case insensitivity and valid result');
+
+#$HeadURL$
+#$Id$
