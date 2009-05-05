@@ -102,7 +102,7 @@ sub _do
 {
     my ($self, $iterator) = @_;    
 
-    $DB::single = $DB::stopper;
+    #$DB::single = $DB::stopper;
     
     # prevent commits due to changes here
     # this can be prevented by careful use of environment variables if you REALLY want to use this to update data
