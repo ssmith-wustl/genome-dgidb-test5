@@ -136,7 +136,7 @@ sub execute {
     for my $stage_name ($pp->stages) {
         my @scheduled_objects = $self->_schedule_stage($stage_name);
         unless (@scheduled_objects) {
-            $self->error_message('WARNING: build ('. $self->build_id .") objects not scheduled for classes:\n".
+            $self->error_message('WARNING: Stage '. $stage_name .' for build ('. $self->build_id .") failed to schedule objects for classes:\n".
                                  join("\n",$pp->classes_for_stage($stage_name)));
             next;
         }
@@ -513,7 +513,7 @@ sub _schedule_stage {
         if (ref($object)) {
             $object_class = ref($object);
             $object_id = $object->id;
-        } elsif ($object == 1) {
+        } elsif ($object eq '1') {
             $object_class = 'single_instance';
         } else {
             $object_class = 'reference_sequence';
