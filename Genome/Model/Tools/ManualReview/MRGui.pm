@@ -427,7 +427,9 @@ sub open_file
     
     my $project_file = $self->current_file;
     my $filename = basename($project_file);
-    $project_file.=".$ENV{USERNAME}" unless($filename =~ /$ENV{USERNAME}/);
+    my $uid = $>;
+    my $uname = getpwuid($uid);
+    $project_file.=".$uname" unless($filename =~ /$uname/);
     $self->current_file($project_file);
     $filename = basename($project_file);
     $mainWin->set_title("Manual Review - $filename");
