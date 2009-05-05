@@ -117,6 +117,14 @@ sub iub_to_bases {
 }
 
 
+sub iub_to_string {
+    my $base = pop;
+    $base = uc $base if $base;
+    
+    return $iub_as_string{$base} if $base and $iub_as_string{$base};
+    return;
+}
+
 1;
 
 =pod
