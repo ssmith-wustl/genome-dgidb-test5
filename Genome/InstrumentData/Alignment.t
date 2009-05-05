@@ -151,12 +151,15 @@ for my $aligner_output_file (@aligner_output_file_paths) {
 my $pe2_instrument_data = $real_alignment->instrument_data;
 my $pe1_seq_id = $pe2_instrument_data->fwd_seq_id;
 
-my $pe1_alignment = Genome::InstrumentData::Alignment->create(
+my $pe1_alignment;
+eval {
+   $pe1_alignment =  Genome::InstrumentData::Alignment->create(
                                                               instrument_data_id => $pe1_seq_id,
                                                               aligner_name => 'maq',
                                                               aligner_version => '0.6.8',
                                                               reference_name => 'NCBI-human-build36',
                                                           );
+};
 ok(!$pe1_alignment,'Can not create an alignment for paired end read 1 in paired end alignment mode');
 
 my $ff_alignment = Genome::InstrumentData::Alignment->create(

@@ -55,7 +55,7 @@ my $fake_allocation = Genome::Disk::Allocation->define(
 isa_ok($fake_allocation,'Genome::Disk::Allocation');
 $instrument_data->set_list('allocations',$fake_allocation);
 
-my $alignment = Genome::InstrumentData::Alignment->create(
+my $alignment = Genome::InstrumentData::Alignment::Maq->create(
                                                           instrument_data_id => $instrument_data->id,
                                                           aligner_name => 'maq',
                                                           aligner_version => '0.6.8',

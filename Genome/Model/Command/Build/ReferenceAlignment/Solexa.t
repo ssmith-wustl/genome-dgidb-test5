@@ -53,7 +53,7 @@ if ($override_testdir) {
     $tmp_dir = $override_testdir;
 }
 else {
-    $tmp_dir = File::Temp::tempdir('TestAlignmentDataXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+    $tmp_dir = File::Temp::tempdir('TestAlignmentDataXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 0);
 }
 
 
@@ -96,7 +96,7 @@ $build_test->runtests;
 
 my $comparison_dir = '/gsc/var/cache/testsuite/data/'
         . 'Genome-Model-Command-Build-ReferenceAlignment-Solexa/'
-        . 'alignment-root-expected-v2';
+        . 'alignment-root-expected-v3';
 
 my @diff = `diff -r --brief $tmp_dir $comparison_dir`; 
 my @bad;

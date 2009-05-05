@@ -48,7 +48,7 @@ sub new {
         $self->add_directory_to_remove($self->data_dir);
     }
 
-    my $tmp_dir = File::Temp::tempdir('ReferenceAlignmentTestXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+    my $tmp_dir = File::Temp::tempdir('ReferenceAlignmentTestXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 0);
     $ENV{GENOME_MODEL_ROOT} = $tmp_dir;
     $ENV{GENOME_MODEL_DATA} = $tmp_dir;
     Genome::Utility::FileSystem->create_directory(
