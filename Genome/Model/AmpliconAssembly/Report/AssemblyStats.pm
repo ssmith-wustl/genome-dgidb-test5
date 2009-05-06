@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 use Data::Dumper 'Dumper';
+use XML::LibXML;
 
 class Genome::Model::AmpliconAssembly::Report::AssemblyStats {
     is => 'Genome::Model::AmpliconAssembly::Report',
@@ -18,11 +19,8 @@ sub create {
         or return;
 
     $self->{_metrix} = {
-        sequence_srcs => {
-            assembly => 0,
-            read => 0,
-            none => 0,
-        },
+        assembled => 0,
+        attempted => 0,
         lengths => [],
         qual => 0,
         qual_gt_20 => 0,
@@ -36,28 +34,27 @@ sub create {
 sub _generate_data {
     my $self = shift;
 
-    for my $build ( $self->builds ) {
-        my $amplicons = $build->get_amplicons;
-        unless ( $amplicons ) {
-            $self->error_message( sprintf("No amplicons for build (ID %s)", $build->id) );
-            return;
-        }
-        for my $amplicon ( @$amplicons ) {
-            $self->add_amplicon($amplicon)
-                or return;
-        }
+    my $amplicons = $self->build->get_amplicons;
+    unless ( $amplicons ) {
+        $self->error_message( sprintf("No amplicons for build (ID %s)", $self->build->id) );
+        return;
+    }
+    for my $amplicon ( @$amplicons ) {
+        $self->add_amplicon($amplicon)
+            or return;
     }
 
     my %totals = $self->_calculate_totals
         or return;
 
-    my @headers = sort { $a cmp $b } keys %totals;
+        my @headers = sort { $a cmp $b } keys %totals;
     #my @headers = map { join(' ', map { ucfirst } split('_', $_)) } sort { $a cmp $b } keys %totals;
     my @data = map { $totals{$_} } sort { $a cmp $b } keys %totals; # only one row
 
     my $description = sprintf(
-        'Assembly stats for amplicon assembly build(s) (%s)',
-        join(',', $self->build_ids),
+        'Assembly Stats for Amplicon Assembly (Name <%s> Build Id <%s>)',
+        $self->model_name,
+        $self->build_id,
     );
 
     my $csv = $self->_generate_csv_string(
@@ -85,9 +82,11 @@ sub _generate_data {
 sub add_amplicon {
     my ($self, $amplicon) = @_;
 
-    $self->{_metrix}->{sequence_srcs}->{ $amplicon->get_bioseq_source }++;
+    $self->{_metrix}->{attempted}++;
 
     return 1 unless $amplicon->was_assembled_successfully;
+
+    $self->{_metrix}->{assembled}++;
 
     # Length
     my $bioseq = $amplicon->get_bioseq;
@@ -110,20 +109,19 @@ sub add_amplicon {
 sub _calculate_totals {
     my $self = shift;
 
+    my $attempted = $self->{_metrix}->{attempted};
+    unless ( $attempted ) {
+        $self->error_message("Cannot calculate totals because no amplicons added");
+        return;
+    }
+
     my $sum = sub{
         my $total = 0;
         for ( @_ ) { $total += $_; }
         return $total;
     };
 
-    my $attempted = $sum->( values %{$self->{_metrix}->{sequence_srcs}} );
-
-    unless ( $attempted ) {
-        $self->error_message("Cannot calculate totals because no amplicons added");
-        return;
-    }
-
-    my $assembled = $self->{_metrix}->{sequence_srcs}->{assembly};
+    my $assembled = $self->{_metrix}->{assembled};
     my $read_cnt = $sum->( @{$self->{_metrix}->{reads}} );
     my $assembled_read_cnt = $sum->( @{$self->{_metrix}->{reads_assembled}} );
     my @lengths = sort { $a <=> $b } @{ $self->{_metrix}->{lengths} };
@@ -135,7 +133,6 @@ sub _calculate_totals {
     }
 
     my %totals = (
-        map( { 'Sequence Source is '.ucfirst($_) => $self->{_metrix}->{sequence_srcs}->{$_} } keys %{$self->{_metrix}->{sequence_srcs}}),
         Assembled => $assembled,
         Attempted => $attempted,
         'Assembly Success' => sprintf(
