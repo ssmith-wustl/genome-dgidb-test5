@@ -90,7 +90,7 @@
                   </tr>
                   <tr>
                     <td class="label">
-                      dbSNP positions:
+                      unfiltered dbSNP positions:
                     </td>
                     <td class="value">
                       [% dbsnp_unfiltered_positions %]
@@ -98,7 +98,7 @@
                   </tr>
                   <tr>
                     <td class="label">
-                      concordance:
+                      unfiltered concordance:
                     </td>
                     <td class="value">
                       [% unfiltered_concordance %]
@@ -119,7 +119,7 @@
                   </tr>
                   <tr>
                     <td class="label">
-                      dbSNP positions:
+                      filtered dbSNP positions:
                     </td>
                     <td class="value">
                       [% dbsnp_filtered_positions %]
@@ -127,7 +127,7 @@
                   </tr>
                   <tr>
                     <td class="label">
-                      concordance:
+                      filtered concordance:
                     </td>
                     <td class="value">
                       [% filtered_concordance %]

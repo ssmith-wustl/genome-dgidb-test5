@@ -147,7 +147,7 @@
 														haploid coverage:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
-														[% haploid_coverage %]x
+														[% haploid_coverage %]
 													</td>
 												</tr>
 											</table>

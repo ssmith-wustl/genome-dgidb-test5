@@ -122,15 +122,21 @@ $DB::single = 1;
     my $na = "Not Available";
     
     my $haploid_coverage=$na;
+
+    my $total_unfiltered_snps=$na;
+    my $total_filtered_snps=$na;
+
+    my $unfiltered_dbsnp_positions=$na;
+    my $filtered_dbsnp_positions=$na;
     
     my $unfiltered_dbsnp_concordance=$na;
     my $filtered_dbsnp_concordance=$na;
 
     my $report_dir = $build->resolve_reports_directory;
 
-    my $mapcheck_report_file = $report_dir."/RefSeqMaq/report.html";
+    my $mapcheck_report_file = $report_dir."/Mapcheck/report.html";
     my $goldsnp_report_file = $report_dir."/Gold_SNP_Concordance/report.html";
-    my $dbsnp_report_file = $report_dir."/dbSNP_Concordance/report.html";
+    my $dbsnp_report_file = $report_dir."/dbSNP_Concordance/report.txt";
 
     ##match mapcheck report
     my $fh = new IO::File($mapcheck_report_file, "r");
@@ -140,6 +146,8 @@ $DB::single = 1;
             $haploid_coverage=$1 if defined($1);
         }
         $fh->close();
+    } else {
+        $self->status_message("Could not locate RefSeqMaq report at $mapcheck_report_file!");
     }
 
     ##match goldsnp report
@@ -195,12 +203,53 @@ $DB::single = 1;
     $fh = new IO::File($dbsnp_report_file, "r");
     if ($fh) {
         my $dbsnp_contents = get_contents($fh);
-        if ( $dbsnp_contents =~ m|There were (\S+) positions in dbSNP for a concordance of (\S+)%|g ) {
-            $unfiltered_dbsnp_concordance=$2;
-        } 
-        if ( $dbsnp_contents =~ m|There were (\S+) positions in dbSNP for a concordance of (\S+)%|g ) {
-            $filtered_dbsnp_concordance=$2;
+        # get unfiltered data
+        if ( $dbsnp_contents =~ /^\s*total unfiltered SNPs: (\S+)$/m) {
+            $total_unfiltered_snps = $1;
+        } else {
+            $self->status_message("Could not extract total unfiltered SNPs from $dbsnp_report_file!");
         }
+
+        if ( $dbsnp_contents =~ /^\s*unfiltered dbSNP positions: (\S+)$/m) {
+            $unfiltered_dbsnp_positions = $1;
+        } else {
+            $self->status_message("Could not extract unfiltered dbSNP positions from $dbsnp_report_file!");
+        }
+
+        if ( $dbsnp_contents =~ /^\s*unfiltered concordance: (\S+)$/m) {
+            $unfiltered_dbsnp_concordance = $1;
+        } else {
+            $self->status_message("Could not extract unfiltered concordance from $dbsnp_report_file!");
+        }        
+
+        # get filtered data
+        if ( $dbsnp_contents =~ /^\s*total filtered SNPs: (\S+)$/m) {
+            $total_filtered_snps = $1;
+            $self->status_message("total_filtered_snps: $total_filtered_snps");
+        } else {
+            $self->status_message("Could not extract total filtered SNPs from $dbsnp_report_file!");
+        }
+
+        if ( $dbsnp_contents =~ /^\s*filtered dbSNP positions: (\S+)$/m) {
+            $filtered_dbsnp_positions = $1;
+            $self->status_message("filtered_dbsnp_positions: $filtered_dbsnp_positions");
+        } else {
+            $self->status_message("Could not extract filtered dbSNP positions from $dbsnp_report_file!");
+        }
+
+        if ( $dbsnp_contents =~ /^\s*filtered concordance: (\S+)$/m) {
+            $filtered_dbsnp_concordance = $1;
+            $self->status_message("filtered_dbsnp_concordance: $filtered_dbsnp_concordance");
+        } else {
+            $self->status_message("Could not extract filtered concordance from $dbsnp_report_file!");
+        }        
+        
+        # if ( $dbsnp_contents =~ m|There were (\S+) positions in dbSNP for a concordance of (\S+)%|g ) {
+        #     $unfiltered_dbsnp_concordance=$2;
+        # } 
+        # if ( $dbsnp_contents =~ m|There were (\S+) positions in dbSNP for a concordance of (\S+)%|g ) {
+        #     $filtered_dbsnp_concordance=$2;
+        # }
         $fh->close();
     }
 
@@ -275,51 +324,57 @@ $DB::single = 1;
     my $data_directory = "/gscmnt/839/info/medseq/model_links/$model_name/build$build_id/";
 
     my @vars = (
-        model_id                => $model->id,
-        model_name              => $model->name,
+        model_id                                      => $model->id,
+        model_name                                    => $model->name,
         
-        patient_upn             => $source_upn,
+        patient_upn                                   => $source_upn,
         
-        tissue_sample_label     => $tissue_label,
+        tissue_sample_label                           => $tissue_label,
         
-        extraction_label        => $extraction_label,
-        extraction_type         => $extraction_type,
-        extraction_name         => $extraction_name,
-        extraction_id           => $extraction_id,
-        extraction_desc         => $extraction_desc,
+        extraction_label                              => $extraction_label,
+        extraction_type                               => $extraction_type,
+        extraction_name                               => $extraction_name,
+        extraction_id                                 => $extraction_id,
+        extraction_desc                               => $extraction_desc,
         
-        processing_profile_type => $pp->type_name,
-        processing_profile_name => $pp->name,
-        processing_profile_id   => $pp->id,
+        processing_profile_type                       => $pp->type_name,
+        processing_profile_name                       => $pp->name,
+        processing_profile_id                         => $pp->id,
         
-        build_id                => $build->id,
-        build_date              => $time,
-        data_directory          => $data_directory,
+        build_id                                      => $build->id,
+        build_date                                    => $time,
+        data_directory                                => $data_directory,
         
-        total_number_of_lanes   => scalar(@inst_data_ass),
-        libraries               => [ sort keys %library_lane_counts ],
-        lanes_by_library        => \%library_lane_counts,
+        total_number_of_lanes                         => scalar(@inst_data_ass),
+        libraries                                     => [ sort keys %library_lane_counts ],
+        lanes_by_library                              => \%library_lane_counts,
         
-        haploid_coverage        => $haploid_coverage,
+        haploid_coverage                              => $haploid_coverage,
         
-        unfiltered_snp_calls                            => commify($unfiltered_snp_calls),
-        filtered_snp_calls                              => commify($filtered_snp_calls),
+        unfiltered_snp_calls                          => commify($unfiltered_snp_calls),
+        filtered_snp_calls                            => commify($filtered_snp_calls),
+
+        total_filtered_snps                           => commify($total_filtered_snps),
+        total_unfiltered_snps                         => commify($total_unfiltered_snps),
+
+        unfiltered_dnsbp_positions                    => commify($unfiltered_dbsnp_positions),
+        filtered_dnsbp_positions                      => commify($filtered_dbsnp_positions),
         
-        unfiltered_dbsnp_concordance                    => $unfiltered_dbsnp_concordance,
-        filtered_dbsnp_concordance                      => $filtered_dbsnp_concordance,
+        unfiltered_dbsnp_concordance                  => $unfiltered_dbsnp_concordance,
+        filtered_dbsnp_concordance                    => $filtered_dbsnp_concordance,
         
-        unfiltered_diploid_het_coverage_actual_number   => commify($unfiltered_diploid_het_coverage_actual_number),
-        unfiltered_diploid_het_coverage_percent         => $unfiltered_diploid_het_coverage_percent,
-        unfiltered_diploid_hom_coverage_actual_number   => commify($unfiltered_diploid_hom_coverage_actual_number),
-        unfiltered_diploid_hom_coverage_percent         => $unfiltered_diploid_hom_coverage_percent,
+        unfiltered_diploid_het_coverage_actual_number => commify($unfiltered_diploid_het_coverage_actual_number),
+        unfiltered_diploid_het_coverage_percent       => $unfiltered_diploid_het_coverage_percent,
+        unfiltered_diploid_hom_coverage_actual_number => commify($unfiltered_diploid_hom_coverage_actual_number),
+        unfiltered_diploid_hom_coverage_percent       => $unfiltered_diploid_hom_coverage_percent,
         
-        filtered_diploid_het_coverage_actual_number     => commify($filtered_diploid_het_coverage_actual_number),
-        filtered_diploid_het_coverage_percent           => $filtered_diploid_het_coverage_percent,
-        filtered_diploid_hom_coverage_actual_number     => commify($filtered_diploid_hom_coverage_actual_number),
-        filtered_diploid_hom_coverage_percent           => $filtered_diploid_hom_coverage_percent,
+        filtered_diploid_het_coverage_actual_number   => commify($filtered_diploid_het_coverage_actual_number),
+        filtered_diploid_het_coverage_percent         => $filtered_diploid_het_coverage_percent,
+        filtered_diploid_hom_coverage_actual_number   => commify($filtered_diploid_hom_coverage_actual_number),
+        filtered_diploid_hom_coverage_percent         => $filtered_diploid_hom_coverage_percent,
     );
 
-    $self->status_message("Summary Report values: ".Dumper(\@vars) );
+    #$self->status_message("Summary Report values: ".Dumper(\@vars) );
     
     ##################################
       
