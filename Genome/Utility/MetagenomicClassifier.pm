@@ -3,9 +3,19 @@ package Genome::Utility::MetagenomicClassifier;
 use strict;
 use warnings;
 
-#use base 'Class::Singleton';
-
 use Bio::Taxon;
+
+sub error_message {
+    my ($self, $msg) = @_;
+
+    printf(
+        "%s [ERROR] %s\n",
+        __PACKAGE__,
+        $msg,
+    );
+
+    return $msg;
+}
 
 my @RANKS = (qw/ domain kingdom phylum class order family genus species /); 
 sub taxonomic_ranks {
@@ -16,12 +26,45 @@ sub taxonomic_rank_at {
     return $RANKS[ $_[1] ];
 }
 
-my @DOMAINS = (qw/ Archaea Bacteria Eukarya/);
+sub validate_taxonomic_rank {
+    my ($self, $rank) = @_;
+
+    unless ( defined $rank ) {
+        $self->error_message("No rank given");
+        return;
+    }
+
+    unless ( grep { $rank eq $_ } @RANKS ) {
+        $self->error_message("Rank ($rank) is not in the list of valid ranks: ".join(', ', @RANKS));
+        return;
+    }
+
+
+    return 1;
+}
+
+my @DOMAINS = (qw/ archaea bacteria eukarya/);
 sub domains {
     return @DOMAINS;
 }
 
-my @KINGDOMS = (qw/ Animalia Archaea Eubacteria Fungi Plantae Protista /);
+sub validate_domain {
+    my ($self, $domain) = @_;
+
+    unless ( defined $domain ) {
+        $self->error_message("No domain given");
+        return;
+    }
+
+    unless ( grep { $domain =~ /^$_$/i } $self->domains ) {
+        $self->error_message("Domain ($domain) is not in the list of valid domains: ".join(', ', @DOMAINS));
+        return;
+    }
+    
+    return 1;
+}
+
+my @KINGDOMS = (qw/ animalia archaea eubacteria fungi plantae protista /);
 sub kingdoms {
     return @KINGDOMS;
 }
