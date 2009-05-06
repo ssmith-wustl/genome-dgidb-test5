@@ -115,7 +115,7 @@ sub get_ranks {
     my %ranks = $self->_get_ranks_and_positions
         or return;
  
-    return map { $ranks{$_} } sort keys %ranks;
+    return sort { $ranks{$a} <=> $ranks{$b} } keys %ranks;
 }
 
 sub _get_ranks_and_positions {
@@ -144,6 +144,12 @@ sub get_taxa {
         or return;
  
     return @{$self->{_taxa}};
+}
+
+sub get_taxa_ids {
+    my $self = shift;
+    
+    return map { $_->id } $self->get_taxa;
 }
 
 sub taxa_count { 
@@ -191,6 +197,7 @@ sub _get_taxon_name_and_confidence {
     return ($taxon->id, ($taxon->get_tag_values('confidence'))[0]);
 }
 
+#< Root >#
 sub get_root_taxon {
     return $_[0]->_get_taxon_for_rank('root');
 }
@@ -203,6 +210,7 @@ sub get_root_confidence {
     return $_[0]->_get_taxon_confidence_for_rank('root');
 }
 
+#< Domain >#
 sub get_domain_taxon {
     return $_[0]->_get_taxon_for_rank('domain');
 }
@@ -225,6 +233,7 @@ sub get_domain_name_and_confidence {
     return $_[0]->_get_taxon_name_and_confidence('domain');
 }
 
+#< Kingdom >#
 sub get_kingdom_taxon {
     return $_[0]->_get_taxon_for_rank('kingdom');
 }
@@ -243,6 +252,11 @@ sub get_kingdom_confidence {
     return $confidence;
 }
 
+sub get_kingdom_name_and_confidence {
+    return $_[0]->_get_taxon_name_and_confidence('kingdom');
+}
+
+#< Phylum >#
 sub get_phylum_taxon {
     return $_[0]->_get_taxon_for_rank('phylum');
 }
@@ -261,6 +275,11 @@ sub get_phylum_confidence {
     return $confidence;
 }
 
+sub get_phylum_name_and_confidence {
+    return $_[0]->_get_taxon_name_and_confidence('phylum');
+}
+
+#< Class >#
 sub get_class_taxon {
     return $_[0]->_get_taxon_for_rank('class');
 }
@@ -279,6 +298,11 @@ sub get_class_confidence {
     return $confidence;
 }
 
+sub get_class_name_and_confidence {
+    return $_[0]->_get_taxon_name_and_confidence('class');
+}
+
+#< Order >#
 sub get_order_taxon {
     return $_[0]->_get_taxon_for_rank('order');
 }
@@ -297,6 +321,11 @@ sub get_order_confidence {
     return $confidence;
 }
 
+sub get_order_name_and_confidence {
+    return $_[0]->_get_taxon_name_and_confidence('order');
+}
+
+#< Family >#
 sub get_family_taxon {
     return $_[0]->_get_taxon_for_rank('family');
 }
@@ -315,6 +344,11 @@ sub get_family_confidence {
     return $confidence;
 }
 
+sub get_family_name_and_confidence {
+    return $_[0]->_get_taxon_name_and_confidence('family');
+}
+
+#< Genus >#
 sub get_genus_taxon {
     return $_[0]->_get_taxon_for_rank('genus');
 }
@@ -337,6 +371,7 @@ sub get_genus_name_and_confidence {
     return $_[0]->_get_taxon_name_and_confidence('genus');
 }
 
+#< Species >#
 sub get_species_taxon {
     return $_[0]->_get_taxon_for_rank('species');
 }
