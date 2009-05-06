@@ -7,6 +7,7 @@ use warnings;
 
 use base 'Genome::Utility::TestBase';
 
+use Data::Dumper 'Dumper';
 use Test::More;
 
 sub amplicon {
@@ -48,18 +49,30 @@ sub test01_accessors : Tests {
 sub test02_bioseq : Tests {
     my $self = shift;
 
-    my %params = $self->params_for_test_class;
-    my $attempted_reads = $params{reads};
-    
     my $amplicon = $self->amplicon;
     ok($amplicon->get_bioseq, 'Got bioseq');
-    is($amplicon->get_bioseq_source, 'assembly', 'Got source');
-    my $assembled_reads = $amplicon->get_assembled_reads;
-    is_deeply($assembled_reads, $attempted_reads, 'Got source');
-    is($amplicon->get_assembled_read_count, scalar(@$assembled_reads), 'Got source');
+    is($amplicon->get_bioseq_source, 'assembly', 'Got source - assembly');
     is($amplicon->was_assembled_successfully, 1, 'Assembled successfully');
     is($amplicon->is_bioseq_oriented, 0, 'Not oriented');
  
+    return 1;
+}
+
+sub test03_reads : Tests {
+    my $self = shift;
+
+    my $amplicon = $self->amplicon;
+    my %params = $self->params_for_test_class;
+    my $attempted_reads = $params{reads};
+    
+    my $assembled_reads = $amplicon->get_assembled_reads;
+    is_deeply($assembled_reads, $attempted_reads, 'Got source');
+    is($amplicon->get_assembled_read_count, scalar(@$assembled_reads), 'Got source');
+    my $read_bioseq = $amplicon->get_reads_raw_bioseq($attempted_reads->[2]);
+    is($read_bioseq->id, $attempted_reads->[2], 'Got read bioseq for '.$attempted_reads->[2]);
+    my $processed_bioseq = $amplicon->get_reads_processed_bioseq($attempted_reads->[4]);
+    is($processed_bioseq->id, $attempted_reads->[4], 'Got processed bioseq for '.$attempted_reads->[4]);
+    
     return 1;
 }
 
