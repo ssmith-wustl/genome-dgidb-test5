@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Genome::Info::IUB;
 use Command;
 use IO::File;
 use Bio::DB::Fasta;
@@ -15,7 +16,7 @@ class Genome::Model::Tools::Snp::GoldSnpIntersection {
     { 
         type => 'String',
         is_optional => 0,
-        doc => "maq0.6.8 cns2snp output",
+        doc => "maq cns2snp output or samtools pileup SNP output",
     },
     gold_snp_file =>
     {
@@ -55,58 +56,50 @@ class Genome::Model::Tools::Snp::GoldSnpIntersection {
         is_optional => 0,
         default => "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c",
     },        
+    snp_format => {
+        type => 'String',
+        is_optional => 1,
+        doc => 'It should be either maq or sam. default is maq.',
+        default => 'MAQ',
+    },        
     ]
 };
 
-#Allele strings for the IUB codes
-my %bases_for = (
-    A => 'AA',
-    C => 'CC',
-    G => 'GG',
-    T => 'TT',
-    M => 'AC',
-    K => 'GT',
-    Y => 'CT',
-    R => 'AG',
-    W => 'AT',
-    S => 'GC',
-    D => 'AGT',
-    B => 'CGT',
-    H => 'ACT',
-    V => 'ACG',
-    N => 'ACGT',
-);
-
 
 sub execute {
-    my $self=shift;
+    my $self = shift;
 
+    my $snp_format = uc $self->snp_format;
+    unless ($snp_format =~ /^(MAQ|SAM)$/) {
+        $self->error_message("Invalid snp format: $snp_format");
+        return;
+    }
+    
     #Check on the file names
-    unless(-f $self->snp_file) {
+    unless (-f $self->snp_file) {
         $self->error_message("Snps file is not a file: " . $self->snp_file);
         return;
     }
-    unless(-f $self->gold_snp_file) {
+    unless (-f $self->gold_snp_file) {
         $self->error_message("Gold snp file is not a file: " . $self->gold_snp_file);
         return;
     }
 
     #Check and open filehandles
-    my $snp_fh=IO::File->new($self->snp_file);
-    unless($snp_fh) {
+    my $snp_fh = IO::File->new($self->snp_file);
+    unless ($snp_fh) {
         $self->error_message("Failed to open filehandle for: " .  $self->snp_file );
         return;
     }
-    my $gold_fh=IO::File->new($self->gold_snp_file);
-    unless($gold_fh) {
+    my $gold_fh = IO::File->new($self->gold_snp_file);
+    unless ($gold_fh) {
         $self->error_message("Failed to open filehandle for: " .  $self->gold_snp_file );
         return;
     }
 
     my ($gold_het_hash_ref, $gold_hom_hash_ref, $gold_ref_hash_ref) = $self->create_gold_snp_hashes($gold_fh);
-    close($gold_fh);
-    
-    unless(defined($gold_het_hash_ref)) {
+        
+    unless (defined($gold_het_hash_ref)) {
         $self->error_message("Fatal error creating Gold SNP hash");
         return;
     }
@@ -115,8 +108,11 @@ sub execute {
     my ($total_snp_positions,$ref_breakdown_ref, $het_breakdown_ref, $hom_breakdown_ref) 
         = $self->calculate_metrics($snp_fh,$gold_het_hash_ref,$gold_hom_hash_ref,$gold_ref_hash_ref);
 
+    $self->print_report($ref_breakdown_ref,$self->total_gold_homozygous_ref_positions,$het_breakdown_ref, $self->total_gold_heterozygote_snps, $hom_breakdown_ref, $self->total_gold_homozygous_snps);
 
-        $self->print_report($ref_breakdown_ref,$self->total_gold_homozygous_ref_positions,$het_breakdown_ref, $self->total_gold_heterozygote_snps, $hom_breakdown_ref, $self->total_gold_homozygous_snps);
+    $gold_fh->close;
+    $snp_fh->close;
+
     return 1;
 }
 
@@ -130,7 +126,7 @@ sub help_brief {
 }
 
 sub help_detail {
-    "This script performs a comparison of a maq cns2snp output file with a Gold SNP file. The comparisons are made on a by-genotype basis. Matches are reported only on an exact genotype match. Each type of array call is reported with the maq calls broken down by match vs. partial match vs. mismatch and then further by type. In addition, the number of each is reported along with percentage of total calls and the average depth for those calls. Currently, no distinction is made between heterozygous Gold calls where one of the alleles is the reference and heterozygous Gold calls where neither allele is the reference. These are unlikely to occur, but this should be improved upon on some point. For maq calls, the following types are reported:
+    "This script performs a comparison of a maq cns2snp or samtools pileup SNP output file with a Gold SNP file. The comparisons are made on a by-genotype basis. Matches are reported only on an exact genotype match. Each type of array call is reported with the maq/sam calls broken down by match vs. partial match vs. mismatch and then further by type. In addition, the number of each is reported along with percentage of total calls and the average depth for those calls. Currently, no distinction is made between heterozygous Gold calls where one of the alleles is the reference and heterozygous Gold calls where neither allele is the reference. These are unlikely to occur, but this should be improved upon on some point. For maq/sam calls, the following types are reported:
 'homozygous reference' - two alleles are reported, both are identical to the reference allele
 'homozygous variant' - two alleles are reported, both are identical, but not the reference
 'heterozygous - 1 allele variant' - two different alleles are reported, one is reference, the other is variant
@@ -148,6 +144,7 @@ sub calculate_metrics {
     my %hom_breakdown;
     my %ref_breakdown;
     my $total_snp_positions = 0;
+    my $snp_format = uc $self->snp_format;
 
     my $exclude_y = $self->exclude_y;
     
@@ -155,7 +152,8 @@ sub calculate_metrics {
     while(my $line = $snp_fh->getline) {
         chomp $line;
         my ($chr,$pos,$ref,$call,$quality,@metrics) = split /\t/, $line; 
-
+        my $rd_depth = $snp_format eq 'SAM' ? $metrics[2] : $metrics[0];
+        
         if($exclude_y) {
             next if($chr eq 'Y'); #female patient these are BS
         }
@@ -163,29 +161,29 @@ sub calculate_metrics {
         next if($ref eq ' ' || $ref eq '' || $ref eq 'N'); #skip 'SNPs' where the reference is N or non-existent
         $total_snp_positions++;
         
-        my $maq_type = $self->define_maq_call($ref,$call); #get string describing maq type
+        my $snp_type = $self->define_snp_call($ref,$call); #get string describing snp type
         
         if(exists($gold_het_hash_ref->{$chr}{$pos})) {
             #Gold standard het call
-            my $comparison = $self->compare_gold_to_maq($gold_het_hash_ref->{$chr}{$pos},$call);
-            $het_breakdown{$comparison}{$maq_type}{n} += 1;
+            my $comparison = $self->compare_gold_to_call($gold_het_hash_ref->{$chr}{$pos},$call);
+            $het_breakdown{$comparison}{$snp_type}{n} += 1;
             #print STDERR $line, "\n" if($self->compare_gold_to_maq($gold_het_hash_ref->{$chr}{$pos},$call) eq 'mismatch' && $maq_type eq 'mono-allelic variant');
-            $het_breakdown{$comparison}{$maq_type}{depth} += $metrics[0];
+            $het_breakdown{$comparison}{$snp_type}{depth} += $rd_depth;
             #if($maq_type eq 'homozygous variant') {
             #    print STDERR qq{"$comparison",},$metrics[0],"\n";
             #}
         }
         elsif(exists($gold_ref_hash_ref->{$chr}{$pos})) { 
             #Gold standard ref call
-            my $comparison = $self->compare_gold_to_maq($gold_ref_hash_ref->{$chr}{$pos},$call);
-            $ref_breakdown{$comparison}{$maq_type}{n} += 1;
-            $ref_breakdown{$comparison}{$maq_type}{depth} += $metrics[0];
+            my $comparison = $self->compare_gold_to_call($gold_ref_hash_ref->{$chr}{$pos},$call);
+            $ref_breakdown{$comparison}{$snp_type}{n} += 1;
+            $ref_breakdown{$comparison}{$snp_type}{depth} += $rd_depth;
         }
         elsif(exists($gold_hom_hash_ref->{$chr}{$pos})) {
             #gold standard homozygous call at this site
-            my $comparison = $self->compare_gold_to_maq($gold_hom_hash_ref->{$chr}{$pos},$call);
-            $hom_breakdown{$comparison}{$maq_type}{n} += 1;
-            $hom_breakdown{$comparison}{$maq_type}{depth} += $metrics[0];
+            my $comparison = $self->compare_gold_to_call($gold_hom_hash_ref->{$chr}{$pos},$call);
+            $hom_breakdown{$comparison}{$snp_type}{n} += 1;
+            $hom_breakdown{$comparison}{$snp_type}{depth} += $rd_depth;
         }
     }
     return ($total_snp_positions, \%ref_breakdown,\%het_breakdown,\%hom_breakdown);
@@ -355,8 +353,10 @@ sub create_gold_snp_hashes {
     return (\%heterozygous_snp_at,\%homozygous_snp_at,\%reference_snp_at);
 }
 
-sub define_maq_call {
+sub define_snp_call {
     my ($self, $ref, $call) = @_;
+    my $iub_string = Genome::Info::IUB->iub_to_string($call);
+    
     if($self->is_homozygous_IUB($call)) {
         #homozygous call
         if($ref eq $call) {
@@ -367,18 +367,18 @@ sub define_maq_call {
             return 'homozygous variant';
         }
     }
-    elsif(length $bases_for{$call} == 2) {
+    elsif(length $iub_string == 2) {
         #het call
-        if($bases_for{$call} =~ qr{$ref}) {
+        if($iub_string =~ qr{$ref}) {
             return 'heterozygous - 1 allele variant';
         }
         else {
             return 'heterozygous - 2 alleles variant';
         }
     }
-    elsif(length $bases_for{call} == 3) {
+    elsif(length $iub_string == 3) {
         #tri-allelic
-        if($bases_for{$call} =~ qr{$ref}) {
+        if($iub_string =~ qr{$ref}) {
             return 'tri-allelic - with reference';
         }
         else {
@@ -401,14 +401,14 @@ sub is_homozygous_IUB {
     }
 }
 
-sub compare_gold_to_maq {
-    my ($self, $gold_alleles, $maq_call) = @_;
-    my $maq_alleles = $bases_for{$maq_call};
+sub compare_gold_to_call {
+    my ($self, $gold_alleles, $call) = @_;
+    my $alleles = Genome::Info::IUB->iub_to_string($call);
     
-    if($gold_alleles eq $maq_alleles || scalar(reverse($gold_alleles)) eq $maq_alleles) {
+    if($gold_alleles eq $alleles || scalar(reverse($gold_alleles)) eq $alleles) {
         return 'match';
     }
-    elsif( $self->overlap($gold_alleles, $maq_call)) {
+    elsif( $self->overlap($gold_alleles, $call)) {
         return 'partial match';
     }
     else {
@@ -419,14 +419,14 @@ sub compare_gold_to_maq {
 #idea borrowed from ssmith's gt snp intersect
 sub overlap {
     $DB::single = 1;
-    my ($self, $gold_alleles, $maq_call) = @_;
+    my ($self, $gold_alleles, $call) = @_;
+    my $iub_string = Genome::Info::IUB->iub_to_string($call);
     
     my $num_bases_overlapping = 0;
-    
     my %gold_bases = map {$_ => 1} (split //, $gold_alleles); #make a list of unique bases in the gold call
     
     for my $base (keys %gold_bases) {
-       if(index($bases_for{$maq_call}, $base) != -1) {  
+       if (index($iub_string, $base) != -1) {  
            $num_bases_overlapping++;
        }
     }
