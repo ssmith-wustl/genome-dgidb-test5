@@ -17,7 +17,7 @@ sub execute {
     # Assembly Stats
     my $stats_generator = Genome::Model::AmpliconAssembly::Report::AssemblyStats->create(
         name => 'Assembly Stats for '.$self->build->model->subject_name,
-        build_ids => [ $self->build->id ],
+        build_id => $self->build->id,
     );
     unless ( $stats_generator ) {
         $self->error_message(
