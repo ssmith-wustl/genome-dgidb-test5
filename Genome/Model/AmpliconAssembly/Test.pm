@@ -198,7 +198,7 @@ sub params_for_test_class {
 
     return (
         name => $self->report_name,
-        build_ids => [ $self->mock_model->latest_complete_build->id ],
+        build_id => $self->mock_model->latest_complete_build->id,
     );
 }
 
@@ -219,7 +219,7 @@ sub test_01_generate_report : Test(2) {
 
     my $report = $self->generator->generate_report;
     ok($report, 'Generated report');
-    #print Dumper($report);
+    # print Dumper($report);
 
     return 1;
 }
@@ -271,12 +271,6 @@ use Test::More;
 sub test_class {
     'Genome::Model::AmpliconAssembly::Report::QualityHistogram';
 }
-
-
-sub test_01_generate_report : Test(1) {
-    ok(1, 'skip generate');
-}
-
 
 1;
 
