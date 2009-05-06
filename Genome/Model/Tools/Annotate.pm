@@ -30,7 +30,7 @@ sub variant_attributes {
 
 sub transcript_attributes {
     my $self = shift;
-    return (qw/ gene_name transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain /);
+    return (qw/ gene_name transcript_name transcript_source transcript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain /);
 }
 
 sub transcript_report_headers {

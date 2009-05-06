@@ -18,6 +18,7 @@ class Genome::MiscAttribute {
         #entity            => { is => 'Genome::InstrumentData', id_by => 'entity_id' },
         _instrument_data  => { is => 'Genome::InstrumentData', id_by => 'entity_id' },
         _model            => { is => 'Genome::Model', id_by => 'entity_id' },
+        _build            => { is => 'Genome::Model::Build', id_by => 'entity_id' },
  
     ],
     schema_name => 'GMSchema',

@@ -39,11 +39,14 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             doc => "A comma delimited list of any extra columns that exist after the expected 5 in the input. Use this option if it is desired to preserve additional columns from the input file, which will then appear in output.Preserved columns must be contiguous and in order as they appear in the infile after the mandatory input columns. Any desired naming or number of columns can be specified so long as it does not exceed the actual number of columns in the file."
         },
         # Transcript Params
-        multi_gene_annotation => {
-            is => 'boolean',
+        annotation_filter => {
+            is => 'String',
             is_optional => 1,
-            default => 1,
-            doc => 'If set to true, this will find the top annotation per gene for a given variant and print one line for each. If this is set to false it will find the top annotation between all genes for a given variant and only print a single line per variant.',
+            default => 'gene',
+            doc => 'The type of filtering to use on the annotation results. There are currently 3 valid options:
+                    "none" -- This returns all possible transcript annotations for a variant. All transcript status are allowed including "unknown" status.
+                    "gene" -- This returns the top transcript annotation per gene. This is the default behavior.
+                    "top" -- This returns the top priority annotation for all genes. One variant in, one annotation out.',
         },
         flank_range => {
             is => 'Integer', 
@@ -102,7 +105,7 @@ The mutation type will be inferred based upon start, stop, reference, and varian
 Any number of additional columns may be in the input following these columns, but they will be disregarded.
 
 OUTPUT COLUMNS (COMMMA SEPARATED)
-chromosome_name start stop reference variant type gene_name transcript_name strand trv_type c_position amino_acid_change ucsc_cons domain
+chromosome_name start stop reference variant type gene_name transcript_name transcript_source trnascript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain
 EOS
 }
 
@@ -114,9 +117,8 @@ sub execute {
     # generate an iterator for the input list of variants
     my $variant_file = $self->variant_file;
 
-    # preserve additional columns from input if desired
+    # preserve additional columns from input if desired 
     my @columns = (($self->variant_attributes), $self->get_extra_columns);
-    
     my $variant_svr = Genome::Utility::IO::SeparatedValueReader->create(
         input => $variant_file,
         headers => \@columns,
@@ -208,6 +210,7 @@ sub execute {
 
         # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
         # TODO... unduplicate this code
+        my $annotation_filter = lc $self->annotation_filter;
         if ($variant->{type} eq 'SNP') {
             my @variant_alleles = Genome::Info::IUB->variant_alleles_for_iub($variant->{reference}, $variant->{variant});
             for my $variant_allele (@variant_alleles) {
@@ -215,26 +218,41 @@ sub execute {
                 $variant->{variant} = $variant_allele;
 
                 # get the data and output it
-                my @transcripts;
-                if ($self->multi_gene_annotation) {
+                my $annotation_method;
+                if ($annotation_filter eq "gene") {
                     # Top annotation per gene
-                    @transcripts = $annotator->prioritized_transcripts(%$variant);
-                } else {
+                    $annotation_method = 'prioritized_transcripts';
+                } elsif ($annotation_filter eq "top") {
                     # Top annotation between all genes
-                    @transcripts = $annotator->prioritized_transcript(%$variant);
+                    $annotation_method = 'prioritized_transcript';
+                } elsif ($annotation_filter eq "none") {
+                    # All transcripts, no filter
+                    $annotation_method = 'transcripts';
+                } else {
+                    $self->error_message("Unknown annotation_filter value: " . $annotation_filter);
+                    return;
                 }
+
+                my @transcripts = $annotator->$annotation_method(%$variant);
                 $self->_print_annotation($variant, \@transcripts);
             }
         } else {
             # get the data and output it
             my @transcripts;
-            if ($self->multi_gene_annotation) {
+            if ($annotation_filter eq "gene") {
                 # Top annotation per gene
                 @transcripts = $annotator->prioritized_transcripts(%$variant);
-            } else {
+            } elsif ($annotation_filter eq "top") {
                 # Top annotation between all genes
                 @transcripts = $annotator->prioritized_transcript(%$variant);
+            } elsif ($annotation_filter eq "none") {
+                # All transcripts, no filter
+                @transcripts = $annotator->transcripts(%$variant);
+            } else {
+                $self->error_message("Unknown annotation_filter value: " . $annotation_filter);
+                return;
             }
+
             $self->_print_annotation($variant, \@transcripts);
         }
     }
@@ -249,7 +267,6 @@ sub _transcript_report_fh {
     return $self->{_transcript_fh};
 }
 
-# Prints the variant and corresponding annotation info for each transcript we have, or dashes if no transcripts
 sub _print_annotation {
     my ($self, $snp, $transcripts) = @_;
 
@@ -283,12 +300,11 @@ sub _print_annotation {
             (
                 ',',                   
                 $snp_info_string,
-                map({ $transcript->{$_} } $self->transcript_attributes),
+                map({ $transcript->{$_} ? $transcript->{$_} : '-' } $self->transcript_attributes),
             ), 
             "\n",
         );
     }
-
     return 1;
 }
 

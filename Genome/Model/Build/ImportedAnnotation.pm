@@ -7,6 +7,20 @@ use Genome;
 
 class Genome::Model::Build::ImportedAnnotation {
     is => 'Genome::Model::Build',
+    has => [
+        version => { 
+            via => 'attributes', 
+            to => 'value', 
+            where => [ property_name => 'version'], 
+            is_mutable => 1 
+        },
+        annotation_data_source_directory => {
+            via => 'attributes',
+            to => 'value',
+            where => [ property_name => 'annotation_data_source_directory'],
+            is_mutable => 1 
+        },
+    ],
 };
 
 sub annotation_data_directory{

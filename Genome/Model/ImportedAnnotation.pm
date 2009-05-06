@@ -23,9 +23,9 @@ class Genome::Model::ImportedAnnotation{
 sub build_by_version {
     my $self = shift;
     my $version = shift;
-    my @b = $self->builds("data_directory like" => "%/v${version}_%");
+    my @b =  grep { $_->version eq $version} $self->builds;
     if (@b > 1) {
-        die "Multiple builds for version $version for model " . $self->model_id;
+        die "Multiple builds for version $version for model " . $self->genome_model_id;
     }
     return $b[0];
 }

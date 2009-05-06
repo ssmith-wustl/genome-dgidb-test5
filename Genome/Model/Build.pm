@@ -60,6 +60,7 @@ class Genome::Model::Build {
                                                    via => 'to_build_links', to => 'to_build',
                                                    doc => 'Genome builds this build contributes "to"',
                                                },
+        attributes                        => { is => 'Genome::MiscAttribute', reverse_id_by => '_build', where => [ entity_class_name => 'Genome::Model::Build' ] },
     ], 
 
     schema_name => 'GMSchema',

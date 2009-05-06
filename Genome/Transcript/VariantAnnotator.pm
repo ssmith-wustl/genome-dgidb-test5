@@ -4,11 +4,11 @@ use strict;
 use warnings;
 
 use Data::Dumper;
-use Genome::Info::CodonToAminoAcid;
 use Genome::Info::VariantPriorities;
 use MG::ConsScore;
 use List::MoreUtils qw/ uniq /;
 use Benchmark;
+use Bio::Tools::CodonTable;
 
 #UR::Context->_light_cache(1); # uh, seems to break things...
 
@@ -20,11 +20,28 @@ class Genome::Transcript::VariantAnnotator{
             is => 'boolean',
             is_optional => 1,
         },
+        codon_translator => {
+            is => 'Bio::Tools::CodonTable',
+            is_optional => 1,
+        },
+        mitochondrial_codon_translator => {
+            is => 'Bio::Tools::CodonTable',
+            is_optional => 1,
+        },
     ]
 };
 
 my %variant_priorities = Genome::Info::VariantPriorities->for_annotation;
-my %codon_to_single = Genome::Info::CodonToAminoAcid->single_letter;
+
+#override create and instantiate codon_translators
+sub create{
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    $self->codon_translator( Bio::Tools::CodonTable->new( -id => 1) );
+    $self->mitochondrial_codon_translator( Bio::Tools::CodonTable->new( -id => 2) );
+
+    return $self;
+}
 
 #- Transcripts -#
 sub transcripts { # was transcripts_for_snp and transcripts_for_indel
@@ -238,7 +255,9 @@ sub _transcript_annotation
     return (
         %structure_annotation,
         transcript_name => $transcript->transcript_name, 
+        transcript_status => $transcript->transcript_status,
         transcript_source => $source,
+        transcript_version => $transcript->build->version,
         gene_name  => $gene->name($source),
 #         amino_acid_change => 'NULL',
         ucsc_cons => $conservation
@@ -313,40 +332,41 @@ sub _transcript_annotation_for_flank
         $aas_length = length($protein->amino_acid_seq);
     }
     my ($c_position, $trv_type, $distance_to_transcript);
-    if ( $position < $transcript->transcript_start ) {
-        #($c_position, $trv_type) = ( $transcript->strand eq '+1' )
-        #? (($position - $cds_exon_positions[0]), "5_prime_flanking_region")
-        # : (("*" . ($cds_exon_positions[0] - $position)), "3_prime_flanking_region");
-        if ( $transcript->strand eq '+1' ) {
+    if ($transcript->strand eq '+1'){
+
+        if ( $position < $transcript->transcript_start ) {
+
             $c_position = $position - $cds_exon_positions[0];
             $trv_type = "5_prime_flanking_region";
             $distance_to_transcript =  $position - $transcript->transcript_start;
-        } else {
-            $c_position = "*" . ($cds_exon_positions[0] - $position);
-            $trv_type = "3_prime_flanking_region";
-            $distance_to_transcript = $transcript->transcript_start - $position;
-        } 
-    }
-    elsif ( $position > $transcript->transcript_stop )	
-    {
-        #($c_position, $trv_type) = ( $transcript->strand eq '-1' )
-        #? (($cds_exon_positions[1] - $position), "5_prime_flanking_region")
-        #: (("*" . ($position - $cds_exon_positions[1])), "3_prime_flanking_region");
-        if ( $transcript->strand eq '-1' ) {
-            $c_position = $cds_exon_positions[1] - $position;
-            $trv_type = "5_prime_flanking_region";
-            $distance_to_transcript = $transcript->transcript_stop - $position;
-        } else {
+
+        }elsif($position > $transcript->transcript_stop){
+
             $c_position = "*" . ($position - $cds_exon_positions[1]);
             $trv_type = "3_prime_flanking_region";
             $distance_to_transcript =  $position - $transcript->transcript_stop;
         }
+
+    }elsif($transcript->strand eq '-1'){
+
+        if ( $position < $transcript->transcript_stop ) {
+
+            $c_position = "*" . ($cds_exon_positions[0] - $position);
+            $trv_type = "3_prime_flanking_region";
+            $distance_to_transcript = $transcript->transcript_start - $position;
+
+        }elsif($position > $transcript->transcript_start){
+
+            $c_position = $cds_exon_positions[1] - $position;
+            $trv_type = "5_prime_flanking_region";
+            $distance_to_transcript = $transcript->transcript_stop - $position;
+        }
     } else {
         $self->warning_message("In _transcript_annotation_for_flank and probably shouldnt be (position falls within the transcript)...");
-        print Dumper($transcript);
-        print Dumper($variant);
     }
-    
+    #print Dumper($transcript);
+    #print Dumper($variant);
+
     return
     (
         strand => $strand,
@@ -354,7 +374,7 @@ sub _transcript_annotation_for_flank
         trv_type => $trv_type,
         amino_acid_length => $aas_length,
         amino_acid_change => 'NULL',
-        distance_to_transcript => $distance_to_transcript,
+        flank_annotation_distance_to_transcript => $distance_to_transcript,
     );
 # From Chapter 8 codon2aa
     #
@@ -413,6 +433,31 @@ sub _transcript_annotation_for_intron
     }
 
 
+
+    my $intron_annotation_substructure_size = $structure_stop - $structure_start + 1;
+    my @intron_ss = $transcript->introns;
+    my $ordinal = 0;
+    my $found = 0;
+    for my $ordered_intron (@intron_ss){
+        $ordinal++;
+        #TODO suck it gabe.  This will go away as well after ordinals are properly calculated during anno db import
+        if ($ordered_intron->structure_start == $main_structure->structure_start and $ordered_intron->structure_stop == $main_structure->structure_stop){
+            $found++; 
+            last;
+        }
+    }
+    unless ($found){
+        $self->error_message("couldn't calculate intron ordinal position!");
+        die;
+    }
+    my $intron_annotation_substructure_ordinal = $ordinal;
+    my $intron_annotation_substructure_position;
+    if ($strand eq '-1'){
+        $intron_annotation_substructure_position = $structure_stop - $variant->{stop} + 1;
+    }else{
+        $intron_annotation_substructure_position = $variant->{start} - $structure_start +1;
+    }
+
     my ($c_position, $trv_type);
     if($variant->{type} =~ /del|ins/i)
     {
@@ -434,6 +479,9 @@ sub _transcript_annotation_for_intron
             trv_type => $trv_type,
             amino_acid_length => length( $transcript->protein->amino_acid_seq ),
             amino_acid_change => 'NULL',
+            intron_annotation_substructure_ordinal  => $intron_annotation_substructure_ordinal,
+            intron_annotation_substructure_size     => $intron_annotation_substructure_size,
+            intron_annotation_substructure_position => $intron_annotation_substructure_position,
         );
         #TODO  make sure it's okay to return early w/ null c. position
     }
@@ -552,6 +600,9 @@ sub _transcript_annotation_for_intron
         trv_type => $trv_type,
         amino_acid_length => length( $aa_seq ),
         amino_acid_change => $pro_str,
+        intron_annotation_substructure_ordinal  => $intron_annotation_substructure_ordinal,
+        intron_annotation_substructure_size     => $intron_annotation_substructure_size,
+        intron_annotation_substructure_position => $intron_annotation_substructure_position,
     );
 # From Chapter 8 codon2aa
     #
@@ -669,7 +720,7 @@ sub _transcript_annotation_for_cds_exon
         $variant_size=2 if($codon_start==0&&$variant->{type}=~/dnp/i);
         $mutated_seq=substr($original_seq,0,$c_position-1).$var.substr($original_seq,$c_position-1+$size2);
     }
-    $mutated_seq_translated = $self->translate($mutated_seq);
+    $mutated_seq_translated = $self->translate($variant->{chromosome_name}, $mutated_seq);
 
 
     my $pro_str = 'NULL';
@@ -723,6 +774,8 @@ sub _ucsc_cons_annotation
 {
     my ($self, $variant) = @_;
     # goto the annotation files for this.
+    #print Dumper $variant;
+    return 'null' if $variant->{chromosome_name} =~ /^[MN]T/;
     my $c = new MG::ConsScore(-location => "/gscmnt/temp202/info/medseq/josborne/conservation/b36/fixed-records/");
 
     my $range = [ $variant->{start}..$variant->{stop} ] ;
@@ -848,16 +901,19 @@ sub compare_protein_seq   {
 sub translate
 {
     my $self = shift;
-    my ($sequence)=@_;
+    my ($chrom, $sequence)=@_;
     my $length=length($sequence);
+    my $translator = $self->codon_translator;
+    if ($chrom =~ /^MT/){
+        $translator = $self->mitochondrial_codon_translator;
+    }
     my $translation;
     my $i;
     for ($i=0; $i<=$length-2; $i+=3 )
     {
         my $codon=substr($sequence, $i, 3);
         $codon =~ s/N/X/g;
-        last if(length($codon)!=3);
-        my $aa = $codon_to_single{$codon};
+        my $aa = $translator->translate($codon);
         $aa="*" if ($aa eq 'X');
         $translation.=$aa;
         last if ($aa eq '*');
