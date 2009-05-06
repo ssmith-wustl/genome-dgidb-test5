@@ -5,6 +5,7 @@ use warnings;
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';
+use Genome::Utility::MetagenomicClassifier;
 use Regexp::Common;
 
 sub new {
@@ -67,27 +68,70 @@ sub get_unconfident_classifications {
     return @{$_[0]->{_classifications}->[0]};
 }
 
-sub _get_genus_count_for_confident_domain {
-    my ($self, $domain_name) = @_;
+sub get_counts_for_domain_down_to_rank {
+    my ($self, $domain, $to_rank) = @_;
 
-    my %genus_counts;
-    for my $classification ( $self->get_confident_classifications ) {
-        #print Dumper({ domain => [ $classification->get_domain_name_and_confidence ], genus => [ $classification->get_genus_name_and_confidence ]});
-        next unless $classification->get_domain eq $domain_name;
-        my ($genus, $conf) = $classification->get_genus_name_and_confidence 
-                or next;
-        $genus_counts{$genus}++ if $conf >= $self->get_confidence_threshold;
+    Genome::Utility::MetagenomicClassifier->validate_domain($domain)
+        or return;
+
+    Genome::Utility::MetagenomicClassifier->validate_taxonomic_rank($to_rank)
+        or return;
+
+    my $threshold = $self->get_confidence_threshold;
+
+    my @ranks;
+    for my $rank ( Genome::Utility::MetagenomicClassifier->taxonomic_ranks ) {
+        push @ranks, $rank;
+        last if $rank eq $to_rank;
     }
-    
-    return \%genus_counts;
+
+    my $counts = {};
+    for my $classification ( $self->get_confident_classifications ) {
+        next unless $classification->get_domain =~ /^$domain$/i;
+        my $taxonomy = join(
+            ':', 
+            grep { defined } map { $self->_get_name_from_classification_for_rank($classification, $_) } @ranks
+        );
+        # Increment total
+        $counts->{$taxonomy}->{total}++;
+        # Go thru the ranks
+        for my $rank ( @ranks ) {
+            my $confidence = $self->_get_confidence_from_classification_for_rank($classification, $rank)
+                or next;
+            if ( $confidence >= $threshold ) {
+                $counts->{$taxonomy}->{$rank}++;
+            }
+            elsif ( not defined $counts->{$taxonomy}->{$rank} ) {
+                $counts->{$taxonomy}->{$rank} = 0;
+            }
+        }
+    }
+
+    return $counts;
 }
 
-sub get_genus_count_for_confident_bacteria_domain {
-    return $_[0]->_get_genus_count_for_confident_domain('Bacteria');
+sub _get_name_from_classification_for_rank {
+    my ($self, $classification, $rank) = @_;
+
+    my $method = 'get_'.$rank;
+
+    return $classification->$method;
 }
 
-sub get_genus_count_for_confident_arch_domain {
-    return $_[0]->_get_genus_count_for_confident_domain('Archaea');
+sub _get_confidence_from_classification_for_rank {
+    my ($self, $classification, $rank) = @_;
+
+    my $method = 'get_'.$rank.'_confidence';
+
+    return $classification->$method;
+}
+
+sub _get_name_and_confidence_from_classification_for_rank {
+    my ($self, $classification, $rank) = @_;
+
+    my $method = 'get_'.$rank.'_name_and_confidence';
+
+    return $classification->$method;
 }
 
 1;
