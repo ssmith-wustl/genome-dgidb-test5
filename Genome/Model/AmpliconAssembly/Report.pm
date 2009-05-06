@@ -9,14 +9,23 @@ use Data::Dumper 'Dumper';
 
 class Genome::Model::AmpliconAssembly::Report {
     is => 'Genome::Report::Generator',
-    has_many => [
-    build_ids => {
+    has => [
+    build_id => {
         is => 'Integer',
-        doc => 'Build ids to generate assembly stats report.',
+        doc => 'Build id to generate assembly stats report.',
     },
-    builds => {
+    build => {
         is => 'Genome::Model::Build',
-        id_by => 'build_ids',
+        id_by => 'build_id',
+    },
+    model => {
+        is => 'Genome::Model',
+        via => 'build',
+    },
+    model_name => {
+        is => 'Text',
+        via => 'model',
+        to => 'name',
     },
     ],
 };
@@ -27,8 +36,14 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
 
-    unless ( $self->build_ids ) {
-        $self->error_message("Need build_ids to gererate report");
+    unless ( $self->build_id ) {
+        $self->error_message("Need build_id to gererate report");
+        $self->delete;
+        return;
+    }
+
+    unless ( $self->build ) {
+        $self->error_message("Could not get build for build_id: ".$self->build_id);
         $self->delete;
         return;
     }
