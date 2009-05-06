@@ -5,6 +5,7 @@ use warnings;
 
 use File::Basename;
 use Genome;
+use Cwd;
 
 class Genome::Model::Command::Build::PolyphredPolyscan::Run {
     is => ['Genome::Model::Event'],
@@ -46,12 +47,11 @@ sub execute {
 
     my $instrument_data_directory = $self->build->instrument_data_directory;
 
-    if (-d $instrument_data_directory ){
-        $self->error_message("new current instrument data dir $instrument_data_directory exists before it should!");
-        die;
-    }
+    unless (-d $instrument_data_directory ){
 
-    $self->create_directory($instrument_data_directory);
+        $self->create_directory($instrument_data_directory);
+    
+    }
 
     unless (-d $instrument_data_directory){
         $self->error_message("New current instrument data dir $instrument_data_directory does not exist");
@@ -59,9 +59,10 @@ sub execute {
     }
 
     my @pending_instrument_data_files = $model->pending_instrument_data_files;
+    $self->status_message("found instrument data files:\n".join("\n", @pending_instrument_data_files));
 
     for my $file (@pending_instrument_data_files) {
-        my $link_to = readlink $file;
+        my $link_to = Cwd::abs_path($file);
         unless ($link_to){
             $self->error_message("couldn't extract source instrumnent data link from instrument data file $file");
             die;
@@ -71,7 +72,7 @@ sub execute {
         symlink($link_to, $new_link);
 
         unless (-e $new_link) {
-            $self->error_message("Failed to link $new_link to $file->$link_to ");
+            $self->error_message("Failed to link $new_link to $file->$link_to $!");
             die;
         }
     }

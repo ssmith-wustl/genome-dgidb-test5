@@ -26,13 +26,13 @@ sub params_for_class{
 
 sub stages {
     return (qw/
-             combine_variants
+             assign_from_builds
              verify_successful_completion
+             combine_variants 
             /);
 }
 
 #TODO I think these are all obsolete due to the clustered assembly changes, most of these should be removed
-#TODO BuildChildren may stay, still not sure how I want to build models that have from_models contributing to them
 #Genome::Model::Command::Build::CombineVariants::DeriveAssemblyNames
 #Genome::Model::Command::Build::CombineVariants::DumpAssemblies
 #Genome::Model::Command::Build::CombineVariants::VerifyAndFixAssembly
@@ -47,7 +47,18 @@ sub combine_variants_job_classes {
         /);
 }
 
+sub assign_from_builds_job_classes {
+    return (qw/
+        Genome::Model::Command::Build::CombineVariants::AssignFromBuilds
+        /);
+}
+
+
 sub combine_variants_objects {
+    return 1;
+}
+
+sub assign_from_builds_objects {
     return 1;
 }
 

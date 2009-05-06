@@ -57,7 +57,8 @@ sub sequencing_platform{
 sub create{
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-    
+    return unless $self;
+ 
     my $data_dir = $self->data_directory;
 
     # If the data directory was not supplied, resolve what it should be by default

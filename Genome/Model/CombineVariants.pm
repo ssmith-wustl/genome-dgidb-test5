@@ -61,22 +61,96 @@ sub sequencing_platform{
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-    die unless $self;
-
-    my $data_dir = $self->data_directory;
-    # If the data directory was not supplied, resolve what it should be by default
-    unless ($data_dir) {
-        $data_dir= $self->resolve_data_directory;
-        $self->data_directory($data_dir);
-    }
+    return unless $self;
 
     # Replace spaces with underscores
+    # TODO: move up or out
+    my $data_dir = $self->data_directory;
     $data_dir =~ s/ /_/g;
     $self->data_directory($data_dir);
+
+    eval { $self->_add_source_models; };
+    if ($@) {
+        $self->delete;
+        die $@;
+    }
 
     return $self;
 }
 
+sub _add_source_models {
+    my $self = shift;
+
+    my $pp = $self->processing_profile;
+
+    my @child_pps = Genome::ProcessingProfile::PolyphredPolyscan->get(
+        sensitivity => ['low','high'],
+        technology => ['polyphred','polyscan'],
+
+        # TODO: this is redundant with the subject, but needed for now
+        # remove me from the PP and this logic
+        research_project => $self->subject_name,         
+    );
+
+    unless (@child_pps == 4) {
+        die "Expected 4 processing profiles to go with this model.  Found " 
+            . scalar(@child_pps) . "\n"
+            . Data::Dumper::Dumper(\@child_pps);
+    }
+
+    my @previously_assigned = $self->from_models;
+    my %previously_assigned = map { $_->id => 1 } @previously_assigned;
+
+    if (@previously_assigned) {
+        $self->status_message("Found " . scalar(@previously_assigned) . " models already assigned!");
+    }
+
+    my @child_models;
+    for my $child_pp (@child_pps) {
+        my @existing_child_models = Genome::Model->get(
+            subject_name => $self->subject_name,
+            processing_profile => $child_pp, 
+        );
+        my $child_model;
+        if (@existing_child_models) {
+            my $names = join(", ", map { '"' . $_->name . '"' } @existing_child_models);
+            $self->status_message("Found model(s) $names for " . $child_pp->name . "\n"); 
+            my @assigned = grep { $previously_assigned{$_->id} } @existing_child_models;
+            if (@assigned > 1) {
+                die "Multiple child models already assigned for this processing profile?!";
+            }
+            elsif (@assigned == 1) {
+                $child_model = $assigned[0];
+                $self->status_message("Model " . $child_model->id . ' "' . $child_model->name . '" is already assigned to this model.'); 
+            }
+            elsif (@existing_child_models > 1) {
+                die "Assignment of a child model is ambiguous because there are multiple matches!"; 
+            }
+            else {
+                $child_model = $existing_child_models[0];
+                $self->status_message("Assigning previously existing model " . $child_model->id . ' "' . $child_model->name . "\"\n");
+                $self->add_from_model(from_model => $child_model);
+            } 
+        }
+        else {
+            $self->status_message("No underlying model found for profile: " . $child_pp->name . ".  Creating...\n");    
+            $child_model = Genome::Model::PolyphredPolyscan->create(
+                name => $self->subject_name . ' ' . $child_pp->name,
+                subject_name => $self->subject_name,
+                subject_type => $self->subject_type,
+                processing_profile => $child_pp,
+            );
+            unless ($child_model) {
+                die "Failed to create model!" . Genome::Model->error_message;
+            }
+            $self->add_from_model(from_model => $child_model);
+        }
+        push @child_models, $child_model;
+    }
+
+    return @child_models;
+}
+    
 sub build_subclass_name {
     return 'combine_variants';
 }
@@ -473,6 +547,11 @@ sub resolve_data_directory {
     $data_dir=~ s/ /_/;
 
     return $data_dir;
+}
+
+sub child_models{
+    my $self = shift;
+    return $self->from_models;
 }
 
 # Returns the parameterized model associated with this composite
