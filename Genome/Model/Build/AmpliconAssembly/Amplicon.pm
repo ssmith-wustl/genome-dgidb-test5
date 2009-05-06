@@ -3,6 +3,7 @@ package Genome::Model::Build::AmpliconAssembly::Amplicon;
 use strict;
 use warnings;
 
+use Bio::SeqIO;
 use Bio::Seq::Quality;
 use Carp 'confess';
 use Data::Dumper 'Dumper';
@@ -30,6 +31,10 @@ sub _fatal_msg {
     my ($self, $msg) = @_;
 
     confess ref($self)." - ERROR: $msg\n";
+}
+
+sub successful_assembly_length {
+    return 1150;
 }
 
 #< Basic Accessors >#
@@ -211,10 +216,8 @@ sub _get_bioseq_info {
 
     unless ( $self->{_bioseq_info} ) {
         my %info;
-        for my $method (qw/ 
-            _get_bioseq_info_from_oriented_fasta _get_bioseq_info_from_longest_contig
-            _get_bioseq_info_from_longest_read _get_bioseq_info_from_nothing 
-            /) {
+        # 2009apr30 No longer getting bioseq if not assembled and has contig length > 1150
+        for my $method (qw/ _get_bioseq_info_from_oriented_fasta _get_bioseq_info_from_assembly _get_bioseq_info_from_nothing /) {
             %info = $self->$method;
             last if %info;
         }
@@ -293,11 +296,30 @@ sub _get_bioseq_info_from_oriented_fasta {
     my $fasta = $fasta_reader->next_seq
         or return;
 
-    my ($source_string) = $fasta->desc =~ /source=([\w]+)/;
-    # TODO error if no source string?
+    # 2009apr30 no longer supported, all are from assembly, this will remove ones from previous builds
+    #  if source is read - remove oriented file?
+    #  if length is too short, skip
+    # Check if source is read
+    my ($source_string) = $fasta->desc =~ /source=(\S+)/;
+    if ( not defined $source_string or $source_string eq 'read' ) {
+        #print $self->get_name." is from read\n";
+        #unlink $fasta_file;
+        #unlink $self->oriented_qual_file;
+        return;
+    }
+    # Check length
+    unless ( $fasta->length >= $self->successful_assembly_length ) {
+        #print $self->get_name." is too short\n";
+        #unlink $fasta_file;
+        #unlink $self->oriented_qual_file;
+        return;
+    }
 
-    my ($read_string) = $fasta->desc =~ /reads=([\w\d\.\-\_])+/;
-    # TODO error if no read string?
+    my ($read_string) = $fasta->desc =~ /reads=(\S+)/;
+    #my ($read_string) = $fasta->desc =~ /reads=([\w\d\.\-\_\,]+)/;
+    unless ( $read_string ) {
+        $self->_fatal_msg('No reads found in description of oriented fasta for amplicon: '.$self->get_name);
+    }
     my @reads = split(',', $read_string);
     #print Dumper([$self->get_name, $fasta->desc, \@reads]);
     
@@ -322,25 +344,29 @@ sub _get_bioseq_info_from_oriented_fasta {
     );
 }
 
-sub _get_bioseq_info_from_longest_contig {
+sub _get_bioseq_info_from_assembly {
+#sub _get_bioseq_info_from_longest_contig {
     my $self = shift;
 
     return unless -s sprintf('%s/%s.fasta.contigs', $self->get_directory, $self->get_name);
     my $acefile = sprintf('%s/%s.fasta.ace', $self->get_directory, $self->get_name);
     my $factory = Finishing::Assembly::Factory->connect('ace', $acefile);
     my $contigs = $factory->get_assembly->contigs;
-    my $contig = $contigs->next
-        or return;
-    while ( my $ctg = $contigs->next ) {
-        next unless $ctg->reads->count > 1;
-        $contig = $ctg if $ctg->unpadded_length > $contig->unpadded_length;
+    my $contig;
+    while ( $contig = $contigs->next ) {
+        next unless $contig->unpadded_length >= $self->successful_assembly_length;
+        next unless $contig->reads->count > 1;
+        last;
     }
+    unless ( $contig ) {
+        $factory->disconnect;
+        #print $self->get_name,"\n";
+        return;
+    }
+
     # Reads
     my $reads = $contig->reads;
-    return unless $reads->count > 1;
     my $read_names = [ sort { $a cmp $b } map { $_->name } $reads->all ];
-
-    #my $reads_attempted = fgrep { /phd/ } sprintf('%s/%s.phds', $self->get_directory, $self->get_name); unless ( $reads_attempted ) { $self->error_message( sprintf('No attempted reads in phds file (%s/%s.phds)', $self->get_directory, $self->get_name)); return; }
 
     # Bioseq
     my $bioseq = Bio::Seq::Quality->new(
@@ -426,8 +452,87 @@ sub _get_bioseq_info_from_nothing {
     return (
         bioseq => undef,
         assembled_reads => [],
-        source => 'read',
+        source => undef,#'read',
         oriented => 0,
+    );
+}
+
+#< Read Bioseq >#
+sub get_reads_raw_bioseq {
+    my ($self, $read_name) = @_;
+
+    $self->_validate_read_name($read_name);
+    
+    return $self->_get_bioseq_for_read_and_type($read_name, 'reads');
+}
+
+sub get_reads_processed_bioseq {
+    my ($self, $read_name) = @_;
+
+    $self->_validate_read_name($read_name);
+    
+    return $self->_get_bioseq_for_read_and_type($read_name, 'processed');
+}
+
+sub _validate_read_name {
+    my ($self, $read_name) = @_;
+
+    unless ( defined $read_name ) {
+        $self->_fatal_msg("No read name given");
+    }
+
+    unless ( grep { $_ eq $read_name } @{$self->get_reads} ) {
+        $self->_fatal_msg("Read ($read_name) is not in the list of attempted reads: ".join(', ', @{$self->get_reads}));
+    }
+    
+    return 1;
+}
+sub _get_bioseq_for_read_and_type {
+    my ($self, $read_name, $type) = @_;
+
+    my $fasta_file_method = $type.'_fasta_file';
+    my $fasta_file = $self->$fasta_file_method;
+    unless ( -e $fasta_file ) { # ok
+        print "No fasta file for read ($read_name) and type ($type)\n";
+        return;
+    }
+    
+    my $qual_file_method = $type.'_qual_file';
+    my $qual_file = $self->$qual_file_method;
+    unless ( -e $qual_file ) { # not ok
+        $self->_fatal_msg("Found fasta file, but not quality file for read ($read_name) and type ($type)");
+        return;
+    }
+
+    my ($fasta, $qual);
+    my $fasta_reader = Bio::SeqIO->new(
+        '-file' => "< $fasta_file",
+        '-format' => 'fasta',
+    );
+    while ( $fasta = $fasta_reader->next_seq ) {
+        last if $fasta->id eq $read_name;
+    }
+    unless ( $fasta ) { # ok
+        print "Fasta not found for read ($read_name) and type ($type)\n";
+        return;
+    }
+    
+    my $qual_reader = Bio::SeqIO->new(
+        '-file' => "< $qual_file",
+        '-format' => 'qual',
+    );
+    while ( $qual = $qual_reader->next_seq ) {
+        last if $qual->id eq $read_name;
+    }
+    unless ( $qual ) { # not ok
+        $self->_fatal_msg("Found fasta, but not quality for read ($read_name) and type ($type)");
+    }
+
+    return Bio::Seq::Quality->new(
+        '-id' => $read_name,
+        '-desc' => 'type='.$type,
+        '-seq' => $fasta->seq,
+        '-qual' => $qual->qual,
     );
 }
 
