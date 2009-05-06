@@ -15,7 +15,7 @@ class Genome::Model::Tools::Annotate::RtPrimerSnps {
     'snp_file' => {
         type => 'String',
         is_optional => 0,
-        doc => 'maq cns2snp output',
+        doc => 'maq cns2snp output or, minimally, tab separated chr and pos',
     },
     'transcript' => {
         type => 'String',
@@ -26,6 +26,16 @@ class Genome::Model::Tools::Annotate::RtPrimerSnps {
         type => 'String',
         is_optional => 0,
         doc => 'sequence of primer to search for snps within',
+    },
+    reference_transcripts => {
+        is => 'String',
+        is_optional => 1, 
+        doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db (not both)'
+    },
+    build_id =>{
+        is => "Number",
+        is_optional => 1,
+        doc => 'build id for the imported annotation model to grab transcripts to annotate from.  Use this or --reference-transcripts to specify a non-default annotation db (not both)',
     },
 
     ]
@@ -38,15 +48,44 @@ sub execute {
         $self->error_message("Input file does not exist");
         return;
     }
-    my $build = Genome::Model::ImportedAnnotation->get(name => 'NCBI-human.combined-annotation')->build_by_version(0);
+    my $build;
+    if ($self->reference_transcripts){
+        my ($name, $version) = split(/\//, $self->reference_transcripts);
+        my $model = Genome::Model->get(name => $name);
+        unless ($model){
+            $self->error_message("couldn't get reference transcripts set for $name");
+            return;
+        }
+        if (defined($version)){
+            $build = $model->build_by_version($version);
+            unless ($build){
+                $self->error_message("couldn't get version $version from reference transcripts set $name");
+                return;
+            }
+        }else{ 
+            $build = $model->last_complete_build;  #TODO latest by version
+            unless ($build){
+                $self->error_message("couldn't get last complete build from reference transcripts set $name");
+                return;
+            }
+        }
+    }else{
+        my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
+        $build = $model->build_by_version(0);
+
+        unless ($build){
+            $self->error_message("couldn't get build v0 from 'NCBI-human.combined-annotation'");
+            return;
+        }
+    }
     my $build_id =$build->build_id;
 
     my $t = Genome::Transcript->get( transcript_name => $self->transcript, build_id => $build_id );
     if($t) {
-        print "Found transcript ", $t->transcript_name," on strand ",$t->strand," for gene ", $t->gene_name, "\n";
+        $self->status_message("Found transcript ". $t->transcript_name." on ".substr($t->strand,0,1)." strand for gene ".$t->gene_name."\n\n");
     }
     else {
-        print "Couldn't find specified transcript:",$self->transcript,"\n";
+        $self->error_message("Couldn't find specified transcript: ".$self->transcript);
         return;
     }
     my %transcript_coords;
@@ -89,9 +128,7 @@ sub execute {
             #looking for uncomplemented sequence in transcript
             $primer_stop = pos($tseq);
             $primer_start = $primer_stop - length($primer_seq) + 1;
-            print "Found primer from $primer_start to $primer_stop\n";
-            print "Primer: $primer_seq\n";
-            print "Trscrt: ",substr($tseq, $primer_start-1, $primer_stop - $primer_start + 1 ),"\n";
+            $self->status_message("Found primer from $primer_start to $primer_stop of transcript\n    Primer: $primer_seq\nTranscript: ".substr($tseq, $primer_start-1,$primer_stop - $primer_start + 1) . "\n\n" );
             $found = 1;
         }
         else {
@@ -106,9 +143,7 @@ sub execute {
         unless($found) {
             $primer_start = pos($tseq);
             $primer_stop = $primer_start - length($primer_seq) + 1;
-            print "Found primer from $primer_start to $primer_stop\n";
-            print "Primer: $primer_seq\n";
-            print "Trscrt: ",substr($tseq, $primer_stop-1, $primer_start - $primer_stop + 1),"\n";
+            $self->status_message("Found primer from $primer_start to $primer_stop of transcript\n    Primer: $primer_seq\nTranscript: ".substr($tseq, $primer_stop-1,$primer_start - $primer_stop + 1) . "\n\n" );
             $found = 1;
             #convert to always be transcript orientation
             ($primer_start, $primer_stop) = ($primer_stop, $primer_start);
@@ -119,7 +154,7 @@ sub execute {
         }
     }
     unless($found) {
-        print "Couldn't find primer sequence in transcript\n";
+        $self->error_message("Couldn't find primer sequence in transcript");
         return;
     }
 
@@ -164,23 +199,27 @@ sub execute {
         push @primer_genomic_alignments, [$genomic_start, $genomic_end];
     }
     #print converted genomic coordinates
-    print "Primer genomic coordinates:\n";
+    $self->status_message("Primer genomic coordinates:");
+    my $genomic_coords = q{};
     for my $aligned_block (@primer_genomic_alignments) {
         my ($start, $end) = @$aligned_block;
-        print "$start...$end\t";
+        $genomic_coords .= "$start...$end\t";
     }
-    print "\n";
+    $self->status_message($genomic_coords."\n\n");
     #print retrieved sequence
     my $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
     my $refdb = Bio::DB::Fasta->new($RefDir);
-    print "Sequence for genomic coordinates:\n";
+
+    $self->status_message("Sequence for genomic coordinates:\n");
+    my $coords = q{};
+
     for my $aligned_block (@primer_genomic_alignments) {
         my ($start, $end) = @$aligned_block;
         my $ref_seq =  $refdb->seq($t->chrom_name, $start => $end); 
 
-        print "$ref_seq\t";
+        $coords .= "$ref_seq\t";
     }
-    print "\n";
+    $self->status_message($coords."\n\n");
 
     #now search the snp file for SNPs
     $self->status_message("Searching for variants within primer location...");
@@ -229,3 +268,10 @@ sub help_brief {
     return "This module searches for a primer sequence within a transcript and then reports any snps in the snp file that fall within it";
 }
 
+sub help_detail {
+    return <<DOC
+This module searches for an exact match of the primer sequence within the transcript sequence and uses the resulting transcript to calculate the genomic position of the primer. This is useful for RT primers which may be short and may span exons. 
+
+Once genomic coordinates are determined, the passed snp_file is scanned for SNPs contained within the primer sequence. The snp_file is minimally a tab-separated file of chromosome and position. Upon finding a SNP within the primer the line from the snp_file is printed to stdout. If no snps are found, output to stdout is produced.";
+DOC
+}
