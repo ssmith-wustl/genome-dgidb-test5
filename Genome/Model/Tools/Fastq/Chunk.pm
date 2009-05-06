@@ -13,23 +13,23 @@ class Genome::Model::Tools::Fastq::Chunk {
     is  => 'Genome::Model::Tools::Fastq',
     has => [
         chunk_size => {
-            is  => 'Integer',
-            doc => 'Number of fastq for each chunk',
+            type => 'Integer',
+            doc  => 'Number of fastq for each chunk',
         },
     ],
     has_optional => [
         chunk_dir => {
-            is  => 'String',
-            doc => 'Root directory of temp dir to hold chunk fastq files, default is dir of fastq_file',
+            type => 'String',
+            doc  => 'Root directory of temp dir to hold chunk fastq files, default is dir of fastq_file',
         },
         show_list => {
-            is  => 'boolean',
-            doc => 'print file path of fastq chunk file fof to std out',
+            type => 'Boolean',
+            doc  => 'print file path of fastq chunk file fof to std out',
             default => 0,
         },
         fast_mode => {
-            is  => 'boolean',
-            doc => 'Avoid bio perl codes to speed up, useful for large dataset.',
+            type => 'Boolean',
+            doc  => 'Avoid bio perl codes to speed up, useful for large dataset.',
             default => 0,
         },
     ],
