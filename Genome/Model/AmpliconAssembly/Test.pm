@@ -197,7 +197,7 @@ sub params_for_test_class {
     my $self = shift;
 
     return (
-        name => $self->report_name,
+        #name => $self->report_name,
         build_id => $self->mock_model->latest_complete_build->id,
     );
 }
@@ -219,7 +219,7 @@ sub test_01_generate_report : Test(2) {
 
     my $report = $self->generator->generate_report;
     ok($report, 'Generated report');
-    # print Dumper($report);
+    print Dumper($report);
 
     return 1;
 }
@@ -272,6 +272,9 @@ sub test_class {
     'Genome::Model::AmpliconAssembly::Report::QualityHistogram';
 }
 
+sub test_01_generate_report {
+    return 1;
+}
 1;
 
 =pod
