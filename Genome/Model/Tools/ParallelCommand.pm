@@ -25,7 +25,7 @@ class Genome::Model::Tools::ParallelCommand {
     ],
     has_param => [
         lsf_resource => {
-            default_value => 'select[type==LINUX64] rusage[mem=2000]',
+            default_value => 'select[type==LINUX64]rusage[mem=16000]',
         }
     ],
 };

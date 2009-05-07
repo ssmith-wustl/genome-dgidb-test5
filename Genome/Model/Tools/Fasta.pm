@@ -11,7 +11,7 @@ require File::Copy;
 
 class Genome::Model::Tools::Fasta {
     is => 'Command',
-    has => [
+    has_input => [
         fasta_file => {
             type => 'String',
             is_optional => 0,
@@ -44,7 +44,7 @@ sub create {
     Genome::Utility::FileSystem->validate_file_for_reading( $self->fasta_file )
         or return;
     
-    my ($basename, $directory, $suffix) = File::Basename::fileparse($self->fasta_file, '.fasta', '.fas', '.fa');
+    my ($basename, $directory, $suffix) = File::Basename::fileparse($self->fasta_file, '.fasta', '.fas', '.fa', '.fna');
     unless ( $suffix ) {
         $self->error_message( sprintf('FASTA file (%s) needs to have a ".fasta", ".fas" or ".fa" suffix.', $self->fasta_file) );
         return;

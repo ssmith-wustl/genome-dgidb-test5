@@ -72,13 +72,11 @@ class Genome::Model::Tools::BacterialContaminationScreen
                  },
             input_file => {
                 is => 'String',
-                default => 'in.txt',
-                doc => 'list of inputs for queries', #ex: /gscmnt/temp100/research/jxu/HGMI/bin/in.txt 
+                doc => 'list of inputs for queries (ex: /gscmnt/temp100/research/jxu/HGMI/bin/in.txt)', 
             },
             output_file => {
                 is => 'String',
-                default => 'commandLines.txt',
-                doc => 'file for commands to be output to', #ex: /gscmnt/temp100/research/jxu/HGMI/bin/commandLines.txt 
+                doc => 'file for commands to be output to (ex: /gscmnt/temp100/research/jxu/HGMI/bin/commandLines.txt)', 
             },
             use_cluster => {
                                 is => 'String',
