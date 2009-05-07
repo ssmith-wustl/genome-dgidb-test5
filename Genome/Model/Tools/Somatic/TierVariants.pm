@@ -8,6 +8,7 @@ use Carp;
 use FileHandle;
 use Data::Dumper;
 use List::Util qw( max );
+use Genome::Info::IUB;
 
 class Genome::Model::Tools::Somatic::TierVariants{
     is => 'Command',
@@ -79,15 +80,14 @@ sub execute {
     my %exonic_at;
     my %variant_at;
     
+    $DB::single = 1;
     while(my $line = $trans_anno_fh->getline) {
         chomp $line;
-
         my @columns = split ',', $line;
-
-        my ($chr, $start, $stop, $allele1, $allele2, $class, $gene, $transcript, $type, $aa_string) = @columns;
+        my ($chr, $start, $stop, $allele1, $allele2, $class, $gene, $transcript, $strand, $type, $aa_string) = @columns;
         $type = lc($type);
         if(defined($type) && ($type eq 'silent' || $type eq 'splice_site_del' || $type eq 'splice_site_ins' || $type eq 'in_frame_del' || $type eq 'frame_shift_del' || $type eq 'rna' || $type eq 'frame_shift_ins' || $type eq 'in_frame_ins'|| $type eq 'missense'|| $type eq 'nonsense'|| $type eq 'nonstop'|| $type eq 'splice_site')) {
-            $exonic_at{$chr}{$start}{$stop}{$allele1}{$allele2} = join "\t", @columns;
+            $exonic_at{$chr}{$start}{$stop}{$allele1}{$allele2} = $type;
         }
     }
 
@@ -141,28 +141,39 @@ sub execute {
                 }
                 if(exists($exonic_at{$chr}{$start}{$stop_pos}{$hash->{reference}}{$hash->{variant}})) {
                     if($exonic_at{$chr}{$start}{$stop_pos}{$hash->{reference}}{$hash->{variant}} eq 'silent') {
-                        print $tier2 $line,"\t",$exonic_at{$chr}{$start}{$stop_pos}{$hash->{reference}}{$hash->{variant}},"\n"; #not gonna happen
+                        print $tier2 $line,"\n"; #not gonna happen
                     }
                     else {
-                        print $tier1 $line,"\t",$exonic_at{$chr}{$start}{$stop_pos}{$hash->{reference}}{$hash->{variant}}, "\n";
+                        print $tier1 $line,"\n";
                     }
                     next;
                 }
                 $variant_at{$chr}{$start}{$stop_pos}{$hash->{reference}}{$hash->{variant}} = $line;
             }
         } elsif ($type =~ /snp/i) {
-            my ($chr, $start, $somatic_score, $reference, $variant) = split /\t/, $line;
+            my ($chr, $start, $somatic_score, $reference, $genotype) = split /\t/, $line;
+            my @variant_alleles = Genome::Info::IUB::variant_alleles_for_iub($reference, $genotype);
             my $stop = $start;
-            if(exists($exonic_at{$chr}{$start}{$stop}{$reference}{$variant})) {
-                if($exonic_at{$chr}{$start}{$stop}{$reference}{$variant} eq 'silent') {
-                    print $tier2 $line, "\n";
+            my $assigned_position_to_tier = 0;
+            foreach my $variant (@variant_alleles) {
+                if(exists($exonic_at{$chr}{$start}{$stop}{$reference}{$variant})) {
+                    if($exonic_at{$chr}{$start}{$stop}{$reference}{$variant} eq 'silent') {
+                        print $tier2 $line, "\n";
+                    }
+                    else {
+                        print $tier1 $line, "\n";
+                    }
+                    $assigned_position_to_tier = 1;
+                    last; #skip
                 }
-                else {
-                    print $tier1 $line, "\n";
-                }
-                next; #skip
+                $variant_at{$chr}{$start}{$stop}{$reference}{$variant} = $line;
             }
-            $variant_at{$chr}{$start}{$stop}{$reference}{$variant} = $line;
+            if($assigned_position_to_tier) {
+                foreach my $variant (@variant_alleles) {
+                    delete $exonic_at{$chr}{$start}{$stop}{$reference}{$variant};
+                }
+            }
+            
         } else {
             $self->error_message("Type $type not implemented");
             return;
