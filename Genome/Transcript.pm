@@ -62,6 +62,10 @@ sub structure_at_position {
 
     # check if in range of the trascript
     my @structures = $self->ordered_sub_structures;
+    unless (@structures){
+        $self->error_message("No sub-structures for transcript ". $self->transcript_id." ".$self->transcript_name);
+        return;
+    }
     return unless $structures[0]->structure_start <= $position
         and $structures[$#structures]->structure_stop >= $position;
 
