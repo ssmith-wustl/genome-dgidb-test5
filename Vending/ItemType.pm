@@ -6,7 +6,7 @@ use warnings;
 use Vending;
 class Vending::ItemType {
     type_name => 'item type',
-    table_name => 'ITEM_TYPE',
+    table_name => 'CONTENT_TYPE',
     id_by => [
         type_id => { is => 'integer' },
     ],
@@ -21,7 +21,7 @@ class Vending::ItemType {
                          doc => 'How many items of this type are there' },
 
     ],
-    id_sequence_generator_name => 'URMETA_ITEM_TYPE_TYPE_ID_seq',
+    id_sequence_generator_name => 'URMETA_CONTENT_TYPE_TYPE_ID_seq',
     doc => 'abstract base class for things the machine knows about',
     schema_name => 'Machine',
     data_source => 'Vending::DataSource::Machine',

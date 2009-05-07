@@ -5,7 +5,7 @@ use Vending;
 
 class Vending::VendItem {
     type_name => 'vend item',
-    table_name => 'VEND_ITEM',
+    table_name => 'CONTENT',
     is_abstract => 1,
     sub_classification_method_name => 'type_name_resolver',
     id_by => [

@@ -6,7 +6,7 @@ use warnings;
 use Vending;
 class Vending::VendSlot {
     type_name => 'vend slot',
-    table_name => 'VEND_SLOT',
+    table_name => 'MACHINE_LOCATION',
     id_by => [
         slot_id => { is => 'integer' },
     ],
