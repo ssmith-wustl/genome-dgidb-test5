@@ -16,7 +16,7 @@ CREATE TABLE dd_fk_constraint (
     last_object_revision timestamp NOT NULL,
     PRIMARY KEY(data_source, owner, r_owner, table_name, r_table_name, fk_constraint_name)
 );
-INSERT INTO "dd_fk_constraint" VALUES('Vending::DataSource::Machine','','','INVENTORY','PRODUCT','INVENTORY_PRODUCT_ID_PRODUCT_PRODUCT_ID_FK','2009-05-07 14:09:28');
+INSERT INTO "dd_fk_constraint" VALUES('Vending::DataSource::Machine','','','MERCHANDISE','PRODUCT','MERCHANDISE_PRODUCT_ID_PRODUCT_PRODUCT_ID_FK','2009-05-07 14:09:28');
 INSERT INTO "dd_fk_constraint" VALUES('Vending::DataSource::Machine','','','MACHINE_LOCATION','MACHINE','MACHINE_LOCATION_MACHINE_ID_MACHINE_MACHINE_ID_FK','2009-05-07 14:09:27');
 INSERT INTO "dd_fk_constraint" VALUES('Vending::DataSource::Machine','','','CONTENT','MACHINE_LOCATION','CONTENT_MACHINE_LOCATION_ID_MACHINE_LOCATION_MACHINE_LOCATION_ID_FK','2009-05-07 14:09:27');
 INSERT INTO "dd_fk_constraint" VALUES('Vending::DataSource::Machine','','','CONTENT','MACHINE','CONTENT_MACHINE_ID_MACHINE_MACHINE_ID_FK','2009-05-07 14:09:29');
@@ -36,7 +36,7 @@ CREATE TABLE dd_fk_constraint_column (
 );
 INSERT INTO "dd_fk_constraint_column" VALUES('COIN_COIN_ID_CONTENT_CONTENT_ID_FK','Vending::DataSource::Machine','','COIN','CONTENT','COIN_ID','CONTENT_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('COIN_TYPE_ID_CONTENT_TYPE_TYPE_ID_FK','Vending::DataSource::Machine','','COIN','CONTENT_TYPE','TYPE_ID','TYPE_ID');
-INSERT INTO "dd_fk_constraint_column" VALUES('INVENTORY_PRODUCT_ID_PRODUCT_PRODUCT_ID_FK','Vending::DataSource::Machine','','INVENTORY','PRODUCT','PRODUCT_ID','PRODUCT_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('MERCHANDISE_PRODUCT_ID_PRODUCT_PRODUCT_ID_FK','Vending::DataSource::Machine','','MERCHANDISE','PRODUCT','PRODUCT_ID','PRODUCT_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('MACHINE_LOCATION_MACHINE_ID_MACHINE_MACHINE_ID_FK','Vending::DataSource::Machine','','MACHINE_LOCATION','MACHINE','MACHINE_ID','MACHINE_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('CONTENT_MACHINE_LOCATION_ID_MACHINE_LOCATION_MACHINE_LOCATION_ID_FK','Vending::DataSource::Machine','','CONTENT','MACHINE_LOCATION','MACHINE_LOCATION_ID','MACHINE_LOCATION_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('CONTENT_MACHINE_ID_MACHINE_MACHINE_ID_FK','Vending::DataSource::Machine','','CONTENT','MACHINE','MACHINE_ID','MACHINE_ID');
@@ -54,7 +54,7 @@ INSERT INTO "dd_pk_constraint_column" VALUES('Vending::DataSource::Machine','','
 INSERT INTO "dd_pk_constraint_column" VALUES('Vending::DataSource::Machine','','CONTENT_TYPE','type_id',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Vending::DataSource::Machine','','PRODUCT','product_id',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Vending::DataSource::Machine','','COIN','coin_id',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('Vending::DataSource::Machine','','INVENTORY','merchandise_id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Vending::DataSource::Machine','','MERCHANDISE','merchandise_id',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Vending::DataSource::Machine','','MACHINE_LOCATION','machine_location_id',1);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE dd_table (
 );
 INSERT INTO "dd_table" VALUES('Vending::DataSource::Machine','','MACHINE','TABLE','entity',NULL,'2009-05-07 14:09:29',NULL);
 INSERT INTO "dd_table" VALUES('Vending::DataSource::Machine','','MACHINE_LOCATION','TABLE','entity',NULL,'2009-05-07 14:09:27',NULL);
-INSERT INTO "dd_table" VALUES('Vending::DataSource::Machine','','INVENTORY','TABLE','entity',NULL,'2009-05-07 14:09:30',NULL);
+INSERT INTO "dd_table" VALUES('Vending::DataSource::Machine','','MERCHANDISE','TABLE','entity',NULL,'2009-05-07 14:09:30',NULL);
 INSERT INTO "dd_table" VALUES('Vending::DataSource::Machine','','COIN','TABLE','bridge',NULL,'2009-05-07 14:09:29',NULL);
 INSERT INTO "dd_table" VALUES('Vending::DataSource::Machine','','PRODUCT','TABLE','entity',NULL,'2009-05-07 14:09:28',NULL);
 INSERT INTO "dd_table" VALUES('Vending::DataSource::Machine','','CONTENT','TABLE','entity',NULL,'2009-05-07 14:09:30',NULL);
@@ -86,7 +86,7 @@ CREATE TABLE dd_table_column (
     remarks varchar,
     PRIMARY KEY(data_source, owner, table_name, column_name)
 );
-INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','INVENTORY','PRODUCT_ID','integer',NULL,'N','2009-05-07 14:09:30','');
+INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','MERCHANDISE','PRODUCT_ID','integer',NULL,'N','2009-05-07 14:09:30','');
 INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','CONTENT_TYPE','NAME','varchar',NULL,'N','2009-05-07 14:09:29','');
 INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','PRODUCT','MANUFACTURER','varchar',NULL,'N','2009-05-07 14:09:28','');
 INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','PRODUCT','COST_CENTS','integer',NULL,'N','2009-05-07 14:09:28','');
@@ -98,7 +98,7 @@ INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','MACHINE'
 INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','MACHINE_LOCATION','IS_BUYABLE','integer',NULL,'N','2009-05-07 14:09:27','');
 INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','MACHINE_LOCATION','LABEL','varchar',NULL,'Y','2009-05-07 14:09:27','');
 INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','CONTENT_TYPE','TYPE_ID','integer',NULL,'N','2009-05-07 14:09:29','');
-INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','INVENTORY','INSERT_DATE','datetime',NULL,'N','2009-05-07 14:09:30','');
+INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','MERCHANDISE','INSERT_DATE','datetime',NULL,'N','2009-05-07 14:09:30','');
 INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','CONTENT','SUBTYPE_NAME','varchar',NULL,'Y','2009-05-07 14:09:30','');
 INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','PRODUCT','PRODUCT_ID','integer',NULL,'N','2009-05-07 14:09:28','');
 INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','MACHINE_LOCATION','NAME','varchar',NULL,'N','2009-05-07 14:09:27','');
@@ -107,7 +107,7 @@ INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','CONTENT'
 INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','MACHINE_LOCATION','COST_CENTS','integer',NULL,'Y','2009-05-07 14:09:27','');
 INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','COIN','COIN_ID','integer',NULL,'N','2009-05-07 14:09:29','');
 INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','CONTENT','MACHINE_LOCATION_ID','integer',NULL,'N','2009-05-07 14:09:30','');
-INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','INVENTORY','MERCHANDISE_ID','integer',NULL,'N','2009-05-07 14:09:30','');
+INSERT INTO "dd_table_column" VALUES('Vending::DataSource::Machine','','MERCHANDISE','MERCHANDISE_ID','integer',NULL,'N','2009-05-07 14:09:30','');
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,

@@ -30,7 +30,7 @@ sub create_from_vend_items {
  
             if ($item->isa('Vending::Coin')) {
                 $create_params{'value'} = $item->value_cents;
-            } elsif ($item->isa('Vending::Inventory')) {
+            } elsif ($item->isa('Vending::Merchandise')) {
                 $create_params{'value'} = $item->cost_cents;
             } else {
                 die "Can't create a Vending::ReturnedItem from an object of type ".$item->class;

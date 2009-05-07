@@ -37,7 +37,7 @@ sub count_items_by_type {
     if ($item->isa('Vending::CoinType')) {
         @objects = Vending::Coin->get(type_id => $type_id);
     }  else {
-        @objects = Vending::Inventory->get(product_id => $type_id);
+        @objects = Vending::Merchandise->get(product_id => $type_id);
     }
     return scalar(@objects);
 }

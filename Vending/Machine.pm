@@ -19,7 +19,7 @@ class Vending::Machine {
     has_many => [
         products        => { is => 'Vending::Product', reverse_id_by => 'machine' },
         items           => { is => 'Vending::Content', reverse_id_by => 'machine' },
-        inventory_items => { is => 'Vending::Inventory', reverse_id_by => 'machine' },
+        inventory_items => { is => 'Vending::Merchandise', reverse_id_by => 'machine' },
         item_types      => { is => 'Vending::ContentType', reverse_id_by => 'machine' },
         machine_locations           => { is => 'Vending::MachineLocation', reverse_id_by => 'machine' },
     ],

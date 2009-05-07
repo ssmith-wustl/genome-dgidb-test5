@@ -14,7 +14,7 @@ my $prod = Vending::Product->create(name => 'Apple', manufacturer => 'Acme', cos
 ok($prod, 'Created a product type Apple');
 my $slot = Vending::MachineLocation->get(name => 'b');
 ok($slot, 'Got object for slot b');
-my $item = $slot->add_item(subtype_name => 'Vending::Inventory', product_id => $prod);
+my $item = $slot->add_item(subtype_name => 'Vending::Merchandise', product_id => $prod);
 ok($item, 'Added an Apple inventory item to slot b');
 
 

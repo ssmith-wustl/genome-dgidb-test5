@@ -222,7 +222,7 @@
 <h>280</h>
 </coordinates>
 <panel_attributes>lt=&lt;&lt;-
-//subject_id:Vending::Inventory;Vending::VendItem;;
+//subject_id:Vending::Merchandise;Vending::VendItem;;
 </panel_attributes>
 <additional_attributes>20;20;320;260</additional_attributes>
 </element>
@@ -324,7 +324,7 @@
  bank_slot: 
  change_dispenser: 
  slots: Vending::VendSlot
- inventory_items: Vending::Inventory
+ inventory_items: Vending::Merchandise
  item_types: Vending::ItemType
 //subject_id:Vending::Machine
 </panel_attributes><additional_attributes/></element>
@@ -350,7 +350,7 @@
 <h>286</h>
 </coordinates>
 <panel_attributes>lt=&lt;-
-//subject_id:Vending::Inventory;Vending::Product;product_id;product_id
+//subject_id:Vending::Merchandise;Vending::Product;product_id;product_id
 </panel_attributes>
 <additional_attributes>20;20;250;266</additional_attributes>
 </element>
@@ -401,7 +401,7 @@
 <w>260</w>
 <h>200</h>
 </coordinates>
-<panel_attributes>Vending::Inventory
+<panel_attributes>Vending::Merchandise
 --
  manufacturer: 
  name: 
@@ -412,7 +412,7 @@
  price: 
  subtype_name: 
  product_id: integer
-//subject_id:Vending::Inventory
+//subject_id:Vending::Merchandise
 </panel_attributes><additional_attributes/></element>
 <element>
 <type>com.umlet.element.base.Relation</type>

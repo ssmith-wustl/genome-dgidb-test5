@@ -21,7 +21,7 @@ my $prod = Vending::Product->create(name => 'Battery', manufacturer => 'Acme', c
 ok($prod, "defined Battery product");
 
 my $slot_a = Vending::MachineLocation->get(name => 'a');
-$slot_a->add_item(subtype_name => 'Vending::Inventory', product_id => $prod);
+$slot_a->add_item(subtype_name => 'Vending::Merchandise', product_id => $prod);
 
 ok($machine->insert('dollar'), 'Inserted a dollar');
 

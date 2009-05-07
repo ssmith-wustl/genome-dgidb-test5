@@ -17,7 +17,7 @@ ok($change_disp->add_item(subtype_name => 'Vending::Coin', type_id => $quarter_t
 my $prod = Vending::Product->create(name => 'Orange', manufacturer => 'Acme', cost_cents => 65);
 ok($prod, "Defined 'Orange' product");
 my $slot_a = Vending::MachineLocation->get(name => 'a');
-my $inv = $slot_a->add_item(subtype_name => 'Vending::Inventory', product_id => $prod);
+my $inv = $slot_a->add_item(subtype_name => 'Vending::Merchandise', product_id => $prod);
 ok($inv, 'Added an orange to slot A');
 
 ok($machine->insert('dollar'), 'Inserted a dollar');
@@ -35,7 +35,7 @@ is($items[0]->name, 'dollar', 'The returned thing was a dollar');
 is($items[0]->value, 100, 'The returned thing was worth 100 cents');
 
 # Poke the machine and make sure everything is still in there
-@items = Vending::Inventory->get();
+@items = Vending::Merchandise->get();
 is(scalar(@items), 1, 'There is one item still in the inventory');
 is($items[0]->name, 'Orange', 'It was an Orange');
 is($items[0]->machine_location, $slot_a, 'The orange is in slot a');

@@ -23,7 +23,7 @@ my $prod = Vending::Product->create(name => 'Orange', manufacturer => 'Acme', co
 ok($prod, 'Defined "Orange" product');
 
 my $slot_a = $machine->machine_locations(name => 'a');
-my $inv = $slot_a->add_item(subtype_name => 'Vending::Inventory', product_id => $prod);
+my $inv = $slot_a->add_item(subtype_name => 'Vending::Merchandise', product_id => $prod);
 ok($inv, 'Added an orange to slot A');
 
 ok($machine->insert('dollar'), 'Inserted a dollar');

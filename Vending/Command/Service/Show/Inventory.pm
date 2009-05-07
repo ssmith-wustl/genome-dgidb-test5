@@ -7,7 +7,7 @@ use Vending;
 class Vending::Command::Service::Show::Inventory {
     is => 'UR::Object::Command::List',
     has => [
-        subject_class_name => { value => 'Vending::Inventory' },
+        subject_class_name => { value => 'Vending::Merchandise' },
         show => { value => 'id,location_name,name,insert_date' },
         filter => { is_calculated => 1 },
     ],

@@ -1,12 +1,12 @@
-package Vending::Inventory;
+package Vending::Merchandise;
 
 use strict;
 use warnings;
 
 use Vending;
-class Vending::Inventory {
+class Vending::Merchandise {
     is => [ 'Vending::Content' ],
-    table_name => 'INVENTORY',
+    table_name => 'merchandise',
     id_sequence_generator_name => 'URMETA_coin_coin_ID_seq',
     id_by => [
         merchandise_id => { is => 'integer' },

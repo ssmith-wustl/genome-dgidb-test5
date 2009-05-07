@@ -73,8 +73,8 @@ check-again - secret backdoor to use when another progrtam reloads the inventory
 }
 
 sub clear_query_cache {
-    print "Forgetting about Vending::Inventorys and Vending::Coins\n";
-    Vending::Inventory->unload();
+    print "Forgetting about Vending::Merchandises and Vending::Coins\n";
+    Vending::Merchandise->unload();
     Vending::Coin::Change->unload();
 }
 
