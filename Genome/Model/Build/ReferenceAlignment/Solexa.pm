@@ -195,8 +195,8 @@ sub _snv_file_filtered {
 
     #'new', whole genome 
     if ( $build_id < 0 || $build_id > 96763806 ) {
-        my $path = File::Basename->dirname($unfiltered);
-        $filtered = $path."/filtered.indelpe.snps";
+        $filtered = $self->maq_snp_related_metric_directory."/filtered.indelpe.snps";
+        $self->status_message("********************Path for filtered indelpe file: $filtered");
     } else {
     #'old', per chromosme
        $filtered = $unfiltered; 
