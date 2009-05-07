@@ -49,7 +49,7 @@ sub execute {
 
     my $count = $self->count;
     while($count--) {
-        my $item = $loc->add_item(type_name => 'Vending::Merchandise', product_id => $item_kind->id, insert_date => time());
+        my $item = $loc->add_item(subtype_name => 'Vending::Merchandise', product_id => $item_kind->id, insert_date => time(), machine_id => $self);
     }
 
     return 1;

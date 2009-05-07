@@ -5,7 +5,7 @@ use warnings;
 use Vending;
 
 class Vending::Command::Service::Show::Inventory {
-    is => 'UR::Object::Command::List',
+    is => [ 'UR::Object::Command::List', 'Vending::Command::Service'],
     has => [
         subject_class_name => { value => 'Vending::Merchandise' },
         show => { value => 'id,location_name,name,insert_date' },
@@ -28,6 +28,10 @@ $DB::single=1;
     return $filter;
 }
 
+sub execute {
+    $DB::single = 1;
+    shift->SUPER::_execute_body(@_)
+}
 
 
 1;

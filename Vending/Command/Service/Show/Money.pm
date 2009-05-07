@@ -2,7 +2,7 @@ package Vending::Command::Service::Show::Money;
 
 class Vending::Command::Service::Show::Money {
     is_abstract => 1,
-    is => 'Command',
+    is => 'Vending::Command::Service',
     doc => 'parent class for show change and show bank',
     has => [
         location_name => { is => 'String', is_abstract => 1 },
@@ -14,7 +14,7 @@ sub execute {
 
     my $machine = $self->machine();
 
-    my $loc = $machine->machine_locations(name => $self->slot_name);
+    my $loc = $machine->machine_locations(name => $self->location_name);
     unless ($loc) {
         $self->error_message("There is no slot named ".$self->location_name);
         return;

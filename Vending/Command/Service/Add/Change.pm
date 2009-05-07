@@ -30,7 +30,7 @@ sub execute {
 
     my $count = $self->count;
     while($count--) {
-        my $coin = $change_disp->add_item(subtype_name => 'Vending::Coin', type_id => $coin_kind->type_id);
+        my $coin = $change_disp->add_item(subtype_name => 'Vending::Coin', type_id => $coin_kind->type_id, machine_id => $self);
         1;
     }
 

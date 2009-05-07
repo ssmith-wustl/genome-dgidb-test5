@@ -37,8 +37,9 @@ sub insert {
         return;
     }
 
+$DB::single=1;
     my $loc = $self->coin_box();
-    my $coin = $loc->add_item(subtype_name => 'Vending::Coin', type_id => $coin_type->type_id);
+    my $coin = $loc->add_item(subtype_name => 'Vending::Coin', type_id => $coin_type->type_id, machine_id => $self);
 
     return defined($coin);
 }
