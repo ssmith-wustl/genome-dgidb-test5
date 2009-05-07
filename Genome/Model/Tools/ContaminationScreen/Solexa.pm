@@ -10,12 +10,15 @@ use File::Basename;
 class Genome::Model::Tools::ContaminationScreen::Solexa
 {
     is => 'Genome::Model::Tools::ContaminationScreen',
-    has => [
+    has_input => [
+                    minscore => {
+                                    is => 'Number', doc => 'value for minimum score, based on read length',
+                    },
         ],
     has_param => [
-        lsf_resource => {
-            default_value => "-M 15000000 -R 'select[type==LINUX64] rusage[mem=15000]'",
-        }
+            lsf_resource => {
+                             default_value => "-M 15000000 -R 'select[type==LINUX64] rusage[mem=15000]'",
+            },
     ],
 };
 
@@ -27,7 +30,7 @@ sub help_brief
 sub help_synopsis 
 {
     return <<"EOS"
-    gt cross_match.test --input_file --database -raw -tags -minmatch 16 -minscore 42 -bandwidth 3 -penalty -1 -gap_init -1 -gap_exp -1 >  --output_file 
+    gt cross_match.test --input_file --database -raw -tags -minmatch 16 -minscore -bandwidth 3 -penalty -1 -gap_init -1 -gap_exp -1 >  --output_file 
 EOS
 }
 
@@ -42,11 +45,11 @@ sub create
 sub execute 
 {
     my $self = shift;
-    my ($read_file, $hits_file) = ($self->_resolve_directory . '/reads.txt', $self->_resolve_directory . '/hits.fna');
+    my ($read_file, $hits_file, $minscore) = ($self->_resolve_directory . '/reads.txt', $self->_resolve_directory . '/hits.fna', $self->minscore);
     my $output_file = $self->input_file . '.screened';
 
     #create read file
-    my $cmd = 'cross_match.test ' . $self->input_file . ' ' .  $self->database . ' -raw -tags -minmatch 16 -minscore 42 -bandwidth 3 -penalty -1 -gap_init -1 -gap_ext -1 > ' . $read_file;
+    my $cmd = 'cross_match.test ' . $self->input_file . ' ' .  $self->database . ' -raw -tags -minmatch 16 -minscore ' . $minscore . ' -bandwidth 3 -penalty -1 -gap_init -1 -gap_ext -1 > ' . $read_file;
     $self->status_message('Running: '. $cmd);
     my $rv = system($cmd);
     unless ($rv == 0) {
