@@ -9,7 +9,7 @@ class Vending::Command::Service::Show::Bank {
     is => 'Vending::Command::Service::Show::Money',
     doc => "Show how much money is in the machine's bank",
     has => [
-        slot_name => { value => 'bank' },
+        location_name => { value => 'bank' },
     ],
 };
 

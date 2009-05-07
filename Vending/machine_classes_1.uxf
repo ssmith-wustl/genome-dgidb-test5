@@ -42,7 +42,7 @@
  item_type: Vending::ItemType
  coin_type: Vending::CoinType
  type_id: integer
- type_name: 
+ subtype_name: 
 //subject_id:Vending::Coin
 </panel_attributes><additional_attributes/></element>
 <element>
@@ -196,7 +196,7 @@
  machine_id: Scalar
  slot: Vending::VendSlot
  machine: Vending::Machine
- type_name: varchar
+ subtype_name: varchar
 +vend_item_id: integer
  slot_id: integer
  slot_name: 
@@ -322,7 +322,7 @@
  coin_box_slot: 
  products: Vending::Product
  bank_slot: 
- change_slot: 
+ change_dispenser: 
  slots: Vending::VendSlot
  inventory_items: Vending::Inventory
  item_types: Vending::ItemType
@@ -410,7 +410,7 @@
  cost_cents: 
  insert_date: datetime
  price: 
- type_name: 
+ subtype_name: 
  product_id: integer
 //subject_id:Vending::Inventory
 </panel_attributes><additional_attributes/></element>

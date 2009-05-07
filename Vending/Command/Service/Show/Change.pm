@@ -9,7 +9,7 @@ class Vending::Command::Service::Show::Change {
     is => 'Vending::Command::Service::Show::Money',
     doc => "Show how much money is in the machine's change dispenser",
     has => [
-        slot_name => { value => 'change' },
+        location_name => { value => 'change' },
     ],
 };
 

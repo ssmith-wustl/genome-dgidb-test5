@@ -5,20 +5,22 @@ class Vending::Command::Service::Show::Money {
     is => 'Command',
     doc => 'parent class for show change and show bank',
     has => [
-        slot_name => { is => 'String', is_abstract => 1 },
+        location_name => { is => 'String', is_abstract => 1 },
     ],
 };
 
 sub execute {
     my $self = shift;
 
-    my $slot = Vending::VendSlot->get(name => $self->slot_name);
-    unless ($slot) {
-        $self->error_message("There is no slot named ".$self->slot_name);
+    my $machine = $self->machine();
+
+    my $loc = $machine->machine_locations(name => $self->slot_name);
+    unless ($loc) {
+        $self->error_message("There is no slot named ".$self->location_name);
         return;
     }
 
-    my @coins = $slot->items;
+    my @coins = $loc->items;
 
     my %coins_by_type;
     my $total_value = 0;

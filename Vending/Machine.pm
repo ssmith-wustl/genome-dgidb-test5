@@ -6,20 +6,24 @@ use warnings;
 use Vending;
 
 class Vending::Machine {
-    is => 'UR::Singleton',
-    doc => 'Represents the vending machine',
-    has_many => [
-        products        => { is => 'Vending::Product', reverse_id_by => 'machine', is_many => 1 },
-        items           => { is => 'Vending::Content', reverse_id_by => 'machine', is_many => 1 },
-        inventory_items => { is => 'Vending::Inventory', reverse_id_by => 'machine', is_many => 1 },
-        item_types      => { is => 'Vending::ContentType', reverse_id_by => 'machine', is_many => 1 },
-        slots           => { is => 'Vending::MachineLocation', reverse_id_by => 'machine', is_many => 1,},
+    table_name => 'MACHINE',
+    id_by => [
+        machine_id => { is => 'Integer' },
     ],
     has => [
-        coin_box_slot => { via => 'slots', to => '-filter', where => [name => 'box'] },
-        bank_slot     => { via => 'slots', to => '-filter', where => [name => 'bank'] },
-        change_slot   => { via => 'slots', to => '-filter', where => [name => 'change'] },
+        coin_box => { via => 'machine_locations', to => '-filter', where => [ name => 'box' ] },
+        bank     => { via => 'machine_locations', to => '-filter', where => [ name => 'bank' ] },
+        change_dispenser   => { via => 'machine_locations', to => '-filter', where => [ name => 'change' ] },
+        address       => { is => 'Text', is_optional => 1 },
     ],
+    has_many => [
+        products        => { is => 'Vending::Product', reverse_id_by => 'machine' },
+        items           => { is => 'Vending::Content', reverse_id_by => 'machine' },
+        inventory_items => { is => 'Vending::Inventory', reverse_id_by => 'machine' },
+        item_types      => { is => 'Vending::ContentType', reverse_id_by => 'machine' },
+        machine_locations           => { is => 'Vending::MachineLocation', reverse_id_by => 'machine' },
+    ],
+    data_source => 'Vending::DataSource::Machine',
 };
 
 
@@ -33,8 +37,8 @@ sub insert {
         return;
     }
 
-    my $slot = $self->coin_box_slot();
-    my $coin = $slot->add_item(type_name => 'Vending::Coin', type_id => $coin_type->type_id);
+    my $loc = $self->coin_box();
+    my $coin = $loc->add_item(subtype_name => 'Vending::Coin', type_id => $coin_type->type_id);
 
     return defined($coin);
 }
@@ -42,8 +46,8 @@ sub insert {
 sub coin_return {
     my $self = shift;
 
-    my $slot = $self->coin_box_slot;
-    my @coins = $slot->items();
+    my $loc = $self->coin_box;
+    my @coins = $loc->items();
     my @returned_items = Vending::ReturnedItem->create_from_vend_items(@coins);
 
     return @returned_items;
@@ -52,23 +56,23 @@ sub coin_return {
 sub empty_bank  {
     my $self = shift;
 
-    my $slot = $self->bank_slot();
-    my @coins = $slot->items();
+    my $loc = $self->bank();
+    my @coins = $loc->items();
     my @returned_items = Vending::ReturnedItem->create_from_vend_items(@coins);
 
     return @returned_items;
 }
 
-sub empty_slot_by_name {
+sub empty_machine_location_by_name {
     my($self,$name) = @_;
 
-    my $slot = $self->slots(name => $name);
-    return unless $slot;
-    unless ($slot->is_buyable) {
-        die "You can only empty out inventory type slots";
+    my $loc = $self->machine_locations(name => $name);
+    return unless $loc;
+    unless ($loc->is_buyable) {
+        die "You can only empty out inventory type machine_locations";
     }
 
-    my @items = $slot->items();
+    my @items = $loc->items();
     my @returned_items = Vending::ReturnedItem->create_from_vend_items(@items);
 
     return @returned_items;
@@ -78,9 +82,9 @@ sub empty_slot_by_name {
 
 
 sub buy {
-    my($self,@slot_names) = @_;
+    my($self,@machine_location_names) = @_;
     
-    my $coin_box = $self->coin_box_slot();
+    my $coin_box = $self->coin_box();
     my $transaction = UR::Context::Transaction->begin();
 
 $DB::single = 1;
@@ -89,23 +93,23 @@ $DB::single = 1;
         my $users_money = $coin_box->content_value();
 
         my @bought_items;
-        my %iterator_for_slot;
+        my %iterator_for_machine_location;
 
-        foreach my $slot_name ( @slot_names ) {
-            my $vend_slot = $self->slots(name => $slot_name);
-            unless ($vend_slot && $vend_slot->is_buyable) {
-                die "$slot_name is not a valid choice\n";
+        foreach my $loc_name ( @machine_location_names ) {
+            my $machine_location = $self->machine_locations(name => $loc_name);
+            unless ($machine_location && $machine_location->is_buyable) {
+                die "$loc_name is not a valid choice\n";
             }
 
-            my $iter = $iterator_for_slot{$slot_name} || $vend_slot->item_iterator();
+            my $iter = $iterator_for_machine_location{$loc_name} || $machine_location->item_iterator();
             unless ($iter) {
-                die "Problem creating iterator for $slot_name\n";
+                die "Problem creating iterator for $loc_name\n";
                 return;
             }
 
             my $item = $iter->next();    # This is the one they'll buy
             unless ($item) {
-                $self->error_message("Item $slot_name is empty");
+                $self->error_message("Item $loc_name is empty");
                 next;
             }
             
@@ -136,7 +140,7 @@ $DB::single = 1;
 sub _complete_purchase_and_make_change_for_selections {
     my($self,@bought_items) = @_;
 
-    my $coin_box = $self->coin_box_slot();
+    my $coin_box = $self->coin_box();
 
     my $purchased_value = 0;
     foreach my $item ( @bought_items ) {
@@ -149,8 +153,8 @@ sub _complete_purchase_and_make_change_for_selections {
     }
 
     # Put all the user's coins into the bank
-    my $bank_slot = $self->bank_slot;
-    $coin_box->transfer_items_to_slot($bank_slot);
+    my $bank = $self->bank;
+    $coin_box->transfer_items_to_machine_location($bank);
 
     if ($change_value == 0) {
         return;
@@ -161,7 +165,7 @@ sub _complete_purchase_and_make_change_for_selections {
                                sort { $b->value_cents <=> $a->value_cents }
                                Vending::CoinType->get();
 
-    my $change_dispenser = $self->change_slot;
+    my $change_dispenser = $self->change_dispenser;
     my @change;
     # Make change for the user
     MAKING_CHANGE:
@@ -196,9 +200,9 @@ sub _initialize_for_tests {
     $_->delete foreach Vending::Content->get();
     $_->delete foreach Vending::Product->get();
     
-    $self->slots(name => 'a')->cost_cents(65);
-    $self->slots(name => 'b')->cost_cents(100);
-    $self->slots(name => 'c')->cost_cents(150);
+    $self->machine_locations(name => 'a')->cost_cents(65);
+    $self->machine_locations(name => 'b')->cost_cents(100);
+    $self->machine_locations(name => 'c')->cost_cents(150);
 }
 
 

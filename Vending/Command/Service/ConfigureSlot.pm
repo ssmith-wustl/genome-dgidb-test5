@@ -16,17 +16,17 @@ sub execute {
     my $self = shift;
 
     my $machine = $self->machine();
-    my $slot = $machine->slots(name => $self->name);
-    unless ($slot) {
+    my $loc = $machine->machine_locations(name => $self->name);
+    unless ($loc) {
         $self->error_message("Not a valid slot name");
         return;
     }
 
     if (defined $self->label) {
-        $slot->label($self->label);
+        $loc->label($self->label);
     }
     if (defined $self->cost_cents) {
-        $slot->cost_cents($self->cost_cents);
+        $loc->cost_cents($self->cost_cents);
     }
     return 1;
 }

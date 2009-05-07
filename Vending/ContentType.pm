@@ -5,7 +5,6 @@ use warnings;
 
 use Vending;
 class Vending::ContentType {
-    type_name => 'item type',
     table_name => 'content_type',
     id_by => [
         type_id => { is => 'integer' },

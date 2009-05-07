@@ -21,7 +21,7 @@ create table vend_slot (slot_id integer PRIMARY KEY NOT NULL,
 
 --Parent table for instances of things the machine can sell
 create table vend_item (vend_item_id integer PRIMARY KEY NOT NULL,
-                        type_name varchar,
+                        subtype_name varchar,
                         slot_id integer NOT NULL REFERENCES vend_slot(slot_id));
 
 -- instances of coins held by the machine

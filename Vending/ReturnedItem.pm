@@ -8,9 +8,9 @@ class Vending::ReturnedItem {
     has => [
         name        => { is => 'String' },
         value       => { is => 'Float' },
-        source_slot => { is => 'Vending::MachineLocation', id_by => 'source_slot_id' },
-        price       => { via => 'source_slot', to => 'price' },
-        cost_cents  => { via => 'source_slot', to => 'cost_cents' },
+        source_machine_location => { is => 'Vending::MachineLocation', id_by => 'source_machine_location_id' },
+        price       => { via => 'source_machine_location', to => 'price' },
+        cost_cents  => { via => 'source_machine_location', to => 'cost_cents' },
     ],
     doc => 'Represents a thing being returned to the user, not stored in the database',
 };
@@ -26,7 +26,7 @@ sub create_from_vend_items {
 
         my @returned_items;
         foreach my $item ( @items ) {
-            my %create_params = ( name => $item->name, source_slot_id => $item->slot_id );
+            my %create_params = ( name => $item->name, source_machine_location_id => $item->machine_location_id );
  
             if ($item->isa('Vending::Coin')) {
                 $create_params{'value'} = $item->value_cents;

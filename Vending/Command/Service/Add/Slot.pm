@@ -17,10 +17,10 @@ sub execute {
     my $self = shift;
 
     my $machine = $self->machine;
-    my $slot = $machine->add_slot(name => $self->name,
-                                  label => $self->label,
-                                  cost_cents => $self->cost,
-                                  is_buyable => 1);
+    my $slot = $machine->add_machine_location(name => $self->name,
+                                              label => $self->label,
+                                              cost_cents => $self->cost,
+                                              is_buyable => 1);
 
     return 1;
 }

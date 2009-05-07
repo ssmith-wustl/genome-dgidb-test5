@@ -4,7 +4,7 @@ class Vending::Command::Menu {
     is => ['UR::Object::Command::List', 'Vending::Command' ],
     doc => 'Show the items available to buy',
     has => [
-        subject_class_name => { is_constant => 1, value => 'Vending::VendSlot' },
+        subject_class_name => { is_constant => 1, value => 'Vending::MachineLocation' },
         filter => { value => 'is_buyable=1' },
         show => { value => 'name,label,price' },
     ],
@@ -18,7 +18,7 @@ sub execute {
 
 $DB::single=1;
     my $machine = $self->machine;
-    my $inserted = $machine->coin_box_slot->content_value();
+    my $inserted = $machine->coin_box->content_value();
     if ($inserted) {
         printf("You have inserted \$%.2f so far\n", $inserted/100);
     } else {

@@ -13,15 +13,15 @@ $machine->_initialize_for_tests();
 my $quarter_type = Vending::CoinType->get(name => 'quarter');
 my $dime_type = Vending::CoinType->get(name => 'dime');
 
-my $change_disp = $machine->change_slot;
-ok($change_disp->add_item(type_name => 'Vending::Coin', type_id => $quarter_type), "Added a quarter to the change");
-ok($change_disp->add_item(type_name => 'Vending::Coin', type_id => $dime_type), "Added a dime to the change");
+my $change_disp = $machine->change_dispenser;
+ok($change_disp->add_item(subtype_name => 'Vending::Coin', type_id => $quarter_type), "Added a quarter to the change");
+ok($change_disp->add_item(subtype_name => 'Vending::Coin', type_id => $dime_type), "Added a dime to the change");
 
 my $prod = Vending::Product->create(name => 'Battery', manufacturer => 'Acme', cost_cents => 65);
 ok($prod, "defined Battery product");
 
-my $slot_a = Vending::VendSlot->get(name => 'a');
-$slot_a->add_item(type_name => 'Vending::Inventory', product_id => $prod);
+my $slot_a = Vending::MachineLocation->get(name => 'a');
+$slot_a->add_item(subtype_name => 'Vending::Inventory', product_id => $prod);
 
 ok($machine->insert('dollar'), 'Inserted a dollar');
 

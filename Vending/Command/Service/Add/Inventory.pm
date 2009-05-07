@@ -25,30 +25,31 @@ Example:
 sub execute {
     my $self = shift;
 
-    my $slot = Vending::VendSlot->get(name => $self->slot);
-    unless ($slot) {
+    my $machine = $self->machine;
+
+    my $loc = $machine->machine_locations(name => $self->slot);
+    unless ($loc) {
         die "There is no slot with that name";
     }
 
     unless (defined $self->name) {
-        print "Adding ",$slot->label,"(s)\n";
-        $self->name($slot->label);
+        print "Adding ",$loc->label,"(s)\n";
+        $self->name($loc->label);
     }
 
-    my $item_kind = Vending::Product->get(name => $self->name);
+    my $item_kind = $machine->products(name => $self->name);
     unless ($item_kind) {
         print "This is a new item.  What is the manufacturer:\n";
         my $manufacturer = <STDIN>;
         print "What is the cost (dollars)\n";
         my $price = <STDIN>;
         $price = int($price * 100);  # Convert to cents
-        $item_kind = Vending::Product->create(name => $self->name, manufacturer => $manufacturer, cost_cents => $price);
+        $item_kind = $machine->add_product(name => $self->name, manufacturer => $manufacturer, cost_cents => $price);
     }
 
     my $count = $self->count;
     while($count--) {
-        my $item = $slot->add_item(type_name => 'Vending::Inventory', product_id => $item_kind->id, insert_date => time());
-        1;
+        my $item = $loc->add_item(type_name => 'Vending::Inventory', product_id => $item_kind->id, insert_date => time());
     }
 
     return 1;

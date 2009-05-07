@@ -4,27 +4,26 @@ use warnings;
 use Vending;
 
 class Vending::Content {
-    type_name => 'vend item',
-    table_name => 'content',
+    table_name => 'CONTENT',
     is_abstract => 1,
-    sub_classification_method_name => 'type_name_resolver',
+    subclassify_by => 'subtype_name',
     id_by => [
-        vend_item_id => { is => 'integer' },
+        content_id => {  },
     ],
     has => [
-        machine_id => { value => 'Vending::Machine', is_constant => 1, is_class_wide => 1, column_name => '' },
-        machine    => { is => 'Vending::Machine', id_by => 'machine_id' },
-
-        type_name => { is => 'varchar', is_optional => 1 },
-        slot      => { is => 'Vending::MachineLocation', id_by => 'slot_id' },
-        slot_name => { via => 'slot', to => 'name' },
+        machine             => { is => 'Vending::Machine', id_by => 'machine_id', constraint_name => 'CONTENT_MACHINE_ID_MACHINE_MACHINE_ID_FK' },
+        machine_id          => {  },
+        machine_location_id => { is => 'integer' },
+        subtype_name        => { is => 'varchar', is_optional => 1 },
+        machine_location           => { is => 'Vending::MachineLocation', id_by => 'machine_location_id', constraint_name => 'CONTENT_MACHINE_LOCATION_ID_MACHINE_LOCATION_MACHINE_LOCATION_ID_FK' },
+        location_name       => { via => 'machine_location', to => 'name' },
     ],
     schema_name => 'Machine',
     data_source => 'Vending::DataSource::Machine',
 };
 
 # Called when you try to create a generic Vending::Content
-sub type_name_resolver {
+sub subtype_name_resolver {
     my $class = shift;
 
     my %params;
@@ -33,7 +32,7 @@ sub type_name_resolver {
     } else {
         %params = @_;        # called with hash as arglist
     }
-    return $params{'type_name'};
+    return $params{'subtype_name'};
 }
     
 

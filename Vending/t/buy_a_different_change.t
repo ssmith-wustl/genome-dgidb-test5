@@ -13,17 +13,17 @@ $machine->_initialize_for_tests();
 my $dime_type = Vending::CoinType->get(name => 'dime');
 my $nickel_type = Vending::CoinType->get(name => 'nickel');
 # 5 dimes and 5 nickels
-my $change_disp = $machine->change_slot;
+my $change_disp = $machine->change_dispenser;
 foreach ( 1 .. 5 ) {
-    ok($change_disp->add_item(type_name => 'Vending::Coin', type_id => $nickel_type), 'Added a nickel to the change');
-    ok($change_disp->add_item(type_name => 'Vending::Coin', type_id => $dime_type), 'Added a dime to the change');
+    ok($change_disp->add_item(subtype_name => 'Vending::Coin', type_id => $nickel_type), 'Added a nickel to the change');
+    ok($change_disp->add_item(subtype_name => 'Vending::Coin', type_id => $dime_type), 'Added a dime to the change');
 }
 
 my $prod = Vending::Product->create(name => 'Orange', manufacturer => 'Acme', cost_cents => 65);
 ok($prod, 'Defined "Orange" product');
 
-my $slot_a = $machine->slots(name => 'a');
-my $inv = $slot_a->add_item(type_name => 'Vending::Inventory', product_id => $prod);
+my $slot_a = $machine->machine_locations(name => 'a');
+my $inv = $slot_a->add_item(subtype_name => 'Vending::Inventory', product_id => $prod);
 ok($inv, 'Added an orange to slot A');
 
 ok($machine->insert('dollar'), 'Inserted a dollar');

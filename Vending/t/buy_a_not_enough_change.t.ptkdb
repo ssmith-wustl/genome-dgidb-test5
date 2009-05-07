@@ -13,15 +13,15 @@ $files = {
          };
 $expr_list = [
                {
-                 'expr' => 'Vending::VendSlot->get(name => \'bank\')->items',
+                 'expr' => 'Vending::MachineLocation->get(name => \'bank\')->items',
                  'depth' => -1
                },
                {
-                 'expr' => 'Vending::VendSlot->get(name => \'box\')->items',
+                 'expr' => 'Vending::MachineLocation->get(name => \'box\')->items',
                  'depth' => -1
                },
                {
-                 'expr' => 'Vending::VendSlot->get(name => \'change\')->items',
+                 'expr' => 'Vending::MachineLocation->get(name => \'change\')->items',
                  'depth' => -1
                }
              ];

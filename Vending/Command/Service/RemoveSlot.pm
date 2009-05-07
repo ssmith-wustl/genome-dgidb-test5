@@ -16,10 +16,10 @@ sub _get_items_to_output {
     my $self = shift;
     my $machine = $self->machine();
 
-    my @items = $machine->empty_slot_by_name($self->name);
+    my @items = $machine->empty_machine_location_by_name($self->name);
 
-    my $slot = $machine->slots(name => $self->name);
-    $slot->delete;
+    my $loc = $machine->machine_locations(name => $self->name);
+    $loc->delete;
 
     return @items;
 }

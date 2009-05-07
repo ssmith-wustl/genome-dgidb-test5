@@ -11,13 +11,13 @@ $machine->_initialize_for_tests();
 
 # Stock the machine, but not enough change
 my $quarter_type = Vending::CoinType->get(name => 'quarter');
-my $change_disp = $machine->change_slot;
-ok($change_disp->add_item(type_name => 'Vending::Coin', type_id => $quarter_type),'Added a quarter to the change');
+my $change_disp = $machine->change_dispenser;
+ok($change_disp->add_item(subtype_name => 'Vending::Coin', type_id => $quarter_type),'Added a quarter to the change');
 
 my $prod = Vending::Product->create(name => 'Orange', manufacturer => 'Acme', cost_cents => 65);
 ok($prod, "Defined 'Orange' product");
-my $slot_a = Vending::VendSlot->get(name => 'a');
-my $inv = $slot_a->add_item(type_name => 'Vending::Inventory', product_id => $prod);
+my $slot_a = Vending::MachineLocation->get(name => 'a');
+my $inv = $slot_a->add_item(subtype_name => 'Vending::Inventory', product_id => $prod);
 ok($inv, 'Added an orange to slot A');
 
 ok($machine->insert('dollar'), 'Inserted a dollar');
@@ -38,9 +38,9 @@ is($items[0]->value, 100, 'The returned thing was worth 100 cents');
 @items = Vending::Inventory->get();
 is(scalar(@items), 1, 'There is one item still in the inventory');
 is($items[0]->name, 'Orange', 'It was an Orange');
-is($items[0]->slot, $slot_a, 'The orange is in slot a');
+is($items[0]->machine_location, $slot_a, 'The orange is in slot a');
 
-my $bank = $machine->bank_slot();
+my $bank = $machine->bank();
 @items = $bank->items();
 is(scalar(@items), 0, 'Nothing in the bank');
 

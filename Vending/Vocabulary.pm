@@ -7,7 +7,6 @@ use UR;
 
 class Vending::Vocabulary {
     is => [ 'UR::Vocabulary' ],
-    type_name => 'vending vocabulary',
 };
 
 

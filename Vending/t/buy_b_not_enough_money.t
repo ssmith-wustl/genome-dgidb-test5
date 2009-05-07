@@ -13,8 +13,8 @@ $machine->_initialize_for_tests();
 my $prod = Vending::Product->create(name => 'Candy', manufacturer => 'Acme', cost_cents => 100);
 ok($prod, 'Defined Candy product');
 
-my $slot_b = Vending::VendSlot->get(name => 'b');
-ok($slot_b->add_item(type_name => 'Vending::Inventory', product_id => $prod),'Added Candy to slot a');
+my $slot_b = Vending::MachineLocation->get(name => 'b');
+ok($slot_b->add_item(subtype_name => 'Vending::Inventory', product_id => $prod),'Added Candy to slot a');
 
 
 ok($machine->insert('quarter'), 'Inserted a quarter');

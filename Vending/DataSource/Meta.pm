@@ -7,7 +7,6 @@ use UR;
 
 class Vending::DataSource::Meta {
     is => [ 'UR::DataSource::Meta' ],
-    type_name => 'vending datasource meta',
 };
 
 

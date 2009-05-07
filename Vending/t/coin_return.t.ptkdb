@@ -24,7 +24,7 @@ $files = {
          };
 $expr_list = [
                {
-                 'expr' => 'UR::Object::Index->get(indexed_class_name => \'Vending::VendSlot\')',
+                 'expr' => 'UR::Object::Index->get(indexed_class_name => \'Vending::MachineLocation\')',
                  'depth' => -1
                }
              ];

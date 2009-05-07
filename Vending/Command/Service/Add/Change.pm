@@ -15,21 +15,22 @@ class Vending::Command::Service::Add::Change {
 sub execute {
     my $self = shift;
 
+    my $machine = $self->machine();
+
     my $coin_kind = Vending::CoinType->get(name => $self->name);
     unless ($coin_kind) {
         $self->error_message($self->name." is not a valid coin name");
         return;
     }
 
-    my $change_disp = Vending::VendSlot->get(name => 'change');
+    my $change_disp = $machine->change_dispenser;
     unless ($change_disp) {
         die "Couldn't retrieve money location for 'change'";
     }
 
     my $count = $self->count;
-$DB::single=1;
     while($count--) {
-        my $coin = $change_disp->add_item(type_name => 'Vending::Coin', type_id => $coin_kind->type_id);
+        my $coin = $change_disp->add_item(subtype_name => 'Vending::Coin', type_id => $coin_kind->type_id);
         1;
     }
 
