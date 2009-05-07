@@ -171,7 +171,7 @@ sub _complete_purchase_and_make_change_for_selections {
             die "Can't create iterator for Vending::Coin::Change\n";
         }
            
-        THIS_COIN_TYPE:
+        THIS_coin_type:
         while ( my $coin = $coin_iter->next() ) {
             last if $change_value < $coin->value_cents;
 

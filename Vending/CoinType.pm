@@ -6,7 +6,7 @@ use warnings;
 use Vending;
 class Vending::CoinType {
     type_name => 'coin type',
-    table_name => 'COIN_TYPE',
+    table_name => 'coin_type',
     id_by => [
         name => { is => 'String' },
     ],

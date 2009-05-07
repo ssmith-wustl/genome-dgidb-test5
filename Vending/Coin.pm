@@ -6,7 +6,7 @@ use warnings;
 use Vending;
 class Vending::Coin {
     type_name => 'coin',
-    table_name => 'COIN',
+    table_name => 'coin',
     is => 'Vending::VendItem',
     id_by => [
         coin_id => { is => 'integer' },
@@ -19,7 +19,7 @@ class Vending::Coin {
         coin_type    => { is => 'Vending::CoinType', id_by => 'name' },
         value_cents  => { via => 'coin_type', to => 'value_cents' },
     ],
-    id_sequence_generator_name => 'URMETA_COIN_COIN_ID_seq',
+    id_sequence_generator_name => 'URMETA_coin_coin_ID_seq',
     schema_name => 'Machine',
     data_source => 'Vending::DataSource::Machine',
 
