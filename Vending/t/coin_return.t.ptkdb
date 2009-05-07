@@ -1,0 +1,32 @@
+$files = {
+           '_<t/coin_return.t' => [
+                                    {
+                                      'expr' => undef,
+                                      'value' => '1',
+                                      'text' => 'ok($machine->insert(\'quarter\'), \'Inserted a quarter\');
+',
+                                      'fname' => 't/coin_return.t',
+                                      'type' => 'user',
+                                      'line' => '11'
+                                    }
+                                  ],
+           '_</gscuser/abrummet/svk/perl_modules/Vending/..//Vending/Machine.pm' => [
+                                                                                      {
+                                                                                        'expr' => undef,
+                                                                                        'value' => '1',
+                                                                                        'text' => '    my $slot = $self->coin_box_slot();
+',
+                                                                                        'fname' => '/gscuser/abrummet/svk/perl_modules/Vending/..//Vending/Machine.pm',
+                                                                                        'type' => 'user',
+                                                                                        'line' => '36'
+                                                                                      }
+                                                                                    ]
+         };
+$expr_list = [
+               {
+                 'expr' => 'UR::Object::Index->get(indexed_class_name => \'Vending::VendSlot\')',
+                 'depth' => -1
+               }
+             ];
+$eval_saved_text = undef;
+$main_win_geometry = '1636x963+237+0';
