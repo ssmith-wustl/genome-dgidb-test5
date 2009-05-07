@@ -6,33 +6,26 @@ use warnings;
 use Genome;
 use Command;
 use File::Basename;
+use File::Copy;
 use IO::File;
 
 class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Maq {
     is => ['Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries'],
-    has => [ 
-          parallel_switch => {
-                  is => 'String',
-              doc => 'Set to 0 for serial execution.  Set to 1 for parallel execution.',
-              default_value => '0',
-              is_optional =>1,
-           },  
-           ],
 };
 
 sub help_brief {
-    "Use maq to align reads";
+    "TBD";
 }
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model add-reads postprocess-alignments merge-alignments maq --model-id 5 --ref-seq-id all_sequences
+    TBD 
 EOS
 }
 
 sub help_detail {
     return <<EOS 
-This command is usually called as part of the add-reads process
+    TBD
 EOS
 }
 
@@ -40,61 +33,51 @@ EOS
 sub execute {
     my $self = shift;
     my $now = UR::Time->now;
-    $self->parallel_switch(1);
-    $self->status_message("Running in PARALLEL.") if ($self->parallel_switch eq '1');
-    $self->status_message("Running in SERIAL.") if ($self->parallel_switch ne '1');
   
-    $self->status_message("Setting up inputs...");
+    $self->status_message("Starting DeduplicateLibraries::Maq");
     
-    my @subsequences = grep { $_ ne 'all_sequences' } $self->model->get_subreference_names(reference_extension  => 'bfa');
-    
-    my $maplist_dir = $self->build->accumulated_alignments_directory;
-    #my $log_dir = $self->resolve_log_directory;
-    my $log_dir = "/tmp/";
+    my $alignments_dir = $self->build->accumulated_alignments_directory;
 
-    $self->status_message("Using maplist directory: ".$maplist_dir);
+    $self->status_message("Accumulated alignments directory: ".$alignments_dir);
    
-    unless (-e $maplist_dir) { 
-        unless ($self->create_directory($maplist_dir)) {
+    unless (-e $alignments_dir) { 
+        unless ($self->create_directory($alignments_dir)) {
             #doesn't exist can't create it...quit
-            $self->error_message("Failed to create directory '$maplist_dir':  $!");
+            $self->error_message("Failed to create directory '$alignments_dir':  $!");
             return;
         }
-        chmod 02775, $maplist_dir;
+        chmod 02775, $alignments_dir;
     } else {
-        unless (-d $maplist_dir) {
-            #does exist, but is a file, not a directory? quit.
-            $self->error_message("File already exists for directory '$maplist_dir':  $!");
+        unless (-d $alignments_dir) {
+            $self->error_message("File already exists for directory '$alignments_dir':  $!");
             return;
         }
     }
 
+    #get the instrument data assignments
     my @idas = $self->model->instrument_data_assignments;
     my %library_alignments;
     my @all_alignments;
-    my $count = 0;
-    #accumulate the readsets per library
+    
+    #accumulate the maps per library
     for my $ida (@idas) {
-        #$self->status_message("Read set: \n".$read_set_link->short_name .", ". $read_set_link->sample_name.", ".$read_set_link->full_path ) if ($count eq 1);
         my $library = $ida->library_name;
         my $alignment = $ida->alignment;
-        #$self->status_message("Original Library: ".$library);
-        my @read_set_maps = $alignment->alignment_file_paths;
-        #$self->status_message("library $library alignment file paths: \n".join("\n",@read_set_maps) ) if ($count eq 1);
-        push @{$library_alignments{$library}}, @read_set_maps;
-        push @all_alignments, @read_set_maps;
+        my @maps = $alignment->alignment_file_paths;
+        push @{$library_alignments{$library}}, @maps;  #for the dedup step
+        push @all_alignments, @maps;                   #for the whole genome map file
     }
+    
     unless (Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::WholeMap->execute(
                                                                                                        whole_map_file => $self->build->whole_map_file,
                                                                                                        alignments => \@all_alignments,
                                                                                                        aligner_version => $self->model->read_aligner_version,
                                                                                                    )) {
-        $self->error_message('Failed to create whole map file for cdna or rna');
+        $self->error_message('Failed to create whole map file for cdna or rna.');
         return;
     }
 
-    $self->status_message("About to call Dedup. Input params are... \n");
-    #$self->status_message("Libraries and readsets: \n");
+    $self->status_message("Starting dedup workflow with params:");
     #prepare the input for parallelization
     my @list_of_library_alignments;
     for my $library_key ( keys %library_alignments ) {
@@ -102,70 +85,52 @@ sub execute {
         $self->status_message("Library: ".$library_key." Read sets count: ". scalar(@read_set_list) ."\n");
         my %library_alignments_item = ( $library_key => \@read_set_list );  
         push @list_of_library_alignments, \%library_alignments_item; 
-        $count = $count + 1;
     }
-    $self->status_message("Libraries added: ".$count ); 
-
     $self->status_message("Size of library alignments: ".@list_of_library_alignments ); 
-    #checking outbound list
-    for my $list_item (@list_of_library_alignments) {
-        my %hash = %{$list_item};
-        for my $hash_item (keys %hash) {
-		my @test_list = @{$hash{$hash_item}};
-    		$self->status_message("Checking library and size: ".$hash_item.",".scalar(@test_list));
-	}
-    } 
 
-    $self->status_message("Accumulated Alignments Dir: ".$maplist_dir);
-    $self->status_message("Subref names: ".join (",", @subsequences) );
-    $self->status_message("Size of library alignments: ".@list_of_library_alignments );
-
-#parallelization starts here
-    if ( $self->parallel_switch eq "1" ) {
-	require Workflow::Simple;
-        $Workflow::Simple::store_db=0;
+    #parallelization starts here
+    require Workflow::Simple;
+    $Workflow::Simple::store_db=0;
         
-	my $op = Workflow::Operation->create(
+    my $op = Workflow::Operation->create(
             name => 'Deduplicate libraries.',
             operation_type => Workflow::OperationType::Command->get('Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Dedup')
-        );
+    );
 
-	$op->parallel_by('library_alignments');
+    $op->parallel_by('library_alignments');
 
-        my $output = Workflow::Simple::run_workflow_lsf(
+    my $output = Workflow::Simple::run_workflow_lsf(
             $op,
-            'accumulated_alignments_dir' =>$maplist_dir, 
+            'accumulated_alignments_dir' =>$alignments_dir, 
             'library_alignments' =>\@list_of_library_alignments,
-            'subreference_names' =>\@subsequences,
             'aligner_version' => $self->model->read_aligner_version,
-        );
- 
-        $self->status_message("Output: ".$output);
+   );
 
-    } else {
-
-    	my $rmdup = Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Dedup->create(
-                    accumulated_alignments_dir => $maplist_dir, 
-                    library_alignments =>\@list_of_library_alignments,
-                    subreference_names =>\@subsequences,
-                    aligner_version => $self->model->read_aligner_version,
-                  );
-       
-	#execute the tool
-	
-	$rmdup->execute;
-
-   }
+   #check workflow for errors 
+   if (!defined $output) {
+       foreach my $error (@Workflow::Simple::ERROR) {
+           $self->error_message($error->error);
+       }
+       return;
+   } else {
+       my $results = $output->{result};
+       my $result_libraries = $output->{library_name};
+       for (my $i = 0; $i < scalar(@$results); $i++) {
+           my $rv = $results->[$i];
+                if ($rv != 1) {
+                       $self->error_message("Workflow had an error while rmdup'ing library: ". $result_libraries->[$i]); 
+                }
+       }
+  } 
  
    #merge those Bam files...BAM!!!
    $now = UR::Time->now;
    $self->status_message(">>> Beginning Bam merge at $now.");
    my $bam_merge_tool = "/gscuser/dlarson/src/samtools/tags/samtools-0.1.2/samtools merge";
    my $bam_index_tool = "/gscuser/dlarson/src/samtools/tags/samtools-0.1.2/samtools index";
-   my $bam_merged_output_file = $maplist_dir."/".$self->model->subject_name."_merged_rmdup.bam";
-   my $bam_non_merged_output_file = $maplist_dir."/".$self->model->subject_name."_rmdup.bam";
+   my $bam_merged_output_file = $alignments_dir."/".$self->model->subject_name."_merged_rmdup.bam";
+   my $bam_non_merged_output_file = $alignments_dir."/".$self->model->subject_name."_rmdup.bam";
    my $bam_final;
-
  
    if (-s $bam_merged_output_file )  {
    	$self->error_message("The bam file: $bam_merged_output_file already exists.  Skipping bam processing.  Please remove this file and rerun to generate new bam files.");
@@ -173,143 +138,136 @@ sub execute {
    	$self->error_message("The bam file: $bam_non_merged_output_file already exists.  Skipping bam processing.  Please remove this file and rerun to generate new bam files.");
    }  else {
  
-   	   #get the bam files from the alignments directory
-   	   my @bam_files = <$maplist_dir/*.bam>;
+       #get the bam files from the alignments directory
+       my @bam_files = <$alignments_dir/*.bam>;
 
-	   #remove previously merged/rmdup bam files from the list of files to merge... 
-	   my $i=0;
-	   for my $each_bam (@bam_files) {
-		#if the bam file name contains the string '_rmdup.bam', remove it from the list of files to merge
-		my $substring_index = index($each_bam, "_rmdup.bam");
-		unless ($substring_index == -1) {
-			$self->status_message($bam_files[$i]. " will not be merged.");
-			delete $bam_files[$i];
-		}		
-		$i++;
-	   }
+       #remove previously merged/rmdup bam files from the list of files to merge... 
+       my $i=0;
+       for my $each_bam (@bam_files) {
+            #if the bam file name contains the string '_rmdup.bam', remove it from the list of files to merge
+            my $substring_index = index($each_bam, "_rmdup.bam");
+            unless ($substring_index == -1) {
+                    $self->status_message($bam_files[$i]. " will not be merged.");
+                    delete $bam_files[$i];
+            }		
+            $i++;
+       }
 
-	   if (scalar(@bam_files) == 0 ) {
-		$self->error_message("No bam files have been found at: $maplist_dir");
-	   } elsif (scalar(@bam_files) == 1) {
-		my $single_file = shift(@bam_files);
-		$self->status_message("Only one bam file has been found at: $maplist_dir. Not merging, only renaming.");
-		my $rename_cmd = "mv ".$single_file." ".$bam_non_merged_output_file;
-		$self->status_message("Bam rename commmand: $rename_cmd");
-		my $bam_rename_rv = system($rename_cmd);
-		unless ($bam_rename_rv==0) {
-			$self->error_message("Bam file rename error!  Return value: $bam_rename_rv");
-		} else {
-			#renaming success
-			$bam_final = $bam_non_merged_output_file; 
-		} 
-	   } else {
-		$self->status_message("Multiple Bam files found.  Bam files to merge: ".join(",",@bam_files) );
-		my $bam_merge_cmd = "$bam_merge_tool $bam_merged_output_file ".join(" ",@bam_files); 
-		$self->status_message("Bam merge command: $bam_merge_cmd");
-		my $bam_merge_rv = system($bam_merge_cmd);
-		$self->status_message("Bam merge return value: $bam_merge_rv");
-		unless ($bam_merge_rv == 0) {
-			$self->error_message("Bam merge error!  Return value: $bam_merge_rv");
-		} else {
-			#merging success
-			$bam_final = $bam_merged_output_file;
-		}
-	   }
+       if (scalar(@bam_files) == 0 ) {
+            $self->error_message("No bam files have been found at: $alignments_dir");
+       } elsif (scalar(@bam_files) == 1) {
+            my $single_file = shift(@bam_files);
+            $self->status_message("Only one bam file has been found at: $alignments_dir. Not merging, only renaming.");
+            #my $rename_cmd = "mv ".$single_file." ".$bam_non_merged_output_file;
+            $self->status_message("Renaming Bam file from $single_file to $bam_non_merged_output_file");
+            my $bam_rename_rv = move($single_file,$bam_non_merged_output_file); 
+            unless ($bam_rename_rv==1) {
+                    $self->error_message("Bam file rename error!  Return value: $bam_rename_rv");
+            } else {
+                    #renaming success
+                    $bam_final = $bam_non_merged_output_file; 
+            } 
+       } else {
+            $self->status_message("Multiple Bam files found.  Bam files to merge: ".join(",",@bam_files) );
+            my $bam_merge_cmd = "$bam_merge_tool $bam_merged_output_file ".join(" ",@bam_files); 
+            $self->status_message("Bam merge command: $bam_merge_cmd");
+            #my $bam_merge_rv = system($bam_merge_cmd);
+            my $bam_merge_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$bam_merge_cmd,
+                                                                     input_files=>\@bam_files,
+                                                                     output_files=>[$bam_merged_output_file],
+                                                                    );
+            $self->status_message("Bam merge return value: $bam_merge_rv");
+            unless ($bam_merge_rv == 1) {
+                    $self->error_message("Bam merge error!  Return value: $bam_merge_rv");
+            } else {
+                    #merging success
+                    $bam_final = $bam_merged_output_file;
+            }
+       }
 
-	   my $bam_index_rv;
-	   if (defined $bam_final) {
-		$self->status_message("Indexing bam file: $bam_final");
-		my $bam_index_cmd = $bam_index_tool ." ". $bam_final;
-		$bam_index_rv = system($bam_index_cmd);
-		unless ($bam_index_rv == 0) {
-			$self->error_message("Bam index error!  Return value: $bam_index_rv");
-		} else {
-			#indexing success
-			$self->status_message("Bam indexed successfully.");
-		}
-	   }  else {
-		#no final file defined, something went wrong	
-		$self->error_message("Bam index error!  Return value: $bam_index_rv");
-	   }
-
-	   $now = UR::Time->now;
-	   $self->status_message("<<< Completing Bam merge at $now.");
-
-	   #remove intermediate files
-	   $now = UR::Time->now;
-	   $self->status_message(">>> Removing intermediate files at $now");
-	   
-	   #remove bam files 
-	   for my $each_bam_file (@bam_files) {
-		my $rm_cmd = "unlink $each_bam_file";
-		$self->status_message("Executing remove command: $rm_cmd");
-		my $rm_rv1 = system("$rm_cmd");
-		my $rm_rv2 = system("$rm_cmd".".bai"); #remove each index as well
-		unless ($rm_rv1 == 0) {
-			$self->error_message("There was a problem with the bam remove command: $rm_rv1");
-		}  
-		unless ($rm_rv2 == 0) {
-			$self->error_message("There was a problem with the bam index remove command: $rm_rv2");
-		}
-	   } 
-
-      } #end else for skipping Bam process
+       my $bam_index_rv;
+       if (defined $bam_final) {
+            $self->status_message("Indexing bam file: $bam_final");
+            my $bam_index_cmd = $bam_index_tool ." ". $bam_final;
+            #$bam_index_rv = system($bam_index_cmd);
+            $bam_index_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$bam_index_cmd,
+                                                                  input_files=>[$bam_final],
+                                                                  output_files=>[$bam_final.".bai"],
+                                                                 );
+            unless ($bam_index_rv == 1) {
+                    $self->error_message("Bam index error!  Return value: $bam_index_rv");
+            } else {
+                    #indexing success
+                    $self->status_message("Bam indexed successfully.");
+            }
+       }  else {
+            #no final file defined, something went wrong	
+            $self->error_message("Bam index error!  Return value: $bam_index_rv");
+       }
 
        $now = UR::Time->now;
-       $self->status_message("<<< Completed removing intermediate files at $now");
+       $self->status_message("<<< Completing Bam merge at $now.");
 
-       #######################################
-       #starting mixed map merge of all maps 
+       #remove intermediate files
        $now = UR::Time->now;
-       $self->status_message(">>> Beginning mapmerge at $now .");
-       my $out_filepath= $maplist_dir;
-
-       unless (-e $out_filepath) { 
-            unless ($self->create_directory($out_filepath)) {
-                #doesn't exist can't create it...quit
-                $self->error_message("Failed to create directory '$out_filepath':  $!");
-                return;
+       $self->status_message(">>> Removing intermediate files at $now");
+       
+       #remove bam files 
+       for my $each_bam_file (@bam_files) {
+            $self->status_message("Executing unlink command on $each_bam_file and $each_bam_file.bai");
+            my $rm_rv1 = unlink($each_bam_file);
+            my $rm_rv2 = unlink($each_bam_file.".bai"); #remove each index as well
+            unless ($rm_rv1 == 1) {
+                    $self->error_message("There was a problem with the bam remove command: $rm_rv1");
+            }  
+            unless ($rm_rv2 == 1) {
+                    $self->error_message("There was a problem with the bam index remove command: $rm_rv2");
             }
-            chmod 02775, $out_filepath;
-        } else {
-            unless (-d $maplist_dir) {
-                #does exist, but is a file, not a directory? quit.
-                $self->error_message("File already exists for directory '$out_filepath':  $!");
-                return;
-            }
-        }
+       } 
 
-        my @libraries =  keys %library_alignments; 
-        $self->status_message("Libraries: ".join(",",@libraries));
-        my @maps_to_merge;
-        my $cmd;
-        for my $library (@libraries) {
-            my $library_file = $maplist_dir .'/'. $library.'.map';
-            if (-e $library_file) {
-                push @maps_to_merge, $library_file;
-            }
-        }
-        if (@maps_to_merge) {
-            $now = UR::Time->now;
-            my $maq_pathname = Genome::Model::Tools::Maq->path_for_maq_version($self->model->read_aligner_version);                                
-            $cmd ="$maq_pathname mapmerge ". $self->build->whole_rmdup_map_file ." ".join(" ",@maps_to_merge);
-            $self->status_message("Creating string: $cmd at $now.");
-        }
+   } #end else for Bam merge process
 
-        $self->status_message("Executing $cmd at $now.");
-        my $rv = system($cmd);
-        if($rv) {
-            $self->error_message("non-zero return value($rv) from command: $cmd");
-            die($self->error_message);
-        }
+   $now = UR::Time->now;
+   $self->status_message("<<< Completed removing intermediate files at $now");
 
-  $now = UR::Time->now;
-  $self->status_message("<<< Completed mapmerge at $now .");
-  $self->status_message("*** All processes completed. ***");
+   #starting map merge of all library maps 
+   $now = UR::Time->now;
+   $self->status_message(">>> Beginning mapmerge at $now .");
+   my $out_filepath = $alignments_dir;
 
-#return verify_successful_completion();
-return 1;
+   my @libraries =  keys %library_alignments; 
+   $self->status_message("Libraries: ".join(",",@libraries));
+   my @maps_to_merge;
+   my $cmd;
+   for my $library (@libraries) {
+       my $library_file = $alignments_dir .'/'. $library.'.map';
+       if (-e $library_file) {
+           push @maps_to_merge, $library_file;
+       }
+   }
 
+   if (@maps_to_merge) {
+       $now = UR::Time->now;
+       my $maq_pathname = Genome::Model::Tools::Maq->path_for_maq_version($self->model->read_aligner_version);                                
+       $cmd ="$maq_pathname mapmerge ". $self->build->whole_rmdup_map_file ." ".join(" ",@maps_to_merge);
+   }
+
+   $self->status_message("Executing $cmd at $now.");
+   #my $rv = system($cmd);
+   my $rv = Genome::Utility::FileSystem->shellcmd(  cmd=>$cmd,
+                                                    output_files=>[$self->build->whole_rmdup_map_file],
+                                                    input_files=>\@maps_to_merge,
+                                                  );
+   unless ($rv == 1) {
+       $self->error_message("Unexpected return value($rv) from command: $cmd");
+       die($self->error_message);
+   }
+
+    $now = UR::Time->now;
+    $self->status_message("<<< Completed mapmerge at $now .");
+    $self->status_message("*** All processes completed. ***");
+
+    return $self->verify_successful_completion();
 }
 
 
