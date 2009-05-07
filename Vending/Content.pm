@@ -16,7 +16,7 @@ class Vending::Content {
         machine    => { is => 'Vending::Machine', id_by => 'machine_id' },
 
         type_name => { is => 'varchar', is_optional => 1 },
-        slot      => { is => 'Vending::VendSlot', id_by => 'slot_id' },
+        slot      => { is => 'Vending::MachineLocation', id_by => 'slot_id' },
         slot_name => { via => 'slot', to => 'name' },
     ],
     schema_name => 'Machine',

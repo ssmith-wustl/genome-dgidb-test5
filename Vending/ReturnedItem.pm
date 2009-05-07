@@ -8,7 +8,7 @@ class Vending::ReturnedItem {
     has => [
         name        => { is => 'String' },
         value       => { is => 'Float' },
-        source_slot => { is => 'Vending::VendSlot', id_by => 'source_slot_id' },
+        source_slot => { is => 'Vending::MachineLocation', id_by => 'source_slot_id' },
         price       => { via => 'source_slot', to => 'price' },
         cost_cents  => { via => 'source_slot', to => 'cost_cents' },
     ],

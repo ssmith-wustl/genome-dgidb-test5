@@ -1,10 +1,10 @@
-package Vending::VendSlot;
+package Vending::MachineLocation;
 
 use strict;
 use warnings;
 
 use Vending;
-class Vending::VendSlot {
+class Vending::MachineLocation {
     type_name => 'vend slot',
     table_name => 'machine_location',
     id_by => [
@@ -44,15 +44,15 @@ class Vending::VendSlot {
 &_initialize();
 
 sub _initialize {
-    my $a = Vending::VendSlot->get(name => 'change');
+    my $a = Vending::MachineLocation->get(name => 'change');
     unless ($a) {
-        Vending::VendSlot->create(name => 'a', cost_cents => 65, is_buyable => 1);
-        Vending::VendSlot->create(name => 'b', cost_cents => 100, is_buyable => 1);
-        Vending::VendSlot->create(name => 'c', cost_cents => 150, is_buyable => 1);
+        Vending::MachineLocation->create(name => 'a', cost_cents => 65, is_buyable => 1);
+        Vending::MachineLocation->create(name => 'b', cost_cents => 100, is_buyable => 1);
+        Vending::MachineLocation->create(name => 'c', cost_cents => 150, is_buyable => 1);
 
         foreach my $name ( qw(bank box change) ) {
 print "Creating slot $name\n";
-            Vending::VendSlot->create(name => $name, label => '', is_buyable => 0, cost_cents => -1);
+            Vending::MachineLocation->create(name => $name, label => '', is_buyable => 0, cost_cents => -1);
         }
     }
 }

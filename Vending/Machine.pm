@@ -13,7 +13,7 @@ class Vending::Machine {
         items           => { is => 'Vending::Content', reverse_id_by => 'machine', is_many => 1 },
         inventory_items => { is => 'Vending::Inventory', reverse_id_by => 'machine', is_many => 1 },
         item_types      => { is => 'Vending::ContentType', reverse_id_by => 'machine', is_many => 1 },
-        slots           => { is => 'Vending::VendSlot', reverse_id_by => 'machine', is_many => 1,},
+        slots           => { is => 'Vending::MachineLocation', reverse_id_by => 'machine', is_many => 1,},
     ],
     has => [
         coin_box_slot => { via => 'slots', to => '-filter', where => [name => 'box'] },
