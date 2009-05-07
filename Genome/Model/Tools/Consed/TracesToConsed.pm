@@ -6,7 +6,7 @@ use DBI;
 use Compress::Zlib;
 use Genome;
 use GSCApp;
-
+use IPC::Run;
 
 class Genome::Model::Tools::Consed::TracesToConsed {
     is => 'Command',                    
@@ -245,11 +245,14 @@ sub execute {                               # replace with real execution logic.
     my $poly_dir = "$project_dir/poly_dir";
     my $edit_dir = "$project_dir/edit_dir";
     
-    unless (-e $project_dir && -d $project_dir) {system qq(mkdir $project_dir);}
-    unless (-e $chromat_dir && -d $chromat_dir) {system qq(mkdir $chromat_dir);}
-    unless (-e $phd_dir && -d $phd_dir) {system qq(mkdir $phd_dir);}
-    unless (-e $poly_dir && -d $poly_dir) {system qq(mkdir $poly_dir);}
-    unless (-e $edit_dir && -d $edit_dir) {system qq(mkdir $edit_dir);}
+
+    mkdir ($project_dir,0775) if (! -d $project_dir);
+    print qq(In the process of building a project at $project_dir\n);
+
+    mkdir ($chromat_dir,0775) if (! -d $chromat_dir);
+    mkdir ($phd_dir,0775) if (! -d $phd_dir);
+    mkdir ($poly_dir,0775) if (! -d $poly_dir);
+    mkdir ($edit_dir,0775) if (! -d $edit_dir);
     
     my $project_details = $self->project_details;
 
@@ -272,13 +275,15 @@ sub execute {                               # replace with real execution logic.
 ###system qq(mv $project.c1 ../chromat_dir);
     
 #system qq(consensus_raid -dir . -piece-type c -fasta $project.c1.refseq.fasta -quality-value 30 -root-name $project.c1);
+
+
+    my @command = ["/gsc/scripts/bin/fasta2phd" , "$project.c1.refseq.fasta" , "30"]; &ipc_run(@command);
     
-    system qq(/gsc/scripts/bin/fasta2phd $project.c1.refseq.fasta 30);
     unless ("$project.c1.phd.1" && -e "$project.c1.phd.1") { die "no phd file\n"; }
-    system qq(cp $project.c1.phd.1 ../phd_dir);
-    
-    
-    system qq(phd2Ace $project.c1.phd.1);
+
+    @command = ["cp" , "$project.c1.phd.1" , "$phd_dir"]; &ipc_run(@command);
+    @command = ["phd2Ace" , "$project.c1.phd.1"]; &ipc_run(@command);
+
     unless ("$project.c1.ace" && -e "$project.c1.ace") { die "no Ace file\n"; }
 #system qq(cp $project.c1.ace $project.ace);
     my $egdfasta = "$project.c1.refseq.fasta";
@@ -291,6 +296,8 @@ sub execute {                               # replace with real execution logic.
     chomp($chrln);
     $chrln=~s/.phd.1//;
     system ("cat $chrln.phd.1|sed \'s/CHROMAT_FILE: none/CHROMAT_FILE: $chrln/\'>$chrln.phd.1.tmp");
+    #@command = ["cat" , "$chrln.phd.1|sed" , "\'s/CHROMAT_FILE:" , "none/CHROMAT_FILE:" , "$chrln/\'>$chrln.phd.1.tmp"]; &ipc_run(@command);
+
     system ("\\mv $chrln.phd.1.tmp $chrln.phd.1");
     system ("cat $acefile|sed \'s/CHROMAT_FILE: none/CHROMAT_FILE: $chrln/\'> $acenew");
     #--- make fake trace file, then move to chromat_dir---
@@ -341,18 +348,25 @@ sub execute {                               # replace with real execution logic.
 	}
 	
     #guide the reads from a traces fof provided by the user
+	#eval { $answer = $a / $b; }; warn $@ if $@;
+
+	my @zip = ["gzip" , "$trace_dir/$trace"];
+	my @link = ["ln" , "-s" , "$trace_dir/$trace" , "$chromat_dir/$trace"];
+	my @copy = ["cp" , "$trace_dir/$trace" , "$chromat_dir"];
 
 	if ($assembly_traces_fof && -e $assembly_traces_fof) {
 	    if ($assembly_traces->{$trace} || $assembly_traces->{$read}) {
-		unless ($trace =~ /\.gz$/) {system qq(gzip $trace_dir/$trace); $trace="$read.gz";}
+		#unless ($trace =~ /\.gz$/) {system qq(gzip $trace_dir/$trace); $trace="$read.gz";}
+		unless ($trace =~ /\.gz$/) { &ipc_run(@zip); $trace="$read.gz"; }
 		
-		
-		if ($link_traces) {
-		    system qq(ln -s $trace_dir/$trace $chromat_dir/$trace);
-		} else {
-		    system qq(cp $trace_dir/$trace $chromat_dir);   
+		unless ($trace_dir eq $chromat_dir) {
+		    if ($link_traces) {
+			&ipc_run(@link);
+		    } else {
+			&ipc_run(@copy);
+		    }
 		}
-		
+
 		my $amplicon;     #H _ 0 9 _ 0 0 e f q
 		if ($read =~ /PCR(H\_\S\S\_\S\S\S\S\S)\S+/) {
 		    $amplicon = $1;
@@ -365,36 +379,47 @@ sub execute {                               # replace with real execution logic.
 		    push (@amplist,$amplicon);
 		}
 		
-		print FOF qq($read\n);
-		system qq(/gsc/scripts/bin/phred -dd $poly_dir -pd $phd_dir $chromat_dir/$read.gz);
+		my ($in, $out, $err);
+		IPC::Run::run(["/gsc/scripts/bin/phred" , "-dd" , "$poly_dir" , "-pd" , "$phd_dir" , "$chromat_dir/$read.gz"], \$in, \$out, \$err);
+		unless ($err) {
+		    print FOF qq($read\n);
+		}
 	    }
 	} elsif ($amplicons) {
 	    foreach my $amplicon (sort keys %{$amps}) {
 		if ($read =~ /$amplicon/) {
 		    
-		    unless ($trace =~ /\.gz$/) {system qq(gzip $trace_dir/$trace); $trace="$read.gz";}
-		    
-		    if ($link_traces) {
-			system qq(ln -s $trace_dir/$trace $chromat_dir/$trace);
-		    } else {
-			system qq(cp $trace_dir/$trace $chromat_dir);   
+		    unless ($trace =~ /\.gz$/) { &ipc_run(@zip); $trace="$read.gz"; }
+
+		    unless ($trace_dir eq $chromat_dir) {
+			if ($link_traces) {
+			    &ipc_run(@link);
+			} else {
+			    &ipc_run(@copy);
+			}
 		    }
-		    
+
 		    push @{$ampread{$amplicon}},$read;
 		    push (@amplist,$amplicon);
 		    
-		    print FOF qq($read\n);
-		    system qq(/gsc/scripts/bin/phred -dd $poly_dir -pd $phd_dir $chromat_dir/$read.gz);
+		    my ($in, $out, $err);
+		    IPC::Run::run(["/gsc/scripts/bin/phred" , "-dd" , "$poly_dir" , "-pd" , "$phd_dir" , "$chromat_dir/$read.gz"], \$in, \$out, \$err); #, debug=>1
+		    
+		    unless ($err) {
+			print FOF qq($read\n);
+		    }
 		}
 	    }
 	} else {
 	    
-	    unless ($trace =~ /\.gz$/) {system qq(gzip $trace_dir/$trace); $trace="$read.gz";}
-	    
-	    if ($link_traces) {
-		system qq(ln -s $trace_dir/$trace $chromat_dir/$trace);
-	    } else {
-		system qq(cp $trace_dir/$trace $chromat_dir);   
+	    unless ($trace =~ /\.gz$/) { &ipc_run(@zip); $trace="$read.gz"; }
+
+	    unless ($trace_dir eq $chromat_dir) {
+		if ($link_traces) {
+		    &ipc_run(@link);
+		} else {
+		    &ipc_run(@copy);
+		}
 	    }
 	    my $amplicon;     #H _ 0 9 _ 0 0 e f q
 	    if ($read =~ /PCR(H\_\S\S\_\S\S\S\S\S)\S+/) {
@@ -408,9 +433,12 @@ sub execute {                               # replace with real execution logic.
 		push (@amplist,$amplicon);
 	    }
 	    
-	    print FOF qq($read\n);
-	    system qq(/gsc/scripts/bin/phred -dd $poly_dir -pd $phd_dir $chromat_dir/$read.gz);
+	    my ($in, $out, $err);
+	    IPC::Run::run(["/gsc/scripts/bin/phred" , "-dd" , "$poly_dir" , "-pd" , "$phd_dir" , "$chromat_dir/$read.gz"], \$in, \$out, \$err);
 	    
+	    unless ($err) {
+		print FOF qq($read\n);
+	    }
 	}
     }
     
@@ -450,11 +478,18 @@ sub execute {                               # replace with real execution logic.
 	}
     }
     
-    system qq(consed_auto -ace $project.ace -addNewReads ../traces.fof -newAceFilename $project.ace.1);
+    my @mk_consed = ["consed_auto" , "-ace" , " $project.ace" , " -addNewReads" , " ../traces.fof" , " -newAceFilename" , " $project.ace.1"];
+    print qq(Now running addnewreads to consed using consed_auto\n);
+    &ipc_run(@mk_consed);
+    #system qq(consed_auto -ace $project.ace -addNewReads ../traces.fof -newAceFilename $project.ace.1);
     
     #LSF: The new consed might fail if no read align to it.  Try the old consed.
     unless(-f "$project.ace.1") {
-	system("consed_old  -ace $project.ace -addNewReads ../traces.fof -newAceFilename $project.ace.1");
+	@mk_consed = ["consed_old" , "-ace" , " $project.ace" , " -addNewReads" , " ../traces.fof" , " -newAceFilename" , " $project.ace.1"];
+	print qq(consed_auto failed, Now rerunning addnewreads to consed using consed_old\n);
+	&ipc_run(@mk_consed);
+
+	#system("consed_old  -ace $project.ace -addNewReads ../traces.fof -newAceFilename $project.ace.1");
     }
     
     if (-f "$project.ace.1") { print qq($project.ace.1 successfully built\n); } else { print qq($project.ace.1 failed\n); }
@@ -467,6 +502,18 @@ sub execute {                               # replace with real execution logic.
     
 }
 
+sub ipc_run {
+
+    my (@command) = @_;
+    my ($in, $out, $err);
+    IPC::Run::run(@command, \$in, \$out, \$err);
+    if ($err) {
+#	print qq($err\n);
+    }
+    if ($out) {
+#	print qq($out\n);
+    }
+}
 
 sub get_ref_base {
 
