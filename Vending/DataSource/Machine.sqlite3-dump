@@ -1,52 +1,55 @@
 BEGIN TRANSACTION;
-CREATE TABLE item_type (type_id integer PRIMARY KEY NOT NULL,
+CREATE TABLE machine (machine_id Integer PRIMARY KEY NOT NULL, 
+                      address Text);
+INSERT INTO "machine" VALUES (1,'127.0.0.1');
+CREATE TABLE content_type (type_id integer PRIMARY KEY NOT NULL,
                         name varchar NOT NULL);
-INSERT INTO "item_type" VALUES(1,'dollar');
-INSERT INTO "item_type" VALUES(2,'quarter');
-INSERT INTO "item_type" VALUES(3,'dime');
-INSERT INTO "item_type" VALUES(4,'nickel');
-INSERT INTO "item_type" VALUES(5,'Cookie');
-INSERT INTO "item_type" VALUES(6,'Apple');
-INSERT INTO "item_type" VALUES(7,'Water');
-INSERT INTO "item_type" VALUES(8,'Coke');
-INSERT INTO "item_type" VALUES(9,'shilling');
-INSERT INTO "item_type" VALUES(10,'iPod');
-INSERT INTO "item_type" VALUES(11,'diamond');
-CREATE TABLE CONTENT (CONTENT_id PRIMARY KEY NOT NULL,
-                        type_name varchar,
-                        slot_id integer NOT NULL REFERENCES vend_slot(slot_id));
-INSERT INTO "CONTENT" VALUES('27','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('25','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('28','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('26','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('30','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('24','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('23','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('29','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('39','Vending::Inventory',9);
-INSERT INTO "CONTENT" VALUES('40','Vending::Inventory',9);
-INSERT INTO "CONTENT" VALUES('41','Vending::Inventory',9);
-INSERT INTO "CONTENT" VALUES('38','Vending::Inventory',9);
-INSERT INTO "CONTENT" VALUES('42','Vending::Inventory',9);
-INSERT INTO "CONTENT" VALUES('43','Vending::Inventory',9);
-INSERT INTO "CONTENT" VALUES('44','Vending::Inventory',9);
-INSERT INTO "CONTENT" VALUES('50','Vending::Inventory',10);
-INSERT INTO "CONTENT" VALUES('49','Vending::Inventory',10);
-INSERT INTO "CONTENT" VALUES('48','Vending::Inventory',10);
-INSERT INTO "CONTENT" VALUES('74','Vending::Inventory',8);
-INSERT INTO "CONTENT" VALUES('85','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('90','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('95','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('94','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('91','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('92','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('93','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('89','Vending::Coin',13);
-INSERT INTO "CONTENT" VALUES('96','Vending::Inventory',14);
-INSERT INTO "CONTENT" VALUES('108','Vending::Inventory',10);
-INSERT INTO "CONTENT" VALUES('110','Vending::Coin',12);
-CREATE TABLE coin (coin_id integer PRIMARY KEY NOT NULL REFERENCES CONTENT(CONTENT_id),
-                   type_id integer NOT NULL REFERENCES item_type(type_id));
+INSERT INTO "content_type" VALUES(1,'dollar');
+INSERT INTO "content_type" VALUES(2,'quarter');
+INSERT INTO "content_type" VALUES(3,'dime');
+INSERT INTO "content_type" VALUES(4,'nickel');
+INSERT INTO "content_type" VALUES(5,'Cookie');
+INSERT INTO "content_type" VALUES(6,'Apple');
+INSERT INTO "content_type" VALUES(7,'Water');
+INSERT INTO "content_type" VALUES(8,'Coke');
+INSERT INTO "content_type" VALUES(9,'shilling');
+INSERT INTO "content_type" VALUES(10,'iPod');
+INSERT INTO "content_type" VALUES(11,'diamond');
+CREATE TABLE content (content_id PRIMARY KEY NOT NULL,
+                        subtype_name varchar,
+                        machine_location_id integer NOT NULL REFERENCES machine_location(machine_location_id));
+INSERT INTO "content" VALUES('27','Vending::Coin',13);
+INSERT INTO "content" VALUES('25','Vending::Coin',13);
+INSERT INTO "content" VALUES('28','Vending::Coin',13);
+INSERT INTO "content" VALUES('26','Vending::Coin',13);
+INSERT INTO "content" VALUES('30','Vending::Coin',13);
+INSERT INTO "content" VALUES('24','Vending::Coin',13);
+INSERT INTO "content" VALUES('23','Vending::Coin',13);
+INSERT INTO "content" VALUES('29','Vending::Coin',13);
+INSERT INTO "content" VALUES('39','Vending::Inventory',9);
+INSERT INTO "content" VALUES('40','Vending::Inventory',9);
+INSERT INTO "content" VALUES('41','Vending::Inventory',9);
+INSERT INTO "content" VALUES('38','Vending::Inventory',9);
+INSERT INTO "content" VALUES('42','Vending::Inventory',9);
+INSERT INTO "content" VALUES('43','Vending::Inventory',9);
+INSERT INTO "content" VALUES('44','Vending::Inventory',9);
+INSERT INTO "content" VALUES('50','Vending::Inventory',10);
+INSERT INTO "content" VALUES('49','Vending::Inventory',10);
+INSERT INTO "content" VALUES('48','Vending::Inventory',10);
+INSERT INTO "content" VALUES('74','Vending::Inventory',8);
+INSERT INTO "content" VALUES('85','Vending::Coin',13);
+INSERT INTO "content" VALUES('90','Vending::Coin',13);
+INSERT INTO "content" VALUES('95','Vending::Coin',13);
+INSERT INTO "content" VALUES('94','Vending::Coin',13);
+INSERT INTO "content" VALUES('91','Vending::Coin',13);
+INSERT INTO "content" VALUES('92','Vending::Coin',13);
+INSERT INTO "content" VALUES('93','Vending::Coin',13);
+INSERT INTO "content" VALUES('89','Vending::Coin',13);
+INSERT INTO "content" VALUES('96','Vending::Inventory',14);
+INSERT INTO "content" VALUES('108','Vending::Inventory',10);
+INSERT INTO "content" VALUES('110','Vending::Coin',12);
+CREATE TABLE coin (coin_id integer PRIMARY KEY NOT NULL REFERENCES content(content_id),
+                   type_id integer NOT NULL REFERENCES content_type(type_id));
 INSERT INTO "coin" VALUES(23,4);
 INSERT INTO "coin" VALUES(24,4);
 INSERT INTO "coin" VALUES(25,4);
@@ -64,7 +67,7 @@ INSERT INTO "coin" VALUES(93,3);
 INSERT INTO "coin" VALUES(94,3);
 INSERT INTO "coin" VALUES(95,3);
 INSERT INTO "coin" VALUES(110,1);
-CREATE TABLE product (product_id integer PRIMARY KEY NOT NULL REFERENCES item_type(type_id),
+CREATE TABLE product (product_id integer PRIMARY KEY NOT NULL REFERENCES content_type(type_id),
                       cost_cents integer NOT NULL,
                       manufacturer varchar NOT NULL);
 INSERT INTO "product" VALUES(5,50,'Mom
@@ -77,7 +80,7 @@ INSERT INTO "product" VALUES(8,80,'Coca Cola
 ');
 INSERT INTO "product" VALUES(10,10000,'Apple
 ');
-CREATE TABLE inventory (inv_id integer PRIMARY KEY NOT NULL,
+CREATE TABLE inventory (merchandise_id integer PRIMARY KEY NOT NULL,
                         product_id integer NOT NULL REFERENCES product(product_id),
                         insert_date datetime NOT NULL DEFAULT (date('now')));
 INSERT INTO "inventory" VALUES(38,6,1241466472);
@@ -93,23 +96,23 @@ INSERT INTO "inventory" VALUES(50,8,1241466582);
 INSERT INTO "inventory" VALUES(74,5,1241569434);
 INSERT INTO "inventory" VALUES(96,10,1241570736);
 INSERT INTO "inventory" VALUES(108,5,1241581797);
-CREATE TABLE URMETA_MACHINE_LOCATION_SLOT_ID_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
+CREATE TABLE URMETA_machine_location_SLOT_ID_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
 DELETE FROM sqlite_sequence;
-INSERT INTO "sqlite_sequence" VALUES('URMETA_MACHINE_LOCATION_SLOT_ID_seq',14);
-INSERT INTO "sqlite_sequence" VALUES('URMETA_CONTENT_TYPE_TYPE_ID_seq',11);
+INSERT INTO "sqlite_sequence" VALUES('URMETA_machine_location_SLOT_ID_seq',14);
+INSERT INTO "sqlite_sequence" VALUES('URMETA_content_type_TYPE_ID_seq',11);
 INSERT INTO "sqlite_sequence" VALUES('URMETA_COIN_COIN_ID_seq',110);
-CREATE TABLE vend_slot (slot_id integer PRIMARY KEY NOT NULL,
+CREATE TABLE machine_location (machine_location_id integer PRIMARY KEY NOT NULL,
                          name varchar NOT NULL,
                          is_buyable integer NOT NULL,
                          cost_cents integer,
                          label varchar);
-INSERT INTO "vend_slot" VALUES(8,'a',1,65,'Cookie');
-INSERT INTO "vend_slot" VALUES(9,'b',1,100,'Apple');
-INSERT INTO "vend_slot" VALUES(10,'c',1,150,'Coke');
-INSERT INTO "vend_slot" VALUES(11,'bank',0,-1,NULL);
-INSERT INTO "vend_slot" VALUES(12,'box',0,-1,NULL);
-INSERT INTO "vend_slot" VALUES(13,'change',0,-1,NULL);
-INSERT INTO "vend_slot" VALUES(14,'d',1,10000,'iPod');
-CREATE TABLE URMETA_CONTENT_TYPE_TYPE_ID_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
+INSERT INTO "machine_location" VALUES(8,'a',1,65,'Cookie');
+INSERT INTO "machine_location" VALUES(9,'b',1,100,'Apple');
+INSERT INTO "machine_location" VALUES(10,'c',1,150,'Coke');
+INSERT INTO "machine_location" VALUES(11,'bank',0,-1,NULL);
+INSERT INTO "machine_location" VALUES(12,'box',0,-1,NULL);
+INSERT INTO "machine_location" VALUES(13,'change',0,-1,NULL);
+INSERT INTO "machine_location" VALUES(14,'d',1,10000,'iPod');
+CREATE TABLE URMETA_content_type_TYPE_ID_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
 CREATE TABLE URMETA_COIN_COIN_ID_seq (next_value integer PRIMARY KEY AUTOINCREMENT);
 COMMIT;
