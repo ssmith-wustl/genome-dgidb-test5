@@ -15,6 +15,11 @@ class Genome::Model::Tools::Library::GatherLibraryMetrics {
             is_optional => 0,
             doc => "model id of the model to gather library metrics for",
         },
+        all_events => {
+            type => 'Flag',
+            is_optional => 1,
+            default => 0,
+        },
     ]
 };
 
@@ -29,20 +34,99 @@ sub execute {
         $self->error_message("Unable to find model $model_id");
         return;
     }
-
+    #additions to just get alignments from the latest build of this model
+    my $last_complete_build = $model->last_complete_build;
+    my $current_running_build = $model->current_running_build;
+    my $align_count = 0;
+    my @events;
     #Grab all alignment events so we can filter out ones that are still running or are abandoned
-    my @events = Genome::Model::Event->get(event_type => 
-        {operator => 'like', value => '%align-reads%'},
-        model_id => $model_id,
-        event_status => 'Succeeded'
-    );
+    if ($current_running_build) {
+        my $current_align_count = 0; 
+        # get all align events for the current running build
+        my @current_running_build_align_events = Genome::Model::Event->get(event_type => 
+                {operator => 'like', value => '%align-reads%'},
+                build_id => $current_running_build,
+                model_id => $model_id,
+            );
+        # check to see if any of the events have not succeeded and throw a warning
+        foreach my $current_align_event (@current_running_build_align_events){
+            if ($self->all_events || ($current_align_event->event_status eq 'Succeeded') || ($current_align_event->event_status eq 'Abandoned')){
+                $current_align_count++;
+            }
+            else {
+                $self->status_message(" $current_align_count alignments have succeeded as part of the current running build ");
+                $self->status_message(" Some alignments are still running or have failed ");
+                $self->status_message(" CONTINUING WITH POTENTIALLY INCOMPLETE SET OF ALIGNMENTS ");
+            }
+        }
+        #now just get the Succeeded events to pass along for further processing
+        # THIS MAY NOT INCLUDE ANY EVENTS
+        if($self->all_events) {
+            @events = @current_running_build_align_events;
+        }
+        else {
+            @events = Genome::Model::Event->get(event_type => 
+                {operator => 'like', value => '%align-reads%'},
+                build_id => $current_running_build,
+                event_status => 'Succeeded',
+                model_id => $model_id,
+
+            );
+        }
+        # if it does not include any succeeded events - die
+        unless (@events) {
+            $self->error_message(" No alignments have Succeeded on the current running build ");
+            return;
+        }
+        $align_count = $current_align_count;
+    }
+    elsif ($last_complete_build){
+        my $last_complete_align_count = 0;
+        my @last_complete_build_align_events = Genome::Model::Event->get(event_type => 
+                {operator => 'like', value => '%align-reads%'},
+                    build_id => $last_complete_build,
+                    model_id => $model_id,
+
+
+            );
+        foreach my $last_complete_event (@last_complete_build_align_events){
+            if ($self->all_events || ($last_complete_event->event_status eq 'Succeeded') || ($last_complete_event->event_status eq 'Abandoned')){
+                $last_complete_align_count++;
+            }
+            else {
+            $self->error_message(" $last_complete_align_count alignments have succeeded as part of the last complete build,  some alignments from this build are still running or have failed");
+            return;
+            }
+        }
+        if($self->all_events) {
+            @events = @last_complete_build_align_events;
+        }
+        else {
+            @events = Genome::Model::Event->get(event_type => 
+                {operator => 'like', value => '%align-reads%'},
+                build_id => $last_complete_build,
+                event_status => 'Succeeded',
+                model_id => $model_id,
+
+            );
+        }
+        unless (@events) {
+            $self->error_message(" No alignments have Succeeded on the current running build ");
+            return;
+        }
+        $align_count = $last_complete_align_count;
+    }
+    else{
+        $self->error_message(" No Running or Complete Builds Found ");
+        return;
+    }
     #Convert events to InstrumentDataAssignment objects
     my @idas = map { $_->instrument_data_assignment } @events;
 
     my %stats_for;
     my %readset_stats;
 
-        print STDOUT join "\t",("Name","#Reads_Mapped","#Reads_Total","isPaired","#Reads_Mapped_asPaired","Median_Insert_Size","Standard_Deviation_Above_Insert_Size",),"\n";
+    #print STDOUT join "\t",("Name","#Reads_Mapped","#Reads_Total","isPaired","#Reads_Mapped_asPaired","Median_Insert_Size","Standard_Deviation_Above_Insert_Size",),"\n";
 #Completely undeprecated loop over the readsets
     foreach my $ida (@idas) {
         my $library = $ida->library_name;
@@ -50,7 +134,13 @@ sub execute {
             $self->error_message("No library defined for ".$ida->instrument_data_id);
             next;
         }
-        my $hash = $ida->get_alignment_statistics;
+        my $lane_name = $ida->short_name."_".$ida->subset_name;
+        my $alignment = $ida->alignment;
+        my @aligner_output = $alignment->aligner_output_file_paths;
+        if(@aligner_output > 1) {
+            $self->error_message("More than one aligner_output_file! WTF!");
+        }
+        my $hash = $alignment->get_alignment_statistics($aligner_output[0]);
         $stats_for{$library}{total_read_sets} += 1;
         unless(defined($hash)) {
             #ignore runs where there are no aligner outputs (shouldn't really happen anymore)
@@ -61,14 +151,8 @@ sub execute {
         $stats_for{$library}{$hash->{isPE}}{total} += $hash->{total};
         $stats_for{$library}{$hash->{isPE}}{paired} += $hash->{paired};
         $stats_for{$library}{$hash->{isPE}}{read_sets} += 1;
-        my $sls = GSC::RunLaneSolexa->get($ida->instrument_dataid); 
-        unless(defined($sls)) {
-            $self->error_message("Unable to find RunLaneSolexa object for ".$ida->instrument_data_id);
-            next;
-        }
-        my $median_insert_size = $sls->median_insert_size;
-        my $sd_above_insert_size = $sls->sd_above_insert_size;
-        my $lane_name = $ida->short_name."_".$ida->subset_name;
+        my $median_insert_size = $ida->median_insert_size;
+        my $sd_above_insert_size = $ida->sd_above_insert_size;
         if(defined($median_insert_size) && $hash->{isPE}) {
             $stats_for{$library}{median_insert_size} += $median_insert_size;
             $stats_for{$library}{median_insert_size_n} +=1;
@@ -85,7 +169,7 @@ sub execute {
         unless(defined($sd_above_insert_size)) {
             $sd_above_insert_size = '-';
         }
-        $readset_stats{$lane_name} = join "\t",($lane_name, $hash->{mapped},$hash->{total},$hash->{isPE}, $hash->{paired},$median_insert_size,$sd_above_insert_size,),"\n";
+        $readset_stats{$lane_name} = "";# join "\t",($lane_name, $hash->{mapped},$hash->{total},$hash->{isPE}, $hash->{paired},$median_insert_size,$sd_above_insert_size,),"\n";
     }
     foreach my $lane (sort keys %readset_stats) {
         print $readset_stats{$lane};
