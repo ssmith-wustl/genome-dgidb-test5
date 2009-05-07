@@ -117,11 +117,11 @@ sub execute {
 1;
 
 sub help_detail {
-    return "This module takes a Hapmap Genotype file for a single patient and converts it to Gold SNP style format for use with established tools";
+    return "This module takes two genotype files and converts the intersection of their genotypes and positions to Gold SNP file format";
 }
 
 sub help_brief {
-    return "Convert a Hapmap Genotype file to Gold SNP style";
+    return "Take two genotype files and make a gold SNP file format";
 }
 
 
