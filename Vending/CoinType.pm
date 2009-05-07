@@ -22,7 +22,7 @@ class Vending::CoinType {
 # Overriding because the property definition doesn't exactly work...
 sub item_type {
     my $self = shift;
-    my $type_obj = Vending::ItemType->get_or_create(name => $self->name);
+    my $type_obj = Vending::ContentType->get_or_create(name => $self->name);
     return $type_obj;
 }
 

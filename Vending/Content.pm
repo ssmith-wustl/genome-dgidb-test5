@@ -1,9 +1,9 @@
-package Vending::VendItem;
+package Vending::Content;
 use strict;
 use warnings;
 use Vending;
 
-class Vending::VendItem {
+class Vending::Content {
     type_name => 'vend item',
     table_name => 'content',
     is_abstract => 1,
@@ -23,7 +23,7 @@ class Vending::VendItem {
     data_source => 'Vending::DataSource::Machine',
 };
 
-# Called when you try to create a generic Vending::VendItem
+# Called when you try to create a generic Vending::Content
 sub type_name_resolver {
     my $class = shift;
 

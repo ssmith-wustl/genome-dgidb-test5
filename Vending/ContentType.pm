@@ -1,10 +1,10 @@
-package Vending::ItemType;
+package Vending::ContentType;
 
 use strict;
 use warnings;
 
 use Vending;
-class Vending::ItemType {
+class Vending::ContentType {
     type_name => 'item type',
     table_name => 'content_type',
     id_by => [
@@ -47,11 +47,11 @@ sub count_items_by_type {
 sub _initialize {
     my $class = shift;
 
-    my $a = Vending::ItemType->get(name => 'dollar');
+    my $a = Vending::ContentType->get(name => 'dollar');
     unless ($a) {
-        __PACKAGE__->status_message("Initializing Vending::ItemType");
+        __PACKAGE__->status_message("Initializing Vending::ContentType");
         foreach my $name ( qw( dollar quarter dime nickel ) ) {
-            Vending::ItemType->create(name => $name);
+            Vending::ContentType->create(name => $name);
         }
     }
 }

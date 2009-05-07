@@ -7,13 +7,13 @@ use Vending;
 class Vending::Coin {
     type_name => 'coin',
     table_name => 'coin',
-    is => 'Vending::VendItem',
+    is => 'Vending::Content',
     id_by => [
         coin_id => { is => 'integer' },
     ],
     has => [
         #type_name    => { is_constant => 1, value => 'Vending::Coin', is_transient => 1 },
-        item_type    => { is => 'Vending::ItemType', id_by => 'type_id' },
+        item_type    => { is => 'Vending::ContentType', id_by => 'type_id' },
 
         name         => { via => 'item_type', to => 'name' },
         coin_type    => { is => 'Vending::CoinType', id_by => 'name' },

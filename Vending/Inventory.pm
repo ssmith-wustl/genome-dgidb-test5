@@ -5,7 +5,7 @@ use warnings;
 
 use Vending;
 class Vending::Inventory {
-    is => [ 'Vending::VendItem' ],
+    is => [ 'Vending::Content' ],
     type_name => 'inventory',
     table_name => 'inventory',
     id_by => [

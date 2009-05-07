@@ -18,7 +18,7 @@ class Vending::VendSlot {
         label         => { is => 'varchar', is_optional => 1 },
         is_buyable    => { is => 'integer' },
         cost_cents    => { is => 'integer', is_optional => 1 },
-        items         => { is => 'Vending::VendItem', reverse_id_by => 'slot', is_many => 1 },
+        items         => { is => 'Vending::Content', reverse_id_by => 'slot', is_many => 1 },
         coin_items    => { is => 'Vending::Coin', reverse_id_by => 'slot', is_many => 1 },
         count         => { calculate => q(my @obj = $self->items; 
                                         return scalar(@obj);), 

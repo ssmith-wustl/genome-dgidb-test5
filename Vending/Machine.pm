@@ -10,9 +10,9 @@ class Vending::Machine {
     doc => 'Represents the vending machine',
     has_many => [
         products        => { is => 'Vending::Product', reverse_id_by => 'machine', is_many => 1 },
-        items           => { is => 'Vending::VendItem', reverse_id_by => 'machine', is_many => 1 },
+        items           => { is => 'Vending::Content', reverse_id_by => 'machine', is_many => 1 },
         inventory_items => { is => 'Vending::Inventory', reverse_id_by => 'machine', is_many => 1 },
-        item_types      => { is => 'Vending::ItemType', reverse_id_by => 'machine', is_many => 1 },
+        item_types      => { is => 'Vending::ContentType', reverse_id_by => 'machine', is_many => 1 },
         slots           => { is => 'Vending::VendSlot', reverse_id_by => 'machine', is_many => 1,},
     ],
     has => [
@@ -193,7 +193,7 @@ sub _complete_purchase_and_make_change_for_selections {
 sub _initialize_for_tests {
     my $self = shift;
 
-    $_->delete foreach Vending::VendItem->get();
+    $_->delete foreach Vending::Content->get();
     $_->delete foreach Vending::Product->get();
     
     $self->slots(name => 'a')->cost_cents(65);

@@ -7,7 +7,7 @@ use Vending;
 class Vending::Product {
     type_name => 'product',
     table_name => 'product',
-    is => ['Vending::ItemType'],
+    is => ['Vending::ContentType'],
     id_by => [
         product_id => { is => 'integer' },
     ],
