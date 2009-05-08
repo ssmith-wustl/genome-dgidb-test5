@@ -105,7 +105,10 @@ sub generate_report_detail
 
     my $build = $self->build;
     my $model = $build->model;
-    my $gold_snp_path = $self->gold_snp_path;
+    my $pp    = $model->processing_profile;
+    
+    my $genotyper_name = $pp->genotyper_name;
+    my $gold_snp_path  = $self->gold_snp_path;
 
     my $module_path = $INC{"Genome/Model/ReferenceAlignment/Report/GoldSnpConcordance.pm"};
     die 'failed to find module path!' unless $module_path;
@@ -137,7 +140,8 @@ $DB::single = 1;
         my $cmd = "gt snp gold-snp-intersection " .
             "--gold-snp-file $gold_snp_path " .
             "--snp-file $snp_file";
-        
+        $cmd .= ' --snp-format sam' if $genotyper_name =~ /samtools/;
+
         $self->status_message("GoldSnp command: ".$cmd);
         
         my $gold_rpt = `$cmd`; 
