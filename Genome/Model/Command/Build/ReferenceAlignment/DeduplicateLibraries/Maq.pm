@@ -83,10 +83,19 @@ sub execute {
     for my $library_key ( keys %library_alignments ) {
 	my @read_set_list = @{$library_alignments{$library_key}};	
         $self->status_message("Library: ".$library_key." Read sets count: ". scalar(@read_set_list) ."\n");
-        my %library_alignments_item = ( $library_key => \@read_set_list );  
-        push @list_of_library_alignments, \%library_alignments_item; 
+        if (scalar(@read_set_list)>0) {
+            my %library_alignments_item = ( $library_key => \@read_set_list );  
+            push @list_of_library_alignments, \%library_alignments_item;
+        } else {
+            $self->status_message("Not including library: $library_key because it is empty.");
+        } 
     }
     $self->status_message("Size of library alignments: ".@list_of_library_alignments ); 
+
+    if (scalar(@list_of_library_alignments)==0) {
+        $self->status_message("None of the libraries contain data.  Quitting.");
+        return; 
+    }
 
     #parallelization starts here
     require Workflow::Simple;
