@@ -15,6 +15,8 @@ class Genome::Model::Tools::ContaminationScreen::Solexa
                                     is => 'Number', doc => 'value for minimum score, based on read length',
                     },
         ],
+    has => [
+    ],
     has_param => [
             lsf_resource => {
                              default_value => "-M 15000000 -R 'select[type==LINUX64] rusage[mem=15000]'",

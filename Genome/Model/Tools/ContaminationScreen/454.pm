@@ -19,12 +19,6 @@ class Genome::Model::Tools::ContaminationScreen::454
         ],
 };
 
-#operation_io Genome::Model::Tools::ContaminationScreen::454
-#{
-#    input  => [ 'input_file', 'database' ],
-#    output => [ 'read_file','output_file'],
-#};
-
 sub help_brief 
 {
     "locate contamination in quality/vector trimmed data for 454",
