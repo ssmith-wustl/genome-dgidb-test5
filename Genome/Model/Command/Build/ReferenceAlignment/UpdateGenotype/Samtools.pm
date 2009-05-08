@@ -43,7 +43,7 @@ sub execute {
 
     my $consensus_dir = $build->consensus_directory;
     unless (-d $consensus_dir) {
-        unless (Genome::Utility::FileSystem->create_directory($consensus_dir)) {
+        unless ($self->create_directory($consensus_dir)) {
             $self->error_message("Failed to create consensus directory $consensus_dir: $!");
             return;
         }
@@ -71,8 +71,8 @@ sub execute {
          return;
     }         
 
-    my $tool_pathname = '/gscuser/dlarson/src/samtools/tags/samtools-0.1.2/samtools';
-    my $cmd = $tool_pathname. " pileup -f $ref_seq_file";
+    my $sam_pathname = '/gscuser/dlarson/src/samtools/tags/samtools-0.1.2/samtools';
+    my $cmd = $sam_pathname. " pileup -f $ref_seq_file";
     $cmd .= ' '.$assembly_opts if $assembly_opts;
     
     $cmd = sprintf(
