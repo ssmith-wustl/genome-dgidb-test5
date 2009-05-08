@@ -7,7 +7,6 @@ use Vending;
 
 my $machine = Vending::Machine->get();
 ok($machine, 'Got the Vending::Machine instance');
-$machine->_initialize_for_tests();
 
 # Stock the machine so there's something to get
 my $prod = Vending::Product->create(name => 'Apple', manufacturer => 'Acme', cost_cents => 100);

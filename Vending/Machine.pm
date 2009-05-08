@@ -26,8 +26,6 @@ class Vending::Machine {
     data_source => 'Vending::DataSource::Machine',
 };
 
-
-# Insert a coin
 sub insert {
     my($self, $item_name) = @_;
 
@@ -37,7 +35,6 @@ sub insert {
         return;
     }
 
-$DB::single=1;
     my $loc = $self->coin_box();
     my $coin = $loc->add_item(subtype_name => 'Vending::Coin', type_id => $coin_type->type_id, machine_id => $self);
 
@@ -79,16 +76,12 @@ sub empty_machine_location_by_name {
     return @returned_items;
 }
 
-
-
-
 sub buy {
     my($self,@machine_location_names) = @_;
     
     my $coin_box = $self->coin_box();
     my $transaction = UR::Context::Transaction->begin();
 
-$DB::single = 1;
     my @returned_items = eval {
 
         my $users_money = $coin_box->content_value();
@@ -193,20 +186,6 @@ sub _complete_purchase_and_make_change_for_selections {
 
     return @change;
 }
-
-# Called by the test cases to empty out the machine
-sub _initialize_for_tests {
-    my $self = shift;
-
-    $_->delete foreach Vending::Content->get();
-    $_->delete foreach Vending::Product->get();
-    
-    $self->machine_locations(name => 'a')->cost_cents(65);
-    $self->machine_locations(name => 'b')->cost_cents(100);
-    $self->machine_locations(name => 'c')->cost_cents(150);
-}
-
-
 
 1;
   

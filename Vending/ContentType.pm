@@ -26,8 +26,6 @@ class Vending::ContentType {
     data_source => 'Vending::DataSource::Machine',
 };
 
-&_initialize();
-
 sub count_items_by_type {
     my $type_id = shift;
 
@@ -42,16 +40,5 @@ sub count_items_by_type {
     return scalar(@objects);
 }
 
-
-sub _initialize {
-    my $class = shift;
-
-    my $a = Vending::ContentType->get(name => 'dollar');
-    unless ($a) {
-        __PACKAGE__->status_message("Initializing Vending::ContentType");
-        foreach my $name ( qw( dollar quarter dime nickel ) ) {
-            Vending::ContentType->create(name => $name);
-        }
-    }
-}
 1;
+

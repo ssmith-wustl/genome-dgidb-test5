@@ -7,7 +7,6 @@ use Vending;
 
 my $machine = Vending::Machine->get();
 ok($machine, 'Got the Vending::Machine instance');
-$machine->_initialize_for_tests();
 
 # Stock the machine, but not enough change
 my $quarter_type = Vending::CoinType->get(name => 'quarter');

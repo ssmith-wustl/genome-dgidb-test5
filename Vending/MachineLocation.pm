@@ -39,22 +39,6 @@ class Vending::MachineLocation {
 };
 
 
-&_initialize();
-
-sub _initialize {
-    my $a = Vending::MachineLocation->get(name => 'change');
-    unless ($a) {
-        Vending::MachineLocation->create(name => 'a', cost_cents => 65, is_buyable => 1);
-        Vending::MachineLocation->create(name => 'b', cost_cents => 100, is_buyable => 1);
-        Vending::MachineLocation->create(name => 'c', cost_cents => 150, is_buyable => 1);
-
-        foreach my $name ( qw(bank box change) ) {
-print "Creating machine_location $name\n";
-            Vending::MachineLocation->create(name => $name, label => '', is_buyable => 0, cost_cents => -1);
-        }
-    }
-}
-
 sub transfer_items_to_machine_location {
     my($self,$to_machine_location) =@_;
 
@@ -67,3 +51,4 @@ sub transfer_items_to_machine_location {
 }
 
 1;
+

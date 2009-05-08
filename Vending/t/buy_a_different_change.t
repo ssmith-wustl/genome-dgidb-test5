@@ -7,7 +7,6 @@ use Vending;
 
 my $machine = Vending::Machine->get();
 ok($machine, 'Got the Vending::Machine instance');
-$machine->_initialize_for_tests();
 
 # Stock the machine so there's something to get
 my $dime_type = Vending::CoinType->get(name => 'dime');
@@ -39,3 +38,5 @@ foreach my $item ( @items ) {
 is($item_counts{'Orange'}, 1, 'One of them was an Orange');
 is($item_counts{'nickel'}, 1, 'One of them was a nickel');
 is($item_counts{'dime'}, 3, 'Three of them were dimes');
+
+

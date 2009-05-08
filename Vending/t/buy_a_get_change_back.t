@@ -2,12 +2,10 @@ use strict;
 use warnings;
 
 use Test::More tests => 9;
-
 use Vending;
 
 my $machine = Vending::Machine->get();
 ok($machine, 'Got the Vending::Machine instance');
-$machine->_initialize_for_tests();
 
 # Stock the machine so there's something to get
 my $quarter_type = Vending::CoinType->get(name => 'quarter');
@@ -36,3 +34,4 @@ foreach my $item ( @items ) {
 is($item_counts{'Battery'}, 1, 'One of them was a Battery');
 is($item_counts{'quarter'}, 1, 'One of them was a quarter');
 is($item_counts{'dime'}, 1, 'One of them was a dime');
+
