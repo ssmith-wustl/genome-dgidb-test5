@@ -715,7 +715,6 @@ my %csp_priority = (
     'configure alignment'                     => 1,
     'generate lane summary'                   => 1,
     'copy sequence files'                     => 1,
-    'transfer submission'                     => 1,
     'analysis completed'                      => 1,
     'import sequence'                         => 1,
 #    'copy run'                                => 1,
