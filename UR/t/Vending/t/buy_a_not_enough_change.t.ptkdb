@@ -1,0 +1,29 @@
+$files = {
+           '_<t/buy_a_not_enough_change.t' => [
+                                                {
+                                                  'expr' => undef,
+                                                  'value' => '1',
+                                                  'text' => 'ok($machine->insert(\'dollar\'), \'Inserted a dollar\');
+',
+                                                  'fname' => 't/buy_a_not_enough_change.t',
+                                                  'type' => 'user',
+                                                  'line' => '23'
+                                                }
+                                              ]
+         };
+$expr_list = [
+               {
+                 'expr' => 'Vending::MachineLocation->get(name => \'bank\')->items',
+                 'depth' => -1
+               },
+               {
+                 'expr' => 'Vending::MachineLocation->get(name => \'box\')->items',
+                 'depth' => -1
+               },
+               {
+                 'expr' => 'Vending::MachineLocation->get(name => \'change\')->items',
+                 'depth' => -1
+               }
+             ];
+$eval_saved_text = undef;
+$main_win_geometry = '1378x920+495+0';
