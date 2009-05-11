@@ -717,6 +717,7 @@ my %csp_priority = (
     'copy sequence files'                     => 1,
     'analysis completed'                      => 1,
     'import sequence'                         => 1,
+    'define reference sequence set'           => 1,
 #    'copy run'                                => 1,
 #    'remove run'                              => 1,
     'import sequence annotation'              => 2,
