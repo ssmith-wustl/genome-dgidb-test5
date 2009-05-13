@@ -9,17 +9,17 @@ class Genome::Transcript {
     type_name => 'genome transcript',
     table_name => 'TRANSCRIPT',
     id_by => [
+        chrom_name => { is => 'String', len => 10 },
+        transcript_start => { is => 'NUMBER', len => 10, is_optional => 1 },
         transcript_id => { is => 'NUMBER', len => 10 },
     ],
     has => [
         gene_id => { is => 'NUMBER', len => 10 },
-        transcript_start => { is => 'NUMBER', len => 10, is_optional => 1 },
         transcript_stop => { is => 'NUMBER', len => 10, is_optional => 1 },
         transcript_name => { is => 'VARCHAR', len => 255, is_optional => 1 },
         source => { is => 'VARCHAR', len => 7, is_optional => 1 },
         transcript_status => { is => 'VARCHAR', len => 11, is_optional => 1 },
         strand => { is => 'VARCHAR', len => 2, is_optional => 1 },
-        chrom_name => { is => 'String', len => 10 },
 
         sub_structures => { 
             calculate_from => [qw/ transcript_id build_id/],
