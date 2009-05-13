@@ -284,16 +284,6 @@ For this, in the class declaration, add a has key w/ arrayref of hashrefs.  One 
 
 Overwrite the help_brief, help_synopsis and help_detail methods to provide specific help.  If overwiting the help_detail method, use call '_filter_doc' to get the filter documentation and usage to combine with your specific help.
 
-=head1 Disclaimer
-
-Copyright (C) 2005 - 2008 Washington University Genome Sequencing Center
-
-This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-=head1 Author(s)
-
-B<Eddie Belter> I<ebelter@watson.wustl.edu>
-
 =cut
 
 #$HeadURL$
