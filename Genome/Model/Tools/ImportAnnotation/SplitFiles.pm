@@ -49,6 +49,12 @@ sub execute
     my $self    = shift;
     my $workdir = $self->workdir;
 
+
+    #unless($workdir =~ /\/$/)
+    #{
+    #    $self->workdir($workdir."/");
+    #    $workdir = $self->workdir;
+    #}
     # split up genes by gene_id
     #$DB::single = 1;
     $self->split_files( 0, "genes.csv" );
@@ -82,8 +88,8 @@ sub execute
     IPC::Run::run(
         ['mv',$self->workdir.'/genes.csv',
          $self->workdir.'/proteins.csv',
-         $self->workdir.'transcript_sub_structures.csv',
-         $self->workdir.'source_data',],
+         $self->workdir.'/transcript_sub_structures.csv',
+         $self->workdir.'/source_data',],
         \undef,
         '>', $stdout,
         '2>', $stderr,
@@ -169,8 +175,8 @@ sub split_transcripts
 
     IPC::Run::run(
         ['sort', '-n', '-k3,9', '-o', 
-         $self->workdir.'transcripts.csv.sorted', 
-         $self->workdir."transcripts.csv" ],
+         $self->workdir.'/transcripts.csv.sorted', 
+         $self->workdir."/transcripts.csv" ],
         \undef,
         '>',
         \$stdout,
@@ -179,8 +185,8 @@ sub split_transcripts
         ) or croak "sorting transcripts.csv $!\n$stderr";
 
     IPC::Run::run(
-        [ 'cp', $self->workdir.'transcripts.csv.sorted',
-          $self->workdir."transcripts.csv",],
+        [ 'cp', $self->workdir.'/transcripts.csv.sorted',
+          $self->workdir."/transcripts.csv",],
         \undef,
         '>',
         \$stdout,
