@@ -56,6 +56,12 @@ class Genome::Model::Tools::Assembly::AutoJoin::ByFwdRevPairing
 		 default => 0,
 		 doc => "Option to print joins the program finds but not make the joins",
 	         },
+	     min_spanning_pairs => {
+		 type => 'String',
+		 is_optional => 1,
+		 default => 1,
+		 doc => "Minimum number of fwd/rev pairing for join",
+	         },
 	     ],
 };
 
@@ -349,8 +355,7 @@ sub _align_join_contigs
     #FIND THE ONE CONTIG MOST F/R HITS GO TO
 
     #TODO - FIND A RIGHT PLACE TO DO THIS LATER
-    my $min_spanning_pairs = 2;
-    $min_spanning_pairs = $self->min_read_num if $self->min_read_num;
+    my $min_spanning_pairs = $self->min_spanning_pairs;
 
     my $hit_ratio;
 
