@@ -65,7 +65,7 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-	Align and join contigs based on cross_match matches
+Align and join contigs based on cross_match matches
 EOS
 }
 
