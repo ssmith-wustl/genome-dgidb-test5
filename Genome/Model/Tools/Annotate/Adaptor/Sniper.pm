@@ -6,11 +6,16 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::Annotate::Adaptor::Sniper {
-    is => 'Command',
+    is => 'Genome::Model::Tools::Annotate',
     has => [
         somatic_file => {
             is  => 'String',
             doc => 'The somatic file output from sniper to be adapted',
+        },
+        output_file => {
+            is => 'Text',
+            is_optional => 1,
+            doc => "Store output in the specified file instead of sending it to STDOUT."
         },
     ],
 };
@@ -39,8 +44,17 @@ sub execute {
     unless (-s $self->somatic_file) {
         $self->error_message("blahhhhhhhhhhh YOU SUPPLY A FILE PLEASE");
     }
-
     my $somatic_fh = IO::File->new($self->somatic_file);
+
+    # establish the output handle for the transcript variants
+    my $output_fh;
+    if (my $output_file = $self->output_file) {
+        $output_fh = $self->_create_file($output_file);
+    }
+    else {
+        $output_fh = 'STDOUT';
+    }
+
     my @return;   
     while (my $line=$somatic_fh->getline) {
         chomp $line;
@@ -48,22 +62,13 @@ sub execute {
             #INDELOL!!!
             @return = $self->parse_indel_line($line);
             for my $ret (@return) {
-                print join("\t",@{$ret}) . "\n";
+                $output_fh->print(join("\t",@{$ret}) . "\n");
             }
        }
        else { #CONSNPTION FIT!
             my ($chr, $start, $somatic_score, $ref_base, $variant_base, $consensus_quality, $snp_quality, $max_map_q, $depth_tumor, $depth_normal) = split("\t", $line);
-            print "$chr\t$start\t$start\t$ref_base\t$variant_base\tSNP\t$somatic_score\t$consensus_quality\t$snp_quality\t$max_map_q\t$depth_tumor\t$depth_normal\n";
+            $output_fh->print("$chr\t$start\t$start\t$ref_base\t$variant_base\tSNP\t$somatic_score\t$consensus_quality\t$snp_quality\t$max_map_q\t$depth_tumor\t$depth_normal\n");
         }
-    
-               
-        
-         #parse this line differently depending on indel or not..perhaps grep for *
-
-         #annotate transcript -- parallelize? 
-
-         #annotate ucsc -- parallelize?
-
     }
 }
 
