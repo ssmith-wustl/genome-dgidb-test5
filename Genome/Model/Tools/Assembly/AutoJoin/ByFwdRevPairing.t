@@ -3,9 +3,14 @@
 use strict;
 use warnings;
 
+use File::Temp;
 use above "Genome";
 use Genome::Model::Tools::Assembly::AutoJoin::ByFwdRevPairing;
 
-use Test::More tests => 1;
+use Test::More tests => 2;
 
-ok(Genome::Model::Tools::Assembly::AutoJoin::ByScaffolding->execute ( ace => 'autojoin_test.ace', dir => '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-AutoJoin/edit_dir') );
+my $test_dir = File::Temp::tempdir (CLEANUP => 1);
+
+ok(Genome::Model::Tools::Assembly::AutoJoin->create_test_temp_dir ($test_dir));
+
+ok(Genome::Model::Tools::Assembly::AutoJoin::ByScaffolding->execute ( ace => 'autojoin_test.ace', dir => $test_dir.'/edit_dir')); 
