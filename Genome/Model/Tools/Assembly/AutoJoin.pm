@@ -721,4 +721,52 @@ sub _resolve_complementation
     return 'Contig'.$contig_number, 'yes';
 }
 
+sub create_test_temp_dir
+{
+    my ($self, $dir) = @_;
+
+    unless (-d $dir) {
+	$self->error_message("Unable to access test directory: $dir");
+	return;
+    }
+
+    chdir ($dir);
+    mkdir ("$dir/edit_dir");
+
+    my $test_root_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-AutoJoin';
+
+    eval {
+	symlink $test_root_dir.'/phd_dir', "$dir/phd_dir";
+    };
+    if ($@) {
+	$self->error_message("Unable to create link to test phd_dir");
+	return;
+    };
+
+    eval {
+	symlink $test_root_dir.'/phdball_dir', "$dir/phdball_dir";
+    };
+    if ($@) {
+	$self->error_message("Unable to create link to test phdball_dir");
+	return;
+    };
+
+    eval {
+	symlink $test_root_dir.'/sff_dir', "$dir/sff_dir";
+    };
+    if ($@) {
+	$self->error_message("Unable to create link to test sff_dir");
+	return;
+    };
+
+    eval {
+	symlink $test_root_dir.'/edit_dir/autojoin_test.ace', "$dir/edit_dir/autojoin_test.ace";
+    };
+    if ($@) {
+	$self->error_message("Unable to create link to test ace");
+	return;
+    };
+    return 1;
+}
+
 1;
