@@ -264,20 +264,40 @@ sub _print_contig_ends
     $self->error_message("Can not create file handle for cross_match fasta") and
 	return unless $fh;
 
+    my $merge_type = $self->merge_type;
+
     foreach my $contig ($ao->contigs->all)
     {
 	my $name = $contig->name;
 	my $number = $name;
 	$number =~ s/^contig//i;
 
-	#ONLY INCLUDE CONTIGS THAT ARE A PART OF SCAFFOLD
-	next unless exists $scaf_contigs->{$number}->{scaffolds};
-		
-	my ($left_end, $right_end);
-
 	my $fasta = $contig->unpadded_base_string;
-
 	my $length = $contig->unpadded_length;
+
+	#PARAMETERS SPECIFIC FOR 
+	if ($merge_type eq 'ByCrossMatch') {
+	    #IGNORE CONTIGS LESS THAN THIS LENGTH
+	    if ($self->min_length) {
+		next if $length < $self->min_length;
+	    }
+	    #IGNORE CONTIGS GREATHER THAN THIS LENGTH
+	    if ($self->max_length) {
+		next if $length > $self->max_length;
+	    }
+	    #IGNORE CONTIGS WITH LESS THAN THIS NUMBER OF READS
+	    if ($self->min_read_num) {
+		my $reads = $contig->assembled_reads;
+		my $read_count = $reads->all;
+		next if $read_count < $self->min_read_num;
+	    }
+	}
+	else {
+	    #ONLY INCLUDE CONTIGS THAT ARE A PART OF SCAFFOLD
+	    next unless exists $scaf_contigs->{$number}->{scaffolds};
+	}
+
+	my ($left_end, $right_end);
 
 	$fasta_length = $length if $length < $fasta_length;
 
@@ -767,6 +787,12 @@ sub create_test_temp_dir
 	return;
     };
     return 1;
+}
+
+sub merge_type {
+    my ($self) = @_;
+    my ($merge_type) = ref($self) =~ /(\w+)$/;
+    return $merge_type;
 }
 
 1;
