@@ -38,8 +38,8 @@ class Genome::Model::Event {
         ref_seq_id         => { is => 'VARCHAR2', len => 64 },
         parent_event       => { is => 'Genome::Model::Event', id_by => 'parent_event_id', constraint_name => 'GME_PAEID_FK' },
         prior_event        => { is => 'Genome::Model::Event', id_by => 'prior_event_id', constraint_name => 'GME_PPEID_FK' },
-        date_completed     => { is => 'TIMESTAMP', len => 6 },
-        date_scheduled     => { is => 'TIMESTAMP', len => 6 },
+        date_completed     => { is => 'TIMESTAMP', len => 20 },
+        date_scheduled     => { is => 'TIMESTAMP', len => 20 },
         lsf_job_id         => { is => 'VARCHAR2', len => 64 },
         retry_count        => { is => 'NUMBER', len => 3 },
         status_detail      => { is => 'VARCHAR2', len => 200 },
@@ -318,12 +318,14 @@ sub invalid {
     my ($self) = shift;
 
     my @tags = $self->SUPER::invalid(@_);
-    unless (Genome::Model->get($self->model_id)) {
-        push @tags, UR::Object::Tag->create(
+    if ($self->model_id) {
+        unless (Genome::Model->get($self->model_id)) {
+            push @tags, UR::Object::Tag->create(
                                             type => 'invalid',
                                             properties => ['model_id'],
                                             desc => "There is no model with id ". $self->model_id,
                                         );
+        }
     }
 
     if ($self->instrument_data_id && !Genome::InstrumentData->get($self->instrument_data_id)) {

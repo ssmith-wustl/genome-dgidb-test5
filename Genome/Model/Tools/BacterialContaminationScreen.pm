@@ -12,8 +12,8 @@ class Genome::Model::Tools::BacterialContaminationScreen
             doc => "THIS IS A TEST",
    has => [
             type => {
-                        is => 'String'
-                        
+                        is => 'String',
+                        valid_values => ['read','contig','16S']
                     },
             e => {
                     calculate_from => [ 'type' ],

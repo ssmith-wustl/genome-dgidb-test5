@@ -8,6 +8,13 @@ use File::Path;
 use Data::Dumper;
 require Genome::Utility::FileSystem;
 
+my @subject_types = ();
+{
+    my $gm_class = Genome::Model->get_class_object;
+    my $m = $gm_class->property_meta_for_name('subject_type');
+    @subject_types = @{ $m->valid_values };
+}
+
 class Genome::Model::Command::Define {
     is => 'Command',
     is_abstract => 1,
@@ -24,8 +31,8 @@ class Genome::Model::Command::Define {
             is_input => 1,
             doc => 'The name of the subject all the reads originate from'
         },
-        ],
-        has_optional => [
+    ],
+    has_optional => [
         model_name => {
             is => 'varchar',
             len => 255,
@@ -42,7 +49,8 @@ class Genome::Model::Command::Define {
             is => 'varchar',
             len => 255,
             is_input => 1,
-            doc => 'The type of subject all the reads originate from'
+            doc => 'The type of subject all the reads originate from',
+            valid_values => \@subject_types
         },
         auto_assign_inst_data => {
                                   is => 'Boolean',

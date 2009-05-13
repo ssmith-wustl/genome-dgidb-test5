@@ -800,7 +800,7 @@ sub help_sub_commands
         }
     }
 
-    my @colors = (qw/ red cyan blue /);
+    my @colors = (qw/ red   bold /);
     my $text = '';
     for my $row (@data) {
         for my $c (0..2) {

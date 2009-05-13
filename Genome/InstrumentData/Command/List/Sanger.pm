@@ -19,6 +19,21 @@ class Genome::InstrumentData::Command::List::Sanger {
     doc => 'list sanger/3730 runs (96-well) available for analysis',
 };
 
+sub create {
+
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+
+    unless (defined($self->filter())) {
+        $self->error_message("You must provide a --filter option when listing sanger instrument data");  
+        return;
+    }
+   
+    return $self;
+
+}
+
 sub _base_filter {
     'sequencing_platform=sanger'
 }

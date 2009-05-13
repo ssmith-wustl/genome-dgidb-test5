@@ -72,18 +72,31 @@ sub execute {
 
     if ( 1 ) { #$self->list_available ) {
         # List available
-        my @available_instrument_data = $self->model->compatible_instrument_data;
-        unless ( @available_instrument_data ) {
-            $self->status_message( 
-                sprintf(
-                    'No compatible instrument data found for model (<name> %s <subject name> %s)',
-                    $self->model->name, 
-                    $self->model->subject_name,
-                ) 
+        my @compatible_instrument_data = $self->model->compatible_instrument_data;
+        my @assigned_instrument_data = $self->model->assigned_instrument_data;
+        my @unassigned_instrument_data = $self->model->unassigned_instrument_data;
+
+        $self->status_message(
+            sprintf(
+                'Model (<name> %s <subject_name> %s): %s assigned and %s unassigned of %s compatible instrument data',
+                $self->model->name,
+                $self->model->subject_name,
+                scalar @assigned_instrument_data,
+                scalar @unassigned_instrument_data,
+                scalar @compatible_instrument_data
+            )
+        );
+
+        if (@unassigned_instrument_data) {
+            my $lister = Genome::Model::Command::InstrumentData::List->create(
+                unassigned=>1,
+                model_id => $self->model->id
             );
-            return;
+
+            return $lister->execute;
         }
-        print Data::Dumper::Dumper(\@available_instrument_data);
+
+        return 1;
     }
 
     return 1;

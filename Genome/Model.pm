@@ -17,6 +17,8 @@ use Sort::Naturally;
 use YAML;
 use Archive::Tar;
 
+our %SUBJECT_TYPES;
+
 class Genome::Model {
     type_name => 'genome model',
     table_name => 'GENOME_MODEL',
@@ -30,7 +32,8 @@ class Genome::Model {
         name                    => { is => 'Text', len => 255 },
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
         subject_name            => { is => 'Text', len => 255 },
-        subject_type            => { is => 'Text', len => 255 },
+        subject_type            => { is => 'Text', len => 255, 
+                                     valid_values => [keys %SUBJECT_TYPES] },
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
         subject                 => { calculate_from => [ 'subject_name', 'subject_type' ],
@@ -128,6 +131,8 @@ class Genome::Model {
     doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
 };
 
+
+
 sub create {
     my $class = shift;
     
@@ -173,39 +178,42 @@ sub create {
     return $self;
 }
 
+BEGIN {  # This is ugly when its above the class definition, but I need it to happen first.
 #< Subjects >#
-my %SUBJECT_TYPES = (
-    species_name => {
-        needs_to_be_verified => 1,
-        class => 'Genome::Taxon',
-        property => 'species_name',
-    },
-    sample_name => {
-        needs_to_be_verified => 1,
-        class => 'Genome::Sample',
-        property => 'name',
-    },
-    genomic_dna => {
-                    needs_to_be_verified => 1,
-                    class => 'Genome::Sample::Genomic',
-                    property => 'name',
-                },
-    sample_group => {
-        needs_to_be_verified => 0,
-        #class => 'Genome::Sample',
-        #property => 'name',
-    },
-    dna_resource_item_name => {
-        needs_to_be_verified => 0,
-        #class => 'Genome::Sample',
-        #property => 'name',
-    },
-    flow_cell_id => {
-                     needs_to_be_verified => 1,
-                     class => 'Genome::InstrumentData::Solexa',
-                     property => 'flow_cell_id',
-                 },
-);
+    %SUBJECT_TYPES = (
+        species_name => {
+            needs_to_be_verified => 1,
+            class => 'Genome::Taxon',
+            property => 'species_name',
+        },
+        sample_name => {
+            needs_to_be_verified => 1,
+            class => 'Genome::Sample',
+            property => 'name',
+        },
+        genomic_dna => {
+                        needs_to_be_verified => 1,
+                        class => 'Genome::Sample::Genomic',
+                        property => 'name',
+                    },
+        sample_group => {
+            needs_to_be_verified => 0,
+            #class => 'Genome::Sample',
+            #property => 'name',
+        },
+        dna_resource_item_name => {
+            needs_to_be_verified => 0,
+            #class => 'Genome::Sample',
+            #property => 'name',
+        },
+        flow_cell_id => {
+                         needs_to_be_verified => 1,
+                         class => 'Genome::InstrumentData::Solexa',
+                         property => 'flow_cell_id',
+                     },
+    );
+};
+
 sub subject_types {
     return keys %SUBJECT_TYPES;
 }

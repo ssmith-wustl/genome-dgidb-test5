@@ -7,7 +7,7 @@ use warnings;
 use Genome;
 
 class Genome::InstrumentData::Command::Align {
-    is => ['Genome::Utility::FileSystem','Command'],
+    is => ['Command','Genome::Utility::FileSystem'],
     has_abstract_constant => [
         aligner_name                    => { is => 'Text' },
     ],

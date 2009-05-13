@@ -57,7 +57,7 @@ class Genome::Model::Tools::DesignTranscriptSequence {
 sub help_brief {
     return <<EOS
   This tool was design to retrieve, from the data base, coding sequence of a transcript centered around some variation.
-  EOS
+EOS
 }
 
 sub help_synopsis {

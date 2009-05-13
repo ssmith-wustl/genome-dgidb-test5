@@ -67,7 +67,8 @@ UR::Object::Type->define(
         },
         'gram_stain' => {
             is => 'String',
-            doc => 'Gram Stain'
+            doc => 'Gram Stain',
+            valid_values => ['positive','negative']
         },
         'blastp_archive_dir' => {
                                  is  => 'String',

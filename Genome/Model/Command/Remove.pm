@@ -32,7 +32,7 @@ sub sub_command_sort_position { 4 }
 
 sub help_synopsis {
     return <<"EOS"
-    genome-model remove FooBar
+genome-model remove FooBar
 EOS
 }
 

@@ -12,7 +12,7 @@ class Genome::Individual::Command::List {
             is_constant => 1, 
             value => 'Genome::Individual'
         },
-        show => { default_value => 'id,name' },
+        show => { default_value => 'id,name,species_name' },
     ],
 };
 

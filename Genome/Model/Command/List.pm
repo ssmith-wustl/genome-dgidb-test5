@@ -22,9 +22,10 @@ sub help_brief {
     return 'List models';
 }
 
-sub help_deatil {
-    return help_brief();
-}
+# TODO: provide customized, detailed help
+# sub help_detail {
+#     return help_brief();
+#}
 
 sub is_subcommand_delegator { 1 }
 
