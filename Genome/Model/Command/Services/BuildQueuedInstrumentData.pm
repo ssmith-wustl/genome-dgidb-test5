@@ -41,7 +41,7 @@ sub execute {
                              pse_status => 'inprogress',
                          );
     my %model_ids;
-    foreach my $pse (@pses) {
+    PSE: foreach my $pse (@pses) {
         if ($self->test){
             next if $pse->id > 0;
         }
@@ -54,36 +54,69 @@ sub execute {
         my ($research_project_name)     = $pse->added_param('research_project_name');
         my ($processing_profile_name)   = $pse->added_param('processing_profile_name');
 
+        unless ($instrument_data_type =~ /sanger/i) { next PSE; }
+
+        if ($instrument_data_type =~ /sanger/i) {
+
+            my $pse      = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
+
+            unless (defined($pse)) {
+                $self->error_message("failed to fetch pse for sanger instrument data with id '$instrument_data_id'");
+                next PSE;
+            }
+            
+            my $run_name = $pse->run_name();
+            
+            unless (defined($run_name)) {
+                $self->error_message("failed to get a run_name for sanger instrument data with id '$instrument_data_id'");
+                next PSE;
+            }                                                                     
+       
+            $instrument_data_id = $run_name;
+
+        } 
+        
         my $pp = Genome::ProcessingProfile->get(name => $processing_profile_name);
         unless ($pp) {
             $self->error_message("Failed to get processing profile '$processing_profile_name' for inprogress pse ". $pse->pse_id);
-            next;
+            next PSE;
         }
+        warn ref($pp);
+
         my $model = Genome::Model->get(
                                         subject_name => $subject_name,
                                         processing_profile_id => $pp->id,
                                     );
+
         unless ($model) {
+        
             my $model_name = $subject_name .'.'. $pp->name;
-            my $model_create = Genome::Model::Command::Create::Model->create(
-                                                                             model_name => $model_name,
-                                                                             subject_name => $subject_name,
-                                                                             subject_type => $subject_type,
-                                                                             processing_profile_name => $pp->name,
-                                                                             bare_args => [],
-                                                                         );
-            unless ($model_create->execute) {
+            
+            my $model = Genome::Model->create(
+                                              model_name              => $model_name,
+                                              subject_name            => $subject_name,
+                                              subject_type            => $subject_type,
+                                              processing_profile_name => $pp->name(),
+                                              auto_assign_inst_data   => 1,
+                                             );
+                                                  
+            unless (defined($model)) {
                 $self->error_message("Failed to create model '$model_name'");
                 next;
             }
+            
         }
+        
         $model = Genome::Model->get(
                                     subject_name => $subject_name,
                                     processing_profile_id => $pp->id,
                                 );
-        my @existing_instrument_data = Genome::Model::InstrumentDataAssignments->get(
-                                                                                     instrument_data_id => $instrument_data_id,
-                                                                                     model_id => $model->id,
+
+        unless ($model->auto_assign_inst_data() == 1) { next PSE; }
+        
+        my @existing_instrument_data = Genome::Model::InstrumentDataAssignment->get(
+                                                                                    instrument_data_id => $instrument_data_id,
+                                                                                    model_id => $model->id,
                                                                                  );
         if (@existing_instrument_data) {
             $self->status_message('Existing instrument_data found for model '. $model->id .' and instrument_data_id '. $instrument_data_id);
