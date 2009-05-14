@@ -21,7 +21,7 @@ class Genome::Model::Tools::Fasta::Trim::Lucy {
     keep_lucy_file => {
         type => 'Boolean',
         default => 1,
-        doc => 'Keep the lucy produced positions file.  It will be named as the output fasta with a ".lucy.debug" extension',
+        doc => 'Keep the lucy produced positions file.  It will be named as the output fasta with a ".lucy" extension',
     },
     ],
 };
@@ -29,7 +29,11 @@ class Genome::Model::Tools::Fasta::Trim::Lucy {
 #< Command Interface >#
 sub help_detail { 
     return <<EOS 
-    Requires a quality file.
+A wrapper for lucy, a command line executable for trimming quality and vector in FASTAs.  This module not only runs lucy, it will fetch the vector FASTAs, create insert flanking regions, and then mask the FASTA file with the lucy results.
+
+Requirements:
+ 1. quality file named with the fasta file name with a '.qual' extension
+ 2. that the vector be in the database
 EOS
 }
 
@@ -122,7 +126,7 @@ sub _tmp_lucy_file {
 }
 
 sub lucy_file {
-    return $_[0]->output_fasta_file.'.lucy.debug';
+    return $_[0]->output_fasta_file.'.lucy';
 }
 
 #< Vector Fastas >#
@@ -304,13 +308,24 @@ sub _screen_fasta_and_qual_files {
             }
         } until $fasta->id eq $lucy->{id};
 
+        # Skip if both clr values are zero
+        next if $lucy->{clr_left} == 0 and $lucy->{clr_right} == 0;
+        
         # Trim
+        #  2009-05-13
+        #  We'll replace the sequence up to the clr value for each side.  To determine
+        #  the trimming character (N or X) test if the clv (vector) value is the same as the clr.
+        #  If so use X for vector.  If not, assume quality trimming, and use N.  The length of
+        #  replacement will be based on the clr vlaue.
         my $left_seq = '';
         my $right_seq = '';
-
         # Left
         if ( $lucy->{clr_left} ) { # Trim on the left
-            #if ( $lucy->{clv_left} or $lucy->{cln_left} ) { # Trim on the left
+            my $trim_char = ( $lucy->{clr_left} == $lucy->{clv_left} )
+            ? 'X'
+            : 'N';
+            $left_seq .= $trim_char x $lucy->{cln_left};
+=cut
             if ( $lucy->{clv_left} >= $lucy->{cln_left} ) { # lq then vector
                 $left_seq .= 'N' x $lucy->{cln_left};
                 $left_seq .= 'X' x ($lucy->{clv_left} - $lucy->{cln_left});
@@ -321,9 +336,7 @@ sub _screen_fasta_and_qual_files {
             }
 
             # check left seq length
-            if ( 0 ) { # remove until we figure out best positions to use
-                #unless ( $lucy->{clb_left} eq length($left_seq) ) {
-                #unless ( $lucy->{clr_left} eq length($left_seq) ) {
+            unless ( $lucy->{clr_left} eq length($left_seq) ) {
                 $self->error_message("Miscalculated the left trimmed sequence:");
                 print Dumper([{
                         seq => $left_seq, 
@@ -333,12 +346,17 @@ sub _screen_fasta_and_qual_files {
                     ]);
                 return;
             }
+=cut
         }
 
         # Right
         my $fasta_length = $fasta->length;
-        if ( $lucy->{clr_right} ) { # Trim on the left
-            #if ( $lucy->{clv_right} or $lucy->{cln_right} ) { # Trim on the right
+        if ( $lucy->{clr_right} ) { # Trim on the right
+            my $trim_char = ( $lucy->{clr_right} == $lucy->{clv_right} )
+            ? 'X'
+            : 'N';
+            $right_seq = $trim_char x ($fasta_length - $lucy->{clr_right} + 1);
+=cut
             if ( $lucy->{clv_right} <= $lucy->{cln_right} ) { # vector then lq
                 $right_seq .= 'X' x ($lucy->{cln_right} - $lucy->{clv_right}) if $lucy->{clv_right}; 
                 $right_seq .= 'N' x ($fasta_length - $lucy->{cln_right} + 1);
@@ -349,9 +367,7 @@ sub _screen_fasta_and_qual_files {
             }
 
             # check right seq length
-            if ( 0 ) { # remove until we figure out best positions to use
-                #unless ( ($fasta_length - $lucy->{clb_right} + 1) eq length($right_seq) ) {
-                #unless ( ($fasta_length - $lucy->{clr_right} + 1) eq length($right_seq) ) {
+            unless ( ($fasta_length - $lucy->{clr_right} + 1) eq length($right_seq) ) {
                 $self->error_message("Miscalculated the right trimmed sequence:");
                 print Dumper([{ 
                         seq => $right_seq, 
@@ -363,6 +379,7 @@ sub _screen_fasta_and_qual_files {
                     ]);
                 return;
             }
+=cut
         }
 
         my $seq = join(
@@ -405,6 +422,74 @@ sub _screen_fasta_and_qual_files {
 }
 
 1;
+
+=pod
+
+=head1 Name
+
+Genome::Model::Tools::Fasta::Trim::Lucy
+
+=head1 Synopsis
+
+A wrapper for lucy, a command line executable for trimming quality and vector in FASTAs.  This module not only runs lucy, it will fetch the vector FASTAs and flanking regions, and mask the FASTA file with the lucy results.
+
+=head1 Usage
+
+my $lucy = Genome::Model::Tools::Fasta::Trim::Lucy->create(
+) or die;
+$lucy->execute or die;
+
+=head1 Methods
+
+=head2 create
+
+ my $lucy = Genome::Model::Tools::Fasta::Trim::Lucy->create(
+    fasta_file => $fasta, # REQUIRED - Fasta file.  Also must have quality file named with a '.qual' extentsion
+    vector_name => $vector, # REQUIRED - Name of vector to screen against.
+    keep_lucy_file => 1, # OPTIONAL - Keep the lucy 'debug' file.  Default is 0.
+ )
+    or die;
+
+=over
+
+=item I<Synopsis>   Creates a lucy command object.
+
+=item I<Arguments>  see above
+
+=item I<Returns>    A lucy command object.
+
+=back
+
+=head2 execute
+
+ my $rv = $lucy->execute
+    or die;
+
+=over
+
+=item I<Synopsis>   Executes the lucy command.
+
+=item I<Arguments>  None.
+
+=item I<Returns>    Boolean - true for success, false for failure
+
+=back
+
+=head1 See Also
+
+B<lucy>, B<Genome::Model::Tools::Fasta>
+
+=head1 Disclaimer
+
+Copyright (C) 2009 The Genome Center @ Washington University in St. Louis
+
+This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+=head1 Author(s)
+
+B<Eddie Belter> I<ebelter@genome.wustl.edu>
+
+=cut
 
 #$HeadURL$
 #$Id$
