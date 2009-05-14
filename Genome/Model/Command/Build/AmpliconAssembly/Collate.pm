@@ -88,7 +88,6 @@ sub _collate_amplicon_fasta_and_qual {
     while ( my $line = $fasta_fh->getline ) {
         $self->{$fasta_fh_key}->print($line);
     }
-    $self->{$fasta_fh_key}->print("\n");
 
     #QUAL
     my $qual_file = $amplicon->qual_file_for_type($type);
@@ -101,7 +100,6 @@ sub _collate_amplicon_fasta_and_qual {
     while ( my $line = $qual_fh->getline ) {
         $self->{$qual_fh_key}->print($line);
     }
-    $self->{$qual_fh_key}->print("\n");
 
     return 1;
 }
