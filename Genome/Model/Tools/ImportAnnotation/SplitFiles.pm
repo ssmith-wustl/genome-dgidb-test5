@@ -80,8 +80,8 @@ sub execute
         ['cp',$self->workdir.'/transcripts.csv',
          $self->workdir."/source_data", ],
         \undef,
-        '>', $stdout,
-        '2>', $stderr,
+        '>', \$stdout,
+        '2>', \$stderr,
         ) or croak "problem copying transcripts $!\n$stderr";
 
     # move the rest.
@@ -91,8 +91,8 @@ sub execute
          $self->workdir.'/transcript_sub_structures.csv',
          $self->workdir.'/source_data',],
         \undef,
-        '>', $stdout,
-        '2>', $stderr,
+        '>', \$stdout,
+        '2>', \$stderr,
         ) or croak "problem moving other datafiles $!\n$stderr";
 
     return 1;
