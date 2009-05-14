@@ -312,31 +312,25 @@ sub _screen_fasta_and_qual_files {
         next if $lucy->{clr_left} == 0 and $lucy->{clr_right} == 0;
         
         # Trim
-        #  2009-05-13
-        #  We'll replace the sequence up to the clr value for each side.  To determine
-        #  the trimming character (N or X) test if the clv (vector) value is the same as the clr.
-        #  If so use X for vector.  If not, assume quality trimming, and use N.  The length of
-        #  replacement will be based on the clr vlaue.
         my $left_seq = '';
         my $right_seq = '';
         # Left
         if ( $lucy->{clr_left} ) { # Trim on the left
-            my $trim_char = ( $lucy->{clr_left} == $lucy->{clv_left} )
-            ? 'X'
-            : 'N';
-            $left_seq .= $trim_char x $lucy->{cln_left};
-=cut
             if ( $lucy->{clv_left} >= $lucy->{cln_left} ) { # lq then vector
-                $left_seq .= 'N' x $lucy->{cln_left};
-                $left_seq .= 'X' x ($lucy->{clv_left} - $lucy->{cln_left});
+                # Xs up to, not including, clv_left
+                $left_seq = 'N' x ( $lucy->{cln_left} - 1 ); # if -1, then nothing happens
+                # Ns up to the clr_left value
+                $left_seq .= 'X' x ( $lucy->{clr_left} - length($left_seq) - 1 );
             }
             else { # vector then lq
-                $left_seq .= 'X' x $lucy->{clv_left};
-                $left_seq .= 'N' x ($lucy->{cln_left} - $lucy->{clv_left});
+                # Ns up to, not including, cln_left
+                $left_seq = 'X' x ( $lucy->{clv_left} - 1 ); # if -1, then nothing happens
+                # Xs up to the clr_left value
+                $left_seq .= 'N' x ( $lucy->{clr_left} - length($left_seq) - 1 );
             }
 
             # check left seq length
-            unless ( $lucy->{clr_left} eq length($left_seq) ) {
+            unless ( ( $lucy->{clr_left} - 1 ) eq length($left_seq) ) {
                 $self->error_message("Miscalculated the left trimmed sequence:");
                 print Dumper([{
                         seq => $left_seq, 
@@ -346,28 +340,33 @@ sub _screen_fasta_and_qual_files {
                     ]);
                 return;
             }
-=cut
         }
 
         # Right
         my $fasta_length = $fasta->length;
         if ( $lucy->{clr_right} ) { # Trim on the right
-            my $trim_char = ( $lucy->{clr_right} == $lucy->{clv_right} )
-            ? 'X'
-            : 'N';
-            $right_seq = $trim_char x ($fasta_length - $lucy->{clr_right} + 1);
-=cut
-            if ( $lucy->{clv_right} <= $lucy->{cln_right} ) { # vector then lq
-                $right_seq .= 'X' x ($lucy->{cln_right} - $lucy->{clv_right}) if $lucy->{clv_right}; 
-                $right_seq .= 'N' x ($fasta_length - $lucy->{cln_right} + 1);
+            if ( $lucy->{clv_right} >= $lucy->{cln_right} ) { # lq then vector
+                my $number_of_xs = ( $lucy->{clv_right} )
+                ? $fasta_length - $lucy->{clv_right}
+                : 0;
+                # Xs up to the clr_right value
+                $right_seq = 'N' x ( $fasta_length - $lucy->{clr_right} - $number_of_xs );
+                # Add Ns
+                $right_seq .= 'X' x $number_of_xs;
             }
-            else { # lq then vector
-                $right_seq .= 'X' x ($lucy->{clv_right} - $lucy->{cln_right}) if $lucy->{cln_right}; 
-                $right_seq .= 'N' x ($fasta_length - $lucy->{clv_right} + 1);
+            else { # vector then lq
+                # Get number of Ns up to, not including, clv_right
+                my $number_of_ns = ( $lucy->{cln_right} )
+                ? $fasta_length - $lucy->{cln_right}
+                : 0;
+                # Xs up to the clr_right value
+                $right_seq = 'X' x ( $fasta_length - $lucy->{clr_right} - $number_of_ns );
+                # Add Ns
+                $right_seq .= 'N' x $number_of_ns;
             }
 
             # check right seq length
-            unless ( ($fasta_length - $lucy->{clr_right} + 1) eq length($right_seq) ) {
+            unless ( ( $fasta_length - $lucy->{clr_right} ) eq length($right_seq) ) {
                 $self->error_message("Miscalculated the right trimmed sequence:");
                 print Dumper([{ 
                         seq => $right_seq, 
@@ -379,7 +378,6 @@ sub _screen_fasta_and_qual_files {
                     ]);
                 return;
             }
-=cut
         }
 
         my $seq = join(
