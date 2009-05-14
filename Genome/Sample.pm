@@ -14,64 +14,39 @@ use warnings;
 
 class Genome::Sample {
     table_name => q|
-(
-    select 
-        --temporary
-        d.dna_id                id,
-        a.sample_name           name,
-        o.taxon_id,
-        
-        --futuristic
-        s.organism_sample_id    id_new,
-        s.full_name             name_new,
-        s.taxon_id              taxon_id_new,
-        
-        --common
-        s.sample_name           extraction_label,
-        s.sample_type           extraction_type,
-        s.description           extraction_desc,
-        s.cell_type,        
-        s.tissue_label,    
-        s.tissue_name           tissue_desc,
-        s.organ_name,    
-        s.source_id,    
-        s.source_type
-    from (
-        select sample_name
-        from solexa_lane_summary@dw
-        union
-        select sample_name
-        from run_region_454@dw
-        union
-        select incoming_dna_name
-        from run_region_454@dw
-        where sample_name is null
-        union
-        select value
-        from mg.misc_attribute@dw
-        where entity_class_name = 'Genome::InstrumentData::Sanger' and
-        property_name = 'sample_name'
-    ) a
-    join dna@oltp d on d.dna_name = a.sample_name
-    left join organism_sample@dw s on d.dna_id = s.organism_sample_id
-    left join (
-        dna_resource@oltp dr 
-        join entity_attribute_value@oltp eav        
-            on eav.entity_id = dr.dr_id
-            and eav.type_name = 'dna'
-            and eav.attribute_name = 'org id'   
-        join organism_taxon@dw o 
-            on o.legacy_org_id = eav.value
-    ) on dr.dna_resource_prefix = substr(dna_name,0,4)
-) sample
-|,
+        (
+            select
+                --fully precise and connected to LIMS
+                s.organism_sample_id    id,
+                s.full_name             name,
+
+                -- collaborator's output
+                s.sample_name           extraction_label,
+                s.sample_type           extraction_type,
+                s.description           extraction_desc,
+
+                -- collaborator's source
+                s.cell_type,
+                s.tissue_label,
+                s.tissue_name           tissue_desc,
+                s.organ_name,
+
+                -- patient, environment, or group for pools
+                s.source_id,
+                s.source_type,
+
+                -- species/strain
+                s.taxon_id              taxon_id
+            from organism_sample@dw s
+        ) sample
+    |,
     id_by => [
         id                          => { is => 'Number',
                                         doc => 'the numeric ID for the specimen in both the LIMS and the analysis system' },
     ],
     has => [
         name                        => { is => 'Text',     len => 64, 
-        								doc => 'the fully qualified name for the sample (the "DNA NAME" in LIMS for both DNA and RNA)' },
+                                        doc => 'the fully qualified name for the sample (the "DNA NAME" in LIMS for both DNA and RNA)' },
     ],
     has_optional => [	
         extraction_label            => { is => 'Text', 
@@ -105,14 +80,10 @@ class Genome::Sample {
         source_name                 => { via => 'source', to => 'name' },
         
         taxon                       => { is => 'Genome::Taxon', id_by => 'taxon_id', 
-										doc => 'the taxon of the sample\'s source' },
+                                        doc => 'the taxon of the sample\'s source' },
         
         species_name                => { via => 'taxon', to => 'species_name', 
-        								doc => 'the name of the species of the sample source\'s taxonomic category' },
-                                        
-        _id_new                     => { column_name => 'ID_NEW' },
-        _name_new                   => { column_name => 'NAME_NEW' },
-        _taxon_id_new               => { column_name => 'TAXON_ID_NEW' },
+                                        doc => 'the name of the species of the sample source\'s taxonomic category' },
     ],
     has_many => [
         libraries                   => { is => 'Genome::Library', reverse_id_by => 'sample' },
