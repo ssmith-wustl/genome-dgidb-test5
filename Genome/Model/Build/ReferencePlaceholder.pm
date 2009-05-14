@@ -107,5 +107,16 @@ sub subreference_names {
     return @basenames;
 }
 
+sub description {
+    my $self = shift;
+    my $path = $self->data_directory . '/description';
+    unless (-e $path) {
+        return 'all';
+    }
+    my $fh = IO::File->new($path);
+    my $desc = $fh->getline;
+    chomp $desc;
+    return $desc;
+}
 
 1;
