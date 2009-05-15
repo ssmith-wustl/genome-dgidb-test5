@@ -414,7 +414,7 @@ sub execute_with_bsub {
     my $model_id = $self->model_id;
 
     ## should check if $self isa Command??
-    $queue ||= 'long';
+    $queue ||= 'apipe';
 
     $DB::single = $DB::stopper;
 

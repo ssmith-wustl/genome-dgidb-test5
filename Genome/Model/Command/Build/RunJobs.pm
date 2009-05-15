@@ -95,7 +95,7 @@ sub execute {
 
     $DB::single=1;
     
-    my $lsf_queue = $self->bsub_queue || 'long';
+    my $lsf_queue = $self->bsub_queue || 'apipe';
 
     my $stage = Workflow::Model->create(
                                         name => $self->build_id . ' ' . $self->stage_name,
