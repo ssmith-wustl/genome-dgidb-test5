@@ -4,10 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
+use File::Copy;
 use File::Basename;
-use File::Temp;
-use IO::File;
 
 class Genome::Model::Tools::Maq::MapToBam {
     is  => 'Genome::Model::Tools::Maq',
@@ -36,6 +34,11 @@ class Genome::Model::Tools::Maq::MapToBam {
         keep_sam    => {
             is  => 'Boolean',
             doc => 'flag to keep sam file',
+            default => 0,
+        },
+        fix_mate    => {
+            is  => 'Boolean',
+            doc => 'fix mate info problem in sam/bam',
             default => 0,
         },
     ],
@@ -92,6 +95,25 @@ sub execute {
     $rv  = system $cmd;
     $self->error_message("$cmd failed") and return if $rv or !-s $bam_file;
      
+    #watch out disk space, for now hard code maxMemory 200000000 
+    if ($self->fix_mate) {
+        my $tmp_file = $bam_file.'.sort';
+        $rv = system "$samtools sort -n -m 2000000000 $bam_file $tmp_file";
+        $self->error_message("first sort failed") and return if $rv or !-s $tmp_file.'.bam';
+
+        $rv = system "$samtools fixmate $tmp_file.bam $tmp_file.fixmate";
+        $self->error_message("fixmate failed") and return if $rv or !-s $tmp_file.'.fixmate';
+        unlink "$tmp_file.bam";
+
+        $rv = system "$samtools sort -m 2000000000 $tmp_file.fixmate $tmp_file.fix";
+        $self->error_message("Second sort failed") and return if $rv or !-s $tmp_file.'.fix.bam';
+        
+        unlink "$tmp_file.fixmate";
+        unlink $bam_file;
+
+        move "$tmp_file.fix.bam", $bam_file;
+    }
+
     if ($self->index_bam) {
         $rv = system "$samtools index $bam_file";
         $self->error_message('Indexing bam_file failed') and return if $rv;
