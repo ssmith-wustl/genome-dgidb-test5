@@ -416,10 +416,15 @@ sub calculate_elapsed_time {
         $diff = time - UR::Time->datetime_to_time( $date_scheduled);
     }
 
-    my $m = int($diff/60);
-    my $s = $diff % 60;
-    return "${m}m ${s}s" if $m;
-    return "${s}s";
+    # convert seconds to days, hours, minutes
+    my $seconds = $diff;
+    my $days = int($seconds/(24*60*60));
+    $seconds -= $days*24*60*60;
+    my $hours = int($seconds/(60*60));
+    $seconds -= $hours*60*60;
+    my $minutes = int($seconds/60);
+    $seconds -= $minutes*60;
+    return sprintf("%d:%02d:%02d:%02d\n",$days,$hours,$minutes,$seconds);
 }
 
 sub to_html {
