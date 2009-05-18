@@ -269,7 +269,18 @@ sub calculate_elapsed_time {
     $seconds -= $hours*60*60;
     my $minutes = int($seconds/60);
     $seconds -= $minutes*60;
-    return sprintf("%d:%02d:%02d:%02d\n",$days,$hours,$minutes,$seconds);
+    my $formatted_time;
+    if ($days) {
+        $formatted_time = sprintf("%d:%02d:%02d:%02d",$days,$hours,$minutes,$seconds);
+    } elsif ($hours) {
+        $formatted_time = sprintf("%02d:%02d:%02d",$hours,$minutes,$seconds);
+    } elsif ($minutes) {
+        $formatted_time = sprintf("%02d:%02d",$minutes,$seconds);
+    } else {
+        $formatted_time = sprintf("%02d:%02d",$minutes,$seconds);
+    }
+
+    return $formatted_time;
 }
 
 sub xml {
