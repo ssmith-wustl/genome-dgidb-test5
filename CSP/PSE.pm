@@ -409,12 +409,8 @@ sub is_failed{
 
 sub get_fail_logs{
     my $self = shift;	
-    my $cmd = q(find /gsc/var/log/confirm_scheduled_pse/{fail,prev_fail}/ -name )
-              . q(') . $self->pse_id
-              . q(.*' 2> /dev/null);
-    my @potential = `$cmd`;
-    chomp(@potential);
-    return @potential;
+    my $pse_id = $self->pse_id;
+    return glob "/gsc/var/log/confirm_scheduled_pse/{fail,prev_fail}/$pse_id.*";
 }
 
 sub get_output_logs{
