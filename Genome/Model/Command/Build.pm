@@ -637,7 +637,7 @@ sub mail_summary {
     my $self = shift;
 
     my $model = $self->model;
-    return unless $model->can('sequencing_platform');
+    $self->status_message("No build summary for model that has no sequencing_platform") and return unless $model->processing_profile->can('sequencing_platform');
     
     my $sendmail = "/usr/sbin/sendmail -t";
     my $from = "From: ssmith\@genome.wustl.edu\n";
