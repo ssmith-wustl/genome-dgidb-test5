@@ -15,8 +15,16 @@ sub create {
 
     my $classifier = $self->classifier;
     unless ($classifier) {
-        my $training_set = $self->{training_set};
-        $classifier = new Genome::Utility::MetagenomicClassifier::Rdp(training_set => $training_set);
+        if ($self->{training_set}) {
+            my $training_set = $self->{training_set};
+            $classifier = new Genome::Utility::MetagenomicClassifier::Rdp(training_set => $training_set);
+        }
+        elsif ($self->{training_path}) {
+            $classifier = new Genome::Utility::MetagenomicClassifier::Rdp(training_path => $self->{training_path});
+        }
+        else {
+            $classifier = new Genome::Utility::MetagenomicClassifier::Rdp();
+        }
         $self->classifier($classifier);
     }
 
@@ -55,17 +63,23 @@ sub classify {
     my ($self, $seq) = @_;
 
     unless ( $seq ) {
-        $self->error_message("No sequence to classify");
+        warn ("No sequence to classify");
+        #$self->error_message("No sequence to classify");
         return;
     }
 
     my $sequence = $seq->seq;
-    if (length $sequence < 1200) {
+#    if (length $sequence < 1000) {
 #        print "sequence is too short\n";
+#        return;
+#    }
+    my $classification = $self->classifier->classify($seq);
+
+    unless ($classification) {
+        warn "Failed to classify ".$seq->display_name. " with rdp";
         return;
     }
-    my $classification = $self->classifier->classify($seq);
-    
+
     my @probe_sequences = $self->generate_probe_sequences($seq);
 
 
@@ -97,6 +111,11 @@ sub generate_probe_sequences {
     my $probe_count = 1;
     foreach my $probe_pair (@probe_pairs) {
         my ($start, $length) = @$probe_pair;
+        if ($start > $full_length) {
+            warn "$seq_name is too short";
+            next;
+        }
+
         if ($start < 0) {
             $start = $full_length + $start;
         }
