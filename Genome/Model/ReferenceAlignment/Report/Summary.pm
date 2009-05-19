@@ -321,7 +321,7 @@ $DB::single = 1;
 
     my $model_name = $model->name;
     my $build_id = $build->id;
-    my $data_directory = $build->data_directory;
+    my $data_directory = $build->data_directory . "/";
 
     my @vars = (
         model_id                                      => $model->id,
