@@ -168,7 +168,7 @@
 														[% unfiltered_snp_calls %]
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
-														1-22, X &amp; Y
+                                                        [% snp_chromosomes %]
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
 														depth &gt; 1
@@ -176,10 +176,10 @@
 												</tr>
 												<tr>
 													<td style="background-color:#F6F6F6;font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
-														[% filtered_snp_calls %]
+													  [% filtered_snp_calls %]
 													</td>
 													<td style="background-color:#F6F6F6;font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
-														1-22, X &amp; Y
+                                                      [% snp_chromosomes %]
 													</td>
 													<td style="background-color:#F6F6F6;font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
 														maq SNPfilter
