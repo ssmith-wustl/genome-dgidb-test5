@@ -35,6 +35,11 @@ class Genome::Model::Tools::MetagenomicClassifier::DetectChimeras {
             default => 0,
             doc => 'output the full classification for each probe',
         },
+        arff => {
+            type => 'BOOL',
+            default => 0,
+            doc => 'output arff header',
+        }
     ],
 };
 
@@ -67,9 +72,13 @@ sub execute {
     my $writer = Genome::Utility::MetagenomicClassifier::ChimeraClassification::Writer->create(
         output => $self->output_file,
         verbose => $self->verbose,
+        arff => $self->arff,
     )
         or return;
 
+    if ($self->arff) {
+        $writer->write_arff_header;
+    }
     while ( my $seq = $bioseq_in->next_seq ) {
         my $classification = $classifier->classify($seq);
         $writer->write_one($classification) if $classification;
