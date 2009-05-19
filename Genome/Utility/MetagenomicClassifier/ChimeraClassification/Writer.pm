@@ -12,7 +12,15 @@ class Genome::Utility::MetagenomicClassifier::ChimeraClassification::Writer {
     has_optional => [
         verbose => {
             type => 'BOOL',
+            default => 0,
+        },
+        arff => {
+            type => 'BOOL',
             default => 'false',
+        },
+        classification => {
+            type => 'STRING',
+            default => '?',
         },
     ],
 
@@ -23,6 +31,9 @@ sub write_one {
 
     if ($self->verbose) {
         $self->_write_verbose($classification)
+    }
+    elsif ($self->arff) {
+        $self->_write_arff($classification);
     }
     else {
         $self->_write_brief($classification);
@@ -39,11 +50,52 @@ sub _rdp_writer {
     return $rdp_writer;
 }
 
+sub write_arff_header {
+    my $self = shift;
+    my $output = $self->output;
+    $output->print(
+        '@relation test-weka.filters.unsupervised.attribute.NominalToString-C1
+
+@attribute Name string
+@attribute \'Common Depth\' numeric
+@attribute \'Divergent Genera Count\' numeric
+@attribute \'Percent Divergent Probes\' numeric
+@attribute \'Classification Confidence\' numeric
+@attribute \'Max Divergent Confidence Diff\' numeric
+@attribute \'Min Convergent Confidence Diff\' numeric
+@attribute classification {clean,unclassified,chimera}
+@data'
+    );
+    $output->print("\n\n");
+}
+
 sub write_brief_header {
     my $self = shift;
     my $output = $self->output;
     $output->print("Name, Common Depth, Divergent Genera Count, Percent Divergent Probes, Classification Confidence, Max Divergent Confidence Diff, Max Convergent Confidence Diff\n");
 }
+
+sub _write_arff {
+    my ($self, $classification) = @_;
+    my $output = $self->output;
+    $output->print($classification->name);
+    $output->print(',');
+    $output->print($classification->maximum_common_depth);
+    $output->print(',');
+    $output->print($classification->divergent_genera_count);
+    $output->print(',');
+    $output->print($classification->divergent_probe_percent);
+    $output->print(',');
+    $output->print($classification->classification->get_genus_confidence);
+    $output->print(',');
+    $output->print($classification->maximum_divergent_confidence_difference);
+    $output->print(',');
+    $output->print($classification->minimum_convergent_confidence_difference);
+    $output->print(',');
+    $output->print($self->classification);
+    $output->print("\n");
+}
+
 
 sub _write_brief {
     my ($self, $classification) = @_;
@@ -70,7 +122,7 @@ sub _write_verbose {
     my $rdp_writer = $self->_rdp_writer;
 
     $rdp_writer->write_one($classification->classification);
-    
+
     my @probes = @{$classification->probe_classifications};
     foreach my $probe (@probes) {
         $output->print("\t");
