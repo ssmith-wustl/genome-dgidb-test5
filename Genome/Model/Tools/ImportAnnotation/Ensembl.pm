@@ -322,6 +322,18 @@ sub execute
 
     }
 
+    my $splitter = Genome::Model::Tools::ImportAnnotation::SplitFiles->create(
+        workdir => $outputdir,
+    );
+    unless ($splitter){
+        $self->error_message("Couldn't create Genome::Model::Tools::ImportAnnotation::SplitFiles to split files in $outputdir");
+        die;
+    }
+    unless ($splitter->execute){
+        $self->error_message("Failed to split files in $outputdir!");
+        die;
+    }
+
     return 1;
 }
 
