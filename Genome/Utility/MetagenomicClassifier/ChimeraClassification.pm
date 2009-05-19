@@ -31,6 +31,19 @@ sub _fatal_message {
     confess __PACKAGE__." ERROR: $msg\n";
 }
 
+sub get_profile {
+    my $self = shift;
+    my @profile;
+    push @profile, $self->name;
+    push @profile, $self->maximum_common_depth;
+    push @profile, $self->divergent_genera_count;
+    push @profile, $self->divergent_probe_percent;
+    push @profile, $self->classification->get_genus_confidence;
+    push @profile, $self->maximum_divergent_confidence_difference;
+    push @profile, $self->minimum_convergent_confidence_difference;
+    return @profile;
+}
+
 sub probe_count {
     my $self = shift;
     my @probe_classifications = @{$self->probe_classifications};
