@@ -10,8 +10,6 @@ use List::MoreUtils qw/ uniq /;
 use Benchmark;
 use Bio::Tools::CodonTable;
 
-#UR::Context->_light_cache(1); # uh, seems to break things...
-
 class Genome::Transcript::VariantAnnotator{
     is => 'UR::Object',
     has => [
@@ -33,6 +31,39 @@ class Genome::Transcript::VariantAnnotator{
 
 my %variant_priorities = Genome::Info::VariantPriorities->for_annotation;
 
+local $SIG{__WARN__} = sub { 
+    __PACKAGE__->save_error_producing_variant(); 
+    warn @_ 
+};
+
+sub warning_message{
+    my $self = shift;
+    $self->save_error_producing_variant();
+    $self->SUPER::warning_message(@_);
+}
+
+sub error_message{
+    my $self = shift;
+    $self->save_error_producing_variant();
+    $self->SUPER::error_message(@_);
+}
+
+sub save_error_producing_variant{
+    unless ($Genome::Transcript::VariantAnnotator::error_fh){
+        $Genome::Transcript::VariantAnnotator::error_fh = IO::File->new(">variant_annotator_error_producing_variants".time.".tsv");
+    }
+    my $line = join("\t", map {$Genome::Transcript::VariantAnnotator::current_variant->{$_}} (qw/chromosome_name start stop reference variant/));
+    if ($Genome::Transcript::VariantAnnotator::last_printed_line){
+        unless ($line eq $Genome::Transcript::VariantAnnotator::last_printed_line){
+            $Genome::Transcript::VariantAnnotator::error_fh->print($line);
+            $Genome::Transcript::VariantAnnotator::last_printed_line = $line;
+        }
+    }else{
+        $Genome::Transcript::VariantAnnotator::error_fh->print($line."\n");
+        $Genome::Transcript::VariantAnnotator::last_printed_line = $line;
+    }
+}
+
 #override create and instantiate codon_translators
 sub create{
     my $class = shift;
@@ -47,6 +78,8 @@ sub create{
 sub transcripts { # was transcripts_for_snp and transcripts_for_indel
     my ($self, %variant) = @_;
 
+    $Genome::Transcript::VariantAnnotator::current_variant = \%variant; #for error tracking, we will create a variant file that exposes warnings and errors in the system
+
     # Make sure variant is set properly
     unless (defined($variant{start}) and defined($variant{stop}) and defined($variant{variant}) and defined($variant{reference}) and defined($variant{type}) and defined($variant{chromosome_name})) {
         print Dumper(\%variant);
@@ -59,6 +92,9 @@ sub transcripts { # was transcripts_for_snp and transcripts_for_indel
 
     my @annotations;
     foreach my $transcript ( @transcripts_to_annotate ) {
+        unless ($self->is_valid_transcript($transcript)){  #TODO, record this?  eventually remove, as data sanity should be resolved elsewhere
+            next;
+        }
         my %annotation = $self->_transcript_annotation($transcript, \%variant)
             or next;
         push @annotations, \%annotation;
@@ -73,6 +109,17 @@ sub transcripts { # was transcripts_for_snp and transcripts_for_indel
     }
 
     return @annotations;
+}
+
+sub is_valid_transcript{
+    my ($self, $transcript) = @_;
+    my $strand = $transcript->strand;
+    if ($strand eq '+1' or $strand eq '-1'){
+        return 1;
+    }else{
+        $self->warning_message(sprintf("invalid transcript strand($strand)! id:%d pos: %d %d %d", $transcript->transcript_id, $transcript->chrom_name, $transcript->transcript_start, $transcript->transcript_stop));
+        return undef;
+    }
 }
 
 sub prioritized_transcripts {# was prioritized_transcripts_for_snp and prioritized_transcripts_for_indel
@@ -223,20 +270,28 @@ sub _transcript_annotation
 {
     my ($self, $transcript, $variant) = @_;
 
-    #my $ss_window = $transcript->sub_structure_window;
-    #my ($main_structure) = $ss_window->scroll( $variant->{start} );
-    #return unless $main_structure;
-
     my $main_structure = $transcript->structure_at_position( $variant->{start} )
         or return;
+    my $alternate_structure = $transcript->structure_at_position( $variant->{stop} );
 
-    # skip psuedogenes
-    #return unless $ss_window->cds_exons;
-    #return unless $transcript->cds_exons;
+
 
     my $structure_type = $main_structure->structure_type;
-    # skip micro rnas
-    #return if $structure_type eq 'rna';
+    my $alternate_structure_type = $alternate_structure->structure_type;
+
+    unless ($structure_type eq $alternate_structure_type){
+        if ($structure_type eq 'flank'){
+            $structure_type = $alternate_structure_type;
+        }
+        if ($structure_type =~ /intron/){
+            $structure_type = $alternate_structure_type if $alternate_structure_type =~ /exon/;
+        }
+        if ($structure_type eq 'utr_exon'){
+            $structure_type = $alternate_structure_type if $alternate_structure_type eq 'cds_exon';
+        }
+    }
+
+    #print "post: $structure_type : $alternate_structure_type\n";
 
     my $method = '_transcript_annotation_for_' . $structure_type;
 
@@ -345,8 +400,9 @@ sub _transcript_annotation_for_flank
             $c_position = "*" . ($position - $cds_exon_positions[1]);
             $trv_type = "3_prime_flanking_region";
             $distance_to_transcript =  $position - $transcript->transcript_stop;
+        } else {
+            $self->warning_message("In _transcript_annotation_for_flank and probably shouldnt be (position falls within the transcript)...");
         }
-
     }elsif($transcript->strand eq '-1'){
 
         if ( $position < $transcript->transcript_stop ) {
@@ -360,12 +416,12 @@ sub _transcript_annotation_for_flank
             $c_position = $cds_exon_positions[1] - $position;
             $trv_type = "5_prime_flanking_region";
             $distance_to_transcript = $transcript->transcript_stop - $position;
+        } else {
+            $self->warning_message("In _transcript_annotation_for_flank and probably shouldnt be (position falls within the transcript)...");
         }
     } else {
-        $self->warning_message("In _transcript_annotation_for_flank and probably shouldnt be (position falls within the transcript)...");
+        $self->warning_message("Invalid strand for transcript: " . $transcript->strand);
     }
-    #print Dumper($transcript);
-    #print Dumper($variant);
 
     return
     (
