@@ -13,7 +13,7 @@ use_ok('Genome::Model::Tools::Consed::TracesToNav');
 my $refseq = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/10_126008345_126010576.c1.refseq.fasta";
 my $ace = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/10_126008345_126010576.ace.1";
 
-my $list = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576/edit_dir/Nav.list";
+my $list = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToNav/Nav.list";
 
 ok (-s $refseq);
 ok (-s $ace);
