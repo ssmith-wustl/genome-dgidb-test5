@@ -10,18 +10,46 @@ class Genome::Utility::Window{
         iterator => {is => 'UR::Object::Iterator'},
         range   => { is => 'Integer', default_value => 0 },
 
-        _start => { is => 'Integer', default_value => 0},
-        _stop => { is => 'Integer', default_value => 0},
-        _max => { is => 'Integer'},
-        _min => { is => 'Integer'},
+        _start => { 
+            is => 'Integer', 
+            default_value => 0,
+            is_optional => 1,
+        },
+        _stop => { 
+            is => 'Integer', 
+            default_value => 0,
+            is_optional => 1,
+        },
+        _max => { 
+            is => 'Integer',
+            is_optional => 1,
+        },
+        _min => { 
+            is => 'Integer',
+            is_optional => 1,
+        },
 
-        _iterator_position => { is => 'Integer', default_value => 0},
-        _iterator_done => { is => 'boolean'},
+        _iterator_position => { 
+            is => 'Integer', 
+            default_value => 0,
+            is_optional => 1,
+        },
+        _iterator_done => { 
+            is => 'Boolean',
+            is_optional => 1, 
+        },
 
         #_object_is_in_range => { is => 'boolean'},
-        _leftover_object => { is => 'UR::Object'},
+        _leftover_object => { 
+            is => 'UR::Object',
+            is_optional => 1,
+        },
 
-        _objects => { is => 'UR::Object', is_many => 1 },
+        _objects => { 
+            is => 'UR::Object', 
+            is_many => 1,
+            is_optional => 1,
+        },
     ]
 };
 
