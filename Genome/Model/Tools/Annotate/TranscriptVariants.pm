@@ -10,6 +10,11 @@ use Data::Dumper;
 use IO::File;
 use Genome::Info::IUB;
 
+my $low=20000;
+my $high=100000;
+UR::Context->object_cache_size_lowwater($low);
+UR::Context->object_cache_size_highwater($high);
+
 
 class Genome::Model::Tools::Annotate::TranscriptVariants{
     is => 'Genome::Model::Tools::Annotate',
@@ -182,17 +187,19 @@ sub execute {
         }
     }
 
-    # omit headers as necessary
+    # omit headers as necessary 
     $output_fh->print( join(',', $self->transcript_report_headers), "\n" ) unless $self->no_headers;
 
     # annotate all of the input variants
     my $chromosome_name = '';
+    my $last_variant_start = 0;
     my $annotator = undef;
     while ( my $variant = $variant_svr->next ) {
         $variant->{type} = $self->infer_variant_type($variant);
         # make a new annotator when we begin and when we switch chromosomes
         unless ($variant->{chromosome_name} eq $chromosome_name) {
             $chromosome_name = $variant->{chromosome_name};
+            $last_variant_start = 0;
 
             my $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
             die Genome::Transcript->error_message unless $transcript_iterator;
@@ -207,6 +214,25 @@ sub execute {
             );
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
         }
+        unless ( $variant->{start} >= $last_variant_start){
+            $self->warning_message("Improperly sorted input! Restarting iterator!  Improve your annotation speed by sorting input variants by chromosome, then position!");
+            $chromosome_name = $variant->{chromosome_name};
+            $last_variant_start = 0;
+
+            my $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
+            die Genome::Transcript->error_message unless $transcript_iterator;
+
+            my $transcript_window =  Genome::Utility::Window::Transcript->create (
+                iterator => $transcript_iterator, 
+                range => $self->flank_range
+            );
+            die Genome::Utility::Window::Transcript->error_message unless $transcript_window;
+            $annotator = Genome::Transcript::VariantAnnotator->create(
+                transcript_window => $transcript_window 
+            );
+            die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
+        }
+        $last_variant_start = $variant->{start};
 
         # If we have an IUB code, annotate once per base... doesnt apply to things that arent snps
         # TODO... unduplicate this code
