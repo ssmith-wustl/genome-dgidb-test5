@@ -34,6 +34,10 @@ use Inline(
             return f.createClassifier();
          }
 
+         public String getHierarchyVersion() {
+            return f.getHierarchyVersion();
+         }
+
       };
 END
 
@@ -61,6 +65,10 @@ sub get_training_path {
     return "/gsc/scripts/share/rdp/$training_set";
 }
 
+sub create {
+    my $class = shift;
+    return $class->new(@_);
+}
 sub new {
     my ($class, %params) = @_;
     
@@ -68,7 +76,7 @@ sub new {
 
     my $classifier_properties_path = '/gsc/scripts/share/rdp/';
     if ($self->{training_path}) {
-        $classifier_properties_path = $self->{training_path};
+        $classifier_properties_path = $self->{training_path}.'/';
     }
     elsif ($self->{training_set}) {
         $classifier_properties_path .= $self->{training_set}.'/';
@@ -80,9 +88,16 @@ sub new {
         or return;
 
     my $factory = new FactoryInstance($classifier_properties_path);
+    $self->{'factory'} = $factory;
     $self->{'classifier'} = $factory->createClassifier();
 
     return $self;
+}
+
+sub get_training_version {
+    my $self = shift;
+    my $version = $self->{'factory'}->getHierarchyVersion();
+    return $version;
 }
 
 sub get_training_set {
@@ -105,6 +120,8 @@ sub classify {
     my $parsed_seq = new edu::msu::cme::rdp::classifier::readseqwrapper::ParsedSequence($seq->display_name, $seq->seq);
     my $complemented = $self->{'classifier'}->isSeqReversed($parsed_seq);
     my $classification_result = $self->{'classifier'}->classify($parsed_seq);
+
+    return unless $classification_result;
     my $taxon = $self->_build_taxon_from_classification_result($classification_result);
 
     return Genome::Utility::MetagenomicClassifier::SequenceClassification->new(
