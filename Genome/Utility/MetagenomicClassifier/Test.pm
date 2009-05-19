@@ -268,17 +268,27 @@ sub create_broad_classifier {
     );
 }
 
+sub create_rdp_classifier {
+    return Genome::Utility::MetagenomicClassifier::Rdp->new(
+    );
+}
+
 sub test001_require : Tests(1) {
     use_ok('Genome::Utility::MetagenomicClassifier::Rdp')
         or die;
     return 1;
 }
 
-sub test002_create : Tests(5) {
+sub test002_create : Tests(6) {
     my $self = shift;
 
-    my $classifier = $self->create_broad_classifier;
+    my $classifier = $self->create_rdp_classifier;
+
+    my $version = $classifier->get_training_version;
+    ok ($version ne '', 'Got training set version');
     ok($classifier, 'Created rdp classifier');
+
+    $classifier = $self->create_broad_classifier;
 
     my $seq = Bio::Seq->new( 
         -display_id => 'S000002017 Pirellula staleyi', 
