@@ -22,7 +22,7 @@ class Genome::Model::ReferenceAlignment::Report::Summary {
             is_many => 1,
             default_value => [
                  "$base_template_path.html.tt2",
-                 "$base_template_path.txt.tt2",
+                 "$base_template_path.txt.tt2"
             ],
             doc => 'The paths of template(s) to use to format the report.  (In .tt2 format)',
         },
@@ -314,14 +314,14 @@ $DB::single = 1;
     $filtered_snp_calls =~ s/\s\S+\s*$//i;
     $filtered_snp_calls =~ s/\s//g;
 
+    my $snp_chromosomes = $self->model->reference_build->description;
+
     my @stat = stat($filtered_files[-1]); 
     my $time = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime($stat[10]));
 
-    # gscweb can't see sata disk? TODO: fixme
-    #my $data_directory = $build->data_directory;
     my $model_name = $model->name;
     my $build_id = $build->id;
-    my $data_directory = "/gscmnt/839/info/medseq/model_links/$model_name/build$build_id/";
+    my $data_directory = $build->data_directory;
 
     my @vars = (
         model_id                                      => $model->id,
@@ -354,6 +354,8 @@ $DB::single = 1;
         unfiltered_snp_calls                          => commify($unfiltered_snp_calls),
         filtered_snp_calls                            => commify($filtered_snp_calls),
 
+        snp_chromosomes                               => $snp_chromosomes,
+        
         total_filtered_snps                           => commify($total_filtered_snps),
         total_unfiltered_snps                         => commify($total_unfiltered_snps),
 
