@@ -8,14 +8,14 @@ use Genome;
 class Genome::ProcessingProfile::ImportedAnnotation{
     is => 'Genome::ProcessingProfile',
     has => [
-        reference_sequence_model_id => {
-            doc => 'What genes the analysis should be limited to. Comma delimited, leave blank for no limitation.',
+        annotation_source => {
+            doc => 'Where the annotation comes from (ensembl, genbank, etc.) This value is "combined-annotation" for a combined-annotation model',
             is_optional => 0,
-            is_mutable  => 1,
-            via         => 'params',
-            to          => 'value',
-            where       => [name => 'reference_sequence_model_id'],
-        },
+            is_mutable => 1,
+            via => 'params',
+            to => 'value',
+            where => [name => 'annotation_source'],
+        }
     ],
     
 };
@@ -32,7 +32,6 @@ sub imported_annotation_job_classes {
         Genome::Model::Command::Build::ImportedAnnotation::Run
         /);
 }
-
 
 sub imported_annotation_objects {
     return 1;

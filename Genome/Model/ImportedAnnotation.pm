@@ -12,10 +12,10 @@ class Genome::Model::ImportedAnnotation{
             is => 'Genome::ProcessingProfile::ImportedAnnotation',
             id_by => 'processing_profile_id',
         },
-        reference_sequence_build => {
-            is => 'Genome::Model::ImportedReferenceSequence', #TODO, should this just be Genome::Model?
-            via => 'processing_profile'
-        },
+        annotation_source => {
+            is => 'String',
+            via => 'processing_profile',
+        }
     ],
 };
 
@@ -25,7 +25,8 @@ sub build_by_version {
     my $version = shift;
     my @b =  grep { $_->version eq $version} $self->builds;
     if (@b > 1) {
-        die "Multiple builds for version $version for model " . $self->genome_model_id;
+        $self->error_message("Multiple builds for version $version for model " . $self->genome_model_id);
+        die;
     }
     return $b[0];
 }
