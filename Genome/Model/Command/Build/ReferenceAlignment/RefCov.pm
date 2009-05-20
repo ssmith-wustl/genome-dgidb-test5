@@ -39,12 +39,12 @@ sub execute {
         $self->error_message('Failed to create ref_cov directory '. $ref_cov_dir .":  $!");
         return;
     }
-    my @instrument_data = $build->instrument_data;
+    my @idas = $build->instrument_data_assignments;
     unless (Genome::Model::Tools::RefCov::Snapshot->execute(
-                                                            snapshots => scalar(@instrument_data),
+                                                            snapshots => scalar(@idas),
                                                             layers_file_path => $build->layers_file,
                                                             genes_file_path => $build->genes_file,
-                                                            output_directory => $ref_cov_dir,
+                                                            base_output_directory => $ref_cov_dir,
                                                         )) {
         $self->error_message('Failed to run RefCov tool!');
         return;
