@@ -642,12 +642,12 @@ sub mail_summary {
     my $sendmail = "/usr/sbin/sendmail -t";
     my $from = "From: ssmith\@genome.wustl.edu\n";
     my $reply_to = "Reply-to: thisisafakeemail\n";
-    my $subject = "Subject: Build Process Status.\n";
-    my $content = 'These links provide the status for your model '. $model->name .' and build '. $self->id ."\n\n";
+    my $subject = "Subject: Build Process Status\n";
+    my $content = 'These links provide the status for your model '. $model->name .' and build '. $self->build_id ."\n\n";
     my $to = "To: " . $self->user_name . '@genome.wustl.edu' . "\n";
 
-    $content .= "The new update status cgi:\n";
-    $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/solexa/status.cgi?build-id='. $self->id ."\n\n";
+    $content .= "The new updated status cgi:\n";
+    $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/solexa/status.cgi?build-id='. $self->build_id ."\n\n";
 
     $content .= "The old stage one cgi:\n";
     $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/'. $model->sequencing_platform
