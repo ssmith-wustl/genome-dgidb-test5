@@ -638,17 +638,22 @@ sub mail_summary {
 
     my $model = $self->model;
     $self->status_message("No build summary for model that has no sequencing_platform") and return unless $model->processing_profile->can('sequencing_platform');
-    
+
     my $sendmail = "/usr/sbin/sendmail -t";
     my $from = "From: ssmith\@genome.wustl.edu\n";
     my $reply_to = "Reply-to: thisisafakeemail\n";
-    my $subject = "Subject: Build Summary.\n";
-    my $content = 'This is the Build Summary for your model '. $model->name .' and build '. $self->id ."\n";
+    my $subject = "Subject: Build Process Status.\n";
+    my $content = 'These links provide the status for your model '. $model->name .' and build '. $self->id ."\n\n";
     my $to = "To: " . $self->user_name . '@genome.wustl.edu' . "\n";
 
+    $content .= "The new update status cgi:\n";
+    $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/solexa/status.cgi?build-id='. $self->id ."\n\n";
+
+    $content .= "The old stage one cgi:\n";
     $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/'. $model->sequencing_platform
         .'/genome-model-stage1.cgi?model-name='. $model->name  ."&refresh=1\n\n";
     if ($model->sequencing_platform eq 'solexa') {
+        $content .= "The old stage two cgi:\n";
         $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/'. $model->sequencing_platform
             .'/genome-model-stage2.cgi?model-name=' . $model->name  ."&refresh=1\n";
     }
