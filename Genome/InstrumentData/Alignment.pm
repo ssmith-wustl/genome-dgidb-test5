@@ -147,16 +147,17 @@ sub create_allocation {
     unless ($instrument_data->calculate_alignment_estimated_kb_usage) {
         return;
     }
-    my $disk_allocation = Genome::Disk::Allocation->allocate(
-                                                             disk_group_name => 'info_alignments',
-                                                             allocation_path => $self->resolve_alignment_subdirectory,
-                                                             kilobytes_requested => $instrument_data->calculate_alignment_estimated_kb_usage,
-                                                             owner_class_name => $instrument_data->class,
-                                                             owner_id => $instrument_data->id,
-                                                         );
+    my %params = (
+                  disk_group_name => 'info_alignments',
+                  allocation_path => $self->resolve_alignment_subdirectory,
+                  kilobytes_requested => $instrument_data->calculate_alignment_estimated_kb_usage,
+                  owner_class_name => $instrument_data->class,
+                  owner_id => $instrument_data->id,
+              );
+    my $disk_allocation = Genome::Disk::Allocation->allocate(%params);
     unless ($disk_allocation) {
-        $self->error_message('Failed to get disk allocation');
-        return;
+        $self->error_message("Failed to get disk allocation with params:\n". Data::Dumper::Dumper(%params));
+        die($self->error_message);
     }
     return $disk_allocation;
 }
