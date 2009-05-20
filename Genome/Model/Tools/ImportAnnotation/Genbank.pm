@@ -351,11 +351,31 @@ sub get_from_flatfile
 
             ( $transcript_start, $transcript_stop )
                 = $self->transcript_bounds($transcript);
+
+            my $flank_ord = 1;
+            if($strand eq "-1")
+            {
+                $flank_ord = 2; # need to swap the ordinality/order of the flank areas
+            }
+            # what is the cost of getting the chromosome lengths?  just to make sure 
+            # there aren't any structures that decide to fall off the end...
+
+            my ($flank_start,$flank_end) = ($transcript_start - 50000,$transcript_start - 1);
+
+            if($flank_start < 1)
+            {
+                $flank_start = 0;
+            }
+
+            if($flank_end < 1)
+            {
+                $flank_end = 0;
+            }
             $csv1->combine(
                 $tss_id, $transcript_id, "flank",
-                $transcript_start - 50000,
-                $transcript_start - 1,
-                1, 0, undef
+                $flank_start,
+                $flank_end,
+                $flank_ord, 0, undef
             );
             write_file(
                 $dir . "/transcript_sub_structures.csv",
@@ -363,11 +383,16 @@ sub get_from_flatfile
                 $csv1->string() . "\n"
             );
             $tss_id++;
+            $flank_ord = 2;
+            if($strand eq "-1")
+            {
+                $flank_ord = 1;
+            }
             $csv1->combine(
                 $tss_id, $transcript_id, "flank",
                 $transcript_stop + 1,
                 $transcript_stop + 50000,
-                2, 0, undef
+                $flank_ord, 0, undef
             );
             write_file(
                 $dir . "/transcript_sub_structures.csv",

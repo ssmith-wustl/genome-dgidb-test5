@@ -202,7 +202,41 @@ sub execute
         my $phase = 0;
         $ordinal->{'ord'} = ();
 
-        foreach my $exon (@exons)
+        # flanks
+        my @flank;
+        my $flank_ord = 1;
+        if($strand eq '-1')
+        {
+            $flank_ord = 2;
+        }
+        @flank = ( $tss_id, $tr->dbID, 'flank', 
+                   $transcript_start - 50000, $transcript_start - 1,
+                   $flank_ord, undef, undef );
+        $csv->combine( @flank );
+        write_file( 
+            $outputdir."/transcript_sub_structure.csv",
+            { append => 1 },
+            $csv->string()."\n" 
+            );
+        $tss_id++;
+        
+        $flank_ord = 2;
+        if( $strand eq '-1' )
+        {
+            $flank_ord = 1;
+        }
+        @flank = ( $tss_id, $tr->dbID, 'flank',
+                   $transcript_end + 1, $transcript_end + 50000,
+                   $flank_ord, undef, undef );
+        $csv->combine( @flank  );
+        write_file( 
+            $outputdir."/transcript_sub_structure.csv",
+            { append => 1 },
+            $csv->string()."\n" 
+            );
+        $tss_id++;
+
+        foreach my $exon ( @exons )
         {
             my $start    = $exon->coding_region_start($tr);
             my $end      = $exon->coding_region_end($tr);
@@ -278,7 +312,9 @@ sub execute
 
             }
 
-            $sequence = substr( $exon_seq, $start - $exon->start,
+            $sequence = substr( 
+                $exon_seq, 
+                $start - $exon->start,
                 $end - $start + 1 );
             $sequence
                 = substr( $exon_seq, $exon->end - $end, $end - $start + 1 )
