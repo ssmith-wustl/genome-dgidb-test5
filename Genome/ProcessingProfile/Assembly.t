@@ -71,7 +71,7 @@ sub create_successfully {
 
     $mock_model->set_list('unbuilt_instrument_data','1','2','3');
     my %known_classes_for_stage = (
-                                   setup_project => 4,
+                                   setup_project => 3,
                                    assemble => 1,
                                    verify_successful_completion => 1,
                                );

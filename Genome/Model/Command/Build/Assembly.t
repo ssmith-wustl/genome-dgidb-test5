@@ -19,7 +19,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     }
-    plan tests => 392;
+    plan tests => 326;
 
     use_ok( 'Genome::InstrumentData::454');
     use_ok( 'Genome::Model::Assembly');
@@ -27,8 +27,6 @@ BEGIN {
     use_ok( 'Genome::Model::Command::Define' );
     use_ok( 'Genome::ProcessingProfile::Command::Create' );
     use_ok( 'Genome::Model::Command::Build::Assembly' );
-    use_ok( 'Genome::Model::Command::Build::Assembly::AssignReadSetToModel' );
-    use_ok( 'Genome::Model::Command::Build::Assembly::AssignReadSetToModel::454' );
     use_ok( 'Genome::Model::Command::Build::Assembly::FilterReadSet' );
     use_ok( 'Genome::Model::Command::Build::Assembly::FilterReadSet::Seqclean' );
     use_ok( 'Genome::Model::Command::Build::Assembly::TrimReadSet' );
@@ -111,7 +109,7 @@ my @pp_params = (\%pp_2_params,\%pp_3_params, \%pp_4_params, \%pp_5_params);
 my $skip_assemble = 1;
 
 my $model_base_name = 'test_assembly_model';
-my $subject_name = 'H_FY-454_96normal_tspset3_indel';
+my $subject_name = 'TCAM-090304_gDNA_tube1';
 my $subject_type = 'sample_name';
 
 for (my $i=0; $i < scalar(@pp_params); $i++) {
@@ -193,8 +191,6 @@ for (my $i=0; $i < scalar(@pp_params); $i++) {
             like($status_messages[$index++], qr(^Created directory: .*/build.*), 'Found creating build directory status message');
         }
         like($status_messages[$index++], qr(^Scheduling jobs for Genome::InstrumentData::454 .*), 'Found scheduling InstrumentData messages');
-        like($status_messages[$index++], qr(^Scheduled Genome::Model::Command::Build::Assembly::AssignReadSetToModel),
-             'Found Scheduled...AssignReadSetToModel message');
         if ($pp_params->{'read_filter_name'}) {
             like($status_messages[$index++], qr(^Scheduled Genome::Model::Command::Build::Assembly::FilterReadSet),
                  'Found Scheduled...FilterReadSet messages');

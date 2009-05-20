@@ -8,23 +8,11 @@ use Genome;
 class Genome::Model::Command::Build::Assembly::FilterReadSet::Seqclean {
     is => 'Genome::Model::Command::Build::Assembly::FilterReadSet',
     has => [
-            sff_file => {
-                         via => 'instrument_data'
-                     },
-            fasta_file => {
-                           is_output => 1,
-                           calculate_from => ['sff_file'],
-                           calculate => q|
-                               my $fasta_file = $sff_file;
-                               $fasta_file =~ s/\.sff$/\.fna/;
-                               return $fasta_file;
-                           |
-                       },
             seqclean_report => {
                                 is_output => 1,
-                                calculate_from => ['fasta_file'],
+                                calculate_from => ['instrument_data'],
                                 calculate => q|
-                                     return $fasta_file .'.cln';
+                                     return $instrument_data->fasta_file .'.cln';
                                  |
                              },
         ]
@@ -58,28 +46,12 @@ sub execute {
     $DB::single = $DB::stopper;
 
     my $model = $self->model;
-
-    #Need to dump fasta or convert from sff
-    unless (-e $self->fasta_file) {
-	my %sff_info_params = (
-			       sff_file => $self->sff_file,
-			       output_file => $self->fasta_file,
-			       params => '-s',
-			       version => $model->assembler_version,
-			       version_subdirectory => $model->version_subdirectory,
-			       );
-
-        my $fasta_converter = Genome::Model::Tools::454::Sffinfo->create( %sff_info_params );
-        unless ($fasta_converter->execute) {
-            $self->error_message("Failed to run fasta converter on event ". $self->id);
-            return;
-        }
-    }
+    my $instrument_data = $self->instrument_data;
 
     unless (-e $self->seqclean_report) {
         my $params = '-c 2';
         my $seq_clean = Genome::Model::Tools::454::Seqclean->create(
-                                                                    in_fasta_file => $self->fasta_file,
+                                                                    in_fasta_file => $instrument_data->fasta_file,
                                                                     seqclean_params => $params,
                                                                 );
         unless ($seq_clean->execute) {

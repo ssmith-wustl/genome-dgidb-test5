@@ -9,23 +9,6 @@ class Genome::Model::Command::Build::Assembly::TrimReadSet::Sfffile {
     is => 'Genome::Model::Command::Build::Assembly::TrimReadSet',
     has => [
             seqclean_report => { via => 'prior_event', },
-            in_sff_file     => {via => 'instrument_data', to => 'sff_file'},
-            sff_file => {
-                         calculate_from => ['in_sff_file'],
-                         calculate => q|
-                                 my $file = $in_sff_file;
-                                 $file =~ s/\.sff$/_clean\.sff/;
-                                 return $file;
-                             |
-                     },
-            trim_file => {
-                                 calculate_from => ['in_sff_file'],
-                                 calculate => q|
-                                     my $file = $in_sff_file;
-                                     $file =~ s/\.sff$/\.trim/;
-                                     return $file;
-                                 |
-                             },
         ]
 };
 
@@ -41,7 +24,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-genome-model build reference-alignment trim-read-set sfffile ... 
+genome-model build reference-alignment trim-read-set sfffile ...
 EOS
 }
 
@@ -57,20 +40,18 @@ sub execute {
     $DB::single = $DB::stopper;
 
     my $model = $self->model;
-
-    unless (-e $self->trim_file && -e $self->sff_file) {
+    my $instrument_data = $self->instrument_data;
+    unless (-e $instrument_data->trimmed_sff_file) {
 	my %trimmer_params = (
 			      seqclean_report => $self->seqclean_report,
-			      in_sff_file => $self->in_sff_file,
-			      out_sff_file => $self->sff_file,
-			      trim_file =>  $self->trim_file,
+			      in_sff_file => $instrument_data->sff_file,
+			      out_sff_file => $instrument_data->trimmed_sff_file,
 			      version => $model->assembler_version,
 			      version_subdirectory => $model->version_subdirectory,
-			      );
-
-        my $sfffile_trim = Genome::Model::Tools::454::SffTrimWithSeqcleanReport->create( %trimmer_params );
-        unless ($sfffile_trim->execute) {
-            $self->error_message('Failed to execute genome-model tool '. $sfffile_trim->class_name);
+                          );
+        unless (Genome::Model::Tools::454::SffTrimWithSeqcleanReport->execute( %trimmer_params )) {
+            $self->error_message("Failed to execute trim seq-clean tool with params:\n".
+                                 Data::Dumper::Dumper(%trimmer_params));
             return;
         }
     }

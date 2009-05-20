@@ -4,21 +4,10 @@ use strict;
 use warnings;
 
 use Genome;
-use Data::Dumper;
 
 class Genome::Model::Command::Build::Assembly::AddReadSetToProject::Newbler {
     is => 'Genome::Model::Command::Build::Assembly::AddReadSetToProject',
-    has => [
-            sff_file => {via => 'instrument_data'},
-            sff_link => {
-                         doc => 'The symlink created by newbler after the read set is added to the newbler project',
-                         calculate_from => ['model', 'instrument_data'],
-                         calculate => q|
-                             return $model->sff_directory .'/'. $instrument_data->sff_basename .'.sff';
-                         |,
-
-                     }
-        ],
+    has => [],
 };
 
 sub bsub_rusage {
@@ -43,6 +32,17 @@ One build of a given assembly model.
 EOS
 }
 
+sub sff_link {
+    my $self = shift;
+    my $model = $self->model;
+    my $instrument_data = $self->instrument_data;
+    my $sff_filename = $instrument_data->sff_basename;
+    if ($model->read_trimmer_name) {
+        $sff_filename .= '_trimmed';
+    }
+    $sff_filename .= '.sff';
+    return $model->sff_directory .'/'. $sff_filename;
+}
 
 sub execute {
     my $self = shift;
@@ -50,7 +50,7 @@ sub execute {
     $DB::single = $DB::stopper;
 
     my $model = $self->model;
-    print Dumper $model;
+    my $instrument_data = $self->instrument_data;
 
     my $assembly_directory = $model->assembly_directory;
     my $sff_directory = $model->sff_directory;
@@ -75,9 +75,19 @@ sub execute {
         chmod 02775, $sff_directory;
     }
 
+    my $sff_file;
+    if ($model->read_trimmer_name) {
+        $sff_file = $instrument_data->trimmed_sff_file;
+    } else {
+        $sff_file = $instrument_data->sff_file;
+    }
+    unless (-s $sff_file) {
+        $self->error_message('non-existent or zero size sff file '. $sff_file);
+        return;
+    }
     my %add_run_params = (
 			  dir => $model->data_directory,
-			  runs => [$self->sff_file],
+			  runs => [$sff_file],
 			  is_paired_end => $self->instrument_data->is_paired_end,
 			  version => $model->assembler_version,
 			  version_subdirectory=> $model->version_subdirectory,
@@ -85,7 +95,7 @@ sub execute {
 
     my $add_run = Genome::Model::Tools::454::Newbler::AddRun->create( %add_run_params );
     unless($add_run->execute) {
-        $self->error_message('Failed to add run '. $self->id ." to project $assembly_directory");
+        $self->error_message("Failed to add run to project $assembly_directory with params:\n". Data::Dumper::Dumper(%add_run_params));
         return;
     }
     return $self->verify_successful_completion;

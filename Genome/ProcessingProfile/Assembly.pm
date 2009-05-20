@@ -121,11 +121,11 @@ sub stages {
 
 sub setup_project_job_classes {
     my @classes = qw/
-            Genome::Model::Command::Build::Assembly::AssignReadSetToModel
             Genome::Model::Command::Build::Assembly::FilterReadSet
             Genome::Model::Command::Build::Assembly::TrimReadSet
             Genome::Model::Command::Build::Assembly::AddReadSetToProject
     /;
+    #Genome::Model::Command::Build::Assembly::AssignReadSetToModel
     return @classes;
 }
 
