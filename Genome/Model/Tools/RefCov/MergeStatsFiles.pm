@@ -9,7 +9,7 @@ class Genome::Model::Tools::RefCov::MergeStatsFiles {
     is => ['Genome::Model::Tools','Genome::Utility::FileSystem'],
     has_input => [
                   input_stats_files => { is => 'List', },
-                  output_stats_file => { is => 'Test', },
+                  output_stats_file => { is => 'Text', },
               ],
 };
 
@@ -19,14 +19,22 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
+    unless (ref($self->input_stats_files) eq 'ARRAY') {
+        my @input_stats_files = ($self->input_stats_files);
+        $self->input_stats_files(\@input_stats_files);
+    }
     for my $input_stats_file (@{$self->input_stats_files}) {
         unless ($self->validate_file_for_reading($input_stats_file)) {
             $self->error_message('Failed to validate file for reading '. $input_stats_file);
             die($self->error_message);
         }
     }
+    if (ref($self->output_stats_file) eq 'ARRAY') {
+        $self->output_stats_file( @{ $self->output_stats_file }[0] );
+    }
+
     unless ($self->validate_file_for_writing($self->output_stats_file)) {
-        $self->error_message('Failed to validate file for reading '. $self->output_stats_file);
+        $self->error_message('Failed to validate file for writing '. $self->output_stats_file);
         die($self->error_message);
     }
     return $self;

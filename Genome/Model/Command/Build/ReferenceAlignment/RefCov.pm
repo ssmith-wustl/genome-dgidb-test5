@@ -7,8 +7,7 @@ use Genome;
 
 class Genome::Model::Command::Build::ReferenceAlignment::RefCov {
     is => ['Genome::Model::Event'],
-    has => [
-        ],
+    has => [ ],
 };
 
 sub help_brief {
@@ -40,13 +39,38 @@ sub execute {
         $self->error_message('Failed to create ref_cov directory '. $ref_cov_dir .":  $!");
         return;
     }
-    my $ref_cov = Genome::Model::Tools::RefCov::Parallel->execute(
-                                                                  layers_file_path => $build->layers_file,
-                                                                  genes_file_path => $build->genes_file,
-                                                                  output_directory => $ref_cov_dir,
-                                                              );
-    unless ($ref_cov) {
+    my @instrument_data = $build->instrument_data;
+    unless (Genome::Model::Tools::RefCov::Snapshot->execute(
+                                                            snapshots => scalar(@instrument_data),
+                                                            layers_file_path => $build->layers_file,
+                                                            genes_file_path => $build->genes_file,
+                                                            output_directory => $ref_cov_dir,
+                                                        )) {
         $self->error_message('Failed to run RefCov tool!');
+        return;
+    }
+    unless (opendir(DIR,$ref_cov_dir)) {
+        $self->error_message('Failed to open ref-cov directory '. $ref_cov_dir .":  $!");
+        return;
+    }
+    my @snapshots = grep { -d  } map { $ref_cov_dir .'/'. $_ } grep { $_ !~ /^composed/ } grep { $_ !~ /^\./ } readdir(DIR);
+    closedir(DIR);
+
+    unless (@snapshots) {
+        $self->error_message('Failed to find snapshots in ref-cov directory '. $ref_cov_dir);
+        return;
+    }
+
+    my $composed_dir = $ref_cov_dir .'/composed';
+    unless (Genome::Utility::FileSystem->create_directory($composed_dir)) {
+        $self->error_message('Failed to make composed directory '. $composed_dir .":  $!");
+        return;
+    }
+    unless (Genome::Model::Tools::RefCov::Compose->execute(
+                                                           snapshot_directories => \@snapshots,
+                                                           composed_directory => $composed_dir,
+                                                       )) {
+        $self->error_message('Failed to execute compose on ref-cov snapshots.');
         return;
     }
     return $self->verify_successful_completion;
@@ -55,14 +79,16 @@ sub execute {
 sub verify_successful_completion {
     my $self = shift;
     my $build = $self->build;
-    unless (-d $build->reference_coverage_directory .'/FROZEN') {
-        $self->error_message('Failed to find frozen directory');
-        return;
-    }
-    unless (-e $build->reference_coverage_directory .'/STATS.tsv') {
-        $self->error_message('Failed to find stats file');
-        return;
-    }
+    #TODO: Defined what should exist after execution... each snapshot directory with stats/FROZEN??
+    
+    #unless (-d $build->reference_coverage_directory .'/FROZEN') {
+    #    $self->error_message('Failed to find frozen directory');
+    #    return;
+    #}
+    #unless (-e $build->reference_coverage_directory .'/STATS.tsv') {
+    #    $self->error_message('Failed to find stats file');
+    #    return;
+    #}
     return 1;
 }
 

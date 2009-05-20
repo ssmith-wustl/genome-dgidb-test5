@@ -20,12 +20,11 @@ my $layers_file_path = $data_dir .'/test.layers';
 my $genes_file_path = $data_dir .'/test.genes';
 my $expected_stats_file = $data_dir .'/STATS.tsv';
 
-
 my $ref_cov = Genome::Model::Tools::RefCov::Run->create(
-                                                   output_directory => $tmp_dir,
-                                                   layers_file_path => $layers_file_path,
-                                                   genes_file_path => $genes_file_path,
-                                               );
+                                                        base_output_directory => $tmp_dir,
+                                                        layers_file_path => $layers_file_path,
+                                                        genes_file_path => $genes_file_path,
+                                                    );
 isa_ok($ref_cov,'Genome::Model::Tools::RefCov::Run');
 ok($ref_cov->execute,'execute RefCov command '. $ref_cov->command_name);
 

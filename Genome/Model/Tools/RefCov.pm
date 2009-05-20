@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use File::Basename;
 
 class Genome::Model::Tools::RefCov {
     is => ['Command'],
@@ -17,10 +18,10 @@ class Genome::Model::Tools::RefCov {
                                  is => 'Text',
                                  doc => 'The genes or backbone file path(fully qualified) containing reference sequence data',
                              },
-            output_directory => {
-                                 is => 'Text',
-                                 doc => 'The output directory where files are written',
-                             },
+            base_output_directory => {
+                                      is => 'Text',
+                                      doc => 'The output directory where files are written',
+                                  },
               ],
     has_output => [
             stats_file_path  => {
@@ -36,12 +37,37 @@ class Genome::Model::Tools::RefCov {
                                  |,
                              },
             frozen_directory => {
-                                 calculate_from => ['output_directory',],
+                                 calculate_from => ['output_directory'],
                                  calculate => q|
                                     return $output_directory .'/FROZEN';
                                  |,
                              },
+            layer_stats_file => {
+                calculate_from => ['output_directory'],
+                calculate => q|
+                    return $output_directory . '/STATS.tsv';
+                |
+            }
     ],
+    has => [
+            output_directory => {
+                                 calculate_from => ['base_output_directory','unique_subdirectory'],
+                                 calculate => q|
+                                     return $base_output_directory . $unique_subdirectory;
+                                 |
+                             },
+            unique_subdirectory => {
+                            calculate_from => ['layers_file_path'],
+                            calculate => q|
+                                               my $layers_basename = File::Basename::basename($layers_file_path);
+                                               if ($layers_basename =~ /(\d+)$/) {
+                                                   return '/'. $1;
+                                               } else {
+                                                   return '';
+                                               }
+                                           |,
+                        },
+            ],
     has_optional  => [
                       stats_file_name => {
                                           is => 'Text',
