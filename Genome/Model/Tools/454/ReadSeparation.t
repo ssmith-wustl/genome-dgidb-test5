@@ -24,7 +24,7 @@ my $sff_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-454-ReadSeparat
 my @version_subdirs = qw/ offInstrumentApps mapasm454_source /;
 foreach my $sub_dir (@version_subdirs) {
     my $version;
-    $version = '2.0.00.20-64' if $sub_dir eq 'offInstrumentApps';
+    $version = '2.0.00.20' if $sub_dir eq 'offInstrumentApps';
     $version = '10282008' if $sub_dir eq 'mapasm454_source';
     my $read_separation = Genome::Model::Tools::454::ReadSeparation->create(
 									    sff_file => $sff_file,
