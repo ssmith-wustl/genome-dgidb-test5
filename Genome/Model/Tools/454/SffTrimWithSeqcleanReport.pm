@@ -7,7 +7,7 @@ use Genome;
 use Data::Dumper;
 
 class Genome::Model::Tools::454::SffTrimWithSeqcleanReport {
-    is => ['Genome::Model::Tools::454'],
+    is => ['Genome::Model::Tools::454','Genome::Utility::FileSystem'],
     has => [
             seqclean_report => {
                                 is => 'string',
@@ -19,15 +19,6 @@ class Genome::Model::Tools::454::SffTrimWithSeqcleanReport {
                             doc => 'a file path to the input sff file',
                             is_input => 1,
                      },
-            trim_file => {
-                          is_output => 1,
-                          calculate_from => ['in_sff_file'],
-                          calculate => q|
-                                     my $file = $in_sff_file;
-                                     $file =~ s/\.sff$/\.trim/;
-                                     return $file;
-                                 |
-                      },
             out_sff_file => {
                              is => 'string',
                              doc => 'a file path to the output sff file',
@@ -68,9 +59,6 @@ sub create {
     unless (-e $self->in_sff_file) {
         die 'Input sff file '. $self->in_sff_file .' does not exist';
     }
-    if (-e $self->trim_file) {
-        die 'sfffile trim file '. $self->trim_file .' already exists';
-    }
     if (-e $self->out_sff_file) {
         die 'Output sff file '. $self->out_sff_file .' already exists';
     }
@@ -85,9 +73,10 @@ sub execute {
         $self->error_message('Failed to create seqclean report reader for file'. $self->seqclean_report);
         return;
     }
-    my $writer = Genome::Utility::454TrimFile::Writer->create(file => $self->trim_file);
+    my $trim_file = $self->create_temp_file_path();
+    my $writer = Genome::Utility::454TrimFile::Writer->create(file => $trim_file);
     unless ($writer) {
-        $self->error_message('Failed to create sfffile trim file writer for file '. $self->trim_file);
+        $self->error_message('Failed to create sfffile trim file writer for file '. $trim_file);
         return;
     }
     while (my $record = $reader->next) {
@@ -104,7 +93,7 @@ sub execute {
                                                              out_sff_file => $self->out_sff_file,
                                                              # The -t option alone seems to give unexpected results
                                                              # I guess because old trim values are somewhere in the manifest??
-                                                             params => '-i '. $self->trim_file .' -tr '. $self->trim_file,
+                                                             params => '-i '. $trim_file .' -tr '. $trim_file,
 							     #test => $self->test,
 							     version => $self->version,
 							     version_subdirectory => $self->version_subdirectory,

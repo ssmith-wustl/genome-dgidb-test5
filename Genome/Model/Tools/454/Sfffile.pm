@@ -10,8 +10,6 @@ class Genome::Model::Tools::454::Sfffile {
     has => [
             in_sff_files => {
                             doc => 'The sff file to operate',
-                            is => 'string',
-                            is_many => 1,
                      },
             out_sff_file => {
                             is => 'string',
@@ -38,14 +36,16 @@ EOS
 sub execute {
     my $self = shift;
 
+    my @in_sff_files = @{$self->in_sff_files};
+    my $out_sff_file = $self->out_sff_file;
     my $params = $self->params || '';
-    $params .= ' -o '. $self->out_sff_file;
-    my $cmd = $self->bin_path .'/sfffile '. $params .' '. join(' ',$self->in_sff_files);
-    my $rv = system($cmd);
-    unless ($rv == 0) {
-        $self->error_message("non-zero exit code '$rv' returned by sffinfo");
-        return;
-    }
+    $params .= ' -o '. $out_sff_file;
+    my $cmd = $self->bin_path .'/sfffile '. $params .' '. join(' ',@in_sff_files);
+    Genome::Utility::FileSystem->shellcmd(
+                                         cmd => $cmd,
+                                         input_files => \@in_sff_files,
+                                         output_files => [$out_sff_file],
+                                     );
     return 1;
 }
 

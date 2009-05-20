@@ -37,7 +37,7 @@ foreach my $subdir (@version_subdirs) {
 
     my ($version, $expected_path);
     if ($subdir =~ /offInstrumentApps/) {
-	$version = '2.0.00.20-64';
+	$version = '2.0.00.20-1';
 	$expected_path = '/gsc/pkg/bio/454/'.$subdir.'-'.$version.'/bin';
     }
     if ($subdir =~ /mapasm454_source/) {
