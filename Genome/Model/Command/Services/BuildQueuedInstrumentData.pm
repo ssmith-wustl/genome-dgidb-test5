@@ -81,7 +81,6 @@ sub execute {
             $self->error_message("Failed to get processing profile '$processing_profile_name' for inprogress pse ". $pse->pse_id);
             next PSE;
         }
-        warn ref($pp);
 
         my $model = Genome::Model->get(
                                         subject_name => $subject_name,
@@ -93,11 +92,11 @@ sub execute {
             my $model_name = $subject_name .'.'. $pp->name;
             
             my $model = Genome::Model->create(
-                                              model_name              => $model_name,
-                                              subject_name            => $subject_name,
-                                              subject_type            => $subject_type,
-                                              processing_profile_name => $pp->name(),
-                                              auto_assign_inst_data   => 1,
+                                              name                  => $model_name,
+                                              subject_name          => $subject_name,
+                                              subject_type          => $subject_type,
+                                              processing_profile    => $pp,
+                                              auto_assign_inst_data => 1,
                                              );
                                                   
             unless (defined($model)) {
