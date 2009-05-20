@@ -69,11 +69,11 @@ sub create {
 sub full_consensus_path {
     my ($self,$format) = @_;
     $format ||= 'bfa';
-    my $file = $self->data_directory . '/all_sequences.bfa';
+    my $file = $self->data_directory . '/all_sequences.'. $format;
     if ( -e $file){
         return $file;
     }
-    $file = $self->data_directory . '/ALL.bfa';
+    $file = $self->data_directory . '/ALL.'. $format;
     if ( -e $file){
         return $file;
     }
