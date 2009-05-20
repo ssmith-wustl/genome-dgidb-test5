@@ -24,6 +24,16 @@ EOS
                       is_transient => 1,
                       is_mutable => 1,
                   },
+        _fasta_file => {
+                        is => 'String',
+                        is_transient => 1,
+                        is_mutable => 1,
+                  },
+        _qual_file => {
+                       is => 'String',
+                       is_transient => 1,
+                       is_mutable => 1,
+                   },
         #< Run Region 454 from DW Attrs >#
         run_region_454     => {
             doc => '454 Run Region from LIMS.',
@@ -48,6 +58,15 @@ sub _default_full_path {
     return sprintf('%s/%s/%s', $self->_data_base_path, $self->run_name, $self->id);
 }
 
+sub calculate_alignment_estimated_kb_usage {
+    my $self = shift;
+    return 500000;
+}
+
+sub is_external {
+    return;
+}
+
 sub resolve_sff_path {
     my $self = shift;
 
@@ -64,6 +83,87 @@ sub resolve_sff_path {
         $sff_file = sprintf('%s/%s.sff', $self->resolve_full_path, $self->id);
     }
     return $sff_file;
+}
+
+sub resolve_fasta_path {
+    my $self = shift;
+    my $full_path = $self->full_path;
+    unless ($full_path) {
+        $full_path = $self->resolve_full_path;
+    }
+    unless (Genome::Utility::FileSystem->create_directory($full_path)) {
+        $self->error_message("Failed to create instrument data directory '$full_path'");
+        return;
+    }
+    return $full_path .'/'. $self->subset_name .'.fa';
+}
+
+sub resolve_qual_path {
+    my $self = shift;
+    my $full_path = $self->full_path;
+    unless ($full_path) {
+        $full_path = $self->resolve_full_path;
+    }
+    unless (Genome::Utility::FileSystem->create_directory($full_path)) {
+        $self->error_message("Failed to create instrument data directory '$full_path'");
+        return;
+    }
+    return $full_path .'/'. $self->subset_name .'.qual';
+}
+
+sub qual_file {
+    my $self = shift;
+
+    unless ($self->_qual_file) {
+        $self->_qual_file($self->resolve_qual_path);
+    }
+    unless (-s $self->_qual_file) {
+        unless (-e $self->sff_file) {
+            $self->error_message('Failed to find sff_file: '. $self->sff_file);
+            die($self->error_message);
+        }
+        unless (Genome::Model::Tools::454::Sffinfo->execute(
+                                                            sff_file => $self->sff_file,
+                                                            output_file => $self->_qual_file,
+                                                            params => '-q',
+                                                        )) {
+            $self->error_message('Failed to convert sff to qual file');
+            die($self->error_message);
+        }
+    }
+    return $self->_qual_file;
+}
+
+sub fasta_file {
+    my $self = shift;
+
+    unless ($self->_fasta_file) {
+        $self->_fasta_file($self->resolve_fasta_path);
+    }
+    unless (-s $self->_fasta_file) {
+        unless (-e $self->sff_file) {
+            $self->error_message('Failed to find sff_file: '. $self->sff_file);
+            die($self->error_message);
+        }
+        unless (Genome::Model::Tools::454::Sffinfo->execute(
+                                                            sff_file => $self->sff_file,
+                                                            output_file => $self->_fasta_file,
+                                                            params => '-s',
+                                                        )) {
+            $self->error_message('Failed to convert sff to fasta file');
+            die($self->error_message);
+        }
+    }
+    return $self->_fasta_file;
+}
+
+sub trimmed_sff_file {
+    my $self = shift;
+    my $full_path = $self->resolve_full_path;
+    unless (-d $full_path) {
+        Genome::Utility::FileSystem->create_directory($full_path);
+    }
+    return $full_path .'/'. $self->sff_basename .'_trimmed.sff';
 }
 
 sub sff_file {

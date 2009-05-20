@@ -205,38 +205,6 @@ sub add_instrument_data {
                                                            );
         isa_ok($ida,'Genome::Model::InstrumentDataAssignment');
         ok(!$ida->first_build_id,'undef first_build_id for InstrumentDataAssignment');
-        if ($ida->full_path) {
-            $self->add_directory_to_remove($ida->full_path);
-        }
-
-        if ($ida->sequencing_platform eq '454') {
-            my $tmp_sff = $self->data_dir .'/'. $ida->run_name .'/'. $ida->subset_name .'.sff';
-            my $tmp_amp = $self->data_dir .'/'. $ida->run_name .'/amplicon_headers.txt';
-
-            my $full_path = $ida->instrument_data->resolve_full_path;
-            $assign_command->create_directory($full_path);
-
-            my $ida_sff = $ida->instrument_data->sff_file;
-            copy($tmp_sff,$ida_sff) || die("Failed to copy '$tmp_sff' to '$ida_sff'");
-
-            my $ida_amp = $full_path .'/amplicon_headers.txt';
-            copy($tmp_amp,$ida_amp) || die("Failed to copy '$tmp_amp' to '$ida_amp'");
-            if ($ida->subset_name == 1) {
-                my $tmp_out = $self->data_dir .'/'. $ida->run_name .'/'. $ida->subset_name .'.out';
-                my $tmp_psl = $self->data_dir .'/'. $ida->run_name .'/'. $ida->subset_name .'.psl';
-                my $alignment_directory = '/gscmnt/839/info/medseq/alignment_links/blat/refseq-for-test/'.
-                    $ida->run_name .'/'. $ida->subset_name .'_'. $ida->instrument_data->id;
-                $assign_command->create_directory($alignment_directory);
-                my $ida_out = $alignment_directory .'/'. $ida->subset_name .'.out.-123456';
-                my $ida_psl = $alignment_directory .'/'. $ida->subset_name .'.psl.-123456';
-                copy($tmp_out,$ida_out) || die("Failed to copy '$tmp_out' to '$ida_out'");
-                copy($tmp_psl,$ida_psl) || die("Failed to copy '$tmp_psl' to '$ida_psl'");
-                $self->add_directory_to_remove($alignment_directory);
-            }
-        }
-        if ($ida->full_path) {
-            $self->add_directory_to_remove($ida->full_path);
-        }
     }
 }
 

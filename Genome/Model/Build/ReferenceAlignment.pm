@@ -17,6 +17,11 @@ sub accumulated_alignments_directory {
     return $self->data_directory . '/alignments';
 }
 
+sub variants_directory {
+    my $self = shift;
+    return $self->data_directory . '/variants';
+}
+
 sub _resolve_subclass_name {
     my $class = shift;
 

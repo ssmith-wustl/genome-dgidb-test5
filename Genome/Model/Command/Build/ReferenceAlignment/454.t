@@ -32,13 +32,13 @@ my $message_flag = 0;
 
 my $tmp_dir = File::Temp::tempdir('TestAlignmentDataXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $model_name = "test_454_$ENV{USER}";
-my $subject_name = 'H_FY-454_96normal_tspset3_indel';
+my $subject_name = 'TCAM-090304_gDNA_tube1';
 my $subject_type = 'sample_name';
 my $pp_name = '454_ReferenceAlignment_test';
 my %pp_params = (
                  name => $pp_name,
                  dna_type => 'genomic dna',
-                 indel_finder_name => 'breakPointRead',
+                 indel_finder_name => 'varScan',
                  read_aligner_name => 'blat',
                  reference_sequence_name => 'refseq-for-test',
                  sequencing_platform => '454',
@@ -69,7 +69,7 @@ sub setup_test_data {
 
     chdir $tmp_dir || die("Failed to change directory to '$tmp_dir'");
 
-    my $zip_file = '/gsc/var/cache/testsuite/data/Genome-Model-Command-AddReads/addreads-454-new.tgz';
+    my $zip_file = '/gsc/var/cache/testsuite/data/Genome-Model-Command-AddReads/addreads-454-varScan.tgz';
     `tar -xzf $zip_file`;
 
     my @run_dirs = grep { -d $_ } glob("$tmp_dir/R_2008_07_29_*");
@@ -144,18 +144,14 @@ my $allocation_path = sprintf('alignment_data/%s/%s/%s/%s_%s',
                                    }
                                );
             # TODO:switch these paths to something like /gsc/var/cache/testsuite/data/BLAH
-            $instrument_data->mock('_data_base_path',\&Genome::InstrumentData::_data_base_path);
-            $instrument_data->mock('_default_full_path',\&Genome::InstrumentData::_default_full_path);
-            $instrument_data->mock('resolve_full_path',\&Genome::InstrumentData::resolve_full_path);
-            $instrument_data->mock('resolve_sff_path',\&Genome::InstrumentData::454::resolve_sff_path);
-            $instrument_data->mock('sff_file',sub {
-                                       my $self = shift;
-                                       unless ($self->{_sff_path}) {
-                                           $self->{_sff_path} = $self->resolve_sff_path;
-                                       }
-                                       return $self->{_sff_path};
-                                       }
-                               );
+            #$instrument_data->mock('_data_base_path',\&Genome::InstrumentData::_data_base_path);
+            #$instrument_data->mock('_default_full_path',\&Genome::InstrumentData::_default_full_path);
+            #$instrument_data->set_always('resolve_full_path',$run_dir);
+            #$instrument_data->mock('resolve_sff_path',\&Genome::InstrumentData::454::resolve_sff_path);
+            $instrument_data->set_always('is_external',undef);
+            $instrument_data->set_always('sff_file',$run_dir .'/'.$region_number .'.sff');
+            $instrument_data->set_always('fasta_file',$run_dir .'/'.$region_number .'.fa');
+            $instrument_data->set_always('qual_file',$run_dir .'/'.$region_number .'.qual');
             $instrument_data->set_always('dump_to_file_system',1);
             push @instrument_data, $instrument_data;
         }
