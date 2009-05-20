@@ -73,7 +73,6 @@ sub create {
     unless ($self) {
         return;
     }
-    $DB::single = 1;
     unless ($self->data_directory) {
         my $dir;
         eval {
