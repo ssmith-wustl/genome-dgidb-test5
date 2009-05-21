@@ -128,6 +128,7 @@ sub execute {
            my $rv = $results->[$i];
                 if ($rv != 1) {
                        $self->error_message("Workflow had an error while rmdup'ing library: ". $result_libraries->[$i]); 
+                       die "Workflow had an error while rmdup'ing library: ". $result_libraries->[$i];
                 }
        }
   } 
