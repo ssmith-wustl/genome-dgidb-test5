@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 
+use Bio::SeqIO;
 use Data::Dumper 'Dumper';
 
 class Genome::Model::Command::Build::AmpliconAssembly::Collate {
@@ -19,7 +20,7 @@ sub execute {
     
     my @amplicon_fasta_types = $self->build->amplicon_fasta_types;
 
-    $self->_open_build_fasta_and_qual_fhs(@amplicon_fasta_types)
+    $self->_open_fasta_and_qual_writers(@amplicon_fasta_types)
         or return;
 
     for my $amplicon ( @$amplicons ) {
@@ -28,47 +29,39 @@ sub execute {
         }
     }
 
-    $self->_close_build_fasta_and_qual_fhs(@amplicon_fasta_types)
-        or return;
-
     #print $self->build->data_directory,"\n"; <STDIN>;
 
     return 1;
 }
 
 #< FHs >#
-sub _fasta_fh_key_for_type {
-    return '_'.$_[0].'_fasta_fh';
+sub _key_for_fasta_writer {
+    return '_'.$_[0].'_fasta_writer';
 }
 
-sub _qual_fh_key_for_type {
-    return '_'.$_[0].'_qual_fh';
+sub _key_for_qual_writer {
+    return '_'.$_[0].'_qual_writer';
 }
 
-sub _open_build_fasta_and_qual_fhs {
+sub _open_fasta_and_qual_writers {
     my ($self, @types) = @_;
 
     for my $type ( @types ) {
         my $fasta_file = $self->build->fasta_file_for_type($type);
         unlink $fasta_file if -e $fasta_file;
-        $self->{ _fasta_fh_key_for_type($type) } = Genome::Utility::FileSystem->open_file_for_writing($fasta_file)
+        $self->{ _key_for_fasta_writer($type) } = Bio::SeqIO->new(
+            '-file' => '>'.$fasta_file,
+            '-format' => 'fasta',
+        )
             or return;
 
         my $qual_file = $self->build->qual_file_for_type($type);
         unlink $qual_file if -e $qual_file;
-        $self->{ _qual_fh_key_for_type($type) } = Genome::Utility::FileSystem->open_file_for_writing($qual_file)
+        $self->{ _key_for_qual_writer($type) } = Bio::SeqIO->new(
+            '-file' => '>'.$qual_file,
+            '-format' => 'qual',
+        )
             or return;
-    }
-
-    return 1;
-}
-
-sub _close_build_fasta_and_qual_fhs {
-    my ($self, @types) = @_;
-
-    for my $type ( @types ) {
-        $self->{ _fasta_fh_key_for_type($type) }->close;
-        $self->{ _qual_fh_key_for_type($type) }->close;
     }
 
     return 1;
@@ -78,30 +71,25 @@ sub _close_build_fasta_and_qual_fhs {
 sub _collate_amplicon_fasta_and_qual {
     my ($self, $amplicon, $type) = @_;
 
-    # FASTA
-    my $fasta_file = $amplicon->fasta_file_for_type($type);
-    return unless -s $fasta_file;
-    #print "Found $fasta_file\n";
-    my $fasta_fh = Genome::Utility::FileSystem->open_file_for_reading($fasta_file)
-        or return;
-    my $fasta_fh_key = _fasta_fh_key_for_type($type);
-    while ( my $line = $fasta_fh->getline ) {
-        $self->{$fasta_fh_key}->print($line);
+    my $method = $self->build->amplicon_bioseq_method_for_type($type);
+    unless ( $method ) {
+        $self->error_message("Can't determine method for getting bioseqs for type ($type)");
+        return;
     }
-
-    #QUAL
-    my $qual_file = $amplicon->qual_file_for_type($type);
-    $self->fatal_msg(
-        sprintf('Fasta file, but no qual file (%s) for amplicon (%s)', $qual_file, $amplicon->get_name)
-    ) unless -e $qual_file;
-    my $qual_fh = Genome::Utility::FileSystem->open_file_for_reading($qual_file)
+    
+    my @bioseqs = $amplicon->$method
         or return;
-    my $qual_fh_key = _qual_fh_key_for_type($type);
-    while ( my $line = $qual_fh->getline ) {
-        $self->{$qual_fh_key}->print($line);
+
+    for my $bioseq ( @bioseqs ) {
+        $self->{ _key_for_fasta_writer($type) }->write_seq($bioseq);
+        $self->{ _key_for_qual_writer($type) }->write_seq($bioseq);
     }
 
     return 1;
+}
+
+sub _verify_bioseq {
+    
 }
 
 1;
