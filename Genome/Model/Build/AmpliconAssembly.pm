@@ -77,8 +77,19 @@ sub reports_dir {
 }
     
 #< FASTA >#
+my %_fasta_types_and_methods = (
+    reads => 'get_bioseqs_for_raw_reads',
+    processed => 'get_bioseqs_for_processed_reads',
+    assembly => 'get_assembly_bioseq',
+    oriented => 'get_oriented_bioseq',
+);
+
 sub amplicon_fasta_types {
-    return (qw/ reads processed assembly oriented /);
+    return keys %_fasta_types_and_methods;
+}
+
+sub amplicon_bioseq_method_for_type {
+    return $_fasta_types_and_methods{$_[1]};
 }
 
 sub fasta_file_for_type {
