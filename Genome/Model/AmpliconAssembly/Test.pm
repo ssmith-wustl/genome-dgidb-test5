@@ -114,7 +114,7 @@ sub create_mock_model {
         (qw/
             consed_directory create_directory_structure
             edit_dir chromat_dir phd_dir fasta_dir
-            amplicon_fasta_types fasta_file_for_type qual_file_for_type
+            amplicon_fasta_types amplicon_bioseq_method_for_type fasta_file_for_type qual_file_for_type
             link_instrument_data 
             get_amplicons _determine_amplicons_in_chromat_dir_gsc 
             assembly_fasta reads_fasta processed_fasta 
