@@ -68,9 +68,9 @@ sub test03_reads : Tests {
     my $assembled_reads = $amplicon->get_assembled_reads;
     is_deeply($assembled_reads, $attempted_reads, 'Got source');
     is($amplicon->get_assembled_read_count, scalar(@$assembled_reads), 'Got source');
-    my $read_bioseq = $amplicon->get_reads_raw_bioseq($attempted_reads->[2]);
+    my $read_bioseq = $amplicon->get_bioseq_for_raw_read($attempted_reads->[2]);
     is($read_bioseq->id, $attempted_reads->[2], 'Got read bioseq for '.$attempted_reads->[2]);
-    my $processed_bioseq = $amplicon->get_reads_processed_bioseq($attempted_reads->[4]);
+    my $processed_bioseq = $amplicon->get_bioseq_for_processed_read($attempted_reads->[4]);
     is($processed_bioseq->id, $attempted_reads->[4], 'Got processed bioseq for '.$attempted_reads->[4]);
     
     return 1;
