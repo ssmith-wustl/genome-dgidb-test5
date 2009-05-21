@@ -50,7 +50,11 @@ sub make_whole_map_file {
         my $aligner_version = $self->aligner_version;
         my $maq_cmd = "gt maq vmerge --version=$aligner_version --maplist $maplist --pipe $tmp_file &";
         $self->status_message("Executing:  $maq_cmd");
-        system "$maq_cmd";
+        my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$maq_cmd);
+        unless ($rv) {
+            $self->error_message("Command had errors: $maq_cmd");
+            return;
+        }  
         my $start_time = time;
         until (-p "$tmp_file" or ( (time - $start_time) > 100) )  {
             sleep(5);
