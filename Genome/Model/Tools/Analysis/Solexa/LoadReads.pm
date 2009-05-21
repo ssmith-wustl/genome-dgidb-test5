@@ -15,6 +15,7 @@ package Genome::Model::Tools::Analysis::Solexa::LoadReads;     # rename this whe
 
 use strict;
 use warnings;
+use Cwd;
 
 use FileHandle;
 
@@ -24,23 +25,27 @@ class Genome::Model::Tools::Analysis::Solexa::LoadReads {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		flowcell	=> { is => 'Text', doc => "Link to the Gerald directory containing s*_sequence.txt files", is_optional => 1 },
-		gerald_dir	=> { is => 'Text', doc => "Link to the Gerald directory containing s*_sequence.txt files", is_optional => 1 },
-		output_dir	=> { is => 'Text', doc => "Output file for FastQ files [./]" , is_optional => 1},
-		lanes	=> { is => 'Text', doc => "Lanes to include [1,2,3,4,5,6,7,8]", is_optional => 1 },
+		flowcell_id	=> { is => 'Text', doc => "Search by flowcell_id", is_optional => 1 },
+		sample_name	=> { is => 'Text', doc => "Search by sample name", is_optional => 1 },
+		library_name	=> { is => 'Text', doc => "Search by library name" , is_optional => 1},
+		print_location	=> { is => 'Text', doc => "If set to 1, prints data location" , is_optional => 1},
+		include_lanes	=> { is => 'Text', doc => "Specify which lanes of a flowcell to include [e.g. 1,2,3]" , is_optional => 1},
+		output_dir	=> { is => 'Text', doc => "Output dir to receive files" , is_optional => 1},
 	],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Obtains reads from a flowcell in FastQ format"                 
+    "Obtains reads from a flowcell_id in FastQ format"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command retrieves the locations of unplaced reads for a given genome model
-EXAMPLE:	gt bowtie --query-file s_1_sequence.fastq --output-file s_1_sequence.Hs36.bowtie
+This command builds FASTQ files for Illumina/Solexa data using the database
+EXAMPLE 1:	gt analysis solexa load-reads --flowcell_id 302RT --include-lanes 1,2,3,4 --output-dir output_dir
+EXAMPLE 2:	gt analysis solexa load-reads --sample-name H_GP-0365n --output-dir H_GP-0365n
+EXAMPLE 3:	gt analysis solexa load-reads --library-name H_GP-0365n-lib2 --output-dir H_GP-0365n
 EOS
 }
 
@@ -60,57 +65,200 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	## Get required parameters ##
-	my $flowcell = $self->flowcell;
-	my $lanes = $self->lanes;
-	my $gerald_dir = $self->gerald_dir;
-	my $output_dir = $self->output_dir;
+	my $flowcell_id = $self->flowcell_id;
+	my $sample_name = $self->sample_name;
+	my $library_name = $self->library_name;
+	my $print_location;
+	$print_location = $self->print_location if($self->print_location);
+	my $output_dir = "./";
+	$output_dir = $self->output_dir if($self->output_dir);
 
-	if($flowcell)
+	## Handle include-lanes when specified ##
+
+	my $include_lanes;
+	$include_lanes = $self->include_lanes if($self->include_lanes);
+	my %lanes_to_include = ();
+	
+	if($include_lanes)
 	{
-		
+		my @lanes = split(/\,/, $include_lanes);
+		foreach my $desired_lane (@lanes)
+		{
+			$lanes_to_include{$desired_lane} = 1;
+		}
+	}
+	
+
+	## Get current directory ##
+	
+	my $cwd = getcwd;
+
+	my $sqlrun, my $rows_returned, my $cmd;
+
+	if($flowcell_id)
+	{
+		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where flow_cell_id = '$flowcell_id' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;
 	}
 
-	if($gerald_dir)
-	{	
-		if(!(-d $gerald_dir))
-		{
-			die "Error: Gerald directory does not exist!\n";
-		}
-	
-		## Create the output dir if it does not exist ##
-	
-		if(!(-d $output_dir))
-		{
-			mkdir($output_dir);
-		}
-	
-		## Open the directory and find ##
+	if($sample_name)
+	{
+		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where sample_name LIKE '\%$sample_name\%' ORDER BY lane" --instance warehouse --parse`;
+	}
+
+	if($library_name)
+	{
+		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where library_name = '$library_name' ORDER BY lane" --instance warehouse --parse`;
+	}
+
+	if($sqlrun)
+	{
+#		print "$sqlrun\n"; exit(0);
 		
-		opendir(GERALD_DIR, $gerald_dir) or die "Unable to open gerald directory $gerald_dir\n";
+		print "fcell\tlane\tlibrary_type\tfilt_reads\taln%\tsample_name\tlibrary_name\tstatus\n";
 		
-		## Identify s_*sequence.txt files ##
-	
-		my @sequence_files = ();	
-		my @dirfiles = readdir GERALD_DIR;
+		my @lines = split(/\n/, $sqlrun);
+		my %lane_pairs = ();
 		
-		foreach my $filename (sort @dirfiles)
+		foreach my $line (@lines)
 		{
-			if(substr($filename, length($filename) - 12, 12) eq "sequence.txt")
+			if($line && (substr($line, 0, 4) eq "FLOW" || substr($line, 0, 1) eq "-"))
 			{
-				my $outfile = $filename;
-				$outfile =~ s/\.txt/\.fastq/;
-				my $cmd = "maq sol2sanger $gerald_dir/$filename $output_dir/$outfile";
-				print "$cmd\n";
-				system("bsub -q long -R\"select[type==LINUX64 && mem>2000] rusage[mem=2000]\" $cmd");
+				
+			}
+			elsif($line && $line =~ "Execution")
+			{
+				($rows_returned) = split(/\s+/, $line);
+				print "$rows_returned rows returned\n";
+			}
+			elsif($line)
+			{
+				(my $flowcell, my $lane, my $sample, my $library, my $read_length, my $filt_clusters, my $seq_id, my $gerald_dir, my $insert_size, my $align_pct) = split(/\t/, $line);
+				
+				## Proceed if lane to be included ##
+				if(!$include_lanes || $lanes_to_include{$lane})
+				{
+					## Get num reads ##
+					
+					my $num_reads = commify($filt_clusters);
+					$align_pct = 0 if(!$align_pct);
+					$align_pct = sprintf("%.2f", $align_pct) . '%';
+					
+					## Get SE or PE ##
+					
+					my $end_type = "SE";
+					my $lane_name = $lane;
+	
+					if($insert_size)
+					{
+						$end_type = "PE";
+						$lane_pairs{"$flowcell.$lane"} = 1 if(!$lane_pairs{"$flowcell.$lane"});
+						$lane_name .= "_" . $lane_pairs{"$flowcell.$lane"};
+						$lane_pairs{"$flowcell.$lane"}++;
+					}
+					
+					## Create flowcell output dir and fastq output dir if necessary ##
+					
+					my $flowcell_dir = $output_dir . "/" . $flowcell;
+					my $fastq_dir = $output_dir . "/" . $flowcell . "/fastq_dir";
+					mkdir($flowcell_dir) if(!(-d $flowcell_dir));
+					mkdir($fastq_dir) if(!(-d $fastq_dir));
+					my $output_fastq = $fastq_dir . "/" . "s_" . $lane_name . "_sequence.fastq";
+					
+					## Get gerald dir ##
+					
+					my $status = "unknown";
+					my $location = "";
+	
+					## FILES STILL ON FILESYSTEM ##
+					if(-d $gerald_dir)
+					{
+						## Try to get the file locations ##
+						
+						my $find_command = `find $gerald_dir/ -name s_$lane_name\_*sequence.txt`;
+						if($find_command)
+						{
+							chomp($find_command);
+							$location = $find_command;
+	
+							if($location && -e $location)
+							{
+								my @temp = split(/\//, $location);
+								my $sata_drive = $temp[2];
+								
+								$status = "on_filesystem ($sata_drive)";
+								
+								## Output the command ##
+								
+								$cmd = "maq sol2sanger $location $output_fastq";
+								print "$cmd\n";
+								system($cmd);
+							}
+						}
+					}
+					
+					## EXTRACTING FILES FROM ARCHIVES ##
+					if(!($location && -e $location))
+					{
+						## Try to find the file in the archive ##
+						
+						my $archive_file = `sqlrun "select path FROM seq_fs_path WHERE seq_id = $seq_id AND data_type = 'illumina fastq tgz'" --instance warehouse | grep sequence_$flowcell`;
+						chomp($archive_file) if($archive_file);
+						if($archive_file && -e $archive_file)
+						{
+							$location = $archive_file;
+	
+							## Move to directory ##
+							chdir $flowcell_dir;
+							
+							## Extract the sequence.txt files ##
+							$cmd = "tar xf $archive_file";
+							print "$cmd\n";
+							my $extracted_files = `$cmd`;
+							chomp($extracted_files);
+							
+							## Extract each file ##
+							
+							my @files = split(/\n/, $extracted_files);
+							foreach my $extracted_file (@files)
+							{
+								my $this_output_file = $extracted_file;
+								$this_output_file =~ s/\.txt/\.fastq/;
+								$cmd = "maq sol2sanger $location fastq_dir/$this_output_file";
+								print "$cmd\n";
+							}
+							
+							## Move back to directory ##
+							chdir $cwd;
+	
+							my @temp = split(/\//, $archive_file);
+							my $sata_drive = $temp[2];
+							$status = "archived ($sata_drive)";						
+						}
+					}
+					
+					## Print result ##
+					print "$flowcell \t$lane_name \t$read_length bp $end_type\t$num_reads \t$align_pct \t$sample \t$library \t$status\n";
+	
+					## Print location ##
+					if($print_location && $location)
+					{
+						print "$location\n";
+					}					
+				}
 			}
 		}
-		
-		closedir(GERALD_DIR);
 	}
+
 	
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
+sub commify
+{
+	local($_) = shift;
+	1 while s/^(-?\d+)(\d{3})/$1,$2/;
+	return $_;
+}
 
 
 1;
