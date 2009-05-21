@@ -187,7 +187,7 @@ sub oriented_qual_file { # .oriented.fasta.qual - post assembly, then oriented
 }
 
 #< Assembled Sequence/Qual and Info >#
-sub get_bioseq { 
+sub get_bioseq { # gets the oriented or assembly bioseq and sets the other info about it
     return $_[0]->_get_bioseq_info->{bioseq};
 }
 
@@ -211,6 +211,24 @@ sub is_bioseq_oriented {
     return $_[0]->_get_bioseq_info->{oriented};
 }
 
+sub get_assembly_bioseq { # this just gets the assembly bioseq, and doesn't set the bioseq info
+    my $self = shift;
+
+    my %assembly_bioseq_info = $self->_get_bioseq_info_from_assembly
+        or return;
+
+    return $assembly_bioseq_info{bioseq};
+}
+
+sub get_oriented_bioseq { # this just gets the oriented bioseq, and doesn't set the bioseq info
+    my $self = shift;
+
+    my %oriented_bioseq_info = $self->_get_bioseq_info_from_oriented_fasta
+        or return;
+
+    return $oriented_bioseq_info{bioseq};
+}
+
 sub _get_bioseq_info {
     my $self = shift;
 
@@ -220,20 +238,6 @@ sub _get_bioseq_info {
         for my $method (qw/ _get_bioseq_info_from_oriented_fasta _get_bioseq_info_from_assembly _get_bioseq_info_from_nothing /) {
             %info = $self->$method;
             last if %info;
-        }
-
-        # Set bioseq props
-        if ( $info{bioseq} ) {
-            $info{bioseq}->id( $self->get_name );
-            $info{bioseq}->desc(
-                sprintf(
-                    'source=%s reads=%s',
-                    $info{source},
-                    ( join(',', @{$info{assembled_reads}}) || '' ),
-                )
-            );
-            $info{bioseq}->alphabet('dna');
-            $info{bioseq}->force_flush(1);
         }
 
         $self->{_bioseq_info} = \%info;
@@ -333,23 +337,28 @@ sub _get_bioseq_info_from_oriented_fasta {
     my $qual = $qual_reader->next_seq
         or return;
 
+    $self->_validate_fasta_and_qual_bioseq($fasta, $qual)
+        or return;
+    
     return (
         bioseq => Bio::Seq::Quality->new(
+            '-id' => $self->get_name,
+            '-desc' => "source=oriented reads=$read_string",
+            '-alphabet' => 'dna',
+            '-force_flush' => 1,
             '-seq' => $fasta->seq,
             '-qual' => $qual->qual,
         ), 
         assembled_reads => \@reads,
-        source => $source_string,
+        source => 'oriented',
         oriented => 1,
     );
 }
 
-sub _get_bioseq_info_from_assembly {
-#sub _get_bioseq_info_from_longest_contig {
+sub _get_bioseq_info_from_assembly { # was _get_bioseq_info_from_longest_contig
     my $self = shift;
 
-    return unless -s sprintf('%s/%s.fasta.contigs', $self->get_directory, $self->get_name);
-    my $acefile = sprintf('%s/%s.fasta.ace', $self->get_directory, $self->get_name);
+    my $acefile = $self->ace_file;
     my $factory = Finishing::Assembly::Factory->connect('ace', $acefile);
     my $contigs = $factory->get_assembly->contigs;
     my $contig;
@@ -370,78 +379,23 @@ sub _get_bioseq_info_from_assembly {
 
     # Bioseq
     my $bioseq = Bio::Seq::Quality->new(
+        '-id' => $self->get_name,
+        '-desc' => 'source=assembly reads='.join(',', @$read_names),
+        '-alphabet' => 'dna',
+        '-force_flush' => 1,
         '-seq' => $contig->unpadded_base_string,
         '-qual' => join(' ', @{$contig->qualities}),
     );
 
     $factory->disconnect;
 
+    $self->_validate_fasta_and_qual_bioseq($bioseq, $bioseq)
+        or return;
+
     return (
         bioseq => $bioseq,
         assembled_reads => $read_names,
         source => 'assembly',
-        oriented => 0,
-    );
-}
-
-sub _get_bioseq_info_from_longest_read {
-    my $self = shift;
-
-    # Fasta
-    my $fasta_file = sprintf('%s/%s.fasta', $self->get_directory, $self->get_name);
-    return unless -s $fasta_file;
-    my $fasta_reader = Bio::SeqIO->new(
-        '-file' => $fasta_file,
-        '-format' => 'fasta',
-    )
-        or return;
-    my $longest_fasta = $fasta_reader->next_seq;
-    while ( my $seq = $fasta_reader->next_seq ) {
-        $longest_fasta = $seq if $seq->length > $longest_fasta->length;
-    }
-
-    unless ( $longest_fasta ) { # should never happen
-        $self->error_message( 
-            sprintf(
-                'Found fasta file for amplicon (%s) reads, but could not find the longest fasta',
-                $self->get_name,
-            ) 
-        );
-        return;
-    }
-
-    # Qual
-    my $qual_file = sprintf('%s/%s.fasta.qual', $self->get_directory, $self->get_name);
-    my $qual_reader = Bio::SeqIO->new(
-        '-file' => $qual_file,
-        '-format' => 'qual',
-    )
-        or return;
-    my $longest_qual;
-    while ( my $seq = $qual_reader->next_seq ) {
-        next unless $seq->id eq $longest_fasta->id;
-        $longest_qual = $seq;
-        last;
-    }
-
-    unless ( $longest_qual ) { # should not happen
-        $self->error_message( 
-            sprintf(
-                'Found largest fasta for amplicon (%s), but could not find corresponding qual with id (%s)',
-                $self->get_name,
-                $longest_fasta->id,
-            ) 
-        );
-        return;
-    }
-
-    return (
-        bioseq => Bio::Seq::Quality->new(
-            '-seq' => $longest_fasta->seq,
-            '-qual' => $longest_qual->qual,
-        ),
-        assembled_reads => [],
-        source => 'read',
         oriented => 0,
     );
 }
@@ -452,13 +406,76 @@ sub _get_bioseq_info_from_nothing {
     return (
         bioseq => undef,
         assembled_reads => [],
-        source => undef,#'read',
         oriented => 0,
+        source =>undef, 
     );
 }
 
 #< Read Bioseq >#
-sub get_reads_raw_bioseq {
+# all
+sub get_bioseqs_for_raw_reads {
+    my ($self, $read_name) = @_;
+
+    return $self->_get_bioseqs_for_reads('reads');
+}
+
+sub get_bioseqs_for_processed_reads {
+    my ($self, $read_name) = @_;
+
+    return $self->_get_bioseqs_for_reads('processed');
+}
+
+sub _get_bioseqs_for_reads {
+    my ($self, $type) = @_;
+
+    my $fasta_file_method = $type.'_fasta_file';
+    my $fasta_file = $self->$fasta_file_method;
+    unless ( -e $fasta_file ) { # ok
+        print "No fasta file for type ($type)\n";
+        return;
+    }
+    
+    my $qual_file_method = $type.'_qual_file';
+    my $qual_file = $self->$qual_file_method;
+    unless ( -e $qual_file ) { # not ok
+        $self->_fatal_msg("Found fasta file, but not quality file for type ($type)");
+        return;
+    }
+
+    my @bioseqs;
+    my $fasta_reader = Bio::SeqIO->new(
+        '-file' => "< $fasta_file",
+        '-format' => 'fasta',
+    );
+    while ( my $fasta = $fasta_reader->next_seq ) {
+        push @bioseqs, Bio::Seq::Quality->new(
+            '-id' => $fasta->id,
+            '-desc' => 'source='.$type,
+            '-seq' => $fasta->seq,
+        );
+    }
+    unless ( @bioseqs ) { # not ok
+        $self->error_message("No reads found in fasta file ($fasta_file) for type ($type)\n");
+        return;
+    }
+
+    my $qual_reader = Bio::SeqIO->new(
+        '-file' => "< $qual_file",
+        '-format' => 'qual',
+    );
+    while ( my $qual = $qual_reader->next_seq ) {
+        # should be in order, but just in case
+        my ($bioseq) = grep { $_->id eq $qual->id } @bioseqs;
+        $self->_validate_fasta_and_qual_bioseq($bioseq, $qual)
+            or return;
+        $bioseq->qual( $qual->qual );
+    }
+
+    return @bioseqs;
+}
+
+# by read
+sub get_bioseq_for_raw_read {
     my ($self, $read_name) = @_;
 
     $self->_validate_read_name($read_name);
@@ -466,7 +483,7 @@ sub get_reads_raw_bioseq {
     return $self->_get_bioseq_for_read_and_type($read_name, 'reads');
 }
 
-sub get_reads_processed_bioseq {
+sub get_bioseq_for_processed_read {
     my ($self, $read_name) = @_;
 
     $self->_validate_read_name($read_name);
@@ -487,20 +504,21 @@ sub _validate_read_name {
     
     return 1;
 }
+
 sub _get_bioseq_for_read_and_type {
     my ($self, $read_name, $type) = @_;
 
     my $fasta_file_method = $type.'_fasta_file';
     my $fasta_file = $self->$fasta_file_method;
     unless ( -e $fasta_file ) { # ok
-        print "No fasta file for read ($read_name) and type ($type)\n";
+        print "No fasta file for type ($type)\n";
         return;
     }
     
     my $qual_file_method = $type.'_qual_file';
     my $qual_file = $self->$qual_file_method;
     unless ( -e $qual_file ) { # not ok
-        $self->_fatal_msg("Found fasta file, but not quality file for read ($read_name) and type ($type)");
+        $self->_fatal_msg("Found fasta file, but not quality file for type ($type)");
         return;
     }
 
@@ -528,9 +546,12 @@ sub _get_bioseq_for_read_and_type {
         $self->_fatal_msg("Found fasta, but not quality for read ($read_name) and type ($type)");
     }
 
+    $self->_validate_fasta_and_qual_bioseq($fasta, $qual)
+        or return;
+
     return Bio::Seq::Quality->new(
         '-id' => $read_name,
-        '-desc' => 'type='.$type,
+        '-desc' => 'source='.$type,
         '-seq' => $fasta->seq,
         '-qual' => $qual->qual,
     );
@@ -560,7 +581,387 @@ sub save_classification {
     return 1;
 }
 
+#< Bio::Seq Helpers >#
+sub _validate_fasta_and_qual_bioseq {
+    my ($self, $fasta, $qual) = @_;
+
+    #print "Validating ".$fasta->id.' and '.$qual->id."\n";
+    
+    unless ( $fasta->seq =~ /^[ATGCNX]+$/i ) {
+        $self->error_message(
+            sprintf(
+                "Illegal characters found in fasta (%s) seq:\n%s",
+                $fasta->id,
+                $fasta->seq,
+            )
+        );
+        return;
+    }
+
+    unless ( $fasta->length == $qual->length ) {
+        $self->error_message(
+            sprintf(
+                'Unequal length for fasta (%s) and quality (%s)',
+                $fasta->id,
+                $qual->id,
+            )
+        );
+        return;
+    }
+    
+    return 1;
+}
+
 1;
+
+=pod
+
+=head1 Name
+
+Genome::Model::Build::AmpliconAssembly::Amplicon
+
+=head1 Synopsis
+
+A package for interacting with amplicons in amplicon assembly models 
+
+=head1 Usage
+
+Although an amplicon can be created directly, it is best to use the 'get_amplicons' method on a amplicon assembly build:
+
+ my $build = Genome::Model::Build->get(build_id => $id);
+ my $amplicons = $build->get_amplicons
+    or die "No amplicons for build id: $id\n";
+ for my $amplicon ( @$amplicons ) {
+    ...
+ }
+
+Create directly:
+
+ my $amplicon = Genome::Model::Build::AmpliconAssembly::Amplicon->new(
+    name => 'HMPB-aaa01a01', # base name of the amplicon
+    directory => $build->edit_dir, # dir w/ fasta and quals for the amplicon
+    reads => [qw/ HMPB-aaa01a01.b1 HMPB-aaa01a01.b2 HMPB-aaa01a01.g1 /], # the trace names for the amplicon that were used in attempting to assemble
+ );
+
+ ...
+
+
+=head1 Attribute Getters
+
+These are getters for the attributes that are used to create the amplicon.
+
+=over
+
+=item B<get_name>
+
+=item B<get_directory>
+
+=item B<get_reads> 
+
+=item B<get_read_count> - simple read count
+
+=back
+
+=head1 Files
+
+The methods get the file names
+
+=over
+
+=item B<scfs_file>
+
+=item B<create_scfs_file>
+
+=item B<phds_file>
+
+=item B<classification_file>
+
+=item B<fasta_file_for_type>
+
+=item B<qual_file_for_type>
+
+=item B<reads_fasta_file>
+
+=item B<reads_qual_file>
+
+=item B<processed_fasta_file>
+
+=item B<processed_qual_file>
+
+=item B<assembly_fasta_file> - same as contigs_fasta_file
+
+=item B<assembly_qual_file> - same as contigs_qual_file
+
+=item B<contigs_fasta_file>
+
+=item B<contigs_qual_file>
+
+=item B<ace_file>
+
+=item B<oriented_fasta_file>
+
+=item B<oriented_qual_file>
+
+=back
+
+=head1 Main Bioseq Methods
+
+The methods refer to the main bioseq methods, which when called we set the bioseq and it's properties.  These methods try to first get the oriented fasta/qual, but if that does not exist, the ace assembly will be used.  If the amplicon reads failed to assemble, or do not meet the successful_assembly_length, no bioseq info will be returned.
+
+=head2 get_bioseq
+
+=over
+
+=item I<Synopsis>   Trys to get the assembled bioseq from oriented fasta, then the assembly fasta.  If not assembled no bioseq is returned.
+
+=item I<Arguments>  none
+
+=item I<Returns>    bioseq object (Bio::Seq::Quality)
+
+=back
+
+=head2 get_bioseq_source
+
+=over
+
+=item I<Synopsis>   The source of the main bioseq.  Currently oriented or assembly
+
+=item I<Arguments>  none
+
+=item I<Returns>    source (string)
+
+=back
+
+=head2 get_assembled_reads
+
+=over
+
+=item I<Synopsis>   The reads used in successful assembly of the amplicon
+
+=item I<Arguments>  none
+
+=item I<Returns>    read names (array ref of strings)
+
+=back
+
+
+=head2 get_assembled_read_count
+
+=over
+
+=item I<Synopsis>   The number of reads used in successful assembly of the amplicon
+
+=item I<Arguments>  none
+
+=item I<Returns>    read count (integer)
+
+=back
+
+=head2 was_assembled_successfully
+
+ if ( $amplicon->was_assembled_successfully ) {
+    ...
+ }
+
+=over
+
+=item I<Synopsis>   Tells wheter or not the amplicon was assembled successfully
+
+=item I<Arguments>  none
+
+=item I<Returns>    boolean (true for success)
+
+=back
+
+=head2 is_bioseq_oriented
+
+=over
+
+=item I<Synopsis>   Tells if the bioseq was oriented
+
+=item I<Arguments>  none
+
+=item I<Returns>    boolean (true for success)
+
+=back
+
+=head1 Bioseq Methods for Speicifc Types
+
+=head2 get_assembly_bioseq
+
+ my $bioseq = $amplicon->get_assembly_bioseq;
+
+=over
+
+=item I<Synopsis>   Gets the assembly bioseq, straight from the acefile, if assembled and if the assembly meets the successful assembly length.
+
+=item I<Arguments>  none
+
+=item I<Returns>    bioseq object (Bio::Seq::Quality)
+
+=back
+
+=head2 get_oriented_bioseq
+
+ my $bioseq = $amplicon->get_oriented_bioseq;
+
+=over
+
+=item I<Synopsis>   Gets the oriented bioseq, if it exists
+
+=item I<Arguments>  none
+
+=item I<Returns>    bioseq object (Bio::Seq::Quality)
+
+=back
+
+=head2 get_bioseq_for_raw_read
+
+ my $bioseq = $amplicon->get_bioseq_for_raw_readi($read_name);
+
+=over
+
+=item I<Synopsis>   Gets the bioseq for a raw, unprocessed read
+
+=item I<Arguments>  read name (string)
+
+=item I<Returns>    bioseq object (Bio::Seq::Quality)
+
+=back
+
+=head2 get_bioseqs_for_raw_reads
+
+ my @bioseqs = $amplicon->get_bioseqs_for_raw_reads;
+
+=over
+
+=item I<Synopsis>   Gets the oriented bioseq, if it exists
+
+=item I<Arguments>  none
+
+=item I<Returns>    array of bioseq objects (Bio::Seq::Quality)
+
+=back
+
+=head2 get_bioseq_for_processed_read
+
+ my $bioseq = $amplicon->get_bioseq_for_processed_read($read_name);
+
+=over
+
+=item I<Synopsis>   Gets the bioseq for a processed read
+
+=item I<Arguments>  read name (string)
+
+=item I<Returns>    bioseq object (Bio::Seq::Quality)
+
+=back
+
+=head2 get_bioseqs_for_processed_reads
+
+ my @bioseqs = $amplicon->get_bioseqs_for_processed_reads;
+
+=over
+
+=item I<Synopsis>   Gets the bioseqs for all of the processed reads
+
+=item I<Arguments>  none
+
+=item I<Returns>    array of bioseq objects (Bio::Seq::Quality)
+
+=back
+
+=head1 Classification
+
+=head2 get_classification
+
+=over
+
+=item I<Synopsis>   Gets the classification
+
+=item I<Arguments>  none
+
+=item I<Returns>    classification object (Genome::Utility::MetagenomicClassifier::SequenceClassification)
+
+=back
+
+=head2 save_classification
+
+=over
+
+=item I<Synopsis>   Saves the classification
+
+=item I<Arguments>  classification object (Genome::Utility::MetagenomicClassifier::SequenceClassification)
+
+=item I<Returns>    boolean (true for success)
+
+=back
+
+=head1 Misc
+
+=head2 successful_assembly_length
+
+=over
+
+=item I<Synopsis>   Gets the length that an assembly must be greater than or eqaul to to be considered a success
+
+=item I<Arguments>  none
+
+=item I<Returns>    1150 (integer)
+
+=back
+
+=head2 confirm_orientation
+
+ if ( $amplicon->confirm_orientation ) {
+    print "Yay! Saved oriented fasta for amplicon\n";
+ }
+
+=over
+
+=item I<Synopsis>   Confirms the orientation of the amplicon.  This will then create 'oriented' fasta and quality files.
+
+=item I<Arguments>  complement (boolean) - whether or not the assembly bioseq must be complemented before saving.
+
+=item I<Returns>    boolean (true for success)
+
+=back
+
+=head2 remove_unneeded_files
+ 
+ $amplicon->remove_unneeded_files;
+
+=over
+
+=item I<Synopsis>   Removes the redundant, uneeded files for an amplicon from the directory
+
+=item I<Arguments>  none
+
+=item I<Returns>    boolean (true for success)
+
+=back
+
+=head1 See Also
+
+=over
+
+=item B<Genome::Model::Build::AmpliconAssembly>
+
+=back
+
+=head1 Disclaimer
+
+Copyright (C) 2005 - 2009 Genome Center at Washington University in St. Louis
+
+This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied
+ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.
+
+=head1 Author(s)
+
+B<Eddie Belter> I<ebelter@genome.wustl.edu>
+
+=cut
 
 #$HeadURL$
 #$Id$
