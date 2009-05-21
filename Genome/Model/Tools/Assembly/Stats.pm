@@ -198,7 +198,7 @@ sub parse_input_qual_files {
 	    $counts->{prefin_read_count}++ if $read_name =~ /_t/;
 	    foreach my $qual_value (@{$q->qual}) {
 		$counts->{base_count}++;
-		$counts->{q20_base_count}++ if $qual_value ge $q_cutoff;
+		$counts->{q20_base_count}++ if $qual_value >= $q_cutoff;
 	    }
 	}
 	$fh->close;
@@ -337,7 +337,7 @@ sub _resolve_tier_values {
     }
     else {
 	my $est_genome_size = -s 'contigs.bases';
-	$t1 = int ($est_genome_size * 0.6);
+	$t1 = int ($est_genome_size * 0.4);
 	$t2 = int ($est_genome_size * 0.2);
     }
     return ($t1, $t2);
@@ -415,19 +415,18 @@ sub create_contiguity_stats {
     my $larger_than_0K = 0;
 
     foreach my $c (sort {$counts->{$type}->{$b} <=> $counts->{$type}->{$a}} keys %{$counts->{$type}}) {
-
 	$total_contig_number++;
 	$total_q20_bases += $q20_counts->{$c} if exists $q20_counts->{$c};
 	$cumulative_length += $counts->{$type}->{$c};
 
-	if ($counts->{$type}->{$c} ge $major_contig_length) {
+	if ($counts->{$type}->{$c} >= $major_contig_length) {
 	    $major_contig_bases += $counts->{$type}->{$c};
 	    $major_contig_q20_bases += $q20_counts->{$c} if exists $q20_counts->{$c};
 	    $major_contig_number++;
 	}
 	if ($not_reached_n50) {
 	    $n50_contig_number++;
-	    if ($cumulative_length ge $counts->{total_contig_length} * 0.50) {
+	    if ($cumulative_length >= $counts->{total_contig_length} * 0.50) {
 		$n50_contig_length = $counts->{$type}->{$c};
 		$not_reached_n50 = 0;
 	    }
@@ -441,7 +440,7 @@ sub create_contiguity_stats {
 	    $total_t1_q20_bases += $q20_counts->{$c} if exists $q20_counts->{$c};
 	    if ($t1_not_reached_n50) {
 		$t1_n50_contig_number++;
-		if ($cumulative_length ge ($t1 * 0.50)) {
+		if ($cumulative_length >= ($t1 * 0.50)) {
 		    $t1_n50_contig_length = $counts->{$type}->{$c};
 		    $t1_not_reached_n50 = 0;
 		}
@@ -457,7 +456,7 @@ sub create_contiguity_stats {
 	    $total_t2_q20_bases += $q20_counts->{$c} if exists $q20_counts->{$c};
 	    if ($t2_not_reached_n50) {
 		$t2_n50_contig_number++;
-		if ($cumulative_length ge ($t1 * 0.50)) {
+		if ($cumulative_length >= ($t2 * 0.50)) {
 		    $t2_n50_contig_length = $counts->{$type}->{$c};
 		    $t2_not_reached_n50 = 0;
 		}
@@ -473,7 +472,7 @@ sub create_contiguity_stats {
 	    $total_t3_q20_bases += $q20_counts->{$c} if exists $q20_counts->{$c};
 	    if ($t3_not_reached_n50) {
 		$t3_n50_contig_number++;
-		if ($cumulative_length ge ($t1 * 0.50)) {
+		if ($cumulative_length >= ($t3 * 0.50)) {
 		    $t3_n50_contig_length = $counts->{$type}->{$c};
 		    $t3_not_reached_n50 = 0;
 		}
@@ -514,7 +513,7 @@ sub create_contiguity_stats {
 	$n50_cumulative_length += $counts->{$type}->{$c};
 	$n50_major_contig_number++ if $not_reached_major_n50;
 	if ($not_reached_major_n50) {
-	    if ($n50_cumulative_length ge $major_contig_q20_bases * 0.50) {
+	    if ($n50_cumulative_length >= $major_contig_q20_bases * 0.50) {
 		$not_reached_major_n50 = 0;
 		$n50_major_contig_length = $counts->{$type}->{$c};
 	    }
@@ -523,7 +522,6 @@ sub create_contiguity_stats {
 
     my $average_contig_length = int ($cumulative_length / $total_contig_number + 0.50);
     my $average_major_contig_length = int ($major_contig_length / $major_contig_number + 0.50);
-
     my $average_t1_contig_length = int ($total_t1_bases/$t1_count + 0.5);
     my $average_t2_contig_length = int ($total_t2_bases/$t2_count + 0.5);
     my $average_t3_contig_length = int ($total_t3_bases/$t3_count + 0.5);
@@ -547,7 +545,9 @@ sub create_contiguity_stats {
     else {
 	$q20_ratio = int ($total_q20_bases * 1000 / $cumulative_length) / 10;
 	$major_contig_q20_ratio = int ($total_q20_bases * 1000 / $major_contig_number) / 10;
-#	$major_contig_q20_base_ratio = int ($major_contig_q20_bases / $major_contig_number + 0.50);
+
+	print "T1 $total_t1_bases T2 $total_t2_bases T3 $total_t3_bases\n";
+
 	$t1_q20_ratio = int ($total_t1_q20_bases * 1000 / $total_t1_bases) / 10;
 	$t2_q20_ratio = int ($total_t2_q20_bases * 1000 / $total_t2_bases) / 10;
 	$t3_q20_ratio = int ($total_t3_q20_bases * 1000 / $total_t3_bases) / 10;
@@ -625,7 +625,7 @@ sub get_read_depth_stats {
     my @contig_names = $ace_obj->get_all_contigNames();
     foreach my $contig (@contig_names) {
 	my $contig_length = $ace_obj->Contig_Length ( -contig => $contig );
-	next unless $contig_length ge $major_contig_length;
+	next unless $contig_length >= $major_contig_length;
 	my @reads = $ace_obj->ReadsInContig(-contig => $contig);
 	foreach my $read (@reads) {
 	    my $align_unpadded_clip_start = $ace_obj->getAlignUnpadedClipStart ( -read => $read );
@@ -682,6 +682,7 @@ sub get_read_depth_stats {
 	       "Depth >= 2: $two_x_cov\t". $two_x_cov/$total_read_bases."\n".
 	       "Depth >= 1: $one_x_cov\t". $one_x_cov/$total_read_bases."\n\n";
 
+    unlink $depth_file;
     return $text;
 }
 
