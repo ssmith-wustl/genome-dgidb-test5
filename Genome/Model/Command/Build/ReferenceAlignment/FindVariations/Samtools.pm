@@ -15,7 +15,7 @@ class Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Samtool
             doc => "the path at which all analysis output is stored",
             calculate_from => ['build'],
             calculate      => q|
-                return $build->map_snp_related_metric_directory;
+                return $build->maq_snp_related_metric_directory;
             |,
             is_constant => 1,
         },
