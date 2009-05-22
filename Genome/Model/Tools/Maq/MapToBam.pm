@@ -71,7 +71,7 @@ sub create {
 sub execute {
     my $self = shift;
 
-    my $tool_path  = '/gscuser/dlarson/src/samtools/tags/samtools-0.1.2';
+    my $tool_path  = '/gscuser/dlarson/samtools/r301wu1';
     my $tosam_path = $tool_path.'/misc/maq2sam-';
     my $samtools   = $tool_path.'/samtools';
 
