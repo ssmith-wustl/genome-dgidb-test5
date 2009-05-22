@@ -6,6 +6,9 @@ use strict;
 # software infrastructure
 use UR;
 
+# this keeps available parts of the UR 0.01 API we still use
+use UR::ObjectV001;
+
 # environmental configuration
 use Genome::Config;
 
