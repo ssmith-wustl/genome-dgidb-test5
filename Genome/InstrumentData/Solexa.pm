@@ -84,6 +84,16 @@ EOS
             is => "Genome::Project",
             calculate => q|Genome::Project->get(name => $self->research_project_name)| 
         },
+        target_region_set_name => {
+                                   via   => 'attributes',
+                                   to    => 'value',
+                                   where => [
+                                             entity_class_name => 'Genome::InstrumentData::Solexa',
+                                             property_name     => 'target_region_set_name',
+                                         ],
+                                   is_optional => 1,
+                                   is_mutable  => 1,
+                               },
         _run_lane_solexa => {
             doc => 'Solexa Lane Summary from LIMS.',
             is => 'GSC::RunLaneSolexa',
