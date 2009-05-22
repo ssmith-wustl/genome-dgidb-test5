@@ -71,7 +71,7 @@ sub execute {
          return;
     }         
 
-    my $sam_pathname = '/gscuser/dlarson/src/samtools/tags/samtools-0.1.2/samtools';
+    my $sam_pathname = '/gscuser/dlarson/samtools/r301wu1/samtools';
     my $cmd = $sam_pathname. " pileup -f $ref_seq_file";
     $cmd .= ' '.$assembly_opts if $assembly_opts;
     
