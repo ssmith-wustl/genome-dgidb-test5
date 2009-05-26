@@ -179,7 +179,7 @@ sub execute {
 	    unless($name) {$name = "$chr\:$start\:$stop";}
 	    $chr =~ s/chr([\S]+)/\U$1/;
 
-	    if ($chr =~ /M/ || $chr =~ /m/) { $chr == "MT"; }
+	    if ($chr =~ /M/ || $chr =~ /m/) { $chr = "MT"; }
 
 	    my $seq = &get_ref_base($chr,$start,$stop,$self);
 
@@ -215,7 +215,7 @@ sub execute {
 	unless ($start =~ /^[\d]+$/) {$self->error_message("please provide the Build 36 start coordinate"); return 0; }
 	unless ($stop =~ /^[\d]+$/) {$self->error_message("please provide the Build 36 start coordinate"); return 0; }
 
-	if ($chr =~ /M/ || $chr =~ /m/) { $chr == "MT"; }
+	if ($chr =~ /M/ || $chr =~ /m/) { $chr = "MT"; }
 
 	my $seq = &get_ref_base($chr,$start,$stop,$self);
 
