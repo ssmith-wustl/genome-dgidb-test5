@@ -444,11 +444,15 @@ sub PSEDataInfo{
 	}
     }
 
-    $frame -> BrowseEntry(-label => '', 
-			  -width => $max,
-			  -variable => \$param_value, 
-			  -choices => $options, 
-			  -browsecmd => [$cmd]) -> pack(-side => 'top', -anchor => 'e');
+    my $entry = $frame->BrowseEntry(
+        -label     => '',
+        -width     => $max,
+        -variable  => \$param_value,
+        -choices   => $options,
+        -browsecmd => [$cmd]
+    )->pack(-side   => 'top', -anchor => 'e');
+    $entry->bind('<KeyRelease>', $cmd);
+    $entry->bind('<FocusIn>', sub { $entry->selectionRange(0, 'end'); });
     
     $hlist->itemCreate($row, $col, -itemtype => $window_type,-style => $button_style,-widget => $frame);
     
