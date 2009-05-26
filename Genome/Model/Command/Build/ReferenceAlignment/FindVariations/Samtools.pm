@@ -21,9 +21,9 @@ class Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Samtool
         },
         snp_output_file => {
             doc => "",
-            calculate_from => ['analysis_base_path'],
+            calculate_from => ['analysis_base_path', 'ref_seq_id'],
             calculate      => q|
-                return $analysis_base_path.'/snps_all_sequences';
+                return $analysis_base_path.'/snps_'.$ref_seq_id;
             |,
         },
         filtered_snp_output_file => {
@@ -177,7 +177,7 @@ sub generate_genotype_detail_file {
 
     my $snp_gd = Genome::Model::Tools::Snp::GenotypeDetail->create(
         snp_file   => $snp_output_file,
-        out_file   => $$report_input_file,
+        out_file   => $report_input_file,
         snp_format => 'sam',
     );
     
