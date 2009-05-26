@@ -21,16 +21,16 @@ class Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Samtool
         },
         snp_output_file => {
             doc => "",
-            calculate_from => ['analysis_base_path','ref_seq_id'],
+            calculate_from => ['analysis_base_path'],
             calculate      => q|
-                return $analysis_base_path.'/snps_'.$ref_seq_id;
+                return $analysis_base_path.'/snps_all_sequences';
             |,
         },
         filtered_snp_output_file => {
             doc => "",
-            calculate_from => ['snp_output_file'],
+            calculate_from => ['analysis_base_path'],
             calculate      => q|
-                return $snp_output_file.'.filtered';
+                return $analysis_base_path.'/filtered.indelpe.snps';
             |,
         },
         indel_output_file => {
