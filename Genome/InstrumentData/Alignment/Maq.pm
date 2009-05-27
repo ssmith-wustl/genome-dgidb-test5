@@ -10,6 +10,15 @@ class Genome::InstrumentData::Alignment::Maq {
     has_constant => [
                      aligner_name => { value => 'maq' },
     ],
+    has => [
+            arch_os => {
+                        calculate => q|
+                            my $arch_os = `uname -m`;
+                            chomp($arch_os);
+                            return $arch_os;
+                        |
+                    },
+        ],
 };
 
 sub sanger_bfq_filenames {
@@ -305,26 +314,45 @@ sub verify_alignment_data {
     return unless $alignment_dir;
     return unless -d $alignment_dir;
 
+    unless ( $self->arch_os =~ /64/ ) {
+        die('Failed to verify_alignment_data.  Must run from 64-bit architecture.');
+    }
+
+    my $lock;
+    unless ($self->_resource_lock) {
+        $lock = $self->lock_alignment_resource;
+    } else {
+        $lock = $self->_resource_lock;
+    }
+
     unless ($self->output_files) {
         $self->status_message('No output files found in alignment directory: '. $alignment_dir);
         return;
     }
 
     my $reference_build = $self->reference_build;
-    my ($all_sequences_alignment_file) = $self->alignment_file_paths_for_subsequence_name('all_sequences');
+    my ($alignment_file) = $self->alignment_file_paths_for_subsequence_name('all_sequences');
     my $errors = 0;
-    unless ($all_sequences_alignment_file) {
+    unless ($alignment_file) {
         my @subsequence_names = grep { $_ ne 'all_sequences' } $reference_build->subreference_names(reference_extension => 'bfa');
         unless  (@subsequence_names) {
             @subsequence_names = 'all_sequences';
         }
         for my $subsequence_name (@subsequence_names) {
-            my ($alignment_file) = $self->alignment_file_paths_for_subsequence_name($subsequence_name);
+            ($alignment_file) = $self->alignment_file_paths_for_subsequence_name($subsequence_name);
             unless ($alignment_file) {
                 $errors++;
                 $self->error_message('No alignment file found for subsequence '. $subsequence_name .' in alignment directory '. $self->alignment_directory);
             }
         }
+    }
+    unless (Genome::Model::Tools::Maq::Mapvalidate->execute(
+                                                        map_file => $alignment_file,
+                                                        output_file => '/dev/null',
+                                                        use_version => $self->aligner_version,
+                                                    )) {
+        $errors++;
+        $self->error_message('Failed to run maq mapvalidate on alignment file: '. $alignment_file);
     }
     my @possible_unaligned_shortcuts= $self->unaligned_reads_list_paths;
     for my $possible_unaligned_shortcut (@possible_unaligned_shortcuts) {
@@ -358,28 +386,35 @@ sub verify_alignment_data {
         return;
     }
     $self->status_message('Alignment data verified: '. $alignment_dir);
+
+    unless ($self->unlock_alignment_resource) {
+        $self->error_message('Failed to unlock alignment resource '. $lock);
+        return;
+    }
     return 1;
 }
 
 sub find_or_generate_alignment_data {
     my $self = shift;
 
-    my $lock = $self->lock_alignment_resource;
     unless ($self->verify_alignment_data) {
         $self->_run_aligner();
     } else {
         $self->status_message("Existing alignment data is available and deemed correct.");
     }
-    unless ($self->unlock_alignment_resource) {
-        $self->error_message('Failed to unlock alignment resource '. $self->_lock);
-        return;
-    }
+
     return 1;
 }
 
 sub _run_aligner {
     my $self = shift;
 
+    my $lock;
+    unless ($self->_resource_lock) {
+        $lock = $self->lock_alignment_resource;
+    } else {
+        $lock = $self->_resource_lock;
+    }
     my $instrument_data = $self->instrument_data;
     my $reference_build = $self->reference_build;
     my $alignment_directory = $self->alignment_directory;
@@ -529,6 +564,11 @@ sub _run_aligner {
             $self->error_message('Failed to reallocate disk space for disk allocation: '. $alignment_allocation->id);
             $self->die_and_clean_up($self->error_message);
         }
+    }
+
+    unless ($self->unlock_alignment_resource) {
+        $self->error_message('Failed to unlock alignment resource '. $lock);
+        return;
     }
     return 1;
 }
