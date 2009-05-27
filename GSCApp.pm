@@ -290,7 +290,6 @@ associations in four cases.
     GSC_USERS                   => 'user', 
     DNA_TYPE                    => 'dna type',
     BARCODE_SOURCES             => 'barcode',
-    BARCODE                     => 'barcode new',
     TP_ENTRY                    => 'tp entry',
     SEQUENCE_VERIFICATION       => 'verification sequence tag',
     SEQUENCE_CLIPPING           => 'clipping sequence tag',
@@ -340,10 +339,6 @@ associations in four cases.
         ENTITY_TYPE_ATTRIBUTE           App::Object::Property
         ENTITY_TYPE_ID                  App::Object::Property::ID
         ENTITY_TYPE_UNIQUE_ATTRIBUTE    App::Object::Property::Unique
-        BARCODE                         GSC::BarcodeNew
-        PS_TPP                          GSC::PSTPP
-
-         
         SEQUENCE_ITEM_TYPE              GSC::Sequence::ItemType
         SEQUENCE_TAG_TYPE               GSC::Sequence::TagType
          
@@ -355,15 +350,9 @@ associations in four cases.
         SEQUENCE_ASSEMBLY_PSE           GSC::Sequence::AssemblyPSE
         SEQUENCE_ASSEMBLY_SANGER        GSC::Sequence::Assembly::Sanger
         SEQUENCE_ASSEMBLY_454           GSC::Sequence::Assembly::454
-        SEQUENCE_ASSEMBLY_SOLEXA        GSC::Sequence::Assembly::Solexa
         SEQUENCE_ASSEMBLY_INPUT         GSC::Sequence::Assembly::Input
-        SEQUENCE_ASSEMBLY_INPUT_SANGER  GSC::Sequence::Assembly::Input::Sanger
         SEQUENCE_ASSEMBLY_INPUT_454     GSC::Sequence::Assembly::Input::454
-        SEQUENCE_ASSEMBLY_INPUT_Solexa  GSC::Sequence::Assembly::Input::Solexa
         SEQUENCE_ASSEMBLY_OUTPUT        GSC::Sequence::Assembly::Output
-        SEQUENCE_ASSEMBLY_OUTPUT_SANGER GSC::Sequence::Assembly::Output::Sanger
-        SEQUENCE_ASSEMBLY_OUTPUT_454    GSC::Sequence::Assembly::Output::454
-        SEQUENCE_ASSEMBLY_OUTPUT_Solexa GSC::Sequence::Assembly::Output::Solexa
         SEQUENCE_GC_PCT_COUNT           GSC::Sequence::GCPctCount
 
         SEQ_ASSEMBLY_READ_STATUS_454	GSC::Sequence::Assembly::ReadStatus::454
@@ -417,12 +406,7 @@ associations in four cases.
         SETUP_PROJECT_HTMP_REFSEQ       GSC::Setup::Project::HTMP::RefSeq 
         SETUP_PROJECT_HTMP_AMPLICON     GSC::Setup::Project::HTMP::Amplicon 
         SETUP_PROJECT_FINISHING         GSC::Setup::Project::Finishing
-
-        RESEARCH_PROJECT_HTMP           GSC::ResearchProject::HTMP 
-        RESEARCH_PROJECT_FINISHING      GSC::ResearchProject::Finishing
-
         SEQUENCE_ANNOTATION_PARAM       GSC::Setup::SequenceAnnotationParam
-
         SETUP_AUTO_ASSEMBLY             GSC::Setup::AutoAssembly
         SETUP_BASECALLER                GSC::Setup::Basecaller
         SETUP_AMPLICON_DESIGN           GSC::Setup::AmpliconDesign
@@ -460,7 +444,6 @@ associations in four cases.
         SOLEXA_RUN_ANALYSIS             GSC::Equipment::Solexa::RunAnalysis
         SOLEXA_RUN_ANALYSIS_LANE        GSC::Equipment::Solexa::RunAnalysisLane
         SOLEXA_LANE_ALIGN_SPEC          GSC::Equipment::Solexa::RunAnalysisLaneAlignSpec
-        SOLEXA_RUN_SUMMARY              GSC::Equipment::Solexa::RunAnalysis::Summary
         SOLEXA_LANE_SUMMARY             GSC::RunLaneSolexa
         SOLID_RUN                       GSC::Equipment::Solid::Run
         SOLID_RUN_REGION                GSC::Equipment::Solid::RunRegion
