@@ -98,9 +98,10 @@ sub execute {
     my $snp_output_file          = $self->snp_output_file;
     my $filtered_snp_output_file = $self->filtered_snp_output_file;
     my $indel_output_file        = $self->indel_output_file;
+    my $filtered_indel_file      = $self->indel_output_file . '.filtered';
 
     # Remove the result files from any previous run
-    unlink($snp_output_file, $filtered_snp_output_file, $indel_output_file);
+    unlink($snp_output_file, $filtered_snp_output_file, $indel_output_file, $filtered_indel_file);
 
     my $samtools_cmd = "$sam_pathname pileup -c -f $ref_seq_file";
 
@@ -109,8 +110,11 @@ sub execute {
 
     $rv = system "$samtools_cmd -i $bam_file > $indel_output_file";
     return unless $self->_check_rv("Running samtools indel failed with exit code $rv", $rv, 0);
+
+    $rv = system "gt sam indel-filter --indel-file $indel_output_file";
+    return unless $self->_check_rv("Running gt sam indel-filter failed with ext code $rv", $rv, 0);
    
-    $rv = system "gt sam snp-filter --snp-file $snp_output_file --out-file $filtered_snp_output_file --indel-file $indel_output_file";
+    $rv = system "gt sam snp-filter --snp-file $snp_output_file --out-file $filtered_snp_output_file --indel-file $filtered_indel_file";
     return unless $self->_check_rv("Running gt sam snp-filter failed with exit code $rv", $rv, 0);
     
     $rv = $self->generate_genotype_detail_file;
