@@ -211,7 +211,7 @@ sub alignment_file_paths {
     my $self = shift;
     return unless $self->alignment_directory;
     return unless -d $self->alignment_directory;
-    return grep { -e $_ && $_ !~ /aligner_output/ }
+    return grep { -e $_ && $_ !~ /aligner_output/ && $_ !~ /mapview/ }
             glob($self->alignment_directory .'/*.map*');
 }
 
