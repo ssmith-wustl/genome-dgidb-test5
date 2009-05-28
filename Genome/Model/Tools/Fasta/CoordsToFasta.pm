@@ -12,12 +12,17 @@ class Genome::Model::Tools::Fasta::CoordsToFasta {
 
 	     out => {
 		 type  =>  'String',
-		 doc   =>  "provide a name for you output fasta file or it will simply be printed as stdout",
+		 doc   =>  "provide a name for your output fasta file or it will simply be printed as stdout",
 		 is_optional  => 1,
 	     },
 	     name => {
 		 type  =>  'String',
 		 doc   =>  "provide a string that will appear in the fasta header",
+		 is_optional  => 1,
+	     },
+	     format_header => {
+		 type  =>  'Boolean',
+		 doc   =>  "using this option will write a string that will appear in the fasta header and will supersede the name option",
 		 is_optional  => 1,
 	     },
 	     chromosome => {
@@ -27,12 +32,12 @@ class Genome::Model::Tools::Fasta::CoordsToFasta {
 	     },
 	     start => {
 		 type  =>  'Number',
-		 doc   =>  "build 36 start coordinate of the variation",
+		 doc   =>  "build 36 start coordinate",
 		 is_optional  => 1,
 	     },
 	     stop => {
 		 type  =>  'Number',
-		 doc   =>  "build 36 stop coordinate of the variation; default will be equal to the start coordinate",
+		 doc   =>  "build 36 stop coordinate;",
 		 is_optional  => 1,
 	     },
 	     list => {
@@ -40,7 +45,6 @@ class Genome::Model::Tools::Fasta::CoordsToFasta {
 		 doc   =>  "a list of positions from which to retrieve sequence",
 		 is_optional  => 1,
 	     },
- 
 	     masked => {
 		 type  =>  'Boolean',
 		 doc   =>  "use this option if you want masked sequence rather than the default softmasked sequence",
@@ -48,12 +52,12 @@ class Genome::Model::Tools::Fasta::CoordsToFasta {
 	     },
 	     unmasked => {
 		 type  =>  'Boolean',
-		 doc   =>  "use this option if you want softmasked sequence rather than the default softmasked sequence",
+		 doc   =>  "use this option if you want unmasked sequence rather than the default softmasked sequence",
 		 is_optional  => 1,
 	     },
 	     reverse_complement => {
 		 type  =>  'Boolean',
-		 doc   =>  "use this option if you reverse completementd sequence rather than the default positively oriented sequence",
+		 doc   =>  "use this option if you reverse completemented sequence rather than the default positively oriented sequence",
 		 is_optional  => 1,
 	     },
 
@@ -136,11 +140,13 @@ If you would like to produce a fasta of fastas you can use the --list option
           chromosome start stop name
 	  the name is optional in the list. Other options and defaults are the same as above 
 
-	  see this list file for some acceptable list line configurations, and run this as an example 
+	  see this list file for some acceptable/unacceptable list line configurations, and run this as an example 
 
   gt fasta coords-to-fasta --list /gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-CoordsToFasta/CoordsToFasta.test.list
 
 
+--reverse-complement will return the recomplement of your selected range
+--format-header will provide a comple header line for your fasta
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 If you are retrieving mitochondrial sequence please note that masked sequence is not available
@@ -156,6 +162,11 @@ sub execute {
 
     my $genome;
     if ($self->masked) {$genome = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-human-build36');}
+
+    my $ori = "+";
+    if ($self->reverse_complement) {
+	$ori = "-";
+    }
 
     my $out = $self->out;
     if ($out) {open(OUT,">$out");}
@@ -181,8 +192,11 @@ sub execute {
 
 	    if ($chr =~ /M/ || $chr =~ /m/) { $chr = "MT"; }
 
-	    my $seq = &get_ref_base($chr,$start,$stop,$self);
 
+	    if ($self->format_header) {$name = "$chr\:$start\:$stop NCBI Build 36, Chr:$chr, Coords $start-$stop, Ori ($ori)";}
+
+	    my $seq = &get_ref_base($chr,$start,$stop,$self);
+	    
 	    unless ($seq) {$self->error_message("the sequence was not found from the info $line. This line will be skipped"); next;}
 
 	    $chr =~ s/chr//;
@@ -221,6 +235,7 @@ sub execute {
 
 	$chr =~ s/chr//;
 
+
 	if ($self->masked) {
 	    unless ($chr eq "MT") {
 		
@@ -238,6 +253,8 @@ sub execute {
 	my $name = $self->name;
 	unless ($name) { $name = "chr$chr:$start:$stop"; }
 
+	if ($self->format_header) {$name = "$chr\:$start\:$stop NCBI Build 36, Chr:$chr, Coords $start-$stop, Ori ($ori)";}
+	
 	if ($out) {
 	    print OUT qq(\>$name\n$seq\n);
 	} else {
