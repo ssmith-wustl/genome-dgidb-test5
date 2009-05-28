@@ -202,15 +202,11 @@ sub _do
 
 =pod
 
-=head1 Name
+=head1 NAME
 
-UR::Object::Command::FetchAndDo
+UR::Object::Command::FetchAndDo - Base class for fetching objects and then performing a function on/with them.
 
-=head1 Synopsis
-
-Base class for fetching objects and then performing a function on/with them.
-
-=head1 Usage
+=head1 SYNOPSIS
 
  package MyFecthAndDo;
 

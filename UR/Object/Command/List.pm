@@ -356,15 +356,11 @@ sub tab2col{
 1;
 =pod
 
-=head1 Name
+=head1 NAME
 
-UR::Object::Command::List
+UR::Object::Command::List - Fetches and lists objects in different styles.
 
-=head1 Synopsis
-
-Fetches and lists objects in different styles.
-
-=head1 Usage
+=head1 SYNOPSIS
 
  package MyLister;
 
