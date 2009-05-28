@@ -145,8 +145,6 @@ If you would like to produce a fasta of fastas you can use the --list option
   gt fasta coords-to-fasta --list /gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-CoordsToFasta/CoordsToFasta.test.list
 
 
---reverse-complement will return the recomplement of your selected range
---format-header will provide a comple header line for your fasta
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 If you are retrieving mitochondrial sequence please note that masked sequence is not available
