@@ -67,11 +67,15 @@ sub execute {
     if ($self->output_file) {
         $cmd .= ' > '. $self->output_file;
     }
-    my $rv = system($cmd);
-    unless ($rv == 0) {
-        $self->error_message('non-zero return value '. $rv .' for maq command '. $cmd);
-        return;
+    my %params = (
+                  cmd => $cmd,
+                  input_files => [$self->map_file],
+                  skip_if_output_is_present => 0,
+              );
+    if ($self->output_file && $self->output_file ne '/dev/null') {
+        $params{output_files} = [$self->output_file];
     }
+    Genome::Utility::FileSystem->shellcmd(%params);
     return 1;
 }
 
