@@ -346,11 +346,12 @@ sub verify_alignment_data {
             }
         }
     }
-    unless (Genome::Model::Tools::Maq::Mapvalidate->execute(
-                                                        map_file => $alignment_file,
-                                                        output_file => '/dev/null',
-                                                        use_version => $self->aligner_version,
-                                                    )) {
+    my $validate = Genome::Model::Tools::Maq::Mapvalidate->execute(
+                                                                   map_file => $alignment_file,
+                                                                   output_file => '/dev/null',
+                                                                   use_version => $self->aligner_version,
+                                                               );
+    unless ($validate) {
         $errors++;
         $self->error_message('Failed to run maq mapvalidate on alignment file: '. $alignment_file);
     }
