@@ -102,7 +102,7 @@ my $real_alignment = Genome::InstrumentData::Alignment->create(
                                                            );
 
 my $real_alignment_directory = $real_alignment->resolve_alignment_directory;
-is($real_alignment_directory,'/gscmnt/sata363/info/medseq/alignment_data/maq0_6_8/NCBI-human-build36/080428_HWI-EAS292_0039_3035U/8_2499312867','got expected alignment directory');
+like($real_alignment_directory,qr/alignment_data\/maq0_6_8\/NCBI-human-build36\/080428_HWI-EAS292_0039_3035U\/8_2499312867/,'got expected alignment directory');
 
 ok(my @alignment_file_paths = $real_alignment->alignment_file_paths, "Got the alignment_file_paths");
 for my $file_path (@alignment_file_paths) {
