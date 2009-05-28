@@ -74,8 +74,8 @@ sub execute {
     my $alignment;
     eval {
        $alignment = Genome::InstrumentData::Alignment->create(
-                                                  instrument_data => $self->instrument_data,
-                                                  reference_build => $self->reference_build,
+                                                  instrument_data_id => $self->instrument_data_id,
+                                                  reference_name => $self->reference_name,
                                                   aligner_name => $self->aligner_name,
                                                   aligner_version => $self->version,
                                                   aligner_params => $self->params,
