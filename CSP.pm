@@ -734,6 +734,7 @@ my %csp_priority = (
     'update report summary'                   => 2,
     'design amplicons'                        => 1,
     'delete allocation data'                  => 1,
+    'configure run analysis'                  => 1,
 #    these were given their own cron to get around the
 #    problem of running as the lims user instead of seqmgr
 #    'analyze traces'                          => 2,
