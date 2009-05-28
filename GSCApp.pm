@@ -341,6 +341,7 @@ associations in four cases.
         ENTITY_TYPE_UNIQUE_ATTRIBUTE    App::Object::Property::Unique
         SEQUENCE_ITEM_TYPE              GSC::Sequence::ItemType
         SEQUENCE_TAG_TYPE               GSC::Sequence::TagType
+        SEQUENCE_ITEM_FILE              GSC::Sequence::ItemFile
          
         SEQUENCE_FASTA_QUAL		GSC::Sequence::Fasta::Qual
         SEQUENCE_FASTA_SEQ		GSC::Sequence::Fasta::Seq
