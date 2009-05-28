@@ -31,7 +31,7 @@ class Genome::Model::Tools::RefCov::Topology {
 sub execute {
     my $self = shift;
     unless(Genome::Utility::FileSystem->validate_file_for_reading($self->frozen_file)) {
-        $self->error_message('Failed to valide frozen file '. $self->frozen_file .' for reading!');
+        $self->error_message('Failed to validate frozen file '. $self->frozen_file .' for reading!');
         return;
     }
     my $oldout;
