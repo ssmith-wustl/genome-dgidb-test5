@@ -24,7 +24,6 @@ sub execute {
     my $self=shift;
     $DB::single = 1;
     my $model_id = $self->model_id;
-    
     my $model = Genome::Model->get($model_id);
     unless(defined($model)) {
         $self->error_message("Unable to find model $model_id");
@@ -43,6 +42,7 @@ sub execute {
         my @current_running_build_align_events = Genome::Model::Event->get(event_type => 
                 {operator => 'like', value => '%align-reads%'},
                 build_id => $current_running_build,
+                model_id => $model_id,
             );
         # check to see if any of the events have not succeeded and throw a warning
         foreach my $current_align_event (@current_running_build_align_events){
@@ -60,7 +60,9 @@ sub execute {
         @events = Genome::Model::Event->get(event_type => 
                     {operator => 'like', value => '%align-reads%'},
                     build_id => $current_running_build,
-                    event_status => 'Succeeded'
+                    event_status => 'Succeeded',
+                     model_id => $model_id,
+
                     );
         # if it does not include any succeeded events - die
         unless (@events) {
@@ -73,7 +75,10 @@ sub execute {
         my $last_complete_align_count = 0;
         my @last_complete_build_align_events = Genome::Model::Event->get(event_type => 
                 {operator => 'like', value => '%align-reads%'},
-                build_id => $last_complete_build,
+                    build_id => $last_complete_build,
+                    model_id => $model_id,
+
+
             );
         foreach my $last_complete_event (@last_complete_build_align_events){
             if (($last_complete_event->event_status eq 'Succeeded') || ($last_complete_event->event_status eq 'Abandoned')){
@@ -87,7 +92,10 @@ sub execute {
         @events = Genome::Model::Event->get(event_type => 
                     {operator => 'like', value => '%align-reads%'},
                     build_id => $last_complete_build,
-                    event_status => 'Succeeded'
+                    event_status => 'Succeeded',
+                      model_id => $model_id,
+
+
                     );
         unless (@events) {
             $self->error_message(" No alignments have Succeeded on the current running build ");
@@ -130,18 +138,33 @@ sub execute {
             print $fh join("\n",@fof), "\n"; #must end in a new-line or the vmerge tool will hang horribly
         }
     }
+    
+    #Here determine what version of vmerge to use
+    my $aligner = $model->read_aligner_name;
+    
+    #use aligner info to use the proper maq
+    my $maq;
+    if($aligner eq 'maq0_6_8') {
+        $maq = "/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq";
+    }
+    elsif($aligner eq 'maq0_7_1') {
+        $maq = "/gsc/pkg/bio/maq/maq-0.7.1-64/bin/maq";
+    }
+
     #That's right I'm dynamically generating a bash script 
     #deal with it
     #At some point this will need to be moved to a file or something in order to avoid truncation by bash
     
     my $i;
     my $bash_script = "case \$LSB_JOBINDEX in\n";
-    my @libraries = keys %map_files;
+    my @libraries = sort keys %map_files;
+    
     
     unless(@libraries) {
         $self->error_message("No libraries with data found for model $model_id");
         return;
     }
+
     
     my $num_libraries = scalar @libraries;
     for($i = 0; $i < $num_libraries; ++$i) {
@@ -149,16 +172,16 @@ sub execute {
     }
     $bash_script .= "esac\n";
 
+    #TODO Fix this back to deployed vmerge once harris deploys it
     my $commands = <<"COMMANDS";
-gt maq vmerge --maplist ${model_id}_\${LIBRARY}_readsets.fof --pipe /tmp/${model_id}_\${LIBRARY}.map & 
-sleep 5
+perl -I ~/src/perl-modules/trunk `which gt` maq vmerge --maplist ${model_id}_\${LIBRARY}_readsets.fof --pipe /tmp/${model_id}_\${LIBRARY}.map --version $aligner & 
 mkdir -p -m a+rw \${LIBRARY}
-/gsc/pkg/bio/maq/maq-0.6.8_x86_64-linux/maq rmdup \${LIBRARY}/\${LIBRARY}.rmdup.map /tmp/${model_id}_\${LIBRARY}.map
+sleep 5
+$maq rmdup \${LIBRARY}/\${LIBRARY}.rmdup.map /tmp/${model_id}_\${LIBRARY}.map
 COMMANDS
 
-
 #now we have all the files, send out the jobs
-system("bsub -N -u \${USER}\@watson.wustl.edu -R 'select[type==LINUX64]' -J '${model_id}_library_vmerge[1-$num_libraries]' -oo 'stdout.\%I' -eo 'stderr.\%I' '$bash_script$commands'");
+system("bsub -N -u \${USER}\@watson.wustl.edu -R '-R 'select[mem>500 && type==LINUX64] rusage[mem=500]' -J '${model_id}_library_vmerge[1-$num_libraries]' -oo 'stdout.\%I' -eo 'stderr.\%I' '$bash_script$commands'");
 
     return 1;
 }
