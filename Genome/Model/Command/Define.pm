@@ -26,7 +26,7 @@ class Genome::Model::Command::Define {
             doc => 'identifies the processing profile by name' 
         },
         subject_name => {
-            is => 'varchar',
+            is => 'Text',
             len => 255,
             is_input => 1,
             doc => 'The name of the subject all the reads originate from'
@@ -34,36 +34,36 @@ class Genome::Model::Command::Define {
     ],
     has_optional => [
         model_name => {
-            is => 'varchar',
+            is => 'Text',
             len => 255,
             is_input => 1,
             doc => 'User meaningful name for this model (default value: $SUBJECT_NAME.$PP_NAME)'
         },
         data_directory => {
-            is => 'varchar',
+            is => 'Text',
             len => 255,
             is_input => 1,
             doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
         },
         subject_type => {
-            is => 'varchar',
+            is => 'Text',
             len => 255,
             is_input => 1,
             doc => 'The type of subject all the reads originate from',
             valid_values => \@subject_types
         },
         auto_assign_inst_data => {
-                                  is => 'Boolean',
-                                  default_value => 1,
-                                  is_input => 1,
-                                  doc => 'Assigning instrument data to the model is performed automatically',
-                              },
+            is => 'Boolean',
+            default_value => 1,
+            is_input => 1,
+            doc => 'Assigning instrument data to the model is performed automatically',
+        },
         auto_build_alignments => {
-                                  is => 'Boolean',
-                                  default_value => 1,
-                                  is_input => 1,
-                                  doc => 'The building of the model is performed automatically',
-                              },
+            is => 'Boolean',
+            default_value => 1,
+            is_input => 1,
+            doc => 'The building of the model is performed automatically',
+        },
     ],
     schema_name => 'Main',
 };

@@ -7,7 +7,7 @@ use strict;
 use UR;
 
 # this keeps available parts of the UR pre-0.01 API we still use
-use Genome::URv001removed;
+use UR::ObjectV001removed;
 
 # environmental configuration
 use Genome::Config;
