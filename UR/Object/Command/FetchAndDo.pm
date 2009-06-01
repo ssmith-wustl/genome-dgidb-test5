@@ -174,7 +174,7 @@ sub _complete_filter {
 sub _fetch
 {
     my $self = shift;
-    my ($bool_expr, %extra) = UR::BoolExpr->create_from_filter_string(
+    my ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
         $self->subject_class_name, 
         $self->_complete_filter, 
         $self->_hint_string
