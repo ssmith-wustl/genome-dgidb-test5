@@ -148,6 +148,7 @@ sub get_events_node {
     my @events = $self->build->events;
 
     for my $event (@events) {
+        $DB::single = 1;
         my $event_node = $self->get_event_node($event);
         $events_list->addChild($event_node);
     }
@@ -262,7 +263,7 @@ sub get_instrument_data_node {
   
     my $self = shift;
     my $object = shift; 
-
+    $DB::single = 1;
     #print Dumper($object);
 
     my $id = $self->anode("instrument_data","id",$object->id);
@@ -330,18 +331,20 @@ sub get_event_node {
     my $doc = $self->_doc;
 
     my $lsf_job_status = $self->get_lsf_job_status($event->lsf_job_id);
-
+    $DB::single = 1;
     my $event_node = $self->anode("event","id",$event->id);
     $event_node->addChild( $doc->createAttribute("command_class",$event->class)); 
-        $event_node->addChild( $self->tnode("event_status",$event->event_status));
-        $event_node->addChild( $self->tnode("lsf_job_id",$event->lsf_job_id));
-        $event_node->addChild( $self->tnode("lsf_job_status",$lsf_job_status));
-        $event_node->addChild( $self->tnode("date_scheduled",$event->date_scheduled));
-        $event_node->addChild( $self->tnode("date_completed",$event->date_completed));
-        $event_node->addChild( $self->tnode("elapsed_time", $self->calculate_elapsed_time($event->date_scheduled,$event->date_completed) ));
-        $event_node->addChild( $self->tnode("instrument_data_id",$event->instrument_data_id));
-        my $log_file = $event->resolve_log_directory ."/".$event->id.".err";
-        $event_node->addChild( $self->tnode("log_file",$log_file));
+    $event_node->addChild( $self->tnode("event_status",$event->event_status));
+    $event_node->addChild( $self->tnode("lsf_job_id",$event->lsf_job_id));
+    $event_node->addChild( $self->tnode("lsf_job_status",$lsf_job_status));
+    $event_node->addChild( $self->tnode("date_scheduled",$event->date_scheduled));
+    $event_node->addChild( $self->tnode("date_completed",$event->date_completed));
+    $event_node->addChild( $self->tnode("elapsed_time", $self->calculate_elapsed_time($event->date_scheduled,$event->date_completed) ));
+    $event_node->addChild( $self->tnode("instrument_data_id",$event->instrument_data_id));
+    my $err_log = $event->resolve_log_directory ."/".$event->id.".err";
+    my $out_log = $event->resolve_log_directory ."/".$event->id.".out";
+    $event_node->addChild( $self->tnode("output_log",$out_log));
+    $event_node->addChild( $self->tnode("error_log",$err_log));
     return $event_node;
 
 }
