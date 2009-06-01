@@ -167,7 +167,7 @@ sub execute {                               # replace with real execution logic.
 					my $alignment_dir = $flowcell_dir . "/" . $aligner . "_out";
 					mkdir($alignment_dir) if(!(-d $alignment_dir));
 
-					my $alignment_outfile = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane_name . "_sequence.bowtie";
+					my $alignment_outfile = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane_name . "_sequence.$aligner";
 					
 					## Print result ##
 					if(-e $output_fastq)
@@ -194,6 +194,12 @@ sub execute {                               # replace with real execution logic.
 								my $paired_outfile = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane . "_paired.bowtie";
 								system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -oo $paired_outfile.log bowtie -m 1 -X 450 --unfq $paired_outfile.unmapped.fastq --maxfq $paired_outfile.multiple.fastq $reference -1 $file1 -2 $file2 $paired_outfile");
 							}
+						}
+						elsif($aligner eq "novoalign")
+						{
+							my $reference = "/gscmnt/sata194/info/sralign/dkoboldt/human_refseq/ref.unmasked.novoindex";
+							#system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -oo $alignment_outfile.log bowtie -m 1 --unfq $alignment_outfile.unmapped.fastq --maxfq $alignment_outfile.multiple.fastq $reference $output_fastq $alignment_outfile");
+							system("bsub -q long -R\"select[type==LINUX64 && mem>20000] rusage[mem=18000]\" -M 20000000 -oo $alignment_outfile.log \"/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.03.12/novocraft/novoalign -a -l 36 -t 240 -d $reference -f $output_fastq >$alignment_outfile\"");
 						}
 					}
 					else

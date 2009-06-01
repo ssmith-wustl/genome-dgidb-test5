@@ -1,8 +1,8 @@
 
-package Genome::Model::Tools::Analysis::Solexa::VariantContigs;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Analysis::Solexa::IndelContigs;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# VariantContigs - Given a set of SNP variants, build reference and variant contigs for alignment purposes
+# IndelContigs - Given a set of SNP variants, build reference and variant contigs for alignment purposes
 #			Note: if there are several variants near one another, many near-matching contigs will be generated, and
 #			Bowtie will not place reads that look like repeats.  Thus, it may be best to run this analysis in batches.
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
@@ -24,11 +24,11 @@ my $ref_dir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-class Genome::Model::Tools::Analysis::Solexa::VariantContigs {
+class Genome::Model::Tools::Analysis::Solexa::IndelContigs {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		variants_file	=> { is => 'Text', doc => "File of SNPs in chrom, pos, ref, var TSV format" },
+		variants_file	=> { is => 'Text', doc => "File of indels in chrom, pos, type, size, context TSV format" },
 		output_dir	=> { is => 'Text', doc => "Output dir for FASTA and variant files [contig_dir]", is_optional => 1 },
 		flank_size	=> { is => 'Text', doc => "Number of flanking bases to include [48]", is_optional => 1},
 	],
@@ -68,6 +68,9 @@ sub execute {                               # replace with real execution logic.
 	my $variants_file = $self->variants_file;
 	my $output_dir = "contig_dir";
 	$output_dir = $self->output_dir if($self->output_dir);
+
+	mkdir($output_dir) if(!(-d $output_dir));
+
 	my $flank_size = 48;
 	$flank_size = $self->flank_size if($self->flank_size);
 
@@ -86,6 +89,7 @@ sub execute {                               # replace with real execution logic.
 	}	
 
 	## Variants by chrom ##
+	open(ALLCONTIGS, ">$output_dir/contigs.fasta");
 	
 	my %variants_by_chrom = ();
 	
@@ -100,13 +104,42 @@ sub execute {                               # replace with real execution logic.
 	
 		if($lineCounter >= 1)
 		{
-			(my $chromosome, my $position, my $allele1, my $allele2) = split(/\t/, $line);
+			(my $chromosome, my $chr_start, my $chr_stop, my $indel_type, my $indel_size, my $indel_context) = split(/\t/, $line);
 			
-			if($chromosome && $chromosome ne "chromosome" && $chromosome ne "ref_name")
+			if($chromosome && $chromosome ne "chrom" && $chromosome ne "chromosome" && $chromosome ne "ref_name")
 			{
-				print "Saving $chromosome $position\n";
+				print "Saving $chromosome $chr_start\t$chr_stop\t$indel_type\t$indel_size\n";
+
+				my $indel_name = $chromosome . '_' . $chr_start . '_' . $chr_stop . '_' . $indel_type . '_' . $indel_size;
+
+				my $flank_5 = uc($reference_db->seq($chromosome, ($chr_start - $flank_size) => ($chr_start - 1)));
+				my $flank_3 = uc($reference_db->seq($chromosome, ($chr_stop + 1) => ($chr_stop + 1 + $flank_size)));
+
+				my @tempArray = split(/[\[\/\]]/, $indel_context);
+				my $allele1 = $tempArray[1];
+				my $allele2 = $tempArray[2];
+				$allele1 =~ s/[^ACGTN]//g;
+				$allele2 =~ s/[^ACGTN]//g;
+				
+				my $ref_contig = $flank_5 . $allele1 . $flank_3;
+				my $var_contig = $flank_5 . $allele2 . $flank_3;				
+
+				## Adjust for indel content ##
+				
+				my $desired_flank_size = 2 * $flank_size + 1;
+				$ref_contig = substr($ref_contig, 0, $desired_flank_size);
+				$var_contig = substr($var_contig, 0, $desired_flank_size);
+				
+				print ALLCONTIGS ">$indel_name" . "_ref\n";
+				print ALLCONTIGS "$ref_contig\n";
+
+				print ALLCONTIGS ">$indel_name" . "_var\n";
+				print ALLCONTIGS "$var_contig\n";
+
+#				print "$indel_context\n$flank_5" . '[' . "$allele1/$allele2]$flank_3\n";
+
 #				$variants_by_chrom{$chromosome} .= "$line\n";
-				$variants_by_chrom{$chromosome . "\t" . $position} = "$allele1\t$allele2\n";
+				$variants_by_chrom{$chromosome . "\t" . $chr_start} = "$indel_type\t$indel_size\t$indel_context\n";
 			}
 			else
 			{
@@ -117,6 +150,9 @@ sub execute {                               # replace with real execution logic.
 	
 	close($input);
 	print "$lineCounter variants\n";
+	close(ALLCONTIGS);
+
+	exit(0);
 
 	my $contig_number = 0;
 	my %remaining_variants = ();
@@ -128,7 +164,7 @@ sub execute {                               # replace with real execution logic.
 	{
 		$contig_number++;
 		
-		open(OUTFILE, ">$output_dir/contigs-$contig_number.snps");
+		open(OUTFILE, ">$output_dir/contigs-$contig_number.indels");
 		open(OUTFASTA, ">$output_dir/contigs-$contig_number.fasta");
 		
 		$num_included = $num_remaining = 0;
@@ -185,6 +221,8 @@ sub execute {                               # replace with real execution logic.
 #		my $pct_remain = $num_remaining / ($num_included + $num_remaining) * 100;
 #		$pct_remain = sprintf("%.2f", $pct_remain) . '%';
 #		print "$num_included included, $num_remaining remain ($pct_remain)\n";
+
+		$num_remaining = 0;	# Hack
 	}
 
 	print "$contig_number contig files created\n";
