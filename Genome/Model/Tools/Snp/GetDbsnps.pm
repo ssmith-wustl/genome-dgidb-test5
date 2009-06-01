@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use Genome;
 use GSCApp;
-App->init;
 
 class Genome::Model::Tools::Snp::GetDbsnps {
     is => 'Command',                    
@@ -58,6 +57,8 @@ class Genome::Model::Tools::Snp::GetDbsnps {
 	
     
 };
+
+#App->init;
 
 sub help_brief {
     return <<EOS
