@@ -14,17 +14,17 @@ class Genome::InstrumentData::Solexa {
             select to_char(s_rev.seq_id) id,
                    s_rev.research_project project_name,
                    s_rev.sample_id,
-                   s_rev.library_id,
+                   s_rev.library_id, --library.dna_id library_id,
                    s_rev.run_name,
                    s_rev.flow_cell_id,
                    s_rev.lane,
                    s_rev.read_length,
-                   (case when s_rev.run_type = 'paired end read 2' then s_rev.filt_error_rate_avg else null end) rev_filt_error_rate_avg,
-                   (case when s_fwd.run_type = 'paired end read 1' then s_fwd.filt_error_rate_avg else null end) fwd_filt_error_rate_avg,
-                   (case when s_rev.run_type = 'paired end read 2' then s_rev.filt_aligned_clusters_pct else null end) rev_filt_aligned_clusters_pct,
-                   (case when s_fwd.run_type = 'paired end read 1' then s_fwd.filt_aligned_clusters_pct else null end) fwd_filt_aligned_clusters_pct,
-                   (case when s_rev.run_type = 'paired end read 2' then s_rev.seq_id else null end) rev_seq_id,
-                   (case when s_fwd.run_type = 'paired end read 1' then s_fwd.seq_id else null end) fwd_seq_id,
+                   (case when s_rev.run_type = 'Paired End Read 2' then s_rev.filt_error_rate_avg else null end) rev_filt_error_rate_avg,
+                   (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.filt_error_rate_avg else null end) fwd_filt_error_rate_avg,
+                   (case when s_rev.run_type = 'Paired End Read 2' then s_rev.filt_aligned_clusters_pct else null end) rev_filt_aligned_clusters_pct,
+                   (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.filt_aligned_clusters_pct else null end) fwd_filt_aligned_clusters_pct,
+                   (case when s_rev.run_type = 'Paired End Read 2' then s_rev.seq_id else null end) rev_seq_id,
+                   (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.seq_id else null end) fwd_seq_id,
                    (case when s_rev.run_type = 'Paired End Read 2' then s_rev.read_length else null end) rev_read_length,
                    (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.read_length else null end) fwd_read_length,
                    (case when s_rev.run_type = 'Paired End Read 2' then s_rev.run_type else null end) rev_run_type,
@@ -36,12 +36,11 @@ class Genome::InstrumentData::Solexa {
                    s_rev.is_external,
                    (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.FILT_CLUSTERS else null end) fwd_filt_clusters,
                    (case when s_rev.run_type = 'Paired End Read 2' then s_rev.FILT_CLUSTERS else null end) rev_filt_clusters,
-                   /** s_rev.FILT_CLUSTERS is still the expected value for fragment reads **/
-                   (nvl(s_fwd.FILT_CLUSTERS,0) + s_rev.FILT_CLUSTERS) filt_clusters,
-                   s_rev.analysis_software_version
+                   (nvl(s_fwd.FILT_CLUSTERS,0) + s_rev.FILT_CLUSTERS) filt_clusters, /** s_rev.FILT_CLUSTERS is still the expected value for fragment reads **/
+                   s_rev.analysis_software_version,
+                   1 one
             from solexa_lane_summary\@dw s_rev
-            left join solexa_lane_summary\@dw s_fwd on s_fwd.sral_id = s_rev.sral_id
-                    and s_fwd.run_type = 'Paired End Read 1'
+            left join solexa_lane_summary\@dw s_fwd on s_fwd.sral_id = s_rev.sral_id and s_fwd.run_type = 'Paired End Read 1'
             where s_rev.run_type in ('Standard','Paired End Read 2')
         )
         solexa_detail
@@ -64,12 +63,12 @@ EOS
         clusters                        => { column_name => 'FILT_CLUSTERS' },
         fwd_clusters                    => { column_name => 'fwd_filt_clusters' },
         rev_clusters                    => { column_name => 'rev_filt_clusters' },
+        fwd_seq_id                      => { },
+        rev_seq_id                      => { },
         fwd_filt_error_rate_avg         => { },
         rev_filt_error_rate_avg         => { },
         fwd_filt_aligned_clusters_pct   => { },
         rev_filt_aligned_clusters_pct   => { },
-        fwd_seq_id                      => { },
-        rev_seq_id                      => { },
         short_name => {
             doc => 'The essential portion of the run name which identifies the run.  The rest is redundent information about the instrument, date, etc.',
             is => 'Text', 
