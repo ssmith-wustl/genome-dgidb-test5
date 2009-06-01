@@ -3,7 +3,6 @@ package Genome::Model::Tools::Snp::GetDbsnps;
 use strict;
 use warnings;
 use Genome;
-use GSCApp;
 
 class Genome::Model::Tools::Snp::GetDbsnps {
     is => 'Command',                    
@@ -48,8 +47,8 @@ class Genome::Model::Tools::Snp::GetDbsnps {
 		 is_optional  => 1,
 	     },
 	     gff => {
-		 type  =>  'Boolean',
-		 doc   =>  "through this flag if you want a gff file",
+		 type  =>  'string',
+		 doc   =>  "provide a name for the optional gff file of all dbsnps from your input coverage range",
 		 is_optional  => 1,
 	     },
 
@@ -58,7 +57,6 @@ class Genome::Model::Tools::Snp::GetDbsnps {
     
 };
 
-#App->init;
 
 sub help_brief {
     return <<EOS
@@ -86,6 +84,7 @@ or
 
 gt snp get-dbsnps --chromosome --start --stop --ref --var
 
+when detirmining the validation status of a dbsnp this tool assumes that if the snp was ever entered in the database as being validated that it is still validated.
 
 EOS
 }
@@ -131,7 +130,7 @@ sub execute {
 	
     }
 
-    $list = &getDBSNPS($list);
+    $list = &getDBSNPS($list,$self);
     
     foreach my $chr (sort keys %{$list}) {
 	foreach my $start (sort {$a<=>$b} keys %{$list->{$chr}}) {
@@ -140,19 +139,26 @@ sub execute {
 		unless ($dbsnp_info) {$dbsnp_info = "no_dbsnp_hit";}
 		my $ref = $list->{$chr}->{$start}->{$stop}->{ref};
 		my $var = $list->{$chr}->{$start}->{$stop}->{var};
-		
-		print qq($chr $start $stop $ref $var $dbsnp_info\n);
+		if ($out) {
+		    print OUT qq($chr $start $stop $ref $var $dbsnp_info\n);
+		} else {
+		    print qq($chr $start $stop $ref $var $dbsnp_info\n);
+		}
 	    }
 	}
     }
-    return 1;
+    return ($list);
 }
 
 sub getDBSNPS {
 
-    my ($list) = @_;    
+    my ($list,$self) = @_;   
+
+    my $gff = $self->gff;
+    if ($gff) {open(GFF,">$gff");}
+
     my $g = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-human-build36');
-    
+
     foreach my $chr (sort keys %{$list}) {
 	my $c = $g->get_chromosome($chr);
 	
@@ -169,33 +175,55 @@ sub getDBSNPS {
 			my $allele_description = $t->allele_description;
 			my $validated = $t->is_validated;
 			my $seq_length = $t->seq_length;
-			
+			my $stag_id = $t->stag_id;
+
 			my $unzipped_base_string = $t->unzipped_base_string;
 
 			my $end = $pos + ($seq_length - 1);
 
 			unless ($validated) { $validated = 0; }
-			$dbsnp->{$chr}->{$pos}->{$ref_id}="$variation_type\:$validated\:$allele_description";
 
-			#if ($self->gff) {
-			    #print OUT qq(Chromosome$chr\tDB\t$variation_type\t$pos\t$end\t.\t+\t.\t$ref_id \; Alleles $allele_description \; Validation $validated\n);
-			#}
+			my ($vt,$v,$ad);
+			if ($dbsnp->{$chr}->{$pos}->{$ref_id}) {
+			    ($vt,$v,$ad) = split(/\:/,$dbsnp->{$chr}->{$pos}->{$ref_id});
+			}
 
-			my $ref = $list->{$chr}->{$start}->{$stop}->{ref};
-			my $var = $list->{$chr}->{$start}->{$stop}->{var};
-
-			my $match = &check_match($ref,$var,$allele_description);
-			unless ($match) {$match="no_match";}
-			my $snpfo = $list->{$chr}->{$start}->{$stop}->{dbsnp};
-			if ($snpfo) {
-			    unless ($snpfo =~ /$variation_type\:$validated\:$allele_description\:$match/) {
-				$list->{$chr}->{$start}->{$stop}->{dbsnp}="$snpfo\:\:$ref_id\:$variation_type\:$validated\:$allele_description\:$match";
-			    }
+			if ($validated == 1) {
+			    $dbsnp->{$chr}->{$pos}->{$ref_id}="$variation_type\:$validated\:$allele_description";
+			} elsif ($vt && $v && $ad) {
+			    if ($v == 1) {$dbsnp->{$chr}->{$pos}->{$ref_id}="$vt\:$v\:$ad";}
 			} else {
-			    $list->{$chr}->{$start}->{$stop}->{dbsnp}="$ref_id\:$variation_type\:$validated\:$allele_description\:$match";
+			    $dbsnp->{$chr}->{$pos}->{$ref_id}="$variation_type\:$validated\:$allele_description";
+			}
+
+
+			#$dbsnp->{$chr}->{$pos}->{$ref_id}="$variation_type\:$validated\:$allele_description";
+
+			if ($self->gff) {
+			    print GFF qq(Chromosome$chr\tDB\t$variation_type\t$pos\t$end\t.\t+\t.\t$stag_id\t$ref_id \; Alleles $allele_description \; Validation $validated\n);
 			}
 		    }
 		}
+		
+		my $ref = $list->{$chr}->{$start}->{$stop}->{ref};
+		my $var = $list->{$chr}->{$start}->{$stop}->{var};
+
+		foreach my $ref_id (sort keys %{$dbsnp->{$chr}->{$start}}) {
+		    my ($variation_type,$validated,$allele_description) = split(/\:/,$dbsnp->{$chr}->{$start}->{$ref_id});
+		    my $match = &check_match($ref,$var,$allele_description);
+		    unless ($match) {$match="no_match";}
+		    my $snpfo = $list->{$chr}->{$start}->{$stop}->{dbsnp};
+		    
+		    if ($snpfo) {
+			unless ($snpfo =~ /$variation_type\:$validated\:$allele_description\:$match/) {
+			    $list->{$chr}->{$start}->{$stop}->{dbsnp}="$snpfo\:\:$ref_id\:$variation_type\:$validated\:$allele_description\:$match";
+			}
+		    } else {
+			$list->{$chr}->{$start}->{$stop}->{dbsnp}="$ref_id\:$variation_type\:$validated\:$allele_description\:$match";
+		    }
+		}
+		my $snpfo = $list->{$chr}->{$start}->{$stop}->{dbsnp};
+		unless ($snpfo) {$list->{$chr}->{$start}->{$stop}->{dbsnp} = "no_dbsnp_hit"};
 	    }
 	}
     }
