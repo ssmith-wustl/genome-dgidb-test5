@@ -798,11 +798,14 @@ sub _cron_setup {
         exit 0;
     }
 
-    # must be on cron2 (linuscs38) because of file based locks
+    # must be on proper host because of file based locks
     App::Object->status_message("checking hostname: $hostname");
-    my $proper_hostname = 'linuscs38';
-    if ( $arg->{hostname_check} && $hostname ne $proper_hostname ) {
-        my $msg = "must run on $proper_hostname, not $hostname";
+    my @proper_hostname = qw(linuscs38 vm20);
+    my $on_proper_host = grep { $hostname eq $_ } @proper_hostname;
+    if ( $arg->{hostname_check} && !$on_proper_host ) {
+        my $msg = 'must run on '
+          . join( ' ', @proper_hostname )
+          . " not $hostname";
         App::Object->error_message($msg);
         die $msg;
     }
