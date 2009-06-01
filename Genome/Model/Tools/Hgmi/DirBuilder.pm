@@ -14,33 +14,33 @@ UR::Object::Type->define(
     class_name => __PACKAGE__,
     is         => 'Command',
     has        => [
-        'path' => {
-            is  => 'String',
-            doc => "direcotry path"
-        },
-        'org_dirname' => {
-            is  => 'String',
-            doc => "organism abbreviated name"
-        },
-        'assembly_version_name' => {
-            is  => 'String',
-            doc => "complete assembly name and version"
-        },
-        'assembly_version' => {
-            is  => 'String',
-            doc => "analysis version"
-        },
-        'pipe_version' => {
-            is  => 'String',
-            doc => "pipeline version"
-        },
-        'cell_type' => {
-            is  => 'String',
-            doc => "[BACTERIA|EUKARYOTES]"
-        },
-    ],
-
-);
+		   'path'                  => {
+					       is  => 'String',
+					       doc => "direcotry path"
+					      },
+		   'org_dirname'           => {
+					       is  => 'String',
+					       doc => "organism abbreviated name"
+					      },
+		   'assembly_version_name' => {
+					       is  => 'String',
+					       doc => "complete assembly name and version"
+					      },
+		   'assembly_version'      => {
+					       is  => 'String',
+					       doc => "analysis version"
+					      },
+		   'pipe_version'         => {
+					      is  => 'String',
+					      doc => "pipeline version"
+					     },
+		   'cell_type'            => {
+					      is  => 'String',
+					      doc => "[BACTERIA|EUKARYOTES]"
+					     },
+		  ],
+			 
+			);
 
 sub help_brief
 {
@@ -109,8 +109,8 @@ sub execute
         . $self->assembly_version_name;
     $dirpath = $dirpatha . "/" . $self->assembly_version;
     my $newdir       = $self->path . "/" . $self->org_dirname;
-    my $assembly_dir = $self->assembly_version_name;             # why?
-    my $version      = $self->pipe_version;                      # again, why?
+    my $assembly_dir = $self->assembly_version_name;
+    my $version      = $self->pipe_version;
 
     foreach my $file (@moredirs)
     {

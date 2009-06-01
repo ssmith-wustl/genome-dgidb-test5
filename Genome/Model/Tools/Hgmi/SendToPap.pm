@@ -85,6 +85,7 @@ UR::Object::Type->define(
         'resume_workflow' => { 
                               is => 'String',
                               doc => 'resume (crashed) workflow from previous invocation',
+			      is_optional => 1,
                              },
     ]
 );
@@ -123,10 +124,10 @@ sub execute
     my $previous_workflow_id = $self->resume_workflow();
 
     unless (defined($previous_workflow_id)) {
-        print STDERR "moving data from mgap to biosql\n";
+        print STDERR "moving data from mgap to biosql SendToPap.pm\n";
         $self->mgap_to_biosql();
 
-        print STDERR "creating peptide file\n";
+        print STDERR "creating peptide file SendToPap.pm\n";
         $self->get_gene_peps();
     }
     
@@ -225,12 +226,12 @@ GENE: while ( my $seq = $res->next_object() )
     }
     if(! -f $file )
     {
-        print STDERR "the fasta file $file doesn't exist!\n";
+        print STDERR "the fasta file $file doesn't exist! SendToPap.pm\n";
         return 0;
     }
     unless( -s $file > 0 )
     {
-        print STDERR "the fasta file $file still empty!\n";
+        print STDERR "the fasta file $file still empty! SendToPap.pm\n";
     }
 
     return 1;
@@ -299,7 +300,7 @@ sub mgap_to_biosql
         \$cmd_out,
         '2>',
         \$cmd_err,
-    ) or croak "can't load biosql from mgap!!!\n$cmd_err";
+    ) or croak "can't load biosql from mgap!!!\n$cmd_err SendToPap.pm";
 
     print STDERR $cmd_err,"\n";
     return 1;
@@ -323,8 +324,8 @@ sub do_pap_workflow
     unless (defined($previous_workflow_id)) {
     
         if (! -f $fasta_file) {
-            print STDERR "\nwhere is the fasta file ", $fasta_file, "?\n";
-            croak "fasta file doesn't exist!";
+            print STDERR "\nwhere is the fasta file ", $fasta_file, "? SendToPap.pm\n";
+            croak "fasta file doesn't exist! SendToPap.pm";
         }
     
     }

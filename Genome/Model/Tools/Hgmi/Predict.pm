@@ -22,38 +22,51 @@ use Bio::SeqIO;
 use Cwd;
 #require "pwd.pl";
 use Data::Dumper;
+use English;
 
 
 UR::Object::Type->define(
                          class_name => __PACKAGE__,
-                         is => 'Command',
+                         is  => 'Command',
                          has => [
-                                 'organism_name' => {is => 'String',
-                                                     doc => "" },
-                                 'hgmi_locus_tag' => {is => 'String',
-                                                      doc => "" },
-                                 'project_type' => {is => 'String',
-                                                    doc => "" },
-                                 'locus' => {is => 'String',
-                                        doc => "",
-                                        is_optional => 1},
-                                 'gram_stain' => {is => 'String',
-                                                  doc => "",
-                                                  is_optional => 1},
+                                 'organism_name'    => {is => 'String',
+							doc => "Genius_species" ,
+						       },
+                                 'locus_tag'        => {is => 'String',
+							doc => "Locus tag for project, containing DFT/FNL postpended",
+						       },
+                                 'project_type'     => {is => 'String',
+							doc => "", 
+						       },
+                                 'locus_id'         => {is => 'String',
+							doc => "locus_tag with OUT DFT/FNL postpended",
+						       },
+                                 'gram_stain'       => {is => 'String',
+							doc => "",
+							valid_values => ['positive','negative'],
+						       },
                                  'ncbi_taxonomy_id' => {is => 'String',
                                                         doc => "",
-                                                        is_optional =>1},
-                                 'work_directory' => { is => 'String',
-                                                       doc => "",
-                                                       is_optional => 1},
-                                 'dev' => {is => 'Boolean',
-                                           doc => "use development db",
-                                           is_optional => 1},
-                                 'script_location' => {is => 'String',
-                                                       doc =>"location for bap_predict_genes",
-                                                       is_optional => 1,
-                                                       default => 'bap_predict_genes'},
-
+                                                        is_optional =>1,
+						       },
+                                 'work_directory'   => { is => 'String',
+							 doc => "",
+							 is_optional => 1,
+						       },
+                                 'dev'              => {is => 'Boolean',
+							doc => "use development db",
+							is_optional => 1,
+						       },
+                                 'script_location'  => {is => 'String',
+							doc =>"location for bap_predict_genes",
+							is_optional => 1,
+							default => 'bap_predict_genes',
+						       },
+				 'runner_count'     => { is => 'Number',
+							 doc => "runner_count",
+							 default => 10,
+							 is_optional => 1,
+						       },
                                  ]
                          );
 
@@ -89,15 +102,9 @@ sub execute
 {
     my $self = shift;
 
-    my ($predict_out,$predict_err);
-    my $predict_command = $self->gather_details();
-    IPC::Run::run( $predict_command,
-                   \undef,
-                   '>',
-                   \$predict_out,
-                   '2>',
-                   \$predict_err,
-                   ) || croak "can't run predict : $!";
+    my @predict_command = $self->gather_details();
+
+    IPC::Run::run( @predict_command ) || croak "can't run Predict.pm : $OS_ERROR";
 
     return 1;
 }
@@ -106,10 +113,28 @@ sub execute
 sub gather_details
 {
     my $self = shift;
-    my $organism_name = $self->organism_name;
-    my $hgmi_locus_tag = $self->hgmi_locus_tag;
-    my $project_type = $self->project_type;
-    my ($ncbi_taxonomy_id, $gram_stain, $locus, $organism_id, );
+    my $organism_name    = $self->organism_name;
+    my $locus_tag        = $self->locus_tag;
+    my $project_type     = $self->project_type;
+    my $ncbi_taxonomy_id = $self->ncbi_taxonomy_id;
+    my $gram_stain       = $self->gram_stain;
+    my $locus_id         = $self->locus_id;
+    my ($organism_id );
+
+    if (defined($gram_stain)) {
+
+      if ($gram_stain =~ /positive/){
+
+	$gram_stain = "+";
+
+      }
+      else {
+
+	$gram_stain = "-";
+
+      }
+    }
+
     if (defined($self->dev)) { $BAP::DB::DBI::db_env = 'dev'; }
     my $organism_obj = BAP::DB::Organism->retrieve('organism_name'=> $organism_name);
 
@@ -123,7 +148,7 @@ sub gather_details
                                                       'organism_name'    => $organism_name,
                                                       'ncbi_taxonomy_id' => $ncbi_taxonomy_id,
                                                       'gram_stain'       => $gram_stain,
-                                                      'locus'            => $locus,
+                                                      'locus'            => $locus_id,
                                                   }
                                                   );
         
@@ -133,8 +158,8 @@ sub gather_details
     $organism_id       = $organism_obj->organism_id();
     $ncbi_taxonomy_id  = $organism_obj->ncbi_taxonomy_id();
     $gram_stain        = $organism_obj->gram_stain();
-    $locus             = $organism_obj->locus();
-    my @cols = ($organism_id, $organism_name, $ncbi_taxonomy_id, $gram_stain, $locus);
+    $locus_id          = $organism_obj->locus();
+    my @cols = ($organism_id, $organism_name, $ncbi_taxonomy_id, $gram_stain, $locus_id);
     @cols = map { defined($_) ? $_ : 'NULL' } @cols;
     
     print join("\t", @cols), "\n\n";
@@ -144,7 +169,7 @@ sub gather_details
 
     unless (defined($organism_obj)) 
     {
-        croak " organism_obj is not set at line 70 ! ";
+        croak " organism_obj is not set in Predict.pm ! ";
     }
 
     # cwd should look like:
@@ -160,6 +185,7 @@ sub gather_details
     {
         $cwd = $self->work_directory;
     }
+
     @cwd = split(/\//x,$cwd);
 
     my ($sequence_set_name, $analysis_version_num, $hgmi_sequence_dir);
@@ -171,28 +197,28 @@ sub gather_details
         # instead of just a 'raw' split.
         unless($#cwd == 9)
         {
-            croak "directory structure is wrong or broken\n$cwd\n$#cwd\n";
+            croak "directory structure is wrong or broken\n$cwd\n$#cwd  Predict.pm \n";
         }
         $sequence_set_name = $cwd[6]; #HGMI projects
         $analysis_version_num = $cwd[9]; #HGMI projects
-        $hgmi_sequence_dir = join("\/", @cwd[0..9],'Sequence',$hgmi_locus_tag); #HGMI projects
+        $hgmi_sequence_dir = join("\/", @cwd[0..9],'Sequence',$locus_tag); #HGMI projects
         
     }
     else # HMPP/Enterobacter
     {
         unless($#cwd == 10)
         {
-            croak "directory structure is wrong or broken";
+            croak "directory structure is wrong or broken in Predict.pm\n";
         }
         $sequence_set_name = $cwd[7];
         $analysis_version_num = $cwd[10];
-        $hgmi_sequence_dir = join("\/", @cwd[0..10],'Sequence',$hgmi_locus_tag); 
+        $hgmi_sequence_dir = join("\/", @cwd[0..10],'Sequence',$locus_tag); 
         
     }
 
     unless (defined($sequence_set_name)) 
     {
-        croak " sequence_set_name is not set! ";
+        croak " sequence_set_name is not set from Predict.pm! \n";
     }
 
     my $sequence_set_name_obj;
@@ -203,7 +229,7 @@ sub gather_details
 
     if (defined($sequence_set_name_obj)) 
     {
-        print "Sequence-set-name: '$sequence_set_name' already exist!! Here is your information:\n\n";
+        print "Sequence-set-name: '$sequence_set_name' already exist!! Here is your information from Predict.pm:\n\n";
 
     }
     else 
@@ -216,12 +242,12 @@ sub gather_details
     
         unless (defined($fasta_file)) 
         {
-            croak "fasta-file: '$fasta_file' is not set! ";
+            croak "fasta-file: '$fasta_file' is not set! Predict.pm\n";
         }
     
         if ((-z $fasta_file) ) 
         {
-            croak "fasta-file: '$fasta_file 'is empty or non-existant!";
+            croak "fasta-file: '$fasta_file 'is empty or non-existant! Predict.pm\n";
         }
 
 
@@ -256,44 +282,34 @@ sub gather_details
     print join("\t",@list),"\n\n";
 
     my (
-        $glimmer2_model,
-        $glimmer3_model, $glimmer3_pwm,
+	$glimmer3_model, $glimmer3_pwm,
         $genemark_model,
-        $job_stdout, $job_stderr,
-        $runner_count,
-        $bappredictgenes_output
-        );
+	$runner_count,
+       );
 
-    $glimmer2_model = $cwd."/Sequence/".$hgmi_locus_tag."_gl2.icm";
-
-    if (-z $glimmer2_model) 
-    {
-        croak "glimmer2-model: '$glimmer2_model' is empty!";
-    }
-
-    $glimmer3_model = $cwd."/Sequence/".$hgmi_locus_tag."_gl3.icm";
+    $glimmer3_model = $cwd."/Sequence/".$locus_tag."_gl3.icm";
 
     if (-z $glimmer3_model) 
     {
-        croak "glimmer3-model: '$glimmer3_model ' is empty!";
+        croak "glimmer3-model: '$glimmer3_model ' is empty! Predict.pm\n";
     }
 
-    $glimmer3_pwm   = $cwd."/Sequence/".$hgmi_locus_tag."_gl3.motif";
+    $glimmer3_pwm   = $cwd."/Sequence/".$locus_tag."_gl3.motif";
 
     if (-z $glimmer3_pwm) 
     {
-        croak "glimmer3-pwm: '$glimmer3_pwm' is empty!";
+        croak "glimmer3-pwm: '$glimmer3_pwm' is empty! Predict.pm \n";
     }
 
     my $model_file = undef;
-    #my $model_file = <heu_11_*.mod>; # not being picked up
-
+    
     my $idir = IO::Dir->new($cwd."/Sequence");
+
     while(defined(my $fname = $idir->read))
     {
-        if($fname =~ /heu_11_(\d+).mod/)
+      if($fname =~ /heu_11_(\d+).mod/)
         {
-            $model_file = $fname;
+	  $model_file = $fname;
         }
     }
     $idir->close;
@@ -304,40 +320,22 @@ sub gather_details
 
     if (-z $genemark_model) 
     {
-        croak "genemark_model: '$genemark_model' is empty!";
+        croak "genemark_model: '$genemark_model' is empty! Predict.pm \n";
     }
 
     unless (-f $genemark_model)
     {
-        croak "genemark_model $genemark_model doesn't exist!";
+        croak "genemark_model $genemark_model doesn't exist! Predict.pm \n";
     }
-
-    $job_stdout     = $cwd."/".$hgmi_locus_tag."_bpg_BAP_job_".$sequence_set_id.".txt";
-
-    $job_stderr     = $cwd."/".$hgmi_locus_tag."_bpg_BAP_job_err_".$sequence_set_id.".txt";
-
     $runner_count   = 50;
 
-    $bappredictgenes_output = $cwd."/".$hgmi_locus_tag."_bpg_BAP_screenoutput_".$sequence_set_id.".txt";
+    my $bpg_job_stdout         = $cwd."/".$locus_tag."_bpg_BAP_job_".$sequence_set_id.".txt";
+    my $bpg_job_stderr         = $cwd."/".$locus_tag."_bpg_BAP_job_err_".$sequence_set_id.".txt";
+    my $bappredictgenes_output = $cwd."/".$locus_tag."_bpg_BAP_screenoutput_".$sequence_set_id.".txt";
 
-    my $bsub_output = $cwd."/".$hgmi_locus_tag."_bpg_BAP_".$sequence_set_id.".output";
+    print qq{\nbap_predict_genes.pl\n};
 
-    my $bsub_error = $cwd."/".$hgmi_locus_tag."_bpg_BAP_".$sequence_set_id.".error";
-
-    my $cmd;
-
-    $cmd .= qq{(bsub -o $bsub_output -e $bsub_error -q long -n 2 -R 'span[hosts=1] rusage[mem=4096]' -N -u wnash\@wustl.edu \\\n};
-    #$cmd .= qq{(bap_predict_genes --sequence-set-id $sequence_set_id --glimmer2-model $glimmer2_model \\\n};
-           $cmd .= qq{bap_predict_genes --sequence-set-id $sequence_set_id --domain bacteria \\\n};
-           $cmd .= qq{--glimmer3-model $glimmer3_model --glimmer3-pwm $glimmer3_pwm --genemark-model $genemark_model \\\n};
-           $cmd .= qq{--runner-count $runner_count --job-stdout $job_stdout --job-stderr $job_stderr \\\n};
-    #$cmd .= qq{) > & $bappredictgenes_output &\\\n};
-           $cmd .= qq{) > & $bappredictgenes_output \\\n};
-
-    print "bap_predict_genes.pl\n";
-    print "\n$cmd \n";
-
-    my @command_list = ($self->script_location,
+    my @command_list = ('bap_predict_genes',
                         '--sequence-set-id',
                         $sequence_set_id,
                         '--domain',
@@ -351,12 +349,23 @@ sub gather_details
                         '--runner-count',
                         $runner_count,
                         '--job-stdout',
-                        $job_stdout,
+                        $bpg_job_stdout,
                         '--job-stderr',
-                        $job_stderr
+                        $bpg_job_stderr
                         );
+
     if(defined($self->dev)) { push(@command_list,"--dev"); }
-    return \@command_list;
+
+     print "\n", join(' ', @command_list), "\n";
+
+    my @ipc = (
+               \@command_list,
+               \undef,
+               '2>&1',
+               $bappredictgenes_output,
+           );
+
+    return @ipc;
 }
 
 

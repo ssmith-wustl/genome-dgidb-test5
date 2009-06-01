@@ -17,6 +17,7 @@ use BAP::DB::Sequence;
 
 use Bio::SeqIO;
 use Cwd;
+use English;
 
 UR::Object::Type->define(
                          class_name => __PACKAGE__,
@@ -24,7 +25,7 @@ UR::Object::Type->define(
                          has => [
                                  'organism_name' => {is => 'String',
                                                      doc => "" },
-                                 'hgmi_locus_tag' => {is => 'String',
+                                 'locus_tag' => {is => 'String',
                                                       doc => "" },
                                  'project_type' => {is => 'String',
                                                     doc => "" },
@@ -89,30 +90,22 @@ EOS
 
 }
 
-
 sub execute
 {
     my $self = shift;
 
-    my ($finish_out,$finish_err);
-    my $finish_command = $self->gather_details();
-    IPC::Run::run( $finish_command,
-                   \undef,
-                   '>',
-                   \$finish_out,
-                   '2>',
-                   \$finish_err,
-                   ) || croak "can't run finish : $!";
+    my @finish_command = $self->gather_details();
+
+    IPC::Run::run( @finish_command ) || croak "can't run finish : $OS_ERROR  Finish.pm\n\n";
 
     return 1;
 }
-
 
 sub gather_details
 {
     my $self = shift;
     my $organism_name = $self->organism_name;
-    my $hgmi_locus_tag = $self->hgmi_locus_tag;
+    my $locus_tag = $self->locus_tag;
     my $project_type = $self->project_type;
     my ($ncbi_taxonomy_id, $gram_stain, $locus, $organism_id, );
     if (defined($self->dev)) { $BAP::DB::DBI::db_env = 'dev'; }
@@ -120,7 +113,7 @@ sub gather_details
 
     unless (defined($organism_obj)) 
     {
-        croak " organism_obj is not set - are you running this before the predict and merge steps?";
+        croak " organism_obj is not set - are you running this before the predict and merge steps? Finish.pm\n\n";
     }
 
     $organism_name     = $organism_obj->organism_name();
@@ -172,7 +165,7 @@ sub gather_details
 
     unless (defined($sequence_set_name)) 
     {
-        croak " sequence_set_name is not set! ";
+        croak " sequence_set_name is not set! Finish.pm\n\n";
     }
 
     my $sequence_set_name_obj;
@@ -183,7 +176,7 @@ sub gather_details
 
     unless(defined($sequence_set_name_obj))
     {
-        croak "nothing found for $sequence_set_name,\nperhaps you are running this before the predict and merge steps?";
+        croak "nothing found for $sequence_set_name,\nperhaps you are running this before the predict and merge steps?Finish.pm\n\n ";
     }
     else
     {
@@ -198,47 +191,34 @@ sub gather_details
     my @list =($organism_id,$sequence_set_name, $sequence_set_id);
     print join("\t",@list),"\n\n";
 
-
-
-    my $bsub_output = $cwd."/".$hgmi_locus_tag."_bpg_BAP_".$sequence_set_id.".output";
-
-    my $bsub_error = $cwd."/".$hgmi_locus_tag."_bpg_BAP_".$sequence_set_id.".error";
-
-
-
-
-
-my (
-    $cmd3,
-    $bsub_bfp_output,
-    $bsub_bfp_error,
-    
-    );
-
-    $bsub_bfp_output = $cwd."/".$hgmi_locus_tag."_bfp_BAP_".$sequence_set_id."_blade.output";
-
-    $bsub_bfp_error = $cwd."/".$hgmi_locus_tag."_bfp_BAP_".$sequence_set_id."_blade.error";
-
-    $cmd3 .= qq{bsub -o $bsub_bfp_output -e $bsub_bfp_error -q long -n 2 -R 'span[hosts=1] rusage[mem=4096]' -N -u wnash\@wustl.edu \\\n};
-
-    $cmd3 .= qq{/gscmnt/277/analysis/personal_dirs/wnash/Work/Scripts/BAP_TEST/bap_finish_project.pl --ssid $sequence_set_id --locus-id $hgmi_locus_tag --project-type HGMI --acedb-version V2 \\\n};
+    my $bapfinish_output = $cwd."/".$locus_tag."_bfp_BAP_screenoutput".$sequence_set_id.".txt";
 
     print "\nbap_finish_project.pl\n";
-    print "\n$cmd3 \n";
 
-    my @command_list = ($self->script_location,
+    my @command_list = ('bap_finish_project',
                         '--sequence-set-id',
                         $sequence_set_id,
                         '--locus-id',
-                        $hgmi_locus_tag,
+                        $locus_tag,
                         '--project-type',
-                        'HGMI',
+                        $self->project_type,
                         '--acedb-version',
                         $self->acedb_version,
                         );
+
     if(defined($self->dev)) { push(@command_list,"--dev"); }
     if(defined($self->skip_acedb_parse)) { push(@command_list, "--no-acedb");}
-    return \@command_list;
+
+    print "\n", join(' ', @command_list), "\n";
+
+    my @ipc = (
+               \@command_list,
+               \undef,
+               '2>&1',
+               $bapfinish_output,
+           );
+
+    return @ipc;
 }
 
 

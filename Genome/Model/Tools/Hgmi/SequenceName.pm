@@ -16,21 +16,22 @@ UR::Object::Type->define(
 class_name => __PACKAGE__,
 is => 'Command',
 has => [
-        'fasta' => { is => 'String',
-                     doc => "fasta file" },
+        'fasta'            => { is => 'String',
+				doc => "fasta file" },
         'analysis_version' => { is => 'String',
                                 doc => "Analysis version" },
-        'locus_id' => { is => 'String',
-                        doc => "Locus ID string" },
-        'acedb_version' => { is => 'String',
-                             doc => "Ace DB version" },
-        'new_output'    => { is => 'String',
-                             doc => "new fasta output file",
-                             is_optional => 1},
-        ]
+        'locus_tag'        => { is => 'String',
+				doc => "Locus ID string" },
+        'acedb_version'    => { is => 'String',
+				doc => "Ace DB version" },
+        'new_output'       => { is => 'String',
+				doc => "new fasta output file",
+				is_optional => 1,
+			      },
+       ]
 
 
-                         );
+			);
 
 sub help_brief
 {
@@ -63,11 +64,12 @@ sub execute
     my $fasta = $line[1] = 'fasta';
     my $short_ver_num = $self->version_lookup($self->analysis_version);
     my $new = "newname";
-    my $new_output_file = join(".",$self->locus_id,
+    my $new_output_file = join(".",$self->locus_tag,
                                    $short_ver_num,
                                    $line[0],
                                    $new,
                                    $line[1]);
+
     $self->new_output($new_output_file);
 
     my $instream = new Bio::SeqIO(-file => $self->fasta, -format => 'fasta');
@@ -79,7 +81,7 @@ sub execute
     while( my $seqobj = $instream->next_seq)
     {
         my $seq_id = $seqobj->primary_id();
-        my $new_seq_id = join("_",$self->locus_id,$seq_id);
+        my $new_seq_id = join("_",$self->locus_tag,$seq_id);
         push(@seq_gcfile, $new_seq_id);
         my $seq = $seqobj->seq;
         if ($seq =~ m/x/ix)
@@ -117,7 +119,7 @@ sub execute
     my $acedb_version = $self->acedb_version;
     $acedb_version =~ s/V(\d)/Version_$1\.0/;
     $hgmi_acedb_patha = "/gscmnt/278/analysis/HGMI/Acedb/". $acedb_version . 
-                        "/ace_files/". $self->locus_id;
+                        "/ace_files/". $self->locus_tag;
 
     unless (-e $hgmi_acedb_patha)
     {
@@ -142,32 +144,39 @@ sub execute
 
     # the presence of the symlink target should be
     # tested before creating the symlink
-    symlink "$cwd/$new_output_file","$hgmi_acedb_path/$new_output_file";
-
-    if($! && ($! ne "File exists")) # skip the "File exists" problem
-    {
-        croak "Can't make symlink path: $!\nsource: $cwd/$new_output_file\ndest: $hgmi_acedb_path/$new_output_file";
-    }
     # symlink OLDFILE,NEWFILE
-    symlink "$cwd/$new_output_file","$Intergenic/$new_output_file";
-    if($! && ($! ne "File exists")) # skip the "File exists" problem
-    {
-        croak "Can't make symlink path Intergenic: $!\nsource: $cwd/$new_output_file\ndest: $Intergenic/$new_output_file";
+    my $hgmiOUTPUTfilelink = qq{$hgmi_acedb_path/$new_output_file};
+
+    unless ( -e $hgmiOUTPUTfilelink) {
+      symlink "$cwd/$new_output_file","$hgmi_acedb_path/$new_output_file" ||
+	die "Can't make symlink path: $!\nsource: $cwd/$new_output_file\ndest: $hgmi_acedb_path/$new_output_file\n ";
     }
-    symlink "$cwd/$new_output_file","$BAPseq/$new_output_file";
-    if($! && ($! ne "File exists")) # skip the "File exists" problem
-    {
-        croak "Can't make symlink path BAP: $!\nsource: $cwd/$new_output_file\ndest: $BAPseq/$new_output_file";
+
+    my $intergenicNEWfilelink = qq{$Intergenic/$new_output_file};
+
+    unless ( -e $intergenicNEWfilelink) {
+      symlink "$cwd/$new_output_file","$Intergenic/$new_output_file" or 
+	die "Can't make symlink path Intergenic: $!\nsource: $cwd/$new_output_file\ndest: $Intergenic/$new_output_file";
     }
-    symlink "$cwd/$new_output_file","$Ensemblseq/$new_output_file";
-    if($! && ($! ne "File exists")) # skip the "File exists" problem
-    {
-        croak "Can't make symlink path Ensembl: $!\nsource: $cwd/$new_output_file\ndest: $Ensemblseq/$new_output_file";
+
+    my $bapNEWfilelink = qq{$BAPseq/$new_output_file};
+    
+    unless ( -e $bapNEWfilelink ) {
+      symlink "$cwd/$new_output_file","$BAPseq/$new_output_file" or 
+	die "Can't make symlink path BAP: $!\nsource: $cwd/$new_output_file\ndest: $BAPseq/$new_output_file";
     }
-    symlink "$cwd/$new_output_file","$Rfamseq/$new_output_file";
-    if($! && ($! ne "File exists")) # skip the "File exists" problem
-    {
-        croak "Can't make symlink path Rfam: $!\nsource: $cwd/$new_output_file\ndest: $Rfamseq/$new_output_file\n";
+   
+    my $ensemblNEWfilelink = qq{$Ensemblseq/$new_output_file};
+
+    unless (-e $ensemblNEWfilelink ) {
+      symlink "$cwd/$new_output_file","$Ensemblseq/$new_output_file" or 
+	die "Can't make symlink path Ensembl: $!\nsource: $cwd/$new_output_file\ndest: $Ensemblseq/$new_output_file";
+    }
+    my $rfamNEWfilelink = qq{$Rfamseq/$new_output_file};
+    
+    unless ( -e $rfamNEWfilelink) {
+      symlink "$cwd/$new_output_file","$Rfamseq/$new_output_file" or 
+	die "Can't make symlink path Rfam: $!\nsource: $cwd/$new_output_file\ndest: $Rfamseq/$new_output_file\n" ;
     }
 
     chdir($Rfamseq);
@@ -179,7 +188,7 @@ sub execute
 
     chdir($hgmi_acedb_path);
     my $gc_file = "genomic_canonical.ace";
-    my $new_gc_outfile = join(".",$self->locus_id,$gc_file);
+    my $new_gc_outfile = join(".",$self->locus_tag,$gc_file);
     my @gc_outlines = ( );
     foreach my $gc_name (@seq_gcfile)
     {

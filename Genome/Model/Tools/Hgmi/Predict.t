@@ -39,7 +39,7 @@ ok($d->execute());
 # do model creation
 my $p = Genome::Model::Tools::Hgmi::Predict->create(
   'organism_name' => "Bifidobacterium_catenulatum",
-  'hgmi_locus_tag' => "BIFCATDFT",
+  'locus_tag' => "BIFCATDFT",
   'project_type' => "HGMI",
   'work_directory' => $testpath,
   'dev' => 1

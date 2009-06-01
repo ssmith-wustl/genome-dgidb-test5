@@ -24,17 +24,17 @@ UR::Object::Type->define(
                          class_name => __PACKAGE__,
                          is => 'Command',
                          has => [
-                                 'config' => { is => 'String',
-                                               doc => "YAML file for reading"},
-                                 'gen_example' => { is => 'Boolean',
-                                                    doc => "Generate an example yaml config file",
-                                                    is_optional => 1},
+                                 'config'       => { is => 'String',
+						     doc => "YAML file for reading"},
+                                 'gen_example'  => { is => 'Boolean',
+						     doc => "Generate an example yaml config file",
+						     is_optional => 1},
                                  'internalhash' => { is => 'HashRef',
                                                      doc => "internal",
                                                      is_optional => 1},
-                                 'dev' => { is => 'Boolean',
-                                            doc => "development flag for testing",
-                                            is_optional => 1}
+                                 'dev'          => { is => 'Boolean',
+						     doc => "development flag for testing",
+						     is_optional => 1}
 
                                 ]
                         );
@@ -73,7 +73,7 @@ sub execute
     {
         if( -f $self->config )
         {
-            croak "cowardly refusing to overwrite existing file!";
+            croak "cowardly refusing to overwrite existing file! Hap.pm \n\n";
         }
 
         $self->build_empty_config();
@@ -89,7 +89,7 @@ sub execute
     {
         # blow up...
         my $file = $self->config;
-        carp "non-existent file $file";
+        carp "non-existent file $file Hap.pm\n\n";
         return 0;
     }
 
@@ -97,17 +97,17 @@ sub execute
     my $config = $self->internalhash;
     # dir-builder
     my $d = Genome::Model::Tools::Hgmi::DirBuilder->create(
-                                                           path => $config->{path},
-                                                           org_dirname => $config->{org_dirname},
+                                                           path                  => $config->{path},
+                                                           org_dirname           => $config->{org_dirname},
                                                            assembly_version_name => $config->{assembly_name},
-                                                           assembly_version => $config->{assembly_version},
-                                                           pipe_version => $config->{pipe_version},
-                                                           cell_type => $config->{cell_type}
+                                                           assembly_version      => $config->{assembly_version},
+                                                           pipe_version          => $config->{pipe_version},
+                                                           cell_type             => $config->{cell_type}
                                                            );
     
     if($d)
     {
-        $d->execute() or croak "can't run dir-builder";
+        $d->execute() or croak "can't run dir-builder Hap.pm\n\n";
     }
     else
     {
@@ -121,32 +121,32 @@ sub execute
 
     # collect-sequence
     my $cs = Genome::Model::Tools::Hgmi::CollectSequence->create(
-                                                                  sequence_file => $config->{sequence_file},
-                                                                  output => $config->{output},
-                                                                  minimum_length => $config->{minimum_length}, 
+								 seq_file_name  => $config->{seq_file_name},
+								 seq_file_dir   => $config->{seq_file_dir},
+								 minimum_length => $config->{minimum_length}, 
                                                                   );
 
     if($cs)
     {
-        $cs->execute() or croak "can't run collect-sequence";
+        $cs->execute() or croak "can't run collect-sequence Hap.pm\n\n";
     }
     else
     {
-        croak "can't set up collect-sequence";
+        croak "can't set up collect-sequence Hap.pm\n\n";
     }
 
     # sequence-name
     my $sn = Genome::Model::Tools::Hgmi::SequenceName->create(
-                                                              locus_id => $config->{locus_id},
-                                                              fasta => $config->{output},
-                                                              analysis_version => $config->{analysis_version},
-                                                              acedb_version => $config->{acedb_version},
+                                                              locus_tag        => $config->{locus_tag},
+							      fasta            => $cs->new_ctgs_out,
+                                                              analysis_version => $config->{pipe_version},
+                                                              acedb_version    => $config->{acedb_version},
 
                                                               );
 
     if($sn)
     {
-        $sn->execute() or croak "can't run sequence-name";
+        $sn->execute() or croak "can't run sequence-name Hap.pm\n\n";
     }
     else
     {
@@ -161,17 +161,17 @@ sub execute
     chdir($next_dir);
 
     my $model = Genome::Model::Tools::Hgmi::MkPredictionModels->create(
-                                                                      locus_tag_prefix => $config->{locus_tag_prefix},
+                                                                      locus_tag  => $config->{locus_tag},
                                                                       fasta_file => $sn->new_output ,
                                                                       );
 
     if($model)
     {
-        $model->execute() or croak "can't run mk-prediction-model";
+        $model->execute() or croak "can't run mk-prediction-model Hap.pm\n\n";
     }
     else
     {
-        croak "can't set up mk-prediction-model";
+        croak "can't set up mk-prediction-model Hap.pm\n\n";
     }
 
     $next_dir = $config->{path}."/".$config->{org_dirname}."/".
@@ -180,9 +180,12 @@ sub execute
     chdir($next_dir);
 
     my $predict = Genome::Model::Tools::Hgmi::Predict->create(
-                                                              organism_name => $config->{org_dirname} ,
-                                                              hgmi_locus_tag => $config->{locus_tag_prefix} ,
+                                                              organism_name => $config->{organism_name} ,
+                                                              locus_tag => $config->{locus_tag} ,
                                                               project_type => $config->{project_type} ,
+							      ncbi_taxonomy_id => $config->{ncbi_taxonomy_id},
+							      gram_stain => $config->{gram_stain},
+							      locus_id => $config->{locus_id},
                                                               
                                                               );
 
@@ -193,17 +196,18 @@ sub execute
     
     if($predict)
     {
-        $predict->execute() or croak "can't run predict step";
+        $predict->execute() or croak "can't run bap_predict_genes.pl step.... from Hap.pm\n\n";
     }
     else
     {
-        croak "can't set up predict step";
+        croak "can't set up bap_predict_genes.pl step.... from Hap.pm\n\n";
     }
 
     my $merge = Genome::Model::Tools::Hgmi::Merge->create(
-                                                          hgmi_locus_tag => $config->{locus_tag_prefix},
-                                                          organism_name => $config->{org_dirname},
-                                                          project_type => $config->{project_type},
+							  organism_name => $config->{organism_name},
+                                                          locus_tag     => $config->{locus_tag},
+							  project_type  => $config->{project_type},
+							  runner_count  => $config->{runner_count},
                                                           );
 
     if($self->dev)
@@ -213,11 +217,11 @@ sub execute
 
     if($merge)
     {
-        $merge->execute() or croak "can't run merge step";
+        $merge->execute() or croak "can't run bap_merge_genes.pl step... from Hap.pm\n\n";
     }
     else
     {
-        croak "can't set up merge step";
+        croak "can't set up bap_merge_genes.pl step... from Hap.pm\n\n";
     }
 
     # this needs to get the sequence set name and sequence set id somehow.
@@ -226,10 +230,10 @@ sub execute
     my $fin = Genome::Model::Tools::Hgmi::Finish->create(
                                                          #sequence_set_name => ,
                                                          sequence_set_id => $ssid ,
-                                                         hgmi_locus_tag => $config->{locus_tag_prefix},
-                                                         organism_name => $config->{org_dirname},
-                                                         project_type => $config->{project_type},
-                                                         acedb_version => $config->{acedb_version},
+                                                         locus_tag       => $config->{locus_tag},
+                                                         organism_name   => $config->{organism_name},
+                                                         project_type    => $config->{project_type},
+                                                         acedb_version   => $config->{acedb_version},
 						      
                                                         );
 
@@ -246,11 +250,11 @@ sub execute
 
     if($fin)
     {
-        $fin->execute() or croak "can't run finish step";
+        $fin->execute() or croak "can't run finish step... Hap.pm\n\n";
     }
     else
     {
-        croak "can't set up finish step";
+        croak "can't set up finish step... Hap.pm\n\n";
     }
 
     unless(defined($config->{workflowxml}))
@@ -262,11 +266,11 @@ sub execute
         my $gram_stain = $config->{gram_stain};
     
         unless (defined($gram_stain)) {
-            die 'cannot start workflow - no gram_stain specified in config file';
+            die 'cannot start workflow - no gram_stain specified in config file...Hap.pm\n\n';
         }
        
         unless (($gram_stain eq 'positive') || ($gram_stain eq 'negative')) {
-            die "cannot start workflow - gram_stain must be 'postive' or 'negative', not '$gram_stain'";
+            die "cannot start workflow - gram_stain must be 'postive' or 'negative', not '$gram_stain'...Hap.pm\n\n";
         }
        
     }
@@ -301,7 +305,7 @@ sub execute
                                                    join(
                                                         '.',
                                                         'KS-OUTPUT',
-                                                        $config->{locus_id},
+                                                        $config->{locus_tag},
                                                         'CDS',
                                                         'pep',
                                                         ),
@@ -312,7 +316,7 @@ sub execute
     }
     
     my $send = Genome::Model::Tools::Hgmi::SendToPap->create(
-                                                             'locus_tag'            => $config->{locus_tag_prefix},
+                                                             'locus_tag'            => $config->{locus_tag},
                                                              'sequence_set_id'      => $ssid, 
                                                              'workflow_xml'         => $config->{workflowxml},
                                                              'gram_stain'           => $config->{gram_stain},
@@ -329,11 +333,11 @@ sub execute
     
     if($send)
     {
-        $send->execute() or croak "can't run workflow pap step";
+        $send->execute() or croak "can't run workflow pap step in Hap.pm\n\n";
     }
     else
     {
-        croak "can't set up workflow pap step";
+        croak "can't set up workflow pap step... Hap.pm\n\n";
     }
 
     return 1;
@@ -347,7 +351,7 @@ sub read_config
     my $conf = $self->config;
     unless(-f $conf)
     {
-        carp "no config file $conf ...";
+        carp "no config file $conf ...Hap.pm\n\n";
         return undef;
     }
 
@@ -364,42 +368,34 @@ sub build_empty_config
     my $config = {
                   #dir builder stuff
                   'path' => "",
-                  'org_dirname' => "",
-                  'assembly_name' => "",
+                  'org_dirname' => "<organism abbreviated name>",
+                  'assembly_name' => "<full org name, locus_tag, finish assembly, pipeline>",
                   'assembly_version' => "",
                   'pipe_version' => "",
                   'cell_type' => "",
                   #collect sequence stuff
-                  'sequence_file' => "",
+                  'seq_file_name' => "",
+		  'seq_file_dir'=> "",
                   'minimum_length' => "",
-                  'output' => "",
-                  # sequence name
-                  'fasta' => "",
-                  'assembly_version' => "",
-                  'locus_id' => "", # same as hgmi_locus_tag?
+		  # sequence name
+		  'assembly_version' => "",
+                  'locus_id' => "<locus_tag w/o DFT/FNL>",
                   'acedb_version' => "",
                   #mk prediction mods
-                  'locus_tag_prefix' => "", # same as hgmi_locus_tag?
-                  'fasta_file' => "",
-                  #'work_directory' => "",
-                  #'gc' => "",
-                  #predict
+                  'locus_tag' => "",
+		  #predict
+		  'runner_count' => "",
                   'organism_name' => "",
-                  'hgmi_locus_tag' => "",
-                  'project_type' => "",
-                  'locus' => "", # same as hgmi_locus_tag?
-                  'gram_stain' => "<optional>",
-                  'ncbi_taxonomy_id' => "",
-                  'work_directory' => "<optional>",
-                  'predict_script_location' => "<optional>",
+		  'project_type' => "",
+		  'gram_stain' => "",
+                  'ncbi_taxonomy_id' => "<optional>",
+		  'predict_script_location' => "<optional>",
                   #merge
                   # uses some of the same items from predict
                   'merge_script_location' => "<optional>",
-                  #finish
+		  #finish
                   # uses some of the same items from predict
                   'acedb_version' => "",
-                  'sequence_set_name' => "",
-                  'sequence_set_id' => "",
 		  'skip_acedb_parse' => "<optional>",
                   'finish_script_location' => "<optional>",
                   'workflowxml' => "",

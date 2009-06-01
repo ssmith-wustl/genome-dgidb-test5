@@ -16,7 +16,7 @@ my $fasta = $testdir."/"."BIFCATDFT.v1.contigs.newname.fasta";
 chdir($testdir);
 
 my $m = Genome::Model::Tools::Hgmi::MkPredictionModels->create(
-            'locus_tag_prefix' => "BIFCATDFT",
+            'locus_tag' => "BIFCATDFT",
             'fasta_file' => $fasta,
 );
 
@@ -31,7 +31,7 @@ is($m->gc(), 56);
 $fasta = $testdir."/"."BIFCATDFT.v1.contigs.newname.57gc.fasta";
 
 $m = Genome::Model::Tools::Hgmi::MkPredictionModels->create(
-            'locus_tag_prefix' => "BIFCATDFT",
+            'locus_tag' => "BIFCATDFT",
             'fasta_file' => $fasta,
 );
 
