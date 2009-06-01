@@ -54,7 +54,7 @@ class Genome::Model::Command::Define {
         },
         auto_assign_inst_data => {
             is => 'Boolean',
-            default_value => 1,
+            default_value => 0,
             is_input => 1,
             doc => 'Assigning instrument data to the model is performed automatically',
         },
