@@ -34,7 +34,7 @@ class Genome::Model::Tools::Sam::SnpFilter {
         max_read_depth => {
             is  => 'Integer',
             doc => 'maximum read depth to call a SNP, default 256',
-            default => 256,
+            default => 100000000,
         },
         snp_win_size => {
             is  => 'Integer',
@@ -62,7 +62,12 @@ class Genome::Model::Tools::Sam::SnpFilter {
         indel_win_size => {
             is  => 'Integer',
             doc => 'window size of indel position in which SNPs should be filtered out',
-            default => 1,
+            default => 10,
+        },
+        min_indel_score => {
+            is  => 'Integer',
+            doc => 'minimum samtools indel score, default is 50',
+            default => 50,
         },
     ],
 };
@@ -97,9 +102,9 @@ sub execute {
         my $indel_fh = Genome::Utility::FileSystem->open_file_for_reading($self->indel_file) or return;
 
         while (my $indel = $indel_fh->getline) {
-            my ($chr, $pos, $id) = $indel =~ /^(\S+)\s+(\S+)\s+(\S+)\s+/;
-            next unless $id eq '*';
-            map{$indel_filter{$chr, $_}= 1}($pos-1..$pos+2*$self->indel_win_size);
+            my ($chr, $pos, $id, $indel_seq, $indel_score) = $indel =~ /^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+\S+\s+(\S+)\s+/;
+            next if $id ne '*' or $indel_seq eq '*/*' or $indel_score < $self->min_indel_score;
+            map{$indel_filter{$chr, $_}= 1}($pos - $self->indel_win_size .. $pos + $self->indel_win_size);
         }
         $indel_fh->close;
     }
