@@ -70,6 +70,7 @@ sub execute {
             $self->error_message('Error saving '.$report.'. Error: '. $self->build->error_message);
             die($self->error_message);
         }
+        #print $build->resolve_reports_directory,"\n";<STDIN>;
     }
 
     ##############################################
