@@ -25,6 +25,11 @@ class Genome::Model::Tools::RefCov::Bias {
                             default_value => 0,
                         },
               ],
+    has_optional => [
+                     sample_name => {
+                                     is => 'Text', default_value => '',
+                                 },
+                 ],
 };
 
 sub execute {
@@ -49,63 +54,77 @@ sub execute {
         return;
     }
 
-    my @gene_files = map { $self->frozen_directory .'/'. $_  } grep { /^\_\_.*\.rc/ } $dh->read;
-    my %relative_depth;
-    my $gene_counter = 0;
-    for my $gene_file (@gene_files) {
-        if (($gene_counter % 1000) == 0) {
-            $self->status_message('Finished thawing '. $gene_counter .' gene files out of '. scalar(@gene_files) .'...');
+    my @ref_files = map { $self->frozen_directory .'/'. $_  } grep { /^\_\_.*\.rc/ } $dh->read;
+    my %size_to_relative_depth;
+    my $ref_counter = 0;
+    for my $ref_file (@ref_files) {
+        if (($ref_counter % 1000) == 0) {
+            $self->status_message('Finished thawing '. $ref_counter .' ref files out of '. scalar(@ref_files) .'...');
         }
-        unless ($gene_file =~ /\/\_\_(.*)\.rc/) {
-            $self->error_message('Failed to parse gene file name '. $gene_file);
+        unless ($ref_file =~ /\/\_\_(.*)\.rc/) {
+            $self->error_message('Failed to parse ref file name '. $ref_file);
             return;
         }
-        my $gene = RefCov::Reference->new( thaw => $gene_file );
-        my $depth_span_ref = $gene->depth_span(
-                                               start => $gene->start,
-                                               stop => $gene->stop,
+        my $ref = RefCov::Reference->new( thaw => $ref_file );
+        my $length = $ref->reflen;
+        my $size;
+        if (($length >= 100) && ($length <= 2_999)) {
+            $size = 'SMALL';
+        }
+        elsif (($length >= 3_000) && ($length <= 6_999)) {
+            $size = 'MEDIUM';
+        }
+        elsif (($length >= 7_000)) {
+            $size = 'LARGE';
+        } else { next; }
+        my $depth_span_ref = $ref->depth_span(
+                                               start => $ref->start,
+                                               stop => $ref->stop,
                                            );
         my @depth_span = @{$depth_span_ref};
-        unless (scalar(@depth_span) == $gene->reflen) {
-            $self->error_message('The length of the gene '. $gene->reflen .' does not match the depth span '. scalar(@depth_span) );
+        unless (scalar(@depth_span) == $length) {
+            $self->error_message('The length of the ref '. $length .' does not match the depth span '. scalar(@depth_span) );
             return;
         }
         my $pos = 1;
         for (@depth_span) {
-            my $relative_position = sprintf("%.02f",($pos / $gene->reflen));
+            my $relative_position = sprintf("%.02f",($pos / $length));
             if ($relative_position > 1) {
-                $self->error_message('Relative position '. $relative_position .' for gene '. $gene->name .' is greater than one.');
+                $self->error_message('Relative position '. $relative_position .' for ref '. $ref->name .' is greater than one.');
                 return;
             }
-            $relative_depth{$relative_position} += $_;
+            $size_to_relative_depth{$size}{$relative_position} += $_;
             $pos++;
         }
-        $gene_counter++;
+        $ref_counter++;
     }
-    my @positions = grep { $_ <= 1 } sort {$a <=> $b} keys %relative_depth;
-    my @depth;
-    for my $position (@positions) {
-        print $position ."\t". $relative_depth{$position} ."\n";
-        push @depth, $relative_depth{$position};
-    }
-    if ($self->graph) {
-        my @data = (\@positions,\@depth);
-        my $graph = GD::Graph::lines->new(1200,800);
-        $graph->set(
-                    'x_label' => "Relative Position 5'->3'",
-                    'x_label_skip' => 10,
-                    'y_label' => 'Read Depth',
-                    'title' => "5'->3' Bias Topology",
-                    marker_size => 1,
-                );
-        my $gd = $graph->plot(\@data);
-        open(IMG, '>'. ($self->output_file || 'topology') .'.png' ) or die $!;
-        binmode IMG;
-        print IMG $gd->png;
-        close IMG;
-    }
-    if ($oldout) {
-        open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
+    foreach my $size (keys %size_to_relative_depth){
+        my %relative_depth = %{$size_to_relative_depth{$size}};
+        my @positions = grep { $_ <= 1 } sort {$a <=> $b} keys %relative_depth;
+        my @depth;
+        for my $position (@positions) {
+            print $position ."\t". $relative_depth{$position} ."\n";
+            push @depth, $relative_depth{$position};
+        }
+        if ($self->graph) {
+            my @data = (\@positions,\@depth);
+            my $graph = GD::Graph::lines->new(1200,800);
+            $graph->set(
+                        'x_label' => "Relative Position 5'->3'",
+                        'x_label_skip' => 10,
+                        'y_label' => 'Read Depth',
+                        'title' => $self->sample_name ." $size Reference 5'->3' Bias ",
+                        marker_size => 1,
+                    );
+            my $gd = $graph->plot(\@data);
+            open(IMG, '>'. ($self->output_file || 'topology') .'.'. $size .'.png' ) or die $!;
+            binmode IMG;
+            print IMG $gd->png;
+            close IMG;
+        }
+        if ($oldout) {
+            open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
+        }
     }
     return 1;
 }
