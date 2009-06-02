@@ -111,9 +111,8 @@ sub generate_report_detail
 
     my $build = $self->build;
     my $model = $build->model;
-    my $pp    = $model->processing_profile;
     
-    my $genotyper_name = $pp->genotyper_name;
+    my $genotyper_name = $model->genotyper_name;
     my $gold_snp_path  = $self->gold_snp_path;
 
     my $module_path = $INC{"Genome/Model/ReferenceAlignment/Report/GoldSnpConcordance.pm"};
