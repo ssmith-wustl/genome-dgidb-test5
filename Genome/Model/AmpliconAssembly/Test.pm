@@ -197,7 +197,7 @@ sub params_for_test_class {
     my $self = shift;
 
     return (
-        name => $self->report_name,
+        #name => $self->report_name,
         build_id => $self->mock_model->latest_complete_build->id,
     );
 }
@@ -219,7 +219,8 @@ sub test_01_generate_report : Test(2) {
 
     my $report = $self->generator->generate_report;
     ok($report, 'Generated report');
-    #print Dumper($report);
+    #print Dumper([map{$report->$_} (qw/ name description date generator /)]);
+    $report->save('/gscuser/ebelter/Desktop/reports', 1);
 
     return 1;
 }
@@ -258,7 +259,7 @@ sub test_class {
 
 ######################################################################
 
-package Genome::Model::AmpliconAssembly::Report::QualityHistogramTest;
+package Genome::Model::AmpliconAssembly::Report::SummaryTest;
 
 use strict;
 use warnings;
@@ -269,12 +270,11 @@ use Data::Dumper 'Dumper';
 use Test::More;
 
 sub test_class {
-    'Genome::Model::AmpliconAssembly::Report::QualityHistogram';
+    'Genome::Model::AmpliconAssembly::Report::Summary';
 }
 
-sub test_01_generate_report {
-    return 1;
-}
+######################################################################
+
 1;
 
 =pod
