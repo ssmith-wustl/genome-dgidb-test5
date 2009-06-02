@@ -20,18 +20,20 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
     is => 'Genome::Model::Tools::Annotate',
     has => [ 
         variant_file => {
-            is => 'Text',
+            is => 'Text',   
+            is_input => 1,
             is_optional => 0,
             doc => "File of variants. Tab separated columns: chromosome_name start stop reference variant",
+        },
+        output_file => {
+            is => 'Text',
+            is_input => 1,
+            is_output=> 1,
+            doc => "Store annotation in the specified file instead of sending it to STDOUT."
         },
     ],
     has_optional => [
         # IO Params
-       output_file => {
-            is => 'Text',
-            is_optional => 1,
-            doc => "Store annotation in the specified file instead of sending it to STDOUT."
-        },
         no_headers => {
             is => 'Boolean',
             is_optional => 1,
@@ -80,8 +82,15 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             default => 0,
             doc => 'enabling this flag produces an additional four columns: flank_annotation_distance_to_transcript, intron_annotation_substructure_ordinal, intron_annotation_substructure_size, and intron_annotation_substructure_position',
         },
+        sloppy => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'enable this flag to skip variants on a chromosome where no annotation information exists, as oppeosed to crashing',
+        },
     ], 
 };
+
 
 ############################################################
 
@@ -188,7 +197,7 @@ sub execute {
     }
 
     # omit headers as necessary 
-    $output_fh->print( join(',', $self->transcript_report_headers), "\n" ) unless $self->no_headers;
+    $output_fh->print( join("\t", $self->transcript_report_headers), "\n" ) unless $self->no_headers;
 
     # annotate all of the input variants
     my $chromosome_name = '';
@@ -198,21 +207,38 @@ sub execute {
         $variant->{type} = $self->infer_variant_type($variant);
         # make a new annotator when we begin and when we switch chromosomes
         unless ($variant->{chromosome_name} eq $chromosome_name) {
-            $chromosome_name = $variant->{chromosome_name};
-            $last_variant_start = 0;
 
             my $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
-            die Genome::Transcript->error_message unless $transcript_iterator;
+            unless ($transcript_iterator){
+                $self->error_message("Couldn't get transcript_iterator for chromosome $chromosome_name!");
+                if ($self->sloppy){
+                    #print this variant and go to the next one, we will only set chromosome name at the end of the check, so we should fail the transcript iterator test repeatedly until we hit a variant on the next new chromosome
+                    $self->_print_annotation($variant, []);
+                    next;
+                }else{
+                    die;
+                }
+            }
 
             my $transcript_window =  Genome::Utility::Window::Transcript->create (
                 iterator => $transcript_iterator, 
                 range => $self->flank_range
             );
-            die Genome::Utility::Window::Transcript->error_message unless $transcript_window;
+            unless ($transcript_window){
+                $self->error_message("Couldn't create a transcript window from iterator for chromosome $chromosome_name!");
+                die;
+            }
+
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window 
             );
-            die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
+            unless ($annotator){
+                $self->error_message("Couldn't create iterator for chromosome $chromosome_name!");
+                die;
+            }
+            
+            $chromosome_name = $variant->{chromosome_name};
+            $last_variant_start = 0;
         }
         unless ( $variant->{start} >= $last_variant_start){
             $self->warning_message("Improperly sorted input! Restarting iterator!  Improve your annotation speed by sorting input variants by chromosome, then position!");
@@ -299,24 +325,25 @@ sub _print_annotation {
     # Basic SNP Info # FIXME (plus also print out the type that is inferred... should clean this up)
     my $snp_info_string = join
     (
-        ',', 
+        "\t", 
         map { $snp->{$_} } ($self->variant_attributes,"type", $self->get_extra_columns),
     );
 
     # If we have no transcripts, print the original variant with dashes for annotation info
-    unless( defined @$transcripts ) {
+    unless( @$transcripts ) {
         $self->_transcript_report_fh->print
         (
             join
             (
-                ',',                   
+                "\t",                   
                 $snp_info_string,
                 map({ '-' } $self->transcript_attributes),
             ), 
             "\n",
         );
+        return 1;
     }
-    
+
     # Otherwise, print an annotation line for each transcript we have
     for my $transcript ( @$transcripts )
     {
@@ -324,7 +351,7 @@ sub _print_annotation {
         (
             join
             (
-                ',',                   
+                "\t",                   
                 $snp_info_string,
                 map({ $transcript->{$_} ? $transcript->{$_} : '-' } $self->transcript_attributes),
             ), 
