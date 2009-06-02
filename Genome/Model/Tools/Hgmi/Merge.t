@@ -24,6 +24,7 @@ my $d = Genome::Model::Tools::Hgmi::DirBuilder->create(
                     'cell_type' => "BACTERIA");
 isa_ok($d,'Genome::Model::Tools::Hgmi::DirBuilder');
 ok($d->execute());
+chdir($testpath);
 
 my $m = Genome::Model::Tools::Hgmi::Merge->create(
   'organism_name' => "Bifidobacterium_catenulatum",
