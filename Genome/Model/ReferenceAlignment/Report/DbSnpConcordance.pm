@@ -25,13 +25,18 @@ class Genome::Model::ReferenceAlignment::Report::DbSnpConcordance {
         db_snp_file                 => { via => 'build' },
         
         name                        => { default_value => 'dbSNP Concordance' },
+        description => {
+            calculate => q|
+            return "<div>Db Snp coverage for " . $self->model->name . " (build " . $self->build_id . ") as of " . UR::Time->now.'</div>';
+            |,
+        },
 
         report_templates => {
             is => 'String',
             is_many => 1,
             default_value => [
-                 "$base_template_path.html.tt2",
-                 "$base_template_path.txt.tt2"
+            "$base_template_path.html.tt2",
+            "$base_template_path.txt.tt2"
             ],
             doc => 'The paths of template(s) to use to format the report.  (In .tt2 format)',
         },
@@ -86,7 +91,8 @@ sub _generate_data
         die "No report templates assigned!  Cannot generate any content."
     }
 
-    my $data = { description => $self->generate_report_brief };
+    #my $data = { description => $self->generate_report_brief };
+    my $data = {}; 
     
     for my $template (@templates) {
         my $content = $self->generate_report_detail($template);
