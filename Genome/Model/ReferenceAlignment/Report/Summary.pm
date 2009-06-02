@@ -29,6 +29,9 @@ class Genome::Model::ReferenceAlignment::Report::Summary {
         name => {
             default_value => 'Summary',
         },
+        description => {
+            default_value => "Link to summary report will go here",
+        },
     ],
 };
 
@@ -55,7 +58,8 @@ sub _generate_data
         die "No report templates assigned!  Cannot generate any content."
     }
 
-    my $data = { description => $self->generate_report_brief };
+    #my $data = { description => $self->generate_report_brief };
+    my $data = {};
     
     for my $template (@templates) {
         my $content = $self->generate_report_detail($template);
