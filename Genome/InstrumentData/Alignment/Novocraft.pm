@@ -12,90 +12,164 @@ class Genome::InstrumentData::Alignment::Novocraft {
     ],
 };
 
+sub input_pathnames {
+    my $self = shift;
+    my $instrument_data = $self->instrument_data;
+    my %params;
+    if ($self->force_fragment) {
+        if ($self->instrument_data_id eq $self->_fragment_seq_id) {
+            $params{paired_end_as_fragment} = 2;
+        } else {
+            $params{paired_end_as_fragment} = 1;
+        }
+    }
+    my @illumina_fastq_pathnames = $instrument_data->fastq_filenames(%params);
+    return @illumina_fastq_pathnames;
+}
+
+sub alignment_file {
+    my $self = shift;
+    return $self->alignment_directory .'/all_sequences.novo';
+}
+
+
+sub output_files {
+    my $self = shift;
+    my @output_files;
+    push @output_files, $self->alignment_file;
+    return @output_files;
+}
+
+sub find_or_generate_alignment_data {
+    my $self = shift;
+
+    unless ($self->verify_alignment_data) {
+        $self->_run_aligner();
+    } else {
+        $self->status_message("Existing alignment data is available and deemed correct.");
+    }
+
+    return 1;
+}
+
+
+sub verify_alignment_data {
+    my $self = shift;
+
+    my $alignment_dir = $self->alignment_directory;
+    return unless $alignment_dir;
+    return unless -d $alignment_dir;
+
+    unless ( $self->arch_os =~ /64/ ) {
+        die('Failed to verify_alignment_data.  Must run from 64-bit architecture.');
+    }
+
+    my $lock;
+    unless ($self->_resource_lock) {
+        $lock = $self->lock_alignment_resource;
+    } else {
+        $lock = $self->_resource_lock;
+    }
+
+    my $alignment_file = $self->alignment_file;
+    my $errors;
+    unless (-e $alignment_file) {
+        $self->status_message('No alignment file found in alignment directory: '. $alignment_dir);
+        return;
+    } elsif (!$self->verify_aligner_successful_completion($alignment_file)) {
+        $self->error_message('Failed to verify aligner successful completion');
+        $errors++;
+    }
+    if ($errors) {
+        my @output_files = $self->output_files;
+        if (@output_files) {
+            my $msg = 'REFUSING TO CONTINUE with files in place in alignment directory:' ."\n";
+            $msg .= join("\n",@output_files) ."\n";
+            $self->die_and_clean_up($msg);
+        }
+        return;
+    }
+    $self->status_message('Alignment data verified: '. $alignment_dir);
+
+    unless ($self->unlock_alignment_resource) {
+        $self->error_message('Failed to unlock alignment resource '. $lock);
+        return;
+    }
+    return 1;
+}
 
 sub _run_aligner {
     my $self = shift;
-    my %p = @_;
 
-    my $alignment = delete $p{alignment};
-
-    # the rest of these will probably be alignment attributes/methods at some point,
-    # and this logic will itself be an alignmen object method too.
-    my $alignment_directory = delete $p{output_directory};
-    my $reference_build = delete $p{reference_build};
-    my $adaptor_file = delete $p{adaptor_file};
-    my $aligner_params = delete $p{aligner_params};
-    my $is_paired_end = delete $p{is_paired_end};
-    my $upper_bound_on_insert_size = delete $p{upper_bound_on_insert_size};
-
-    if (%p) {
-        die("Unknown params: " . join(" ",%p) . "\n");
+    my $lock;
+    unless ($self->_resource_lock) {
+        $lock = $self->lock_alignment_resource;
+    } else {
+        $lock = $self->_resource_lock;
     }
+    my $instrument_data = $self->instrument_data;
+    my $reference_build = $self->reference_build;
+    my $alignment_directory = $self->alignment_directory;
 
-
-    die "NOT IMPLEMENTED YET!";
+    $self->status_message("OUTPUT PATH: $alignment_directory\n");
 
 
     # we resolve these first, since we might just print the paths we work with then exit
-    my @input_pathnames = $alignment->sanger_bfq_filenames;
-    $self->status_message("SANGER BFQ PATHS: @input_pathnames\n");
+    my @input_pathnames = $self->input_pathnames;
+    $self->status_message("INPUT PATH(S): @input_pathnames\n");
 
     # prepare the refseq
-    my $ref_seq_file =  $reference_build->full_consensus_path('bfa');
+    my $ref_seq_file =  $reference_build->full_consensus_path('ndx');
     unless ($ref_seq_file && -e $ref_seq_file) {
         $self->error_message("Reference build full consensus path '$ref_seq_file' does not exist.");
         die($self->error_message);
     }
     $self->status_message("REFSEQ PATH: $ref_seq_file\n");
 
-    # input/output files
-    my $alignment_file = $self->create_temp_file_path('all.map');
-    unless ($alignment_file) {
-        $self->error_message('Failed to create temp alignment file for all sequences');
-        die($self->error_message);
+    my $is_paired_end;
+    my $insert_size;
+    my $insert_sd;
+    if ($instrument_data->is_paired_end && !$self->force_fragment) {
+        $insert_sd = $instrument_data->sd_above_insert_size;
+        $insert_size = $instrument_data->median_insert_size;
+        $is_paired_end = 1;
+    } else {
+        $is_paired_end = 0;
     }
+
+    # for novocraft we just need the 3' adaptor
+    # commercial version also allows 5' adaptor trimming
+    #my $adaptor_seq = $instrument_data->resolve_adaptor_seq;
+    #unless ($adaptor_seq) {
+    #    $self->die_and_clean_up("Failed to resolve adaptor sequence!");
+    #}
+
+    # these are general params not infered from the above
+    my $aligner_params = $self->aligner_params || '';
+    my $alignment_file = $self->alignment_file;
 
     # RESOLVE A STRING OF ALIGNMENT PARAMETERS
-    if ($is_paired_end) {
-        $aligner_params .= ' -a '. $upper_bound_on_insert_size;
+    if ($is_paired_end && $insert_size && $insert_sd) {
+        $aligner_params .= ' -i '. $insert_size .' '. $insert_sd;
     }
 
-    # TODO: this doesn't really work, so leave it out
-    if ($adaptor_file) {
-        $aligner_params .= ' -d '. $adaptor_file;
-    }
-    else {
-        Carp::confess("No adaptor file?");
-    }
-
-    # prevent randomness!  seed the generator based on the flow cell not the clock
-    my $seed = 0; 
-    for my $c (split(//,$alignment->instrument_data->flow_cell_id || $alignment->instrument_data_id)) {
-        $seed += ord($c)
-    }
-    $seed = $seed % 65536;
-    $self->status_message("Seed for novocraft's random number generator is $seed.");
-    $aligner_params .= " -s $seed ";
-
-    # NOT SURE IF THIS IS USED BUT COULD BE IMPLEMENTED
-    #if ( defined($self->duplicate_mismatch_file) ) {
-    #    $duplicate_mismatch_option = '-H '.$self->duplicate_mismatch_file;
+    #if ($adaptor_seq) {
+    #    $aligner_params .= ' -a '. $adaptor_seq;
+    #}
+    #else {
+    #    Carp::confess("No adaptor sequence?");
     #}
 
     my $files_to_align = join(' ',@input_pathnames);
-    my $cmdline = Genome::Model::Tools::Novocraft->path_for_novocraft_version($self->version)
-        . sprintf(' map %s -u %s %s %s %s > ',
+    my $cmdline = Genome::Model::Tools::Novocraft->path_for_novocraft_version($self->aligner_version)
+        . sprintf(' %s -d %s -f %s > ',
                   $aligner_params,
-                  $alignment->unaligned_reads_list_path,
-                  $alignment_file,
                   $ref_seq_file,
                   $files_to_align)
-            . $alignment->aligner_output_file_path . ' 2>&1';
+            . $alignment_file . ' 2>&1';
     my @input_files = ($ref_seq_file, @input_pathnames);
-    if ($adaptor_file) {
-        push @input_files, $adaptor_file;
-    }
-    my @output_files = ($alignment_file, $alignment->unaligned_reads_list_path, $alignment->aligner_output_file_path);
+
+    my @output_files = ($alignment_file);
     Genome::Utility::FileSystem->shellcmd(
                                           cmd                         => $cmdline,
                                           input_files                 => \@input_files,
@@ -103,154 +177,90 @@ sub _run_aligner {
                                           skip_if_output_is_present   => 1,
                                       );
 
-    unless ($alignment->verify_aligner_successful_completion($alignment->aligner_output_file_path)) {
-        $self->error_message('Failed to verify novocraft successful completion from output file '. $alignment->aligner_output_file_path);
+    unless ($self->verify_aligner_successful_completion($alignment_file)) {
+        $self->error_message('Failed to verify novocraft successful completion from output file '. $alignment_file);
         die($self->error_message);
     }
-
-    # in some cases novocraft will "work" but not make an unaligned reads file
-    # this happens when all reads are filtered out
-    # make an empty file to represent our zero-item list of unaligned reads
-    unless (-e $alignment->unaligned_reads_list_path) {
-        if (my $fh = IO::File->new(">".$alignment->unaligned_reads_list_path)) {
-            $self->status_message("Made empty unaligned reads file since that file is was not generated by novocraft.");
-        } else {
-            $self->error_message("Failed to make empty unaligned reads file!: $!");
-        }
-    }
-
-    # make a sanitized version of the aligner output for comparisons
-    my $output = $self->open_file_for_reading($alignment->aligner_output_file_path);
-    my $clean = $self->open_file_for_writing($alignment->aligner_output_file_path . '.sanitized');
-    while (my $row = $output->getline) {
-        $row =~ s/\% processed in [\d\.]+/\% processed in N/;
-        $row =~ s/CPU time: ([\d\.]+)/CPU time: N/;
-        $clean->print($row);
-    }
-    $output->close;
-    $clean->close;
-
-    # TODO: is this used anymore?  It's a hack left around from AML1
-    my $cmd = '/gscmnt/sata114/info/medseq/pkg/novocraft/branches/lh3/novocraft-xp/novocraft-xp pileup -t '. $alignment->aligner_output_file_path .' 2>&1';
-    my $line = `$cmd`;
-    my ($evenness)=($line=~/(\S+)\%$/);
-    IO::File->new(">$alignment_directory/evenness")->print($evenness);
-    $DB::single = $DB::stopper;
-
-    # TODO: stop splitting the files up by chromosome as soon as downstream stuff handles a single file
-    my @subsequences = grep {$_ ne "all_sequences"} $reference_build->subreference_names(reference_extension=>'bfa');
-    my $mapsplit_cmd = Genome::Model::Tools::Novocraft->path_for_mapsplit_version($self->version);
-    if (@subsequences) {
-        my $cmd = "$mapsplit_cmd " . $alignment_directory . "/ $alignment_file " . join(',',@subsequences);
-        my $rv = system($cmd);
-        if($rv) {
-            #arbitrary convention set up with homemade mapsplit and mapsplit_long..return 2 if file is empty.
-            if($rv/256 == 2) {
-                my $first_subsequence = $subsequences[0];
-                my ($empty_map_file) = $alignment->alignment_file_paths_for_subsequence_name($first_subsequence);
-                unless ($empty_map_file) {
-                    $self->error_message('Failed to find empty map file after return value 2 from mapsplit comand '. $cmd);
-                    die $self->error_message;
-                }
-                unless (-s $empty_map_file) {
-                    $self->error_message('Empty map file '. $empty_map_file .' does not have size.');
-                    die $self->error_message;
-                }
-                for my $subsequence (@subsequences) {
-                    if ($subsequence eq $first_subsequence) { next; }
-                    my $subsequence_map_file = $alignment_directory .'/'. $subsequence .'.map';
-                    unless (File::Copy::copy($empty_map_file,$subsequence_map_file)) {
-                        $self->error_message('Failed to copy empty map file '. $empty_map_file .' to '. $subsequence_map_file .":  $!");
-                        die $self->error_message;
-                    }
-                }
-            } else {
-                $self->error_message("Failed to run map split on alignment file $alignment_file");
-                die $self->error_message;
-            }
-        }
-    } else {
-        @subsequences = 'all_sequences';
-        my $all_sequences_map_file = $alignment_directory .'/all_sequences.map';
-        unless (File::Copy::copy($alignment_file,$all_sequences_map_file)) {
-            $self->error_message('Failed to copy map file from '. $alignment_file .' to '. $all_sequences_map_file);
-            die $self->error_message;
-        }
-    }
-
-    my $errors;
-    for my $subsequence (@subsequences) {
-        my @found = $alignment->alignment_file_paths_for_subsequence_name($subsequence);
-        unless (@found) {
-            $self->error_message("Failed to find map file for subsequence name $subsequence!");
-            $errors++;
-        }
-    }
-    if ($errors) {
-        my @files = glob($alignment_directory . '/*');
-        $self->error_message("Files in dir are:\n\t" . join("\n\t",@files) . "\n");
-        die('Failed to find map files after alignment');
-    }
-
     return 1;
 }
 
 sub process_low_quality_alignments {
     my $self = shift;
+    $self->die_and_clean_up('Please implement process_low_quality_alignments for '. __PACKAGE__);
+}
 
-    my $alignment = $self->_alignment;
+sub verify_aligner_successful_completion {
+    my $self = shift;
+    my $aligner_output_file = shift;
 
-    my $unaligned_reads_file = $alignment->unaligned_reads_list_path;
-    my @unaligned_reads_files = $alignment->unaligned_reads_list_paths;
-
-    my @paths;
-
-    my $result;
-    if (-s $unaligned_reads_file . '.fastq' && -s $unaligned_reads_file) {
-        $self->status_message("SHORTCUTTING: ALREADY FOUND MY INPUT AND OUTPUT TO BE NONZERO");
-        return 1;
+    unless ($aligner_output_file) {
+        $aligner_output_file = $self->alignment_file;
     }
-    elsif (-s $unaligned_reads_file) {
-        if ($self->_alignment->instrument_data->is_paired_end) {
-            $result = Genome::Model::Tools::Novocraft::UnalignedDataToFastq->execute(
-                in => $unaligned_reads_file, 
-                fastq => $unaligned_reads_file . '.1.fastq',
-                reverse_fastq => $unaligned_reads_file . '.2.fastq'
-            );
-        }
-        else {
-            $result = Genome::Model::Tools::Novocraft::UnalignedDataToFastq->execute(
-                in => $unaligned_reads_file, 
-                fastq => $unaligned_reads_file . '.fastq'
-            );
-        }
-        unless ($result) {die "Failed Genome::Model::Tools::Novocraft::UnalignedDataToFastq for $unaligned_reads_file";}
+    unless (-s $aligner_output_file) {
+        $self->error_message("Aligner output file '$aligner_output_file' not found or zero size.");
+        return;
     }
-    else {
-        foreach my $unaligned_reads_files_entry (@unaligned_reads_files){
-            if ($self->_alignment->instrument_data->is_paired_end) {
-                $result = Genome::Model::Tools::Novocraft::UnalignedDataToFastq->execute(
-                    in => $unaligned_reads_files_entry, 
-                    fastq => $unaligned_reads_files_entry . '.1.fastq',
-                    reverse_fastq => $unaligned_reads_files_entry . '.2.fastq'
-                );
+    my $aligner_output_fh = Genome::Utility::FileSystem->open_file_for_reading($aligner_output_file);
+    unless ($aligner_output_fh) {
+        $self->error_message("Can't open aligner output file $aligner_output_file: $!");
+        return;
+    }
+    my $instrument_data = $self->instrument_data;
+    if ($instrument_data->is_paired_end) {
+        my $stats = $self->get_alignment_statistics($aligner_output_file);
+        unless ($stats) {
+            return;
+        }
+        if ($self->force_fragment) {
+            if (defined($$stats{'Paired Reads'})) {
+                $self->error_message('Paired-end instrument data '. $instrument_data->id .' was not aligned as fragment data according to aligner output '. $aligner_output_file);
+                return;
             }
-            else {
-                $result = Genome::Model::Tools::Novocraft::UnalignedDataToFastq->execute(
-                    in => $unaligned_reads_files_entry, 
-                    fastq => $unaligned_reads_files_entry . '.fastq'
-                );
+        }  else {
+            if (!defined($$stats{'Paired Reads'})) {
+                $self->error_message('Paired-end instrument data '. $instrument_data->id .' was not aligned as paired end data according to aligner output '. $aligner_output_file);
+                return;
             }
-            unless ($result) {die "Failed Genome::Model::Tools::Novocraft::UnalignedDataToFastq for $unaligned_reads_files_entry";}
         }
     }
+    while(<$aligner_output_fh>) {
+        if (m/^# Done.$/) {
+            $aligner_output_fh->close();
+            return 1;
+        }
+    }
+    return;
+}
 
-    unless (-s $unaligned_reads_file || @unaligned_reads_files) {
-        $self->error_message("Could not find any unaligned reads files.");
+sub get_alignment_statistics {
+    my $self = shift;
+    my $aligner_output_file = shift;
+    unless ($aligner_output_file) {
+        $aligner_output_file = $self->alignment_file;
+    }
+    unless (-s $aligner_output_file) {
+        $self->error_message("Aligner output file '$aligner_output_file' not found or zero size.");
         return;
     }
 
-    return 1;
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($aligner_output_file);
+    unless($fh) {
+        $self->error_message("unable to open maq's alignment output file:  " . $aligner_output_file);
+        return;
+    }
+    my @lines = $fh->getlines;
+    $fh->close;
+    my %hashy_hash_hash;
+    my @comments = grep { /^#/ } @lines;
+    foreach my $comment (@comments) {
+        $comment =~ /^#\s+(.*)\:\s+(.*)/;
+        my $key = $1;
+        my $value = $2;
+        if ($key && $value) {
+            $hashy_hash_hash{$key} = $value;
+        }
+    }
+    return \%hashy_hash_hash;
 }
 
 1;
