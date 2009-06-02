@@ -12,26 +12,17 @@ ok(-d $test_dir, "test data dir exists");
 my $input = "$test_dir/input";
 ok(-e $input, 'input exists');
 
-my $ref_variation = "$test_dir/known_output.variation";
-ok(-e $ref_variation, 'ref variation exists');
+my $ref_output = "$test_dir/known_output.variation";
+ok(-e $ref_output, 'ref variation exists');
 
-my $ref_metrics = "$test_dir/known_output.metrics";
-ok(-e $ref_metrics, 'ref metrics exists');
-
-my $output_base = "$test_dir/output";
-my $command = "gt annotate novel-variations --snv-file $input --output-file $output_base.variation --summary-file $output_base.metrics";
+my $output = "$test_dir/output";
+my $command = "gt annotate novel-variations --variant-file $input --output-file $output";
 
 is(system($command),0, "executed $command w/ return value of 0");
 
-my $variation = "$output_base.variation";
-ok(-e $variation, 'variation output exists');
-is(compare($variation, $ref_variation), 0, "variation and ref variation are the same")
-    or diag("sdiff $variation $ref_variation");
+ok(-e $output, 'output exists');
+is(compare($output, $ref_output), 0, "output and ref output are the same")
+    or diag("sdiff $output $ref_output");
 
-my $metrics = "$output_base.metrics";
-ok(-e $metrics, 'metrics output exists');
-is(compare($metrics, $ref_metrics), 0, "metrics and ref metrics are the same")
-    or diag("sdiff $metrics $ref_metrics");
-
-unlink($variation,$metrics);
+#unlink($output);
 

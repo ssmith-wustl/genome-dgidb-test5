@@ -13,6 +13,20 @@ class Genome::Variation{
     has => [
         external_variation_id => {is => 'Number'},
         allele_string => {is => 'String'},
+        reference => {
+            calculate_from => 'allele_string',
+            calculate => q|
+                my ($reference, $variant) = split ("/", $allele_string);
+                return $reference;
+            |,
+        },
+        variant => {
+            calculate_from => 'allele_string',
+            calculate => q|
+                my ($reference, $variant) = split ("/", $allele_string);
+                return $variant;
+            |,
+        },
         variation_type => {is => 'String'},
         chrom_name => {is => 'String'},
         start => {is => 'Number'},

@@ -66,6 +66,37 @@ sub infer_variant_type {
     }
 }
 
+# Figures out what the 'type' of this variation should be (snp, dnp, ins, del) based upon
+# the start, stop, reference, and variation
+# Takes in a variation hash, returns the type
+sub infer_variation_type {
+    my ($self, $variation) = @_;
+    $DB::single=1;
+
+    # If the start and stop are the same, and ref and variation are defined its a SNP
+    if (($variation->stop == $variation->start)&&
+        ($variation->reference ne '-')&&($variation->reference ne '0')&&
+        ($variation->variant ne '-')&&($variation->variant ne '0')) {
+        return 'SNP';
+    # If start and stop are 1 off, and ref and variation are defined its a DNP
+    } elsif (($variation->stop - $variation->start == 1)&&
+             ($variation->reference ne '-')&&($variation->reference ne '0')&&
+             ($variation->variant ne '-')&&($variation->variant ne '0')) {
+        return 'DNP';
+    # If reference is a dash, we have an insertion
+    } elsif (($variation->reference eq '-')||($variation->reference eq '0')) {
+        return 'INS';
+    } elsif (($variation->variant eq '-')||($variation->variant eq '0')) {
+        return 'DEL';
+    } else {
+        $self->error_message("Could not determine variation type from variation:");
+        $self->error_message(Dumper($variation));
+        die;
+    }
+}
+
+
+
 sub _create_file {
     my ($self, $output_file) = @_;
     my $output_fh;

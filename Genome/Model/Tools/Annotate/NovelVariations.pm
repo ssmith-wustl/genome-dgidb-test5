@@ -3,34 +3,24 @@ package Genome::Model::Tools::Annotate::NovelVariations;
 use strict;
 use warnings;
 
-use Genome; 
-
-use Command;
+use Genome;
 use Data::Dumper;
 use IO::File;
-use Tie::File;
-use Fcntl 'O_RDONLY';
-use Carp;
 
 class Genome::Model::Tools::Annotate::NovelVariations {
-    is => 'Command',
+    is => 'Genome::Model::Tools::Annotate',
     has => [ 
-        snv_file => {
+        variant_file => {
             type => 'Text',
             is_optional => 0,
-            doc => "File of single-nucleotide variants.  Tab separated columns: chromosome_name start stop reference variant reference_type type reference_reads variant_reads maq_score",
+            doc => "File of variants.  Tab separated columns: chromosome_name start stop reference variant",
         },
     ],
     has_optional => [
         output_file => {
             type => 'Text',
-            is_optional => 0,
-            doc => "Store annotation in the specified file instead of sending it to STDOUT."
-        },
-        summary_file => {
-            type => 'Text',
             is_optional => 1,
-            doc => "Store summary metrics about the SNVs analyzed in a file with the specified name."
+            doc => "Store annotation in the specified file instead of sending it to STDOUT."
         },
         no_headers => {
             type => 'Boolean',
@@ -38,38 +28,23 @@ class Genome::Model::Tools::Annotate::NovelVariations {
             default => 0,
             doc => 'Exclude headers in report output',
         },
-        # Metrix Params
-        minimum_maq_score => {
-            is => 'Integer',
-            is_optional => 1,
-            default => 15,
-            doc => 'Minimum quality to consider a variant high quality',
-        },
-        minimum_read_count => {
-            is => 'Integer',
-            is_optional => 1,
-            default => 3,
-            doc => 'Minimum number of total reads to consider a variant high quality',
-        },
-        # Transcript Params
-        flank_range => {
-            type => 'Integer', 
-            is_optional => 1,
-            default => 50000,
-            doc => 'Range to look around for flaking regions of transcripts',
-        },
         # Variation Params
-        variation_range => {
+        indel_range => {
            type => 'Integer',
            is_optional => 1,
            default => 0,
-           doc => 'Range to look around a variant for known variations',
+           doc => 'Range to look around an indel for known variations... does not apply to snps',
         },
-	    build => {
-	        is => "Genome::Model::Build",
-	        id_by => 'build_id',
+        submitter_filter => {
+            type => 'Text',
+            is_optional => 1,
+            doc => 'Comma separated list of submitters to consider from dbsnp. Results will not include submitters not mentioned. Default is no filter.',
+        },
+        build => {
+            is => "Genome::Model::Build",
+            id_by => 'build_id',
             is_optional => 1, 
-	    },
+        },
     ],
 };
 
@@ -78,7 +53,7 @@ class Genome::Model::Tools::Annotate::NovelVariations {
 
 sub help_synopsis { 
     return <<EOS
-gt annotate transcript-variations --snv-file snvs.csv --output-file transcript-changes.csv --summary-file myresults.csv
+gt annotate novel-variations --variant-file snvs.csv --output-file transcript-changes.csv
 EOS
 }
 
@@ -94,17 +69,13 @@ sub execute {
     my $self = shift;
     $DB::single =1;
     
-    # generate an iterator for the input list of SNVs
-    my $variant_file = $self->snv_file;
+    my $variant_file = $self->variant_file;
+
     my $variant_svr = Genome::Utility::IO::SeparatedValueReader->create(
         input => $variant_file,
-        headers => [qw/
-            chromosome_name start stop reference variant 
-            reference_type type reference_reads variant_reads
-            maq_score
-        /],
-        separator => '\s+',
-        is_regex => 1,
+        headers => [ $self->variant_attributes ],
+        separator => "\t",
+        ignore_extra_columns => 1,
     );
     unless ($variant_svr) {
         $self->error_message("error opening file $variant_file");
@@ -133,7 +104,7 @@ sub execute {
         $self->build($build);
     }
     
-    # emit headers as necessary
+    # omit headers as necessary
     $output_fh->print( join(',', $self->variation_report_headers), "\n" ) unless $self->no_headers;
     
     # annotate all of the input SNVs...
@@ -145,43 +116,93 @@ sub execute {
             $chromosome_name = $variant->{chromosome_name};
             $self->status_message("generating overlap iterator for $chromosome_name");
             
-            my $variant_iterator = Genome::Variation->create_iterator(
-                where => [ 
-                chrom_name => $chromosome_name,
-                build_id => $self->build->build_id,
-                ]
-            );
+            # Apply the filter on submitters if necessary
+            my $variant_iterator;
+            if ($self->submitter_filter) {
+                my @valid_submitters = split (",", $self->submitter_filter);
+                $variant_iterator = Genome::Variation->create_iterator(
+                    where => [ 
+                    chrom_name => $chromosome_name,
+                    build_id => $self->build->build_id,
+                    submitters => \@valid_submitters,
+                    ]
+                );
+            } else {
+                $variant_iterator = Genome::Variation->create_iterator(
+                    where => [ 
+                    chrom_name => $chromosome_name,
+                    build_id => $self->build->build_id,
+                    ]
+                );
+            }
             $variation_window =  Genome::Utility::Window::Variation->create( 
                 iterator => $variant_iterator,
-                range => $self->variation_range
+                range => $self->indel_range
             );
             die Genome::Utility::Window::Variation->error_message unless $variation_window;
         }
         # get the data and output it
-        my @variations = grep { $_->start eq $_->stop } $variation_window->scroll($variant->{start});
-        $self->_print_reports_for_snp($variant, \@variations);
+        my @variations = $variation_window->scroll($variant->{start});
+
+        # Find the valid varations... any indel that was returned and any snp
+        # That is at the exact position sought (snps dont have a range, only indels)
+        my @valid_variations;
+        for my $variation (@variations) {
+            if (($self->is_valid_variation($variation))&&
+                ($self->variation_in_range($variant, $variation))) {
+                    push @valid_variations, $variation;
+                }
+        }
+        
+        $self->_print_reports_for_snp($variant, \@valid_variations);
     }
 
-    # produce a summary as needed
-    if (my $summary_file = $self->summary_file) {
-        my $summary_fh = $self->_create_file($summary_file);
-        $summary_fh->print( join(',', $self->metrics_report_headers), "\n" );
-        my $metrics = $self->{_metrics};
-        my $result = $summary_fh->print(
-            join(
-                ',',
-                map({ $metrics->{$_} || 0 } $self->metrics_report_headers),
-            ),
-            "\n",
-        );
-        unless ($result) {
-            die "failed to print a summary report?! : $!";
-        }
-        $summary_fh->close;
-    }
-    
-    $output_fh->close unless $output_fh eq 'STDOUT';
     return 1;
+}
+
+# This method filters out invalid variations according to some filter logic...
+# Right now it simply filters out "snps" that have a reference or variant length != 1
+sub is_valid_variation {
+    my ($self, $variation) = @_;
+
+    # No filter on anything but snps for now sooo... anything else is ok
+    unless ($variation->variation_type =~ /SNP/i) {
+        return 1;
+    }
+
+    if ((length($variation->reference) != 1)||
+        (length($variation->variant) != 1)) {
+        return 0;
+    }
+
+    return 1;
+}
+
+# This method checks to see if the variation is in range of the current variant considered
+# in order to consider this a "hit"
+# Indels have some "fudge factor" but snps must be a direct hit
+sub variation_in_range {
+    my ($self, $variant, $variation) = @_;
+
+    my $type = $variation->variation_type;
+    # Indels returned within range should be considered
+    # should we check for range here? Should not have to since since window only returns stuff in range anyways...
+    if ($type =~ /INS|DEL/i) {
+        return 1;
+    # SNPs should only be considered if they are on the same position as the original variant, no range here
+    } elsif (($type =~ /SNP/i)&&($variation->{start} == $variant->{start})&&($variation->{stop} == $variant->{stop})) {
+        return 1;
+    # DNPs should only be considered if they are on the same position as the original variant, no range here
+    } elsif (($type =~ /DNP|MNP/i)&&($variation->{start} == $variant->{start})&&($variation->{stop} == $variant->{stop})) {
+        return 1;
+    } else {
+        if ($type =~ /INS|DEL|SNP|DNP|MNP/i) {
+            $self->warning_message("Junk data from data source (SNP with start and stop not equal?). Variation is: " . Dumper $variation);
+        } else {
+            $self->warning_message("Variation from data source has type $type, which is not supported. Variation is: " . Dumper $variation);
+        }
+    }
+
 }
 
 sub _create_file {
@@ -210,48 +231,30 @@ sub _variation_report_fh {
     return $self->{_variation_fh};
 }
 
-# report headers
-sub metrics_report_headers {
-    return (qw/ total confident distinct /, variation_sources());
-}
-
 sub variation_report_headers {
-    return ( variant_attributes(), variation_attributes() );
-}
-
-# attributes
-sub variant_attributes {
-    return (qw/ chromosome_name start stop variant variant_reads reference reference_reads maq_score /);
+    my $self = shift;
+    return ( $self->variant_attributes(), $self->variation_attributes() );
 }
 
 sub variation_attributes {
-    #return ('in_coding_region', variation_sources());
-    return ( variation_sources());
-    #return ('genic', variation_sources());
+    my $self = shift;
+    return ( $self->variation_sources());
 }
 
 sub variation_sources {
+    my $self = shift;
     return (qw/ dbsnp-127 watson venter /);
 }
 
 #- PRINT REPORTS -#
 sub _print_reports_for_snp {
-    my ($self, $snp, $variations) = @_;
-
-    # Calculate Metrics
-    my $is_hq_snp = ( $snp->{maq_score} >= $self->minimum_maq_score 
-            and $snp->{reference_reads} + $snp->{variant_reads} >= $self->minimum_read_count )
-    ? 1
-    : 0;
-
-    $self->{_metrics}->{total}++;
-    $self->{_metrics}->{confident}++ if $is_hq_snp;
+    my ($self, $variant, $variations) = @_;
 
     # Basic SNP Info
-    my $snp_info_string = join
+    my $variant_info_string = join
     (
         ',', 
-        map { $snp->{$_} } $self->variant_attributes,
+        map { $variant->{$_} } $self->variant_attributes,
     );
 
     # Variation Report
@@ -263,7 +266,6 @@ sub _print_reports_for_snp {
             if ( grep { lc($_->source) eq $db_source } @$variations )
             {
                 push @snp_exists_in_variations, 1;
-                $self->{_metrics}->{$db_source}++ if $is_hq_snp;
             }
             else
             {
@@ -273,7 +275,6 @@ sub _print_reports_for_snp {
     }
     else
     {
-        $self->{_metrics}->{distinct}++ if $is_hq_snp;
         @snp_exists_in_variations = (qw/ 0 0 0 /);
     }
 
@@ -283,7 +284,7 @@ sub _print_reports_for_snp {
         join
         (
             ',',
-            $snp_info_string,
+            $variant_info_string,
             @snp_exists_in_variations,
         ),
         "\n",
@@ -299,25 +300,23 @@ sub _print_reports_for_snp {
 
 =head1 Name
 
-Genome::Model::Tools::Annotate::TranscriptVariations
+Genome::Model::Tools::Annotate::NovelVariations
 
 =head1 Synopsis
 
-Goes through each variant in a file, retrieving annotation information from Genome::Transcript::VariantAnnotator.
+Goes through each variant in a file, retrieving dbsnp, watson, and venter information.
 
 =head1 Usage
 
  in the shell:
  
-     gt annotate transcript-variations --snv-file myinput.csv --output-file myoutput.csv --metric-summary metrics.csv
+     gt annotate novel-variations --variant-file myinput.csv --output-file myoutput.csv --variation-range 0
 
  in Perl:
  
-     $success = Genome::Model::Tools::Annotate::TranscriptVariations->execute(
-         snv_file => 'myoutput.csv',
+     $success = Genome::Model::Tools::Annotate::NovelVariations->execute(
+         variant_file => 'myoutput.csv',
          output_file => 'myoutput.csv',
-         summary_file => 'metrics.csv', # optional
-         flank_range => 10000, # default 50000
          variation_range => 0, # default 0
      );
 
@@ -325,24 +324,18 @@ Goes through each variant in a file, retrieving annotation information from Geno
 
 =over
 
-=item snv_file
+=item variant_file
 
 An input list of single-nucleotide variations.  The format is:
- chromosome
- position
- reference value
- variant value
+ chromosome_name
+ start
+ stop
+ reference
+ variant
 
 =item output_file
 
-The list of transcript changes which would occur as a result of the associated genome sequence changes.
-
-One SNV may result in multiple transcript entries if it intersects multiple transcripts.  One 
-transcript may occur multiple times in results if multiple SNVs intersect it.
-
-=item summary_file
-
-A one-row csv "table" with some metrics on the SNVs analyzed.
+A list of all input variants and whether that variant exists in watson, venter, and dbsnp.
 
 =item 
 
@@ -350,7 +343,7 @@ A one-row csv "table" with some metrics on the SNVs analyzed.
 
 =head1 See Also
 
-B<Genome::Transcript::VariantAnnotator>, 
+B<Genome::Transcript::NovelVariations>, 
 
 =head1 Disclaimer
 
