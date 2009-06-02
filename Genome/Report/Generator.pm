@@ -7,30 +7,59 @@ use Genome;
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';
+use IO::String;
+use XML::LibXML;
 
 class Genome::Report::Generator {
     is => 'UR::Object',
     has => [
-    name => { 
+    name => {
         is => 'Text',
-        doc => 'Name of the report',
+        doc => 'Name to give the report.  Will usually have a default/calculated value',
     },
-    ],
+    description => {
+        is => 'Text',
+        doc => 'Description to give the report.  Will usually have a default/calculated value',
+    },
+    ]
 };
 
-#< Get/Create >#
+#< Create >#
 sub create {
     my $class = shift;
+
+    unless ( $class->can('_generate_data') ) {
+        confess "This report generator class does not implement '_generate_data' method.  Please correct.";
+    }
 
     my $self = $class->SUPER::create(@_)
         or return;
 
     unless ( $self->name ) {
-        $self->error_message("Name is required to create");
+        $self->error_message('No name for generator to give report');
         $self->delete;
         return;
     }
 
+    unless ( $self->description ) {
+        $self->error_message('No description for generator to give report');
+        $self->delete;
+        return;
+    }
+    
+    # XML doc
+    $self->{_xml} = XML::LibXML->createDocument;
+    unless ( $self->{_xml} ) {
+        $self->error_message("Can't create XML object");
+        $self->delete;
+        return;
+    }
+
+    # main node
+    $self->{_main_node} = $self->_xml->createElement('report');
+    $self->_xml->addChild( $self->_main_node );
+    $self->_xml->setDocumentElement( $self->_main_node ); 
+    
     return $self;
 }
 
@@ -38,27 +67,65 @@ sub create {
 sub generate_report {
     my $self = shift;
 
-    unless ( $self->can('_generate_data') ) {
-        confess "This report class does not implement '_generate_data' method.  Please correct.";
-    }
-
-    my $data = $self->_generate_data;
-    unless ( $data ) { 
+    # Data
+    my $data;
+    unless ( $data = $self->_generate_data ) {
         $self->error_message("Could not generate report data");
         return;
     }
 
-    $data->{name} = $self->name;
-    $data->{date} = UR::Time->now;
-    $data->{generator} = $self->class;
-    $data->{generator_params} = $self->_get_params_for_generation;
+    # Meta
+    $self->_add_report_meta_node
+        or return;
 
-    #print Dumper($data);
-
-    return Genome::Report->create(
-        name => $self->name,
-        data => $data,
+    my $report = Genome::Report->create(
+        xml => $self->_xml,
     );
+
+    # DATA - BACKWARD COMPATIBILITY - THIS WILL BE REMOVED!
+    if ( ref($data) ) {
+        $self->warning_message("Generating a report w/ 'data' is deprecated.  Please store data as XML");
+        $report->data($data);
+    }
+
+    return $report;
+}
+
+sub _add_report_meta_node {
+    my $self = shift;
+
+    my $meta_node = $self->_xml->createElement('report-meta');
+    $self->_main_node->addChild($meta_node);
+    
+    # Basics
+    for my $attr (qw/ name description date generator /) {
+    $meta_node->addChild( $self->_xml->createElement($attr) )->appendTextNode($self->$attr);
+    #$meta_node->addChild( $self->_xml->createElement('name') )->appendTextNode($self->name);
+    }
+
+    # Generator params
+    my %generation_params = $self->_get_params_for_generation;
+    my $gen_params_node = $self->_xml->createElement('generator-params')
+        or return;
+    $meta_node->addChild($gen_params_node)
+        or return;
+    for my $param ( keys %generation_params ) {
+        for my $value ( @{$generation_params{$param}} ) {
+            my $element = $gen_params_node->addChild( $self->_xml->createElement($param) )
+                or return;
+            $element->appendTextNode($value);
+        }
+    }
+
+    return $meta_node;
+}
+
+sub generator { # lets this be overwritten
+    return $_[0]->class;
+}
+
+sub date { # lets this be overwritten
+    return UR::Time->now; 
 }
 
 sub _get_params_for_generation {
@@ -68,165 +135,20 @@ sub _get_params_for_generation {
     for my $property ( $self->get_class_object->all_property_metas ) {
         my $property_name = $property->property_name;
         next if $property_name =~ /^_/;
+        next if grep { $property_name eq $_ } (qw/ name description /);
         next if $property->via or $property->id_by;
         next unless $property->class_name->isa('Genome::Report::Generator');
         next if $property->class_name eq 'Genome::Report::Generator';
         #print Dumper($property_name);
-        $params{$property_name} = ( $property->is_many )
-        ? [ $self->$property_name ]
-        : $self->$property_name;
+        my $key = $property_name;
+        $key =~ s#_#\-#g;
+        $params{$key} = [ $self->$property_name ];
     }
 
-    return \%params;
+    return %params;
 }
 
-#< Data Generation Helper Methods >#
-sub _generate_csv_string {
-    my ($self, %params) = @_;
-
-    $self->_validate_aryref(
-        name => 'headers',
-        value => $params{headers},
-        method => '_generate_csv_string',
-    )
-        or return;
-
-    $self->_validate_aryref(
-        name => 'data',
-        value => $params{data},
-        method => '_generate_csv_string',
-    )
-        or return;
-
-    my $io = IO::String->new();
-    my $svw = Genome::Utility::IO::SeparatedValueWriter->create(
-        output => $io,
-        headers => $params{headers},
-    )
-        or return;
-
-    for my $row ( @{$params{data}} ) {
-        my %data;
-        @data{ @{$params{headers}} } = @$row;
-        unless ( $svw->write_one(\%data) ) {
-            $self->error_message("Error writing row");
-            return;
-        }
-    }
-
-    $io->seek(0, 0);
-
-    return join('', $io->getlines);
-}
-
-sub _generate_html_table {
-    my ($self, %params) = @_;
-
-    $self->_validate_aryref(
-        name => 'headers',
-        value => $params{headers},
-        method => '_generate_html_table',
-    )
-        or return;
-
-    $self->_validate_aryref(
-        name => 'data',
-        value => $params{data},
-        method => '_generate_html_table',
-    )
-        or return;
-
-    my $table = $self->_start_hmtl_table(%params)
-        or return;
-
-    my @data = _convert_data_with_undef_and_empty_strings_to_html_spaces(@{$params{data}});
-    my $entry_attrs = ( $params{entry_attrs} ? ' '.$params{entry_attrs} : '' );
-
-    for my $row ( @data ) {
-        $table .= '<tr>';
-        $table .= join('', map { sprintf('<td%s>%s</td>', $entry_attrs, $_) } @$row );
-        $table .= "</tr>\n";
-    }
-
-    $table .= "</table>\n";
-
-    return $table;
-}
-
-sub _generate_vertical_html_table {
-    my ($self, %params) = @_;
-
-    $self->_validate_aryref(
-        name => 'horizontal headers',
-        value => $params{horizontal_headers},
-        method => '_generate_vertical_html_table',
-    )
-        or return;
-
-    $self->_validate_aryref(
-        name => 'data',
-        value => $params{data},
-        method => '_generate_vertical_html_table',
-    )
-        or return;
-
-    my $table = $self->_start_hmtl_table(%params)
-        or return;
-
-    my @data = _convert_data_with_undef_and_empty_strings_to_html_spaces(@{$params{data}});
-    my $entry_attrs = ( $params{entry_attrs} ? ' '.$params{entry_attrs} : '' );
-
-    for ( my $i = 0; $i < @{$params{horizontal_headers}}; $i++ ) {
-        # header
-        $table .= sprintf('<tr><td%s><b>%s</b></td>', $entry_attrs, $params{horizontal_headers}->[$i]);
-        # data
-        for my $data ( @data ) {
-            $table .= join('', map { sprintf('<td%s>%s</td>', $entry_attrs, $_) } $data->[$i]);
-        }
-        $table .= "</tr>\n";
-    }
-
-    $table .= "</table>\n";
-
-    return $table;
-}
-
-sub _html_table_attrs {
-    return (
-        table_attrs => 'style="text-align:left;border:groove;border-width:3"',
-        header_attrs => 'style="border:groove;border-width:1"',
-        entry_attrs => 'style="border:groove;border-width:1"',
-    );
-}
-
-sub _start_hmtl_table {
-    my ($self, %params) = @_;
-
-    my $table;
-    if ( $params{title} ) {
-        $table = '<h2>'.$params{title}.'</h2><br>';
-    }
-
-    $table .= sprintf('<table %s>', ( $params{table_attrs} || '' ));
-
-    my $header_attrs = ( $params{header_attrs} ? ' '.$params{header_attrs} : '');
-    $table .=  join(
-        '', 
-        map { 
-            sprintf(
-                '<th%s>%s</th>',
-                $header_attrs,
-                $_,
-            ) 
-        } map { 
-            defined $_ ? $_ : '&nbsp'
-        } 
-        _convert_undef_and_empty_strings_to_html_spaces(@{$params{headers}})
-    );
-
-    return $table;
-}
-
+#< Helpers >#
 sub _validate_aryref { 
     my ($self, %params) = @_;
 
@@ -240,23 +162,198 @@ sub _validate_aryref {
     }
 
     unless ( ref($params{value}) eq 'ARRAY' ) {
-        $self->error_message(ucfirst($params{name}).' are required to be an array reference for '.$params{desc});
+        $self->error_message(ucfirst($params{name}).' are required to be an array reference for '.$params{method});
         return;
     }
 
     return 1;
 }
 
-sub _convert_data_with_undef_and_empty_strings_to_html_spaces { # takes an aryref of aryrefs in @_ - no self/class
-    my @new_data;
-    for my $aryref ( @_ ) {
-        push @new_data, [ _convert_undef_and_empty_strings_to_html_spaces(@$aryref) ];
+sub _validate_string_for_xml { 
+    my ($self, %params) = @_;
+
+    # value => value of attr
+    # name => name of attr
+    # method => caller method
+    
+    unless ( $params{value} ) {
+        $self->error_message(ucfirst($params{name}).' is required for '.$params{method});
+        return;
     }
-    return @new_data;
+
+    if ( $params{value} =~ /\s/ ) {
+        $self->error_message(
+            sprintf(
+                'Spaces were found in %s from method %s, and are not allowed',
+                $params{name},
+                $params{method},
+            )
+        );
+        return;
+    }
+
+    return 1;
 }
 
-sub _convert_undef_and_empty_strings_to_html_spaces { # straight ary in @_ - no 'self' or class
-    return map { (( not defined($_) or $_ eq "" ) ? "&nbsp" : $_ ) } @_;
+#< XML >#
+sub _xml {
+    return $_[0]->{_xml};
+}
+
+sub _main_node {
+    return $_[0]->{_main_node};
+}
+
+sub _datasets_node {
+    my $self = shift;
+
+    unless ( $self->{_datasets_node} ) {
+        $self->{_datasets_node} = $self->_xml->createElement('datasets')
+            or return;
+        $self->_main_node->addChild( $self->{_datasets_node} )
+            or return;
+    }
+
+    return $self->{_datasets_node};
+}
+
+sub _add_dataset {
+    my ($self, %params) = @_;
+
+    # Names
+    my $dataset_name = delete $params{name};
+    $self->_validate_string_for_xml(
+        name => 'dataset_name',
+        value => $dataset_name,
+        method => '_add_dataset',
+    )
+        or return;
+    my $row_name = delete $params{row_name};
+    $self->_validate_string_for_xml(
+        name => 'row_name',
+        value => $row_name,
+        method => '_add_dataset',
+    )
+        or return;
+
+    # Headers
+    my $headers = delete $params{headers};
+    $self->_validate_aryref(
+        name => 'headers',
+        value => $headers,
+        method => '_add_dataset',
+    ) or return;
+    for my $header ( @$headers ) {
+        $self->_validate_string_for_xml(
+            name => 'header',
+            value => $header,
+            method => '_add_dataset',
+        )
+            or return;
+    }
+
+    # Rows
+    my $rows = delete $params{rows};
+    $self->_validate_aryref(
+        name => 'rows',
+        value => $rows,
+        method => '_add_dataset',
+    ) or return;
+
+    # Dataset node
+    my $dataset_node = $self->_xml->createElement($dataset_name)
+        or return;
+    $self->_datasets_node->addChild($dataset_node)
+        or return;
+
+    # Add data
+    my $i;
+    for my $row ( @$rows ) {
+        my $row_node = $self->_xml->createElement($row_name)
+            or return;
+        $dataset_node->addChild($row_node)
+            or return;
+        for ( $i = 0; $i < @$headers; $i++ ) {
+            #print Dumper([$headers->[$i], $row->[$i]]);
+            my $element = $row_node->addChild( $self->_xml->createElement($headers->[$i]) )
+                or return;
+            $element->appendTextNode($row->[$i]);
+            #$row_node->addChild( $self->_xml->createAttribute($headers->[$i], $row->[$i]) )
+            #    or return;
+        }
+    }
+
+    # Add dataset attributes
+    for my $attr ( keys %params ) {
+        $dataset_node->addChild( $self->_xml->createAttribute($attr, $params{$attr}) )
+            or return;
+    }
+
+    return $dataset_node;
+}
+
+=pod
+CDATA....
+    my $csv = IO::String->new;
+    unless ( $csv ) {
+        $self->error_message("Can't create IO::String: $!");
+        return;
+    }
+    my $svw = Genome::Utility::IO::SeparatedValueWriter->create(
+        headers => $headers,
+        output => $csv,
+    )
+        or return;
+    for my $row ( @$rows ) {
+        my %data;
+        @data{ @$headers } = @$row;
+        $svw->write_one(\%data)
+            or return;
+    }
+    $csv->seek(0, 0);
+    my $cdata_node = XML::LibXML::CDATASection->new( join('', $csv->getlines) )
+        or return;
+    $csv_node->addChild($cdata_node)
+        or return;
+=cut
+
+sub _add_node_with_multiple_values {
+    my ($self, %params) = @_;
+
+    unless ( $params{parent_node} ) {
+        $self->error_message("Need parent_node to add node with multiple values");
+        return;
+    }
+
+    unless ( $params{tag_name} ) {
+        $self->error_message("Need tag_name to add node with multiple values");
+        return;
+    }
+
+    unless ( $params{child_tag_name} ) {
+        $self->error_message("Need child_tag_name to add node with multiple values");
+        return;
+    }
+
+    $self->_validate_aryref(
+        name => $params{child_tag_name},
+        value => $params{'values'},
+        method => 'create node with multiple values',
+    )
+        or return;
+    
+    my $node = $self->_xml->createElement($params{tag_name})
+        or return;
+    $params{parent_node}->addChild($node)
+        or return;
+    
+    for my $value ( @{$params{'values'}} ) {
+        my $child_node = $self->_xml->createElement($params{child_tag_name});
+        $child_node->addChild( $self->_xml->createTextNode($value) );
+        $node->addChild($child_node);
+    }
+    
+    return $node;
 }
 
 1;
