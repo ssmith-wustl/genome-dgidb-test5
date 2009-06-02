@@ -85,7 +85,7 @@ sub get_counts_for_domain_down_to_rank {
         last if $rank eq $to_rank;
     }
 
-    my $counts = {};
+    my %counts;
     for my $classification ( $self->get_confident_classifications ) {
         next unless $classification->get_domain =~ /^$domain$/i;
         my $taxonomy = join(
@@ -93,21 +93,21 @@ sub get_counts_for_domain_down_to_rank {
             grep { defined } map { $self->_get_name_from_classification_for_rank($classification, $_) } @ranks
         );
         # Increment total
-        $counts->{$taxonomy}->{total}++;
+        $counts{$taxonomy}->{total}++;
         # Go thru the ranks
         for my $rank ( @ranks ) {
             my $confidence = $self->_get_confidence_from_classification_for_rank($classification, $rank)
                 or next;
             if ( $confidence >= $threshold ) {
-                $counts->{$taxonomy}->{$rank}++;
+                $counts{$taxonomy}->{$rank}++;
             }
-            elsif ( not defined $counts->{$taxonomy}->{$rank} ) {
-                $counts->{$taxonomy}->{$rank} = 0;
+            elsif ( not defined $counts{$taxonomy}->{$rank} ) {
+                $counts{$taxonomy}->{$rank} = 0;
             }
         }
     }
 
-    return $counts;
+    return %counts;
 }
 
 sub _get_name_from_classification_for_rank {
