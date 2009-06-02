@@ -15,15 +15,15 @@ sub test_class {
 
 sub params_for_test_class {
     return (
-        name => '18S Composition 18SEUKF to 18SEUKR (502F, 1174R)',
+        name => '16S Composition 27F to 1492R (907R)',
         assembler => 'phredphrap',
-        assembly_size => 1900,
+        assembly_size => 1465,
         primer_amp_forward => '18SEUKF:ACCTGGTTGATCCTGCCAG',
         primer_amp_reverse => '18SEUKR:TGATCCTTCYGCAGGTTCAC',
         primer_seq_forward => '502F:GGAGGGCAAGTCTGGT',
         primer_seq_reverse => '1174R:CCCGTGTTGAGTCAAA',
         purpose => 'composition',
-        region_of_interest => '18S',
+        region_of_interest => '16S',
         sequencing_center => 'gsc',
         sequencing_platform => 'sanger',
     );
