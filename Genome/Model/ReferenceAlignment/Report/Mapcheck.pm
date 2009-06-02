@@ -14,6 +14,11 @@ class Genome::Model::ReferenceAlignment::Report::Mapcheck {
     is => 'Genome::Model::Report',
     has => [
             name => { default_value => 'Mapcheck' },
+            description => {
+                calculate => q|
+                return '<div>maq mapcheck coverage for ' . $self->model->name . " as of " . UR::Time->now.'</div>';
+                |,
+            },
     ],
 };
 
@@ -30,7 +35,7 @@ sub _generate_data {
     my $self = shift;
 
     return {
-        description => $self->generate_report_brief,
+        #description => $self->generate_report_brief,
         html => $self->generate_report_detail,
     };
 }
