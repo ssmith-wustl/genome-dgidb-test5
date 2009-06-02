@@ -341,10 +341,10 @@ sub get_event_node {
     $event_node->addChild( $self->tnode("date_completed",$event->date_completed));
     $event_node->addChild( $self->tnode("elapsed_time", $self->calculate_elapsed_time($event->date_scheduled,$event->date_completed) ));
     $event_node->addChild( $self->tnode("instrument_data_id",$event->instrument_data_id));
-    my $err_log = $event->resolve_log_directory ."/".$event->id.".err";
-    my $out_log = $event->resolve_log_directory ."/".$event->id.".out";
-    $event_node->addChild( $self->tnode("output_log",$out_log));
-    $event_node->addChild( $self->tnode("error_log",$err_log));
+    my $err_log_file = $event->resolve_log_directory ."/".$event->id.".err";
+    my $out_log_file = $event->resolve_log_directory ."/".$event->id.".out";
+    $event_node->addChild( $self->tnode("output_log_file",$out_log_file));
+    $event_node->addChild( $self->tnode("error_log_file",$err_log_file));
     return $event_node;
 
 }
