@@ -10,15 +10,6 @@ class Genome::InstrumentData::Alignment::Maq {
     has_constant => [
                      aligner_name => { value => 'maq' },
     ],
-    has => [
-            arch_os => {
-                        calculate => q|
-                            my $arch_os = `uname -m`;
-                            chomp($arch_os);
-                            return $arch_os;
-                        |
-                    },
-        ],
 };
 
 sub sanger_bfq_filenames {
