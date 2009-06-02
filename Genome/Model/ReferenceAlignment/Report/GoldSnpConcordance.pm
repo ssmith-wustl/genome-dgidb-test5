@@ -24,6 +24,11 @@ class Genome::Model::ReferenceAlignment::Report::GoldSnpConcordance {
         
         # the name is essentially constant
         name                        => { default_value => 'Gold_SNP_Concordance' },
+        description => {
+            calculate => q|
+            return "<div>Gold Snp coverage for " . $self->model_name . " (build " . $self->build_id . ") as of " . UR::Time->now.'</div>';
+            |,
+        },
         report_templates => {
             is => 'String',
             is_many => 0,
@@ -65,7 +70,8 @@ sub _generate_data
         die "No report templates assigned! Cannot generate any content."
     }
 
-    my $data = { description => $self->generate_report_brief };
+    #my $data = { description => $self->generate_report_brief };
+    my $data = {};
     
     for my $template (@templates) {
         my $content = $self->generate_report_detail($template);
