@@ -7,13 +7,14 @@ use base 'Genome::Utility::TestBase';
 
 use Data::Dumper 'Dumper';
 use Test::More;
+use XML::LibXML;
 
 sub report {
     return $_[0]->{_object};
 }
 
 sub reports_dir {
-    return $_[0]->dir.'/reports';
+    return $_[0]->dir.'/xml_reports';
 }
 
 sub test_class {
@@ -21,27 +22,75 @@ sub test_class {
 }
 
 sub params_for_test_class {
+    my $xml = XML::LibXML->new->parse_string( _xml_string() )
+        or die "Can't parse xml string\n";
     return (
-        name => 'Test Report',
-        data => $_[0]->report_data,
+        xml => $xml,
     );
 }
 
-sub report_data {
-    return {
-        generator => 'Genome::Report::Generator',
-        generator_params => {
-            who => 'employees',
-            what => [qw/ name email /],
-        },
-        date => '2009-03-16 15:13:20',
-        description => 'html test report',
-        html => '<html><title>Report</title><h1>GC Employees</h1><br><table><th>Name</th><th>Email</th><tr><td>Rick Wilson</td><td>rwilson@genome.wustl.edu</td></tr></table></html>',
-        csv => "Name,Email\nRick Wilson,rwilson\@genome.wustl.edu\n",
-    };
+sub _xml_string {
+        return <<EOS
+<?xml version="1.0"?>
+<report>
+  <datasets>
+    <stats>
+      <stat>
+        <assembled>4</assembled>
+        <attempted>5</attempted>
+      </stat>
+    </stats>
+  </datasets>
+   <report-meta>
+    <name>Assembly Stats</name>
+    <description>Assembly Stats for Amplicon Assembly (Name &lt;mr. mock&gt; Build Id &lt;-10000&gt;)</description>
+    <date>2009-05-29 10:19:10</date>
+    <generator>Genome::Model::AmpliconAssembly::Report::AssemblyStats</generator>
+    <generator-params>
+      <build-id>-10000</build-id>
+      <amplicons>HMPB-aad16a01</amplicons>
+      <amplicons>HMPB-aad16c10</amplicons>
+    </generator-params>
+  </report-meta>
+</report>
+EOS
 }
 
-sub test01_save_report : Test(4) {
+sub _report_meta_hash {
+    return (
+        name => 'Assembly Stats',
+        description => 'Assembly Stats for Amplicon Assembly (Name <mr. mock> Build Id <-10000>)',
+        date => '2009-05-29 10:19:10',
+        generator => 'Genome::Model::AmpliconAssembly::Report::AssemblyStats',
+        generator_params => {
+            build_id => [ -10000 ],
+            amplicons => [qw/ HMPB-aad16a01 HMPB-aad16c10 /],
+        },
+    );
+}
+
+sub test00_attrs : Test(8) {
+    my $self = shift;
+
+    my $report = $self->report;
+
+    # meta
+    my %report_meta = $self->_report_meta_hash;
+    for my $attr ( keys %report_meta ) {
+        is_deeply($report->$attr, $report_meta{$attr}, $attr);
+    }
+    
+    # datasets
+    my @datasets = $report->get_dataset_nodes;
+    ok(@datasets, 'datasets') or die;
+    my ($stats) = $report->get_dataset_nodes_for_name('stats');
+    ok($stats, 'stats dataset') or die;
+    is($datasets[0]->nodeName, $stats->nodeName, 'dataset name');
+
+    return 1;
+}
+
+sub test01_save_report : Test(5) {
     my $self = shift;
 
     # Save - fails
@@ -51,13 +100,14 @@ sub test01_save_report : Test(4) {
     # Save
     ok($self->report->save( $self->tmp_dir ), 'Saved report to tmp dir');
     
-    # Resave - fails
+    # Resave 
     ok(!$self->report->save( $self->tmp_dir ), 'Failed as expected - resave report');
-    
+    ok($self->report->save($self->tmp_dir, 1), 'Overwrite report');
+
     return 1;
 }
 
-sub test02_create_report_from_directories : Test(9) {
+sub test02_create_report_from_directories : Tests {
     my $self = shift;
     
     # Get it w/ parent dir
@@ -65,36 +115,35 @@ sub test02_create_report_from_directories : Test(9) {
     is(@reports, 2, 'Got two reports using create_reports_from_parent_directory');
     is($reports[0]->name, 'Test Report 1', 'Report 1 has correct name');
     is($reports[1]->name, 'Test Report 2', 'Report 2 has correct name');
-
-    # Check data
-    my $data = $self->report_data;
-    for my $type (qw/ generator generator_params description html csv xml /) {
-        my $method = 'get_'.$type;
-        is_deeply($reports[0]->$method, $data->{$type}, $reports[0]->name." $type matches");
-    }
+    is_deeply(
+        $reports[1]->generator_params,
+        { 'scalar' => [qw/ yes /], array => [qw/ 1 2 /] },
+        'Test Report 1 - gen params'
+    );
 
     return 1;
 }
 
-sub test03_other_get_and_create_fails {# : Tests {
+sub test03_other_get_and_create_fails : Tests {
     my $self = shift;
-    
+
     my $valid_name = 'Test Report';
     my $valid_dir = $self->dir;
+    my @reports;
 
-    #< Get and create funnel to same method
-    ok( # invalid parent_directory
-        !$self->test_class->get(
-            name => $valid_name,
-            parent_directory => 'no_way_this_dir_exists',
-        ),
-        'Failed as expected - get report w/ invalid parent_directory',
-    );
-    ok( # w/ data
-        !$self->test_class->get(name => $valid_name, parent_directory => $valid_dir, data => { key => 'value' }),
-        'Failed as expected - tried to get report w/ data',
-    );
+    # get - can't
+    eval {
+        @reports = $self->test_class->get(xml => _xml_string());
+    };
+    print "$@\n";
+    ok(!@reports, 'Failed as expected - get');
 
+    # create w/ invalid parent dir
+    eval {
+        @reports = $self->test_class->create_reports_from_parent_directory('no_way_this_dir_exists');
+    };
+    print "$@\n";
+    ok(!@reports, 'Failed as expected - create reports w/ invalid parent_directory');
 
     return 1;
 }
@@ -103,30 +152,18 @@ sub test03_other_get_and_create_fails {# : Tests {
 
 package Genome::Report::GeneratorTest;
 
+# FIXME does not fully test the generator!
+
 use strict;
 use warnings;
 
-use base 'Genome::Utility::TestBase';
+use base 'Test::Class';
 
 use Data::Dumper 'Dumper';
 use Test::More;
 
 sub test_class {
     return 'Genome::Report::Generator';
-}
-
-sub params_for_test_class {
-    return (
-        name => 'Generator Tester',
-    );
-}
-
-sub headers {
-    return [qw/ Assembled Attempted Success /];
-}
-
-sub data {
-    return [ [qw/ 5 5 100% /] ];
 }
 
 sub test01_generate_report : Test(1) {
@@ -144,7 +181,7 @@ sub test02_validate_aryref : Test(2) {
         !$self->test_class->_validate_aryref(
             name => 'data',
             value => undef,
-            method => '_generate_vertical_html_table',
+            method => 'test validating the _validate_aryref',
         ),
         'Failed as expected - no value'
     );
@@ -152,7 +189,7 @@ sub test02_validate_aryref : Test(2) {
         !$self->test_class->_validate_aryref(
             name => 'data',
             value => 'string',
-            method => '_generate_vertical_html_table',
+            method => 'test validating the _validate_aryref',
         ),
         'Failed as expected - value not aryref headers'
     );
@@ -160,42 +197,6 @@ sub test02_validate_aryref : Test(2) {
     return 1;
 }
 
-sub test03_generate_cvs : Test(1) {
-    my $self = shift;
-
-    my $svs =  $self->test_class->_generate_csv_string(
-        headers => $self->headers,
-        data => $self->data,
-    );
-    ok($svs, 'Generated csv string');
-    #print Dumper($svs);
-
-    return 1;
-}
-
-sub test04_generate_html_tables : Test(2) {
-    my $self = shift;
-
-    # note - not testing if headers and data are included, testing the _validate_aryref method above
-    
-    my $table =  $self->test_class->_generate_html_table(
-        headers => $self->headers,
-        data => $self->data,
-    );
-    ok($table, 'Generated html table');
-    #print Dumper($table);
-
-    my $vert_table = $self->test_class->_generate_vertical_html_table(
-        headers => [qw/ Category Assembly1 /],
-        horizontal_headers => $self->headers,
-        data => $self->data,
-    );
-    ok($vert_table, 'Generated vertical html table');
-
-    return 1;
-}
-
- 
 #######################################################################
 
 package Genome::Report::FromSeparatedValueFileTest;
@@ -222,17 +223,29 @@ sub test_class {
     return 'Genome::Report::FromSeparatedValueFile';
 }
 
+sub _svr {
+    my $self = shift;
+
+    unless ( $self->{_svr} ) {
+        $self->{_svr} = Genome::Utility::IO::SeparatedValueReader->create(
+            input => $self->dir.'/albums.csv',
+        ) or die;
+    }
+
+    return $self->{_svr};
+}
+
 sub params_for_test_class {
     my $self = shift;
     return (
         name => 'Report from Albums SVF',
-        file => $self->dir.'/albums.csv',
         description => 'Albums on Hand Today',
+        svr => $self->_svr,
     );
 }
 
 sub required_attrs {
-    return (qw/ name file description /);
+    return (qw/ name description svr /);
 }
 
 sub test_01_generate_report : Test(2) {
@@ -242,7 +255,59 @@ sub test_01_generate_report : Test(2) {
 
     my $report = $self->generator->generate_report;
     ok($report, 'Generated report');
-    print Dumper($report);
+    print $report->xml_string;
+    #print Dumper($report);
+
+    return 1;
+}
+
+#######################################################################
+
+package Genome::Report::FromLegacyTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::TestBase';
+
+use Data::Dumper 'Dumper';
+use File::Compare 'compare';
+use Test::More;
+use Storable 'retrieve';
+
+sub generator {
+    return $_[0]->{_object};
+}
+
+sub test_class {
+    return 'Genome::Report::FromLegacy';
+}
+
+sub legacy_report_directory {
+    return $_[0]->dir.'/Legacy_Report';
+}
+
+sub legacy_properties_file {
+    return $_[0]->legacy_report_directory.'/properties.stor';
+}
+
+sub params_for_test_class {
+    my $self = shift;
+    return (
+        properties_file => $self->legacy_properties_file,
+    );
+}
+
+sub required_attrs {
+    return (qw/ properties_file /);
+}
+
+sub test_01_generate_report : Test(1) {
+    my $self = shift;
+
+    my $report = $self->generator->generate_report;
+    ok($report, 'Generated report');
+    #print Dumper($report); $report->save('/gscuser/ebelter/Desktop/reports', 1);
 
     return 1;
 }
@@ -331,6 +396,44 @@ sub test01_write_and_compare : Test(1) {
     }
 
     is(compare($svw->get_original_output, $self->_albums_csv, ), 0, 'Compared generated and files');
+
+    return 1;
+}
+
+#######################################################################
+
+package Genome::Report::XSLTTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::TestBase';
+
+use Data::Dumper 'Dumper';
+use Genome::Report;
+use Test::More;
+
+sub test_class {
+    return 'Genome::Report::XSLT';
+}
+
+sub xslt {
+    return $_[0]->{_object};
+}
+
+sub params_for_test_class {
+    return (
+        report => Genome::Report->create_report_from_directory($_[0]->dir.'/Assembly_Stats'),
+        xslt_file => $_[0]->dir.'/AssemblyStats.txt.xsl',
+    );
+}
+
+sub test01_transform : Test(1) {
+    my $self = shift;
+
+    my $txt = $self->xslt->transform_report;
+    ok($txt, 'transformed report');
+    #print $txt,"\n";
 
     return 1;
 }
