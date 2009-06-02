@@ -25,16 +25,16 @@ sub _generate_data {
     my $self = shift;
 
     return {
-        description => $self->generate_report_brief,
         html => $self->generate_report_detail,
     };
 }
 
-sub generate_report_brief 
+sub name { return 'SolexaStageTwo'; }
+sub description 
 {
     my $self=shift;
     my $model= $self->model;
-    $self->preload_data();
+    #$self->preload_data();
     #my $output_file = $self->report_brief_output_filename;
     #my $brief = IO::File->new(">$output_file");
     #die unless $brief;
