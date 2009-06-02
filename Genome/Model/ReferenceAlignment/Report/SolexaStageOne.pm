@@ -26,12 +26,12 @@ sub _generate_data {
     my $self = shift;
 
     return {
-        description => $self->generate_report_brief,
         html => $self->generate_report_detail,
     };
 }
 
-sub generate_report_brief 
+sub name { return 'SolexaStageOne'; }
+sub description 
 {
     my $self=shift;
     my $model= $self->model;
