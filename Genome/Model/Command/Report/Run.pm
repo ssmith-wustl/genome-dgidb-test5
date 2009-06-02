@@ -151,7 +151,7 @@ $DB::single = 1;
     my $report_output = $report_specification->generate_report;
     unless ($report_output) {
         $self->error_message("Error generating report!" . $report_specification->error_message);
-        $report_specification->delte;
+        $report_specification->delete;
         return;
     }
     
@@ -258,7 +258,7 @@ sub _resolve_valid_report_class_for_build_and_name{
         );
 
     my @model_classes = (
-        grep { $_->isa('Genome::Model') and $_ ne 'Genome::Model' } 
+        grep { $_->isa('Genome::Model') } 
         map { $_, $_->inheritance }
         $build->model->get_class_object->class_name
     );
