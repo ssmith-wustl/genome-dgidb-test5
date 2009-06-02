@@ -135,7 +135,6 @@ sub test_class {
 
 sub params_for_test_class {
     return (
-        name => 'Solexa Stage One',
         $_[0]->base_params_for_test_class,
     );
 }
@@ -160,7 +159,6 @@ sub test_class {
 
 sub params_for_test_class {
     return (
-        name => 'Test Solexa Stage Two',
         $_[0]->base_params_for_test_class,
     );
 }
