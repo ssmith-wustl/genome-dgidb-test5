@@ -60,7 +60,7 @@ class Genome::Model::Tools::Snp::GetDbsnps {
 
 sub help_brief {
     return <<EOS
-  This tool was design to retrieve dbsnp\'s for an individual site/range or list of sites. It will optionally check for an allele match to your variant.
+  This tool was design to retrieve dbsnp\'s for an individual site/range or list of sites and will check for an allele match to your variant if provided or it will simply state which sites on your list/input coords coinside with a dbsnp.
   EOS
 }
 
@@ -69,22 +69,46 @@ sub help_synopsis {
 
 gt snp get-dbsnps --list
 
+the list is intended to be set up the same as with annotate transcript-variants
+
+if the ref and var columns are omitted, then this script will still return dbsnps found in your input coordinates
+
+using the --out option will allow your to get or list back in a file rather than as standard output to your screen 
+
+chromosome start stop ref and var options will not be used if the list option is
+
 EOS
 }
 
 sub help_detail {
     return <<EOS 
 
-gt snp get-dbsnps --list
+gt snp get-dbsnps --list file
 
-your list should be a tab delimited file with five columns
+your list should be a tab/space delimited file with five columns
 chromosome   start   stop   ref_allele   variant_allele
 
 or
 
-gt snp get-dbsnps --chromosome --start --stop --ref --var
+running...
+gt snp get-dbsnps --chromosome 1 --start 202785447 --stop 202785447 --ref A --var T
+
+ will produce
+      1 202785447 202785447 A T rs4252743:snp:1:'A/T':dbsnp_match
+
+running...
+gt snp get-dbsnps --chromosome 1 --start 202785447 --stop 202785447 --ref A --var G
+
+ will produce
+      1 202785447 202785447 A G rs4252743:snp:1:'A/T':no_match
+
 
 when detirmining the validation status of a dbsnp this tool assumes that if the snp was ever entered in the database as being validated that it is still validated.
+
+
+if a dbsnp coinsides with the coordinates and the reference and variant alleles are provided, this script will check to see if the dbsnp alleles match your variant 
+
+use the gff option to get a gff like file of the dbsnps identified by your input coordinates 
 
 EOS
 }
@@ -103,6 +127,9 @@ sub execute {
 
     my $list;
     if ($file) {
+
+	unless (-f $file) {system qq(gt snp get-dbsnps --help);print qq(Your list was not found.\t\n\tPlease check that your list is in place and try again.\n\n\n);return 0;}
+
 	open(LIST,"$file");
 	while (<LIST>) {
 	    chomp;
