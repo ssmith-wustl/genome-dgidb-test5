@@ -25,9 +25,6 @@ class Genome::Model::Tools::DesignTranscriptSequence {
 	     },
 	     variation_type => {  #predicted_type
 		 type  =>   'String',
-		 #doc   =>   "one of the following {3_prime_flanking_region,3_prime_untranslated_region,5_prime_flanking_region,5_prime_untranslated_region,intronic,missense,nonsense,silent,splice_site}"
-#		 doc   =>   "one of the following {missense,nonsense,silent,splice_site}",
-		 #doc   =>   "one of the following {coding_snp,coding_ins,coding_del,splice_site_snp,splice_site_ins,splice_site_del}",
 		 doc   =>   "one of the following {coding_snp,coding_ins,coding_del,splice_site_snp}",
 	     },
 	     transcript => {
@@ -48,6 +45,11 @@ class Genome::Model::Tools::DesignTranscriptSequence {
 		 doc   =>  "provide the number of bases you would like on either side of your variation; default will be equal to 200",
 		 is_optional  => 1,
 	     },
+	     include_utr => {
+		 type  =>  'Boolean',
+		 doc   =>  "use this option if you would like UTR regions included in the transcript sequence",
+		 is_optional  => 1,
+	     },
 
 	     ],
 	
@@ -56,7 +58,7 @@ class Genome::Model::Tools::DesignTranscriptSequence {
 
 sub help_brief {
     return <<EOS
-  This tool was design to retrieve, from the data base, coding sequence of a transcript centered around some variation.
+  This tool was design to retrieve transcript sequence centered around some variation. Intended to be used as tool to derive a sequence to be used in RT-PCR primer design.
 EOS
 }
 
@@ -111,7 +113,7 @@ gt design-transcript-sequence --chromosome 19 --start 17247609 --transcript NM_0
 
   will result in
 
-    19,17247609,17247609,splice_site_snp,NM_001033549,G,G,20,GGCCTCCTGTTCCACCTTCA [ATCTGGAAGGACTTTTCAGCCTCAT/-] CCAGCAGAAAACTGAGCTTC,GGCCTCCTGTTCCACCTTCA [ATCTGGAAGGACTTTTCAGCCTCAT/-] CCAGCAGAAAACTGAGCTTC
+    19,17247609,17247609,splice_site_snp,NM_001033549,G,T,20,GGCCTCCTGTTCCACCTTCA [ATCTGGAAGGACTTTTCAGCCTCAT/-] CCAGCAGAAAACTGAGCTTC,GGCCTCCTGTTCCACCTTCA [ATCTGGAAGGACTTTTCAGCCTCAT/-] CCAGCAGAAAACTGAGCTTC
 
 
 EOS
@@ -123,7 +125,7 @@ sub execute {
     my $self = shift;
     
     my $chromosome = $self->chromosome;
-    unless ($chromosome =~ /[1..22]/ || $chromosome =~ /^[XY]$/) {$self->error_message("please provide the chromosome"); return 0;}
+    #unless ($chromosome =~ /[1..22]/ || $chromosome =~ /^[XY]$/) {$self->error_message("please provide the chromosome"); return 0;}
     my $start = $self->start;
     unless ($start =~ /^[\d]+$/) {$self->error_message("please provide the Build 36 start coordinate"); return 0; }
     my $stop = $self->stop;
@@ -132,6 +134,7 @@ sub execute {
     unless ($stop) {if ($variation_type =~ /ins/) {$stop=$start+1;} else {$stop=$start;}} #will assume start and stop to be the same
     
     #unless ($variation_type eq "coding_snp" || $variation_type eq "coding_ins" || $variation_type eq "coding_del" || $variation_type eq "splice_site_snp" || $variation_type eq "splice_site_ins" || $variation_type eq "splice_site_del") { die "please provide the variation_type\n"; }
+
     unless ($variation_type eq "coding_snp" || $variation_type eq "coding_ins" || $variation_type eq "coding_del" || $variation_type eq "splice_site_snp") { $self->error_message("please provide the variation_type"); return 0; }
     
     my $transcript = $self->transcript;
@@ -177,9 +180,11 @@ sub execute {
     #print OUT qq($chromosome,$start,$stop,$transcript\n);
     
     my $strand = $t->strand;
-    
+    #print qq($strand\n);
     my $frame;
     my $aa_n;
+
+    my $counted_regions;
     if (@substructures) {
 	
 	my @mask_snps_and_repeats_sequence;
@@ -191,39 +196,50 @@ sub execute {
 	    my $t_regoin = $substructures[$t_n];
 	    $t_n++;
 	    
-	    if ($t_regoin->{structure_type} eq "cds_exon") {
-		
+	    #if (($t_regoin->{structure_type} eq "cds_exon") || ($t_regoin->{structure_type} eq "utr_exon")) {
+
+	    if ((($self->include_utr) && (($t_regoin->{structure_type} eq "cds_exon") || ($t_regoin->{structure_type} eq "utr_exon"))) || ($t_regoin->{structure_type} eq "cds_exon")) {
+
 		#print OUT qq(\n);
+
+
 		my $tr_start = $t_regoin->{structure_start};
 		my $tr_stop = $t_regoin->{structure_stop};
-		my $refseq = &get_ref_base($chromosome,$tr_start,$tr_stop);
 
-
-		for my $n ($tr_start..$tr_stop) {
-		    $trans_base_count++;
-		    $frame++;
-		    #print OUT qq($n-$frame-$trans_base_count );
-		    if ($frame == 3) {
-			$aa_n++;
-			#print OUT qq($aa_n\n);
-			$frame=0;
-		    }
+		unless ($counted_regions->{$chromosome}->{$tr_start}->{$tr_stop}) { #This was put in place because the coordinates for some utr in ENST00000376087 were duplicated with different sequence represented 
+		    $counted_regions->{$chromosome}->{$tr_start}->{$tr_stop}=1;
 		    
-		    if ($n == $start) {
-			$transcript_targetbase_start=$trans_base_count;
-		    }
-		    if ($n == $stop) {
-			$transcript_targetbase_stop=$trans_base_count;
-		    }
+		    
+		    my $refseq = &get_ref_base($chromosome,$tr_start,$tr_stop);
 
-		 
-		    #if ($variation_type =~ /splice_site/) {
+		    #print qq($t_regoin->{structure_type} $tr_start $tr_stop\n);
+		    
+		    
+		    for my $n ($tr_start..$tr_stop) {
+			$trans_base_count++;
+			$frame++;
+			#print OUT qq($n-$frame-$trans_base_count );
+			if ($frame == 3) {
+			    $aa_n++;
+			    #print OUT qq($aa_n\n);
+			    $frame=0;
+			}
+			
+			if ($n == $start) {
+			    $transcript_targetbase_start=$trans_base_count;
+			}
+			if ($n == $stop) {
+			    $transcript_targetbase_stop=$trans_base_count;
+			}
+			
+			
+			#if ($variation_type =~ /splice_site/) {
 			my $ss1 = $tr_start - 1;
 			my $ss2 = $tr_start - 2;
 			
 			my $ss3 = $tr_stop + 1;
 			my $ss4 = $tr_stop + 2;
-
+			
 
 			if ($start == $ss1 || $start == $ss2 || $start == $ss3 || $start == $ss4) {
 			    $ttss=1;$ssttss=1;
@@ -246,27 +262,50 @@ sub execute {
 			else {
 			    $ttss = 0;
 			}
-		    #}
+		    }
+		    
+		    my $tr_seq = $t_regoin->{nucleotide_seq};
+		    
+		    
+		    
+		    if ($strand eq "-1") {$tr_seq = &reverse_complement_allele($tr_seq);}
+		    
+		    my $exp_length = $tr_stop - ($tr_start - 1);
+		    my $ref_length = length($refseq);
+		    my $tr_length = length($tr_seq);
+		    
+		    
+		    unless ($tr_seq eq $refseq) {
+			print qq(there appears to be a discrepancy between the transcript sequence provide by the database and the reference sequence from NCBI Build 36\nWill make an attempt to select the correct sequence based on the expected length of the sequence\n);
+			
+			if ($tr_length == $exp_length) {
+			    print qq(sequence from db is the correct lenght\n);
+			} elsif ($ref_length == $exp_length) {
+			    $tr_seq = $refseq;
+			    print qq(sequence from NCBI B36 is the correct length and will be used in place of the sequence from the database for this region\n);
+			} else {
+			    print qq(results from this run will need to be verified as there is a discrpency indenfying the sequence that could not be resolve\n);
+			}
+		    }
+		    
+		    
+		    if ($ttss) {$reference_allele = $tr_seq;$variant_allele = "-";}
+		    
+		    push(@transcipt_seq,$tr_seq);
+		    my $masked_tr_seq = $chr->mask_snps_and_repeats(begin_position       => $tr_start, 
+								    end_position         => $tr_stop,
+								    sequence_base_string => $tr_seq);
+		    
+		    push(@mask_snps_and_repeats_sequence,$masked_tr_seq);
+		    push(@ucscrefseq,$refseq);
+		    
+		    
+		    #print qq($t_regoin->{structure_type}\t$chromosome\t$tr_start\t$tr_stop\t$exp_length\t$tr_length\t$ref_length\n$tr_seq\n$refseq\n);
+		    
+		    
 		}
-		
-		my $tr_seq = $t_regoin->{nucleotide_seq};
-		if ($strand eq "-1") {$tr_seq = &reverse_complement_allele($tr_seq);}
-		
-		if ($ttss) {$reference_allele = $tr_seq;$variant_allele = "-";}
-
-		push(@transcipt_seq,$tr_seq);
-		my $masked_tr_seq = $chr->mask_snps_and_repeats(begin_position       => $tr_start, 
-								end_position         => $tr_stop,
-								sequence_base_string => $tr_seq);
-		
-		push(@mask_snps_and_repeats_sequence,$masked_tr_seq);
-		push(@ucscrefseq,$refseq);
-		
-		unless ($tr_seq eq $refseq) {print qq(there appears to be a discrepancy between the transcript sequence provide be the database and the referance sequence from NCBI Build 36\n);}
-		
 	    }
 	}
-	
 	
 	my $masked_transcript_seq = join '' , @mask_snps_and_repeats_sequence;
 	my $transcript_seq = join '' , @transcipt_seq ;
@@ -361,3 +400,6 @@ sub get_ref_base {
 }
 
 1;
+
+
+
