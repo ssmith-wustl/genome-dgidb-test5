@@ -202,9 +202,9 @@ $DB::single = 1;
     
     # dump this before handling failed saves b/c if the later fails, we'll be glad this at least
     # made it to the terminal...
-    if (my $txt = $report_output->get_txt) {
-        print $txt,"\n"; 
-    }
+    #if (my $data = $report_output->get_data) {
+    #    print $data->{txt},"\n"; 
+    #}
 
     if ($saved) {
         # mail whoever ran the tools so they don't have to mail themselves
