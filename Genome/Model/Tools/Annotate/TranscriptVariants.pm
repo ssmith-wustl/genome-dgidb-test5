@@ -203,17 +203,23 @@ sub execute {
     my $chromosome_name = '';
     my $last_variant_start = 0;
     my $annotator = undef;
+    my $sloppy_skip = 0; #This var is set when we can't annotate a chromosome and want to skip the rest of the variants on that chromosome
     while ( my $variant = $variant_svr->next ) {
         $variant->{type} = $self->infer_variant_type($variant);
         # make a new annotator when we begin and when we switch chromosomes
         unless ($variant->{chromosome_name} eq $chromosome_name) {
 
+            $chromosome_name = $variant->{chromosome_name};
+            $last_variant_start = 0;
+            $sloppy_skip = 0;  #reset skip behavior on new chrom
+            
             my $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
             unless ($transcript_iterator){
                 $self->error_message("Couldn't get transcript_iterator for chromosome $chromosome_name!");
                 if ($self->sloppy){
                     #print this variant and go to the next one, we will only set chromosome name at the end of the check, so we should fail the transcript iterator test repeatedly until we hit a variant on the next new chromosome
                     $self->_print_annotation($variant, []);
+                    $sloppy_skip = 1;
                     next;
                 }else{
                     die;
@@ -237,9 +243,8 @@ sub execute {
                 die;
             }
             
-            $chromosome_name = $variant->{chromosome_name};
-            $last_variant_start = 0;
         }
+        next if $sloppy_skip;
         unless ( $variant->{start} >= $last_variant_start){
             $self->warning_message("Improperly sorted input! Restarting iterator!  Improve your annotation speed by sorting input variants by chromosome, then position!");
             $chromosome_name = $variant->{chromosome_name};
