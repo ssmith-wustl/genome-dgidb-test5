@@ -73,7 +73,7 @@ sub execute {
         }
 
         my $rv = $command->execute($params);
-        if ($command->invalid) {
+        if ($command->__errors__) {
             $command->delete;
             print STDERR "Invalid!?\n";
             next;

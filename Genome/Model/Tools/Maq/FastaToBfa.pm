@@ -40,7 +40,7 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
-    if ($self->invalid) {
+    if ($self->__errors__) {
         $self->error_message('Invalid object');
         return;
     }

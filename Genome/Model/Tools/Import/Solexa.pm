@@ -60,10 +60,10 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
-    if ($self->invalid) {
-        my @invalid_tags = $self->invalid;
+    if ($self->__errors__) {
+        my @__errors___tags = $self->__errors__;
         my $error_message = 'Invalid object: ' ."\n";
-        for my $tag (@invalid_tags) {
+        for my $tag (@__errors___tags) {
             $error_message .= $tag->desc ."\n";
         }
         $self->error_message($error_message);

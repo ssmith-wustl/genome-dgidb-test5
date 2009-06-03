@@ -43,7 +43,7 @@ ok($instrument_data->is_paired_end,'instrument data is paired end');
 
 
 
-my $fake_allocation = Genome::Disk::Allocation->define(
+my $fake_allocation = Genome::Disk::Allocation->__define__(
                                                        disk_group_name => 'info_alignments',
                                                        group_subdirectory => 'info',
                                                        mount_path => '/gscmnt/sata828',

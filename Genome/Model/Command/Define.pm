@@ -253,7 +253,7 @@ sub execute {
         return;
     }
 
-    if ( my @problems = $model->invalid ) {
+    if ( my @problems = $model->__errors__ ) {
         $self->error_message(
             "Error creating model:\n\t".  join("\n\t", map { $_->desc } @problems)
         );

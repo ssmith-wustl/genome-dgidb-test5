@@ -48,19 +48,19 @@ my @idas = $build->instrument_data_assignments;
 ok(!scalar(@idas),'no instrument data assignments');
 
 
-my $mock_idas_lt = Genome::Model::InstrumentDataAssignment->define(
+my $mock_idas_lt = Genome::Model::InstrumentDataAssignment->__define__(
                                                                    id => $model->id .' '. --$bogus_id,
                                                                    model_id => $model->id,
                                                                    instrument_data_id => $bogus_id,
                                                                    first_build_id => ($build->id - 1),
                                                                );
-my $mock_idas_eq = Genome::Model::InstrumentDataAssignment->define(
+my $mock_idas_eq = Genome::Model::InstrumentDataAssignment->__define__(
                                                                    id => $model->id .' '. --$bogus_id,
                                                                    model_id => $model->id,
                                                                    instrument_data_id => $bogus_id,
                                                                    first_build_id => $build->id,
                                                                );
-my $mock_idas_gt = Genome::Model::InstrumentDataAssignment->define(
+my $mock_idas_gt = Genome::Model::InstrumentDataAssignment->__define__(
                                                                    id => $model->id .' '. --$bogus_id,
                                                                    model_id => $model->id,
                                                                    instrument_data_id => $bogus_id,

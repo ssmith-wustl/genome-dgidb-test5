@@ -146,7 +146,7 @@ sub execute {
         my $class = class_for_pre_assembly_processor($processor_name);
         my %params = $self->_params_for_class($class);
         my $processor = $class->create(%params);
-        if ( $processor->invalid ) { 
+        if ( $processor->__errors__ ) { 
             print "\n\n",$processor->error_message,"\n\n";
             #or $self->error_message("Can't create class ($class)");
             return;

@@ -57,10 +57,10 @@ class Genome::Model::InstrumentDataAssignment {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-sub invalid {
+sub __errors__ {
     my ($self) = shift;
 
-    my @tags = $self->SUPER::invalid(@_);
+    my @tags = $self->SUPER::__errors__(@_);
     unless (Genome::Model->get($self->model_id)) {
         push @tags, UR::Object::Tag->create(
                                             type => 'invalid',

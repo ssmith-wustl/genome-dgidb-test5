@@ -158,7 +158,7 @@ sub execute {
     for my $property ($gsc_disk_allocation_class_object->all_property_names) {
         $params{$property} = $gsc_disk_allocation->$property;
     }
-    my $defined_allocation = Genome::Disk::Allocation->define(%params);
+    my $defined_allocation = Genome::Disk::Allocation->__define__(%params);
     unless ($defined_allocation) {
         $self->error_message('Failed to define a Genome::Disk::Allocation for: '. Data::Dumper::Dumper(%params));
         return;

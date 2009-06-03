@@ -110,7 +110,7 @@ sub execute {
         return;
     }
 
-    if ( my @problems = $processing_profile->invalid ) {
+    if ( my @problems = $processing_profile->__errors__) {
         $self->error_message(
             "Error(s) creating processing profile\n\t".  join("\n\t", map { $_->desc } @problems)
         );

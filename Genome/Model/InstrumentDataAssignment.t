@@ -40,7 +40,7 @@ $invalid_instrument_data = Genome::Model::InstrumentDataAssignment->create(
                                                                            instrument_data_id => --$mock_id,
                                                                        );
 isa_ok($invalid_instrument_data,'Genome::Model::InstrumentDataAssignment');
-my @invalid_tags = $invalid_instrument_data->invalid;
+my @invalid_tags = $invalid_instrument_data->__errors__;
 is(scalar(@invalid_tags),2,'Invalid instrument data with no model or run chunk objects');
 eval {
     $invalid_instrument_data->read_length;
@@ -65,7 +65,7 @@ $invalid_instrument_data = Genome::Model::InstrumentDataAssignment->create(
                                                                            instrument_data_id => $mock_instrument_data->id,
                                                );
 isa_ok($invalid_instrument_data,'Genome::Model::InstrumentDataAssignment');
-@invalid_tags = $invalid_instrument_data->invalid;
+@invalid_tags = $invalid_instrument_data->__errors__;
 is(scalar(@invalid_tags),1,'Invalid instrument data with no model object');
 
 
@@ -91,7 +91,7 @@ $invalid_instrument_data = Genome::Model::InstrumentDataAssignment->create(
                                                                            instrument_data_id => --$mock_id,
                                                );
 isa_ok($invalid_instrument_data,'Genome::Model::InstrumentDataAssignment');
-@invalid_tags = $invalid_instrument_data->invalid;
+@invalid_tags = $invalid_instrument_data->__errors__;
 is(scalar(@invalid_tags),1,'Invalid instrument data with no run chunk object');
 
 ###############################
@@ -138,7 +138,7 @@ $ENV{GENOME_MODEL_ROOT} = undef;
 
 ok(my $instrument_data = Genome::Model::InstrumentDataAssignment->get(instrument_data_id=> 2499312867, model_id=>2721044485), "Got a instrument_data");
 isa_ok($instrument_data, "Genome::Model::InstrumentDataAssignment");
-ok(scalar($instrument_data->invalid) == 0, "Checked invalid, seems valid");
+ok(scalar($instrument_data->__errors__) == 0, "Checked invalid, seems valid");
 
 my $real_alignment = $instrument_data->alignment;
 isa_ok($real_alignment,'Genome::InstrumentData::Alignment');
