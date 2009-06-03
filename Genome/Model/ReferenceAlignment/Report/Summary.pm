@@ -319,7 +319,8 @@ $DB::single = 1;
     $filtered_snp_calls =~ s/\s//g;
 
     my $snp_chromosomes = $self->model->reference_build->description;
-
+    my $snp_caller = $self->model->genotyper_name;
+    
     my @stat = stat($filtered_files[-1]); 
     my $time = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime($stat[10]));
 
@@ -359,6 +360,8 @@ $DB::single = 1;
         filtered_snp_calls                            => commify($filtered_snp_calls),
 
         snp_chromosomes                               => $snp_chromosomes,
+        snp_caller                                    => $snp_caller . " SNPfilter",
+
         
         total_filtered_snps                           => commify($total_filtered_snps),
         total_unfiltered_snps                         => commify($total_unfiltered_snps),

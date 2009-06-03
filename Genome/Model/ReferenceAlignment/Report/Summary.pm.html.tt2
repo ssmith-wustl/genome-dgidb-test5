@@ -182,7 +182,7 @@
                                                       [% snp_chromosomes %]
 													</td>
 													<td style="background-color:#F6F6F6;font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
-														maq SNPfilter
+                                                      [% snp_caller %]
 													</td>
 												</tr>
 											</table>
@@ -254,7 +254,7 @@
 														gold heterozygous
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
-														maq SNPfilter
+														[% snp_caller %]
 													</td>
 												</tr>
 												<tr>
@@ -268,7 +268,7 @@
 														gold homozygous
 													</td>
 													<td style="background-color:#F6F6F6;font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
-														maq SNPfilter
+														[% snp_caller %]
 													</td>
 												</tr>
 											</table>
@@ -309,7 +309,7 @@
 														[% filtered_dbsnp_concordance %]
 													</td>
 													<td style="background-color:#F6F6F6;font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
-														maq SNPfilter
+														[% snp_caller %]
 													</td>
 												</tr>
 											</table>
