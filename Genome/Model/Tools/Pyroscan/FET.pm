@@ -64,6 +64,29 @@ sub new{
   return $self;
 }
 
+sub Left_Test{
+
+#  a   b   R0
+#  c   d   R1
+
+#  C0  C1  N
+
+  my ($self,$a,$b,$c,$d,$cutoff)=@_;
+  my @R=($a+$b, $c+$d);
+  my @C=($a+$c, $b+$d);
+  my $LPvalue=$LZERO;
+  my $Lcutoff=log($cutoff) if(defined $cutoff && $cutoff>0);
+  for(my $i=0;$i<=$a;$i++){
+    my $j=$R[0]-$i;
+    my $k=$C[0]-$i;
+    my $l=$R[1]-$k;
+    my $LP=&LogHyge($i,$j,$k,$l);
+    $LPvalue=&LAdd($LPvalue,$LP);
+    last if(defined $Lcutoff && $LPvalue>$Lcutoff);  #no need to continue if exceeds Pcutoff
+  }
+  return $LPvalue;
+}
+
 sub Right_Test{
 
 #  a   b   R0
