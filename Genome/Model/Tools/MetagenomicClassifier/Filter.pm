@@ -50,6 +50,21 @@ sub execute {
         classifier => $rdp_classifier,
     ) or return;
     
+    my $clean_detail_writer = Genome::Utility::MetagenomicClassifier::Rdp::Writer->create(
+        output => $self->input_file.".clean.detail",
+    );
+
+    my $chimera_detail_writer =  Genome::Utility::MetagenomicClassifier::ChimeraClassification::Writer->create(
+        verbose => 1,
+        output => $self->input_file.".chimera.detail",
+    );
+
+    my $unclassified_detail_writer =  Genome::Utility::MetagenomicClassifier::ChimeraClassification::Writer->create(
+        verbose => 1,
+        output => $self->input_file.".unclassified.detail",
+    );
+
+    
     my $weka = Genome::Utility::MetagenomicClassifier::Weka->create();
     #< IN >#
     my $bioseq_in = Bio::SeqIO->new(
@@ -75,16 +90,22 @@ sub execute {
 
     while ( my $seq = $bioseq_in->next_seq ) {
         my $classification = $classifier->classify($seq);
-        my $class = $weka->classify($classification->get_profile);
-        if ($class eq 'clean') {
-            $clean_writer->write_seq($seq);
+        if ($classification) {
+            my $class = $weka->classify($classification->get_profile);
+            if ($class eq 'clean') {
+                $clean_writer->write_seq($seq);
+                $clean_detail_writer->write_one($classification->classification);
+            }
+            elsif ($class eq 'chimera') {
+                $chimera_writer->write_seq($seq);
+                $chimera_detail_writer->write_one($classification);
+            }
+            else {
+                $unclassified_writer->write_seq($seq);
+                $unclassified_detail_writer->write_one($classification);
+            } 
         }
-        elsif ($class eq 'chimera') {
-            $chimera_writer->write_seq($seq);
-        }
-        else {
-            $unclassified_writer->write_seq($seq);
-        }
+
     }
 
     return 1;
