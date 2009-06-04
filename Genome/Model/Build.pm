@@ -21,6 +21,9 @@ class Genome::Model::Build {
         model_id            => { is => 'NUMBER', len => 10, implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
         model_name          => { via => 'model', to => 'name' },
         type_name           => { via => 'model' },
+        the_events          => { is => 'Genome::Model::Event', reverse_as => 'build', is_many => 1,  },
+        the_master_event    => { via => 'the_events', to => '-filter', where => [event_type => 'genome model build'] },
+        master_event_status => { via => 'the_master_event', to => 'event_status' }
     ],
     has_optional => [
         date_scheduled      => { calculate => q|my $e = $self->build_event; return unless $e; return $e->date_scheduled| },
