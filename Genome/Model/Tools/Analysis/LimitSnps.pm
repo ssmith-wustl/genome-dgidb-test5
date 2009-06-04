@@ -1,16 +1,15 @@
-
 package Genome::Model::Tools::Analysis::LimitSnps;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# LimiSnps.pm - 	Limit SNPs by various factors, like ROI positions.
-#					
-#	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
+# LimiSnps.pm -    Limit SNPs by various factors, like ROI positions.
+#               
+#   AUTHOR:      Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
-#	CREATED:	03/20/2009 by D.K.
-#	MODIFIED:	03/20/2009 by D.K.
+#   CREATED:   03/20/2009 by D.K.
+#   MODIFIED:   03/20/2009 by D.K.
 #
-#	NOTES:	
-#			
+#   NOTES:   
+#         
 #####################################################################################################################################
 
 use strict;
@@ -21,16 +20,16 @@ use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Analysis::LimitSnps {
-	is => 'Command',                       
-	
-	has => [                                # specify the command's single-value properties (parameters) <--- 
-		variants_file	=> { is => 'Text', doc => "File containing SNPs" },
-		regions_file	=> { is => 'Text', doc => "File containing ROI chromosome positions (chr1\t939339)"},
-        reference_list => {is => 'String', doc => 'File containing the lengths of each reference sequence', is_optional => 1, default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/ref_list_for_bam'},
-		output_file	=> { is => 'Text', doc => "Output file to receive limited SNPs", is_optional => 1 },
-		not_file	=> { is => 'Text', doc => "Output file to receive excluded SNPs", is_optional => 1 },
-		verbose	=> { is => 'Text', doc => "Print interim progress updates", is_optional => 1 },
-	],
+    is => 'Command',                       
+
+    has => [                                # specify the command's single-value properties (parameters) <--- 
+    variants_file   => { is => 'Text', doc => "File containing SNPs" },
+    regions_file   => { is => 'Text', doc => "File containing ROI chromosome positions (chr1\t939339)"},
+    reference_list => {is => 'String', doc => 'File containing the lengths of each reference sequence', is_optional => 1, default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/ref_list_for_bam'},
+    output_file   => { is => 'Text', doc => "Output file to receive limited SNPs", is_optional => 1 },
+    not_file   => { is => 'Text', doc => "Output file to receive excluded SNPs", is_optional => 1 },
+    verbose   => { is => 'Text', doc => "Print interim progress updates", is_optional => 1 },
+    ],
 };
 
 sub sub_command_sort_position { 12 }
@@ -57,15 +56,15 @@ EOS
 ################################################################################################
 
 sub execute {                               # replace with real execution logic.
-	my $self = shift;
+    my $self = shift;
 
-	## Get required parameters ##
-	my $variants_file = $self->variants_file;
+    ## Get required parameters ##
+    my $variants_file = $self->variants_file;
     my $regions_file = $self->regions_file;
     my $reference_list = $self->reference_list;
-	my $notfile = $self->not_file if(defined($self->not_file));
-	my $outfile = $self->output_file if(defined($self->output_file));
-	my $verbose = 1 if(defined($self->verbose));
+    my $notfile = $self->not_file if(defined($self->not_file));
+    my $outfile = $self->output_file if(defined($self->output_file));
+    my $verbose = 1 if(defined($self->verbose));
 
     unless(-e $regions_file) {
         $self->error_message("Positions file does not exist!");
@@ -80,10 +79,10 @@ sub execute {                               # replace with real execution logic.
         return;
     }
 
-	my %stats = ();
-	$stats{'total_snps'} = $stats{'limit_snps'} = 0;
-	my $input, my $lineCounter;
-    
+    my %stats = ();
+    $stats{'total_snps'} = $stats{'limit_snps'} = 0;
+    my $input, my $lineCounter;
+
     my %genome;
     $input = new FileHandle ($reference_list);
     unless($input) {
@@ -101,17 +100,17 @@ sub execute {                               # replace with real execution logic.
     }
     $input->close; #done creating the bit vector representation of the genome
 
-	$self->status_message("Parsing regions...");
+    $self->status_message("Parsing regions...");
 
-	if($regions_file) {
-		## Parse the alignment blocks ##
-	
-		$input = new FileHandle ($regions_file);
-		$lineCounter = 0;
-		
-		while (<$input>) {
-			chomp;
-			my $line = $_;
+    if($regions_file) {
+        ## Parse the alignment blocks ##
+
+        $input = new FileHandle ($regions_file);
+        $lineCounter = 0;
+
+        while (<$input>) {
+            chomp;
+            my $line = $_;
             my ($chrom, $start, $stop, $name) = split(/\t/, $line);
             $chrom = uc $chrom;
             unless(exists($genome{$chrom})) {
@@ -124,84 +123,69 @@ sub execute {                               # replace with real execution logic.
                 $self->error_message("Coordinates for region $name fall outside of the chromosome coordinates indicated in the reference list. Skipping region $name");
                 next;
             }
-            
+
             #otherwise add region to bitvector
             $genome{$chrom}->Interval_Fill($start-1, $stop-1);
         }
         $lineCounter = $input->input_line_number;
-		$self->status_message("$lineCounter regions loaded\n");
+        $self->status_message("$lineCounter regions loaded\n");
         $input->close;
-	}
+    }
 
-	print "Parsing SNPs...\n";
-	## Parse the combined SNPs ##
+    print "Parsing SNPs...\n";
+    ## Parse the combined SNPs ##
 
-	## Open the outfile ##
-	if($outfile)
-	{
-		open(OUTFILE, ">$outfile") or die "Can't open outfile: $!\n";
-	}
-	
-	if($notfile)
-	{
-		open(NOTFILE, ">$notfile") or die "Can't open outfile: $!\n";
-	}
+    ## Open the outfile ##
+    if($outfile)
+    {
+        open(OUTFILE, ">$outfile") or die "Can't open outfile: $!\n";
+    }
 
-	$input = new FileHandle ($variants_file);
-	$lineCounter = 0;
-	while (<$input>)
-	{
-		chomp;
-		my $line = $_;
-		$lineCounter++;
-		
-		if($lineCounter == 1)
-		{
-			print OUTFILE "$line\n" if($outfile);
-			print NOTFILE "$line\n" if($notfile);
-		}
-		if($lineCounter > 1)# && $lineCounter < 1000)
-		{
-			$stats{'total_snps'}++;
-#			(my $chrom, my $position, my $allele1, my $allele2, my $context, my $num_reads, my $reads) = split(/\t/, $line);			
-			(my $chrom, my $position) = split(/\t/, $line);
-            $chrom = uc $chrom;
+    if($notfile)
+    {
+        open(NOTFILE, ">$notfile") or die "Can't open outfile: $!\n";
+    }
 
-			my $included_flag = 0;
-			
-			if(!$regions_file || (exists($genome{$chrom}) && $genome{$chrom}->contains($position-1)))
-			{
-				$stats{'limit_snps'}++;
-				print OUTFILE "$line\n" if($outfile);
-				$included_flag = 1;
-			}
-			
-			if(!$included_flag)
-			{
-				print NOTFILE "$line\n" if($notfile);
-			}
-		}
-	}
+    $input = new FileHandle ($variants_file);
+    $lineCounter = 0;
+    while (<$input>)
+    {
+        chomp;
+        my $line = $_;
 
-	close($input);
-	
-	close(OUTFILE) if($outfile);
-	close(NOTFILE) if($notfile);
+        $stats{'total_snps'}++;
+        (my $chrom, my $position) = split(/\t/, $line);
+        $chrom = uc $chrom;
 
-	print "$stats{'total_snps'} total SNPs\n";
-
-	## Get percentage ##
-	
-        if($stats{'total_snps'})
+        if(!$regions_file || (exists($genome{$chrom}) && $genome{$chrom}->contains($position-1)))
         {
-        	$stats{'limit_pct'} = sprintf("%.2f", ($stats{'limit_snps'} / $stats{'total_snps'} * 100)) . '%';
-        	print "$stats{'limit_snps'} SNPs ($stats{'limit_pct'}) remained after filter\n";
+            $stats{'limit_snps'}++;
+            print OUTFILE "$line\n" if($outfile);
         }
+        else {
+            print NOTFILE "$line\n" if($notfile);
+        }
+    }
+
+    close($input);
+
+    close(OUTFILE) if($outfile);
+    close(NOTFILE) if($notfile);
+
+    print "$stats{'total_snps'} total SNPs\n";
+
+    ## Get percentage ##
+
+    if($stats{'total_snps'})
+    {
+        $stats{'limit_pct'} = sprintf("%.2f", ($stats{'limit_snps'} / $stats{'total_snps'} * 100)) . '%';
+        print "$stats{'limit_snps'} SNPs ($stats{'limit_pct'}) remained after filter\n";
+    }
 
 
 
-	
-	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
+
+    return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
 
