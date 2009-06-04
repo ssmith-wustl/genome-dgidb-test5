@@ -2,12 +2,12 @@ package Genome::Model::Tools::MetagenomicClassifier::Filter;
 use strict;
 use warnings;
 
-use Bio::SeqIO;
+require Bio::SeqIO;
 use Genome;
-use Genome::Utility::MetagenomicClassifier::Rdp;
-use Genome::Utility::MetagenomicClassifier::ChimeraClassifier;
-use Genome::Utility::MetagenomicClassifier::Weka;
-use IO::File;
+require Genome::Utility::MetagenomicClassifier::Rdp;
+require Genome::Utility::MetagenomicClassifier::ChimeraClassifier;
+require Genome::Utility::MetagenomicClassifier::Weka;
+require IO::File;
 
 
 class Genome::Model::Tools::MetagenomicClassifier::Filter {
