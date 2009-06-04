@@ -19,29 +19,28 @@ class Genome::Model::Tools::Fastq::FilterHomopolymer {
                    },
             nucleotides => {
                             is => 'List',
-                            doc => 'the nucleotide homopolymer runs to remove',
+                            doc => 'the nucleotide homopolymer runs to remove(default_value='. join(",",@nucleotides) .')',
                             default_value => \@nucleotides,
                         },
             length => {
                        is => 'Number',
-                       doc => 'the length of the nucleotide homopolymer run to remove',
+                       doc => 'the length of the nucleotide homopolymer run to remove(default_value=10)',
                        default_value => '10',
                   }
     ],
     has_optional => [
                      removed => {
                                  is => 'Text',
-                             }
+                                 doc => 'a fastq file of removed reads',
+                             },
     ],
     doc => 'Remove homopolymer reads from a fastq, or pair of paired-end fastqs.',
 };
 
 sub help_synopsis {
     return <<EOS
-gt fastq filter-homopolymer --input1=lane1.fastq --output1=lane1.filtered.fastq
+gt fastq filter-homopolymer --input=lane1.fastq --output=lane1.filtered.fastq
 
-gt fastq filter-homopolymer --input1=lane1-fwd.fastq --input2=lane2-rev.fastq --output1=lane1-fwd.filtered.fastq --output2=lane1-rev.filtered.fastq
-(not implemented)
 EOS
 }
 
