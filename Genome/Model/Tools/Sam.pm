@@ -10,7 +10,7 @@ use File::Basename;
 class Genome::Model::Tools::Sam {
     is => 'Command',
     has => [
-        use_version => { is => 'Version', is_optional => 1, default_value => '0.6.3', doc => "Version of Sam to use" }
+        use_version => { is => 'Version', is_optional => 1, default_value => 'r301wu1', doc => 'Version of Sam to use' }
     ],
 };
 
@@ -33,6 +33,23 @@ More information about the Sam suite of tools can be found at http://Samtools.so
 EOS
 }
 
+
+my %SAMTOOLS_VERSIONS = (
+    r301wu1 => '/gscuser/dlarson/samtools/r301wu1/samtools',
+);
+
+
+sub path_for_samtools_version {
+    my ($class, $version) = @_;
+    my $path = $SAMTOOLS_VERSIONS{$version};
+    return $path if defined $path;
+    die 'No path found for samtools version: '.$version;
+}
+
+sub samtools_path {
+    my $self = shift;
+    return $self->path_for_samtools_version($self->use_version);
+}
 
 sub c_linkage_class {
     my $self = shift;
