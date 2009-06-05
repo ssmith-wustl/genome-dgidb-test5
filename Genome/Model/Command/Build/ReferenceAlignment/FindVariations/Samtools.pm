@@ -15,7 +15,7 @@ class Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Samtool
             doc => "the path at which all analysis output is stored",
             calculate_from => ['build'],
             calculate      => q|
-                return $build->maq_snp_related_metric_directory;
+                return $build->snp_related_metric_directory;
             |,
             is_constant => 1,
         },
@@ -74,7 +74,8 @@ sub execute {
     my $build = $self->build;
 
     #my $sam_pathname = $self->proper_sam_pathname('read_aligner_version');
-    my $sam_pathname = '/gscuser/dlarson/samtools/r301wu1/samtools';
+    #my $sam_pathname = '/gscuser/dlarson/samtools/r301wu1/samtools';
+    my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($model->indel_finder_version);
 
     # ensure the reference sequence exists.
     my $ref_seq_file = $model->reference_sequence_path.'/all_sequences.fasta';
@@ -90,7 +91,8 @@ sub execute {
 
     #my ($pileup_file) =  $build->_consensus_files($self->ref_seq_id).'.samtools_pileup';
     my $maplist_dir = $build->accumulated_alignments_directory;
-    my ($bam_file)  = glob("$maplist_dir/".$model->subject_name."*_rmdup.bam");
+    #my ($bam_file)  = glob("$maplist_dir/".$model->subject_name."*_rmdup.bam");
+    my ($bam_file)  = $build->whole_rmdup_bam_file; 
 
     $rv = $self->check_for_existence($bam_file);
     return unless $self->_check_rv("Bam output file $bam_file was not found.", $rv);
