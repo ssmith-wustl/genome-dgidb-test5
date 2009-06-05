@@ -23,23 +23,28 @@ class Genome::Model::Tools::Maq::MapToBam {
         },
         ref_list    => {
             is  => 'String',
-            doc => 'ref list contains ref name and its length',
+            doc => 'ref list contains ref name and its length, default is NCBI-human-build36/ref_list_for_bam',
             default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/ref_list_for_bam',
         },
         index_bam   => {
             is  => 'Boolean',
-            doc => 'flag to index bam file',
+            doc => 'flag to index bam file, default yes',
             default => 1,
         },
         keep_sam    => {
             is  => 'Boolean',
-            doc => 'flag to keep sam file',
+            doc => 'flag to keep sam file, default no',
             default => 0,
         },
         fix_mate    => {
             is  => 'Boolean',
-            doc => 'fix mate info problem in sam/bam',
-            default => 0,
+            doc => 'fix mate info problem in sam/bam, default yes',
+            default => 1,
+        },
+        sam_version => {
+            is  => 'String',
+            doc => 'samtools version to be used, default is r301wu1',
+            default => 'r301wu1',
         },
     ],
 };
@@ -71,9 +76,9 @@ sub create {
 sub execute {
     my $self = shift;
 
-    my $tool_path  = '/gscuser/dlarson/samtools/r301wu1';
+    my $samtools   = Genome::Model::Tools::Sam->path_for_samtools_version($self->sam_version);
+    my $tool_path  = dirname $samtools;
     my $tosam_path = $tool_path.'/misc/maq2sam-';
-    my $samtools   = $tool_path.'/samtools';
 
     my ($ver) = $self->use_version =~ /^\D*\d\D*(\d)\D*\d/;
     $self->error_message("Give correct maq version") and return unless $ver;
@@ -88,14 +93,14 @@ sub execute {
 
     my $cmd = sprintf('%s %s %s > %s', $tosam_path, $map_file, $self->lib_tag, $sam_file);
     my $rv  = system $cmd;
-    $self->error_message("$cmd failed") and return if $rv or !-s $sam_file;
+    $self->error_message("$cmd failed") and return if $rv or !-e $sam_file;
     
     $cmd = sprintf('%s import %s %s %s', $samtools, $self->ref_list, $sam_file, $bam_file);
     $self->status_message("MapToBam conversion command: $cmd");
     $rv  = system $cmd;
-    $self->error_message("$cmd failed") and return if $rv or !-s $bam_file;
+    $self->error_message("$cmd failed") and return if $rv or !-e $bam_file;
      
-    #watch out disk space, for now hard code maxMemory 200000000 
+    #watch out disk space, for now hard code maxMemory 2000000000
     if ($self->fix_mate) {
         my $tmp_file = $bam_file.'.sort';
         $rv = system "$samtools sort -n -m 2000000000 $bam_file $tmp_file";
