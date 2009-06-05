@@ -65,20 +65,22 @@ sub execute {
 =cut
 
     my $maplist_dir = $build->accumulated_alignments_directory;
-    my @bam_files = glob("$maplist_dir/".$model->subject_name."*_rmdup.bam");
-    unless(@bam_files == 1) {
-         $self->error_message("Couldn't resolve accumulated bam file");
-         return;
-    }         
+    #my @bam_files = glob("$maplist_dir/".$model->subject_name."*_rmdup.bam");
+    #unless(@bam_files == 1) {
+    #     $self->error_message("Couldn't resolve accumulated bam file");
+    #     return;
+    #}
+    my $bam_file = $build->whole_rmdup_bam_file;         
 
-    my $sam_pathname = '/gscuser/dlarson/samtools/r301wu1/samtools';
+    #my $sam_pathname = '/gscuser/dlarson/samtools/r301wu1/samtools';
+    my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($model->genotyper_version);
     my $cmd = $sam_pathname. " pileup -f $ref_seq_file";
     $cmd .= ' '.$assembly_opts if $assembly_opts;
     
     $cmd = sprintf(
         '%s %s > %s',
         $cmd,
-        $bam_files[0],
+        $bam_file,
         $consensus_file,
     );
 
@@ -86,7 +88,7 @@ sub execute {
 
     $self->shellcmd(
         cmd          => $cmd,
-        input_files  => [$ref_seq_file, $bam_files[0]],
+        input_files  => [$ref_seq_file, $bam_file],
         output_files => [$consensus_file],
     );
 
