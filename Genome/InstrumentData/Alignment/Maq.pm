@@ -206,6 +206,66 @@ sub alignment_file_paths {
             glob($self->alignment_directory .'/*.map*');
 }
 
+sub alignment_bam_file_paths {
+    my $self = shift;
+    return unless $self->alignment_directory;
+    return unless -d $self->alignment_directory;
+    my @bam_files = grep { -e $_ && $_ !~ /merged_rmdup/} glob($self->alignment_directory .'/*.bam');
+    if ( scalar(@bam_files) > 0 ) {
+        $self->status_message("Found ".scalar(@bam_files)." BAM files.");
+        return @bam_files;
+    } else {
+        $self->status_message('No BAM files found.  Creating from MAP files.');
+        my @map_files = $self->alignment_file_paths;
+        if ( scalar(@map_files) > 0 ) {
+            $self->status_message("Found ".scalar(@map_files)." MAP files.  Creating BAM files.");
+            $self->status_message("map files:\n".join("\n",@map_files));
+            my $error_count = 0;
+            for my $map_file (@map_files) {
+                if (-s $map_file) {
+                    $self->status_message("Map file: $map_file exists. Converting to BAM.");
+                    #system("cp $map_file /gscuser/jpeck/target/solexa_all_seq.map"); 
+                    #$self->status_message("Copied file.");
+                } else {
+                    $self->error_message("Map file: $map_file DOES NOT EXIST. Returning."); 
+                    return;
+                }
+                
+                $self->status_message("Aligner version: ".$self->aligner_version);
+
+                my $lib_name = $self->instrument_data->library_name;
+                my $lib_tag  = defined $lib_name ? $lib_name : '';
+                
+                $self->status_message("library name/tag: $lib_tag");
+                
+                my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
+                    map_file    => $map_file,
+                    use_version => $self->aligner_version,
+                    lib_tag     => $lib_tag,
+                );
+                my $rv = $map_to_bam->execute;
+                if ($rv == 1) {
+                    $self->status_message("Conversion succeeded.");
+                } else {
+                    $self->error_message("Error converting MAP file: $map_file to BAM file.  Return value: $rv");
+                    $error_count++;
+                }
+            }
+            if ($error_count == 0 ) {
+                $self->status_message("All MAP files converted successfully to BAM files.");
+                return 1;
+            } else {
+                $self->error_message("There were $error_count error(s) converting map files to bam files.");
+                #return;
+            }  
+        } else {
+            $self->error_message("No MAP files found.  Can't create BAM files.");
+            return; 
+        }
+    }
+
+}
+
 #a glob for subsequence alignment files
 sub alignment_file_paths_for_subsequence_name {
     my $self = shift;
@@ -544,6 +604,13 @@ sub _run_aligner {
         $self->die_and_clean_up($self->error_message);
     }
 
+    $self->status_message('Converting map to bam after alignment.');
+    my @bam_files = $self->alignment_bam_file_paths;
+    unless (@bam_files) {
+        $self->error_message('Could not convert MAP files to BAM files in directory '. $self->alignment_directory);
+        $self->die_and_clean_up($self->error_message);
+    }
+    
     unless ($self->verify_alignment_data) {
         $self->error_message('Failed to verify existing alignment data in directory '. $self->alignment_directory);
         $self->die_and_clean_up($self->error_message);
