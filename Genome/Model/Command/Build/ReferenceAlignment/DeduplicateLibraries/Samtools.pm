@@ -1,0 +1,211 @@
+package Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Samtools;
+
+use strict;
+use warnings;
+
+use Genome;
+use Command;
+use File::Basename;
+use File::Copy;
+use IO::File;
+
+class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Samtools {
+    is => ['Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries'],
+};
+
+sub help_brief {
+    "TBD";
+}
+
+sub help_synopsis {
+    return <<"EOS"
+    TBD 
+EOS
+}
+
+sub help_detail {
+    return <<EOS 
+    TBD
+EOS
+}
+
+
+sub execute {
+    my $self = shift;
+    my $now = UR::Time->now;
+  
+    $self->status_message("Starting DeduplicateLibraries::Samtools");
+    
+    my $alignments_dir = $self->build->accumulated_alignments_directory;
+
+    $self->status_message("Accumulated alignments directory: ".$alignments_dir);
+   
+    unless (-e $alignments_dir) { 
+        unless ($self->create_directory($alignments_dir)) {
+            #doesn't exist can't create it...quit
+            $self->error_message("Failed to create directory '$alignments_dir':  $!");
+            return;
+        }
+        chmod 02775, $alignments_dir;
+    } else {
+        unless (-d $alignments_dir) {
+            $self->error_message("File already exists for directory '$alignments_dir':  $!");
+            return;
+        }
+    }
+
+    #my $bam_merged_output_file = $alignments_dir."/".$self->model->subject_name."_merged_rmdup.bam";
+    my $bam_merged_output_file = $self->build->whole_rmdup_bam_file; 
+    if (-e $bam_merged_output_file) {
+        $self->status_message("A merged and rmdup'd bam file has been found at: $bam_merged_output_file");
+        $self->status_message("If you would like to regenerate this file, please delete it and rerun.");
+        $now = UR::Time->now;
+        $self->status_message("Skipping the rest of DeduplicateLibraries::Samtools at $now");
+        $self->status_message("*** All processes skipped. ***");
+        return 1;
+    } 
+
+    #get the instrument data assignments
+    my @idas = $self->model->instrument_data_assignments;
+    my %library_alignments;
+    my @all_alignments;
+    
+    #accumulate the maps per library
+    for my $ida (@idas) {
+        my $library = $ida->library_name;
+        my $alignment = $ida->alignment;
+        my @bams = $alignment->alignment_bam_file_paths;
+        $self->status_message("bam file paths: ". @bams);
+
+        push @{$library_alignments{$library}}, @bams;  #for the dedup step
+        push @all_alignments, @bams;                   #for the whole genome map file
+    }
+    
+    $self->status_message("Starting SAM dedup workflow with params:");
+    #prepare the input for parallelization
+    my @list_of_library_alignments;
+    for my $library_key ( keys %library_alignments ) {
+	my @read_set_list = @{$library_alignments{$library_key}};	
+        $self->status_message("Library: ".$library_key." Read sets count: ". scalar(@read_set_list) ."\n");
+        if (scalar(@read_set_list)>0) {
+            my %library_alignments_item = ( $library_key => \@read_set_list );  
+            push @list_of_library_alignments, \%library_alignments_item;
+        } else {
+            $self->status_message("Not including library: $library_key because it is empty.");
+        } 
+    }
+    $self->status_message("Size of library alignments: ".@list_of_library_alignments ); 
+
+    if (scalar(@list_of_library_alignments)==0) {
+        $self->status_message("None of the libraries contain data.  Quitting.");
+        return; 
+    }
+
+    #parallelization starts here
+    require Workflow::Simple;
+    $Workflow::Simple::store_db=0;
+        
+    my $op = Workflow::Operation->create(
+            name => 'Deduplicate libraries.',
+            operation_type => Workflow::OperationType::Command->get('Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::DedupSam')
+    );
+
+    $op->parallel_by('library_alignments');
+
+    my $output = Workflow::Simple::run_workflow_lsf(
+            $op,
+            'accumulated_alignments_dir' =>$alignments_dir, 
+            'library_alignments' =>\@list_of_library_alignments,
+            'rmdup_version' => $self->model->rmdup_version,
+   );
+
+   #check workflow for errors 
+   if (!defined $output) {
+       foreach my $error (@Workflow::Simple::ERROR) {
+           $self->error_message($error->error);
+       }
+       return;
+   } else {
+       my $results = $output->{result};
+       my $result_libraries = $output->{library_name};
+       for (my $i = 0; $i < scalar(@$results); $i++) {
+           my $rv = $results->[$i];
+                if ($rv != 1) {
+                       $self->error_message("Workflow had an error while rmdup'ing library: ". $result_libraries->[$i]); 
+                       die "Workflow had an error while rmdup'ing library: ". $result_libraries->[$i];
+                }
+       }
+  } 
+ 
+   #merge those Bam files...BAM!!!
+   $now = UR::Time->now;
+   $self->status_message(">>> Beginning Bam merge at $now.");
+   #my $bam_merged_output_file = $alignments_dir."/".$self->model->subject_name."_merged_rmdup.bam";
+
+   my @bam_files = <$alignments_dir/*_merged_rmdup.bam>;
+   
+    #remove previously merged/rmdup bam files from the list of files to merge... 
+    #    my $i=0;
+    #   for my $each_bam (@bam_files) {
+    #        #if the bam file name contains the string '_rmdup.bam', remove it from the list of files to merge
+    #        my $substring_index = index($each_bam, "_rmdup.bam");
+    #        unless ($substring_index == -1) {
+    #                $self->status_message($bam_files[$i]. " will not be merged.");
+   #                delete $bam_files[$i];
+   #         }		
+   #         $i++;
+   #    }
+
+
+   my $merge_rv = Genome::Model::Tools::Sam::Merge->execute(files_to_merge=>\@bam_files, merged_file=>$bam_merged_output_file); 
+
+   $now = UR::Time->now;
+   $self->status_message("<<< Completing Bam merge at $now.");
+
+   #remove intermediate files
+   #$now = UR::Time->now;
+   #$self->status_message(">>> Removing intermediate files at $now");
+       
+   #remove bam files 
+   #for my $each_bam_file (@bam_files) {
+   #    $self->status_message("Executing unlink command on $each_bam_file and $each_bam_file.bai");
+   #      my $rm_rv1 = unlink($each_bam_file);
+   #      my $rm_rv2 = unlink($each_bam_file.".bai"); #remove each index as well
+   #      unless ($rm_rv1 == 1) {
+   #      $self->error_message("There was a problem with the bam remove command: $rm_rv1");
+   #      }  
+   #      unless ($rm_rv2 == 1) {
+   #              $self->error_message("There was a problem with the bam index remove command: $rm_rv2");
+   #      }
+   #    } 
+
+   #} #end else for Bam merge process
+
+   #$now = UR::Time->now;
+   #$self->status_message("<<< Completed removing intermediate files at $now");
+
+   $self->status_message("*** All processes completed. ***");
+
+    return $self->verify_successful_completion();
+}
+
+
+sub verify_successful_completion {
+
+    my $self = shift;
+
+    my $return_value = 1;
+    my $build = $self->build;
+
+            
+   # unless (-e $build->whole_rmdup_map_file) {
+#	$self->error_message("Can't verify successful completeion of Deduplication step. ".$build->whole_rmdup_map_file." does not exist!");	  	
+#	return 0;
+    #} 
+
+    return $return_value;
+
+}
+
+
+1;
