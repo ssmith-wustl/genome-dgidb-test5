@@ -35,6 +35,8 @@ my $map_file = "$tmp_dir/test.map";
 my $to_bam = Genome::Model::Tools::Maq::MapToBam->create(
     map_file => $map_file,                                                      
     keep_sam => 1,
+    fix_mate => 0,
+    use_version => '0.7.1',
 );
 
 isa_ok($to_bam,'Genome::Model::Tools::Maq::MapToBam');
@@ -47,6 +49,7 @@ my $to_bam_fixmate = Genome::Model::Tools::Maq::MapToBam->create(
     map_file => $map_file,                                                      
     keep_sam => 1,
     fix_mate => 1,
+    use_version => '0.7.1',
 );
 
 ok($to_bam_fixmate->execute,'bam fixmate executed ok');
