@@ -29,7 +29,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is => 'Text',
             is_input => 1,
             is_output=> 1,
-            doc => "Store annotation in the specified file instead of sending it to STDOUT."
+            doc => "Store annotation in the specified file. Provide 'STDOUT' if you'd like the output sent to STDOUT."
         },
     ],
     has_optional => [
@@ -146,11 +146,12 @@ sub execute {
     
     # establish the output handle for the transcript variants
     my $output_fh;
-    if (my $output_file = $self->output_file) {
-        $output_fh = $self->_create_file($output_file);
+    my $output_file = $self->output_file;
+    if ($self->output_file =~ /STDOUT/i) {
+        $output_fh = 'STDOUT';
     }
     else {
-        $output_fh = 'STDOUT';
+        $output_fh = $self->_create_file($output_file);
     }
     $self->_transcript_report_fh($output_fh);
     
