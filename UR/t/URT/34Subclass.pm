@@ -4,6 +4,7 @@ package URT::34Subclass;
 use strict;
 use warnings;
 ## dont "use URT::34Baseclass";
+use URT;
 
 class URT::34Subclass {
     isa => 'URT::34Baseclass',

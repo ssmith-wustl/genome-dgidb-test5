@@ -3,6 +3,7 @@ package URT::34Baseclass;
 
 use strict;
 use warnings;
+use URT;
 
 class URT::34Baseclass {
     is_transactional => 0,
