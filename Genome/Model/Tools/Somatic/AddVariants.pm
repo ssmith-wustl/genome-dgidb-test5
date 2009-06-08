@@ -11,15 +11,15 @@ class Genome::Model::Tools::Somatic::AddVariants{
     has => [
     input_file => {
         is  => 'String',
-        doc => 'The input file of variants to be stored',
+        doc => 'The input file of variants to be stored. this should be in annotation input format, which is: chr start stop ref var',
     },
     model_search_string => {
         is_optional=>1,
-        doc => 'The string to try to resolve a model id from',
+        doc => 'The string to try to resolve a model id from. untested but works in theory',
     },
     model_id => {
         is_optional=>1,
-        doc =>"The model you want to add variants to",
+        doc =>"The model you want to add variants to. if supplied, simply adds them all to latest build id",
     },
     build_id => {
         is_optional=>1,
@@ -31,19 +31,19 @@ class Genome::Model::Tools::Somatic::AddVariants{
 };
 
 sub help_brief {
-    "runs ucsc annotation on some variants",
+    "adds any known variants to the database",
 }
 
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    genome-model tools somatic ucsc-annotator...    
+    genome-model tools somatic add-variants...    
 EOS
 }
 
 sub help_detail {                           
     return <<EOS 
-    runs ucsc annotation on some variants
+    adds somatic variants to db
 EOS
 }
 
