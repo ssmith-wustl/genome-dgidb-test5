@@ -72,14 +72,23 @@ sub execute {
     foreach my $ref (keys %ref) {
         my $size = $ref{$ref}->{size};
         my $cov    = $ref{$ref}->{cov};
-        if (($size >= 100) && ($size <= 2_999) && ($cov >= 90)) {
-            $bins{SMALL}++;
+        if (($size >= 100) && ($size <= 2_999)) {
+            if ($cov >= 90) {
+                $bins{SMALL_COVERED}++;
+            }
+            $bins{SMALL_TOTAL}++;
         }
-        elsif (($size >= 3_000) && ($size <= 6_999) && ($cov >= 50)) {
-            $bins{MEDIUM}++;
+        elsif (($size >= 3_000) && ($size <= 6_999)) {
+            if ($cov >= 50) {
+                $bins{MEDIUM_COVERED}++;
+            }
+            $bins{MEDIUM_TOTAL}++;
         }
-        elsif (($size >= 7_000) && ($cov >= 30)) {
-            $bins{LARGE}++;
+        elsif (($size >= 7_000)) {
+            if ($cov >= 30) {
+                $bins{LARGE_COVERED}++;
+            }
+            $bins{LARGE_TOTAL}++;
         }
     }
     my %desc = (
@@ -88,7 +97,10 @@ sub execute {
                 LARGE => 'LARGE(>=7000,1X,30%)',
             );
     for my $key ('SMALL', 'MEDIUM', 'LARGE') {
-        print $desc{$key} .":\t". $bins{$key} ."\n";
+        my $covered = $bins{$key .'_COVERED'};
+        my $total = $bins{$key .'_TOTAL'};
+        my $pc = sprintf("%.02f",(($covered / $total) * 100));
+        print $desc{$key} .":\t".  $covered .'/'. $total ."\t". $pc ."%\n";
     }
     if ($oldout) {
         open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
