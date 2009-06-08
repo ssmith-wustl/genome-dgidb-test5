@@ -242,6 +242,7 @@ sub alignment_bam_file_paths {
                     map_file    => $map_file,
                     use_version => $self->aligner_version,
                     lib_tag     => $lib_tag,
+                    index_bam   => 0,
                 );
                 my $rv = $map_to_bam->execute;
                 if ($rv == 1) {
