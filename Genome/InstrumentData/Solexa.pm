@@ -135,9 +135,9 @@ sub calculate_alignment_estimated_kb_usage {
     # 3.) clusters
     # 4.) paired end
     if ($self->is_paired_end) {
-        return 2000000;
+        return 4000000;
     } else {
-        return 1000000;
+        return 2000000;
     }
 }
 
