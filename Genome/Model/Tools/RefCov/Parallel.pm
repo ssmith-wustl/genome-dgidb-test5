@@ -7,7 +7,7 @@ use Genome;
 use Workflow;
 
 class Genome::Model::Tools::RefCov::Parallel {
-    is => ['Workflow::Operation::Command'],
+    is => ['Workflow::Operation::Command','Genome::Model::Tools::RefCov'],
     workflow => sub {
         my $workflow = Workflow::Operation->create(
                                                    name => 'parallel ref-cov',
