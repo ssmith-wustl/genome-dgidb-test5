@@ -866,6 +866,10 @@ sub _cron_setup {
         exit 0;
     }
 
+    # for maintenance
+    App->status_message('exiting');
+    exit 0;
+
     return $cspc_lock;
 }
 
