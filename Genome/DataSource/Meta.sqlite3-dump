@@ -44,6 +44,7 @@ INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_BUILD_LINK','GENOME_MODEL_BUILD','GMBL_FB_GMB_FK','2009-04-02 11:35:43');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_LINK','GENOME_MODEL','GML_FB_GM_FK','2009-04-02 11:35:36');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','GENOME_MODEL_LINK','GENOME_MODEL','GML_TB_GM_FK','2009-04-02 11:35:36');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','VARIANT_OCCURRENCE','GENOME_MODEL_BUILD','VO_GMB_FK','2009-06-05 09:39:01');
 CREATE TABLE dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
     data_source varchar NOT NULL,
@@ -84,6 +85,7 @@ INSERT INTO "dd_fk_constraint_column" VALUES('GML_TB_GM_FK','Genome::DataSource:
 INSERT INTO "dd_fk_constraint_column" VALUES('GMBL_FB_GMB_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_LINK','GENOME_MODEL_BUILD','FROM_BUILD','BUILD_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GMBL_TB_GMB_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_LINK','GENOME_MODEL_BUILD','TO_BUILD','BUILD_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('GML_FB_GM_FK','Genome::DataSource::GMSchema','MG','GENOME_MODEL_LINK','GENOME_MODEL','FROM_MODEL','GENOME_MODEL_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('VO_GMB_FK','Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','GENOME_MODEL_BUILD','BUILD_ID','BUILD_ID');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -146,6 +148,10 @@ INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG'
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_LINK','TO_BUILD_ID',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_LINK','TO_MODEL_ID',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_LINK','FROM_MODEL_ID',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','STOP_POS',4);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','CHROMOSOME',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','START_POS',3);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','BUILD_ID',1);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -185,6 +191,7 @@ INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VR_LIS
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SOFTWARE_RESULT','TABLE','entity','2009-02-19 16:47:25','2009-02-03 10:58:13',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_LINK','TABLE','entity','2009-04-02 13:31:20','2009-04-02 11:35:43',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_LINK','TABLE','entity','2009-04-02 13:31:20','2009-04-02 11:35:36',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','TABLE','entity','2009-06-04 15:25:20','2009-06-05 09:39:01',NULL);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -359,6 +366,14 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_LINK','FROM_MODEL_ID','NUMBER','11','N','2009-04-02 15:37:44',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_LINK','TO_BUILD_ID','NUMBER','11','N','2009-04-02 15:37:56',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_LINK','FROM_BUILD_ID','NUMBER','11','N','2009-04-02 15:37:56',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','STOP_POS','NUMBER','10','N','2009-06-05 09:39:01',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','START_POS','NUMBER','10','N','2009-06-05 09:39:01',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','CHROMOSOME','VARCHAR2','50','N','2009-06-05 09:39:01',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','TYPE','VARCHAR2','1','N','2009-06-05 09:39:01',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','VARIANT_ALLELE','VARCHAR2','50','N','2009-06-05 09:39:01',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','GENE','VARCHAR2','50','N','2009-06-05 09:39:01',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','REFERENCE_ALLELE','VARCHAR2','50','N','2009-06-05 09:39:01',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','VARIANT_OCCURRENCE','BUILD_ID','NUMBER','10','N','2009-06-05 09:39:01',NULL);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
