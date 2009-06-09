@@ -98,6 +98,7 @@ sub get_model_node {
     $modelnode->addChild( $doc->createAttribute("model-name",$model->name) );
     $modelnode->addChild( $doc->createAttribute("user_name",$model->user_name) );
     $modelnode->addChild( $doc->createAttribute("creation_date",$model->creation_date) );
+    $modelnode->addChild( $doc->createAttribute("processing_profile_name", $model->processing_profile->name) );
     $modelnode->addChild( $doc->createAttribute("sample_name",$model->subject_name) );
     $modelnode->addChild( $doc->createAttribute("subject_id",$model->subject_id) );
     $modelnode->addChild( $doc->createAttribute("subject_name",$model->subject_name) );
