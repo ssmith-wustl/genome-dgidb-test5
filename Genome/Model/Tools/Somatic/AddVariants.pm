@@ -78,7 +78,7 @@ sub execute {
             reference_allele=>$ref,
             variant_allele=>$var,
             gene=> $gene_name,
-            type => 'S',);
+            somatic_status => 'S',);
         }
 
     }
