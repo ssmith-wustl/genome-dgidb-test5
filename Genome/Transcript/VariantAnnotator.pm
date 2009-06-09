@@ -274,7 +274,11 @@ sub _transcript_annotation
         or return;
     my $alternate_structure = $transcript->structure_at_position( $variant->{stop} );
 
-
+    # If alternate sturcture is not defined here we are probably dealing with a very large deletion...
+    unless (defined $alternate_structure) {
+        $alternate_structure = $main_structure;
+        $self->warning_message("Alternate structure is not defined at the stop position (very large deletion? These are not handled well) for variant: " . Dumper $variant);
+    }
 
     my $structure_type = $main_structure->structure_type;
     my $alternate_structure_type = $alternate_structure->structure_type;
@@ -465,7 +469,10 @@ sub _transcript_annotation_for_intron
 
     my ($prev_structure, $next_structure) = $transcript->structures_flanking_structure_at_position( $variant->{start} );
 #my ($prev_structure, $next_structure) = $transcript->sub_structure_window->structures_flanking_main_structure;
-#return unless $prev_structure and $next_structure;
+    unless ($prev_structure and $next_structure) {
+        $self->warning_message("Previous and/or next structures are undefined for variant (very large deletion? These are not handled well currently), skipping: " . Dumper $variant);
+        return;
+    }
     my ($prev_structure_type, $next_structure_type, $position_before, $position_after);
 
     if ( $strand eq '-1' ) 
