@@ -39,8 +39,7 @@ isa_ok($m,'Genome::Model::Tools::Hgmi::Merge');
 
 
 #my $cmd = $m->gather_details();
-my @cmd = $m->gather_details();
 #$DB::single = 1;
-print join(" ", @{$cmd[0]}),"\n";
+#print join(" ", @{$cmd[0]}),"\n";
 
 remove \1, qw{ /tmp/disk/analysis };
