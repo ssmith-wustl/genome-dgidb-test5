@@ -101,40 +101,48 @@ sub execute {
         $self->error_message("Failed to validate stats file '$final_stats_file' for reading:  $!");
         die($self->error_message);
     }
-    my $bias = Genome::Model::Tools::RefCov::Bias->execute(
-                                                           frozen_directory => $final_frozen_dir,
-                                                           sample_name => $self->sample_name,
-                                                           image_file => $self->bias_png_file,
-                                                           output_file => $self->bias_data_file,
-                                                       );
-    unless ($bias) {
-        $self->error_message('Failed to run ref-cov bias report!');
-        die($self->error_message);
+    unless (-s $self->bias_data_file ) {
+        my $bias = Genome::Model::Tools::RefCov::Bias->execute(
+                                                               frozen_directory => $final_frozen_dir,
+                                                               sample_name => $self->sample_name,
+                                                               image_file => $self->bias_png_file,
+                                                               output_file => $self->bias_data_file,
+                                                           );
+        unless ($bias) {
+            $self->error_message('Failed to run ref-cov bias report!');
+            die($self->error_message);
+        }
     }
-    my $coverage_bins = Genome::Model::Tools::RefCov::CoverageBins->execute(
+    unless (-s $self->coverage_bins_data_file) {
+        my $coverage_bins = Genome::Model::Tools::RefCov::CoverageBins->execute(
+                                                                                stats_file => $final_stats_file,
+                                                                                output_file => $self->coverage_bins_data_file,
+                                                                            );
+        unless ($coverage_bins) {
+            $self->error_message('Failed to run ref-cov coverage-bins report!');
+            die($self->error_message);
+        }
+    }
+    unless (-s $self->size_histos_data_file) {
+        my $size_histos = Genome::Model::Tools::RefCov::SizeHistos->execute(
                                                                             stats_file => $final_stats_file,
-                                                                            output_file => $self->coverage_bins_data_file,
+                                                                            output_file => $self->size_histos_data_file,
                                                                         );
-    unless ($coverage_bins) {
-        $self->error_message('Failed to run ref-cov coverage-bins report!');
-        die($self->error_message);
-    }
-    my $size_histos = Genome::Model::Tools::RefCov::SizeHistos->execute(
-                                                                        stats_file => $final_stats_file,
-                                                                        output_file => $self->size_histos_data_file,
-                                                                    );
-    unless ($size_histos) {
-        $self->error_message('Failed to run ref-cov size-histos report!');
-        die($self->error_message);
+        unless ($size_histos) {
+            $self->error_message('Failed to run ref-cov size-histos report!');
+            die($self->error_message);
+        }
     }
 
-    my @composed_stats_files = map { $_ .'/STATS.tsv'} $self->all_composed_directories;
-    my $progression = Genome::Model::Tools::RefCov::CoverageProgression->execute(
-                                                                                 stats_files => \@composed_stats_files,
-                                                                                 sample_name => $self->sample_name,
-                                                                                 image_file => $self->progression_png_file,
-                                                                                 output_file => $self->progression_data_file,
-                                                                             );
+    unless (-s $self->progression_data_file) {
+        my @composed_stats_files = map { $_ .'/STATS.tsv'} $self->all_composed_directories;
+        my $progression = Genome::Model::Tools::RefCov::Progression->execute(
+                                                                             stats_files => \@composed_stats_files,
+                                                                             sample_name => $self->sample_name,
+                                                                             image_file => $self->progression_png_file,
+                                                                             output_file => $self->progression_data_file,
+                                                                         );
+    }
 
     return $self->verify_successful_completion;
 }
@@ -232,13 +240,14 @@ sub verify_successful_completion {
     }
     for my $data_type ( qw/bias coverage_bins size_histos progression/ ) {
         my $file_method = $data_type .'_data_file';
-        my $file = $self->file_method;
+        my $file = $self->$file_method;
         unless (-f $file) {
             $self->error_message('Missing data file '. $file);
             return;
         }
     }
-    for my $image_type ( qw /bias progression/ ) {
+    # TODO: add bias to this list, but must account for the small, medium, and large files
+    for my $image_type ( qw / progression/ ) {
         my $file_method = $image_type .'_png_file';
         my $file = $self->$file_method;
         unless (-f $file ) {
