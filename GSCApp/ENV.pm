@@ -103,9 +103,9 @@ sub fix_env
     push(@ld_library_path, @lib);
 
     # oracle enviroment variables
-    my $oracle_version = ($^V ge v5.8.0) ? '9.2' : '8.1';
+
     $ENV{ORACLE_BASE} ||= '/gsc/pkg/oracle';
-    $ENV{ORACLE_HOME} = "$ENV{ORACLE_BASE}/$oracle_version";
+    $ENV{ORACLE_HOME} = "$ENV{ORACLE_BASE}/10gR2/db_1";
     $ENV{ORACLE_BIN} = "$ENV{ORACLE_HOME}/bin";
     $ENV{TNS_ADMIN} = "$ENV{ORACLE_HOME}/network/admin";
     $ENV{OBK_HOME} = "$ENV{ORACLE_HOME}/obackup";
