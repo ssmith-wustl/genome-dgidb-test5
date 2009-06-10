@@ -9,25 +9,26 @@ use RefCov::Reference;
 
 class Genome::Model::Tools::RefCov::Bias {
     is => ['Command'],
-    has_input => [
-                  frozen_directory => {
-                                       is => 'Text',
-                                       doc => 'The frozen reference directory produed by ref-cov.',
-                              },
-                  output_file => {
-                                  is => 'Text',
-                                  doc => 'The output file path to dump the results',
-                                  is_optional => 1,
-                              },
-                  graph => {
-                            is => 'Boolean',
-                            doc => 'Creates a png format line graph',
-                            default_value => 0,
+    has => [
+            frozen_directory => {
+                                 is => 'Text',
+                                 doc => 'The frozen reference directory produed by ref-cov.',
+                             },
+            output_file => {
+                            is => 'Text',
+                            doc => 'The output file path to dump the results',
                         },
-              ],
+        ],
     has_optional => [
+
+                     image_file => {
+                                    is => 'Text',
+                                    doc => 'The output png file path to dump the graph',
+                                    is_optional => 1,
+                                },
                      sample_name => {
-                                     is => 'Text', default_value => '',
+                                     is => 'Text',
+                                     default_value => '',
                                  },
                  ],
 };
@@ -37,16 +38,6 @@ sub execute {
     unless(Genome::Utility::FileSystem->validate_directory_for_read_access($self->frozen_directory)) {
         $self->error_message('Failed to validate frozen directory '. $self->frozen_directory .' for read access!');
         return;
-    }
-    my $oldout;
-    if ($self->output_file) {
-        open $oldout, ">&STDOUT"     or die "Can't dup STDOUT: $!";
-        my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
-        unless ($output_fh) {
-            $self->error_message('Failed to open output file '. $self->output_file .' for writing!');
-            return;
-        }
-        STDOUT->fdopen($output_fh,'w');
     }
     my $dh = Genome::Utility::FileSystem->open_directory($self->frozen_directory);
     unless ($dh) {
@@ -98,15 +89,23 @@ sub execute {
         }
         $ref_counter++;
     }
+    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    unless ($output_fh) {
+        $self->error_message('Failed to open output file '. $self->output_file .' for writing!');
+        return;
+    }
     foreach my $size (keys %size_to_relative_depth){
         my %relative_depth = %{$size_to_relative_depth{$size}};
         my @positions = grep { $_ <= 1 } sort {$a <=> $b} keys %relative_depth;
         my @depth;
+        print $output_fh "#$size\n";
         for my $position (@positions) {
-            print $position ."\t". $relative_depth{$position} ."\n";
+            print $output_fh $position ."\t". $relative_depth{$position} ."\n";
             push @depth, $relative_depth{$position};
         }
-        if ($self->graph) {
+        if ($self->image_file) {
+            my ($filename, $dirname, $suffix) = File::Basename::fileparse($self->image_file,'.png');
+            my $image_file = $dirname . $filename .'_'. $size . $suffix;
             my @data = (\@positions,\@depth);
             my $graph = GD::Graph::lines->new(1200,800);
             $graph->set(
@@ -117,14 +116,12 @@ sub execute {
                         marker_size => 1,
                     );
             my $gd = $graph->plot(\@data);
-            open(IMG, '>'. ($self->output_file || 'topology') .'.'. $size .'.png' ) or die $!;
+            open(IMG, '>'. $image_file) or die $!;
             binmode IMG;
             print IMG $gd->png;
             close IMG;
         }
-        if ($oldout) {
-            open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
-        }
     }
+    $output_fh->close;
     return 1;
 }

@@ -30,10 +30,6 @@ sub execute {
         my $snapshot_basename = File::Basename::basename($snapshot_directory);
         unless ($prior_directory) {
             $prior_directory = $snapshot_directory;
-            unless (Genome::Utility::FileSystem->copy_directory($snapshot_directory,$self->composed_directory .'/'. $snapshot_basename)) {
-                $self->error_message('Failed to copy the first iteration '.$snapshot_directory .":  $!");
-                die($self->error_message);
-            }
             next;
         }
         my $prior_basename= File::Basename::basename($prior_directory);

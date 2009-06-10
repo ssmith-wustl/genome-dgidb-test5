@@ -34,6 +34,8 @@ class Genome::InstrumentData::Solexa {
                    s_rev.median_insert_size,
                    s_rev.sd_above_insert_size,
                    s_rev.is_external,
+                   archive.path archive_path,
+                   adaptor.path adaptor_path,
                    (case when s_fwd.run_type = 'Paired End Read 1' then s_fwd.FILT_CLUSTERS else null end) fwd_filt_clusters,
                    (case when s_rev.run_type = 'Paired End Read 2' then s_rev.FILT_CLUSTERS else null end) rev_filt_clusters,
                    (nvl(s_fwd.FILT_CLUSTERS,0) + s_rev.FILT_CLUSTERS) filt_clusters, /** s_rev.FILT_CLUSTERS is still the expected value for fragment reads **/
@@ -41,6 +43,10 @@ class Genome::InstrumentData::Solexa {
                    1 one
             from solexa_lane_summary\@dw s_rev
             left join solexa_lane_summary\@dw s_fwd on s_fwd.sral_id = s_rev.sral_id and s_fwd.run_type = 'Paired End Read 1'
+            left join seq_fs_path\@dw archive on archive.seq_id = s_rev.seq_id
+                 and archive.data_type = 'illumina fastq tgz'
+            left join seq_fs_path\@dw adaptor on adaptor.seq_id = s_rev.seq_id
+                 and adaptor.data_type = 'adaptor sequence file'
             where s_rev.run_type in ('Standard','Paired End Read 2')
         )
         solexa_detail
@@ -59,7 +65,9 @@ EOS
         median_insert_size              => { },
         sd_above_insert_size            => { },
         is_external                     => { },
-        analysis_software_version       => { },             
+        adaptor_path                    => { },
+        archive_path                    => { },
+        analysis_software_version       => { },
         clusters                        => { column_name => 'FILT_CLUSTERS' },
         fwd_clusters                    => { column_name => 'fwd_filt_clusters' },
         rev_clusters                    => { column_name => 'rev_filt_clusters' },
@@ -277,11 +285,13 @@ sub resolve_fastq_filenames {
 
 sub dump_illumina_fastq_archive {
     my $self = shift;
+    my $dir = shift;
 
-    my $rls = $self->_run_lane_solexa;
-    my $archive = $rls->illumina_fastq_archive_path;
-    my $tmp_dir = $self->base_temp_directory;
-    my $cmd = "tar -xzf $archive --directory=$tmp_dir";
+    my $archive = $self->archive_path;
+    unless ($dir) {
+        $dir = $self->base_temp_directory;
+    }
+    my $cmd = "tar -xzf $archive --directory=$dir";
     unless ($self->shellcmd(
                             cmd => $cmd,
                             input_files => [$archive],
@@ -289,7 +299,7 @@ sub dump_illumina_fastq_archive {
         $self->error_message('Failed to run tar command '. $cmd);
         die($self->error_message);
     }
-    return $tmp_dir;
+    return $dir;
 }
 
 sub resolve_external_fastq_filenames {
