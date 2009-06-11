@@ -328,11 +328,11 @@ sub _transcript_report_fh {
 sub _print_annotation {
     my ($self, $snp, $transcripts) = @_;
 
-    # Basic SNP Info # FIXME (plus also print out the type that is inferred... should clean this up)
+    # Basic SNP Info 
     my $snp_info_string = join
     (
         "\t", 
-        map { $snp->{$_} } ($self->variant_attributes,"type", $self->get_extra_columns),
+        map { $snp->{$_} } ($self->variant_attributes, $self->get_extra_columns),
     );
 
     # If we have no transcripts, print the original variant with dashes for annotation info

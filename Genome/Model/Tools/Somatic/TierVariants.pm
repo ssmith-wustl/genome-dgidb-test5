@@ -15,15 +15,46 @@ class Genome::Model::Tools::Somatic::TierVariants{
     has => [
         ucsc_file => {
             is  => 'String',
+            is_input  => 1,
             doc => 'The output of the ucsc annotation',
         },
         transcript_annotation_file => {
             is  => 'String',
+            is_input  => 1,
             doc => 'The output of transcript annotation',
         },
         variant_file => {
             is  => 'String',
+            is_input  => 1,
             doc => 'The list of variants to be tiered',
+        },
+        output_file => {
+            is => 'String',
+            is_input => 1,
+            is_output => 1,
+            doc=> 'The output of the Tier Variants process.',
+        },
+    ],
+    has_optional => [
+        tier1_file => {
+            is => 'String',
+            doc => 'tier1 output file',
+        },
+        tier2_file => {
+            is => 'String',
+            doc => 'tier2 output file',
+        },
+        tier3_file => {
+            is => 'String',
+            doc => 'tier3 output file',
+        },
+        tier4_file => {
+            is => 'String',
+            doc => 'tier4 output file',
+        },
+        tier5_file => {
+            is => 'String',
+            doc => 'tier5 output file',
         },
     ],
 };
@@ -57,34 +88,40 @@ sub execute {
     $trans_anno_fh->open($transcript_annotation_file,"r") or croak "Couldn't open $transcript_annotation_file";
 
     my $ucsc_fh = new FileHandle;
-    $ucsc_fh->open($ucsc_file,"r") or croak "Couldn't open $ucsc_file";
+    if (-e $ucsc_file) {
+        $ucsc_fh->open($ucsc_file,"r") or croak "Couldn't open $ucsc_file";
+    }
 
     my $variant_fh = new FileHandle;
     $variant_fh->open($variant_file,"r") or croak "Couldn't open $variant_file";
 
     my $tier1 = new FileHandle;
-    $tier1->open($variant_file.".tier1","w") or croak "Couldn't write tier1 file";
+    $self->tier1_file($variant_file.".tier1");
+    $tier1->open($self->tier1_file,"w") or croak "Couldn't write tier1 file";
 
     my $tier2 = new FileHandle;
-    $tier2->open($variant_file.".tier2","w") or croak "Couldn't write tier2 file";
+    $self->tier2_file($variant_file.".tier2");
+    $tier2->open($self->tier2_file,"w") or croak "Couldn't write tier2 file";
 
     my $tier3 = new FileHandle;
-    $tier3->open($variant_file.".tier3","w") or croak "Couldn't write tier3 file";
+    $self->tier3_file($variant_file.".tier3");
+    $tier3->open($self->tier3_file,"w") or croak "Couldn't write tier3 file";
 
     my $tier4 = new FileHandle;
-    $tier4->open($variant_file.".tier4","w") or croak "Couldn't write tier4 file";
-
+    $self->tier4_file($variant_file.".tier4");
+    $tier4->open($self->tier4_file,"w") or croak "Couldn't write tier4 file";
+    
     my $tier5 = new FileHandle;
-    $tier5->open($variant_file.".tier5","w") or croak "Couldn't write tier5 file";
-
+    $self->tier5_file($variant_file.".tier5");
+    $tier5->open($self->tier5_file,"w") or croak "Couldn't write tier5 file";
+    
     my %exonic_at;
     my %variant_at;
     
-    $DB::single = 1;
     while(my $line = $trans_anno_fh->getline) {
         chomp $line;
-        my @columns = split ',', $line;
-        my ($chr, $start, $stop, $allele1, $allele2, $class, $gene, $transcript, $strand, $type, $aa_string) = @columns;
+        my @columns = split "\t", $line;
+        my ($chr, $start, $stop, $allele1, $allele2, $gene, $transcript, $transcript_source, $transcript_version, $strand, $transcript_status, $type, $aa_string) = @columns;
         $type = lc($type);
         if(defined($type) && ($type eq 'silent' || $type eq 'splice_site_del' || $type eq 'splice_site_ins' || $type eq 'in_frame_del' || $type eq 'frame_shift_del' || $type eq 'rna' || $type eq 'frame_shift_ins' || $type eq 'in_frame_ins'|| $type eq 'missense'|| $type eq 'nonsense'|| $type eq 'nonstop'|| $type eq 'splice_site')) {
             $exonic_at{$chr}{$start}{$stop}{$allele1}{$allele2} = $type;
@@ -178,6 +215,10 @@ sub execute {
             $self->error_message("Type $type not implemented");
             return;
         }
+    }
+
+    unless (-e $ucsc_file) {
+        return 1;
     }
 
     my %totals;

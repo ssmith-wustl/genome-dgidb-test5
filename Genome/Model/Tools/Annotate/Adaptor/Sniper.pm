@@ -10,11 +10,13 @@ class Genome::Model::Tools::Annotate::Adaptor::Sniper {
     has => [
         somatic_file => {
             is  => 'String',
+            is_input  => 1,
             doc => 'The somatic file output from sniper to be adapted',
         },
         output_file => {
             is => 'Text',
-            is_optional => 1,
+            is_input => 1,
+            is_output => 1,
             doc => "Store output in the specified file instead of sending it to STDOUT."
         },
     ],
@@ -43,6 +45,7 @@ sub execute {
 
     unless (-s $self->somatic_file) {
         $self->error_message("blahhhhhhhhhhh YOU SUPPLY A FILE PLEASE");
+        die;
     }
     my $somatic_fh = IO::File->new($self->somatic_file);
 

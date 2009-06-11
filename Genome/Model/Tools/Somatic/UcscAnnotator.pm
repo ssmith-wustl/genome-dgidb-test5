@@ -5,16 +5,20 @@ use warnings;
 use Genome;
 use Genome::Utility::HugoGene::HugoGeneMethods;
 use Carp;
+use IO::File;
 
 class Genome::Model::Tools::Somatic::UcscAnnotator{
     is => 'Command',
     has => [
         input_file => {
             is  => 'String',
+            is_input => 1,
             doc => 'The input file of variants to be annotated',
         },
        output_file => {
             is => 'Text',
+            is_input => 1,
+            is_output => 1,
             doc => "Store annotation in the specified file"
         },
     ],
@@ -236,8 +240,14 @@ sub execute {
 
         $gotEntry = 0; 
         # Repeatmasker query
+
+        unless(exists $chrToRepeatmaskStatements{$Chr}) {
+            $self->warning_message("Chromosome $Chr is not handled for chrToRepeatmaskStatements...skipping this line");
+            next;
+        }
+        
         $chrToRepeatmaskStatements{$Chr}->execute($start, $stop) ||
-        die "Could not execute statement for repeat masker table with ($start, $stop): $DBI::errstr \n";
+        die("Could not execute statement for repeat masker table with ($start, $stop) for chromosome $Chr : $DBI::errstr \n");
         while ( ($description, $chrStart, $chrStop) =  $chrToRepeatmaskStatements{$Chr}->fetchrow_array() ) {
             $descriptionList{$description} = 1;
             $gotEntry = 1;
