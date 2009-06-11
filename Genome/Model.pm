@@ -175,6 +175,11 @@ sub create {
         $self->data_directory( $self->resolve_data_directory );
     }
 
+    unless ( $self->_build_model_filesystem_paths() ) {
+        $self->error_message('Filesystem path creation failed');
+        return;
+    }
+                                 
     return $self;
 }
 
@@ -800,6 +805,38 @@ sub delete {
     return 1;
 
 }
+
+sub _build_model_filesystem_paths {
+    my $self = shift;
+    
+    # This is actual data directory on the filesystem
+    # Currently the disk is hard coded in $model->base_parent_directory
+    my $model_data_dir = $self->data_directory;
+    unless (Genome::Utility::FileSystem->create_directory($model_data_dir)) {
+        $self->warning_message("Can't create dir: $model_data_dir");
+        return;
+    }
+
+    # This is a human readable(model_name) symlink to the model_id based directory
+    # This symlink is created so humans can find their data on the filesystem
+    my $model_link = $self->model_link;
+    if ( -l $model_link ) {
+        $self->warning_message("model symlink '$model_link' already exists");
+        unless (unlink $model_link) {
+            $self->error_message("existing model symlink '$model_link' could not be removed");
+            return;
+        }
+    }
+
+    unless ( Genome::Utility::FileSystem->create_symlink($model_data_dir, $model_link) ) {
+        $self->error_message("model symlink '$model_link => $model_data_dir'  could not be successfully created");
+        return;
+    }
+    
+    return 1;
+
+}
+
 
 #######################
 ## MODEL FOR TESTING ##
