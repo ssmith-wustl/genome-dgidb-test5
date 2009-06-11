@@ -53,6 +53,7 @@ sub execute {
 
             # parse the solexa quality data line and interpolate to phred quality values
             my $qual_line = $reader->getline;
+            chomp($qual_line);
             my @sol_quals = split("",$qual_line);
             my @phred_quals;
             for my $solq (@sol_quals) {
