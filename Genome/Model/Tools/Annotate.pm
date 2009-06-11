@@ -28,6 +28,11 @@ sub variant_attributes {
     return (qw/ chromosome_name start stop reference variant /);
 }
 
+sub variant_output_attributes {
+    my $self = shift;
+    return (qw/ type /);
+}
+
 sub transcript_attributes {
     my $self = shift;
     return (qw/ gene_name transcript_name transcript_source transcript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain /);

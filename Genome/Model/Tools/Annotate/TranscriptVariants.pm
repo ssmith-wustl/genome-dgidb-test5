@@ -29,7 +29,8 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is => 'Text',
             is_input => 1,
             is_output=> 1,
-            doc => "Store annotation in the specified file. Provide 'STDOUT' if you'd like the output sent to STDOUT."
+            doc => "Store annotation in the specified file. Defaults to STDOUT if no file is supplied.",
+            default => "STDOUT",
         },
     ],
     has_optional => [
@@ -332,7 +333,7 @@ sub _print_annotation {
     my $snp_info_string = join
     (
         "\t", 
-        map { $snp->{$_} } ($self->variant_attributes, $self->get_extra_columns),
+        map { $snp->{$_} } ($self->variant_attributes, $self->variant_output_attributes, $self->get_extra_columns),
     );
 
     # If we have no transcripts, print the original variant with dashes for annotation info
@@ -390,7 +391,7 @@ sub get_extra_columns {
 
 sub transcript_report_headers {
     my $self = shift;
-    return ($self->variant_attributes, $self->get_extra_columns, $self->transcript_attributes);
+    return ($self->variant_attributes, $self->variant_output_attributes, $self->get_extra_columns, $self->transcript_attributes);
 }
 1;
 
