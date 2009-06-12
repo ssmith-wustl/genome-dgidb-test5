@@ -10,12 +10,6 @@ use Data::Dumper;
 use IO::File;
 use Genome::Info::IUB;
 
-my $low=20000;
-my $high=100000;
-UR::Context->object_cache_size_lowwater($low);
-UR::Context->object_cache_size_highwater($high);
-
-
 class Genome::Model::Tools::Annotate::TranscriptVariants{
     is => 'Genome::Model::Tools::Annotate',
     has => [ 

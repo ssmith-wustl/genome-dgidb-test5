@@ -5,6 +5,11 @@ use warnings;
 
 use Genome;     
 
+my $low=20000;
+my $high=200000;
+UR::Context->object_cache_size_lowwater($low);
+UR::Context->object_cache_size_highwater($high);
+
 class Genome::Model::Tools::Annotate {
     is => 'Command',
 };
