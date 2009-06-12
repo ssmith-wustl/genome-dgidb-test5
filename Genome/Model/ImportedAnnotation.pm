@@ -23,12 +23,13 @@ class Genome::Model::ImportedAnnotation{
 sub build_by_version {
     my $self = shift;
     my $version = shift;
-    my @b =  grep { $_->version eq $version} $self->builds;
-    if (@b > 1) {
-        $self->error_message("Multiple builds for version $version for model " . $self->genome_model_id);
+    my @builds =  grep { $_->version eq $version} $self->builds;
+    if (@builds > 1) {
+        my $versions_string = join("\n", map { "model_id ".$_->model_id." build_id ".$_->build_id." version ".$_->version } @builds);
+        $self->error_message("Multiple builds for version $version for model " . $self->genome_model_id.", ".$self->name."\n".$versions_string."\n");
         die;
     }
-    return $b[0];
+    return $builds[0];
 }
 
 sub annotation_data_directory{
