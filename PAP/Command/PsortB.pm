@@ -126,6 +126,7 @@ sub parse_psortb_terse {
         }
         
         my ($gene, $class, $score) = split(/\t/,$line);
+        $gene =~ s/\s$//; # psort-b has been appending a space to this...
 
         if ($class =~ /unknown/i) { next LINE; }
         

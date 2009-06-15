@@ -7,7 +7,7 @@ use Bio::Seq;
 use Bio::SeqIO;
 
 use File::Temp;
-use Test::More tests => 205;
+use Test::More tests => 230;
 
 BEGIN {
     use_ok('PAP::Command');
@@ -29,7 +29,7 @@ is(ref($ref), 'ARRAY');
 foreach my $feature (@{$ref}) {
 
     isa_ok($feature, 'Bio::SeqFeature::Generic');
-    
+    unlike($feature->display_name, qr/\s$/, 'stray space at end of genename');
     ok($feature->has_tag('psort_localization'), 'has localization tag');
     ok($feature->has_tag('psort_score'), 'has score tag');
 
