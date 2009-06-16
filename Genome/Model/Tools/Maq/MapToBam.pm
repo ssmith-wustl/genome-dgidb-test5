@@ -7,6 +7,8 @@ use Genome;
 use File::Copy;
 use File::Basename;
 
+my $SAM_DEFAULT = Genome::Model::Tools::Sam->default_samtools_version;
+
 class Genome::Model::Tools::Maq::MapToBam {
     is  => 'Genome::Model::Tools::Maq',
     has => [ 
@@ -43,8 +45,8 @@ class Genome::Model::Tools::Maq::MapToBam {
         },
         sam_version => {
             is  => 'String',
-            doc => 'samtools version to be used, default is r301wu1',
-            default => 'r301wu1',
+            doc => "samtools version to be used, default is $SAM_DEFAULT",
+            default => $SAM_DEFAULT,
         },
     ],
 };
