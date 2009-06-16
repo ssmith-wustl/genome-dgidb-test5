@@ -63,11 +63,13 @@ sub execute {
         );
     }
 
-    $cmd .= sprintf(' -new_ace > %s 2> %s ', $self->out, $self->memlog);
+    $cmd .= sprintf(' > %s 2> %s ', $self->out, $self->memlog);
 
     $self->error_message("Error running phrap:\n$cmd") 
         and return if system $cmd;
 
+    $self->status_message("$cmd\nDone\n");
+    
     return 1;
 }
 
