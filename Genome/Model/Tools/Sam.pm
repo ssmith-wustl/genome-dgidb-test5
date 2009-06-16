@@ -3,14 +3,15 @@ package Genome::Model::Tools::Sam;
 use strict;
 use warnings;
 
-use Genome;                         # >above< ensures YOUR copy is used during development
-
+use Genome; 
 use File::Basename;
+
+my $DEFAULT = 'r301wu1';
 
 class Genome::Model::Tools::Sam {
     is => 'Command',
     has => [
-        use_version => { is => 'Version', is_optional => 1, default_value => 'r301wu1', doc => 'Version of Sam to use' }
+        use_version => { is => 'Version', is_optional => 1, default_value => $DEFAULT, doc => 'Version of Sam to use' }
     ],
 };
 
@@ -30,22 +31,33 @@ EOS
 sub help_detail {                           
     return <<EOS 
 More information about the Sam suite of tools can be found at http://Samtools.sourceforege.net.
+Everytime when we get a new version of samtools, we need update in this module and create new 
+processing_profile/model for pipeline.
 EOS
 }
 
 
 my %SAMTOOLS_VERSIONS = (
     r301wu1 => '/gscuser/dlarson/samtools/r301wu1/samtools',
+    r320wu1 => '/gscuser/dlarson/samtools/r320wu1/samtools',
 );
 
 
 sub path_for_samtools_version {
     my ($class, $version) = @_;
+    $version ||= $DEFAULT;
     my $path = $SAMTOOLS_VERSIONS{$version};
     return $path if defined $path;
     die 'No path found for samtools version: '.$version;
 }
 
+
+sub default_samtools_version {
+    die "default samtools version: $DEFAULT is not valid" unless $SAMTOOLS_VERSIONS{$DEFAULT};
+    return $DEFAULT;
+}
+        
+    
 sub samtools_path {
     my $self = shift;
     return $self->path_for_samtools_version($self->use_version);
