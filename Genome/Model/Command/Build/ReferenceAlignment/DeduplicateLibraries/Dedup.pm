@@ -176,8 +176,9 @@ sub execute {
             print $log_fh "lib_tag: ".$library."\n"; 
             my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
                         use_version => $self->aligner_version,
-                        map_file => $map_file,
-                        lib_tag => $library,
+                        map_file    => $map_file,
+                        lib_tag     => $library,
+                        fix_mate    => 0,
             );
             my $map_to_bam_rv =  $map_to_bam->execute;
             unless ($map_to_bam_rv == 1) {
