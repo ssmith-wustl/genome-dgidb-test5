@@ -105,7 +105,7 @@ sub execute {
     }
     
     # omit headers as necessary
-    $output_fh->print( join(',', $self->variation_report_headers), "\n" ) unless $self->no_headers;
+    $output_fh->print( join("\t", $self->variation_report_headers), "\n" ) unless $self->no_headers;
     
     # annotate all of the input SNVs...
     my $chromosome_name = '';
@@ -197,7 +197,7 @@ sub variation_in_range {
         return 1;
     } else {
         if ($type =~ /INS|DEL|SNP|DNP|MNP/i) {
-            $self->warning_message("Junk data from data source (SNP with start and stop not equal?). Variation is: " . Dumper $variation);
+            #$self->warning_message("Junk data from data source (SNP with start and stop not equal?). Variation is: " . Dumper $variation);
         } else {
             $self->warning_message("Variation from data source has type $type, which is not supported. Variation is: " . Dumper $variation);
         }
@@ -253,7 +253,7 @@ sub _print_reports_for_snp {
     # Basic SNP Info
     my $variant_info_string = join
     (
-        ',', 
+        "\t", 
         map { $variant->{$_} } $self->variant_attributes,
     );
 
@@ -283,7 +283,7 @@ sub _print_reports_for_snp {
     (
         join
         (
-            ',',
+            "\t",
             $variant_info_string,
             @snp_exists_in_variations,
         ),
