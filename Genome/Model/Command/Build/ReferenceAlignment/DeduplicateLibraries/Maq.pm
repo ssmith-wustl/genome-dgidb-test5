@@ -136,8 +136,9 @@ sub execute {
    #merge those Bam files...BAM!!!
    $now = UR::Time->now;
    $self->status_message(">>> Beginning Bam merge at $now.");
-   my $bam_merge_tool = "/gscuser/dlarson/src/samtools/tags/samtools-0.1.2/samtools merge";
-   my $bam_index_tool = "/gscuser/dlarson/src/samtools/tags/samtools-0.1.2/samtools index";
+   my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version;
+   my $bam_merge_tool = $sam_path.' merge';
+   my $bam_index_tool = $sam_path.' index';
    my $bam_merged_output_file = $alignments_dir."/".$self->model->subject_name."_merged_rmdup.bam";
    my $bam_non_merged_output_file = $alignments_dir."/".$self->model->subject_name."_rmdup.bam";
    my $bam_final;
