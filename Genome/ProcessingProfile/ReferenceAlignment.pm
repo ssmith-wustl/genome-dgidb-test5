@@ -70,9 +70,18 @@ sub properties_hash {
                                                    doc => '',
                                                    is_optional => 1,
                                                },
+                  rmdup_name => {
+                                        doc => 'rmdup tool used for this model',
+                                        is_optional => 1,
+                                    },
+                  rmdup_version => {
+                                        doc => 'rmdup tool version used for this model',
+                                        is_optional => 1,
+                                    },
                   read_aligner_name => {
                                         doc => 'alignment algorithm/software used for this model',
                                     },
+
                   read_aligner_version => {
                                            doc => 'the aligner version used for this model',
                                            is_optional => 1,
