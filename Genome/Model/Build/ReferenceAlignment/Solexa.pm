@@ -195,7 +195,7 @@ sub _snv_file_filtered {
 
     #'new', whole genome 
     if ( $build_id < 0 || $build_id > 96763806 ) {
-        $filtered = $self->maq_snp_related_metric_directory."/filtered.indelpe.snps";
+        $filtered = $self->filtered_snp_file();
         $self->status_message("********************Path for filtered indelpe file: $filtered");
     } else {
     #'old', per chromosme
@@ -252,6 +252,12 @@ sub other_snp_related_metric_directory {
 sub maq_snp_related_metric_directory {
     my $self = shift;
     return $self->data_directory . "/maq_snp_related_metrics/";
+}
+
+sub filtered_snp_file {
+
+    my ($self) = @_;
+    return join('/', $self->maq_snp_related_metric_directory(), '/filtered.indelpe.snps');
 }
 
 sub _filtered_variants_dir {
