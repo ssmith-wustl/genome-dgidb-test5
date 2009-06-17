@@ -236,9 +236,13 @@ sub _write_vector_flanking_sequences {
     }
 
     $writer->write_seq($five_prime_flank_bioseq);
+=cut
+    ## No longer writing the revcom seq to the flanking file.  This causes some sequences to be tagged as vector because each 'hit' to the flanking file is seen as evidence of vector - we guess.
+
     my $revcom_five_prime_flank_bioseq = $five_prime_flank_bioseq->revcom;
     $revcom_five_prime_flank_bioseq->desc($five_prime_flank_desc.' revcom');
     $writer->write_seq($revcom_five_prime_flank_bioseq);
+=cut
 
     # 3 prime
     my $three_prime_seq = $vector_linearization->end_sequence_three_prime;
@@ -265,9 +269,13 @@ sub _write_vector_flanking_sequences {
     }
 
     $writer->write_seq($three_prime_flank_bioseq);
+=cut
+    ## No longer writing the revcom seq to the flanking file.  This causes some sequences to be tagged as vector because each 'hit' to the flanking file is seen as evidence of vector - we guess.
+    
     my $revcom_three_prime_flank_bioseq = $three_prime_flank_bioseq->revcom;
     $revcom_three_prime_flank_bioseq->desc($three_prime_flank_desc.' revcom');
     $writer->write_seq($revcom_three_prime_flank_bioseq);
+=cut
 
     return 1;
 }
