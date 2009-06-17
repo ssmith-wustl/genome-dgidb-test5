@@ -82,6 +82,24 @@ sub _no_read_file {
     return sprintf('%s/no_read_file.txt', _no_write_dir());
 }
 
+sub test_bzip : Tests {
+
+    my $input_file = "/gsc/var/cache/testsuite/data/Genome-Utility-Filesystem/pileup.cns";
+    my $source_file = Genome::Utility::FileSystem->create_temp_file_path();
+    #my $source_file = "/gsc/var/cache/testsuite/running_testsuites/t1/pup.cns"; 
+    ok(Genome::Utility::FileSystem->copy_file($input_file, $source_file),"Copied test file to temp."); 
+   
+    my $bzip_file = Genome::Utility::FileSystem->bzip($source_file);
+ 
+    ok (-s $bzip_file, "Bzip file exists.");
+
+    my $bunzip_file = Genome::Utility::FileSystem->bunzip($bzip_file);
+
+    ok (-s $bunzip_file, "Bunzip file exists.");
+    ok (-s $bzip_file, "Bzip file exists.");
+
+}
+
 sub test1_file : Tests {
     my $self = shift;
 

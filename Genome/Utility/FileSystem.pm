@@ -178,6 +178,51 @@ sub validate_file_for_writing {
     return 1;
 }
 
+sub bzip {
+    my $self = shift;
+    my $file = shift;
+
+    $self->validate_file_for_reading($file)
+        or return;
+
+    my $bzip_cmd = "bzip2 -z $file";
+    my $result_file = $file.".bz2";
+    $self->shellcmd(cmd=>$bzip_cmd, 
+                    output_files=>[$result_file]
+                    );
+    return $result_file;
+
+}
+
+sub bunzip {
+    my $self = shift;
+    my $file = shift;
+
+    $self->validate_file_for_reading($file)
+        or return;
+
+    if ($file=~m/.bz2/) {  
+
+        #the -k option will keep the bzip file around
+        my $bzip_cmd = "bzip2 -dk $file";
+
+        #get the unzipped file name by removing the .bz2 extension.
+        $file=~m/(\S+).bz2/;
+        my $result_file = $1;
+
+        $self->shellcmd(cmd=>$bzip_cmd, 
+                        output_files=>[$result_file],
+                        );
+
+        return $result_file;
+
+    } else {
+        $self->error_message("Input file does not have .bz2 extension. Not unzipping.");
+        return;
+    } 
+
+}
+
 sub open_file_for_writing {
     my ($self, $file) = @_;
 
