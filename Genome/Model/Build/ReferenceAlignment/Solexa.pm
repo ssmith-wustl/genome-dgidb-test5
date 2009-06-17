@@ -58,13 +58,50 @@ sub _consensus_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/consensus/%s.cns',@_);
 }
 
-#clearly if multiple aligners/programs becomes common practice, we should be delegating to the appropriate module to construct this directory
-sub _variant_list_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/snps_%s',@_);
+#sub bam_pileup_file {
+#    my $self = shift;
+#    my $ref_seq_id = shift;
+
+#    my ($pileup_file) = $self->_consensus_files($self->ref_seq_id);
+#    $pileup_file .= '.samtools_pileup';
+#    return $pileup_file;
+#}
+
+sub bam_pileup_file_path {
+    my $self = shift; 
+    my $filename = $self->consensus_directory . "/all_sequences.cns.samtools_pileup";
+    return $filename; 
 }
 
-sub _variant_filtered_list_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/snps_%s.filtered',@_);
+sub bam_pileup_bzip_file_path {
+    my $self = shift; 
+    my $filename = $self->bam_pileup_file_path.".bz2";
+    return $filename; 
+}
+
+sub bam_pileup_file {
+
+    my $self = shift;
+    my $file = $self->bam_pileup_file_path;
+    my $bzip_file = $file.".bz2";
+    if (-s $file) {
+        return $file;
+    } elsif (-s $bzip_file) {
+        #see if the bzip version exists
+        my $pileup_file = Genome::Utility::FileSystem->bunzip($bzip_file);
+        if (-s $pileup_file) {
+            return $pileup_file;
+        } else {
+            $self->error_message("Could not bunzip pileup file: $pileup_file.");
+            die "Could not bunzip pileup file: $pileup_file.";
+        }
+    } else {
+        $self->error_message("No bam pileup file could be found at: $file.");
+        die "No bam pileup file could be found at: $file."; 
+    }
+
+return;
+
 }
 
 # TODO: we should abstract the genotyper the way we do the aligner
@@ -80,7 +117,7 @@ sub _snv_file_unfiltered {
  
     #The 'new' whole genome way 
     if ( $build_id < 0 || $build_id > 96763806 ) {
-        my $unfiltered = $self->maq_snp_related_metric_directory .'/snps_all_sequences';
+        my $unfiltered = $self->snp_related_metric_directory .'/snps_all_sequences';
         unless (-e $unfiltered) {
             die 'No variant snps files were found.';
         }
@@ -95,7 +132,7 @@ sub _snv_file_unfiltered {
 
 sub X_snv_file_unfiltered {
     my $self = shift;
-    my $unfiltered = $self->maq_snp_related_metric_directory .'/all.snps';
+    my $unfiltered = $self->snp_related_metric_directory .'/all.snps';
     unless (-e $unfiltered) {
         # make a combined snp file
         my @old = $self->_variant_list_files();
@@ -119,7 +156,7 @@ sub X_snv_file_unfiltered {
 
 sub _unsorted_indel_file {
     my $self = shift;
-    my $map_snp_dir = $self->maq_snp_related_metric_directory;
+    my $map_snp_dir = $self->snp_related_metric_directory;
     my $unsorted_indel_file = $map_snp_dir .'/indelpe.out';
     unless (-e $unsorted_indel_file) {
         my @unsorted_indel_files = grep {$_ !~ /sorted/} grep { -e $_ } glob("$map_snp_dir/indelpe*out");
@@ -158,7 +195,7 @@ sub _unsorted_indel_file {
 sub _indel_file {
     my $self = shift;
 
-    my $maq_snp_dir = $self->maq_snp_related_metric_directory;
+    my $maq_snp_dir = $self->snp_related_metric_directory;
     my $sorted_indelpe = $maq_snp_dir .'/indelpe.sorted.out';
     unless (-e $sorted_indelpe) {
         # lookup or make a sorted indelpe file
@@ -195,7 +232,7 @@ sub _snv_file_filtered {
 
     #'new', whole genome 
     if ( $build_id < 0 || $build_id > 96763806 ) {
-        $filtered = $self->filtered_snp_file();
+        $filtered = $self->snp_related_metric_directory."/filtered.indelpe.snps";
         $self->status_message("********************Path for filtered indelpe file: $filtered");
     } else {
     #'old', per chromosme
@@ -229,16 +266,35 @@ sub _snv_file_filtered {
     return $filtered;
 }
 
+#clearly if multiple aligners/programs becomes common practice, we should be delegating to the appropriate module to construct this directory
+sub _variant_list_files {
+    return shift->_variant_files('snps', @_);
+}
+
+sub _variant_filtered_list_files {
+    my ($self, $ref_seq) = @_;
+    my $caller_type = $self->_snp_caller_type;
+    my $pattern = '%s/'.$caller_type.'_snp_related_metrics/snps_%s.filtered';
+    return $self->_files_for_pattern_and_optional_ref_seq_id($pattern, $ref_seq);
+}
+
 sub _variant_pileup_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/pileup_%s',@_);
+    return shift->_variant_files('pileup', @_);
 }
 
 sub _variant_detail_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/report_input_%s',@_);
+    return shift->_variant_files('report_input', @_);
 }
 
 sub _variation_metrics_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/other_snp_related_metrics/variation_metrics_%s.csv',@_);
+}
+
+sub _variant_files {
+    my ($self, $file_type, $ref_seq) = @_;
+    my $caller_type = $self->_snp_caller_type;
+    my $pattern = '%s/'.$caller_type.'_snp_related_metrics/'.$file_type.'_%s';
+    return $self->_files_for_pattern_and_optional_ref_seq_id($pattern, $ref_seq);
 }
 
 sub _transcript_annotation_files {
@@ -249,17 +305,16 @@ sub other_snp_related_metric_directory {
     my $self = shift;
     return $self->data_directory . "/other_snp_related_metrics/";
 }
-sub maq_snp_related_metric_directory {
+
+sub snp_related_metric_directory {
     my $self = shift;
-    return $self->data_directory . "/maq_snp_related_metrics/";
+    return $self->data_directory . '/' . $self->_snp_caller_type . '_snp_related_metrics/';
 }
 
-sub filtered_snp_file {
-
-    my ($self) = @_;
-    return join('/', $self->maq_snp_related_metric_directory(), '/filtered.indelpe.snps');
+sub _snp_caller_type {
+    return shift->model->_snp_caller_type;
 }
-
+    
 sub _filtered_variants_dir {
     my $self = shift;
     return sprintf('%s/filtered_variations/',$self->data_directory);
@@ -271,9 +326,7 @@ sub _reports_dir {
 }
 
 sub _files_for_pattern_and_optional_ref_seq_id {
-    my $self=shift;
-    my $pattern = shift;
-    my $ref_seq=shift;
+    my ($self, $pattern, $ref_seq) = @_;
 
     if(defined($ref_seq) and $ref_seq eq 'all_sequences') {
         return sprintf($pattern,$self->data_directory,$ref_seq);
@@ -303,6 +356,12 @@ sub whole_rmdup_map_file {
     my $self = shift;
     return $self->accumulated_alignments_directory .'/whole_rmdup.map';
 }
+
+sub whole_rmdup_bam_file {
+    my $self = shift;
+    return $self->accumulated_alignments_directory .'/whole_rmdup.bam';
+}
+
 
 sub reference_coverage_directory {
     my $self = shift;

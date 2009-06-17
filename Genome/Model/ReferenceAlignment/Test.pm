@@ -81,9 +81,9 @@ sub create_mock_model {
     Genome::Utility::TestBase->mock_methods(
         $build,
         'Genome::Model::Build::ReferenceAlignment::Solexa',
-        (qw/ maq_snp_related_metric_directory /),
+        (qw/ snp_related_metric_directory /),
     );
-    $build->set_list('_variant_list_files', glob($build->maq_snp_related_metric_directory.'/snps_*'));
+    $build->set_list('_variant_list_files', glob($build->snp_related_metric_directory.'/snps_*'));
 
     # mock build info for model
     $model->set_list('builds', $build);

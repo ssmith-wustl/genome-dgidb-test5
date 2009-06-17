@@ -17,6 +17,8 @@ class Genome::Model::ReferenceAlignment {
     has => [
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
+        rmdup_name                   => { via => 'processing_profile'},
+        rmdup_version                => { via => 'processing_profile'},
         genotyper_name               => { via => 'processing_profile'},
         genotyper_version            => { via => 'processing_profile'},
         genotyper_params             => { via => 'processing_profile'},
@@ -175,9 +177,15 @@ sub other_snp_related_metric_directory {
     my $self=shift;
     return $self->complete_build_directory . "/other_snp_related_metrics/";
 }
-sub maq_snp_related_metric_directory {
+
+sub _snp_caller_type {
+    my $type = shift->processing_profile->name =~ /samtools/i ? 'sam' : 'maq';
+    return $type;
+}
+
+sub snp_related_metric_directory {
     my $self=shift;
-    return $self->complete_build_directory . "/maq_snp_related_metrics/";
+    return $self->complete_build_directory . '/' . $self->_snp_caller_type . '_snp_related_metrics/';
 }
 
 sub metric_to_class_hash {
@@ -606,21 +614,27 @@ sub _consensus_files {
 }
 #clearly if multiple aligners/programs becomes common practice, we should be delegating to the appropriate module to construct this directory
 sub _variant_list_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/snps_%s',@_);
+    return shift->_variant_files('snps', @_);
 }
 
 sub _variant_pileup_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/pileup_%s',@_);
+    return shift->_variant_files('pileup', @_);
 }
 
 sub _variant_detail_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/maq_snp_related_metrics/report_input_%s',@_);
+    return shift->_variant_files('report_input', @_);
 }
 
 sub _variation_metrics_files {
     return shift->_files_for_pattern_and_optional_ref_seq_id('%s/other_snp_related_metrics/variation_metrics_%s.csv',@_);
 }
 
+sub _variant_files {
+    my ($self, $file_type, $ref_seq) = @_;
+    my $caller_type = $self->_snp_caller_type;
+    my $pattern = '%s/'.$caller_type.'_snp_related_metrics/'.$file_type.'_%s';
+    return $self->_files_for_pattern_and_optional_ref_seq_id($pattern, $ref_seq);
+}
 
 sub _filtered_variants_dir {
     my $self = shift;
@@ -633,9 +647,7 @@ sub _reports_dir {
 }
 
 sub _files_for_pattern_and_optional_ref_seq_id {
-    my $self=shift;
-    my $pattern = shift;
-    my $ref_seq=shift;
+    my ($self, $pattern, $ref_seq) = @_;
     
     my @files = 
         map { 

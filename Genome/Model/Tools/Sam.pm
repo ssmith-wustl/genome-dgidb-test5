@@ -6,7 +6,7 @@ use warnings;
 use Genome; 
 use File::Basename;
 
-my $DEFAULT = 'r301wu1';
+my $DEFAULT = 'r320wu1';
 
 class Genome::Model::Tools::Sam {
     is => 'Command',

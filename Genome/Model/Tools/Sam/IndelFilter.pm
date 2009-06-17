@@ -62,7 +62,7 @@ sub execute {
     my $indel_file = $self->indel_file;
     my $is_ref     = $self->is_ref ? 1 : 0;
 
-    unless (-s $indel_file) {
+    unless (-e $indel_file) {
         $self->error_message('Can not find valid SAM indel file: '.$indel_file);
         return;
     }
