@@ -185,8 +185,7 @@ sub execute {
         my $db_seq = $result->next_object();
         
         unless (defined($db_seq)) {
-            warn "failed to find sequence object for '$seq_id'";
-            next SEQ;
+            die "failed to find sequence object for '$seq_id'";
         }
         
         foreach my $feature (@{$interpro_features{$seq_id}}) {
