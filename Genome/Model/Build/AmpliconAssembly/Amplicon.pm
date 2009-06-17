@@ -359,6 +359,7 @@ sub _get_bioseq_info_from_assembly { # was _get_bioseq_info_from_longest_contig
     my $self = shift;
 
     my $acefile = $self->ace_file;
+    return unless -s $acefile; # ok
     my $factory = Finishing::Assembly::Factory->connect('ace', $acefile);
     my $contigs = $factory->get_assembly->contigs;
     my $contig;
