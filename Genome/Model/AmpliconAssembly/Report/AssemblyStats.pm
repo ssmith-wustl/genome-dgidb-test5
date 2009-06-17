@@ -206,8 +206,9 @@ sub _add_quality_dataset {
     for my $read_count ( sort { $a <=> $b } keys %read_counts ) {
         $self->_add_dataset(
             name => 'qualities',
+            label => 'read-count-'.$read_count,
+            'length' => $self->build->model->assembly_size,
             row_name => 'quality',
-            'read-count' => $read_count,
             headers => [qw/ value /],
             rows => [ 
             map { 
