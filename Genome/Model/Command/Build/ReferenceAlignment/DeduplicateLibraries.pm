@@ -32,7 +32,7 @@ EOS
 }
 
 sub command_subclassing_model_property {
-    return 'read_aligner_name';
+    return 'rmdup_name';
 }
 
 sub is_not_to_be_run_by_add_reads {

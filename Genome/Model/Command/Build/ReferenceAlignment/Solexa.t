@@ -89,6 +89,7 @@ $build_test->create_test_pp(
     genotyper_version => '0.7.1',
     read_aligner_name => 'maq',
     read_aligner_version => '0.7.1',
+    rmdup_name => 'maq',
     reference_sequence_name => 'refseq-for-test',
     #filter_ruleset_name => 'basic',
 );

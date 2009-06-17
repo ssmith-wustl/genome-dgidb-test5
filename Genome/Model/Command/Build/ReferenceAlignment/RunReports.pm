@@ -29,21 +29,31 @@ Generates GoldSnp report, etc
 EOS
 }
 
-my @REPORT_TYPES = qw/
-        Mapcheck
-        DbSnpConcordance
-        GoldSnpConcordance
-    /;
+my %REPORT_TYPES = (
+    Mapcheck           => 'Mapcheck',
+    DbSnpConcordance   => 'dbSNP_Concordance',
+    GoldSnpConcordance => 'Gold_SNP_Concordance',
+);
+
 
 sub execute {
-    my $self = shift;
-
+    my $self  = shift;
     my $build = $self->build;
+    
+    #my $pp    = $build->model->processing_profile;
+    #shift @REPORT_TYPES if $pp->name =~ /samtools/;
+
+    my $gold_snp_path = $build->gold_snp_path;
+    unless ($gold_snp_path and -s $gold_snp_path) {
+        $self->status_message("No gold_snp_path provided for the build, skip its report");
+        delete $REPORT_TYPES{GoldSnpConcordance};
+    }
+    
     unless ($self->create_directory($build->resolve_reports_directory) ) {
-	die('Could not create reports directory at: '. $build->resolve_reports_directory);
+	    die('Could not create reports directory at: '. $build->resolve_reports_directory);
     }
 
-    for my $report_type (@REPORT_TYPES) {
+    for my $report_type (keys %REPORT_TYPES) {
         my $report_class = 'Genome::Model::ReferenceAlignment::Report::' . $report_type;
         my $report_name = 'unknown';
         $self->status_message("Starting $report_type report.");
@@ -70,7 +80,6 @@ sub execute {
             $self->error_message('Error saving '.$report.'. Error: '. $self->build->error_message);
             die($self->error_message);
         }
-        #print $build->resolve_reports_directory,"\n";<STDIN>;
     }
 
     ##############################################
@@ -115,9 +124,15 @@ sub verify_successful_completion {
         $self->error_message('Failed verify_successful_completion of RunReports step. Build is undefined.');
         return;
     }
-    my $report_dir = $build->resolve_reports_directory;
 
-    for my $sub_directory ( 'Mapcheck', 'dbSNP_Concordance', 'Gold_SNP_Concordance', 'Summary') {
+    my $report_dir = $build->resolve_reports_directory;
+    #my @sub_dirs = qw(Mapcheck dbSNP_Concordance Gold_SNP_Concordance Summary);
+    my $gold_snp_path = $self->build->gold_snp_path;
+    delete $REPORT_TYPES{GoldSnpConcordance} unless $gold_snp_path and -s $gold_snp_path;
+        
+    my @sub_dirs = (values %REPORT_TYPES, 'Summary');  
+   
+    for my $sub_directory (@sub_dirs) {
         unless (-d $report_dir .'/'. $sub_directory) {
             $self->error_message('Failed verify_successful_completeion of RunReports step.  Failed to find directory: '. $report_dir .'/'. $sub_directory);
             return;

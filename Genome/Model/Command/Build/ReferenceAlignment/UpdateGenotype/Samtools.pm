@@ -49,9 +49,10 @@ sub execute {
         }
     }
 
-    my ($consensus_file) = $build->_consensus_files($self->ref_seq_id);
-    $consensus_file .= '.samtools_pileup';
-    
+    #my ($consensus_file) = $build->_consensus_files($self->ref_seq_id);
+    #$consensus_file .= '.samtools_pileup';
+    my $consensus_file = $build->bam_pileup_file_path;   
+ 
     my $ref_seq_file = sprintf("%s/all_sequences.fasta", $model->reference_sequence_path);
     my $assembly_opts = $model->genotyper_params || '';
 
@@ -92,6 +93,12 @@ sub execute {
         output_files => [$consensus_file],
     );
 
+    if (Genome::Utility::FileSystem->bzip($consensus_file) ) {
+        $self->status_message("Converted consesnsus file to bzip format.");
+    } else {
+        $self->error_message("Could NOT convert consensus file to bzip format.  Continuing anyway.");
+    }
+
     return $self->verify_successful_completion;
 }
 
@@ -99,8 +106,10 @@ sub execute {
 sub verify_successful_completion {
     my $self = shift;
 
-    my ($consensus_file) = $self->build->_consensus_files($self->ref_seq_id);
-    $consensus_file .= '.samtools_pileup';
+    #my ($consensus_file) = $self->build->_consensus_files($self->ref_seq_id);
+    #$consensus_file .= '.samtools_pileup';
+
+    my $consensus_file = $self->build->bam_pileup_bzip_file_path;
 
     unless (-e $consensus_file && -s $consensus_file > 20) {
         $self->error_message("Consensus file $consensus_file is too small");
