@@ -9,7 +9,7 @@ use Data::Dumper 'Dumper';
 require Genome::Utility::MetagenomicClassifier::PopulationComposition;
 
 class Genome::Model::AmpliconAssembly::Report::Composition {
-    is => 'Genome::Model::AmpliconAssembly::Report',
+    is => 'Genome::Model::Report',
     has => [
     name => {
         default_value => 'Composition',
