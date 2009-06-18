@@ -52,6 +52,40 @@ sub create {
     return $self;
 }
 
+sub generate_report {
+    my $self = shift;
+
+    $self->_add_model_info
+        or return;
+    
+    return $self->SUPER::generate_report;
+}
+
+sub _add_model_info {
+    my $self = shift;
+
+    my $build_node = $self->_xml->createElement('model-info')
+        or return;
+    $self->_main_node->addChild($build_node)
+        or return;
+
+    my %objects_attrs = (
+        model => [qw/ name type_name subject_name subject_type /, $self->model->processing_profile->params_for_class ],
+        build => [qw/ build_id data_directory /],
+    );
+    for my $object ( keys %objects_attrs ) {
+        for my $attr ( @{$objects_attrs{$object}} ) {
+            my $value = $self->$object->$attr;
+            $attr =~ s#\_#\-#g;
+            my $element = $build_node->addChild( $self->_xml->createElement($attr) )
+                or return;
+            $element->appendTextNode($value);
+        }
+    }
+
+    return 1;
+}
+
 1;
 
 #$HeadURL$
