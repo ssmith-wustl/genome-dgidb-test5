@@ -101,7 +101,7 @@ sub execute {
     ###################################################
     #Send user email
 
-    my $mail_dest = ($build->id < 0 ? Genome::Config->user_email() . ',charris@genome.wustl.edu' : 'apipe-run@genome.wustl.edu');
+    my $mail_dest = ($build->id < 0 ? Genome::Config->user_email() . ',jpeck@genome.wustl.edu' : 'apipe-run@genome.wustl.edu');
     $self->status_message('Sending summary e-mail to ' . $mail_dest);
     my $mail_rv = Genome::Model::Command::Report::Mail->execute(
         model => $self->model,
