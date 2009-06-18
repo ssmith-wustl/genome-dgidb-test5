@@ -56,9 +56,17 @@ sub create {
     }
 
     # main node
-    $self->{_main_node} = $self->_xml->createElement('report');
-    $self->_xml->addChild( $self->_main_node );
-    $self->_xml->setDocumentElement( $self->_main_node ); 
+    $self->{_main_node} = $self->_xml->createElement('report')
+        or Carp::confess('Create main node to XML');
+    $self->_xml->addChild( $self->_main_node )
+        or Carp::confess('Add main node to XML');
+    $self->_xml->setDocumentElement( $self->_main_node );
+    
+    # meta node
+    $self->{_meta_node} = $self->_xml->createElement('report-meta')
+        or Carp::confess('Create meta node to XML');
+    $self->_main_node->addChild( $self->_meta_node )
+        or Carp::confess('Add meta node to main node');
     
     return $self;
 }
@@ -74,8 +82,8 @@ sub generate_report {
         return;
     }
 
-    # Meta
-    $self->_add_report_meta_node
+    # Meta data
+    $self->_add_report_meta_data
         or return;
 
     my $report = Genome::Report->create(
@@ -91,23 +99,19 @@ sub generate_report {
     return $report;
 }
 
-sub _add_report_meta_node {
+sub _add_report_meta_data {
     my $self = shift;
 
-    my $meta_node = $self->_xml->createElement('report-meta');
-    $self->_main_node->addChild($meta_node);
-    
     # Basics
     for my $attr (qw/ name description date generator /) {
-    $meta_node->addChild( $self->_xml->createElement($attr) )->appendTextNode($self->$attr);
-    #$meta_node->addChild( $self->_xml->createElement('name') )->appendTextNode($self->name);
+        $self->_meta_node->addChild( $self->_xml->createElement($attr) )->appendTextNode($self->$attr);
     }
 
     # Generator params
     my %generation_params = $self->_get_params_for_generation;
     my $gen_params_node = $self->_xml->createElement('generator-params')
         or return;
-    $meta_node->addChild($gen_params_node)
+    $self->_meta_node->addChild($gen_params_node)
         or return;
     for my $param ( keys %generation_params ) {
         for my $value ( @{$generation_params{$param}} ) {
@@ -117,7 +121,7 @@ sub _add_report_meta_node {
         }
     }
 
-    return $meta_node;
+    return $self->_meta_node;
 }
 
 sub generator { # lets this be overwritten
@@ -202,6 +206,10 @@ sub _xml {
 
 sub _main_node {
     return $_[0]->{_main_node};
+}
+
+sub _meta_node {
+    return $_[0]->{_meta_node};
 }
 
 sub _datasets_node {
