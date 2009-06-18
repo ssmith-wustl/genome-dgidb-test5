@@ -18,6 +18,10 @@ class Genome::Model::Tools::Sam::SamToBam {
         }
     ],
     has_optional => [
+        bam_file    => {
+            is  => 'String',
+            doc => 'Name of output bam file (default: use base name of input sam file -- e.g. foo.sam -> foo.bam)'
+        },
         ref_list    => {
             is  => 'String',
             doc => 'ref list contains ref name and its length, default is NCBI-human-build36/ref_list_for_bam',
@@ -85,7 +89,7 @@ sub execute {
     my ($root_name) = basename $sam_file =~ /^(\S+)\.sam/;
     
     my $sam_dir  = dirname $sam_file;
-    my $bam_file = $sam_dir . "/$root_name.bam";
+    my $bam_file = $self->bam_file || $sam_dir . "/$root_name.bam";
     
     my ($cmd, $rv);
 
