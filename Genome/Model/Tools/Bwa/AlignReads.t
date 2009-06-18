@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Genome::Model::Tools::BWA::AlignReads;
+use Genome::Model::Tools::Bwa::AlignReads;
 use Test::More;
 #tests => 1;
 
@@ -16,8 +16,8 @@ if (`uname -a` =~ /x86_64/){
 
 my $expected_output = 3;
 
-my $ref_seq = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-BWA-AlignReads/reference-sequence/all_sequences.fa";
-my $files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-BWA-AlignReads/single-solexa";
+my $ref_seq = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Bwa-AlignReads/reference-sequence/all_sequences.fa";
+my $files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Bwa-AlignReads/single-solexa";
 my $unaligned = "unaligned.out";
 my $aligner_log = "aligner.log";
 my $sol_flag = "y";
@@ -32,7 +32,7 @@ my $force_fragments = 1;
 
  
 #Case 1: single read 
-my $aligner = Genome::Model::Tools::BWA::AlignReads->create(
+my $aligner = Genome::Model::Tools::Bwa::AlignReads->create(
                                                             ref_seq_file => $ref_seq,
                                                             files_to_align_path => $files_to_align,
                                                             alignment_file => $output_dir .'/single_read.bam',
@@ -56,11 +56,11 @@ ok( scalar(@listing) eq $expected_output, "Number of output files expected = ".$
 #get a new output dir
 $output_dir = File::Temp::tempdir(CLEANUP => 1);
 #get new input test data
-$files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-BWA-AlignReads/paired-solexa";
+$files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Bwa-AlignReads/paired-solexa";
 #Add a pipe delimited test eventually...
-#$files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-BWA-AlignReads/paired-solexa/s_1_1_sequence_test.txt|/gsc/var/cache/testsuite/data/Genome-Model-Tools-BWA-AlignReads/paired-solexa/s_1_2_sequence_test.txt";
+#$files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Bwa-AlignReads/paired-solexa/s_1_1_sequence_test.txt|/gsc/var/cache/testsuite/data/Genome-Model-Tools-Bwa-AlignReads/paired-solexa/s_1_2_sequence_test.txt";
 
-$aligner = Genome::Model::Tools::BWA::AlignReads->create(
+$aligner = Genome::Model::Tools::Bwa::AlignReads->create(
 							 ref_seq_file => $ref_seq,
                                                          files_to_align_path => $files_to_align,
                                                          alignment_file => $output_dir .'/paired-solexa.map',
@@ -88,7 +88,7 @@ $output_dir = File::Temp::tempdir(CLEANUP => 1);
 #get new input test data
 $files_to_align = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-AlignReads/paired-solexa";
 
-$aligner = Genome::Model::Tools::BWA::AlignReads->create(
+$aligner = Genome::Model::Tools::Bwa::AlignReads->create(
 							 ref_seq_file => $ref_seq,
                                                          files_to_align_path => $files_to_align,
 							 force_fragments => $force_fragments,

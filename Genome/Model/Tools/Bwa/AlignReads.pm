@@ -1,4 +1,4 @@
-package Genome::Model::Tools::BWA::AlignReads;
+package Genome::Model::Tools::Bwa::AlignReads;
 
 use strict;
 use warnings;
@@ -6,8 +6,8 @@ use warnings;
 use Genome;
 use Genome::Utility::FileSystem;
 
-class Genome::Model::Tools::BWA::AlignReads {
-    is  => 'Genome::Model::Tools::BWA',
+class Genome::Model::Tools::Bwa::AlignReads {
+    is  => 'Genome::Model::Tools::Bwa',
     has => [
         #######################################################
         use_version => {
@@ -288,9 +288,6 @@ sub execute {
     else {
         $tmp_dir = File::Temp::tempdir( CLEANUP => 1 );
     }
-
-#bwa path stuff, does this need to support previous versions? See: /dev/trunk/Genome/Model/Command/BWASubclasser.pm
-#my $aligner_path = '/gsc/pkg/bio/bwa/maq-0.6.8_x86_64-linux/maq';
 
     #get the files to align ready
     my @input_file_list = @{ $self->_files_to_align_list };
