@@ -9,7 +9,7 @@ use Data::Dumper 'Dumper';
 use XML::LibXML;
 
 class Genome::Model::AmpliconAssembly::Report::AssemblyStats {
-    is => 'Genome::Model::AmpliconAssembly::Report',
+    is => 'Genome::Model::Report',
     has => [
     name => {
         default_value => 'Assembly Stats',
@@ -108,7 +108,7 @@ sub add_amplicon {
     my $i = 1;
     my $last_qual_pos = @{$bioseq->qual} - 1;
     if ( $last_qual_pos < $self->build->model->assembly_size ) { # not enough quals, need to move start
-        $i = $self->build->model->assembly_size - $last_qual_pos;
+        $i = $self->build->model->assembly_size - $last_qual_pos - 1;
     }
 
     my $qual_total = 0;
@@ -204,15 +204,16 @@ sub _add_quality_dataset {
     }
     
     for my $read_count ( sort { $a <=> $b } keys %read_counts ) {
+        my $pos = 0;
         $self->_add_dataset(
             name => 'qualities',
             label => 'read-count-'.$read_count,
             'length' => $self->build->model->assembly_size,
             row_name => 'quality',
-            headers => [qw/ value /],
+            headers => [qw/ position value /],
             rows => [ 
             map { 
-                [ sprintf('%.0f', ($_ || 0) / $read_counts{$read_count}) ]
+                [ ++$pos, sprintf('%.0f', ($_ || 0) / $read_counts{$read_count}) ]
             } @{$self->{_metrix}->{qual_by_pos}->{$read_count}}
             ],
         );
