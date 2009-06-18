@@ -232,7 +232,7 @@ sub _snv_file_filtered {
 
     #'new', whole genome 
     if ( $build_id < 0 || $build_id > 96763806 ) {
-        $filtered = $self->snp_related_metric_directory."/filtered.indelpe.snps";
+        $filtered = $self->filtered_snp_file();
         $self->status_message("********************Path for filtered indelpe file: $filtered");
     } else {
     #'old', per chromosme
@@ -265,6 +265,13 @@ sub _snv_file_filtered {
     }
     return $filtered;
 }
+
+sub filtered_snp_file {
+
+    my ($self) = @_;
+    return join('/', $self->snp_related_metric_directory(), '/filtered.indelpe.snps');
+}
+
 
 #clearly if multiple aligners/programs becomes common practice, we should be delegating to the appropriate module to construct this directory
 sub _variant_list_files {
