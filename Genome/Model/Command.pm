@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+require Carp;
+use Data::Dumper 'Dumper';
 require Genome::Utility::FileSystem;
 use Regexp::Common;
 
@@ -200,6 +202,29 @@ sub _ask_user_question {
     return $input;
 }
 
+#< Models Classes and Subclasses >#
+sub get_model_classes {
+    my @classes = Genome::Utility::FileSystem::get_classes_in_subdirectory_that_isa(
+        'Genome/Model',
+        'Genome::Model',
+    );
+
+    unless ( @classes ) { # bad
+        Carp::confess("No model subclasses found!");
+    }
+
+    return @classes;
+}
+
+sub get_model_subclasses {
+    # should confess in get_model_classes
+    return map { m#::([\w\d]+)$# } get_model_classes();
+}
+
+sub get_model_type_names {
+    # should confess in get_model_classes
+    return map { Genome::Utility::Text::camel_case_to_string($_, ' ') } get_model_subclasses();
+}
 
 1;
 
