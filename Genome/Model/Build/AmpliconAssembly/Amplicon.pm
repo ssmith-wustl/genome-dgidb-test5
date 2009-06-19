@@ -355,19 +355,35 @@ sub _get_bioseq_info_from_oriented_fasta {
     );
 }
 
-sub _get_bioseq_info_from_assembly { # was _get_bioseq_info_from_longest_contig
+sub get_ace_factory {
     my $self = shift;
 
     my $acefile = $self->ace_file;
     return unless -s $acefile; # ok
-    my $factory = Finishing::Assembly::Factory->connect('ace', $acefile);
-    my $contigs = $factory->get_assembly->contigs;
+
+    return Finishing::Assembly::Factory->connect('ace', $acefile);
+}
+
+sub get_successfully_assembled_contig_from_assembly {
+    my ($self, $assembly) = @_;
+
+    my $contigs = $assembly->contigs;
     my $contig;
     while ( $contig = $contigs->next ) {
         next unless $contig->unpadded_length >= $self->successful_assembly_length;
         next unless $contig->reads->count > 1;
         last;
     }
+ 
+    return $contig;
+}
+
+sub _get_bioseq_info_from_assembly { # was _get_bioseq_info_from_longest_contig
+    my $self = shift;
+
+    my $factory = $self->get_ace_factory
+        or return;
+    my $contig = $self->get_successfully_assembled_contig_from_assembly($factory->get_assembly);
     unless ( $contig ) {
         $factory->disconnect;
         #print $self->get_name,"\n";
