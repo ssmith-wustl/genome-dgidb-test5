@@ -6,11 +6,13 @@ use warnings;
 use Genome;
 
 use Data::Dumper;
+require Carp;
 require IO::Dir;
 require IO::File;
 require File::Basename;
 require File::Path;
 require File::Copy;
+require Genome::Utility::Text;
 
 # this helps us clean-up locks
 
@@ -703,6 +705,66 @@ sub INT_cleanup {
     }
     die;
 }
+
+#< Inc Dir, Modules, Classes, etc >#
+sub get_inc_directory_for_class {
+    my $class = shift;
+
+    Carp::confess('No class given to get INC directory') unless $class;
+    
+    my $module = Genome::Utility::Text::class_to_module($class);
+    my $directory = $INC{$module};
+    $directory =~ s/$module//;
+
+    return $directory;
+}
+
+sub get_classes_in_subdirectory {
+    my ($subdirectory) = @_;
+
+    unless ( $subdirectory ) {
+        Carp::confess("No subdirectory given to get classes\n"); 
+        return;
+    }
+
+    my $inc_directory = get_inc_directory_for_class(__PACKAGE__);
+    unless ( $inc_directory ) {
+        Carp::confess('Could not get inc directory for '.__PACKAGE__."\n"); 
+        return;
+    }
+
+    my $directory = $inc_directory.'/'.$subdirectory;
+    return unless -d $directory;
+
+    my @classes;
+    for my $module ( glob("$directory/*pm") ) {
+        $module =~ s#$inc_directory/##;
+        #print "$module\n";
+        push @classes, Genome::Utility::Text::module_to_class($module);
+    }
+
+    return @classes;
+}
+
+sub get_classes_in_subdirectory_that_isa {
+    my ($subdirectory, $isa) = @_;
+
+    unless ( $isa ) {
+        Carp::confess("No isa given to get classes in directory that isa\n"); 
+        return;
+    }
+
+    my @classes;
+    for my $class ( get_classes_in_subdirectory($subdirectory) ) {
+        #print "$class\n";
+        next unless $class->isa($isa);
+        push @classes, $class;
+    }
+
+    return @classes;
+}
+
+
 
 1;
 
