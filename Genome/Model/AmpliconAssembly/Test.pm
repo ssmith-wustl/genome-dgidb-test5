@@ -97,7 +97,8 @@ sub create_mock_model {
         'Genome::Model::Build',
         (qw/
             build_events build_event build_status
-            add_report resolve_reports_directory
+            add_report get_report reports 
+            reports_directory resolve_reports_directory
             /),
     );
     # Accessors
