@@ -212,11 +212,10 @@ sub resolve_data_directory {
 }
 
 #< Reports >#
-sub resolve_reports_directory
-{
-    my $self = shift;
-    return  $self->data_directory . '/reports/';
+sub reports_directory { 
+    return  $_[0]->data_directory . '/reports/';
 }
+sub resolve_reports_directory { return reports_directory(@_); }
 
 sub add_report {
     my ($self, $report) = @_;
@@ -262,6 +261,19 @@ sub reports {
     my $report_dir = $self->resolve_reports_directory;
     return unless -d $report_dir;
     return Genome::Report->create_reports_from_parent_directory($report_dir);
+}
+
+sub get_report {
+    my ($self, $report_name) = @_;
+
+    unless ( $report_name ) { # die?
+        $self->error_message("No report name given to get report");
+        return;
+    }
+
+    my $subdir = Genome::Report->name_to_subdirectory($report_name);
+
+    return Genome::Report->create_report_from_directory($self->reports_directory.'/'.$subdir); 
 }
 
 sub available_reports {
