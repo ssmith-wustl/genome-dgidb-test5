@@ -75,7 +75,7 @@ sub fasta_dir {
 sub reports_dir {
     return $_[0]->data_directory.'/reports';
 }
-    
+
 #< FASTA >#
 my %_fasta_types_and_methods = (
     reads => 'get_bioseqs_for_raw_reads',
@@ -262,6 +262,58 @@ sub _determine_amplicons_in_chromat_dir_broad {
     }
     
     return  \%amplicons;
+}
+
+#< Contamination Screening >#
+sub contamination_dir {
+    return $_[0]->data_directory.'/contamination';
+}
+
+sub contamination_reads_dir {
+    return $_[0]->contamination_dir.'/reads';
+}
+    
+sub amplicon_fasta_file_for_contamination_screening {
+    return $_[0]->contamination_dir.'/amplicon_reads.fasta';
+}
+
+sub create_contamination_dir {
+    my $self = shift;
+
+    return Genome::Utility::FileSystem->create_directory( $self->contamination_dir );
+}
+
+sub create_amplicon_fasta_files_for_contamination_screening {
+    my $self = shift;
+
+    my $amplicons = $self->get_amplicons
+        or return;
+
+    $self->create_contamination_dir
+        or return;
+    
+    my $fasta_file = $self->amplicon_fasta_file_for_contamination_screening;
+    unlink $fasta_file if -e $fasta_file;
+    my $fasta_writer = Bio::SeqIO->new(
+        '-file' => '>'.$fasta_file,
+        '-fomat' => 'fasta',
+    );
+    for my $amplicon ( @$amplicons ) {
+        for my $bioseq ( $amplicon->get_bioseq_for_raw_reads ) {
+            $fasta_writer->write_seq($bioseq);
+        }
+    }
+
+    return $fasta_file;
+}
+
+sub read_is_contaminated {
+    my ($self, $read_name) = @_;
+
+    # move reads for amplicon to contam dir
+    die "not done\n";
+    
+    return 1;
 }
 
 #<>#
