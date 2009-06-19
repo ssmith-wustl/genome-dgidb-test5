@@ -52,6 +52,102 @@ sub create {
     return $self;
 }
 
+#< Report Classes >#
+sub get_generic_report_classes {
+    my $type_name = shift;
+
+    unless ( $type_name ) {
+        Carp::confess("No model sub type given\n"); 
+        return;
+    }
+
+    return Genome::Utility::FileSystem::get_classes_in_subdirectory_that_isa(
+        'Genome/Model/Report',
+        'Genome::Report::Generator',
+    );
+}
+
+sub get_report_classes_for_type_name {
+    print Dumper(\@_);
+    my $type_name = shift;
+    
+    unless ( $type_name ) {
+        Carp::confess("No model sub type given\n"); 
+    }
+
+    return Genome::Utility::FileSystem::get_classes_in_subdirectory_that_isa(
+        'Genome/Model/'.Genome::Utility::Text::string_to_camel_case($type_name).'/Report', 
+        'Genome::Report::Generator',
+    );
+}
+
+sub get_report_class_for_generic_report_name {
+    my ($report_name) = @_;
+
+    unless ( $report_name ) {
+        Carp::confess("No report name given to get generic report class");
+    }
+    
+    return 'Genome::Model::Report::'.Genome::Utility::Text::string_to_camel_case($report_name);
+}
+
+sub get_report_class_for_type_name_and_report_name {
+    my ($type_name, $report_name) = @_;
+
+    unless ( $type_name ) {
+        Carp::confess("No type name given to get report class");
+    }
+
+    unless ( $report_name ) {
+        Carp::confess("No report name given to get report class");
+    }
+
+    return sprintf(
+        'Genome::Model::%s::Report::%s', 
+        Genome::Utility::Text::string_to_camel_case($type_name),
+        Genome::Utility::Text::string_to_camel_case($report_name),
+    );
+}
+
+#< Report Subclasses >#
+sub get_generic_report_subclasses { 
+    my $type_name = shift;
+
+    my @classes = get_generic_report_classes($type_name)
+        or return;
+
+    return map { $_ =~ m#::([\w\d]+)$# } @classes;
+}
+
+
+sub get_report_subclasses_for_type_name {
+    my $type_name = shift;
+
+    my @classes = get_report_classes_for_type_name($type_name)
+        or return;
+
+    return map { $_ =~ m#::([\w\d]+)$# } @classes;
+}
+
+#< Report Names >#
+sub get_generic_report_names { 
+    my $type_name = shift;
+
+    my @subclasses = get_generic_report_subclasses($type_name)
+        or return;
+
+    return map { Genome::Utility::Text::camel_case_to_string($_, ' ') } @subclasses;
+}
+
+sub get_report_names_for_type_name {
+    my $type_name = shift;
+
+    my @subclasses = get_report_subclasses_for_type_name($type_name)
+        or return;
+
+    return map { Genome::Utility::Text::camel_case_to_string($_, ' ') } @subclasses;
+}
+
 sub generate_report {
     my $self = shift;
 
