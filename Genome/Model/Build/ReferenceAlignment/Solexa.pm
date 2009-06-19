@@ -46,7 +46,9 @@ sub calculate_estimated_kb_usage {
     my @idas = $model->instrument_data_assignments;
     my $estimate_from_instrument_data = scalar(@idas) * 10000;
 
-    return ($estimate_from_reference + $estimate_from_instrument_data);
+    #return ($estimate_from_reference + $estimate_from_instrument_data);
+    my $temporary_value = 629145600; #600Gb
+    return $temporary_value; 
 }
 
 sub consensus_directory {
