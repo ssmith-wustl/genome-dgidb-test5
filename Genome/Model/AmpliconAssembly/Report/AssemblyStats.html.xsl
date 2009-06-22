@@ -366,7 +366,7 @@
 			</td>
           </tr>
         </table>
-        <h2 class="report_section">Quality Graph</h2>
+        <h2 class="report_section">Quality Histogram</h2>
           <table width="100%" cellpadding="5" cellspacing="0">
             <tr>
               <td valign="middle"><img src="/static/report_resources/apipe_dashboard/images/axis_label_v_quality.png" width="25" height="68"/></td>
