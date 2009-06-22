@@ -368,7 +368,10 @@ sub whole_rmdup_map_file {
 
 sub whole_rmdup_bam_file {
     my $self = shift;
-    return $self->accumulated_alignments_directory .'/whole_rmdup.bam';
+    my $model = $self->model;
+    my $subject = $model->subject_name;
+    my $resolved_file = $subject . '_merged_rmdup.bam';
+    return $self->accumulated_alignments_directory .'/'.$resolved_file;
 }
 
 
