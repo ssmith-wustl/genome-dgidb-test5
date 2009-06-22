@@ -139,14 +139,11 @@ sub execute {
    my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version;
    my $bam_merge_tool = $sam_path.' merge';
    my $bam_index_tool = $sam_path.' index';
-   my $bam_merged_output_file = $alignments_dir."/".$self->model->subject_name."_merged_rmdup.bam";
-   my $bam_non_merged_output_file = $alignments_dir."/".$self->model->subject_name."_rmdup.bam";
+   my $bam_merged_output_file = $self->build->whole_rmdup_bam_file; 
    my $bam_final;
  
    if (-s $bam_merged_output_file )  {
    	$self->error_message("The bam file: $bam_merged_output_file already exists.  Skipping bam processing.  Please remove this file and rerun to generate new bam files.");
-   } if (-s $bam_non_merged_output_file )  {
-   	$self->error_message("The bam file: $bam_non_merged_output_file already exists.  Skipping bam processing.  Please remove this file and rerun to generate new bam files.");
    }  else {
  
        #get the bam files from the alignments directory
@@ -170,13 +167,13 @@ sub execute {
             my $single_file = shift(@bam_files);
             $self->status_message("Only one bam file has been found at: $alignments_dir. Not merging, only renaming.");
             #my $rename_cmd = "mv ".$single_file." ".$bam_non_merged_output_file;
-            $self->status_message("Renaming Bam file from $single_file to $bam_non_merged_output_file");
-            my $bam_rename_rv = move($single_file,$bam_non_merged_output_file); 
+            $self->status_message("Renaming Bam file from $single_file to $bam_merged_output_file");
+            my $bam_rename_rv = move($single_file,$bam_merged_output_file); 
             unless ($bam_rename_rv==1) {
                     $self->error_message("Bam file rename error!  Return value: $bam_rename_rv");
             } else {
                     #renaming success
-                    $bam_final = $bam_non_merged_output_file; 
+                    $bam_final = $bam_merged_output_file; 
             } 
        } else {
             $self->status_message("Multiple Bam files found.  Bam files to merge: ".join(",",@bam_files) );
