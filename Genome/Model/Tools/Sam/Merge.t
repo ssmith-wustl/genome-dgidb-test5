@@ -9,7 +9,7 @@ use Test::More;
 #tests => 1;
 
 if (`uname -a` =~ /x86_64/){
-    plan tests => 8;
+    plan tests => 6;
 } else{
     plan skip_all => 'Must run on a 64 bit machine';
 }
