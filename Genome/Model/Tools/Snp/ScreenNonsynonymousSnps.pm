@@ -1,0 +1,157 @@
+package Genome::Model::Tools::Snp::ScreenNonsynonymousSnps;
+
+use strict;
+use warnings;
+use Genome;
+use Bio::SeqIO;
+
+
+class Genome::Model::Tools::Snp::ScreenNonsynonymousSnps {
+    is => 'Command',                    
+    has => [ 
+	
+	list => {
+	    is =>  'string',
+	    doc   =>  "a file listing the nonsynonymous snps you want to run sift and polyphen on",
+	},
+	
+	transcript => {
+	    is  =>  'String',
+	    doc   =>  "provide the transcript id",
+	},
+	
+	]
+	    
+};
+
+sub help_brief {
+    return <<EOS
+	This tool was design to retrieve derive the protien sequence for a transcript using the sequence from the datawarhouse and subsequently run sift and then polyphen on the list of nonsynonymous snps.
+EOS
+}
+
+sub help_synopsis {
+    return <<EOS
+
+
+gt snp screen-nonsynonymous-snps --transcript --list 
+
+
+EOS
+}
+
+
+sub help_detail {
+    return <<EOS 
+
+gt snp screen-nonsynonymous-snps --transcript --list 
+
+EOS
+}
+
+
+sub execute {
+    
+    my $self = shift;
+    
+    my $transcript = $self->transcript;
+    my $list = $self->list;
+    
+########################### prep NS input list for sift and polyphen
+    my $sortedlist;
+    if (-f $list) {
+	open(LIST,$list);
+	while (<LIST>) {
+	    chomp;
+	    my $ns_snp = $_;
+	    my ($sub1)=$ns_snp=~/^([A-Z])/;
+	    my ($sub2)=$ns_snp=~/([A-Z])$/;
+	    my ($sub3)=$ns_snp=~/(\d+)/;
+	    $sortedlist->{$sub3}->{sub1}=$sub1;
+	    $sortedlist->{$sub3}->{sub2}=$sub2;
+	} close (LIST);
+	open(SL,">SIFT_LIST");
+	open(PL,">POLYPHEN_LIST");
+	foreach my $sub3 (sort {$a<=>$b} keys %{$sortedlist}) {
+	    my $sub1 = $sortedlist->{$sub3}->{sub1};
+	    my $sub2 = $sortedlist->{$sub3}->{sub2};
+	    my $aa = "$sub1$sub3$sub2";
+	    print SL qq($aa\n);
+	    print PL "0\t0\t$transcript\t$sub3\t$sub1\t$sub2\n";
+	}
+	close SL;
+	close PL;
+    } else {
+	print qq(Could not find the nonsynonymous snps list\n);
+	return 0;
+    }
+########################### get the protein sequence
+    
+    my $build = Genome::Model::ImportedAnnotation->get(name => 'NCBI-human.combined-annotation')->build_by_version(0);
+    my $build_id =$build->build_id;
+    
+    my $t = Genome::Transcript->get( transcript_name => $transcript, build_id => $build_id );
+    my $tseq = $t->cds_full_nucleotide_sequence;
+    
+    unless ($tseq) {
+	print qq(Could not find the nucleotide sequence for $transcript in the dw\n);
+	return 0;
+    }
+    
+    my $fasta = "$transcript.fasta";
+    open(FA,">$fasta");
+    print FA qq(>$transcript.fasta\n$tseq\n);
+    close (FA);
+    
+    my $display_id = $transcript;
+    
+    my $newseq = Bio::Seq->new( -display_id => $display_id, -seq => $tseq );
+    my $protein = $newseq->translate->seq;
+    
+    if ( $protein =~ /^[A-Z]+\*$/ ) {
+	
+	my $protein_file = "$transcript.protein.fasta";
+	open(PFA,">$protein_file");
+	print PFA qq(>$transcript $transcript\n$protein\n);
+	close (PFA);
+	
+	my $db_location = "~josborne/work/medseq/snp-misc/egfr/nr";
+
+	if (-f "$transcript.protein.time.error") {system qq(rm $transcript.protein.time.error);}
+
+	my $siftcmd = "SIFT.csh $protein_file $db_location SIFT_LIST";
+	print "$siftcmd \nRunning...\n\n";
+	
+	`$siftcmd > ./SIFT_$protein_file.out`;
+
+	if (-f "$transcript.protein.SIFTprediction") {
+	    print qq(Sift results can be viewed in $transcript.protein.SIFTprediction\n);
+	} else {
+	    print qq(SIFT failed to produce a result\n);
+	}
+
+	my $prediction_file = $protein_file;
+	$prediction_file =~ s/.fasta$/.PPHprediction/;
+	my $pphdire=qq(/gscmnt/200/medseq/analysis/software/scripts/pph.sh);
+	my $polycmd = "$pphdire -s $protein_file POLYPHEN_LIST";
+	
+	print "$polycmd \nRunning...\n\n";
+	`$polycmd > ./$prediction_file`;
+	if (-f "$transcript.protein.PPHprediction") {
+	    print qq(polyphen results can be viewed in $transcript.protein.PPHprediction\n);
+	} else {
+	    print qq(polyphen failed to produce a result\n);
+	}
+
+	#clean up
+	system qq(rm SIFT_LIST POLYPHEN_LIST);
+
+    } else {
+	
+	print qq(protein sequence does not conform to requirements and sift will not run on it.\n);
+	
+    }
+}
+
+
+1;
