@@ -60,6 +60,7 @@ sub resolve_version {
     return $exec;
 }
 
+#DON'T NEED THIS ANYMORE
 sub validate_params {
     my ($self, $params) = @_;
     
@@ -111,6 +112,7 @@ sub _verify_type_is_boolean {
     }
     return;
 }
+
 sub valid_params {
     return {
 	file_name => {
