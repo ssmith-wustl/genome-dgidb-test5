@@ -7,7 +7,6 @@ use Genome;
 
 class Genome::Model::Tools::RepeatMasker::Run {
     is => ['Genome::Model::Tools::RepeatMasker','Genome::Utility::FileSystem'],
-
 };
 
 sub create {
@@ -41,7 +40,14 @@ sub create {
 sub execute {
     my $self = shift;
 
-    my $options = ' -species human -qq -dir '. $self->output_directory;
+    my $options = ' -species '. $self->species;
+    if ($self->mask && $self->mask ne '-n') {
+        $options .=  ' '. $self->mask;
+    }
+    if ($self->sensitivity) {
+        $options .= ' '. $self->sensitivity;
+    }
+    $options .= ' -dir '. $self->output_directory;
     my $cmd = 'RepeatMasker '. $options .' '. $self->fasta_file;
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
