@@ -203,7 +203,10 @@ sub sample_type {
     my $dna_type;
     my @dna = GSC::DNA->get(dna_name => $self->sample_name);
     if (@dna == 1) {
+        
         if ($dna[0]->dna_type eq 'genomic dna') {
+            return 'dna';
+        } elsif ($dna[0]->dna_type eq 'pooled dna') {
             return 'dna';
         } elsif ($dna[0]->dna_type eq 'rna') {
             return 'rna';
