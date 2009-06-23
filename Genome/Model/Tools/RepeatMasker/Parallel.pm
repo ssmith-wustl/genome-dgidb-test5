@@ -19,9 +19,10 @@ class Genome::Model::Tools::RepeatMasker::Parallel {
     has => [
             kb_sequence => {
                 is => 'Number',
-                doc => 'The number of snapshots to create. defalut_value=100',
+                doc => 'The number of snapshots to create. default_value=10000',
                 default_value => 10000,
             },
+            _fasta_file => { is_optional => 1, },
             #output_directory => {
             #                     calculate_from => ['base_output_directory','unique_subdirectory'],
             #                     calculate => q|
@@ -45,6 +46,8 @@ class Genome::Model::Tools::RepeatMasker::Parallel {
 sub pre_execute {
     my $self = shift;
 
+    $self->_fasta_file($self->fasta_file);
+    
     my @fasta_files;
     
     my $file_counter = 1;
@@ -98,8 +101,60 @@ sub post_execute {
     my $self = shift;
 
     print Data::Dumper->new([$self])->Dump;
+    my $output_basename;
+    my @fasta_files = @{$self->fasta_file};
+    my %files;
+    for my $fasta_file (@fasta_files) {
+        my $fasta_basename = File::Basename::basename($fasta_file);
+        $fasta_basename =~ /(.*)_(\d+)$/;
+        my $file_counter = $2;
+        $output_basename = $1;
+        my $file = $self->base_output_directory .'/'. $file_counter .'/'. $fasta_basename .'.out';
+        $files{$file_counter} =  $file;
+    }
+    my @output_files;
+    for my $key ( sort {$a <=> $b} keys %files) {
+        push @output_files, $files{$key};
+    }
 
-    # merge the RepeatMasker tables
+    my $output_file = $self->base_output_directory .'/'. $output_basename .'.out';
+    my $merge = Genome::Model::Tools::RepeatMasker::MergeOutput->create(
+        input_files => \@output_files,
+        output_file => $output_file,
+    );
+    unless ($merge) {
+        die ('Failed to create merge tool for RepeatMasker output');
+    }
+    unless ($merge->execute) {
+        die ('Failed to execute the RepeatMasker output merging tool');
+    }
+
+    my @masked_files;
+    for my $key ( sort {$a <=> $b} keys %files) {
+        my $file = $files{$key};
+        $file =~ s/\.out/\.masked/;
+        push @masked_files, $file;
+    }
+    my $masked_file = $self->base_output_directory .'/'. $output_basename .'.masked';
+    @masked_files = grep { -f } @masked_files;
+    Genome::Utility::FileSystem->cat(
+        input_files => \@masked_files,
+        output_file => $masked_file,
+    );
+    for my $file (@fasta_files,@output_files,@masked_files) {
+        # TODO: unlink($file);
+    }
+    my $table = Genome::Model::Tools::RepeatMasker::GenerateTable->create(
+        fasta_file => $self->_fasta_file,
+        output_file => $output_file,
+        table_file => $self->base_output_directory .'/'. $output_basename .'.tsv',
+    );
+    unless ($table) {
+        die('Failed to create table generating tool');
+    }
+    unless ($table->execute) {
+        die('Failed to execute table generating tool');
+    }
     return 1;
 }
 
