@@ -52,7 +52,7 @@ class Genome::Model::Tools::Snp::GetDbsnps {
 		 is_optional  => 1,
 	     },
 
-	     ],
+	]
 	
     
 };
@@ -61,7 +61,7 @@ class Genome::Model::Tools::Snp::GetDbsnps {
 sub help_brief {
     return <<EOS
   This tool was design to retrieve dbsnp\'s for an individual site/range or list of sites and will check for an allele match to your variant if provided or it will simply state which sites on your list/input coords coinside with a dbsnp.
-  EOS
+EOS
 }
 
 sub help_synopsis {
