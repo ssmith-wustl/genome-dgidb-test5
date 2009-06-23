@@ -12,11 +12,11 @@ BEGIN {
 }
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/Hash';
-my @file_names = map{$test_dir."/$_"}qw(test.fa test1.fa);
+my $test_file = 'test1.fa';
 my $dir = $test_dir.'/velvet_run';
 
 my $vh = Genome::Model::Tools::Velvet::Hash->create(
-    file_names => \@file_names,
+    file_name => $test_dir.'/'.$test_file,
     directory  => $dir,
 );
 
