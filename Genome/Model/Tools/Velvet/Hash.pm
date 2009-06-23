@@ -8,10 +8,10 @@ use Genome;
 
 class Genome::Model::Tools::Velvet::Hash {
     is           => 'Genome::Model::Tools::Velvet',
-    has_many     => [
-        file_names  => {
+    has => [
+         file_name  => {
             is      => 'String', 
-            doc     => 'input file name(s)',
+            doc     => 'input file name',
         }
     ],
     has_optional => [
@@ -46,7 +46,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gt velvet hash --file-names name [--directory dir --hash-length 21 --file-format fastq --read-type short]
+gt velvet hash --file-name name [--directory dir --hash-length 21 --file-format fastq --read-type short]
 EOS
 }
 
@@ -68,11 +68,9 @@ sub create {
     my $self  = $class->SUPER::create(@_);
     my $dir   = $self->directory;
 
-    for my $file ($self->file_names) {
-        unless (-s $file) {
-            $self->error_message("Input file: $file, not existing or is empty");
-            return;
-        }
+    unless (-s $self->file_name) {
+	$self->error_message("Input file: ".$self->file_name." not existing or is empty");
+	return;
     }
     
     if (-d $dir) {
@@ -92,9 +90,7 @@ sub create {
 
 sub execute {
     my $self = shift;
-    
-    my $files = join ' ', $self->file_names;
-    
+        
     my $command = sprintf(
         '%s %s %d -%s -%s %s',
         $self->resolve_version,
@@ -102,7 +98,7 @@ sub execute {
         $self->hash_length,
         $self->file_format,
         $self->read_type,
-        $files,
+        $self->file_name,
     );
     
     if (system $command) {
