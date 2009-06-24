@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use Command;
 use IO::File;
+use File::Basename;
 
 class Genome::Model::Tools::Sam::Merge {
     is  => 'Genome::Model::Tools::Sam',
@@ -99,7 +100,9 @@ sub execute {
 	
 	if (!$self->is_sorted) {
 	    foreach my $input_file (@files) {
-	        my $tmpfile = File::Temp->new(SUFFIX => ".bam" );
+		my $dirname = dirname($input_file);
+		print "Using $dirname\n";
+	        my $tmpfile = File::Temp->new(DIR=>$dirname, SUFFIX => ".sort_tmp.bam" );
 	        my ($tgt_file) = $tmpfile->filename =~ m/(.*?)\.bam$/;
 	        my $sam_sort_cmd = sprintf("%s sort %s %s", $self->samtools_path, $input_file,  $tgt_file);
 	        my $sam_sort_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$sam_sort_cmd, input_files=>[$input_file], output_files=>[$tmpfile->filename], skip_if_output_is_present=>0);
