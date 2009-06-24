@@ -19,27 +19,10 @@ class Genome::Model::Tools::RepeatMasker::Parallel {
     has => [
             kb_sequence => {
                 is => 'Number',
-                doc => 'The number of snapshots to create. default_value=10000',
+                doc => 'The number of kb sequence to include in each instance. default_value=10000',
                 default_value => 10000,
             },
             _fasta_file => { is_optional => 1, },
-            #output_directory => {
-            #                     calculate_from => ['base_output_directory','unique_subdirectory'],
-            #                     calculate => q|
-            #                         return $base_output_directory . $unique_subdirectory;
-            #                     |
-            #                 },
-            #unique_subdirectory => {
-            #                calculate_from => ['fasta_file'],
-            #                calculate => q|
-            #                                   my $fasta_basename = File::Basename::basename($fasta_file);
-            #                                   if ($fasta_basename =~ /(\d+)$/) {
-            #                                       return '/'. $1;
-            #                                   } else {
-            #                                       return '';
-            #                                   }
-            #                               |,
-            #            },
         ],
 };
 
@@ -52,7 +35,7 @@ sub pre_execute {
     
     my $file_counter = 1;
     my $fasta_basename = File::Basename::basename($self->fasta_file);
-    my $output_file = $self->base_output_directory .'/'. $fasta_basename .'_'. $file_counter;
+    my $output_file = $self->output_directory .'/'. $fasta_basename .'_'. $file_counter;
     #Divide fasta files by kb_sequence
     my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output_file);
     unless ($output_fh) {
@@ -79,7 +62,7 @@ sub pre_execute {
             if ($total_seq >= ($self->kb_sequence * 1000)) {
                 $file_counter++;
                 $output_fh->close;
-                $output_file = $self->base_output_directory .'/'. $fasta_basename .'_'. $file_counter;
+                $output_file = $self->output_directory .'/'. $fasta_basename .'_'. $file_counter;
                 $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output_file);
                 unless ($output_fh) {
                     $self->error_message('Failed to open fasta output file '. $output_file);
@@ -109,7 +92,7 @@ sub post_execute {
         $fasta_basename =~ /(.*)_(\d+)$/;
         my $file_counter = $2;
         $output_basename = $1;
-        my $file = $self->base_output_directory .'/'. $file_counter .'/'. $fasta_basename .'.out';
+        my $file = $self->output_directory .'/'. $fasta_basename .'.out';
         $files{$file_counter} =  $file;
     }
     my @output_files;
@@ -117,7 +100,7 @@ sub post_execute {
         push @output_files, $files{$key};
     }
 
-    my $output_file = $self->base_output_directory .'/'. $output_basename .'.out';
+    my $output_file = $self->output_directory .'/'. $output_basename .'.out';
     my $merge = Genome::Model::Tools::RepeatMasker::MergeOutput->create(
         input_files => \@output_files,
         output_file => $output_file,
@@ -135,19 +118,24 @@ sub post_execute {
         $file =~ s/\.out/\.masked/;
         push @masked_files, $file;
     }
-    my $masked_file = $self->base_output_directory .'/'. $output_basename .'.masked';
+    my $masked_file = $self->output_directory .'/'. $output_basename .'.masked';
     @masked_files = grep { -f } @masked_files;
     Genome::Utility::FileSystem->cat(
         input_files => \@masked_files,
         output_file => $masked_file,
     );
-    for my $file (@fasta_files,@output_files,@masked_files) {
-        # TODO: unlink($file);
+    for my $fasta_file (@fasta_files) {
+        my @rm_files = glob($fasta_file.'*');
+        for my $rm_file (@rm_files) {
+            unless (unlink($rm_file)) {
+                die('Failed to remove file '. $rm_file .":  $!");
+            }
+        }
     }
     my $table = Genome::Model::Tools::RepeatMasker::GenerateTable->create(
         fasta_file => $self->_fasta_file,
         output_file => $output_file,
-        table_file => $self->base_output_directory .'/'. $output_basename .'.tsv',
+        table_file => $self->output_directory .'/'. $output_basename .'.tsv',
     );
     unless ($table) {
         die('Failed to create table generating tool');
