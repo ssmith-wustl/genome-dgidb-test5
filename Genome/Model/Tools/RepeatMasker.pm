@@ -14,7 +14,7 @@ class Genome::Model::Tools::RepeatMasker {
             is => 'Text',
             doc => 'The layers file path(fully qualified) formatted from maq alignments',
         },
-        base_output_directory => {
+        output_directory => {
             is => 'Text',
             doc => 'The output directory where files are written',
         },
@@ -36,25 +36,6 @@ class Genome::Model::Tools::RepeatMasker {
             valid_values => ['-small','-xsmall','-x','-n'],
         },
     ],
-    has => [
-            output_directory => {
-                                 calculate_from => ['base_output_directory','unique_subdirectory'],
-                                 calculate => q|
-                                     return $base_output_directory . $unique_subdirectory;
-                                 |
-                             },
-            unique_subdirectory => {
-                            calculate_from => ['fasta_file'],
-                            calculate => q|
-                                               my $fasta_basename = File::Basename::basename($fasta_file);
-                                               if ($fasta_basename =~ /(\d+)$/) {
-                                                   return '/'. $1;
-                                               } else {
-                                                   return '';
-                                               }
-                                           |,
-                        },
-            ],
 };
 
 1;
