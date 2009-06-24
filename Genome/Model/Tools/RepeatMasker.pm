@@ -12,7 +12,7 @@ class Genome::Model::Tools::RepeatMasker {
     has_input => [
         fasta_file => {
             is => 'Text',
-            doc => 'The layers file path(fully qualified) formatted from maq alignments',
+            doc => 'The fasta file of sequences to mask',
         },
         output_directory => {
             is => 'Text',
