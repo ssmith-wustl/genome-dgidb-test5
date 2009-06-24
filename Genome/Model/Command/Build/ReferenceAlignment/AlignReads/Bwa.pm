@@ -78,7 +78,7 @@ sub _calculate_total_reads_passed_quality_filter_count {
             my @f = grep {-f $_ } $self->instrument_data->fastq_filenames;
             unless (@f) {
                 $self->error_message("Problem calculating metric...this doesn't mean the step failed");
-                return;
+                return 0;
             }
             my ($wc) = grep { /total/ } `wc -l @f`;
             $wc =~ s/total//;
@@ -214,14 +214,14 @@ sub execute {
     # ensure the alignments are present
     unless ($alignment->find_or_generate_alignment_data) {
         $self->error_message("Error finding or generating alignments!:\n" .  join("\n",$alignment->error_message));
-        return;
+        return 0;
     }
 
     $self->generate_metric($self->metrics_for_class);
 
     unless ($self->verify_successful_completion) {
         $self->error_message("Error verifying completion!");
-        return;
+        return 0;
     }
 
     return 1;
@@ -234,14 +234,14 @@ sub verify_successful_completion {
 
     unless (-d $self->build_directory) {
     	$self->error_message("Build directory does not exist: " . $self->build_directory);
-        return;
+        return 0;
     }
 
     my $instrument_data_assignment = $self->instrument_data_assignment;
     my $alignment = $instrument_data_assignment->alignment;
     unless ($alignment->verify_alignment_data) {
         $self->error_message('Failed to verify alignment data: '. join ("\n",$alignment->error_message));
-        return;
+        return 0;
     }
     return 1;
 }
