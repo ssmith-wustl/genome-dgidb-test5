@@ -197,9 +197,9 @@ BEGIN {  # This is ugly when its above the class definition, but I need it to ha
             property => 'name',
         },
         genomic_dna => {
-                        needs_to_be_verified => 1,
-                        class => 'Genome::Sample::Genomic',
-                        property => 'name',
+	    needs_to_be_verified => 1,
+	    class => 'Genome::Sample::Genomic',
+	    property => 'name',
                     },
         sample_group => {
             needs_to_be_verified => 0,
@@ -212,10 +212,15 @@ BEGIN {  # This is ugly when its above the class definition, but I need it to ha
             #property => 'name',
         },
         flow_cell_id => {
-                         needs_to_be_verified => 1,
-                         class => 'Genome::InstrumentData::Solexa',
-                         property => 'flow_cell_id',
+	    needs_to_be_verified => 1,
+	    class => 'Genome::InstrumentData::Solexa',
+	    property => 'flow_cell_id',
                      },
+	lane => {
+	    needs_to_be_verified => 1,
+	    class => 'Genome::InstrumentData::Solexa',
+	    property => 'lane',
+	},
     );
 };
 
