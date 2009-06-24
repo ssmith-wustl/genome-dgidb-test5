@@ -215,11 +215,6 @@ BEGIN {  # This is ugly when its above the class definition, but I need it to ha
 	    needs_to_be_verified => 1,
 	    class => 'Genome::InstrumentData::Solexa',
 	    property => 'flow_cell_id',
-                     },
-	lane => {
-	    needs_to_be_verified => 1,
-	    class => 'Genome::InstrumentData::Solexa',
-	    property => 'lane',
 	},
     );
 };
