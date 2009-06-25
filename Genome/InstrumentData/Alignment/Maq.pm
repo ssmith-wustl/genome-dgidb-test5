@@ -211,12 +211,15 @@ sub alignment_bam_file_paths {
     return unless $self->alignment_directory;
     return unless -d $self->alignment_directory;
     my @bam_files = grep { -e $_ && $_ !~ /merged_rmdup/} glob($self->alignment_directory .'/*.bam');
+    
     if ( scalar(@bam_files) > 0 ) {
         $self->status_message("Found ".scalar(@bam_files)." BAM files.");
         return @bam_files;
-    } else {
+    } 
+    else {
         $self->status_message('No BAM files found.  Creating from MAP files.');
         my @map_files = $self->alignment_file_paths;
+        
         if ( scalar(@map_files) > 0 ) {
             $self->status_message("Found ".scalar(@map_files)." MAP files.  Creating BAM files.");
             $self->status_message("map files:\n".join("\n",@map_files));
@@ -226,7 +229,8 @@ sub alignment_bam_file_paths {
                     $self->status_message("Map file: $map_file exists. Converting to BAM.");
                     #system("cp $map_file /gscuser/jpeck/target/solexa_all_seq.map"); 
                     #$self->status_message("Copied file.");
-                } else {
+                } 
+                else {
                     $self->error_message("Map file: $map_file DOES NOT EXIST. Returning."); 
                     return;
                 }
@@ -244,27 +248,38 @@ sub alignment_bam_file_paths {
                     lib_tag     => $lib_tag,
                     index_bam   => 0,
                 );
+                my $bam_file = $map_to_bam->bam_file_path;
                 my $rv = $map_to_bam->execute;
+                
                 if ($rv == 1) {
                     $self->status_message("Conversion succeeded.");
-                } else {
+                    
+                    if (-e $bam_file) {
+                        push @bam_files, $bam_file;
+                    }
+                    else {
+                        $self->error_message("Somehow bam file: $bam_file not existing");
+                        $error_count++;
+                    }
+                } 
+                else {
                     $self->error_message("Error converting MAP file: $map_file to BAM file.  Return value: $rv");
                     $error_count++;
                 }
             }
             if ($error_count == 0 ) {
                 $self->status_message("All MAP files converted successfully to BAM files.");
-                return 1;
-            } else {
+                return @bam_files;
+            } 
+            else {
                 $self->error_message("There were $error_count error(s) converting map files to bam files.");
-                #return;
             }  
-        } else {
+        } 
+        else {
             $self->error_message("No MAP files found.  Can't create BAM files.");
-            return; 
         }
+        return;
     }
-
 }
 
 #a glob for subsequence alignment files
