@@ -29,7 +29,7 @@ sub file_resolver {
 
     my($chrom_name, $data_directory) = @_;
 
-    my $path = "$data_directory/variations/variations_" . $chrom_name . ".csv";
+    my $path = "$data_directory/variations_" . $chrom_name . ".csv";
     return $path;
 }
 
