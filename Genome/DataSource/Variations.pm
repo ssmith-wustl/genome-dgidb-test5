@@ -11,7 +11,7 @@ sub delimiter {
 }
 
 sub column_order {
-return [qw( variation_id external_variation_id allele_string variation_type chrom_name start stop pubmed_id)];
+return [qw( variation_id allele_string variation_type chrom_name start stop submitter_name database version )];
 }
 
 sub sort_order {
@@ -22,15 +22,14 @@ sub skip_first_line {
     return 0;
 }
 
-sub constant_values { ['build_id'] };
-sub required_for_get { [qw( chrom_name build_id)] }
+sub constant_values { ['data_directory'] };
+sub required_for_get { [qw( chrom_name data_directory)] }
 
 sub file_resolver {
-    my($chrom_name, $build_id) = @_;
 
-    my $build = Genome::Model::Build::ImportedAnnotation->get($build_id);
-    my $annotation_dir = $build->annotation_data_directory;
-    my $path = "$annotation_dir/variations/variations_" . $chrom_name . ".csv";
+    my($chrom_name, $data_directory) = @_;
+
+    my $path = "$data_directory/variations/variations_" . $chrom_name . ".csv";
     return $path;
 }
 
