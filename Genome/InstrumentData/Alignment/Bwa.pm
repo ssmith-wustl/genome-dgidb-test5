@@ -271,54 +271,38 @@ sub _run_aligner {
     my @aln_log_files;
     
     my $bwa_aln_params = (defined $aligner_params{'bwa_aln_params'} ? $aligner_params{'bwa_aln_params'} : "");
+    
+    foreach my $input (@input_pathnames) {
 
-    my $bwa_aln_tmp_dir = File::Temp::tempdir( DIR => $alignment_directory, CLEANUP => 1 );
 
-    my %wfparams = (
-	'aligner_version' =>$self->aligner_version,
-        'query_input' =>\@input_pathnames,
-        'reference_fasta_path' => $reference_fasta_path,
-	'bwa_aln_params' => $bwa_aln_params,
-	'alignments_dir' => $alignment_directory,
-	'output_path' => $bwa_aln_tmp_dir
-    );
+        my $tmp_sai_file = File::Temp->new( DIR => $tmp_dir, SUFFIX => ".sai" );
+	my $tmp_log_file = File::Temp->new( DIR => $tmp_dir, SUFFIX => ".bwa.aln.log");
 
-    # bwa aln is long.  parallelize this step!
-    require Workflow::Simple;
-    $Workflow::Simple::store_db=0;
-
-    my $op = Workflow::Operation->create(
-            name => 'BWA Align Step.',
-            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::Bwa::AlignStep')
-    );
-
-    $op->parallel_by('query_input');
-    my $wfoutput = Workflow::Simple::run_workflow_lsf(
-            $op,
-	    %wfparams
-   );
-
-   #check workflow for errors
-   if (!defined $wfoutput) {
-       foreach my $error (@Workflow::Simple::ERROR) {
-           $self->error_message($error->error);
-       }
-       return;
-   } else {
-       my $results = $wfoutput->{result};
-       my $fastq_files = $wfoutput->{fastq_file};
-       for (my $i = 0; $i < scalar(@$results); $i++) {
-           my $rv = $results->[$i];
-                if ($rv != 1) {
-                       $self->error_message("Workflow had an error while running bwa aln on: ". $fastq_files->[$i]);
-                       $self->clean_up_and_die( "Workflow had an error while running bwa aln on : ". $fastq_files->[$i]);
-                }
-       }
-   }
-   
-   @sai_intermediate_files = @{$wfoutput->{sai_file}};
-   @aln_log_files = @{$wfoutput->{output_file}};
- 
+	
+        my $cmdline = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
+	    . sprintf( ' aln %s %s %s 1> ',
+		       $bwa_aln_params, $reference_fasta_path, $input )
+	    . $tmp_sai_file->filename . ' 2>>'
+	    . $tmp_log_file->filename;
+	
+	
+        push @sai_intermediate_files, $tmp_sai_file;
+	push @aln_log_files, $tmp_log_file;
+	
+        # run the aligner
+        Genome::Utility::FileSystem->shellcmd(
+            cmd          => $cmdline,
+            input_files  => [ $reference_fasta_path, $input ],
+            output_files => [ $tmp_sai_file->filename, $tmp_log_file->filename ],
+            skip_if_output_is_present => 0,
+	    );
+        unless ($self->_verify_bwa_aln_did_happen(sai_file => $tmp_sai_file->filename,
+						  log_file => $tmp_log_file->filename)) {
+	    $self->error_message("bwa aln did not seem to successfully take place for " . $reference_fasta_path);
+	    $self->die_and_clean_up($self->error_message);
+	}
+    }
+    
     #### STEP 2: Use "bwa samse" or "bwa sampe" to perform single-ended or paired alignments, respectively.
     #### Runs once for ALL input files
 
@@ -360,7 +344,7 @@ sub _run_aligner {
 	    . sprintf(
 	    ' samse %s %s %s %s',
 	    $bwa_samse_params, $reference_fasta_path,
-	    $sai_intermediate_files[0],
+	    $sai_intermediate_files[0]->filename,
 	    $input_pathnames[0]
 	    )
 	    . " 2>>"
@@ -379,7 +363,7 @@ sub _run_aligner {
 	    ' sampe %s %s %s %s',
 	    $bwa_sampe_params,
 	    $reference_fasta_path,
-	    join (' ', @sai_intermediate_files),
+	    join (' ', map {$_->filename} @sai_intermediate_files),
 	    join (' ', @input_pathnames)
 	    )
 	    . " 2>>"
@@ -391,22 +375,17 @@ sub _run_aligner {
     #BWA is not nice enough to give us an unaligned output file so we need to
     #filter it out on our own
     
+    my $sam_map_output_fh =
+	File::Temp->new( DIR => $tmp_dir, SUFFIX => ".sam" );
+    my $unaligned_output_fh =
+	IO::File->new( ">" . $self->unaligned_reads_list_path );
+
     my $sam_run_output_fh = IO::File->new( $sam_command_line . "|" );
     if ( !$sam_run_output_fh ) {
 	$self->error_message("Error running $sam_command_line $!");
 	return;
     }
-   
-    my ($sam_map_output_fh, $unaligned_output_fh); 
-    unless ($sam_map_output_fh = File::Temp->new( DIR => $tmp_dir, SUFFIX => ".sam" )) {
-	$self->error_message("Couldn't open map output file: $!");
-	$self->die_and_clean_up($self->error_message);
-    }
-    unless ($unaligned_output_fh = IO::File->new( ">" . $self->unaligned_reads_list_path )) {
-	$self->error_message("Couldn't open unaligned read output file: $!");
-	$self->die_and_clean_up($self->error_message);
-    }
-
+    
     while (<$sam_run_output_fh>) {
 	my @line = split /\s+/;
 	
@@ -426,6 +405,7 @@ sub _run_aligner {
         $self->error_message('Failed to process_low_quality_alignments');
         $self->die_and_clean_up($self->error_message);
     }
+    
 
     #### STEP 3: Convert the SAM format output from samse/sampe (a text file) into the binary
     #### BAM file format.  This requires "samtools import"
@@ -453,7 +433,7 @@ sub _run_aligner {
 
     #### STEP 4: Concat all the log files into one
 
-    my $log_input_fileset = join " ", (@aln_log_files, $samxe_logfile->filename);
+    my $log_input_fileset = join " ", map {$_->filename} (@aln_log_files, $samxe_logfile);
     my $log_output_file = $self->aligner_output_file_path;
     
     my $concat_log_cmd = sprintf('cat %s > %s',
@@ -462,12 +442,10 @@ sub _run_aligner {
     
     Genome::Utility::FileSystem->shellcmd(
             cmd          => $concat_log_cmd,
-            input_files  => [ (@aln_log_files, $samxe_logfile->filename) ],
+            input_files  => [ map {$_->filename} (@aln_log_files, $samxe_logfile 	) ],
             output_files => [ $log_output_file ],
             skip_if_output_is_present => 0,
 	    );
-    
-    # cleanup the intermediate files
 
     unless ($self->verify_aligner_successful_completion($self->aligner_output_file_path)) {
         $self->error_message('Failed to verify bwa successful completion from output file '. $self->aligner_output_file_path);
@@ -479,6 +457,25 @@ sub _run_aligner {
     return 1;
 }
 
+
+sub _verify_bwa_aln_did_happen {
+    my $self = shift;
+    my %p = @_;
+
+    unless (-e $p{sai_file} && -s $p{sai_file}) {
+	$self->error_message("Expected SAI file is $p{sai_file} nonexistent or zero length.");
+	return;
+    }
+    
+    unless ($self->_inspect_log_file(log_file=>$p{log_file},
+				     log_regex=>'(\d+) sequences have been processed')) {
+	
+	$self->error_message("Expected to see 'X sequences have been processed' in the log file where 'X' must be a nonzero number.");
+	return 0;
+    }
+    
+    return 1;
+}
 
 sub process_low_quality_alignments {
     my $self = shift;
