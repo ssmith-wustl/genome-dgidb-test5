@@ -157,7 +157,8 @@ sub execute {
    #    }
 
 
-   my $merge_rv = Genome::Model::Tools::Sam::Merge->execute(files_to_merge=>\@bam_files, merged_file=>$bam_merged_output_file); 
+   # these are already sorted coming out of the initial merge, so don't bother re-sorting
+   my $merge_rv = Genome::Model::Tools::Sam::Merge->execute(files_to_merge=>\@bam_files, merged_file=>$bam_merged_output_file, is_sorted=>1); 
 
    $now = UR::Time->now;
    $self->status_message("<<< Completing Bam merge at $now.");
