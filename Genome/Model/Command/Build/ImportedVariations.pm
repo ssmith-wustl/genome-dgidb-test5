@@ -8,10 +8,9 @@ use Genome;
 class Genome::Model::Command::Build::ImportedVariations {
     is => 'Genome::Model::Command::Build',
     has => [
-        variation_DATA_directory => {
+        variation_data_directory => {
             is => 'Path',
             doc => 'path to imported_annotation folder, not needed if this is a composite annotation model, not needed for composite annotation models(combined-annotation)',
-            is_optional => 1,
         },
         version => {
             is => 'String',
