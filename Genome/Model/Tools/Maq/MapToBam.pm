@@ -87,11 +87,10 @@ sub execute {
     $tosam_path = $ver < 7 ? $tosam_path.'short' : $tosam_path.'long';
 
     my $map_file = $self->map_file;
-    my ($root_name) = basename $map_file =~ /^(\S+)\.map/;
+    my $bam_file = $self->bam_file_path;
+    my $sam_file = $bam_file;
     
-    my $map_dir  = dirname $map_file;
-    my $sam_file = $map_dir . "/$root_name.sam";
-    my $bam_file = $map_dir . "/$root_name.bam";
+    $sam_file =~ s/\.bam$/\.sam/;
 
     my $cmd = sprintf('%s %s %s > %s', $tosam_path, $map_file, $self->lib_tag, $sam_file);
     my $rv  = system $cmd;
@@ -129,5 +128,17 @@ sub execute {
     unlink $sam_file unless $self->keep_sam;
     return 1;
 }
+
+
+sub bam_file_path {
+    my $self     = shift;
+    my $map_file = $self->map_file;
+
+    my ($base, $dir) = fileparse($map_file);
+    my ($root) = $base =~ /^(\S+)\.map/;
+
+    return $dir.$root.'.bam';
+}
+
 
 1;

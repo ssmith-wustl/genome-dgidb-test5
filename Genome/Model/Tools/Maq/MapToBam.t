@@ -12,7 +12,7 @@ use File::Compare;
 
 BEGIN {
     if (`uname -a` =~ /x86_64/){
-        plan tests => 7;
+        plan tests => 8;
     }
     else{
         plan skip_all => 'Must run on a 64 bit machine';
@@ -31,6 +31,9 @@ my $tmp_dir  = File::Temp::tempdir(
 
 copy "$root_dir/test.map", $tmp_dir;
 my $map_file = "$tmp_dir/test.map";
+my $bam_file = "$tmp_dir/test.bam";
+my $sam_file = $bam_file;
+$sam_file =~ s/\.bam$/\.sam/;
 
 my $to_bam = Genome::Model::Tools::Maq::MapToBam->create(
     map_file => $map_file,                                                      
@@ -39,11 +42,14 @@ my $to_bam = Genome::Model::Tools::Maq::MapToBam->create(
     use_version => '0.7.1',
 );
 
+my $to_bam_bam_file = $to_bam->bam_file_path;
+ok($to_bam_bam_file eq $bam_file, 'bam_file_path method return ok');
+
 isa_ok($to_bam,'Genome::Model::Tools::Maq::MapToBam');
 ok($to_bam->execute,'bam executed ok');
 
-is(compare("$tmp_dir/test.sam", "$root_dir/test_short.sam"), 0, 'Sam file was created ok');
-cmp_ok(compare("$tmp_dir/test.bam", "$root_dir/test_short.bam"), '==', 0, 'Bam file was created ok');
+is(compare($sam_file, "$root_dir/test_short.sam"), 0, 'Sam file was created ok');
+cmp_ok(compare($bam_file, "$root_dir/test_short.bam"), '==', 0, 'Bam file was created ok');
 
 my $to_bam_fixmate = Genome::Model::Tools::Maq::MapToBam->create(
     map_file => $map_file,                                                      
@@ -53,7 +59,7 @@ my $to_bam_fixmate = Genome::Model::Tools::Maq::MapToBam->create(
 );
 
 ok($to_bam_fixmate->execute,'bam fixmate executed ok');
-is(compare("$tmp_dir/test.bam", "$root_dir/test_short.fix.bam"), 0, 'Bam file with mate fixed was created ok');
+is(compare($bam_file, "$root_dir/test_short.fix.bam"), 0, 'Bam file with mate fixed was created ok');
 
 
 exit;
