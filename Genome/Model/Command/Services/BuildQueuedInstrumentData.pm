@@ -101,8 +101,19 @@ sub execute {
               next PSE;
               
           }
+          if ($instrument_data_type =~ /solexa/i) {
+
+              my @bwa_pp = grep { $_ eq 'bwa0.4.9 and samtools r320wu1' } @processing_profile_names;
+
+              unless (@bwa_pp > 0) {
+                  push @processing_profile_names, 'bwa0.4.9 and samtools r320wu1'; 
+              }
+
+          }
           
         PP: foreach my $processing_profile_name (@processing_profile_names) {
+             
+              if ($processing_profile_name eq 'maq 0.7.1') { $processing_profile_name = 'maq 0.7.1 alignments only'; }
               
               my $auto_build = 1;
 
@@ -278,6 +289,8 @@ sub execute {
           $pse->pse_status("completed");
           
       }
+   
+    UR::Context->commit();
     
     #Execute all the builds for models with new data
   MODEL: foreach my $model_id (keys %model_ids) {
@@ -288,7 +301,7 @@ sub execute {
         );
         
         unless (defined($build)) { 
-            warn "failed to create a Genome::Model::Command::Build for model 'model_id'";
+            warn "failed to create a Genome::Model::Command::Build for model '$model_id'";
             next MODEL;
         }
         

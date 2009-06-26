@@ -56,10 +56,14 @@ sub deduplication_job_classes {
 }
 
 sub generate_reports_job_classes {
-    my @steps = (
-        'Genome::Model::Command::Build::ReferenceAlignment::RunReports'
-    );
+    my $self = shift;
+    if (defined($self->indel_finder_name)) {
+        my @steps = (
+            'Genome::Model::Command::Build::ReferenceAlignment::RunReports'
+        );
     return @steps;
+    }
+    return;
 }
 
 
