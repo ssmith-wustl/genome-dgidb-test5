@@ -21,7 +21,17 @@ class Genome::Model::Tools::Sv::Peruse {
         type => 'String',
         is_optional => 0,
         doc => "directory produced by gt sv yenta",
-    },        
+    },
+#    results_file => {
+#        type => 'String',
+#        is_optional => 1,
+#        doc => "file containing breakdancer review results",
+#    },
+    start_from => {
+        type => 'String',
+        is_optional => 1,
+        doc => "string indicating which SV to pop up",
+    },
     viewer_program => {
         type => "String",
         default => "eog",
@@ -48,7 +58,7 @@ class Genome::Model::Tools::Sv::Peruse {
 sub execute {
     my $self=shift;
     $DB::single = 1; 
-    
+
     my @types = map { uc $_ } split /,/, $self->types;
     my $allowed_types = $self->possible_BD_type;
     foreach my $type (@types) {
@@ -73,7 +83,39 @@ sub execute {
     my $dir = $self->dir;
 
     my $viewer = $self->viewer_program;
-    
+    my $start = $self->start_from;
+    if($start) {
+        my ($start_chr1, $start_chr1_pos, $start_chr2,$start_chr2_pos,$start_type) = split /\_/, $start;
+        while(my $line = $indel_fh->getline) {
+            chomp $line;
+            my ($chr1,
+                $chr1_pos,
+                $orientation1,
+                $chr2,
+                $chr2_pos,
+                $orientation2,
+                $type,
+                $size,
+            ) = split /\s+/, $line; 
+            if($chr1 eq $start_chr1 && $chr2 eq $start_chr2 && $start_chr1_pos eq $chr1_pos && $start_chr2_pos eq $chr2_pos && $start_type eq $type) {
+
+                my $name = "$dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_*_${type}*.png";
+                print "Opening files for ${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_${type}\n";
+                system("$viewer $name &");
+                my $next = <STDIN>;
+                chomp $next;
+                if($next eq 'q') {
+                    exit 0;
+                }
+                else {
+                    last;
+                }
+            }
+        }
+    }
+
+
+
     #assuming we are reasonably sorted
     while ( my $line = $indel_fh->getline) {
         chomp $line;
@@ -101,7 +143,7 @@ sub execute {
             }
 
         }
-            
+
     }
 
     $indel_fh->close; 
@@ -115,7 +157,7 @@ sub help_detail {
     my $value = <<HELP;
 This module reads through a breakdancer output file and opens up all the associated files produced through gt sv yenta for viewing. The default viewer is eog. Each viewer is opened as a background process. To proceed to the next SV just hit enter. To quit, type q.
 HELP
-    
+
     return $value;
 }
 
