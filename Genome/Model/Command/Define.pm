@@ -64,6 +64,10 @@ class Genome::Model::Command::Define {
             is_input => 1,
             doc => 'The building of the model is performed automatically',
         },
+	result_model_id => {
+	    is => 'Integer',
+	    is_output => 1,
+	}
     ],
     schema_name => 'Main',
 };
@@ -263,6 +267,7 @@ sub execute {
 
     $self->status_message("Created model:");
     $self->status_message($model->pretty_print_text);
+    $self->result_model_id($model->id);
 
     return 1;
 }
