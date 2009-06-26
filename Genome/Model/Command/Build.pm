@@ -647,7 +647,7 @@ sub mail_summary {
     my $to = "To: " . $self->user_name . '@genome.wustl.edu' . "\n";
 
     $content .= "The new updated status cgi:\n";
-    $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/solexa/status.cgi?build-id='. $self->build_id ."\n\n";
+    $content .= 'https://lims.gsc.wustl.edu/cgi-bin/apipe/status.cgi?build-id='. $self->build_id ."\n\n";
 
     $content .= "The old stage one cgi:\n";
     $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/'. $model->sequencing_platform
