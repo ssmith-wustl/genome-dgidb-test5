@@ -154,19 +154,16 @@ sub _validate_params_for_step {
 
 sub get_assemble_params {
     my $self = shift;
-    return unless $self->assembler_params;
     return $self->get_param_string_as_hash ($self->assembler_params);
 }
 
 sub get_prepare_instrument_data_params {
     my $self = shift;
-    return unless $self->prepare_instrument_data_params;
     return $self->get_param_string_as_hash ($self->prepare_instrument_data_params);
 }
 
 sub get_preprocess_params {
     my $self = shift;
-    return unless $self->assembly_preprocess_params;
     return $self->get_param_string_as_hash ($self->assembly_preprocess_params);
 }
 
