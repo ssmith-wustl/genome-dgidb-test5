@@ -64,9 +64,11 @@ sub get_bam_content {
     my $build = $self->build;
     my $pileup_file = $build->bam_pileup_file;
     $self->status_message("Using pileup file $pileup_file to generate Bam coverage.");
-    my $bam_coverage_report = Genome::Model::Tools::Sam::Coverage->execute(pileup_file=>$pileup_file);
+    my $coverage = Genome::Model::Tools::Sam::Coverage->create(pileup_file=>$pileup_file);
+    my $bam_coverage_report = $coverage->execute;
     if (defined($bam_coverage_report) ) {
-        $self->status_message("Bam coverage report successfully generated from pileup file.");  
+        $self->status_message("Bam coverage report successfully generated from pileup file.");
+        $self->status_message("Bam coverage report string: \n".$bam_coverage_report);
         return $bam_coverage_report;
     }  else {
         $self->error_message("Could not generate Bam coverage report.");  
