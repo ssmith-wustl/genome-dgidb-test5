@@ -14,26 +14,32 @@ class Genome::Model::Command::Build::DeNovoAssembly::Assemble::Velvet {
 sub execute { 
     my $self = shift;
 
-    unless (-e $self->build->velvet_fastq_file) {
-	$self->error_message("Velvet fastq file does not exist");
-	return;
+    unless (-s $self->build->velvet_fastq_file) {
+        $self->error_message("Velvet fastq file does not exist");
+        return;
+    }
+
+    my $assemble_params = $self->model->processing_profile->get_assemble_params;
+    unless ( $assemble_params ) {
+        $self->error_message("Problem getting assembler params");
+        return;
     }
 
     my $run = Genome::Model::Tools::Velvet::Run->create(
-	file_name => $self->build->velvet_fastq_file,
-	directory => $self->build->data_directory,
-	version => $self->model->assembler_version,
-	%{$self->model->processing_profile->get_assemble_params},
-	);
+        file_name => $self->build->velvet_fastq_file,
+        directory => $self->build->data_directory,
+        version => $self->model->assembler_version,
+        %$assemble_params,
+    );
 
     unless ($run) {
-	$self->error_message("Failed velvet create");
-	return;
+        $self->error_message("Failed velvet create");
+        return;
     }
 
     unless ($run->execute) {
-	$self->error_message("Failed to run velvet");
-	return;
+        $self->error_message("Failed to run velvet");
+        return;
     }
 
     return 1;
