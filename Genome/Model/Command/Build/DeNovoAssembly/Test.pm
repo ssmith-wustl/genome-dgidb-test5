@@ -128,8 +128,7 @@ sub params_for_test_class {
         build => $model->latest_complete_build,
     );
 }
-
-sub required_attrs { return; }
+sub required_params_for_class { return; }
 
 sub mock_model {
     my $self = shift;
