@@ -58,6 +58,7 @@ sub create_alignments
     #CAT ALL PHDBALL FILES TOGETHER IF PRESENT SINCE PHDBALL FACTORY ONLY
     #WORK WITH SINGLE PHDBALL FILE
     #TODO - FIX THIS IN PHDBALL FACTORY
+    print "Please wait .. gathering phd data\n";
     unless ($self->_gather_phd_data) {
 	$self->error_message("Could not gather phd data");
 	return;
@@ -107,36 +108,36 @@ sub create_alignments
     return $cm_aligns, $ace_obj, $contig_tool, $scaffolds;
 }
 
-sub _gather_phd_data
-{
-    my ($self) = @_;
+sub _gather_phd_data { #and _remove_duplicates
+    my $self = shift;
 
     my $phdball_dir = '../phdball_dir';
 
-    return 1 if ! -d $phdball_dir;
-
-    my $autojoin_ball_name = 'autoJoinPhdBall';
-
-    return 1 if -s $phdball_dir.'/'.$autojoin_ball_name;
-
-    if (-d $phdball_dir)
-    {
-        my @ball_files = glob ("$phdball_dir/*");
-
-        if (scalar @ball_files > 0)
-        {
-            foreach my $ball_file (@ball_files)
-            {
-                my $ec = `cat $ball_file >> $phdball_dir/autoJoinPhdBall`;
-                $self->error_message ("Cannot cat $ball_file to autoJoinPhdBall") and
-		    return if $ec;
-            }
-        }
+    if (-d $phdball_dir) {
+	my @files = glob("$phdball_dir/*");
+	my $out_fh = IO::File->new("> $phdball_dir/autoJoinPhdBall") || die
+	    "Can not create phdball out file\n";
+	my $reads = {};
+	foreach my $ball (@files) {
+	    my $fh = IO::File->new("< $ball") || die "Can not open file: $ball\n";
+	    my $read_duplicated = 0;
+	    while (my $line = $fh->getline) {
+		if ($line =~ /BEGIN_SEQUENCE/) {
+		    my ($read) = $line =~ /BEGIN_SEQUENCE\s+(\S+)/;
+		    $read_duplicated = (exists $reads->{$read}) ? 1 : 0 ;
+		    $reads->{$read} = 1;
+		}
+		unless ($read_duplicated) {
+		    $out_fh->write($line);
+		}
+	    }
+	    $fh->close;
+	}
+	$out_fh->close;
+	$reads = undef;
     }
-
     return 1;
 }
-
 
 sub _add_phd_to_ace_DS_line
 {
@@ -536,30 +537,32 @@ sub make_joins
     my ($self, $scafs, $ace_obj, $ctg_tool) = @_;
 
     my $dir = cwd();
-
     print "Please wait: gathering phds and ace file .. this could take up to 10 minutes\n";
 
     my $ace_out = $self->ace.'.autojoined';
-
     my $xport = Finishing::Assembly::Ace::Exporter->new( file => $ace_out );
-
     my @phd_objs;
 
     my $phd_dir = "$dir/../phd_dir";
-
-    if (-d $phd_dir)
-    {
-	my $phd_obj = Finishing::Assembly::Phd->new(input_directory => "$phd_dir");
-
-	unless ($phd_obj)
-	{
-	    $self->error_message("Unable to create phd_dir object");
-	    return;
+    my $dir_is_empty = 1;
+    if (-d $phd_dir) {
+	my $phd_obj;
+	opendir (DIR, $phd_dir) || die "Can not open $phd_dir\n";
+	foreach my $file (readdir(DIR)) {
+	    if ($file =~ /\.phd\.\d+/) {
+		$dir_is_empty = 0;
+		last;
+	    }
 	}
-
-	push @phd_objs, $phd_obj;
+	unless ($dir_is_empty) {
+	    $phd_obj = Finishing::Assembly::Phd->new(input_directory => "$phd_dir");
+	    unless ($phd_obj) {
+		$self->error_message("Unable to create phd_dir object");
+		return;
+	    }
+	    push @phd_objs, $phd_obj;
+	}
     }
-
     my $phd_ball = "$dir/../phdball_dir/autoJoinPhdBall";
 
     if (-s $phd_ball)
@@ -574,7 +577,6 @@ sub make_joins
 
         push @phd_objs, $phd_ball_obj;
     }
-
     unless (scalar @phd_objs > 0)
     {
 	$self->error_message("No phd objects were loaded");
@@ -583,17 +585,14 @@ sub make_joins
 
     #create a temp hash to keep track of contigs not joined
     my %unused_contig_names;
-    foreach ($ace_obj->contigs->all)
-    {
+    foreach ($ace_obj->contigs->all) {
         $unused_contig_names{$_->name} = 1;
     }
-
     my $join_count = 0;
     my $ace_version = 0;
     my $last_merge_failed = 0;
 
-    foreach my $line (@$scafs)
-    {
+    foreach my $line (@$scafs) {
         #new scaf number?
         #scaffold name is really the first contig name
 
@@ -660,6 +659,7 @@ sub make_joins
             };
 
             if ($@) {
+		print Dumper $@;
 		$last_merge_failed = 1;
 		#MERGE FAILED SO EXPORT THE LEFT CONTIG
 		print " => Merge failed! \n\tExporting $left_contig_name\n";
@@ -727,6 +727,8 @@ sub make_joins
 	    $xport->export_contig(contig => $contig_obj);
         }
     }
+
+    print "Please wait writing ace file: $ace_out\n";
 
     $xport->close;
 
