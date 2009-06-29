@@ -307,7 +307,7 @@ sub open_consed
         }
         #end hack
         
-        my $c_command= "$consed -socket 0 -ace $ace1 -mainContigPos $relative_target_base_pos &>/dev/null";
+        my $c_command= "$consed -socket 0 -ace $ace1 -mainContigPos $relative_target_base_pos >/dev/null";
         print $c_command,"\n";
         my $rc = system($c_command);
         if($rc)
