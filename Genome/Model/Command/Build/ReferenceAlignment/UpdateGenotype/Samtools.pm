@@ -49,8 +49,6 @@ sub execute {
         }
     }
 
-    #my ($consensus_file) = $build->_consensus_files($self->ref_seq_id);
-    #$consensus_file .= '.samtools_pileup';
     my $consensus_file = $build->bam_pileup_file_path;   
  
     my $ref_seq_file = sprintf("%s/all_sequences.fasta", $model->reference_sequence_path);
@@ -66,14 +64,8 @@ sub execute {
 =cut
 
     my $maplist_dir = $build->accumulated_alignments_directory;
-    #my @bam_files = glob("$maplist_dir/".$model->subject_name."*_rmdup.bam");
-    #unless(@bam_files == 1) {
-    #     $self->error_message("Couldn't resolve accumulated bam file");
-    #     return;
-    #}
     my $bam_file = $build->whole_rmdup_bam_file;         
 
-    #my $sam_pathname = '/gscuser/dlarson/samtools/r301wu1/samtools';
     my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($model->genotyper_version);
     my $cmd = $sam_pathname. " pileup -f $ref_seq_file";
     $cmd .= ' '.$assembly_opts if $assembly_opts;
@@ -93,12 +85,6 @@ sub execute {
         output_files => [$consensus_file],
     );
 
-    if (Genome::Utility::FileSystem->bzip($consensus_file) ) {
-        $self->status_message("Converted consesnsus file to bzip format.");
-    } else {
-        $self->error_message("Could NOT convert consensus file to bzip format.  Continuing anyway.");
-    }
-
     return $self->verify_successful_completion;
 }
 
@@ -106,10 +92,7 @@ sub execute {
 sub verify_successful_completion {
     my $self = shift;
 
-    #my ($consensus_file) = $self->build->_consensus_files($self->ref_seq_id);
-    #$consensus_file .= '.samtools_pileup';
-
-    my $consensus_file = $self->build->bam_pileup_bzip_file_path;
+    my $consensus_file = $self->build->bam_pileup_file_path;
 
     unless (-e $consensus_file && -s $consensus_file > 20) {
         $self->error_message("Consensus file $consensus_file is too small");
