@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Genome::Utility::MetagenomicClassifier::Test;
 
-Genome::Utility::MetagenomicClassifier::Rdp::Writer::Test->runtests;
+Genome::Utility::MetagenomicClassifier::ChimeraClassification::Writer::Test->runtests;
 
 exit;
 
