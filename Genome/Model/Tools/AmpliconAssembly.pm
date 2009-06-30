@@ -12,7 +12,7 @@ class Genome::Model::Tools::AmpliconAssembly {
     is_abstract => 1,
     has => [
     Genome::AmpliconAssembly->attributes, 
-    map( { $_ => { via => 'amplicon_assembly' } } amplicon_assembly_methods_to_incorporate() ),
+    map( { $_ => { via => 'amplicon_assembly' } } Genome::AmpliconAssembly->helpful_methods ),
     ],
 };
 
@@ -49,13 +49,6 @@ sub amplicon_assembly {
     }
     
     return $self->{_amplicon_assembly};
-}
-
-sub amplicon_assembly_methods_to_incorporate {
-    return (qw/ 
-        chromat_dir phd_dir edit_dir create_directory_structure
-        get_amplicons 
-        /);
 }
 
 1;
