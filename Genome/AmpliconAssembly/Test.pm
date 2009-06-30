@@ -133,7 +133,6 @@ sub amplicons {
     return $_[0]->{_object}->get_amplicons;
 }
 
-# traces
 sub should_copy_traces { 1 }
 sub should_copy_edit_dir { 1 }
 sub _pre_execute { 1 }
@@ -316,31 +315,6 @@ sub test_03_verify : Test(2) {
     my $qual_cnt = grep { -s $collate->amplicon_assembly->qual_file_for_type($_) } @types;
     is($qual_cnt, @types, 'Verified - Created a qual for each type');
     
-    return 1;
-}
-
-###########################################################################
-
-package Genome::Model::Tools::AmpliconAssembly::CleanUpTest;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::Tools::AmpliconAssembly::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Tools::AmpliconAssembly::CleanUp';
-}
-
-sub test_03_verify : Test(1) {
-    my $self = shift;
-
-    my @files_remaining = glob($self->{_object}->edit_dir.'/*');
-    is(@files_remaining, 50, "Removed correct number of files");
-
     return 1;
 }
 
