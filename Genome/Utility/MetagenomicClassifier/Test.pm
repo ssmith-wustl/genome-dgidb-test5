@@ -61,10 +61,6 @@ sub test_class {
     return 'Genome::Utility::MetagenomicClassifier::SequenceClassification';
 }
 
-sub required_attrs {
-    return (qw/ name classifier taxon /);
-}
-
 sub params_for_test_class {
     my $self = shift;
 
@@ -370,6 +366,23 @@ sub test002_create : Tests(10) {
 
     
     return 1;
+}
+
+#####################################################################################################
+
+package Genome::Utility::MetagenomicClassifier::ChimeraClassification::Writer::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::MetagenomicClassifier::TestBase';
+
+use Data::Dumper 'Dumper';
+use File::Compare 'compare';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Utility::MetagenomicClassifier::ChimeraClassification::Writer';
 }
 
 #####################################################################################################
