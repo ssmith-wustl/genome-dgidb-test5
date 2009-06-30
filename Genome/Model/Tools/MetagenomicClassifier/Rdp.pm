@@ -3,9 +3,9 @@ package Genome::Model::Tools::MetagenomicClassifier::Rdp;
 use strict;
 use warnings;
 
+use Genome;
+
 use Bio::SeqIO;
-use Genome::Utility::MetagenomicClassifier::Rdp;
-use Genome::Utility::MetagenomicClassifier::Rdp::Writer;
 
 class Genome::Model::Tools::MetagenomicClassifier::Rdp {
     is => 'Command',
@@ -33,10 +33,25 @@ sub new {
     return $class->create(@_);
 }
 
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_)
+        or return;
+
+    unless ( Genome::Utility::FileSystem->validate_file_for_reading( $self->input_file ) ) {
+        $self->delete;
+        return;
+    }
+
+    return $self;
+}
+
 sub execute {
     my $self = shift;
     
     #< CLASSIFER >#
+    require Genome::Utility::MetagenomicClassifier::Rdp;
     my $classifier = Genome::Utility::MetagenomicClassifier::Rdp->new(
         training_set => $self->training_set,
     )
