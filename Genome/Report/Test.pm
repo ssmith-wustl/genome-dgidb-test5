@@ -298,7 +298,7 @@ sub params_for_test_class {
     );
 }
 
-sub required_attrs {
+sub required_params_for_class {
     return (qw/ properties_file /);
 }
 
