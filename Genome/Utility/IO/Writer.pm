@@ -11,10 +11,9 @@ require IO::Handle;
 class Genome::Utility::IO::Writer {
     is => 'UR::Object',
     is_abstract => 1,
-    has => [
+    has_optional => [
     output => {
         type => 'String',
-        is_optional => 0,
         doc => 'Output (file, if from command line) to write.  Defaults to STDOUT',
     },
     ],
