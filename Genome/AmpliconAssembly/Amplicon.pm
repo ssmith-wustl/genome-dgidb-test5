@@ -12,17 +12,43 @@ require Genome::Utility::MetagenomicClassifier::SequenceClassification;
 require Finishing::Assembly::Factory;
 use Storable;
 
-sub new {
-    my ($class, %params) = @_;
+class Genome::AmpliconAssembly::Amplicon {
+    is => 'UR::Object',
+    has => [
+    name => {
+        is => 'Text',
+        doc => 'Name of amplicon',
+    },
+    directory => {
+        is => 'Text',
+        doc => 'Directory where the amplicon fasta and qual files are located.',
+    },
+    ],
+    has_many => [
+    reads => {
+        is => 'Text',
+        doc => 'Reads for the amplicon',
+    },
+    ],
+};
 
-    my $self = bless \%params, $class;
+sub create {
+    my $class = shift;
 
-    for my $attr (qw/ name directory reads /) {
-        $self->_fatal_msg("Attribute ($attr) is required") unless exists $self->{$attr};
+    my $self = $class->SUPER::create(@_)
+        or return;
+
+    for my $attr (qw/ name reads /) {
+        next if $self->$attr;
+        $self->error_message("Attribute ($attr) is required to create");
+        $self->delete;
+        return;
     }
 
-    Genome::Utility::FileSystem->validate_existing_directory($self->{directory})
-        or confess;
+    unless ( Genome::Utility::FileSystem->validate_existing_directory( $self->directory ) ) {
+        $self->delete;
+        return;
+    }
 
     return $self;
 }
@@ -39,15 +65,15 @@ sub successful_assembly_length {
 
 #< Basic Accessors >#
 sub get_name {
-    return $_[0]->{name};
+    return $_[0]->name;
 }
 
 sub get_directory {
-    return $_[0]->{directory};
+    return $_[0]->directory;
 }
 
 sub get_reads {
-    return $_[0]->{reads};
+    return [ $_[0]->reads ];
 }
 
 sub get_read_count {
