@@ -20,6 +20,10 @@ sub base_params_for_test_class {
     );
 }
 
+sub required_params_for_class {
+    return (qw/ build_id /);
+}
+
 sub build_id {
     return Genome::Model::ReferenceAlignment::Test->get_mock_build_id;
 }
