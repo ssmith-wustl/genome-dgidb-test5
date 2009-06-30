@@ -111,10 +111,6 @@ sub execute {
     $self->tier4_file($variant_file.".tier4");
     $tier4->open($self->tier4_file,"w") or croak "Couldn't write tier4 file";
     
-    my $tier5 = new FileHandle;
-    $self->tier5_file($variant_file.".tier5");
-    $tier5->open($self->tier5_file,"w") or croak "Couldn't write tier5 file";
-    
     my %exonic_at;
     my %variant_at;
     
@@ -177,12 +173,7 @@ sub execute {
 
                 }
                 if(exists($exonic_at{$chr}{$start}{$stop_pos}{$hash->{reference}}{$hash->{variant}})) {
-                    if($exonic_at{$chr}{$start}{$stop_pos}{$hash->{reference}}{$hash->{variant}} eq 'silent') {
-                        print $tier2 $line,"\n"; #not gonna happen
-                    }
-                    else {
-                        print $tier1 $line,"\n";
-                    }
+                    print $tier1 $line,"\n";
                     next;
                 }
                 $variant_at{$chr}{$start}{$stop_pos}{$hash->{reference}}{$hash->{variant}} = $line;
@@ -194,12 +185,7 @@ sub execute {
             my $assigned_position_to_tier = 0;
             foreach my $variant (@variant_alleles) {
                 if(exists($exonic_at{$chr}{$start}{$stop}{$reference}{$variant})) {
-                    if($exonic_at{$chr}{$start}{$stop}{$reference}{$variant} eq 'silent') {
-                        print $tier2 $line, "\n";
-                    }
-                    else {
-                        print $tier1 $line, "\n";
-                    }
+                    print $tier1 $line, "\n";
                     $assigned_position_to_tier = 1;
                     last; #skip
                 }
@@ -295,7 +281,7 @@ sub execute {
                 #Tier 5 repeats everything else!!!
                 for my $reference (keys %{$variant_at{$chr}{$start}{$stop}}) {
                     for my $variant(keys %{$variant_at{$chr}{$start}{$stop}{$reference}}) {
-                        print $tier5 $variant_at{$chr}{$start}{$stop}{$reference}{$variant}, "\n";
+                        print $tier4 $variant_at{$chr}{$start}{$stop}{$reference}{$variant}, "\n";
                     }
                 }
             }
@@ -324,7 +310,7 @@ sub execute {
                 #TIER3 Regulatory regions
                 for my $reference (keys %{$variant_at{$chr}{$start}{$stop}}) {
                     for my $variant(keys %{$variant_at{$chr}{$start}{$stop}{$reference}}) {
-                        print $tier3 $variant_at{$chr}{$start}{$stop}{$reference}{$variant}, "\n";
+                        print $tier2 $variant_at{$chr}{$start}{$stop}{$reference}{$variant}, "\n";
                     }
                 }
 
@@ -333,7 +319,7 @@ sub execute {
                 #Tier 5 repeats everything else!!!
                 for my $reference (keys %{$variant_at{$chr}{$start}{$stop}}) {
                     for my $variant(keys %{$variant_at{$chr}{$start}{$stop}{$reference}}) {
-                        print $tier4 $variant_at{$chr}{$start}{$stop}{$reference}{$variant}, "\n";
+                        print $tier3 $variant_at{$chr}{$start}{$stop}{$reference}{$variant}, "\n";
                     }
                 }
             }
