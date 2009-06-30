@@ -8,6 +8,7 @@ use Genome::Info::IUB;
 use Command;
 use IO::File;
 use Bio::DB::Fasta;
+use XML::LibXML;
 
 class Genome::Model::Tools::Snp::GoldSnpIntersection {
     is => 'Command',
@@ -61,7 +62,24 @@ class Genome::Model::Tools::Snp::GoldSnpIntersection {
         is_optional => 1,
         doc => 'It should be either maq or sam. default is maq.',
         default => 'MAQ',
-    },        
+    },
+    report_format => {
+        type => 'String',
+        is_optional => 1,
+        doc => 'Format of the report as sent to STDOUT. txt or xml. Defaults to txt.',
+        default => 'txt'
+    },
+    _report_txt => {
+        type => 'String',
+        is_optional => 1,
+        doc => 'Report results stored here as text after execute.'
+    },
+    _report_xml => {
+        type => 'String',
+        is_optional => 1,
+        doc => 'Report results stored here as xml after execute.'
+    }                
+            
     ]
 };
 
@@ -107,19 +125,29 @@ sub execute {
     #Grab metrics
     my ($total_snp_positions,$ref_breakdown_ref, $het_breakdown_ref, $hom_breakdown_ref) 
         = $self->calculate_metrics($snp_fh,$gold_het_hash_ref,$gold_hom_hash_ref,$gold_ref_hash_ref);
+    
+    $self->store_report_txt($ref_breakdown_ref,$self->total_gold_homozygous_ref_positions,$het_breakdown_ref, $self->total_gold_heterozygote_snps, $hom_breakdown_ref, $self->total_gold_homozygous_snps);
 
-    $self->print_report($ref_breakdown_ref,$self->total_gold_homozygous_ref_positions,$het_breakdown_ref, $self->total_gold_heterozygote_snps, $hom_breakdown_ref, $self->total_gold_homozygous_snps);
+    $self->store_report_xml($ref_breakdown_ref,$self->total_gold_homozygous_ref_positions,$het_breakdown_ref, $self->total_gold_heterozygote_snps, $hom_breakdown_ref, $self->total_gold_homozygous_snps);
 
+    # print report in requested format
+    
+    if ($self->report_format eq "xml") {
+        print STDOUT $self->_report_xml;
+    } elsif ($self->report_format eq "txt") {
+        print STDOUT $self->_report_txt;
+    } else {
+        $self->error_message("Report format '" . $self->report_format . "' not supported, please specify 'txt' or 'xml'.");
+    }
+                              
+    
+    $DB::single = 1;
+    
     $gold_fh->close;
     $snp_fh->close;
 
     return 1;
 }
-
-    
-
-
-1;
 
 sub help_brief {
     "Performs a by-genotype comparison of a cns2snp file and a Gold SNP File";
@@ -206,24 +234,101 @@ sub print_breakdown {
     if(exists($hash->{'match'})) {
         print STDOUT "\tMatching Gold Genotype\n";
         foreach my $type (keys %{$hash->{'match'}}) {
-            printf STDOUT "\t\t%s\t%d\t%0.2f\t%0.2f\n",$type,$hash->{'match'}{$type}{'n'},$hash->{'match'}{$type}{'n'}/$total*100,$hash->{'match'}{$type}{'depth'}/$hash->{'match'}{$type}{'n'};
+            printf STDOUT (
+                           "\t\t%s\t%d\t%0.2f\t%0.2f\n",
+                           $type,
+                           $hash->{'match'}{$type}{'n'},
+                           $hash->{'match'}{$type}{'n'}/$total*100,
+                           $hash->{'match'}{$type}{'depth'}/$hash->{'match'}{$type}{'n'}
+                          );
         }
     }
     if(exists($hash->{'partial match'})) {
         print STDOUT "\tPartially Matching Gold Genotype\n";
         foreach my $type (keys %{$hash->{'partial match'}}) {
-            printf STDOUT "\t\t%s\t%d\t%0.2f\t%0.2f\n",$type,$hash->{'partial match'}{$type}{'n'},$hash->{'partial match'}{$type}{'n'}/$total*100,$hash->{'partial match'}{$type}{'depth'}/$hash->{'partial match'}{$type}{'n'};
+            printf STDOUT (
+                           "\t\t%s\t%d\t%0.2f\t%0.2f\n",
+                           $type,
+                           $hash->{'partial match'}{$type}{'n'},
+                           $hash->{'partial match'}{$type}{'n'}/$total*100,
+                           $hash->{'partial match'}{$type}{'depth'}/$hash->{'partial match'}{$type}{'n'}
+                          );
         }
     }
     #next print un-matching classes
     if(exists($hash->{'mismatch'})) {
         print STDOUT "\tMismatching Gold Genotype\n";
         foreach my $type (keys %{$hash->{'mismatch'}}) {
-            printf STDOUT "\t\t%s\t%d\t%0.2f\t%0.2f\n",$type,$hash->{'mismatch'}{$type}{'n'},$hash->{'mismatch'}{$type}{'n'}/$total*100,$hash->{'mismatch'}{$type}{'depth'}/$hash->{'mismatch'}{$type}{'n'};
+            printf STDOUT (
+                           "\t\t%s\t%d\t%0.2f\t%0.2f\n",
+                           $type,
+                           $hash->{'mismatch'}{$type}{'n'},
+                           $hash->{'mismatch'}{$type}{'n'}/$total*100,
+                           $hash->{'mismatch'}{$type}{'depth'}/$hash->{'mismatch'}{$type}{'n'}
+                          );
         }
     }
 }
-        
+
+sub store_report_txt {
+    my ($self, $ref_breakdown_ref, $gold_ref_total, $het_breakdown_ref, $gold_het_total, $hom_breakdown_ref, $gold_hom_total) = @_; 
+    my $report_txt;
+    # store txt report
+    $report_txt .= "There were $gold_ref_total homozygous ref sites\n";
+    $report_txt .= $self->get_breakdown($gold_ref_total,$ref_breakdown_ref);
+    $report_txt .= "There were $gold_het_total heterozygous calls (could include bi-allelic calls)\n";
+    $report_txt .= $self->get_breakdown($gold_het_total,$het_breakdown_ref);
+    $report_txt .=  "There were $gold_hom_total homozygous calls\n";
+    $report_txt .= $self->get_breakdown($gold_hom_total, $hom_breakdown_ref);
+
+    $self->_report_txt($report_txt);
+
+}
+
+sub get_breakdown {
+    my ($self, $total, $hash) = @_;
+    my $breakdown;
+    #first print predominant class (match)
+    if (exists($hash->{'match'})) {
+        $breakdown .= "\tMatching Gold Genotype\n";
+        foreach my $type (keys %{$hash->{'match'}}) {
+            $breakdown .= sprintf(
+                                  "\t\t%s\t%d\t%0.2f\t%0.2f\n",
+                                  $type,
+                                  $hash->{'match'}{$type}{'n'},
+                                  $hash->{'match'}{$type}{'n'}/$total*100,
+                                  $hash->{'match'}{$type}{'depth'}/$hash->{'match'}{$type}{'n'}
+                                 );
+        }
+    }
+    if (exists($hash->{'partial match'})) {
+        $breakdown .= "\tPartially Matching Gold Genotype\n";
+        foreach my $type (keys %{$hash->{'partial match'}}) {
+            $breakdown .= sprintf (
+                                   "\t\t%s\t%d\t%0.2f\t%0.2f\n",
+                                   $type,
+                                   $hash->{'partial match'}{$type}{'n'},
+                                   $hash->{'partial match'}{$type}{'n'}/$total*100,
+                                   $hash->{'partial match'}{$type}{'depth'}/$hash->{'partial match'}{$type}{'n'}
+                                  );
+        }
+    }
+    #next print un-matching classes
+    if (exists($hash->{'mismatch'})) {
+        $breakdown .= "\tMismatching Gold Genotype\n";
+        foreach my $type (keys %{$hash->{'mismatch'}}) {
+            $breakdown .= sprintf(
+                                  "\t\t%s\t%d\t%0.2f\t%0.2f\n",
+                                  $type,
+                                  $hash->{'mismatch'}{$type}{'n'},
+                                  $hash->{'mismatch'}{$type}{'n'}/$total*100,
+                                  $hash->{'mismatch'}{$type}{'depth'}/$hash->{'mismatch'}{$type}{'n'});
+        }
+    }
+    return $breakdown;
+}
+
+
 
 #Functions to create hashes of data
 
@@ -418,7 +523,7 @@ sub compare_gold_to_call {
     
 #idea borrowed from ssmith's gt snp intersect
 sub overlap {
-    $DB::single = 1;
+
     my ($self, $gold_alleles, $call) = @_;
     my $iub_string = Genome::Info::IUB->iub_to_string($call);
     
@@ -433,3 +538,110 @@ sub overlap {
     
     return $num_bases_overlapping;
 }
+
+#
+# XML reporting subs
+#
+
+sub store_report_xml {
+    my ($self, $ref_breakdown_ref, $gold_ref_total, $het_breakdown_ref, $gold_het_total, $hom_breakdown_ref, $gold_hom_total) = @_; 
+
+    my $report_xml;
+    $self->{_xml} = XML::LibXML->createDocument;
+    unless ( $self->{_xml} ) {
+        $self->error_message("Can't create XML object");
+        return;
+    }
+
+    # main node
+    $self->{_main_node} = $self->_xml->createElement('gold-snp-intersection-report')
+      or Carp::confess('Create main node to XML');
+    $self->_xml->addChild( $self->_main_node )
+      or Carp::confess('Add main node to XML');
+    $self->_xml->setDocumentElement( $self->_main_node );
+    
+    # assemble gold-homozygous-ref node
+    $self->{_gold_hom_ref_node} =  $self->_xml->createElement("gold-homozygous-ref");
+    $self->_gold_hom_ref_node->addChild( $self->_xml->createAttribute("total", $gold_ref_total) );
+    $self->_add_variants_node($gold_ref_total, $ref_breakdown_ref, $self->_gold_hom_ref_node);
+
+    # assemble gold-heterozygous-snp node
+    $self->{_gold_het_snp_node} =  $self->_xml->createElement("gold-heterozygous-snp");
+    $self->_gold_het_snp_node->addChild( $self->_xml->createAttribute("total", $gold_het_total) );
+    $self->_add_variants_node($gold_het_total, $het_breakdown_ref, $self->_gold_het_snp_node);
+
+    # assemble gold-homozygous-snp node   
+    $self->{_gold_hom_snp_node} =  $self->_xml->createElement("gold-homozygous_snp");
+    $self->_gold_hom_snp_node->addChild( $self->_xml->createAttribute("total", $gold_hom_total) );
+    $self->_add_variants_node($gold_hom_total, $hom_breakdown_ref, $self->_gold_hom_snp_node);
+
+    # add nodes
+    $self->_main_node->addChild( $self->_gold_hom_ref_node );
+    $self->_main_node->addChild( $self->_gold_het_snp_node );
+    $self->_main_node->addChild( $self->_gold_hom_snp_node );
+    
+    # store xml report
+    $self->_report_xml($self->_xml->toString(1));
+
+}
+
+sub _add_variants_node {
+    my ($self, $total, $hash, $node) = @_;
+    
+    #first print predominant class (match)
+    if (exists($hash->{'match'})) {
+        my $match_node = $node->addChild($self->_xml->createElement("match"));
+        foreach my $type (keys %{$hash->{'match'}}) {
+            my $variant_node = $match_node->addChild($self->_xml->createElement("variant"));
+            $variant_node->appendTextChild("type", $type);
+            $variant_node->appendTextChild("reads", $hash->{'match'}{$type}{'n'});
+            $variant_node->appendTextChild("intersection", $hash->{'match'}{$type}{'n'}/$total*100);
+            $variant_node->appendTextChild("depth", $hash->{'match'}{$type}{'depth'}/$hash->{'match'}{$type}{'n'});
+        }
+    }
+
+    if (exists($hash->{'partial match'})) {
+        my $partial_match_node = $node->addChild($self->_xml->createElement("partial-match"));
+        foreach my $type (keys %{$hash->{'partial match'}}) {
+            my $variant_node = $partial_match_node->addChild($self->_xml->createElement("variant"));
+            $variant_node->appendTextChild("type", $type);
+            $variant_node->appendTextChild("reads", $hash->{'partial match'}{$type}{'n'});
+            $variant_node->appendTextChild("intersection", $hash->{'partial match'}{$type}{'n'}/$total*100);
+            $variant_node->appendTextChild("depth", $hash->{'partial match'}{$type}{'depth'}/$hash->{'partial match'}{$type}{'n'});
+        }
+    }
+
+    #next print un-matching classes
+    if (exists($hash->{'mismatch'})) {
+        my $mismatch_node = $node->addChild($self->_xml->createElement("mismatch"));
+        foreach my $type (keys %{$hash->{'mismatch'}}) {
+            my $variant_node = $mismatch_node->addChild($self->_xml->createElement("variant"));
+            $variant_node->appendTextChild("type", $type);
+            $variant_node->appendTextChild("reads", $hash->{'mismatch'}{$type}{'n'});
+            $variant_node->appendTextChild("intersection", $hash->{'mismatch'}{$type}{'n'}/$total*100);
+            $variant_node->appendTextChild("depth", $hash->{'mismatch'}{$type}{'depth'}/$hash->{'mismatch'}{$type}{'n'});
+        }
+    }
+}
+
+sub _xml {
+    return $_[0]->{_xml};
+}
+
+sub _main_node {
+    return $_[0]->{_main_node};
+}
+
+sub _gold_hom_ref_node {
+    return $_[0]->{_gold_hom_ref_node};
+}
+
+sub _gold_het_snp_node {
+    return $_[0]->{_gold_het_snp_node};    
+}
+
+sub _gold_hom_snp_node {
+    return $_[0]->{_gold_hom_snp_node};
+}
+
+1;
