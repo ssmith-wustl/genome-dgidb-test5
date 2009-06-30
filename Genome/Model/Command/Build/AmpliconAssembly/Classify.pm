@@ -14,35 +14,13 @@ class Genome::Model::Command::Build::AmpliconAssembly::Classify {
 sub execute {
     my $self = shift;
 
-    my $amplicons = $self->build->get_amplicons
-        or return;
-
-    require Genome::Utility::MetagenomicClassifier::Rdp;
-    my $classifier = Genome::Utility::MetagenomicClassifier::Rdp->new(
-        #training_set => 'broad', # switched to regular set 4/14
+    my $classify = Genome::Model::Tools::AmpliconAssembly::Classify->create(
+        directory => $self->build->data_directory,
+        sequencing_center => $self->model->sequencing_center,
     )
         or return;
-
-    for my $amplicon ( @$amplicons ) {
-        my $bioseq = $amplicon->get_bioseq
-            or next;
-        my $classification = $classifier->classify($bioseq);
-        unless ( $classification ) {
-            $self->error_message(
-                sprintf(
-                    'Can\'t get classification from RDP classifier for amplicon (<Amplicon %s> <Build Id %s>)', 
-                    $amplicon->get_name,
-                    $self->build->id,
-                )
-            );
-            # have a counter and error if all fail?
-            # $no_classification++;
-            next;
-        }
-        $amplicon->save_classification($classification); # error?
-    }
-
-    #print $self->build->data_directory."\n"; <STDIN>;
+    $classify->execute
+        or return;
 
     return 1;
 }
