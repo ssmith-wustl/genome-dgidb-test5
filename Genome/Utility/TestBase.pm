@@ -42,11 +42,35 @@ sub params_for_test_class {
 }
 
 sub required_attrs {
-    my %params = $_[0]->params_for_test_class;
-    return keys %params;
+    return;
+}
+
+sub required_params_for_class {
+    my $self = shift;
+
+    unless ( $self->test_class->isa('UR::Object') ) {
+        return $self->required_attrs;
+    }
+    
+    my @params;
+    for my $property ( $self->test_class->get_class_object->property_metas ) {
+        next if defined $property->default_value;
+        next if $property->is_optional;
+        next if $property->id_by;
+        next if $property->via;
+        next if $property->calculate;
+        next if $property->property_name =~ /^_/;
+        push @params, $property->property_name;
+    }
+        
+    return @params;
 }
 
 sub invalid_params_for_test_class {
+    return;
+}
+
+sub alternate_params_for_test_class {
     return;
 }
 
@@ -155,13 +179,13 @@ sub test002_create : Test(2) {
     return 1;
 }
 
-sub test003_required_attrs : Tests {
+sub test003_required_params : Tests {
     my $self = shift;
 
-    my $method = $self->new_or_create;
     my %params = $self->params_for_test_class
         or return 1;
-    for my $attr ( $self->required_attrs ) {
+    my $method = $self->new_or_create;
+    for my $attr ( $self->required_params_for_class ) {
         my $val = delete $params{$attr};
         my $eval;
         eval {
