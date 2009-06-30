@@ -67,8 +67,9 @@ sub execute {
           }
           
           unless (
-              ($instrument_data_type =~ /sanger/i) ||
-              ($instrument_data_type =~ /solexa/i)
+              #($instrument_data_type =~ /sanger/i) ||
+              #($instrument_data_type =~ /solexa/i) ||
+              ($instrument_data_type =~ /454/)
           ) { 
               next PSE; 
           }
