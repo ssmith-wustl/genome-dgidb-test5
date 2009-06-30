@@ -21,6 +21,12 @@ class Genome::Model::Tools::Somatic::UcscAnnotator{
             is_output => 1,
             doc => "Store annotation in the specified file"
         },
+        unannotated_file => {
+            is => 'Text',
+            is_optional => 1,
+            doc => "File of sites unable to be annotated",
+            default => 'ucsc_unannotated_variants',
+        },
     ],
 };
 
@@ -45,6 +51,12 @@ sub execute {
     my $self = shift;
     my $InputFile = $self->input_file;
     my $outfile = $self->output_file;
+
+    # Default to the same name as output file with an extension if not specifically provided
+    my $unannotated_file = $self->unannotated_file;
+    $unannotated_file ||= $self->output_file . ".unannotated";
+
+    open(UNANNOTATED, "> $unannotated_file") || die "Could not open '$unannotated_file': $!";
 
     open(OUT, "> $outfile") || die "Could not open '$outfile': $!";
 
@@ -97,10 +109,11 @@ sub execute {
     my $geneStatement = $dbh->prepare($geneTableQuery) ||
     die "Could not prepare statement '$geneTableQuery': $DBI::errstr \n";
 
-
+    # Define available chromosomes for repeatmasker to use
+    my @available_chromosomes = (1..22, "X","Y");
     #  Query for repeatmask tables.  Call with start, end of region to check
     #  Call with $chrToRepeatmaskStatements{$chr}->execute($start, $stop)
-    foreach my $chr (1..22, "X", "Y") {
+    foreach my $chr (@available_chromosomes) {
         $table = "chr$chr"."_rmsk";
         $repeatMaskQuery = "SELECT repFamily, genoStart, genoEnd 
         FROM $table
@@ -111,7 +124,7 @@ sub execute {
         die "Could not prepare statement '$repeatMaskQuery': $DBI::errstr \n";
     }
     #   Query for selfChain tables
-    foreach my $chr (1..22, "X", "Y") {
+    foreach my $chr (@available_chromosomes) {
         my $table = "chr$chr"."_chainSelf";
         my $selfChainQuery = "SELECT normScore, tStart, tEnd 
         FROM $table
@@ -217,6 +230,13 @@ sub execute {
         $DB::single=1;
         chomp $line;
         my ($Chr, $start, $stop) = split /\s+/, $line;
+        
+        #check if we can annotate this site
+        unless(grep {$Chr eq $_} @available_chromosomes) {
+            warn "Unable to annotate $Chr\t$start\t$stop. Chromosome unavailable for annotation\n";
+            print UNANNOTATED "$Chr\t$start\t$stop\n"; 
+            next;
+        }
 
         print OUT "$Chr\t$start\t$stop\t"; 
         $start = $start - 1; #change to 0 based
@@ -241,21 +261,22 @@ sub execute {
         $gotEntry = 0; 
         # Repeatmasker query
 
-        unless(exists $chrToRepeatmaskStatements{$Chr}) {
-            $self->warning_message("Chromosome $Chr is not handled for chrToRepeatmaskStatements...skipping this line");
-            next;
+        if(exists $chrToRepeatmaskStatements{$Chr}) {
+            #But we already printed some of it out. So drop a newline in
+            print OUT "-";
         }
-        
-        $chrToRepeatmaskStatements{$Chr}->execute($start, $stop) ||
-        die("Could not execute statement for repeat masker table with ($start, $stop) for chromosome $Chr : $DBI::errstr \n");
-        while ( ($description, $chrStart, $chrStop) =  $chrToRepeatmaskStatements{$Chr}->fetchrow_array() ) {
-            $descriptionList{$description} = 1;
-            $gotEntry = 1;
-        }
-        if ( $gotEntry ) { 
-            foreach (keys %descriptionList) { print OUT "$_ "; }
-        } else {
-            print OUT  "-"; 
+        else { 
+            $chrToRepeatmaskStatements{$Chr}->execute($start, $stop) ||
+            die("Could not execute statement for repeat masker table with ($start, $stop) for chromosome $Chr : $DBI::errstr \n");
+            while ( ($description, $chrStart, $chrStop) =  $chrToRepeatmaskStatements{$Chr}->fetchrow_array() ) {
+                $descriptionList{$description} = 1;
+                $gotEntry = 1;
+            }
+            if ( $gotEntry ) { 
+                foreach (keys %descriptionList) { print OUT "$_ "; }
+            } else {
+                print OUT  "-"; 
+            }
         }
         print OUT  "\t";
 
