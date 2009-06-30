@@ -129,8 +129,7 @@ sub params_for_test_class {
         build => $model->latest_complete_build,
     );
 }
-
-sub required_attrs { return; }
+sub required_params_for_class { return; }
 
 sub mock_model {
     my $self = shift;
@@ -151,44 +150,175 @@ sub amplicons {
     return $_[0]->build->get_amplicons;
 }
 
-sub should_link_instrument_data { 1 }
-sub should_copy_edit_dir { 1 }
+# Setup
+sub should_copy_traces { 0 }
+sub should_copy_edit_dir { 0 }
 sub _pre_execute { 1 }
 
-sub test_01_copy_data : Test(2) {
+sub test_01_execute : Tests {
     my $self = shift;
 
-    my $model = $self->mock_model;
-    ok($model, 'Got mock amplicon assembly model');
-
-    my $build = $model->latest_complete_build;
-    ok($build, 'Got build from model');
-
-    if ( $self->should_link_instrument_data ) {
-        $build->link_instrument_data( $model->instrument_data )
-            or die "Can't link traces\n";
+    # traces
+    if ( $self->should_copy_traces ) {
+        ok( 
+            Genome::Model::AmpliconAssembly::Test->copy_test_dir(
+                'chromat_dir',
+                $self->mock_model->latest_complete_build->chromat_dir,
+            ),
+            "Copy traces"
+        ) or die;
     }
 
+    # edit_dir
     if ( $self->should_copy_edit_dir ) {
-        Genome::Model::AmpliconAssembly::Test->copy_test_dir(
-            'edit_dir',
-            $build->edit_dir,
-        )
-            or die "Can't copy test data\n";
+        ok(
+            Genome::Model::AmpliconAssembly::Test->copy_test_dir(
+                'edit_dir',
+                $self->mock_model->latest_complete_build->edit_dir,
+            ),
+            "Copy edit_dir"
+        ) or die;
     }
+
+    # Overwrite the execute method in the tool, so we don't redunduntly test (if applicable)
+    my $class = $self->test_class;
+    $class =~ s/Command::Build/Tools/; # get teh tool class
+    my $execute; # to save the original execute
+    eval "use $class"; # use to see if exists
+    no strict 'refs'; # w/ these on, reassigning execute causes errors
+    no warnings;
+    unless ( $@ ) { # the tool exists, overwrite the execute to a null sub
+        $execute = \&{$class.'::execute'};
+        *{$class.'::execute'} = sub{ return 1; };
+    }
+
+    #ok($self->_pre_execute, 'Pre Execute') or die "Failed method _pre_execute\n";
+    ok($self->{_object}->execute, "Execute") or die "Failed execute\n";
+
+    *{$class.'::execute'} = $execute if $execute;
+
+    #print Dumper({event_id=>$self->{_object}->id});
+    #print $self->build->data_directory,"\n"; <STDIN>;
 
     return 1;
 }
 
-sub test_02_execute : Test(2) {
+###########################################################################
+
+package Genome::Model::Command::Build::AmpliconAssembly::AssembleTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Command::Build::AmpliconAssembly::Assemble';
+}
+
+###########################################################################
+
+package Genome::Model::Command::Build::AmpliconAssembly::ClassifyTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Command::Build::AmpliconAssembly::Classify';
+}
+
+###########################################################################
+
+package Genome::Model::Command::Build::AmpliconAssembly::CleanUpTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Command::Build::AmpliconAssembly::CleanUp';
+}
+
+sub should_copy_traces { 1 }
+sub should_copy_edit_dir { 1 }
+
+sub test_03_verify : Test(1) {
     my $self = shift;
 
-    #print Dumper({event_id=>$self->{_object}->id});
-    ok($self->_pre_execute, 'Pre Execute')
-        or die "Failed method _pre_execute\n";
+    my @files_remaining = glob($self->build->edit_dir.'/*');
+    is(@files_remaining, 50, "Removed correct number of files");
 
-    ok($self->{_object}->execute, "Execute");
-    #print $self->build->data_directory,"\n"; <STDIN>;
+    return 1;
+}
+
+###########################################################################
+
+package Genome::Model::Command::Build::AmpliconAssembly::CollateTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Command::Build::AmpliconAssembly::Collate';
+}
+
+###########################################################################
+
+package Genome::Model::Command::Build::AmpliconAssembly::OrientTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Command::Build::AmpliconAssembly::Orient';
+}
+
+###########################################################################
+
+package Genome::Model::Command::Build::AmpliconAssembly::ReportsTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Command::Build::AmpliconAssembly::Reports';
+}
+
+sub should_copy_traces { 1 }
+sub should_copy_edit_dir { 1 }
+
+sub test_03_verify : Test(1) {
+    my $self = shift;
+
+    my @files_remaining = glob($self->build->resolve_reports_directory.'/*');
+    is(@files_remaining, 1, "Created reports ");
 
     return 1;
 }
@@ -209,9 +339,6 @@ sub test_class {
     return 'Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentData';
 }
 
-sub should_link_instrument_data { 0 }
-sub should_copy_edit_dir { 0 }
-
 sub test_03_verify : Test(1) {
     my $self = shift;
 
@@ -221,198 +348,6 @@ sub test_03_verify : Test(1) {
     return 1;
 }
 
-###########################################################################
-
-package Genome::Model::Command::Build::AmpliconAssembly::AssembleTest;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Command::Build::AmpliconAssembly::Assemble';
-}
-
-sub should_copy_edit_dir { 0 }
-
-sub test_03_verify : Test(1) {
-    my $self = shift;
-
-    my $amplicons = $self->amplicons;
-    my $ace_cnt = grep { -s $_->ace_file } @$amplicons;
-    is($ace_cnt, @$amplicons, 'Verified - Created an acefile for each amplicon');
-    
-    return 1;
-}
-
-###########################################################################
-
-package Genome::Model::Command::Build::AmpliconAssembly::ClassifyTest;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Command::Build::AmpliconAssembly::Classify';
-}
-
-sub _pre_execute {
-    my $self = shift;
-
-    my $amplicons = $self->amplicons;
-    for my $amplicon ( @$amplicons ) {
-        my $class_file = $amplicon->classification_file;
-        unlink $class_file if -e $class_file;
-    }
-
-    my $cnt = grep { -s $_->classification_file } @$amplicons;
-    die "Could not remove classification files\n" if $cnt;
-
-    return 1;
-}
-
-sub test_03_verify : Test(1) {
-    my $self = shift;
-
-    my $amplicons = $self->amplicons;
-    my $cnt = grep { -s $_->classification_file } @$amplicons;
-    is($cnt, @$amplicons, 'Verified - Created classification for each amplicon');
-    
-    return 1;
-}
-
-###########################################################################
-
-package Genome::Model::Command::Build::AmpliconAssembly::OrientTest;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Command::Build::AmpliconAssembly::Orient';
-}
-
-sub _pre_execute {
-    my $self = shift;
-
-    my $amplicons = $self->amplicons;
-    for my $amplicon ( @$amplicons ) {
-        my $ori_fasta = $amplicon->oriented_fasta_file;
-        unlink $ori_fasta if -e $ori_fasta;
-        my $ori_qual = $amplicon->oriented_qual_file;
-        unlink $ori_qual if -e $ori_qual;
-    }
-
-    my $cnt = grep { -s $_->oriented_fasta_file } @$amplicons;
-    die "Did not remove oriented fastas\n" if $cnt;
-
-    return 1;
-}
-
-sub test_03_verify : Test(2) {
-    my $self = shift;
-
-    my $amplicons = $self->amplicons;
-    my $fasta_cnt = grep { -s $_->oriented_fasta_file } @$amplicons;
-    is($fasta_cnt, @$amplicons, 'Verified - Created oriented fasta for each amplicon');
-    my $qual_cnt = grep { -s $_->oriented_qual_file } @$amplicons;
-    is($qual_cnt, @$amplicons, 'Verified - Created oriented qual for each amplicon');
-    
-    return 1;
-}
-
-###########################################################################
-
-package Genome::Model::Command::Build::AmpliconAssembly::CollateTest;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Command::Build::AmpliconAssembly::Collate';
-}
-
-sub test_03_verify : Test(2) {
-    my $self = shift;
-
-    my $build = $self->build;
-    my @types = $build->amplicon_fasta_types;
-    my $fasta_cnt = grep { -s $build->fasta_file_for_type($_) } @types;
-    is($fasta_cnt, @types, 'Verified - Created a fasta for each type');
-    my $qual_cnt = grep { -s $build->qual_file_for_type($_) } @types;
-    is($qual_cnt, @types, 'Verified - Created a qual for each type');
-    
-    return 1;
-}
-
-###########################################################################
-
-package Genome::Model::Command::Build::AmpliconAssembly::CleanUpTest;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Command::Build::AmpliconAssembly::CleanUp';
-}
-
-sub test_03_verify : Test(1) {
-    my $self = shift;
-
-    my @files_remaining = glob($self->build->edit_dir.'/*');
-    is(@files_remaining, 50, "Removed correct number of files");
-
-    return 1;
-}
-
-###########################################################################
-
-package Genome::Model::Command::Build::AmpliconAssembly::ReportsTest;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Command::Build::AmpliconAssembly::Reports';
-}
-
-sub test_03_verify : Test(1) {
-    my $self = shift;
-
-    my @files_remaining = glob($self->build->resolve_reports_directory.'/*');
-    is(@files_remaining, 1, "Created reports ");
-
-    return 1;
-}
 
 1;
 
