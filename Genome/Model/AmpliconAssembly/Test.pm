@@ -91,6 +91,12 @@ sub create_mock_model {
     $model->set_always('latest_complete_build', $build);
     $model->mock('current_running_build', sub{ Genome::Model::current_running_build(@_); } );
 
+    # This is for the helpful methods from G:M:B:AmplionAssembly via G::AmpliconAssembly
+    $self->mock_methods(
+        $build,
+        'UR::ModuleBase',
+        'context_return'
+    );
     # Genome::Model::Build
     $self->mock_methods(
         $build,
@@ -112,14 +118,10 @@ sub create_mock_model {
     $self->mock_methods(
         $build,
         'Genome::Model::Build::AmpliconAssembly',
+        Genome::AmpliconAssembly->helpful_methods,
         (qw/
-            consed_directory create_directory_structure
-            edit_dir chromat_dir phd_dir fasta_dir
-            amplicon_fasta_types amplicon_bioseq_method_for_type fasta_file_for_type qual_file_for_type
+            amplicon_assembly
             link_instrument_data 
-            get_amplicons _determine_amplicons_in_chromat_dir_gsc 
-            assembly_fasta reads_fasta processed_fasta 
-            metrics_report 
             /),
     );
 
@@ -198,7 +200,6 @@ sub params_for_test_class {
     my $self = shift;
 
     return (
-        #name => $self->report_name,
         build_id => $self->mock_model->latest_complete_build->id,
     );
 }
