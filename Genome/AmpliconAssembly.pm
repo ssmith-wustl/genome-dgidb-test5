@@ -23,10 +23,22 @@ sub attributes {
     },
     sequencing_center => {
         is => 'Text',
+        is_optional => 1,
         default_value => __PACKAGE__->default_sequencing_center,
         doc => 'Sequencing Center that the amplicons were sequenced.  Currently supported centers: '.__PACKAGE__->valid_sequencing_centers,
     },
 );
+}
+
+sub helpful_methods {
+    return (qw/ 
+        chromat_dir phd_dir edit_dir
+        consed_directory create_directory_structure
+        get_amplicons 
+        amplicon_fasta_types amplicon_bioseq_method_for_type
+        fasta_file_for_type qual_file_for_type
+        assembly_fasta reads_fasta processed_fasta 
+        /);
 }
 
 sub create {
@@ -146,7 +158,7 @@ sub get_amplicons {
     my @amplicons;
     my $edit_dir = $self->edit_dir;
     for my $name ( keys %$amplicons ) {
-        push @amplicons, Genome::AmpliconAssembly::Amplicon->new(
+        push @amplicons, Genome::AmpliconAssembly::Amplicon->create(
             name => $name,
             reads => $amplicons->{$name},
             directory => $edit_dir,
