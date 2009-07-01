@@ -9,7 +9,7 @@ use Test::More;
 #tests => 1;
 
 if (`uname -a` =~ /x86_64/){
-    plan tests => 6;
+    plan tests => 3;
 } else{
     plan skip_all => 'Must run on a 64 bit machine';
 }
@@ -29,5 +29,5 @@ ok(-s $out_file->filename, "output file is nonzero");
 $DB::single = 1;
 
 
-print "done";
+print "done\n";
 
