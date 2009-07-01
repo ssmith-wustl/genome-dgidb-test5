@@ -77,7 +77,10 @@ sub execute {
         $consensus_file,
     );
 
-    $self->status_message("\n***** UpdateGenotype cmd: $cmd *****\n\n");
+    #$self->status_message("\n***** UpdateGenotype cmd: $cmd *****\n\n");
+    $self->status_message("\n***** Due to disk space and speed issue. For now turn off UpdateGenotype cmd: $cmd *****\n\n");
+
+=cut
 
     $self->shellcmd(
         cmd          => $cmd,
@@ -86,6 +89,9 @@ sub execute {
     );
 
     return $self->verify_successful_completion;
+
+=cut
+    return 1;
 }
 
 
@@ -93,11 +99,16 @@ sub verify_successful_completion {
     my $self = shift;
 
     my $consensus_file = $self->build->bam_pileup_file_path;
+    
+=cut
 
     unless (-e $consensus_file && -s $consensus_file > 20) {
         $self->error_message("Consensus file $consensus_file is too small");
         return;
     }
+    
+=cut
+
     return 1;
 }
 
