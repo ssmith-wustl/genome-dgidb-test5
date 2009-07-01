@@ -111,9 +111,9 @@ sub input_pathnames {
 
 sub formatted_aligner_params {
     my $self = shift;
-    my $params = $self->aligner_params || ";;;";
+    my $params = $self->aligner_params || ":::";
     
-    my @spar = split /\;/, $params;
+    my @spar = split /\:/, $params;
     
     
     return ('bwa_aln_params' => $spar[0], 'bwa_samse_params' => $spar[1], 'bwa_sampe_params' => $spar[2]);
