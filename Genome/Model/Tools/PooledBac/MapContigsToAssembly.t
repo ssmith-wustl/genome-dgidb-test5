@@ -22,7 +22,7 @@ my $ace_file_name = 'Pcap.454Contigs.ace.1';
 
 my $ref_seq_path = '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/';
 my $ref_seq_file = '/gscuser/jschindl/ref_seq_file2.txt';
-my $project_dir = '/gscmnt/936/info/jschindl/pbtestout_for_tina';
+my $project_dir = '/gscmnt/936/info/jschindl/pbtestout_final';
 `rm -rf $project_dir/*`;
 `mkdir -p $project_dir`;
 

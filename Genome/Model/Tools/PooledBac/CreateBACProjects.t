@@ -14,7 +14,7 @@ exit;
 #}
 use Genome::Model::Tools::PooledBac::CreateBACProjects;
 
-my $project_dir = '/gscmnt/936/info/jschindl/pbtestout_for_tina';
+my $project_dir = '/gscmnt/936/info/jschindl/pbtestout_final';
 
 Genome::Model::Tools::PooledBac::CreateBACProjects->execute(project_dir => $project_dir);
 1;

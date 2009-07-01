@@ -15,7 +15,7 @@ exit;
 use Genome::Model::Tools::PooledBac::CreateProjectDirectories;
 my $path = '/gsc/var/cache/Genome-Model-Tools-PooledBac';
 
-my $project_dir = '/gscmnt/936/info/jschindl/pbtestout_for_tina';
+my $project_dir = '/gscmnt/936/info/jschindl/pbtestout_final';
 
 #my $pb_path = '/gscmnt/936/info/jschindl/pbintestdir';
 #my $phd_ball = '/gscmnt/936/info/jschindl/pbintestdir/consed/phdball_dir/phd.ball';
