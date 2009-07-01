@@ -108,7 +108,7 @@ sub execute {
     ORDER BY txStart";
     my $geneStatement = $dbh->prepare($geneTableQuery) ||
     die "Could not prepare statement '$geneTableQuery': $DBI::errstr \n";
-
+    $DB::single =1 ;
     # Define available chromosomes for repeatmasker to use
     my @available_chromosomes = (1..22, "X","Y");
     #  Query for repeatmask tables.  Call with start, end of region to check
@@ -261,29 +261,23 @@ sub execute {
         $gotEntry = 0; 
         # Repeatmasker query
 
-        if(exists $chrToRepeatmaskStatements{$Chr}) {
-            #But we already printed some of it out. So drop a newline in
-            print OUT "-";
+        $chrToRepeatmaskStatements{$Chr}->execute($start, $stop) ||
+        die("Could not execute statement for repeat masker table with ($start, $stop) for chromosome $Chr : $DBI::errstr \n");
+        while ( ($description, $chrStart, $chrStop) =  $chrToRepeatmaskStatements{$Chr}->fetchrow_array() ) {
+            $descriptionList{$description} = 1;
+            $gotEntry = 1;
         }
-        else { 
-            $chrToRepeatmaskStatements{$Chr}->execute($start, $stop) ||
-            die("Could not execute statement for repeat masker table with ($start, $stop) for chromosome $Chr : $DBI::errstr \n");
-            while ( ($description, $chrStart, $chrStop) =  $chrToRepeatmaskStatements{$Chr}->fetchrow_array() ) {
-                $descriptionList{$description} = 1;
-                $gotEntry = 1;
-            }
-            if ( $gotEntry ) { 
-                foreach (keys %descriptionList) { print OUT "$_ "; }
-            } else {
-                print OUT  "-"; 
-            }
+        if ( $gotEntry ) { 
+            foreach (keys %descriptionList) { print OUT "$_ "; }
+        } else {
+            print OUT  "-"; 
         }
         print OUT  "\t";
 
         # selfChain query
         %descriptionList = ();
         $gotEntry = 0;
-        $chrToSelfChainStatements{$Chr}->execute($start, $stop) || die "Could not execute statement for repeat masker table with ($start, $stop): $DBI::errstr \n";
+        $chrToSelfChainStatements{$Chr}->execute($start, $stop) || die "Could not execute statement for selfChain table with ($start, $stop): $DBI::errstr \n";
         while ( ($description, $chrStart, $chrStop) =  $chrToSelfChainStatements{$Chr}->fetchrow_array() ) {
             $descriptionList{$description} = 1;
             $gotEntry = 1;
