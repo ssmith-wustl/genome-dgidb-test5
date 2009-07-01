@@ -95,7 +95,7 @@ sub execute {
                 $now = UR::Time->now;
                 print $log_fh "<<< Skipped bam merge at $now for library: $library ."."\n";
             } else {
-                my $merge_rv = Genome::Model::Tools::Sam::Merge->execute(files_to_merge=>\@library_maps,merged_file=>$merged_file); 
+                my $merge_rv = Genome::Model::Tools::Sam::Merge->execute(files_to_merge=>\@library_maps,merged_file=>$merged_file,is_sorted=>1); 
 
                 unless ($merge_rv) {
                     print $log_fh "There was a problem merging ".join(",",@library_maps). " to $merged_file.";

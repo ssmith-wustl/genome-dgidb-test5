@@ -176,7 +176,7 @@ sub find_or_generate_alignment_data {
     my $self = shift;
 
     unless ($self->verify_alignment_data) {
-        $self->_run_aligner();
+        return $self->_run_aligner();
     } else {
         $self->status_message("Existing alignment data is available and deemed correct.");
     }
@@ -406,13 +406,16 @@ sub _run_aligner {
         $self->die_and_clean_up($self->error_message);
     }
     
+     my $unsorted_bam_output =
+	File::Temp->new( DIR => $tmp_dir, SUFFIX => ".bam" );
+    
 
     #### STEP 3: Convert the SAM format output from samse/sampe (a text file) into the binary
     #### BAM file format.  This requires "samtools import"
     $DB::single = 1;
     my $map_to_bam = Genome::Model::Tools::Sam::SamToBam->create(
                     sam_file    => $sam_map_output_fh->filename,
-		    bam_file	=> $self->alignment_file,
+		    bam_file	=> $unsorted_bam_output->filename,
 		    ref_list 	=> $reference_fasta_index_path,
                     index_bam   => 0,
 		    fix_mate 	=> 0,
@@ -426,12 +429,27 @@ sub _run_aligner {
         return;
     }
     
+    unless (-e $unsorted_bam_output->filename && -s $unsorted_bam_output->filename) {
+	$self->error_message("Alignment output " . $unsorted_bam_output->filename . " not found or zero length.  Something went wrong");
+	return;
+    }
+    
+    #### STEP 4: Sort the BAM formatted files
+    my $sort_bam = Genome::Model::Tools::Sam::SortBam->create(
+	file_name=>$unsorted_bam_output->filename,
+	output_file=>$self->alignment_file	
+    );
+    unless ($sort_bam->execute()) {
+	$self->error_message("Error sorting BAM file.");
+	return;
+    }
+    
     unless (-e $self->alignment_file && -s $self->alignment_file) {
 	$self->error_message("Alignment output " . $self->alignment_file . " not found or zero length.  Something went wrong");
 	return;
     }
 
-    #### STEP 4: Concat all the log files into one
+    #### STEP 5: Concat all the log files into one
 
     my $log_input_fileset = join " ", map {$_->filename} (@aln_log_files, $samxe_logfile);
     my $log_output_file = $self->aligner_output_file_path;
