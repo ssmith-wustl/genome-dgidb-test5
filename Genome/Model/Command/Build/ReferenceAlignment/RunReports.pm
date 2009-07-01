@@ -40,8 +40,11 @@ sub execute {
     my $self  = shift;
     my $build = $self->build;
     
-    #my $pp    = $build->model->processing_profile;
-    #shift @REPORT_TYPES if $pp->name =~ /samtools/;
+    my $gt = $build->model->genotyper_name;
+    unless ($gt =~ /maq/i) {
+        $self->status_message('For now turn off mapcheck for non-maq based pipeline');
+        delete $REPORT_TYPES{Mapcheck};
+    }
 
     my $gold_snp_path = $build->gold_snp_path;
     unless ($gold_snp_path and -s $gold_snp_path) {
@@ -111,6 +114,8 @@ sub execute {
     );
     $self->status_message("E-mail command executed.  Return value: $mail_rv");
 
+=cut
+
     ###############################################
     #Clean up big consensus file
     my $consensus_file = $build->bam_pileup_file_path;
@@ -122,6 +127,8 @@ sub execute {
         }
     }
     #################################################3 
+    
+=cut
 
     return $self->verify_successful_completion;
 }
@@ -136,7 +143,10 @@ sub verify_successful_completion {
     }
 
     my $report_dir = $build->resolve_reports_directory;
-    #my @sub_dirs = qw(Mapcheck dbSNP_Concordance Gold_SNP_Concordance Summary);
+    
+    my $gt = $build->model->genotyper_name;
+    delete $REPORT_TYPES{Mapcheck} unless $gt =~ /maq/i;
+
     my $gold_snp_path = $self->build->gold_snp_path;
     delete $REPORT_TYPES{GoldSnpConcordance} unless $gold_snp_path and -s $gold_snp_path;
         
