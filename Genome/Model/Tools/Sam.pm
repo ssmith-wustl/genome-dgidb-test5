@@ -40,6 +40,7 @@ EOS
 my %SAMTOOLS_VERSIONS = (
     r301wu1 => '/gscuser/dlarson/samtools/r301wu1/samtools',
     r320wu1 => '/gscuser/dlarson/samtools/r320wu1/samtools',
+    r320wu2 => '/gscuser/dlarson/samtools/r320wu2/samtools',
 );
 
 
