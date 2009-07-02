@@ -67,8 +67,8 @@ sub execute {
           }
           
           unless (
-              #($instrument_data_type =~ /sanger/i) ||
-              #($instrument_data_type =~ /solexa/i) ||
+              ($instrument_data_type =~ /sanger/i) ||
+              ($instrument_data_type =~ /solexa/i) ||
               ($instrument_data_type =~ /454/)
           ) { 
               next PSE; 
@@ -110,11 +110,15 @@ sub execute {
                   push @processing_profile_names, 'bwa0.4.9 and samtools r320wu1'; 
               }
 
+              my @maq_pp = grep { $_ eq 'maq 0.7.1' } @processing_profile_names;
+
+              unless (@maq_pp > 0) {
+                  push @processing_profile_names, 'maq 0.7.1';
+              }
+
           }
           
         PP: foreach my $processing_profile_name (@processing_profile_names) {
-             
-              if ($processing_profile_name eq 'maq 0.7.1') { $processing_profile_name = 'maq 0.7.1 alignments only'; }
               
               my $auto_build = 1;
 
@@ -130,11 +134,15 @@ sub execute {
                   next PP;
               }
             
-              # Don't want to auto-build the samtools models just yet...
+              # Don't want to auto-build these...
               if (
                   ($processing_profile_name eq 'Maq 0.7.1 and Samtools r320wu1')
                   ||
+                  ($processing_profile_name eq 'maq 0.7.1')
+                  ||
                   ($pp->id() == 2128324)  
+                  ||
+                  ($pp->id() == 2036054)
                  ) {
                   $auto_build = 0;
               }
