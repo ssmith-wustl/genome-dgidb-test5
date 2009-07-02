@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 use Genome;
-
+exit;
 #use Test::More skip_all => 'test data not in place yet....';
 #use Test::More tests => 5;
 
