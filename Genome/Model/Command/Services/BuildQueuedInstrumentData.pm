@@ -104,10 +104,16 @@ sub execute {
           }
           if ($instrument_data_type =~ /solexa/i) {
 
-              my @bwa_pp = grep { $_ eq 'bwa0.4.9 and samtools r320wu1' } @processing_profile_names;
+              my @bwa_pp_1 = grep { $_ eq 'bwa0.4.9 and samtools r320wu1' } @processing_profile_names;
 
-              unless (@bwa_pp > 0) {
+              unless (@bwa_pp_1 > 0) {
                   push @processing_profile_names, 'bwa0.4.9 and samtools r320wu1'; 
+              }
+
+              my @bwa_pp_2 = grep { $_ eq 'bwa0.4.9 and samtools r320wu2' } @processing_profile_names;
+
+              unless (@bwa_pp_2 > 0) {
+                  push @processing_profile_names, 'bwa0.4.9 and samtools r320wu2';
               }
 
               my @maq_pp = grep { $_ eq 'maq 0.7.1' } @processing_profile_names;
