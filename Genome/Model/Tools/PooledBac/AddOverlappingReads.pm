@@ -53,11 +53,11 @@ sub execute {
         
         my $name = $seq->display_id;
         chdir($name);
-        my $base_frags = create_base_frags($bases,500,50);
-        my $qual_frags = create_qual_frags($qual,500,50);
+        my $base_frags = create_base_frags($bases,1000,800);
+        my $qual_frags = create_qual_frags($qual,1000,800);
         
-        my $fasta_fh  = IO::File->new(">>out.fasta");
-        my $qual_fh = IO::File->new(">>out.fasta.qual");
+        my $fasta_fh  = IO::File->new(">reference_reads.fasta");
+        my $qual_fh = IO::File->new(">reference_reads.fasta.qual");
         for(my $i = 0;$i<@{$base_frags};$i++)
         {
             my $base_frag = $base_frags->[$i];
