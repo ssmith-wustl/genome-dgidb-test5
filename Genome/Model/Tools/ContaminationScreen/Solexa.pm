@@ -6,6 +6,8 @@ use warnings;
 use Genome;
 use Workflow;
 use File::Basename;
+use IO::File;
+use Math::Round qw(round);
 
 class Genome::Model::Tools::ContaminationScreen::Solexa
 {
@@ -47,9 +49,9 @@ sub create
 sub execute 
 {
     my $self = shift;
-    my ($read_file, $hits_file, $minscore) = ($self->_resolve_directory . '/reads.txt', $self->_resolve_directory . '/hits.fna', $self->minscore);
-    my $output_file = $self->input_file . '.screened';
-
+    my ($read_file, $minscore) = ($self->_resolve_directory . '/reads.txt', $self->minscore);
+    my ($output_file, $summary_file) = ($self->output_file ? $self->output_file :  $self->input_file . 'screened', 
+                                        $self->summary_file ? $self->summary_file : $self->input_file . '.summary');
     #create read file
     my $cmd = 'cross_match.test ' . $self->input_file . ' ' .  $self->database . ' -raw -tags -minmatch 16 -minscore ' . $minscore . ' -bandwidth 3 -penalty -1 -gap_init -1 -gap_ext -1 > ' . $read_file;
     $self->status_message('Running: '. $cmd);
@@ -58,24 +60,64 @@ sub execute
         $self->error_message("non-zero return value($rv) from command $cmd");
         return;
     }
-    #search for hits
-    my $grep = 'grep "ALIGNMENT" ' . $read_file . ' > ' . $hits_file;
-    $self->status_message('Running: ' . $grep);
-    $rv = system($grep);
-    unless ($rv == 0) {
-        $self->error_message("non-zero return value($rv) from command $grep");
-        return;
-    }
-    #parse out column of reads
-    my $awk = 'cat ' . $hits_file . ' | awk -F " " \'{print $6}\' > ' . $output_file;
-    $rv = system($awk);
-    unless ($rv == 0)
+
+    #search for hits and parse out column reads
+    my ($grep, $parse, $summary) =  (new IO::File, new IO::File, new IO::File);
+    my ($line, @align);
+    my ($total_reads, $contaminated_reads) = (0,0);
+    my ($hit,%aligns);
+
+    if ($grep->open("< $read_file"))
     {
-        $self->error_message("non-zero return value($rv) from command $awk");
-        return;
+        if ($parse->open("> $output_file"))
+        {
+            do
+            {
+                chomp($line = $grep->getline());
+                if ($line=~/ALIGNMENT/)
+                {
+                    @align = split(/ /, $line);
+                    $align[9]=~/(.*\/)(\d)/;
+                    
+                    #screening paired ends - 
+                    #if we get HWI-EAS90:4:1:4:388#0/1 
+                    #we also need HWI-EAS90:4:1:4:388#0/2, and vice versa
+                    #consume duplicates, so only uniques are written to output
+                    $aligns{$1 . 1}++;
+                    $aligns{$1 . 2}++;
+                    $contaminated_reads++;
+                }
+                $total_reads++;
+            }
+            until ($grep->eof());
+            print $parse join("\n", sort keys(%aligns));
+            $parse->close; 
+            $grep->close;
+        }
+        else
+        {
+            $self->error_message("error opening $output_file for writing");
+        }
     }
+    else
+    {
+        $self->error_message("error opening $read_file for reading");
+    }   
+
+    #make summary file
+    if ($summary->open("> $summary_file"))
+    {
+       print $summary "total reads:  $total_reads\n";
+       print $summary "contaminated reads $contaminated_reads\n";
+       print $summary round($contaminated_reads * 100/$total_reads) . "%";  
+    }
+    else
+    {
+       $self->error_message("error opening $summary_file for writing"); 
+    } 
 
     $self->output_file($output_file);
+    $self->summary_file($summary_file);
     return 1;
 }
 

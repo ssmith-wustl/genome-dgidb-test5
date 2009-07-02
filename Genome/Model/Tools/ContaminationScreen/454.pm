@@ -6,17 +6,12 @@ use warnings;
 use Genome;
 use Workflow;
 use File::Basename;
+use IO::File;
+use Math::Round qw(round);
 
 class Genome::Model::Tools::ContaminationScreen::454
 {
     is => 'Genome::Model::Tools::ContaminationScreen',
-    has => [
-            parse_script =>{
-                             doc => 'script to parse cross match (post-crossmatch cutoff: 90% identity over at least 50 bases)',
-                             is => 'String',
-                             default => '/gscmnt/233/analysis/sequence_analysis/scripts/parse_crossmatch_results.pl',
-                         },
-        ],
 };
 
 sub help_brief 
@@ -44,7 +39,9 @@ sub execute
 {
     my $self = shift;
     my ($read_file, $parsed_file, $hits_file) = ($self->_resolve_directory . '/reads.txt', $self->_resolve_directory . '/reads.parsed', $self->_resolve_directory . '/hits.fna');
-    my $output_file = $self->input_file . '.screened';
+    my ($output_file, $summary_file) = ($self->output_file ? $self->output_file :  $self->input_file . 'screened', 
+                                        $self->summary_file ? $self->summary_file : $self->input_file . '.summary');
+    my $parse_script = '/gscmnt/233/analysis/sequence_analysis/scripts/parse_crossmatch_results.pl';
 
     #create read file
     my $cmd = 'cross_match.test ' . $self->input_file . ' ' .  $self->database . ' -raw -tags -minmatch 14 -bandwidth 6 -penalty -1 -gap_init -1 -gap_ext -1 > ' . $read_file;
@@ -56,34 +53,63 @@ sub execute
     }
 
     #run parsing script
-    my $parse = $self->parse_script . ' -input ' . $read_file . ' -output ' . $parsed_file . ' -percent 90 -length 50'; 
-    $self->status_message('Running: ' . $parse);
-    $rv = system($parse);
+    my $parse_cmd = $parse_script . ' -input ' . $read_file . ' -output ' . $parsed_file . ' -percent 90 -length 50'; 
+    $self->status_message('Running: ' . $parse_cmd);
+    $rv = system($parse_cmd);
     unless ($rv == 0)
     {
-        $self->error_message("non-zero return value($rv) from command $parse");
-        return;
-    }
-    
-    #search for hits
-    my $grep = 'grep "====" ' . $parsed_file . ' > ' . $hits_file;
-    $self->status_message('Running: ' . $grep);
-    $rv = system($grep);
-    unless ($rv == 0) {
-        $self->error_message("non-zero return value($rv) from command $grep");
+        $self->error_message("non-zero return value($rv) from command $parse_cmd");
         return;
     }
 
-    #parse out column of reads
-    my $awk = 'cat ' . $hits_file . ' | awk -F " " \'{print $2}\' > ' . $output_file;
-    $rv = system($awk);
-    unless ($rv == 0)
+    #search for hits and parse out column reads
+    my ($grep, $parse, $summary) =  (new IO::File, new IO::File, new IO::File);
+    my ($line, @align);
+    my ($total_reads, $contaminated_reads) = (0,0);
+    my %aligns;
+    
+    if ($grep->open("< $parsed_file"))
     {
-        $self->error_message("non-zero return value($rv) from command $awk");
-        return;
+        if ($parse->open("> $output_file"))
+        {
+            do
+            {
+                chomp($line = $grep->getline());
+                if ($line=~/====/)
+                {
+                    @align = split(/ /,$line);
+                    $aligns{$align[1]}++; #consume duplicates, so only uniques are written to output
+                    $contaminated_reads++;
+                }
+                $total_reads++;
+            }
+            until ($grep->eof());
+            print $parse join("\n", keys(%aligns));
+            $parse->close;
+            $grep->close;
+        }
+        else
+        {
+            $self->error_message("error opening $output_file for writing:  " . $!);
+        }
     }
+    else
+    {
+        $self->error_message("error opening $read_file for reading");
+    }
+    if ($summary->open("> $summary_file"))
+    {
+       print $summary "total reads:  $total_reads\n";
+       print $summary "contaminated reads $contaminated_reads\n";
+       print $summary round($contaminated_reads * 100/$total_reads) . "%" if $total_reads;  
+    }
+    else
+    {
+       $self->error_message("error opening $summary_file for writing"); 
+    }     
 
     $self->output_file($output_file);
+    $self->summary_file($summary_file);
     return 1;
 }
 
