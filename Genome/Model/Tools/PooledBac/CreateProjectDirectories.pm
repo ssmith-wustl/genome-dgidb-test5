@@ -25,7 +25,7 @@ class Genome::Model::Tools::PooledBac::CreateProjectDirectories {
         phd_file_name_or_dir =>
         {
             type => 'Sring',
-            is_optional => 0,
+            is_optional => 1,
             doc => "Phd file or dir containing read bases and quals"       
         },
         project_dir =>
@@ -57,6 +57,7 @@ sub execute {
     my $pooled_bac_dir = $self->pooled_bac_dir;
     my $project_dir = $self->project_dir;
     my $phd_dir_or_ball = $self->phd_file_name_or_dir;
+    $phd_dir_or_ball = $pooled_bac_dir.'/consed/phdball_dir/phd.ball.1' unless $phd_dir_or_ball;
     my $blastfile = $project_dir."/bac_region_db.blast";
     my $out = Genome::Model::Tools::WuBlast::Parse->execute(blast_outfile => $blastfile);#, parse_outfile => $lbast_outfile.".report");
     my $ace_file = $pooled_bac_dir.'/consed/edit_dir/'.$self->ace_file_name;
@@ -85,7 +86,7 @@ sub execute {
         system("mkdir -p $bac_dir");
         my $old_dir = `pwd`;
         chdir($bac_dir);
-        write_fasta_from_contig_names($ao,$bac_dir."/out.fasta",$bac_dir."/out.fasta.qual",$po, \@contig_names);    
+        write_fasta_from_contig_names($ao,$bac_dir."/pooledreads.fasta",$bac_dir."/pooledreads.fasta.qual",$po, \@contig_names);    
         chdir($old_dir);
     }    
 }
