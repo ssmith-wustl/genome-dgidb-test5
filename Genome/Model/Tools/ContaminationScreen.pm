@@ -25,6 +25,12 @@ class Genome::Model::Tools::ContaminationScreen {
                              is => 'String',
                              is_input => 1,
                          },
+            summary_file => {
+                            doc => 'statistical report',
+                            is => 'String',
+                            is_output => 1,
+                            is_optional => 1,
+                       },
          ],
 };
 
