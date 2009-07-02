@@ -1,4 +1,4 @@
-package Genome::Model::Tools::PooledBac::CreateBACProjects;
+package Genome::Model::Tools::PooledBac::CreateBacProjects;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Genome::Model::Tools::Pcap::Assemble;
 use Bio::SeqIO;
 use PP::LSF;
 use Data::Dumper;
-class Genome::Model::Tools::PooledBac::CreateBACProjects {
+class Genome::Model::Tools::PooledBac::CreateBacProjects {
     is => 'Command',
     has => 
     [        

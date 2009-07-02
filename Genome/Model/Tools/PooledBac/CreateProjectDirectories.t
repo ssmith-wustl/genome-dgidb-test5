@@ -5,12 +5,12 @@ use warnings;
 
 use above 'Genome';
 use Genome;
-exit;
+
 #use Test::More skip_all => 'test data not in place yet....';
 #use Test::More tests => 5;
 
 #BEGIN {
-#    use_ok('Genome::Model::Tools::PooledBac::CreateBACProjectDirectories');
+#    use_ok('Genome::Model::Tools::PooledBac::CreateBacProjectDirectories');
 #}
 use Genome::Model::Tools::PooledBac::CreateProjectDirectories;
 my $path = '/gsc/var/cache/Genome-Model-Tools-PooledBac';
