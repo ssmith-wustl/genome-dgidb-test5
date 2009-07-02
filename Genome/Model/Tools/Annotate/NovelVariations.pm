@@ -92,55 +92,52 @@ sub execute {
     }
     $self->_variation_report_fh($output_fh);
     
-    #if no build is provided, use the v0 of our generic NCBI-human-36 imported annotation model
+    #if no build is provided, use dbSNP 130
     unless ($self->build){
-        my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
-        my $build = $model->build_by_version(0);
-        
+        my $model = Genome::Model->get(name => 'dbSNP.imported-variations');
+        my $build = $model->build_by_version(130);
+
         unless ($build){
-            $self->error_message("couldn't get build v0 from 'NCBI-human.combined-annotation'");
+            $self->error_message("couldn't get build 130 from 'dbSNP.imported-variations'");
             return;
         }
         $self->build($build);
     }
     
-    # omit headers as necessary
-    $output_fh->print( join("\t", $self->variation_report_headers), "\n" ) unless $self->no_headers;
+    die 'no headers' if $self->no_headers;
+    $output_fh->print( join("\t", $self->variation_report_headers), "\n" );
     
-    # annotate all of the input SNVs...
     my $chromosome_name = '';
     my $variation_window = undef;
+
     while ( my $variant = $variant_svr->next ) {
+
         # make a new annotator when we begin and when we switch chromosomes
-        unless ($variant->{chromosome_name} eq $chromosome_name) {
+        if ($variant->{chromosome_name} ne $chromosome_name) {
             $chromosome_name = $variant->{chromosome_name};
             $self->status_message("generating overlap iterator for $chromosome_name");
             
             # Apply the filter on submitters if necessary
-            my $variant_iterator;
+            my $variation_iterator;
             if ($self->submitter_filter) {
                 my @valid_submitters = split (",", $self->submitter_filter);
-                $variant_iterator = Genome::Variation->create_iterator(
-                    where => [ 
+                $variation_iterator = $self->build->variation_iterator(
                     chrom_name => $chromosome_name,
-                    build_id => $self->build->build_id,
                     submitters => \@valid_submitters,
-                    ]
                 );
             } else {
-                $variant_iterator = Genome::Variation->create_iterator(
-                    where => [ 
+                $variation_iterator = $self->build->variation_iterator(
                     chrom_name => $chromosome_name,
-                    build_id => $self->build->build_id,
-                    ]
                 );
             }
             $variation_window =  Genome::Utility::Window::Variation->create( 
-                iterator => $variant_iterator,
+                iterator => $variation_iterator,
                 range => $self->indel_range
             );
+
             die Genome::Utility::Window::Variation->error_message unless $variation_window;
         }
+
         # get the data and output it
         my @variations = $variation_window->scroll($variant->{start});
 
@@ -238,57 +235,32 @@ sub variation_report_headers {
 
 sub variation_attributes {
     my $self = shift;
-    return ( $self->variation_sources());
-}
-
-sub variation_sources {
-    my $self = shift;
-    return (qw/ dbsnp-127 watson venter /);
+    return qw(database version submitter_name);
 }
 
 #- PRINT REPORTS -#
 sub _print_reports_for_snp {
+
     my ($self, $variant, $variations) = @_;
 
     # Basic SNP Info
-    my $variant_info_string = join
-    (
-        "\t", 
-        map { $variant->{$_} } $self->variant_attributes,
-    );
+    my $variant_info_string =
+        join( "\t", map { $variant->{$_} } $self->variant_attributes );
+    my @variation_strings;
 
-    # Variation Report
-    my @snp_exists_in_variations;
-    if ($variations and @$variations )
-    {
-        for my $db_source ( $self->variation_sources )
-        {
-            if ( grep { lc($_->source) eq $db_source } @$variations )
-            {
-                push @snp_exists_in_variations, 1;
-            }
-            else
-            {
-                push @snp_exists_in_variations, 0;
-            }
-        }
-    }
-    else
-    {
-        @snp_exists_in_variations = (qw/ 0 0 0 /);
+    for my $variation (@$variations) {
+
+        my $variation_info_string =
+            join( "\t", map { $variation->{$_} } $self->variation_attributes );
+
+        push @variation_strings, join("\t", $variant_info_string, $variation_info_string);
     }
 
-    # Variations
-    $self->_variation_report_fh->print
-    (
-        join
-        (
-            "\t",
-            $variant_info_string,
-            @snp_exists_in_variations,
-        ),
-        "\n",
-    );
+    if (! @variation_strings) {
+        push @variation_strings, "$variant_info_string\t\t\t";
+    }
+
+    $self->_variation_report_fh->print(join("\n",@variation_strings) . "\n");
 
     return 1;
 }

@@ -42,27 +42,5 @@ class Genome::Variation {
     data_source => 'Genome::DataSource::Variations',
 };
 
-
-sub data_directory {
-
-    my ($self) = @_;
-
-    my $dd = $self->__data_directory();
-
-    if (!$dd) {
-
-        my $build = $self->build() || die 'no build';
-        $dd = $build->variation_data_directory();
-        $self->__data_directory($dd) if $dd;
-    }
-
-    return $dd;
-}
-
-
-__END__
-
-
-
 1;
 

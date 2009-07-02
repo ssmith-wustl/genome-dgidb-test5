@@ -17,10 +17,23 @@ class Genome::Model::Build::ImportedVariations {
         variation_data_directory => {
             via => 'attributes',
             to => 'value',
-            where => [ property_name => 'annotation_data_source_directory'],
+            where => [ property_name => 'variation_data_directory'],
             is_mutable => 1 
         },
     ],
 };
+
+sub variation_iterator{
+    my $self = shift;
+    my %p = @_;
+
+    my $chrom_name = delete $p{chrom_name};
+
+    if ($chrom_name){
+            return Genome::Variation->create_iterator(where => [data_directory => $self->variation_data_directory, chrom_name => $chrom_name, %p]);
+    }else{
+        $self->error_message("No chromosome name provided to create variation iterator");
+    }
+}
 
 1;
