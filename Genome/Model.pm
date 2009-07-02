@@ -384,7 +384,11 @@ sub model_data_directory {
 sub model_link {
     my $self = shift;
     die sprintf("Model (ID: %s) does not have a name\n", $self->id) unless defined $self->name;
-    return Genome::Config->model_links_directory .'/'. $self->name;
+
+    # strip out path separator chars because those will cause symlink creation to fail!
+    my $sanitized_name = $self->name;
+    $sanitized_name =~ s/\//_/g;
+    return Genome::Config->model_links_directory .'/'. $sanitized_name;
 }
 
 # These vary based on the current configuration, which could vary over
