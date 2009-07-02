@@ -140,9 +140,6 @@ sub execute {
         $self->error_message("Report format '" . $self->report_format . "' not supported, please specify 'txt' or 'xml'.");
     }
                               
-    
-    $DB::single = 1;
-    
     $gold_fh->close;
     $snp_fh->close;
 
@@ -571,7 +568,7 @@ sub store_report_xml {
     $self->_add_variants_node($gold_het_total, $het_breakdown_ref, $self->_gold_het_snp_node);
 
     # assemble gold-homozygous-snp node   
-    $self->{_gold_hom_snp_node} =  $self->_xml->createElement("gold-homozygous_snp");
+    $self->{_gold_hom_snp_node} =  $self->_xml->createElement("gold-homozygous-snp");
     $self->_gold_hom_snp_node->addChild( $self->_xml->createAttribute("total", $gold_hom_total) );
     $self->_add_variants_node($gold_hom_total, $hom_breakdown_ref, $self->_gold_hom_snp_node);
 
