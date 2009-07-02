@@ -12,38 +12,46 @@ class Genome::Model::Tools::Annotate::NovelVariations {
     has => [ 
         variant_file => {
             type => 'Text',
-            is_optional => 0,
+            is_input => 1,
             doc => "File of variants.  Tab separated columns: chromosome_name start stop reference variant",
+        },
+        output_file => {
+            type => 'Text',
+            default => "STDOUT",
+            is_input => 1,
+            is_output => 1,
+            doc => "Store annotation in the specified file instead of sending it to STDOUT."
         },
     ],
     has_optional => [
-        output_file => {
-            type => 'Text',
-            is_optional => 1,
-            doc => "Store annotation in the specified file instead of sending it to STDOUT."
+        exclude_known_variations => {
+            type => 'Integer',
+            default => 0,
+            doc => '(DEFAULT VALUE) If set to 0, output every input variant and the (variant database, version, and submitter_name) of previously found variations if they were found. These columns will be blank if no variations were found for the given line of input.
+            If set to 1, the output will contain only variants that were NOT found previously in dbSNP. Output will be the ORIGINAL LINE of input if the variant was NOT previously found. If the variant was previously found, no output will be given for that variant.',
         },
         no_headers => {
             type => 'Boolean',
-            is_optional => 1,
             default => 0,
             doc => 'Exclude headers in report output',
         },
         # Variation Params
         indel_range => {
            type => 'Integer',
-           is_optional => 1,
            default => 0,
            doc => 'Range to look around an indel for known variations... does not apply to snps',
         },
         submitter_filter => {
             type => 'Text',
-            is_optional => 1,
-            doc => 'Comma separated list of submitters to consider from dbsnp. Results will not include submitters not mentioned. Default is no filter.',
+            doc => 'Comma separated list of submitters (no spaces allowed) to consider from dbsnp. Results will only include submitters mentioned. Default is no filter.',
         },
         build => {
             is => "Genome::Model::Build",
             id_by => 'build_id',
-            is_optional => 1, 
+        },
+        build_id => {
+            is => "Integer",
+            doc => 'Build id of imported variations to use. Currently defaults to use DBsnp 130.',
         },
     ],
 };
@@ -53,7 +61,7 @@ class Genome::Model::Tools::Annotate::NovelVariations {
 
 sub help_synopsis { 
     return <<EOS
-gt annotate novel-variations --variant-file snvs.csv --output-file transcript-changes.csv
+gt annotate novel-variations --variant-file snvs.csv --output-file transcript-changes.csv --submitter-filter HUMANGENOME_JCVI,1000GENOMES
 EOS
 }
 
@@ -82,13 +90,14 @@ sub execute {
         return;
     }
     
-    # establish the output handle for the transcript variations
+    # establish the output handle for the transcript variants
     my $output_fh;
-    if (my $output_file = $self->output_file) {
-        $output_fh = $self->_create_file($output_file);
+    my $output_file = $self->output_file;
+    if ($self->output_file =~ /STDOUT/i) {
+        $output_fh = 'STDOUT';
     }
     else {
-        $output_fh = 'STDOUT';
+        $output_fh = $self->_create_file($output_file);
     }
     $self->_variation_report_fh($output_fh);
     
@@ -104,8 +113,7 @@ sub execute {
         $self->build($build);
     }
     
-    die 'no headers' if $self->no_headers;
-    $output_fh->print( join("\t", $self->variation_report_headers), "\n" );
+    $output_fh->print( join("\t", $self->variation_report_headers), "\n" ) unless ($self->no_headers);
     
     my $chromosome_name = '';
     my $variation_window = undef;
@@ -123,7 +131,7 @@ sub execute {
                 my @valid_submitters = split (",", $self->submitter_filter);
                 $variation_iterator = $self->build->variation_iterator(
                     chrom_name => $chromosome_name,
-                    submitters => \@valid_submitters,
+                    submitter_name => \@valid_submitters,
                 );
             } else {
                 $variation_iterator = $self->build->variation_iterator(
@@ -150,8 +158,15 @@ sub execute {
                     push @valid_variations, $variation;
                 }
         }
-        
-        $self->_print_reports_for_snp($variant, \@valid_variations);
+        # If we are only printing previously unknown variations, check to see if it is novel before printing 
+        # Otherwise print a line with our findings regardless
+        if ($self->exclude_known_variations) {
+            unless(scalar(@valid_variations >= 1)) {
+                $output_fh->print($variant->{original_line});
+            }    
+        } else {
+            $self->_print_reports_for_snp($variant, \@valid_variations);
+        }
     }
 
     return 1;
@@ -195,31 +210,14 @@ sub variation_in_range {
     } else {
         if ($type =~ /INS|DEL|SNP|DNP|MNP/i) {
             #$self->warning_message("Junk data from data source (SNP with start and stop not equal?). Variation is: " . Dumper $variation);
+        # We do not really know what these are right now, but they are present in the data, so skip.
+        } elsif ($type =~ /NAMED-LOCUS/i) {
+            return 0;
         } else {
             $self->warning_message("Variation from data source has type $type, which is not supported. Variation is: " . Dumper $variation);
         }
     }
 
-}
-
-sub _create_file {
-    my ($self, $output_file) = @_;
-    my $output_fh;
-    
-    unlink $output_file if -e $output_file;
-    if (-e $output_file) {
-        $self->warning_message("found previous output file, removing $output_file");
-        unlink $output_file;
-        if (-e $output_file) {
-            die "failed to remove previous file: $! ($output_file)";
-        }
-    }
-    $output_fh = IO::File->new("> $output_file");
-    unless ($output_fh) {
-        die "Can't open file ($output_file) for writing: $!";
-    }
-    
-    return $output_fh;
 }
 
 sub _variation_report_fh {
