@@ -42,15 +42,35 @@ sub create
 sub execute 
 {
     my $self = shift;
-    my ($read_file, $parsed_file, $hits_file) = ($self->_resolve_directory . '/reads.txt', $self->_resolve_directory . '/reads.parsed', $self->_resolve_directory . '/hits.fna');
-    my ($output_file, $summary_file) = ($self->output_file ? $self->output_file :  $self->input_file . 'screened', 
-                                        $self->summary_file ? $self->summary_file : $self->input_file . '.summary');
+    my $input_file = $self->input_file;
+    my ($read_file, $parsed_file, $hits_file) = ($input_file . '.reads', $input_file . '.reads.parsed', $input_file . '.hits.fna');
+    my ($output_file, $summary_file) = ($self->output_file ? $self->output_file :  $input_file . '.screened', 
+                                        $self->summary_file ? $self->summary_file : $input_file . '.summary');
     my $parse_script = '/gscmnt/233/analysis/sequence_analysis/scripts/parse_blast_results_fullgroup_percid_fractionoflength.pl';
 
+#    my $wu_blast =  Genome::Model::Tools::WuBlast::Blastn->create(
+#                                                                    database   => $self->database,
+#                                                                    query_file => $self->input_file', 
+#                                                                    output_file=> $read_file,
+#                                                                    M => 1, 
+#                                                                    N => -3,
+#                                                                    R => 3,
+#                                                                    Q => 3,
+#                                                                    wordmask=seg lcmask,
+#                                                                    topcomboN=1,
+#                                                                    hspsepsmax=10,
+#                                                                    golmax=0,
+#                                                                    B=1,
+#                                                                    V=1,
+#                                                                    novalidctxok,
+#                                                                );
+
+
     #create read file
-    my $cmd = 'blastn ' . $self->database . ' ' . $self->input_file . ' M=1 N=-3 R=3 Q=3 wordmask=seg lcmask topcomboN=1 hspsepsmax=10 golmax=0 B=1 V=1 novalidctxok >  ' . $read_file; 
+    my $cmd = 'blastn ' . $self->database . ' ' . $input_file . ' M=1 N=-3 R=3 Q=3 wordmask=seg lcmask topcomboN=1 hspsepsmax=10 golmax=0 B=1 V=1 novalidctxok >  ' . $read_file; 
     $self->status_message('Running: '. $cmd);
 
+    print("$cmd\n");
     my $rv = system($cmd);
     unless ($rv == 0) {
         $self->error_message("non-zero return value($rv) from command $cmd");
@@ -86,7 +106,6 @@ sub execute
                     $aligns{$align[1]}++; #consume duplicates, so only uniques are written to output
                     $contaminated_reads++;
                 }
-                $total_reads++;
             }
             until ($grep->eof());
             print $parse join("\n", keys(%aligns));
@@ -104,9 +123,7 @@ sub execute
     }       
     if ($summary->open("> $summary_file"))
     {
-       print $summary "total reads:  $total_reads\n";
        print $summary "contaminated reads $contaminated_reads\n";
-       print $summary round($contaminated_reads * 100/$total_reads) . "%";  
     }
     else
     {
