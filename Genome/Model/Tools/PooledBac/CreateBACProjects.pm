@@ -34,14 +34,30 @@ sub help_detail {
 EOS
 }
 
+sub dump_sff_read_names
+{
+    my ($self, $input_fasta) = @_;
+    my $input_fasta_fh = IO::File->new("$input_fasta");
+    my $read_names_fh = IO::File->new(">read_names");
+    while(<$input_fasta_fh>) {
+        next unless />/;
+        chomp;
+        last if /\.c1/;
+        my ($name) = />(.+)/;
+        print  $read_names_fh  "$name\n";
+    } 
+}
 ############################################################
 sub execute { 
     my ($self) = @_;
     my $project_dir = $self->project_dir;
     $DB::single = 1;
     chdir($project_dir);
+    my @sff_files = ('/gscmnt/sata601/production/96211313/R_2009_03_17_15_50_42_FLX03080333_adminrig_96211313/D_2009_03_18_04_10_38_blade9-2-6_fullProcessing/sff/FSP3MSF02.sff',
+                             '/gscmnt/sata601/production/96211313/R_2009_03_17_15_50_42_FLX03080333_adminrig_96211313/D_2009_03_18_04_10_23_blade9-4-10_fullProcessing/sff/FSP3MSF01.sff');
+    my $sff_string = join ' ',@sff_files;
+    
     my $seqio = Bio::SeqIO->new(-format => 'fasta', -file => 'ref_seq.fasta');
-    #my $qualio = Bio::SeqIO->new(-format => 'qual', -file => 'out.fasta.qual');
     my @jobs;
     while (my $seq = $seqio->next_seq)
     {    
@@ -50,32 +66,19 @@ sub execute {
         chomp $date;
         chdir($project_dir."/$name");
         
-        #this brain damage is due to how Kyung sets up the data
-        `mkdir -p $project_dir/$name/Pooled_Bac_Projects-1.0_$date.pcap/edit_dir`;
-        `gzip *`;
-        `/bin/cp -f *.gz Pooled_Bac_Projects-1.0_$date.pcap/edit_dir/.`;
-        
-#        `bsub gt pcap assemble --project_name 'Pooled_Bac_Projects' --disk_location=$project_dir/$name --parameter_setting='NORMAL' --assembly_version='1.0' --assembly_date=$date --existing_data_only='YES' --pcap_run_type='NORMAL'`;
-
-#        my $obj = Genome::Model::Tools::Pcap::Assemble->create
-#        (
-#            project_name       => 'Pooled_Bac_Projects',
-#            disk_location      => $project_dir."/$name",
-#            parameter_setting  => 'RELAXED',
-#            assembly_version   => '1.0',
-#            assembly_date      => $date,
-#            #read_prefixes      => 'PPBA',
-#            existing_data_only  => 'YES',
-#            pcap_run_type      => 'RAW_454',#'NORMAL'
-#        );
-#
-#        $obj->execute_pcap;
-        my $command = "bsub gt pcap assemble --project_name 'Pooled_Bac_Projects' --disk_location=$project_dir/$name --parameter_setting='RELAXED' --assembly_version='1.0' --assembly_date=$date --existing_data_only='YES' --pcap_run_type='RAW_454'";
+        $self->dump_sff_read_names("pooledreads.fasta");
+        my $create_sff = "sfffile -o pooledreads.sff -i read_names $sff_string";
+        my $run_newbler = "mapasm runAssembly -o newbler_assembly -consed -rip -cpu 7 -vt /gscmnt/233/analysis/sequence_analysis/databases/genomic_contaminant.db.081104.fna reference_reads.fasta pooledreads.sff";
+        my $command_fh = IO::File->new(">command.sh");
+        print $command_fh "$create_sff\n$run_newbler\n";
         my %job_params = (
             pp_type => 'lsf',
             q => 'short',
-            command => $command,
-            o => "pcap_bsub.log",
+            command => 'source ./command.sh',
+            o => "newbler_bsub.log",
+            M => 16000000,
+            rusage => ['mem=16000'],
+            select => ['type==LINUX64','mem>16000']
         );
         my $job = PP::LSF->create(%job_params);
         $self->error_message("Can't create job: $!")
