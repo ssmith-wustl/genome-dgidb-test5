@@ -171,31 +171,30 @@ $DB::single = 1;
         my $goldsnp_contents = get_contents($fh);
         my ($unfiltered,$filtered) = ($goldsnp_contents =~ /Gold Concordance for Unfiltered SNVs(.*)Gold Concordance for SNPFilter SNVs(.*)/ms);
         
-        my ($unfiltered_het, $unfiltered_hom) = ($unfiltered    =~ /(There were \d+ heterozygous calls.*).*?(There were \d+ homozygous calls.*)/ms);
-        my ($filtered_het,   $filtered_hom)   = ($filtered      =~ /(There were \d+ heterozygous calls.*).*?(There were \d+ homozygous calls.*)/ms);
+        my ($unfiltered_het, $unfiltered_hom) = ($unfiltered    =~ /(heterozygous calls.*)Partially.*?(homozygous calls.*)Partially/ms);
+        my ($filtered_het,   $filtered_hom)   = ($filtered      =~ /(heterozygous calls.*)Partially.*?(homozygous calls.*)Partially/ms);
 
-	if ($unfiltered_het =~ m|>Matching Gold Genotype</span>
-</div>
-<div>
-<span style=\"padding-left:10px;\"></span><span style=\"padding-left:10px;\">heterozygous - 1 allele variant</span><span style=\"padding-left:10px;\">(\S+)</span><span style=\"padding-left:10px;\">(\S+)</span>|g) {
+$DB::single = 1;
+
+        if ($unfiltered_het =~ m|heterozygous - 1 allele variant</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td></tr>|) {
             #print ("Found match. >$1, $2<\n");
             $unfiltered_diploid_het_coverage_actual_number=$1; 
             $unfiltered_diploid_het_coverage_percent=$2; 
         }
         
-        if ($filtered_het =~ m|heterozygous - 1 allele variant</span><span style=\"padding-left:10px;\">(\S+)</span><span style=\"padding-left:10px;\">(\S+)</span><span style=\"padding-left:10px;\">(\S+)</span>|g) {
+        if ($filtered_het =~ m|heterozygous - 1 allele variant</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td></tr>|) {
             #print ("Found match. >$1, $2, $3<\n");
             $filtered_diploid_het_coverage_actual_number=$1; 
             $filtered_diploid_het_coverage_percent=$2; 
         }
         
-        if ($unfiltered_hom =~ m|homozygous variant</span><span style=\"padding-left:10px;\">(\S+)</span><span style=\"padding-left:10px;\">(\S+)</span><span style=\"padding-left:10px;\">(\S+)</span>|g) {
+        if ($unfiltered_hom =~ m|homozygous variant</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td></tr>|) {
             #print ("Found match. >$1, $2, $3<\n");
             $unfiltered_diploid_hom_coverage_actual_number=$1; 
             $unfiltered_diploid_hom_coverage_percent=$2; 
         }
         
-        if ($filtered_hom =~ m|homozygous variant</span><span style=\"padding-left:10px;\">(\S+)</span><span style=\"padding-left:10px;\">(\S+)</span><span style=\"padding-left:10px;\">(\S+)</span>|g) {
+        if ($filtered_hom =~ m|homozygous variant</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td></tr>|) {
             #print ("Found match. >$1, $2, $3<\n");
             $filtered_diploid_hom_coverage_actual_number=$1; 
             $filtered_diploid_hom_coverage_percent=$2; 
