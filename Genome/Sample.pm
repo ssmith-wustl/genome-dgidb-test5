@@ -19,6 +19,7 @@ class Genome::Sample {
                 --fully precise and connected to LIMS
                 s.organism_sample_id    id,
                 s.full_name             name,
+                s.common_name           common_name,
 
                 -- collaborator's output
                 s.sample_name           extraction_label,
@@ -49,6 +50,9 @@ class Genome::Sample {
                                         doc => 'the fully qualified name for the sample (the "DNA NAME" in LIMS for both DNA and RNA)' },
     ],
     has_optional => [	
+        common_name                 => { is => 'Text', 
+                                        doc => 'a name like "tumor1" for a given sample' },
+
         extraction_label            => { is => 'Text', 
                                         doc => 'identifies the specimen sent from the laboratory which extracted DNA/RNA' },
                 
@@ -78,6 +82,8 @@ class Genome::Sample {
                                         doc => 'either "organism individual" for individual patients, or "population group" for cross-individual samples' },
         
         source_name                 => { via => 'source', to => 'name' },
+        
+        source_common_name          => { via => 'source', to => 'common_name' },
         
         taxon                       => { is => 'Genome::Taxon', id_by => 'taxon_id', 
                                         doc => 'the taxon of the sample\'s source' },

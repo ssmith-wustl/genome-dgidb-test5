@@ -18,9 +18,9 @@ class Genome::SampleSource {
             from population_group@dw
             union all
             select organism_id id,
-                name,
+                full_name name,
                 taxon_id,
-                NULL description,
+                description,
                 'Genome::Individual' sample_source_subclass_name
             from organism_individual@dw
         ) sample_source|,
@@ -30,8 +30,7 @@ class Genome::SampleSource {
         id           => { is => 'Text', len => 10 },
     ],
     has => [
-        sample_source_subclass_name => { is => 'Text' },
-        
+        sample_source_subclass_name => { is => 'Text' },        
         name            => { is => 'Text', len => 64 },
         description     => { is => 'Text' },
         

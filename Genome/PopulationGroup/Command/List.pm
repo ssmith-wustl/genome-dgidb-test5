@@ -12,7 +12,7 @@ class Genome::PopulationGroup::Command::List {
             is_constant => 1, 
             value => 'Genome::PopulationGroup'
         },
-        show => { default_value => 'id,name' },
+        show => { default_value => 'id,name,description' },
     ],
 };
 
