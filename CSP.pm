@@ -723,6 +723,7 @@ my %csp_priority = (
     'import sequence annotation'              => 2,
     'reallocate disk space'                   => 1,
     'deallocate disk space'                   => 1,
+    'copy allocation'                         => 1,
     'transfer solid run'                      => 1,
     'build sequence db'                       => 1,
 #    'add amplification target to region of interest' => 2,
