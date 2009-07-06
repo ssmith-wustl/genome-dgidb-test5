@@ -90,6 +90,7 @@ class Genome::Model {
         comparable_normal_model_id       => { is => 'Number', len => 10 },
         sample_name                      => { is => 'Text', len => 255 },
         sequencing_platform              => { via => 'processing_profile' },
+        last_complete_build_directory    => { is_calculated => 1, calculate => q|$b = $self->last_complete_build; return unless $b; return $b->data_directory| },
     ],
     has_many_optional => [
         ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_id_by => 'model' },
