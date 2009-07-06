@@ -80,6 +80,7 @@ sub execute
     #run parsing script
     my $parse_cmd = $parse_script . ' -input ' . $read_file . ' -output ' . $parsed_file . ' -num_hits 1 -percent 95 -fol .75'; 
     $self->status_message('Running: ' . $parse_cmd);
+    print $parse_cmd, "\n";
     $rv = system($parse_cmd);
     unless ($rv == 0)
     {
