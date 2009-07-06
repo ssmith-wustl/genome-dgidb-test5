@@ -124,12 +124,14 @@ sub execute {
 
           }
           
+        my @process_errors;
         PP: foreach my $processing_profile_name (@processing_profile_names) {
               
               my $auto_build = 1;
 
               unless (defined($processing_profile_name) && ($processing_profile_name =~ /\S+/)) {
                   $self->error_message("got garbage processing profile name for instrument data '$instrument_data_id' PSE '$pse_id'");
+                  push @process_errors, $self->error_message;
                   next PP;
               }
               
@@ -137,6 +139,7 @@ sub execute {
               
               unless ($pp) {
                   $self->error_message("Failed to get processing profile '$processing_profile_name' for inprogress pse ". $pse->pse_id);
+                  push @process_errors, $self->error_message;
                   next PP;
               }
             
@@ -249,6 +252,7 @@ sub execute {
                   
                   unless (defined($model)) {
                       $self->error_message("Failed to create model '$model_name'");
+                      push @process_errors, $self->error_message;
                       next PP;
                   }
                   
@@ -265,7 +269,7 @@ sub execute {
                   
                   if (@existing_instrument_data) {
                       $self->status_message('Existing instrument_data found for model '. $model->id .' and instrument_data_id '. $instrument_data_id);
-                      next PP;
+                      next;
                   }
                   
                   unless ($model->isa('Genome::Model::PolyphredPolyscan') || $model->isa('Genome::Model::CombineVariants')){
@@ -277,6 +281,7 @@ sub execute {
                       
                       unless ($assign->execute) {
                           $self->error_message('Failed to execute instrument-data assign for model '. $model->id .' and instrument data '. $instrument_data_id);
+                          push @process_errors, $self->error_message;
                           next PP;
                       }
                       
@@ -300,8 +305,12 @@ sub execute {
               
           }
           
-          # Set the pse as completed since this is the end of the line for the pses
-          $pse->pse_status("completed");
+          unless (@process_errors > 0) {
+            # Set the pse as completed since this is the end of the line for the pses
+            $pse->pse_status("completed");
+          } else {
+            $self->error_message("Leaving queue instrument data PSE inprogress, due to errors. \n" . join "\n", @process_errors);
+          }
           
       }
    
