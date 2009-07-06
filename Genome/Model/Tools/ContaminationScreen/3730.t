@@ -14,7 +14,7 @@ my %params;
 $params{input_file} = '/gsc/var/tmp/fasta/3730/test.fna';
     #'/gscmnt/sata156/research/mmitreva/bacteria/multi_sample_analysis/jmartin/CONTAMINATION_SCREENING_ALL_DATA/data_for_eric/3730/UpperGi_all_16s.duplicates_removed.fna.clean'
 $params{output_file} = '/gsc/var/tmp/fasta/3730/test_output.fna';
-$params{database} = '/gscmnt/sata156/research/mmitreva/databases/human_build36/HS36.chr_Mt_ribo.fna';
+$params{database} = '/gsc/var/lib/reference/set/2809160070/blastdb/blast';
 
 my $hcs_3730 = Genome::Model::Tools::ContaminationScreen::3730->create(%params);
 
