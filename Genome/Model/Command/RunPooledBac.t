@@ -7,7 +7,7 @@ use above 'Genome';
 use Genome;
 
 use Genome::Model::Command::RunPooledBac;
-use Test::More skip_all => "Skipping, test data not in place yet.";
+use Test::More skip_all => "Test data not in place yet.";
 exit;
 my $path = '/gsc/var/cache/Genome-Model-Tools-PooledBac';
 
