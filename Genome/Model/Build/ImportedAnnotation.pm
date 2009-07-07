@@ -48,11 +48,14 @@ sub transcript_iterator{
             push @cached_transcripts, $iterators[$i]->next;
         }
         my $iterator = sub {
-            my $index = 0;
-            my $lowest = $cached_transcripts[0];
+            my $index;
+            my $lowest;
             for (my $i = 0; $i < @iterators; $i++) {
                 next unless $cached_transcripts[$i];
-                $lowest ||= $cached_transcripts[$i];
+                unless ($lowest){
+                    $lowest = $cached_transcripts[$i];
+                    $index = $i;
+                }
                 if ($self->transcript_cmp($cached_transcripts[$i], $lowest) < 0) {
                     $index = $i;
                     $lowest = $cached_transcripts[$index];
