@@ -67,7 +67,7 @@ sub _resolve_subclass_name {
     my $class = shift;
 
     if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
-        my $aligner_name = $_[0]->alginer_name;
+        my $aligner_name = $_[0]->aligner_name;
         return $class->_resolve_subclass_name_for_aligner_name($aligner_name);
     }
     elsif (my $aligner_name = $class->get_rule_for_params(@_)->specified_value_for_property_name('aligner_name')) {
