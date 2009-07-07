@@ -595,6 +595,7 @@ sub lock_resource {
                 $self->unlock_resource(resource_lock => $resource_lock);
             }
         }
+	$info_fh->close();
         sleep $block_sleep;
     }
 
