@@ -104,8 +104,10 @@ sub execute {
 
     # Remove the result files from any previous run
     unlink($snp_output_file, $filtered_snp_output_file, $indel_output_file, $filtered_indel_file);
+ 
+    my $indel_finder_params = (defined $model->indel_finder_params ? $model->indel_finder_params : " ");
 
-    my $samtools_cmd = "$sam_pathname pileup -c -f $ref_seq_file";
+    my $samtools_cmd = "$sam_pathname pileup -c $indel_finder_params -f $ref_seq_file";
 
     #Originally "-S" was used as SNP calling. In r320wu1 version, "-v" is used to replace "-S" but with 
     #double indel lines embedded, this need sanitized
