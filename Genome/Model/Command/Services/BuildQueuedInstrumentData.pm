@@ -183,6 +183,10 @@ sub execute {
                     EIDA: foreach my $eida (@existing_instrument_data_assignments) {
                           
                           my $eid = Genome::InstrumentData::Solexa->get(id => $eida->instrument_data_id());
+			  unless ($eid) {
+				$self->warning_message(sprintf("This model has instrument data assigned to it, but the assigned instrument data could not be located (model name %s instrument data id %s)", $model->name, $eida->instrument_data_id));
+				next EIDA;
+			  }
                           
                           my $eid_capture_target = $eid->target_region_set_name();
                           
