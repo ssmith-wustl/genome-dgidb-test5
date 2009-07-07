@@ -164,26 +164,31 @@ sub execute {
    $self->status_message("<<< Completing Bam merge at $now.");
 
    #remove intermediate files
-   #$now = UR::Time->now;
-   #$self->status_message(">>> Removing intermediate files at $now");
+   $now = UR::Time->now;
+   $self->status_message(">>> Removing intermediate files at $now");
        
-   #remove bam files 
-   #for my $each_bam_file (@bam_files) {
-   #    $self->status_message("Executing unlink command on $each_bam_file and $each_bam_file.bai");
-   #      my $rm_rv1 = unlink($each_bam_file);
-   #      my $rm_rv2 = unlink($each_bam_file.".bai"); #remove each index as well
-   #      unless ($rm_rv1 == 1) {
-   #      $self->error_message("There was a problem with the bam remove command: $rm_rv1");
-   #      }  
-   #      unless ($rm_rv2 == 1) {
-   #              $self->error_message("There was a problem with the bam index remove command: $rm_rv2");
-   #      }
-   #    } 
+   #clean up files for dna typed models
+   my $dna_type = $self->model->dna_type;
+   if ( $dna_type eq 'rna' || $dna_type eq 'cdna' ) {
+       $self->status_message("Model is of type $dna_type.  Keeping all files.");
+   } else {
+       #delete everything except big dedup bam file and index 
+       my @all_files = <$alignments_dir/*>;
+       for my $each_bam_file (@all_files) {
+           if ( ($each_bam_file eq $bam_merged_output_file) || ($each_bam_file eq $bam_merged_output_file.".bai" ) ) {   
+                $self->status_message("Keeping $each_bam_file");
+           } else {
+                $self->status_message("Executing unlink command on $each_bam_file");
+                my $rm_rv1 = unlink($each_bam_file);
+                unless ($rm_rv1 == 1) {
+                    $self->error_message("There was a problem with the bam remove command: $rm_rv1");
+                }  
+           }
+       }
+   } 
 
-   #} #end else for Bam merge process
-
-   #$now = UR::Time->now;
-   #$self->status_message("<<< Completed removing intermediate files at $now");
+   $now = UR::Time->now;
+   $self->status_message("<<< Completed removing intermediate files at $now");
 
    $self->status_message("*** All processes completed. ***");
 
@@ -197,12 +202,11 @@ sub verify_successful_completion {
 
     my $return_value = 1;
     my $build = $self->build;
-
             
-   # unless (-e $build->whole_rmdup_map_file) {
-#	$self->error_message("Can't verify successful completeion of Deduplication step. ".$build->whole_rmdup_map_file." does not exist!");	  	
-#	return 0;
-    #} 
+    unless (-e $build->whole_rmdup_bam_file) {
+	$self->error_message("Can't verify successful completeion of Deduplication step. ".$build->whole_rmdup_bam_file." does not exist!");	  	
+	return 0;
+    } 
 
     return $return_value;
 
