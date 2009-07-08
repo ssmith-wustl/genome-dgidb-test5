@@ -14,14 +14,25 @@ class Genome::Model::Command::Build::AmpliconAssembly::Reports {
 sub execute {
     my $self = shift;
 
-    # Assembly Stats
-    my $stats_generator = Genome::Model::AmpliconAssembly::Report::AssemblyStats->create(
+    for my $report_type ('assembly stats', 'composition') {
+        $self->_generate_and_save_report($report_type);
+    }
+
+    return 1;
+}
+
+sub _generate_and_save_report {
+    my ($self, $type) = @_;
+
+    my $class = 'Genome::Model::AmpliconAssembly::Report::'.Genome::Utility::Text::string_to_camel_case($type);
+    my $generator = $class->create(
         build_id => $self->build->id,
     );
-    unless ( $stats_generator ) {
+    unless ( $generator ) {
         $self->error_message(
             sprintf(
-                'Could not create assembly stats report generator (MODEL <Name:%s Id:%s> BUILD <Id:%s>)', 
+                'Could not create %s report generator (MODEL <Name:%s Id:%s> BUILD <Id:%s>)', 
+                $type,
                 $self->model->name,
                 $self->model->id,
                 $self->build->id,
@@ -29,11 +40,12 @@ sub execute {
         );
         return;
     }
-    my $stats_report = $stats_generator->generate_report;
-    unless ( $stats_report ) {
+    my $report = $generator->generate_report;
+    unless ( $report ) {
         $self->error_message(
             sprintf(
-                'Could not generate assembly stats report (MODEL <Name:%s Id:%s> BUILD <Id:%s>)', 
+                'Could not generate %s report (MODEL <Name:%s Id:%s> BUILD <Id:%s>)', 
+                $type,
                 $self->model->name,
                 $self->model->id,
                 $self->build->id,
@@ -42,10 +54,11 @@ sub execute {
         return;
     }
 
-    unless ( $self->build->add_report($stats_report) ) {
+    unless ( $self->build->add_report($report) ) {
         $self->error_message(
             sprintf(
-                'Could not save assembly stats report (MODEL <Name:%s Id:%s> BUILD <Id:%s>)', 
+                'Could not save %s report (MODEL <Name:%s Id:%s> BUILD <Id:%s>)', 
+                $type,
                 $self->model->name,
                 $self->model->id,
                 $self->build->id,
@@ -53,9 +66,7 @@ sub execute {
         );
     }
 
-    #print $self->build->data_directory."\n"; <STDIN>;
-    
-    return 1;
+    return $report;
 }
 
 1;
