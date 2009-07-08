@@ -39,7 +39,7 @@ sub _test_dir_for_type {
 }
 
 #< MOCK ># 
-sub create_mock_model {
+sub create_basic_mock_model {
     my ($self, %params) = @_;
 
     # Processing profile
@@ -49,7 +49,7 @@ sub create_mock_model {
     my $model_data_dir = ( $params{use_test_dir} ) 
     ? $self->dir
     : File::Temp::tempdir(CLEANUP => 1);
-    
+
     # Model
     my $model = Genome::Model::AmpliconAssembly->create_mock(
         id => -5000,
@@ -63,10 +63,19 @@ sub create_mock_model {
         data_directory => $model_data_dir,
     )
         or die "Can't create mock model for amplicon assembly\n";
-    
+
     for my $pp_param ( Genome::ProcessingProfile::AmpliconAssembly->params_for_class ) {
         $model->set_always($pp_param, $pp->$pp_param);
     }
+
+    return $model;
+}
+
+sub create_mock_model {
+    my ($self, %params) = @_;
+
+    my $model = $self->create_basic_mock_model(%params)
+        or die;
 
     $self->mock_methods(
         $model,
