@@ -49,11 +49,12 @@ sub create
 sub execute 
 {
     my $self = shift;
-    my ($read_file, $minscore) = ($self->_resolve_directory . '/reads.txt', $self->minscore);
-    my ($output_file, $summary_file) = ($self->output_file ? $self->output_file :  $self->input_file . 'screened', 
-                                        $self->summary_file ? $self->summary_file : $self->input_file . '.summary');
+    my $input_file = $self->input_file;
+    my ($read_file, $minscore) = ($input_file . '.reads', $self->minscore);
+    my ($output_file, $summary_file) = ($self->output_file ? $self->output_file :  $input_file . '.screened', 
+                                        $self->summary_file ? $self->summary_file : $input_file . '.summary');
     #create read file
-    my $cmd = 'cross_match.test ' . $self->input_file . ' ' .  $self->database . ' -raw -tags -minmatch 16 -minscore ' . $minscore . ' -bandwidth 3 -penalty -1 -gap_init -1 -gap_ext -1 > ' . $read_file;
+    my $cmd = 'cross_match.test ' . $input_file . ' ' .  $self->database . ' -raw -tags -minmatch 16 -minscore ' . $minscore . ' -bandwidth 3 -penalty -1 -gap_init -1 -gap_ext -1 > ' . $read_file;
     $self->status_message('Running: '. $cmd);
     my $rv = system($cmd);
     unless ($rv == 0) {

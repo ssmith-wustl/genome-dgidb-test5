@@ -38,13 +38,14 @@ sub create
 sub execute 
 {
     my $self = shift;
-    my ($read_file, $parsed_file, $hits_file) = ($self->_resolve_directory . '/reads.txt', $self->_resolve_directory . '/reads.parsed', $self->_resolve_directory . '/hits.fna');
-    my ($output_file, $summary_file) = ($self->output_file ? $self->output_file :  $self->input_file . 'screened', 
-                                        $self->summary_file ? $self->summary_file : $self->input_file . '.summary');
+    my $input_file = $self->input_file;
+    my ($read_file, $parsed_file, $hits_file) = ($input_file . '.reads', $input_file . '.reads.parsed', $input_file . '.hits.fna');
+    my ($output_file, $summary_file) = ($self->output_file ? $self->output_file :  $input_file . '.screened', 
+                                        $self->summary_file ? $self->summary_file : $input_file . '.summary');
     my $parse_script = '/gscmnt/233/analysis/sequence_analysis/scripts/parse_crossmatch_results.pl';
 
     #create read file
-    my $cmd = 'cross_match.test ' . $self->input_file . ' ' .  $self->database . ' -raw -tags -minmatch 14 -bandwidth 6 -penalty -1 -gap_init -1 -gap_ext -1 > ' . $read_file;
+    my $cmd = 'cross_match.test ' . $input_file . ' ' .  $self->database . ' -raw -tags -minmatch 14 -bandwidth 6 -penalty -1 -gap_init -1 -gap_ext -1 > ' . $read_file;
     $self->status_message('Running: '. $cmd);
     my $rv = system($cmd);
     unless ($rv == 0) {
