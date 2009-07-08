@@ -193,7 +193,7 @@ sub execute {
                      right_operation => $output_connector,
                      right_property => 'result'
                  );
-    $stage->as_png($self->build->data_directory .'/'. $self->stage_name .'.png');
+#    $stage->as_png($self->build->data_directory .'/'. $self->stage_name .'.png');
     $stage->save_to_xml(OutputFile => $self->build->data_directory . '/' . $self->stage_name . '.xml');
 #    print $stage->save_to_xml;
 

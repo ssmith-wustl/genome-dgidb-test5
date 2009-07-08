@@ -16,6 +16,7 @@ class Genome::Model::Command::Build {
                            is_optional => 1,
                            doc => 'The build will execute genome model build run-jobs(default_value=1)',
                        },
+        bsub_queue  => {is => 'String', is_optional => 1, doc => 'lsf jobs should be put into this queue' },
     ],
     doc => "build the model with currently assigned instrument data according to the processing profile",
 };
@@ -122,6 +123,8 @@ sub execute {
         return;
     }
 
+    $self->bsub_queue('apipe') unless $self->bsub_queue;
+
     $self->create_directory($self->data_directory);
     my $run_jobs_script = $self->data_directory .'/run_jobs_'. $build->build_id .'.pl';
     open(FILE,'>'.$run_jobs_script) || die ('Failed to open run jobs script: '. $run_jobs_script .":  $!");
@@ -144,14 +147,14 @@ sub execute {
             # transent properties with default_values are not re-initialized when loading object from data source
             $self->auto_execute(1);
         }
-        my $command = 'genome model build run-jobs --model-id='. $build->model_id .' --build-id='. $build->build_id .' --stage-name='. $stage_name;
+        my $command = 'genome model build run-jobs --model-id='. $build->model_id .' --build-id='. $build->build_id .' --stage-name='. $stage_name . ' --bsub-queue=' . $self->bsub_queue;
         print FILE '$rv' . " = system('$command');\n";
         print FILE 'unless ($rv == 0) { die $!; }'. "\n";
     }
     close(FILE);
     # this is really more of a 'testing' flag and may be more appropriate named such
     if ($self->auto_execute) {
-        my $cmdline = 'bsub -H -q long -u '. $ENV{USER} .'@genome.wustl.edu perl '. $run_jobs_script;
+        my $cmdline = 'bsub -H -q ' . $self->bsub_queue . ' -u '. $ENV{USER} .'@genome.wustl.edu perl '. $run_jobs_script;
         my $bsub_output = `$cmdline`;
         my $retval = $? >> 8;
 
