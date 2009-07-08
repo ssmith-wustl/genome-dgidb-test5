@@ -7,6 +7,7 @@ use warnings;
 
 use base 'Genome::Utility::TestBase';
 
+use Data::Dumper 'Dumper';
 use Test::More;
 require File::Path;
 
@@ -16,12 +17,42 @@ sub test_class {
     return 'Genome::AmpliconAssembly';
 }
 
+sub amplicon_assembly {
+    return $_[0]->{_object};
+}
+
 sub params_for_test_class {
     my $self = shift;
     return (
         directory => $self->base_test_dir.'/Genome-Model-AmpliconAssembly/build-10000',
     );
 }
+
+sub invalid_params_for_test_class {
+    return (
+        sequencing_center => 'washu',
+        sequencing_platform => '373',
+    );
+}
+
+sub test_01_amplicons_gsc_3730 : Tests {
+    my $self = shift;
+    
+    # amplicons
+    my $amplicon_assembly = $self->amplicon_assembly;
+    my $amplicons = $amplicon_assembly->get_amplicons;
+    is(@$amplicons, 5, 'got 5 amplicons');
+
+    # reads for amplicon
+    my @reads = $self->amplicon_assembly->get_all_amplicons_reads_for_read_name(
+        ($amplicons->[0]->reads)[0],
+    );
+    is_deeply(\@reads, $amplicons->[0]->get_reads, 'Got all amplicons reads for read name');
+    
+    return 1;
+}
+
+# TODO sub test_02_amplicons_broad_3730 : Tests {
 
 ###########################################################################
 
@@ -123,9 +154,9 @@ use Genome::Model::AmpliconAssembly::Test; # necessary cuz mock objects are in h
 use Test::More;
 
 sub params_for_test_class {
-    my $self = shift;
     return (
-        directory => $self->tmp_dir,
+        directory => $_[0]->tmp_dir,
+        $_[0]->_params_for_test_class,
     );
 }
 
@@ -133,6 +164,7 @@ sub amplicons {
     return $_[0]->{_object}->get_amplicons;
 }
 
+sub _params_for_test_class { return; }
 sub should_copy_traces { 1 }
 sub should_copy_edit_dir { 1 }
 sub _pre_execute { 1 }
@@ -240,6 +272,72 @@ sub test_03_verify : Test(1) {
     my $amplicons = $self->amplicons;
     my $cnt = grep { -s $_->classification_file } @$amplicons;
     is($cnt, @$amplicons, 'Verified - Created classification for each amplicon');
+    
+    return 1;
+}
+
+###########################################################################
+
+package Genome::Model::Tools::AmpliconAssembly::ContaminationScreenTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Tools::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Tools::AmpliconAssembly::ContaminationScreen';
+}
+
+sub _params_for_test_class {
+    return (
+        database => '/gsc/var/lib/reference/set/2809160070/blastdb/blast',
+        remove_contaminants => 1,
+    );
+}
+
+sub _pre_execute { 
+    # copy in the contaminated reads
+    # contaminated read is vjn39g07.g1
+    my $self = shift;
+
+    for my $subdir ( (qw/ chromat_dir edit_dir /) ){
+        my $source = $self->dir."/$subdir";
+        my $dest = $self->tmp_dir."/$subdir";
+        my $dh = Genome::Utility::FileSystem->open_directory($source)
+            or die;
+        while ( my $file = $dh->read ) {
+            next if $file =~ m#^\.#;
+            File::Copy::copy("$source/$file", $dest)
+                or die "Can't copy ($source/$file) to ($dest): $!\n";
+        }
+    }
+
+    $self->{_pre_execute_amplicons} = [ map { $_->get_name } @{$self->amplicons} ];
+
+    return 1;
+}
+
+sub test_03_verify : Test(2) {
+    my $self = shift;
+
+    # screen file
+    my $screen_file = $self->{_object}->screen_file;
+    ok(-s $screen_file, "Wrote screen file: $screen_file");
+
+    # make sure we removed the conaminated amp
+    my %pre_execute_amps = map { $_ => 1 } @{$self->{_pre_execute_amplicons}};
+    for my $amplicon ( @{$self->amplicons} ) {
+        delete $pre_execute_amps{$amplicon->get_name};
+    }
+    is_deeply(
+        [ keys %pre_execute_amps ],
+        [qw/ uyj40e03 /],
+        'Removed contaminated amplicon: uyj40e03'
+    );
     
     return 1;
 }
