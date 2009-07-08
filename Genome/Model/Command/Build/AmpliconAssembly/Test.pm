@@ -92,7 +92,7 @@ sub test03_verify : Tests {
         build_id => $build_event->build_id,
         event_status => 'Scheduled',
     );
-    my $expected_event_count = 8;
+    my $expected_event_count = 9;
     is(@events, $expected_event_count, "Scheduled $expected_event_count events");
 
     # The execution of these events are tested via the unit tests...but you may wanna make sure it works and see the results
@@ -281,6 +281,22 @@ sub test_class {
 
 ###########################################################################
 
+package Genome::Model::Command::Build::AmpliconAssembly::ContaminationScreenTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Command::Build::AmpliconAssembly::ContaminationScreen';
+}
+
+###########################################################################
+
 package Genome::Model::Command::Build::AmpliconAssembly::OrientTest;
 
 use strict;
@@ -317,8 +333,8 @@ sub should_copy_edit_dir { 1 }
 sub test_03_verify : Test(1) {
     my $self = shift;
 
-    my @files_remaining = glob($self->build->resolve_reports_directory.'/*');
-    is(@files_remaining, 1, "Created reports ");
+    my @reports = glob($self->build->resolve_reports_directory.'/*');
+    is(@reports, 2, "Created 2 reports");
 
     return 1;
 }
