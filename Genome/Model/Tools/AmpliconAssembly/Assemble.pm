@@ -5,8 +5,11 @@ use warnings;
 
 use Genome;
 
+use Data::Dumper 'Dumper';
+
 class Genome::Model::Tools::AmpliconAssembly::Assemble{
     is => 'Genome::Model::Tools::AmpliconAssembly',
+    has_optional => [ Genome::Model::Tools::PhredPhrap->properties_hash ],
 };
 
 sub execute {
@@ -34,17 +37,36 @@ sub _assemble_amplicon {
     }
 
     # Create and run the Command
-    my $command = Genome::Model::Tools::PhredPhrap::ScfFile->create(
+    my $phrap = Genome::Model::Tools::PhredPhrap::ScfFile->create(
         directory => $self->directory,
         assembly_name => $amplicon->get_name,
         scf_file => $scf_file,
+        $self->_get_phred_phrap_params,
     );
+    unless ( $phrap ) { # bad
+        $self->error_message("Can't create phrap command.");
+        return;
+    }
     #eval{ # if this fatals, we still want to go on
-    $command->execute;
+    $phrap->execute;
     #};
     #TODO write file for failed assemblies
 
     return 1;
+}
+
+sub _get_phred_phrap_params {
+    my $self = shift;
+
+    my %phred_phrap_props = Genome::Model::Tools::PhredPhrap->properties_hash;
+    my %params;
+    for my $attr ( keys %phred_phrap_props ) {
+        my $value = $self->$attr;
+        next unless defined $value;
+        $params{$attr} = $value;
+    }
+    
+    return %params;
 }
 
 1;
