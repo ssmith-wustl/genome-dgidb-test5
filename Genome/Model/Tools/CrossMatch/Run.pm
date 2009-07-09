@@ -97,7 +97,7 @@ sub execute {
 
     my $cm_param_string = $self->cm_params || '';
 
-    my $cmd = '(cross_match.test '. $self->subject_file .' '. $self->query_file .' '. $cm_param_string .' > '. $self->alignment_file .') >& '. $self->aligner_output_file ;
+    my $cmd = '(cross_match.test '. $self->subject_file .' '. $self->query_file .' '. $cm_param_string .' > '. $self->alignment_file .') > '. $self->aligner_output_file . ' 2>&1';
     $self->status_message('Running: '. $cmd);
     my $rv = system($cmd);
     unless ($rv == 0) {

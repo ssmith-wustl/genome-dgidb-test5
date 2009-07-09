@@ -126,7 +126,7 @@ sub execute {
             my $rmdup_tool = Genome::Model::Tools::Sam->path_for_samtools_version($self->rmdup_version);
             $rmdup_tool .= ' rmdup';
             my $report_file = $log_dir."/".$pid."_".$library."_rmdup.out";
-            my $rmdup_cmd = $rmdup_tool." ".$merged_file." ".$rmdup_file." >& $report_file";
+            my $rmdup_cmd = $rmdup_tool . " " . $merged_file . " " . $rmdup_file . " > $report_file 2>&1";
             print $log_fh "Rmduping with cmd: $rmdup_cmd";
             my $rmdup_rv = Genome::Utility::FileSystem->shellcmd( cmd=>$rmdup_cmd );
 

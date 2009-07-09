@@ -519,7 +519,7 @@ sub abandon {
     if ($self->event_status =~ /Scheduled|Running/) {
         my $lsf_job_id = $self->lsf_job_id;
         if ($lsf_job_id) {
-            my $cmd = 'bkill '. $lsf_job_id .' >& /dev/null';
+            my $cmd = 'bkill '. $lsf_job_id . ' > /dev/null 2>&1';
             my $rv = system($cmd);
             unless ($rv == 0) {
                 $self->error_message('Failed execution of command '. $cmd);
