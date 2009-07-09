@@ -15,7 +15,7 @@ return [qw( variation_id allele_string variation_type chrom_name start stop subm
 }
 
 sub sort_order {
-    return ['start'];
+    return ['start', 'stop', 'variation_id', 'submitter_name'];
 }
 
 sub skip_first_line {
