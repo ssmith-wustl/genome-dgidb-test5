@@ -175,8 +175,8 @@ sub stages {
 sub assemble_job_classes {
     return (qw/
         Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentData
-        Genome::Model::Command::Build::AmpliconAssembly::ContaminationScreen
         Genome::Model::Command::Build::AmpliconAssembly::Assemble
+        Genome::Model::Command::Build::AmpliconAssembly::ContaminationScreen
         Genome::Model::Command::Build::AmpliconAssembly::Classify
         Genome::Model::Command::Build::AmpliconAssembly::Orient
         Genome::Model::Command::Build::AmpliconAssembly::Collate
