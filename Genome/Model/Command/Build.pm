@@ -154,7 +154,7 @@ sub execute {
     close(FILE);
     # this is really more of a 'testing' flag and may be more appropriate named such
     if ($self->auto_execute) {
-        my $cmdline = 'bsub -H -q ' . $self->bsub_queue . ' -u '. $ENV{USER} .'@genome.wustl.edu perl '. $run_jobs_script;
+        my $cmdline = 'bsub -H -q ' . $self->bsub_queue . ' -m blades -u '. $ENV{USER} .'@genome.wustl.edu perl '. $run_jobs_script;
         my $bsub_output = `$cmdline`;
         my $retval = $? >> 8;
 
