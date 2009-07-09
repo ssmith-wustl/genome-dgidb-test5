@@ -166,6 +166,18 @@ sub validate_file_for_writing {
         return;
     }
 
+    return $self->validate_file_for_writing_overwrite($file);
+}
+
+
+sub validate_file_for_writing_overwrite {
+    my ($self, $file) = @_;
+
+    unless ( defined $file ) {
+        $self->error_message("No file given");
+        return;
+    }
+
     my ($name, $dir) = File::Basename::fileparse($file);
     unless ( $dir ) {
         $self->error_message("Cannot determine directory from file ($file)");
