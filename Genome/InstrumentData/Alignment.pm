@@ -103,7 +103,7 @@ sub create {
     return unless $self;
 
     if ($self->instrument_data) {
-        if ($self->force_fragment) {
+        if ($self->force_fragment && !defined($self->_fragment_seq_id)) {
             $self->_fragment_seq_id($self->instrument_data_id);
         }
     } else {
