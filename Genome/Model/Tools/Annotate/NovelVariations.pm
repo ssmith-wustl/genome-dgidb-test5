@@ -23,12 +23,13 @@ class Genome::Model::Tools::Annotate::NovelVariations {
             doc => "Store annotation in the specified file instead of sending it to STDOUT."
         },
     ],
-    has_optional => [
-        exclude_known_variations => {
-            type => 'Integer',
-            default => 0,
-            doc => '(DEFAULT VALUE) If set to 0, output every input variant and the (variant database, version, and submitter_name) of previously found variations if they were found. These columns will be blank if no variations were found for the given line of input.
-            If set to 1, the output will contain only variants that were NOT found previously in dbSNP. Output will be the ORIGINAL LINE of input if the variant was NOT previously found. If the variant was previously found, no output will be given for that variant.',
+    has_optional => [ #FIXME fix this name.
+        report_mode => {
+            type => 'Text',
+            default => 1,
+            doc => '(DEFAULT VALUE) If set to "all", output every input variant and the (variant database, version, and list of submitter_names) of previously found variations if they were found. These columns will be blank if no variations were found for the given line of input.
+            If set to "novel-only", the output will contain only variants that were NOT found previously in dbSNP. Output will be the ORIGINAL LINE of input if the variant was NOT previously found. If the variant was previously found, no output will be given for that variant.
+            If set to "known-only", the output will contain only variants that WERE found previously in dbSNP. Output will be the ORIGINAL LINE of input if the variant WAS previously found. If the variant was not previously found, no output will be given for that variant.',
         },
         no_headers => {
             type => 'Boolean',
@@ -61,7 +62,7 @@ class Genome::Model::Tools::Annotate::NovelVariations {
 
 sub help_synopsis { 
     return <<EOS
-gt annotate novel-variations --variant-file snvs.csv --output-file transcript-changes.csv --submitter-filter HUMANGENOME_JCVI,1000GENOMES
+gt annotate novel-variations --variant-file snvs.csv --output-file transcript-changes.csv --submitter-filter HUMANGENOME_JCVI,1000GENOMES --report-mode novel-only
 EOS
 }
 
@@ -76,7 +77,7 @@ EOS
 sub execute { 
     my $self = shift;
     $DB::single =1;
-    
+
     my $variant_file = $self->variant_file;
 
     my $variant_svr = Genome::Utility::IO::SeparatedValueReader->create(
@@ -160,12 +161,22 @@ sub execute {
         }
         # If we are only printing previously unknown variations, check to see if it is novel before printing 
         # Otherwise print a line with our findings regardless
-        if ($self->exclude_known_variations) {
-            unless(scalar(@valid_variations >= 1)) {
+
+        # If in "include only dbsnp concordance" mode, output if we found variations in dbsnp
+        if ($self->report_mode eq 'known-only') {
+            if (scalar(@valid_variations >= 1)) {
                 $output_fh->print($variant->{original_line});
             }    
-        } else {
+        # If in "include only novel variations" mode, output if we didnt find variations in dbsnp
+        } elsif ($self->report_mode eq 'novel-only') {
+            if (scalar(@valid_variations < 1)) {
+                $output_fh->print($variant->{original_line});
+            }    
+        } elsif ($self->report_mode eq 'all') {
             $self->_print_reports_for_snp($variant, \@valid_variations);
+        } else {
+            $self->error_message("Invalid value for exclude-known-variations: " . $self->report_mode);
+            die;
         }
     }
 
