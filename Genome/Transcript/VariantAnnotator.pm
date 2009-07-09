@@ -592,8 +592,8 @@ sub _transcript_annotation_for_intron
         {
             $c_position = $exon_pos . '+' . $pre_start;
             $c_position.='_+'.$pre_end if($variant->{start}!=$variant->{stop});
-            $exon_ord=$prev_structure->ordinal;
         }
+	$exon_ord=$prev_structure->ordinal;
         $splice_site_pos='+'.$pre_start;
     }
     else
@@ -623,8 +623,8 @@ sub _transcript_annotation_for_intron
         {
             $c_position = ($exon_pos + 1) . '-' . $aft_end;
             $c_position.='_-'.$aft_start if($variant->{start}!=$variant->{stop});
-            $exon_ord=$next_structure->ordinal;
         }
+	$exon_ord=$next_structure->ordinal;
         $splice_site_pos='-'.$aft_end;
     }
 
