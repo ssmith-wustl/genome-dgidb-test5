@@ -26,7 +26,7 @@ class Genome::Model::Tools::Annotate::NovelVariations {
     has_optional => [ #FIXME fix this name.
         report_mode => {
             type => 'Text',
-            default => 1,
+            default => 'all',
             doc => '(DEFAULT VALUE) If set to "all", output every input variant and the (variant database, version, and list of submitter_names) of previously found variations if they were found. These columns will be blank if no variations were found for the given line of input.
             If set to "novel-only", the output will contain only variants that were NOT found previously in dbSNP. Output will be the ORIGINAL LINE of input if the variant was NOT previously found. If the variant was previously found, no output will be given for that variant.
             If set to "known-only", the output will contain only variants that WERE found previously in dbSNP. Output will be the ORIGINAL LINE of input if the variant WAS previously found. If the variant was not previously found, no output will be given for that variant.',
@@ -44,7 +44,7 @@ class Genome::Model::Tools::Annotate::NovelVariations {
         },
         submitter_filter => {
             type => 'Text',
-            doc => 'Comma separated list of submitters (no spaces allowed) to consider from dbsnp. Results will only include submitters mentioned. Default is no filter.',
+            doc => 'Comma separated (no spaces allowed) list of submitters to consider from dbsnp. Results will only include submitters mentioned. Default is no filter.',
         },
         build => {
             is => "Genome::Model::Build",
