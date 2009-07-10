@@ -4,7 +4,7 @@
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 		<title>
-			[% model_name %] Build Report
+			[% model_name %] Build Summary
 		</title>
 	</head>
 	<body style="margin:0;padding:0;">
@@ -14,27 +14,27 @@
 					<tr>
 						<td>
 							<h1 style="font-family:Helvetica,Arial,sans-serif;font-size:105%;line-height:45px;font-weight:bold;color:#FFF;margin:0;padding:0 15px;background-color: #5f604c;border-bottom:5px solid #8dc643">
-								Build Report for Model [% model_id %] ("<em>[% model_name %]</em>") 
+								Build Summary for Model [% model_id %] ("<em>[% model_name %]</em>") 
 							</h1>
 						</td>
 					</tr>
 					<tr>
-						<td style="padding:15px 25px;">
+						<td style="padding: 15px 25px;">
 							<!-- report section -->
 							<table border="0" cellspacing="0" cellpadding="0" width="100%" summary="report section header">
 								<tbody>
-									<tr>
+<!--							<tr>
 										<td style="border-bottom:3px solid #c5c6be;">
 											<h2 style="font-family:Helvetica,Arial,sans-serif;font-size:105%;line-height:1.2;color:#36372c;margin:0;padding:5px 0;">
 												Build Summary
 											</h2>
 										</td>
 										<td style="border-bottom:3px solid #c5c6be;" align="right"></td>
-									</tr>
+									</tr> -->
 									<tr>
 										<td style="padding:10px;" colspan="2">
 											<!-- report subsection-->
-											<table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:20px 0 0 0;padding:0;" summary="report subsection header">
+											<table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:0 0 0 0;padding:0;" summary="report subsection header">
 												<tr>
 													<td style="border-bottom: 2px solid #CCC;">
 														<h2 style="font-family:Helvetica,Arial,sans-serif;font-size:100%;color:#36372c;margin:0 0 0 0;padding:5px 0 3px 5px;">
@@ -51,12 +51,21 @@
 												</colgroup>
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
+														model id:
+													</td>
+													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
+														[% model_id %] <a href="https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?genome-model-id=[% model_id %]" style="text-decoration:none;font-size:85%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view model &gt;</a>
+													</td>
+												</tr>
+												<tr>
+													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
 														patient:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
 														[% patient_upn %]
 													</td>
 												</tr>
+
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
 														tissue sample:
@@ -105,7 +114,7 @@
 														build id:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
-														[% build_id %]
+														[% build_id %] <a href="https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id=[% build_id %]" style="text-decoration:none;font-weight:bold;font-size:85%;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view build &gt;</a>
 													</td>
 												</tr>
 												<tr>
@@ -196,7 +205,7 @@
 														</h2>
 													</td>
 													<td style="border-bottom: 2px solid #CCC;" align="right">
-														<a href="https://gscweb.gsc.wustl.edu[% data_directory %]reports/Gold_SNP_Concordance/report.html" style="text-decoration:none;font-size:70%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view details &gt;</a>
+													  <a href="https://gscweb.gsc.wustl.edu[% data_directory %]reports/Gold_SNP_Concordance/report.html" style="text-decoration:none;font-size:70%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;">view details &gt;</a>
 													</td>
 												</tr>
 											</table>
