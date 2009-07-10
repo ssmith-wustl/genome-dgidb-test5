@@ -10,19 +10,21 @@ use Genome;
 class Genome::SampleSource {
     table_name => 
         q|(
-            select pg_id id,
-                name,
-                taxon_id,
-                description,
-                'Genome::PopulationGroup' sample_source_subclass_name 
-            from population_group@dw
-            union all
             select organism_id id,
                 full_name name,
                 taxon_id,
                 description,
+                common_name,
                 'Genome::Individual' sample_source_subclass_name
             from organism_individual@dw
+            union all
+            select pg_id id,
+                name,
+                taxon_id,
+                description,
+                NULL common_name,
+                'Genome::PopulationGroup' sample_source_subclass_name 
+            from population_group@dw
         ) sample_source|,
     is_abstract => 1,
     subclassify_by => 'sample_source_subclass_name',
@@ -32,6 +34,9 @@ class Genome::SampleSource {
     has => [
         sample_source_subclass_name => { is => 'Text' },        
         name            => { is => 'Text', len => 64 },
+    ],
+    has_optional => [
+        common_name     => { is => 'Text' },
         description     => { is => 'Text' },
         
         taxon           => { is => 'Genome::Taxon', id_by => 'taxon_id' },
