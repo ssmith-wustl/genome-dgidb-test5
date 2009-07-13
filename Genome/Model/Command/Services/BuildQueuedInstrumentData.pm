@@ -98,7 +98,7 @@ sub execute {
           
           unless (defined($genome_instrument_data)) {
               
-              warn "Failed to get a Genome::InstrumentData via id '$instrument_data_id'";
+              warn "Failed to get a Genome::InstrumentData via id '$instrument_data_id' pse_id '$pse_id'";
               next PSE;
               
           }
