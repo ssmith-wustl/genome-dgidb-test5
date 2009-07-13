@@ -113,7 +113,7 @@ sub print_samples_summary_from_hash_ref {
         for (my $i = 0; $i < scalar @{$family_bp_array_ref}; $i++) {
             my $total_bp = $base_pair[$i];
             my $family_bp = $family_bp_array_ref->[$i];
-            print $table_fh "\t". $family_bp .'('. sprintf("%.02f",($family_bp/$total_bp)) .'%)';
+            print $table_fh "\t". $family_bp .'('. sprintf("%.02f",(($family_bp/$total_bp) * 100)) .'%)';
         }
         print $table_fh "\n";
         for my $class (sort keys %{$families{$family}}) {
@@ -122,7 +122,7 @@ sub print_samples_summary_from_hash_ref {
             for (my $i = 0; $i < scalar @{$class_bp_array_ref}; $i++) {
                 my $total_bp = $base_pair[$i];
                 my $class_bp = $class_bp_array_ref->[$i];
-                print $table_fh "\t". $class_bp .'('. sprintf("%.02f",($class_bp/$total_bp)) .'%)';
+                print $table_fh "\t". $class_bp .'('. sprintf("%.02f",(($class_bp/$total_bp) * 100)) .'%)';
             }
             print $table_fh "\n";
         }
