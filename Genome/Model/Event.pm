@@ -147,11 +147,14 @@ sub yaml_string {
 
 sub delete {
     my $self = shift;
-    if (defined($self->prior_event_id)) {
-        # Remove foreign keys
-        $self->prior_event_id(undef);
+    #removing constraints
+    my @next_events = $self->next_events;
+    for my $next_event (@next_events) {
+        $next_event->prior_event_id(undef);
         UR::Context->_sync_databases;
+        $self->warning_message('Setting event '.$next_event->id.' to undef to remove prior_event_id constraint.');
     }
+    
     if ($self->{db_committed}) {
         $self->warning_message('deleting ' . $self->class . ' with id  ' . $self->id);
     }
@@ -268,7 +271,7 @@ sub _shell_args_property_meta {
 # TODO: replace with cleaner calculated property.
 sub _resolve_subclass_name {
     my $class = shift;
-    
+
     if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
         my $event_type = $_[0]->event_type;
         return $class->_resolve_subclass_name_for_event_type($event_type);
@@ -311,6 +314,11 @@ sub _resolve_subclass_name_for_event_type {
 
     # TEMP
     $class_name =~ s/AddReads::/Build::ReferenceAlignment::/;
+
+    unless (eval {$class_name->class()}) {
+        $class_name = 'Genome::Model::Event::Generic';
+    }
+
     return $class_name;
 }
 
