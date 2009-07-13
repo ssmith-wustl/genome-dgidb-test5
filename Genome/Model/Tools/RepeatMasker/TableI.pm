@@ -106,7 +106,15 @@ sub print_samples_summary_from_hash_ref {
     print $table_fh "sequences:\t". join("\t",@{$data{'sequences'}}) ."\n";
     my @base_pair = @{$data{'base_pair'}};
     print $table_fh "total length:\t". join("\t",@base_pair) ."\n";
-    print $table_fh "masked:\t". join("\t",@{$data{'masked'}}) ."\n\n";
+
+    my $masked_array_ref = $data{'masked'};
+    print $table_fh 'masked:';
+    for (my $i = 0; $i < scalar @{$masked_array_ref}; $i++) {
+        my $total_bp = $base_pair[$i];
+        my $masked_bp = $masked_array_ref->[$i];
+        print $table_fh "\t". $masked_bp .'('. sprintf("%.02f",(($masked_bp/$total_bp) * 100)) .'%)';
+    }
+    print $table_fh "\n\n";
     for my $family (sort keys %families) {
         my $family_bp_array_ref = delete($data{$family}{base_pair});
         print $table_fh $family .':';
