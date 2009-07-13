@@ -29,6 +29,10 @@ class Genome::Utility::IO::SeparatedValueReader {
         default => 0,
         doc => 'Rather than crash when extra columns are found, just drop/ignore them.'
     },
+    current_line => {
+        type => 'Text',
+        doc => 'The current original line of input from the file, pre splitting.'
+    },
     ],
 };
 
@@ -83,8 +87,9 @@ sub create {
         $self->headers($headers);
     }
     else {
-        my @headers = $self->_getline_and_split;
-        $self->error_msg("No headers found in io")
+        my $line = $self->getline;
+        my @headers = $self->_splitline($line);
+        $self->error_message("No headers found in io")
             and return unless @headers;
         $self->headers(\@headers);
         $self->{_headers_were_in_input} = 1;
@@ -95,8 +100,8 @@ sub create {
 
 sub next {
     my $self = shift;
-
-    my @values = $self->_getline_and_split
+    my $line = $self->getline or return;
+    my @values = $self->_splitline($line)
         or return;
     foreach (@values) { # FIXME param this replacing quotes and spaces?
         $_ =~ s/^\s*['"]?//;
@@ -109,7 +114,7 @@ sub next {
         if (!($self->ignore_extra_columns)||(@{$self->headers} > @values)) {
             #  Bomb out if we dont want extra columns
             $self->error_message(
-                sprintf(
+               sprintf(
                     'Expected %d values, got %d on line %d in %s', 
                     scalar @{$self->headers}, 
                     scalar @values,
@@ -123,14 +128,13 @@ sub next {
     
     my %data;
     @data{ @{$self->headers} } = @values;
+    $self->current_line($line);
     return \%data;
 }
 
-sub _getline_and_split {
+sub _splitline {
     my $self = shift;
-
-    my $line = $self->getline
-        or return;
+    my $line = shift;
     chomp $line;
 
     return $self->{_split}->($line); 
