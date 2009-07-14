@@ -92,7 +92,7 @@ sub test03_verify : Tests {
         build_id => $build_event->build_id,
         event_status => 'Scheduled',
     );
-    my $expected_event_count = 11;
+    my $expected_event_count = 10;
     is(@events, $expected_event_count, "Scheduled $expected_event_count events");
 
     # The execution of these events are tested via the unit tests...but you may wanna make sure it works and see the results
@@ -102,7 +102,7 @@ sub test03_verify : Tests {
             ok($event->execute, sprintf('Executed event (%s %s)', $event->id, $event->event_type))
                 or die; # if one of these fails just die
         }
-        #print $build_event->build->data_directory,"\n##### HIT RETURN TO CONTINUE #####\n"; <STDIN>;
+        print $build_event->build->data_directory,"\n##### HIT RETURN TO CONTINUE #####\n"; <STDIN>;
     }
 
     return 1;
