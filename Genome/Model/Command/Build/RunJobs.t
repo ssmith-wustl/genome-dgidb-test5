@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 10;
+use Test::More tests => 9;
 
 use above 'Genome';
 
@@ -121,8 +121,6 @@ for my $stage_name ($mock_pp->stages) {
 
 for my $run_stage (@run_stages) {
     ok($run_stage->execute,'execute the command '. $run_stage->command_name);
-    my $png_file = $mock_build->data_directory.'/'. $run_stage->stage_name .'.png';
-    ok(-f $png_file, "png file '$png_file' exists");
     my $xml_file = $mock_build->data_directory.'/'. $run_stage->stage_name .'.xml';
     ok(-f $xml_file, "xml file '$xml_file' exists");
 }
