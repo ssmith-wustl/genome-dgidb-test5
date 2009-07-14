@@ -97,7 +97,7 @@ sub test03_verify : Tests {
 
     # The execution of these events are tested via the unit tests...but you may wanna make sure it works and see the results
     #  of the system running together
-    if ( 1 ) {  
+    if ( 0 ) {  
         for my $event ( @events ) {
             ok($event->execute, sprintf('Executed event (%s %s)', $event->id, $event->event_type))
                 or die; # if one of these fails just die
