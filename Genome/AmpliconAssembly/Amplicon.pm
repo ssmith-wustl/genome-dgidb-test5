@@ -482,7 +482,7 @@ sub _get_bioseqs_for_reads {
     my $fasta_file_method = $type.'_fasta_file';
     my $fasta_file = $self->$fasta_file_method;
     unless ( -e $fasta_file ) { # ok
-        print "No fasta file for type ($type)\n";
+        print "No fasta file ($fasta_file) for type ($type)\n";
         return;
     }
     
@@ -562,7 +562,7 @@ sub _get_bioseq_for_read_and_type {
     my $fasta_file_method = $type.'_fasta_file';
     my $fasta_file = $self->$fasta_file_method;
     unless ( -e $fasta_file ) { # ok
-        print "No fasta file for type ($type)\n";
+        print "No fasta file ($fasta_file) for type ($type)\n";
         return;
     }
     
