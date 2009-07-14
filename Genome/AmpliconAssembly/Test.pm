@@ -223,7 +223,31 @@ sub test_class {
     return 'Genome::Model::Tools::AmpliconAssembly::Assemble';
 }
 
-sub should_copy_edit_dir { 0 }
+sub _params_for_test_class {
+    return (
+        assembler => 'phred_phrap',
+    );
+}
+
+sub invalid_params_for_test_class {
+    return (
+        assembler => 'consed',
+    );
+}
+sub _pre_execute {
+    my $self = shift;
+
+    my $amplicons = $self->amplicons;
+    for my $amplicon ( @$amplicons ) {
+        # remove ace files
+        unlink $amplicon->ace_file;
+    }
+
+    my $cnt = grep { -s $_->ace_file } @$amplicons;
+    die "Could not remove ace files\n" if $cnt;
+
+    return 1;
+}
 
 sub test_03_verify : Test(1) {
     my $self = shift;
@@ -344,6 +368,35 @@ sub test_03_verify : Test(2) {
 
 ###########################################################################
 
+package Genome::Model::Tools::AmpliconAssembly::CollateTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Tools::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Tools::AmpliconAssembly::Collate';
+}
+
+sub test_03_verify : Test(2) {
+    my $self = shift;
+
+    my $collate = $self->{_object};
+    my @types = $collate->amplicon_assembly->amplicon_fasta_types;
+    my $fasta_cnt = grep { -s $collate->amplicon_assembly->fasta_file_for_type($_) } @types;
+    is($fasta_cnt, @types, 'Verified - Created a fasta for each type');
+    my $qual_cnt = grep { -s $collate->amplicon_assembly->qual_file_for_type($_) } @types;
+    is($qual_cnt, @types, 'Verified - Created a qual for each type');
+    
+    return 1;
+}
+
+###########################################################################
+
 package Genome::Model::Tools::AmpliconAssembly::OrientTest;
 
 use strict;
@@ -389,30 +442,74 @@ sub test_03_verify : Test(2) {
 
 ###########################################################################
 
-package Genome::Model::Tools::AmpliconAssembly::CollateTest;
+package Genome::Model::Tools::AmpliconAssembly::TrimAndScreenTest;
 
 use strict;
 use warnings;
 
 use base 'Genome::Model::Tools::AmpliconAssembly::TestBase';
 
+require File::Copy;
+require File::Compare;
 use Data::Dumper 'Dumper';
 use Test::More;
 
 sub test_class {
-    return 'Genome::Model::Tools::AmpliconAssembly::Collate';
+    return 'Genome::Model::Tools::AmpliconAssembly::TrimAndScreen';
 }
 
-sub test_03_verify : Test(2) {
+sub _params_for_test_class {
+    return (
+        trimmer_and_screener => 'trim3_and_crossmatch',
+        #trimmer_and_screener_params => '-;',
+    );
+}
+
+sub invalid_params_for_test_class {
+    return (
+        trimmer_and_screener => 'consed',
+        trimmer_and_screener_params => '-;',
+    );
+}
+
+sub _pre_execute {
     my $self = shift;
 
-    my $collate = $self->{_object};
-    my @types = $collate->amplicon_assembly->amplicon_fasta_types;
-    my $fasta_cnt = grep { -s $collate->amplicon_assembly->fasta_file_for_type($_) } @types;
-    is($fasta_cnt, @types, 'Verified - Created a fasta for each type');
-    my $qual_cnt = grep { -s $collate->amplicon_assembly->qual_file_for_type($_) } @types;
-    is($qual_cnt, @types, 'Verified - Created a qual for each type');
-    
+    my $amplicons = $self->amplicons;
+    for my $amplicon ( @$amplicons ) {
+        my $check_file = sprintf(
+            '%s/%s.check.fasta',
+            $amplicon->directory,
+            $amplicon->name,
+        );
+        File::Copy::copy($amplicon->reads_fasta_file, $check_file)
+            or die "Can't copy ".$amplicon->reads_fasta_file." to ".$check_file;
+        unlink $amplicon->fasta_file;
+        unlink $amplicon->qual_file;
+        File::Copy::move($amplicon->reads_fasta_file, $amplicon->fasta_file)
+            or die "Can't copy ".$amplicon->reads_fasta_file." to ".$amplicon->fasta_file;
+        File::Copy::move($amplicon->reads_qual_file, $amplicon->qual_file)
+            or die "Can't copy ".$amplicon->reads_fasta_file." to ".$amplicon->fasta_file;
+    }
+
+    return 1;
+}
+
+sub test_03_verify : Test(1) {
+    my $self = shift;
+
+    my $amplicons = $self->amplicons;
+    my $compare_cnt = 0;
+    for my $amplicon ( @$amplicons ) {
+        my $pre_fasta = sprintf(
+            '%s/%s.check.fasta',
+            $amplicon->directory,
+            $amplicon->name,
+        );
+        $compare_cnt++ if File::Compare::compare($amplicon->fasta_file, $pre_fasta);
+    }
+    is ($compare_cnt, scalar(@$amplicons), 'Trimmed and screened amplicons');
+
     return 1;
 }
 
