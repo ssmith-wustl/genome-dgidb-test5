@@ -9,8 +9,52 @@ use Data::Dumper 'Dumper';
 
 class Genome::Model::Tools::AmpliconAssembly::Assemble{
     is => 'Genome::Model::Tools::AmpliconAssembly',
-    has_optional => [ Genome::Model::Tools::PhredPhrap->properties_hash ],
+    has => [
+    assembler => {
+        is => 'Text',
+        doc => 'The assembler to use.  Currently supported assemblers: '.join(', ', valid_assemblers()),
+    },
+    ],
+    has_optional => [ 
+    assembler_params => {
+        is => 'Text',
+        doc => 'String of parameters for the assembler',
+    },
+    ],
 };
+
+#< Assemblers >#
+sub valid_assemblers {
+    return (qw/ phred_phrap /);
+}
+
+#< Command >#
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_)
+        or return;
+
+    unless ( $self->assembler ) {
+        $self->error_message('No assembler given');
+        $self->delete;
+        return;
+    }
+
+    unless ( grep { $self->assembler eq $_ } valid_assemblers() ) {
+        $self->error_message('Invalid assembler: '.$self->assembler);
+        $self->delete;
+        return;
+    }
+
+    unless ( $self->_get_hashified_assembler_params ) {
+        # this may not be necessary for all assemblers, but handle that later
+        $self->delete;
+        return;
+    }
+
+    return $self;
+}
 
 sub execute {
     my $self = shift;
@@ -18,55 +62,55 @@ sub execute {
     my $amplicons = $self->get_amplicons
         or return;
 
+    my $method = '_assemble_amplicon_with_'.$self->assembler;
+    
     for my $amplicon ( @$amplicons ) {
-        $self->_assemble_amplicon($amplicon)
+        $self->$method($amplicon)
             or return;
     }
 
     return 1;
 }
 
-sub _assemble_amplicon {
+#< Assembling >#
+sub _assemble_amplicon_with_phred_phrap {
     my ($self, $amplicon) = @_;
 
-    # Create SCF file
-    my $scf_file = $amplicon->create_scfs_file;
-    unless ( $scf_file ) {
-        $self->error_message("Error creating SCF file ($scf_file)");
-        return;
-    }
-
-    # Create and run the Command
-    my $phrap = Genome::Model::Tools::PhredPhrap::ScfFile->create(
-        directory => $self->directory,
-        assembly_name => $amplicon->get_name,
-        scf_file => $scf_file,
-        $self->_get_phred_phrap_params,
+    my $fasta_file = $amplicon->processed_fasta_file;
+    return 1 unless -s $fasta_file; # ok
+    my $phred_phrap_params = $self->_get_hashified_assembler_params;
+    
+    my $phrap = Genome::Model::Tools::PhredPhrap::Fasta->create(
+        fasta_file => $fasta_file,
+        %$phred_phrap_params,
     );
+
     unless ( $phrap ) { # bad
         $self->error_message("Can't create phrap command.");
         return;
     }
-    #eval{ # if this fatals, we still want to go on
+
     $phrap->execute;
-    #};
-    #TODO write file for failed assemblies
 
     return 1;
 }
 
-sub _get_phred_phrap_params {
+sub _get_hashified_assembler_params {
     my $self = shift;
 
-    my %phred_phrap_props = Genome::Model::Tools::PhredPhrap->properties_hash;
-    my %params;
-    for my $attr ( keys %phred_phrap_props ) {
-        my $value = $self->$attr;
-        next unless defined $value;
-        $params{$attr} = $value;
-    }
+    return {} unless $self->assembler_params; # ok
     
-    return %params;
+    unless ( $self->{_hashified_assembler_params} ) {
+        my %params = Genome::Utility::Text::param_string_to_hash( $self->assembler_params );
+        unless ( %params ) {
+            $self->error_message('Malformed assembler params: '.$self->assembler_params);
+            return;
+        }
+        $self->{_hashified_assembler_params} = \%params;
+
+    }
+
+    return $self->{_hashified_assembler_params};
 }
 
 1;
