@@ -92,17 +92,17 @@ sub test03_verify : Tests {
         build_id => $build_event->build_id,
         event_status => 'Scheduled',
     );
-    my $expected_event_count = 9;
+    my $expected_event_count = 11;
     is(@events, $expected_event_count, "Scheduled $expected_event_count events");
 
     # The execution of these events are tested via the unit tests...but you may wanna make sure it works and see the results
     #  of the system running together
-    if ( 0 ) {  
+    if ( 1 ) {  
         for my $event ( @events ) {
             ok($event->execute, sprintf('Executed event (%s %s)', $event->id, $event->event_type))
                 or die; # if one of these fails just die
         }
-        print $build_event->build->data_directory,"\n##### HIT RETURN TO CONTINUE #####\n"; <STDIN>;
+        #print $build_event->build->data_directory,"\n##### HIT RETURN TO CONTINUE #####\n"; <STDIN>;
     }
 
     return 1;
@@ -297,6 +297,33 @@ sub test_class {
 
 ###########################################################################
 
+package Genome::Model::Command::Build::AmpliconAssembly::PrepareInstrumentDataTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Command::Build::AmpliconAssembly::PrepareInstrumentData';
+}
+
+sub should_copy_traces { 1 }
+
+sub test_03_verify : Test(1) {
+    my $self = shift;
+
+    my $fasta_cnt = grep { -s $_->fasta_file } @{$self->amplicons};
+    ok($fasta_cnt, 'Prepared instrument data');
+    
+    return 1;
+}
+
+###########################################################################
+
 package Genome::Model::Command::Build::AmpliconAssembly::OrientTest;
 
 use strict;
@@ -341,6 +368,34 @@ sub test_03_verify : Test(1) {
 
 ###########################################################################
 
+package Genome::Model::Command::Build::AmpliconAssembly::TrimAndScreenTest;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Command::Build::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Command::Build::AmpliconAssembly::TrimAndScreen';
+}
+
+sub should_copy_traces { 1 }
+sub should_copy_edit_dir { 1 }
+
+sub test_03_verify {#: Test(1) {
+    my $self = shift;
+
+    my @reports = glob($self->build->resolve_reports_directory.'/*');
+    is(@reports, 2, "Created 2 reports");
+
+    return 1;
+}
+
+###########################################################################
+
 package Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentDataTest;
 
 use strict;
@@ -363,7 +418,6 @@ sub test_03_verify : Test(1) {
     
     return 1;
 }
-
 
 1;
 
