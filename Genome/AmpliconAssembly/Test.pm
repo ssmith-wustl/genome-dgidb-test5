@@ -35,7 +35,7 @@ sub invalid_params_for_test_class {
     );
 }
 
-sub test_01_amplicons_gsc_3730 : Tests {
+sub test_01_amplicons_gsc_sanger : Tests {
     my $self = shift;
     
     # amplicons
@@ -52,7 +52,7 @@ sub test_01_amplicons_gsc_3730 : Tests {
     return 1;
 }
 
-# TODO sub test_02_amplicons_broad_3730 : Tests {
+# TODO sub test_02_amplicons_broad_sanger : Tests {
 
 ###########################################################################
 
