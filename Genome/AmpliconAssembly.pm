@@ -35,6 +35,11 @@ sub attributes {
         default_value => __PACKAGE__->default_sequencing_platform,
         doc => 'Platform upon whence the amplicons were sequenced.  Currently supported platforms '.join(', ', __PACKAGE__->valid_sequencing_platforms),
     },
+    subject_name => {
+        is => 'Text',
+        is_optional => 1,
+        doc => 'Subject name',
+    },
 );
 }
 
@@ -96,7 +101,7 @@ sub default_sequencing_center {
 
 #< Sequencing Platforms >#
 sub valid_sequencing_platforms {
-    return (qw/ 3730 /);
+    return (qw/ sanger /);
 }
 
 sub default_sequencing_platform {
@@ -159,8 +164,10 @@ sub fasta_file_for_type {
     my ($self, $type) = @_;
 
     return sprintf(
-        '%s/%s.fasta',
+        '%s/%s%s.fasta',
         $self->fasta_dir,
+        $self->subject_name.'.',
+        #( defined $self->subject_name ? $self->subject_name.'.' : '' ),
         $type,
     );
 }
@@ -199,7 +206,7 @@ sub get_amplicons {
     return \@amplicons;
 }
 
-sub _get_amplicons_and_read_names_for_gsc_3730 {
+sub _get_amplicons_and_read_names_for_gsc_sanger {
     my $self = shift;
 
     my $dh = Genome::Utility::FileSystem->open_directory( $self->chromat_dir )
@@ -209,7 +216,7 @@ sub _get_amplicons_and_read_names_for_gsc_3730 {
     while ( my $read_name = $dh->read ) {
         next if $read_name =~ m#^\.#;
         $read_name =~ s#\.gz##;
-        my $amplicon_name = $self->_get_amplicon_name_for_gsc_3730_read_name($read_name)
+        my $amplicon_name = $self->_get_amplicon_name_for_gsc_sanger_read_name($read_name)
             or next;
         push @{$amplicons{$amplicon_name}}, $read_name;
     }
@@ -218,7 +225,7 @@ sub _get_amplicons_and_read_names_for_gsc_3730 {
     return \%amplicons;
 }
 
-sub _get_amplicons_and_read_names_for_broad_3730 {
+sub _get_amplicons_and_read_names_for_broad_sanger {
     my $self = shift;
 
     my $dh = Genome::Utility::FileSystem->open_directory( $self->chromat_dir )
@@ -228,7 +235,7 @@ sub _get_amplicons_and_read_names_for_broad_3730 {
     while ( my $read_name = $dh->read ) {
         next if $read_name =~ m#^\.#;
         $read_name =~ s#\.gz$##;
-        my $amplicon = $self->_get_amplicon_name_for_broad_3730_read_name($read_name)
+        my $amplicon = $self->_get_amplicon_name_for_broad_sanger_read_name($read_name)
             or return;
         push @{$amplicons{$amplicon}}, $read_name;
     }
@@ -247,7 +254,7 @@ sub get_method_for_get_amplicon_name_for_read_name {
     );
 }
 
-sub _get_amplicon_name_for_gsc_3730_read_name {
+sub _get_amplicon_name_for_gsc_sanger_read_name {
     my ($self, $read_name) = @_;
     
     $read_name =~ /^(.+)\.[bg]\d+$/
@@ -256,7 +263,7 @@ sub _get_amplicon_name_for_gsc_3730_read_name {
     return $1;
 }
 
-sub _get_amplicon_name_for_broad_3730_read_name {
+sub _get_amplicon_name_for_broad_sanger_read_name {
     my ($self, $read_name) = @_;
 
     $read_name =~ s#\.T\d+$##;
@@ -299,7 +306,7 @@ sub get_method_for_get_all_amplicons_reads_for_read_name {
     );
 }
 
-sub _get_all_reads_for_gsc_3730_amplicon {
+sub _get_all_reads_for_gsc_sanger_amplicon {
     my ($self, $amplicon_name) = @_;
     
     my $chromat_dir = $self->chromat_dir;
@@ -313,7 +320,7 @@ sub _get_all_reads_for_gsc_3730_amplicon {
     return @read_names;
 }
 
-sub _get_all_reads_for_broad_3730_amplicon {
+sub _get_all_reads_for_broad_sanger_amplicon {
     die "Not implemented\n";
 }
 
@@ -400,7 +407,7 @@ sub remove_contaminated_amplicons_by_reads_in_file {
             return;
         }
         # Move chromats - this effectively removes the amplicon
-        # TODO create the amplicon interface here, to support 3730 and 454
+        # TODO create the amplicon interface here, to support sanger and 454
         #  maybe move this logic to amplicon?
         for my $read_name ( @read_names ) {
             my $from = "$chromat_dir/$read_name.gz"; 
