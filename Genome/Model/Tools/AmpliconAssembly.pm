@@ -45,9 +45,11 @@ sub amplicon_assembly {
         $self->{_amplicon_assembly} = Genome::AmpliconAssembly->create(
             directory => $self->directory,
             sequencing_center => $self->sequencing_center,
+            sequencing_platform => $self->sequencing_platform,
+            subject_name => $self->subject_name,
         );
     }
-    
+
     return $self->{_amplicon_assembly};
 }
 
