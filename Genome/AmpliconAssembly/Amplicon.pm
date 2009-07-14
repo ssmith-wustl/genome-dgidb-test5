@@ -172,6 +172,14 @@ sub qual_file_for_type {
     return $self->$method;
 }
 
+sub fasta_file { # main fasta file 
+    return $_[0]->_file('fasta');
+}
+
+sub qual_file { # main qual file
+    return $_[0]->_file('fasta.qual');
+}
+
 sub reads_fasta_file { # .fasta - after phred
     return $_[0]->_file('reads.fasta');
 }
