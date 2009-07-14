@@ -48,6 +48,8 @@ sub amplicon_assembly {
         $self->{_amplicon_assembly} = Genome::AmpliconAssembly->create(
             directory => $self->data_directory,
             sequencing_center => $self->model->sequencing_center,
+            sequencing_platform => $self->model->sequencing_platform,
+            subject_name => $self->model->subject_name,
         );
     }
     
