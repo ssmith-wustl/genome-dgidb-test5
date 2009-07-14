@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 use Data::Dumper 'Dumper';
+require File::Copy;
 
 class Genome::Model::Command::Build::AmpliconAssembly::PrepareInstrumentData {
     is => 'Genome::Model::Event',
@@ -61,6 +62,20 @@ sub _prepare_instrument_data_for_phred_phrap {
         $self->error_message("Can't execute phd to fasta command");
         return;
     }
+    
+    # Create raw reads fasta and qual file
+    my $reads_fasta = $amplicon->reads_fasta_file;
+    unlink $reads_fasta if -e $reads_fasta;
+    File::Copy::copy(
+        $amplicon->fasta_file,
+        $reads_fasta,
+    );
+    my $reads_qual = $amplicon->reads_qual_file;
+    unlink $reads_qual if -e $reads_qual;
+    File::Copy::copy(
+        $amplicon->qual_file,
+        $reads_qual,
+    );
     
     return 1;
 }
