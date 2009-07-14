@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-require Data::Dumper;
+use Data::Dumper 'Dumper';
 require Carp;
 
 class Genome::Utility::Text {
@@ -38,6 +38,35 @@ sub module_to_class {
     $module =~ s#\.pm##;
     $module =~ s#/#::#g;
     return $module;
+}
+
+#< Params as String and Hash >#
+sub param_string_to_hash {
+    my $param_string = shift;
+
+    unless ( $param_string ) {
+        Carp::cluck('No param string to convert to hash');
+        return;
+    }
+
+    unless ($param_string =~ m#^-#) {
+        Carp::cluck('Param string must start with a dash (-)');
+        return;
+    }
+
+    my %params;
+    my @params = split(/\s?(\-{1,2}\D[\w\d]*)\s?/, $param_string);
+    shift @params;
+    for ( my $i = 0; $i < @params; $i += 2 ) {
+        my $key = $params[$i];
+        $key =~ s/^\-{1,2}//;
+        Carp::cluck("Malformed param string ($param_string).  Found empty dash (-).") if $key eq '';
+        my $value = $params[$i + 1];
+        $params{$key} = ( $value ne '' ? $value : 1 );
+    }
+    
+    #print Dumper(\@params, \%params);
+    return %params;
 }
 
 1;
