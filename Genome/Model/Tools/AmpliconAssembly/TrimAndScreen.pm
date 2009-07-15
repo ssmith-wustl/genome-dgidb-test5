@@ -119,29 +119,33 @@ sub _screen_params {
 sub _trim_and_screen_amplicon_by_trim3_and_crossmatch {
     my ($self, $amplicon) = @_;
 
+    return 1 unless -s $amplicon->fasta_file; # ok
+    
     my $trim3 = Genome::Model::Tools::Fasta::Trim::Trim3->create(
         fasta_file => $amplicon->fasta_file,
         $self->_trim_params,
     );
     unless ( $trim3 ) {
-        $self->error_message("Can't create trim3 command");
+        $self->error_message("Can't create trim3 command for amplicon: ".$amplicon->name);
         return;
     }
     unless ( $trim3->execute ) {
-        $self->error_message("Can't execute trim3 command");
+        $self->error_message("Can't execute trim3 command for amplicon: ".$amplicon->name);
         return;
     }
    
+    return 1 unless -s $amplicon->fasta_file; # ok
+
     my $screen = Genome::Model::Tools::Fasta::ScreenVector->create(
         fasta_file => $amplicon->fasta_file,
         $self->_screen_params,
     );
     unless ( $screen ) {
-        $self->error_message("Can't create screen vector command");
+        $self->error_message("Can't create screen vector command for amplicon: ".$amplicon->name);
         return;
     }
     unless ( $screen->execute ) {
-        $self->error_message("Can't execute screen vector command");
+        $self->error_message("Can't execute screen vector command for amplicon: ".$amplicon->name);
         return;
     }
     
@@ -152,16 +156,18 @@ sub _trim_and_screen_amplicon_by_trim3_and_crossmatch {
 sub _trim_and_screen_amplicon_by_lucy {
     my ($self, $amplicon) = @_;
 
+    return 1 unless -s $amplicon->fasta_file; # ok
+
     my $lucy = Genome::Model::Tools::Fasta::Trim::Lucy->create(
         fasta_file => $amplicon->fasta_file,
         $self->_trim_params,
     );
     unless ( $lucy ) {
-        $self->error_message("Can't create lucy command");
+        $self->error_message("Can't create lucy command for amplicon: ".$amplicon->name);
         return;
     }
     unless ( $lucy->execute ) {
-        $self->error_message("Can't execute lucy command");
+        $self->error_message("Can't execute lucy command for amplicon: ".$amplicon->name);
         return;
     }
 
