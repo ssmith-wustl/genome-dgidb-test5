@@ -42,6 +42,7 @@ $instrument_data->set_always('sample_type','dna');
 $instrument_data->set_always('is_paired_end',1);
 ok($instrument_data->is_paired_end,'instrument data is paired end');
 $instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
+$instrument_data->set_always('resolve_quality_converter','sol2sanger');
 
 
 
@@ -91,6 +92,7 @@ my @fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
 $instrument_data->set_always('sample_type','dna');
 $instrument_data->set_always('is_paired_end',1);
 $instrument_data->set_always('class','Genome::InstrumentData::Solexa');
+$instrument_data->set_always('resolve_quality_converter','sol2sanger');
 
 my $tmp_dir = File::Temp::tempdir('Align-Bwa-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $tmp_allocation = Genome::Disk::Allocation->create_mock(
@@ -114,6 +116,7 @@ isa_ok($tmp_allocation,'Genome::Disk::Allocation');
 $instrument_data->set_list('allocations',$tmp_allocation);
 $instrument_data->set_list('fastq_filenames',@fastq_files);
 $instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
+$instrument_data->set_always('resolve_quality_converter','sol2sanger');
 
 $alignment = Genome::InstrumentData::Alignment->create(
                                                        instrument_data_id => $instrument_data->id,
