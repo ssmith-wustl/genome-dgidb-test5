@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use Command; 
+use File::Basename;
 
 class Genome::Model::Command::AddGoldSnp {
     is => 'Genome::Model::Event',
@@ -73,13 +74,23 @@ sub execute {
     }
 
     #copy gold snp file to model's data directory
-    my $cmd = "cp " . $self->file_name . " " . $model->data_directory;
+    my $target_file = $model->data_directory . "/" . basename($self->file_name);
+    my $cmd = "cp " . $self->file_name . " " . $target_file;
+
+
+    print "Copying this to $target_file....\n";
+
 print("cmd:  $cmd\n");
     my $success = system $cmd;
 print "success:  $success\n";
-    $model->gold_snp_file($self->file_name);  #throw error
+
+    unless (-f $target_file) {
+        die "Could not find target file $target_file in model directory; the copy must not have worked!";
+    }
+
+    $model->gold_snp_file($target_file);  #throw error
     my $foobar = Genome::MiscAttribute->create(entity_id=>$model->id, 
-    entity_class_name=>'Genome::Model', property_name=>'gold_snp_path', value=>$self->file_name);
+    entity_class_name=>'Genome::Model', property_name=>'gold_snp_path', value=>$target_file);
 }
 
 sub _get_sub_command_class_name {
