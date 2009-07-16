@@ -810,7 +810,7 @@ sub create_constraint_file
 
     my @con_files = glob ("$dir/edit_dir/*.con");
 
-    return 1 if scalar @con_files == 0;
+#   return 1 if scalar @con_files == 0;
 
     #need to append to the existing con file if it exists
     #else create a new one
