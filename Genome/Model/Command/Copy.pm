@@ -118,7 +118,9 @@ sub execute {
     my $define_cmd = $define_cmd_class_name->create(%cmd_params);
     my $define_res = $define_cmd->execute();
     unless ($define_res) {
-        $self->error_messge("Couldn't execute $cmd_class_object with params " . Data::Dumper::Dumper(\%cmd_params));
+        $self->error_message(
+            "Error defining new model:" . $define_cmd->error_message
+            . "\nParams were: " . Data::Dumper::Dumper(\%cmd_params));
         return;
     }
     
