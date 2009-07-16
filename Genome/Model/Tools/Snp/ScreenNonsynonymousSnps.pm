@@ -67,17 +67,19 @@ sub execute {
 	    my ($sub1)=$ns_snp=~/^([A-Z])/;
 	    my ($sub2)=$ns_snp=~/([A-Z])$/;
 	    my ($sub3)=$ns_snp=~/(\d+)/;
-	    $sortedlist->{$sub3}->{sub1}=$sub1;
-	    $sortedlist->{$sub3}->{sub2}=$sub2;
+	    $sortedlist->{$sub3}->{$ns_snp}->{sub1}=$sub1;
+	    $sortedlist->{$sub3}->{$ns_snp}->{sub2}=$sub2;
 	} close (LIST);
 	open(SL,">SIFT_LIST");
 	open(PL,">POLYPHEN_LIST");
 	foreach my $sub3 (sort {$a<=>$b} keys %{$sortedlist}) {
-	    my $sub1 = $sortedlist->{$sub3}->{sub1};
-	    my $sub2 = $sortedlist->{$sub3}->{sub2};
-	    my $aa = "$sub1$sub3$sub2";
-	    print SL qq($aa\n);
-	    print PL "0\t0\t$transcript\t$sub3\t$sub1\t$sub2\n";
+	    foreach my $ns_snp (sort keys %{$sortedlist->{$sub3}}) {
+		my $sub1 = $sortedlist->{$sub3}->{$ns_snp}->{sub1};
+		my $sub2 = $sortedlist->{$sub3}->{$ns_snp}->{sub2};
+		my $aa = "$sub1$sub3$sub2";
+		print SL qq($aa\n);
+		print PL "0\t0\t$transcript\t$sub3\t$sub1\t$sub2\n";
+	    }
 	}
 	close SL;
 	close PL;
