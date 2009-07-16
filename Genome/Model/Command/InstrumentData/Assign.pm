@@ -29,6 +29,15 @@ class Genome::Model::Command::InstrumentData::Assign {
             default => 0,
             doc => 'Assign all available unassigned instrument data to the model.'
         },
+        capture => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'Only assign capture data',
+        },
+        capture_target => {
+            is => 'String',
+            doc => 'Only assign capture data with the specified target (implies --capture)',
+        }
     ],
 };
 
@@ -50,9 +59,18 @@ sub create {
     my $self = $class->SUPER::create(%params)
         or return;
 
+    if (defined($self->capture_target())) {
+        $self->capture(1);
+    }
+    
+    if ($self->capture()) {
+        $self->all(1);
+    }
+    
     my @requested_actions = grep { 
         $self->$_ 
     } (qw/ instrument_data_id instrument_data_ids all /);
+    
     if ( @requested_actions > 1 ) {
         $self->error_message('Multiple actions requested: '.join(', ', @requested_actions));
         $self->delete;
@@ -63,6 +81,7 @@ sub create {
         or  return;
 
     return $self;
+    
 }
 
 sub execute {
@@ -195,12 +214,46 @@ sub _assign_all_instrument_data {
 
     # Assign all unassigned if requested 
     $self->status_message("Attempting to assign all available instrument data");
+    
     my @unassigned_instrument_data = $self->model->unassigned_instrument_data;
+    
     unless ( @unassigned_instrument_data ){
         $self->error_message("Attempted to assign all instrument data that was unassigned for model, but found none");
         return;
     }
-    for my $id ( @unassigned_instrument_data ) { 
+
+    my $requested_capture_target = $self->capture_target();
+    
+  ID: for my $id ( @unassigned_instrument_data ) {
+
+        my $id_capture_target;
+        
+        if ($id->can('target_region_set_name')) {
+            $id_capture_target = $id->target_region_set_name();
+        }
+
+        if ($self->capture()) {
+
+            unless (defined($id_capture_target)) {
+                next ID;
+            }
+
+            if (defined($requested_capture_target)) {
+                unless ($id_capture_target eq $requested_capture_target) {
+                    next ID;
+                }
+            }
+
+        }
+        
+        else {
+
+            if (defined($id_capture_target)) {
+                next ID;
+            }
+            
+        }
+        
         $self->_assign_instrument_data($id)
             or return;
     }
