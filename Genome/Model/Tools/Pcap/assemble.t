@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 18;
+use Test::More tests => 17;
 use above 'Genome';
 use Genome::Model::Tools::Pcap::Assemble;
 use Data::Dumper;
@@ -22,7 +22,7 @@ $obj->_project_path();  # Makes the object discover it's project_path
 $obj->delete_completed_assembly;  # Clean out the cruft from any past semi-completed test
 
 ok($obj->create_project_directories, "created project dirs");
-ok($obj->validate_organism_name, "organism name validated");
+#ok($obj->validate_organism_name, "organism name validated"); #SKIP .. NOT ALL ASSEMBLIES HAVE VALID ORG NAME
 ok($obj->copy_test_data_set, "test data set copied");
 ok($obj->create_pcap_input_fasta_fof, "pcap fasta fof created");
 ok($obj->create_constraint_file, "constraint file created successfully");
