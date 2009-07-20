@@ -143,6 +143,11 @@ sub execute {
         $rv = $self->wait_for_pse_to_confirm(pse => $allocator);
     }
 
+    # Commit here to free up a DB lock we'll be holding if we executed the 
+    # allocation PSE via confirm_scheduled_pse().  If we block on a hung
+    # mount below when we start check / create the directory. 
+    UR::Context->commit();
+
     unless ($rv) {
         $self->error_message('Failed to confirm pse '. $self->allocator_id);
         return;
