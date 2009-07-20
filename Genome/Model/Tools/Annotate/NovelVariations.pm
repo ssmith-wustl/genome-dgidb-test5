@@ -23,9 +23,10 @@ class Genome::Model::Tools::Annotate::NovelVariations {
             doc => "Store annotation in the specified file instead of sending it to STDOUT."
         },
     ],
-    has_optional => [ #FIXME fix this name.
+    has_optional => [
         report_mode => {
             type => 'Text',
+            is_input => 1,
             default => 'all',
             doc => '(DEFAULT VALUE) If set to "all", output every input variant and the (variant database, version, and list of submitter_names) of previously found variations if they were found. These columns will be blank if no variations were found for the given line of input.
             If set to "novel-only", the output will contain only variants that were NOT found previously in dbSNP. Output will be the ORIGINAL LINE of input if the variant was NOT previously found. If the variant was previously found, no output will be given for that variant.
@@ -33,6 +34,7 @@ class Genome::Model::Tools::Annotate::NovelVariations {
         },
         no_headers => {
             type => 'Boolean',
+            is_input => 1,
             default => 0,
             doc => 'Exclude headers in report output',
         },
@@ -45,6 +47,11 @@ class Genome::Model::Tools::Annotate::NovelVariations {
         submitter_filter => {
             type => 'Text',
             doc => 'Comma separated (no spaces allowed) list of submitters to consider from dbsnp. Results will only include submitters mentioned. Default is no filter.',
+        },
+        submitter_filter_not => {
+            type => 'Text',
+            is_input => 1,
+            doc => 'Comma separated (no spaces allowed) list of submitters to IGNORE from dbsnp. Results will only include submitters not mentioned. Default is no filter.',
         },
         build => {
             is => "Genome::Model::Build",
@@ -77,6 +84,12 @@ EOS
 sub execute { 
     my $self = shift;
     $DB::single =1;
+
+    # FIXME shortcutting... should we do this or not post-testing?
+    if (-s $self->output_file) {
+        $self->status_message("Previous output detected, shortcutting");
+        return 1;
+    }
 
     my $variant_file = $self->variant_file;
 
@@ -128,11 +141,20 @@ sub execute {
             
             # Apply the filter on submitters if necessary
             my $variation_iterator;
-            if ($self->submitter_filter) {
+            if (($self->submitter_filter)&&($self->submitter_filter_not)) {
+                $self->error_message("Specifying both submitter-filter and submitter-filter-not is not allowed (or even logical)... so DONT.");
+                die;
+            } elsif ($self->submitter_filter) {
                 my @valid_submitters = split (",", $self->submitter_filter);
                 $variation_iterator = $self->build->variation_iterator(
                     chrom_name => $chromosome_name,
                     submitter_name => \@valid_submitters,
+                );
+            } elsif ($self->submitter_filter_not) {
+                my @invalid_submitters = split (",", $self->submitter_filter_not);
+                $variation_iterator = $self->build->variation_iterator(
+                    chrom_name => $chromosome_name,
+                    submitter_name => { operator => 'not in', value => \@invalid_submitters},
                 );
             } else {
                 $variation_iterator = $self->build->variation_iterator(
@@ -165,12 +187,12 @@ sub execute {
         # If in "include only dbsnp concordance" mode, output if we found variations in dbsnp
         if ($self->report_mode eq 'known-only') {
             if (scalar(@valid_variations >= 1)) {
-                $output_fh->print($variant->{original_line});
+                $output_fh->print($variant_svr->{current_line});
             }    
         # If in "include only novel variations" mode, output if we didnt find variations in dbsnp
         } elsif ($self->report_mode eq 'novel-only') {
             if (scalar(@valid_variations < 1)) {
-                $output_fh->print($variant->{original_line});
+                $output_fh->print($variant_svr->{current_line});
             }    
         } elsif ($self->report_mode eq 'all') {
             $self->_print_reports_for_snp($variant, \@valid_variations);
