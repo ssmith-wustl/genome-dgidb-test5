@@ -16,6 +16,12 @@ class Genome::Model::Command::Build {
                            is_optional => 1,
                            doc => 'The build will execute genome model build run-jobs(default_value=1)',
                        },
+	force_new_build => {
+			    is => 'Boolean',
+			    default_value => 0,
+			    doc => 'Force a new build when existing builds are running',
+                            is_optional => 1,
+			},
         bsub_queue  => {is => 'String', is_optional => 1, doc => 'lsf jobs should be put into this queue' },
     ],
     doc => "build the model with currently assigned instrument data according to the processing profile",
@@ -36,20 +42,24 @@ sub create {
     }
     my $model = $self->model;
     unless ($self->build_id) {
-        my $current_running_build = $model->current_running_build;
-        if ($current_running_build) {
-            $self->build_id($current_running_build->build_id);
-        } else {
-            my $build = Genome::Model::Build->create(
-                                                     model_id => $model->id,
-                                                   );
-            unless ($build) {
-                $self->error_message('Failed to create new build for model '. $model->id);
-                $self->delete;
+        my @running_builds = $model->running_builds;
+        my $ids = join "\n", map {$_->id} @running_builds;
+        if (@running_builds > 0) {
+            $self->warning_message("This model already has one (or more) builds currently running.\n IDs are: $ids\n");
+            if (!$self->force_new_build) {
+                $self->error_message("Use the --force-new-build param to force a new build to run.  ");
                 return;
             }
-            $self->build_id($build->build_id);
+        } 
+        my $build = Genome::Model::Build->create(
+                                                 model_id => $model->id,
+                                                 );
+        unless ($build) {
+        $self->error_message('Failed to create new build for model '. $model->id);
+            $self->delete;
+            return;
         }
+        $self->build_id($build->build_id);
     }
     my @build_events = Genome::Model::Command::Build->get(
                                                           model_id => $model->id,
@@ -650,7 +660,7 @@ sub mail_summary {
     my $to = "To: " . $self->user_name . '@genome.wustl.edu' . "\n";
 
     $content .= "The new updated status cgi:\n";
-    $content .= 'https://lims.gsc.wustl.edu/cgi-bin/apipe/status.cgi?build-id='. $self->build_id ."\n\n";
+    $content .= 'https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id='. $self->build_id ."\n\n";
 
     $content .= "The old stage one cgi:\n";
     $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/'. $model->sequencing_platform
