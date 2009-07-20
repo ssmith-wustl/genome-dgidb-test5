@@ -26,8 +26,12 @@ if (-e $tmp) {
 
 mkdir($tmp) or die "Failed to create directory $tmp: $!";
 
-my $build_id = "96267575";
-my $build = Genome::Model::Build->get($build_id);
+my $model = Genome::Model->get(name => 'pipeline_test_1');
+unless ($model) {
+    die "Can't find a model to work with";
+}
+my $build = $model->last_complete_build;
+my $build_id = $build->id;
 ok($build, "build found with id $build_id");
 
 my $r = Genome::Model::ReferenceAlignment::Report::Summary->create(
