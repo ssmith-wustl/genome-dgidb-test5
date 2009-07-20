@@ -822,6 +822,12 @@ sub _build_model_filesystem_paths {
         return;
     }
 
+    # Fix when models are created, ensure the directory is group-writable.
+    my $chmodrv = system(sprintf("chmod g+w %s", $model_data_dir));
+    unless ($chmodrv == 0) {
+        $self->warning_message("Error attempting to set group write permissions on model directory $model_data_dir: rv $chmodrv");
+    } 
+
     # This is a human readable(model_name) symlink to the model_id based directory
     # This symlink is created so humans can find their data on the filesystem
     my $model_link = $self->model_link;
