@@ -160,7 +160,7 @@ sub data_link {
 }
 
 sub _data_base_path {
-    return '/gscmnt/sata363/info/medseq/instrument_data/';
+    return '/gscmnt/sata835/info/medseq/instrument_data/';
 }
 
 sub resolve_full_path{

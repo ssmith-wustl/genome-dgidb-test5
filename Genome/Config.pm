@@ -17,7 +17,7 @@ sub root_directory {
 }
 
 sub data_directory {
-     $ENV{GENOME_MODEL_DATA} || '/gscmnt/sata363/info/medseq';
+     $ENV{GENOME_MODEL_DATA} || '/gscmnt/sata835/info/medseq';
 }
 
 # links
