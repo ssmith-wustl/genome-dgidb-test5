@@ -8,9 +8,9 @@ use Test::More tests => 3;
 
 use above 'Genome';
 
-my $model_id = '2771359026';
+my $model = Genome::Model->get(name => 'pipeline_test_1');
 
-my $model_status = Genome::Model::Command::Status->create(genome_model_id=>$model_id, display_output=>0);
+my $model_status = Genome::Model::Command::Status->create(genome_model_id=>$model->id, display_output=>0);
 
 ok($model_status);
 
@@ -21,8 +21,11 @@ is($rv, 1, 'Testing for successful execution.  Expecting 1.  Got: '.$rv);
 my $length_test = 0;
 
 my $xml = $model_status->xml();
+print $xml;
 
-if (length($xml) > 3000 ) {
+# FIXME in the future, this test should check some data in the XML, not just
+# its length
+if (length($xml) > 900 ) {
     $length_test = 1 ;
 } 
 
