@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use File::Path;
-use Test::More tests => 3;
+use Test::More tests => 4;
 use XML::LibXML;
 
 use above 'Genome';
