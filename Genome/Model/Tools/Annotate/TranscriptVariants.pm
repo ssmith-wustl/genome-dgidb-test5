@@ -233,7 +233,6 @@ sub execute {
 
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window,
-                version => $self->build->version,
             );
             unless ($annotator){
                 $self->error_message("Couldn't create iterator for chromosome $chromosome_name!");
@@ -257,7 +256,6 @@ sub execute {
             die Genome::Utility::Window::Transcript->error_message unless $transcript_window;
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window,
-                version => $self->build->version,
             );
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
         }
