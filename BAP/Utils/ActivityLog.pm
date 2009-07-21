@@ -18,6 +18,11 @@ sub log_action
     if(exists($ENV{ACTIVITY_LOG}))
     {
         $db_file = $ENV{ACTIVITY_LOG};
+        if( ! -f $db_file )
+        {
+            print STDERR "in test mode, not logging action\n";
+            return 1;
+        }
     }
     my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file",'','',
                            {RaiseError => 1, AutoCommit => 1});
