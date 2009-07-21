@@ -62,12 +62,21 @@ sub generate_report_detail {
 sub get_bam_content {
     my $self = shift;
     my $build = $self->build;
-    my $pileup_file = $build->bam_pileup_file;
-    $self->status_message("Using pileup file $pileup_file to generate Bam coverage.");
-    my $coverage = Genome::Model::Tools::Sam::Coverage->create(pileup_file=>$pileup_file);
+
+    #my $pileup_file = $build->bam_pileup_file;
+    #$self->status_message("Using pileup file $pileup_file to generate Bam coverage.");
+    #my $coverage = Genome::Model::Tools::Sam::Coverage->create(pileup_file=>$pileup_file);
+    my $ref_build = $build->model->reference_build;
+    my $reference_file = $ref_build->full_consensus_path('fa');
+    my $aligned_reads = $build->whole_rmdup_bam_file;
+    $self->status_message("Using:  Reference File: $reference_file, Aligned Reads File: $aligned_reads");
+    my $coverage = Genome::Model::Tools::Sam::Coverage->create( aligned_reads_file=>$aligned_reads,
+                                                                reference_file =>$reference_file,
+                                                                return_output =>1,
+                                                                );
     my $bam_coverage_report = $coverage->execute;
     if (defined($bam_coverage_report) ) {
-        $self->status_message("Bam coverage report successfully generated from pileup file.");
+        $self->status_message("Bam coverage report successfully generated.");
         $self->status_message("Bam coverage report string: \n".$bam_coverage_report);
         return $bam_coverage_report;
     }  else {
