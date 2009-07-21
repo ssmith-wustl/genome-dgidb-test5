@@ -7,12 +7,18 @@ use Genome;
 use Command;
 use IO::File;
 
+my $SAM_DEFAULT = Genome::Model::Tools::Sam->default_samtools_version;
+
 class Genome::Model::Tools::Sam::Coverage {
     is  => 'Command',
     has => [
-        pileup_file => {
+        aligned_reads_file => {
             is  => 'String',
-            doc => 'The input sam/bam pileup file.',
+            doc => 'The input sam/bam file.',
+        },
+        reference_file => {
+            is  => 'String',
+            doc => 'The reference file used in the production of the aligned reads file.',
         },
         return_output => {
             is => 'Integer',
@@ -23,85 +29,69 @@ class Genome::Model::Tools::Sam::Coverage {
     has_optional => [
         output_file => {
             is =>'String',
-            doc => 'The output file containing metrics.',
+            doc => 'The output file containing metrics.  If no file is provided a temporary file is created.',
         },
+        coverage_command => {
+            is =>'String',
+            doc => 'The coverage command tool path.',
+        },
+
     ],
 };
 
 
 sub help_brief {
-    'Calculate haploid coverage using a SAM pileup file.';
+    'Calculate haploid coverage using a BAM file.';
 }
 
 sub help_detail {
     return <<EOS
-    Calculate haploid coverage using the SAM pileupfile.  
+    Calculate haploid coverage using a BAM file.  
 EOS
 }
 
 
 sub execute {
     my $self = shift;
-    my $pileup_file = $self->pileup_file;
-    my $output_file = $self->output_file;
+    my $reference = $self->reference_file;
+    my $aligned_reads = $self->aligned_reads_file;
 
-    my $genome_size = 0;
-    my $non_n_genome_size = 0;
-    my $number_of_bases_covered = 0;
-    my $number_of_bases_mapped = 0;
-    my $haploid_coverage = 0;
-    
-    if (-s $pileup_file) {
-        my $pileup_fh = Genome::Utility::FileSystem->open_file_for_reading($pileup_file) or return;
-        
-        
-        while (my $line = $pileup_fh->getline) {
-           
-            my ($chr, $pos, $ref, $con, $qual, $snp_qual, $max_map_qual, $read_depth, $rest ) = split(/\s+/,$line);
-           
-            next if $ref eq '*'; #skip all indels e.g. lines with a '*' for $ref
-
-            $genome_size++;
-            next if $ref eq 'N'; #count N's via genome_size, but skip the rest of the metrics
-
-            $non_n_genome_size++;
-            $number_of_bases_covered++ if $read_depth > 0;
-            $number_of_bases_mapped = $number_of_bases_mapped + $read_depth; 
-            
-        }
-        $pileup_fh->close;
-
-        $haploid_coverage = $number_of_bases_mapped / $non_n_genome_size;
-
-        my $report_output;
-        #print $out_fh "Average depth across all non-gap regions: $haploid_coverage\n";
-        my $now = UR::Time->now();
-        $report_output =  "Average depth across all non-gap regions: $haploid_coverage\n"
-        . "Genome size: $genome_size\n"
-        . "Non-N genome size: $non_n_genome_size\n"
-        . "Number of bases covered: $number_of_bases_covered\n"
-        . "Number of bases mapped: $number_of_bases_mapped\n"
-        . "Input file: $pileup_file\n"
-        . "Date and time calculated: $now\n";
-        
-
-        if (defined $self->output_file) {
-            my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($output_file) or return;
-            print $out_fh $report_output;
-            $out_fh->close;
-        }
-        
-        if ($self->return_output) {
-            return $report_output;
-        }
-    
-    } else {
-        $self->error_message('Provided pileup file does not exist: '.$pileup_file);
-        return;
+    my $coverage_cmd;
+    if (defined $self->coverage_command) {
+       $coverage_cmd = $self->coverage_command;
+    } else { 
+        #Switch this when wu350 is deployed 
+        #my $samtools_cmd = Genome::Model::Tools::Sam->path_for_samtools_version($SAM_DEFAULT);
+        my $samtools_cmd = "/gscuser/dlarson/samtools/r350wu1/samtools"; 
+        $coverage_cmd = "$samtools_cmd mapcheck"; 
     }
 
-    return 1; 
+    my $output_file;
+    if (defined $self->output_file) {
+        $output_file = $self->output_file;
+    } else {
+        $output_file = Genome::Utility::FileSystem->create_temp_file_path('mapcheck_coverage_results');
+    }
+ 
+    #my $cmd = "/gscuser/charris/c-src-BLECH/trunk/samtool2/samtools mapcheck /gscuser/jpeck/bam/map-TESTINGLIBRARY.bam -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+    my $cmd = "$coverage_cmd $aligned_reads -f $reference > $output_file";
+
+    $self->status_message("Mapcheck coverage command: ".$cmd);
+    my $report_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd,output_files=>[$output_file],input_files=>[$aligned_reads,$reference]);
     
+    my @output_text;
+    my $return_text; 
+    if ($self->return_output) {
+        my $out_fh = Genome::Utility::FileSystem->open_file_for_reading($output_file);
+        if ($out_fh) {
+            @output_text = $out_fh->getlines;
+        } 
+        $out_fh->close;
+        $return_text = join("",@output_text);
+        return $return_text;
+    } 
+
+    return 1; 
 
 }
 
