@@ -337,10 +337,10 @@ sub SetupBiomek {
 	return 0;
     }
     
-    if($buddy_id == $emp_id) {
-	$self->{'Error'} = "$pkg: SetupBiomek() -> Buddy and user cannot be the same.";
-	return  0;
-    }
+    # if($buddy_id == $emp_id) {
+        # $self->{'Error'} = "$pkg: SetupBiomek() -> Buddy and user cannot be the same.";
+        # return  0;
+    # }
 
 
     my $new_pse_id =  $self->{'CoreSql'}->Process('GetNextPse');
