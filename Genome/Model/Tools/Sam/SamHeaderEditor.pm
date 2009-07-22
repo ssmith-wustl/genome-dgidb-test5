@@ -117,27 +117,38 @@ sub execute {
    my $self = shift;
  
    #see note in create() for explanation of 'main' package definition.
-   my $she = new main::edu::wustl::genome::samtools::SamHeaderEditor();
-
-   #The order of the following parameters is important.  Do not change unless you change the corresponding Java class!
-   my $result = $she->addAttributes(  $self->input_sam_file, 
-                         $self->output_sam_file, 
-                         $self->bam_version_field, 
-                         $self->sort_order_field, 
-                         $self->assembly_field, 
-                         $self->species_field,
-                         $self->refseq_path_field, 
+   my $she = new main::edu::wustl::genome::samtools::SamHeaderEditor($self->input_sam_file, $self->output_sam_file);
+  
+   my $rg_field_result = $she->setReadGroupName($self->library_field);  #this should also be the id of the read group
+   print ("\nrg field result: $rg_field_result\n");
+ 
+   my $rg_result = $she->addReadGroup( 
+                         $self->library_field, #the id of the read group is the first field 
                          $self->sample_name_field, 
                          $self->platform_field, 
                          $self->platform_unit_field, 
                          $self->library_field, 
                          $self->date_run_field,
                          $self->genome_center_field, 
+                    );
+   print ("\nrg result: $rg_result\n");
+   
+   #The order of the following parameters is important.  Do not change unless you change the corresponding Java class!
+   my $aa_result = $she->addAttributes(  
+                         $self->bam_version_field, 
+                         $self->sort_order_field, 
+                         $self->assembly_field, 
+                         $self->species_field,
+                         $self->refseq_path_field, 
                          $self->aligner_command_field,
                          $self->aligner_version_field
                       );
-    
-    return $result;
+   print ("\naa result: $aa_result\n");
+   
+   $she->execute();
+
+   my $result = 1; 
+   return $result;
 }
 
 1;
