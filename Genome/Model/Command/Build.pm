@@ -136,14 +136,6 @@ sub execute {
     $self->bsub_queue('apipe') unless $self->bsub_queue;
 
     $self->create_directory($self->data_directory);
-    my $run_jobs_script = $self->data_directory .'/run_jobs_'. $build->build_id .'.pl';
-    open(FILE,'>'.$run_jobs_script) || die ('Failed to open run jobs script: '. $run_jobs_script .":  $!");
-
-    print FILE "#!/gsc/bin/perl\n
-                use strict;\n
-                use warnings;\n
-                use Genome;\n";
-    print FILE 'my $rv;'. "\n";
 
     my $pp = $self->model->processing_profile;
     for my $stage_name ($pp->stages) {
@@ -153,18 +145,27 @@ sub execute {
                                  join("\n",$pp->classes_for_stage($stage_name)));
             next;
         }
-        if (!defined $self->auto_execute) {
-            # transent properties with default_values are not re-initialized when loading object from data source
-            $self->auto_execute(1);
-        }
-        my $command = 'genome model build run-jobs --model-id='. $build->model_id .' --build-id='. $build->build_id .' --stage-name='. $stage_name . ' --bsub-queue=' . $self->bsub_queue;
-        print FILE '$rv' . " = system('$command');\n";
-        print FILE 'unless ($rv == 0) { die $!; }'. "\n";
+
     }
-    close(FILE);
-    # this is really more of a 'testing' flag and may be more appropriate named such
+
+    my @stage_wf = ();
+    #= map { $self->_workflow_for_stage($_) } $pp->stages;
+
+    foreach my $stage ($pp->stages) {
+        my $w = $self->_workflow_for_stage($stage);
+        if ($w) {
+            push @stage_wf, $w;
+        }
+    }
+
+    my $w = $self->_merge_stage_workflows(@stage_wf);
+
+    $w->save_to_xml(OutputFile => $self->build->data_directory . '/build.xml');
+
     if ($self->auto_execute) {
-        my $cmdline = 'bsub -H -q ' . $self->bsub_queue . ' -m blades -u '. $ENV{USER} .'@genome.wustl.edu perl '. $run_jobs_script;
+        my $cmdline = 'bsub -H -q ' . $self->bsub_queue . ' -m blades -u ' . $ENV{USER} . '@genome.wustl.edu ' . 
+            'genome model build run --model-id ' . $self->model->id . ' --build-id ' . $self->build->id;
+
         my $bsub_output = `$cmdline`;
         my $retval = $? >> 8;
 
@@ -185,6 +186,8 @@ sub execute {
         my $resume = sub { `bresume $bsub_job_id`};
         UR::Context->create_subscription(method => 'commit', callback => $resume);
     }
+
+
     return 1;
 }
 
@@ -512,6 +515,173 @@ sub _remove_dependency_for_classes {
             }
         }
     }
+}
+
+sub _merge_stage_workflows {
+    my $self = shift;
+    my @workflows = @_;
+    
+    my $w = Workflow::Model->create(
+        name => $self->build_id . ' all stages',
+        input_properties => [
+            'prior_result'
+        ],
+        output_properties => [
+            'result'
+        ]
+    );
+    
+    my $last_op = $w->get_input_connector;
+    my $last_op_prop = 'prior_result';
+    foreach my $inner (@workflows) {    
+        $inner->workflow_model($w);
+
+        $w->add_link(
+            left_operation => $last_op,
+            left_property => $last_op_prop,
+            right_operation => $inner,
+            right_property => 'prior_result'
+        );
+        
+        $last_op = $inner;
+        $last_op_prop = 'result';
+    }
+    
+    $w->add_link(
+        left_operation => $last_op,
+        left_property => $last_op_prop,
+        right_operation => $w->get_output_connector,
+        right_property => 'result'
+    );
+    
+    return $w;
+}
+
+sub _workflow_for_stage {
+    my ($self, $stage_name) = @_;
+    my $build = $self->build;
+    
+    my $build_event = $build->build_event;
+
+    $DB::single=1;
+    
+    my $lsf_queue = 'apipe'; #$self->bsub_queue || 'apipe';
+
+    my @events = $build_event->events_for_stage($stage_name);
+    unless (@events){
+        $self->error_message('Failed to get events for stage '. $stage_name);
+        return;
+    }
+
+
+    my $stage = Workflow::Model->create(
+                                        name => $self->build_id . ' ' . $stage_name,
+                                        input_properties => [
+                                                             'prior_result',
+                                                         ],
+                                        output_properties => ['result']
+                                    );
+    my $input_connector = $stage->get_input_connector;
+    my $output_connector = $stage->get_output_connector;
+
+    my @ops_to_merge = ();
+    my @first_events = grep { !defined($_->prior_event_id) } @events;
+    for my $first_event ( @first_events ) {
+        my $first_operation = $stage->add_operation(
+                                                    name => $first_event->command_name_brief .' '. $first_event->id,
+                                                    operation_type => Workflow::OperationType::Event->get(
+                                                                                                          $first_event->id
+                                                                                                      )
+                                                );
+        my $first_event_log_resource = $self->_resolve_log_resource($first_event);
+
+        $first_operation->operation_type->lsf_resource($first_event->bsub_rusage . $first_event_log_resource);
+        $first_operation->operation_type->lsf_queue($lsf_queue);
+
+        $stage->add_link(
+                         left_operation => $input_connector,
+                         left_property => 'prior_result',
+                         right_operation => $first_operation,
+                         right_property => 'prior_result'
+                     );
+        my $output_connector_linked = 0;
+        my $sub;
+        $sub = sub {
+            my $prior_op = shift;
+            my $prior_event = shift;
+            my @events = $prior_event->next_events;
+            if (@events) {
+                foreach my $n_event (@events) {
+                    my $n_operation = $stage->add_operation(
+                                                            name => $n_event->command_name_brief .' '. $n_event->id,
+                                                            operation_type => Workflow::OperationType::Event->get(
+                                                                                                                  $n_event->id
+                                                                                                              )
+                                                        );
+                    my $n_event_log_resource = $self->_resolve_log_resource($n_event);
+                    $n_operation->operation_type->lsf_resource($n_event->bsub_rusage . $n_event_log_resource);
+                    $n_operation->operation_type->lsf_queue($lsf_queue);
+
+                    $stage->add_link(
+                                     left_operation => $prior_op,
+                                     left_property => 'result',
+                                     right_operation => $n_operation,
+                                     right_property => 'prior_result'
+                                 );
+                    $sub->($n_operation,$n_event);
+                }
+            } else {
+                ## link the op's result to it.
+                unless ($output_connector_linked) {
+                    push @ops_to_merge, $prior_op;
+                    $output_connector_linked = 1;
+                }
+            }
+        };
+        $sub->($first_operation,$first_event);
+    }
+
+    my $i = 1;
+    my @input_names = map { 'result_' . $i++ } @ops_to_merge;
+    my $converge = $stage->add_operation(
+                                         name => 'merge results',
+                                         operation_type => Workflow::OperationType::Converge->create(
+                                                                                                     input_properties => \@input_names,
+                                                                                                     output_properties => ['all_results','result']
+                                                                                                 )
+                                     );
+    $i = 1;
+    foreach my $op (@ops_to_merge) {
+        $stage->add_link(
+                         left_operation => $op,
+                         left_property => 'result',
+                         right_operation => $converge,
+                         right_property => 'result_' . $i++
+                     );
+    }
+    $stage->add_link(
+                     left_operation => $converge,
+                     left_property => 'result',
+                     right_operation => $output_connector,
+                     right_property => 'result'
+                 );
+
+    return $stage;
+}
+
+
+sub _resolve_log_resource {
+    my $self = shift;
+    my $event = shift;
+
+    my $event_id = $event->genome_model_event_id;
+    my $log_dir = $event->resolve_log_directory;
+    unless (-d $log_dir) {
+        $event->create_directory($log_dir);
+    }
+    my $err_log_file = sprintf("%s/%s.err", $log_dir, $event_id);
+    my $out_log_file = sprintf("%s/%s.out", $log_dir, $event_id);
+    return ' -o ' . $out_log_file . ' -e ' . $err_log_file;
 }
 
 sub _schedule_stage {
