@@ -35,10 +35,6 @@ class Genome::Variation {
         },
         variation_type => { is => 'Text' },
         chrom_name     => { is => 'Text' },
-        build          => {
-            is    => "Genome::Model::Build",
-            id_by => 'build_id',
-        },
     ],
     schema_name => 'files',
     data_source => 'Genome::DataSource::Variations',

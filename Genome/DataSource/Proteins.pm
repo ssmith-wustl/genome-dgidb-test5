@@ -1,5 +1,8 @@
 package Genome::DataSource::Proteins;
 
+use strict;
+use warnings;
+
 use Genome;
 
 class Genome::DataSource::Proteins {
@@ -7,7 +10,7 @@ class Genome::DataSource::Proteins {
 };
 
 sub delimiter {
-    return "\t";
+    return ",";
 }
 
 sub column_order {
@@ -22,16 +25,18 @@ sub skip_first_line {
     return 0;
 }
 
-sub constant_values { ['build_id'] };
-sub required_for_get { [qw( transcript_id build_id)] }
+sub constant_values { ['data_directory'] };
+sub required_for_get { [qw( transcript_id data_directory)] }
 
 sub file_resolver {
-    my($transcript_id, $build_id) = @_;
+    my($composite_id, $data_directory) = @_;
 
+    my $meta = Genome::Transcript->__meta__;
+
+    my ($chrom, $position, $transcript_id) = $meta->resolve_ordered_values_from_composite_id($composite_id);
+    
     my $thousand = int($transcript_id / 1000);
-    my $build = Genome::Model::Build::ImportedAnnotation->get($build_id);
-    my $annotation_dir = $build->annotation_data_directory;
-    my $path = "$annotation_dir/proteins/proteins_" . $thousand . ".csv";
+    my $path = "$data_directory/proteins/proteins_" . $thousand . ".csv";
     return $path;
 }
 

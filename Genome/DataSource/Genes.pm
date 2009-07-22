@@ -7,7 +7,7 @@ class Genome::DataSource::Genes {
 };
 
 sub delimiter {
-    return "\t";
+    return ",";
 }
 
 sub column_order {
@@ -22,16 +22,14 @@ sub skip_first_line {
     return 0;
 }
 
-sub constant_values { ['build_id'] };
-sub required_for_get { ['gene_id','build_id'] }
+sub constant_values { ['data_directory'] };
+sub required_for_get { ['gene_id','data_directory'] }
 
 sub file_resolver {
-    my($gene_id, $build_id) = @_;
+    my($gene_id, $data_directory) = @_;
 
     my $thousand = int($gene_id / 1000);
-    my $build = Genome::Model::Build::ImportedAnnotation->get($build_id);
-    my $annotation_dir = $build->annotation_data_directory;
-    my $path = "$annotation_dir/genes/genes_" . $thousand . ".csv";
+    my $path = "$data_directory/genes/genes_" . $thousand . ".csv";
     return $path;
 }
 

@@ -15,7 +15,14 @@ class Genome::Model::ImportedAnnotation{
         annotation_source => {
             is => 'String',
             via => 'processing_profile',
-        }
+        },
+        species_name => {
+            is => 'String',
+            via => 'attributes',
+            to => 'value',
+            where => [property_name => 'species_name'],
+            is_mutable => 1,
+        },
     ],
 };
 

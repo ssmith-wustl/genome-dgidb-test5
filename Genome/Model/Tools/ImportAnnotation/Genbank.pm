@@ -8,24 +8,12 @@ use GSC::ImportExport::GenBank::Transcript;
 use Genome;
 
 use Bio::SeqIO;
-use File::Slurp;
-use File::Temp qw/ tempfile /;
-use File::Path;
-use Text::CSV_XS;
-use Carp;
 use Storable;
+use File::Slurp qw/ write_file /;
 
 class Genome::Model::Tools::ImportAnnotation::Genbank {
-    is  => 'Command',
+    is  => 'Genome::Model::Tools::ImportAnnotation',
     has => [
-        outputdir => {
-            is  => 'Text',
-            doc => "directory to dump annotation files",
-        },
-        version => {
-            is  => 'Text',
-            doc => "Version to use",
-        },
         flatfile => {
             is  => 'Text',
             doc => "path to asn.1 flat file",
@@ -39,7 +27,6 @@ class Genome::Model::Tools::ImportAnnotation::Genbank {
             doc => "path to storable hash of transcript statuses",
             is_optional => 1,
         },
-
     ],
 };
 
@@ -55,58 +42,246 @@ sub help_synopsis
 {
     return <<EOS
 
-gt import-annotation genbank --flatfile <genbank asn1 file> --genbank-file <gb format file of transcripts> --outputdir <output directory> --version <ensembl associated version>
+gt import-annotation genbank --flatfile <genbank asn1 file> --genbank-file <gb format file of transcripts> --output_directory <output directory> --version <ensembl associated version>
 EOS
 }
 
 sub help_detail
 {
     return <<EOS
-This command is used for importing the genbank based human annotation data to
-the filesystem based data sources.
+This command is used for importing the genbank based annotation data to the filesystem based data sources.
 EOS
 }
 
 
-sub execute
+sub import_objects_from_external_db
 {
     my $self = shift;
-    unless( -d $self->outputdir )
-    {
-        eval { mkpath( $self->outputdir ); };
-        if($@)
-        {
-            $self->error_msg("can't create outputdir path\n$@");
-            exit 1;
-        }
-    }
 
-
-    my $status_hash;
+    my $transcript_status;
     if($self->status_file)
     {
-        $status_hash = retrieve $self->status_file;
+        $transcript_status = retrieve $self->status_file;
     }
     else
     {
-        $status_hash = $self->cache_transcript_status();
+        $transcript_status = $self->cache_transcript_status();
     }
-    #store $status_hash, 'status_hash.stor';
-    #exit;
 
-    $self->get_from_flatfile($status_hash);
-    
-    my $outputdir = $self->outputdir;
-    my $splitter = Genome::Model::Tools::ImportAnnotation::SplitFiles->create(
-        workdir => $outputdir,
-    );
-    unless ($splitter){
-        $self->error_message("Couldn't create Genome::Model::Tools::ImportAnnotation::SplitFiles to split files in $outputdir");
-        die;
+    $DB::single = 1;
+
+    my $lines;
+    foreach my $ts (sort keys %$transcript_status)
+    {
+        push(@$lines,[$transcript_status->{$ts}->{entrezid}, $transcript_status->{$ts}->{hugo_gene_name}]);  #TODO, possibility this is undef if 'db_xref' tag wasn't present, see above
     }
-    unless ($splitter->execute){
-        $self->error_message("Failed to split files in $outputdir!");
-        die;
+    
+
+
+    my $version = $self->version;
+
+    my $gene_id       = 1;
+    my $egi_id        = 1;
+    my $transcript_id = 1;
+    my $protein_id    = 1;
+    my $tss_id        = 1;
+
+    my $csv  = Text::CSV_XS->new( { sep_char => "\t" } );
+    my $csv1 = Text::CSV_XS->new( { sep_char => "\t" } );
+
+    my $count;
+    print scalar @$lines." genes";
+    foreach my $record (@$lines)
+    {
+        $count++;
+        my $locus_id = $record->[0];
+        my $hugo     = $record->[1]; #TODO this is undefined here?
+
+        # sometimes we get an odd error here, and this hangs, because
+        # the bioperl interface way deep in GSC::ImportExport::GenBank::Gene
+        # has this odd notion that it wants to rebuild the index, and tries
+        # to remove it...  I changed that little bit, so hopefully that won't
+        # happen again.
+        my $genbank_gene = GSC::ImportExport::GenBank::Gene->retrieve(
+            species_name => $self->species,
+            version      => $version,
+            locus_id     => $locus_id,  #locus id is entrez id
+        );
+
+        my @genbank_transcripts = GSC::ImportExport::GenBank::Transcript->retrieve( gene => $genbank_gene);
+
+        my $chromosome = undef;
+        {
+            if ( $genbank_gene->[0]->{source}->[0]->{subtype}->[0]->{subtype} eq 'chromosome' )  
+            {
+                $chromosome = $genbank_gene->[0]->{source}->[0]->{subtype}->[0]->{name};
+            }
+            else
+            {
+                $self->warning_message("uh oh, no chromosome! setting to UNKNOWN");
+                $chromosome = 'UNKNOWN';
+            }
+        }
+
+        $DB::single = 1;
+        my $strand = GSC::ImportExport::GenBank::Gene->resolve_strand(gene=>$genbank_gene);
+        $strand = $strand eq '+' ? '+1' : '-1';
+
+        my $external_gene_id = Genome::ExternalGeneId->create(  #TODO, is this necessary
+            egi_id => $egi_id,
+            gene_id => $gene_id,
+            id_type => 'entrez',
+            id_value => $locus_id,
+            data_directory => $self->data_directory,
+        ); 
+        $egi_id++;
+
+        my %external_ids = $self->get_external_gene_ids($genbank_gene);
+        foreach my $dbname (sort keys %external_ids)
+        {
+           my $external_gene_id = Genome::ExternalGeneId->create(
+               egi_id => $egi_id,
+               gene_id => $gene_id,
+               id_type => $dbname,
+               id_value => $external_ids{$dbname},
+               data_directory => $self->data_directory,
+               );
+           $egi_id++;
+        }
+
+        my $gene = Genome::Gene->create(
+            id => $gene_id,
+            hugo_gene_name => $hugo, 
+            strand => $strand,
+            data_directory => $self->data_directory,
+        );
+        $gene_id++;
+        
+        foreach my $genbank_transcript (@genbank_transcripts) {
+
+            my $transcript_start = undef;
+            my $transcript_stop  = undef;
+            my $transcript_name  = $genbank_transcript->{accession};
+            my $status           = 'unknown';  #this gets filled out later from the status hash
+            
+            ( $transcript_start, $transcript_stop )
+            = $self->transcript_bounds($genbank_transcript);
+            unless (defined $transcript_start and defined $transcript_stop){
+                next;
+            }
+
+            if(exists($transcript_status->{$transcript_name}))
+            {
+                $status = lc($transcript_status->{$transcript_name}->{status});
+            }
+
+            $DB::single = 1;
+            my $transcript = Genome::Transcript->create(
+                transcript_id => $transcript_id,
+                gene_id => $gene->gene_id,
+                transcript_start => $transcript_start, 
+                transcript_stop => $transcript_stop,
+                transcript_name => $transcript_name,
+                source => 'genbank',
+                transcript_status => $status,   #TODO valid statuses (unknown, known, novel) #TODO verify substructures and change status if necessary
+                strand => $strand,
+                chrom_name => $chromosome,
+                data_directory => $self->data_directory,
+            );
+            $transcript_id++;
+            
+            # these give out warnings every once in a while.
+            # usually for clone sequences that are associated with a gene
+            # ....
+            my @genbank_cds = GSC::ImportExport::GenBank::CDS->retrieve(
+                transcript => $genbank_transcript, );
+            my @genbank_utr = GSC::ImportExport::GenBank::UTR->convert_to_gsc_params(
+                transcript => $genbank_transcript, );
+
+            my @cds_exons;
+            my @utr_exons;
+
+            # split out all the exons
+            my @seqs;
+
+            foreach my $genbank_exon (@genbank_cds)
+            {
+                my $structure_start   = $genbank_exon->{from};  #TODO these are different than the below
+                my $structure_stop    = $genbank_exon->{to};
+                my $cds_sequence = $self->get_seq_slice(  $chromosome, $structure_start, $structure_stop );
+                if ( $strand eq "-1" )
+                {
+                    $cds_sequence = $self->revcom_slice($cds_sequence);
+                }
+                my $cds_exon = Genome::TranscriptSubStructure->create(
+                    transcript_structure_id => $tss_id,
+                    transcript => $transcript,
+                    structure_type => 'cds_exon',
+                    structure_start => $structure_start,
+                    structure_stop => $structure_stop,
+                    nucleotide_seq => $cds_sequence,
+                    data_directory => $self->data_directory,
+                );
+                $tss_id++;
+                push( @seqs, $cds_sequence );
+                push @cds_exons, $cds_exon;
+            }
+
+            # utr stuff
+            foreach my $genbank_exon (@genbank_utr)
+            {
+                my $structure_start   = $genbank_exon->{begin_position};  #TODO these are different than above
+                my $structure_stop    = $genbank_exon->{end_position};
+                my $utr_sequence = $self->get_seq_slice( $chromosome, $structure_start, $structure_stop );
+                #TODO no revcomp here?
+
+                my $utr_exon = Genome::TranscriptSubStructure->create(
+                    transcript_structure_id => $tss_id,
+                    transcript => $transcript,
+                    structure_type => 'utr_exon',
+                    structure_start => $structure_start,
+                    structure_stop => $structure_stop,
+                    nucleotide_seq => $utr_sequence,
+                    data_directory => $self->data_directory,
+                );
+                $tss_id++;
+                push @utr_exons, $utr_exon;
+
+            }
+            $DB::single = 1;
+
+            if (@utr_exons > 0 or @cds_exons > 0){
+                $self->assign_ordinality_to_exons( $transcript->strand, [@utr_exons, @cds_exons] );
+            }
+            if (@cds_exons > 0){
+                $self->assign_phase( \@cds_exons );
+            }
+
+            #create flanks and intron
+            my @flanks_and_introns = $self->create_flanking_sub_structures_and_introns($transcript, \$tss_id, [@cds_exons, @utr_exons]);
+
+
+            my $protein_name = $genbank_transcript->{products}->[0]->{accession};
+
+            my $amino_acid_seq = $self->create_protein( \@seqs );    # create aa seq
+
+            if ($amino_acid_seq){
+                my $protein = Genome::Protein->create(
+                    protein_id => $protein_id,
+                    transcript => $transcript,
+                    protein_name => $protein_name,
+                    amino_acid_seq => $amino_acid_seq,
+                    data_directory => $self->data_directory,
+                );
+                $protein_id++;
+            }
+        }
+        unless ($count % 1000){
+            #Periodically commit to files so we don't run out of memory
+            print "committing...($count)";
+            UR::Context->commit;
+            print "finished commit!\n";
+        }
     }
 
     return 1;
@@ -123,6 +298,7 @@ sub execute
 
 sub cache_transcript_status
 {
+    $DB::single = 1;
     my $self = shift;
 
     my $seqio = new Bio::SeqIO(
@@ -131,33 +307,45 @@ sub cache_transcript_status
     );
 
     my %ts_status_hash;
+    #Check storable status so we don't have to regenerate this file
+    my $storable_file = "/gscmnt/sata363/info/medseq/annotation_data/genbank_transcript_status_cache/".$self->species.".".$self->version;
+
+    if (-e $storable_file){
+        my $ref = retrieve($storable_file);
+        if ($ref){
+            return $ref;
+        }
+    }
 
     while ( my $seq = $seqio->next_seq() )
     {
-        my $a = $seq->annotation();
-        foreach my $comment ( $a->get_Annotations('comment') )
+        my $annotation = $seq->annotation();
+        foreach my $comment ( $annotation->get_Annotations('comment') )
         {
-            my ( $status, $junk ) = split( / /, $comment->text );
+            my ( $status, $junk ) = split( ' ', $comment->text );
             $ts_status_hash{ $seq->display_id }->{status} = lc($status);
 
         }
 
-        foreach my $feat ( $seq->get_SeqFeatures() )
+        foreach my $feature ( $seq->get_SeqFeatures() )
         {
-            if (   ( $feat->primary_tag eq 'gene' )
-                && ( $feat->has_tag('db_xref') ) )
+            if (   ( $feature->primary_tag eq 'gene' )
+                && ( $feature->has_tag('db_xref') )
+                && ( $feature->has_tag('gene') ) )
             {
 
-                my @values = $feat->get_tag_values('db_xref');
+                my @values = $feature->get_tag_values('db_xref');
+                my ($hugo) = $feature->get_tag_values('gene');
                 foreach my $val (@values)
                 {
                     if ( $val =~ /GeneID/x )
                     {
 
+                        #TODO if this is always expected to exist, we should handle it
                         # will look like GeneID:144448 or GeneID:(\d+)
                         $val =~ s/GeneID:(\d+)/$1/x;
-                        $ts_status_hash{ $seq->display_id }->{entrezid}
-                            = $val;
+                        $ts_status_hash{ $seq->display_id }->{entrezid} = $val;
+                        $ts_status_hash{ $seq->display_id }->{hugo_gene_name} = $hugo;
                     }
                 }
 
@@ -167,295 +355,15 @@ sub cache_transcript_status
         #return \%ts_status_hash;
     }
 
+    #store this file so we don't have to do it every time
+    store \%ts_status_hash, $storable_file;
+
     return
-        \%ts_status_hash;   # should this just be stored in part of the class?
+    \%ts_status_hash;   # should this just be stored in part of the class?
 }
 
-sub get_from_flatfile
-{
-    my $self        = shift;
-    my $status_href = shift;
-    my $dir         = $self->outputdir;
-    #print STDERR "before getting llids\n";
-    #my $lines       = $self->get_llids_hugo_names();
-    my $lines;
-    foreach my $ts (sort keys %$status_href)
-    {
-        push(@$lines,$status_href->{$ts}->{entrezid});
-    }
-    
-    #print STDERR "got ", $#{$lines}," ids\n";
-    #should we use this as an option?
-    my $model = Genome::Model::ImportedReferenceSequence->get(2741951221);
-    my $build = $model->build_by_version(36);
 
-
-    my $version = $self->version;
-
-    my $gene_id       = 1;
-    my $egi_id        = 1;
-    my $transcript_id = 1;
-    my $protein_id    = 1;
-    my $tss_id        = 1;
-
-    my $csv  = Text::CSV_XS->new( { sep_char => "\t" } );
-    my $csv1 = Text::CSV_XS->new( { sep_char => "\t" } );
-    $DB::single = 1;
-    foreach my $rec (@$lines)
-    {
-        $csv->parse($rec);
-        my @f        = $csv->fields();
-        my $locus_id = $f[0];
-        my $hugo     = $f[1];
-
-        # sometimes we get an odd error here, and this hangs, because
-        # the bioperl interface way deep in GSC::ImportExport::GenBank::Gene
-        # has this odd notion that it wants to rebuild the index, and tries
-        # to remove it...  I changed that little bit, so hopefully that won't
-        # happen again.
-        my $gene = GSC::ImportExport::GenBank::Gene->retrieve(
-            species_name => 'human',
-            version      => $version,
-            locus_id     => $locus_id,
-        );
-
-        my @tr
-            = GSC::ImportExport::GenBank::Transcript->retrieve( gene => $gene,
-            );
-
-        my $chromosome = undef;
-        {
-            if ( $gene->[0]->{source}->[0]->{subtype}->[0]->{subtype} eq
-                'chromosome' )
-            {
-                $chromosome
-                    = $gene->[0]->{source}->[0]->{subtype}->[0]->{name};
-            }
-            else
-            {
-                carp "uh oh, on chromosome!";
-            }
-        }
-
-        my $strand = undef;
-
-        foreach my $transcript (@tr)
-        {
-
-            my $transcript_start = undef;
-            my $transcript_stop  = undef;
-            my $transcript_name  = $transcript->{accession};
-            my $source           = 'genbank';                  # genbank???
-            my $status           = 'unknown';
-            # these give out warnings every once in a while.
-            # usually for clone sequences that are associated with a gene
-            # ....
-            my @cds = GSC::ImportExport::GenBank::CDS->retrieve(
-                transcript => $transcript, );
-            my @utr = GSC::ImportExport::GenBank::UTR->convert_to_gsc_params(
-                transcript => $transcript, );
-
-
-            if ( !defined($strand) )
-            {
-                $strand = $transcript->{'genomic-coords'}->[0]->{mix}->[0]
-                    ->{'int'}->[0]->{strand};
-                $strand = ( $strand eq 'plus' ) ? '+1' : '-1';
-
-            }
-
-            # split out all the exons
-            my $ordinal = 1;
-            my @seqs;
-            if ( $strand eq "-1" )
-            {
-                @cds = reverse @cds;
-            }
-
-            foreach my $exon (@cds)
-            {
-                my $structure_type = "cds_exon";
-                my $struct_start   = $exon->{from};
-                my $struct_stop    = $exon->{to};
-                my $seq = $self->get_seq_slice( $build, $chromosome,
-                    $struct_start, $struct_stop );
-                if ( $strand eq "-1" )
-                {
-                    $seq = $self->revcom_slice($seq);
-                }
-                my $phase = 0;
-                my $length = $struct_stop - $struct_start + 1;
-                $phase = ($phase+$length) % 3;
-                my @tss = (
-                    $tss_id, $transcript_id, $structure_type, $struct_start,
-                    $struct_stop, $ordinal, $phase, $seq
-                );
-                $csv1->combine(@tss);
-                write_file(
-                    $dir . "/transcript_sub_structures.csv",
-                    { append => 1 },
-                    $csv1->string() . "\n"
-                );
-                $ordinal++;
-                $tss_id++;
-                push( @seqs, $seq );
-            }
-
-            my $i = 1;
-            $ordinal = 1;
-
-            # calculate introns
-            while ( $i <= $#cds )
-            {
-                my @intron = (
-                    $tss_id, $transcript_id, 'intron',
-                    $cds[ $i - 1 ]->{to} + 1,
-                    $cds[$i]->{from} - 1,
-                    $ordinal, undef, undef
-                );
-                $csv1->combine(@intron);
-                write_file(
-                    $dir . "/transcript_sub_structures.csv",
-                    { append => 1 },
-                    $csv1->string() . "\n"
-                );
-                $i++;
-                $ordinal++;
-            }
-
-            # utr stuff
-            $ordinal = 1;
-            foreach my $exon (@utr)
-            {
-                my $structure_type = "utr_exon";
-                my $struct_start   = $exon->{begin_position};
-                my $struct_stop    = $exon->{end_position};
-                my $seq = $self->get_seq_slice( $build, $chromosome,
-                    $struct_start, $struct_stop );
-                my $phase = 0;
-
-                my @tss = (
-                    $tss_id, $transcript_id, $structure_type, $struct_start,
-                    $struct_stop, $ordinal, $phase, $seq
-                );
-                $csv1->combine(@tss);
-                write_file(
-                    $dir . "/transcript_sub_structures.csv",
-                    { append => 1 },
-                    $csv1->string() . "\n"
-                );
-                $ordinal++;
-                $tss_id++;
-
-            }
-
-            ( $transcript_start, $transcript_stop )
-                = $self->transcript_bounds($transcript);
-
-            my $flank_ord = 1;
-            if($strand eq "-1")
-            {
-                $flank_ord = 2; # need to swap the ordinality/order of the flank areas
-            }
-            # what is the cost of getting the chromosome lengths?  just to make sure 
-            # there aren't any structures that decide to fall off the end...
-
-            my ($flank_start,$flank_end) = ($transcript_start - 50000,$transcript_start - 1);
-
-            if($flank_start < 1)
-            {
-                $flank_start = 0;
-            }
-
-            if($flank_end < 1)
-            {
-                $flank_end = 0;
-            }
-            $csv1->combine(
-                $tss_id, $transcript_id, "flank",
-                $flank_start,
-                $flank_end,
-                $flank_ord, 0, undef
-            );
-            write_file(
-                $dir . "/transcript_sub_structures.csv",
-                { append => 1 },
-                $csv1->string() . "\n"
-            );
-            $tss_id++;
-            $flank_ord = 2;
-            if($strand eq "-1")
-            {
-                $flank_ord = 1;
-            }
-            $csv1->combine(
-                $tss_id, $transcript_id, "flank",
-                $transcript_stop + 1,
-                $transcript_stop + 50000,
-                $flank_ord, 0, undef
-            );
-            write_file(
-                $dir . "/transcript_sub_structures.csv",
-                { append => 1 },
-                $csv1->string() . "\n"
-            );
-            $tss_id++;
-
-            if(exists($status_href->{$transcript_name}))
-            {
-                $status = lc($status_href->{$transcript_name}->{status});
-            }
-
-            my @transcriptinfo = (
-                $transcript_id,   $gene_id,         $transcript_start,
-                $transcript_stop, $transcript_name, $source,
-                $status,          $strand,          $chromosome
-            );
-            $csv1->combine(@transcriptinfo);
-            write_file(
-                $dir . "/transcripts.csv",
-                { append => 1 },
-                $csv1->string() . "\n"
-            );
-            $transcript_id++;
-            my $protein_name = $transcript->{products}->[0]->{accession};
-
-            my $amino_acid_seq
-                = $self->create_protein( \@seqs );    # create aa seq
-            my @protein_info = (
-                $protein_id,   $transcript_id,
-                $protein_name, $amino_acid_seq
-            );
-            $csv1->combine(@protein_info);
-            write_file(
-                $dir . "/proteins.csv",
-                { append => 1 },
-                $csv1->string() . "\n"
-            );
-            $protein_id++;
-        }
-
-        my @egi = ( $egi_id, $gene_id, "entrez", $locus_id );
-        $csv1->combine(@egi);
-        write_file(
-            $dir . "/external_gene_ids.csv",
-            { append => 1 },
-            $csv1->string() . "\n"
-        );
-        $egi_id++;
-        $csv1->combine( $gene_id, $hugo, $strand );
-        write_file(
-            $dir . "/genes.csv",
-            { append => 1 },
-            $csv1->string() . "\n"
-        );
-        $gene_id++;
-
-    }
-
-    return 1;
-}
-
+#TODO, unused
 sub get_llids_hugo_names
 {
     my $self = shift;
@@ -482,8 +390,6 @@ sub get_llids_hugo_names
 
         #return \@lines; # temp, remove
     }
-
-
 
     return \@lines;    # or @lines?
 }
@@ -515,16 +421,6 @@ sub transcript_bounds
     return ( $min, $max );
 }
 
-sub get_seq_slice
-{
-    my ( $self, $build, $chrom, $start, $stop ) = @_;
-    my $slice = undef;
-
-
-    my $file = $build->get_bases_file($chrom);
-    $slice = $build->sequence( $file, $start, $stop );
-    return $slice;
-}
 
 sub revcom_slice
 {
@@ -540,7 +436,7 @@ sub create_protein
 
     my $transcript = join( "", @sequence );
     if(($transcript eq "") ||
-       (!defined($transcript)))
+        (!defined($transcript)))
     {
         return undef; # Bio::Seq throws an annoying warning otherwise
     }
@@ -550,6 +446,49 @@ sub create_protein
     );
     my $aa = $tran->translate()->seq();
     return $aa;
+}
+
+sub get_external_gene_ids
+{
+    my ($self,$gene) = @_;
+    my %external_ids;
+    if( exists($gene->[0]->{gene}->[0]->{db}) )
+    {
+        foreach my $external ( @{$gene->[0]->{gene}->[0]->{db}} )
+        {
+            my $dbname = $external->{db};
+            my $dbvalue = $external->{tag}->[0]->{id} || $external->{tag}->[0]->{str};
+            $external_ids{$dbname} = $dbvalue;
+        }
+    }
+    return %external_ids;
+}
+
+sub get_seq_slice
+{
+    my ( $self, $chrom, $start, $stop ) = @_;
+    my $slice = undef;
+    my $reference_build = $self->reference_build;
+
+    my $file = $reference_build->get_bases_file($chrom);
+    $slice = $reference_build->sequence( $file, $start, $stop );
+    return $slice;
+}
+
+sub reference_build
+{
+    my $self = shift;
+    unless ($self->{reference_build}){
+        my $species = $self->species;
+        my ($reference_build_version) = $self->version =~ /^\d+_(\d+)[a-z]$/; #currently only supports versions in familiar formats(54_36p, 54_37g) possible these will get more complicated later
+        my $build = Genome::Model->get(name => "NCBI-$species")->build_by_version($reference_build_version);
+        unless ($build){
+            $self->error_message("Couldn't find reference sequence build version $reference_build_version for species $species");
+            die;
+        }
+        $self->{reference_build} = $build;
+    }
+    return $self->{reference_build};
 }
 
 1;

@@ -1,29 +1,13 @@
-
 package Genome::Model::Tools::ImportAnnotation::Ensembl;
 
 use strict;
 use warnings;
 
 use Genome;
-use Text::CSV_XS;
-use IO::File;
-use File::Temp qw/ tempfile /;
-use File::Slurp;
-use Text::CSV_XS;
-use File::Path qw/ mkpath /;
-use Carp;
 
 class Genome::Model::Tools::ImportAnnotation::Ensembl {
-    is  => 'Command',
+    is  => 'Genome::Model::Tools::ImportAnnotation',
     has => [
-        outputdir => {
-            is  => 'Text',
-            doc => "directory to dump annotation files",
-        },
-        ensembl_version => {
-            is  => 'Text',
-            doc => "Version of EnsEMBL to use",
-        },
         host => {
             is  => 'Text',
             doc => "ensembl db hostname",
@@ -39,11 +23,6 @@ class Genome::Model::Tools::ImportAnnotation::Ensembl {
             is_optional => 1,
         },
     ],
-
-#    has_many => [                           # specify the command's multi-value properties (parameters) <---
-#        infiles  => { is => 'Text', doc => 'this is a list of values' },
-#        outfiles => { is => 'Text', doc => 'also a list of values' },
-#    ],
 };
 
 sub sub_command_sort_position {12}
@@ -57,326 +36,333 @@ sub help_synopsis
 {
     return <<EOS
 
-gt import-annotation ensembl --ensembl-version <ensembl version string> --host <ensembl db hostname> --user <ensembl db user> [--pass <ensembl db password>] --outputdir <directory to dump annotation data>
+gt import-annotation ensembl --version <ensembl version string> --host <ensembl db hostname> --user <ensembl db user> [--pass <ensembl db password>] --output_directory <directory to dump annotation data>
 EOS
 }
 
 sub help_detail
 {
     return <<EOS
-This command is used for importing the ensembl based human annotation data to
-the filesystem based data sources.
+This command is used for importing the ensembl based annotation data to the filesystem based data sources.
 EOS
 }
 
-sub execute
+sub import_objects_from_external_db
 {
     my $self = shift;
 
-    my $outputdir = $self->outputdir;
+    $DB::single = 1;
+    my $registry = $self->connect_registry;
+    my $ucfirst_species = ucfirst $self->species;
+    my $gene_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Gene' );
+    my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Transcript' );
 
-    # let us see if the outputdir actually exists!
-    unless ( -d $outputdir )
+    print "gene adaptor: THIS ONE ", ref($gene_adaptor), "\n";
+    print "transcript adaptor: ", ref($transcript_adaptor), "\n";
+
+    my @ensembl_transcript_ids = @{ $transcript_adaptor->list_dbIDs };
+
+    my $idx = 0;
+    my $egi_id = 1;    # starting point for external_gene_id...
+    my $tss_id = 1;    # starting point for transcript sub struct ids...
+
+    my @transcripts;
+    my @genes;
+    my @proteins;
+    my @sub_structures;
+
+    print "Total transcripts: ".scalar @ensembl_transcript_ids."\n";
+    my $count = 0;
+
+    foreach my $ensembl_transcript_id ( @ensembl_transcript_ids ) #TODO why reverse here?
     {
-        $self->error_message("$outputdir does not exist...\ncreating...");
-        eval { mkpath($outputdir); };
-        if($@)
+        $count++;
+        my $ensembl_transcript = $transcript_adaptor->fetch_by_dbID($ensembl_transcript_id);
+        #my $biotype = $ensembl_transcript->biotype(); #TODO unused
+
+        my $ensembl_gene  = $gene_adaptor->fetch_by_transcript_id( $ensembl_transcript->dbID );
+        my $ensembl_gene_id = $ensembl_gene->dbID;
+        my $chromosome = $ensembl_transcript->slice()->seq_region_name();
+
+        my $transcript_start = $ensembl_transcript->start;
+        my $transcript_stop  = $ensembl_transcript->end;
+        my $strand           = $ensembl_transcript->strand;
+        if ( $strand == 1 )
         {
-            croak;
+            $strand = "+1";
+        }else{
+            $strand = "-1";
+        }
+
+        my $hugo_gene_name = undef;
+        my $external_db;
+        if ($self->species eq 'human'){
+            $external_db = 'HGNC';
+        }elsif($self->species eq 'mouse'){
+            $external_db = 'MGI';
+        }
+        if ($ensembl_gene->external_db =~ /$external_db/){
+            $hugo_gene_name = $ensembl_gene->external_name;
+        }
+
+        my $entrez_id = undef;
+        my $entrez_genes = $ensembl_gene->get_all_DBEntries('EntrezGene');
+        if ( defined(@$entrez_genes) )
+        {
+            $entrez_id = @$entrez_genes[0]->primary_id;
+        }
+
+        #gene cols: gene_id hugo_gene_name strand
+        my $gene;
+        $gene = Genome::Gene->get(gene_id => $ensembl_gene_id, data_directory => $self->data_directory);
+        unless ($gene){
+            $gene = Genome::Gene->create(
+                id => $ensembl_gene_id, 
+                hugo_gene_name => $hugo_gene_name, 
+                strand => $strand,
+                data_directory => $self->data_directory,
+            );
+        }
+
+        #Transcript cols: transcript_id gene_id transcript_start transcript_stop transcript_name source transcript_status strand chrom_name
+
+        my $transcript = Genome::Transcript->create(
+            transcript_id => $ensembl_transcript->dbID,
+            gene_id => $gene->id,
+            transcript_start => $transcript_start, 
+            transcript_stop => $transcript_stop,
+            transcript_name => $ensembl_transcript->stable_id,    
+            source => 'ensembl',
+            transcript_status => lc( $ensembl_transcript->status ),   #TODO valid statuses (unknown, known, novel) #TODO verify substructures and change status if necessary
+            strand => $strand,
+            chrom_name => $chromosome,
+            data_directory => $self->data_directory,
+        );
+
+        my %external_gene_ids = $self->get_external_gene_ids($ensembl_gene);
+        if ( defined($hugo_gene_name) )
+        {
+            $external_gene_ids{hugo_symbol} = $hugo_gene_name;
+        }
+
+        if ( defined($entrez_id) )
+        {
+            $external_gene_ids{entrez} = $entrez_id;
+        }
+        $external_gene_ids{ensembl} = $ensembl_gene->stable_id;
+
+        #external_gene_id columns
+        foreach my $type ( sort keys %external_gene_ids )
+        {
+            my $external_gene_id = Genome::ExternalGeneId->create(
+                egi_id => $egi_id,
+                gene_id => $gene->id,
+                id_type => $type,
+                id_value => $external_gene_ids{$type},
+                data_directory => $self->data_directory,
+            ); 
+
+            $egi_id++;
+        }
+
+        #sub structures
+        my @ensembl_exons = @{ $ensembl_transcript->get_all_Exons() };
+
+        my @utr_exons;
+        my @cds_exons;
+
+        foreach my $exon ( @ensembl_exons )
+        #Ensembl exons are combined coding region and untranslated region, we need to create both utr and cds exons from these
+        #flank and intron will be created after instantianting these substructures
+        #phase and ordinal will be set after instantiating these substructures
+        {
+            my $coding_region_start = $exon->coding_region_start($ensembl_transcript);
+            my $coding_region_stop = $exon->coding_region_end($ensembl_transcript);
+            my $start = $exon->start;
+            my $stop = $exon->end;
+            my $exon_sequence = $exon->seq->seq;
+
+            if (defined $coding_region_start){
+                #There is a coding section in this exon
+                unless (defined $coding_region_stop){
+                    $self->error_message("ensembl exon has a coding_region_start defined, but not a coding_region_end!". Dumper $exon);
+                    die;
+                }
+
+                if ($coding_region_start > $start){
+                    #there is a utr exon between the start of the transcript and the coding region
+                    #create utr_exon
+                    my $utr_sequence;
+                    if ( $transcript->strand eq '+1' ){
+                        $utr_sequence = substr( $exon_sequence, 0, $coding_region_start - $start );
+                    }
+                    else{
+                        #sequence is returned stranded, so we need the seq from the end
+                        $utr_sequence = substr( $exon_sequence, 0 - ( $coding_region_start - $start ) )
+                    }
+
+                    my $utr_stop = $coding_region_start - 1;
+
+                    my $utr_exon = Genome::TranscriptSubStructure->create(
+                        transcript_structure_id => $tss_id,
+                        transcript => $transcript,
+                        structure_type => 'utr_exon',
+                        structure_start => $start,
+                        structure_stop => $utr_stop,
+                        nucleotide_seq => $utr_sequence,
+                        data_directory => $self->data_directory,
+                    );
+                    $tss_id++;
+                    push @utr_exons, $utr_exon;
+                }
+
+                #create cds_exon (we do a little extra arithmetic here if the whole exon is coding, cleaner this way but could add an alternative block if coding_region_start == start and coding_region_stop == stop)
+                my $cds_sequence;
+                if ( $transcript->strand eq '+1' ){
+                    #grab sequence from start of coding region for length of coding region
+                    $cds_sequence = substr( 
+                        $exon_sequence, 
+                        $coding_region_start - $start,
+                        $coding_region_stop - $coding_region_start + 1 );
+                }else{
+                    #otherwise grab starting at the index of the distance from the coding_region stop to the stop for the length of the coding region
+                    $cds_sequence
+                    = substr( $exon_sequence, $stop - $coding_region_stop, $coding_region_stop - $coding_region_start + 1 );
+                }
+
+                my $cds_exon = Genome::TranscriptSubStructure->create(
+                    transcript_structure_id => $tss_id,
+                    transcript => $transcript,
+                    structure_type => 'cds_exon',
+                    structure_start => $coding_region_start,
+                    structure_stop => $coding_region_stop,
+                    nucleotide_seq => $cds_sequence,
+                    data_directory => $self->data_directory,
+                );
+
+                $tss_id++;
+                push @cds_exons, $cds_exon;
+
+                if ($stop > $coding_region_stop){
+                    #there is a utr exon after the coding region
+                    #create utr_exon
+                    my $utr_sequence;
+                    if ( $transcript->strand eq '+1' ){
+                        $utr_sequence = substr( $exon_sequence, 0 - ( $stop - $coding_region_stop ) );
+                    }else{
+                        $utr_sequence = substr( $exon_sequence, 0, $stop - $coding_region_stop )
+                    }
+
+                    my $utr_start = $coding_region_stop + 1;
+
+                    my $utr_exon = Genome::TranscriptSubStructure->create(
+                        transcript_structure_id => $tss_id,
+                        transcript => $transcript,
+                        structure_type => 'utr_exon',
+                        structure_start => $utr_start,
+                        structure_stop => $stop,
+                        nucleotide_seq => $utr_sequence,
+                        data_directory => $self->data_directory,
+                    );
+                    $tss_id++;
+                    push @utr_exons, $utr_exon;
+
+                }
+            }elsif(defined $coding_region_stop){
+                $self->error_message("ensembl exon has a coding_region_end, but not a coding_region_start!". Dumper $exon);
+                die;
+            }else{
+                #no coding region, entire exon is utr. 
+                #create utr exon
+                my $utr_exon = Genome::TranscriptSubStructure->create(
+                    transcript_structure_id => $tss_id,
+                    transcript => $transcript,
+                    structure_type => 'utr_exon',
+                    structure_start => $start,
+                    structure_stop => $stop,
+                    nucleotide_seq => $exon_sequence,
+                    data_directory => $self->data_directory,
+                );
+                $tss_id++;
+                push @utr_exons, $utr_exon;
+            }
+        }
+        if (@utr_exons > 0 or @cds_exons > 0){
+            $self->assign_ordinality_to_exons( $transcript->strand, [@utr_exons, @cds_exons] );
+        }
+        if (@cds_exons > 0){
+            $self->assign_phase( \@cds_exons );
+        }
+
+        #create flanks and intron
+        my @flanks_and_introns = $self->create_flanking_sub_structures_and_introns($transcript, \$tss_id, [@cds_exons, @utr_exons]);
+
+        my $protein;
+        my $translation = $ensembl_transcript->translation();
+        if ( defined($translation) )
+        {
+            $protein = Genome::Protein->create(
+                protein_id => $translation->dbID,
+                transcript => $transcript,
+                protein_name => $translation->stable_id,
+                amino_acid_seq => $ensembl_transcript->translate->seq,
+                data_directory => $self->data_directory,
+            );
+        }
+
+        #double check transcripts here for unknown status
+
+        push @transcripts, $transcript;
+        push @genes, $gene;
+        push @proteins, $protein if $protein;
+        push @sub_structures, (@flanks_and_introns, @cds_exons, @utr_exons);
+
+        unless ($count % 1000){
+            #Periodically commit to files so we don't run out of memory
+            print "committing...($count)";
+            UR::Context->commit;
+
+            print "finished commit!\n";
         }
     }
+    return 1;
+}
+
+sub connect_registry{
+    my $self = shift;
     my $eversion = $self->ensembl_version_string();
 
     # the fun abuse of eval is neccessary here to make sure we can do evil
     # things like 'dynamically' load the ensembl modules.
     my $lib = "use lib '/gsc/scripts/share/ensembl-"
-        . $eversion
-        . "/ensembl/modules';";
+    . $eversion
+    . "/ensembl/modules';";
     $lib
-        .= "\nuse Bio::EnsEMBL::Registry;\nuse Bio::EnsEMBL::DBSQL::DBAdaptor;";
+    .= "\nuse Bio::EnsEMBL::Registry;\nuse Bio::EnsEMBL::DBSQL::DBAdaptor;";
     eval $lib;
 
     if ($@)
     {
         $self->error_message("not able to load the ensembl modules");
-        croak;
+        croak();
     }
 
-    my $reg      = 'Bio::EnsEMBL::Registry';
+    my $registry     = 'Bio::EnsEMBL::Registry';
     my $ens_host = $self->host;
     my $ens_user = $self->user;
 
-    $reg->load_registry_from_db(
+    $registry->load_registry_from_db(
         -host => $ens_host,
         -user => $ens_user,
     );
-
-    my $ga = $reg->get_adaptor( 'Human', 'Core', 'Gene' );
-    my $ta = $reg->get_adaptor( 'Human', 'Core', 'Transcript' );
-
-    print "gene adaptor: ",       ref($ga), "\n";
-    print "transcript adaptor: ", ref($ta), "\n";
-
-    my @xscrpt_ids = @{ $ta->list_dbIDs };
-    my $csv        = new Text::CSV_XS( { 'sep_char' => "\t" } );
-
-    my $idx    = 0;
-    my $egi_id = 1;    # starting point for external_gene_id...
-    my $tss_id = 1;    # starting point for transcript sub struct ids...
-
-    foreach my $trid ( reverse @xscrpt_ids )
-    {
-
-        my $tr      = $ta->fetch_by_dbID($trid);
-        my $biotype = $tr->biotype();
-
-        my $gene       = $ga->fetch_by_transcript_id( $tr->dbID );
-        my $chromosome = $tr->slice()->seq_region_name();
-
-        my ($gene_local_id)  = $gene->stable_id;
-        my $transcript_start = $tr->start;
-        my $transcript_end   = $tr->end;
-        my $strand           = $tr->strand;
-        if ( $strand == 1 )
-        {
-            $strand = "+1";
-        }
-
-        my $hugo          = undef;
-        my $entrez_id     = undef;
-        my $entrez_genest = $tr->get_all_DBLinks('EntrezGene');
-        my $entrez_genesg = $gene->get_all_DBLinks('EntrezGene');
-        if ( defined(@$entrez_genesg) )
-        {
-            $hugo      = @$entrez_genesg[0]->display_id;
-            $entrez_id = @$entrez_genesg[0]->primary_id;
-        }
-
-        $csv->combine( ( $gene->dbID, $hugo, $strand ) );
-        write_file(
-            $outputdir . "/genes.csv",
-            { append => 1 },
-            $csv->string() . "\n"
-        );
-
-        my @transcript = (
-            $tr->dbID,         $gene->dbID,
-            $transcript_start, $transcript_end,
-            $tr->stable_id,    'ensembl',
-            lc( $tr->status ), $strand,
-            $chromosome
-        );
-        $csv->combine(@transcript);
-        write_file(
-            $outputdir . "/transcripts.csv",
-            { append => 1 },
-            $csv->string() . "\n"
-        );
-
-        my %extids;
-        if ( defined($hugo) )
-        {
-            $extids{hugo_symbol} = $hugo;
-        }
-
-        if ( defined($entrez_id) )
-        {
-            $extids{entrez} = $entrez_id;
-        }
-        $extids{ensembl} = $gene->stable_id;
-
-        foreach my $type ( sort keys %extids )
-        {
-            $csv->combine( ( $egi_id, $gene->dbID, $type, $extids{$type} ) );
-            write_file(
-                $outputdir . "/external_gene_ids.csv",
-                { append => 1 },
-                $csv->string() . "\n"
-            );
-            $egi_id++;
-        }
-
-        # sub structs
-        my @exons = @{ $tr->get_all_Exons() };
-        my $ordinal;
-        my $phase = 0;
-        $ordinal->{'ord'} = ();
-
-        # flanks
-        my @flank;
-        my $flank_ord = 1;
-        if($strand eq '-1')
-        {
-            $flank_ord = 2;
-        }
-        @flank = ( $tss_id, $tr->dbID, 'flank', 
-                   $transcript_start - 50000, $transcript_start - 1,
-                   $flank_ord, undef, undef );
-        $csv->combine( @flank );
-        write_file( 
-            $outputdir."/transcript_sub_structure.csv",
-            { append => 1 },
-            $csv->string()."\n" 
-            );
-        $tss_id++;
-        
-        $flank_ord = 2;
-        if( $strand eq '-1' )
-        {
-            $flank_ord = 1;
-        }
-        @flank = ( $tss_id, $tr->dbID, 'flank',
-                   $transcript_end + 1, $transcript_end + 50000,
-                   $flank_ord, undef, undef );
-        $csv->combine( @flank  );
-        write_file( 
-            $outputdir."/transcript_sub_structure.csv",
-            { append => 1 },
-            $csv->string()."\n" 
-            );
-        $tss_id++;
-
-        foreach my $exon ( @exons )
-        {
-            my $start    = $exon->coding_region_start($tr);
-            my $end      = $exon->coding_region_end($tr);
-            my $exon_seq = $exon->seq->seq;
-            my $sequence;
-
-            unless ( defined($start) || defined($end) )
-            {
-
-               #trss_insert( $tscrpt->transcript_id, "utr_exon", $exon->start,
-               #    $exon->end, ordcount( $ordinal, "utrexon" ), $exon_seq );
-               #print "1utr_exon", " ", $exon->start, ",",
-               #    $exon->end, ":";
-                $csv->combine(
-                    (   $tss_id,    $tr->dbID,
-                        'utr_exon', $exon->start,
-                        $exon->end, $self->ordcount( $ordinal, 'utrexon' ),
-                        undef,      $exon_seq
-                    )
-                );
-                write_file(
-                    $outputdir . "/transcript_sub_structures.csv",
-                    { append => 1 },
-                    $csv->string() . "\n"
-                );
-                $tss_id++;
-                next;
-            }
-            if ( $start > $exon->start )
-            {
-                $sequence = substr( $exon_seq, 0, $start - $exon->start );
-                $sequence = substr( $exon_seq, 0 - ( $start - $exon->start ) )
-                    if ( $tr->strand == -1 );
-
-                $csv->combine(
-                    (   $tss_id,    $tr->dbID,
-                        'utr_exon', $exon->start,
-                        $exon->end, $self->ordcount( $ordinal, 'utrexon' ),
-                        undef,      $exon_seq
-                    )
-                );
-
-                write_file(
-                    $outputdir . "/transcript_sub_structures.csv",
-                    { append => 1 },
-                    $csv->string() . "\n"
-                );
-                $tss_id++;
-
-            }
-
-            if ( $end < $exon->end )
-            {
-                $sequence = substr( $exon_seq, 0 - ( $exon->end - $end ) );
-                $sequence = substr( $exon_seq, 0, $exon->end - $end )
-                    if ( $tr->strand == -1 );
-
-                $csv->combine(
-                    (   $tss_id,    $tr->dbID,
-                        'utr_exon', $exon->start,
-                        $exon->end, $self->ordcount( $ordinal, 'utrexon' ),
-                        undef,      $exon_seq
-                    )
-                );
-
-                write_file(
-                    $outputdir . "/transcript_sub_structures.csv",
-                    { append => 1 },
-                    $csv->string() . "\n"
-                );
-
-                $tss_id++;
-
-            }
-
-            $sequence = substr( 
-                $exon_seq, 
-                $start - $exon->start,
-                $end - $start + 1 );
-            $sequence
-                = substr( $exon_seq, $exon->end - $end, $end - $start + 1 )
-                if ( $tr->strand == -1 );
-
-            #print "   phase different :", $exon->phase, " <>  $phase  ";
-            if ( $exon->phase == -1 ) { $exon->phase($phase); }
-
-            $phase = ( $phase + ( $end - $start + 1 ) ) % 3;
-            $csv->combine(
-                (   $tss_id,    $tr->dbID,
-                    'cds_exon', $exon->start,
-                    $exon->end, $self->ordcount( $ordinal, 'cdsexon' ),
-                    $phase,     $exon_seq
-                )
-            );
-            write_file(
-                $outputdir . "/transcript_sub_structures.csv",
-                { append => 1 },
-                $csv->string() . "\n"
-            );
-
-            $tss_id++;
-        }
-
-        # introns for transcript sub structures. or not.
-        my $translation = $tr->translation();
-        if ( defined($translation) )
-        {
-            $csv->combine( $translation->dbID, $tr->dbID,
-                $translation->stable_id, $tr->translate->seq );
-
-            #print $ph $csv->string(),"\n";
-            write_file(
-                $outputdir . "/proteins.csv",
-                { append => 1 },
-                $csv->string() . "\n"
-            );
-
-        }
-
-    }
-
-    my $splitter = Genome::Model::Tools::ImportAnnotation::SplitFiles->create(
-        workdir => $outputdir,
-    );
-    unless ($splitter){
-        $self->error_message("Couldn't create Genome::Model::Tools::ImportAnnotation::SplitFiles to split files in $outputdir");
-        die;
-    }
-    unless ($splitter->execute){
-        $self->error_message("Failed to split files in $outputdir!");
-        die;
-    }
-
-    return 1;
+    return $registry;
 }
+
 
 sub ensembl_version_string
 {
     my $self    = shift;
-    my $ensembl = $self->ensembl_version;
+    my $ensembl = $self->version;
 
     # <ens version>_<ncbi build vers><letter>
     # 52_36n
@@ -400,6 +386,31 @@ sub ordcount
     }
     return $ord->{$type};
 }
+
+sub get_external_gene_ids
+{
+    my $self = shift;
+    my $gene = shift;
+    my %external_ids;
+    my @entries = @{$gene->get_all_DBEntries()};
+    my @dbswanted = qw/ UCSC EntrezGene OTTT CCDS Vega_gene /;
+    if ($self->species eq 'human'){
+        unshift @dbswanted, (qw/HGNC HGNC_automatic_gene/);
+    }elsif ($self->species eq 'mouse'){
+        unshift @dbswanted, (qw/MGI MGI_automatic_gene/);
+    }
+    my %dbs = map { $_ => 1 } @dbswanted; 
+    foreach my $entry (@entries)
+    {
+
+        my $dbname = $entry->dbname();
+        next unless exists($dbs{$dbname});
+        my $dbvalue = $entry->display_id();
+        $external_ids{$dbname} = $dbvalue;
+    }
+    return %external_ids;
+}
+
 
 1;
 

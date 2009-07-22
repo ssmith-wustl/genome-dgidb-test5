@@ -123,7 +123,8 @@ sub annotate {
     }
 
     my $annotator = Genome::Transcript::VariantAnnotator->create(
-        transcript_window => $transcript_window 
+        transcript_window => $transcript_window,
+        version => $self->build->version,
     );
     unless ($annotator){
         $self->error_message("Couldn't create annotator for chromosome " . $variant->{chromosome_name});

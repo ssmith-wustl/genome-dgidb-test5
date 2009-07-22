@@ -20,6 +20,10 @@ class Genome::Model::Build::ImportedAnnotation {
             where => [ property_name => 'annotation_data_source_directory'],
             is_mutable => 1 
         },
+        species_name => {
+            via => 'model',
+            to => 'species_name',
+        },
     ],
 };
 
@@ -36,12 +40,12 @@ sub transcript_iterator{
 
     my @composite_builds = $self->from_builds; #TODO, implement build links
     if (@composite_builds){
-        my @build_ids = map {$_->build_id} @composite_builds;
+        my @data_directories = map {$_->annotation_data_directory} @composite_builds;
         my @iterators;
         if ($chrom_name){
-            @iterators = map { Genome::Transcript->create_iterator( where => [ build_id => $_ , chrom_name => $chrom_name ] ) } @build_ids;
+            @iterators = map { Genome::Transcript->create_iterator( where => [ data_directory => $_ , chrom_name => $chrom_name ] ) } @data_directories;
         }else{
-            @iterators = map { Genome::Transcript->create_iterator( where => [ build_id => $_ ] ) } @build_ids;
+            @iterators = map { Genome::Transcript->create_iterator( where => [ data_directory => $_ ] ) } @data_directories;
         }
         my @cached_transcripts;
         for (my $i = 0; $i < @iterators; $i++){
@@ -71,9 +75,9 @@ sub transcript_iterator{
         return $iterator;
     }else{
         if ($chrom_name){
-            return Genome::Transcript->create_iterator(where => [build_id => $self->build_id, chrom_name => $chrom_name]);
+            return Genome::Transcript->create_iterator(where => [data_directory => $self->annotation_data_directory, chrom_name => $chrom_name]);
         }else{
-            return Genome::Transcript->create_iterator(where => [build_id => $self->build_id]);
+            return Genome::Transcript->create_iterator(where => [data_directory => $self->annotation_data_directory]);
         }
     }
 }

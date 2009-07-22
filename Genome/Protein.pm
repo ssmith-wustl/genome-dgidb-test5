@@ -12,18 +12,21 @@ class Genome::Protein {
         protein_id => { is => 'NUMBER' },
     ],
     has => [
-        protein_name => { is => 'String' },
-        transcript_id => { is => 'Number' },
-        amino_acid_seq => { is => 'String' },
-        transcript => {
-            calculate_from => [qw/ transcript_id build_id/],
-            calculate => q|
-                Genome::Transcript->get(transcript_id => $transcript_id, build_id => $build_id);
-            |,
+        protein_name => { 
+            is => 'String' 
         },
-        build => {
-                    is => "Genome::Model::Build",
-                    id_by => 'build_id',
+        transcript_id => { 
+            is => 'Text' 
+        },
+        amino_acid_seq => { 
+            is => 'String' 
+        },
+        transcript => { #TODO, straighten out ID stuff w/ Tony
+            is => 'Genome::Transcript', 
+            id_by => 'transcript_id' 
+        },
+        data_directory => {
+                    is => "Path",
                     },
     ],
     schema_name => 'files',
@@ -32,3 +35,6 @@ class Genome::Protein {
 
 1;
 
+#TODO
+=pod
+=cut

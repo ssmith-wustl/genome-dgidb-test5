@@ -9,38 +9,46 @@ class Genome::Gene {
     type_name => 'genome gene',
     table_name => 'GENE',
     id_by => [
-        gene_id => { is => 'NUMBER' },
+        gene_id => { 
+            is => 'NUMBER' 
+        },
     ],
     has => [
-        hugo_gene_name => { is => 'String' },
-        strand => { is => 'String' },
-        build => {
-                    is => "Genome::Model::Build",
-                    id_by => 'build_id',
+        hugo_gene_name => { 
+            is => 'Text',
+            is_optional => 1,
+        },
+        strand => {
+            is => 'Text',
+            valid_values => ['+1', '-1', 'UNDEF'],
+        },
+        data_directory => {
+            is => "Path",
         },
     ],
     has_many => [
         transcripts => { 
-            calculate_from => [qw/ gene_id build_id/],
+            calculate_from => [qw/ gene_id data_directory/],
             calculate => q|
-                Genome::Transcript->get(gene_id => $gene_id,  build_id => $build_id);
+                Genome::Transcript->get(gene_id => $gene_id,  data_directory => $data_directory);
             |,
         },
         external_ids => { 
-            calculate_from => [qw/ gene_id build_id/],
+            calculate_from => [qw/ gene_id data_directory/],
             calculate => q|
-                Genome::ExternalGeneId->get(gene_id => $gene_id, build_id => $build_id);
+                Genome::ExternalGeneId->get(gene_id => $gene_id, data_directory => $data_directory);
             |,
         },
-        gene_expressions => { 
-            calculate_from => [qw/ gene_id build_id/],
-            calculate => q|
-                Genome::GeneGeneExpression->get(gene_id => $gene_id, build_id => $build_id);
-            |,
-        },
-        expressions => {
-            is => 'Genome::GeneExpression', via => 'gene_expressions', to => 'expression'
-        },
+        #TODO expression data is patient specific this needs to be moved
+#        gene_expressions => { 
+#            calculate_from => [qw/ gene_id data_directory/],
+#            calculate => q|
+#                Genome::GeneGeneExpression->get(gene_id => $gene_id, data_directory => $data_directory);
+#            |,
+#        },
+#        expressions => {
+#            is => 'Genome::GeneExpression', via => 'gene_expressions', to => 'expression'
+#        },
     ],
     schema_name => 'files',
     data_source => 'Genome::DataSource::Genes',

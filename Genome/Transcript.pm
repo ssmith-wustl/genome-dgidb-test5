@@ -9,53 +9,107 @@ class Genome::Transcript {
     type_name => 'genome transcript',
     table_name => 'TRANSCRIPT',
     id_by => [
-        chrom_name => { is => 'String', len => 10 },
-        transcript_start => { is => 'NUMBER', len => 10, is_optional => 1 },
-        transcript_id => { is => 'NUMBER', len => 10 },
+        chrom_name => { 
+            is => 'Text', 
+            len => 10 
+        },
+        transcript_start => { 
+            is => 'NUMBER', 
+            len => 10, 
+            is_optional => 1 },
+        transcript_id => { 
+            is => 'NUMBER', 
+            len => 10 
+        },
     ],
     has => [
-        gene_id => { is => 'NUMBER', len => 10 },
-        transcript_stop => { is => 'NUMBER', len => 10, is_optional => 1 },
-        transcript_name => { is => 'VARCHAR', len => 255, is_optional => 1 },
-        source => { is => 'VARCHAR', len => 7, is_optional => 1 },
-        transcript_status => { is => 'VARCHAR', len => 11, is_optional => 1 },
-        strand => { is => 'VARCHAR', len => 2, is_optional => 1 },
-
+        gene_id => { 
+            is => 'NUMBER', 
+            len => 10 
+        },
+        transcript_stop => { 
+            is => 'NUMBER', 
+            len => 10, 
+            is_optional => 1,
+        },
+        transcript_name => { 
+            is => 'VARCHAR', 
+            len => 255, 
+            is_optional => 1,
+        },
+        source => { is => 'VARCHAR',
+            len => 7,
+            is_optional => 1,
+        },
+        transcript_status => { is => 'VARCHAR',
+            len => 11,
+            is_optional => 1,
+            valid_values => ['reviewed', 'unknown', 'model', 'validated', 'predicted', 'inferred', 'provisional', 'unknown', 'known', 'novel'],
+        },
+        strand => { is => 'VARCHAR',
+            is_optional => 1,
+            valid_values => ['+1', '-1', 'UNDEF'],
+        },
         sub_structures => { 
-            calculate_from => [qw/ transcript_id build_id/],
+            calculate_from => [qw/ id  data_directory/],
             calculate => q|
-                Genome::TranscriptSubStructure->get(transcript_id => $transcript_id, build_id => $build_id);
+            Genome::TranscriptSubStructure->get(transcript_id => $id, data_directory => $data_directory);
             |,
         },
         protein => { 
-            calculate_from => [qw/ transcript_id build_id/],
+            calculate_from => [qw/ id data_directory/],
             calculate => q|
-                Genome::Protein->get(transcript_id => $transcript_id, build_id => $build_id);
+            Genome::Protein->get(transcript_id => $id, data_directory => $data_directory);
             |,
         },
         gene => {
-            calculate_from => [qw/ gene_id build_id/],
+            calculate_from => [qw/ gene_id data_directory/],
             calculate => q|
-                Genome::Gene->get(gene_id => $gene_id, build_id => $build_id);
+            Genome::Gene->get(gene_id => $gene_id, data_directory => $data_directory);
             |,
         },
-        build => {
-                    is => "Genome::Model::Build",
-                    id_by => 'build_id',
-                    },
- 
+        data_directory => {
+            is => "Path",
+        },
+
     ],
-    schema_name => 'GMSchema',
+    schema_name => 'files',
     data_source => 'Genome::DataSource::Transcripts',
 };
 
+sub transcript_start{
+    my $self = shift;
+    my $start = $self->__transcript_start;
+    return $start if $start;
+    $self->status_message("undefined start for transcript (chrom\tstart\tid):(". $self->id.") ".$self->transcript_name.".  Returning -100000 to avoid annotation");
+    return -100000;
+}
 
-#sub protein {
-#    my $self = shift;
-#
-#    my $protein = Genome::Protein->get(transcript_id => $self->transcript_id);
-#    return $protein;
-#}
+sub transcript_stop{
+    my $self = shift;
+    my $stop = $self->__transcript_stop;
+    return $stop if $stop;
+    $self->status_message("undefined stop for transcript (chrom\tstart\tid):(". $self->id.") ".$self->transcript_name.".  Returning -100000 to avoid annotation");
+    return -100000;
+}
+
+sub rename_to_errors_later{  #TODO Not sure what the new valid method is
+    my $self = shift;
+    ########TODO check for:
+    #phase completeness for cds exons
+    #correct bp length for cds exons (length % 3 = 0 for reg, length % 3 = 2 for MT)
+    #contiguous substructures
+    #flank sequences
+    #flank ordinality
+    #substructure ordinality
+    #substructure presence
+    #field completeness
+    #always valid(except for field completeness and ordinality) just change status to unknown
+    #gene strand same as transcript strand
+    #protein seq matches cds exon translation
+    return 1;
+}
+
 
 sub structure_at_position {
     my ($self, $position) = @_;
@@ -63,7 +117,7 @@ sub structure_at_position {
     # check if in range of the trascript
     my @structures = $self->ordered_sub_structures;
     unless (@structures){
-        $self->error_message("No sub-structures for transcript ". $self->transcript_id." ".$self->transcript_name);
+        $self->status_message("No sub-structures for transcript (chrom\tstart\tid):(". $self->id.") ".$self->transcript_name);
         return;
     }
     return unless $structures[0]->structure_start <= $position
@@ -105,7 +159,7 @@ sub ordered_sub_structures {
     my $self = shift;
 
     unless (exists $self->{'_ordered_sub_structures'}) {
- 
+
         my @subs = sort { $a->structure_start <=> $b->structure_start } $self->sub_structures;
         $self->{'_ordered_sub_structures'} = \@subs;
     }
@@ -154,7 +208,7 @@ sub cds_exon_range {
     return ($cds_exons[0]->structure_start, $cds_exons[$#cds_exons]->structure_stop);
 }
 
-sub length_of_cds_exons_before_structure_at_position {
+sub length_of_cds_exons_before_structure_at_position { #TODO, clean this up, shouldn't take strand should use transcript strand and exon ordinality
     my ($self, $position, $strand) = @_;
 
     my @cds_exons = $self->cds_exons
@@ -220,3 +274,10 @@ sub gene_name
 }
 
 1;
+
+#TODO
+=pod
+
+
+=cut
+

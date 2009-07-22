@@ -182,7 +182,7 @@ sub execute {
             }
         }else{
             my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
-            my $build = $model->build_by_version('0_old');
+            my $build = $model->build_by_version('0');
 
             unless ($build){
                 $self->error_message("couldn't get build v0 from 'NCBI-human.combined-annotation'");
@@ -233,6 +233,7 @@ sub execute {
 
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window,
+                version => $self->build->version,
             );
             unless ($annotator){
                 $self->error_message("Couldn't create iterator for chromosome $chromosome_name!");
@@ -256,6 +257,7 @@ sub execute {
             die Genome::Utility::Window::Transcript->error_message unless $transcript_window;
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window,
+                version => $self->build->version,
             );
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
         }

@@ -7,7 +7,7 @@ class Genome::DataSource::ExternalGeneIds {
 };
 
 sub delimiter {
-    return "\t";
+    return ",";
 }
 
 sub column_order {
@@ -22,16 +22,14 @@ sub skip_first_line {
     return 0;
 }
 
-sub constant_values { ['build_id'] };
-sub required_for_get { ['build_id'] }
+sub constant_values { ['data_directory'] };
+sub required_for_get { ['data_directory'] }
 
 
 # All the possible locations of files
 sub file_resolver {        
-    my ($build_id) = @_;
-    my $build = Genome::Model::Build::ImportedAnnotation->get($build_id);
-    my $annotation_dir = $build->annotation_data_directory;
-    my $path =  "$annotation_dir/external_gene_ids.csv";
+    my ($data_directory) = @_;
+    my $path =  "$data_directory/external_gene_ids.csv";
     return $path;
 }
 

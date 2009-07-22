@@ -7,7 +7,7 @@ class Genome::DataSource::Transcripts {
 };
 
 sub delimiter {
-    return "\t";
+    return ",";
 }
 
 sub column_order {
@@ -24,7 +24,7 @@ sub column_order {
     )]
 }
 
-sub constant_values { ['build_id'] };
+sub constant_values { ['data_directory'] };
 
 sub sort_order {
     return [qw(chrom_name transcript_start transcript_id)];
@@ -34,14 +34,12 @@ sub skip_first_line {
     return 0;
 }
 
-sub required_for_get { ['build_id'] }
+sub required_for_get { ['data_directory'] }
 
 sub file_resolver {
-    my ($build_id) = @_;
+    my ($data_directory) = @_;
 
-    my $build = Genome::Model::Build::ImportedAnnotation->get($build_id);
-    my $annotation_dir = $build->annotation_data_directory;
-    my $path = "$annotation_dir/transcripts.csv";
+    my $path = "$data_directory/transcripts.csv";
 
     return $path;
 }

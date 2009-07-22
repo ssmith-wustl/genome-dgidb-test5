@@ -147,7 +147,8 @@ sub execute {
         range => $self->flank_range
     );
     my $annotator = Genome::Transcript::VariantAnnotator->create(
-        transcript_window => $transcript_window 
+        transcript_window => $transcript_window,
+        version => $self->build->build,
     );
     
     my $variant_iterator = Genome::Variation->create_iterator(

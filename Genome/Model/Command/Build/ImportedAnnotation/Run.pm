@@ -82,7 +82,7 @@ sub execute {
             $self->error_message("no from models composed this combined-annotation model, this is a serious error!");
             die;
         }
-        my @latest_from_builds = map { $_->last_complete_build } @from_models;
+        my @from_builds_by_version = map { $_->build_by_version($version) } @from_models;
         
         my $latest_ca_build = $model->last_complete_build;
     
@@ -92,22 +92,22 @@ sub execute {
             my @latest_ca_build_from_builds_ids = map {$_->build_id} @latest_ca_build_from_builds;
             @latest_ca_build_from_builds_ids = sort {$a <=> $b} @latest_ca_build_from_builds_ids;
             
-            my @latest_from_builds_ids = map {$_->build_id} @latest_from_builds;
-            @latest_from_builds_ids = sort {$a <=> $b} @latest_from_builds_ids;
+            my @from_builds_by_version_ids = map {$_->build_id} @from_builds_by_version;
+            @from_builds_by_version_ids = sort {$a <=> $b} @from_builds_by_version_ids;
 
-            if ( @latest_from_builds_ids eq @latest_ca_build_from_builds_ids ){
+            if ( @from_builds_by_version_ids eq @latest_ca_build_from_builds_ids ){
                 $self->error_message("already have a build that contains the latest builds of the models this combined-annotation model is a composite of, skipping!");
                 #TODO, do this gracefully
                 die; 
             }
         }
 
-        for my $from_build (@latest_from_builds){
-            $build->add_from_build(build => $from_build, role => 'member');
+        for my $from_build (@from_builds_by_version){
+            $build->add_from_build(from_build => $from_build, role => 'member');
         }
 
         my @test_from_builds = $build->from_builds;
-        unless(scalar @test_from_builds eq @latest_from_builds){
+        unless(scalar @test_from_builds eq @from_builds_by_version){
             $self->error_message("didn't successfully add latest from builds to this one!");
             die;
         }

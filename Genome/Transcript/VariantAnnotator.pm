@@ -26,6 +26,9 @@ class Genome::Transcript::VariantAnnotator{
             is => 'Bio::Tools::CodonTable',
             is_optional => 1,
         },
+        version => {
+            is => 'String',
+        },
     ]
 };
 
@@ -55,7 +58,7 @@ sub save_error_producing_variant{
     my $line = join("\t", map {$Genome::Transcript::VariantAnnotator::current_variant->{$_}} (qw/chromosome_name start stop reference variant/));
     if ($Genome::Transcript::VariantAnnotator::last_printed_line){
         unless ($line eq $Genome::Transcript::VariantAnnotator::last_printed_line){
-            $Genome::Transcript::VariantAnnotator::error_fh->print($line);
+            $Genome::Transcript::VariantAnnotator::error_fh->print($line."\n");
             $Genome::Transcript::VariantAnnotator::last_printed_line = $line;
         }
     }else{
@@ -316,7 +319,7 @@ sub _transcript_annotation
         transcript_name => $transcript->transcript_name, 
         transcript_status => $transcript->transcript_status,
         transcript_source => $source,
-        transcript_version => $transcript->build->version,
+        transcript_version => $self->version,
         gene_name  => $gene->name($source),
 #         amino_acid_change => 'NULL',
         ucsc_cons => $conservation
@@ -796,7 +799,7 @@ sub _transcript_annotation_for_cds_exon
     }
     else {
         if(length($mutated_seq_translated)<$pro_start-1|| substr($original_seq_translated,$pro_start-3,2) ne substr($mutated_seq_translated,$pro_start-3,2)) {
-            my $e="protein string does not match:".$transcript->transcript_name.",".$c_position.",".$variant->{chromosome_name}.",".$variant->{start}.",".$variant->{stop}.",".$variant->{reference}.",".$variant->{variant}.",".$variant->{type}."\n";
+            my $e="protein string does not match:".$transcript->transcript_name.",".$c_position.",".$variant->{chromosome_name}.",".$variant->{start}.",".$variant->{stop}.",".$variant->{reference}.",".$variant->{variant}.",".$variant->{type}.",".$transcript->gene->strand."\n";
             $self->error_message($e);
             return ;
         }
@@ -904,7 +907,6 @@ sub compare_protein_seq   {
                 elsif($pro_ori eq "") {
                     $pro_pos++;
                 }
-
             }
             #$pro_new=~s/(\*).*/$1/g; 
             if($pro_new =~ /\*/) {$type="Nonsense";}
