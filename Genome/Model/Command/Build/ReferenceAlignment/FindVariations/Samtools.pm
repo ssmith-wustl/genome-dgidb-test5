@@ -111,7 +111,8 @@ sub execute {
 
     #Originally "-S" was used as SNP calling. In r320wu1 version, "-v" is used to replace "-S" but with 
     #double indel lines embedded, this need sanitized
-    #$rv = system "$samtools_cmd -S $bam_file > $snp_output_file";  
+    #$rv = system "$samtools_cmd -S $bam_file > $snp_output_file"; 
+    $self->status_message("Find variations command: $samtools_cmd -v $bam_file > $snp_output_file");
     $rv = system "$samtools_cmd -v $bam_file > $snp_output_file";  
     return unless $self->_check_rv("Running samtools SNP failed with exit code $rv", $rv, 0);
 
