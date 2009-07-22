@@ -31,12 +31,21 @@ class Genome::Disk::Assignment {
                                   return ($total_kb - $unallocated_kb);
                               |,
                          },
-            percent_used => {
+            percent_allocated => {
                              calculate_from => ['total_kb','allocated_kb'],
                              calculate => q|
                                   return sprintf("%.2f", ( $allocated_kb / $total_kb ) * 100);
                               |,
                          },
+	    percent_full => {
+				calculate_from => ['absolute_path'],
+				calculate => q|
+					my @pct_full = `df -h $absolute_path`;
+					my @split_pct_full = split(/%/,$pct_full[1]);
+					@split_pct_full = split (/ /,$split_pct_full[0]);
+					return $split_pct_full[-1];
+				|,
+			  },
             absolute_path => {
                               calculate_from => ['mount_path','subdirectory'],
                               calculate => q|
