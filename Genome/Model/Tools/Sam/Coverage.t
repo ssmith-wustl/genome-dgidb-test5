@@ -42,6 +42,7 @@ my $coverage = Genome::Model::Tools::Sam::Coverage->create(
     reference_file => $ref_file,
     output_file => $output_file,                                                      
     return_output => 1,
+    use_version => 'r350wu1',  #This only works from r350wu1, once set Sam.pm default_value to r350wu1, this will become unnecessary
 );
 
 isa_ok($coverage,'Genome::Model::Tools::Sam::Coverage');

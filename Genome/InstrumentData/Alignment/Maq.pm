@@ -223,12 +223,19 @@ sub alignment_bam_file_paths {
         if ( scalar(@map_files) > 0 ) {
             $self->status_message("Found ".scalar(@map_files)." MAP files.  Creating BAM files.");
             $self->status_message("map files:\n".join("\n",@map_files));
+            
+            my $ref_build = $self->reference_build;
+            my $ref_list  = $ref_build->full_consensus_sam_index_path;
+            unless ($ref_list) {
+                $self->error_message("Failed to get MapToBam ref list: $ref_list");
+                return;
+            }
+            
             my $error_count = 0;
+            
             for my $map_file (@map_files) {
                 if (-s $map_file) {
                     $self->status_message("Map file: $map_file exists. Converting to BAM.");
-                    #system("cp $map_file /gscuser/jpeck/target/solexa_all_seq.map"); 
-                    #$self->status_message("Copied file.");
                 } 
                 else {
                     $self->error_message("Map file: $map_file DOES NOT EXIST. Returning."); 
@@ -246,6 +253,7 @@ sub alignment_bam_file_paths {
                     map_file    => $map_file,
                     use_version => $self->aligner_version,
                     lib_tag     => $lib_tag,
+                    ref_list    => $ref_list,
                     index_bam   => 0,
                 );
                 my $bam_file = $map_to_bam->bam_file_path;

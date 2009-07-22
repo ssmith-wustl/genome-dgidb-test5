@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 14;
+use Test::More tests => 15;
 $ENV{UR_DBI_NO_COMMIT} = 1;
 
 my $m = Genome::Model->get(2771359026); 
@@ -12,7 +12,8 @@ ok($m, "got a model");
 
 # we may build and build again, but just test this build...
 # TODO: mock
-my $build_id = 96402993; 
+#my $build_id = 96402993; This build does not exist anymore. 
+my $build_id = 97848505;
 my @completed = $m->completed_builds;
 for my $b (@completed) {
     next if $b->id == $build_id;
@@ -26,43 +27,46 @@ unless ($last_complete_build->id == $build_id) {
     die "Failed to force model " . $m->id . " to use build " . $build_id . " as its last complete build.  Got " . $last_complete_build->id;
 }
 
-my @f = $m->_consensus_files('X');
-ok(scalar(@f), "identified " . scalar(@f) . " consensus file by refseq");
+my $refseq = 'all_sequences';
 
-    my @f2 = $m->assembly_file_for_refseq('X');
-    is("@f2","@f","old consensus method matches new with a refseq");
+#my @f = $m->_consensus_files('X');  New way only contains all_sequences....
+my @cns = $m->_consensus_files($refseq); 
+ok(scalar @cns, "identified " . scalar @cns . " consensus file by $refseq");
 
-@f = $m->_consensus_files();
-ok(scalar(@f), "identified " . scalar(@f) . " consensus files w/o refseq filter");
-ok(all_exist(@f),"the consensus files exist")
-    or diag('example path: ' . $f[0]);
+#my @f2 = $m->assembly_file_for_refseq('X');
+my @asm = $m->assembly_file_for_refseq($refseq);
+is_deeply(\@cns, \@asm, "old consensus method matches new with $refseq");
 
-@f = $m->_variant_list_files();
-ok(scalar(@f), "identified " . scalar(@f) . " snp files w/o refseq filter");
-ok(all_exist(@f),"the snp files exist")
-    or diag('example path: ' . $f[0]);
+my @cns2 = $m->_consensus_files();
+is(scalar @cns2, 1, 'Got only 1 consensus file');
+ok(all_exist(@cns2), "the consensus files exist") or diag('example path: ' . $cns2[0]);
+is_deeply(\@cns, \@cns2, "Giving w/o ref seq filter will return $refseq file");
 
-@f = $m->_variant_detail_files();
-ok(scalar(@f), "identified " . scalar(@f) . " pileup files w/o refseq filter");
-ok(all_exist(@f),"the pileup files exist")
-    or diag('example path: ' . $f[0]);
+my @var = $m->_variant_list_files();
+ok(scalar @var, "identified " . scalar @var . " snp files of $refseq");
+ok(all_exist(@var),"the snp files exist") or diag('example path: ' .$var[0]);
 
-@f = $m->_variation_metrics_files();
-ok(scalar(@f), "identified " . scalar(@f) . " variation metrics files w/o refseq filter");
+@var = $m->_variant_detail_files();
+ok(scalar @var, "identified " . scalar @var . " pileup files of $refseq");
+ok(all_exist(@var),"the pileup files exist") or diag('example path: ' . $var[0]);
+
+@var = $m->_variation_metrics_files();
+ok(scalar @var, "identified " . scalar @var . " variation metrics files of $refseq");
 
 SKIP: {
     skip 'We do not generate other_snp_related_metrics subdir right now', 1;
-    ok(all_exist(@f),"the variation files exist");
+    ok(all_exist(@var),"the variation files exist");
 }
 
 $DB::single=1;
 my $v = $m->variant_count();
-is($v,6619300, "got expected variant count");
+is($v, 6631155, 'Got expected variant count');
 
 my $f;
 
 my $data_directory = $m->complete_build_directory;
-my $expected = '/gscmnt/sata821/info/model_data/2771359026/build96402993';
+#my $expected = '/gscmnt/sata821/info/model_data/2771359026/build96402993';
+my $expected ='/gscmnt/sata905/info/model_data/2771359026/build97848505';
 is($data_directory, $expected, "resolved data directory");  # FIX WHEN WE SWITCH MODELS
 
 #$f = $m->resolve_accumulated_alignments_filename();

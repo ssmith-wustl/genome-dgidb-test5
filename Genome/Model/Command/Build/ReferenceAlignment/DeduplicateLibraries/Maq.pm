@@ -47,7 +47,8 @@ sub execute {
             return;
         }
         chmod 02775, $alignments_dir;
-    } else {
+    } 
+    else {
         unless (-d $alignments_dir) {
             $self->error_message("File already exists for directory '$alignments_dir':  $!");
             return;
@@ -69,10 +70,10 @@ sub execute {
     }
     
     unless (Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::WholeMap->execute(
-                                                                                                       whole_map_file => $self->build->whole_map_file,
-                                                                                                       alignments => \@all_alignments,
-                                                                                                       aligner_version => $self->model->read_aligner_version,
-                                                                                                   )) {
+        whole_map_file => $self->build->whole_map_file,
+        alignments => \@all_alignments,
+        aligner_version => $self->model->read_aligner_version,
+    )) {
         $self->error_message('Failed to create whole map file for cdna or rna.');
         return;
     }
@@ -81,12 +82,13 @@ sub execute {
     #prepare the input for parallelization
     my @list_of_library_alignments;
     for my $library_key ( keys %library_alignments ) {
-	my @read_set_list = @{$library_alignments{$library_key}};	
+	    my @read_set_list = @{$library_alignments{$library_key}};	
         $self->status_message("Library: ".$library_key." Read sets count: ". scalar(@read_set_list) ."\n");
         if (scalar(@read_set_list)>0) {
             my %library_alignments_item = ( $library_key => \@read_set_list );  
             push @list_of_library_alignments, \%library_alignments_item;
-        } else {
+        } 
+        else {
             $self->status_message("Not including library: $library_key because it is empty.");
         } 
     }
@@ -99,39 +101,41 @@ sub execute {
 
     #parallelization starts here
     require Workflow::Simple;
-    $Workflow::Simple::store_db=0;
+    $Workflow::Simple::store_db = 0;
         
     my $op = Workflow::Operation->create(
-            name => 'Deduplicate libraries.',
-            operation_type => Workflow::OperationType::Command->get('Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Dedup')
+        name => 'Deduplicate libraries.',
+        operation_type => Workflow::OperationType::Command->get('Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Dedup')
     );
 
     $op->parallel_by('library_alignments');
 
     my $output = Workflow::Simple::run_workflow_lsf(
-            $op,
-            'accumulated_alignments_dir' =>$alignments_dir, 
-            'library_alignments' =>\@list_of_library_alignments,
-            'aligner_version' => $self->model->read_aligner_version,
-   );
+        $op,
+        'ref_list'  => $self->model->reference_build->full_consensus_sam_index_path,
+        'accumulated_alignments_dir' => $alignments_dir, 
+        'library_alignments' => \@list_of_library_alignments,
+        'aligner_version' => $self->model->read_aligner_version,
+    );
 
-   #check workflow for errors 
-   if (!defined $output) {
+    #check workflow for errors 
+    if (!defined $output) {
        foreach my $error (@Workflow::Simple::ERROR) {
            $self->error_message($error->error);
        }
        return;
-   } else {
+    }
+    else {
        my $results = $output->{result};
        my $result_libraries = $output->{library_name};
        for (my $i = 0; $i < scalar(@$results); $i++) {
            my $rv = $results->[$i];
-                if ($rv != 1) {
-                       $self->error_message("Workflow had an error while rmdup'ing library: ". $result_libraries->[$i]); 
-                       die "Workflow had an error while rmdup'ing library: ". $result_libraries->[$i];
-                }
-       }
-  } 
+            if ($rv != 1) {
+                $self->error_message("Workflow had an error while rmdup'ing library: ". $result_libraries->[$i]); 
+                die "Workflow had an error while rmdup'ing library: ". $result_libraries->[$i];
+            }
+        }
+    }
  
    #merge those Bam files...BAM!!!
    $now = UR::Time->now;

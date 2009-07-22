@@ -649,6 +649,10 @@ sub _reports_dir {
 sub _files_for_pattern_and_optional_ref_seq_id {
     my ($self, $pattern, $ref_seq) = @_;
     
+    if((defined $ref_seq and $ref_seq eq 'all_sequences') or !defined $ref_seq) {
+        return sprintf($pattern, $self->complete_build_directory, 'all_sequences');
+    }
+
     my @files = 
         map { 
             sprintf(

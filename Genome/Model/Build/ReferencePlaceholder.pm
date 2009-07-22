@@ -80,6 +80,47 @@ sub full_consensus_path {
     return;
 }
 
+#This is for samtools faidx output that can be used as ref_list for
+#SamToBam convertion
+sub full_consensus_sam_index_path {
+    my $self = shift;
+
+    my $data_dir = $self->data_directory;
+    my $fa_file  = $self->full_consensus_path('fasta');
+    my $idx_file = $fa_file.'.fai';
+
+    unless (-e $idx_file) {
+        my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version;
+        my $cmd      = $sam_path.' faidx '.$fa_file;
+        
+        my $lock = Genome::Utility::FileSystem->lock_resource(
+            resource_lock => $data_dir.'/lock_for_faidx',
+            max_try       => 2,
+        );
+        unless ($lock) {
+            $self->error_message("Failed to lock resource: $data_dir");
+            return;
+        }
+
+        my $rv = Genome::Utility::FileSystem->shellcmd(
+            cmd => $cmd,
+            input_files  => [$fa_file],
+            output_files => [$idx_file],
+        );
+        
+        unless (Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)) {
+            $self->error_message("Failed to unlock resource: $lock");
+            return;
+        }
+        unless ($rv == 1) {
+            $self->error_message("Failed to run samtools faidx on fasta: $fa_file");
+            return;
+        }
+    }
+    return $idx_file if -e $idx_file;
+    return;
+}
+        
 sub subreference_paths {
     my $self = shift;
     my %p = @_;

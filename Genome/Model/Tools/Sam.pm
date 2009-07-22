@@ -9,9 +9,14 @@ use File::Basename;
 my $DEFAULT = 'r320wu1';
 
 class Genome::Model::Tools::Sam {
-    is => 'Command',
+    is  => 'Command',
     has => [
-        use_version => { is => 'Version', is_optional => 1, default_value => $DEFAULT, doc => 'Version of Sam to use' }
+        use_version => { 
+            is  => 'Version', 
+            doc => "samtools version to be used, default is $DEFAULT",
+            is_optional   => 1, 
+            default_value => $DEFAULT,   
+        }
     ],
 };
 
@@ -41,6 +46,7 @@ my %SAMTOOLS_VERSIONS = (
     r301wu1 => '/gscuser/dlarson/samtools/r301wu1/samtools',
     r320wu1 => '/gscuser/dlarson/samtools/r320wu1/samtools',
     r320wu2 => '/gscuser/dlarson/samtools/r320wu2/samtools',
+    r350wu1 => '/gscuser/dlarson/samtools/r350wu1/samtools',
 );
 
 

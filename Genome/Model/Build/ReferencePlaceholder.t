@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 my $BASE = Genome::Config->root_directory;
 
@@ -19,6 +19,10 @@ unless ($model) {
 
 my $reference_sequence_path = $model->data_directory;
 is($reference_sequence_path,"$BASE/reference_sequences/NCBI-human-build36",'got reference_sequence_path');
+
+my $ref_seq_path   = $model->full_consensus_path('fasta');
+my $sam_faidx_path = $model->full_consensus_sam_index_path;
+is($sam_faidx_path, $ref_seq_path.'.fai', 'Got correct ref seq sam fasta index');
 
 my @get_subreference_paths = sort $model->subreference_paths(reference_extension => 'bfa');
 is(scalar(@get_subreference_paths),25,'got get_subreference_paths countn');

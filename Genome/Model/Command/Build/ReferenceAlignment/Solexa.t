@@ -97,7 +97,7 @@ $build_test->runtests;
 
 my $comparison_dir = '/gsc/var/cache/testsuite/data/'
         . 'Genome-Model-Command-Build-ReferenceAlignment-Solexa/'
-        . 'alignment-root-expected-v4';
+        . 'alignment-root-expected-v5';
 
 my @diff = `diff -r --brief $tmp_dir $comparison_dir`; 
 my @bad;

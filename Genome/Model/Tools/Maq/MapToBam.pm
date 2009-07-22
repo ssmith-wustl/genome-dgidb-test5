@@ -93,39 +93,26 @@ sub execute {
     $sam_file =~ s/\.bam$/\.sam/;
 
     my $cmd = sprintf('%s %s %s > %s', $tosam_path, $map_file, $self->lib_tag, $sam_file);
-    my $rv  = system $cmd;
-    $self->error_message("$cmd failed") and return if $rv or !-e $sam_file;
-    
-    $cmd = sprintf('%s import %s %s %s', $samtools, $self->ref_list, $sam_file, $bam_file);
-    $self->status_message("MapToBam conversion command: $cmd");
-    $rv  = system $cmd;
-    $self->error_message("$cmd failed") and return if $rv or !-e $bam_file;
-     
-    #watch out disk space, for now hard code maxMemory 2000000000
-    if ($self->fix_mate) {
-        my $tmp_file = $bam_file.'.sort';
-        $rv = system "$samtools sort -n -m 2000000000 $bam_file $tmp_file";
-        $self->error_message("first sort failed") and return if $rv or !-s $tmp_file.'.bam';
+    my $rv  = Genome::Utility::FileSystem->shellcmd(
+        cmd => $cmd, 
+        output_files => [$sam_file],
+        skip_if_output_is_present => 0,
+        allow_zero_size_output_files => 1, #unit test would fail if not allowing empty output samfile.
+    );
 
-        $rv = system "$samtools fixmate $tmp_file.bam $tmp_file.fixmate";
-        $self->error_message("fixmate failed") and return if $rv or !-s $tmp_file.'.fixmate';
-        unlink "$tmp_file.bam";
+    $self->error_message("maq2sam command: $cmd failed") and return unless $rv == 1;
 
-        $rv = system "$samtools sort -m 2000000000 $tmp_file.fixmate $tmp_file.fix";
-        $self->error_message("Second sort failed") and return if $rv or !-s $tmp_file.'.fix.bam';
-        
-        unlink "$tmp_file.fixmate";
-        unlink $bam_file;
-
-        move "$tmp_file.fix.bam", $bam_file;
-    }
-
-    if ($self->index_bam) {
-        $rv = system "$samtools index $bam_file";
-        $self->error_message('Indexing bam_file failed') and return if $rv;
-    }
-
-    unlink $sam_file unless $self->keep_sam;
+    my $sam2bam = Genome::Model::Tools::Sam::SamToBam->create(
+        sam_file  => $sam_file,
+        bam_file  => $bam_file,
+        ref_list  => $self->ref_list,
+        fix_mate  => $self->fix_mate,
+        keep_sam  => $self->keep_sam,
+        index_bam => $self->index_bam,
+    );
+    $rv = $sam2bam->execute;
+    $self->error_message("SamToBam failed for $sam_file") and return unless $rv ==1;
+  
     return 1;
 }
 

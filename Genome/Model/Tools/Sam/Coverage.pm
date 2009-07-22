@@ -7,10 +7,9 @@ use Genome;
 use Command;
 use IO::File;
 
-my $SAM_DEFAULT = Genome::Model::Tools::Sam->default_samtools_version;
 
 class Genome::Model::Tools::Sam::Coverage {
-    is  => 'Command',
+    is  => 'Genome::Model::Tools::Sam',
     has => [
         aligned_reads_file => {
             is  => 'String',
@@ -60,9 +59,10 @@ sub execute {
     if (defined $self->coverage_command) {
        $coverage_cmd = $self->coverage_command;
     } else { 
-        #Switch this when wu350 is deployed 
-        #my $samtools_cmd = Genome::Model::Tools::Sam->path_for_samtools_version($SAM_DEFAULT);
-        my $samtools_cmd = "/gscuser/dlarson/samtools/r350wu1/samtools"; 
+        #currently this only from r350wu1 while default is r320wu1, so give use_version => r350wu1 should work
+        #when we set G::M::T::Sam default to r350wu1, use_version will not be necessary. See Coverage.t
+        #my $samtools_cmd = "/gscuser/dlarson/samtools/r350wu1/samtools"; 
+        my $samtools_cmd = $self->samtools_path;
         $coverage_cmd = "$samtools_cmd mapcheck"; 
     }
 

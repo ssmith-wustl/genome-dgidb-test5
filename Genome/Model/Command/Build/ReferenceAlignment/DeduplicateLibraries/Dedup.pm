@@ -11,44 +11,43 @@ use IO::File;
 class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::Dedup {
     is => ['Command'],
     has_input => [
-    accumulated_alignments_dir => {
-        is => 'String',
-        doc => 'Accumulated alignments directory.' 
-    },
-    library_alignments => {
-        is => 'String',
-        doc => 'Hash of library names and related alignment files.' 
-    },
-    aligner_version => {
-                        is => 'Text',
-                        doc => 'The maq read aligner version used',
-                    },
+        accumulated_alignments_dir => {
+            is  => 'String',
+            doc => 'Accumulated alignments directory.' 
+        },
+        library_alignments => {
+            is  => 'String',
+            doc => 'Hash of library names and related alignment files.' 
+        },
+        aligner_version => {
+            is  => 'Text',
+            doc => 'The maq read aligner version used',
+        },
+        ref_list    => {
+            is  => 'Text',
+            doc => 'The ref list that MapToBam uses to convert to bam',
+        },
     ],
     has_param => [
         lsf_resource => {
             default_value => 'select[model!=Opteron250 && type==LINUX64] rusage[mem=2000]',
         }
     ],
-
-
     has_output => [
-    output_file => { 
-        is => 'String', 
-        is_optional => 1, 
-    },
-    library_name => { 
-        is => 'String', 
-        is_optional => 1, 
-    }
+        output_file => { 
+            is => 'String', 
+            is_optional => 1, 
+        },
+        library_name => { 
+            is => 'String', 
+            is_optional => 1, 
+        }
     ],
 };
 
 
 sub make_real_rmdupped_map_file {
-    my $self=shift;
-    my $maplist=shift;
-    my $library=shift;
-    my $log_fh=shift;
+    my ($self, $maplist, $library, $log_fh) = @_;
 
     print $log_fh "Library: ".$library." Maplist: ".$maplist."\n";
 
@@ -57,7 +56,8 @@ sub make_real_rmdupped_map_file {
 
     if (-s "$final_file") {
         print $log_fh "Rmdup'd file exists: ".$final_file."\n";
-    } else {
+    } 
+    else {
         my $tmp_file = Genome::Utility::FileSystem->create_temp_file_path($library.".map" );
         print $log_fh "Rmdup'd file DOES NOT exist: ".$final_file."\n";
         my $aligner_version = $self->aligner_version;
@@ -90,15 +90,15 @@ sub make_real_rmdupped_map_file {
 }
 
 sub execute {
-    my $self=shift;
-
-    my $pid = getppid(); 
+    my $self = shift;
+    my $pid  = getppid(); 
+    
     my $log_dir = $self->accumulated_alignments_dir.'/../logs/';
     unless (-e $log_dir ) {
-	unless( Genome::Utility::FileSystem->create_directory($log_dir) ) {
+	    unless( Genome::Utility::FileSystem->create_directory($log_dir) ) {
             $self->error_message("Failed to create log directory for dedup process: $log_dir");
             return;
-	}
+	    }
     }
  
     my $log_file = $log_dir.'/parallel_dedup_'.$pid.'.log';
@@ -108,22 +108,20 @@ sub execute {
        die "Could not open file ".$log_file." for writing.";
     } 
 
-    #open(STDOUT, ">$log_file") || die "Can't redirect stdout.";
-    #open(STDERR, ">&STDOUT"); 
-
     my $now = UR::Time->now;
     print $log_fh "Executing Dedup.pm at $now"."\n";
 
     my @list;
     if ( ref($self->library_alignments) ne 'ARRAY' ) {
         push @list, $self->library_alignments; 		
-    } else {
+    } 
+    else {
         @list = @{$self->library_alignments};   	#the parallelized code will only receive a list of one item. 
     }
 
     print $log_fh "Input library list length: ".scalar(@list)."\n";
-    for my $list_item ( @list  ) {
-        my %hash = %{$list_item };    		#there will only be one name-value-pair in the hash: $library name -> @list of alignment file paths (maps)
+    for my $list_item ( @list ) {
+        my %hash = %{$list_item};    		#there will only be one name-value-pair in the hash: $library name -> @list of alignment file paths (maps)
         for my $library ( keys %hash ) {
             $self->library_name($library);
             my @library_maps = @{$hash{$library}};
@@ -154,7 +152,7 @@ sub execute {
 
             $now = UR::Time->now;
             print $log_fh ">>> Starting make_real_rmdupped_map_file() at $now for library: $library ."."\n";
-            my $map_file =  $self->make_real_rmdupped_map_file($library_maplist, $library,$log_fh);
+            my $map_file =  $self->make_real_rmdupped_map_file($library_maplist, $library, $log_fh);
             $now = UR::Time->now;
             print $log_fh "<<< Completed make_real_rmdupped_map_file() at $now for library: $library ."."\n";
 
@@ -169,37 +167,35 @@ sub execute {
 
             $now = UR::Time->now;
             print $log_fh ">>> Beginning MapToBam conversion at $now for library: $library ."."\n";
-     
             print $log_fh "MapToBam inputs for library: $library"."\n";
             print $log_fh "maq_version: ".$self->aligner_version."\n";
             print $log_fh "map_file: ".$map_file."\n";
             print $log_fh "lib_tag: ".$library."\n"; 
+            
             my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
-                        use_version => $self->aligner_version,
-                        map_file    => $map_file,
-                        lib_tag     => $library,
-                        fix_mate    => 0,
+                use_version => $self->aligner_version,
+                map_file    => $map_file,
+                lib_tag     => $library,
+                ref_list    => $self->ref_list,
+                fix_mate    => 0,
             );
-            my $map_to_bam_rv =  $map_to_bam->execute;
+            my $map_to_bam_rv = $map_to_bam->execute;
             unless ($map_to_bam_rv == 1) {
-                    print $log_fh "MapToBam failed for library: $library with return value: $map_to_bam_rv"."\n";
-                    $log_fh->close;
-                    return;
+                print $log_fh "MapToBam failed for library: $library with return value: $map_to_bam_rv"."\n";
+                $log_fh->close;
+                return;
             }
             $now = UR::Time->now;
             print $log_fh "<<< Ending MapToBam conversion at $now for library: $library ."."\n";
     
-	}#end library loop 
-
-
-    print $log_fh "*** Dedup process completed ***";
+        }#end library loop 
+        
+        print $log_fh "*** Dedup process completed ***";
     }#end parallelized item loop
 
-   $log_fh->close;
-   return 1;
+    $log_fh->close;
+    return 1;
 } #end execute
-
-
 
 
 1;
