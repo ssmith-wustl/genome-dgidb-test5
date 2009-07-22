@@ -106,7 +106,7 @@ sub execute {
                                    );
 
     unless ($output) {
-        $self->error_message("Stage '" . $self->stage_name . "' failed.");
+        $self->error_message("Build failed.");
         foreach my $error (@Workflow::Simple::ERROR) {
             $self->error_message($error->path_name . ':' . $error->error);
         }
