@@ -41,10 +41,10 @@ sub execute {
     my $build = $self->build;
     
     my $gt = $build->model->genotyper_name;
-    unless ($gt =~ /maq/i) {
-        $self->status_message('For now turn off mapcheck for non-maq based pipeline');
-        delete $REPORT_TYPES{Mapcheck};
-    }
+    #unless ($gt =~ /maq/i) {
+    #    $self->status_message('For now turn off mapcheck for non-maq based pipeline');
+    #    delete $REPORT_TYPES{Mapcheck};
+    #}
 
     my $gold_snp_path = $build->gold_snp_path;
     unless ($gold_snp_path and -s $gold_snp_path) {
