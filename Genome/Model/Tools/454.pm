@@ -79,7 +79,7 @@ sub create {
 	if (-l $base_path) {
 	    my $link_path = readlink($base_path);
 	    if ($link_path =~ /^offInstrumentApps/){
-		unless ($link_path =~ /(offInstrumentApps)-(\d\.\d\.\d{2}\.\d{2}-\d+)/) {
+		unless ($link_path =~ /(offInstrumentApps)-(\d\.\d\.\d{2}\.\d{2}/) {
 		    $self->error_message('Link to 454 tools was malformed: '. $link_path);
 		    return;
 		}
