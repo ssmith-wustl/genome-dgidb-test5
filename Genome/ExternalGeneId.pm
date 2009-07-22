@@ -13,16 +13,15 @@ class Genome::ExternalGeneId {
     ],
     has => [
         gene_id => { is => 'NUMBER' },
-        id_type => { is => 'String' },
-        id_value => { is => 'String' },
-        build => {
-                    is => "Genome::Model::Build",
-                    id_by => 'build_id',
+        id_type => { is => 'Text' },
+        id_value => { is => 'Text' },
+        data_directory => {
+                    is => "Path",
         },
         gene => {
-            calculate_from => [qw/ gene_id build_id/],
+            calculate_from => [qw/ gene_id data_directory/],
             calculate => q|
-                Genome::GeneId->get(gene_id => $gene_id, build_id => $build_id);
+                Genome::Gene->get(gene_id => $gene_id, data_directory => $data_directory);
             |,
         },
     ],
