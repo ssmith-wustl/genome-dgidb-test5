@@ -433,21 +433,40 @@ sub _run_aligner {
 	$self->error_message("Alignment output " . $unsorted_bam_output->filename . " not found or zero length.  Something went wrong");
 	return;
     }
+     
+    my $sorted_bam_output =
+	File::Temp->new( DIR => $tmp_dir, SUFFIX => ".bam" );
     
     #### STEP 4: Sort the BAM formatted files
     my $sort_bam = Genome::Model::Tools::Sam::SortBam->create(
 	file_name=>$unsorted_bam_output->filename,
-	output_file=>$self->alignment_file	
+	output_file=>$sorted_bam_output->filename,
     );
     unless ($sort_bam->execute()) {
 	$self->error_message("Error sorting BAM file.");
 	return;
     }
     
+    $DB::single = 1;
+    my $editor = Genome::Model::Tools::Sam::SamHeaderEditor->create( input_sam_file => $sorted_bam_output->filename,
+                                                                 output_sam_file => $self->alignment_file,
+                                                                 library_field => $self->instrument_data->library_name,
+                                                                 bam_version_field => '0.1.2',
+                                                                 sample_name_field => $self->instrument_data->sample_name,
+                                                                 genome_center_field => 'WUGSC',
+                                                                 platform_field => 'illumina',
+                                                                 date_run_field => $self->instrument_data->run_start_date_formatted(),
+                                                                 platform_unit_field => sprintf("%s.%s",$self->instrument_data->flow_cell_id,$self->instrument_data->lane),
+                                                                 aligner_command_field => sprintf("bwa aln %s", $bwa_aln_params),
+                                                                 aligner_version_field => $self->aligner_version,
+                                                                );
+    $editor->execute;
+
     unless (-e $self->alignment_file && -s $self->alignment_file) {
 	$self->error_message("Alignment output " . $self->alignment_file . " not found or zero length.  Something went wrong");
 	return;
     }
+
 
     #### STEP 5: Concat all the log files into one
 

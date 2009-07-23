@@ -29,7 +29,10 @@ my $gerald_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Alig
 my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   id => '-123456',
                                                                   sequencing_platform => 'solexa',
+                                                                  flow_cell_id => '12345',
+                                                                  lane => '1',
                                                                   sample_name => 'test_sample_name',
+                                                                  library_name => 'test_sample_name-lib1',
                                                                   run_name => 'test_run_name',
                                                                   subset_name => 4,
                                                                   run_type => 'Paired End Read 2',
@@ -43,6 +46,7 @@ $instrument_data->set_always('is_paired_end',1);
 ok($instrument_data->is_paired_end,'instrument data is paired end');
 $instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
 $instrument_data->set_always('resolve_quality_converter','sol2sanger');
+$instrument_data->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
 
 
 
@@ -81,8 +85,11 @@ ok(-d $dir, "result is a real directory");
 
 $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                id => '-123458',
+                                                               flow_cell_id => '12345',
+                                                               lane => '1',
                                                                sequencing_platform => 'solexa',
                                                                sample_name => 'test_sample_name',
+                                                               library_name => 'test_sample_name-lib1',
                                                                run_name => 'test_run_name',
                                                                subset_name => 4,
                                                                run_type => 'Paired End Read 2',
@@ -93,6 +100,7 @@ $instrument_data->set_always('sample_type','dna');
 $instrument_data->set_always('is_paired_end',1);
 $instrument_data->set_always('class','Genome::InstrumentData::Solexa');
 $instrument_data->set_always('resolve_quality_converter','sol2sanger');
+$instrument_data->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
 
 my $tmp_dir = File::Temp::tempdir('Align-Bwa-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $tmp_allocation = Genome::Disk::Allocation->create_mock(
