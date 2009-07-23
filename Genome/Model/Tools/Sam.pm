@@ -70,6 +70,20 @@ sub samtools_path {
     return $self->path_for_samtools_version($self->use_version);
 }
 
+
+sub samtools_pl_path {
+    my $self = shift;
+    my $dir  = dirname $self->samtools_path;
+    my $path = "$dir/misc/samtools.pl";
+    
+    unless (-x $path) {
+        $self->error_message("samtools.pl: $path is not executable");
+        return;
+    }
+    return $path;
+}
+
+    
 sub c_linkage_class {
     my $self = shift;
 
