@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 10;
+use Test::More tests => 9;
 use File::Compare;
 use above "Genome";
 
@@ -37,15 +37,16 @@ unlink($transcript);
 my $command_build_id = "gt annotate transcript-variants --build-id 96232344 --variant-file $input --output-file $output_base.transcript";
 is(system($command_build_id),0, "executed $command_build_id w/ return value of 0");
 
-my $command_reference_transcripts = "gt annotate transcript-variants --reference-transcripts NCBI-human.ensembl/1 --variant-file $input --output-file $output_base.transcript";
-is(system($command_reference_transcripts),0, "executed $command_reference_transcripts w/ return value of 0");
-
 SKIP: {
    skip 'skipping for warnings', 2;
 
-$command_reference_transcripts = "gt annotate transcript-variants --reference-transcripts NCBI-human.genbank/1 --variant-file $input --output-file $output_base.transcript";
+my $command_reference_transcripts = "gt annotate transcript-variants --reference-transcripts NCBI-human.ensembl/54_36p --variant-file $input --output-file $output_base.transcript";
 is(system($command_reference_transcripts),0, "executed $command_reference_transcripts w/ return value of 0");
 
-$command_reference_transcripts = "gt annotate transcript-variants --reference-transcripts NCBI-human.combined-annotation/1 --variant-file $input --output-file $output_base.transcript";
+
+$command_reference_transcripts = "gt annotate transcript-variants --reference-transcripts NCBI-human.genbank/54_36p --variant-file $input --output-file $output_base.transcript";
+is(system($command_reference_transcripts),0, "executed $command_reference_transcripts w/ return value of 0");
+
+$command_reference_transcripts = "gt annotate transcript-variants --reference-transcripts NCBI-human.combined-annotation/54_36p --variant-file $input --output-file $output_base.transcript";
 is(system($command_reference_transcripts),0, "executed $command_reference_transcripts w/ return value of 0");
 }
