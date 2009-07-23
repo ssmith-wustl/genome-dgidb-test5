@@ -47,9 +47,14 @@ chmod 0644, $Bin."/".$readonly_testfile;
 unlink $Bin."/".$readonly_testfile;
 
 #$p = undef;
+my $runiprscan = undef;
+if(exists($ENV{RUNIPRSCAN}))
+{
+    $runiprscan = 1;
+}
 
 SKIP: {
-    skip "need to set environment variable to run iprscan", 1 unless $ENV{RUNIPRSCAN} eq 1;
+    skip "need to set environment variable to run iprscan", 1 unless $runiprscan ;
 # test checking the transcripts/getting the peps/prots.
     $p = Genome::Model::ReferenceAlignment::Report::Pfam->create(
                                           build_id      => $build_id,
@@ -99,7 +104,7 @@ ok(defined($report_buffer),'test running the report');
 #                                        );
 
 SKIP: {
-    skip "need to set environment variable to run iprscan", 1 unless $ENV{RUNIPRSCAN} eq 1;
+    skip "need to set environment variable to run iprscan", 1 unless $runiprscan ;
 ok($p->generate_report_detail(report_detail => $Bin."/"."full_report_test.csv"),'run a full report via generate_report_detail()');
 unlink $Bin."/"."full_report_test.csv";
 } # end skip
