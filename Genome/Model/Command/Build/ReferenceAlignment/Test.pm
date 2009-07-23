@@ -280,7 +280,7 @@ sub schedule {
            $variation_granularity, "Got $variation_granularity AnnotateVariations messages");
     }
    # Not checking warning messages - for now, there are some relating to obsolete locking
-    my $expected_errors = $model->sequencing_platform eq 'solexa' && $model->dna_type eq 'genomic dna' ? 1 : 0;
+    my $expected_errors = $model->sequencing_platform eq 'solexa' && $model->dna_type eq 'genomic dna' ? 2 : 0;
     is(scalar(@error_messages), $expected_errors, "found $expected_errors errors");
 
     $self->build($build);
