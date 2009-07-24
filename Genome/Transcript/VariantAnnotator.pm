@@ -819,7 +819,8 @@ sub _transcript_annotation_for_cds_exon
     }
 
     my $conservation = $self->_ucsc_cons_annotation($variant);
-    my $pdom = $self->_protein_domain($variant,
+    # change to pick up the other domains...
+    my ($pdom, $alldomains) = $self->_protein_domain($variant,
         $transcript->gene,
         $transcript->transcript_name,
         $amino_acid_change);
@@ -832,7 +833,8 @@ sub _transcript_annotation_for_cds_exon
         amino_acid_change => $pro_str,
         amino_acid_length => length($amino_acid_seq),
         ucsc_cons => $conservation,
-        domain => $pdom
+        domain => $pdom,
+        all_domains => $alldomains
     );
 }
 
@@ -863,14 +865,19 @@ sub _protein_domain
     $s->add_mutation($gene->name ,$transcript ,$amino_acid_change);
     my %domlen;
     $s->mutation_in_dom(\%domlen,"HMMPfam");
+    # by request.... add in all domains on this transcript/protein
+    my @all_domains = $s->get_all_domains($gene->name,$transcript);
+    my $alldoms = join(',', @all_domains);
+    my $mutation_domains = 'NULL';
+
     my $obj = $s->get_mut_obj($transcript . "," . $gene->name);
-    return 'NULL' unless $obj;
+    return 'NULL',$alldoms unless $obj;
     my $doms = $obj->get_domain($amino_acid_change);
     if(defined($doms))
     {
-        return join(":", uniq @$doms);
+        return join(":", uniq @$doms),$alldoms;
     }
-    return 'NULL';
+    return 'NULL',$alldoms;
 }
 
 
