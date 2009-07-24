@@ -11,50 +11,26 @@ use XML::LibXML;
 use XML::LibXSLT;
 
 class Genome::Report::XSLT {
-    is => 'UR::Object',
-    has => [
-    report => { 
-        is => 'Genome::Report',
-        doc => 'Report to apply XSLT to',
-    },
-    xslt_file => {
-        is => 'Text',
-        doc => 'XSLT file',
-    },
-    ],
 };
 
-#< Get/Create >#
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
-
-    unless ( $self->report ) {
-        $self->error_message("Report is required to create");
-        $self->delete;
-        return;
-    }
-
-    unless ( $self->xslt_file ) {
-        $self->error_message("XSLT file is required to create");
-        $self->delete;
-        return;
-    }
-
-    return $self;
-}
-
-#< XLST >#
 sub transform_report {
-    my $self = shift;
+    my ($self, %params) = @_;
+
+    my $report = delete $params{report};
+    unless ( $report ) {
+        $self->error_message("Report is required to transform");
+        return;
+    }
+               
+    my $xslt_file = delete $params{xslt_file};
+    Genome::Utility::FileSystem->validate_file_for_reading($xslt_file)
+        or return;
 
     my $string = "Content-Type: text/html; charset=ISO-8859-1\r\n\r\n";
 
     my $xml = XML::LibXML->new();
-    my $xml_string = $xml->parse_string( $self->report->xml_string );
-    my $style_doc = eval{ $xml->parse_file( $self->xslt_file ) };
+    my $xml_string = $xml->parse_string( $report->xml_string );
+    my $style_doc = eval{ $xml->parse_file( $xslt_file ) };
     print "<pre>Continuing after error: $@</pre>" if $@;
 
     my $xslt = XML::LibXSLT->new();
@@ -78,59 +54,47 @@ Genome::Report::XSLT
 
 =head1 Usage
 
- my $generator = Genome::Report::Generator->create(
-    name => 'Happy', # required
-    ..other params...
+ use Genome;
+ 
+ # Get or generate a report...
+ my $report = Genome::Report->create_report_from_directory(...);
+ 
+ # Grab a xslt file
+ my $xslt_file = ...;
+ 
+ # Transform
+ my $string = Genome::Report::XSLT->transform_report(
+    report => $report, # required
+    xslt_file => $xslt_file, #required
  );
 
- my $report = $generator->generate_report
-    or die;
-
- $report->save('some_directory')
-    or die;
-
+ ...
+ 
 =head1 Public Methods
 
-=head2 generate_report
+=head2 transform_report
 
- my $report = $generator->generate_report
-    or die;
-
-=over
-
-=item I<Synopsis>   Generates data and creates a Genome::Report
-
-=item I<Arguments>  none
-
-=item I<Returns>    Genome::Report
-
-=back
-
-=head1 Private Methods Implemented in Subclasses
-
-=head2 _generate_data
+ my $string = Genome::Report::XSLT->transform_report(report => $report, xslt_file => $xslt_file);
 
 =over
 
-=item I<Synopsis>   Generates data and returns a hashref containing keys description, html (opt) and csv (opt)
+=item I<Synopsis>   Takes a report and an xslt file (as a hash), and returns the transformed report as a string
 
-=item I<Arguments>  none
+=item I<Arguments>  report (Genome::Report), xslt_file (readable file)
 
-=item I<Returns>    hashref 
+=item I<Returns>    string
 
 =back
-
-=head1 See Also
 
 =head1 Disclaimer
 
-Copyright (C) 2005 - 2008 Washington University Genome Sequencing Center
+Copyright (C) 2009 Washington University Genome Sequencing Center
 
 This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 =head1 Author(s)
 
-B<Eddie Belter> I<ebelter@watson.wustl.edu>
+B<Eddie Belter> I<ebelter@genome.wustl.edu>
 
 =cut
 
