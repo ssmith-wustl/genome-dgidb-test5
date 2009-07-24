@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Genome::InlineConfig;
 use File::Copy;
 use File::Basename;
 
@@ -99,7 +100,8 @@ sub create {
             
     #eval the 'use inline' command to inject the correct classpath
     #note:  the "PACKAGE=>'main'" entry allows you to replace "Genome::Model::Tools::Sam::SamHeaderEditor" with "main" when subsequently calling the Java class.  See in execute. 
-    my $inline_string =  "use Inline ( Java => 'STUDY', CLASSPATH => qw($cp), STUDY => ['edu.wustl.genome.samtools.SamHeaderEditor'], AUTOSTUDY => 1, PACKAGE => 'main', );";
+    $ENV{PERL_INLINE_JAVA_JNI} = 1;
+    my $inline_string =  "use Inline ( Java => 'STUDY', CLASSPATH => qw($cp), STUDY => ['edu.wustl.genome.samtools.SamHeaderEditor'], AUTOSTUDY => 1, PACKAGE => 'main', DIRECTORY => Genome::InlineConfig::DIRECTORY(), JNI=>1 );";
     eval "$inline_string";
     unless ( defined $@ ) {
         $self->error_message("There was a problem evaluating the 'use Inline' code for the required Java libraries: $inline_string.  The classpath was set to: $cp");
