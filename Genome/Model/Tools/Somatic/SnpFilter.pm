@@ -31,7 +31,6 @@ class Genome::Model::Tools::Somatic::SnpFilter {
                 return $build->filtered_snp_file();
             },
             is_optional => 1,
-            is_input    => '1',
             doc         => 'The snp filter output file from maq.',
         },
         sniper_snp_file => {
@@ -67,8 +66,14 @@ EOS
 }
 
 sub execute {
-
     my ($self) = @_;
+    $DB::single=1;
+
+    # FIXME shortcutting... should we do this or not post-testing?
+    if (-s $self->output_file) {
+        $self->status_message("Previous output detected, shortcutting");
+        return 1;
+    }
 
     my $tumor_snp_file = $self->tumor_snp_file();
     if ( ! Genome::Utility::FileSystem->validate_file_for_reading($tumor_snp_file) ) {
@@ -76,25 +81,44 @@ sub execute {
     }
 
     my $sniper_snp_file = $self->sniper_snp_file();
+    my $sniper_snp_file_sorted = "/tmp/snipers.sorted";
     if ( ! Genome::Utility::FileSystem->validate_file_for_reading($sniper_snp_file) ) {
         die 'cant read from: ' . $sniper_snp_file;
     }
-
+    my $sort_cmd = "sort -k1,1 -k2,2n $sniper_snp_file | grep -v ^MT > $sniper_snp_file_sorted";
+    my $result = Genome::Utility::FileSystem->shellcmd(
+        cmd          => $sort_cmd,
+        input_files  => [ $sniper_snp_file ],
+        output_files => [ $sniper_snp_file_sorted ],
+        skip_if_output_is_present => 0
+    );
+    
+    my $tumor_snp_file_sorted = "/tmp/tumors.sorted";
+    $sort_cmd = "sort -k1,1 -k2,2n $tumor_snp_file > $tumor_snp_file_sorted";
+    $result = Genome::Utility::FileSystem->shellcmd(
+        cmd          => $sort_cmd,
+        input_files  => [ $tumor_snp_file ],
+        output_files => [ $tumor_snp_file_sorted ],
+        skip_if_output_is_present => 0
+    );
+    
     my $output_file = $self->output_file();
-    if ( ! Genome::Utility::FileSystem->validate_file_for_writing($output_file) ) {
+    if ( ! Genome::Utility::FileSystem->validate_file_for_writing_overwrite($output_file) ) {
         die 'cant write to: ' . $sniper_snp_file;
     }
-
+    
 
     # passing sniper snp file in first makes it the default output
-    my $cmd = join(' ', 'gmt snp intersect', $sniper_snp_file, $tumor_snp_file);
-    my $result = Genome::Utility::FileSystem->shellcmd(
+    my $cmd = "gmt snp intersect-chrom-pos -file1=$sniper_snp_file_sorted -file2=$tumor_snp_file_sorted --intersect-output=$output_file --f1-only=/dev/null --f2-only=/dev/null";
+    $result = Genome::Utility::FileSystem->shellcmd(
         cmd          => $cmd,
-        input_files  => [ $sniper_snp_file, $tumor_snp_file ],
+        input_files  => [ $sniper_snp_file_sorted, $tumor_snp_file_sorted ],
         output_files => [ $output_file ],
         skip_if_output_is_present => 0
     );
-
+    system("grep ^MT $sniper_snp_file >> $output_file");
+    unlink($sniper_snp_file_sorted);
+    unlink($tumor_snp_file_sorted);
     return $result;
 }
 

@@ -27,6 +27,13 @@ class Genome::Model::Tools::Somatic::UcscAnnotator{
             doc => "File of sites unable to be annotated",
             default => 'ucsc_unannotated_variants',
         },
+        skip => {
+            is => 'Boolean',
+            default => '0',
+            is_input => 1,
+            is_optional => 1,
+            doc => "If set to true... this will do nothing! Fairly useless, except this is necessary for workflow.",
+        },
     ],
 };
 
@@ -49,6 +56,13 @@ EOS
 
 sub execute {
     my $self = shift;
+    $DB::single=1;
+
+    if ($self->skip) {
+        $self->status_message("Skip flag set. Skipping execution.");
+        return 1;
+    }
+
     my $InputFile = $self->input_file;
     my $outfile = $self->output_file;
 

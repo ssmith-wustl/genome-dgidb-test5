@@ -10,7 +10,7 @@ use FileHandle;
 use Data::Dumper;
 use List::Util qw( max );
 
-class Genome::Model::Tools::Somatic::Sniper{
+class Genome::Model::Tools::Somatic::Sniper {
     is => ['Command','Genome::Software'],
     has => [
         tumor_model => { is => 'Genome::Model',
@@ -52,7 +52,7 @@ class Genome::Model::Tools::Somatic::Sniper{
         quality_filter => {
             is => 'Integer',
             is_input=>1,
-            is_optional=>1,
+            is_optional=>1, 
             doc=>'minimum somatic quality to include in the snp output. default is 15.',
             default=>15,
         },
@@ -61,7 +61,10 @@ class Genome::Model::Tools::Somatic::Sniper{
             default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa', 
             doc => 'The somatic sniper reference file',
         },
-
+        # Make workflow choose 64 bit blades
+        lsf_resource => {
+            default_value => 'rusage[mem=4000] select[type==LINUX64] span[hosts=1]',
+        } 
     ],
 };
 
@@ -82,20 +85,46 @@ sub help_detail {
 EOS
 }
 
+my $error_fh;
+
 sub resolve_software_version{
     my $self = shift;
     return 'test';
 }
 
+sub error_message {
+    my $self=shift;
+    my $line =shift;
+    unless($error_fh) {
+        $error_fh = IO::File->new("/gscuser/gsanders/svn/test-pm/Genome/Model/Tools/Somatic/test_runs/Sniper_error.out",">");
+    }
+    $error_fh->print($line);
+    $self->SUPER::error_message($line);
+}
+
+sub status_message {
+    my $self=shift;
+    my $line =shift;
+    unless($error_fh) {
+        $error_fh = IO::File->new("/gscuser/gsanders/svn/test-pm/Genome/Model/Tools/Somatic/test_runs/Sniper_error.out",">");
+    }
+    $error_fh->print($line);
+    $self->SUPER::status_message($line);
+}
+
+
+
 sub execute {
     my $self = shift;
     $DB::single = 1;
 
-    #this may be removed later because it seems to skip this step perhaps without warning
-    if (-e $self->output_snp_file && -e $self->output_indel_file) {
-        $self->status_message("Skipping, output file exists");
+    # Skip if both output files exist... not sure if this should be here or not
+    if ((-s $self->output_snp_file)&&(-s $self->output_indel_file)) {
+        $self->status_message("Both output files are already present... skip sniping");
         return 1;
     }
+
+    #this may be removed later because it seems to skip this step perhaps without warning
     unless($self->tumor_model) {
         $self->error_message("Unable to find tumor model for: " . $self->tumor_model_id);
     }
@@ -116,11 +145,11 @@ sub execute {
         $self->error_message("Could not validate normal file:  ".$self->_normal_file );
         return;
     } 
-    
-    
+
     #check for result
+    $DB::single=1;
     
-    my $inputs_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params('Genome::Model::Tools::Somatic::Sniper',_tumor_file => $self->_tumor_file, _normal_file => $self->_normal_file, output_file => $self->output_file, reference_file => $self->reference_file );  #TODO, I don't really think output file should be a part of these params here, up for debate though
+    my $inputs_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params('Genome::Model::Tools::Somatic::Sniper',_tumor_file => $self->_tumor_file, _normal_file => $self->_normal_file, output_snp_file => $self->output_snp_file, output_indel_file => $self->output_indel_file,reference_file => $self->reference_file );  #TODO, I don't really think output file should be a part of these params here, up for debate though
     
 
 # Skip this for now until we figure out how we want to do this
@@ -134,8 +163,9 @@ sub execute {
     }
 =cut
 
-    my $cmd = "~charris/c-src-BLECH/samtools_somatic_copy/samtools somaticsniper -Q " . $self->quality_filter. " -f ".$self->reference_file." ".$self->_tumor_file." ".$self->_normal_file ." " . $self->output_snp_file . " " . $self->output_indel_file; 
-    my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->_tumor_file,$self->_normal_file], output_files=>[$self->output_file], skip_if_output_is_present=>0 );
+    $DB::single=1;
+    my $cmd = "/gscuser/charris/c-src-BLECH/trunk/samtool2/samtools somaticsniper -Q " . $self->quality_filter. " -f ".$self->reference_file." ".$self->_tumor_file." ".$self->_normal_file ." " . $self->output_snp_file . " " . $self->output_indel_file; 
+    my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->_tumor_file,$self->_normal_file], output_files=>[$self->output_snp_file,$self->output_indel_file], skip_if_output_is_present=>0 );
 
 # Skip this for now until we figure out how we want to do this
 =cut

@@ -32,6 +32,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
         no_headers => {
             is => 'Boolean',
             is_optional => 1,
+            is_input => 1,
             default => 0,
             doc => 'Exclude headers in report output',
         },
@@ -44,6 +45,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
         annotation_filter => {
             is => 'String',
             is_optional => 1,
+            is_input => 1,
             default => 'gene',
             doc => 'The type of filtering to use on the annotation results. There are currently 3 valid options:
                     "none" -- This returns all possible transcript annotations for a variant. All transcript status are allowed including "unknown" status.
@@ -122,7 +124,8 @@ EOS
 
 sub execute { 
     my $self = shift;
-    
+    $DB::single=1;
+
     # generate an iterator for the input list of variants
     my $variant_file = $self->variant_file;
 

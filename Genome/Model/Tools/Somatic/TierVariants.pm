@@ -16,6 +16,7 @@ class Genome::Model::Tools::Somatic::TierVariants{
         ucsc_file => {
             is  => 'String',
             is_input  => 1,
+            is_optional => 1,
             doc => 'The output of the ucsc annotation',
         },
         transcript_annotation_file => {
@@ -34,6 +35,13 @@ class Genome::Model::Tools::Somatic::TierVariants{
             is_output => 1,
             doc=> 'The output of the Tier Variants process.',
         },
+        only_tier_1 => {
+            type => 'Boolean',
+            default => 0,
+            is_input => 1,
+            is_optional => 1,
+            doc=> 'If set to true (defaults to false), do only tier 1 annotation. This eliminates the need for a ucsc file.',
+        }
     ],
     has_optional => [
         tier1_file => {
@@ -78,6 +86,7 @@ EOS
 
 sub execute {
     my $self = shift;
+    $DB::single=1;
 
     my $ucsc_file = $self->ucsc_file;
     my $transcript_annotation_file = $self->transcript_annotation_file;
@@ -179,7 +188,8 @@ sub execute {
                 $variant_at{$chr}{$start}{$stop_pos}{$hash->{reference}}{$hash->{variant}} = $line;
             }
         } elsif ($type =~ /snp/i) {
-            my ($chr, $start, $somatic_score, $reference, $genotype) = split /\t/, $line;
+            my ($chr, $start, $reference, $genotype) = split /\t/, $line;
+            $DB::single=1;
             my @variant_alleles = Genome::Info::IUB::variant_alleles_for_iub($reference, $genotype);
             my $stop = $start;
             my $assigned_position_to_tier = 0;
@@ -203,7 +213,13 @@ sub execute {
         }
     }
 
+    if ($self->only_tier_1) {
+        $self->status_message("only_tier_1 flag is set. Skipping tiers 2-4. Exiting.");
+        return 1;
+    }
+
     unless (-e $ucsc_file) {
+        $self->status_message("ucsc file $ucsc_file does not exist. Skipping tiers 2-4. Exiting.");
         return 1;
     }
 
