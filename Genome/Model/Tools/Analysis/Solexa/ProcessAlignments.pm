@@ -28,12 +28,17 @@ class Genome::Model::Tools::Analysis::Solexa::ProcessAlignments {
 		flowcell_id	=> { is => 'Text', doc => "Search by flowcell_id", is_optional => 1 },
 		sample_name	=> { is => 'Text', doc => "Search by sample name", is_optional => 1 },
 		library_name	=> { is => 'Text', doc => "Search by library name" , is_optional => 1},
+		project_name	=> { is => 'Text', doc => "Search by research project name" , is_optional => 1},
 		include_lanes	=> { is => 'Text', doc => "Specify which lanes of a flowcell to include [e.g. 1,2,3]" , is_optional => 1},
 		output_dir	=> { is => 'Text', doc => "Output dir containing the fastq_dir" , is_optional => 1},
 		aligner	=> { is => 'Text', doc => "Alignment tool to use (bowtie|maq|novoalign) [bowtie]" , is_optional => 1},
 		match_to_regions	=> { is => 'Text', doc => "A file of regions to match alignments against" , is_optional => 1},
 		output_name	=> { is => 'Text', doc => "A string for naming output files e.g. layers" , is_optional => 1},
 		varscan_roi	=> { is => 'Text', doc => "Run varscan on ROI file" , is_optional => 1},
+		map_unmapped	=> { is => 'Text', doc => "Map unmapped reads with Novoalign" , is_optional => 1},
+		unmapped_indels	=> { is => 'Text', doc => "Detect indels from Novoalign of unmapped" , is_optional => 1},
+		compile_bowtie	=> { is => 'Text', doc => "Compile all Bowtie alignments" , is_optional => 1},
+		compile_dedup	=> { is => 'Text', doc => "Compile all deduplicated Bowtie alignments" , is_optional => 1},
 	],
 };
 
@@ -71,16 +76,26 @@ sub execute {                               # replace with real execution logic.
 	my $flowcell_id = $self->flowcell_id;
 	my $sample_name = $self->sample_name;
 	my $library_name = $self->library_name;
+	my $project_name = $self->project_name;
 	my $aligner = "bowtie";
 	$aligner = $self->aligner if($self->aligner);
 	my $output_dir = "./";
 	$output_dir = $self->output_dir if($self->output_dir);
-	my $output_name;
+	my $output_name = "sample";
 	$output_name = $self->output_name if($self->output_name);
 	my $match_to_regions;
 	$match_to_regions = $self->match_to_regions if($self->match_to_regions);
 	my $varscan_roi;
 	$varscan_roi = $self->varscan_roi if($self->varscan_roi);
+	my $map_unmapped;
+	$map_unmapped = $self->map_unmapped if($self->map_unmapped);
+	my $unmapped_indels;
+	$unmapped_indels = $self->unmapped_indels if($self->unmapped_indels);
+	my $compile_bowtie; my $compile_dedup;
+	$compile_bowtie = $self->compile_bowtie if($self->compile_bowtie);
+	$compile_dedup = $self->compile_dedup if($self->compile_dedup);
+	system("rm -rf $compile_bowtie") if($compile_bowtie && -e $compile_bowtie);
+	system("rm -rf $compile_dedup") if($compile_dedup && -e $compile_dedup);
 
 	## Handle include-lanes when specified ##
 
@@ -111,12 +126,24 @@ sub execute {                               # replace with real execution logic.
 
 	if($sample_name)
 	{
-		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where sample_name LIKE '\%$sample_name\%' ORDER BY lane" --instance warehouse --parse`;
+		if($project_name)
+		{
+			$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where sample_name LIKE '\%$sample_name\%' AND research_project = '$project_name' ORDER BY lane" --instance warehouse --parse`;
+		}
+		else
+		{
+			$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where sample_name LIKE '\%$sample_name\%' ORDER BY lane" --instance warehouse --parse`;
+		}
 	}
 
 	if($library_name)
 	{
 		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where library_name = '$library_name' ORDER BY lane" --instance warehouse --parse`;
+	}
+
+	if($project_name && !$sample_name)
+	{
+		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where research_project = '$project_name' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;		
 	}
 
 	if($sqlrun)
@@ -180,7 +207,7 @@ sub execute {                               # replace with real execution logic.
 					my $alignment_logfile = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane_name . "_sequence.bowtie.log";
 
 					## Print result ##
-					if(-e $output_fastq && -e $alignment_outfile)
+					if(-e $alignment_outfile)
 					{
 						$num_reads =~ s/[^0-9]//g;
 
@@ -205,10 +232,48 @@ sub execute {                               # replace with real execution logic.
 								}
 							}
 							
+					
 							$align_result .= "\t$alignment_outfile";
 
 							print "$flowcell\t$lane_name\t$read_length bp $end_type\t$sample\t" . commify($num_reads) . "\t$align_result\n";
+
+							## Print paired end results ##
+
+							my $paired_outfile = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane . "_paired.bowtie";
+							my $paired_logfile = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane . "_paired.bowtie.log";
+
+							if(-e $paired_logfile)
+							{
+								$align_result = "";
+								$reads_aligned = `grep Reported $paired_logfile | grep output`;
+								my @temp = split(/\s+/, $reads_aligned);
+								$reads_aligned = $temp[1];
+								if($reads_aligned)
+								{
+									$align_result .= commify($reads_aligned);
+									$new_align_pct = sprintf("%.2f", ($reads_aligned / $num_reads * 100)) . '%';
+									$align_result .= "\t$new_align_pct";
+		
+									$align_result .= "\t$paired_outfile";
+		
+									print "$flowcell\t$lane\t$read_length bp $end_type\t$sample\t" . commify($num_reads) . "\t$align_result\n";
+								}
+							}
 							
+
+
+
+
+							if(-e $alignment_outfile && $compile_bowtie)
+							{
+								system("cat $alignment_outfile >>$compile_bowtie");
+								system("cat $alignment_outfile.roi >>$compile_bowtie.roi") if(-e "$alignment_outfile.roi");
+							}
+
+							if(-e "$alignment_outfile.dedup" && $compile_dedup)
+							{
+								system("cat $alignment_outfile.dedup >>$compile_dedup");
+							}
 							
 							## Launch required processing steps ##
 							
@@ -242,6 +307,39 @@ sub execute {                               # replace with real execution logic.
 									system("bsub -q long -R\"select[mem>4000] rusage[mem=4000]\" $cmd");
 								}
 							}
+							
+							if($map_unmapped)
+							{
+								my $unmapped_file = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane_name . "_sequence.bowtie.unmapped.fastq";
+								my $reference = "/gscmnt/sata194/info/sralign/dkoboldt/human_refseq/ref.k14s3m.novoindex";
+								system("bsub -q long -R\"select[type==LINUX64 && mem>12000] rusage[mem=12000]\" -M 14000000 -oo $unmapped_file.novoalign.log \"/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.04.02/novocraft/novoalign -a -l 36 -t 240 -k -d $reference -f $unmapped_file >$unmapped_file.novoalign\"");
+							}
+							
+							if($unmapped_indels)
+							{
+								my $bowtie_file = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane_name . "_sequence.bowtie";
+								my $novoalign_file = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane_name . "_sequence.bowtie.unmapped.fastq.novoalign";
+								if(-e $novoalign_file)
+								{
+									my $script_filename = "scripts/process-$flowcell-$aligner-$lane_name-novoalign-indels.sh";
+									open(SCRIPT, ">$script_filename");
+									print SCRIPT "!#/gsc/bin/sh\n";
+									## Step one is Varscan ##
+									
+									my $cmd = "varscan parse-alignments $novoalign_file --output-indels $novoalign_file.indels";
+									print SCRIPT "$cmd\n";
+									$cmd = "varscan combine-indels $novoalign_file.indels $novoalign_file.indels.combined";
+									print SCRIPT "$cmd\n";
+									$cmd = "perl /gscuser/dkoboldt/src/perl_modules/trunk/VarScan/varscan.pl get-readcounts $novoalign_file.indels.combined $bowtie_file $novoalign_file.indels.combined.b-readcounts";
+									print SCRIPT "$cmd\n";
+									$cmd = "perl /gscuser/dkoboldt/src/perl_modules/trunk/VarScan/varscan.pl get-readcounts $novoalign_file.indels.combined $novoalign_file $novoalign_file.indels.combined.n-readcounts";
+									print SCRIPT "$cmd\n";
+									
+									close(SCRIPT);
+									system("bsub -q long -R\"select[mem>4000] rusage[mem=4000]\" sh $script_filename");
+								}
+							}
+							
 							
 							## Launch PE ##
 							if($end_type eq "PE" && $lane_pairs{"$flowcell.$lane"} eq "2")

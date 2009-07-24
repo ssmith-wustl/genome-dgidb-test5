@@ -13,6 +13,12 @@ package Genome::Model::Tools::Analysis::Solexa::AlignReads;     # rename this wh
 #			
 #####################################################################################################################################
 
+my $bowtie_reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.bowtie";
+my $bowtie_params = "-m 1 --best --strata";
+
+my $novoalign_reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.novoindex-k14-s3-v2.03.01";
+my $novoalign_params = "-a -l 36 -t 240";	# -o SAM
+
 use strict;
 use warnings;
 use Cwd;
@@ -25,11 +31,9 @@ class Genome::Model::Tools::Analysis::Solexa::AlignReads {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		flowcell_id	=> { is => 'Text', doc => "Search by flowcell_id", is_optional => 1 },
-		sample_name	=> { is => 'Text', doc => "Search by sample name", is_optional => 1 },
-		library_name	=> { is => 'Text', doc => "Search by library name" , is_optional => 1},
+		flowcell_dir	=> { is => 'Text', doc => "Dir containing a fastq_dir", is_optional => 0 },
 		include_lanes	=> { is => 'Text', doc => "Specify which lanes of a flowcell to include [e.g. 1,2,3]" , is_optional => 1},
-		output_dir	=> { is => 'Text', doc => "Output dir containing the fastq_dir" , is_optional => 1},
+		output_dir	=> { is => 'Text', doc => "Output dir for Bowtie; defaults to [dir]/bowtie_out" , is_optional => 1},
 		aligner	=> { is => 'Text', doc => "Alignment tool to use (bowtie|maq|novoalign) [bowtie]" , is_optional => 1},
 	],
 };
@@ -65,9 +69,7 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	## Get required parameters ##
-	my $flowcell_id = $self->flowcell_id;
-	my $sample_name = $self->sample_name;
-	my $library_name = $self->library_name;
+	my $flowcell_dir = $self->flowcell_dir;
 	my $aligner = "bowtie";
 	$aligner = $self->aligner if($self->aligner);
 	my $output_dir = "./";
@@ -88,27 +90,84 @@ sub execute {                               # replace with real execution logic.
 		}
 	}
 	
-
-	## Get current directory ##
+	## Get all fastq files in flowcell dir ##
 	
-	my $cwd = getcwd;
-
-	my $sqlrun, my $rows_returned, my $cmd;
-
-	if($flowcell_id)
+	if(-d $flowcell_dir)
 	{
-		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where flow_cell_id = '$flowcell_id' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;
+		my $fastq_dir = $flowcell_dir . "/fastq_dir";
+
+		## Create alignment output directory ##
+		my $alignment_dir = $flowcell_dir . "/" . $aligner . "_out";	
+		mkdir($alignment_dir) if(!(-d $alignment_dir));
+
+		## Approach 1: look for all possible lanes ##
+		
+		for(my $lane = 1; $lane <= 8; $lane++)
+		{
+			if(!$include_lanes || $lanes_to_include{$lane})
+			{
+				## Fragment-end read ##
+				
+				if(-e "$fastq_dir/s_" . $lane . "_sequence.fastq")
+				{
+					my $fastq_file1 = "$fastq_dir/s_" . $lane . "_sequence.fastq";
+
+					## Run the alignment ##
+					
+					if($aligner eq "bowtie")
+					{
+						my $reference = $bowtie_reference;
+
+						## Launch SE ##
+						print "$fastq_file1\tbowtie SE\n";
+						my $alignment_outfile1 = $alignment_dir . "/s_" . $lane . "_sequence.$aligner";
+						system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -M 6000000 -oo $alignment_outfile1.log bowtie $bowtie_params --unfq $alignment_outfile1.unmapped.fastq --maxfq $alignment_outfile1.multiple.fastq $reference $fastq_file1 $alignment_outfile1");
+					}
+
+				}
+				
+				## Paired-end reads ##
+				
+				elsif(-e "$fastq_dir/s_" . $lane . "_1_sequence.fastq")
+				{
+					my $fastq_file1 = "$fastq_dir/s_" . $lane . "_1_sequence.fastq";
+					my $fastq_file2 = "$fastq_dir/s_" . $lane . "_2_sequence.fastq";
+					
+					## Run the alignment ##
+					
+					if($aligner eq "bowtie")
+					{
+						my $reference = $bowtie_reference;
+
+						## Launch SE ##
+						print "$fastq_file1\tbowtie SE\n";
+						my $alignment_outfile1 = $alignment_dir . "/s_" . $lane . "_1_sequence.$aligner";
+						system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -M 6000000 -oo $alignment_outfile1.log bowtie $bowtie_params --unfq $alignment_outfile1.unmapped.fastq --maxfq $alignment_outfile1.multiple.fastq $reference $fastq_file1 $alignment_outfile1");
+
+						print "$fastq_file2\tbowtie SE\n";
+						my $alignment_outfile2 = $alignment_dir . "/s_" . $lane . "_2_sequence.$aligner";
+						system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -M 6000000 -oo $alignment_outfile2.log bowtie $bowtie_params --unfq $alignment_outfile2.unmapped.fastq --maxfq $alignment_outfile2.multiple.fastq $reference $fastq_file2 $alignment_outfile2");
+					}
+				}
+			}
+		}
+
+		## Approach 2: List all files in fastq_dir ##
+
+		my $fastq_list = `find $fastq_dir -name "*.fastq" -print`;
+		chomp($fastq_list);
+
+		my @fastq_files = split(/\n/, $fastq_list);
+		
+		@fastq_files = sort @fastq_files;
+		
+		foreach my $fastq_file (@fastq_files)
+		{
+#			print "$fastq_file\n";
+		}
 	}
 
-	if($sample_name)
-	{
-		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where sample_name LIKE '\%$sample_name\%' ORDER BY lane" --instance warehouse --parse`;
-	}
-
-	if($library_name)
-	{
-		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where library_name = '$library_name' ORDER BY lane" --instance warehouse --parse`;
-	}
+	my $sqlrun = my $rows_returned = "";
 
 	if($sqlrun)
 	{
@@ -178,13 +237,11 @@ sub execute {                               # replace with real execution logic.
 						
 						if($aligner eq "bowtie")
 						{
-							#my $reference = "/gscmnt/sata194/info/sralign/dkoboldt/human_refseq/Hs36_1c_dkoboldt.bowtie";
-							my $reference = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/Hs36_1c_dkoboldt.bowtie";
+							my $reference = $bowtie_reference;
 
 							## Launch SE ##
-							system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -oo $alignment_outfile.log bowtie -m 1 --unfq $alignment_outfile.unmapped.fastq --maxfq $alignment_outfile.multiple.fastq $reference $output_fastq $alignment_outfile");
+							system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -M 6000000 -oo $alignment_outfile.log bowtie $bowtie_params --unfq $alignment_outfile.unmapped.fastq --maxfq $alignment_outfile.multiple.fastq $reference $output_fastq $alignment_outfile");
 
-						
 							## Launch PE ##
 							if($end_type eq "PE" && $lane_pairs{"$flowcell.$lane"} eq "2")
 							{
@@ -192,14 +249,27 @@ sub execute {                               # replace with real execution logic.
 								my $file2 = $output_fastq;
 								$file2 =~ s/1\_sequence\.fastq/2\_sequence\.fastq/;
 								my $paired_outfile = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane . "_paired.bowtie";
-								system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -oo $paired_outfile.log bowtie -m 1 -X 450 --unfq $paired_outfile.unmapped.fastq --maxfq $paired_outfile.multiple.fastq $reference -1 $file1 -2 $file2 $paired_outfile");
+							#	system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -oo $paired_outfile.log bowtie -m 1 -p 4 -I 50 -X 450 --unfq $paired_outfile.unmapped.fastq --maxfq $paired_outfile.multiple.fastq $reference -1 $file1 -2 $file2 $paired_outfile");
 							}
 						}
 						elsif($aligner eq "novoalign")
 						{
-							my $reference = "/gscmnt/sata194/info/sralign/dkoboldt/human_refseq/ref.unmasked.novoindex";
-							#system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -oo $alignment_outfile.log bowtie -m 1 --unfq $alignment_outfile.unmapped.fastq --maxfq $alignment_outfile.multiple.fastq $reference $output_fastq $alignment_outfile");
-							system("bsub -q long -R\"select[type==LINUX64 && mem>20000] rusage[mem=18000]\" -M 20000000 -oo $alignment_outfile.log \"/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.03.12/novocraft/novoalign -a -l 36 -t 240 -d $reference -f $output_fastq >$alignment_outfile\"");
+							## Think about setting -l 50 for 75 bp reads
+							## Launch SE ##
+							my $reference = $novoalign_reference;
+							$novoalign_params = "-a -l 50 -t 240" if($read_length >= 70);	
+
+							system("bsub -q long -R\"select[type==LINUX64 && mem>20000] rusage[mem=18000]\" -M 20000000 -oo $alignment_outfile.log \"/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.02/novocraft/novoalign $novoalign_params -d $reference -f $output_fastq >$alignment_outfile\"");
+
+							## Launch PE ##
+							if($end_type eq "PE" && $lane_pairs{"$flowcell.$lane"} eq "2")
+							{
+								my $file1 = $output_fastq;
+								my $file2 = $output_fastq;
+								$file2 =~ s/1\_sequence\.fastq/2\_sequence\.fastq/;
+								my $paired_outfile = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane . "_paired.novoalign";
+								system("bsub -q long -R\"select[type==LINUX64 && mem>16000] rusage[mem=16000]\" -M 20000000 -oo $paired_outfile.log \"/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.02/novocraft/novoalign $novoalign_params -d $reference -f $file1 $file2 >$paired_outfile\"");
+							}
 						}
 					}
 					else

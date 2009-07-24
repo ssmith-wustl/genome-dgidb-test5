@@ -28,6 +28,7 @@ class Genome::Model::Tools::Analysis::Solexa::LoadReads {
 		flowcell_id	=> { is => 'Text', doc => "Search by flowcell_id", is_optional => 1 },
 		sample_name	=> { is => 'Text', doc => "Search by sample name", is_optional => 1 },
 		library_name	=> { is => 'Text', doc => "Search by library name" , is_optional => 1},
+		project_name	=> { is => 'Text', doc => "Search by research project name" , is_optional => 1},
 		print_location	=> { is => 'Text', doc => "If set to 1, prints data location" , is_optional => 1},
 		include_lanes	=> { is => 'Text', doc => "Specify which lanes of a flowcell to include [e.g. 1,2,3]" , is_optional => 1},
 		output_dir	=> { is => 'Text', doc => "Output dir to receive files" , is_optional => 1},
@@ -68,6 +69,7 @@ sub execute {                               # replace with real execution logic.
 	my $flowcell_id = $self->flowcell_id;
 	my $sample_name = $self->sample_name;
 	my $library_name = $self->library_name;
+	my $project_name = $self->project_name;
 	my $print_location;
 	$print_location = $self->print_location if($self->print_location);
 	my $output_dir = "./";
@@ -109,6 +111,11 @@ sub execute {                               # replace with real execution logic.
 	{
 		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where library_name = '$library_name' ORDER BY lane" --instance warehouse --parse`;
 	}
+
+	if($project_name)
+	{
+		$sqlrun = `sqlrun "select flow_cell_id, lane, sample_name, library_name, read_length, filt_clusters, seq_id, gerald_directory, median_insert_size, filt_aligned_clusters_pct from solexa_lane_summary where research_project = '$project_name' ORDER BY flow_cell_id, lane" --instance warehouse --parse`;		
+	}	
 
 	if($sqlrun)
 	{
