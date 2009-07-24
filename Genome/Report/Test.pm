@@ -407,33 +407,44 @@ package Genome::Report::XSLTTest;
 use strict;
 use warnings;
 
-use base 'Genome::Utility::TestBase';
+use base 'Test::Class';
 
 use Data::Dumper 'Dumper';
 use Genome::Report;
 use Test::More;
 
-sub test_class {
-    return 'Genome::Report::XSLT';
+sub dir {
+    return '/gsc/var/cache/testsuite/data/Genome-Report-XSLT';
 }
 
-sub xslt {
-    return $_[0]->{_object};
-}
-
-sub params_for_test_class {
-    return (
-        report => Genome::Report->create_report_from_directory($_[0]->dir.'/Assembly_Stats'),
-        xslt_file => $_[0]->dir.'/AssemblyStats.txt.xsl',
-    );
-}
-
-sub test01_transform : Test(1) {
+sub test01_transform_report : Test(4) {
     my $self = shift;
 
-    my $txt = $self->xslt->transform_report;
+    use_ok('Genome::Report::XSLT');
+    
+    my $report = Genome::Report->create_report_from_directory($self->dir.'/Assembly_Stats')
+        or die "Can't get report\n";
+    my $xslt_file = $self->dir.'/AssemblyStats.txt.xsl';
+        
+    # Valid
+    my $txt = Genome::Report::XSLT->transform_report(
+        report => $report,
+        xslt_file => $xslt_file,
+    );
     ok($txt, 'transformed report');
     #print $txt,"\n";
+    
+    #< Invalid >#
+    # no report
+    my $no_report = Genome::Report::XSLT->transform_report(
+        xslt_file => $xslt_file,
+    );
+    ok(!$no_report, "Failed as expected, w/o report");
+    # no xslt_file
+    my $no_xslt_file = Genome::Report::XSLT->transform_report(
+        report => $report,
+    );
+    ok(!$no_xslt_file, "Failed as expected, w/o xslt file");
 
     return 1;
 }
