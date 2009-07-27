@@ -25,6 +25,18 @@ class Genome::Model::Tools::Sam::SamHeaderEditor {
             is => 'String',
             doc => 'bam version used to generate the file',
         },
+        seq_id_field => {
+            is => 'String',
+            doc => 'The seq_id off of the Solexa lane summary table for this alignment.  Will be set to the Read Group (RG tag) name.',
+        },
+        description_field => {
+            is => 'String',
+            doc => 'The seq_id off of the Solexa lane summary table for this alignment.  Will be set to the Read Group (RG tag) name.',
+        },
+        insert_size_field => {
+            is => 'String',
+            doc => 'The median_insert_size field off of the Solexa lane summary table for this alignment.  Will be set to the Paired Insert (PI tag) name.',
+        },
         sort_order_field => {
             is => 'String',
             doc => 'sort order of the bam file',
@@ -121,11 +133,13 @@ sub execute {
    #see note in create() for explanation of 'main' package definition.
    my $she = new main::edu::wustl::genome::samtools::SamHeaderEditor($self->input_sam_file, $self->output_sam_file);
   
-   my $rg_field_result = $she->setReadGroupName($self->library_field);  #this should also be the id of the read group
+   my $rg_field_result = $she->setReadGroupName($self->seq_id_field);  #this should also be the id of the read group
    print ("\nrg field result: $rg_field_result\n");
  
    my $rg_result = $she->addReadGroup( 
-                         $self->library_field, #the id of the read group is the first field 
+                         $self->seq_id_field, #the id of the read group is the first field 
+                         $self->description_field, #the description of the read group, e.g. paired end or fragment 
+                         $self->insert_size_field, #setting the PI tag. 
                          $self->sample_name_field, 
                          $self->platform_field, 
                          $self->platform_unit_field, 
