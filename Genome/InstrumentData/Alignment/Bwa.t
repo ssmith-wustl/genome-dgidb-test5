@@ -31,6 +31,8 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   sequencing_platform => 'solexa',
                                                                   flow_cell_id => '12345',
                                                                   lane => '1',
+                                                                  seq_id => '2989765',
+                                                                  median_insert_size => '22',
                                                                   sample_name => 'test_sample_name',
                                                                   library_name => 'test_sample_name-lib1',
                                                                   run_name => 'test_run_name',
@@ -38,6 +40,9 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   run_type => 'Paired End Read 2',
                                                                   gerald_directory => $gerald_directory,
                                                               );
+
+print ("\nid: ".$instrument_data->seq_id."\n");
+
 my @in_fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
 $instrument_data->set_list('fastq_filenames',@in_fastq_files);
 isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
@@ -87,6 +92,8 @@ $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                id => '-123458',
                                                                flow_cell_id => '12345',
                                                                lane => '1',
+                                                               seq_id => '2989765',
+                                                               median_insert_size => '22',
                                                                sequencing_platform => 'solexa',
                                                                sample_name => 'test_sample_name',
                                                                library_name => 'test_sample_name-lib1',
@@ -138,6 +145,8 @@ ok($alignment->find_or_generate_alignment_data,'generated new alignment data for
 my $dir2 = $alignment->alignment_directory;
 ok($dir2, "alignments found/generated");
 ok(-d $dir2, "result is a real directory");
+print "\n ****************** $dir2 \n";
+
 ok($alignment->remove_alignment_directory,'removed alignment directory '. $dir2);
 ok(! -e $dir2, 'alignment directory does not exist');
 
