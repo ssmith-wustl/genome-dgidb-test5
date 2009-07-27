@@ -448,8 +448,26 @@ sub _run_aligner {
     }
     
     $DB::single = 1;
+
+    my $insert_size_for_header;
+    if ($self->instrument_data->median_insert_size) {
+        $insert_size_for_header= $self->instrument_data->median_insert_size;
+    } else {
+        $insert_size_for_header = 0;
+    }
+
+    my $description_for_header;
+    if ($self->instrument_data->is_paired_end) {
+        $description_for_header = 'paired end';
+    } else {
+        $description_for_header = 'fragment';
+    }
+
     my $editor = Genome::Model::Tools::Sam::SamHeaderEditor->create( input_sam_file => $sorted_bam_output->filename,
                                                                  output_sam_file => $self->alignment_file,
+                                                                 description_field => $description_for_header,
+                                                                 seq_id_field => $self->instrument_data->seq_id,
+                                                                 insert_size_field => $insert_size_for_header, 
                                                                  library_field => $self->instrument_data->library_name,
                                                                  bam_version_field => '0.1.2',
                                                                  sample_name_field => $self->instrument_data->sample_name,
