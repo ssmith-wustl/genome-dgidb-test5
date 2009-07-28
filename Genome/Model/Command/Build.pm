@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
 
 class Genome::Model::Command::Build {
     is => [ 'Genome::Model::Event' ],
@@ -28,6 +29,26 @@ class Genome::Model::Command::Build {
 };
 
 sub sub_command_sort_position { 3 }
+
+
+# Why is this here? "Build" is both a noun and a verb.
+# "genome model build list" ends up getting routed here as Genome::Model::Command::Build takes precedence.
+# redirect that into the right place.
+# -ben
+
+sub resolve_class_and_params_for_argv {
+    my $class = shift;
+    my @args = @_;
+
+    if ($class eq "Genome::Model::Command::Build" && grep {$_ eq "list"} @args) {
+        my ($list, @list_args) = @args;
+        return Genome::Model::Build::Command::List->resolve_class_and_params_for_argv(@list_args);
+    } else {
+        return $class->SUPER::resolve_class_and_params_for_argv(@args);
+    }
+}
+
+
 
 sub create {
     my $class = shift;
