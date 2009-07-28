@@ -67,18 +67,20 @@ This command is usually called as part of the reference-alignment solexa pipelin
 EOS
 }
 
+sub bsub_rusage {
+    return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=12000]' -M 1610612736";
+}
+
 
 sub execute {
     my $self = shift;
     my $model = $self->model;
     my $build = $self->build;
 
-    #my $sam_pathname = $self->proper_sam_pathname('read_aligner_version');
-    #my $sam_pathname = '/gscuser/dlarson/samtools/r301wu1/samtools';
     my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($model->indel_finder_version);
 
     # ensure the reference sequence exists.
-    my $ref_seq_file = $model->reference_sequence_path.'/all_sequences.fasta';
+    my $ref_seq_file = $model->reference_build->full_consensus_path('fasta');
     my $rv = $self->check_for_existence($ref_seq_file);
     return unless $self->_check_rv("reference sequence file $ref_seq_file does not exist", $rv);
     
@@ -89,9 +91,7 @@ sub execute {
         chmod 02775, $analysis_base_path;
     }
 
-    #my ($pileup_file) =  $build->_consensus_files($self->ref_seq_id).'.samtools_pileup';
     my $maplist_dir = $build->accumulated_alignments_directory;
-    #my ($bam_file)  = glob("$maplist_dir/".$model->subject_name."*_rmdup.bam");
     my ($bam_file)  = $build->whole_rmdup_bam_file; 
 
     $rv = $self->check_for_existence($bam_file);
@@ -105,38 +105,59 @@ sub execute {
     # Remove the result files from any previous run
     unlink($snp_output_file, $filtered_snp_output_file, $indel_output_file, $filtered_indel_file);
  
-    my $indel_finder_params = (defined $model->indel_finder_params ? $model->indel_finder_params : " ");
+    my $indel_finder_params = (defined $model->indel_finder_params ? $model->indel_finder_params : '');
 
     my $samtools_cmd = "$sam_pathname pileup -c $indel_finder_params -f $ref_seq_file";
 
     #Originally "-S" was used as SNP calling. In r320wu1 version, "-v" is used to replace "-S" but with 
     #double indel lines embedded, this need sanitized
     #$rv = system "$samtools_cmd -S $bam_file > $snp_output_file"; 
-    $self->status_message("Find variations command: $samtools_cmd -v $bam_file > $snp_output_file");
-    $rv = system "$samtools_cmd -v $bam_file > $snp_output_file";  
-    return unless $self->_check_rv("Running samtools SNP failed with exit code $rv", $rv, 0);
+    
+    my $snp_cmd = "$samtools_cmd -v $bam_file > $snp_output_file";
+    $rv = system $snp_cmd;  
+    return unless $self->_check_rv("Running samtools SNP failed with exit code $rv\nCommand: $snp_cmd", $rv, 0);
 
-    #$rv = system "gt sam snp-sanitizer --snp-file $snp_output_file";
     my $snp_sanitizer = Genome::Model::Tools::Sam::SnpSanitizer->create(snp_file => $snp_output_file);
     $rv = $snp_sanitizer->execute;
     return unless $self->_check_rv("Running samtools snp-sanitizer failed with exit code $rv", $rv, 1);
     
-    $rv = system "$samtools_cmd -i $bam_file > $indel_output_file";
-    return unless $self->_check_rv("Running samtools indel failed with exit code $rv", $rv, 0);
+    my $indel_cmd = "$samtools_cmd -i $bam_file > $indel_output_file";
+    $rv = system $indel_cmd;
+    return unless $self->_check_rv("Running samtools indel failed with exit code $rv\nCommand: $indel_cmd", $rv, 0);
 
-    #$rv = system "gt sam indel-filter --indel-file $indel_output_file";
-    my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(indel_file => $indel_output_file);
-    $rv = $indel_filter->execute;
-    return unless $self->_check_rv("Running sam indel-filter failed with exit code $rv", $rv, 1);
+    #For test purpose, put filter switch here. In the future, probably only one is needed.
+    my $filter_type = $model->variant_filter || 'SnpFilter';
+
+    if ($filter_type =~ /^VarFilter$/i) {
+        my %params = (
+            bam_file     => $bam_file,
+            ref_seq_file => $ref_seq_file,
+            filtered_snp_out_file   => $filtered_snp_output_file,
+            filtered_indel_out_file => $filtered_indel_file,
+        );
+        $params{pileup_params} = $indel_finder_params if $indel_finder_params;
+        
+        my $varfilter = Genome::Model::Tools::Sam::VarFilter->create(%params);
+        $rv = $varfilter->execute;
+        return unless $self->_check_rv("Running samtools varFilter failed with exit code $rv", $rv, 1);
+    }
+    elsif ($filter_type =~ /^SnpFilter$/i) {
+        my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(indel_file => $indel_output_file);
+        $rv = $indel_filter->execute;
+        return unless $self->_check_rv("Running sam indel-filter failed with exit code $rv", $rv, 1);
    
-    #$rv = system "gt sam snp-filter --snp-file $snp_output_file --out-file $filtered_snp_output_file --indel-file $filtered_indel_file";
-    my $snp_filter = Genome::Model::Tools::Sam::SnpFilter->create(
-        snp_file   => $snp_output_file,
-        out_file   => $filtered_snp_output_file,
-        indel_file => $filtered_indel_file,
-    );
-    $rv = $snp_filter->execute;
-    return unless $self->_check_rv("Running sam snp-filter failed with exit code $rv", $rv, 1);
+        my $snp_filter = Genome::Model::Tools::Sam::SnpFilter->create(
+            snp_file   => $snp_output_file,
+            out_file   => $filtered_snp_output_file,
+            indel_file => $filtered_indel_file,
+        );
+        $rv = $snp_filter->execute;
+        return unless $self->_check_rv("Running sam snp-filter failed with exit code $rv", $rv, 1);
+    }
+    else {
+        $self->error_message("Invalid variant filter type: $filter_type");
+        return;
+    }
     
     $rv = $self->generate_genotype_detail_file;
     return unless $self->_check_rv('Generating genotype detail file errored out', $rv);

@@ -66,6 +66,10 @@ sub properties_hash {
                                           doc => 'command line args for the indel finder',
                                           is_optional => 1,
                                       },
+                  variant_filter => {
+                                     doc => 'variant filter type: VarFilter or SnpFilter',
+                                     is_optional => 1,
+                                    },
                   multi_read_fragment_strategy => {
                                                    doc => '',
                                                    is_optional => 1,

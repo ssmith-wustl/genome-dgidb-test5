@@ -28,8 +28,8 @@ my %options = (
     },
     max_read_depth => {
         is  => 'Integer',
-        doc => '-D maximum read depth, default 100',
-        default => 100,
+        doc => '-D maximum read depth, default 100000000',
+        default => 100000000,
     },
     snp_win_size => {
         is  => 'Integer',
@@ -56,6 +56,9 @@ my %options = (
         doc => '-G minimum indel score for nearby SNP filtering, default is 25',
         default => 25,
     },
+);
+
+my %other_options = (
     filtered_snp_out_file => {
         is  => 'String',
         doc => 'snp output file after filter',
@@ -65,6 +68,11 @@ my %options = (
         is  => 'String',
         doc => 'snp output file after filter',
         default => 'indel.varfilter',
+    },
+    pileup_params => {
+        is  => 'String',
+        doc => 'samtools pileup parameters',
+        default => '-q 1',
     },
 );
 
@@ -81,7 +89,7 @@ class Genome::Model::Tools::Sam::VarFilter {
             doc => 'reference sequence file used for samtools pileup',
         },
     ],
-    has_optional => [%options],
+    has_optional => [%options, %other_options],
 };
 
 
@@ -113,12 +121,11 @@ sub execute {
         TMPDIR => 1,
     );
     
-    my $pileup_cmd = sprintf('%s pileup -f %s -q 1 -c %s', $sam_path, $ref_seq, $bam_file);
+    my $pileup_cmd = sprintf('%s pileup -f %s %s -c %s', $sam_path, $ref_seq, $self->pileup_params, $bam_file);
     
     my $filter_cmd = $self->samtools_pl_path . ' varFilter';
 
     for my $option (keys %options) {
-        next if $option =~ /^filtered/;
         if (defined $self->$option) {
             my ($opt) = $options{$option}->{doc} =~ /^(\-\S)\s/;
             $filter_cmd .= " $opt " . $self->$option;
