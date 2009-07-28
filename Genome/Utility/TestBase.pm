@@ -115,7 +115,7 @@ sub mock_accessors {
             sub{
                 my ($obj, $param) = @_;
                 $obj->{$method} = $param if defined $param;
-                return $obj->{$param}; 
+                return $obj->{$method}; 
             },
         );
     }
