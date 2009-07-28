@@ -166,7 +166,10 @@ sub _add_model_info {
         or return;
 
     my %objects_attrs = (
-        model => [qw/ name type_name subject_name subject_type /, $self->model->processing_profile->params_for_class ],
+        model => [
+        qw/ id name type_name subject_name subject_type processing_profile_name /,
+        $self->model->processing_profile->params_for_class 
+        ],
         build => [qw/ build_id data_directory /],
     );
     for my $object ( keys %objects_attrs ) {
@@ -175,11 +178,46 @@ sub _add_model_info {
             $attr =~ s#\_#\-#g;
             my $element = $build_node->addChild( $self->_xml->createElement($attr) )
                 or return;
-            $element->appendTextNode($value);
+            $element->appendTextNode( defined $value ? $value : '' );
         }
     }
 
     return 1;
+}
+
+#< Report Template Files >#
+sub get_xsl_file_for_html { 
+    return $_[0]->_get_xsl_file_for_type('html');
+}
+
+sub _get_xsl_file_for_type { 
+    my ($self, $type) = @_;
+
+    my $module = $self->class;
+    Carp::confess( # no xsl for base g:m:report
+        "Can't get xsl file for base Genome::Model::Report class.  Get from subclass."
+    ) if $module eq __PACKAGE__; 
+    
+    my $inc_dir = Genome::Utility::FileSystem::get_inc_directory_for_class($module);
+    $module =~ s#::#/#g;
+
+    return sprintf(
+        '%s/%s.%s.xsl',
+        $inc_dir,
+        $module,
+        $type
+    );
+}
+
+#< Images >#
+sub get_footer_image_info {
+    return {
+        description => 'GC Logo GIF',
+        ctype => 'image/jpeg',
+        encoding => 'base64',
+        disposition => "inline; filename=\"genome_center_logo.gif\";\r\nContent-ID: <footerimg>",
+        file => '/gscmnt/839/info/medseq/images/genome_center_logo.gif'
+    };
 }
 
 1;
