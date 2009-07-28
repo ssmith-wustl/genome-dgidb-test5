@@ -69,6 +69,10 @@ sub _report_meta_hash {
     );
 }
 
+sub get_report_for_testing {
+    return $_[0]->create_valid_object;
+}
+
 sub test00_attrs : Test(8) {
     my $self = shift;
 
@@ -193,6 +197,53 @@ sub test02_validate_aryref : Test(2) {
         ),
         'Failed as expected - value not aryref headers'
     );
+
+    return 1;
+}
+
+#######################################################################
+
+package Genome::Report::Email::Test;
+
+use strict;
+use warnings;
+
+use base 'Test::Class';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_report_dir {
+    return '/gsc/var/cache/testsuite/data/Genome-Report/Build_Start';
+}
+
+sub test01_send_report : Test(5) {
+    my $self = shift;
+
+    use_ok('Genome::Report::Email');
+    
+    my $report = Genome::Report->create_report_from_directory(
+        $self->test_report_dir,
+    ) or die "Can't get report\n";
+
+    my %valid_params = (
+        report => $report,
+        to => $ENV{USER}.'@genome.wustl.edu',
+        xsl_file_for_html => $report->generator->get_xsl_file_for_html,
+        image_files => [ $report->generator->get_footer_image_info ],
+    );
+
+    #< Valid >#
+    my $valid = Genome::Report::Email->send_report(%valid_params);
+    ok($valid, 'Sent report');
+
+    #< Invalid >#
+    for my $attr (qw/ report to xsl_file_for_html /) {
+        my $val = delete $valid_params{$attr};
+        my $invalid = Genome::Report::Email->send_report(%valid_params);
+        ok(!$invalid, 'Failed as expected - no '.$attr);
+        $valid_params{$attr} = $val;
+    }
 
     return 1;
 }
@@ -417,7 +468,7 @@ sub dir {
     return '/gsc/var/cache/testsuite/data/Genome-Report-XSLT';
 }
 
-sub test01_transform_report : Test(4) {
+sub test01_transform_report : Test(7) {
     my $self = shift;
 
     use_ok('Genome::Report::XSLT');
@@ -426,13 +477,16 @@ sub test01_transform_report : Test(4) {
         or die "Can't get report\n";
     my $xslt_file = $self->dir.'/AssemblyStats.txt.xsl';
         
-    # Valid
-    my $txt = Genome::Report::XSLT->transform_report(
+    #< Valid >#
+    my $xslt = Genome::Report::XSLT->transform_report(
         report => $report,
         xslt_file => $xslt_file,
     );
-    ok($txt, 'transformed report');
-    #print $txt,"\n";
+    ok($xslt, 'transformed report');
+    ok($xslt->{content}, 'Content');
+    #print $xslt->content;
+    ok($xslt->{encoding}, 'Encoding');
+    is($xslt->{media_type}, 'text/plain', 'Media type');
     
     #< Invalid >#
     # no report
