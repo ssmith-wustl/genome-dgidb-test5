@@ -68,6 +68,20 @@ sub create_basic_mock_model {
         $model->set_always($pp_param, $pp->$pp_param);
     }
 
+    $self->mock_methods(
+        $model,
+        'UR::ModuleBase',
+        'context_return'
+    );
+
+    $self->mock_methods(
+        $model,
+        'Genome::Model',
+        (qw/
+            processing_profile_name
+            /),
+    );
+
     return $model;
 }
 
