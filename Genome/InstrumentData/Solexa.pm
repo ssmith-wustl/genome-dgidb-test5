@@ -407,9 +407,10 @@ sub run_start_date_formatted {
     my $self = shift;
 
     my ($y, $m, $d) = $self->run_name =~ m/^(\d{2})(\d{2})(\d{2})_.*$/;
-    
+     
     my $dt_format = UR::Time->config('datetime');
-    UR::Time->config(datetime => '%a %b %d %T %Z %Y');
+    #UR::Time->config(datetime => '%a %b %d %T %Z %Y');
+    UR::Time->config(datetime => '%Y-%m-%d');
     my $dt = UR::Time->numbers_to_datetime(0, 0, 0, $d, $m, "20$y");    
     UR::Time->config(datetime => $dt_format);
 
