@@ -193,6 +193,7 @@ sub import_objects_from_external_db
             # these give out warnings every once in a while.
             # usually for clone sequences that are associated with a gene
             # ....
+            # these both come in sorted
             my @genbank_cds = GSC::ImportExport::GenBank::CDS->retrieve(
                 transcript => $genbank_transcript, );
             my @genbank_utr = GSC::ImportExport::GenBank::UTR->convert_to_gsc_params(
@@ -233,7 +234,10 @@ sub import_objects_from_external_db
                 my $structure_start   = $genbank_exon->{begin_position};  #TODO these are different than above
                 my $structure_stop    = $genbank_exon->{end_position};
                 my $utr_sequence = $self->get_seq_slice( $chromosome, $structure_start, $structure_stop );
-                #TODO no revcomp here?
+                if ( $strand eq "-1" )
+                {
+                    $utr_sequence = $self->revcom_slice($utr_sequence);
+                }
 
                 my $utr_exon = Genome::TranscriptSubStructure->create(
                     transcript_structure_id => $tss_id,
@@ -262,8 +266,11 @@ sub import_objects_from_external_db
 
 
             my $protein_name = $genbank_transcript->{products}->[0]->{accession};
-
-            my $amino_acid_seq = $self->create_protein( \@seqs );    # create aa seq
+            # create aa seq, if we're on negative strand, need to reverse the revcomed array of seqs so cds seq is assembled properly for translation
+            if ($transcript->strand eq '-1'){
+                @seqs = reverse @seqs;
+            }
+            my $amino_acid_seq = $self->create_protein( \@seqs );
 
             if ($amino_acid_seq){
                 my $protein = Genome::Protein->create(
@@ -431,7 +438,7 @@ sub revcom_slice
 
 sub create_protein
 {
-    my ( $self, $seq_array ) = @_;
+    my ( $self, $seq_array) = @_;
     my @sequence = @$seq_array;
 
     my $transcript = join( "", @sequence );
