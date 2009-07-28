@@ -14,19 +14,17 @@ class Genome::Report::XSLT {
 };
 
 sub transform_report {
-    my ($self, %params) = @_;
+    my ($class, %params) = @_;
 
     my $report = delete $params{report};
     unless ( $report ) {
-        $self->error_message("Report is required to transform");
+        $class->error_message("Report is required to transform");
         return;
     }
                
     my $xslt_file = delete $params{xslt_file};
     Genome::Utility::FileSystem->validate_file_for_reading($xslt_file)
         or return;
-
-    my $string = "Content-Type: text/html; charset=ISO-8859-1\r\n\r\n";
 
     my $xml = XML::LibXML->new();
     my $xml_string = $xml->parse_string( $report->xml_string );
@@ -39,7 +37,11 @@ sub transform_report {
 
     my $transformed_xml = $stylesheet->transform($xml_string);
 
-    return $stylesheet->output_string($transformed_xml);
+    return {
+        content => $stylesheet->output_string($transformed_xml),
+        encoding => $stylesheet->output_encoding,
+        media_type => $stylesheet->media_type,
+    };
 }
 
 1;
@@ -63,10 +65,12 @@ Genome::Report::XSLT
  my $xslt_file = ...;
  
  # Transform
- my $string = Genome::Report::XSLT->transform_report(
+ my $xslt = Genome::Report::XSLT->transform_report(
     report => $report, # required
     xslt_file => $xslt_file, #required
  );
+
+ print "Content: ".$xslt->{content}."\n";
 
  ...
  
@@ -82,7 +86,7 @@ Genome::Report::XSLT
 
 =item I<Arguments>  report (Genome::Report), xslt_file (readable file)
 
-=item I<Returns>    string
+=item I<Returns>    hashref with content, media_type, and encoding keys.
 
 =back
 
