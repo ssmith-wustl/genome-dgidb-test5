@@ -294,9 +294,9 @@ sub execute {
                       if ($build_id) {
                           warn "Model '$model_id' is already building ($build_id)"; 
                       }
-                      else {
-                          $model_ids{$model->id} = 1;
-                      }
+                      
+                      $model_ids{$model->id} = 1;
+                    
                   }
                   
               }
@@ -319,7 +319,8 @@ sub execute {
        
         
         my $build = Genome::Model::Command::Build->create(
-            model_id => $model_id,
+            model_id        => $model_id,
+            force_new_build => 1,
         );
         
         unless (defined($build)) { 
