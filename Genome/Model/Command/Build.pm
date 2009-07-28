@@ -203,11 +203,10 @@ sub execute {
             return;
         }
         $self->lsf_job_id($bsub_job_id);
-        $self->mail_summary;
+        $self->email_build_start_report;# FIXME return here on failure?
         my $resume = sub { `bresume $bsub_job_id`};
         UR::Context->create_subscription(method => 'commit', callback => $resume);
     }
-
 
     return 1;
 }
@@ -837,40 +836,45 @@ sub _schedule_command_classes_for_object {
     return @scheduled_commands;
 }
 
-sub mail_summary {
+#< Email Initialization and Completion Reports >#
+sub report_class_for_build_success {
+    # Overwrite in your build if you'd like - a summary perhaps?
+    return 'Genome::Model::Report::BuildSuccess';
+}
+
+sub email_build_start_report {
     my $self = shift;
 
-    my $model = $self->model;
-    $self->status_message("No build summary for model that has no sequencing_platform") and return unless $model->processing_profile->can('sequencing_platform');
-
-    my $sendmail = "/usr/sbin/sendmail -t";
-    my $from = "From: ssmith\@genome.wustl.edu\n";
-    my $reply_to = "Reply-to: thisisafakeemail\n";
-    my $subject = "Subject: Build Process Status\n";
-    my $content = 'These links provide the status for your model '. $model->name .' and build '. $self->build_id ."\n\n";
-    my $to = "To: " . $self->user_name . '@genome.wustl.edu' . "\n";
-
-    $content .= "The new updated status cgi:\n";
-    $content .= 'https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id='. $self->build_id ."\n\n";
-
-    $content .= "The old stage one cgi:\n";
-    $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/'. $model->sequencing_platform
-        .'/genome-model-stage1.cgi?model-name='. $model->name  ."&refresh=1\n\n";
-    if ($model->sequencing_platform eq 'solexa') {
-        $content .= "The old stage two cgi:\n";
-        $content .= 'https://gscweb.gsc.wustl.edu/cgi-bin/'. $model->sequencing_platform
-            .'/genome-model-stage2.cgi?model-name=' . $model->name  ."&refresh=1\n";
+    my $generator = Genome::Model::Report::BuildStart->create(build_id => $self->build_id);
+    unless ( $generator ) { 
+        $self->error_message("Can't create build start report generator");
+        return;
     }
 
-    open(SENDMAIL, "|$sendmail") or die "Cannot open $sendmail: $!";
-    print SENDMAIL $reply_to;
-    print SENDMAIL $from;
-    print SENDMAIL $subject;
-    print SENDMAIL $to;
-    print SENDMAIL $content;
-    close(SENDMAIL);
+    my $report = $generator->generate_report; # SAVE report??
+    unless ( $report ) { 
+        $self->error_message("Can't generate report for build start");
+        return;
+    }
+    
+    my $confirmation = Genome::Report::Email->send_report(
+        report => $report,
+        to => $self->user_name.'@genome.wustl.edu',
+        from => 'apipe@genome.wustl.edu',
+        replyto => 'noreply@genome.wustl.edu',
+        # maybe not the best/correct place for this information but....
+        xsl_file_for_html => Genome::Model::Report::BuildStart->get_xsl_file_for_html,
+        image_files => [  Genome::Model::Report::BuildStart->get_footer_image_info ],  
+    );
+    unless ( $confirmation ) {
+        $self->error_message("Couldn't email build start report");
+        return;
+    }
+
     return 1;
 }
+
+#<>#
 
 sub get_all_objects {
     my $self = shift;
