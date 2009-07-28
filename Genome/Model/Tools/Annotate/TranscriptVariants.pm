@@ -246,7 +246,7 @@ sub execute {
         }
         next if $sloppy_skip;
         unless ( $variant->{start} >= $last_variant_start){
-            $self->warning_message("Improperly sorted input! Restarting iterator!  Improve your annotation speed by sorting input variants by chromosome, then position!");
+            $self->warning_message("Improperly sorted input! Restarting iterator!  Improve your annotation speed by sorting input variants by chromosome, then position!  chromosome:". $variant->{chromosome_name}." start".$variant->{start}." stop".$variant->{stop});
             $chromosome_name = $variant->{chromosome_name};
             $last_variant_start = 0;
 
