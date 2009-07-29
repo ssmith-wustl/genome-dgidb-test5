@@ -172,7 +172,7 @@ sub execute {
         # get the data and output it
         my @variations = $variation_window->scroll($variant->{start});
 
-        # Find the valid varations... any indel that was returned and any snp
+        # Find the valid varations... variations matching the variant type... any indel that was returned and any snp
         # That is at the exact position sought (snps dont have a range, only indels)
         my @valid_variations;
         for my $variation (@variations) {
@@ -226,31 +226,36 @@ sub is_valid_variation {
 # This method checks to see if the variation is in range of the current variant considered
 # in order to consider this a "hit"
 # Indels have some "fudge factor" but snps must be a direct hit
+# Also, make sure the variation type matches the variant type
 sub variation_in_range {
     my ($self, $variant, $variation) = @_;
 
-    my $type = $variation->variation_type;
-    # Indels returned within range should be considered
-    # should we check for range here? Should not have to since since window only returns stuff in range anyways...
-    if ($type =~ /INS|DEL/i) {
+    my $variant_type = $self->infer_variant_type($variant);
+    my $variation_type = $variation->variation_type;
+
+    # Indels returned within range should be considered... we do not have to double check the start/stop range here since
+    # the range for the window above will have done that job
+    # The reason the check is worded like this is because variants are INS or DEL... variations are INDEL
+    if (($variant_type =~ /INS|DEL/i)&&($variation_type =~ /INS|DEL/i)) {
         return 1;
-    # SNPs should only be considered if they are on the same position as the original variant, no range here
-    } elsif (($type =~ /SNP/i)&&($variation->{start} == $variant->{start})&&($variation->{stop} == $variant->{stop})) {
-        return 1;
-    # DNPs should only be considered if they are on the same position as the original variant, no range here
-    } elsif (($type =~ /DNP|MNP/i)&&($variation->{start} == $variant->{start})&&($variation->{stop} == $variant->{stop})) {
-        return 1;
-    } else {
-        if ($type =~ /INS|DEL|SNP|DNP|MNP/i) {
-            #$self->warning_message("Junk data from data source (SNP with start and stop not equal?). Variation is: " . Dumper $variation);
-        # We do not really know what these are right now, but they are present in the data, so skip.
-        } elsif ($type =~ /NAMED-LOCUS/i) {
-            return 0;
-        } else {
-            $self->warning_message("Variation from data source has type $type, which is not supported. Variation is: " . Dumper $variation);
-        }
     }
 
+    # ins/del vs indel should be the only special case. Otherwise variant and variation should have the same type name
+    # i.e snp
+    unless (lc($variant_type) eq lc($variation_type)) {
+        return 0;
+    }
+    
+    # If we have the same type... start checking matching start and stop positions
+    # SNPs should only be considered if they are on the same position as the original variant, no range here
+    if (($variation_type =~ /SNP/i)&&($variation->{start} == $variant->{start})&&($variation->{stop} == $variant->{stop})) {
+        return 1;
+        # DNPs should only be considered if they are on the same position as the original variant, no range here
+    } elsif (($variation_type =~ /DNP|MNP/i)&&($variation->{start} == $variant->{start})&&($variation->{stop} == $variant->{stop})) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 sub _variation_report_fh {
