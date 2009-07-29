@@ -463,8 +463,19 @@ sub _run_aligner {
         $description_for_header = 'fragment';
     }
 
+    #### STEP 5: Copy out the bam file to the alignment directory, including read group and header tags in the process.
+    #### use a temp file so it gets cleaned up automatically if things don't go according to plan.  We'll set the 
+    #### unlink_on_destroy to zero once we're happy with the output later on so the file doesn't go away.
+
+    my $output_sam_tmp_file = File::Temp->new(SUFFIX=>'.bam', DIR=>$self->alignment_directory);
+    unless ($output_sam_tmp_file) {
+        $self->error_message("Couldn't open an output file in " . $self->alignment_directory . " to put our all_sequences.bam.  Check disk space and permissions!");
+        return;
+    }
+
+    $DB::single = 1;
     my $editor = Genome::Model::Tools::Sam::SamHeaderEditor->create( input_sam_file => $sorted_bam_output->filename,
-                                                                 output_sam_file => $self->alignment_file,
+                                                                 output_sam_file => $output_sam_tmp_file->filename,
                                                                  description_field => $description_for_header,
                                                                  seq_id_field => $self->instrument_data->seq_id,
                                                                  insert_size_field => $insert_size_for_header, 
@@ -479,6 +490,16 @@ sub _run_aligner {
                                                                  aligner_version_field => $self->aligner_version,
                                                                 );
     $editor->execute;
+    
+    unless (-s $output_sam_tmp_file->filename) {
+        $self->error_message("temp output file " . $output_sam_tmp_file->filename . " has zero length.  Something went wrong");
+        return;
+    }
+
+    #### if it got to here then we've got ourselves a good alignment, let's keep it!
+    $output_sam_tmp_file->unlink_on_destroy(0);
+    rename($output_sam_tmp_file->filename, $self->alignment_file);
+
 
     unless (-e $self->alignment_file && -s $self->alignment_file) {
 	$self->error_message("Alignment output " . $self->alignment_file . " not found or zero length.  Something went wrong");
