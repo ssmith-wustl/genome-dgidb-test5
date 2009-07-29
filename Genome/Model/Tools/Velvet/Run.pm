@@ -204,7 +204,7 @@ sub execute {
 
 	my $to_ace = Genome::Model::Tools::Velvet::ToAce->create(
 								 afg_file => $self->_resolve_afg_file,
-								 fastq_file => $self->file_name,
+								 seq_file => $self->directory.'/Sequences',
 								 time => $self->_resolve_time,
 								 out_acefile => $self->_resolve_ace_out,
 								 );
