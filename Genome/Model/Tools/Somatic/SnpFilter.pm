@@ -94,7 +94,7 @@ sub execute {
     );
     
     my $tumor_snp_file_sorted = "/tmp/tumors.sorted";
-    $sort_cmd = "sort -k1,1 -k2,2n $tumor_snp_file > $tumor_snp_file_sorted";
+    $sort_cmd = "sort -k1,1 -k2,2n $tumor_snp_file | grep -v ^MT > $tumor_snp_file_sorted";
     $result = Genome::Utility::FileSystem->shellcmd(
         cmd          => $sort_cmd,
         input_files  => [ $tumor_snp_file ],
