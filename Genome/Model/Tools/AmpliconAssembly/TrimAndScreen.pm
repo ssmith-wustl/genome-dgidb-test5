@@ -125,14 +125,11 @@ sub _trim_and_screen_amplicon_by_trim3_and_crossmatch {
         fasta_file => $amplicon->fasta_file,
         $self->_trim_params,
     );
-    unless ( $trim3 ) {
+    unless ( $trim3 ) { # not ok
         $self->error_message("Can't create trim3 command for amplicon: ".$amplicon->name);
         return;
     }
-    unless ( $trim3->execute ) {
-        $self->error_message("Can't execute trim3 command for amplicon: ".$amplicon->name);
-        return;
-    }
+    $trim3->execute; # ok
    
     return 1 unless -s $amplicon->fasta_file; # ok
 
@@ -140,14 +137,11 @@ sub _trim_and_screen_amplicon_by_trim3_and_crossmatch {
         fasta_file => $amplicon->fasta_file,
         $self->_screen_params,
     );
-    unless ( $screen ) {
+    unless ( $screen ) { # not ok
         $self->error_message("Can't create screen vector command for amplicon: ".$amplicon->name);
         return;
     }
-    unless ( $screen->execute ) {
-        $self->error_message("Can't execute screen vector command for amplicon: ".$amplicon->name);
-        return;
-    }
+    $screen->execute; # ok
     
     return 1;
 }
@@ -166,10 +160,7 @@ sub _trim_and_screen_amplicon_by_lucy {
         $self->error_message("Can't create lucy command for amplicon: ".$amplicon->name);
         return;
     }
-    unless ( $lucy->execute ) {
-        $self->error_message("Can't execute lucy command for amplicon: ".$amplicon->name);
-        return;
-    }
+    $lucy->execute;
 
     return 1;
 }
