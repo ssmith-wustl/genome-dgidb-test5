@@ -54,6 +54,7 @@ sub _get_report_attribute {
     return $attribute_element->to_literal;
 }
 
+#< Datasets >#
 sub get_dataset_nodes { 
     return $_[0]->xml->findnodes('report/datasets/*');
 }
@@ -62,6 +63,56 @@ sub get_dataset_nodes_for_name {
     return $_[0]->xml->findnodes("report/datasets[1]/$_[1]");
 }
 
+sub get_dataset_names { 
+    my $self = shift;
+
+    my @datasets = $self->get_dataset_nodes
+        or return;
+    
+    my @names;
+    for my $dataset ( @datasets ) {
+        push @names, $dataset->nodeName;
+    }
+    
+    return @names;
+}
+
+sub get_datasets_by_name_as_xml {
+    my ($self, $name) = @_;
+
+    my @datasets = $self->get_dataset_nodes_for_name($name)
+        or return;
+    
+    my @xmls;
+    for my $dataset ( @datasets ) {
+        push @xmls, $dataset->toString;
+    }
+
+    return @xmls; # wantarray?
+}
+
+sub get_datasets_by_name_as_separated_value_string {
+    my ($self, $name, $separator) = @_;
+
+    my @datasets = $self->get_dataset_nodes_for_name($name)
+        or return;
+
+    my @svs;
+    for my $dataset ( @datasets ) {
+        my @rows = grep { $_->nodeType == 1 } $dataset->findnodes('*');
+        # headers
+        my $svs = join(',', map { $_->nodeName } grep { $_->nodeType == 1 } $rows[0]->findnodes('*'))."\n";
+        # data
+        for my $row ( @rows ) {
+            $svs .= join(',', map { $_->to_literal } grep { $_->nodeType == 1 } $row->getChildnodes)."\n";
+        }
+        push @svs, $svs;
+    }
+
+    return @svs; # wantarray?
+}
+
+#<>#
 sub generator_params {
     my $self = shift;
 
@@ -72,7 +123,7 @@ sub generator_params {
         push @{$params{$attr}}, $attr_element->to_literal;
     }
     #print Dumper(\%params);
-    
+
     return \%params;
 }
 
