@@ -25,20 +25,39 @@ sub execute {
 
     my @links = glob($self->build->chromat_dir.'/*');
     
-    return ( @links )
-    ? 1
-    : 0;
+    return ( @links ) ? 1 : 0;
 }
 
 sub _link_instrument_data {
     my $self = shift;
 
-    my $chromat_dir = $self->build->chromat_dir;
-    for my $ida ( $self->model->instrument_data_assignments ) {
-        $self->_dump_unbuilt_instrument_data($ida)
+    my @idas = $self->model->instrument_data_assignments;
+    unless ( @idas ) {
+        $self->error_message(
+            sprintf(
+                'No instrument data assigned to model for model (<Name> %s <Id> %s).',
+                $self->model->name,
+                $self->model->id,
+            )
+        );
+        return;
+    }
+
+    for my $ida ( @idas ) {
+        $self->_dump_unbuilt_instrument_data($ida) # error is in sub
             or return;
-        $self->build->link_instrument_data( $ida->instrument_data )
-            or return;
+        unless ( $self->build->link_instrument_data( $ida->instrument_data ) ) {
+            $self->error_message(
+                sprintf(
+                    'Error linking instrument data (%s <Id> %s) to model (%s <Id> %s)',
+                    $ida->instrument_data->run_name,
+                    $ida->instrument_data->id,
+                    $self->model->name,
+                    $self->model->id,
+                )
+            );
+            return;
+        }
     }
 
     return 1;
@@ -51,7 +70,7 @@ sub _dump_unbuilt_instrument_data {
         unless ( $ida->instrument_data->dump_to_file_system ) {
             $self->error_message(
                 sprintf(
-                    'Error dumping instrument data (%s <ID: %s) for model (%s <ID %s)',
+                    'Error dumping instrument data (%s <Id> %s) assigned to model (%s <Id> %s)',
                     $ida->instrument_data->run_name,
                     $ida->instrument_data->id,
                     $self->model->name,
