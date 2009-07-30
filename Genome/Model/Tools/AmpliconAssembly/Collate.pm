@@ -25,7 +25,8 @@ sub execute {
 
     for my $amplicon ( @$amplicons ) {
         for my $type ( @amplicon_fasta_types ) {
-            $self->_collate_amplicon_fasta_and_qual($amplicon, $type);
+            $self->_collate_amplicon_fasta_and_qual($amplicon, $type)
+                or return;
         }
     }
 
@@ -51,7 +52,7 @@ sub _open_fasta_and_qual_writers {
             '-file' => '>'.$fasta_file,
             '-format' => 'fasta',
         )
-            or return;
+            or return; # bad
 
         my $qual_file = $self->amplicon_assembly->qual_file_for_type($type);
         unlink $qual_file if -e $qual_file;
@@ -59,7 +60,7 @@ sub _open_fasta_and_qual_writers {
             '-file' => '>'.$qual_file,
             '-format' => 'qual',
         )
-            or return;
+            or return; # bad
     }
 
     return 1;
@@ -70,13 +71,13 @@ sub _collate_amplicon_fasta_and_qual {
     my ($self, $amplicon, $type) = @_;
 
     my $method = $self->amplicon_assembly->amplicon_bioseq_method_for_type($type);
-    unless ( $method ) {
+    unless ( $method ) { # bad
         $self->error_message("Can't determine method for getting bioseqs for type ($type)");
         return;
     }
     
     my @bioseqs = $amplicon->$method
-        or return;
+        or return 1; # ok
 
     for my $bioseq ( @bioseqs ) {
         $self->{ _key_for_fasta_writer($type) }->write_seq($bioseq);
@@ -84,10 +85,6 @@ sub _collate_amplicon_fasta_and_qual {
     }
 
     return 1;
-}
-
-sub _verify_bioseq {
-    
 }
 
 1;
