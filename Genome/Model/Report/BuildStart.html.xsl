@@ -41,21 +41,10 @@
 												</colgroup>
 												<tr>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
-                            Status: 
-													</td>
-													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
-                            <a>
-                              <xsl:attribute name="href">https://lims.gsc.wustl.edu/cgi-bin/apipe/status.cgi?build-id<xsl:value-of select="//model-info/build-id"/></xsl:attribute>
-                              https://lims.gsc.wustl.edu/cgi-bin/apipe/status.cgi?build-id<xsl:value-of select="//model-info/build-id"/>
-                            </a>
-													</td>
-                        </tr>
-												<tr>
-													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
                             Build Id:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
-                            <xsl:value-of select="//model-info/build-id"/>
+                                                      <xsl:value-of select="//model-info/build-id"/><xsl:text> </xsl:text><a><xsl:attribute name="href">https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?build-id=<xsl:value-of select="//model-info/build-id"/></xsl:attribute><xsl:attribute name="style"><xsl:text>text-decoration:none;font-size:85%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;</xsl:text></xsl:attribute>view build &gt;</a>
 													</td>
 												</tr>
 												<tr>
@@ -74,8 +63,8 @@
             </td>
           </tr>
 					<tr>
-						<td style="padding:15px 25px;">
-              <table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:20px 0 0 0;padding:0;" summary="report subsection header">
+						<td style="padding:0 25px;">
+              <table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:0 0 0 0;padding:0;" summary="report subsection header">
                 <tr>
                   <td style="border-bottom: 2px solid #CCC;">
                     <h2 style="font-family:Helvetica,Arial,sans-serif;font-size:100%;color:#36372c;margin:0 0 0 0;padding:5px 0 3px 5px;">
@@ -101,7 +90,7 @@
                             Model Id: 
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
-                            <xsl:value-of select="//model-info/id"/>
+                                                      <xsl:value-of select="//model-info/id"/><xsl:text> </xsl:text><a><xsl:attribute name="href">https://lims.gsc.wustl.edu/cgi-bin/dashboard/status.cgi?genome-model-id=<xsl:value-of select="//model-info/id"/></xsl:attribute><xsl:attribute name="style"><xsl:text>text-decoration:none;font-size:85%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;</xsl:text></xsl:attribute>view model &gt;</a>
                           </td>
 												</tr>
 												<tr>
