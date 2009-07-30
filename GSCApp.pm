@@ -303,6 +303,7 @@ associations in four cases.
     RUN_REGION_454		=> '454 run region',
     SEQUENCE_GENOME             => 'genome sequence',        
     SEQUENCE_CHROMOSOME         => 'chromosome sequence',
+    SEQUENCE_MITOCHONDRIAL      => 'mitochondrial sequence',
     SEQUENCE_TRANSCRIPTOME      => 'transcriptome sequence', 
     SOLEXA_LANE_SUMMARY         => 'solexa run lane',
     SEQUENCE_PLASMID            => 'plasmid sequence', 
@@ -438,6 +439,7 @@ associations in four cases.
         AMPLICON_SEQUENCE_TAG           GSC::Sequence::Tag::Amplicon
         SEQUENCE_GENOME                 GSC::Sequence::Genome        
         SEQUENCE_CHROMOSOME             GSC::Sequence::Chromosome
+        SEQUENCE_MITOCHONDRIAL          GSC::Sequence::Mitochondrial
         SEQUENCE_TRANSCRIPTOME          GSC::Sequence::Transcriptome
 
         AMP_TARGET_SAMPLE_COVERAGE      GSC::AmplificationTarget::Coverage::Sample
