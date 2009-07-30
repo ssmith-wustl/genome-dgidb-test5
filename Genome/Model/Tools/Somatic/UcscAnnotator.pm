@@ -23,6 +23,7 @@ class Genome::Model::Tools::Somatic::UcscAnnotator{
         },
         unannotated_file => {
             is => 'Text',
+            is_input => 1,
             is_optional => 1,
             doc => "File of sites unable to be annotated",
             default => 'ucsc_unannotated_variants',
