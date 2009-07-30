@@ -19,9 +19,7 @@ sub execute {
         or return;
 
     require Genome::Utility::MetagenomicClassifier::Rdp;
-    my $classifier = Genome::Utility::MetagenomicClassifier::Rdp->new(
-        #training_set => 'broad', # switched to regular set 4/14
-    )
+    my $classifier = Genome::Utility::MetagenomicClassifier::Rdp->new()
         or return;
 
     for my $amplicon ( @$amplicons ) {
@@ -35,8 +33,6 @@ sub execute {
                     $amplicon->get_name,
                 )
             );
-            # have a counter and error if all fail?
-            # $no_classification++;
             next;
         }
         $amplicon->save_classification($classification); # error?
