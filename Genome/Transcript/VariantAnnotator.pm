@@ -678,6 +678,150 @@ sub _transcript_annotation_for_intron
 
 }
 
+sub _transcript_annotation_for_cds_exon_modified
+{
+    my ($self, $transcript, $variant) = @_;
+
+    my $strand = $transcript->strand;
+
+    my $main_structure = $transcript->structure_at_position( $variant->{start} );
+    my $structure_start = $main_structure->structure_start;
+    my $structure_stop = $main_structure->structure_stop;
+    my ($oriented_structure_start, $oriented_structure_stop) = ($structure_start, $structure_stop);
+
+    if ( $strand eq '-1' ) 
+    {
+        ($oriented_structure_stop, $oriented_structure_start) = ($structure_start, $structure_stop);
+    }
+
+    my $exon_pos = $transcript->length_of_cds_exons_before_structure_at_position($variant->{start}, $strand);
+    my $pre_start = abs( $variant->{start} - $oriented_structure_start ) + 1;
+    my $pre_end = abs( $variant->{stop} - $oriented_structure_start ) + 1;
+    my $aft_start = abs( $oriented_structure_stop - $variant->{start} ) + 1;
+    my $aft_end = abs( $oriented_structure_stop - $variant->{stop} ) + 1;
+
+    my $trsub_phase = $exon_pos % 3;
+    unless ( $trsub_phase eq $main_structure->phase ) 
+    {
+        $self->error_message
+        (
+            sprintf
+            (
+                'Calculated phase (%d) does not match the phase (%d, exon position: %d) for the main sub structure (%d) for transcript (%d) at %d',
+                $trsub_phase,
+                $main_structure->phase,
+                $exon_pos,
+                $main_structure->transcript_structure_id,
+                $transcript->transcript_id,
+                $variant->{start},
+            )
+        );
+        return;
+    }
+
+    my $coding_position = $pre_start + $exon_pos;
+    $coding_position-=1 if($strand == -1 && $variant->{type} =~ /ins|del/i ); #Adjusting the coding position to still point to the base before the insertion
+    my $codon_start = $coding_position % 3; #position in frame, if 0, at last base of frame
+    my $pro_start = int( $coding_position / 3 ); 
+    $pro_start++ if $codon_start != 0; #pro start is ordinality of codon that variant is in
+    my $amino_acid_seq = $transcript->protein->amino_acid_seq; 
+    my $aa_be = substr($amino_acid_seq, $pro_start - 1, 1); # amino acid of pro_start codon
+    $aa_be = "*" if $aa_be eq "" or $aa_be eq "X"; #stop codon
+    my $first_amino_acid_affected = "p." . $aa_be . $pro_start;
+
+#modifications from xshi...
+    my $trv_type;
+    my $variant_size=1; 
+    
+    my ($reference_sequence,$variant_sequence)=($variant->{reference},$variant->{variant});
+    my $deletion_size=length($reference_sequence);
+    my $insertion_size=length($variant_sequence);
+    my $indel_size;
+    $deletion_size > $insertion_size ? $indel_size = $deletion_size : $indel_size = $insertion_size;
+    
+    if($strand==-1) {
+        $reference_sequence=~tr/ATGC/TACG/;
+        $variant_sequence=~tr/ATGC/TACG/;
+        $reference_sequence=reverse($reference_sequence);
+        $variant_sequence=reverse($variant_sequence);
+    }
+
+    my $mutated_sequence;
+    my $original_seq_translated = $transcript->protein->amino_acid_seq;
+    my $mutated_seq_translated;
+
+    my $original_sequence=$transcript->cds_full_nucleotide_sequence;
+
+    if($variant->{type} =~ /ins/i) {
+        $mutated_sequence=substr($original_sequence,0,$coding_position).$variant_sequence.substr($original_sequence,$coding_position);
+    }
+    elsif($variant->{type} =~ /del/i) {
+        #don't want to substr beyond the length of the full coding sequence
+        my $post_deletion_start_position = $coding_position+$indel_size;
+        $post_deletion_start_position = length $original_sequence if length $original_sequence < $post_deletion_start_position;
+        $mutated_sequence=substr($original_sequence,0,$coding_position-1).substr($original_sequence,$post_deletion_start_position-1);
+    }
+    else { #SNP and DNP
+        if(substr($original_sequence,$coding_position-1,$indel_size) ne $reference_sequence) {
+            my $e="allele does not match:" . $transcript->transcript_name.",".$coding_position.",".$variant->{chromosome_name}.",".$variant->{start}.",".$variant->{stop}.",".$variant->{reference}.",".$variant->{variant}.",".$variant->{type}."\n";
+            $self->error_message($e);
+            return ;
+        }
+        $variant_size=2 if($codon_start==0&&$variant->{type}=~/dnp/i);
+        $mutated_sequence=substr($original_sequence,0,$coding_position-1).$variant_sequence.substr($original_sequence,$coding_position-1+$indel_size);
+    }
+    $mutated_seq_translated = $self->translate($variant->{chromosome_name}, $mutated_sequence);
+
+    my $protein_string = 'NULL';
+    if($variant->{type} =~ /del|ins/i) {
+        if ($indel_size%3==0) {$trv_type="in_frame_";}
+        else {$trv_type="frame_shift_"; }
+        $trv_type.= lc ($variant->{type});
+        my $hash_pro= $self->compare_protein_seq($trv_type,$original_seq_translated,$mutated_seq_translated,$pro_start-1,$variant_size);
+        $protein_string="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{type}.$hash_pro->{new};
+    }
+    else { #SNP DNP
+        my $pre_pro_start = $pro_start-3;
+        $pre_pro_start = 0 if $pre_pro_start < 0;
+        my $pre_pro_length = $pro_start-$pre_pro_start-1; 
+        if(length($mutated_seq_translated)<$pro_start-1|| substr($original_seq_translated,$pre_pro_start,$pre_pro_length) ne substr($mutated_seq_translated,$pre_pro_start,$pre_pro_length)) {
+            my $e="protein string does not match:".$transcript->transcript_name.",".$coding_position.",".$variant->{chromosome_name}.",".$variant->{start}.",".$variant->{stop}.",".$variant->{reference}.",".$variant->{variant}.",".$variant->{type}.",".$transcript->gene->strand."\n";
+            $self->error_message($e);
+            return ;
+        }
+        my $hash_pro= $self->compare_protein_seq($variant->{type},$original_seq_translated,$mutated_seq_translated,$pro_start-1,$variant_size);
+        $trv_type = lc $hash_pro->{type};
+        $protein_string="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{new};
+    }
+
+# If the variation has a range, set c_position to that range on the transcript (<coding position for variant start>_<coding position for variant stop>)
+    if($variant->{start}!=$variant->{stop}) {
+        # If on the negative strand, reverse the range order
+        if ($strand =~ '-') { 
+            $coding_position = ($pre_end+$exon_pos) . '_' . $coding_position; #TODO check HGVS nomenclature
+        } else { 
+            $coding_position.='_'.($pre_end+$exon_pos);
+        }      
+    } 
+
+    my $conservation = $self->_ucsc_cons_annotation($variant);
+    my $pdom = $self->_protein_domain($variant,
+        $transcript->gene,
+        $transcript->transcript_name,
+        $first_amino_acid_affected);
+
+    return 
+    (
+        strand => $strand,
+        c_position => 'c.' . $coding_position,
+        trv_type => $trv_type,
+        amino_acid_change => $protein_string,
+        amino_acid_length => length($amino_acid_seq),
+        ucsc_cons => $conservation,
+        domain => $pdom
+    );
+}
+
 sub _transcript_annotation_for_cds_exon
 {
     my ($self, $transcript, $variant) = @_;
@@ -775,7 +919,11 @@ sub _transcript_annotation_for_cds_exon
         $mutated_seq=substr($original_seq,0,$c_position).$var.substr($original_seq,$c_position);
     }
     elsif($variant->{type} =~ /del/i) {
-        $mutated_seq=substr($original_seq,0,$c_position-1).substr($original_seq,$c_position-1+$size2);
+        #don't want to substr beyond the length of the full coding sequence
+        $DB::single = 1;
+        my $post_deletion_start_position = $c_position-1+$size2;
+        $post_deletion_start_position = length $original_seq if length $original_seq < $post_deletion_start_position;
+        $mutated_seq=substr($original_seq,0,$c_position-1).substr($original_seq,$post_deletion_start_position);
     }
     else {
         if(substr($original_seq,$c_position-1,$size2) ne $reference) {
@@ -798,7 +946,10 @@ sub _transcript_annotation_for_cds_exon
         $pro_str="p.".$hash_pro->{ori}.$hash_pro->{pos}.$hash_pro->{type}.$hash_pro->{new};
     }
     else {
-        if(length($mutated_seq_translated)<$pro_start-1|| substr($original_seq_translated,$pro_start-3,2) ne substr($mutated_seq_translated,$pro_start-3,2)) {
+        my $pre_pro_start = $pro_start-3;
+        $pre_pro_start = 0 if $pre_pro_start < 0;
+        my $pre_pro_length = $pro_start-$pre_pro_start-1; 
+        if(length($mutated_seq_translated)<$pro_start-1|| substr($original_seq_translated,$pre_pro_start,$pre_pro_length) ne substr($mutated_seq_translated,$pre_pro_start,$pre_pro_length)) {
             my $e="protein string does not match:".$transcript->transcript_name.",".$c_position.",".$variant->{chromosome_name}.",".$variant->{start}.",".$variant->{stop}.",".$variant->{reference}.",".$variant->{variant}.",".$variant->{type}.",".$transcript->gene->strand."\n";
             $self->error_message($e);
             return ;
