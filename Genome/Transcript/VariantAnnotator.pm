@@ -52,8 +52,9 @@ sub error_message{
 }
 
 sub save_error_producing_variant{
+    my $self=shift;
     unless ($Genome::Transcript::VariantAnnotator::error_fh){
-        $Genome::Transcript::VariantAnnotator::error_fh = IO::File->new(">variant_annotator_error_producing_variants".time.".tsv");
+        $Genome::Transcript::VariantAnnotator::error_fh = IO::File->new(">variant_annotator_error_producing_variants".time.".".$self->version.".tsv");
     }
     my $line = join("\t", map {$Genome::Transcript::VariantAnnotator::current_variant->{$_}} (qw/chromosome_name start stop reference variant/));
     if ($Genome::Transcript::VariantAnnotator::last_printed_line){
