@@ -122,7 +122,8 @@ sub execute
     }
     
     my $previous_workflow_id = $self->resume_workflow();
-
+    # start timer here
+    my $starttime = DateTime->now(time_zone => 'America/Chicago');
     unless (defined($previous_workflow_id)) {
         print STDERR "moving data from mgap to biosql SendToPap.pm\n";
         $self->mgap_to_biosql();
@@ -133,6 +134,11 @@ sub execute
     
     # interface to workflow to start the PAP.
     $self->do_pap_workflow();
+
+    # end timer, log run time
+    my $finishtime = DateTime->now(time_zone => 'America/Chicago');
+    my $runtime = ($finishtime->epoch() - $starttime->epoch());
+    $self->activity_log($runtime,$self->locus_tag );
 
     return 1;
 }
@@ -360,7 +366,7 @@ sub do_pap_workflow
 
     
     # do quick check on the return value.
-    #print STDERR Dumper($output),"\n";
+    print STDERR Dumper($output),"\n";
    
     if (defined($output)) {
         print STDERR "workflow completed successfully";
@@ -387,6 +393,89 @@ sub do_pap_workflow
 
     }
 
+}
+
+
+sub activity_log
+{
+    my $self = shift;
+    my ($run_time, $locus_tag) = @_;
+    if($self->dev)
+    {
+        return 1;
+
+    }
+    use BAP::DB::Organism;
+    my ($organism) = BAP::DB::Organism->search({locus => $locus_tag});
+    my $organism_name;
+    if($organism)
+    {
+        $organism_name = $organism->organism_name;
+    }
+    else
+    {
+        carp "can't get organism name, logging with locus tag";
+        $organism_name = $locus_tag;
+    }
+    $locus_tag =~ s/(DFT|FNL|MSI)$//;
+    my $db_file = '/gscmnt/temp212/info/annotation/BAP_db/mgap_activity.db';
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$db_file",'','',
+                           {RaiseError => 1, AutoCommit => 1});
+    unless(defined($dbh))
+    {
+        return 0;
+    }
+    my $sql = <<SQL;
+    INSERT INTO activity_log (activity,
+                              sequence_id,
+                              sequence_name,
+                              organism_name,
+                              host,
+                              user,
+                              started,
+                              finished)
+        VALUES (?,?,?,?,?,?,
+                strftime('%s', 'now') - $run_time,
+                strftime('%s', 'now')
+        );
+SQL
+
+    my $host = undef;
+    my $user = undef;
+
+    if (exists($ENV{LSB_HOSTS}) )
+    {
+        $host = $ENV{LSB_HOSTS};
+    }
+    elsif (exists($ENV{HOST}) )
+    {
+        $host = $ENV{HOST};
+    }
+
+    if (exists($ENV{USER}) )
+    {
+        $user = $ENV{USER};
+    }
+    elsif (exists($ENV{LOGIN}) )
+    {
+        $user = $ENV{LOGIN};
+    }
+    elsif (exists($ENV{USERNAME}) )
+    {
+        $user = $ENV{USERNAME};
+    }
+
+
+    if(!$self->dev)
+    {
+
+        $dbh->do($sql, {},
+                 'protein annotation', undef, 'coding sequences',
+                 $organism_name,
+                 $host, $user);
+
+    }
+    return 1;
 }
 
 1;
