@@ -23,12 +23,6 @@ class Genome::Model::Tools::Array::CreateGenotypesFromAffyCalls {
         is_optional => 0,
         doc => "File of calls describing which allele of the probe was detected",
     },
-    output_directory =>
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => "Directory to place individual files for each header in the file",
-    },
     output_filename => {
         type => 'String',
         is_optional => 0,
@@ -50,9 +44,8 @@ sub execute {
 
     #Convert each call into a genotype and write to a new file by chromosome and position
     #create file handles to write out each sample
-    my $out_dir = $self->output_directory;
     my $file = $self->output_filename;
-    my $filehandle = new IO::File "$out_dir/$file.genotype", "w";
+    my $filehandle = new IO::File "$file", "w";
     unless(defined($filehandle)) {
         $self->error_message("Couldn't open filehandle for file: $file");
         return;
@@ -81,7 +74,7 @@ sub create_call_file_hash {
     while(my $line = $fh->getline) {
         next if $line =~ /^#%/; #these are comments in affy apt-chp-to-text output
 
-        my ($PS_ID, $call, $confidence) = split /\s+/, $line;
+        my ($PS_ID, $call, $confidence) = split /\s+/, $line; #confidence may not be in file depending on format
         $call_hash{$PS_ID} = $call; 
     }
     return \%call_hash;
