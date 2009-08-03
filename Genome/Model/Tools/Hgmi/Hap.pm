@@ -257,6 +257,51 @@ sub execute
         croak "can't set up finish step... Hap.pm\n\n";
     }
 
+    # core genes and rrna screens
+    $next_dir = $config->{path}."/".$config->{org_dirname}."/".
+        $config->{assembly_name} . "/". $config->{assembly_version} . "/".
+        "Genbank_submission/Version_1.0/Annotated_submisstion";
+    chdir($next_dir);
+
+    my $coregene = Genome::Model::Tools::Hgmi::CoreGenes->create(
+        cell_type => $config->{cell_type},
+        sequence_set_id => $ssid,
+    );
+  
+    if($self->dev)
+    {
+        $coregene->dev(1);
+    }
+
+    if($coregene)
+    {
+        $coregene->execute() or croak "can't execute core gene screen";
+    }
+    else
+    {
+        croak "can't set up core gene step... Hap.pm\n\n";
+    }
+
+    # rrna screen step
+    my $rrnascreen = Genome::Model::Tools::Hgmi::RrnaScreen->create(
+        sequence_set_id => $ssid,
+    );
+  
+    if($self->dev)
+    {
+        $rrnascreen->dev(1);
+    }
+
+    if($coregene)
+    {
+        $rrnascreen->execute() or croak "can't execute core gene screen";
+    }
+    else
+    {
+        croak "can't set up rrna screen step... Hap.pm\n\n";
+    }
+
+
     unless(defined($config->{workflowxml}))
     {
         return 1;
