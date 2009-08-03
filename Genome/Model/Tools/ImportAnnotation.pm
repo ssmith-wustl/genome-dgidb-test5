@@ -152,8 +152,8 @@ sub create_flanking_sub_structures_and_introns{
     );
     $$tss_id_ref++;
 
-    my $right_flank_structure_stop = $a[-1]->structure_stop + 1;
-    my $right_flank_structure_start = $a[-1]->structure_start + 50000;
+    my $right_flank_structure_start = $a[-1]->structure_stop + 1;
+    my $right_flank_structure_stop = $a[-1]->structure_start + 50000;
     my $right_flank = Genome::TranscriptSubStructure->create(
         transcript_structure_id => $$tss_id_ref,
         transcript => $transcript,
@@ -177,7 +177,7 @@ sub create_flanking_sub_structures_and_introns{
         my $right_structure_start = $ss->structure_start;
         my $left_structure_stop = $left_ss->structure_stop;
 
-        if ( $right_structure_start > $left_structure_stop){
+        if ( $right_structure_start > $left_structure_stop + 1 ){
             my $intron_start = $left_structure_stop+1;
             my $intron_stop = $right_structure_start-1;
             my $intron = Genome::TranscriptSubStructure->create(
