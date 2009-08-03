@@ -4,11 +4,13 @@ use strict;
 use warnings;
 
 use Data::Dumper;
+use Genome;
 use Genome::Info::VariantPriorities;
 use MG::ConsScore;
 use List::MoreUtils qw/ uniq /;
 use Benchmark;
 use Bio::Tools::CodonTable;
+use DateTime;
 
 class Genome::Transcript::VariantAnnotator{
     is => 'UR::Object',
@@ -54,7 +56,9 @@ sub error_message{
 sub save_error_producing_variant{
     my $self=shift;
     unless ($Genome::Transcript::VariantAnnotator::error_fh){
-        $Genome::Transcript::VariantAnnotator::error_fh = IO::File->new(">variant_annotator_error_producing_variants".time.".".$self->version.".tsv");
+        my $ts = DateTime->now(time_zone => 'America/Chicago')->iso8601();
+        $ts =~ s/[-:]/_/g;
+        $Genome::Transcript::VariantAnnotator::error_fh = IO::File->new(">variant_annotator_error_producing_variants".$ts.".".$self->version.".tsv");
     }
     my $line = join("\t", map {$Genome::Transcript::VariantAnnotator::current_variant->{$_}} (qw/chromosome_name start stop reference variant/));
     if ($Genome::Transcript::VariantAnnotator::last_printed_line){
@@ -453,6 +457,17 @@ sub _transcript_annotation_for_intron
     my ($self, $transcript, $variant) = @_;
 
     my $strand = $transcript->strand;
+    
+    my $protein = $transcript->protein;
+    my $aa_seq ='';
+    if ($protein){
+        $aa_seq = $protein->amino_acid_seq;
+    }else{
+        if (grep {$_->structure_type =~ /cds/} $transcript->ordered_sub_structures){
+            $self->error_message("Couldn't find a protein for transcript ".$transcript->id."! This is bad!");
+        }
+    }
+
 
     my ($cds_exon_start, $cds_exon_stop) = $transcript->cds_exon_range;
     $cds_exon_start ||= 0;
@@ -544,7 +559,7 @@ sub _transcript_annotation_for_intron
             strand => $strand,
             c_position => 'c.' . 'NULL',
             trv_type => $trv_type,
-            amino_acid_length => length( $transcript->protein->amino_acid_seq ),
+            amino_acid_length => length( $aa_seq ),
             amino_acid_change => 'NULL',
             intron_annotation_substructure_ordinal  => $intron_annotation_substructure_ordinal,
             intron_annotation_substructure_size     => $intron_annotation_substructure_size,
@@ -650,14 +665,6 @@ sub _transcript_annotation_for_intron
     {
         # intron NN 
         $trv_type = "intronic";
-    }
-
-    my $protein = $transcript->protein;
-    my $aa_seq;
-    if ($protein){
-        $aa_seq = $protein->amino_acid_seq;
-    }else{
-        $self->error_message("Couldn't find a protein for transcript ".$transcript->id."! This is bad!");
     }
 
     return
@@ -921,7 +928,6 @@ sub _transcript_annotation_for_cds_exon
     }
     elsif($variant->{type} =~ /del/i) {
         #don't want to substr beyond the length of the full coding sequence
-        $DB::single = 1;
         my $post_deletion_start_position = $c_position-1+$size2;
         $post_deletion_start_position = length $original_seq if length $original_seq < $post_deletion_start_position;
         $mutated_seq=substr($original_seq,0,$c_position-1).substr($original_seq,$post_deletion_start_position);
