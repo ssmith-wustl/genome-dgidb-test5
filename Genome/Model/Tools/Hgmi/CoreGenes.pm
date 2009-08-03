@@ -71,7 +71,7 @@ sub execute
     #my $sequences = $self->sequences;
 
     # bap_export_proteins should be deployed.
-    my @pep_export = ('/gscuser/josborne/src/hgmi_annotation/BAP/bap_export_proteins.pl',
+    my @pep_export = ('/gsc/scripts/gsc/annotation/bap_export_proteins',
                       '-sequence-set-id', 
                       $self->sequence_set_id(),
 
