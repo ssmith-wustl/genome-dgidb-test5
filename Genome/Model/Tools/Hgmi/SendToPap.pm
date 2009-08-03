@@ -366,7 +366,7 @@ sub do_pap_workflow
 
     
     # do quick check on the return value.
-    print STDERR Dumper($output),"\n";
+    #print STDERR Dumper($output),"\n";
    
     if (defined($output)) {
         print STDERR "workflow completed successfully";
