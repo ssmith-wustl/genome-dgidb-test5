@@ -707,6 +707,7 @@ my %csp_priority = (
     'update mp assembly'                      => 1,
     'update mp coverage'                      => 1,
     'add read to mp assembly'                 => 1,
+    'dump assembly project'                 => 1,
     'import external reads'                   => 1,
     'gather submission results'               => 1,
     'prepare read submission'                 => 1,
