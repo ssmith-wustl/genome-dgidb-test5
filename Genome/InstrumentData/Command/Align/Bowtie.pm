@@ -1,0 +1,38 @@
+package Genome::InstrumentData::Command::Align::Bowtie;
+
+use strict;
+use warnings;
+
+use Genome;
+
+class Genome::InstrumentData::Command::Align::Bowtie {
+    is => ['Genome::InstrumentData::Command::Align'],
+    has_constant => [
+        aligner_name => { value => 'Bowtie' },
+    ],
+    doc => "align instrument data using Bowtie's novoalign tool (see http://bowtie-bio.sourceforge.net)",
+};
+
+sub help_synopsis {
+return <<EOS
+genome instrument-data align bowtie -r NCBI-human-build36 -i 2761701954
+
+genome instrument-data align bowtie -r NCBI-human-build36 -i 2761701954 -v 2.03.01 
+
+genome instrument-data align bowtie --reference-name NCBI-human-build36 --instrument-data-id 2761701954 --version 2.03.01 
+
+genome instrument-data align bowtie -i 2761701954 -v 2.03.01 
+EOS
+}
+
+sub help_detail {
+return <<EOS
+Launch the Bowtie aligner in a standard way and produce results ready for the genome modeling pipeline.
+
+See http://bowtie-bio.sourceforge.net.
+EOS
+}
+
+
+1;
+
