@@ -55,7 +55,7 @@ class Genome::Model {
                                                     return Genome::Sample->get(name => $subject_name);
                                                 }
                                                 elsif ($subject_type eq 'species_name') {
-                                                    return Genome::Taxon->get(name => $subject_name); 
+                                                    return Genome::Taxon->get(species_name => $subject_name); 
                                                 }
                                                 elsif ($subject_type eq 'sample_group') {
                                                     return;
