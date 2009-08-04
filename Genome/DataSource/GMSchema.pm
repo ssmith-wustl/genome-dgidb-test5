@@ -32,6 +32,9 @@ sub _get_sequence_name_for_table_and_column {
     elsif($table_name =~ /GENOME_MODEL_BUILD/) {
         return 'GENOME_MODEL_EVENT_SEQ';
     }
+    elsif($table_name =~ /SOFTWARE_RESULT/) {
+        return 'GENOME_MODEL_EVENT_SEQ';
+    }
     elsif ($column_name eq 'ID') {
         return $table_name . '_SEQ';
     }
