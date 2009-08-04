@@ -225,6 +225,7 @@ sub _get_annotator {
 
     my $annotator = Genome::Transcript::VariantAnnotator->create(
         transcript_window => $transcript_window,
+        version => 'combined_v0', #TODO, update this when the hardcoded value is changed
     );
     die unless $annotator;
 
