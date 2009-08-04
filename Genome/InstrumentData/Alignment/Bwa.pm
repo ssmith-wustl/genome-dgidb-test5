@@ -527,6 +527,15 @@ sub _run_aligner {
         $self->error_message('Failed to verify bwa successful completion from output file '. $self->aligner_output_file_path);
         $self->die_and_clean_up($self->error_message);
     }
+
+    my $alignment_allocation = $self->get_allocation;
+    if ($alignment_allocation) {
+        unless ($alignment_allocation->reallocate) {
+            $self->error_message('Failed to reallocate disk space for disk allocation: '. $alignment_allocation->id);
+            $self->die_and_clean_up($self->error_message);
+        }
+    }
+
     
     $DB::single = 1;
     
