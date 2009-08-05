@@ -59,7 +59,7 @@ sub create_mock_model {
         $model->set_always($pp_param, $pp->$pp_param);
     }
 
-    #< Build ># /gscmnt/sata363/info/medseq/model_data/2733662090/build93293206
+    #< Build ># /gscmnt/sata835/info/medseq/model_data/2733662090/build93293206
     my $build_id = get_mock_build_id();
     my $build_dir = $self->dir.'/build'.$build_id;
     my $build_reports_dir = $build_dir.'/reports';

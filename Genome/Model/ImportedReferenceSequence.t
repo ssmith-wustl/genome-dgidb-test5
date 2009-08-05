@@ -17,7 +17,7 @@ my $build = $model->build_by_version(36);    # returns a hashref
 #print $build,"\n";
 #print Dumper($build),"\n";
 my $expected_dir
-    = '/gscmnt/sata363/info/medseq/model_data/2741951221/v36-build93636924';
+    = '/gscmnt/sata835/info/medseq/model_data/2741951221/v36-build93636924';
 
 #print $build->data_directory(),"\n";
 is( $build->data_directory(), $expected_dir, 'got the right data directory' );
@@ -25,7 +25,7 @@ is( $build->data_directory(), $expected_dir, 'got the right data directory' );
 #print $build->get_bases_file(1),"\n";
 my $bases_file = $build->get_bases_file(1);
 my $expected_bases_file
-    = '/gscmnt/sata363/info/medseq/model_data/2741951221/v36-build93636924/1.bases';
+    = '/gscmnt/sata835/info/medseq/model_data/2741951221/v36-build93636924/1.bases';
 is( $bases_file, $expected_bases_file, 'bases file correct' );
 
 #print $build->sequence($bases_file, 1, 10),"\n";

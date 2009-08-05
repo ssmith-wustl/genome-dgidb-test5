@@ -62,12 +62,12 @@ sub execute
     return 1;
 
     my $flatfile = $self->derive_flatfile_location();
-    my $gbff = "/gscmnt/sata363/info/medseq/annotation_data/human.rna.gbff"; # hard code this for now
+    my $gbff = "/gscmnt/sata835/info/medseq/annotation_data/human.rna.gbff"; # hard code this for now
 
     my $ensembl_host = "mysql1"; # or mysql2?
     my $ensembl_user = "mse";
 
-    my $outputdir_base = "/gscmnt/sata363/info/medseq/annotation_data/";
+    my $outputdir_base = "/gscmnt/sata835/info/medseq/annotation_data/";
 
     my $vers_number = $self->version;
     
@@ -75,7 +75,7 @@ sub execute
     my $ensdir = $outputdir_base."annotation_data.ensembl_v".$vers_number;
     my $gbdir  = $outputdir_base."annotation_data.genbank_v".$vers_number;
     # they look like:
-    # /gscmnt/sata363/info/medseq/annotation_data/annotation_data.something_v1/
+    # /gscmnt/sata835/info/medseq/annotation_data/annotation_data.something_v1/
 
 =head1 NOTES
 

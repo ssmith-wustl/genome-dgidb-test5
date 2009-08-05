@@ -120,7 +120,7 @@ sub get_genbank_info
 {
     my $self = shift;
     my $version = shift;
-    my $gbfile = "/gscmnt/sata363/info/medseq/annotation_data/human.rna.gbff";
+    my $gbfile = "/gscmnt/sata835/info/medseq/annotation_data/human.rna.gbff";
     my $flatfile = "/gsc/var/lib/import/entrez/".$version."/Homo_sapiens.agc";
     unless(-f $flatfile)
     {
