@@ -13,11 +13,13 @@ class Genome::Software {
     has_optional => [
                      inputs_bx   => { is => 'UR::BoolExpr', id_by => 'inputs_id', is_optional => 1 },
                      inputs_id   => { is => 'Text', implied_by => 'inputs_bx', is_optional => 1 },
+                     params_bx   => { is => 'UR::BoolExpr', id_by => 'params_id', is_optional => 1},
+                     params_id   => { is => 'Text', implied_by => 'params_bx', is_optional => 1 },
                  ],
     attributes_have => [
                         is_input => { is => 'Boolean' },
                         is_param => { is => 'Boolean' },
-                    ],
+                        ],
 };
 
 sub create {
@@ -43,7 +45,6 @@ sub create {
     }
     if (keys %is_input) {
         my $bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($self->class,%is_input);
-        #my $bx = UR::BoolExpr->resolve_for_class_and_params($self->class,%is_input);
         $self->inputs_id($bx->id);
     }
     return $self;
@@ -55,7 +56,14 @@ sub inputs {
     return $bx->params_list;
 }
 
+sub params {
+    my $self = shift;
+    my $bx = $self->params_bx;
+    return $bx->params_list;
+}
+
 sub resolve_software_version {
+    #TODO, this tries to get svn revision info, then snapshot info, then date commited to trunk.  This actually isn't used anywhere to verify versions, so as long as it doesn't die here we are ok for the time being
     my $self = shift;
     my $base_dir = $self->base_dir;
     my $path = $base_dir .'.pm';
@@ -98,17 +106,22 @@ sub get_input_value_by_name {
     my $input_name = shift;
     my %inputs = $self->inputs;
     return $inputs{$input_name}
-};
+}
 
-1;
+sub get_param_value_by_name {
+    my $self = shift;
+    my $param_name = shift;
+    my %params = $self->params;
+    return $params{$param_name};
+}
 
 package Genome::Software::AbstractBaseTest;
 
 class Genome::Software::AbstractBaseTest {
     is => 'Genome::Software',
     has_input => [
-                  foo => { is => 'Text'},
-              ],
+    foo => { is => 'Text'},
+    ],
 };
 
 1;
