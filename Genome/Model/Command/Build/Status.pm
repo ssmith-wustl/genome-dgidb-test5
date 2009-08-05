@@ -21,6 +21,14 @@ class Genome::Model::Command::Build::Status {
             },
     ],
     has_optional => [
+            instance_id => {
+                is => 'String',
+                doc => 'Optional id of the workflow operation instance to use.'
+            },
+            instance => {
+                is => 'Workflow::Store::Db::Operation::Instance',
+                id_by => 'instance_id',
+            },
             section => {
                 is => 'String',
                 doc => "NOT IMPLEMENTED YET.  The sub-section of the document to return.  Options are 'all', 'events', etc.", 
@@ -86,6 +94,20 @@ sub execute  {
     #build node 
     my $buildnode = $self->get_build_node;
     $build_status_node->addChild($buildnode);
+
+
+    ## find the latest workflow for this build
+    unless ($self->instance) {
+        my @ops = sort { $b->id <=> $a->id } Workflow::Store::Db::Operation::Instance->get(
+            name => $self->build->id . ' all stages'
+        );
+
+        if (defined $ops[0]) {
+            $self->instance($ops[0]);
+        }
+    }
+    
+    $buildnode->addChild( $self->get_workflow_node ) if $self->instance;
    
     #processing profile 
     $buildnode->addChild ( $self->get_processing_profile_node() );
@@ -136,8 +158,6 @@ sub get_reports_node {
     }
 
     return $reports_node;
- 
-
 }
 
 sub get_events_node {
@@ -170,8 +190,28 @@ sub get_build_node {
     $buildnode->addChild( $doc->createAttribute("build-id",$self->build_id) );
     $buildnode->addChild( $doc->createAttribute("status",$self->build->build_status) );
     $buildnode->addChild( $doc->createAttribute("data-directory",$self->build->data_directory) );
- 
+
+    my $event = $self->build->build_event;
+    
+    my $out_log_file = $event->resolve_log_directory . "/" . $event->id . ".out";
+    my $err_log_file = $event->resolve_log_directory . "/" . $event->id . ".err";
+
+    $buildnode->addChild( $doc->createAttribute("output-log",$out_log_file));
+    $buildnode->addChild( $doc->createAttribute("error-log",$err_log_file));
+    
     return $buildnode; 
+}
+
+sub get_workflow_node {
+    my $self = shift;
+    my $doc = $self->_doc;
+
+    my $workflownode = $doc->createElement("workflow");
+
+    $workflownode->addChild( $doc->createAttribute("instance-id", $self->instance->id));
+    $workflownode->addChild( $doc->createAttribute("instance-status", $self->instance->status));
+
+    return $workflownode;
 }
 
 #Note:  Since the Web server cannot execute bjob commands, use the cron'd results from the tmp file
@@ -335,6 +375,32 @@ sub get_event_node {
     my $event_node = $self->anode("event","id",$event->id);
     $event_node->addChild( $doc->createAttribute("command_class",$event->class)); 
     $event_node->addChild( $self->tnode("event_status",$event->event_status));
+    
+    my $root_instance = $self->instance;
+    if ($root_instance) {
+        my $event_instance;
+        foreach my $stage_instance ($root_instance->child_instances) {
+            next unless $stage_instance->can('child_instances');
+            my @found = $stage_instance->child_instances(
+                name => $event->command_name_brief . ' ' . $event->id
+            );
+            if (@found) {
+                $event_instance = $found[0];
+            }
+        }
+
+        if ($event_instance) {
+            $event_node->addChild( $self->tnode("instance_id", $event_instance->id));
+            $event_node->addChild( $self->tnode("instance_status", $event_instance->status));
+
+            my @e = Workflow::Store::Db::Operation::InstanceExecution->get(
+                instance_id => $event_instance->id
+            );
+
+            $event_node->addChild( $self->tnode("execution_count", scalar @e));
+        }
+    }
+    
     $event_node->addChild( $self->tnode("lsf_job_id",$event->lsf_job_id));
     $event_node->addChild( $self->tnode("lsf_job_status",$lsf_job_status));
     $event_node->addChild( $self->tnode("date_scheduled",$event->date_scheduled));
@@ -345,6 +411,7 @@ sub get_event_node {
     my $out_log_file = $event->resolve_log_directory ."/".$event->id.".out";
     $event_node->addChild( $self->tnode("output_log_file",$out_log_file));
     $event_node->addChild( $self->tnode("error_log_file",$err_log_file));
+
     return $event_node;
 
 }
