@@ -107,6 +107,18 @@ sub alignment {
         if ($model->read_aligner_params) {
             $params{'aligner_params'} = $model->read_aligner_params;
         }
+        if ($model->read_trimmer_name) {
+            $params{'trimmer_name'} = $model->read_trimmer_name;
+        }
+        if ($model->read_trimmer_version) {
+            $params{'trimmer_version'} = $model->read_trimmer_version;
+        }
+        if ($model->read_trimmer_params) {
+            $params{'trimmer_params'} = $model->read_trimmer_params;
+        }
+        if ($model->force_fragment) {
+            $params{'force_fragment'} = $model->force_fragment;
+        }
         my $alignment = Genome::InstrumentData::Alignment->create(%params);
         unless ($alignment) {
             $self->error_message('Failed to create an alignment object');
