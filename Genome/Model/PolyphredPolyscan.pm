@@ -384,7 +384,7 @@ sub setup_input {
         
         $op->parallel_by('input_file');
 
-        my $input_dir = File::Temp::tempdir('input_dir_XXXXXXXX', DIR => '/gscmnt/sata363/info/medseq/temporary_data', CLEANUP => 1);
+        my $input_dir = File::Temp::tempdir('input_dir_XXXXXXXX', DIR => '/gscmnt/sata835/info/medseq/temporary_data', CLEANUP => 1);
 
         my @copied_files = ();
         foreach my $file (@input_files) {

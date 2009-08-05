@@ -113,7 +113,7 @@ SKIP: {
         $op,
         'parser_type' => 'Polyscan',
         'input_file' => [$data_path . '/Polyscan.input/TCGA_Production_Set_1-0000199_00n-Ensembl-44_36f.polyscan.high'],
-        'output_path' => '/gscmnt/sata363/info/medseq/temporary_data'
+        'output_path' => '/gscmnt/sata835/info/medseq/temporary_data'
     );
     
     ok($output,'has output');

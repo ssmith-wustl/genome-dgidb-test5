@@ -315,7 +315,7 @@ sub cache_transcript_status
 
     my %ts_status_hash;
     #Check storable status so we don't have to regenerate this file
-    my $storable_file = "/gscmnt/sata363/info/medseq/annotation_data/genbank_transcript_status_cache/".$self->species.".".$self->version;
+    my $storable_file = "/gscmnt/sata835/info/medseq/annotation_data/genbank_transcript_status_cache/".$self->species.".".$self->version;
 
     if (-e $storable_file){
         my $ref = retrieve($storable_file);
