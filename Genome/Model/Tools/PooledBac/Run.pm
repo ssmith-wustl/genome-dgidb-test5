@@ -1,4 +1,4 @@
-package Genome::Model::Command::RunPooledBac;
+package Genome::Model::Tools::PooledBac::Run;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Genome::Model::Tools::Pcap::Assemble;
 use Bio::SeqIO;
 use PP::LSF;
 use Data::Dumper;
-class Genome::Model::Command::RunPooledBac {
+class Genome::Model::Tools::PooledBac::Run {
     is => 'Command',
     has => 
     [        
