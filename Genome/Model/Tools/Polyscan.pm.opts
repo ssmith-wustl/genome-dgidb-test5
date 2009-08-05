@@ -1,0 +1,6 @@
+$Genome::Model::Tools::Polyscan::OPTS_SPEC = [
+          '>to-tsv',
+          \'Genome::Model::Tools::Polyscan::ToTsv',
+          'help!',
+          undef
+        ];

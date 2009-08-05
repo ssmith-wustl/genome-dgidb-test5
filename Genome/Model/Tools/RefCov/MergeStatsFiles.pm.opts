@@ -1,0 +1,8 @@
+$Genome::Model::Tools::RefCov::MergeStatsFiles::OPTS_SPEC = [
+          'input-stats-files=s',
+          undef,
+          'output-stats-file=s',
+          undef,
+          'help!',
+          undef
+        ];

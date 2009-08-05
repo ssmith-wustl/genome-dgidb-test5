@@ -1,0 +1,6 @@
+$Genome::Model::Tools::DeleteFiles::OPTS_SPEC = [
+          'files=s',
+          undef,
+          'help!',
+          undef
+        ];

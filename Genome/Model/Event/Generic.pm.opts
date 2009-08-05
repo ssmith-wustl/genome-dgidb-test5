@@ -1,0 +1,6 @@
+$Genome::Model::Event::Generic::OPTS_SPEC = [
+          'model-id=s',
+          undef,
+          'help!',
+          undef
+        ];

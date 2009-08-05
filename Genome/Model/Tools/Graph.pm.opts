@@ -1,0 +1,6 @@
+$Genome::Model::Tools::Graph::OPTS_SPEC = [
+          '>heatmap',
+          \'Genome::Model::Tools::Graph::Heatmap',
+          'help!',
+          undef
+        ];

@@ -1,0 +1,22 @@
+$Genome::Model::Command::Write::Ace::Maq::OPTS_SPEC = [
+          'ace=s',
+          undef,
+          'chromosome=s',
+          undef,
+          'end=s',
+          undef,
+          'maq=s',
+          undef,
+          'refseq=s',
+          undef,
+          'start=s',
+          undef,
+          'anychr!',
+          undef,
+          'endpad=s',
+          undef,
+          'phds=s',
+          undef,
+          'help!',
+          undef
+        ];

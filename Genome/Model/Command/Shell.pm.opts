@@ -1,0 +1,4 @@
+$Genome::Model::Command::Shell::OPTS_SPEC = [
+          'help!',
+          undef
+        ];

@@ -1,0 +1,14 @@
+$Genome::Model::Command::Build::Assembly::OPTS_SPEC = [
+          '>add-read-set-to-project',
+          \'Genome::Model::Command::Build::Assembly::AddReadSetToProject',
+          '>assemble',
+          \'Genome::Model::Command::Build::Assembly::Assemble',
+          '>assign-read-set-to-model',
+          \'Genome::Model::Command::Build::Assembly::AssignReadSetToModel',
+          '>filter-read-set',
+          \'Genome::Model::Command::Build::Assembly::FilterReadSet',
+          '>trim-read-set',
+          \'Genome::Model::Command::Build::Assembly::TrimReadSet',
+          'help!',
+          undef
+        ];

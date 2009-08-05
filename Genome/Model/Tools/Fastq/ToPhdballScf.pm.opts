@@ -1,0 +1,4 @@
+$Genome::Model::Tools::Fastq::ToPhdballScf::OPTS_SPEC = [
+          'help!',
+          undef
+        ];

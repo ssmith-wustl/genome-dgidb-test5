@@ -1,0 +1,14 @@
+$Genome::Model::Tools::ImportAnnotation::OPTS_SPEC = [
+          '>db-snp',
+          \'Genome::Model::Tools::ImportAnnotation::DbSnp',
+          '>split-files',
+          \'Genome::Model::Tools::ImportAnnotation::SplitFiles',
+          '>update-annotation',
+          \'Genome::Model::Tools::ImportAnnotation::UpdateAnnotation',
+          '>venter',
+          \'Genome::Model::Tools::ImportAnnotation::Venter',
+          '>watson',
+          \'Genome::Model::Tools::ImportAnnotation::Watson',
+          'help!',
+          undef
+        ];

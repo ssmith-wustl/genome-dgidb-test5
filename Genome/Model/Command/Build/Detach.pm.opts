@@ -1,0 +1,10 @@
+$Genome::Model::Command::Build::Detach::OPTS_SPEC = [
+          'event-id=s',
+          undef,
+          'model-id=s',
+          undef,
+          'build-id=s',
+          undef,
+          'help!',
+          undef
+        ];

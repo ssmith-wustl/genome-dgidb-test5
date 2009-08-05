@@ -1,0 +1,18 @@
+$Genome::Model::Tools::AmpliconAssembly::ContaminationScreen::OPTS_SPEC = [
+          'database=s',
+          undef,
+          'directory=s',
+          undef,
+          'remove-contaminants!',
+          undef,
+          'screen-file=s',
+          undef,
+          'sequencing-center=s',
+          undef,
+          'sequencing-platform=s',
+          undef,
+          'subject-name=s',
+          undef,
+          'help!',
+          undef
+        ];

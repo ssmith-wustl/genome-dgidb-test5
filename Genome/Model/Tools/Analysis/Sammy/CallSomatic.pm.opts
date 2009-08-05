@@ -1,0 +1,20 @@
+$Genome::Model::Tools::Analysis::Sammy::CallSomatic::OPTS_SPEC = [
+          'output-dir=s',
+          undef,
+          'regions-file=s',
+          undef,
+          'sample-name=s',
+          undef,
+          'normal-bam=s',
+          undef,
+          'normal-pileup=s',
+          undef,
+          'reference=s',
+          undef,
+          'tumor-bam=s',
+          undef,
+          'tumor-pileup=s',
+          undef,
+          'help!',
+          undef
+        ];

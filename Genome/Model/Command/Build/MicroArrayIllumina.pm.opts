@@ -1,0 +1,6 @@
+$Genome::Model::Command::Build::MicroArrayIllumina::OPTS_SPEC = [
+          '>run',
+          \'Genome::Model::Command::Build::MicroArrayIllumina::Run',
+          'help!',
+          undef
+        ];

@@ -1,0 +1,8 @@
+$Genome::Model::Command::Build::Abandon::OPTS_SPEC = [
+          'model-id=s',
+          undef,
+          'build-id=s',
+          undef,
+          'help!',
+          undef
+        ];

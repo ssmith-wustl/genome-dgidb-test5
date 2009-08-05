@@ -1,0 +1,6 @@
+$Genome::Model::Tools::ImportAnnotation::SplitFiles::OPTS_SPEC = [
+          'workdir=s',
+          undef,
+          'help!',
+          undef
+        ];

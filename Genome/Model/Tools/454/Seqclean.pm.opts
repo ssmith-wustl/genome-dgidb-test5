@@ -1,0 +1,16 @@
+$Genome::Model::Tools::454::Seqclean::OPTS_SPEC = [
+          'in-fasta-file=s',
+          undef,
+          'adaptor-sequence-db=s',
+          undef,
+          'contaminant-db=s',
+          undef,
+          'out-fasta-file=s',
+          undef,
+          'seqclean-params=s',
+          undef,
+          'seqclean-report=s',
+          undef,
+          'help!',
+          undef
+        ];

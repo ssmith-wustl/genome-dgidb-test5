@@ -1,0 +1,12 @@
+$Genome::Model::Command::Build::RunJobs::OPTS_SPEC = [
+          'model-id=s',
+          undef,
+          'stage-name=s',
+          undef,
+          'bsub-queue=s',
+          undef,
+          'build-id=s',
+          undef,
+          'help!',
+          undef
+        ];

@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Fasta::TrimQuality::OPTS_SPEC = [
+          'fasta-file=s',
+          undef,
+          'min-trim-length=s',
+          undef,
+          'min-trim-quality=s',
+          undef,
+          'help!',
+          undef
+        ];

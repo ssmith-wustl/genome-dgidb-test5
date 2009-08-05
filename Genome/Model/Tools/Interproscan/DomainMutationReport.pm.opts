@@ -1,0 +1,18 @@
+$Genome::Model::Tools::Interproscan::DomainMutationReport::OPTS_SPEC = [
+          'maf=s',
+          undef,
+          'output=s',
+          undef,
+          'acol=s',
+          undef,
+          'filter=s',
+          undef,
+          'gcol=s',
+          undef,
+          'sepchar=s',
+          undef,
+          'tcol=s',
+          undef,
+          'help!',
+          undef
+        ];

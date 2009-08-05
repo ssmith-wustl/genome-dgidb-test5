@@ -1,0 +1,12 @@
+$Genome::Model::Tools::Graph::Heatmap::OPTS_SPEC = [
+          'columns=s',
+          undef,
+          'image=s',
+          undef,
+          'matrix=s',
+          undef,
+          'sepchar=s',
+          undef,
+          'help!',
+          undef
+        ];

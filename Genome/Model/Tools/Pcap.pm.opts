@@ -1,0 +1,8 @@
+$Genome::Model::Tools::Pcap::OPTS_SPEC = [
+          '>assemble',
+          \'Genome::Model::Tools::Pcap::Assemble',
+          '>run-stats',
+          \'Genome::Model::Tools::Pcap::RunStats',
+          'help!',
+          undef
+        ];

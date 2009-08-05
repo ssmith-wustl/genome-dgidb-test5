@@ -1,0 +1,14 @@
+$Genome::Model::Command::RunPooledBac::OPTS_SPEC = [
+          'pooled-bac-dir=s',
+          undef,
+          'project-dir=s',
+          undef,
+          'ref-seq-file=s',
+          undef,
+          'ace-file-name=s',
+          undef,
+          'phd-ball-name=s',
+          undef,
+          'help!',
+          undef
+        ];

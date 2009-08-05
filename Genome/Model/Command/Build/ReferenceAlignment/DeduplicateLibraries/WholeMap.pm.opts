@@ -1,0 +1,14 @@
+$Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::WholeMap::OPTS_SPEC = [
+  'aligner-version=s',
+  undef,
+  'alignments=s',
+  undef,
+  'lsf-resource=s',
+  undef,
+  'whole-map-file=s',
+  undef,
+  'output-file=s',
+  undef,
+  'help!',
+  undef
+];

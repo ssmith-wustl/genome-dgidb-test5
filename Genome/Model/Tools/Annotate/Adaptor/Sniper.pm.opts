@@ -1,0 +1,8 @@
+$Genome::Model::Tools::Annotate::Adaptor::Sniper::OPTS_SPEC = [
+          'output-file=s',
+          undef,
+          'somatic-file=s',
+          undef,
+          'help!',
+          undef
+        ];

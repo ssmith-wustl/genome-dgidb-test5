@@ -1,0 +1,14 @@
+$Genome::Model::Tools::Bowtie::LimitSnps::OPTS_SPEC = [
+          'positions-file=s',
+          undef,
+          'variants-file=s',
+          undef,
+          'not-file=s',
+          undef,
+          'output-file=s',
+          undef,
+          'verbose=s',
+          undef,
+          'help!',
+          undef
+        ];

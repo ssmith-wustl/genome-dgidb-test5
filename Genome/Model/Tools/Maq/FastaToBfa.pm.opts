@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Maq::FastaToBfa::OPTS_SPEC = [
+          'bfa-file=s',
+          undef,
+          'fasta-file=s',
+          undef,
+          'use-version=s',
+          undef,
+          'help!',
+          undef
+        ];

@@ -1,0 +1,6 @@
+$Genome::Model::Command::Build::ImportedAnnotation::OPTS_SPEC = [
+          '>run',
+          \'Genome::Model::Command::Build::ImportedAnnotation::Run',
+          'help!',
+          undef
+        ];

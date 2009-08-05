@@ -1,0 +1,6 @@
+$Genome::Model::Command::Build::ReferenceAlignment::FindVariations::Pyroscan::OPTS_SPEC = [
+  'model-id=s',
+  undef,
+  'help!',
+  undef
+];

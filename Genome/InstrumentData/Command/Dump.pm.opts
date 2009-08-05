@@ -1,0 +1,8 @@
+$Genome::InstrumentData::Command::Dump::OPTS_SPEC = [
+          'directory=s',
+          undef,
+          'instrument-data-id=s',
+          undef,
+          'help!',
+          undef
+        ];

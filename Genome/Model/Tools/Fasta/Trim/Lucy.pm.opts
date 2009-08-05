@@ -1,0 +1,12 @@
+$Genome::Model::Tools::Fasta::Trim::Lucy::OPTS_SPEC = [
+          'fasta-file=s',
+          undef,
+          'vector-name=s',
+          undef,
+          'keep-lucy-file!',
+          undef,
+          'output-fasta-file=s',
+          undef,
+          'help!',
+          undef
+        ];

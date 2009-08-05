@@ -1,0 +1,14 @@
+$Genome::Model::Tools::Snp::Filters::DtrSeeFive::OPTS_SPEC = [
+          'basedir=s',
+          undef,
+          'c5src=s',
+          undef,
+          'experimental-metric-model-file=s',
+          undef,
+          'ref-seq-id=s',
+          undef,
+          'specificity=s',
+          undef,
+          'help!',
+          undef
+        ];

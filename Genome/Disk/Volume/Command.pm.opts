@@ -1,0 +1,6 @@
+$Genome::Disk::Volume::Command::OPTS_SPEC = [
+  '>list',
+  \'Genome::Disk::Volume::Command::List',
+  'help!',
+  undef
+];

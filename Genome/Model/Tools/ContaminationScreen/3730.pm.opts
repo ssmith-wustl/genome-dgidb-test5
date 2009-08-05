@@ -1,0 +1,14 @@
+$Genome::Model::Tools::ContaminationScreen::3730::OPTS_SPEC = [
+          'database=s',
+          undef,
+          'input-file=s',
+          undef,
+          'lsf-resource=s',
+          undef,
+          'output-file=s',
+          undef,
+          'summary-file=s',
+          undef,
+          'help!',
+          undef
+        ];

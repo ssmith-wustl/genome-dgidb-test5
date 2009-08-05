@@ -1,0 +1,6 @@
+$Genome::Model::Command::Build::AmpliconAssembly::CleanUp::OPTS_SPEC = [
+          'model-id=s',
+          undef,
+          'help!',
+          undef
+        ];

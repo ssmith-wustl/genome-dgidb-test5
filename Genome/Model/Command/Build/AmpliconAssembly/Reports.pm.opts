@@ -1,0 +1,6 @@
+$Genome::Model::Command::Build::AmpliconAssembly::Reports::OPTS_SPEC = [
+          'model-id=s',
+          undef,
+          'help!',
+          undef
+        ];

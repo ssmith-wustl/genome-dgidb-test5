@@ -1,0 +1,4 @@
+$Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments::OPTS_SPEC = [
+  'help!',
+  undef
+];

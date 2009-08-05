@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Consed::NavToAcenav::OPTS_SPEC = [
+          'acefile=s',
+          undef,
+          'acenav=s',
+          undef,
+          'nav=s',
+          undef,
+          'help!',
+          undef
+        ];

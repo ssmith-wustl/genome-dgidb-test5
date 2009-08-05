@@ -1,0 +1,10 @@
+$Genome::Model::Tools::PhredPhrap::PhdToFasta::OPTS_SPEC = [
+          'fasta-file=s',
+          undef,
+          'phd-dir=s',
+          undef,
+          'phd-file=s',
+          undef,
+          'help!',
+          undef
+        ];

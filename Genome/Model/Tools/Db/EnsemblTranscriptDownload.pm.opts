@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Db::EnsemblTranscriptDownload::OPTS_SPEC = [
+          'dev!',
+          undef,
+          'source=s',
+          undef,
+          'version=s',
+          undef,
+          'help!',
+          undef
+        ];

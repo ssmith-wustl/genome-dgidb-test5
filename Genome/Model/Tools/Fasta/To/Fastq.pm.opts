@@ -1,0 +1,12 @@
+$Genome::Model::Tools::Fasta::To::Fastq::OPTS_SPEC = [
+          'fasta-file=s',
+          undef,
+          'dir=s',
+          undef,
+          'out-filename=s',
+          undef,
+          'qual-val=s',
+          undef,
+          'help!',
+          undef
+        ];

@@ -1,0 +1,6 @@
+$Genome::Model::Command::Services::BuildQueuedInstrumentData::OPTS_SPEC = [
+          'test=s',
+          undef,
+          'help!',
+          undef
+        ];

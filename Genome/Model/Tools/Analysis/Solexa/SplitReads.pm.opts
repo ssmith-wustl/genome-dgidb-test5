@@ -1,0 +1,16 @@
+$Genome::Model::Tools::Analysis::Solexa::SplitReads::OPTS_SPEC = [
+          'batch-size=s',
+          undef,
+          'flowcell-id=s',
+          undef,
+          'include-lanes=s',
+          undef,
+          'library-name=s',
+          undef,
+          'output-dir=s',
+          undef,
+          'sample-name=s',
+          undef,
+          'help!',
+          undef
+        ];

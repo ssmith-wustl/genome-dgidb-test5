@@ -1,0 +1,12 @@
+$Genome::Model::Tools::Hgmi::Hap::OPTS_SPEC = [
+          'config=s',
+          undef,
+          'dev!',
+          undef,
+          'gen-example!',
+          undef,
+          'internalhash=s',
+          undef,
+          'help!',
+          undef
+        ];

@@ -1,0 +1,14 @@
+$Genome::Model::Command::Report::Mail::OPTS_SPEC = [
+  'build-id=s',
+  undef,
+  'model-id=s',
+  undef,
+  'report-name=s',
+  undef,
+  'to=s',
+  undef,
+  'directory=s',
+  undef,
+  'help!',
+  undef
+];

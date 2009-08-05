@@ -1,0 +1,18 @@
+$Genome::Model::Tools::Analysis::Solexa::LoadReads::OPTS_SPEC = [
+          'flowcell-id=s',
+          undef,
+          'include-lanes=s',
+          undef,
+          'library-name=s',
+          undef,
+          'output-dir=s',
+          undef,
+          'print-location=s',
+          undef,
+          'project-name=s',
+          undef,
+          'sample-name=s',
+          undef,
+          'help!',
+          undef
+        ];

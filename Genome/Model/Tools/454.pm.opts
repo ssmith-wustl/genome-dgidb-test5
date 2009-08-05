@@ -1,0 +1,6 @@
+$Genome::Model::Tools::454::OPTS_SPEC = [
+          '>seqclean',
+          \'Genome::Model::Tools::454::Seqclean',
+          'help!',
+          undef
+        ];

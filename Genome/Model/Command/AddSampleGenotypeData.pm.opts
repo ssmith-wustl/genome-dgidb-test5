@@ -1,0 +1,10 @@
+$Genome::Model::Command::AddSampleGenotypeData::OPTS_SPEC = [
+          'input-data=s',
+          undef,
+          'process-param-set-id=s',
+          undef,
+          'technology-type=s',
+          undef,
+          'help!',
+          undef
+        ];

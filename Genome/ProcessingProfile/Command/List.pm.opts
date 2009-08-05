@@ -1,0 +1,12 @@
+$Genome::ProcessingProfile::Command::List::OPTS_SPEC = [
+          'show=s',
+          undef,
+          'filter=s',
+          undef,
+          'noheaders!',
+          undef,
+          'style=s',
+          undef,
+          'help!',
+          undef
+        ];

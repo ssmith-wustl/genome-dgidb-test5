@@ -1,0 +1,10 @@
+$Genome::Model::Command::Htest::Diff::Define::Lst::OPTS_SPEC = [
+          'changes=s',
+          undef,
+          'from-path=s',
+          undef,
+          'to-path=s',
+          undef,
+          'help!',
+          undef
+        ];

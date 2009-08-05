@@ -1,0 +1,14 @@
+$Genome::Model::Command::AddGoldSnp::OPTS_SPEC = [
+          'file-name=s',
+          undef,
+          'model-id=s',
+          undef,
+          'all!',
+          undef,
+          'instrument-data-id=s',
+          undef,
+          'redo-all!',
+          undef,
+          'help!',
+          undef
+        ];

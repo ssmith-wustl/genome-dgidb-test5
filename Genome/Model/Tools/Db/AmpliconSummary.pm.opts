@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Db::AmpliconSummary::OPTS_SPEC = [
+          'fasta-format!',
+          undef,
+          'output-file=s',
+          undef,
+          'sample-name=s',
+          undef,
+          'help!',
+          undef
+        ];

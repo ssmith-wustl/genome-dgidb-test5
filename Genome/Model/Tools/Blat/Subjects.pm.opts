@@ -1,0 +1,14 @@
+$Genome::Model::Tools::Blat::Subjects::OPTS_SPEC = [
+          'psl-path=s',
+          undef,
+          'query-file=s',
+          undef,
+          'subject-files=s@',
+          'subject-files',
+          'blat-output-path=s',
+          undef,
+          'blat-params=s',
+          undef,
+          'help!',
+          undef
+        ];

@@ -1,0 +1,4 @@
+$Genome::Model::Tools::Fasta::Trim::OPTS_SPEC = [
+          'help!',
+          undef
+        ];

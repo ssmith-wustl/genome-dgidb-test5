@@ -1,0 +1,14 @@
+$Genome::Model::Tools::Consed::TracesToNav::OPTS_SPEC = [
+          'ace=s',
+          undef,
+          'list=s',
+          undef,
+          'convert-coords=s',
+          undef,
+          'name-nav=s',
+          undef,
+          'unpaired!',
+          undef,
+          'help!',
+          undef
+        ];

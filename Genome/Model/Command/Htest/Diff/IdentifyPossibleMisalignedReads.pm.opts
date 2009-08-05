@@ -1,0 +1,4 @@
+$Genome::Model::Command::Htest::Diff::IdentifyPossibleMisalignedReads::OPTS_SPEC = [
+          'help!',
+          undef
+        ];

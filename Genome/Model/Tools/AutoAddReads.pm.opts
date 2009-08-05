@@ -1,0 +1,4 @@
+$Genome::Model::Tools::AutoAddReads::OPTS_SPEC = [
+          'help!',
+          undef
+        ];

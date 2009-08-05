@@ -1,0 +1,10 @@
+$Genome::Model::Command::Build::DeNovoAssembly::OPTS_SPEC = [
+          '>assemble',
+          \'Genome::Model::Command::Build::DeNovoAssembly::Assemble',
+          '>prepare-instrument-data',
+          \'Genome::Model::Command::Build::DeNovoAssembly::PrepareInstrumentData',
+          '>preprocess',
+          \'Genome::Model::Command::Build::DeNovoAssembly::Preprocess',
+          'help!',
+          undef
+        ];

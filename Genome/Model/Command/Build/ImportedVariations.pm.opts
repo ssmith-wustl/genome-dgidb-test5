@@ -1,0 +1,6 @@
+$Genome::Model::Command::Build::ImportedVariations::OPTS_SPEC = [
+          '>run',
+          \'Genome::Model::Command::Build::ImportedVariations::Run',
+          'help!',
+          undef
+        ];

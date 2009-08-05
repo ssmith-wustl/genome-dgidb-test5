@@ -1,0 +1,6 @@
+$Genome::Model::Command::Build::AmpliconAssembly::ContaminationScreen::OPTS_SPEC = [
+          'model-id=s',
+          undef,
+          'help!',
+          undef
+        ];

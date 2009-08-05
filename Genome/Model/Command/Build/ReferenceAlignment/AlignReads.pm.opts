@@ -1,0 +1,4 @@
+$Genome::Model::Command::Build::ReferenceAlignment::AlignReads::OPTS_SPEC = [
+  'help!',
+  undef
+];

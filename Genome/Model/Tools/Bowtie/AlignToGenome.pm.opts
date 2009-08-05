@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Bowtie::AlignToGenome::OPTS_SPEC = [
+          'output-file=s',
+          undef,
+          'query-file=s',
+          undef,
+          'reference=s',
+          undef,
+          'help!',
+          undef
+        ];

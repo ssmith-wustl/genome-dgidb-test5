@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Maq::UnalignedDataToFastq::OPTS_SPEC = [
+          'in=s',
+          undef,
+          'fastq=s',
+          undef,
+          'reverse-fastq=s',
+          undef,
+          'help!',
+          undef
+        ];

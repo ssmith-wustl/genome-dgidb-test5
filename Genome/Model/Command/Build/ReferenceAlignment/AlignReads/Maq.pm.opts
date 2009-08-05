@@ -1,0 +1,6 @@
+$Genome::Model::Command::Build::ReferenceAlignment::AlignReads::Maq::OPTS_SPEC = [
+  'model-id=s',
+  undef,
+  'help!',
+  undef
+];

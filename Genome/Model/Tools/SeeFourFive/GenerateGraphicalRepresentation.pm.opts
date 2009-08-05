@@ -1,0 +1,6 @@
+$Genome::Model::Tools::SeeFourFive::GenerateGraphicalRepresentation::OPTS_SPEC = [
+          'c-file=s',
+          undef,
+          'help!',
+          undef
+        ];

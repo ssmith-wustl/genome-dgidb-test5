@@ -1,0 +1,14 @@
+$Genome::Model::Tools::Bowtie::ParseAlignments::OPTS_SPEC = [
+          'alignments-file=s',
+          undef,
+          'output-file=s',
+          undef,
+          'min-qual-score=s',
+          undef,
+          'output-blocks=s',
+          undef,
+          'verbose=s',
+          undef,
+          'help!',
+          undef
+        ];

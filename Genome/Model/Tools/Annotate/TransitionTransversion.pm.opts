@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Annotate::TransitionTransversion::OPTS_SPEC = [
+          'referance-allele=s',
+          undef,
+          'variant-allele=s',
+          undef,
+          'trans-type=s',
+          undef,
+          'help!',
+          undef
+        ];

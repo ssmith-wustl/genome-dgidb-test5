@@ -1,0 +1,6 @@
+$Genome::Model::Command::Build::PolyphredPolyscan::OPTS_SPEC = [
+          '>run',
+          \'Genome::Model::Command::Build::PolyphredPolyscan::Run',
+          'help!',
+          undef
+        ];

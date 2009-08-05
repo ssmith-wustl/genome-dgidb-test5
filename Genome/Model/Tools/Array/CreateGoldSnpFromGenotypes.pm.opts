@@ -1,0 +1,14 @@
+$Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes::OPTS_SPEC = [
+          'REFDIR=s',
+          undef,
+          'genotype-file1=s',
+          undef,
+          'genotype-file2=s',
+          undef,
+          'output-file=s',
+          undef,
+          'refdb=s',
+          undef,
+          'help!',
+          undef
+        ];

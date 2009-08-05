@@ -1,0 +1,4 @@
+$Genome::Model::Command::Build::Assembly::Assemble::OPTS_SPEC = [
+  'help!',
+  undef
+];

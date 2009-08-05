@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Analysis::Solexa::FindModels::OPTS_SPEC = [
+          'print-location=s',
+          undef,
+          'sample-list=s',
+          undef,
+          'sample-name=s',
+          undef,
+          'help!',
+          undef
+        ];

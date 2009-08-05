@@ -1,0 +1,4 @@
+$Genome::Model::Tools::454::Newbler::OPTS_SPEC = [
+          'help!',
+          undef
+        ];

@@ -1,0 +1,10 @@
+$Genome::Model::Command::Build::ReferenceAlignment::454::OPTS_SPEC = [
+          'bsub-queue=s',
+          undef,
+          'force-new-build!',
+          undef,
+          'model-id=s',
+          undef,
+          'help!',
+          undef
+        ];

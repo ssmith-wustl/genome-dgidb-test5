@@ -1,0 +1,10 @@
+$Genome::Model::Command::Report::OPTS_SPEC = [
+  '>list',
+  \'Genome::Model::Command::Report::List',
+  '>mail',
+  \'Genome::Model::Command::Report::Mail',
+  '>run',
+  \'Genome::Model::Command::Report::Run',
+  'help!',
+  undef
+];

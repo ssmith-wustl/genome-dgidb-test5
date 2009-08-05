@@ -1,0 +1,18 @@
+$Genome::Model::Tools::Interproscan::AppendDomain::OPTS_SPEC = [
+          'filter=s',
+          undef,
+          'maf=s',
+          undef,
+          'output=s',
+          undef,
+          'acol=s',
+          undef,
+          'gcol=s',
+          undef,
+          'sepchar=s',
+          undef,
+          'tcol=s',
+          undef,
+          'help!',
+          undef
+        ];

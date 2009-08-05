@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Analysis::Solexa::IndelContigs::OPTS_SPEC = [
+          'variants-file=s',
+          undef,
+          'flank-size=s',
+          undef,
+          'output-dir=s',
+          undef,
+          'help!',
+          undef
+        ];

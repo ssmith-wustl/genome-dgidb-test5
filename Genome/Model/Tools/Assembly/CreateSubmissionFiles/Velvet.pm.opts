@@ -1,0 +1,14 @@
+$Genome::Model::Tools::Assembly::CreateSubmissionFiles::Velvet::OPTS_SPEC = [
+          'fastq-file=s',
+          undef,
+          'ace=s',
+          undef,
+          'archaea!',
+          undef,
+          'directory=s',
+          undef,
+          'gap-file=s',
+          undef,
+          'help!',
+          undef
+        ];

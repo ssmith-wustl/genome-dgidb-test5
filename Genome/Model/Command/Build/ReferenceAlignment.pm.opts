@@ -1,0 +1,20 @@
+$Genome::Model::Command::Build::ReferenceAlignment::OPTS_SPEC = [
+          '>align-reads',
+          \'Genome::Model::Command::Build::ReferenceAlignment::AlignReads',
+          '>deduplicate-libraries',
+          \'Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries',
+          '>find-variations',
+          \'Genome::Model::Command::Build::ReferenceAlignment::FindVariations',
+          '>layers',
+          \'Genome::Model::Command::Build::ReferenceAlignment::Layers',
+          '>merge-alignments',
+          \'Genome::Model::Command::Build::ReferenceAlignment::MergeAlignments',
+          '>ref-cov',
+          \'Genome::Model::Command::Build::ReferenceAlignment::RefCov',
+          '>run-reports',
+          \'Genome::Model::Command::Build::ReferenceAlignment::RunReports',
+          '>update-genotype',
+          \'Genome::Model::Command::Build::ReferenceAlignment::UpdateGenotype',
+          'help!',
+          undef
+        ];

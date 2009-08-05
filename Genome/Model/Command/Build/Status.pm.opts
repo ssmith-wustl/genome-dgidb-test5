@@ -1,0 +1,16 @@
+$Genome::Model::Command::Build::Status::OPTS_SPEC = [
+          'build-id=s',
+          undef,
+          'display-output=s',
+          undef,
+          'output-format=s',
+          undef,
+          'section=s',
+          undef,
+          'use-lsf-file=s',
+          undef,
+          'xsl-file=s',
+          undef,
+          'help!',
+          undef
+        ];

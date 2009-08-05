@@ -1,0 +1,14 @@
+$Genome::Model::Tools::Fastq::FilterHomopolymer::OPTS_SPEC = [
+          'input=s',
+          undef,
+          'length=s',
+          undef,
+          'nucleotides=s',
+          undef,
+          'output=s',
+          undef,
+          'removed=s',
+          undef,
+          'help!',
+          undef
+        ];

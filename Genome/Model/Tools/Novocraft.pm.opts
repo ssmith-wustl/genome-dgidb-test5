@@ -1,0 +1,6 @@
+$Genome::Model::Tools::Novocraft::OPTS_SPEC = [
+          'use-version=s',
+          undef,
+          'help!',
+          undef
+        ];

@@ -1,0 +1,8 @@
+$MGAP::Command::CalculateGcPercent::OPTS_SPEC = [
+          'fasta-files=s',
+          undef,
+          'gc-percent=s',
+          undef,
+          'help!',
+          undef
+        ];

@@ -1,0 +1,10 @@
+$Genome::Model::Command::ReLaunch::OPTS_SPEC = [
+  'model-id=s',
+  undef,
+  'event-id=s',
+  undef,
+  'events-matching=s',
+  undef,
+  'help!',
+  undef
+];

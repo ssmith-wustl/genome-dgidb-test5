@@ -1,0 +1,6 @@
+$Genome::ProcessingProfile::Command::Report::OPTS_SPEC = [
+          '>summary',
+          \'Genome::ProcessingProfile::Command::Report::Summary',
+          'help!',
+          undef
+        ];

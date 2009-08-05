@@ -1,0 +1,4 @@
+$Genome::Model::Tools::Sam::SamHeaderEditor::OPTS_SPEC = [
+          'help!',
+          undef
+        ];

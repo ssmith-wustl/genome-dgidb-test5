@@ -1,0 +1,8 @@
+$Genome::Model::Tools::RefCov::Compose::OPTS_SPEC = [
+          'composed-directory=s',
+          undef,
+          'snapshot-directories=s',
+          undef,
+          'help!',
+          undef
+        ];

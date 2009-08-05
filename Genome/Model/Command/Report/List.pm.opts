@@ -1,0 +1,8 @@
+$Genome::Model::Command::Report::List::OPTS_SPEC = [
+          'build-id=s',
+          undef,
+          'type-name=s',
+          undef,
+          'help!',
+          undef
+        ];

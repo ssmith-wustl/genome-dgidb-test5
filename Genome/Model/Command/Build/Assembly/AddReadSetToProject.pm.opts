@@ -1,0 +1,4 @@
+$Genome::Model::Command::Build::Assembly::AddReadSetToProject::OPTS_SPEC = [
+  'help!',
+  undef
+];

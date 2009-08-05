@@ -1,0 +1,8 @@
+$Genome::Model::Tools::Pyroscan::Total::OPTS_SPEC = [
+          'dir=s',
+          undef,
+          'lst=s',
+          undef,
+          'help!',
+          undef
+        ];

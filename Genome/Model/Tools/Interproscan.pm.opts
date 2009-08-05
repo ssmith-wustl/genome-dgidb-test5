@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Interproscan::OPTS_SPEC = [
+          '>append-domain',
+          \'Genome::Model::Tools::Interproscan::AppendDomain',
+          '>check-ts-ipro',
+          \'Genome::Model::Tools::Interproscan::CheckTsIpro',
+          '>domain-mutation-report',
+          \'Genome::Model::Tools::Interproscan::DomainMutationReport',
+          'help!',
+          undef
+        ];

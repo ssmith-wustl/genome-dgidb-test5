@@ -1,0 +1,14 @@
+$Genome::Model::Tools::RefCov::Run::OPTS_SPEC = [
+          'base-output-directory=s',
+          undef,
+          'genes-file-path=s',
+          undef,
+          'layers-file-path=s',
+          undef,
+          'log-file-name=s',
+          undef,
+          'stats-file-name=s',
+          undef,
+          'help!',
+          undef
+        ];

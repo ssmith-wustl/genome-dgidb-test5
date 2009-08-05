@@ -1,0 +1,10 @@
+$Genome::Model::Tools::ManualReview::CreateDirectory::OPTS_SPEC = [
+          'map-list=s',
+          undef,
+          'output-dir=s',
+          undef,
+          'snp-file=s',
+          undef,
+          'help!',
+          undef
+        ];

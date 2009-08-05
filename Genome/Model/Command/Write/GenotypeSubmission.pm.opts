@@ -1,0 +1,12 @@
+$Genome::Model::Command::Write::GenotypeSubmission::OPTS_SPEC = [
+  '>454',
+  \'Genome::Model::Command::Write::GenotypeSubmission::454',
+  '>affy',
+  \'Genome::Model::Command::Write::GenotypeSubmission::Affy',
+  '>maq',
+  \'Genome::Model::Command::Write::GenotypeSubmission::Maq',
+  '>ssahasnp',
+  \'Genome::Model::Command::Write::GenotypeSubmission::Ssahasnp',
+  'help!',
+  undef
+];

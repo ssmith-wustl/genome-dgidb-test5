@@ -1,0 +1,12 @@
+$Genome::Project::Command::List::OPTS_SPEC = [
+          'filter=s',
+          undef,
+          'show=s',
+          undef,
+          'noheaders!',
+          undef,
+          'style=s',
+          undef,
+          'help!',
+          undef
+        ];

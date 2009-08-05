@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Merger::OPTS_SPEC = [
+          'file-chunks=s',
+          undef,
+          'merged-file=s',
+          undef,
+          'force-overwrite=s',
+          undef,
+          'help!',
+          undef
+        ];

@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Maq::Mapvalidate::OPTS_SPEC = [
+          'map-file=s',
+          undef,
+          'use-version=s',
+          undef,
+          'output-file=s',
+          undef,
+          'help!',
+          undef
+        ];

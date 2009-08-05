@@ -1,0 +1,10 @@
+$Genome::Model::Command::Remove::OPTS_SPEC = [
+  'archive!',
+  undef,
+  'force-delete!',
+  undef,
+  'model-id=s',
+  undef,
+  'help!',
+  undef
+];

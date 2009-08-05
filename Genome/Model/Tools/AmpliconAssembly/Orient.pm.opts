@@ -1,0 +1,12 @@
+$Genome::Model::Tools::AmpliconAssembly::Orient::OPTS_SPEC = [
+          'directory=s',
+          undef,
+          'sequencing-center=s',
+          undef,
+          'sequencing-platform=s',
+          undef,
+          'subject-name=s',
+          undef,
+          'help!',
+          undef
+        ];

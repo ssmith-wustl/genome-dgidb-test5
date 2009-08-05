@@ -1,0 +1,6 @@
+$Genome::Model::Command::InstrumentData::DumpToFileSystem::OPTS_SPEC = [
+  'model-id=s',
+  undef,
+  'help!',
+  undef
+];

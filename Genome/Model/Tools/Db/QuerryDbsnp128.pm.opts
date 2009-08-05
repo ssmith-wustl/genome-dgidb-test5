@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Db::QuerryDbsnp128::OPTS_SPEC = [
+          'chr=s',
+          undef,
+          'coord=s',
+          undef,
+          'querry-result=s',
+          undef,
+          'help!',
+          undef
+        ];

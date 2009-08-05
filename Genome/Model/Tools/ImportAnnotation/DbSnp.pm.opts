@@ -1,0 +1,10 @@
+$Genome::Model::Tools::ImportAnnotation::DbSnp::OPTS_SPEC = [
+          'files=s@',
+          'files',
+          'outputdir=s',
+          undef,
+          'start-id=s',
+          undef,
+          'help!',
+          undef
+        ];

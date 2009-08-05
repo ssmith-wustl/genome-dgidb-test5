@@ -1,0 +1,12 @@
+$MGAP::Command::GenePredictor::Genemark::OPTS_SPEC = [
+          'bio-seq-feature=s',
+          undef,
+          'fasta-file=s',
+          undef,
+          'gc-percent=s',
+          undef,
+          'model-file=s',
+          undef,
+          'help!',
+          undef
+        ];

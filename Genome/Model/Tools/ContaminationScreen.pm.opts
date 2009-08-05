@@ -1,0 +1,4 @@
+$Genome::Model::Tools::ContaminationScreen::OPTS_SPEC = [
+          'help!',
+          undef
+        ];

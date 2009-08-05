@@ -1,0 +1,12 @@
+$Genome::Model::Tools::Hgmi::CollectSequence::OPTS_SPEC = [
+          'minimum-length=s',
+          undef,
+          'seq-file-dir=s',
+          undef,
+          'seq-file-name=s',
+          undef,
+          'new-ctgs-out=s',
+          undef,
+          'help!',
+          undef
+        ];

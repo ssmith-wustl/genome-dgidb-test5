@@ -1,0 +1,8 @@
+$Genome::Model::Tools::Sam::SnpSanitizer::OPTS_SPEC = [
+          'snp-file=s',
+          undef,
+          'out-file=s',
+          undef,
+          'help!',
+          undef
+        ];

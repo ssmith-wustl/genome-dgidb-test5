@@ -1,0 +1,10 @@
+$Genome::Model::Command::Status::OPTS_SPEC = [
+          'genome-model-id=s',
+          undef,
+          'display-output=s',
+          undef,
+          'section=s',
+          undef,
+          'help!',
+          undef
+        ];

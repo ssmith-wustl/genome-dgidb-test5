@@ -1,0 +1,8 @@
+$MGAP::Command::GenePredictor::RNAmmer::OPTS_SPEC = [
+          'bio-seq-feature=s',
+          undef,
+          'fasta-file=s',
+          undef,
+          'help!',
+          undef
+        ];

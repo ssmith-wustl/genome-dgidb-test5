@@ -1,0 +1,6 @@
+$Genome::Model::Tools::CrossMatch::OPTS_SPEC = [
+          '>run',
+          \'Genome::Model::Tools::CrossMatch::Run',
+          'help!',
+          undef
+        ];

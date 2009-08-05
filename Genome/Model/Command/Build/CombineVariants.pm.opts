@@ -1,0 +1,8 @@
+$Genome::Model::Command::Build::CombineVariants::OPTS_SPEC = [
+          '>assign-from-builds',
+          \'Genome::Model::Command::Build::CombineVariants::AssignFromBuilds',
+          '>combine-and-annotate',
+          \'Genome::Model::Command::Build::CombineVariants::CombineAndAnnotate',
+          'help!',
+          undef
+        ];

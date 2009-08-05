@@ -1,0 +1,12 @@
+$Genome::Model::Tools::ManualReview::AssignVariantReviewers::OPTS_SPEC = [
+          'finishers=s',
+          undef,
+          'review-type=s',
+          undef,
+          'list-id=s',
+          undef,
+          'list-name=s',
+          undef,
+          'help!',
+          undef
+        ];

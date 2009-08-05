@@ -1,0 +1,6 @@
+$Genome::PopulationGroup::Command::OPTS_SPEC = [
+          '>list',
+          \'Genome::PopulationGroup::Command::List',
+          'help!',
+          undef
+        ];

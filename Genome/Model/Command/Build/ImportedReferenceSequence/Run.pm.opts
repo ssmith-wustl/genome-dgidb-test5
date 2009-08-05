@@ -1,0 +1,6 @@
+$Genome::Model::Command::Build::ImportedReferenceSequence::Run::OPTS_SPEC = [
+          'model-id=s',
+          undef,
+          'help!',
+          undef
+        ];

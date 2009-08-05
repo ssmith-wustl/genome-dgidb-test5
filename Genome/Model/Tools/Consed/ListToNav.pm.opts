@@ -1,0 +1,10 @@
+$Genome::Model::Tools::Consed::ListToNav::OPTS_SPEC = [
+          'list=s',
+          undef,
+          'nav=s',
+          undef,
+          'title=s',
+          undef,
+          'help!',
+          undef
+        ];

@@ -1,0 +1,18 @@
+$Genome::Model::Tools::Import::Solexa::OPTS_SPEC = [
+          'data-file=s',
+          undef,
+          'external-data-source=s',
+          undef,
+          'lane=s',
+          undef,
+          'read-length=s',
+          undef,
+          'research-project=s',
+          undef,
+          'sample-name=s',
+          undef,
+          'is-fragment=s',
+          undef,
+          'help!',
+          undef
+        ];

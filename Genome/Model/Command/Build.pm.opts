@@ -1,0 +1,18 @@
+$Genome::Model::Command::Build::OPTS_SPEC = [
+          '>abandon',
+          \'Genome::Model::Command::Build::Abandon',
+          '>detach',
+          \'Genome::Model::Command::Build::Detach',
+          '>remove',
+          \'Genome::Model::Command::Build::Remove',
+          '>run',
+          \'Genome::Model::Command::Build::Run',
+          '>run-jobs',
+          \'Genome::Model::Command::Build::RunJobs',
+          '>status',
+          \'Genome::Model::Command::Build::Status',
+          '>verify-successful-completion',
+          \'Genome::Model::Command::Build::VerifySuccessfulCompletion',
+          'help!',
+          undef
+        ];

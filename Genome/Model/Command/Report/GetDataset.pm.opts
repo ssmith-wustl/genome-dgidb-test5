@@ -1,0 +1,14 @@
+$Genome::Model::Command::Report::GetDataset::OPTS_SPEC = [
+  'build-id=s',
+  undef,
+  'dataset-name=s',
+  undef,
+  'report-name=s',
+  undef,
+  'output-file=s',
+  undef,
+  'output-type=s',
+  undef,
+  'help!',
+  undef
+];

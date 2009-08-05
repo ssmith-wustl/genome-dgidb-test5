@@ -1,0 +1,8 @@
+$Genome::Model::Tools::Somatic::LibrarySupportFilter::OPTS_SPEC = [
+          'indel-file=s',
+          undef,
+          'output-file=s',
+          undef,
+          'help!',
+          undef
+        ];
