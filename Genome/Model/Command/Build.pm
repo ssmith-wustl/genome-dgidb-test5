@@ -184,7 +184,8 @@ sub execute {
     $w->save_to_xml(OutputFile => $self->build->data_directory . '/build.xml');
 
     if ($self->auto_execute) {
-        my $cmdline = 'bsub -H -q ' . $self->bsub_queue . ' -m blades -u ' . $ENV{USER} . '@genome.wustl.edu ' . 
+        my $cmdline = 'bsub -H -q ' . $self->bsub_queue . ' -m blades -u ' . $ENV{USER} . '@genome.wustl.edu' .
+            $self->_resolve_log_resource($self) . ' ' . 
             'genome model build run --model-id ' . $self->model->id . ' --build-id ' . $self->build->id;
 
         my $bsub_output = `$cmdline`;
