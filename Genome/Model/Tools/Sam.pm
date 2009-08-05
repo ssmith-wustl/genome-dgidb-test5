@@ -7,16 +7,23 @@ use Genome;
 use File::Basename;
 
 my $DEFAULT = 'r320wu1';
+my $PICARD_DEFAULT = 'r103wu0';
 
 class Genome::Model::Tools::Sam {
     is  => 'Command',
     has => [
         use_version => { 
             is  => 'Version', 
-            doc => "samtools version to be used, default is $DEFAULT",
+            doc => "samtools version to be used, default is $DEFAULT. ", 
             is_optional   => 1, 
             default_value => $DEFAULT,   
-        }
+        },
+        use_picard_version => { 
+            is  => 'Version', 
+            doc => "picard version to be used, default is $PICARD_DEFAULT",
+            is_optional   => 1, 
+            default_value => $PICARD_DEFAULT,   
+        },
     ],
 };
 
@@ -49,6 +56,10 @@ my %SAMTOOLS_VERSIONS = (
     r350wu1 => '/gscuser/dlarson/samtools/r350wu1/samtools',
 );
 
+my %PICARD_VERSIONS = (
+    #I'm using -wu0 to signify that no changes have been made to the Broad release.
+    r103wu0 => '/gsc/scripts/lib/java/samtools/picard-tools-1.03/',
+);
 
 sub path_for_samtools_version {
     my ($class, $version) = @_;
@@ -58,6 +69,13 @@ sub path_for_samtools_version {
     die 'No path found for samtools version: '.$version;
 }
 
+sub path_for_picard_version {
+    my ($class, $version) = @_;
+    $version ||= $PICARD_DEFAULT;
+    my $path = $PICARD_VERSIONS{$version};
+    return $path if defined $path;
+    die 'No path found for samtools version: '.$version;
+}
 
 sub default_samtools_version {
     die "default samtools version: $DEFAULT is not valid" unless $SAMTOOLS_VERSIONS{$DEFAULT};
@@ -69,6 +87,13 @@ sub samtools_path {
     my $self = shift;
     return $self->path_for_samtools_version($self->use_version);
 }
+
+sub picard_path {
+    my $self = shift;
+    return $self->path_for_picard_version($self->use_picard_version);
+}
+
+
 
 
 sub samtools_pl_path {
