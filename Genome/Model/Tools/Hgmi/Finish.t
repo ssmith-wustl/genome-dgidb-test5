@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 use File::Remove qw/ remove /;
 
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 BEGIN {
         use_ok('Genome::Model::Tools::Hgmi::Finish');
@@ -14,15 +14,22 @@ BEGIN {
 }
 
 my $finish = Genome::Model::Tools::Hgmi::Finish->create(
-  'organism_name' => "Bifidobacterium_catenulatum",
-  'locus_tag' => "BIFCATDFT",
-  'project_type' => "HGMI",
+  'organism_name'     => "Bifidobacterium_catenulatum",
+  'locus_tag'         => "BIFCATDFT",
+  'project_type'      => "HGMI",
   'sequence_set_name' => "Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb",
-  'acedb_version' => 'V2',
-  'dev' => 1
+  'acedb_version'     => 'V2',
+  'dev'               => 1,
+  'assembly_name'     => "Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb",
+  'org_dirname'       => "B_catenulatum",
+  'assembly_version'  => "Version_1.0",
+  'pipe_version'      => "Version_1.0",
+  'path'              => "/gscmnt/278/analysis/HGMI",
 );
 
 isa_ok($finish, 'Genome::Model::Tools::Hgmi::Finish');
+
+ok($finish->execute,'execute finish');
 
 #my $d = Genome::Model::Tools::Hgmi::DirBuilder->create(
 #                    path => "/tmp/test/analysis/HGMI",

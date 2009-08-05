@@ -45,25 +45,46 @@ UR::Object::Type->define(
                                  'dev' => {is => 'Boolean',
                                            doc => "",
                                            is_optional => 1},
-                                 'sequence_set_id' => { is => 'Integer',
-                                                        doc => "sequence set id" ,
-                                                        is_optional => 1},
-                                 'acedb_version' => { is => 'String',
-                                                      doc => "Ace DB version (V1,V2,etc)" },
+                                 'sequence_set_id'   => { is => 'Integer',
+							  doc => "sequence set id" ,
+							  is_optional => 1},
+                                 'acedb_version'     => { is => 'String',
+							  doc => "Ace DB version (V1,V2,etc)" },
                                  'sequence_set_name' => {is => 'String',
                                                          doc => "",
                                                          is_optional => 1},
-                                 'work_directory' => {is => 'String',
-                                                      doc => "",
-                                                      is_optional => 1},
-                                 'script_location' => {is => 'String',
-                                                       doc => "path or name of bap finish project script",
-                                                       is_optional => 1,
-                                                       default => "bap_finish_project",},
-				 'skip_acedb_parse' => {is => 'Boolean',
-							doc => "skip parsing into acedb for testing",
-							is_optional => 1, default => 0 }
-				 
+                                 'work_directory'    => {is => 'String',
+							 doc => "",
+							 is_optional => 1},
+                                 'script_location'   => {is => 'String',
+							 doc => "path or name of bap finish project script",
+							 is_optional => 1,
+							 default => "bap_finish_project",},
+				 'skip_acedb_parse'  => {is => 'Boolean',
+							 doc => "skip parsing into acedb for testing",
+							 is_optional => 1,
+							 default => 0, # this skips parsing into acedb...
+						        },
+				 'assembly_name'     => {
+				                         is  => 'String',
+							 doc => "assembly name from the config file",
+							 },
+				 'org_dirname'       => {
+                                                         is  => 'String',
+							 doc => "organism directory name from config file",
+				                        },
+				 'assembly_version'  => {
+				                         is  => 'String',
+							 doc => "assembly version from config file",
+				                        },
+				 'pipe_version'      => {
+                                                         is  => 'String',
+							 doc => "pipe version from config file",
+                                                        },
+				 'path'              => {
+                                                         is  => 'String',
+							 doc => "path from config file",
+                                                        },
                                  ]
                          );
 
@@ -104,9 +125,16 @@ sub execute
 sub gather_details
 {
     my $self = shift;
-    my $organism_name = $self->organism_name;
-    my $locus_tag = $self->locus_tag;
-    my $project_type = $self->project_type;
+
+    my $organism_name    = $self->organism_name;
+    my $locus_tag        = $self->locus_tag;
+    my $project_type     = $self->project_type;
+    my $assembly_name    = $self->assembly_name;
+    my $org_dirname      = $self->org_dirname;
+    my $assembly_version = $self->assembly_version;
+    my $pipe_version     = $self->pipe_version;
+    my $path             = $self->path;
+
     my ($ncbi_taxonomy_id, $gram_stain, $locus, $organism_id, );
     if (defined($self->dev)) { $BAP::DB::DBI::db_env = 'dev'; }
     my $organism_obj = BAP::DB::Organism->retrieve('organism_name'=> $organism_name);
@@ -135,39 +163,7 @@ sub gather_details
     {
         $cwd = getcwd();
     }
-    my @cwd = split(/\//x,$cwd);
-    #print "there are ", $#cwd," in \@cwd\n";
-    my ($sequence_set_name, $analysis_version_num, $hgmi_sequence_dir);
-
-    # these below are dangerous - perhaps set these differently?
-    if ($project_type =~ /HGMI/x )
-    {
-        # these need to be based on the directory structure,
-        # instead of just a 'raw' split.
-        $sequence_set_name = $cwd[6]; #HGMI projects
-#        $analysis_version_num = $cwd[9]; #HGMI projects
-#        $hgmi_sequence_dir = join("\/", @cwd[0..9],'Sequence',$hgmi_locus_tag); #HGMI projects
-        
-    }
-    else # HMPP/Enterobacter
-    {
-    
-        $sequence_set_name = $cwd[7]; #HMPP and Enterobacter
-#        $analysis_version_num = $cwd[10]; #HMPP and Enterobacter
-#        $hgmi_sequence_dir = join("\/", @cwd[0..10],'Sequence',$hgmi_locus_tag); #HMPP and Enterobacter
-        
-    }
-
-#    if(defined($self->sequence_set_name))
-#    {
-#        $sequence_set_name = $self->sequence_set_name;
-#    }
-
-    unless (defined($sequence_set_name)) 
-    {
-        croak " sequence_set_name is not set! Finish.pm\n\n";
-    }
-
+    my $sequence_set_name = $assembly_name;
     my $sequence_set_name_obj;
     my $sequence_set_obj;
     my $sequence_set_id = $self->sequence_set_id;
@@ -195,7 +191,9 @@ sub gather_details
 
     print "\nbap_finish_project.pl\n";
 
-    my @command_list = ('bap_finish_project',
+    my @command_list = (
+                        #'/gscmnt/277/analysis/personal_dirs/wnash/Work/Scripts/BAP_TEST/bap_finish_project.pl',
+	                'bap_finish_project',
                         '--sequence-set-id',
                         $sequence_set_id,
                         '--locus-id',
@@ -204,6 +202,16 @@ sub gather_details
                         $self->project_type,
                         '--acedb-version',
                         $self->acedb_version,
+			'--assembly-name',
+			$assembly_name,
+			'--org-dirname',
+			$org_dirname,
+			'--assembly-version',
+			$assembly_version,
+			'--pipe-version',
+			$pipe_version,
+			'--path-base',
+			$path,
                         );
 
     if(defined($self->dev)) { push(@command_list,"--dev"); }

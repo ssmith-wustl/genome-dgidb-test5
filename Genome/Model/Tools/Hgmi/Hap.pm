@@ -228,13 +228,16 @@ sub execute
     my $ssid = $merge->sequence_set_id();
 
     my $fin = Genome::Model::Tools::Hgmi::Finish->create(
-                                                         #sequence_set_name => ,
-                                                         sequence_set_id => $ssid ,
-                                                         locus_tag       => $config->{locus_tag},
-                                                         organism_name   => $config->{organism_name},
-                                                         project_type    => $config->{project_type},
-                                                         acedb_version   => $config->{acedb_version},
-						      
+	                                                 sequence_set_id  => $ssid ,
+                                                         locus_tag        => $config->{locus_tag},
+                                                         organism_name    => $config->{organism_name},
+                                                         project_type     => $config->{project_type},
+                                                         acedb_version    => $config->{acedb_version},
+							 assembly_name    => $config->{assembly_name},
+							 org_dirname      => $config->{org_dirname},
+							 assembly_version => $config->{assembly_version},
+							 pipe_version     => $config->{pipe_version},
+							 path             => $config->{path},
                                                         );
 
     if($self->dev)
