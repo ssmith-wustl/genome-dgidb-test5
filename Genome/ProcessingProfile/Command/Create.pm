@@ -13,11 +13,16 @@ class Genome::ProcessingProfile::Command::Create {
     is => 'Command',
     is_abstract => 1,
     has => [
-    name => {
-        is => 'VARCHAR2',
-        len => 255, 
-        doc => 'Human readable name.', 
-    },
+        name => {
+            is => 'Text',
+            len => 255, 
+            doc => 'Human readable name.', 
+        },
+        based_on => {
+            is => 'Text',
+            len => '255',
+            doc => 'The (optional) name or ID of another profile which is used to specify default values for this new one.',
+        },
     ],
 };
 
@@ -77,6 +82,42 @@ sub help_detail {
     return $_[0]->help_brief();
 }
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    return unless $self;
+
+    my %defaults;
+    if (my $based_on = $self->based_on) {
+        my $target_class = $self->_target_class;
+        my $other_profile;
+        if ($based_on =~ /\D/) {
+            $other_profile = $target_class->get(name => $based_on);
+        }
+        else {
+            $other_profile = $target_class->get($based_on);
+        }
+        unless ($other_profile) {
+            $self->error_message("Failed to find a processing profile of class $target_class with name or ID '$based_on'!");
+            return;
+        }
+        my @params = $other_profile->params;
+        if (not @params) {
+            $self->error_message("When basing on another processing profile, you must specify some parameters which will be different!");
+            return;
+        }
+        for my $param (@params) {
+            my $name = $param->name;
+            my $specified_value = $self->$name;
+            if (not defined $specified_value or not length $specified_value) {
+                $self->$name($param->value);
+            }
+        }
+    }
+
+    return $self;
+}
+
 #< Execute and supporters >#
 sub execute {
     my $self = shift;
@@ -110,7 +151,7 @@ sub execute {
         return;
     }
 
-    if ( my @problems = $processing_profile->__errors__) {
+    if ( my @problems = $processing_profile->__errors__ ) {
         $self->error_message(
             "Error(s) creating processing profile\n\t".  join("\n\t", map { $_->desc } @problems)
         );
