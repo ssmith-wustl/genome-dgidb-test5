@@ -46,7 +46,8 @@ sub execute {
     };
     $fasta_reader->close;
     if ($@) {die ($@); }
-
+    $self->_total_count($total_count);
+    $self->_total_bp($total_bp);
     my $parser = Bio::Tools::RepeatMasker->new(-file => $self->output_file);
     unless ($parser) {
         die ('Failed to create RepeatMasker parser for file: '. $self->output_file);
