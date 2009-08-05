@@ -197,6 +197,11 @@ BEGIN {  # This is ugly when its above the class definition, but I need it to ha
             class => 'Genome::Sample',
             property => 'name',
         },
+        library_name => {
+            needs_to_be_verified => 1,
+            class => 'Genome::InstrumentData',
+            property => 'library_name',
+        },
         genomic_dna => {
 	    needs_to_be_verified => 1,
 	    class => 'Genome::Sample::Genomic',
@@ -278,7 +283,10 @@ sub get_all_possible_sample_names { #
     if ( $self->subject_type eq 'species_name' ) {
         my $taxon = Genome::Taxon->get(species_name => $self->subject_name);
         @sample_names = map { $_->name } $taxon->samples;
-    } elsif ( $self->subject_type eq 'flow_cell_id' ) {
+    } elsif (
+        $self->subject_type eq 'flow_cell_id' ||
+            $self->subject_type eq 'library_name'
+        ) {
         return;
     } else {
         @sample_names = ( $self->subject_name );
