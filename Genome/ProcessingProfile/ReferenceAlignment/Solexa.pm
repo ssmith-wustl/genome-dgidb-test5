@@ -31,7 +31,6 @@ sub reference_coverage_job_classes {
     my $self = shift;
     if ($self->dna_type eq 'cdna' || $self->dna_type eq 'rna') {
         my @steps = (
-                   'Genome::Model::Command::Build::ReferenceAlignment::Layers',
                    'Genome::Model::Command::Build::ReferenceAlignment::RefCov',
                );
         return @steps;
