@@ -69,8 +69,9 @@ sub execute {
     my $now = UR::Time->now;
     $self->status_message(">>> Beginning Bam merge at $now.");
     my $sam_path = $self->samtools_path;
+    my $picard_path = $self->picard_path;
     
-    my $bam_merge_tool = $sam_path.' merge';
+    my $bam_merge_tool = "java -cp $picard_path/MergeSamFiles.jar net.sf.picard.sam.MergeSamFiles MSD=true SO=coordinate AS=true VALIDATION_STRINGENCY=SILENT O=$result ";  
     my $bam_index_tool = $sam_path.' index';
 
     if (scalar(@files) == 1) {
@@ -117,8 +118,9 @@ sub execute {
 	    @input_files = @files;
 	}
 	
-	my $list_of_files = join(",",@input_files); 
-	my $bam_merge_cmd = "$bam_merge_tool $result ".join(" ",@input_files);
+	my $list_of_files = join(" I=",@input_files); 
+        print("Files to merge: ".$list_of_files);
+	my $bam_merge_cmd = "$bam_merge_tool I=$list_of_files";
 	$self->status_message("Bam merge command: $bam_merge_cmd");
 	
 	my $bam_merge_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$bam_merge_cmd,
