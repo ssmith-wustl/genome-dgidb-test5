@@ -30,53 +30,20 @@ sub pre_execute {
     my $self = shift;
 
     $self->_fasta_file($self->fasta_file);
-    
-    my @fasta_files;
-    
-    my $file_counter = 1;
-    my $fasta_basename = File::Basename::basename($self->fasta_file);
-    my $output_file = $self->output_directory .'/'. $fasta_basename .'_'. $file_counter;
-    #Divide fasta files by kb_sequence
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output_file);
-    unless ($output_fh) {
-        $self->error_message('Failed to open output file '. $output_file);
-        return;
+
+    my $split = Genome::Model::Tools::Fasta::Split->create(
+        kb_sequence => $self->kb_sequence,
+        fasta_file => $self->fasta_file,
+    );
+
+    unless ($split) {
+        die('Failed to create fasta split command');
     }
-    push @fasta_files, $output_file;
-    
-    my $fasta_reader = Genome::Utility::FileSystem->open_file_for_reading($self->fasta_file);
-    unless ($fasta_reader) {
-        $self->error_message('Failed to open fasta file '. $self->fasta_file);
-        return;
+    unless ($split->execute) {
+        die('Failed to execute fasta split command');
     }
-    local $/ = "\n>";
-    my $total_seq = 0;
-    while (<$fasta_reader>) {
-        if ($_) {
-            chomp;
-            if ($_ =~ /^>/) { $_ =~ s/\>//g }
-            my $myFASTA = FASTAParse->new();
-            $myFASTA->load_FASTA( fasta => '>' . $_ );
-            my $seqlen = length( $myFASTA->sequence() );
-            $total_seq += $seqlen;
-            if ($total_seq >= ($self->kb_sequence * 1000)) {
-                $file_counter++;
-                $output_fh->close;
-                $output_file = $self->output_directory .'/'. $fasta_basename .'_'. $file_counter;
-                $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output_file);
-                unless ($output_fh) {
-                    $self->error_message('Failed to open fasta output file '. $output_file);
-                    return;
-                }
-                push @fasta_files, $output_file;
-                $total_seq = 0;
-            }
-            print $output_fh '>'. $myFASTA->id() ."\n". $myFASTA->sequence() . "\n";
-        }
-    }
-    $fasta_reader->close;
-    $output_fh->close;
-    $self->fasta_file(\@fasta_files);
+    my $fasta_files = $split->fasta_files;
+    $self->fasta_file($fasta_files);
     return 1;
 }
 
@@ -135,7 +102,7 @@ sub post_execute {
     my $table = Genome::Model::Tools::RepeatMasker::GenerateTable->create(
         fasta_file => $self->_fasta_file,
         output_file => $output_file,
-        table_file => $self->output_directory .'/'. $output_basename .'.tsv',
+        output_table => $self->output_directory .'/'. $output_basename .'.tsv',
     );
     unless ($table) {
         die('Failed to create table generating tool');
