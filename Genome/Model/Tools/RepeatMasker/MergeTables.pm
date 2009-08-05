@@ -9,14 +9,6 @@ class Genome::Model::Tools::RepeatMasker::MergeTables {
     is => 'Genome::Model::Tools::RepeatMasker::TableI',
     has => [
         input_tables => { },
-        _total_count => {
-            is => 'Integer',
-            is_optional => 1,
-        },
-        _total_bp => {
-            is => 'Integer',
-            is_optional => 1,
-        },
     ],
 };
 
