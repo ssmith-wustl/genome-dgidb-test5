@@ -94,6 +94,28 @@ sub properties_hash {
                                           doc => 'command line args for the aligner',
                                           is_optional => 1,
                                       },
+                  force_fragment => {
+                                     is => 'Integer',
+                                     #This doesn't seem to work yet because of the create code, can't the valid values logic be removed from create???
+                                     #default_value => '0',
+                                     #valid_values => ['0', '1'],
+                                     doc => 'force all alignments as fragment reads',
+                                     is_optional => 1,
+                  },
+                  read_trimmer_name => {
+                                        doc => 'trimmer algorithm/software used for this model',
+                                        is_optional => 1,
+                                    },
+
+                  read_trimmer_version => {
+                                           doc => 'the trimmer version used for this model',
+                                           is_optional => 1,
+                                       },
+                  read_trimmer_params => {
+                                          doc => 'command line args for the trimmer',
+                                          is_optional => 1,
+                                      },
+                  
                   read_calibrator_name => {
                                            doc => '',
                                            is_optional => 1,
