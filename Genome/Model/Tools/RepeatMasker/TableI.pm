@@ -13,6 +13,14 @@ class Genome::Model::Tools::RepeatMasker::TableI {
             is => 'Text',
             doc => 'This is the file location where the output table from this command will be written.  This is NOT a RepeatMasker(.tbl) file!',
         },
+        _total_count => {
+            is => 'Integer',
+            is_optional => 1,
+        },
+        _total_bp => {
+            is => 'Integer',
+            is_optional => 1,
+        },
     ],
 };
 
