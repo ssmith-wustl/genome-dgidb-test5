@@ -22,6 +22,7 @@ class Genome::ProcessingProfile::Command::Create {
             is => 'Text',
             len => '255',
             doc => 'The (optional) name or ID of another profile which is used to specify default values for this new one.',
+            is_optional => 1,
         },
     ],
 };
