@@ -30,10 +30,12 @@ sub alignment_job_classes {
 sub reference_coverage_job_classes {
     my $self = shift;
     if ($self->dna_type eq 'cdna' || $self->dna_type eq 'rna') {
-        my @steps = (
-                   'Genome::Model::Command::Build::ReferenceAlignment::RefCov',
-               );
-        return @steps;
+        if ($self->reference_sequence_name eq 'XStrans_adapt_smallRNA_ribo') {
+            my @steps = (
+                'Genome::Model::Command::Build::ReferenceAlignment::RefCov',
+            );
+            return @steps;
+        }
     }
     return;
 }
