@@ -47,6 +47,9 @@ class Genome::Utility::Parser {
                             doc => "The filehandle",
                             is => 'IO::File',
                      },
+                     _position => {
+                         doc => 'The position before reading next line',
+                     },
                  ],
 };
 
@@ -124,6 +127,8 @@ BEGIN {
 sub next { 
     my $self = shift;
 
+    my $pos = $self->_file_handle->tell;
+    $self->_position($pos);
     my $line = $self->_file_handle()->getline()
         or return;
 
@@ -144,13 +149,18 @@ sub _read_line {
             $_ =~ s/^\s*|\s*$//g;
         }
     }
+    if (scalar(@values) > scalar(@keys)) {
+        my $diff = scalar(@values) - scalar(@keys);
+        my @new_keys = @keys;
+        for (my $i = scalar(@keys) + 1; $i <= scalar(@values); $i++) {
+            push @new_keys, $i;
+        }
+        @keys = @new_keys;
+    }
     unless (scalar(@values) == scalar(@keys)) {
-        $self->error_message (
-            sprintf('Un-balanced data found: %d values and %d expected on line %d',
-                scalar(@values),
-                scalar(@keys),
-                $line,
-            )
+        $self->error_message ("Un-balanced data found ". scalar(@values) .':values '. scalar(@keys) .":keys \n".
+                join("\t",@values) ."\n".
+                join("\t",@keys) ."\n"
         );
         return;
     }
