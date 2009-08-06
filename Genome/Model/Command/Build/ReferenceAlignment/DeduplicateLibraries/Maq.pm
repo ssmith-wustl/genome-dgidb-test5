@@ -63,10 +63,12 @@ sub execute {
     #accumulate the maps per library
     for my $ida (@idas) {
         my $library = $ida->library_name;
-        my $alignment = $ida->alignment;
-        my @maps = $alignment->alignment_file_paths;
-        push @{$library_alignments{$library}}, @maps;  #for the dedup step
-        push @all_alignments, @maps;                   #for the whole genome map file
+        my @alignments = $ida->alignments;
+        for my $alignment (@alignments) {
+            my @maps = $alignment->alignment_file_paths;
+            push @{$library_alignments{$library}}, @maps;  #for the dedup step
+            push @all_alignments, @maps;                   #for the whole genome map file
+        }
     }
     
     unless (Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::WholeMap->execute(
