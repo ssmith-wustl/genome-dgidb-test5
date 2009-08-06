@@ -400,7 +400,7 @@ sub setup_input {
             $op,
             'parser_type' => $type,
             'input_file' => \@copied_files,
-            'output_path' => '/gscmnt/sata363/info/medseq/temporary_data'
+            'output_path' => '/gscmnt/sata835/info/medseq/temporary_data'
         );
     
         unless ($output) {
