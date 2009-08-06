@@ -26,6 +26,13 @@ class Genome::Model::Command::Copy {
             is_optional => 0,
             doc => 'The name of the new model that will be created'
         },
+        skip_instrument_data_assignments => {
+            is => 'Boolean',
+            is_input => 1,
+            is_optional => 1,     
+            default_value => 0,
+            doc => 'Skip assigning instrument data'
+        }
     ],
   schema_name => 'Main',
 };
@@ -131,13 +138,25 @@ sub execute {
     # assign all the instrument data from the original model to the new one
     
     my @instrument_data = $src_model->instrument_data;
-    
-    for (@instrument_data) {
-        my $assign_cmd = Genome::Model::Command::InstrumentData::Assign->create(model_id=>$new_model->id,
+
+    unless ($self->skip_instrument_data_assignments ) {
+        for (@instrument_data) {
+               my $assign_cmd = Genome::Model::Command::InstrumentData::Assign->create(model_id=>$new_model->id,
                                                                                  instrument_data_id=>$_->id);
-        unless ($assign_cmd->execute) {
-            $self->error_message("Couldn't assign instrument data id " . $_->id);
-            return;
+               unless ($assign_cmd->execute) {
+                    $self->error_message("Couldn't assign instrument data id " . $_->id);
+                    return;
+               }
+        }
+    }
+
+    if ($src_model->gold_snp_path) {
+        my $gold_snp_path_cmd = Genome::Model::Command::AddGoldSnp->create(model_id=>$new_model->id,
+                                                                           file_name=>$src_model->gold_snp_path);
+
+        unless ($gold_snp_path_cmd->execute) {
+                $self->error_message("Couldn't assign gold snp path from source model - " . $src_model->gold_snp_path);
+                return;
         }
     }
     
