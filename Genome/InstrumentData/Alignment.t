@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 71;
+use Test::More tests => 73;
 
 use above 'Genome';
 
@@ -172,6 +172,22 @@ my $ff_alignment = Genome::InstrumentData::Alignment->create(
 isa_ok($ff_alignment,'Genome::InstrumentData::Alignment');
 is(scalar($ff_alignment->sanger_fastq_filenames),1,'only found one fastq for paired-end instrument data run as fragment alignment');
 
+
+
+### Test the trimmer additions ###
+my $trimmed_alignment = Genome::InstrumentData::Alignment->create(
+    instrument_data_id => 2499312867,
+    aligner_name => 'maq',
+    aligner_version => '0.7.1',
+    reference_name => 'NCBI-human-build36',
+    trimmer_name => 'trim5',
+    trimmer_params => '6',
+);
+my $trimmer_label = $trimmed_alignment->trimmer_label;
+is($trimmer_label,'trim5/1679091c5a880faf6fb5e6087eb1b2dc','got expected trimmer label');
+
+my $trimmed_alignment_directory = $trimmed_alignment->resolve_alignment_directory;
+like($trimmed_alignment_directory,qr/alignment_data\/maq0_7_1\/NCBI-human-build36\/080428_HWI-EAS292_0039_3035U\/8_2499312867\/trim5\/1679091c5a880faf6fb5e6087eb1b2dc/,'got expected trimmed alignment directory');
 
 
 exit;

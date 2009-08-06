@@ -32,6 +32,18 @@ class Genome::InstrumentData::Alignment {
                     },
     ],
     has_optional => [
+         trimmer_name       => {
+                                is => 'Text',
+                                doc => 'the name of the trimmer to use: fastx_clipper, etc.'
+                            },
+         trimmer_version    => {
+                                is => 'Text',
+                                doc => 'the version of read trimmer to use, i.e. 0.6.8, 0.7.1, etc.'
+                            },
+         trimmer_params     => {
+                                is => 'Text',
+                                doc => 'any additional params for the trimmer in a single string'
+                            },
          aligner_version    => {
                                 is => 'Text',
                                 doc => 'the version of maq to use, i.e. 0.6.8, 0.7.1, etc.'
@@ -207,34 +219,39 @@ sub resolve_alignment_subdirectory {
     unless ($instrument_data->subset_name) {
         die ($instrument_data->class .'('. $instrument_data->id .') is missing the subset_name or lane!');
     }
+    my $directory;
     if ($instrument_data->is_external) {
-        return sprintf('alignment_data/%s/%s/%s/%s_%s',
-                       $self->aligner_label,
-                       $reference_sequence_name,
-                       $instrument_data->id,
-                       $instrument_data->subset_name,
-                       $instrument_data->id
-                   );
+        $directory = sprintf('alignment_data/%s/%s/%s/%s_%s',
+                             $self->aligner_label,
+                             $reference_sequence_name,
+                             $instrument_data->id,
+                             $instrument_data->subset_name,
+                             $instrument_data->id
+                         );
     } elsif ($self->force_fragment) {
-        return sprintf('alignment_data/%s/%s/%s/fragment/%s_%s',
-                       $self->aligner_label,
-                       $reference_sequence_name,
-                       $instrument_data->run_name,
-                       $instrument_data->subset_name,
-                       $self->_fragment_seq_id,
-                   );
+        $directory = sprintf('alignment_data/%s/%s/%s/fragment/%s_%s',
+                             $self->aligner_label,
+                             $reference_sequence_name,
+                             $instrument_data->run_name,
+                             $instrument_data->subset_name,
+                             $self->_fragment_seq_id,
+                         );
     } else {
         unless ($instrument_data->run_name) {
             die ($instrument_data->class .'('. $instrument_data->id .') is missing the run_name!');
         }
-        return sprintf('alignment_data/%s/%s/%s/%s_%s',
-                       $self->aligner_label,
-                       $reference_sequence_name,
-                       $instrument_data->run_name,
-                       $instrument_data->subset_name,
-                       $instrument_data->id
-                   );
+        $directory = sprintf('alignment_data/%s/%s/%s/%s_%s',
+                             $self->aligner_label,
+                             $reference_sequence_name,
+                             $instrument_data->run_name,
+                             $instrument_data->subset_name,
+                             $instrument_data->id
+                         );
     }
+    if ($self->trimmer_name) {
+        $directory .= '/'. $self->trimmer_label;
+    }
+    return $directory;
 }
 
 sub aligner_label {
@@ -244,18 +261,35 @@ sub aligner_label {
     my $aligner_version = $self->aligner_version;
     my $aligner_params  = $self->aligner_params;
 
-    return $aligner_name unless $aligner_version;
-
-    $aligner_version =~ s/\./_/g;
-
-    my $aligner_label = $aligner_name . $aligner_version;
-
+    my $aligner_label = $aligner_name;
+    if (defined($aligner_version)) {
+        $aligner_version =~ s/\./_/g;
+        $aligner_label .= $aligner_version;
+    }
     if ($aligner_params and $aligner_params ne '') {
         my $params_md5 = md5_hex($aligner_params);
         $aligner_label .= '/'. $params_md5;
     }
-
     return $aligner_label;
+}
+
+sub trimmer_label {
+    my $self = shift;
+
+    my $trimmer_name    = $self->trimmer_name;
+    my $trimmer_version = $self->trimmer_version;
+    my $trimmer_params  = $self->trimmer_params;
+
+    my $trimmer_label = $trimmer_name;
+    if (defined($trimmer_version)) {
+        $trimmer_version =~ s/\./_/g;
+        $trimmer_label .= $trimmer_version;
+    }
+    if ($trimmer_params and $trimmer_params ne '') {
+        my $params_md5 = md5_hex($trimmer_params);
+        $trimmer_label .= '/'. $params_md5;
+    }
+    return $trimmer_label;
 }
 
 
@@ -362,6 +396,105 @@ sub die_and_clean_up {
     }
     die($error_message);
 }
+
+sub sanger_fastq_filenames {
+    my $self = shift;
+
+    my $instrument_data = $self->instrument_data;
+
+    my @sanger_fastq_pathnames;
+    if ($self->{_sanger_fastq_pathnames}) {
+        @sanger_fastq_pathnames = @{$self->{_sanger_fastq_pathnames}};
+        my $errors;
+        for my $sanger_fastq (@sanger_fastq_pathnames) {
+            unless (-e $sanger_fastq && -f $sanger_fastq && -s $sanger_fastq) {
+                $self->error_message('Missing or zero size sanger fastq file: '. $sanger_fastq);
+                $self->die_and_clean_up($self->error_message);
+            }
+        }
+    } else {
+        my %params;
+        if ($self->force_fragment) {
+            if ($self->instrument_data_id eq $self->_fragment_seq_id) {
+                $params{paired_end_as_fragment} = 2;
+            } else {
+                $params{paired_end_as_fragment} = 1;
+            }
+        }
+        my @illumina_fastq_pathnames = $instrument_data->fastq_filenames(%params);
+        my $counter = 0;
+        for my $illumina_fastq_pathname (@illumina_fastq_pathnames) {
+            my $sanger_fastq_pathname = $self->create_temp_file_path('sanger-fastq-'. $counter);
+            if ($instrument_data->resolve_quality_converter eq 'sol2sanger') {
+                my $aligner_version;
+                if ($self->aligner_name eq 'maq') {
+                    $aligner_version = $self->aligner_version;
+                } else {
+                    $aligner_version = '0.7.1', ### default to most recent
+                }
+                unless (Genome::Model::Tools::Maq::Sol2sanger->execute(
+                                                                       use_version => $aligner_version,
+                                                                       solexa_fastq_file => $illumina_fastq_pathname,
+                                                                       sanger_fastq_file => $sanger_fastq_pathname,
+                                                                   )) {
+                    $self->error_message('Failed to execute sol2sanger quality conversion.');
+                    $self->die_and_clean_up($self->error_message);
+                }
+            } elsif ($instrument_data->resolve_quality_converter eq 'sol2phred') {
+                unless (Genome::Model::Tools::Fastq::Sol2phred->execute(
+                                                                        fastq_file => $illumina_fastq_pathname,
+                                                                        phred_fastq_file => $sanger_fastq_pathname,
+                                                                    )) {
+                    $self->error_message('Failed to execute sol2phred quality conversion.');
+                    $self->die_and_clean_up($self->error_message);
+                }
+            }
+            unless (-e $sanger_fastq_pathname && -f $sanger_fastq_pathname && -s $sanger_fastq_pathname) {
+                $self->error_message('Failed to validate the conversion of solexa fastq file '. $illumina_fastq_pathname .' to sanger quality scores');
+                $self->die_and_clean_up($self->error_message);
+            }
+
+            if ($self->trimmer_name) {
+                my $trimmed_sanger_fastq_pathname = $self->create_temp_file_path('trimmed-sanger-fastq-'. $counter);
+                my $trimmer;
+                if ($self->trimmer_name eq 'fastx_clipper') {
+                    #THIS DOES NOT EXIST YET
+                    $trimmer = Genome::Model::Tools::Fastq::Clipper->create(
+                        params => $self->trimmer_params,
+                        version => $self->trimmer_version,
+                        input => $sanger_fastq_pathname,
+                        output => $trimmed_sanger_fastq_pathname,
+                    );
+                } elsif ($self->trimmer_name eq 'trim5') {
+                    $trimmer = Genome::Model::Tools::Fastq::Trim5->create(
+                        length => $self->trimmer_params,
+                        input => $sanger_fastq_pathname,
+                        output => $trimmed_sanger_fastq_pathname,
+                    );
+                } else {
+                    $self->error_message('Unknown read trimmer_name '. $self->trimmer_name);
+                    $self->die_and_clean_up($self->error_message);
+                }
+                unless ($trimmer) {
+                    $self->error_message('Failed to create fastq trim command');
+                    $self->die_and_clean_up($self->error_message);
+                }
+                unless ($trimmer->execute) {
+                    $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
+                    $self->die_and_clean_up($self->error_message);
+                }
+                $sanger_fastq_pathname = $trimmed_sanger_fastq_pathname;
+            }
+            push @sanger_fastq_pathnames, $sanger_fastq_pathname;
+            $counter++;
+        }
+        $self->{_sanger_fastq_pathnames} = \@sanger_fastq_pathnames;
+    }
+    return @sanger_fastq_pathnames;
+}
+
+
+
 
 
 1;
