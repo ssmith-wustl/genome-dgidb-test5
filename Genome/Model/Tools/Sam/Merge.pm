@@ -71,7 +71,7 @@ sub execute {
     my $sam_path = $self->samtools_path;
     my $picard_path = $self->picard_path;
     
-    my $bam_merge_tool = "java -cp $picard_path/MergeSamFiles.jar net.sf.picard.sam.MergeSamFiles MSD=true SO=coordinate AS=true VALIDATION_STRINGENCY=SILENT O=$result ";  
+    my $bam_merge_tool = "java -Xmx2g -cp $picard_path/MergeSamFiles.jar net.sf.picard.sam.MergeSamFiles MSD=true SO=coordinate AS=true VALIDATION_STRINGENCY=SILENT O=$result ";  
     my $bam_index_tool = $sam_path.' index';
 
     if (scalar(@files) == 1) {
