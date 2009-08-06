@@ -185,10 +185,10 @@ sub execute {
             }
         }else{
             my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
-            my $build = $model->build_by_version('0');
+            my $build = $model->build_by_version('54_36p');
 
             unless ($build){
-                $self->error_message("couldn't get build v0 from 'NCBI-human.combined-annotation'");
+                $self->error_message("couldn't get build 54_36p from 'NCBI-human.combined-annotation'");
                 return;
             }
             $self->build($build);
