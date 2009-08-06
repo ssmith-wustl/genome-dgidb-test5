@@ -123,12 +123,12 @@ sub execute
         \$results,
         '2>',
         \$stderr,
-      ) or croak "failed to run core genes screen script";
+      ) or croak "\n\nfailed to run core genes screen script ... CoreGenes.pm\n\n";
 
     write_file('Coregene_results',$results);
     unless($results =~ /PASSED/)
     {
-        croak "core genes did not pass:\n$results";
+        croak "\n\nWARNING: core genes did not pass:\n$results ... CoreGenes.pm\n\n";
     }
     
     return 1;

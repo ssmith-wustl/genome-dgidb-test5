@@ -260,6 +260,8 @@ sub execute
         croak "can't set up finish step... Hap.pm\n\n";
     }
 
+    warn qq{\n\nRunning core genes ... Hap.pm\n\n};
+
     # core genes and rrna screens
     $next_dir = $config->{path}."/".$config->{org_dirname}."/".
         $config->{assembly_name} . "/". $config->{assembly_version} . "/".
@@ -285,6 +287,8 @@ sub execute
         croak "can't set up core gene step... Hap.pm\n\n";
     }
 
+    warn qq{\n\nRunning rRNA screening step ... Hap.pm\n\n};
+
     # rrna screen step
     my $rrnascreen = Genome::Model::Tools::Hgmi::RrnaScreen->create(
         sequence_set_id => $ssid,
@@ -304,6 +308,7 @@ sub execute
         croak "can't set up rrna screen step... Hap.pm\n\n";
     }
 
+    warn qq{\n\nBeginning to run SendToPap.pm(workflow) ... from Hap.pm\n\n};
 
     unless(defined($config->{workflowxml}))
     {
@@ -436,7 +441,7 @@ sub build_empty_config
                   'organism_name' => "",
 		  'project_type' => "",
 		  'gram_stain' => "",
-                  'ncbi_taxonomy_id' => "<optional>",
+                  'ncbi_taxonomy_id' => "",
 		  'predict_script_location' => "<optional>",
                   #merge
                   # uses some of the same items from predict

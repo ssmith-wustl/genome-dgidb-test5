@@ -369,7 +369,7 @@ sub do_pap_workflow
     #print STDERR Dumper($output),"\n";
    
     if (defined($output)) {
-        print STDERR "workflow completed successfully";
+        print STDERR "workflow completed successfully ... SendToPap.pm\n";
         return 0;
     }
     else {
@@ -414,7 +414,7 @@ sub activity_log
     }
     else
     {
-        carp "can't get organism name, logging with locus tag";
+        carp "Couldn't get organism name for activity logging, will continue logging with locus tag, instead ... from SendToPap.pm\n";
         $organism_name = $locus_tag;
     }
     $locus_tag =~ s/(DFT|FNL|MSI)$//;
