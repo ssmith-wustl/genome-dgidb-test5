@@ -71,14 +71,14 @@ sub execute {
         }
     }
     
-    unless (Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::WholeMap->execute(
-        whole_map_file => $self->build->whole_map_file,
-        alignments => \@all_alignments,
-        aligner_version => $self->model->read_aligner_version,
-    )) {
-        $self->error_message('Failed to create whole map file for cdna or rna.');
-        return;
-    }
+    #unless (Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::WholeMap->execute(
+    #    whole_map_file => $self->build->whole_map_file,
+    #    alignments => \@all_alignments,
+    #    aligner_version => $self->model->read_aligner_version,
+    #)) {
+    #    $self->error_message('Failed to create whole map file for cdna or rna.');
+    #    return;
+    #}
 
     $self->status_message("Starting dedup workflow with params:");
     #prepare the input for parallelization
