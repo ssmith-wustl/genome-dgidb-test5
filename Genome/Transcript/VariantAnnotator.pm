@@ -280,15 +280,20 @@ sub _transcript_annotation
 
     my $main_structure = $transcript->structure_at_position( $variant->{start} )
         or return;
-    my $alternate_structure = $transcript->structure_at_position( $variant->{stop} );
 
+    $DB::single =1;
+    my $structure_type = $main_structure->structure_type;
+
+=cut
+#TODO, I'm taking this out for the time being because we are doing a really terrible job annotating substructure spanning variants, and not getting much value, just producing errors
+    my $alternate_structure = $transcript->structure_at_position( $variant->{stop} );
+    
     # If alternate sturcture is not defined here we are probably dealing with a very large deletion...
     unless (defined $alternate_structure) {
         $alternate_structure = $main_structure;
         $self->warning_message("Alternate structure is not defined at the stop position (very large deletion? These are not handled well) for variant: " . Dumper $variant);
     }
-
-    my $structure_type = $main_structure->structure_type;
+    
     my $alternate_structure_type = $alternate_structure->structure_type;
 
     unless ($structure_type eq $alternate_structure_type){
@@ -302,8 +307,9 @@ sub _transcript_annotation
             $structure_type = $alternate_structure_type if $alternate_structure_type eq 'cds_exon';
         }
     }
-
     #print "post: $structure_type : $alternate_structure_type\n";
+=cut
+    
 
     my $method = '_transcript_annotation_for_' . $structure_type;
 
@@ -709,15 +715,18 @@ sub _transcript_annotation_for_cds_exon_modified
     my $aft_end = abs( $oriented_structure_stop - $variant->{stop} ) + 1;
 
     my $trsub_phase = $exon_pos % 3;
-    unless ( $trsub_phase eq $main_structure->phase ) 
+    my $main_structure_phase = $main_structure->phase;
+    $main_structure_phase = 'none' unless defined $main_structure_phase;
+    unless ( $trsub_phase == $main_structure_phase ) 
     {
+        $DB::single =1;
         $self->error_message
         (
             sprintf
             (
                 'Calculated phase (%d) does not match the phase (%d, exon position: %d) for the main sub structure (%d) for transcript (%d) at %d',
                 $trsub_phase,
-                $main_structure->phase,
+                $main_structure_phase,
                 $exon_pos,
                 $main_structure->transcript_structure_id,
                 $transcript->transcript_id,
@@ -862,8 +871,11 @@ sub _transcript_annotation_for_cds_exon
     my $aft_end = abs( $oriented_structure_stop - $variant->{start} ) + 1;
 
     my $trsub_phase = $exon_pos % 3;
-    unless ( $trsub_phase eq $main_structure->phase ) 
+    my $main_structure_phase = $main_structure->phase;
+    $main_structure_phase = 'none' unless defined $main_structure_phase;
+    unless ( $trsub_phase eq $main_structure_phase ) 
     {
+        $DB::single = 1;
         $self->error_message
         (
 # From Chapter 8 codon2aa
@@ -876,7 +888,7 @@ sub _transcript_annotation_for_cds_exon
             (
                 'Calculated phase (%d) does not match the phase (%d, exon position: %d) for the main sub structure (%d) for transcript (%d) at %d',
                 $trsub_phase,
-                $main_structure->phase,
+                $main_structure_phase,
                 $exon_pos,
                 $main_structure->transcript_structure_id,
                 $transcript->transcript_id,
