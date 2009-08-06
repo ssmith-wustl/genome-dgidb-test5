@@ -73,12 +73,14 @@ sub execute {
     #accumulate the maps per library
     for my $ida (@idas) {
         my $library = $ida->library_name;
-        my $alignment = $ida->alignment;
-        my @bams = $alignment->alignment_bam_file_paths;
-        $self->status_message("bam file paths: ". @bams);
+        my @alignments = $ida->alignments;
+        for my $alignment (@alignments) {
+            my @bams = $alignment->alignment_bam_file_paths;
+            $self->status_message("bam file paths: ". @bams);
 
-        push @{$library_alignments{$library}}, @bams;  #for the dedup step
-        push @all_alignments, @bams;                   #for the whole genome map file
+            push @{$library_alignments{$library}}, @bams;  #for the dedup step
+            push @all_alignments, @bams;                   #for the whole genome map file
+        }
     }
     
     $self->status_message("Starting SAM dedup workflow with params:");

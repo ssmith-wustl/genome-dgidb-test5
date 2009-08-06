@@ -238,14 +238,19 @@ sub execute {
     $self->revert;
 
     my $instrument_data_assignment = $self->instrument_data_assignment;
-    my $alignment = $instrument_data_assignment->alignment;
-
-    # ensure the alignments are present
-    unless ($alignment->find_or_generate_alignment_data) {
-        $self->error_message("Error finding or generating alignments!:\n" .  join("\n",$alignment->error_message));
+    my @alignments = $instrument_data_assignment->alignments;
+    my @errors;
+    for my $alignment (@alignments) {
+        # ensure the alignments are present
+        unless ($alignment->find_or_generate_alignment_data) {
+            $self->error_message("Error finding or generating alignments!:\n" .  join("\n",$alignment->error_message));
+            push @errors, $self->error_message;
+        }
+    }
+    if (@errors) {
+        $self->error_message(join("\n",@errors));
         return;
     }
-
     $self->generate_metric($self->metrics_for_class);
 
     unless ($self->verify_successful_completion) {
@@ -267,9 +272,16 @@ sub verify_successful_completion {
     }
 
     my $instrument_data_assignment = $self->instrument_data_assignment;
-    my $alignment = $instrument_data_assignment->alignment;
-    unless ($alignment->verify_alignment_data) {
-        $self->error_message('Failed to verify alignment data: '. join ("\n",$alignment->error_message));
+    my @alignments = $instrument_data_assignment->alignments;
+    my @errors;
+    for my $alignment (@alignments) {
+        unless ($alignment->verify_alignment_data) {
+            $self->error_message('Failed to verify alignment data: '. join ("\n",$alignment->error_message));
+            push @errors, $self->error_message;
+        }
+    }
+    if (@errors) {
+        $self->error_message(join("\n",@errors));
         return;
     }
     return 1;
