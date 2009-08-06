@@ -196,8 +196,12 @@ sub get_build_node {
     my $out_log_file = $event->resolve_log_directory . "/" . $event->id . ".out";
     my $err_log_file = $event->resolve_log_directory . "/" . $event->id . ".err";
 
-    $buildnode->addChild( $doc->createAttribute("output-log",$out_log_file));
-    $buildnode->addChild( $doc->createAttribute("error-log",$err_log_file));
+    if (-e $out_log_file) {
+        $buildnode->addChild( $doc->createAttribute("output-log",$out_log_file));
+    }
+    if (-e $err_log_file) {
+        $buildnode->addChild( $doc->createAttribute("error-log",$err_log_file));
+    }
     
     return $buildnode; 
 }
