@@ -15,10 +15,10 @@ BEGIN
 use Inline 'C' => 'Config' => (
             CC => '/gscmnt/936/info/jschindl/gcc32/gcc',
             DIRECTORY => Genome::InlineConfig::DIRECTORY(), 
-            INC => '-I/gscuser/jschindl -I/gsc/pkg/bio/maq/zlib/include',
+            INC => '-I/gscmnt/936/info/jschindl/inline_c_deps -I/gsc/pkg/bio/maq/zlib/include',
             CCFLAGS => '-D_FILE_OFFSET_BITS=64 -m32 ',
             LD => '/gscmnt/936/info/jschindl/gcc32/ld',
-            LIBS => '-L/gscuser/jschindl -L/gsc/pkg/bio/maq/zlib/lib -lz -lmaq '.$libs,
+            LIBS => '-L/gscmnt/936/info/jschindl/inline_c_deps -L/gsc/pkg/bio/maq/zlib/lib -lz -lmaq '.$libs,
             NAME => __PACKAGE__
              );
 
