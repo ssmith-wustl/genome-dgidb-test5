@@ -426,7 +426,7 @@ sub build_empty_config
                   'assembly_name' => "<full org name, locus_tag, finish assembly, pipeline>",
                   'assembly_version' => "",
                   'pipe_version' => "",
-                  'cell_type' => "",
+                  'cell_type' => "<BACTERIA or ARCHEA>",
                   #collect sequence stuff
                   'seq_file_name' => "",
 		  'seq_file_dir'=> "",

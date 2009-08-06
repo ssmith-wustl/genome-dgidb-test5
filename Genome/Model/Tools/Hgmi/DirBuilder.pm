@@ -76,7 +76,7 @@ sub execute
     $date = $ymd;
     my @moredirs = ();
 
-    if ( ($self->cell_type =~ /BACTERIA/) or ($self->cell_type =~ /ARCHEA/) )
+    if ( ($self->cell_type =~ /BACTERIA/) || ($self->cell_type =~ /ARCHEA/) )
     {
         @moredirs = (
             'Ensembl_pipeline', 'Gene_predictions',
@@ -87,7 +87,10 @@ sub execute
             'psortB',           'Blastp',
             'BAP'
         );    #Bacteria
-    } or die "Can't run dir-builder... check cell_type in config file ... from DirBuilder.pm: $OS_ERROR\n\n"
+    } 
+    else {
+	die "Can't run dir-builder... check cell_type in config file ... from DirBuilder.pm: $OS_ERROR\n\n";
+    }
 
     # it looks like there's a bunch of extra
     # filepath variables that are built here
@@ -114,6 +117,13 @@ sub execute
         $self->add_directory(\@cmd,$dirpathfile);
         $self->add_directory(\@cmd,$dirpfversion);
         $self->add_directory(\@cmd,$dirpfScripts);
+
+	my (
+	    $dirpfvGlimmer2,$dirpfvGlimmer3,
+	    $dirpfvHybrid,$dirpfvGenemark,
+	    $dirpfvDumps,$dirpfvSequence,
+	    );
+
         if ( $file =~ 'Ensembl_pipeline' )
         {
 
@@ -210,13 +220,13 @@ sub execute
             #unless ( -e $dirpfScripts ) { push @cmd, qq{$dirpfScripts}; }
             $self->add_directory(\@cmd,$dirpfScripts );
 
-            my $dirpfvGenemark = qq{$dirpath/$file/$version/Genemark};
+            $dirpfvGenemark = qq{$dirpath/$file/$version/Genemark};
             #unless ( -e $dirpfvGenemark ) { push @cmd, qq{$dirpfvGenemark}; }
-            my $dirpfvGlimmer2 = qq{$dirpath/$file/$version/Glimmer2};
+             $dirpfvGlimmer2 = qq{$dirpath/$file/$version/Glimmer2};
             #unless ( -e $dirpfvGlimmer2 ) { push @cmd, qq{$dirpfvGlimmer2}; }
-            my $dirpfvGlimmer3 = qq{$dirpath/$file/$version/Glimmer3};
+             $dirpfvGlimmer3 = qq{$dirpath/$file/$version/Glimmer3};
             #unless ( -e $dirpfvGlimmer3 ) { push @cmd, qq{$dirpfvGlimmer3}; }
-            my $dirpfvHybrid = qq{$dirpath/$file/$version/Hybrid};
+            $dirpfvHybrid = qq{$dirpath/$file/$version/Hybrid};
             #unless ( -e $dirpfvHybrid ) { push @cmd, qq{$dirpfvHybrid}; }
             $self->add_directory(\@cmd,$dirpfvGenemark );
             $self->add_directory(\@cmd,$dirpfvGlimmer2 );
@@ -228,13 +238,13 @@ sub execute
             #unless ( -e $dirpfScripts ) { push @cmd, qq{$dirpfScripts}; }
             $self->add_directory(\@cmd,$dirpfScripts );
 
-            my $dirpfvGenemark = qq{$dirpath/$file/$version/Genemark};
+             $dirpfvGenemark = qq{$dirpath/$file/$version/Genemark};
             #unless ( -e $dirpfvGenemark ) { push @cmd, qq{$dirpfvGenemark}; }
-            my $dirpfvGlimmer2 = qq{$dirpath/$file/$version/Glimmer2};
+             $dirpfvGlimmer2 = qq{$dirpath/$file/$version/Glimmer2};
             #unless ( -e $dirpfvGlimmer2 ) { push @cmd, qq{$dirpfvGlimmer2}; }
-            my $dirpfvGlimmer3 = qq{$dirpath/$file/$version/Glimmer3};
+             $dirpfvGlimmer3 = qq{$dirpath/$file/$version/Glimmer3};
             #unless ( -e $dirpfvGlimmer3 ) { push @cmd, qq{$dirpfvGlimmer3}; }
-            my $dirpfvHybrid = qq{$dirpath/$file/$version/Hybrid};
+             $dirpfvHybrid = qq{$dirpath/$file/$version/Hybrid};
             #unless ( -e $dirpfvHybrid ) { push @cmd, qq{$dirpfvHybrid}; }
             $self->add_directory(\@cmd,$dirpfvGenemark );
             $self->add_directory(\@cmd,$dirpfvGlimmer2 );
@@ -245,13 +255,13 @@ sub execute
         {
             unless ( -e $dirpfScripts ) { push @cmd, qq{$dirpfScripts}; }
 
-            my $dirpfvGenemark = qq{$dirpath/$file/$version/Genemark};
+             $dirpfvGenemark = qq{$dirpath/$file/$version/Genemark};
 #            unless ( -e $dirpfvGenemark ) { push @cmd, qq{$dirpfvGenemark}; }
-            my $dirpfvGlimmer2 = qq{$dirpath/$file/$version/Glimmer2};
+             $dirpfvGlimmer2 = qq{$dirpath/$file/$version/Glimmer2};
 #            unless ( -e $dirpfvGlimmer2 ) { push @cmd, qq{$dirpfvGlimmer2}; }
-            my $dirpfvGlimmer3 = qq{$dirpath/$file/$version/Glimmer3};
+             $dirpfvGlimmer3 = qq{$dirpath/$file/$version/Glimmer3};
 #            unless ( -e $dirpfvGlimmer3 ) { push @cmd, qq{$dirpfvGlimmer3}; }
-            my $dirpfvHybrid = qq{$dirpath/$file/$version/Hybrid};
+             $dirpfvHybrid = qq{$dirpath/$file/$version/Hybrid};
 #            unless ( -e $dirpfvHybrid ) { push @cmd, qq{$dirpfvHybrid}; }
             $self->add_directory(\@cmd,$dirpfvGenemark );
             $self->add_directory(\@cmd,$dirpfvGlimmer2 );
@@ -263,13 +273,13 @@ sub execute
         {
             unless ( -e $dirpfScripts ) { push @cmd, qq{$dirpfScripts}; }
 
-            my $dirpfvGenemark = qq{$dirpath/$file/$version/Genemark};
+             $dirpfvGenemark = qq{$dirpath/$file/$version/Genemark};
             #unless ( -e $dirpfvGenemark ) { push @cmd, qq{$dirpfvGenemark}; }
-            my $dirpfvGlimmer2 = qq{$dirpath/$file/$version/Glimmer2};
+             $dirpfvGlimmer2 = qq{$dirpath/$file/$version/Glimmer2};
             #unless ( -e $dirpfvGlimmer2 ) { push @cmd, qq{$dirpfvGlimmer2}; }
-            my $dirpfvGlimmer3 = qq{$dirpath/$file/$version/Glimmer3};
+             $dirpfvGlimmer3 = qq{$dirpath/$file/$version/Glimmer3};
             #unless ( -e $dirpfvGlimmer3 ) { push @cmd, qq{$dirpfvGlimmer3}; }
-            my $dirpfvHybrid = qq{$dirpath/$file/$version/Hybrid};
+             $dirpfvHybrid = qq{$dirpath/$file/$version/Hybrid};
             #unless ( -e $dirpfvHybrid ) { push @cmd, qq{$dirpfvHybrid}; }
             $self->add_directory(\@cmd,$dirpfvGenemark );
             $self->add_directory(\@cmd,$dirpfvGlimmer2 );
@@ -280,24 +290,24 @@ sub execute
         {
             unless ( -e $dirpfScripts ) { push @cmd, qq{$dirpfScripts}; }
 
-            my $dirpfvHybrid = qq{$dirpath/$file/$version/Hybrid};
+             $dirpfvHybrid = qq{$dirpath/$file/$version/Hybrid};
 #            unless ( -e $dirpfvHybrid ) { push @cmd, qq{$dirpfvHybrid}; }
             $self->add_directory(\@cmd,$dirpfvHybrid );
         }
         if ( $file =~ 'BAP' )
         {
-            my $dirpfvSequence = qq{$dirpath/$file/$version/Sequence};
+            $dirpfvSequence = qq{$dirpath/$file/$version/Sequence};
 #            unless ( -e $dirpfvSequence ) { push @cmd, qq{$dirpfvSequence}; }
-            my $dirpfvDumps = qq{$dirpath/$file/$version/Dumps};
+             $dirpfvDumps = qq{$dirpath/$file/$version/Dumps};
 #            unless ( -e $dirpfvDumps ) { push @cmd, qq{$dirpfvDumps}; }
             $self->add_directory(\@cmd,$dirpfvSequence );
             $self->add_directory(\@cmd,$dirpfvDumps );
         }
         if ( $file =~ 'GAP' )
         {
-            my $dirpfvSequence = qq{$dirpath/$file/$version/Sequence};
+             $dirpfvSequence = qq{$dirpath/$file/$version/Sequence};
 #            unless ( -e $dirpfvSequence ) { push @cmd, qq{$dirpfvSequence}; }
-            my $dirpfvDumps = qq{$dirpath/$file/$version/Dumps};
+             $dirpfvDumps = qq{$dirpath/$file/$version/Dumps};
 #            unless ( -e $dirpfvDumps ) { push @cmd, qq{$dirpfvDumps}; }
             $self->add_directory(\@cmd,$dirpfvDumps );
             $self->add_directory(\@cmd,$dirpfvSequence );
