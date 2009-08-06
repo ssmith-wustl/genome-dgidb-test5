@@ -265,7 +265,8 @@ sub execute
     # core genes and rrna screens
     $next_dir = $config->{path}."/".$config->{org_dirname}."/".
         $config->{assembly_name} . "/". $config->{assembly_version} . "/".
-        "Genbank_submission/Version_1.0/Annotated_submisstion";
+	"Genbank_submission/".$config->{pipe_version}."/Annotated_submission";
+
     chdir($next_dir);
 
     my $coregene = Genome::Model::Tools::Hgmi::CoreGenes->create(
