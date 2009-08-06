@@ -101,7 +101,7 @@ sub alignment {
         return;
     }
     my @alignments;
-    unless ($self->_alignment) {
+    unless ($self->_alignments) {
         my %params = (
                       instrument_data_id => $self->instrument_data_id,
                       aligner_name => $model->read_aligner_name,
@@ -130,7 +130,7 @@ sub alignment {
             $self->error_message('Failed to create an alignment object');
             return;
         }
-        $self->_alignment($alignment);
+        #$self->_alignment($alignment);
         push @alignments, $alignment;
         #Now create 'Paired End Read 1' fwd alignment
         if ($model->force_fragment) {
@@ -143,9 +143,10 @@ sub alignment {
             }
             push @alignments, $alignment_fwd;
         }
+        $self->_alignments(\@alignments);
     }
-    $self->_alignments(\@alignments);
-    return $self->_alignment;
+    my @return = $self->_alignments;
+    return $return[0];
 }
 
 sub alignments {
