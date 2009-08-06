@@ -113,7 +113,7 @@ sub create {
     #eval the 'use inline' command to inject the correct classpath
     #note:  the "PACKAGE=>'main'" entry allows you to replace "Genome::Model::Tools::Sam::SamHeaderEditor" with "main" when subsequently calling the Java class.  See in execute. 
     $ENV{PERL_INLINE_JAVA_JNI} = 1;
-    my $inline_string =  "use Inline ( Java => 'STUDY', CLASSPATH => qw($cp), STUDY => ['edu.wustl.genome.samtools.SamHeaderEditor'], AUTOSTUDY => 1, PACKAGE => 'main', DIRECTORY => Genome::InlineConfig::DIRECTORY(), JNI=>1 );";
+    my $inline_string =  "use Inline ( Java => 'STUDY', CLASSPATH => qw($cp), STUDY => ['edu.wustl.genome.samtools.SamHeaderEditor'], EXTRA_JAVA_ARGS => '-Xmx2g', AUTOSTUDY => 1, PACKAGE => 'main', DIRECTORY => Genome::InlineConfig::DIRECTORY(), JNI=>1 );";
     eval "$inline_string";
     unless ( defined $@ ) {
         $self->error_message("There was a problem evaluating the 'use Inline' code for the required Java libraries: $inline_string.  The classpath was set to: $cp");
@@ -132,9 +132,9 @@ sub execute {
  
    #see note in create() for explanation of 'main' package definition.
    my $she = new main::edu::wustl::genome::samtools::SamHeaderEditor($self->input_sam_file, $self->output_sam_file);
-  
+   $self->status_message("Created SamHeaderEditor");
    my $rg_field_result = $she->setReadGroupName($self->seq_id_field);  #this should also be the id of the read group
-   print ("\nrg field result: $rg_field_result\n");
+   $self->status_message("Called setReadGroupName.  Return value: $rg_field_result");
  
    my $rg_result = $she->addReadGroup( 
                          $self->seq_id_field, #the id of the read group is the first field 
@@ -147,7 +147,7 @@ sub execute {
                          $self->date_run_field,
                          $self->genome_center_field, 
                     );
-   print ("\nrg result: $rg_result\n");
+   $self->status_message("Called addReadGroup.  Return value: $rg_result");
    
    #The order of the following parameters is important.  Do not change unless you change the corresponding Java class!
    my $aa_result = $she->addAttributes(  
@@ -159,10 +159,12 @@ sub execute {
                          $self->aligner_command_field,
                          $self->aligner_version_field
                       );
-   print ("\naa result: $aa_result\n");
+   
+   $self->status_message("Called addAttributes.  Return value: $aa_result");
    
    $she->execute();
-
+   $self->status_message("SamHeaderEditor execute() complete.");
+   
    my $result = 1; 
    return $result;
 }
