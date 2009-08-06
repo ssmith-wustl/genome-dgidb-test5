@@ -48,63 +48,6 @@ sub sanger_bfq_filenames {
     return @sanger_bfq_pathnames;
 }
 
-sub sanger_fastq_filenames {
-    my $self = shift;
-
-    my $instrument_data = $self->instrument_data;
-
-    my @sanger_fastq_pathnames;
-    if ($self->{_sanger_fastq_pathnames}) {
-        @sanger_fastq_pathnames = @{$self->{_sanger_fastq_pathnames}};
-        my $errors;
-        for my $sanger_fastq (@sanger_fastq_pathnames) {
-            unless (-e $sanger_fastq && -f $sanger_fastq && -s $sanger_fastq) {
-                $self->error_message('Missing or zero size sanger fastq file: '. $sanger_fastq);
-                $self->die_and_clean_up($self->error_message);
-            }
-        }
-    } else {
-        my %params;
-        if ($self->force_fragment) {
-            if ($self->instrument_data_id eq $self->_fragment_seq_id) {
-                $params{paired_end_as_fragment} = 2;
-            } else {
-                $params{paired_end_as_fragment} = 1;
-            }
-        }
-        my @illumina_fastq_pathnames = $instrument_data->fastq_filenames(%params);
-        my $counter = 0;
-        for my $illumina_fastq_pathname (@illumina_fastq_pathnames) {
-            my $sanger_fastq_pathname = $self->create_temp_file_path('sanger-fastq-'. $counter++);
-            if ($instrument_data->resolve_quality_converter eq 'sol2sanger') {
-                unless (Genome::Model::Tools::Maq::Sol2sanger->execute(
-                                                                       use_version => $self->aligner_version,
-                                                                       solexa_fastq_file => $illumina_fastq_pathname,
-                                                                       sanger_fastq_file => $sanger_fastq_pathname,
-                                                                   )) {
-                    $self->error_message('Failed to execute sol2sanger quality conversion.');
-                    $self->die_and_clean_up($self->error_message);
-                }
-            } elsif ($instrument_data->resolve_quality_converter eq 'sol2phred') {
-                unless (Genome::Model::Tools::Fastq::Sol2phred->execute(
-                                                                        fastq_file => $illumina_fastq_pathname,
-                                                                        phred_fastq_file => $sanger_fastq_pathname,
-                                                                    )) {
-                    $self->error_message('Failed to execute sol2phred quality conversion.');
-                    $self->die_and_clean_up($self->error_message);
-                }
-            }
-            unless (-e $sanger_fastq_pathname && -f $sanger_fastq_pathname && -s $sanger_fastq_pathname) {
-                $self->error_message('Failed to validate the conversion of solexa fastq file '. $illumina_fastq_pathname .' to sanger quality scores');
-                $self->die_and_clean_up($self->error_message);
-            }
-            push @sanger_fastq_pathnames, $sanger_fastq_pathname;
-        }
-        $self->{_sanger_fastq_pathnames} = \@sanger_fastq_pathnames;
-    }
-    return @sanger_fastq_pathnames;
-}
-
 sub get_alignment_statistics {
     my $self = shift;
     my $aligner_output_file = shift;
@@ -144,23 +87,12 @@ sub get_alignment_statistics {
 sub verify_aligner_successful_completion {
     my $self = shift;
     my $aligner_output_file = shift;
-    unless ($aligner_output_file) {
-        $aligner_output_file = $self->aligner_output_file_path;
-    }
-    unless (-s $aligner_output_file) {
-        $self->error_message("Aligner output file '$aligner_output_file' not found or zero size.");
-        return;
-    }
-    my $aligner_output_fh = IO::File->new($aligner_output_file);
-    unless ($aligner_output_fh) {
-        $self->error_message("Can't open aligner output file $aligner_output_file: $!");
-        return;
-    }
+    
     my $instrument_data = $self->instrument_data;
     if ($instrument_data->is_paired_end) {
         my $stats = $self->get_alignment_statistics($aligner_output_file);
         unless ($stats) {
-            return;
+            return $self->_aligner_output_file_complete($aligner_output_file);
         }
         if ($self->force_fragment) {
             if ($$stats{'isPE'} != 0) {
@@ -174,6 +106,25 @@ sub verify_aligner_successful_completion {
             }
         }
     }
+    return $self->_aligner_output_file_complete($aligner_output_file);
+}
+
+sub _aligner_output_file_complete {
+    my $self = shift;
+    my $aligner_output_file = shift;
+
+    unless ($aligner_output_file) {
+        $aligner_output_file = $self->aligner_output_file_path;
+    }
+    unless (-s $aligner_output_file) {
+        $self->error_message("Aligner output file '$aligner_output_file' not found or zero size.");
+        return;
+    }
+    my $aligner_output_fh = IO::File->new($aligner_output_file);
+    unless ($aligner_output_fh) {
+        $self->error_message("Can't open aligner output file $aligner_output_file: $!");
+        return;
+    }
     while(<$aligner_output_fh>) {
         if (m/match_data2mapping/) {
             $aligner_output_fh->close();
@@ -181,7 +132,7 @@ sub verify_aligner_successful_completion {
         }
         if (m/\[match_index_sorted\] no reasonable reads are available. Exit!/) {
             $aligner_output_fh->close();
-            return 1;
+            return 2;
         }
     }
     return;
@@ -408,6 +359,7 @@ sub verify_alignment_data {
     my $reference_build = $self->reference_build;
     my ($alignment_file) = $self->alignment_file_paths_for_subsequence_name('all_sequences');
     my $errors = 0;
+    my $verified_no_reads = 0;
     unless ($alignment_file) {
         my @subsequence_names = grep { $_ ne 'all_sequences' } $reference_build->subreference_names(reference_extension => 'bfa');
         unless  (@subsequence_names) {
@@ -416,40 +368,55 @@ sub verify_alignment_data {
         for my $subsequence_name (@subsequence_names) {
             ($alignment_file) = $self->alignment_file_paths_for_subsequence_name($subsequence_name);
             unless ($alignment_file) {
-                $errors++;
-                $self->error_message('No alignment file found for subsequence '. $subsequence_name .' in alignment directory '. $self->alignment_directory);
+                my @possible_aligner_output_shortcuts = $self->aligner_output_file_paths;
+                for my $possible_aligner_output_shortcut (@possible_aligner_output_shortcuts) {
+                    my $found_aligner_output_file = $self->check_for_path_existence($possible_aligner_output_shortcut);
+                    if (!$found_aligner_output_file) {
+                        $self->error_message("Missing aligner output file '$possible_aligner_output_shortcut'.");
+                        $errors++;
+                    }
+                    my $verify = $self->verify_aligner_successful_completion($possible_aligner_output_shortcut);
+                    if ($verify == 2) {
+                        $self->status_message('No reasonable reads are available');
+                        $verified_no_reads = 1;
+                    } else {
+                        $errors++;
+                        $self->error_message('No alignment file found for subsequence '. $subsequence_name .' in alignment directory '. $self->alignment_directory);
+                    }
+                }
             }
         }
     }
-    my $validate = Genome::Model::Tools::Maq::Mapvalidate->execute(
-                                                                   map_file => $alignment_file,
-                                                                   output_file => '/dev/null',
-                                                                   use_version => $self->aligner_version,
-                                                               );
-    unless ($validate) {
-        $errors++;
-        $self->error_message('Failed to run maq mapvalidate on alignment file: '. $alignment_file);
-    }
-    my @possible_unaligned_shortcuts= $self->unaligned_reads_list_paths;
-    for my $possible_unaligned_shortcut (@possible_unaligned_shortcuts) {
-        my $found_unaligned_reads_file = $self->check_for_path_existence($possible_unaligned_shortcut);
-        if (!$found_unaligned_reads_file) {
-            $self->error_message("Missing unaligned reads file '$possible_unaligned_shortcut'");
+    unless ($verified_no_reads) {
+        my $validate = Genome::Model::Tools::Maq::Mapvalidate->execute(
+            map_file => $alignment_file,
+            output_file => '/dev/null',
+            use_version => $self->aligner_version,
+        );
+        unless ($validate) {
             $errors++;
-        } elsif (!-s $possible_unaligned_shortcut) {
-            $self->error_message("Unaligned reads file '$possible_unaligned_shortcut' found but zero size");
-            $errors++;
+            $self->error_message('Failed to run maq mapvalidate on alignment file: '. $alignment_file);
         }
-    }
-
-    my @possible_aligner_output_shortcuts = $self->aligner_output_file_paths;
-    for my $possible_aligner_output_shortcut (@possible_aligner_output_shortcuts) {
-        my $found_aligner_output_file = $self->check_for_path_existence($possible_aligner_output_shortcut);
-        if (!$found_aligner_output_file) {
-            $self->error_message("Missing aligner output file '$possible_aligner_output_shortcut'.");
-            $errors++;
-        } elsif (!$self->verify_aligner_successful_completion($possible_aligner_output_shortcut)) {
-            $errors++;
+        my @possible_unaligned_shortcuts= $self->unaligned_reads_list_paths;
+        for my $possible_unaligned_shortcut (@possible_unaligned_shortcuts) {
+            my $found_unaligned_reads_file = $self->check_for_path_existence($possible_unaligned_shortcut);
+            if (!$found_unaligned_reads_file) {
+                $self->error_message("Missing unaligned reads file '$possible_unaligned_shortcut'");
+                $errors++;
+            } elsif (!-s $possible_unaligned_shortcut) {
+                $self->error_message("Unaligned reads file '$possible_unaligned_shortcut' found but zero size");
+                $errors++;
+            }
+        }
+        my @possible_aligner_output_shortcuts = $self->aligner_output_file_paths;
+        for my $possible_aligner_output_shortcut (@possible_aligner_output_shortcuts) {
+            my $found_aligner_output_file = $self->check_for_path_existence($possible_aligner_output_shortcut);
+            if (!$found_aligner_output_file) {
+                $self->error_message("Missing aligner output file '$possible_aligner_output_shortcut'.");
+                $errors++;
+            } elsif (!$self->verify_aligner_successful_completion($possible_aligner_output_shortcut)) {
+                $errors++;
+            }
         }
     }
     if ($errors) {
