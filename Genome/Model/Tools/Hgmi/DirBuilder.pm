@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use Command;
 use Carp;
+use English;
 use File::Slurp;
 use DateTime;
 use List::MoreUtils qw/ uniq /;
@@ -75,7 +76,7 @@ sub execute
     $date = $ymd;
     my @moredirs = ();
 
-    if ( $self->cell_type =~ /BACTERIA/ )
+    if ( ($self->cell_type =~ /BACTERIA/) or ($self->cell_type =~ /ARCHEA/) )
     {
         @moredirs = (
             'Ensembl_pipeline', 'Gene_predictions',
@@ -86,19 +87,7 @@ sub execute
             'psortB',           'Blastp',
             'BAP'
         );    #Bacteria
-    }
-    else
-    {
-        @moredirs = (
-            'Acedb',              'Ensembl_pipeline',
-            'Gene_predictions',   'Gene_merging',
-            'Genbank_submission', 'Sequence',
-            'gff_files',          'Gene_merging',
-            'Repeats',            'Kegg',
-            'Cog',                'Interpro',
-            'GAP'
-        );    #Eukaryotes
-    }
+    } or die "Can't run dir-builder... check cell_type in config file ... from DirBuilder.pm: $OS_ERROR\n\n"
 
     # it looks like there's a bunch of extra
     # filepath variables that are built here
