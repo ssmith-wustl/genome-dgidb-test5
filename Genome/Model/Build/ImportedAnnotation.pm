@@ -65,6 +65,10 @@ sub transcript_iterator{
                     $lowest = $cached_transcripts[$index];
                 }
             }
+            unless (defined $index){
+                #here we have exhausted both iterators
+                return undef;
+            }
             my $next_cache =  $iterators[$index]->next();
             $next_cache ||= '';
             $cached_transcripts[$index] = $next_cache;
