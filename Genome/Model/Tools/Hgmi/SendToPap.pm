@@ -215,6 +215,7 @@ GENE: while ( my $seq = $res->next_object() )
             my $display_name = $f->display_name();
             #print STDERR $display_name," ", $f->primary_tag,"\n";
             next GENE if $f->primary_tag ne 'gene';
+            next GENE if $f->has_tag('Dead');
             my $ss;
             $ss = $seq->subseq( $f->start, $f->end );
 
