@@ -73,10 +73,11 @@ sub import_objects_from_external_db
     my $lines;
     foreach my $ts (sort keys %$transcript_status)
     {
-        push(@$lines,[$transcript_status->{$ts}->{entrezid}, $transcript_status->{$ts}->{hugo_gene_name}]);  #TODO, possibility this is undef if 'db_xref' tag wasn't present, see above
+        push(@$lines,[$transcript_status->{$ts}->{entrezid}, $transcript_status->{$ts}->{hugo_gene_name}]);  
     }
     
-
+    my %seen;
+    my @unique_lines = grep {!$seen{@$_[0]}++} @$lines;
 
     my $version = $self->version;
 
@@ -90,12 +91,12 @@ sub import_objects_from_external_db
     my $csv1 = Text::CSV_XS->new( { sep_char => "\t" } );
 
     my $count;
-    print scalar @$lines." genes";
-    foreach my $record (@$lines)
+    print scalar @unique_lines." genes";
+    foreach my $record (@unique_lines)
     {
         $count++;
         my $locus_id = $record->[0];
-        my $hugo     = $record->[1]; #TODO this is undefined here?
+        my $hugo     = $record->[1]; 
 
         # sometimes we get an odd error here, and this hangs, because
         # the bioperl interface way deep in GSC::ImportExport::GenBank::Gene
