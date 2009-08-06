@@ -46,6 +46,11 @@ class Genome::Model::InstrumentDataAssignment {
                                     is => 'Genome::InstrumentData::Alignment',
                                     is_transient => 1,
                                 },
+                     _alignments => {
+                         is => 'Genome::InstrumentData::Alignment',
+                         is_many => 1,
+                         is_transient => 1,
+                     },
                  ],
     has_many_optional => [
                           events => {
@@ -95,6 +100,7 @@ sub alignment {
         $self->error_message('Can not create an alignment object for model type '. $model->type_name);
         return;
     }
+    my @alignments;
     unless ($self->_alignment) {
         my %params = (
                       instrument_data_id => $self->instrument_data_id,
@@ -125,8 +131,27 @@ sub alignment {
             return;
         }
         $self->_alignment($alignment);
+        push @alignments, $alignment;
+        #Now create 'Paired End Read 1' fwd alignment
+        if ($model->force_fragment) {
+            my $instrument_data = $self->instrument_data;
+            $params{instrument_data_id} = $instrument_data->fwd_seq_id;
+            my $alignment_fwd = Genome::InstrumentData::Alignment->create(%params);
+            unless ($alignment_fwd) {
+                $self->error_message('Failed to create a fwd alignment object');
+                return;
+            }
+            push @alignments, $alignment_fwd;
+        }
     }
+    $self->_alignments(\@alignments);
     return $self->_alignment;
+}
+
+sub alignments {
+    my $self = shift;
+    $self->alignment(@_);
+    return $self->_alignments;
 }
 
 sub read_length {
