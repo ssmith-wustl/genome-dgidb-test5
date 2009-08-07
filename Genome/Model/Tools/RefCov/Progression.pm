@@ -43,7 +43,8 @@ sub execute {
 
     my %progression;
     my $current_interval = $self->interval;
-    for my $stats_file (@{$self->stats_files}) {
+    my @sorted_numeric = sort by_numeric_dir  @{$self->stats_files};
+    for my $stats_file (@sorted_numeric) {
         my $stats_fh = Genome::Utility::FileSystem->open_file_for_reading($stats_file);
         unless ($stats_fh) {
             $self->error_message("Failed to open stats file '$stats_file' for reading:  $!");
@@ -104,4 +105,20 @@ sub execute {
         close IMG;
     }
     return 1;
+}
+
+
+sub by_numeric_dir {
+
+    unless ($a =~ /\/(\d+)\/STATS.tsv$/) {
+        die ('Failed to parse directory '. $a);
+    }
+    my $a_dir = $1;
+
+    unless ($b =~ /\/(\d+)\/STATS.tsv$/) {
+        die('Failed to parse directory '. $b);
+    }
+    my $b_dir = $1;
+
+    return $a_dir <=> $b_dir;
 }
