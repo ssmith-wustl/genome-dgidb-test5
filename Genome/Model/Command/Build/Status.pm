@@ -406,14 +406,14 @@ sub get_event_node {
 
     my $lsf_job_id = $event->lsf_job_id;
 
-    ## disable this until we can improve performance
-    if (0) {
     my $root_instance = $self->instance;
     if ($root_instance) {
         my $event_instance;
-        foreach my $stage_instance ($root_instance->child_instances) {
+        foreach my $stage_instance (Workflow::Operation::Instance->get(parent_instance_id => $root_instance->id)) { #$root_instance->child_instances) {
             next unless $stage_instance->can('child_instances');
-            my @found = $stage_instance->child_instances(
+#            my @found = $stage_instance->child_instances(
+            my @found = Workflow::Operation::Instance->get(
+                parent_instance_id => $stage_instance->id,
                 name => $event->command_name_brief . ' ' . $event->id
             );
             if (@found) {
@@ -423,19 +423,26 @@ sub get_event_node {
 
         if ($event_instance) {
             $event_node->addChild( $self->tnode("instance_id", $event_instance->id));
-            $event_node->addChild( $self->tnode("instance_status", $event_instance->status));
+#            $event_node->addChild( $self->tnode("instance_status", $event_instance->status));
 
             my @e = Workflow::Store::Db::Operation::InstanceExecution->get(
                 instance_id => $event_instance->id
             );
 
             $event_node->addChild( $self->tnode("execution_count", scalar @e));
-            
-            if (!$lsf_job_id) {
-                $lsf_job_id = $event_instance->current->dispatch_identifier;
+
+            foreach my $current (@e) {
+                if ($current->id == $event_instance->current_execution_id) {
+                    $event_node->addChild( $self->tnode("instance_status", $current->status));
+
+                    if (!$lsf_job_id) {
+                         $lsf_job_id = $current->dispatch_identifier;
+                    }
+                    
+                    last;
+                }
             }
         }
-    }
     }
 
     my $lsf_job_status = $self->get_lsf_job_status($lsf_job_id);
