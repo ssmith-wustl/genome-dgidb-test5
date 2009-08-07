@@ -15,6 +15,11 @@ class Genome::Model::Tools::Library::GatherBuildMetrics {
         is_optional => 0,
         doc => "build id of the build to gather metrics for",
     },
+    mapcheck_dir => {
+        type => 'String',
+        is_optional => 1,
+        doc => "directory containing mapcheck output for each lane in a model",
+    },
     ]
 };
 
@@ -117,12 +122,37 @@ sub execute {
             $sd_above_insert_size = '-';
         }
         my $gerald_clusters = $ida->instrument_data->clusters;
+        my $fwd_gerald_alignment_rate = $ida->instrument_data->fwd_filt_aligned_clusters_pct;
+        my $rev_gerald_alignment_rate = $ida->instrument_data->rev_filt_aligned_clusters_pct;
+        $fwd_gerald_alignment_rate |= '-';
+        $rev_gerald_alignment_rate |= '-';
+        
         my $read_length = $ida->instrument_data->read_length;
         $stats_for{$library}{$hash->{isPE}}{total_clusters} += $gerald_clusters;
         $stats_for{$library}{$hash->{isPE}}{total_gbp} += $gerald_clusters * ($read_length-1) / 1000000000;
-        $readset_stats{$lane_name} = join "\t",($lane_name,$library, $hash->{mapped},$hash->{total},$hash->{isPE}, $hash->{paired},$median_insert_size,$sd_above_insert_size,$gerald_clusters, $read_length, $error1, $error2, sprintf("%0.02f",$hash->{mapped}/$hash->{total}),),"\n";
+        if($self->mapcheck_dir) {
+            my $haploid_coverage_file = $self->mapcheck_dir . "/$lane_name/$lane_name.mapcheck";
+            my $haploid_coverage = '-';
+
+            my $fh = IO::File->new($haploid_coverage_file, "r");
+            unless($fh) {
+                $self->error_message("Unable to open $haploid_coverage_file");
+                return;
+            }
+            my ($line) = grep { $_ =~ /Average depth across all non-gap regions:/ } $fh->getlines;
+            ($haploid_coverage) = $line =~ /([0-9\.]+)$/;
+            $readset_stats{$lane_name} = join "\t",($lane_name,$library, $hash->{mapped},$hash->{total},$hash->{isPE}, $hash->{paired},$median_insert_size,$sd_above_insert_size,$gerald_clusters, $read_length, $error1, $error2, $fwd_gerald_alignment_rate, $rev_gerald_alignment_rate, sprintf("%0.02f",$hash->{mapped}/$hash->{total}),),$haploid_coverage,"\n";
+        }
+        else {
+            $readset_stats{$lane_name} = join "\t",($lane_name,$library, $hash->{mapped},$hash->{total},$hash->{isPE}, $hash->{paired},$median_insert_size,$sd_above_insert_size,$gerald_clusters, $read_length, $error1, $error2, $fwd_gerald_alignment_rate, $rev_gerald_alignment_rate, sprintf("%0.02f",$hash->{mapped}/$hash->{total}),),"\n";
+        }
     }
-    print("Flowcell_Lane\tLibrary\t#Reads_Mapped\t#Reads_Total\tMapped_as_PE\t#Mapped_as_Pairs\tMedian_Insert_Size\tSD_Above_Insert_Size\tFiltered_Clusters\tCycles(Read_Length+1)\tRead1_Avg_Error_Rate\tRead2_Avg_Error_Rate\tMapping_Rate\n"); 
+    print("Flowcell_Lane\tLibrary\t#Reads_Mapped\t#Reads_Total\tMapped_as_PE\t#Mapped_as_Pairs\tMedian_Insert_Size\tSD_Above_Insert_Size\tFiltered_Clusters\tCycles(Read_Length+1)\tRead1_Avg_Error_Rate\tRead2_Avg_Error_Rate\tRead1_ELAND_Mapping_Rate\tRead2_ELAND_Mapping_Rate\tMaq_Mapping_Rate"); 
+    if($self->mapcheck_dir) {
+        print "\tHaploid_Coverage";
+    }
+    print "\n";
+    
     foreach my $lane (sort keys %readset_stats) {
         print $readset_stats{$lane};
     }
