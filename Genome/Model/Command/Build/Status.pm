@@ -107,7 +107,31 @@ sub execute  {
         }
     }
     
-    $buildnode->addChild( $self->get_workflow_node ) if $self->instance;
+    if ($self->instance) {
+        # silly UR tricks to get everything i'm interested in loaded into the cache in 2 queries
+        
+#        my @exec_ids = map {
+#            $_->current_execution_id
+#        } (Workflow::Store::Db::Operation::Instance->get(
+#            id => $self->instance->id,
+#            -recurse => ['parent_instance_id','instance_id']
+#        ));
+
+        my @exec_ids = map {
+            $_->current_execution_id
+        } (Workflow::Store::Db::Operation::Instance->get(
+            sql => 'select workflow_instance.workflow_instance_id
+                      from workflow_instance
+                     start with workflow_instance.parent_instance_id = ' . $self->instance->id . '
+                     connect by workflow_instance.parent_instance_id = prior workflow_instance.workflow_instance_id'
+        ));
+
+        my @ex = Workflow::Store::Db::Operation::InstanceExecution->get(
+            instance_id => { operator => '[]', value=>\@exec_ids }
+        );
+    
+        $buildnode->addChild( $self->get_workflow_node );
+    }
    
     #processing profile 
     $buildnode->addChild ( $self->get_processing_profile_node() );
@@ -190,6 +214,7 @@ sub get_build_node {
     $buildnode->addChild( $doc->createAttribute("build-id",$self->build_id) );
     $buildnode->addChild( $doc->createAttribute("status",$self->build->build_status) );
     $buildnode->addChild( $doc->createAttribute("data-directory",$self->build->data_directory) );
+    $buildnode->addChild( $doc->createAttribute("lsf-job-id", $self->build->build_event->lsf_job_id));
 
     my $event = $self->build->build_event;
     
@@ -214,8 +239,6 @@ sub get_workflow_node {
 
     $workflownode->addChild( $doc->createAttribute("instance-id", $self->instance->id));
     $workflownode->addChild( $doc->createAttribute("instance-status", $self->instance->status));
-
-    $workflownode->addChild( $doc->createAttribute("lsf-job-id", $self->instance->current->dispatch_identifier));
 
     return $workflownode;
 }
@@ -376,11 +399,12 @@ sub get_event_node {
     my $event = shift;
     my $doc = $self->_doc;
 
-    my $lsf_job_status = $self->get_lsf_job_status($event->lsf_job_id);
     $DB::single = 1;
     my $event_node = $self->anode("event","id",$event->id);
     $event_node->addChild( $doc->createAttribute("command_class",$event->class)); 
     $event_node->addChild( $self->tnode("event_status",$event->event_status));
+
+    my $lsf_job_id = $event->lsf_job_id;
 
     ## disable this until we can improve performance
     if (0) {
@@ -406,11 +430,17 @@ sub get_event_node {
             );
 
             $event_node->addChild( $self->tnode("execution_count", scalar @e));
+            
+            if (!$lsf_job_id) {
+                $lsf_job_id = $event_instance->current->dispatch_identifier;
+            }
         }
     }
     }
+
+    my $lsf_job_status = $self->get_lsf_job_status($lsf_job_id);
     
-    $event_node->addChild( $self->tnode("lsf_job_id",$event->lsf_job_id));
+    $event_node->addChild( $self->tnode("lsf_job_id",$lsf_job_id));
     $event_node->addChild( $self->tnode("lsf_job_status",$lsf_job_status));
     $event_node->addChild( $self->tnode("date_scheduled",$event->date_scheduled));
     $event_node->addChild( $self->tnode("date_completed",$event->date_completed));
