@@ -215,6 +215,8 @@ sub get_workflow_node {
     $workflownode->addChild( $doc->createAttribute("instance-id", $self->instance->id));
     $workflownode->addChild( $doc->createAttribute("instance-status", $self->instance->status));
 
+    $workflownode->addChild( $doc->createAttribute("lsf-job-id", $self->instance->current->dispatch_identifier));
+
     return $workflownode;
 }
 
@@ -379,7 +381,9 @@ sub get_event_node {
     my $event_node = $self->anode("event","id",$event->id);
     $event_node->addChild( $doc->createAttribute("command_class",$event->class)); 
     $event_node->addChild( $self->tnode("event_status",$event->event_status));
-    
+
+    ## disable this until we can improve performance
+    if (0) {
     my $root_instance = $self->instance;
     if ($root_instance) {
         my $event_instance;
@@ -403,6 +407,7 @@ sub get_event_node {
 
             $event_node->addChild( $self->tnode("execution_count", scalar @e));
         }
+    }
     }
     
     $event_node->addChild( $self->tnode("lsf_job_id",$event->lsf_job_id));
