@@ -25,6 +25,7 @@ my $finish = Genome::Model::Tools::Hgmi::Finish->create(
   'assembly_version'  => "Version_1.0",
   'pipe_version'      => "Version_1.0",
   'path'              => "/gscmnt/278/analysis/HGMI",
+  'script_location'   => "/gsc/scripts/gsc/annotation/bap_finish_project",
 );
 
 isa_ok($finish, 'Genome::Model::Tools::Hgmi::Finish');
