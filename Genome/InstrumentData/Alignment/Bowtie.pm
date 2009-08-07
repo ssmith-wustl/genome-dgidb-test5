@@ -152,7 +152,7 @@ sub _run_aligner {
 
     # these are general params not infered from the above
     my $alignment_file = $self->alignment_file;
-    my $aligner_params = $self->aligner_params || '-m 1 --best --strata';
+    my $aligner_params = $self->aligner_params || '-m 1 --best --strata -p 4';
 
 
     # RESOLVE A STRING OF ALIGNMENT PARAMETERS
