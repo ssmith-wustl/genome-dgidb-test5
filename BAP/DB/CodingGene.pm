@@ -6,7 +6,7 @@ use DBD::Oracle qw(:ora_types);
 
 my $start_col = Class::DBI::Column->new('seq_start' => { accessor => 'start'  });
 my $end_col   = Class::DBI::Column->new('seq_end'   => { accessor => 'end'    });
-print STDERR "this is in svn\n";
+
 __PACKAGE__->table('mgap.coding_gene');
 
 __PACKAGE__->columns(
