@@ -34,9 +34,13 @@ ok($ta->execute, 'velvet to-ace runs ok');
 
 my @diff = `diff $out_ace $ori_ace`;
 
-my $pass = 0;
-$pass++ if $diff[1] =~ /comment\sVelvetToAce/ and $diff[4] =~/comment\sVelvetToAce/ and scalar @diff == 6;
+my @lines = ();
 
-ok($pass, 'Ace file converted from velvet output is OK');
+for my $diff (@diff) {
+    next if $diff =~ /comment\sVelvetToAce|Run\sby/;
+    push @lines, $diff;
+}
+
+is(scalar @lines, 2, 'Ace file converted from velvet output is OK');
 
 exit;
