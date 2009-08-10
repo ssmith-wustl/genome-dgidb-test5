@@ -66,7 +66,7 @@ sub execute {
     } 
 
     #get the instrument data assignments
-    my @idas = $self->model->instrument_data_assignments;
+    my @idas = $self->build->instrument_data_assignments;
     my %library_alignments;
     my @all_alignments;
     
