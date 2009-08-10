@@ -746,6 +746,7 @@ my %csp_priority = (
 #    'mkcs'                                    => 1,
 #    'shotgun done'                            => 1,
 #    'autofinish'                              => 1,
+    'expunge pse'                             => 1,
 );
 
 sub csp_priority { %csp_priority }
