@@ -6,7 +6,7 @@ use DBD::Oracle qw(:ora_types);
 
 my $start_col = Class::DBI::Column->new('seq_start' => { accessor => 'start'  });
 my $end_col   = Class::DBI::Column->new('seq_end'   => { accessor => 'end'    });
-
+print STDERR "this is in svn\n";
 __PACKAGE__->table('mgap.coding_gene');
 
 __PACKAGE__->columns(
@@ -45,5 +45,23 @@ __PACKAGE__->data_type('sequence_string' => $seq_type);
 __PACKAGE__->sequence('gene_id_seq');
 
 __PACKAGE__->has_many('protein' => BAP::DB::Protein, 'gene_id');
+
+__PACKAGE__->has_many('gene_tags' => BAP::DB::GeneTag, 'gene_id');
+
+
+# not pretty, but sends back the tag names and values with a single call...
+sub tag_names
+{
+    my $self = shift;
+
+    my @tags = $self->gene_tags;
+    my @tagreturns;
+    foreach my $tag (@tags)
+    {
+        my $tag_row = $tag->tag_id;
+        push(@tagreturns,$tag_row);
+    }
+    return @tagreturns;
+}
 
 1;
