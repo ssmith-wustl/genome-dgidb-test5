@@ -33,8 +33,8 @@ class Genome::Model::Tools::Sam::SamToBam {
         },
         fix_mate    => {
             is  => 'Boolean',
-            doc => 'fix mate info problem in sam/bam, default yes',
-            default => 1,
+            doc => 'fix mate info problem in sam/bam, default no',
+            default => 0,
         },
         keep_sam    => {
             is  => 'Boolean',

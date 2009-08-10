@@ -40,8 +40,8 @@ class Genome::Model::Tools::Maq::MapToBam {
         },
         fix_mate    => {
             is  => 'Boolean',
-            doc => 'fix mate info problem in sam/bam, default yes',
-            default => 1,
+            doc => 'fix mate info problem in sam/bam, default no',
+            default => 0,
         },
         sam_version => {
             is  => 'String',
