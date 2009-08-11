@@ -1,0 +1,27 @@
+#!/gsc/bin/perl
+
+use strict;
+use warnings;
+
+use above "Genome";
+use File::Remove qw/ remove /;
+
+use Test::More tests => 3;
+
+BEGIN {
+    use_ok('Genome::Model::Tools::Ber::BerRunBtabhmmtab');
+    
+}
+
+my $tool_db = Genome::Model::Tools::Ber::BerRunBtabhmmtab->create(
+                    'locus_tag'       => "PNI0002DFT",
+		    'fastadirpath'    => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate/data/genomes/PNI0002DFT/fasta",
+		    'berdirpath'      => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate/data/genomes/PNI0002DFT/ber",
+		    'bsubfiledirpath' => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate/data/genomes/PNI0002DFT/bsubERRfiles",
+		    'hmmdirpath'      => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate/data/genomes/PNI0002DFT/hmm",
+		    'srcdirpath'      => "/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/src",
+		);
+isa_ok($tool_db,'Genome::Model::Tools::Ber::BerRunBtabhmmtab');
+
+
+ok($tool_db->execute,'execute berrunbtabhmmtab');

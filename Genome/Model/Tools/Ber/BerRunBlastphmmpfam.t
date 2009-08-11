@@ -1,0 +1,30 @@
+#!/gsc/bin/perl
+
+use strict;
+use warnings;
+
+use above "Genome";
+use File::Remove qw/ remove /;
+
+use Test::More tests => 3;
+
+BEGIN {
+    use_ok('Genome::Model::Tools::Ber::BerRunBlastphmmpfam');
+    
+}
+
+my $tool_db = Genome::Model::Tools::Ber::BerRunBlastphmmpfam->create(
+                    'locus_tag'       => "PNI0002DFT",
+		    'proteinnamefile' => "PNI0002DFT.proteinname.fof",
+		    'fastadirpath'    => "/gscmnt/temp110/analysis/wnash/BER_TEST/PNI0002DFT/fasta",
+		    'berdirpath'      => "/gscmnt/temp110/analysis/wnash/BER_TEST/PNI0002DFT/ber",
+		    'bsubfiledirpath' => "/gscmnt/temp110/analysis/wnash/BER_TEST/PNI0002DFT/bsubERRfiles",
+		    'hmmdirpath'      => "/gscmnt/temp110/analysis/wnash/BER_TEST/PNI0002DFT/hmm",
+		    'blpqueryfile'    => "/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/data/panda/AllGroup/AllGroup.niaa",
+		    'hmmdatabase'     => "/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/data/ALL_LIB.20081108.HMM",
+
+		);
+isa_ok($tool_db,'Genome::Model::Tools::Ber::BerRunBlastphmmpfam');
+
+
+ok($tool_db->execute,'execute berrunblastphmmpfam');
