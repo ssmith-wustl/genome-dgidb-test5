@@ -193,9 +193,8 @@ sub gather_details
 
     my @command_list = (
                         #'/gscmnt/277/analysis/personal_dirs/wnash/Work/Scripts/BAP_TEST/bap_finish_project.pl',
-	                #'bap_finish_project',
-                    $self->script_location,
-                        '--sequence-set-id',
+	                '/gsc/scripts/gsc/annotation/bap_finish_project',
+			'--sequence-set-id',
                         $sequence_set_id,
                         '--locus-id',
                         $locus_tag,
