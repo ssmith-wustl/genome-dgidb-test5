@@ -83,11 +83,14 @@ sub execute {
     # Report results
     my @intervals;
     my @coverage;
+    my $prior_pc_coverage = 0;
     foreach my $interval (sort {$a <=> $b} keys %progression) {
         my $pc_coverage = $progression{$interval};
         push @intervals, $interval;
         push @coverage, $pc_coverage;
-        print $output_fh $interval ."\t". $pc_coverage ."\n";
+        my $pc_gain = sprintf("%.02f",$pc_coverage - $prior_pc_coverage);
+        print $output_fh $interval ."\t". $pc_coverage ."\t". $pc_gain ."\n";
+        $prior_pc_coverage = $pc_coverage;
     }
     $output_fh->close;
     if ($self->image_file) {
@@ -110,12 +113,12 @@ sub execute {
 
 sub by_numeric_dir {
 
-    unless ($a =~ /\/(\d+)\/STATS.tsv$/) {
+    unless ($a =~ /\/.*(\d+)\/STATS.tsv$/) {
         die ('Failed to parse directory '. $a);
     }
     my $a_dir = $1;
 
-    unless ($b =~ /\/(\d+)\/STATS.tsv$/) {
+    unless ($b =~ /\/.*(\d+)\/STATS.tsv$/) {
         die('Failed to parse directory '. $b);
     }
     my $b_dir = $1;
