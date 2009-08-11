@@ -61,7 +61,7 @@ my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Solexa-Integration-Te
 my $message_flag = 1;  #set this to 1 to turn on verbose message output
 my $model_name = "test_solexa_$ENV{USER}";
 my $processing_profile_name = "test_solexa_pp_$ENV{USER}";
-my $subject_name = 'H_GV-933124G-skin1-9017g';
+my $subject_name = 'H_GV-933124G-S.9017';
 my $subject_type = 'sample_name';
 my @instrument_data = setup_test_data($subject_name);
 
@@ -97,7 +97,7 @@ $build_test->runtests;
 
 my $comparison_dir = '/gsc/var/cache/testsuite/data/'
         . 'Genome-Model-Command-Build-ReferenceAlignment-Solexa/'
-        . 'alignment-root-expected-v5';
+        . 'alignment-root-expected-v6';
 
 my @diff = `diff -r --brief $tmp_dir $comparison_dir`; 
 my @bad;
