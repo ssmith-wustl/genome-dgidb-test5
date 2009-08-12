@@ -84,16 +84,6 @@ sub alignment_objects {
     my @instrument_data_ids = map { $_->instrument_data_id() } @assignments;
     my @solexa_instrument_data = Genome::InstrumentData::Solexa->get( \@instrument_data_ids );
 
-#    If we ever care about models that contain data from multiple platforms, think about:
-#    my @solexa_instrument_data = Genome::InstrumentData->get( \@instrument_data_ids );
-
-    if (@instrument_data_ids != @solexa_instrument_data) {
-        die 'some of the assignments ('
-            . scalar(@instrument_data_ids)
-            . ') might not have been solexa instrument data ('
-            . scalar(@solexa_instrument_data) . ')';
-    }
-
     return @solexa_instrument_data;
 }
 
