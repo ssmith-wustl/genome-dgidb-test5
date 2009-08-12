@@ -63,11 +63,15 @@ sub save_error_producing_variant{
     my $line = join("\t", map {$Genome::Transcript::VariantAnnotator::current_variant->{$_}} (qw/chromosome_name start stop reference variant/));
     if ($Genome::Transcript::VariantAnnotator::last_printed_line){
         unless ($line eq $Genome::Transcript::VariantAnnotator::last_printed_line){
-            $Genome::Transcript::VariantAnnotator::error_fh->print($line."\n");
+            if ($Genome::TranscriptVariantAnnotator::error_fh){
+                $Genome::Transcript::VariantAnnotator::error_fh->print($line."\n");
+            }
             $Genome::Transcript::VariantAnnotator::last_printed_line = $line;
         }
     }else{
-        $Genome::Transcript::VariantAnnotator::error_fh->print($line."\n");
+        if ($Genome::TranscriptVariantAnnotator::error_fh){
+            $Genome::Transcript::VariantAnnotator::error_fh->print($line."\n");
+        }
         $Genome::Transcript::VariantAnnotator::last_printed_line = $line;
     }
 }
@@ -281,7 +285,6 @@ sub _transcript_annotation
     my $main_structure = $transcript->structure_at_position( $variant->{start} )
         or return;
 
-    $DB::single =1;
     my $structure_type = $main_structure->structure_type;
 
 =cut
@@ -318,6 +321,12 @@ sub _transcript_annotation
 
     my $source = $transcript->source;
     my $gene = $transcript->gene;
+
+    unless ($gene){
+        $self->error_message("Transcript ". $transcript->transcript_name."(chrom".$transcript->chrom_name." start-stop:". $transcript->transcript_start."-".$transcript->transcript_stop.") does not have an associated gene! Skipping this transcript");
+        return;
+    }
+        
 
     my $conservation = $self->_ucsc_cons_annotation($variant);
     if(!exists($structure_annotation{domain}))
@@ -719,7 +728,6 @@ sub _transcript_annotation_for_cds_exon_modified
     $main_structure_phase = 'none' unless defined $main_structure_phase;
     unless ( $trsub_phase == $main_structure_phase ) 
     {
-        $DB::single =1;
         $self->error_message
         (
             sprintf
@@ -875,7 +883,6 @@ sub _transcript_annotation_for_cds_exon
     $main_structure_phase = 'none' unless defined $main_structure_phase;
     unless ( $trsub_phase eq $main_structure_phase ) 
     {
-        $DB::single = 1;
         $self->error_message
         (
 # From Chapter 8 codon2aa
