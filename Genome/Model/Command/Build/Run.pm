@@ -100,17 +100,19 @@ sub execute {
 
     $Workflow::Simple::server_location_file = $loc_file;
 
+    $self->build->initialize;
+    UR::Context->commit;
+    
     my $output = Workflow::Simple::run_workflow_lsf(
-                                       $xmlfile,
-                                       prior_result => 1
-                                   );
+        $xmlfile,
+        prior_result => 1
+    );
 
-    unless ($output) {
-        $self->error_message("Build failed.");
-        foreach my $error (@Workflow::Simple::ERROR) {
-            $self->error_message($error->path_name . ':' . $error->error);
-        }
-        die;
+    if ( $output ) { # Success
+        $build->success;
+    }
+    else { # Fail
+        $build->fail( @Workflow::Simple::ERROR );
     }
 
     return 1;
