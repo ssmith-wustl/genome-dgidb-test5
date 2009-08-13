@@ -61,8 +61,12 @@ class Genome::Model {
                                                     return;
                                                     die "not sure how to handle sample type $subject_type";
                                                 }
+                                                elsif ($subject_type eq 'library_name') {
+                                                    return;
+                                                    die "not sure how to handle sample type $subject_type";
+                                                }
                                                 else {
-                                                    die "unkown sample type $subject_type!";
+                                                    die "unknown sample type $subject_type!";
                                                 }
                                             ) },
         processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
