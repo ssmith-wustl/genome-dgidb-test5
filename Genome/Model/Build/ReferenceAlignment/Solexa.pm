@@ -400,6 +400,59 @@ sub genes_file {
     return $reference_build->data_directory .'/BACKBONE.tsv';
 }
 
+sub relative_coverage_files {
+    my $self = shift;
+    my $model = $self->model;
+    #TODO: Once refcov is a genome tool we should have better control over output file names
+    #return glob($self->reference_coverage_directory .'/'. $model->subject_name .'_relative_coverage_*.tsv');
+    return glob($self->reference_coverage_directory .'/bias_*');
+}
+
+sub relative_coverage_file {
+    my $self = shift;
+    my $size_fraction = shift;
+    unless ($size_fraction) {
+        return;
+    }
+    #TODO: Once refcov is a genome tool we should have better control over output file names
+    #return $self->_coverage_data_file('relative_coverage_'. $size_fraction);
+    return $self->reference_coverage_directory .'/bias_'. $size_fraction;
+}
+
+sub coverage_stats_file {
+    my $self = shift;
+    return $self->_coverage_data_file('stats');
+}
+
+sub coverage_progression_file {
+    my $self = shift;
+    return $self->_coverage_data_file('progression');
+}
+
+sub breakdown_file {
+    my $self = shift;
+    # TODO: once breakdown.pl is turned into a genome command handling file names should be easier
+    return $self->reference_coverage_directory .'/breakdown.tsv';
+    # return $self->_coverage_data_file('breakdown');
+}
+
+sub coverage_breadth_bin_file {
+    my $self = shift;
+    return $self->_coverage_data_file('coverage_bins');
+}
+
+sub coverage_size_histogram_file {
+ my $self = shift;
+    return $self->_coverage_data_file('size_histos');
+}
+
+sub _coverage_data_file {
+    my $self = shift;
+    my $type = shift;
+    my $model = $self->model;
+    return $self->reference_coverage_directory .'/'. $model->subject_name .'_'. $type .'.tsv';
+}
+
 sub maplist_file_paths {
     my $self = shift;
 
