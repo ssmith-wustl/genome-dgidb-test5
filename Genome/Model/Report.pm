@@ -210,6 +210,10 @@ sub _get_xsl_file_for_type {
 }
 
 #< Images >#
+sub get_image_file_infos_for_html { 
+    return $_[0]->get_footer_image_info;
+}
+
 sub get_footer_image_info {
     return {
         description => 'GC Logo GIF',
