@@ -147,6 +147,13 @@ sub yaml_string {
 
 sub delete {
     my $self = shift;
+
+    # get rid of associated metrics
+    my @metrics = Genome::Model::Event::Metric->get(event_id=>$self->id);
+    for (@metrics) {
+        $_->delete;
+    }
+
     #removing constraints
     my @next_events = $self->next_events;
     for my $next_event (@next_events) {
