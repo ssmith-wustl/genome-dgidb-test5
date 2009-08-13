@@ -499,15 +499,16 @@ sub execute_with_bsub {
     return $bsub_job_id;
 }
 
-# Scheduling
-
+#< Scheduling, Abandon >#
 sub schedule {
     my $self = shift;
 
+    # FYI: user_name is set in create
     $self->event_status("Scheduled");
     $self->date_scheduled( UR::Time->now );
     $self->date_completed(undef);
-    $self->retry_count(0);
+    $self->retry_count(0) unless defined $self->retry_count;
+
     return 1;
 }
 
@@ -539,6 +540,7 @@ sub abandon {
     return 1;
 }
 
+#<>#
 sub next_events {
     my $self = shift;
     my @next_events = Genome::Model::Event->get(
