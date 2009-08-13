@@ -95,12 +95,12 @@ sub instrument_data_assignments {
     my $self = shift;
 
     my @idas = Genome::Model::InstrumentDataAssignment->get(
-                                                            model_id => $self->model_id,
-                                                            first_build_id => {
-                                                                               operator => '<=',
-                                                                               value => $self->build_id,
-                                                                           },
-                                                        );
+        model_id => $self->model_id,
+        first_build_id => {
+            operator => '<=',
+            value => $self->build_id,
+        },
+    );
     return @idas;
 }
 
@@ -108,9 +108,9 @@ sub events {
     my $self = shift;
 
     my @events = Genome::Model::Event->get(
-                                           model_id => $self->model_id,
-                                           build_id => $self->build_id,
-                                       );
+        model_id => $self->model_id,
+        build_id => $self->build_id,
+    );
     return @events;
 }
 
@@ -118,9 +118,9 @@ sub build_events {
     my $self = shift;
 
     my @build_events = Genome::Model::Command::Build->get(
-                                                          model_id => $self->model_id,
-                                                          build_id => $self->build_id,
-                                                      );
+        model_id => $self->model_id,
+        build_id => $self->build_id,
+    );
     return @build_events;
 }
 
@@ -129,7 +129,7 @@ sub build_event {
     my @build_events = $self->build_events;
     if (scalar(@build_events) > 1) {
         my $error_message = 'Found '. scalar(@build_events) .' build events for model id '.
-            $self->model_id .' and build id '. $self->build_id ."\n";
+        $self->model_id .' and build id '. $self->build_id ."\n";
         for (@build_events) {
             $error_message .= "\t". $_->desc .' '. $_->event_status ."\n";
         }
@@ -257,6 +257,47 @@ sub add_report {
     }
 }
 
+#< Initialize, Fail and Success >#
+sub initialize {
+    my $self = shift;
+
+    $self->build_event->event_status('Running');
+
+    $self->generate_send_and_save_report('Genome::Model::Report::BuildInitialized')
+        or return;
+
+    return 1;
+}
+
+sub fail {
+    my ($self, @errors) = @_;
+
+    $self->build_event->event_status('Failed');
+
+    $self->generate_send_and_save_report(
+        'Genome::Model::Report::BuildFailed', {
+            errors => \@errors,
+        },
+    )
+        or return;
+
+    return 1;
+}
+
+sub success {
+    my $self = shift;
+
+    $self->build_event->event_status('Succeeded');
+    $self->build_event->date_completed( UR::Time->now );
+
+    $self->generate_send_and_save_report( $self->report_generator_class_for_success )
+        or return;
+
+    return 1;
+
+}
+
+#< Reports >#
 sub reports {
     my $self = shift;
     my $report_dir = $self->resolve_reports_directory;
@@ -282,6 +323,57 @@ sub available_reports {
     my $report_dir = $self->resolve_reports_directory;
     return unless -d $report_dir;
     return Genome::Report->create_reports_from_parent_directory($report_dir);
+}
+
+sub generate_send_and_save_report {
+    my ($self, $generator_class, $additional_params) = @_;
+    
+    $additional_params ||= {};
+    my $generator = $generator_class->create(
+        build_id => $self->id,
+        %$additional_params,
+    );
+    unless ( $generator ) {
+        $self->error_message(
+            sprintf(
+                "Can't create report generator (%s) for build (%s)",
+                $generator_class,
+                $self->id
+            )
+        );
+        return;
+    }
+
+    my $report = $generator->generate_report;
+    unless ( $report ) {
+        $self->error_message(
+            sprintf("Can't generate report (%s) for build (%s)", $generator->name, $self->id)
+        );
+        return;
+    }
+    
+    my $email_confirmation = Genome::Report::Email->send_report(
+        report => $report,
+        to => $self->build_event->user_name.'@genome.wustl.edu',
+        from => 'apipe@genome.wustl.edu',
+        replyto => 'noreply@genome.wustl.edu',
+        # maybe not the best/correct place for this information but....
+        xsl_files => [ $generator->get_xsl_file_for_html ],
+        image_files => [  $generator->get_image_file_infos_for_html ],  
+    );
+    unless ( $email_confirmation ) {
+        $self->error_message('Couldn\'t email build report ('.lc($report->name).')');
+        return;
+    }
+
+    $self->add_report($report)
+        or return;
+
+    return $report;
+}
+
+sub report_generator_class_for_success { # in subclass replace w/ summary or the like?
+    return 'Genome::Model::Report::BuildSucceeded';
 }
 
 #< SUBCLASSING >#
