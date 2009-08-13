@@ -176,6 +176,10 @@ sub mail
     if ($^O eq 'MSWin32' || $^O eq 'cygwin') {
         $login = 'winguest';
         $name = 'Generic Windows User';
+    } 
+    elsif ($mail{'login'} && $mail{'name'}) {
+        $login = $mail{'login'};
+        $name  = $mail{'name'};
     }
     else {
         ($login, $name) = (getpwuid($<))[0, 6];
