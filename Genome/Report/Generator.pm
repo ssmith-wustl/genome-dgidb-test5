@@ -300,6 +300,17 @@ sub _add_dataset {
     return $dataset_node;
 }
 
+sub _add_element_with_text_to_node {
+    my ($self, $node, $name, $text) = @_;
+
+    my $element = $node->addChild( $self->_xml->createElement($name) )
+        or return;
+    $element->appendTextNode($text)
+        or return;
+
+    return $element;
+}
+
 =pod
 CDATA....
     my $csv = IO::String->new;
