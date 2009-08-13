@@ -33,11 +33,13 @@ my %REPORT_TYPES = (
     Mapcheck           => 'Mapcheck',
     DbSnpConcordance   => 'dbSNP_Concordance',
     GoldSnpConcordance => 'Gold_SNP_Concordance',
+    ReferenceCoverage  => 'Reference_Coverage',
 );
 
 
 sub execute {
     my $self  = shift;
+    my $model = $self->model;
     my $build = $self->build;
     
     #my $gt = $build->model->genotyper_name;
@@ -51,7 +53,9 @@ sub execute {
         $self->status_message("No gold_snp_path provided for the build, skip its report");
         delete $REPORT_TYPES{GoldSnpConcordance};
     }
-    
+    unless ( ($model->dna_type eq 'cdna' || $model->dna_type eq 'rna') && $model->reference_sequence_name eq 'XStrans_adapt_smallRNA_ribo' ) {
+        delete $REPORT_TYPES{ReferenceCoverage};
+    }
     unless ($self->create_directory($build->resolve_reports_directory) ) {
 	    die('Could not create reports directory at: '. $build->resolve_reports_directory);
     }
@@ -135,7 +139,7 @@ sub execute {
 
 sub verify_successful_completion {
     my $self = shift;
-
+    my $model = $self->model;
     my $build = $self->build;
     unless ($build) {
         $self->error_message('Failed verify_successful_completion of RunReports step. Build is undefined.');
@@ -149,6 +153,10 @@ sub verify_successful_completion {
 
     my $gold_snp_path = $self->build->gold_snp_path;
     delete $REPORT_TYPES{GoldSnpConcordance} unless $gold_snp_path and -s $gold_snp_path;
+
+    unless ( ($model->dna_type eq 'cdna' || $model->dna_type eq 'rna') && $model->reference_sequence_name eq 'XStrans_adapt_smallRNA_ribo' ) {
+        delete $REPORT_TYPES{ReferenceCoverage};
+    }
         
     my @sub_dirs = (values %REPORT_TYPES, 'Summary');  
    
