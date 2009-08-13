@@ -29,11 +29,17 @@ sub transform_report {
     my $xml = XML::LibXML->new();
     my $xml_string = $xml->parse_string( $report->xml_string );
     my $style_doc = eval{ $xml->parse_file( $xslt_file ) };
-    print "<pre>Continuing after error: $@</pre>" if $@;
+    if ( $@ ) {
+        $class->error_message("Error parsing xslt file ($xslt_file):\n$@");
+        return;
+    }
 
     my $xslt = XML::LibXSLT->new();
     my $stylesheet = eval { $xslt->parse_stylesheet($style_doc) };
-    print "<pre>Continuing after error: $@</pre>" if $@;
+    if ( $@ ) {
+        $class->error_message("Error parsing stylesheet for xslt file ($xslt_file):\n$@");
+        return;
+    }
 
     my $transformed_xml = $stylesheet->transform($xml_string);
 
