@@ -8,10 +8,11 @@ use Genome;
 class Genome::Model::Command::Build::ReferenceAlignment::RefCov {
     is => ['Genome::Model::Event'],
     has => [
-            sample_name => { via => 'model', to => 'subject_name'},
-            reference_coverage_directory => { via => 'build' },
-            genes_file => { via => 'build', },
-        ],
+        _sorted_bams => {
+            is => 'Array',
+            is_optional => 1,
+        },
+    ],
 };
 
 sub help_brief {
@@ -34,17 +35,11 @@ sub bsub_rusage {
     return "-R 'select[type==LINUX86]'";
 }
 
-sub execute {
+sub sorted_bam_files {
     my $self = shift;
     my $build = $self->build;
-    my $ref_cov_dir = $self->reference_coverage_directory;
-    unless (Genome::Utility::FileSystem->create_directory($ref_cov_dir)) {
-        $self->error_message('Failed to create ref_cov directory '. $ref_cov_dir .":  $!");
-        return;
-    }
-
-    unless ($self->verify_snapshot_directories) {
-        my @sorted_bam_files;
+    my @sorted_bam_files;
+    unless (defined($self->_sorted_bams)) {
         my @sorted_idas = sort { $a->instrument_data_id <=> $b->instrument_data_id } $build->instrument_data_assignments;
         for my $idas (@sorted_idas) {
             my @alignments = $idas->alignments;
@@ -56,128 +51,136 @@ sub execute {
                 push @sorted_bam_files, $alignment->alignment_bam_file_paths;
             }
         }
-        my $snapshot_cmd = '/gscuser/jwalker/svn/TechD/RefCov/bin/snapshot.pl '. $ref_cov_dir .' '. join(' ',@sorted_bam_files);
+        $self->_sorted_bams(\@sorted_bam_files);
+    } else {
+        @sorted_bam_files = @{$self->_sorted_bams};
+    }
+    return @sorted_bam_files;;
+}
+
+sub snapshot_count {
+    my $self = shift;
+    my @sorted_bam_files = $self->sorted_bam_files;
+    my $snapshot_count = scalar(@sorted_bam_files);
+    return $snapshot_count;
+}
+
+sub execute {
+    my $self = shift;
+
+    my $ref_cov_dir = $self->build->reference_coverage_directory;
+    unless (Genome::Utility::FileSystem->create_directory($ref_cov_dir)) {
+        $self->error_message('Failed to create ref_cov directory '. $ref_cov_dir .":  $!");
+        return;
+    }
+
+    # Run ref-cov on each accumulated iteration or snapshot
+    # produces a reference coverage stats file for each iteration and relative coverage
+    unless ($self->verify_snapshots) {
+        my @sorted_bam_files = $self->sorted_bam_files;
+        my $snapshot_cmd = '/gscuser/jwalker/svn/TechD/RefCov/bin/new_snapshot.pl '. $self->build->genes_file .' '.$ref_cov_dir .' '. join(' ',@sorted_bam_files);
         Genome::Utility::FileSystem->shellcmd(
             cmd => $snapshot_cmd,
             input_files => \@sorted_bam_files,
         );
     }
-
-    unless ($self->verify_snapshot_directories) {
+    unless ($self->verify_snapshots) {
         $self->error_message('Failed to verify snapshot directories after running ref-cov');
         return;
     }
 
-    my @snapshot_dirs = $self->snapshot_directories;
-    my $final_dir = pop(@snapshot_dirs);
-    my $final_stats_file = $final_dir .'/STATS.tsv';
-
-     unless (Genome::Utility::FileSystem->validate_file_for_reading($final_stats_file)) {
+    my @snapshot_stats_files = $self->snapshot_stats_files;
+    my $final_stats_file = $snapshot_stats_files[-1];
+    unless (Genome::Utility::FileSystem->validate_file_for_reading($final_stats_file)) {
         $self->error_message("Failed to validate stats file '$final_stats_file' for reading:  $!");
         die($self->error_message);
     }
+    my $stats_file = $self->build->coverage_stats_file;
+    unless ( -l $stats_file) {
+        unless (symlink($final_stats_file,$stats_file)) {
+            $self->error_message("Failed to create final stats snapshot symlink:  $!");
+            die($self->error_message);
+        }
+    }
 
-    unless (-s $self->progression_data_file) {
-        my @snapshot_stats_files = map { $_ .'/STATS.tsv'} $self->snapshot_directories;
-        my $progression = Genome::Model::Tools::RefCov::Progression->execute(
-                                                                             stats_files => \@snapshot_stats_files,
-                                                                             sample_name => $self->sample_name,
-                                                                             image_file => $self->progression_png_file,
-                                                                             output_file => $self->progression_data_file,
-                                                                         );
+    unless (-s $self->build->coverage_progression_file) {
+        unless (Genome::Model::Tools::RefCov::Progression->execute(
+            stats_files => \@snapshot_stats_files,
+            sample_name => $self->model->subject_name,
+            output_file => $self->build->coverage_progression_file,
+        ) ) {
+            $self->error_message('Failed to execute the progression for snapshots:  '. join("\n",@snapshot_stats_files));
+            die($self->error_message);
+        }
+    }
+
+    unless (-s $self->build->breakdown_file) {
+        my @sorted_bam_files = $self->sorted_bam_files;
+        my $breakdown_cmd = '/gscuser/jwalker/svn/TechD/RefCov/bin/breakdown.pl '. $ref_cov_dir .' '. join(' ',@sorted_bam_files);
+        Genome::Utility::FileSystem->shellcmd(
+            cmd => $breakdown_cmd,
+            input_files => \@sorted_bam_files,
+            output_files => [$self->build->breakdown_file],
+        );
     }
 
     return $self->verify_successful_completion;
 }
 
-sub snapshot_directories {
+sub snapshot_stats_files {
     my $self = shift;
-    my @subdirs = $self->_ref_cov_subdirs;
-    my @snapshots = sort { $a cmp $b } grep {$_ =~ /\/\d+$/ } @subdirs;
-    return @snapshots;
+
+    my @stats_files = map { $self->build->reference_coverage_directory .'/STATS_'. $_ .'.tsv' } (1 .. $self->snapshot_count);
+    return @stats_files;
 }
 
-sub _ref_cov_subdirs {
+sub verify_snapshots {
     my $self = shift;
-    my $ref_cov_dir = $self->reference_coverage_directory;
-    unless (opendir(DIR,$ref_cov_dir)) {
-        $self->error_message('Failed to open ref-cov directory '. $ref_cov_dir .":  $!");
-        return;
+    my @snapshot_stats_files = $self->snapshot_stats_files;
+    for my $snapshot_stats_file (@snapshot_stats_files) {
+        unless (-e $snapshot_stats_file) {
+            return;
+        }
+        unless (-f $snapshot_stats_file) {
+            return;
+        }
+        unless (-s $snapshot_stats_file) {
+            return;
+        }
     }
-    my @subdirs = grep { -d  } map { $ref_cov_dir .'/'. $_ }  grep { $_ !~ /^\./ } readdir(DIR);
-    closedir(DIR);
-    return @subdirs;
-}
-
-sub progression_data_file {
-    my $self = shift;
-    return $self->_data_file('progression');
-}
-
-sub progression_png_file {
-    my $self = shift;
-    return $self->_png_file('progression');
-}
-
-sub _data_file {
-    my $self = shift;
-    my $type = shift;
-    return $self->reference_coverage_directory .'/'. $self->sample_name .'_'. $type;
-}
-
-sub _png_file {
-    my $self = shift;
-    my $type = shift;
-    my $data_file = $self->_data_file($type);
-    return $data_file .'.png';
+    return 1;
 }
 
 sub verify_successful_completion {
     my $self = shift;
 
-    unless ($self->verify_snapshot_directories) {
-        $self->error_message('Failed to verify_snapshot_directories!');
+    unless ($self->verify_snapshots) {
+        $self->error_message('Failed to verify snapshots!');
         die($self->error_message);
     }
-    for my $data_type ( qw/progression/ ) {
-        my $file_method = $data_type .'_data_file';
-        my $file = $self->$file_method;
-        unless (-f $file) {
-            $self->error_message('Missing data file '. $file);
-            return;
-        }
+    my @files = (
+        $self->build->coverage_progression_file,
+        $self->build->coverage_stats_file,
+        $self->build->breakdown_file
+    );
+    my @SIZES = qw/SMALL MEDIUM LARGE/;
+    for my $size (@SIZES) {
+        push @files, $self->build->relative_coverage_file($size);
     }
-    # TODO: add bias to this list, but must account for the small, medium, and large files
-    for my $image_type ( qw /progression/ ) {
-        my $file_method = $image_type .'_png_file';
-        my $file = $self->$file_method;
-        unless (-f $file ) {
-            $self->error_message('Missing image file '. $file);
-            return;
-        }
+    for my $file (@files) {
+        $self->check_output_file_existence($file);
     }
     return 1;
 }
 
-sub verify_snapshot_directories {
+sub check_output_file_existence {
     my $self = shift;
+    my $file = shift;
 
-    my @snapshots = $self->snapshot_directories;
-    unless (@snapshots) {
+    unless (-e $file) {
+        $self->error_message('Missing reference coverage output file '. $file);
         return;
     }
-    my $build = $self->build;
-    my @sorted_idas = sort { $a->instrument_data_id <=> $b->instrument_data_id } $build->instrument_data_assignments;
-    my $expected;
-    for my $idas (@sorted_idas) {
-        $expected += $idas->alignments;
-    }
-    unless (scalar(@snapshots) == $expected) {
-        return 0;
-    }
-    return 1;
 }
-
-
 
 1;
