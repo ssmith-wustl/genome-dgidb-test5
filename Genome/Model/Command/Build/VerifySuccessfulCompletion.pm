@@ -49,15 +49,15 @@ sub execute {
                 $self->warning_message('Failed to reallocate disk space.');
             }
         }
-        $build_event->event_status('Succeeded');
-        $build_event->date_completed(UR::Time->now);
+        #$build_event->event_status('Succeeded');
+        #$build_event->date_completed(UR::Time->now);
         $self->event_status('Succeeded');
         $self->date_completed(UR::Time->now);
-        $model->current_running_build_id(undef);
-        $model->last_complete_build_id($build_event->build_id);
+        #$model->current_running_build_id(undef);
+        #$model->last_complete_build_id($build_event->build_id);
     } else {
-        $build_event->event_status('Failed');
-        $build_event->date_completed(UR::Time->now);
+        #$build_event->event_status('Failed');
+        #$build_event->date_completed(UR::Time->now);
         $self->event_status('Failed');
         $self->date_completed(UR::Time->now);
     }
