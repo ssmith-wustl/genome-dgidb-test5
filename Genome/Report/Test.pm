@@ -229,8 +229,8 @@ sub test01_send_report : Test(5) {
     my %valid_params = (
         report => $report,
         to => $ENV{USER}.'@genome.wustl.edu',
-        xsl_file_for_html => $report->generator->get_xsl_file_for_html,
-        image_files => [ $report->generator->get_footer_image_info ],
+        xsl_files => [ $report->generator->get_xsl_file_for_html ],
+        image_files => [ $report->generator->get_image_file_infos_for_html ],
     );
 
     #< Valid >#
@@ -238,7 +238,7 @@ sub test01_send_report : Test(5) {
     ok($valid, 'Sent report');
 
     #< Invalid >#
-    for my $attr (qw/ report to xsl_file_for_html /) {
+    for my $attr (qw/ report to xsl_files /) {
         my $val = delete $valid_params{$attr};
         my $invalid = Genome::Report::Email->send_report(%valid_params);
         ok(!$invalid, 'Failed as expected - no '.$attr);
