@@ -15,22 +15,18 @@ sub send_report {
     my ($class, %params) = @_;
 
     # XSL Files
-    my $xsl_count;
-    for my $type (qw/ text html /) {
-        my $xls_file = $params{'xsl_file_for_'.$type};
-        next unless $xls_file;
-        unless ( Genome::Utility::FileSystem->validate_file_for_reading($xls_file) ) {
-            $class->error_message("Error with xls file for $type.  See above");
-            return;
-        }
-        $xsl_count++;
-    }
-
-    unless ( $xsl_count ) {
+    unless ( $params{xsl_files} ) {
         $class->error_message('No XSL files to transform report to email');
         return;
     }
+    for my $xls_file ( @{$params{xsl_files}} ) {
+        unless ( Genome::Utility::FileSystem->validate_file_for_reading($xls_file) ) {
+            $class->error_message("Error with xls file.  See above");
+            return;
+        }
+    }
 
+    # Report
     my $report = delete $params{report};
     unless ( $report ) {
         $class->error_message('Report is required to be able to email it');
@@ -60,27 +56,16 @@ sub send_report {
                 replyto => $reply_to,
                 subject => $report->description,
                 multipart => 'related',
-                on_error => 'die',
-            });
-
-        unless ( $sender ) {
-            $class->error_message("sender");
-            return;
-        }
+                on_errors => 'die',
+            }) or die "Can't create Mail::Sender";
 
         $sender->OpenMultipart;
 
-        for my $type (qw/ text html /) {
-            my $xls_file = $params{'xsl_file_for_'.$type};
-            next unless $xls_file;
+        for my $xls_file ( @{$params{xsl_files}} ) {
             my $xslt = Genome::Report::XSLT->transform_report(
                 report => $report,
                 xslt_file => $xls_file,
-            );
-            unless ( $xslt ) {
-                $class->error_message("Can't tranform report to $type");
-                return;
-            }
+            ) or  die $class->error_message("Can't tranform report with xsl file ($xls_file)");
             $sender->Part({ctype => 'multipart/alternative'});
             $sender->Part({
                     ctype => $xslt->{media_type},
@@ -101,7 +86,7 @@ sub send_report {
     };
 
     if ( $@ ) {
-        $class->error_message("Error sending mail!: $@");
+        $class->error_message("Error configuring email: $@");
         return;
     }
 
