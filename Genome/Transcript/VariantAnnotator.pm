@@ -1037,6 +1037,9 @@ sub _protein_domain
 {
     my ($self, $variant, $gene, $transcript, $amino_acid_change) = @_;
     #my ($gene,$transcript);
+    unless (defined $gene and defined $transcript){
+        return 'NULL', 'NULL';
+    }
     require SnpDom;
     my $s = SnpDom->new({'-inc-ts' => 1});
     $s->add_mutation($gene->name ,$transcript ,$amino_acid_change);
