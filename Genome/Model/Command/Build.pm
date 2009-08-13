@@ -8,28 +8,32 @@ use Data::Dumper;
 
 class Genome::Model::Command::Build {
     is => [ 'Genome::Model::Event' ],
+    doc => "Build the model with currently assigned instrument data according to the processing profile.",
     has => [
-        data_directory => { via => 'build' },
-        auto_execute   => {
-                           is => 'Boolean',
-                           default_value => 1,
-                           is_transient => 1,
-                           is_optional => 1,
-                           doc => 'The build will execute genome model build run-jobs(default_value=1)',
-                       },
-	force_new_build => {
-			    is => 'Boolean',
-			    default_value => 0,
-			    doc => 'Force a new build when existing builds are running',
-                            is_optional => 1,
-			},
-        bsub_queue  => {is => 'String', is_optional => 1, doc => 'lsf jobs should be put into this queue' },
+    data_directory => { via => 'build' },
+    auto_execute   => {
+        is => 'Boolean',
+        default_value => 1,
+        is_transient => 1,
+        is_optional => 1,
+        doc => 'The build will execute genome model build run-jobs(default_value=1)',
+    },
+    force_new_build => {
+        is => 'Boolean',
+        default_value => 0,
+        doc => 'Force a new build when existing builds are running',
+        is_optional => 1,
+    },
+    bsub_queue  => {
+        is => 'String', 
+        is_optional => 1, 
+        default_value => 'apipe',
+        doc => 'lsf jobs should be put into this queue',
+    },
     ],
-    doc => "build the model with currently assigned instrument data according to the processing profile",
 };
 
 sub sub_command_sort_position { 3 }
-
 
 # Why is this here? "Build" is both a noun and a verb.
 # "genome model build list" ends up getting routed here as Genome::Model::Command::Build takes precedence.
@@ -47,8 +51,6 @@ sub resolve_class_and_params_for_argv {
         return $class->SUPER::resolve_class_and_params_for_argv(@args);
     }
 }
-
-
 
 sub create {
     my $class = shift;
@@ -73,23 +75,23 @@ sub create {
             }
         } 
         my $build = Genome::Model::Build->create(
-                                                 model_id => $model->id,
-                                                 );
+            model_id => $model->id,
+        );
         unless ($build) {
-        $self->error_message('Failed to create new build for model '. $model->id);
+            $self->error_message('Failed to create new build for model '. $model->id);
             $self->delete;
             return;
         }
         $self->build_id($build->build_id);
     }
     my @build_events = Genome::Model::Command::Build->get(
-                                                          model_id => $model->id,
-                                                          build_id => $self->build_id,
-                                                          genome_model_event_id => { operator => 'ne', value => $self->id},
-                                                      );
+        model_id => $model->id,
+        build_id => $self->build_id,
+        genome_model_event_id => { operator => 'ne', value => $self->id},
+    );
     if (scalar(@build_events)) {
         my $error_message = 'Found '. scalar(@build_events) .' build event(s) that already exist for build id '.
-            $self->build_id;
+        $self->build_id;
         for (@build_events) {
             $error_message .= "\n". $_->desc ."\t". $_->event_status ."\n";
         }
@@ -97,10 +99,6 @@ sub create {
         $self->delete;
         return;
     }
-    $self->date_scheduled(UR::Time->now());
-    $self->date_completed(undef);
-    $self->event_status('Running');
-    $self->user_name($ENV{'USER'});
 
     my $build = $self->build;
     unless ($build) {
@@ -108,6 +106,8 @@ sub create {
         $self->delete;
         return;
     }
+
+    $self->schedule; # in G:M:Event, sets status, times, etc.
 
     return $self;
 }
@@ -127,9 +127,6 @@ sub clean {
     $self->delete;
     return;
 }
-
-
-
 
 sub Xresolve_data_directory {
     my $self = shift;
@@ -184,7 +181,7 @@ sub execute {
     $w->save_to_xml(OutputFile => $self->build->data_directory . '/build.xml');
 
     if ($self->auto_execute) {
-        my $cmdline = 'bsub -H -q ' . $self->bsub_queue . ' -m blades -u ' . $ENV{USER} . '@genome.wustl.edu' .
+        my $cmdline = 'bsub -N -H -q ' . $self->bsub_queue . ' -m blades -u ' . $ENV{USER} . '@genome.wustl.edu' .
             $self->_resolve_log_resource($self) . ' ' . 
             'genome model build run --model-id ' . $self->model->id . ' --build-id ' . $self->build->id;
 
@@ -204,7 +201,7 @@ sub execute {
             return;
         }
         $self->lsf_job_id($bsub_job_id);
-        $self->email_build_start_report;# FIXME return here on failure?
+        #$self->build->start;# FIXME return here on failure?
         my $resume = sub { `bresume $bsub_job_id`};
         UR::Context->create_subscription(method => 'commit', callback => $resume);
     }
