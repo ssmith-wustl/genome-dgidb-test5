@@ -6,6 +6,7 @@ use warnings;
 
 use Genome;
 use Data::Dumper;
+use IO::File;
 
 
 class Genome::Model::Tools::Annotate::LookupVariants {
@@ -24,20 +25,20 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             default   => "STDOUT",
             doc       => "default is STDOUT",
         },
+    ],
+    has_optional => [
+        filter_out_submitters => {
+            type     => 'Text',
+            is_input => 1,
+            doc      =>
+                'Comma separated (no spaces allowed) list of submitters to IGNORE from dbsnp',
+        },
         dbSNP_path => {
             type     => 'Text',
             is_input => 1,
             default  => '/gscmnt/sata835/info/medseq/imported_variations/dbSNP/130/',
             doc      => "path to dbSNP files broken into chromosome",
         },
-        index_fixed_width => {
-            type     => 'Int',
-            is_input => 1,
-            default  => 10,
-            doc      => "look, dont change this, ok?"
-        },
-    ],
-    has_optional => [
         report_mode => {
             type     => 'Text',
             is_input => 1,
@@ -46,23 +47,23 @@ class Genome::Model::Tools::Annotate::LookupVariants {
                 'novel-only (DEFAULT VALUE) prints lines from variant_file that are not found in dbSNP
                     known-only prints lines from variant file that are found in dbSNP',
         },
-        print_dbsnp_matches => {
+        index_fixed_width => {
+            type     => 'Int',
+            is_input => 1,
+            default  => 10,
+            doc      => "look, dont change this, ok?"
+        },
+        group_by_position => {
+            type     => 'Boolean',
+            is_input => 1,
+            default  => 0,
+            doc      => "only matters if report_mode is known-only"
+        },
+        print_dbsnp_lines => {
             type     => 'Boolean',
             is_input => 1,
             default  => 0,
             doc      => 'print matching dbSNP line isntead of input',
-        },
-        no_headers => {
-            type     => 'Boolean',
-            is_input => 1,
-            default  => 0,
-            doc      => 'Exclude headers from output',
-        },
-        filter_out_submitters => {
-            type     => 'Text',
-            is_input => 1,
-            doc      =>
-                'Comma separated (no spaces allowed) list of submitters to IGNORE from dbsnp',
         },
     ],
 };
@@ -92,7 +93,12 @@ sub execute {
         if ($self->filter_out_submitters) {
             $self->print_input_lines_with_filters($line);
         } else {
-            $self->print_input_lines_without_filters($line);
+
+            if ($self->print_dbsnp_lines) {
+                $self-> print_db_snp_lines_without_filters($line);
+            } else {
+                $self->print_input_lines_without_filters($line);
+            }
         }
     }
 
@@ -110,7 +116,11 @@ sub print_input_lines_with_filters {
     @matches = map { $self->filter_by_submitters($_) } @matches;
     @matches = map { $self->filter_by_type($_) } @matches; 
 
-    print $line if @matches;
+    my $fh = $self->get_output_fh();
+
+    if (@matches) {
+        $fh->print($line);
+    }
 }
 
 sub print_input_lines_without_filters {
@@ -120,13 +130,51 @@ sub print_input_lines_without_filters {
     my $pos = $self->find_a_matching_pos($line);
     my $report_mode = $self->report_mode();
 
+    my $fh = $self->get_output_fh();
+
     if ($report_mode eq 'novel-only' && !$pos) {
-        print $line;
+        $fh->print($line);
     }
     
     if ($report_mode eq 'known-only' && $pos) {
+        $fh->print($line);
+    }
+}
+
+sub get_output_fh {
+    my $self = shift;
+
+    if ($self->output_file eq 'STDOUT') {
+        return 'STDOUT';
+    }
+
+    my $fh = IO::File->new(">" . $self->output_file);
+    return $fh;
+}
+
+sub print_db_snp_lines_without_filters {
+    
+    my ($self, $line) = @_;
+
+    my $report_mode = $self->report_mode();
+    my @matches = $self->find_all_matches($line);
+
+    if ( $report_mode eq 'novel-only' && !@matches ) {
         print $line;
     }
+
+    my $group_by_position = $self->group_by_position();
+    if ( $report_mode eq 'known_only' ) {
+
+        if ($group_by_position) {
+            # novel-only is automatically group by position, yeah?
+            @matches= $self->group_variants_by_position(\@matches);            
+        }
+
+        print $_ for @matches;
+    }
+
+    return 1;
 }
 
 sub filter_by_submitters {
@@ -280,7 +328,7 @@ sub get_fh_for_chr {
 
     my ($self, $chr) = @_;
 
-    my $dbSNP_path = $self->dbSNP_pathname();
+    my $dbSNP_path = $self->dbSNP_path();
     my ($fh, $index);
     my $f = $self->{'filehandles'};
     my $i = $self->{'index_filehandles'};
@@ -310,31 +358,6 @@ sub get_fh_for_chr {
     die "no filehandle for $chr" if !$fh || !$index;
 
     return ($fh, $index);
-}
-
-sub print_db_snp_lines_without_filters {
-    
-    my ($self, $line) = @_;
-
-    my $report_mode = $self->report_mode();
-    my @matches = $self->find_all_matches($line);
-
-    if ( $report_mode eq 'novel-only' && !@matches ) {
-        print $line;
-    }
-
-    my $group_by_position = $self->group_by_position();
-    if ( $report_mode eq 'known_only' ) {
-
-        if ($group_by_position) {
-            # novel-only is automatically group by position, yeah?
-            @matches= $self->group_variants_by_position(\@matches);            
-        }
-
-        print $_ for @matches;
-    }
-
-    return 1;
 }
 
 sub group_variants_by_position {
