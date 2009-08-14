@@ -96,7 +96,7 @@ sub error_message {
     my $self=shift;
     my $line =shift;
     unless($error_fh) {
-        $error_fh = IO::File->new("/gscuser/gsanders/svn/test-pm/Genome/Model/Tools/Somatic/test_runs/Sniper_error.out",">");
+        $error_fh = IO::File->new("/gscmnt/sata820/info/medseq/somatic_pipeline/Sniper_error.out",">");
     }
     $error_fh->print($line);
     $self->SUPER::error_message($line);
@@ -106,7 +106,7 @@ sub status_message {
     my $self=shift;
     my $line =shift;
     unless($error_fh) {
-        $error_fh = IO::File->new("/gscuser/gsanders/svn/test-pm/Genome/Model/Tools/Somatic/test_runs/Sniper_error.out",">");
+        $error_fh = IO::File->new("/gscmnt/sata820/info/medseq/somatic_pipeline/Sniper_error.out",">");
     }
     $error_fh->print($line);
     $self->SUPER::status_message($line);
