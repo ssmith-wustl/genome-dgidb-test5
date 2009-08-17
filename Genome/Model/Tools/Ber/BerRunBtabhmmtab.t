@@ -15,11 +15,11 @@ BEGIN {
 
 my $tool_db = Genome::Model::Tools::Ber::BerRunBtabhmmtab->create(
                     'locus_tag'       => "PNI0002DFT",
-		    'fastadirpath'    => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate/data/genomes/PNI0002DFT/fasta",
-		    'berdirpath'      => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate/data/genomes/PNI0002DFT/ber",
-		    'bsubfiledirpath' => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate/data/genomes/PNI0002DFT/bsubERRfiles",
-		    'hmmdirpath'      => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate/data/genomes/PNI0002DFT/hmm",
-		    'srcdirpath'      => "/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/src",
+		    'fastadirpath'    => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate.090715.old/data/genomes/PNI0002DFT/fasta",
+		    'berdirpath'      => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate.090715.old/data/genomes/PNI0002DFT/ber",
+		    'bsubfiledirpath' => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate.090715.old/data/genomes/PNI0002DFT/bsubERRfiles",
+		    'hmmdirpath'      => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate.090715.old/data/genomes/PNI0002DFT/hmm",
+		    'srcdirpath'      => "/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate.090715.old/src",
 		);
 isa_ok($tool_db,'Genome::Model::Tools::Ber::BerRunBtabhmmtab');
 
