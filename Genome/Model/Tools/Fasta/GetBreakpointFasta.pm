@@ -21,7 +21,7 @@ class Genome::Model::Tools::Fasta::GetBreakpointFasta {
 	     },
 	     flank => {
 		 type  =>  'Number',
-		 doc   =>  "give the number of bases you wolud like on either side of your breakpoints, default set at 500",
+		 doc   =>  "give the number of bases you would like on either side of your breakpoints, default set at 500",
 		 is_optional  => 1,
 	     },
 
