@@ -41,7 +41,6 @@ class Genome::Model::Tools::Annotate::LookupVariants {
         },
         dbSNP_path => {
             type     => 'Text',
-            is_input => 1,
             default  => '/gscmnt/sata835/info/medseq/imported_variations/dbSNP/130/',
             doc      => "path to dbSNP files broken into chromosome",
         },
@@ -55,19 +54,16 @@ class Genome::Model::Tools::Annotate::LookupVariants {
         },
         index_fixed_width => {
             type     => 'Int',
-            is_input => 1,
             default  => 10,
             doc      => "look, dont change this, ok?"
         },
         group_by_position => {
             type     => 'Boolean',
-            is_input => 1,
             default  => 0,
             doc      => "only matters if report_mode is known-only"
         },
         print_dbsnp_lines => {
             type     => 'Boolean',
-            is_input => 1,
             default  => 0,
             doc      => 'print matching dbSNP line isntead of input',
         },
