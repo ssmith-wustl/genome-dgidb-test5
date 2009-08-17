@@ -22,17 +22,17 @@ class Genome::Model::Tools::Sv::Yenta {
         is_optional => 0,
         doc => "Output directory name for placement of directories",
     },        
-    tumor_model_map_file_prefix =>
+    tumor_bam =>
     {
         type => 'String',
         is_optional => 0,
-        doc => "map file location and prefix for tumor",
+        doc => "bam file location for tumor",
     },
-    normal_model_map_file_prefix =>
+    normal_bam =>
     {
         type => 'String',
         is_optional => 0,
-        doc => "map file location and prefix for normal",
+        doc => "bam file location for normal",
     },
     types => {
         type => 'String',
@@ -85,8 +85,8 @@ sub execute {
         return;
     }
 
-    my $TUMOR_SUBMAP_PATH = $self->tumor_model_map_file_prefix;
-    my $NORMAL_SUBMAP_PATH = $self->normal_model_map_file_prefix;
+    my $tumor_bam = $self->tumor_bam;
+    my $normal_bam = $self->normal_bam;
     my $output_dir = $self->output_dir;
 
     my $grapher = $self->yenta_program;
@@ -111,28 +111,43 @@ sub execute {
             #Doing this based on chromosomes in case types ever change
             if($chr1 eq $chr2) {
                 my $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q1.png";
-                system("bsub -R 'select[type==LINUX64]' -eo $name.err -oo $name.out '$grapher -q 1 -b 500 -o $name $TUMOR_SUBMAP_PATH$chr1.map $chr1 $chr1_pos $chr2_pos'");
+                system("$grapher -B -q 1 -b 500 -o $name $tumor_bam $chr1 $chr1_pos $chr2_pos");
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
-                system("bsub -R 'select[type==LINUX64]' -eo $name.err -oo $name.out '$grapher -q 1 -b 500  -o $name $NORMAL_SUBMAP_PATH$chr1.map $chr1 $chr1_pos $chr2_pos'");
+                system("$grapher -B -q 1 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr2_pos");
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
-                system("bsub -R 'select[type==LINUX64]' -eo $name.err -oo $name.out '$grapher -q 0 -b 500  -o $name $TUMOR_SUBMAP_PATH$chr1.map $chr1 $chr1_pos $chr2_pos'");
+                system("$grapher -B -q 0 -b 500  -o $name $tumor_bam $chr1 $chr1_pos $chr2_pos");
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
-                system("bsub -R 'select[type==LINUX64]' -eo $name.err -oo $name.out '$grapher -q 0 -b 500  -o $name $NORMAL_SUBMAP_PATH$chr1.map $chr1 $chr1_pos $chr2_pos'");
+                system("$grapher -B -q 0 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr2_pos");
+                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 1 -b 500 -o $name $tumor_bam $chr1 $chr1_pos $chr2_pos'");
+                #$name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
+                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 1 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr2_pos'");
+                #$name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
+                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 0 -b 500  -o $name $tumor_bam $chr1 $chr1_pos $chr2_pos'");
+                #$name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
+                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 0 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr2_pos'");
             }
             else {
                 my $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q1.png";
-                system("bsub -R 'select[type==LINUX64]' -eo $name.err -oo $name.out '$grapher -q 1 -b 500 -o $name $TUMOR_SUBMAP_PATH$chr1.map $chr1 $chr1_pos $chr1_pos $TUMOR_SUBMAP_PATH$chr2.map $chr2 $chr2_pos $chr2_pos'");
+                system("$grapher -B -q 1 -b 500 -o $name $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos");
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
-                system("bsub -R 'select[type==LINUX64]' -eo $name.err -oo $name.out '$grapher -q 1 -b 500  -o $name $NORMAL_SUBMAP_PATH$chr1.map $chr1 $chr1_pos $chr1_pos $NORMAL_SUBMAP_PATH$chr2.map $chr2 $chr2_pos $chr2_pos'");
+                system("$grapher -B -q 1 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos");
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
-                system("bsub -R 'select[type==LINUX64]' -eo $name.err -oo $name.out '$grapher -q 0 -b 500  -o $name $TUMOR_SUBMAP_PATH$chr1.map $chr1 $chr1_pos $chr1_pos $TUMOR_SUBMAP_PATH$chr2.map $chr2 $chr2_pos $chr2_pos'");
+                system("$grapher -B -q 0 -b 500  -o $name $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos");
                 $name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
-                system("bsub -R 'select[type==LINUX64]' -eo $name.err -oo $name.out '$grapher -q 0 -b 500  -o $name $NORMAL_SUBMAP_PATH$chr1.map $chr1 $chr1_pos $chr1_pos $NORMAL_SUBMAP_PATH$chr2.map $chr2 $chr2_pos $chr2_pos'");
+                system("$grapher -B -q 0 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos");
+                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 1 -b 500 -o $name $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos'");
+                #$name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png";
+                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 1 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos'");
+                #$name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q0.png";
+                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 0 -b 500  -o $name $tumor_bam $chr1 $chr1_pos $chr1_pos $tumor_bam $chr2 $chr2_pos $chr2_pos'");
+                #$name = "$output_dir/${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q0.png";
+                #system("bsub -R 'select[type==LINUX64 & mem > 1000] rusage[mem=1000]' -eo $name.err -oo $name.out '$grapher -B -q 0 -b 500  -o $name $normal_bam $chr1 $chr1_pos $chr1_pos $normal_bam $chr2 $chr2_pos $chr2_pos'");
+
 
             }
-            if($count % 25 == 0) {
-                sleep(600); #delay by 10 minutes before rolling out the next 50
-            }
+            #if($count % 50 == 0) {
+            #    sleep(600); #delay by 10 minutes before rolling out the next 50
+            #}
 
         }
             
