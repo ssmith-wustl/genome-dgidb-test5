@@ -104,7 +104,7 @@ sub transcripts { # was transcripts_for_snp and transcripts_for_indel
 
     my @annotations;
     foreach my $transcript ( @transcripts_to_annotate ) {
-        unless ($self->is_valid_transcript($transcript)){  #TODO, record this?  eventually remove, as data sanity should be resolved elsewhere
+        unless ($self->is_valid_transcript($transcript)){  
             next;
         }
         my %annotation = $self->_transcript_annotation($transcript, \%variant)
@@ -127,11 +127,22 @@ sub is_valid_transcript{
     my ($self, $transcript) = @_;
     my $strand = $transcript->strand;
     if ($strand eq '+1' or $strand eq '-1'){
+        
+        my $gene = $transcript->gene;
+
+        unless ($gene){
+            $self->warning_message("Transcript ". $transcript->transcript_name."(chrom".$transcript->chrom_name." start-stop:". $transcript->transcript_start."-".$transcript->transcript_stop.") does not have an associated gene! Skipping this transcript");
+            return;
+        }
+
         return 1;
+
     }else{
         $self->warning_message(sprintf("invalid transcript strand($strand)! id:%d pos: %d %d %d", $transcript->transcript_id, $transcript->chrom_name, $transcript->transcript_start, $transcript->transcript_stop));
         return undef;
     }
+
+
 }
 
 sub prioritized_transcripts {# was prioritized_transcripts_for_snp and prioritized_transcripts_for_indel
@@ -290,13 +301,13 @@ sub _transcript_annotation
 =cut
 #TODO, I'm taking this out for the time being because we are doing a really terrible job annotating substructure spanning variants, and not getting much value, just producing errors
     my $alternate_structure = $transcript->structure_at_position( $variant->{stop} );
-    
+
     # If alternate sturcture is not defined here we are probably dealing with a very large deletion...
     unless (defined $alternate_structure) {
         $alternate_structure = $main_structure;
         $self->warning_message("Alternate structure is not defined at the stop position (very large deletion? These are not handled well) for variant: " . Dumper $variant);
     }
-    
+
     my $alternate_structure_type = $alternate_structure->structure_type;
 
     unless ($structure_type eq $alternate_structure_type){
@@ -312,38 +323,32 @@ sub _transcript_annotation
     }
     #print "post: $structure_type : $alternate_structure_type\n";
 =cut
-    
 
-    my $method = '_transcript_annotation_for_' . $structure_type;
 
-    my %structure_annotation = $self->$method($transcript, $variant)
-        or return;
+my $method = '_transcript_annotation_for_' . $structure_type;
 
-    my $source = $transcript->source;
-    my $gene = $transcript->gene;
+my %structure_annotation = $self->$method($transcript, $variant)
+    or return;
 
-    unless ($gene){
-        $self->error_message("Transcript ". $transcript->transcript_name."(chrom".$transcript->chrom_name." start-stop:". $transcript->transcript_start."-".$transcript->transcript_stop.") does not have an associated gene! Skipping this transcript");
-        return;
-    }
-        
+my $source = $transcript->source;
+my $gene = $transcript->gene;
 
-    my $conservation = $self->_ucsc_cons_annotation($variant);
-    if(!exists($structure_annotation{domain}))
-    {
-        $structure_annotation{domain} = 'NULL';
-    }
+my $conservation = $self->_ucsc_cons_annotation($variant);
+if(!exists($structure_annotation{domain}))
+{
+    $structure_annotation{domain} = 'NULL';
+}
 
-    return (
-        %structure_annotation,
-        transcript_name => $transcript->transcript_name, 
-        transcript_status => $transcript->transcript_status,
-        transcript_source => $source,
-        transcript_version => $self->version,
-        gene_name  => $gene->name($source),
+return (
+    %structure_annotation,
+    transcript_name => $transcript->transcript_name, 
+    transcript_status => $transcript->transcript_status,
+    transcript_source => $source,
+    transcript_version => $self->version,
+    gene_name  => $gene->name($source),
 #         amino_acid_change => 'NULL',
-        ucsc_cons => $conservation
-    )
+    ucsc_cons => $conservation
+)
 }
 
 sub _transcript_annotation_for_rna
@@ -472,7 +477,7 @@ sub _transcript_annotation_for_intron
     my ($self, $transcript, $variant) = @_;
 
     my $strand = $transcript->strand;
-    
+
     my $protein = $transcript->protein;
     my $aa_seq ='';
     if ($protein){
@@ -504,7 +509,7 @@ sub _transcript_annotation_for_intron
     my ($prev_structure, $next_structure) = $transcript->structures_flanking_structure_at_position( $variant->{start} );
 #my ($prev_structure, $next_structure) = $transcript->sub_structure_window->structures_flanking_main_structure;
     unless ($prev_structure and $next_structure) {
-        $self->warning_message("Previous and/or next structures are undefined for variant (very large deletion? These are not handled well currently), skipping: " . Dumper $variant);
+        $self->warning_message("Previous and/or next structures are undefined for variant (very large deletion? These are not handled well currently), skipping: " . Dumper $variant); #TODO, should there ever be an intron without flanking structures?
         return;
     }
     my ($prev_structure_type, $next_structure_type, $position_before, $position_after);
@@ -627,7 +632,7 @@ sub _transcript_annotation_for_intron
             $c_position = $exon_pos . '+' . $pre_start;
             $c_position.='_+'.$pre_end if($variant->{start}!=$variant->{stop});
         }
-	$exon_ord=$prev_structure->ordinal;
+        $exon_ord=$prev_structure->ordinal;
         $splice_site_pos='+'.$pre_start;
     }
     else
@@ -658,7 +663,7 @@ sub _transcript_annotation_for_intron
             $c_position = ($exon_pos + 1) . '-' . $aft_end;
             $c_position.='_-'.$aft_start if($variant->{start}!=$variant->{stop});
         }
-	$exon_ord=$next_structure->ordinal;
+        $exon_ord=$next_structure->ordinal;
         $splice_site_pos='-'.$aft_end;
     }
 
@@ -757,13 +762,13 @@ sub _transcript_annotation_for_cds_exon_modified
 #modifications from xshi...
     my $trv_type;
     my $variant_size=1; 
-    
+
     my ($reference_sequence,$variant_sequence)=($variant->{reference},$variant->{variant});
     my $deletion_size=length($reference_sequence);
     my $insertion_size=length($variant_sequence);
     my $indel_size;
     $deletion_size > $insertion_size ? $indel_size = $deletion_size : $indel_size = $insertion_size;
-    
+
     if($strand==-1) {
         $reference_sequence=~tr/ATGC/TACG/;
         $variant_sequence=~tr/ATGC/TACG/;
