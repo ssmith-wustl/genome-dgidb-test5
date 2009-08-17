@@ -8,7 +8,6 @@ use Genome;
 use Data::Dumper;
 use IO::File;
 
-
 class Genome::Model::Tools::Annotate::LookupVariants {
     is  => 'Genome::Model::Tools::Annotate',
     has => [
@@ -27,6 +26,9 @@ class Genome::Model::Tools::Annotate::LookupVariants {
         },
     ],
     has_optional => [
+        _output_filehandle => {
+            type      => 'SCALAR',
+        },
         filter_out_submitters => {
             type     => 'Text',
             is_input => 1,
@@ -87,7 +89,10 @@ sub execute {
 
     my $variant_file = $self->variant_file;
     open(my $in, $variant_file) || die "cant open $variant_file";
-    
+
+    my $fh = $self->get_output_fh() || die 'no output filehandle';
+    $self->_output_filehandle($fh);
+
     while (my $line = <$in>) {
 
         if ($self->filter_out_submitters) {
@@ -95,7 +100,7 @@ sub execute {
         } else {
 
             if ($self->print_dbsnp_lines) {
-                $self-> print_db_snp_lines_without_filters($line);
+                $self->print_db_snp_lines_without_filters($line);
             } else {
                 $self->print_input_lines_without_filters($line);
             }
@@ -111,12 +116,11 @@ sub print_input_lines_with_filters {
 
     my ($self, $line) = @_;
 
+    my $fh = $self->_output_filehandle() || die 'no output_filehandle';
     my @matches = $self->find_all_matches($line);
 
     @matches = map { $self->filter_by_submitters($_) } @matches;
     @matches = map { $self->filter_by_type($_) } @matches; 
-
-    my $fh = $self->get_output_fh();
 
     if (@matches) {
         $fh->print($line);
@@ -127,16 +131,15 @@ sub print_input_lines_without_filters {
 
     my ($self, $line) = @_;
 
+    my $fh = $self->_output_filehandle() || die 'no output_filehandle';
     my $pos = $self->find_a_matching_pos($line);
     my $report_mode = $self->report_mode();
 
-    my $fh = $self->get_output_fh();
-
-    if ($report_mode eq 'novel-only' && !$pos) {
+    if ($report_mode eq 'novel-only' && !defined($pos)) {
         $fh->print($line);
     }
     
-    if ($report_mode eq 'known-only' && $pos) {
+    if ($report_mode eq 'known-only' && defined($pos)) {
         $fh->print($line);
     }
 }
@@ -144,23 +147,26 @@ sub print_input_lines_without_filters {
 sub get_output_fh {
     my $self = shift;
 
-    if ($self->output_file eq 'STDOUT') {
+    my $output_file = $self->output_file();
+    die 'no output_file!' if !$output_file;
+
+    if ($output_file eq 'STDOUT') {
         return 'STDOUT';
     }
 
-    my $fh = IO::File->new(">" . $self->output_file);
+    my $fh = IO::File->new(">" . $output_file);
     return $fh;
 }
 
 sub print_db_snp_lines_without_filters {
-    
     my ($self, $line) = @_;
 
+    my $fh = $self->_output_filehandle() || die 'no output_filehandle';
     my $report_mode = $self->report_mode();
     my @matches = $self->find_all_matches($line);
 
     if ( $report_mode eq 'novel-only' && !@matches ) {
-        print $line;
+        $fh->print($line);
     }
 
     my $group_by_position = $self->group_by_position();
@@ -171,7 +177,7 @@ sub print_db_snp_lines_without_filters {
             @matches= $self->group_variants_by_position(\@matches);            
         }
 
-        print $_ for @matches;
+        $fh->print($_) for @matches;
     }
 
     return 1;
@@ -231,6 +237,11 @@ sub find_matches_around {
     my ($self, $chr, $pos) = @_;
     my $variant = {};
     my (@forward, @backward);
+
+    if ($chr =~ /^(MT|NT)/) {
+        return;
+    }
+
     my ($fh, $index) = $self->get_fh_for_chr($chr);
 
     my ( $ds_id, $ds_allele, $ds_type, $ds_chr, $ds_start, $ds_stop, $ds_submitter );
@@ -281,6 +292,10 @@ sub find_a_matching_pos {
     my ($self, $line) = @_;
 
     my ($chr, $start, $stop) = split(/\t/,$line);
+
+    if ($chr =~ /^(MT|NT)/) {
+        return;
+    }
 
     my ($fh, $index) = $self->get_fh_for_chr($chr);
     my $match_count = 0;
