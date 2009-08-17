@@ -29,6 +29,10 @@ class Genome::Model::Tools::Annotate::LookupVariants {
         _output_filehandle => {
             type      => 'SCALAR',
         },
+        _last_data_line_number => {
+            type      => 'SCALAR',
+            doc => 'The number of lines in the input',
+        },
         filter_out_submitters => {
             type     => 'Text',
             is_input => 1,
@@ -98,7 +102,6 @@ sub execute {
         if ($self->filter_out_submitters) {
             $self->print_input_lines_with_filters($line);
         } else {
-
             if ($self->print_dbsnp_lines) {
                 $self->print_db_snp_lines_without_filters($line);
             } else {
@@ -224,7 +227,7 @@ sub find_all_matches {
     my @matches;
 
     my $pos = $self->find_a_matching_pos($line);
-    if ($pos) {
+    if (defined ($pos)) {
         my ($chr, $start, $stop) = split(/\t/,$line);
         @matches = $self->find_matches_around($chr, $pos);
     }
@@ -255,8 +258,9 @@ sub find_matches_around {
    
     # go forward 
     while ($cur == $pos || $start == $ds_start) {
-    
         $cur++;
+        last if ($cur > $self->_last_data_line_number);
+        
         $line = $self->get_line($fh, $index, $cur);
         last if !$line;
 
@@ -271,8 +275,9 @@ sub find_matches_around {
     # go backwards
     $cur = $pos; 
     while ($cur == $pos || $start == $ds_start) {
-
         $cur--;
+        last if ($cur < 0);
+
         $line = $self->get_line($fh, $index, $cur);
         last if !$line;
 
@@ -299,9 +304,10 @@ sub find_a_matching_pos {
 
     my ($fh, $index) = $self->get_fh_for_chr($chr);
     my $match_count = 0;
-    my $size = <$index>; chomp($size);  
+    my $size = <$index>; chomp($size);
     my $min = 0;
     my $max = $size - 1;
+    $self->_last_data_line_number($max);
 
     while($min <= $max) {
 
