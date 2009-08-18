@@ -11,6 +11,7 @@ use IO::String;
 use Data::Dumper;
 use Template;
 use POSIX; 
+use XML::Simple;
 
 my $base_template_path = __PACKAGE__->_base_path_for_templates;
 
@@ -137,15 +138,39 @@ $DB::single = 1;
     my $content;
     my $report_content;
 
+    my @gold_xml_reports;
+
     for my $list (qw/variant_list_files variant_filtered_list_files/) {
         my $snp_file = $self->create_temp_file_path($list);
         my @files = $self->$list;
         system "cat @files > $snp_file";
         
+        my %intersect_params = ('gold_snp_file' => $gold_snp_path,    
+                                'snp_file' => $snp_file);
+
+        if ($genotyper_name =~ m/samtools/) {
+            $intersect_params{'snp_format'} = 'sam';
+        }
+
+        my $cmd = Genome::Model::Tools::Snp::GoldSnpIntersection->create(%intersect_params);
+
+        unless ($cmd) {
+            $self->error_message("failed at getting a gold snp intersection command.");
+            return;
+        }
+    
+        unless ($cmd->execute) {
+            $self->error_message("gold snp intersection command failed to execute!");
+            return;
+        }
+
+=cut                      
         my $cmd = "gt snp gold-snp-intersection " .
             "--gold-snp-file $gold_snp_path " .
             "--snp-file $snp_file";
         $cmd .= ' --snp-format sam' if $genotyper_name =~ /samtools/;
+    
+        $DB::single = 1;
 
         $self->status_message("GoldSnp command: ".$cmd);
         
@@ -153,23 +178,33 @@ $DB::single = 1;
         #my $output_file = $self->report_detail_output_filename;   
         
         #my $body = IO::File->new(">$output_file");  
-       
+=cut
+
+        my $gold_rpt = $cmd->_report_txt;
+        my $gold_rpt_xml = $cmd->_report_xml;
+
+        my $filter_flavor; 
         my $label;
         if ($list eq 'variant_list_files') {
-            $label = 'Gold Concordance for Unfiltered SNVs'
+            $label = 'Gold Concordance for Unfiltered SNVs';
+            $filter_flavor = "unfiltered";
         }
         elsif ($list eq 'variant_filtered_list_files') {
-            $label = 'Gold Concordance for SNPFilter SNVs'
+            $label = 'Gold Concordance for SNPFilter SNVs';
+            $filter_flavor = "filtered";
         }
         else {
             die "unknown list $list!";
         }
+
+        push @gold_xml_reports, {filter_flavor=>$filter_flavor, xml=>$gold_rpt_xml};
        
         my $formatted_gold_rpt = $self->format_report($gold_rpt, $label);
 #        $body->print("$formatted_gold_rpt");
         $report_content = $report_content . $formatted_gold_rpt;
         
     }
+
 
 #    $body->print("$report_end");
 #    $body->print( $r->end_html );
@@ -195,6 +230,10 @@ $DB::single = 1;
     }
     unless ($report_content) {
         die "No content returned from template processing!";
+    }
+
+    for (@gold_xml_reports) {
+        $self->store_report_metrics($_->{xml}, $_->{filter_flavor});
     }
 
     my $body = IO::String->new();  
@@ -257,6 +296,44 @@ sub get_snp_file
     my $file_list = join(' ', (sort @variant_list_files));
     my $cat = `cat $file_list`;
     return $cat;
+}
+
+sub store_report_metrics {
+    my $self = shift;
+    my $report_xml = shift;
+    my $filter_flavor = shift;
+
+    my $xml_struct = XMLin($report_xml);
+
+    my @report_keys = keys %{$xml_struct};
+
+    for my $block (@report_keys) {
+        my $this_block = $xml_struct->{$block};
+
+        my @block_keys = keys %{$this_block};
+
+        for my $match_type ( grep { $_ =~ m/match/ } @block_keys ) {
+            my $variant_set = $this_block->{$match_type}->{'variant'};
+            my @variants;
+            if ( ref($variant_set) eq 'HASH' ) {
+                @variants = ($variant_set);
+            }
+            else {
+                @variants = @{$variant_set};
+            }
+
+            for (@variants) {
+                my $t = $_->{type};
+                $t =~ s/\s\-\s/-/g;
+                $t =~ s/\s/\-/g;
+
+                my $metric_name = "$block $match_type $t $filter_flavor";
+                my $metric_value = $_->{intersection};
+        
+                $self->build->set_metric($metric_name, $metric_value);
+            }
+        }
+    }
 }
 
 1;

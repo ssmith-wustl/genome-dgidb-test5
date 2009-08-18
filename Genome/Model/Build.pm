@@ -65,6 +65,7 @@ class Genome::Model::Build {
                                                    doc => 'Genome builds this build contributes "to"',
                                                },
         attributes                        => { is => 'Genome::MiscAttribute', reverse_id_by => '_build', where => [ entity_class_name => 'Genome::Model::Build' ] },
+        metrics                           => { is => 'Genome::Model::Metric', reverse_id_by => 'build', doc => "Build metrics"},
     ], 
 
     schema_name => 'GMSchema',
@@ -547,6 +548,12 @@ sub delete {
     for my $object (@objects) {
         $object->delete;
     }
+
+    my @metrics = $self->metrics;
+    for (@metrics) {
+        $self->delete;
+    }
+
     #idas = instrument data assignments
     my @idas = $self->instrument_data_assignments;
     for my $ida (@idas) {
@@ -569,6 +576,31 @@ sub delete {
         }
     }
     return $self->SUPER::delete;
+}
+
+sub set_metric {
+    my $self = shift;
+    my $metric_name  = shift;
+    my $metric_value = shift;
+
+    my $metric = Genome::Model::Metric->get(build_id=>$self->id, name=>$metric_name);
+    if ($metric) {
+        $metric->value($metric_value);
+    } else {
+        $metric = Genome::Model::Metric->create(build_id=>$self->id, name=>$metric_name, value=>$metric_value);
+    }
+    
+    return $metric->value;
+}
+
+sub get_metric {
+    my $self = shift;
+    my $metric_name = shift;
+
+    my $metric = Genome::Model::Metric->get(build_id=>$self->id, name=>$metric_name);
+    if ($metric) {
+        return $metric->value;
+    }
 }
 
 
