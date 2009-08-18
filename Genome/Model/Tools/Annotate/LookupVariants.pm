@@ -116,12 +116,15 @@ sub print_input_lines_with_filters {
     my ($self, $line) = @_;
 
     my $fh = $self->_output_filehandle() || die 'no output_filehandle';
+    my $report_mode = $self->report_mode();
     my @matches = $self->find_all_matches($line);
 
     @matches = map { $self->filter_by_submitters($_) } @matches;
     @matches = map { $self->filter_by_type($_) } @matches; 
 
-    if (@matches) {
+    if (($report_mode eq 'known-only')&&(@matches)) {
+        $fh->print($line);
+    } elsif (($report_mode eq 'novel-only')&& (scalar @matches == 0)) {
         $fh->print($line);
     }
 }
