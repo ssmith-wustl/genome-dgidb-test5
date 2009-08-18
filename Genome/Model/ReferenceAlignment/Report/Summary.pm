@@ -141,6 +141,7 @@ $DB::single = 1;
     my $mapcheck_report_file = $report_dir."/Mapcheck/report.html";
     my $goldsnp_report_file = $report_dir."/Gold_SNP_Concordance/report.html";
     my $dbsnp_report_file = $report_dir."/dbSNP_Concordance/report.txt";
+    my $input_base_count_report_file = $report_dir . "/Input_Base_Count/report.html";
 
     ##match mapcheck report
     my $fh = new IO::File($mapcheck_report_file, "r");
@@ -262,6 +263,14 @@ $DB::single = 1;
     my @inst_data;
     eval { @inst_data = $build->instrument_data };
     @inst_data = Genome::InstrumentData->get(id => [ map { $_->instrument_data_id } @inst_data_ass ]);
+
+    my $total_bases = 0;
+    for (@inst_data) { 
+        if ($_->can('total_bases_read'))  {
+            $total_bases += $_->total_bases_read;    
+        }
+    }
+    my $total_gigabases = sprintf("%.03f", $total_bases/1000000000);
     
     # summarize the instrument data
     my %library_lanes;
@@ -350,6 +359,7 @@ $DB::single = 1;
         data_directory                                => $data_directory,
         
         total_number_of_lanes                         => scalar(@inst_data_ass),
+        total_gigabases                               => $total_gigabases,
         libraries                                     => [ sort keys %library_lane_counts ],
         lanes_by_library                              => \%library_lane_counts,
         
@@ -361,7 +371,6 @@ $DB::single = 1;
         snp_chromosomes                               => $snp_chromosomes,
         snp_caller                                    => $snp_caller . " SNPfilter",
 
-        
         total_filtered_snps                           => commify($total_filtered_snps),
         total_unfiltered_snps                         => commify($total_unfiltered_snps),
 

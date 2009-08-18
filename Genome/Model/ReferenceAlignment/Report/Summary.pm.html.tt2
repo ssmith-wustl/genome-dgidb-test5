@@ -132,6 +132,14 @@
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
 														[% total_number_of_lanes %]
 													</td>
+                                                                                                </tr>
+												<tr>
+													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-weight:bold;text-align:left;white-space:nowrap;padding:5px 5px 5px 0;">
+														input base count:
+													</td>
+													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
+														[% total_gigabases %] Gb
+													</td>
 												</tr>
 											</table><!-- report subsection-->
 											<table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:20px 0 0 0;padding:0;" summary="report subsection header">

@@ -34,6 +34,7 @@ my %REPORT_TYPES = (
     DbSnpConcordance   => 'dbSNP_Concordance',
     GoldSnpConcordance => 'Gold_SNP_Concordance',
     ReferenceCoverage  => 'Reference_Coverage',
+    InputBaseCounts   => 'Input_Base_Counts'
 );
 
 

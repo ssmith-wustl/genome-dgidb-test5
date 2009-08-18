@@ -417,6 +417,23 @@ sub run_start_date_formatted {
     return $dt;
 }
 
+sub total_bases_read {
+    my $self = shift;
+
+    my $total_bases;
+        
+
+    my $count;
+    if ($self->is_paired_end) {
+        $count += ($self->fwd_read_length * $self->fwd_clusters);
+        $count += ($self->rev_read_length  * $self->rev_clusters);
+    } else {
+        $count += ($self->read_length  * $self->clusters);
+    }
+
+    return $count;
+}
+
 1;
 
 #$HeaderURL$
