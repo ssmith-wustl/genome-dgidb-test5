@@ -10,14 +10,8 @@ class Genome::Model::Metric {
     table_name => 'GENOME_MODEL_METRIC',
     id_by => [
         build => { is => 'Genome::Model::Build', id_by => 'build_id', constraint_name => 'GMM_BI_FK' },
+        value => { is => 'VARCHAR2', len => 1000, column_name => 'METRIC_VALUE' },
         name  => { is => 'VARCHAR2', len => 100, column_name => 'METRIC_NAME' },
-    ],
-    has => [
-        value => { is => 'VARCHAR2', len => 1000, column_name => 'METRIC_VALUE', is_optional => 1 },
-    ],
-    unique_constraints => [
-        { properties => [qw/build_id name/], sql => 'GMM_PK' },
-        { properties => [qw/name value/], sql => 'GMM_MNMV' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',

@@ -610,13 +610,16 @@ sub set_metric {
     my $metric_value = shift;
 
     my $metric = Genome::Model::Metric->get(build_id=>$self->id, name=>$metric_name);
+    my $new_metric;
     if ($metric) {
-        $metric->value($metric_value);
+        #delete an existing one and create the new one
+        $metric->delete;
+        $new_metric = Genome::Model::Metric->create(build_id=>$self->id, name=>$metric_name, value=>$metric_value);
     } else {
-        $metric = Genome::Model::Metric->create(build_id=>$self->id, name=>$metric_name, value=>$metric_value);
+        $new_metric = Genome::Model::Metric->create(build_id=>$self->id, name=>$metric_name, value=>$metric_value);
     }
     
-    return $metric->value;
+    return $new_metric->value;
 }
 
 sub get_metric {
