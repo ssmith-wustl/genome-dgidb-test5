@@ -104,7 +104,8 @@ sub execute {
         while (my $indel = $indel_fh->getline) {
             my ($chr, $pos, $id, $indel_seq, $indel_score) = $indel =~ /^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+\S+\s+(\S+)\s+/;
             next if $id ne '*' or $indel_seq eq '*/*' or $indel_score < $self->min_indel_score;
-            map{$indel_filter{$chr, $_}= 1}($pos - $self->indel_win_size .. $pos + $self->indel_win_size);
+            #map{$indel_filter{$chr, $_}= 1}($pos - $self->indel_win_size .. $pos + $self->indel_win_size);
+            $indel_filter{$chr, $pos} = 1;
         }
         $indel_fh->close;
     }
@@ -118,7 +119,15 @@ sub execute {
     
     while (my $snp = $snp_fh->getline) {
         my ($chr, $pos, $cns_qual, $snp_qual, $map_qual, $rd_depth) = $snp =~ /^(\S+)\s+(\S+)\s+\S+\s+\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+/;
-        next if $indel_filter{$chr,$pos};
+        my $test = 0;
+        for my $range_pos ($pos - $self->indel_win_size .. $pos + $self->indel_win_size) {
+            if ($indel_filter{$chr, $range_pos}) {
+                $test++;
+                last;
+            }
+        }
+        next if $test;
+        #next if $indel_filter{$chr,$pos};
         
         my $pass = 1 if $map_qual >= $self->max_map_qual and $rd_depth >= $self->min_read_depth and $rd_depth <= $self->max_read_depth;
         $pass = 0 unless $cns_qual >= $self->min_cns_qual || $snp_qual >= $self->min_snp_qual;
