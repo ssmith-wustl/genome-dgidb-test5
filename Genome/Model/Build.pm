@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Workflow;
 use File::Path;
 use YAML;
 
@@ -137,6 +138,31 @@ sub build_event {
         die($error_message);
     }
     return $build_events[0];
+}
+
+sub workflow_instances {
+    my $self = shift;
+    
+    my @instances = Workflow::Store::Db::Operation::Instance->get(
+        name => $self->build_id . ' all stages'
+    );
+    
+    return @instances;
+}
+
+sub newest_workflow_instance {
+    my $self = shift;
+    
+    my @sorted = sort { 
+        $b->id <=> $a->id
+    } $self->workflow_instances;
+    
+    
+    if (@sorted) { 
+        return $sorted[0];
+    } else {
+        return;
+    }
 }
 
 sub build_status {

@@ -20,7 +20,12 @@ class Genome::Model::Command::Build::Run{
                         is => 'Genome::Model::Build',
                         id_by => 'build_id',
                         is_optional => 1,
-                    }
+                    },
+            restart => {
+                is => 'Boolean',
+                is_optional => 1,
+                doc => 'Restart a new Workflow Instance. Overrides the default behavior of resuming an existing workflow.' 
+            }
     ],
 };
 
@@ -100,13 +105,31 @@ sub execute {
 
     $Workflow::Simple::server_location_file = $loc_file;
 
+    my $w = $build->newest_workflow_instance;
+    if ($w && !$self->restart) {
+        if ($w->is_done) {
+            $self->error_message("Workflow Instance is complete, if you are sure you need to restart use the --restart option");
+            return 0;
+        }
+    }
+
+
     $self->build->initialize;
     UR::Context->commit;
+
+    my $w = $build->newest_workflow_instance;
     
-    my $output = Workflow::Simple::run_workflow_lsf(
-        $xmlfile,
-        prior_result => 1
-    );
+    my $output;
+    
+    if ($w && !$self->restart) {
+        $output = Workflow::Simple::resume_lsf($w->id);
+    } else {
+
+        $output = Workflow::Simple::run_workflow_lsf(
+            $xmlfile,
+            prior_result => 1
+        );
+    }
 
     if ( $output ) { # Success
         $build->success;
@@ -116,20 +139,6 @@ sub execute {
     }
 
     return 1;
-}
-
-sub resolve_log_resource {
-    my $self = shift;
-    my $event = shift;
-
-    my $event_id = $event->genome_model_event_id;
-    my $log_dir = $event->resolve_log_directory;
-    unless (-d $log_dir) {
-        $event->create_directory($log_dir);
-    }
-    my $err_log_file = sprintf("%s/%s.err", $log_dir, $event_id);
-    my $out_log_file = sprintf("%s/%s.out", $log_dir, $event_id);
-    return ' -o ' . $out_log_file . ' -e ' . $err_log_file;
 }
 
 1;
