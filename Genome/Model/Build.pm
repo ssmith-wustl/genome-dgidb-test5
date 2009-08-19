@@ -577,7 +577,7 @@ sub delete {
 
     my @metrics = $self->metrics;
     for (@metrics) {
-        $self->delete;
+        $_->delete;
     }
 
     #idas = instrument data assignments
