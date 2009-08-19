@@ -70,7 +70,9 @@ sub execute {
     
     $self->_xml($doc->toString(1));
 
-    print $self->_xml;
+    if ($self->display_output) {
+        print $self->_xml;
+    }
 }
 
 sub _get_model_node {
