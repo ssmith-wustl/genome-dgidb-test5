@@ -73,13 +73,15 @@ sub execute {
     if ($self->display_output) {
         print $self->_xml;
     }
+
+    return 1;
 }
 
 sub _get_model_node {
     my $self = shift;
     my $model = shift;
 
-    my $model_node = $self->anode("model","id",$model->id,"name",$model->name);
+    my $model_node = $self->anode("model","id",$model->id,"name",$model->name,"processing-profile",$model->processing_profile_name,"username",$model->user_name);
 
     my @builds = $model->builds;
     for (@builds) {
