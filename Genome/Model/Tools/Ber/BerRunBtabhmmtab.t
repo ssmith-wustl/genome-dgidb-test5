@@ -24,4 +24,7 @@ my $tool_db = Genome::Model::Tools::Ber::BerRunBtabhmmtab->create(
 isa_ok($tool_db,'Genome::Model::Tools::Ber::BerRunBtabhmmtab');
 
 
-ok($tool_db->execute,'execute berrunbtabhmmtab');
+SKIP: {
+    skip "sends a couple thousand jobs to the blades.  needs a smaller data set for testing.", 1;
+    ok($tool_db->execute,'execute berrunbtabhmmtab');
+};
