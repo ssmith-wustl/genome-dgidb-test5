@@ -41,14 +41,13 @@ sub execute {
     my $path = $self->reference_base_path . "/" . $self->reference_name;
 
     print "New path for the reference will be $path\n";
-=cut    
+    
     if (-d $path) {
         $self->error_message("This path already exists, can't create a new one.");
         return;
     }
 
     mkdir($path);
-=cut
 
     if (!-s $self->fasta_file) {
         $self->error_message("Fasta file " . $self->fasta_file . " doesn't exist or is zero length!");
@@ -57,13 +56,12 @@ sub execute {
 
     my $new_fasta_path = sprintf("%s/all_sequences.fa", $path); 
     print "Copying to $new_fasta_path\n";
-=cut
+
     Genome::Utility::FileSystem->copy_file($self->fasta_file, $new_fasta_path);
     unless (-e $new_fasta_path) {
         $self->error_message("The file did not successfully copy!");
         return;
     }
-=cut
 
     my $size = stat($new_fasta_path)->size;
 
