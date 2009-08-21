@@ -32,7 +32,9 @@ my $tool_db = Genome::Model::Tools::Ber::AmgapPrepareBER->create(
 isa_ok($tool_db,'Genome::Model::Tools::Ber::AmgapPrepareBER');
 
 
-ok($tool_db->execute,'execute amgapprepareber');
-
+SKIP: {
+    skip "this craps a ton of files into your current directory:(",1;
+    ok($tool_db->execute,'execute amgapprepareber');
+};
 
 

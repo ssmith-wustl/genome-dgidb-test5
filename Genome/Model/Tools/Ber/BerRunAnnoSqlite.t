@@ -20,5 +20,7 @@ my $tool_db = Genome::Model::Tools::Ber::BerRunAnnoSqlite->create(
 		);
 isa_ok($tool_db,'Genome::Model::Tools::Ber::BerRunAnnoSqlite');
 
-
-ok($tool_db->execute,'execute berrunannosqlite');
+SKIP: {
+    skip "writes to annotation dir",1; # should check if in gscana
+    ok($tool_db->execute,'execute berrunannosqlite');
+};

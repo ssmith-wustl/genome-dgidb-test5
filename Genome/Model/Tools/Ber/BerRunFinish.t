@@ -29,4 +29,7 @@ my $tool_db = Genome::Model::Tools::Ber::BerRunFinish->create(
 isa_ok($tool_db,'Genome::Model::Tools::Ber::BerRunFinish');
 
 
-ok($tool_db->execute,'execute berrunfinish');
+SKIP: {
+    skip "writes to annotation dir", 1;
+    ok($tool_db->execute,'execute berrunfinish');
+};
