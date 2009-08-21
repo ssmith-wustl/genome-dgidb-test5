@@ -86,7 +86,7 @@ sub full_consensus_sam_index_path {
     my $self = shift;
 
     my $data_dir = $self->data_directory;
-    my $fa_file  = $self->full_consensus_path('fasta');
+    my $fa_file  = $self->full_consensus_path('fa');
     my $idx_file = $fa_file.'.fai';
 
     unless (-e $idx_file) {
