@@ -80,7 +80,7 @@ sub execute {
     my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($model->indel_finder_version);
 
     # ensure the reference sequence exists.
-    my $ref_seq_file = $model->reference_build->full_consensus_path('fasta');
+    my $ref_seq_file = $model->reference_build->full_consensus_path('fa');
     my $rv = $self->check_for_existence($ref_seq_file);
     return unless $self->_check_rv("reference sequence file $ref_seq_file does not exist", $rv);
     
