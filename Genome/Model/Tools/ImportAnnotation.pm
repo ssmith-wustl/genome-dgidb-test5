@@ -4,6 +4,8 @@ use strict;
 use warnings;
 
 use Genome;            
+use IO::File;
+use Data::Dumper;
 
 my $low=500000;
 my $high=750000;
@@ -25,6 +27,16 @@ class Genome::Model::Tools::ImportAnnotation {
         is => 'Text',
         doc => 'Species of annotation to import (mouse, human currently suported)',
         valid_values => [qw(mouse human)],
+    },
+    log_file => {
+        is => 'Path',
+        doc => 'optional file to record very detailed information about transcripts, substructures, proteins and genes imported',
+        is_optional => 1,
+    },
+    dump_file => {
+        is => 'Path', 
+        doc => 'optional file to store object cache dumps from UR.  Used to diagnose import problems',
+        is_optional => 1,
     },
     ],
 };
@@ -49,6 +61,16 @@ EOS
 
 sub execute{
     my $self = shift;
+    if (-e $self->log_file){
+        unlink $self->log_file;
+    }
+    if (-e $self->dump_file){
+        unlink $self->dump_file;
+    }
+    $self->{cumulative_transcripts} = 0;
+    $self->{cumulative_sub_structures} = 0;
+    $self->{cumulative_genes} = 0;
+    $self->{cumulative_proteins} = 0;
     $self->import_objects_from_external_db;
 
     return 1;
@@ -86,14 +108,14 @@ sub assign_ordinality_to_exons{
             $last_exon = $ss;
             next;
         }
-        $ord++ unless $self->substructures_are_contiguous($strand, $last_exon, $ss);
+        $ord++ unless $self->sub_structures_are_contiguous($strand, $last_exon, $ss);
         $ss->ordinal($ord);
         $last_exon = $ss;
     }
     return 1;
 }
 
-sub substructures_are_contiguous{
+sub sub_structures_are_contiguous{
     my ($self, $strand, $a, $b) = @_;
     if ($strand eq '+1'){
         if ($a->structure_stop >= $b->structure_start){
@@ -197,6 +219,53 @@ sub create_flanking_sub_structures_and_introns{
     return ($left_flank, $right_flank, @introns);
 }
 
+sub write_log_entry{
+    my $self = shift;
+    my ($count, $transcripts, $sub_structures, $genes, $proteins) = @_;
+    my $log_fh = IO::File->new(">> ". $self->log_file);
+    return unless $log_fh;
+    my $total_transcripts = scalar @$transcripts;
+    $self->{cumulative_transcripts} += $total_transcripts;
+    my $total_sub_structures = scalar @$sub_structures;
+    $self->{cumulative_sub_structures} += $total_sub_structures;
+    my $total_genes = scalar @$genes;
+    $self->{cumulative_genes} += $total_genes;
+    my $total_proteins = scalar @$proteins;
+    $self->{cumulative_proteins} += $total_proteins;
+
+    my @transcripts_missing_sub_structures;
+    my @transcripts_missing_gene;
+    for my $transcript (@$transcripts){
+        my @ss = $transcript->sub_structures;
+        my $gene = $transcript->gene;
+        push @transcripts_missing_sub_structures, $transcript unless @ss;
+        push @transcripts_missing_gene, $transcript unless $gene;
+    }
+
+    $log_fh->print("Count $count\n");
+    $log_fh->print("transcripts this round $total_transcripts\n");
+    $log_fh->print("sub_structures this round $total_sub_structures\n");
+    $log_fh->print("genes this round $total_genes\n");
+    $log_fh->print("proteins this round $total_proteins\n");
+    $log_fh->print("Cumulative: ".$self->{cumulative_transcripts}." transcripts, ".$self->{cumulative_sub_structures}." ss, ".$self->{cumulative_genes}." genes, ".$self->{cumulative_proteins}." proteins\n");
+    $log_fh->print("There were ".scalar @transcripts_missing_sub_structures." transcripts missing sub_structures: ".join(" ", map {$_->transcript_name} @transcripts_missing_sub_structures)."\n");
+    $log_fh->print("There were ".scalar @transcripts_missing_gene." transcripts missing a gene ".join(" ", map {$_->transcript_name} @transcripts_missing_gene)."\n");
+    $log_fh->print("##########################################\n");
+}
+
+sub dump_sub_structures{
+    my $self = shift;
+    my $dump_fh = IO::File->new(">> ". $self->dump_file);
+    return unless $dump_fh;
+    my %hash = map { $_ => scalar(keys %{$UR::Context::all_objects_loaded->{$_}}) }
+    qw( Genome::TranscriptSubStructure
+    );
+    my $objects_loaded = $UR::Context::all_objects_cache_size;
+    $dump_fh->print("all_objects_cache_size: $objects_loaded\n");
+    $dump_fh->print(Dumper \%hash);
+    $dump_fh->print("\n#########################################\n#######################################\n\n");
+}
+
 1;
 
 =cut
@@ -210,8 +279,8 @@ foreach external transcript
     grab external gene
     find or create Genome::Gene (genes have multiple transcripts so we will encounter repeats)
     find or create external gene ids (this is the locus link, entrez what have you, won't always be defined)
-    grab external substructures
-    translate external substructures in Genome::Substures(flank, utr exon, cds exon, intron)
+    grab external sub_structures
+    translate external sub_structures in Genome::Substures(flank, utr exon, cds exon, intron)
     grab external protein
     if no external protein
         ok if transcript has no cds exon
