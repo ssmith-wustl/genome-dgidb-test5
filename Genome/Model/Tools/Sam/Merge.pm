@@ -30,6 +30,12 @@ class Genome::Model::Tools::Sam::Merge {
             default_value => 0,
 	    is_optional => 1
         },
+        software => {
+            is => 'Text',
+            default_value => 'picard',
+            valid_values => ['picard', 'samtools'],
+            doc => 'the software tool to use for merging BAM files.  defualt_value=>picard',
+        },
     ],
 };
 
@@ -43,6 +49,29 @@ sub help_detail {
 EOS
 }
 
+sub merge_command {
+    my $self = shift;
+    my @input_files = @_;
+
+    my $merged_file = $self->merged_file;
+    my $bam_merge_cmd;
+    if ($self->software eq 'picard') {
+        my $picard_path = $self->picard_path;
+        my $bam_merge_tool = "java -Xmx2g -cp $picard_path/MergeSamFiles.jar net.sf.picard.sam.MergeSamFiles MSD=true SO=coordinate AS=true VALIDATION_STRINGENCY=SILENT O=$merged_file ";
+        my $list_of_files = join(' I=',@input_files);
+        $self->status_message('Files to merge: '. $list_of_files);
+	$bam_merge_cmd = "$bam_merge_tool I=$list_of_files";
+    } elsif ($self->software eq 'samtools') {
+        my $sam_path = $self->samtools_path;
+        my $bam_merge_tool = $sam_path .' merge ';
+        my $list_of_files = join(' ',@input_files);
+        $self->status_message("Files to merge: ". $list_of_files);
+	$bam_merge_cmd = "$bam_merge_tool $merged_file $list_of_files";
+    } else {
+        die ('Failed to resolve merge command for software '. $self->software);
+    }
+    return $bam_merge_cmd
+}
 
 
 sub execute {
@@ -64,41 +93,34 @@ sub execute {
        $self->error_message("The target merged file already exists at: $result . Please remove this file and rerun to generate a new merged file.");
        return;
     }
-    
     #merge those Bam files...BAM!!!
     my $now = UR::Time->now;
     $self->status_message(">>> Beginning Bam merge at $now.");
-    my $sam_path = $self->samtools_path;
-    my $picard_path = $self->picard_path;
-    
-    my $bam_merge_tool = "java -Xmx2g -cp $picard_path/MergeSamFiles.jar net.sf.picard.sam.MergeSamFiles MSD=true SO=coordinate AS=true VALIDATION_STRINGENCY=SILENT O=$result ";  
+    my $sam_path = $self->samtools_path; 
     my $bam_index_tool = $sam_path.' index';
 
     if (scalar(@files) == 1) {
        $self->status_message("Only one input file has been provided.  Simply sorting the input file (if necessary) and dropping it at the requested target location.");
-
- 	if ($self->is_sorted) {	 
-
-	        my $cp_cmd = sprintf("cp %s %s", $files[0], $result);
-		my $cp_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cp_cmd, input_files=>\@files, output_files=>[$result], skip_if_output_is_present=>0);
-	       if ($cp_rv != 1) {
-			$self->error_message("Bam copy error.  Return value: $cp_rv");
-			return;
-	       }
+ 	if ($self->is_sorted) {
+            my $cp_cmd = sprintf("cp %s %s", $files[0], $result);
+            my $cp_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cp_cmd, input_files=>\@files, output_files=>[$result], skip_if_output_is_present=>0);
+            if ($cp_rv != 1) {
+                $self->error_message("Bam copy error.  Return value: $cp_rv");
+                return;
+            }
 	} else {
-		# samtools sort adds a ".bam" to the end so snap that off for the output file location passed into merge.
-		my ($tgt_file) = $result =~ m/(.*?)\.bam$/;
-		my $sam_sort_cmd = sprintf("%s sort %s %s", $self->samtools_path, $files[0],  $tgt_file);
-		my $sam_sort_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$sam_sort_cmd, input_files=>\@files, output_files=>[$result], skip_if_output_is_present=>0);
-		if ($sam_sort_rv != 1) {
-			$self->error_message("Bam sort error.  Return value $sam_sort_rv");
-			return;
-		}
+            # samtools sort adds a ".bam" to the end so snap that off for the output file location passed into merge.
+            my ($tgt_file) = $result =~ m/(.*?)\.bam$/;
+            my $sam_sort_cmd = sprintf("%s sort %s %s", $self->samtools_path, $files[0],  $tgt_file);
+            my $sam_sort_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$sam_sort_cmd, input_files=>\@files, output_files=>[$result], skip_if_output_is_present=>0);
+            if ($sam_sort_rv != 1) {
+                $self->error_message("Bam sort error.  Return value $sam_sort_rv");
+                return;
+            }
 	}
     } else {
 	my @input_sorted_fhs;
 	my @input_files;
-	
 	if (!$self->is_sorted) {
 	    foreach my $input_file (@files) {
 		my $dirname = dirname($input_file);
@@ -117,12 +139,10 @@ sub execute {
 	} else {
 	    @input_files = @files;
 	}
-	
-	my $list_of_files = join(" I=",@input_files); 
-        print("Files to merge: ".$list_of_files);
-	my $bam_merge_cmd = "$bam_merge_tool I=$list_of_files";
+
+        my $bam_merge_cmd = $self->merge_command(@input_files);
 	$self->status_message("Bam merge command: $bam_merge_cmd");
-	
+
 	my $bam_merge_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$bam_merge_cmd,
 								 input_files=>\@input_files,
 								 output_files=>[$result],
