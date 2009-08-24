@@ -229,27 +229,46 @@ sub resolve_alignment_subdirectory {
                              $instrument_data->id
                          );
     } elsif ($self->force_fragment) {
-        $directory = sprintf('alignment_data/%s/%s/%s/fragment/%s_%s',
-                             $self->aligner_label,
-                             $reference_sequence_name,
-                             $instrument_data->run_name,
-                             $instrument_data->subset_name,
-                             $self->_fragment_seq_id,
-                         );
+        if ($self->trimmer_name) {
+            $directory = sprintf('alignment_data/%s/%s/%s/fragment/%s/%s_%s',
+                                 $self->aligner_label,
+                                 $reference_sequence_name,
+                                 $instrument_data->run_name,
+                                 $self->trimmer_label,
+                                 $instrument_data->subset_name,
+                                 $self->_fragment_seq_id,
+                             );
+        } else {
+            $directory = sprintf('alignment_data/%s/%s/%s/fragment/%s_%s',
+                                 $self->aligner_label,
+                                 $reference_sequence_name,
+                                 $instrument_data->run_name,
+                                 $instrument_data->subset_name,
+                                 $self->_fragment_seq_id,
+                             );
+        }
     } else {
         unless ($instrument_data->run_name) {
             die ($instrument_data->class .'('. $instrument_data->id .') is missing the run_name!');
         }
-        $directory = sprintf('alignment_data/%s/%s/%s/%s_%s',
-                             $self->aligner_label,
-                             $reference_sequence_name,
-                             $instrument_data->run_name,
-                             $instrument_data->subset_name,
-                             $instrument_data->id
-                         );
-    }
-    if ($self->trimmer_name) {
-        $directory .= '/'. $self->trimmer_label;
+        if ($self->trimmer_name) {
+            $directory = sprintf('alignment_data/%s/%s/%s/%s/%s_%s',
+                                 $self->aligner_label,
+                                 $reference_sequence_name,
+                                 $instrument_data->run_name,
+                                 $self->trimmer_label,
+                                 $instrument_data->subset_name,
+                                 $instrument_data->id
+                             );
+        } else {
+            $directory = sprintf('alignment_data/%s/%s/%s/%s_%s',
+                                 $self->aligner_label,
+                                 $reference_sequence_name,
+                                 $instrument_data->run_name,
+                                 $instrument_data->subset_name,
+                                 $instrument_data->id
+                             );
+        }
     }
     return $directory;
 }
