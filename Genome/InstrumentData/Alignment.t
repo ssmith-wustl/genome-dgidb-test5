@@ -187,7 +187,7 @@ my $trimmer_label = $trimmed_alignment->trimmer_label;
 is($trimmer_label,'trim5/1679091c5a880faf6fb5e6087eb1b2dc','got expected trimmer label');
 
 my $trimmed_alignment_directory = $trimmed_alignment->resolve_alignment_directory;
-like($trimmed_alignment_directory,qr/alignment_data\/maq0_7_1\/NCBI-human-build36\/080428_HWI-EAS292_0039_3035U\/8_2499312867\/trim5\/1679091c5a880faf6fb5e6087eb1b2dc/,'got expected trimmed alignment directory');
+like($trimmed_alignment_directory,qr/alignment_data\/maq0_7_1\/NCBI-human-build36\/080428_HWI-EAS292_0039_3035U\/trim5\/1679091c5a880faf6fb5e6087eb1b2dc\/8_2499312867/,'got expected trimmed alignment directory');
 
 
 exit;
