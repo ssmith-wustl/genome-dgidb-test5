@@ -32,15 +32,42 @@ EOS
 }
 
 sub bsub_rusage {
-    return "-R 'select[type==LINUX86]'";
+    return "-R 'select[type==LINUX64]'";
+}
+
+sub sorted_instrument_data_assignments {
+    my $self = shift;
+    my $build = $self->build;
+    my @sorted_idas = sort { $a->instrument_data_id <=> $b->instrument_data_id } $build->instrument_data_assignments;
+    return @sorted_idas;
+}
+
+sub sorted_instrument_data_ids {
+    my $self = shift;
+    my @seq_ids;
+    my @sorted_idas = $self->sorted_instrument_data_assignments;
+    for my $idas (@sorted_idas) {
+        my @alignments = $idas->alignments;
+        unless (@alignments) {
+            $self->error_message('No alignments found for instrument data '. $idas->instrument_data_id);
+            return;
+        }
+        for my $alignment (@alignments) {
+            if ($alignment->force_fragment) {
+                push @seq_ids, $alignment->_fragment_seq_id;
+            } else {
+                push @seq_ids, $alignment->instrument_data_id;
+            }
+        }
+    }
+    return @seq_ids;
 }
 
 sub sorted_bam_files {
     my $self = shift;
-    my $build = $self->build;
     my @sorted_bam_files;
     unless (defined($self->_sorted_bams)) {
-        my @sorted_idas = sort { $a->instrument_data_id <=> $b->instrument_data_id } $build->instrument_data_assignments;
+        my @sorted_idas = $self->sorted_instrument_data_assignments;
         for my $idas (@sorted_idas) {
             my @alignments = $idas->alignments;
             unless (@alignments) {
@@ -58,11 +85,25 @@ sub sorted_bam_files {
     return @sorted_bam_files;;
 }
 
-sub snapshot_count {
+sub progression_array_ref {
+    my $self = shift;
+
+    my @sorted_bam_files = $self->sorted_bam_files;
+    my @progression;
+    my @progression_instance;
+    for my $bam_file (@sorted_bam_files) {
+        push @progression_instance, $bam_file;
+        my @current_instance = @progression_instance;
+        push @progression, \@current_instance;
+    }
+    return \@progression;
+}
+
+sub progression_count {
     my $self = shift;
     my @sorted_bam_files = $self->sorted_bam_files;
-    my $snapshot_count = scalar(@sorted_bam_files);
-    return $snapshot_count;
+    my $progression_count = scalar(@sorted_bam_files);
+    return $progression_count;
 }
 
 sub execute {
@@ -74,23 +115,54 @@ sub execute {
         return;
     }
 
-    # Run ref-cov on each accumulated iteration or snapshot
+    # Run ref-cov on each accumulated iteration or progression
     # produces a reference coverage stats file for each iteration and relative coverage
-    unless ($self->verify_snapshots) {
-        my @sorted_bam_files = $self->sorted_bam_files;
-        my $snapshot_cmd = '/gscuser/jwalker/svn/TechD/RefCov/bin/new_snapshot.pl '. $self->build->genes_file .' '.$ref_cov_dir .' '. join(' ',@sorted_bam_files);
-        Genome::Utility::FileSystem->shellcmd(
-            cmd => $snapshot_cmd,
-            input_files => \@sorted_bam_files,
+    unless ($self->verify_progressions) {
+        my $progression_array_ref = $self->progression_array_ref;
+        $self->status_message('Progressions look like: '. Data::Dumper::Dumper($progression_array_ref));
+        #parallelization starts here
+        require Workflow::Simple;
+        #$Workflow::Simple::store_db=0;
+
+        my $op = Workflow::Operation->create(
+            name => 'RefCov Progression',
+            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::RefCov::ProgressionInstance')
         );
+
+        $op->parallel_by('bam_files');
+
+        my $output = Workflow::Simple::run_workflow_lsf(
+            $op,
+            'output_directory' => $ref_cov_dir,
+            'bam_files' => $progression_array_ref,
+            'target_query_file' => $self->build->genes_file
+        );
+
+        #check workflow for errors 
+        if (!defined $output) {
+            foreach my $error (@Workflow::Simple::ERROR) {
+                $self->error_message($error->error);
+            }
+            return;
+        } else {
+            my $results = $output->{result};
+            my $result_instances = $output->{instance};
+            for (my $i = 0; $i < scalar(@$results); $i++) {
+                my $rv = $results->[$i];
+                if ($rv != 1) {
+                    $self->error_message("Workflow had an error while running progression instance: ". $result_instances->[$i]); 
+                    die($self->error_message);
+                }
+            }
+        }
     }
-    unless ($self->verify_snapshots) {
-        $self->error_message('Failed to verify snapshot directories after running ref-cov');
+    unless ($self->verify_progressions) {
+        $self->error_message('Failed to verify progression directories after running ref-cov');
         return;
     }
 
-    my @snapshot_stats_files = $self->snapshot_stats_files;
-    my $final_stats_file = $snapshot_stats_files[-1];
+    my @progression_stats_files = $self->progression_stats_files;
+    my $final_stats_file = $progression_stats_files[-1];
     unless (Genome::Utility::FileSystem->validate_file_for_reading($final_stats_file)) {
         $self->error_message("Failed to validate stats file '$final_stats_file' for reading:  $!");
         die($self->error_message);
@@ -98,25 +170,43 @@ sub execute {
     my $stats_file = $self->build->coverage_stats_file;
     unless ( -l $stats_file) {
         unless (symlink($final_stats_file,$stats_file)) {
-            $self->error_message("Failed to create final stats snapshot symlink:  $!");
+            $self->error_message("Failed to create final stats progression symlink:  $!");
             die($self->error_message);
         }
     }
 
+    my @final_bias_files = glob ($ref_cov_dir .'/bias_'. $self->progression_count .'_*');
+    for my $final_bias_file (@final_bias_files) {
+        unless ($final_bias_file =~ /bias_\d+_(\w+)/) {
+            $self->error_message('Failed to parse bias file name '. $final_bias_file);
+            die($self->error_message);
+        }
+        my $size = $1;
+        my $bias_file = $self->build->relative_coverage_file($size);
+        unless ( -l $bias_file) {
+            unless (symlink($final_bias_file,$bias_file)) {
+                $self->error_message("Failed to create final bias progression symlink:  $!");
+                die($self->error_message);
+            }
+        }
+    }
+
+    my @progression_instrument_data_ids = $self->sorted_instrument_data_ids;
     unless (-s $self->build->coverage_progression_file) {
         unless (Genome::Model::Tools::RefCov::Progression->execute(
-            stats_files => \@snapshot_stats_files,
+            stats_files => \@progression_stats_files,
+            instrument_data_ids => \@progression_instrument_data_ids,
             sample_name => $self->model->subject_name,
             output_file => $self->build->coverage_progression_file,
         ) ) {
-            $self->error_message('Failed to execute the progression for snapshots:  '. join("\n",@snapshot_stats_files));
+            $self->error_message('Failed to execute the progression for progressions:  '. join("\n",@progression_stats_files));
             die($self->error_message);
         }
     }
 
     unless (-s $self->build->breakdown_file) {
         my @sorted_bam_files = $self->sorted_bam_files;
-        my $breakdown_cmd = '/gscuser/jwalker/svn/TechD/RefCov/bin/breakdown.pl '. $ref_cov_dir .' '. join(' ',@sorted_bam_files);
+        my $breakdown_cmd = '/gscuser/jwalker/svn/TechD/RefCov/bin/breakdown-64.pl '. $ref_cov_dir .' '. join(' ',@sorted_bam_files);
         Genome::Utility::FileSystem->shellcmd(
             cmd => $breakdown_cmd,
             input_files => \@sorted_bam_files,
@@ -127,24 +217,24 @@ sub execute {
     return $self->verify_successful_completion;
 }
 
-sub snapshot_stats_files {
+sub progression_stats_files {
     my $self = shift;
 
-    my @stats_files = map { $self->build->reference_coverage_directory .'/STATS_'. $_ .'.tsv' } (1 .. $self->snapshot_count);
+    my @stats_files = map { $self->build->reference_coverage_directory .'/STATS_'. $_ .'.tsv' } (1 .. $self->progression_count);
     return @stats_files;
 }
 
-sub verify_snapshots {
+sub verify_progressions {
     my $self = shift;
-    my @snapshot_stats_files = $self->snapshot_stats_files;
-    for my $snapshot_stats_file (@snapshot_stats_files) {
-        unless (-e $snapshot_stats_file) {
+    my @progression_stats_files = $self->progression_stats_files;
+    for my $progression_stats_file (@progression_stats_files) {
+        unless (-e $progression_stats_file) {
             return;
         }
-        unless (-f $snapshot_stats_file) {
+        unless (-f $progression_stats_file) {
             return;
         }
-        unless (-s $snapshot_stats_file) {
+        unless (-s $progression_stats_file) {
             return;
         }
     }
@@ -154,8 +244,8 @@ sub verify_snapshots {
 sub verify_successful_completion {
     my $self = shift;
 
-    unless ($self->verify_snapshots) {
-        $self->error_message('Failed to verify snapshots!');
+    unless ($self->verify_progressions) {
+        $self->error_message('Failed to verify progressions!');
         die($self->error_message);
     }
     my @files = (
