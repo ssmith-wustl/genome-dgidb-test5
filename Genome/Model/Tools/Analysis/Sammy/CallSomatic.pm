@@ -80,6 +80,9 @@ sub execute {                               # replace with real execution logic.
 	my $normal_snp = $self->output_dir . "/" . $self->sample_name . ".normal.snp";
 	my $tumor_snp = $self->output_dir . "/" . $self->sample_name . ".tumor.snp";
 
+	$normal_snp = "$normal_pileup.snp" if(-e "$normal_pileup.snp");
+	$tumor_snp = "$tumor_pileup.snp" if(-e "$tumor_pileup.snp");
+
 	## Convert BAM to ROI Pileup ##
 
 	if($self->normal_bam)
