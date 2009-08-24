@@ -77,19 +77,11 @@ sub _generate_summary {
         $total_references++;
     }
     my $pc_touched = sprintf("%.02f",( ($touched_references / $total_references) * 100 ));
-    my @touched_headers = qw(touched-references total-references percent-touched);
-    my @touched_row = ($touched_references, $total_references, $pc_touched);
-    my @touched_rows;
-    push @touched_rows, \@touched_row;
-    unless ($self->_add_dataset(
-        name => 'summary',
-        row_name => 'references-touched',
-        headers => \@touched_headers,
-        rows => \@touched_rows,
-    )) {
-        $self->error_message('Failed to add dataset.');
-        return;
-    }
+    my @headers = qw(category-name category-items total percent-category);
+    my @rows;
+
+    my @touched_row = ('references-touched', $touched_references, $total_references, $pc_touched);
+    push @rows, \@touched_row;
 
     my $total_reads = 0;
     my $aligned_reads = 0;
@@ -104,15 +96,15 @@ sub _generate_summary {
         }
     }
     my $pc_aligned = sprintf("%.02f",( ($aligned_reads / $total_reads) * 100 ));
-    my @align_headers = qw(aligned-reads total-reads percent-aligned);
-    my @align_row = ($aligned_reads, $total_reads, $pc_aligned);
-    my @align_rows;
-    push @align_rows, \@align_row;
+    my @align_row = ('aligned-reads', $aligned_reads, $total_reads, $pc_aligned);
+    push @rows, \@align_row;
     unless ($self->_add_dataset(
         name => 'summary',
-        row_name => 'alignment',
-        headers => \@align_headers,
-        rows => \@align_rows,
+        title => 'cDNA Alignment Summary',
+        'display-type' => 'table',
+        row_name => 'category',
+        headers => \@headers,
+        rows => \@rows,
     )) {
         $self->error_message('Failed to add dataset.');
         return;
@@ -148,6 +140,8 @@ sub _generate_stats {
     }
     unless ($self->_add_dataset(
                         name => 'coverage-stats',
+                        title => 'Coverage Statisticts Per Reference',
+                        'display-type' => 'table',
                         row_name => 'reference',
                         headers => \@headers,
                         rows => \@rows,
@@ -184,6 +178,8 @@ sub _generate_breakdown {
     }
     unless ($self->_add_dataset(
                         name => 'breakdown',
+                        title => 'Alignment Breakdown',
+                        'display-type' => 'table',
                         row_name => 'category',
                         headers => \@headers,
                         rows => \@rows,
@@ -199,7 +195,7 @@ sub _generate_progression {
 
     my $progression_tsv = $self->build->coverage_progression_file;
 
-    my @headers = ('instance-name', 'pc-coverage', 'pc-gain');
+    my @headers = ('lane-name','bases-covered','reference-bases','percent-coverage','percent-gain','lane-id','lane-error-average','lane-error-standard-deviation');
 
     my $parser = Genome::Utility::IO::SeparatedValueReader->create(
         input => $progression_tsv,
@@ -220,7 +216,14 @@ sub _generate_progression {
     }
     unless ($self->_add_dataset(
                         name => 'progression',
-                        row_name => 'instance',
+                        title => 'Coverage Progression By Lane',
+                        'display-type' => 'graph-line',
+                        'x-axis' => 'lane-name',
+                        'y1-axis' => 'percent-coverage',
+                        'y1-axis-title' => 'Total Coverage(%)',
+                        'y2-axis' => 'percent-gain',
+                        'y2-axis-title' => 'Coverage Gain(%)',
+                        row_name => 'lane',
                         headers => \@headers,
                         rows => \@rows,
                     )) {
@@ -232,13 +235,37 @@ sub _generate_progression {
 
 sub _generate_relative_coverage {
     my $self = shift;
+
+    my $relative_coverage_node = $self->_xml->createElement('relative-coverage')
+        or return;
+    $self->_datasets_node->addChild($relative_coverage_node)
+        or return;
+    my %params = (
+        title => 'Depth By Relative Position',
+        'display-type' => 'graph-line',
+        'x-axis-title' => 'Relative Position(5\'->3\')',
+        'x-axis' => 'relative-position',
+        'y-axis-title' => 'Depth',
+        'y-axis' => 'depth',
+    );
+    for my $attr (keys %params) {
+        $relative_coverage_node->addChild( $self->_xml->createAttribute($attr, $params{$attr}) )
+            or return;
+    }
+
     my @headers = ('relative-position','depth');
     my @size_files = $self->build->relative_coverage_files;
     for my $size_file ( @size_files ) {
         unless ($size_file =~ /bias_(\w+)$/) {
             die('Failed to parse bias file path '. $size_file);
         }
-        my $size = $1;
+        my $size = lc($1);
+        my $size_bin_node = $self->_xml->createElement('relative-coverage-bin')
+            or return;
+        $size_bin_node->addChild( $self->_xml->createAttribute('size', $size) )
+            or return;
+        $relative_coverage_node->addChild($size_bin_node)
+            or return;
         my $parser = Genome::Utility::IO::SeparatedValueReader->create(
             input => $size_file,
             separator => "\t",
@@ -248,22 +275,13 @@ sub _generate_relative_coverage {
             $self->error_message('Failed to create tab delimited parser for file '. $size_file);
             die($self->error_message);
         }
-        my @rows;
         while (my $rel_cov = $parser->next) {
-            my @row;
+            my $reading_node = $size_bin_node->addChild( $self->_xml->createElement('reading') );
             for my $header (@headers) {
-                push @row, $rel_cov->{$header};
+                my $element = $reading_node->addChild( $self->_xml->createElement($header) )
+                    or return;
+                $element->appendTextNode($rel_cov->{$header});
             }
-            push @rows, \@row;
-        }
-        unless ($self->_add_dataset(
-            name => 'relative-coverage',
-            row_name => lc($size),
-            headers => \@headers,
-            rows => \@rows,
-        )) {
-            $self->error_message('Failed to add dataset.');
-            return;
         }
     }
     return 1;
@@ -303,39 +321,41 @@ sub _generate_breadth {
                     minimum_basepair => '100',
                     maximum_basepair => '<=2999',
                     minimum_depth => '1X',
-                    minimum_percent_coverage =>'90%',
+                    minimum_percent_coverage =>'90',
                 },
                 MEDIUM => {
                     minimum_basepair => '>=3000',
                     maximum_basepair => '<=6999',
                     minimum_depth => '1X',
-                    minimum_percent_coverage =>'50%',
+                    minimum_percent_coverage =>'50',
                 },
                 LARGE => {
                     minimum_basepair => '>=7000',
                     maximum_basepair => 'inf',
                     minimum_depth => '1X',
-                    minimum_percent_coverage =>'30%',
+                    minimum_percent_coverage =>'30',
                 },
             );
     my @bin_headers= qw(reference-size minimum-basepair maximum-basepair minimum-depth minimum-percent-coverage covered-references total-references percent-covered);
     # Hard coded to retain order
+    my @rows;
     for my $key ('SMALL', 'MEDIUM', 'LARGE') {
-        my @rows;
         my $covered = $bins{$key .'_COVERED'};
         my $total = $bins{$key .'_TOTAL'};
         my $pc = sprintf("%.02f",(($covered / $total) * 100));
         my @row = ($key,$desc{$key}->{minimum_basepair},$desc{$key}->{maximum_basepair},$desc{$key}->{minimum_depth},$desc{$key}->{minimum_percent_coverage},$covered,$total,$pc);
         push @rows, \@row;
-        unless ($self->_add_dataset(
-            name => 'coverage-bins',
-            row_name => $key,
-            headers => \@bin_headers,
-            rows => \@rows,
-        )) {
-            $self->error_message('Failed to add dataset.');
-            return;
-        }
+    }
+    unless ($self->_add_dataset(
+        name => 'coverage-bins',
+        title => 'Breadth and Depth of Coverage Summary',
+        row_name => 'coverage-bin',
+        'display-type' => 'table',
+        headers => \@bin_headers,
+        rows => \@rows,
+    )) {
+        $self->error_message('Failed to add dataset.');
+        return;
     }
     return 1;
 }
@@ -380,6 +400,8 @@ sub _generate_size_histos {
                        11 => [90.01, 99.99],
                        12 => [100,  100],
                    };
+    my @headers = qw(minimum-basepair maximum-basepair minimum-coverage-percent maximum-coverage-percent references-covered percent-references-covered);
+    my @rows;
     foreach my $bin (sort {$a <=> $b} keys %{$bin_sizes}) {
         # Gather information based on BIN size.
         my $bininfo = {};
@@ -407,8 +429,6 @@ sub _generate_size_histos {
             }
         }
 
-        my @headers = qw(minimum-basepair maximum-basepair minimum-coverage-percent maximum-coverage-percent references-covered percent-references-covered);
-        my @rows;
         foreach my $range_val (sort {$a <=> $b} keys %{$range_sizes}) {
             my @row;
             if ($bininfo->{perc_cov}->{$range_val}) {
@@ -420,15 +440,16 @@ sub _generate_size_histos {
             }
             push @rows, \@row;
         }
-        unless ($self->_add_dataset(
-                        name => 'size-bins',
-                        row_name => 'size-bin',
-                        headers => \@headers,
-                        rows => \@rows,
-                    )) {
-            $self->error_message('Failed to add dataset.');
-            return;
-        }
+    }
+    unless ($self->_add_dataset(
+        name => 'size-bins',
+        row_name => 'size-bin',
+        title => 'Breadth and Depth of Coverage',
+        headers => \@headers,
+        rows => \@rows,
+    )) {
+        $self->error_message('Failed to add dataset.');
+        return;
     }
     return 1;
 }
