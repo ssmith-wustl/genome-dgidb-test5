@@ -83,6 +83,9 @@ sub execute {                               # replace with real execution logic.
 	my $normal_indel = $self->output_dir . "/" . $self->sample_name . ".normal.indel";
 	my $tumor_indel = $self->output_dir . "/" . $self->sample_name . ".tumor.indel";
 
+	$normal_indel = "$normal_pileup.indel" if(-e "$normal_pileup.indel");
+	$tumor_indel = "$tumor_pileup.indel" if(-e "$tumor_pileup.indel");
+
 	## Convert BAM to ROI Pileup ##
 	if(!(-e $normal_pileup))
 	{
