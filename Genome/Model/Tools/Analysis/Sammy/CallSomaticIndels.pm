@@ -1,5 +1,5 @@
 
-package Genome::Model::Tools::Analysis::Sammy::CallSomatic;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Analysis::Sammy::CallSomaticIndels;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
 # CallSomatic - Call somatic variants from normal/tumor BAM files
@@ -20,7 +20,7 @@ use FileHandle;
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-class Genome::Model::Tools::Analysis::Sammy::CallSomatic {
+class Genome::Model::Tools::Analysis::Sammy::CallSomaticIndels {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
@@ -77,91 +77,100 @@ sub execute {                               # replace with real execution logic.
 	my $normal_pileup = $self->normal_pileup;
 	my $tumor_pileup = $self->tumor_pileup;
 	
-	my $normal_snp = $self->output_dir . "/" . $self->sample_name . ".normal.snp";
-	my $tumor_snp = $self->output_dir . "/" . $self->sample_name . ".tumor.snp";
+	$normal_pileup = $self->output_dir . "/" . $self->sample_name . ".normal.pileup" if(!$normal_pileup);
+	$tumor_pileup = $self->output_dir . "/" . $self->sample_name . ".tumor.pileup" if(!$tumor_pileup);
+	
+	my $normal_indel = $self->output_dir . "/" . $self->sample_name . ".normal.indel";
+	my $tumor_indel = $self->output_dir . "/" . $self->sample_name . ".tumor.indel";
 
 	## Convert BAM to ROI Pileup ##
-
-	if($self->normal_bam)
+	if(!(-e $normal_pileup))
 	{
-		die "Normal BAM file $self->normal_bam not found!\n" if(!(-e $self->normal_bam));
-
-		$normal_pileup = $self->output_dir . "/" . $self->sample_name . ".normal.pileup" if(!$normal_pileup);
-
-		## If no pileup file exists, extract it from the BAM ##
-		
-		if(!(-e $normal_pileup))
+		if($self->normal_bam)
 		{
+			die "Normal BAM file $self->normal_bam not found!\n" if(!(-e $self->normal_bam));
+	
 			$cmd = "samtools pileup -f " . $reference_file . " " . $self->normal_bam;
-			$cmd .= " | " . call_sammy() . "limit-snps --regions-file " . $self->regions_file . " --output-file $normal_pileup";
+			$cmd .= " | " . call_sammy() . "limit-indels --regions-file " . $self->regions_file . " --output-file $normal_pileup";
 			
 			print "Generating Normal Pileup file...\n";
 			system($cmd);
 		}
+		else
+		{
+			die "Error: Normal BAM file " . $self->normal_bam . " not found!\n";
+		}		
 	}
+
 	
-	## Call SNPs on ROI pileup ##
-	if(-e $normal_pileup && !(-e $normal_snp))
+	## Call indels on ROI pileup ##
+	if(-e $normal_pileup && !(-e $normal_indel))
 	{
-		$cmd = call_sammy() . "pileup2snp " . $normal_pileup . " --min-coverage 10 --min-reads2 2 --min-var-freq 0.25 --p-value 1.0E-06 >$normal_snp";
-		print "Calling SNPs in Normal...\n";
+		$cmd = call_sammy() . "pileup2indel " . $normal_pileup . " --min-coverage 10 --min-reads2 2 --min-var-freq 0.25 --p-value 1.0E-06 >$normal_indel";
+		print "Calling indels in Normal...\n";
 		system($cmd);
 	}
 
 
 	## Convert BAM to ROI Pileup ##
 
-	if($self->tumor_bam)
+	if(!(-e $tumor_pileup))
 	{
-		die "Normal BAM file $self->tumor_bam not found!\n" if(!(-e $self->tumor_bam));
-
-		$tumor_pileup = $self->output_dir . "/" . $self->sample_name . ".tumor.pileup" if(!$tumor_pileup);
-
-		## If no pileup file exists, extract it from the BAM ##
-		
-		if(!(-e $tumor_pileup))
+		if($self->tumor_bam)
 		{
+			die "Normal BAM file $self->tumor_bam not found!\n" if(!(-e $self->tumor_bam));
+
+			## If no pileup file exists, extract it from the BAM ##
 			$cmd = "samtools pileup -f " . $reference_file . " " . $self->tumor_bam;
-			$cmd .= " | " . call_sammy() . "limit-snps --regions-file " . $self->regions_file . " --output-file $tumor_pileup";
+			$cmd .= " | " . call_sammy() . "limit-indels --regions-file " . $self->regions_file . " --output-file $tumor_pileup";
 			
 			print "Generating Tumor Pileup file...\n";
 			system($cmd);
 		}
+		else
+		{
+			die "Error: Tumor BAM file " . $self->tumor_bam . " not found!\n";	
+		}		
 	}
+
 	
-	## Call SNPs on ROI pileup ##
-	if(-e $tumor_pileup && !(-e $tumor_snp))
+	## Call indels on ROI pileup ##
+	if(-e $tumor_pileup && !(-e $tumor_indel))
 	{
-		$cmd = call_sammy() . "pileup2snp " . $tumor_pileup . " --min-coverage 10 --min-reads2 2 --min-var-freq 0.25 --p-value 1.0E-06 >$tumor_snp";
-		print "Calling SNPs in Tumor...\n";
+		$cmd = call_sammy() . "pileup2indel " . $tumor_pileup . " --min-coverage 10 --min-reads2 2 --min-var-freq 0.25 --p-value 1.0E-06 >$tumor_indel";
+		print "Calling indels in Tumor...\n";
 		system($cmd);
 	}
 
 
-	## Compare SNPs between normal and tumor ##
+	## Compare indels between normal and tumor ##
 	
-	my $compared_snps = $self->output_dir . "/" . $self->sample_name . ".snps.compared";
+	my $compared_indels = $self->output_dir . "/" . $self->sample_name . ".indels.compared";
 
-	if(-e $normal_snp && -e $tumor_snp)
+	if(-e $normal_indel && -e $tumor_indel)
 	{	
-		## Compare the SNPs ##
+		## Compare the indels ##
 		
-		$cmd = call_sammy() . "compare " . $normal_snp . " " . $tumor_snp . " " . $compared_snps;
+		$cmd = call_sammy() . "compare " . $normal_indel . " " . $tumor_indel . " " . $compared_indels;
 
-		print "Comparing SNPs between Normal and Tumor...\n";
+		print "Comparing indels between Normal and Tumor...\n";
 		system($cmd);
+	}
+	else
+	{
+		die "Error: Normal or Tumor indels file missing...\n";
 	}
 
 
 	## Make the somatic call ##
 
-	my $compared_somatic = $self->output_dir . "/" . $self->sample_name . ".snps.compared.status";
+	my $compared_somatic = $self->output_dir . "/" . $self->sample_name . ".indels.compared.status";
 	
-	if(-e $compared_snps && -e $normal_pileup && -e $tumor_pileup)
+	if(-e $compared_indels && -e $normal_pileup && -e $tumor_pileup)
 	{
 		## Run the somatic ##
 
-		$cmd = call_sammy() . "somatic " . $normal_pileup . " " . $tumor_pileup . " " . $compared_snps . " " . $compared_somatic;		
+		$cmd = call_sammy() . "somatic-indel " . $normal_pileup . " " . $tumor_pileup . " " . $compared_indels . " " . $compared_somatic;		
 
 		print "Calling variants as Germline or Somatic...\n";
 		system($cmd);
@@ -173,7 +182,7 @@ sub execute {                               # replace with real execution logic.
 
 sub call_sammy
 {
-	my $classpath = "/gscuser/dkoboldt/Software/Sammy2";
+	my $classpath = "/gscuser/dkoboldt/Software/Sammy3";
 	my $cmd = "java -Xms2000m -Xmx2000m -classpath $classpath Sammy ";
 	return($cmd);
 }
