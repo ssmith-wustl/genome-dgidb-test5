@@ -57,22 +57,20 @@ sub import_objects_from_external_db
     my $gene_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Gene' );
     my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Transcript' );
 
-    print "gene adaptor: THIS ONE ", ref($gene_adaptor), "\n";
-    print "transcript adaptor: ", ref($transcript_adaptor), "\n";
-
     my @ensembl_transcript_ids = @{ $transcript_adaptor->list_dbIDs };
 
     my $idx = 0;
     my $egi_id = 1;    # starting point for external_gene_id...
     my $tss_id = 1;    # starting point for transcript sub struct ids...
 
-    my @transcripts;
-    my @genes;
-    my @proteins;
-    my @sub_structures;
-
-    print "Total transcripts: ".scalar @ensembl_transcript_ids."\n";
     my $count = 0;
+    $self->status_message("Importing ".scalar @ensembl_transcript_ids." transcripts\n");
+    
+    #for logging purposes
+    my @transcripts;
+    my @sub_structures;
+    my @proteins;
+    my @genes;
 
     foreach my $ensembl_transcript_id ( @ensembl_transcript_ids ) #TODO why reverse here?
     {
@@ -122,7 +120,9 @@ sub import_objects_from_external_db
                 strand => $strand,
                 data_directory => $self->data_directory,
             );
+            push @genes, $gene;#logging
         }
+
 
         #Transcript cols: transcript_id gene_id transcript_start transcript_stop transcript_name source transcript_status strand chrom_name
 
@@ -138,6 +138,7 @@ sub import_objects_from_external_db
             chrom_name => $chromosome,
             data_directory => $self->data_directory,
         );
+        push @transcripts, $transcript; #logging
 
         my %external_gene_ids = $self->get_external_gene_ids($ensembl_gene);
         if ( defined($hugo_gene_name) )
@@ -214,6 +215,7 @@ sub import_objects_from_external_db
                     );
                     $tss_id++;
                     push @utr_exons, $utr_exon;
+                    push @sub_structures, $utr_exon; #logging
                 }
 
                 #create cds_exon (we do a little extra arithmetic here if the whole exon is coding, cleaner this way but could add an alternative block if coding_region_start == start and coding_region_stop == stop)
@@ -242,6 +244,7 @@ sub import_objects_from_external_db
 
                 $tss_id++;
                 push @cds_exons, $cds_exon;
+                push @sub_structures, $cds_exon; #logging
 
                 if ($stop > $coding_region_stop){
                     #there is a utr exon after the coding region
@@ -266,6 +269,7 @@ sub import_objects_from_external_db
                     );
                     $tss_id++;
                     push @utr_exons, $utr_exon;
+                    push @sub_structures, $utr_exon; #logging
 
                 }
             }elsif(defined $coding_region_stop){
@@ -285,6 +289,7 @@ sub import_objects_from_external_db
                 );
                 $tss_id++;
                 push @utr_exons, $utr_exon;
+                push @sub_structures, $utr_exon;
             }
         }
         if (@utr_exons > 0 or @cds_exons > 0){
@@ -308,21 +313,29 @@ sub import_objects_from_external_db
                 amino_acid_seq => $ensembl_transcript->translate->seq,
                 data_directory => $self->data_directory,
             );
+            push @proteins, $protein;
         }
 
         #double check transcripts here for unknown status
 
-        push @transcripts, $transcript;
-        push @genes, $gene;
-        push @proteins, $protein if $protein;
-        push @sub_structures, (@flanks_and_introns, @cds_exons, @utr_exons);
-
         unless ($count % 1000){
             #Periodically commit to files so we don't run out of memory
-            print "committing...($count)";
+            
+            $self->write_log_entry(\@transcripts, \@sub_structures, \@genes, \@proteins);
+            $self->dump_sub_structures();
+
+            $self->status_message( "committing...($count)");
             UR::Context->commit;
 
-            print "finished commit!\n";
+            $self->status_message("finished commit!\n");
+            
+            #reset logging arrays
+            @transcripts = ();
+            @genes = ();
+            @proteins = ();
+            @sub_structures = ();
+
+            #exit; #uncomment for testing
         }
     }
     return 1;
