@@ -13,8 +13,12 @@ my $tmp = Genome::Utility::FileSystem->create_temp_directory();
 #my $tmp = File::Temp::tempdir(CLEANUP=>0);
 
 # TODO: use a "testing" cDNA model to get build rather than this real build
-my $build_id = '98203530';
-my $build = Genome::Model::Build->get($build_id);
+my $model = Genome::Model->get(name => 'pipeline_test_cDNA');
+unless ($model) {
+    die "Can't find a model to work with";
+}
+my $build = $model->last_complete_build;
+my $build_id = $build->id;
 ok($build, "build found with id $build_id");
 
 my $r = Genome::Model::ReferenceAlignment::Report::ReferenceCoverage->create(
