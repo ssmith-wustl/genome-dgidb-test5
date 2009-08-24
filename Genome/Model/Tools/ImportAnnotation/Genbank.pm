@@ -57,7 +57,7 @@ EOS
 sub import_objects_from_external_db
 {
     my $self = shift;
-
+    
     my $transcript_status;
     if($self->status_file)
     {
@@ -76,6 +76,7 @@ sub import_objects_from_external_db
         push(@$lines,[$transcript_status->{$ts}->{entrezid}, $transcript_status->{$ts}->{hugo_gene_name}]);  
     }
     
+    #dedup hash based on locus_id
     my %seen;
     my @unique_lines = grep {!$seen{@$_[0]}++} @$lines;
 
@@ -87,11 +88,15 @@ sub import_objects_from_external_db
     my $protein_id    = 1;
     my $tss_id        = 1;
 
-    my $csv  = Text::CSV_XS->new( { sep_char => "\t" } );
-    my $csv1 = Text::CSV_XS->new( { sep_char => "\t" } );
+    my $count = 0;
+    $self->status_message("importing ". scalar @unique_lines. " genes");
 
-    my $count;
-    print scalar @unique_lines." genes";
+    #for logging purposes
+    my @transcripts;
+    my @sub_structures;
+    my @proteins;
+    my @genes;
+
     foreach my $record (@unique_lines)
     {
         $count++;
@@ -157,6 +162,7 @@ sub import_objects_from_external_db
             data_directory => $self->data_directory,
         );
         $gene_id++;
+        push @genes, $gene; #logging
         
         foreach my $genbank_transcript (@genbank_transcripts) {
 
@@ -184,12 +190,13 @@ sub import_objects_from_external_db
                 transcript_stop => $transcript_stop,
                 transcript_name => $transcript_name,
                 source => 'genbank',
-                transcript_status => $status,   #TODO valid statuses (unknown, known, novel) #TODO verify substructures and change status if necessary
+                transcript_status => $status,   #TODO valid statuses (unknown, known, novel) #TODO verify sub_structures and change status if necessary
                 strand => $strand,
                 chrom_name => $chromosome,
                 data_directory => $self->data_directory,
             );
             $transcript_id++;
+            push @transcripts,$transcript; #logging;
             
             # these give out warnings every once in a while.
             # usually for clone sequences that are associated with a gene
@@ -227,6 +234,7 @@ sub import_objects_from_external_db
                 $tss_id++;
                 push( @seqs, $cds_sequence );
                 push @cds_exons, $cds_exon;
+                push @sub_structures, $cds_exon; #logging
             }
 
             # utr stuff
@@ -251,6 +259,7 @@ sub import_objects_from_external_db
                 );
                 $tss_id++;
                 push @utr_exons, $utr_exon;
+                push @sub_structures, $utr_exon; #logging
 
             }
             $DB::single = 1;
@@ -282,15 +291,31 @@ sub import_objects_from_external_db
                     data_directory => $self->data_directory,
                 );
                 $protein_id++;
+                push @proteins, $protein;
             }
         }
         unless ($count % 1000){
             #Periodically commit to files so we don't run out of memory
-            print "committing...($count)";
+            
+            $self->write_log_entry($count, \@transcripts, \@sub_structures, \@genes, \@proteins);
+            $self->dump_sub_structures();
+
+            $self->status_message( "committing...($count)");
             UR::Context->commit;
-            print "finished commit!\n";
+            $self->status_message("finished commit!");
+            
+            #reset logging arrays
+            @transcripts = ();
+            @genes = ();
+            @proteins = ();
+            @sub_structures = ();
+
+            #exit; #uncomment for testing
         }
     }
+    $self->status_message("committing...($count)");
+    UR::Context->commit;
+    $self->status_message("finished commit!");
 
     return 1;
 }
