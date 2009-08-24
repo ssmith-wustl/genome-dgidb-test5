@@ -405,7 +405,7 @@ sub relative_coverage_files {
     my $model = $self->model;
     #TODO: Once refcov is a genome tool we should have better control over output file names
     #return glob($self->reference_coverage_directory .'/'. $model->subject_name .'_relative_coverage_*.tsv');
-    return glob($self->reference_coverage_directory .'/bias_*');
+    return grep { $_ !~ /bias_\d+_\w+$/ } glob($self->reference_coverage_directory .'/bias_*');
 }
 
 sub relative_coverage_file {
