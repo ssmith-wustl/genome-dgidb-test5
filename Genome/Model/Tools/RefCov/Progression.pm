@@ -34,7 +34,8 @@ class Genome::Model::Tools::RefCov::Progression {
                      interval_unit => {
                                        is => 'Text',
                                        default_value => 'Lanes',
-                                   }
+                                   },
+                     instrument_data_ids => { },
                  ],
 };
 
@@ -42,8 +43,17 @@ sub create {
     my $class = shift;
     my %params = @_;
     my $stats_files = delete $params{stats_files};
+    my $instrument_data_ids = delete $params{instrument_data_ids};
     my $self = $class->SUPER::create(%params);
     $self->stats_files($stats_files);
+    if ($instrument_data_ids) {
+        my @stats_files = @{$stats_files};
+        my @instrument_data_ids = @{$instrument_data_ids};
+        unless (scalar(@stats_files) eq scalar(@instrument_data_ids)) {
+            die('Unbalanced number of stats files and instrument data ids!');
+        }
+        $self->instrument_data_ids($instrument_data_ids);
+    }
     return $self;
 }
 
@@ -52,7 +62,10 @@ sub execute {
 
     my %progression;
     my $current_interval = $self->interval;
-    for my $stats_file (@{$self->stats_files}) {
+    
+    my @stats_files = @{$self->stats_files};
+    for (my $i = 0; $i < scalar(@stats_files); $i++) {
+        my $stats_file = $stats_files[$i];
         my $stats_fh = Genome::Utility::FileSystem->open_file_for_reading($stats_file);
         unless ($stats_fh) {
             $self->error_message("Failed to open stats file '$stats_file' for reading:  $!");
@@ -80,7 +93,18 @@ sub execute {
             $reference_bases += $entry[2];
             $bases_covered += $entry[3];
         }
-        $progression{$current_interval} = sprintf("%.02f", (($bases_covered / $reference_bases) * 100) );
+        $progression{$current_interval}{'bases_covered'} = $bases_covered;
+        $progression{$current_interval}{'reference_bases'} = $reference_bases;
+        if ($self->instrument_data_ids) {
+            my @instrument_data_ids = @{$self->instrument_data_ids};
+            my $instrument_data_id = $instrument_data_ids[$i];
+            my $rls = GSC::RunLaneSolexa->get($instrument_data_id);
+            my $error_avg = $rls->filt_error_rate_avg;
+            my $error_stdev = $rls->filt_error_rate_stdev;
+            $progression{$current_interval}{'interval_id'} = $instrument_data_id;
+            $progression{$current_interval}{'interval_error_avg'} = $error_avg;
+            $progression{$current_interval}{'interval_error_stdev'} = $error_stdev;
+        }
         $current_interval += $self->interval;
     }
     my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
@@ -93,11 +117,21 @@ sub execute {
     my @coverage;
     my $prior_pc_coverage = 0;
     foreach my $interval (sort {$a <=> $b} keys %progression) {
-        my $pc_coverage = $progression{$interval};
+        my $bases_covered = $progression{$interval}{'bases_covered'};
+        my $reference_bases = $progression{$interval}{'reference_bases'};
+        my $pc_coverage = sprintf("%.02f", (($bases_covered / $reference_bases) * 100) );
         push @intervals, $interval;
         push @coverage, $pc_coverage;
-        my $pc_gain = sprintf("%.02f",$pc_coverage - $prior_pc_coverage);
-        print $output_fh $interval ."\t". $pc_coverage ."\t". $pc_gain ."\n";
+        my $pc_gain = sprintf("%.02f",($pc_coverage - $prior_pc_coverage) );
+        print $output_fh $interval ."\t".$bases_covered ."\t". $reference_bases ."\t". $pc_coverage ."\t". $pc_gain;
+        if (defined($progression{$interval}{'interval_id'})) {
+            my $interval_id = $progression{$interval}{'interval_id'};
+            my $error_avg = $progression{$interval}{'interval_error_avg'};
+            my $error_stdev = $progression{$interval}{'interval_error_stdev'};
+            print $output_fh "\t". $interval_id ."\t". $error_avg ."\t". $error_stdev;
+        }
+        print $output_fh "\n";
+
         $prior_pc_coverage = $pc_coverage;
     }
     $output_fh->close;
