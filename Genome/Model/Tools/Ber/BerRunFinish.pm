@@ -292,11 +292,14 @@ sub execute
 	                 $parse_script_full,
                         );
 
+      my $aceparse_stderr;
       IPC::Run::run(
                     \@aceparcecmd,
                      '>',
-		    $aceparce_stdout,
-                   );
+		    \$aceparce_stdout,
+                    '2>',
+                    \$aceparse_stderr,
+                   ) or die "problem: $aceparse_stderr";
 
       ########################################################
       # gather stats from phase5 ace file and acedb
