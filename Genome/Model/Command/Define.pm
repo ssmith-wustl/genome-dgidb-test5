@@ -177,20 +177,10 @@ sub _model_type {
 
 ###################################################
 
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
-
-    return $self;
-}
-
 sub execute {
     my $self = shift;
 
     # Make sure there aren't any bare args
-
     my $ref = $self->bare_args;
     if ( $ref && (my @args = @$ref) ) {
         $self->error_message("extra arguments: @args");
@@ -198,22 +188,8 @@ sub execute {
         return;
     }
 
-    # Verify required params
-    for my $req (qw/ processing_profile_name subject_name /) {
-        unless ( defined $self->$req) {
-            $self->error_message("Property ($req) to define model is required");
-            return
-        }
-    }
-
-    # Default model name
-    unless ( $self->model_name ) {
-        my $subject_name = $self->_sanitize_string_for_filesystem($self->subject_name);
-        $self->model_name($subject_name .'.'. $self->processing_profile_name);
-    }
-
-    # Get processing profile id
-    my $processing_profile_id = $self->_get_procesiing_profile_id_for_name
+    # Get processing profile id for the name given
+    my $processing_profile_id = $self->_get_processing_profile_id_for_name
         or return;
 
     #attempt derive subject_type if not passed as an arg
@@ -234,7 +210,7 @@ sub execute {
         }
     }
 
-    # Create the model, then verify
+    # Create the model
     my %model_params = (
         name => $self->model_name,
         processing_profile_id => $processing_profile_id,
@@ -266,16 +242,30 @@ sub execute {
     }
 
     $self->status_message("Created model:");
-    $self->status_message($model->pretty_print_text);
+    my $list = Genome::Model::Command::List->create(
+        style => 'pretty',
+        filter => 'id='.$model->id,
+        show => join(
+            ',', 
+            (qw/ id name data_directory subject_name subject_type processing_profile_id processing_profile_name /),
+            #$model->processing_profile->params_for_class,
+        ),
+    );
+    $list->execute;
     $self->result_model_id($model->id);
 
     return 1;
 }
 
 #< Processing profile ># 
-sub _get_procesiing_profile_id_for_name {
+sub _get_processing_profile_id_for_name {
     my $self = shift;
 
+    unless ( $self->processing_profile_name ) {
+        $self->error_message("No name to get processing profile");
+        return;
+    }
+    
     my (@processing_profiles) = Genome::ProcessingProfile->get(name => $self->processing_profile_name);
 
     unless ( @processing_profiles ) {
@@ -307,16 +297,6 @@ sub _get_procesiing_profile_id_for_name {
     }
 
     return $processing_profiles[0]->id;
-}
-
-#< File system >#
-sub _sanitize_string_for_filesystem {
-    my $self = shift;
-    my $string = shift;
-    return $string if not defined $string;
-    my $OK_CHARS = '-a-zA-Z0-9_./';
-    $string =~ s/[^$OK_CHARS]/_/go;
-    return $string;
 }
 
 1;
