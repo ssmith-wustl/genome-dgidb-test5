@@ -7,6 +7,7 @@ use warnings;
 
 use base 'Test::Class';
 
+require Genome::Model::Test;
 use Test::More;
 require File::Path;
 
@@ -27,7 +28,10 @@ sub _mock_model {
     my $self = shift;
 
     unless ( $self->{_mock_model} ) {
-        $self->{_mock_model} = Genome::Model::DeNovoAssembly::Test->create_mock_model
+        $self->{_mock_model} = Genome::Model::Test->create_mock_model(
+            type_name => 'de novo assembly',
+            instrument_data_count => 1,
+        )
             or die "Can't create mock de novo assembly model\n";
     }
 
@@ -42,13 +46,11 @@ sub _main_event {
     return $self->{_main_event};
 }
 
-sub test01_use : Test(4) {
+sub test01_use : Test(3) {
     my $self = shift;
 
     use_ok('Genome::Model::DeNovoAssembly');
-    use_ok('Genome::Model::DeNovoAssembly::Test');
     use_ok('Genome::ProcessingProfile::DeNovoAssembly');
-
     ok($self->_mock_model, 'Got mock model');
 
     return 1;
@@ -117,7 +119,7 @@ use warnings;
 use base 'Genome::Utility::TestBase';
 
 use Data::Dumper 'Dumper';
-use Genome::Model::DeNovoAssembly::Test;
+require Genome::Model::Test;
 use Test::More;
 
 sub params_for_test_class {
@@ -125,7 +127,7 @@ sub params_for_test_class {
     my $model = $self->mock_model;
     return (
         model => $model,
-        build => $model->latest_complete_build,
+        build => $model->last_complete_build,
     );
 }
 sub required_params_for_class { return; }
@@ -134,7 +136,7 @@ sub mock_model {
     my $self = shift;
 
     unless ( $self->{_mock_model} ) {
-        $self->{_mock_model} = Genome::Model::DeNovoAssembly::Test->create_mock_model
+        $self->{_mock_model} = Genome::Model::Test->create_mock_model(type_name => 'de novo assembly')
             or die "Can't create mock de novo assembly model\n";
     }
 
@@ -142,7 +144,7 @@ sub mock_model {
 }
 
 sub build {
-    return $_[0]->mock_model->latest_complete_build;
+    return $_[0]->mock_model->last_complete_build;
 }
 
 sub _pre_execute { 1 }
