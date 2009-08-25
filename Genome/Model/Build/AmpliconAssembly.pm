@@ -52,7 +52,7 @@ sub amplicon_assembly {
             subject_name => $self->model->subject_name,
         );
     }
-    
+
     return $self->{_amplicon_assembly};
 }
 
