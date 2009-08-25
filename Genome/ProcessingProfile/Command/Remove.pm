@@ -17,7 +17,8 @@ sub execute {
     $self->_verify_processing_profile
         or return;
 
-    # These are for convenience, and the ability to output the name and id upon successful removal
+    # These are for convenience, and the ability to output the name and id
+    #  upon successful removal cuz there won't be a pp anymore
     my $pp = $self->processing_profile;
     my $pp_name = $pp->name;
     my $pp_id = $pp->id;
