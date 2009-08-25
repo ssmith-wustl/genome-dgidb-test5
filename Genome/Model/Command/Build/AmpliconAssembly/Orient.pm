@@ -15,6 +15,7 @@ sub execute {
     my $orient = Genome::Model::Tools::AmpliconAssembly::Orient->create(
         directory => $self->build->data_directory,
         sequencing_center => $self->model->sequencing_center,
+        sequencing_platform => $self->model->sequencing_platform,
     )
         or return;
     $orient->execute
