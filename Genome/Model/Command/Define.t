@@ -6,7 +6,7 @@ use warnings;
 use Data::Dumper;
 use above "Genome";
 use Command;
-use Test::More tests => 244;
+use Test::More 'no_plan';
 use Test::Differences;
 use File::Path;
 use Fcntl ':mode';
@@ -46,15 +46,6 @@ test_model_from_params(
 );
 
 
-# test normal model and processing profile creation for reference alignment
-test_model_from_params(
-    model_params => {
-        subject_name            => $default_subject_name,
-        subject_type            => $default_subject_type,
-        processing_profile_name => $default_pp_name,
-    },
-);
-
 # test create for a genome model with defined model_name
 test_model_from_params(
     model_params => {
@@ -62,64 +53,6 @@ test_model_from_params(
         subject_name            => $default_subject_name,
         subject_type            => $default_subject_type,
         processing_profile_name => $default_pp_name,
-    },
-);
-
-# test create for a genome model with an incorrect subject_type
-test_model_from_params(
-    test_params => {
-        fail => 'invalid_subject_type',
-    },
-    model_params => {
-        subject_name => $default_subject_name,
-        subject_type => 'invalid_subject_type',
-        processing_profile_name   => $default_pp_name,
-    },
-);
-
-# test create for a genome model with an incorrect subject_name
-test_model_from_params(
-    test_params => {
-        fail => 'invalid_subject_name',
-    },
-    model_params => {
-        subject_name => 'invalid_subject_name',
-        subject_type => $default_subject_type,
-        processing_profile_name   => $default_pp_name,
-    },
-);
-
-# test create for a genome model with an incorrect subject_name
-test_model_from_params(
-    test_params => {
-        fail => 'invalid_pp_name',
-    },
-    model_params => {
-        subject_name => $default_subject_name,
-        subject_type => $default_subject_type,
-        processing_profile_name   => 'invalid_pp_name',
-    },
-);
-
-# test when no processing profile name passed as arg
-test_model_from_params(
-    test_params => {
-        fail => 'No value specified for required property processing_profile_name',
-    },
-    model_params => {
-        subject_name => $default_subject_name,
-        subject_type => $default_subject_type,
-    },
-);
-
-# test when no subject name is passed as arg
-test_model_from_params(
-    test_params => {
-        fail => 'No value specified for required property subject_name',
-    },
-    model_params => {
-        subject_type => $default_subject_type,
-        processing_profile_name   => $default_pp_name,
     },
 );
 
@@ -192,10 +125,12 @@ exit;
 
 ########################################################3
 
+my $cnt = 0;
 sub test_model_from_params {
     my %params = @_;
     my %test_params = %{$params{'test_params'}} if defined $params{'test_params'};
 
+    diag("Test: ".++$cnt);
     my %model_params = %{$params{'model_params'}};
     if ($test_params{'fail'}) {
         &failed_create_model($test_params{'fail'},\%model_params);
@@ -221,7 +156,7 @@ sub successful_create_model {
         symlink('/tmp/', $test_model_link_pathname);
         $expected_model_name = $params{model_name};
     } else {
-        my $subject_name = Genome::Model::Command::Define->_sanitize_string_for_filesystem($params{subject_name});
+        my $subject_name = Genome::Utility::Text::sanitize_string_for_filesystem($params{subject_name});
         $expected_model_name = $subject_name .'.'. $params{processing_profile_name};
     }
     my $expected_data_directory;

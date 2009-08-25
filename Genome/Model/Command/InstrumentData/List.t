@@ -5,28 +5,32 @@ use warnings;
 
 use above 'Genome';
 
+require Genome::Model::Test;
 use Test::More tests => 13;
 
 BEGIN {
     use_ok('Genome::Model::Command::InstrumentData::List');
 }
 
-my $m = Genome::Model::ReferenceAlignment->create(-1);
+my $m = Genome::Model::Test->create_basic_mock_model(type_name => 'tester');
+my @id = Genome::Model::Test->create_mock_solexa_instrument_data(2);
+Genome::Model::Test->create_mock_instrument_data_assignments($m, $id[0]);
+$m->set_list('compatible_instrument_data', @id);
 
 #< Successes >#
 # list assigned
-my $lister = Genome::Model::Command::InstrumentData::List->create(model_id => -1);
+my $lister = Genome::Model::Command::InstrumentData::List->create(model_id => $m->id);
 ok($lister, 'Created the lister');
 isa_ok($lister, 'Genome::Model::Command::InstrumentData::List');
-ok($lister->execute, 'Execution succeeds!');
+ok($lister->execute, 'Show assigned instrument data');
 # list compatible
 $lister = Genome::Model::Command::InstrumentData::List->create(
-    model_id => -1,
+    model_id => $m->id,
     compatible => 1,
 );
 ok($lister, 'Created the lister for compatible inst data');
 isa_ok($lister, 'Genome::Model::Command::InstrumentData::List');
-ok($lister->execute, 'Execution succeeds!');
+ok($lister->execute, 'Show compatable instrument data');
 
 #< Fails >#
 # no model id
@@ -36,7 +40,7 @@ isa_ok($lister, 'Genome::Model::Command::InstrumentData::List');
 ok(!$lister->execute, 'Execution fails as expected');
 # assigned and compatible
 $lister = Genome::Model::Command::InstrumentData::List->create(
-    model_id => -1,
+    model_id => $m->id,
     assigned => 1,
     compatible => 1,
 );

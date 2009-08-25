@@ -5,13 +5,13 @@ use warnings;
 
 use above 'Genome';
 
-use Genome::Model::AmpliconAssembly::Test;
+require Genome::Model::Test;
 use Test::More 'no_plan';
 
 use_ok('Genome::Model::Command::Rename');
 
 # MOCK 
-my $model = Genome::Model::AmpliconAssembly::Test->create_mock_model
+my $model = Genome::Model::Test->create_basic_mock_model(type_name => 'amplicon assembly')
     or die "Can't create mock model for amplicon assembly\n";
 
 my $new_name = 'mrs. mock';
