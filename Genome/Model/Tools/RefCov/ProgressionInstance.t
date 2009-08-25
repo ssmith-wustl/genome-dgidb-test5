@@ -3,9 +3,15 @@
 use strict;
 use warnings;
 
-use Test::More tests => 4;
+use Test::More;
 
 use above 'Genome';
+
+if (`uname -a` =~ /x86_64/){
+    plan tests => 4;
+} else{
+    plan skip_all => 'Must run on a 64 bit machine';
+}
 
 use_ok('Genome::Model::Tools::RefCov::ProgressionInstance');
 
