@@ -30,7 +30,10 @@ my $finish = Genome::Model::Tools::Hgmi::Finish->create(
 
 isa_ok($finish, 'Genome::Model::Tools::Hgmi::Finish');
 
-ok($finish->execute,'execute finish');
+SKIP: {
+    skip "this seems to touch a bunch of stuff with group gscana",1;
+    ok($finish->execute,'execute finish');
+}
 
 #my $d = Genome::Model::Tools::Hgmi::DirBuilder->create(
 #                    path => "/tmp/test/analysis/HGMI",
