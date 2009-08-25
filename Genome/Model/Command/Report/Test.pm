@@ -10,14 +10,17 @@ use base 'Genome::Utility::TestBase';
 
 use Data::Dumper 'Dumper';
 use Genome;
-use Genome::Model::AmpliconAssembly::Test;
+use Genome::Model::Test;
 use Test::More;
 
 sub _model {
     my $self = shift;
 
     unless ( $self->{_model} ) {
-        $self->{_model} = Genome::Model::AmpliconAssembly::Test->create_mock_model(use_test_dir => 1)
+        $self->{_model} = Genome::Model::Test->create_mock_model(
+            type_name => 'amplicon assembly',
+            use_mock_dir => 1
+        )
             or die "Can't create mock model\n";
     }
 
@@ -27,7 +30,7 @@ sub _model {
 sub _build {
     my $self = shift;
 
-    return $self->_model->latest_complete_build;
+    return $self->_model->last_complete_build;
 }
 
 sub params_for_test_class {
