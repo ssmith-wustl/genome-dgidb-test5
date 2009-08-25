@@ -13,21 +13,34 @@ class Genome::Utility::Text {
 
 #< Camel Case >#
 sub string_to_camel_case {
-    return join('', map { ucfirst } split(/[\s_]+/, $_[0]));
+    my $string = shift;
+    unless ( $string ) {
+        Carp::cluck('No string to convert to camel case');
+        return;
+    }
+    return join('', map { ucfirst } split(/[\s_]+/, $string));
 }
 
 sub camel_case_to_string {
     my $camel_case = shift;
+    unless ( $camel_case ) {
+        Carp::cluck('No camel case to convert to string');
+        return;
+    }
     my $join = ( @_ )
     ? $_[0]
     : ' '; 
-    my @words = $camel_case =~ /([A-Z](?:[A-Z]*(?=$|[A-Z][a-z])|[a-z]*))/g;
+    my @words = $camel_case =~ /([A-Z\d](?:[A-Z\d]*(?=$|[A-Z][a-z])|[a-z]*))/g;
     return join($join, map { lc } @words);
 }
 
 #< Module to/from Class >#
 sub class_to_module {
     my $class = shift;
+    unless ( $class ) {
+        Carp::cluck('No class to convert to module');
+        return;
+    }
     $class =~ s/::/\//g;
     $class .= '.pm';
     return $class;
@@ -35,6 +48,10 @@ sub class_to_module {
 
 sub module_to_class {
     my $module = shift;
+    unless ( $module ) {
+        Carp::cluck('No module to convert to class');
+        return;
+    }
     $module =~ s#\.pm##;
     $module =~ s#/#::#g;
     return $module;
@@ -67,6 +84,18 @@ sub param_string_to_hash {
     
     #print Dumper(\@params, \%params);
     return %params;
+}
+
+#< Sanitize for File System >#
+sub sanitize_string_for_filesystem {
+    my $string = shift;
+    unless ( $string ) {
+        Carp::cluck('No string to sanitize for filesystem');
+        return;
+    }
+    my $OK_CHARS = '-a-zA-Z0-9_./';
+    $string =~ s/[^$OK_CHARS]/_/go;
+    return $string;
 }
 
 1;
