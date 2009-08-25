@@ -27,18 +27,18 @@ sub attributes {
         is => 'Text',
         is_optional => 1,
         default_value => __PACKAGE__->default_sequencing_center,
-        doc => 'Sequencing Center that the amplicons were sequenced.  Currently supported centers: '.join(', ', __PACKAGE__->valid_sequencing_centers),
+        doc => 'Sequencing Center that the amplicons were sequenced.  Currently supported centers: '.join(', ', __PACKAGE__->valid_sequencing_centers).'.',
     },
     sequencing_platform => {
         is => 'Text',
         is_optional => 1,
         default_value => __PACKAGE__->default_sequencing_platform,
-        doc => 'Platform upon whence the amplicons were sequenced.  Currently supported platforms '.join(', ', __PACKAGE__->valid_sequencing_platforms),
+        doc => 'Platform upon whence the amplicons were sequenced.  Currently supported platforms: '.join(', ', __PACKAGE__->valid_sequencing_platforms).'.',
     },
     subject_name => {
         is => 'Text',
         is_optional => 1,
-        doc => 'Subject name',
+        doc => 'Subject name.  Used as a identifier in combined fasta files and the like.',
     },
 );
 }
@@ -65,20 +65,14 @@ sub create {
         return;
     }
 
-    my $sequencing_center = $self->sequencing_center;
-    unless ( grep { $_ eq $sequencing_center } valid_sequencing_centers() ) {
-        $self->error_message(
-            "Invalid sequencing center: $sequencing_center.  Valid centers: ".join(', ',valid_sequencing_centers())
-        );
+    # Sequencing center
+    unless ( $self->validate_sequencing_center( $self->sequencing_center ) ) {
         $self->delete;
         return;
     }
 
-    my $sequencing_platform = $self->sequencing_platform;
-    unless ( grep { $_ eq $sequencing_platform } valid_sequencing_platforms() ) {
-        $self->error_message(
-            "Invalid sequencing platform: $sequencing_platform.  Valid platforms: ".join(', ',valid_sequencing_platforms())
-        );
+    # Sequencing platform
+    unless ( $self->validate_sequencing_platform( $self->sequencing_platform ) ) {
         $self->delete;
         return;
     }
@@ -98,6 +92,23 @@ sub default_sequencing_center {
     return (valid_sequencing_centers)[0];
 }
 
+sub validate_sequencing_center {
+    my ($self, $center) = @_;
+
+    unless ( defined $center ) {
+        $self->error_message("No sequencing center given.");
+        return;
+    }
+
+    unless ( grep { $_ eq $center } valid_sequencing_centers() ) {
+        $self->error_message(
+            "Invalid sequencing center: $center.  Valid centers: ".join(', ',valid_sequencing_centers())
+        );
+        return;
+    }
+    
+    return 1;
+}
 
 #< Sequencing Platforms >#
 sub valid_sequencing_platforms {
@@ -106,6 +117,24 @@ sub valid_sequencing_platforms {
 
 sub default_sequencing_platform {
     return (valid_sequencing_platforms)[0];
+}
+
+sub validate_sequencing_platform {
+    my ($self, $platform) = @_;
+
+    unless ( defined $platform ) {
+        $self->error_message("No sequencing platform given.");
+        return;
+    }
+
+    unless ( grep { $_ eq $platform } valid_sequencing_platforms() ) {
+        $self->error_message(
+            "Invalid sequencing platform: $platform.  Valid platforms: ".join(', ',valid_sequencing_platforms())
+        );
+        return;
+    }
+
+    return 1;
 }
 
 #< DIRS >#
