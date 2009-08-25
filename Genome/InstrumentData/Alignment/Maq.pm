@@ -513,7 +513,7 @@ sub _run_aligner {
 		$aligner_params .= ' -a '. $upper_bound_on_insert_size;
 		$self->status_message("Median insert size ($median_insert) less than 1000, setting -a");
 	}
-	else if ($median_insert >= 1000){
+	elsif ($median_insert >= 1000){
 		$aligner_params .= ' -A '. $upper_bound_on_insert_size;
 		$self->status_message("Median insert size ($median_insert) greater than or equal to 1000, setting -A");
 	}
