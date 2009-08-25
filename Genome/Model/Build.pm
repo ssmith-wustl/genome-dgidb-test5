@@ -28,9 +28,6 @@ class Genome::Model::Build {
         master_event_status => { via => 'the_master_event', to => 'event_status' },
     ],
     has_optional => [
-        date_scheduled      => { calculate => q|my $e = $self->build_event; return unless $e; return $e->date_scheduled| },
-        date_completed      => { calculate => q|my $e = $self->build_event; return unless $e; return $e->date_completed| },
-        
         disk_allocation     => {
                                 calculate_from => [ 'class', 'id' ],
                                 calculate => q|
