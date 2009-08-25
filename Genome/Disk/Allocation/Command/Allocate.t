@@ -6,6 +6,7 @@ use warnings;
 use above 'Genome';
 
 use File::Copy;
+require Genome::Model::Test;
 use String::Random;
 use Test::More tests => 29;
 
@@ -29,21 +30,13 @@ my $known_file = '/gsc/var/cache/testsuite/data/Genome-Disk-Allocation/'. $known
 my $fake_mount_path = '/incorrect/mount/path';
 my $allocation_path = '/testing/allocate';
 
+
+my $mock_model = Genome::Model::Test->create_mock_model(
+    type_name => 'tester',
+    use_mock_dir => 0,
+);
+my ($mock_build) = $mock_model->builds;
 my $mock_id = 0;
-my $mock_pp = Genome::ProcessingProfile->create_mock(id => --$mock_id);
-my $mock_model = Genome::Model->create_mock(
-                                            genome_model_id => --$mock_id,
-                                            id => $mock_id,
-                                            processing_profile_id => $mock_pp->id,
-                                            subject_name => 'test_subject_name',
-                                            subject_type => 'test_subject_type',
-                                            name => 'test_model_name',
-                                        );
-my $mock_build = Genome::Model::Build->create_mock(
-                                                   build_id => --$mock_id,
-                                                   id => $mock_id,
-                                                   model_id => $mock_model->genome_model_id,
-                                               );
 
 my $allocation;
 # Test an incorrect mount path param
@@ -68,11 +61,11 @@ eval {
 ok(scalar(grep { 'Owner id is required!' } $@),'owner id is required');
 
 # Test incorrect owner id
-$allocate_params{'owner_id'} = --$mock_id;
+$allocate_params{'owner_id'} = -1;
 eval {
     $allocation = Genome::Disk::Allocation::Command::Allocate->create(%allocate_params);
 };
-ok(scalar(grep { 'Failed to get object of class Genome::Model::Build and id '. $mock_id } $@),'failed to get owner object');
+ok(scalar(grep { 'Failed to get object of class Genome::Model::Build and id -1' } $@),'failed to get owner object');
 
 # Test with out allocation path
 $allocate_params{'owner_id'} = $mock_build->id;
