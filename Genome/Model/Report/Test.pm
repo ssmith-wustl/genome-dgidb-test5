@@ -7,7 +7,7 @@ use warnings;
 
 use base 'Genome::Utility::TestBase';
 
-use Genome::Model::AmpliconAssembly::Test;
+require Genome::Model::Test;
 use Test::More;
 
 sub test_class {
@@ -18,7 +18,10 @@ sub _model {
     my $self = shift;
     
     unless ( $self->{_model} ) {
-        $self->{_model} = Genome::Model::AmpliconAssembly::Test->create_mock_model#(use_test_dir => 1)
+        $self->{_model} = Genome::Model::Test->create_mock_model(
+            type_name => 'amplicon assembly',
+            use_mock_dir => 1
+        )
             or die "Can't get amplicon assembly mock model\n";
     }
 
@@ -28,7 +31,7 @@ sub _model {
 sub _build_id {
     my $self = shift;
 
-    return $self->_model->latest_complete_build->id;
+    return $self->_model->last_complete_build->id;
 }
 
 sub params_for_test_class {
