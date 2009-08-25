@@ -88,6 +88,8 @@ class Genome::Model {
         user_name                        => { is => 'VARCHAR2', len => 64 },
         creation_date                    => { is => 'TIMESTAMP', len => 6 },
         builds                           => { is => 'Genome::Model::Build', reverse_as => 'model', is_many => 1 },
+        build_statuses                   => { via => 'builds', to => 'master_event_status', is_many => 1 },
+        build_ids                        => { via => 'builds', to => 'id', is_many => 1 },
         gold_snp_path                    => { via => 'attributes', to => 'value', is_mutable => 1, where => [ property_name => 'gold_snp_path', entity_class_name => 'Genome::Model' ] },
         input_instrument_data_class_name => { calculate_from => 'instrument_data_class_name',
                                               calculate => q($instrument_data_class_name->_dw_class), 
