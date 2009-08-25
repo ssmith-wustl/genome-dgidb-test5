@@ -5,10 +5,7 @@ use warnings;
 
 use Genome;
 
-use Term::ANSIColor;
-use Genome::Model::EqualColumnWidthTableizer;
-use Genome::Model::Tools::Maq::RemovePcrArtifacts;
-require Genome::Utility::FileSystem;
+use Regexp::Common;
 use File::Path;
 use Cwd;
 use File::Basename;
@@ -32,11 +29,12 @@ class Genome::Model {
         name                    => { is => 'Text', len => 255 },
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
         subject_name            => { is => 'Text', len => 255 },
-        subject_type            => { is => 'Text', len => 255, valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] },
+        subject_type            => { is => 'Text', len => 255, 
+                                     valid_values => [keys %SUBJECT_TYPES] },
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
         subject                 => { calculate_from => [ 'subject_name', 'subject_type' ],
-                                     calculate => q( 
+                         calculate => q( 
                                                 if (not defined $subject_type) {
                                                     # this should not happen
                                                     return;
@@ -71,18 +69,17 @@ class Genome::Model {
         processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
         type_name               => { via => 'processing_profile' },
-        events                  => { is => 'Genome::Model::Event', reverse_as => 'model', is_many => 1, 
-                                     doc => 'all events which have occurred for this model' },
+        events                  => { is => 'Genome::Model::Event', reverse_id_by => 'model', is_many => 1, 
+                         doc => 'all events which have occurred for this model' },
         subject_class_name      => { is => 'VARCHAR2', len => 500, is_optional => 1 },
         subject_id              => { is => 'NUMBER', len => 15, is_optional => 1 },
-        build_granularity_unit  => { is => 'VARCHAR2', len => 20, is_optional => 1, 
-                                     doc => 'A unit/value pair indicating the number of lanes, gigabases, days,\nhours, etc. which should trigger a new build of the model.' },
-        build_granularity_value => { is => 'NUMBER', len => 10, is_optional => 1, 
-                                     doc => 'A unit/value pair indicating the number of lanes, gigabases, days,\nhours, etc. which should trigger a new build of the model.' },
-        id                      => { is => 'NUMBER', len => 20, is_optional => 1 },
-        keep                    => { is => 'NUMBER', len => 4, is_optional => 1 },
-        limit_inputs_to_id      => { is => 'VARCHAR2', len => 1000, is_optional => 1, 
-                                     doc => 'The blob-ish identifier for the boolean expression which restricts inputs to the model.' },
+        # Reports
+        reports => {
+            via => 'last_succeeded_build'
+        },
+        reports_directory => {
+            via => 'last_succeeded_build'
+        },
     ],
     has_optional => [
         user_name                        => { is => 'VARCHAR2', len => 64 },
@@ -92,44 +89,53 @@ class Genome::Model {
         build_ids                        => { via => 'builds', to => 'id', is_many => 1 },
         gold_snp_path                    => { via => 'attributes', to => 'value', is_mutable => 1, where => [ property_name => 'gold_snp_path', entity_class_name => 'Genome::Model' ] },
         input_instrument_data_class_name => { calculate_from => 'instrument_data_class_name',
-                                              calculate => q($instrument_data_class_name->_dw_class), 
-                                              doc => 'the class of instrument_data assignable to this model in the dw' },
+                         calculate => q($instrument_data_class_name->_dw_class), 
+                         doc => 'the class of instrument_data assignable to this model in the dw' },
         instrument_data_class_name       => { calculate_from => 'sequencing_platform',
-                                              calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ), 
-                                              doc => 'the class of instrument data assignable to this model' },
+                         calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ), 
+                         doc => 'the class of instrument data assignable to this model' },
         test                             => { is => 'Boolean', is_transient => 1, 
-                                              doc => 'testing flag' },
+                         doc => 'testing flag' },
         _printable_property_names_ref    => { is => 'array_ref', is_transient => 1 },
         comparable_normal_model_id       => { is => 'Number', len => 10 },
         sample_name                      => { is => 'Text', len => 255 },
         sequencing_platform              => { via => 'processing_profile' },
-        last_complete_build_directory    => { calculate => q($b = $self->last_complete_build; return unless $b; return $b->data_directory) },
+        last_complete_build_directory    => { is_calculated => 1, calculate => q|$b = $self->last_complete_build; return unless $b; return $b->data_directory| },
     ],
     has_many_optional => [
-        ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_as => 'model' },
-        project_assignments               => { is => 'Genome::Model::ProjectAssignment', reverse_as => 'model' },
+        ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_id_by => 'model' },
+        project_assignments               => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'model' },
         projects                          => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
         project_names                     => { is => 'Text', via => 'projects', to => 'name' },
-        attributes                        => { is => 'Genome::MiscAttribute', reverse_as => '_model', where => [ entity_class_name => 'Genome::Model' ] },
+        attributes                        => { is => 'Genome::MiscAttribute', reverse_id_by => '_model', where => [ entity_class_name => 'Genome::Model' ] },
         instrument_data                   => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments' },
         assigned_instrument_data          => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments', to => 'instrument_data' },
-        instrument_data_assignments       => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
+        instrument_data_assignments       => { is => 'Genome::Model::InstrumentDataAssignment', reverse_id_by => 'model' },
         built_instrument_data             => { calculate => q( 
-                                                                                                          return map { $_->instrument_data } grep { defined $_->first_build_id } $self->instrument_data_assignments;
+            return map { $_->instrument_data } grep { defined $_->first_build_id } $self->instrument_data_assignments;
             ) },
         unbuilt_instrument_data           => { calculate => q( 
-                                                                                                          return map { $_->instrument_data } grep { !defined $_->first_build_id } $self->instrument_data_assignments;
+            return map { $_->instrument_data } grep { !defined $_->first_build_id } $self->instrument_data_assignments;
             ) },
-        instrument_data_assignment_events => { is => 'Genome::Model::Command::InstrumentData::Assign', reverse_as => 'model', 
-                                               doc => 'Each case of an instrument data being assigned to the model' },
-        from_model_links                  => { is => 'Genome::Model::Link', reverse_as => 'to_model', 
-                                               doc => 'bridge table entries where this is the \\\"to\\\" model(used to retrieve models this model is \\\"from\\\")' },
-        from_models                       => { is => 'Genome::Model', via => 'from_model_links', to => 'from_model', 
-                                               doc => 'Genome models that contribute \\\"to\\\" this model' },
-        to_model_links                    => { is => 'Genome::Model::Link', reverse_as => 'from_model', 
-                                               doc => 'bridge entries where this is the \\\"from\\\" model(used to retrieve models models this model is \\\"to\\\")' },
-        to_models                         => { is => 'Genome::Model', via => 'to_model_links', to => 'to_model', 
-                                               doc => 'Genome models this model contributes \\\"to\\\"' },
+        instrument_data_assignment_events => { is => 'Genome::Model::Command::InstrumentData::Assign', reverse_id_by => 'model', 
+                         doc => 'Each case of an instrument data being assigned to the model' },
+
+        from_model_links                  => { is => 'Genome::Model::Link',
+                                               reverse_id_by => 'to_model',
+                                               doc => 'bridge table entries where this is the "to" model(used to retrieve models this model is "from")'
+                                           },
+        from_models                       => { is => 'Genome::Model',
+                                               via => 'from_model_links', to => 'from_model',
+                                               doc => 'Genome models that contribute "to" this model',
+                                           },
+        to_model_links                    => { is => 'Genome::Model::Link',
+                                               reverse_id_by => 'from_model',
+                                               doc => 'bridge entries where this is the "from" model(used to retrieve models models this model is "to")'
+                                           },
+        to_models                         => { is => 'Genome::Model',
+                                               via => 'to_model_links', to => 'to_model',
+                                               doc => 'Genome models this model contributes "to"',
+                                           },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -139,10 +145,25 @@ class Genome::Model {
 
 
 sub create {
-    my $class = shift;
+    my ($class, %params) = @_;
     
-    my $self = $class->SUPER::create(@_)
+    # Processing profile - gotta validate here or SUPER::create will fail silently
+    $class->_validate_processing_profile_id($params{processing_profile_id})
         or return;
+
+    my $self = $class->SUPER::create(%params)
+        or return;
+
+    # Model name - use default if none given
+    unless ( $self->name ) {
+        $self->name(
+            join(
+                '.',
+                Genome::Utility::Text::sanitize_string_for_filesystem($self->subject_name),
+                $self->processing_profile_name
+            )
+        );
+    }
 
     # Verify subject_type
     unless ( $self->subject_type ) {
@@ -186,6 +207,27 @@ sub create {
     }
                                  
     return $self;
+}
+
+sub _validate_processing_profile_id {
+    my ($class, $pp_id) = @_;
+
+    unless ( $pp_id ) {
+        $class->error_message("No processing profile id given");
+        return;
+    }
+
+    unless ( $pp_id =~ m#^$RE{num}{int}$#) {
+        $class->error_message("Processing profile id is not an integer");
+        return;
+    }
+
+    unless ( Genome::ProcessingProfile->get(id => $pp_id) ) {
+        $class->error_message("Can't get processing profile for id ($pp_id)");
+        return;
+    }
+
+    return 1;
 }
 
 BEGIN {  # This is ugly when its above the class definition, but I need it to happen first.
@@ -259,10 +301,17 @@ sub get_subjects {
 sub _verify_subjects {
     my $self = shift;
 
+    unless ( $self->subject_name ) {
+        $self->error_message("No subject name for model id: ".$self->id);
+        return;
+    }
+    
     return 1 unless $self->need_to_verify_subjects_for_type;
 
     my @subjects = $self->get_subjects;
     unless ( @subjects ) {
+        $self->error_message('No subject found for subject name: '.$self->subject_name);
+        return;
         my $subject_class = $self->subject_type_class;
         my $subject_property = $self->subject_type_property;
         $self->error_message( 
@@ -587,8 +636,11 @@ sub _resolve_subclass_name {
     }
     # access the type according to the processing profile being used
     elsif (my $processing_profile_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('processing_profile_id')) {
-        my $processing_profile = Genome::ProcessingProfile->get(id =>
-                                            $processing_profile_id);
+        my $processing_profile = Genome::ProcessingProfile->get(id => $processing_profile_id);
+        unless ( $processing_profile ) {
+            $class->error_message("Can't resolve subclass because can't get processing profile for id: ".$processing_profile_id);
+            return;
+        }
         my $type_name = $processing_profile->type_name;    
         $proper_subclass_name = $class->_resolve_subclass_name_for_type_name($type_name);
     }
@@ -616,65 +668,6 @@ sub _resolve_type_name_for_subclass_name {
     my @words = $ext =~ /[a-z]+|[A-Z](?:[A-Z]+|[a-z]*)(?=$|[A-Z])/g;
     my $type_name = lc(join(" ", @words));
     return $type_name;
-}
-
-sub pretty_print_text {
-    my $self = shift;
-    unless (defined $self->_printable_property_names_ref) {
-        # do this just once...
-        my @props;
-        my $class_meta = $self->get_class_object;
-        for my $name ($class_meta->all_property_names) {
-            next if $name eq 'name';
-            my $property_meta = $class_meta->property_meta_for_name($name);
-            unless ($property_meta->is_delegated or $property_meta->is_calculated) {
-                push @props, $name;
-            }
-            # an exception to include the processing profile name when listed
-            if ($name eq 'processing_profile_name') {
-                push @props, $name;
-            }
-        }
-        $self->_printable_property_names_ref(\@props);
-    }
-    my @printable_property_names = @{$self->_printable_property_names_ref};
-    unless (@printable_property_names){
-        $self->error_message("Can't generate property names from ".ref $self);
-        return;
-    }
-    
-    my @out;
-    for my $prop (@printable_property_names) {
-        if (my @values = $self->$prop) {
-            my $value;
-            if (@values > 1) {
-                if (grep { ref($_) } @values) {
-                    next;
-                }
-                $value = join(", ", grep { defined $_ } @values);
-            }
-            else {
-                $value = $values[0];
-            }
-            next if not defined $value;
-            next if ref $value;
-            next if $value eq '';
-            
-            push @out, [
-                Term::ANSIColor::colored($prop, 'red'),
-                Term::ANSIColor::colored($value, "cyan")
-            ]
-        }
-    }
-    
-    Genome::Model::EqualColumnWidthTableizer->new->convert_table_to_equal_column_widths_in_place( \@out );
-
-    my $out;
-    $out .= Term::ANSIColor::colored(sprintf("Model: %s (ID %s)", $self ->name, $self->id), 'bold magenta') . "\n\n";
-    $out .= Term::ANSIColor::colored("Configured Properties:", 'red'). "\n";    
-    $out .= join("\n", map { " @$_ " } @out);
-    $out .= "\n\n";
-    return $out;
 }
 
 sub get_all_objects {
@@ -858,39 +851,6 @@ sub _build_model_filesystem_paths {
     
     return 1;
 
-}
-
-
-#######################
-## MODEL FOR TESTING ##
-#######################
-
-package Genome::Model::Test; {
-    use Genome;
-
-    use strict;
-    use warnings;
-
-    class Genome::Model::Test {
-        is => 'Genome::Model',
-        has => [
-        colour =>{ via => 'processing_profile', },
-        shape =>{ via => 'processing_profile', },
-        ],
-    };
-
-    sub create {
-        my ($class, %params) = @_;
-
-        # Create processing profile too?
-        $params{subject_type} = 'dna_resource_item_name' unless exists $params{subject_type};
-        $params{subject_name} = 'a piece of dna' unless exists $params{subject_name};
-
-        my $self = $class->SUPER::create(%params)
-            or return;
-
-        return $self;
-    }
 }
 
 1;
