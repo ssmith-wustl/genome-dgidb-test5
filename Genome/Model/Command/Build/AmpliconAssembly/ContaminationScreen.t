@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Genome::Model::Command::Build::AmpliconAssembly::Test;
 
-Genome::Model::Command::Build::AmpliconAssembly::ContaminationScreenTest->runtests;
+Genome::Model::Command::Build::AmpliconAssembly::ContaminationScreen::Test->runtests;
 
 exit;
 

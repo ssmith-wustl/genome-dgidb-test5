@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Genome::Model::Command::Build::AmpliconAssembly::Test;
 
-Genome::Model::Command::Build::AmpliconAssembly::CleanUpTest->runtests;
+Genome::Model::Command::Build::AmpliconAssembly::CleanUp::Test->runtests;
 
 exit;
 

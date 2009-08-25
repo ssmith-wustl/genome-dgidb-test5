@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Genome::Model::Command::Build::AmpliconAssembly::Test;
 
-Genome::Model::Command::Build::AmpliconAssembly::ReportsTest->runtests;
+Genome::Model::Command::Build::AmpliconAssembly::Reports::Test->runtests;
 
 exit;
 
