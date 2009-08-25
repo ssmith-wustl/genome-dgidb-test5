@@ -6,6 +6,7 @@ use warnings;
 use above 'Genome';
 
 use Test::More tests => 8;
+require Genome::ProcessingProfile::Test;
 
 BEGIN {
     use_ok('Genome::ProcessingProfile::Command::Describe');
@@ -13,11 +14,8 @@ BEGIN {
 
 #< GOOD >#
 # Create a pp to describe
-my $pp = Genome::ProcessingProfile::Test->create(
-    name => 'test for renaming',
-    colour => 'read',
-    shape => 'square',
-);
+my $pp = Genome::ProcessingProfile::Test->create_mock_processing_profile('tester');
+;
 ok($pp, "Created processing profile to test renaming");
 die unless $pp; # can't proceed
 

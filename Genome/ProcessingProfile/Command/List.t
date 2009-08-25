@@ -5,26 +5,9 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 5;
+use Genome::ProcessingProfile::Test; # test is here
 
-BEGIN {
-    use_ok('Genome::ProcessingProfile::Command::List');
-}
-
-# GOOD
-# Create a pp to list
-my $pp = Genome::ProcessingProfile::Test->create(
-    name => 'test for renaming',
-    colour => 'read',
-    shape => 'square',
-);
-ok($pp, "Created processing profile to test renaming");
-die unless $pp; # can't proceed
-
-my $lister = Genome::ProcessingProfile::Command::List->create(filter => 'name=test meta genomic composition');
-ok($lister, 'Created the lister');
-isa_ok($lister, 'Genome::ProcessingProfile::Command::List');
-ok($lister->execute, 'Executed the lister, look at the listing!!');
+Genome::ProcessingProfile::Command::List::Test->runtests;
 
 exit;
 

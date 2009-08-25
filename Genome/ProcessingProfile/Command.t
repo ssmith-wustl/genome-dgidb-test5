@@ -5,6 +5,7 @@ use warnings;
 
 use above 'Genome';
 
+use Genome::ProcessingProfile::Test;
 use Test::More tests => 9;
 
 # This tests the base G:PP:Command functions.
@@ -16,11 +17,7 @@ BEGIN {
 }
 
 #< CREATE A PP TO TEST >#
-my $pp = Genome::ProcessingProfile::Test->create(
-    name => 'test',
-    colour => 'blue',
-    shape => 'hexagon',
-);
+my $pp = Genome::ProcessingProfile::Test->create_mock_processing_profile('tester');
 ok($pp, "Created processing profile to test");
 die unless $pp; # can't proceed
 
