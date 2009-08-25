@@ -6,7 +6,7 @@ use warnings;
 use base 'Genome::Utility::TestBase';
 
 use Data::Dumper 'Dumper';
-use Genome::Model::ReferenceAlignment::Test;
+require Genome::Model::Test;
 use Test::More;
 
 sub generator {
@@ -14,9 +14,8 @@ sub generator {
 }
 
 sub base_params_for_test_class {
-    my $build = $_[0]->get_mock_model->last_complete_build;
     return (
-        build_id => $build->id,
+        build_id => $_[0]->_mock_model->last_complete_build->id,
     );
 }
 
@@ -24,25 +23,17 @@ sub required_params_for_class {
     return (qw/ build_id /);
 }
 
-sub build_id {
-    return Genome::Model::ReferenceAlignment::Test->get_mock_build_id;
-}
-
-sub get_mock_model {
+sub _mock_model {
     my $self = shift;
 
     unless ( $self->{_mock_model} ) { 
-        $self->{_mock_model} = Genome::Model::ReferenceAlignment::Test->create_mock_model
+        $self->{_mock_model} = Genome::Model::Test->create_mock_model(
+            type_name => 'reference alignment solexa',
+        )
             or die;
     }
-    
+
     return $self->{_mock_model};
-}
-
-sub get_mock_build {
-    my $self = shift;
-
-    return $self->get_mock_model->last_complete_build;
 }
 
 sub skip_generate { return 0; }
