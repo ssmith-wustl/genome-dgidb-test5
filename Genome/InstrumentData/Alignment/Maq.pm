@@ -463,12 +463,12 @@ sub _run_aligner {
     my $alignment_directory = $self->alignment_directory;
 
     $self->status_message("OUTPUT PATH: $alignment_directory\n");
-
     my $is_paired_end;
     my $upper_bound_on_insert_size;
+    my $median_insert;
     if ($instrument_data->is_paired_end && !$self->force_fragment) {
         my $sd_above = $instrument_data->sd_above_insert_size;
-        my $median_insert = $instrument_data->median_insert_size;
+        $median_insert = $instrument_data->median_insert_size;
         $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;
         unless($upper_bound_on_insert_size > 0) {
             $self->status_message("Unable to calculate a valid insert size to run maq with. Using 600 (hax)");
@@ -509,7 +509,19 @@ sub _run_aligner {
 
     # RESOLVE A STRING OF ALIGNMENT PARAMETERS
     if ($is_paired_end) {
-        $aligner_params .= ' -a '. $upper_bound_on_insert_size;
+        if ($median_insert < 1000){
+		$aligner_params .= ' -a '. $upper_bound_on_insert_size;
+		$self->status_message("Median insert size ($median_insert) less than 1000, setting -a");
+	}
+	else if ($median_insert >= 1000){
+		$aligner_params .= ' -A '. $upper_bound_on_insert_size;
+		$self->status_message("Median insert size ($median_insert) greater than or equal to 1000, setting -A");
+	}
+	else {
+	#in the future we need to make an intelligent decision about setting -a vs -A based on the intended insert size;
+	#we should only be here in the case where gerald failed to calculate a median insert size
+	# TODO: extract additional details from the read set (that is what the guy at line 477 thought)
+	}
     }
 
     # TODO: this doesn't really work, so leave it out
