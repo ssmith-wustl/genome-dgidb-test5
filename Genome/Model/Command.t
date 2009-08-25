@@ -5,31 +5,17 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 8;
+require Genome::Model::Test;
+use Test::More tests => 7;
 
 BEGIN {
     use_ok('Genome::Model::Command');
 }
 
-my $bogus_id = 0;
-my $pp = Genome::ProcessingProfile->create_mock(
-                                                id => --$bogus_id,
-                                            );
-isa_ok($pp,'Genome::ProcessingProfile');
 
-my $model = Genome::Model->create_mock(
-                                       id => --$bogus_id,
-                                       genome_model_id => $bogus_id,
-                                       processing_profile_id => $pp->id,
-                                       last_complete_build_id => undef,
-                                       subject_name => 'test_subject_name',
-                                       subject_type => 'test_subject_type',
-                                       name => 'test_model_name',
-                                   );
-isa_ok($model,'Genome::Model');
-
-my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
-my $sub_dir = $tmp_dir .'/sub/dir/test';
+my $model = Genome::Model::Test->create_basic_mock_model(type_name => 'tester');
+ok($model, 'Created mock model');
+my $sub_dir = $model->data_directory.'/sub/dir/test';
 my $command = Genome::Model::Command->create(
                                              model => $model,
                                          );
