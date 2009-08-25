@@ -54,64 +54,6 @@ sub create_mock_processing_profile {
     return $pp;
 }
 
-#< VALID - CREATES A REAL PP >#
-sub test001_create_processing_profile : Test(4) {
-    my $self = shift;
-
-    use_ok('Genome::ProcessingProfile::AmpliconAssembly');
-    my $pp = Genome::ProcessingProfile::AmpliconAssembly->create( _valid_params() );
-    ok($pp, 'Created amplicon assembly processing profile');
-    isa_ok($pp, 'Genome::ProcessingProfile::AmpliconAssembly');
-    isa_ok($pp, 'Genome::ProcessingProfile');
-
-    return $pp;
-}
-
-#< INVALID >#
-sub test002_invalid_params : Test(14) {
-    my $self = shift;
-
-    my %params = _valid_params();
-    for my $param ( Genome::ProcessingProfile::AmpliconAssembly->params_for_class) {
-        my $valid_value = delete $params{$param}; # save to ad back
-        unless ( Genome::ProcessingProfile::AmpliconAssembly->param_is_optional($param) ) {
-            # No param...
-            ok(
-                ! Genome::ProcessingProfile::AmpliconAssembly->create(%params),
-                "Failed as expected - w/o $param",
-            );
-        }
-
-        if ( Genome::ProcessingProfile::AmpliconAssembly->valid_values_for_param($param) ) {
-            # Invalid param...
-            $params{$param} = 'Not a valid value for a parameter';
-            ok( 
-                ! Genome::ProcessingProfile::AmpliconAssembly->create(%params),
-                "Failed as expected - w/ an invalid value for $param",
-            );
-        }
-
-        # Reset value
-        $params{$param} = $valid_value;
-    }
-
-    #< Primers >#
-    # none
-    for ( keys %params ) { delete $params{$_} if /primer/; }
-    ok( 
-        ! Genome::ProcessingProfile::AmpliconAssembly->create(%params),
-        "Failed as expected - w/o any primers",
-    );
-    # invlaid (no primer name)
-    $params{primer_amp_forward} = 'AAGGTGAGCCCGCGATGCGAGCTTAT';
-    ok( 
-        ! Genome::ProcessingProfile::AmpliconAssembly->create(%params),
-        "Failed as expected - w/ invalid primer string",
-    );
-
-    return 1;
-}
-
 1;
 
 #$HeadURL$
