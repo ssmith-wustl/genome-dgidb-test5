@@ -35,6 +35,7 @@ sub description
 {
     my $self=shift;
     my $model= $self->model;
+    return '<div> 2 instrument data for ' . $model->name . " as of " . UR::Time->now.'</div>';
     $self->get_models_and_preload_related_data();
     #my $output_file = $self->report_brief_output_filename;
     my @details = get_instrument_data_for_model($model);
@@ -44,7 +45,6 @@ sub description
     #my $desc = @details . " instrument data for " . $model->name . " as of " . UR::Time->now;
     #$brief->print("<div>$desc</div>");
 
-    my $desc = '<div>'.@details . " instrument data for " . $model->name . " as of " . UR::Time->now.'</div>';
 }
 
 sub generate_report_detail {
@@ -213,7 +213,8 @@ sub data_for_step {
 
 
     my @rc = Genome::InstrumentData->is_loaded(
-        instrument_data_id => $lane->id,
+        id => $lane->id,
+        #instrument_data_id => $lane->id,
         sample_name => $lane->sample_name, # this gets around dups in this temp table from testing
     );
 
@@ -299,7 +300,7 @@ sub data_for_step {
         }
     }
     $DB::single=1;
-    my $gm_run = Genome::InstrumentData->is_loaded(instrument_data_id => $lane->id, sample_name => $lane->sample_name);
+    my $gm_run = Genome::InstrumentData->is_loaded(id => $lane->id, sample_name => $lane->sample_name);
     my $detail = format_div_data(\@merged, $gm_run, $model);
     my $detail_n++;
     my $title=join(" ",$merged[0]);
