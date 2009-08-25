@@ -39,13 +39,13 @@ for my $target ( glob("$pp_path/*pm") ) {
     $target =~ s#$pp_path/##;
     $target =~ s/\.pm//;
     my $target_class = 'Genome::ProcessingProfile::' . $target;
+    next unless $target_class->isa('Genome::ProcessingProfile');
     my $target_meta = $target_class->get_class_object;
     unless ( $target_meta ) {
         eval("use $target_class;");
         die "$@\n" if $@;
         $target_meta = $target_class->get_class_object;
     }
-    next unless $target_class->isa('Genome::ProcessingProfile');
     next if $target_class->get_class_object->is_abstract;
     my $subclass = 'Genome::ProcessingProfile::Command::Create::' . $target;
     #print Dumper({mod=>$module, path=>$pp_path, target=>$target, target_class=>$target_class,subclass=>$subclass});
