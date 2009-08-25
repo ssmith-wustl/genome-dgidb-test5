@@ -150,7 +150,7 @@ use warnings;
 use base 'Genome::Utility::TestBase';
 
 use Data::Dumper 'Dumper';
-use Genome::Model::AmpliconAssembly::Test; # necessary cuz mock objects are in here
+require Genome::Model::Test;
 use Test::More;
 
 sub params_for_test_class {
@@ -164,6 +164,10 @@ sub amplicons {
     return $_[0]->{_object}->get_amplicons;
 }
 
+sub _build_dir {
+    return $_[0]->base_test_dir.'/Genome-Model-AmpliconAssembly/build-10000';
+}
+
 sub _params_for_test_class { return; }
 sub should_copy_traces { 1 }
 sub should_copy_edit_dir { 1 }
@@ -174,8 +178,8 @@ sub test_01_copy_data : Tests {
 
     if ( $self->should_copy_traces ) {
         ok( 
-            Genome::Model::AmpliconAssembly::Test->copy_test_dir(
-                'chromat_dir',
+            Genome::Model::Test->copy_test_dir(
+                $self->_build_dir.'/chromat_dir',
                 $self->{_object}->chromat_dir,
             ),
             "Copy traces"
@@ -184,8 +188,8 @@ sub test_01_copy_data : Tests {
 
     if ( $self->should_copy_edit_dir ) {
         ok(
-            Genome::Model::AmpliconAssembly::Test->copy_test_dir(
-                'edit_dir',
+            Genome::Model::Test->copy_test_dir(
+                $self->_build_dir.'/edit_dir',
                 $self->{_object}->edit_dir,
             ),
             "Copy edit_dir"
