@@ -46,6 +46,7 @@ sub bwa_path {
 my %BWA_VERSIONS = (
 		    '0.4.2' => '/gsc/pkg/bio/bwa/bwa-0.4.2-64/bwa',
 		    '0.4.9' => '/gsc/pkg/bio/bwa/bwa-0.4.9-64/bwa',
+		    '0.5.0' => '/gsc/pkg/bio/bwa/bwa-0.5.0-64/bwa',
                     'bwa'   => 'bwa',
                 );
 
