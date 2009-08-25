@@ -6,14 +6,26 @@ use base 'Test::Class';
 
 use Test::More;
 
+#< TESTS >#
 sub test_dir {
     return '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Sanger';
+}
+
+sub test001_ : Tests(1) {
+    my $self = shift;
+
+    use_ok('Genome::InstrumentData::Sanger');
+
+    return 1;
 }
 
 #< MOCK >#
 sub create_mock_instrument_data {
     my $self = shift;
 
+    # Number to create
+    
+    
     my $run_name = '01jan00.101amaa';
     my $full_path = test_dir().'/'.$run_name;
     die "Test data directory does not exist\n" unless -d $full_path;
@@ -34,15 +46,6 @@ sub create_mock_instrument_data {
     $inst_data->mock('dump_to_file_system', sub{ return 1; }); # TODO actually do something?
 
     return $inst_data;
-}
-
-#< TESTS >#
-sub test001_ : Tests(1) {
-    my $self = shift;
-
-    use_ok('Genome::InstrumentData::Sanger');
-
-    return 1;
 }
 
 1;
