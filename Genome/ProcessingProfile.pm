@@ -17,11 +17,12 @@ class Genome::ProcessingProfile {
         id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        name      => { is => 'VARCHAR2', len => 255, is_optional => 1, doc => 'Human readable name', },
-        type_name => { is => 'VARCHAR2', len => 255, is_optional => 1, doc => 'The type of processing profile' },
+        name      => { is => 'VARCHAR2', is_optional => 1, len => 255, doc => 'Human readable name', },
+        type_name => { is => 'VARCHAR2', is_optional => 1, len => 255, is_optional => 1, doc => 'The type of processing profile' },
     ],
     has_many_optional => [
         params => { is => 'Genome::ProcessingProfile::Param', reverse_id_by => 'processing_profile' },
+        models => { is => 'Genome::Model', reverse_id_by => 'processing_profile' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -243,53 +244,6 @@ sub _resolve_type_name_for_class {
     
     my @words = $subclass =~ /[a-z\d]+|[A-Z\d](?:[A-Z\d]+|[a-z]*)(?=$|[A-Z\d])/gx;
     return lc(join(" ", @words));
-}
-
-#########################################
-## FAKE PROCESSING PROFILE FOR TESTING ##
-#########################################
-
-package Genome::ProcessingProfile::Test; {
-    use Genome;
-
-    use strict;
-    use warnings;
-
-    my %HAS = (
-        colour =>{ 
-            doc => 'The colour of this profile',
-        },
-        shape => { 
-            doc => 'The shape of this profile',
-            is_optional => 1,
-        },
-    );
-
-    class Genome::ProcessingProfile::Test {
-        is => 'Genome::ProcessingProfile',
-        has => [
-        map(
-            { 
-                $_ => {
-                    via => 'params',
-                    to => 'value',
-                    where => [ name => $_ ],
-                    is_mutable => 1,
-                    is_optional => ( exists $HAS{$_}->{is_optional} ? $HAS{$_}->{is_optional} : 0),
-                    doc => (
-                        ( exists $HAS{$_}->{valid_values} )
-                        ? sprintf('%s. Valid values: %s.', $HAS{$_}->{doc}, join(', ', @{$HAS{$_}->{valid_values}}))
-                        : $HAS{$_}->{doc}
-                    ),
-                },
-            } keys %HAS
-        ),
-        ],
-    };
-
-    sub params_for_class {
-        return keys %HAS;
-    }
 }
 
 1;
