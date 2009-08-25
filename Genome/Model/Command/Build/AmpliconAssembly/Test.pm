@@ -7,6 +7,7 @@ use warnings;
 
 use base 'Test::Class';
 
+require Genome::Model::Test;
 use Test::More;
 require File::Path;
 
@@ -27,7 +28,7 @@ sub _mock_model {
     my $self = shift;
 
     unless ( $self->{_mock_model} ) {
-        $self->{_mock_model} = Genome::Model::AmpliconAssembly::Test->create_mock_model
+        $self->{_mock_model} = Genome::Model::Test->create_mock_model(type_name => 'amplicon assembly')
             or die "Can't create mock amplicon assembly model\n";
     }
 
@@ -42,11 +43,10 @@ sub _main_event {
     return $self->{_main_event};
 }
 
-sub test01_use : Test(6) {
+sub test01_use : Test(5) {
     my $self = shift;
 
     use_ok('Genome::Model::AmpliconAssembly');
-    use_ok('Genome::Model::AmpliconAssembly::Test');
     use_ok('Genome::ProcessingProfile::AmpliconAssembly');
     use_ok('Genome::Model::Build::AmpliconAssembly');
     use_ok('Genome::Model::Command::Build');
@@ -118,37 +118,38 @@ use warnings;
 
 use base 'Genome::Utility::TestBase';
 
+use Carp 'confess';
 use Data::Dumper 'Dumper';
-use Genome::Model::AmpliconAssembly::Test; # necessary cuz mock objects are in here
+require Genome::Model::Test;
 use Test::More;
 
 sub params_for_test_class {
-    my $self = shift;
-    my $model = $self->mock_model;
     return (
-        model => $model,
-        build => $model->latest_complete_build,
+        model => $_[0]->_mock_model,
+        build => $_[0]->_mock_build,
     );
 }
 sub required_params_for_class { return; }
 
-sub mock_model {
+sub _mock_model {
     my $self = shift;
 
     unless ( $self->{_mock_model} ) {
-        $self->{_mock_model} = Genome::Model::AmpliconAssembly::Test->create_mock_model
-            or die "Can't create mock amplicon assembly model\n";
+        $self->{_mock_model} = Genome::Model::Test->create_mock_model(
+            type_name => 'amplicon assembly',
+        )
+            or confess "Can't create mock amplicon assembly model";
     }
 
     return $self->{_mock_model};
 }
 
-sub build {
-    return $_[0]->mock_model->latest_complete_build;
+sub _mock_build {
+    return $_[0]->_mock_model->last_succeeded_build || die "No succeeded mock build";
 }
 
-sub amplicons {
-    return $_[0]->build->get_amplicons;
+sub _amplicons {
+    return $_[0]->_mock_build->get_amplicons;
 }
 
 # Setup
@@ -162,9 +163,9 @@ sub test_01_execute : Tests {
     # traces
     if ( $self->should_copy_traces ) {
         ok( 
-            Genome::Model::AmpliconAssembly::Test->copy_test_dir(
-                'chromat_dir',
-                $self->mock_model->latest_complete_build->chromat_dir,
+            Genome::Model::Test->copy_test_dir(
+                $self->base_test_dir.'/Genome-Model-AmpliconAssembly/build-10000/chromat_dir',
+                $self->_mock_build->chromat_dir,
             ),
             "Copy traces"
         ) or die;
@@ -173,9 +174,9 @@ sub test_01_execute : Tests {
     # edit_dir
     if ( $self->should_copy_edit_dir ) {
         ok(
-            Genome::Model::AmpliconAssembly::Test->copy_test_dir(
-                'edit_dir',
-                $self->mock_model->latest_complete_build->edit_dir,
+            Genome::Model::Test->copy_test_dir(
+                $self->base_test_dir.'/Genome-Model-AmpliconAssembly/build-10000/edit_dir',
+                $self->_mock_build->edit_dir,
             ),
             "Copy edit_dir"
         ) or die;
@@ -199,14 +200,14 @@ sub test_01_execute : Tests {
     *{$class.'::execute'} = $execute if $execute;
 
     #print Dumper({event_id=>$self->{_object}->id});
-    #print $self->build->data_directory,"\n"; <STDIN>;
+    #print $self->_mock_build->data_directory,"\n"; <STDIN>;
 
     return 1;
 }
 
 ###########################################################################
 
-package Genome::Model::Command::Build::AmpliconAssembly::AssembleTest;
+package Genome::Model::Command::Build::AmpliconAssembly::Assemble::Test;
 
 use strict;
 use warnings;
@@ -222,7 +223,7 @@ sub test_class {
 
 ###########################################################################
 
-package Genome::Model::Command::Build::AmpliconAssembly::ClassifyTest;
+package Genome::Model::Command::Build::AmpliconAssembly::Classify::Test;
 
 use strict;
 use warnings;
@@ -238,7 +239,7 @@ sub test_class {
 
 ###########################################################################
 
-package Genome::Model::Command::Build::AmpliconAssembly::CleanUpTest;
+package Genome::Model::Command::Build::AmpliconAssembly::CleanUp::Test;
 
 use strict;
 use warnings;
@@ -258,7 +259,7 @@ sub should_copy_edit_dir { 1 }
 sub test_03_verify : Test(1) {
     my $self = shift;
 
-    my @files_remaining = glob($self->build->edit_dir.'/*');
+    my @files_remaining = glob($self->_mock_build->edit_dir.'/*');
     is(@files_remaining, 50, "Removed correct number of files");
 
     return 1;
@@ -266,7 +267,7 @@ sub test_03_verify : Test(1) {
 
 ###########################################################################
 
-package Genome::Model::Command::Build::AmpliconAssembly::CollateTest;
+package Genome::Model::Command::Build::AmpliconAssembly::Collate::Test;
 
 use strict;
 use warnings;
@@ -282,7 +283,7 @@ sub test_class {
 
 ###########################################################################
 
-package Genome::Model::Command::Build::AmpliconAssembly::ContaminationScreenTest;
+package Genome::Model::Command::Build::AmpliconAssembly::ContaminationScreen::Test;
 
 use strict;
 use warnings;
@@ -298,7 +299,7 @@ sub test_class {
 
 ###########################################################################
 
-package Genome::Model::Command::Build::AmpliconAssembly::PrepareInstrumentDataTest;
+package Genome::Model::Command::Build::AmpliconAssembly::PrepareInstrumentData::Test;
 
 use strict;
 use warnings;
@@ -317,7 +318,7 @@ sub should_copy_traces { 1 }
 sub test_03_verify : Test(1) {
     my $self = shift;
 
-    my $fasta_cnt = grep { -s $_->fasta_file } @{$self->amplicons};
+    my $fasta_cnt = grep { -s $_->fasta_file } @{$self->_amplicons};
     ok($fasta_cnt, 'Prepared instrument data');
     
     return 1;
@@ -325,7 +326,7 @@ sub test_03_verify : Test(1) {
 
 ###########################################################################
 
-package Genome::Model::Command::Build::AmpliconAssembly::OrientTest;
+package Genome::Model::Command::Build::AmpliconAssembly::Orient::Test;
 
 use strict;
 use warnings;
@@ -341,7 +342,7 @@ sub test_class {
 
 ###########################################################################
 
-package Genome::Model::Command::Build::AmpliconAssembly::ReportsTest;
+package Genome::Model::Command::Build::AmpliconAssembly::Reports::Test;
 
 use strict;
 use warnings;
@@ -361,7 +362,7 @@ sub should_copy_edit_dir { 1 }
 sub test_03_verify : Test(1) {
     my $self = shift;
 
-    my @reports = glob($self->build->resolve_reports_directory.'/*');
+    my @reports = glob($self->_mock_build->resolve_reports_directory.'/*');
     is(@reports, 2, "Created 2 reports");
 
     return 1;
@@ -369,7 +370,7 @@ sub test_03_verify : Test(1) {
 
 ###########################################################################
 
-package Genome::Model::Command::Build::AmpliconAssembly::TrimAndScreenTest;
+package Genome::Model::Command::Build::AmpliconAssembly::TrimAndScreen::Test;
 
 use strict;
 use warnings;
@@ -389,7 +390,7 @@ sub should_copy_edit_dir { 1 }
 sub test_03_verify {#: Test(1) {
     my $self = shift;
 
-    my @reports = glob($self->build->resolve_reports_directory.'/*');
+    my @reports = glob($self->_mock_build->resolve_reports_directory.'/*');
     is(@reports, 2, "Created 2 reports");
 
     return 1;
@@ -397,7 +398,7 @@ sub test_03_verify {#: Test(1) {
 
 ###########################################################################
 
-package Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentDataTest;
+package Genome::Model::Command::Build::AmpliconAssembly::VerifyInstrumentData::Test;
 
 use strict;
 use warnings;
@@ -414,7 +415,7 @@ sub test_class {
 sub test_03_verify : Test(1) {
     my $self = shift;
 
-    my $amplicons = $self->amplicons;
+    my $amplicons = $self->_amplicons;
     ok(@$amplicons, 'Verified linking of instrument data');
     
     return 1;
