@@ -11,7 +11,7 @@ class Genome::Model::Tools::Annotate::TranscriptInformation {
 	    type  =>  'String',
 	    doc   =>  "provide the transcript name",
 	},
-	make => {
+	organism => {
 	    type  =>  'String',
 	    doc   =>  "provide the organism either mouse or human; default is human",
 	    is_optional  => 1,
@@ -30,7 +30,7 @@ class Genome::Model::Tools::Annotate::TranscriptInformation {
 	},
 	utr_seq => {
 	    is => 'Boolean',
-	    doc   =>  "use this flag if you would like to retriev the utr sequence for this transcript. Currently only availible from human build 36",
+	    doc   =>  "use this flag if you would like to retriev the utr sequence for this transcript.",
 	    is_optional  => 1,
 	    default => 0,
 	},
@@ -56,31 +56,31 @@ sub help_detail {
     return <<EOS 
 	
 	-trans_pos option will locate the given coordinate in the transcript and print a line of information at the bottom of your screen 
-	-make use this option if your transcript is from mouse otherwise, human will be assumed
+	-organism use this option if your transcript is from mouse otherwise, human will be assumed
 	-version if you would prefer something other than the default for human is 54_36p and for mouse is 54_37g
 	-utr_seq will display the utr sequence for human build 36 or mouse build 37
 
-	gmt annotate transcript-information -transcript ENSMUST00000102781 -make mouse -utr-seq -trans-pos 100857095
+	gmt annotate transcript-information -transcript ENSMUST00000102781 -organism mouse -utr-seq -trans-pos 100857095
 
 EOS
 }
 
 
 
-my ($transcript_info,$strand,$trans_pos_number_line,$chromosome);
+my ($transcript_info,$strand,$trans_pos_number_line,$chromosome,$post_pos_bases);
 sub execute {
 
     my $self = shift;
 
     my $trans_pos = $self->trans_pos;
-   
+    my $transcript = $self->transcript;
     &get_transcript_info($self);
 
     &get_transcript($self);
     
     if ($self->trans_pos) {
 	if ($trans_pos_number_line) {
-	    print qq(\n$trans_pos_number_line\n);
+	    print qq(\n$trans_pos_number_line. There are $post_pos_bases coding bases left in $transcript after $trans_pos\n);
 	} else {
 	    print qq(\n$trans_pos was not located\n);
 	}
@@ -94,14 +94,14 @@ sub get_transcript {
     my $trans_pos = $self->trans_pos;
     unless ($trans_pos) { $trans_pos = 0; }
 
-    my $make = $self->make;
+    my $organism = $self->organism;
 
     my $version = $self->version;
-    if ($make eq "mouse" && $version eq "54_36p") { $version = "54_37g"; }
+    if ($organism eq "mouse" && $version eq "54_36p") { $version = "54_37g"; }
 
     my $utr_seq = $self->utr_seq;
-    if ($utr_seq && $make eq "human") { unless ($version =~ /\_36/) { print qq(can only get utr seq for human build 36);$utr_seq = 0; } }
-    if ($utr_seq && $make eq "mouse") { unless ($version =~ /\_37/) { print qq(can only get utr seq for mouse build 37);$utr_seq = 0; } }
+    if ($utr_seq && $organism eq "human") { unless ($version =~ /\_36/) { print qq(can only get utr seq for human build 36);$utr_seq = 0; } }
+    if ($utr_seq && $organism eq "mouse") { unless ($version =~ /\_37/) { print qq(can only get utr seq for mouse build 37);$utr_seq = 0; } }
 
     my $myCodonTable = Bio::Tools::CodonTable->new();
     my @seq;
@@ -126,7 +126,7 @@ sub get_transcript {
 	    push(@positions,$pos);
 	}
     }
-
+    my $pre_pos_bases;
     for my $pos (@positions) {
 	my ($exon,$region) = split(/\,/,$transcript_info->{$transcript}->{$pos}->{exon});
 	my $frame = $transcript_info->{$transcript}->{$pos}->{frame};
@@ -136,6 +136,7 @@ sub get_transcript {
 	my ($trans_posid) = $transcript_info->{$transcript}->{$pos}->{trans_pos};
 	
 	if ($trans_posid) {
+	    $pre_pos_bases = $trans_pos_in;
 	    my ($trans_pos_n,$trans_pos_r)  =  split(/\,/,$trans_posid);
 	    $trans_pos_number_line = qq(The position $trans_pos_n was in an $trans_pos_r and is in or after $region $exon, frame $frame, base $base, amino_acid_numuber $aa_n, and falls after $trans_pos_in_5utr bases of 5prime UTR, $trans_pos_in bases of coding sequence and $trans_pos_in_3utr bases of 3prime UTR);
 	}
@@ -167,11 +168,11 @@ sub get_transcript {
 		if ($coding_start) {
 		    print qq($exon $region $range $p3\n);
 		    $p3=0;
-		    if ($utr_seq) { &print_utr_seq($r_start,$r_stop,$make); }
+		    if ($utr_seq) { &print_utr_seq($r_start,$r_stop,$organism); }
 		} else {
 		    print qq($exon $region $range $p5\n);
 		    $p5=0;
-		    if ($utr_seq) { &print_utr_seq($r_start,$r_stop,$make); }
+		    if ($utr_seq) { &print_utr_seq($r_start,$r_stop,$organism); }
 		}
 	    }
 	    if ($region =~ /cds/) {
@@ -183,23 +184,24 @@ sub get_transcript {
 	    }
 	}
     }
-    
+    $post_pos_bases = $trans_pos_in - $pre_pos_bases - 1;
+
     my $sequence = join '' , @fullseq;
     my $protien_seq = $myCodonTable->translate($sequence);
     
     print qq(\n\>$transcript.dna.fasta\n$sequence\n\n\>$transcript.protien.fasta\n$protien_seq\n);
-    
+
 }
 
 sub print_utr_seq {
     
-    my ($r_start,$r_stop,$make) = @_;
+    my ($r_start,$r_stop,$organism) = @_;
     if ($strand eq "-1") {
-	my $seq = &get_ref_base($r_stop,$r_start,$chromosome,$make);
+	my $seq = &get_ref_base($r_stop,$r_start,$chromosome,$organism);
 	my $rev = &reverse_complement_allele($seq);
 	print qq($rev\n\n);
     } else {
-	my $seq = &get_ref_base($r_start,$r_stop,$chromosome,$make);
+	my $seq = &get_ref_base($r_start,$r_stop,$chromosome,$organism);
 	print qq($seq\n\n);
     }
 }
@@ -212,16 +214,16 @@ sub get_transcript_info {
     my $trans_pos = $self->trans_pos;
     unless ($trans_pos) { $trans_pos = 0; }
 
-    my $make = $self->make;
+    my $organism = $self->organism;
 
     my $version = $self->version;
-    if ($make eq "mouse") { if ($version eq "54_36p") { $version = "54_37g";}}
+    if ($organism eq "mouse") { if ($version eq "54_36p") { $version = "54_37g";}}
 
     my ($ncbi_reference) = $version =~ /\_([\d]+)/;
 
-    my $eianame = "NCBI-" . $make . ".ensembl";
-    my $gianame = "NCBI-" . $make . ".genbank";
-    my $build_source = "$make build $ncbi_reference version $version";
+    my $eianame = "NCBI-" . $organism . ".ensembl";
+    my $gianame = "NCBI-" . $organism . ".genbank";
+    my $build_source = "$organism build $ncbi_reference version $version";
 
     my $ensembl_build = Genome::Model::ImportedAnnotation->get(name => $eianame)->build_by_version($version);
     my $ensembl_data_directory = $ensembl_build->annotation_data_directory;
@@ -235,7 +237,7 @@ sub get_transcript_info {
 	($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $genbank_data_directory)
     }
 
-    unless ($t) {print qq(\nCould not find a transcript object for $transcript from the $make data warehouse\nWill exit the program now\n\n);;exit(1);}
+    unless ($t) {print qq(\nCould not find a transcript object for $transcript from the $organism data warehouse\nWill exit the program now\n\n);;exit(1);}
 
     my $tseq = $t->cds_full_nucleotide_sequence;
     my @substructures = $t->ordered_sub_structures;
@@ -299,7 +301,7 @@ sub get_transcript_info {
 	    }
 	}
     } else {
-	print qq(\nCould not find substructures in the transcript object for $transcript from the $make data warehouse\nWill exit the program now\n\n);
+	print qq(\nCould not find substructures in the transcript object for $transcript from the $organism data warehouse\nWill exit the program now\n\n);
 	exit 1;	
     }
     
@@ -383,12 +385,12 @@ sub reverse_complement_allele {
 
 sub get_ref_base {
 
-    my ($chr_start,$chr_stop,$chr_name,$make) = @_;
+    my ($chr_start,$chr_stop,$chr_name,$organism) = @_;
 
     use Bio::DB::Fasta;
 
     my $RefDir;
-    if ($make eq "human"){
+    if ($organism eq "human"){
 	$RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
     } else {
 	$RefDir = "/gscmnt/sata147/info/medseq/rmeyer/resources/MouseB37/";
@@ -420,7 +422,7 @@ This script will get transcript information
 
 transcript
 trans_pos
-make
+organism
 
 =head1 KNOWN BUGS
 
