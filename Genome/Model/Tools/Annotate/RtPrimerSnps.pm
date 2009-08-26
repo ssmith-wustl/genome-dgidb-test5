@@ -37,6 +37,18 @@ class Genome::Model::Tools::Annotate::RtPrimerSnps {
         is_optional => 1,
         doc => 'build id for the imported annotation model to grab transcripts to annotate from.  Use this or --reference-transcripts to specify a non-default annotation db (not both)',
     },
+	organism => {
+	    type  =>  'String',
+	    doc   =>  "provide the organism either mouse or human; default is human",
+	    is_optional  => 1,
+	    default => 'human',
+	},
+	version => {
+	    type  =>  'String',
+	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
+	    is_optional  => 1,
+	    default => '54_36p',
+	},
 
     ]
 };
@@ -72,15 +84,40 @@ sub execute {
     }else{
         my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
         $build = $model->build_by_version(0);
-
+	
         unless ($build){
             $self->error_message("couldn't get build v0 from 'NCBI-human.combined-annotation'");
             return;
         }
     }
-    my $build_id =$build->build_id;
+    ###   my $build_id =$build->build_id;  ###Rather than build id now to get the transcript we need the data directory
+    
+    ###my $t = Genome::Transcript->get( transcript_name => $self->transcript, build_id => $build_id );
+    my $organism = $self->organism;
+    my $version = $self->version;
+    my $transcript = $self->transcript;
+    
+    if ($organism eq "mouse") { if ($version eq "54_36p") { $version = "54_37g";}}
+    
+    my ($ncbi_reference) = $version =~ /\_([\d]+)/;
+    my $eianame = "NCBI-" . $organism . ".ensembl";
+    my $gianame = "NCBI-" . $organism . ".genbank";
+    my $build_source = "$organism build $ncbi_reference version $version";
+    
+    my $ensembl_build = Genome::Model::ImportedAnnotation->get(name => $eianame)->build_by_version($version);
+    my $ensembl_data_directory = $ensembl_build->annotation_data_directory;
+    my $genbank_build = Genome::Model::ImportedAnnotation->get(name => $gianame)->build_by_version($version);
+    my $genbank_data_directory = $genbank_build->annotation_data_directory;
+    
+    my $t;
+    if ($transcript =~/^ENS/){ #ENST for Human ENSMUST
+	($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $ensembl_data_directory);
+    }else{
+	($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $genbank_data_directory)
+    }
 
-    my $t = Genome::Transcript->get( transcript_name => $self->transcript, build_id => $build_id );
+
+
     if($t) {
         $self->status_message("Found transcript ". $t->transcript_name." on ".substr($t->strand,0,1)." strand for gene ".$t->gene_name."\n\n");
     }
@@ -207,7 +244,13 @@ sub execute {
     }
     $self->status_message($genomic_coords."\n\n");
     #print retrieved sequence
-    my $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+
+    my $RefDir;
+    if ($organism eq "human"){
+	$RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+    } else {
+	$RefDir = "/gscmnt/sata147/info/medseq/rmeyer/resources/MouseB37/";
+    }
     my $refdb = Bio::DB::Fasta->new($RefDir);
 
     $self->status_message("Sequence for genomic coordinates:\n");
