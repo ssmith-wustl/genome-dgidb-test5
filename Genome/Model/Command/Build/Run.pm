@@ -117,7 +117,7 @@ sub execute {
     $self->build->initialize;
     UR::Context->commit;
 
-    my $w = $build->newest_workflow_instance;
+    $w = $build->newest_workflow_instance;
     
     my $output;
     
