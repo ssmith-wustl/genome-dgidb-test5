@@ -17,12 +17,12 @@ my $gsd = Genome::Model::Tools::GetSubDirectories->create(
 );
 isa_ok($gsd, 'Genome::Model::Tools::GetSubDirectories');
 
-ok($gsd->execute, 'getting sample directories');
+ok($gsd->execute, 'getting sub directories');
 
-my $sample_dirs = $gsd->sample_directories;
+my $sub_dirs = $gsd->sub_directories;
 my $exists = 1;
 
-foreach my $sub_dir (@$sample_dirs)
+foreach my $sub_dir (@$sub_dirs)
 {
    $exists = 0 unless(-e $sub_dir); 
 }
