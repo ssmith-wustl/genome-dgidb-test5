@@ -164,7 +164,7 @@ sub execute {
 =cut
 
     $DB::single=1;
-    my $cmd = "/gscuser/charris/c-src-BLECH/trunk/samtool2/samtools somaticsniper -Q " . $self->quality_filter. " -f ".$self->reference_file." ".$self->_tumor_file." ".$self->_normal_file ." " . $self->output_snp_file . " " . $self->output_indel_file; 
+    my $cmd = "bam-somaticsniper -Q " . $self->quality_filter. " -f ".$self->reference_file." ".$self->_tumor_file." ".$self->_normal_file ." " . $self->output_snp_file . " " . $self->output_indel_file; 
     my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->_tumor_file,$self->_normal_file], output_files=>[$self->output_snp_file,$self->output_indel_file], skip_if_output_is_present=>0 );
 
 # Skip this for now until we figure out how we want to do this
