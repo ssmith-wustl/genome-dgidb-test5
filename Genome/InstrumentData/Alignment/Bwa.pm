@@ -498,6 +498,7 @@ sub _run_aligner {
 
     #### if it got to here then we've got ourselves a good alignment, let's keep it!
     $output_sam_tmp_file->unlink_on_destroy(0);
+    chmod 0644,$output_sam_tmp_file->filename;
     rename($output_sam_tmp_file->filename, $self->alignment_file);
 
 
