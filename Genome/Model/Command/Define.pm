@@ -99,6 +99,10 @@ for my $target ( glob("$pp_path/*pm") ) {
     my $subclass = 'Genome::Model::Command::Define::' . $target;
     #print Dumper({mod=>$module, path=>$pp_path, target=>$target, target_class=>$target_class,subclass=>$subclass});
 
+    # Do not autogenerate this if it is an exception (things with actual modules for define)
+    my @targets_to_skip = ("Somatic");
+    next if (grep {$target eq $_} @targets_to_skip);
+    
     no strict 'refs';
     class {$subclass} {
         is => __PACKAGE__,
