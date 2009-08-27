@@ -7,8 +7,8 @@ use Genome;
 use IO::File;
 use Data::Dumper;
 
-my $low=500000;
-my $high=750000;
+my $low=200000;
+my $high=500000;
 UR::Context->object_cache_size_highwater($high);
 UR::Context->object_cache_size_lowwater($low);
 
