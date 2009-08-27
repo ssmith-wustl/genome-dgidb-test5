@@ -311,7 +311,7 @@ sub execute {
                 
             map{$writer->write_object($_)}($contig, @read_pos, @base_segments, @reads);
             $nReads += $nRd;
-            $self->status_message("$nContigs contigs are done") if $nContigs % 1000 == 0;
+            $self->status_message("$nContigs contigs are done") if $nContigs % 100 == 0;
         }#if 'CTG'
     }#While loop
     $afg_fh->close;
