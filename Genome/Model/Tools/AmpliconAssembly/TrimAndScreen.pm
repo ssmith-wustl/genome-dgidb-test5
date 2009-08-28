@@ -28,6 +28,15 @@ class Genome::Model::Tools::AmpliconAssembly::TrimAndScreen {
 sub valid_trimmers_and_screeners {
     return (qw/ trim3_and_crossmatch lucy /);
 }
+#< Helps >#
+sub help_detail {
+    return <<EOS;
+Runs quality trimming and vector screening. See above for valid trimmers and screeners.
+EOS
+}
+
+sub help_synopsis {
+}
 
 #< Command >#
 sub create {

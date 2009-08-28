@@ -9,12 +9,6 @@ use Data::Dumper 'Dumper';
 
 class Genome::Model::Tools::AmpliconAssembly::Assemble{
     is => 'Genome::Model::Tools::AmpliconAssembly',
-    has => [
-    assembler => {
-        is => 'Text',
-        doc => 'The assembler to use.  Currently supported assemblers: '.join(', ', valid_assemblers()),
-    },
-    ],
     has_optional => [ 
     assembler_params => {
         is => 'Text',
@@ -22,10 +16,22 @@ class Genome::Model::Tools::AmpliconAssembly::Assemble{
     },
     ],
 };
+#< Helps >#
+sub help_detail {
+    return <<EOS;
+Assembles the amplicons in an amplicon assembly with the given assembler and assembler parameters (assembler_params).  Currently supported assemblers are: .  The assembler parameters should be a string that would normally be used for a command line program.  Encapsulate the string in qoutes, and list attributes with a minus (-) sign followed by a space, and then the values.  See synopsis for examples.  See above for supported assemblers.
+EOS
+}
 
-#< Assemblers >#
-sub valid_assemblers {
-    return (qw/ phred_phrap /);
+sub help_synopsis {
+    return join(
+        "\n", 
+        map { $_[0]->command_name.' '.$_ }
+        (
+            "--directory . --assembler phredphrap --assembler-params '-'",
+
+        )
+    );
 }
 
 #< Command >#
@@ -34,18 +40,6 @@ sub create {
 
     my $self = $class->SUPER::create(@_)
         or return;
-
-    unless ( $self->assembler ) {
-        $self->error_message('No assembler given');
-        $self->delete;
-        return;
-    }
-
-    unless ( grep { $self->assembler eq $_ } valid_assemblers() ) {
-        $self->error_message('Invalid assembler: '.$self->assembler);
-        $self->delete;
-        return;
-    }
 
     unless ( $self->_get_hashified_assembler_params ) {
         # this may not be necessary for all assemblers, but handle that later
@@ -68,12 +62,19 @@ sub execute {
         $self->$method($amplicon)
             or return;
     }
+    
+    $self->status_message(
+        sprintf(
+            'Successfully assembled amplicon assembly with "%s."',
+            $self->assembler,
+        )
+    );
 
     return 1;
 }
 
 #< Assembling >#
-sub _assemble_amplicon_with_phred_phrap {
+sub _assemble_amplicon_with_phredphrap {
     my ($self, $amplicon) = @_;
 
     my $fasta_file = $amplicon->processed_fasta_file;

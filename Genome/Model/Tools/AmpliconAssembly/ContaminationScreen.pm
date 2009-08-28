@@ -31,20 +31,21 @@ class Genome::Model::Tools::AmpliconAssembly::ContaminationScreen {
     ],
 };
 
+#< Helps >#
 sub help_brief {
     return 'Run contamnation screen on amplicon assembly reads'
 }
 
-sub help_synopsis {
-    return <<"EOS"
-EOS
-}
-
 sub help_detail {                           
     return <<EOS 
+This command will run contamination screening on an amplicon assembly's data.  It can optionally remove the contaminates from the amplicon assembly, putting them in the screen directory of the amplicon assembly.
 EOS
 }
 
+sub help_synopsis {
+}
+
+#< Command >#
 sub create {
     my $class = shift;
     

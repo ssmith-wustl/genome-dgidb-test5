@@ -8,6 +8,17 @@ use Genome;
 class Genome::Model::Tools::AmpliconAssembly::Orient {
     is => 'Genome::Model::Tools::AmpliconAssembly',
 };
+#< Helps >#
+sub help_detail {
+    return <<EOS;
+This command will orient successful assembled amplicons ( > 2 reads, > 1150 bps ) using the RDP classification output.
+EOS
+}
+
+sub help_synopsis {
+}
+
+#< Command >#
 
 sub execute {
     my $self = shift;

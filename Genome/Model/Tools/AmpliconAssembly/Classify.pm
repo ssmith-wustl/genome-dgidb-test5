@@ -12,6 +12,18 @@ class Genome::Model::Tools::AmpliconAssembly::Classify {
     # TODO classifier and params
 };
 
+#< Helps >#
+sub help_detail {
+    return sprintf(
+        'Classifies successfully assembled amplicons (%s) using RDP.',
+        Genome::AmpliconAssembly->successfully_assembled_requirements_as_string,
+    );
+}
+
+sub help_synopsis {
+}
+
+#< Command >#
 sub execute {
     my $self = shift;
 
