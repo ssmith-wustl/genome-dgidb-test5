@@ -298,11 +298,14 @@ sub import_objects_from_external_db
             #Periodically commit to files so we don't run out of memory
             
             $self->write_log_entry($count, \@transcripts, \@sub_structures, \@genes, \@proteins);
-            $self->dump_sub_structures();
+
+            $self->dump_sub_structures(0); #arg added for pre/post commit notation
 
             $self->status_message( "committing...($count)");
             UR::Context->commit;
             $self->status_message("finished commit!");
+            
+            $self->dump_sub_structures(1);
             
             #reset logging arrays
             @transcripts = ();
