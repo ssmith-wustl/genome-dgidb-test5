@@ -21,6 +21,9 @@ class Genome::Model::Tools::Snp::Intersect {
         delimiter2          => { is => 'Text', default_value => '\s+', },
         headers1            => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'file 1 has n header lines' },
         headers2            => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'file 2 has n header lines' },
+        _only_in_f1         => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'number only in file 1'},
+        _only_in_f2         => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'number only in file 2'},
+        _intersection       => { is => 'Integer', default_value => 0, is_optional=>1, doc => 'number intersected'},
     ],
     doc => "intersect two snp lists by position, with optional genotype overlap detail"
 };
@@ -193,7 +196,7 @@ sub execute {
 
     no warnings;
     my ($v1,$c1,$p1,$r1,$g1,@t1);
-    sub getf1() {
+    my $getf1 = sub {
         $v1 = $h1->getline;
         chomp($v1);
         if (defined $v1) {
@@ -203,10 +206,10 @@ sub execute {
         else {
             $c1 = undef;
         }
-    }
+    };
 
     my ($v2,$c2,$p2,$r2,$g2,@t2);
-    sub getf2() {
+    my $getf2 = sub {
         $v2 = $h2->getline;
         chomp($v2);
         if (defined $v2) {
@@ -216,7 +219,7 @@ sub execute {
         else {
             $c2 = undef;
         }
-    }
+    };
     use warnings;
 
     my $format = $self->format || 'default';
@@ -258,7 +261,7 @@ sub execute {
     while ($headers_count) {
         $DB::single=1;
         if ($headers1) {
-            getf1();
+            $getf1->();
             $headers1--;
             #print "got1\n";
         }
@@ -267,7 +270,7 @@ sub execute {
             @t1 = ();
         }
         if ($headers2) {
-            getf2();
+            $getf2->();
             $headers2--;
             #print "got2\n";
         }
@@ -281,8 +284,8 @@ sub execute {
         $headers_count--;
     }
 
-    getf1();
-    getf2();
+    $getf1->();
+    $getf2->();
     while ($v1 or $v2) {
         # compare chromosomes
         no warnings;
@@ -303,23 +306,30 @@ sub execute {
         if (($cc == -1) or ($cc == 0 and $p1 < $p2)) {
             $n1++;
             $printer->($x1,$c1,$p1,$r1,$g1,\@t1) if $x1;
-            getf1();
+            $getf1->();
         }
         elsif ($cc == 1 or ($cc == 0 and $p2 < $p1)) {
             $n2++;
             $printer->($x2,$c2,$p2,$r2,$g2,\@t2) if $x2;
-            getf2();
+            $getf2->();
         }
         elsif ($cc == 0 and $p1 == $p2) {
             $ni++;
             $printer->($xi,$c1,$p1,$r1,$g1,\@t1,$r2,$g2,\@t2) if $xi;
-            getf1();
-            getf2();
+            $getf1->();
+            $getf2->();
         }
         else {
             die "$v1\n$v2\n";
         }
     }
+
+    $h1->close;
+    $h2->close;
+
+    $self->_only_in_f1($n1);
+    $self->_only_in_f2($n2);
+    $self->_intersection($ni);
     print STDERR "$f1 only:\t$n1\n";
     print STDERR "$f2 only:\t$n2\n";
     print STDERR "intersection:\t$ni\n";
