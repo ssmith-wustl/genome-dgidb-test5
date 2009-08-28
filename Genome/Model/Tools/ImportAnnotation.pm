@@ -8,7 +8,7 @@ use IO::File;
 use Data::Dumper;
 
 my $low=200000;
-my $high=500000;
+my $high=600000;
 UR::Context->object_cache_size_highwater($high);
 UR::Context->object_cache_size_lowwater($low);
 
@@ -255,14 +255,20 @@ sub write_log_entry{
 
 sub dump_sub_structures{
     my $self = shift;
+    my ($commited) = @_; #indicates if we are dumping status pre or post commit
     my $dump_fh = IO::File->new(">> ". $self->dump_file);
     return unless $dump_fh;
-    my %hash = map { $_ => scalar(keys %{$UR::Context::all_objects_loaded->{$_}}) }
-    qw( Genome::TranscriptSubStructure
-    );
+    if ($commited){
+        print "POST COMMIT UR CACHE INFO:\n";
+    }elsif ($commited = 0){
+        print "POST COMMIT UR CACHE INFO:\n";
+    }
+    my %hash = ( $_ => scalar(keys %{$UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}}) );
+    my @ss_sample = map { $UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}->{$_}} @{keys %{$UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}}}[0..4];
     my $objects_loaded = $UR::Context::all_objects_cache_size;
     $dump_fh->print("all_objects_cache_size: $objects_loaded\n");
     $dump_fh->print(Dumper \%hash);
+    $dump_fh->print("substructure samples:\n".Dumper \@ss_sample);
     $dump_fh->print("\n#########################################\n#######################################\n\n");
 }
 
