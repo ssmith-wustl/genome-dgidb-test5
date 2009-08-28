@@ -32,6 +32,7 @@ sub invalid_params_for_test_class {
     return (
         sequencing_center => 'washu',
         sequencing_platform => '373',
+        assembler => 'consed',
     );
 }
 
@@ -132,6 +133,22 @@ sub test03_reads : Tests {
     return 1;
 }
 
+sub test04_succesful_assembly_reqs : Tests(3) {
+    my $self = shift;
+
+    my $length = $self->test_class->successfully_assembled_length;
+    is($length, 1150, 'Successfully assembled length');
+    my $cnt = $self->test_class->successfully_assembled_read_count;
+    is($cnt, 2, 'Successfully assembled read count');
+    is(
+        $self->test_class->successfully_assembled_requirements_as_string,
+        "length >= $length, reads >= $cnt",
+        'Successfully assembled reqs string',
+    );
+
+    return 1;
+}
+
 sub test03_files {#: Tests {
     my $self = shift;
 
@@ -141,6 +158,7 @@ sub test03_files {#: Tests {
 }
 
 ###########################################################################
+
 
 package Genome::Model::Tools::AmpliconAssembly::TestBase;
 
@@ -173,7 +191,7 @@ sub should_copy_traces { 1 }
 sub should_copy_edit_dir { 1 }
 sub _pre_execute { 1 }
 
-sub test_01_copy_data : Tests {
+sub test01_copy_data : Tests {
     my $self = shift;
 
     if ( $self->should_copy_traces ) {
@@ -199,7 +217,7 @@ sub test_01_copy_data : Tests {
     return 1;
 }
 
-sub test_02_execute : Test(2) {
+sub test02_execute : Test(2) {
     my $self = shift;
 
     ok($self->_pre_execute, 'Pre Execute')
@@ -227,15 +245,9 @@ sub test_class {
     return 'Genome::Model::Tools::AmpliconAssembly::Assemble';
 }
 
-sub _params_for_test_class {
-    return (
-        assembler => 'phred_phrap',
-    );
-}
-
 sub invalid_params_for_test_class {
     return (
-        assembler => 'consed',
+        assembler_params => 'u-n-p-a-r-s able 00',
     );
 }
 sub _pre_execute {
@@ -253,7 +265,7 @@ sub _pre_execute {
     return 1;
 }
 
-sub test_03_verify : Test(1) {
+sub test03_verify : Test(1) {
     my $self = shift;
 
     my $amplicons = $self->amplicons;
@@ -294,7 +306,7 @@ sub _pre_execute {
     return 1;
 }
 
-sub test_03_verify : Test(1) {
+sub test03_verify : Test(1) {
     my $self = shift;
 
     my $amplicons = $self->amplicons;
@@ -349,7 +361,7 @@ sub _pre_execute {
     return 1;
 }
 
-sub test_03_verify : Test(2) {
+sub test03_verify : Test(2) {
     my $self = shift;
 
     # screen file
@@ -386,7 +398,7 @@ sub test_class {
     return 'Genome::Model::Tools::AmpliconAssembly::Collate';
 }
 
-sub test_03_verify : Test(2) {
+sub test03_verify : Test(2) {
     my $self = shift;
 
     my $collate = $self->{_object};
@@ -432,7 +444,7 @@ sub _pre_execute {
     return 1;
 }
 
-sub test_03_verify : Test(2) {
+sub test03_verify : Test(2) {
     my $self = shift;
 
     my $amplicons = $self->amplicons;
@@ -440,6 +452,34 @@ sub test_03_verify : Test(2) {
     is($fasta_cnt, @$amplicons, 'Verified - Created oriented fasta for each amplicon');
     my $qual_cnt = grep { -s $_->oriented_qual_file } @$amplicons;
     is($qual_cnt, @$amplicons, 'Verified - Created oriented qual for each amplicon');
+    
+    return 1;
+}
+
+###########################################################################
+
+package Genome::Model::Tools::AmpliconAssembly::PrepareData::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Tools::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Tools::AmpliconAssembly::PrepareData';
+}
+
+sub should_copy_edit_dir { return; }
+
+sub test03_verify : Test(1) {
+    my $self = shift;
+
+    my $amplicons = $self->amplicons;
+    my $fasta_cnt = grep { -s $_->fasta_file } @$amplicons;
+    is($fasta_cnt, @$amplicons, 'Verified - Created fasta for each amplicon');
     
     return 1;
 }
@@ -499,7 +539,7 @@ sub _pre_execute {
     return 1;
 }
 
-sub test_03_verify : Test(1) {
+sub test03_verify : Test(1) {
     my $self = shift;
 
     my $amplicons = $self->amplicons;
@@ -517,7 +557,203 @@ sub test_03_verify : Test(1) {
     return 1;
 }
 
-###########################################################################
+############################################################################
+
+package Genome::Model::Tools::AmpliconAssembly::Report::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Tools::AmpliconAssembly::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Model::Tools::AmpliconAssembly::Report';
+}
+
+sub _params_for_test_class {
+    return (
+        report => 'stats',
+        report_params => '-assembly_size 1400',
+        report_directory => $_[0]->tmp_dir,
+        save_report => 1,
+        save_datasets => 1,
+        #print_report => 1,
+        print_dataset => 'stats',
+    );
+}
+
+sub invalid_params_for_test_class {
+    return (
+        report => 'none',
+    );
+}
+
+sub test03_verify : Tests(3) {
+    my $self = shift;
+
+    my $dir = $self->tmp_dir;
+    ok(-s $dir.'/Stats/report.xml', 'Report XML');
+    ok(-s $dir.'/Stats/stats.csv', 'Stats dataset');
+    ok(-s $dir.'/Stats/qualities.csv', 'Qualities dataset');
+    #print "$dir\n"; <STDIN>;
+    
+    return 1;
+}
+
+###########
+# Reports #
+###########
+
+package Genome::AmpliconAssembly::Report::TestBase;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::TestBase';
+
+use Data::Dumper 'Dumper';
+require Genome::Model::Test;
+use Test::More;
+
+sub generator {
+    return $_[0]->{_object};
+}
+
+sub report_name {
+    my $self = shift;
+
+    my ($pkg) = $self->test_class =~ m/Genome::Model::AmpliconAssembly::Report::(\w+)$/;
+
+    return 'Test '.$pkg.' Report',
+}
+
+sub params_for_test_class {
+    return (
+        amplicon_assemblies => [ $_[0]->mock_model->last_succeeded_build->amplicon_assembly ],
+        $_[0]->_params_for_test_class,
+    );
+}
+
+sub _params_for_test_class {
+    return;
+}
+
+sub mock_model {
+    my $self = shift;
+
+    unless ( $self->{_mock_model} ) {
+        $self->{_mock_model} = Genome::Model::Test->create_mock_model(
+            type_name => 'amplicon assembly',
+            use_mock_dir => 1,
+        );
+    }
+    
+    return $self->{_mock_model};
+}
+
+sub test01_generate_report : Test(2) {
+    my $self = shift;
+
+    can_ok($self->generator, '_generate_data');
+
+    my $report = $self->generator->generate_report;
+    ok($report, 'Generated report');
+    #print Dumper([map{$report->$_} (qw/ name description date generator /)]);
+    $report->save('/gscuser/ebelter/Desktop', 1);
+
+    return 1;
+}
+
+######################################################################
+
+package Genome::AmpliconAssembly::Report::Stats::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::AmpliconAssembly::Report::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    'Genome::AmpliconAssembly::Report::Stats';
+}
+
+sub _params_for_test_class {
+    return (
+        assembly_size => 1400,
+    );
+}
+
+sub invalid_params_for_test_class {
+    return (
+        assembly_size => -1400,
+    );
+}
+
+sub test02_position_quality_stats : Tests(2) {
+    my $self = shift;
+
+    my $qual = $self->{_object}->get_position_quality_stats;
+    #print Dumper($qual->{position_qualities});
+    ok($qual, 'Quality stats');
+    is(scalar(keys %{$qual->{position_qualities}}), 3, 'Read counts');
+
+    return 1;
+}
+
+sub test03_assembly_stats : Tests(1) {
+    my $self = shift;
+
+    my $stats = $self->{_object};
+    my $assembly_stats = $stats->get_assembly_stats;
+    #print Dumper($assembly_stats);
+    is_deeply(
+        $assembly_stats, {
+            headers => [qw/ assembled assemblies-with-3-reads assemblies-with-5-reads assemblies-with-6-reads assembly-success attempted length-average length-maximum length-median length-minimum quality-base-average quality-less-than-20-bases-per-assembly reads reads-assembled reads-assembled-average reads-assembled-maximum reads-assembled-median reads-assembled-minimum reads-assembled-success /],
+            stats => [qw/ 5 3 1 1 100.00 5 1399 1413 1396 1385 62.75 1349.80 30 20 4.00 6 3 3 66.67 /],
+        },
+        'Assembly stats',
+    );
+
+    return 1;
+}
+
+sub test04_none_attempted : Tests(2) {
+    my $self = shift;
+
+    my $stats = $self->{_object};
+    $stats->{_metrix}->{assembled} = 0;
+    my $assembly_stats = $stats->get_assembly_stats;
+    is_deeply(
+        $assembly_stats, {
+            headers => [qw/ assembled attempted assembly-success /],
+            stats => [qw/ 0 5 0.00 /],
+        },
+        'Assembly stats w/ none assembled',
+    );
+
+    my $qual = $stats->get_position_quality_stats;
+    ok($qual, 'Position quality stats w/ none assembled');
+
+    return 1;
+}
+
+sub test05_none_attempted : Tests(1) {
+    my $self = shift;
+
+    my $stats = $self->{_object};
+    $stats->{_metrix}->{attempted} = 0;  
+    ok(!$stats->get_assembly_stats, 'Failed as expected - no assemblies attempted');
+    
+    return 1;
+}
+
+######################################################################
 
 1;
 
@@ -527,7 +763,7 @@ sub test_03_verify : Test(1) {
 
 =head1 Disclaimer
 
- Copyright (C) 2006 Washington University Genome Sequencing Center
+ Copyright (C) 2009 Washington University Genome Sequencing Center
 
  This script is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
