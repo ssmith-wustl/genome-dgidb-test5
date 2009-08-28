@@ -5,8 +5,6 @@ use warnings;
 
 use DBI;
 use Genome;
-use IO::File;
-use Tie::File;
 use Bio::SeqIO;
 use File::Temp;
 use Date::Format;
@@ -74,7 +72,9 @@ sub help_detail {
     return <<EOS
 If give "-amos_file yes" option to run velvetg, velvet will generate velvet_asm.afg 
 file that contains all contigs/reads assembly/alignment info. This tool will convert 
-those info into acefile so assembly can be viewed/edited by using consed.
+those info into acefile so assembly can be viewed/edited by using consed. Based on the
+current setting, this tool can handle up to 25 million reads dataset with -sqlite-yes
+option
 EOS
 }
 
@@ -112,8 +112,6 @@ sub execute {
     my $self = shift;
     
     my $time   = $self->time || localtime;
-    my $out    = IO::File->new('>'.$self->out_acefile) or die "can't write to out_acefile\n";
-    my $writer = GSC::IO::Assembly::Ace::Writer->new($out);
     my $dbh    = $self->_dbh if $self->sqlite_yes;
     
     my $seqinfo  = {};
@@ -154,8 +152,11 @@ sub execute {
     $seq_fh->close;
     
     my $afg_file = $self->afg_file;
-    my $afg_fh   = IO::File->new($afg_file) or die "can't open $afg_file\n";
-    
+    my $afg_fh   = Genome::Utility::FileSystem->open_file_for_reading($afg_file) or return;
+    my $out_ace  = $self->out_acefile;
+    my $out      = Genome::Utility::FileSystem->open_file_for_writing($out_ace) or return;
+    my $writer   = GSC::IO::Assembly::Ace::Writer->new($out);
+
     while (my $record = getRecord($afg_fh)){
         my ($rec, $fields, $recs) = parseRecord($record);
         my $nseqs = 0;
@@ -316,7 +317,7 @@ sub execute {
     }#While loop
     $afg_fh->close;
     #$seq_fh->close;
-    $self->status_message("There are total $nContigs contigs processed");
+    $self->status_message("There are total $nContigs contigs and $nReads reads processed");
     
     $writer->write_object({
         type     => 'assembly_tag',
@@ -326,11 +327,36 @@ sub execute {
         data     => "Run by $ENV{USER}\n",
     });
     $out->close;
+
+    my $tmp_ace = $out_ace . '.tmp';
     
-    tie(my @lines, 'Tie::File', $self->out_acefile);
-    unshift @lines, sprintf('AS %d %d', $nContigs, $nReads);
-    untie(@lines);
+    my $rv = Genome::Utility::FileSystem->shellcmd(
+        cmd => "mv $out_ace $tmp_ace",
+        output_files => [$tmp_ace],
+        skip_if_output_is_present => 0,
+    );
     
+    unless ($rv == 1) {
+        $self->error_message('Failed to mv ace file to ace.tmp');
+        return;
+    }
+    
+    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($out_ace) or return;
+    $out_fh->print("AS $nContigs $nReads\n");
+    $out_fh->close;
+    
+    $rv = Genome::Utility::FileSystem->shellcmd(
+        cmd => "cat $tmp_ace >> $out_ace",
+        output_files => [$out_ace],
+        skip_if_output_is_present => 0,
+    );
+
+    unless ($rv == 1) {
+        $self->error_message('Failed to cat ace header line to acefile');
+        return;
+    }
+
+    unlink $tmp_ace;    
     return 1;
 }
 
