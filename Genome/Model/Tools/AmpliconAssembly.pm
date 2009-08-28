@@ -5,8 +5,6 @@ use warnings;
 
 use Genome;
 
-require Genome::AmpliconAssembly;
-
 class Genome::Model::Tools::AmpliconAssembly {
     is => 'Command',
     is_abstract => 1,
@@ -18,8 +16,11 @@ class Genome::Model::Tools::AmpliconAssembly {
 
 #< Helps >#
 sub help_brief {
-    return 'Work with amplicon assemblies';
+    return ucfirst(join(' ', split('-', $_[0]->command_name_brief))).' amplicon assemblies';
 }
+
+sub help_synopsis {
+};
 
 #< UR >#
 sub create {
@@ -28,11 +29,10 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
 
-    $self->amplicon_assembly
-        or die;
-    
-    $self->amplicon_assembly->create_directory_structure
-        or return;
+    unless ( $self->amplicon_assembly ) {
+        $self->error_message("Can't get amplicon assembly with given parameters. See above error.");
+        return;
+    }
 
     return $self;
 }
@@ -42,12 +42,15 @@ sub amplicon_assembly {
     my $self = shift;
 
     unless ( $self->{_amplicon_assembly} ) {
-        $self->{_amplicon_assembly} = Genome::AmpliconAssembly->create(
+        my $amplicon_assembly = Genome::AmpliconAssembly->create(
             directory => $self->directory,
             sequencing_center => $self->sequencing_center,
             sequencing_platform => $self->sequencing_platform,
             subject_name => $self->subject_name,
-        );
+        ) or return;
+        $amplicon_assembly->create_directory_structure
+            or return;
+        $self->{_amplicon_assembly} = $amplicon_assembly;
     }
 
     return $self->{_amplicon_assembly};
