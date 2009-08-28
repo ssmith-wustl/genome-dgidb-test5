@@ -47,7 +47,32 @@ sub transform_report {
         content => $stylesheet->output_string($transformed_xml),
         encoding => $stylesheet->output_encoding,
         media_type => $stylesheet->media_type,
+        output_type => $class->_determine_output_type($stylesheet->media_type),
     };
+}
+
+sub _determine_output_type {
+    my ($class, $media_type) = @_;
+
+    if ( not defined $media_type ) {
+        $class->error_message("No media type given to convert to output type");
+        return '',
+        #die instead??
+    }
+    if ( $media_type eq 'text/plain' ) {
+        return 'txt';
+    }
+    elsif ( $media_type eq 'text/html' ) {
+        return 'html';
+    }
+    elsif ( $media_type =~ /xml/ ) {
+        return 'xml';
+    }
+    else {
+        $class->error_message("Unknown media type to convert to output type: $media_type");
+        return '';
+        #die instead??
+    }
 }
 
 1;
