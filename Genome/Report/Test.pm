@@ -365,95 +365,7 @@ sub test_01_generate_report : Test(1) {
 
 #######################################################################
 
-package Genome::Utility::IO::HtmlTableWriterTest;
-
-use strict;
-use warnings;
-
-use base 'Genome::Utility::TestBase';
-
-use Data::Dumper 'Dumper';
-use File::Compare 'compare';
-use Test::More;
-use Storable 'retrieve';
-
-sub svw {
-    return $_[0]->{_object};
-}
-
-sub test_class_sub_dir {
-    return 'Genome-Utility-IO';
-}
-
-sub test_class {
-    return 'Genome::Utility::IO::HtmlTableWriter';
-}
-
-sub params_for_test_class {
-    my $self = shift;
-    return (
-        headers => $self->_headers,
-        output => $self->dir.'/myalbums.html',
-        #output => $self->tmp_dir.'/albums.html',
-    );
-}
-
-sub required_attrs {
-    return (qw/ headers /);
-}
-
-sub _headers {
-    my $self = shift;
-
-    $self->_set_headers_and_rows unless $self->{_headers};
-
-    return $self->{_headers};
-}
-
-sub _rows {
-    my $self = shift;
-
-    $self->_set_headers_and_rows unless $self->{_headers};
-
-    return $self->{_rows};
-}
-
-sub _albums_csv {
-    return $_[0]->dir.'/albums.csv';
-}
-
-sub _set_headers_and_rows {
-    my $self = shift;
-
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $self->_albums_csv )
-        or die;
-    my $header_line = $fh->getline;
-    chomp $header_line;
-    $self->{_headers} = [ split(',', $header_line) ];
-    while ( my $line = $fh->getline ) {
-        chomp $line;
-        push @{$self->{_rows}}, [ split(',', $line) ];
-    }
-    
-    return 1;
-}
-
-sub test01_write_and_compare : Test(1) {
-    my $self = shift;
-
-    my $svw = $self->svw;
-    for my $row ( @{$self->_rows} ) {
-        $svw->write_one($row);
-    }
-
-    is(compare($svw->get_original_output, $self->_albums_csv, ), 0, 'Compared generated and files');
-
-    return 1;
-}
-
-#######################################################################
-
-package Genome::Report::XSLTTest;
+package Genome::Report::XSLT::Test;
 
 use strict;
 use warnings;
@@ -468,6 +380,10 @@ sub dir {
     return '/gsc/var/cache/testsuite/data/Genome-Report-XSLT';
 }
 
+sub xsl_file {
+    return $_[0]->dir.'/AssemblyStats.txt.xsl';
+}
+
 sub test01_transform_report : Test(7) {
     my $self = shift;
 
@@ -475,7 +391,7 @@ sub test01_transform_report : Test(7) {
     
     my $report = Genome::Report->create_report_from_directory($self->dir.'/Assembly_Stats')
         or die "Can't get report\n";
-    my $xslt_file = $self->dir.'/AssemblyStats.txt.xsl';
+    my $xslt_file = $self->xsl_file;
         
     #< Valid >#
     my $xslt = Genome::Report::XSLT->transform_report(
@@ -484,7 +400,7 @@ sub test01_transform_report : Test(7) {
     );
     ok($xslt, 'transformed report');
     ok($xslt->{content}, 'Content');
-    #print $xslt->content;
+    #print $xslt->{content};
     ok($xslt->{encoding}, 'Encoding');
     is($xslt->{media_type}, 'text/plain', 'Media type');
     
@@ -499,6 +415,141 @@ sub test01_transform_report : Test(7) {
         report => $report,
     );
     ok(!$no_xslt_file, "Failed as expected, w/o xslt file");
+
+    return 1;
+}
+
+sub test02_output_type : Tests(4) {
+    my $self = shift;
+
+    my %media_and_output_types = (
+        'application/xml' => 'xml',
+        'text/plain' => 'txt',
+        'text/html' => 'html',
+        rrrr => '',
+    );
+
+    for my $media_type ( keys %media_and_output_types ) {
+        is(
+            Genome::Report::XSLT->_determine_output_type($media_type), 
+            $media_and_output_types{$media_type},
+            "Media ($media_type) to output type ($media_and_output_types{$media_type})"
+        );
+    }
+
+    return 1;
+}
+
+#######################################################################
+
+package Genome::Report::Command::Test;
+
+use strict;
+use warnings;
+
+use base 'Test::Class';
+
+require Cwd;
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Report::Command';
+}
+
+sub test01_use : Test(1) {
+    my $self = shift;
+
+    use_ok( $self->test_class );
+
+    return 1;
+}
+ 
+#######################################################################
+
+package Genome::Report::Command::Xslt::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::TestBase';
+
+require Cwd;
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class {
+    return 'Genome::Report::Command::Xslt';
+}
+
+sub xslt_dir {
+    return Genome::Report::XSLT::Test->dir;
+}
+
+sub params_for_test_class {
+    return (
+        report_directory => $_[0]->xslt_dir.'/Assembly_Stats',
+        xsl_file => Genome::Report::XSLT::Test->xsl_file,
+    );
+}
+
+sub test01_execute : Test(3) {
+    my $self = shift;
+
+    my $cwd = Cwd::getcwd();
+    my $dir = $self->xslt_dir;
+    my $tmp_dir = $self->tmp_dir;
+    chdir $tmp_dir;
+
+    no warnings 'once';
+    local *Genome::Report::XSLT::transform_report = sub { # so we don't test this twice
+        my $content = <<EOS;
+            
+Summary for Amplicon Assembly Model (Name:  Build Id:)
+
+------------------------
+Stats
+------------------------
+
+Attempted
+Assembled 5
+Assembly Success 100.00%
+
+Length Average 1399
+Length Median 1396
+Length Maximum 1413
+Length Minimum 1385
+
+Quality Base Average 62.75
+Quality >= 20 per Assembly 1349.80
+
+Reads Assembled 20
+Reads Total 30
+Reads Assembled Success 66.67%
+Reads Assembled Average 4.00
+Reads Assembled Median 3
+Reads Assembled Maximum 6
+Reads Assembled Minimum 3
+
+------------------------
+
+For full report, including quality hisotgram go to:
+http://
+
+EOS
+        return { 
+            mediat_type => 'text/plain',
+            output_type => 'txt',
+            content => $content,
+        };
+    };
+    
+    my $xslt = $self->{_object};
+    ok($xslt->execute, 'Execute');
+    ok(-e $xslt->output_file, 'Output file exists');
+    is($xslt->output_file, $tmp_dir.'/Assembly_Stats.txt', 'Correct output file name');
+    
+    chdir $cwd;
 
     return 1;
 }

@@ -7,7 +7,7 @@ use above "Genome";
 
 use Genome::Report::Test;
 
-Genome::Report::XSLTTest->runtests;
+Genome::Report::XSLT::Test->runtests;
 
 exit;
 
