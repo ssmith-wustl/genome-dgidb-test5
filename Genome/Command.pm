@@ -24,6 +24,7 @@ my @SUB_COMMANDS = qw/
     model                  
     tools
     disk
+    report
 /;
 
 our %SUB_COMMAND_CLASSES = 
