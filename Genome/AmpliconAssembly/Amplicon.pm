@@ -59,8 +59,18 @@ sub _fatal_msg {
     confess ref($self)." - ERROR: $msg\n";
 }
 
-sub successful_assembly_length {
+#< Successfully Assembled Reqs >#
+sub successful_assembly_length { successfully_assembled_length(@_); }
+sub successfully_assembled_length {
     return 1150;
+}
+
+sub successfully_assembled_read_count {
+    return 2;
+}
+
+sub successfully_assembled_requirements_as_string {
+    return 'length >= 1150, reads >= 2';
 }
 
 #< Basic Accessors >#
@@ -346,7 +356,7 @@ sub _get_bioseq_info_from_oriented_fasta {
         return;
     }
     # Check length
-    unless ( $fasta->length >= $self->successful_assembly_length ) {
+    unless ( $fasta->length >= $self->successfully_assembled_length ) {
         #print $self->get_name." is too short\n";
         #unlink $fasta_file;
         #unlink $self->oriented_qual_file;
@@ -404,7 +414,7 @@ sub get_successfully_assembled_contig_from_assembly {
     my $contigs = $assembly->contigs;
     my $contig;
     while ( $contig = $contigs->next ) {
-        next unless $contig->unpadded_length >= $self->successful_assembly_length;
+        next unless $contig->unpadded_length >= $self->successfully_assembled_length;
         next unless $contig->reads->count > 1;
         last;
     }
@@ -750,7 +760,7 @@ The methods get the file names
 
 =head1 Main Bioseq Methods
 
-The methods refer to the main bioseq methods, which when called we set the bioseq and it's properties.  These methods try to first get the oriented fasta/qual, but if that does not exist, the ace assembly will be used.  If the amplicon reads failed to assemble, or do not meet the successful_assembly_length, no bioseq info will be returned.
+The methods refer to the main bioseq methods, which when called we set the bioseq and it's properties.  These methods try to first get the oriented fasta/qual, but if that does not exist, the ace assembly will be used.  If the amplicon reads failed to assemble, or do not meet the successfully_assembled_length, no bioseq info will be returned.
 
 =head2 get_bioseq
 
@@ -943,7 +953,7 @@ The methods refer to the main bioseq methods, which when called we set the biose
 
 =head1 Misc
 
-=head2 successful_assembly_length
+=head2 successfully_assembled_length
 
 =over
 
