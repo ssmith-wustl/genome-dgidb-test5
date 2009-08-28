@@ -49,6 +49,7 @@ sub amplicon_assembly {
             directory => $self->data_directory,
             sequencing_center => $self->model->sequencing_center,
             sequencing_platform => $self->model->sequencing_platform,
+            assembler => $self->model->assembler,
             subject_name => $self->model->subject_name,
         );
     }
