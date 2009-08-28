@@ -5,20 +5,13 @@ use warnings;
 
 use Genome;
 
+use Carp 'confess';
 use Data::Dumper 'Dumper';
 require File::Copy;
 require Genome::Consed::Directory;
 require Genome::AmpliconAssembly::Amplicon;
 
-class Genome::AmpliconAssembly {
-    is => 'UR::Object',
-    has => [ 
-    __PACKAGE__->attributes,
-    ],
-};
-
-sub attributes {
-    return (
+my %ATTRIBUTES = (
     directory => {
         is => 'Text',
         doc => 'Base directory',
@@ -27,20 +20,78 @@ sub attributes {
         is => 'Text',
         is_optional => 1,
         default_value => __PACKAGE__->default_sequencing_center,
-        doc => 'Sequencing Center that the amplicons were sequenced.  Currently supported centers: '.join(', ', __PACKAGE__->valid_sequencing_centers).'.',
+        doc => 'Sequencing Center that the amplicons were sequenced.  Currently supported centers: '.join(', ', __PACKAGE__->valid_sequencing_centers).' (default: '.__PACKAGE__->default_sequencing_center.').',
     },
     sequencing_platform => {
         is => 'Text',
         is_optional => 1,
         default_value => __PACKAGE__->default_sequencing_platform,
-        doc => 'Platform upon whence the amplicons were sequenced.  Currently supported platforms: '.join(', ', __PACKAGE__->valid_sequencing_platforms).'.',
+        doc => 'Platform upon whence the amplicons were sequenced.  Currently supported platforms: '.join(', ', __PACKAGE__->valid_sequencing_platforms).' (default: '.__PACKAGE__->default_sequencing_platform.').',
+    },
+    assembler => {
+        is => 'Text',
+        is_optional => 1,
+        default_value => __PACKAGE__->default_assembler,
+        doc => 'The assembler to use.  Currently supported assemblers: '.join(', ', valid_assemblers()).' (default: '.__PACKAGE__->default_assembler.').',
+    },
+    assembly_size => { # amplicon_size
+        is => 'Integer',
+        is_optional => 1,
+        doc => 'Expected assembly size for an assembled amplicon.',
     },
     subject_name => {
         is => 'Text',
         is_optional => 1,
-        doc => 'Subject name.  Used as a identifier in combined fasta files and the like.',
+        doc => 'The subject name of the underlying data.  Used primarily in naming files (etc) that represent the entire amplicon assembly, like an assembled fasta of each amplicon.',
     },
 );
+
+#< UR >#
+class Genome::AmpliconAssembly {
+    is => 'UR::Object',
+    has => [ %ATTRIBUTES ],
+};
+
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_)
+        or return;
+
+    unless ( Genome::Utility::FileSystem->validate_existing_directory( $self->directory ) ) {
+        $self->delete;
+        return;
+    }
+
+    for my $attribute (qw/ sequencing_platform sequencing_center assembler /) {
+        unless ( $self->validate_attribute_value($attribute) ) {
+            $self->delete;
+            return;
+        }
+    }
+
+    $self->create_directory_structure
+        or return;
+
+    return $self;
+}
+
+#< Atributes >#
+sub attributes {
+    return %ATTRIBUTES;
+}
+
+sub attribute_names {
+    return keys %ATTRIBUTES;
+}
+
+sub get_attribute_for_name {
+    my ($class, $name) = @_;
+
+    confess "No attribute name given to get attribute" unless $name;
+    confess "No attribute found for name ($name)" unless exists $ATTRIBUTES{$name};
+
+    return $ATTRIBUTES{$name};
 }
 
 sub helpful_methods {
@@ -54,36 +105,33 @@ sub helpful_methods {
         /);
 }
 
-sub create {
-    my $class = shift;
+sub validate_attribute_value {
+    my ($self, $attribute) = @_;
 
-    my $self = $class->SUPER::create(@_)
-        or return;
-
-    unless ( Genome::Utility::FileSystem->validate_existing_directory( $self->directory ) ) {
-        $self->delete;
+    my $value = $self->$attribute;
+    unless ( defined $value ) { # all attrs have defaults, make sure it is set
+        $self->error_message("No value for $attribute given");
+        return;
+    }
+    
+    my $valid_values_method = 'valid_'.$attribute.'s';
+    unless ( grep { $value eq $_ } $self->$valid_values_method ) {
+        $self->error_message(
+            sprintf(
+                'Invalid %s %s. Valid %ss: %s',
+                $attribute,
+                $value,
+                $attribute,
+                join(', ',valid_sequencing_centers()),
+            )
+        );
         return;
     }
 
-    # Sequencing center
-    unless ( $self->validate_sequencing_center( $self->sequencing_center ) ) {
-        $self->delete;
-        return;
-    }
-
-    # Sequencing platform
-    unless ( $self->validate_sequencing_platform( $self->sequencing_platform ) ) {
-        $self->delete;
-        return;
-    }
-
-    $self->create_directory_structure
-        or return;
-
-    return $self;
+    return 1;
 }
 
-#< Sequencing Centers >#
+# Sequencing Centers
 sub valid_sequencing_centers {
     return (qw/ gsc broad /);
 }
@@ -92,25 +140,7 @@ sub default_sequencing_center {
     return (valid_sequencing_centers)[0];
 }
 
-sub validate_sequencing_center {
-    my ($self, $center) = @_;
-
-    unless ( defined $center ) {
-        $self->error_message("No sequencing center given.");
-        return;
-    }
-
-    unless ( grep { $_ eq $center } valid_sequencing_centers() ) {
-        $self->error_message(
-            "Invalid sequencing center: $center.  Valid centers: ".join(', ',valid_sequencing_centers())
-        );
-        return;
-    }
-    
-    return 1;
-}
-
-#< Sequencing Platforms >#
+# Sequencing Platforms
 sub valid_sequencing_platforms {
     return (qw/ sanger /);
 }
@@ -119,22 +149,13 @@ sub default_sequencing_platform {
     return (valid_sequencing_platforms)[0];
 }
 
-sub validate_sequencing_platform {
-    my ($self, $platform) = @_;
+# Assemblers
+sub valid_assemblers {
+    return (qw/ phredphrap /);
+}
 
-    unless ( defined $platform ) {
-        $self->error_message("No sequencing platform given.");
-        return;
-    }
-
-    unless ( grep { $_ eq $platform } valid_sequencing_platforms() ) {
-        $self->error_message(
-            "Invalid sequencing platform: $platform.  Valid platforms: ".join(', ',valid_sequencing_platforms())
-        );
-        return;
-    }
-
-    return 1;
+sub default_assembler {
+    return (valid_assemblers)[0];
 }
 
 #< DIRS >#
@@ -195,8 +216,7 @@ sub fasta_file_for_type {
     return sprintf(
         '%s/%s%s.fasta',
         $self->fasta_dir,
-        $self->subject_name.'.',
-        #( defined $self->subject_name ? $self->subject_name.'.' : '' ),
+        ( defined $self->subject_name ? $self->subject_name.'.' : '' ),
         $type,
     );
 }
