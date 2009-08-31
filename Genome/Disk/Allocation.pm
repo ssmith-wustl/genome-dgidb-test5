@@ -158,6 +158,16 @@ sub deallocate {
     return 1;
 }
 
+sub get_actual_disk_usage {
+    my $self = shift;
+    
+    my $allocator = $self->allocator;
+
+    my $kb = $allocator->get_actual_disk_usage;
+
+    return $kb;
+}
+
 1;
 
 

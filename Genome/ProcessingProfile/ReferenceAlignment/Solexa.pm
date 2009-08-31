@@ -52,6 +52,7 @@ sub variant_detection_job_classes {
 sub deduplication_job_classes {
     my @steps = ( 
         'Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries',
+        'Genome::Model::Command::Build::ReferenceAlignment::PostDedupReallocate',
     );
     return @steps;
 }
