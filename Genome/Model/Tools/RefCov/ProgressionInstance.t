@@ -26,12 +26,12 @@ my $progression_instance = Genome::Model::Tools::RefCov::ProgressionInstance->cr
     output_directory => $output_directory,
 );
 
-ok($progression_instance->execute(),'');
+ok($progression_instance->execute(),'execute command '. $progression_instance->command_name);
 
-ok (-s $progression_instance->stats_file,'');
+ok (-s $progression_instance->stats_file,'stats file has size');
 
 for my $size (qw/LARGE/) {
-    ok(-s $progression_instance->bias_basename .'_'. $size,'');
+    ok(-s $progression_instance->bias_basename .'_'. $size,'size fraction '. $size .' bias has size');
 }
 
 exit;
