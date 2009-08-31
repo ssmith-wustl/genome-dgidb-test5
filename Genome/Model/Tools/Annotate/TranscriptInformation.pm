@@ -34,21 +34,24 @@ class Genome::Model::Tools::Annotate::TranscriptInformation {
 	    is_optional  => 1,
 	    default => 0,
 	},
+
     ], 
 };
 
 
 sub help_brief {
     return <<EOS
-
-    gmt annotate transcript-information will print information about and transcript in the lastest version of annotation data in our database
-
-EOS  
+	gmt annotate transcript-information will print information about and transcript in the lastest version of annotation data in our database
+EOS
 }
 
 sub help_synopsis {
     return <<EOS
 	gmt annotate transcript-information -transcript NM_001024809
+
+	or for multiple transcripts, seperate each with a comma and if the trans-pos option is used the positions need to be in the order of the transcripts
+
+	gmt annotate transcript-information -transcript NM_001024809,NM_033238 -trans-pos 35752360,72113517
 EOS
 }
 
@@ -66,32 +69,55 @@ EOS
 }
 
 
-
 my ($transcript_info,$strand,$trans_pos_number_line,$chromosome,$post_pos_bases);
 sub execute {
 
     my $self = shift;
 
-    my $trans_pos = $self->trans_pos;
-    my $transcript = $self->transcript;
-    &get_transcript_info($self);
+    my $trans_poss = $self->trans_pos;
+    #my $transcript = $self->transcript;
+    my $transcripts = $self->transcript;
 
-    &get_transcript($self);
+    my @trans = split(/\,/,$transcripts);
+    my $n = 0;
     
-    if ($self->trans_pos) {
-	if ($trans_pos_number_line) {
-	    print qq(\n$trans_pos_number_line. There are $post_pos_bases coding bases left in $transcript after $trans_pos\n);
-	} else {
-	    print qq(\n$trans_pos was not located\n);
+    for my $transcript (@trans) {
+
+	if ($n > 0) { print qq(\n\n\n); }
+
+	my $trans_pos;
+	if ($trans_poss) {
+	    $trans_pos = (split(/\,/,$trans_poss))[$n];
+	}
+	$n++;
+	&get_transcript_info($self,$transcript,$trans_pos);
+	&get_transcript($self,$transcript,$trans_pos);
+
+	$transcript_info->{$transcript}->{-1}->{strand}=$strand;
+	
+	if ($self->trans_pos) {
+	    if ($trans_pos_number_line) {
+		print qq(\n$trans_pos_number_line. There are $post_pos_bases coding bases left in $transcript after $trans_pos\n);
+		
+		
+		$transcript_info->{$transcript}->{-1}->{post_pos_bases}=$post_pos_bases;
+		
+		
+	    } else {
+		$transcript_info->{$transcript}->{-1}->{trans_posid}="not_ided";
+		print qq(\n$trans_pos was not located\n);
+	    }
 	}
     }
+
+    return($transcript_info);
 }
 
 sub get_transcript {
     
-    my ($self) = @_;
-    my $transcript = $self->transcript;
-    my $trans_pos = $self->trans_pos;
+    my ($self,$transcript,$trans_pos) = @_;
+    #my $transcript = $self->transcript;
+    #my $trans_pos = $self->trans_pos;
     unless ($trans_pos) { $trans_pos = 0; }
 
     my $organism = $self->organism;
@@ -119,14 +145,14 @@ sub get_transcript {
     my $trans_pos_in_3utr=0;
     if ($strand eq "+1") {
 	foreach my $pos (sort {$a<=>$b} keys %{$transcript_info->{$transcript}}) {
-	    push(@positions,$pos);
+	    unless ($pos == -1) {push(@positions,$pos);}
 	}
     } else {
 	foreach my $pos (sort {$b<=>$a} keys %{$transcript_info->{$transcript}}) {
-	    push(@positions,$pos);
+	    unless ($pos == -1) {push(@positions,$pos);}
 	}
     }
-    my $pre_pos_bases;
+    my $pre_pos_bases = 0;
     for my $pos (@positions) {
 	my ($exon,$region) = split(/\,/,$transcript_info->{$transcript}->{$pos}->{exon});
 	my $frame = $transcript_info->{$transcript}->{$pos}->{frame};
@@ -139,6 +165,19 @@ sub get_transcript {
 	    $pre_pos_bases = $trans_pos_in;
 	    my ($trans_pos_n,$trans_pos_r)  =  split(/\,/,$trans_posid);
 	    $trans_pos_number_line = qq(The position $trans_pos_n was in an $trans_pos_r and is in or after $region $exon, frame $frame, base $base, amino_acid_numuber $aa_n, and falls after $trans_pos_in_5utr bases of 5prime UTR, $trans_pos_in bases of coding sequence and $trans_pos_in_3utr bases of 3prime UTR);
+
+	    $transcript_info->{$transcript}->{-1}->{trans_pos_n}=$trans_pos_n;
+	    $transcript_info->{$transcript}->{-1}->{trans_pos_r}=$trans_pos_r;
+	    $transcript_info->{$transcript}->{-1}->{region}=$region;
+	    $transcript_info->{$transcript}->{-1}->{exon}=$exon;
+	    $transcript_info->{$transcript}->{-1}->{frame}=$frame;
+	    $transcript_info->{$transcript}->{-1}->{base}=$base;
+	    $transcript_info->{$transcript}->{-1}->{aa_n}=$aa_n;
+	    $transcript_info->{$transcript}->{-1}->{trans_pos_in_5utr}=$trans_pos_in_5utr;
+	    $transcript_info->{$transcript}->{-1}->{trans_pos_in}=$trans_pos_in;
+	    $transcript_info->{$transcript}->{-1}->{trans_pos_in_3utr}=$trans_pos_in_3utr;
+	    $transcript_info->{$transcript}->{-1}->{trans_posid}=$trans_posid;
+
 	}
 
 	if ($region =~ /cds/) {
@@ -208,10 +247,11 @@ sub print_utr_seq {
 
 sub get_transcript_info {
 
-    my ($self) = @_;
-
-    my $transcript = $self->transcript;
-    my $trans_pos = $self->trans_pos;
+    my ($self,$transcript,$trans_pos) = @_;
+    #($transcript_info) = @_;
+    #my $self = shift;
+    #my $transcript = $self->transcript;
+    #my $trans_pos = $self->trans_pos;
     unless ($trans_pos) { $trans_pos = 0; }
 
     my $organism = $self->organism;
@@ -261,6 +301,8 @@ sub get_transcript_info {
     unless ($hugo_gene_name) {$hugo_gene_name = "unlisted";}
 
     print qq(Hugo gene name $hugo_gene_name, Gene Id $gene_id, Transcript name $transcript, Chromosome $chromosome, Strand $strand, Transcript status $transcript_status, Transcript source $source $build_source\n\n\n);
+
+    $transcript_info->{$transcript}->{-1}->{source_line} = qq(Hugo gene name $hugo_gene_name, Gene Id $gene_id, Transcript name $transcript, Chromosome $chromosome, Strand $strand, Transcript status $transcript_status, Transcript source $source $build_source);
 
     if (@substructures) {
 	#print qq($transcript $total_substructures  $strand  $chr $trans_pos\n);
@@ -364,9 +406,10 @@ sub get_transcript_info {
 	$transcript_info->{$transcript}->{$gcoord}->{aa_n}=$aa_n;
 	$transcript_info->{$transcript}->{$gcoord}->{base}=$base;
 	$transcript_info->{$transcript}->{$gcoord}->{range}=$range;
-	
+	$transcript_info->{$transcript}->{-1}->{exon_total}=$exon;
 	if ($frame eq "3") {$frame=0;$aa_n++;}
     }
+    #return($transcript_info);
 }
 
 
