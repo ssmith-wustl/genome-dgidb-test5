@@ -18,37 +18,59 @@ class Genome::Model::Tools::Annotate::TranslocationInformation {
 	    doc   =>  "provide a fasta contig for the translocation",
 	    is_optional  => 1,
 	},
+	organism => {
+	    is => 'String',
+	    doc   =>  "use this option if you're working with mouse",
+	    is_optional  => 1,
+	    default => 'human',
+	},
+	version => {
+	    type  =>  'String',
+	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
+	    is_optional  => 1,
+	    default => '54_36p',
+	},
+
     ], 
 };
 
         
-#sub sub_command_sort_position { 12 }
 
 sub help_brief {   
-         
+    return <<EOS
+	gt annotation translocation-information 
+EOS  
 }
 
 sub help_synopsis {
     return <<EOS
-gt annotation 
+	gt annotation translocation-information -breakdancer
+
+	or
+
+	gt annotation translocation-information -fasta
 EOS
 }
 
 sub help_detail { 
     return <<EOS 
 
+	you can use the -fasta option if there is anassembly fasta for your translocation
+	otherwise you can use the breakdancer output with the -breakdancer option
+	organsim mouse or human
 EOS
 }
 
 
 
 my ($bp1_chr,$bp1_pos,$bp2_chr,$bp2_pos,$np1_orientation,$np2_orientation,$name,$np1,$np2,$bp1_region,$bp2_region);
-my ($translocation_boundary,$annotation_info,$transcript_info,$translocation,$bp1_transcript,$bp2_transcript,$bp1exon_total,$bp2exon_total,$bp1_strand,$bp2_strand,$bp1_flip,$bp2_flip,$bp1_gene,$bp2_gene);
+my ($annotation_info,$transcript_info,$translocation,$bp1_transcript,$bp2_transcript,$bp1exon_total,$bp2exon_total,$bp1_strand,$bp2_strand,$bp1_flip,$bp2_flip,$bp1_gene,$bp2_gene);
 sub execute {
 
     my $self = shift;
     my $fasta = $self->fasta;
     my $breakdancer = $self->breakdancer;
+    my $organism = $self->organism;
 
     unless ($fasta && -e "$fasta" || $breakdancer) { 
 	print "Could not find an input file.\n";
@@ -71,8 +93,16 @@ sub execute {
 	#$name = "$bp1_chr\_$bp1_pos\-$bp2_chr\_$bp2_pos";
 	($name) = $fasta =~ /(\S+)\.fasta/;
 	my $blast_out = "$name.parsed.blast.out";
-	system qq(blastn /gscmnt/200/medseq/analysis/software/resources/B36/HS36.fa $fasta | blast2gll -s > $blast_out);
-	
+	my $blast_db;
+	if ($organism eq "human") {
+	    $blast_db = "/gscmnt/200/medseq/analysis/software/resources/B36/HS36.fa";
+	} else {
+	    $blast_db = "/gscmnt/200/medseq/analysis/software/resources/MouseB37/MS37.fa";
+	}
+
+	#system qq(blastn /gscmnt/200/medseq/analysis/software/resources/B36/HS36.fa $fasta | blast2gll -s > $blast_out);
+	system qq(blastn $blast_db $fasta | blast2gll -s > $blast_out);
+
 	my $alignment_locations = &parse_blast_out($blast_out,$bp1_chr,$bp1_pos,$bp2_chr,$bp2_pos);
 	
 	my ($np1_alignment,$np2_alignment);
@@ -101,10 +131,10 @@ sub execute {
 	} 
     }
     
-    my $np1_rb = &get_ref_base($np1,$np1,$bp1_chr);
+    my $np1_rb = &get_ref_base($np1,$np1,$bp1_chr,$organism);
     my ($rev_np1_rb) = &reverse_complement_allele ($np1_rb);
     
-    my $np2_rb = &get_ref_base($np2,$np2,$bp2_chr);
+    my $np2_rb = &get_ref_base($np2,$np2,$bp2_chr,$organism);
     my ($rev_np2_rb) = &reverse_complement_allele ($np2_rb);
     
     my $nbp1_chr = $bp1_chr;
@@ -152,8 +182,14 @@ sub execute {
     
     #my ($bp1exon_total,$bp2exon_total,$bp1_region,$bp2_region);
     #my $transcript_info;
-    &get_transcript_info;
-    
+
+    #&get_transcript_info;
+    #my ($transcript_info) = Genome::Model::Tools::Annotate::TranscriptInformation->get_transcript_info(transcript => $transcript, trans_pos => 72102220);
+    my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$bp1_transcript,$bp2_transcript", trans_pos => "$np1,$np2");
+    $transcript_info = $info->{result};
+    $bp1_region = $transcript_info->{$bp1_transcript}->{-1}->{region};
+
+
      $bp1_gene = $annotation_info->{$bp1_chr}->{$np1}->{gene};
      $bp1_strand = $annotation_info->{$bp1_chr}->{$np1}->{strand};
      ($bp1_flip) = &compare_orientations($bp1_strand,$np1_orientation);
@@ -195,10 +231,10 @@ sub execute {
 	my $side = "BP1";
 	my ($count) = &get_translocation($bp1_gene,$bp1_strand,$bp1_transcript,$base_count,$side,$bp1_flip);
 	$side = "BP2";
-	$translocation_boundary=$count;
+	#$translocation_boundary=$count;
 	&get_translocation($bp2_gene,$bp2_strand,$bp2_transcript,$count,$side,$bp2_flip);
 	my $regionside = "BP2";
-	&get_translocation_info($bp1_region,$bp2_region,$regionside);
+	&get_translocation_info($bp1_region,$bp2_region,$regionside,$organism);
 	
     }
     
@@ -212,10 +248,10 @@ sub execute {
 	my $side = "BP1";
 	my ($count) = &get_translocation($bp2_gene,$bp2_strand,$bp2_transcript,$base_count,$side,$bp2_flip);
 	$side = "BP2";
-	$translocation_boundary=$count;
+	#$translocation_boundary=$count;
 	&get_translocation($bp1_gene,$bp1_strand,$bp1_transcript,$count,$side,$bp1_flip);
 	my $regionside = "BP1";
-	&get_translocation_info($bp2_region,$bp1_region,$regionside);
+	&get_translocation_info($bp2_region,$bp1_region,$regionside,$organism);
     }
     
     if ($bp1_flip eq "NO" && $bp2_flip eq "YES") {  ##This needs to be tested
@@ -223,25 +259,25 @@ sub execute {
 	my $side = "BP1";
 	my ($count) = &get_translocation($bp1_gene,$bp1_strand,$bp1_transcript,$base_count,$side,$bp1_flip);
 	$side = "BP2";
-	$translocation_boundary=$count;
+	#$translocation_boundary=$count;
 	&get_translocation($bp2_gene,$bp2_strand,$bp2_transcript,$count,$side,$bp2_flip);
 	my $regionside = "BP2";
-	&get_translocation_info($bp1_region,$bp2_region,$regionside);
+	&get_translocation_info($bp1_region,$bp2_region,$regionside,$organism);
 	
 ###AND
 	
 	undef($translocation);
-	undef($translocation_boundary);
+	#undef($translocation_boundary);
 	
 	$base_count=0;
 	$count=0;
 	$side = "BP1";
 	($count) = &get_translocation($bp2_gene,$bp2_strand,$bp2_transcript,$base_count,$side,$bp2_flip);
 	$side = "BP2";
-	$translocation_boundary=$count;
+	#$translocation_boundary=$count;
 	&get_translocation($bp1_gene,$bp1_strand,$bp1_transcript,$count,$side,$bp1_flip);
 	$regionside = "BP1";
-	&get_translocation_info($bp2_region,$bp1_region,$regionside);
+	&get_translocation_info($bp2_region,$bp1_region,$regionside,$organism);
 	
 	
     }
@@ -251,9 +287,9 @@ sub execute {
 ##########################################
 
 sub get_translocation_info {
-
-    my ($region1,$region2,$regionside) = @_;
-
+    my $translocation_boundary;
+    my ($region1,$region2,$regionside,$organism) = @_;
+    my $bases_per_side=0;
     my $x = 0;
     my @translocation_dnaseq;
     
@@ -286,14 +322,14 @@ sub get_translocation_info {
 		if ($side eq "BP2") {
 		    if ($region1 =~ /cds/ && $region2 =~ /5_prime_untranslated/) {
 			my ($gpos,$strand) = split(/\:/,$base);
-			my $refbase = &get_ref_base($gpos,$gpos,$bp2_chr);
+			my $refbase = &get_ref_base($gpos,$gpos,$bp2_chr,$organism);
 			if ($strand eq "-1") { my $revrefbase = &reverse_complement_allele($refbase);$refbase=$revrefbase;}
 			$base = $refbase;
 		    }
 
 		    if ($region =~ /3_prime_untranslated/) {
 			my ($gpos,$strand) = split(/\:/,$base);
-			my $refbase = &get_ref_base($gpos,$gpos,$bp2_chr);
+			my $refbase = &get_ref_base($gpos,$gpos,$bp2_chr,$organism);
 			if ($strand eq "-1") { my $revrefbase = &reverse_complement_allele($refbase);$refbase=$revrefbase;}
 			$base = $refbase;
 		    }
@@ -301,8 +337,14 @@ sub get_translocation_info {
 	    }
 	    
 	    #my $trans_pos = $translocation->{$base_count}->{trans_pos};
+	    
 	    my $trans_pos = $translocation->{$n}->{trans_pos};
 	    if ($trans_pos) {
+		print OUT qq(bases to the break point $bases_per_side\n);
+		print qq(bases to the break point $bases_per_side\n);
+		$translocation_boundary = $bases_per_side;
+		$bases_per_side = 0;
+
 		my ($tpe,$tps) = split(/\,/,$trans_pos);
 		if ($tps eq "BP1" && $side eq "BP1" && $region1 =~ /cds/ && $region2 =~ /intron/ && $tpe == $exon) {
 		    $tps1_exon = $exon;
@@ -311,6 +353,7 @@ sub get_translocation_info {
 		    $tps2_exon = $exon;
 		}
 	    }
+
 	    if ($side eq "BP1" && $tps1_exon) {
 		if ($tps1_exon eq $exon) {
 		    $base = 1;
@@ -323,7 +366,8 @@ sub get_translocation_info {
 	    }
 	    
 	    unless ($base =~ /\d/) {
-		
+		$bases_per_side++;
+
 		if ($transcript eq $bp1_transcript) {
 		    $bp1exons->{$exon}=1;
 		    #if ($bp1_flip eq "YES") {
@@ -361,7 +405,9 @@ sub get_translocation_info {
 	    }
 	}
     }
-    
+
+    print OUT qq(bases from the break point $bases_per_side\n);
+    print qq(bases from the break point $bases_per_side\n);
     print qq(\n);
 
     my $translocation_seq = join '',@translocation_dnaseq;
@@ -372,22 +418,32 @@ sub get_translocation_info {
 #$transcript_info->{$bp1_transcript}->{$nbp1}->{trans_pos}
     
     print OUT qq(Breakpoint 1; Gene=>$bp1_gene Transcript=>$bp1_transcript Chromosome=>$bp1_chr Coordinate=>$np1 Region=>$bp1_region Incorporated exons =>{);
+    print qq(Breakpoint 1; Gene=>$bp1_gene Transcript=>$bp1_transcript Chromosome=>$bp1_chr Coordinate=>$np1 Region=>$bp1_region Incorporated exons =>{);
     foreach my $exon (sort {$a<=>$b} keys %{$bp1exons}) {
 	print OUT qq( $exon);
+	print qq( $exon);
     }
+    $bp1exon_total = $transcript_info->{$bp1_transcript}->{-1}->{exon_total};
     print OUT qq( } Total exons in the transcript =>$bp1exon_total\n);
-    
+    print qq( } Total exons in the transcript =>$bp1exon_total\n);
+
     print OUT qq(Breakpoint 2; Gene=>$bp2_gene Transcript=>$bp2_transcript Chromosome=>$bp2_chr Coordinate=>$np2 Region=>$bp2_region Incorporated exons =>{);
+    print qq(Breakpoint 2; Gene=>$bp2_gene Transcript=>$bp2_transcript Chromosome=>$bp2_chr Coordinate=>$np2 Region=>$bp2_region Incorporated exons =>{);
     foreach my $exon (sort {$a<=>$b} keys %{$bp2exons}) {
 	print OUT qq( $exon);
+	print qq( $exon);
     }
+    $bp2exon_total = $transcript_info->{$bp2_transcript}->{-1}->{exon_total};
     print OUT qq( } Total exons in the transcript =>$bp2exon_total\n);
+    print qq( } Total exons in the transcript =>$bp2exon_total\n);
     unless ($stopped_short == 0) {
 	print OUT qq(In translation, the transcript hit a stop codon $stopped_short bases before the end of $bp2_transcript\n);
+	print qq(In translation, the transcript hit a stop codon $stopped_short bases before the end of $bp2_transcript\n);
     }
     
     print OUT qq(\n\nHere is the new sequence that describes the translocation with the splice at base $translocation_boundary\n\>$name.nucleotide.seq\n$translocation_seq);
-    
+    print qq(\n\nHere is the new sequence that describes the translocation with the splice at base $translocation_boundary\n\>$name.nucleotide.seq\n$translocation_seq);
+
     
     my $looks;
     if (($protien_seq =~ /^M/) && ($protien_seq =~ /\*/)) {
@@ -396,14 +452,20 @@ sub get_translocation_info {
 	$looks = "The protien represented by $name either doesn't start with a Methionine or doesn't have a stop codon";
     }
     print OUT  qq(\n\n$looks\nHere is the protien sequence\n>$name.protien.seq\n$protien_seq\n\n);
-    
+    print qq(\n\n$looks\nHere is the protien sequence\n>$name.protien.seq\n$protien_seq\n\n);
+
     
     print OUT qq($bp1_gene $bp1_transcript flipped $bp1_flip gene strand $bp1_strand, alignment strand $np1_orientation. 
 $bp2_gene $bp2_transcript flipped $bp2_flip gene strand $bp2_strand, alignment strand $np2_orientation.\n);
     
+    print qq($bp1_gene $bp1_transcript flipped $bp1_flip gene strand $bp1_strand, alignment strand $np1_orientation. 
+$bp2_gene $bp2_transcript flipped $bp2_flip gene strand $bp2_strand, alignment strand $np2_orientation.\n);
     
     my $y = $x/3;
     print OUT qq(\nthe new transcript has $x bases and $y amino acids\n\n);
+    print qq(\nthe new transcript has $x bases and $y amino acids\n\n);
+
+
 }
 
 
@@ -413,122 +475,78 @@ sub get_translocation {
     my ($gene,$strand,$transcript,$base_count,$side,$flip) = @_;
     
     #if (($strand eq "+1" && $flip eq "NO") || ($strand eq "-1" && $flip eq "YES")) {
+
+    my (@positions);
+
     if ($strand eq "+1") {
 	foreach my $pos (sort {$a<=>$b} keys %{$transcript_info->{$transcript}}) {
-	    my ($exon,$region) = split(/\,/,$transcript_info->{$transcript}->{$pos}->{exon});
-	    my $frame = $transcript_info->{$transcript}->{$pos}->{frame};
-	    my $aa_n = $transcript_info->{$transcript}->{$pos}->{aa_n};
-	    my $base = $transcript_info->{$transcript}->{$pos}->{base};
-	    my ($trans_pos) = $transcript_info->{$transcript}->{$pos}->{trans_pos};
-	    #my ($trans_pos,$region) = split(/\,/,$transcript_info->{$transcript}->{$pos}->{trans_pos});
-	    
-	    if ($trans_pos) {
-		unless ($trans_pos =~ /intron/) {
-		    if ($side eq "BP2") {
-			$resume = 1;
-			($bp2_region) = $trans_pos =~ /\S+\,(\S+)/;
-			$translocation->{$base_count}->{trans_pos}="$exon,BP2";
-
-			#$bp2_region = $region;
-		    }
-		}
-	    }
-	    if ($side eq "BP2") {
-		if ($resume) {
-
-		    #unless ($trans_pos =~ /utr/) {
-		    #print qq($gene $transcript $exon $frame $aa_n $base $pos $bp2_chr\n);
-		    $base_count++;
-		    $translocation->{$base_count}->{base}=$base;
-		    $translocation->{$base_count}->{transcript}=$transcript;
-		    $translocation->{$base_count}->{exon}="$exon,$region,BP2";
-		    #$translocation->{$base_count}=$base;
-		    #}
-		}
-	    }
-
-
-
-	    if ($side eq "BP1") {
-		unless ($pause) {
-		    #print qq($gene $transcript $exon $frame $aa_n $base $pos $bp1_chr\n);
-		    $base_count++;
-		    $translocation->{$base_count}->{base}=$base;
-		    $translocation->{$base_count}->{transcript}=$transcript;
-		    $translocation->{$base_count}->{exon}="$exon,$region,BP1";
-		    #$translocation->{$base_count}=$base;
-		}
-	    }
-	    if ($trans_pos) {
-		if ($side eq "BP1") {
-		    $pause=1;
-		    ($bp1_region) = $trans_pos =~ /\S+\,(\S+)/;
-		    $translocation->{$base_count}->{trans_pos}="$exon,BP1";
-		    #$bp1_region = $region;
-
-		}
-		if ($trans_pos =~ /intron/) {
-		    if ($side eq "BP2") {
-			$resume = 1;
-			($bp2_region) = $trans_pos =~ /\S+\,(\S+)/;
-			$translocation->{$base_count}->{trans_pos}="$exon,BP2";
-			#$bp2_region = $region;
-
-		    }
-		}
-	    }
+	    unless ($pos == -1) {push(@positions,$pos);}
 	}
     } else {
 	foreach my $pos (sort {$b<=>$a} keys %{$transcript_info->{$transcript}}) {
-	    my ($exon,$region) = split(/\,/,$transcript_info->{$transcript}->{$pos}->{exon});
-	    my $frame = $transcript_info->{$transcript}->{$pos}->{frame};
-	    my $aa_n = $transcript_info->{$transcript}->{$pos}->{aa_n};
-	    my $base = $transcript_info->{$transcript}->{$pos}->{base};
-	    my $trans_pos = $transcript_info->{$transcript}->{$pos}->{trans_pos};
-	    
-	    if ($trans_pos) {
-		unless ($trans_pos =~ /intron/) {
-		    if ($side eq "BP2") {
-			$resume = 1;
-			($bp2_region) = $trans_pos =~ /\S+\,(\S+)/;
-			$translocation->{$base_count}->{trans_pos}="$exon,BP2";
-			#$bp2_region = $region;
-		    }
+	    unless ($pos == -1) {push(@positions,$pos);}
+	}
+    }
+
+    for my $pos (@positions) {
+	
+	my ($exon,$region) = split(/\,/,$transcript_info->{$transcript}->{$pos}->{exon});
+	my $frame = $transcript_info->{$transcript}->{$pos}->{frame};
+	my $aa_n = $transcript_info->{$transcript}->{$pos}->{aa_n};
+	my $base = $transcript_info->{$transcript}->{$pos}->{base};
+	my ($trans_pos) = $transcript_info->{$transcript}->{$pos}->{trans_pos};
+	#my ($trans_pos,$region) = split(/\,/,$transcript_info->{$transcript}->{$pos}->{trans_pos});
+	
+	if ($trans_pos) {
+	    unless ($trans_pos =~ /intron/) {
+		if ($side eq "BP2") {
+		    $resume = 1;
+		    ($bp2_region) = $trans_pos =~ /\S+\,(\S+)/;
+		    $translocation->{$base_count}->{trans_pos}="$exon,BP2";
+		    
+		    #$bp2_region = $region;
 		}
 	    }
-	    if ($side eq "BP2") {
-		if ($resume) {
-		    #print qq($gene $transcript $exon $frame $aa_n $base $pos $bp2_chr\n);
-		    $base_count++;
-		    $translocation->{$base_count}->{base}=$base;
-		    $translocation->{$base_count}->{transcript}=$transcript;
-		    $translocation->{$base_count}->{exon}="$exon,$region,BP2";
-		}
+	}
+	if ($side eq "BP2") {
+	    if ($resume) {
+		
+		#unless ($trans_pos =~ /utr/) {
+		#print qq($gene $transcript $exon $frame $aa_n $base $pos $bp2_chr\n);
+		$base_count++;
+		$translocation->{$base_count}->{base}=$base;
+		$translocation->{$base_count}->{transcript}=$transcript;
+		$translocation->{$base_count}->{exon}="$exon,$region,BP2";
+		#$translocation->{$base_count}=$base;
+		#}
 	    }
+	}
+	
+	if ($side eq "BP1") {
+	    unless ($pause) {
+		#print qq($gene $transcript $exon $frame $aa_n $base $pos $bp1_chr\n);
+		$base_count++;
+		$translocation->{$base_count}->{base}=$base;
+		$translocation->{$base_count}->{transcript}=$transcript;
+		$translocation->{$base_count}->{exon}="$exon,$region,BP1";
+		#$translocation->{$base_count}=$base;
+	    }
+	}
+	if ($trans_pos) {
 	    if ($side eq "BP1") {
-		unless ($pause) {
-		    #print qq($gene $transcript $exon $frame $aa_n $base $pos $bp1_chr\n);
-		    $base_count++;
-		    #$translocation->{$base_count}=$base;
-		    $translocation->{$base_count}->{base}=$base;
-		    $translocation->{$base_count}->{transcript}=$transcript;
-		    $translocation->{$base_count}->{exon}="$exon,$region,BP1";
-		}
+		$pause=1;
+		($bp1_region) = $trans_pos =~ /\S+\,(\S+)/;
+		$translocation->{$base_count}->{trans_pos}="$exon,BP1";
+		#$bp1_region = $region;
+		
 	    }
-	    if ($trans_pos) {
-		if ($side eq "BP1") {
-		    $pause=1;
-		    ($bp1_region) = $trans_pos =~ /\S+\,(\S+)/;
-		    $translocation->{$base_count}->{trans_pos}="$exon,BP1";
-		    #$bp1_region = $region;
-		}
-		if ($trans_pos =~ /intron/) {
-		    if ($side eq "BP2") {
-			$resume = 1;
-			($bp2_region) = $trans_pos =~ /\S+\,(\S+)/;
-			$translocation->{$base_count}->{trans_pos}="$exon,BP2";
-			#$bp2_region = $region;
-		    }
+	    if ($trans_pos =~ /intron/) {
+		if ($side eq "BP2") {
+		    $resume = 1;
+		    ($bp2_region) = $trans_pos =~ /\S+\,(\S+)/;
+		    $translocation->{$base_count}->{trans_pos}="$exon,BP2";
+		    #$bp2_region = $region;
+		    
 		}
 	    }
 	}
@@ -536,182 +554,6 @@ sub get_translocation {
     return($base_count);
 }
 
-sub get_transcript_info {
-    #/gscmnt/sata835/info/medseq/annotation_data/NCBI-human.genbank//
-
-    #my $build = Genome::Model::ImportedAnnotation->get(name => 'NCBI-human.combined-annotation')->build_by_version(0);
-    #my $data_directory = $build->annotation_data_directory;
-
-    #print qq($data_directory\n);
-    my $ensembl_build = Genome::Model::ImportedAnnotation->get(name => 'NCBI-human.ensembl')->build_by_version("54_36p");
-    my $ensembl_data_directory = $ensembl_build->annotation_data_directory;
-    my $genbank_build = Genome::Model::ImportedAnnotation->get(name => 'NCBI-human.genbank')->build_by_version("54_36p");
-    my $genbank_data_directory = $genbank_build->annotation_data_directory;
-
-
-    #unless ($data_directory) {print qq(no data directory for $build\n);}
-    foreach my $chr (sort keys%{$annotation_info}) {
-	foreach my $pos (sort {$a<=>$b} keys %{$annotation_info->{$chr}}) {
-	    my $info;
-	    my $gene = $annotation_info->{$chr}->{$pos}->{gene};
-	    my $transcript = $annotation_info->{$chr}->{$pos}->{transcript};
-	    my $strand = $annotation_info->{$chr}->{$pos}->{strand};
-	    my $trv_type = $annotation_info->{$chr}->{$pos}->{trv_type}; #region intronic splice_site exonic
-	    
-	    my $t;
-	    if ($transcript =~/^ENST/){
-		($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $ensembl_data_directory);
-	    }else{
-		($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $genbank_data_directory)
-	    }
-	    unless ($t) {print qq(Could not get the transcript object for $chr $pos $gene $transcript\nWill now exit the program\n);exit(1);}
-	    my $tseq = $t->cds_full_nucleotide_sequence;
-	    my @substructures = $t->ordered_sub_structures;
-	    
-	    my $total_substructures = @substructures;
-	    my $t_n = 0; #substructure counter
-	    
-	    my $tstrand = $t->strand;
-	    $info->{$transcript}->{strand}=$tstrand;
-	    if (@substructures) {
-		
-		while ($t_n < $total_substructures) {
-		    my $t_region = $substructures[$t_n];
-		    $t_n++;
-		    
-		    my $tr_start = $t_region->{structure_start};
-		    my $tr_stop = $t_region->{structure_stop};
-		    my $range = "$tr_start\-$tr_stop";
-		    
-		    #if ($t_region->{structure_type} eq "utr_exon") {
-			#for my $n ($tr_start..$tr_stop) {
-			    #$info->{$transcript}->{ref_base}->{$n}="$range,utr_exon";
-			#}
-		    #}
-		    #if ($t_region->{structure_type} eq "cds_exon") {
-			#my $refseq = &get_ref_base($tr_start,$tr_stop,$chr);
-		
-
-		    if ($t_region->{structure_type} =~ /exon/) {
-			unless ($trv_type =~ /untranslated/) {$trv_type = $t_region->{structure_type};}
-			for my $n ($tr_start..$tr_stop) {
-			    my $refbase;
-			    if ($t_region->{structure_type} =~ /cds/) {
-				$refbase = &get_ref_base($n,$n,$chr);
-				if ($strand eq "-1") { my $revrefbase = &reverse_complement_allele($refbase);$refbase=$revrefbase;}
-				#$info->{$transcript}->{ref_base}->{$n}="$range,$refbase";
-			    } else {
-				$refbase = "$n:$strand";
-			    }
-			    #$info->{$transcript}->{ref_base}->{$n}="$t_region->{structure_type},$refbase";
-			    $info->{$transcript}->{ref_base}->{$n}="$trv_type,$refbase";
-			}
-		    }
-		}
-	    } else {
-
-		print qq(\nCould not find the transcript object for \"$transcript on $chr id\'ed by $pos, from the data warehouse\nWill exit the program now\n\n);
-		exit 1;
-
-	    }
-
-	    my $exon=0;
-	    my $previous_coord;
-	    my $frame=0;
-	    my $aa_n=1;
-	    my $trans_pos;
-	    if ($info->{$transcript}->{strand} eq "-1") {
-		foreach my $gcoord (sort {$b<=>$a} keys %{$info->{$transcript}->{ref_base}}) {
-		    my ($region,$base) = split(/\,/,$info->{$transcript}->{ref_base}->{$gcoord});
-		    #my ($start,$stop) = split(/\-/,$range);
-		    unless ($previous_coord) {$previous_coord = $gcoord;}
-		    unless ($gcoord + 1 == $previous_coord) {
-			$exon++;
-		    }
-		    if ($region =~ /untranslated/) {
-			$frame = "-";
-		    } else {
-			$frame++;
-		    }
-		    
-		    if ($pos == $gcoord) {
-			$trans_pos = $gcoord;
-			$transcript_info->{$transcript}->{$gcoord}->{trans_pos}="$trans_pos,$region";
-			#if ($base eq "utr_exon") {
-			    #$transcript_info->{$transcript}->{$gcoord}->{trans_pos}="$trans_pos,utr_exon";
-			#}
-		    } elsif ($pos < $previous_coord && $pos > $gcoord) {
-			unless ($trans_pos) {
-			    $trans_pos = $previous_coord;
-			    $transcript_info->{$transcript}->{$previous_coord}->{trans_pos}="$trans_pos,intron";
-			}
-		    }
-		    if ($bp1_transcript eq $transcript) {
-			$bp1exon_total = $exon;
-		    }
-		    if ($bp2_transcript eq $transcript) {
-			$bp2exon_total = $exon;
-		    }
-		    $previous_coord = $gcoord;
-		    #unless ($base eq "utr_exon") {
-		    #if ($frame =~ /[1 2 3]/) {
-			#	print qq($transcript $range $exon $frame $aa_n $gcoord $base\n);
-			$transcript_info->{$transcript}->{$gcoord}->{exon}="$exon,$region";
-			$transcript_info->{$transcript}->{$gcoord}->{frame}=$frame;
-			$transcript_info->{$transcript}->{$gcoord}->{aa_n}=$aa_n;
-			$transcript_info->{$transcript}->{$gcoord}->{base}=$base;
-			
-			if ($frame eq "3") {$frame=0;$aa_n++;}
-		    #}
-		}
-	    } else {
-		foreach my $gcoord (sort {$a<=>$b} keys %{$info->{$transcript}->{ref_base}}) {
-		    my ($region,$base) = split(/\,/,$info->{$transcript}->{ref_base}->{$gcoord});
-		    #my ($start,$stop) = split(/\-/,$range);
-		    unless ($previous_coord) {$previous_coord = $gcoord;}
-		    unless ($gcoord - 1 == $previous_coord) {
-			$exon++;
-		    }
-		    if ($region =~ /untranslated/) {
-			$frame = "-";
-		    } else {
-			$frame++;
-		    }
-		    
-		    if ($pos == $gcoord) {
-			$trans_pos = $gcoord;
-			$transcript_info->{$transcript}->{$gcoord}->{trans_pos}="$trans_pos,$region";
-			#if ($base eq "utr_exon") {
-			#    $transcript_info->{$transcript}->{$gcoord}->{trans_pos}="$trans_pos,utr_exon";
-			#}
-		    } elsif ($pos > $previous_coord && $pos < $gcoord) {
-			unless ($trans_pos) {
-			    $trans_pos = $previous_coord;
-			    $transcript_info->{$transcript}->{$previous_coord}->{trans_pos}="$trans_pos,intron";
-			}
-		    }
-		    if ($bp1_transcript eq $transcript) {
-			$bp1exon_total = $exon;
-		    }
-		    if ($bp2_transcript eq $transcript) {
-			$bp2exon_total = $exon;
-		    }
-		    $previous_coord = $gcoord;
-		    #unless ($base eq "utr_exon") {
-		    #if ($frame =~ /[1 2 3]/) {
-			#	print qq($transcript $range $exon $frame $aa_n $gcoord $base\n);
-			$transcript_info->{$transcript}->{$gcoord}->{exon}="$exon,$region";
-			$transcript_info->{$transcript}->{$gcoord}->{frame}=$frame;
-			$transcript_info->{$transcript}->{$gcoord}->{aa_n}=$aa_n;
-			$transcript_info->{$transcript}->{$gcoord}->{base}=$base;
-			
-			if ($frame eq "3") {$frame=0;$aa_n++;}
-		    #}
-		}
-	    }
-	}
-    }
-}
 
 
 sub parse_annotation {
@@ -810,11 +652,19 @@ sub get_locations {
 
 
 sub get_ref_base {
+
+    my ($chr_start,$chr_stop,$chr_name,$organism) = @_;
+
     use Bio::DB::Fasta;
-    my $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+    my $RefDir;
+    if ($organism eq "human") {
+	$RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+    } else {
+	$RefDir = "/gscmnt/sata147/info/medseq/rmeyer/resources/MouseB37/";
+    }
+
     my $refdb = Bio::DB::Fasta->new($RefDir);
 
-    my ($chr_start,$chr_stop,$chr_name) = @_;
     my $seq = $refdb->seq($chr_name, $chr_start => $chr_stop);
     $seq =~ s/(\S)/\U$1/;
 
