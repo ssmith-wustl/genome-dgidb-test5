@@ -213,7 +213,54 @@ sub execute {
             output_files => [$self->build->breakdown_file],
         );
     }
-
+    
+    my $report_generator = Genome::Model::ReferenceAlignment::Report::ReferenceCoverage->create(build_id => $self->build->id);
+    unless ($report_generator) {
+        $self->error_message('Error creating ReferenceCoverage report generator: '. Genome::Model::ReferenceAlignment::Report::ReferenceCoverage->error_message());
+        die($self->error_message);
+    }
+    my $report = $report_generator->generate_report;
+    unless ($report) {
+        $self->error_message('Error generating report '. $report_generator->report_name .': '. Genome::Model::ReferenceAlignment::Report::ReferenceCoverage->error_message());
+        $report_generator->delete;
+        die($self->error_message);
+    }
+    if ($self->build->add_report($report)) {
+        $self->status_message('Saved report: '. $report);
+    } else {
+        $self->error_message('Error saving '. $report.'. Error: '. $self->build->error_message);
+        die($self->error_message);
+    }
+    my $xsl_file = $report_generator->get_xsl_file_for_html;
+    unless (-e $xsl_file) {
+        $self->error_message('Failed to find xsl file for ReferenceCoverage report');
+        die($self->error_message);
+    }
+    my $xslt = Genome::Report::XSLT->transform_report(
+        report => $report,
+        xslt_file => $xsl_file,
+    );
+    unless ($xslt) {
+        $self->error_message('Failed to generate XSLT for ReferenceCoverage report');
+        die($self->error_message);
+    }
+    my $report_subdirectory = $self->build->reports_directory .'/'. $report->name_to_subdirectory($report->name);
+    my $report_file = $report_subdirectory .'/report.'. ($xslt->{output_type} || 'html');
+    my $fh = Genome::Utility::FileSystem->open_file_for_writing( $report_file );
+    $fh->print( $xslt->{content} );
+    $fh->close;
+    my $mail_dest = Genome::Config->user_email();
+    my $link = 'https://gscweb.gsc.wustl.edu'. $report_file;
+    my $sender = Mail::Sender->new({
+        smtp => 'gscsmtp.wustl.edu',
+        from => 'jwalker@genome.wustl.edu',
+        replyto => 'jwalker@genome.wustl.edu',
+    });
+    $sender->MailMsg({
+        to => $mail_dest,
+        subject => 'Genome Model '. $self->model->name .' Reference Coverage Report for Build '. $self->build->id,
+        msg => $link,
+    });
     return $self->verify_successful_completion;
 }
 
