@@ -75,6 +75,12 @@ class Genome::Model::Tools::Consed::TracesToConsed {
 		 doc          => "provide a project name or use the default chromosome_start; No "." allowed in project the assembly will fail to produce a phd file with the expected name for the refseq",
 		 is_optional  => 1,
 	     },
+	     organism  => {
+		 type         => 'string',
+		 doc          => "use this option if you want to build an ace file for mouse build 37.",
+		 is_optional  => 1,
+		 default      => 'human',
+	     },
 	     
 	     ],
     
@@ -84,7 +90,7 @@ class Genome::Model::Tools::Consed::TracesToConsed {
 
 
 sub help_brief {                            # keep this to just a few words <---
-    "This tool will make a consed ace file from a minimun of a directory of traces a chromosome and an NCBI build 36 chromosomal start coordinate"                 
+    "This tool will make a consed ace file from a minimun of a directory of traces a chromosome and a chromosomal start coordinate for either NCBI Human build 36 or NCBI Mouse build 37"                 
 }
 
 sub help_synopsis {                         # replace the text below with real examples <---
@@ -168,7 +174,7 @@ building Human NCBI Build36 assemblies to be used in the abbreviated Legacy pipe
 
 
 
-With regard to the limitations of this script, it is restricted to the use of UCSC/NCBI Human Build 36
+With regard to the limitations of this script, it is restricted to the use of UCSC/NCBI Human Build 36 and/or NCBI/Mouse Build 37
 
 
 
@@ -258,10 +264,21 @@ sub execute {                               # replace with real execution logic.
 
     unless ($project_details) { $project_details = "$chromosome\:$start\_$stop"; }
 
+
+    my $organism = $self->organism;
+
     open(REF,">$edit_dir/$project.c1.refseq.fasta");
-    print REF qq(>$project.c1.refseq.fasta $project_details NCBI Build 36, Chr:$chromosome, Coords $ref_start-$ref_stop, Ori (+)\n);
-    my $sequence = &get_ref_base($chromosome,$ref_start,$ref_stop);
-    print REF qq($sequence\n);
+    if ($organism eq "human") {
+	print qq(Your reference sequence will be based on NCBI Human Build 36\n);
+	print REF qq(>$project.c1.refseq.fasta $project_details NCBI Human Build 36, Chr:$chromosome, Coords $ref_start-$ref_stop, Ori (+)\n);
+	my $sequence = &get_ref_base($chromosome,$ref_start,$ref_stop,$organism);
+	print REF qq($sequence\n);
+    } else {
+	print qq(Your reference sequence will be based on NCBI Mouse Build 37\n);
+	print REF qq(>$project.c1.refseq.fasta $project_details NCBI Mouse Build 37, Chr:$chromosome, Coords $ref_start-$ref_stop, Ori (+)\n);
+	my $sequence = &get_ref_base($chromosome,$ref_start,$ref_stop,$organism);
+	print REF qq($sequence\n);
+    } 
     close(REF);
     
     chdir($edit_dir);
@@ -518,11 +535,17 @@ sub ipc_run {
 sub get_ref_base {
 
 #used to generate the refseqs;
-    use Bio::DB::Fasta;
-    my $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
-    my $refdb = Bio::DB::Fasta->new($RefDir);
+    my ($chr_name,$chr_start,$chr_stop,$organism) = @_;
 
-    my ($chr_name,$chr_start,$chr_stop) = @_;
+    use Bio::DB::Fasta;
+    my $RefDir;
+    if ($organism eq "human"){
+	$RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+    } else {
+	$RefDir = "/gscmnt/sata147/info/medseq/rmeyer/resources/MouseB37/";
+    }
+
+    my $refdb = Bio::DB::Fasta->new($RefDir);
     my $seq = $refdb->seq($chr_name, $chr_start => $chr_stop);
     $seq =~ s/([\S]+)/\U$1/;
 
