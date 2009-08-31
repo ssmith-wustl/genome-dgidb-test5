@@ -64,7 +64,7 @@ sub execute
     unlink($logfile) if (-e $logfile); 
 
     my $output = run_workflow_lsf(
-                              '/gscmnt/sata835/info/medseq/virome/workflow/virome-screening.xml',
+                              '/gscmnt/sata835/info/medseq/virome/workflow/xml/virome-screening.xml',
                               'fasta_file'  => $fasta_file,
                               'barcode_file'=> $barcode_file,
                               'dir'         => $dir,
