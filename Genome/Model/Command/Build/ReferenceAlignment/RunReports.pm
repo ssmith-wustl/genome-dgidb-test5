@@ -33,7 +33,6 @@ my %REPORT_TYPES = (
     Mapcheck           => 'Mapcheck',
     DbSnpConcordance   => 'dbSNP_Concordance',
     GoldSnpConcordance => 'Gold_SNP_Concordance',
-    ReferenceCoverage  => 'Reference_Coverage',
     InputBaseCounts   => 'Input_Base_Counts'
 );
 
