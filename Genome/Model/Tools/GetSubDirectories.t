@@ -28,3 +28,4 @@ foreach my $sub_dir (@$sub_dirs)
 }
 
 ok($exists, "subdirectories successfully retrieved");
+

@@ -13,13 +13,14 @@ class Genome::Model::Tools::ViromeEvent::SequenceQualityControl{
 };
 
 sub help_brief {
-    "skeleton for gzhao's virome script"
+    return <<"EOS"
+filtering step prior to blast for virome pipeline
+EOS
 }
 
 sub help_synopsis {
     return <<"EOS"
-
-wrapper for script sequence to be utilized by workflow
+genome-model toold virome-event split-quality-control
 EOS
 }
 

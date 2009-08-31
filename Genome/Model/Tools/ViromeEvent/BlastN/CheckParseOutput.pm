@@ -67,6 +67,7 @@ sub execute
 	        if ($file =~ /\.blastn\.out$/) 
                 {
 		    $have_input_file = 1;
+                    $self->log_event("input file $file found");
 		    my $have_blastn_parsed = 0;
 		    my $finished = 0;
 		
@@ -82,26 +83,16 @@ sub execute
 		    if ((!$have_blastn_parsed)||(!$finished)) 
                     {
 		        $allFinished = 0;
-		        print $file, " does not have blastn.parsed or not finished! Resubmiting the job!\n\n";
 		        $self->log_event("$file does not have blastn.parsed or not finished! Resubmiting the job!\n\n");
 		    
-		        #$com = '/gsc/var/tmp/virome/scripts/scripts2/Process454_S6_Blastn_2_parser.pl '.$full_path.' '.$file;
-                        #system($com);
-
                         $self->run_parser($full_path, $file);
 
-		        #use PP::LSF;
-		        #my $job = PP::LSF->run ( pp_type => 'lsf',
-			#		     command => $com,
-			#		     J => 'BstNTprs',
-			#		     q => 'long',
-                        #                     R => "'select[type==LINUX64] span[hosts=1]'",);
-		        #if (! $job) 
-                        #{
-			#    die("Failed to submit job:\n $com\n");
-		        #}
 		    }
 	        }
+                else
+                {
+                    $self->log_event("$file does not match");
+                }
 	    }
         }
     }

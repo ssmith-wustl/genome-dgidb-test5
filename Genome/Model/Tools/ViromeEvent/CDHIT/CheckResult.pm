@@ -89,9 +89,9 @@ sub execute
         my $ec = system($com);
         if ($ec) 
         {
-	    $self->log_event("CDHIT Failed: re-run of cd-hit for $str");
+	    $self->log_event("CDHIT Failed: re-run of cd-hit for $com");
 	    #cd-hit-est is a c++ code, return 0 when successful
-	    die("CDHIT Failed: re-run of cd-hit for $str");
+	    die("CDHIT Failed: re-run of cd-hit for $com");
         }
         else 
         {

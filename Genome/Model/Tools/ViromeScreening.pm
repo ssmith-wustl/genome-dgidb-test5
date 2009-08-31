@@ -19,7 +19,7 @@ UR::Object::Type->define(
                            is => 'String',
                            is_input => 1,
                        },
-            log_file => {
+            barcode_file => { 
                            doc => 'list of samples for screening',
                            is => 'String',
                            is_input => 1,
@@ -30,43 +30,45 @@ UR::Object::Type->define(
                            is_input => 1,
 
                         },
-            workflow_xml => {
-                                is => 'String',
-                                doc => "Workflow xml file",
-                                default => '/gscmnt/sata835/info/medseq/virome/workflow/virome.xml',
-                                is_optional => 1,
-                            }
+            logfile => {
+                            doc => 'output file for monitoring progress of pipeline',
+                            is => 'String',
+                            is_input => 1,
+                        },
     ]
 );
 
 sub help_brief
 {
-    "Runs virome screening pipeline";
+    "Runs virome screening workflow";
 }
 
 sub help_synopsis
 {
     return <<"EOS"
-    Runs virome screening pipeline.  Takes directory path, fasta and sample log.
+    genome-model tools virome-screening ... 
 EOS
 }
 
 sub help_detail
 {
     return <<"EOS"
-    Runs virome screening pipeline.  Takes directory path, fasta and sample log.
+    Runs the virome screening pipeline, using ViromeEvent modules.  Takes directory path, fasta, sample log, and logfile. 
 EOS
 }
 
 sub execute
 {
     my $self = shift;
-    my ($fasta_file, $log_file, $dir, $xml_file) = ($self->fasta_file, $self->log_file, $self->dir, $self->workflow_xml);
+    my ($fasta_file, $barcode_file, $dir, $logfile) = ($self->fasta_file, $self->barcode_file, $self->dir, $self->logfile);
+    unlink($logfile) if (-e $logfile); 
+
     my $output = run_workflow_lsf(
-                              $xml_file,
+                              '/gscmnt/sata835/info/medseq/virome/workflow/virome-screening.xml',
                               'fasta_file'  => $fasta_file,
-                              'log_file'    => $log_file,
+                              'barcode_file'=> $barcode_file,
                               'dir'         => $dir,
+                              'logfile'     => $logfile,
                           );
     return 1;
 }

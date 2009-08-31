@@ -124,6 +124,7 @@ sub splitGivenNumberSequence {
 	}
 	close OUT;
     $self->log_event("Repeat Masker splitGivenNumberSequence completed");
+    return 0;
 }
 
 sub read_FASTA_data () {

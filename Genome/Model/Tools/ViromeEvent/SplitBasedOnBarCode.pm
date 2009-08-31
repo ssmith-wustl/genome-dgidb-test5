@@ -14,12 +14,12 @@ class Genome::Model::Tools::ViromeEvent::SplitBasedOnBarCode{
     has =>
     [
 
-            fasta_file => {
+            barcode_file => {
                            doc => 'file of reads to be checked for contamination',
                            is => 'String',
                            is_input => 1,
                        },
-            log_file => {
+            fasta_file => {
                            doc => 'file of reads to be checked for contamination',
                            is => 'String',
                            is_input => 1,
@@ -28,33 +28,19 @@ class Genome::Model::Tools::ViromeEvent::SplitBasedOnBarCode{
 };
 
 sub help_brief {
-    "wrapper for gzhaos manual step in virome script"
+    return <<"EOS"
+Creates a list of directories and fasta files based on querying barcode file against fasta file
+EOS
 }
 
 sub help_synopsis {
     return <<"EOS"
-wrapper for gzhaos manual step in virome script
+genome-model toold virome-event split-based-on-bar-code
 EOS
 }
 
 sub help_detail {
     return <<"EOS"
-wrapper for gzhaos manual step in virome script
-EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
-
-}
-
-sub execute
-{
-    my $self = shift;
-    
-    my $usage = '
 This script accepts a 454 sequencing run output fasta file and sort the 
 sequences based on their barcode. Each group of barcoded sequence 
 represents a library. A "undecodable" file/dir will be created for 
@@ -71,13 +57,28 @@ In this version, calculate percentage of sequences in each length category
 In this version, both barcodes from 5 prime and 3 prime are used for 
 decoding.
 
-perl script <input .fa file><sequencing log file>
-<input .fa file> = 454 .fa sequence file with full path 
+<barcode file> = full path to the file
+<fasta file> = 454 .fa sequence file with full path 
                    This script will create directories in the dir that the
                    input file resides. 
-<sequencing log file> = full path to the file
-';
-    my ($input_file, $barcode_seq_file) = ($self->fasta_file, $self->log_file);
+<logfile>   = output file for logging events
+EOS
+}
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    return $self;
+
+}
+
+sub execute
+{
+    my $self = shift;
+
+    $self->log_event("Split based on barcode entered");
+    
+    my ($input_file, $barcode_seq_file) = ($self->fasta_file, $self->barcode_file);
 
     # get directory path
     my @fields = split(/\//, $input_file);
@@ -134,18 +135,13 @@ perl script <input .fa file><sequencing log file>
 	}
 	chomp;
 	my @temp = split(/\t/, $_);
-	my $tag = $temp[6];
+	my $tag = $temp[2];
 	$tag =~ s/$PBseq//;
 	my $lib = "";
-	if ($temp[8] ne "") {
-		$lib = $temp[7]."_".$temp[8];
-	}
-	else {
-		$lib = $temp[7];
-	}
+        $lib = $temp[3];
 	$lib =~ s/\W+/_/g;
 	my $samp_name = "S".$temp[0]."_".$lib;
-	print "tag = $tag, samp_name =$samp_name\n"; 
+	$self->log_event("tag = $tag, samp_name =$samp_name"); 
 	if (!$tag) {
 		next;
 	}
@@ -415,7 +411,7 @@ perl script <input .fa file><sequencing log file>
     }
     print OUT "End of sample list\n";
 
-    $self->log_event("CDHIT split based on bar code complete"); #monitor
+    $self->log_event("Split based on barcode completed"); #monitor
     return 1;
 }
 

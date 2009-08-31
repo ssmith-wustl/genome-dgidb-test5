@@ -18,10 +18,15 @@ class Genome::Model::Tools::ViromeEvent{
                                 doc => 'directory of inputs',
                                 is => 'String',
                                 is_input => 1,
+                                is_optional => 1,
                             },            
+            logfile => {
+                            is => 'String',
+                            doc => 'output file for monitoring progress of pipeline',
+                            is_input => 1,
+                        },
     ],
     has_output => [
-        
     ],
 };
 
@@ -31,8 +36,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-
-wrapper for script sequence to be utilized by workflow
+genome-model tools virome-event ... 
 EOS
 }
 
@@ -58,11 +62,11 @@ sub execute
 
 sub log_event
 {
-    return;
     my ($self,$str) = @_;
     my $dir = $self->dir;
+    my $logfile = $self->logfile;
     my @name = split("=",$self);
-    my $fh = IO::File->new(">> /gscmnt/sata835/info/medseq/virome/workflow/logfile.txt");#monitor
+    my $fh = IO::File->new(">> $logfile");
     print $fh localtime(time) . "\t " . $name[0] . ":\t$str\n";
     $fh->close();
 }

@@ -44,7 +44,7 @@ sub execute
 {
     my $self = shift;
     my $dir = $self->dir;
-    $self->log_event("Blast Human Genome check output entered");
+    $self->log_event("Blast Human Genome parse output entered");
     my @temp_dir_arr = split("/", $dir);
     my $lib_name = $temp_dir_arr[$#temp_dir_arr];
 
@@ -87,12 +87,6 @@ sub execute
                     {
 		        $allFinished = 0;	
                         $self->run_parser($full_path,$file);
-		        #my $com = 'perl /gsc/var/tmp/virome/scripts/scripts2/Process454_S5_Blast_HumanGenome_3_parser.pl '.$full_path.' '.$file;
-		        #my $ec = system ($com);
-		        #if ($ec) 
-                        #{
-			#    die("Parse HG blast failed for command: $com\n");
-		        #}
 		    }
 	        }
 	    }
@@ -112,7 +106,7 @@ sub execute
         $self->log_event ("$dir does not have input file!");
     }
 
-    $self->log_event("Blast Human Genome check output completed");
+    $self->log_event("Blast Human Genome parse output completed");
     return 1;
 }
 

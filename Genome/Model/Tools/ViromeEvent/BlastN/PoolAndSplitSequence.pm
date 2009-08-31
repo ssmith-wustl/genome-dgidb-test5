@@ -139,10 +139,12 @@ sub splitGivenNumberSequence {
 	# make directory for splited files
 	if (-e $outDir) 
         {
+                $self->log_event("$outDir exists");
 		return 0;
 	}
 	else {
 		my $com = "mkdir $outDir";
+                $self->log_event("creating $outDir");
 		system ($com);
 	}
 	
@@ -150,6 +152,7 @@ sub splitGivenNumberSequence {
 	my $geneCount = 0;
 	my $fileCount = 0;
 	my $outFile = $outDir."/".$inFile_name."_file".$fileCount.".fa";
+        $self->log_event("writing to $outFile");
 	open (OUT, ">$outFile") or die "can not open file $outFile!\n";
 	foreach my $read (keys %seq) 
         {
