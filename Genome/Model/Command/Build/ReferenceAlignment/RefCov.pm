@@ -53,6 +53,8 @@ sub sorted_instrument_data_ids {
             return;
         }
         for my $alignment (@alignments) {
+            my @bam_files = $alignment->alignment_bam_file_paths;
+            unless (@bam_files) { next; }
             if ($alignment->force_fragment) {
                 push @seq_ids, $alignment->_fragment_seq_id;
             } else {
@@ -84,6 +86,7 @@ sub sorted_bam_files {
     }
     return @sorted_bam_files;;
 }
+
 
 sub progression_array_ref {
     my $self = shift;
