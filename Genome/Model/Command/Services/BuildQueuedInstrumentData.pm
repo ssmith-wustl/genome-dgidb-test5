@@ -345,9 +345,11 @@ sub execute {
         
         if ($@) {
             warn $@;
+            UR::Context->rollback();
             next MODEL;
         }
-        
+       
+        UR::Context->commit(); 
     }
 
     return 1;
