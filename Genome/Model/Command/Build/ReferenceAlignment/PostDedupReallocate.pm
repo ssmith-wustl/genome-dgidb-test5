@@ -36,8 +36,8 @@ sub execute {
     my $allocation = $build->disk_allocation;
 
     unless ($allocation) {
-        $self->error_message("Expected this build to have a disk allocation, but none was found.  Bailing out.");
-        return 0; 
+        $self->status_message("No allocation found, nothing to reallocate.  Shortcutting out.");
+        return 1; 
     }
 
     my $actual_allocated_space = $allocation->get_actual_disk_usage;
