@@ -1,4 +1,4 @@
-package Finishing::Assembly::Ace;
+package Genome::Assembly::Pcap::Ace;
 
 our $VERSION = 0.01;
 
@@ -6,17 +6,17 @@ use strict;
 use warnings;
 use Carp;
 use base qw(Class::Accessor);
-use Finishing::Assembly::Ace::Reader;
-use Finishing::Assembly::Ace::Writer;
-use Finishing::Assembly::Item;
-use Finishing::Assembly::Sequence;
-use Finishing::Assembly::SequenceItem;
-use Finishing::Assembly::Contig;
-use Finishing::Assembly::Read;
-use Finishing::Assembly::Tag;
-use Finishing::Assembly::TagParser;
-use Finishing::Assembly::AceCallBacks;
-use Finishing::Assembly::Config;
+use Genome::Assembly::Pcap::Ace::Reader;
+use Genome::Assembly::Pcap::Ace::Writer;
+use Genome::Assembly::Pcap::Item;
+use Genome::Assembly::Pcap::Sequence;
+use Genome::Assembly::Pcap::SequenceItem;
+use Genome::Assembly::Pcap::Contig;
+use Genome::Assembly::Pcap::Read;
+use Genome::Assembly::Pcap::Tag;
+use Genome::Assembly::Pcap::TagParser;
+use Genome::Assembly::Pcap::AceCallBacks;
+use Genome::Assembly::Pcap::Config;
 use IO::File;
 use IO::String;
 use Storable;
@@ -27,9 +27,9 @@ $Storable::Deparse = 1;
 $Storable::Eval = 1;
 #$Storable::forgive_me = 1;
 
-Finishing::Assembly::Ace->mk_accessors(qw(_reader _writer _input _output _input_file _output_file dbh sth_create sth_rem sth_set sth_get sth_getcount db_type _init_db _keep_changes _db_dsn _assembly_name config));
+Genome::Assembly::Pcap::Ace->mk_accessors(qw(_reader _writer _input _output _input_file _output_file dbh sth_create sth_rem sth_set sth_get sth_getcount db_type _init_db _keep_changes _db_dsn _assembly_name config));
 
-my $pkg = 'Finishing::Assembly::Ace';
+my $pkg = 'Genome::Assembly::Pcap::Ace';
 
 sub new {
     croak("$pkg:new:no class given, quitting") if @_ < 1;
@@ -38,7 +38,7 @@ sub new {
     my $class = $caller_is_obj || $caller;
     my $self = {};
     bless ($self, $class);
-	$self->_set_config( Finishing::Assembly::Config->new);
+	$self->_set_config( Genome::Assembly::Pcap::Config->new);
 	$params{input_file} = abs_path( $params{input_file}) if exists $params{input_file};	
 	$self->_input(delete $params{input});
     $self->_input_file(delete $params{input_file});
@@ -69,7 +69,7 @@ sub new {
     $self->{contigs} = {};
     $self->{assembly_tags} = {};
     $self->{sleep} = 1;
-    $self->_reader ( Finishing::Assembly::Ace::Reader->new($self->_input));
+    $self->_reader ( Genome::Assembly::Pcap::Ace::Reader->new($self->_input));
 	
     if($params{conserve_memory})
     {
@@ -913,9 +913,9 @@ sub get_contig
 		{    
         	my $input = $self->_input;
         	my $reader = $self->_reader;
-        	my $contig_callback = Finishing::Assembly::AceContigCallBack->new(name => $contig_index->{name},
+        	my $contig_callback = Genome::Assembly::Pcap::AceContigCallBack->new(name => $contig_index->{name},
         	index => $contig_index, reader => $self->_reader, fh => $self->_input, file_name => $self->_input_file);    
-        	return Finishing::Assembly::Contig->new(callbacks => $contig_callback);   
+        	return Genome::Assembly::Pcap::Contig->new(callbacks => $contig_callback);   
     	}
     }
 }
@@ -937,7 +937,7 @@ sub get_contig_old
     {
         $input->seek($read_index->{read}{offset},0);
         my $ace_read = $reader->next_object;
-        $reads{$ace_read->{name}} = Finishing::Assembly::Read->new(ace_read => $ace_read);
+        $reads{$ace_read->{name}} = Genome::Assembly::Pcap::Read->new(ace_read => $ace_read);
 		#grab read_tags
 		foreach my $read_tag_index (@{$read_index->{read}{read_tags}})
 		{
@@ -958,7 +958,7 @@ sub get_contig_old
 	foreach my $contig_tag_index (@{$contig_index->{contig_tags}})
 	{
 		$input->seek($contig_tag_index->{offset},0);
-		push @contig_tags, Finishing::Assembly::TagParser->new()->parse($input);
+		push @contig_tags, Genome::Assembly::Pcap::TagParser->new()->parse($input);
 	}
 	#grab base_segments
 	$input->seek($contig_index->{base_segments}{offset},0);
@@ -968,7 +968,7 @@ sub get_contig_old
 		push @base_segments, $obj;	
 	}	
 	#glue everything together
-    my $contig = Finishing::Assembly::Contig->new(ace_contig => $ace_contig,
+    my $contig = Genome::Assembly::Pcap::Contig->new(ace_contig => $ace_contig,
                                                 reads => \%reads,
                                                 contig_tags => \@contig_tags,
                                                 base_segments => \@base_segments);
@@ -1155,7 +1155,7 @@ sub write_file
     {
         die "Could not find find file to write to.\n";
     }
-    $self->_writer (Finishing::Assembly::Ace::Writer->new($self->_output));
+    $self->_writer (Genome::Assembly::Pcap::Ace::Writer->new($self->_output));
     #first, come up with a list of read and contig counts
     my $read_count=0;
     my $contig_count=0;
@@ -1589,7 +1589,7 @@ sub _write_contig_from_object
                 no_trans => $_->no_trans,
             }
                 }       
-            Finishing::Assembly::TagParser->new()->parse($input);
+            Genome::Assembly::Pcap::TagParser->new()->parse($input);
         }    
     }
 }
@@ -1633,7 +1633,7 @@ sub _write_contig_from_file
 		    no_trans => $_->no_trans,
 		}
             }		
-	    Finishing::Assembly::TagParser->new()->parse($input);
+	    Genome::Assembly::Pcap::TagParser->new()->parse($input);
 	}
 }
 
@@ -1665,7 +1665,7 @@ sub _load_index_from_file
 sub _build_assembly_tag {
     my ($self, $obj) = @_;
 
-    my $tag = new Finishing::Assembly::Tag(
+    my $tag = new Genome::Assembly::Pcap::Tag(
         type => $obj->{tag_type},
         date => $obj->{date},
         source => $obj->{program},
@@ -1676,7 +1676,7 @@ sub _build_assembly_tag {
 
 sub _build_read_tag {
     my ($self, $obj) = @_;
-    my $tag = new Finishing::Assembly::Tag(
+    my $tag = new Genome::Assembly::Pcap::Tag(
         type => $obj->{tag_type},
         date => $obj->{date},
         source => $obj->{program},
@@ -1891,7 +1891,7 @@ sub DESTROY
     }
 }
 
-package Finishing::Assembly::Ace::Test;
+package Genome::Assembly::Pcap::Ace::Test;
 use base qw(Test::Class);
 use Test::More;
 #use Test::Deep;
@@ -1903,19 +1903,19 @@ use warnings;
 use Carp;
 
 sub header : Test(startup){
-	print "\nTesting Finishing::Assembly::Ace\n";	
+	print "\nTesting Genome::Assembly::Pcap::Ace\n";	
 }
 sub setup : Test(setup){
 	my $self = shift;
 	$self->{assembly} = [];
-	push(@{$self->{assembly}}, Finishing::Assembly::Ace->new(
+	push(@{$self->{assembly}}, Genome::Assembly::Pcap::Ace->new(
 											input_file => "./testout1.ace"
 										));
 }
 
 sub setup2 : Test(setup){
 	my $self = shift;
-	push(@{$self->{assembly}}, Finishing::Assembly::Ace->new(
+	push(@{$self->{assembly}}, Genome::Assembly::Pcap::Ace->new(
 											input_file => "./testout1.ace",
 											conserve_memory => 1,
 											db_type => "SQLite"
@@ -1926,7 +1926,7 @@ sub setup2 : Test(setup){
 
 sub setup3 : Test(setup){
 	my $self = shift;
-	push(@{$self->{assembly}}, Finishing::Assembly::Ace->new(
+	push(@{$self->{assembly}}, Genome::Assembly::Pcap::Ace->new(
 											input_file => "./testout1.ace",
 											conserve_memory => 1,
 											db_type => "mysql"
@@ -1936,7 +1936,7 @@ sub setup3 : Test(setup){
 
 #sub setup4 : Test(setup){
 #	my $self = shift;
-#	my $assembly = Finishing::Assembly::Ace->new(
+#	my $assembly = Genome::Assembly::Pcap::Ace->new(
 #											input_file => "./testout1.ace",
 #											conserve_memory => 
 #										);
@@ -2015,7 +2015,7 @@ Ace - Object oriented ace file reader/writer
 
 =head1 SYNOPSIS
 
-my $ace_object = Finishing::Assembly::Ace->new(input_file => "inputfilename", output_file => "outputfilename", conserve_memory => 1, input_file_index => "inputfileindex");
+my $ace_object = Genome::Assembly::Pcap::Ace->new(input_file => "inputfilename", output_file => "outputfilename", conserve_memory => 1, input_file_index => "inputfileindex");
 
  my @contig_names = $ace_object->get_contig_names();
  my $contig = $ace_object->get_contig("Contig0.1");
@@ -2025,13 +2025,13 @@ my $ace_object = Finishing::Assembly::Ace->new(input_file => "inputfilename", ou
     
 =head1 DESCRIPTION
 
-Finishing::Assembly::Ace indexes an ace file, and allows the user to get Contig objects from the ace file, edit them, and write the file back to the hard disk when finished.
+Genome::Assembly::Pcap::Ace indexes an ace file, and allows the user to get Contig objects from the ace file, edit them, and write the file back to the hard disk when finished.
 
 =head1 METHODS
 
 =head1 new 
 
-my $ace_object = new Finishing::Assembly::Ace(input_file => $input_file, output_file => $output_file);
+my $ace_object = new Genome::Assembly::Pcap::Ace(input_file => $input_file, output_file => $output_file);
 
 input_file - required, the name of the input ace file.
 

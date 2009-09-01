@@ -18,17 +18,17 @@
 
 # Last modified: <Wed, 2005/09/28 10:46:49 lcarmich linus58>
 
-package Finishing::Assembly::Ace::Writer;
+package Genome::Assembly::Pcap::Ace::Writer;
 our $VERSION = 0.01;
 
 =pod
 
 =head1 NAME
-Finishing::Assembly::Ace::Writer - Write an ace file one element at a time
+Genome::Assembly::Pcap::Ace::Writer - Write an ace file one element at a time
 
 =head1 SYNOPSIS
 
-my $writer = new Finishing::Assembly::Ace::Writer(\*STDOUT);
+my $writer = new Genome::Assembly::Pcap::Ace::Writer(\*STDOUT);
 
 foreach $contig_hashref (@contigs) {
     $writer->write_object($contig_hashref);
@@ -36,7 +36,7 @@ foreach $contig_hashref (@contigs) {
 
 =head1 DESCRIPTION
 
-Finishing::Assembly::Ace::Writer takes hashrefs representing elements of an assembly and writes them out
+Genome::Assembly::Pcap::Ace::Writer takes hashrefs representing elements of an assembly and writes them out
 to an ace file.
 
 =cut
@@ -46,13 +46,13 @@ use warnings;
 use Carp;
 use Data::Dumper;
 
-my $pkg = 'Finishing::Assembly::Ace::Writer';
+my $pkg = 'Genome::Assembly::Pcap::Ace::Writer';
 
 =pod
 
 =item new 
 
-    my $writer = new Finishing::Assembly::Ace::Writer(\*STDOUT);    
+    my $writer = new Genome::Assembly::Pcap::Ace::Writer(\*STDOUT);    
 
 =cut
 sub new {

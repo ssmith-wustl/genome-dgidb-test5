@@ -1,19 +1,19 @@
-package Finishing::Assembly::Contig;
+package Genome::Assembly::Pcap::Contig;
 our $VERSION = 0.01;
 
 use strict;
 use warnings;
 use Carp;
 
-use Finishing::Assembly::SequenceItem;
-use Finishing::Assembly::Sequence;
-use Finishing::Assembly::Tag;
+use Genome::Assembly::Pcap::SequenceItem;
+use Genome::Assembly::Pcap::Sequence;
+use Genome::Assembly::Pcap::Tag;
 use List::Util qw(min max);
 use Utility;
 use Storable;
-use base (qw(Finishing::Assembly::SequenceItem));
+use base (qw(Genome::Assembly::Pcap::SequenceItem));
 
-my $pkg = "Finishing::Assembly::Contig";
+my $pkg = "Genome::Assembly::Pcap::Contig";
 
 =pod
 
@@ -23,12 +23,12 @@ Contig - Contig Object.
 
 =head1 SYNOPSIS
 
-my $contig = Finishing::Assembly::Contig->new(reads => \%reads, base_segments => \@base_segments, ace_contig => $ace_contig,  contig_tags => \@contig_tags);
+my $contig = Genome::Assembly::Pcap::Contig->new(reads => \%reads, base_segments => \@base_segments, ace_contig => $ace_contig,  contig_tags => \@contig_tags);
 
 =head1 DESCRIPTION
 
-Finishing::Assembly::Contig mainly acts a container for the reads and sequence data that are normally associated with contig.
-It inherits some useful functionality from Finishing::Assembly::SequenceItem, which uses GSC::IO::Assembly::Sequence.
+Genome::Assembly::Pcap::Contig mainly acts a container for the reads and sequence data that are normally associated with contig.
+It inherits some useful functionality from Genome::Assembly::Pcap::SequenceItem, which uses GSC::IO::Assembly::Sequence.
 
 =head1 METHODS
 
@@ -98,7 +98,7 @@ sub process_params
 
 $contig->ace_contig($ace_contig_hash);
     
-This is a getter/setter that takes a contig hash that is created by Finishing::Assembly::Ace::Reader.  It will also return an ace contig hash using the data that is contained in the contig.
+This is a getter/setter that takes a contig hash that is created by Genome::Assembly::Pcap::Ace::Reader.  It will also return an ace contig hash using the data that is contained in the contig.
 
 =cut
 

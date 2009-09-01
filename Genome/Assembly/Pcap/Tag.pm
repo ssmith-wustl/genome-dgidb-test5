@@ -1,4 +1,4 @@
-package Finishing::Assembly::Tag;
+package Genome::Assembly::Pcap::Tag;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use base qw(Class::Accessor);
 use Carp;
 use Storable;
 
-Finishing::Assembly::Tag->mk_accessors
+Genome::Assembly::Pcap::Tag->mk_accessors
 (qw/
     type
     date
@@ -29,7 +29,7 @@ our $VERSION = 0.01;
 
 sub new
 {
-    croak "Finishing::Assembly::Tag->new no class given, quitting" unless @_;
+    croak "Genome::Assembly::Pcap::Tag->new no class given, quitting" unless @_;
 
     my ($caller, %arg) = @_;
     
@@ -53,7 +53,7 @@ sub copy
 
 =head1 Name
 
- Finishing::Assembly::Tag - Represents a tag on a GSC::IO::Assembly::Item
+ Genome::Assembly::Pcap::Tag - Represents a tag on a GSC::IO::Assembly::Item
 
 =head1 Synopsis
 

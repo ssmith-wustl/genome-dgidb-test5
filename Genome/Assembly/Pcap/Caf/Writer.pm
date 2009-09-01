@@ -18,17 +18,17 @@
 
 # Last modified: <Wed, 2005/01/26 15:13:01 lcarmich linus58.gsc.wustl.edu>
 
-package Finishing::Assembly::Caf::Writer;
+package Genome::Assembly::Pcap::Caf::Writer;
 our $VERSION = 0.01;
 
 =pod
 
 =head1 NAME
-Finishing::Assembly::Caf::Writer - Write a caf file one element at a time
+Genome::Assembly::Pcap::Caf::Writer - Write a caf file one element at a time
 
 =head1 SYNOPSIS
 
-my $writer = new Finishing::Assembly::Caf::Writer(\*STDOUT);
+my $writer = new Genome::Assembly::Pcap::Caf::Writer(\*STDOUT);
 
 foreach $contig_hashref (@contigs) {
     $writer->write_object($contig_hashref);
@@ -36,7 +36,7 @@ foreach $contig_hashref (@contigs) {
 
 =head1 DESCRIPTION
 
-Finishing::Assembly::Caf::Writer takes hashrefs representing elements of an assembly and writes them out
+Genome::Assembly::Pcap::Caf::Writer takes hashrefs representing elements of an assembly and writes them out
 to an ace file.
 
 =cut
@@ -46,7 +46,7 @@ use warnings;
 use Carp;
 use List::Util qw(first max maxstr min minstr reduce shuffle sum);
 
-my $pkg = 'Finishing::Assembly::Caf::Writer';
+my $pkg = 'Genome::Assembly::Pcap::Caf::Writer';
 
 =pod
 

@@ -1,9 +1,9 @@
-package Finishing::Assembly::Ace::CoverageFilter::ByTags;
+package Genome::Assembly::Pcap::Ace::CoverageFilter::ByTags;
 
 use strict;
 use warnings;
 
-use base qw(Finishing::Assembly::Ace::CoverageFilter);
+use base qw(Genome::Assembly::Pcap::Ace::CoverageFilter);
 
 sub eval_contig
 {
@@ -40,16 +40,16 @@ sub tag_is_ok
 
 =head1 Name
 
-Finishing::Assembly::Ace::CoverageFilter::ByTags
+Genome::Assembly::Pcap::Ace::CoverageFilter::ByTags
  
 > Creates a map of each given contig representing the areas covered by
    tags.
 
-   ** Inherits from Finishing::Assembly::Ace::CoverageFilter **
+   ** Inherits from Genome::Assembly::Pcap::Ace::CoverageFilter **
    
 =head1 Synopsis
 
-my $cf = Finishing::Assembly::Ace::CoverageFilter::ByTags->new(\@patterns);
+my $cf = Genome::Assembly::Pcap::Ace::CoverageFilter::ByTags->new(\@patterns);
  * patterns: an array ref of tag types to process
 
 foreach my $contig (@contigs)
@@ -65,11 +65,11 @@ do stuff with the map objects...
 
 =head2 eval_contig($contig)
 
- Evaluates the tags in a Finishing::Assembly::Contig and creates a contig map.
+ Evaluates the tags in a Genome::Assembly::Pcap::Contig and creates a contig map.
  
 =head1 See Also
 
-Base class -> Finishing::Assembly::CoverageFilter
+Base class -> Genome::Assembly::Pcap::CoverageFilter
 
 =head1 Disclaimer
 

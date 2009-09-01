@@ -1,14 +1,14 @@
-package Finishing::Assembly::Item;
+package Genome::Assembly::Pcap::Item;
 our $VERSION = 0.01;
 
 use strict;
 use warnings;
 use Carp;
 use Storable;
-use Finishing::Assembly::Tag;
+use Genome::Assembly::Pcap::Tag;
 use Storable;
-use base(qw(Finishing::Assembly::DataAccessor));
-my $pkg = "Finishing::Assembly::Item";
+use base(qw(Genome::Assembly::Pcap::DataAccessor));
+my $pkg = "Genome::Assembly::Pcap::Item";
 
 =pod
 
@@ -18,7 +18,7 @@ Item - Base class for Reads, Contigs, and SuperContigs (through SequenceItem).  
 
 =head1 DESCRIPTION
 
-Finishing::Assembly::Item has a position, length, tags, and children.  The data items can be set through accessor methods.
+Genome::Assembly::Pcap::Item has a position, length, tags, and children.  The data items can be set through accessor methods.
 
 =head1 METHODS
 
@@ -29,7 +29,7 @@ Finishing::Assembly::Item has a position, length, tags, and children.  The data 
 
 =head1 new
 
-$item = Finishing::Assembly::Item->new(children => \%children, tags => \@tags, position => $position, length => $length);
+$item = Genome::Assembly::Pcap::Item->new(children => \%children, tags => \@tags, position => $position, length => $length);
     
 children - optional, a hash containing the items children, indexed by the child names.
 

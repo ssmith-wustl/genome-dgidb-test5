@@ -1,9 +1,9 @@
-package Finishing::Assembly::ContigTools;
+package Genome::Assembly::Pcap::ContigTools;
 our $VERSION = 0.01;
 
 use strict;
 
-use Finishing::Assembly::Transform;
+use Genome::Assembly::Pcap::Transform;
 use Carp::Assert;
 use Cwd;
 use Bio::Seq;
@@ -11,14 +11,14 @@ use Bio::Tools::dpAlign;
 use Utility;
 use Gtk;
 use Gtk::ButtonCrate::Radio;
-use Finishing::Assembly::Ace::Writer;
-use Finishing::Assembly::Ace::Reader;
-use Finishing::Assembly::Ace;
+use Genome::Assembly::Pcap::Ace::Writer;
+use Genome::Assembly::Pcap::Ace::Reader;
+use Genome::Assembly::Pcap::Ace;
 use List::Util qw(min max);
-#use Finishing::Assembly::PhdDB;
-use Finishing::Assembly::Phd;
+#use Genome::Assembly::Pcap::PhdDB;
+use Genome::Assembly::Pcap::Phd;
 use GSC::Sequence::Assembly::AceAdaptor;
-my $pkg = "Finishing::Assembly::ContigTools";
+my $pkg = "Genome::Assembly::Pcap::ContigTools";
 
 my $DEBUG = 0;
 
@@ -119,8 +119,8 @@ sub _convert_bioperl_to_gsc_transform
 	$left_contig->{align}{merge_seq} =~ tr/-/*/;
 
 
-	my $left_transform = Finishing::Assembly::Transform->new($left_contig->{align}{align_seq}, '-');#this creates a transform for the merge region as it originally 
-	my $right_transform = Finishing::Assembly::Transform->new($right_contig->{align}{align_seq}, '-');#this creates a transform for the merge region as it originally 
+	my $left_transform = Genome::Assembly::Pcap::Transform->new($left_contig->{align}{align_seq}, '-');#this creates a transform for the merge region as it originally 
+	my $right_transform = Genome::Assembly::Pcap::Transform->new($right_contig->{align}{align_seq}, '-');#this creates a transform for the merge region as it originally 
 	$right_transform->_offset( $left_contig->{align}{start}-$right_contig->{align}{start});
 	#may want to check if offset is valid
 	$left_contig->{align}{transform} = $left_transform;
@@ -176,7 +176,7 @@ sub _create_merge_tag
 	my $tempstring = sprintf("%02d%02d%02d:%02d%02d%02d", $year, ($temptime[4]+1), $temptime[3], 
 	$temptime[2], $temptime[1], $temptime[0] );
 		
-	return Finishing::Assembly::Tag->new(type => 'comment', , parent =>
+	return Genome::Assembly::Pcap::Tag->new(type => 'comment', , parent =>
        $contig_name, start => $left_end_of_merge, stop => $right_end_of_merge, date => $tempstring,
 	   source => "cmt", no_trans => "NoTrans", scope => "ACE");
 }
@@ -474,7 +474,7 @@ sub merge
 	#will be the same for the left and right contigs.  So, we just add the consensus in the right contig that occurs
 	#after the locally aligned region to the left contig.
 
-	my $merge_contig = Finishing::Assembly::Contig->new;
+	my $merge_contig = Genome::Assembly::Pcap::Contig->new;
 	$merge_contig->name( $left_contig->name );
 	$merge_contig->{align} = {};
 	$merge_contig->{align}{start} = $left_contig->{align}{transform}->get_pad_position($left_contig->{align}{start});
@@ -488,7 +488,7 @@ sub merge
 		if($_->align_end > $left_contig->{align}{start} )
 		{
 			my $new_seq = $left_contig->{align}{transform}->pad_string_partial($_->sequence->padded_base_string, $_->position-1, '-');
-			my $transform = Finishing::Assembly::Transform->new($new_seq, '-');
+			my $transform = Genome::Assembly::Pcap::Transform->new($new_seq, '-');
 			$new_seq =~ tr/-/*/;
 			$_->sequence->padded_base_string( $new_seq);
 
@@ -508,7 +508,7 @@ sub merge
 		{
 			my $tempoffset = 0;#$right_contig->{align}{transform}->_offset;
 			my $new_seq = $right_contig->{align}{transform}->pad_string_partial($_->sequence->padded_base_string, $_->position-$tempoffset-1, '-');
-			my $transform = Finishing::Assembly::Transform->new($new_seq, '-');
+			my $transform = Genome::Assembly::Pcap::Transform->new($new_seq, '-');
 			$new_seq =~ tr/-/*/;
 			$_->sequence->padded_base_string( $new_seq);
 
@@ -667,7 +667,7 @@ sub _get_ace_object
 
 		my $in_fs;
 		$in_fh = new IO::String($in_fs);
-		my $ace_writer = Finishing::Assembly::Ace::Writer->new($in_fh);
+		my $ace_writer = Genome::Assembly::Pcap::Ace::Writer->new($in_fh);
 		my $ace_adapter = GSC::Sequence::Assembly::AceAdaptor->new();
 
 		$ace_adapter->export_assembly(
@@ -684,7 +684,7 @@ sub _get_ace_object
 		$in_fh = new IO::File($data_source);
 		
 	}
-	return Finishing::Assembly::Ace->new(input => $in_fh);
+	return Genome::Assembly::Pcap::Ace->new(input => $in_fh);
 }
 
 sub _get_phd_object
@@ -692,12 +692,12 @@ sub _get_phd_object
 	my ($self, $data_source) = @_;
 	if(!($data_source =~ /\.ace/))
 	{		
-		return Finishing::Assembly::PhdDB->new;
+		return Genome::Assembly::Pcap::PhdDB->new;
 	}
 	else		
 	{
 		my $cwd = getcwd;
-		return Finishing::Assembly::Phd->new(input_directory => "$cwd/../phd_dir/");		
+		return Genome::Assembly::Pcap::Phd->new(input_directory => "$cwd/../phd_dir/");		
 	}
 }
 
@@ -1045,7 +1045,7 @@ sub split
 	# Transfer reads to new contigs.
 	# Fix alignment positions and tag positions of the right contig 326-592, 592-870
 
-	my $left_contig = Finishing::Assembly::Contig->new;
+	my $left_contig = Genome::Assembly::Pcap::Contig->new;
 	$left_contig->name( $contig->name . "a" );
 	$left_contig->reads( \%left_reads);
 	$left_contig->complemented( $contig->complemented);
@@ -1231,7 +1231,7 @@ sub split
 		$read->position($read->position + $offset);
 	}
 	
-	my $right_contig = Finishing::Assembly::Contig->new;
+	my $right_contig = Genome::Assembly::Pcap::Contig->new;
 	$right_contig->name( $contig->name . "b" );
 	$right_contig->reads( \%right_reads);
 	$right_contig->complemented( $contig->complemented);
@@ -1983,7 +1983,7 @@ ContigTools - Object oriented contig toolkit
     
 =head1 DESCRIPTION
 
-Finishing::Assembly::ContigTools performs operation on objects of type contig.  So far the functions supported are merging and splitting.
+Genome::Assembly::Pcap::ContigTools performs operation on objects of type contig.  So far the functions supported are merging and splitting.
 
 =head1 METHODS
 

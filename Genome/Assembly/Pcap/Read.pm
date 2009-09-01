@@ -1,21 +1,21 @@
-package Finishing::Assembly::Read;
+package Genome::Assembly::Pcap::Read;
 our $VERSION = 0.01;
 
 use strict;
 use warnings;
 use Carp;
-use Finishing::Assembly::Transform;
-use Finishing::Assembly::Tag;
+use Genome::Assembly::Pcap::Transform;
+use Genome::Assembly::Pcap::Tag;
 
-use Finishing::Assembly::SequenceItem;
-use Finishing::Assembly::Sequence;
+use Genome::Assembly::Pcap::SequenceItem;
+use Genome::Assembly::Pcap::Sequence;
 use Storable;
 
-use base (qw(Finishing::Assembly::SequenceItem));
+use base (qw(Genome::Assembly::Pcap::SequenceItem));
 
 
 
-my $pkg = "Finishing::Assembly::Read";
+my $pkg = "Genome::Assembly::Pcap::Read";
 
 =pod
 
@@ -25,7 +25,7 @@ Read - Class that manages a read's data.
 
 =head1 DESCRIPTION
 
-Finishing::Assembly::Read inherits from GSC::IO::Assembly::SequenceItem and has all it's functionality.  I also contains the getter/setters described below.
+Genome::Assembly::Pcap::Read inherits from GSC::IO::Assembly::SequenceItem and has all it's functionality.  I also contains the getter/setters described below.
 
 =head1 METHODS
 
@@ -36,7 +36,7 @@ Finishing::Assembly::Read inherits from GSC::IO::Assembly::SequenceItem and has 
 
 =head1 new
 
-$read = Finishing::Assembly::Read->new(children => \%children, tags => \@tags, position => $position, length => $length, ace_read => $ace_read, ace_read_position => $ace_read_position);
+$read = Genome::Assembly::Pcap::Read->new(children => \%children, tags => \@tags, position => $position, length => $length, ace_read => $ace_read, ace_read_position => $ace_read_position);
     
 children - optional, a hash containing the items children, indexed by the child names.
 
@@ -46,9 +46,9 @@ position - optional, the position of the item in the parent string.
 
 length - optional, the length of the item in the parent item in padded base units.
 
-ace_read - optional, will take a read hash as defined by Finishing::Assembly::Ace::Reader, and populate the fields of the read object.
+ace_read - optional, will take a read hash as defined by Genome::Assembly::Pcap::Ace::Reader, and populate the fields of the read object.
 
-ace_read_position - optional, will populate the read object with the data contained in an read_position.  This hash is produced by Finishing::Assembly::Ace::Reader.
+ace_read_position - optional, will populate the read object with the data contained in an read_position.  This hash is produced by Genome::Assembly::Pcap::Ace::Reader.
 
 =cut
 sub new 
@@ -319,7 +319,7 @@ sub code {
     
 $read->ace_read($ace_read)           
 
-This is a getter/setter that takes or returns a copy of the read hash in the same format as the read hash that is produced by Finishing::Assembly::Ace::Reader/Writer.  This method helps to provide compatibility with the low-level Ace Reader/Writer.
+This is a getter/setter that takes or returns a copy of the read hash in the same format as the read hash that is produced by Genome::Assembly::Pcap::Ace::Reader/Writer.  This method helps to provide compatibility with the low-level Ace Reader/Writer.
 
 =cut
 sub ace_read
@@ -365,7 +365,7 @@ sub ace_read
 
 $read->ace_read_position($ace_read_position)           
 
-This is a getter/setter that takes or returns a copy of the read_position hash in the same format as the read_position hash that is produced by Finishing::Assembly::Ace::Reader/Writer.  This method helps to provide compatibility with the low-level Ace Reader/Writer.
+This is a getter/setter that takes or returns a copy of the read_position hash in the same format as the read_position hash that is produced by Genome::Assembly::Pcap::Ace::Reader/Writer.  This method helps to provide compatibility with the low-level Ace Reader/Writer.
 
 =cut
 

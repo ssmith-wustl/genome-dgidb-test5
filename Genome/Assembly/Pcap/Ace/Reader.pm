@@ -18,7 +18,7 @@
 
 # Last modified: <Wed, 2006/01/04 13:55:25 lcarmich linus58>
 
-package Finishing::Assembly::Ace::Reader;
+package Genome::Assembly::Pcap::Ace::Reader;
 our $VERSION = 0.01;
 
 =pod
@@ -29,7 +29,7 @@ AceReader - Ace file iterator
 
 =head1 SYNOPSIS
 
-    my $reader = new Finishing::Assembly::Ace::Reader(input => \*STDIN);
+    my $reader = new Genome::Assembly::Pcap::Ace::Reader(input => \*STDIN);
     while (my $obj = $reader->next_object()) {
         if ($obj->{'type'} eq 'contig') {
             ...
@@ -39,7 +39,7 @@ AceReader - Ace file iterator
 
 =head1 DESCRIPTION
 
-Finishing::Assembly::Ace::Reader iterates over an ace file, returning one element at a time.
+Genome::Assembly::Pcap::Ace::Reader iterates over an ace file, returning one element at a time.
 
 =head1 METHODS
 
@@ -49,13 +49,13 @@ use strict;
 use warnings;
 use Carp;
 
-my $pkg = 'Finishing::Assembly::Ace::Reader';
+my $pkg = 'Genome::Assembly::Pcap::Ace::Reader';
 
 =pod
 
 =item new 
 
-    my $reader = new Finishing::Assembly::Ace::Reader(\*STDIN);
+    my $reader = new Genome::Assembly::Pcap::Ace::Reader(\*STDIN);
 
 =cut
 sub new {

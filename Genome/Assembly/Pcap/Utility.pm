@@ -4,7 +4,7 @@ package Utility;
 
 use Exporter;
 use Compress::Zlib;
-use Finishing::Assembly::Read;
+use Genome::Assembly::Pcap::Read;
 use List::Util qw(min max);
 @ISA    = qw(Exporter);
 @EXPORT = qw(

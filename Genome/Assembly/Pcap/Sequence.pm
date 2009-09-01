@@ -1,4 +1,4 @@
-package Finishing::Assembly::Sequence;
+package Genome::Assembly::Pcap::Sequence;
 our $VERSION = 0.01;
 
 use strict;
@@ -6,9 +6,9 @@ use warnings;
 use Carp;
 use Storable;
 
-use Finishing::Assembly::Transform;
-use base(qw(Finishing::Assembly::DataAccessor));
-my $pkg = "Finishing::Assembly::Sequence";
+use Genome::Assembly::Pcap::Transform;
+use base(qw(Genome::Assembly::Pcap::DataAccessor));
+my $pkg = "Genome::Assembly::Pcap::Sequence";
 #required params, padded_base_string
 
 #cases where same data is stored twice, and needs to be resolved
@@ -37,7 +37,7 @@ Sequence - Sequence class.
 
 =head1 DESCRIPTION
  
-Finishing::Assembly::Sequence manages a sequence and provides convenient conversion functions for padding and unpadding sequences.
+Genome::Assembly::Pcap::Sequence manages a sequence and provides convenient conversion functions for padding and unpadding sequences.
 
 =head1 METHODS
  
@@ -47,7 +47,7 @@ Finishing::Assembly::Sequence manages a sequence and provides convenient convers
 
 =head1 new
 
-$sequence = Finishing::Assembly::Sequence->new(sequence_state => "padded", padded_base_string => $padded_base_string);           
+$sequence = Genome::Assembly::Pcap::Sequence->new(sequence_state => "padded", padded_base_string => $padded_base_string);           
  
 sequence_state - optional, however, required if you want to initialized the sequence during object creation.  There are three sequence states: invalid, padded_sequence, and unpadded_sequence.
  
@@ -101,7 +101,7 @@ sub _transform
 	}
 	else
 	{
-		$self->{transform} = Finishing::Assembly::Transform->new if(!defined $self->{transform});
+		$self->{transform} = Genome::Assembly::Pcap::Transform->new if(!defined $self->{transform});
 		$self->_load_transform;
 		$self->{recent_align} = "transform";
         return $self->{transform};

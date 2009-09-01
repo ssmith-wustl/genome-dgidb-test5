@@ -1,11 +1,11 @@
-package Finishing::Assembly::ItemCallBack;
+package Genome::Assembly::Pcap::ItemCallBack;
 our $VERSION = 0.01;
 
 use strict;
 use warnings;
 use Carp;
 
-#my $pkg = "Finishing::Assembly::ItemCallBack";
+#my $pkg = "Genome::Assembly::Pcap::ItemCallBack";
 
 sub new 
 {
@@ -106,7 +106,7 @@ sub end_position
     croak "$name is an abstract base method!\n";
 }
 
-package Finishing::Assembly::SequenceCallBack;
+package Genome::Assembly::Pcap::SequenceCallBack;
 our $VERSION = 0.01;
 
 use strict;
@@ -115,8 +115,8 @@ use warnings;
 use Carp;
 use Storable;
 
-use Finishing::Assembly::Transform;
-#my $pkg = "Finishing::Assembly::SequenceCallBack";
+use Genome::Assembly::Pcap::Transform;
+#my $pkg = "Genome::Assembly::Pcap::SequenceCallBack";
 
 sub new {
     croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
@@ -245,7 +245,7 @@ sub length
     croak "$name is an abstract base method!\n";
 }
 
-package Finishing::Assembly::SequenceItemCallBack;
+package Genome::Assembly::Pcap::SequenceItemCallBack;
 our $VERSION = 0.01;
 
 use strict;
@@ -254,9 +254,9 @@ use warnings;
 use Carp;
 use Storable;
 
-use Finishing::Assembly::Transform;
-use base(qw(Finishing::Assembly::ItemCallBack));
-#my $pkg = "Finishing::Assembly::SequenceItemCallBack";
+use Genome::Assembly::Pcap::Transform;
+use base(qw(Genome::Assembly::Pcap::ItemCallBack));
+#my $pkg = "Genome::Assembly::Pcap::SequenceItemCallBack";
 
 sub new {
     croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
@@ -286,7 +286,7 @@ sub sequence
     croak "$name is an abstract base method!\n";
 }
 
-package Finishing::Assembly::ReadCallBack;
+package Genome::Assembly::Pcap::ReadCallBack;
 our $VERSION = 0.01;
 
 use strict;
@@ -294,9 +294,9 @@ use warnings;
 use Carp;
 
 use Storable;
-use base (qw(Finishing::Assembly::SequenceItemCallBack));
+use base (qw(Genome::Assembly::Pcap::SequenceItemCallBack));
 
-#my $pkg = "Finishing::Assembly::ReadCallBack";
+#my $pkg = "Genome::Assembly::Pcap::ReadCallBack";
 
 =head1 NAME
 
@@ -386,7 +386,7 @@ sub time
     croak "$name is an abstract base method!\n";
 }
 
-package Finishing::Assembly::ContigCallBack;
+package Genome::Assembly::Pcap::ContigCallBack;
 our $VERSION = 0.01;
 
 use strict;
@@ -394,9 +394,9 @@ use warnings;
 use Carp;
 
 use Storable;
-use base (qw(Finishing::Assembly::SequenceItemCallBack));
+use base (qw(Genome::Assembly::Pcap::SequenceItemCallBack));
 
-#my $pkg = "Finishing::Assembly::ContigCallBack";
+#my $pkg = "Genome::Assembly::Pcap::ContigCallBack";
 
 
 #Contig Data Structure

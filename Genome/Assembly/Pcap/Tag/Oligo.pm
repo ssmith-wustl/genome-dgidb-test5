@@ -1,11 +1,11 @@
-package Finishing::Assembly::Tag::Oligo;
+package Genome::Assembly::Pcap::Tag::Oligo;
 
 use strict;
 use warnings;
 
-use base qw(Finishing::Assembly::Tag);
+use base qw(Genome::Assembly::Pcap::Tag);
 
-Finishing::Assembly::Tag::Oligo->mk_accessors
+Genome::Assembly::Pcap::Tag::Oligo->mk_accessors
 (qw/
     oligo_name
     oligo_num
@@ -22,9 +22,9 @@ our $VERSION = 0.01;
 
 =head1 Name
 
- Finishing::Assembly::Tag::Oligo - Represents an oligo tag on a GSC::IO::Assembly::Item
+ Genome::Assembly::Pcap::Tag::Oligo - Represents an oligo tag on a GSC::IO::Assembly::Item
 
-  > Inherits from Finishing::Assembly::Tag;
+  > Inherits from Genome::Assembly::Pcap::Tag;
  
 =head2 Contig Tag Format
 

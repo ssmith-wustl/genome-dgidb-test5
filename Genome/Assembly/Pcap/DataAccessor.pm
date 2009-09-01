@@ -1,4 +1,4 @@
-package Finishing::Assembly::DataAccessor;
+package Genome::Assembly::Pcap::DataAccessor;
 
 use UNIVERSAL qw(can);
 sub new

@@ -18,7 +18,7 @@
 
 # Last modified: <Wed, 2005/03/02 14:57:21 lcarmich linus58.gsc.wustl.edu>
 
-package Finishing::Assembly::Phd::Reader;
+package Genome::Assembly::Pcap::Phd::Reader;
 our $VERSION = 0.01;
 
 =pod
@@ -29,13 +29,13 @@ PhdReader - Phd file iterator
 
 =head1 SYNOPSIS
 
-    my $reader = new Finishing::Assembly::Phd::Reader(\*STDIN);
+    my $reader = new Genome::Assembly::Pcap::Phd::Reader(\*STDIN);
     while (my $obj = $reader->nextObject()) {
     }
 
 =head1 DESCRIPTION
 
-Finishing::Assembly::Phd::Reader iterates over a phd file, returning one element at a time.
+Genome::Assembly::Pcap::Phd::Reader iterates over a phd file, returning one element at a time.
 
 =head1 METHODS
 
@@ -45,17 +45,17 @@ use strict;
 use warnings;
 use Carp;
 
-use Finishing::Assembly::Read;
-use Finishing::Assembly::Tag;
-use Finishing::Assembly::Sequence;
+use Genome::Assembly::Pcap::Read;
+use Genome::Assembly::Pcap::Tag;
+use Genome::Assembly::Pcap::Sequence;
 
-my $pkg = 'Finishing::Assembly::Phd::Reader';
+my $pkg = 'Genome::Assembly::Pcap::Phd::Reader';
 
 =pod
 
 =item new 
 
-    my $reader = new Finishing::Assembly::Phd::Reader;
+    my $reader = new Genome::Assembly::Pcap::Phd::Reader;
 
 =cut
 sub new {
@@ -81,14 +81,14 @@ sub new {
 
 =pod
 
-=item Finishing::Assembly::Phd::Reader::read 
+=item Genome::Assembly::Pcap::Phd::Reader::read 
 
     $phd = $reader->read(\*STDIN);
 
 =cut
 sub read {
     my ($self,$IN) = @_;
-    my $phd = new Finishing::Assembly::Read();
+    my $phd = new Genome::Assembly::Pcap::Read();
     while (my $line = <$IN>) {
         chomp $line;
         my @tokens = split(/ /, $line);
@@ -136,7 +136,7 @@ sub read_DNA {
         push @quality, $pos[1];
         push @positions, $pos[2];
     }
-    my $sequence = Finishing::Assembly::Sequence->new(sequence_state => "unpadded",unpadded_base_string => $bases);
+    my $sequence = Genome::Assembly::Pcap::Sequence->new(sequence_state => "unpadded",unpadded_base_string => $bases);
 	$sequence->unpadded_base_quality(\@quality);
 	$sequence->unpadded_chromat_positions(\@positions);
 	
@@ -188,7 +188,7 @@ sub read_tag {
         $tag_data{$element[0]} = $element[1] if defined $element[0];
     }
     my @pos = split / /, $tag_data{UNPADDED_READ_POS};
-    my $tag = new Finishing::Assembly::Tag(
+    my $tag = new Genome::Assembly::Pcap::Tag(
         type   => $tag_data{TYPE},
         source => $tag_data{SOURCE},
         date   => $tag_data{DATE},

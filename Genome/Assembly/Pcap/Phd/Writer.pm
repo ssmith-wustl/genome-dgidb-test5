@@ -18,7 +18,7 @@
 
 # Last modified: <Wed, 2006/11/15 16:26:13 ebelter linus108>
 
-package Finishing::Assembly::Phd::Writer;
+package Genome::Assembly::Pcap::Phd::Writer;
 our $VERSION = 0.01;
 
 =pod
@@ -44,11 +44,11 @@ use strict;
 use warnings;
 use Carp;
 
-use Finishing::Assembly::Read;
-use Finishing::Assembly::Tag;
-use Finishing::Assembly::Sequence;
+use Genome::Assembly::Pcap::Read;
+use Genome::Assembly::Pcap::Tag;
+use Genome::Assembly::Pcap::Sequence;
 
-my $pkg = 'Finishing::Assembly::Phd::Writer';
+my $pkg = 'Genome::Assembly::Pcap::Phd::Writer';
 
 =pod
 

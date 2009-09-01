@@ -1,9 +1,9 @@
-package Finishing::Assembly::Ace::CoverageFilter::ByReads;
+package Genome::Assembly::Pcap::Ace::CoverageFilter::ByReads;
 
 use strict;
 use warnings;
 
-use base qw(Finishing::Assembly::Ace::CoverageFilter);
+use base qw(Genome::Assembly::Pcap::Ace::CoverageFilter);
 
 sub eval_contig
 {
@@ -14,7 +14,7 @@ sub eval_contig
 
     $self->create_map($contig);
 
-    if ($contig->isa("Finishing::Assembly::Contig"))
+    if ($contig->isa("Genome::Assembly::Pcap::Contig"))
     {
         foreach my $read ( values %{ $contig->reads } )
         {
@@ -43,16 +43,16 @@ sub obj_is_ok
 
 =head1 Name
 
-Finishing::Assembly::Ace::CoverageFilter::ByReads
+Genome::Assembly::Pcap::Ace::CoverageFilter::ByReads
 
 > Creates a map of each given contig representing the areas covered by
    reads.  Does not take into account read pair info.
 
-   ** Inherits from Finishing::Assembly::Ace::CoverageFilter **
+   ** Inherits from Genome::Assembly::Pcap::Ace::CoverageFilter **
 
 =head1 Synopsis
 
- my $cf = Finishing::Assembly::Ace::CoverageFilter::ByReads->new(\@patterns);
+ my $cf = Genome::Assembly::Pcap::Ace::CoverageFilter::ByReads->new(\@patterns);
 
  > The @patterns var is an array of read name patterns.  These will be checked against
     the read name in a pattern match to determine whether or not to process the read.
@@ -72,13 +72,13 @@ Finishing::Assembly::Ace::CoverageFilter::ByReads
 
 =head2 eval_contig($contig)
 
- Evaluates the reads in a Finishing::Assembly::Contig and creates a contig map.
+ Evaluates the reads in a Genome::Assembly::Pcap::Contig and creates a contig map.
 
 =head1 See Also
 
- - Finishing::Assembly::Ace::CoverageFilter *base class* for map access;
- - Finishing::Assembly::Map
- - Finishing::Assembly::Mapping 
+ - Genome::Assembly::Pcap::Ace::CoverageFilter *base class* for map access;
+ - Genome::Assembly::Pcap::Map
+ - Genome::Assembly::Pcap::Mapping 
 
 =head1 Disclaimer
 

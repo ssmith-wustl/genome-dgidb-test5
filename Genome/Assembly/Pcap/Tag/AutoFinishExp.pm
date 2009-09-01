@@ -1,11 +1,11 @@
-package Finishing::Assembly::Tag::AutoFinishExp;
+package Genome::Assembly::Pcap::Tag::AutoFinishExp;
 
 use strict;
 use warnings;
 
-use base qw(Finishing::Assembly::Tag);
+use base qw(Genome::Assembly::Pcap::Tag);
 
-Finishing::Assembly::Tag::AutoFinishExp->mk_ro_accessors
+Genome::Assembly::Pcap::Tag::AutoFinishExp->mk_ro_accessors
 (qw/
     orientation
     num1 num2 num3 
@@ -82,9 +82,9 @@ sub template_for_id
 
 =head1 Name
 
- Finishing::Assembly::Tag::Oligo - Represents an oligo tag on a GSC::IO::Assembly::Item
+ Genome::Assembly::Pcap::Tag::Oligo - Represents an oligo tag on a GSC::IO::Assembly::Item
 
-  > Inherits from Finishing::Assembly::Tag;
+  > Inherits from Genome::Assembly::Pcap::Tag;
 
 =head2 Contig Tag Format
 

@@ -1,4 +1,4 @@
-package Finishing::Assembly::Map;
+package Genome::Assembly::Pcap::Map;
 
 use strict;
 use warnings;
@@ -9,9 +9,9 @@ use Bio::Seq::SeqWithQuality;
 use Bio::Seq;
 use Carp;
 use Data::Dumper;
-use Finishing::Assembly::Mapping;
+use Genome::Assembly::Pcap::Mapping;
 
-Finishing::Assembly::Map->mk_accessors
+Genome::Assembly::Pcap::Map->mk_accessors
 (qw/
     name
     bases
@@ -195,7 +195,7 @@ sub extend
         ? $mapping->parent_stop + $extend
         : $max_unpad;
 
-        push @new_mappings, Finishing::Assembly::Mapping->new
+        push @new_mappings, Genome::Assembly::Pcap::Mapping->new
         (
             parent_name => $mapping->parent_name,
             parent_start => $start,
@@ -274,7 +274,7 @@ sub create_mappings
 
         if (defined $start and defined $stop)
         {
-            push @mappings, Finishing::Assembly::Mapping->new
+            push @mappings, Genome::Assembly::Pcap::Mapping->new
             (
                 parent_name => $self->name,
                 parent_start => $start,
@@ -297,7 +297,7 @@ sub create_mappings_unpad
     my $pos = $self->pos_unpad;
     foreach my $mapping ( $self->create_mappings )
     {
-        push @new_mappings, Finishing::Assembly::Mapping->new
+        push @new_mappings, Genome::Assembly::Pcap::Mapping->new
         (
             parent_name => $mapping->parent_name,
             parent_start => $pos->{ $mapping->parent_start },
@@ -373,14 +373,14 @@ sub union
 {
     my (@maps) = @_;
 
-    confess "Finishing::Assembly::Map::union is a class method.\n"
+    confess "Genome::Assembly::Pcap::Map::union is a class method.\n"
     unless @maps and scalar @maps == grep { ref $_ } @maps;
 
     my $name = $maps[0]->name;
     my $union;
     foreach my $map (@maps)
     {
-        $union = Finishing::Assembly::Map->new( $name, $map->bases ) unless defined $union;
+        $union = Genome::Assembly::Pcap::Map->new( $name, $map->bases ) unless defined $union;
         foreach my $mapping ($map->create_mappings)
         {
             $union->edit($mapping->parent_start, $mapping->parent_stop);
@@ -393,11 +393,11 @@ sub intersect
 {
     my (@maps) = @_;
     
-    confess "Finishing::Assembly::Map::intersect is a class method.\n"
+    confess "Genome::Assembly::Pcap::Map::intersect is a class method.\n"
     unless @maps and scalar @maps == grep { ref $_ } @maps;
 
     my $init=shift @maps;
-    my $intersection = Finishing::Assembly::Map->new( $init->name, $init->bases );
+    my $intersection = Genome::Assembly::Pcap::Map->new( $init->name, $init->bases );
     my @intersection_map=$init->_map;
     my $size = @intersection_map;
     foreach my $map (@maps)
@@ -419,11 +419,11 @@ sub intersect
 
 =head1 Name & Constructor
 
-Finishing::Assembly::Map
+Genome::Assembly::Pcap::Map
 
  > represents the coverage of a contig.
 
- my $map = Finishing::Assembly::Map->new($name, $bases);
+ my $map = Genome::Assembly::Pcap::Map->new($name, $bases);
 
  * $name      name of object, string, required
  * $bases     bases to associate with the map, string, required
@@ -471,7 +471,7 @@ Finishing::Assembly::Map
 
     my $mappings = $map->create_mappings;
     
-    > Converts each of the map areas to a Finishing::Assembly::Mapping object.
+    > Converts each of the map areas to a Genome::Assembly::Pcap::Mapping object.
 
 =head2 create_bioseqs
 
@@ -493,7 +493,7 @@ Finishing::Assembly::Map
 
 ==head2 intersect(@other_maps)
 
-    my $map = Finishing::Assembly::Map->intersect(@maps);
+    my $map = Genome::Assembly::Pcap::Map->intersect(@maps);
 
     > Intersects map objects. Call as class method. Returns a new map object.
 =head1 Disclaimer

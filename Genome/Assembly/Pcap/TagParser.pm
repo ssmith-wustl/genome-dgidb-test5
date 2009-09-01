@@ -1,11 +1,11 @@
-package Finishing::Assembly::TagParser;
+package Genome::Assembly::Pcap::TagParser;
 
 use strict;
 use warnings;
 
-use Finishing::Assembly::Tag;
-use Finishing::Assembly::Tag::AutoFinishExp;
-use Finishing::Assembly::Tag::Oligo;
+use Genome::Assembly::Pcap::Tag;
+use Genome::Assembly::Pcap::Tag::AutoFinishExp;
+use Genome::Assembly::Pcap::Tag::Oligo;
 
 our $VERSION = 0.01;
 
@@ -60,7 +60,7 @@ sub _create_tag
 {
     my ($self, $atts) = @_;
     
-    my $class = 'Finishing::Assembly::Tag';
+    my $class = 'Genome::Assembly::Pcap::Tag';
 
     if ( $atts->{type} eq 'oligo' )
     {
@@ -175,14 +175,14 @@ sub serialize
 ## TEST ##
 ##########
 
-package Finishing::Assembly::TagParser::Test;
+package Genome::Assembly::Pcap::TagParser::Test;
 
 use strict;
 use warnings;
 
 use base qw(Test::Class);
 
-my $class = 'Finishing::Assembly::TagParser';
+my $class = 'Genome::Assembly::Pcap::TagParser';
 
 use Data::Dumper;
 use IO::String;
@@ -263,13 +263,13 @@ sub test_parse : Test(4)
 
 =head1 Name
 
- Finishing::Assembly::TagParser
+ Genome::Assembly::Pcap::TagParser
 
   > Parses tags from an acefice, or formats a tag for an acefile (not ready)
   
 =head1 Synopsis
 
- my $tp = Finishing::Assembly::TagParser->new();
+ my $tp = Genome::Assembly::Pcap::TagParser->new();
 
  $tp->parse($io);
 
@@ -278,7 +278,7 @@ sub test_parse : Test(4)
 =head2 parse
 
  Takes an io stream (inherits from IO::Handle) and parses the tag info.  The IO 
- stream must be where a tag begins.  Returns a Finishing::Assembly::Tag.
+ stream must be where a tag begins.  Returns a Genome::Assembly::Pcap::Tag.
 
    # CT{
    # Contig24 oligo consed 606 621 050427:142133

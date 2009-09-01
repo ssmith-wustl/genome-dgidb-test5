@@ -21,11 +21,11 @@
 our $VERSION = 0.01;
 
 =head1 NAME
-Finishing::Assembly::Mapping - Mapping of a child's position in its parent.
+Genome::Assembly::Pcap::Mapping - Mapping of a child's position in its parent.
 
 =head1 SYNOPSIS
 
-$mapping = new Finishing::Assembly::Mapping(parent_start => 2340, parent_stop => 2600, child_start => 55, child_stop => 545);
+$mapping = new Genome::Assembly::Pcap::Mapping(parent_start => 2340, parent_stop => 2600, child_start => 55, child_stop => 545);
 
 =head1 DESCRIPTION
 
@@ -42,10 +42,10 @@ use strict;
 use warnings;
 use Carp;
 
-package Finishing::Assembly::Mapping;
+package Genome::Assembly::Pcap::Mapping;
 
 sub new {
-    croak("Finishing::Assembly::Mapping:new:no class given, quitting") if @_ < 1;
+    croak("Genome::Assembly::Pcap::Mapping:new:no class given, quitting") if @_ < 1;
     my ($caller, %arg) = @_;
     my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;

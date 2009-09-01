@@ -1,11 +1,11 @@
-package Finishing::Assembly::Ace::CoverageFilter::ByScaffoldSpanningReads;
+package Genome::Assembly::Pcap::Ace::CoverageFilter::ByScaffoldSpanningReads;
 
 use strict;
 use warnings;
 
-use base qw(Finishing::Assembly::Ace::CoverageFilter);
+use base qw(Genome::Assembly::Pcap::Ace::CoverageFilter);
 
-Finishing::Assembly::Ace::CoverageFilter::ByScaffoldSpanningReads->mk_accessors
+Genome::Assembly::Pcap::Ace::CoverageFilter::ByScaffoldSpanningReads->mk_accessors
 (qw/
     traces
     /);
@@ -21,7 +21,7 @@ sub eval_contig
 
     # Go thru the reads...
     my $traces = $self->traces;
-    if ($contig->isa("Finishing::Assembly::Contig"))
+    if ($contig->isa("Genome::Assembly::Pcap::Contig"))
     {
         foreach my $read ( values %{ $contig->reads } )
         {
@@ -226,16 +226,16 @@ sub obj_is_ok
 
 =head1 Name
 
-Finishing::Assembly::Ace::CoverageFilter::ByScaffoldSpanningReads
+Genome::Assembly::Pcap::Ace::CoverageFilter::ByScaffoldSpanningReads
 
 > Creates a map of each given contig representing the areas covered by
    reads that span a scaffold.
 
-   ** Inherits from Finishing::Assembly::Ace::CoverageFilter **
+   ** Inherits from Genome::Assembly::Pcap::Ace::CoverageFilter **
 
 =head1 Synopsis
 
-my $cf = Finishing::Assembly::Ace:CoverageFilter::ByScaffoldSpanningReads->new
+my $cf = Genome::Assembly::Pcap::Ace:CoverageFilter::ByScaffoldSpanningReads->new
  (\@patterns);
 
 foreach my $contig (@contigs)
@@ -251,7 +251,7 @@ my @objs = $cf->get_all_objects;
 
 =head2 eval_contig($contig)
 
- Evaluates the reads in a Finishing::Assembly::Contig and creates a contig map.
+ Evaluates the reads in a Genome::Assembly::Pcap::Contig and creates a contig map.
  
 =head2 eval_scaffold(@scaffold)
 
@@ -260,7 +260,7 @@ my @objs = $cf->get_all_objects;
  
 =head1 See Also
 
-Base class -> Finishing::Assembly::CoverageFilter
+Base class -> Genome::Assembly::Pcap::CoverageFilter
  
 =head1 Author
 

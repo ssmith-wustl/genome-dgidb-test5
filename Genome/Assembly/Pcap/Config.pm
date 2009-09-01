@@ -1,4 +1,4 @@
-package Finishing::Assembly::Config;
+package Genome::Assembly::Pcap::Config;
 
 our $VERSION = 0.01;
 
@@ -10,7 +10,7 @@ use base qw(Class::Accessor);
 use IO::File;
 use Storable;
 
-#Finishing::Assembly::Config->mk_accessors(qw (
+#Genome::Assembly::Pcap::Config->mk_accessors(qw (
 
 sub new 
 {

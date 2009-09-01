@@ -1,11 +1,11 @@
-package Finishing::Assembly::SuperContig;
+package Genome::Assembly::Pcap::SuperContig;
 our $VERSION = 0.01;
 
 use strict;
 use warnings;
 use Carp;
 
-use Finishing::Assembly:
+use Genome::Assembly::Pcap:
 use List::Util qw(min max);
 use Utility;
 use Storable;

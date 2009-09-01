@@ -1,16 +1,16 @@
-package Finishing::Assembly::SequenceItem;
+package Genome::Assembly::Pcap::SequenceItem;
 our $VERSION = 0.01;
 
 use strict;
 use warnings;
 use Carp;
-use Finishing::Assembly::Tag;
-use Finishing::Assembly::Item;
-#use Finishing::Assembly::Transform;
-use Finishing::Assembly::Sequence;
-use base (qw(Finishing::Assembly::Item));
+use Genome::Assembly::Pcap::Tag;
+use Genome::Assembly::Pcap::Item;
+#use Genome::Assembly::Pcap::Transform;
+use Genome::Assembly::Pcap::Sequence;
+use base (qw(Genome::Assembly::Pcap::Item));
 
-my $pkg = "Finishing::Assembly::SequenceItem";
+my $pkg = "Genome::Assembly::Pcap::SequenceItem";
 sub new {
     croak("$pkg:new:no class given, quitting") if @_ < 1;
     my ($caller, %params) = @_;
@@ -26,7 +26,7 @@ sub new {
     #}
     #else
     #{
-    #    $self->sequence(Finishing::Assembly::Sequence->new(sequence_state => "invalid"));
+    #    $self->sequence(Genome::Assembly::Pcap::Sequence->new(sequence_state => "invalid"));
     #}
 	
 	if(exists $params{callbacks})
@@ -68,7 +68,7 @@ sub sequence
     }
     my $sequence = $self->check_and_load_data($name);       
 	return $sequence if defined $sequence;
-	return $self->check_and_load_data($name,Finishing::Assembly::Sequence->new);
+	return $self->check_and_load_data($name,Genome::Assembly::Pcap::Sequence->new);
 }
 
 sub freeze

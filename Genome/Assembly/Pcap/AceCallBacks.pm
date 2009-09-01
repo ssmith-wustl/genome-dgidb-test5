@@ -1,15 +1,15 @@
-use Finishing::Assembly::CallBacks;
-package Finishing::Assembly::AceItemCallBack;
+use Genome::Assembly::Pcap::CallBacks;
+package Genome::Assembly::Pcap::AceItemCallBack;
 our $VERSION = 0.01;
 
 use strict;
 use warnings;
 use Carp;
 
-use Finishing::Assembly::Tag;
+use Genome::Assembly::Pcap::Tag;
 use Storable;
 
-use base(qw(Finishing::Assembly::ItemCallBack));
+use base(qw(Genome::Assembly::Pcap::ItemCallBack));
 
 sub new
 {
@@ -27,7 +27,7 @@ sub base_count
 
 }
 
-package Finishing::Assembly::AceReadSequenceCallBack;
+package Genome::Assembly::Pcap::AceReadSequenceCallBack;
 our $VERSION = 0.01;
 
 use strict;
@@ -35,9 +35,9 @@ use strict;
 use warnings;
 use Carp;
 use Storable;
-use base(qw(Finishing::Assembly::SequenceCallBack));
+use base(qw(Genome::Assembly::Pcap::SequenceCallBack));
 
-#my $pkg = "Finishing::Assembly::AceReadSequenceCallBack";
+#my $pkg = "Genome::Assembly::Pcap::AceReadSequenceCallBack";
 
 sub new {
     croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
@@ -103,7 +103,7 @@ sub has_alignment
     return "padded_base_string";
 }
 
-package Finishing::Assembly::AceReadCallBack;
+package Genome::Assembly::Pcap::AceReadCallBack;
 our $VERSION = 0.01;
 
 use strict;
@@ -111,8 +111,8 @@ use warnings;
 use Carp;
 
 use Storable;
-use base (qw(Finishing::Assembly::SequenceItemCallBack));
-#my $pkg = "Finishing::Assembly::AceReadCallBack";
+use base (qw(Genome::Assembly::Pcap::SequenceItemCallBack));
+#my $pkg = "Genome::Assembly::Pcap::AceReadCallBack";
 
 =cut
 Contig Data Structure
@@ -192,7 +192,7 @@ sub length
 
 sub _build_read_tag {
     my ($self, $obj) = @_;
-    my $tag = new Finishing::Assembly::Tag(
+    my $tag = new Genome::Assembly::Pcap::Tag(
         type => $obj->{tag_type},
         date => $obj->{date},
         source => $obj->{program},
@@ -259,9 +259,9 @@ sub sequence
 {
     my ($self,$object) = @_;
     return 1 unless (@_ > 1);
-    my $rs_callback = Finishing::Assembly::AceReadSequenceCallBack->new(name => $self->{name},
+    my $rs_callback = Genome::Assembly::Pcap::AceReadSequenceCallBack->new(name => $self->{name},
     index => $self->{index}, reader => $self->{reader}, fh => $self->{fh}, file_name => $self->{file_name} );
-    my $sequence = Finishing::Assembly::Sequence->new(callbacks => $rs_callback); 
+    my $sequence = Genome::Assembly::Pcap::Sequence->new(callbacks => $rs_callback); 
 	$object->{just_load} = 1;   
     $object->sequence($sequence); 
 	$object->{just_load} = 0;
@@ -532,7 +532,7 @@ sub qual_clip_end
 }
 
 
-package Finishing::Assembly::AceContigSequenceCallBack;
+package Genome::Assembly::Pcap::AceContigSequenceCallBack;
 our $VERSION = 0.01;
 
 use strict;
@@ -541,9 +541,9 @@ use warnings;
 use Carp;
 use Storable;
 
-use Finishing::Assembly::Transform;
-use base(qw(Finishing::Assembly::SequenceCallBack));
-#my $pkg = "Finishing::Assembly::AceContigSequenceCallBack";
+use Genome::Assembly::Pcap::Transform;
+use base(qw(Genome::Assembly::Pcap::SequenceCallBack));
+#my $pkg = "Genome::Assembly::Pcap::AceContigSequenceCallBack";
 
 sub new {
     croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
@@ -645,7 +645,7 @@ sub has_alignment
     return "padded_base_string";
 }
 
-package Finishing::Assembly::AceContigCallBack;
+package Genome::Assembly::Pcap::AceContigCallBack;
 our $VERSION = 0.01;
 
 use strict;
@@ -653,9 +653,9 @@ use warnings;
 use Carp;
 
 use Storable;
-use base (qw(Finishing::Assembly::SequenceItemCallBack));
+use base (qw(Genome::Assembly::Pcap::SequenceItemCallBack));
 
-#my $pkg = "Finishing::Assembly::AceContigCallBack";
+#my $pkg = "Genome::Assembly::Pcap::AceContigCallBack";
 
 =cut
 Contig Data Structure
@@ -732,7 +732,7 @@ sub length
 
 sub _build_read_tag {
     my ($self, $obj) = @_;
-    my $tag = new Finishing::Assembly::Tag(
+    my $tag = new Genome::Assembly::Pcap::Tag(
         type => $obj->{tag_type},
         date => $obj->{date},
         source => $obj->{program},
@@ -758,7 +758,7 @@ sub tags
     foreach my $tag_index (@tags)
     {
         $input->seek($tag_index->{offset},0);
-        my $contig_tag = Finishing::Assembly::TagParser->new()->parse($input);
+        my $contig_tag = Genome::Assembly::Pcap::TagParser->new()->parse($input);
         push @contig_tags, $contig_tag;    
     }
 	$object->{just_load} = 1;
@@ -896,9 +896,9 @@ sub sequence
 {
     my ($self,$object) = @_;
     return 1 unless (@_ > 1);
-    my $cs_callback = Finishing::Assembly::AceContigSequenceCallBack->new(name => $self->{name},
+    my $cs_callback = Genome::Assembly::Pcap::AceContigSequenceCallBack->new(name => $self->{name},
     index => $self->_index, reader => $self->{reader}, fh => $self->{fh}, file_name => $self->{file_name} );
-    my $sequence = Finishing::Assembly::Sequence->new(callbacks => $cs_callback);    
+    my $sequence = Genome::Assembly::Pcap::Sequence->new(callbacks => $cs_callback);    
 	$object->{just_load} = 1;
     $object->sequence($sequence); 
 	$object->{just_load} = 0;
@@ -932,9 +932,9 @@ sub children
     my %children;
     foreach my $read_index (values %{$self->_index->{reads}} )
     {
-        my $read_callback = Finishing::Assembly::AceReadCallBack->new(name => $read_index->{read}{name},
+        my $read_callback = Genome::Assembly::Pcap::AceReadCallBack->new(name => $read_index->{read}{name},
         index => $self->_index, reader => $self->{reader}, fh => $self->{fh}, file_name => $self->{file_name} );
-        my $read = Finishing::Assembly::Read->new(callbacks => $read_callback);
+        my $read = Genome::Assembly::Pcap::Read->new(callbacks => $read_callback);
         $children{$read_index->{read}{name}} = $read;        
     }
 	$object->{just_load} = 1;

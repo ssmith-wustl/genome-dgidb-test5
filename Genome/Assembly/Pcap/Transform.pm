@@ -1,13 +1,13 @@
 #The Contig Merging and Splitting Utility Library has several classes.
 
-package Finishing::Assembly::Transform;
+package Genome::Assembly::Pcap::Transform;
 our $VERSION = 0.01;
 
 use strict;
 use warnings;
 use Carp;
    
-my $pkg = "Finishing::Assembly::Transform";
+my $pkg = "Genome::Assembly::Pcap::Transform";
 sub new#($padded_string, $pad_char)#return $transform
 {
 	croak("$pkg:new:no class given, quitting") if @_ < 1;

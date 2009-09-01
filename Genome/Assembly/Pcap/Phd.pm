@@ -1,7 +1,7 @@
-package Finishing::Assembly::Phd;
+package Genome::Assembly::Pcap::Phd;
 
 our $VERSION = 0.01;
-my $pkg = 'Finishing::Assembly::Phd';
+my $pkg = 'Genome::Assembly::Pcap::Phd';
 
 use strict;
 use warnings;
@@ -9,15 +9,15 @@ use warnings;
 use base qw(Class::Accessor);
 
 use Carp;
-use Finishing::Assembly::Phd::Reader;
-use Finishing::Assembly::Phd::Writer;
+use Genome::Assembly::Pcap::Phd::Reader;
+use Genome::Assembly::Pcap::Phd::Writer;
 use IO::File;
 use IO::String;
 use Compress::Zlib;
 use IO::String;
 use Storable;
 
-Finishing::Assembly::Phd->mk_accessors(qw(_reader _writer _input _input_directory _input_file _index conserve_memory));
+Genome::Assembly::Pcap::Phd->mk_accessors(qw(_reader _writer _input _input_directory _input_file _index conserve_memory));
 
 sub new
 {
@@ -60,8 +60,8 @@ sub new
 		$self->conserve_memory(0);
 	}
 	
-	$self->_reader( Finishing::Assembly::Phd::Reader->new );
-	$self->_writer( Finishing::Assembly::Phd::Writer->new );
+	$self->_reader( Genome::Assembly::Pcap::Phd::Reader->new );
+	$self->_writer( Genome::Assembly::Pcap::Phd::Writer->new );
 	if(exists $params{index_file}&& defined $params{index_file} && -e $params{index_file})
 	{
 		my $fh = IO::File->new($params{index_file});
@@ -364,13 +364,13 @@ sub add_phd
 
 =head1 NAME
 
- Finishing::Assembly::Phd
+ Genome::Assembly::Pcap::Phd
  
   > Object oriented phd/phd.ball file reader/writer
 
 =head1 SYNOPSIS
 
- my $phd_object = Finishing::Assembly::Phd->new
+ my $phd_object = Genome::Assembly::Pcap::Phd->new
  (
     input_directory => "inputdirname",
  );
@@ -381,7 +381,7 @@ sub add_phd
     
 =head1 DESCRIPTION
 
-Finishing::Assembly::Phd takes either a Phd file, and allows the user to get Contig objects from the ace file, edit them, and write the file back to the hard disk when finished.
+Genome::Assembly::Pcap::Phd takes either a Phd file, and allows the user to get Contig objects from the ace file, edit them, and write the file back to the hard disk when finished.
 
 =head1 METHODS
 
