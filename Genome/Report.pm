@@ -60,7 +60,28 @@ sub get_dataset_nodes {
 }
 
 sub get_dataset_nodes_for_name { 
-    return $_[0]->xml->findnodes("report/datasets[1]/$_[1]");
+    my ($self, $name) = @_;
+
+    confess "No name given to get dataset node by name." unless $name;
+
+    return $_[0]->xml->findnodes("report/datasets[1]/$name");
+}
+
+sub get_dataset {
+    my ($self, $name) = @_;
+
+    my ($node) = $self->get_dataset_nodes_for_name($name)
+        or return;
+
+    return Genome::Report::Dataset->create_from_xml_element($node);
+}
+
+sub get_datasets {
+    my ($self, $name) = @_;
+
+    return map { 
+        Genome::Report::Dataset->create_from_xml_element($_) 
+    } $self->get_dataset_nodes;
 }
 
 sub get_dataset_names { 
@@ -77,39 +98,22 @@ sub get_dataset_names {
     return @names;
 }
 
-sub get_datasets_by_name_as_xml {
+sub get_dataset_by_name_as_xml {
     my ($self, $name) = @_;
 
-    my @datasets = $self->get_dataset_nodes_for_name($name)
+    my ($dataset) = $self->get_dataset_nodes_for_name($name)
         or return;
-    
-    my @xmls;
-    for my $dataset ( @datasets ) {
-        push @xmls, $dataset->toString;
-    }
 
-    return @xmls; # wantarray?
+    return $dataset->toString;
 }
 
 sub get_datasets_by_name_as_separated_value_string {
     my ($self, $name, $separator) = @_;
 
-    my @datasets = $self->get_dataset_nodes_for_name($name)
+    my $dataset = $self->get_dataset($name)
         or return;
 
-    my @svs;
-    for my $dataset ( @datasets ) {
-        my @rows = grep { $_->nodeType == 1 } $dataset->findnodes('*');
-        # headers
-        my $svs = join(',', map { $_->nodeName } grep { $_->nodeType == 1 } $rows[0]->findnodes('*'))."\n";
-        # data
-        for my $row ( @rows ) {
-            $svs .= join(',', map { $_->to_literal } grep { $_->nodeType == 1 } $row->getChildnodes)."\n";
-        }
-        push @svs, $svs;
-    }
-
-    return @svs; # wantarray?
+    return $dataset->to_separated_value_string($separator);
 }
 
 #<>#
@@ -152,8 +156,8 @@ sub create {
     $self->xml($xml);
 
     unless ( $self->xml ) {
-        $self->delete;
         $self->error_message("Need XML document object to create report");
+        $self->delete;
         return;
     }
 
