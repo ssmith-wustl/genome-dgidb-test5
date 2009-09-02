@@ -14,23 +14,9 @@ class Genome::Model::Tools::Somatic::SnpFilter {
 
     is  => ['Command'],
     has => [
-        tumor_model => {
-            is          => 'Genome::Model',
-            id_by       => 'tumor_model_id',
-            is_optional => 1,
-        },
-        tumor_model_id => { 
-            is_input    => 1, 
-            is          => 'integer', 
-            is_optional => 0 
-        },
         tumor_snp_file => {
-            calculate_from => 'tumor_model',
-            calculate      => q{
-                my $build = $tumor_model->last_complete_build || die 'no completed build';
-                return $build->filtered_snp_file();
-            },
-            is_optional => 1,
+            is       => 'String',
+            is_input => '1',
             doc         => 'The snp filter output file from maq.',
         },
         sniper_snp_file => {

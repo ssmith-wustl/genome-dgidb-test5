@@ -23,15 +23,9 @@ class Genome::Model::Tools::Somatic::HighConfidence {
            is_output => 1,
            doc => 'File name in which to write output',
        },
-       tumor_model_id => { is_input=>1, is=>'integer', is_optional=>1},
-       tumor_model => { is => 'Genome::Model',
-           id_by => 'tumor_model_id',
-           is_optional => 1,
-           doc => 'tumor model to obtain tumor bam from --  must provide this OR tumor_model_id but not both',
-       },
-       'tumor_bam' => {
+       'tumor_bam_file' => {
             type => 'String',
-            doc => 'Tumor bam file to look at reads for -- must provide this OR tumor_model_id but not both',
+            doc => 'Tumor bam file in which to examine reads',
             is_optional => 1,
        },
        'min_mapping_quality' => {
@@ -92,28 +86,13 @@ sub execute {
        die;
     }
 
-    # If the tumor bam has not been set... set it via tumor model (for the pipeline, til refactor occurs)
-    unless (defined $self->tumor_model xor defined $self->tumor_bam) {
-        $self->error_message("Either tumor model or tumor bam must be provided... but not both!");
-        die;
-    }
-
-    unless (defined $self->tumor_bam) {
-        my $build = $self->tumor_model->last_complete_build;
-        unless ($build) {
-            $self->error_message("Could not get last complete build for tumor model " . $self->tumor_model_id);
-            die;
-        }
-        $self->tumor_bam($build->whole_rmdup_bam_file);
-    }
- 
     #check on BAM file
-    unless(-e $self->tumor_bam) {
-        $self->error_message("Tumor bam file: " . $self->tumor_bam . " does not exist");
+    unless(-e $self->tumor_bam_file) {
+        $self->error_message("Tumor bam file: " . $self->tumor_bam_file . " does not exist");
         die;
     }
 
-    unless(-e $self->tumor_bam . ".bai") {
+    unless(-e $self->tumor_bam_file . ".bai") {
         $self->error_message("Tumor bam must be indexed");
         die;
     }
@@ -164,7 +143,7 @@ sub execute {
     return 1 unless $current_variant;
     my ($vchr, $vpos, $vref, $viub) = split /\t/, $current_variant;
 
-    my $readcount_command = sprintf("%s -q 1 -l %s %s |",$self->readcount_program, $temp_path, $self->tumor_bam);
+    my $readcount_command = sprintf("%s -q 1 -l %s %s |",$self->readcount_program, $temp_path, $self->tumor_bam_file);
     $self->status_message("Running: $readcount_command");
     my $readcounts = IO::File->new($readcount_command);
     while(my $count_line = $readcounts->getline) {
