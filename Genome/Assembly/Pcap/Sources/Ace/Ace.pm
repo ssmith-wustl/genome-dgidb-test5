@@ -27,35 +27,38 @@ sub base_count
 
 }
 
-package Genome::Assembly::Pcap::AceReadSequenceCallBack;
+package Genome::Assembly::Pcap::AceReadCallBack;
 our $VERSION = 0.01;
 
 use strict;
-
 use warnings;
 use Carp;
+
 use Storable;
-use base(qw(Genome::Assembly::Pcap::SequenceCallBack));
+use base (qw(Genome::Assembly::Pcap::SequenceItemCallBack));
 
-#my $pkg = "Genome::Assembly::Pcap::AceReadSequenceCallBack";
+=cut
+Contig Data Structure
+Contig:
+    sequence (bases and quality)
+    children 
+    get_child
+    padded_base_count
+    base_count
+    read_count
+    complemented
+    tags
+=cut
 
-sub new {
+sub new 
+{
     croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
-    my ($caller, %args) = @_;
+    my ($caller, %params) = @_; 
     my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;
-    
-    my $self = $class->SUPER::new(%args);
-    
-    return $self;
-}
+    my $self = $class->SUPER::new(%params);
 
-sub get_map {
-    my ($self) = @_;
-    return { self => [ 'self' ],
-			 padded_base_string   => [ 'padded_base_string', 'unpadded_base_string', 'alignment' ],
-			 unpadded_base_string => [ 'unpadded_base_string', 'padded_base_string' ]
-           };
+    return $self;
 }
 
 sub padded_base_string
@@ -103,49 +106,16 @@ sub has_alignment
     return "padded_base_string";
 }
 
-package Genome::Assembly::Pcap::AceReadCallBack;
-our $VERSION = 0.01;
-
-use strict;
-use warnings;
-use Carp;
-
-use Storable;
-use base (qw(Genome::Assembly::Pcap::SequenceItemCallBack));
-#my $pkg = "Genome::Assembly::Pcap::AceReadCallBack";
-
-=cut
-Contig Data Structure
-Contig:
-    sequence (bases and quality)
-    children 
-    get_child
-    padded_base_count
-    base_count
-    read_count
-    complemented
-    tags
-=cut
-
-sub new 
-{
-    croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
-    my ($caller, %params) = @_; 
-    my $caller_is_obj = ref($caller);
-    my $class = $caller_is_obj || $caller;
-    my $self = $class->SUPER::new(%params);
-
-    return $self;
-}
 
 sub get_map {
     my ($self) = @_;
     return { self => [ 'self' ],
 			 read_position   => [ 'name', 'complemented', 'position' ],
-             read => [ 'name', 'padded_base_count', 'length', 'info_count', 'tags' ],
-             sequence => [ 'padded_base_string' ],
+             read => [ 'name', 'padded_base_count', 'length', 'info_count', 'tags' ],             
              qa => [ 'qual_clip_start', 'qual_clip_end', 'align_clip_start', 'align_clip_end'],
-             ds => [ 'chromat_file', 'phd_file', 'time', 'chemistry', 'dye' ]
+             ds => [ 'chromat_file', 'phd_file', 'time', 'chemistry', 'dye' ],
+             padded_base_string   => [ 'padded_base_string', 'unpadded_base_string', 'alignment' ],
+			 unpadded_base_string => [ 'unpadded_base_string', 'padded_base_string' ]
            };
 }
 
@@ -254,19 +224,6 @@ sub end_position
 }
 
 #methods inherited from SequenceItemCallBack
-
-sub sequence
-{
-    my ($self,$object) = @_;
-    return 1 unless (@_ > 1);
-    my $rs_callback = Genome::Assembly::Pcap::AceReadSequenceCallBack->new(name => $self->{name},
-    index => $self->{index}, reader => $self->{reader}, fh => $self->{fh}, file_name => $self->{file_name} );
-    my $sequence = Genome::Assembly::Pcap::Sequence->new(callbacks => $rs_callback); 
-	$object->{just_load} = 1;   
-    $object->sequence($sequence); 
-	$object->{just_load} = 0;
-    return 1;   
-}
 
 sub info_count
 {
@@ -532,35 +489,48 @@ sub qual_clip_end
 }
 
 
-package Genome::Assembly::Pcap::AceContigSequenceCallBack;
+package Genome::Assembly::Pcap::AceContigCallBack;
 our $VERSION = 0.01;
 
 use strict;
-
 use warnings;
 use Carp;
+
 use Storable;
+use base (qw(Genome::Assembly::Pcap::SequenceItemCallBack));
 
-use Genome::Assembly::Pcap::Transform;
-use base(qw(Genome::Assembly::Pcap::SequenceCallBack));
-#my $pkg = "Genome::Assembly::Pcap::AceContigSequenceCallBack";
+=cut
+Contig Data Structure
+Contig:
+    children 
+    get_child
+    padded_base_count
+    base_count
+    read_count
+    complemented
+    tags
+=cut
 
-sub new {
+sub new 
+{
     croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
-    my ($caller, %args) = @_;
+    my ($caller, %params) = @_; 
     my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;
-    #my $self = {};
-    #bless ($self, $class); 
-	my $self = $class->SUPER::new(%args);
-#    $self->{fh} = $args{fh};
-#    $self->{index} = $args{index};      
-    return $self;
+    my $self = $class->SUPER::new(%params);
+    
+    return $self;   
 }
+
 sub get_map {
     my ($self) = @_;
     return { self => [ 'self' ],
-			 padded_base_string   => [ 'padded_base_string', 'unpadded_base_string', 'alignment' ],
+			 contig   => [ 'name', 'complemented', 'base_count', 'length', 'read_count', 'base_seg_count' ],
+             quality => [ 'unpadded_base_quality' ],
+             base_segments => [ 'base_segments' ],
+             tags => [ 'tags' ],
+             children => [ 'children' ],
+   			 padded_base_string   => [ 'padded_base_string', 'unpadded_base_string', 'alignment' ],
 			 unpadded_base_string => [ 'unpadded_base_string', 'padded_base_string' ],
 			 padded_base_quality   => [ 'padded_base_quality', 'unpadded_base_quality', 'alignment' ],
 			 unpadded_base_quality => [ 'unpadded_base_quality', 'padded_base_quality' ]
@@ -643,54 +613,6 @@ sub unpadded_base_quality
 sub has_alignment
 {
     return "padded_base_string";
-}
-
-package Genome::Assembly::Pcap::AceContigCallBack;
-our $VERSION = 0.01;
-
-use strict;
-use warnings;
-use Carp;
-
-use Storable;
-use base (qw(Genome::Assembly::Pcap::SequenceItemCallBack));
-
-#my $pkg = "Genome::Assembly::Pcap::AceContigCallBack";
-
-=cut
-Contig Data Structure
-Contig:
-    sequence (bases and quality)
-    children 
-    get_child
-    padded_base_count
-    base_count
-    read_count
-    complemented
-    tags
-=cut
-
-sub new 
-{
-    croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
-    my ($caller, %params) = @_; 
-    my $caller_is_obj = ref($caller);
-    my $class = $caller_is_obj || $caller;
-    my $self = $class->SUPER::new(%params);
-    
-    return $self;   
-}
-
-sub get_map {
-    my ($self) = @_;
-    return { self => [ 'self' ],
-			 contig   => [ 'name', 'complemented', 'base_count', 'length', 'read_count', 'base_seg_count' ],
-             sequence => [ 'padded_base_string' ],
-             quality => [ 'unpadded_base_quality' ],
-             base_segments => [ 'base_segments' ],
-             tags => [ 'tags' ],
-             children => [ 'children' ],
-           };
 }
 
 #methods inherited from ItemCallBack
@@ -891,19 +813,6 @@ sub read_count
     return 1;
 }
     
-
-sub sequence
-{
-    my ($self,$object) = @_;
-    return 1 unless (@_ > 1);
-    my $cs_callback = Genome::Assembly::Pcap::AceContigSequenceCallBack->new(name => $self->{name},
-    index => $self->_index, reader => $self->{reader}, fh => $self->{fh}, file_name => $self->{file_name} );
-    my $sequence = Genome::Assembly::Pcap::Sequence->new(callbacks => $cs_callback);    
-	$object->{just_load} = 1;
-    $object->sequence($sequence); 
-	$object->{just_load} = 0;
-    return 1;   
-}
 
 sub base_segments
 {

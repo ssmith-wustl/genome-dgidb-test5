@@ -1,11 +1,9 @@
-package Genome::Assembly::Pcap::ItemCallBack;
+package Genome::Assembly::Pcap::Source::Item;
 our $VERSION = 0.01;
 
 use strict;
 use warnings;
 use Carp;
-
-#my $pkg = "Genome::Assembly::Pcap::ItemCallBack";
 
 sub new 
 {
@@ -106,17 +104,7 @@ sub end_position
     croak "$name is an abstract base method!\n";
 }
 
-package Genome::Assembly::Pcap::SequenceCallBack;
-our $VERSION = 0.01;
-
-use strict;
-
-use warnings;
-use Carp;
-use Storable;
-
 use Genome::Assembly::Pcap::Transform;
-#my $pkg = "Genome::Assembly::Pcap::SequenceCallBack";
 
 sub new {
     croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
@@ -129,17 +117,6 @@ sub new {
     return $self;
 }
 
-#sub freeze
-#{
-#	my ($self) = @_;
-#	$self->{fh} = undef;
-#}
-
-#sub thaw
-#{
-#	my ($self) = @_;
-#	$self->{fh} = $fh;
-#}
 sub freeze
 {
 	my ($self) = @_;
@@ -245,7 +222,7 @@ sub length
     croak "$name is an abstract base method!\n";
 }
 
-package Genome::Assembly::Pcap::SequenceItemCallBack;
+package Genome::Assembly::Pcap::Source::SequenceItem;
 our $VERSION = 0.01;
 
 use strict;
@@ -255,8 +232,7 @@ use Carp;
 use Storable;
 
 use Genome::Assembly::Pcap::Transform;
-use base(qw(Genome::Assembly::Pcap::ItemCallBack));
-#my $pkg = "Genome::Assembly::Pcap::SequenceItemCallBack";
+use base(qw(Genome::Assembly::Pcap::Source::Item));
 
 sub new {
     croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
@@ -286,7 +262,7 @@ sub sequence
     croak "$name is an abstract base method!\n";
 }
 
-package Genome::Assembly::Pcap::ReadCallBack;
+package Genome::Assembly::Pcap::Source::Read;
 our $VERSION = 0.01;
 
 use strict;
@@ -294,13 +270,11 @@ use warnings;
 use Carp;
 
 use Storable;
-use base (qw(Genome::Assembly::Pcap::SequenceItemCallBack));
-
-#my $pkg = "Genome::Assembly::Pcap::ReadCallBack";
+use base (qw(Genome::Assembly::Pcap::SequenceItem));
 
 =head1 NAME
 
-Read - Read Callback Object.
+Read - Read  Object.
 
 =cut
 #Read Data Structure
@@ -386,7 +360,7 @@ sub time
     croak "$name is an abstract base method!\n";
 }
 
-package Genome::Assembly::Pcap::ContigCallBack;
+package Genome::Assembly::Pcap::Source::Contig;
 our $VERSION = 0.01;
 
 use strict;
@@ -394,9 +368,7 @@ use warnings;
 use Carp;
 
 use Storable;
-use base (qw(Genome::Assembly::Pcap::SequenceItemCallBack));
-
-#my $pkg = "Genome::Assembly::Pcap::ContigCallBack";
+use base (qw(Genome::Assembly::Pcap::Source::SequenceItem));
 
 
 #Contig Data Structure
