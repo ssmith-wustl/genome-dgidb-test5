@@ -1,12 +1,13 @@
 #############################################################
 
-package Genome::Model::Report::BuildEventReportsBase;
+package Genome::Model::Report::BuildReportsBase;
 
 use strict;
 use warnings;
 
 use base 'Genome::Utility::TestBase';
 
+use Data::Dumper 'Dumper';
 require Genome::Model::Test;
 use Test::More;
 
@@ -28,6 +29,12 @@ sub _model {
     return $self->{_model};
 }
 
+sub _build_event {
+    my $self = shift;
+
+    return $self->_model->last_complete_build->build_event;
+}
+
 sub _build_id {
     my $self = shift;
 
@@ -45,10 +52,21 @@ sub _additional_params_for_test_class {
     return;
 }
 
+sub _pre_generate {
+    return 1;
+}
+
+sub _post_generate {
+    return 1;
+}
+
 sub test01_generate_report : Tests() {
     my $self = shift;
 
-    my $report = $self->{_object}->generate_report;
+    $self->_pre_generate or die "Can't run _pre_generate";
+    
+    my $generator = $self->{_object};
+    my $report = $generator->generate_report;
     ok($report, 'Generated report');
 
     if ( 0 ) { # Email/save yourself the report if ya wanna
@@ -56,13 +74,60 @@ sub test01_generate_report : Tests() {
         my $email = Genome::Report::Email->send_report(
             report => $report,
             to => $ENV{USER}.'@genome.wustl.edu',
-            xsl_files => [ $report->generator->get_xsl_file_for_html ],
-            image_files => [ $report->generator->get_image_file_infos_for_html ],
+            xsl_files => [ $generator->get_xsl_file_for_html ],
+            image_files => [ $generator->get_image_file_infos_for_html ],
         );
         print $report->xml_string."\n";
         #<STDIN>;
     }
 
+    $self->_post_generate or die "Can't run _post_generate";
+
+    return 1;
+}
+
+#############################################################
+
+package Genome::Model::Report::BuildDailySummary::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Model::Report::BuildReportsBase';
+
+use Test::More;
+
+sub report_subclass {
+    return 'BuildDailySummary';
+}
+
+sub params_for_test_class {
+    return (
+        #type_name => 'amplicon assembly',
+        processing_profile_id => 2067049, # WashU amplicon assembly
+        #show_most_recent_build_only => 1,
+    );
+}
+
+sub _pre_generate {
+    #return 1; # uncomment this to see real data
+    my $self = shift;
+    no warnings 'redefine';
+    *Genome::Model::Report::BuildDailySummary::_selectall_arrayref = sub{
+        return [ [qw|
+        2816929867 H_MA-TestPatient1-MOBIOpwrsoil_3.WashU H_MA-TestPatient1-MOBIOpwrsoil_3 23
+        98421139 /gscmnt/sata835/info/medseq/model_data/2816929867/build98421139 
+        Succeeded 2009-08-27
+        |] ]; 
+    };
+    return 1;
+}
+
+sub test02_create_failures : Tests() {
+    my $self = shift;
+
+    ok(!$self->test_class->create(), 'Failed as expected - create w/o id or type name');
+    
     return 1;
 }
 
@@ -73,7 +138,7 @@ package Genome::Model::Report::BuildInitialized::Test;
 use strict;
 use warnings;
 
-use base 'Genome::Model::Report::BuildEventReportsBase';
+use base 'Genome::Model::Report::BuildReportsBase';
 
 use Test::More;
 
@@ -88,7 +153,7 @@ package Genome::Model::Report::BuildSucceeded::Test;
 use strict;
 use warnings;
 
-use base 'Genome::Model::Report::BuildEventReportsBase';
+use base 'Genome::Model::Report::BuildReportsBase';
 
 use Test::More;
 
@@ -103,7 +168,7 @@ package Genome::Model::Report::BuildFailed::Test;
 use strict;
 use warnings;
 
-use base 'Genome::Model::Report::BuildEventReportsBase';
+use base 'Genome::Model::Report::BuildReportsBase';
 
 use Test::More;
 
