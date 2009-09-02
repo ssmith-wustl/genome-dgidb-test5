@@ -88,8 +88,8 @@ sub test00_attrs : Test(8) {
     my @datasets = $report->get_dataset_nodes;
     ok(@datasets, 'datasets') or die;
     my ($stats) = $report->get_dataset_nodes_for_name('stats');
-    ok($stats, 'stats dataset') or die;
-    is($datasets[0]->nodeName, $stats->nodeName, 'dataset name');
+    ok($stats, 'Dataset node: stats') or die;
+    is($datasets[0]->nodeName, $stats->nodeName, 'Dataset name: stats');
 
     return 1;
 }
@@ -178,25 +178,135 @@ sub test01_generate_report : Test(1) {
     return 1;
 }
 
-sub test02_validate_aryref : Test(2) { 
+#######################################################################
+
+package Genome::Report::Dataset::Test;
+
+use strict;
+use warnings;
+
+use base 'Genome::Utility::TestBase';
+
+use Data::Dumper 'Dumper';
+use Test::More;
+
+sub test_class { 
+    return 'Genome::Report::Dataset';
+}
+
+sub params_for_test_class {
+    return (
+        name => 'stats',
+        row_name => 'stat',
+        headers => [qw/ attempted assembled assembled-percent /],
+        rows => [ [qw/ 4 5 80.0% /] ],
+        attributes => { good => 'mizzou', bad => 0 },
+    );
+}
+
+sub test01_xml : Tests(2) {
     my $self = shift;
 
+    my $dataset = $self->{_object};
+    ok($dataset->to_xml_element, 'XML element');
+    ok($dataset->to_xml_string, 'XML string');
+    
+    return 1;
+}
+
+sub test02_svs : Tests(1) {
+    my $self = shift;
+
+   is(
+       $self->{_object}->to_separated_value_string('|'), 
+       "attempted|assembled|assembled-percent\n4|5|80.0\%\n",
+       'SVS string',
+   );
+
+    return 1;
+}
+
+sub test03_attributes : Tests(2) {
+    my $self = shift;
+
+    is(
+        $self->{_object}->get_attribute('good'), 
+        'mizzou',
+        'get_attribute good => mizzou',
+    );
+    ok(
+        $self->{_object}->set_attribute('bad', 'kansas'), 
+        'set_attribute bad => kansas',
+    );
+
+    return;
+}
+
+sub test04_create_from_xml_element : Tests(6) {
+    my $self = shift;
+
+    my $ds = $self->{_object};
+    my $from_element_ds = $self->test_class->create_from_xml_element($self->{_object}->to_xml_element);
+    ok($from_element_ds, 'Created dataset from XML element');
+
+    # Check ds and from element ds
+    for my $attr (qw/ name row_name headers rows attributes /) {
+        is_deeply($from_element_ds->$attr, $ds->$attr, $attr);
+    }
+
+    return 1;
+}
+
+sub test05_validate_aryref_and_xml_string : Test(4) { 
+    my $self = shift;
+
+    # aryref
     ok(
         !$self->test_class->_validate_aryref(
             name => 'data',
             value => undef,
-            method => 'test validating the _validate_aryref',
+            method => '_validate_aryref',
         ),
-        'Failed as expected - no value'
+        '_validate_aryref failed as expected - no value'
     );
     ok(
         !$self->test_class->_validate_aryref(
             name => 'data',
             value => 'string',
-            method => 'test validating the _validate_aryref',
+            method => '_validate_aryref',
         ),
-        'Failed as expected - value not aryref headers'
+        '_validate_string_for_xml failed as expected - not aryref'
     );
+
+    # xml
+    ok(
+        !$self->test_class->_validate_string_for_xml(
+            name => 'data',
+            value => undef,
+            method => '_validate_string_for_xml',
+        ),
+        '_validate_string_for_xml failed as expected - no value'
+    );
+    ok(
+        !$self->test_class->_validate_aryref(
+            name => 'data',
+            value => 'string_w_under_scores',
+            method => '_validate_string_for_xml',
+        ),
+        '_validate_string_for_xml failed as expected - value has underscores'
+    );
+
+    return 1;
+}
+
+
+sub test06_rows : Tests(3) {
+    my $self = shift;
+
+    my $ds = $self->{_object};
+    is_deeply([$ds->get_row_values_for_header('assembled')], [5], 'get_row_values_for_header');
+    ok(!$ds->get_row_values_for_header(), 'get_row_values_for_header failed as expected - no header');
+    ok(!$ds->get_row_values_for_header('not there'), 'get_row_values_for_header failed as expected - header not found');
 
     return 1;
 }
@@ -228,7 +338,7 @@ sub test01_send_report : Test(5) {
 
     my %valid_params = (
         report => $report,
-        to => $ENV{USER}.'@genome.wustl.edu',
+        to => [$ENV{USER}.'@genome.wustl.edu'], # can be string or aryref
         xsl_files => [ $report->generator->get_xsl_file_for_html ],
         image_files => [ $report->generator->get_image_file_infos_for_html ],
     );
@@ -238,7 +348,7 @@ sub test01_send_report : Test(5) {
     ok($valid, 'Sent report');
 
     #< Invalid >#
-    for my $attr (qw/ report to xsl_files /) {
+    for my $attr (qw/ to report xsl_files /) {
         my $val = delete $valid_params{$attr};
         my $invalid = Genome::Report::Email->send_report(%valid_params);
         ok(!$invalid, 'Failed as expected - no '.$attr);
