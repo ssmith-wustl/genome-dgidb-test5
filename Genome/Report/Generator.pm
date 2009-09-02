@@ -7,6 +7,7 @@ use Genome;
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';
+require Genome::Utility::FileSystem;
 use IO::String;
 use XML::LibXML;
 
@@ -226,78 +227,34 @@ sub _datasets_node {
 }
 
 sub _add_dataset {
-    my ($self, %params) = @_;
+    my $self = shift;
 
-    # Names
-    my $dataset_name = delete $params{name};
-    $self->_validate_string_for_xml(
-        name => 'dataset_name',
-        value => $dataset_name,
-        method => '_add_dataset',
-    )
-        or return;
-    my $row_name = delete $params{row_name};
-    $self->_validate_string_for_xml(
-        name => 'row_name',
-        value => $row_name,
-        method => '_add_dataset',
-    )
-        or return;
-
-    # Headers
-    my $headers = delete $params{headers};
-    $self->_validate_aryref(
-        name => 'headers',
-        value => $headers,
-        method => '_add_dataset',
-    ) or return;
-    for my $header ( @$headers ) {
-        $self->_validate_string_for_xml(
-            name => 'header',
-            value => $header,
-            method => '_add_dataset',
-        )
-            or return;
+    my $dataset;
+    my $ref = ref($_[0]); # we gotta a dataset object
+    if ( $ref ) {
+        $dataset = $_[0];
+    }
+    else { # OLD way
+        # separate the G:R:DS properties from the dataset xml attributes
+        my %attrs = @_; 
+        my %create_props = map { $_ => delete $attrs{$_} } (qw/ name row_name headers rows /);
+        $dataset = Genome::Report::Dataset->create(
+            %create_props,
+            attributes => \%attrs,
+        );
     }
 
-    # Rows
-    my $rows = delete $params{rows};
-    $self->_validate_aryref(
-        name => 'rows',
-        value => $rows,
-        method => '_add_dataset',
-    ) or return;
-
-    # Dataset node
-    my $dataset_node = $self->_xml->createElement($dataset_name)
+    unless ( $dataset ) {
+        $self->error_message();
+        return;
+    }
+    
+    my $element = $dataset->to_xml_element
         or return;
-    $self->_datasets_node->addChild($dataset_node)
+    $self->_datasets_node->addChild($element)
         or return;
 
-    # Add data
-    my $i;
-    for my $row ( @$rows ) {
-        my $row_node = $self->_xml->createElement($row_name)
-            or return;
-        $dataset_node->addChild($row_node)
-            or return;
-        for ( $i = 0; $i < @$headers; $i++ ) {
-            #print Dumper([$headers->[$i], $row->[$i]]);
-            my $element = $row_node->addChild( $self->_xml->createElement($headers->[$i]) )
-                or return;
-            $element->appendTextNode($row->[$i]);
-            #$row_node->addChild( $self->_xml->createAttribute($headers->[$i], $row->[$i]) )
-            #    or return;
-        }
-    }
-
-    # Add dataset attributes
-    for my $attr ( keys %params ) {
-        $dataset_node->addChild( $self->_xml->createAttribute($attr, $params{$attr}) )
-            or return;
-    }
-
-    return $dataset_node;
+    return $element;
 }
 
 sub _add_element_with_text_to_node {
@@ -311,68 +268,28 @@ sub _add_element_with_text_to_node {
     return $element;
 }
 
-=pod
-CDATA....
-    my $csv = IO::String->new;
-    unless ( $csv ) {
-        $self->error_message("Can't create IO::String: $!");
-        return;
-    }
-    my $svw = Genome::Utility::IO::SeparatedValueWriter->create(
-        headers => $headers,
-        output => $csv,
-    )
-        or return;
-    for my $row ( @$rows ) {
-        my %data;
-        @data{ @$headers } = @$row;
-        $svw->write_one(\%data)
-            or return;
-    }
-    $csv->seek(0, 0);
-    my $cdata_node = XML::LibXML::CDATASection->new( join('', $csv->getlines) )
-        or return;
-    $csv_node->addChild($cdata_node)
-        or return;
-=cut
+#< Report Template Files >#
+sub get_xsl_file_for_html { 
+    return $_[0]->_get_xsl_file_for_type('html');
+}
 
-sub _add_node_with_multiple_values {
-    my ($self, %params) = @_;
+sub _get_xsl_file_for_type { 
+    my ($self, $type) = @_;
 
-    unless ( $params{parent_node} ) {
-        $self->error_message("Need parent_node to add node with multiple values");
-        return;
-    }
-
-    unless ( $params{tag_name} ) {
-        $self->error_message("Need tag_name to add node with multiple values");
-        return;
-    }
-
-    unless ( $params{child_tag_name} ) {
-        $self->error_message("Need child_tag_name to add node with multiple values");
-        return;
-    }
-
-    $self->_validate_aryref(
-        name => $params{child_tag_name},
-        value => $params{'values'},
-        method => 'create node with multiple values',
-    )
-        or return;
+    my $module = $self->class;
+    Carp::confess( # no xsl for base 
+        "Can't get xsl file for base Genome::Report::Genertor class.  Get from subclass."
+    ) if $module eq __PACKAGE__; 
     
-    my $node = $self->_xml->createElement($params{tag_name})
-        or return;
-    $params{parent_node}->addChild($node)
-        or return;
-    
-    for my $value ( @{$params{'values'}} ) {
-        my $child_node = $self->_xml->createElement($params{child_tag_name});
-        $child_node->addChild( $self->_xml->createTextNode($value) );
-        $node->addChild($child_node);
-    }
-    
-    return $node;
+    my $inc_dir = Genome::Utility::FileSystem::get_inc_directory_for_class($module);
+    $module =~ s#::#/#g;
+
+    return sprintf(
+        '%s/%s.%s.xsl',
+        $inc_dir,
+        $module,
+        $type
+    );
 }
 
 1;
