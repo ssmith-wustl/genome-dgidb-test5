@@ -58,7 +58,7 @@ sub test_01_generate_report : Test(2) {
 
 ######################################################################
 
-package Genome::Model::AmpliconAssembly::Report::AssemblyStatsTest;
+package Genome::Model::AmpliconAssembly::Report::Stats::Test;
 
 use strict;
 use warnings;
@@ -74,7 +74,7 @@ sub test_class {
 
 ######################################################################
 
-package Genome::Model::AmpliconAssembly::Report::CompositionTest;
+package Genome::Model::AmpliconAssembly::Report::Composition::Test;
 
 use strict;
 use warnings;
@@ -90,7 +90,7 @@ sub test_class {
 
 ######################################################################
 
-package Genome::Model::AmpliconAssembly::Report::SummaryTest;
+package Genome::Model::AmpliconAssembly::Report::Summary::Test;
 
 use strict;
 use warnings;
