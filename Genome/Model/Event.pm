@@ -5,8 +5,6 @@ use warnings;
 use File::Path;
 use YAML;
 
-our $log_base = '/gscmnt/sata114/info/medseq/model_data/logs/';
-
 use Genome;
 class Genome::Model::Event {
     is => [ 'Genome::Model::Command' ],
@@ -365,58 +363,7 @@ sub desc {
     return $desc;
 }
 
-# Override the default message handling to auto-instantiate a log handle.
-# TODO: have the command tell the current context to take messages
-
-our @process_logs;
-
-sub _get_msgdata {
-    my $self = $_[0];
-    my $msgdata = $self->SUPER::_get_msgdata;
-    return $msgdata if $msgdata->{gm_fh_set};
-    $msgdata->{gm_fh_set} = 1;
-    my $name = $log_base;
-    use Sys::Hostname;
-    if (ref($self)) {
-        no warnings;
-        $name .= "/" . join('.', UR::Time->now, hostname(), $$, $self->id, $self->event_type, 
-            $self->model_id,
-            ($self->lsf_job_id || 'NOJOB')
-        ) . ".log";
-    }
-    else {
-        $name .= "/" . join(".", UR::Time->now, hostname(), $$) . ".process-log";
-    }
-    $name =~ s/\s/_/g;
-
-    my $logfh = $msgdata->{gm_logfh} = IO::File->new(">$name")
-        or die "Can't open file ($name): $!\n";
-    $logfh->autoflush(1);
-    chmod(0644, $name) or die "chmod $name failed: $!";
-    require IO::Tee;
-    my $fh = IO::Tee->new(\*STDERR, $logfh) or die "failed to open tee for $name: $!";        
-
-    push @process_logs, [$name,$logfh,$fh];
-
-    $self->dump_status_messages($fh);
-    $self->dump_warning_messages($fh);
-    $self->dump_error_messages($fh);
-
-    return $msgdata;
-}
-
-END {
-    for (@process_logs) {
-        my ($name,$logfh,$fh) = @$_;
-        eval { $fh->close; };
-        eval { $logfh->close; };
-        if (-f $name) {
-            print STDERR "removing temporary log file $name\n";
-            unlink $name;
-        }
-    }
-}
-
+#< Bsub >#
 sub bsub_rusage {
     return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1]'";
 }
