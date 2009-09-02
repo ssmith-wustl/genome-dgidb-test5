@@ -11,7 +11,7 @@ BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::Assignment::Generate');}
 
 #create
 my $g = Genome::Model::Tools::ViromeEvent::Assignment::Generate->create(
-                                                                dir => '/gscmnt/sata835/info/medseq/virome/test_mini/S0_Mouse_Tissue_0_Control',
+                                                                dir => '/gscmnt/sata835/info/medseq/virome/test17/S0_Mouse_Tissue_0_Control',
                                                             );
 isa_ok($g, 'Genome::Model::Tools::ViromeEvent::Assignment::Generate');
 #$g->execute();

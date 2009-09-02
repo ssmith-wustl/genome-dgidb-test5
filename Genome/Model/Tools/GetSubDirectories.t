@@ -9,7 +9,7 @@ use Test::More tests => 4;
 
 BEGIN {use_ok('Genome::Model::Tools::GetSubDirectories');}
 
-my ($dir) = ('/gscmnt/sata835/info/medseq/virome/test_mini');
+my ($dir) = ('/gscmnt/sata835/info/medseq/virome/test17');
 
 #create
 my $gsd = Genome::Model::Tools::GetSubDirectories->create(

@@ -11,7 +11,7 @@ BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::BlastX_NT::PoolAndSplitSequenc
 
 #create
 my $pass = Genome::Model::Tools::ViromeEvent::BlastX_NT::PoolAndSplitSequence->create(
-                                                                dir => '/gscmnt/sata835/info/medseq/virome/test_mini/S0_Mouse_Tissue_0_Control',
+                                                                dir => '/gscmnt/sata835/info/medseq/virome/test17/S0_Mouse_Tissue_0_Control',
                                                             );
 isa_ok($pass, 'Genome::Model::Tools::ViromeEvent::BlastX_NT::PoolAndSplitSequence');
 #$pass->execute();
