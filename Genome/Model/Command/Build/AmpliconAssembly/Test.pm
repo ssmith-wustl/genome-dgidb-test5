@@ -103,7 +103,7 @@ sub test03_verify : Tests {
             ok($event->execute, sprintf('Executed event (%s %s)', $event->id, $event->event_type))
                 or die; # if one of these fails just die
         }
-        print $build_event->build->data_directory,"\n##### HIT RETURN TO CONTINUE #####\n"; <STDIN>;
+        #print $build_event->build->data_directory,"\n##### HIT RETURN TO CONTINUE #####\n"; <STDIN>;
     }
 
     return 1;
@@ -362,6 +362,7 @@ sub should_copy_edit_dir { 1 }
 sub test_03_verify : Test(1) {
     my $self = shift;
 
+    #diag($self->_mock_build->resolve_reports_directory); <STDIN>;
     my @reports = glob($self->_mock_build->resolve_reports_directory.'/*');
     is(@reports, 2, "Created 2 reports");
 
