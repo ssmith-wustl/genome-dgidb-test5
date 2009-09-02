@@ -185,30 +185,6 @@ sub _add_model_info {
     return 1;
 }
 
-#< Report Template Files >#
-sub get_xsl_file_for_html { 
-    return $_[0]->_get_xsl_file_for_type('html');
-}
-
-sub _get_xsl_file_for_type { 
-    my ($self, $type) = @_;
-
-    my $module = $self->class;
-    Carp::confess( # no xsl for base g:m:report
-        "Can't get xsl file for base Genome::Model::Report class.  Get from subclass."
-    ) if $module eq __PACKAGE__; 
-    
-    my $inc_dir = Genome::Utility::FileSystem::get_inc_directory_for_class($module);
-    $module =~ s#::#/#g;
-
-    return sprintf(
-        '%s/%s.%s.xsl',
-        $inc_dir,
-        $module,
-        $type
-    );
-}
-
 #< Images >#
 sub get_image_file_infos_for_html { 
     return $_[0]->get_footer_image_info;
