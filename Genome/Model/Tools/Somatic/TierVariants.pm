@@ -29,40 +29,39 @@ class Genome::Model::Tools::Somatic::TierVariants{
             is_input  => 1,
             doc => 'The list of variants to be tiered',
         },
-        output_file => {
-            is => 'String',
-            is_input => 1,
-            is_output => 1,
-            doc=> 'The output of the Tier Variants process.',
-        },
         only_tier_1 => {
             type => 'Boolean',
             default => 0,
             is_input => 1,
             is_optional => 1,
             doc=> 'If set to true (defaults to false), do only tier 1 annotation. This eliminates the need for a ucsc file.',
-        }
-    ],
-    has_optional => [
+        },
         tier1_file => {
             is => 'String',
             doc => 'tier1 output file',
+            is_input => 1,
+            is_output => 1,
         },
         tier2_file => {
             is => 'String',
-            doc => 'tier2 output file',
+            doc => 'tier2 output file -- this must be set unless running only_tier_1',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
         },
         tier3_file => {
             is => 'String',
-            doc => 'tier3 output file',
+            doc => 'tier3 output file -- this must be set unless running only_tier_1',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
         },
         tier4_file => {
             is => 'String',
-            doc => 'tier4 output file',
-        },
-        tier5_file => {
-            is => 'String',
-            doc => 'tier5 output file',
+            doc => 'tier4 output file -- this must be set unless running only_tier_1',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
         },
     ],
 };
@@ -96,8 +95,14 @@ sub execute {
     my $trans_anno_fh = new FileHandle;
     $trans_anno_fh->open($transcript_annotation_file,"r") or croak "Couldn't open $transcript_annotation_file";
 
+    # make sure we're either only running tier 1 or that tier 2-4 files have been provided
+    unless ( ($self->only_tier_1) || ($self->tier2_file && $self->tier3_file && $self->tier4_file) ) {
+        $self->error_message("Tier 2-4 filenames must be provided unless only_tier_1 is set");
+        return;
+    }
+
     my $ucsc_fh = new FileHandle;
-    if (-e $ucsc_file) {
+    if (defined $ucsc_file and -e $ucsc_file) {
         $ucsc_fh->open($ucsc_file,"r") or croak "Couldn't open $ucsc_file";
     }
 
@@ -105,20 +110,17 @@ sub execute {
     $variant_fh->open($variant_file,"r") or croak "Couldn't open $variant_file";
 
     my $tier1 = new FileHandle;
-    $self->tier1_file($variant_file.".tier1");
     $tier1->open($self->tier1_file,"w") or croak "Couldn't write tier1 file";
 
     my $tier2 = new FileHandle;
-    $self->tier2_file($variant_file.".tier2");
-    $tier2->open($self->tier2_file,"w") or croak "Couldn't write tier2 file";
-
     my $tier3 = new FileHandle;
-    $self->tier3_file($variant_file.".tier3");
-    $tier3->open($self->tier3_file,"w") or croak "Couldn't write tier3 file";
-
     my $tier4 = new FileHandle;
-    $self->tier4_file($variant_file.".tier4");
-    $tier4->open($self->tier4_file,"w") or croak "Couldn't write tier4 file";
+
+    unless ($self->only_tier_1) {
+        $tier2->open($self->tier2_file,"w") or croak "Couldn't write tier2 file";
+        $tier3->open($self->tier3_file,"w") or croak "Couldn't write tier3 file";
+        $tier4->open($self->tier4_file,"w") or croak "Couldn't write tier4 file";
+    }
     
     my %exonic_at;
     my %variant_at;
