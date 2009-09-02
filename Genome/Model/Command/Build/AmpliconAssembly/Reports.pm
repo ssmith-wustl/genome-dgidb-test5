@@ -66,8 +66,8 @@ sub _generate_and_save_report {
         );
     }
 
-    my @dataset_names = $report->get_dataset_names;
-    unless ( @dataset_names ) { # not ok
+    my @datasets = $report->get_datasets;
+    unless ( @datasets ) { # not ok
         $self->error_message(
             sprintf(
                 'No datasets in %s report (MODEL <Name:%s Id:%s> BUILD <Id:%s>)', 
@@ -84,12 +84,19 @@ sub _generate_and_save_report {
         $self->build->reports_directory,
         $report->name_to_subdirectory($report->name),
     );
-    for my $dataset_name ( @dataset_names ) {
-        my $file = $file_base."/$dataset_name.csv";
+
+    for my $dataset ( @datasets ) {
+        my $dataset_name = $dataset->name;
+        my $file = sprintf(
+            '%s/%s.%s.tsv',
+            $file_base,
+            $self->model->subject_name,
+            $dataset_name,
+        );
         unlink $file if -e $file;
         my $fh = Genome::Utility::FileSystem->open_file_for_writing($file)
             or return; # not ok
-        my ($svs) = $report->get_datasets_by_name_as_separated_value_string($dataset_name, ',');
+        my ($svs) = $dataset->to_separated_value_string("\t");
         unless ( $svs ) { # not ok
             $self->error_message(
                 sprintf(
