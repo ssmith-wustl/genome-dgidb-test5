@@ -35,7 +35,7 @@ sub send_report {
     
     # Email addresses
     my $to = delete $params{to};
-    $class->_validate_to_address_string($to)
+    $class->_validate_to_addressees($to)
         or return;
     my $from = ( exists $params{from} ) 
     ? delete $params{from}
@@ -112,15 +112,28 @@ sub _validate_email_address_string {
     return 1;
 }
 
-sub _validate_to_address_string {
+sub _validate_to_addressees {
     my ($class, $to) = @_;
 
     unless ( $to ) {
-        $class->error_message("Required to have a *to* address string");
+        $class->error_message("To email report, there must be at least one *to* addressees");
         return;
     }
 
-    return $class->_validate_email_address_string('to', $to);
+    unless ( ref($to) ) { 
+        return $class->_validate_email_address_string('to', $to);
+    }
+
+    unless ( @$to ) {
+        $class->error_message("To email report, there must be at least one *to* addressees");
+        return;
+    }
+    for my $addressee ( @$to ) {
+        $class->_validate_email_address_string('to', $addressee)
+            or return;
+    }
+
+    return 1;
 }
 
 1;
@@ -138,10 +151,10 @@ Email a Genome::Report
 =head1 Usage
 
  use Genome;
- 
+
  # Get or generate a report...
  my $report = Genome::Report->create_report_from_directory(...);
- 
+
  # Transform
  my $confirmation = Genome::Report::Email->send_report(
     # Required
