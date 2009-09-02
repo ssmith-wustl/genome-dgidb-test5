@@ -89,6 +89,24 @@ sub link_instrument_data {
     return $cnt;
 }
 
+#< Reports >#
+sub get_stats_report {
+    my $self = shift;
+
+    my $report = $self->get_report('Stats');
+
+    return $report if $report;
+
+    $report = $self->get_report('Assembly Stats'); #old name
+
+    unless ( $report ) {
+        $self->error_message("No stats report found for build: ".$self->id);
+        return;
+    }
+
+    return $report;
+}
+
 ############################################
 #< THIS IS OLD...DON'T WANNA (RE)MOVE YET >#
 sub amplicons_and_headers { 
