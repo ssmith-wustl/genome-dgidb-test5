@@ -69,7 +69,7 @@ sub test_class {
 
 sub _params_for_test_class {
     return (
-        report_name => 'Assembly Stats',
+        report_name => 'Stats',
         directory => $_[0]->tmp_dir,
         #directory => '/gscuser/ebelter/Desktop',
         force => 1,
@@ -93,7 +93,7 @@ sub test_class {
 
 sub _params_for_test_class {
     return (
-        report_name => 'Assembly Stats',
+        report_name => 'Stats',
         dataset_name => 'stats',
         output_type => 'csv',
         #output_type => 'xml',
