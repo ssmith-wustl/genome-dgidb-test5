@@ -69,7 +69,7 @@ use Data::Dumper 'Dumper';
 use Test::More;
 
 sub test_class {
-    'Genome::Model::AmpliconAssembly::Report::AssemblyStats';
+    'Genome::Model::AmpliconAssembly::Report::Stats';
 }
 
 ######################################################################
