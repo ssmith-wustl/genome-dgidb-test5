@@ -95,7 +95,12 @@ sub _generate_summary {
             #May need to handle PE differently
         }
     }
-    my $pc_aligned = sprintf("%.02f",( ($aligned_reads / $total_reads) * 100 ));
+    my $pc_aligned;
+    if ($total_reads > 0) {
+        $pc_aligned = sprintf("%.02f",( ($aligned_reads / $total_reads) * 100 ));
+    } else {
+        $pc_aligned = '0.00';
+    }
     my @align_row = ('aligned-reads', $aligned_reads, $total_reads, $pc_aligned);
     push @rows, \@align_row;
     unless ($self->_add_dataset(
