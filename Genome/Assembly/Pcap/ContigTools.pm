@@ -8,7 +8,7 @@ use Carp::Assert;
 use Cwd;
 use Bio::Seq;
 use Bio::Tools::dpAlign;
-use Utility;
+use Genome::Assembly::Pcap::Utility;
 use Gtk;
 use Gtk::ButtonCrate::Radio;
 use Genome::Assembly::Pcap::Ace::Writer;

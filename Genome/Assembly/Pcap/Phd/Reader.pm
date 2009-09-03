@@ -47,7 +47,6 @@ use Carp;
 
 use Genome::Assembly::Pcap::Read;
 use Genome::Assembly::Pcap::Tag;
-use Genome::Assembly::Pcap::Sequence;
 
 my $pkg = 'Genome::Assembly::Pcap::Phd::Reader';
 
@@ -136,11 +135,11 @@ sub read_DNA {
         push @quality, $pos[1];
         push @positions, $pos[2];
     }
-    my $sequence = Genome::Assembly::Pcap::Sequence->new(sequence_state => "unpadded",unpadded_base_string => $bases);
-	$sequence->unpadded_base_quality(\@quality);
-	$sequence->unpadded_chromat_positions(\@positions);
-	
-    $phd->sequence($sequence);
+
+	$phd->unpadded_base_string($base);
+    $phd->unpadded_base_quality(\@quality);
+	$phd->unpadded_chromat_positions(\@positions);
+    
 }
 
 sub read_WR {

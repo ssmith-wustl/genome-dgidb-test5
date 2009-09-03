@@ -6,7 +6,6 @@ use warnings;
 use Carp;
 
 use Genome::Assembly::Pcap::SequenceItem;
-use Genome::Assembly::Pcap::Sequence;
 use Genome::Assembly::Pcap::Tag;
 use List::Util qw(min max);
 use Utility;

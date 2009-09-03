@@ -90,7 +90,7 @@ sub get_map {
            };
 }
 
-#methods inherited from ItemCallBack
+#methods inherited from Item Source
 
 sub position 
 {
@@ -194,7 +194,7 @@ sub end_position
     return 1;
 }
 
-#methods inherited from SequenceItemCallBack
+#methods inherited from SequenceItem Source
 
 sub info_count
 {

@@ -9,13 +9,12 @@ use base qw(Class::Accessor);
 use Genome::Assembly::Pcap::Ace::Reader;
 use Genome::Assembly::Pcap::Ace::Writer;
 use Genome::Assembly::Pcap::Item;
-use Genome::Assembly::Pcap::Sequence;
 use Genome::Assembly::Pcap::SequenceItem;
 use Genome::Assembly::Pcap::Contig;
 use Genome::Assembly::Pcap::Read;
 use Genome::Assembly::Pcap::Tag;
 use Genome::Assembly::Pcap::TagParser;
-use Genome::Assembly::Pcap::AceCallBacks;
+use Genome::Assembly::Pcap::Sources::Ace::Contig;
 use Genome::Assembly::Pcap::Config;
 use IO::File;
 use IO::String;
@@ -29,10 +28,10 @@ $Storable::Eval = 1;
 
 Genome::Assembly::Pcap::Ace->mk_accessors(qw(_reader _writer _input _output _input_file _output_file dbh sth_create sth_rem sth_set sth_get sth_getcount db_type _init_db _keep_changes _db_dsn _assembly_name config));
 
-my $pkg = 'Genome::Assembly::Pcap::Ace';
+
 
 sub new {
-    croak("$pkg:new:no class given, quitting") if @_ < 1;
+    croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
     my ($caller, %params) = @_;
     my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;

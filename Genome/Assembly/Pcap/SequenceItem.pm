@@ -9,9 +9,8 @@ use Genome::Assembly::Pcap::Item;
 #use Genome::Assembly::Pcap::Transform;
 use base (qw(Genome::Assembly::Pcap::Item));
 
-my $pkg = "Genome::Assembly::Pcap::SequenceItem";
 sub new {
-    croak("$pkg:new:no class given, quitting") if @_ < 1;
+    croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
     my ($caller, %params) = @_;
     my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;
@@ -48,7 +47,7 @@ sub length #no setter for length, since it doesn't make sense to allow someone t
     }
 }
 
-sub length
+sub length_deprecated
 {
 	my ($self, $type) = @_;
 	

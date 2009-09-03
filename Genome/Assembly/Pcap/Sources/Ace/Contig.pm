@@ -124,7 +124,7 @@ sub has_alignment
     return "padded_base_string";
 }
 
-#methods inherited from ItemCallBack
+#methods inherited from Item Source
 
 sub position 
 {

@@ -7,7 +7,7 @@ use Carp;
 use Storable;
 use Genome::Assembly::Pcap::Tag;
 use Storable;
-use base(qw(Genome::Assembly::Pcap::DataAccessor));
+use base(qw(Genome::Assembly::Pcap::Proxy));
 my $pkg = "Genome::Assembly::Pcap::Item";
 
 =pod

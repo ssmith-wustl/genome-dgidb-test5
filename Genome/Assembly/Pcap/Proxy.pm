@@ -1,4 +1,4 @@
-package Genome::Assembly::Pcap::DataAccessor;
+package Genome::Assembly::Pcap::Proxy;
 
 use UNIVERSAL qw(can);
 sub new

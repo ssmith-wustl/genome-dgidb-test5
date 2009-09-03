@@ -46,7 +46,6 @@ use Carp;
 
 use Genome::Assembly::Pcap::Read;
 use Genome::Assembly::Pcap::Tag;
-use Genome::Assembly::Pcap::Sequence;
 
 my $pkg = 'Genome::Assembly::Pcap::Phd::Writer';
 
@@ -108,11 +107,10 @@ sub write_comment {
 
 sub write_DNA {
     my ($self, $OUT, $phd) = @_;
-	return unless (defined $phd->sequence);
-	my $sequence = $phd->sequence;
-	my $bases = $sequence->unpadded_base_string;
-	my $quality = $sequence->unpadded_base_quality;
-	my $positions = $sequence->unpadded_chromat_positions;
+	return unless (defined $phd->unpadded_base_string);
+	my $bases = $phd->unpadded_base_string;
+	my $quality = $phd->unpadded_base_quality;
+	my $positions = $phd->unpadded_chromat_positions;
 	print $OUT "\nBEGIN_DNA\n";
 	
 	for(my $i=0;$i<@{$quality};$i++)

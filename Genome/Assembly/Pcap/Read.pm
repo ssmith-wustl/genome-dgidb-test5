@@ -8,14 +8,11 @@ use Genome::Assembly::Pcap::Transform;
 use Genome::Assembly::Pcap::Tag;
 
 use Genome::Assembly::Pcap::SequenceItem;
-use Genome::Assembly::Pcap::Sequence;
 use Storable;
 
 use base (qw(Genome::Assembly::Pcap::SequenceItem));
 
 
-
-my $pkg = "Genome::Assembly::Pcap::Read";
 
 =pod
 
@@ -53,7 +50,7 @@ ace_read_position - optional, will populate the read object with the data contai
 =cut
 sub new 
 {
-    croak("$pkg:new:no class given, quitting") if @_ < 1;
+    croak("__PACKAGE__:new:no class given, quitting") if @_ < 1;
     my ($caller, %params) = @_;
 #    my ($caller, $contig_hash, $reads, $contig_tags, $base_segments) = @_;
     my $caller_is_obj = ref($caller);
