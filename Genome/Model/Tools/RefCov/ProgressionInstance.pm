@@ -20,6 +20,11 @@ class Genome::Model::Tools::RefCov::ProgressionInstance {
             is => 'Text',
             doc => 'The base output directory for ref-cov files',
         },
+        samtools_version => {
+            is => 'Text',
+            doc => 'The version of samtools to use',
+            default_value => 'r320wu1',
+        }
     ],
     has_output => [
         stats_file => {
@@ -64,6 +69,7 @@ sub execute {
         is_sorted => 1,
         files_to_merge => \@bam_files,
         merged_file => $merged_bam,
+        use_version => $self->samtools_version,
     );
     my $merge = Genome::Model::Tools::Sam::Merge->create(%params);
     unless ($merge) {
