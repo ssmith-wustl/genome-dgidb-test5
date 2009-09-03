@@ -135,7 +135,6 @@ sub execute {
             filtered_snp_out_file   => $filtered_snp_output_file,
             filtered_indel_out_file => $filtered_indel_file,
         );
-        $params{pileup_params} = $indel_finder_params if $indel_finder_params;
         
         my $varfilter = Genome::Model::Tools::Sam::VarFilter->create(%params);
         $rv = $varfilter->execute;

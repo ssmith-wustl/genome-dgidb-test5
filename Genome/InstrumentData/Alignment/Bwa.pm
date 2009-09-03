@@ -195,9 +195,9 @@ sub verify_alignment_data {
     return unless -d $alignment_dir;
     
     unless ($self->_resource_lock) {
-	$lock = $self->lock_alignment_resource;
+	    $lock = $self->lock_alignment_resource;
     } else {
-	$lock = $self->_resource_lock;
+	    $lock = $self->_resource_lock;
     }
     
     print Data::Dumper::Dumper($self->output_files);
@@ -208,10 +208,14 @@ sub verify_alignment_data {
     }
     
     unless (-e $self->alignment_file) {
-	$self->status_message('No output files found in alignment directory: '. $alignment_dir . " missing file: " . $self->alignment_file);
-	return;
+	    $self->status_message('No output files found in alignment directory: '. $alignment_dir . " missing file: " . $self->alignment_file);
+	    return;
     }
     
+    unless ($self->unlock_alignment_resource) {
+        $self->error_message('Failed to unlock alignment resource '. $lock);
+        return;
+    }
 
     return 1;
 
@@ -223,9 +227,9 @@ sub _run_aligner {
     my $lock;
 
     unless ($self->_resource_lock) {
-	$lock = $self->lock_alignment_resource;
+	    $lock = $self->lock_alignment_resource;
     } else {
-	$lock = $self->_resource_lock;
+	    $lock = $self->_resource_lock;
     }
     my $instrument_data = $self->instrument_data;
     my $reference_build = $self->reference_build;
@@ -536,8 +540,12 @@ sub _run_aligner {
             $self->die_and_clean_up($self->error_message);
         }
     }
-
     
+    unless ($self->unlock_alignment_resource) {
+        $self->error_message('Failed to unlock alignment resource '. $lock);
+        return;
+    }
+
     $DB::single = 1;
     
     return 1;

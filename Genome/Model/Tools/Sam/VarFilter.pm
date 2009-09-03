@@ -69,11 +69,6 @@ my %other_options = (
         doc => 'snp output file after filter',
         default => 'indel.varfilter',
     },
-    pileup_params => {
-        is  => 'String',
-        doc => 'samtools pileup parameters',
-        default => '-q 1',
-    },
 );
 
 
@@ -110,18 +105,39 @@ sub execute {
     my $ref_seq  = $self->ref_seq_file;
     my $sam_path = $self->samtools_path;
     
+    my $dir = dirname $self->filtered_snp_out_file;
+    
     unless (-s $bam_file and -s $ref_seq) {
         $self->error_message("Can not find valid bam file: $bam_file or valid ref seq: $ref_seq");
+        return;
+    }
+    
+    my (undef, $tmp_bam) = File::Temp::tempfile(
+        'tmpBamXXXXXX', 
+        UNLINK => 1,
+        DIR    => $dir,
+    );
+    
+    my $view_cmd = "$sam_path view -b -q 1 $bam_file -o $tmp_bam";
+
+    my $rv = Genome::Utility::FileSystem->shellcmd(
+        cmd => $view_cmd,
+        output_files => [$tmp_bam],
+        skip_if_output_is_present => 0,
+    );
+
+    unless ($rv == 1) {
+        $self->error_message("Failed to run command: $view_cmd");
         return;
     }
     
     my ($tmp_fh, $tmp_out) = File::Temp::tempfile(
         'varFilterXXXXXX', 
         UNLINK => 1,
-        TMPDIR => 1,
+        DIR    => $dir,
     );
     
-    my $pileup_cmd = sprintf('%s pileup -f %s %s -c %s', $sam_path, $ref_seq, $self->pileup_params, $bam_file);
+    my $pileup_cmd = sprintf('%s pileup -f %s -c %s', $sam_path, $ref_seq, $tmp_bam);
     
     my $filter_cmd = $self->samtools_pl_path . ' varFilter';
 
@@ -136,12 +152,17 @@ sub execute {
 
     my $cmd = $pileup_cmd . ' | '. $filter_cmd;
     
-    my $rv = Genome::Utility::FileSystem->shellcmd(
+    $rv = Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
         output_files => [$tmp_out],
         skip_if_output_is_present => 0,
     );
         
+    unless ($rv == 1) {
+        $self->error_message("Failed to run command: $cmd");
+        return;
+    }
+
     my $snp_out_fh   = Genome::Utility::FileSystem->open_file_for_writing($self->filtered_snp_out_file) or return;
     my $indel_out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->filtered_indel_out_file) or return;
 
