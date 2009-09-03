@@ -248,19 +248,19 @@ sub execute {
                       auto_assign_inst_data => 1,
                   );
 
-                  my $subject_obj = $model->subject();
-                  
-                  if (defined($subject_obj)) {
-                      $model->subject_class_name(ref($subject_obj));
-                      $model->subject_id($subject_obj->id());
-                  }
-                      
                   unless (defined($model)) {
                       $self->error_message("Failed to create model '$model_name'");
                       push @process_errors, $self->error_message;
                       next PP;
                   }
                   
+                  my $subject_obj = $model->subject();
+                 
+                  if (defined($subject_obj)) {
+                      $model->subject_class_name(ref($subject_obj));
+                      $model->subject_id($subject_obj->id());
+                  }
+                 
                   push @models, $model;
                   
               }
