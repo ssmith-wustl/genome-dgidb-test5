@@ -51,9 +51,6 @@ sub new {
     my $tmp_dir = File::Temp::tempdir('ReferenceAlignmentTestXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 0);
     $ENV{GENOME_MODEL_ROOT} = $tmp_dir;
     $ENV{GENOME_MODEL_DATA} = $tmp_dir;
-    Genome::Utility::FileSystem->create_directory(
-                                                  Genome::Config->model_links_directory
-                                              );
     if ($args{messages}) {
         $self->{_messages} = $args{messages};
     } else {

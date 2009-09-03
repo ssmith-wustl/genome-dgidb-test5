@@ -152,8 +152,6 @@ sub successful_create_model {
     }
     my $expected_model_name;
     if ($params{model_name}) {
-        my $test_model_link_pathname = Genome::Model->model_links_directory . '/' . $params{'model_name'};
-        symlink('/tmp/', $test_model_link_pathname);
         $expected_model_name = $params{model_name};
     } else {
         my $subject_name = Genome::Utility::Text::sanitize_string_for_filesystem($params{subject_name});

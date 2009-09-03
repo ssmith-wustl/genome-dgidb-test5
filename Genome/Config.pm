@@ -22,10 +22,6 @@ sub data_directory {
 
 # links
 
-sub model_links_directory {
-    return shift->root_directory . '/model_links';
-}
-
 sub alignment_links_directory {
     return shift->root_directory . '/alignment_links';
 }
@@ -130,13 +126,6 @@ It can be changed with the GENOME_MODEL_DATA environment variable.
 
 This value changes over time, as disk fills, and new space is made for
 new data.
-
-=head2 model_links_directory
-
-All models directories are given a symlink under this directory.  The symlink 
-uses the model's "name".
-
-By default the $root_directory/model_links.
 
 =head2 model_data_directory
 

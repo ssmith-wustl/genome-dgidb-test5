@@ -424,10 +424,6 @@ sub base_parent_directory {
     return Genome::Config->root_directory;
 }
 
-sub model_links_directory {
-    return Genome::Config->model_links_directory;
-}
-
 sub alignment_links_directory {
     return Genome::Config->alignment_links_directory;;
 }
@@ -440,18 +436,6 @@ sub model_data_directory {
     return Genome::Config->model_data_directory;
 }
 
-
-# This is a human readable(model_name) symlink to the model_id based symlink
-# This symlink is created so humans can find their data on the filesystem
-sub model_link {
-    my $self = shift;
-    die sprintf("Model (ID: %s) does not have a name\n", $self->id) unless defined $self->name;
-
-    # strip out path separator chars because those will cause symlink creation to fail!
-    my $sanitized_name = $self->name;
-    $sanitized_name =~ s/\//_/g;
-    return Genome::Config->model_links_directory .'/'. $sanitized_name;
-}
 
 # These vary based on the current configuration, which could vary over
 # time.  This value is set when the model is created if not specified by the creator.
@@ -801,16 +785,7 @@ sub delete {
             $self->warning_message('Failed to rmtree model data directory '. $self->data_directory);
         }
     }
-    if (-l $self->model_link) {
-        unless (unlink($self->model_link)) {
-            $self->warning_message('Failed to remove model link '. $self->model_link);
-        }
-    } else {
-        if (-e $self->model_link) {
-            $self->warning_message('Expected symlink for the model link but got path'. $self->model_link);
-            $self->warning_message('Remove the model directory path manually if desired');
-        }
-    }
+    
     $self->SUPER::delete;
     return 1;
 
@@ -833,22 +808,6 @@ sub _build_model_filesystem_paths {
         $self->warning_message("Error attempting to set group write permissions on model directory $model_data_dir: rv $chmodrv");
     } 
 
-    # This is a human readable(model_name) symlink to the model_id based directory
-    # This symlink is created so humans can find their data on the filesystem
-    my $model_link = $self->model_link;
-    if ( -l $model_link ) {
-        $self->warning_message("model symlink '$model_link' already exists");
-        unless (unlink $model_link) {
-            $self->error_message("existing model symlink '$model_link' could not be removed");
-            return;
-        }
-    }
-
-    unless ( Genome::Utility::FileSystem->create_symlink($model_data_dir, $model_link) ) {
-        $self->error_message("model symlink '$model_link => $model_data_dir'  could not be successfully created");
-        return;
-    }
-    
     return 1;
 
 }
