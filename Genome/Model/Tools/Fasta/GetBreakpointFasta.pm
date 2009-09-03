@@ -45,7 +45,7 @@ class Genome::Model::Tools::Fasta::GetBreakpointFasta {
 sub help_brief {
     return <<EOS
   This tool was design to retrieve sequence from NCBI Human Build 36, sequence from an individual or list of breakpoint ids.
-  EOS
+EOS
 }
 
 sub help_synopsis {
