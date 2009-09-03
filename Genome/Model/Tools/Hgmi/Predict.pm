@@ -106,6 +106,12 @@ sub execute
 
     IPC::Run::run( @predict_command ) || croak "can't run Predict.pm : $OS_ERROR";
 
+    if($@)
+    {
+        carp "uh, we should have quit by now";
+        exit 1;
+    }
+
     return 1;
 }
 
