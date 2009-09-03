@@ -913,7 +913,7 @@ sub get_contig
 		{    
         	my $input = $self->_input;
         	my $reader = $self->_reader;
-        	my $contig_callback = Genome::Assembly::Pcap::AceContigCallBack->new(name => $contig_index->{name},
+        	my $contig_callback = Genome::Assembly::Pcap::Source::Ace::Contig->new(name => $contig_index->{name},
         	index => $contig_index, reader => $self->_reader, fh => $self->_input, file_name => $self->_input_file);    
         	return Genome::Assembly::Pcap::Contig->new(callbacks => $contig_callback);   
     	}

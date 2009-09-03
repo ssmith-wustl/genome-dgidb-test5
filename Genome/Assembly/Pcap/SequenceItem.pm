@@ -7,7 +7,6 @@ use Carp;
 use Genome::Assembly::Pcap::Tag;
 use Genome::Assembly::Pcap::Item;
 #use Genome::Assembly::Pcap::Transform;
-use Genome::Assembly::Pcap::Sequence;
 use base (qw(Genome::Assembly::Pcap::Item));
 
 my $pkg = "Genome::Assembly::Pcap::SequenceItem";
