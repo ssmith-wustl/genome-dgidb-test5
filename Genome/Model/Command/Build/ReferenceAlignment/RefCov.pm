@@ -138,7 +138,8 @@ sub execute {
             $op,
             'output_directory' => $ref_cov_dir,
             'bam_files' => $progression_array_ref,
-            'target_query_file' => $self->build->genes_file
+            'target_query_file' => $self->build->genes_file,
+            'samtools_version' => $self->model->rmdup_version,
         );
 
         #check workflow for errors 
