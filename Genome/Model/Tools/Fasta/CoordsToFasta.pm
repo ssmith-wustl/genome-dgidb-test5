@@ -73,7 +73,7 @@ class Genome::Model::Tools::Fasta::CoordsToFasta {
 sub help_brief {
     return <<EOS
   This tool was design to retrieve sequence from NCBI Human Build 36, sequence from an individual or list of coordinates.
-  EOS
+EOS
 }
 
 sub help_synopsis {
