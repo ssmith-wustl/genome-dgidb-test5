@@ -31,7 +31,13 @@ class Genome::Model::Tools::Fasta::GetBreakpointFasta {
 		 is_optional  => 1,
 	     },
 
-	     ],
+	     organism => {
+		 type  =>  'String',
+		 doc   =>  "provide the organism either mouse or human; default is human",
+		 is_optional  => 1,
+		 default => 'human',
+	     },
+	],
 	
     
 };
@@ -88,6 +94,8 @@ sub execute {
 
     my @bps = split(/\,/,$bp_ids);
     my $bp_n = @bps;
+
+    my $organism = $self->organism;
     
     my $out;
     if ($name) {
@@ -111,16 +119,23 @@ sub execute {
 	
 	my $start = $breakpoint1 - $flank;
 	my $stop = $breakpoint2 + $flank;
-	my ($mid) = &get_ref_base($chromosome,$breakpoint1,$breakpoint2);
+	my ($mid) = &get_ref_base($chromosome,$breakpoint1,$breakpoint2,$organism);
 	my ($lstop) = $breakpoint1 - 1;
 	my ($rstart) = $breakpoint2 + 1;
 	
-	my ($lseq) = &get_ref_base($chromosome,$start,$lstop);
-	my ($rseq) = &get_ref_base($chromosome,$rstart,$stop);
+	my ($lseq) = &get_ref_base($chromosome,$start,$lstop,$organism);
+	my ($rseq) = &get_ref_base($chromosome,$rstart,$stop,$organism);
 	
 	my $fullseq = $lseq . $mid . $rseq;
-	
-	print OUT qq(>$bp_id.fasta $flank\n);
+
+	my $header;
+	if ($organism eq "human") {
+	    $header = "\>$bp_id.fasta Flank $flank NCBI Human Build 36, Chr:$chromosome, Coords $start-$stop, Ori (+)";
+	} else {
+	    $header = "\>$bp_id.fasta Flank $flank NCBI Mouse Build 37, Chr:$chromosome, Coords $start-$stop, Ori (+)";
+	}
+
+	print OUT qq(>$header\n);
 	
 	my @seq = split(//,$fullseq);
 	my $n = 0;
@@ -147,12 +162,19 @@ sub execute {
 
 sub get_ref_base {
     
+    my ($chr_name,$chr_start,$chr_stop,$organism) = @_;
+
 #used to generate the refseqs;
     use Bio::DB::Fasta;
-    my $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+
+    my $RefDir;
+    if ($organism eq "human"){
+	$RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+    } else {
+	$RefDir = "/gscmnt/sata147/info/medseq/rmeyer/resources/MouseB37/";
+    }
     my $refdb = Bio::DB::Fasta->new($RefDir);
     
-    my ($chr_name,$chr_start,$chr_stop) = @_;
     my $seq = $refdb->seq($chr_name, $chr_start => $chr_stop);
     $seq =~ s/([\S]+)/\U$1/;
     
