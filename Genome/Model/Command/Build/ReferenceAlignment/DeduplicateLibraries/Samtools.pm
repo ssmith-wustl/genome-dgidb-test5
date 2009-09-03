@@ -103,6 +103,12 @@ sub execute {
         return; 
     }
 
+    my $merge_software = 'picard';
+    # Picard fails when merging BAMs aligned against the transcriptome
+    if ($self->model->dna_type eq 'cdna' && $self->model->reference_sequence_name eq 'XStrans_adapt_smallRNA_ribo') {
+        $merge_software = 'samtools';
+    }
+
     #parallelization starts here
     require Workflow::Simple;
     $Workflow::Simple::store_db=0;
@@ -116,9 +122,10 @@ sub execute {
 
     my $output = Workflow::Simple::run_workflow_lsf(
             $op,
-            'accumulated_alignments_dir' =>$alignments_dir, 
-            'library_alignments' =>\@list_of_library_alignments,
+            'accumulated_alignments_dir' => $alignments_dir, 
+            'library_alignments' => \@list_of_library_alignments,
             'rmdup_version' => $self->model->rmdup_version,
+            'merge_software' => $merge_software,
    );
 
    #check workflow for errors 
@@ -158,9 +165,13 @@ sub execute {
    #         $i++;
    #    }
 
-
    # these are already sorted coming out of the initial merge, so don't bother re-sorting
-   my $merge_rv = Genome::Model::Tools::Sam::Merge->execute(files_to_merge=>\@bam_files, merged_file=>$bam_merged_output_file, is_sorted=>1); 
+   my $merge_rv = Genome::Model::Tools::Sam::Merge->execute(
+       files_to_merge => \@bam_files,
+       merged_file => $bam_merged_output_file,
+       is_sorted => 1,
+       software => $merge_software,
+   ); 
 
    $now = UR::Time->now;
    $self->status_message("<<< Completing Bam merge at $now.");
