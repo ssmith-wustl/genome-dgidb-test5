@@ -89,7 +89,7 @@ sub execute {
         return;
     }
     
-    my $workflow = Workflow::Command::SomaticPipeline->create(
+    my $workflow = Genome::Model::Tools::Somatic::Compare::Bams->create(
         normal_bam_file => $normal_bam,
         tumor_bam_file => $tumor_bam,
         tumor_snp_file => $tumor_snp_file,
