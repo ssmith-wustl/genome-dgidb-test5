@@ -133,7 +133,7 @@ sub alignment {
         #$self->_alignment($alignment);
         push @alignments, $alignment;
         #Now create 'Paired End Read 1' fwd alignment
-        if ($model->force_fragment) {
+        if ($model->force_fragment && $self->instrument_data->is_paired_end) {
             my $instrument_data = $self->instrument_data;
             $params{instrument_data_id} = $instrument_data->fwd_seq_id;
             my $alignment_fwd = Genome::InstrumentData::Alignment->create(%params);
