@@ -23,6 +23,11 @@ class Genome::Model::Command::Build::ReferenceAlignment::DeduplicateLibraries::D
                         is => 'Text',
                         doc => 'The version of rmdup tools (samtools) used',
                     },
+    merge_software => {
+        is => 'Text',
+        doc => 'The software used for merging BAM files',
+        valid_values => ['picard','samtools'],
+    },
     ],
     has_param => [
         lsf_resource => {
@@ -95,7 +100,13 @@ sub execute {
                 $now = UR::Time->now;
                 print $log_fh "<<< Skipped bam merge at $now for library: $library ."."\n";
             } else {
-                my $merge_rv = Genome::Model::Tools::Sam::Merge->execute(files_to_merge=>\@library_maps,merged_file=>$merged_file,is_sorted=>1); 
+                my $merge_rv = Genome::Model::Tools::Sam::Merge->execute(
+                    files_to_merge => \@library_maps,
+                    merged_file => $merged_file,
+                    is_sorted => 1,
+                    software => $self->merge_software,
+                    use_version => $self->rmdup_version,
+                ); 
 
                 unless ($merge_rv) {
                     print $log_fh "There was a problem merging ".join(",",@library_maps). " to $merged_file.";
