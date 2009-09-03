@@ -227,7 +227,10 @@ sub get_transcript {
 
     my $sequence = join '' , @fullseq;
     my $protien_seq = $myCodonTable->translate($sequence);
-    
+
+    $transcript_info->{$transcript}->{-1}->{protien_seq} = $protien_seq;
+    $transcript_info->{$transcript}->{-1}->{sequence} = $sequence;
+
     print qq(\n\>$transcript.dna.fasta\n$sequence\n\n\>$transcript.protien.fasta\n$protien_seq\n);
 
 }
