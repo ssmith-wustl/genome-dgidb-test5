@@ -1,6 +1,0 @@
-Below is a description of the files contained in this directory.  They serve as an abstract base class, or template of which methods to implement when creating a data source.  
-Inheriting from them is optional but recommended.  It is only necessary to inherit and over-ride Read and Contig modules:
-Item.pm - base abstract class
-SequenceItem - inherits from and extends item, this is an item that contains sequence material
-Read - sequence item that handles read information
-Contig - sequence item that handles consensus information, 
