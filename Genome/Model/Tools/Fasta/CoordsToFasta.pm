@@ -3,7 +3,6 @@ package Genome::Model::Tools::Fasta::CoordsToFasta;
 use strict;
 use warnings;
 use Genome;
-use GSCApp;
 
 class Genome::Model::Tools::Fasta::CoordsToFasta {
     is => 'Command',                    
@@ -60,7 +59,12 @@ class Genome::Model::Tools::Fasta::CoordsToFasta {
 		 doc   =>  "use this option if you reverse completemented sequence rather than the default positively oriented sequence",
 		 is_optional  => 1,
 	     },
-
+	     organism => {
+		 type  =>  'String',
+		 doc   =>  "provide the organism either mouse or human; default is human",
+		 is_optional  => 1,
+		 default => 'human',
+	     },
 	     ],
 	
     
@@ -157,9 +161,16 @@ EOS
 sub execute {
 
     my $self = shift;
+    my $organism = $self->organism;
 
     my $genome;
-    if ($self->masked) {$genome = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-human-build36');}
+    if ($self->masked) {
+	if ($organism eq "human") {
+	    $genome = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-human-build36');
+	} else {
+	    $genome = GSC::Sequence::Genome->get(sequence_item_name => 'NCBI-mouse-buildC57BL6J');
+	}
+    }
 
     my $ori = "+";
     if ($self->reverse_complement) {
@@ -190,9 +201,14 @@ sub execute {
 
 	    if ($chr =~ /M/ || $chr =~ /m/) { $chr = "MT"; }
 
-
-	    if ($self->format_header) {$name = "$chr\:$start\:$stop NCBI Build 36, Chr:$chr, Coords $start-$stop, Ori ($ori)";}
-
+	    if ($self->format_header) {
+		if ($organism eq "human") {
+		    $name = "$chr\:$start\:$stop NCBI Human Build 36, Chr:$chr, Coords $start-$stop, Ori ($ori)";
+		} else {
+		    $name = "$chr\:$start\:$stop NCBI Mouse Build 37, Chr:$chr, Coords $start-$stop, Ori ($ori)";
+		}
+	    }
+	    
 	    my $seq = &get_ref_base($chr,$start,$stop,$self);
 	    
 	    unless ($seq) {$self->error_message("the sequence was not found from the info $line. This line will be skipped"); next;}
@@ -224,8 +240,8 @@ sub execute {
 
 	unless ($chr && $start && $stop) { system qq(gt fasta coords-to-fasta --help); return 0;}
 
-	unless ($start =~ /^[\d]+$/) {$self->error_message("please provide the Build 36 start coordinate"); return 0; }
-	unless ($stop =~ /^[\d]+$/) {$self->error_message("please provide the Build 36 start coordinate"); return 0; }
+	unless ($start =~ /^[\d]+$/) {$self->error_message("please provide the start coordinate"); return 0; }
+	unless ($stop =~ /^[\d]+$/) {$self->error_message("please provide the stop coordinate"); return 0; }
 
 	if ($chr =~ /M/ || $chr =~ /m/) { $chr = "MT"; }
 
@@ -251,8 +267,14 @@ sub execute {
 	my $name = $self->name;
 	unless ($name) { $name = "chr$chr:$start:$stop"; }
 
-	if ($self->format_header) {$name = "$chr\:$start\:$stop NCBI Build 36, Chr:$chr, Coords $start-$stop, Ori ($ori)";}
-	
+	if ($self->format_header) {
+	    if ($organism eq "human") {
+		$name = "$chr\:$start\:$stop NCBI Human Build 36, Chr:$chr, Coords $start-$stop, Ori ($ori)";
+	    } else {
+		$name = "$chr\:$start\:$stop NCBI Mouse Build 37, Chr:$chr, Coords $start-$stop, Ori ($ori)";
+	    }
+	}
+
 	if ($out) {
 	    print OUT qq(\>$name\n$seq\n);
 	} else {
@@ -277,12 +299,20 @@ sub reverse_complement_allele {
 
 
 sub get_ref_base {
+    my ($chr_name,$chr_start,$chr_stop,$self) = @_;
+
+    my $organism = $self->organism;
 
     use Bio::DB::Fasta;
-    my $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+    my $RefDir;
+    if ($organism eq "human"){
+	$RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
+    } else {
+	$RefDir = "/gscmnt/sata147/info/medseq/rmeyer/resources/MouseB37/";
+    }
+
     my $refdb = Bio::DB::Fasta->new($RefDir);
 
-    my ($chr_name,$chr_start,$chr_stop,$self) = @_;
     my $chr = $chr_name;
 
     unless ($chr_name =~ /chr/) {$chr = "chr$chr_name";}
