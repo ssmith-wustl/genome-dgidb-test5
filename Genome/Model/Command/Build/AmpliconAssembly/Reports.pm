@@ -14,7 +14,7 @@ class Genome::Model::Command::Build::AmpliconAssembly::Reports {
 sub execute {
     my $self = shift;
 
-    for my $report_type ('assembly stats', 'composition') {
+    for my $report_type ('stats', 'composition') {
         $self->_generate_and_save_report($report_type);
     }
 
