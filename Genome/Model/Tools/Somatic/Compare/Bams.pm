@@ -72,6 +72,15 @@ sub pre_execute {
         }
     }
 
+    # The output files of indel pe step should go into the workflow directory
+    unless ($self->indelpe_data_directory) {
+        $self->indelpe_data_directory($self->data_directory);
+    }
+    # Default ref seq
+    unless ($self->indelpe_ref_seq_file) {
+        $self->indelpe_ref_seq_file("/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa");
+    }
+
     if ($error_count) {
         # Shouldnt really hit this error... we should only be missing params if the user failed to provide them if they didnt provide data directory
         if ($self->data_directory) {
@@ -124,7 +133,13 @@ __DATA__
   <link fromOperation="input connector" fromProperty="sniper_snp_output" toOperation="Somatic Sniper" toProperty="output_snp_file" />
   <link fromOperation="input connector" fromProperty="sniper_indel_output" toOperation="Somatic Sniper" toProperty="output_indel_file" />
 
-  <link fromOperation="input connector" fromProperty="tumor_snp_file" toOperation="Snp Filter" toProperty="tumor_snp_file" />
+
+  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Indelpe Runner" toProperty="tumor_bam_file" />
+  <link fromOperation="input connector" fromProperty="indelpe_ref_seq_file" toOperation="Indelpe Runner" toProperty="ref_seq_file" />
+  <link fromOperation="input connector" fromProperty="indelpe_data_directory" toOperation="Indelpe Runner" toProperty="output_dir" />
+  <link fromOperation="input connector" fromProperty="tumor_snp_file" toOperation="Indelpe Runner" toProperty="filtered_snp_file" />
+
+  <link fromOperation="Indelpe Runner" fromProperty="filtered_snp_file" toOperation="Snp Filter" toProperty="tumor_snp_file" />
   <link fromOperation="input connector" fromProperty="snp_filter_output" toOperation="Snp Filter" toProperty="output_file" />
   <link fromOperation="Somatic Sniper" fromProperty="output_snp_file" toOperation="Snp Filter" toProperty="sniper_snp_file" />
 
@@ -202,6 +217,10 @@ __DATA__
     <operationtype commandClass="Genome::Model::Tools::Somatic::Sniper" typeClass="Workflow::OperationType::Command" />
   </operation>
 
+  <operation name="Indelpe Runner">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::IndelpeRunner" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
   <operation name="Snp Filter">
     <operationtype commandClass="Genome::Model::Tools::Somatic::SnpFilter" typeClass="Workflow::OperationType::Command" />
   </operation>
@@ -252,7 +271,7 @@ __DATA__
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>normal_bam_file</inputproperty>
     <inputproperty>tumor_bam_file</inputproperty>
-    <inputproperty>tumor_snp_file</inputproperty>
+    <inputproperty isOptional="Y">tumor_snp_file</inputproperty>
 
     <inputproperty isOptional="Y">only_tier_1</inputproperty>
     <inputproperty isOptional="Y">only_tier_1_indel</inputproperty>
@@ -261,6 +280,9 @@ __DATA__
     <inputproperty isOptional="Y">ucsc_file</inputproperty>
     <inputproperty isOptional="Y">sniper_snp_output</inputproperty>
     <inputproperty isOptional="Y">sniper_indel_output</inputproperty>
+
+    <inputproperty isOptional="Y">indelpe_data_directory</inputproperty>
+    <inputproperty isOptional="Y">indelpe_ref_seq_file</inputproperty>
 
     <inputproperty isOptional="Y">snp_filter_output</inputproperty>
 
