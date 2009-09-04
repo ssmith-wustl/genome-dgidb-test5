@@ -10,7 +10,16 @@ class Genome::Gene {
     table_name => 'GENE',
     id_by => [
         gene_id => { 
-            is => 'NUMBER' 
+            is => 'Text' 
+        },
+        species => { is => 'varchar',
+            is_optional => 1,
+        },
+        source => { is => 'VARCHAR',
+            is_optional => 1,
+        },
+        version => { is => 'VARCHAR',
+            is_optional => 1,
         },
     ],
     has => [
@@ -28,27 +37,17 @@ class Genome::Gene {
     ],
     has_many => [
         transcripts => { 
-            calculate_from => [qw/ gene_id data_directory/],
+            calculate_from => [qw/ id data_directory/],
             calculate => q|
-                Genome::Transcript->get(gene_id => $gene_id,  data_directory => $data_directory);
+                Genome::Transcript->get(gene_id => $id,  data_directory => $data_directory);
             |,
         },
         external_ids => { 
-            calculate_from => [qw/ gene_id data_directory/],
+            calculate_from => [qw/ id data_directory/],
             calculate => q|
-                Genome::ExternalGeneId->get(gene_id => $gene_id, data_directory => $data_directory);
+                Genome::ExternalGeneId->get(gene_id => $id, data_directory => $data_directory);
             |,
         },
-        #TODO expression data is patient specific this needs to be moved
-#        gene_expressions => { 
-#            calculate_from => [qw/ gene_id data_directory/],
-#            calculate => q|
-#                Genome::GeneGeneExpression->get(gene_id => $gene_id, data_directory => $data_directory);
-#            |,
-#        },
-#        expressions => {
-#            is => 'Genome::GeneExpression', via => 'gene_expressions', to => 'expression'
-#        },
     ],
     schema_name => 'files',
     data_source => 'Genome::DataSource::Genes',

@@ -9,7 +9,16 @@ class Genome::Protein {
     type_name => 'genome protein',
     table_name => 'PROTEIN',
     id_by => [
-        protein_id => { is => 'NUMBER' },
+        protein_id => { is => 'Text' },
+        species => { is => 'varchar',
+            is_optional => 1,
+        },
+        source => { is => 'VARCHAR',
+            is_optional => 1,
+        },
+        version => { is => 'VARCHAR',
+            is_optional => 1,
+        },
     ],
     has => [
         protein_name => { 
@@ -21,7 +30,7 @@ class Genome::Protein {
         amino_acid_seq => { 
             is => 'String' 
         },
-        transcript => { #TODO, straighten out ID stuff w/ Tony
+        transcript => { 
             is => 'Genome::Transcript', 
             id_by => 'transcript_id' 
         },

@@ -17,17 +17,18 @@ sub column_order {
         transcript_start
         transcript_stop
         transcript_name
-        source
         transcript_status
         strand
         chrom_name
+        species 
+        source 
+        version
     )]
 }
 
-sub constant_values { ['data_directory'] };
-
+sub constant_values { [qw/ data_directory /] }; 
 sub sort_order {
-    return [qw(chrom_name transcript_start transcript_id)];
+    return [qw(chrom_name transcript_start transcript_stop transcript_id)];
 }
 
 sub skip_first_line {

@@ -11,7 +11,15 @@ sub delimiter {
 }
 
 sub column_order {
-    return [ qw( egi_id gene_id id_type id_value )];
+    return [ qw( 
+    egi_id 
+    gene_id 
+    id_type 
+    id_value 
+    species 
+    source 
+    version
+    )];
 }
 
 sub sort_order {
@@ -22,7 +30,7 @@ sub skip_first_line {
     return 0;
 }
 
-sub constant_values { ['data_directory'] };
+sub constant_values { [qw/data_directory /] };
 sub required_for_get { ['data_directory'] }
 
 

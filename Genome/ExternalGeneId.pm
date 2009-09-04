@@ -10,9 +10,18 @@ class Genome::ExternalGeneId {
     table_name => 'EXTERNAL_GENE_ID',
     id_by => [
         egi_id => { is => 'NUMBER' },
+        species => { is => 'varchar',
+            is_optional => 1,
+        },
+        source => { is => 'VARCHAR',
+            is_optional => 1,
+        },
+        version => { is => 'VARCHAR',
+            is_optional => 1,
+        },
     ],
     has => [
-        gene_id => { is => 'NUMBER' },
+        gene_id => { is => 'Text' },
         id_type => { is => 'Text' },
         id_value => { is => 'Text' },
         data_directory => {
@@ -21,7 +30,7 @@ class Genome::ExternalGeneId {
         gene => {
             calculate_from => [qw/ gene_id data_directory/],
             calculate => q|
-                Genome::Gene->get(gene_id => $gene_id, data_directory => $data_directory);
+                Genome::Gene->get(id => $gene_id, data_directory => $data_directory);
             |,
         },
     ],

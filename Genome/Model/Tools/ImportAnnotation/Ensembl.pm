@@ -51,7 +51,6 @@ sub import_objects_from_external_db
 {
     my $self = shift;
 
-    $DB::single = 1;
     my $registry = $self->connect_registry;
     my $ucfirst_species = ucfirst $self->species;
     my $gene_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Gene' );
@@ -66,17 +65,24 @@ sub import_objects_from_external_db
     my $count = 0;
     $self->status_message("Importing ".scalar @ensembl_transcript_ids." transcripts\n");
     
+    #species, source and version are id properties on all items
+    my $source = 'ensembl';
+    my $version = $self->version;
+    my $species = $self->species;
+
     #for logging purposes
     my @transcripts;
     my @sub_structures;
     my @proteins;
     my @genes;
 
+    $DB::single = 1;
+
     foreach my $ensembl_transcript_id ( @ensembl_transcript_ids ) #TODO why reverse here?
     {
         $count++;
         my $ensembl_transcript = $transcript_adaptor->fetch_by_dbID($ensembl_transcript_id);
-        #my $biotype = $ensembl_transcript->biotype(); #TODO unused
+        my $biotype = $ensembl_transcript->biotype(); #used in determining rna sub_structures
 
         my $ensembl_gene  = $gene_adaptor->fetch_by_transcript_id( $ensembl_transcript->dbID );
         my $ensembl_gene_id = $ensembl_gene->dbID;
@@ -94,9 +100,9 @@ sub import_objects_from_external_db
 
         my $hugo_gene_name = undef;
         my $external_db;
-        if ($self->species eq 'human'){
+        if ($species eq 'human'){
             $external_db = 'HGNC';
-        }elsif($self->species eq 'mouse'){
+        }elsif($species eq 'mouse'){
             $external_db = 'MGI';
         }
         if ($ensembl_gene->external_db =~ /$external_db/){
@@ -112,13 +118,19 @@ sub import_objects_from_external_db
 
         #gene cols: gene_id hugo_gene_name strand
         my $gene;
-        $gene = Genome::Gene->get(gene_id => $ensembl_gene_id, data_directory => $self->data_directory);
+        my $gene_meta = Genome::Gene->__meta__;
+        my $composite_gene_id = $gene_meta->resolve_composite_id_from_ordered_values($ensembl_gene_id, $species,$source,$version);
+        $gene = Genome::Gene->get(id => $composite_gene_id, data_directory => $self->data_directory);
+        #$gene = Genome::Gene->get(gene_id => $ensembl_gene_id, species => $species, source => $source, version => $version, data_directory => $self->data_directory);
         unless ($gene){
             $gene = Genome::Gene->create(
-                id => $ensembl_gene_id, 
+                gene_id => $ensembl_gene_id, 
                 hugo_gene_name => $hugo_gene_name, 
                 strand => $strand,
                 data_directory => $self->data_directory,
+                species => $species,
+                source => $source,
+                version => $version,
             );
             push @genes, $gene;#logging
         }
@@ -132,11 +144,13 @@ sub import_objects_from_external_db
             transcript_start => $transcript_start, 
             transcript_stop => $transcript_stop,
             transcript_name => $ensembl_transcript->stable_id,    
-            source => 'ensembl',
             transcript_status => lc( $ensembl_transcript->status ),   #TODO valid statuses (unknown, known, novel) #TODO verify substructures and change status if necessary
             strand => $strand,
             chrom_name => $chromosome,
             data_directory => $self->data_directory,
+            species => $species,
+            source => $source,
+            version => $version,
         );
         push @transcripts, $transcript; #logging
 
@@ -161,6 +175,9 @@ sub import_objects_from_external_db
                 id_type => $type,
                 id_value => $external_gene_ids{$type},
                 data_directory => $self->data_directory,
+                species => $species,
+                source => $source,
+                version => $version,
             ); 
 
             $egi_id++;
@@ -212,6 +229,9 @@ sub import_objects_from_external_db
                         structure_stop => $utr_stop,
                         nucleotide_seq => $utr_sequence,
                         data_directory => $self->data_directory,
+                        species => $species,
+                        source => $source,
+                        version => $version,
                     );
                     $tss_id++;
                     push @utr_exons, $utr_exon;
@@ -240,6 +260,9 @@ sub import_objects_from_external_db
                     structure_stop => $coding_region_stop,
                     nucleotide_seq => $cds_sequence,
                     data_directory => $self->data_directory,
+                    species => $species,
+                    source => $source,
+                    version => $version,
                 );
 
                 $tss_id++;
@@ -266,6 +289,9 @@ sub import_objects_from_external_db
                         structure_stop => $stop,
                         nucleotide_seq => $utr_sequence,
                         data_directory => $self->data_directory,
+                        species => $species,
+                        source => $source,
+                        version => $version,
                     );
                     $tss_id++;
                     push @utr_exons, $utr_exon;
@@ -277,15 +303,22 @@ sub import_objects_from_external_db
                 die;
             }else{
                 #no coding region, entire exon is utr. 
-                #create utr exon
+                #create utr exon or rna exon if this transcript biotype is rna
+                my $structure_type = 'utr_exon';
+                if ($biotype =~/RNA/){
+                    $structure_type = 'rna';
+                }
                 my $utr_exon = Genome::TranscriptSubStructure->create(
                     transcript_structure_id => $tss_id,
                     transcript => $transcript,
-                    structure_type => 'utr_exon',
+                    structure_type => $structure_type,
                     structure_start => $start,
                     structure_stop => $stop,
                     nucleotide_seq => $exon_sequence,
                     data_directory => $self->data_directory,
+                    species => $species,
+                    source => $source,
+                    version => $version,
                 );
                 $tss_id++;
                 push @utr_exons, $utr_exon;
@@ -312,6 +345,9 @@ sub import_objects_from_external_db
                 protein_name => $translation->stable_id,
                 amino_acid_seq => $ensembl_transcript->translate->seq,
                 data_directory => $self->data_directory,
+                species => $species,
+                source => $source,
+                version => $version,
             );
             push @proteins, $protein;
         }
@@ -327,10 +363,10 @@ sub import_objects_from_external_db
 
             $self->status_message( "committing...($count)");
             UR::Context->commit;
+            $self->status_message("finished commit!\n");
             
             $self->dump_sub_structures(1);
 
-            $self->status_message("finished commit!\n");
             
             #reset logging arrays
             @transcripts = ();
@@ -341,6 +377,9 @@ sub import_objects_from_external_db
             #exit; #uncomment for testing
         }
     }
+    $self->status_message( "committing...($count)");
+    UR::Context->commit;
+    $self->status_message("finished commit!\n");
     return 1;
 }
 

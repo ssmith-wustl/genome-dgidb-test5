@@ -51,8 +51,8 @@ sub variant_alleles_for_iub {
        return;
    }
 
-   unless($ref =~ /[ACTG]/i) {
-       warn "Ambiguous reference bases not currently supported";
+   unless($ref =~ /[ACTG]/i) { #TODO, I think N should be acceptable here
+       warn "Ambiguous reference bases ($ref) not currently supported";
        return;
    }
    my @alleles = iub_to_alleles($iub);

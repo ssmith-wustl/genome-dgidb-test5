@@ -11,37 +11,39 @@ class Genome::TranscriptSubStructure {
     id_by => [
         transcript_structure_id => { 
             is => 'NUMBER', 
-            len => 10 
+        },
+        species => { is => 'varchar',
+            is_optional => 1,
+        },
+        source => { is => 'VARCHAR',
+            is_optional => 1,
+        },
+        version => { is => 'VARCHAR',
+            is_optional => 1,
         },
     ],
     has => [
         transcript_id => {  #TODO changed to text extended length
             is => 'Text', 
-            len => 35 
         },
         structure_type => { 
             is => 'VARCHAR',    
-            len => 10, 
             is_optional => 1 
         },
         structure_start => { 
             is => 'NUMBER', 
-            len => 10, 
             is_optional => 1 
         },
         structure_stop => { 
             is => 'NUMBER', 
-            len => 10, 
             is_optional => 1 
         },
         ordinal => { 
             is => 'NUMBER', 
-            len => 10, 
             is_optional => 1
         },
         phase => { 
             is => 'NUMBER', 
-            len => 7, 
             is_optional => 1
         },
         nucleotide_seq => { 

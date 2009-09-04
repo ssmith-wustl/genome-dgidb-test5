@@ -68,8 +68,6 @@ sub import_objects_from_external_db
         $transcript_status = $self->cache_transcript_status();
     }
 
-    $DB::single = 1;
-
     my $lines;
     foreach my $ts (sort keys %$transcript_status)
     {
@@ -80,8 +78,6 @@ sub import_objects_from_external_db
     my %seen;
     my @unique_lines = grep {!$seen{@$_[0]}++} @$lines;
 
-    my $version = $self->version;
-
     my $gene_id       = 1;
     my $egi_id        = 1;
     my $transcript_id = 1;
@@ -89,8 +85,14 @@ sub import_objects_from_external_db
     my $tss_id        = 1;
 
     my $count = 0;
-    $self->status_message("importing ". scalar @unique_lines. " genes");
+    my $current_thousand = 0;  #since genbank is imported per gene, we use this to commit roughly every thousand instead of exactly
+    $self->status_message("importing ". scalar @$lines. " transcripts");
 
+    #species, source and version are id properties on all items
+    my $source = 'genbank';
+    my $version = $self->version;
+    my $species = $self->species;
+    
     #for logging purposes
     my @transcripts;
     my @sub_structures;
@@ -99,7 +101,6 @@ sub import_objects_from_external_db
 
     foreach my $record (@unique_lines)
     {
-        $count++;
         my $locus_id = $record->[0];
         my $hugo     = $record->[1]; 
 
@@ -109,7 +110,7 @@ sub import_objects_from_external_db
         # to remove it...  I changed that little bit, so hopefully that won't
         # happen again.
         my $genbank_gene = GSC::ImportExport::GenBank::Gene->retrieve(
-            species_name => $self->species,
+            species_name => $species,
             version      => $version,
             locus_id     => $locus_id,  #locus id is entrez id
         );
@@ -129,16 +130,30 @@ sub import_objects_from_external_db
             }
         }
 
-        $DB::single = 1;
         my $strand = GSC::ImportExport::GenBank::Gene->resolve_strand(gene=>$genbank_gene);
         $strand = $strand eq '+' ? '+1' : '-1';
 
+        my $gene = Genome::Gene->create(
+            gene_id => $gene_id,
+            hugo_gene_name => $hugo, 
+            strand => $strand,
+            data_directory => $self->data_directory,
+            species => $species,
+            source => $source,
+            version => $version,
+        );
+        $gene_id++;
+        push @genes, $gene; #logging
+        
         my $external_gene_id = Genome::ExternalGeneId->create(  #TODO, is this necessary
             egi_id => $egi_id,
-            gene_id => $gene_id,
+            gene_id => $gene->id,
             id_type => 'entrez',
             id_value => $locus_id,
             data_directory => $self->data_directory,
+            species => $species,
+            source => $source,
+            version => $version,
         ); 
         $egi_id++;
 
@@ -147,25 +162,20 @@ sub import_objects_from_external_db
         {
            my $external_gene_id = Genome::ExternalGeneId->create(
                egi_id => $egi_id,
-               gene_id => $gene_id,
+               gene_id => $gene->id,
                id_type => $dbname,
                id_value => $external_ids{$dbname},
                data_directory => $self->data_directory,
+               species => $species,
+               source => $source,
+               version => $version,
                );
            $egi_id++;
         }
-
-        my $gene = Genome::Gene->create(
-            id => $gene_id,
-            hugo_gene_name => $hugo, 
-            strand => $strand,
-            data_directory => $self->data_directory,
-        );
-        $gene_id++;
-        push @genes, $gene; #logging
         
         foreach my $genbank_transcript (@genbank_transcripts) {
 
+            $count++;
             my $transcript_start = undef;
             my $transcript_stop  = undef;
             my $transcript_name  = $genbank_transcript->{accession};
@@ -182,18 +192,19 @@ sub import_objects_from_external_db
                 $status = lc($transcript_status->{$transcript_name}->{status});
             }
 
-            $DB::single = 1;
             my $transcript = Genome::Transcript->create(
                 transcript_id => $transcript_id,
-                gene_id => $gene->gene_id,
+                gene_id => $gene->id,
                 transcript_start => $transcript_start, 
                 transcript_stop => $transcript_stop,
                 transcript_name => $transcript_name,
-                source => 'genbank',
                 transcript_status => $status,   #TODO valid statuses (unknown, known, novel) #TODO verify sub_structures and change status if necessary
                 strand => $strand,
                 chrom_name => $chromosome,
                 data_directory => $self->data_directory,
+                species => $species,
+                source => $source,
+                version => $version,
             );
             $transcript_id++;
             push @transcripts,$transcript; #logging;
@@ -230,6 +241,9 @@ sub import_objects_from_external_db
                     structure_stop => $structure_stop,
                     nucleotide_seq => $cds_sequence,
                     data_directory => $self->data_directory,
+                    species => $species,
+                    source => $source,
+                    version => $version,
                 );
                 $tss_id++;
                 push( @seqs, $cds_sequence );
@@ -256,13 +270,15 @@ sub import_objects_from_external_db
                     structure_stop => $structure_stop,
                     nucleotide_seq => $utr_sequence,
                     data_directory => $self->data_directory,
+                    species => $species,
+                    source => $source,
+                    version => $version,
                 );
                 $tss_id++;
                 push @utr_exons, $utr_exon;
                 push @sub_structures, $utr_exon; #logging
 
             }
-            $DB::single = 1;
 
             if (@utr_exons > 0 or @cds_exons > 0){
                 $self->assign_ordinality_to_exons( $transcript->strand, [@utr_exons, @cds_exons] );
@@ -273,7 +289,6 @@ sub import_objects_from_external_db
 
             #create flanks and intron
             my @flanks_and_introns = $self->create_flanking_sub_structures_and_introns($transcript, \$tss_id, [@cds_exons, @utr_exons]);
-
 
             my $protein_name = $genbank_transcript->{products}->[0]->{accession};
             # create aa seq, if we're on negative strand, need to reverse the revcomed array of seqs so cds seq is assembled properly for translation
@@ -289,14 +304,18 @@ sub import_objects_from_external_db
                     protein_name => $protein_name,
                     amino_acid_seq => $amino_acid_seq,
                     data_directory => $self->data_directory,
+                    species => $species,
+                    source => $source,
+                    version => $version,
                 );
                 $protein_id++;
                 push @proteins, $protein;
             }
         }
-        unless ($count % 1000){
+        if (int($count/1000) >  $current_thousand){
             #Periodically commit to files so we don't run out of memory
             
+            $current_thousand = int($count/1000);
             $self->write_log_entry($count, \@transcripts, \@sub_structures, \@genes, \@proteins);
 
             $self->dump_sub_structures(0); #arg added for pre/post commit notation
@@ -334,7 +353,6 @@ sub import_objects_from_external_db
 
 sub cache_transcript_status
 {
-    $DB::single = 1;
     my $self = shift;
 
     my $seqio = new Bio::SeqIO(

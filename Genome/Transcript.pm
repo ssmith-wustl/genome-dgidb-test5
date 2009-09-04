@@ -9,40 +9,39 @@ class Genome::Transcript {
     type_name => 'genome transcript',
     table_name => 'TRANSCRIPT',
     id_by => [
+        transcript_id => { 
+            is => 'NUMBER', 
+        },
         chrom_name => { 
             is => 'Text', 
-            len => 10 
         },
         transcript_start => { 
             is => 'NUMBER', 
-            len => 10, 
-            is_optional => 1 },
-        transcript_id => { 
+            is_optional => 1 
+        },
+        transcript_stop => { 
             is => 'NUMBER', 
-            len => 10 
+            is_optional => 1,
+        },
+        species => { is => 'varchar',
+            is_optional => 1,
+        },
+        source => { is => 'VARCHAR',
+            is_optional => 1,
+        },
+        version => { is => 'VARCHAR',
+            is_optional => 1,
         },
     ],
     has => [
         gene_id => { 
-            is => 'NUMBER', 
-            len => 10 
-        },
-        transcript_stop => { 
-            is => 'NUMBER', 
-            len => 10, 
-            is_optional => 1,
+            is => 'Text', 
         },
         transcript_name => { 
             is => 'VARCHAR', 
-            len => 255, 
-            is_optional => 1,
-        },
-        source => { is => 'VARCHAR',
-            len => 7,
             is_optional => 1,
         },
         transcript_status => { is => 'VARCHAR',
-            len => 11,
             is_optional => 1,
             valid_values => ['reviewed', 'unknown', 'model', 'validated', 'predicted', 'inferred', 'provisional', 'unknown', 'known', 'novel'],
         },
@@ -65,7 +64,7 @@ class Genome::Transcript {
         gene => {
             calculate_from => [qw/ gene_id data_directory/],
             calculate => q|
-            Genome::Gene->get(gene_id => $gene_id, data_directory => $data_directory);
+            Genome::Gene->get(id => $gene_id, data_directory => $data_directory);
             |,
         },
         data_directory => {

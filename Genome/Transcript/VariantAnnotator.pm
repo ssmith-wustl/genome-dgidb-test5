@@ -28,9 +28,6 @@ class Genome::Transcript::VariantAnnotator{
             is => 'Bio::Tools::CodonTable',
             is_optional => 1,
         },
-        version => {
-            is => 'String',
-        },
     ]
 };
 
@@ -55,10 +52,11 @@ sub error_message{
 
 sub save_error_producing_variant{
     my $self=shift;
+    return; #TODO disabling this for now, implement a more elegant solution/storage for file and recommit
     unless ($Genome::Transcript::VariantAnnotator::error_fh){
         my $ts = DateTime->now(time_zone => 'America/Chicago')->iso8601();
         $ts =~ s/[-:]/_/g;
-        $Genome::Transcript::VariantAnnotator::error_fh = IO::File->new(">variant_annotator_error_producing_variants".$ts.".".$self->version.".tsv");
+        $Genome::Transcript::VariantAnnotator::error_fh = IO::File->new(">variant_annotator_error_producing_variants".$ts.".tsv");
     }
     my $line = join("\t", map {$Genome::Transcript::VariantAnnotator::current_variant->{$_}} (qw/chromosome_name start stop reference variant/));
     if ($Genome::Transcript::VariantAnnotator::last_printed_line){
@@ -344,9 +342,9 @@ return (
     transcript_name => $transcript->transcript_name, 
     transcript_status => $transcript->transcript_status,
     transcript_source => $source,
-    transcript_version => $self->version,
+    transcript_species=> $transcript->species,
+    transcript_version => $transcript->version,
     gene_name  => $gene->name($source),
-#         amino_acid_change => 'NULL',
     ucsc_cons => $conservation
 )
 }

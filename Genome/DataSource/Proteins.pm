@@ -14,7 +14,15 @@ sub delimiter {
 }
 
 sub column_order {
-    return [qw( protein_id transcript_id protein_name amino_acid_seq )];
+    return [qw( 
+    protein_id 
+    transcript_id 
+    protein_name 
+    amino_acid_seq 
+    species 
+    source 
+    version
+    )];
 }
 
 sub sort_order {
@@ -25,7 +33,7 @@ sub skip_first_line {
     return 0;
 }
 
-sub constant_values { ['data_directory'] };
+sub constant_values { [qw/ data_directory /] };
 sub required_for_get { [qw( transcript_id data_directory)] }
 
 sub file_resolver {
@@ -33,7 +41,7 @@ sub file_resolver {
 
     my $meta = Genome::Transcript->__meta__;
 
-    my ($chrom, $position, $transcript_id) = $meta->resolve_ordered_values_from_composite_id($composite_id);
+    my ($transcript_id) = $meta->resolve_ordered_values_from_composite_id($composite_id);
     
     my $thousand = int($transcript_id / 1000);
     my $path = "$data_directory/proteins/proteins_" . $thousand . ".csv";

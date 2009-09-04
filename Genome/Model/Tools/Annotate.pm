@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;     
+use Data::Dumper;
 
 my $low=20000;
 my $high=200000;
@@ -40,7 +41,7 @@ sub variant_output_attributes {
 
 sub transcript_attributes {
     my $self = shift;
-    return (qw/ gene_name transcript_name transcript_source transcript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain all_domains/);
+    return (qw/ gene_name transcript_name transcript_species transcript_source transcript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain all_domains/);
 }
 
 sub transcript_report_headers {

@@ -63,6 +63,11 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is_optional => 1, 
             doc => 'provide name/version number of the reference transcripts set you would like to use ("NCBI-human.combined-annotation/0").  Leaving off the version number will grab the latest version for the transcript set, and leaving off this option and build_id will default to using the latest combined annotation transcript set. Use this or --build-id to specify a non-default annoatation db (not both)'
         },
+        data_directory => {
+            is => 'String',
+            is_optional => 1,
+            doc => 'Alternate method to specify imported annotation data used in annotation.  This option allows a directory w/o supporting model and build, not reccomended except for testing purposes',
+        },
         build_id =>{
             is => "Number",
             is_optional => 1,
@@ -85,6 +90,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             default => 0,
             doc => 'enable this flag to skip variants on a chromosome where no annotation information exists, as oppeosed to crashing',
         },
+        
     ], 
 };
 
@@ -184,14 +190,17 @@ sub execute {
                 $self->build($build);
             }
         }else{
-            my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
-            my $build = $model->build_by_version('54_36p');
+            unless ($self->data_directory){
+                #if data_directory was provided, we will get our transcript_iterator from there, not a build
+                my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
+                my $build = $model->build_by_version('54_36p');
 
-            unless ($build){
-                $self->error_message("couldn't get build 54_36p from 'NCBI-human.combined-annotation'");
-                return;
+                unless ($build){
+                    $self->error_message("couldn't get build 54_36p from 'NCBI-human.combined-annotation'");
+                    return;
+                }
+                $self->build($build);
             }
-            $self->build($build);
         }
     }
 
@@ -211,8 +220,13 @@ sub execute {
             $chromosome_name = $variant->{chromosome_name};
             $last_variant_start = 0;
             $sloppy_skip = 0;  #reset skip behavior on new chrom
-            
-            my $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
+
+            my $transcript_iterator;
+            if ($self->build){
+                $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
+            }else{
+                $transcript_iterator = Genome::Transcript->create_iterator(data_directory=>$self->data_directory, chrom_name => $chromosome_name);
+            }
             unless ($transcript_iterator){
                 $self->error_message("Couldn't get transcript_iterator for chromosome $chromosome_name!");
                 if ($self->sloppy){
@@ -236,13 +250,12 @@ sub execute {
 
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window,
-                version => $self->build->version,
             );
             unless ($annotator){
                 $self->error_message("Couldn't create iterator for chromosome $chromosome_name!");
                 die;
             }
-            
+
         }
         next if $sloppy_skip;
         unless ( $variant->{start} >= $last_variant_start){
@@ -250,7 +263,12 @@ sub execute {
             $chromosome_name = $variant->{chromosome_name};
             $last_variant_start = 0;
 
-            my $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
+            my $transcript_iterator;
+            if ($self->build){
+                $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
+            }else{
+                $transcript_iterator = Genome::Transcript->create_iterator(data_directory=>$self->data_directory, chrom_name => $chromosome_name);
+            }
             die Genome::Transcript->error_message unless $transcript_iterator;
 
             my $transcript_window =  Genome::Utility::Window::Transcript->create (
@@ -260,7 +278,6 @@ sub execute {
             die Genome::Utility::Window::Transcript->error_message unless $transcript_window;
             $annotator = Genome::Transcript::VariantAnnotator->create(
                 transcript_window => $transcript_window,
-                version => $self->build->version,
             );
             die Genome::Transcript::VariantAnnotator->error_message unless $annotator;
         }

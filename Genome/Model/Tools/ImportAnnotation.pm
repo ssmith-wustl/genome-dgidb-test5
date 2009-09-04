@@ -7,8 +7,8 @@ use Genome;
 use IO::File;
 use Data::Dumper;
 
-my $low=200000;
-my $high=600000;
+my $low=100000;
+my $high=200000;
 UR::Context->object_cache_size_highwater($high);
 UR::Context->object_cache_size_lowwater($low);
 
@@ -171,11 +171,15 @@ sub create_flanking_sub_structures_and_introns{
         structure_start => $left_flank_structure_start,
         structure_stop => $left_flank_structure_stop,
         data_directory => $self->data_directory,
+        species => $self->species,
+        source => $transcript->source,
+        version => $self->version,
+
     );
     $$tss_id_ref++;
 
     my $right_flank_structure_start = $a[-1]->structure_stop + 1;
-    my $right_flank_structure_stop = $a[-1]->structure_start + 50000;
+    my $right_flank_structure_stop = $a[-1]->structure_stop + 50000;
     my $right_flank = Genome::TranscriptSubStructure->create(
         transcript_structure_id => $$tss_id_ref,
         transcript => $transcript,
@@ -183,6 +187,9 @@ sub create_flanking_sub_structures_and_introns{
         structure_start => $right_flank_structure_start,
         structure_stop => $right_flank_structure_stop,
         data_directory => $self->data_directory,
+        species => $self->species,
+        source => $transcript->source,
+        version => $self->version,
     );
     $$tss_id_ref++;
 
@@ -209,6 +216,9 @@ sub create_flanking_sub_structures_and_introns{
                 structure_start => $intron_start,
                 structure_stop => $intron_stop,
                 data_directory => $self->data_directory,
+                species => $self->species,
+                source => $transcript->source,
+                version => $self->version,
             );
             $$tss_id_ref++;
             push @introns, $intron
@@ -255,16 +265,19 @@ sub write_log_entry{
 
 sub dump_sub_structures{
     my $self = shift;
-    my ($commited) = @_; #indicates if we are dumping status pre or post commit
+    my ($committed) = @_; #indicates if we are dumping status pre or post commit
     my $dump_fh = IO::File->new(">> ". $self->dump_file);
     return unless $dump_fh;
-    if ($commited){
-        print "POST COMMIT UR CACHE INFO:\n";
-    }elsif ($commited = 0){
-        print "POST COMMIT UR CACHE INFO:\n";
+    if ($committed){
+        $dump_fh->print("POST COMMIT UR CACHE INFO:\n");
+    }elsif ($committed == 0){
+        $dump_fh->print("PRE COMMIT UR CACHE INFO:\n");
     }
-    my %hash = ( $_ => scalar(keys %{$UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}}) );
-    my @ss_sample = map { $UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}->{$_}} @{keys %{$UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}}}[0..4];
+    my %hash = ( 'Genome::TranscriptSubStructure' => scalar(keys %{$UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}}) );
+    my @ss_keys = keys %{$UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}};
+
+    my @ss_sample = map { $UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}->{$_}} @ss_keys[0..4];
+    #my @ss_sample = map { $UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}->{$_}} @{keys %{$UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}}}[0..4];
     my $objects_loaded = $UR::Context::all_objects_cache_size;
     $dump_fh->print("all_objects_cache_size: $objects_loaded\n");
     $dump_fh->print(Dumper \%hash);
