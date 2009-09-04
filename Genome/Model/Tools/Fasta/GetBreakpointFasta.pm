@@ -135,7 +135,7 @@ sub execute {
 	    $header = "\>$bp_id.fasta Flank $flank NCBI Mouse Build 37, Chr:$chromosome, Coords $start-$stop, Ori (+)";
 	}
 
-	print OUT qq(>$header\n);
+	print OUT qq($header\n);
 	
 	my @seq = split(//,$fullseq);
 	my $n = 0;
