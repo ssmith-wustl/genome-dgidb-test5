@@ -26,6 +26,7 @@ class Genome::Model::Tools::Analysis::Solexa::FindModels {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		sample_list	=> { is => 'Text', doc => "Accept a list of sample names as input", is_optional => 1 },
 		sample_name	=> { is => 'Text', doc => "Search by sample name", is_optional => 1 },
+		processing_profile_id	=> { is => 'Text', doc => "Search by processing-profile-id", is_optional => 1 },
 		print_location	=> { is => 'Text', doc => "If set to 1, prints data location" , is_optional => 1},
 	],
 };
@@ -61,17 +62,31 @@ sub execute {                               # replace with real execution logic.
 	## Get required parameters ##
 	my $sample_name = $self->sample_name;
 	my $sample_list = $self->sample_list;
+	my $processing_profile_id = $self->processing_profile_id;
 
 	my $print_location;
 	$print_location = $self->print_location if($self->print_location);
 
+
 	my $model_list = "";
+	my $filter = "";
+
+	## Build the filter based on user input ##
 
 	if($sample_name)
 	{
-		$model_list = `genome model list --filter=subject_name=$sample_name`;
-		chomp($model_list);
+		$filter .= "," if($filter);
+		$filter .= "subject_name=$sample_name";
 	}
+
+	if($processing_profile_id)
+	{
+		$filter .= "," if($filter);
+		$filter .= "processing_profile_id=$processing_profile_id";		
+	}
+
+	$model_list = `genome model list --filter=$filter`;
+	chomp($model_list);
 
 	my @lines = split(/\n/, $model_list);
 	

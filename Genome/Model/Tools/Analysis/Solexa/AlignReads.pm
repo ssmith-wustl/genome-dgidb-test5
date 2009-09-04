@@ -14,8 +14,9 @@ package Genome::Model::Tools::Analysis::Solexa::AlignReads;     # rename this wh
 #####################################################################################################################################
 
 my $bowtie_reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.bowtie";
-my $bowtie_params = "-m 1 --best --strata";
+my $bowtie_params = "-m 1 --best --strata -p 4";
 
+my $path_to_novoalign = "/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.07/novocraft/novoalign";
 my $novoalign_reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.novoindex-k14-s3-v2.03.01";
 my $novoalign_params = "-a -l 36 -t 240";	# -o SAM
 
@@ -35,6 +36,7 @@ class Genome::Model::Tools::Analysis::Solexa::AlignReads {
 		include_lanes	=> { is => 'Text', doc => "Specify which lanes of a flowcell to include [e.g. 1,2,3]" , is_optional => 1},
 		output_dir	=> { is => 'Text', doc => "Output dir for Bowtie; defaults to [dir]/bowtie_out" , is_optional => 1},
 		aligner	=> { is => 'Text', doc => "Alignment tool to use (bowtie|maq|novoalign) [bowtie]" , is_optional => 1},
+		trim3	=> { is => 'Text', doc => "Bases to trim from 3' end for Bowtie alignment [0]" , is_optional => 1},
 	],
 };
 
@@ -74,6 +76,11 @@ sub execute {                               # replace with real execution logic.
 	$aligner = $self->aligner if($self->aligner);
 	my $output_dir = "./";
 	$output_dir = $self->output_dir if($self->output_dir);
+
+	if($self->trim3)
+	{
+		$bowtie_params .= " --trim3 " . $self->trim3;
+	}
 
 	## Handle include-lanes when specified ##
 
@@ -120,8 +127,8 @@ sub execute {                               # replace with real execution logic.
 
 						## Launch SE ##
 						print "$fastq_file1\tbowtie SE\n";
-						my $alignment_outfile1 = $alignment_dir . "/s_" . $lane . "_sequence.$aligner";
-						system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -M 6000000 -oo $alignment_outfile1.log bowtie $bowtie_params --unfq $alignment_outfile1.unmapped.fastq --maxfq $alignment_outfile1.multiple.fastq $reference $fastq_file1 $alignment_outfile1");
+						my $alignment_outfile1 = $alignment_dir . "/s_" . $lane . "_sequence.$aligner";			# span[hosts=1]  -n 4
+						system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 6000000 -oo $alignment_outfile1.log bowtie $bowtie_params --unfq $alignment_outfile1.unmapped.fastq --maxfq $alignment_outfile1.multiple.fastq $reference $fastq_file1 $alignment_outfile1");
 					}
 
 				}
@@ -142,11 +149,28 @@ sub execute {                               # replace with real execution logic.
 						## Launch SE ##
 						print "$fastq_file1\tbowtie SE\n";
 						my $alignment_outfile1 = $alignment_dir . "/s_" . $lane . "_1_sequence.$aligner";
-						system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -M 6000000 -oo $alignment_outfile1.log bowtie $bowtie_params --unfq $alignment_outfile1.unmapped.fastq --maxfq $alignment_outfile1.multiple.fastq $reference $fastq_file1 $alignment_outfile1");
+						system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000] span[hosts=1]\" -n 4 -M 6000000 -oo $alignment_outfile1.log bowtie $bowtie_params --unfq $alignment_outfile1.unmapped.fastq --maxfq $alignment_outfile1.multiple.fastq $reference $fastq_file1 $alignment_outfile1");
 
 						print "$fastq_file2\tbowtie SE\n";
 						my $alignment_outfile2 = $alignment_dir . "/s_" . $lane . "_2_sequence.$aligner";
-						system("bsub -q long -R\"select[type==LINUX64 && mem>4000] rusage[mem=4000]\" -M 6000000 -oo $alignment_outfile2.log bowtie $bowtie_params --unfq $alignment_outfile2.unmapped.fastq --maxfq $alignment_outfile2.multiple.fastq $reference $fastq_file2 $alignment_outfile2");
+						system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000] span[hosts=1]\" -n 4 -M 6000000 -oo $alignment_outfile2.log bowtie $bowtie_params --unfq $alignment_outfile2.unmapped.fastq --maxfq $alignment_outfile2.multiple.fastq $reference $fastq_file2 $alignment_outfile2");
+					}
+					elsif($aligner eq "novoalign")
+					{
+						## Think about setting -l 50 for 75 bp reads
+						## Launch SE ##
+						my $reference = $novoalign_reference;
+						#$novoalign_params = "-a -l 50 -t 240" if($read_length >= 70);	
+
+						print "$fastq_file1\tnovoalign SE\n";
+						my $alignment_outfile1 = $alignment_dir . "/s_" . $lane . "_1_sequence.$aligner";
+
+						system("bsub -q long -R\"select[type==LINUX64 && mem>12000] rusage[mem=12000]\" -M 20000000 -oo $alignment_outfile1.log \"$path_to_novoalign $novoalign_params -d $reference -f $fastq_file1 >$alignment_outfile1 2>$alignment_outfile1.err\"");
+
+						print "$fastq_file2\tnovoalign SE\n";
+						my $alignment_outfile2 = $alignment_dir . "/s_" . $lane . "_2_sequence.$aligner";
+
+						system("bsub -q long -R\"select[type==LINUX64 && mem>12000] rusage[mem=12000]\" -M 20000000 -oo $alignment_outfile2.log \"$path_to_novoalign $novoalign_params -d $reference -f $fastq_file2 >$alignment_outfile2 2>$alignment_outfile2.err\"");
 					}
 				}
 			}
@@ -259,16 +283,17 @@ sub execute {                               # replace with real execution logic.
 							my $reference = $novoalign_reference;
 							$novoalign_params = "-a -l 50 -t 240" if($read_length >= 70);	
 
-							system("bsub -q long -R\"select[type==LINUX64 && mem>20000] rusage[mem=18000]\" -M 20000000 -oo $alignment_outfile.log \"/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.02/novocraft/novoalign $novoalign_params -d $reference -f $output_fastq >$alignment_outfile\"");
+							system("bsub -q bigmem -R\"select[type==LINUX64 && mem>12000] rusage[mem=12000]\" -M 20000000 -oo $alignment_outfile.log \"$path_to_novoalign $novoalign_params -d $reference -f $output_fastq >$alignment_outfile\"");
 
 							## Launch PE ##
 							if($end_type eq "PE" && $lane_pairs{"$flowcell.$lane"} eq "2")
 							{
+								$novoalign_params .= " -i 250 50";
 								my $file1 = $output_fastq;
 								my $file2 = $output_fastq;
 								$file2 =~ s/1\_sequence\.fastq/2\_sequence\.fastq/;
 								my $paired_outfile = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane . "_paired.novoalign";
-								system("bsub -q long -R\"select[type==LINUX64 && mem>16000] rusage[mem=16000]\" -M 20000000 -oo $paired_outfile.log \"/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.02/novocraft/novoalign $novoalign_params -d $reference -f $file1 $file2 >$paired_outfile\"");
+								#system("bsub -q bigmem -R\"select[type==LINUX64 && mem>12000] rusage[mem=12000]\" -M 20000000 -oo $paired_outfile.log \"$path_to_novoalign $novoalign_params -d $reference -f $file1 $file2 >$paired_outfile\"");
 							}
 						}
 					}

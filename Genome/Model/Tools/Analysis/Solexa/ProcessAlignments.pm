@@ -311,8 +311,9 @@ sub execute {                               # replace with real execution logic.
 							if($map_unmapped)
 							{
 								my $unmapped_file = $flowcell_dir . "/" . $aligner . "_out/" . "s_" . $lane_name . "_sequence.bowtie.unmapped.fastq";
-								my $reference = "/gscmnt/sata194/info/sralign/dkoboldt/human_refseq/ref.k14s3m.novoindex";
-								system("bsub -q long -R\"select[type==LINUX64 && mem>12000] rusage[mem=12000]\" -M 14000000 -oo $unmapped_file.novoalign.log \"/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.04.02/novocraft/novoalign -a -l 36 -t 240 -k -d $reference -f $unmapped_file >$unmapped_file.novoalign\"");
+								my $reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.novoindex-k14-s3-v2.03.01";
+								system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>1000] rusage[mem=4000]\" -M 12000000 -oo $unmapped_file.novoalign.log \"/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.07/novocraft/novoalign -a -l 50 -t 240 -k -d $reference -f $unmapped_file >$unmapped_file.novoalign\"");
+#								system("bsub -q bigmem -M 12000000 -oo $unmapped_file.novoalign2.log \"/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.05.07/novocraft/novoalign -a -l 50 -t 240 -k -d $reference -f $unmapped_file >$unmapped_file.novoalign2\"");
 							}
 							
 							if($unmapped_indels)

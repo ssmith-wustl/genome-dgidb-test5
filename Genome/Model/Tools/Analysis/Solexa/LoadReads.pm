@@ -75,6 +75,8 @@ sub execute {                               # replace with real execution logic.
 	my $output_dir = "./";
 	$output_dir = $self->output_dir if($self->output_dir);
 
+	mkdir($output_dir) if(!(-d $output_dir));
+
 	## Handle include-lanes when specified ##
 
 	my $include_lanes;
