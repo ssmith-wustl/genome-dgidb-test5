@@ -70,7 +70,7 @@ class Genome::Model {
         processing_profile_name => { via => 'processing_profile', to => 'name' },
         type_name               => { via => 'processing_profile' },
         events                  => { is => 'Genome::Model::Event', reverse_id_by => 'model', is_many => 1, 
-                         doc => 'all events which have occurred for this model' },
+                                        doc => 'all events which have occurred for this model' },
         subject_class_name      => { is => 'VARCHAR2', len => 500, is_optional => 1 },
         subject_id              => { is => 'NUMBER', len => 15, is_optional => 1 },
         # Reports
