@@ -3,8 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More;
-    #skip_all => 'This test will complete outside of the testing harness.  It uses a different version of perl and will not succeed in a test harness.';
+use Test::More skip_all => 'This test will complete outside of the testing harness.  It uses a different version of perl and will not succeed in a test harness.';
 
 use above 'Genome';
 
