@@ -143,18 +143,24 @@ sub execute {
     #Originally "-S" was used as SNP calling. In r320wu1 version, "-v" is used to replace "-S" but with 
     #double indel lines embedded, this need sanitized
     #$rv = system "$samtools_cmd -S $tumor_bam_file > $snp_output_file"; 
-    $DB::single=1; 
-    my $snp_cmd = "$samtools_cmd -v $tumor_bam_file > $snp_output_file";
-    $rv = system $snp_cmd;  
-    return unless $self->_check_rv("Running samtools SNP failed with exit code $rv\nCommand: $snp_cmd", $rv, 0);
+
+    my $snp_cmd = "$samtools_cmd -v $tumor_bam_file > $snp_output_file"
+    # Skip if we already have the output
+    unless (-s $snp_output_file) {
+        $rv = system $snp_cmd;  
+        return unless $self->_check_rv("Running samtools SNP failed with exit code $rv\nCommand: $snp_cmd", $rv, 0);
+    }
 
     my $snp_sanitizer = Genome::Model::Tools::Sam::SnpSanitizer->create(snp_file => $snp_output_file);
     $rv = $snp_sanitizer->execute;
     return unless $self->_check_rv("Running samtools snp-sanitizer failed with exit code $rv", $rv, 1);
     
     my $indel_cmd = "$samtools_cmd -i $tumor_bam_file > $indel_output_file";
-    $rv = system $indel_cmd;
-    return unless $self->_check_rv("Running samtools indel failed with exit code $rv\nCommand: $indel_cmd", $rv, 0);
+    # Skip if we already have the output
+    unless (-s $indel_output_file) {
+        $rv = system $indel_cmd;
+        return unless $self->_check_rv("Running samtools indel failed with exit code $rv\nCommand: $indel_cmd", $rv, 0);
+    }
 
     #FIXME:8-25-09 i spoke to ben and varfilter is still too permissive to be trusted so just hardcode normal snpfilter
     #in somatic pipeline until we hear different
@@ -174,15 +180,19 @@ sub execute {
         return unless $self->_check_rv("Running samtools varFilter failed with exit code $rv", $rv, 1);
     }
     elsif ($filter_type =~ /^SnpFilter$/i) {
-        my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(indel_file => $indel_output_file);
-        $rv = $indel_filter->execute;
-        return unless $self->_check_rv("Running sam indel-filter failed with exit code $rv", $rv, 1);
+        # Skip if we already have the output
+        unless (-s $filtered_indel_file) {
+            my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(indel_file => $indel_output_file, out_file => $filtered_indel_file);
+            $rv = $indel_filter->execute;
+            return unless $self->_check_rv("Running sam indel-filter failed with exit code $rv", $rv, 1);
+        }
    
         my $snp_filter = Genome::Model::Tools::Sam::SnpFilter->create(
             snp_file   => $snp_output_file,
             out_file   => $filtered_snp_file,
             indel_file => $filtered_indel_file,
         );
+
         $rv = $snp_filter->execute;
         return unless $self->_check_rv("Running sam snp-filter failed with exit code $rv", $rv, 1);
         $self->filtered_snp_file($filtered_snp_file);
