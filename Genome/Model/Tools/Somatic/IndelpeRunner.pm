@@ -144,7 +144,7 @@ sub execute {
     #double indel lines embedded, this need sanitized
     #$rv = system "$samtools_cmd -S $tumor_bam_file > $snp_output_file"; 
 
-    my $snp_cmd = "$samtools_cmd -v $tumor_bam_file > $snp_output_file"
+    my $snp_cmd = "$samtools_cmd -v $tumor_bam_file > $snp_output_file";
     # Skip if we already have the output
     unless (-s $snp_output_file) {
         $rv = system $snp_cmd;  
