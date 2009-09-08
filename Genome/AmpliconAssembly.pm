@@ -20,19 +20,19 @@ my %ATTRIBUTES = (
         is => 'Text',
         is_optional => 1,
         default_value => __PACKAGE__->default_sequencing_center,
-        doc => 'Sequencing Center that the amplicons were sequenced.  Currently supported centers: '.join(', ', __PACKAGE__->valid_sequencing_centers).' (default: '.__PACKAGE__->default_sequencing_center.').',
+        doc => 'Sequencing Center that the amplicons were sequenced. Currently supported centers: '.join(', ', __PACKAGE__->valid_sequencing_centers).' (default: '.__PACKAGE__->default_sequencing_center.').',
     },
     sequencing_platform => {
         is => 'Text',
         is_optional => 1,
         default_value => __PACKAGE__->default_sequencing_platform,
-        doc => 'Platform upon whence the amplicons were sequenced.  Currently supported platforms: '.join(', ', __PACKAGE__->valid_sequencing_platforms).' (default: '.__PACKAGE__->default_sequencing_platform.').',
+        doc => 'Platform upon whence the amplicons were sequenced. Currently supported platforms: '.join(', ', __PACKAGE__->valid_sequencing_platforms).' (default: '.__PACKAGE__->default_sequencing_platform.').',
     },
     assembler => {
         is => 'Text',
         is_optional => 1,
         default_value => __PACKAGE__->default_assembler,
-        doc => 'The assembler to use.  Currently supported assemblers: '.join(', ', valid_assemblers()).' (default: '.__PACKAGE__->default_assembler.').',
+        doc => 'The assembler to use. Currently supported assemblers: '.join(', ', valid_assemblers()).' (default: '.__PACKAGE__->default_assembler.').',
     },
     assembly_size => { # amplicon_size
         is => 'Integer',
@@ -42,7 +42,19 @@ my %ATTRIBUTES = (
     subject_name => {
         is => 'Text',
         is_optional => 1,
-        doc => 'The subject name of the underlying data.  Used primarily in naming files (etc) that represent the entire amplicon assembly, like an assembled fasta of each amplicon.',
+        doc => 'The subject name of the underlying data. Used primarily in naming files (etc) that represent the entire amplicon assembly, like an assembled fasta of each amplicon.',
+    },
+    exclude_contaminated_amplicons => {
+        is => 'Boolean',
+        is_optional => 1,
+        default_value => 0,
+        doc => 'When getting amplicons, exclude those that have a contaminated read(s). Only for "gsc" generated reads. Default is to include all amplicons.',
+    },
+    only_use_latest_iteration_of_reads => {
+        is => 'Boolean',
+        is_optional => 1,
+        default_value => 0,
+        doc => 'When getting reads for amplicons, only use the most recent iteration for each primer. Only for "gsc" generated reads. Default is to include all reads for each amplicon.',
     },
 );
 
@@ -65,6 +77,20 @@ sub create {
 
     for my $attribute (qw/ sequencing_platform sequencing_center assembler /) {
         unless ( $self->validate_attribute_value($attribute) ) {
+            $self->delete;
+            return;
+        }
+    }
+
+    unless ( $self->sequencing_center eq 'gsc' ) {
+        if ( my @attrs = grep { $self->$_ } gsc_only_attributes() ) {
+            $self->error_message(
+                sprintf(
+                    'Indicated unsupported attributes (%s) for sequencing center (%s).',
+                    join(', ', @attrs),
+                    $self->sequencing_center,
+                )
+            );
             $self->delete;
             return;
         }
@@ -158,6 +184,11 @@ sub default_assembler {
     return (valid_assemblers)[0];
 }
 
+# GSC Only Attributes
+sub gsc_only_attributes {
+    return (qw/ only_use_latest_iteration_of_reads exclude_contaminated_amplicons /);
+}
+
 #< DIRS >#
 sub consed_directory {
     my $self = shift;
@@ -234,6 +265,9 @@ sub get_amplicons {
         $self->sequencing_center,
         $self->sequencing_platform,
     );
+
+    my $iterator = $self->$method;
+    
     my $amplicons = $self->$method;
     unless ( $amplicons and %$amplicons ) {
         $self->error_message(
@@ -242,9 +276,20 @@ sub get_amplicons {
         return;
     }
 
+    # Only use most recent read
+    if ( $self->only_use_latest_iteration_of_reads ) {
+        $self->_remove_old_read_iterations_from_amplicons($amplicons)
+            or return;
+    }
+    
+    if ( $self->exclude_contaminated_amplicons ) {
+        $self->_remove_contaminated_amplicons($amplicons)
+            or return;
+    }
+    
     my @amplicons;
     my $edit_dir = $self->edit_dir;
-    for my $name ( keys %$amplicons ) {
+    for my $name ( sort { $a cmp $b } keys %$amplicons ) {
         push @amplicons, Genome::AmpliconAssembly::Amplicon->create(
             name => $name,
             reads => $amplicons->{$name},
@@ -258,18 +303,15 @@ sub get_amplicons {
 sub _get_amplicons_and_read_names_for_gsc_sanger {
     my $self = shift;
 
-    my $dh = Genome::Utility::FileSystem->open_directory( $self->chromat_dir )
+    my $read_iterator = $self->_get_read_name_iterator
         or return;
 
     my %amplicons;
-    while ( my $read_name = $dh->read ) {
-        next if $read_name =~ m#^\.#;
-        $read_name =~ s#\.gz##;
+    while ( my $read_name = $read_iterator->() ) {
         my $amplicon_name = $self->_get_amplicon_name_for_gsc_sanger_read_name($read_name)
-            or next;
+            or next; # Assume conversion logic is good, and returns undef cuz it is not a read
         push @{$amplicons{$amplicon_name}}, $read_name;
     }
-    $dh->close;
 
     return \%amplicons;
 }
@@ -277,19 +319,91 @@ sub _get_amplicons_and_read_names_for_gsc_sanger {
 sub _get_amplicons_and_read_names_for_broad_sanger {
     my $self = shift;
 
-    my $dh = Genome::Utility::FileSystem->open_directory( $self->chromat_dir )
+    my $read_iterator = $self->_get_read_name_iterator
         or return;
 
     my %amplicons;
-    while ( my $read_name = $dh->read ) {
-        next if $read_name =~ m#^\.#;
-        $read_name =~ s#\.gz$##;
+    while ( my $read_name = $read_iterator->() ) {
         my $amplicon = $self->_get_amplicon_name_for_broad_sanger_read_name($read_name)
-            or return;
+            or return; # Assume conversion logic is good, and returns undef cuz it is not a read
         push @{$amplicons{$amplicon}}, $read_name;
     }
-    
+
     return  \%amplicons;
+}
+
+sub _get_read_name_iterator {
+    my $self = shift;
+
+    my $dh = Genome::Utility::FileSystem->open_directory( $self->chromat_dir );
+    unless ( $dh ) {
+        $self->error_message("Can't open chromat dir to get reads. See above error.");
+        return;
+    }
+
+    return sub{
+        while ( my $name = $dh->read ) {
+            next if $name =~ m#^\.#;
+            $name =~ s#\.gz##;
+            return $name;
+        }
+        $dh->close;
+        return;
+    }
+}
+
+sub _remove_old_read_iterations_from_amplicons {
+    my ($self, $amplicons) = @_;
+
+    for my $amplicon_name ( keys %$amplicons ) {
+        my %reads;
+        for my $read_name ( @{$amplicons->{$amplicon_name}} ) {
+            my $read = $self->_get_gsc_sequence_read($read_name);
+            confess "Can't get read for name ($read_name). This is required to remove old read iterations from amplicons" unless $read;
+            
+            my $read_id = $amplicon_name.$read->primer_code;
+            if ( exists $reads{$read_id} ) {
+                my $date_compare = UR::Time->compare_dates(
+                    '00:00:00 '.$read->run_date,
+                    '00:00:00 '.$reads{$read_id}->run_date,
+                ); #returns -1, 0, or 1
+                #print "RUN DATE $read_name => ".$read->run_date."($date_compare)\n";
+                $reads{$read_id} = $read if $date_compare eq 1;
+            }
+            else {
+                $reads{$read_id} = $read;
+            }
+        }
+        $amplicons->{$amplicon_name} = [
+        sort { $a cmp $b } 
+        map { $_->trace_name }
+        values %reads 
+        ];
+    }
+
+    return 1;
+}
+
+sub _remove_contaminated_amplicons {
+    my ($self, $amplicons) = @_;
+
+    AMPLICON: for my $amplicon_name ( keys %$amplicons ) {
+        for my $read_name ( @{$amplicons->{$amplicon_name}} ) {
+            my $read = $self->_get_gsc_sequence_read($read_name);
+            confess "Can't get read for name ($read_name). This is required to remove contaminated amplicons" unless $read;
+            #print "$read_name : ".$read->contamination_status."\n";
+            if ( $read->contamination_status and $read->contamination_status eq 'FOUND' ) {
+                delete $amplicons->{$amplicon_name};
+                next AMPLICON;
+            }
+        }
+    }
+
+    return 1;
+}
+
+sub _get_gsc_sequence_read { # in sub to overload on test
+    return GSC::Sequence::Read->get(trace_name => $_[0]);
 }
 
 #< Amplicon Reads >#
@@ -305,7 +419,7 @@ sub get_method_for_get_amplicon_name_for_read_name {
 
 sub _get_amplicon_name_for_gsc_sanger_read_name {
     my ($self, $read_name) = @_;
-    
+
     $read_name =~ /^(.+)\.[bg]\d+$/
         or return;
 
@@ -343,7 +457,7 @@ sub get_all_amplicons_reads_for_read_name {
         return;
     }
 
-    
+
     return @read_names;
 }
 
@@ -724,7 +838,7 @@ Genome::AmpliconAssembly
 
 Copyright (C) 2005 - 2009 Genome Center at Washington University in St. Louis
 
-This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 =head1 Author(s)
 
@@ -734,4 +848,3 @@ B<Eddie Belter> I<ebelter@genome.wustl.edu>
 
 #$HeadURL$
 #$Id$
-
