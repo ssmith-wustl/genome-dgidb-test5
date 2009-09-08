@@ -99,10 +99,10 @@ sub _bsub_invoke {
     my $self = shift;
     my %p = @_;
 
-    my $rusage = delete $p{rusage} || "";
+    my $rusage = delete $p{rusage} || "'";
     my $jobname = delete $p{job_name} || "ref-seq-prep";
 
-    my $bsub64_params = "bsub -J $jobname -u " . $ENV{USER} . "\@genome.wustl.edu -q apipe -R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] $rusage'"; 
+    my $bsub64_params = "bsub -J $jobname -u " . $ENV{USER} . "\@genome.wustl.edu -q apipe -R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] $rusage"; 
     
     my $cmd = delete $p{cmd};
     
