@@ -507,12 +507,15 @@ sub send_mail {
     my ($ssid, $assembly_name, $rtfileloc, $rtfilename, $rtfullname) = @ARG;
     my $from = join(
                     ', ',
-                    'wnash@watson.wustl.edu'
+                    'wnash@watson.wustl.edu',
+		    'ssurulir@watson.wustl.edu',
                    );
 
     my $to   = join(
                     ', ',
-                    'wnash@watson.wustl.edu'
+                    'wnash@watson.wustl.edu',
+		    'ssurulir@watson.wustl.edu',
+		    'kpepin@genome.wustl.edu',
                    );
 
     my $subject = "Amgap BER Product Naming script mail for AMGAP SSID: $ssid ($assembly_name)";
