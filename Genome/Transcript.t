@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 use Storable;
-use Test::More tests => 262;
+use Test::More skip_all => 'out of date, need to update without using models';
 
 my $build    = Genome::Model::ImportedAnnotation->get(name => 'NCBI-human.combined-annotation')->build_by_version(0);
 my $iterator = $build->transcript_iterator;
