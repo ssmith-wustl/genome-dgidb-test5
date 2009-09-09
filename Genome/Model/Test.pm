@@ -317,6 +317,7 @@ sub add_mock_event_to_build {
         build_id => $build->id,
         event_type => 'genome model build',
         event_status => 'Succeeded',
+        user_name => $ENV{USER},
         date_scheduled => UR::Time->now,
         date_completed => UR::Time->now,
     ) or confess "Can't create mock build event for ".$build->type_name." build";

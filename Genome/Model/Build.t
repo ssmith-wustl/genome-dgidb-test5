@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 16;
+use Test::More tests => 19;
 require Genome::Model::Test;
 
 BEGIN {
@@ -52,6 +52,24 @@ is($model->last_complete_build_id, $build->id, 'Last complete build id set to bu
 no warnings 'redefine';
 *Genome::Model::Build::generate_send_and_save_report = $gss_report;
 use warnings;
+
+# Report to addressees
+is(
+    $build->_get_to_addressees_for_report_generator_class('Genome::Model::Report::BuildInitialized'),
+    $ENV{USER}.'@genome.wustl.edu', 
+    "reports go to $ENV{USER}",
+);
+$build->build_event->user_name('apipe'); # check for apipe
+is(
+    $build->_get_to_addressees_for_report_generator_class('Genome::Model::Report::BuildInitialized'),
+    'apipe-run@genome.wustl.edu', 
+    'apipe\'s reports go to apipe-run',
+);
+is(
+    $build->_get_to_addressees_for_report_generator_class('Genome::Model::Report::BuildFailed'),
+    'apipe-bulk@genome.wustl.edu', 
+    'apipe\'s reports go to apipe-bulk',
+);
 
 exit;
 
