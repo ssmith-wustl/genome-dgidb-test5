@@ -5,33 +5,30 @@ use warnings;
 
 use File::Path;
 use File::Temp;
-#use Test::More tests => 5;
-use Test::More skip_all => 'due to taking model ids as input now we have to mock models to test this, and havnt done so yet';
+use Test::More;
+#use Test::More skip_all => 'due to taking model ids as input now we have to mock models to test this, and havnt done so yet';
 use above 'Genome';
+
+my $archos = `uname -a`;
+if ($archos !~ /64/) {
+    plan skip_all => "Must run from 64-bit machine";
+} else {
+    plan tests => 4;
+}
 
 my $tumor =  "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-Sniper/tumor.tiny.bam";
 my $normal = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-Sniper/normal.tiny.bam";
 
 my $tmpdir = File::Temp::tempdir('SomaticSniperXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 0);
-my $tmpfile = File::Temp->new( TEMPLATE=>'somatic_outputXXXXX', DIR=>$tmpdir, UNLINK=>0, SUFFIX=>'.txt'  );
-my $output_file = $tmpfile->filename;
+my $tmpfile_snp = File::Temp->new( TEMPLATE=>'somatic_outputXXXXX', DIR=>$tmpdir, UNLINK=>0, SUFFIX=>'.txt'  );
+my $output_snp_file = $tmpfile_snp->filename;
+my $tmpfile_indel = File::Temp->new( TEMPLATE=>'somatic_outputXXXXX', DIR=>$tmpdir, UNLINK=>0, SUFFIX=>'.txt'  );
+my $output_indel_file = $tmpfile_indel->filename;
 
-my $sniper = Genome::Model::Tools::Somatic::Sniper->create(tumor_file=>$tumor, normal_file=>$normal,  output_file=>$output_file);
+my $sniper = Genome::Model::Tools::Somatic::Sniper->create(tumor_bam_file=>$tumor, normal_bam_file=>$normal, output_snp_file=>$output_snp_file, output_indel_file=>$output_indel_file);
 ok($sniper, 'sniper command created');
 my $rv = $sniper->execute;
 is($rv, 1, 'Testing for successful execution.  Expecting 1.  Got: '.$rv);
 
-$sniper = Genome::Model::Tools::Somatic::Sniper->create(tumor_file=>$tumor, normal_file=>$normal,  output_file=>$output_file);
-ok($sniper, 'sniper command created');
-$rv = $sniper->execute;
-is($rv, 1, 'Testing for successful execution.  Expecting 1.  Got: '.$rv);
-
-# Turned off software result for now in sniper
-#ok(-e '/gscuser/adukes/svn/perl_modules/Genome/Model/Tools/Somatic/result_found', 'detected software result on second go round');
-#unlink '/gscuser/adukes/svn/perl_modules/Genome/Model/Tools/Somatic/result_found';
-
-my $length_test = 0;
-if (length($output_file) > 70 ) {
-    $length_test = 1 ;
-} 
-is($length_test,1,'Testing success: Expecting an output file >70. Got a string of length: '.length($output_file));
+ok(-s $output_snp_file,'Testing success: Expecting a snp output file exists');
+ok(-s $output_indel_file,'Testing success: Expecting a indel output file exists');
