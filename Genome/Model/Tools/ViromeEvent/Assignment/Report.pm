@@ -52,7 +52,7 @@ sub execute
     my $self = shift;
     my $dir = $self->dir;
 
-    $self->log_event("Assignment Reporting begun");
+    $self->log_event("Assignment Reporting begun on $dir");
 
     # get all the viral read sequences
     my %viral_reads_blastn = ();
@@ -304,7 +304,7 @@ sub execute
         print OUT3 $seq{$read}, "\n";
     }	
 
-    $self->log_event("Assignment Reporting completed");
+    $self->log_event("Assignment Reporting completed on $dir");
 
     return 1;
 }

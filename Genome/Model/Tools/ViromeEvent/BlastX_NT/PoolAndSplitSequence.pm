@@ -136,7 +136,7 @@ sub splitGivenNumberSequence {
 	my %seq = $self->read_FASTA_data($inFile);
 	my $num_seq_total = keys %seq;
 	my $num_seq_left = $num_seq_total;
-        $self->log_event("splitGivenNumberSequence entered");	
+        $self->log_event("splitGivenNumberSequence entered with $outDir");	
 	# check there are sequences in the file
 	my $n = keys %seq;
 	if (!$n) {

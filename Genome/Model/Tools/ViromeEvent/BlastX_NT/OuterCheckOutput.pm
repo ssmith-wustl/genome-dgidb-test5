@@ -40,12 +40,12 @@ sub create {
 sub execute
 {
     my $self = shift;
-    $self->log_event("Blast X NT check output entered");
     my $dir = $self->dir;
 
     my @temp_dir_arr = split("/", $dir);
     my $lib_name = $temp_dir_arr[$#temp_dir_arr];
     my $directory_job_file = $dir."/".$lib_name.".job";
+    $self->log_event("Blast X NT check output entered for $lib_name");
 
     my @files_for_blast;
     opendir(DH, $dir) or die "Can not open dir $dir!\n";
@@ -68,7 +68,7 @@ sub execute
     }
     $self->files_for_blast(\@files_for_blast);
 
-    $self->log_event("Blast X NT check output completed with");
+    $self->log_event("Blast X NT check output completed for $lib_name");
     return 1;
 }
 

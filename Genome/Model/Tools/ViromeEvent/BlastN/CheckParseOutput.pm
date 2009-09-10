@@ -44,11 +44,11 @@ sub create {
 sub execute
 {
     my $self = shift;
-    $self->log_event("Blast N check parse output entered");
     my $dir = $self->dir;
 
     my @temp_dir_arr = split("/", $dir);
     my $lib_name = $temp_dir_arr[$#temp_dir_arr];
+    $self->log_event("Blast N check parse output entered for $lib_name");
     my $com = "";
 
 
@@ -135,7 +135,7 @@ sub execute
         }
 
 
-        $self->log_event("Blast N check parse output completed with $matches matches");
+        $self->log_event("Blast N check parse output completed for $lib_name");
         return 1;
     }
 }

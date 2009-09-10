@@ -52,7 +52,7 @@ sub execute
     my $self = shift;
     my $dir = $self->dir;
 
-    $self->log_event("Assignment Summary begun");
+    $self->log_event("Assignment Summary begun on $dir");
 
     # cutoff for sequences to be interesting
     my $percentID_cutoff = 100;
@@ -268,7 +268,7 @@ sub execute
     }
     closedir DH;
 
-    $self->log_event("Assignment Summary completed");
+    $self->log_event("Assignment Summary completed $dir");
 
     return 1;
 }

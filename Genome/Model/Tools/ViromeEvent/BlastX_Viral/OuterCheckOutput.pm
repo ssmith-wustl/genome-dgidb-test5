@@ -46,11 +46,11 @@ sub create {
 sub execute
 {
     my $self = shift;
-    $self->log_event("Outer BlastX Viral centered");
     my $dir = $self->dir;
 
     my @temp_dir_arr = split("/", $dir);
     my $lib_name = $temp_dir_arr[$#temp_dir_arr];
+    $self->log_event("Outer BlastX Viral centered for $lib_name");
 
     my $allFinished = 1;
     my $have_input_file = 0;
@@ -72,7 +72,7 @@ sub execute
         }
     }
 
-    $self->log_event("Outer BlastX Viral completed");
+    $self->log_event("Outer BlastX Viral completed for $lib_name");
     return 1;
 }
 

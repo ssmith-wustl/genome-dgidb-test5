@@ -49,7 +49,6 @@ sub create {
 sub execute
 {
     my $self = shift;
-    $self->log_event("Blast X viral check parse output entered");
     my $dir = $self->dir;
 
     my @temp_dir_arr = split("/", $dir);
@@ -59,6 +58,9 @@ sub execute
     my $allFinished = 1;
     my $have_tblastx_out = 0;
     my $matches = 0;
+
+    $self->log_event("Blast X viral check parse output entered for $lib_name");
+
     opendir(DH, $dir) or die "Can not open dir $dir!\n";
     foreach my $name (readdir DH) 
     {
@@ -123,7 +125,7 @@ sub execute
     {
         die("$dir does not have input file!\n");
     }
-    $self->log_event("Blast  X viral check parse output completed with $matches matches");
+    $self->log_event("Blast  X viral check parse output completed for $lib_name");
     return 1;
 }
 

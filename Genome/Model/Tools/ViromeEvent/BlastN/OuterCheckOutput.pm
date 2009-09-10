@@ -43,11 +43,11 @@ sub create {
 sub execute
 {
     my $self = shift;
-    $self->log_event("Outer Blast N check output entered");
     my $dir = $self->dir;
 
     my @temp_dir_arr = split("/", $dir);
     my $lib_name = $temp_dir_arr[$#temp_dir_arr];
+    $self->log_event("Outer Blast N check output entered for $lib_name");
 
     my @files_for_blast;
     opendir(DH, $dir) or die "Can not open dir $dir!\n";
@@ -70,9 +70,7 @@ sub execute
     }
     $self->files_for_blast(\@files_for_blast);
     
-    $self->log_event("files for blast:\n" . join("\n", @files_for_blast));
-
-    $self->log_event("Outer Blast Human N check output completed");
+    $self->log_event("Outer Blast Human N check output completed for $lib_name");
     return 1;
 }
 

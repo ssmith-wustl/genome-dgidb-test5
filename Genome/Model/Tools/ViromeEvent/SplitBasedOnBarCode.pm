@@ -76,9 +76,9 @@ sub execute
 {
     my $self = shift;
 
-    $self->log_event("Split based on barcode entered");
-    
     my ($input_file, $barcode_seq_file) = ($self->fasta_file, $self->barcode_file);
+
+    $self->log_event("Splitting $input_file based on barcode...");
 
     # get directory path
     my @fields = split(/\//, $input_file);
@@ -86,10 +86,10 @@ sub execute
     my $output_dir = join("/", @fields);
     
     my $lib_name = $fields[$#fields];
-    print "lib is $lib_name\n";
+    $self->log_event("lib is $lib_name");
     my $out = $output_dir."/"."Analysis_ReadStatistics_".$lib_name;
 
-    open (OUT, ">$out") or die "can not open file $out!\n";
+    open (OUT, ">$out") or ($self->log_event("can not open file $out") and die "can not open file $out!\n");
 
     # cutoffs for sample to be reamplify and resequencing
     my $percentage_cutoff = 15; # percentage of sequence less than 100 bp
@@ -295,7 +295,7 @@ sub execute
 	else {
 		# make directory for each library
 		my $samp_name = $barcode{$code_seq};
-		print "lib = $samp_name, barcode = $code_seq\n";
+		$self->log_event("lib = $samp_name, barcode = $code_seq");
 		my $samp_dir = $output_dir."/".$samp_name;
 		if (!(-e $samp_dir)) {
 			my $com = "mkdir ".$samp_dir;

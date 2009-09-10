@@ -40,7 +40,7 @@ sub execute
     my $self = shift;
     my $dir = $self->dir;
 
-    $self->log_event("Assignment Generate begun");
+    $self->log_event("Assignment Generate begun on $dir");
 
     my @temp = split("/", $dir);
     my $run_name = pop @temp;
@@ -110,7 +110,7 @@ sub execute
     $self->generate_InterestingReads( $dir );
     print OUT "End of Interesting Reads\n\n";
 
-    $self->log_event("Assignment Generate completed");
+    $self->log_event("Assignment Generate completed on $dir");
 
     return 1;
 }

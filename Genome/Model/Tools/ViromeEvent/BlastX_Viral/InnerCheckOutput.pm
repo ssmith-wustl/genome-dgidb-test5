@@ -59,7 +59,7 @@ sub execute
     my $com;
 
 
-    $self->log_event("inner check output entered");
+    $self->log_event("inner check output entered for $file_name");
 
 		    my $resubmit = 0;
 		    my $temp = substr($file, 0, -3);
@@ -93,7 +93,7 @@ sub execute
                         system($com);
 		    }
 
-    $self->log_event("inner check output completed");
+    $self->log_event("inner check output completed for $file_name");
     return 1;
 }
 
