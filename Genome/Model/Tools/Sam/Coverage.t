@@ -48,7 +48,7 @@ my $coverage = Genome::Model::Tools::Sam::Coverage->create(
 
 isa_ok($coverage,'Genome::Model::Tools::Sam::Coverage');
 my $result = $coverage->execute;
-$result =~ m/Average Coverage:(\S+)/g; 
+$result =~ m/\nAverage Coverage:(\S+)/g; 
 my $haploid_coverage=$1 if defined($1);
 ok( $haploid_coverage eq '0.001', "haploid coverage calculated correctly" );
 

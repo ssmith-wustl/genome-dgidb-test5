@@ -6,7 +6,7 @@ use warnings;
 use Genome; 
 use File::Basename;
 
-my $DEFAULT = 'r320wu1';
+my $DEFAULT = 'r453';
 my $PICARD_DEFAULT = 'r103wu0';
 
 class Genome::Model::Tools::Sam {
@@ -50,6 +50,8 @@ EOS
 
 
 my %SAMTOOLS_VERSIONS = (
+    r453    => '/gsc/pkg/bio/samtools/samtools-0.1.6/samtools',
+    r449    => '/gsc/pkg/bio/samtools/samtools-0.1.5-32/samtools',
     r301wu1 => '/gscuser/dlarson/samtools/r301wu1/samtools',
     r320wu1 => '/gscuser/dlarson/samtools/r320wu1/samtools',
     r320wu2 => '/gscuser/dlarson/samtools/r320wu2/samtools',
@@ -60,6 +62,7 @@ my %PICARD_VERSIONS = (
     #I'm using -wu0 to signify that no changes have been made to the Broad release.
     r103wu0 => '/gsc/scripts/lib/java/samtools/picard-tools-1.03/',
 );
+
 
 sub path_for_samtools_version {
     my ($class, $version) = @_;
@@ -92,8 +95,6 @@ sub picard_path {
     my $self = shift;
     return $self->path_for_picard_version($self->use_picard_version);
 }
-
-
 
 
 sub samtools_pl_path {

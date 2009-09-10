@@ -147,7 +147,7 @@ $DB::single = 1;
     my $fh = new IO::File($mapcheck_report_file, "r");
     if ($fh) {
         my $mapcheck_contents = get_contents($fh);
-        if ( ($mapcheck_contents =~ m/Average depth across all non-gap regions: (\S+)/g ) || ($mapcheck_contents =~ m/Average Coverage:(\S+)/g ) ) {
+        if ( ($mapcheck_contents =~ m/Average depth across all non-gap regions: (\S+)/g ) || ($mapcheck_contents =~ m/\nAverage Coverage:(\S+)/g ) ) {
             $haploid_coverage=$1 if defined($1);
         }
         $fh->close();
