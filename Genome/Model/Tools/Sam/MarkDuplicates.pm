@@ -84,10 +84,8 @@ sub execute {
     $self->status_message(">>> Beginning mark duplicates at $now");
     my $picard_path = $self->picard_path;
     #This is a temporary fix until release 1.04
-    my $mark_duplicates_jar = $picard_path."/picard-1.03r95.jar";
-    my $sam_jar = $picard_path."/sam-1.03r95.jar";
-    #my $picard_path = "/gscuser/jpeck/svn/picard/trunk/dist/picard-1.03r95.jar:/gscuser/jpeck/svn/picard/trunk/dist/sam-r95.jar";
-    my $classpath = "$mark_duplicates_jar:$sam_jar";
+    my $mark_duplicates_jar = $picard_path."/MarkDuplicates.jar";
+    my $classpath = "$mark_duplicates_jar";
 
     my $rm_option = 'true';
     if ($self->remove_duplicates ne '1') {
@@ -108,7 +106,7 @@ sub execute {
     if ($self->assume_sorted ne '1') {
         $assume_sorted_param = 'false';
     }
-    #my $mark_duplicates_cmd = "java -Xmx".$self->max_jvm_heap_size."g -cp $picard_path/MarkDuplicates.jar net.sf.picard.sam.MergeSamFiles VALIDATION_STRINGENCY=SILENT I=$input_file O=$result remove_duplicates=$rm_option $log_file_param";  
+    
     my $mark_duplicates_cmd = "java -Xmx".$self->max_jvm_heap_size."g -cp $classpath net.sf.picard.sam.MarkDuplicates VALIDATION_STRINGENCY=SILENT metrics_file=".$self->metrics_file." I=$input_file O=$result remove_duplicates=$rm_option assume_sorted=$assume_sorted_param $tmp_dir_param $log_file_param";  
 
 	$self->status_message("Picard mark duplicates command: $mark_duplicates_cmd");
