@@ -133,17 +133,23 @@ sub execute {
         );
 
         $op->parallel_by('bam_files');
-        my %params = (
-            $op,
-            'output_directory' => $ref_cov_dir,
-            'bam_files' => $progression_array_ref,
-            'target_query_file' => $self->build->genes_file,
-        );
+        my $output;
         if ($self->model->rmdup_name eq 'samtools') {
-            $params{'samtools_version'} = $self->model->rmdup_version;
+            $output = Workflow::Simple::run_workflow_lsf(
+                $op,
+                'output_directory' => $ref_cov_dir,
+                'bam_files' => $progression_array_ref,
+                'target_query_file' => $self->build->genes_file,
+                'samtools_version' => $self->model->rmdup_version,
+            );
+        } else {
+            $output = Workflow::Simple::run_workflow_lsf(
+                $op,
+                'output_directory' => $ref_cov_dir,
+                'bam_files' => $progression_array_ref,
+                'target_query_file' => $self->build->genes_file,
+            );
         }
-        my $output = Workflow::Simple::run_workflow_lsf(%params);
-
         #check workflow for errors 
         if (!defined $output) {
             foreach my $error (@Workflow::Simple::ERROR) {
@@ -280,6 +286,9 @@ sub progression_stats_files {
 sub verify_progressions {
     my $self = shift;
     my @progression_stats_files = $self->progression_stats_files;
+    unless (scalar(@progression_stats_files)) {
+        return;
+    }
     for my $progression_stats_file (@progression_stats_files) {
         unless (-e $progression_stats_file) {
             return;
