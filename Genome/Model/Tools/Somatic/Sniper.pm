@@ -114,12 +114,12 @@ sub execute {
     
     unless ( Genome::Utility::FileSystem->validate_file_for_reading($self->tumor_bam_file) ) {
         $self->error_message("Could not validate tumor file:  ".$self->tumor_bam_file );
-        return;
+        die;
     } 
 
     unless ( Genome::Utility::FileSystem->validate_file_for_reading($self->normal_bam_file) ) {
         $self->error_message("Could not validate normal file:  ".$self->normal_bam_file );
-        return;
+        die;
     } 
 
     #check for result
