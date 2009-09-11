@@ -98,7 +98,7 @@ sub execute {
     # make sure we're either only running tier 1 or that tier 2-4 files have been provided
     unless ( ($self->only_tier_1) || ($self->tier2_file && $self->tier3_file && $self->tier4_file) ) {
         $self->error_message("Tier 2-4 filenames must be provided unless only_tier_1 is set");
-        return;
+        die;
     }
 
     my $ucsc_fh = new FileHandle;
@@ -211,7 +211,7 @@ sub execute {
             
         } else {
             $self->error_message("Type $type not implemented");
-            return;
+            die;
         }
     }
 
