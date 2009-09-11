@@ -199,7 +199,7 @@ sub execute {
     }
     else {
         $self->error_message("Invalid variant filter type: $filter_type");
-        return;
+        die;
     }
 } 
  
@@ -214,7 +214,7 @@ sub execute {
     }
 
     $self->error_message($msg);
-    return;
+    die;
 }
     
 sub check_for_existence {
@@ -235,7 +235,7 @@ sub check_for_existence {
             return $found;
         }
     }
-    return;
+    die;
 }
 
 
