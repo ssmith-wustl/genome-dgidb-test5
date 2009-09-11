@@ -244,7 +244,7 @@ sub execute {
                       name                  => $model_name,
                       subject_name          => $subject_name,
                       subject_type          => $subject_type,
-                      processing_profile    => $pp,
+                      processing_profile_id    => $pp->id(),
                       auto_assign_inst_data => 1,
                   );
 
