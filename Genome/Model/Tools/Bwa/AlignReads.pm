@@ -10,11 +10,6 @@ class Genome::Model::Tools::Bwa::AlignReads {
     is  => 'Genome::Model::Tools::Bwa',
     has => [
         #######################################################
-        use_version => {
-            is            => 'Version',
-            default_value => '0.4.9',
-            doc           => "Version of bwa to use"
-        },
         dna_type => {
             doc =>
 'Optional switch which can be "dna" or "rna".  Each choice causes the application to use a specific primer file.  If no dna_type value is provided, an adaptor_file parameter must be used.',

@@ -64,6 +64,13 @@ my $subject_name = 'H_GV-933124G-S.9017';
 my $subject_type = 'sample_name';
 my $align_params = '-t4::';
 my $sam_version  = Genome::Model::Tools::Sam->default_samtools_version;
+my $bwa_version = Genome::Model::Tools::Bwa->default_bwa_version;
+my $bwa_label = 'bwa'.$bwa_version;
+
+$bwa_label =~ s/\./\_/g;
+
+print "\nThis test is on bwa version: $bwa_version and samtools version: $sam_version\n";
+
 my @instrument_data = setup_test_data($subject_name);
 
 my $build_test = Genome::Model::Command::Build::ReferenceAlignment::Test->new(
@@ -87,22 +94,19 @@ $build_test->create_test_pp(
     align_dist_threshold => '0',
     multi_read_fragment_strategy => 'eliminate start site duplicates',
     indel_finder_name => 'samtools',
-    #indel_finder_version => 'r320wu1',
     genotyper_name => 'samtools',
-    #genotyper_version => 'r320wu1',
     read_aligner_name => 'bwa',
-    read_aligner_version => '0.4.9',
+    read_aligner_version => $bwa_version,
     read_aligner_params => $align_params,
     rmdup_name => 'samtools',
     rmdup_version => $sam_version,
     reference_sequence_name => 'refseq-for-test',
-    #filter_ruleset_name => 'basic',
 );
 $build_test->runtests;
 
 my $comparison_dir = '/gsc/var/cache/testsuite/data/'
         . 'Genome-Model-Command-Build-ReferenceAlignment-Solexa/'
-        . 'alignment-root-expected-v7';
+        . 'alignment-root-expected-v9';
 
 my @diff = `diff -r --brief $tmp_dir $comparison_dir`; 
 my @bad;
@@ -132,8 +136,7 @@ sub setup_test_data {
     my $mock_id = -10;
     my $library = 'TESTINGLIBRARY'; 
     my $params_md5 = md5_hex($align_params) if $align_params;
-    my $align_label = 'bwa0_4_9';
-    $align_label .= "/$params_md5" if $params_md5;
+    $bwa_label .= "/$params_md5" if $params_md5;
     
     for my $run_dir (@run_dirs) {
         my $run_dir_params = GSC::PSE::SolexaSequencing::SolexaRunDirectory->parse_regular_run_directory($run_dir);
@@ -167,7 +170,7 @@ sub setup_test_data {
                 							                                  library_name => $library,
                                                                           );
             my $allocation_path = sprintf('alignment_data/%s/%s/%s/%s_%s',
-                                          $align_label,
+                                          $bwa_label,
                                           'refseq-for-test',
                                           $instrument_data->run_name,
                                           $instrument_data->subset_name,

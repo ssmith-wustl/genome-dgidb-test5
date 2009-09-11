@@ -4,15 +4,19 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Genome::Model::Tools::Bwa::AlignStep;
 use Test::More;
-#tests => 1;
 
 if (`uname -a` =~ /x86_64/){
-    plan tests => 8;
+    plan tests => 9;
 } else{
     plan skip_all => 'Must run on a 64 bit machine';
 }
+
+use_ok('Genome::Model::Tools::Bwa::AlignStep');
+
+my $version = Genome::Model::Tools::Bwa->default_bwa_version;
+
+print "Bwa version on test is $version\n";
 
 my $ref_seq = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Bwa-AlignReads/reference-sequence/all_sequences.fa";
 
@@ -20,7 +24,7 @@ my $aln_dir = File::Temp::tempdir(CLEANUP=>1);
 
 my $aln_input_1 = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Bwa-AlignReads/single-solexa/s_3_sequence.txt";
 
-my $cmd = Genome::Model::Tools::Bwa::AlignStep->create(aligner_version=>'0.4.9',
+my $cmd = Genome::Model::Tools::Bwa::AlignStep->create(aligner_version=>$version,
                                                        alignments_dir=>$aln_dir,
                                                        query_input=>$aln_input_1,
                                                        reference_fasta_path=>$ref_seq,

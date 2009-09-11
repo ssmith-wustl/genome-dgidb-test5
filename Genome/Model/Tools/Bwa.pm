@@ -6,10 +6,12 @@ use warnings;
 use Genome;
 use File::Basename;
 
+my $DEFAULT = '0.5.1';
+
 class Genome::Model::Tools::Bwa {
     is => 'Command',
     has => [
-        use_version => { is => 'Version', is_optional => 1, default_value => '0.4.9', doc => "Version of bwa to use" },
+        use_version => { is => 'Version', is_optional => 1, default_value => $DEFAULT, doc => "Version of bwa to use, default is $DEFAULT" },
         arch_os => {
                     calculate => q|
                             my $arch_os = `uname -m`;
@@ -39,17 +41,20 @@ More information about the BWA suite of tools can be found at http://bwa.sourcef
 EOS
 }
 
+
+my %BWA_VERSIONS = (
+	'0.4.2' => '/gsc/pkg/bio/bwa/bwa-0.4.2-64/bwa',
+	'0.4.9' => '/gsc/pkg/bio/bwa/bwa-0.4.9-64/bwa',
+	'0.5.0' => '/gsc/pkg/bio/bwa/bwa-0.5.0-64/bwa',
+	'0.5.1' => '/gsc/pkg/bio/bwa/bwa-0.5.1-64/bwa',
+    'bwa'   => 'bwa',
+);
+
+
 sub bwa_path {
     my $self = $_[0];
     return $self->path_for_bwa_version($self->use_version);
 }
-my %BWA_VERSIONS = (
-		    '0.4.2' => '/gsc/pkg/bio/bwa/bwa-0.4.2-64/bwa',
-		    '0.4.9' => '/gsc/pkg/bio/bwa/bwa-0.4.9-64/bwa',
-		    '0.5.0' => '/gsc/pkg/bio/bwa/bwa-0.5.0-64/bwa',
-		    '0.5.1' => '/gsc/pkg/bio/bwa/bwa-0.5.1-64/bwa',
-                    'bwa'   => 'bwa',
-                );
 
 sub available_bwa_versions {
     my $self = shift;
@@ -66,6 +71,11 @@ sub path_for_bwa_version {
     die('No path for bwa version '. $version);
 }
 
+sub default_bwa_version {
+    die "default samtools version: $DEFAULT is not valid" unless $BWA_VERSIONS{$DEFAULT};
+    return $DEFAULT;
+}
+        
 
 1;
 

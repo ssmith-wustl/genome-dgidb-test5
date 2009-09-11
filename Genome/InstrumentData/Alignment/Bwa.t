@@ -23,6 +23,12 @@ BEGIN {
 
 #TODO: Modify version info and make tool to get path for bwa version
 
+my $bwa_version = Genome::Model::Tools::Bwa->default_bwa_version;
+my $bwa_label   = 'bwa'.$bwa_version;
+$bwa_label =~ s/\./\_/g;
+
+print "\nBwa version tested is $bwa_version\n";
+
 my $gerald_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name';
 
 # Existing
@@ -41,7 +47,7 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   gerald_directory => $gerald_directory,
                                                               );
 
-print ("\nid: ".$instrument_data->seq_id."\n");
+print ("id: ".$instrument_data->seq_id."\n\n");
 
 my @in_fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
 $instrument_data->set_list('fastq_filenames',@in_fastq_files);
@@ -59,7 +65,7 @@ my $fake_allocation = Genome::Disk::Allocation->__define__(
                                                        disk_group_name => 'info_alignments',
                                                        group_subdirectory => 'info',
                                                        mount_path => '/gscmnt/sata828',
-                                                       allocation_path => 'alignment_data/bwa0_4_9/refseq-for-test/test_run_name/4_-123456',
+                                                       allocation_path => 'alignment_data/'.$bwa_label.'/refseq-for-test/test_run_name/4_-123456',
                                                        allocator_id => '-123457',
                                                        kilobytes_requested => 100000,
                                                        kilobutes_used => 0,
@@ -72,7 +78,7 @@ $instrument_data->set_list('allocations',$fake_allocation);
 my $alignment = Genome::InstrumentData::Alignment::Bwa->create(
                                                           instrument_data_id => $instrument_data->id,
                                                           aligner_name => 'bwa',
-                                                          aligner_version => '0.4.9',
+                                                          aligner_version => $bwa_version,
                                                           reference_name => 'refseq-for-test',
                                                       );
 
@@ -115,7 +121,7 @@ my $tmp_allocation = Genome::Disk::Allocation->create_mock(
                                                            disk_group_name => 'info_alignments',
                                                            group_subdirectory => 'test',
                                                            mount_path => '/tmp/mount_path',
-                                                           allocation_path => 'alignment_data/bwa0_4_9/refseq-for-test/test_run_name/4_-123458',
+                                                           allocation_path => 'alignment_data/'.$bwa_label.'/refseq-for-test/test_run_name/4_-123458',
                                                            allocator_id => '-123459',
                                                            kilobytes_requested => 100000,
                                                            kilobytes_used => 0,
@@ -136,7 +142,7 @@ $instrument_data->set_always('resolve_quality_converter','sol2sanger');
 $alignment = Genome::InstrumentData::Alignment->create(
                                                        instrument_data_id => $instrument_data->id,
                                                        aligner_name => 'bwa',
-                                                       aligner_version => '0.4.9',
+                                                       aligner_version => $bwa_version,
                                                        reference_name => 'refseq-for-test',
                                                    );
 
@@ -152,13 +158,13 @@ ok(! -e $dir2, 'alignment directory does not exist');
 
 
 #Run paired end as fragment
-$tmp_allocation->allocation_path('alignment_data/bwa0_4_9/refseq-for-test/test_run_name/fragment/4_-123458');
+$tmp_allocation->allocation_path('alignment_data/'.$bwa_label.'/refseq-for-test/test_run_name/fragment/4_-123458');
 $tmp_dir = File::Temp::tempdir('Align-Bwa-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 $instrument_data->set_list('fastq_filenames',$fastq_files[0]);
 $alignment = Genome::InstrumentData::Alignment->create(
                                                        instrument_data_id => $instrument_data->id,
                                                        aligner_name => 'bwa',
-                                                       aligner_version => '0.4.9',
+                                                       aligner_version => $bwa_version,
                                                        reference_name => 'refseq-for-test',
                                                        force_fragment => 1,
                                                    );

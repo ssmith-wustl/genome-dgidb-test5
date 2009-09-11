@@ -4,15 +4,16 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Genome::Model::Tools::Bwa::AlignReads;
 use Test::More;
 #tests => 1;
 
 if (`uname -a` =~ /x86_64/){
-    plan tests => 7;
+    plan tests => 8;
 } else{
     plan skip_all => 'Must run on a 64 bit machine';
 }
+
+use_ok('Genome::Model::Tools::Bwa::AlignReads');
 
 my $expected_output = 3;
 
@@ -39,8 +40,9 @@ my $aligner = Genome::Model::Tools::Bwa::AlignReads->create(
                                                             aligner_output_file => $output_dir .'/single_read.out',
                                                             unaligned_reads_file => $output_dir .'/single_read.unaligned',
                                                         );
-is($aligner->use_version,'0.4.9','using 0.4.9 version of bwa');
 
+my $default_version = Genome::Model::Tools::Bwa->default_bwa_version;
+is($aligner->use_version,$default_version,"using $default_version version of bwa");
 
 #execute the tool 
 ok($aligner->execute,'AlignReads execution, single read solexa input.');
