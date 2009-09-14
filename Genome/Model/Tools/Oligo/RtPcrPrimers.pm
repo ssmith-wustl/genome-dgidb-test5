@@ -37,7 +37,6 @@ class Genome::Model::Tools::Oligo::RtPcrPrimers {
 		 type  =>  'String',
 		 doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
 		 is_optional  => 1,
-		 default => '54_36p',
 	     },
 
 	],
@@ -55,15 +54,24 @@ sub help_synopsis {
 
 running...
 
-gmt rt-pcr-primers -chr -target-pos -transcript -organism
- 
+gmt rt-pcr-primers -chr 15 -target-pos 72102230 
+
+will return three files and you can optionally capture the transcript information which gets printed as std out
+human.15.72102230.annotated.list.csv show the info from variant-transcript
+chrNM_033238.rtpcr.designseq:742-742.span.742.primer3.result.txt shows the raw primer3 output
+chrNM_033238.rtpcr.designseq:742-742.ordered_primer_pairs.txt shows the primer3 primer-pairs with ranking as described by gmt oligo pcr-primers
+
+if the -all-transcripts option is used, individual files for primers foreach transcript will be produced
+
 EOS
 }
 
 sub help_detail {
     return <<EOS 
 
-you can enter multiple transcripts however, each should be on the same chromosome and include the target_pos. If no transcripts are provided a list will be generated from the annotator.
+you can enter multiple transcripts however, each should be on the same chromosome and include the target_pos. If no transcripts are provided a list will be generated from the annotator which provides the single preferred transcript by default or all transcripts with the -all-transcripts option.
+
+If the coordinate provide by target-pos falls in an exon, that exon will be omitted from the rt-pcr design sequence. 
 
 EOS
 }
@@ -81,7 +89,11 @@ sub execute {
 
     my $transcripts = $self->transcript;
     my @transcripts;
-    
+
+    my $version = $self->version;
+    unless ($version) { if ($organism eq "mouse") { $version = "54_37g"; } else { $version = "54_36p"; } }
+    my $references_transcripts = "NCBI-$organism.combined-annotation/$version";
+
     if ($transcripts) {
 	@transcripts = split(/\,/,$transcripts);
     } else {
@@ -95,14 +107,14 @@ sub execute {
 	
 	my $annotation_file = "$name.annotated.list.csv";
 
+
 	my @command;
 
 	if ($self->all_transcripts) {
-	    @command = ["gmt" , "annotate" , "transcript-variants" , "--variant-file" , "$name.annotation.list" , "--output-file" , "$annotation_file" , "--flank-range" , "0" , "--extra-details" , "--annotation-filter" , "none"]; #running it this way will get all transcripts
+	    @command = ["gmt" , "annotate" , "transcript-variants" , "--variant-file" , "$name.annotation.list" , "--output-file" , "$annotation_file" , "--flank-range" , "0" , "--extra-details" , "--annotation-filter" , "none" , "--reference-transcripts" , "$references_transcripts"]; #running it this way will get all transcripts
 	} else {
-	    @command = ["gmt" , "annotate" , "transcript-variants" , "--variant-file" , "$name.annotation.list" , "--output-file" , "$annotation_file" , "--flank-range" , "0" , "--extra-details"]; #running it this way will get the prefered Genes
+	    @command = ["gmt" , "annotate" , "transcript-variants" , "--variant-file" , "$name.annotation.list" , "--output-file" , "$annotation_file" , "--flank-range" , "0" , "--extra-details" , "--reference-transcripts" , "$references_transcripts"]; #running it this way will get the prefered Genes
 	}
-
 
 	&ipc_run(@command);
 
@@ -117,9 +129,11 @@ sub execute {
 	}
     }
 
+    unless (@transcripts) { die "no transcripts were identified\n"; }
+
     for my $transcript (@transcripts) {
 	
-	my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1");
+	my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$transcript", trans_pos => "$target_pos", utr_seq => "1", organism => "$organism", version => "$version");
 	my $transcript_info = $info->{result};
 	my $strand = $transcript_info->{$transcript}->{-1}->{strand};
 	#my ($chromosome) = $transcript_info->{$transcript}->{-1}->{source_line} =~ /Chromosome ([\S]+)\,/;
@@ -177,7 +191,7 @@ sub execute {
 	close (FA);
 
 	my $hspsepSmax = $target->{seq_stop} - $target->{seq_start} + 51;
-	system qq(gmt oligo get-pcr-primers -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax);
+	system qq(gmt oligo get-pcr-primers -fasta $fasta -target-depth $target_depth -hspsepSmax $hspsepSmax -organism $organism);
     }
 }
 
@@ -335,3 +349,26 @@ sub parse_annotation {
 }
 
 1;
+
+
+=head1 TITLE
+
+PtPcrPrimers
+
+=head1 DESCRIPTION
+
+This script will produce rt-pcr primers!
+
+=head1 Input Options:
+
+chrmosome coordinate transcript all_transcripts organism version
+
+=head1 KNOWN BUGS
+
+Please report bugs to <rmeyer@genome.wustl.edu>
+
+=head1 AUTHOR
+
+Rick Meyer <rmeyer@genome.wustl.edu>
+
+=cut
