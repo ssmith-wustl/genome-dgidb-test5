@@ -177,7 +177,7 @@ sub execute
 
     foreach my $file (@file2convert) {
 
-      unless (system(qq{unix2dos -u -o -p '$file'})==0) {
+      unless (system(qq{/usr/bin/unix2dos -u -o -p '$file'})==0) {
 
 	warn "unix2dos died for '$file'  , from AmgapPrepareBER.pm\n";
 
