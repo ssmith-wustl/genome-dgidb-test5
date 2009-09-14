@@ -143,6 +143,9 @@ sub execute {
                                    'DIR'      => '/gsc/var/log/genome/allocation_debugging',
                                    'SUFFIX'   => '.tmp',
                                   );
+                                   
+    $trace_fh->autoflush(1);
+    
     DBI->trace(4, $trace_fh);
     
     my $rv;
