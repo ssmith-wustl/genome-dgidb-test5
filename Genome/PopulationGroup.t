@@ -2,7 +2,8 @@
 use strict;
 use warnings;
 use above "Genome";
-use Test::More tests => 5;
+#use Test::More tests => 5;
+use Test::More skip_all => 'LIMS now requires a PSE to create a GSC::PopulationGroup';
 
 use_ok("Genome::PopulationGroup");
 
