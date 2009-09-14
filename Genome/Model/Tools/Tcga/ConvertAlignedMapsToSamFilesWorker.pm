@@ -1,0 +1,128 @@
+package Genome::Model::Tools::Tcga::ConvertAlignedMapsToSamFilesWorker;
+
+use strict;
+use warnings;
+
+use Genome;
+use Workflow;
+use IO::File;
+
+class Genome::Model::Tools::Tcga::ConvertAlignedMapsToSamFilesWorker {
+    is  => ['Command'],
+    has => [
+        alignment_info => {
+            is  => 'String',
+            is_input => 1,
+            doc => 'The directory containing the Maq map files.',
+        },
+        working_directory => {
+            is => 'String',
+            is_input => 1,
+            doc => 'The working directory of the tool.',
+        },
+    ],
+    has_param => [
+           lsf_resource => {
+           default_value => 'select[model!=Opteron250 && type==LINUX64] rusage[mem=2000]',
+           },
+    ],
+
+};
+
+sub help_brief {
+    'Convert Maq map files into the TCGA format.';
+}
+
+sub help_detail {
+    return <<EOS
+    Convert Maq map files into the TCGA format.
+EOS
+}
+
+sub execute {
+    my $self = shift;
+    my $working_dir = $self->working_directory;
+    
+    my $alignment_string = $self->alignment_info; 
+
+    my @alignment_info = split(/\|/,$alignment_string);
+    my $seq_id = shift @alignment_info; 
+    my $alignment_directory = shift @alignment_info; 
+
+    my $pid = getppid();
+    my $log_path = "$working_dir/logs/convert_aligned_maps_$seq_id"."_".$pid.".txt";
+    my $log_fh = Genome::Utility::FileSystem->open_file_for_writing($log_path);
+    unless($log_fh) {
+       $self->error_message("For $seq_id, failed to open output filehandle for: " .  $log_path );
+       die "For $seq_id, could not open file ".$log_path." for writing.";
+    } 
+
+    print $log_fh "Alignment string: $alignment_string\n";
+    print $log_fh "Alignment seq id: $seq_id\n";
+    print $log_fh "Alignment dir: $alignment_directory\n";
+
+    my $mapmerge_output_file = "$working_dir/maps/$seq_id.map"; 
+    my $conversion_output_file = "$working_dir/aligned/$seq_id.sam"; 
+
+    #if no map file exists
+    if (!-s $mapmerge_output_file) {
+        my @maps = <$alignment_directory/*.map>;
+
+        if ( scalar(@maps) == 0 ) {
+            print $log_fh "\nNo maps found in $alignment_directory.  Returning.";
+            return 1; 
+        }
+
+        if ( scalar(@maps) == 1  ) {
+            #if there is only one map, no merge needed
+            my $single_map = shift(@maps);
+            print $log_fh "\nFound $single_map. Not merging, just copying to $mapmerge_output_file";
+            if ($single_map =~ m/.+all_sequences.map$/) {
+                #in this case, the all_sequences.map exist, just copy it to the proper location for merging
+                my $copy_rv = Genome::Utility::FileSystem->copy_file($single_map,$mapmerge_output_file);
+                if ($copy_rv ne 1)  {
+                    print $log_fh "\nFor $seq_id, error copying $single_map to $mapmerge_output_file";
+                    die "For $seq_id, error copying $single_map to $mapmerge_output_file";
+                }        
+            } else {
+                #there is only one map and it is not all_sequences.map
+                print $log_fh "\nNo appropriate map files found at: $alignment_directory.  Quitting.";
+                die "No appropriate map files found at $alignment_directory";
+            }
+        } else { 
+            #merge all the maps 
+            print $log_fh "\nJoining...\n". join("\n",@maps) ;
+            my $mapmerge_tool = Genome::Model::Tools::Maq::Mapmerge->create(use_version=>'0.7.1',
+                                                                        input_map_files=>\@maps,
+                                                                        output_map_file=>$mapmerge_output_file);
+        
+            my $mm_rv = $mapmerge_tool->execute();
+            print $log_fh "\nDone with merge.  Merge return value is $mm_rv";
+
+            if ($mm_rv ne 1) {
+                $self->error_message("For $seq_id, error during merge: $mm_rv");
+                die "For $seq_id, error during merge: $mm_rv";
+            }
+        }
+
+    } else {
+        print $log_fh "\n$mapmerge_output_file already exists.  Skipping generation of this file.\n";
+    } 
+
+    if (!-s $conversion_output_file) {
+
+        my $convert_cmd = "/gsc/pkg/bio/samtools/samtools-0.1.6/misc/maq2sam-long $mapmerge_output_file $seq_id > $conversion_output_file"; 
+
+        print $log_fh "\nExecuting map to sam conversion: $convert_cmd";
+        my $rv = Genome::Utility::FileSystem->shellcmd( cmd=>$convert_cmd, input_files=>[$mapmerge_output_file], output_files=>[$conversion_output_file] );
+        print $log_fh "\nResult from map2sam conversion: $rv";
+
+    } else {
+        print $log_fh "\n$conversion_output_file already exists.  Skipping generation of this file.\n";
+    } 
+
+    $log_fh->close;
+    return 1; 
+
+}
+1;
