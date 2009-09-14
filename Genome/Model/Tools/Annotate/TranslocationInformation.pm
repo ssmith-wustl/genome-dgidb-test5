@@ -28,7 +28,6 @@ class Genome::Model::Tools::Annotate::TranslocationInformation {
 	    type  =>  'String',
 	    doc   =>  "provide the imported annotation version; default for human is 54_36p and for mouse is 54_37g",
 	    is_optional  => 1,
-	    default => '54_36p',
 	},
 
     ], 
@@ -155,8 +154,13 @@ sub execute {
 #my @command = ["gmt" , "annotate" , "transcript-variants" , "--variant-file" , "annotation.list" , "--output-file" , "annotated.list.csv" , "--flank-range" , "0" , "--annotation-filter" , "none" , "--reference-transcripts" , "NCBI-human.combined-annotation/54_36p"];
 #my @command = ["gmt" , "annotate" , "transcript-variants" , "--variant-file" , "annotation.list" , "--output-file" , "annotated.list.csv" , "--flank-range" , "0" , "--annotation-filter" , "none"];
     
+
+    my $version = $self->version;
+    unless ($version) { if ($organism eq "mouse") { $version = "54_37g" ; } else { $version = "54_36p" ; } }
+    my $references_transcripts = "NCBI-$organism.combined-annotation/$version";
+
     my $annotation_file = "$name.annotated.list.csv";
-    my @command = ["gmt" , "annotate" , "transcript-variants" , "--variant-file" , "$name.annotation.list" , "--output-file" , "$annotation_file" , "--flank-range" , "0" , "--extra-details"]; #running it this way will get the prefered Genes/transcripts annotations 
+    my @command = ["gmt" , "annotate" , "transcript-variants" , "--variant-file" , "$name.annotation.list" , "--output-file" , "$annotation_file" , "--flank-range" , "0" , "--extra-details" , "--reference-transcripts" , "$references_transcripts"]; #running it this way will get the prefered Genes/transcripts annotations 
     
     &ipc_run(@command);
     
