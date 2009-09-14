@@ -189,7 +189,7 @@ sub execute {
 
     #&get_transcript_info;
     #my ($transcript_info) = Genome::Model::Tools::Annotate::TranscriptInformation->get_transcript_info(transcript => $transcript, trans_pos => 72102220);
-    my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$bp1_transcript,$bp2_transcript", trans_pos => "$np1,$np2");
+    my ($info) = Genome::Model::Tools::Annotate::TranscriptInformation->execute(transcript => "$bp1_transcript,$bp2_transcript", trans_pos => "$np1,$np2", organism => "$organism", version => "$version");
     $transcript_info = $info->{result};
     $bp1_region = $transcript_info->{$bp1_transcript}->{-1}->{region};
 
