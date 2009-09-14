@@ -40,14 +40,13 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     return unless $self;
+    my $class_object = $self->get_class_object;
+    
     return $self;
 }
 
 sub stages {
-    return (qw/
-               screen
-               verify_successful_completion
-    /);
+    return (qw/ screen verify_successful_completion /);
 }
 
 sub screen_objects {
