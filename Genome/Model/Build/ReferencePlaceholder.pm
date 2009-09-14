@@ -160,4 +160,18 @@ sub description {
     return $desc;
 }
 
+sub get_sequence_dictionary {
+
+    my $self = shift;
+    my $file_type = shift;
+    my $path = $self->data_directory.'/seqdict/seqdict.'.$file_type;
+    if (-s $path) {
+       return $path; 
+    } else {
+       $self->error_message("Failed to find sequence dictionary file at $path.  You may need to generate it manually with the Picard CreateSequenceDictionary tool.");
+    }
+
+    return;
+}
+
 1;
