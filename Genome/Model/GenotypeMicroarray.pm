@@ -12,7 +12,13 @@ class Genome::Model::GenotypeMicroarray{
     #is => 'Genome::Model::ImportedVariants',
     is => 'Genome::Model',
     has => [
-        #file => { }; # where to get this? misc_attributes?
+        filename => { is => 'String',
+                      doc => "",
+                    },
+        source => {
+                    is => 'String',
+                    doc => "",
+        },
         input_format    => { via => 'processing_profile' },
         instrument_type => { via => 'processing_profile' },
     ],
