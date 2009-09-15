@@ -179,7 +179,7 @@ sub execute
 
       unless (system(qq{/usr/bin/unix2dos -u -o -p '$file'})==0) {
 
-	warn "unix2dos died for '$file'  , from AmgapPrepareBER.pm\n";
+	die "unix2dos died for '$file'  , from AmgapPrepareBER.pm\n";
 
       }
     }
