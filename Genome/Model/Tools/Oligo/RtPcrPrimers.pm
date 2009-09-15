@@ -23,7 +23,7 @@ class Genome::Model::Tools::Oligo::RtPcrPrimers {
 	         is_optional  => 1,
 	     },
 	     all_transcripts => {
-		 type  =>   'String',
+		 is  =>   'Boolean',
 		 doc   =>   "All transcript from annotate-variants will be used",
 	         is_optional  => 1,
 	     },
@@ -179,7 +179,7 @@ sub execute {
 	    }
 	}
 	print qq(\n\n\n);
-	
+
 	my $fasta = "$transcript.rtpcr.designseq.fasta";
 	open(FA,">$fasta") || die "couldn't open a fasta file to write to\n";
 	print FA qq(\>$transcript.rtpcr.designseq\n);
