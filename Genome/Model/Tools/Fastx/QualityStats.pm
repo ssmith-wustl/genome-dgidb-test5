@@ -1,0 +1,55 @@
+package Genome::Model::Tools::Fastx::QualityStats;
+
+use strict;
+use warnings;
+
+use above 'Genome';
+use Genome::Utility::FileSystem;
+use File::Basename;
+
+class Genome::Model::Tools::Fastx::QualityStats {
+    is => ['Genome::Model::Tools::Fastx'],
+    has_constant => {
+        fastx_tool => { value => 'fastx_quality_stats' },
+    },
+    has_input => [
+        fastq_file => {
+            is => 'Text',
+            doc => 'The fastq file to produce quality stats for',
+        },
+    ],
+    has_output => [
+        stats_file => {
+            is => 'Text',
+            doc => 'The output stats file',
+            is_optional => 1,
+        }
+    ],
+};
+
+sub execute {
+    my $self = shift;
+    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->fastq_file)) {
+        $self->error_message('Failed to validate fastq file for read access '. $self->fastq_file .":  $!");
+        die($self->error_message);
+    }
+    my @suffix = qw/fq fastq txt/;
+    my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->fastq_file,@suffix);
+    $basename =~ s/\.$//;
+    unless ($self->stats_file) {
+        $self->stats_file($dirname .'/'. $basename .'.stats');
+    }
+    unless (Genome::Utility::FileSystem->validate_file_for_writing($self->stats_file)) {
+        $self->error_message('Failed to validate stats file for write access '. $self->stats_file .":  $!");
+        die($self->error_message);
+    }
+    my $cmd = $self->fastx_tool_path .' -i '. $self->fastq_file .' -o '. $self->stats_file;
+    Genome::Utility::FileSystem->shellcmd(
+        cmd => $cmd,
+        input_files => [$self->fastq_file],
+        output_files => [$self->stats_file],
+    );
+    return 1;
+}
+
+1;
