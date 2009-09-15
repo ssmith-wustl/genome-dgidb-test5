@@ -87,6 +87,11 @@ sub execute {
 
     my ($self) = @_;
 
+    if (-s $self->output_file) {
+        $self->status_message("Previous output detected, shortcutting");
+        return 1;
+    }
+
     my $variant_file = $self->variant_file;
     open(my $in, $variant_file) || die "cant open $variant_file";
 
