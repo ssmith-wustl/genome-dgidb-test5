@@ -23,7 +23,7 @@ class Genome::Model::Tools::RefCov::ProgressionInstance {
         samtools_version => {
             is => 'Text',
             doc => 'The version of samtools to use',
-            default_value => 'r320wu1',
+            default_value => Genome::Model::Tools::Sam->default_samtools_version,
         }
     ],
     has_output => [
