@@ -12,12 +12,10 @@ class Genome::Model::Tools::Tcga::GenerateMaqBasedFile {
     has => [
         workflow_log_directory => {
                     is => 'String',
-                    is_input => '1',
                     doc => 'The directory where the workflow logs (LSF output) should be dumped.' ,
         },
         cleanup => { 
                     is => 'Boolean',
-                    is_input => '1',
                     is_optional => '1',
                     default_value => '0',
                     doc => 'A clean up flag.  Will remove intermediate files if set. Default = 0, no cleanup.',
@@ -46,7 +44,6 @@ sub pre_execute {
     $self->status_message("Delete intermediate files on completion: ".$self->cleanup);
     $self->status_message("Creating required directories.");
 
-    Genome::Utility::FileSystem->create_directory("$self->workflow_log");
     Genome::Utility::FileSystem->create_directory("$working_dir");
     Genome::Utility::FileSystem->create_directory("$working_dir/header");
     Genome::Utility::FileSystem->create_directory("$working_dir/aligned");
