@@ -8,7 +8,16 @@ use Genome;
 
 class Genome::ProcessingProfile::Somatic{
     is => 'Genome::ProcessingProfile',
+    has => [
+        only_tier_1 => {
+            via         => 'params',
+            to          => 'value',
+            where       => [name => 'only_tier_1'],
+            is_mutable  => 1,
+        },
+    ],
 };
+
 sub params_for_class{
     my $self = shift;
     return qw//;
